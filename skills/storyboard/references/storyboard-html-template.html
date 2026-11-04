@@ -19,42 +19,40 @@
     this file — the renderer draws the window.SCENES that <script src="./scenes.js">
     loaded. Fix scenes.js and this document follows on its own.
   - SB_DOC holds only editorial metadata that is not in scenes.js: core message,
-    per-scene notes, transitions, audio directions, privacy avoidance, source summary,
+    per-scene notes, audio directions, privacy avoidance, source summary,
     platform plan, shooting prep, recheck list, the scenario handoff
     (SB_DOC.scenario — references and editorial intent copied from scenario.md),
-    the cast (SB_DOC.characters — the
-    channel characters this episode uses, with their panel paths), and the promise
+    the cast detail (SB_DOC.characters — on a story-first board the story tools sync each
+    storyboard/cast.json member's panels and identity into scenes.js SB_DOC), and the promise
     ledger (SB_DOC.craft — every loop and plant the episode opens with the shot that
     pays it, plus the story-arc holds, burst, signature line and device).
   - Character counts, speech rate, scene length and total length are computed by the
     renderer against the contract (scenes-schema / shot-script-template) and shown as
     badges; violations are collected in the check strip at the top of the document.
 
-  ■ Shot card structure — scene-frame sheet layout (2026-08-17 grammar units)
+  ■ Shot card structure
     · One SCENES[] entry = one shot. Entries sharing a scene number group under a scene
-      band, and only a sequence with a different purpose opens a sequence line.
+      band (with STRUCTURE scene.summary), and a sequence line opens each sequence.
       Identifier names (SCENES, scene-N.png) stay as they are.
-    · One reveal (the moment text appears inside the same shot) = one row. The 9:16 frame
-      on the left, that reveal's screen text and dialogue on the right. A reveal is not a shot.
-    · The shot header carries two production layers — the picture itself (still photo /
-      AI video / recording / shared asset) and the staging over it (HTML reveal, caption,
-      typing / none). Do not merge them into one badge.
+    · The shot header carries the shot's summary and its icon row in reading order: render
+      route, size, angle, camera move (plus focus), depth, MSR when the call goes there, and
+      the join into the next shot (stored on the next shot's transition — shot_icons next).
+    · The shot body: on the left what the video call takes — the start image, the end image a
+      first_last shot needs, and the reference slots of its video lane; on the right the
+      shot's lines, speaker by speaker.
     · The palette is fixed light (no dark media query — a review document is read on the
-      same white ground as the print and approval screens). This layout converged over four
-      adversarial designer reviews (97 points, zero P0).
+      same white ground as the print and approval screens).
 
-  ■ Frame geometry is the produce renderer's ratios carried over as-is (rough preview)
+  ■ Text-fit probe — the produce renderer's ratios carried over as-is
+    · No frame preview is drawn on the cards. An off-screen probe (#fr-probe) lays each reveal
+      out at the produce geometry to catch on-screen text that would overflow before production.
     · Generated mode = video-template.html — text zone x 176/1080 · top 190/1920 ·
       bottom 570/1920, cover anchored bottom · points anchored top · quote/outro centered.
     · Shooting mode = screencast-overlay.html — top block y190~460 + recording band y≥460
       (build-screencast.sh BAND_MIN_Y 460 · BAND_CY 880 · BAND_MAX_H 900).
-    · Subtitles = build-reel.sh ASS Style Sub — font 58 · MarginV 380 · MarginL/R 250.
-    When the geometry changes in those three produce files, change the constants here too.
-
-  Modes: both shooting (screencast) and generated are supported — visual.source==="recording"
-  draws the recording-band frame, anything else draws the generated-background frame.
-  With narration[].img it goes to per-line illustration mode (light) and the background
-  changes with every line.
+    · .f-sub mirrors build-reel.sh ASS Style Sub for format-lint.js only: delivered video
+      carries no subtitles (burn is off on every format; an SRT is a separate opt-in file).
+    When the geometry changes in those produce files, change the constants here too.
 -->
 <head>
 <meta charset="utf-8">
@@ -192,7 +190,6 @@
   .view-style b { display: block; font-size: 1.0625rem; font-weight: 700; color: var(--text); word-break: keep-all; }
   .view-style.unknown b { color: var(--warn-ink, var(--accent-ink)); }
   .view-style p { margin: 4px 0 0; font-size: var(--t-aux); line-height: 1.55; color: var(--muted); word-break: keep-all; }
-  .view-switches { display: flex; flex-wrap: wrap; gap: var(--s2); }
   .switch {
     display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 16px 0 10px;
     border: 1px solid var(--line); border-radius: 999px; background: var(--card);
@@ -209,7 +206,6 @@
   .switch input:checked { background: var(--accent); }
   .switch input:checked::after { transform: translateX(14px); }
   .switch input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .view-setup-note { margin: var(--s3) 0 0; font-size: var(--t-cap); color: var(--muted); }
   @media (max-width: 720px) {
     .view-setup { border-radius: 20px; }
     .view-setup-head { padding: 14px 16px; }
@@ -664,9 +660,8 @@
   /* Three or more badges bunched together drop to the line below the title, so the badges
      do not push the title into a wrap (review round 3) */
 
-  /* Scene-frame layout — one reveal = one row, the 9:16 frame on the left · that reveal's
-     content on the right. Text is centered vertically with a width cap — short content
-     used to pile up top-left and make the row look like an empty box (design review round 1). */
+  /* Retired reveal rows (.conti) — no card draws them since the shot body became start/end
+     images, reference slots and lines (shotBodyHtml). The rules stay until the sheet is pruned. */
   .conti { --fw: 156px; margin-top: var(--s4); }
   .conti-row {
     display: grid; grid-template-columns: var(--fw) minmax(0, 1fr);
@@ -1144,7 +1139,6 @@
 
   /* Safe-zone guide — toggle */
   .fr .fsafe { position: absolute; inset: 0; display: none; }
-  body.safe .fr .fsafe { display: block; }
   .fr .fsafe::before {
     content: ""; position: absolute; left: 16.30%; right: 16.30%; top: 9.90%; bottom: 29.69%;
     border: 1px dashed rgba(120,200,255,.55);
@@ -1347,7 +1341,7 @@
     .scene:has(.conti) { max-width: none; }   /* on paper the print margin decides the width */
     .scene-head { break-after: avoid; }
     .conti-row, .cmeta, .clip { break-inside: avoid; }
-    .toolbar, .tl-cap, .view-switches, .view-setup-note { display: none; }
+    .toolbar, .tl-cap { display: none; }
     .seq-stats::after, .scene-band-stats::after { display: none; }
     details.prompt, details.docnotes { display: none; }
     details.scenenotes > summary { display: none; }
@@ -1360,7 +1354,7 @@
 </style>
 <link rel="stylesheet" href="./review.css">
 </head>
-<body class="subs review-board">
+<body class="review-board">
 <main class="wrap"><div id="app"><noscript>This document renders by loading scenes.js — please turn JavaScript on.</noscript></div></main>
 
 <script src="./review-typography.js"></script>
@@ -1436,16 +1430,16 @@ window.SB_DOC = {
   //   ]
   // },
 
-  // The cast — only the characters this episode uses (the ids appearing in any scene's
-  // visual.character). Leave it out and the document has no cast section.
-  // panels: the panel files that actually exist, relative to this directory.
-  // The reference set going into generation is face → body (order is weight), plus back
-  // only for a back-facing shot — video-model-selection.md §The character panels.
+  // The cast — on a story-first board storyboard/cast.json names the members, and every story
+  // or shot write syncs each on-screen member's panels and identity into scenes.js SB_DOC.characters;
+  // this block adds detail only. Older boards list the ids their shots use here.
+  // panels: face, front, back — the sheet panels panels.json names (one character sends all three
+  // to generation; two send each face, then each front — character-panels.js).
   characters: [
     // { id: "claude", name: "Claude", role: "the AI — answers carefully",
     //   tts: { engine: "supertonic", voiceId: "M1", speed: 1 },
     //   panels: { face: "../../../assets/characters/claude/face.png",
-    //             body: "../../../assets/characters/claude/body.png",
+    //             front: "../../../assets/characters/claude/front.png",
     //             back: "../../../assets/characters/claude/back.png" },
     //   note: "no lettered wordmark · voice is profile §2 Leda" }
   ],
@@ -1454,9 +1448,10 @@ window.SB_DOC = {
   // Canonical asset sheets belong in scenes.js SB_DOC, not a second editable copy here.
   // props: [{id, name, description, imageUrl, tracking}], propContinuity: {...}
   // locations: [{id, name, description, layout, lighting, invariants, imageUrl, sheetPath, manifest}]
-  // Shots link planning locations with visual.locationId; visual.location binds a built set.
+  // Shots link planning locations with visual.locationId; shot.location binds a built set
+  // (location-assets.js bind); visual.location holds that set's render results.
   // assetSheetNotes: {characters: "Not applicable: ...", props: "...", locations: "..."}
-  narratorCharacterId: "", // required — one id from characters above
+  narratorCharacterId: "", // legacy boards only: the speaker of lines that name none; story-v2 lines carry explicit speakers
 
   // Promise ledger — what the episode promises and the shot that keeps each promise
   // (scenario-craft §3 · §5), plus the story-arc devices (§7 · §8 · §10). Shot numbers are the
@@ -1480,9 +1475,6 @@ window.SB_DOC = {
   // call was based on, and what is off-limits.
   sceneNotes: {
   },
-  // Transition direction after scene i ends (same length as the scene count — the last one
-  // tells the user to stop recording)
-  transitions: [],
   // Scene number → privacy-avoidance direction (that scene only)
   privacy: {},
   // Scene number → audio direction (BGM, sound effects, tone). Attached to the scene meta
@@ -1534,7 +1526,7 @@ window.STORYBOARD_READY = (async function () {
       sceneMax: 13, recSceneMax: 20,
       capCover: 40, capBody: 50, sentMin: 8, sentMax: 25,
       videoMax: 2,                              // 8s × 2 slots = 16s
-      burn: true,                               // burned-in subtitles (formats.js:108)
+      burn: false,                              // no burned subtitles (formats.js shorts-9x16 burn)
       chapterMin: null, chapterMax: null        // short-form has no notion of chapters
     },
     "youtube-long-16x9": {
@@ -1546,13 +1538,16 @@ window.STORYBOARD_READY = (async function () {
       videoMax: 5,                              // 8s × 5 slots = 40s
       burn: false,                              // clean master + subs.srt (formats.js:246)
       chapterMin: 3, chapterMax: 13             // 3 = YouTube requirement · 13 = target cap for the shooting lane
-                                                // (the authoring lane target of 5~10 is in SKILL §4)
+                                                // (the authoring lane target of 5~10 is in scenes-schema §chapter)
     }
   };
   var FMT_KEY = FMT_MIRROR[window.FORMAT] ? window.FORMAT : "shorts-9x16";
   var FMT = FMT_MIRROR[FMT_KEY];
   var WIDE = FMT_KEY === "youtube-long-16x9";
   var STORY_V2 = window.STORY && window.STORY.version === "story-v2";
+  // A story-v2 board's metadata comes from scenes.js SB_DOC, which the story tools write. The
+  // HTML block's untouched {{…}} examples are not the episode's, so they are dropped, not flagged.
+  if (STORY_V2) Object.keys(DOC).forEach(function (k) { if (/\{\{/.test(JSON.stringify(DOC[k]))) delete DOC[k]; });
 
   /* ══ Language ══
      This document is what a person reads before approving an episode, and the plugin is
@@ -1673,9 +1668,9 @@ window.STORYBOARD_READY = (async function () {
       hookForm: { paradox: "paradox", gap: "leave a blank", payoff: "result first",
                   identify: "that is me", number: "number · frame", secret: "secret told" },
       cam: { movement: "movement", speed: "speed", framing: "framing", end: "end frame" },
-      panel: { face: "Face close-up", body: "Headless front", back: "Headless back",
-               front: "Front (legacy)", real: "Live action" },
-      panelShort: { face: "Face", body: "Front", back: "Back", front: "Front", real: "Live" },
+      panel: { face: "Face close-up", front: "Headless front", back: "Headless back",
+               body: "Front (legacy body panel)", real: "Live action" },
+      panelShort: { face: "Face", front: "Front", back: "Back", body: "Front", real: "Live" },
       deviceSteps: ["claim", "act", "result"],
 
       // ── check-strip categories (flag's second argument) ──
@@ -1798,10 +1793,8 @@ window.STORYBOARD_READY = (async function () {
 
       // ── shot cards ──
       shotsHead: "Shots", shotsAside: "one item = one shot · a reveal is the screen changing inside that shot",
-      toggleSafe: "show the text zone", toggleSubs: "subtitles",
-      viewSetupHead: "Video settings", previewHead: "Preview",
+      viewSetupHead: "Video settings",
       legend: "dotted = where the text sits · hatched = what the subtitles and app buttons cover · channel color = AI video · outline only = HTML staging",
-      previewNote: "a scaled-down preview of the real screen",
       sequence: function (v) { return "Sequence · " + v; },
       seqKicker: "Sequence", seqStats: function (sc, sh) { return sc + " scenes · " + sh + " shots"; },
       formIs: function (v) { return "form · " + v; },
@@ -1914,7 +1907,7 @@ window.STORYBOARD_READY = (async function () {
         return "loops " + loops + " · plants " + plants +
                (unpaid ? ' · <span class="mark">unpaid ' + unpaid + "</span>" : " · all paid"); },
       promiseSummaryNote: " — every promise opened has a shot that pays it, and a plant comes back in the frame it was planted in (scenario-craft §3 · §5)",
-      promiseSummaryEmpty: "empty — start with the cover's promise and the shot that pays it, in SB_DOC.craft.loops (SKILL §6)",
+      promiseSummaryEmpty: "empty — start with the cover's promise and the shot that pays it, in SB_DOC.craft.loops (legacy-authoring §6)",
       cShotGrammar: "Shot grammar",
       feelGapText: function (n) { return n + " shots have no shot.feel"; },
       feelAllText: "every shot wrote what the viewer should feel",
@@ -2024,9 +2017,9 @@ window.STORYBOARD_READY = (async function () {
       hookForm: { paradox: "역설", gap: "빈칸 남기기", payoff: "결과 먼저", identify: "내 얘기네",
                   number: "숫자·틀", secret: "비밀 공개" },
       cam: { movement: "움직임", speed: "속도", framing: "프레임", end: "끝 프레임" },
-      panel: { face: "얼굴 클로즈업", body: "머리 없는 앞면", back: "머리 없는 뒷면",
-               front: "앞면(이전 이름)", real: "실사" },
-      panelShort: { face: "얼굴", body: "앞면", back: "후면", front: "앞면", real: "실사" },
+      panel: { face: "얼굴 클로즈업", front: "머리 없는 앞면", back: "머리 없는 뒷면",
+               body: "앞면(이전 body 패널)", real: "실사" },
+      panelShort: { face: "얼굴", front: "앞면", back: "후면", body: "앞면", real: "실사" },
       deviceSteps: ["주장", "행동", "결과"],
 
       // ── check-strip categories ──
@@ -2147,10 +2140,8 @@ window.STORYBOARD_READY = (async function () {
 
       // ── shot cards ──
       shotsHead: "샷 구성", shotsAside: "항목 하나 = 샷 하나 · 공개는 그 샷 안에서 화면이 바뀌는 것",
-      toggleSafe: "글자 영역 보기", toggleSubs: "자막",
-      viewSetupHead: "영상 설정", previewHead: "미리보기",
+      viewSetupHead: "영상 설정",
       legend: "점선 = 글자가 놓이는 자리 · 빗금 = 자막과 앱 버튼이 덮는 아래쪽 · 채널색 = AI 영상 · 테두리만 = HTML 연출",
-      previewNote: "실제 화면을 줄여서 그린 미리보기",
       sequence: function (v) { return "시퀀스 · " + v; },
       seqKicker: "시퀀스", seqStats: function (sc, sh) { return sc + "씬 · " + sh + "샷"; },
       formIs: function (v) { return "형태 · " + v; },
@@ -2263,7 +2254,7 @@ window.STORYBOARD_READY = (async function () {
         return "고리 " + loops + " · 떡밥 " + plants +
                (unpaid ? ' · <span class="mark">안 갚음 ' + unpaid + "</span>" : " · 다 갚음"); },
       promiseSummaryNote: " — 연 약속마다 갚는 샷이 있고, 떡밥은 심은 프레임으로 회수한다 (scenario-craft §3 · §5)",
-      promiseSummaryEmpty: "비어 있음 — SB_DOC.craft.loops 에 커버의 약속과 갚는 샷부터 적는다 (SKILL §6)",
+      promiseSummaryEmpty: "비어 있음 — SB_DOC.craft.loops 에 커버의 약속과 갚는 샷부터 적는다 (legacy-authoring §6)",
       cShotGrammar: "샷 문법",
       feelGapText: function (n) { return n + "샷에 shot.feel 이 없다"; },
       feelAllText: "모든 샷이 보는 사람이 느낄 것을 적었다",
@@ -2417,11 +2408,16 @@ window.STORYBOARD_READY = (async function () {
   function engineOf(s) {
     var v = s.visual || {};
     /* A motion background may name its route on the video object itself — the same place the
-       cost panel reads it from. check-scenes.js engineOf resolves it in this order too. */
+       cost panel reads it from. check-scenes.js engineOf resolves it in this order too; a shot that
+       names none takes the episode's saved video engine before the seedance default. */
     var named = (v.video && v.video.engine) || (v.clip && v.clip.engine) || v.engine;
-    if (named === "seedance" || named === "host") return named;   // host: the CLI's own video tool
+    if (["seedance", "host", "astra", "astra-genai"].indexOf(named) !== -1) return named;   // host: the CLI's own video tool; astra: our LTX box
+    var P = window.PRODUCTION || {}, saved = (window.REVIEW_VIDEO_SNAPSHOT || (P.modelSettings && P.modelSettings.models && P.modelSettings.models.video) || {}).engine;
+    if (["seedance", "host", "astra", "astra-genai"].indexOf(saved) !== -1) return saved;
+    if (P.videoProvider === "astra" || P.videoProvider === "host") return P.videoProvider;
     return "seedance";
   }
+
   /* The stored final clip prompt — one home per type (scenes-schema §clip prompt). */
   function clipPromptOf(s) {
     var v = s.visual || {};
@@ -2536,7 +2532,10 @@ window.STORYBOARD_READY = (async function () {
       Array.isArray((s.visual || {}).props) && s.visual.props.length ? (ko ? "소품 " : "Props ") + s.visual.props.map(function (id) { return docName(DOC.props, id); }).join(", ") : "",
       // The end image's own props, when they differ from the start's (frames.endProps)
       fp.end && Array.isArray(((s.visual || {}).frames || {}).endProps) && s.visual.frames.endProps.join() !== ((s.visual || {}).props || []).join()
-        ? (ko ? "종료 소품 " : "End props ") + (s.visual.frames.endProps.map(function (id) { return docName(DOC.props, id); }).join(", ") || (ko ? "없음" : "none")) : ""].filter(Boolean);
+        ? (ko ? "종료 소품 " : "End props ") + (s.visual.frames.endProps.map(function (id) { return docName(DOC.props, id); }).join(", ") || (ko ? "없음" : "none")) : "",
+      // The built set shot_image rendered in Blender as the start image's Image 1 (visual.locationFrame)
+      ((s.visual || {}).locationFrame || {}).set ? (ko ? "세트 렌더 " : "Set render ") + docName(DOC.locations, s.visual.locationFrame.set) +
+        (s.visual.locationFrame.blocked ? (ko ? " · 인물 배치 반영" : " · with blocking") : "") : ""].filter(Boolean);
     if (setting.length) story += '<p class="shot-setting">' + esc(setting.join(" · ")) + "</p>";
     var vis = s.visual || {}, video = vis.video || {}, prompts = [
       [ko ? "영상 프롬프트" : "Video prompt", video.prompt || (video.speechBinding || {}).videoPrompt],
@@ -2545,6 +2544,11 @@ window.STORYBOARD_READY = (async function () {
       [vis.frames && vis.frames.start && vis.frames.start === vis.bg ? (ko ? "시작 이미지 프롬프트" : "Start image prompt") : (ko ? "배경 프롬프트" : "Background prompt"), vis.bgPrompt],
       [ko ? "종료 이미지 프롬프트" : "End image prompt", vis.endPrompt]
     ].filter(function (x) { return typeof x[1] === "string" && x[1]; });
+    // MSR speakers as shot_prompt bound them to the start image (viewer-relative position)
+    var bindings = Array.isArray(video.speakerBindings) ? video.speakerBindings : [];
+    if (bindings.length) prompts.push([ko ? "MSR 화자 위치" : "MSR speaker positions", bindings.map(function (b) {
+      return castName(b.speaker) + " — " + b.screenPosition + (b.description ? " (" + b.description + ")" : "");
+    }).join("\n")]);
     var lines = narr.length ? narr.map(function (line, j) { return speechHtml(line, j); }).join("") : '<div class="speech-silent">' + esc(T.speechSilent) + "</div>";
     var none = function (t) { return '<div class="speech-silent">' + t + "</div>"; };
     var tabs = [[ko ? "스토리" : "Story", story || none(ko ? "스토리 없음" : "No story")], [ko ? "대사" : "Lines", lines],
@@ -3232,7 +3236,7 @@ window.STORYBOARD_READY = (async function () {
   }
 
   /* ── Reveal states — one panel = one moment the screen changes ──
-     Mapping basis: scenes-schema §per-type contract (cover rg1=title/rg2=stat,
+     Mapping basis: scenes-schema §contracts by type (cover rg1=title/rg2=stat,
      points rg1=title+source/rg2..=captions, quote rg0=signature/rg1=quote). */
   function revealsOf(s) {
     var narr = s.narration || [], out = [];
@@ -3691,7 +3695,10 @@ window.STORYBOARD_READY = (async function () {
   // this copy gives the person opening the file the same verdict before approval.
   var COMP = window.COMPREHENSION;
   var isShortForm = FMT_KEY !== "youtube-long-16x9";
-  if (!COMP || typeof COMP !== "object") {
+  // Story-v1 guidance (scenes-schema §comprehension contract); a story-v2 board carries no block.
+  if (STORY_V2) {
+    /* nothing to check */
+  } else if (!COMP || typeof COMP !== "object") {
     flag("bad", T.where.comprehension, "window.COMPREHENSION missing — write one question, answer, takeaway, branches, and term introductions");
   } else {
     ["question", "answer", "takeaway"].forEach(function (field) {
@@ -3791,7 +3798,7 @@ window.STORYBOARD_READY = (async function () {
   if (window.PRODUCTION) {
     if (!window.PRODUCTION_MODE) flag("bad", T.where.production, "Missing production-mode.js");
     else {
-      window.PRODUCTION_MODE.check(window, {advice: []}).forEach(function (message) { flag("bad", T.where.production, message); });
+      window.PRODUCTION_MODE.check(window, {advice: [], snapshotVideo: window.REVIEW_VIDEO_SNAPSHOT}).forEach(function (message) { flag("bad", T.where.production, message); });
       policyVideoMax = window.PRODUCTION_MODE.policy({ generatedVideoMax: policyVideoMax }, window.PRODUCTION, SCENES).generatedVideoMax;
     }
   }
@@ -3826,7 +3833,7 @@ window.STORYBOARD_READY = (async function () {
         var moving = !!(v.reuse || v.video || v.clip || v.source === "recording" ||
                         v.source === "screencast" || v.picture === "recording");
         if (!moving)
-          flag("bad", T.shotCap(1), "the hook is a still — on a short the cover is video: a motion background under the code-rendered title (visual.video), or a recording (visual.source)");
+          flag("bad", T.shotCap(1), "the hook is a still — on a short with hook_video on, the cover is video: a motion background (visual.video) or a recording (visual.source), with nothing drawn over it");
       } else if (generatedVideo(s)) {
         bodyVideo++;
         if (!String(v.why || "").trim())
@@ -3911,12 +3918,13 @@ window.STORYBOARD_READY = (async function () {
     }
   }
 
-  // Long-form chapter requirement (scenes-schema §chapter) — short-form has no notion of chapters
+  // Long-form chapters (scenes-schema §chapter) — short-form has no notion of chapters. Under three,
+  // the builder skips chapters.txt and YouTube shows none: a note, not a defect.
   if (FMT.chapterMin) {
     var chaps = SCENES.filter(function (s) { return s.chapter; });
     if (chaps.length < FMT.chapterMin)
-      flag("bad", T.where.chapter, chaps.length + " — YouTube requires at least " + FMT.chapterMin +
-           ". Write a chapter string on the scene (§chapter)");
+      flag("warn", T.where.chapter, chaps.length + " — YouTube shows chapters from " + FMT.chapterMin +
+           "; under that the builder makes no chapters.txt. Write a chapter string on the shot that opens one (§chapter)");
     else if (chaps.length > FMT.chapterMax)
       flag("warn", T.where.chapter, chaps.length + " — the authoring target is " + FMT.chapterMin + "~" +
            FMT.chapterMax);
@@ -4003,12 +4011,15 @@ window.STORYBOARD_READY = (async function () {
   // same way whether it is spaced, punctuated or neither.
   var compactLetters = function (v) { return String(v || "").replace(/[\s\p{P}\p{S}]/gu, ""); };
   var orderOk = true, orderBad = false;
+  // Story-v1 guidance (scenes-schema §playback order): a story-v2 board follows character-scenarios.md,
+  // where the beat skeleton is a suggestion, so its shots are not held to hook → drip → cta.
+  var orderFlag = STORY_V2 ? function () {} : flag;
   if (WIDE && cover && cover.arc && !T.arc[arc]) {
-    flag("warn", T.where.order, "arc \"" + cover.arc + "\" is outside the two — write answer-first or story on the cover (scenes-schema §playback order); read as answer-first below");
+    orderFlag("warn", T.where.order, "arc \"" + cover.arc + "\" is outside the two — write answer-first or story on the cover (scenes-schema §playback order); read as answer-first below");
     orderOk = false;
   }
   if (order.length && order[0].s.type !== "cover") {
-    flag(!WIDE ? "bad" : "warn", T.where.order, "the first shot is not the cover — a short opens on the hook");
+    orderFlag(!WIDE ? "bad" : "warn", T.where.order, "the first shot is not the cover — a short opens on the hook");
     orderOk = false;
     if (!WIDE) orderBad = true;
   }
@@ -4017,28 +4028,28 @@ window.STORYBOARD_READY = (async function () {
     mainOrder.forEach(function (o) {
       var b = beatOf(o.s);
       if (LONG_BEATS[b]) {
-        flag("bad", T.where.order, "shot " + (o.i + 1) + " carries beat:\"" + b + "\" — consider hook → development → ending (scenes-schema §playback order)");
+        orderFlag("bad", T.where.order, "shot " + (o.i + 1) + " carries beat:\"" + b + "\" — consider hook → development → ending (scenes-schema §playback order)");
         orderOk = false; orderBad = true;
       } else if (!o.s.beat && o.s.type !== "cover") {
-        flag("bad", T.where.order, "shot " + (o.i + 1) + " has no beat — label beats when useful for reviewing the flow");
+        orderFlag("bad", T.where.order, "shot " + (o.i + 1) + " has no beat — label beats when useful for reviewing the flow");
         orderOk = false; orderBad = true;
       }
     });
     if (!firstBeat.drip) {
-      flag("bad", T.where.order, "there is no drip shot — after the hook, 1–n shots pay curiosity in stages (beat:\"drip\") before the ending");
+      orderFlag("bad", T.where.order, "there is no drip shot — after the hook, 1–n shots pay curiosity in stages (beat:\"drip\") before the ending");
       orderOk = false; orderBad = true;
     }
     if (mainOrder.length) {
       var firstB = beatOf(mainOrder[0].s);
       if (firstB && firstB !== "hook") {
-        flag("bad", T.where.order, "the hook beat is not the first shot — a short opens on the cover");
+        orderFlag("bad", T.where.order, "the hook beat is not the first shot — a short opens on the cover");
         orderOk = false; orderBad = true;
       }
     }
     mainOrder.forEach(function (o, pos) {
       var b = beatOf(o.s);
       if (b === "hook" && pos !== 0) {
-        flag("bad", T.where.order, "shot " + (o.i + 1) + " carries beat:\"hook\" — the cover opens the episode");
+        orderFlag("bad", T.where.order, "shot " + (o.i + 1) + " carries beat:\"hook\" — the cover opens the episode");
         orderOk = false; orderBad = true;
 
       }
@@ -4056,41 +4067,41 @@ window.STORYBOARD_READY = (async function () {
           (cover.narration || []).map(function (seg) { return (seg && (seg.sub || seg.tts)) || ""; })
         ).join(" "));
         if (hookText.indexOf(ans) !== -1)
-          flag("bad", T.where.cover, "the hook dumps COMPREHENSION.answer while hookType is not \"spoiler\" — a gap cover opens the question and the last drip completes the answer; declare hookType:\"spoiler\" to reveal on the cover");
+          orderFlag("bad", T.where.cover, "the hook dumps COMPREHENSION.answer while hookType is not \"spoiler\" — a gap cover opens the question and the last drip completes the answer; declare hookType:\"spoiler\" to reveal on the cover");
       }
     }
   } else if (!storyArc) {
     if (processy && firstBeat.body && !firstBeat.result) {
-      flag("warn", T.where.order, "there is body but no result scene — put a shot after the hooking that lays out the finished thing (an informational piece has no result scene: give its first content shot beat:\"result\")");
+      orderFlag("warn", T.where.order, "there is body but no result scene — put a shot after the hooking that lays out the finished thing (an informational piece has no result scene: give its first content shot beat:\"result\")");
       orderOk = false;
     }
     if (firstBeat.result && firstBeat.body && firstBeat.body.pos < firstBeat.result.pos) {
-      flag("bad", T.where.order, "body comes before result — move shot " +
+      orderFlag("bad", T.where.order, "body comes before result — move shot " +
            (firstBeat.body.i + 1) + " after shot " + (firstBeat.result.i + 1) + " (or set arc:\"story\" on the cover if the answer is meant to wait)");
       orderOk = false; orderBad = true;
     }
     if (firstBeat.turn) {
-      flag("warn", T.where.order, firstBeat.turn.s.beat
+      orderFlag("warn", T.where.order, firstBeat.turn.s.beat
            ? "shot " + (firstBeat.turn.i + 1) + " carries beat:\"turn\" — the turning point belongs to the story arc; drop the beat or write arc:\"story\" on the cover"
            : T.turnHeadingFlag(firstBeat.turn.i + 1));
       orderOk = false;
     }
   } else {
     if (!firstBeat.result) {
-      flag("warn", T.where.order, "story arc with no result (payoff) shot — the loop the cover opened never closes; add the shot where the answer appears for the first time (beat:\"result\"), after the turn");
+      orderFlag("warn", T.where.order, "story arc with no result (payoff) shot — the loop the cover opened never closes; add the shot where the answer appears for the first time (beat:\"result\"), after the turn");
       orderOk = false;
     }
     if (!firstBeat.turn) {
-      flag("warn", T.where.order, "story arc with no turn shot — add the moment someone saw it differently (beat:\"turn\") right before the payoff");
+      orderFlag("warn", T.where.order, "story arc with no turn shot — add the moment someone saw it differently (beat:\"turn\") right before the payoff");
       orderOk = false;
     }
     if (firstBeat.result && firstBeat.body && firstBeat.result.pos < firstBeat.body.pos) {
-      flag("bad", T.where.order, "result comes before body on a story arc — the payoff closes the loop before the build; move shot " +
+      orderFlag("bad", T.where.order, "result comes before body on a story arc — the payoff closes the loop before the build; move shot " +
            (firstBeat.result.i + 1) + " after the turn, or set arc:\"answer-first\" on the cover");
       orderOk = false; orderBad = true;
     }
     if (firstBeat.result && firstBeat.turn && firstBeat.result.pos < firstBeat.turn.pos) {
-      flag("bad", T.where.order, "result comes before the turn — the answer is out before the turning point; move shot " +
+      orderFlag("bad", T.where.order, "result comes before the turn — the answer is out before the turning point; move shot " +
            (firstBeat.result.i + 1) + " after shot " + (firstBeat.turn.i + 1));
       orderOk = false; orderBad = true;
     }
@@ -4098,7 +4109,7 @@ window.STORYBOARD_READY = (async function () {
       var ri = -1;
       mainOrder.forEach(function (o, k) { if (ri < 0 && beatOf(o.s) === "result") ri = k; });
       if (ri > 0 && beatOf(mainOrder[ri - 1].s) !== "turn") {
-        flag("warn", T.where.order, "the shot right before the payoff (shot " + (mainOrder[ri - 1].i + 1) + ") is not the turn — the turning point is the last beat before the answer");
+        orderFlag("warn", T.where.order, "the shot right before the payoff (shot " + (mainOrder[ri - 1].i + 1) + ") is not the turn — the turning point is the last beat before the answer");
         orderOk = false;
       }
     }
@@ -4108,11 +4119,11 @@ window.STORYBOARD_READY = (async function () {
   var afterCover = mainOrder.length > 1 && mainOrder[0].s.type === "cover" ? mainOrder[1] : null;
   if (WIDE) {
     if (mainOrder.length > 1 && !firstBeat.hooking) {
-      flag("warn", T.where.order, "there is no hooking shot — after the cover, add the shot that hooks why to stay (beat:\"hooking\"" + (storyArc ? ", the setup on a story arc" : "") + "). Informational episodes are no exception");
+      orderFlag("warn", T.where.order, "there is no hooking shot — after the cover, add the shot that hooks why to stay (beat:\"hooking\"" + (storyArc ? ", the setup on a story arc" : "") + "). Informational episodes are no exception");
       orderOk = false;
     } else if (afterCover && beatOf(afterCover.s) !== "hooking") {
       var ab = beatOf(afterCover.s);
-      flag("warn", T.where.order, "the shot after the cover is not the hooking — shot " + (afterCover.i + 1) +
+      orderFlag("warn", T.where.order, "the shot after the cover is not the hooking — shot " + (afterCover.i + 1) +
            (ab ? "(" + (T.beat[ab] || ab) + ")" : "(no beat)") + " comes before the hooking (shot " +
            (firstBeat.hooking.i + 1) + "). Reorder to " + ORDER_TXT);
       orderOk = false;
@@ -4252,8 +4263,10 @@ window.STORYBOARD_READY = (async function () {
     clipPrompts(s, i).forEach(function (f) {
       var p = f.prompt, eng = f.eng;
       if (!p) {
-        flag("warn", f.cap, "generated video with no stored clip prompt — assemble it (assemble-bg-prompt.js --clip --engine " + eng +
-             ") and store it before approval; produce sends it verbatim (scenes-schema §clip prompt)");
+        flag("warn", f.cap, "generated video with no stored clip prompt — " + (window.STORY && window.STORY.authoring === "story-first"
+             ? "write it with shot_prompt once every picture shot has its images"
+             : "assemble it (assemble-bg-prompt.js --clip --engine " + eng + ") and store it before approval") +
+             "; produce sends it verbatim (scenes-schema §clip prompt)");
         return;
       }
       if (eng === "seedance" && TIME_RE.test(p))
@@ -4662,8 +4675,6 @@ window.STORYBOARD_READY = (async function () {
     if (cover.statLabel && dispLen(cover.statLabel) > labCap)
       flag("warn", T.where.cover, "statLabel displays " + dispLen(cover.statLabel) + " chars — cap " + labCap + (cover.stat ? "" : " (subtext)"));
   }
-  if (DOC.transitions && DOC.transitions.length && DOC.transitions.length !== SCENES.length)
-    flag("warn", T.where.transition, "SB_DOC.transitions: " + DOC.transitions.length + " — the shot count is " + SCENES.length);
 
   // Stops an unfilled template placeholder from reaching the approval gate
   var blanks = (JSON.stringify(DOC).match(/\{\{/g) || []).length;
@@ -4692,8 +4703,11 @@ window.STORYBOARD_READY = (async function () {
   var COST = DOC.cost || null;
   var PCOST = COST && COST.productionCost;
   if (window.PRODUCTION) {
+    // A standing videoAuthorization is the spending boundary video_plan reads (video-routing.ts);
+    // the six-mode quote is then information, not the approval it binds to.
     if (!PCOST || !window.PRODUCTION_MODE || PCOST.planSignature !== window.PRODUCTION_MODE.signature(window))
-      flag("bad", T.where.productionCost, "Missing or stale mode comparison; refresh cost-preview.js --sbdoc before approval");
+      flag(window.PRODUCTION.videoAuthorization ? "warn" : "bad", T.where.productionCost, "Missing or stale mode comparison; refresh cost-preview.js --sbdoc" +
+        (window.PRODUCTION.videoAuthorization ? " to show the six-mode quote" : " before approval"));
     else {
       h += '<section class="cost" id="production-cost"><div class="cost-head">' + esc(T.prodHead) + '</div>';
       h += '<table><thead><tr><th>' + esc(T.prodMode) + '</th><th>' + esc(T.prodClips) + '</th><th>' + esc(T.prodFirst) +
@@ -4811,11 +4825,7 @@ window.STORYBOARD_READY = (async function () {
        (styleOf() ? "<small>" + esc(T.styleHead) + " · " + esc(T.styleName[styleOf().preset] || styleOf().preset) + "</small>" : "") +
        "</span></summary>" +
        '<div class="view-setup-body"><div class="view-setup-grid">' + styleBlock() +
-       '<div class="view-setup-cell"><span class="view-setup-kt">' + esc(T.previewHead) + "</span>" +
-       '<div class="view-switches">' +
-       '<label class="switch"><input type="checkbox" role="switch" id="tg-safe"><span>' + esc(T.toggleSafe) + "</span></label>" +
-       '<label class="switch"><input type="checkbox" role="switch" id="tg-subs" checked><span>' + esc(T.toggleSubs) + "</span></label></div>" +
-       '<p class="view-setup-note">' + esc(T.previewNote) + "</p></div></div>" +
+       "</div>" +
        sizeKey() + "</div></details>";
 
   var shotGroups = [];
@@ -5066,15 +5076,6 @@ window.STORYBOARD_READY = (async function () {
     } else {
       var vis = s.visual || {};
       var states = revealsOf(s);
-      // Segment → cut assignment: sentence j attaches to the last real cut (carry cuts excluded)
-      // whose seg ≤ j. With more sentences than cuts, the last cut absorbs the rest (the screen
-      // holds still and only the subtitle changes).
-      var segRows = states.map(function () { return []; });
-      narr.forEach(function (n, j) {
-        var at = 0;
-        states.forEach(function (st, k) { if (!st.carry && st.seg >= 0 && st.seg <= j) at = k; });
-        segRows[at].push(j);
-      });
 
       h += shotBodyHtml(s, narr);
 
@@ -5105,14 +5106,15 @@ window.STORYBOARD_READY = (async function () {
   h += seqClose();
 
   /* ══ Cast ══ — the channel characters this episode uses, with the panels that will be
-     handed to the generation call. Absent SB_DOC.characters, nothing is drawn. */
+     handed to the generation call. Story tools sync SB_DOC.characters from storyboard/cast.json
+     (panels and identity); absent entries, nothing is drawn. */
   if (CAST.length) {
     h += '<h2 class="sec" id="cast">' + esc(T.castHead) +
          '<span class="aside">' + esc(T.castAside) + "</span></h2>";
     h += '<div class="cast">';
-    // face → body → back is the order the reference set goes into a generation call
-    // (video-model-selection §The character panels); front and real are the older per-channel names.
-    var PANEL_ORDER = ["face", "body", "back", "front", "real"];
+    // face → front → back, the sheet panels panels.json names and the order a generation call takes
+    // them (character-panels.js canonicalReferences); body is the older name of the headless front.
+    var PANEL_ORDER = ["face", "front", "back", "body", "real"];
     // A confirmed identity field (character-identity.js), else "" — pending fields stay on the shared sheet.
     var idField = function (c, group, key) {
       var f = c.character && c.character[group] && c.character[group][key];
@@ -5431,9 +5433,6 @@ window.STORYBOARD_READY = (async function () {
     location.href = u.toString();
   });
 
-  var safe = document.getElementById("tg-safe"), subs = document.getElementById("tg-subs");
-  if (safe) safe.addEventListener("change", function () { document.body.classList.toggle("safe", safe.checked); });
-  if (subs) subs.addEventListener("change", function () { document.body.classList.toggle("subs", subs.checked); });
 
   window.ReviewTypography.apply(DOC, SCENES);
   if (fontFailures.length) {

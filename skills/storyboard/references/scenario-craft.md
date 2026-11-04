@@ -134,7 +134,7 @@ recontextualize earlier scenes without contradicting them. Craft canon.
   `shot.space` — the viewer recognizes the object because they stand where they stood when
   it was planted, and no narration has to say "remember this". A payoff in a fresh frame has
   to explain itself, and the explaining is the tell (directing-grammar §6 rule 14). Write the
-  pair into `SB_DOC.craft.loops` as `{ open: n, pay: m, kind: "plant" }` (storyboard SKILL §6)
+  pair into `SB_DOC.craft.loops` as `{ open: n, pay: m, kind: "plant" }` (legacy-authoring §6)
   — storyboard.html compares the two frames and warns when the size, angle or layout differs.
 - **An odd angle on an object is the promise that it matters.** Looking up at the shovel from
   inside the drum says "this drum is not set dressing" before anything happens. Spend it on
@@ -344,7 +344,7 @@ loudness. Field practice (lecture reading) — and the same mechanism the rule o
   reviewer which of the two it's reading. A held face gets held time too — 3 s on a face doing
   nothing is the point, not a stretch to cut (the 2–4 s cadence still wants something on
   screen to change, so hold the face and move the caption). List the holds in
-  `SB_DOC.craft.holds` and the release in `craft.burst` (storyboard SKILL §6) — the document
+  `SB_DOC.craft.holds` and the release in `craft.burst` (legacy-authoring §6) — the document
   tags them and warns when two holds share a `feel` or the burst comes before the last hold.
 - **The burst is an action, not the emotion.** Write the release as something the character
   does — runs, throws, laughs at the wrong moment — and let `feel` name the emotion underneath.

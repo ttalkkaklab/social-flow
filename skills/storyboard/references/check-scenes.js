@@ -440,10 +440,16 @@ function motionKind(scene) {
 
 /** The planned route (scenes-schema §clip prompt) — `engine` overrides the default, seedance
     (Veo left on 2026-10-31: no voice reference). The same routing as the check strip's engineOf. */
-function engineOf(scene) {
+const ENGINES = ['seedance', 'host', 'astra', 'astra-genai'];
+function engineOf(scene, win, snapshotVideo) {
   const v = (scene && scene.visual) || {};
   const named = (v.video && v.video.engine) || (v.clip && v.clip.engine) || v.engine;
-  if (named === 'seedance' || named === 'host' || named === 'astra' || named === 'astra-genai') return named;   // host: the CLI's own video tool; astra: our LTX-2.5 box
+  if (ENGINES.includes(named)) return named;   // host: the CLI's own video tool; astra: our LTX-2.5 box
+  // A shot that names none takes the episode's saved video engine (storyboard.html engineOf does the same).
+  const P = (win && win.PRODUCTION) || {};
+  const saved = (snapshotVideo || P.modelSettings?.models?.video || {}).engine;
+  if (ENGINES.includes(saved)) return saved;
+  if (P.videoProvider === 'astra' || P.videoProvider === 'host') return P.videoProvider;
   return 'seedance';
 }
 
@@ -626,7 +632,7 @@ function check(win, fmt, opts) {
      board is not judged by whether it spelled the key snake_case or camelCase. */
   const channelPolicy = (opts && opts.policy) || normalizeMotionPolicy(win.MOTION_POLICY || null, formatVideoMax, 'window.MOTION_POLICY', pacing, isShort);
   const productionAdvice = [];
-  productionMode.check(win, { draft, generatedVideoMax: channelPolicy.generatedVideoMax, advice: productionAdvice })
+  productionMode.check(win, { draft, generatedVideoMax: channelPolicy.generatedVideoMax, advice: productionAdvice, snapshotVideo: opts && opts.snapshotVideo })
     .forEach(message => bad('production mode', message));
   productionAdvice.forEach(message => warn('production guidance', message));
   perShotLookFindings(win, { bad, machine, warn });
@@ -704,7 +710,12 @@ function check(win, fmt, opts) {
      and first-use term explanations beside the narration that ships. It is written in §4a,
      before any machine-layer work, so it is a hard authoring check in draft mode too. */
   const comp = win.COMPREHENSION;
-  if (!comp || typeof comp !== 'object' || Array.isArray(comp)) {
+  // Story-v1 guidance (scenes-schema §comprehension contract and §playback order): a story-v2
+  // board follows character-scenarios.md and carries neither the block nor the beat skeleton.
+  const storyV2 = win.STORY?.version === 'story-v2';
+  if (storyV2) {
+    /* nothing to check */
+  } else if (!comp || typeof comp !== 'object' || Array.isArray(comp)) {
     bad('episode', 'no window.COMPREHENSION — write the one question, answer, takeaway, branches, and term introductions before the scenes');
   } else {
     if (COMPREHENSION_MODES.indexOf(comp.mode) === -1)
@@ -815,7 +826,9 @@ function check(win, fmt, opts) {
     }
   }
 
-  if (isShort) {
+  if (storyV2) {
+    /* story-v2: the beat skeleton is a suggestion (scenes-schema §playback order) */
+  } else if (isShort) {
     const mainBeats = scenes.map((s, i) => ({ i: i + 1, beat: s.beat, type: s.type }))
       .filter((s) => s.type !== 'broll' && s.type !== 'outro')
       .map((s) => ({ ...s, beat: s.beat || (s.type === 'cover' ? 'hook' : '') }));
@@ -1335,8 +1348,9 @@ function check(win, fmt, opts) {
       productionMode.cameraWarnings(s).forEach((w) => warn(where, w));
       const prompt = v.prompt || (v.video && v.video.prompt) ||
                      (v.clip && typeof v.clip === 'object' && v.clip.prompt);
-      if (!prompt) machine(where, 'no stored clip prompt — produce sends this verbatim (scenes-schema §clip prompt)');
-      else seedancePromptFindings(prompt, engineOf(s), s.visual?.video?.model).forEach((f) => machine(where, f));
+      if (!prompt) machine(where, 'no stored clip prompt — ' + (win.STORY?.authoring === 'story-first' ? 'write it with shot_prompt; ' : '') +
+        'produce sends this verbatim (scenes-schema §clip prompt)');
+      else seedancePromptFindings(prompt, engineOf(s, win, opts && opts.snapshotVideo), s.visual?.video?.model).forEach((f) => machine(where, f));
       // A clip planned silent (generateAudio:false — every full-video cut) has nothing to describe.
       if (!v.audio && s.type !== 'quote' && !(v.video && v.video.generateAudio === false))
         warn(where, 'no visual.audio — the engine invents a soundtrack under the narration');
@@ -3130,7 +3144,10 @@ function main() {
   const scenePolicy = normalizeMotionPolicy(win.MOTION_POLICY || null, formatVideoMax, 'window.MOTION_POLICY', fmt.pacing, isShort);
   const effectivePolicy = profileHasPolicy ? profilePolicy
     : normalizeMotionPolicy(null, formatVideoMax, 'format default', fmt.pacing, isShort);
-  let findings = check(win, fmt, { draft, policy: effectivePolicy, requireRenderPlan: true,
+  // The episode's saved video selection (.work/model-settings.json beside storyboard/), as video_plan reads it.
+  let snapshotVideo;
+  try { snapshotVideo = JSON.parse(fs.readFileSync(path.join(path.dirname(scenesPath), '..', '.work', 'model-settings.json'), 'utf8')).config.models.video; } catch { /* none */ }
+  let findings = check(win, fmt, { draft, policy: effectivePolicy, requireRenderPlan: true, snapshotVideo,
                                      channelDir: profilePath ? path.dirname(profilePath) : null });
   require('./location-assets.js').check(win, path.dirname(scenesPath), {ready: !draft}).forEach(f => findings.push(f));
   require('../../channel/references/character-sheet.js').sourceErrors(win, path.dirname(scenesPath)).forEach(what =>

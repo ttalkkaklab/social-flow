@@ -491,19 +491,19 @@ hand over the two or three the shot actually needs:
 data/<channel>/assets/characters/<id>/
   identity.md   # the canonical description — look, marks, expression, voice
   face.png      # face close-up — neutral, minimal shoulders, plain background. The headshot the vendor asks for
-  body.png      # canonical front panel: headless mannequin, build, clothes and shoes
-  costume.png   # optional wardrobe variant; baseline body/back already omit the head
-  back.png      # matching headless rear mannequin — required for every new reference set
-  front.png     # legacy: full body with the head on. Fallback when the panels don't exist yet
+  body.png      # the headless front panel (panels.json slot "front"): build, clothes and shoes
+  costume.png   # optional wardrobe variant; baseline front/back already omit the head
+  back.png      # matching headless rear mannequin (slot "back") — required for every new reference set
+  panels.json   # registers the face, front and back slots and their files (character-panels.md)
   voice.wav     # the fixed voice sample — 5–10 s of speech in the character's register, no music or effects. Reference audio for cuts the model voices
 ```
 
-**Front-facing reference set: `[face.png, body.png]`, in that order.** That is the vendor's headshot +
-body-reference pairing, with our headless wardrobe panel and the face first. Add
-`back.png` for rear views. A rear shot still needs the head design from `face.png`
-(or a separate approved rear-head reference); do not send the headless back alone.
-A facial close-up uses face alone. State that body panels supply wardrobe/build,
-while the face supplies the complete head; the scene depicts a complete character.
+**Reference set: the registered face, front and back panels, in that order.** One character
+sends all three; two characters send each face, then each front (`character-panels.js`
+`canonicalReferences`, the same set on the image and video lanes). The face supplies the complete
+head; the headless front and back supply wardrobe and build, and the scene depicts a complete
+character. A missing panel is reported (`character_panel_missing`), never replaced by a body-only
+picture.
 Keep body, back and face reference images locally. All three must be stored before
 a new character reference set is complete; optional extra images serve specific poses/details. Never build a combined sheet out of the panels — the moment two
 angles share one image, this whole section's warning applies again.

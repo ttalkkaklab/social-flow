@@ -92784,8 +92784,9 @@ var require_production_mode = __commonJS({
         }
         return errors;
       }
-      function check2(win, { requireSelection = false, requireApproval = false, draft = false, generatedVideoMax, advice = [] } = {}) {
+      function check2(win, { requireSelection = false, requireApproval = false, draft = false, generatedVideoMax, advice = [], snapshotVideo } = {}) {
         const p = win.PRODUCTION, errors = Array.from(win.SCENES || []).flatMap((s2, i2) => reuseErrors(s2).map((e2) => `shot ${i2 + 1}: ${e2}`));
+        const snapshot = snapshotVideo || p?.modelSettings?.models?.video;
         advice.push(...cameraDirectionWarnings(win.SCENES));
         if (!p) return requireSelection || (win.SCENES || []).some(reused) ? errors.concat(["Choose a production mode with a six-option cost comparison before generation"]) : errors;
         if (!MODES[p.mode]) errors.push("PRODUCTION.mode must be one of " + CHOICES.join(", ") + " (hook_only, stills_only and hybrid are legacy)");
@@ -92793,11 +92794,18 @@ var require_production_mode = __commonJS({
         if (bandContract(p) && (win.SCENES || []).every((s2) => s2.shot?.render?.mode)) errors.push(...ratioErrors(win, { advice }));
         if (p.imageProvider !== void 0 && !["host", "api"].includes(p.imageProvider)) errors.push("PRODUCTION.imageProvider must be host or api");
         if (p.videoProvider !== void 0 && !["host", "api", "astra"].includes(p.videoProvider)) errors.push("PRODUCTION.videoProvider must be host, api or astra");
-        if (!Number.isFinite(p.videoBudgetUsd) || p.videoBudgetUsd < 0)
-          errors.push("PRODUCTION.videoBudgetUsd must be a finite nonnegative episode cap");
-        if (!Number.isInteger(p.maxAttempts) || p.maxAttempts < 1 || p.maxAttempts > 5)
-          errors.push("PRODUCTION.maxAttempts must be 1\u20135 total attempts per clip (including the first)");
-        if (requireApproval && !["stills_only", "no_video"].includes(p.mode) && (!p.approval || !["user", "standing"].includes(p.approval.kind) || !text4(p.approval.reference) || !Number.isFinite(Date.parse(p.approval.at)) || !text4(p.approval.quoteFingerprint)))
+        const auth = p.videoAuthorization;
+        const count = (v, max) => v === void 0 || Number.isInteger(v) && v >= 1 && v <= max;
+        if (auth !== void 0) {
+          if (!auth || typeof auth !== "object" || Array.isArray(auth) || !text4(auth.reference) || !Number.isFinite(auth.maxUsd) || auth.maxUsd < 0 || !count(auth.maxConcurrent, 64) || !count(auth.maxAttempts, 20) || auth.openingSpendUsd !== void 0 && (!Number.isFinite(auth.openingSpendUsd) || auth.openingSpendUsd < 0) || Object.keys(auth).some((k) => !["reference", "maxUsd", "maxConcurrent", "maxAttempts", "openingSpendUsd"].includes(k)))
+            errors.push("PRODUCTION.videoAuthorization needs reference and maxUsd \u2265 0, with maxConcurrent 1\u201364 and maxAttempts 1\u201320 when given");
+        } else {
+          if (!Number.isFinite(p.videoBudgetUsd) || p.videoBudgetUsd < 0)
+            errors.push("PRODUCTION.videoBudgetUsd must be a finite nonnegative episode cap");
+          if (!Number.isInteger(p.maxAttempts) || p.maxAttempts < 1 || p.maxAttempts > 5)
+            errors.push("PRODUCTION.maxAttempts must be 1\u20135 total attempts per clip (including the first)");
+        }
+        if (requireApproval && auth === void 0 && !["stills_only", "no_video"].includes(p.mode) && (!p.approval || !["user", "standing"].includes(p.approval.kind) || !text4(p.approval.reference) || !Number.isFinite(Date.parse(p.approval.at)) || !text4(p.approval.quoteFingerprint)))
           errors.push("PRODUCTION.approval needs kind, reference, at and the approved cost quoteFingerprint");
         const chosen = p.style?.preset;
         if (!chosen) advice.push("Choose an episode visual style (PRODUCTION.style.preset) before authoring; every production mode carries one");
@@ -92845,20 +92853,20 @@ var require_production_mode = __commonJS({
             if (vm2 && vm2.model !== "host") errors.push("PRODUCTION.videoModel.model must be host under videoProvider host");
           } else if (p.videoProvider === "astra") {
             if (vm2 && vm2.model !== "astra") errors.push("PRODUCTION.videoModel.model must be astra under videoProvider astra");
-          } else if (!vm2 || !text4(vm2.model)) errors.push("Copy the saved video selection into PRODUCTION.videoModel (model-settings.md); ask only when .social-flow/models.json has no video model");
+          } else if (!snapshot && (!vm2 || !text4(vm2.model))) errors.push("Copy the saved video selection into PRODUCTION.videoModel (model-settings.md); ask only when .social-flow/models.json has no video model");
           if (vm2 && !["host", "astra"].includes(vm2.model) && !selectionRecorded(vm2.selection)) advice.push("Record where the video model came from in PRODUCTION.videoModel.selection (standing from models.json, or the user's explicit choice)");
         }
         errors.push(...coverageErrors(win));
         if (!full(p)) {
-          const count = (win.SCENES || []).filter((s2) => eligible(s2) && (s2.visual?.video || s2.type === "broll" || s2.type === "quote" && typeof s2.visual?.clip === "object")).length;
-          if (p.mode === "hybrid" && (count < 1 && !(win.SCENES || []).some(reused) || count > 2)) errors.push("hybrid needs 1\u20132 generated clips or at least one reused clip with zero generation; revise conflicting channel constraints before production");
+          const count2 = (win.SCENES || []).filter((s2) => eligible(s2) && (s2.visual?.video || s2.type === "broll" || s2.type === "quote" && typeof s2.visual?.clip === "object")).length;
+          if (p.mode === "hybrid" && (count2 < 1 && !(win.SCENES || []).some(reused) || count2 > 2)) errors.push("hybrid needs 1\u20132 generated clips or at least one reused clip with zero generation; revise conflicting channel constraints before production");
           if (p.mode === "stills_only") {
             const cap = videoCap(win, generatedVideoMax);
             if (cap === null)
               errors.push("stills_only needs the channel cap on the board: copy the profile policy into window.MOTION_POLICY with generated_video_max 0 (generatedVideoMax is read too)");
             else if (cap !== 0)
               errors.push("stills_only is for a channel whose generated_video_max is 0; choose a cost mode from the six-option comparison instead");
-            if (count) errors.push("stills_only carries no generated clip; " + count + " shot(s) hold one \u2014 drop them or choose a cost mode");
+            if (count2) errors.push("stills_only carries no generated clip; " + count2 + " shot(s) hold one \u2014 drop them or choose a cost mode");
             const imported = (win.SCENES || []).filter(reused).length;
             if (imported) errors.push("stills_only plays no video at all; " + imported + " shot(s) import one (visual.reuse) \u2014 drop them or use the reuse shape");
           }
@@ -92874,20 +92882,24 @@ var require_production_mode = __commonJS({
           const v = s2.visual || {}, design = s2.shot?.videoDesign || {};
           const bad = (message) => errors.push("shot " + (i2 + 1) + ": " + message);
           const warn = (message) => advice.push("shot " + (i2 + 1) + ": " + message);
-          if (s2.shot?.render?.mode !== "generated_video" || !v.video || v.slide || v.source && v.source !== "stock" || v.clip)
+          if (s2.shot?.render?.mode !== "generated_video" || !v.video) {
+            warn("full_video aims at video here, but the shot is routed " + (s2.shot?.render?.mode || "nowhere yet") + " \u2014 reported, not padded");
+            return;
+          }
+          if (v.slide || v.source && v.source !== "stock" || v.clip)
             bad("full_video needs a narrated visual.video handoff; no slide/still substitution or b-roll splice");
           if (["broll", "quote"].includes(s2.type)) bad("full_video generated cuts use ordinary narrated cards");
           if (!text4(v.bg) || !text4(v.bgPrompt) && v.source !== "stock") bad("keep a source image path and its generation prompt");
-          if (!text4(v.video?.prompt)) bad("store the motion prompt before generation");
+          if (!text4(v.video?.prompt)) bad("store the motion prompt before generation" + (win.STORY?.authoring === "story-first" ? " (shot_prompt)" : ""));
           let selected;
           try {
-            selected = resolveVideoChoice(p, s2, p.modelSettings?.models?.video);
+            selected = resolveVideoChoice(p, s2, snapshot);
           } catch (error2) {
             bad(error2.message);
             return;
           }
           const selectedEngine = selected.selection.engine;
-          const managedChoice = Boolean(p.modelSettings?.models?.video) || selected.source.endsWith("_override");
+          const managedChoice = Boolean(snapshot) || selected.source.endsWith("_override");
           const hostVideo = selectedEngine === "host", astraVideo = selectedEngine === "astra";
           const astra = astraSize(win);
           const wantRes = hostVideo ? "720p" : astraVideo ? astra.source : v.video?.resolution || p.videoModel?.resolution || "1080p";
@@ -92909,7 +92921,7 @@ var require_production_mode = __commonJS({
           motionErrors(s2).forEach(warn);
           if (!Array.isArray(s2.narration) || !s2.narration.length) warn("a generated cut needs its approved narration");
           if (s2.title || s2.stat || (s2.bullets || []).length || s2.footnote || !["none", void 0].includes(v.overlay))
-            bad("nothing goes over full-video footage; clear title, bullets, footnote and overlays");
+            bad("nothing goes over full-video footage; clear title, bullets, footnote and overlays (storyboard_apply; titles go to platform metadata)");
         });
         const run = [];
         (win.SCENES || []).forEach((s2, i2) => {
@@ -115227,7 +115239,7 @@ var sceneSchema = external_exports.object({
   event: external_exports.string().optional().describe("The one thing that happens in this scene"),
   charge: external_exports.record(external_exports.unknown()).optional(),
   turn: external_exports.string().optional().describe("What flipped between the open and the close"),
-  summary: external_exports.string().optional().describe("The scene's story in one or two sentences; the storyboard scene header shows it"),
+  summary: external_exports.string().optional().describe("The scene's story in one sentence; the storyboard scene header shows it"),
   out: nonEmpty.optional().describe("The sentence the scene goes out on \u2014 the one that forces a \uADF8\uB7F0\uB370 or \uADF8\uB798\uC11C into the next scene")
 }).strict();
 var sequenceSchema = external_exports.object({
@@ -115660,9 +115672,9 @@ function applyPatch(win, patch, opts = {}) {
       shots: e2.shots
     }));
     const inserts = resolved.sort((a, b) => b.after - a.after);
-    for (const { after, shots: add } of inserts) {
-      if (after > shots.length) throw new Error(`insertShots: after ${after} is past the last shot (${shots.length})`);
-      shots.splice(after, 0, ...add);
+    for (const { after: after2, shots: add } of inserts) {
+      if (after2 > shots.length) throw new Error(`insertShots: after ${after2} is past the last shot (${shots.length})`);
+      shots.splice(after2, 0, ...add);
     }
   }
   const finalOrder = shots.slice();
@@ -115704,6 +115716,18 @@ function applyPatch(win, patch, opts = {}) {
     return { id, ...shot };
   });
   if (next.STRUCTURE) next.STRUCTURE = { ...next.STRUCTURE, nextShotId };
+  const joinNotes = [];
+  const previousOf = (list) => new Map(list.map((shot, i2) => [shot.id, i2 ? list[i2 - 1].id : void 0]));
+  const before = previousOf(originalShots), after = previousOf(shots);
+  const priorById = new Map(originalShots.map((shot) => [shot.id, shot]));
+  shots = shots.map((shot, i2) => {
+    const prior = priorById.get(shot.id);
+    if (!prior || !shot.transition || transitionTargets.has(i2 + 1) || shot.transition !== prior.transition || before.get(shot.id) === after.get(shot.id)) return shot;
+    const { transition, edit: oldEdit, ...rest } = shot;
+    const { reason: _reason, continuity: _continuity, transitionSeconds: _seconds, ...edit2 } = oldEdit ?? {};
+    joinNotes.push({ level: "warn", where: String(shot.id), what: `the shot before it changed, so its join (${transition}) was cleared \u2014 set it again with shot_icons next on the shot that now precedes it` });
+    return Object.keys(edit2).length ? { ...rest, edit: edit2 } : rest;
+  });
   next.SCENES = shots.map((shot) => shot.shot?.motionGraphic && (shot.shot.motionGraphic.style.theme || next.THEME?.motionGraphicTheme) ? motionThemeContract().applyTheme({ ...shot }, next.THEME?.motionGraphicTheme) : { ...shot });
   if (!opts.outline) {
     const earlier = new Map(originalShots.map((shot) => [shot.id, shot]));
@@ -115715,7 +115739,7 @@ function applyPatch(win, patch, opts = {}) {
       return { ...shot, visual: { ...shot.visual, video: rest } };
     });
   }
-  const findings = [];
+  const findings = [...joinNotes];
   if (!shots.length && !opts.outline) findings.push({ level: "bad", where: "board", what: "the board has no shots" });
   if (win.STORY?.authoring === "story-first" && next.STORY?.authoring !== "story-first")
     findings.push({ level: "bad", where: "STORY", what: 'story_order: STORY.authoring "story-first" stays on a board started with story_sequence' });
@@ -115757,9 +115781,28 @@ function applyStoryboard(args, opts = {}) {
     }
     const doc = next.SB_DOC ?? {};
     const entries = Array.isArray(doc.characters) ? doc.characters : Object.entries(doc.characters ?? {}).map(([id, value]) => ({ ...value, id }));
+    const identities = /* @__PURE__ */ new Map();
+    let cast = [];
+    try {
+      cast = readCast(dirname5(file));
+    } catch {
+    }
+    for (const { id, source } of cast) {
+      if (!panelIds.includes(id) || typeof source !== "string") continue;
+      try {
+        const text4 = readFileSync20(resolve5(dirname5(file), source), "utf8");
+        const heading = /^#\s+(.+?)\s*$/m.exec(text4)?.[1];
+        identities.set(id, { ...heading ? { name: heading } : {}, character: identityCatalog().identityCharacter(text4, { ready: false }) });
+      } catch {
+      }
+    }
+    const withIdentity = (entry2) => {
+      const found = identities.get(String(entry2.id));
+      return found ? { ...entry2, ...entry2.name ? {} : { name: found.name }, character: found.character } : entry2;
+    };
     next.SB_DOC = { ...doc, characters: [
-      ...entries.map((entry2) => sheets.has(String(entry2.id)) ? { ...entry2, panels: { ...entry2.panels ?? {}, ...sheets.get(String(entry2.id)) } } : entry2),
-      ...panelIds.filter((id) => sheets.has(id) && !entries.some((entry2) => entry2.id === id)).map((id) => ({ id, panels: sheets.get(id) }))
+      ...entries.map((entry2) => withIdentity(sheets.has(String(entry2.id)) ? { ...entry2, panels: { ...entry2.panels ?? {}, ...sheets.get(String(entry2.id)) } } : entry2)),
+      ...panelIds.filter((id) => sheets.has(id) && !entries.some((entry2) => entry2.id === id)).map((id) => withIdentity({ id, panels: sheets.get(id) }))
     ] };
     for (const shot of next.SCENES ?? []) {
       const visual = shot.visual;
@@ -115824,7 +115867,7 @@ var storySceneSchema = external_exports.object({
     place: nonEmpty,
     time: nonEmpty,
     event: nonEmpty.describe("The one thing that happens in this scene"),
-    summary: nonEmpty.describe("The scene's story in one or two sentences"),
+    summary: nonEmpty.describe("The scene's story in one sentence"),
     turn: nonEmpty.optional(),
     out: nonEmpty.optional()
   }).strict()).min(1)
@@ -115834,8 +115877,7 @@ var storyShotSchema = external_exports.object({
   shots: external_exports.array(external_exports.object({
     id: shotIdSchema.optional().describe("Revise this shot; without it a new shot is added at the end of its scene"),
     scene: external_exports.number().int().positive().describe("The scene number \u2014 written first with story_scene"),
-    summary: nonEmpty.describe("The story this shot tells, in one sentence"),
-    title: nonEmpty.optional()
+    summary: nonEmpty.describe("The story this shot tells, in one sentence")
   }).strict()).min(1)
 }).strict();
 var emptyStructure = () => ({ version: STRUCTURE_VERSION, sequences: [], scenes: [] });
@@ -116078,7 +116120,7 @@ var shotIconsSchema = external_exports.object({
   path: outlinePath,
   shots: external_exports.array(external_exports.object({
     id: shotIdSchema,
-    render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: nonEmpty.optional(), reason: nonEmpty }).strict().optional().describe("Render route: shot.render"),
+    render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: nonEmpty.refine((v) => renderPurposes().includes(v), (v) => ({ message: `${v} is not a render purpose (render-routing.js PURPOSES)` })).optional(), reason: nonEmpty }).strict().optional().describe("Render route: shot.render"),
     size: tuple(V.SIZES).optional(),
     why: nonEmpty.optional().describe("Why this size"),
     angle: tuple(V.ANGLES).optional(),
@@ -121363,7 +121405,7 @@ Do NOT use for voices, images or episode cast handoffs (character-sheet.js compi
 
 Use for a new character's panels, or a requested redo after its identity changed. The prompt is built from the sheet: the face takes physical.appearance; the front and back take height, weight, build, proportions and outfit with every clause naming the head left out, so every channel and storyboard draws the same body. The project style preset and the character-panels framing (1:1 face; 2:3 body at 85 % height, neutral grey, even light) are added. By default the face is drawn from text, the front is edited from the face panel and the back from the front panel alone, turned 180 degrees with front-only details ruled out; pass references to edit from other pictures (e.g. an approved full-body design). Runs image_plan \u2192 image_execute with the saved image model and the existing spending authorization, saves <id>-<view>-vN.png next to identity.md, records the slot in panels.json (framing not_reviewed) and refreshes the sheets. On the GenAI gateway's 800-character cap it drops the style sentence.
 Returns the file, the inputs in order, the prompt and warnings (a non-English physical field is left out and named); a host selection returns the handoff instead of generating.
-Do NOT use it for scene images (shot_image) or text-bearing art. Refused (character_panel_missing) when a default reference panel does not exist yet, and (image_references_unsupported) when the saved model cannot take that many pictures \u2014 ask the user before changing models. Update the episode's SB_DOC.characters panels separately when a board should use the new files.`,
+Do NOT use it for scene images (shot_image) or text-bearing art. Refused (character_panel_missing) when a default reference panel does not exist yet, and (image_references_unsupported) when the saved model cannot take that many pictures \u2014 ask the user before changing models. A story-first board picks the new files up on its next story or shot write, which syncs SB_DOC.characters panels from the character's panels.json; an older board updates its SB_DOC.characters panels by hand.`,
     inputSchema: { type: "object", additionalProperties: false, required: ["identityPath", "view"], properties: {
       identityPath: { type: "string", description: "Absolute <channel>/assets/characters/<id>/identity.md" },
       view: { type: "string", enum: ["face", "front", "back"], description: "face: 1:1 head close-up \xB7 front / back: 2:3 headless body" },
@@ -124914,7 +124956,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
           place: { type: "string", description: "One place \u2014 the slugline location" },
           time: { type: "string", description: "One continuous stretch of time \u2014 \uB0AE \xB7 \uBC24 \xB7 \uC0C8\uBCBD" },
           event: { type: "string", description: "The one thing that happens in this scene" },
-          summary: { type: "string", description: "The scene's story in one or two sentences" },
+          summary: { type: "string", description: "The scene's story in one sentence" },
           turn: { type: "string", description: "What flipped between the open and the close" },
           out: { type: "string", description: "The sentence the scene goes out on" }
         } } }
@@ -124926,9 +124968,9 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     name: "story_shot",
     title: "Write shot stories (story step 3 of 3)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    description: `Use it after story_scene to write each shot as one sentence of story in its scene. Without an id the shot is added at the end of its scene and gets a stable id (s0001\u2026); with an id that shot's scene, summary and title are revised and everything else on it is kept; a new scene moves it to the end of that scene. Refused (story_order) before any scene exists or for a scene outside a sequence. A story-first episode board also repeats story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
+    description: `Use it after story_scene to write each shot as one sentence of story in its scene. Without an id the shot is added at the end of its scene and gets a stable id (s0001\u2026); with an id that shot's scene and summary are revised and everything else on it is kept; a new scene moves it to the end of that scene. Refused (story_order) before any scene exists or for a scene outside a sequence. A story-first episode board also repeats story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
 
-Do NOT pass characters, dialogue, narration, camera or visual fields \u2014 the input refuses them. Once every shot has its story, shot_characters and shot_dialogue come next, then shot_icons; on a board these tools started (STORY.authoring "story-first") storyboard_apply refuses a shot without scene and summary.
+Do NOT pass characters, dialogue, narration, camera, visual fields or a title \u2014 the input refuses them; a shot's title is on-screen text, which a full_video cut never carries. Once every shot has its story, shot_characters and shot_dialogue come next, then shot_icons; on a board these tools started (STORY.authoring "story-first") storyboard_apply refuses a shot without scene and summary.
 
 Returns: the file written or not, counts, and findings (! violation \xB7 warning).`,
     inputSchema: {
@@ -124939,8 +124981,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
         shots: { type: "array", minItems: 1, description: "Shot stories in playback order", items: { type: "object", additionalProperties: false, required: ["scene", "summary"], properties: {
           id: { type: "string", pattern: "^s\\d{4,}$", description: "Stable shot id to revise; omit to add a shot" },
           scene: { type: "integer", minimum: 1, description: "The scene number" },
-          summary: { type: "string", description: "The story this shot tells, in one sentence" },
-          title: { type: "string", description: "Short shot heading" }
+          summary: { type: "string", description: "The story this shot tells, in one sentence" }
         } } }
       },
       required: ["path", "shots"]
@@ -125000,7 +125041,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     name: "shot_icons",
     title: "Set each shot's icon attributes (step 3)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    description: `Use it after every shot has its story and characters (story_shot \u2192 shot_characters), and normally after its lines (shot_dialogue): set the attributes the review's icon row shows, per shot \u2014 render route (shot.render), size and why, angle, camera move, focus, depth, the frame plan, where reference means MSR, and next, the transition into the following shot (stored as that shot's transition and edit.reason, which assembly draws; the same checks as storyboard_apply transitions). A move on a still_camera cut is the still effect (shot.render.camera.effect); on any other route it is a camera technique, written to shot.techniques with visual.camera.movement kept consistent. Switching to still_camera drops the camera technique and visual.camera move; switching from it drops the still effect. A different move replaces the old one's speed and target (the same move \u2014 its technique, or an authored visual.camera move before any technique \u2014 keeps them unless given), and a new size without its own why drops the old why. Changing size, angle, depth or focus after the start image exists warns to remake it with shot_image. A frame plan other than first_last takes the end image off (with a warning), and switching to or from reference re-marks the character panels for the video call. A change to what a written video prompt came from (cast, on-screen lines, frame plan, camera, focus, MSR framing) warns to rewrite it with shot_prompt; the review page marks it too. Only the attributes given change. Refused (story_order) while a sequence, scene or shot story or any shot's characters are missing. Local file only; no image, video, speech or prompt is generated.
+    description: `Use it after every shot has its story and characters (story_shot \u2192 shot_characters), and normally after its lines (shot_dialogue): set the attributes the review's icon row shows, per shot \u2014 render route (shot.render), size and why, angle, camera move, focus, depth, the frame plan, where reference means MSR, and next, the transition into the following shot (stored as that shot's transition and edit.reason, which assembly draws; the same checks as storyboard_apply transitions). A move on a still_camera cut is the still effect (shot.render.camera.effect); on any other route it is a camera technique, written to shot.techniques with visual.camera.movement kept consistent. Switching to still_camera drops the camera technique and visual.camera move; switching from it drops the still effect. A different move replaces the old one's speed and target (the same move \u2014 its technique, or an authored visual.camera move before any technique \u2014 keeps them unless given), and a new size without its own why drops the old why. Changing size, angle, depth or focus after the start image exists warns to remake it with shot_image. A frame plan other than first_last takes the end image off (with a warning), and switching to or from reference re-marks the character panels for the video call. A change to what a written video prompt came from (cast, on-screen lines, frame plan, camera, focus, MSR framing) warns to rewrite it with shot_prompt; the review page marks it too. Only the attributes given change. Refused (story_order) while a sequence, scene or shot story or any shot's characters are missing. Also refused: a move target or focus subject outside English (video_prompt_language); on a still_camera cut a move outside the still effects, a speed outside the still speeds, or a focus technique; elsewhere a move that is not a camera move, a speed outside the camera speeds, or a focus id that is not a focus technique; an invalid depth; next on the last shot, or a join the transition checks refuse. Local file only; no image, video, speech or prompt is generated.
 
 Choose each attribute from the beat it serves, never from a quota. A card's use is a practitioners' convention, not a measured effect \u2014 no experiment shows a camera move's emotional effect, and the angle effects (low strong, high weak) appeared only when pictures ran as a story \u2014 so the neighbouring shots carry the meaning. storyboard_read's techniqueCatalog carries a card per choice \u2014 entries for sizes, moves, angles, focus and timing, and guides for the values without an entry (composition sizes, ground and over, depth, still effects). Every card gives use, avoid and specify (what the start image and video prompt must name \u2014 crop line, endpoints, focus target); where one applies it also gives pair (what the neighbouring shots should be: establish \u2192 cut in \u2192 reestablish; look \u2192 POV \u2192 reaction; matched sizes in shot/reverse shot) and vertical (how a 9:16 frame changes it). Size is the distance: els \u2026 ecu, or insert for one object. two, three, ots, pov, back, cutaway and reaction name a composition with no crop of its own; on a new board pick the distance and carry the composition in the cast, camera.pov, camera.rear or the camera framing. Write why, move.reason and focus.reason as the beat the choice serves. Give a video move its speed and target, and a rack focus its from and to subjects: shot_image stages them and shot_prompt writes them. A still effect hold keeps the frame put as a deliberate beat. On a 9:16 board the result lists the vertical note of every chosen value \u2014 advice, never a refusal.
 
@@ -125121,7 +125162,7 @@ storyboard_apply assigns stable shot ids (s0001\u2026) and advances STRUCTURE.ne
 Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign, visual.camera and the three plan records shot.eyeline \xB7 shot.composition \xB7 shot.depth in the input schema. shot.depth (L11): count what the viewer must read in the frame at once \u2014 one thing \u2192 shallow with focus (a person's eyes), two or more \u2192 deep with the planes listed front to back; a departure needs a reason, and a still_camera focus-in/rack-focus cut cannot be deep. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
 Do NOT pass a shot's visual plan through a summary \u2014 pass the object scenes-schema.md defines (visual \xB7 shot.space \xB7 visual.camera \xB7 visual.video \u2026); unknown keys on a shot pass through untouched. Editing a board drops its stale \`// approved:\` line; existing task authorization is unchanged.
 
-Scene: { no, place, time, event, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? }. Sequence: { id, title, purpose, question?, payoff?, scenes: [no\u2026] }. The reasons for each field are in scenes-schema.md \xA7structure.
+Scene: { no, place, time, event, summary, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? } \u2014 on a story-first board a scene without its one-sentence summary is refused (story_order). The cast membership, voiceOnly and two-character checks run in shot_characters and storyboard_check, not here. Sequence: { id, title, purpose, question?, payoff?, scenes: [no\u2026] }. The reasons for each field are in scenes-schema.md \xA7structure.
 
 Returns: the file written or not, counts, and findings (! violation \xB7 warning).`,
     inputSchema: {
@@ -125139,7 +125180,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
         },
         structure: { type: "object", description: "Replace window.STRUCTURE only" },
         sequences: { type: "array", items: { type: "object", description: "{ id, title, purpose, question?, payoff?, scenes }" }, description: "Upsert sequences by id" },
-        scenes: { type: "array", items: { type: "object", description: "{ no, place, time, event, charge, turn, out? }" }, description: "Upsert scenes by no" },
+        scenes: { type: "array", items: { type: "object", description: "{ no, place, time, event, summary, charge, turn, out? }" }, description: "Upsert scenes by no" },
         shots: { type: "array", items: { type: "object", description: "One positional upsert", properties: { no: { type: "number", description: "1-based position" }, shot: storyboardShotInput }, required: ["no", "shot"] }, description: "Upsert shots by 1-based position; no = length + 1 appends. Not with the id fields in the same patch" },
         shotsById: { type: "array", items: { type: "object", description: "One upsert by id", properties: { id: { type: "string", pattern: "^s\\d{4,}$", description: "The stable shot id (s0007) to replace" }, shot: storyboardShotInput }, required: ["id", "shot"] }, description: "Replace shots by their stable id \u2014 the shot keeps that id, an unknown id writes nothing. Preferred over shots once the board has ids: positions shift with every insert, ids do not" },
         insertShots: { type: "array", items: { type: "object", description: "One insert", properties: { after: { type: "number", description: "1-based position to insert after; 0 = at the start" }, afterId: { type: "string", pattern: "^s\\d{4,}$", description: "The shot id to insert after \u2014 instead of after" }, shots: { type: "array", items: storyboardShotInput, description: "Shots to insert, in order" } }, required: ["shots"] }, description: "Insert shots after a 1-based position (0 = at the start) or after the shot with afterId \u2014 exactly one of the two per entry" },
@@ -125189,7 +125230,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     annotations: HINT.local,
     description: `Run the sequence \u2192 scene \u2192 shot rules and the full scenes.js contract (check-scenes.js: vocabularies, beat order, camera slots, motion policy, production mode) on a board and return every finding. Reads the file and runs a local script; no API call.
 
-Use it after storyboard_apply and before delegating a reviewer or generating anything \u2014 the same command the storyboard skill runs by hand (\`node check-scenes.js storyboard/\`). draft:true is the story pass (\xA74a): machine-layer absences are deferred and counted; structure/address errors fail, creative findings are warnings.
+Use it when the user asks for a check or a concrete doubt needs one \u2014 no write or generation waits for it (only the story order and the episode cast refuse a write) \u2014 the same command the storyboard skill runs by hand (\`node check-scenes.js storyboard/\`). draft:true is the story pass (\xA74a): machine-layer absences are deferred and counted; structure/address errors fail, creative findings are warnings.
 Do NOT treat a pass as visual quality \u2014 frame overflow, hero-stat width and speech rate are measured on the rendered canvas in storyboard.html's check strip.
 
 Returns: counts (violations \xB7 warnings \xB7 deferred) and two lists \u2014 structure findings, then shot-contract findings \u2014 each line "! where what" (violation) or "\xB7 where what" (warning).`,

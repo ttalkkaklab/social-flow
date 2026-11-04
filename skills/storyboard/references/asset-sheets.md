@@ -3,8 +3,8 @@
 Follow [production order](../../_shared/production-workflow.md). Complete project setup,
 then character text/images before text storyboard authoring. Derive props from that text
 and complete their text/images, then backgrounds, before composing the image storyboard.
-Inspect and reuse existing sheets. Pending media cannot complete a visual stage; missing
-spending authorization blocks new media rather than silently bypassing the stage.
+Inspect and reuse existing sheets. Missing media or spending authorization is reported, never
+silently bypassed; it stops no other step except the episode cast's own panels (production-workflow.md).
 
 - **Characters:** follow [character identity](../../channel/references/character-identity.md).
   Read/create `assets/characters/<id>/identity.md`, export the shared character sheet, and
@@ -21,7 +21,7 @@ spending authorization blocks new media rather than silently bypassing the stage
   one-off backgrounds and abstract stages. Each entry has `id`, `name`, `description`,
   `layout` (entrances, landmarks, actor/object positions and movement space), `lighting`
   (time/weather/light), `invariants` (what stays consistent), and optional `imageUrl`,
-  `sheetPath`, `manifest`. Missing media blocks completion of the background stage. Use `visual.locationId` to reference
+  `sheetPath`, `manifest`. Missing media is reported with the background sheet. Use `visual.locationId` to reference
   this planning sheet. It does not replace the production `visual.location` binding.
   For built sets, also follow [location assets](location-assets.md); link the real manifest
   and its shared views. A written location sheet does not require Blender or a 3D render.

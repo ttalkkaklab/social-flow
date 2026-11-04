@@ -112,8 +112,8 @@ select a narrator only when the expression needs one. Do not invent existing IDs
 Before shot design, complete the three sheet categories using
 [asset sheet preparation](references/asset-sheets.md). This includes one-off characters,
 story-relevant props and every background/location, not only recurring assets. Reuse actual
-existing sheets; finish props and backgrounds after the text storyboard. Missing images
-block completion of their visual stage and do not authorize paid generation. Do not proceed with an applicable sheet category silently omitted.
+existing sheets; finish props and backgrounds after the text storyboard. Missing images are
+reported and do not authorize paid generation; apart from the cast's own panels they stop no step. Do not proceed with an applicable sheet category silently omitted.
 
 Store local plans under `data/<channel>/episodes/<topic>/storyboard/` following
 [the destination contract](references/storyboard-target.md). No planning artifacts under

@@ -32796,6 +32796,10 @@ function motionGraphicTypes() {
   const registry = loadFromHere2(join4(REFERENCES_DIR, "motion-graphics.js"));
   return Object.keys(registry.TYPES);
 }
+function renderPurposes() {
+  const routing = loadFromHere2(join4(REFERENCES_DIR, "render-routing.js"));
+  return Object.keys(routing.PURPOSES);
+}
 var tuple = (list) => external_exports.enum(list);
 var MISSING = ["__contract-missing__"];
 function vocabAtLoad() {
@@ -32836,7 +32840,7 @@ var sceneSchema = external_exports.object({
   event: external_exports.string().optional().describe("The one thing that happens in this scene"),
   charge: external_exports.record(external_exports.unknown()).optional(),
   turn: external_exports.string().optional().describe("What flipped between the open and the close"),
-  summary: external_exports.string().optional().describe("The scene's story in one or two sentences; the storyboard scene header shows it"),
+  summary: external_exports.string().optional().describe("The scene's story in one sentence; the storyboard scene header shows it"),
   out: nonEmpty.optional().describe("The sentence the scene goes out on \u2014 the one that forces a \uADF8\uB7F0\uB370 or \uADF8\uB798\uC11C into the next scene")
 }).strict();
 var sequenceSchema = external_exports.object({
@@ -33069,7 +33073,7 @@ var storySceneSchema = external_exports.object({
     place: nonEmpty,
     time: nonEmpty,
     event: nonEmpty.describe("The one thing that happens in this scene"),
-    summary: nonEmpty.describe("The scene's story in one or two sentences"),
+    summary: nonEmpty.describe("The scene's story in one sentence"),
     turn: nonEmpty.optional(),
     out: nonEmpty.optional()
   }).strict()).min(1)
@@ -33079,8 +33083,7 @@ var storyShotSchema = external_exports.object({
   shots: external_exports.array(external_exports.object({
     id: shotIdSchema.optional().describe("Revise this shot; without it a new shot is added at the end of its scene"),
     scene: external_exports.number().int().positive().describe("The scene number \u2014 written first with story_scene"),
-    summary: nonEmpty.describe("The story this shot tells, in one sentence"),
-    title: nonEmpty.optional()
+    summary: nonEmpty.describe("The story this shot tells, in one sentence")
   }).strict()).min(1)
 }).strict();
 var shotCharactersSchema = external_exports.object({
@@ -33108,7 +33111,7 @@ var shotIconsSchema = external_exports.object({
   path: outlinePath,
   shots: external_exports.array(external_exports.object({
     id: shotIdSchema,
-    render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: nonEmpty.optional(), reason: nonEmpty }).strict().optional().describe("Render route: shot.render"),
+    render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: nonEmpty.refine((v) => renderPurposes().includes(v), (v) => ({ message: `${v} is not a render purpose (render-routing.js PURPOSES)` })).optional(), reason: nonEmpty }).strict().optional().describe("Render route: shot.render"),
     size: tuple(V.SIZES).optional(),
     why: nonEmpty.optional().describe("Why this size"),
     angle: tuple(V.ANGLES).optional(),

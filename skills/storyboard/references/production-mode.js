@@ -567,8 +567,10 @@
     }
     return errors;
   }
-  function check(win, { requireSelection = false, requireApproval = false, draft = false, generatedVideoMax, advice = [] } = {}) {
+  function check(win, { requireSelection = false, requireApproval = false, draft = false, generatedVideoMax, advice = [], snapshotVideo } = {}) {
     const p = win.PRODUCTION, errors = Array.from(win.SCENES || []).flatMap((s, i) => reuseErrors(s).map(e => `shot ${i + 1}: ${e}`));
+    // The episode's saved video selection: .work/model-settings.json (video_plan reads it), else the handoff copy.
+    const snapshot = snapshotVideo || p?.modelSettings?.models?.video;
     advice.push(...cameraDirectionWarnings(win.SCENES));
     if (!p) return requireSelection || (win.SCENES || []).some(reused)
       ? errors.concat(['Choose a production mode with a six-option cost comparison before generation']) : errors;
@@ -577,16 +579,29 @@
     if (bandContract(p) && (win.SCENES || []).every(s => s.shot?.render?.mode)) errors.push(...ratioErrors(win, { advice }));
     // host = the CLI's own media tool (image_gen on Codex and Grok, image_to_video on Grok); absent reads as api.
     if (p.imageProvider !== undefined && !['host', 'api'].includes(p.imageProvider)) errors.push('PRODUCTION.imageProvider must be host or api');
-    // astra = our own LTX-2.5 box (video-model-selection §ASTRA). Video only: there is no image lane on it,
-    // and unlike the two API vendors a call spends wall clock instead of money, so it carries no price record.
+    // astra = our own LTX-2.5 box (video-model-selection §ASTRA), a video provider label only: ASTRA GenAI
+    // images (z-image-turbo) record imageProvider "api" like every other image engine (production-mode.md).
+    // Unlike the two API vendors a video call spends wall clock instead of money, so it carries no price record.
     if (p.videoProvider !== undefined && !['host', 'api', 'astra'].includes(p.videoProvider)) errors.push('PRODUCTION.videoProvider must be host, api or astra');
-    if (!Number.isFinite(p.videoBudgetUsd) || p.videoBudgetUsd < 0)
-      errors.push('PRODUCTION.videoBudgetUsd must be a finite nonnegative episode cap');
-    if (!Number.isInteger(p.maxAttempts) || p.maxAttempts < 1 || p.maxAttempts > 5)
-      errors.push('PRODUCTION.maxAttempts must be 1–5 total attempts per clip (including the first)');
+    // A standing videoAuthorization (video_plan reads it first, video-routing.ts) replaces the
+    // per-episode budget and attempt fields; the same bounds as the server.
+    const auth = p.videoAuthorization;
+    const count = (v, max) => v === undefined || (Number.isInteger(v) && v >= 1 && v <= max);
+    if (auth !== undefined) {
+      if (!auth || typeof auth !== 'object' || Array.isArray(auth) || !text(auth.reference) || !Number.isFinite(auth.maxUsd) || auth.maxUsd < 0
+          || !count(auth.maxConcurrent, 64) || !count(auth.maxAttempts, 20)
+          || (auth.openingSpendUsd !== undefined && (!Number.isFinite(auth.openingSpendUsd) || auth.openingSpendUsd < 0))
+          || Object.keys(auth).some(k => !['reference', 'maxUsd', 'maxConcurrent', 'maxAttempts', 'openingSpendUsd'].includes(k)))
+        errors.push('PRODUCTION.videoAuthorization needs reference and maxUsd ≥ 0, with maxConcurrent 1–64 and maxAttempts 1–20 when given');
+    } else {
+      if (!Number.isFinite(p.videoBudgetUsd) || p.videoBudgetUsd < 0)
+        errors.push('PRODUCTION.videoBudgetUsd must be a finite nonnegative episode cap');
+      if (!Number.isInteger(p.maxAttempts) || p.maxAttempts < 1 || p.maxAttempts > 5)
+        errors.push('PRODUCTION.maxAttempts must be 1–5 total attempts per clip (including the first)');
+    }
     // no_video (and legacy stills_only) buys no generated video, so there is no cost quote to
     // fingerprint and nothing for the user to approve. Every other mode carries one.
-    if (requireApproval && !['stills_only', 'no_video'].includes(p.mode) && (!p.approval || !['user', 'standing'].includes(p.approval.kind) ||
+    if (requireApproval && auth === undefined && !['stills_only', 'no_video'].includes(p.mode) && (!p.approval || !['user', 'standing'].includes(p.approval.kind) ||
         !text(p.approval.reference) || !Number.isFinite(Date.parse(p.approval.at)) || !text(p.approval.quoteFingerprint)))
       errors.push('PRODUCTION.approval needs kind, reference, at and the approved cost quoteFingerprint');
     // The visual style is asked before authoring in every production mode (visual-style.md,
@@ -641,7 +656,7 @@
         if (vm && vm.model !== 'host') errors.push('PRODUCTION.videoModel.model must be host under videoProvider host');
       } else if (p.videoProvider === 'astra') {
         if (vm && vm.model !== 'astra') errors.push('PRODUCTION.videoModel.model must be astra under videoProvider astra');
-      } else if (!vm || !text(vm.model)) errors.push('Copy the saved video selection into PRODUCTION.videoModel (model-settings.md); ask only when .social-flow/models.json has no video model');
+      } else if (!snapshot && (!vm || !text(vm.model))) errors.push('Copy the saved video selection into PRODUCTION.videoModel (model-settings.md); ask only when .social-flow/models.json has no video model');
       // The selection record names where the model came from. Our own boxes have no tiers to price,
       // so host and astra record no selection; every other value still names its source.
       if (vm && !['host', 'astra'].includes(vm.model) && !selectionRecorded(vm.selection)) advice.push('Record where the video model came from in PRODUCTION.videoModel.selection (standing from models.json, or the user\'s explicit choice)');
@@ -676,18 +691,24 @@
       const v = s.visual || {}, design = s.shot?.videoDesign || {};
       const bad = message => errors.push('shot ' + (i + 1) + ': ' + message);
       const warn = message => advice.push('shot ' + (i + 1) + ': ' + message);
-      if (s.shot?.render?.mode !== 'generated_video' || !v.video || v.slide || (v.source && v.source !== 'stock') || v.clip)
+      // full_video aims every shot at video, but fewer video shots than the target is advice, never an
+      // error (production-mode.md, owner decision 2026-10-18): a shot routed elsewhere is reported and skipped.
+      if (s.shot?.render?.mode !== 'generated_video' || !v.video) {
+        warn('full_video aims at video here, but the shot is routed ' + (s.shot?.render?.mode || 'nowhere yet') + ' — reported, not padded');
+        return;
+      }
+      if (v.slide || (v.source && v.source !== 'stock') || v.clip)
         bad('full_video needs a narrated visual.video handoff; no slide/still substitution or b-roll splice');
       if (['broll', 'quote'].includes(s.type)) bad('full_video generated cuts use ordinary narrated cards');
       // A stock photograph (visual.source "stock") is a supplied source image: a license record, no prompt.
       if (!text(v.bg) || (!text(v.bgPrompt) && v.source !== 'stock')) bad('keep a source image path and its generation prompt');
-      if (!text(v.video?.prompt)) bad('store the motion prompt before generation');
+      if (!text(v.video?.prompt)) bad('store the motion prompt before generation' + (win.STORY?.authoring === 'story-first' ? ' (shot_prompt)' : ''));
       // The host video tool (owner directive 2026-09-07) tops out at 720p and takes every full_video cut.
       let selected;
-      try { selected = resolveVideoChoice(p, s, p.modelSettings?.models?.video); }
+      try { selected = resolveVideoChoice(p, s, snapshot); }
       catch (error) { bad(error.message); return; }
       const selectedEngine = selected.selection.engine;
-      const managedChoice = Boolean(p.modelSettings?.models?.video) || selected.source.endsWith('_override');
+      const managedChoice = Boolean(snapshot) || selected.source.endsWith('_override');
       const hostVideo = selectedEngine === 'host', astraVideo = selectedEngine === 'astra';
       // ASTRA sizes sit on a 64-pixel grid under a 2,064,384-pixel area ceiling. Read the board's
       // existing FORMAT: portrait renders 1024x1920 and landscape renders 1920x1024, then the edit
@@ -718,7 +739,7 @@
       motionErrors(s).forEach(warn);
       if (!Array.isArray(s.narration) || !s.narration.length) warn('a generated cut needs its approved narration');
       if (s.title || s.stat || (s.bullets || []).length || s.footnote || !['none', undefined].includes(v.overlay))
-        bad('nothing goes over full-video footage; clear title, bullets, footnote and overlays');
+        bad('nothing goes over full-video footage; clear title, bullets, footnote and overlays (storyboard_apply; titles go to platform metadata)');
     });
     // Three identical set-ups in a row read as one long take that keeps restarting. A change of
     // size, angle or move needs a reason, and the reason is the next sentence (full-video.md §Shot plan).

@@ -119,7 +119,7 @@ export const sceneSchema = z
     event: z.string().optional().describe('The one thing that happens in this scene'),
     charge: z.record(z.unknown()).optional(),
     turn: z.string().optional().describe('What flipped between the open and the close'),
-    summary: z.string().optional().describe("The scene's story in one or two sentences; the storyboard scene header shows it"),
+    summary: z.string().optional().describe("The scene's story in one sentence; the storyboard scene header shows it"),
     out: nonEmpty.optional().describe('The sentence the scene goes out on — the one that forces a 그런데 or 그래서 into the next scene'),
 })
     .strict();
@@ -641,6 +641,22 @@ export function applyPatch(win, patch, opts = {}) {
     });
     if (next.STRUCTURE)
         next.STRUCTURE = { ...next.STRUCTURE, nextShotId };
+    // A shot's transition is the join from the shot before it. When an insert, remove or move gives
+    // it a different predecessor, the stored join describes a cut that no longer exists: clear it.
+    const joinNotes = [];
+    const previousOf = (list) => new Map(list.map((shot, i) => [shot.id, i ? list[i - 1].id : undefined]));
+    const before = previousOf(originalShots), after = previousOf(shots);
+    const priorById = new Map(originalShots.map((shot) => [shot.id, shot]));
+    shots = shots.map((shot, i) => {
+        const prior = priorById.get(shot.id);
+        if (!prior || !shot.transition || transitionTargets.has(i + 1) || shot.transition !== prior.transition
+            || before.get(shot.id) === after.get(shot.id))
+            return shot;
+        const { transition, edit: oldEdit, ...rest } = shot;
+        const { reason: _reason, continuity: _continuity, transitionSeconds: _seconds, ...edit } = oldEdit ?? {};
+        joinNotes.push({ level: 'warn', where: String(shot.id), what: `the shot before it changed, so its join (${transition}) was cleared — set it again with shot_icons next on the shot that now precedes it` });
+        return (Object.keys(edit).length ? { ...rest, edit } : rest);
+    });
     next.SCENES = shots.map((shot) => shot.shot?.motionGraphic && (shot.shot.motionGraphic.style.theme || next.THEME?.motionGraphicTheme) ? motionThemeContract().applyTheme({ ...shot }, next.THEME?.motionGraphicTheme) : { ...shot }); // sync() writes sceneSlug/sequence — never into the caller's objects
     // A prompt rewritten through storyboard_apply no longer comes from its shot_prompt basis (structure-contract.js promptDrift).
     if (!opts.outline) {
@@ -654,7 +670,7 @@ export function applyPatch(win, patch, opts = {}) {
             return { ...shot, visual: { ...shot.visual, video: rest } };
         });
     }
-    const findings = [];
+    const findings = [...joinNotes];
     if (!shots.length && !opts.outline)
         findings.push({ level: 'bad', where: 'board', what: 'the board has no shots' });
     if (win.STORY?.authoring === 'story-first' && next.STORY?.authoring !== 'story-first')
@@ -709,9 +725,32 @@ export function applyStoryboard(args, opts = {}) {
         const doc = (next.SB_DOC ?? {});
         const entries = Array.isArray(doc.characters) ? doc.characters
             : Object.entries(doc.characters ?? {}).map(([id, value]) => ({ ...value, id }));
-        next.SB_DOC = { ...doc, characters: [...entries.map(entry => sheets.has(String(entry.id))
-                    ? { ...entry, panels: { ...(entry.panels ?? {}), ...sheets.get(String(entry.id)) } } : entry),
-                ...panelIds.filter(id => sheets.has(id) && !entries.some(entry => entry.id === id)).map(id => ({ id, panels: sheets.get(id) }))] };
+        // The identity (name heading and character JSON) comes from the cast's identity.md, so shot_image and
+        // shot_prompt read the sheet's height, appearance and name rather than an empty entry.
+        const identities = new Map();
+        // An unreadable identity keeps the entry as it is; character_manage owns that file's shape.
+        let cast = [];
+        try {
+            cast = readCast(dirname(file));
+        }
+        catch { /* cast_unreadable is reported by the story tools */ }
+        for (const { id, source } of cast) {
+            if (!panelIds.includes(id) || typeof source !== 'string')
+                continue;
+            try {
+                const text = readFileSync(resolve(dirname(file), source), 'utf8');
+                const heading = /^#\s+(.+?)\s*$/m.exec(text)?.[1];
+                identities.set(id, { ...(heading ? { name: heading } : {}), character: identityCatalog().identityCharacter(text, { ready: false }) });
+            }
+            catch { /* no JSON identity yet */ }
+        }
+        const withIdentity = (entry) => {
+            const found = identities.get(String(entry.id));
+            return found ? { ...entry, ...(entry.name ? {} : { name: found.name }), character: found.character } : entry;
+        };
+        next.SB_DOC = { ...doc, characters: [...entries.map(entry => withIdentity(sheets.has(String(entry.id))
+                    ? { ...entry, panels: { ...(entry.panels ?? {}), ...sheets.get(String(entry.id)) } } : entry)),
+                ...panelIds.filter(id => sheets.has(id) && !entries.some(entry => entry.id === id)).map(id => withIdentity({ id, panels: sheets.get(id) }))] };
         for (const shot of next.SCENES ?? []) {
             const visual = shot.visual;
             if (visual?.frames?.mode !== 'reference'
@@ -776,7 +815,7 @@ export const storySceneSchema = z.object({
         no: z.number().int().positive(),
         place: nonEmpty, time: nonEmpty,
         event: nonEmpty.describe('The one thing that happens in this scene'),
-        summary: nonEmpty.describe("The scene's story in one or two sentences"),
+        summary: nonEmpty.describe("The scene's story in one sentence"),
         turn: nonEmpty.optional(), out: nonEmpty.optional(),
     }).strict()).min(1),
 }).strict();
@@ -786,7 +825,6 @@ export const storyShotSchema = z.object({
         id: shotIdSchema.optional().describe('Revise this shot; without it a new shot is added at the end of its scene'),
         scene: z.number().int().positive().describe('The scene number — written first with story_scene'),
         summary: nonEmpty.describe('The story this shot tells, in one sentence'),
-        title: nonEmpty.optional(),
     }).strict()).min(1),
 }).strict();
 const emptyStructure = () => ({ version: STRUCTURE_VERSION, sequences: [], scenes: [] });
@@ -1076,7 +1114,7 @@ export const shotIconsSchema = z.object({
     path: outlinePath,
     shots: z.array(z.object({
         id: shotIdSchema,
-        render: z.object({ mode: tuple(V.RENDER_MODES), purpose: nonEmpty.optional(), reason: nonEmpty }).strict().optional()
+        render: z.object({ mode: tuple(V.RENDER_MODES), purpose: nonEmpty.refine((v) => renderPurposes().includes(v), (v) => ({ message: `${v} is not a render purpose (render-routing.js PURPOSES)` })).optional(), reason: nonEmpty }).strict().optional()
             .describe('Render route: shot.render'),
         size: tuple(V.SIZES).optional(),
         why: nonEmpty.optional().describe('Why this size'),

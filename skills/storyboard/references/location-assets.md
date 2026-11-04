@@ -13,10 +13,11 @@ A location is an immutable Blender set plus semantic JSON, not a collection of i
 
 ## Spatial planning before storyboard images
 
-After the story's scene actions are settled, build the recurring set once. Place all actors
-and the important objects in world coordinates, then choose shot cameras. Render the grey
-or simple-colour board before generating styled images. Compare the wide, close-up and
-reverse views together. Keep actor identity, world facing and gaze separate from screen
+When a recurring place gets a built set, build it once after the story's scene actions are
+settled. Place all actors and the important objects in world coordinates; `shot_image` then
+renders the set from each shot's size and angle as the start image's Image 1, so no separate
+render step runs before images. A grey board or a wide, close-up and reverse comparison is a
+composition the user asks for, not a gate. Without a set the place's sheet image leads. Keep actor identity, world facing and gaze separate from screen
 left/right: a camera change can legitimately reverse a screen direction.
 
 Bind shots in a continuous sequence with the same `continuityGroup`. The location check

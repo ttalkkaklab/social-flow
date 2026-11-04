@@ -15,7 +15,8 @@ picture continues moving. Dip also fits a chapter break; whip, iris and zoom nee
 specific narrative or camera motivation. Do not cycle effects or assign `cut` to every
 shot merely because production mode is full video.
 
-To patch effects without replacing shots, call `storyboard_apply` with
+On a story-first board set the join with `shot_icons` `next` on the outgoing shot; it lands on
+the following shot's `transition`. To patch effects without replacing shots, call `storyboard_apply` with
 `transitions: [{no: 3, transition: "dip", reason: "The next scene begins at night"}]`.
 `no` is the incoming shot's 1-based position after removals and inserts. This writes
 `transition` and `edit.reason` into the source plan; switching to dip removes an old

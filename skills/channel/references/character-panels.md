@@ -40,8 +40,9 @@ within 3 percentage points. These are generation/comparison targets, not measure
 physical height. They are independent of the episode's 9:16 or 16:9 video format.
 Inspect the actual picture for cropping, perspective, identity and scene props.
 
-Write `panels.json` next to `identity.md`. Slot names are front/back/face; the board
-uses `panels.body` for front and `panels.face`/`panels.back` for the other two.
+Write `panels.json` next to `identity.md`. Slot names are front/back/face, and storyboard
+writes copy them into `SB_DOC.characters[].panels` under the same names (older boards used
+`panels.body` for the front).
 Example for one available slot (add the others when available):
 
 ```json
