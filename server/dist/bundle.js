@@ -114594,7 +114594,7 @@ function resolveCharacterVoice(character, context2, warnings) {
   if (!Object.keys(object3(character.tts)).length && existsSync18(identity)) {
     try {
       const { handoff } = load3("../../skills/channel/references/character-sheet.js");
-      const current = handoff(identity);
+      const current = handoff(identity, { voiceOnly: character.voiceOnly === true });
       resolved = { ...current, ...character, tts: current.tts };
     } catch (error2) {
       warnings.push(`${id}: cannot read the selected character voice: ${error2 instanceof Error ? error2.message : String(error2)}`);
@@ -114646,7 +114646,7 @@ function msrSubject(character, refs, context2) {
   const owned = object3(character.voiceReference).imagePaths;
   let ownedPaths;
   const declared = [].concat(object3(context2.shot.visual).character ?? []).map((entry2) => typeof entry2 === "string" ? entry2 : text(object3(entry2).id));
-  if (declared.includes(text(character.id))) {
+  if (declared.includes(text(character.id)) && existsSync18(path17.join(context2.episode, "storyboard", "cast.json"))) {
     const { sheetPanels } = load3("../../skills/channel/references/character-panels.js");
     const dir = path17.join(context2.episode, "storyboard");
     const panels = sheetPanels(dir, [text(character.id)]).get(text(character.id));
@@ -114924,7 +114924,7 @@ function compileVideoPrompt(shot, source, names = {}) {
 
 // src/video-image-inputs.ts
 import path18 from "node:path";
-import { realpathSync as realpathSync6, readFileSync as readFileSync19 } from "node:fs";
+import { existsSync as existsSync19, realpathSync as realpathSync6, readFileSync as readFileSync19 } from "node:fs";
 import { createRequire as createRequire8 } from "node:module";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
 var load5 = createRequire8(import.meta.url);
@@ -114975,7 +114975,7 @@ function prepareVideoImages(tool2, input, shot, episode) {
   const frames = routing.framePlan(shot);
   let references = routing.imageReferences(shot);
   const rawCast = shot.visual?.character;
-  const canonicalMsr = tool2 === "astra_genai_msr" && frames.mode === "reference" && rawCast !== void 0;
+  const canonicalMsr = tool2 === "astra_genai_msr" && frames.mode === "reference" && rawCast !== void 0 && existsSync19(path18.join(episode, "storyboard", "cast.json"));
   if (canonicalMsr) {
     const ids = [].concat(rawCast ?? []).map((entry2) => typeof entry2 === "string" ? entry2 : entry2.id);
     references = [
@@ -115139,7 +115139,7 @@ function evaluateWindowScript(source, options = {}) {
 }
 
 // src/storyboard.ts
-import { existsSync as existsSync19, mkdirSync as mkdirSync9, readFileSync as readFileSync20, renameSync as renameSync4, statSync as statSync11, unlinkSync as unlinkSync4, writeFileSync as writeFileSync15 } from "node:fs";
+import { existsSync as existsSync20, mkdirSync as mkdirSync9, readFileSync as readFileSync20, renameSync as renameSync4, statSync as statSync11, unlinkSync as unlinkSync4, writeFileSync as writeFileSync15 } from "node:fs";
 import * as nodeModule3 from "node:module";
 import { basename as basename6, dirname as dirname5, join as join9, relative, resolve as resolve5 } from "node:path";
 import { fileURLToPath as fileURLToPath5 } from "node:url";
@@ -115332,7 +115332,7 @@ function boardReadiness(win, boardDir) {
   let root = boardDir, channel;
   for (; ; ) {
     if (basename6(root) === "episodes") channel = dirname5(root);
-    if (existsSync19(join9(root, ".social-flow/models.json")) || dirname5(root) === root) break;
+    if (existsSync20(join9(root, ".social-flow/models.json")) || dirname5(root) === root) break;
     root = dirname5(root);
   }
   let configuration;
@@ -115349,7 +115349,7 @@ function boardReadiness(win, boardDir) {
   const characters = Array.isArray(entries) ? entries : Object.entries(entries).map(([id, c]) => ({ ...c, id }));
   const assets = characters.flatMap((c) => Object.entries(c.panels ?? {}).map(([slot, name]) => {
     const file = typeof name === "string" && name.trim() ? resolve5(boardDir, name) : null;
-    const present = !!file && existsSync19(file) && statSync11(file).isFile();
+    const present = !!file && existsSync20(file) && statSync11(file).isFile();
     let decoding = "not_verified";
     if (present) {
       try {
@@ -115498,7 +115498,7 @@ function scenesPath(target) {
 }
 function readBoard(target) {
   const file = scenesPath(target);
-  if (!existsSync19(file)) throw new Error(`no scenes.js at ${file}`);
+  if (!existsSync20(file)) throw new Error(`no scenes.js at ${file}`);
   if (!statSync11(file).isFile()) throw new Error(`${file} is not a file`);
   const src = readFileSync20(file, "utf8");
   const header = [];
@@ -115720,13 +115720,13 @@ function applyPatch(win, patch, opts = {}) {
 }
 function applyStoryboard(args, opts = {}) {
   const file = scenesPath(args.path);
-  const exists = existsSync19(file);
+  const exists = existsSync20(file);
   let header = [];
   let win = {};
   if (exists) ({ header, win } = readBoard(file));
   else if (!args.set && !opts.outline) throw new Error(`no scenes.js at ${file} \u2014 a new board is written with \`set\` (structure + shots)`);
   else if (!opts.outline && workflowEpisode(dirname5(file))) throw new Error("story_order: a new episode board starts with story_sequence \u2192 story_scene \u2192 story_shot");
-  else if (!existsSync19(dirname5(file))) throw new Error(`directory does not exist: ${dirname5(file)}`);
+  else if (!existsSync20(dirname5(file))) throw new Error(`directory does not exist: ${dirname5(file)}`);
   const original = exists ? readFileSync20(file, "utf8") : "";
   const originalHash = createHash11("sha256").update(original).digest("hex");
   const previousDoc = win.SB_DOC;
@@ -115736,7 +115736,7 @@ function applyStoryboard(args, opts = {}) {
     throw new Error("head_moved: propSheet requires the current expectedSha256 from storyboard_read");
   const { win: next, findings, synced } = applyPatch(win, args, opts);
   const panelIds = [...new Set((next.SCENES ?? []).flatMap((shot) => contract().castOf(shot) ?? []))];
-  if (panelIds.length && existsSync19(join9(dirname5(file), "cast.json"))) {
+  if (panelIds.length && existsSync20(join9(dirname5(file), "cast.json"))) {
     const sheets = /* @__PURE__ */ new Map();
     for (const id of panelIds) {
       try {
@@ -115781,7 +115781,7 @@ function applyStoryboard(args, opts = {}) {
       const history = join9(dirname5(file), ".prop-history");
       mkdirSync9(history, { recursive: true });
       const backup = join9(history, originalHash + ".js");
-      if (!existsSync19(backup)) writeFileSync15(backup, original, { flag: "wx" });
+      if (!existsSync20(backup)) writeFileSync15(backup, original, { flag: "wx" });
     }
     writeFileSync15(tmp, serializeBoard(next, header), "utf8");
     renameSync4(tmp, file);
@@ -115831,7 +115831,7 @@ var storyShotSchema = external_exports.object({
 var emptyStructure = () => ({ version: STRUCTURE_VERSION, sequences: [], scenes: [] });
 function readOutline(path31) {
   const file = scenesPath(path31);
-  const win = existsSync19(file) ? readBoard(file).win : {};
+  const win = existsSync20(file) ? readBoard(file).win : {};
   return { win, st: win.STRUCTURE ?? emptyStructure() };
 }
 function writeOutline(path31, win, structure, shots) {
@@ -115931,12 +115931,12 @@ function missingPanels(folder) {
   }
   return SHEET_VIEWS.filter((view) => {
     const file = panels[view]?.file;
-    return typeof file !== "string" || !file || !existsSync19(join9(folder, file));
+    return typeof file !== "string" || !file || !existsSync20(join9(folder, file));
   });
 }
 function readCast(storyboardDir) {
   const file = join9(storyboardDir, "cast.json");
-  if (!existsSync19(file)) return [];
+  if (!existsSync20(file)) return [];
   let list;
   try {
     list = JSON.parse(readFileSync20(file, "utf8")).characters;
@@ -115953,7 +115953,7 @@ function checkCast(storyboardDir, cast) {
   for (const { id, source, voiceOnly } of cast) {
     const identity = typeof source === "string" && source ? resolve5(storyboardDir, source) : "";
     const folder = dirname5(identity);
-    if (!identity || basename6(identity) !== "identity.md" || basename6(folder) !== id || basename6(dirname5(folder)) !== "characters" || basename6(dirname5(dirname5(folder))) !== "assets" || !existsSync19(identity)) {
+    if (!identity || basename6(identity) !== "identity.md" || basename6(folder) !== id || basename6(dirname5(folder)) !== "characters" || basename6(dirname5(dirname5(folder))) !== "assets" || !existsSync20(identity)) {
       problems.push(`cast_source_missing: ${id} needs source pointing at an existing assets/characters/${id}/identity.md (character_manage)`);
       continue;
     }
@@ -116341,7 +116341,7 @@ function shotImageRequest(args) {
     warnings.push({ level: "warn", where: args.id, what: `the saved image model has no room for the ${location} sheet picture beside the set render, so the look comes from the style and prompt alone` });
   }
   const inputs = ordered.map((ref) => resolve5(boardDir, ref.path));
-  for (const file of inputs) if (!existsSync19(file)) throw new Error(`image_input_missing: ${file}`);
+  for (const file of inputs) if (!existsSync20(file)) throw new Error(`image_input_missing: ${file}`);
   const assemble = loadFromHere2(join9(REFERENCES_DIR, "assemble-bg-prompt.js")).assemble;
   const style = loadFromHere2(join9(REFERENCES_DIR, "production-mode.js")).shotStyle(win, shots.indexOf(shot));
   const body = assemble({
@@ -116396,7 +116396,7 @@ function imageCall(o) {
   const mimes = selection.engine === "gpt-image" ? inputs.map((f3) => readImageMetadata(f3).mimeType) : [];
   const toPng = (f3) => {
     const out = join9(o.outDir, "inputs", createHash11("sha256").update(readFileSync20(f3)).digest("hex").slice(0, 16) + ".png");
-    if (!existsSync19(out)) {
+    if (!existsSync20(out)) {
       mkdirSync9(dirname5(out), { recursive: true });
       try {
         execFileSync9("ffmpeg", ["-v", "error", "-y", "-i", f3, out], { timeout: 6e4 });
@@ -116409,7 +116409,7 @@ function imageCall(o) {
   const sent = new Set(mimes).size > 1 ? inputs.map((f3, i2) => mimes[i2] === "image/png" ? f3 : toPng(f3)) : inputs;
   const jobs = readImageState(directory2)?.jobs ?? {};
   let k = 1;
-  while (existsSync19(join9(o.outDir, `${o.stem}-v${k}.png`)) || Object.hasOwn(jobs, `${o.stem}-v${k}`)) k += 1;
+  while (existsSync20(join9(o.outDir, `${o.stem}-v${k}.png`)) || Object.hasOwn(jobs, `${o.stem}-v${k}`)) k += 1;
   const requestId = `${o.stem}-v${k}`, file = join9(o.outDir, `${requestId}.png`);
   mkdirSync9(dirname5(file), { recursive: true });
   const base642 = (f3) => readFileSync20(f3).toString("base64");
@@ -117080,7 +117080,7 @@ async function generateGemini38Speech(request) {
 var import_tts_speed_policy = __toESM(require_tts_speed_policy(), 1);
 import { execFile as execFile4 } from "node:child_process";
 import { createHash as createHash12, randomUUID as randomUUID3 } from "node:crypto";
-import { closeSync as closeSync4, existsSync as existsSync20, mkdirSync as mkdirSync10, openSync as openSync4, readFileSync as readFileSync21, renameSync as renameSync5, rmSync as rmSync9, writeFileSync as writeFileSync18 } from "node:fs";
+import { closeSync as closeSync4, existsSync as existsSync21, mkdirSync as mkdirSync10, openSync as openSync4, readFileSync as readFileSync21, renameSync as renameSync5, rmSync as rmSync9, writeFileSync as writeFileSync18 } from "node:fs";
 import path20 from "node:path";
 import { promisify as promisify2 } from "node:util";
 
@@ -118021,14 +118021,14 @@ async function applySentenceSpacing(output2, request, align) {
   const alignmentPath = output2.replace(/\.wav$/i, "") + ".alignment.json";
   rmSync9(sentencesPathFor(output2), { force: true });
   try {
-    if (existsSync20(alignmentPath)) {
+    if (existsSync21(alignmentPath)) {
       try {
         if (JSON.parse(readFileSync21(alignmentPath, "utf8")).engine === "asr-aligner") rmSync9(alignmentPath, { force: true });
       } catch {
         rmSync9(alignmentPath, { force: true });
       }
     }
-    if (!existsSync20(alignmentPath)) {
+    if (!existsSync21(alignmentPath)) {
       if (!align) return { skipped: "no alignment sidecar beside the take and no aligner" };
       const aligned = await align(output2, request.expectedText, request.language);
       if (aligned.matched < aligned.letters * 0.8) throw new Error(`aligner matched ${aligned.matched}/${aligned.letters} script letters; transcript "${aligned.transcript.slice(0, 60)}"`);
@@ -118113,7 +118113,7 @@ async function generateCheckedSpeech(input, dependencies) {
     return { success: status === "pass", status, audioPath: output2, proofPath: proofFile, attempts: attempts.length, ...extra };
   }
   try {
-    if (existsSync20(proofFile)) {
+    if (existsSync21(proofFile)) {
       const old = JSON.parse(readFileSync21(proofFile, "utf8"));
       if (Object.entries(base).every(([key, value]) => key === "model" || key === "voiceSettings" && old[key] === void 0 || JSON.stringify(old[key]) === JSON.stringify(value))) {
         if (!Array.isArray(old.attempts) || old.attempts.length > 3) throw new Error("Invalid attempt history");
@@ -118124,12 +118124,12 @@ async function generateCheckedSpeech(input, dependencies) {
         const transcriptSatisfied = transcriptRecorded && (!request.transcriptCheck || storedTranscript !== null);
         if (last?.duplicateOf) return save3("fail", { error: "Identical rejected audio already stopped this request; correct the episode pronunciation or delivery plan" });
         if (request.rejectTake) {
-          if (!last || last.audioSha256 !== request.rejectTake.audioSha256 || !existsSync20(output2) || sha256(readFileSync21(output2)) !== request.rejectTake.audioSha256) throw new Error("The rejected take is not the current audio; inspect the current file before requesting another retake");
+          if (!last || last.audioSha256 !== request.rejectTake.audioSha256 || !existsSync21(output2) || sha256(readFileSync21(output2)) !== request.rejectTake.audioSha256) throw new Error("The rejected take is not the current audio; inspect the current file before requesting another retake");
           last.authorRejection = request.rejectTake.reason;
           last.pending = false;
           last.failures = [...Array.isArray(last.failures) ? last.failures : [], "Rejected during final listening: " + request.rejectTake.reason];
         }
-        if (!request.rejectTake && old.model === REVIEW_MODEL && old.status === "pass" && last?.pending === false && Array.isArray(last.failures) && !last.failures.length && transcriptSatisfied && existsSync20(output2) && old.audioSha256 === sha256(readFileSync21(output2)) && last.audioSha256 === old.audioSha256 && !signalFailures(last.signal, request.expectedText).length && !reviewFailures(request.expectedText, storedTranscript, reviewSchema.parse(last.review), last.signal.duration).length) {
+        if (!request.rejectTake && old.model === REVIEW_MODEL && old.status === "pass" && last?.pending === false && Array.isArray(last.failures) && !last.failures.length && transcriptSatisfied && existsSync21(output2) && old.audioSha256 === sha256(readFileSync21(output2)) && last.audioSha256 === old.audioSha256 && !signalFailures(last.signal, request.expectedText).length && !reviewFailures(request.expectedText, storedTranscript, reviewSchema.parse(last.review), last.signal.duration).length) {
           if (old.voiceSettings === void 0) save3("pass", { audioSha256: old.audioSha256 });
           const lastSpacing = last.spacing;
           return {
@@ -118142,7 +118142,7 @@ async function generateCheckedSpeech(input, dependencies) {
             spacing: !prepared.spacing ? "not applicable" : lastSpacing?.skipped ? "skipped: " + String(lastSpacing.skipped) : "applied"
           };
         }
-        if (!request.rejectTake && (old.model !== REVIEW_MODEL || !transcriptSatisfied) && old.status === "pass" && last && existsSync20(output2) && last.audioSha256 === sha256(readFileSync21(output2))) {
+        if (!request.rejectTake && (old.model !== REVIEW_MODEL || !transcriptSatisfied) && old.status === "pass" && last && existsSync21(output2) && last.audioSha256 === sha256(readFileSync21(output2))) {
           last.previousReviews = [
             ...Array.isArray(last.previousReviews) ? last.previousReviews : [],
             { model: last.model, transcript: last.transcript, review: last.review, failures: last.failures, signal: last.signal, cer: last.cer, transcriptCheck: last.transcriptCheck ?? null }
@@ -118157,7 +118157,7 @@ async function generateCheckedSpeech(input, dependencies) {
     await deps.preflight();
     while (true) {
       let take = attempts.at(-1);
-      const resumeReview = take?.pending === true && typeof take.audioSha256 === "string" && existsSync20(output2) && take.audioSha256 === sha256(readFileSync21(output2));
+      const resumeReview = take?.pending === true && typeof take.audioSha256 === "string" && existsSync21(output2) && take.audioSha256 === sha256(readFileSync21(output2));
       if (!resumeReview) {
         if (attempts.length >= request.maxAttempts) break;
         const attempt = attempts.length + 1;
@@ -118233,7 +118233,7 @@ async function generateCheckedSpeech(input, dependencies) {
 
 // src/qwen3-asr-client.ts
 import { execFile as execFile5 } from "node:child_process";
-import { existsSync as existsSync21, mkdirSync as mkdirSync11, mkdtempSync as mkdtempSync4, readFileSync as readFileSync22, renameSync as renameSync6, rmSync as rmSync10 } from "node:fs";
+import { existsSync as existsSync22, mkdirSync as mkdirSync11, mkdtempSync as mkdtempSync4, readFileSync as readFileSync22, renameSync as renameSync6, rmSync as rmSync10 } from "node:fs";
 import { homedir as homedir3 } from "node:os";
 import { basename as basename8, extname as extname9, join as join10 } from "node:path";
 var QWEN3_ASR_MODELS = ["Qwen/Qwen3-ASR-1.7B", "Qwen/Qwen3-ASR-0.6B"];
@@ -118390,10 +118390,10 @@ function normalizeSegments(data) {
 }
 async function transcribeLocal(request) {
   const bin = qwen3AsrBin();
-  if (!existsSync21(bin)) {
+  if (!existsSync22(bin)) {
     return { success: false, error: installHint2(`mlx-qwen3-asr binary not found: "${bin}"`) };
   }
-  if (!existsSync21(request.audioPath)) {
+  if (!existsSync22(request.audioPath)) {
     return { success: false, error: `Audio file not found: ${request.audioPath}` };
   }
   const outFile = resolveOutputFile(
@@ -118404,7 +118404,7 @@ async function transcribeLocal(request) {
   const outDir = request.outputPath || process.cwd();
   mkdirSync11(outDir, { recursive: true });
   const scratchDir = mkdtempSync4(join10(outDir, ".qwen3-asr-"));
-  const firstCall = !existsSync21(weightCacheDir2(request.model)) || request.timestamps && !existsSync21(alignerCacheDir());
+  const firstCall = !existsSync22(weightCacheDir2(request.model)) || request.timestamps && !existsSync22(alignerCacheDir());
   if (firstCall) {
     console.error(
       "[Qwen3-ASR] First call \u2014 downloading ~3.4GB of weights (plus ForcedAligner if timestamps) to the huggingface cache. This can take a while."
@@ -118461,7 +118461,7 @@ ${tail}` : ""}`));
     return { success: false, error: message };
   }
   const cliJsonPath = join10(scratchDir, `${basename8(request.audioPath, extname9(request.audioPath))}.json`);
-  if (!existsSync21(cliJsonPath)) {
+  if (!existsSync22(cliJsonPath)) {
     rmSync10(scratchDir, { recursive: true, force: true });
     return { success: false, error: `mlx-qwen3-asr exited without producing JSON (looked for ${cliJsonPath})` };
   }
@@ -118492,7 +118492,7 @@ ${tail}` : ""}`));
 
 // src/blender-bridge.ts
 import { execFile as execFile6 } from "node:child_process";
-import { existsSync as existsSync22, mkdtempSync as mkdtempSync5, readFileSync as readFileSync23, rmSync as rmSync11, writeFileSync as writeFileSync19 } from "node:fs";
+import { existsSync as existsSync23, mkdtempSync as mkdtempSync5, readFileSync as readFileSync23, rmSync as rmSync11, writeFileSync as writeFileSync19 } from "node:fs";
 import { tmpdir as tmpdir5 } from "node:os";
 import { dirname as dirname6, extname as extname10, join as join11, resolve as resolve6 } from "node:path";
 var BLENDER_PROXY_KINDS = ["person", "dog", "car", "box", "cylinder", "sphere"];
@@ -118818,7 +118818,7 @@ ${stderr}`.split("\n").filter((l) => l.trim().length > 0);
         }
       );
     });
-    if (existsSync22(resultPath)) {
+    if (existsSync23(resultPath)) {
       const raw = JSON.parse(readFileSync23(resultPath, "utf-8"));
       if (raw.ok) return { success: true, result: raw.result };
       return { success: false, error: `${raw.error ?? "Blender reported an error"}${raw.trace ? `
@@ -118834,7 +118834,7 @@ ${run.tail}` };
   }
 }
 async function readScene(request) {
-  if (!existsSync22(request.blendPath)) {
+  if (!existsSync23(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
   const r2 = await runBridge({ op: "read", blendPath: request.blendPath }, EDIT_TIMEOUT_MS);
@@ -118842,45 +118842,45 @@ async function readScene(request) {
 }
 async function buildScene(request) {
   for (const imp of request.imports) {
-    if (!existsSync22(imp.glbPath)) return { success: false, error: `GLB not found: ${imp.glbPath}` };
+    if (!existsSync23(imp.glbPath)) return { success: false, error: `GLB not found: ${imp.glbPath}` };
   }
-  if (!request.reset && !existsSync22(request.blendPath)) {
+  if (!request.reset && !existsSync23(request.blendPath)) {
     return { success: false, error: `reset is false but ${request.blendPath} does not exist yet \u2014 set reset to true to create it.` };
   }
   const r2 = await runBridge({ op: "build", ...request }, EDIT_TIMEOUT_MS);
   return r2.success ? { success: true, scene: r2.result } : r2;
 }
 async function setCamera(request) {
-  if (!existsSync22(request.blendPath)) {
+  if (!existsSync23(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
   const r2 = await runBridge({ op: "camera", ...request }, EDIT_TIMEOUT_MS);
   return r2.success ? { success: true, scene: r2.result } : r2;
 }
 async function animateObject(request) {
-  if (!existsSync22(request.blendPath)) {
+  if (!existsSync23(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
   const r2 = await runBridge({ op: "animate", ...request }, EDIT_TIMEOUT_MS);
   return r2.success ? { success: true, scene: r2.result } : r2;
 }
 async function poseKey(request) {
-  if (!existsSync22(request.blendPath)) {
+  if (!existsSync23(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
   const r2 = await runBridge({ op: "pose", ...request }, EDIT_TIMEOUT_MS);
   return r2.success ? { success: true, scene: r2.result } : r2;
 }
 async function importMotion(request) {
-  if (!existsSync22(request.blendPath)) {
+  if (!existsSync23(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
-  if (!existsSync22(request.motionPath)) return { success: false, error: `motion file not found: ${request.motionPath}` };
+  if (!existsSync23(request.motionPath)) return { success: false, error: `motion file not found: ${request.motionPath}` };
   const r2 = await runBridge({ op: "motion", ...request, maxFrames: MAX_PREVIZ_FRAMES }, MOTION_TIMEOUT_MS);
   return r2.success ? { success: true, scene: r2.result } : r2;
 }
 async function renderPreviz(request) {
-  if (!existsSync22(request.blendPath)) {
+  if (!existsSync23(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
   const outputDir = request.outputPath ? resolve6(request.outputPath) : join11(dirname6(request.blendPath), "previz");
@@ -125381,7 +125381,7 @@ for (const tool2 of TOOLS) {
 }
 
 // src/handlers.ts
-import { existsSync as existsSync36 } from "node:fs";
+import { existsSync as existsSync37 } from "node:fs";
 
 // src/music-routing.ts
 import * as fs19 from "node:fs";
@@ -126595,7 +126595,7 @@ async function hostReview(input) {
 }
 
 // src/voice-design.ts
-import { existsSync as existsSync27, mkdirSync as mkdirSync17, writeFileSync as writeFileSync22 } from "node:fs";
+import { existsSync as existsSync28, mkdirSync as mkdirSync17, writeFileSync as writeFileSync22 } from "node:fs";
 import { resolve as resolve7 } from "node:path";
 import { createHash as createHash17 } from "node:crypto";
 var voiceDesignSchema = external_exports.object({
@@ -126625,7 +126625,7 @@ async function designGeminiVoice(input) {
   const body = buildVoiceDesignBody(args);
   const apiKey = requireGeminiKey();
   mkdirSync17(output2, { recursive: true });
-  if (existsSync27(samplePath)) throw new Error("Preview already exists; use a new outputPath.");
+  if (existsSync28(samplePath)) throw new Error("Preview already exists; use a new outputPath.");
   writeFileSync22(receiptPath, JSON.stringify({ status: "submitted", request: body, submittedAt: (/* @__PURE__ */ new Date()).toISOString() }, null, 2), { flag: "wx" });
   const response = await requestRaw(
     "post",
@@ -126764,7 +126764,7 @@ async function reviewActing(input) {
 
 // src/voice-audition.ts
 import { createHash as createHash18, randomUUID as randomUUID6 } from "node:crypto";
-import { appendFileSync as appendFileSync3, copyFileSync, existsSync as existsSync28, mkdirSync as mkdirSync18, readFileSync as readFileSync30, writeFileSync as writeFileSync23, renameSync as renameSync7 } from "node:fs";
+import { appendFileSync as appendFileSync3, copyFileSync, existsSync as existsSync29, mkdirSync as mkdirSync18, readFileSync as readFileSync30, writeFileSync as writeFileSync23, renameSync as renameSync7 } from "node:fs";
 import { basename as basename9, dirname as dirname7, join as join12, resolve as resolve8 } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { createRequire as createRequire14 } from "node:module";
@@ -126929,7 +126929,7 @@ async function manageVoiceAudition(args) {
     });
     if (args.action === "plan") return { identityPath, identitySha256: hash3(source), target, candidates: planned, review: "not_reviewed", instruction: "Use provider metadata to choose candidates; unknown attributes require auditioning. No audio generated and identity is unchanged." };
     const resumed = args.auditionPath ? JSON.parse(readFileSync30(resolve8(args.auditionPath), "utf8")) : void 0;
-    if (resumed && !(resumed.status === "failed" && resumed.identityPath === identityPath && resumed.identitySha256 === hash3(source) && resumed.sampleText === args.sampleText && isDeepStrictEqual(resumed.acting, args.acting) && isDeepStrictEqual(resumed.sampleTurns, args.sampleTurns) && resumed.candidates.every((c, i2) => isDeepStrictEqual(c.tts, planned[i2]?.tts) && existsSync28(c.audioPath) && hash3(readFileSync30(c.audioPath)) === c.audioSha256)))
+    if (resumed && !(resumed.status === "failed" && resumed.identityPath === identityPath && resumed.identitySha256 === hash3(source) && resumed.sampleText === args.sampleText && isDeepStrictEqual(resumed.acting, args.acting) && isDeepStrictEqual(resumed.sampleTurns, args.sampleTurns) && resumed.candidates.every((c, i2) => isDeepStrictEqual(c.tts, planned[i2]?.tts) && existsSync29(c.audioPath) && hash3(readFileSync30(c.audioPath)) === c.audioSha256)))
       throw new Error("audition_resume_mismatch: continue only a failed audition with the same identity, sample, acting and candidate voices; create a new audition otherwise");
     const outputPath = resumed ? dirname7(resolve8(args.auditionPath)) : join12(dirname7(identityPath), "voice-auditions", randomUUID6());
     mkdirSync18(outputPath, { recursive: true });
@@ -127004,7 +127004,7 @@ function selectCandidate(auditionPath, candidateId, userSelection) {
   }
   if ((actual.voiceId || actual.voice || actual.voiceName) !== config3.voiceId || actual.model !== config3.model || config3.engine === "elevenlabs" && (recorded.generator !== "tts_elevenlabs_generate" || actual.languageCode !== config3.language || actual.stability !== config3.stability || actual.similarity !== config3.similarity) || config3.engine === "gemini" && !["tts_generate", "tts_gemini_38"].includes(recorded.generator || ""))
     throw new Error("Candidate voice settings differ from the recorded generation; create a new audition");
-  for (const c of audition.candidates) if (!existsSync28(c.audioPath) || hash3(readFileSync30(c.audioPath)) !== c.audioSha256) throw new Error("Audition audio changed; regenerate or restore original audio before selection");
+  for (const c of audition.candidates) if (!existsSync29(c.audioPath) || hash3(readFileSync30(c.audioPath)) !== c.audioSha256) throw new Error("Audition audio changed; regenerate or restore original audio before selection");
   const source = readFileSync30(audition.identityPath, "utf8");
   if (hash3(source) !== audition.identitySha256) throw new Error("Character identity changed after audition; create a new audition for the current character");
   const selection = { candidateId: chosen.id, userSelection, at: (/* @__PURE__ */ new Date()).toISOString(), auditionPath, audioSha256: chosen.audioSha256 };
@@ -127026,7 +127026,7 @@ function selectCandidate(auditionPath, candidateId, userSelection) {
   save(auditionPath, audition);
   const folder = dirname7(audition.identityPath);
   for (const [name, saved] of [["voice.wav", "voice-before-selection.wav"], ["sample.txt", "sample-before-selection.txt"]])
-    if (existsSync28(join12(folder, name))) copyFileSync(join12(folder, name), join12(dirname7(auditionPath), saved));
+    if (existsSync29(join12(folder, name))) copyFileSync(join12(folder, name), join12(dirname7(auditionPath), saved));
   copyFileSync(chosen.audioPath, join12(folder, "voice.wav"));
   writeFileSync23(join12(folder, "sample.txt"), audition.sampleText + "\n");
   return {
@@ -127101,7 +127101,7 @@ async function manageLocation(args) {
 
 // src/speech.ts
 import { createHash as createHash19, randomUUID as randomUUID7 } from "node:crypto";
-import { readFileSync as readFileSync31, writeFileSync as writeFileSync24, renameSync as renameSync8, mkdirSync as mkdirSync19, existsSync as existsSync29 } from "node:fs";
+import { readFileSync as readFileSync31, writeFileSync as writeFileSync24, renameSync as renameSync8, mkdirSync as mkdirSync19, existsSync as existsSync30 } from "node:fs";
 import { dirname as dirname8, resolve as resolve9, join as join14 } from "node:path";
 import * as nodeModule7 from "node:module";
 import { execFileSync as execFileSync13 } from "node:child_process";
@@ -127132,7 +127132,7 @@ function speechRevision(line, character) {
 }
 function currentAudio(line, character) {
   try {
-    return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync29(line.audio.path) && hash4(readFileSync31(line.audio.path)) === line.audio.sha256;
+    return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync30(line.audio.path) && hash4(readFileSync31(line.audio.path)) === line.audio.sha256;
   } catch {
     return false;
   }
@@ -127169,7 +127169,7 @@ function audioProvenanceStatus(line, character) {
   return "stale_or_missing";
 }
 function measuredDuration(line) {
-  if (!line.audio || !existsSync29(line.audio.path)) return null;
+  if (!line.audio || !existsSync30(line.audio.path)) return null;
   try {
     const value = Number(execFileSync13("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
     return Number.isFinite(value) && value > 0 ? value : null;
@@ -127325,7 +127325,7 @@ function manageSpeech(args) {
     if (args.lineId || args.speaker || args.query) throw new Error("Video planning uses all lines in the shot; remove line filters");
     for (const { line } of selected) actingSchema.nullable().optional().parse(line.acting);
     const episode = dirname8(dirname8(file));
-    if (existsSync29(join14(episode, ".work/model-settings.json"))) {
+    if (existsSync30(join14(episode, ".work/model-settings.json"))) {
       const { selection } = routingContext(episode, args.shotId);
       const adapter2 = args.tool ? VIDEO_ADAPTERS[args.tool] : void 0;
       if (args.tool && adapter2?.engine !== selection.engine) throw new Error("model_selection_mismatch: tool does not match selected engine");
@@ -127412,7 +127412,7 @@ function manageSpeech(args) {
     const work = resolve9(dirname8(file), "../.work/speech-history");
     mkdirSync19(work, { recursive: true });
     const backup = join14(work, revision + ".js");
-    if (!existsSync29(backup)) writeFileSync24(backup, before);
+    if (!existsSync30(backup)) writeFileSync24(backup, before);
     const nextSource = serializeBoard(win, header);
     if (hash4(readFileSync31(file)) !== revision) throw new Error("Storyboard changed during speech edit");
     const tmp = file + "." + randomUUID7() + ".tmp";
@@ -127425,7 +127425,7 @@ function manageSpeech(args) {
 // src/acting-review.ts
 import { execFile as execFile8 } from "node:child_process";
 import { createHash as createHash20, randomUUID as randomUUID8 } from "node:crypto";
-import { existsSync as existsSync30, mkdirSync as mkdirSync20, readFileSync as readFileSync32, realpathSync as realpathSync10, renameSync as renameSync9, rmSync as rmSync15, statSync as statSync17, writeFileSync as writeFileSync25 } from "node:fs";
+import { existsSync as existsSync31, mkdirSync as mkdirSync20, readFileSync as readFileSync32, realpathSync as realpathSync10, renameSync as renameSync9, rmSync as rmSync15, statSync as statSync17, writeFileSync as writeFileSync25 } from "node:fs";
 import path27 from "node:path";
 import { homedir as homedir5 } from "node:os";
 import { promisify as promisify4 } from "node:util";
@@ -127778,7 +127778,7 @@ async function reviewActing2(input, deps) {
   };
   let retryOf;
   if (request.retryTransportFailure) {
-    if (!existsSync30(receiptPath)) throw new Error("Transport retry requires an existing matching original receipt; no new review was sent");
+    if (!existsSync31(receiptPath)) throw new Error("Transport retry requires an existing matching original receipt; no new review was sent");
     const parent = readMatchingReceipt(receiptPath, requestSha256);
     if (!isTransportFailure(parent) || currentHash(mediaPath) !== mediaSha256 || parent.currentMediaSha256 !== void 0 && parent.currentMediaSha256 !== mediaSha256)
       throw new Error("Transport retry requires an unchanged original timeout/abort receipt with no observation; reviewed or rejected observations cannot be rerolled");
@@ -127786,7 +127786,7 @@ async function reviewActing2(input, deps) {
     requestSha256 = hash5(JSON.stringify({ retryOf, attempt: 1, policy: "transport-retry-v1" }));
     receiptPath = path27.join(directory2, `${requestSha256}.json`);
   }
-  if (existsSync30(receiptPath)) {
+  if (existsSync31(receiptPath)) {
     try {
       const cached2 = readMatchingReceipt(receiptPath, requestSha256, retryOf);
       const currentMediaSha2562 = currentHash(mediaPath);
@@ -128037,7 +128037,7 @@ function checkThreadsEpisode(input) {
 
 // src/datago-client.ts
 import { mkdir, writeFile as writeFile2 } from "node:fs/promises";
-import { existsSync as existsSync31 } from "node:fs";
+import { existsSync as existsSync32 } from "node:fs";
 import { tmpdir as tmpdir6 } from "node:os";
 import { join as join16 } from "node:path";
 var PORTAL_BASE = "https://www.data.go.kr";
@@ -128281,7 +128281,7 @@ async function downloadFile2(input) {
   const saveDir = input.saveDir ?? join16(tmpdir6(), "social-flow-datago");
   await mkdir(saveDir, { recursive: true });
   let savedPath = join16(saveDir, filename);
-  for (let i2 = 1; existsSync31(savedPath); i2++) {
+  for (let i2 = 1; existsSync32(savedPath); i2++) {
     if (i2 >= 100) {
       return err(`there are already 100+ files with the same name in ${saveDir} \u2014 clean up saveDir or point at a different directory.`);
     }
@@ -129346,7 +129346,7 @@ async function stockSearch(input) {
 // src/sns-client.ts
 import { createHash as createHash22, randomUUID as randomUUID10 } from "node:crypto";
 import {
-  existsSync as existsSync32,
+  existsSync as existsSync33,
   mkdirSync as nodeMkdirSync,
   readFileSync as nodeReadFileSync,
   rmSync as nodeRmSync,
@@ -129357,11 +129357,11 @@ import { basename as basename10, dirname as dirname10, extname as extname11, joi
 function enabledPlatforms() {
   const channelDirs = listChannelDirs();
   return SNS_PLATFORMS.filter(
-    (platform) => existsSync32(snsCredentialFile(platform)) || channelDirs.some((dir) => dir.platforms.includes(platform))
+    (platform) => existsSync33(snsCredentialFile(platform)) || channelDirs.some((dir) => dir.platforms.includes(platform))
   );
 }
 function availablePlatformsFor(channel) {
-  return SNS_PLATFORMS.filter((platform) => existsSync32(snsCredentialFile(platform, channel)));
+  return SNS_PLATFORMS.filter((platform) => existsSync33(snsCredentialFile(platform, channel)));
 }
 var GRAPH_VERSION = "v23.0";
 var THREADS_BASE = "https://graph.threads.net/v1.0";
@@ -131195,7 +131195,7 @@ async function checkAccounts(channel) {
 
 // src/tts-final-quality.ts
 import { execFile as execFile9 } from "node:child_process";
-import { existsSync as existsSync33, mkdtempSync as mkdtempSync6, readFileSync as readFileSync34, rmSync as rmSync16, writeFileSync as writeFileSync27, renameSync as renameSync11, openSync as openSync7, closeSync as closeSync7 } from "node:fs";
+import { existsSync as existsSync34, mkdtempSync as mkdtempSync6, readFileSync as readFileSync34, rmSync as rmSync16, writeFileSync as writeFileSync27, renameSync as renameSync11, openSync as openSync7, closeSync as closeSync7 } from "node:fs";
 import { tmpdir as tmpdir7 } from "node:os";
 import path28 from "node:path";
 import { promisify as promisify5 } from "node:util";
@@ -131245,7 +131245,7 @@ async function reviewFinalSpeech(input, deps) {
       return await reviewChapters(request, media, wav, temp, base, proofPath, save3, deps);
     }
     if (sha256(readFileSync34(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
-    if (existsSync33(proofPath)) {
+    if (existsSync34(proofPath)) {
       const old = JSON.parse(readFileSync34(proofPath, "utf8"));
       const same = Object.entries(base).every(([k, v]) => ["mediaSha256", "expectedText"].includes(k) || old[k] === v);
       if (old.audioSha256 === base.audioSha256 && old.textSha256 === base.textSha256 && old.status === "fail") return save3("fail", { reused: true, signal: old.signal, transcript: old.transcript, transcriptCheck: transcriptCheck ?? old.transcriptCheck ?? null, failures: old.failures, review: old.review, error: "This exact final audio already failed; fix the audio before another listening review" });
@@ -131291,7 +131291,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
   const pcm = chapters.decode(wav), totalSamples = pcm.length / chapters.BYTES;
   const planned = chapters.plan(request.segments, totalSamples, request.expectedText);
   const identity = { policy: chapters.POLICY, sampleRate: chapters.RATE, totalSamples, pcmSha256: chapters.hash(pcm), segments: request.segments, transcriptCheck: request.transcriptCheck ?? null };
-  const old = existsSync33(proofPath) ? JSON.parse(readFileSync34(proofPath, "utf8")) : null;
+  const old = existsSync34(proofPath) ? JSON.parse(readFileSync34(proofPath, "utf8")) : null;
   const pieces = [];
   const commit = (status, extra = {}) => save3(status, { ...identity, pieces, manifestSha256: chapters.manifest({ ...identity, pieces }), ...extra });
   if (old?.pcmSha256 === identity.pcmSha256 && old.textSha256 === base.textSha256 && old.status === "fail") {
@@ -133026,14 +133026,14 @@ ${errors.join("\n")}`);
 }
 
 // src/capability-status.ts
-import { existsSync as existsSync34 } from "node:fs";
+import { existsSync as existsSync35 } from "node:fs";
 import path29 from "node:path";
 import os4 from "node:os";
 var has2 = (v) => Boolean(v && v.length > 0);
 var binOk = (p) => {
   try {
-    if (p.includes(path29.sep)) return existsSync34(p);
-    return (process.env.PATH || "").split(path29.delimiter).some((dir) => dir && existsSync34(path29.join(dir, p)));
+    if (p.includes(path29.sep)) return existsSync35(p);
+    return (process.env.PATH || "").split(path29.delimiter).some((dir) => dir && existsSync35(path29.join(dir, p)));
   } catch {
     return false;
   }
@@ -133272,7 +133272,7 @@ function renderCapabilityStatus() {
 }
 
 // src/character-panel.ts
-import { existsSync as existsSync35, readFileSync as readFileSync35, writeFileSync as writeFileSync29 } from "node:fs";
+import { existsSync as existsSync36, readFileSync as readFileSync35, writeFileSync as writeFileSync29 } from "node:fs";
 import { createRequire as createRequire17 } from "node:module";
 import path30 from "node:path";
 var load9 = createRequire17(import.meta.url);
@@ -133304,14 +133304,14 @@ function characterPanelRequest(raw) {
   const { identityCharacter, panelPrompt } = shared4("_shared/character-identity.js");
   const character = identityCharacter(readFileSync35(identityPath, "utf8"), { ready: false });
   const panelsFile = path30.join(folder, "panels.json");
-  const panels = (existsSync35(panelsFile) ? JSON.parse(readFileSync35(panelsFile, "utf8")).panels : void 0) ?? {};
+  const panels = (existsSync36(panelsFile) ? JSON.parse(readFileSync35(panelsFile, "utf8")).panels : void 0) ?? {};
   const panelFile = (view) => {
     const file = panels[view]?.file;
-    if (!file || !existsSync35(path30.join(folder, file))) throw new Error(`character_panel_missing: make ${id}'s ${view} panel first, or pass references`);
+    if (!file || !existsSync36(path30.join(folder, file))) throw new Error(`character_panel_missing: make ${id}'s ${view} panel first, or pass references`);
     return path30.join(folder, file);
   };
   const references = (args.references ?? (args.view === "face" ? [] : args.view === "front" ? ["face"] : ["front"]).map(panelFile)).map((file) => path30.resolve(folder, file));
-  for (const file of references) if (!existsSync35(file)) throw new Error(`image_input_missing: ${file}`);
+  for (const file of references) if (!existsSync36(file)) throw new Error(`image_input_missing: ${file}`);
   const { findImageWorkspace, readImageContext } = shared4("_shared/image-selection.js");
   const workspace = findImageWorkspace(folder);
   if (!workspace) throw new Error("image_setup_required: no .social-flow/models.json above this character");
@@ -133339,7 +133339,7 @@ function characterPanelRequest(raw) {
   return { workspace, folder, id, view: args.view, panelsFile, prompt, negativePrompt: call.negativeSent ? negativePrompt : void 0, warnings, ...call };
 }
 function recordCharacterPanel(request) {
-  const doc = existsSync35(request.panelsFile) ? JSON.parse(readFileSync35(request.panelsFile, "utf8")) : { schemaVersion: 1, panels: {} };
+  const doc = existsSync36(request.panelsFile) ? JSON.parse(readFileSync35(request.panelsFile, "utf8")) : { schemaVersion: 1, panels: {} };
   doc.panels = { ...doc.panels, [request.view]: { file: path30.basename(request.file), purpose: "character_reference", view: request.view, framing: { status: "not_reviewed" } } };
   writeFileSync29(request.panelsFile, JSON.stringify(doc, null, 2) + "\n");
   try {
@@ -133859,7 +133859,7 @@ var ROUTES = {
   // ── image generation (OpenAI GPT Image) — returns base64 image block + summary text ──
   gpt_image_text2img: async (args) => {
     const request = parseArgs(text2ImageSchema, args);
-    if (request.savePath && existsSync36(request.savePath)) return { ...text3(`Output already exists; choose a new savePath: ${request.savePath}`, true), terminal: true };
+    if (request.savePath && existsSync37(request.savePath)) return { ...text3(`Output already exists; choose a new savePath: ${request.savePath}`, true), terminal: true };
     const result = await generateFromText(request);
     if (!result.success || !result.base64) {
       return { ...text3(`Image generation failed: ${result.error}`, true), terminal: result.terminal === true };
@@ -133887,7 +133887,7 @@ File save failed: ${formatError(saveError)}`;
   },
   gpt_image_img2img: async (args) => {
     const request = parseArgs(img2ImgSchema, args);
-    if (request.savePath && existsSync36(request.savePath)) return { ...text3(`Output already exists; choose a new savePath: ${request.savePath}`, true), terminal: true };
+    if (request.savePath && existsSync37(request.savePath)) return { ...text3(`Output already exists; choose a new savePath: ${request.savePath}`, true), terminal: true };
     const result = await generateFromImage(request);
     if (!result.success || !result.base64) {
       return { ...text3(`Image editing failed: ${result.error}`, true), terminal: result.terminal === true };

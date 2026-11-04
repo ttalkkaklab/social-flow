@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { realpathSync, readFileSync } from 'node:fs';
+import { existsSync, realpathSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { verifyImageFile, type ImageMetadata } from './image-media.js';
@@ -70,7 +70,8 @@ export function prepareVideoImages(tool: string, input: Record<string, unknown>,
   const frames = routing.framePlan(shot);
   let references = routing.imageReferences(shot);
   const rawCast = (shot.visual as Record<string, unknown> | undefined)?.character;
-  const canonicalMsr = tool === 'astra_genai_msr' && frames.mode === 'reference' && rawCast !== undefined;
+  const canonicalMsr = tool === 'astra_genai_msr' && frames.mode === 'reference' && rawCast !== undefined
+    && existsSync(path.join(episode, 'storyboard', 'cast.json'));
   if (canonicalMsr) {
     const ids = ([] as unknown[]).concat(rawCast ?? []).map(entry => typeof entry === 'string' ? entry : (entry as { id: string }).id);
     // Old combined pictures and omitted faces cannot redefine a declared principal's identity.

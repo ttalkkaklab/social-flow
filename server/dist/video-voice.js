@@ -46,7 +46,7 @@ export function resolveCharacterVoice(character, context, warnings) {
     if (!Object.keys(object(character.tts)).length && existsSync(identity)) {
         try {
             const { handoff } = load('../../skills/channel/references/character-sheet.js');
-            const current = handoff(identity);
+            const current = handoff(identity, { voiceOnly: character.voiceOnly === true });
             resolved = { ...current, ...character, tts: current.tts };
         }
         catch (error) {
@@ -117,7 +117,7 @@ function msrSubject(character, refs, context) {
     let ownedPaths;
     const declared = [].concat(object(context.shot.visual).character ?? [])
         .map(entry => typeof entry === 'string' ? entry : text(object(entry).id));
-    if (declared.includes(text(character.id))) {
+    if (declared.includes(text(character.id)) && existsSync(path.join(context.episode, 'storyboard', 'cast.json'))) {
         const { sheetPanels } = load('../../skills/channel/references/character-panels.js');
         const dir = path.join(context.episode, 'storyboard');
         // Planning rebuilt these references from this same registered owner; transport aliases no longer identify the slot.

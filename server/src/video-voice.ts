@@ -76,9 +76,9 @@ export function resolveCharacterVoice(character: Record<string, unknown>, contex
   if (!Object.keys(object(character.tts)).length && existsSync(identity)) {
     try {
       const { handoff } = load('../../skills/channel/references/character-sheet.js') as {
-        handoff(file: string): Record<string, unknown>;
+        handoff(file: string, options?: { voiceOnly: boolean }): Record<string, unknown>;
       };
-      const current = handoff(identity);
+      const current = handoff(identity, { voiceOnly: character.voiceOnly === true });
       resolved = { ...current, ...character, tts: current.tts };
     } catch (error) {
       warnings.push(`${id}: cannot read the selected character voice: ${error instanceof Error ? error.message : String(error)}`);
@@ -144,7 +144,7 @@ function msrSubject(character: Record<string, unknown>, refs: Record<string, unk
   let ownedPaths: string[];
   const declared = ([] as unknown[]).concat(object(context.shot.visual).character ?? [])
     .map(entry => typeof entry === 'string' ? entry : text(object(entry).id));
-  if (declared.includes(text(character.id))) {
+  if (declared.includes(text(character.id)) && existsSync(path.join(context.episode, 'storyboard', 'cast.json'))) {
     const { sheetPanels } = load('../../skills/channel/references/character-panels.js') as {
       sheetPanels(dir: string, ids: string[]): Map<string, Record<string, string>>;
     };

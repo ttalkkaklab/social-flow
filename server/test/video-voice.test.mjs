@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { prepareVideoVoice } from '../dist/video-voice.js';
+import { prepareVideoVoice, resolveCharacterVoice } from '../dist/video-voice.js';
 import { videoVoiceCapabilities } from '../dist/video-registry.js';
 
 const tts = { engine:'gemini', model:'gemini-2.5-flash-preview-tts', voiceId:'Kore', language:'ko', speed:1, voiceDirection:'Low dry voice, Seoul accent.' };
@@ -238,6 +238,7 @@ test('MSR keeps a phone caller off screen without borrowing the visible listener
 test('declared MSR cast maps pinned voices to canonical faces instead of stale transport aliases',t=>{
  const ctx=fixture(t),characters=ctx.board.SB_DOC.characters;
  fs.mkdirSync(path.join(ctx.episode,'storyboard'));
+ fs.writeFileSync(path.join(ctx.episode,'storyboard/cast.json'),JSON.stringify({characters:characters.map(c=>({id:c.id,source:'../assets/characters/'+c.id+'/identity.md'}))}));
  const references=[];
  for(const c of characters){
   const folder=path.join(ctx.episode,'assets/characters',c.id);fs.mkdirSync(folder,{recursive:true});const panels={};
@@ -250,4 +251,24 @@ test('declared MSR cast maps pinned voices to canonical faces instead of stale t
  const result=prepareVideoVoice('astra_genai_msr',{prompt:'Exchange.',references},ctx);
  assert.deepEqual(result.voiceContinuity.speakers.map(s=>s.imageIndices),[[1],[2]]);
  assert.deepEqual(result.args.references.map(r=>r.audioPath),characters.map(c=>c.voiceReference.path));
+});
+
+test('legacy MSR cast keeps explicit voice ownership without requiring shared panels',t=>{
+ const ctx=fixture(t),characters=ctx.board.SB_DOC.characters;
+ ctx.shot.visual.character=characters.map(c=>c.id);
+ const result=prepareVideoVoice('astra_genai_msr',{prompt:'Exchange.',references:characters.map(c=>({imagePath:c.voiceReference.imagePaths[0]}))},{...ctx,msrVoice:true});
+ assert.deepEqual(result.args.references.map(r=>r.audioPath),characters.map(c=>c.voiceReference.path));
+});
+
+test('id-only voice-only speakers resolve pinned speech with pending body details',t=>{
+ const ctx=fixture(t),folder=path.join(ctx.episode,'assets/characters/caller');
+ fs.mkdirSync(folder,{recursive:true});fs.writeFileSync(path.join(ctx.episode,'profile.md'),'# Channel');
+ const example=fs.readFileSync(new URL('../../skills/channel/references/character-identity-example.md',import.meta.url),'utf8');
+ const doc=JSON.parse(example.match(/```json\s*\n([\s\S]*?)```/)[1]);doc.tts=tts;
+ doc.character.identity.age={status:'pending',reason:'Voice-only role',value:null};
+ doc.character.physical.heightCm={status:'pending',reason:'Voice-only role',value:null};
+ fs.writeFileSync(path.join(folder,'identity.md'),'# Caller\n\n```json\n'+JSON.stringify(doc)+'\n```');
+ const warnings=[],resolved=resolveCharacterVoice({id:'caller',voiceOnly:true},ctx,warnings);
+ assert.deepEqual(resolved.tts,tts);
+ assert.deepEqual(warnings,[]);
 });

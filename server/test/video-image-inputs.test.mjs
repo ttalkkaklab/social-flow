@@ -43,6 +43,13 @@ test('reference-only inputs keep order and roles; installed adapters enforce the
  const tooMany=prepareVideoImages('seedance_reference',{prompt:'Walk',model:'dreamina-seedance-2-0-260128'},s,root);
  assert.throws(()=>parseVideoArgs('seedance_reference',tooMany.args),/at most 9/);
 });
+test('MSR preserves explicit image references on a legacy board without a declared cast',t=>{
+ const root=fixture(t),s=shot('reference',[ref()]);
+ s.visual.character=['hero'];s.visual.frames.start='start.png';
+ const p=prepareVideoImages('astra_genai_msr',{prompt:'Walk'},s,root);
+ assert.deepEqual(p.args.references.map(r=>path.basename(r.imagePath)),['hero.png','start.png']);
+ assert.match(p.args.prompt,/Image 1: character, Preserve hero appearance/);
+});
 test('MSR names the character-sheet panels of one character as one subject',t=>{
  const root=fixture(t),sheet=path.join(root,'assets/characters/kardum');fs.mkdirSync(sheet,{recursive:true});
  for(const name of ['face','body','back'])fs.writeFileSync(path.join(sheet,name+'.png'),png);

@@ -32678,7 +32678,7 @@ function resolveCharacterVoice(character, context, warnings) {
   if (!Object.keys(object(character.tts)).length && existsSync4(identity)) {
     try {
       const { handoff } = load2("../../skills/channel/references/character-sheet.js");
-      const current = handoff(identity);
+      const current = handoff(identity, { voiceOnly: character.voiceOnly === true });
       resolved = { ...current, ...character, tts: current.tts };
     } catch (error) {
       warnings.push(`${id}: cannot read the selected character voice: ${error instanceof Error ? error.message : String(error)}`);
