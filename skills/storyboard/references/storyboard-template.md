@@ -85,7 +85,7 @@ storyboard.md and script.md suffer is structurally impossible here.
   are off-limits.
 - SB_DOC holds only editorial metadata that isn't in scenes.js: core message, the selected
   scenario handoff (`scenario` — references and intent copied from `scenario.md`), docNotes,
-  per-scene notes (sceneNotes), transitions, audio directions (audioNotes), privacy avoidance
+  per-scene notes (sceneNotes), audio directions (audioNotes), privacy avoidance
   (privacy), source summary (sources), platform plan (platforms), shooting prep (prep), and
   the recheck list (recheck).
 - Just open `storyboard.html` in a browser (no external resources). Use this document as the
@@ -93,16 +93,14 @@ storyboard.md and script.md suffer is structurally impossible here.
 
 What the document shows:
 
-- **Shot card** — one `SCENES[]` entry. The header carries the role (`COVER`), size and angle,
-  the opening-strategy, hook-form and arc name tags (cover only), the **beat** (short: cover, drip, CTA;
-  long-form: cover, hooking, result, body, turn, CTA), and the two production-layer badges (picture / overlay). Entries sharing `scene` are grouped
-  under a scene band (`S#1. location / time`). The last main shot is not stamped PAYOFF.
-- **Scene-frame rows** — one reveal = one row. A 9:16 frame on the left; on the right, the
-  text and dialogue at that moment. A reveal is not a shot. A channel-color badge means AI
-  video; an outline-only badge means HTML staging. On a cover the first row is the title
-  reveal, and that is what the viewer sees at t=0 — the manifest opens on it, so there is no
-  background-only frame in front of it. Read that row as the first-second check: the topic
-  word or the figure legible, the movement already started.
+- **Shot card** — one `SCENES[]` entry ([storyboard-design.md](storyboard-design.md) is the
+  current layout). The header carries the shot's summary, its beat on a story-v1 board, and the
+  icon row: render route, size, angle, camera move (plus focus), depth, MSR, and the join into
+  the next shot. Entries sharing `scene` are grouped under a scene band (`S#1. location / time`).
+- **Shot body** — on the left the start image, the end image a first_last shot needs and the
+  reference slots of its video lane; on the right the shot's lines, speaker by speaker, with its
+  story and prompts. No frame preview with text over the picture is drawn: delivered video
+  carries no subtitles, and an off-screen probe only measures on-screen text for overflow.
 - **Contract check** — at the top of the document. Beyond character counts, speech rate, shot
   length, and frame overflow: whether the recorded `picture`/`overlay` match the structure,
   whether `shot.info` within the same scene overlaps, whether `shot.infoType` routes timelines,

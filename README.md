@@ -611,8 +611,8 @@ spoken sentences, numbered and handed to the reviewer inline so it opens no file
 
 | Review | What it reads | Score is |
 |---|---|---|
-| Narration mode (§4.4) | the narration alone, without the picture — does the topic and the content come through | total; a requested improvement loop targets 95, cap 3 reads |
-| Vocabulary mode (§4.5) | the same sentences — are the words what a person says | **lowest sentence**; the same loop on request |
+| Narration mode (legacy-authoring §4.4) | the narration alone, without the picture — does the topic and the content come through | total; a requested improvement loop targets 95, cap 3 reads |
+| Vocabulary mode (legacy-authoring §4.5) | the same sentences — are the words what a person says | **lowest sentence**; the same loop on request |
 
 Those are the only reviewer calls in the flow (0.50.0). The six board reads, the plan
 review and the slide loop of 0.49 came out after measuring 358 reviewer runs: a call cost
@@ -620,7 +620,8 @@ review and the slide loop of 0.49 came out after measuring 358 reviewer runs: a 
 full session the reviewers used more tokens than the session itself. What they looked at is
 now `check-scenes.js`, `check-slide.js`, `check-style.py` and the author's own read of the
 board, the images and the slide key frames — with anything left over going onto the human
-approval screen, which is the one thing that blocks. The other modes (copy · scene · camera ·
+review screen. Only the story order and the episode cast refuse a write, and each shot's video
+waits for the user's yes (`video_approve`). The other modes (copy · scene · camera ·
 sound · image), `slide-reviewer` and `content-reviewer` plan mode still exist for a read the
 user asks for by name. autoproduce has no human to decide, so there a read still short after
 the third pass is recorded as evidence and authoring continues with the best justified draft.

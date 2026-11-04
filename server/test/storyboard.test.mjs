@@ -502,6 +502,30 @@ describe('icon attributes come after every shot\'s characters', () => {
     assert.throws(() => writeShotIcons({ path: dir, shots: [{ id: 's0002', next: { transition: 'cut', reason: 'r' } }] }), /last shot has no next shot/);
     assert.throws(() => shotIconsSchema.parse({ path: dir, shots: [{ id: 's0001', next: { transition: 'cut', transitionSeconds: .2, reason: 'r' } }] }), /cut and dip do not accept transitionSeconds/);
   });
+  it('board writes copy the cast identity, so the sheet height and name reach the board', () => {
+    const dir = storyBoard();
+    const f = (value) => ({ status: 'confirmed', value });
+    const character = { schemaVersion: 1, version: 1, physical: { heightCm: f(160) },
+      identity: { gender: f('female'), species: f('human'), age: f('20s'), role: f('lead'), summary: f('a young archer') } };
+    writeFileSync(join(dir, 'assets/characters/mina/identity.md'), `# Mina\n\n\`\`\`json\n${JSON.stringify({ character })}\n\`\`\`\n`);
+    writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }] });
+    const entry = readBoard(dir).win.SB_DOC.characters.find((c) => c.id === 'mina');
+    assert.deepEqual([entry.name, entry.character.physical.heightCm.value, Object.keys(entry.panels).sort()], ['Mina', 160, ['back', 'face', 'front']]);
+  });
+  it('a shot that gets a new predecessor loses the join written for the old one', () => {
+    const dir = storyBoard();
+    writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }, { id: 's0002', characters: [] }] });
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', next: { transition: 'whip:l2r', transitionSeconds: .3, reason: 'the answer is outside' } }] });
+    // A new shot between the two: s0002's whip was the cut out of s0001, not out of the new shot.
+    const r = applyStoryboard({ path: dir, draft: true, insertShots: [{ after: 1, shots: [{ type: 'points', scene: 1, summary: 'n' }] }] });
+    const moved = readBoard(dir).win.SCENES.find((s) => s.id === 's0002');
+    assert.deepEqual([moved.transition, moved.edit], [undefined, undefined]);
+    assert.ok(r.findings.some((f) => f.level === 'warn' && f.where === 's0002' && /join \(whip:l2r\) was cleared/.test(f.what)));
+    // A join set in the same patch stays.
+    const kept = applyStoryboard({ path: dir, draft: true, removeShotIds: ['s0003'], transitions: [{ no: 2, transition: 'dip', reason: 'night' }] });
+    assert.equal(kept.written, true);
+    assert.equal(readBoard(dir).win.SCENES[1].transition, 'dip');
+  });
   it('only a board started with story_sequence holds every writer to the order', () => {
     const dir = storyBoard();
     const shot = readBoard(dir).win.SCENES[0];

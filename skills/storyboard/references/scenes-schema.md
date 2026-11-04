@@ -2179,13 +2179,12 @@ character, or when a location reference should control only the sky, the water, 
 **The check strip warns when a generated clip carries two or more references and none of them
 is scoped** — one reference alone has nothing to leak into.
 
-The id first resolves against `PRODUCTION.cast`. If that entry has `image`, use the episode
-image; if it has no image, resolve the same id from the channel panels. An id absent from the
-episode cast is a channel character and produces a warning because the checker cannot inspect
-the channel directory. `resolve-asset.py <channel dir> character <id>` turns a channel id into
-`assets/characters/<id>/`, and the panels inside that directory are the reference set
-(`video-model-selection.md` §The character panels). The storyboard says **who is on screen**;
-produce chooses any channel panels according to the framing.
+On a story-first board the id must be a `storyboard/cast.json` member, and its references are
+the sheet panels its `panels.json` registers: one character sends face, front and back; two send
+each face, then each front (`video-model-selection.md` §The character panels). `shot_image` and
+`video_plan` build that set — the storyboard says **who is on screen**, not which panel. An older
+board without a cast resolves the id against `PRODUCTION.cast` first, then the channel panels
+(`resolve-asset.py <channel dir> character <id>` → `assets/characters/<id>/`).
 
 Writing it buys two things — produce attaches the reference images without re-reading the scene
 text, and storyboard.html can show the cast with the

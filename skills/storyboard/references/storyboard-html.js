@@ -66,10 +66,14 @@ function storyboardHtml(directory, check = false) {
     const face = '../../../assets/characters/' + id + '/face.png';
     if (fs.existsSync(path.resolve(dir, face))) portraits[id] = face;
   }
+  // The episode's saved video selection, which video_plan resolves shots against; the review cannot read it from file://.
+  let videoSnapshot = null;
+  try { videoSnapshot = JSON.parse(fs.readFileSync(path.join(dir, '..', '.work', 'model-settings.json'), 'utf8')).config.models.video || null; } catch { /* none */ }
   const panelFindings = win ? require('../../channel/references/character-panels.js').boardPanelFindings(win, dir, path.resolve(dir, '../../..')) : [];
   const reviewData = 'window.LOCATION_DETAIL_LINKS = '+JSON.stringify(locationLinks).replace(/</g,'\\u003c')+';\n' +
     'window.REVIEW_PANEL_FINDINGS = ' + JSON.stringify(panelFindings).replace(/</g, '\\u003c') + ';\n' +
     'window.REVIEW_FILES = ' + JSON.stringify(available) + ';\n' +
+    'window.REVIEW_VIDEO_SNAPSHOT = ' + JSON.stringify(videoSnapshot).replace(/</g, '\\u003c') + ';\n' +
     'window.REVIEW_CHARACTER_PORTRAITS = ' + JSON.stringify(portraits).replace(/</g, '\\u003c') + ';\n' +
     'window.REVIEW_VIDEO_TYPES = ' + JSON.stringify(typeLabels).replace(/</g, '\\u003c') + ';\n';
   const catalogue = require('./film-techniques.js');

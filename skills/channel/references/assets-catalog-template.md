@@ -22,9 +22,10 @@ Well-known files are found even without a row in the table below.
 - character / `<id>` → `characters/<id>/`
   — inside it: `identity.md` (the canonical description), `face.png` (face close-up),
   `body.png` (headless front mannequin, build and wardrobe — `character-identity.md`),
-  `back.png` (matching headless rear mannequin — required), `front.png` (legacy front
-  filename; inspect existing contents before reuse). The reference set handed to generation is
-  face → body; never paste the panels into one sheet (`video-model-selection.md` §The character panels).
+  `back.png` (matching headless rear mannequin — required), `panels.json` (registers the face,
+  front and back slots — `character-panels.md`). The reference set handed to generation is the
+  registered face, front and back for one character, and each face then each front for two; never
+  paste the panels into one sheet (`video-model-selection.md` §The character panels).
   `voice.wav` is the character's fixed voice sample — 5–10 s of speech in the character's
   register, cut from the voice `identity.md` pins, no music or effects. produce hands it to
   `seedance_reference` as reference audio on cuts the model voices, so the model-voiced lane

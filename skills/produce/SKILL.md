@@ -206,9 +206,10 @@ setup only if missing. Preserve legacy approved choices rather than overwriting
 them. Use the selected video, speech and image models throughout production, even
 when later recipes recommend another engine. No repeated model question or silent fallback.
 Follow [delivery preflight and continuation](references/delivery-continuation.md) before generating assets and on every resume. Clips alone are never completion.
-- Confirm `status: approved` in the `storyboard/storyboard.md` frontmatter — that approval is the
-  spending boundary for this episode's generation; without it stop and point the user at
-  `/social-flow:storyboard`.
+- Spend only inside the authorization the user gave — `PRODUCTION.videoAuthorization`, or the
+  approved cost quote (`PRODUCTION.approval`) — and run each shot's video only after the user's yes
+  to its plan (`video_approve`, or `{auto:true}` for every shot; `video_execute` refuses otherwise).
+  The `storyboard.md` `status` is a progress label, not the spending boundary.
 - Load `data/<channel>/profile.md` (voice, theme, platforms, `shortform_outro` — `on` if absent).
 - **Identify the source**: three paths, decided by `window.FORMAT` and the scenes'
   `visual.source`.
@@ -301,13 +302,14 @@ Follow [delivery preflight and continuation](references/delivery-continuation.md
   so a resumed run reuses the captures and TSV manifests already there.
 ### 1.5 Generate the stills
 
-**This is where the episode starts costing money.** The storyboard planned every still and
-generated none of it (its §5), so `storyboard/images/` is empty when this step begins and full
-when it ends. **Skip the whole section on the shooting-edit path** (the screen is the user's
+**Stills cost money under the image authorization.** On a story-first board `shot_image` already
+made each picture shot's start image (and a first_last end image) in the storyboard's fourth step;
+this step makes only what is still missing. An older board planned its stills without generating
+them, so its `storyboard/images/` fills here. **Skip the whole section on the shooting-edit path** (the screen is the user's
 recording); a **mixed** episode still generates the stills its generated scenes name. Slide
 scenes have no still here either — their screen is HTML, authored at §3.6.
 
-**Persistent locations:** Before source images, follow [location assets](../storyboard/references/location-assets.md). Render the bound set/camera and complete actor start/end blocking; inspect consecutive cuts and the advisory continuity findings. Use `mcp__social-flow__location_manage` action `previz` for motion so its clip and source composition share that same spatial plan. Forward the assembler's actual image inputs with the location composition first; cast sheets supply appearance. Read spatialWarnings for legacy independent previz. Camera, actor or endpoint changes require fresh references; actual reviews remain optional and honestly recorded.
+**Persistent locations:** a place whose sheet names a built set (`SB_DOC.locations[].manifest`) needs no separate step — `shot_image` renders that set in Blender from the shot's size and angle as Image 1 ([location assets](../storyboard/references/location-assets.md)); without a set the sheet image leads, with a warning. A Blender composition, a motion previz (`mcp__social-flow__location_manage` action `previz`) or a continuity review runs when the user asks for it. Cast sheets supply appearance; actual reviews remain optional and honestly recorded.
 
 **The plan clears rule 13 first.** Go through each `bgPrompt` and the footage stills against
 absolute rule 13's list with profile.md §3 open for the target person — no still life as a
@@ -400,17 +402,13 @@ means generating something nobody approved.
   camera:` sentence and the exclusions — and `--no-person` again when the stored string reads
   "the subject" instead of a body) rather than editing the string by hand.
 - Follow [character-identity.md](../channel/references/character-identity.md) for cast directions: recompile current identities, compare source hashes, and apply image/video/dialogue/voice guidance to their respective generation lanes.
-- **`visual.character` — who is on screen.** Use `PRODUCTION.cast[id].image` when present;
-  otherwise resolve the id to the channel panel directory:
-
-  ```bash
-  CH=$(python3 ../channel/references/resolve-asset.py "$CHANNEL_DIR" character claude)
-  # → …/assets/characters/claude — reference set: $CH/face.png then $CH/body.png
-  ```
-  Keep source-image order as previz, style pack, episode cast. **Inside channel panels, order is
-  weight**: front/three-quarter shots use face then body, close-ups use face alone,
-  rear shots use back (add face only when visible). Store all three views for new characters. No panels yet means falling back to that character's `front.png`; a live-action
-  character keeps its single image (`real.png`). The reference lane is the saved video model's
+- **`visual.character` — who is on screen.** The references are the sheet panels the character's
+  `panels.json` registers (`character-panels.js` `canonicalReferences`): one character sends its
+  face close-up, headless front and headless back; two send each face, then each front. At most two
+  characters take references (`msr_character_limit`). `shot_image` and `video_plan` build this set
+  themselves. A missing panel is reported for `character_panel` to make — never replaced by a
+  body-only picture or an older full-body file. A live-action character keeps its single image
+  (`real.png`). The reference lane is the saved video model's
   (`astra_genai_msr`, `seedance_reference` or `fasth3_omni_reference` as the plan selects;
   model input limits are validated in code) — a saved model that cannot take the required references is reported for an explicit
   exception, not swapped. The full rule is

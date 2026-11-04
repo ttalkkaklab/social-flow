@@ -98,7 +98,7 @@ complete in any order and no other tool reads this record. The one check left: a
 `node "$CLAUDE_PLUGIN_ROOT/server/dist/bundle.js" --workflow request.json`.
 
 ```json
-{"episode":"/workspace/data/channel/episodes/topic","action":"begin","stage":"characters","entries":[{"id":"hero","text":"../../../assets/characters/hero/identity.md","image":"../../../assets/characters/hero/front.png"}]}
+{"episode":"/workspace/data/channel/episodes/topic","action":"begin","stage":"characters","entries":[{"id":"hero","text":"../../../assets/characters/hero/identity.md","image":"../../../assets/characters/hero/face.png"}]}
 ```
 
 Existing episodes are regenerated in this order rather than migrated.

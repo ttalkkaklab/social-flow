@@ -409,8 +409,8 @@ local generation and host image tools are explicit alternatives. Text-bearing im
 require GPT Image 2. At first video setup, a supported host video tool is recommended;
 once saved, the saved choice governs every generated still, slide art, clip, candidate logo,
 intro keyframe and growth-post image — channel assets follow `.social-flow/models.json` like
-episodes. The storyboard records the saved providers in `window.PRODUCTION.imageProvider` and
-`videoProvider` (`host` | `astra` | `api`); the fallback from a failed host call is asked for,
+episodes. The storyboard records the saved providers in `window.PRODUCTION.imageProvider`
+(`host` | `api`; ASTRA GenAI images are `api`) and `videoProvider` (`host` | `astra` | `api`); the fallback from a failed host call is asked for,
 never silent. Host output is logged as `image.host` / `video.host` at $0 with the allowance
 noted. Contracts: `skills/produce/references/still-generation.md` §1 and
 `skills/produce/references/video-model-selection.md`.
