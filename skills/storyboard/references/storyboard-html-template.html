@@ -853,6 +853,10 @@
   .size-ico.c-follow { background: linear-gradient(150deg, #6fd88a, #23995a); }
   .size-ico.c-rise { background: linear-gradient(150deg, #ffd25e, #e0901a); }
   .size-ico.c-body { background: linear-gradient(150deg, #ff8a8a, #d63c5a); }
+  /* Transition families — a hard change, a blend through or over the old picture, a moving wipe */
+  .size-ico.t-cut { background: linear-gradient(150deg, #9aa6b8, #4b5566); }
+  .size-ico.t-blend { background: linear-gradient(150deg, #f29ad8, #a83fa0); }
+  .size-ico.t-move { background: linear-gradient(150deg, #7fb2ff, #2f5fd0); }
   .size-key {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); gap: var(--s3) var(--s1);
     margin: var(--s3) 0 0; padding: var(--s3) var(--s4); border-radius: 12px; background: var(--sunk);
@@ -1832,12 +1836,24 @@ window.STORYBOARD_READY = (async function () {
       promptMotion: "Movement prompt", promptSpeechClip: "Speech-clip prompt",
       promptBg: "Background prompt", metaSlide: "Slide", promptSlidePlan: "Slide plan",
       privacyNote: "Avoiding private detail — ",
-      transitionLabel: "Transition effect · into this shot",
+      transitionKey: "transition · into the next shot",
       transitionNames: { cut: "Straight cut", dip: "Fade through black", "dip:white": "Fade through white", jcut: "Sound leads, then picture cuts", dissolve: "Cross dissolve", iris: "Circle reveal", blur: "Blur dissolve", zoom: "Zoom fade", push: "Slide reveal", whip: "Whip pan" },
-      transitionMissing: "Not selected",
-      transitionOpening: "Opening",
-      transitionDip: "Previous picture fades out, then this picture fades in · up to 0.30s each (short shots use shorter fades)",
-      transitionDipOpening: "Opening fades in · up to 0.30s",
+      transitionHint: {
+        cut: "Picture and sound change together, no added pre-roll. For a cut on action, an eyeline or composition match, or a reveal that lands on the new frame.",
+        jcut: "The next line starts over the continuing outgoing footage (0.24s), then the picture cuts. For two shots of one place and one moment, size or angle changed.",
+        dissolve: "The next picture melts up through the old one (0.40s). Time passed or the place changed, and the pictures should blend without black.",
+        dip: "The old picture fades to black, then the next fades in (up to 0.30s each). A chapter or act break, a jump the story treats as a distance.",
+        "dip:white": "The same fade through white — it reads as a flash.",
+        iris: "A circle opens out of the old picture onto the new one (0.40s). A find — the shot names the thing the episode has been circling.",
+        blur: "The old picture smears sideways and melts (0.40s). A memory, a hypothetical, someone losing the thread.",
+        zoom: "The old picture grows past the camera and thins out (0.32s). The camera goes in — into the box, the building, the diagram.",
+        push: "The old picture slides off and uncovers the new one (0.32s). A list, a comparison, \"meanwhile\" — siblings, not a before and after.",
+        whip: "The old picture smears along the travel and is gone (0.24s). A hard swerve — the answer is somewhere else, and the turn is the point."
+      },
+      transitionDirs: { l2r: "left → right", r2l: "right → left", u2d: "top → bottom", d2u: "bottom → top" },
+      transitionDirKey: "direction: left→right · right→left · top→bottom · bottom→top",
+      transitionMissing: "Join to the next shot not set",
+      transitionNext: "into the next shot",
       transitionReason: "Reason",
       transitionContinuity: "Continuity",
 
@@ -2169,12 +2185,24 @@ window.STORYBOARD_READY = (async function () {
       promptMotion: "움직임 프롬프트", promptSpeechClip: "말하는 클립 프롬프트",
       promptBg: "배경 프롬프트", metaSlide: "슬라이드", promptSlidePlan: "슬라이드 구성",
       privacyNote: "사생활 피하기 — ",
-      transitionLabel: "전환 효과 · 이 샷으로 들어올 때",
+      transitionKey: "전환 효과 · 다음 샷으로 넘어갈 때",
       transitionNames: { cut: "바로 전환", dip: "검정 페이드", "dip:white": "흰색 페이드", jcut: "다음 목소리 먼저, 화면은 뒤에 전환", dissolve: "화면 겹치며 전환", iris: "원이 열리며 전환", blur: "흐려지며 전환", zoom: "확대하며 전환", push: "밀어내며 전환", whip: "빠르게 휘돌며 전환" },
-      transitionMissing: "미지정",
-      transitionOpening: "첫 화면",
-      transitionDip: "이전 화면이 서서히 사라진 뒤 현재 화면이 나타남 · 각 최대 0.30초 (짧은 샷에서는 단축)",
-      transitionDipOpening: "첫 화면이 서서히 나타남 · 최대 0.30초",
+      transitionHint: {
+        cut: "그림과 소리가 함께 바뀝니다. 동작 연결, 시선·구도 맞춤, 새 화면에서 드러나는 공개에 씁니다.",
+        jcut: "다음 대사가 앞 화면 위에서 먼저 시작하고(0.24초) 화면이 뒤따라 바뀝니다. 같은 장소·같은 순간을 크기나 각도만 바꿔 이을 때 씁니다.",
+        dissolve: "다음 화면이 앞 화면을 뚫고 0.40초 동안 떠오릅니다. 시간이 흘렀거나 장소가 바뀌었는데 검정 없이 이을 때 씁니다.",
+        dip: "앞 화면이 검정으로 사라진 뒤 다음 화면이 나타납니다(각 최대 0.30초). 장·막이 바뀌거나 이야기가 거리를 두고 건너뛸 때 씁니다.",
+        "dip:white": "같은 페이드를 흰색으로 거칩니다. 섬광처럼 읽힙니다.",
+        iris: "앞 화면에서 원이 열리며 다음 화면이 드러납니다(0.40초). 에피소드가 맴돌던 대상을 찾아낸 순간에 씁니다.",
+        blur: "앞 화면이 옆으로 번지며 녹아내립니다(0.40초). 회상, 가정, 생각이 흐트러지는 순간에 씁니다.",
+        zoom: "앞 화면이 카메라를 지나 커지며 옅어집니다(0.32초). 상자·건물·도해 속으로 들어갈 때 씁니다.",
+        push: "앞 화면이 밀려나며 다음 화면이 드러납니다(0.32초). 목록, 비교, '한편' 같은 나란한 장면에 씁니다.",
+        whip: "앞 화면이 이동 방향으로 번지며 사라집니다(0.24초). 답이 다른 곳에 있고 그 급회전이 요점일 때 씁니다."
+      },
+      transitionDirs: { l2r: "왼쪽 → 오른쪽", r2l: "오른쪽 → 왼쪽", u2d: "위 → 아래", d2u: "아래 → 위" },
+      transitionDirKey: "방향: 왼→오 · 오→왼 · 위→아래 · 아래→위",
+      transitionMissing: "다음 샷 전환 미지정",
+      transitionNext: "다음 샷으로",
       transitionReason: "선택 이유",
       transitionContinuity: "두 화면의 연결",
 
@@ -2814,6 +2842,46 @@ window.STORYBOARD_READY = (async function () {
   function camKeyTile(id) {
     return '<span class="k" tabindex="0" data-tip="' + esc(camTitle(id)) + '">' + camIcon(id) + "<span>" + esc(window.FILM_TECHNIQUES.byId[id].label[LANG]) + "</span></span>";
   }
+  /* Transition pictograms (scenes-schema §scene transition) — the old picture A on the left, the
+     next picture B on the right; push and whip are drawn left → right and turned for the others. */
+  var JOIN_KINDS = ["cut", "jcut", "dissolve", "dip", "dip:white", "iris", "blur", "zoom", "push", "whip"];
+  var JOIN_SECONDS = { jcut: .24, dissolve: .40, iris: .40, blur: .40, zoom: .32, push: .32, whip: .24 };
+  var JOIN_FAMILY = { cut: "t-cut", jcut: "t-cut", dissolve: "t-blend", dip: "t-blend", "dip:white": "t-blend", blur: "t-blend",
+                      iris: "t-move", zoom: "t-move", push: "t-move", whip: "t-move" };
+  var JOIN_TURN = { l2r: 0, u2d: 90, r2l: 180, d2u: 270 };
+  var JOIN_ICON = {
+    cut: '<rect x="3.5" y="9" width="10" height="14" rx="2"/><rect x="18.5" y="9" width="10" height="14" rx="2" class="ico-fill"/><path d="M16 5v22"/>',
+    jcut: '<path d="M4 10h11"/><path d="M17 10h11" stroke-width="4"/><path d="M16 6v8" class="ico-dim"/>' +
+          '<path d="M4 22h5"/><path d="M11 22h17" stroke-width="4"/><path d="M10 18v8" class="ico-dim"/>',
+    dissolve: '<rect x="3.5" y="6" width="15" height="13" rx="2"/><rect x="13.5" y="13" width="15" height="13" rx="2"/>' +
+              '<rect x="13.5" y="13" width="5" height="6" class="ico-fill" style="opacity:.5"/>',
+    dip: '<rect x="2.5" y="11" width="8" height="10" rx="1.5"/><rect x="12" y="11" width="8" height="10" rx="1.5" class="ico-fill"/><rect x="21.5" y="11" width="8" height="10" rx="1.5"/>',
+    "dip:white": '<rect x="2.5" y="11" width="8" height="10" rx="1.5"/><rect x="21.5" y="11" width="8" height="10" rx="1.5"/>' +
+                 '<path d="M16 9.5v3M16 19.5v3M10.5 16h3M18.5 16h3M12.5 12.5l1.6 1.6M19.5 12.5l-1.6 1.6M12.5 19.5l1.6-1.6M19.5 19.5l-1.6-1.6"/>',
+    iris: '<rect x="4" y="6" width="24" height="20" rx="2.5" class="ico-dim"/><circle cx="16" cy="16" r="4" class="ico-fill"/>' +
+          '<circle cx="16" cy="16" r="8" stroke-dasharray="2.5 2.5"/>',
+    blur: '<rect x="4" y="7" width="12" height="18" rx="2"/><path d="M19 11h9M21 16h7M19 21h9" class="ico-dim"/>',
+    zoom: '<rect x="11" y="11.5" width="10" height="9" rx="1.5"/><rect x="3.5" y="5" width="25" height="22" rx="2.5" class="ico-dim"/>' +
+          '<path d="M10 10.5L6.5 7M22 10.5L25.5 7M10 21.5l-3.5 3.5M22 21.5l3.5 3.5"/>',
+    push: '<rect x="3" y="10" width="12" height="15" rx="2" class="ico-dim"/><rect x="17" y="10" width="12" height="15" rx="2"/>' +
+          '<path d="M8 5h15M19.5 2l3.5 3-3.5 3"/>',
+    whip: '<rect x="17" y="9" width="12" height="15" rx="2"/><path d="M3 11h10M5 16h9M3 21h10" class="ico-dim"/>' +
+          '<path d="M8 4.5h15M19.5 1.5l3.5 3-3.5 3"/>'
+  };
+  function joinIcon(t) {
+    var kind = t === "dip:white" ? t : String(t || "").split(":")[0], d = JOIN_ICON[kind], dir = String(t || "").split(":")[1];
+    if (!d) return '<svg class="size-ico d-unset" viewBox="0 0 32 32" aria-hidden="true"><rect x="4" y="9" width="24" height="14" rx="2" stroke-dasharray="3 3"/><path d="M16 5v22" class="ico-dim"/></svg>';
+    if ((kind === "push" || kind === "whip") && JOIN_TURN[dir]) d = '<g transform="rotate(' + JOIN_TURN[dir] + ' 16 16)">' + d + "</g>";
+    return '<svg class="size-ico ' + JOIN_FAMILY[kind] + '" viewBox="0 0 32 32" aria-hidden="true">' + d + "</svg>";
+  }
+  function joinName(t) {
+    var kind = t === "dip:white" ? t : String(t || "").split(":")[0], dir = String(t || "").split(":")[1];
+    return (T.transitionNames[kind] || t) + (kind !== "dip:white" && T.transitionDirs[dir] ? " · " + T.transitionDirs[dir] : "");
+  }
+  function joinTitle(kind) {
+    return (T.transitionNames[kind] || kind) + " — " + (T.transitionHint[kind] || "") +
+      (kind === "push" || kind === "whip" ? "\n" + T.transitionDirKey : "") + "\n" + kind + (kind === "push" || kind === "whip" ? ":l2r|r2l|u2d|d2u" : "");
+  }
   function depthTitle(mode) { var g = window.FILM_TECHNIQUES.guide("depth", mode); return (T.depth[mode] || mode) + " — " + (LANG === "ko" && g ? guideTip(g) : (T.depthHint[mode] || "")) + (mode === "shallow" || mode === "deep" ? "\n" + T.depthRule : ""); }
   /* Render-route pictograms — what makes the picture move: an AI clip, an HTML animation,
      or a camera over a photo. Same tile and the same 2px line as the size icons. */
@@ -2936,6 +3004,10 @@ window.STORYBOARD_READY = (async function () {
       '<div class="size-key"><span class="kt">' + esc(T.depthKey) + "</span>" +
       ["shallow", "deep", "none"].map(function (k) {
         return '<span class="k" tabindex="0" data-tip="' + esc(depthTitle(k)) + '">' + depthIcon(k) + '<span>' + esc(T.depth[k]) + "</span></span>";
+      }).join("") + "</div>" +
+      '<div class="size-key joins"><span class="kt">' + esc(T.transitionKey) + "</span>" +
+      JOIN_KINDS.map(function (k) {
+        return '<span class="k" tabindex="0" data-tip="' + esc(joinTitle(k)) + '">' + joinIcon(k === "push" || k === "whip" ? k + ":l2r" : k) + '<span>' + esc(T.transitionNames[k]) + "</span></span>";
       }).join("") + "</div>" +
       '<div class="size-key routes"><span class="kt">' + esc(T.renderKey) + "</span>" +
       routes.map(function (k) {
@@ -4928,7 +5000,8 @@ window.STORYBOARD_READY = (async function () {
     h += '<span class="scene-dur"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.8V8l2.2 1.4"/></svg>' + esc(T.sec(dur === null ? "?" : dur)) + "</span></div>";
     var directionAt = directionOrder.findIndex(function (o) { return o.i === i; });
     /* The shot's whole plan as legend icons, in reading order: render, size, angle, camera move
-       (plus focus, which adds to a move), depth. Each code value lives in the tooltip only. */
+       (plus focus, which adds to a move), depth, then the join into the next shot. Each code value
+       lives in the tooltip only. */
     function chip(icon, label, tip) {
       if (tip.indexOf(label) !== 0) tip = label + "\n" + tip;
       return '<span class="shot-chip" tabindex="0" role="img" aria-label="' + esc(tip) + '" data-tip="' + esc(tip) + '">' + (icon || esc(label)) + "</span>";
@@ -4959,6 +5032,16 @@ window.STORYBOARD_READY = (async function () {
     if (msrLane(s, rmode))
       chips += chip('<svg class="size-ico r-msr" viewBox="0 0 32 32" aria-hidden="true"><text x="16" y="19.5" text-anchor="middle" font-size="10" font-weight="800" letter-spacing="-.3" class="ico-fill">MSR</text></svg>',
         "MSR", LANG === "ko" ? "MSR — 캐릭터 이미지 최대 4장(한 명이면 얼굴·앞·뒤 3장)과 시작 이미지 1장(배경 칸)을 받아 영상을 그립니다. 첫 프레임은 고정하지 않습니다." : "MSR — renders from up to four character images (three for one character: face, front, back) and the start image in the background slot; no frame is pinned.");
+    // The join into the next shot — stored on the next shot's transition, which assembly reads (edit-plan.js).
+    var nextShot = SCENES[i + 1];
+    if (s.type !== "broll" && s.type !== "outro" && nextShot && nextShot.type !== "broll" && nextShot.type !== "outro") {
+      var nj = typeof nextShot.transition === "string" ? nextShot.transition : "", ne = nextShot.edit || {}, nk = nj === "dip:white" ? nj : nj.split(":")[0];
+      var nsec = nk === "cut" ? 0 : nk === "dip" || nk === "dip:white" ? null : ne.transitionSeconds !== undefined ? ne.transitionSeconds : JOIN_SECONDS[nk];
+      chips += nj ? chip(joinIcon(nj), joinName(nj), joinName(nj) + " · " + T.transitionNext + (nsec !== null && nsec !== undefined ? " · " + nsec + "s" : "") +
+          "\n" + (T.transitionHint[nk] || nj) + (ne.reason ? "\n\n" + T.transitionReason + " — " + ne.reason : "") +
+          (ne.continuity ? "\n" + T.transitionContinuity + " — " + ne.continuity : ""))
+        : chip(joinIcon(""), T.transitionMissing, T.transitionMissing);
+    }
     // The direction-join line (시작 / 전환 미설정 …) under the row is dropped
     h += summaryHtml.replace(/<div class="direction-join">[\s\S]*$/, "").replace(/<div class="direction-summary"[\s\S]*?<\/div>/, function () {
       var cast = castFacesHtml(s);

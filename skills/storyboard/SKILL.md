@@ -160,8 +160,8 @@ speaker is one of the shot's characters; a narrator is a character who speaks in
 without being seen. When a character leaves a shot later, `shot_characters` keeps their lines
 as `off_screen` and warns, and it warns when the start image shows the old cast; revise them
 with `shot_dialogue` and `shot_image`. The third step, once every shot has its characters, sets what the review's
-icon row shows with `shot_icons` (§4): render route, size, angle, camera move, focus, depth and
-frame plan. Camera endpoints and blocking then go through `storyboard_apply`. The fourth step,
+icon row shows with `shot_icons` (§4): render route, size, angle, camera move, focus, depth,
+frame plan and `next`, the transition into the following shot (scenes-schema §scene transition). Camera endpoints and blocking then go through `storyboard_apply`. The fourth step,
 once every shot has its icon attributes and the props and backgrounds exist, makes each
 picture shot's start image with `shot_image` from its characters' sheet panels, place and
 props — and its end image only for a `first_last` shot. A place whose sheet names a built set
@@ -256,7 +256,7 @@ Before image prompts, perform the required camera-direction pass in
 [action direction](references/action-direction.md#required-camera-direction-pass).
 Choose framing, angle, focus and movement from each beat; never initialize every shot
 with static or copy one generic hold rationale. Set the icon attributes — render route, size,
-angle, move, focus, depth, frame plan — with `shot_icons`, then persist the executable
+angle, move, focus, depth, frame plan, transition to the next shot — with `shot_icons`, then persist the executable
 endpoints through `storyboard_apply`, then review the sequence for purposeful holds and
 changes of attention. This is authoring work, not a moving-shot quota or approval gate.
 

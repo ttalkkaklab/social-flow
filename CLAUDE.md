@@ -122,7 +122,8 @@ time: `story_sequence` → `story_scene` → `story_shot` (one sentence per shot
 prompt, camera or dialogue work happens in it. The second step sets each shot's characters with
 `shot_characters` (at most two, or none), then each character's lines with `shot_dialogue`. The
 third sets the attributes the review's icon row shows with `shot_icons`: render route, size,
-angle, camera move, focus, depth and frame plan (`reference` is MSR). Each tool refuses a layer
+angle, camera move, focus, depth, frame plan (`reference` is MSR) and the transition into the
+next shot (`next`, stored on that shot's `transition`, which assembly reads). Each tool refuses a layer
 whose parent is missing (`story_order`); `shot_characters` waits for a story with no gaps and
 `shot_icons` for every shot's characters. Inside an episode a new board starts with
 `story_sequence` — `storyboard_apply` does not create one — and carries

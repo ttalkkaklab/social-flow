@@ -32674,8 +32674,7 @@ var globalsSchema = external_exports.record(external_exports.string().regex(/^[A
   const parsed = productionSchema.safeParse(value.PRODUCTION);
   if (!parsed.success) for (const issue of parsed.error.issues) ctx.addIssue({ ...issue, path: ["PRODUCTION", ...issue.path] });
 });
-var transitionPatchSchema = external_exports.object({
-  no: external_exports.number().int().positive().describe("Incoming shot number, 1-based, after removals and inserts"),
+var transitionFields = {
   transition: external_exports.enum([
     "cut",
     "dip",
@@ -32697,10 +32696,17 @@ var transitionPatchSchema = external_exports.object({
   transitionSeconds: external_exports.number().finite().min(0.08).max(0.8).optional(),
   reason: nonEmpty,
   continuity: nonEmpty.optional()
-}).strict().refine(
-  (v) => !["cut", "dip", "dip:white"].includes(v.transition) || v.transitionSeconds === void 0,
+};
+var STILL_JOINS = ["cut", "dip", "dip:white"];
+var secondsOnMovingJoins = [
+  (v) => !STILL_JOINS.includes(v.transition) || v.transitionSeconds === void 0,
   "cut and dip do not accept transitionSeconds; dip fades each side for up to 0.30 seconds"
-);
+];
+var transitionPatchSchema = external_exports.object({
+  no: external_exports.number().int().positive().describe("Incoming shot number, 1-based, after removals and inserts"),
+  ...transitionFields
+}).strict().refine(...secondsOnMovingJoins);
+var nextTransitionSchema = external_exports.object(transitionFields).strict().refine(...secondsOnMovingJoins);
 var storyboardApplySchema = external_exports.object({
   path: external_exports.string().min(1).describe("The storyboard directory (scenes.js is created there when missing), or its scenes.js"),
   draft: external_exports.boolean().default(false).describe("The story pass (storyboard \xA74a) \u2014 camera-continuity records (lineCrossing, coverage) are deferred, not violations"),
@@ -32833,7 +32839,8 @@ var shotIconsSchema = external_exports.object({
     move: choice.extend({ target: nonEmpty.optional(), speed: external_exports.enum(["very slow", "slow", "steady", "fast", "very fast"]).optional() }).strict().optional().describe("A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold \u2026)"),
     focus: choice.extend({ from: nonEmpty.optional(), to: nonEmpty.optional() }).strict().nullable().optional().describe("A camera technique with a focus field (camera.rack-focus) and the subjects it hands focus between; null removes it"),
     depth: depthSchema.optional(),
-    frames: external_exports.object({ mode: external_exports.enum(["first", "first_last", "reference"]), reason: nonEmpty, endState: nonEmpty.optional() }).strict().optional().describe("Frame plan: reference is MSR (subject images + start image)")
+    frames: external_exports.object({ mode: external_exports.enum(["first", "first_last", "reference"]), reason: nonEmpty, endState: nonEmpty.optional() }).strict().optional().describe("Frame plan: reference is MSR (subject images + start image)"),
+    next: nextTransitionSchema.optional().describe("The join from this shot into the next one, written on the next shot's transition")
   }).strict()).min(1)
 }).strict();
 var shotImageSchema = external_exports.object({
