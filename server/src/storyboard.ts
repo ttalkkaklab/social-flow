@@ -391,15 +391,47 @@ const globalsSchema = z.record(z.string().regex(/^[A-Z][A-Z0-9_]*$/, 'a window.*
   if (!parsed.success) for (const issue of parsed.error.issues) ctx.addIssue({ ...issue, path: ['PRODUCTION', ...issue.path] });
 });
 
-export const transitionPatchSchema = z.object({
-  no: z.number().int().positive().describe('Incoming shot number, 1-based, after removals and inserts'),
+const transitionFields = {
   transition: z.enum(['cut', 'dip', 'dip:white', 'jcut', 'dissolve', 'iris', 'blur', 'zoom',
     'push:l2r', 'push:r2l', 'push:u2d', 'push:d2u', 'whip:l2r', 'whip:r2l', 'whip:u2d', 'whip:d2u']),
   transitionSeconds: z.number().finite().min(.08).max(.8).optional(),
   reason: nonEmpty,
   continuity: nonEmpty.optional(),
-}).strict().refine(v => !['cut', 'dip', 'dip:white'].includes(v.transition) || v.transitionSeconds === undefined,
-  'cut and dip do not accept transitionSeconds; dip fades each side for up to 0.30 seconds');
+};
+type TransitionChange = { transition: string; transitionSeconds?: number; reason: string; continuity?: string };
+const STILL_JOINS = ['cut', 'dip', 'dip:white'];
+const secondsOnMovingJoins = [(v: TransitionChange) => !STILL_JOINS.includes(v.transition) || v.transitionSeconds === undefined,
+  'cut and dip do not accept transitionSeconds; dip fades each side for up to 0.30 seconds'] as const;
+export const transitionPatchSchema = z.object({
+  no: z.number().int().positive().describe('Incoming shot number, 1-based, after removals and inserts'),
+  ...transitionFields,
+}).strict().refine(...secondsOnMovingJoins);
+// shot_icons sets the join out of a shot; it is stored on the next shot's transition, which the builder reads.
+const nextTransitionSchema = z.object(transitionFields).strict().refine(...secondsOnMovingJoins);
+
+// Writes the join in front of shots[at] (storyboard_apply transitions, shot_icons next).
+function applyTransition(shots: Shot[], at: number, change: TransitionChange): void {
+  const source = shots[at];
+  if (['broll', 'outro'].includes(source.type)) throw new Error('Spliced shots use their own assembly transition');
+  const moving = !STILL_JOINS.includes(change.transition);
+  if (moving && !shots.slice(0, at).some(s => !['broll', 'outro'].includes(s.type)))
+    throw new Error('First shot cannot carry a previous picture');
+  if (moving) {
+    const previous = shots[at - 1];
+    if (!previous || ['broll', 'outro'].includes(previous.type))
+      throw new Error('A moving carry cannot bridge an inserted recording; choose cut or dip');
+    if (previous.visual?.reuse !== undefined)
+      throw new Error('Reused clips cannot supply outgoing live handles; choose cut or dip');
+    if (previous.visual?.sync === true || source.visual?.sync === true)
+      throw new Error('Sync footage requires cut or dip, not a moving carry');
+  }
+  const edit = { ...(source.edit as Record<string, unknown> ?? {}), reason: change.reason } as Record<string, unknown>;
+  if (!moving || source.transition !== change.transition) delete edit.transitionSeconds;
+  if (change.transitionSeconds !== undefined) edit.transitionSeconds = change.transitionSeconds;
+  if (change.continuity !== undefined) edit.continuity = change.continuity;
+  if (moving && Number(edit.pre ?? 0) !== 0) throw new Error('Moving transitions require edit.pre=0; update the shot timing first');
+  shots[at] = { ...source, transition: change.transition, edit };
+}
 
 export const storyboardApplySchema = z.object({
   path: z.string().min(1).describe('The storyboard directory (scenes.js is created there when missing), or its scenes.js'),
@@ -645,25 +677,7 @@ export function applyPatch(win: Board, patch: StoryboardApplyArgs, opts: { outli
     if (!source) throw new Error(`transitions: there is no shot ${change.no}`);
     if (transitionTargets.has(change.no)) throw new Error(`transitions: duplicate shot ${change.no}`);
     transitionTargets.add(change.no);
-    if (['broll', 'outro'].includes(source.type)) throw new Error('Spliced shots use their own assembly transition');
-    const moving = !['cut', 'dip', 'dip:white'].includes(change.transition);
-    if (moving && !shots.slice(0, change.no - 1).some(s => !['broll', 'outro'].includes(s.type)))
-      throw new Error('First shot cannot carry a previous picture');
-    if (moving) {
-      const previous = shots[change.no - 2];
-      if (!previous || ['broll', 'outro'].includes(previous.type))
-        throw new Error('A moving carry cannot bridge an inserted recording; choose cut or dip');
-      if (previous.visual?.reuse !== undefined)
-        throw new Error('Reused clips cannot supply outgoing live handles; choose cut or dip');
-      if (previous.visual?.sync === true || source.visual?.sync === true)
-        throw new Error('Sync footage requires cut or dip, not a moving carry');
-    }
-    const edit = { ...(source.edit as Record<string, unknown> ?? {}), reason: change.reason } as Record<string, unknown>;
-    if (!moving || source.transition !== change.transition) delete edit.transitionSeconds;
-    if (change.transitionSeconds !== undefined) edit.transitionSeconds = change.transitionSeconds;
-    if (change.continuity !== undefined) edit.continuity = change.continuity;
-    if (moving && Number(edit.pre ?? 0) !== 0) throw new Error('Moving transitions require edit.pre=0; update the shot timing first');
-    shots[change.no - 1] = { ...source, transition: change.transition, edit };
+    applyTransition(shots, change.no - 1, change);
   }
   const originalShots = Array.isArray(win.SCENES) ? win.SCENES : [];
   const numericId = (shot: Shot): number => typeof shot.id === 'string' && /^s\d{4,}$/.test(shot.id) ? Number(shot.id.slice(1)) : 0;
@@ -1069,6 +1083,8 @@ export const shotIconsSchema = z.object({
     depth: depthSchema.optional(),
     frames: z.object({ mode: z.enum(['first', 'first_last', 'reference']), reason: nonEmpty, endState: nonEmpty.optional() }).strict().optional()
       .describe('Frame plan: reference is MSR (subject images + start image)'),
+    next: nextTransitionSchema.optional()
+      .describe('The join from this shot into the next one, written on the next shot\'s transition'),
   }).strict()).min(1),
 }).strict();
 
@@ -1082,7 +1098,7 @@ export function writeShotIcons(args: z.infer<typeof shotIconsSchema>): ApplyResu
   const notes: Finding[] = [];
   // A 9:16 board gets each chosen value's vertical note back as a warning — advice for the choice, never a refusal.
   const vertical = !/16x9/.test(String(win.FORMAT ?? ''));
-  for (const { id, render, size, why, angle, move, focus, depth, frames } of args.shots) {
+  for (const { id, render, size, why, angle, move, focus, depth, frames, next } of args.shots) {
     const index = shotIndex(shots, id, 'shot_icons');
     const plan = { ...(shots[index].shot ?? {}) } as Record<string, unknown>;
     const visual = { ...(shots[index].visual ?? {}) } as Record<string, unknown>;
@@ -1174,6 +1190,10 @@ export function writeShotIcons(args: z.infer<typeof shotIconsSchema>): ApplyResu
     if ((visual.frames as { start?: unknown } | undefined)?.start && framing() !== framedBefore)
       notes.push({ level: 'warn', where: id, what: 'the start image was made for the previous size, angle, depth or focus — remake it with shot_image' });
     shots[index] = { ...shots[index], shot: plan, visual } as Shot;
+    if (next) {
+      if (index + 1 >= shots.length) throw new Error(`shot_icons ${id}: the last shot has no next shot to join`);
+      try { applyTransition(shots, index + 1, next); } catch (error) { throw new Error(`shot_icons ${id} next: ${(error as Error).message}`); }
+    }
     notes.push(...promptNotes(shots[index]));
     if (vertical) {
       const t = techniqueContract(), still = (plan.render as { mode?: string } | undefined)?.mode === 'still_camera';

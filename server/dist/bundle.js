@@ -114896,8 +114896,7 @@ var globalsSchema = external_exports.record(external_exports.string().regex(/^[A
   const parsed = productionSchema.safeParse(value.PRODUCTION);
   if (!parsed.success) for (const issue2 of parsed.error.issues) ctx.addIssue({ ...issue2, path: ["PRODUCTION", ...issue2.path] });
 });
-var transitionPatchSchema = external_exports.object({
-  no: external_exports.number().int().positive().describe("Incoming shot number, 1-based, after removals and inserts"),
+var transitionFields = {
   transition: external_exports.enum([
     "cut",
     "dip",
@@ -114919,10 +114918,39 @@ var transitionPatchSchema = external_exports.object({
   transitionSeconds: external_exports.number().finite().min(0.08).max(0.8).optional(),
   reason: nonEmpty,
   continuity: nonEmpty.optional()
-}).strict().refine(
-  (v) => !["cut", "dip", "dip:white"].includes(v.transition) || v.transitionSeconds === void 0,
+};
+var STILL_JOINS = ["cut", "dip", "dip:white"];
+var secondsOnMovingJoins = [
+  (v) => !STILL_JOINS.includes(v.transition) || v.transitionSeconds === void 0,
   "cut and dip do not accept transitionSeconds; dip fades each side for up to 0.30 seconds"
-);
+];
+var transitionPatchSchema = external_exports.object({
+  no: external_exports.number().int().positive().describe("Incoming shot number, 1-based, after removals and inserts"),
+  ...transitionFields
+}).strict().refine(...secondsOnMovingJoins);
+var nextTransitionSchema = external_exports.object(transitionFields).strict().refine(...secondsOnMovingJoins);
+function applyTransition(shots, at, change) {
+  const source = shots[at];
+  if (["broll", "outro"].includes(source.type)) throw new Error("Spliced shots use their own assembly transition");
+  const moving = !STILL_JOINS.includes(change.transition);
+  if (moving && !shots.slice(0, at).some((s2) => !["broll", "outro"].includes(s2.type)))
+    throw new Error("First shot cannot carry a previous picture");
+  if (moving) {
+    const previous = shots[at - 1];
+    if (!previous || ["broll", "outro"].includes(previous.type))
+      throw new Error("A moving carry cannot bridge an inserted recording; choose cut or dip");
+    if (previous.visual?.reuse !== void 0)
+      throw new Error("Reused clips cannot supply outgoing live handles; choose cut or dip");
+    if (previous.visual?.sync === true || source.visual?.sync === true)
+      throw new Error("Sync footage requires cut or dip, not a moving carry");
+  }
+  const edit2 = { ...source.edit ?? {}, reason: change.reason };
+  if (!moving || source.transition !== change.transition) delete edit2.transitionSeconds;
+  if (change.transitionSeconds !== void 0) edit2.transitionSeconds = change.transitionSeconds;
+  if (change.continuity !== void 0) edit2.continuity = change.continuity;
+  if (moving && Number(edit2.pre ?? 0) !== 0) throw new Error("Moving transitions require edit.pre=0; update the shot timing first");
+  shots[at] = { ...source, transition: change.transition, edit: edit2 };
+}
 var storyboardApplySchema = external_exports.object({
   path: external_exports.string().min(1).describe("The storyboard directory (scenes.js is created there when missing), or its scenes.js"),
   draft: external_exports.boolean().default(false).describe("The story pass (storyboard \xA74a) \u2014 camera-continuity records (lineCrossing, coverage) are deferred, not violations"),
@@ -115115,25 +115143,7 @@ function applyPatch(win, patch, opts = {}) {
     if (!source) throw new Error(`transitions: there is no shot ${change.no}`);
     if (transitionTargets.has(change.no)) throw new Error(`transitions: duplicate shot ${change.no}`);
     transitionTargets.add(change.no);
-    if (["broll", "outro"].includes(source.type)) throw new Error("Spliced shots use their own assembly transition");
-    const moving = !["cut", "dip", "dip:white"].includes(change.transition);
-    if (moving && !shots.slice(0, change.no - 1).some((s2) => !["broll", "outro"].includes(s2.type)))
-      throw new Error("First shot cannot carry a previous picture");
-    if (moving) {
-      const previous = shots[change.no - 2];
-      if (!previous || ["broll", "outro"].includes(previous.type))
-        throw new Error("A moving carry cannot bridge an inserted recording; choose cut or dip");
-      if (previous.visual?.reuse !== void 0)
-        throw new Error("Reused clips cannot supply outgoing live handles; choose cut or dip");
-      if (previous.visual?.sync === true || source.visual?.sync === true)
-        throw new Error("Sync footage requires cut or dip, not a moving carry");
-    }
-    const edit2 = { ...source.edit ?? {}, reason: change.reason };
-    if (!moving || source.transition !== change.transition) delete edit2.transitionSeconds;
-    if (change.transitionSeconds !== void 0) edit2.transitionSeconds = change.transitionSeconds;
-    if (change.continuity !== void 0) edit2.continuity = change.continuity;
-    if (moving && Number(edit2.pre ?? 0) !== 0) throw new Error("Moving transitions require edit.pre=0; update the shot timing first");
-    shots[change.no - 1] = { ...source, transition: change.transition, edit: edit2 };
+    applyTransition(shots, change.no - 1, change);
   }
   const originalShots = Array.isArray(win.SCENES) ? win.SCENES : [];
   const numericId = (shot) => typeof shot.id === "string" && /^s\d{4,}$/.test(shot.id) ? Number(shot.id.slice(1)) : 0;
@@ -115509,7 +115519,8 @@ var shotIconsSchema = external_exports.object({
     move: choice.extend({ target: nonEmpty.optional(), speed: external_exports.enum(["very slow", "slow", "steady", "fast", "very fast"]).optional() }).strict().optional().describe("A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold \u2026)"),
     focus: choice.extend({ from: nonEmpty.optional(), to: nonEmpty.optional() }).strict().nullable().optional().describe("A camera technique with a focus field (camera.rack-focus) and the subjects it hands focus between; null removes it"),
     depth: depthSchema.optional(),
-    frames: external_exports.object({ mode: external_exports.enum(["first", "first_last", "reference"]), reason: nonEmpty, endState: nonEmpty.optional() }).strict().optional().describe("Frame plan: reference is MSR (subject images + start image)")
+    frames: external_exports.object({ mode: external_exports.enum(["first", "first_last", "reference"]), reason: nonEmpty, endState: nonEmpty.optional() }).strict().optional().describe("Frame plan: reference is MSR (subject images + start image)"),
+    next: nextTransitionSchema.optional().describe("The join from this shot into the next one, written on the next shot's transition")
   }).strict()).min(1)
 }).strict();
 function writeShotIcons(args) {
@@ -115521,7 +115532,7 @@ function writeShotIcons(args) {
   const shots = (win.SCENES ?? []).slice();
   const notes = [];
   const vertical = !/16x9/.test(String(win.FORMAT ?? ""));
-  for (const { id, render, size, why, angle, move, focus, depth, frames } of args.shots) {
+  for (const { id, render, size, why, angle, move, focus, depth, frames, next } of args.shots) {
     const index = shotIndex(shots, id, "shot_icons");
     const plan2 = { ...shots[index].shot ?? {} };
     const visual = { ...shots[index].visual ?? {} };
@@ -115596,21 +115607,29 @@ function writeShotIcons(args) {
     }
     if (move && routed.mode !== "still_camera" || focus !== void 0) plan2.techniques = techniques;
     if (frames) {
-      const old = visual.frames ?? {}, next = { ...old, ...frames };
+      const old = visual.frames ?? {}, next2 = { ...old, ...frames };
       if (frames.mode !== "first_last") {
         if (typeof old.end === "string") notes.push({ level: "warn", where: id, what: `the end image ${old.end} is off the shot \u2014 a ${frames.mode} plan has no end image` });
-        delete next.end;
-        delete next.endState;
-        delete next.endProps;
+        delete next2.end;
+        delete next2.endState;
+        delete next2.endProps;
         delete visual.endPrompt;
       }
       if (old.mode === "reference" !== (frames.mode === "reference") && Array.isArray(visual.references))
         visual.references = visual.references.map((ref) => ref?.role === "character" ? { ...ref, use: frames.mode === "reference" ? "both" : "image" } : ref);
-      visual.frames = next;
+      visual.frames = next2;
     }
     if (visual.frames?.start && framing() !== framedBefore)
       notes.push({ level: "warn", where: id, what: "the start image was made for the previous size, angle, depth or focus \u2014 remake it with shot_image" });
     shots[index] = { ...shots[index], shot: plan2, visual };
+    if (next) {
+      if (index + 1 >= shots.length) throw new Error(`shot_icons ${id}: the last shot has no next shot to join`);
+      try {
+        applyTransition(shots, index + 1, next);
+      } catch (error2) {
+        throw new Error(`shot_icons ${id} next: ${error2.message}`);
+      }
+    }
     notes.push(...promptNotes(shots[index]));
     if (vertical) {
       const t2 = techniqueContract(), still = plan2.render?.mode === "still_camera";
@@ -124448,7 +124467,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     name: "shot_icons",
     title: "Set each shot's icon attributes (step 3)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    description: `Use it after every shot has its story and characters (story_shot \u2192 shot_characters), and normally after its lines (shot_dialogue): set the attributes the review's icon row shows, per shot \u2014 render route (shot.render), size and why, angle, camera move, focus, depth, and the frame plan, where reference means MSR. A move on a still_camera cut is the still effect (shot.render.camera.effect); on any other route it is a camera technique, written to shot.techniques with visual.camera.movement kept consistent. Switching to still_camera drops the camera technique and visual.camera move; switching from it drops the still effect. A different move replaces the old one's speed and target (the same move \u2014 its technique, or an authored visual.camera move before any technique \u2014 keeps them unless given), and a new size without its own why drops the old why. Changing size, angle, depth or focus after the start image exists warns to remake it with shot_image. A frame plan other than first_last takes the end image off (with a warning), and switching to or from reference re-marks the character panels for the video call. A change to what a written video prompt came from (cast, on-screen lines, frame plan, camera, focus, MSR framing) warns to rewrite it with shot_prompt; the review page marks it too. Only the attributes given change. Refused (story_order) while a sequence, scene or shot story or any shot's characters are missing. Local file only; no image, video, speech or prompt is generated.
+    description: `Use it after every shot has its story and characters (story_shot \u2192 shot_characters), and normally after its lines (shot_dialogue): set the attributes the review's icon row shows, per shot \u2014 render route (shot.render), size and why, angle, camera move, focus, depth, the frame plan, where reference means MSR, and next, the transition into the following shot (stored as that shot's transition and edit.reason, which assembly draws; the same checks as storyboard_apply transitions). A move on a still_camera cut is the still effect (shot.render.camera.effect); on any other route it is a camera technique, written to shot.techniques with visual.camera.movement kept consistent. Switching to still_camera drops the camera technique and visual.camera move; switching from it drops the still effect. A different move replaces the old one's speed and target (the same move \u2014 its technique, or an authored visual.camera move before any technique \u2014 keeps them unless given), and a new size without its own why drops the old why. Changing size, angle, depth or focus after the start image exists warns to remake it with shot_image. A frame plan other than first_last takes the end image off (with a warning), and switching to or from reference re-marks the character panels for the video call. A change to what a written video prompt came from (cast, on-screen lines, frame plan, camera, focus, MSR framing) warns to rewrite it with shot_prompt; the review page marks it too. Only the attributes given change. Refused (story_order) while a sequence, scene or shot story or any shot's characters are missing. Local file only; no image, video, speech or prompt is generated.
 
 Choose each attribute from the beat it serves, never from a quota. A card's use is a practitioners' convention, not a measured effect \u2014 no experiment shows a camera move's emotional effect, and the angle effects (low strong, high weak) appeared only when pictures ran as a story \u2014 so the neighbouring shots carry the meaning. storyboard_read's techniqueCatalog carries a card per choice \u2014 entries for sizes, moves, angles, focus and timing, and guides for the values without an entry (composition sizes, ground and over, depth, still effects). Every card gives use, avoid and specify (what the start image and video prompt must name \u2014 crop line, endpoints, focus target); where one applies it also gives pair (what the neighbouring shots should be: establish \u2192 cut in \u2192 reestablish; look \u2192 POV \u2192 reaction; matched sizes in shot/reverse shot) and vertical (how a 9:16 frame changes it). Size is the distance: els \u2026 ecu, or insert for one object. two, three, ots, pov, back, cutaway and reaction name a composition with no crop of its own; on a new board pick the distance and carry the composition in the cast, camera.pov, camera.rear or the camera framing. Write why, move.reason and focus.reason as the beat the choice serves. Give a video move its speed and target, and a rack focus its from and to subjects: shot_image stages them and shot_prompt writes them. A still effect hold keeps the frame put as a deliberate beat. On a 9:16 board the result lists the vertical note of every chosen value \u2014 advice, never a refusal.
 
@@ -124487,6 +124506,12 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
             mode: { type: "string", enum: ["first", "first_last", "reference"], description: "first = start image \xB7 first_last = start and end images \xB7 reference = MSR" },
             reason: { type: "string", description: "Why this shot needs this frame plan" },
             endState: { type: "string", description: "first_last: the visible final state" }
+          } },
+          next: { type: "object", additionalProperties: false, required: ["transition", "reason"], description: "Transition icon: the join from this shot into the next one, stored on the next shot's transition (the field the assembly builder reads)", properties: {
+            transition: { type: "string", enum: ["cut", "dip", "dip:white", "jcut", "dissolve", "iris", "blur", "zoom", "push:l2r", "push:r2l", "push:u2d", "push:d2u", "whip:l2r", "whip:r2l", "whip:u2d", "whip:d2u"], description: "scenes-schema \xA7scene transition: what moved between the two shots picks the join" },
+            transitionSeconds: { type: "number", minimum: 0.08, maximum: 0.8, description: "Moving joins only; omit for cut, dip and dip:white" },
+            reason: { type: "string", minLength: 1, description: "Why this boundary uses this effect" },
+            continuity: { type: "string", minLength: 1, description: "What connects the two pictures" }
           } }
         } } }
       },

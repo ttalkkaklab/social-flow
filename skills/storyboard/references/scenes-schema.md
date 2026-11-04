@@ -1782,7 +1782,9 @@ the field appears only where there is a table to point at.
 **Every shot after the first carries one.** The join is chosen from what happened between
 the two shots, one boundary at a time, and `check-scenes.js` reports a shot that has none (the
 field is written when the shots are staged — SKILL.md §4 — so `--draft` reports it as later);
-the builder itself never guesses a missing transition (`edit-plan.js`). There is no count budget and no
+the builder assembles a missing transition as a `cut` (`edit-plan.js`). `shot_icons` sets it from the
+shot before (`next`), and the review shows it as the last icon of that shot's row; `storyboard_apply
+transitions` sets it by the incoming shot's number. There is no count budget and no
 boundary where a visible join is forbidden: a join that fits its boundary is never one too
 many, and one that does not fit is wrong at any count. The first shot has nothing in front of
 it, so it takes `"dip"` (it opens out of black), `"cut"`, or nothing.

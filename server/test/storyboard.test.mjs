@@ -27,6 +27,7 @@ import {
   writeShotCharacters,
   writeShotDialogue,
   writeShotIcons,
+  shotIconsSchema,
   writeShotPrompt,
   shotImageRequest,
   recordShotImage,
@@ -488,6 +489,18 @@ describe('icon attributes come after every shot\'s characters', () => {
     const wide = writeShotIcons({ path: dir, shots: [{ id: 's0001', size: 'ls', focus: { id: 'camera.rack-focus', reason: 'r' } }] });
     assert.deepEqual([wide.written, notes(wide)], [true, []]);
     assert.ok(wide.findings.some((f) => f.level === 'warn' && f.where === 's0001' && /camera.rack-focus names no subjects/.test(f.what)));
+  });
+  it('next writes the join into the following shot, where the builder reads it', () => {
+    const dir = storyBoard();
+    writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }, { id: 's0002', characters: [] }] });
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', next: { transition: 'whip:l2r', transitionSeconds: .3, reason: 'the answer is outside', continuity: 'her glance' } }] });
+    const [first, second] = readBoard(dir).win.SCENES;
+    assert.equal(first.transition, undefined);
+    assert.deepEqual([second.transition, second.edit], ['whip:l2r', { reason: 'the answer is outside', transitionSeconds: .3, continuity: 'her glance' }]);
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', next: { transition: 'dip', reason: 'night falls' } }] });
+    assert.deepEqual([readBoard(dir).win.SCENES[1].transition, readBoard(dir).win.SCENES[1].edit.transitionSeconds], ['dip', undefined]);
+    assert.throws(() => writeShotIcons({ path: dir, shots: [{ id: 's0002', next: { transition: 'cut', reason: 'r' } }] }), /last shot has no next shot/);
+    assert.throws(() => shotIconsSchema.parse({ path: dir, shots: [{ id: 's0001', next: { transition: 'cut', transitionSeconds: .2, reason: 'r' } }] }), /cut and dip do not accept transitionSeconds/);
   });
   it('only a board started with story_sequence holds every writer to the order', () => {
     const dir = storyBoard();

@@ -19,7 +19,7 @@ generation authorization and adapter input validation stay. Work in this order:
 2. Story, one layer at a time: `story_sequence` → `story_scene` → `story_shot`.
 3. Each shot's characters (`shot_characters`, at most two), then their lines (`shot_dialogue`).
 4. Each shot's icon attributes (`shot_icons`): render route, size, angle, camera move,
-   focus, depth and frame plan (`reference` is MSR).
+   focus, depth, frame plan (`reference` is MSR) and the transition into the next shot (`next`).
 5. Props and backgrounds — `SB_DOC.props` and `SB_DOC.locations` with their images.
 6. Each shot's start image (`shot_image`), composed from its characters' sheet panels,
    its place and props; then the end image (`frame:"end"`) only for a `first_last` shot.
