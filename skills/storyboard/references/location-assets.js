@@ -47,10 +47,11 @@ function context(win,index,dir){
 // What the set render holds, for the image prompt: inventory, state, invariants, landmarks and which proxy is whom.
 // english keeps out any name in another script, which an image model may letter into the picture.
 const foreign=v=>/(?!\p{Script=Latin})\p{L}/u.test(v);
-function locationPrompt(m,b,phase,english=false){
+function locationPrompt(m,b,phase,english=false,composition=true){
   const stateId=phase==='end'?(b.endStateId||b.stateId):b.stateId,keep=v=>!english||!foreign(v);
   const inventory=[...new Set(C.resolvedObjects(m,stateId).filter(o=>o.visible!==false).map(o=>o.label))].filter(keep),invariants=m.invariants.filter(keep),state=m.states[stateId].label;
-  return ['Keep exactly the supplied location composition and object inventory. Surface texture polish may not add plants, furniture, art, openings or props.',
+  return [composition?'Keep exactly the supplied location composition and object inventory. Surface texture polish may not add plants, furniture, art, openings or props.'
+    :'Preserve the location object inventory and world layout while following the planned closing camera. Surface texture polish may not add plants, furniture, art, openings or props.',
     inventory.length?`Visible set inventory: ${inventory.join(', ')}.`:'',`Location ${keep(m.name)?m.name:m.id}, revision ${m.revision}.`,keep(state)?`State: ${state}.`:'',
     'The location reference controls architecture, fixed objects, materials and their spatial relationships.',invariants.length?`Preserve: ${invariants.join('; ')}.`:'',
     b.mustShow?.length?`Required landmarks: ${b.mustShow.join(', ')}.`:'',C.blockingPrompt(b.blocking,phase)].filter(Boolean).join(' ');
@@ -210,7 +211,7 @@ function hitsBody(p,q,x){
  * The camera a shot's size and angle ask for in this set: aimed at the shot's blocked cast (or the set when
  * nobody is blocked), from the side the reference camera stands on, distance fitted to the lens's field of view.
  */
-function shotCamera(m,{stateId,actors=[],cast=[],size,angle,width,height,side,mustShow=[]}){
+function shotCamera(m,{stateId,actors=[],cast=[],size,angle,width,height,side,mustShow=[],viewpoint}){
   const warnings=[],deg=Math.PI/180,r3=v=>v.map(x=>Math.round(x*1000)/1000);
   const unit=v=>{const n=Math.hypot(...v);return n>1e-9?v.map(x=>x/n):null;},dot=(a,b)=>a[0]*b[0]+a[1]*b[1];
   // Zero body rotation faces -Y; +90 degrees faces +X (location-assets.md).
@@ -225,8 +226,9 @@ function shotCamera(m,{stateId,actors=[],cast=[],size,angle,width,height,side,mu
   const ref=side||Object.values(m.cameras)[0],a=angle||'eye';
   let lensMm=SIZE_LENS[frame],target,span,spread=0,u,eye,position;
   const fit=(dist,height,width=0)=>Math.max(12,Math.min(135,(sensorV/2)*dist/(height/2),width?18*dist/(width/2):Infinity));
-  const viewer=size==='pov'?actors.find(x=>!cast.includes(x.id)&&x.gazeTarget&&(cast.includes(x.gazeTarget)||!cast.length))||people[1]:null;
-  if(size==='pov'&&!viewer)warnings.push('pov needs a blocked viewer whose gaze names the seen character or object; the render frames the shot from the front');
+  const pov=size==='pov'||viewpoint==='pov';
+  const viewer=pov?actors.find(x=>!cast.includes(x.id)&&x.gazeTarget&&(cast.includes(x.gazeTarget)||!cast.length))||people[1]:null;
+  if(pov&&!viewer)warnings.push('pov needs a blocked viewer whose gaze names the seen character or object; the render frames the shot from the front');
   if(viewer){
     // Point of view: the lens sits just in front of the viewer's eyes and looks where they look.
     const seen=actors.find(x=>x.id===viewer.gazeTarget),object=objects.find(o=>o.id===viewer.gazeTarget);
@@ -259,7 +261,7 @@ function shotCamera(m,{stateId,actors=[],cast=[],size,angle,width,height,side,mu
         const lateral=[-u[1],u[0]],across=people.map(x=>dot(lateral,x.position));
         spread=Math.max(...across)-Math.min(...across)+1;   // half a metre beyond each centre holds the shoulders and arms
       }
-      if(size==='back')u=u.map(v=>-v);
+      if(size==='back'||viewpoint==='rear')u=u.map(v=>-v);
     } else {
       // Nobody blocked, an insert or a cutaway: frame the required landmarks, or the standing set without its walls.
       if(size==='insert'&&!mustShow.length)warnings.push('insert names no object: bind the shot with mustShow so the render closes on it');
@@ -331,12 +333,21 @@ function shotFrame(win,index,dir,{manifest,cast=[],size,angle,width,height}){
   if(!bound&&Object.keys(m.states).length>1)warnings.push(`the render shows the set's first state (${m.states[stateId].label}); bind the shot with location_manage to choose another`);
   // The render keeps the picture's aspect, at most 1280 px on the long side, in even pixels.
   const k=Math.min(1,1280/Math.max(width,height)),w=2*Math.round(width*k/2),h=2*Math.round(height*k/2);
-  const shot=shotCamera(m,{stateId,actors:C.actorsAt(blocking,'start'),cast,size,angle,width:w,height:h,side:bound?(bound.camera||m.cameras[bound.cameraId]):undefined,mustShow:bound?.mustShow||[]});
-  const manifestSha256=fileHash(p),fingerprint=digest({manifestSha256,stateId,endStateId,blocking,camera:shot.camera});
+  const ref=bound?(bound.camera||m.cameras[bound.cameraId]):undefined,cam=s.visual?.camera||{};
+  const picked=require('./film-techniques.js').selected(s),viewpoint=picked.find(t=>t.entry?.fields.viewpoint)?.entry.fields.viewpoint||(cam.rear?'rear':cam.pov?'pov':undefined);
+  const shot=shotCamera(m,{stateId,actors:C.actorsAt(blocking,'start'),cast,size,angle,width:w,height:h,side:ref,mustShow:bound?.mustShow||[],viewpoint});
+  // Text cannot specify a Blender transform. Without an authored endpoint a moving shot uses text for its landing,
+  // rather than locking its end image to a second render of the opening camera.
+  const fixed=/^(static|fixed|locked)/i.test(String(cam.movement||'').trim());
+  const moving=!fixed&&!!(cam.movement||cam.end||ref?.end);
+  const endCamera=!moving?shot.camera:ref?.end?{...shot.camera,...ref.end,width:w,height:h}:null;
+  if(endCamera)assert(C.cameraErrors(endCamera));
+  else warnings.push('the moving shot has no numeric camera endpoint; its end image follows camera.end and the move in text, without a locked set end composition — author shot.location.camera.end for an exact Blender landing');
+  const manifestSha256=fileHash(p),fingerprint=digest({manifestSha256,stateId,endStateId,blocking,camera:shot.camera,endCamera});
   const relative='locations/'+s.id+'-frame-'+fingerprint.slice(0,16),output=safe(dir,relative);
   if(!['start','end'].every(n=>fs.existsSync(path.join(output,n+'.png')))){
     const tmp=output+'.rendering-'+process.pid;fs.rmSync(tmp,{recursive:true,force:true});
-    try{blender({action:'render',manifest:m,blend:safe(path.dirname(p),m.assets.blend.path),stateId,endStateId,blocking,cameras:{start:shot.camera,end:shot.camera},output:tmp,fingerprint});}
+    try{blender({action:'render',manifest:m,blend:safe(path.dirname(p),m.assets.blend.path),stateId,endStateId,blocking,cameras:{start:shot.camera,end:endCamera||shot.camera},output:tmp,fingerprint});}
     catch(e){fs.rmSync(tmp,{recursive:true,force:true});throw new Error('location_render_failed: '+e.message);}
     fs.rmSync(output,{recursive:true,force:true});fs.renameSync(tmp,output);
   }
@@ -344,8 +355,8 @@ function shotFrame(win,index,dir,{manifest,cast=[],size,angle,width,height}){
   const unsaid=[[m.name,'name'],[m.states[stateId].label,'state label'],[m.states[endStateId].label,'end state label']].filter(([v])=>foreign(v)).map(([,k])=>k)
     .concat(C.resolvedObjects(m,stateId).some(o=>foreign(o.label))?['object labels']:[],m.invariants.some(foreign)?['invariants']:[]);
   if(unsaid.length)warnings.push(`the ${m.id} set's ${[...new Set(unsaid)].join(', ')} are not in English and stay out of the image prompt (the render still shows the set) — write them in English in the set spec`);
-  return {id:m.id,name:foreign(m.name)?m.id:m.name,revision:m.revision,manifest:path.relative(dir,p),manifestSha256,stateId,endStateId,camera:shot.camera,blocked:!!blocking,fingerprint,
-    start:frame('start'),end:frame('end'),prompt:locationPrompt(m,scope,'start',true),endPrompt:locationPrompt(m,scope,'end',true),warnings:[...warnings,...shot.warnings]};
+  return {id:m.id,name:foreign(m.name)?m.id:m.name,revision:m.revision,manifest:path.relative(dir,p),manifestSha256,stateId,endStateId,camera:shot.camera,endCamera,blocked:!!blocking,fingerprint,
+    start:frame('start'),end:frame('end'),prompt:locationPrompt(m,scope,'start',true),endPrompt:locationPrompt(m,scope,'end',true,!!endCamera),warnings:[...warnings,...shot.warnings]};
 }
 function approve(win,index,dir,{reviewer,notes}){
   const p=plan(win,index,dir,{ready:true});if(!p||!reviewer?.trim()||!notes?.trim())throw new Error('actual reviewer and observed notes required');

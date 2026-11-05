@@ -194,12 +194,12 @@
   }
   function selected(scene) { return Array.isArray(scene.shot?.techniques) ? scene.shot.techniques.map(item=>({...item,entry:byId[item?.id]})) : []; }
   function instructions(scene) { return selected(scene).filter(item=>item.entry && ['camera','framing'].includes(item.entry.category)).map(item=>item.entry.category==='framing' ? 'Opening frame: '+item.entry.instruction+'.' : item.entry.instruction).join(' '); }
-  function sourceInstructions(scene) {
+  function sourceInstructions(scene, phase = 'start', endpoint = false) {
     return selected(scene).filter(item=>item.entry).map(({entry, from, to}) => {
-      if(entry.category === 'framing') return 'Opening frame: '+entry.instruction+'.';
-      if(entry.fields.viewpoint || entry.fields.angle) return entry.instruction;
-      if(entry.fields.focus === 'rack') return from && to ? 'Stage '+from+' and '+to+' at clearly different distances from the camera, '+from+' in sharp focus.'
-        : 'Stage the named near and far focus targets at distinct depths; use the authored opening focus from camera.framing.';
+      if(entry.category === 'framing') return endpoint ? '' : (phase === 'end' ? 'Final frame: ' : 'Opening frame: ')+entry.instruction+'.';
+      if(entry.fields.viewpoint || entry.fields.angle) return endpoint ? '' : entry.instruction;
+      if(entry.fields.focus === 'rack') return from && to ? 'Stage '+from+' and '+to+' at clearly different distances from the camera, '+(phase === 'end' ? to : from)+' in sharp focus.'
+        : 'Stage the named near and far focus targets at distinct depths; use the authored '+(phase === 'end' ? 'closing' : 'opening')+' focus.';
       return '';
     }).filter(Boolean).join(' ');
   }

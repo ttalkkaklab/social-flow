@@ -643,6 +643,57 @@ describe('images and the video prompt follow the icon attributes', () => {
     writeShotIcons({ path: dir, shots: [{ id: 's0002', render: { mode: 'motion_html', reason: 'a diagram' } }] });
     assert.throws(() => shotImageRequest({ path: dir, id: 's0002', frame: 'start', prompt: 'p' }), /shot_image: s0002 is a motion_html cut/);
   });
+  it('image requests carry composition, gaze and move preparation, and a still canvas keeps both crop endpoints', () => {
+    const { dir } = pictureBoard();
+    icons(dir);
+    const board = readBoard(dir), shot = board.win.SCENES[0];
+    const patched = { ...shot, shot: { ...shot.shot,
+      space: { layout: 'Mina on the left third, window on the right', facing: 'Mina faces camera-right' },
+      composition: { mode: 'standard', subject: 'mina', subjectKind: 'face', position: 'left', eyeHeight: .33,
+        headroom: 'tight', lookRoom: 'right', movement: 'stationary', leadRoom: 'none' },
+      eyeline: { mode: 'lens', subject: 'mina', target: 'camera', horizontal: 'center', vertical: 'level', targetDistance: 'medium' } },
+      visual: { ...shot.visual, camera: { ...shot.visual.camera, framing: 'Mina beside the window with her hands visible', rear: true } } };
+    assert.equal(applyStoryboard({ path: dir, draft: true, shotsById: [{ id: shot.id, shot: patched }] }).written, true);
+    const first = make(dir, 's0001');
+    assert.match(first.prompt, /Mina on the left third/);
+    assert.match(first.prompt, /Mina faces camera-right/);
+    assert.match(first.prompt, /headroom tight, look room right/);
+    assert.match(first.prompt, /directly into the camera lens/);
+    assert.match(first.prompt, /Opening composition: Mina beside the window with her hands visible/);
+    assert.match(first.prompt, /View the subject from behind/);
+    assert.match(first.prompt, /margin for the closer landing/);
+    const changed = writeShotIcons({ path: dir, shots: [{ id: 's0001', move: { id: 'camera.pan-right', reason: 'find the door', target: 'the door', speed: 'slow' } }] });
+    assert.ok(changed.findings.some(f => f.where === 's0001' && /start image/.test(f.what)));
+    const panned = shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits.' });
+    assert.match(panned.prompt, /slow pan right, with movement target the door/);
+    assert.match(panned.prompt, /Frame the starting target/);
+    assert.doesNotMatch(panned.prompt, /margin for the closer landing/);
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', render: { mode: 'still_camera', reason: 'scan the source' }, move: { id: 'pan', reason: 'reveal the door', target: 'the door' } }] });
+    const still = shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits.' });
+    assert.match(still.prompt, /both the opening and closing regions in one continuous source canvas/);
+    assert.doesNotMatch(still.prompt, /slow pan right/);
+  });
+  it('end images use the closing crop, story state and final focus rather than opening instructions', () => {
+    const { dir } = pictureBoard();
+    icons(dir);
+    const old = readBoard(dir).win.SCENES[1];
+    const patch = { ...old, shot: { ...old.shot, depth: { mode: 'shallow', reads: 1, focus: 'Mina eyes' },
+      techniques: [{ id: 'camera.rack-focus', reason: 'find the key', from: 'Mina eyes', to: 'the key' }, { id: 'framing.mcu', reason: 'opening crop' }] },
+      visual: { ...old.visual, camera: { movement: 'pan right', speed: 'slow', target: 'the key',
+        framing: 'Mina at the window', end: 'an overhead close-up of the key on the table' },
+        frames: { ...old.visual.frames, endState: 'the key lies on the table' } } };
+    assert.equal(applyStoryboard({ path: dir, draft: true, shotsById: [{ id: old.id, shot: patch }] }).written, true);
+    const start = make(dir, 's0002');
+    assert.match(start.prompt, /Mina eyes in sharp focus/);
+    const end = make(dir, 's0002', 'end');
+    assert.match(end.prompt, /Closing composition: an overhead close-up of the key on the table/);
+    assert.match(end.prompt, /Closing story state: the key lies on the table/);
+    assert.match(end.prompt, /the key in sharp focus/);
+    assert.match(end.prompt, /only the key is sharp/);
+    assert.doesNotMatch(end.prompt, /chest up|at eye level|Mina eyes in sharp focus|only Mina eyes is sharp|Opening composition/);
+    const changed = writeShotIcons({ path: dir, shots: [{ id: 's0002', focus: { id: 'camera.rack-focus', reason: 'find the window', from: 'Mina eyes', to: 'the window' } }] });
+    assert.ok(changed.findings.some(f => f.where === 's0002' && /start image/.test(f.what)));
+  });
   it('a frame takes each visible prop\'s picture in its condition at that end of the shot, with its description and state', () => {
     const { dir } = pictureBoard();
     for (const name of ['watch-intact', 'watch-cracked']) writeFileSync(join(dir, `places/${name}.png`), png);
