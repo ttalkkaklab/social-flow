@@ -7,6 +7,7 @@ import { execFileSync } from 'node:child_process';
 import { bareFilenameSchema, resolveOutputFile } from './media-utils.js';
 import { GenaiRequestError, astraGenaiBaseUrl, downloadGenaiResult, pollGenaiJob, requestGenai, requireAstraGenaiKey, genaiImageUriSchema, genaiSourceUri } from './astra-genai-client.js';
 import { atomicJson } from './routing-files.js';
+import { GENAI_FILE_GONE, GENAI_FILE_SCHEME, forgetGenaiUploads, genaiUploadable, shrinkImageToFit, uploadGenaiFile } from './astra-genai-upload.js';
 import { recordVideoSubmission } from './video-events.js';
 
 export const GENAI_VIDEO_MODELS = ['ltx-2.5-22b-distilled', 'ltx-2.5-22b-dev'] as const;
@@ -216,6 +217,36 @@ export async function getGenaiVideoStatus(input: z.infer<typeof genaiVideoStatus
   return { jobId: receipt.jobId, status: 'completed', videoPath: receipt.videoPath, downloaded: true, review: 'not_reviewed' };
 }
 
+/** A fallback body above this is not sent: voice cannot be shrunk, and so large a body on a slow link meets the edge's 524 again. */
+export const GENAI_MSR_INLINE_MAX_BYTES = 8 * 1000 * 1000;
+
+/**
+ * Shrink each inline picture to the render size and send inline pictures and voice samples as
+ * chunked uploads, so the MSR body carries file ids instead of base64. HTTPS sources pass
+ * untouched; a gateway without the upload API keeps the (shrunk) data URIs.
+ */
+export async function prepareGenaiMsrSources(body: ReturnType<typeof buildGenaiMsrBody>) {
+  let supported = true;
+  const send = async (uri: string, shrink: boolean) => {
+    const match = /^data:([^;,]+);base64,(.*)$/s.exec(uri);
+    if (!match) return uri;
+    const bytes = shrink ? shrinkImageToFit(Buffer.from(match[2], 'base64'), body.width, body.height) : Buffer.from(match[2], 'base64');
+    // Only a gateway answer (no upload API, a limit, a full disk) stops later uploads; a type it does not take goes inline alone.
+    const uploadable = supported && genaiUploadable(bytes, match[1]);
+    const id = uploadable ? await uploadGenaiFile(bytes, match[1]) : undefined;
+    if (uploadable && id === undefined) supported = false;
+    return id ?? `data:${match[1]};base64,${bytes.toString('base64')}`;
+  };
+  const references = [];
+  for (const ref of body.references) references.push({ ...ref, image_uri: await send(ref.image_uri, true),
+    ...('audio_uri' in ref && typeof ref.audio_uri === 'string' ? { audio_uri: await send(ref.audio_uri, false) } : {}) });
+  const prepared = { ...body, references };
+  const size = Buffer.byteLength(JSON.stringify(prepared));
+  if (size > GENAI_MSR_INLINE_MAX_BYTES)
+    throw new Error(`msr_body_too_large: the gateway did not take the chunked upload and the inline request is ${(size / 1e6).toFixed(1)} MB (limit 8 MB); nothing was submitted. Try again later, or use a shorter voice sample.`);
+  return prepared;
+}
+
 // A busy MSR backend acknowledged a submission after 480 s (2026-10-30); 60 s orphaned jobs.
 const SUBMIT_TIMEOUT_MS = 15 * 60_000;
 function genaiVideoRoute(operation: Operation): string {
@@ -241,11 +272,24 @@ export async function generateGenaiVideo(operation: Operation, input: unknown) {
     if (fs.existsSync(videoPath)) throw new Error('GenAI output already exists');
     if (operation === 'msr' && 'references' in args && args.references.some(ref => oneOf(ref.audioUri, ref.audioPath)) && !await refreshGenaiMsrVoice(true))
       throw new Error('msr_voice_unsupported: the GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities)');
+    // Upload before the receipt exists: a failed upload leaves nothing to recover and the call can simply run again.
+    // The fingerprint stays on the request as written, so a resumed receipt still matches.
+    const submitted = 'references' in args ? await prepareGenaiMsrSources(body as ReturnType<typeof buildGenaiMsrBody>) : body;
     const receipt = { version: 1 as const, baseUrl: astraGenaiBaseUrl(), operation, fingerprint, videoPath, status: 'submitting' as const };
     fs.writeFileSync(receiptPath, JSON.stringify(receipt), { flag: 'wx', mode: 0o600 });
     let response: unknown;
-    try { response = await requestGenai('POST', genaiVideoRoute(operation), body, SUBMIT_TIMEOUT_MS); }
-    catch (error) {
+    try {
+      try { response = await requestGenai('POST', genaiVideoRoute(operation), submitted, SUBMIT_TIMEOUT_MS); }
+      catch (error) {
+        // The gateway no longer knows an uploaded id (expired, restarted). That 400 created no job: upload again and resubmit once.
+        if (!JSON.stringify(submitted).includes(GENAI_FILE_SCHEME) || !(error instanceof GenaiRequestError && error.httpStatus === 400 && GENAI_FILE_GONE.test(error.message))) throw error;
+        forgetGenaiUploads();
+        let again: unknown;
+        try { again = await prepareGenaiMsrSources(body as ReturnType<typeof buildGenaiMsrBody>); }
+        catch (uploadError) { fs.rmSync(receiptPath, { force: true }); throw uploadError; }
+        response = await requestGenai('POST', genaiVideoRoute(operation), again, SUBMIT_TIMEOUT_MS);
+      }
+    } catch (error) {
       // An explicit rejection created no job; free the output name so a corrected request can retry it.
       if (error instanceof GenaiRequestError && error.terminal) fs.rmSync(receiptPath, { force: true });
       throw error;
