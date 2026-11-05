@@ -32510,6 +32510,17 @@ var receiptSchema = external_exports.object({
   sha256: external_exports.string().optional()
 }).strict();
 
+// src/astra-genai-upload.ts
+var GENAI_FILE_SCHEME = "genai-file://";
+var UPLOAD_MAX_BYTES = 32 * 1024 * 1024;
+var sessionSchema = external_exports.object({
+  upload_id: external_exports.string().min(1),
+  chunk_size: external_exports.number().int().positive().max(5 * 1024 * 1024),
+  chunks: external_exports.number().int().positive()
+}).passthrough();
+var fileSchema = external_exports.object({ file_id: external_exports.string().min(1), uri: external_exports.string().startsWith(GENAI_FILE_SCHEME), expires_at: external_exports.string().optional() }).passthrough();
+var statusSchema = external_exports.object({ missing: external_exports.array(external_exports.number().int().nonnegative()) }).passthrough();
+
 // src/astra-genai-video.ts
 var GENAI_VIDEO_MODELS = ["ltx-2.5-22b-distilled", "ltx-2.5-22b-dev"];
 var GENAI_CAMERA_MOTIONS = ["dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"];
@@ -32610,13 +32621,14 @@ var receiptSchema2 = external_exports.object({
   status: external_exports.enum(["submitting", "submitted", "completed"]),
   sha256: external_exports.string().optional()
 }).strict();
-var statusSchema = external_exports.object({
+var statusSchema2 = external_exports.object({
   id: external_exports.string().min(1),
   status: external_exports.enum(["pending", "processing", "completed", "failed"]),
   result: external_exports.object({ video_url: external_exports.string().min(1) }).passthrough().nullish(),
   error: external_exports.unknown().optional()
 }).passthrough();
 var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
+var GENAI_MSR_INLINE_MAX_BYTES = 8 * 1e3 * 1e3;
 var SUBMIT_TIMEOUT_MS2 = 15 * 6e4;
 
 // src/video-registry.ts

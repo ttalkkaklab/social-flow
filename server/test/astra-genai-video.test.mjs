@@ -97,6 +97,8 @@ test('MSR recovery uses the MSR route and never submits twice', async t => {
   let posts = 0;
   globalThis.fetch = async (url, options) => {
     if (String(url).endsWith('/capabilities')) return Response.json({ msr: true, voice_references: true });
+    // A gateway without the upload API keeps the inline data URI.
+    if (String(url).endsWith('/v1/uploads')) return new Response('not found', { status: 404 });
     if (options.method === 'POST') {
       posts++; assert.ok(String(url).endsWith('/v1/ltx/msr'));
       assert.match(JSON.parse(options.body).references[0].image_uri, /^data:image\/png;base64,/);
@@ -114,6 +116,88 @@ test('MSR recovery uses the MSR route and never submits twice', async t => {
     return Response.json({ id: 'msr-job', status: 'processing' });
   };
   assert.equal((await getGenaiVideoStatus({ receiptPath, download: false })).status, 'processing');
+});
+
+test('MSR sends local sources as chunked file ids, leaves HTTPS alone and resumes without uploading again', async t => {
+  const dir = setup(t), source = path.join(dir, 'reference.png'), wav = path.join(dir, 'voice.wav');
+  fs.writeFileSync(source, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=', 'base64'));
+  fs.writeFileSync(wav, Buffer.alloc(64, 1));
+  const args = { prompt: 'The person says hello.', references: [{ imagePath: source, audioPath: wav }, { imageUri: 'https://example.com/place.png', background: true }],
+    reserveUsd: 0, outputPath: dir, filename: 'msr.mp4' };
+  const uploads = [];
+  let submitted;
+  globalThis.fetch = async (url, options) => {
+    const route = new URL(String(url)).pathname;
+    if (route.endsWith('/capabilities')) return Response.json({ msr: true, voice_references: true });
+    if (route.startsWith('/v1/uploads')) {
+      uploads.push(`${options.method} ${route}`);
+      const id = `u${uploads.filter(call => call.endsWith('/v1/uploads')).length}`;
+      if (route === '/v1/uploads') return Response.json({ upload_id: id, chunk_size: 5 * 1024 * 1024, chunks: 1 });
+      if (route.endsWith('/complete')) return Response.json({ file_id: route.split('/')[3], uri: `genai-file://${route.split('/')[3]}`, expires_at: '2099-01-01T00:00:00Z' });
+      return new Response(null, { status: 204 });
+    }
+    if (route === '/v1/ltx/msr') { submitted = JSON.parse(options.body); return Response.json({ id: 'msr-job' }, { status: 202 }); }
+    return Response.json({ id: 'msr-job', status: 'failed', error: 'fixture' });
+  };
+  await assert.rejects(generateGenaiVideo('msr', args), /fixture/);
+  assert.equal(submitted.references[0].image_uri, 'genai-file://u1');
+  assert.equal(submitted.references[0].audio_uri, 'genai-file://u2');
+  assert.equal(submitted.references[1].image_uri, 'https://example.com/place.png');
+  assert.ok(JSON.stringify(submitted).length < 2000);
+  const receipt = JSON.parse(fs.readFileSync(path.join(dir, 'msr.mp4.astra-genai.json'), 'utf8'));
+  const { genaiMsrSchema, buildGenaiMsrBody } = await import('../dist/astra-genai-video.js');
+  const { createHash } = await import('node:crypto');
+  // The receipt binds the request as written, not the per-upload file ids.
+  assert.equal(receipt.fingerprint, createHash('sha256').update(JSON.stringify(buildGenaiMsrBody(genaiMsrSchema.parse(args)))).digest('hex'));
+  const before = uploads.length;
+  await assert.rejects(generateGenaiVideo('msr', args), /fixture/);
+  assert.equal(uploads.length, before);
+});
+
+test('an MSR 400 for a lost genai-file id uploads again and resubmits once', async t => {
+  const { forgetGenaiUploads } = await import('../dist/astra-genai-upload.js');
+  forgetGenaiUploads();
+  const dir = setup(t), source = path.join(dir, 'reference.png');
+  fs.writeFileSync(source, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=', 'base64'));
+  const args = { prompt: 'The person waves.', references: [{ imagePath: source }], reserveUsd: 0, outputPath: dir, filename: 'gone.mp4' };
+  let creates = 0;
+  const submissions = [];
+  globalThis.fetch = async (url, options) => {
+    const route = new URL(String(url)).pathname;
+    if (route === '/v1/uploads') { creates++; return Response.json({ upload_id: `g${creates}`, chunk_size: 4 * 1024 * 1024, chunks: 1 }, { status: 201 }); }
+    if (route.endsWith('/complete')) return Response.json({ file_id: route.split('/')[3], uri: `genai-file://${route.split('/')[3]}`, expires_at: '2099-01-01T00:00:00Z' });
+    if (route.startsWith('/v1/uploads')) return new Response(null, { status: 204 });
+    if (route === '/v1/ltx/msr') {
+      submissions.push(JSON.parse(options.body).references[0].image_uri);
+      if (submissions.length === 1) return Response.json({ error: { type: 'invalid_request_error', message: 'references.0.image_uri: genai-file not found or expired' } }, { status: 400 });
+      return Response.json({ id: 'msr-gone' }, { status: 202 });
+    }
+    return Response.json({ id: 'msr-gone', status: 'failed', error: 'fixture' });
+  };
+  await assert.rejects(generateGenaiVideo('msr', args), /fixture/);
+  assert.deepEqual(submissions, ['genai-file://g1', 'genai-file://g2']);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(dir, 'gone.mp4.astra-genai.json'), 'utf8')).jobId, 'msr-gone');
+});
+
+test('a large voice sample with no upload API is refused before anything is submitted', async t => {
+  const { forgetGenaiUploads } = await import('../dist/astra-genai-upload.js');
+  forgetGenaiUploads();
+  const dir = setup(t), source = path.join(dir, 'reference.png'), wav = path.join(dir, 'voice.wav');
+  fs.writeFileSync(source, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=', 'base64'));
+  // 6.5 MB of voice is about 8.7 MB as base64; voice cannot be shrunk.
+  fs.writeFileSync(wav, Buffer.alloc(6_500_000, 1));
+  const args = { prompt: 'The person says hello.', references: [{ imagePath: source, audioPath: wav }], reserveUsd: 0, outputPath: dir, filename: 'big.mp4' };
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    const route = new URL(String(url)).pathname;
+    calls.push(`${options.method} ${route}`);
+    if (route.endsWith('/capabilities')) return Response.json({ msr: true, voice_references: true });
+    if (route === '/v1/uploads') return new Response('not found', { status: 404 });
+    return assert.fail(`unexpected ${options.method} ${route}`);
+  };
+  await assert.rejects(generateGenaiVideo('msr', args), /msr_body_too_large: .*nothing was submitted\. Try again later/);
+  assert.ok(!calls.includes('POST /v1/ltx/msr'));
+  assert.ok(!fs.existsSync(path.join(dir, 'big.mp4.astra-genai.json')));
 });
 
 test('audio-to-video follows the gateway AudioVideo contract and its data URI limits', async t => {
