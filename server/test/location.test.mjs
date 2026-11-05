@@ -131,6 +131,22 @@ test('angles set the camera height and pitch; dutch says the render stays level'
   for(const camera of [high,low,ground])assert.ok(Math.abs(project(camera,[0,0,1.6])[1])<1,'the face stays in frame');
   assert.ok(frameOf('ms','dutch').warnings.some(w=>/no camera roll/.test(w)));
 });
+test('follow and side-tracking use the same opening viewpoint in the source prompt and set camera',()=>{
+  const prompts=require('../../skills/storyboard/references/assemble-bg-prompt.js');
+  const cameraFor=movement=>{
+    const scene={shot:{size:'ms',angle:'eye'},visual:{camera:{movement}}};
+    return {camera:L.shotCamera(spec,{stateId:'day',actors:[mina()],cast:['mina'],size:'ms',angle:'eye',width:960,height:540,viewpoint:L.shotViewpoint(scene)}).camera,
+      prompt:prompts.assemble(prompts.frameOptions(scene)).prompt};
+  };
+  const follow=cameraFor('tracking from behind');
+  assert.ok(follow.camera.position[1]>1);
+  assert.match(follow.prompt,/subject from behind/);
+  const side=cameraFor('truck parallel to the subject');
+  assert.ok(Math.abs(side.camera.position[0])>1&&Math.abs(side.camera.position[1])<.01);
+  assert.match(side.prompt,/subject from the side/);
+  assert.equal(L.shotViewpoint({shot:{techniques:[{id:'camera.follow'}]}}),'rear');
+  assert.equal(L.shotViewpoint({visual:{camera:{movement:'truck parallel to the subject',rear:true}}}),'rear');
+});
 test('two people keep the reference camera side; over the shoulder and pov stand at the named person',()=>{
   const a=mina({position:[-1,0,0],rotationZDeg:90,gazeTarget:'jun'}),b={id:'jun',height:1.8,color:'#346cbe',position:[1,0,0],rotationZDeg:-90,gazeTarget:'mina'};
   // Facing each other along X: square to their line on the side the wide camera (y -5.8) stands.

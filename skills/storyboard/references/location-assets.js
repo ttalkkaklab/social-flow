@@ -261,6 +261,10 @@ function shotCamera(m,{stateId,actors=[],cast=[],size,angle,width,height,side,mu
         const lateral=[-u[1],u[0]],across=people.map(x=>dot(lateral,x.position));
         spread=Math.max(...across)-Math.min(...across)+1;   // half a metre beyond each centre holds the shoulders and arms
       }
+      if(viewpoint==='side'&&people.length===1){
+        u=[-u[1],u[0]];
+        if(dot(u,[ref.position[0]-centre[0],ref.position[1]-centre[1]])<0)u=u.map(v=>-v);
+      }
       if(size==='back'||viewpoint==='rear')u=u.map(v=>-v);
     } else {
       // Nobody blocked, an insert or a cutaway: frame the required landmarks, or the standing set without its walls.
@@ -323,6 +327,12 @@ function shotCamera(m,{stateId,actors=[],cast=[],size,angle,width,height,side,mu
  * The set seen from the shot's own camera (shotCamera), rendered once per input fingerprint into
  * locations/<shot>-frame-<fingerprint>/ with start and end poses: the start image's composition source.
  */
+function shotViewpoint(s){
+  const cam=s.visual?.camera||{},picked=require('./film-techniques.js').selected(s);
+  const explicit=picked.find(t=>t.entry?.fields.viewpoint)?.entry.fields.viewpoint||(cam.rear?'rear':cam.pov?'pov':undefined);
+  const move=String(cam.movement||picked.find(t=>t.entry?.fields.movement)?.entry.fields.movement||'');
+  return explicit||(/tracking from behind/i.test(move)?'rear':/truck parallel/i.test(move)?'side':undefined);
+}
 function shotFrame(win,index,dir,{manifest,cast=[],size,angle,width,height}){
   if(typeof manifest!=='string'||path.isAbsolute(manifest))throw new Error('location manifest must be relative to storyboard');
   const p=path.resolve(dir,manifest),m=load(p),s=win.SCENES?.[index];
@@ -334,7 +344,7 @@ function shotFrame(win,index,dir,{manifest,cast=[],size,angle,width,height}){
   // The render keeps the picture's aspect, at most 1280 px on the long side, in even pixels.
   const k=Math.min(1,1280/Math.max(width,height)),w=2*Math.round(width*k/2),h=2*Math.round(height*k/2);
   const ref=bound?(bound.camera||m.cameras[bound.cameraId]):undefined,cam=s.visual?.camera||{};
-  const picked=require('./film-techniques.js').selected(s),viewpoint=picked.find(t=>t.entry?.fields.viewpoint)?.entry.fields.viewpoint||(cam.rear?'rear':cam.pov?'pov':undefined);
+  const viewpoint=shotViewpoint(s);
   const shot=shotCamera(m,{stateId,actors:C.actorsAt(blocking,'start'),cast,size,angle,width:w,height:h,side:ref,mustShow:bound?.mustShow||[],viewpoint});
   // Text cannot specify a Blender transform. Without an authored endpoint a moving shot uses text for its landing,
   // rather than locking its end image to a second render of the opening camera.
@@ -453,5 +463,5 @@ async function run(args){
   saveBoard(p,win);return result;
 }
 function detailFilename(topic,id){return digest([topic,id]).slice(0,24)+'.html';}
-module.exports={detailFilename,angleCameras,shotCamera,shotFrame,locationPrompt,digest,fileHash,load,build,sheet,sheetView,context,signature,plan,bind,render,previz,renderJob,approve,references,receipt,reviewResult,applyCamera,check,preview,run,saveBoard};
+module.exports={detailFilename,angleCameras,shotCamera,shotViewpoint,shotFrame,locationPrompt,digest,fileHash,load,build,sheet,sheetView,context,signature,plan,bind,render,previz,renderJob,approve,references,receipt,reviewResult,applyCamera,check,preview,run,saveBoard};
 if(require.main===module)run(read(process.argv[2])).then(r=>console.log(JSON.stringify(r,null,2))).catch(e=>{console.error(e.message);process.exitCode=1;});
