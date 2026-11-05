@@ -93152,11 +93152,11 @@ var require_film_techniques = __commonJS({
       function instructions(scene) {
         return selected(scene).filter((item) => item.entry && ["camera", "framing"].includes(item.entry.category)).map((item) => item.entry.category === "framing" ? "Opening frame: " + item.entry.instruction + "." : item.entry.instruction).join(" ");
       }
-      function sourceInstructions(scene) {
+      function sourceInstructions(scene, phase = "start", endpoint = false) {
         return selected(scene).filter((item) => item.entry).map(({ entry: entry2, from, to }) => {
-          if (entry2.category === "framing") return "Opening frame: " + entry2.instruction + ".";
-          if (entry2.fields.viewpoint || entry2.fields.angle) return entry2.instruction;
-          if (entry2.fields.focus === "rack") return from && to ? "Stage " + from + " and " + to + " at clearly different distances from the camera, " + from + " in sharp focus." : "Stage the named near and far focus targets at distinct depths; use the authored opening focus from camera.framing.";
+          if (entry2.category === "framing") return endpoint ? "" : (phase === "end" ? "Final frame: " : "Opening frame: ") + entry2.instruction + ".";
+          if (entry2.fields.viewpoint || entry2.fields.angle) return endpoint ? "" : entry2.instruction;
+          if (entry2.fields.focus === "rack") return from && to ? "Stage " + from + " and " + to + " at clearly different distances from the camera, " + (phase === "end" ? to : from) + " in sharp focus." : "Stage the named near and far focus targets at distinct depths; use the authored " + (phase === "end" ? "closing" : "opening") + " focus.";
           return "";
         }).filter(Boolean).join(" ");
       }
@@ -116330,10 +116330,20 @@ function writeShotIcons(args) {
     const index = shotIndex(shots, id, "shot_icons");
     const plan2 = { ...shots[index].shot ?? {} };
     const visual = { ...shots[index].visual ?? {} };
-    const framing = () => JSON.stringify([plan2.size, plan2.angle, plan2.depth, (Array.isArray(plan2.techniques) ? plan2.techniques : []).filter((t2) => {
-      const entry2 = catalog2[t2.id];
-      return !!entry2 && (entry2.category === "framing" || !!entry2.fields?.focus || !!entry2.fields?.viewpoint || !!entry2.fields?.angle);
-    }).map((t2) => t2.id)]);
+    const framing = () => JSON.stringify([
+      plan2.size,
+      plan2.angle,
+      plan2.depth,
+      plan2.space,
+      plan2.composition,
+      plan2.eyeline,
+      visual.camera,
+      plan2.render?.camera,
+      (Array.isArray(plan2.techniques) ? plan2.techniques : []).filter((t2) => {
+        const entry2 = catalog2[t2.id];
+        return !!entry2 && (entry2.category === "framing" || !!entry2.fields?.focus || !!entry2.fields?.viewpoint || !!entry2.fields?.angle);
+      }).map((t2) => [t2.id, t2.from, t2.to])
+    ]);
     const framedBefore = framing();
     const routed = { ...plan2.render, ...render };
     const previous = plan2.render?.mode;
@@ -116414,7 +116424,7 @@ function writeShotIcons(args) {
       visual.frames = next2;
     }
     if (visual.frames?.start && framing() !== framedBefore)
-      notes.push({ level: "warn", where: id, what: "the start image was made for the previous size, angle, depth or focus \u2014 remake it with shot_image" });
+      notes.push({ level: "warn", where: id, what: "the start image was made for the previous size, angle, depth, camera or focus \u2014 remake it and any end image with shot_image" });
     shots[index] = { ...shots[index], shot: plan2, visual };
     if (next) {
       if (index + 1 >= shots.length) throw new Error(`shot_icons ${id}: the last shot has no next shot to join`);
@@ -116559,12 +116569,12 @@ function shotImageRequest(args) {
   else if (location && args.frame === "start")
     warnings.push({ level: "warn", where: args.id, what: `the ${location} sheet names no built set, so Image 1 is its picture at whatever angle that was made, not this shot's camera \u2014 build the set (location_manage build) and write its manifest on the sheet for a camera-matched start image` });
   const lens = set ? `${set.camera.lensMm} mm lens` : "", dutch = plan2.angle === "dutch";
-  const composition = set ? [{
+  const composition = set && (args.frame === "start" || set.endCamera) ? [{
     id: `${args.id}-set`,
     path: set[args.frame].path,
     role: "composition",
     use: "image",
-    purpose: args.frame === "end" ? `the ${set.name} set from the same camera at the end of the shot, where every object${set.blocked ? " and figure" : ""} stands when it ends` : `the ${set.name} set seen from this shot's camera (${lens}): its viewpoint, framing${dutch ? "" : " and horizon"}, the architecture and where every object${set.blocked ? " and coloured figure" : ""} stands; its plain unpainted surfaces are placeholders`
+    purpose: args.frame === "end" ? `the ${set.name} set from the closing camera (${set.endCamera.lensMm} mm lens), where every object${set.blocked ? " and figure" : ""} stands when it ends` : `the ${set.name} set seen from this shot's camera (${lens}): its viewpoint, framing${dutch ? "" : " and horizon"}, the architecture and where every object${set.blocked ? " and coloured figure" : ""} stands; its plain unpainted surfaces are placeholders`
   }] : [];
   const propPictures = propRefs(win, shots.indexOf(shot), args.id, props, args.frame, warnings);
   const refs = [
@@ -116589,11 +116599,11 @@ function shotImageRequest(args) {
   }
   const inputs = ordered.map((ref) => resolve5(boardDir, ref.path));
   for (const file of inputs) if (!existsSync20(file)) throw new Error(`image_input_missing: ${file}`);
-  const assemble = loadFromHere2(join10(REFERENCES_DIR, "assemble-bg-prompt.js")).assemble;
+  const imagePrompts = loadFromHere2(join10(REFERENCES_DIR, "assemble-bg-prompt.js"));
   const style = loadFromHere2(join10(REFERENCES_DIR, "production-mode.js")).shotStyle(win, shots.indexOf(shot));
-  const body = assemble({
-    ...args.frame === "start" ? { size: plan2.size, depth: plan2.depth, techniques: plan2.techniques } : {},
-    angle: plan2.angle,
+  const body = imagePrompts.assemble({
+    ...imagePrompts.frameOptions(shot, args.frame),
+    ...args.frame === "end" && set?.endCamera && JSON.stringify(set.camera) !== JSON.stringify(set.endCamera) ? { omitFraming: true } : {},
     style: style.preset ? style : null,
     scene: args.prompt,
     noPerson: !cast.length,
@@ -116601,13 +116611,13 @@ function shotImageRequest(args) {
   }).prompt;
   const roles = ordered.map((ref, i2) => `Image ${i2 + 1} shows ${ref.purpose}.`).join(" ");
   const at = (ref) => ordered.indexOf(ref) + 1;
-  const lock2 = !set ? "" : args.frame === "end" ? `Move the figures and objects to where Image ${at(composition[0])} shows them and keep Image 1's camera, look and every identity.` : `Keep Image 1's camera position, ${lens}${dutch ? "" : ", horizon"} and framing, and keep every object${set.blocked ? " and figure" : ""} where it stands in Image 1; paint its plain unpainted surfaces as the real place, and continue the place into any flat dark area past the set's edge.` + (dutch ? " Image 1 is level; tilt the whole picture to the dutch angle described below." : "") + (look.some((ref) => ordered.includes(ref)) ? ` Take only materials, colours and light from Image ${at(look[0])}.` : "");
+  const lock2 = !set ? "" : args.frame === "end" ? composition.length ? `Use Image ${at(composition[0])}'s closing camera, lens, framing and final object and figure positions. Image 1 supplies the look and every identity; its opening camera does not constrain this closing view.` : `Image 1 supplies the opening appearance and identities. Follow the closing camera direction below while preserving the set's world layout.` : `Keep Image 1's camera position, ${lens}${dutch ? "" : ", horizon"} and world layout, and keep every object${set.blocked ? " and figure" : ""} at its world position in Image 1. The authored composition below controls the final crop, headroom and subject screen placement. Paint its plain unpainted surfaces as the real place, and continue the place into any flat dark area past the set's edge.` + (dutch ? " Image 1 is level; tilt the whole picture to the dutch angle described below." : "") + (look.some((ref) => ordered.includes(ref)) ? ` Take only materials, colours and light from Image ${at(look[0])}.` : "");
   const prompt = [
     ordered.length ? "Compose one picture from these images." : "",
     roles,
     lock2,
     heightSentence(win, cast),
-    args.frame === "end" ? "This is the last frame of the shot that opens on Image 1: keep its place, light and every identity, and change only what the action changed." : "",
+    args.frame === "end" ? "This is the last frame of the shot that opens on Image 1: keep its place, light and every identity, applying the planned action, camera landing and final focus." : "",
     ...propPictures.unseen,
     body.charAt(0).toUpperCase() + body.slice(1)
   ].filter(Boolean).join(" ");
@@ -116620,6 +116630,7 @@ function shotImageRequest(args) {
     manifestSha256: set.manifestSha256,
     stateId: set.stateId,
     camera: set.camera,
+    endCamera: set.endCamera,
     blocked: set.blocked,
     fingerprint: set.fingerprint,
     start: set.start,
@@ -125227,7 +125238,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     name: "shot_icons",
     title: "Set each shot's icon attributes (step 3)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    description: `Use it after every shot has its story and characters (story_shot \u2192 shot_characters), and normally after its lines (shot_dialogue): set the attributes the review's icon row shows, per shot \u2014 render route (shot.render), size and why, angle, camera move, focus, depth, the frame plan, where reference means MSR, and next, the transition into the following shot (stored as that shot's transition and edit.reason, which assembly draws; the same checks as storyboard_apply transitions). A move on a still_camera cut is the still effect (shot.render.camera.effect); on any other route it is a camera technique, written to shot.techniques with visual.camera.movement kept consistent. Switching to still_camera drops the camera technique and visual.camera move; switching from it drops the still effect. A different move replaces the old one's speed and target (the same move \u2014 its technique, or an authored visual.camera move before any technique \u2014 keeps them unless given), and a new size without its own why drops the old why. Changing size, angle, depth or focus after the start image exists warns to remake it with shot_image. A frame plan other than first_last takes the end image off (with a warning), and switching to or from reference re-marks the character panels for the video call. A change to what a written video prompt came from (cast, on-screen lines, frame plan, camera, focus, MSR framing) warns to rewrite it with shot_prompt; the review page marks it too. Only the attributes given change. Refused (story_order) while a sequence, scene or shot story or any shot's characters are missing. Also refused: a move target or focus subject outside English (video_prompt_language); on a still_camera cut a move outside the still effects, a speed outside the still speeds, or a focus technique; elsewhere a move that is not a camera move, a speed outside the camera speeds, or a focus id that is not a focus technique; an invalid depth; next on the last shot, or a join the transition checks refuse. Local file only; no image, video, speech or prompt is generated.
+    description: `Use it after every shot has its story and characters (story_shot \u2192 shot_characters), and normally after its lines (shot_dialogue): set the attributes the review's icon row shows, per shot \u2014 render route (shot.render), size and why, angle, camera move, focus, depth, the frame plan, where reference means MSR, and next, the transition into the following shot (stored as that shot's transition and edit.reason, which assembly draws; the same checks as storyboard_apply transitions). A move on a still_camera cut is the still effect (shot.render.camera.effect); on any other route it is a camera technique, written to shot.techniques with visual.camera.movement kept consistent. Switching to still_camera drops the camera technique and visual.camera move; switching from it drops the still effect. A different move replaces the old one's speed and target (the same move \u2014 its technique, or an authored visual.camera move before any technique \u2014 keeps them unless given), and a new size without its own why drops the old why. Changing size, angle, depth, camera movement or rack-focus subjects after the start image exists warns to remake it and any end image with shot_image. A frame plan other than first_last takes the end image off (with a warning), and switching to or from reference re-marks the character panels for the video call. A change to what a written video prompt came from (cast, on-screen lines, frame plan, camera, focus, MSR framing) warns to rewrite it with shot_prompt; the review page marks it too. Only the attributes given change. Refused (story_order) while a sequence, scene or shot story or any shot's characters are missing. Also refused: a move target or focus subject outside English (video_prompt_language); on a still_camera cut a move outside the still effects, a speed outside the still speeds, or a focus technique; elsewhere a move that is not a camera move, a speed outside the camera speeds, or a focus id that is not a focus technique; an invalid depth; next on the last shot, or a join the transition checks refuse. Local file only; no image, video, speech or prompt is generated.
 
 Choose each attribute from the beat it serves, never from a quota. A card's use is a practitioners' convention, not a measured effect \u2014 no experiment shows a camera move's emotional effect, and the angle effects (low strong, high weak) appeared only when pictures ran as a story \u2014 so the neighbouring shots carry the meaning. storyboard_read's techniqueCatalog carries a card per choice \u2014 entries for sizes, moves, angles, focus and timing, and guides for the values without an entry (composition sizes, ground and over, depth, still effects). Every card gives use, avoid and specify (what the start image and video prompt must name \u2014 crop line, endpoints, focus target); where one applies it also gives pair (what the neighbouring shots should be: establish \u2192 cut in \u2192 reestablish; look \u2192 POV \u2192 reaction; matched sizes in shot/reverse shot) and vertical (how a 9:16 frame changes it). Size is the distance: els \u2026 ecu, or insert for one object. two, three, ots, pov, back, cutaway and reaction name a composition with no crop of its own; on a new board pick the distance and carry the composition in the cast, camera.pov, camera.rear or the camera framing. Write why, move.reason and focus.reason as the beat the choice serves. Give a video move its speed and target, and a rack focus its from and to subjects: shot_image stages them and shot_prompt writes them. A still effect hold keeps the frame put as a deliberate beat. On a 9:16 board the result lists the vertical note of every chosen value \u2014 advice, never a refusal.
 
@@ -125282,7 +125293,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     name: "shot_image",
     title: "Make a shot's start or end image (step 4)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-    description: `Use it after every shot has its icon attributes (shot_icons): make one shot's start image from its characters' sheet panels (assets/characters/<id>/panels.json \u2014 face, headless front and back; two characters take each face, then each front), its place and its props, with a prompt assembled from the shot's size, angle, depth and techniques, the episode style and your English description. When the place's sheet names a built set (SB_DOC.locations manifest), Image 1 is that set rendered locally in Blender from the camera the shot's size and angle ask for \u2014 aimed at its cast's blocking from location_manage bind, swung round the subject when someone or something blocks the view, kept inside the walls with a wider lens, at the picture's aspect \u2014 and the sheet image follows as a look reference when the model has room; the render is cached per input fingerprint under storyboard/locations/ and recorded in visual.locationFrame. Without a set the sheet image (imageUrl) leads and a warning says the angle is not the shot's. Each prop seen in the frame goes in through the prop ledger: a prop hidden in the shot (propUsage visible:false) stays out, the picture is its reference drawn in the condition it has when the frame opens (start) or closes (end), and its Image line carries its English description, holder, location and condition; a prop without a picture or a reference for that condition is a warning, and ledger errors only drop the state of a prop whose own entry, history or usage in this shot has them, never refuse. Set names and labels in another script stay out of the prompt. frame:"end" makes the last image of a first_last shot from its start image, with the set's end pose from the same camera (optional; only when the frame plan needs it). Runs image_plan \u2192 image_execute with the saved image model and the existing spending authorization, then writes visual.frames.start and visual.bg (or frames.end), visual.references, locationId and props. Each call saves a new versioned file under storyboard/images/. A new start image takes the shot's end image off (it was edited from the old start; the file stays) and warns, so make the end image again. An end image keeps the start image's place (location is refused) and records its own props in frames.endProps. GPT Image gets a mixed PNG/JPEG set as PNG copies in storyboard/images/inputs/.
+    description: `Use it after every shot has its icon attributes (shot_icons): make one shot's start image from its characters' sheet panels (assets/characters/<id>/panels.json \u2014 face, headless front and back; two characters take each face, then each front), its place and its props, with a prompt assembled from the shot's size, angle, depth, techniques, screen layout, facing, composition and eyeline, camera framing and POV/rear flags, move-specific opening guidance, the episode style and your English description. Still-camera pans and tilts prepare a source canvas containing both crop endpoints. When the place's sheet names a built set (SB_DOC.locations manifest), Image 1 is that set rendered locally in Blender from the camera the shot's size and angle ask for \u2014 aimed at its cast's blocking from location_manage bind, swung round the subject when someone or something blocks the view, kept inside the walls with a wider lens, at the picture's aspect \u2014 and the sheet image follows as a look reference when the model has room; the render is cached per input fingerprint under storyboard/locations/ and recorded in visual.locationFrame. Without a set the sheet image (imageUrl) leads and a warning says the angle is not the shot's. Each prop seen in the frame goes in through the prop ledger: a prop hidden in the shot (propUsage visible:false) stays out, the picture is its reference drawn in the condition it has when the frame opens (start) or closes (end), and its Image line carries its English description, holder, location and condition; a prop without a picture or a reference for that condition is a warning, and ledger errors only drop the state of a prop whose own entry, history or usage in this shot has them, never refuse. Set names and labels in another script stay out of the prompt. frame:"end" makes the last image of a first_last shot from its start image, with its closing composition (visual.camera.end), story state (frames.endState) and final rack-focus target. A set uses the authored numeric endpoint (shot.location.camera.end, or the bound set camera's end); a static camera stays fixed. A moving shot with no numeric endpoint warns and omits the set end render from the inputs, so the prompt can follow the planned landing without locking to the opening camera. Runs image_plan \u2192 image_execute with the saved image model and the existing spending authorization, then writes visual.frames.start and visual.bg (or frames.end), visual.references, locationId and props. Each call saves a new versioned file under storyboard/images/. A new start image takes the shot's end image off (it was edited from the old start; the file stays) and warns, so make the end image again. An end image keeps the start image's place (location is refused) and records its own props in frames.endProps. GPT Image gets a mixed PNG/JPEG set as PNG copies in storyboard/images/inputs/.
 
 Do NOT use it for a cut with no picture route \u2014 only still_camera and generated_video cuts are accepted. The saved image model has to take every picture the frame composes (gpt-image up to 16; astra-genai-native or an MLX Qwen-Image-2.1 pack up to 10; MLX FLUX.2 klein or Mage-Flow Edit up to 4); otherwise it refuses with image_references_unsupported, so ask the user before changing models. Refused (story_order) while a shot lacks icon attributes, or for an end image before the start image or outside first_last; location_render_failed when Blender cannot render the set (it never falls back to the sheet image).
 

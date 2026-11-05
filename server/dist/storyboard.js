@@ -1145,12 +1145,13 @@ export function writeShotIcons(args) {
         const index = shotIndex(shots, id, 'shot_icons');
         const plan = { ...(shots[index].shot ?? {}) };
         const visual = { ...(shots[index].visual ?? {}) };
-        // What shot_image composed the start image from: size, angle, depth and the framing techniques (sourceInstructions).
-        const framing = () => JSON.stringify([plan.size, plan.angle, plan.depth, (Array.isArray(plan.techniques) ? plan.techniques : [])
+        // The image prompt's composition, camera and focus inputs; changed rack endpoints matter even with the same technique id.
+        const framing = () => JSON.stringify([plan.size, plan.angle, plan.depth, plan.space, plan.composition, plan.eyeline, visual.camera,
+            plan.render?.camera, (Array.isArray(plan.techniques) ? plan.techniques : [])
                 .filter((t) => {
                 const entry = catalog[t.id];
                 return !!entry && (entry.category === 'framing' || !!entry.fields?.focus || !!entry.fields?.viewpoint || !!entry.fields?.angle);
-            }).map((t) => t.id)]);
+            }).map((t) => [t.id, t.from, t.to])]);
         const framedBefore = framing();
         const routed = { ...plan.render, ...render };
         // A new route drops the old route's move: a still cut moves its window (render.camera), any other route moves the camera.
@@ -1258,7 +1259,7 @@ export function writeShotIcons(args) {
             visual.frames = next;
         }
         if (visual.frames?.start && framing() !== framedBefore)
-            notes.push({ level: 'warn', where: id, what: 'the start image was made for the previous size, angle, depth or focus — remake it with shot_image' });
+            notes.push({ level: 'warn', where: id, what: 'the start image was made for the previous size, angle, depth, camera or focus — remake it and any end image with shot_image' });
         shots[index] = { ...shots[index], shot: plan, visual };
         if (next) {
             if (index + 1 >= shots.length)
@@ -1427,8 +1428,8 @@ export function shotImageRequest(args) {
         warnings.push({ level: 'warn', where: args.id, what: `the ${location} sheet names no built set, so Image 1 is its picture at whatever angle that was made, not this shot's camera — build the set (location_manage build) and write its manifest on the sheet for a camera-matched start image` });
     // The renderer has no roll, so a dutch shot's render is level and the prompt alone tilts it.
     const lens = set ? `${set.camera.lensMm} mm lens` : '', dutch = plan.angle === 'dutch';
-    const composition = set ? [{ id: `${args.id}-set`, path: set[args.frame].path, role: 'composition', use: 'image',
-            purpose: args.frame === 'end' ? `the ${set.name} set from the same camera at the end of the shot, where every object${set.blocked ? ' and figure' : ''} stands when it ends`
+    const composition = set && (args.frame === 'start' || set.endCamera) ? [{ id: `${args.id}-set`, path: set[args.frame].path, role: 'composition', use: 'image',
+            purpose: args.frame === 'end' ? `the ${set.name} set from the closing camera (${set.endCamera.lensMm} mm lens), where every object${set.blocked ? ' and figure' : ''} stands when it ends`
                 : `the ${set.name} set seen from this shot's camera (${lens}): its viewpoint, framing${dutch ? '' : ' and horizon'}, the architecture and where every object${set.blocked ? ' and coloured figure' : ''} stands; its plain unpainted surfaces are placeholders` }] : [];
     const propPictures = propRefs(win, shots.indexOf(shot), args.id, props, args.frame, warnings);
     const refs = [
@@ -1452,25 +1453,27 @@ export function shotImageRequest(args) {
     for (const file of inputs)
         if (!existsSync(file))
             throw new Error(`image_input_missing: ${file}`);
-    const assemble = loadFromHere(join(REFERENCES_DIR, 'assemble-bg-prompt.js')).assemble;
+    const imagePrompts = loadFromHere(join(REFERENCES_DIR, 'assemble-bg-prompt.js'));
     const style = loadFromHere(join(REFERENCES_DIR, 'production-mode.js')).shotStyle(win, shots.indexOf(shot));
-    const body = assemble({ ...(args.frame === 'start' ? { size: plan.size, depth: plan.depth, techniques: plan.techniques } : {}), angle: plan.angle,
+    const body = imagePrompts.assemble({ ...imagePrompts.frameOptions(shot, args.frame),
+        ...(args.frame === 'end' && set?.endCamera && JSON.stringify(set.camera) !== JSON.stringify(set.endCamera) ? { omitFraming: true } : {}),
         style: style.preset ? style : null, scene: args.prompt, noPerson: !cast.length,
         ...(set ? { location: { prompt: args.frame === 'end' ? set.endPrompt : set.prompt, paths: [] } } : {}) }).prompt;
     const roles = ordered.map((ref, i) => `Image ${i + 1} shows ${ref.purpose}.`).join(' ');
     const at = (ref) => ordered.indexOf(ref) + 1;
     const lock = !set ? '' : args.frame === 'end'
-        ? `Move the figures and objects to where Image ${at(composition[0])} shows them and keep Image 1's camera, look and every identity.`
-        : `Keep Image 1's camera position, ${lens}${dutch ? '' : ', horizon'} and framing, and keep every object${set.blocked ? ' and figure' : ''} where it stands in Image 1; paint its plain unpainted surfaces as the real place, and continue the place into any flat dark area past the set's edge.`
+        ? composition.length ? `Use Image ${at(composition[0])}'s closing camera, lens, framing and final object and figure positions. Image 1 supplies the look and every identity; its opening camera does not constrain this closing view.`
+            : `Image 1 supplies the opening appearance and identities. Follow the closing camera direction below while preserving the set's world layout.`
+        : `Keep Image 1's camera position, ${lens}${dutch ? '' : ', horizon'} and world layout, and keep every object${set.blocked ? ' and figure' : ''} at its world position in Image 1. The authored composition below controls the final crop, headroom and subject screen placement. Paint its plain unpainted surfaces as the real place, and continue the place into any flat dark area past the set's edge.`
             + (dutch ? ' Image 1 is level; tilt the whole picture to the dutch angle described below.' : '')
             + (look.some((ref) => ordered.includes(ref)) ? ` Take only materials, colours and light from Image ${at(look[0])}.` : '');
     const prompt = [ordered.length ? 'Compose one picture from these images.' : '', roles, lock, heightSentence(win, cast),
-        args.frame === 'end' ? 'This is the last frame of the shot that opens on Image 1: keep its place, light and every identity, and change only what the action changed.' : '',
+        args.frame === 'end' ? 'This is the last frame of the shot that opens on Image 1: keep its place, light and every identity, applying the planned action, camera landing and final focus.' : '',
         ...propPictures.unseen, body.charAt(0).toUpperCase() + body.slice(1)].filter(Boolean).join(' ');
     const call = imageCall({ directory: episode, assetId: args.id, inputs, prompt, width, height, outDir: join(boardDir, 'images'), stem: `${args.id}-${args.frame}`, what: 'this frame' });
     const sent = refs.filter((ref) => ordered.includes(ref));
     const locationFrame = set && args.frame === 'start' ? { set: set.id, revision: set.revision, manifest: set.manifest, manifestSha256: set.manifestSha256, stateId: set.stateId,
-        camera: set.camera, blocked: set.blocked, fingerprint: set.fingerprint, start: set.start, end: set.end } : undefined;
+        camera: set.camera, endCamera: set.endCamera, blocked: set.blocked, fingerprint: set.fingerprint, start: set.start, end: set.end } : undefined;
     return { episode, assetId: args.id, ...call, refs: sent, ...(location ? { location } : {}), ...(locationFrame ? { locationFrame } : {}), props, prompt, warnings };
 }
 /**

@@ -146,11 +146,24 @@ render is level.
 It adds the set inventory, invariants, state and which proxy colour is whom. Set names, state
 labels, object labels and invariants in another script stay out of the prompt (a model could
 letter them into the picture) with a warning. An end image of a `first_last` shot adds the
-set's end pose from the same camera after the start image. The render rides as
+set's end pose from the authored numeric camera endpoint (`shot.location.camera.end`, or the
+bound set camera's `end`) after the start image. A static camera keeps the opening transform.
+A moving shot without a numeric endpoint reports a warning and omits the set end render
+from the image inputs: the opening image supplies appearance, while `visual.camera.end`
+and the move describe the closing view. It never treats a second opening-camera render as
+the moving camera's landing. Endpoint transforms participate in the render cache fingerprint.
+The render rides as
 `role:"composition"`, `use:"image"`, so it never reaches a video call, and
 `visual.locationFrame` records the set, state, camera, fingerprint and render hashes.
 Without a manifest the sheet picture leads as before, with a warning that its angle is not the
 shot's.
+
+The image prompt also carries the shot's screen layout, facing, eyeline, composition
+(headroom and look room), camera framing, POV/rear flags and move-specific opening guidance.
+Still-camera pans and tilts ask for a source canvas containing both crop endpoints. End
+images use `camera.end`, `frames.endState` and the rack focus's `to` subject; an explicit
+closing view replaces the opening crop and viewpoint instructions. These are generation
+instructions, not evidence that the image model followed them.
 
 ## Interactive review and camera changes
 

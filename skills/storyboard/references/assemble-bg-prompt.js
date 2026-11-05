@@ -310,6 +310,69 @@ function spaceSentence(opts) {
   return bits.length ? "From the camera: " + bits.join(". ") + "." : "";
 }
 
+// Keep the MCP frame path and the CLI on the same camera/composition inputs.
+function frameOptions(scene, frame = 'start') {
+  const sh = scene.shot || {}, visual = scene.visual || {}, camera = visual.camera || {}, sp = sh.space || {};
+  const end = frame === 'end', moving = camera.movement && !/^(static|fixed|locked)/i.test(String(camera.movement).trim());
+  const endpoint = end && !!(camera.end || moving);
+  const rack = require('./film-techniques.js').selected(scene).find(t => t.entry?.fields.focus === 'rack');
+  const depth = rack && (end ? rack.to : rack.from)
+    ? { mode: 'shallow', reads: 1, focus: end ? rack.to : rack.from }
+    : sh.depth;
+  return { frame, omitFraming: endpoint, size: endpoint ? undefined : sh.size, angle: endpoint ? undefined : sh.angle,
+    techniques: sh.techniques, depth, camera, stillCamera: sh.render?.mode === 'still_camera' ? sh.render.camera : null,
+    ...(end ? { endState: visual.frames?.endState } : { layout: sp.layout, facing: sp.facing, line: sp.line, light: sp.light,
+      composition: sh.composition, eyeline: sh.eyeline }) };
+}
+
+function cameraSourceInstructions(opts) {
+  const cam = opts.camera || {}, end = opts.frame === 'end', parts = [];
+  if (end && cam.end) parts.push('Closing composition: ' + cam.end + '. This closing view takes priority over the opening crop and viewpoint.');
+  else if (!end && cam.framing) parts.push('Opening composition: ' + cam.framing + '.');
+  if (end && opts.endState) parts.push('Closing story state: ' + opts.endState + '.');
+  if (!(end && cam.end)) {
+    if (cam.rear) parts.push('View the subject from behind.');
+    if (cam.pov) parts.push('Point of view: ' + (typeof cam.pov === 'string' ? cam.pov : 'the named character') + '.');
+  }
+  const still = opts.stillCamera;
+  if (still?.effect) {
+    const guides = {
+      pan: 'Include both the opening and closing regions in one continuous source canvas, with horizontal room for the crop window to travel.',
+      tilt: 'Include both the lower and upper endpoint regions in one continuous source canvas, with vertical room for the crop window to travel.',
+      push: 'Leave crop margin around the target so the playback window can tighten toward it.',
+      approach: 'Leave crop margin around the target so the playback window can approach it.',
+      pull: 'Include the wider surroundings that the playback window reveals as it pulls out.',
+      'focus-in': 'Keep the final focus target detailed and readable in the source; playback applies the focus effect.',
+      'rack-focus': 'Keep both focus regions detailed and readable in the source; playback applies the change of focus.',
+      reveal: 'Include the concealed area and foreground boundary needed for the reveal.',
+      parallax: 'Separate foreground, subject and background clearly for the planned parallax layers.',
+      hold: 'Compose the final held view with no extra travel margin.'
+    };
+    parts.push('Source canvas for the ' + still.effect + ' still-camera effect: ' + (guides[still.effect] || 'preserve the planned crop regions.') +
+      (still.target ? ' Effect target: ' + still.target + '.' : ''));
+    return parts.join(' ');
+  }
+  const movement = String(cam.movement || '').trim().toLowerCase();
+  if (!movement) return parts.join(' ');
+  const fixed = /^(static|fixed|locked)/.test(movement);
+  if (fixed) parts.push('Keep camera position, angle and focal length fixed between the opening and closing images.');
+  else {
+    parts.push('This is the ' + (end ? 'settled closing' : 'opening') + ' still for a ' + [cam.speed, movement].filter(Boolean).join(' ') +
+      (cam.target ? ', with movement target ' + cam.target : '') + '; show one instant, with no motion trail or montage.');
+    if (end) parts.push('Use the camera landing after that move; preserve world geometry and identity as perspective or crop changes.');
+    else if (/pan|tilt/.test(movement)) parts.push('Frame the starting target and retain scene detail in the direction of travel for the later reveal.');
+    else if (/dolly out|pull.?back|backward and upward/.test(movement)) parts.push('Begin near the subject, with coherent surrounding geometry for the wider closing view.');
+    else if (/dolly zoom/.test(movement)) parts.push('Keep the subject at the planned screen size, with distinct foreground and background depth for the later perspective change.');
+    else if (/dolly|zoom in/.test(movement)) parts.push('Begin at the opening crop with margin for the closer landing and readable foreground/background depth.');
+    else if (/arc|truck|tracking/.test(movement)) parts.push('Keep foreground, subject and background spatially distinct, with clear travel room along the planned path.');
+    if (!end && /tracking from behind/.test(movement)) parts.push('Show the subject from behind at the start of the following path.');
+    if (!end && /backward in front|body-mounted/.test(movement)) parts.push('Show the subject facing the camera in the opening frame.');
+    if (!end && /truck parallel/.test(movement)) parts.push('Show the subject from the side with travel room alongside it.');
+    if (!end && /crane up/.test(movement)) parts.push('Begin at the lower view, preserving the upper space the rising camera will reveal.');
+  }
+  return parts.join(' ');
+}
+
 function assemble(opts) {
   const size = opts.size || "";
   const angle = opts.angle || "eye";
@@ -327,11 +390,15 @@ function assemble(opts) {
 
   const space = spaceSentence(opts);
   const parts = [];
-  if (sizeWords) parts.push(sizeWords + ", " + angleWords + ".");
-  else parts.push(angleWords + ".");
-  const sourceTechnique = require('./film-techniques.js').sourceInstructions({shot:{techniques:opts.techniques}});
+  if (!opts.omitFraming) {
+    if (sizeWords) parts.push(sizeWords + ", " + angleWords + ".");
+    else parts.push(angleWords + ".");
+  }
+  const sourceTechnique = require('./film-techniques.js').sourceInstructions({shot:{techniques:opts.techniques}}, opts.frame, opts.omitFraming);
   if (sourceTechnique) parts.push(sourceTechnique);
   if (space) parts.push(space);
+  const cameraWords = cameraSourceInstructions(opts);
+  if (cameraWords) parts.push(cameraWords);
   if (opts.propPrompt) parts.push(opts.propPrompt);
   parts.push(...styleSentences(opts.style));
   if (scene) parts.push(scene.replace(/[.!?\s]*$/, "") + ".");
@@ -364,7 +431,6 @@ function loadShot(file, index) {
   if (overrideProblems.length) throw new Error(overrideProblems.join("; "));
   const style = pm.shotStyle(win, i);
   const sh = s.shot || {};
-  const sp = sh.space || {};
   const v = s.visual || {};
   const propSnapshot = require('./prop-continuity.js').snapshot(win, i);
   const propReferenceImages = propSnapshot.filter(p => p.visible).flatMap(p => p.references.map(r => path.resolve(path.dirname(file), r.path)));
@@ -373,15 +439,7 @@ function loadShot(file, index) {
     propPrompt: require('./prop-continuity.js').prompt(win, i),
     propSnapshot,
     sourceImageArgs: propReferenceImages.length ? { referenced_image_paths: propReferenceImages } : {},
-    techniques: sh.techniques,
-    size: sh.size,
-    angle: sh.angle,
-    layout: sp.layout,
-    facing: sp.facing,
-    eyeline: sh.eyeline, composition: sh.composition, depth: sh.depth,
-    line: sp.line,
-    light: sp.light,
-    camera: v.camera || null,
+    ...frameOptions(s),
     scene: typeof sh.videoDesign?.before === 'string' ? sh.videoDesign.before
       : sh.render?.mode === 'still_camera' && typeof v.action === 'string' ? v.action : undefined,
     sourceContext: sourceContext.context(s, win.STORY),
@@ -747,4 +805,4 @@ function main(argv) {
 
 if (require.main === module) main(process.argv.slice(2));
 
-module.exports = { assemble, clipAssemble, styleSentences, bannedHits, negDirectiveHits, timingHits, hangulHits, lockMissing, spaceSentence, SIZE_WORDS, SIZE_WORDS_OBJECT, ANGLE_WORDS, BANNED, NEG_RE, NEG_OK };
+module.exports = { assemble, frameOptions, clipAssemble, styleSentences, bannedHits, negDirectiveHits, timingHits, hangulHits, lockMissing, spaceSentence, SIZE_WORDS, SIZE_WORDS_OBJECT, ANGLE_WORDS, BANNED, NEG_RE, NEG_OK };

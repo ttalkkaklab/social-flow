@@ -6,6 +6,8 @@ import os from 'node:os';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {locationSchema} from '../dist/location.js';
+import {shotImageRequest} from '../dist/storyboard.js';
+import {setupProject,png} from './workflow-fixture.mjs';
 const require=createRequire(import.meta.url);
 const L=require('../../skills/storyboard/references/location-assets.js');
 const C=require('../../skills/storyboard/references/location-contract.js');
@@ -57,6 +59,11 @@ test('real Blender renders one shared set, moving actors, gaze and matching prev
       const sourceHash=L.fileHash(path.join(path.dirname(built.manifest),'source.blend'));
       const stills=L.render(win,0,boardDir);
       for(const f of Object.values(stills.frames))assert.ok(fs.statSync(path.join(boardDir,f.path)).size>1000);
+      const shotFrame=L.shotFrame(win,0,boardDir,{manifest:path.relative(boardDir,built.manifest),cast:['A','B'],size:'mfs',angle:'eye',width:480,height:270});
+      const shotSpatial=JSON.parse(fs.readFileSync(path.join(boardDir,path.dirname(shotFrame.start.path),'spatial.json'),'utf8'));
+      assert.deepEqual(shotSpatial.views.end.camera.position,m.cameras.wide.end.position);
+      assert.deepEqual(shotSpatial.views.end.camera.target,m.cameras.wide.end.target);
+      assert.notDeepEqual(shotSpatial.views.start.camera.position,shotSpatial.views.end.camera.position);
       const spatial=L.references(win,0,boardDir);
       assert.equal(spatial.spatialPaths.length,6);
       assert.equal(spatial.spatial.fingerprint,stills.fingerprint);
@@ -124,6 +131,22 @@ test('angles set the camera height and pitch; dutch says the render stays level'
   for(const camera of [high,low,ground])assert.ok(Math.abs(project(camera,[0,0,1.6])[1])<1,'the face stays in frame');
   assert.ok(frameOf('ms','dutch').warnings.some(w=>/no camera roll/.test(w)));
 });
+test('follow and side-tracking use the same opening viewpoint in the source prompt and set camera',()=>{
+  const prompts=require('../../skills/storyboard/references/assemble-bg-prompt.js');
+  const cameraFor=movement=>{
+    const scene={shot:{size:'ms',angle:'eye'},visual:{camera:{movement}}};
+    return {camera:L.shotCamera(spec,{stateId:'day',actors:[mina()],cast:['mina'],size:'ms',angle:'eye',width:960,height:540,viewpoint:L.shotViewpoint(scene)}).camera,
+      prompt:prompts.assemble(prompts.frameOptions(scene)).prompt};
+  };
+  const follow=cameraFor('tracking from behind');
+  assert.ok(follow.camera.position[1]>1);
+  assert.match(follow.prompt,/subject from behind/);
+  const side=cameraFor('truck parallel to the subject');
+  assert.ok(Math.abs(side.camera.position[0])>1&&Math.abs(side.camera.position[1])<.01);
+  assert.match(side.prompt,/subject from the side/);
+  assert.equal(L.shotViewpoint({shot:{techniques:[{id:'camera.follow'}]}}),'rear');
+  assert.equal(L.shotViewpoint({visual:{camera:{movement:'truck parallel to the subject',rear:true}}}),'rear');
+});
 test('two people keep the reference camera side; over the shoulder and pov stand at the named person',()=>{
   const a=mina({position:[-1,0,0],rotationZDeg:90,gazeTarget:'jun'}),b={id:'jun',height:1.8,color:'#346cbe',position:[1,0,0],rotationZDeg:-90,gazeTarget:'mina'};
   // Facing each other along X: square to their line on the side the wide camera (y -5.8) stands.
@@ -171,6 +194,39 @@ test('shotFrame renders the set once per camera and reuses the render',()=>{
     assert.ok(first.warnings.some(w=>/not blocked/.test(w))&&first.warnings.some(w=>/first state/.test(w)));
     ask();
     assert.equal(fs.readFileSync(path.join(dir,'runs'),'utf8'),'x');
+    // A numeric landing changes both the render and the cache; fixed shots retain the opening camera.
+    L.bind(win,0,board,{manifest:path.join(asset,'location.json'),stateId:'day',cameraId:'wide'});
+    win.SCENES[0].shot.render={mode:'generated_video'};
+    win.SCENES[0].shot.location.camera={...m.cameras.wide,end:{position:[1,-2,2],target:[0,0,1],lensMm:70}};
+    win.SCENES[0].visual={character:[],frames:{mode:'first_last',start:'opening.png'},camera:{movement:'dolly in',end:'a close-up at the desk'}};
+    const landed=ask();
+    assert.deepEqual(landed.endCamera.position,[1,-2,2]);
+    assert.equal(landed.endCamera.lensMm,70);
+    assert.deepEqual(JSON.parse(fs.readFileSync(path.join(board,landed.end.path),'utf8')),landed.endCamera);
+    const cached=fs.readFileSync(path.join(dir,'runs'),'utf8');
+    ask();assert.equal(fs.readFileSync(path.join(dir,'runs'),'utf8'),cached);
+    setupProject(dir);
+    fs.writeFileSync(path.join(board,'opening.png'),png);
+    const request=()=>{
+      fs.writeFileSync(path.join(board,'scenes.js'),`window.SCENES=${JSON.stringify(win.SCENES)};window.FORMAT="youtube-long-16x9";window.SB_DOC=${JSON.stringify({locations:[{id:'set',manifest:'../set/location.json'}]})};`);
+      return shotImageRequest({path:board,id:'s0001',frame:'end',location:undefined,prompt:'Mina waits.'});
+    };
+    win.SCENES[0].visual.locationId='set';
+    const ending=request();
+    assert.match(ending.prompt,/Use Image 2's closing camera/);
+    assert.doesNotMatch(ending.prompt,/keep Image 1's camera/);
+    assert.equal(ending.refs.find(r=>r.role==='composition').path,landed.end.path);
+    win.SCENES[0].shot.location.camera.end.position=[2,-3,2];
+    assert.notEqual(ask().fingerprint,landed.fingerprint);
+    delete win.SCENES[0].shot.location.camera.end;
+    const textual=ask();
+    assert.equal(textual.endCamera,null);
+    assert.ok(textual.warnings.some(w=>/no numeric camera endpoint/.test(w)));
+    const textEnding=request();
+    assert.equal(textEnding.refs.some(r=>r.role==='composition'),false);
+    assert.doesNotMatch(textEnding.prompt,/Keep exactly the supplied location composition|keep Image 1's camera/);
+    win.SCENES[0].visual.camera.movement='static';
+    const held=ask();assert.deepEqual(held.endCamera,held.camera);
     fs.writeFileSync(fake,'#!/bin/sh\nexit 3\n',{mode:0o755});
     assert.throws(()=>L.shotFrame(win,0,board,{manifest:'../set/location.json',cast:['mina'],size:'fs',angle:'eye',width:1536,height:1024}),/location_render_failed/);
   }finally{if(blender===undefined)delete process.env.BLENDER;else process.env.BLENDER=blender;fs.rmSync(dir,{recursive:true,force:true});}
