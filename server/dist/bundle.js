@@ -98681,9 +98681,9 @@ function atomicJson(file, value) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const temporary = file + "." + randomUUID() + ".tmp";
   try {
-    fs.writeFileSync(temporary, JSON.stringify(value, null, 2) + "\n", { mode: 384, flag: "wx" });
-    const fd = fs.openSync(temporary, "r");
+    const fd = fs.openSync(temporary, "wx", 384);
     try {
+      fs.writeFileSync(fd, JSON.stringify(value, null, 2) + "\n");
       fs.fsyncSync(fd);
     } finally {
       fs.closeSync(fd);
