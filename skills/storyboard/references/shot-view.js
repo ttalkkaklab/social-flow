@@ -8,6 +8,7 @@ const SCHEMA = {type:'object',additionalProperties:false,required:['subject','re
   subject:{type:'string',minLength:1,description:'English: what the audience must read, including the owner of a body detail.'},
   reason:{type:'string',minLength:1,description:'Why this evidence or reaction matters in this shot; editorial guidance, not provider text.'},
   crop:{type:'string',minLength:1,description:'English: visible boundaries, e.g. only Mina’s clenched right hand and the key fill the frame.'},
+  subjectType:{type:'string',enum:['person','object','detail'],description:'What the crop measures. Person keeps anatomical shot-size boundaries; object/detail uses subject-relative framing. Defaults to person with cast, detail for insert/ecu or an explicit target, otherwise object.'},
   mode:{type:'string',enum:MODES,description:'Opening viewpoint. Left/right name the visible side of the subject. Independent of shot.angle (height).'},
   subjectId:{type:'string',minLength:1,description:'Blocked actor or set object to frame. Defaults to the shot cast for ordinary person shots.'},
   viewerId:{type:'string',minLength:1,description:'Blocked observer for pov/ots; required for those modes.'},
@@ -21,6 +22,7 @@ function validate(view) {
   const errors=Object.keys(view).filter(k=>!Object.hasOwn(SCHEMA.properties,k)).map(k=>'unknown view field '+k);
   for(const key of ['subject','reason','crop','mode'])if(typeof view[key]!=='string'||!view[key].trim())errors.push('view.'+key+' is required');
   if(!MODES.includes(view.mode))errors.push('unknown view mode');
+  if(view.subjectType!==undefined&&!['person','object','detail'].includes(view.subjectType))errors.push('unknown view subjectType');
   for(const key of ['subjectId','viewerId'])if(view[key]!==undefined&&(typeof view[key]!=='string'||!view[key].trim()))errors.push('invalid view.'+key);
   if(['ots','pov'].includes(view.mode)&&!view.viewerId)errors.push('view.viewerId is required for ots/pov');
   if(['ots','pov'].includes(view.mode)&&!view.subjectId)errors.push('view.subjectId is required for ots/pov');
@@ -53,4 +55,37 @@ function instructions(view) {
   return 'Opening attention: '+view.subject+'. Opening crop: '+view.crop+'. Opening viewpoint: '+WORDS[view.mode]+
     (view.viewerId?' (observer '+view.viewerId+')':'')+'.';
 }
-module.exports={BEARINGS,MODES,SCHEMA,validate,checked,instructions};
+// Only explicit framing statements are checked here, not the story's artistic suitability.
+// Negative statements and incidental body parts are not crop declarations.
+function framingConflicts(size,view,scene='',noPerson=false) {
+  const aliases={ws:'ls'}, chosen=aliases[size]||size;
+  const known=['els','ls','fs','mfs','ms','mcu','cu','choker','ecu','insert'];
+  if(!known.includes(chosen))return [];
+  const rules=[
+    [/\b(?:head[- ]to[- ]toe|full[- ]body)\b/i,['els','ls','fs']],
+    [/\bwaist[- ]up\b/i,['ms']],
+    [/\b(?:chest[- ]up|frame bottom at mid[- ]chest)\b/i,['mcu']],
+    [/\b(?:face only|only (?:the |[\w’'-]+ )?face|forehead to chin)\b/i,['cu','choker']],
+  ];
+  const person=(view?.subjectType||((noPerson||view?.target||['insert','ecu'].includes(chosen))?'detail':'person'))==='person';
+  const parts=[['view.crop',view?.crop||''],['scene',scene]];
+  const out=[];
+  for(const [field,text] of parts)for(const sentence of text.split(/[.!?;]\s*/)){
+    if(/\b(?:no|not|without|never|avoid)\b/i.test(sentence))continue;
+    // In scene prose only a leading shot declaration is a second camera instruction.
+    // "She examines a full-body portrait" must not be mistaken for a camera crop.
+    if(field==='scene'&&!/^\s*(?:(?:a|an|the)\s+)?(?:extreme |medium |big |tight |wide |full |close[- ]up|head[- ]to[- ]toe|waist[- ]up|chest[- ]up)/i.test(sentence))continue;
+    const shot=sentence.match(/\b(extreme (?:wide|long) shot|medium close[- ]up|medium (?:full|long) shot|extreme close[- ]up|(?:big|tight) close[- ]up|wide (?:establishing )?shot|long shot|full shot|medium shot|close[- ]up)\b/i);
+    if(shot){
+      const label=shot[1].toLowerCase().replace(/-/g,' ');
+      const stated=label.startsWith('extreme wide')||label.startsWith('extreme long')?'els':label==='medium close up'?'mcu':/^medium (full|long)/.test(label)?'mfs':label==='extreme close up'?'ecu':/^(big|tight) close up$/.test(label)?'choker':/^(wide (establishing )?|long )shot$/.test(label)?'ls':label==='full shot'?'fs':label==='medium shot'?'ms':'cu';
+      if(stated!==chosen&&!(chosen==='insert'&&['cu','ecu'].includes(stated)))out.push(field+' says '+shot[1]+' but shot.size is '+size);
+    }
+    if(person)for(const [pattern,allowed] of rules){
+      const match=sentence.match(pattern);
+      if(match&&!allowed.includes(chosen))out.push(field+' says '+match[0]+' but shot.size is '+size);
+    }
+  }
+  return out;
+}
+module.exports={BEARINGS,MODES,SCHEMA,validate,checked,instructions,framingConflicts};

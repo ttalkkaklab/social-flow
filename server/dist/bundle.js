@@ -8548,7 +8548,7 @@ var require_gaxios = __commonJS({
     var retry_js_1 = require_retry3();
     var stream_1 = __require("stream");
     var interceptor_js_1 = require_interceptor();
-    var randomUUID12 = async () => globalThis.crypto?.randomUUID() || (await import("crypto")).randomUUID();
+    var randomUUID13 = async () => globalThis.crypto?.randomUUID() || (await import("crypto")).randomUUID();
     var HTTP_STATUS_NO_CONTENT = 204;
     var Gaxios = class {
       agentCache = /* @__PURE__ */ new Map();
@@ -8821,7 +8821,7 @@ var require_gaxios = __commonJS({
          */
         ["Blob", "File", "FormData"].includes(opts.data?.constructor?.name || "");
         if (opts.multipart?.length) {
-          const boundary = await randomUUID12();
+          const boundary = await randomUUID13();
           preparedHeaders.set("content-type", `multipart/related; boundary=${boundary}`);
           opts.body = stream_1.Readable.from(this.getMultipartRequest(opts.multipart, boundary));
         } else if (shouldDirectlyPassData) {
@@ -92969,6 +92969,7 @@ var require_shot_view = __commonJS({
       subject: { type: "string", minLength: 1, description: "English: what the audience must read, including the owner of a body detail." },
       reason: { type: "string", minLength: 1, description: "Why this evidence or reaction matters in this shot; editorial guidance, not provider text." },
       crop: { type: "string", minLength: 1, description: "English: visible boundaries, e.g. only Mina\u2019s clenched right hand and the key fill the frame." },
+      subjectType: { type: "string", enum: ["person", "object", "detail"], description: "What the crop measures. Person keeps anatomical shot-size boundaries; object/detail uses subject-relative framing. Defaults to person with cast, detail for insert/ecu or an explicit target, otherwise object." },
       mode: { type: "string", enum: MODES, description: "Opening viewpoint. Left/right name the visible side of the subject. Independent of shot.angle (height)." },
       subjectId: { type: "string", minLength: 1, description: "Blocked actor or set object to frame. Defaults to the shot cast for ordinary person shots." },
       viewerId: { type: "string", minLength: 1, description: "Blocked observer for pov/ots; required for those modes." },
@@ -92982,6 +92983,7 @@ var require_shot_view = __commonJS({
       const errors = Object.keys(view).filter((k) => !Object.hasOwn(SCHEMA.properties, k)).map((k) => "unknown view field " + k);
       for (const key of ["subject", "reason", "crop", "mode"]) if (typeof view[key] !== "string" || !view[key].trim()) errors.push("view." + key + " is required");
       if (!MODES.includes(view.mode)) errors.push("unknown view mode");
+      if (view.subjectType !== void 0 && !["person", "object", "detail"].includes(view.subjectType)) errors.push("unknown view subjectType");
       for (const key of ["subjectId", "viewerId"]) if (view[key] !== void 0 && (typeof view[key] !== "string" || !view[key].trim())) errors.push("invalid view." + key);
       if (["ots", "pov"].includes(view.mode) && !view.viewerId) errors.push("view.viewerId is required for ots/pov");
       if (["ots", "pov"].includes(view.mode) && !view.subjectId) errors.push("view.subjectId is required for ots/pov");
@@ -93013,7 +93015,36 @@ var require_shot_view = __commonJS({
       if (!checked(view)) return "";
       return "Opening attention: " + view.subject + ". Opening crop: " + view.crop + ". Opening viewpoint: " + WORDS[view.mode] + (view.viewerId ? " (observer " + view.viewerId + ")" : "") + ".";
     }
-    module.exports = { BEARINGS, MODES, SCHEMA, validate: validate2, checked, instructions };
+    function framingConflicts(size, view, scene = "", noPerson = false) {
+      const aliases = { ws: "ls" }, chosen = aliases[size] || size;
+      const known = ["els", "ls", "fs", "mfs", "ms", "mcu", "cu", "choker", "ecu", "insert"];
+      if (!known.includes(chosen)) return [];
+      const rules = [
+        [/\b(?:head[- ]to[- ]toe|full[- ]body)\b/i, ["els", "ls", "fs"]],
+        [/\bwaist[- ]up\b/i, ["ms"]],
+        [/\b(?:chest[- ]up|frame bottom at mid[- ]chest)\b/i, ["mcu"]],
+        [/\b(?:face only|only (?:the |[\w’'-]+ )?face|forehead to chin)\b/i, ["cu", "choker"]]
+      ];
+      const person = (view?.subjectType || (noPerson || view?.target || ["insert", "ecu"].includes(chosen) ? "detail" : "person")) === "person";
+      const parts = [["view.crop", view?.crop || ""], ["scene", scene]];
+      const out = [];
+      for (const [field2, text4] of parts) for (const sentence2 of text4.split(/[.!?;]\s*/)) {
+        if (/\b(?:no|not|without|never|avoid)\b/i.test(sentence2)) continue;
+        if (field2 === "scene" && !/^\s*(?:(?:a|an|the)\s+)?(?:extreme |medium |big |tight |wide |full |close[- ]up|head[- ]to[- ]toe|waist[- ]up|chest[- ]up)/i.test(sentence2)) continue;
+        const shot = sentence2.match(/\b(extreme (?:wide|long) shot|medium close[- ]up|medium (?:full|long) shot|extreme close[- ]up|(?:big|tight) close[- ]up|wide (?:establishing )?shot|long shot|full shot|medium shot|close[- ]up)\b/i);
+        if (shot) {
+          const label = shot[1].toLowerCase().replace(/-/g, " ");
+          const stated = label.startsWith("extreme wide") || label.startsWith("extreme long") ? "els" : label === "medium close up" ? "mcu" : /^medium (full|long)/.test(label) ? "mfs" : label === "extreme close up" ? "ecu" : /^(big|tight) close up$/.test(label) ? "choker" : /^(wide (establishing )?|long )shot$/.test(label) ? "ls" : label === "full shot" ? "fs" : label === "medium shot" ? "ms" : "cu";
+          if (stated !== chosen && !(chosen === "insert" && ["cu", "ecu"].includes(stated))) out.push(field2 + " says " + shot[1] + " but shot.size is " + size);
+        }
+        if (person) for (const [pattern, allowed] of rules) {
+          const match2 = sentence2.match(pattern);
+          if (match2 && !allowed.includes(chosen)) out.push(field2 + " says " + match2[0] + " but shot.size is " + size);
+        }
+      }
+      return out;
+    }
+    module.exports = { BEARINGS, MODES, SCHEMA, validate: validate2, checked, instructions, framingConflicts };
   }
 });
 
@@ -116016,7 +116047,7 @@ async function refreshGenaiImage(directory2, requestId) {
 }
 
 // src/storyboard.ts
-import { createHash as createHash14 } from "node:crypto";
+import { createHash as createHash14, randomUUID as randomUUID3 } from "node:crypto";
 import { execFileSync as execFileSync11 } from "node:child_process";
 
 // src/scenes-vm.ts
@@ -116336,6 +116367,7 @@ function readStoryboard(args) {
   const continuity = loadFromHere2(join10(REFERENCES_DIR, "shot-continuity.js"));
   result.continuityFindings = continuity.check(win, dirname5(file));
   result.cameraDirectionFindings = cameraContract().cameraDirectionWarnings(win.SCENES).map((what) => ({ level: "warn", where: "camera direction", what }));
+  result.imageFraming = (win.SCENES || []).filter((shot) => shot.visual?.frames?.start).map((shot) => imageFramingStatus(shot, win.FORMAT));
   result.techniqueFindings = (win.SCENES || []).flatMap((scene, index) => techniqueContract().findings(scene).map((what) => ({ level: "warn", where: "shot " + (index + 1), what })));
   if (args.includeContext) result.reviewContext = {
     story: win.STORY || null,
@@ -117216,12 +117248,43 @@ var shotImageSchema = external_exports.object({
   frame: external_exports.enum(["start", "end"]).default("start").describe("start: the first image; end: the last image of a first_last shot"),
   prompt: nonEmpty.describe("What the frame shows, in English: who is where, doing what, facing which way, expression and light"),
   editExisting: external_exports.boolean().optional().describe("Edit the saved frame in place conceptually, saving a new version; prompt describes only the change"),
+  reframe: external_exports.boolean().optional().describe("With editExisting, reapply the saved start-frame size, crop and viewpoint to correct a generated composition; prompt describes the opening action and correction"),
+  sourceCrop: external_exports.object({ x: external_exports.number().int().nonnegative(), y: external_exports.number().int().nonnegative(), width: external_exports.number().int().positive(), height: external_exports.number().int().positive() }).strict().optional().describe("With reframe, an inspected rectangle in source-image pixels, e.g. {x:72,y:64,width:720,height:1280}; must fit the source and match output aspect. It becomes the GenAI composition reference, not the final output."),
   preserve: nonEmpty.optional().describe("Details to preserve when editExisting is true"),
   location: nonEmpty.optional().describe("SB_DOC.locations id of the place, for the start image; an earlier call's choice stays when omitted, and an end image keeps the start's place"),
   props: external_exports.array(nonEmpty).optional().describe("SB_DOC.props ids seen in the frame; an earlier call's choice stays when omitted"),
-  size: external_exports.string().regex(/^\d{3,4}x\d{3,4}$/).optional().describe("Output WIDTHxHEIGHT; default 1536x1024 for a 16:9 board, 1024x1536 otherwise"),
+  size: external_exports.string().regex(/^\d{3,4}x\d{3,4}$/).optional().describe("Output WIDTHxHEIGHT; default 1536x864 for 16:9, 864x1536 for 9:16. Fixed-size GPT models keep their supported preset with a framing warning."),
   reserveUsd: external_exports.number().finite().nonnegative().optional()
 }).strict();
+function startImageBasis(shot, format) {
+  const plan2 = shot.shot ?? {}, visual = shot.visual ?? {};
+  return createHash14("sha256").update(JSON.stringify({
+    format,
+    size: plan2.size,
+    angle: plan2.angle,
+    space: plan2.space,
+    composition: plan2.composition,
+    eyeline: plan2.eyeline,
+    depth: plan2.depth,
+    techniques: plan2.techniques,
+    render: plan2.render,
+    camera: visual.camera,
+    cast: contract().castOf(shot),
+    location: visual.locationId,
+    locationBinding: plan2.location,
+    props: visual.props
+  })).digest("hex");
+}
+function imageFramingStatus(shot, format) {
+  const frames = shot.visual?.frames;
+  return {
+    id: shot.id,
+    image: frames?.start,
+    status: !frames?.startBasis ? "unknown" : frames.startBasis === startImageBasis(shot, format) ? "current" : "stale",
+    visualReview: "not_reviewed",
+    note: "Current means the saved framing inputs match. Inspect the actual image crop before using it."
+  };
+}
 var locationContract = () => loadFromHere2(join10(REFERENCES_DIR, "location-assets.js"));
 var IMAGE_INPUTS = {
   "gpt-image": { tool: "gpt_image_img2img", max: 16 },
@@ -117317,19 +117380,45 @@ function shotImageRequest(args) {
   const recorded = args.frame === "end" && Array.isArray(frames.endProps) ? frames.endProps : visual.props;
   const props = args.props ?? (Array.isArray(recorded) ? recorded.filter((id) => typeof id === "string") : []);
   const cast = contract().castOf(shot) ?? [];
-  const [width, height] = (args.size ?? (/16x9/.test(String(win.FORMAT ?? "")) ? "1536x1024" : "1024x1536")).split("x").map(Number);
+  const selectedImage = imageContext(episode, args.id).selection;
+  const wide = /16x9/.test(String(win.FORMAT ?? ""));
+  const fixedSize = selectedImage.engine === "gpt-image" && !gptImageContract(selectedImage.model ?? "gpt-image-2")?.flexibleSize;
+  const [width, height] = (args.size ?? (fixedSize ? wide ? "1536x1024" : "1024x1536" : wide ? "1536x864" : "864x1536")).split("x").map(Number);
   if (args.preserve && !args.editExisting) throw new Error("image_edit_required: preserve requires editExisting");
+  if (args.reframe && (!args.editExisting || args.frame !== "start")) throw new Error("image_edit_scope: reframe requires editExisting and frame:start");
+  if (args.sourceCrop && !args.reframe) throw new Error("image_edit_scope: sourceCrop requires reframe");
   if (args.editExisting) {
     if (args.location || args.props) throw new Error("image_edit_scope: update location and prop metadata before editing; omit location and props here");
     const source = frames[args.frame];
     if (!source) throw new Error(`image_edit_source_missing: ${args.id} has no saved ${args.frame} image`);
-    const input = resolve5(boardDir, source);
+    let input = resolve5(boardDir, source);
     if (!existsSync22(input)) throw new Error(`image_input_missing: ${input}`);
     const metadata = readImageMetadata(input);
-    const [editWidth, editHeight] = args.size ? [width, height] : [metadata.width, metadata.height];
+    const [editWidth, editHeight] = args.size || args.reframe ? [width, height] : [metadata.width, metadata.height];
+    if (args.sourceCrop) {
+      const crop = shotImageSchema.shape.sourceCrop.parse(args.sourceCrop);
+      if (crop.x + crop.width > metadata.width || crop.y + crop.height > metadata.height)
+        throw new Error("image_crop_bounds: sourceCrop must fit inside the saved image");
+      if (crop.width * editHeight !== crop.height * editWidth)
+        throw new Error("image_crop_aspect: sourceCrop must match the output aspect exactly; do not stretch anatomy");
+      const stamp = createHash14("sha256").update(JSON.stringify({ source: metadata.sha256, crop, width: editWidth, height: editHeight })).digest("hex");
+      const prepared = join10(boardDir, "images", "inputs", `crop-${stamp}.png`);
+      mkdirSync11(dirname5(prepared), { recursive: true });
+      const temporary = prepared + "." + randomUUID3() + ".png";
+      try {
+        execFileSync11("ffmpeg", ["-v", "error", "-y", "-i", input, "-vf", `crop=${crop.width}:${crop.height}:${crop.x}:${crop.y}:exact=1,scale=${editWidth}:${editHeight}:flags=lanczos`, "-frames:v", "1", temporary], { timeout: 3e4, stdio: "pipe" });
+        renameSync4(temporary, prepared);
+      } finally {
+        if (existsSync22(temporary)) unlinkSync5(temporary);
+      }
+      writeFileSync17(prepared + ".source.json", JSON.stringify({ source: input, sourceSha256: metadata.sha256, crop, prepared: readImageMetadata(prepared) }, null, 2));
+      input = prepared;
+    }
+    const framing = args.reframe ? loadFromHere2(join10(REFERENCES_DIR, "assemble-bg-prompt.js")) : void 0;
     const prompt2 = [
-      "Edit Image 1. Change only: " + args.prompt,
-      "Preserve all other visible details, identities, composition, lighting and rendering style unless the requested change requires otherwise.",
+      args.sourceCrop ? "Image 1 is already cropped to the required opening composition. Keep its exact frame boundaries and subject scale. Refine image detail and apply the opening action below without widening the view." : args.reframe ? "Reframe Image 1 to the following opening composition. Zoom and crop the subject to these boundaries; the input image supplies identity, clothing, place and light, not the crop or expression." : "Edit Image 1. Change only: " + args.prompt,
+      framing ? framing.assemble({ ...framing.frameOptions(shot, "start"), scene: args.prompt, noPerson: !cast.length }).prompt : "",
+      args.reframe ? "Preserve the visible subject identity, clothing, environment and rendering style. Apply the authored opening state instead of copying a conflicting state from the input." : "Preserve all other visible details, identities, composition, lighting and rendering style unless the requested change requires otherwise.",
       args.preserve ? "Preserve explicitly: " + args.preserve : ""
     ].filter(Boolean).join("\n");
     const call3 = imageCall({
@@ -117343,6 +117432,10 @@ function shotImageRequest(args) {
       stem: `${args.id}-${args.frame}`,
       what: "this frame edit"
     });
+    const warnings2 = [];
+    if (imageFramingStatus(shot, win.FORMAT).status === "stale") warnings2.push({ level: "warn", where: args.id, what: "image_framing_stale: this edit inherits an image made from older shot inputs; normal generation rebuilds all current references and framing" });
+    if (Math.abs(editWidth / editHeight - (wide ? 16 / 9 : 9 / 16)) > 1e-3)
+      warnings2.push({ level: "warn", where: args.id, what: `image_aspect_mismatch: ${editWidth}x${editHeight} differs from the delivery aspect; inspect its final crop` });
     return {
       episode,
       assetId: args.id,
@@ -117352,11 +117445,14 @@ function shotImageRequest(args) {
       ...visual.locationFrame ? { locationFrame: visual.locationFrame } : {},
       props,
       prompt: prompt2,
-      warnings: []
+      startBasis: frames.startBasis,
+      warnings: warnings2
     };
   }
   const entry2 = location ? docEntry(win, "locations", location) : void 0;
   const warnings = [];
+  if (Math.abs(width / height - (wide ? 16 / 9 : 9 / 16)) > 1e-3)
+    warnings.push({ level: "warn", where: args.id, what: `image_aspect_mismatch: ${width}x${height} differs from the ${wide ? "16:9" : "9:16"} delivery frame; inspect the final crop, including hands and feet, before video generation` });
   const backgroundView = visual.camera?.backgroundView ?? "front";
   const panels = entry2?.panels;
   const selected = backgroundView === "back" ? panels?.back : panels?.front;
@@ -117387,7 +117483,6 @@ function shotImageRequest(args) {
     use: "image",
     purpose: args.frame === "end" ? `the ${set.name} set from the closing camera (${set.endCamera.lensMm} mm lens), where every object${set.blocked ? " and figure" : ""} stands when it ends` : `the ${set.name} set seen from this shot's camera (${lens}): its viewpoint, framing${dutch ? "" : " and horizon"}, the architecture and where every object${set.blocked ? " and coloured figure" : ""} stands; its plain unpainted surfaces are placeholders`
   }] : [];
-  const selectedImage = imageContext(episode, args.id).selection;
   const conciseIdentity = selectedImage.engine === "astra-genai-native" && ["qwen-image-fast", "qwen-image-2.1-turbo"].includes(selectedImage.model ?? "") || selectedImage.engine === "mlx" && mlxImageFamily(selectedImage.model ?? "") === "qwen-2.1";
   const propPictures = propRefs(win, shots.indexOf(shot), args.id, props, args.frame, warnings);
   const refs = [
@@ -117426,14 +117521,15 @@ function shotImageRequest(args) {
   const at = (ref) => ordered.indexOf(ref) + 1;
   const lock2 = !set ? selected && args.frame === "start" ? `Keep the background's ${backgroundView} viewing direction and landmark arrangement. The character sheets supply appearance and identity only; recompose the subject to the authored opening crop and subject viewpoint within that space. Character panel poses do not constrain this shot.` : view ? `The location and character sheets supply appearance and identity only. Recompose them to the authored ${args.frame === "end" ? "closing" : "opening"} crop and viewpoint; the sheet pose and camera do not constrain this shot.` : "" : args.frame === "end" ? composition.length ? `Use Image ${at(composition[0])}'s closing camera, lens, framing and final object and figure positions. Image 1 supplies the look and every identity; its opening camera does not constrain this closing view.` : `Image 1 supplies the opening appearance and identities. Follow the closing camera direction below while preserving the set's world layout.` : `Keep Image 1's camera position, ${lens}${dutch ? "" : ", horizon"} and world layout, and keep every object${set.blocked ? " and figure" : ""} at its world position in Image 1. The authored composition below controls the final crop, headroom and subject screen placement. Paint its plain unpainted surfaces as the real place, and continue the place into any flat dark area past the set's edge.` + (dutch ? " Image 1 is level; tilt the whole picture to the dutch angle described below." : "") + (look.some((ref) => ordered.includes(ref)) ? ` Take only materials, colours and light from Image ${at(look[0])}.` : "");
   const prompt = [
-    ordered.length ? "Compose one picture from these images." : "",
+    args.frame === "start" && view ? `Create one opening image with this required crop: ${view.crop}.` : ordered.length ? "Compose one picture from these images." : "",
     roles,
     lock2,
     heightSentence(win, cast),
-    view ? "Character panels identify the subject; include only the body regions named by the crop. A face reference does not require a face in the output." : "",
+    view ? "Character panels identify the subject; include only the body regions named by the crop. A face reference does not require a face in the output. The opening action determines expression and gaze; do not copy a reference smile when the action asks for a different expression." : "",
     args.frame === "end" ? "This is the last frame of the shot that opens on Image 1: keep its place, light and every identity, applying the planned action, camera landing and final focus." : "",
     ...propPictures.unseen,
-    body.charAt(0).toUpperCase() + body.slice(1)
+    body.charAt(0).toUpperCase() + body.slice(1),
+    args.frame === "start" && view ? `Final frame boundaries: ${view.crop}.` : ""
   ].filter(Boolean).join(" ");
   const call2 = imageCall({ directory: episode, assetId: args.id, inputs, prompt, width, height, outDir: join10(boardDir, "images"), stem: `${args.id}-${args.frame}`, what: "this frame" });
   const sent = refs.filter((ref) => ordered.includes(ref));
@@ -117450,7 +117546,8 @@ function shotImageRequest(args) {
     start: set.start,
     end: set.end
   } : void 0;
-  return { episode, assetId: args.id, ...call2, refs: sent, ...location ? { location } : {}, ...locationFrame ? { locationFrame } : {}, props, prompt, warnings };
+  const startBasis = startImageBasis({ ...shot, visual: { ...visual, ...location ? { locationId: location } : {}, props } }, win.FORMAT);
+  return { episode, assetId: args.id, ...call2, refs: sent, ...location ? { location } : {}, ...locationFrame ? { locationFrame } : {}, props, prompt, warnings, startBasis };
 }
 var PANEL_NEGATIVE_GUIDANCE = { "qwen-image-fast": 4, "qwen-image-2.1-turbo": 4 };
 function imageAdapter(selection) {
@@ -117502,6 +117599,8 @@ function recordShotImage(args, request) {
   const frames = { ...visual.frames, [args.frame]: rel };
   const notes = [...request.warnings];
   if (args.frame === "start") {
+    if (request.startBasis) frames.startBasis = request.startBasis;
+    else delete frames.startBasis;
     Object.assign(visual, {
       bg: rel,
       bgPrompt: request.prompt,
@@ -118152,7 +118251,7 @@ async function generateGemini38Speech(request) {
 // src/tts-quality.ts
 var import_tts_speed_policy = __toESM(require_tts_speed_policy(), 1);
 import { execFile as execFile4 } from "node:child_process";
-import { createHash as createHash15, randomUUID as randomUUID3 } from "node:crypto";
+import { createHash as createHash15, randomUUID as randomUUID4 } from "node:crypto";
 import { closeSync as closeSync5, existsSync as existsSync23, mkdirSync as mkdirSync12, openSync as openSync5, readFileSync as readFileSync25, renameSync as renameSync5, rmSync as rmSync11, writeFileSync as writeFileSync20 } from "node:fs";
 import path23 from "node:path";
 import { promisify as promisify2 } from "node:util";
@@ -119180,7 +119279,7 @@ async function generateCheckedSpeech(input, dependencies) {
   };
   function save3(status, extra = {}) {
     const report = { ...base, status, attempts, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
-    const temporary = proofFile + "." + randomUUID3() + ".tmp";
+    const temporary = proofFile + "." + randomUUID4() + ".tmp";
     writeFileSync20(temporary, JSON.stringify(report, null, 2) + "\n");
     renameSync5(temporary, proofFile);
     return { success: status === "pass", status, audioPath: output2, proofPath: proofFile, attempts: attempts.length, ...extra };
@@ -126070,7 +126169,7 @@ Set backgroundView to front or back relative to the location sheet layout; shot_
 
 Set view with subject (visible evidence), reason, crop and mode. It writes visual.camera.view, shot.info and shot.why. Subject and crop are English provider text. This view supersedes old opening framing, rear/pov flags and viewpoint/framing techniques in the image and video prompts. Left/right name the visible side of the subject; angle separately controls height. Set subjectId for a blocked actor or set object; ots/pov also need a different viewerId. Built-set body inserts/ecu need target with the actual staged world point and vertical span; objects use their subjectId. Missing set targets cannot silently become frontal portraits. Use storyboard_apply for blocking and closing camera endpoints.
 
-Size is distance (els \u2026 ecu, insert). Composition labels two/three/ots/pov/back/cutaway/reaction carry no crop; new boards use a distance with view. The technique catalogue gives use, avoid, specify, neighbouring-shot and vertical guidance; these are directing conventions, not measured emotional effects. On 9:16 the result includes the chosen values' vertical advice.
+Size is distance (els \u2026 ecu, insert). Set size and view.crop together when changing the crop. Person shots keep anatomical size boundaries even with a view; set view.subjectType to object or detail when the subject is a prop or body detail despite a character being in the cast. Explicit contradictory crop declarations fail image planning with shot_framing_conflict. Composition labels two/three/ots/pov/back/cutaway/reaction carry no crop; new boards use a distance with view. The technique catalogue gives use, avoid, specify, neighbouring-shot and vertical guidance; these are directing conventions, not measured emotional effects. On 9:16 the result includes the chosen values' vertical advice.
 
 On still_camera, move is a still effect stored in shot.render.camera; other routes use a camera technique and synchronize visual.camera.movement. Route changes drop the old route's movement. A different move replaces its speed/target; the same move keeps them unless provided. Video moves take slow/steady/fast and an English target; rack focus takes English from/to subjects. A new size without why drops the old why. A still hold is deliberate, not an unset move.
 
@@ -126127,31 +126226,42 @@ Refused: missing story/characters (story_order), invalid attributes, incompatibl
     name: "shot_image",
     title: "Make a shot's start or end image (step 4)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-    description: `Use it after shot_icons to make a shot's start image, or the end image of a first_last shot. Normal generation composes character sheet panels, the location and props with the saved shot framing, action, lighting and episode style. Write prompt in English. One character uses face/front/back panels; two use each face then each front. Reference images identify appearance; the authored view determines crop and viewpoint. Actor layout and gaze stay in the prompt.
+    description: `Create a shot\u2019s start or end image.
+
+Use it after shot_icons to compose a start image or a first_last end image from character panels, place and props using saved framing and style. Write English action, layout, gaze and light in prompt. One character uses face/front/back panels; two use each face then each front. References supply appearance; the authored view controls crop and viewpoint.
 
 For a targeted correction, set editExisting:true and describe only the change in prompt. preserve adds explicit invariants. The saved start or end image becomes the sole input, source dimensions are reused unless size is supplied, and original scene instructions are not reassembled. Omit location and props; update their storyboard metadata first if needed. Refuses image_edit_source_missing without that saved frame and image_edit_scope if location/props are supplied.
+To correct a generated start image's crop, set editExisting:true and reframe:true. The saved size, crop and viewpoint are recompiled with prompt as the opening action/correction; dimensions default to the current delivery aspect. Inspect the actual result; this does not certify visual adherence or clear stale source evidence. Reframe is only for frame:start.
+If text-only reframing fails, sourceCrop prepares an inspected source-pixel rectangle as a separate reference, recording its source hash and crop. It must fit and match output aspect (image_crop_bounds/image_crop_aspect). The saved model still generates the final image. Describe action, not another zoom; never guess coordinates without viewing the source.
 
 For normal generation, a location with a built set uses a camera-matched Blender render as Image 1 and its sheet as a look reference when capacity allows. visual.camera.backgroundView chooses front/back (default front). Without a set, the corresponding location panel leads and retains its landmark layout; authored subject framing still applies. Missing directional panels refuse background_view_missing; legacy front-only sheets can reuse imageUrl with a warning. A built set with conflicting direction refuses background_view_conflict; a render failure refuses location_render_failed without substituting the sheet. Props use their frame-specific ledger state and references; hidden props stay out, missing images or state references warn, and ledger errors omit only the affected state.
 
 frame:end edits the opening image using the closing composition, story state and final focus. A built set supplies its numeric end camera when available; a moving shot without one warns and follows the prompt's landing. An end image keeps the start's location (location is refused) and records endProps separately.
 
-Runs image_plan \u2192 image_execute under the saved model and existing spending authorization. Saves a new version under storyboard/images and records visual.frames.start/bg or frames.end, prompt, references and asset bindings. Revising a start invalidates its old end with a warning; files are preserved. GPT inputs of mixed PNG/JPEG types become PNG copies.
+Runs image_plan \u2192 image_execute under the saved model and existing spending authorization. Saves a new version under storyboard/images and records visual.frames.start/bg or frames.end, prompt, references and asset bindings. Framing contradictions refuse shot_framing_conflict. Flexible-size models use delivery aspect; fixed-size GPT models warn with their supported preset. Revising a start invalidates its old end with a warning; files are preserved. storyboard_read.imageFraming compares the recorded start inputs with the current plan (current/stale/unknown), separately from visual review. Inspect the returned image against the saved size and crop; a matching prompt is not pixel evidence. GPT inputs of mixed PNG/JPEG types become PNG copies.
 
-Do NOT use it for routes other than still_camera and generated_video. story_order refuses missing icon attributes, an end before its start or outside first_last. image_references_unsupported refuses inputs beyond the saved model's capacity; never switch models silently. Text-bearing images follow the GPT Image 2 directive. Returns: file, input order, prompt and warnings; a host selection returns a handoff instead of generating.`,
+Do NOT use it just to inspect a shot \u2014 use storyboard_read. Do NOT use it for routes other than still_camera and generated_video. story_order refuses missing icon attributes, an end before its start or outside first_last. image_references_unsupported refuses inputs beyond the saved model's capacity; never switch models silently. Text-bearing images follow the GPT Image 2 directive. Returns: file, input order, prompt and warnings; a host selection returns a handoff instead of generating.`,
     inputSchema: {
       type: "object",
       additionalProperties: false,
       properties: {
-        path: { type: "string", description: "The storyboard directory or its scenes.js" },
-        id: { type: "string", pattern: "^s\\d{4,}$", description: "Stable shot id" },
+        path: { type: "string", description: "The storyboard directory or its scenes.js, e.g. data/channel/episodes/topic/storyboard" },
+        id: { type: "string", pattern: "^s\\d{4,}$", description: "Stable shot id, e.g. s0001" },
         frame: { type: "string", enum: ["start", "end"], default: "start", description: "start: the first image \xB7 end: the last image of a first_last shot" },
-        prompt: { type: "string", description: "What the frame shows, in English: who is where, doing what, facing which way, expression and light" },
+        prompt: { type: "string", description: "What the frame shows, in English: who is where, doing what, facing which way, expression and light, e.g. Mina waits with closed relaxed lips." },
         editExisting: { type: "boolean", description: "Edit the saved frame using prompt as the change instruction; save a new version. Omit location and props." },
-        preserve: { type: "string", description: "Details to preserve during editExisting" },
-        location: { type: "string", description: "SB_DOC.locations id of the place, for the start image; an earlier choice stays when omitted, and an end image keeps the start's place (refused there)" },
-        props: { type: "array", items: { type: "string" }, description: "SB_DOC.props ids seen in the frame; an earlier choice stays when omitted" },
-        size: { type: "string", pattern: "^\\d{3,4}x\\d{3,4}$", description: "Output WIDTHxHEIGHT; default 1536x1024 on a 16:9 board, 1024x1536 otherwise" },
-        reserveUsd: { type: "number", minimum: 0, description: "API reservation estimate, as in image_plan" }
+        reframe: { type: "boolean", description: "With editExisting and frame:start, recompile saved shot size, crop and viewpoint to correct the generated image; prompt gives opening action and correction." },
+        sourceCrop: { type: "object", additionalProperties: false, description: "Inspected rectangle in saved source-image pixels, e.g. {x:72,y:64,width:720,height:1280}; requires reframe, in bounds and matching output aspect. Prepared as a reference before GenAI generation.", properties: {
+          x: { type: "integer", minimum: 0, description: "Left pixel, e.g. 72" },
+          y: { type: "integer", minimum: 0, description: "Top pixel, e.g. 64" },
+          width: { type: "integer", minimum: 1, description: "Crop width in pixels, e.g. 720" },
+          height: { type: "integer", minimum: 1, description: "Crop height in pixels, e.g. 1280" }
+        }, required: ["x", "y", "width", "height"] },
+        preserve: { type: "string", description: "Details to preserve during editExisting, e.g. Keep the navy blazer." },
+        location: { type: "string", description: "SB_DOC.locations id of the place (e.g. studio), for the start image; an earlier choice stays when omitted, and an end image keeps the start's place (refused there)" },
+        props: { type: "array", items: { type: "string" }, description: 'SB_DOC.props ids seen in the frame (e.g. ["cup"]); an earlier choice stays when omitted' },
+        size: { type: "string", pattern: "^\\d{3,4}x\\d{3,4}$", description: "Output WIDTHxHEIGHT; default 1536x864 on a 16:9 board, 864x1536 otherwise; fixed-size GPT models use their supported preset with a warning" },
+        reserveUsd: { type: "number", minimum: 0, description: "API reservation estimate in USD, as in image_plan; e.g. 0 for an authorized local run" }
       },
       required: ["path", "id", "prompt"]
     }
@@ -126573,7 +126683,7 @@ function musicTransaction(directory2, openingSpendUsd, update) {
 // src/music-media.ts
 import * as fs21 from "node:fs";
 import path25 from "node:path";
-import { createHash as createHash16, randomUUID as randomUUID4 } from "node:crypto";
+import { createHash as createHash16, randomUUID as randomUUID5 } from "node:crypto";
 import { execFileSync as execFileSync12 } from "node:child_process";
 function readMusicMetadata(file) {
   const result = JSON.parse(execFileSync12(
@@ -126602,7 +126712,7 @@ function readMusicMetadata(file) {
 }
 function normalizeMusicFile(source, target) {
   fs21.mkdirSync(path25.dirname(target), { recursive: true });
-  const temporary = target + "." + randomUUID4() + ".wav";
+  const temporary = target + "." + randomUUID5() + ".wav";
   try {
     execFileSync12(
       "ffmpeg",
@@ -126969,7 +127079,7 @@ async function routeSpeech(input) {
 // src/host-review.ts
 import { execFile as execFile7 } from "node:child_process";
 import { promisify as promisify3 } from "node:util";
-import { createHash as createHash17, randomUUID as randomUUID5 } from "node:crypto";
+import { createHash as createHash17, randomUUID as randomUUID6 } from "node:crypto";
 import { createReadStream as createReadStream3, mkdirSync as mkdirSync16, realpathSync as realpathSync9, statSync as statSync16, writeFileSync as writeFileSync22 } from "node:fs";
 import { homedir as homedir4 } from "node:os";
 import path27 from "node:path";
@@ -127027,7 +127137,7 @@ async function hostReview(input) {
   if (r2.action === "prepare") {
     const frames = [];
     if (r2.mode !== "audio") {
-      const directory3 = path27.join(homedir4(), ".cache", "social-flow", "host-reviews", "evidence", mediaSha256, randomUUID5());
+      const directory3 = path27.join(homedir4(), ".cache", "social-flow", "host-reviews", "evidence", mediaSha256, randomUUID6());
       mkdirSync16(directory3, { recursive: true, mode: 448 });
       const timing = await exec2("ffprobe", [
         "-v",
@@ -127094,7 +127204,7 @@ async function hostReview(input) {
   if (await digest3(file) !== mediaSha256) throw new Error("Media changed while recording observations");
   const directory2 = path27.join(homedir4(), ".cache", "social-flow", "host-reviews");
   mkdirSync16(directory2, { recursive: true, mode: 448 });
-  const receiptPath = path27.join(directory2, `${mediaSha256}-${randomUUID5()}.json`);
+  const receiptPath = path27.join(directory2, `${mediaSha256}-${randomUUID6()}.json`);
   const result = {
     ...base,
     status: r2.observations.some((o) => o.score !== null) ? "observed" : "unverified",
@@ -127279,7 +127389,7 @@ async function reviewActing(input) {
 }
 
 // src/voice-audition.ts
-import { createHash as createHash19, randomUUID as randomUUID6 } from "node:crypto";
+import { createHash as createHash19, randomUUID as randomUUID7 } from "node:crypto";
 import { appendFileSync as appendFileSync3, copyFileSync, existsSync as existsSync29, mkdirSync as mkdirSync18, readFileSync as readFileSync31, writeFileSync as writeFileSync24, renameSync as renameSync7 } from "node:fs";
 import { basename as basename9, dirname as dirname7, join as join13, resolve as resolve8 } from "node:path";
 import { isDeepStrictEqual } from "node:util";
@@ -127417,7 +127527,7 @@ function refreshSheet(identityPath) {
   }
 }
 function save(file, value) {
-  const temporary = file + "." + randomUUID6() + ".tmp";
+  const temporary = file + "." + randomUUID7() + ".tmp";
   writeFileSync24(temporary, JSON.stringify(value, null, 2));
   renameSync7(temporary, file);
 }
@@ -127447,7 +127557,7 @@ async function manageVoiceAudition(args) {
     const resumed = args.auditionPath ? JSON.parse(readFileSync31(resolve8(args.auditionPath), "utf8")) : void 0;
     if (resumed && !(resumed.status === "failed" && resumed.identityPath === identityPath && resumed.identitySha256 === hash3(source) && resumed.sampleText === args.sampleText && isDeepStrictEqual(resumed.acting, args.acting) && isDeepStrictEqual(resumed.sampleTurns, args.sampleTurns) && resumed.candidates.every((c, i2) => isDeepStrictEqual(c.tts, planned[i2]?.tts) && existsSync29(c.audioPath) && hash3(readFileSync31(c.audioPath)) === c.audioSha256)))
       throw new Error("audition_resume_mismatch: continue only a failed audition with the same identity, sample, acting and candidate voices; create a new audition otherwise");
-    const outputPath = resumed ? dirname7(resolve8(args.auditionPath)) : join13(dirname7(identityPath), "voice-auditions", randomUUID6());
+    const outputPath = resumed ? dirname7(resolve8(args.auditionPath)) : join13(dirname7(identityPath), "voice-auditions", randomUUID7());
     mkdirSync18(outputPath, { recursive: true });
     const auditionPath2 = join13(outputPath, "audition.json");
     const audition2 = resumed ? { ...resumed, status: "generating" } : { version: 1, status: "generating", identityPath, identitySha256: hash3(source), sampleText: args.sampleText, candidates: [], target, ...args.acting ? { acting: args.acting } : {}, ...args.sampleTurns ? { sampleTurns: args.sampleTurns } : {}, previewPath: join13(outputPath, "index.html") };
@@ -127534,7 +127644,7 @@ function selectCandidate(auditionPath, candidateId, userSelection) {
   });
   if (!replaced) throw new Error("Missing identity JSON");
   writeFileSync24(join13(dirname7(auditionPath), "identity-before-selection.md"), source, { flag: "wx" });
-  const temporary = audition.identityPath + "." + randomUUID6() + ".tmp";
+  const temporary = audition.identityPath + "." + randomUUID7() + ".tmp";
   writeFileSync24(temporary, next);
   renameSync7(temporary, audition.identityPath);
   audition.status = "selected";
@@ -127616,7 +127726,7 @@ async function manageLocation(args) {
 }
 
 // src/speech.ts
-import { createHash as createHash20, randomUUID as randomUUID7 } from "node:crypto";
+import { createHash as createHash20, randomUUID as randomUUID8 } from "node:crypto";
 import { readFileSync as readFileSync32, writeFileSync as writeFileSync25, renameSync as renameSync8, mkdirSync as mkdirSync19, existsSync as existsSync30 } from "node:fs";
 import { dirname as dirname8, resolve as resolve9, join as join15 } from "node:path";
 import * as nodeModule7 from "node:module";
@@ -127736,7 +127846,7 @@ function manageSpeech(args) {
     for (const scene of scenes) {
       scene.id ||= "s" + String(++next).padStart(4, "0");
       for (const line of scene.narration || []) {
-        line.id ||= "d-" + randomUUID7();
+        line.id ||= "d-" + randomUUID8();
         line.speaker ||= doc.narratorCharacterId;
         line.delivery ||= line.speaker === doc.narratorCharacterId ? "voiceover" : "on_screen";
       }
@@ -127931,7 +128041,7 @@ function manageSpeech(args) {
     if (!existsSync30(backup)) writeFileSync25(backup, before);
     const nextSource = serializeBoard(win, header);
     if (hash4(readFileSync32(file)) !== revision) throw new Error("Storyboard changed during speech edit");
-    const tmp = file + "." + randomUUID7() + ".tmp";
+    const tmp = file + "." + randomUUID8() + ".tmp";
     writeFileSync25(tmp, nextSource);
     renameSync8(tmp, file);
   }
@@ -127940,7 +128050,7 @@ function manageSpeech(args) {
 
 // src/acting-review.ts
 import { execFile as execFile8 } from "node:child_process";
-import { createHash as createHash21, randomUUID as randomUUID8 } from "node:crypto";
+import { createHash as createHash21, randomUUID as randomUUID9 } from "node:crypto";
 import { existsSync as existsSync31, mkdirSync as mkdirSync20, readFileSync as readFileSync33, realpathSync as realpathSync10, renameSync as renameSync9, rmSync as rmSync16, statSync as statSync17, writeFileSync as writeFileSync26 } from "node:fs";
 import path28 from "node:path";
 import { homedir as homedir5 } from "node:os";
@@ -128372,7 +128482,7 @@ async function reviewActing2(input, deps) {
     currentMediaSha256,
     ...retryOf ? { retryOf } : {}
   };
-  const temporary = `${receiptPath}.${randomUUID8()}.tmp`;
+  const temporary = `${receiptPath}.${randomUUID9()}.tmp`;
   try {
     writeFileSync26(lock2, JSON.stringify({ phase: "evaluated", receipt }), { flag: "w" });
     writeFileSync26(temporary, JSON.stringify(receipt, null, 2) + "\n", { flag: "wx" });
@@ -128393,7 +128503,7 @@ async function reviewActing2(input, deps) {
 }
 
 // src/threads-gate.ts
-import { createHash as createHash22, randomUUID as randomUUID9 } from "node:crypto";
+import { createHash as createHash22, randomUUID as randomUUID10 } from "node:crypto";
 import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync21, readFileSync as readFileSync34, realpathSync as realpathSync11, renameSync as renameSync10, statSync as statSync18, writeFileSync as writeFileSync27 } from "node:fs";
 import { dirname as dirname9, join as join16, resolve as resolve10 } from "node:path";
 import { fileURLToPath as fileURLToPath10 } from "node:url";
@@ -128448,7 +128558,7 @@ function audit(channel, tool2, result, details = {}) {
 function save2(draft) {
   const { file } = draftLocation(draft.draftId);
   mkdirSync21(dirname9(file), { recursive: true });
-  const temp = `${file}.${randomUUID9()}.tmp`;
+  const temp = `${file}.${randomUUID10()}.tmp`;
   writeFileSync27(temp, JSON.stringify(draft), { mode: 384 });
   renameSync10(temp, file);
 }
@@ -128483,7 +128593,7 @@ function createThreadsDraft(args) {
     const input = draftSchema.strict().parse(args);
     if (input.surface === "reply" !== Boolean(input.replyToId)) throw new Error("Reply drafts require replyToId; post drafts must omit it");
     if (input.purposeEvidence && !whitespace(input.body).includes(whitespace(input.purposeEvidence))) throw new Error("Purpose evidence quote not present in draft body");
-    const draftId = `${input.channel}.${randomUUID9()}`;
+    const draftId = `${input.channel}.${randomUUID10()}`;
     const bodyHash = threadsBodyHash(input.body, input.selfReply);
     save2({ ...input, draftId, bodyHash, reviews: {} });
     audit(input.channel, "threads_draft_create", "created", { draftId, bodyHash, submitter: input.submitter ?? null, submitterContext: input.submitterContext ?? null });
@@ -129860,7 +129970,7 @@ async function stockSearch(input) {
 }
 
 // src/sns-client.ts
-import { createHash as createHash23, randomUUID as randomUUID10 } from "node:crypto";
+import { createHash as createHash23, randomUUID as randomUUID11 } from "node:crypto";
 import {
   existsSync as existsSync33,
   mkdirSync as nodeMkdirSync,
@@ -130477,7 +130587,7 @@ async function readCaptionFile(path32, maxBytes) {
   return { bytes };
 }
 async function uploadYoutubeCaption(token, videoId, caption) {
-  const boundary = `sfcap${randomUUID10().replace(/-/g, "")}`;
+  const boundary = `sfcap${randomUUID11().replace(/-/g, "")}`;
   const meta = JSON.stringify({
     snippet: { videoId, language: caption.language, name: "", isDraft: false }
   });
@@ -131864,7 +131974,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
 }
 
 // src/handlers.ts
-import { randomUUID as randomUUID11 } from "node:crypto";
+import { randomUUID as randomUUID12 } from "node:crypto";
 
 // src/content-feedback.ts
 import { mkdirSync as mkdirSync22, writeFileSync as writeFileSync29 } from "node:fs";
@@ -134547,7 +134657,7 @@ GLB. Inspect the mesh and materials, then use it in an HTML mesh slide (mesh-obj
     const result = await routeSpeech({
       action: "execute",
       generator: "tts_astra_genai",
-      requestId: generation2.requestId || randomUUID11(),
+      requestId: generation2.requestId || randomUUID12(),
       generation: { ...generation2, outputPath: generation2.outputPath || process.cwd() }
     });
     return text3(JSON.stringify(result), "success" in result && result.success === false);

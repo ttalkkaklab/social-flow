@@ -37,6 +37,8 @@ import {
 } from '../dist/storyboard.js';
 import { TOOLS } from '../dist/tools.js';
 import { ROUTES } from '../dist/handlers.js';
+import { buildNativeImageBody } from '../dist/astra-genai-native-image.js';
+import { readImageMetadata } from '../dist/image-media.js';
 import editPlan from '../../skills/produce/references/edit-plan.js';
 import { setupProject, png } from './workflow-fixture.mjs';
 import { createRequire } from 'node:module';
@@ -679,6 +681,67 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.doesNotMatch(qwen.prompt, /distinctive amber eyes/);
     assert.match(qwen.prompt, /mina's face and hair/);
     assert.deepEqual(qwen.inputs, normal.inputs);
+    const wire = buildNativeImageBody({ ...qwen.args, model: 'qwen-image-fast' }, true);
+    assert.equal(wire.prompt, qwen.prompt);
+    assert.equal(wire.size, '864x1536');
+  });
+  it('sends canonical framing at delivery aspect and retains stale evidence across targeted edits', () => {
+    const { root, dir } = pictureBoard();
+    icons(dir);
+    const view = { subject: 'Mina', reason: 'Read the reaction', crop: 'Mina centered', mode: 'front' };
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', size: 'mcu', view }] });
+    const args = { path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits.' };
+    const start = make(dir, 's0001');
+    assert.equal(start.args.prompt, start.prompt);
+    assert.equal(start.args.size, '864x1536');
+    assert.match(start.prompt, /chest up, frame bottom at mid-chest/);
+    const status = () => readStoryboard({ path: dir, level: 'shot' }).imageFraming.find(row => row.id === 's0001');
+    assert.equal(status().status, 'current');
+    assert.equal(status().visualReview, 'not_reviewed');
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', size: 'cu', view: { ...view, crop: 'Full body, head to toe' } }] });
+    assert.equal(status().status, 'stale');
+    assert.throws(() => shotImageRequest(args), /shot_framing_conflict/);
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', view: { ...view, crop: 'Face and shoulder tops fill the frame' } }] });
+    assert.throws(() => shotImageRequest({ ...args, prompt: 'Wide shot of the room.' }), /shot_framing_conflict/);
+    const editArgs = { ...args, editExisting: true, prompt: 'Make the coat blue.' };
+    const edit = shotImageRequest(editArgs);
+    assert.equal(edit.startBasis, start.startBasis);
+    assert.ok(edit.warnings.some(f => /image_framing_stale/.test(f.what)));
+    writeFileSync(edit.file, png); recordShotImage(editArgs, edit);
+    assert.equal(status().status, 'stale');
+    const reframeArgs = { ...args, editExisting: true, reframe: true, prompt: 'Mina looks left with closed relaxed lips.' };
+    const reframe = shotImageRequest(reframeArgs);
+    assert.deepEqual(reframe.inputs, [edit.file]);
+    assert.match(reframe.prompt, /Opening crop: Face and shoulder tops/);
+    assert.match(reframe.prompt, /looks left with closed relaxed lips/);
+    assert.equal(reframe.args.prompt, reframe.prompt);
+    assert.equal(reframe.args.size, '864x1536');
+    assert.equal(reframe.startBasis, start.startBasis);
+    assert.ok(reframe.warnings.some(f => /image_framing_stale/.test(f.what)));
+    assert.throws(() => shotImageRequest({ ...reframeArgs, prompt: 'Full body, head to toe.' }), /shot_framing_conflict/);
+    assert.throws(() => shotImageRequest({ ...args, reframe: true }), /image_edit_scope/);
+    make(dir, 's0001');
+    assert.equal(status().status, 'current');
+    const bound = readBoard(dir).win.SCENES.find(shot => shot.id === 's0001');
+    bound.shot.location = { id: 'room', revision: 1, stateId: 'day', cameraId: 'wide', mustShow: [],
+      blocking: { actors: [{ id: 'mina', height: 1.7, start: { position: [0, 0, 0], rotationZDeg: 0 } }] } };
+    applyStoryboard({ path: dir, shotsById: [{ id: bound.id, shot: bound }] });
+    make(dir, 's0001');
+    assert.equal(status().status, 'current');
+    bound.shot.location.blocking.actors[0].start.position = [1, 0, 0];
+    applyStoryboard({ path: dir, shotsById: [{ id: bound.id, shot: { ...readBoard(dir).win.SCENES.find(shot => shot.id === bound.id), shot: bound.shot } }] });
+    assert.equal(status().status, 'stale');
+    assert.ok(shotImageRequest(editArgs).warnings.some(f => /image_framing_stale/.test(f.what)));
+    make(dir, 's0001');
+    applyStoryboard({ path: dir, globals: { FORMAT: 'youtube-long-16x9' } });
+    assert.equal(status().status, 'stale');
+    assert.equal(shotImageRequest(args).args.size, '1536x864');
+    const current = settings.readSettings(root);
+    settings.saveSettings(root, { ...current.config.models, image: { engine: 'gpt-image', model: 'gpt-image-1.5' } },
+      { expectedRevision: current.revision, request: 'Fixture: fixed size model' });
+    const fixed = shotImageRequest(args);
+    assert.equal(fixed.args.size, '1536x1024');
+    assert.ok(fixed.warnings.some(f => /image_aspect_mismatch/.test(f.what)));
   });
   it('targeted edits use the saved frame and preserve its metadata without rebuilding the scene', () => {
     const { dir } = pictureBoard();
@@ -695,6 +758,30 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.notEqual(edit.file, start.file);
     assert.throws(() => shotImageRequest({ path: dir, id: 's0001', frame: 'start', preserve: 'face', prompt: 'x' }), /image_edit_required/);
     assert.throws(() => shotImageRequest({ path: dir, id: 's0001', frame: 'start', editExisting: true, props: [], prompt: 'x' }), /image_edit_scope/);
+  });
+  it('prepares an inspected crop as the generation input without replacing the saved output', () => {
+    const { dir } = pictureBoard();
+    icons(dir);
+    const start = make(dir, 's0001');
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'color=c=red:s=32x64', '-vf', 'drawbox=x=4:y=4:w=18:h=32:color=blue:t=fill', '-frames:v', '1', start.file]);
+    const original = readFileSync(start.file);
+    const args = { path: dir, id: 's0001', frame: 'start', editExisting: true, reframe: true,
+      sourceCrop: { x: 4, y: 4, width: 18, height: 32 }, prompt: 'Mina waits.' };
+    const request = shotImageRequest(args), prepared = request.inputs[0];
+    assert.notEqual(prepared, start.file);
+    assert.notEqual(prepared, request.file);
+    assert.deepEqual(readFileSync(start.file), original);
+    assert.equal(request.operation, 'edit');
+    assert.equal(readImageMetadata(prepared).width, 864);
+    assert.equal(readImageMetadata(prepared).height, 1536);
+    const provenance = JSON.parse(readFileSync(prepared + '.source.json', 'utf8'));
+    assert.deepEqual(provenance.crop, args.sourceCrop);
+    assert.equal(provenance.sourceSha256, readImageMetadata(start.file).sha256);
+    const pixel = execFileSync('ffmpeg', ['-v', 'error', '-i', prepared, '-vf', 'scale=1:1', '-frames:v', '1', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-']);
+    assert.ok(pixel[2] > 200 && pixel[0] < 25 && pixel[1] < 25, 'the selected blue region, not the surrounding red, reaches generation');
+    assert.throws(() => shotImageRequest({ ...args, reframe: false }), /image_edit_scope/);
+    assert.throws(() => shotImageRequest({ ...args, sourceCrop: { ...args.sourceCrop, x: 20 } }), /image_crop_bounds/);
+    assert.throws(() => shotImageRequest({ ...args, sourceCrop: { ...args.sourceCrop, width: 20 } }), /image_crop_aspect/);
   });
   it('a sheet panel missing from panels.json or disk stops the frame instead of being dropped', () => {
     const { root, dir } = pictureBoard();

@@ -365,7 +365,8 @@ function cameraSourceInstructions(opts) {
   const movement = String(cam.movement || '').trim().toLowerCase();
   if (!movement) return parts.join(' ');
   const fixed = /^(static|fixed|locked)/.test(movement);
-  if (fixed) parts.push('Keep camera position, angle and focal length fixed between the opening and closing images.');
+  if (fixed) parts.push(end ? 'Keep camera position, angle and focal length fixed between the opening and closing images.'
+    : 'This opening image establishes the camera position, angle and focal length for the shot.');
   else {
     parts.push('This is the ' + (end ? 'settled closing' : 'opening') + ' still for a ' + [cam.speed, movement].filter(Boolean).join(' ') +
       (cam.target ? ', with movement target ' + cam.target : '') + '; show one instant, with no motion trail or montage.');
@@ -392,10 +393,20 @@ function assemble(opts) {
   const tail = (opts.tail === undefined ? "the picture fills the frame from the top edge to the bottom edge" : opts.tail).trim();
 
   const view = require('./shot-view.js').checked(opts.camera?.view);
-  const ladder = opts.noPerson || view ? SIZE_WORDS_OBJECT : SIZE_WORDS;
-  const sizeWords = ladder[size] || SIZE_WORDS[size] || (size ? size : "");
+  const subjectType = view?.subjectType || (opts.noPerson ? 'object' : view?.target || ['insert','ecu'].includes(size) ? 'detail' : 'person');
+  const ladder = subjectType === 'person' ? SIZE_WORDS : SIZE_WORDS_OBJECT;
+  let sizeWords = ladder[size] || SIZE_WORDS[size] || (size ? size : "");
+  const rear = view ? view.mode === 'rear' : opts.camera?.rear;
+  if (subjectType === 'person' && rear) {
+    if (size === 'cu') sizeWords = 'close-up, the back of the head and the top of the shoulders, crown lightly cropped';
+    if (size === 'choker') sizeWords = 'big close-up, the back of the head fills the frame';
+  }
   const angleWords = ANGLE_WORDS[angle] || angle || ANGLE_WORDS.eye;
   const unknown = [];
+  if (!opts.omitFraming) {
+    const conflicts = require('./shot-view.js').framingConflicts(size, view || { crop: opts.camera?.framing }, scene, opts.noPerson);
+    if (conflicts.length) throw new Error('shot_framing_conflict: ' + conflicts.join('; ') + ' — set size and view.crop together, and keep scene prose about the opening action');
+  }
   if (size && !SIZE_WORDS[size]) unknown.push("size \"" + size + "\"");
   if (angle && !ANGLE_WORDS[angle]) unknown.push("angle \"" + angle + "\"");
 
@@ -406,10 +417,10 @@ function assemble(opts) {
     else parts.push(angleWords + ".");
   }
   const techniques = require('./film-techniques.js');
-  const selected = view ? (opts.techniques || []).filter(t => {
+  const selected = (opts.techniques || []).filter(t => {
     const e = techniques.byId[t.id];
-    return e?.category !== 'framing' && !e?.fields.viewpoint;
-  }) : opts.techniques;
+    return !(size && e?.category === 'framing') && !(view && e?.fields.viewpoint);
+  });
   const sourceTechnique = techniques.sourceInstructions({shot:{techniques:selected}}, opts.frame, opts.omitFraming);
   if (sourceTechnique) parts.push(sourceTechnique);
   if (space) parts.push(space);

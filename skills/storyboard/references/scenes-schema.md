@@ -1979,8 +1979,13 @@ the PNG already holds the floor plan.
 ### Content-led opening view (`visual.camera.view`)
 
 New picture shots follow [content-led opening views](shot-view.md) and write `shot_icons view`:
-`{subject,reason,crop,mode,subjectId?,viewerId?,target?:{point:[x,y,z],span}}`.
-Subject and crop are English provider text, reason explains the story decision. Mode is
+`{subject,reason,crop,mode,subjectType?,subjectId?,viewerId?,target?:{point:[x,y,z],span}}`.
+Subject and crop are English provider text, reason explains the story decision.
+`subjectType` selects person, object or detail crop wording; person shots retain their
+anatomical shot-size boundaries. Set size and crop together; explicit conflicting crop
+declarations refuse image planning with `shot_framing_conflict`. The start image records
+`visual.frames.startBasis`; `storyboard_read.imageFraming` compares it with current inputs
+without claiming a visual pass. Mode is
 front, three-quarter-left/right, profile-left/right, rear, ots or pov. Left/right name the
 visible side of the subject, independently of `shot.angle` (camera height). OTS/POV require
 a subject and a different observer; POV uses eye height. A built-set body insert/ecu needs

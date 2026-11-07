@@ -4871,7 +4871,7 @@ Set backgroundView to front or back relative to the location sheet layout; shot_
 
 Set view with subject (visible evidence), reason, crop and mode. It writes visual.camera.view, shot.info and shot.why. Subject and crop are English provider text. This view supersedes old opening framing, rear/pov flags and viewpoint/framing techniques in the image and video prompts. Left/right name the visible side of the subject; angle separately controls height. Set subjectId for a blocked actor or set object; ots/pov also need a different viewerId. Built-set body inserts/ecu need target with the actual staged world point and vertical span; objects use their subjectId. Missing set targets cannot silently become frontal portraits. Use storyboard_apply for blocking and closing camera endpoints.
 
-Size is distance (els … ecu, insert). Composition labels two/three/ots/pov/back/cutaway/reaction carry no crop; new boards use a distance with view. The technique catalogue gives use, avoid, specify, neighbouring-shot and vertical guidance; these are directing conventions, not measured emotional effects. On 9:16 the result includes the chosen values' vertical advice.
+Size is distance (els … ecu, insert). Set size and view.crop together when changing the crop. Person shots keep anatomical size boundaries even with a view; set view.subjectType to object or detail when the subject is a prop or body detail despite a character being in the cast. Explicit contradictory crop declarations fail image planning with shot_framing_conflict. Composition labels two/three/ots/pov/back/cutaway/reaction carry no crop; new boards use a distance with view. The technique catalogue gives use, avoid, specify, neighbouring-shot and vertical guidance; these are directing conventions, not measured emotional effects. On 9:16 the result includes the chosen values' vertical advice.
 
 On still_camera, move is a still effect stored in shot.render.camera; other routes use a camera technique and synchronize visual.camera.movement. Route changes drop the old route's movement. A different move replaces its speed/target; the same move keeps them unless provided. Video moves take slow/steady/fast and an English target; rack focus takes English from/to subjects. A new size without why drops the old why. A still hold is deliberate, not an unset move.
 
@@ -4926,30 +4926,39 @@ Refused: missing story/characters (story_order), invalid attributes, incompatibl
     name: 'shot_image',
     title: "Make a shot's start or end image (step 4)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-    description: `Use it after shot_icons to make a shot's start image, or the end image of a first_last shot. Normal generation composes character sheet panels, the location and props with the saved shot framing, action, lighting and episode style. Write prompt in English. One character uses face/front/back panels; two use each face then each front. Reference images identify appearance; the authored view determines crop and viewpoint. Actor layout and gaze stay in the prompt.
+    description: `Create a shot’s start or end image.
+
+Use it after shot_icons to compose a start image or a first_last end image from character panels, place and props using saved framing and style. Write English action, layout, gaze and light in prompt. One character uses face/front/back panels; two use each face then each front. References supply appearance; the authored view controls crop and viewpoint.
 
 For a targeted correction, set editExisting:true and describe only the change in prompt. preserve adds explicit invariants. The saved start or end image becomes the sole input, source dimensions are reused unless size is supplied, and original scene instructions are not reassembled. Omit location and props; update their storyboard metadata first if needed. Refuses image_edit_source_missing without that saved frame and image_edit_scope if location/props are supplied.
+To correct a generated start image's crop, set editExisting:true and reframe:true. The saved size, crop and viewpoint are recompiled with prompt as the opening action/correction; dimensions default to the current delivery aspect. Inspect the actual result; this does not certify visual adherence or clear stale source evidence. Reframe is only for frame:start.
+If text-only reframing fails, sourceCrop prepares an inspected source-pixel rectangle as a separate reference, recording its source hash and crop. It must fit and match output aspect (image_crop_bounds/image_crop_aspect). The saved model still generates the final image. Describe action, not another zoom; never guess coordinates without viewing the source.
 
 For normal generation, a location with a built set uses a camera-matched Blender render as Image 1 and its sheet as a look reference when capacity allows. visual.camera.backgroundView chooses front/back (default front). Without a set, the corresponding location panel leads and retains its landmark layout; authored subject framing still applies. Missing directional panels refuse background_view_missing; legacy front-only sheets can reuse imageUrl with a warning. A built set with conflicting direction refuses background_view_conflict; a render failure refuses location_render_failed without substituting the sheet. Props use their frame-specific ledger state and references; hidden props stay out, missing images or state references warn, and ledger errors omit only the affected state.
 
 frame:end edits the opening image using the closing composition, story state and final focus. A built set supplies its numeric end camera when available; a moving shot without one warns and follows the prompt's landing. An end image keeps the start's location (location is refused) and records endProps separately.
 
-Runs image_plan → image_execute under the saved model and existing spending authorization. Saves a new version under storyboard/images and records visual.frames.start/bg or frames.end, prompt, references and asset bindings. Revising a start invalidates its old end with a warning; files are preserved. GPT inputs of mixed PNG/JPEG types become PNG copies.
+Runs image_plan → image_execute under the saved model and existing spending authorization. Saves a new version under storyboard/images and records visual.frames.start/bg or frames.end, prompt, references and asset bindings. Framing contradictions refuse shot_framing_conflict. Flexible-size models use delivery aspect; fixed-size GPT models warn with their supported preset. Revising a start invalidates its old end with a warning; files are preserved. storyboard_read.imageFraming compares the recorded start inputs with the current plan (current/stale/unknown), separately from visual review. Inspect the returned image against the saved size and crop; a matching prompt is not pixel evidence. GPT inputs of mixed PNG/JPEG types become PNG copies.
 
-Do NOT use it for routes other than still_camera and generated_video. story_order refuses missing icon attributes, an end before its start or outside first_last. image_references_unsupported refuses inputs beyond the saved model's capacity; never switch models silently. Text-bearing images follow the GPT Image 2 directive. Returns: file, input order, prompt and warnings; a host selection returns a handoff instead of generating.`,
+Do NOT use it just to inspect a shot — use storyboard_read. Do NOT use it for routes other than still_camera and generated_video. story_order refuses missing icon attributes, an end before its start or outside first_last. image_references_unsupported refuses inputs beyond the saved model's capacity; never switch models silently. Text-bearing images follow the GPT Image 2 directive. Returns: file, input order, prompt and warnings; a host selection returns a handoff instead of generating.`,
     inputSchema: {
       type: 'object', additionalProperties: false,
       properties: {
-        path: { type: 'string', description: 'The storyboard directory or its scenes.js' },
-        id: { type: 'string', pattern: '^s\\d{4,}$', description: 'Stable shot id' },
+        path: { type: 'string', description: 'The storyboard directory or its scenes.js, e.g. data/channel/episodes/topic/storyboard' },
+        id: { type: 'string', pattern: '^s\\d{4,}$', description: 'Stable shot id, e.g. s0001' },
         frame: { type: 'string', enum: ['start', 'end'], default: 'start', description: 'start: the first image · end: the last image of a first_last shot' },
-        prompt: { type: 'string', description: 'What the frame shows, in English: who is where, doing what, facing which way, expression and light' },
+        prompt: { type: 'string', description: 'What the frame shows, in English: who is where, doing what, facing which way, expression and light, e.g. Mina waits with closed relaxed lips.' },
         editExisting: { type: 'boolean', description: 'Edit the saved frame using prompt as the change instruction; save a new version. Omit location and props.' },
-        preserve: { type: 'string', description: 'Details to preserve during editExisting' },
-        location: { type: 'string', description: 'SB_DOC.locations id of the place, for the start image; an earlier choice stays when omitted, and an end image keeps the start\'s place (refused there)' },
-        props: { type: 'array', items: { type: 'string' }, description: 'SB_DOC.props ids seen in the frame; an earlier choice stays when omitted' },
-        size: { type: 'string', pattern: '^\\d{3,4}x\\d{3,4}$', description: 'Output WIDTHxHEIGHT; default 1536x1024 on a 16:9 board, 1024x1536 otherwise' },
-        reserveUsd: { type: 'number', minimum: 0, description: 'API reservation estimate, as in image_plan' },
+        reframe: { type: 'boolean', description: 'With editExisting and frame:start, recompile saved shot size, crop and viewpoint to correct the generated image; prompt gives opening action and correction.' },
+        sourceCrop: { type: 'object', additionalProperties: false, description: 'Inspected rectangle in saved source-image pixels, e.g. {x:72,y:64,width:720,height:1280}; requires reframe, in bounds and matching output aspect. Prepared as a reference before GenAI generation.', properties: {
+          x: { type: 'integer', minimum: 0, description: 'Left pixel, e.g. 72' }, y: { type: 'integer', minimum: 0, description: 'Top pixel, e.g. 64' },
+          width: { type: 'integer', minimum: 1, description: 'Crop width in pixels, e.g. 720' }, height: { type: 'integer', minimum: 1, description: 'Crop height in pixels, e.g. 1280' },
+        }, required: ['x', 'y', 'width', 'height'] },
+        preserve: { type: 'string', description: 'Details to preserve during editExisting, e.g. Keep the navy blazer.' },
+        location: { type: 'string', description: 'SB_DOC.locations id of the place (e.g. studio), for the start image; an earlier choice stays when omitted, and an end image keeps the start\'s place (refused there)' },
+        props: { type: 'array', items: { type: 'string' }, description: 'SB_DOC.props ids seen in the frame (e.g. ["cup"]); an earlier choice stays when omitted' },
+        size: { type: 'string', pattern: '^\\d{3,4}x\\d{3,4}$', description: 'Output WIDTHxHEIGHT; default 1536x864 on a 16:9 board, 864x1536 otherwise; fixed-size GPT models use their supported preset with a warning' },
+        reserveUsd: { type: 'number', minimum: 0, description: 'API reservation estimate in USD, as in image_plan; e.g. 0 for an authorized local run' },
       },
       required: ['path', 'id', 'prompt'],
     },

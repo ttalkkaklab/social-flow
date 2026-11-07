@@ -1,7 +1,7 @@
 import { readShotVideoTiming } from './video-routing.js';
 import { manageProject } from './project.js';
 import { readImageMetadata, verifyImageFile } from './image-media.js';
-import { mlxImageFamily } from './image-models.js';
+import { gptImageContract, mlxImageFamily } from './image-models.js';
 import { workflowEpisode } from './production-workflow.js';
 import { imageContext } from './image-routing.js';
 import { readImageState } from './image-state.js';
@@ -33,7 +33,7 @@ import { characterPanels } from './video-image-inputs.js';
  * with check-scenes.js (node) and the approval page (browser); this module loads that file
  * at runtime from the plugin tree, the same way the bundle finds the skills it ships with.
  */
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { evaluateWindowScript } from './scenes-vm.js';
 import { existsSync, mkdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
@@ -305,6 +305,8 @@ export function readStoryboard(args) {
     const continuity = loadFromHere(join(REFERENCES_DIR, 'shot-continuity.js'));
     result.continuityFindings = continuity.check(win, dirname(file));
     result.cameraDirectionFindings = cameraContract().cameraDirectionWarnings(win.SCENES).map(what => ({ level: 'warn', where: 'camera direction', what }));
+    result.imageFraming = (win.SCENES || []).filter(shot => shot.visual?.frames?.start)
+        .map(shot => imageFramingStatus(shot, win.FORMAT));
     result.techniqueFindings = (win.SCENES || []).flatMap((scene, index) => techniqueContract().findings(scene).map(what => ({ level: 'warn', where: 'shot ' + (index + 1), what })));
     if (args.includeContext)
         result.reviewContext = {
@@ -1330,12 +1332,28 @@ export const shotImageSchema = z.object({
     frame: z.enum(['start', 'end']).default('start').describe('start: the first image; end: the last image of a first_last shot'),
     prompt: nonEmpty.describe('What the frame shows, in English: who is where, doing what, facing which way, expression and light'),
     editExisting: z.boolean().optional().describe('Edit the saved frame in place conceptually, saving a new version; prompt describes only the change'),
+    reframe: z.boolean().optional().describe('With editExisting, reapply the saved start-frame size, crop and viewpoint to correct a generated composition; prompt describes the opening action and correction'),
+    sourceCrop: z.object({ x: z.number().int().nonnegative(), y: z.number().int().nonnegative(), width: z.number().int().positive(), height: z.number().int().positive() }).strict().optional()
+        .describe('With reframe, an inspected rectangle in source-image pixels, e.g. {x:72,y:64,width:720,height:1280}; must fit the source and match output aspect. It becomes the GenAI composition reference, not the final output.'),
     preserve: nonEmpty.optional().describe('Details to preserve when editExisting is true'),
     location: nonEmpty.optional().describe('SB_DOC.locations id of the place, for the start image; an earlier call\'s choice stays when omitted, and an end image keeps the start\'s place'),
     props: z.array(nonEmpty).optional().describe('SB_DOC.props ids seen in the frame; an earlier call\'s choice stays when omitted'),
-    size: z.string().regex(/^\d{3,4}x\d{3,4}$/).optional().describe('Output WIDTHxHEIGHT; default 1536x1024 for a 16:9 board, 1024x1536 otherwise'),
+    size: z.string().regex(/^\d{3,4}x\d{3,4}$/).optional().describe('Output WIDTHxHEIGHT; default 1536x864 for 16:9, 864x1536 for 9:16. Fixed-size GPT models keep their supported preset with a framing warning.'),
     reserveUsd: z.number().finite().nonnegative().optional(),
 }).strict();
+// Evidence of the inputs used, not a claim that a model obeyed them. Exclude generated bindings.
+function startImageBasis(shot, format) {
+    const plan = shot.shot ?? {}, visual = (shot.visual ?? {});
+    return createHash('sha256').update(JSON.stringify({ format, size: plan.size, angle: plan.angle,
+        space: plan.space, composition: plan.composition, eyeline: plan.eyeline, depth: plan.depth,
+        techniques: plan.techniques, render: plan.render, camera: visual.camera,
+        cast: contract().castOf(shot), location: visual.locationId, locationBinding: plan.location, props: visual.props })).digest('hex');
+}
+function imageFramingStatus(shot, format) {
+    const frames = shot.visual?.frames;
+    return { id: shot.id, image: frames?.start, status: !frames?.startBasis ? 'unknown' : frames.startBasis === startImageBasis(shot, format) ? 'current' : 'stale',
+        visualReview: 'not_reviewed', note: 'Current means the saved framing inputs match. Inspect the actual image crop before using it.' };
+}
 const locationContract = () => loadFromHere(join(REFERENCES_DIR, 'location-assets.js'));
 // Image models that take several pictures in one request; astra-genai edits one picture, zimage none.
 const IMAGE_INPUTS = {
@@ -1454,30 +1472,70 @@ export function shotImageRequest(args) {
     const recorded = args.frame === 'end' && Array.isArray(frames.endProps) ? frames.endProps : visual.props;
     const props = args.props ?? (Array.isArray(recorded) ? recorded.filter((id) => typeof id === 'string') : []);
     const cast = contract().castOf(shot) ?? [];
-    const [width, height] = (args.size ?? (/16x9/.test(String(win.FORMAT ?? '')) ? '1536x1024' : '1024x1536')).split('x').map(Number);
+    const selectedImage = imageContext(episode, args.id).selection;
+    const wide = /16x9/.test(String(win.FORMAT ?? ''));
+    const fixedSize = selectedImage.engine === 'gpt-image' && !gptImageContract(selectedImage.model ?? 'gpt-image-2')?.flexibleSize;
+    const [width, height] = (args.size ?? (fixedSize ? (wide ? '1536x1024' : '1024x1536') : (wide ? '1536x864' : '864x1536'))).split('x').map(Number);
     if (args.preserve && !args.editExisting)
         throw new Error('image_edit_required: preserve requires editExisting');
+    if (args.reframe && (!args.editExisting || args.frame !== 'start'))
+        throw new Error('image_edit_scope: reframe requires editExisting and frame:start');
+    if (args.sourceCrop && !args.reframe)
+        throw new Error('image_edit_scope: sourceCrop requires reframe');
     if (args.editExisting) {
         if (args.location || args.props)
             throw new Error('image_edit_scope: update location and prop metadata before editing; omit location and props here');
         const source = frames[args.frame];
         if (!source)
             throw new Error(`image_edit_source_missing: ${args.id} has no saved ${args.frame} image`);
-        const input = resolve(boardDir, source);
+        let input = resolve(boardDir, source);
         if (!existsSync(input))
             throw new Error(`image_input_missing: ${input}`);
         const metadata = readImageMetadata(input);
-        const [editWidth, editHeight] = args.size ? [width, height] : [metadata.width, metadata.height];
-        const prompt = ['Edit Image 1. Change only: ' + args.prompt,
-            'Preserve all other visible details, identities, composition, lighting and rendering style unless the requested change requires otherwise.',
+        const [editWidth, editHeight] = args.size || args.reframe ? [width, height] : [metadata.width, metadata.height];
+        if (args.sourceCrop) {
+            const crop = shotImageSchema.shape.sourceCrop.parse(args.sourceCrop);
+            if (crop.x + crop.width > metadata.width || crop.y + crop.height > metadata.height)
+                throw new Error('image_crop_bounds: sourceCrop must fit inside the saved image');
+            if (crop.width * editHeight !== crop.height * editWidth)
+                throw new Error('image_crop_aspect: sourceCrop must match the output aspect exactly; do not stretch anatomy');
+            const stamp = createHash('sha256').update(JSON.stringify({ source: metadata.sha256, crop, width: editWidth, height: editHeight })).digest('hex');
+            const prepared = join(boardDir, 'images', 'inputs', `crop-${stamp}.png`);
+            mkdirSync(dirname(prepared), { recursive: true });
+            const temporary = prepared + '.' + randomUUID() + '.png';
+            try {
+                execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', input, '-vf', `crop=${crop.width}:${crop.height}:${crop.x}:${crop.y}:exact=1,scale=${editWidth}:${editHeight}:flags=lanczos`, '-frames:v', '1', temporary], { timeout: 30_000, stdio: 'pipe' });
+                renameSync(temporary, prepared);
+            }
+            finally {
+                if (existsSync(temporary))
+                    unlinkSync(temporary);
+            }
+            writeFileSync(prepared + '.source.json', JSON.stringify({ source: input, sourceSha256: metadata.sha256, crop, prepared: readImageMetadata(prepared) }, null, 2));
+            input = prepared;
+        }
+        const framing = args.reframe ? loadFromHere(join(REFERENCES_DIR, 'assemble-bg-prompt.js')) : undefined;
+        const prompt = [args.sourceCrop ? 'Image 1 is already cropped to the required opening composition. Keep its exact frame boundaries and subject scale. Refine image detail and apply the opening action below without widening the view.'
+                : args.reframe ? 'Reframe Image 1 to the following opening composition. Zoom and crop the subject to these boundaries; the input image supplies identity, clothing, place and light, not the crop or expression.' : 'Edit Image 1. Change only: ' + args.prompt,
+            framing ? framing.assemble({ ...framing.frameOptions(shot, 'start'), scene: args.prompt, noPerson: !cast.length }).prompt : '',
+            args.reframe ? 'Preserve the visible subject identity, clothing, environment and rendering style. Apply the authored opening state instead of copying a conflicting state from the input.' : 'Preserve all other visible details, identities, composition, lighting and rendering style unless the requested change requires otherwise.',
             args.preserve ? 'Preserve explicitly: ' + args.preserve : ''].filter(Boolean).join('\n');
         const call = imageCall({ directory: episode, assetId: args.id, inputs: [input], prompt,
             width: editWidth, height: editHeight, outDir: join(boardDir, 'images'), stem: `${args.id}-${args.frame}`, what: 'this frame edit' });
+        const warnings = [];
+        if (imageFramingStatus(shot, win.FORMAT).status === 'stale')
+            warnings.push({ level: 'warn', where: args.id, what: 'image_framing_stale: this edit inherits an image made from older shot inputs; normal generation rebuilds all current references and framing' });
+        if (Math.abs(editWidth / editHeight - (wide ? 16 / 9 : 9 / 16)) > 0.001)
+            warnings.push({ level: 'warn', where: args.id, what: `image_aspect_mismatch: ${editWidth}x${editHeight} differs from the delivery aspect; inspect its final crop` });
         return { episode, assetId: args.id, ...call, refs: (visual.references ?? []),
-            ...(location ? { location } : {}), ...(visual.locationFrame ? { locationFrame: visual.locationFrame } : {}), props, prompt, warnings: [] };
+            ...(location ? { location } : {}), ...(visual.locationFrame ? { locationFrame: visual.locationFrame } : {}), props, prompt,
+            startBasis: frames.startBasis,
+            warnings };
     }
     const entry = location ? docEntry(win, 'locations', location) : undefined;
     const warnings = [];
+    if (Math.abs(width / height - (wide ? 16 / 9 : 9 / 16)) > 0.001)
+        warnings.push({ level: 'warn', where: args.id, what: `image_aspect_mismatch: ${width}x${height} differs from the ${wide ? '16:9' : '9:16'} delivery frame; inspect the final crop, including hands and feet, before video generation` });
     const backgroundView = visual.camera?.backgroundView ?? 'front';
     const panels = entry?.panels;
     const selected = backgroundView === 'back' ? panels?.back : panels?.front;
@@ -1506,7 +1564,6 @@ export function shotImageRequest(args) {
     const composition = set && (args.frame === 'start' || set.endCamera) ? [{ id: `${args.id}-set`, path: set[args.frame].path, role: 'composition', use: 'image',
             purpose: args.frame === 'end' ? `the ${set.name} set from the closing camera (${set.endCamera.lensMm} mm lens), where every object${set.blocked ? ' and figure' : ''} stands when it ends`
                 : `the ${set.name} set seen from this shot's camera (${lens}): its viewpoint, framing${dutch ? '' : ' and horizon'}, the architecture and where every object${set.blocked ? ' and coloured figure' : ''} stands; its plain unpainted surfaces are placeholders` }] : [];
-    const selectedImage = imageContext(episode, args.id).selection;
     const conciseIdentity = (selectedImage.engine === 'astra-genai-native' && ['qwen-image-fast', 'qwen-image-2.1-turbo'].includes(selectedImage.model ?? ''))
         || (selectedImage.engine === 'mlx' && mlxImageFamily(selectedImage.model ?? '') === 'qwen-2.1');
     const propPictures = propRefs(win, shots.indexOf(shot), args.id, props, args.frame, warnings);
@@ -1547,15 +1604,17 @@ export function shotImageRequest(args) {
         : `Keep Image 1's camera position, ${lens}${dutch ? '' : ', horizon'} and world layout, and keep every object${set.blocked ? ' and figure' : ''} at its world position in Image 1. The authored composition below controls the final crop, headroom and subject screen placement. Paint its plain unpainted surfaces as the real place, and continue the place into any flat dark area past the set's edge.`
             + (dutch ? ' Image 1 is level; tilt the whole picture to the dutch angle described below.' : '')
             + (look.some((ref) => ordered.includes(ref)) ? ` Take only materials, colours and light from Image ${at(look[0])}.` : '');
-    const prompt = [ordered.length ? 'Compose one picture from these images.' : '', roles, lock, heightSentence(win, cast),
-        view ? 'Character panels identify the subject; include only the body regions named by the crop. A face reference does not require a face in the output.' : '',
+    const prompt = [args.frame === 'start' && view ? `Create one opening image with this required crop: ${view.crop}.` : ordered.length ? 'Compose one picture from these images.' : '', roles, lock, heightSentence(win, cast),
+        view ? 'Character panels identify the subject; include only the body regions named by the crop. A face reference does not require a face in the output. The opening action determines expression and gaze; do not copy a reference smile when the action asks for a different expression.' : '',
         args.frame === 'end' ? 'This is the last frame of the shot that opens on Image 1: keep its place, light and every identity, applying the planned action, camera landing and final focus.' : '',
-        ...propPictures.unseen, body.charAt(0).toUpperCase() + body.slice(1)].filter(Boolean).join(' ');
+        ...propPictures.unseen, body.charAt(0).toUpperCase() + body.slice(1),
+        args.frame === 'start' && view ? `Final frame boundaries: ${view.crop}.` : ''].filter(Boolean).join(' ');
     const call = imageCall({ directory: episode, assetId: args.id, inputs, prompt, width, height, outDir: join(boardDir, 'images'), stem: `${args.id}-${args.frame}`, what: 'this frame' });
     const sent = refs.filter((ref) => ordered.includes(ref));
     const locationFrame = set && args.frame === 'start' ? { set: set.id, revision: set.revision, manifest: set.manifest, manifestSha256: set.manifestSha256, stateId: set.stateId,
         camera: set.camera, endCamera: set.endCamera, blocked: set.blocked, fingerprint: set.fingerprint, start: set.start, end: set.end } : undefined;
-    return { episode, assetId: args.id, ...call, refs: sent, ...(location ? { location } : {}), ...(locationFrame ? { locationFrame } : {}), props, prompt, warnings };
+    const startBasis = startImageBasis({ ...shot, visual: { ...visual, ...(location ? { locationId: location } : {}), props } }, win.FORMAT);
+    return { episode, assetId: args.id, ...call, refs: sent, ...(location ? { location } : {}), ...(locationFrame ? { locationFrame } : {}), props, prompt, warnings, startBasis };
 }
 /**
  * The adapter call for one generated picture with the saved image model: the next free versioned
@@ -1622,6 +1681,11 @@ export function recordShotImage(args, request) {
     const frames = { ...visual.frames, [args.frame]: rel };
     const notes = [...request.warnings];
     if (args.frame === 'start') {
+        // An edit inherits the source's basis, so a colour correction cannot certify an old crop.
+        if (request.startBasis)
+            frames.startBasis = request.startBasis;
+        else
+            delete frames.startBasis;
         Object.assign(visual, { bg: rel, bgPrompt: request.prompt, references: request.refs, props: request.props,
             ...(request.location ? { locationId: request.location } : {}) });
         // The set render the start image was composed from: its camera, inputs and fingerprint.

@@ -213,6 +213,8 @@ function hitsBody(p,q,x){
  */
 function shotCamera(m,{stateId,actors=[],cast=[],size,angle,width,height,side,mustShow=[],viewpoint,view,backgroundView}){
   const V=require('./shot-view.js');V.checked(view);
+  const framingConflicts=V.framingConflicts(size,view,'',!cast.length);
+  if(framingConflicts.length)throw new Error('shot_framing_conflict: '+framingConflicts.join('; '));
   const warnings=[],deg=Math.PI/180,r3=v=>v.map(x=>Math.round(x*1000)/1000);
   const unit=v=>{const n=Math.hypot(...v);return n>1e-9?v.map(x=>x/n):null;},dot=(a,b)=>a[0]*b[0]+a[1]*b[1];
   // Zero body rotation faces -Y; +90 degrees faces +X (location-assets.md).
@@ -224,7 +226,8 @@ function shotCamera(m,{stateId,actors=[],cast=[],size,angle,width,height,side,mu
   if(view?.subjectId&&!subject&&!objectSubject)throw new Error('shot_view_subject_missing: '+view.subjectId+' is not blocked or visible in this set');
   const people=subject?[subject]:objectSubject?[]:cast.map(id=>actors.find(a=>a.id===id)).filter(Boolean),unblocked=cast.filter(id=>!actors.some(a=>a.id===id));
   if(view&&!view.target&&!objectSubject&&!people.length)throw new Error('shot_view_subject_missing: bind the opening subject before rendering its view');
-  if(view&&['insert','ecu'].includes(size)&&!view.target&&!objectSubject)throw new Error('shot_view_target_required: name the set object or give the body detail point and span from the opening blocking');
+  if(view&&(['insert','ecu'].includes(size)||view.subjectType==='detail')&&!view.target&&!objectSubject)throw new Error('shot_view_target_required: name the set object or give the body detail point and span from the opening blocking');
+  if(view?.subjectType==='object'&&!objectSubject&&!view.target)throw new Error('shot_view_target_required: an object crop needs its set object subjectId or an explicit target');
   if(view&&angle==='over'&&view.mode!=='ots')throw new Error('shot_view_conflict: angle over needs view.mode ots');
   if(view?.mode==='pov'&&angle&&angle!=='eye')throw new Error('shot_view_conflict: pov uses the observer eye height');
   // The floor is where the people stand, else the lowest top surface (a floor slab's top, not its underside).
