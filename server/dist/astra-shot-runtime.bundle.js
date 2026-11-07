@@ -31848,6 +31848,9 @@ var genaiMsrSchema = external_exports.object({
 ${GENAI_MSR_NO_TEXT}`).pipe(external_exports.string().max(2e3, "MSR prompt including the subtitle-free instruction must fit 2000 characters; shorten the action without dropping dialogue")),
   negativePrompt: external_exports.string().trim().min(1).max(5e3).optional(),
   guidanceScale: external_exports.number().finite().min(1).max(10).optional(),
+  nagScale: external_exports.number().finite().min(0).max(100).optional(),
+  nagAlpha: external_exports.number().finite().min(0).max(1).optional(),
+  nagTau: external_exports.number().finite().min(0).max(10).optional(),
   references: external_exports.array(external_exports.object({
     imageUri: genaiImageUriSchema.optional(),
     imagePath: external_exports.string().min(1).optional(),
@@ -31872,8 +31875,10 @@ ${GENAI_MSR_NO_TEXT}`).pipe(external_exports.string().max(2e3, "MSR prompt inclu
   filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use a .mp4 filename").optional()
 }).strict().superRefine((args, ctx) => {
   const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-  if (args.negativePrompt !== void 0 && (args.guidanceScale ?? 1) <= 1)
-    issue("MSR negativePrompt requires guidanceScale > 1; CFG=1 ignores negative conditioning");
+  if ((args.nagScale ?? 0) > 0 && args.negativePrompt === void 0)
+    issue("MSR nagScale > 0 requires negativePrompt");
+  if (args.negativePrompt !== void 0 && (args.guidanceScale ?? 1) <= 1 && (args.nagScale ?? 0) === 0)
+    issue("MSR negativePrompt requires guidanceScale > 1 or nagScale > 0");
   const backgrounds = args.references.filter((ref) => ref.background).length;
   if (backgrounds > 1 || args.references.length - backgrounds > 4) issue("MSR supports at most four subjects and one background");
   let subject = 0;

@@ -91096,6 +91096,9 @@ var require_video_catalog = __commonJS({
             "prompt",
             "negativePrompt",
             "guidanceScale",
+            "nagScale",
+            "nagAlpha",
+            "nagTau",
             "references",
             "referenceStrength",
             "referenceFrames",
@@ -110900,6 +110903,9 @@ var genaiMsrSchema = external_exports.object({
 ${GENAI_MSR_NO_TEXT}`).pipe(external_exports.string().max(2e3, "MSR prompt including the subtitle-free instruction must fit 2000 characters; shorten the action without dropping dialogue")),
   negativePrompt: external_exports.string().trim().min(1).max(5e3).optional(),
   guidanceScale: external_exports.number().finite().min(1).max(10).optional(),
+  nagScale: external_exports.number().finite().min(0).max(100).optional(),
+  nagAlpha: external_exports.number().finite().min(0).max(1).optional(),
+  nagTau: external_exports.number().finite().min(0).max(10).optional(),
   references: external_exports.array(external_exports.object({
     imageUri: genaiImageUriSchema.optional(),
     imagePath: external_exports.string().min(1).optional(),
@@ -110924,8 +110930,10 @@ ${GENAI_MSR_NO_TEXT}`).pipe(external_exports.string().max(2e3, "MSR prompt inclu
   filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use a .mp4 filename").optional()
 }).strict().superRefine((args, ctx) => {
   const issue2 = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-  if (args.negativePrompt !== void 0 && (args.guidanceScale ?? 1) <= 1)
-    issue2("MSR negativePrompt requires guidanceScale > 1; CFG=1 ignores negative conditioning");
+  if ((args.nagScale ?? 0) > 0 && args.negativePrompt === void 0)
+    issue2("MSR nagScale > 0 requires negativePrompt");
+  if (args.negativePrompt !== void 0 && (args.guidanceScale ?? 1) <= 1 && (args.nagScale ?? 0) === 0)
+    issue2("MSR negativePrompt requires guidanceScale > 1 or nagScale > 0");
   const backgrounds = args.references.filter((ref) => ref.background).length;
   if (backgrounds > 1 || args.references.length - backgrounds > 4) issue2("MSR supports at most four subjects and one background");
   let subject = 0;
@@ -110947,6 +110955,11 @@ function buildGenaiMsrBody(args) {
     prompt: args.prompt,
     ...args.negativePrompt === void 0 ? {} : { negative_prompt: args.negativePrompt },
     ...args.guidanceScale === void 0 ? {} : { guidance_scale: args.guidanceScale },
+    ...(args.nagScale ?? 0) > 0 ? {
+      nag_scale: args.nagScale,
+      ...args.nagAlpha === void 0 ? {} : { nag_alpha: args.nagAlpha },
+      ...args.nagTau === void 0 ? {} : { nag_tau: args.nagTau }
+    } : {},
     references: args.references.map((ref) => ({
       image_uri: genaiSourceUri(ref.imageUri, ref.imagePath),
       background: ref.background,
@@ -111086,7 +111099,9 @@ async function generateGenaiVideo(operation, input) {
   } else {
     if (fs10.existsSync(videoPath)) throw new Error("GenAI output already exists");
     if ("references" in args && (args.negativePrompt !== void 0 || (args.guidanceScale ?? 1) > 1)) {
-      const capabilities = external_exports.object({ negative_prompt: external_exports.boolean().optional() }).passthrough().parse(await requestGenai("GET", "/v1/ltx/msr/capabilities", void 0, 15e3));
+      const capabilities = external_exports.object({ negative_prompt: external_exports.boolean().optional(), nag: external_exports.boolean().optional() }).passthrough().parse(await requestGenai("GET", "/v1/ltx/msr/capabilities", void 0, 15e3));
+      if ((args.nagScale ?? 0) > 0 && capabilities.nag !== true)
+        throw new Error("msr_nag_unsupported: the GenAI MSR backend does not advertise NAG; no request was submitted");
       if (capabilities.negative_prompt !== true)
         throw new Error("msr_negative_unsupported: the GenAI MSR backend does not advertise negative conditioning; no request was submitted");
     }
@@ -111227,8 +111242,11 @@ var GENAI_TOOLS = [
     description: "Combine character, clothing, object and background references in one MSR video through ASTRA GenAI. Use video_plan operation reference and video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Up to four subject images and one background; place the background last and number prompt images in that order. Local PNG/JPEG files are shrunk to the render size and, with local voice samples, uploaded in chunks as gateway file ids (data URIs where the gateway has no upload API). MSR is a server-selected deployment with no model parameter, independent of saved LTX v2 weights. It cannot pin first/last frames; use img2video for frame control. Speech and effects are rendered natively. Subjects 1 and 2 may carry an optional voice sample of the character (audioPath or audioUri, at most 10 s, about 5 s used); write any dialogue in the prompt. The model imitates the timbre of the sample and does not preserve it; without a sample the voice follows the prompt. A request with a sample is refused before submission when the gateway MSR backend does not accept samples (GET /v1/ltx/msr/capabilities). Saves a job receipt and resumes via video_status without resubmission.",
     inputSchema: { type: "object", properties: {
       prompt: { type: "string", minLength: 1, maxLength: 2e3, description: "Action and reference roles. A subtitle-free instruction is always appended; the combined prompt must fit 2000 characters." },
-      negativePrompt: { type: "string", minLength: 1, maxLength: 5e3, description: "Separate negative conditioning, e.g. subtitles, captions, text overlays. Requires guidanceScale > 1 and live backend negative_prompt support; otherwise refused before submission." },
+      negativePrompt: { type: "string", minLength: 1, maxLength: 5e3, description: "Separate negative conditioning, e.g. subtitles, captions, text overlays. Requires guidanceScale > 1 or nagScale > 0, plus live backend negative_prompt support; otherwise refused before submission." },
       guidanceScale: { type: "number", minimum: 1, maximum: 10, description: "Classifier-free guidance; omitted keeps gateway default 1. Values above 1 require backend negative conditioning support and change distilled sampling." },
+      nagScale: { type: "number", minimum: 0, maximum: 100, description: "Video-only normalized attention guidance. Omitted or 0 disables NAG; a positive value requires negativePrompt and live backend nag support. Example 11 is experimental, not a subtitle-free guarantee; works at CFG 1." },
+      nagAlpha: { type: "number", minimum: 0, maximum: 1, description: "NAG mixing coefficient; gateway default 0.25. Sent only when nagScale > 0." },
+      nagTau: { type: "number", minimum: 0, maximum: 10, description: "NAG clipping threshold; gateway default 2.5. Sent only when nagScale > 0." },
       references: { type: "array", minItems: 1, maxItems: 5, description: "At most four subjects and one background. Exactly one URI or path per reference.", items: {
         type: "object",
         properties: {
