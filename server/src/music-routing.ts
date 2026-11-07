@@ -13,6 +13,7 @@ import { readMusicMetadata, normalizeMusicFile } from './music-media.js';
 import { requireGeminiKey, requireSunoKey, requireElevenLabsKey, mlxServeConfigured, disabledToolPatterns, disabledToolsFile } from './config.js';
 import { resolveToolGate } from './tool-gate.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
+import { resumeMusic as resumeSunoTask } from './suno-client.js';
 import type { ToolResult } from './handlers.js';
 
 const load = createRequire(import.meta.url);
@@ -144,7 +145,7 @@ export async function executeMusic(raw: unknown, dispatch: MusicDispatch): Promi
       status: 'submitting', ownerPid: process.pid, ownerHost: os.hostname(), reserveUsd: plan.quote.reserveUsd, updatedAt: new Date().toISOString() };
   });
   const started = Date.now();
-  let ok = false;
+  let ok = false, terminal = false;
   try {
     const result = await dispatch(plan.tool, plan.args);
     const receipt = result.musicReceipt as { usage?: unknown; requestId?: string; audioPath?: string } | undefined;
@@ -153,7 +154,11 @@ export async function executeMusic(raw: unknown, dispatch: MusicDispatch): Promi
       Object.assign(state.jobs[plan.requestId], { usage: receipt?.usage, providerId: receipt?.requestId || undefined,
          updatedAt: new Date().toISOString() });
     });
-    if (result.isError) throw new Error('music_adapter_failed: ' + JSON.stringify(result.content));
+    if (result.isError) {
+      // Only an adapter that saw a definite rejection before any provider task existed marks it terminal.
+      terminal = result.terminal === true;
+      throw new Error('music_adapter_failed: ' + JSON.stringify(result.content));
+    }
     if (!plan.outputFile) throw new Error('music_output_missing');
     const sourceFile = receipt?.audioPath || path.join(String(plan.args.outputPath), String(plan.args.filename));
     if (!withinDirectory(canonicalPath(String(plan.args.outputPath)), canonicalPath(sourceFile))) throw new Error('music_source_outside_request');
@@ -165,7 +170,10 @@ export async function executeMusic(raw: unknown, dispatch: MusicDispatch): Promi
     ok = true;
     return response;
   } catch (error) {
-    musicTransaction(directory, undefined, state => { state.jobs[plan.requestId].status = 'submission_unknown'; state.jobs[plan.requestId].evidence = String(error).slice(0, 1500); });
+    musicTransaction(directory, undefined, state => Object.assign(state.jobs[plan.requestId], {
+      status: terminal ? 'failed' : 'submission_unknown', evidence: String(error).slice(0, 1500), updatedAt: new Date().toISOString(),
+      // A rejected submission created no provider task, so it releases its reservation too.
+      ...(terminal ? { spentUsd: 0 } : {}) }));
     throw error;
   } finally {
     recordUsage(plan.outputFile, { ts: new Date().toISOString(), tool: plan.tool, ok, ms: Date.now() - started,
@@ -192,6 +200,37 @@ export async function routeLegacyMusic(tool: string, raw: unknown, dispatch: Mus
   const parsed = parseMusicArgs(tool, args);
   inputFiles(parsed, process.cwd());
   return dispatch(tool, parsed);
+}
+/**
+ * Finish an interrupted Suno request from its recorded task ID: re-query record-info, download
+ * and normalize. It never submits a new generation, so it spends nothing beyond the original task.
+ */
+export async function resumeMusic(raw: unknown): Promise<ToolResult> {
+  gate('music_status');
+  const input = z.object({ directory: z.string().min(1), requestId: idSchema, action: z.literal('resume') }).strict().parse(raw);
+  const directory = fs.realpathSync(input.directory);
+  const jobs = readMusicState(directory)?.jobs;
+  const job = jobs && Object.hasOwn(jobs, input.requestId) ? jobs[input.requestId] : undefined;
+  if (!job || job.status !== 'submission_unknown' || job.tool !== 'suno_generate' || !job.providerId)
+    throw new Error('music_resume_requires_unknown_suno_task: only a submission_unknown suno_generate request with a recorded task ID');
+  const plan: MusicPlan = JSON.parse(fs.readFileSync(path.join(directory, '.work/music-routing/plans', job.planId + '.json'), 'utf8'));
+  const { id, ...body } = plan;
+  if (id !== job.planId || routingHash(body) !== id || !plan.outputFile) throw new Error('music_plan_invalid');
+  gate(plan.tool); requireSunoKey();
+  const result = await resumeSunoTask(job.providerId, { outputPath: String(plan.args.outputPath), filename: String(plan.args.filename), pickTrack: Number(plan.args.pickTrack ?? 0) });
+  if (!result.success || !result.audioPath) {
+    musicTransaction(directory, undefined, state => Object.assign(state.jobs[input.requestId], { evidence: String(result.error).slice(0, 1500), updatedAt: new Date().toISOString() }));
+    throw new Error('music_resume_failed: ' + result.error);
+  }
+  if (!withinDirectory(canonicalPath(String(plan.args.outputPath)), canonicalPath(result.audioPath))) throw new Error('music_source_outside_request');
+  const output = normalizeMusicFile(result.audioPath, plan.outputFile);
+  const response: ToolResult = { content: [{ type: 'text', text: 'Music output: ' + JSON.stringify(output) }],
+    musicReceipt: { requestId: job.providerId, audioPath: result.audioPath, output, review: 'not_reviewed' } };
+  musicTransaction(directory, undefined, state => {
+    if (state.jobs[input.requestId].status !== 'submission_unknown') throw new Error('music_resume_conflict: request changed during resume');
+    Object.assign(state.jobs[input.requestId], { status: 'completed', output, result: response, updatedAt: new Date().toISOString() });
+  });
+  return response;
 }
 export function musicStatus(raw: unknown) {
   gate('music_status');

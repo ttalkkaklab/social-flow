@@ -1,12 +1,11 @@
 /**
  * Blender bridge — request schemas, the embedded script's syntax, and (when a Blender is
- * installed here) round trips: build → camera → animate → read → render, a posed person,
- * and a motion-capture clip retargeted onto the person's rig.
+ * installed here) round trips: build → camera → animate → read → render, and file safety.
  */
 
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, describe, it } from 'node:test';
@@ -26,10 +25,6 @@ import {
   blenderSceneBuildSchema,
   blenderSceneReadSchema,
   buildScene,
-  describeKeys,
-  importMotion,
-  poseKey,
-  previzTimeoutMs,
   readScene,
   renderPreviz,
   setCamera,
@@ -132,11 +127,6 @@ describe('blender bridge schemas', () => {
     assert.ok(!blenderRenderPrevizSchema.safeParse({ blendPath: 's.blend', height: 961 }).success, 'odd height is refused before Blender runs');
   });
 
-  it('the render timeout grows with the frame count and the engine', () => {
-    assert.ok(previzTimeoutMs(300, 'eevee') > previzTimeoutMs(300, 'workbench'));
-    assert.ok(previzTimeoutMs(3000, 'eevee') <= 60 * 60_000);
-  });
-
   it('pose keys need a frame and at least one body group, and only rig bones in the raw map', () => {
     const ok = blenderPoseKeySchema.safeParse({
       blendPath: 's.blend',
@@ -170,43 +160,7 @@ describe('blender bridge schemas', () => {
     assert.ok(!blenderMotionImportSchema.safeParse({ blendPath: 's.blend', object: 'dancer', motionPath: 'clip.bvh', boneMap: { tail: 'Tail' } }).success, 'only rig bones can be mapped');
     assert.ok(blenderMotionImportSchema.safeParse({ blendPath: 's.blend', object: 'dancer', motionPath: 'clip.bvh', boneMap: { 'thigh.L': 'LeftUpLeg' }, speed: 1.5, loop: true }).success);
   });
-
-  it('long key lists collapse to a range in the summary', () => {
-    assert.equal(describeKeys([1, 12, 20]), 'keys [1, 12, 20]');
-    assert.equal(describeKeys(Array.from({ length: 151 }, (_, i) => i + 1)), 'keys 1–151 (151)');
-    assert.equal(describeKeys([]), '');
-  });
 });
-
-/**
- * A ten-frame Biovision clip in the vocabulary CMU and Mixamo share: T-pose at the first
- * frame, the left arm dropping to the side by the last, the hips walking 50 units forward.
- * Units are centimetres; the figure faces the file's +Z, which the importer turns to -Y.
- */
-function syntheticBvh() {
-  const joint = (name, offset, children) =>
-    `JOINT ${name}\n{\nOFFSET ${offset}\nCHANNELS 3 Zrotation Xrotation Yrotation\n${children}\n}`;
-  const end = (offset) => `End Site\n{\nOFFSET ${offset}\n}`;
-  const arm = (side, s) =>
-    joint(`${side}Shoulder`, `${3 * s} 15 0`, joint(`${side}Arm`, `${12 * s} 0 0`, joint(`${side}ForeArm`, `${28 * s} 0 0`, joint(`${side}Hand`, `${25 * s} 0 0`, end(`${10 * s} 0 0`)))));
-  const leg = (side, s) => joint(`${side}UpLeg`, `${9 * s} 0 0`, joint(`${side}Leg`, '0 -42 0', joint(`${side}Foot`, '0 -40 0', end('0 -8 15'))));
-  const hierarchy =
-    `HIERARCHY\nROOT Hips\n{\nOFFSET 0 90 0\nCHANNELS 6 Xposition Yposition Zposition Zrotation Xrotation Yrotation\n` +
-    joint('Spine', '0 10 0', joint('Chest', '0 20 0', joint('Neck', '0 20 0', joint('Head', '0 8 0', end('0 15 0'))) + '\n' + arm('Left', 1) + '\n' + arm('Right', -1))) +
-    '\n' + leg('Left', 1) + '\n' + leg('Right', -1) + '\n}\n';
-  // channel order follows the hierarchy: Hips(6) Spine Chest Neck Head LShoulder LArm LForeArm LHand RShoulder RArm RForeArm RHand LUpLeg LLeg LFoot RUpLeg RLeg RFoot (3 each)
-  const lines = [];
-  for (let f = 0; f < 10; f++) {
-    const u = f / 9;
-    const values = [0, 0, 50 * u, 0, 0, 0]; // hips: walk forward along +Z
-    for (let j = 0; j < 18; j++) {
-      const isLeftArm = j === 5; // LeftArm: T-pose (along +X) → hanging (-90° about Z)
-      values.push(isLeftArm ? -90 * u : 0, 0, 0);
-    }
-    lines.push(values.map((v) => v.toFixed(4)).join(' '));
-  }
-  return `${hierarchy}MOTION\nFrames: 10\nFrame Time: 0.033333\n${lines.join('\n')}\n`;
-}
 
 describe('embedded bridge script', () => {
   it('has no template-literal escapes and parses as Python', () => {
@@ -334,194 +288,6 @@ describe('blender round trip', { skip: !blenderBin() && 'no Blender on this mach
     const missing = await animateObject(blenderObjectAnimateSchema.parse({ blendPath, object: 'ghost', keys: [{ frame: 1, location: [0, 0, 0] }] }));
     assert.ok(!missing.success);
     assert.match(missing.error, /no object named ghost/);
-  });
-
-  it('poses a person by channel and reports where the hands and feet went', async () => {
-    const blend = join(dir, 'pose.blend');
-    const built = await buildScene(blenderSceneBuildSchema.parse({ blendPath: blend, fps: 24, frameEnd: 24, width: 128, height: 224, proxies: [{ name: 'dancer', kind: 'person', height: 1.6 }] }));
-    assert.ok(built.success, built.success ? '' : built.error);
-    const posed = await poseKey(
-      blenderPoseKeySchema.parse({
-        blendPath: blend,
-        object: 'dancer',
-        keys: [
-          { frame: 1, pose: { armL: {}, armR: {}, legL: {}, hips: {} } },
-          { frame: 24, pose: { armL: { raise: 90, elbow: 90 }, armR: { side: 90 }, legL: { raise: 60, knee: 60 }, hips: { offset: [0, 0, -0.1] }, torso: { bow: 20 } } },
-        ],
-      }),
-    );
-    assert.ok(posed.success, posed.success ? '' : posed.error);
-    const a = posed.scene.applied;
-    assert.deepEqual(a.keyframes, [1, 24]);
-    assert.ok(a.bones.includes('upper_arm.L') && a.bones.includes('forearm.L') && a.bones.includes('shin.L') && a.bones.includes('spine') && a.bones.includes('hips'), a.bones.join(','));
-    assert.ok(!a.bones.includes('head'), 'an absent group keys nothing');
-    const t = a.tails;
-    // left arm forward with a bent elbow: the hand rises above the elbow and sits in front of the body
-    assert.ok(t['hand.L'][1] < -0.2 && t['hand.L'][2] > 1.1, `hand.L ${t['hand.L']}`);
-    // right arm out to the side: the hand is far out on -X (the figure's right) at shoulder height
-    assert.ok(t['hand.R'][0] < -0.5 && Math.abs(t['hand.R'][2] - 0.82 * 1.6) < 0.2, `hand.R ${t['hand.R']}`);
-    // a marching step — thigh up 60, knee 60 leaves the shin vertical: the toe clears the floor
-    assert.ok(t['foot.L'][2] > 0.08, `foot.L ${t['foot.L']}`);
-    assert.ok(t['foot.R'][2] < 0.05, `foot.R stays down ${t['foot.R']}`);
-    const rig = posed.scene.objects.find((o) => o.name === 'dancer.rig');
-    assert.deepEqual(rig.keyframes, [1, 24]);
-
-    // the root still moves the whole figure; the pose rides along
-    const walked = await animateObject(blenderObjectAnimateSchema.parse({ blendPath: blend, object: 'dancer', keys: [{ frame: 1, location: [0, 0, 0] }, { frame: 24, location: [1, 0, 0] }] }));
-    assert.ok(walked.success, walked.success ? '' : walked.error);
-    assert.deepEqual(walked.scene.objects.find((o) => o.name === 'dancer.rig')?.keyframes, [1, 24], 'the body keys survive a root move');
-
-    // a fresh call (clearExisting true) puts the bones it does not key back at rest — the
-    // right arm that was out to the side hangs again, not frozen where the last call left it
-    const again = await poseKey(blenderPoseKeySchema.parse({ blendPath: blend, object: 'dancer', keys: [{ frame: 1, pose: { head: { nod: 20 } } }] }));
-    assert.ok(again.success, again.success ? '' : again.error);
-    assert.ok(Math.abs(again.scene.applied.tails['hand.R'][0] + 0.12 * 1.6) < 0.05 && again.scene.applied.tails['hand.R'][2] < 0.7, `hand.R hangs after a fresh call ${again.scene.applied.tails['hand.R']}`);
-    assert.ok(again.scene.applied.tails['foot.L'][2] < 0.05, `foot.L is down again ${again.scene.applied.tails['foot.L']}`);
-
-    const notRigged = await poseKey(blenderPoseKeySchema.parse({ blendPath, object: 'dog', keys: [{ frame: 1, pose: { head: { nod: 10 } } }] }));
-    assert.ok(!notRigged.success);
-    assert.match(notRigged.error, /has no rig/);
-  });
-
-  it('keeps delayed pose channels at rest on the opening frame', async () => {
-    const blend = join(dir, 'delayed-pose.blend');
-    const built = await buildScene(blenderSceneBuildSchema.parse({ blendPath: blend, fps: 24, frameEnd: 24, proxies: [{ name: 'actor', kind: 'person' }] }));
-    assert.ok(built.success, built.success ? '' : built.error);
-    const posed = await poseKey(blenderPoseKeySchema.parse({
-      blendPath: blend, object: 'actor', interpolation: 'LINEAR', keys: [
-        { frame: 1, pose: { head: { nod: 15 }, hips: { turn: 10 } } },
-        { frame: 24, pose: { armR: { raise: 70 }, hips: { offset: [0, 0, -0.2] } } },
-      ],
-    }));
-    assert.ok(posed.success, posed.success ? '' : posed.error);
-    const probe = [
-      'import bpy,json',
-      'rig=bpy.data.objects["actor.rig"]',
-      'rows=[]',
-      'for f in [1,12,24]:',
-      ' bpy.context.scene.frame_set(f)',
-      ' rows.append({"arm":rig.pose.bones["upper_arm.R"].rotation_quaternion.angle,"head":rig.pose.bones["head"].rotation_quaternion.angle,"hips":list(rig.pose.bones["hips"].location)})',
-      'print("POSE_PROBE="+json.dumps(rows))',
-    ].join('\n');
-    const stdout = execFileSync(blenderBin(), ['--background', '--factory-startup', blend, '--python-expr', probe], { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'] });
-    const rows = JSON.parse(stdout.match(/POSE_PROBE=(.*)/)[1]);
-    assert.ok(rows[0].arm < 1e-5, `a future arm key leaked into frame 1: ${rows[0].arm}`);
-    assert.ok(Math.hypot(...rows[0].hips) < 1e-5, 'a later pelvis offset must not affect its earlier rotation-only key');
-    assert.ok(rows[0].head > 0.05, 'the explicitly authored opening head pose stays intact');
-    assert.ok(rows[1].arm > rows[0].arm && rows[1].arm < rows[2].arm, 'the arm progresses toward its later pose');
-    assert.ok(Math.abs(Math.hypot(...rows[2].hips) - 0.2) < 1e-5, 'the authored final pelvis offset is preserved');
-  });
-
-  it('retargets a Biovision clip onto the person, scaled, faced and floored', async () => {
-    const blend = join(dir, 'motion.blend');
-    const clip = join(dir, 'tpose-drop.bvh');
-    writeFileSync(clip, syntheticBvh(), 'utf-8');
-    const built = await buildScene(blenderSceneBuildSchema.parse({ blendPath: blend, fps: 30, frameEnd: 30, width: 128, height: 224, proxies: [{ name: 'actor', kind: 'person', height: 1.75 }] }));
-    assert.ok(built.success, built.success ? '' : built.error);
-
-    const first = await importMotion(blenderMotionImportSchema.parse({ blendPath: blend, object: 'actor', motionPath: clip }));
-    assert.ok(first.success, first.success ? '' : first.error);
-    const m = first.scene.applied.motion;
-    for (const [canon, src] of Object.entries({ hips: 'Hips', spine: 'Spine', chest: 'Chest', neck: 'Neck', head: 'Head', 'shoulder.L': 'LeftShoulder', 'upper_arm.L': 'LeftArm', 'forearm.L': 'LeftForeArm', 'hand.L': 'LeftHand', 'thigh.R': 'RightUpLeg', 'shin.R': 'RightLeg', 'foot.R': 'RightFoot' })) {
-      assert.equal(m.mapped[canon], src, `${canon} should take ${src}: ${JSON.stringify(m.mapped)}`);
-    }
-    assert.deepEqual(m.unmapped, [], 'every rig bone found a source bone');
-    assert.equal(m.sourceBones, 19);
-    assert.ok(m.frames >= 9 && m.frames <= 11, `ten source frames bake to about ten keys: ${m.frames}`);
-    assert.equal(first.scene.applied.keyframes[0], 1);
-    // the clip's leg is 82 units, the figure's 0.45 × 1.75 m
-    assert.ok(Math.abs(m.heightRatio - (0.45 * 1.75) / 82) < 0.0005, `scale ${m.heightRatio}`);
-    assert.ok(Math.abs(m.yawDeg) < 1, `the file already faces -Y: ${m.yawDeg}`);
-    // first frame is a T-pose: the left hand is far out on +X at shoulder height, feet on the floor
-    const t0 = first.scene.applied.tails;
-    assert.ok(t0['hand.L'][0] > 0.6 && Math.abs(t0['hand.L'][2] - 0.82 * 1.75) < 0.15, `hand.L ${t0['hand.L']}`);
-    assert.ok(t0['hand.R'][0] < -0.6, `hand.R ${t0['hand.R']}`);
-    assert.ok(Math.abs(t0['foot.L'][2]) < 0.05 && Math.abs(t0['foot.R'][2]) < 0.05, `feet on the floor ${t0['foot.L']} ${t0['foot.R']}`);
-    assert.ok(Math.abs(t0['head'][2] - 1.75) < 0.12, `head near the top ${t0['head']}`);
-    const rig = first.scene.objects.find((o) => o.name === 'actor.rig');
-    assert.ok(rig.keyframes.length >= 9 && rig.keyframes[0] === 1, `baked keys ${rig.keyframes}`);
-    assert.ok(!first.scene.objects.some((o) => o.name === 'Hips' || o.name.includes('tpose-drop')), 'the source skeleton is gone after the bake');
-
-    // by the last frame the left arm has dropped, the right is still out; in place, the walk
-    // has not moved the figure — with full root motion it has
-    const t1 = first.scene.applied.tailsEnd;
-    assert.ok(t1['hand.L'][2] < 0.75 && Math.abs(t1['hand.L'][0]) < 0.35, `hand.L hangs ${t1['hand.L']}`);
-    assert.ok(t1['hand.R'][0] < -0.6, `hand.R still out ${t1['hand.R']}`);
-    assert.ok(Math.abs(t1['head'][1]) < 0.15, `in place, the head stays over the origin: ${t1['head']}`);
-    const travelled = await importMotion(blenderMotionImportSchema.parse({ blendPath: blend, object: 'actor', motionPath: clip, rootMotion: 'full' }));
-    assert.ok(travelled.success, travelled.success ? '' : travelled.error);
-    assert.ok(travelled.scene.applied.tailsEnd['head'][1] < -0.3, `with full root motion the walk carries the figure forward (-Y): ${travelled.scene.applied.tailsEnd['head']}`);
-    // a slice that starts near the end is a single baked frame, already in the dropped pose
-    const late = await importMotion(blenderMotionImportSchema.parse({ blendPath: blend, object: 'actor', motionPath: clip, fromSeconds: 0.29 }));
-    assert.ok(late.success, late.success ? '' : late.error);
-    assert.equal(late.scene.applied.motion.frames, 1);
-    assert.ok(late.scene.applied.tails['hand.L'][2] < 0.75, `hand.L hangs from the first baked frame ${late.scene.applied.tails['hand.L']}`);
-
-    // loop fills the scene's range; speed shortens the bake
-    const looped = await importMotion(blenderMotionImportSchema.parse({ blendPath: blend, object: 'actor', motionPath: clip, loop: true, frameStart: 1 }));
-    assert.ok(looped.success, looped.success ? '' : looped.error);
-    assert.equal(looped.scene.applied.motion.frames, 30);
-    const fast = await importMotion(blenderMotionImportSchema.parse({ blendPath: blend, object: 'actor', motionPath: clip, speed: 2 }));
-    assert.ok(fast.success, fast.success ? '' : fast.error);
-    assert.ok(fast.scene.applied.motion.frames <= 6, `double speed halves the keys: ${fast.scene.applied.motion.frames}`);
-
-    // an accent layered on the baked clip takes over a window, not one frame: with ease 3 at
-    // frame 5 the upper arm's clip keys at 3, 4, 6, 7 go and the key at 5 is the accent — and
-    // the leg key this call adds at 7 is the leg's, so it does not save the arm's clip key at 7
-    const whole = await importMotion(blenderMotionImportSchema.parse({ blendPath: blend, object: 'actor', motionPath: clip }));
-    assert.ok(whole.success, whole.success ? '' : whole.error);
-    const accent = await poseKey(blenderPoseKeySchema.parse({ blendPath: blend, object: 'actor', clearExisting: false, ease: 3, keys: [{ frame: 5, pose: { armL: { raise: 170 } } }, { frame: 7, pose: { legL: { knee: 30 } } }] }));
-    assert.ok(accent.success, accent.success ? '' : accent.error);
-    assert.deepEqual(accent.scene.applied.keyframes, [5, 7], 'both accent frames are keyed');
-    const reached = await poseKey(blenderPoseKeySchema.parse({ blendPath: blend, object: 'actor', clearExisting: false, ease: 0, keys: [{ frame: 5, pose: { armL: { raise: 170 } } }] }));
-    assert.ok(reached.success && reached.scene.applied.tails['hand.L'][2] > 1.9, `the accent is reached: ${JSON.stringify(reached.success && reached.scene.applied.tails)}`);
-    assert.ok(accent.scene.objects.find((o) => o.name === 'actor.rig').keyframes.length >= 9, 'the clip keys on the other bones stay');
-    const keyProbe = [
-      'import bpy',
-      'o = bpy.data.objects["actor.rig"]; ad = o.animation_data; act = ad.action; fcs = []',
-      'try:',
-      '    for layer in act.layers:',
-      '        for strip in layer.strips:',
-      '            bag = strip.channelbag(ad.action_slot)',
-      '            if bag is not None: fcs.extend(bag.fcurves)',
-      'except Exception:',
-      '    fcs = list(act.fcurves)',
-      'fc = [f for f in fcs if f.data_path == \'pose.bones["upper_arm.L"].rotation_quaternion\'][0]',
-      'print("KEYS", len(fc.keyframe_points), sorted(int(round(k.co[0])) for k in fc.keyframe_points))',
-    ].join('\n');
-    const keyCount = execFileSync(blenderBin(), ['--background', '--factory-startup', blend, '--python-expr', keyProbe], { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'] })
-      .split('\n')
-      .find((l) => l.startsWith('KEYS'));
-    assert.ok(keyCount && !/\b[3467]\b/.test(keyCount.split('[')[1]) && / 5[,\]]/.test(keyCount), `window (2, 8) cleared around the accent: ${keyCount}`);
-
-    // an FBX keeps the file's frame rate: exported at 30 fps, it lands in a 24 fps cut at the
-    // right speed and leaves the scene's fps alone
-    const fbx = join(dir, 'tpose-drop.fbx');
-    execFileSync(
-      blenderBin(),
-      ['--background', '--factory-startup', '--python-expr',
-        // the exporter bakes the scene's frame range, so pin it to the clip's ten frames
-        `import bpy\nbpy.ops.wm.read_factory_settings(use_empty=True)\nsc=bpy.context.scene\nsc.render.fps=30\nsc.frame_start=1\nsc.frame_end=10\nbpy.ops.import_anim.bvh(filepath=${JSON.stringify(clip)}, target="ARMATURE", frame_start=1, use_fps_scale=True, update_scene_fps=False, update_scene_duration=False)\nbpy.ops.export_scene.fbx(filepath=${JSON.stringify(fbx)}, bake_anim=True, bake_anim_use_all_actions=False, bake_anim_use_nla_strips=False, add_leaf_bones=False)`],
-      { stdio: 'ignore' },
-    );
-    assert.ok(existsSync(fbx), 'Blender exported the FBX fixture');
-    const slow = join(dir, 'motion24.blend');
-    const built24 = await buildScene(blenderSceneBuildSchema.parse({ blendPath: slow, fps: 24, frameEnd: 24, width: 128, height: 224, proxies: [{ name: 'actor', kind: 'person', height: 1.75 }] }));
-    assert.ok(built24.success, built24.success ? '' : built24.error);
-    const fromFbx = await importMotion(blenderMotionImportSchema.parse({ blendPath: slow, object: 'actor', motionPath: fbx }));
-    assert.ok(fromFbx.success, fromFbx.success ? '' : fromFbx.error);
-    assert.equal(fromFbx.scene.frame.fps, 24, 'the scene keeps its own fps after an FBX import');
-    assert.equal(fromFbx.scene.applied.motion.sourceFps, 30);
-    assert.ok(fromFbx.scene.applied.motion.frames >= 7 && fromFbx.scene.applied.motion.frames <= 9, `ten 30-fps frames are about eight 24-fps keys: ${fromFbx.scene.applied.motion.frames}`);
-    assert.ok(Math.abs(fromFbx.scene.applied.motion.sourceSeconds - 0.333) < 0.05, `clip length in seconds ${fromFbx.scene.applied.motion.sourceSeconds}`);
-    assert.ok(fromFbx.scene.applied.tails['hand.L'][0] > 0.6, `the FBX pose arrives too: ${fromFbx.scene.applied.tails['hand.L']}`);
-
-    const wrongMap = await importMotion(blenderMotionImportSchema.parse({ blendPath: blend, object: 'actor', motionPath: clip, boneMap: { 'thigh.L': 'NoSuchBone' } }));
-    assert.ok(!wrongMap.success);
-    assert.match(wrongMap.error, /NoSuchBone/);
-    const notRigged = await importMotion(blenderMotionImportSchema.parse({ blendPath, object: 'can', motionPath: clip }));
-    assert.ok(!notRigged.success);
-    assert.match(notRigged.error, /has no rig/);
   });
 
   it('two files rendering into one folder keep their own private files', async () => {

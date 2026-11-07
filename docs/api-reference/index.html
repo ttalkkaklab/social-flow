@@ -16,11 +16,11 @@
 <header class="hero">
   <div class="kicker">API REFERENCE</div>
   <h1>social-flow가 호출하는 전체 API</h1>
-  <p class="sub">내부 MCP 서버(<code>server/src</code>)가 실제로 호출하는 외부 API 13종의 공식 계약을 정리한 레퍼런스다. 각 문서는 <strong>공식 문서가 말하는 것</strong>과 <strong>이 저장소의 구현이 실제로 하는 것</strong>을 나란히 적어, 둘이 어긋나는 지점을 바로 볼 수 있게 했다. 이미지·음성·받아쓰기는 네트워크를 타지 않는 온디바이스 엔진 3종이 기본 경로이며 그쪽은 호출할 외부 계약이 없다.</p>
+  <p class="sub">내부 MCP 서버(<code>server/src</code>)가 실제로 호출하는 외부 API 12종의 공식 계약을 정리한 레퍼런스다. 각 문서는 <strong>공식 문서가 말하는 것</strong>과 <strong>이 저장소의 구현이 실제로 하는 것</strong>을 나란히 적어, 둘이 어긋나는 지점을 바로 볼 수 있게 했다. 이미지·음성·받아쓰기는 네트워크를 타지 않는 온디바이스 엔진 3종이 기본 경로이며 그쪽은 호출할 외부 계약이 없다.</p>
   <div class="meta">
     <span>기준일 <strong>2026-08-30</strong></span>
     <span>툴 <strong>77종</strong></span>
-    <span>외부 API <strong>13종</strong> + 로컬 <strong>3종</strong> + MLX Core</span>
+    <span>외부 API <strong>12종</strong> + 로컬 <strong>3종</strong> + MLX Core</span>
     <span>MCP SDK <strong>1.30.0</strong></span>
   </div>
 </header>
@@ -53,19 +53,9 @@
       <p>세 번째 음성 레인. 모델 4종과 요청당 글자 상한, 쿼리 파라미터인 <code>output_format</code> 29종과 티어 게이트, 글자 단위 타임스탬프 두 정렬(한국어는 normalized 가 로마자), 보이스 10종 대화, 권한 단위 키와 오류 status 목록 — 실호출 실측 포함.</p>
       <div class="tools">tts_elevenlabs_generate · tts_elevenlabs_dialogue · tts_elevenlabs_voices</div>
     </a>
-    <a class="card" href="gemini-veo.html">
-      <h3>Google Veo 3.1</h3>
-      <p>모델 3종의 해상도·길이·비율 교차 제약, 연장(+7초·최대 20회)과 참조 이미지(최대 3장·8초 고정), long-running operation 폴링.</p>
-      <div class="tools">veo_text2video · veo_img2video · veo_extension · veo_reference</div>
-    </a>
-    <a class="card" href="veo-portrait.html">
-      <h3>Veo 인물·참조 정책</h3>
-      <p>성인 얼굴은 통과하고 아이 얼굴은 막히는 <code>personGeneration</code> 계약, 자산 등록소가 없는 이유, 3.1 에서 닫힌 화풍 참조와 구도를 정하는 첫·끝 프레임.</p>
-      <div class="tools">personGeneration · referenceType asset / style · lastFrame</div>
-    </a>
     <a class="card" href="seedance.html">
       <h3>ByteDance Seedance</h3>
-      <p>모델 7종의 능력 차이(해상도·길이·참조 이미지·음성·seed), 태스크 생성 → 폴링 → 24시간 URL 회수, 토큰 과금 산식과 실사 얼굴 입력 거부.</p>
+      <p>Dreamina Seedance 2.x 모델 4종의 능력 차이(해상도·길이·참조 이미지·음성), 태스크 생성 → 폴링 → 24시간 URL 회수, 토큰 과금 산식과 실사 얼굴 입력 거부.</p>
       <div class="tools">seedance_text2video · seedance_img2video · seedance_reference</div>
     </a>
     <a class="card" href="seedance-portrait.html">
@@ -90,7 +80,7 @@
     </a>
     <a class="card" href="../research/2026-08-12-local-image-generation/index.html">
       <h3>온디바이스 엔진 (Z-Image · Supertonic · Qwen3-ASR)</h3>
-      <p>외부 계약이 없는 세 툴과, 루프백 HTTP 로 MLX Core 를 부르는 mlx_* 여섯. Z-Image Turbo 는 mflux/MLX 로 돌아 1024²가 9스텝에 149~210초, 1088×1920 이 462초다(M4 Max 실측). Supertonic 은 CPU 만 쓰고 44.1kHz wav 를 낸다. Qwen3-ASR 은 한글 STT 기본 경로다. mlx_* 는 :11234 가 꺼져 있으면 닫히고, 이 플러그인은 앱을 띄우지 않는다. 기본 경로는 그대로 Z-Image · Supertonic · Lyria · Veo/Seedance 다.</p>
+      <p>외부 계약이 없는 세 툴과, 루프백 HTTP 로 MLX Core 를 부르는 mlx_* 여섯. Z-Image Turbo 는 mflux/MLX 로 돌아 1024²가 9스텝에 149~210초, 1088×1920 이 462초다(M4 Max 실측). Supertonic 은 CPU 만 쓰고 44.1kHz wav 를 낸다. Qwen3-ASR 은 한글 STT 기본 경로다. mlx_* 는 :11234 가 꺼져 있으면 닫히고, 이 플러그인은 앱을 띄우지 않는다. 기본 경로는 그대로 Z-Image · Supertonic · Lyria · 저장된 영상 모델(Seedance 2.x·LTX)이다.</p>
       <div class="tools">image_local_generate · tts_local_generate · stt_local_transcribe · mlx_*</div>
     </a>
     <a class="card" href="serpapi.html">
@@ -129,15 +119,15 @@
 <section id="creds">
   <h2>자격증명 매트릭스</h2>
   <p><strong>키는 서로 독립인 두 묶음이고, 어느 한쪽에서 멈춰도 된다.</strong></p>
-  <p><strong>① 제작 키</strong> — 영상을 만드는 쪽이다. <code>OPENAI_API_KEY</code> 가 커버와 글자 들어간 프레임을 그리고(로컬 이미지 생성은 한글 자소가 깨진다), <code>GEMINI_API_KEY</code> 가 생성 영상 클립·연기 나레이션·BGM 을 맡는다. 엄밀히 따지면 둘 다 선택이다 — 씬 배경은 온디바이스 <code>image_local_generate</code>, 나레이션은 온디바이스 <code>tts_local_generate</code> 가 기본 경로라 키가 하나도 없어도 영상 한 편이 나온다. 조사 키(<code>SERPAPI_API_KEY</code>·Naver 한 쌍)도 선택이고, 없으면 스토리보드가 내장 WebSearch 로 간다.</p>
+  <p><strong>① 제작 키</strong> — 영상을 만드는 쪽이다. <code>OPENAI_API_KEY</code> 가 커버와 글자 들어간 프레임을 그리고(로컬 이미지 생성은 한글 자소가 깨진다), <code>GEMINI_API_KEY</code> 가 연기 나레이션·BGM 을 맡는다. 생성 영상 클립은 저장된 영상 모델에 따라 <code>ARK_API_KEY</code>(Seedance 2.x)나 <code>ASTRA_GENAI_API_KEY</code>(LTX)로 만든다. 엄밀히 따지면 모두 선택이다 — 씬 배경은 온디바이스 <code>image_local_generate</code>, 나레이션은 온디바이스 <code>tts_local_generate</code> 가 기본 경로라 키가 하나도 없어도 영상 한 편이 나온다. 조사 키(<code>SERPAPI_API_KEY</code>·Naver 한 쌍)도 선택이고, 없으면 스토리보드가 내장 WebSearch 로 간다.</p>
   <p><strong>② 플랫폼 자격증명(Threads · Instagram · YouTube · Facebook) — 선택이다.</strong> 넣으면 파이프라인이 끝까지 가고 그다음부터는 알아서 굴러간다 — <code>publish</code> 가 내 계정에 바로 올리고, 성장 스킬(<code>grow-threads</code>·<code>grow-youtube</code>·<code>grow-instagram</code>)이 <code>/loop</code> 위에서 댓글 답글·지표 관찰·키워드 대화 참여·대기열 보충·게시까지 <code>init</code> 때 한 번 승인한 상시 승인서 안에서 채널을 운영한다. 안 넣어도 제작까지는 전부 돌아간다 — <code>produce</code> 가 완성 영상과 플랫폼별 텍스트를 <code>data/&lt;채널&gt;/episodes/&lt;주제&gt;/output/</code> 에 써 주고, 그 파일을 손으로 올리면 된다. 못 쓰는 건 게시·성장 절반뿐이고 자격증명에 묶인 툴 9종은 목록에 나오지도 않는다. 플랫폼 단위라 전부 아니면 전무도 아니다 — YouTube 만 연결하면 YouTube 만 게시·성장하고 나머지는 수동으로 둔다. 나중에 토큰을 넣어도 서버를 다시 띄울 필요가 없다.</p>
   <p>키는 <strong>기동 시가 아니라 툴 호출 시점에</strong> 검증된다. 검색 키 없이도 게시 툴은 동작해야 하고 그 반대도 마찬가지이기 때문이다. 아래 표의 환경변수 이름만 기록하고 값은 어디에도 커밋하지 않는다.</p>
   <div class="table-scroll">
   <table>
     <thead><tr><th>환경변수</th><th>필요한 툴</th><th>없을 때</th><th>발급처</th></tr></thead>
     <tbody>
-      <tr><td><code>GEMINI_API_KEY</code><br>(또는 <code>GOOGLE_API_KEY</code>)</td><td><code>veo_*</code> · <code>tts_generate</code> · <code>tts_multi_speaker</code> · <code>music_generate*</code></td><td>영상·음성·음악 생성 불가. 나머지는 정상</td><td><a href="https://aistudio.google.com/apikey">AI Studio</a></td></tr>
-      <tr><td><code>ARK_API_KEY</code></td><td><code>seedance_*</code></td><td>Seedance 영상 생성 불가. <code>veo_*</code> 는 정상</td><td><a href="https://ai.byteplus.com/ark/region:ap-southeast-1/apikey">BytePlus ModelArk</a></td></tr>
+      <tr><td><code>GEMINI_API_KEY</code><br>(또는 <code>GOOGLE_API_KEY</code>)</td><td><code>tts_generate</code> · <code>tts_multi_speaker</code> · <code>music_generate*</code></td><td>음성·음악 생성 불가. 나머지는 정상</td><td><a href="https://aistudio.google.com/apikey">AI Studio</a></td></tr>
+      <tr><td><code>ARK_API_KEY</code></td><td><code>seedance_*</code></td><td>Seedance 영상 생성 불가. LTX 레인(<code>astra_genai_*</code>·<code>astra_*</code>·<code>ltx_video_generate</code>)은 정상</td><td><a href="https://ai.byteplus.com/ark/region:ap-southeast-1/apikey">BytePlus ModelArk</a></td></tr>
       <tr><td><code>SUNO_API_KEY</code></td><td><code>suno_*</code></td><td>보컬 풀송·Suno 루프 불가. <code>music_*</code>(Lyria) 는 정상</td><td><a href="https://sunoapi.org/api-key">sunoapi.org</a></td></tr>
       <tr><td><code>ELEVENLABS_API_KEY</code></td><td><code>tts_elevenlabs_*</code></td><td>세 번째 음성 레인 불가. <code>tts_generate</code>(Gemini)·<code>tts_local_generate</code> 는 정상. 제한 키는 <code>text_to_speech</code> 권한, 목록은 <code>voices_read</code> 가 필요</td><td><a href="https://elevenlabs.io/app/settings/api-keys">ElevenLabs</a></td></tr>
       <tr><td><code>OPENAI_API_KEY</code></td><td><code>gpt_image_*</code></td><td>이미지 생성 불가</td><td><a href="https://platform.openai.com/api-keys">OpenAI</a></td></tr>
@@ -185,10 +175,6 @@
       <tr><td><code>image_local_generate</code></td><td><span class="badge wr">쓰기</span> <span class="badge free">무인증</span></td><td>없음 — 로컬 <code>mflux-generate-z-image-turbo</code> 프로세스</td><td><a href="../research/2026-08-12-local-image-generation/index.html">로컬 이미지 조사</a></td></tr>
       <tr><td><code>mlx_image_generate</code></td><td><span class="badge wr">쓰기</span> <span class="badge free">무인증</span></td><td>루프백 <code>POST /v1/images/generations</code></td><td>MLX Core / mlx-serve</td></tr>
       <tr><td><code>mlx_image_edit</code></td><td><span class="badge wr">쓰기</span> <span class="badge free">무인증</span></td><td>같은 엔드포인트 (<code>mode:edit</code>)</td><td>MLX Core / mlx-serve</td></tr>
-      <tr><td><code>veo_text2video</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>models.generateVideos</code> + operation 폴링</td><td><a href="gemini-veo.html">Veo</a></td></tr>
-      <tr><td><code>veo_img2video</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>models.generateVideos</code> (<code>image</code>/<code>lastFrame</code>)</td><td><a href="gemini-veo.html">Veo</a></td></tr>
-      <tr><td><code>veo_extension</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>models.generateVideos</code> (<code>video</code>)</td><td><a href="gemini-veo.html">Veo</a></td></tr>
-      <tr><td><code>veo_reference</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>models.generateVideos</code> (<code>referenceImages</code>)</td><td><a href="gemini-veo.html">Veo</a></td></tr>
       <tr><td><code>seedance_text2video</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>POST /contents/generations/tasks</code> + 폴링</td><td><a href="seedance.html">Seedance</a></td></tr>
       <tr><td><code>seedance_img2video</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td>같은 엔드포인트 (<code>role: first_frame/last_frame</code>)</td><td><a href="seedance.html">Seedance</a></td></tr>
       <tr><td><code>seedance_reference</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td>같은 엔드포인트 (<code>role: reference_image</code>)</td><td><a href="seedance.html">Seedance</a></td></tr>

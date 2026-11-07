@@ -39,16 +39,15 @@
  *       # the produce §3 recipe) + subject motion + positive locks + the visual.audio
  *       # sentence. storyboard §4 stores the stdout whole (scenes-schema §clip prompt);
  *       # produce sends it verbatim. --engine picks the machine checks: seedance blocks
- *       # timecodes (2.0 responds to shot numbers only; 1.5 pro shows none in any
- *       # example) and digit seconds; veo allows [mm:ss] timestamps and blocks digit
- *       # seconds; seedance-2.5 takes integer-second forms ("0-3 seconds", "[1s-4s]").
+ *       # timecodes (2.0 responds to shot numbers only) and digit seconds;
+ *       # seedance-2.5 takes integer-second forms ("0-3 seconds", "[1s-4s]").
  *       # State changes are written in words on every route: "in under half a second".
  *       # Negative directives are blocked except the Audio: sentence ("no music, no
  *       # speech" is the established wording) and, on seedance routes, the vendor's
  *       # artifact classes (subtitles·text·logo·watermark·bgm — 2.0 guide templates
- *       # them). A seedance route takes two more rules the veo route doesn't:
- *       # **the body carries no Korean** (Chinese or English only; Korean lives inside
- *       # the quotes of a dialogue line, or the shot routes to seedance-2.5) and
+ *       # them). A seedance route takes two more rules:
+ *       # **the body carries no Korean** (English only; Korean lives inside the
+ *       # quotes of a dialogue line) and
  *       # **--locks is required** — the image lane closes with a consistency lock, which
  *       # is also the only place an exclusion can go on an engine with no negativePrompt
  *       # argument. --with-space prepends the From-the-camera sentence
@@ -68,7 +67,7 @@
  * Owner 2026-08-25: never ask for a letterbox / lower-third fade / top-bottom gradient.
  * The image tools (gpt_image_text2img, image_local_generate) have
  * no exclusion argument, so --exclude goes into the body as the short noun list the
- * profile requires; only veo_* takes a separate negativePrompt.
+ * profile requires.
  *
  * stdout is the assembled prompt (or OK on --check). Banned language anywhere in the
  * assembled prompt — the space slots, --scene, --mood, --exclude — prints to stderr and
@@ -86,14 +85,16 @@ const sourceContext = require('./source-context.js');
 const SIZE_WORDS = {
   ...require('./film-techniques.js').SIZE_WORDS,
   ws: require('./film-techniques.js').SIZE_WORDS.ls,
+  // Composition labels carry no crop of their own (film-techniques.js VALUES.size); each phrase says
+  // what is in frame, in positive words, so the size icon still reaches the picture.
   insert: "insert, the object fills the frame",
-  two: "two-shot",
-  three: "three-shot",
-  ots: "over-the-shoulder",
-  pov: "point of view from the character eyes, no view of their face",
-  back: "from behind, the back fills the frame",
-  cutaway: "cutaway",
-  reaction: "reaction close-up"
+  two: "two-shot, both people in frame",
+  three: "three-shot, all three people in frame",
+  ots: "over-the-shoulder shot, the near shoulder and the back of the head soft in the foreground, the far face toward the camera",
+  pov: "point-of-view shot from the character eye height, showing what the character sees",
+  back: "seen from behind, the back of the head and shoulders toward the camera",
+  cutaway: "cutaway, a separate view away from the main action",
+  reaction: "reaction close-up, the face of the one who reacts"
 };
 
 // --no-person: the same ladder for a still with nobody in it (a vent box, a tunnel cutaway).
@@ -118,7 +119,9 @@ const ANGLE_WORDS = {
   high: "seen from above",
   low: "from a low angle, looking up",
   overhead: "from straight overhead",
-  dutch: "at a dutch angle, horizon tilted"
+  dutch: "at a dutch angle, horizon tilted",
+  ground: "from ground level, the lens just above the floor",
+  over: "over the shoulder of the near person"
 };
 
 // Camera-inference ("left view of X"), allocentric ("from the car's right", "to her
@@ -137,9 +140,8 @@ const BANNED = [
 ];
 
 // ── Clip mode — the generated-video prompt checks ──
-// Negative directives in the body draw the noun instead (measured 4 of 4 on images; Veo's
-// own guide marks the form not recommended) — exclusions are Veo's negativePrompt argument,
-// and on Seedance a re-description plus positive locks. The Audio: sentence is exempt:
+// Negative directives in the body draw the noun instead (measured 4 of 4 on images) —
+// on Seedance an exclusion becomes a re-description plus positive locks. The Audio: sentence is exempt:
 // "no music, no speech" is a state description, the established wording (scenes-schema
 // §clip audio). Edit directives about cutting keep whichever negation word carries them.
 // storyboard-html-template.html carries NEG_RE/NEG_OK verbatim (negHits) — the selftest
@@ -150,8 +152,7 @@ const NEG_OK = /^(cut|cuts|camera cuts|timecode|timecodes|timecode splits|refere
 const NEG_RE = /\b(no|not|avoid|avoids|never|don't|dont|doesn't|won't)\b[ \t]*([a-z' \t-]{0,24})/gi;
 // On a seedance route the vendor's own 2.0 guide templates directive negatives for the
 // artifact classes only — subtitles, on-frame text, logos, watermarks (2.5 adds audio/BGM).
-// Everything else stays positive re-description. On veo every exclusion is the
-// negativePrompt argument, so no body negative is exempt there.
+// Everything else stays positive re-description.
 const ARTIFACT_OK = /(subtitle|caption|text|logo|watermark|bgm)/;
 function negDirectiveHits(text, engine) {
   if (!text) return [];
@@ -169,39 +170,37 @@ function negDirectiveHits(text, engine) {
   return out;
 }
 // Timecodes and digit seconds. Seedance 2.0 self-reports unstable precision timing, so a
-// Seedance-routed prompt takes neither; Veo 3.1 presents [mm:ss] interval prompting as a
-// workflow, so on veo the timestamp form passes and only bare digit seconds are blocked
-// (in-clip state changes are written in words on both engines: "in under half a second").
+// Seedance-routed prompt takes neither (in-clip state changes are written in words:
+// "in under half a second").
 // Bracketed spans and zero-led clock times only — "9:16" is a ratio, not a timecode.
 const TIMESTAMP_RE = /\[\d{1,2}:\d{2}(?:\s*[-–~]\s*\d{1,2}:\d{2})?\]|\b0\d?:\d{2}\b/;
 const DIGIT_SECONDS_RE = /\b(\d{1,3})(?:\.\d+)?\s*(s|secs?|seconds?)\b/gi;
 function timingHits(text, engine) {
   const hits = [];
   if (!text) return hits;
-  if (TIMESTAMP_RE.test(text) && engine !== "veo")
-    hits.push("clock timecode — 2.0 responds to shot numbers, not timestamps, and 1.5 pro shows none in any example; order beats by description and cut in the edit (on seedance-2.5 write integer-second forms, on veo [mm:ss] is the workflow)");
+  if (TIMESTAMP_RE.test(text))
+    hits.push("clock timecode — 2.0 responds to shot numbers, not timestamps; order beats by description and cut in the edit (on seedance-2.5 write integer-second forms)");
   if (engine === "seedance-2.5") return hits;   // 2.5 officially takes integer-second timestamps ("0-3 seconds", "[1s-4s]", "at the 2-second mark")
   let m;
   DIGIT_SECONDS_RE.lastIndex = 0;
   while ((m = DIGIT_SECONDS_RE.exec(text)) !== null) {
     // A bare "s" on a number over 19 is a decade ("80s film look"), not a length.
     if (m[2].toLowerCase() === "s" && Number(m[1]) > 19) continue;
-    hits.push("digit seconds (\"" + m[0] + "\") — length lives in `duration`; an in-clip state change is written in words (\"in under half a second\")" + (engine === "veo" ? ", or as a [mm:ss] span on Veo" : ""));
+    hits.push("digit seconds (\"" + m[0] + "\") — length lives in `duration`; an in-clip state change is written in words (\"in under half a second\")");
     break;
   }
   return hits;
 }
 
-// ── The two rules only the Seedance lane has ──
-// Language: the prompt body reads Chinese or English. dreamina-seedance-2-5 is the one model
-// that takes Korean, and on 1.5 pro Korean belongs **inside the quotes of a dialogue line** —
-// the model lip-syncs that. So Hangul outside quotes fails a seedance route here, and
+// ── Prompt language (every engine) and the Seedance consistency lock ──
+// Language: every video prompt is English (2026-10-31); Korean belongs only **inside the quotes
+// of a dialogue line**. So Hangul outside quotes fails a seedance route here, and
 // seedance-client.ts refuses the same call at the boundary.
 const QUOTED_RE = /"[^"]*"|“[^”]*”|「[^」]*」/g;
 const HANGUL_RE = /[가-힣]+(?:[ \t]+[가-힣]+)*/;
 function isSeedance(engine) { return typeof engine === "string" && engine.indexOf("seedance") === 0; }
 function hangulHits(text, engine) {
-  if (!text || !isSeedance(engine) || engine === "seedance-2.5") return [];
+  if (!text) return [];   // every engine: video prompts are English
   const m = String(text).replace(QUOTED_RE, " ").match(HANGUL_RE);
   return m ? [m[0]] : [];
 }
@@ -216,7 +215,8 @@ function lockMissing(text, engine) {
 }
 
 function clipAssemble(opts) {
-  const cam = opts.camera || {};
+  const original = opts.camera || {}, view = require('./shot-view.js').checked(original.view);
+  const cam = view ? {...original, framing:require('./shot-view.js').instructions(view)} : original;
   // The produce §3 recipe: framing, then speed movement, then ending on end. A static
   // camera has no speed to state — "static camera" is the whole move, so that slot may stay empty.
   const isStatic = /^(static|fixed|locked)/i.test((cam.movement || "").trim());
@@ -228,9 +228,11 @@ function clipAssemble(opts) {
   const dot = s => s.replace(/[.!?\s]*$/, "") + ".";
 
   const parts = [];
-  const techniqueInstructions = require('./film-techniques.js').instructions({shot:{techniques:opts.techniques}});
+  const catalogue = require('./film-techniques.js');
+  const selected = view ? (opts.techniques || []).filter(t => catalogue.byId[t.id]?.category !== 'framing' && !catalogue.byId[t.id]?.fields.viewpoint) : opts.techniques;
+  const techniqueInstructions = catalogue.instructions({shot:{techniques:selected}});
   if (techniqueInstructions) parts.push(techniqueInstructions);
-  const space = opts.withSpace ? spaceSentence(opts) : "";
+  const space = opts.withSpace && !view ? spaceSentence(opts) : "";
   if (space) parts.push(space);
   if (opts.propPrompt) parts.push(opts.propPrompt);
   if (scene) parts.push(dot(scene));
@@ -311,28 +313,119 @@ function spaceSentence(opts) {
   return bits.length ? "From the camera: " + bits.join(". ") + "." : "";
 }
 
+// Keep the MCP frame path and the CLI on the same camera/composition inputs.
+function frameOptions(scene, frame = 'start') {
+  const sh = scene.shot || {}, visual = scene.visual || {}, camera = visual.camera || {}, sp = sh.space || {};
+  const view = require('./shot-view.js').checked(camera.view);
+  const end = frame === 'end', moving = camera.movement && !/^(static|fixed|locked)/i.test(String(camera.movement).trim());
+  const endpoint = end && !!(camera.end || moving);
+  const rack = require('./film-techniques.js').selected(scene).find(t => t.entry?.fields.focus === 'rack');
+  const depth = rack && (end ? rack.to : rack.from)
+    ? { mode: 'shallow', reads: 1, focus: end ? rack.to : rack.from }
+    : sh.depth;
+  return { frame, omitFraming: endpoint, size: endpoint ? undefined : sh.size, angle: endpoint ? undefined : sh.angle,
+    techniques: sh.techniques, depth, camera, stillCamera: sh.render?.mode === 'still_camera' ? sh.render.camera : null,
+    ...(end ? { endState: visual.frames?.endState } : { layout: sp.layout, facing: sp.facing, line: sp.line, light: sp.light,
+      composition: sh.composition, eyeline: sh.eyeline }),
+    // A view replaces camera crop/orientation, not actor placement or interaction.
+    ...(view ? { composition: undefined,
+      facing: end ? undefined : String(sp.facing || '').split(/(?<=[.!?;])\s+/)
+        .filter(clause => !/^(?:faces?|facing|view(?:ed)? from|seen from) (?:the )?(?:camera|front|back|behind)[.!;]?$/i.test(clause.trim())).join(' ') } : {}) };
+}
+
+function cameraSourceInstructions(opts) {
+  const cam = opts.camera || {}, end = opts.frame === 'end', parts = [];
+  const view = require('./shot-view.js').checked(cam.view);
+  if (view && !opts.omitFraming) parts.push(require('./shot-view.js').instructions(view));
+  if (end && cam.end) parts.push('Closing composition: ' + cam.end + '. This closing view takes priority over the opening crop and viewpoint.');
+  else if (!end && !view && cam.framing) parts.push('Opening composition: ' + cam.framing + '.');
+  if (end && opts.endState) parts.push('Closing story state: ' + opts.endState + '.');
+  if (!view && !(end && cam.end)) {
+    if (cam.rear) parts.push('View the subject from behind.');
+    if (cam.pov) parts.push('Point of view: ' + (typeof cam.pov === 'string' ? cam.pov : 'the named character') + '.');
+  }
+  const still = opts.stillCamera;
+  if (still?.effect) {
+    const guides = {
+      pan: 'Include both the opening and closing regions in one continuous source canvas, with horizontal room for the crop window to travel.',
+      tilt: 'Include both the lower and upper endpoint regions in one continuous source canvas, with vertical room for the crop window to travel.',
+      push: 'Leave crop margin around the target so the playback window can tighten toward it.',
+      approach: 'Leave crop margin around the target so the playback window can approach it.',
+      pull: 'Include the wider surroundings that the playback window reveals as it pulls out.',
+      'focus-in': 'Keep the final focus target detailed and readable in the source; playback applies the focus effect.',
+      'rack-focus': 'Keep both focus regions detailed and readable in the source; playback applies the change of focus.',
+      reveal: 'Include the concealed area and foreground boundary needed for the reveal.',
+      parallax: 'Separate foreground, subject and background clearly for the planned parallax layers.',
+      hold: 'Compose the final held view with no extra travel margin.'
+    };
+    parts.push('Source canvas for the ' + still.effect + ' still-camera effect: ' + (guides[still.effect] || 'preserve the planned crop regions.') +
+      (still.target ? ' Effect target: ' + still.target + '.' : ''));
+    return parts.join(' ');
+  }
+  const movement = String(cam.movement || '').trim().toLowerCase();
+  if (!movement) return parts.join(' ');
+  const fixed = /^(static|fixed|locked)/.test(movement);
+  if (fixed) parts.push(end ? 'Keep camera position, angle and focal length fixed between the opening and closing images.'
+    : 'This opening image establishes the camera position, angle and focal length for the shot.');
+  else {
+    parts.push('This is the ' + (end ? 'settled closing' : 'opening') + ' still for a ' + [cam.speed, movement].filter(Boolean).join(' ') +
+      (cam.target ? ', with movement target ' + cam.target : '') + '; show one instant, with no motion trail or montage.');
+    if (end) parts.push('Use the camera landing after that move; preserve world geometry and identity as perspective or crop changes.');
+    else if (/pan|tilt/.test(movement)) parts.push('Frame the starting target and retain scene detail in the direction of travel for the later reveal.');
+    else if (/dolly out|pull.?back|backward and upward/.test(movement)) parts.push('Begin near the subject, with coherent surrounding geometry for the wider closing view.');
+    else if (/dolly zoom/.test(movement)) parts.push('Keep the subject at the planned screen size, with distinct foreground and background depth for the later perspective change.');
+    else if (/dolly|zoom in/.test(movement)) parts.push('Begin at the opening crop with margin for the closer landing and readable foreground/background depth.');
+    else if (/arc|truck|tracking/.test(movement)) parts.push('Keep foreground, subject and background spatially distinct, with clear travel room along the planned path.');
+    if (!view && !end && /tracking from behind/.test(movement)) parts.push('Show the subject from behind at the start of the following path.');
+    if (!view && !end && /backward in front|body-mounted/.test(movement)) parts.push('Show the subject facing the camera in the opening frame.');
+    if (!view && !end && /truck parallel/.test(movement)) parts.push('Show the subject from the side with travel room alongside it.');
+    if (!end && /crane up/.test(movement)) parts.push('Begin at the lower view, preserving the upper space the rising camera will reveal.');
+  }
+  return parts.join(' ');
+}
+
 function assemble(opts) {
   const size = opts.size || "";
   const angle = opts.angle || "eye";
   const scene = (opts.scene || "").trim();
   const mood = (opts.mood || "").trim();
   const exclude = (opts.exclude || "").trim();
-  const tail = (opts.tail === undefined ? "the picture fills the frame from the top edge to the bottom edge, even brightness top to bottom" : opts.tail).trim();
+  const tail = (opts.tail === undefined ? "the picture fills the frame from the top edge to the bottom edge" : opts.tail).trim();
 
-  const ladder = opts.noPerson ? SIZE_WORDS_OBJECT : SIZE_WORDS;
-  const sizeWords = ladder[size] || SIZE_WORDS[size] || (size ? size : "");
+  const view = require('./shot-view.js').checked(opts.camera?.view);
+  const subjectType = view?.subjectType || (opts.noPerson ? 'object' : view?.target || ['insert','ecu'].includes(size) ? 'detail' : 'person');
+  const ladder = subjectType === 'person' ? SIZE_WORDS : SIZE_WORDS_OBJECT;
+  let sizeWords = ladder[size] || SIZE_WORDS[size] || (size ? size : "");
+  const rear = view ? view.mode === 'rear' : opts.camera?.rear;
+  if (subjectType === 'person' && rear) {
+    if (size === 'cu') sizeWords = 'close-up, the back of the head and the top of the shoulders, crown lightly cropped';
+    if (size === 'choker') sizeWords = 'big close-up, the back of the head fills the frame';
+  }
   const angleWords = ANGLE_WORDS[angle] || angle || ANGLE_WORDS.eye;
   const unknown = [];
+  if (!opts.omitFraming) {
+    const conflicts = require('./shot-view.js').framingConflicts(size, view || { crop: opts.camera?.framing }, scene, opts.noPerson);
+    if (conflicts.length) throw new Error('shot_framing_conflict: ' + conflicts.join('; ') + ' — set size and view.crop together, and keep scene prose about the opening action');
+  }
   if (size && !SIZE_WORDS[size]) unknown.push("size \"" + size + "\"");
   if (angle && !ANGLE_WORDS[angle]) unknown.push("angle \"" + angle + "\"");
 
   const space = spaceSentence(opts);
   const parts = [];
-  if (sizeWords) parts.push(sizeWords + ", " + angleWords + ".");
-  else parts.push(angleWords + ".");
-  const sourceTechnique = require('./film-techniques.js').sourceInstructions({shot:{techniques:opts.techniques}});
+  if (!opts.omitFraming) {
+    if (sizeWords) parts.push(sizeWords + ", " + angleWords + ".");
+    else parts.push(angleWords + ".");
+  }
+  const techniques = require('./film-techniques.js');
+  const selected = (opts.techniques || []).filter(t => {
+    const e = techniques.byId[t.id];
+    return !(size && e?.category === 'framing') && !(view && e?.fields.viewpoint);
+  });
+  const sourceTechnique = techniques.sourceInstructions({shot:{techniques:selected}}, opts.frame, opts.omitFraming);
   if (sourceTechnique) parts.push(sourceTechnique);
   if (space) parts.push(space);
+  const cameraWords = cameraSourceInstructions(opts);
+  if (cameraWords) parts.push(cameraWords);
   if (opts.propPrompt) parts.push(opts.propPrompt);
   parts.push(...styleSentences(opts.style));
   if (scene) parts.push(scene.replace(/[.!?\s]*$/, "") + ".");
@@ -365,7 +458,6 @@ function loadShot(file, index) {
   if (overrideProblems.length) throw new Error(overrideProblems.join("; "));
   const style = pm.shotStyle(win, i);
   const sh = s.shot || {};
-  const sp = sh.space || {};
   const v = s.visual || {};
   const propSnapshot = require('./prop-continuity.js').snapshot(win, i);
   const propReferenceImages = propSnapshot.filter(p => p.visible).flatMap(p => p.references.map(r => path.resolve(path.dirname(file), r.path)));
@@ -374,15 +466,7 @@ function loadShot(file, index) {
     propPrompt: require('./prop-continuity.js').prompt(win, i),
     propSnapshot,
     sourceImageArgs: propReferenceImages.length ? { referenced_image_paths: propReferenceImages } : {},
-    techniques: sh.techniques,
-    size: sh.size,
-    angle: sh.angle,
-    layout: sp.layout,
-    facing: sp.facing,
-    eyeline: sh.eyeline, composition: sh.composition, depth: sh.depth,
-    line: sp.line,
-    light: sp.light,
-    camera: v.camera || null,
+    ...frameOptions(s),
     scene: typeof sh.videoDesign?.before === 'string' ? sh.videoDesign.before
       : sh.render?.mode === 'still_camera' && typeof v.action === 'string' ? v.action : undefined,
     sourceContext: sourceContext.context(s, win.STORY),
@@ -430,16 +514,17 @@ function selftest() {
     exclude: "no text, no logos"
   });
   ok("prefix starts with size+angle",
-    a.prompt.startsWith("medium close-up, chest up, at eye level. From the camera:"));
+    a.prompt.startsWith(SIZE_WORDS.mcu + ", at eye level. From the camera:"));
   // Every angle joins the size words as one readable sentence.
-  eq("high joins", assemble({ size: "ls", angle: "high", tail: "" }).prompt, "wide shot, full body with room above and below, seen from above.");
-  eq("overhead joins", assemble({ size: "ls", angle: "overhead", tail: "" }).prompt, "wide shot, full body with room above and below, from straight overhead.");
-  eq("low joins", assemble({ size: "fs", angle: "low", tail: "" }).prompt, "full shot, head to toe, from a low angle, looking up.");
+  eq("size words are the catalogue's", SIZE_WORDS.mcu, "medium close-up, chest up, frame bottom at mid-chest, eyes near the upper third");
+  eq("high joins", assemble({ size: "ls", angle: "high", tail: "" }).prompt, SIZE_WORDS.ls + ", seen from above.");
+  eq("overhead joins", assemble({ size: "ls", angle: "overhead", tail: "" }).prompt, SIZE_WORDS.ls + ", from straight overhead.");
+  eq("low joins", assemble({ size: "fs", angle: "low", tail: "" }).prompt, SIZE_WORDS.fs + ", from a low angle, looking up.");
   ok("layout is camera-framed", a.prompt.includes("person on the left third"));
   ok("facing is the visible result", a.prompt.includes("faces camera-right"));
   ok("scene follows space", /From the camera:.*a Korean woman/.test(a.prompt));
   ok("exclusions sit after the mood, before the tail",
-    a.prompt.endsWith("warm tungsten. no text, no logos. the picture fills the frame from the top edge to the bottom edge, even brightness top to bottom."));
+    a.prompt.endsWith("warm tungsten. no text, no logos. the picture fills the frame from the top edge to the bottom edge."));
   eq("no banned hits on a good prompt", a.hits.length, 0);
 
   // Banned language in --scene / --mood / --exclude is caught too — it ships to the model.
@@ -460,7 +545,7 @@ function selftest() {
     spaceSentence({ layout: "from the camera, the right-hand door is on the right of frame" }),
     "From the camera: the right-hand door is on the right of frame.");
   eq("sentence ends are normalised",
-    assemble({ size: "ms", scene: "is this it?", tail: "" }).prompt, "medium shot, waist up, at eye level. is this it.");
+    assemble({ size: "ms", scene: "is this it?", tail: "" }).prompt, SIZE_WORDS.ms + ", at eye level. is this it.");
   ok("out-of-vocabulary size is reported", assemble({ size: "xyz", scene: "x" }).unknown.length === 1);
 
   // No space written (an older scenes.js) — no dangling "From the camera." sentence.
@@ -470,7 +555,7 @@ function selftest() {
 
   // --tail "" turns the tail off; --space-only gives just the sentence.
   eq("empty tail is honoured",
-    assemble({ size: "ms", scene: "x", tail: "" }).prompt, "medium shot, waist up, at eye level. x.");
+    assemble({ size: "ms", scene: "x", tail: "" }).prompt, SIZE_WORDS.ms + ", at eye level. x.");
   eq("space sentence alone (quote clip)",
     assemble({ size: "mcu", layout: "speaker centred", facing: "faces the camera" }).space,
     "From the camera: speaker centred. faces the camera.");
@@ -531,27 +616,25 @@ function selftest() {
     c1.prompt,
     "chest-up on the subject, pauses, then very slow dolly in, settling on subject centred at mid-frame. steam curling off the cup. the notepad's three lines stay identical in every frame. Audio: quiet room tone, no music, no speech.");
   ok("clip: a move that does not travel (handheld) keeps the plain span",
-    clipAssemble({ camera: { movement: "handheld", speed: "steady", framing: "chest-up", end: "the same" }, engine: "veo" })
+    clipAssemble({ camera: { movement: "handheld", speed: "steady", framing: "chest-up", end: "the same" }, engine: "seedance" })
       .prompt.startsWith("chest-up, steady handheld, ending on the same."));
   eq("clip: 'no music, no speech' in the Audio sentence is exempt", c1.negHits.length, 0);
   eq("clip: clean prompt has no timing hits", c1.timeHits.length, 0);
   eq("clip: all four slots present", c1.missing.length, 0);
 
   ok("clip: static camera drops the speed word",
-    clipAssemble({ camera: { movement: "static", speed: "n/a", framing: "wide on the desk", end: "unchanged" }, engine: "veo" })
+    clipAssemble({ camera: { movement: "static", speed: "n/a", framing: "wide on the desk", end: "unchanged" }, engine: "seedance" })
       .prompt.startsWith("wide on the desk, static camera, ending on unchanged."));
   ok("clip: missing end is reported",
-    clipAssemble({ camera: { movement: "pan", speed: "slow", framing: "wide" }, engine: "veo" }).missing.indexOf("end") >= 0);
+    clipAssemble({ camera: { movement: "pan", speed: "slow", framing: "wide" }, engine: "seedance" }).missing.indexOf("end") >= 0);
   ok("clip: negative directive in the body is caught",
-    clipAssemble({ camera: camA, engine: "veo", motion: "no sudden moves, hands resting" }).negHits.length > 0);
+    clipAssemble({ camera: camA, engine: "seedance", motion: "no sudden moves, hands resting" }).negHits.length > 0);
   ok("clip: the cut line's negation is allowed",
     clipAssemble({ camera: camA, engine: "seedance", locks: "Sequence of cuts, no timecodes — cuts only at the specified points, the camera does not cut on its own" }).negHits.length === 0);
   ok("clip: timecode blocked on seedance",
     clipAssemble({ camera: camA, engine: "seedance", motion: "at [00:04] the door closes" }).timeHits.length > 0);
-  eq("clip: timestamp allowed on veo",
-    clipAssemble({ camera: camA, engine: "veo", motion: "[00:00-00:02] she looks up, [00:02-00:06] the door closes" }).timeHits.length, 0);
-  ok("clip: digit seconds blocked on both",
-    clipAssemble({ camera: camA, engine: "veo", motion: "the light comes up over 2 seconds" }).timeHits.length > 0);
+  ok("clip: digit seconds blocked",
+    clipAssemble({ camera: camA, engine: "seedance", motion: "the light comes up over 2 seconds" }).timeHits.length > 0);
   eq("clip: a state change in words passes",
     clipAssemble({ camera: camA, engine: "seedance", motion: "the visor snaps shut in under half a second" }).timeHits.length, 0);
   eq("clip: 9:16 is a ratio, not a timecode",
@@ -559,15 +642,13 @@ function selftest() {
   eq("clip: a decade is not a length",
     clipAssemble({ camera: camA, engine: "seedance", motion: "soft 80s film look on the highlights" }).timeHits.length, 0);
   ok("clip: --with-space prepends the From-the-camera sentence",
-    clipAssemble({ camera: camA, engine: "veo", withSpace: true, layout: "speaker centred", facing: "faces the camera" })
+    clipAssemble({ camera: camA, engine: "seedance", withSpace: true, layout: "speaker centred", facing: "faces the camera" })
       .prompt.startsWith("From the camera: speaker centred. faces the camera."));
   ok("clip: banned space language still caught",
-    clipAssemble({ camera: camA, engine: "veo", motion: "left view of the desk" }).hits.length > 0);
-  // Artifact-class negatives — vendor-templated on seedance (2.0 guide), negativePrompt-only on veo.
+    clipAssemble({ camera: camA, engine: "seedance", motion: "left view of the desk" }).hits.length > 0);
+  // Artifact-class negatives — vendor-templated on seedance (2.0 guide).
   eq("clip: 'avoid generating any text or subtitles' passes on seedance",
     clipAssemble({ camera: camA, engine: "seedance", locks: "avoid generating any text or subtitles, do not generate a watermark" }).negHits.length, 0);
-  ok("clip: the same line is caught on veo (belongs in negativePrompt)",
-    clipAssemble({ camera: camA, engine: "veo", locks: "avoid generating any text or subtitles" }).negHits.length > 0);
   ok("clip: a non-artifact negative is still caught on seedance",
     clipAssemble({ camera: camA, engine: "seedance", motion: "no sudden moves" }).negHits.length > 0);
   // seedance-2.5 takes integer-second timestamp forms; the clock form stays blocked.
@@ -583,15 +664,11 @@ function selftest() {
   eq("clip: Korean inside a dialogue quote passes",
     clipAssemble({ camera: camA, engine: "seedance", motion: "the man says \"딸깍\" once",
       locks: "the notepad stays identical" }).hanHits.length, 0);
-  eq("clip: seedance-2.5 reads Korean",
+  eq("clip: Korean in the body is caught on seedance-2.5 too",
     clipAssemble({ camera: camA, engine: "seedance-2.5", motion: "컵에서 김이 오른다",
-      locks: "the notepad stays identical" }).hanHits.length, 0);
-  eq("clip: Korean on a veo route is not this check's business",
-    clipAssemble({ camera: camA, engine: "veo", motion: "컵에서 김이 오른다" }).hanHits.length, 0);
+      locks: "the notepad stays identical" }).hanHits.length, 1);
   eq("clip: a seedance clip with no lock is caught",
     clipAssemble({ camera: camA, engine: "seedance", motion: "steam curling off the cup" }).lockMissing, true);
-  eq("clip: veo needs no lock (its exclusions ride in negativePrompt)",
-    clipAssemble({ camera: camA, engine: "veo", motion: "steam curling off the cup" }).lockMissing, false);
 
   // Drift guard — storyboard-html-template.html carries the same three regexes.
   const tpl = path.join(__dirname, "storyboard-html-template.html");
@@ -701,8 +778,8 @@ function main(argv) {
   }
 
   if (args.clip) {
-    if (args.engine !== "seedance" && args.engine !== "veo" && args.engine !== "seedance-2.5") {
-      console.error("assemble-bg-prompt: --clip needs --engine seedance|veo|seedance-2.5 — the timing checks differ per route");
+    if (args.engine !== "seedance" && args.engine !== "seedance-2.5") {
+      console.error("assemble-bg-prompt: --clip needs --engine seedance|seedance-2.5 — the timing checks differ per route");
       process.exit(2);
     }
     // Slot overrides beat the file — the same precedence as the space flags above.
@@ -721,9 +798,9 @@ function main(argv) {
     if (!r.prompt) { console.error("assemble-bg-prompt: nothing to assemble — no slots, motion, locks or audio"); process.exit(2); }
     let bad = 0;
     r.hits.forEach(h => { console.error("banned: \"" + h.match + "\" — " + h.why); bad++; });
-    r.negHits.forEach(h => { console.error("banned: \"" + h + "\" — negative directive in the body; Veo takes exclusions in negativePrompt, Seedance wants the scene re-described plus positive locks"); bad++; });
+    r.negHits.forEach(h => { console.error("banned: \"" + h + "\" — negative directive in the body; re-describe the scene and close with positive locks"); bad++; });
     r.timeHits.forEach(h => { console.error("banned: " + h); bad++; });
-    r.hanHits.forEach(h => { console.error("banned: Korean in the body (\"" + h + "\") — a seedance prompt reads Chinese or English; Korean goes inside the quotes of a dialogue line, or the shot routes to seedance-2.5"); bad++; });
+    r.hanHits.forEach(h => { console.error("banned: Korean in the body (\"" + h + "\") — video prompts are English; Korean goes inside the quotes of a dialogue line"); bad++; });
     if (r.lockMissing) {
       console.error("no consistency lock — a seedance clip closes with the sentence that says what holds in every frame " +
         "(\"the subject stays exactly consistent with the input frame; appearance, proportions and materials hold\"), " +
@@ -755,4 +832,4 @@ function main(argv) {
 
 if (require.main === module) main(process.argv.slice(2));
 
-module.exports = { assemble, clipAssemble, styleSentences, bannedHits, negDirectiveHits, timingHits, hangulHits, lockMissing, spaceSentence, SIZE_WORDS, SIZE_WORDS_OBJECT, ANGLE_WORDS, BANNED, NEG_RE, NEG_OK };
+module.exports = { assemble, frameOptions, clipAssemble, styleSentences, bannedHits, negDirectiveHits, timingHits, hangulHits, lockMissing, spaceSentence, SIZE_WORDS, SIZE_WORDS_OBJECT, ANGLE_WORDS, BANNED, NEG_RE, NEG_OK };

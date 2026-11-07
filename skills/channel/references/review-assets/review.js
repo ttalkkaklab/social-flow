@@ -69,6 +69,23 @@
       audio.play().catch(function () { sync(); });
     });
     ['play', 'pause', 'ended'].forEach(function (event) { audio.addEventListener(event, sync); });
+    // A sheet player also shows progress and elapsed time.
+    var player = button.closest('.character-player');
+    if (player) {
+      var bar = player.querySelector('[data-audio-progress]');
+      var time = player.querySelector('[data-audio-time]');
+      var clock = function (seconds) {
+        var s = Math.max(0, Math.floor(seconds || 0));
+        return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+      };
+      var progress = function () {
+        var length = isFinite(audio.duration) ? audio.duration : 0;
+        bar.style.width = (length ? audio.currentTime / length * 100 : 0) + '%';
+        time.textContent = audio.paused && !audio.currentTime ? clock(length) : clock(audio.currentTime);
+      };
+      ['loadedmetadata', 'timeupdate', 'ended'].forEach(function (event) { audio.addEventListener(event, progress); });
+      audio.addEventListener('ended', function () { audio.currentTime = 0; progress(); });
+    }
     audio.addEventListener('error', function () {
       button.disabled = true;
       button.removeAttribute('data-playing');
@@ -88,6 +105,53 @@
   document.body.appendChild(dialog);
   close.addEventListener('click', function () { dialog.close(); });
   dialog.addEventListener('click', function (event) { if (event.target === dialog) dialog.close(); });
+  // The character strip swaps the stage panel; without JS each thumbnail opens its file.
+  document.querySelectorAll('.character-thumb').forEach(function (thumb) {
+    thumb.addEventListener('click', function (event) {
+      if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      var hero = thumb.closest('.character-hero');
+      var stage = hero.querySelector('.character-stage');
+      var link = stage.querySelector('[data-image-preview]');
+      var img = link.querySelector('img');
+      var pill = stage.querySelector('.character-pill > span');
+      stage.dataset.kind = thumb.dataset.kind;
+      link.href = thumb.href;
+      img.src = thumb.href;
+      img.alt = thumb.dataset.alt;
+      link.setAttribute('aria-label', thumb.dataset.alt + ' · 원본 보기 / View original');
+      pill.dataset.ko = thumb.dataset.labelKo;
+      pill.dataset.en = thumb.dataset.labelEn;
+      pill.textContent = pill.dataset[document.documentElement.lang === 'ko' ? 'ko' : 'en'];
+      hero.querySelectorAll('.character-thumb').forEach(function (other) {
+        if (other === thumb) other.setAttribute('aria-current', 'true');
+        else other.removeAttribute('aria-current');
+      });
+    });
+  });
+  // Extra-image slider: buttons step one slide; the controls show only when the track overflows.
+  document.querySelectorAll('[data-gallery]').forEach(function (gallery) {
+    var track = gallery.querySelector('[data-gallery-track]');
+    var slides = track.children;
+    var controls = gallery.querySelector('.character-gallery-controls');
+    var index = gallery.querySelector('[data-gallery-index]');
+    var prev = gallery.querySelector('[data-gallery-prev]');
+    var next = gallery.querySelector('[data-gallery-next]');
+    function step() { return slides.length > 1 ? slides[1].offsetLeft - slides[0].offsetLeft : track.clientWidth; }
+    function sync() {
+      var max = track.scrollWidth - track.clientWidth;
+      controls.hidden = max <= 1;
+      var atEnd = track.scrollLeft >= max - 1;
+      index.textContent = (atEnd ? slides.length : Math.round(track.scrollLeft / step()) + 1) + ' / ' + slides.length;
+      prev.disabled = track.scrollLeft <= 1;
+      next.disabled = atEnd;
+    }
+    prev.addEventListener('click', function () { track.scrollBy({ left: -step() }); });
+    next.addEventListener('click', function () { track.scrollBy({ left: step() }); });
+    track.addEventListener('scroll', sync, { passive: true });
+    window.addEventListener('resize', sync);
+    sync();
+  });
   document.querySelectorAll('[data-image-preview]').forEach(function (link) {
     link.addEventListener('click', function (event) {
       if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;

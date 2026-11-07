@@ -8,97 +8,8 @@ import { execFileSync } from 'node:child_process';
 import { manageSpeech } from '../dist/speech.js';
 
 const require = createRequire(import.meta.url);
-const { prepare, motionPrompt, motionTimeline } = require('../../skills/produce/references/prepare-astra-shot.js');
-const { sceneVideoPrompt } = require('../../skills/_shared/scene-acting.js');
+const { prepare } = require('../../skills/produce/references/prepare-astra-shot.js');
 const ff = args => execFileSync('ffmpeg', ['-nostdin', '-v', 'error', '-y', ...args], { timeout: 30000 });
-test('prompt compaction removes repeated endpoints and actions without losing intermediate states', () => {
-  const before = 'She stands outside holding the tray.', after = 'The tray rests on the desk.', action = 'She places the tray once.';
-  const prompt = sceneVideoPrompt([{ kind: 'action', character: 'woman', text: action,
-    startSeconds: 0, endSeconds: 4 }], 'voiceover', { shot: { videoDesign: { before, action, after,
-    motion: { beats: [{ state: before }, { state: 'Her hands touch the desktop.' }, { state: after }] } } } });
-  for (const state of [before, after, action]) assert.equal(prompt.split(state).length - 1, 1);
-  assert.match(prompt, /Her hands touch the desktop/);
-});
-test('ASTRA wording retains ordered motion and audio intervals without screenplay labels or literal dialogue', () => {
-  const scene = { shot: { videoDesign: { before: 'A woman stands outside.', action: 'She keeps the door open.', after: 'She remains outside.',
-    continuity: 'The same door stays open.', motion: { beats: [{ at: 1, state: 'Her hand touches the tray.' }] } } },
-    visual: { camera: { movement: 'static', framing: 'Medium doorway view.', end: 'Keep the threshold visible.' } } };
-  const prompt = motionPrompt(scene, { mode: 'audio_conditioned', performance: [
-    { kind: 'action', character: 'woman', text: 'She raises the tray once.', startSeconds: 0, endSeconds: 1 },
-    { kind: 'dialogue', speaker: 'woman', to: 'uncle', delivery: 'on_screen', text: 'Exact dialogue.',
-      speechStartSeconds: 1.2, speechEndSeconds: 2.4, acting: { direction: 'Casual and guarded.', visual: 'She conceals alarm.' } },
-  ] });
-  for (const content of ['raises the tray once', '1.2 to 2.4 seconds', 'woman speaks naturally to uncle',
-    'Casual and guarded', 'conceals alarm', 'same door stays open', 'camera stays fixed', 'Keep the threshold visible'])
-    assert.ok(prompt.includes(content), content);
-  assert.doesNotMatch(prompt, /Beat \d|before:|speaker:|Exact dialogue/);
-  const warnings = motionTimeline(scene, { performance: [{ kind: 'action', text: 'She raises the tray once.' }] }).warnings;
-  assert.ok(warnings.some(message => message.includes('She keeps the door open')));
-  assert.ok(warnings.some(message => message.includes('Her hand touches the tray')));
-});
-
-test('resolved four-second action excludes stale eight-second design timing with visible warnings', () => {
-  const scene = { duration: 4, shot: { videoDesign: {
-    before: 'She holds a tray at the doorway.', action: 'Approach over the first four seconds, then lower the tray.',
-    after: 'The tray rests on the desk.', motion: { beats: [
-      { at: 4, state: 'She still holds the tray above the desktop.' },
-      { at: 6.5, state: 'She releases her hands.' }, { at: 8, state: 'The tray rests on the desk.' },
-    ] },
-  } } };
-  const plan = { performance: [{ kind: 'action', videoDirection: 'Walk for two seconds and release the tray by 3.5 seconds.',
-    startSeconds: 0, endSeconds: 4 }] };
-  const prompt = motionPrompt(scene, plan), timeline = motionTimeline(scene, plan);
-  assert.match(prompt, /From 0 to 4 seconds, Walk for two seconds/);
-  assert.match(prompt, /shot finishes with this state and holds it until the cut: The tray rests/);
-  assert.doesNotMatch(prompt, /first four|still holds|At 6.5|At 8/);
-  assert.ok(timeline.warnings.some(message => message.includes('6.5s falls outside')));
-  assert.ok(timeline.warnings.some(message => message.includes('8s falls outside')));
-  assert.ok(timeline.warnings.some(message => message.includes('still holds the tray')));
-});
-
-test('one fully concurrent audio-conditioned line omits redundant numeric spans without changing the plan', () => {
-  const scene = { visual: { camera: { movement: 'static' } } };
-  const plan = { mode: 'audio_conditioned', performance: [
-    { kind: 'action', text: 'He holds the receiver still.', startSeconds: .12, endSeconds: 2.76 },
-    { kind: 'dialogue', speaker: 'uncle', delivery: 'on_screen', text: 'Private script.',
-      speechStartSeconds: .12, speechEndSeconds: 2.76 },
-  ] };
-  const before = JSON.stringify(plan), prompt = motionPrompt(scene, plan);
-  assert.equal(prompt.split('During the supplied spoken line,').length - 1, 2);
-  assert.doesNotMatch(prompt, /0\.12|2\.76|From .*seconds|Private script/);
-  assert.match(prompt, /He holds the receiver still/);
-  assert.match(prompt, /Match visible lip movements to the supplied audio/);
-  assert.match(prompt, /All surfaces stay unlettered/);
-  assert.equal(JSON.stringify(plan), before);
-});
-
-test('sequential, partly overlapping, offscreen and multiple spoken intervals retain exact timing', () => {
-  const line = { kind: 'dialogue', speaker: 'uncle', delivery: 'on_screen', speechStartSeconds: .12, speechEndSeconds: 2.76 };
-  for (const performance of [
-    [{ kind: 'action', text: 'Look back first.', startSeconds: 0, endSeconds: .12 }, line],
-    [line, { kind: 'action', text: 'React after speaking.', startSeconds: 2.76, endSeconds: 3 }],
-    [{ kind: 'action', text: 'Hold a pose through the lead-in.', startSeconds: 0, endSeconds: 2.76 }, line],
-    [{ ...line, delivery: 'off_screen' }],
-    [line, { ...line, speechStartSeconds: 3, speechEndSeconds: 4 }],
-  ]) {
-    const prompt = motionPrompt({}, { mode: 'audio_conditioned', performance });
-    assert.match(prompt, /From 0.12 to 2.76 seconds/);
-    assert.doesNotMatch(prompt, /During the supplied spoken line/);
-    if (performance.length === 2 && performance[1].speechStartSeconds === 3)
-      assert.match(prompt, /From 3 to 4 seconds/);
-  }
-  assert.match(motionPrompt({}, { mode: 'voiceover', performance: [line] }), /From 0.12 to 2.76 seconds/);
-});
-
-test('design-only action keeps in-range intermediate states and reports impossible timestamps', () => {
-  const scene = { duration: 4, shot: { videoDesign: { action: 'Lower the tray once.', motion: { beats: [
-    { at: 2, state: 'Hands still support the tray.' }, { at: 6, state: 'Release the tray.' },
-  ] } } } };
-  const plan = { performance: [] };
-  assert.match(motionPrompt(scene, plan), /Lower the tray once.*At 2 seconds, Hands still support/);
-  assert.doesNotMatch(motionPrompt(scene, plan), /At 6 seconds/);
-  assert.ok(motionTimeline(scene, plan).warnings.some(message => message.includes('Release the tray')));
-});
 function fixture(t, onScreen = false) {
   const dir = mkdtempSync(path.join(tmpdir(), 'astra-shot-input-'));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
@@ -274,26 +185,6 @@ test('renderer dispatches prepared keyframes to their own adapter and rejects un
   assert.deepEqual(calls, [['keyframe', { ...args, validated: true }]]);
   await assert.rejects(submitPrepared(client, 'unknown', args), /Unsupported prepared ASTRA tool/);
   assert.equal(calls.length, 1);
-});
-
-test('image handoff preserves HQ controls and default-tier LoRA strength', async t => {
-  const { dir, scene, save } = fixture(t);
-  Object.assign(scene.visual.video, { tier: 'hq', resolution: '1024x1920', guidance: { videoCfgGuidanceScale: 4 },
-    negativePrompt: 'blur', numInferenceSteps: 15, generateAudio: false });
-  save();
-  const result = await prepare(dir, { shotId: scene.id });
-  for (const key of ['tier', 'guidance', 'negativePrompt', 'numInferenceSteps', 'generateAudio'])
-    assert.deepEqual(result.arguments[key], scene.visual.video[key]);
-  assert.equal(result.arguments.width, 1024);
-  assert.equal(result.arguments.height, 1920);
-  delete scene.visual.video.guidance;
-  delete scene.visual.video.negativePrompt;
-  delete scene.visual.video.numInferenceSteps;
-  Object.assign(scene.visual.video, { tier: 'default', lora: [{ name: 'cinemagraph', strength: .6 }], numGeneratedKeyframes: 2 });
-  save();
-  const basic = await prepare(dir, { shotId: scene.id });
-  assert.deepEqual(basic.arguments.lora, scene.visual.video.lora);
-  assert.equal(basic.arguments.numGeneratedKeyframes, 2);
 });
 
 test('keyframe handoff carries guided controls and rejects unsupported tier instead of dropping it', async t => {

@@ -7,7 +7,7 @@ description: >
   action and attributed speech, then plans shots and content-led timing. Saves the local
   review board. Produce builds an approved board; autoproduce runs both unattended.
 argument-hint: "<channel> <topic or topic hint>"
-allowed-tools: ["mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "mcp__social-flow__host_review", "mcp__plugin_social-flow_social-flow__host_review", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__location_manage", "mcp__plugin_social-flow_social-flow__location_manage", "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "mcp__social-flow__storyboard_apply", "mcp__plugin_social-flow_social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__plugin_social-flow_social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__plugin_social-flow_social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__plugin_social-flow_social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__plugin_social-flow_social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__plugin_social-flow_social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__plugin_social-flow_social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__plugin_social-flow_social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__plugin_social-flow_social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__plugin_social-flow_social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__plugin_social-flow_social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__plugin_social-flow_social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__plugin_social-flow_social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics", "mcp__plugin_social-flow_social-flow__suno_generate_lyrics"]
+allowed-tools: ["mcp__social-flow__character_manage", "mcp__social-flow__character_panel", "mcp__plugin_social-flow_social-flow__character_manage", "mcp__plugin_social-flow_social-flow__character_panel", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "mcp__social-flow__host_review", "mcp__plugin_social-flow_social-flow__host_review", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__location_manage", "mcp__plugin_social-flow_social-flow__location_manage", "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "mcp__social-flow__story_sequence", "mcp__plugin_social-flow_social-flow__story_sequence", "mcp__social-flow__story_scene", "mcp__plugin_social-flow_social-flow__story_scene", "mcp__social-flow__story_shot", "mcp__plugin_social-flow_social-flow__story_shot", "mcp__social-flow__shot_characters", "mcp__plugin_social-flow_social-flow__shot_characters", "mcp__social-flow__shot_dialogue", "mcp__plugin_social-flow_social-flow__shot_dialogue", "mcp__social-flow__shot_icons", "mcp__plugin_social-flow_social-flow__shot_icons", "mcp__social-flow__shot_image", "mcp__plugin_social-flow_social-flow__shot_image", "mcp__social-flow__shot_prompt", "mcp__plugin_social-flow_social-flow__shot_prompt", "mcp__social-flow__storyboard_apply", "mcp__plugin_social-flow_social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__plugin_social-flow_social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__plugin_social-flow_social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__plugin_social-flow_social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__plugin_social-flow_social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__plugin_social-flow_social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__plugin_social-flow_social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__plugin_social-flow_social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__plugin_social-flow_social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__plugin_social-flow_social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__plugin_social-flow_social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__plugin_social-flow_social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__plugin_social-flow_social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics", "mcp__plugin_social-flow_social-flow__suno_generate_lyrics"]
 ---
 For motion-graphic shots, follow [motion type selection and design](references/motion-graphics.md): persist `shot.motionGraphic` with a common `THEME.motionGraphicTheme` when the episode needs consistency and contextual `style.theme` (`auto` or an explicit channel theme), choose the type from viewer intent and available evidence, and keep style, choreography and renderer separate. Built-in abstract scenes use the installed `prepare-motion-graphic.js`; asset-dependent types retain their authored or mesh routes.
 
@@ -16,11 +16,12 @@ Follow [host evaluation](../_shared/host-review.md) for every requested review.
 
 # Storyboard: make the story understandable, then plan its images
 
-**Fixed cut workflow:** Follow [production workflow](../_shared/production-workflow.md).
-The seven stage skills own context review, camera review, Blender composition, cut image
-generation/review and cut video generation/review. These are required episode stages,
-including re-entry for existing boards; guidance-only policies do not waive them. This
-skill supplies shared authoring/production mechanics and must not collapse those stages.
+**Production order (user directive, 2026-10-31):** Follow [production order](../_shared/production-workflow.md).
+Only the story order is enforced; context, camera, image and video reviews and Blender
+compositions run only when the user asks. This skill writes the story, each shot's
+characters and lines and its icon attributes; [generate-cut-images](../generate-cut-images/SKILL.md)
+and [generate-cut-videos](../generate-cut-videos/SKILL.md) make the images, prompts and
+approved videos.
 
 
 For saved GenAI selections, use [GenAI operation selection](../_shared/astra-genai.md)
@@ -33,10 +34,12 @@ text; do not generate assets merely to test a planning choice.
 ## Required authoring and delivery order
 
 First complete project setup and follow [production order](../_shared/production-workflow.md).
-Prepare characters with text and images → present the scenario → write the text storyboard
-with actions, dialogue and narration → prepare prop text/images → background text/images
-→ compose the image storyboard → export the bundled review template. Produce handles
-authorized media calls; do not jump from a text plan directly to video.
+Prepare characters with text (`character_manage`) and images (`character_panel`) → present the scenario → write the story
+(sequences → scenes → shot stories) → set each shot's characters and each character's lines →
+set each shot's icon attributes → prepare prop and background text/images → make each
+shot's start image, and the end image a first_last shot needs (`shot_image`) → write each
+video prompt (`shot_prompt`) → export the bundled review template. Each shot's video waits
+for the user's approval (`video_approve`); do not jump from a text plan directly to video.
 Scenario presentation is a progress update, not an approval request. In an interactive
 session, show the premise, characters, causal sequence, ending and selection reason before
 writing the detailed board. Continue unless the user requested selection/approval first;
@@ -46,14 +49,14 @@ in that case wait for their answer. For an unattended run, save the same preview
 A storyboard request requires the shared HTML, even when no media generation is requested.
 Read [storyboard design](references/storyboard-design.md), generate with
 `node "$CLAUDE_PLUGIN_ROOT/skills/storyboard/references/storyboard-html.js" "<episodeDir>/storyboard"`
-and verify the same command with `--check` before delivery. A custom HTML or Markdown-only
+after changes. A custom HTML or Markdown-only
 board is not a substitute. Explicit text-only/scenario-only requests stop at that scope;
 any HTML review still uses the shared template.
 
 When delegating writing, pass the resolved path of this SKILL.md, the episode directory,
 user scope, saved choices and this required order to the author. Require it to read this
 skill and its sheet/design references before writing, return the scenario preview before
-shot authoring, and return sheet paths, board path and actual template-check result.
+shot authoring, and return sheet paths and the board path.
 The coordinator relays the preview to the user before detailed work continues and verifies
 the deliverables. `storyboard-reviewer` is read-only; it is not the author.
 
@@ -99,14 +102,22 @@ Keep canvas selection separate from length: `window.FORMAT` remains the renderer
 (`shorts-9x16` or `youtube-long-16x9`), not an instruction to write to its historical bands.
 
 Follow [character preparation](../channel/references/character-identity.md#prepare-the-shared-sheet-before-episode-authoring).
-Read actual identities, export shared sheets and snapshot the available pool in `cast.json`.
-Complete required character images before text authoring. Cast only needed people, with specific wants and distinct speech;
+Read actual identities, export shared sheets and snapshot the characters this episode may use in
+`cast.json` (`id` and `source`, the path to their `identity.md`; `"voiceOnly": true` for a narrator
+who is never seen). Complete their face, front and back panels before text authoring, text-only
+requests included: `story_sequence` refuses to start the episode board until every entry has its
+identity and, unless `voiceOnly`, its panels (`cast_required`, `cast_source_missing`,
+`character_panel_missing`). Cast only needed people, with specific wants and distinct speech;
 select a narrator only when the expression needs one. Do not invent existing IDs or voices.
 Before shot design, complete the three sheet categories using
 [asset sheet preparation](references/asset-sheets.md). This includes one-off characters,
 story-relevant props and every background/location, not only recurring assets. Reuse actual
-existing sheets; finish props and backgrounds after the text storyboard. Missing images
-block completion of their visual stage and do not authorize paid generation. Do not proceed with an applicable sheet category silently omitted.
+existing sheets; finish props and backgrounds after the text storyboard. Generate front
+and back camera views for each background by default (`panels.front`, `panels.back` in
+`SB_DOC.locations`), preserving the same space from opposite sides. Set each shot's
+`shot_icons.backgroundView` from that layout so `shot_image` uses the matching panel;
+follow [asset sheets](references/asset-sheets.md). Missing images are
+reported and do not authorize paid generation; apart from the cast's own panels they stop no step. Do not proceed with an applicable sheet category silently omitted.
 
 Store local plans under `data/<channel>/episodes/<topic>/storyboard/` following
 [the destination contract](references/storyboard-target.md). No planning artifacts under
@@ -138,6 +149,46 @@ beat disappears. A trope name, emotion label or “advances the story” is not 
 Use this as a thinking aid, not a demand to make characters explain themselves aloud.
 
 ## 3. Write complete scenes before cutting them into shots
+
+**Story first, one layer at a time (user directive, 2026-10-31).** Once the scenario is
+settled, the first storyboard step writes only the story: `story_sequence` (each sequence's
+title and purpose) → `story_scene` (place, time, event and a one- or two-sentence summary,
+inside its sequence) → `story_shot` (each shot as one sentence of story in its scene; a
+revised shot given another scene moves to the end of that scene). These are provisional
+performance units, not one unit per sentence, gesture or speaker turn. One summary may cover
+a continuous exchange with several lines. Revisit boundaries after the lines are written. No
+image, speech, prompt, camera or dialogue work happens in this step. Each tool refuses a layer
+whose parent is missing (`story_order`). The next step starts once every sequence has scenes,
+every scene has shots and every shot has its story: `shot_characters` sets who is on screen in
+each shot — at most two principal characters, `[]` for nobody — and then `shot_dialogue` writes
+each shot's lines in spoken order, each attributed to a character from `cast.json`. An on-screen
+speaker is one of the shot's characters; a narrator is a character who speaks in `voiceover`
+without being seen. When a character leaves a shot later, `shot_characters` keeps their lines
+as `off_screen` and warns, and it warns when the start image shows the old cast; revise them
+with `shot_dialogue` and `shot_image`. The third step, once every shot has its characters, sets what the review's
+icon row shows with `shot_icons` (§4): render route, size, angle, camera move, focus, depth,
+frame plan and `next`, the transition into the following shot (scenes-schema §scene transition). Camera endpoints and blocking then go through `storyboard_apply`. The fourth step,
+once every shot has its icon attributes and the props and backgrounds exist, makes each
+picture shot's start image with `shot_image` from its characters' sheet panels, place and
+props — and its end image only for a `first_last` shot. A place whose sheet names a built set
+starts from that set rendered at the shot's size and angle, so block the cast with
+`location_manage bind` first when their places matter. The fifth writes each
+`generated_video` shot's English video prompt with `shot_prompt` from its icon attributes,
+lines and action. Each shot's video then waits for the user's yes (`video_approve`), or
+their approval of every shot.
+Inside an episode a new board starts with `story_sequence`; `storyboard_apply` does not create
+one. The story tools mark it `STORY.authoring:"story-first"`, and every writer then keeps each
+shot's order: story, characters, then lines and icons. `production_workflow` completes
+`text_storyboard` only with every shot story and every shot's characters written
+(`story_outline_required`). The guidance below shapes what those summaries
+and lines say.
+
+**Music spotting (guidance).** Once the lines are written and before `shot_prompt`, decide
+where the music changes. One bed under the whole episode is a complete answer. Otherwise write
+`window.MUSIC` cues, each with a one-sentence `reason`, and each changing shot's `sound` through
+`storyboard_apply`, following scenes-schema §Placing cues on a story board: one cue per sequence,
+a change or drop where the scene's `turn` flips the sequence's question. Nothing waits for this
+step and no tool refuses a board without it.
 
 For dialogue-led work and existing-story rewrites, read [causal dialogue and situational
 comedy](references/causal-dialogue.md). Check what triggers each consequential line, what
@@ -189,6 +240,11 @@ A review is useful evidence, not a standing numerical gate.
 
 ## 4. Cut and stage the scenes without losing their events
 
+Read and apply [content-led opening views](references/shot-view.md) for every picture shot:
+choose its visible evidence, crop, horizontal viewpoint and camera height from the story,
+then save `shot_icons view` with size and angle. This is the common decision procedure for
+the start image and set camera; a monologue does not automatically mean a portrait.
+
 For narrated or mixed scenes, apply [narration and visual grounding](references/narration-visual-grounding.md)
 before writing any source-image prompt. Decide what the picture contributes to the line,
 then stage that contribution; shared character, prop and background sheets constrain
@@ -206,12 +262,38 @@ change of attention, revealed information, an action boundary or a necessary rea
 One shot may carry a complete exchange. Use the ordered `performance` and speech-group
 references in character-scenarios so that every story event survives the translation.
 Do not add coverage merely to meet a size count or repeat a medium close-up for every line.
+Before committing the shot list, read each complete scene without cuts, then compare the
+proposed boundaries. Merge adjacent shots whose frame already carries the continuing
+exchange or action. Split when a reveal, reaction, action boundary, viewpoint or necessary
+geography changes what the audience follows. A close-up is one possible reason, not a rule.
+Follow [shot boundary decisions](references/shot-boundaries.md) after `shot_dialogue` and
+after later framing/timing changes. Use `storyboard_read.boundaryReview` to inspect every
+actual playback join, including silent action and speaker changes.
+After `shot_dialogue`, read each scene's complete speech and action without the shot breaks.
+Keep a continuing speaker in the same shot while the frame carries the performance; a pause,
+new sentence, changed speech purpose, glance or hand gesture alone does not require a cut.
+Keep a two-person exchange together when both responses are readable.
+For face-to-face generated dialogue, apply [dialogue coverage](references/dialogue-coverage.md):
+prefer speaker-facing OTS/reverse when expressions matter; split a fixed OTS that gives
+lines to both people, or retain a two-shot when both speaking faces are readable. A cut needs a reveal,
+reaction or viewpoint that the current frame cannot convey, or verified generation capacity.
+Revise provisional shots before images: preserve line IDs, order, speaker, delivery and acting;
+use `storyboard_apply.shotsById` and `removeShotIds` to merge, or `story_shot` followed by
+characters/lines to split. Reconcile performance groups, story/event references and continuity
+links after either change. Do not regenerate existing assets or discard approvals implicitly.
+
+Describe the meaningful opening, change and consequence of each retained shot. Remove
+redundant pauses and repeated setup. Derive its estimated length from those events and
+speech; timing cards and provider minimums never allocate seconds to fill. Preserve
+intentional silence when something changes during it. Consult [pacing cases](references/evals.md)
+for continuous dialogue, rapid action and an earned reaction cut.
 
 Before image prompts, perform the required camera-direction pass in
 [action direction](references/action-direction.md#required-camera-direction-pass).
 Choose framing, angle, focus and movement from each beat; never initialize every shot
-with static or copy one generic hold rationale. Persist shot-specific camera technique
-reasons and executable endpoints, then review the sequence for purposeful holds and
+with static or copy one generic hold rationale. Set the icon attributes — render route, size,
+angle, move, focus, depth, frame plan, transition to the next shot — with `shot_icons`, then persist the executable
+endpoints through `storyboard_apply`, then review the sequence for purposeful holds and
 changes of attention. This is authoring work, not a moving-shot quota or approval gate.
 
 For each consequential action, make the following understandable in the actual plan:
@@ -227,14 +309,14 @@ or its sound conveys the intended information. A prop cannot already be received
 source image when the shot needs to show its handoff.
 
 For recurring places, dialogue, entrances, travel or prop handoffs, plan one shared set.
-For cut storyboard compositions, build it with Blender using
-[location assets](references/location-assets.md) through compose-blender after camera_review.
-Missing Blender blocks that stage; three.js or still planning cannot replace it.
+Blender compositions of that set ([location assets](references/location-assets.md),
+compose-blender) run only when the user asks; `shot_image` composes each start image from
+the sheets.
 The saved previz renderer applies only to optional animated video references.
 Bind each shot's camera and complete actor start/end blocking, including off-camera actors,
 body facing and gaze. Within a `continuityGroup`, carry the previous cut's end state into the
 next start; explain time skips with `continuityBreak` and axis crossings with `lineCrossing`.
-Before generated images, render and inspect the shared space in cut order. Previz rendering is
+When the user asked for Blender compositions, render and inspect the shared space in cut order. Previz rendering is
 optional and belongs to produce (`location_manage` action `previz` on a Blender set) so motion
 shares the same set, camera and blocking. Camera, actor or endpoint changes invalidate those
 references. Continuity findings guide corrections without a new approval gate; record only
@@ -252,11 +334,15 @@ quotas. Choose the medium that can deliver the event. Maintain the saved visual 
 subtitles or explanatory marks burned into video. Explanatory graphics use their supported
 HTML/diagram route; full-video episodes follow [full-video](../produce/references/full-video.md).
 
+Plan each shot with at most two principal characters in `visual.character`; split a beat that
+needs three into shots, and describe extras by appearance in the action
+([character reference](references/scenes-schema.md#character-reference-visualcharacter)).
 For every new generated shot, declare `visual.frames` with explicit start/end planning
 and `visual.references` (empty when none). Each extra image has id, path, role, use
 (image/video/both) and purpose, as defined in [shot image inputs](references/scenes-schema.md#shot-image-inputs).
 Plan reference mode explicitly when using appearance conditioning without pinned frames.
-Do not fill every available model slot or silently drop unsupported combinations.
+Do not fill every available model slot or silently drop unsupported combinations; MSR
+character sheet panels are the default exception (see the schema).
 
 The storyboard plans source/end states, references, blocking and motion; produce builds
 and inspects them. Missing images are pending, never visually approved. Read
@@ -286,8 +372,33 @@ stays unknown and receives a planning note; it does not become zero seconds.
 For the handoff call `speech_manage` with `{path, action: "plan_video", shotId,
 capabilities}`. The tool reads the whole stored shot including `performance`; do not select
 individual line IDs for this review or pass an invented shot-payload argument. Review its
-warnings and source/motion prompt against the scene.
+warnings and source/motion prompt against the scene. An MSR shot plans as `native`: the
+model voices its lines, so the storyboard plans no per-line TTS for it.
 A line-only plan cannot prove that the independent actions or listener reactions survived.
+
+Before finalizing boundaries, set each generated shot's finite estimated `duration` from the
+complete performance and read `storyboard_read.videoTiming`. It resolves the episode snapshot
+and scoped model overrides, reports the selected route's `maxSeconds`, frame grid, source
+coverage and the shortest covering request. A maximum is a ceiling, never a target length or
+a reason to pad a short scene. `fits` covers the authored timing only; native speech remains
+an estimate until the generated clip is inspected. Retime from measured speech when available.
+
+Resolve `split_required` before making images. Split the smallest necessary number of times
+at a complete thought, action or motivated reaction; keep continued speech ordered and avoid
+repeated setup or empty pauses. Do not split at every sentence, divide the total equally,
+speed up speech, cut off words, reduce fps or switch models to make a long shot pass. Allow
+source trim and outgoing transition handles within the same cap. Re-read timing after every
+merge, split, dialogue, action, edit, model, resolution or fps change. The report uses the
+saved shot's `visual.video.frameRate` (or the adapter default); `video_plan` repeats the check
+with the actual request parameters. Pass that same fps to the request.
+
+A `timing_unknown` result needs a performance estimate. `limits_unknown` or `not_verified`
+is not permission to assume 5, 10 or 15 seconds: inspect the selected deployment's live
+catalog/contract (host tools use their actual schema), report the missing evidence and keep
+the timing provisional. Do not present that shot as ready for generation. Text-only work
+may retain an explicitly unresolved timing note. `video_plan` supports `requiredSeconds` on
+registered routes including MSR and rounds upward to a legal request without truncation;
+use the report's exact request or total required coverage instead of a provider default.
 
 Compare the resulting length with explicit user limits, verified publishing limits and
 budget. If it exceeds one, remove repetition, simplify the event or split the episode at a
@@ -302,7 +413,8 @@ The latter distinguishes new action timing from legacy audio-clock compatibility
 may show unknown action time, but production needs finite independent-action durations.
 Keep `STORY.version: story-v2`, its actual cast and event references, the shot-level
 `performance` and existing `STRUCTURE` in `scenes.js`. Do not duplicate dialogue across
-independent script files. Generate readable exports from this source. Use:
+independent script files. Generate readable exports from this source. When the user asks
+for a check or a blind read, use:
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/check-scenario.js" storyboard/scenario.md
@@ -318,7 +430,7 @@ actions with the visual handoff yourself. Vocabulary review uses speech alone; a
 story has no vocabulary score. Reviews of planned action do not certify generated acting.
 
 Build the review HTML with [storyboard-design.md](references/storyboard-design.md) and the
-bundled `storyboard-html.js`; run its `--check` after changes. `scenes.js` is the source of
+bundled `storyboard-html.js`; rerun it after changes. `scenes.js` is the source of
 truth; `SB_DOC` holds editorial metadata and real character identities/voice settings.
 The cast section links to the shared sheets. Include `storyboard.md`, selected scenario,
 local HTML and readable performance. For user-recorded work also generate the shooting
@@ -349,7 +461,14 @@ instead of inventing an episode. For existing supplied recordings use the ingest
 ## Four filmmaking elements and semantic technique choices
 
 Read the catalogue returned by `storyboard_read` (`includeTechniques:true`) before
-choosing techniques. Persist each purposeful choice as `shot.techniques:[{id,reason}]`.
+choosing techniques. Each value `shot_icons` takes has a card there — use, avoid, the shots
+around it, what the prompt must name, and how 9:16 changes it — and a use is a practitioners'
+convention, not a measured effect. Set the camera move and focus with `shot_icons`, which writes
+`shot.techniques:[{id,reason}]`; give a video move its `speed` (slow, steady, fast) and `target`,
+and a rack focus its `from` and `to` subjects in English, because `shot_image` stages them and
+`shot_prompt` writes them ("The camera slowly pushes in toward …", "Rack focus from … to …").
+On a 9:16 board the result lists each chosen value's vertical note; read it before the images.
+Persist other purposeful choices there through `storyboard_apply`.
 The shared source is [film-techniques.js](references/film-techniques.js); exported boards also
 carry the complete catalogue as JSON and an accessible icon legend. Choose from
 information/action needs, not a diversity quota. Match canonical MS (waist-up), MFS

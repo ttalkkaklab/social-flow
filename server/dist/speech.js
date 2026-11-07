@@ -1,5 +1,6 @@
 import { routingContext } from './video-routing.js';
-import { speechVideoCapabilities } from './video-registry.js';
+import { resolveCharacterVoice } from './video-voice.js';
+import { speechVideoCapabilities, VIDEO_ADAPTERS } from './video-registry.js';
 /** Model-independent dialogue addressing, revision tracking and media dependencies. */
 import { createHash, randomUUID } from 'node:crypto';
 import { readFileSync, writeFileSync, renameSync, mkdirSync, existsSync } from 'node:fs';
@@ -12,6 +13,7 @@ import { readBoard, serializeBoard } from './storyboard.js';
 import { actingSchema, compileActing } from './speech-acting.js';
 import { resolveTtsModel } from './tts-models.js';
 import { ASTRA_VIDEO_MAX_PROMPT_CHARS } from './astra-video-client.js';
+import { nonEnglishOutsideQuotes } from './prompt-language.js';
 const actingContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/scene-acting.js');
 export { actingSchema } from './speech-acting.js';
 const delivery = z.enum(['voiceover', 'on_screen', 'off_screen']);
@@ -21,11 +23,11 @@ export const speechManageSchema = z.object({
     shotId: z.string().optional(), lineId: z.string().optional(), speaker: z.string().optional(), query: z.string().optional(),
     expectedRevision: z.string().optional(),
     patch: z.object({ tts: z.string().min(1).optional(), sub: z.string().optional(), speaker: z.string().min(1).optional(), delivery: delivery.optional(), acting: actingSchema.nullable().optional() }).strict().optional(),
-    audioPath: z.string().optional(), videoPath: z.string().optional(),
+    audioPath: z.string().optional(), videoPath: z.string().optional(), tool: z.string().optional(),
     reuse: z.literal('tail_trim').optional(),
     timingPatch: z.object({ speechBoundActions: z.boolean().optional(), actions: z.array(z.tuple([z.number().int().nonnegative(), z.number().finite().positive()])).optional() }).strict().optional(),
     generation: z.object({ generator: z.string().min(1), voiceSettings: z.record(z.unknown()), text: z.string().min(1), language: z.string().min(1).optional() }).strict().optional(),
-    capabilities: z.object({ provider: z.string().min(1), model: z.string().min(1), audioConditioning: z.boolean(), lipSync: z.boolean(), postLipSync: z.boolean(), evidence: z.string().min(1) }).strict().optional(),
+    capabilities: z.object({ provider: z.string().min(1), model: z.string().min(1), audioConditioning: z.boolean(), lipSync: z.boolean(), postLipSync: z.boolean(), nativeSpeech: z.boolean().optional(), evidence: z.string().min(1) }).strict().optional(),
 }).strict();
 const hash = (s) => createHash('sha256').update(s).digest('hex');
 const object = (v) => v && typeof v === 'object' && !Array.isArray(v) ? v : {};
@@ -98,7 +100,8 @@ export function speechVideoPlan(input, capabilities) {
     const scene = Array.isArray(input) ? { narration: input } : input;
     const lines = scene.narration || [];
     const onScreen = lines.some(line => line.delivery === 'on_screen');
-    const mode = !onScreen ? 'voiceover' : capabilities.audioConditioning && capabilities.lipSync ? 'audio_conditioned' : capabilities.postLipSync ? 'post_lipsync' : null;
+    // Native speech renders every authored delivery in the soundtrack; only on-screen speech moves a visible mouth.
+    const mode = capabilities.nativeSpeech ? 'native' : !onScreen ? 'voiceover' : capabilities.audioConditioning && capabilities.lipSync ? 'audio_conditioned' : capabilities.postLipSync ? 'post_lipsync' : null;
     if (!mode)
         throw new Error('Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting');
     const timeline = actingContract().planScenePerformance(scene, measuredDuration);
@@ -107,11 +110,14 @@ export function speechVideoPlan(input, capabilities) {
         ? { characters: videoPrompt.length, maxCharacters: ASTRA_VIDEO_MAX_PROMPT_CHARS, exceeded: videoPrompt.length > ASTRA_VIDEO_MAX_PROMPT_CHARS }
         : undefined;
     const warnings = [...timeline.warnings];
+    const foreign = nonEnglishOutsideQuotes(videoPrompt);
+    if (foreign)
+        warnings.push(`videoPrompt carries authored text in another language ("${foreign}"); write the video prompt in English before video_plan, which refuses it. Only quoted dialogue keeps the video's language.`);
     if (promptLength?.exceeded)
         warnings.push(`ASTRA video prompt has ${promptLength.characters} characters; the adapter limit is ${promptLength.maxCharacters}. Shorten repeated descriptions or split at a natural action boundary while preserving necessary actions. The plan is unchanged.`);
     const performancePayload = actingContract().scenePerformancePayload(scene);
     const { performance: _performance, narration: _narration, ...reuseContext } = performancePayload;
-    return { ...timeline, warnings, promptLength, reuseContextRevision: hash(JSON.stringify(reuseContext)), performanceRevision: hash(JSON.stringify(performancePayload)), videoPrompt, textPolicy: 'no_visible_text', boundary: 'one_shot_per_generation', instructions: 'Generate only this shot. Preserve the ordered actions, addressees and reactions, including silent events. Concurrent actions share their speech interval. Match the source frame to the opening state; do not concatenate other shots sharing a reference image. ' + actingContract().VIDEO_TEXT_POLICY, mode, provider: capabilities.provider, model: capabilities.model, capabilities, audioFirst: onScreen, lineIds: lines.map(line => line.id), review: 'not_reviewed' };
+    return { ...timeline, ...(mode === 'native' && timeline.timing === 'needs_audio_duration' ? { timing: 'model_timed' } : {}), warnings, promptLength, reuseContextRevision: hash(JSON.stringify(reuseContext)), performanceRevision: hash(JSON.stringify(performancePayload)), videoPrompt, textPolicy: 'no_visible_text', boundary: 'one_shot_per_generation', instructions: 'Generate only this shot. Preserve the ordered actions, addressees and reactions, including silent events. Concurrent actions share their speech interval. Match the source frame to the opening state; do not concatenate other shots sharing a reference image. ' + actingContract().VIDEO_TEXT_POLICY, mode, provider: capabilities.provider, model: capabilities.model, capabilities, audioFirst: onScreen && mode !== 'native', lineIds: lines.map(line => line.id), review: 'not_reviewed' };
 }
 export function manageSpeech(args) {
     args = speechManageSchema.parse(args);
@@ -123,7 +129,9 @@ export function manageSpeech(args) {
         throw new Error('Read speech first and supply its current expectedRevision; the storyboard may have changed');
     const doc = object(win.SB_DOC);
     const rawCharacters = doc.characters;
-    const characters = (Array.isArray(rawCharacters) ? rawCharacters : Object.entries(object(rawCharacters)).map(([id, c]) => ({ ...object(c), id })));
+    const voiceWarnings = [];
+    const characters = (Array.isArray(rawCharacters) ? rawCharacters : Object.entries(object(rawCharacters)).map(([id, c]) => ({ ...object(c), id })))
+        .map(c => resolveCharacterVoice(object(c), { episode: dirname(dirname(file)), board: win, shot: {} }, voiceWarnings));
     const character = (id) => characters.find(c => c.id === id);
     const scenes = win.SCENES;
     let changed = false;
@@ -184,7 +192,9 @@ export function manageSpeech(args) {
                 const binding = object(video.speechBinding);
                 invalidated = { audio: oldAudio || null, video: Object.keys(video).length && (line.delivery === 'on_screen' || oldDelivery === 'on_screen' || Object.hasOwn(args.patch, 'acting')) || ['audio_conditioned', 'post_lipsync'].includes(String(binding.mode)) ? video : null, edit: true };
                 delete line.audio;
-                line.mediaStatus = 'needs_audio';
+                // A native-speech clip voiced the old words itself: the stale video, not new audio, is the follow-up.
+                if (binding.mode !== 'native')
+                    line.mediaStatus = 'needs_audio';
                 if (invalidated.video)
                     video.speechStatus = 'stale';
                 scene.speechRevision = (Number(scene.speechRevision) || 0) + 1;
@@ -208,7 +218,7 @@ export function manageSpeech(args) {
             const video = object(object(scene.visual).video), binding = object(video.speechBinding);
             const boundAudio = Array.isArray(binding.audio) ? binding.audio.map(object).find(a => a.lineId === line.id) : undefined;
             if (priorAudio?.sha256 !== audioHash || priorAudio?.revision !== lineRevision || (boundAudio && (boundAudio.sha256 !== audioHash || boundAudio.revision !== lineRevision))) {
-                const dependsOnSpeech = line.delivery === 'on_screen' || ['audio_conditioned', 'post_lipsync'].includes(String(binding.mode));
+                const dependsOnSpeech = binding.mode !== 'native' && (line.delivery === 'on_screen' || ['audio_conditioned', 'post_lipsync'].includes(String(binding.mode)));
                 invalidated = { audio: priorAudio || null, video: dependsOnSpeech && Object.keys(video).length ? video : null, edit: true };
                 if (invalidated.video)
                     video.speechStatus = 'stale';
@@ -255,10 +265,16 @@ export function manageSpeech(args) {
         const episode = dirname(dirname(file));
         if (existsSync(join(episode, '.work/model-settings.json'))) {
             const { selection } = routingContext(episode, args.shotId);
-            const verified = speechVideoCapabilities(selection.engine, selection.model || selection.engine);
+            // The shot's video tool decides the route (MSR speaks its prompt; audio-to-video takes line audio);
+            // without one, the saved default operation does, as in video_plan.
+            const adapter = args.tool ? VIDEO_ADAPTERS[args.tool] : undefined;
+            if (args.tool && adapter?.engine !== selection.engine)
+                throw new Error('model_selection_mismatch: tool does not match selected engine');
+            const verified = speechVideoCapabilities(selection.engine, selection.model || selection.engine, adapter?.operation ?? selection.operation);
             if (args.capabilities && (args.capabilities.provider !== verified.provider || args.capabilities.model !== verified.model ||
-                args.capabilities.audioConditioning !== verified.audioConditioning || args.capabilities.lipSync !== verified.lipSync || args.capabilities.postLipSync !== verified.postLipSync))
-                throw new Error('Caller capabilities disagree with selected adapter registry');
+                args.capabilities.audioConditioning !== verified.audioConditioning || args.capabilities.lipSync !== verified.lipSync || args.capabilities.postLipSync !== verified.postLipSync ||
+                Boolean(args.capabilities.nativeSpeech) !== Boolean(verified.nativeSpeech)))
+                throw new Error('Caller capabilities disagree with selected adapter registry; omit capabilities when the episode has a model snapshot');
             args = { ...args, capabilities: verified };
         }
         plan = speechVideoPlan({ ...scene, narration: selected.map(({ line }) => ({ ...line, audio: currentAudio(line, character(line.speaker)) ? line.audio : undefined })) }, args.capabilities);
@@ -271,7 +287,14 @@ export function manageSpeech(args) {
             const bytes = readFileSync(videoPath);
             if (!bytes.length)
                 throw new Error('Video file is empty');
+            const native = plan.mode === 'native';
+            const sound = object(scene.sound);
+            if (native && sound.audioSource === 'speech')
+                throw new Error('Native video speech lives in the clip soundtrack; sound.audioSource speech would drop it');
             const audio = selected.map(({ line }) => {
+                // The clip spoke the line text, so the binding records the line revision; there is no line audio.
+                if (native)
+                    return { lineId: line.id, revision: speechRevision(line, character(line.speaker)) };
                 if (!line.audio || line.audio.revision !== speechRevision(line, character(line.speaker)) || hash(readFileSync(line.audio.path)) !== line.audio.sha256)
                     throw new Error('Generate and attach current speech before binding video');
                 const errors = voiceContract().generationVoiceErrors(character(line.speaker)?.tts, line.audio.generation, line);
@@ -315,6 +338,13 @@ export function manageSpeech(args) {
                             review: 'not_reviewed' } } : {}) };
                 video.speechStatus = 'current';
             }
+            if (native) {
+                // The clip's soundtrack carries the dialogue, so it is the card's audio.
+                scene.sound = { ...sound, audioSource: 'video' };
+                for (const { line } of selected)
+                    if (line.mediaStatus === 'needs_audio')
+                        delete line.mediaStatus;
+            }
             visual.video = video;
             scene.visual = visual;
             changed = true;
@@ -344,5 +374,5 @@ export function manageSpeech(args) {
         writeFileSync(tmp, nextSource);
         renameSync(tmp, file);
     }
-    return { revision: hash(readFileSync(file)), changed, invalidated, plan, timing, ...(args.action === 'plan_audio' ? { audioPlans: selected.map(({ scene, line }) => ({ shotId: scene.id, lineId: line.id, ...speechAudioPlan(line, character(line.speaker)) })) } : {}), lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker)), audioProvenanceStatus: audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
+    return { revision: hash(readFileSync(file)), changed, invalidated, plan, timing, ...(voiceWarnings.length ? { voiceWarnings } : {}), ...(args.action === 'plan_audio' ? { audioPlans: selected.map(({ scene, line }) => ({ shotId: scene.id, lineId: line.id, ...speechAudioPlan(line, character(line.speaker)) })) } : {}), lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker)), audioProvenanceStatus: object(object(object(scene.visual).video).speechBinding).mode === 'native' ? 'native_speech' : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
 }

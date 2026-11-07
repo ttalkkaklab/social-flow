@@ -63,13 +63,18 @@ their source and stay outside this classification.
 | Real footage of the actual place, era or event | `archive` (this route only); `live_action`, `atmosphere` and `place` may take it instead of their default | `stock_video` | A 1950 newsreel of the street; a real launch from the NASA library; a real market at dawn from Pexels. The license record travels with the cut (scenes-schema §stock material). |
 | An abstract diagram or UI reenactment | `motion_explanation` (quantitative purposes may take it instead of `data_graph`) | `motion_html` | A flow between services, a queue filling, a before/after pair; `shot.motionGraphic` names the type ([motion-graphics.md](motion-graphics.md)). |
 
-Stills also record `camera.effect`, `target` and `reason` — nine effects: `focus-in` ·
+Stills also record `camera.effect`, `target` and `reason` — ten effects: `focus-in` ·
 `rack-focus` · `approach` · `pull` · `pan` · `tilt` · `push` (the plain slow zoom-in, still-camera.js's
-default) · `reveal` · `parallax`. Focus-in suits introducing a
+default) · `reveal` · `parallax` · `hold` (the frame stays put on `focusTo` or the centre; `shot_icons`
+records it as `motionIntent: intentional_still`, so a held still is a decision, not a frozen
+render). Focus-in suits introducing a
 person, approach suits stressing a clue, rack focus a shift of attention, pull a place, pan
 introducing a space or finding B after A, tilt the scale of a tall thing told by the time
 the eye needs (L13). A `pan` or `tilt` travels from `focusFrom` to `focusTo`, two different
-regions of the actual image; the runtime eases both ends, which is the hold in and hold out. Do
+regions of the actual image; the runtime eases both ends, which is the hold in and hold out, and
+centres each region as far as the picture reaches, zooming up to 1.2 (less when the source would
+pass a 1.5× upscale) so a pan between far regions travels about a fifth of the frame instead of
+5–8%. A pan without regions keeps its old diagonal. Do
 not repeat one effect on every cut. Foreground reveals and depth parallax need prepared
 layers. A `focus-in` or `rack-focus` cut declares `shot.depth` as `shallow`
 (scenes-schema §Depth of field); a `deep` record on one fails, because the mask blurs every
@@ -102,8 +107,8 @@ per short and at most 20% of generated cut length in long-form, and a text-led c
 typography into subject motion. Other cuts take the time their action needs. `evidence_quote` records
 `evidence:{source,quote}`; to show the document itself, use a still-camera cut.
 
-Every generated cut needs `mode`, `purpose` and `reason`; recordings and the shared outro are
-exempt. Characters need `actors` and `action`; objects need `action`. Generated video also
+Every generated cut needs `mode`, `purpose` and `reason`, set with `shot_icons` as the
+storyboard's third step; recordings and the shared outro are exempt. Characters need `actors` and `action`; objects need `action`. Generated video also
 needs `motionEssential:true`, `action` and `whyNotStill`. A stock clip needs `action` (what
 the viewer sees happen), `visual.source: "stock"` and the `visual.license` record — provider,
 url, license, licenseUrl, `commercial` and `modify` both true, `attributionRequired` with the
@@ -178,7 +183,7 @@ A `generated_video` cut with a `visual.video` slot may pre-render its camera and
 `previz-template.html` — rendered at the cut's billed length, 24 fps, and stored as
 `visual.video.previz` with `renderer`, `clip`, `firstFrame`, `sha256`, `fps`, `seconds` and
 `camera.movement`. The previz is optional (owner decision 2026-10-18): it helps when the model
-takes a reference clip (Seedance 2.x `reference_video`); on `frame_and_prompt` adapters it is
+takes a reference clip (Seedance 2.x `reference_video`); on a host video tool it is
 advice only. `checkScene` advises when a cut has none after the draft pass. When a record
 exists, `checkPreviz` flags a renderer other than `blender`/`threejs`, a clip that is not a
 local mp4 rendered at whole seconds and 24–60 fps, a first frame that is not a local png, a
@@ -194,7 +199,7 @@ in [blender-previz.md](blender-previz.md) §6.
 ## Start and end frame planning
 
 For every newly authored image-to-video shot, set `visual.frames.mode` to `first` or
-`first_last` and write `reason`. Use `first_last` when the final position, a camera destination,
+`first_last` and write `reason` (`shot_icons` `frames`; `reference` plans MSR and shows its icon). Use `first_last` when the final position, a camera destination,
 opening/closing, assembly, removal or another visible state change must be controlled. Write
 `endState` before generating images. Use `first` for a mood shot or subtle ambient motion with
 no required destination. The decision is per shot, independent of hybrid/full-video choice —
@@ -244,10 +249,8 @@ Do not convert a continuity failure into a passing review because both stills lo
 ## Per-cut model choices (2026-09-13)
 
 The episode model and resolution are defaults, not equality constraints on cuts.
-Seedance 1.x uses `previz.handoff: "frame_and_prompt"` (inferred from the model when absent).
-Its source still is edited from the previz first frame and the prompt carries camera/blocking;
-it sends no reference video. Omit reference image/audio arrays on 1.x.
-Seedance 2.x can continue to use `reference_video`. Keep previz asset and camera checks.
+Seedance 2.x can send the previz as `reference_video`. A cut naming Veo, Gemini Omni or
+Seedance 1.x fails as `video_engine_unsupported`. Keep previz asset and camera checks.
 
 ## Drone spatial reveal
 

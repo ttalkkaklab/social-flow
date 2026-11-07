@@ -304,7 +304,9 @@ const chrome = spawn(CHROME, [
   // without a context (getContext returns null), hence SwiftShader — a WebGL slide reproduces
   // inside that software backend.
   "--headless=new", "--disable-gpu", "--enable-unsafe-swiftshader", "--hide-scrollbars", "--remote-debugging-pipe",
-  "--no-first-run", "--no-default-browser-check", "--disable-extensions", "--mute-audio",
+  // --use-mock-keychain: without it a run on a fresh HOME (npm test) has no login keychain and
+  // macOS pops a "keychain cannot be found" dialog for "Chrome Safe Storage".
+  "--use-mock-keychain", "--no-first-run", "--no-default-browser-check", "--disable-extensions", "--mute-audio",
   "--allow-file-access-from-files", "--window-size=" + W + "," + H,
   "--user-data-dir=" + profile, "about:blank",
 ], { stdio: ["ignore", "ignore", "pipe", "pipe", "pipe"] });

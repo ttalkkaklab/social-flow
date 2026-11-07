@@ -1,11 +1,13 @@
+import { existsSync } from 'node:fs';
+import { generateLocalVideo } from './local-video-models.js';
 import { manageWorkflow } from './production-workflow.js';
 import { MUSIC_ADAPTERS, musicCatalog } from './music-registry.js';
-import { planMusic, musicPlanSummary, executeMusic, musicStatus, routeLegacyMusic } from './music-routing.js';
+import { planMusic, musicPlanSummary, executeMusic, musicStatus, resumeMusic, routeLegacyMusic } from './music-routing.js';
 import { generateLyriaSong, generateElevenMusic } from './music-song-client.js';
 import { IMAGE_ADAPTERS, imageCatalog } from './image-registry.js';
 import { planImage, imagePlanSummary, executeImage, routeLegacyImage, imageStatus } from './image-routing.js';
 import { videoStatus } from './video-routing.js';
-import { planVideo, executeVideo, routeLegacyVideo } from './video-routing.js';
+import { planVideo, executeVideo, routeLegacyVideo, approveVideo } from './video-routing.js';
 import { VIDEO_ADAPTERS, videoCatalog } from './video-registry.js';
 import { routeSpeech, speechRouteSchema } from './tts-routing.js';
 import { hostReview } from './host-review.js';
@@ -38,10 +40,13 @@ import * as tts from './tts-client.js';
 import { checkedSpeechSchema, generateCheckedSpeech } from './tts-quality.js';
 import { finalSpeechSchema, reviewFinalSpeech } from './tts-final-quality.js';
 import * as astraVideo from './astra-video-client.js';
-import { generateGenaiVideo, getGenaiVideoStatus, genaiVideoStatusSchema } from './astra-genai-video.js';
+import { generateGenaiVideo, getGenaiVideoStatus, genaiVideoStatusSchema, refreshGenaiMsrVoice } from './astra-genai-video.js';
+import { generateNativeImage } from './astra-genai-native-image.js';
+import { generateDesktopVideo, desktopVideoStatus } from './astra-genai-desktop.js';
+import { genaiSpeechSchema } from './astra-genai-speech.js';
+import { randomUUID } from 'node:crypto';
+import { genaiCatalog } from './astra-genai-client.js';
 import { generateGenaiImage } from './astra-genai-image.js';
-import * as omni from './omni-client.js';
-import * as video from './video-client.js';
 import { contentFeedback } from './content-feedback.js';
 import { youtubeTopicScout } from './youtube-topic-scout.js';
 import * as snsScout from './sns-issue-scout.js';
@@ -50,6 +55,8 @@ import type { ApiResult } from './http.js';
 import { renderCapabilityStatus } from './capability-status.js';
 import { CHANNEL_SLUG_RE } from './config.js';
 import { DURATION_TOOLS, resolveVideoDuration } from './video-duration.js';
+import { manageCharacter } from './character-manage.js';
+import { characterPanelRequest, characterPanelSchema, recordCharacterPanel } from './character-panel.js';
 
 /** MCP content blocks — generated images are also returned as base64 image blocks. */
 export type ToolContent =
@@ -68,7 +75,7 @@ function text(message: string, isError = false): ToolResult {
   return { content: [{ type: 'text', text: message }], isError };
 }
 
-/** Generated-image response — base64 image block + summary text block (contract inherited from fect-mcp). */
+/** Generated-image response — base64 image block + summary text block. */
 function imageResult(message: string, base64Data: string, mimeType: string): ToolResult {
   return {
     content: [
@@ -107,7 +114,7 @@ function elevenlabsMeta(result: {
   return (
     (result.warnings?.map(warning => `Warning: ${warning}\n`).join('') ?? '') +
     (result.durationSeconds !== undefined ? `Duration: ${result.durationSeconds}s\n` : '') +
-    (result.characterCost !== undefined ? `Character cost: ${result.characterCost} (vendor-metered characters — the billing quantity; log this ÷ 1000 in the cost ledger)\n` : '') +
+    (result.characterCost !== undefined ? `Character cost: ${result.characterCost} (vendor-metered characters — the billing quantity; the server writes it ÷ 1000 into .work/events.jsonl, and a hand-written cost-tally line uses the same ÷ 1000)\n` : '') +
     (result.latencyMs !== undefined ? `Vendor latency: ${result.latencyMs} ms\n` : '') +
     (result.requestId ? `Request ID: ${result.requestId}\n` : '') +
     (result.alignmentPath
@@ -807,9 +814,11 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   // ── image generation (OpenAI GPT Image) — returns base64 image block + summary text ──
   gpt_image_text2img: async (args) => {
     const request = parseArgs(image.text2ImageSchema, args);
+    // Refuse before the paid call: the save never replaces an earlier file.
+    if (request.savePath && existsSync(request.savePath)) return { ...text(`Output already exists; choose a new savePath: ${request.savePath}`, true), terminal: true };
     const result = await image.generateFromText(request);
     if (!result.success || !result.base64) {
-      return text(`Image generation failed: ${result.error}`, true);
+      return { ...text(`Image generation failed: ${result.error}`, true), terminal: result.terminal === true };
     }
     let summary = `Image generated successfully\n\nModel: ${result.model}\nSize: ${result.size ?? 'auto'}\nQuality: ${result.quality ?? 'auto'}\nMIME Type: ${result.mimeType}\nPrompt: ${result.prompt}`;
     if (result.revisedPrompt) summary += `\nRevised Prompt: ${result.revisedPrompt}`;
@@ -825,9 +834,11 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   },
   gpt_image_img2img: async (args) => {
     const request = parseArgs(image.img2ImgSchema, args);
+    // Refuse before the paid call: the save never replaces an earlier file.
+    if (request.savePath && existsSync(request.savePath)) return { ...text(`Output already exists; choose a new savePath: ${request.savePath}`, true), terminal: true };
     const result = await image.generateFromImage(request);
     if (!result.success || !result.base64) {
-      return text(`Image editing failed: ${result.error}`, true);
+      return { ...text(`Image editing failed: ${result.error}`, true), terminal: result.terminal === true };
     }
     let summary = `Image edited successfully\n\nModel: ${result.model}\nSize: ${result.size ?? 'auto'}\nQuality: ${result.quality ?? 'auto'}\nReference Images: ${request.sourceImagesBase64.length}\nMask: ${request.maskBase64 ? 'yes' : 'no'}\nInput Fidelity: ${request.inputFidelity ?? 'default'}\nMIME Type: ${result.mimeType}\nPrompt: ${result.prompt}`;
     if (result.revisedPrompt) summary += `\nRevised Prompt: ${result.revisedPrompt}`;
@@ -847,7 +858,8 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   image_local_generate: async (args) => {
     const request = parseArgs(zimage.zimageGenerateSchema, args);
     const result = await zimage.generateLocalImage(request);
-    if (!result.success) return text(`Local image generation failed: ${result.error}`, true);
+    // Reported only after the child exited (or never started): nothing is still running.
+    if (!result.success) return { ...text(`Local image generation failed: ${result.error}`, true), terminal: true };
     return text(
       `Image generated locally!\n\nFile: ${result.imagePath}\nEngine: Z-Image Turbo via mflux (on-device)\n` +
         `Size: ${result.width}x${result.height}\nSteps: ${result.steps}\nSeed: ${result.seed ?? 'random'}\n` +
@@ -858,7 +870,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   mlx_image_generate: async (args) => {
     const request = parseArgs(mlx.mlxImageGenerateSchema, args);
     const result = await mlx.generateMlxImage(request);
-    if (!result.success) return text(`MLX Core image generation failed:\n${result.error}`, true);
+    if (!result.success) return { ...text(`MLX Core image generation failed:\n${result.error}`, true), terminal: true };
     return text(
       `Image generated via MLX Core.\n\nFile: ${result.path}\nModel: ${result.model}\n` +
         `Size: ${result.width}x${result.height}\nSteps: ${result.steps ?? 'model default'}\n` +
@@ -868,7 +880,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   mlx_image_edit: async (args) => {
     const request = parseArgs(mlx.mlxImageEditSchema, args);
     const result = await mlx.editMlxImage(request);
-    if (!result.success) return text(`MLX Core image edit failed:\n${result.error}`, true);
+    if (!result.success) return { ...text(`MLX Core image edit failed:\n${result.error}`, true), terminal: true };
     return text(
       `Image edited via MLX Core.\n\nFile: ${result.path}\nModel: ${result.model}\n` +
         (result.width && result.height ? `Size: ${result.width}x${result.height}\n` : '') +
@@ -887,9 +899,17 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
         `Generation time: ${result.elapsedSeconds}s`,
     );
   },
+  ltx_video_generate: async (args) => {
+    const result = await generateLocalVideo('ltx_video_generate', args);
+    return text(JSON.stringify(result), !result.success);
+  },
+  fasth3_omni_reference: async (args) => {
+    const result = await generateLocalVideo('fasth3_omni_reference', args);
+    return text(JSON.stringify(result), !result.success);
+  },
   mlx_video_generate: async (args) => {
     const request = parseArgs(mlx.mlxVideoGenerateSchema, args);
-    const result = await mlx.generateMlxVideo(request);
+    const result = await generateLocalVideo('mlx_video_generate', request);
     if (!result.success) return text(`MLX Core video generation failed:\n${result.error}`, true);
     return text(
       `Video generated via MLX Core.\n\nFile: ${result.path}\nModel: ${result.model}\n` +
@@ -911,78 +931,26 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     );
   },
 
-  // ── video generation (Veo 3.1) — saves the mp4 locally, returns path + meta text ──
-  veo_text2video: async (args) => {
-    const result = await video.generateFromText(parseArgs(video.text2VideoSchema, args));
-    if (!result.success) return text(`Video generation failed: ${result.error}`, true);
-    return text(
-      `Video generated successfully!\n\nFile: ${result.videoPath}\nModel: ${result.model}\nAspect Ratio: ${result.aspectRatio}\nResolution: ${result.resolution}\nDuration: ${result.duration} seconds\nPrompt: ${result.prompt}`,
-    );
-  },
-  veo_img2video: async (args) => {
-    const result = await video.generateFromImage(parseArgs(video.img2VideoSchema, args));
-    if (!result.success) return text(`Video generation from image failed: ${result.error}`, true);
-    const lastImageInfo = result.lastImage ? `\nLast Frame Image: ${result.lastImage}` : '';
-    const modeInfo = result.lastImage ? ' (frame interpolation mode)' : '';
-    return text(
-      `Video generated from image${modeInfo} successfully!\n\nOutput: ${result.videoPath}\nFirst Frame Image: ${result.sourceImage}${lastImageInfo}\nModel: ${result.model}\nAspect Ratio: ${result.aspectRatio}\nResolution: ${result.resolution}\nDuration: ${result.duration} seconds\nPrompt: ${result.prompt}`,
-    );
-  },
-  veo_extension: async (args) => {
-    const result = await video.extendVideo(parseArgs(video.videoExtensionSchema, args));
-    if (!result.success) return text(`Video extension failed: ${result.error}`, true);
-    return text(
-      `Video extended successfully!\n\nOutput: ${result.videoPath}\nSource Video: ${result.sourceVideo}\nModel: ${result.model}\nResolution: ${result.resolution}\nAdded Duration: +${result.duration} seconds\nPrompt: ${result.prompt}`,
-    );
-  },
-  veo_reference: async (args) => {
-    const result = await video.generateWithReferences(parseArgs(video.referenceVideoSchema, args));
-    if (!result.success) return text(`Video generation with references failed: ${result.error}`, true);
-    const refImagesInfo = result.referenceImages?.join('\n  - ') || '';
-    return text(
-      `Video generated with reference images successfully!\n\nOutput: ${result.videoPath}\nReference Images (${result.referenceImages?.length || 0}):\n  - ${refImagesInfo}\nModel: ${result.model}\nAspect Ratio: ${result.aspectRatio}\nResolution: ${result.resolution}\nDuration: ${result.duration} seconds\nPrompt: ${result.prompt}`,
-    );
-  },
-
-  // ── video generation (Gemini Omni 1.1 Flash) — same save-and-return-path shape as Veo,
-  //    plus the interaction id, which is the handle omni_extend / omni_edit continue from ──
-  omni_text2video: async (args) => {
-    const result = await omni.generateFromText(parseArgs(omni.omniText2VideoSchema, args));
-    if (!result.success) return text(`Omni video generation failed: ${result.error}`, true);
-    return text(
-      `Video generated with Gemini Omni.\n\nFile: ${result.videoPath}\nInteraction: ${result.interactionId}\nModel: ${result.model}\nAspect Ratio: ${result.aspectRatio}\nResolution: ${result.resolution}\nDuration: ${result.duration} seconds\nPrompt: ${result.prompt}\n\nPass the interaction id as previousInteractionId to omni_extend or omni_edit to keep working on this clip.`,
-    );
-  },
-  omni_img2video: async (args) => {
-    const result = await omni.generateFromImage(parseArgs(omni.omniImg2VideoSchema, args));
-    if (!result.success) return text(`Omni video generation from image failed: ${result.error}`, true);
-    const lastImageInfo = result.lastImage ? `\nLast Frame Image: ${result.lastImage}` : '';
-    const modeInfo = result.lastImage ? ' (frame interpolation)' : '';
-    return text(
-      `Video generated from image with Gemini Omni${modeInfo}.\n\nFile: ${result.videoPath}\nInteraction: ${result.interactionId}\nFirst Frame Image: ${result.sourceImage}${lastImageInfo}\nModel: ${result.model}\nAspect Ratio: ${result.aspectRatio}\nResolution: ${result.resolution}\nDuration: ${result.duration} seconds\nPrompt: ${result.prompt}`,
-    );
-  },
-  omni_extend: async (args) => {
-    const result = await omni.extendVideo(parseArgs(omni.omniExtendSchema, args));
-    if (!result.success) return text(`Omni video extension failed: ${result.error}`, true);
-    const source = result.sourceVideo ? `\nSource Video: ${result.sourceVideo}` : '';
-    return text(
-      `Video extended with Gemini Omni.\n\nFile: ${result.videoPath}\nInteraction: ${result.interactionId}${source}\nModel: ${result.model}\nResolution: ${result.resolution}\nAdded: +${result.duration} seconds\nPrompt: ${result.prompt}\n\nThe saved file is the whole cut (source + the added seconds), not just the new tail.`,
-    );
-  },
-  omni_edit: async (args) => {
-    const result = await omni.editVideo(parseArgs(omni.omniEditSchema, args));
-    if (!result.success) return text(`Omni video edit failed: ${result.error}`, true);
-    const source = result.sourceVideo ? `\nSource Video: ${result.sourceVideo}` : '';
-    return text(
-      `Video edited with Gemini Omni.\n\nFile: ${result.videoPath}\nInteraction: ${result.interactionId}${source}\nModel: ${result.model}\nResolution: ${result.resolution}\nInstruction: ${result.prompt}\n\nLength is unchanged from the input.`,
-    );
-  },
-
   // ── video generation (ASTRA video API — self-hosted LTX-2.5) ──────────────────────
   //    Acceptance and result are separate calls, so the client polls; these routes only
   //    parse, call, and report. Failures arrive as thrown errors carrying the server's own
   //    message — never the request headers, which is where the key lives.
+  astra_genai_catalog: async args => text(JSON.stringify(await genaiCatalog(z.enum(['image','speech','video','loras','contracts']).parse((args as Record<string, unknown>).kind)))),
+  tts_astra_genai: async args => {
+    const generation = genaiSpeechSchema.parse(args);
+    const result = await routeSpeech({ action: 'execute', generator: 'tts_astra_genai', requestId: generation.requestId || randomUUID(),
+      generation: { ...generation, outputPath: generation.outputPath || process.cwd() } });
+    return text(JSON.stringify(result), 'success' in result && result.success === false);
+  },
+  astra_genai_image_generate: async args => { const result = await generateNativeImage(args); return { ...text(JSON.stringify(result)), imageReceipt: result }; },
+  astra_genai_image_edit: async args => { const result = await generateNativeImage(args, true); return { ...text(JSON.stringify(result)), imageReceipt: result }; },
+  astra_genai_desktop_text2video: async args => text(JSON.stringify(await generateDesktopVideo('text-to-video', args))),
+  astra_genai_desktop_img2video: async args => text(JSON.stringify(await generateDesktopVideo('image-to-video', args))),
+  astra_genai_desktop_audio2video: async args => text(JSON.stringify(await generateDesktopVideo('audio-to-video', args))),
+  astra_genai_desktop_extend: async args => text(JSON.stringify(await generateDesktopVideo('extend', args))),
+  astra_genai_desktop_retake: async args => text(JSON.stringify(await generateDesktopVideo('retake', args))),
+  astra_genai_desktop_keyframes: async args => text(JSON.stringify(await generateDesktopVideo('keyframes', args))),
+  astra_genai_desktop_status: async args => { const input = z.object({receiptPath:z.string().min(1),download:z.boolean().default(false)}).strict().parse(args); return text(JSON.stringify(await desktopVideoStatus(input.receiptPath,input.download))); },
   astra_genai_text2video: async args => text(JSON.stringify(await generateGenaiVideo('text-to-video', args))),
   astra_genai_img2video: async args => text(JSON.stringify(await generateGenaiVideo('image-to-video', args))),
   astra_genai_audio2video: async args => text(JSON.stringify(await generateGenaiVideo('audio-to-video', args))),
@@ -1043,6 +1011,14 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
         (parsed.conditioningMaskPath ? `\nConditioning mask: ${parsed.conditioningMaskPath}` : ''),
     );
   },
+  astra_video_upscale: async (args) => {
+    const result = await astraVideo.upscaleVideo(parseArgs(astraVideo.astraVideoUpscaleSchema, args));
+    return text(
+      `${astraVideoReport('Clip upscaled 2x through pixel-upscaler-x2 on the ASTRA video API', result)}` +
+        `\nSource: ${result.source.path} (${result.source.width}x${result.source.height}, ${result.source.frames} frames)` +
+        `\nDropped trailing frames: ${result.droppedFrames}\nAudio: ${result.audio}\nReview: not_reviewed — compare identity, mouths and props with the source`,
+    );
+  },
   astra_video_retake: async (args) => {
     const parsed = parseArgs(astraVideo.astraVideoRetakeSchema, args);
     const result = await astraVideo.retakeVideo(parsed);
@@ -1059,12 +1035,12 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   // record this number.
   seedance_text2video: async (args) => {
     const result = await seedance.generateFromText(parseArgs(seedance.seedanceText2VideoSchema, args));
-    if (!result.success) return text(`Seedance video generation failed: ${result.error}`, true);
+    if (!result.success) return { ...text(`Seedance video generation failed: ${result.error}`, true), terminal: result.terminal === true };
     return text(`Video generated successfully!\n\nFile: ${result.videoPath}\n${seedanceMeta(result)}\nPrompt: ${result.prompt}`);
   },
   seedance_img2video: async (args) => {
     const result = await seedance.generateFromImage(parseArgs(seedance.seedanceImg2VideoSchema, args));
-    if (!result.success) return text(`Seedance video generation from image failed: ${result.error}`, true);
+    if (!result.success) return { ...text(`Seedance video generation from image failed: ${result.error}`, true), terminal: result.terminal === true };
     const lastImageInfo = result.lastImage ? `\nLast Frame Image: ${result.lastImage}` : '';
     const modeInfo = result.lastImage ? ' (frame interpolation mode)' : '';
     return text(
@@ -1073,7 +1049,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   },
   seedance_reference: async (args) => {
     const result = await seedance.generateWithReferences(parseArgs(seedance.seedanceReferenceSchema, args));
-    if (!result.success) return text(`Seedance video generation with references failed: ${result.error}`, true);
+    if (!result.success) return { ...text(`Seedance video generation with references failed: ${result.error}`, true), terminal: result.terminal === true };
     const refImagesInfo = result.referenceImages?.length
       ? `\nReference Images (${result.referenceImages.length}):\n  - ${result.referenceImages.join('\n  - ')}`
       : '';
@@ -1155,7 +1131,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     const request = parseArgs(elevenlabs.elevenLabsSfxSchema, args);
     const result = await elevenlabs.generateElevenLabsSoundEffect(request);
     if (!result.success) return text(`ElevenLabs sound effect generation failed: ${result.error}`, true);
-    return text(
+    return { metered: { durationSeconds: result.durationSeconds }, ...text(
       `Sound effect generated successfully!\n\nFile: ${result.audioPath}\nProvenance: ${result.sidecarPath}\n` +
         `Engine: ElevenLabs ${result.model}\nFormat: ${result.outputFormat}${elevenlabsFormatNote(result.outputFormat)}\n` +
         (result.durationSeconds !== undefined ? `Duration: ${result.durationSeconds}s (measured — the ledger quantity for sfx.elevenlabs)\n` : '') +
@@ -1166,18 +1142,18 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
         (request.durationSeconds !== undefined ? ` · ${request.durationSeconds}s requested` : ' · length chosen by the vendor') +
         (request.loop ? ' · loop' : '') +
         `\nNext: for a channel asset, register it — python3 skills/channel/references/resolve-asset.py --ensure data/<channel> sfx <id> audio/sfx/<id>.wav "elevenlabs ${result.model} · see <id>.json"`,
-    );
+    ) };
   },
   tts_elevenlabs_generate: async (args) => {
     const request = parseArgs(elevenlabs.elevenLabsGenerateSchema, args);
     const result = await elevenlabs.generateElevenLabsSpeech(request);
     if (!result.success) return text(`ElevenLabs TTS generation failed: ${result.error}`, true);
-    return text(
+    return { metered: { characterCost: result.characterCost }, ...text(
       `Audio generated successfully!\n\nFile: ${result.audioPath}\nEngine: ElevenLabs ${result.model}\n` +
         `Voice: ${request.voiceId}\nFormat: ${result.outputFormat}${elevenlabsFormatNote(result.outputFormat)}\n` +
         elevenlabsMeta(result) +
         `Text length: ${request.text.length} chars`,
-    );
+    ) };
   },
   tts_elevenlabs_dialogue: async (args) => {
     const request = parseArgs(elevenlabs.elevenLabsDialogueSchema, args);
@@ -1185,13 +1161,13 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     if (!result.success) return text(`ElevenLabs dialogue generation failed: ${result.error}`, true);
     const voices = new Set(request.inputs.map((line) => line.voiceId));
     const totalChars = request.inputs.reduce((sum, line) => sum + line.text.length, 0);
-    return text(
+    return { metered: { characterCost: result.characterCost }, ...text(
       `Dialogue audio generated successfully!\n\nFile: ${result.audioPath}\nEngine: ElevenLabs ${result.model}\n` +
         `Lines: ${request.inputs.length} (${voices.size} voices)\nFormat: ${result.outputFormat}${elevenlabsFormatNote(result.outputFormat)}\n` +
         elevenlabsMeta(result) +
         (result.voiceSegments !== undefined ? `Voice segments: ${result.voiceSegments}\n` : '') +
         `Script length: ${totalChars} chars`,
-    );
+    ) };
   },
   tts_elevenlabs_voices: async (args) => {
     const request = parseArgs(elevenlabs.elevenLabsVoicesSchema, args);
@@ -1366,7 +1342,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
         `- Combine genre + mood for more specific output (e.g., "calm jazz", "energetic techno")\n` +
         `- Specify instruments for desired sound palette\n` +
         `- Use BPM to control tempo (60=slow, 120=moderate, 180=fast)\n` +
-        `- For 30s short-form BGM, prefer music_generate_clip (Lyria 3 — describe BPM/key/mood in the prompt)\n` +
+        `- New music follows music_plan → music_execute with the saved model; music_generate_clip is the standalone 30s Lyria clip (describe BPM/key/mood in the prompt)\n` +
         `- For exact durations (5-300s), use music_generate (Lyria RealTime)\n` +
         `- For BGM under narration, ask for space in the vocal frequency range\n\n` +
         `ADVANCED CONTROLS (music_generate_advanced):\n` +
@@ -1386,7 +1362,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   suno_generate: async (args) => {
     const request = parseArgs(suno.sunoGenerateSchema, args);
     const result = await suno.generateMusic(request);
-    if (!result.success) return { musicReceipt: { requestId: result.taskId }, ...text(`Suno generation failed: ${result.error}`, true) };
+    if (!result.success) return { musicReceipt: { requestId: result.taskId }, ...text(`Suno generation failed: ${result.error}`, true), terminal: result.terminal === true };
     const tracks = result.tracks ?? [];
     const lines = tracks.map(
       (track, index) =>
@@ -1568,6 +1544,10 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     try { return text(JSON.stringify(await manageLocation(args), null, 2)); }
     catch (error) { return text(error instanceof Error ? error.message : String(error), true); }
   },
+  character_manage: async (args) => {
+    try { return text(JSON.stringify(manageCharacter(args), null, 2)); }
+    catch (error) { return text(error instanceof Error ? error.message : String(error), true); }
+  },
   character_voice_audition: async (args) => text(JSON.stringify(await manageVoiceAudition(voiceAuditionSchema.parse(args)), null, 2)),
   tts_review_acting: async (args) => text(JSON.stringify(await reviewTtsActing(ttsActingReviewSchema.parse(args)), null, 2)),
   speech_manage: async (args) => text(JSON.stringify(manageSpeech(parseArgs(speechManageSchema, args)), null, 2)),
@@ -1582,6 +1562,41 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     storyboard.contract();
     const r = storyboard.applyStoryboard(parseArgs(storyboard.storyboardApplySchema, args));
     return text(storyboard.renderApply(r), r.findings.some((f) => f.level === 'bad'));
+  },
+  story_sequence: async (args) => {
+    storyboard.contract();
+    const r = storyboard.writeStorySequences(parseArgs(storyboard.storySequenceSchema, args));
+    return text(storyboard.renderApply(r), r.findings.some((f) => f.level === 'bad'));
+  },
+  story_scene: async (args) => {
+    storyboard.contract();
+    const r = storyboard.writeStoryScenes(parseArgs(storyboard.storySceneSchema, args));
+    return text(storyboard.renderApply(r), r.findings.some((f) => f.level === 'bad'));
+  },
+  story_shot: async (args) => {
+    storyboard.contract();
+    const r = storyboard.writeStoryShots(parseArgs(storyboard.storyShotSchema, args));
+    return text(storyboard.renderApply(r), r.findings.some((f) => f.level === 'bad'));
+  },
+  shot_characters: async (args) => {
+    storyboard.contract();
+    const r = storyboard.writeShotCharacters(parseArgs(storyboard.shotCharactersSchema, args));
+    return text(storyboard.renderApply(r), r.findings.some((f) => f.level === 'bad'));
+  },
+  shot_dialogue: async (args) => {
+    storyboard.contract();
+    const r = storyboard.writeShotDialogue(parseArgs(storyboard.shotDialogueSchema, args));
+    return text(storyboard.renderApply(r), r.findings.some((f) => f.level === 'bad'));
+  },
+  shot_icons: async (args) => {
+    storyboard.contract();
+    const r = storyboard.writeShotIcons(parseArgs(storyboard.shotIconsSchema, args));
+    return text(storyboard.renderApply(r), r.findings.some((f) => f.level === 'bad'));
+  },
+  shot_prompt: async (args) => {
+    storyboard.contract();
+    const r = storyboard.writeShotPrompt(parseArgs(storyboard.shotPromptSchema, args));
+    return text(storyboard.renderApply(r) + '\n\nVideo prompt (visual.video.prompt):\n' + r.prompt, r.findings.some((f) => f.level === 'bad'));
   },
   storyboard_check: async (args) => {
     storyboard.contract();
@@ -1615,8 +1630,14 @@ for (const name of Object.keys(VIDEO_ADAPTERS)) {
   ROUTES[name] = args => routeLegacyVideo(name, args, dispatchVideo);
 }
 ROUTES.video_catalog = async () => text(JSON.stringify(videoCatalog(), null, 2));
-ROUTES.video_plan = async args => text(JSON.stringify(planVideo(args), null, 2));
+ROUTES.video_plan = async args => {
+  // MSR voice samples depend on the gateway backend; ask before the synchronous plan.
+  const raw = (args ?? {}) as Record<string, unknown>;
+  if (raw.tool === 'astra_genai_msr' || raw.operation === 'reference' || (!raw.tool && !raw.operation)) await refreshGenaiMsrVoice();
+  return text(JSON.stringify(planVideo(args), null, 2));
+};
 ROUTES.video_execute = args => executeVideo(args, dispatchVideo);
+ROUTES.video_approve = async args => text(JSON.stringify(approveVideo(args), null, 2));
 
 ROUTES.video_status = async args => text(JSON.stringify(await videoStatus(args), null, 2));
 
@@ -1628,6 +1649,40 @@ ROUTES.image_catalog = async () => text(JSON.stringify(imageCatalog(), null, 2))
 ROUTES.image_plan = async args => text(JSON.stringify(imagePlanSummary(planImage(args)), null, 2));
 ROUTES.image_execute = args => executeImage(args, dispatchImage);
 ROUTES.image_status = async args => text(JSON.stringify(await imageStatus(args), null, 2));
+// character_panel plans and runs one sheet panel from the identity, then records it in panels.json.
+ROUTES.character_panel = async args => {
+  const input = parseArgs(characterPanelSchema, args);
+  const request = characterPanelRequest(input);
+  const plan = planImage({ directory: request.workspace, assetId: `${request.id}-${request.view}`, requestId: request.requestId, operation: request.operation,
+    ...(request.tool ? { tool: request.tool } : {}), ...(input.reserveUsd !== undefined ? { reserveUsd: input.reserveUsd } : {}), args: request.args });
+  if (plan.execution === 'server') {
+    const result = await executeImage({ directory: plan.directory, planId: plan.id }, dispatchImage);
+    if (result.isError) return result;
+    recordCharacterPanel(request);
+  }
+  const lines = [`${request.view} panel: ${request.file}`, 'Inputs, in order:', ...request.inputs.map((file, i) => `  Image ${i + 1}: ${file}`),
+    '', 'Prompt:', request.prompt, ...(request.negativePrompt ? ['', 'Negative prompt:', request.negativePrompt] : []), ...(request.warnings.length ? ['', 'Warnings:', ...request.warnings.map((w) => '  ' + w)] : [])];
+  if (plan.execution === 'host_handoff') lines.push('', 'host_handoff: generate this picture with the selected host image tool from the inputs above, in order, save it to the panel path, then record it in panels.json.');
+  return text(lines.join('\n'));
+};
+
+// shot_image plans and runs one frame through the image service, then records it on the board.
+ROUTES.shot_image = async args => {
+  storyboard.contract();
+  const input = parseArgs(storyboard.shotImageSchema, args);
+  const request = storyboard.shotImageRequest(input);
+  const plan = planImage({ directory: request.episode, assetId: request.assetId, requestId: request.requestId, operation: request.operation,
+    ...(request.tool ? { tool: request.tool } : {}), ...(input.reserveUsd !== undefined ? { reserveUsd: input.reserveUsd } : {}), args: request.args });
+  if (plan.execution === 'server') {
+    const result = await executeImage({ directory: plan.directory, planId: plan.id }, dispatchImage);
+    if (result.isError) return result;
+  }
+  const r = storyboard.recordShotImage(input, request);
+  const lines = [storyboard.renderApply(r), '', `${input.frame} image: ${request.file}`, 'Inputs, in order:',
+    ...request.inputs.map((file, i) => `  Image ${i + 1}: ${file}`), '', 'Prompt:', request.prompt];
+  if (plan.execution === 'host_handoff') lines.push('', 'host_handoff: generate this picture with the selected host image tool from the inputs above, in order, and save it to the image path.');
+  return text(lines.join('\n'), r.findings.some((f) => f.level === 'bad'));
+};
 
 // Music adapters cannot bypass saved selection or reservations in a configured workspace.
 const musicDispatch = Object.fromEntries(Object.keys(MUSIC_ADAPTERS).map(name => [name, ROUTES[name]]));
@@ -1636,4 +1691,4 @@ for (const name of Object.keys(MUSIC_ADAPTERS)) ROUTES[name] = args => routeLega
 ROUTES.music_catalog = async () => text(JSON.stringify(musicCatalog(), null, 2));
 ROUTES.music_plan = async args => text(JSON.stringify(musicPlanSummary(planMusic(args)), null, 2));
 ROUTES.music_execute = args => executeMusic(args, dispatchMusic);
-ROUTES.music_status = async args => text(JSON.stringify(musicStatus(args), null, 2));
+ROUTES.music_status = async args => (args as { action?: unknown })?.action === 'resume' ? resumeMusic(args) : text(JSON.stringify(musicStatus(args), null, 2));

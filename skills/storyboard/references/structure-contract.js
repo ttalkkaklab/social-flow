@@ -373,7 +373,9 @@
     if (!d || validateDepth(d).length || d.mode === 'none') return '';
     const intent = d.reason ? '; depth intent: ' + d.reason : '';
     if (d.mode === 'shallow') return 'Shallow depth of field: only ' + d.focus + ' is sharp, everything nearer and farther falls softly out of focus' + intent;
-    return 'Deep focus: ' + d.planes.join(', ') + ' all read sharp at the same time, front to back' + intent;
+    // "deep focus" is in neither the LTX nor the Vertex prompt guide; both read the planes spelled out front to back.
+    const p = d.planes, middle = p.length > 2 ? ' through ' + p.slice(1, -1).join(' and ') + ' in the middle ground' : '';
+    return 'Deep depth of field: sharp focus from ' + p[0] + ' in the foreground' + middle + ' to ' + p[p.length - 1] + ' in the background, all at once' + intent;
   }
 
   function check(win, opts) {
@@ -728,9 +730,9 @@
       const sizes = new Set(pics.map(x => x.s.shot && x.s.shot.size).filter(Boolean));
       if (!performanceStory && xs.length === 1 && placed.length >= 5 && groups.size >= 2)
         warn(where, `one shot — coverage is two sizes per scene, a wide and a close; give it a second shot or fold it into a neighbour (scenes-schema §grammar units)`);
-      else if (xs.length >= 2 && pics.length === 1 && placed.length >= 5)
+      else if (!performanceStory && xs.length >= 2 && pics.length === 1 && placed.length >= 5)
         warn(where, `one picture shot and ${xs.length - 1} explanation screen(s) — an explanation screen's size frames the drawing and fills neither slot; coverage is two picture sizes, a wide and a close (rule 9)`);
-      else if (xs.length >= 2 && sizes.size) {
+      else if (!performanceStory && xs.length >= 2 && sizes.size) {
         if (!WIDE.some(z => sizes.has(z)) && !placeKnown)
           warn(where, `${pics.length} picture shots and no wide (${WIDE.join('·')}) — coverage is two sizes per scene, a wide that sets the place and a close; an explanation screen's ls is not the wide (directing-grammar §6.1–2)`);
         if (!CLOSE.some(z => sizes.has(z)))
@@ -1077,7 +1079,7 @@
     const shots = Array.isArray(win.SCENES) ? win.SCENES : [];
     const full = level === 'full';
     const shotRow = (s, i) => {
-      const row = { no: i + 1, id: s.id || null, type: s.type, beat: s.beat, duration: s.duration, after: s.after };
+      const row = { no: i + 1, id: s.id || null, type: s.type, title: s.title, summary: s.summary, beat: s.beat, duration: s.duration, after: s.after };
       if (s.shot) Object.assign(row, {
         feel: s.shot.feel, info: s.shot.info, infoType: s.shot.infoType, size: s.shot.size, angle: s.shot.angle, why: s.shot.why,
         render: s.shot.render && s.shot.render.mode, share: s.shot.share,
@@ -1096,7 +1098,7 @@
           unresolvedGroup: !speech });
       });
       const visual = s.visual || {};
-      row.references = { characters: visual.character || [], location: s.shot && s.shot.location,
+      row.references = { characters: visual.character || [], location: s.shot && s.shot.location || visual.locationId,
         props: visual.props || [], propUsage: visual.propUsage || [] };
       row.media = visual;
       if (s.transition) row.transition = s.transition;
@@ -1189,7 +1191,107 @@
       q.scenes.forEach(no => { if (!sceneNos.has(no)) bad('structure', 'sequence references unknown scene ' + no); });
     });
     shots.forEach((s,i) => { if (s && s.scene !== undefined && !sceneNos.has(s.scene)) bad('shot ' + (i+1), 'scene reference does not exist'); });
+    // A board started with story_sequence is written sequence → scene → shot story, then each
+    // shot's characters, then its lines and icon attributes (user directive 2026-10-31). Older
+    // boards keep their contract; production_workflow checks the story when text_storyboard completes.
+    if (win.STORY?.authoring === 'story-first') {
+      const owned = new Set(st.sequences.flatMap(q => q && Array.isArray(q.scenes) ? q.scenes : []));
+      st.scenes.forEach(sc => {
+        if (!sc || !posInt(sc.no)) return;
+        if (!owned.has(sc.no)) bad('scene ' + sc.no, 'story_order: belongs to no sequence — write it with story_scene');
+        if (!text(sc.summary)) bad('scene ' + sc.no, 'story_order: no summary — write the scene story with story_scene');
+      });
+      shots.forEach((s,i) => {
+        if (!s || ['broll','outro'].includes(s.type)) return;
+        const where = 'shot ' + (i+1), cast = castOf(s), lines = Array.isArray(s.narration) ? s.narration : [];
+        if (s.scene === undefined) bad(where, 'story_order: no scene — write the shot story with story_shot');
+        if (!text(s.summary)) bad(where, 'story_order: no summary — write the shot story with story_shot');
+        if (!cast && (lines.length || hasIcons(s)))
+          bad(where, 'story_order: ' + (lines.length ? 'lines' : 'icon attributes') + ' before characters — set the shot\'s characters with shot_characters');
+        if (cast) lines.forEach(l => {
+          if (l && l.delivery === 'on_screen' && l.speaker && cast.indexOf(l.speaker) === -1)
+            bad(where, 'story_order: ' + l.speaker + ' speaks on screen but is not among the shot\'s characters');
+        });
+      });
+    }
     return out;
+  }
+  /** What the review's icon row shows: render route, size, angle, camera move and focus, depth, frame plan. */
+  function hasIcons(s) {
+    const p = s.shot || {};
+    return !!(p.render || p.size || p.angle || p.depth || (Array.isArray(p.techniques) && p.techniques.length) || (s.visual && s.visual.frames));
+  }
+  /** A shot's characters — visual.character, or a legacy visual.characters list; undefined until set. */
+  function castOf(s) {
+    const v = s && s.visual || {};
+    const list = 'character' in v ? (v.character == null ? [] : [].concat(v.character)) : Array.isArray(v.characters) ? v.characters : undefined;
+    return list && list.map(e => typeof e === 'string' ? e : e && e.id).filter(text);
+  }
+  /** What the story outline still lacks: a sequence without scenes, a scene without a sequence, summary or shot, a shot without its story. */
+  function outlineGaps(win) {
+    const st = win && win.STRUCTURE;
+    if (!st || !Array.isArray(st.sequences) || !st.sequences.length) return ['no sequence'];
+    const shots = (Array.isArray(win.SCENES) ? win.SCENES : []).filter(s => s && !['broll','outro'].includes(s.type));
+    const owned = new Set(st.sequences.flatMap(q => q && Array.isArray(q.scenes) ? q.scenes : []));
+    const gaps = st.sequences.filter(q => !q || !Array.isArray(q.scenes) || !q.scenes.length).map(q => 'sequence ' + (q && q.id) + ' has no scene');
+    (Array.isArray(st.scenes) ? st.scenes : []).forEach(sc => {
+      if (!sc) return;
+      if (!owned.has(sc.no)) gaps.push('scene ' + sc.no + ' belongs to no sequence');
+      if (!text(sc.summary)) gaps.push('scene ' + sc.no + ' has no summary');
+      if (!shots.some(s => s.scene === sc.no)) gaps.push('scene ' + sc.no + ' has no shot');
+    });
+    shots.forEach(s => { if (s.scene === undefined || !text(s.summary)) gaps.push('shot ' + (s.id || '?') + ' has no story'); });
+    return gaps;
+  }
+  function castGaps(win) {
+    return (Array.isArray(win && win.SCENES) ? win.SCENES : [])
+      .filter(s => s && !['broll','outro'].includes(s.type) && !castOf(s)).map(s => 'shot ' + (s.id || '?') + ' has no characters');
+  }
+  // A picture route draws its shot from a generated start image (and an end image when first_last).
+  const imageRoute = s => ['still_camera', 'generated_video'].includes(s.shot && s.shot.render && s.shot.render.mode);
+  /** Shots still waiting for icon attributes: a render route, and for a picture route its size, angle and frame plan. */
+  function iconGaps(win) {
+    return (Array.isArray(win && win.SCENES) ? win.SCENES : []).filter(s => s && !['broll','outro'].includes(s.type)).flatMap(s => {
+      const p = s.shot || {}, frames = s.visual && s.visual.frames;
+      if (!(p.render && p.render.mode)) return ['shot ' + (s.id || '?') + ' has no render route'];
+      return imageRoute(s) && !(p.size && p.angle && frames && frames.mode) ? ['shot ' + (s.id || '?') + ' has no size, angle or frame plan'] : [];
+    });
+  }
+  /** Picture-route shots still waiting for their start image, or the end image a first_last plan needs. */
+  function imageGaps(win) {
+    return (Array.isArray(win && win.SCENES) ? win.SCENES : []).filter(s => s && !['broll','outro'].includes(s.type) && imageRoute(s)).flatMap(s => {
+      const frames = s.visual && s.visual.frames || {};
+      return !text(frames.start) ? ['shot ' + (s.id || '?') + ' has no start image']
+        : frames.mode === 'first_last' && !text(frames.end) ? ['shot ' + (s.id || '?') + ' has no end image'] : [];
+    });
+  }
+  /** What shot_prompt writes a video prompt from, kept as visual.video.promptBasis: the frame plan,
+      the cast, the on-screen lines (MSR adds its own), the camera move, the focus technique and, on
+      MSR, the size, angle and depth. isFocus(id) names the focus techniques (film-techniques.js). */
+  function promptBasis(s, isFocus) {
+    const p = s && s.shot || {}, v = s && s.visual || {}, cam = v.camera || {};
+    const mode = v.frames && v.frames.mode || 'first', msr = mode === 'reference';
+    return {
+      frames: mode,
+      cast: castOf(s) || [],
+      lines: msr ? [] : (Array.isArray(s.narration) ? s.narration : []).filter(l => l && l.delivery === 'on_screen' && l.tts).map(l => l.speaker + ': ' + l.tts),
+      // shot_prompt also writes the closing composition and the rack focus subjects; each joins only when set,
+      // so a basis recorded before they existed still matches.
+      camera: [cam.movement, cam.speed, cam.target].concat(cam.end ? [cam.end] : []).concat(cam.view ? [JSON.stringify(cam.view)] : []).map(x => x == null ? '' : String(x)).join(' | '),
+      focus: (Array.isArray(p.techniques) ? p.techniques : []).filter(t => t && t.id && isFocus(t.id)).map(t => t.from && t.to ? t.id + ': ' + t.from + ' → ' + t.to : t.id),
+      framing: msr ? [p.size || '', p.angle || '', p.depth ? JSON.stringify(p.depth) : ''] : [],
+    };
+  }
+  /** The lines a video call voices or shows — every line but voiceover — as [speaker, delivery, text]. */
+  function videoLines(s) {
+    return (s && Array.isArray(s.narration) ? s.narration : []).filter(l => l && l.delivery !== 'voiceover').map(l => [l.speaker || '', l.delivery || '', l.tts || '']);
+  }
+  /** The promptBasis parts that changed since shot_prompt wrote the prompt; [] when current or not written by shot_prompt. */
+  function promptDrift(s, isFocus) {
+    const video = s && s.visual && s.visual.video, basis = video && video.promptBasis;
+    if (!basis || typeof video.prompt !== 'string') return [];
+    const now = promptBasis(s, isFocus);
+    return Object.keys(now).filter(k => JSON.stringify(now[k]) !== JSON.stringify(basis[k]));
   }
   function guidedCheck(win, opts) {
     const blockers = executionCheck(win);
@@ -1199,7 +1301,7 @@
   const PRODUCTION_MODES = ['full_video','video_80','video_50','video_30','video_lt10','no_video'];
   const api = { VERSION, COMPOSITION_SCHEMA, validateComposition, compositionNeeded, checkCompositions, compositionText, DEPTH_SCHEMA, validateDepth, depthNeeded, checkDepths, depthText, EYELINE_SCHEMA, validateEyeline, checkEyelines, eyelineNeeded, eyelineText, VOCAB: { SIZES, ANGLES, TYPES, BEATS, INFO_TYPES, SHARE_TYPES, HOOK_TYPES, HOOK_FORMS, ARCS,
                                   RENDER_MODES, PRODUCTION_MODES, CHARGES_OPEN, CHARGES_CLOSE, TRANSITION_RE },
-                check, executionCheck, guidedCheck, sync, outline, slugOf, ownerOf };
+                check, executionCheck, guidedCheck, castOf, outlineGaps, castGaps, iconGaps, imageGaps, promptBasis, promptDrift, videoLines, sync, outline, slugOf, ownerOf };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.STRUCTURE_CONTRACT = api;
 })(typeof window === 'object' ? window : globalThis);

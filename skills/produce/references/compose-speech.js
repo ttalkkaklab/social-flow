@@ -49,24 +49,31 @@ function compose(work,board) {
     const lines=(scene?.narration||[]).filter(n=>(n.tts||'').trim());
     if(scene)checkSilentTiming(scene,board,win.SB_DOC?.performanceTimingVersion,path.resolve(work,fields[1]));
     if(!lines.length||(lines.length===1&&!lines.some(n=>n.acting!=null)&&!scene.performance?.some(event=>event.kind==='action')))continue;
-    const inputs=[],filters=[];
-    lines.forEach((line,i)=>{
+    const sources=[];
+    lines.forEach(line=>{
       const errors=actingErrors(line.acting),voice=cast.find(c=>c.id===line.speaker)?.tts;
       errors.push(...generationVoiceErrors(voice,line.audio?.generation,line));
       if(errors.length)throw new Error(line.id+': '+errors.join('; '));
       if(!line.audio || line.audio.generation.text!==line.tts || line.audio.revision!==hash(JSON.stringify(speechRevisionPayload(line,voice))))throw new Error('Attach current audio for '+line.id);
       const source=path.resolve(board,line.audio.path);
       if(hash(fs.readFileSync(source))!==line.audio.sha256)throw new Error('Audio changed for '+line.id);
-      inputs.push('-i',source);
+      sources.push(source);
     });
     const timing=sceneTiming(scene,board,win.SB_DOC?.performanceTimingVersion),intervals=timing.intervals;
+    // ffmpeg only decodes each take; the delay, sum and length are set here. An amix/apad graph hung
+    // or lost its padding on ffmpeg 8.0's threaded CLI (CI 2026-10-31, trac #11061).
+    const total=Math.round(timing.durationSeconds*48000),mix=new Int32Array(total);
     lines.forEach((line,i)=>{
-      const interval=intervals.find(item=>item.lineId===line.id);
-      filters.push(`[${i}:a]aresample=48000,aformat=sample_fmts=s16:channel_layouts=mono,adelay=${Math.round(interval.speechStartSeconds*48000)}S:all=1[a${i}]`);
+      const pcm=execFileSync('ffmpeg',['-v','error','-i',sources[i],'-ac','1','-ar','48000','-f','s16le','-'],{timeout:120000,maxBuffer:1<<30});
+      const start=Math.round(intervals.find(item=>item.lineId===line.id).speechStartSeconds*48000);
+      for(let k=0;k<pcm.length>>1&&start+k<total;k++)mix[start+k]+=pcm.readInt16LE(k*2);
     });
-    filters.push(lines.map((_,i)=>`[a${i}]`).join('')+`amix=inputs=${lines.length}:normalize=0,apad,atrim=duration=${timing.durationSeconds}[out]`);
+    const wav=Buffer.alloc(44+total*2);
+    wav.write('RIFF');wav.writeUInt32LE(36+total*2,4);wav.write('WAVEfmt ',8);wav.writeUInt32LE(16,16);wav.writeUInt16LE(1,20);wav.writeUInt16LE(1,22);
+    wav.writeUInt32LE(48000,24);wav.writeUInt32LE(96000,28);wav.writeUInt16LE(2,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(total*2,40);
+    mix.forEach((sample,k)=>wav.writeInt16LE(Math.max(-32768,Math.min(32767,sample)),44+k*2));
     const output=path.join(work,`c${fields[0]}-speech.wav`),tmp=output+'.tmp.wav';
-    try {execFileSync('ffmpeg',['-y','-v','error',...inputs,'-filter_complex',filters.join(';'),'-map','[out]','-c:a','pcm_s16le',tmp],{timeout:120000});fs.renameSync(tmp,output);} finally {if(fs.existsSync(tmp))fs.unlinkSync(tmp);}
+    try {fs.writeFileSync(tmp,wav);fs.renameSync(tmp,output);} finally {if(fs.existsSync(tmp))fs.unlinkSync(tmp);}
     const receipt={generator:'speech_compose',audioSha256:hash(fs.readFileSync(output)),lineIds:lines.map(n=>n.id),lineSources:lineSources(lines),expectedText:lines.map(n=>n.tts).join('. '),durationSeconds:duration(output),intervals,timing:timing.timing,warnings:timing.warnings,status:'not_reviewed'};
     fs.writeFileSync(output+'.generation.json',JSON.stringify(receipt,null,2)+'\n');
     fields[1]=path.basename(output);rows[row]=fields.join('\t');outputs.push({shotId:scene.id,audioPath:output,...receipt});

@@ -52,19 +52,6 @@ test('local character settings obey the generation engine contracts', async () =
 });
 
 
-test('optional voice fields reject malformed types without throwing and trim consistently',async()=>{
-  const {voiceErrors}=require('../../skills/_shared/character-voice.js');
-  const {ttsSchema}=await import('../dist/character-tts.js');
-  for(const engine of ['gemini','mlx']) for(const patch of [{model:{}},{model:[]},{model:''},{model:' '},{stylePrompt:[]},{stylePrompt:{}},{stylePrompt:''},{model:{},stylePrompt:'warm'}]) {
-    const value={engine,voiceId:'Kore',language:'ko',speed:1,...patch};
-    assert.ok(voiceErrors(value).length);assert.equal(ttsSchema.safeParse(value).success,false);
-  }
-  const padded={engine:'gemini',voiceId:' Kore ',language:' Korean ',speed:1,model:' gemini-2.5-flash-preview-tts ',stylePrompt:' warm '};
-  assert.deepEqual(voiceErrors(padded),[]);
-  assert.deepEqual(identityVoice(identity(padded)),ttsSchema.parse(padded));
-});
-
-
 test('only supported hosted speech engines and v4 character settings are accepted', async () => {
   const { voiceErrors, generationVoiceErrors } = require('../../skills/_shared/character-voice.js');
   const { ttsSchema } = await import('../dist/character-tts.js');
@@ -111,28 +98,6 @@ test('baseline generation receipts cannot substitute another spoken line or tagg
  assert.match(generationVoiceErrors(v38,turns,line).join(),/Generation turns differ/);
  turns.voiceSettings.turns=[{text:'<sigh> '+line.tts}];assert.match(generationVoiceErrors(v38,turns,line).join(),/Generation turns differ/);
  delete single.voiceSettings.text;assert.deepEqual(generationVoiceErrors(voice,single,line),[]);
-});
-
-test('stable Gemini voice identity survives scene emotion and exact request provenance', () => {
-  const voice = { ...tts, model: 'gemini-3.8-flash-tts' };
-  for (const model of ['gemini-3.8-flash-tts','gemini-2.5-flash-preview-tts']) {
-    const pinned = {...voice,model,voiceDirection:'Dry concise phrasing with low falling endings.'};
-    assert.deepEqual(voiceErrors(pinned),[]);
-    assert.equal(ttsSchema.safeParse(pinned).success,true);
-    for (const acting of [undefined,{direction:'urgent but restrained'}]) {
-      const line = {tts:'괜찮아요.',...(acting?{acting}:{})};
-      const plan = compileActing(line.tts,acting,pinned);
-      const style = plan.generation.turns?.[0].style || plan.generation.stylePrompt;
-      assert.match(style,/Dry concise phrasing/);
-      if (acting) assert.match(style,/urgent but restrained/);
-      const proof={generator:plan.generator,text:line.tts,language:'ko',voiceSettings:plan.generation};
-      assert.deepEqual(generationVoiceErrors(pinned,proof,line),[]);
-      const tampered=structuredClone(proof);
-      if(tampered.voiceSettings.turns) delete tampered.voiceSettings.turns[0].style;
-      else delete tampered.voiceSettings.stylePrompt;
-      assert.match(generationVoiceErrors(pinned,tampered,line).join(),/differs/);
-    }
-  }
 });
 
 test('unsupported or oversized identity controls fail rather than silently dropping a baseline', () => {

@@ -3,8 +3,8 @@
 Follow [production order](../../_shared/production-workflow.md). Complete project setup,
 then character text/images before text storyboard authoring. Derive props from that text
 and complete their text/images, then backgrounds, before composing the image storyboard.
-Inspect and reuse existing sheets. Pending media cannot complete a visual stage; missing
-spending authorization blocks new media rather than silently bypassing the stage.
+Inspect and reuse existing sheets. Missing media or spending authorization is reported, never
+silently bypassed; it stops no other step except the episode cast's own panels (production-workflow.md).
 
 - **Characters:** follow [character identity](../../channel/references/character-identity.md).
   Read/create `assets/characters/<id>/identity.md`, export the shared character sheet, and
@@ -20,11 +20,37 @@ spending authorization blocks new media rather than silently bypassing the stage
 - **Backgrounds/locations:** write canonical `SB_DOC.locations` in `scenes.js`, including
   one-off backgrounds and abstract stages. Each entry has `id`, `name`, `description`,
   `layout` (entrances, landmarks, actor/object positions and movement space), `lighting`
-  (time/weather/light), `invariants` (what stays consistent), and optional `imageUrl`,
-  `sheetPath`, `manifest`. Missing media blocks completion of the background stage. Use `visual.locationId` to reference
-  this planning sheet. It does not replace the production `visual.location` binding.
+  (time/weather/light), `invariants` (what stays consistent), `panels: {front, back}`
+  (image paths relative to the storyboard), and optional legacy `imageUrl`, `sheetPath`,
+  `manifest`. Generate **both front and back camera views by default**, as separate images,
+  with the saved image model and existing spending authorization. Plan and quote both calls.
+  Define front as the establishing camera looking into the space; back looks across that same
+  space from the opposite side, 180 degrees around it. Describe both camera positions, look
+  targets and visible landmarks in `layout` before generating. Make the front first, then
+  use it as a reference for the back with the opposite viewpoint explicitly described:
+  preserve architecture, object world positions, materials, time and light; reveal the
+  opposite side, never mirror the front image. Follow [image routing](../../_shared/image-routing.md)
+  for the saved model's reference support; never switch models silently. Inspect both images
+  and save their paths in `panels.front` and `panels.back`. `imageUrl` may alias the front for
+  older readers. Explicit text-only requests record the two planned views without generating.
+  Reuse existing panels; report a missing direction and generate it within authorization.
+  Missing media is reported with the background sheet. Use `visual.locationId` to reference
+  this planning sheet. For each shot, choose `shot_icons.backgroundView:"front"|"back"`
+  from its opening camera position relative to this layout. It saves
+  `visual.camera.backgroundView`; omission keeps the earlier choice, initially `front`.
+  A reverse shot uses `back` when it looks toward the opposite side of this space;
+  a character turning around, a high/low angle or camera movement alone does not change it.
+  `shot_image` selects that panel, never both opposing views. Legacy `imageUrl` is reused
+  with a missing-view warning only for legacy front-only sheets. A missing back panel or a
+  missing selected panel on a directional sheet refuses generation without a built set. It does not replace the production `visual.location` binding.
   For built sets, also follow [location assets](location-assets.md); link the real manifest
-  and its shared views. A written location sheet does not require Blender or a 3D render.
+  and its shared views. For a built set, align `cameras.front` (or the first manifest camera
+  when unnamed) with the sheet's establishing front view. Its horizontal position-to-target
+  axis defines front; back is the opposite direction. `shot_image` uses `backgroundView`
+  (default front) when rendering the opening camera. An authored subject view or POV/OTS
+  on the opposite side reports `background_view_conflict`; correct the view, background
+  direction or blocking rather than rotating the actor or substituting a picture silently.
+  A written location sheet does not require Blender or a 3D render.
 
 If a category has no subjects, set `SB_DOC.assetSheetNotes.characters`, `.props` or
 `.locations` to an explicit not-applicable reason. Do not manufacture a character for a

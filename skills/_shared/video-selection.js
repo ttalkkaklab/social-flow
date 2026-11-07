@@ -4,6 +4,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const settings = require('./model-settings.js');
 const { evaluateWindowScript } = require('./scenes-vm.js');
+const { videoLines } = require('../storyboard/references/structure-contract.js');
 const hash = value => crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
 
 function readVideoContext(episode, shotId) {
@@ -26,11 +27,12 @@ function readVideoContext(episode, shotId) {
   const { resolveVideoChoice } = require('../storyboard/references/production-mode.js');
   const { selection, source } = resolveVideoChoice(production, shot, snapshot?.config.models.video);
   const overrides = production.modelSettings?.overrides || [];
-  for (const change of overrides) if (change.video) settings.validateModels({ video: change.video }, true);
-  if (snapshot || source.endsWith('_override')) settings.validateModels({ video: selection }, true);
+  // A retired engine loads here so video_plan can refuse it as video_engine_unsupported.
+  for (const change of overrides) if (change.video) settings.validateModels({ video: change.video }, true, true);
+  if (snapshot || source.endsWith('_override')) settings.validateModels({ video: selection }, true, true);
   return { episode: root, shotId, selection, source, snapshotRevision: snapshot?.revision || null,
-    revision: hash({ selection, source, snapshotRevision: snapshot?.revision, overrides, imagePlan: { frames: shot.visual?.frames, references: shot.visual?.references, bg: shot.visual?.bg }, authorization: production.videoAuthorization,
+    revision: hash({ selection, source, snapshotRevision: snapshot?.revision, overrides, imagePlan: { frames: shot.visual?.frames, references: shot.visual?.references, bg: shot.visual?.bg }, shotPrompt: shot.visual?.video?.prompt, shotLines: videoLines(shot), authorization: production.videoAuthorization,
       budget: production.videoBudgetUsd, approval: production.approval, maxAttempts: production.maxAttempts }),
-    production, board, shot };
+    lines: videoLines(shot), production, board, shot };
 }
 module.exports = { readVideoContext };

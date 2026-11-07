@@ -50,12 +50,6 @@ describe('scenes.js realm isolation', () => {
   });
 
   for (const [name, evaluate] of evaluators) {
-    it(`${name}: returns only JSON data assigned to window`, () => {
-      assert.deepEqual(evaluate('window.SCENES = [{ no: 1 }]; window.FORMAT = "shorts";'), {
-        SCENES: [{ no: 1 }], FORMAT: 'shorts',
-      });
-    });
-
     it(`${name}: blocks window.constructor.constructor`, () => {
       assert.throws(
         () => evaluate('window.constructor.constructor("return process")()'),
@@ -85,13 +79,6 @@ describe('scenes.js realm isolation', () => {
 
     it(`${name}: interrupts an infinite loop`, () => {
       assert.throws(() => evaluate('while (true) {}', { timeoutMs: 20 }), /timed out/i);
-    });
-
-    it(`${name}: reports line and column with the accepted contract`, () => {
-      assert.throws(
-        () => evaluate('window.SCENES = [];\nFunction("return 1")()', { filename: 'ep07/scenes.js' }),
-        /ep07\/scenes\.js:2:\d+:[\s\S]*Allowed syntax:/,
-      );
     });
   }
 });

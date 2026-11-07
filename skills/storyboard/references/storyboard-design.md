@@ -1,6 +1,8 @@
 # Local storyboard review design
 
-Use [storyboard-html-template.html](storyboard-html-template.html) for every review.
+Use [storyboard-html-template.html](storyboard-html-template.html) for every review. It is
+the one storyboard design (user directive, 2026-10-31). Change the design in the bundled
+template, never in an episode or library copy.
 Edit only `<title>` and the marked `SB_DOC` metadata block. Scene data stays in
 `scenes.js`. Episode art style and `THEME` describe the video, not a custom review UI.
 
@@ -12,7 +14,7 @@ node "$CLAUDE_PLUGIN_ROOT/skills/storyboard/references/storyboard-html.js" "<epi
 
 Refresh preserves the title and metadata and copies the current runtime, CSS and
 bundled fonts and licenses. Fill the metadata after first creation, then refresh the library copy.
-Before delivery, run:
+To see whether a copy drifted from the bundled template, run:
 
 ```bash
 node "$CLAUDE_PLUGIN_ROOT/skills/storyboard/references/storyboard-html.js" "<episodeDir>/storyboard" --check

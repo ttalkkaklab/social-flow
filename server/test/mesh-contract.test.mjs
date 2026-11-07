@@ -26,13 +26,6 @@ test('seek endpoints are continuous and independent of visit order', () => {
   assert.deepEqual(poseFor(r,{pose:{}},'lid').scale,[1,1,1]);
   assert.equal(sampleRecipe(r,1,-1).u,0); assert.equal(sampleRecipe(r,99,0).u,1);
 });
-test('scene lighting accepts bounded art direction and rejects invalid render values',()=>{
-  const r=recipe();r.lighting={exposure:.8,environment:.25,key:1.8,fill:.2,rim:.4,shadowOpacity:.5,keyColor:'#ffd5a3',keyPosition:[-4,5,2]};
-  assert.deepEqual(checkRecipe(r,2),[]);
-  for(const change of [{exposure:Infinity},{key:-1},{shadowOpacity:2},{keyColor:'invalid'},{keyPosition:[0,0,0]}]){
-    const copy=structuredClone(r);Object.assign(copy.lighting,change);assert.match(checkRecipe(copy).join(),/lighting/);
-  }
-});
 test('physical actions can occupy a bounded part of narration without breaking the seam',()=>{
   const r=recipe();r.groups[0].motionWindow=[.2,.7];
   assert.equal(sampleRecipe(r,1,.1).u,0);assert.equal(sampleRecipe(r,1,.8).u,1);

@@ -1,3 +1,4 @@
+import { nativeImageSchema, nativeImageEditSchema } from './astra-genai-native-image.js';
 import { z } from 'zod';
 import { genaiImageSchema, genaiImageEditSchema } from './astra-genai-image.js';
 import { text2ImageSchema, img2ImgSchema } from './image-client.js';
@@ -8,6 +9,8 @@ import { validateImageBase64 } from './image-media.js';
 
 interface ImageAdapter { engine: string; operation: 'text' | 'edit'; schema: z.ZodTypeAny }
 export const IMAGE_ADAPTERS: Readonly<Record<string, ImageAdapter>> = Object.freeze({
+  astra_genai_image_generate: { engine: 'astra-genai-native', operation: 'text', schema: nativeImageSchema },
+  astra_genai_image_edit: { engine: 'astra-genai-native', operation: 'edit', schema: nativeImageEditSchema },
   astra_genai_text2img: { engine: 'astra-genai', operation: 'text', schema: genaiImageSchema },
   astra_genai_edit: { engine: 'astra-genai', operation: 'edit', schema: genaiImageEditSchema },
   gpt_image_text2img: { engine: 'gpt-image', operation: 'text', schema: text2ImageSchema },

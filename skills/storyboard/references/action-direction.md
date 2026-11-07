@@ -30,12 +30,17 @@ Complete this pass for every production storyboard, including unattended authors
 observable scenes and before source-image prompts. Explicit content-only work defers it.
 
 1. Name what the viewer must notice first and what changes by the end of the beat.
+   Follow [content-led opening views](shot-view.md): distinguish face, body detail, object,
+   relationship and geography, then compare a candidate framing with a useful alternative.
 2. Choose shot size, angle, camera distance and depth/focus together. Compare a held
    frame with a motivated move: approach a withheld reaction, follow a travelling subject,
    pull back to reveal a relationship, or shift focus from evidence to its observer.
-3. Record the choice in `shot.techniques` with a scene-specific reason. Write the actual
-   starting picture, motion pace/path and ending picture in `visual.camera`; keep
-   `shot.size`, `shot.angle` and `shot.depth` consistent. For rack focus name both subjects
+3. Set the choice with `shot_icons` — `view` (subject, reason, crop, mode and any set target),
+   size, angle, camera move or still effect, focus,
+   depth, render route and frame plan, each with a scene-specific reason; it writes
+   `shot.techniques` and keeps `visual.camera.movement` consistent. Then write the actual
+   motion pace/path and ending picture in `visual.camera` through
+   `storyboard_apply`; the starting picture is already in `visual.camera.view`. For rack focus name both subjects
    and the focus order in `framing`/`end`, including the action cue or focus timing.
    `shot.techniques[].reason` and `camera.purpose` are review context; their prose is
    not copied into provider prompts. A static camera can still direct attention through focus/blocking.
@@ -70,7 +75,7 @@ neither judge the art nor block tool execution. Do not invent image or motion re
 | Purpose | Possible camera direction | What must be specified |
 | --- | --- | --- |
 | Show isolation or the surrounding space | crane / pedestal up | starting subject, revealed space, ending composition |
-| Sudden discovery | fast zoom in | the discovered detail and readable reaction |
+| Sudden discovery | fast zoom in — a crash zoom reads comic, so a straight dramatic beat takes a fast dolly in | the discovered detail and readable reaction |
 | Build pressure | dolly in | approach direction, subject action, stopping frame |
 | Stay with a chase | tracking / handheld | direction of travel and landmarks |
 | Reveal height around a climber | rising arc | subject, height change and path; a name alone does not define a helix |
@@ -78,8 +83,9 @@ neither judge the art nor block tool execution. Do not invent image or motion re
 | Reveal a hidden situation | dolly out | what the wider ending frame reveals |
 | Connect two targets quickly | whip pan | both endpoints, landing frame and motivated sound |
 
-Store generated camera directions only in `visual.camera`: `movement`, `speed`,
-`framing`, `end`. Follow directing-grammar and the selected adapter's vocabulary.
+Store generated camera directions only in `visual.camera`: opening `view`, `movement`,
+`speed`, and `end` (`framing` is legacy opening prose). Follow the opening-view procedure
+and the selected adapter's vocabulary.
 Rack focus is not camera translation; retain its focus instructions in the existing
 framing/end and depth plan. A dramatic name such as pullback reveal describes the
 purpose of a dolly out, not a new mandatory model argument. Compound moves need an
@@ -112,7 +118,9 @@ The review displays planned lengths with unknown values intact. Its bars compare
 shot lengths, not absolute timecode. Actual assembly uses measured media and trims;
 generated source duration, usable edited duration and billed duration may differ.
 Respect adapter minimum frames and include retries in actual spending authorization.
-Prefer one readable action per generated shot. Multi-cut generation is optional
+Prefer one coherent performance per generated shot. It may include several lines, gestures
+and responses; an individual gesture or sentence is not a shot boundary. Keep it together
+while the frame conveys the event and the selected adapter can cover its full duration. Multi-cut generation is optional
 only when the selected adapter and inspected result support it; it does not replace
 stable shot references or authorize extra generation calls.
 

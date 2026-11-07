@@ -1,10 +1,11 @@
 import path from 'node:path';
-import { realpathSync, readFileSync } from 'node:fs';
+import { existsSync, realpathSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { verifyImageFile, type ImageMetadata } from './image-media.js';
 import { framesForSeconds } from './astra-video-client.js';
 import { resolveVideoDuration } from './video-duration.js';
+import { VIDEO_ADAPTERS } from './video-registry.js';
 
 const load = createRequire(import.meta.url);
 const imageRouting = () => load(fileURLToPath(new URL('../../skills/storyboard/references/render-routing.js', import.meta.url))) as {
@@ -14,6 +15,10 @@ const imageRouting = () => load(fileURLToPath(new URL('../../skills/storyboard/r
   imageReferences(scene: unknown): ImageReference[];
 };
 interface ImageReference { id: string; path: string; role: string; use: string; purpose: string }
+export const characterPanels = () => load(fileURLToPath(new URL('../../skills/channel/references/character-panels.js', import.meta.url))) as {
+  canonicalReferences(boardDir: string, shotId: string, ids: string[], use: string): ImageReference[];
+  sheetPanels(boardDir: string, ids: string[]): Map<string, Record<string, string>>;
+};
 export interface ImageBinding extends ImageMetadata {
   id: string; path: string; role: string; use: string; purpose: string; submitted: boolean;
 }
@@ -23,11 +28,34 @@ interface ShotVisual {
   references?: ImageReference[];
 }
 const FRAME_FIELDS: Record<string, [string, string?]> = {
-  veo_img2video: ['sourceImagePath', 'lastImagePath'], seedance_img2video: ['sourceImagePath', 'lastImagePath'],
-  omni_img2video: ['sourceImagePath', 'lastImagePath'], astra_img2video: ['firstFramePath', 'lastFramePath'],
+  seedance_img2video: ['sourceImagePath', 'lastImagePath'], astra_img2video: ['firstFramePath', 'lastFramePath'],
   astra_audio2video: ['imagePath'], astra_genai_img2video: ['imageUri', 'lastFrameUri'],
-  astra_genai_audio2video: ['imagePath', 'lastFramePath'], mlx_video_generate: ['firstFrameImagePath', 'lastFrameImagePath'],
+  astra_genai_audio2video: ['imagePath', 'lastFramePath'], mlx_video_generate: ['firstFrameImagePath', 'lastFrameImagePath'], ltx_video_generate: ['firstFrameImagePath', 'lastFrameImagePath'],
 };
+// No framing words here: "face close-up" in this sentence opened every 2026-10-31 test render on a close-up.
+const PANEL_VIEWS: Record<string, string> = { face: 'face', front: 'headless front body', back: 'headless back body' };
+/**
+ * An MSR slot is an input source, not a declared subject, so name the character-sheet panels
+ * (panels.json) that show one character: the face close-up carries the head, the headless panels
+ * the body and outfit.
+ */
+function msrPanelBinding(paths: string[], refs: ImageReference[], compact = false): string {
+  const groups = new Map<string, string[]>();
+  paths.forEach((file, i) => {
+    if (refs[i].role === 'background') return;
+    let panels: Record<string, { file?: string }>;
+    try { panels = JSON.parse(readFileSync(path.join(path.dirname(file), 'panels.json'), 'utf8')).panels ?? {}; } catch { return; }
+    const view = Object.entries(panels).find(([, panel]) => panel.file === path.basename(file))?.[0];
+    if (view && PANEL_VIEWS[view]) groups.set(path.dirname(file), [...(groups.get(path.dirname(file)) ?? []), `Image ${i + 1} (${PANEL_VIEWS[view]})`]);
+  });
+  return [...groups].filter(([, items]) => items.length > 1).map(([folder, items]) => compact
+    ? `Images ${items.map(item => item.replace(/Image (\d+) \(([^)]+)\)/, '$1($2)')).join(', ')}: ONE ${path.basename(folder)}; combine head and outfit.`
+    : `${items.join(', ')} show one character, ${path.basename(folder)}: render one complete character with the head and hair from the face and the body and outfit from the headless panels.`).join('\n');
+}
+/** A character-sheet panel counts once per sheet folder; any other character image counts alone. */
+function characterKey(file: string): string {
+  try { readFileSync(path.join(path.dirname(file), 'panels.json')); return path.dirname(file); } catch { return file; }
+}
 export function hasStructuredImages(shot: Record<string, unknown>): boolean {
   return imageRouting().hasStructuredImages(shot);
 }
@@ -40,7 +68,16 @@ export function prepareVideoImages(tool: string, input: Record<string, unknown>,
   const errors = routing.checkFrames(shot);
   if (errors.length) throw new Error('image_plan_invalid: ' + errors.join('; '));
   const frames = routing.framePlan(shot);
-  const references = routing.imageReferences(shot);
+  let references = routing.imageReferences(shot);
+  const rawCast = (shot.visual as Record<string, unknown> | undefined)?.character;
+  const canonicalMsr = tool === 'astra_genai_msr' && frames.mode === 'reference' && rawCast !== undefined
+    && existsSync(path.join(episode, 'storyboard', 'cast.json'));
+  if (canonicalMsr) {
+    const ids = ([] as unknown[]).concat(rawCast ?? []).map(entry => typeof entry === 'string' ? entry : (entry as { id: string }).id);
+    // Old combined pictures and omitted faces cannot redefine a declared principal's identity.
+    references = [...characterPanels().canonicalReferences(path.join(episode, 'storyboard'), String(shot.id ?? 'shot'), ids, 'both'),
+      ...references.filter(ref => ref.role !== 'character')];
+  }
   const videoRefs = references.filter(ref => ['video', 'both'].includes(ref.use));
   const frameMode = frames.mode !== 'reference';
   const keyframes = visual.frames?.keyframes;
@@ -67,7 +104,8 @@ export function prepareVideoImages(tool: string, input: Record<string, unknown>,
       if (frames.end) bind('end', frames.end, 'end', 'video', 'Ending state', false);
     }
     for (const [i, frame] of (keyframes ?? []).entries()) bind('keyframe-' + (i + 1), frame.image, 'keyframe', 'video', frame.state, false);
-    for (const ref of references) bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, false);
+    // The set render that composed the start image (role composition) is already in it; the video never takes it.
+    for (const ref of references) if (ref.role !== 'composition') bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, false);
     return { args, imageBindings: bindings, imageHandoff: 'unverified_host_mapping: bind every video/both input and temporal frame to the actual host schema; do not omit unsupported inputs or claim submission from this plan' };
   }
   const equal = (a: unknown, b: unknown): boolean => {
@@ -87,16 +125,27 @@ export function prepareVideoImages(tool: string, input: Record<string, unknown>,
     assigned.add(key);
   };
   if (frames.mode === 'reference') {
-    if (!['seedance_reference', 'veo_reference', 'astra_genai_msr'].includes(tool)) throw new Error('image_plan_unsupported: reference mode needs a reference adapter');
-    if (tool === 'veo_reference' && videoRefs.some(ref => ['style', 'composition'].includes(ref.role)))
-      throw new Error('image_plan_unsupported: Veo references preserve assets, not style or composition');
-    if (tool === 'astra_genai_msr' && videoRefs.some((ref, i) => ref.role === 'background' && i !== videoRefs.length - 1))
-      throw new Error('image_plan_invalid: MSR background must be last so prompt image indices match the gateway');
-    const paths = videoRefs.map(ref => bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, true));
-    if (tool === 'astra_genai_msr') put('references', videoRefs.map((ref, i) => ({ imagePath: paths[i], ...(ref.role === 'background' ? { background: true } : {}) })));
+    if (VIDEO_ADAPTERS[tool]?.operation !== 'reference') throw new Error('image_plan_unsupported: reference mode needs a reference adapter');
+    // MSR's background slot carries the shot's start image — its characters, place and props composed by the
+    // image tool (user directive 2026-10-31); a plain background reference only conditioned that image.
+    const msr = tool === 'astra_genai_msr', sent = msr ? videoRefs.filter(ref => ref.role !== 'background') : videoRefs;
+    const paths = sent.map(ref => bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, true));
+    const start = msr && frames.start ? bind('start', frames.start, 'start', 'video', 'Opening picture', true) : undefined;
+    if (msr) put('references', [...paths.map(imagePath => ({ imagePath })), ...(start ? [{ imagePath: start, background: true }] : [])]);
     else put('referenceImagePaths', paths);
-    const guidance = videoRefs.map((ref, i) => `Image ${i + 1} (${ref.id}, ${ref.role}): ${ref.purpose}`).join('\n');
-    args.prompt = String(args.prompt ?? '') + '\nImage reference roles:\n' + guidance;
+    if (msr) {
+      // Two principal characters take references (user directive 2026-10-31); the model draws anyone else.
+      const characters = new Set(sent.flatMap((ref, i) => ref.role === 'character' ? [characterKey(paths[i])] : []));
+      if (characters.size > 2) throw new Error(`msr_character_limit: references show ${characters.size} characters; reference two principal characters and describe anyone else in the action`);
+      // The model card describes each reference first ("Image 1: ..."), then the action.
+      const binding = msrPanelBinding(paths, sent, canonicalMsr);
+      args.prompt = [...sent.map((ref, i) => `Image ${i + 1}: ${canonicalMsr && ref.role === 'character' ? '' : ref.role + ', '}${ref.purpose}`),
+        ...(start ? [`Image ${sent.length + 1}: ${canonicalMsr ? 'opening composition (people, place, props)' : 'the opening picture, the characters, place and props as the shot begins'}`] : []),
+        ...(binding ? [binding] : []), '', String(args.prompt ?? '')].join('\n');
+    } else {
+      const guidance = videoRefs.map((ref, i) => `${tool === 'fasth3_omni_reference' ? '<Picture ' + (i + 1) + '>' : 'Image ' + (i + 1)} (${ref.id}, ${ref.role}): ${ref.purpose}`).join('\n');
+      args.prompt = String(args.prompt ?? '') + '\nImage reference roles:\n' + guidance;
+    }
   } else if (keyframes) {
     const fps = Number(args.frameRate ?? 24);
     const count = Number(args.numFrames ?? (args.duration === undefined ? NaN : framesForSeconds(Number(args.duration), fps)));

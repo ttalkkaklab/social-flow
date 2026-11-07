@@ -113,8 +113,8 @@ ask only that choice; existing episode resumes keep their original snapshot.
 Saved choices override host detection and all model recommendations below.
 
 **Call `capability_status` with `channel: <channel slug>` first** and resolve the destination above. It says which engines this machine actually has, grouped by
-capability with an "N of M configured" count. Planning two Veo b-roll slots on a machine with no
-`GEMINI_API_KEY` spends five review rounds before anything reveals the problem, and the tool
+capability with an "N of M configured" count. Planning two Seedance b-roll slots on a machine with no
+`ARK_API_KEY` spends five review rounds before anything reveals the problem, and the tool
 answers it in one call before any of that. If a capability the episode needs is missing, say so
 now — with what one env var would turn on — rather than routing around it silently. **Then look at your own tool list** — the server cannot see the CLI. Use it to validate saved choices or offer first-setup options: `image_gen` supports the host image lane and `image_to_video` supports the host video lane. Derive `PRODUCTION.imageProvider` and `videoProvider` from the selected directory models, not tool presence alone.
 
@@ -211,7 +211,7 @@ one without it (`[style-missing]`). A per-shot preset stays in `shot.style` with
 [drone-flythrough.md](drone-flythrough.md). The quote bound to an existing approval stays
 bound; changed inputs need a fresh quote, not a new preference question.
 Only for the cinematic-miniature style, load the bundled [style guide and image pack](../assets/styles/tactile-miniature-v1/STYLE.md); choose `visual.styleRole` by the narrated subject/action, not the shot number. The assembler emits real reference-image arguments and a portable style binding. Never use a reference's historical props as a substitute for the new topic. Read [full-video.md](../../produce/references/full-video.md), write the spatial style
-and each `videoDesign`, including the subject-motion contract and timed action states in full-video.md, fill the four `visual.camera` slots under its §Camera dynamics (a move the viewer can see, static on at most one shot in three, wide on at most half, `cameraFixed` only under static), then use [spatial-prompts.js](spatial-prompts.js), which assembles both prompts and runs the Seedance prompt gate. This branch
+and each `videoDesign`, including the subject-motion contract and timed action states in full-video.md, fill the four `visual.camera` slots under its §Camera dynamics (a move the viewer can see, static on at most one shot in three, wide on at most half), then use [spatial-prompts.js](spatial-prompts.js), which assembles both prompts and runs the Seedance prompt gate. This branch
 supersedes hybrid's shot cap, mandatory HTML explanation and person-required source clauses.
 Keep facts, narration reviews and the no-marks-over-video rule. Copy `production-mode.js`
 with the HTML template, render-routing.js, structure-contract.js and style-samples.js; `cost-preview.js --sbdoc` supplies both prices.
@@ -746,15 +746,15 @@ Core rules:
   strip warns on a multi-reference clip with no scope anywhere (scenes-schema §character reference).
 - **Select Seedance per cut** using produce `references/video-model-selection.md` §Seedance
   per-cut selection. Each motion background chooses its model and resolution.
-  `PRODUCTION.videoModel` records the default or `model:"mixed"` (§1.7). Seedance 1.5 Pro
-  uses a `frame_and_prompt` previz; 2.x can receive the previz as a reference video. Multiple character/product references: 2.0; fixed voice or over nine reference
+  `PRODUCTION.videoModel` records the default or `model:"mixed"` (§1.7). Seedance 2.x can
+  receive the previz as a reference video. Multiple character/product references: 2.0; fixed voice or over nine reference
   images: 2.5. Record the purpose, reason, face eligibility and reference paths beside the
   prompt (scenes-schema §Motion background). Rebuild the cost preview after any change;
   its generation settings are the ones produce sends. Keep the episode video cap without filling unused slots.
 - **Every generated-video shot leaves here as one API call with its final prompt stored**
-  (scenes-schema §clip prompt). The scene is the call: pick the planned route (`visual.engine`
-  or the type default — b-roll → veo, motion background → seedance, speech clip →
-  veo_reference), fit `duration` to that route's server-validated grid, and assemble the
+  (scenes-schema §clip prompt). The scene is the call: pick the planned route (`visual.engine`,
+  Seedance when absent; a slot naming `engine:"veo"` reuses its existing clip under
+  `visual.reuse` or picks a supported engine), fit `duration` to that route's server-validated grid, and assemble the
   prompt with `references/assemble-bg-prompt.js --clip --from scenes.js --shot N --engine
   <route>` — the four camera slots become the span, `--motion` carries what moves in the
   picture, `--locks` the positive-locks tail on a multi-reference call, and the `visual.audio`
@@ -762,15 +762,14 @@ Core rules:
   `visual.clip.prompt` per type); produce sends it verbatim and the check strip warns on a
   generated shot without one. Exclusion nouns go in the sibling `negative` field, never the
   body. The assembler blocks what each route can't take — timecodes and digit seconds on
-  seedance, digit seconds on veo (in-clip state changes are written in words; on a Veo route
-  `[mm:ss]` spans may pin beats instead).
+  seedance (in-clip state changes are written in words).
 - **A generated clip's `duration` comes from what the cut is for**, not from a default — insert
   3–4s, action 5–7s, a face carrying emotion 7–10s, an establishing shot 5–8s, a deliberate long
   take 10s+ with one move; the directing-grammar §5 row for the shot's feel refines it, and a
   wide holds ≥1.5× a close. The model fills whatever time it is handed, so asking 8 seconds for a
   4-second idea buys 4 seconds of invention (§cut length). Narration-carrying scenes keep the
   speech math — characters / 4.5 — **and on a motion background that math has to land inside
-  the route's one-call cap** (seedance 15s on the 2.0 grades and 30s on 2.5, veo 8s): a 16-second
+  the route's one-call cap** (seedance 15s on the 2.0 grades and 30s on 2.5): a 16-second
   narration over a 15-second clip is a loop seam nobody planned, so trim the narration or split the scene.
 - **Write what the episode sounds like, not only what it looks like.** Every shot that becomes a
   generated video gets `visual.audio` — one sentence on what that clip sounds like, ending in
@@ -961,7 +960,7 @@ once, in this order, before §5:
   every generated shot the four slots filled in vendor words (`dolly in`, not `push in`; `end`
   written out), one move per cut chosen from the feel, a cut length from what the cut is for
   (scenes-schema §cut length), the engine the route names (a real face never goes to Seedance
-  2.x, a drawn character never to `veo_reference` — `../produce/references/video-model-selection.md`),
+  2.x, a spoken cut never to an adapter without a voice lane — `../produce/references/video-model-selection.md`),
   and the stored clip prompt saying what the slots say.
 - **The sound** — `visual.audio` written on every generated video shot, voice casting against
   profile §2 (never three speakers in one scene), `tts` spellings for digits and swallowed
@@ -1019,7 +1018,7 @@ scene, the mood, the exclusions, then a fill-the-frame tail (directing-grammar �
 **Never** append `lower third fading into darkness` or any top/bottom letterbox instruction
 (owner 2026-08-25). The **mandatory negative directions** go in through `--exclude` — neither
 `gpt_image_text2img` nor `image_local_generate` has an exclusion argument, so the short noun
-list stays in the body; `veo_*` is the one call that takes `negativePrompt`. Store the
+list stays in the body. Store the
 assembler's stdout as `visual.bgPrompt` — the whole string.
 
 **Which engine each still goes to is a decision, and it is made here** — produce executes it
@@ -1031,7 +1030,7 @@ so produce doesn't have to guess.
 - **`imageProvider:"host"` → every still and slide art goes to the host image tool** (Codex or Grok `image_gen`; Grok `image_edit` for a reference), `image.host` at $0. The four API lines below apply on Claude Code, or where the episode wrote `"api"` (still-generation §1).
 - **points backgrounds → `image_local_generate`** (local Z-Image, $0), only when explicitly selected.
 - **The cover background (scene-1) → `gpt_image_text2img` `quality: "high"`** ($0.22). It's
-  both the thumbnail and veo's input, so the quality clause applies.
+  both the thumbnail and the b-roll source, so the quality clause applies.
 - **Any screen that has to contain text → `gpt_image_text2img`** whatever the scene — the
   local engine breaks Korean jamo (measured: "딸깍연구소" → "달닥연구소").
 - **A scene with `visual.character` → a reference call** (`gpt_image_img2img`), that
@@ -1046,7 +1045,7 @@ made with the saved image model), framed at the
 cover shot's `shot.size`·`shot.angle` — `eye` unless the cover wrote a reason, since the hook
 cut is where the trust axis wins (directing-grammar §3). The `face not visible` negative
 direction is the one place it changes to `seen from behind, face turned away` (produce
-absolute rules 11 and 12). In episodes with an opening b-roll, this PNG doubles as the veo
+absolute rules 11 and 12). In episodes with an opening b-roll, this PNG doubles as the b-roll
 source — when the cover ends, that photo starts moving.
 
 **points backgrounds are the star of the screen too** (produce absolute rule 14 — captions use
@@ -1075,19 +1074,19 @@ Two generated forms count against the slot cap together:
   cuts roughly 8 seconds out of the time spent delivering information). Per slot write the
   **used length `duration` (4s by default) and the reason for it**, `after`, `src`, the camera
   slots and audio, and store the assembled final prompt in `visual.prompt` (§clip prompt —
-  `--clip --engine veo`). Generation is fixed at 1080p and 8s (an API constraint) and produce
-  trims it. Two slots using the same PNG means the same shot twice — specify a different
+  `--clip --engine seedance`). Veo, Gemini Omni and Seedance 1.x left the plugin on 2026-10-31
+  because none takes a voice reference. Two slots using the same PNG means the same shot twice — specify a different
   source per slot.
 - **Motion background (`visual.video`)** — the scene itself as video. The scene's still becomes
   a parameter for a video laid under the background, and **narration, captions, and subtitles
-  stay**. Use it where the movement itself is the content. `duration` inside one clip (veo 8s ·
-  seedance 4–15s on the 2.0 grades and 4–30s on 2.5 — the previz route every motion background takes — server-validated) · points only · not combined with
+  stay**. Use it where the movement itself is the content. `duration` inside one clip
+  (seedance 4–15s on the 2.0 grades and 4–30s on 2.5 — the previz route every motion background takes — server-validated) · points only · not combined with
   per-line illustrations. Store the assembled prompt in `visual.video.prompt` (§clip prompt —
   `--clip --engine seedance --locks "…"`). Three rules hold on that route and the assembler
   exits 1 on each: the body is **English** (Korean only inside a dialogue quote), it **never
   re-describes the layout, facing or lighting** the still draws — re-describing makes the model
   redesign it — and it **closes on a consistency lock**, the only place an exclusion can go on
-  an engine with no `negativePrompt` argument. Who the subject *is* may stay; where things sit
+  Seedance. Who the subject *is* may stay; where things sit
   may not. Write `visual.audio` anyway — the build discards the clip's sound, but the model
   composes a calmer clip when it isn't left to invent a soundtrack. **Every generated cut is planned in 3D first** (user directive 2026-09-11) — `blender_scene_build` → `blender_camera_set` → `blender_render_previz`, or `previz-template.html` rendered with `render-motion-slide.mjs --previz` where Blender is missing — at the cut's billed length, 24 fps, one flat colour per actor, stored as `visual.video.previz` (`renderer` · `clip` · `firstFrame` · `sha256` · `camera.movement`; `modelPurpose:"previz"` on the API lane), and `check-scenes.js` refuses the cut without it ([blender-previz.md](blender-previz.md) §6):
   the still is edited from the previz's first frame (§6.6), produce hands the clip to Seedance 2.x as `Video 1` with the still as `Image 1` — or, on a host video tool, the still and the prompt carry the previz (§6.7) — and `spatial-prompts.js` writes the binding sentences.
@@ -1116,7 +1115,7 @@ this says why. The convention is
 
 ```bash
 mkdir -p .work
-printf 'storyboard	engine_selection	motion background shot 3	seedance-2-0-video	previz cut on the reference route (PRODUCTION.videoModel), silent slot; rejected veo.lite (no clip input, pays 8s for a 4s cut)\n' >> .work/decisions.tsv
+printf 'storyboard	engine_selection	motion background shot 3	seedance-2-0-video	previz cut on the reference route (PRODUCTION.videoModel), silent slot; rejected seedance-2-0-video-1080p (over the episode budget)\n' >> .work/decisions.tsv
 printf 'storyboard	image_engine	points backgrounds	image_local_generate	no text in frame, $0; rejected gpt high (cost, not needed here)\n' >> .work/decisions.tsv
 ```
 
@@ -1182,7 +1181,7 @@ The block carries a fingerprint of the video slots, and the check strip recomput
 live scenes — so a snapshot that no longer matches shows up as a violation instead of a stale
 number. Regenerate it after any §7 change that adds, retimes, reroutes or moves a video slot.
 
-New or updated casts follow [character-identity.md](../../channel/references/character-identity.md): compile each identity, set `SB_DOC.characterSchemaVersion:1`, and copy the structured identity plus its generation directions into each cast entry. **Every storyboard has at least one character; story-v2 selects a narrator only when needed.** Legacy boards retain their narrator. When selected, set `SB_DOC.narratorCharacterId` to that character `id`; `SB_DOC.characters` contains it and every id used by `visual.character` or `narration[].speaker`. Each entry has `id`, `name`, its character identity JSON `tts` (required `engine`, `voiceId`, `language`, `speed`; model/stylePrompt when applicable), identity `role`, existing `panels` paths, governing `note`, and `veo:"banned"` when applicable.
+New or updated casts follow [character-identity.md](../../channel/references/character-identity.md): compile each identity, set `SB_DOC.characterSchemaVersion:1`, and copy the structured identity plus its generation directions into each cast entry. **Every storyboard has at least one character; story-v2 selects a narrator only when needed.** Legacy boards retain their narrator. When selected, set `SB_DOC.narratorCharacterId` to that character `id`; `SB_DOC.characters` contains it and every id used by `visual.character` or `narration[].speaker`. Each entry has `id`, `name`, its character identity JSON `tts` (required `engine`, `voiceId`, `language`, `speed`; model/stylePrompt when applicable), identity `role`, existing `panels` paths, governing `note`.
 For every new board set `SB_DOC.speechPlanVersion:1`. Each `narration` entry has a stable
 `id`, explicit `speaker` (including the narrator), and `delivery` (`voiceover`, `on_screen`,
 `off_screen`). Keep these fields in scenes.js, with SB_DOC character voices there too.

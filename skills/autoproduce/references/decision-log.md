@@ -3,7 +3,7 @@
 An episode picks an engine, a voice, a music source, a tier, a fallback. Before this log none
 of that survived the run. `scenes.js` gets two lines at approval (`// approved:` and
 `// review:`), `build-report.txt` carries the one allowed deviation, and everything else — which
-engine was considered and dropped, why the b-roll went to Veo instead of Seedance, that the
+engine was considered and dropped, why a spoken cut went to MSR instead of Seedance, that the
 motion background was held because `ARK_API_KEY` was missing — lives only in a session
 transcript nobody reads again.
 
@@ -23,10 +23,10 @@ stage <TAB> category <TAB> subject <TAB> selected <TAB> reason
 ```
 
 ```tsv
-storyboard	engine_selection	motion background shot 2	seedance-2-0-mini-video-720p	previz cut on the plan's standing video_model, silent slot; rejected veo.lite (no clip input, pays 8s for a 4s cut)
+storyboard	engine_selection	motion background shot 2	seedance-2-0-mini-video-720p	previz cut on the plan's standing video_model, silent slot; rejected seedance-2-0-video-1080p (over the episode budget)
 produce	image_engine	scene stills	gpt_image_text2img low	the saved directory image model (models.json); rejected a per-shot local/gpt split (no heuristic overrides the saved model)
 produce	voice_selection	narration TTS	tts_gemini_38	profile §2 pinned voice/model; no engine change
-produce	fallback	motion background shot 2	hold	ARK_API_KEY absent — a previz cut has no Veo route; held for the key, logged in build-report.txt
+produce	fallback	motion background shot 2	hold	ARK_API_KEY absent — no engine switch without the user; held for the key, logged in build-report.txt
 ```
 
 - **stage** — `storyboard` · `produce` · `publish`. The same prefix vocabulary the cost ledger

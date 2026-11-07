@@ -58,14 +58,19 @@ Use `resolve-asset.py --list <channelDir>` and the current character library. Do
 an existing character's voice, identity or ID. If no suitable character exists, use the channel
 creation workflow before finalizing the cast. No new voice or media generation at this stage.
 
-Create `storyboard/cast.json` as a snapshot of the available pool:
+Create `storyboard/cast.json` as a snapshot of the characters this episode may use:
 
 ```json
-{"characters":[{"id":"mina","source":"../../../assets/characters/mina/identity.md"}]}
+{"characters":[{"id":"mina","source":"../../../assets/characters/mina/identity.md"},
+  {"id":"narrator","source":"../../../assets/characters/narrator/identity.md","voiceOnly":true}]}
 ```
 
 Paths are relative to storyboard/. Read each source; the snapshot is a locator, not a second
-identity file. The checker verifies selected IDs and existing source files. On another machine
+identity file. The checker verifies selected IDs and existing source files, and `story_sequence`
+refuses to start the episode board until every `source` is an existing
+`assets/characters/<id>/identity.md` and every entry without `voiceOnly` has its face, front and
+back panels. Mark only a narrator who is never seen `voiceOnly`; `shot_characters` keeps them off
+screen. List only characters this episode may cast, since each one needs a finished sheet. On another machine
 restore the channel assets and refresh these paths; do not fake an identity to clear a check.
 Candidate cast entries contain `id`, episode `role`, `want`, `voice` (speech style, not TTS
 configuration) and `reason` (why this person belongs). Stable identity and episode role differ:
@@ -300,7 +305,10 @@ the performance; a text field alone is not proof of an executable or rendered ac
 Estimate shot time only after laying out words and actions. Per-line `acting.visual`
 happens with speech; an independent action or response may need its own interval. Do not
 use a universal speech-plus-padding formula. Match later measured audio and clip timing to
-this plan. If the take exceeds an adapter limit, split at an action boundary while keeping
+this plan. After writing all lines, revisit provisional shot boundaries: merge a continuing
+performance before comparing its total source coverage with `storyboard_read.videoTiming`.
+Use the selected operation, fps and frame grid, not a model-family duration guess. If the
+take exceeds a verified adapter limit, split at a meaningful performance boundary while keeping
 the necessary setup and consequence. If a user duration limit cannot fit the story, simplify
 or split the episode; do not silently omit causal events. 9:16 and 16:9 describe canvas,
 not how long the story must run.

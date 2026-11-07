@@ -26,14 +26,24 @@ function hasHistory(directory: string): boolean {
   const tally = path.join(directory, '.work/cost-tally.tsv');
   return fs.existsSync(tally) && /^music\./m.test(fs.readFileSync(tally, 'utf8'));
 }
+/** A transaction holds the lock for milliseconds, so a lock this old was left by a crashed process. */
+const STALE_LOCK_MS = 30_000;
+function openLock(lock: string): number {
+  try { return fs.openSync(lock, 'wx', 0o600); }
+  catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error; }
+  let stale = false;
+  try { stale = Date.now() - fs.statSync(lock).mtimeMs > STALE_LOCK_MS; } catch { /* released meanwhile; retry below */ }
+  // ponytail: two processes clearing the same stale lock can race; add owner tokens if crashes become frequent.
+  if (stale) fs.rmSync(lock, { force: true });
+  try { return fs.openSync(lock, 'wx', 0o600); }
+  catch { throw new Error('music_state_busy: retry local operation; never steal another process lock'); }
+}
 /** A short exclusive transaction, never a lock around an API call. */
 export function musicTransaction<T>(directory: string, openingSpendUsd: number | undefined, update: (state: MusicState) => T): T {
   const folder = path.join(directory, '.work/music-routing');
   fs.mkdirSync(folder, { recursive: true });
   const lock = path.join(folder, 'state.lock');
-  let fd: number;
-  try { fd = fs.openSync(lock, 'wx', 0o600); }
-  catch { throw new Error('music_state_busy: retry local operation; never steal another process lock'); }
+  const fd = openLock(lock);
   try {
     let state = readMusicState(directory);
     if (!state) {

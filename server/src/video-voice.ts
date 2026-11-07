@@ -1,8 +1,19 @@
+import { fasth3VideoAudioCount } from './fasth3-omni.js';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, realpathSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { SEEDANCE_MODEL_SPECS, type SeedanceModel } from './seedance-client.js';
+import { VIDEO_ADAPTERS } from './video-registry.js';
+import { nonEnglishOutsideQuotes } from './prompt-language.js';
+import { z } from 'zod';
+
+/** Authored screen coordinates describe the opening image, never reference-array order. */
+export const speakerBindingSchema = z.object({
+  speaker: z.string().trim().min(1),
+  screenPosition: z.enum(['left', 'center', 'right']),
+  description: z.string().trim().min(1),
+}).strict();
 
 const load = createRequire(import.meta.url);
 const object = (value: unknown): Record<string, unknown> =>
@@ -17,6 +28,8 @@ interface VoiceContext {
   episode: string;
   board: Record<string, unknown>;
   shot: Record<string, unknown>;
+  /** Whether the GenAI gateway's MSR backend accepts per-subject voice samples. */
+  msrVoice?: boolean;
 }
 interface SpeakerVoice {
   speaker: string;
@@ -26,10 +39,11 @@ interface SpeakerVoice {
   reference?: { path: string; sha256: string; provenance: string };
   audioIndex?: number;
   imageIndices?: number[];
+  screenBinding?: z.infer<typeof speakerBindingSchema>;
 }
 export interface VoiceContinuity {
   version: 1;
-  strategy: 'external_tts' | 'supplied_audio' | 'reference_voice' | 'prompt_voice';
+  strategy: 'external_tts' | 'supplied_audio' | 'reference_voice';
   revision: string;
   speakers: SpeakerVoice[];
   warnings: string[];
@@ -45,8 +59,45 @@ function voiceDescription(character: Record<string, unknown>): string {
   };
   return [text(tts.language) && `Language: ${text(tts.language)}`,
     confirmed('timbre') && `Timbre: ${confirmed('timbre')}`,
-    confirmed('pace') && `Baseline pace/accent: ${confirmed('pace')}`,
+    confirmed('pace') && `Baseline pace: ${confirmed('pace')}`,
+    confirmed('accent') && `Accent: ${confirmed('accent')}`,
     text(tts.voiceDirection) || text(tts.stylePrompt)].filter(Boolean).join('. ');
+}
+
+/** Story-first boards can carry only a cast id and name; resolve their selected voice at planning time. */
+export function resolveCharacterVoice(character: Record<string, unknown>, context: VoiceContext,
+  warnings: string[]): Record<string, unknown> {
+  const id = text(character.id);
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) return character;
+  let channel = context.episode;
+  while (!existsSync(path.join(channel, 'profile.md')) && path.dirname(channel) !== channel) channel = path.dirname(channel);
+  const folder = path.join(channel, 'assets/characters', id), identity = path.join(folder, 'identity.md');
+  let resolved = character;
+  if (!Object.keys(object(character.tts)).length && existsSync(identity)) {
+    try {
+      const { handoff } = load('../../skills/channel/references/character-sheet.js') as {
+        handoff(file: string, options?: { voiceOnly: boolean }): Record<string, unknown>;
+      };
+      const current = handoff(identity, { voiceOnly: character.voiceOnly === true });
+      resolved = { ...current, ...character, tts: current.tts };
+    } catch (error) {
+      warnings.push(`${id}: cannot read the selected character voice: ${error instanceof Error ? error.message : String(error)}`);
+      return character;
+    }
+  }
+  const reference = object(resolved.voiceReference);
+  // Existing ownership wins. Otherwise use only authored character images inside this character's folder.
+  if (!Array.isArray(reference.imagePaths) && existsSync(folder)) {
+    const root = realpathSync(folder) + path.sep;
+    const refs = object(context.shot.visual).references;
+    const imagePaths = (Array.isArray(refs) ? refs.map(object) : [])
+      .filter(ref => ref.role === 'character' && ['both', 'video'].includes(text(ref.use)))
+      .map(ref => text(ref.path)).filter(Boolean)
+      .map(file => path.resolve(context.episode, 'storyboard', file))
+      .filter(file => existsSync(file) && realpathSync(file).startsWith(root));
+    if (imagePaths.length) resolved = { ...resolved, voiceReference: { ...reference, imagePaths } };
+  }
+  return resolved;
 }
 
 function voiceReference(character: Record<string, unknown>, context: VoiceContext, warnings: string[]): SpeakerVoice['reference'] {
@@ -83,7 +134,49 @@ function voiceReference(character: Record<string, unknown>, context: VoiceContex
   return { path: absolute, sha256, provenance };
 }
 
-const SUPPLIED_AUDIO_TOOLS = new Set(['astra_audio2video', 'astra_genai_audio2video']);
+/**
+ * Find the MSR subject that shows a speaker from voiceReference.imagePaths. MSR pairs
+ * audio_refN with picN for the first two subjects, so the owned picture decides the slot;
+ * references are never reordered because the prompt already numbers the images.
+ */
+function msrSubject(character: Record<string, unknown>, refs: Record<string, unknown>[], context: VoiceContext): { index: number; slot: number } {
+  const owned = object(character.voiceReference).imagePaths;
+  let ownedPaths: string[];
+  const declared = ([] as unknown[]).concat(object(context.shot.visual).character ?? [])
+    .map(entry => typeof entry === 'string' ? entry : text(object(entry).id));
+  if (declared.includes(text(character.id)) && existsSync(path.join(context.episode, 'storyboard', 'cast.json'))) {
+    const { sheetPanels } = load('../../skills/channel/references/character-panels.js') as {
+      sheetPanels(dir: string, ids: string[]): Map<string, Record<string, string>>;
+    };
+    const dir = path.join(context.episode, 'storyboard');
+    // Planning rebuilt these references from this same registered owner; transport aliases no longer identify the slot.
+    const panels = sheetPanels(dir, [text(character.id)]).get(text(character.id))!;
+    ownedPaths = Object.values(panels).map(file => realpathSync(path.resolve(dir, file)));
+  } else ownedPaths = Array.isArray(owned) ? owned.map(value => realpathSync(path.resolve(context.episode, 'storyboard', String(value)))) : [];
+  let subject = 0, index = -1, slot = 0;
+  refs.forEach((ref, i) => {
+    if (ref.background) return;
+    subject += 1;
+    const file = text(ref.imagePath);
+    if (index < 0 && file && ownedPaths.includes(realpathSync(path.resolve(context.episode, file)))) { index = i; slot = subject; }
+  });
+  return { index, slot };
+}
+/** Seconds of a voice sample, or undefined when ffprobe cannot read it. */
+function sampleSeconds(file: string): number | undefined {
+  try {
+    const seconds = Number(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', file], { encoding: 'utf8', timeout: 15_000 }));
+    return Number.isFinite(seconds) ? seconds : undefined;
+  } catch { return undefined; }
+}
+/** The model card's layout puts the reference descriptions first: Audio lines follow the Image lines. */
+function afterImageBlock(prompt: string, lines: string[]): string {
+  const rows = prompt.split('\n');
+  let k = 0;
+  while (k < rows.length && /^Image \d+[:( ]/.test(rows[k])) k += 1;
+  rows.splice(k, 0, ...lines);
+  return rows.join('\n');
+}
 
 /** Prepare provider arguments before schema validation and pricing. No synthesis or uploads. */
 export function prepareVideoVoice(tool: string, input: Record<string, unknown>, context: VoiceContext): {
@@ -91,83 +184,176 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
 } {
   const args = { ...input };
   const lines = (Array.isArray(context.shot.narration) ? context.shot.narration : []).map(object).filter(line => text(line.tts));
-  if (!lines.length) return { args };
+  const msr = tool === 'astra_genai_msr';
+  const finishArgs = () => {
+    if (msr && typeof args.prompt === 'string') {
+      const policy = (load('../../skills/_shared/scene-acting.js') as { VIDEO_TEXT_POLICY: string }).VIDEO_TEXT_POLICY;
+      if (!args.prompt.endsWith(policy)) args.prompt += '\n\n' + policy;
+    }
+    return args;
+  };
+  // MSR renders authored dialogue and voiceover into its own soundtrack; a pinned sample, when the
+  // gateway takes one, sets the timbre (user directive 2026-10-31). A cut without dialogue is fine.
+  if (msr) {
+    if (object(context.shot.visual).video && object(object(context.shot.visual).video).voice !== undefined)
+      throw new Error('visual.video.voice is retired: MSR uses the speaker\'s voice sample when one is pinned');
+  }
+  if (!lines.length) return { args: finishArgs() };
   const doc = object(context.board.SB_DOC), raw = doc.characters;
   const characters: Record<string, unknown>[] = Array.isArray(raw) ? raw.map(object) : Object.entries(object(raw)).map(([id, value]) => ({ ...object(value), id }));
   const visual = object(context.shot.visual);
   const nativeSlot = Boolean(visual.clip) || context.shot.type === 'broll';
-  const audible = tool !== 'astra_genai_msr' && (tool.startsWith('veo_') || tool.startsWith('omni_') ||
-    (tool.startsWith('astra_') ? args.generateAudio !== false : args.generateAudio === true));
-  const supplied = SUPPLIED_AUDIO_TOOLS.has(tool);
-  const native = !supplied && audible && (nativeSlot || lines.some(line => line.delivery === 'on_screen'));
-  const spec = SEEDANCE_MODEL_SPECS[args.model as SeedanceModel];
-  const limitedPromptLanguage = tool.startsWith('seedance_') && !String(args.model).includes('2-5');
-  const reference = native && tool === 'seedance_reference' && Boolean(spec?.referenceAudio);
-  const strategy = supplied ? 'supplied_audio' : reference ? 'reference_voice' : native ? 'prompt_voice' : 'external_tts';
+  const audible = msr || ((tool !== 'astra_genai_desktop_keyframes' || args.audio === true) && (tool === 'fasth3_omni_reference' ||
+    (tool.startsWith('astra_') ? args.generateAudio !== false : args.generateAudio === true)));
+  const lane = VIDEO_ADAPTERS[tool]?.voice ?? 'none';
+  const supplied = lane === 'supplied';
+  const onScreen = lines.some(line => line.delivery === 'on_screen');
+  const native = !supplied && audible && (msr || nativeSlot || onScreen);
+  // Voice gate (owner directive 2026-10-31): a character the viewer hears or sees speak needs a voice
+  // lane. An adapter without one renders only cuts whose lines are external TTS over a non-speaking picture.
+  if (lane === 'none' && (native || onScreen))
+    throw new Error(`voice_lane_required: ${tool} cannot keep a character's voice. Render this spoken cut with a reference adapter ` +
+      `(astra_genai_msr, seedance_reference, fasth3_omni_reference) or an audio2video adapter${onScreen ? '' : ', or set generateAudio:false and keep the lines as TTS voiceover'}.`);
+  const reference = native && lane === 'reference';
+  const strategy = supplied ? 'supplied_audio' : reference ? 'reference_voice' : 'external_tts';
   const warnings: string[] = [];
   const speakers: SpeakerVoice[] = [];
-  const nativeLines = nativeSlot ? lines : lines.filter(line => line.delivery === 'on_screen');
+  const nativeLines = msr || nativeSlot ? lines : lines.filter(line => line.delivery === 'on_screen');
   const ids = [...new Set((native ? nativeLines : lines).map(line => text(line.speaker) || text(doc.narratorCharacterId)))];
   const prompt: string[] = [];
+  const audioOffset = tool === 'fasth3_omni_reference' && Array.isArray(args.referenceVideoPaths)
+    ? fasth3VideoAudioCount(args.referenceVideoPaths.map(file => path.resolve(context.episode, String(file)))) : 0;
   const audioPaths = Array.isArray(args.referenceAudioPaths) ? args.referenceAudioPaths.map(value => realpathSync(path.resolve(context.episode, String(value)))) : [];
   const imagePaths = Array.isArray(args.referenceImagePaths) ? args.referenceImagePaths.map(value => realpathSync(path.resolve(context.episode, String(value)))) : [];
+  const msrRefs = msr && Array.isArray(args.references) ? args.references.map(ref => ({ ...object(ref) })) : [];
+  const msrAudio: string[] = [];
+  const screenBindings = msr ? z.array(speakerBindingSchema).max(2).parse(object(visual.video).speakerBindings ?? []) : [];
+  if (new Set(screenBindings.map(binding => binding.speaker)).size !== screenBindings.length)
+    throw new Error('video_speaker_binding_invalid: each speaker needs one screen binding');
+  for (const binding of screenBindings) {
+    if (!characters.some(character => character.id === binding.speaker) || nonEnglishOutsideQuotes(binding.description))
+      throw new Error('video_speaker_binding_invalid: use a cast id and an English appearance description');
+  }
+  const visibleSpeakers = [...new Set(nativeLines.filter(line => line.delivery === 'on_screen').map(line => text(line.speaker)))];
+  if (msr && visibleSpeakers.length > 1 && visibleSpeakers.some(id => !screenBindings.some(binding => binding.speaker === id)))
+    throw new Error('video_speaker_binding_required: set shot_prompt speakerBindings from the start image for every on-screen speaker; left/right mean the viewer\'s left/right, not Image 1/Image 2');
+  if (msr && visibleSpeakers.length > 1 && new Set(screenBindings.filter(binding => visibleSpeakers.includes(binding.speaker)).map(binding => binding.screenPosition)).size !== visibleSpeakers.length)
+    throw new Error('video_speaker_binding_invalid: on-screen speakers need distinct screen positions');
+  if (msr && screenBindings.length) {
+    const start = text(object(visual.frames).start), expected = text(object(visual.video).speakerBindingImageSha256);
+    if (expected && (!start || fileHash(path.resolve(context.episode, 'storyboard', start)) !== expected))
+      throw new Error('video_speaker_binding_stale: the start image changed; inspect its positions and rewrite shot_prompt speakerBindings');
+  }
   for (const id of ids) {
     const matches = characters.filter(character => character.id === id);
-    if (!id || matches.length !== 1 || !Object.keys(object(matches[0].tts)).length) {
-      warnings.push(`Missing unique pinned voice for speaker ${id || '(unspecified)'}; no voice was invented.`);
+    if (!id || matches.length !== 1) {
+      warnings.push(`Missing unique storyboard character for speaker ${id || '(unspecified)'}; no voice was invented.`);
       continue;
     }
-    const character = matches[0];
+    const character = resolveCharacterVoice(matches[0], context, warnings);
+    if (!Object.keys(object(character.tts)).length) {
+      warnings.push(`${id}: no pinned TTS settings in the storyboard or character identity; voice samples were not resolved.`);
+      continue;
+    }
     const speaker: SpeakerVoice = { speaker: id, name: text(character.name) || id, tts: object(character.tts), description: voiceDescription(character) };
-    const label = limitedPromptLanguage && /[가-힣]/.test(speaker.name) ? id : speaker.name;
-    if (reference) {
+    const screenBinding = screenBindings.find(binding => binding.speaker === id);
+    if (screenBinding) speaker.screenBinding = screenBinding;
+    // Video prompts are English: a non-Latin cast name falls back to the character id
+    const label = nonEnglishOutsideQuotes(speaker.name) ? id : speaker.name;
+    if (reference && msr) {
+      // A pinned sample rides on subject 1 or 2 when the gateway takes samples; otherwise the prompt voices the speaker.
+      const { index, slot } = msrSubject(character, msrRefs, context);
+      if (index >= 0) speaker.imageIndices = [index + 1];
+      speaker.reference = voiceReference(character, context, warnings);
+      const current = index < 0 ? '' : text(msrRefs[index].audioPath);
+      const problem = !speaker.reference ? 'no pinned voice sample'
+        : context.msrVoice !== true ? 'the GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities)'
+        : index < 0 ? 'no MSR subject image matches voiceReference.imagePaths'
+        : slot > 2 ? `MSR subject ${slot} takes no sample; only subjects 1 and 2 do`
+        : current && current !== speaker.reference.path ? `Image ${index + 1} already carries another speaker's sample` : '';
+      if (problem) {
+        warnings.push(`${id}: ${problem}; MSR voices this speaker from the prompt.`);
+        delete speaker.reference;
+      } else {
+        msrRefs[index].audioPath = speaker.reference!.path;
+        speaker.audioIndex = slot;
+        msrAudio.push(`Audio ${slot}: ${label}'s voice, belongs only to Image ${index + 1}.`);
+        const seconds = sampleSeconds(speaker.reference!.path);
+        if (seconds !== undefined && seconds > 5) warnings.push(`${id}: the voice sample runs ${seconds.toFixed(1)} s; MSR conditions on the first 5 seconds and cuts the rest.`);
+      }
+    } else if (reference) {
       speaker.reference = voiceReference(character, context, warnings);
       if (speaker.reference) {
         let index = audioPaths.indexOf(speaker.reference.path);
         if (index < 0) { index = audioPaths.length; audioPaths.push(speaker.reference.path); }
-        speaker.audioIndex = index + 1;
+        speaker.audioIndex = index + 1 + audioOffset;
         // Only map images with explicit ownership, never guess from array position.
         const owned = object(character.voiceReference).imagePaths;
         const ownedPaths = Array.isArray(owned) ? owned.map(value => realpathSync(path.resolve(context.episode, 'storyboard', String(value)))) : [];
         speaker.imageIndices = imagePaths.flatMap((file, i) => ownedPaths.includes(file) ? [i + 1] : []);
         if (imagePaths.length && !speaker.imageIndices.length) warnings.push(`${id}: no explicit image ownership matched the request; add voiceReference.imagePaths to bind this speaker to the correct Image N.`);
         const marker = String(args.model).includes('2-5') ? '@' : '';
-        const images = speaker.imageIndices.map(i => `${marker}Image ${i}`).join(', ');
-        prompt.push(`${label} (speaker ${id})${images ? `, shown in ${images},` : ''} uses ${marker}Audio ${speaker.audioIndex} for voice timbre and accent only. Speak the authored shot dialogue, not the sample's words.`);
+        const images = speaker.imageIndices.map(i => tool === 'fasth3_omni_reference' ? `<Picture ${i}>` : `${marker}Image ${i}`).join(', ');
+        const audioLabel = tool === 'fasth3_omni_reference' ? `<Audio ${speaker.audioIndex}>` : `${marker}Audio ${speaker.audioIndex}`;
+        prompt.push(`${label} (speaker ${id})${images ? `, shown in ${images},` : ''} uses ${audioLabel} for voice timbre and accent only. Speak the authored shot dialogue, not the sample's words.`);
       } else warnings.push(`${id}: no pinned voice sample available; reference-voice consistency is not established. Supply character.voiceReference before relying on this voice.`);
     }
     speakers.push(speaker);
-    if (native && speaker.description) {
-      if (limitedPromptLanguage && /[가-힣]/.test(speaker.description)) warnings.push(`${id}: supply an English or Chinese translation of the pinned acoustic description in the authored prompt; this Seedance schema rejects Korean direction text. The original description stays in this plan.`);
+    if (native && speaker.description && !(msr && speaker.audioIndex)) {
+      if (nonEnglishOutsideQuotes(speaker.description)) warnings.push(`${id}: supply an English translation of the pinned acoustic description in the authored prompt; video prompts are English only. The original description stays in this plan.`);
       else prompt.push(`Stable voice for ${label} (speaker ${id}): ${speaker.description}`);
     }
     if (native && !text(object(character.tts).voiceDirection) && !text(object(character.tts).stylePrompt) && !text(object(object(object(character.character).speech).timbre).value))
       warnings.push(`${id}: no authored acoustic description; the TTS voice ID is not a video-model voice selector.`);
   }
-  if (reference) {
+  if (reference && msr) {
+    args.references = msrRefs;
+    // Narration is the only script authority. A substring cannot establish speaker ownership or turn order.
+    const quoted = [...String(args.prompt).matchAll(/"([^"]*)"|“([^”]*)”|「([^」]*)」/g)].map(match => match[1] ?? match[2] ?? match[3]);
+    if (lines.some(line => quoted.some(words => words.includes(text(line.tts)))))
+      throw new Error('video_dialogue_embedded: keep authored dialogue in shot_dialogue, not args.prompt/action/sound; video_plan compiles every turn with its speaker binding in order');
+    const bySpeaker = new Map(speakers.map(speaker => [speaker.speaker, speaker]));
+    const script = lines.map((line, turn) => {
+      const id = text(line.speaker) || text(doc.narratorCharacterId), speaker = bySpeaker.get(id);
+      const image = speaker?.imageIndices?.[0], audio = speaker?.audioIndex, direction = text(object(line.acting).direction);
+      const who = image ? `Image ${image}` : speaker?.name ?? id;
+      if (line.delivery !== 'on_screen') {
+        const label = nonEnglishOutsideQuotes(speaker?.name ?? '') ? id : speaker?.name ?? id;
+        const delivery = line.delivery === 'off_screen' ? 'off screen' : 'in voiceover';
+        return `${label} speaks ${delivery}${direction ? ` (${direction})` : ''}${audio ? ` using Audio ${audio}` : ''}. ` +
+          `Do not show this speaker or animate any visible mouth during this line. ${audio ? `Audio ${audio} (${label})` : label}: "${text(line.tts)}"`;
+      }
+      const binding = speaker?.screenBinding;
+      const label = nonEnglishOutsideQuotes(speaker?.name ?? '') ? id : speaker?.name ?? id;
+      const identity = binding ? `${who}, ${label} at SCREEN ${binding.screenPosition.toUpperCase()} (${binding.description})` : `${who} (${label})`;
+      return `Turn ${turn + 1}: ${identity} speaks${direction ? ` (${direction})` : ''}${audio ? ` using Audio ${audio}` : ''}` +
+        `. Only this speaker's mouth moves; other visible mouths stay closed. ` +
+        `${audio ? `Audio ${audio} (${who})` : who}: "${text(line.tts)}"`;
+    });
+    if (screenBindings.length) prompt.push('Screen positions use the viewer\'s left and right in the opening image. Preserve these positions and each character\'s appearance.');
+    if (speakers.length > 1) prompt.push('Speak the following turns in order, with a brief pause between speakers and no overlapping speech.');
+    prompt.push(...script);
+    if (typeof args.prompt === 'string' && msrAudio.length) args.prompt = afterImageBlock(args.prompt, msrAudio.sort());
+    if (lines.some(line => /[가-힣]/.test(text(line.tts)))) warnings.push('MSR training captions were English; Korean speech and cross-language voice are not established (arXiv 2609.18393).');
+    if (speakers.some(speaker => speaker.audioIndex)) warnings.push('Reference voice is imitation, not preservation of the original WAV or exact speech timing.');
+  } else if (reference) {
     args.referenceAudioPaths = audioPaths;
     const mapped = new Set(speakers.map(speaker => speaker.audioIndex));
-    if (audioPaths.some((_, i) => !mapped.has(i + 1))) warnings.push('Some supplied audio references have no character mapping; retain their existing role (for example music) explicitly in the prompt.');
+    if (audioPaths.some((_, i) => !mapped.has(i + 1 + audioOffset))) warnings.push('Some supplied audio references have no character mapping; retain their existing role (for example music) explicitly in the prompt.');
     if (speakers.some(speaker => speaker.reference)) {
       prompt.push('Keep the authored visual roles of reference videos, but do not inherit their voices or dialogue. Use the mapped audio references for speaker identity; keep music and effects separate from speech. Keep each speaker assigned to their own voice reference.');
       warnings.push('Reference voice is imitation, not preservation of the original WAV or exact speech timing.');
     }
   }
   if (native) {
-    prompt.push('Keep these speaker identities unchanged. Apply each line\'s authored emotion separately from stable timbre and accent. Keep non-speaking listeners silent; do not invent dialogue or voiceover.');
+    if (!msr) prompt.push('Keep these speaker identities unchanged. Apply each line\'s authored emotion separately from stable timbre and accent. Keep non-speaking listeners silent; do not invent dialogue or voiceover.');
     if (speakers.length > 1) warnings.push('Multiple speakers: check assignment and turn-taking separately from timbre; short turns reduce ambiguity but are not a guarantee.');
-    if (!nativeSlot) warnings.push('visual.video assembly uses the external TTS track. Native voice guidance does not synchronize that WAV; use audio2video for exact supplied-speech staging or the existing visual.clip native-audio slot.');
-  }
-  if (tool === 'veo_extension') warnings.push('Veo voice continuation needs speech in the last second of the source clip; this planner has not listened to that boundary.');
-  if (tool.startsWith('veo_') && native) warnings.push('Veo has no audio-reference input. Reuse the same voice description; prompt guidance cannot lock a TTS voice ID.');
-  if (tool.startsWith('omni_') && native) {
-    warnings.push('Omni API does not support Flow @Voice ingredients or uploaded audio references. Reference-video audio cannot lock the speaker.');
-    if (tool === 'omni_extend' && !args.previousInteractionId) throw new Error('Omni spoken continuation requires previousInteractionId, not a re-uploaded speaking clip');
-    if (args.previousInteractionId) warnings.push('Continue the original stored interaction for dialogue; voice continuity remains unreviewed.');
+    if (msr) warnings.push('MSR renders speech and effects into its own soundtrack; assembly uses it as the cut\'s audio.');
+    else if (!nativeSlot) warnings.push('visual.video assembly uses the external TTS track. Native voice guidance does not synchronize that WAV; use audio2video for exact supplied-speech staging or the existing visual.clip native-audio slot.');
   }
   if (strategy === 'supplied_audio') warnings.push('Use the final composed pinned-voice WAV. ASTRA re-encodes supplied audio; mouth motion and speaker identity remain unreviewed.');
-  if (prompt.length && typeof args.prompt === 'string') args.prompt += '\n\nVoice continuity guidance:\n' + prompt.join('\n');
-  return { args, voiceContinuity: { version: 1, strategy, speakers, warnings,
+  if (prompt.length && typeof args.prompt === 'string') args.prompt += (msr ? '\n\n' : '\n\nVoice continuity guidance:\n') + prompt.join('\n');
+  return { args: finishArgs(), voiceContinuity: { version: 1, strategy, speakers, warnings,
     revision: hash({ lines, speakers, strategy, performance: context.shot.performance }),
     review: { voiceIdentity: 'not_reviewed', dialogue: 'not_reviewed', speakerAssignment: 'not_reviewed', lipSync: 'not_reviewed' } } };
 }

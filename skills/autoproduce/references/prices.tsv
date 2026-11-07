@@ -22,6 +22,8 @@ image.host	image	0.000	derived	Host-provided image generation uses the included 
 image.mlx	image	0.000	official	mlx_image_generate · mlx_image_edit — MLX Core / mlx-serve on-device. Electricity only
 
 # ── Video (Veo 3.1) ──────────────────────────────────────────────────────
+# Retired 2026-10-31 with Gemini Omni and Seedance 1.x below: none of them can keep a character's
+# voice, so the plugin no longer calls them. The rows stay so earlier episode ledgers still price.
 # Billed per second and **audio is always included** — it can't be turned off. No free tier.
 # Lengths are fixed to a 4·6·8s grid and 1080p·4K are 8s-only, so a 4-second 1080p cut
 # still pays the 8-second price — comparing per-second prices alone understates real spend.
@@ -61,6 +63,7 @@ omni.4k	call	1.0136	unverified	assumed identical — upscale may bill more, unte
 # The actual bill's source of truth is the response's completion_tokens. Episode tallies record that value.
 # Limited-time discounts are not baked into these prices (they'd silently go wrong when the promo ends):
 #   2.5 1080p 72% of list ~2026-09-17 · 2.0 mini 40% ~2026-09-07 · 2.0 fast 75% ~2026-09-07
+# Retired 2026-10-31 (no reference audio); rows kept for earlier ledgers.
 seedance.1-0-pro-fast.1080p	second	0.048	derived	seedance-1-0-pro-fast-251015 — silent-only, first frame only. Cheapest
 seedance.1-0-pro-fast.720p	second	0.020	derived	seedance-1-0-pro-fast-251015
 seedance.1-5-pro-silent.1080p	second	0.058	derived	seedance-1-5-pro-251215 silent — default b-roll candidate (accepts photoreal face input)
@@ -88,6 +91,10 @@ tts.local	1000 chars	0.000	official	Supertonic local — no network, no key. Ele
 tts.mlx	1000 chars	0.000	official	mlx_tts_generate — MLX Core / mlx-serve on-device. Quantity is input chars ÷ 1000. Electricity only
 tts.gemini-flash	1000 chars	0.038	derived	$38/1M chars (docs/research/2026-08-11-local-tts-and-commercial-api)
 tts.gemini-pro	1000 chars	0.076	derived	$76/1M chars — fallback when flash refuses
+tts.gemini-3.1-flash	1000 chars	?	unconfirmed	gemini-3.1-flash-tts-preview — no sourced price in this repo; billed as its own row, not as 2.5 flash
+tts.gemini-3.8-flash	1000 chars	?	unconfirmed	tts_gemini_38 gemini-3.8-flash-tts — no sourced price in this repo; the call's provider-usage receipt holds the reported usage
+tts.gemini-3.8-flash-lite	1000 chars	?	unconfirmed	tts_gemini_38 gemini-3.8-flash-lite-tts — no sourced price in this repo
+tts.gemini-voice-design	call	?	unconfirmed	tts_voice_design POST /v1beta/voices — no sourced price in this repo; voice-design.json is the call receipt
 # ElevenLabs API pricing (elevenlabs.io/pricing/api, read 2026-08-23): $0.10 per 1,000 characters on multilingual_v2·v3,
 # $0.05 on flash_v2_5·v3_conversational, the same on every plan. The response header character-cost is the vendor's
 # metered quantity and sits below the raw count (Korean 18 chars → 10, measured) — log that header ÷ 1000, not the text length.
@@ -107,10 +114,19 @@ music.lyria-clip	clip	0.04	official	music_generate_clip — lyria-3-clip-preview
 # cost silently shrinks. The report still prints the total of the remaining items, so write the
 # report line as "total $X + 1 item excluded from the tally (BGM)" (cost-tally.md §reading exit codes).
 music.lyria-realtime	second	?	unconfirmed	music_generate variable length — no Lyria RealTime row in the official price table (checked 2026-08-15)
+# music_generate_song with lyria-3-clip-preview is priced by the music.lyria-clip row above.
+music.lyria-3.5	song	?	unconfirmed	music_generate_song model lyria-3.5 — no confirmed per-song price in this repo (2026-10-31); reconcile provider billing
+# ── Music (ElevenLabs) ───────────────────────────────────────────
+music.elevenlabs.music_v2	song	?	unconfirmed	music_elevenlabs_generate model music_v2 — per-song price not confirmed here (2026-10-31); reconcile provider billing
+music.elevenlabs.music_v2_5	song	?	unconfirmed	music_elevenlabs_generate model music_v2_5 — per-song price not confirmed here (2026-10-31); reconcile provider billing
 # ── Music (Suno / sunoapi.org) ────────────────────────────────────
 # Not an official Suno Inc. API — sunoapi.org (Kie.ai family) third-party.
 # Pack $5 / 1,000 credits = $0.005/credit (sunoapi.org 2026-08).
 music.suno-generate	call	0.06	derived	suno_generate — 12 credits × $0.005 (sunoapi.org $5/1000 pack · Kie.ai 12cr/call)
+# The 12-credit rate above is the retired V4/V5 figure; the current V6 family has no confirmed rate.
+music.suno.V6	call	?	unconfirmed	suno_generate model V6 — credit cost not confirmed (2026-10-31); do not reuse the legacy rate
+music.suno.V6_MINI	call	?	unconfirmed	suno_generate model V6_MINI — credit cost not confirmed (2026-10-31)
+music.suno.V6_WILD	call	?	unconfirmed	suno_generate model V6_WILD — credit cost not confirmed (2026-10-31)
 music.suno-sound	call	?	unconfirmed	suno_generate_sound — credit cost not on the public table (2026-08-20)
 music.suno-lyrics	call	?	unconfirmed	suno_generate_lyrics — credit cost not on the public table (2026-08-20)
 music.mlx	second	0.000	official	mlx_music_generate — MLX Core / mlx-serve on-device. Quantity is durationSeconds. Electricity only
@@ -125,6 +141,7 @@ video.mlx	second	0.000	official	mlx_video_generate — MLX Core on-device. Quant
 # key would still kill the report. image.host sits with the images above. Owner directive 2026-09-07.
 video.host	second	0.000	derived	Host-provided video generation (Grok image_to_video · reference_to_video) uses the subscription allowance; no separate API charge. Quota limits are not priced here. 720p ceiling
 video.astra	second	0.000	derived	Our own LTX-2.5 box (astra_* · ASTRA_VIDEO) runs on hardware we already pay for; no per-second API charge. The real cost is wall clock — 66-184s a job, one at a time, queue of 20 — which this table does not price. 64-pixel grid, 2,064,384-pixel area ceiling
+video.astra-genai	second	?	unconfirmed	astra_genai_* video (LTX v2 · MSR) through the ASTRA GenAI gateway — no published per-second price; the managed reservation (reserveUsd) is the only budget figure (checked 2026-10-31)
 
 # Seedance escalation — conservative list price; no expiring promotions (verified 2026-09-05).
 seedance.2-5.1080p	second	0.569	derived	dreamina-seedance-2-5-260628 — reference/voice escalation; list price

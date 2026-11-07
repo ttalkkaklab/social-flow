@@ -3,7 +3,7 @@ name: produce
 description: >
   Builds the video and the per-platform text from an already-approved storyboard. Use when the user asks to "영상 만들어", "콘텐츠 제작", "produce the video", "플랫폼별 콘텐츠 만들어", or right after a storyboard is approved. Turns the approved scenes.js under data/[channel]/episodes/[topic]/storyboard/ into the subtitle-free video in the project's saved format and video ratio — generated or imported clips, stills under camera moves, HTML motion slides, TTS or character speech, BGM with ducking, brand outro — plus the Threads, Instagram, Facebook and YouTube text under the episode's output/, checked on a phone viewport before publishing. Where recording/alignment.json exists it cuts the user's own screen recording instead of generating scenes. Boundary — storyboard plans and stops for approval, produce starts after it, autoproduce runs both unattended.
 argument-hint: "<channel> <topic> [platformCSV|auto]"
-allowed-tools: ["mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "mcp__social-flow__music_plan", "mcp__plugin_social-flow_social-flow__music_plan", "mcp__social-flow__music_execute", "mcp__plugin_social-flow_social-flow__music_execute", "mcp__social-flow__music_status", "mcp__plugin_social-flow_social-flow__music_status", "mcp__social-flow__music_generate_song", "mcp__plugin_social-flow_social-flow__music_generate_song", "mcp__social-flow__music_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__music_elevenlabs_generate", "mcp__social-flow__image_catalog", "mcp__plugin_social-flow_social-flow__image_catalog", "mcp__social-flow__image_plan", "mcp__plugin_social-flow_social-flow__image_plan", "mcp__social-flow__image_execute", "mcp__plugin_social-flow_social-flow__image_execute", "mcp__social-flow__image_status", "mcp__plugin_social-flow_social-flow__image_status", "mcp__social-flow__video_catalog", "mcp__plugin_social-flow_social-flow__video_catalog", "mcp__social-flow__video_plan", "mcp__plugin_social-flow_social-flow__video_plan", "mcp__social-flow__video_execute", "mcp__plugin_social-flow_social-flow__video_execute", "mcp__social-flow__video_status", "mcp__plugin_social-flow_social-flow__video_status", "mcp__social-flow__host_review", "mcp__plugin_social-flow_social-flow__host_review", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__location_manage", "mcp__plugin_social-flow_social-flow__location_manage", "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "mcp__social-flow__acting_review", "mcp__plugin_social-flow_social-flow__acting_review", "mcp__social-flow__tts_review_acting", "mcp__plugin_social-flow_social-flow__tts_review_acting", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__plugin_social-flow_social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__plugin_social-flow_social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_dictionary", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_dictionary", "mcp__social-flow__tts_elevenlabs_voices", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__plugin_social-flow_social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__plugin_social-flow_social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__plugin_social-flow_social-flow__music_generate_clip", "mcp__social-flow__music_generate_advanced", "mcp__plugin_social-flow_social-flow__music_generate_advanced", "mcp__social-flow__stock_search", "mcp__plugin_social-flow_social-flow__stock_search", "mcp__social-flow__suno_generate", "mcp__plugin_social-flow_social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__plugin_social-flow_social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__plugin_social-flow_social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__plugin_social-flow_social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__plugin_social-flow_social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__plugin_social-flow_social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__plugin_social-flow_social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__plugin_social-flow_social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__plugin_social-flow_social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__plugin_social-flow_social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__plugin_social-flow_social-flow__seedance_reference", "mcp__social-flow__astra_img2video", "mcp__plugin_social-flow_social-flow__astra_img2video", "mcp__social-flow__astra_keyframe_video", "mcp__plugin_social-flow_social-flow__astra_keyframe_video", "mcp__social-flow__astra_audio2video", "mcp__plugin_social-flow_social-flow__astra_audio2video", "mcp__social-flow__astra_ic_lora", "mcp__plugin_social-flow_social-flow__astra_ic_lora", "mcp__social-flow__astra_video_retake", "mcp__plugin_social-flow_social-flow__astra_video_retake", "mcp__social-flow__astra_video_capabilities", "mcp__plugin_social-flow_social-flow__astra_video_capabilities", "mcp__social-flow__astra_video_list_uploads", "mcp__plugin_social-flow_social-flow__astra_video_list_uploads", "mcp__social-flow__astra_video_delete_upload", "mcp__plugin_social-flow_social-flow__astra_video_delete_upload", "mcp__social-flow__mlx_image_generate", "mcp__plugin_social-flow_social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__plugin_social-flow_social-flow__mlx_image_edit", "mcp__social-flow__mlx_music_generate", "mcp__plugin_social-flow_social-flow__mlx_music_generate", "mcp__social-flow__mlx_video_generate", "mcp__plugin_social-flow_social-flow__mlx_video_generate", "mcp__social-flow__mlx_3d_generate", "mcp__plugin_social-flow_social-flow__mlx_3d_generate", "mcp__social-flow__astra_genai_text2video", "mcp__plugin_social-flow_social-flow__astra_genai_text2video", "mcp__social-flow__astra_genai_img2video", "mcp__plugin_social-flow_social-flow__astra_genai_img2video", "mcp__social-flow__astra_genai_text2img", "mcp__plugin_social-flow_social-flow__astra_genai_text2img", "mcp__social-flow__astra_genai_edit", "mcp__plugin_social-flow_social-flow__astra_genai_edit", "mcp__social-flow__astra_genai_msr", "mcp__plugin_social-flow_social-flow__astra_genai_msr", "mcp__social-flow__astra_genai_video_status", "mcp__plugin_social-flow_social-flow__astra_genai_video_status"]
+allowed-tools: ["mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__shot_icons", "mcp__plugin_social-flow_social-flow__shot_icons", "mcp__social-flow__shot_image", "mcp__plugin_social-flow_social-flow__shot_image", "mcp__social-flow__shot_prompt", "mcp__plugin_social-flow_social-flow__shot_prompt", "mcp__social-flow__video_approve", "mcp__plugin_social-flow_social-flow__video_approve", "mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "mcp__social-flow__music_plan", "mcp__plugin_social-flow_social-flow__music_plan", "mcp__social-flow__music_execute", "mcp__plugin_social-flow_social-flow__music_execute", "mcp__social-flow__music_status", "mcp__plugin_social-flow_social-flow__music_status", "mcp__social-flow__music_generate_song", "mcp__plugin_social-flow_social-flow__music_generate_song", "mcp__social-flow__music_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__music_elevenlabs_generate", "mcp__social-flow__image_catalog", "mcp__plugin_social-flow_social-flow__image_catalog", "mcp__social-flow__image_plan", "mcp__plugin_social-flow_social-flow__image_plan", "mcp__social-flow__image_execute", "mcp__plugin_social-flow_social-flow__image_execute", "mcp__social-flow__image_status", "mcp__plugin_social-flow_social-flow__image_status", "mcp__social-flow__video_catalog", "mcp__plugin_social-flow_social-flow__video_catalog", "mcp__social-flow__video_plan", "mcp__plugin_social-flow_social-flow__video_plan", "mcp__social-flow__video_execute", "mcp__plugin_social-flow_social-flow__video_execute", "mcp__social-flow__video_status", "mcp__plugin_social-flow_social-flow__video_status", "mcp__social-flow__host_review", "mcp__plugin_social-flow_social-flow__host_review", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__location_manage", "mcp__plugin_social-flow_social-flow__location_manage", "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "mcp__social-flow__acting_review", "mcp__plugin_social-flow_social-flow__acting_review", "mcp__social-flow__tts_review_acting", "mcp__plugin_social-flow_social-flow__tts_review_acting", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__plugin_social-flow_social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__plugin_social-flow_social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_dictionary", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_dictionary", "mcp__social-flow__tts_elevenlabs_voices", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__plugin_social-flow_social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__plugin_social-flow_social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__plugin_social-flow_social-flow__music_generate_clip", "mcp__social-flow__music_generate_advanced", "mcp__plugin_social-flow_social-flow__music_generate_advanced", "mcp__social-flow__stock_search", "mcp__plugin_social-flow_social-flow__stock_search", "mcp__social-flow__suno_generate", "mcp__plugin_social-flow_social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__plugin_social-flow_social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__plugin_social-flow_social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__plugin_social-flow_social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__plugin_social-flow_social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__plugin_social-flow_social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__plugin_social-flow_social-flow__gpt_image_img2img", "mcp__social-flow__seedance_img2video", "mcp__plugin_social-flow_social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__plugin_social-flow_social-flow__seedance_reference", "mcp__social-flow__astra_img2video", "mcp__plugin_social-flow_social-flow__astra_img2video", "mcp__social-flow__astra_keyframe_video", "mcp__plugin_social-flow_social-flow__astra_keyframe_video", "mcp__social-flow__astra_audio2video", "mcp__plugin_social-flow_social-flow__astra_audio2video", "mcp__social-flow__astra_ic_lora", "mcp__plugin_social-flow_social-flow__astra_ic_lora", "mcp__social-flow__astra_video_retake", "mcp__plugin_social-flow_social-flow__astra_video_retake", "mcp__social-flow__astra_video_capabilities", "mcp__plugin_social-flow_social-flow__astra_video_capabilities", "mcp__social-flow__astra_video_list_uploads", "mcp__plugin_social-flow_social-flow__astra_video_list_uploads", "mcp__social-flow__astra_video_delete_upload", "mcp__plugin_social-flow_social-flow__astra_video_delete_upload", "mcp__social-flow__mlx_image_generate", "mcp__plugin_social-flow_social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__plugin_social-flow_social-flow__mlx_image_edit", "mcp__social-flow__mlx_music_generate", "mcp__plugin_social-flow_social-flow__mlx_music_generate", "mcp__social-flow__mlx_video_generate", "mcp__plugin_social-flow_social-flow__mlx_video_generate", "mcp__social-flow__mlx_3d_generate", "mcp__plugin_social-flow_social-flow__mlx_3d_generate", "mcp__social-flow__astra_genai_text2video", "mcp__plugin_social-flow_social-flow__astra_genai_text2video", "mcp__social-flow__astra_genai_img2video", "mcp__plugin_social-flow_social-flow__astra_genai_img2video", "mcp__social-flow__astra_genai_text2img", "mcp__plugin_social-flow_social-flow__astra_genai_text2img", "mcp__social-flow__astra_genai_edit", "mcp__plugin_social-flow_social-flow__astra_genai_edit", "mcp__social-flow__astra_genai_msr", "mcp__plugin_social-flow_social-flow__astra_genai_msr", "mcp__social-flow__astra_genai_video_status", "mcp__plugin_social-flow_social-flow__astra_genai_video_status", "mcp__social-flow__astra_genai_catalog", "mcp__plugin_social-flow_social-flow__astra_genai_catalog", "mcp__social-flow__astra_genai_image_generate", "mcp__plugin_social-flow_social-flow__astra_genai_image_generate", "mcp__social-flow__astra_genai_image_edit", "mcp__plugin_social-flow_social-flow__astra_genai_image_edit", "mcp__social-flow__astra_genai_desktop_text2video", "mcp__plugin_social-flow_social-flow__astra_genai_desktop_text2video", "mcp__social-flow__astra_genai_desktop_img2video", "mcp__plugin_social-flow_social-flow__astra_genai_desktop_img2video", "mcp__social-flow__astra_genai_desktop_audio2video", "mcp__plugin_social-flow_social-flow__astra_genai_desktop_audio2video", "mcp__social-flow__astra_genai_desktop_extend", "mcp__plugin_social-flow_social-flow__astra_genai_desktop_extend", "mcp__social-flow__astra_genai_desktop_retake", "mcp__plugin_social-flow_social-flow__astra_genai_desktop_retake", "mcp__social-flow__astra_genai_desktop_keyframes", "mcp__plugin_social-flow_social-flow__astra_genai_desktop_keyframes", "mcp__social-flow__astra_genai_desktop_status", "mcp__plugin_social-flow_social-flow__astra_genai_desktop_status", "mcp__social-flow__tts_astra_genai", "mcp__plugin_social-flow_social-flow__tts_astra_genai"]
 ---
 Follow [production order](../_shared/production-workflow.md): setup first, then complete each artifact stage in order under actual spending authorization.
 For the unified `astra-genai` engine, follow [GenAI adapters](../_shared/astra-genai.md). For each GenAI asset, choose text generation, source transformation or masked correction; for each GenAI clip, consider MSR when identity/outfit/prop/background continuity matters. Reuse inspected sheets and record reference roles. Keep precise edits unexpanded and use prompt expansion for short descriptive prompts. Readable text still requires GPT Image 2. Keep legacy `astra` selections on their original server. For motion-graphic shots, follow [motion type selection and design](../storyboard/references/motion-graphics.md): persist `shot.motionGraphic` with a common `THEME.motionGraphicTheme` when the episode needs consistency and contextual `style.theme` (`auto` or an explicit channel theme), choose the type from viewer intent and available evidence, and keep style, choreography and renderer separate. Built-in abstract scenes use the installed `prepare-motion-graphic.js`; asset-dependent types retain their authored or mesh routes.
@@ -12,8 +12,11 @@ For episode video, follow the [shared routing contract](../_shared/video-routing
 For narrated or mixed scenes, apply [visual grounding](../storyboard/references/narration-visual-grounding.md) before source images, including host calls and full-video: enumerate all editorial cuts and inspect repetition across the whole episode; never propagate a chapter score to shots; compare actual pixels with the line, visual purpose and opening state; repair weak conte before motion and carry its action into the provider request.
 For action-led episodes, carry the storyboard's [action direction](../storyboard/references/action-direction.md)
 into generation and editing. Compare the actual clip with the planned camera and
-action; camera icons and a successful API response do not verify footage quality. Use `storyboard_read` techniqueCatalog and persist `shot.techniques:[{id,reason}]`; [film-techniques.js](../storyboard/references/film-techniques.js) owns icons, selection guidance and provider instructions. Keep fields consistent; inspect actual footage before certifying a technique.
+action; camera icons and a successful API response do not verify footage quality. Use `storyboard_read` techniqueCatalog and set the move and focus with `shot_icons`, which persists `shot.techniques:[{id,reason}]`; [film-techniques.js](../storyboard/references/film-techniques.js) owns icons, selection guidance and provider instructions. Keep fields consistent; inspect actual footage before certifying a technique.
 Before source images or video, complete the storyboard's required camera-direction pass if the production plan still has generic static defaults. Preserve motivated holds; carry the selected framing, focus endpoints and move into the prompt and any spatial references. Reassemble prompts after camera edits and report unverified footage honestly. For connected shots, follow [shot continuity](../storyboard/references/shot-continuity.md).
+For generated dialogue, follow [dialogue coverage](../storyboard/references/dialogue-coverage.md)
+before images and prompts: prefer OTS/reverse for face-to-face expression beats and keep
+two-speaker clips only with suitable visible faces or a deliberate creative exception.
 Capture the preceding accepted clip's selected endpoint before authoring the next opening;
 use the spatial assembler's actual reference-image arguments. After any crop, trim or
 replacement, inspect that shot with both neighbours and refresh stale endpoint evidence.
@@ -22,11 +25,11 @@ Behavior examples: [continuity evaluations](references/evals.md).
 For an intentionally silent film, use `SILENT=1 OUTRO=0` with the canonical builder.
 Supply sample-exact zero-valued timing WAVs; omit music, effect and ambience cues.
 The builder verifies silence and preserves the frame clock without loudness scoring.
-**Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; outside the fixed cut workflow, scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
+**Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
 For tracked props, read [prop continuity](../storyboard/references/prop-continuity.md). Resolve the shot snapshot before prompts, preserve reference versions and record the snapshot with generated assets; verify the actual holder and condition in images and clips.
 **New authoring contract (2026-10-16):** Read [character-led scenarios](../storyboard/references/character-scenarios.md) first. New scenarios use `scenario-v2` and boards use `story-v2`: cast existing characters (including narrators), choose evidence/fiction/adapted, write observable actions and attributed speech, and review the whole performance. Its type-specific grounding and rubric replace the legacy research quotas, forced wow/engine mix, spoken-message and narration-only requirements below. Legacy unversioned scenarios and story-v1 boards keep their existing checks. Production voice, budget and publishing consent are unchanged.
 # Per-platform content production — data/[channel]/episodes/[topic]/output/
-**Fixed cut workflow:** Follow [production workflow](../_shared/production-workflow.md): seven stage skills own independent reviews and Blender/image/video stages, including existing boards. This skill supplies shared mechanics; guidance-only policies cannot waive those stages. On direct invocation, resume the next required stage through its skill before generation or assembly.
+**Production order (user directive, 2026-10-31):** Follow [production order](../_shared/production-workflow.md): `shot_image` makes each shot's start image (and the end image a first_last shot needs), `shot_prompt` its video prompt, and each shot's video waits for the user's yes (`video_approve`) or their approval of every shot. Reviews and Blender compositions run only when the user asks; preserve their findings without claiming a pass.
 **Owner directive (2026-10-17): every delivered video is subtitle-free, including speech.**
 This supersedes older burned-subtitle exceptions and rendering recipes below. Use the clean
 master on every platform. No subtitle/caption typography may be generated into clips or
@@ -93,8 +96,8 @@ Use [story-quality.md](../storyboard/references/story-quality.md) to improve the
 7. **The TTS identity is fixed** — preserve the pinned engine, model and voice ID/name.
    Resolve each line's emotion and delivery from `acting`; the character stylePrompt is only
    its baseline. Use `plan_audio` arguments so a confused question does not inherit a sales smile. Follow [acting prompts](references/acting-prompts.md).
-8. **Generated video comes from an image** — don't use `veo_text2video`. The order is always
-   the saved image model (`.social-flow/models.json`, the episode snapshot) → keep the PNG in `storyboard/images/` → the saved video model through `video_plan` → `video_execute`.
+8. **Generated video comes from an image** — don't use a text-to-video tool. The order is always
+   the saved image model (`.social-flow/models.json`, the episode snapshot) → keep the PNG in `storyboard/images/` → the saved video model through `video_plan` → `video_approve` → `video_execute`.
    `PRODUCTION.imageProvider` / `videoProvider` record whether that saved choice is a host tool (`host`) or an API/local engine (`api`, `astra`); a missing or failed tool is reported and an explicit exception is asked for, never a silent substitute (still-generation §1, model-settings.md).
    The image is the reference point for reproducing a shot: if the video isn't right,
    reuse that PNG only if its opening still fits both neighbours; otherwise repair the
@@ -108,7 +111,7 @@ Use [story-quality.md](../storyboard/references/story-quality.md) to improve the
    (scenes-schema §Motion background, `visual.video`) the builder uses only the video
    track, so the clip's sound gets dropped and the narration stays.
 10. **The cover's (first screen's) text is code-rendered only** — the engine never draws
-   the title. **Veo can't write Hangul** (user confirmed 2026-08-11), and the cover is a
+   the title. The cover is a
    screen of nothing but the hook title and the hero number, so broken glyphs write off the
    whole episode. **The opening treatment follows `shot.render`**; video is optional unless the channel explicitly
    enables `hook_video`. A selected motion background is made from the cover still (§3, on the saved
@@ -206,9 +209,10 @@ setup only if missing. Preserve legacy approved choices rather than overwriting
 them. Use the selected video, speech and image models throughout production, even
 when later recipes recommend another engine. No repeated model question or silent fallback.
 Follow [delivery preflight and continuation](references/delivery-continuation.md) before generating assets and on every resume. Clips alone are never completion.
-- Confirm `status: approved` in the `storyboard/storyboard.md` frontmatter — that approval is the
-  spending boundary for this episode's generation; without it stop and point the user at
-  `/social-flow:storyboard`. Existing reviews must satisfy the fixed cut workflow before downstream generation.
+- Spend only inside the authorization the user gave — `PRODUCTION.videoAuthorization`, or the
+  approved cost quote (`PRODUCTION.approval`) — and run each shot's video only after the user's yes
+  to its plan (`video_approve`, or `{auto:true}` for every shot; `video_execute` refuses otherwise).
+  The `storyboard.md` `status` is a progress label, not the spending boundary.
 - Load `data/<channel>/profile.md` (voice, theme, platforms, `shortform_outro` — `on` if absent).
 - **Identify the source**: three paths, decided by `window.FORMAT` and the scenes'
   `visual.source`.
@@ -301,13 +305,14 @@ Follow [delivery preflight and continuation](references/delivery-continuation.md
   so a resumed run reuses the captures and TSV manifests already there.
 ### 1.5 Generate the stills
 
-**This is where the episode starts costing money.** The storyboard planned every still and
-generated none of it (its §5), so `storyboard/images/` is empty when this step begins and full
-when it ends. **Skip the whole section on the shooting-edit path** (the screen is the user's
+**Stills cost money under the image authorization.** On a story-first board `shot_image` already
+made each picture shot's start image (and a first_last end image) in the storyboard's fourth step;
+this step makes only what is still missing. An older board planned its stills without generating
+them, so its `storyboard/images/` fills here. **Skip the whole section on the shooting-edit path** (the screen is the user's
 recording); a **mixed** episode still generates the stills its generated scenes name. Slide
 scenes have no still here either — their screen is HTML, authored at §3.6.
 
-**Persistent locations:** Before source images, follow [location assets](../storyboard/references/location-assets.md). Render the bound set/camera and complete actor start/end blocking; inspect consecutive cuts and the advisory continuity findings. Use `mcp__social-flow__location_manage` action `previz` for motion so its clip and source composition share that same spatial plan. Forward the assembler's actual image inputs with the location composition first; cast sheets supply appearance. Read spatialWarnings for legacy independent previz. Camera, actor or endpoint changes require fresh references; actual reviews remain optional and honestly recorded.
+**Persistent locations:** a place whose sheet names a built set (`SB_DOC.locations[].manifest`) needs no separate step — `shot_image` renders that set in Blender from the shot's size and angle as Image 1 ([location assets](../storyboard/references/location-assets.md)); without a set the sheet image leads, with a warning. A Blender composition, a motion previz (`mcp__social-flow__location_manage` action `previz`) or a continuity review runs when the user asks for it. Cast sheets supply appearance; actual reviews remain optional and honestly recorded.
 
 **The plan clears rule 13 first.** Go through each `bgPrompt` and the footage stills against
 absolute rule 13's list with profile.md §3 open for the target person — no still life as a
@@ -351,7 +356,7 @@ The §6 manifest references these file paths directly, so follow the naming belo
 motion-background scenes from scenes.js against the rule's list, with profile.md §3 open for
 the target person, and only then start the generation calls. The stills those clips are made
 from already exist and were already looked at (§1.5); an engine question about a still belongs
-there, in [still-generation.md](references/still-generation.md). **Every clip request in this section goes `video_catalog` → `video_plan` → `video_execute`** (`video_status` on resume) on the saved video model — except the audio-conditioned ASTRA cut, which the 2026-10-17 block above sends through `render-astra-shot.js`. With `videoProvider:"host"` the plan returns a `host_handoff` for the host `image_to_video` — same source PNG, same stored prompt, `video.host` in the ledger. A direct `veo_*` / `seedance_*` / `omni_*` / `astra_*` call appears only as the adapter the plan selected and must carry `videoContext: {episode, shotId, requestId}`; a configured workspace refuses one without it (`video_context_required`).
+there, in [still-generation.md](references/still-generation.md). **Every clip request in this section goes `video_catalog` → `video_plan` → `video_approve` (the user's yes) → `video_execute`** (`video_status` on resume) on the saved video model — except the audio-conditioned ASTRA cut, which the 2026-10-17 block above sends through `render-astra-shot.js`. With `videoProvider:"host"` the plan returns a `host_handoff` for the host `image_to_video` — same source PNG, same stored prompt, `video.host` in the ledger. A direct `seedance_*` / `astra_*` / `astra_genai_*` call appears only as the adapter the plan selected and must carry `videoContext: {episode, shotId, requestId}`; a configured workspace refuses one without it (`video_context_required`).
 
 **What the storyboard already settled — pass it through, don't re-decide it.** These values
 arrive from scenes.js already chosen and already reviewed. Inventing a replacement at call time
@@ -362,9 +367,7 @@ means generating something nobody approved.
   b-roll, `visual.video.prompt` on a motion background, `visual.clip.prompt` on a speech
   clip), assembled by `assemble-bg-prompt.js --clip` in the planned route's grammar and
   machine-checked there. One scene is one call, and the prompt is the reviewed artifact — the
-  call adds only the arguments the API takes separately: `negativePrompt` from the stored
-  `negative` noun list (Veo fast/standard only — lite takes none, so its exclusions stay in the
-  prompt body), the reference images from `visual.character`, and `requiredSeconds` from
+  call adds only the arguments the API takes separately: the reference images from `visual.character`, and `requiredSeconds` from
   `plan-video-duration.js` (video-duration.md; never beside `durationSeconds`). **To regenerate a clip, resend the stored prompt as-is**;
   when a camera slot or the motion changed, rerun the assembler from the fields rather than
   editing the string by hand — the same discipline as `bgPrompt`.
@@ -402,19 +405,15 @@ means generating something nobody approved.
   camera:` sentence and the exclusions — and `--no-person` again when the stored string reads
   "the subject" instead of a body) rather than editing the string by hand.
 - Follow [character-identity.md](../channel/references/character-identity.md) for cast directions: recompile current identities, compare source hashes, and apply image/video/dialogue/voice guidance to their respective generation lanes.
-- **`visual.character` — who is on screen.** Use `PRODUCTION.cast[id].image` when present;
-  otherwise resolve the id to the channel panel directory:
-
-  ```bash
-  CH=$(python3 ../channel/references/resolve-asset.py "$CHANNEL_DIR" character claude)
-  # → …/assets/characters/claude — reference set: $CH/face.png then $CH/body.png
-  ```
-  Keep source-image order as previz, style pack, episode cast. **Inside channel panels, order is
-  weight**: front/three-quarter shots use face then body, close-ups use face alone,
-  rear shots use back (add face only when visible). Store all three views for new characters. No panels yet means falling back to that character's `front.png`; a live-action
-  character keeps its single image (`real.png`). The reference lane is the saved video model's
-  (`seedance_reference` or `veo_reference` as the plan selects; Veo takes **3 images max**, validated
-  in code) — a saved model that cannot take the required references is reported for an explicit
+- **`visual.character` — who is on screen.** The references are the sheet panels the character's
+  `panels.json` registers (`character-panels.js` `canonicalReferences`): one character sends its
+  face close-up, headless front and headless back; two send each face, then each front. At most two
+  characters take references (`msr_character_limit`). `shot_image` and `video_plan` build this set
+  themselves. A missing panel is reported for `character_panel` to make — never replaced by a
+  body-only picture or an older full-body file. A live-action character keeps its single image
+  (`real.png`). The reference lane is the saved video model's
+  (`astra_genai_msr`, `seedance_reference` or `fasth3_omni_reference` as the plan selects;
+  model input limits are validated in code) — a saved model that cannot take the required references is reported for an explicit
   exception, not swapped. The full rule is
   [video-model-selection.md](references/video-model-selection.md) §The character panels.
 
@@ -427,8 +426,8 @@ means generating something nobody approved.
   speakers, two clips, one sentence each; `@Audio N` is the Nth entry of `referenceAudioPaths`.
   Use the saved compatible Seedance selection: 2.5 documents explicit mapping; 2.0/Fast/Mini accept reference audio with an image. Do not silently switch grades.
   `video_plan` preserves reference indices and maps pinned samples.
-  Veo has no audio reference; select an explicit speech synchronization adapter under
-  shot-speech.md when the finished WAV must drive the mouth. A cut voiced
+  An adapter whose voice lane is `none` refuses a spoken cut (`voice_lane_required`); use an
+  audio2video adapter under shot-speech.md when the finished WAV must drive the mouth. A cut voiced
   by TTS in the build needs no voice reference; native speech can approximate the pinned voice (profile §2). This is imitation,
   not cloning: repeat authored timbre/accent separately from each line's emotion and
   recording environment. Unknown acoustic traits stay unknown.
@@ -441,8 +440,7 @@ means generating something nobody approved.
 - **`duration` — the used length.** On a generated clip this is what the cut needs
   (scenes-schema §cut length), not a default: an insert is 3–4s, a face carrying emotion is
   7–10s. **Ask for exactly that** — send `requiredSeconds` from `plan-video-duration.js`
-  ([video-duration.md](references/video-duration.md)), never a bare `durationSeconds` beside it; Seedance makes and bills the seconds you request, and the router clamps them to the saved model's floor (1.5 pro takes 4–12s, so a 3-second scene bills 4 and the build cuts at the scene boundary).
-  Veo's reference lane is the exception the other way, pinned at 8s, so there you generate 8 and trim. Handing a model more seconds than the idea holds is how the
+  ([video-duration.md](references/video-duration.md)), never a bare `durationSeconds` beside it; Seedance makes and bills the seconds you request, and the router clamps them to the saved model's floor (2.0 takes 4–15s, so a 3-second scene bills 4 and the build cuts at the scene boundary). Handing a model more seconds than the idea holds is how the
   middle of a clip goes dead — it fills the time it is given.
 
 - **What the clip brought back — check it before it enters the plan.** Every returned clip
@@ -452,18 +450,16 @@ means generating something nobody approved.
   text, the audio track against the plan, the local ASR for a line the prompt never wrote.
   Exit 2 lists findings. Accidental type on the picture breaks the subtitle-free delivery rule, so
   fix it within the existing authorization — crop the clip, or replace it off the same PNG with the
-  artifact locks (`subtitles, text, captions, logo, watermark` in `negativePrompt` on Veo
-  fast/standard; lite takes none, so there the exclusions go into the prompt body; "keep it
-  subtitle-free" in a Seedance lock; `no speech, no dialogue` in the `Audio:` sentence) — and record
+  artifact locks ("keep it subtitle-free" in a Seedance lock; `no speech, no dialogue` in the `Audio:` sentence) — and record
   the finding with the frame time and words in the build record. No approval is asked; only a
   replacement that needs new spend goes through the budget check (`--before-call`)
   (video-generation §what the clip brought back).
 
-- **`visual.video.previz` — optional.** A previz helps camera and blocking when the saved model takes a reference clip (Seedance 2.x `reference_video`): pass the `generation` object's `referenceVideoPaths` to `seedance_reference` resolved from the storyboard directory like `referenceImagePaths` — never a re-rendered or substituted clip (its bytes are hash-bound; `check-production.js` flags a mismatch as stale). On a `frame_and_prompt` adapter (Seedance 1.x, Veo, a host tool, ASTRA) it is advice only: the still edited from `previz.firstFrame` and the stored prompt carry its composition. No checker refuses a generated cut without one; when `.social-flow/models.json` has `production.previzRenderer` use that renderer, otherwise pick one and record it as an assistant decision. When a previz exists, check the result against it — a contact sheet at 0/25/50/75/100 % and an edge overlay ([blender-previz.md](../storyboard/references/blender-previz.md) §6.4, §6.7). **Reuse the user's saved model choice**: `PRODUCTION.videoModel` holds it (directory model settings and storyboard §1.7). Populate a new board from its snapshot without another model question; preserve older boards' actual approved choices. Use `video-model-options.js storyboard/` only during first setup or an explicit requested change. Record each cut's selected model/resolution and recalculate costs when the user changes them; retain actual spending authorization.
+- **`visual.video.previz` — optional.** A previz helps camera and blocking when the saved model takes a reference clip (Seedance 2.x `reference_video`): pass the `generation` object's `referenceVideoPaths` to `seedance_reference` resolved from the storyboard directory like `referenceImagePaths` — never a re-rendered or substituted clip (its bytes are hash-bound; `check-production.js` flags a mismatch as stale). On a `frame_and_prompt` adapter (a host tool, ASTRA, image-to-video) it is advice only: the still edited from `previz.firstFrame` and the stored prompt carry its composition. No checker refuses a generated cut without one; when `.social-flow/models.json` has `production.previzRenderer` use that renderer, otherwise pick one and record it as an assistant decision. When a previz exists, check the result against it — a contact sheet at 0/25/50/75/100 % and an edge overlay ([blender-previz.md](../storyboard/references/blender-previz.md) §6.4, §6.7). **Reuse the user's saved model choice**: `PRODUCTION.videoModel` holds it (directory model settings and storyboard §1.7). Populate a new board from its snapshot without another model question; preserve older boards' actual approved choices. Use `video-model-options.js storyboard/` only during first setup or an explicit requested change. Record each cut's selected model/resolution and recalculate costs when the user changes them; retain actual spending authorization.
 
 **Use the `generation` arguments from `cost-preview.js --json` as the `video_plan` operation args; resolve errors and re-estimate retries before spending. Prompt shape and per-slot recipe** —
 [video-generation.md](references/video-generation.md). The engine is the saved video model;
-that document's face → sound → grid route is first-setup advice, while each engine's prompt
+that document's voice → face → sound route is first-setup advice, while each engine's prompt
 shape and the per-slot recipes for b-roll, motion backgrounds and quote speaking clips apply
 to the saved one. **Read it before the first
 generated-video call**; an episode of still backgrounds skips it whole.
@@ -482,7 +478,7 @@ All `still_camera` cuts use the unchanged shared camera HTML template and runtim
   fill-the-frame tail (owner 2026-08-25 — never a letterbox or a lower-third fade), but
   swap `face not visible` for
   **`seen from behind, face turned away`** so the person is clearly visible.
-  The cover capture (`bg=./scene-1.png`) and veo's input use the same file, so when the cover
+  The cover capture (`bg=./scene-1.png`) and the video model's input use the same file, so when the cover
   ends that photo starts moving.
 - **BGM**: the storyboard already decided this. Read `window.MUSIC` and each shot's `sound`
   (scenes-schema §music cues) and turn them into files the builder can find.
@@ -588,7 +584,7 @@ was using. The convention's source of truth is
 
 ```bash
 printf 'image.gpt-image-2.high\t1\tproduce: cover background regenerated\n'          >> .work/cost-tally.tsv
-printf 'veo.lite.1080p\t8\tproduce: b-roll a1 — generated 8s, used 4s\n'             >> .work/cost-tally.tsv
+printf 'seedance.2-0.1080p\t4\tproduce: b-roll a1 — requested 4s, used 4s\n'         >> .work/cost-tally.tsv
 printf 'seedance.2-0-video.1080p\t10\tproduce: motion background i3 — 5s cut + 5s previz (completion_tokens 486000)\n' >> .work/cost-tally.tsv
 printf 'music.lyria-realtime\t90\tproduce: BGM cue "base" 90s — unit price unconfirmed\n' >> .work/cost-tally.tsv
 # one line per cue in window.MUSIC — a three-cue episode is three calls, not one
@@ -596,11 +592,8 @@ printf 'music.suno-generate\t1\tproduce: Suno full song, 1 call (2 tracks)\n'   
 printf 'music.suno-sound\t1\tproduce: Suno loop BGM\n'                                >> .work/cost-tally.tsv
 ```
 
-Two places where the unit is easy to get wrong.
+One place where the unit is easy to get wrong.
 
-- **For veo, write the generated length** — generate 8 seconds and use only 4 and it's still
-  `8`. The API allows 1080p at 8 seconds only, and trimming doesn't reduce the bill. Write 4
-  and half of that episode's video cost vanishes from the report.
 - **For seedance, write the seconds you requested**, and copy the response's
   `completion_tokens` (the actual billing basis) into the memo. The price table's per-second
   value is converted from the official example price, so comparing the two later checks the
@@ -748,7 +741,7 @@ and a headless `--dump-dom` run reads that title back after the page script has 
 ```bash
 . .work/format.env                       # URL_FMT is empty on the portrait preset
 FMT=${URL_FMT:+&format=$URL_FMT}
-"${CHROME:-/Applications/Google Chrome.app/Contents/MacOS/Google Chrome}" --headless=new \
+"${CHROME:-/Applications/Google Chrome.app/Contents/MacOS/Google Chrome}" --headless=new --use-mock-keychain \
   --disable-gpu --dump-dom "file://$PWD/.work/frame.html?i=<idx>&reveal=<last>$FMT" \
   2>/dev/null | grep -o 'ovf=[0-9]*'
 ```
@@ -761,7 +754,7 @@ or push a line into the next state.
 
 **An all-live-voice episode (`window.VOICE === "user"`) skips this whole section** — every
 card's audio comes from the clips (§3.5) and `voice/` (§3.6). The style check already
-ran back in the storyboard.
+ran back in the storyboard. **An MSR shot's lines get no take either**: MSR speaks its prompt's lines and its soundtrack is the card audio, so bind its clip with `speech_manage attach_video` (the `native` route in [shot-speech.md](references/shot-speech.md#adapter-layer)); each speaker's voice sample is made once per character.
 
 **Run the style check before anything gets read aloud** — its findings are editing suggestions
 (rule 4). Narration passes by once with no rewind, and card text can't be fixed after publishing,
@@ -1289,12 +1282,12 @@ that split.
 Cost — what this episode ran to (stills → video)
   produce      6 stills (gpt high 2 · local 4)              $0.44
     · of which 1 regenerated (§1.5 remake)                   $0.22
-               b-roll veo lite 1080p, 8s generated          $0.64
+               b-roll seedance 2.0 1080p, 4s requested      $1.50
                narration 1,840 chars (local)                $0.00
                BGM 90s                                      excluded — unit price unconfirmed
   ────────────────────────────────────────────────────────────
-  total                                                     $1.08  (+ 1 item excluded)
-  forecast (.work/cost-forecast.tsv, the storyboard's projection)  $0.98 — say when the gap is over 20%
+  total                                                     $1.94  (+ 1 item excluded)
+  forecast (.work/cost-forecast.tsv, the storyboard's projection)  $1.84 — say when the gap is over 20%
   full report: output/video/cost-report.txt
 ```
 

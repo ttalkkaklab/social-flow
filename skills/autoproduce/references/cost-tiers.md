@@ -29,16 +29,16 @@ by `models.json` (`models.video`, `production.previzRenderer`); a growth plan's
 | Layer | Billed as | Notes |
 |---|---|---|
 | Stills — cover, scene stills, slide art plates | the saved image model's `image.*` row | host tool at $0 on the allowance; gpt-image by its saved quality tier; Z-Image and MLX at $0. `cost-preview.js` reads the saved model for every still |
-| Generated video | the saved video model's row (`seedance.*`, `veo.*`, `video.host`, `video.astra`, `video.mlx`) | Veo bills generated length (1080p is 8s-only, so a 4s cut pays 8); Seedance bills the requested seconds; a reference-video lane bills input plus output seconds |
+| Generated video | the saved video model's row (`seedance.*`, `video.host`, `video.astra`, `video.mlx`) | Seedance bills the requested seconds; a reference-video lane bills input plus output seconds |
 | Narration | `tts.gemini-*` or `tts.elevenlabs*` by the saved speech model | quantity is characters ÷ 1000; ElevenLabs logs the metered header, not the text length (cost-tally.md) |
 | BGM | one 30s `music.lyria-clip` | variable-length `music.lyria-realtime` has no confirmed price, so its row is `?` and the report stops on it |
 | Ken Burns stills, HTML motion slides, ffmpeg assembly | free | the builder's work; no vendor call |
 
 Measured points worth keeping as history: a still-only short with one gpt high cover ran
 about $0.27–0.29; a 6 s previz-guided hook on Seedance 2.0 mini 720p about $0.54 and
-$2.74 on 2.0 1080p; a Veo lite 1080p 8 s b-roll added $0.64. In blind-arena
-testing Veo standard, fast and lite were statistically identical, so the quality that
-money buys there does not measure (video-model-selection §quality).
+$2.74 on 2.0 1080p. The `veo.*`, `omni.*` and Seedance 1.x rows stay in `prices.tsv` only
+so ledgers written before 2026-10-31 still price; those models left the plugin that day
+because none takes a voice reference.
 
 ## Choosing cuts before pricing them
 
@@ -105,9 +105,7 @@ Edit one file only: `prices.tsv`. Keep the evidence grade
 unconfirmed values as `?` — a `?` fails the report and summons a human. Fill
 in an invented number and the cap is silently disarmed.
 
-Veo's per-second prices were promoted to **official** on 2026-08-15 after
-opening the official pricing page directly (the Seedance side is **derived** —
-official example prices divided by seconds). The Lyria clip price was promoted
-the same day. The one item still unconfirmed is **`music.lyria-realtime`** — the
+The Seedance prices are **derived** — official example prices divided by
+seconds. The Lyria clip price was promoted to **official** on 2026-08-15. The one item still unconfirmed is **`music.lyria-realtime`** — the
 official price table has no row for it at all. One billed call and an actual
 invoice would upgrade its grade.

@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { isDeepStrictEqual } = require('node:util');
-const { identityCharacter, direction, requiresSpeech } = require('../../_shared/character-identity.js');
+const { identityCharacter, direction, panelPrompt, requiresSpeech, isVoiceOnly } = require('../../_shared/character-identity.js');
 const { identityVoice, voiceErrors } = require('../../_shared/character-voice.js');
 
 function episodeVoiceOverride(win, tts) {
@@ -17,15 +17,16 @@ function episodeVoiceOverride(win, tts) {
     && voiceErrors(tts).length === 0;
 }
 
-function handoff(file, { requireSpeech = true } = {}) {
+function handoff(file, { requireSpeech = true, voiceOnly = false } = {}) {
   const source = fs.readFileSync(file, 'utf8');
-  const character = identityCharacter(source, { requireSpeech });
+  const options = { ready: !voiceOnly };
+  const character = identityCharacter(source, options);
   const name = /^#\s+(.+)$/m.exec(source)?.[1]?.trim();
   if (!name) throw new Error('identity.md needs a # Name heading');
   const id = path.basename(path.dirname(path.resolve(file)));
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) throw new Error('Character folder needs a kebab-case id');
   const tts = identityVoice(source, { optional: !requireSpeech });
-  return { id, name, character, tts, direction: direction(character, { requireSpeech }), identitySha256: createHash('sha256').update(source).digest('hex'), ...selectedVoiceReference(source, tts) };
+  return { id, name, character, tts, direction: direction(character, options), identitySha256: createHash('sha256').update(source).digest('hex'), ...(voiceOnly ? { voiceOnly: true } : {}), ...selectedVoiceReference(source, tts) };
 }
 
 // Reuse the chosen audition's actual bytes, rather than an unrelated old voice.wav.
@@ -49,8 +50,14 @@ function selectedVoiceReference(source, tts) {
 if (require.main === module) {
   try {
     const args = process.argv.slice(2);
-    if (args.length !== 1) throw new Error('Usage: character-sheet.js <identity.md>');
-    console.log(JSON.stringify(handoff(args[0]), null, 2));
+    // --panel face|front|back prints the identity words for that panel's image prompt.
+    const view = args[1] === '--panel' && ['face', 'front', 'back'].includes(args[2]) ? args[2] : undefined;
+    if (args.length !== 1 && !view) throw new Error('Usage: character-sheet.js <identity.md> [--panel face|front|back]');
+    if (view) {
+      const { text, skipped } = panelPrompt(identityCharacter(fs.readFileSync(args[0], 'utf8')), view);
+      if (skipped.length) console.error(`Not English, left out: ${skipped.join(', ')}`);
+      console.log(text);
+    } else console.log(JSON.stringify(handoff(args[0]), null, 2));
   } catch (e) { console.error(e.message); process.exitCode = 1; }
 }
 function sourceErrors(win, boardDir) {
@@ -65,7 +72,7 @@ function sourceErrors(win, boardDir) {
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(c?.id || '')) { errors.push('Invalid character id'); continue; }
     const file = path.join(channel, 'assets', 'characters', c.id, 'identity.md');
     try {
-      const current = handoff(file, { requireSpeech: requiresSpeech(win, c.id) });
+      const current = handoff(file, { requireSpeech: requiresSpeech(win, c.id), voiceOnly: isVoiceOnly(win, c.id) });
       const voiceChanged = JSON.stringify(current.tts) !== JSON.stringify(c.tts);
       if (current.identitySha256 !== c.identitySha256 || JSON.stringify(current.character) !== JSON.stringify(c.character)
         || (voiceChanged && !episodeVoiceOverride(win, c.tts)))

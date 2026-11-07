@@ -78,7 +78,7 @@ worldwide block.
 
 ## AI disclosure — this pipeline's core rule
 
-**[official]** social-flow generates the video (Veo), music (Lyria), and voice
+**[official]** social-flow generates the video (the saved video model), music (Lyria), and voice
 (TTS), so it's in disclosure scope. YouTube's stated disclosure targets
 literally include **"AI generated music"** and realistic generated footage of
 real places and people.

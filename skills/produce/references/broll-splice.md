@@ -8,8 +8,8 @@ slot's `after` scene ends. `build-reel.sh` only splices the outro, so this is po
 outside the builder.
 
 Before splicing, handle **trim + loudness normalization + BGM in a single re-encode** per
-slot — cut the broll scene's `duration` (the used length) out of the 8-second original while
-matching the veo sound to the body's level and laying the BGM on (generated sound is quieter
+slot — cut the broll scene's `duration` (the used length) out of the generated original while
+matching the clip's own sound to the body's level and laying the BGM on (generated sound is quieter
 than the body — measured at mean −18 to −22dB on person sources):
 
 ```bash
@@ -38,7 +38,7 @@ audible jump back to the theme in the middle of a scene.
 
 **Don't cut the mixed file again** — the fades are pinned to its length, so cutting loses the
 tail fade and shifts the BGM fade out of place. To change the length, re-mix from the
-original clip. (A 24fps veo clip gets its 30fps re-encode here at the same time.)
+original clip. (A 24fps clip gets its 30fps re-encode here at the same time.)
 
 Get the insertion time T by **accumulating the confirmed lengths up to the `after` card** from
 the `card` lines in `build-report.txt`. broll and outro aren't in the manifest and broll

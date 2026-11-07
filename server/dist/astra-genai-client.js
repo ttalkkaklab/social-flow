@@ -1,16 +1,37 @@
 /** Transport shared by the GenAI provider adapters, separate from legacy ASTRA jobs. */
 import { readFileSync } from 'node:fs';
+import { Agent } from 'undici';
 import { z } from 'zod';
 import { imageMetadata } from './image-media.js';
 import { config } from './config.js';
-export function astraGenaiBaseUrl() {
-    return (process.env.ASTRA_GENAI_URL || 'https://genai.astravision.co.kr').replace(/\/+$/, '');
+/** Model-bound images and speech may run on another gateway (e.g. a local Mac one); everything else uses ASTRA_GENAI_URL. */
+function override(route) {
+    if (route.startsWith('/v1/images/'))
+        return { url: process.env.ASTRA_GENAI_IMAGE_URL, key: process.env.ASTRA_GENAI_IMAGE_API_KEY };
+    if (route.startsWith('/v1/audio/'))
+        return { url: process.env.ASTRA_GENAI_SPEECH_URL, key: process.env.ASTRA_GENAI_SPEECH_API_KEY };
+    return {};
 }
-export function requireAstraGenaiKey() {
+export function astraGenaiBaseUrl(route = '') {
+    return (override(route).url || process.env.ASTRA_GENAI_URL || 'https://genai.astravision.co.kr').replace(/\/+$/, '');
+}
+export function requireAstraGenaiKey(route = '') {
+    const { url, key } = override(route);
+    if (url) {
+        if (!key)
+            throw new Error(`${route.startsWith('/v1/images/') ? 'ASTRA_GENAI_IMAGE_API_KEY' : 'ASTRA_GENAI_SPEECH_API_KEY'} is required with its gateway URL override.`);
+        return key;
+    }
     if (!config.astraGenaiApiKey)
         throw new Error('ASTRA_GENAI_API_KEY is required: issue a gateway token in the GenAI console; ASTRA_VIDEO is a separate credential.');
     return config.astraGenaiApiKey;
 }
+/**
+ * Synchronous image and speech calls answer only when the picture or audio is done, which can take
+ * longer than fetch's built-in 300 s wait for response headers; each request waits as long as its own timeout.
+ */
+const waiters = new Map();
+const waitFor = (ms) => waiters.get(ms) ?? waiters.set(ms, new Agent({ headersTimeout: ms, bodyTimeout: ms })).get(ms);
 /** Only explicit rejection or terminal provider evidence releases a generation slot. */
 export class GenaiRequestError extends Error {
     terminal;
@@ -23,9 +44,9 @@ export class GenaiRequestError extends Error {
 }
 /** No automatic POST retries: a disconnected request may already be generating. */
 export async function requestGenai(method, route, body, timeoutMs = 60_000, onResponse) {
-    const key = requireAstraGenaiKey();
-    const response = await fetch(astraGenaiBaseUrl() + route, {
-        method, redirect: 'error', signal: AbortSignal.timeout(timeoutMs),
+    const key = requireAstraGenaiKey(route);
+    const response = await fetch(astraGenaiBaseUrl(route) + route, {
+        method, redirect: 'error', signal: AbortSignal.timeout(timeoutMs), ...{ dispatcher: waitFor(timeoutMs) },
         headers: { Authorization: `Bearer ${key}`, ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
@@ -47,6 +68,32 @@ export async function requestGenai(method, route, body, timeoutMs = 60_000, onRe
     catch {
         throw new Error('ASTRA GenAI returned a non-JSON response; inspect the existing request before retrying.');
     }
+}
+/**
+ * Poll a submitted job every 5 s for up to 30 minutes. One transient 5xx on the status GET is
+ * retried, and an HTTP error on the GET never counts as terminal job evidence; only a job the
+ * gateway reports failed (thrown as GenaiRequestError with HTTP 200) does. Never wraps a POST.
+ */
+export async function pollGenaiJob(check, pending) {
+    const deadline = Date.now() + 30 * 60_000;
+    let retried = false;
+    do {
+        try {
+            const result = await check();
+            if (result.downloaded)
+                return result;
+            retried = false;
+        }
+        catch (error) {
+            if (!(error instanceof GenaiRequestError) || error.httpStatus === 200)
+                throw error;
+            if (error.httpStatus < 500 || retried)
+                throw new Error(error.message);
+            retried = true;
+        }
+        await new Promise(resolve => setTimeout(resolve, 5000));
+    } while (Date.now() < deadline);
+    throw new Error(pending);
 }
 /** Signed result URLs carry their own authorization. Never send the gateway token. */
 export async function downloadGenaiResult(uri) {
@@ -84,4 +131,25 @@ export function genaiSourceUri(uri, file) {
     if (!['image/png', 'image/jpeg'].includes(meta.mimeType) || meta.bytes > 32 * 1024 * 1024 || meta.width > 4096 || meta.height > 4096)
         throw new Error('GenAI source must be PNG/JPEG, at most 32 MiB and 4096 pixels per side');
     return `data:${meta.mimeType};base64,${bytes.toString('base64')}`;
+}
+/** Authenticated private gateway media; never attach this token to result/CDN URLs. */
+export async function requestGenaiMedia(route, body) {
+    if (!/^\/v1\/(audio\/speech|ltx\/desktop\/assets(?:\/[A-Za-z0-9_-]+\/bytes)?)$/.test(route))
+        throw new Error('Unsupported private gateway media route');
+    const key = requireAstraGenaiKey(route);
+    const form = body instanceof FormData;
+    const response = await fetch(astraGenaiBaseUrl(route) + route, {
+        method: body === undefined ? 'GET' : 'POST', redirect: 'error', signal: AbortSignal.timeout(30 * 60_000), ...{ dispatcher: waitFor(30 * 60_000) },
+        headers: { Authorization: `Bearer ${key}`, ...(body && !form ? { 'Content-Type': 'application/json' } : {}) },
+        ...(body === undefined ? {} : { body: form ? body : JSON.stringify(body) }),
+    });
+    if (!response.ok)
+        throw new GenaiRequestError(`ASTRA GenAI HTTP ${response.status}: ${(await response.text()).replaceAll(key, '[redacted]').slice(0, 2000)}`, response.status >= 400 && response.status < 500 && ![408, 409, 425].includes(response.status), response.status);
+    return Buffer.from(await response.arrayBuffer());
+}
+/** Read deployment configuration without performing inference. */
+export async function genaiCatalog(kind) {
+    const routes = { image: '/v1/images/models', speech: '/v1/audio/models', video: '/v1/ltx/desktop/models',
+        loras: '/v1/ltx/desktop/loras', contracts: '/v1/ltx/desktop/contracts' };
+    return requestGenai('GET', routes[kind]);
 }

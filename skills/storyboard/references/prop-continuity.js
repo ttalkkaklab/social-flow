@@ -161,23 +161,53 @@
       }
       for (const id of Array.isArray(v.props) ? v.props : []) if (props.find(p => p?.id === id)?.tracking === 'continuity' && !used.has(id)) bad(where, 'Missing propUsage for ' + id);
     }
+    const list = x => Array.isArray(x) ? x : [];
+    const shown = new Set([...(win.SCENES || []).flatMap(s => [...list(s?.visual?.props), ...list(s?.visual?.frames?.endProps)]),
+      ...list(object(ledger) ? ledger.events : []).filter(e => object(e) && list(e.shotIds).length).map(e => e.propId)]);
+    for (const p of props) if (object(p) && text(p.id) && !shown.has(p.id))
+      warn(p.id, 'No shot links this prop yet (visual.props, frames.endProps or an event shotIds); link it to the shots it appears in, or drop it if the story does not need it');
     return findings;
   }
-  function snapshot(win, index) {
-    const failures = check(win).filter(f => f.level === 'bad');
-    if (failures.length) throw new Error(failures.map(f => f.where + ': ' + f.what).join('; '));
+  // One prop's slice of the board for a frame: its sheet entry, its ledger history and its usage in this shot only,
+  // with the well-formed characters. Checking the slice finds exactly the errors that can make this prop's state wrong.
+  function slice(win, index, id) {
+    const { doc, ledger } = data(win), list = x => Array.isArray(x) ? x : [], seen = new Set();
+    const characters = list(doc.characters).filter(c => text(c?.id) && c.id !== 'unknown' && !seen.has(c.id) && seen.add(c.id));
+    const own = { ...doc, characters, props: list(doc.props).filter(p => object(p) && p.id === id) };
+    if (ledger !== undefined) own.propContinuity = object(ledger) && Array.isArray(ledger.initial) && Array.isArray(ledger.events)
+      ? { ...ledger, initial: ledger.initial.filter(x => object(x) && x.propId === id), events: ledger.events.filter(x => object(x) && x.propId === id) } : ledger;
+    const scenes = (win.SCENES || []).map((shot, i) => {
+      if (i !== index) return { id: shot?.id };
+      const v = object(shot?.visual) ? shot.visual : {}, mine = x => Array.isArray(x) ? x.filter(u => object(u) ? u.propId === id : u === id) : x;
+      return { ...shot, visual: { ...v, props: mine(v.props), ...(v.propUsage !== undefined ? { propUsage: mine(v.propUsage) } : {}) } };
+    });
+    return { ...win, SB_DOC: own, SCENES: scenes };
+  }
+  // ids defaults to the shot's visual.props; an end image passes its own frames.endProps.
+  // lenient: instead of throwing on ledger errors, a prop whose own slice has errors gets no state and lists them in errors.
+  function snapshot(win, index, ids, opts = {}) {
+    if (!opts.lenient) {
+      const failures = check(win).filter(f => f.level === 'bad');
+      if (failures.length) throw new Error(failures.map(f => f.where + ': ' + f.what).join('; '));
+    }
     const { props, ledger } = data(win);
     const visual = win.SCENES?.[index]?.visual || {};
-    return (visual.props || []).map(id => {
-      const prop = props.find(p => p.id === id);
-      const u = (visual.propUsage || []).find(item => item.propId === id);
-      const before = u ? stateAt(win, prop.id, u.start) : null;
-      const after = u ? stateAt(win, prop.id, u.end) : null;
-      const refs = state => (prop.references || []).filter(r => !r.condition || r.condition === state?.condition).map(r => ({ ...r }));
+    const usage = Array.isArray(visual.propUsage) ? visual.propUsage.filter(object) : [];
+    return (ids || visual.props || []).map(id => {
+      const prop = props.find(p => p?.id === id);
+      if (!prop) throw new Error('Unknown prop: ' + id);
+      const u = usage.find(item => item.propId === id), scope = opts.lenient ? slice(win, index, id) : win;
+      const errors = opts.lenient ? check(scope).filter(f => f.level === 'bad').map(f => f.where + ': ' + f.what) : [];
+      const at = point => { try { return u && !errors.length ? stateAt(scope, prop.id, point) : null; } catch (e) { errors.push(e.message); return null; } };
+      const before = at(u?.start), after = at(u?.end);
+      // Best first: a reference drawn in this condition, then one of the current appearance version.
+      const rank = (r, state) => (r.condition && r.condition === state?.condition ? 2 : 0) + (prop.appearanceVersion && r.version === prop.appearanceVersion ? 1 : 0);
+      const refs = state => (Array.isArray(prop.references) ? prop.references : []).filter(r => object(r)).filter(r => !r.condition || r.condition === state?.condition)
+        .map((r, i) => ({ r, i })).sort((a, b) => rank(b.r, state) - rank(a.r, state) || a.i - b.i).map(({ r }) => ({ ...r }));
       return { propId: prop.id, name: prop.name || prop.id, description: prop.description || '',
         appearanceVersion: prop.appearanceVersion || 'unversioned', references: refs(before), endReferences: refs(after),
         timelineId: ledger?.timelineId || null, start: u ? { ...u.start } : null, end: u ? { ...u.end } : null,
-        before, after, visible: u?.visible !== false, position: u?.position || null };
+        before, after, visible: u?.visible !== false, position: u?.position || null, ...(opts.lenient ? { errors } : {}) };
     });
   }
   function prompt(win, index) {

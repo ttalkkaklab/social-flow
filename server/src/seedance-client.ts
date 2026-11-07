@@ -2,20 +2,20 @@ import { recordVideoSubmission, recordVideoTokens } from './video-events.js';
 /**
  * ByteDance Seedance video generation client (BytePlus ModelArk).
  *
- * The second video engine sharing the slot with Veo (video-client.ts). The two are
- * not substitutes but **tools for different situations** — when to use which is
- * governed by skills/produce/references/video-model-selection.md.
+ * The API video engine next to the LTX lanes. When to use which is governed by
+ * skills/produce/references/video-model-selection.md.
  *
- * - 7 models: Dreamina Seedance 2.5 / 2.0·fast·mini / Seedance 1.5 pro / 1.0 pro·fast
+ * - 4 models: Dreamina Seedance 2.5 / 2.0·fast·mini. Seedance 1.x left the plugin on 2026-10-31:
+ *   it takes no reference audio, so it cannot keep a character's voice.
  * - Text-to-Video, Image-to-Video (first frame · first+last frame), reference images,
- *   reference audio (2.x only — a clip's voice timbre or dialogue content, `role: reference_audio`)
- *   and reference video (2.x only — camera, blocking and motion timing from a clip such as the
+ *   reference audio (a clip's voice timbre or dialogue content, `role: reference_audio`)
+ *   and reference video (camera, blocking and motion timing from a clip such as the
  *   Blender previz, `role: reference_video`; public URL only, see media-publish.ts)
- * - 7 aspect ratios (9:16 included) · fixed 24fps · duration 2~30s (varies per model)
+ * - 7 aspect ratios (9:16 included) · fixed 24fps · duration 4~30s (varies per model)
  * - Generation is async — POST creates a task, GET polls it, then the mp4 is downloaded
  *
  * Result URLs are **valid for 24 hours**, so we save locally as soon as polling
- * finishes and return only the path (same contract as the Veo client). We also
+ * finishes and return only the path. We also
  * return completion_tokens, the billing basis — the vendor bills on this value,
  * so it's more authoritative than any estimated per-unit price conversion.
  *
@@ -35,6 +35,7 @@ import {
   resolveOutputFile,
   validateFilePath,
 } from './media-utils.js';
+import { nonEnglishOutsideQuotes } from './prompt-language.js';
 
 // ── Model capability table (source of truth) ────────────────────────
 //
@@ -77,24 +78,23 @@ export interface SeedanceModelSpec {
   duration: readonly [number, number];
   /** Whether first+last frame interpolation is supported */
   lastFrame: boolean;
-  /** Reference image count range. false means reference images aren't supported at all */
-  referenceImages: readonly [number, number] | false;
+  /** Reference image count range */
+  referenceImages: readonly [number, number];
   /**
    * Reference audio (the omni reference lane — API reference 1520757, checked 2026-08-29).
    * What the clip carries is what the model imitates: a voice timbre, or dialogue and
-   * music content it lip-syncs to. false means the model takes no audio references.
+   * music content it lip-syncs to. A model without it cannot keep a character's voice and
+   * does not belong in this table (2026-10-31).
    */
-  referenceAudio: SeedanceReferenceAudioSpec | false;
+  referenceAudio: SeedanceReferenceAudioSpec;
   /**
    * Reference video (the same omni lane — API reference 1520757, checked 2026-09-11). The
    * model takes camera movement, blocking, motion timing and, when asked, style from it;
-   * this pipeline's use is the Blender previz clip. false means no video input at all.
+   * this pipeline's use is the Blender previz clip.
    */
-  referenceVideos: SeedanceReferenceVideoSpec | false;
+  referenceVideos: SeedanceReferenceVideoSpec;
   /** Whether simultaneous audio generation (generate_audio) is supported. false means silent-only */
   audio: boolean;
-  /** Whether seed·cameraFixed are supported (2.x has neither) */
-  seed: boolean;
   /** Whether input images containing real human faces are accepted (2.x rejects them) */
   realFaceInput: boolean;
   /**
@@ -103,8 +103,7 @@ export interface SeedanceModelSpec {
    *
    * false does not mean "just works". **Every model** must first be enabled in the
    * console's Model activation, and calling one that isn't enabled fails task
-   * creation with `ModelNotOpen` (measured with seedance-1-5-pro, 2026-08-15 — no
-   * charge is incurred). First-time activation also demands TOS, VPC, and ML
+   * creation with `ModelNotOpen` (measured 2026-08-15 — no charge is incurred). First-time activation also demands TOS, VPC, and ML
    * platform cross-service authorization.
    */
   activationGate: boolean;
@@ -121,7 +120,6 @@ export const SEEDANCE_MODEL_SPECS = {
     referenceAudio: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30, audioOnly: true },
     referenceVideos: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30 },
     audio: true,
-    seed: false,
     realFaceInput: false,
     activationGate: true,
   },
@@ -133,7 +131,6 @@ export const SEEDANCE_MODEL_SPECS = {
     referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
     referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
     audio: true,
-    seed: false,
     realFaceInput: false,
     activationGate: true,
   },
@@ -145,7 +142,6 @@ export const SEEDANCE_MODEL_SPECS = {
     referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
     referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
     audio: true,
-    seed: false,
     realFaceInput: false,
     activationGate: true,
   },
@@ -157,45 +153,8 @@ export const SEEDANCE_MODEL_SPECS = {
     referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
     referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
     audio: true,
-    seed: false,
     realFaceInput: false,
     activationGate: true,
-  },
-  'seedance-1-5-pro-251215': {
-    resolutions: ['480p', '720p', '1080p'],
-    duration: [4, 12],
-    lastFrame: true,
-    referenceImages: false,
-    referenceAudio: false,
-    referenceVideos: false,
-    audio: true,
-    seed: true,
-    realFaceInput: true,
-    activationGate: false,
-  },
-  'seedance-1-0-pro-250528': {
-    resolutions: ['480p', '720p', '1080p'],
-    duration: [2, 12],
-    lastFrame: true,
-    referenceImages: false,
-    referenceAudio: false,
-    referenceVideos: false,
-    audio: false,
-    seed: true,
-    realFaceInput: true,
-    activationGate: false,
-  },
-  'seedance-1-0-pro-fast-251015': {
-    resolutions: ['480p', '720p', '1080p'],
-    duration: [2, 12],
-    lastFrame: false,
-    referenceImages: false,
-    referenceAudio: false,
-    referenceVideos: false,
-    audio: false,
-    seed: true,
-    realFaceInput: true,
-    activationGate: false,
   },
 } as const satisfies Record<string, SeedanceModelSpec>;
 
@@ -204,52 +163,14 @@ export const VALID_SEEDANCE_MODELS = Object.keys(SEEDANCE_MODEL_SPECS) as Array<
 >;
 export type SeedanceModel = (typeof VALID_SEEDANCE_MODELS)[number];
 
-/**
- * Default model — Seedance 1.5 pro.
- *
- * Of the models that can produce this pipeline's default format (9:16 · 1080p)
- * today, it's the cheapest, accepts real-person inputs (2.x rejects them),
- * reproduces via seed, and has no balance gate.
- */
-export const DEFAULT_SEEDANCE_MODEL: SeedanceModel = 'seedance-1-5-pro-251215';
-
-/** Models that accept reference images (the 2.x family) — enum source of truth for seedance_reference */
-export const SEEDANCE_REFERENCE_MODELS = VALID_SEEDANCE_MODELS.filter(
-  (model) => SEEDANCE_MODEL_SPECS[model].referenceImages !== false,
-);
-
-/**
- * Default model for the reference tool — Dreamina Seedance 2.0.
- *
- * 2.5 has wider capabilities (30 reference images, 30 seconds) but **no quality
- * evidence** — it appears on none of the four Artificial Analysis blind-arena
- * boards, and ByteDance published no numeric benchmarks either (checked
- * 2026-08-15). 2.0 ranks #1 on that arena's image-to-video board (Elo 1,198 ·
- * sample 12,599) and also outputs 1080p/4K. The side with evidence gets to be
- * the default.
- *
- * It's pinned as a constant rather than picked from list order to remove the
- * coupling where inserting a model into the capability table silently changes
- * the default.
- */
-export const DEFAULT_SEEDANCE_REFERENCE_MODEL: SeedanceModel = 'dreamina-seedance-2-0-260128';
-
-/** Models that accept input images containing real people — the list the cover-background → b-roll lane can use */
-export const SEEDANCE_REAL_FACE_MODELS = VALID_SEEDANCE_MODELS.filter(
-  (model) => SEEDANCE_MODEL_SPECS[model].realFaceInput,
-);
+export const DEFAULT_SEEDANCE_MODEL: SeedanceModel = 'dreamina-seedance-2-0-260128';
 
 export const DEFAULT_SEEDANCE_RESOLUTION: SeedanceResolution = '720p';
 export const DEFAULT_SEEDANCE_DURATION = 5; // the only common default that fits every model's duration range
 export const SEEDANCE_FPS = 24; // fixed across all models
-// BytePlus Create task API: fractional length is supported on 1.0 only.
-export const SEEDANCE_FRAME_MODELS = ['seedance-1-0-pro-250528', 'seedance-1-0-pro-fast-251015'] as const;
-export const SEEDANCE_MIN_FRAMES = 29;
-export const SEEDANCE_MAX_FRAMES = 289;
-export const SEEDANCE_FRAME_STEP = 4;
 
 const POLL_INTERVAL_MS = 10_000;
-const MAX_POLLS = 90; // 15-minute max wait — 2.5's 30s clips take longer than Veo
+const MAX_POLLS = 90; // 15-minute max wait — 2.5's 30s clips take the longest
 const MAX_INPUT_IMAGE_BYTES = 30 * 1024 * 1024; // per-image cap (official)
 const MAX_REQUEST_BYTES = 64 * 1024 * 1024; // request body cap (official)
 const MAX_INPUT_AUDIO_BYTES = 15 * 1024 * 1024; // per-clip cap for reference audio (official)
@@ -270,11 +191,8 @@ const commonFields = {
   model: z.enum(VALID_SEEDANCE_MODELS as [SeedanceModel, ...SeedanceModel[]]).optional().default(DEFAULT_SEEDANCE_MODEL),
   resolution: z.enum(VALID_SEEDANCE_RESOLUTIONS).optional().default(DEFAULT_SEEDANCE_RESOLUTION),
   durationSeconds: z.number().int().optional(),
-  frames: z.number().int().min(SEEDANCE_MIN_FRAMES).max(SEEDANCE_MAX_FRAMES).optional(),
   generateAudio: z.boolean().optional().default(false),
   watermark: z.boolean().optional().default(false),
-  seed: z.number().int().min(-1).max(2147483647).optional(),
-  cameraFixed: z.boolean().optional(),
   outputPath: z.string().optional(),
   filename: bareFilenameSchema('video').optional(),
 };
@@ -284,31 +202,13 @@ type CommonInput = {
   model: SeedanceModel;
   resolution: SeedanceResolution;
   durationSeconds?: number;
-  frames?: number;
   generateAudio: boolean;
-  seed?: number;
-  cameraFixed?: boolean;
 };
-
-/**
- * Hangul outside quotation marks — the prompt language constraint.
- *
- * The prompt body reads Chinese or English on every model but
- * dreamina-seedance-2-5-260628. Korean **dialogue** works on 1.5 pro, which lip-syncs
- * it, so what a quote encloses is exempt; a Korean direction outside quotes is not
- * understood and silently degrades the shot rather than failing the call.
- */
-const QUOTED_SEGMENT = /"[^"]*"|“[^”]*”|「[^」]*」/g;
-const HANGUL_RUN = /[가-힣]+(?:[ \t]+[가-힣]+)*/;
-function hangulOutsideQuotes(prompt: string): string | null {
-  const match = prompt.replace(QUOTED_SEGMENT, ' ').match(HANGUL_RUN);
-  return match ? match[0] : null;
-}
 
 /**
  * Model × resolution × duration × feature cross-constraint validation (per official docs).
  *
- * We reject before calling for the same reason Veo does — one generation takes
+ * We reject before calling because one generation takes
  * minutes, and a bad combination comes back as an async error that burns all of
  * that time. Rejecting here lets the model immediately retry with corrected
  * arguments.
@@ -316,15 +216,14 @@ function hangulOutsideQuotes(prompt: string): string | null {
 function validateCommon(data: CommonInput, ctx: z.RefinementCtx): void {
   const spec = SEEDANCE_MODEL_SPECS[data.model];
 
-  if (data.model !== 'dreamina-seedance-2-5-260628') {
-    const korean = hangulOutsideQuotes(data.prompt);
-    if (korean) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['prompt'],
-        message: `${data.model} reads Chinese or English prompts only — the Korean "${korean}" sits outside quotation marks and would be ignored rather than obeyed. Write the direction in English; Korean dialogue belongs inside quotes (1.5 pro lip-syncs it), or route the shot to dreamina-seedance-2-5-260628.`,
-      });
-    }
+  // Video prompts are English on every model; dialogue in the video's language goes inside quotes.
+  const foreign = nonEnglishOutsideQuotes(data.prompt);
+  if (foreign) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['prompt'],
+      message: `video_prompt_language: "${foreign}" sits outside quotation marks. Write the video prompt in English; only dialogue, inside quotes, uses the video's language.`,
+    });
   }
 
   if (!(spec.resolutions as readonly string[]).includes(data.resolution)) {
@@ -336,12 +235,7 @@ function validateCommon(data: CommonInput, ctx: z.RefinementCtx): void {
   }
 
   const [minDuration, maxDuration] = spec.duration;
-  if (data.frames !== undefined) {
-    if (!(SEEDANCE_FRAME_MODELS as readonly string[]).includes(data.model) || (data.frames - 1) % SEEDANCE_FRAME_STEP !== 0)
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['frames'], message: 'frames requires Seedance 1.0 pro/pro-fast and 25+4n frames in 29..289' });
-    if (data.durationSeconds !== undefined)
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['durationSeconds'], message: 'frames and durationSeconds are mutually exclusive' });
-  } else if ((data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) < minDuration || (data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) > maxDuration) {
+  if ((data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) < minDuration || (data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) > maxDuration) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['durationSeconds'],
@@ -353,25 +247,8 @@ function validateCommon(data: CommonInput, ctx: z.RefinementCtx): void {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['generateAudio'],
-      message: `${data.model} is silent-only and cannot generate audio. If you need audio, use seedance-1-5-pro-251215 or later.`,
+      message: `${data.model} is silent-only and cannot generate audio.`,
     });
-  }
-
-  if (!spec.seed) {
-    if (data.seed !== undefined) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['seed'],
-        message: `${data.model} does not support seed (Seedance 1.5 pro·1.0 pro·1.0 pro fast only).`,
-      });
-    }
-    if (data.cameraFixed !== undefined) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['cameraFixed'],
-        message: `${data.model} does not support cameraFixed (Seedance 1.5 pro·1.0 pro·1.0 pro fast only). Direct a fixed camera through the prompt instead.`,
-      });
-    }
   }
 }
 
@@ -401,27 +278,16 @@ export const seedanceImg2VideoSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['lastImagePath'],
-        message: `${data.model} accepts a first frame only — for first+last frame interpolation use seedance-1-0-pro-250528 or later.`,
+        message: `${data.model} accepts a first frame only.`,
       });
     }
   })
   .transform(data => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
 
-// Reference image request schema (2.x only — omni reference)
-//
-// This **overrides** model from the common fields. The default on the tool
-// surface (JSON schema) is only guidance; what actually applies is the zod
-// default here, so without the override the common default (1.5 pro) comes in
-// and the superRefine below rejects it — every normal call that omits the
-// argument fails. The narrowed enum also filters 1.x out before it reaches the
-// validation below, which makes the message clearer too.
+// Reference request schema (omni reference: images, audio, video)
 export const seedanceReferenceSchema = z
   .object({
     ...commonFields,
-    model: z
-      .enum(SEEDANCE_REFERENCE_MODELS as [SeedanceModel, ...SeedanceModel[]])
-      .optional()
-      .default(DEFAULT_SEEDANCE_REFERENCE_MODEL),
     referenceImagePaths: z.array(z.string()).optional().default([]),
     referenceAudioPaths: z.array(z.string()).optional().default([]),
     referenceVideoPaths: z.array(z.string()).optional().default([]),
@@ -430,15 +296,7 @@ export const seedanceReferenceSchema = z
   })
   .superRefine((data, ctx) => {
     validateCommon(data, ctx);
-    const spec = SEEDANCE_MODEL_SPECS[data.model];
-    if (spec.referenceImages === false) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['model'],
-        message: `${data.model} does not support reference images. Use the Dreamina Seedance 2.5 or 2.0 family (${SEEDANCE_REFERENCE_MODELS.join(', ')}).`,
-      });
-      return;
-    }
+    const spec: SeedanceModelSpec = SEEDANCE_MODEL_SPECS[data.model];
     const [, maxImages] = spec.referenceImages;
     if (data.referenceImagePaths.length > maxImages) {
       ctx.addIssue({
@@ -457,12 +315,7 @@ export const seedanceReferenceSchema = z
       return;
     }
     if (videoCount > 0) {
-      // Read through the interface for the same reason as the audio branch below.
-      const video = (spec as SeedanceModelSpec).referenceVideos;
-      if (video === false) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['referenceVideoPaths'], message: `${data.model} does not take reference video.` });
-        return;
-      }
+      const video = spec.referenceVideos;
       if (videoCount > video.maxClips) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -491,18 +344,7 @@ export const seedanceReferenceSchema = z
     if (data.referenceAudioPaths.length === 0) return;
 
     // Reference audio — the vendor fails these asynchronously, minutes later.
-    // (Read through the interface so the `false` branch survives the literal
-    // narrowing above — a 2.x model added without audio must land here, not in
-    // a type error.)
-    const audio = (spec as SeedanceModelSpec).referenceAudio;
-    if (audio === false) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['referenceAudioPaths'],
-        message: `${data.model} does not take reference audio.`,
-      });
-      return;
-    }
+    const audio = spec.referenceAudio;
     if (data.referenceAudioPaths.length > audio.maxClips) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -549,10 +391,12 @@ export interface SeedanceGenerationResponse {
   ratio?: string;
   resolution?: string;
   duration?: number;
-  durationSource?: 'requested_frames' | 'provider_reported' | 'requested_seconds';
+  durationSource?: 'provider_reported' | 'requested_seconds';
   /** Token count the vendor bills on — this, not an estimated price conversion, is the actual billing basis */
   completionTokens?: number;
   taskId?: string;
+  /** Nothing is running at the vendor: rejected before or at submission, or the task itself ended failed. */
+  terminal?: boolean;
   sourceImage?: string;
   lastImage?: string;
   referenceImages?: string[];
@@ -578,12 +422,9 @@ interface CreateTaskBody {
   content: ContentPart[];
   ratio: string;
   resolution: string;
-  duration?: number;
-  frames?: number;
+  duration: number;
   generate_audio?: boolean;
   watermark: boolean;
-  seed?: number;
-  camera_fixed?: boolean;
 }
 
 interface TaskStatus {
@@ -620,10 +461,13 @@ async function createTask(apiKey: string, body: CreateTaskBody): Promise<string>
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(5 * 60_000),
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to create video task: ${describeHttpError(response.status, await response.text())}`);
+    // Same rule as the GenAI transport: an explicit 4xx answer (except timeout/conflict) created no task.
+    const terminal = response.status >= 400 && response.status < 500 && ![408, 409, 425].includes(response.status);
+    throw Object.assign(new Error(`Failed to create video task: ${describeHttpError(response.status, await response.text())}`), { terminal });
   }
 
   const json = (await response.json()) as { id?: string };
@@ -634,6 +478,7 @@ async function createTask(apiKey: string, body: CreateTaskBody): Promise<string>
 async function getTask(apiKey: string, taskId: string): Promise<TaskStatus> {
   const response = await fetch(`${arkBaseUrl()}/contents/generations/tasks/${encodeURIComponent(taskId)}`, {
     headers: { Authorization: `Bearer ${apiKey}` },
+    signal: AbortSignal.timeout(60_000),
   });
 
   if (!response.ok) {
@@ -654,16 +499,21 @@ async function awaitVideoAndSave(
   taskId: string,
   outputPath: string,
   filename: string,
-): Promise<{ videoPath: string; task: TaskStatus } | { error: string }> {
+): Promise<{ videoPath: string; task: TaskStatus } | { error: string; terminal?: boolean }> {
+  let retried = false;
   for (let poll = 1; poll <= MAX_POLLS; poll += 1) {
     console.error(`[Seedance] Generation in progress... (polling ${poll}/${MAX_POLLS})`);
     await sleep(POLL_INTERVAL_MS);
 
-    const task = await getTask(apiKey, taskId);
+    // One failed status read in a row (a 5xx or a dropped connection) waits for the next poll;
+    // only the GET repeats, never the paid task creation.
+    let task: TaskStatus;
+    try { task = await getTask(apiKey, taskId); retried = false; }
+    catch (error) { if (retried) throw error; retried = true; continue; }
 
     if (task.status === 'failed' || task.status === 'expired' || task.status === 'cancelled') {
       const reason = task.error?.message || task.status;
-      return { error: `Generation ${task.status}: ${reason}` };
+      return { error: `Generation ${task.status}: ${reason}`, terminal: true };
     }
     if (task.status !== 'succeeded') continue;
 
@@ -674,7 +524,7 @@ async function awaitVideoAndSave(
     // rejecting after receiving tens of MB wastes bandwidth, and the result URL
     // disappears after 24 hours so there's no retry either.
     const fullPath = resolveOutputFile(outputPath, filename, 'video');
-    const download = await fetch(videoUrl);
+    const download = await fetch(videoUrl, { signal: AbortSignal.timeout(10 * 60_000) });
     if (!download.ok) {
       return { error: `Failed to download video: HTTP ${download.status} (URL is valid for 24 hours)` };
     }
@@ -879,24 +729,20 @@ function buildBody(
     content: [{ type: 'text', text: request.prompt }, ...parts],
     ratio: request.ratio,
     resolution: request.resolution,
-    ...(request.frames === undefined ? { duration: request.durationSeconds } : { frames: request.frames }),
+    duration: request.durationSeconds!,
     watermark: request.watermark,
   };
   // The vendor default for generate_audio is true. Passing it to a silent-only
   // model gets rejected, so we send it only to models that support it and flip
   // our own default to false — this pipeline attaches narration separately via
-  // TTS, and enabling audio on 1.5 pro exactly doubles the price.
+  // TTS.
   if (spec.audio) body.generate_audio = request.generateAudio;
-  if (spec.seed) {
-    if (request.seed !== undefined) body.seed = request.seed;
-    if (request.cameraFixed !== undefined) body.camera_fixed = request.cameraFixed;
-  }
   return body;
 }
 
 /** Assemble the success response — the actual generation result (values the vendor returned) wins. */
 function toResponse(
-  request: { prompt: string; model: SeedanceModel; ratio: SeedanceRatio; resolution: SeedanceResolution; durationSeconds: number; frames?: number },
+  request: { prompt: string; model: SeedanceModel; ratio: SeedanceRatio; resolution: SeedanceResolution; durationSeconds: number },
   videoPath: string,
   task: TaskStatus,
   taskId: string,
@@ -909,17 +755,18 @@ function toResponse(
     model: request.model,
     ratio: task.ratio ?? request.ratio,
     resolution: task.resolution ?? request.resolution,
-    duration: request.frames !== undefined ? request.frames / SEEDANCE_FPS : task.duration ?? request.durationSeconds,
-    durationSource: request.frames !== undefined ? 'requested_frames' : task.duration !== undefined ? 'provider_reported' : 'requested_seconds',
+    duration: task.duration ?? request.durationSeconds,
+    durationSource: task.duration !== undefined ? 'provider_reported' : 'requested_seconds',
     completionTokens: task.usage?.completion_tokens,
     taskId,
   };
 }
 
-function toFailure(error: unknown): SeedanceGenerationResponse {
+/** Before the POST nothing was sent; after it, only an explicit rejection proves no task exists. */
+function toFailure(error: unknown, posted: boolean): SeedanceGenerationResponse {
   const message = error instanceof Error ? error.message : String(error);
   console.error(`[Seedance] Error: ${message}`);
-  return { success: false, error: message };
+  return { success: false, error: message, terminal: !posted || (error as { terminal?: unknown })?.terminal === true };
 }
 
 // ── The 3 generation functions ──────────────────────────────────────
@@ -929,8 +776,10 @@ export async function generateFromText(
   request: SeedanceText2VideoRequest,
 ): Promise<SeedanceGenerationResponse> {
   const apiKey = requireArkKey();
+  let posted = false;
   try {
     console.error(`[Seedance] Starting text-to-video generation... (model: ${request.model})`);
+    posted = true;
     const taskId = await createTask(apiKey, buildBody(request, []));
     recordVideoSubmission(taskId);
 
@@ -940,11 +789,11 @@ export async function generateFromText(
       request.outputPath || process.cwd(),
       request.filename || `video_${Date.now()}.mp4`,
     );
-    if ('error' in saved) return { success: false, error: saved.error, taskId };
+    if ('error' in saved) return { success: false, error: saved.error, terminal: saved.terminal === true, taskId };
 
     return toResponse(request, saved.videoPath, saved.task, taskId);
   } catch (error) {
-    return toFailure(error);
+    return toFailure(error, posted);
   }
 }
 
@@ -953,6 +802,7 @@ export async function generateFromImage(
   request: SeedanceImg2VideoRequest,
 ): Promise<SeedanceGenerationResponse> {
   const apiKey = requireArkKey();
+  let posted = false;
   try {
     const paths = [request.sourceImagePath, ...(request.lastImagePath ? [request.lastImagePath] : [])];
     const uris = loadImages(paths);
@@ -966,6 +816,7 @@ export async function generateFromImage(
     console.error(`[Seedance] First frame: ${request.sourceImagePath}`);
     if (request.lastImagePath) console.error(`[Seedance] Last frame: ${request.lastImagePath}`);
 
+    posted = true;
     const taskId = await createTask(apiKey, buildBody(request, images));
     recordVideoSubmission(taskId);
 
@@ -975,7 +826,7 @@ export async function generateFromImage(
       request.outputPath || process.cwd(),
       request.filename || `video_${Date.now()}.mp4`,
     );
-    if ('error' in saved) return { success: false, error: saved.error, taskId };
+    if ('error' in saved) return { success: false, error: saved.error, terminal: saved.terminal === true, taskId };
 
     return {
       ...toResponse(request, saved.videoPath, saved.task, taskId),
@@ -983,7 +834,7 @@ export async function generateFromImage(
       lastImage: request.lastImagePath,
     };
   } catch (error) {
-    return toFailure(error);
+    return toFailure(error, posted);
   }
 }
 
@@ -992,21 +843,22 @@ export async function generateWithReferences(
   request: SeedanceReferenceRequest,
 ): Promise<SeedanceGenerationResponse> {
   const apiKey = requireArkKey();
+  let posted = false;
   try {
     const spec = SEEDANCE_MODEL_SPECS[request.model];
     const imageUris = loadImages(request.referenceImagePaths);
     const audioUris = loadReferenceAudio(request.referenceAudioPaths);
     assertRequestBudget([...imageUris, ...audioUris]);
-    if (audioUris.length > 0 && spec.referenceAudio !== false) {
+    if (audioUris.length > 0) {
       await checkReferenceAudioDurations(request.referenceAudioPaths, spec.referenceAudio, request.model);
     }
     let referenceVideoSeconds = 0;
-    if (request.referenceVideoPaths.length > 0 && spec.referenceVideos !== false) {
+    if (request.referenceVideoPaths.length > 0) {
       referenceVideoSeconds = await checkReferenceVideos(request.referenceVideoPaths, spec.referenceVideos, request.model);
     }
     // A URL clip cannot be probed; it is counted at the output length toward the model total
     // (the ledger's assumption too), so a local+URL mix over the cap fails here, not in the queue.
-    if (request.referenceVideoUrls.length > 0 && spec.referenceVideos !== false) {
+    if (request.referenceVideoUrls.length > 0) {
       const assumed = request.referenceVideoUrls.length * request.durationSeconds;
       if (referenceVideoSeconds + assumed > spec.referenceVideos.totalSeconds) {
         throw new Error(
@@ -1035,6 +887,7 @@ export async function generateWithReferences(
       if (videoUrls.length > 0) console.error(`[Seedance] Reference videos: ${[...request.referenceVideoPaths, ...request.referenceVideoUrls].join(', ')}`);
       if (audioUris.length > 0) console.error(`[Seedance] Reference audio: ${request.referenceAudioPaths.join(', ')}`);
 
+      posted = true;
       const taskId = await createTask(apiKey, buildBody(request, parts));
       recordVideoSubmission(taskId);
 
@@ -1044,7 +897,7 @@ export async function generateWithReferences(
         request.outputPath || process.cwd(),
         request.filename || `video_ref_${Date.now()}.mp4`,
       );
-      if ('error' in saved) return { success: false, error: saved.error, taskId };
+      if ('error' in saved) return { success: false, error: saved.error, terminal: saved.terminal === true, taskId };
 
       return {
         ...toResponse(request, saved.videoPath, saved.task, taskId),
@@ -1062,6 +915,6 @@ export async function generateWithReferences(
       await published.close();
     }
   } catch (error) {
-    return toFailure(error);
+    return toFailure(error, posted);
   }
 }

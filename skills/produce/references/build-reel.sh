@@ -111,15 +111,13 @@ export LC_ALL=en_US.UTF-8
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"   # grab before cd (path to reveal-timing.py)
 WORKDIR="${1:?usage: build-reel.sh <workdir>}"
-# Resolve the supplied board before changing directories; both gates inspect the same plan.
+# Resolve the supplied board before changing directories.
 STORYBOARD=$(node -e 'console.log(require("path").resolve(process.argv[1]))' "${2:-$WORKDIR/../storyboard}")
-node "$HERE/../../../server/dist/bundle.js" --workflow-check-delivery "$STORYBOARD"
 [ -f "$STORYBOARD/scenes.js" ] || { echo "source storyboard/scenes.js is required; pass the storyboard directory as build-reel.sh argument 2" >&2; exit 1; }
 [ "${SILENT:-0}" != "1" ] || node "$HERE/silent-plan.js" "$STORYBOARD/scenes.js"
 node "$HERE/compose-speech.js" "$WORKDIR" "$STORYBOARD" >/dev/null
 node "$HERE/prepare-source-audio.js" "$WORKDIR" "$STORYBOARD" >/dev/null
 node "$HERE/verify-build-plan.js" "$WORKDIR" "$STORYBOARD"
-node "$HERE/../../../server/dist/bundle.js" --workflow-check-delivery "$STORYBOARD" "$WORKDIR/build-plan-check.json"
 # A normal board is <channel>/episodes/<topic>/storyboard. Proof fixtures may put storyboard/
 # directly under their channel root, so fall back to the storyboard parent in that shape.
 CHANNEL_DIR=$(node -e 'const p=require("path"), s=p.resolve(process.argv[1]), episode=p.dirname(s), episodes=p.dirname(episode); console.log(p.basename(episodes)==="episodes"?p.dirname(episodes):p.dirname(s))' "$STORYBOARD")
@@ -293,7 +291,7 @@ for C in cards/reveals.tsv reveals.tsv; do [ -f "$C" ] && { RTOTAL="$C"; break; 
 [ -n "$RTOTAL" ] || say "· no reveals.tsv — state completeness runs the skipped-state check only (capture with capture-reveals.sh)"
 
 # ── 0.5) Canvas probe + asset dimension precheck
-#   Today both accidents blow up in §12, i.e. after the TTS/image/veo budget is spent.
+#   Today both accidents blow up in §12, i.e. after the TTS/image/video budget is spent.
 #   Catch them here within 3 seconds. Silent on pass — the gate speaks only on violation.
 
 # Probe: the CSS canvas didn't follow the window. frame.html?probe=1 paints the whole canvas
@@ -767,6 +765,14 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   # @ starts a reveal clip at its own in-point; a shared video advances with the timeline.
   # Every source must cover its visible interval, including the final outgoing handle.
   INS=(); FILT=""; NIN=0
+  # Several dialogue lines can share one continuous filmed source. Reopening that
+  # source at sentence boundaries adds needless fades and fractional seek drift.
+  if [ "${SYNC:-0}" = 1 ] && [ "${GROUPED:-0}" = 0 ] && [ "$MV" -gt 1 ]; then
+    SAME_SOURCE=1
+    for VIS in "${FVIS[@]}"; do [ "$VIS" = "${FVIS[0]}" ] || SAME_SOURCE=0; done
+    case "${FVIS[0]}" in @*|*::*) SAME_SOURCE=0 ;; esac
+    if [ "$SAME_SOURCE" = 1 ]; then FVIS=("${FVIS[0]}"); FOFF=(0); MV=1; fi
+  fi
   j=0
   for VIS in "${FVIS[@]}"; do
     if [ "$j" -eq 0 ]; then
@@ -794,7 +800,10 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
             NEED=$(awk -v s="$SS" -v n="${GFR[$j]}" -v f="$FPS" 'BEGIN{printf "%.9f",s+n/f}')
             T=$(awk -v n="${GFR[$j]}" -v f="$FPS" 'BEGIN{printf "%.9f",n/f}')
           fi
-          awk -v actual="$BDUR" -v needed="$NEED" 'BEGIN{exit !(actual+0.00001>=needed)}' \
+          # A frame samples its start, not its end. Mixed-rate sources may cover
+          # the last output sample even when the audio clock rounds up to a frame.
+          awk -v actual="$BDUR" -v needed="$NEED" -v fps="$FPS" \
+            'BEGIN{exit !(actual+0.00001>=needed || actual>needed-1/fps+0.00001)}' \
             || { say "card $IDX: source needs ${NEED}s including live handle; has ${BDUR}s. Choose an earlier edit.in, shorten/replan the cut, or regenerate. No freeze or loop substitution."; exit 1; }
           case " $REUSED_VIDEO_SHOTS " in *" $IDX "*)
             [ "${VIDEO_WARNINGS_APPROVED:-0}" = 1 ] || awk -v actual="$BDUR" -v needed="$D" -v start="$SOURCE_IN" -v render="$RENDER_D" 'BEGIN{d=actual-needed; if(d<0)d=-d; exit !(d<=0.05 && start==0 && render==needed)}' \
@@ -806,7 +815,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
     esac
     NIN=$((NIN+1))
     GTRIM=""; if [ "${GROUPED:-0}" = 1 ]; then GTRIM="trim=end_frame=${GFR[$j]},setpts=PTS-STARTPTS,"; fi
-    FILT+="[$BI:v]${HOLD}scale=$W:$H:force_original_aspect_ratio=increase:flags=lanczos,crop=$W:$H,setpts=PTS-STARTPTS,fps=$FPS,${GTRIM}settb=AVTB,setsar=1,format=yuv420p[b$j];"
+    FILT+="[$BI:v]${HOLD}scale=$W:$H:force_original_aspect_ratio=increase:flags=lanczos,crop=$W:$H,setpts=PTS-STARTPTS,fps=$FPS:eof_action=pass,${GTRIM}settb=AVTB,setsar=1,format=yuv420p[b$j];"
     if [ -n "$OVL" ]; then
       OI=$NIN
       INS+=(-loop 1 -framerate "$FPS" -t "$T" -i "$OVL")

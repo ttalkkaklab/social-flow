@@ -13,7 +13,7 @@ For new work, return to the corresponding SKILL.md and character-scenarios.md.
 - Deliverables
 - Procedure
 - 0. Load · lock · budget
-- held longer than 60 minutes = dead lock (Veo async takes at most 6 minutes, so the margin is generous)
+- held longer than 60 minutes = dead lock
 - 1. Settle the topic
 - 2. Research & verification (gate 1)
 - 2.2 Scenario candidates (gate 6a — storyboard-reviewer scenario mode, one batched read)
@@ -625,7 +625,7 @@ the price.
   it, `image.host` at $0, `PRODUCTION.imageProvider:"host"`. `image_to_video` present (Grok):
   the selected hook and any escalated clip go to it, `engine:"host"`, `video.host` at $0,
   `videoProvider:"host"` — the cap check then sees only what the API lanes still bill. The
-  gpt/local/seedance/veo lines below are the Claude Code path.
+  gpt/local/seedance lines below are the Claude Code path.
 - **Backgrounds — 1 cover + 2–4 points** — `size: "1088x1920"`.
   - **Cover background = `gpt_image_text2img` `quality: "high"`** (the host
     image tool first under Codex/Grok) — a person only when the shot needs
@@ -633,7 +633,7 @@ the price.
     rules 11·12; the visual-style preset overrides the photo default) — the cover frame
     becomes cover.jpg (the thumbnail) as-is. Make the topic legible at a
     glance; use `seen from behind, face turned away` instead of
-    `face not visible`. On escalated episodes this PNG doubles as the veo
+    `face not visible`. On escalated episodes this PNG doubles as the b-roll
     source.
   - Points backgrounds: **`image_local_generate` (local Z-Image — only when explicitly selected,
     $0 per image)**, **2–4 photorealistic shots of the topic** — the photo is
@@ -660,7 +660,7 @@ the price.
     no minor in frame, the engine the route names. The plan review of 0.49 is not
     called on this path.
 - **Per-cut Seedance escalation** — apply produce `references/video-model-selection.md`
-  §Seedance per-cut selection. A selected simple video hook uses 1.5 Pro; essential complex action
+  §Seedance per-cut selection. A selected simple video hook uses the saved 2.x model; essential complex action
   may use 2.0, reference panels use 2.0 (2.5 above nine), and fixed voice uses 2.5 on a
   speaking/b-roll slot. Record purpose, reason, face eligibility and reference paths before
   generating. Read `cost-preview.js --json` and use the Seedance row's resolved `generation`
@@ -679,47 +679,38 @@ the price.
   `seedance_reference` with the previz as `referenceVideoPaths`, the stored `visual.video.prompt`
   verbatim, `generateAudio: false`, the cover's `duration` (4–8 s; input plus output seconds are
   billed on the `…-video` rows — 2.0 mini 720p ≈ $0.54 for a 6 s cut, 2.0 1080p ≈ $2.74). The
-  builder keeps only the video track and composes the narration separately, without subtitle overlays. No `ARK_API_KEY` means no hook video (the previz has no Veo fallback).
+  builder keeps only the video track and composes the narration separately, without subtitle overlays. No `ARK_API_KEY` means no hook video.
   `.work/motion/motion-i0.mp4`. This is the one slot the baseline pays for
   (cost-tiers §economy baseline).
-- **Opening b-roll (only when escalated)** — `veo_img2video`
-  (`aspectRatio: "9:16"`, `resolution: "1080p"`, `durationSeconds: 8`, model
-  `veo-3.1-lite-generate-preview` — in blind-arena testing the three tiers'
-  quality was statistically identical, so use the cheapest).
-  **The source is the cover-background PNG already made in §6** — produce
-  absolute rule 8 bans `veo_text2video` (the same prompt renders a different
-  scene every time, so there's no baseline to roll back to).
-  This slot is Veo-only because of sound — under absolute rule 9 the b-roll
-  segment uses the clip's own audio, so it's no place for the cheaper-but-silent
-  Seedance. A photorealistic adult person in the cover background is accepted
-  as-is by Veo's image lane (measured 2026-08-15). **But if the source shows
-  anyone who reads as a child or teenager, this lane is blocked**
-  (Support code 17301594) — the plan gate catches it first as P0-10, but if
-  generation drops into no-response, remake the person as an adult and retry
-  that episode.
+- **Opening b-roll (only when escalated)** — an existing clip, including a Veo clip an old
+  board names with `engine:"veo"`, is reused under `visual.reuse`; never regenerate it solely
+  to migrate. A new clip goes through `video_plan` on the saved video model: Veo, Gemini Omni
+  and Seedance 1.x left the plugin on 2026-10-31 because none takes a voice reference, and a
+  board or override naming them fails as `video_engine_unsupported`.
+  **The source is the cover-background PNG already made in §6** — produce absolute rule 8
+  bans text-to-video here (the same prompt renders a different scene every time, so there's
+  no baseline to roll back to). Under absolute rule 9 the b-roll segment uses the clip's own
+  audio.
+  Seedance 2.x rejects real human faces, so a photoreal person goes to an LTX lane. **If the
+  source shows anyone who reads as a child or teenager, remake the person as an adult.**
 
-  Existing 720p clips follow the `visual.reuse` source contract. New Seedance or host
-  clips follow the selected model resolution. The Veo 1080p preference below applies
-  only to new Veo b-roll requests; missing old metadata never requires regeneration.
+  Existing 720p clips follow the `visual.reuse` source contract. New clips follow the selected
+  model resolution; missing old metadata never requires regeneration.
 
-  **Generate 8 seconds (1080p is 8-second-only); use only the broll scene's
-  `duration` (default 4s)** — per produce §6's trim+mix conventions, cut from
-  the head of the original and keep the original. No upscaling (the body is
-  1080×1920 — user decision 2026-08-11 not to go down to 720p).
-  **Send the scene's stored `visual.prompt` verbatim** — on lite without `negativePrompt`
-  (lite takes no `negativePrompt` (the API returns 400 and `video-client.ts` refuses the argument before the call) — every exclusion goes into the prompt body as positive description; scenes-schema §clip prompt); an older
+  Request the broll scene's `duration` (default 4s) and keep the original, per produce §6's
+  trim+mix conventions. **Send the scene's stored `visual.prompt` verbatim** — every exclusion
+  goes into the prompt body as positive description (scenes-schema §clip prompt); an older
   scenes.js with no stored prompt gets the fallback assembly — English, motion
   only, one line of audio directives at the end. Re-describing what's already
   visible in the source image makes the model
   redesign the scene. `.work/broll/broll-a<after>.mp4`
   (`broll-a0.mp4` for the opening slot).
   - **The unattended loop escalates at most 1 slot on its own** (cost-tiers
-    §escalation). The schema allows 2, but veo bills on generated length, so
+    §escalation). The schema allows 2, but each slot bills its generated seconds, so
     one more slot doubles the episode's spend. Still, **if the storyboard has 2
     slots written in, make both as written** — dropping an approved scene over
     cost makes the video diverge from the plan.
-  - **The cover's text is never generated** — Veo can't write Korean (absolute
-    rule 10). The cover's title stays code-rendered over its motion background;
+  - **The cover's text is never generated** (absolute rule 10). The cover's title stays code-rendered over its motion background;
     the b-roll goes in **the segment after the cover** and is the one generated
     cut a short has left (the format cap is 2, and the hook took the first).
   - **No narration over that segment** (absolute rule 9) — the video's own
@@ -752,8 +743,7 @@ the price.
   (produce `references/bgm-scoring.md`).
 
 After every call, append one line of actual usage to `.work/cost-tally.tsv` —
-this file, not §5's estimate file. Line format and units (veo = generated
-length, tts = characters ÷ 1000) are canonical in `references/cost-tally.md`,
+this file, not §5's estimate file. Line format and units (tts = characters ÷ 1000) are canonical in `references/cost-tally.md`,
 and the manual path (storyboard·produce) writes the same-named file under the
 same conventions.
 
@@ -875,7 +865,7 @@ $REF_P/splice-clip.sh .work .work/broll/broll-a0-mixed.mp4 "$(cardend 0)"
 
 Never eyeball `T` — `cardend <after>` (produce §6) sums the confirmed lengths
 of `card 0..after`, and that value is the scene's end time. **Never splice the
-raw original** — skip the mix step and the veo sound sits 4+ dB under the body
+raw original** — skip the mix step and the clip's sound sits 4+ dB under the body
 while the BGM cuts out for just that stretch.
 If the storyboard has 2 b-roll slots, pass **both clips in a single
 invocation** (call it twice and the second run wipes the first splice).
@@ -1007,4 +997,4 @@ authorization.
 - `../produce/references/speedup.sh` — the required speed pass (produce §7.5)
 - `../produce/references/build-reel.sh` — the compositing pipeline
 - `../platform-guide/references/platform-playbook.md` · `korean-style.md` · `check-style.py`
-- `../../docs/guides/ai-video-production/index.html` — why hybrid is the default, Veo hard specs, prompt rules
+- `../../docs/guides/ai-video-production/index.html` — why hybrid is the default, prompt rules

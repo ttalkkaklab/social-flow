@@ -1,7 +1,8 @@
 /** Shared execution boundary for raw tools, auditions and the common speech router. */
+import { astraGenaiBaseUrl, requireAstraGenaiKey } from './astra-genai-client.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHash, randomUUID } from 'node:crypto';
-import { accessSync, constants, existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { accessSync, constants, existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { extname, join, resolve } from 'node:path';
 import { disabledToolPatterns, disabledToolsFile, requireElevenLabsKey, requireGeminiKey } from './config.js';
@@ -42,17 +43,38 @@ function lock(directory: string): () => void {
   return () => rmSync(directory, { recursive: true, force: true });
 }
 
+/** Per-user, per-provider-key directory of concurrency slots, one subdirectory per running request. */
+export function speechSlotsDir(provider: string, key: string): string {
+  return join(tmpdir(), `social-flow-tts-${process.getuid?.() ?? 'user'}-${digest(provider + key).slice(0, 24)}`);
+}
+/**
+ * A slot whose owner is gone — killed before its finally block ran — would block that provider
+ * key forever. The owner's pid is written inside the slot; a slot with no readable pid (killed
+ * between mkdir and write) counts as stale only after a minute.
+ * ponytail: a recycled pid keeps a dead slot held until that process exits; add a start-time check if that shows up.
+ */
+function staleSlot(slot: string): boolean {
+  try {
+    const pid = Number(readFileSync(join(slot, 'pid'), 'utf8'));
+    if (!Number.isInteger(pid) || pid <= 0) throw new Error('unreadable pid');
+    try { process.kill(pid, 0); return false; }
+    catch (error) { return (error as NodeJS.ErrnoException).code === 'ESRCH'; }
+  } catch {
+    try { return Date.now() - statSync(slot).mtimeMs > 60_000; } catch { return false; }
+  }
+}
+
 export async function executeSpeech<T extends SpeechResult>(
   generator: string,
   args: Record<string, unknown>,
   run: (output: { outputPath: string; filename: string }) => Promise<T>,
 ): Promise<T & SpeechResult> {
-  const provider = generator.startsWith('tts_elevenlabs_') ? 'elevenlabs' : 'gemini';
+  const provider = generator === 'tts_astra_genai' ? 'astra-genai' : generator.startsWith('tts_elevenlabs_') ? 'elevenlabs' : 'gemini';
   const contract = resolveTtsModel(provider, String(args.model));
   if (![contract.single, contract.dialogue].includes(generator)) throw new Error('Generator does not implement selected TTS model');
   const gate = resolveToolGate(generator, { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
   if (!gate.enabled) throw new Error(`Selected speech generator is disabled: ${gate.reason}`);
-  const key = provider === 'gemini' ? requireGeminiKey() : requireElevenLabsKey();
+  const key = provider === 'astra-genai' ? requireAstraGenaiKey('/v1/audio/') : provider === 'gemini' ? requireGeminiKey() : requireElevenLabsKey();
   const id = executionId.getStore() || randomUUID();
   const outputPath = resolve(String(args.outputPath || process.cwd()));
   const extension = String(args.outputFormat || 'wav').startsWith('mp3') ? 'mp3' : 'wav';
@@ -71,7 +93,7 @@ export async function executeSpeech<T extends SpeechResult>(
   const runs = join(directory, '.speech-runs');
   mkdirSync(runs, { recursive: true });
   const receiptPath = join(runs, id + '.json');
-  const fingerprint = digest(canonical({ generator, args: { ...args, outputPath: directory } }));
+  const fingerprint = digest(canonical({ generator, ...(provider === 'astra-genai' ? { baseUrl: astraGenaiBaseUrl('/v1/audio/') } : {}), args: { ...args, outputPath: directory } }));
   const releaseRequest = lock(join(runs, id + '.lock'));
   let releaseOutput: (() => void) | undefined, releaseSlot: (() => void) | undefined;
   try {
@@ -86,16 +108,25 @@ export async function executeSpeech<T extends SpeechResult>(
       return { ...prior.result, receiptPath, review: 'not_reviewed', replayed: true };
     }
     releaseOutput = lock(stem + '.speech-lock');
+    if (provider === 'astra-genai' && existsSync(audioPath)) throw new Error('Speech output already exists; recover its original requestId before new generation');
     const limit = Number(process.env.SOCIAL_FLOW_TTS_MAX_CONCURRENCY || 2);
     if (!Number.isInteger(limit) || limit < 1 || limit > 32) throw new Error('SOCIAL_FLOW_TTS_MAX_CONCURRENCY must be an integer from 1 to 32');
-    const slots = join(tmpdir(), `social-flow-tts-${process.getuid?.() ?? 'user'}-${digest(provider + key).slice(0, 24)}`);
+    const slots = speechSlotsDir(provider, key);
     mkdirSync(slots, { recursive: true });
-    for (let i = 0; i < limit; i++) {
+    for (let i = 0; i < limit && !releaseSlot; i++) {
       const slot = join(slots, String(i));
-      try { mkdirSync(slot); releaseSlot = () => rmSync(slot, { recursive: true, force: true }); break; }
-      catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error; }
+      for (const retry of [false, true]) {
+        try {
+          mkdirSync(slot); writeFileSync(join(slot, 'pid'), String(process.pid));
+          releaseSlot = () => rmSync(slot, { recursive: true, force: true }); break;
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+          if (retry || !staleSlot(slot)) break;
+          rmSync(slot, { recursive: true, force: true });
+        }
+      }
     }
-    if (!releaseSlot) throw new Error('Speech provider concurrency limit reached; no request submitted');
+    if (!releaseSlot) throw new Error(`Speech provider concurrency limit reached; no request submitted. Slots held by live processes: ${slots}`);
     const record = { version: 1, requestId: id, generator, provider, model: args.model, fingerprint,
       generation: args, startedAt: new Date().toISOString(), review: 'not_reviewed', attempts: 1,
       billingStatus: 'not_an_invoice' };

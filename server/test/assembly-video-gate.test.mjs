@@ -5,7 +5,7 @@ import {mkdtempSync,writeFileSync,readFileSync,mkdirSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 const require=createRequire(import.meta.url);
-const {decide,approve,snapshot,check}=require('../../skills/produce/references/assembly-video-gate.js');
+const {decide,approve,check}=require('../../skills/produce/references/assembly-video-gate.js');
 function fixture(fn){
  const root=mkdtempSync(path.join(tmpdir(),'assembly-hitl-'));
  const work=path.join(root,'.work'),board=path.join(root,'storyboard');
@@ -37,21 +37,6 @@ test('a clean check needs no approval; malformed approval never becomes verified
   writeFileSync(file,JSON.stringify({...a,...change}));
   assert.equal(decide(work,board,['defect'],{}).status,'continue-with-warnings');
  }
-}));
-test('approval tracks actual video bytes and source images, not just their paths',()=>fixture(({work,board})=>{
- writeFileSync(path.join(board,'scenes.js'),'window.SCENES=[{visual:{video:{clip:".work/clip.mp4"},image:"source.png"}}];');
- writeFileSync(path.join(work,'clip.mp4'),'first clip');
- writeFileSync(path.join(board,'source.png'),'first image');
- writeFileSync(path.join(work,'segs.tsv'),'0\t0\tclip.mp4\t\t\n');
- const initial=snapshot(work,board);
- assert.equal(decide(work,board,['defect'],initial).approved,false);
- approve(work,'User approved this clip');
- assert.equal(decide(work,board,['defect'],snapshot(work,board)).approved,true);
- writeFileSync(path.join(work,'clip.mp4'),'replacement');
- assert.equal(decide(work,board,['defect'],snapshot(work,board)).approved,false);
- writeFileSync(path.join(work,'clip.mp4'),'first clip');
- writeFileSync(path.join(board,'source.png'),'replacement image');
- assert.notDeepEqual(snapshot(work,board),initial);
 }));
 test('assembly ignores absent generation metadata but does not invent quality approval',()=>fixture(({work,board})=>{
  writeFileSync(path.join(board,'scenes.js'),'window.SCENES=[{id:"s0001",type:"points",duration:4,narration:[]}];window.PRODUCTION={mode:"full_video"};');

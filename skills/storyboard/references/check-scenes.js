@@ -438,14 +438,18 @@ function motionKind(scene) {
   return null;
 }
 
-/** The planned route (scenes-schema §clip prompt) — `engine` overrides the type default:
-    b-roll keeps its sound so it goes to veo, a motion background discards it so seedance,
-    a speech clip goes to veo_reference. The same routing as the check strip's engineOf. */
-function engineOf(scene) {
+/** The planned route (scenes-schema §clip prompt) — `engine` overrides the default, seedance
+    (Veo left on 2026-10-31: no voice reference). The same routing as the check strip's engineOf. */
+const ENGINES = ['seedance', 'host', 'astra', 'astra-genai'];
+function engineOf(scene, win, snapshotVideo) {
   const v = (scene && scene.visual) || {};
   const named = (v.video && v.video.engine) || (v.clip && v.clip.engine) || v.engine;
-  if (named === 'veo' || named === 'seedance' || named === 'host' || named === 'astra' || named === 'astra-genai') return named;   // host: the CLI's own video tool; astra: our LTX-2.5 box
-  if (scene && (scene.type === 'broll' || scene.type === 'quote')) return 'veo';
+  if (ENGINES.includes(named)) return named;   // host: the CLI's own video tool; astra: our LTX-2.5 box
+  // A shot that names none takes the episode's saved video engine (storyboard.html engineOf does the same).
+  const P = (win && win.PRODUCTION) || {};
+  const saved = (snapshotVideo || P.modelSettings?.models?.video || {}).engine;
+  if (ENGINES.includes(saved)) return saved;
+  if (P.videoProvider === 'astra' || P.videoProvider === 'host') return P.videoProvider;
   return 'seedance';
 }
 
@@ -515,6 +519,14 @@ function perShotLookFindings(win, { bad, machine, warn }) {
     ? production.cast : {};
   const optIn = production.cast !== undefined || scenes.some((scene) => scene.shot?.cutType !== undefined);
   const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
+
+  // A shot references at most two principal characters (user directive 2026-10-31): MSR conditions
+  // two characters well, and anyone else on screen is an unreferenced extra the model draws.
+  scenes.forEach((scene, index) => {
+    const ids = castIds(scene.visual?.character);
+    if (ids.length > 2)
+      bad(`shot ${index + 1}`, `[character-limit] visual.character lists ${ids.length} principal characters (${ids.join(', ')}); keep two per shot and split the beat into shots, describing anyone else as an unreferenced extra in the action`);
+  });
 
   if (optIn) {
     Object.entries(cast).forEach(([id, entry]) => {
@@ -620,7 +632,7 @@ function check(win, fmt, opts) {
      board is not judged by whether it spelled the key snake_case or camelCase. */
   const channelPolicy = (opts && opts.policy) || normalizeMotionPolicy(win.MOTION_POLICY || null, formatVideoMax, 'window.MOTION_POLICY', pacing, isShort);
   const productionAdvice = [];
-  productionMode.check(win, { draft, generatedVideoMax: channelPolicy.generatedVideoMax, advice: productionAdvice })
+  productionMode.check(win, { draft, generatedVideoMax: channelPolicy.generatedVideoMax, advice: productionAdvice, snapshotVideo: opts && opts.snapshotVideo })
     .forEach(message => bad('production mode', message));
   productionAdvice.forEach(message => warn('production guidance', message));
   perShotLookFindings(win, { bad, machine, warn });
@@ -698,7 +710,12 @@ function check(win, fmt, opts) {
      and first-use term explanations beside the narration that ships. It is written in §4a,
      before any machine-layer work, so it is a hard authoring check in draft mode too. */
   const comp = win.COMPREHENSION;
-  if (!comp || typeof comp !== 'object' || Array.isArray(comp)) {
+  // Story-v1 guidance (scenes-schema §comprehension contract and §playback order): a story-v2
+  // board follows character-scenarios.md and carries neither the block nor the beat skeleton.
+  const storyV2 = win.STORY?.version === 'story-v2';
+  if (storyV2) {
+    /* nothing to check */
+  } else if (!comp || typeof comp !== 'object' || Array.isArray(comp)) {
     bad('episode', 'no window.COMPREHENSION — write the one question, answer, takeaway, branches, and term introductions before the scenes');
   } else {
     if (COMPREHENSION_MODES.indexOf(comp.mode) === -1)
@@ -809,7 +826,9 @@ function check(win, fmt, opts) {
     }
   }
 
-  if (isShort) {
+  if (storyV2) {
+    /* story-v2: the beat skeleton is a suggestion (scenes-schema §playback order) */
+  } else if (isShort) {
     const mainBeats = scenes.map((s, i) => ({ i: i + 1, beat: s.beat, type: s.type }))
       .filter((s) => s.type !== 'broll' && s.type !== 'outro')
       .map((s) => ({ ...s, beat: s.beat || (s.type === 'cover' ? 'hook' : '') }));
@@ -1329,8 +1348,9 @@ function check(win, fmt, opts) {
       productionMode.cameraWarnings(s).forEach((w) => warn(where, w));
       const prompt = v.prompt || (v.video && v.video.prompt) ||
                      (v.clip && typeof v.clip === 'object' && v.clip.prompt);
-      if (!prompt) machine(where, 'no stored clip prompt — produce sends this verbatim (scenes-schema §clip prompt)');
-      else seedancePromptFindings(prompt, engineOf(s), s.visual?.video?.model).forEach((f) => machine(where, f));
+      if (!prompt) machine(where, 'no stored clip prompt — ' + (win.STORY?.authoring === 'story-first' ? 'write it with shot_prompt; ' : '') +
+        'produce sends this verbatim (scenes-schema §clip prompt)');
+      else seedancePromptFindings(prompt, engineOf(s, win, opts && opts.snapshotVideo), s.visual?.video?.model).forEach((f) => machine(where, f));
       // A clip planned silent (generateAudio:false — every full-video cut) has nothing to describe.
       if (!v.audio && s.type !== 'quote' && !(v.video && v.video.generateAudio === false))
         warn(where, 'no visual.audio — the engine invents a soundtrack under the narration');
@@ -1958,7 +1978,7 @@ function selftest() {
   ok('the hook slot itself needs no visual.why',
      !has(bads(run([videoCover, goodShot, ctaShot], null, { policy: hookPolicy })), /no visual\.why/));
   const quoteClip = Object.assign({}, goodShot, { type: 'quote', speaker: 'the pilot',
-    visual: Object.assign({}, goodShot.visual, { clip: { prompt: SEEDANCE_PROMPT, engine: 'veo' } }) });
+    visual: Object.assign({}, goodShot.visual, { clip: { prompt: SEEDANCE_PROMPT, engine: 'seedance' } }) });
   ok('a speech clip is a generated cut, so the hook rule reads it too',
      has(bads(run([videoCover, quoteClip, ctaShot], null, { policy: hookPolicy })), /no visual\.why/));
   ok('speech clips count against the generated-slot cap',
@@ -2062,7 +2082,7 @@ function selftest() {
   // b-roll
   const broll = { type: 'broll', after: 0, duration: 4, narration: [],
                   shot: { feel: 'x', size: 'mcu', angle: 'eye' },
-                  visual: { src: 'images/scene-1.png', prompt: 'p', audio: 'a',
+                  visual: { src: 'images/scene-1.png', prompt: 'p. the subject stays consistent.', audio: 'a', realFaceInput: false,
                             camera: { movement: 'dolly in', speed: 'slow', framing: 'chest-up', end: 'centred' } } };
   ok('a slide without motion:true is a violation',
      has(bads(run([cover, Object.assign({}, goodShot, { visual: { slide: { file: 'slides/s2-x.html', plan: 'a list' } } }), goodShot, goodShot])), /no motion:true/));
@@ -2108,8 +2128,8 @@ function selftest() {
      !has(bads(run([cover, motionScene(SEEDANCE_PROMPT + ' avoid generating any text or subtitles.'), goodShot, goodShot])), /negative directive/));
   ok('a timecode in a seedance prompt is a violation',
      has(bads(run([cover, motionScene(SEEDANCE_PROMPT + ' at [00:04] the riders stop.'), goodShot, goodShot])), /clock timecode/));
-  ok('the same prompt on a veo route is not this check\'s business',
-     !has(bads(run([cover, motionScene(SEEDANCE_PROMPT + ' 말들이 계곡을 건넌다. at [00:04] they stop.', { engine: 'veo' }),
+  ok('the same prompt on an astra route is not this check\'s business',
+     !has(bads(run([cover, motionScene(SEEDANCE_PROMPT + ' 말들이 계곡을 건넌다. at [00:04] they stop.', { engine: 'astra' }),
                     goodShot, goodShot])), /carries Korean|clock timecode/));
   ok('the seedance prompt rules wait for the camera pass (--draft)',
      !has(bads(run([cover, motionScene('high wide, very slow dolly in. the riders cross.'), goodShot, goodShot], null, { draft: true })),
@@ -2901,9 +2921,11 @@ function selftest() {
      engineOf({ type: 'broll', visual: { engine: 'astra' } }) === 'astra');
   ok('an astra clip prompt is not held to the Seedance grammar',
      seedancePromptFindings('she turns to the window', 'astra').length === 0);
-  ok('stored Seedance 2.5 prompts preserve its Korean direction support',
-     seedancePromptFindings('소포를 내려놓는다. The subject stays consistent.', 'seedance', 'dreamina-seedance-2-5-260628').length === 0 &&
-     seedancePromptFindings('소포를 내려놓는다. The subject stays consistent.', 'seedance', 'seedance-1-5-pro-251215').some(f => f.includes('Korean')));
+  // Video prompts are English on every model (user directive 2026-10-31); quoted dialogue keeps its language.
+  ok('stored Seedance prompts are English on every model; quoted dialogue keeps its language',
+     ['dreamina-seedance-2-5-260628', 'dreamina-seedance-2-0-260128'].every(model =>
+       seedancePromptFindings('소포를 내려놓는다. The subject stays consistent.', 'seedance', model).some(f => f.includes('Korean')) &&
+       !seedancePromptFindings('She says "소포 왔어요". The subject stays consistent.', 'seedance', model).some(f => f.includes('Korean'))));
   ok('a board that names the model instead of the lane still falls back to the type default',
      engineOf({ type: 'points', visual: { video: { engine: 'ltx' } } }) === 'seedance');
 
@@ -3036,6 +3058,12 @@ function selftest() {
         !lookHas(findings, 'warn', /\[character-missing\]/);
     }) && !lookHas(perShot(perShotFixture()), 'bad', /\[character-missing\]/);
   })());
+  ok('character-limit rejects three principal characters in one shot and accepts two', (() => {
+    const three = perShotFixture(); three.SCENES[0].visual.character = ['yi', 'won', { id: 'kim', scope: 'background only' }];
+    const two = perShotFixture(); two.SCENES[0].visual.character = ['yi', 'won'];
+    return lookHas(perShot(three), 'bad', /\[character-limit\].*3 principal/) &&
+      !lookHas(perShot(two), 'bad', /\[character-limit\]/);
+  })());
   ok('character-on-empty-cut warns on a document cast and accepts an empty document', (() => {
     const carried = perShotFixture(); carried.SCENES[0].shot.cutType = 'document';
     const empty = perShotFixture(); empty.SCENES[0].shot.cutType = 'document'; delete empty.SCENES[0].visual.character;
@@ -3116,7 +3144,10 @@ function main() {
   const scenePolicy = normalizeMotionPolicy(win.MOTION_POLICY || null, formatVideoMax, 'window.MOTION_POLICY', fmt.pacing, isShort);
   const effectivePolicy = profileHasPolicy ? profilePolicy
     : normalizeMotionPolicy(null, formatVideoMax, 'format default', fmt.pacing, isShort);
-  let findings = check(win, fmt, { draft, policy: effectivePolicy, requireRenderPlan: true,
+  // The episode's saved video selection (.work/model-settings.json beside storyboard/), as video_plan reads it.
+  let snapshotVideo;
+  try { snapshotVideo = JSON.parse(fs.readFileSync(path.join(path.dirname(scenesPath), '..', '.work', 'model-settings.json'), 'utf8')).config.models.video; } catch { /* none */ }
+  let findings = check(win, fmt, { draft, policy: effectivePolicy, requireRenderPlan: true, snapshotVideo,
                                      channelDir: profilePath ? path.dirname(profilePath) : null });
   require('./location-assets.js').check(win, path.dirname(scenesPath), {ready: !draft}).forEach(f => findings.push(f));
   require('../../channel/references/character-sheet.js').sourceErrors(win, path.dirname(scenesPath)).forEach(what =>

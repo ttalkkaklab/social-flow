@@ -1,4 +1,6 @@
-import { requireReviewedImages, requireWorkflow, workflowRevision } from './production-workflow.js';
+import { buildFasth3Body, fasth3OmniSchema } from './fasth3-omni.js';
+import { localVideoStrategy } from './local-video-models.js';
+import { desktopVideoStatus } from './astra-genai-desktop.js';
 import * as fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
@@ -8,21 +10,57 @@ import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { config, disabledToolPatterns, disabledToolsFile, mlxServeConfigured } from './config.js';
 import { resolveToolGate } from './tool-gate.js';
+import { framesForSeconds } from './astra-video-client.js';
+import { assessVideoDuration, DURATION_TOOLS, resolveVideoDuration } from './video-duration.js';
 import { VIDEO_ADAPTERS, parseVideoArgs } from './video-registry.js';
+import { SEEDANCE_MODEL_SPECS } from './seedance-client.js';
 import { quoteVideo } from './video-pricing.js';
 import { atomicJson, videoTransaction } from './video-state.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
-import { OMNI_MODEL } from './omni-client.js';
 import { videoEvents } from './video-events.js';
-import { getGenaiVideoStatus, genaiMsrSchema, buildGenaiMsrBody, buildGenaiAudioBody, genaiAudioToVideoSchema } from './astra-genai-video.js';
-import { hasStructuredImages, prepareVideoImages } from './video-image-inputs.js';
+import { getGenaiVideoStatus, genaiMsrSchema, buildGenaiMsrBody, buildGenaiAudioBody, genaiAudioToVideoSchema, genaiMsrVoiceReferences, refreshGenaiMsrVoice, genaiV2Resolution } from './astra-genai-video.js';
+import { GenaiRequestError } from './astra-genai-client.js';
+import { prepareVideoImages } from './video-image-inputs.js';
 import { prepareVideoVoice } from './video-voice.js';
+import { nonEnglishOutsideQuotes } from './prompt-language.js';
+import { compileVideoPrompt } from './video-prompt.js';
 const load = createRequire(import.meta.url);
 const shared = fileURLToPath(new URL('../../skills/_shared/video-selection.js', import.meta.url));
 const modelSettings = fileURLToPath(new URL('../../skills/_shared/model-settings.js', import.meta.url));
 /** Channel assets (intro clips, logo motion, growth images) live here; they have no episode or shot. */
 const CHANNEL_ASSET_RE = /^data\/[a-z0-9][a-z0-9-]*\/assets(\/|$)/;
 export const routingContext = (episode, shotId) => load(shared).readVideoContext(episode, shotId);
+function selectedVideoTool(selection, operation = selection.operation) {
+    return Object.entries(VIDEO_ADAPTERS).find(([name, a]) => a.engine === selection.engine && a.operation === operation &&
+        (a.engine !== 'mlx' || !selection.model || localVideoStrategy(name)?.acceptsModel(selection.model)))?.[0];
+}
+/** The same source coverage and duration grid inform authoring and the executable plan. */
+function shotVideoTiming(context, tool, args) {
+    const { shot } = context;
+    let coverage;
+    if (shot.duration !== undefined) {
+        const edit = load(fileURLToPath(new URL('../../skills/produce/references/edit-plan.js', import.meta.url))).preview(context.board.SCENES, { videoWarningsApproved: true });
+        const index = context.board.SCENES.indexOf(shot);
+        const timing = load(fileURLToPath(new URL('../../skills/_shared/video-duration.js', import.meta.url)));
+        coverage = timing.shotTiming(shot, { edit: edit.find((entry) => entry.card === index) });
+    }
+    if (args.requiredSeconds !== undefined && (typeof args.requiredSeconds !== 'number' || !Number.isFinite(args.requiredSeconds) || args.requiredSeconds <= 0))
+        throw new Error('requiredSeconds must be finite positive seconds');
+    const required = coverage || args.requiredSeconds !== undefined
+        ? Math.max(coverage?.requiredSeconds ?? 0, args.requiredSeconds ?? 0) : undefined;
+    return { ...assessVideoDuration(tool, args, required), basis: 'planned', coverage,
+        note: 'Fit of authored source coverage, not measured performance or generated output. Recheck after speech/action timing or generation changes.' };
+}
+/** No generation, image preparation, prompt or credentials needed to inspect shot limits. */
+export function readShotVideoTiming(episode, shotId) {
+    const context = routingContext(episode, shotId);
+    requireSupportedSelection(context.selection);
+    const video = context.shot.visual?.video ?? {};
+    const tool = selectedVideoTool(context.selection);
+    const args = tool ? bindSelection(tool, video, context.selection) : video;
+    return { shotId, selection: context.selection, source: context.source,
+        ...shotVideoTiming(context, tool ?? 'unresolved', args) };
+}
 function stable(value) {
     if (Array.isArray(value))
         return value.map(stable);
@@ -66,25 +104,42 @@ function inputFiles(args, episode) {
     Object.assign(args, visit(args, ''));
     return files;
 }
+/** A saved engine without a voice lane (Veo, Gemini Omni, Seedance 1.x) left the plugin on 2026-10-31. */
+function requireSupportedSelection(selection) {
+    const retired = selection.engine !== 'host' && !Object.values(VIDEO_ADAPTERS).some(a => a.engine === selection.engine) ||
+        selection.engine === 'seedance' && Boolean(selection.model) && !Object.hasOwn(SEEDANCE_MODEL_SPECS, selection.model);
+    if (retired)
+        throw new Error(`video_engine_unsupported: ${selection.engine}${selection.model ? ' ' + selection.model : ''} cannot keep a character's voice ` +
+            'and is no longer supported; choose a video model again with project_manage (existing clips stay reusable)');
+}
 function bindSelection(tool, input, selection) {
     const adapter = VIDEO_ADAPTERS[tool];
     if (!adapter || adapter.engine !== selection.engine)
         throw new Error('model_selection_mismatch: tool does not match selected engine');
+    const local = localVideoStrategy(tool);
+    if (local && selection.model && !local.acceptsModel(selection.model))
+        throw new Error('model_selection_mismatch: model does not match video adapter');
     const args = { ...input };
     if (tool === 'astra_audio2video') {
         if (args.maxAttempts !== undefined && args.maxAttempts !== 1)
             throw new Error('Managed ASTRA audio permits one submission per request; reconcile it before creating another attempt');
         args.maxAttempts = 1;
     }
-    if (selection.engine === 'omni' && selection.model !== OMNI_MODEL)
-        throw new Error('model_selection_mismatch: fixed Omni deployment');
     if (selection.model && tool !== 'astra_genai_msr') {
         if (args.model !== undefined && args.model !== selection.model)
             throw new Error('model_selection_mismatch: model differs from saved selection');
-        if (selection.engine !== 'omni')
-            args.model = selection.model;
+        args.model = selection.model;
     }
-    if (selection.resolution && tool !== 'astra_video_retake') {
+    if (selection.resolution && selection.engine === 'astra-genai-desktop' && ['astra_genai_desktop_extend', 'astra_genai_desktop_retake'].includes(tool)) {
+        const match = /^(\d+)x(\d+)$/.exec(selection.resolution);
+        if (match) {
+            const target = { width: Number(match[1]), height: Number(match[2]) };
+            if (args.targetResolution !== undefined && JSON.stringify(args.targetResolution) !== JSON.stringify(target))
+                throw new Error('model_selection_mismatch: targetResolution');
+            args.targetResolution = target;
+        }
+    }
+    else if (selection.resolution && tool !== 'astra_video_retake') {
         if (tool === 'astra_genai_msr' || ['astra', 'mlx'].includes(selection.engine)) {
             const match = /^(\d+)x(\d+)$/.exec(selection.resolution);
             if (!match)
@@ -96,14 +151,11 @@ function bindSelection(tool, input, selection) {
             }
         }
         else {
-            if (args.resolution !== undefined && args.resolution !== selection.resolution)
-                throw new Error('model_selection_mismatch: resolution');
-            if (tool === 'veo_extension') {
-                if (selection.resolution !== '720p')
-                    throw new Error('Veo extension requires selected 720p resolution');
-            }
-            else
-                args.resolution = selection.resolution;
+            // One saved LTX size serves MSR and v2: v2 gets its own closest size (2026-11-02).
+            const resolution = selection.engine === 'astra-genai' ? genaiV2Resolution(selection.resolution) : selection.resolution;
+            if (args.resolution !== undefined && args.resolution !== resolution)
+                throw new Error(`model_selection_mismatch: resolution (expected ${resolution})`);
+            args.resolution = resolution;
         }
     }
     return args;
@@ -114,26 +166,37 @@ export function checkVideoEnvironment(tool) {
         throw new Error('video_tool_disabled: ' + gate.reason);
     const engine = VIDEO_ADAPTERS[tool]?.engine;
     const ready = engine === 'seedance' ? Boolean(config.arkApiKey) : engine === 'astra' ? Boolean(config.astraVideoApiKey) :
-        engine === 'astra-genai' ? Boolean(config.astraGenaiApiKey) : engine === 'mlx' ? mlxServeConfigured() : Boolean(config.geminiApiKey);
+        ['astra-genai', 'astra-genai-desktop'].includes(engine) ? Boolean(config.astraGenaiApiKey) : engine === 'mlx' && mlxServeConfigured();
     if (!ready)
         throw new Error('video_provider_unconfigured: ' + engine);
 }
 export function planVideo(raw) {
     const input = videoPlanSchema.parse(raw);
-    requireWorkflow(input.episode, 'video', input.shotId);
     const context = routingContext(input.episode, input.shotId);
     const { selection } = context;
-    const tool = input.tool || Object.entries(VIDEO_ADAPTERS).find(([, a]) => a.engine === selection.engine && a.operation === input.operation)?.[0];
+    requireSupportedSelection(selection);
+    // New shot_prompt records retain action separately so icon edits cannot leave the submitted direction stale.
+    const video = context.shot.visual?.video;
+    const rawCast = context.board.SB_DOC?.characters;
+    const names = Object.fromEntries((Array.isArray(rawCast) ? rawCast : []).map(c => [c.id, String(c.name ?? '')]));
+    const compiled = input.args.prompt === undefined && video?.promptSource
+        ? compileVideoPrompt(context.shot, video.promptSource, names) : undefined;
+    const authored = compiled?.prompt ?? video?.prompt;
+    const callArgs = input.args.prompt === undefined && typeof authored === 'string' ? { ...input.args, prompt: authored } : input.args;
+    const direction = compiled ? { directionBindings: compiled.directionBindings, directionWarnings: compiled.warnings } :
+        { directionWarnings: [input.args.prompt !== undefined ? 'Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons.' :
+                    'Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.'] };
+    // A saved default operation (an LTX project saves 'reference', i.e. MSR) applies when the call names neither.
+    const operation = input.operation ?? (input.tool ? undefined : selection.operation);
+    const tool = input.tool || selectedVideoTool(selection, operation);
     if (input.tool && input.operation && VIDEO_ADAPTERS[input.tool]?.operation !== input.operation)
         throw new Error('Tool and operation disagree');
     if (selection.engine === 'host') {
         if (input.tool)
             throw new Error('model_selection_mismatch: host has no server adapter');
-        const images = prepareVideoImages('host_external', input.args, context.shot, context.episode);
-        if (hasStructuredImages(context.shot))
-            requireReviewedImages(context.episode, (images.imageBindings ?? []).map(binding => binding.path));
-        const body = { workflowRevision: workflowRevision(input.episode), version: 1, episode: context.episode, shotId: input.shotId, requestId: input.requestId,
-            tool: 'host_external', args: input.args, ...(images.imageBindings ? { imageBindings: images.imageBindings, imageHandoff: images.imageHandoff } : {}), selection, source: context.source, contextRevision: context.revision,
+        const images = prepareVideoImages('host_external', callArgs, context.shot, context.episode);
+        const body = { version: 1, episode: context.episode, shotId: input.shotId, requestId: input.requestId,
+            tool: 'host_external', args: callArgs, ...direction, ...(images.imageBindings ? { imageBindings: images.imageBindings, imageHandoff: images.imageHandoff } : {}), selection, source: context.source, contextRevision: context.revision,
             inputs: Object.fromEntries((images.imageBindings ?? []).map(binding => [binding.path, binding.sha256])), quote: { reserveUsd: 0, estimatedUsd: 0, revision: 'host-allowance-v1', basis: 'External host allowance; limits and actual tool schema must be checked by host; not API enforcement' }, execution: 'host_handoff' };
         const plan = { ...body, id: hash(body) };
         atomicJson(path.join(context.episode, '.work/video-routing/plans', plan.id + '.json'), plan);
@@ -141,11 +204,30 @@ export function planVideo(raw) {
     }
     if (!tool)
         throw new Error('Selected deployment has no adapter for this operation');
-    const images = prepareVideoImages(tool, bindSelection(tool, input.args, selection), context.shot, context.episode);
-    if (hasStructuredImages(context.shot))
-        requireReviewedImages(context.episode, (images.imageBindings ?? []).map(binding => binding.path));
-    const voice = prepareVideoVoice(tool, images.args, context);
+    let bound = bindSelection(tool, callArgs, selection);
+    const durationPlan = shotVideoTiming(context, tool, bound);
+    if (durationPlan.status === 'split_required')
+        throw new Error(`video_duration_exceeded: ${input.shotId} needs ${durationPlan.requiredSeconds}s; ${tool} allows ${durationPlan.maxSeconds}s. Split at a meaningful performance boundary; never truncate or switch models.`);
+    // Legacy boards without a duration keep their exact request. Timed new shots cannot fall back to a short adapter default.
+    if (durationPlan.status === 'fits' && VIDEO_ADAPTERS[tool].voice !== 'supplied' && DURATION_TOOLS.includes(tool)) {
+        const exact = ['duration', 'durationSeconds', 'numFrames', 'frames', 'autoDuration', 'audioMaxDuration'].some(key => bound[key] !== undefined);
+        if (!exact)
+            bound = resolveVideoDuration(tool, { ...bound, requiredSeconds: durationPlan.requiredSeconds }).args;
+    }
+    const images = prepareVideoImages(tool, bound, context.shot, context.episode);
+    const voice = prepareVideoVoice(tool, images.args, { ...context, msrVoice: genaiMsrVoiceReferences() });
     const args = parseVideoArgs(tool, voice.args);
+    if (durationPlan.status === 'fits') {
+        const fps = durationPlan.limits?.frameRate ?? 1;
+        const frames = typeof args.numFrames === 'number' ? args.numFrames : typeof args.duration === 'number' && durationPlan.limits?.frameRate
+            ? framesForSeconds(args.duration, fps) : undefined;
+        const requested = frames !== undefined ? frames / fps : args.durationSeconds;
+        if (typeof requested === 'number' && requested < durationPlan.requiredSeconds)
+            throw new Error(`video_duration_short: ${input.shotId} needs ${durationPlan.requiredSeconds}s but the request covers ${requested}s. Use requiredSeconds or revise the shot timing.`);
+    }
+    const foreign = typeof args.prompt === 'string' ? nonEnglishOutsideQuotes(args.prompt) : null;
+    if (foreign)
+        throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks. Write the video prompt in English; only dialogue, inside quotes, uses the video's language.`);
     const output = canonical(path.resolve(context.episode, typeof args.outputPath === 'string' ? args.outputPath : '.work/video'));
     if (!within(context.episode, output))
         throw new Error('Video output must stay inside the selected episode');
@@ -154,6 +236,8 @@ export function planVideo(raw) {
     const inputs = inputFiles(args, context.episode);
     for (const binding of images.imageBindings ?? [])
         inputs[binding.path] = binding.sha256;
+    if (tool === 'fasth3_omni_reference')
+        buildFasth3Body(fasth3OmniSchema.parse(args));
     if (tool === 'astra_genai_msr')
         buildGenaiMsrBody(genaiMsrSchema.parse(args));
     if (tool === 'astra_genai_audio2video')
@@ -165,9 +249,9 @@ export function planVideo(raw) {
             throw new Error('model_selection_mismatch: retake inherits source dimensions; select the source resolution');
     }
     const quote = quoteVideo(tool, args);
-    const body = { workflowRevision: workflowRevision(input.episode), version: 1, episode: context.episode, shotId: input.shotId, requestId: input.requestId, tool, args,
+    const body = { version: 1, episode: context.episode, shotId: input.shotId, requestId: input.requestId, tool, args,
         ...(images.imageBindings ? { imageBindings: images.imageBindings } : {}),
-        sourceArgs: input.args, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
+        sourceArgs: input.args, durationPlan, ...direction, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
         selection, source: context.source, contextRevision: context.revision, inputs, quote, execution: 'server' };
     const plan = { ...body, id: hash(body) };
     atomicJson(path.join(context.episode, '.work/video-routing/plans', plan.id + '.json'), plan);
@@ -177,7 +261,9 @@ function authorization(context) {
     const p = context.production;
     if (p.videoAuthorization !== undefined) {
         const auth = z.object({ reference: z.string().min(1), maxUsd: z.number().finite().nonnegative(),
-            maxConcurrent: z.number().int().min(1).max(64).default(1), maxAttempts: z.number().int().min(1).max(20).default(3) }).strict().parse(p.videoAuthorization);
+            maxConcurrent: z.number().int().min(1).max(64).default(1), maxAttempts: z.number().int().min(1).max(20).default(3),
+            // Reconciled spend before managed routing, for events whose cost the ledger cannot price.
+            openingSpendUsd: z.number().finite().nonnegative().optional() }).strict().parse(p.videoAuthorization);
         return auth;
     }
     const approval = z.object({ kind: z.enum(['user', 'standing']), reference: z.string().min(1), at: z.string().min(1), quoteFingerprint: z.string().min(1) }).passthrough().parse(p.approval);
@@ -190,6 +276,55 @@ function authorization(context) {
     return { maxUsd: z.number().finite().nonnegative().parse(p.videoBudgetUsd), maxConcurrent: 1,
         maxAttempts: z.number().int().min(1).max(5).parse(p.maxAttempts) };
 }
+// Each shot's video waits for the user's yes to its plan, unless they approved every shot (user directive 2026-10-31).
+export const videoApproveSchema = z.object({
+    episode: z.string().min(1),
+    planIds: z.array(z.string().regex(/^[a-f0-9]{64}$/)).min(1).optional().describe('Video plans the user approved after seeing each shot\'s prompt, images and cost'),
+    auto: z.boolean().optional().describe('true: the user approves every shot\'s video from now on; false: ask before each shot again'),
+    request: z.string().trim().min(1).describe('The user\'s own words that gave this approval'),
+}).strict().refine(input => input.planIds !== undefined || input.auto !== undefined, 'name planIds or auto');
+const approvalsFile = (episode) => path.join(episode, '.work/video-routing/approvals.json');
+function readApprovals(episode) {
+    return fs.existsSync(approvalsFile(episode)) ? JSON.parse(fs.readFileSync(approvalsFile(episode), 'utf8')) : { plans: {} };
+}
+// The review page cannot read .work, so storyboard/video-approvals.js carries each shot's latest yes (storyboard-html-template.html).
+function writeApprovalView(episode, approvals) {
+    const dir = path.join(episode, 'storyboard');
+    if (!fs.existsSync(path.join(dir, 'scenes.js')))
+        return;
+    const shots = {};
+    for (const [planId, entry] of Object.entries(approvals.plans))
+        if (!shots[entry.shotId] || entry.at >= shots[entry.shotId].at)
+            shots[entry.shotId] = { planId, at: entry.at, ...(entry.shown ? { shown: entry.shown } : {}) };
+    const view = { auto: approvals.auto?.at ?? null, shots };
+    fs.writeFileSync(path.join(dir, 'video-approvals.js'), 'window.VIDEO_APPROVALS = ' + JSON.stringify(view).replace(/</g, '\\u003c') + ';\n');
+}
+export function approveVideo(raw) {
+    const input = videoApproveSchema.parse(raw), episode = fs.realpathSync(input.episode);
+    const approvals = readApprovals(episode), at = new Date().toISOString();
+    if (input.auto)
+        approvals.auto = { request: input.request, at };
+    else if (input.auto === false)
+        delete approvals.auto;
+    for (const id of input.planIds ?? []) {
+        const plan = JSON.parse(fs.readFileSync(path.join(episode, '.work/video-routing/plans', id + '.json'), 'utf8'));
+        // A yes covers the plan the user saw; a plan whose shot changed since cannot run (video_execute), so it takes none.
+        const context = routingContext(episode, plan.shotId);
+        if (context.revision !== plan.contextRevision)
+            throw new Error(`video_plan_stale: shot ${plan.shotId}'s frames, prompt, lines or settings changed after this plan — plan it again and show the user the new plan`);
+        const visual = (context.shot.visual ?? {});
+        const used = (plan.sourceArgs ?? plan.args).prompt, fromShot = used === undefined || used === visual.video?.prompt;
+        const shown = Object.fromEntries(Object.entries({ prompt: fromShot ? visual.video?.prompt : undefined, start: visual.frames?.start, end: visual.frames?.end })
+            .filter(([, value]) => typeof value === 'string'));
+        if (!fromShot)
+            shown.callPrompt = true;
+        shown.lines = context.lines;
+        approvals.plans[id] = { shotId: plan.shotId, requestId: plan.requestId, request: input.request, at, shown };
+    }
+    atomicJson(approvalsFile(episode), approvals);
+    writeApprovalView(episode, approvals);
+    return approvals;
+}
 export async function executeVideo(raw, dispatch) {
     const request = videoExecuteSchema.parse(raw), episode = fs.realpathSync(request.episode);
     const plan = JSON.parse(fs.readFileSync(path.join(episode, '.work/video-routing/plans', request.planId + '.json'), 'utf8'));
@@ -198,12 +333,15 @@ export async function executeVideo(raw, dispatch) {
         throw new Error('Invalid video plan');
     if (plan.execution === 'host_handoff')
         throw new Error('host_handoff_required: use the selected host CLI; no API substitution');
-    requireWorkflow(episode, 'video', plan.shotId);
-    if (plan.workflowRevision !== workflowRevision(episode))
-        throw new Error('workflow_plan_stale: prepare a new video plan');
+    const approvals = readApprovals(episode);
+    if (!approvals.auto && !approvals.plans[id])
+        throw new Error(`video_approval_required: show the user shot ${plan.shotId}'s prompt, images and cost, ` +
+            `then record their yes with video_approve {planIds:["${id}"]}, or auto:true once they approve every shot`);
     const context = routingContext(episode, plan.shotId);
     if (context.revision !== plan.contextRevision)
-        throw new Error('video_plan_stale: selection or authorization changed');
+        throw new Error('video_plan_stale: the shot\'s frames, prompt, lines, selection or authorization changed');
+    if (plan.tool === 'astra_genai_msr')
+        await refreshGenaiMsrVoice();
     const refreshed = planVideo({ episode, shotId: plan.shotId, requestId: plan.requestId, tool: plan.tool, args: plan.sourceArgs ?? plan.args });
     if (refreshed.id !== id)
         throw new Error('video_plan_stale: inputs, price or adapter contract changed');
@@ -216,10 +354,12 @@ export async function executeVideo(raw, dispatch) {
                 throw new Error('request_id_conflict: same request ID has a different plan');
             if (existing.status === 'completed')
                 return existing.result;
+            if (existing.status === 'failed')
+                throw new Error(`video_request_failed: ${existing.evidence || 'the provider rejected it'}; plan a new requestId to try again`);
             throw new Error(`video_request_pending: ${existing.status}; provider ID ${existing.providerId || 'unknown'}; do not resubmit`);
         }
         const jobs = Object.values(state.jobs);
-        const occupied = jobs.filter(job => job.status !== 'completed');
+        const occupied = jobs.filter(job => !['completed', 'failed'].includes(job.status));
         if (occupied.length >= auth.maxConcurrent)
             throw new Error('video_concurrency_limit: pending jobs include ambiguous submissions');
         const used = jobs.reduce((sum, job) => sum + (job.settledUsd ?? job.reserveUsd), state.openingSpendUsd ?? 0);
@@ -230,11 +370,20 @@ export async function executeVideo(raw, dispatch) {
         state.jobs[plan.requestId] = { planId: id, requestId: plan.requestId, shotId: plan.shotId, tool: plan.tool,
             status: 'submitting', reserveUsd: plan.quote.reserveUsd, updatedAt: new Date().toISOString() };
         return undefined;
-    });
+    }, auth.openingSpendUsd);
     if (cached)
         return cached;
     const update = (patch) => videoTransaction(episode, state => {
         Object.assign(state.jobs[plan.requestId], patch, { updatedAt: new Date().toISOString() });
+    });
+    // An adapter that proves nothing is running (terminal) closes the request as failed and frees its
+    // concurrency slot; a request that never got a provider ID was never billed. Anything else stays
+    // submission_unknown until video_status reconciles it.
+    const settle = (terminal, evidence, result) => videoTransaction(episode, state => {
+        const job = state.jobs[plan.requestId];
+        Object.assign(job, { status: terminal ? 'failed' : 'submission_unknown', evidence, updatedAt: new Date().toISOString() }, result ? { result } : {});
+        if (terminal && !job.providerId)
+            job.settledUsd = 0;
     });
     const startedAt = Date.now();
     let ok = false;
@@ -251,7 +400,7 @@ export async function executeVideo(raw, dispatch) {
                 throw new Error('Invalid provider usage'); update({ tokens }); },
         }, () => dispatch(plan.tool, plan.args));
         if (result.isError) {
-            update({ status: 'submission_unknown', result });
+            settle(result.terminal === true, result.content.map(item => item.type === 'text' ? item.text : '').join('\n').slice(0, 1000), result);
             return result;
         }
         videoTransaction(episode, state => {
@@ -269,7 +418,7 @@ export async function executeVideo(raw, dispatch) {
         return result;
     }
     catch (error) {
-        update({ status: 'submission_unknown' });
+        settle(error instanceof GenaiRequestError && error.terminal, (error instanceof Error ? error.message : String(error)).slice(0, 1000));
         throw error;
     }
     finally {
@@ -290,6 +439,7 @@ async function dispatchChannelAsset(tool, args, root, output, dispatch) {
     const selection = read.config?.models?.video;
     if (!selection)
         throw new Error(`project_setup_required: ${read.status}; save .social-flow/models.json before generating channel assets`);
+    requireSupportedSelection(selection);
     const bound = { ...bindSelection(tool, args, selection), outputPath: output };
     const startedAt = Date.now();
     let ok = false;
@@ -326,7 +476,6 @@ export async function routeLegacyVideo(tool, raw, dispatch) {
         return executeVideo({ episode: plan.episode, planId: plan.id }, dispatch);
     }
     const output = canonical(path.resolve(typeof args.outputPath === 'string' ? args.outputPath : process.cwd()));
-    requireWorkflow(output, 'video');
     let dir = output;
     for (;;) {
         if (fs.existsSync(path.join(dir, '.social-flow/models.json')) && CHANNEL_ASSET_RE.test(path.relative(dir, output).split(path.sep).join('/')))
@@ -343,17 +492,33 @@ export async function routeLegacyVideo(tool, raw, dispatch) {
         throw new Error('video_context_required');
     return dispatch(tool, args);
 }
-/** Read persisted receipts without polling or issuing a provider request. */
+/** Read persisted receipts; refresh polls an existing GenAI job; reconcile settles an unknown request from billing evidence. */
 export async function videoStatus(raw) {
-    const input = z.object({ episode: z.string().min(1), requestId: idSchema, action: z.enum(['read', 'refresh']).default('read') }).strict().parse(raw);
+    const input = z.object({ episode: z.string().min(1), requestId: idSchema, action: z.enum(['read', 'refresh', 'reconcile']).default('read'),
+        executorStopped: z.boolean().optional(), evidence: z.string().min(1).optional(), spentUsd: z.number().finite().nonnegative().optional() }).strict().parse(raw);
     const episode = fs.realpathSync(input.episode);
     const file = path.join(episode, '.work/video-routing/state.json');
     if (!fs.existsSync(file))
         return { requestId: input.requestId, status: 'not_started' };
+    if (input.action === 'reconcile') {
+        // Same contract as image_status: the caller brings the provider's terminal status and the actual charge.
+        if (!input.evidence || input.spentUsd === undefined)
+            throw new Error('video_reconciliation_requires_billing_evidence');
+        videoTransaction(episode, current => {
+            const job = Object.hasOwn(current.jobs, input.requestId) ? current.jobs[input.requestId] : undefined;
+            if (!job || job.status === 'completed')
+                throw new Error('video_reconciliation_requires_unknown_terminal_request');
+            if (['reserved', 'submitting', 'submitted'].includes(job.status) && input.executorStopped !== true)
+                throw new Error('video_reconciliation_requires_executor_stopped: confirm the executing process has exited and the provider job is terminal');
+            Object.assign(job, { status: 'failed', settledUsd: input.spentUsd, evidence: input.evidence, updatedAt: new Date().toISOString() });
+        });
+    }
     const state = JSON.parse(fs.readFileSync(file, 'utf8'));
     const job = state.jobs?.[input.requestId];
     if (input.action === 'refresh' && job) {
-        if (!['astra_genai_text2video', 'astra_genai_img2video', 'astra_genai_audio2video', 'astra_genai_msr'].includes(job.tool))
+        if (job.status === 'failed')
+            throw new Error('video_request_failed: nothing to recover; plan a new requestId');
+        if (!job.tool.startsWith('astra_genai_desktop_') && !['astra_genai_text2video', 'astra_genai_img2video', 'astra_genai_audio2video', 'astra_genai_msr'].includes(job.tool))
             throw new Error('video_refresh_unsupported: use provider-specific recovery');
         const plan = JSON.parse(fs.readFileSync(path.join(episode, '.work/video-routing/plans', job.planId + '.json'), 'utf8'));
         const { id, ...body } = plan;
@@ -361,7 +526,7 @@ export async function videoStatus(raw) {
             throw new Error('Invalid recovery plan');
         checkVideoEnvironment(plan.tool);
         const receiptPath = path.join(String(plan.args.outputPath), String(plan.args.filename)) + '.astra-genai.json';
-        const result = await getGenaiVideoStatus({ receiptPath, download: true });
+        const result = job.tool.startsWith('astra_genai_desktop_') ? await desktopVideoStatus(receiptPath, true) : await getGenaiVideoStatus({ receiptPath, download: true });
         if (job.providerId && result.jobId !== job.providerId)
             throw new Error('GenAI recovery job ID mismatch');
         if (result.downloaded) {
@@ -372,6 +537,7 @@ export async function videoStatus(raw) {
         return { ...job, providerStatus: result.status, recovery: 'Poll this same request with action:refresh; do not resubmit.' };
     }
     return job ? { ...job, recovery: job.status === 'completed' ? 'Reuse result; no new generation.' :
-            'Inspect providerId at the selected provider. Keep the reservation until billing and terminal status are reconciled. Do not change requestId or delete state to retry.' } :
+            job.status === 'failed' ? 'Closed as failed; its concurrency slot is free. Plan a new requestId to try again.' :
+                'Inspect providerId at the selected provider. Keep the reservation until billing and terminal status are reconciled with action:reconcile. Do not change requestId or delete state to retry.' } :
         { requestId: input.requestId, status: 'not_started' };
 }
