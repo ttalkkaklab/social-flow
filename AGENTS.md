@@ -40,6 +40,29 @@ because a fallback lane rotted in place — six `chrome-devtools` tools and eigh
 `claude-in-chrome` tools sat in `allowed-tools` for versions after the servers were
 gone from every machine that runs this plugin.
 
+## Local GenAI connection — owner directive, 2026-11-07
+
+For `/Volumes/data/story/insight`, `astra-genai-native` / `qwen-image-fast` means
+the local GenAI gateway at `http://127.0.0.1:18081`, backed by MLX Serve
+(`qwen-image-2.1-turbo`). Before generation, verify the image endpoint and credential
+are available to the **MCP server process**, then call `astra_genai_catalog kind:image`
+and confirm that alias and protocol. A shell's environment is not evidence that an
+already-running MCP server inherited it. Forward `ASTRA_GENAI_IMAGE_URL` and
+`ASTRA_GENAI_IMAGE_API_KEY`; speech uses the corresponding `SPEECH` variables.
+Keep the existing remote video route separate. Never print or persist secret values.
+For a Codex STDIO connection, include the six `ASTRA_GENAI_*` names (base URL/key,
+image URL/key and speech URL/key) in `mcp_servers.social-flow.env_vars`; write variable
+names only. Verify a fresh connection with that whitelist. Updating config does not
+change the environment of a server that is already running.
+
+If a call unexpectedly reaches `https://genai.astravision.co.kr`, returns an empty
+model list or says `Model capability is disabled`, compare its receipt's `baseUrl`
+with the last successful receipt. Restore the same local route before proposing a
+different model or asking the user to select one. Check uncertain requests before
+retrying; do not discard their receipts. A fresh invocation of this plugin's own
+MCP server may inherit the correct shell environment when the session's connection
+is stale. Verify recovery with an actual requested image and its local receipt.
+
 ## Images containing text
 
 For every new image generation or edit that must display or preserve readable text,
