@@ -467,20 +467,14 @@ answer to each.
    adapter limit. A close-up is one useful reason, not the only reason. Never pad a scene
    with a wide/close pair or divide dialogue merely to distribute speakers.
 
-10. **A shot says one new thing.** The unit is the information, not the sentence: a shot may
-    speak several segments, but if they do not rewrite as one `shot.info` line, it is two
-    shots. When a line addresses two things (an answer to the other character and a question
-    to the viewer; a fact and its term explained; a freezing point and a fermentation rate),
-    that is two shots. A term and its meaning are one info when the term is what the shot
-    adds (소비기한은 먹어도 안전한 기한이다) — `COMPREHENSION.terms[].firstShot` explains the
-    term in that shot; a fact plus a term plus its meaning is two shots. The cover's sentences
-    are infos too — a second cover sentence that names
-    what the first one hid has spent the hook, and a cover that says the next shot's fact
-    leaves that shot nothing to add. `shot.info` is the one thing this shot adds, and the
-    shot's own lines say it — when the picture carries it (a visual gag, the water jet) write
-    the info with the cover's "연출 —" prefix; a `shot.info` any other shot already gave, or a
-    line that says again what an earlier shot's info gave, is a repeat, whatever the scene
-    (the checker's repeat is the same words or a 0.6 character-bigram overlap). On an
+10. **A shot carries a readable performance.** One frame may convey several facts,
+    lines, decisions or reactions. `shot.info` summarizes the intended contribution;
+    it does not allocate shots. Shared wording, a question followed by an answer, or
+    a change of speech purpose alone does not require a cut. A repeated description
+    may accompany a meaningful reaction or return to the same view. Compare the whole
+    scene and actual framing using [shot boundaries](shot-boundaries.md), including
+    silence, offscreen events, physical timing and the selected adapter's capacity.
+    On an
     explanation screen `size` is the framing of the drawn subject (`ls` the whole mechanism,
     `cu` the detail, `insert` a bare chart) and `shot.space` is skipped; every generated or
     filmed picture shot writes `shot.space`. The values a chart will draw live in
