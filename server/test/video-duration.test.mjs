@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { resolveVideoDuration, DURATION_TOOLS } from '../dist/video-duration.js';
+import { resolveVideoDuration, assessVideoDuration, DURATION_TOOLS } from '../dist/video-duration.js';
 import { priceOf } from '../dist/usage-ledger.js';
 import { TOOLS } from '../dist/tools.js';
 const require = createRequire(import.meta.url);
@@ -73,4 +73,26 @@ test('MCP normalization reaches wire payload and invalid plans never call transp
     assert.equal(calls[1].duration, 5);
     assert.equal(calls[1].frames, undefined);
   } finally { globalThis.fetch = oldFetch; config.arkApiKey = oldKey; }
+});
+
+
+test('MSR coverage rounds upward on the actual fps grid and rejects over-limit speech', () => {
+  for (const fps of [24, 25, 48, 29.97]) {
+    const cap = 361 / fps;
+    const fit = assessVideoDuration('astra_genai_msr', { frameRate: fps }, cap);
+    assert.equal(fit.maxSeconds, cap);
+    assert.equal(fit.status, 'fits');
+    assert.equal(fit.request.numFrames, 361);
+    assert.equal(assessVideoDuration('astra_genai_msr', { frameRate: fps }, cap + .001).status, 'split_required');
+    assert.throws(() => resolveVideoDuration('astra_genai_msr', { frameRate: fps, requiredSeconds: cap + .001 }), /split or replan/);
+  }
+  assert.equal(resolveVideoDuration('astra_genai_msr', { requiredSeconds: 5.1 }).args.numFrames, 129);
+  assert.equal(assessVideoDuration('astra_genai_msr', {}, 21).status, 'split_required');
+  assert.equal(assessVideoDuration('astra_genai_msr', {}).status, 'timing_unknown');
+  assert.equal(assessVideoDuration('astra_genai_img2video', {}, 21).status, 'limits_unknown');
+  assert.equal(assessVideoDuration('host_external', {}, 21).maxSeconds, null);
+  const small = assessVideoDuration('fasth3_omni_reference', { width: 768, height: 448 }, 5);
+  const large = assessVideoDuration('fasth3_omni_reference', { width: 1024, height: 768 }, 5);
+  assert.ok(large.maxSeconds < small.maxSeconds);
+  assert.equal(large.status, 'split_required');
 });

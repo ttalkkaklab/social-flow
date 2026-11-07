@@ -100,6 +100,7 @@ export function buildGenaiAudioBody(args) {
     return { audio_uri: genaiAudioUri(args.audioUri, args.audioPath), prompt: args.prompt, model: args.model, resolution: args.resolution, fps: args.fps,
         ...(image === undefined ? {} : { image_uri: image }), ...(last === undefined ? {} : { last_frame_uri: last }) };
 }
+export const GENAI_MSR_FRAMES = { min: 25, max: 361, step: 8, frameRate: 24 };
 export const genaiMsrSchema = z.object({
     prompt: z.string().trim().min(1).max(2000),
     references: z.array(z.object({
@@ -113,7 +114,7 @@ export const genaiMsrSchema = z.object({
     referenceFrames: z.union([z.literal(25), z.literal(33)]).default(33),
     width: z.number().int().min(64).max(1920).multipleOf(64).default(1536),
     height: z.number().int().min(64).max(1920).multipleOf(64).default(1024),
-    numFrames: z.number().int().min(25).max(361).refine(n => (n - 1) % 8 === 0).optional(),
+    numFrames: z.number().int().min(GENAI_MSR_FRAMES.min).max(GENAI_MSR_FRAMES.max).refine(n => (n - 1) % GENAI_MSR_FRAMES.step === 0).optional(),
     duration: z.number().finite().gt(0).max(360).optional(),
     frameRate: z.number().finite().min(1).max(60).default(24),
     seed: z.number().int().min(0).max(2147483647).default(42),
@@ -141,7 +142,7 @@ export const genaiMsrSchema = z.object({
         if (args.numFrames !== undefined)
             issue('Omit numFrames when using duration');
         const frames = 1 + 8 * Math.ceil((args.duration * args.frameRate - 1) / 8 - 0.5 - 1e-9);
-        if (frames < 25 || frames > 361)
+        if (frames < GENAI_MSR_FRAMES.min || frames > GENAI_MSR_FRAMES.max)
             issue('MSR duration must round to 25..361 frames');
     }
 });
