@@ -112,6 +112,14 @@ falls back to the sheet picture.
 
 `shotCamera` builds the camera:
 
+- New shots use [the authored opening view](shot-view.md). Its subject, crop and mode drive
+  the prompt and set camera together. An explicit mode fixes the horizontal bearing relative
+  to the subject (front 0°, three-quarter ±45°, profile ±90°, rear 180°). A body insert/ecu
+  uses the staged world point and crop span in `view.target`, not the default face height;
+  an object uses its `subjectId`. Missing subjects, observers or detail targets report an
+  input error. Explicit views keep their bearing when obstructed and warn so the author
+  can fix the blocking, rather than silently rotating to a different shot. The rules below
+  describe legacy boards without a view unless stated otherwise.
 - Subject: the shot's cast where the shot's `shot.location` binding (same set and revision)
   blocks them; otherwise the required landmarks, or the standing set without its walls, and a
   warning that the prompt places the cast. Bind blocking first when places matter.
@@ -121,7 +129,8 @@ falls back to the sheet picture.
   distance fits that span into the vertical field of view, and a group's width into the
   horizontal one. Composition sizes borrow a distance: two mfs, three fs, ots mcu, back ms,
   reaction cu, cutaway ls, insert a close frame on the first `mustShow` object.
-- Side: in front of one person (zero rotation faces -Y); square to two people's line on the
+- Side: the bound camera's bearing for one person, or the front when none was bound
+  (zero rotation faces -Y); square to two people's line on the
   side their faces turn to, or, when they face each other, the bound or first registered
   camera's side (180° rule); `back` stands behind.
 - Angle: eye at the subject's eye height; high 35° down; low 25° up (at least 0.3 m above the

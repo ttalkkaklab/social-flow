@@ -2,6 +2,19 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { compileVideoPrompt } from '../dist/video-prompt.js';
 
+test('MSR and frame video prompts keep the authored detail view instead of old portrait instructions', () => {
+  const view = { subject: 'Mina’s fingers', crop: 'Only the fingers and the key fill the frame', reason: 'The grip reveals her fear', mode: 'profile-right' };
+  for (const mode of ['reference', 'first']) {
+    const shot = { shot: { size: 'cu', angle: 'eye', techniques: [{ id: 'camera.rear' }] },
+      visual: { frames: { mode }, camera: { view, framing: 'a frontal portrait', rear: true, movement: 'static' } } };
+    const compiled = compileVideoPrompt(shot, { action: 'The fingers tighten.' });
+    assert.match(compiled.prompt, /Only the fingers and the key/);
+    assert.match(compiled.prompt, /right profile.*facing camera-right/);
+    assert.doesNotMatch(compiled.prompt, /from behind|frontal portrait|face and/);
+    assert.equal(compiled.directionBindings.find(b => b.attribute === 'view').via, 'prompt');
+  }
+});
+
 test('current icon values compile with viewpoint and explicit delivery bindings', () => {
   const shot = { shot: { render: { mode: 'generated_video' }, size: 'ms', angle: 'eye',
     techniques: [{ id: 'camera.dolly-in' }, { id: 'camera.rear' }, { id: 'camera.rack-focus', from: 'the pouch', to: 'the leader' }] },

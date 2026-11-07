@@ -10,7 +10,7 @@ import { VIDEO_ADAPTERS } from './video-registry.js';
 import { DURATION_TOOLS } from './video-duration.js';
 import { characterFieldsProperty } from './character-manage.js';
 import { CHANNEL_SLUG_RE } from './config.js';
-import { techniqueContract, cameraContract, motionThemeContract, motionGraphicTypes, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
+import { techniqueContract, cameraContract, motionThemeContract, motionGraphicTypes, renderPurposes, stillCameraEffectList, shotViewContract, contract as storyboardContract } from './storyboard.js';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
 
@@ -884,6 +884,10 @@ const compositionInput = (() => {
 const depthInput = (() => {
   try { return { type: 'object', additionalProperties: true, description: 'Optional depth and readable-plane plan. The skill guides artistic choices.' }; }
   catch { return { type: 'object', description: 'Depth contract unavailable: restore skills/storyboard/references/structure-contract.js' }; }
+})();
+const shotViewInput = (() => {
+  try { return shotViewContract().SCHEMA; }
+  catch { return { type: 'object', description: 'Opening view; restore the missing skills tree before calling storyboard tools.' }; }
 })();
 const storyboardVocabulary = (() => {
   try { return storyboardContract().VOCAB; } catch { return null; }
@@ -4857,13 +4861,19 @@ Returns: the file written or not, counts, and findings (! violation · warning).
     name: 'shot_icons',
     title: "Set each shot's icon attributes (step 3)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    description: `Use it after every shot has its story and characters (story_shot → shot_characters), and normally after its lines (shot_dialogue): set the attributes the review's icon row shows, per shot — render route (shot.render), size and why, angle, camera move, focus, depth, the frame plan, where reference means MSR, and next, the transition into the following shot (stored as that shot's transition and edit.reason, which assembly draws; the same checks as storyboard_apply transitions). A move on a still_camera cut is the still effect (shot.render.camera.effect); on any other route it is a camera technique, written to shot.techniques with visual.camera.movement kept consistent. Switching to still_camera drops the camera technique and visual.camera move; switching from it drops the still effect. A different move replaces the old one's speed and target (the same move — its technique, or an authored visual.camera move before any technique — keeps them unless given), and a new size without its own why drops the old why. Changing size, angle, depth, camera movement or rack-focus subjects after the start image exists warns to remake it and any end image with shot_image. A frame plan other than first_last takes the end image off (with a warning), and switching to or from reference re-marks the character panels for the video call. A change to what a written video prompt came from (cast, on-screen lines, frame plan, camera, focus, MSR framing) warns to rewrite it with shot_prompt; the review page marks it too. Only the attributes given change. Refused (story_order) while a sequence, scene or shot story or any shot's characters are missing. Also refused: a move target or focus subject outside English (video_prompt_language); on a still_camera cut a move outside the still effects, a speed outside the still speeds, or a focus technique; elsewhere a move that is not a camera move, a speed outside the camera speeds, or a focus id that is not a focus technique; an invalid depth; next on the last shot, or a join the transition checks refuse. Local file only; no image, video, speech or prompt is generated.
+    description: `Use it after every shot has its story and characters (story_shot → shot_characters), normally after shot_dialogue, set its render route, size, angle, opening view, move, focus, depth, frame plan and next transition. Local file only; generates no media. Do NOT generate images or video here.
 
-Choose each attribute from the beat it serves, never from a quota. A card's use is a practitioners' convention, not a measured effect — no experiment shows a camera move's emotional effect, and the angle effects (low strong, high weak) appeared only when pictures ran as a story — so the neighbouring shots carry the meaning. storyboard_read's techniqueCatalog carries a card per choice — entries for sizes, moves, angles, focus and timing, and guides for the values without an entry (composition sizes, ground and over, depth, still effects). Every card gives use, avoid and specify (what the start image and video prompt must name — crop line, endpoints, focus target); where one applies it also gives pair (what the neighbouring shots should be: establish → cut in → reestablish; look → POV → reaction; matched sizes in shot/reverse shot) and vertical (how a 9:16 frame changes it). Size is the distance: els … ecu, or insert for one object. two, three, ots, pov, back, cutaway and reaction name a composition with no crop of its own; on a new board pick the distance and carry the composition in the cast, camera.pov, camera.rear or the camera framing. Write why, move.reason and focus.reason as the beat the choice serves. Give a video move its speed and target, and a rack focus its from and to subjects: shot_image stages them and shot_prompt writes them. A still effect hold keeps the frame put as a deliberate beat. On a 9:16 board the result lists the vertical note of every chosen value — advice, never a refusal.
+Choose from what the audience must see, not shot index, dialogue count or a diversity quota. Read storyboard_read's techniqueCatalog and shot-view.md. A monologue may need the changing face (cu), a revealing hand (insert/ecu) or isolation in the surroundings (ls/els). Compare one useful alternative and state the story-specific reason.
 
-Do NOT write camera endpoints, blocking, eyeline, composition or prompts here — storyboard_apply carries those after this step (action-direction.md camera-direction pass).
+Set view with subject (visible evidence), reason, crop and mode. It writes visual.camera.view, shot.info and shot.why. Subject and crop are English provider text. This view supersedes old opening framing, rear/pov flags and viewpoint/framing techniques in the image and video prompts. Left/right name the visible side of the subject; angle separately controls height. Set subjectId for a blocked actor or set object; ots/pov also need a different viewerId. Built-set body inserts/ecu need target with the actual staged world point and vertical span; objects use their subjectId. Missing set targets cannot silently become frontal portraits. Use storyboard_apply for blocking and closing camera endpoints.
 
-Returns: the file written or not, counts, and findings (! violation · warning).`,
+Size is distance (els … ecu, insert). Composition labels two/three/ots/pov/back/cutaway/reaction carry no crop; new boards use a distance with view. The technique catalogue gives use, avoid, specify, neighbouring-shot and vertical guidance; these are directing conventions, not measured emotional effects. On 9:16 the result includes the chosen values' vertical advice.
+
+On still_camera, move is a still effect stored in shot.render.camera; other routes use a camera technique and synchronize visual.camera.movement. Route changes drop the old route's movement. A different move replaces its speed/target; the same move keeps them unless provided. Video moves take slow/steady/fast and an English target; rack focus takes English from/to subjects. A new size without why drops the old why. A still hold is deliberate, not an unset move.
+
+Frame reference means MSR. Changing away from first_last removes the end-image binding; switching to/from reference updates panel use. Camera/view/size/depth/focus changes warn to remake existing images; changed inputs to a written video prompt warn to rewrite it with shot_prompt. next sets the transition into the following shot, with the same checks as storyboard_apply, and is refused on the last shot. Omitted attributes stay unchanged.
+
+Refused: missing story/characters (story_order), invalid attributes, incompatible move/focus for the route, non-English prompt targets, or an invalid transition. Returns: written file, counts and findings (! violation · warning).`,
     inputSchema: {
       type: 'object', additionalProperties: false,
       properties: {
@@ -4878,6 +4888,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
           size: enumInput(storyboardVocabulary?.SIZES, 'Shot size icon: the distance (els … ecu, insert); composition labels carry no crop — techniqueCatalog guides.size'),
           why: { type: 'string', description: 'The beat this size serves' },
           angle: enumInput(storyboardVocabulary?.ANGLES, 'Camera angle icon: the camera height and tilt; ground and over have cards in techniqueCatalog guides.angle'),
+          view: shotViewInput,
           move: { type: 'object', additionalProperties: false, required: ['id', 'reason'], description: 'Camera move icon', properties: {
             id: { type: 'string', enum: [...cameraMoves, ...stillCameraEffects], description: 'A camera.* technique with a movement, or on a still_camera cut a still effect' },
             reason: { type: 'string', description: 'What the move or the hold does for this beat' },

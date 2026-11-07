@@ -1277,7 +1277,7 @@
       lines: msr ? [] : (Array.isArray(s.narration) ? s.narration : []).filter(l => l && l.delivery === 'on_screen' && l.tts).map(l => l.speaker + ': ' + l.tts),
       // shot_prompt also writes the closing composition and the rack focus subjects; each joins only when set,
       // so a basis recorded before they existed still matches.
-      camera: [cam.movement, cam.speed, cam.target].concat(cam.end ? [cam.end] : []).map(x => x == null ? '' : String(x)).join(' | '),
+      camera: [cam.movement, cam.speed, cam.target].concat(cam.end ? [cam.end] : []).concat(cam.view ? [JSON.stringify(cam.view)] : []).map(x => x == null ? '' : String(x)).join(' | '),
       focus: (Array.isArray(p.techniques) ? p.techniques : []).filter(t => t && t.id && isFocus(t.id)).map(t => t.from && t.to ? t.id + ': ' + t.from + ' → ' + t.to : t.id),
       framing: msr ? [p.size || '', p.angle || '', p.depth ? JSON.stringify(p.depth) : ''] : [],
     };

@@ -3,7 +3,7 @@ name: generate-cut-images
 description: >
   Makes each shot's start image, and the end image a first_last shot needs, from its characters' sheet panels, place and props; stops before the video prompt. Use when images are requested or the episode order reaches them.
 argument-hint: "[episode-or-storyboard-path]"
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent", "mcp__social-flow__shot_image", "mcp__plugin_social-flow_social-flow__shot_image", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__image_catalog", "mcp__plugin_social-flow_social-flow__image_catalog", "mcp__social-flow__image_status", "mcp__plugin_social-flow_social-flow__image_status", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow"]
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent", "mcp__social-flow__shot_icons", "mcp__plugin_social-flow_social-flow__shot_icons", "mcp__social-flow__shot_image", "mcp__plugin_social-flow_social-flow__shot_image", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__image_catalog", "mcp__plugin_social-flow_social-flow__image_catalog", "mcp__social-flow__image_status", "mcp__plugin_social-flow_social-flow__image_status", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow"]
 ---
 
 # Generate Cut Images
@@ -14,8 +14,15 @@ make each picture shot's start image with `shot_image`, then — only for a `fir
 shot — its end image with `frame:"end"`. Read [still generation](../produce/references/still-generation.md)
 and [image routing](../_shared/image-routing.md).
 
-For each shot, read its story, characters, lines and icon attributes with `storyboard_read`,
-then write `prompt` in English: who is where, doing what, facing which way, with which
+For each shot, read its story, characters, lines and icon attributes with `storyboard_read`
+and apply [content-led opening views](../storyboard/references/shot-view.md). Before making
+a new image, the board author sets `visual.camera.view` with `shot_icons`: subject, crop,
+viewpoint and the content-specific reason, plus a real set target for body inserts. A missing
+view on an older board warns and keeps its legacy behaviour; do not treat that as an authored
+decision for new production. Keep the prompt consistent with this view rather than writing
+a second camera direction in prose. For a built set, inspect its target and camera first;
+a missing detail target is corrected from the opening blocking, never replaced with a face.
+Then write `prompt` in English: who is where, doing what, facing which way, with which
 expression and light, at the moment the shot opens (for an end image, the closing moment
 and what changed). Name the place with `location` (an `SB_DOC.locations` id) and the props
 seen in the frame with `props`; later calls keep them. An end image keeps the start image's
@@ -42,5 +49,7 @@ Each call writes a new versioned file under `storyboard/images/` and records
 and `props`. A new start image takes the shot's end image off the shot with a warning,
 because the end was edited from the old start; make the end image again. Look at every
 image you make before moving on; regenerate a wrong one with a
-better prompt within the attempt and spending limits. Text in an image follows the GPT
+better view/blocking/prompt within the attempt and spending limits. Check the visible subject,
+crop, profile/three-quarter/rear side, camera height and action against the saved view;
+face-reference inputs do not justify a visible face in a hand-only insert. Text in an image follows the GPT
 Image 2 rule. Stop before the video prompt; review-cut-images runs only when the user asks.

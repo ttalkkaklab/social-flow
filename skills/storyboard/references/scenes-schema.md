@@ -1976,6 +1976,21 @@ the PNG already holds the floor plan.
 | `line` | two people, or a person and what they look at, share the `scene` number | the 180° sentence, kept true on every shot of that scene |
 | `light` | optional | key direction in the same camera frame (`key from camera-left`) |
 
+### Content-led opening view (`visual.camera.view`)
+
+New picture shots follow [content-led opening views](shot-view.md) and write `shot_icons view`:
+`{subject,reason,crop,mode,subjectId?,viewerId?,target?:{point:[x,y,z],span}}`.
+Subject and crop are English provider text, reason explains the story decision. Mode is
+front, three-quarter-left/right, profile-left/right, rear, ots or pov. Left/right name the
+visible side of the subject, independently of `shot.angle` (camera height). OTS/POV require
+a subject and a different observer; POV uses eye height. A built-set body insert/ecu needs
+the opening detail's actual world point and vertical span; an object uses its subjectId.
+The same view drives the set camera and source-image/video prompt. It replaces legacy
+opening framing, rear/pov flags, viewpoint/framing techniques and spatial crop prose;
+closing `camera.end` still controls the landing. Changing view warns to remake images and
+marks a compiled video prompt stale. Missing views warn on legacy image requests, not gate
+them. Exact target errors refuse the incompatible set input instead of substituting a face.
+
 ### Composition (`shot.composition`, L10)
 
 One structured property owns headroom, look room and lead room. MCP exposes the same
