@@ -2,6 +2,27 @@
 
 Channel-based short-form/long-form content pipeline Claude Code plugin.
 
+## Local GenAI routing (owner directive, 2026-11-07)
+
+`/Volumes/data/story/insight` uses local GenAI (`http://127.0.0.1:18081`) for
+`astra-genai-native` / `qwen-image-fast`, implemented by MLX Serve's
+`qwen-image-2.1-turbo`. Before generation, confirm the MCP process receives
+`ASTRA_GENAI_IMAGE_URL` and `ASTRA_GENAI_IMAGE_API_KEY`, and inspect
+`astra_genai_catalog kind:image`. Shell variables alone do not verify a running
+MCP connection. Speech has separate `ASTRA_GENAI_SPEECH_*` variables; preserve
+the remote video route. Do not print or save credential values.
+Codex's STDIO server also needs the six GenAI variable names in
+`mcp_servers.social-flow.env_vars` (base, image and speech URL/key pairs).
+Forward names without writing their values; verify a fresh connection with that
+whitelist. A running server keeps its original environment until it reconnects.
+
+An unexpected remote `baseUrl`, empty catalog or `Model capability is disabled`
+requires checking the last successful receipt and restoring the local connection
+before suggesting a model change. Inspect uncertain calls before retrying. When
+needed, invoke this plugin's own MCP server with the correct inherited environment;
+do not bypass its tools, reservations or receipts. Confirm recovery with a requested
+image and its local receipt. See AGENTS.md's local GenAI connection directive.
+
 ## Owner decisions (2026-10-18)
 
 - Precedence: the later-dated directive wins, and a superseded sentence is deleted in place, not kept under a banner.
