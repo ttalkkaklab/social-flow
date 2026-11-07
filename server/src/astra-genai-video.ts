@@ -87,11 +87,9 @@ export function buildGenaiAudioBody(args: z.infer<typeof genaiAudioToVideoSchema
 }
 
 export const GENAI_MSR_FRAMES = { min: 25, max: 361, step: 8, frameRate: 24 } as const;
-export const GENAI_MSR_NO_TEXT = 'Speech is audio only. No subtitles, captions, on-screen text, labels, logos or watermarks.';
 
 export const genaiMsrSchema = z.object({
-  prompt: z.string().trim().min(1).transform(prompt => prompt.endsWith(GENAI_MSR_NO_TEXT) ? prompt : `${prompt}\n${GENAI_MSR_NO_TEXT}`)
-    .pipe(z.string().max(2000, 'MSR prompt including the subtitle-free instruction must fit 2000 characters; shorten the action without dropping dialogue')),
+  prompt: z.string().trim().min(1).max(2000),
   negativePrompt: z.string().trim().min(1).max(5000).optional(),
   guidanceScale: z.number().finite().min(1).max(10).optional(),
   nagScale: z.number().finite().min(0).max(100).optional(),

@@ -90,16 +90,17 @@ test('MSR validates slots, geometry and frame timing against its independent con
     assert.equal(genaiMsrSchema.safeParse({ ...args, ...extra }).success, false);
 });
 
-test('MSR suppresses text by default and only sends effective negatives to an advertised backend', async t => {
-  const { genaiMsrSchema, buildGenaiMsrBody, GENAI_MSR_NO_TEXT } = await import('../dist/astra-genai-video.js');
+test('MSR preserves positive prompts and only sends effective negatives to an advertised backend', async t => {
+  const { genaiMsrSchema, buildGenaiMsrBody } = await import('../dist/astra-genai-video.js');
   const dir = setup(t);
   const args = { prompt: 'The person says "Hello."', references: [{ imageUri: 'https://example.com/person.png' }], reserveUsd: 0, outputPath: dir, filename: 'negative.mp4' };
   const parsed = genaiMsrSchema.parse(args), body = buildGenaiMsrBody(parsed);
-  assert.equal(body.prompt, args.prompt + '\n' + GENAI_MSR_NO_TEXT);
+  assert.equal(body.prompt, args.prompt);
   assert.deepEqual(genaiMsrSchema.parse(parsed), parsed); // Planning and execution both parse.
   assert.equal(body.negative_prompt, undefined);
   assert.equal(body.guidance_scale, undefined); // Keep distilled CFG=1 unless explicitly changed.
-  assert.equal(genaiMsrSchema.safeParse({ ...args, prompt: 'x'.repeat(2000) }).success, false);
+  assert.equal(genaiMsrSchema.safeParse({ ...args, prompt: 'x'.repeat(2000) }).success, true);
+  assert.equal(genaiMsrSchema.safeParse({ ...args, prompt: 'x'.repeat(2001) }).success, false);
   const negative = { ...args, negativePrompt: 'subtitles, captions', guidanceScale: 2 };
   for (const extra of [{ guidanceScale: undefined }, { guidanceScale: 1 }, { guidanceScale: 11 }, { negativePrompt: ' ' }])
     assert.equal(genaiMsrSchema.safeParse({ ...negative, ...extra }).success, false);

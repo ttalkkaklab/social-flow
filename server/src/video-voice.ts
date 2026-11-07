@@ -185,20 +185,13 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
   const args = { ...input };
   const lines = (Array.isArray(context.shot.narration) ? context.shot.narration : []).map(object).filter(line => text(line.tts));
   const msr = tool === 'astra_genai_msr';
-  const finishArgs = () => {
-    if (msr && typeof args.prompt === 'string') {
-      const policy = (load('../../skills/_shared/scene-acting.js') as { VIDEO_TEXT_POLICY: string }).VIDEO_TEXT_POLICY;
-      if (!args.prompt.endsWith(policy)) args.prompt += '\n\n' + policy;
-    }
-    return args;
-  };
   // MSR renders authored dialogue and voiceover into its own soundtrack; a pinned sample, when the
   // gateway takes one, sets the timbre (user directive 2026-10-31). A cut without dialogue is fine.
   if (msr) {
     if (object(context.shot.visual).video && object(object(context.shot.visual).video).voice !== undefined)
       throw new Error('visual.video.voice is retired: MSR uses the speaker\'s voice sample when one is pinned');
   }
-  if (!lines.length) return { args: finishArgs() };
+  if (!lines.length) return { args };
   const doc = object(context.board.SB_DOC), raw = doc.characters;
   const characters: Record<string, unknown>[] = Array.isArray(raw) ? raw.map(object) : Object.entries(object(raw)).map(([id, value]) => ({ ...object(value), id }));
   const visual = object(context.shot.visual);
@@ -353,7 +346,7 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
   }
   if (strategy === 'supplied_audio') warnings.push('Use the final composed pinned-voice WAV. ASTRA re-encodes supplied audio; mouth motion and speaker identity remain unreviewed.');
   if (prompt.length && typeof args.prompt === 'string') args.prompt += (msr ? '\n\n' : '\n\nVoice continuity guidance:\n') + prompt.join('\n');
-  return { args: finishArgs(), voiceContinuity: { version: 1, strategy, speakers, warnings,
+  return { args, voiceContinuity: { version: 1, strategy, speakers, warnings,
     revision: hash({ lines, speakers, strategy, performance: context.shot.performance }),
     review: { voiceIdentity: 'not_reviewed', dialogue: 'not_reviewed', speakerAssignment: 'not_reviewed', lipSync: 'not_reviewed' } } };
 }
