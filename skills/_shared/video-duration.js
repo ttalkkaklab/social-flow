@@ -19,7 +19,8 @@ function minimumDuration(requiredSeconds, limits) {
   } else if (limits.frameRate !== undefined) {
     const fps = positive(limits.frameRate, 'frameRate');
     // Compute the first legal frame count, then compare in seconds to avoid rounding down.
-    numFrames = Math.max(limits.min, 1 + limits.step * Math.ceil((requiredSeconds * fps - 1) / limits.step));
+    const offset = limits.frameOffset ?? 1;
+    numFrames = Math.max(limits.min, offset + limits.step * Math.ceil((requiredSeconds * fps - offset) / limits.step));
     if (numFrames / fps < requiredSeconds) numFrames += limits.step;
     // Multiplication can cross a grid boundary at fractional fps. Compare playback
     // seconds directly so an exactly covering preceding grid point still wins.

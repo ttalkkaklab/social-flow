@@ -1,21 +1,22 @@
-import { setupProject, completeWorkflow } from './workflow-fixture.mjs';
+import { setupProject } from './workflow-fixture.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { spawn, execFileSync } from 'node:child_process';
-import { planVideo, executeVideo, routeLegacyVideo, routingContext } from '../dist/video-routing.js';
-import { VIDEO_ADAPTERS, videoCatalog } from '../dist/video-registry.js';
+import { spawn, spawnSync, execFileSync } from 'node:child_process';
+import { planVideo, executeVideo, routeLegacyVideo, routingContext, approveVideo, readShotVideoTiming } from '../dist/video-routing.js';
+import { VIDEO_ADAPTERS, videoCatalog, speechVideoCapabilities } from '../dist/video-registry.js';
 import { videoTransaction } from '../dist/video-state.js';
 import { recordVideoSubmission, recordVideoTokens } from '../dist/video-events.js';
 import { config } from '../dist/config.js';
+import { refreshGenaiMsrVoice } from '../dist/astra-genai-video.js';
 import { ROUTES } from '../dist/handlers.js';
 import { TOOLS } from '../dist/tools.js';
 const require = createRequire(import.meta.url);
 const settings = require('../../skills/_shared/model-settings.js');
-const selection = { engine:'veo', model:'veo-3.1-fast-generate-preview', resolution:'720p' };
+const selection = { engine:'seedance', model:'dreamina-seedance-2-0-fast-260128', resolution:'720p' };
 function fixture(t, video = selection, auth = {}) {
  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'sf-router-')));
  t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
@@ -23,11 +24,11 @@ function fixture(t, video = selection, auth = {}) {
  settings.saveSettings(root,{video,speech:{engine:'gemini',model:'gemini-2.5-flash-preview-tts'},image:{engine:'host',model:'host-managed',host:'codex'}},{expectedRevision:settings.readSettings(root).revision,videoType:{id:'drama'},request:'Fixture selection'});
  const episode = path.join(root,'data/c/episodes/e'); fs.mkdirSync(path.join(episode,'storyboard'),{recursive:true});
  settings.snapshotSettings(root,episode);
- completeWorkflow(episode);
+ approveVideo({episode,auto:true,request:'Fixture: approve every shot'});
  const board = {PRODUCTION:{videoAuthorization:{reference:'Explicit fixture spending instruction',maxUsd:10,maxConcurrent:3,maxAttempts:3,...auth}},SCENES:[{id:'s1',visual:{video:{...video}}},{id:'s2',visual:{video:{...video}}}]};
  const save = ()=>fs.writeFileSync(path.join(episode,'storyboard/scenes.js'),Object.entries(board).map(([k,v])=>'window.'+k+'='+JSON.stringify(v)+';').join('\n'));
  save();
- const old=config.geminiApiKey; config.geminiApiKey='fixture'; t.after(()=>{config.geminiApiKey=old;});
+ const old=config.arkApiKey; config.arkApiKey='fixture'; t.after(()=>{config.arkApiKey=old;});
  const plan = (requestId='a',args={},shotId='s1')=>planVideo({episode,shotId,requestId,operation:'text',args:{prompt:'A boat crosses a lake.',durationSeconds:8,...args}});
  const execute = (p,dispatch)=>executeVideo({episode,planId:p.id},dispatch);
  const state=()=>JSON.parse(fs.readFileSync(path.join(episode,'.work/video-routing/state.json')));
@@ -35,9 +36,11 @@ function fixture(t, video = selection, auth = {}) {
 }
 const result={content:[{type:'text',text:'fixture media'}]};
 test('managed voice guidance is sent once; changed dialogue or pinned voice invalidates the saved plan',async t=>{
- const f=fixture(t);
+ const f=fixture(t);const img=path.join(f.episode,'hero.png');fs.writeFileSync(img,'image');
  f.board.SB_DOC={characters:[{id:'hero',tts:{engine:'gemini',voiceId:'Kore',language:'ko',speed:1,voiceDirection:'Low dry Seoul voice.'}}]};
  f.board.SCENES[0].narration=[{id:'line-1',speaker:'hero',delivery:'on_screen',tts:'Hello'}];f.save();
+ assert.throws(()=>f.plan(),/voice_lane_required/);
+ f.plan=(requestId='a')=>planVideo({episode:f.episode,shotId:'s1',requestId,operation:'reference',args:{prompt:'Hero says hello.',generateAudio:true,referenceImagePaths:[img]}});
  const p=f.plan();let calls=0;
  await f.execute(p,async(tool,args)=>{calls++;assert.equal((args.prompt.match(/Voice continuity guidance/g)||[]).length,1);return result;});
  await f.execute(p,async()=>{calls++;return result;});assert.equal(calls,1);
@@ -45,18 +48,6 @@ test('managed voice guidance is sent once; changed dialogue or pinned voice inva
  await assert.rejects(f.execute(q,async()=>{calls++;return result;}),/stale/);assert.equal(calls,1);
  const r=f.plan('next');f.board.SB_DOC.characters[0].tts.voiceId='Orus';f.save();
  await assert.rejects(f.execute(r,async()=>result),/stale/);
-});
-test('managed Seedance reference plan pins automatically added audio and sends mapped arguments',async t=>{
- const f=fixture(t,{engine:'seedance',model:'dreamina-seedance-2-5-260628',resolution:'720p'});
- const old=config.arkApiKey;config.arkApiKey='fixture';t.after(()=>config.arkApiKey=old);
- const audio=path.join(f.episode,'hero.wav'),img=path.join(f.episode,'hero.png');fs.writeFileSync(audio,'voice');fs.writeFileSync(img,'image');
- f.board.SB_DOC={characters:[{id:'hero',tts:{engine:'gemini',voiceId:'Kore',language:'ko',speed:1},voiceReference:{path:audio,imagePaths:[img]}}]};
- f.board.SCENES[0].narration=[{id:'l1',speaker:'hero',delivery:'on_screen',tts:'Hello'}];f.save();
- const p=planVideo({episode:f.episode,shotId:'s1',requestId:'voice',operation:'reference',args:{prompt:'Hero says hello.',generateAudio:true,referenceImagePaths:[img]}});
- assert.ok(p.inputs[audio]);assert.equal(p.voiceContinuity.speakers[0].audioIndex,1);
- await f.execute(p,async(tool,args)=>{assert.deepEqual(args.referenceAudioPaths,[audio]);assert.match(args.prompt,/@Audio 1/);return result;});
- const q=planVideo({episode:f.episode,shotId:'s1',requestId:'changed',tool:p.tool,args:p.sourceArgs});
- fs.writeFileSync(audio,'different voice');await assert.rejects(f.execute(q,async()=>result),/stale/);
 });
 test('auto-added samples still obey 2.0 reference image requirements and audio-count limits',t=>{
  const f=fixture(t,{engine:'seedance',model:'dreamina-seedance-2-0-260128',resolution:'720p'});
@@ -68,23 +59,39 @@ test('auto-added samples still obey 2.0 reference image requirements and audio-c
  const extras=[1,2,3].map(n=>{const p=path.join(f.episode,`extra-${n}.wav`);fs.writeFileSync(p,'audio');return p;});
  assert.throws(()=>plan({referenceImagePaths:[img],referenceAudioPaths:extras}),/at most 3/);
 });
+test('planning recompiles saved action from current icons and reports explicit prompt overrides', t => {
+ const f=fixture(t);
+ f.board.SCENES[0].visual={video:{prompt:'Old camera wording.',promptSource:{action:'A boat crosses the lake.'}},camera:{movement:'dolly in',speed:'slow',target:'the boat'}};
+ f.board.SCENES[0].shot={...f.board.SCENES[0].shot,techniques:[{id:'camera.dolly-in'}]};
+ f.save();
+ const before=planVideo({episode:f.episode,shotId:'s1',requestId:'direction-a',operation:'text',args:{generateAudio:false}});
+ assert.match(before.args.prompt,/slowly pushes in toward the boat/);
+ f.board.SCENES[0].visual.camera={movement:'static'}; f.save();
+ const after=planVideo({episode:f.episode,shotId:'s1',requestId:'direction-b',operation:'text',args:{generateAudio:false}});
+ assert.match(after.args.prompt,/holds a static frame/);
+ assert.doesNotMatch(after.args.prompt,/Old camera|pushes in/);
+ assert.equal(after.directionBindings.find(b=>b.attribute==='move').via,'prompt');
+ assert.match(f.plan('manual').directionWarnings.join(),/Explicit args.prompt/);
+});
 test('snapshot wins over current defaults; explicit shot replaces episode override', t=>{
  const f=fixture(t); const current=settings.readSettings(f.root);
- settings.saveSettings(f.root,{video:{...selection,model:'veo-3.1-generate-preview'}},{expectedRevision:current.revision,request:'Change future defaults'});
+ settings.saveSettings(f.root,{video:{...selection,model:'dreamina-seedance-2-0-260128'}},{expectedRevision:current.revision,request:'Change future defaults'});
  assert.equal(f.plan().selection.model,selection.model);
- f.board.PRODUCTION.modelSettings={overrides:[{scope:'episode',request:'episode change',video:{...selection,model:'veo-3.1-generate-preview'}},{scope:'shot',shotId:'s1',request:'shot change',video:{...selection,model:'veo-3.1-lite-generate-preview'}}]};f.save();
- assert.equal(f.plan().source,'shot_override'); assert.equal(f.plan().selection.model,'veo-3.1-lite-generate-preview');
+ f.board.PRODUCTION.modelSettings={overrides:[{scope:'episode',request:'episode change',video:{...selection,model:'dreamina-seedance-2-0-260128'}},{scope:'shot',shotId:'s1',request:'shot change',video:{...selection,model:'dreamina-seedance-2-0-mini-260615'}}]};f.save();
+ assert.equal(f.plan().source,'shot_override'); assert.equal(f.plan().selection.model,'dreamina-seedance-2-0-mini-260615');
  assert.equal(f.plan('b',{},'s2').source,'episode_override');
 });
 test('plan validates selection, unsupported options, cross-field constraints and missing files before dispatch',t=>{
  const f=fixture(t);
- assert.throws(()=>f.plan('a',{model:'veo-3.1-generate-preview'}),/mismatch/);
+ assert.throws(()=>f.plan('a',{model:'dreamina-seedance-2-0-260128'}),/mismatch/);
  assert.throws(()=>f.plan('a',{resolution:'1080p'}),/mismatch/);
  assert.throws(()=>f.plan('a',{fakeOption:true}),/Unsupported/);
- assert.throws(()=>f.plan('a',{durationSeconds:5}),/Invalid/);
+ assert.throws(()=>f.plan('a',{durationSeconds:3}),/supports durations/);
  assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'a',operation:'audio',args:{prompt:'x'}}),/no adapter/);
  assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'a',operation:'image',args:{prompt:'x',sourceImagePath:'missing.png'}}),/ENOENT/);
  assert.throws(()=>f.plan('a',{outputPath:os.tmpdir()}),/inside/);
+ assert.throws(()=>f.plan('ko',{prompt:'A boat crosses a lake. 배가 호수를 건넌다.'}),/video_prompt_language/);
+ assert.ok(f.plan('ko-quote',{prompt:'The rower says "건너자" and pushes off.'}).id);
 });
 test('completed request is reused and altered request ID payload is rejected',async t=>{
  const f=fixture(t); let calls=0; const dispatch=async()=>{calls++;recordVideoSubmission('op-1');return result;}; const p=f.plan();
@@ -92,8 +99,32 @@ test('completed request is reused and altered request ID payload is rejected',as
  assert.equal(f.state().jobs.a.providerId,'op-1'); assert.equal(f.state().jobs.a.status,'completed');
  await assert.rejects(f.execute(f.plan('a',{prompt:'Different'}),dispatch),/request_id_conflict/);
 });
+test('a shot video runs only after the user approves its plan or every shot; the plan sends the shot prompt',async t=>{
+ const f=fixture(t); let calls=0; const dispatch=async()=>{calls++;return result;};
+ approveVideo({episode:f.episode,auto:false,request:'Ask me before each shot'});
+ f.board.SCENES[0].visual.video.prompt='A heron lands on the dock.';f.save();
+ const p=planVideo({episode:f.episode,shotId:'s1',requestId:'a',operation:'text',args:{durationSeconds:8}});
+ assert.equal(p.args.prompt,'A heron lands on the dock.');
+ await assert.rejects(f.execute(p,dispatch),/video_approval_required/);
+ approveVideo({episode:f.episode,planIds:[p.id],request:'Shot 1 looks right'});
+ const view=()=>JSON.parse(fs.readFileSync(path.join(f.episode,'storyboard/video-approvals.js'),'utf8').replace(/^window\.VIDEO_APPROVALS = |;\n$/g,''));
+ assert.deepEqual(view().shots.s1,{planId:p.id,at:JSON.parse(fs.readFileSync(path.join(f.episode,'.work/video-routing/approvals.json'))).plans[p.id].at,shown:{prompt:'A heron lands on the dock.',lines:[]}});
+ await f.execute(p,dispatch); assert.equal(calls,1);
+ // A plan with its own prompt is marked so; a plan whose shot changed before the yes takes none.
+ approveVideo({episode:f.episode,planIds:[f.plan('c').id],request:'That prompt is fine'});
+ assert.equal(view().shots.s1.shown.callPrompt,true);
+ const stale=planVideo({episode:f.episode,shotId:'s1',requestId:'d',operation:'text',args:{durationSeconds:8}});
+ f.board.SCENES[0].visual.video.prompt='A heron takes off.';f.save();
+ assert.throws(()=>approveVideo({episode:f.episode,planIds:[stale.id],request:'Yes'}),/video_plan_stale/);
+ const spoken=f.plan('e');f.board.SCENES[0].narration=[{speaker:'hero',delivery:'on_screen',tts:'Over here!'}];f.save();
+ assert.throws(()=>approveVideo({episode:f.episode,planIds:[spoken.id],request:'Yes'}),/video_plan_stale/);delete f.board.SCENES[0].narration;f.save();
+ await assert.rejects(f.execute(f.plan('b'),dispatch),/video_approval_required/);
+ approveVideo({episode:f.episode,auto:true,request:'Make every shot without asking'});
+ assert.equal(view().auto,JSON.parse(fs.readFileSync(path.join(f.episode,'.work/video-routing/approvals.json'))).auto.at);
+ await f.execute(f.plan('b'),dispatch); assert.equal(calls,2);
+});
 test('budget and attempts gate before dispatch and include prior successful reservations',async t=>{
- const f=fixture(t,selection,{maxUsd:1,maxAttempts:2});let calls=0;
+ const f=fixture(t,selection,{maxUsd:1.5,maxAttempts:2});let calls=0;
  await f.execute(f.plan(),async()=>{calls++;return result;});
  await assert.rejects(f.execute(f.plan('b'),async()=>{calls++;return result;}),/budget/);assert.equal(calls,1);
  f.board.PRODUCTION.videoAuthorization.maxUsd=10;f.board.PRODUCTION.videoAuthorization.maxAttempts=1;f.save();
@@ -112,11 +143,37 @@ test('ambiguous failure retains budget and ID across process-like reentry',async
  assert.equal(f.state().jobs.a.status,'submission_unknown');assert.equal(f.state().jobs.a.providerId,'accepted-1');
  await assert.rejects(f.execute(p,async()=>{calls++;return result;}),/pending/);assert.equal(calls,1);
 });
+test('a terminal adapter failure closes as failed and frees the slot; reconcile settles an unknown request',async t=>{
+ const { videoStatus } = await import('../dist/video-routing.js');
+ const { GenaiRequestError } = await import('../dist/astra-genai-client.js');
+ const f=fixture(t,selection,{maxConcurrent:1});
+ const rejected={isError:true,terminal:true,content:[{type:'text',text:'HTTP 400 InvalidParameter'}]};
+ assert.equal((await f.execute(f.plan(),async()=>rejected)).isError,true);
+ assert.equal(f.state().jobs.a.status,'failed');assert.equal(f.state().jobs.a.settledUsd,0);
+ await assert.rejects(f.execute(f.plan(),async()=>result),/video_request_failed/);
+ await assert.rejects(f.execute(f.plan('b'),async()=>{throw new GenaiRequestError('ASTRA GenAI HTTP 422',true,422);}),/422/);
+ assert.equal(f.state().jobs.b.status,'failed');
+ await assert.rejects(f.execute(f.plan('c'),async()=>{recordVideoSubmission('task-9');throw new Error('connection lost');}),/connection/);
+ assert.equal(f.state().jobs.c.status,'submission_unknown');
+ await assert.rejects(f.execute(f.plan('d',{},'s2'),async()=>result),/concurrency/);
+ await assert.rejects(videoStatus({episode:f.episode,requestId:'c',action:'reconcile'}),/billing_evidence/);
+ const settled=await videoStatus({episode:f.episode,requestId:'c',action:'reconcile',evidence:'ModelArk task-9 failed, not billed',spentUsd:0});
+ assert.equal(settled.status,'failed');assert.equal(settled.settledUsd,0);
+ assert.deepEqual((await f.execute(f.plan('d',{},'s2'),async()=>result)).content,result.content);
+});
+test('a lock left by a dead process is recovered; a reconciled opening spend replaces unpriced history',async t=>{
+ const f=fixture(t,selection,{openingSpendUsd:1});
+ fs.writeFileSync(path.join(f.episode,'.work/events.jsonl'),JSON.stringify({tool:'astra_genai_text2video',key:'video.astra-genai',quantity:5})+'\n');
+ const lock=path.join(f.episode,'.work/video-routing/state.lock');fs.mkdirSync(path.dirname(lock),{recursive:true});
+ const dead=spawnSync(process.execPath,['-e','']).pid;fs.writeFileSync(lock,`${dead}@${os.hostname()}`);
+ await f.execute(f.plan(),async()=>result);
+ assert.equal(f.state().openingSpendUsd,1);assert.equal(f.state().jobs.a.status,'completed');assert.equal(fs.existsSync(lock),false);
+});
 test('disabled tool, missing key, changed input and changed authorization fail before execution',async t=>{
  const f=fixture(t);const p=f.plan();let calls=0;const dispatch=async()=>{calls++;return result;};
- process.env.SOCIAL_FLOW_TOOL_VEO_TEXT2VIDEO='off';
- try { await assert.rejects(f.execute(p,dispatch),/disabled/); } finally {delete process.env.SOCIAL_FLOW_TOOL_VEO_TEXT2VIDEO;}
- config.geminiApiKey='';await assert.rejects(f.execute(p,dispatch),/unconfigured/);config.geminiApiKey='fixture';
+ process.env.SOCIAL_FLOW_TOOL_SEEDANCE_TEXT2VIDEO='off';
+ try { await assert.rejects(f.execute(p,dispatch),/disabled/); } finally {delete process.env.SOCIAL_FLOW_TOOL_SEEDANCE_TEXT2VIDEO;}
+ config.arkApiKey='';await assert.rejects(f.execute(p,dispatch),/unconfigured/);config.arkApiKey='fixture';
  f.board.PRODUCTION.videoAuthorization.maxUsd=9;f.save();await assert.rejects(f.execute(p,dispatch),/stale/);
  const image=path.join(f.episode,'image.png');fs.writeFileSync(image,'original');
  const q=planVideo({episode:f.episode,shotId:'s1',requestId:'i',operation:'image',args:{prompt:'x',sourceImagePath:image}});
@@ -124,27 +181,27 @@ test('disabled tool, missing key, changed input and changed authorization fail b
 });
 test('configured legacy route requires context and explicit mismatch cannot bypass it',async t=>{
  const f=fixture(t); let calls=0;const dispatch=async()=>{calls++;return result;};
- await assert.rejects(routeLegacyVideo('veo_text2video',{prompt:'x',outputPath:f.episode},dispatch),/context_required/);
- await assert.rejects(routeLegacyVideo('seedance_text2video',{prompt:'x',videoContext:{episode:f.episode,shotId:'s1',requestId:'a'}},dispatch),/mismatch/);
- await routeLegacyVideo('veo_text2video',{prompt:'x',videoContext:{episode:f.episode,shotId:'s1',requestId:'a'}},dispatch);assert.equal(calls,1);
+ await assert.rejects(routeLegacyVideo('seedance_text2video',{prompt:'x',outputPath:f.episode},dispatch),/context_required/);
+ await assert.rejects(routeLegacyVideo('astra_genai_text2video',{prompt:'x',videoContext:{episode:f.episode,shotId:'s1',requestId:'a'}},dispatch),/mismatch/);
+ await routeLegacyVideo('seedance_text2video',{prompt:'x',videoContext:{episode:f.episode,shotId:'s1',requestId:'a'}},dispatch);assert.equal(calls,1);
 });
 test('channel assets under data/<channel>/assets/ need no context but follow the saved video model',async t=>{
  const f=fixture(t); let seen=null; const dispatch=async(tool,args)=>{seen={tool,args};return result;};
  const intro=path.join(f.root,'data/c/assets/intro'); fs.mkdirSync(intro,{recursive:true});
- await routeLegacyVideo('veo_text2video',{prompt:'x',outputPath:intro},dispatch);
- assert.equal(seen.tool,'veo_text2video'); assert.equal(seen.args.model,selection.model); assert.equal(seen.args.resolution,selection.resolution);
+ await routeLegacyVideo('seedance_text2video',{prompt:'x',outputPath:intro},dispatch);
+ assert.equal(seen.tool,'seedance_text2video'); assert.equal(seen.args.model,selection.model); assert.equal(seen.args.resolution,selection.resolution);
  assert.equal(seen.args.outputPath,intro); assert.equal(seen.args.videoContext,undefined);
- await assert.rejects(routeLegacyVideo('seedance_text2video',{prompt:'x',outputPath:intro},dispatch),/model_selection_mismatch/);
- await assert.rejects(routeLegacyVideo('veo_text2video',{prompt:'x',model:'veo-3.1-generate-preview',outputPath:intro},dispatch),/model_selection_mismatch/);
+ await assert.rejects(routeLegacyVideo('astra_genai_text2video',{prompt:'x',outputPath:intro},dispatch),/model_selection_mismatch/);
+ await assert.rejects(routeLegacyVideo('seedance_text2video',{prompt:'x',model:'dreamina-seedance-2-0-260128',outputPath:intro},dispatch),/model_selection_mismatch/);
  const log=fs.readFileSync(path.join(f.root,'data/c/assets/.work/video-requests.jsonl'),'utf8').trim().split('\n').map(JSON.parse);
- assert.equal(log.length,1); assert.equal(log[0].kind,'channel_asset'); assert.equal(log[0].tool,'veo_text2video'); assert.equal(log[0].selection.engine,'veo'); assert.equal(log[0].ok,true);
+ assert.equal(log.length,1); assert.equal(log[0].kind,'channel_asset'); assert.equal(log[0].tool,'seedance_text2video'); assert.equal(log[0].selection.engine,'seedance'); assert.equal(log[0].ok,true);
  // Episode outputs and every other workspace path still need videoContext.
- await assert.rejects(routeLegacyVideo('veo_text2video',{prompt:'x',outputPath:path.join(f.episode,'.work')},dispatch),/context_required/);
- await assert.rejects(routeLegacyVideo('veo_text2video',{prompt:'x',outputPath:path.join(f.root,'data/c/other')},dispatch),/context_required/);
+ await assert.rejects(routeLegacyVideo('seedance_text2video',{prompt:'x',outputPath:path.join(f.episode,'.work')},dispatch),/context_required/);
+ await assert.rejects(routeLegacyVideo('seedance_text2video',{prompt:'x',outputPath:path.join(f.root,'data/c/other')},dispatch),/context_required/);
 });
 test('public MCP legacy handler validates context before reaching a real provider',async t=>{
  const f=fixture(t);
- await assert.rejects(ROUTES.seedance_text2video({prompt:'x',videoContext:{episode:f.episode,shotId:'s1',requestId:'a'}}),/mismatch/);
+ await assert.rejects(ROUTES.astra_genai_text2video({prompt:'x',videoContext:{episode:f.episode,shotId:'s1',requestId:'a'}}),/mismatch/);
  for(const name of Object.keys(VIDEO_ADAPTERS)) assert.ok(TOOLS.find(t=>t.name===name)?.inputSchema.properties.videoContext,name);
  for(const name of ['video_catalog','video_plan','video_execute']) assert.ok(ROUTES[name]);
  assert.ok(videoCatalog().unimplemented.includes('ltx-official-api'));
@@ -170,9 +227,9 @@ test('unknown ledger values fail closed without resetting spend',t=>{
  assert.throws(()=>videoTransaction(f.episode,()=>{}),/Invalid video job/);
 });
 test('pre-existing per-cut choice survives the episode snapshot',t=>{
- const f=fixture(t);f.board.SCENES[0].visual.video.model='veo-3.1-generate-preview';f.save();
- assert.equal(f.plan().selection.model,'veo-3.1-generate-preview');assert.equal(f.plan().source,'board_shot');
- assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'m',tool:'veo_text2video',operation:'image',args:{prompt:'x'}}),/disagree/);
+ const f=fixture(t);f.board.SCENES[0].visual.video.model='dreamina-seedance-2-0-260128';f.save();
+ assert.equal(f.plan().selection.model,'dreamina-seedance-2-0-260128');assert.equal(f.plan().source,'board_shot');
+ assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'m',tool:'seedance_text2video',operation:'image',args:{prompt:'x'}}),/disagree/);
 });
 test('provider tokens settle once; status exposes receipt and legacy events are not duplicated',async t=>{
  const f=fixture(t,{engine:'seedance',model:'dreamina-seedance-2-0-260128',resolution:'720p'});
@@ -185,7 +242,7 @@ test('provider tokens settle once; status exposes receipt and legacy events are 
  assert.equal(fs.readFileSync(path.join(f.episode,'.work/events.jsonl'),'utf8').trim().split('\n').length,1);
 });
 test('historical events count toward the first reservation',async t=>{
- const f=fixture(t,selection,{maxUsd:1});
+ const f=fixture(t,selection,{maxUsd:1.5});
  fs.writeFileSync(path.join(f.episode,'.work/events.jsonl'),JSON.stringify({tool:'veo_text2video',key:'veo.fast.720p',quantity:8})+'\n');
  await assert.rejects(f.execute(f.plan(),async()=>{throw new Error('must not dispatch');}),/budget/);
 });
@@ -193,13 +250,19 @@ test('managed speech rejects forged adapter capability claims before media gener
  const {manageSpeech}=await import('../dist/speech.js');const f=fixture(t);
  f.board.SCENES[0].narration=[{id:'line-1',speaker:'hero',delivery:'on_screen',tts:'Hello',sub:'Hello'}];
  f.board.SB_DOC={characters:[{id:'hero',name:'Hero',tts:{engine:'gemini',voiceId:'Kore',language:'ko',speed:1}}]};f.save();
- assert.throws(()=>manageSpeech({path:path.join(f.episode,'storyboard'),action:'plan_video',shotId:'s1',capabilities:{provider:'veo',model:selection.model,audioConditioning:true,lipSync:true,postLipSync:false,evidence:'forged'}}),/disagree/);
+ assert.throws(()=>manageSpeech({path:path.join(f.episode,'storyboard'),action:'plan_video',shotId:'s1',capabilities:{provider:'seedance',model:selection.model,audioConditioning:true,lipSync:true,postLipSync:false,evidence:'forged'}}),/disagree/);
 });
-test('frame-based Seedance plans remain valid after schema normalization',async t=>{
- const f=fixture(t,{engine:'seedance',model:'seedance-1-0-pro-fast-251015',resolution:'720p'});
- const old=config.arkApiKey;config.arkApiKey='fixture';t.after(()=>config.arkApiKey=old);
- const p=planVideo({episode:f.episode,shotId:'s1',requestId:'frames',operation:'text',args:{prompt:'A boat',frames:121,generateAudio:false}});
- assert.equal(p.args.durationSeconds,undefined);await f.execute(p,async()=>result);
+test('managed speech plans an MSR shot as native speech; a named tool keeps its own route',async t=>{
+ const {manageSpeech}=await import('../dist/speech.js');
+ const f=fixture(t,{engine:'astra-genai',model:'ltx-2.5-22b-distilled',resolution:'1792x1024',operation:'reference'});
+ f.board.SCENES[0].narration=[{id:'line-1',speaker:'hero',delivery:'on_screen',tts:'Hello',sub:'Hello'}];
+ f.board.SB_DOC={characters:[{id:'hero',name:'Hero',tts:{engine:'gemini',voiceId:'Kore',language:'ko',speed:1}}]};f.save();
+ const plan=tool=>manageSpeech({path:path.join(f.episode,'storyboard'),action:'plan_video',shotId:'s1',tool}).plan;
+ assert.equal(plan().mode,'native');
+ assert.throws(()=>plan('astra_genai_audio2video'),/cannot synchronize/);
+ assert.throws(()=>plan('seedance_text2video'),/model_selection_mismatch/);
+ const allFalse={provider:'astra-genai',model:'ltx-2.5-22b-distilled',audioConditioning:false,lipSync:false,postLipSync:false,evidence:'old caller'};
+ assert.throws(()=>manageSpeech({path:path.join(f.episode,'storyboard'),action:'plan_video',shotId:'s1',capabilities:allFalse}),/disagree/);
 });
 test('historical tally cannot hide costs absent from the event stream',async t=>{
  const f=fixture(t);fs.writeFileSync(path.join(f.episode,'.work/events.jsonl'),'');
@@ -209,17 +272,11 @@ test('historical tally cannot hide costs absent from the event stream',async t=>
 test('host and local selection preserve narrator voiceover without invented lip-sync support',async t=>{
  const {speechVideoCapabilities}=await import('../dist/video-registry.js');
  const {speechVideoPlan}=await import('../dist/speech.js');
- for(const engine of ['host','mlx','omni']) {
+ for(const engine of ['host','mlx']) {
   const caps=speechVideoCapabilities(engine,'selected');
   assert.equal(speechVideoPlan([{id:'n',speaker:'narrator',delivery:'voiceover',tts:'Hello'}],caps).mode,'voiceover');
   assert.throws(()=>speechVideoPlan([{id:'n',speaker:'hero',delivery:'on_screen',tts:'Hello'}],caps),/cannot synchronize/);
  }
-});
-test('public planning preserves the existing ASTRA board provider marker',async t=>{
- const f=fixture(t,{engine:'astra',resolution:'1024x1920'});
- f.board.PRODUCTION.videoProvider='astra';f.board.PRODUCTION.videoModel={model:'astra',resolution:'1024x1920'};f.save();
- const response=await ROUTES.video_plan({episode:f.episode,shotId:'s1',requestId:'legacy',operation:'text',args:{prompt:'A boat crosses a lake.'}});
- const plan=JSON.parse(response.content[0].text);assert.equal(plan.selection.engine,'astra');assert.equal(plan.selection.model,undefined);
 });
 test('ASTRA retake inherits verified source dimensions without unsupported payload fields',async t=>{
  const f=fixture(t,{engine:'astra',resolution:'64x64'});const file=path.join(f.episode,'source.mp4');
@@ -230,18 +287,6 @@ test('ASTRA retake inherits verified source dimensions without unsupported paylo
  await f.execute(p,async(tool,args)=>{assert.equal(tool,'astra_video_retake');assert.equal(args.width,undefined);return result;});
  f.board.SCENES[0].visual.video.resolution='128x64';f.save();
  assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'wrong',operation:'retake',args:{prompt:'A boat',sourceVideoPath:file,startTime:0,endTime:1}}),/inherits source/);
-});
-test('production and execution share per-cut and scoped selection decisions',t=>{
- const mode=require('../../skills/storyboard/references/production-mode.js');
- const f=fixture(t,{engine:'seedance',model:'dreamina-seedance-2-0-260128',resolution:'720p'});
- f.board.PRODUCTION.modelSettings={models:{video:{engine:'seedance',model:'dreamina-seedance-2-0-260128',resolution:'720p'}},overrides:[]};
- f.board.SCENES[0].visual.video={...selection,generateAudio:true};f.save();
- const selected=()=>mode.resolveVideoChoice(f.board.PRODUCTION,f.board.SCENES[0],f.board.PRODUCTION.modelSettings.models.video);
- assert.deepEqual(selected().selection,routingContext(f.episode,'s1').selection);assert.equal(selected().selection.engine,'veo');
- f.board.PRODUCTION.modelSettings.overrides=[{scope:'episode',request:'Use ASTRA',video:{engine:'astra',resolution:'1024x1920'}},{scope:'shot',shotId:'s1',request:'Use Veo',video:selection}];f.save();
- assert.deepEqual(selected().selection,routingContext(f.episode,'s1').selection);assert.equal(selected().source,'shot_override');
- f.board.PRODUCTION.mode='full_video';
- const findings=mode.check(f.board).join('\n');assert.doesNotMatch(findings,/selected deployed video engine|generateAudio:false/);
 });
 test('managed ASTRA audio disables internal generations and never completes a hidden ambiguous child',async t=>{
  const f=fixture(t,{engine:'astra',resolution:'1024x1920'});
@@ -266,8 +311,8 @@ test('unrelated billable tools retain normal accounting with stray videoContext'
  for(const tool of ['gpt_image_text2img','tts_generate','music_generate']) {
   assert.equal(isBillableTool(tool),true);assert.equal(isManagedVideoCall(tool,{videoContext:{episode:'/tmp/e'}}),false);
  }
- assert.equal(isManagedVideoCall('veo_text2video',{videoContext:{episode:'/tmp/e'}}),true);
- assert.equal(isManagedVideoCall('veo_text2video',{prompt:'Standalone'}),false);
+ assert.equal(isManagedVideoCall('seedance_text2video',{videoContext:{episode:'/tmp/e'}}),true);
+ assert.equal(isManagedVideoCall('seedance_text2video',{prompt:'Standalone'}),false);
 });
 
 test('GenAI selection binds its model and reservation; managed recovery completes without another submission', async t => {
@@ -280,7 +325,12 @@ test('GenAI selection binds its model and reservation; managed recovery complete
  const make=extra=>planVideo({episode:f.episode,shotId:'s1',requestId:'genai',operation:'text',args:{...args,...extra}});
  assert.throws(()=>make({reserveUsd:undefined}));
  const p=make();assert.equal(p.tool,'astra_genai_text2video');assert.equal(p.quote.reserveUsd,0.25);
- assert.equal(p.args.model,'ltx-2.5-22b-distilled');assert.equal(p.args.resolution,'1280x704');
+ assert.equal(p.args.model,'ltx-2.5-22b-distilled');assert.equal(p.args.resolution,'1280x720');
+ // The saved MSR size reaches v2 as the gateway size closest in aspect ratio; MSR keeps its own dimensions.
+ for (const [saved,v2] of [['1792x1024','1280x720'],['1024x1792','720x1280'],['1080x720','1080x720']]) {
+  const g=fixture(t,{engine:'astra-genai',model:'ltx-2.5-22b-dev',resolution:saved});
+  assert.equal(planVideo({episode:g.episode,shotId:'s1',requestId:'v2',operation:'text',args}).args.resolution,v2);
+ }
  // Audio-to-video exists on GenAI but has no duration; its length comes from the audio.
  assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'speech',operation:'audio',args}),/Unsupported astra_genai_audio2video argument: duration/);
  let calls=0;
@@ -294,35 +344,90 @@ test('GenAI selection binds its model and reservation; managed recovery complete
  await f.execute(p,async()=>assert.fail('must reuse recovered result'));assert.equal(calls,1);
 });
 
-test('managed MSR plans select reference operation and bind dimensions and local references', async t => {
-  const f = fixture(t, { engine: 'astra-genai', model: 'ltx-2.5-22b-distilled', resolution: '1280x704' });
+test('a saved reference operation plans MSR with the speaker sample, dimensions and local references', async t => {
+  const f = fixture(t, { engine: 'astra-genai', model: 'ltx-2.5-22b-distilled', resolution: '1792x1024', operation: 'reference' });
   const ref = path.join(f.episode, 'person.png'); fs.writeFileSync(ref, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=', 'base64'));
+  const voice = path.join(f.episode, 'hero.wav'); fs.writeFileSync(voice, 'voice');
+  f.board.SB_DOC = { characters: [{ id: 'hero', tts: { engine: 'gemini', voiceId: 'Kore', language: 'ko', speed: 1 }, voiceReference: { path: voice, imagePaths: [ref] } }] };
+  f.board.SCENES[0].narration = [{ id: 'l1', speaker: 'hero', delivery: 'on_screen', tts: '안녕하세요' }]; f.save();
+  const key = config.astraGenaiApiKey, fetch = globalThis.fetch; config.astraGenaiApiKey = 'fixture';
+  t.after(() => { config.astraGenaiApiKey = key; globalThis.fetch = fetch; });
+  globalThis.fetch = async () => Response.json({ msr: true, voice_references: true });
+  await refreshGenaiMsrVoice(true);
   fs.writeFileSync(path.join(f.episode, 'invalid.png'), 'not an image');
-  assert.throws(() => planVideo({ episode: f.episode, shotId: 's1', requestId: 'invalid', operation: 'reference', args: { prompt: 'Walk.', references: [{ imagePath: 'invalid.png' }], reserveUsd: 0.25 } }), /image_invalid/);
+  assert.throws(() => planVideo({ episode: f.episode, shotId: 's1', requestId: 'invalid', args: { prompt: 'Walk.', references: [{ imagePath: 'person.png' }, { imagePath: 'invalid.png', background: true }], reserveUsd: 0.25 } }), /image_invalid/);
   assert.equal(fs.existsSync(path.join(f.episode, '.work/video-routing/state.json')), false);
-  const p = planVideo({ episode: f.episode, shotId: 's1', requestId: 'msr', operation: 'reference', args: {
-    prompt: 'Person in image 1 walks.', references: [{ imagePath: 'person.png' }], duration: 5, reserveUsd: 0.25,
+  const p = planVideo({ episode: f.episode, shotId: 's1', requestId: 'msr', args: {
+    prompt: 'Person in image 1 says hello.', references: [{ imagePath: 'person.png' }], duration: 5, reserveUsd: 0.25,
   } });
   assert.equal(p.tool, 'astra_genai_msr'); assert.equal(p.args.model, undefined); assert.equal(p.args.resolution, undefined);
-  assert.equal(p.args.width, 1280); assert.equal(p.args.height, 704); assert.equal(p.args.references[0].imagePath, ref);
-  assert.equal(Object.keys(p.inputs).length, 1); assert.equal(p.quote.reserveUsd, 0.25);
+  assert.equal(p.args.width, 1792); assert.equal(p.args.height, 1024); assert.equal(p.args.references[0].imagePath, ref);
+  assert.equal(p.args.references[0].audioPath, voice); assert.equal(p.quote.reserveUsd, 0.25);
   fs.appendFileSync(ref, 'changed');
   await assert.rejects(f.execute(p, async () => assert.fail('stale reference must not generate')), /stale/);
 });
 
-test('managed storyboard images reach dispatch and cannot change after planning or bypass review',async t=>{
+test('native gateway video settings select the Desktop adapter and preserve audio loss policy',t=>{
+ const f=fixture(t,{engine:'astra-genai-desktop',model:'ltx-2.5-fast',resolution:'270p'});
+ const audio=path.join(f.episode,'line.wav');fs.writeFileSync(audio,'fixture');
+ const p=planVideo({episode:f.episode,shotId:'s1',requestId:'desktop',operation:'audio',args:{prompt:'A speaker',audioPath:audio,reserveUsd:0}});
+ assert.equal(p.tool,'astra_genai_desktop_audio2video');assert.equal(p.args.allowAudioTruncation,false);assert.equal(p.args.model,'ltx-2.5-fast');assert.equal(p.args.resolution,'270p');assert.ok(p.inputs[audio]);
+ assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'wrong',operation:'image',args:{prompt:'ball',imagePath:audio,duration:2,loras:[{ref:'x'}],reserveUsd:0}}));
+});
+test('a saved engine that cannot keep a voice is refused by name, not as a missing adapter',t=>{
  const f=fixture(t);
- const first=path.join(f.episode,'workflow/image_storyboard.png'),last=path.join(f.episode,'workflow/image_storyboard-s2.png');
- f.board.SCENES[0].visual={frames:{mode:'first_last',start:first,end:last},references:[]};f.save();
- const p=planVideo({episode:f.episode,shotId:'s1',requestId:'authored',operation:'image',args:{prompt:'Move',durationSeconds:8}});
- assert.equal(p.imageBindings.length,2);let calls=0;
- await f.execute(p,async(tool,args)=>{calls++;assert.equal(args.sourceImagePath,first);assert.equal(args.lastImagePath,last);return result;});
- assert.equal(calls,1);
- const q=planVideo({episode:f.episode,shotId:'s1',requestId:'stale',operation:'image',args:{prompt:'Move',durationSeconds:8}});
- f.board.SCENES[0].visual.frames.end=first;f.save();await assert.rejects(f.execute(q,async()=>assert.fail()),/stale/);
- const unreviewed=path.join(f.episode,'unreviewed.png');fs.copyFileSync(last,unreviewed);
- f.board.SCENES[0].visual.frames.end=unreviewed;f.save();
- assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'unreviewed',operation:'image',args:{prompt:'Move'}}),/not_reviewed/);
- delete f.board.SCENES[0].visual.references;f.save();
- assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'no-refs',operation:'image',args:{prompt:'Move'}}),/not_reviewed/);
+ for (const video of [{engine:'veo',model:'veo-3.1-fast-generate-preview',resolution:'720p'},{engine:'seedance',model:'seedance-1-5-pro-251215',resolution:'720p'}]) {
+  f.board.PRODUCTION.modelSettings={overrides:[{scope:'shot',shotId:'s1',request:'Old choice',video}]};f.save();
+  assert.throws(()=>f.plan(),/video_engine_unsupported/);
+ }
+ assert.throws(()=>speechVideoCapabilities('veo','veo-3.1-fast-generate-preview'),/video_engine_unsupported/);
+});
+
+
+test('storyboard timing follows snapshot, scoped overrides, source trim and outgoing handles before media', async t => {
+  const f = fixture(t, { engine: 'astra-genai', model: 'ltx-2.5-22b-distilled', resolution: '1792x1024', operation: 'reference' });
+  Object.assign(f.board.SCENES[0], { duration: 14, edit: { in: .5 }, shot: { render: { mode: 'generated_video' } } });
+  f.board.SCENES[1].transition = 'dissolve';
+  f.save();
+  const fit = readShotVideoTiming(f.episode, 's1');
+  assert.equal(fit.status, 'fits');
+  assert.equal(fit.maxSeconds, 361 / 24);
+  assert.ok(Math.abs(fit.requiredSeconds - 14.9) < 1e-9);
+  assert.equal(fit.request.numFrames, 361);
+  const { readStoryboard, storyboardReadSchema } = await import('../dist/storyboard.js');
+  assert.equal(readStoryboard(storyboardReadSchema.parse({ path: path.join(f.episode, 'storyboard') })).videoTiming[0].status, 'fits');
+  f.board.SCENES[0].duration = 21; f.save();
+  assert.equal(readShotVideoTiming(f.episode, 's1').status, 'split_required');
+  assert.throws(() => planVideo({ episode: f.episode, shotId: 's1', requestId: 'over', args: {} }), /video_duration_exceeded/);
+  assert.equal(fs.existsSync(path.join(f.episode, '.work/video-routing/plans')), false);
+  f.board.PRODUCTION.modelSettings = { overrides: [{ scope: 'shot', shotId: 's1', request: 'Fixture route change',
+    video: { engine: 'seedance', model: 'dreamina-seedance-2-0-260128', resolution: '720p', operation: 'reference' } }] };
+  // Use the registered 30-second model, not a family-wide limit.
+  const { SEEDANCE_MODEL_SPECS } = await import('../dist/seedance-client.js');
+  f.board.PRODUCTION.modelSettings.overrides[0].video.model = Object.entries(SEEDANCE_MODEL_SPECS).find(([, spec]) => spec.duration[1] === 30)[0];
+  delete f.board.SCENES[0].visual.video;
+  f.save();
+  const changed = readShotVideoTiming(f.episode, 's1');
+  assert.equal(changed.source, 'shot_override');
+  assert.equal(changed.maxSeconds, 30);
+  assert.equal(changed.status, 'fits');
+});
+
+test('MSR plans cover the whole shot, reject short exact requests and recheck changed timing', async t => {
+  const f = fixture(t, { engine: 'astra-genai', model: 'ltx-2.5-22b-distilled', resolution: '1792x1024', operation: 'reference' });
+  const ref = path.join(f.episode, 'person.png');
+  fs.writeFileSync(ref, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=', 'base64'));
+  f.board.SCENES[0].duration = 5.1; f.save();
+  const args = { prompt: 'A person listens.', references: [{ imagePath: ref }], reserveUsd: .25 };
+  const plan = extra => planVideo({ episode: f.episode, shotId: 's1', requestId: 'timed', args: { ...args, ...extra } });
+  const p = plan({});
+  assert.equal(p.args.numFrames, 129);
+  assert.equal(p.args.duration, undefined);
+  assert.equal(p.durationPlan.status, 'fits');
+  assert.throws(() => plan({ duration: 5.1 }), /video_duration_short/); // nearest-frame legacy duration rounds down
+  assert.throws(() => plan({ numFrames: 121 }), /video_duration_short/);
+  assert.throws(() => plan({ requiredSeconds: 5, duration: 6 }), /mutually exclusive/);
+  assert.equal(plan({ requiredSeconds: 1 }).args.numFrames, 129); // cannot understate board coverage
+  f.board.SCENES[0].duration = 21; f.save();
+  await assert.rejects(f.execute(p, async () => assert.fail('Over-limit revision must not submit')), /video_duration_exceeded|stale/);
 });

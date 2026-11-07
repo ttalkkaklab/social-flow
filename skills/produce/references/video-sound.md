@@ -34,18 +34,22 @@ command before assembly. Do not feed a previously augmented prompt back into pre
 
 | Mode | Auto policy |
 |---|---|
-| Veo / Omni | Native effects, with visual cause and sound in the prompt |
 | Seedance with audio support | Native effects and explicit generateAudio=true |
-| Silent Seedance version or explicit generateAudio=false | Post effects |
+| Explicit generateAudio=false | Post effects |
 | ASTRA ordinary generation | Native effects unless audio was explicitly disabled |
 | ASTRA audio2video | Post effects; its prompt cannot create an additional soundtrack |
+| ASTRA GenAI MSR | Native effects; audioSource=video always (speech is refused) |
 | sound.audioSource=speech | Post effects, retaining the authored speech source |
 
 Legacy `{sfx, atSeconds}` entries stay post effects. They never silently enable a paid
 audio mode. Explicit unsupported native/input requests fail instead of pretending to work.
 Reference audio in Seedance is conditioning, not a promise of byte-identical preservation.
 When the shot has authored dialogue, the CLI defaults to audioSource=speech to preserve
-the existing voice. Selecting audioSource=video is explicit and still requires the
+the existing voice. MSR is the exception (2026-10-30): its own speech-and-effects
+soundtrack is the cut's audio, voiced from the speaker's pinned sample when one rides on the
+subject image ([GenAI MSR](../../_shared/astra-genai.md#msr-and-v2-video)). Its lines get no
+TTS take: `speech_manage attach_video` binds the clip to their revisions (the `native` route)
+and sets audioSource=video. On other tools, selecting audioSource=video still requires the
 existing line/voice/video provenance for dialogue-bound shots; extraction is not a
 waiver of pinned speech contracts. On silent action shots, native audio is the default.
 
@@ -81,8 +85,7 @@ sound first or replace the soundtrack explicitly. The compiler cannot hear dupli
 Keep semantic quality `not_reviewed` until actual playback/listening; signal tests only
 establish presence, timing and level, not a convincing performance.
 
-Sources: [Veo prompting](https://cloud.google.com/vertex-ai/generative-ai/docs/video/video-gen-prompt-guide),
-[Seedance API](https://docs.byteplus.com/en/docs/modelark/create-video-generation-task-api),
+Sources: [Seedance API](https://docs.byteplus.com/en/docs/modelark/create-video-generation-task-api),
 [LTX A2V](https://docs.ltx.io/open-source-model/usage-guides/audio-to-video).
 
 A silent retained soundtrack uses a -16 LUFS mixing reference for post effects and

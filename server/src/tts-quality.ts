@@ -10,9 +10,8 @@ import { disabledToolPatterns, disabledToolsFile } from './config.js';
 import { resolveToolGate } from './tool-gate.js';
 import { bareFilenameSchema } from './media-utils.js';
 import { prepareSpeech, SPEECH_GENERATORS } from './tts-adapters.js';
-import { priceOf, recordUsage } from './usage-ledger.js';
+import { meteredPrice, priceOf, recordUsage } from './usage-ledger.js';
 import { SPACING_POLICY, respace, splitSentences, type Alignment } from './sentence-spacing.js';
-import { alignmentFromAsr } from './asr-alignment.js';
 
 const exec = promisify(execFile);
 export const QUALITY_POLICY = 'speech-quality-v1';
@@ -238,7 +237,15 @@ export async function generateCheckedSpeech(input: CheckedSpeechRequest, depende
     const gate = resolveToolGate(request.generator, { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
     if (!gate.enabled) throw new Error(`Selected generator is disabled: ${gate.reason}`);
     authorizeSpeed(request.outputPath, 'generation', Number(prepared.args.speed ?? 1));
-    const result = await prepared.run();
+    // tts_generate_checked is kept out of the index.ts ledger wrapper, so the take records itself
+    // under the generator that billed it — the tool name has no price key.
+    const started = Date.now(); let result: GenerationResult | undefined;
+    try { result = await prepared.run(); }
+    finally {
+      const price = meteredPrice(priceOf(request.generator, prepared.args), result);
+      recordUsage(request.outputPath, { ts: new Date().toISOString(), tool: request.generator, ok: result?.success === true, ms: Date.now() - started,
+        ...price, note: price.note ?? 'Checked speech take', detail: { ...(result?.requestId ? { requestId: result.requestId } : {}) } });
+    }
     return { ...result, status: 'not_reviewed', nextAction: 'Use host_review only if review was requested. No automatic scoring or retakes.' };
   }
   const speedAuthorization = {
@@ -321,9 +328,9 @@ export async function generateCheckedSpeech(input: CheckedSpeechRequest, depende
         if (overrides.seed !== undefined) take.seed = overrides.seed; else if (prepared.seed !== undefined) take.seed = prepared.seed;
         try { generated = await deps.generate(overrides); }
         finally {
-          const price = priceOf(request.generator, prepared.args);
+          const price = meteredPrice(priceOf(request.generator, prepared.args), generated);
           recordUsage(request.outputPath, { ts: new Date().toISOString(), tool: request.generator, ok: generated?.success === true, ms: Date.now() - started,
-            key: price.key, quantity: generated?.characterCost !== undefined ? generated.characterCost / 1000 : price.quantity,
+            key: price.key, quantity: price.quantity,
             note: `Checked speech attempt ${attempt}`, detail: { ...(generated?.requestId ? { requestId: generated.requestId } : {}) } });
         }
         if (!generated.success || path.resolve(generated.audioPath || generated.path || '') !== output) throw new Error(generated.error || 'Generator did not return the requested audio path');

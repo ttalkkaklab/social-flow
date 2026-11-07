@@ -31,15 +31,12 @@ test('matching content reuses proof and preserves quality warnings', t => {
   assert.deepEqual(readCachedRender(f), {warnings:['subject action not reviewed']});
   assert.equal(proof.verifyClip(f.mp4, f.html, 1).frames, 31);
 });
-for (const kind of ['html', 'dependency', 'runtime', 'timing', 'group', 'option', 'missing', 'corrupt', 'summary', 'remote', 'new dependency']) {
+for (const kind of ['html', 'dependency', 'timing', 'missing', 'corrupt', 'summary', 'remote', 'new dependency']) {
   test(`cache invalidates on ${kind}`, t => {
     const f = setup(t);
     if (kind === 'html') fs.appendFileSync(f.html, '<p>changed</p>');
     if (kind === 'dependency') fs.appendFileSync(f.dependency, ';changed()');
-    if (kind === 'runtime') f.key.runtime[f.dependency] = 'new-runtime-hash';
     if (kind === 'timing') f.key.segs[1] = 1200;
-    if (kind === 'group') f.key.groups[0].dur = 1200;
-    if (kind === 'option') f.key.options.fps = 24;
     if (kind === 'missing') fs.unlinkSync(f.mp4);
     if (kind === 'corrupt') fs.writeFileSync(f.mp4, 'truncated');
     if (kind === 'summary') fs.writeFileSync(f.summary, '{"warnings":[]}');

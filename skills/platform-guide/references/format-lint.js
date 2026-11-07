@@ -217,6 +217,8 @@ for (const [key, f] of Object.entries(FORMATS)) {
   rule('videoMax', f.video.generatedSecondsMax / 8);
   rule('chapterMin', rec ? rec.min : 'null');
   rule('chapterMax', rec ? rec.targetMax : 'null');
+  // burn is a boolean, so it gets its own pattern (the numeric rule above cannot read it)
+  RULES.push({ name: `storyboard.html ${key} burn`, file: SB_TPL, re: new RegExp(blk + 'burn:\\s*(true|false)'), want: String(!!f.burn) });
 }
 
 // ── authored-screen templates: :root and html.wide mirrors ────────────

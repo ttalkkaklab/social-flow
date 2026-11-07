@@ -927,7 +927,7 @@ export interface YoutubePublishInput {
   /**
    * Synthetic-media self-disclosure — true if the video carries realistic-looking
    * AI-generated or altered content (AI music, realistic generated footage of
-   * real places/people). This pipeline uses Veo video and Lyria music, so the
+   * real places/people). This pipeline uses generated video and Lyria music, so the
    * default is true (non-disclosure risk outweighs disclosure cost — YouTube
    * states disclosure "doesn't affect exposure or monetization eligibility",
    * while repeated non-disclosure is threatened with forced labels, removal,

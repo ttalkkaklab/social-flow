@@ -32,7 +32,17 @@
     tilt: 'M16 4v24m-5-5 5 5 5-5M11 9l5-5 5 5',
     focus: 'M3 16a7 7 0 1 0 14 0a7 7 0 1 0-14 0M20 16h9m-3-3 3 3-3 3',
     static: 'M5 5h15v12H5zM20 9l7-4v12l-7-4M12 17v9m-5 3 5-12 5 12',
-    other: 'M4 7h24v18H4zM12 12l8 4-8 4z'
+    other: 'M4 7h24v18H4zM12 12l8 4-8 4z',
+    // Still effects, one picture each: push arrows point in, pull arrows point out, approach
+    // heads for an off-centre target, focus-in closes on one point, rack hands it near → far.
+    'still-push': 'M4 4h24v24H4zM11 11h10v10H11zM5 5l5 5M10 7v3H7M27 5l-5 5M22 7v3h3M5 27l5-5M10 25v-3H7M27 27l-5-5M22 25v-3h3',
+    'still-pull': 'M4 4h24v24H4zM11 11h10v10H11zM10 10 5 5M5 8V5h3M22 10l5-5M27 8V5h-3M10 22l-5 5M5 24v3h3M22 22l5 5M27 24v3h-3',
+    'still-approach': 'M4 4h24v24H4zM17 11a4 4 0 1 0 8 0a4 4 0 1 0-8 0M8 24l9-9M17 19v-4h-4',
+    'still-focus-in': 'M9 16a7 7 0 1 0 14 0a7 7 0 1 0-14 0M15 16a1 1 0 1 0 2 0a1 1 0 1 0-2 0M16 2v4M16 26v4M2 16h4M26 16h4',
+    'still-rack': 'M4 21a6 6 0 1 0 12 0a6 6 0 1 0-12 0M21 9a3 3 0 1 0 6 0a3 3 0 1 0-6 0M15 16l5-4M17 12h3v3',
+    'still-reveal': 'M4 6h24v20H4zM12 6v20M10 16H6M8 14l-2 2 2 2M17 16a3 3 0 1 0 6 0a3 3 0 1 0-6 0',
+    'still-parallax': 'M3 4h26v24H3zM7 11h8m-2-2 2 2-2 2M7 21h16m-2-2 2 2-2 2',
+    'still-hold': 'M4 6h24v20H4zM13 11v10M19 11v10'
   };
   const ROLES = { action: ['행동', 'Action'], reaction: ['반응', 'Reaction'], insert: ['인서트', 'Insert'],
     scenery: ['공간', 'Setting'], document: ['문서', 'Document'], map: ['지도', 'Map'] };
@@ -47,10 +57,11 @@
     const value = normalized(raw);
     let row = MOVES.find(item => item[1].test(value));
     if (still) {
-      const effects = { 'focus in': ['focus', '초점 모으기', 'Focus in'], 'rack focus': ['focus', '초점 이동', 'Rack focus'],
-        approach: ['zoom', '다가가기', 'Approach'], push: ['zoom', '확대', 'Push'], pull: ['zoom', '축소', 'Pull'],
+      const effects = { 'focus in': ['still-focus-in', '초점 모으기', 'Focus in'], 'rack focus': ['still-rack', '초점 이동', 'Rack focus'],
+        approach: ['still-approach', '다가가기', 'Approach'], push: ['still-push', '확대', 'Push'], pull: ['still-pull', '축소', 'Pull'],
         pan: ['pan', '좌우 이동', 'Pan'], tilt: ['tilt', '상하 이동', 'Tilt'],
-        reveal: ['pan', '가려진 곳 공개', 'Reveal'], parallax: ['arc', '시차 이동', 'Parallax'] };
+        reveal: ['still-reveal', '가려진 곳 공개', 'Reveal'], parallax: ['still-parallax', '시차 이동', 'Parallax'],
+        hold: ['still-hold', '정지', 'Hold'] };
       const effect = effects[value];
       row = effect ? [effect[0], null, effect[1], effect[2]] : null;
     }

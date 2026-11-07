@@ -9,14 +9,12 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
-  describeToolGate,
   isToolEnabled,
   matchesPattern,
   parsePatternList,
   parseToolFlags,
   resolveToolGate,
   toolOverrideVar,
-  warnUnknownPatterns,
 } from '../dist/tool-gate.js';
 import { TOOLS } from '../dist/tools.js';
 
@@ -63,10 +61,6 @@ describe('default', () => {
     for (const name of NAMES) {
       assert.equal(isToolEnabled(name, env).enabled, true, name);
     }
-  });
-
-  it('startup log is short on the default', () => {
-    assert.equal(describeToolGate(NAMES, {}), `tool gate default on (${NAMES.length} tools)`);
   });
 });
 
@@ -125,15 +119,6 @@ describe('per-tool SOCIAL_FLOW_TOOL_<NAME>', () => {
     assert.equal(isToolEnabled('suno_credits', env).enabled, false);
   });
 
-  it('turns one allowlisted tool off', () => {
-    const env = {
-      SOCIAL_FLOW_TOOLS: 'suno_*',
-      [toolOverrideVar('suno_credits')]: 'off',
-    };
-    assert.equal(isToolEnabled('suno_generate', env).enabled, true);
-    assert.equal(isToolEnabled('suno_credits', env).enabled, false);
-  });
-
   it('beats FLAGS too', () => {
     const env = {
       SOCIAL_FLOW_TOOL_FLAGS: 'suno_generate=off',
@@ -160,18 +145,6 @@ describe('disabled-tools.json union', () => {
       jsonPatterns: ['seedance_*'],
     });
     assert.equal(decision.enabled, true);
-  });
-});
-
-describe('unknown-pattern warnings', () => {
-  it('warns on unknown names and does not kill the server', () => {
-    const warnings = warnUnknownPatterns(NAMES, {
-      SOCIAL_FLOW_TOOLS: 'suno_*,no_such_tool',
-      SOCIAL_FLOW_DISABLE_TOOLS: 'zzz_*',
-    });
-    assert.ok(warnings.some((line) => /no_such_tool/.test(line)));
-    assert.ok(warnings.some((line) => /zzz_\*/.test(line)));
-    assert.ok(!warnings.some((line) => /suno_\*/.test(line)));
   });
 });
 

@@ -202,3 +202,31 @@ static reasons plus different angle reasons, repeated landings with varied ratio
 still-camera effects, and action text copied as purpose. These produce advice without
 throwing or creating an execution gate. Preserve reused clips, stock, shared outros and
 explicit content-only plans. This evaluates planning and handoff, never unseen footage.
+
+
+## Continuous dialogue without empty coverage
+
+Input: two colleagues share a medium shot. One points at the contract while the other
+accepts extra work, then challenges that decision. Existing drafts split each turn into
+long static shots with unchanged framing.
+Pass evidence: keep the continuing gesture and exchange together, or earn a cut by showing
+a consequential reaction that the shared frame cannot carry. Preserve attributed turns.
+Estimate complete spoken performance and overlapping action; no fixed seconds per turn,
+wide/close quota or one-speaker rule. Baseline: three repeated setups with idle tails.
+
+## One continuous tactical action
+
+Input: a commander rescues a soldier, retreats to draw a shield wall out, and a concealed
+ally strikes its exposed flank. The author proposes one shot for each clause.
+Pass evidence: preserve the retreat's causal geometry, concealed ally and opening state.
+Combine the action when one readable view can carry it; use an earned viewpoint change
+when it cannot. No fixed shot-count target. Baseline: fragmentation hides why retreat helps.
+
+## A reaction that earns a cut
+
+Input: a messenger produces evidence of betrayal while the lead character attempts to call
+the suspect. A companion stops the hand; later an arrow strikes another protagonist.
+Pass evidence: do not merge indiscriminately. Isolate the evidence, stopped hand or impact
+when a new view reveals consequence. Avoid holding a lone shout or a fallen object for a
+preset duration. Fit the adapter limit without rushed dialogue. Baseline: merging every
+scene into one distant shot conceals the crucial responses. Planning is not playback proof.

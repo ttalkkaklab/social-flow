@@ -177,3 +177,26 @@ test('completed provider generation with failed download releases the slot and p
   assert.equal((await f.run(f.plan('next'),async (_tool,args)=>output(args))).structuredContent.status,'completed');
   assert.equal(imageStatus({directory:f.dir,requestId:p.requestId,action:'reconcile',spentUsd:0,evidence:'billing receipt'}).status,'failed');
 });
+
+test('native gateway selection routes model-bound edits with hashed references and explicit reservation', async t => {
+  const f=fixture(t,{engine:'astra-genai-native',model:'qwen-image-fast'},{reference:'test',maxUsd:1});
+  fs.writeFileSync(path.join(f.dir,'source.png'),png);
+  const p=f.plan('native',{imagePath:'source.png',refImagePaths:['source.png'],loras:[{id:'style',scale:0}]},{operation:'edit',reserveUsd:0});
+  assert.equal(p.tool,'astra_genai_image_edit');assert.equal(p.args.model,'qwen-image-fast');assert.equal(Object.keys(p.inputs).length,1);
+  const key=config.astraGenaiApiKey;config.astraGenaiApiKey='fixture';t.after(()=>{config.astraGenaiApiKey=key;});
+  await f.run(p,async(tool,args)=>{assert.equal(tool,p.tool);assert.equal(args.refImagePaths[0],path.join(f.dir,'source.png'));return output(args);});
+});
+
+test('a billed image whose save failed is kept from the returned bytes', async t => {
+  const f = fixture(t); const p = f.plan();
+  const result = await f.run(p, async () => ({ content: [{ type: 'text', text: 'File save failed' }, { type: 'image', data: png.toString('base64'), mimeType: 'image/png' }] }));
+  assert.equal(result.structuredContent.status, 'completed');
+  assert.equal(fs.readFileSync(p.outputFile).equals(png), true);
+});
+
+test('an adapter failure marked terminal is failed and does not hold the concurrency slot', async t => {
+  const f = fixture(t); const p = f.plan();
+  const failed = await f.run(p, async () => ({ isError: true, terminal: true, content: [{ type: 'text', text: 'rejected' }] }));
+  assert.equal(failed.structuredContent.status, 'failed');
+  assert.equal((await f.run(f.plan('next'), async (_tool, args) => output(args))).structuredContent.status, 'completed');
+});

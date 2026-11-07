@@ -1,30 +1,35 @@
 ---
 name: review-camera
 description: >
-  Reviews and improves cut direction; stops before Blender rendering. Use when this production stage is requested or the fixed episode workflow reaches it.
+  Reviews and improves cut direction; stops before images. Use only when the user asks for a camera review.
 argument-hint: "[episode-or-storyboard-path]"
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__storyboard_apply", "mcp__plugin_social-flow_social-flow__storyboard_apply"]
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__shot_icons", "mcp__plugin_social-flow_social-flow__shot_icons", "mcp__social-flow__storyboard_apply", "mcp__plugin_social-flow_social-flow__storyboard_apply"]
 ---
 
 # Review Camera
 
-Own only `camera_review`. Follow [the fixed workflow](../_shared/production-workflow.md)
-for state, evidence, re-entry and stopping conditions. A completed board can re-enter here;
-existing artifacts are inputs, not automatic passing evidence. Never skip prerequisites.
+Runs only when the user asks for it (user directive 2026-10-31); no other step waits on it.
+Follow [the production order](../_shared/production-workflow.md).
 
-Require context_review and the preparation asset stages. Read
+Read
 [action direction](../storyboard/references/action-direction.md) and
-[shot continuity](../storyboard/references/shot-continuity.md).
+[shot continuity](../storyboard/references/shot-continuity.md) and
+[dialogue coverage](../storyboard/references/dialogue-coverage.md). Test its worked cases
+against each speaking shot: fixed OTS with two speakers, unreadable profile two-shots,
+valid one-speaker OTS and valid two-speaker two-shots. Inspect the whole reverse sequence
+for speech ownership, eyelines and preserved lines; these findings are guidance, not gates.
 
-Map every required audience-visible beat to one or more cuts. Register every cut ID as a
-camera_review entry; entries may point to one whole-sequence review JSON. Export the camera
-plan separately from mutable scenes.js and include it in review inputs. Inspect what the
+Use [shot boundary decisions](../storyboard/references/shot-boundaries.md) and
+`storyboard_read.boundaryReview` to challenge every playback join against an uninterrupted
+scene. Preserve justified cuts; fewer shots alone is not improvement.
+
+Map every required audience-visible beat to one or more cuts. Export the camera plan
+separately from mutable scenes.js and give it to the reviewer. Inspect what the
 viewer first notices, angle/size, focus endpoints, motivated movement or hold, actor blocking,
 prop state, eyelines, action cue and final composition. Check consecutive cuts and missing
 coverage of causal events; do not equate a camera technique name with executable direction.
 
-Use an independent reviewer with fresh context. The author fixes named defects and the
-reviewer rechecks the entire affected sequence. If a missing event changes the story,
-return to review-context. If only the camera plan changes, remain at camera_review and
-review the revised file hashes. Complete with all cut IDs covered and no unresolved
-corrections. Stop before rendering or image generation.
+Use an independent reviewer with fresh context. The author fixes named defects — render
+route, size, angle, move, focus, depth and frame plan with `shot_icons`; endpoints, blocking
+and eyelines with `storyboard_apply` — and the reviewer rechecks the entire affected sequence.
+If a missing event changes the story, fix the story layer first. Stop before image generation.

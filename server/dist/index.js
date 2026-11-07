@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { manageWorkflow, requireWorkflow, requireReviewedVideos } from './production-workflow.js';
+import { manageWorkflow } from './production-workflow.js';
 import { isManagedMusicCall } from './music-registry.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
@@ -11,14 +11,14 @@ import { ROUTES } from './handlers.js';
 import { isManagedImageCall } from './image-registry.js';
 import { isManagedVideoCall } from './video-registry.js';
 import { enabledPlatforms } from './sns-client.js';
-import { episodePathArg, isBillableTool, priceOf, recordUsage } from './usage-ledger.js';
+import { episodePathArg, isBillableTool, meteredPrice, priceOf, recordUsage } from './usage-ledger.js';
 import { readFileSync as readFinalRequest } from 'node:fs';
 import { reviewFinalSpeech } from './tts-final-quality.js';
 // The server version carried in the initialize response — the plugin release, same value as
 // package.json's version and every plugin manifest in skill-lint.js's MANIFESTS (it checks that they agree).
 // If the two drift, the version clients see stops matching the actual package, so bump this
 // line together with package.json (the contract test checks that the two agree).
-const server = new Server({ name: 'social-flow', version: '0.120.0' }, { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS });
+const server = new Server({ name: 'social-flow', version: '0.121.1' }, { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS });
 // Per-platform publish tools are exposed only for platforms that have a credential file
 // (default tokens ∪ channel directories) — this is evaluated per request, so adding a token
 // file takes effect without a server restart. Every handler stays registered, so calling a
@@ -69,13 +69,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             const callArgs = (args ?? {});
             const startedAt = Date.now();
             let ok = false;
+            let result;
             try {
-                const result = await handler(callArgs);
+                result = await handler(callArgs);
                 ok = !result?.isError;
                 return result;
             }
             finally {
-                const { key, quantity, note } = priceOf(name, callArgs);
+                // ElevenLabs handlers attach the vendor-measured amount; it replaces the argument estimate.
+                const { key, quantity, note } = meteredPrice(priceOf(name, callArgs), result?.metered);
                 recordUsage(episodePathArg(callArgs), {
                     ts: new Date().toISOString(),
                     tool: name,
@@ -126,18 +128,6 @@ async function main() {
         console.log(JSON.stringify(manageWorkflow(JSON.parse(readFinalRequest(process.argv[3], 'utf8'))), null, 2));
         return;
     }
-    if (process.argv[2] === '--workflow-check-delivery') {
-        requireWorkflow(process.argv[3], 'delivery');
-        if (process.argv[4]) {
-            const manifest = JSON.parse(readFinalRequest(process.argv[4], 'utf8'));
-            requireReviewedVideos(process.argv[3], manifest.videoSha256 ?? {});
-        }
-        return;
-    }
-    if (process.argv[2] === '--workflow-check-video') {
-        requireWorkflow(process.argv[3], 'video');
-        return;
-    }
     if (process.argv[2] === '--review-final') {
         const gate = resolveToolGate('tts_review_final', { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
         if (!gate.enabled)
@@ -165,9 +155,9 @@ async function main() {
     console.error(`Credentials: serpapi key ${config.serpApiKey ? 'set' : 'MISSING (serp_* and sns_issue_scout tools will fail)'}, ` +
         `naver keys ${config.naverClientId && config.naverClientSecret ? 'set' : 'MISSING (naver_search will fail)'}, ` +
         `data.go.kr key ${config.dataGoKrApiKey ? 'set' : 'MISSING (datago_file_fetch/datago_api_call will fail — search/detail/download still work)'}, ` +
-        `gemini key ${config.geminiApiKey ? 'set' : 'MISSING (veo_*/omni_*/tts_generate/tts_multi_speaker/tts_gemini_38/music_* will fail)'}, ` +
+        `gemini key ${config.geminiApiKey ? 'set' : 'MISSING (tts_generate/tts_multi_speaker/tts_gemini_38/music_* will fail)'}, ` +
         `openai key ${config.openaiApiKey ? 'set' : 'MISSING (gpt_image_* image generation tools will fail — image_local_generate does not need it)'}, ` +
-        `ark key ${config.arkApiKey ? 'set' : 'MISSING (seedance_* video generation tools will fail — veo_* does not need it)'}, ` +
+        `ark key ${config.arkApiKey ? 'set' : 'MISSING (seedance_* video generation tools will fail)'}, ` +
         `suno key ${config.sunoApiKey ? 'set' : 'MISSING (suno_* will fail — music_*(Lyria) does not need it)'}, ` +
         `elevenlabs key ${config.elevenLabsApiKey ? 'set' : 'MISSING (tts_elevenlabs_* and sfx_elevenlabs_generate will fail — tts_generate does not need it)'}, ` +
         `local image mflux ${process.env.MFLUX_ZIMAGE_BIN ? process.env.MFLUX_ZIMAGE_BIN : '~/.local/bin/mflux-generate-z-image-turbo (default — set MFLUX_ZIMAGE_BIN if elsewhere)'}, ` +

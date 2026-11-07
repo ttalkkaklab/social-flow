@@ -1,173 +1,112 @@
-# Enforced production order
+# Production order
 
 Run `project_manage status` first. Resolve missing settings through project-init before
 characters or text authoring, including text-only requests. Pending SNS connections do
 not block local work. Create/resume the episode with `project_manage episode`.
 
-The full order and stage skills are defined below under Fixed cut workflow.
+## The order (user directive, 2026-10-31)
 
-Use `production_workflow` with the absolute `episode` directory:
-- `status` returns the current/next stage and detects stale completed artifacts.
-- `begin` takes `stage` and `entries:[{id,text,image}]`. Paths are relative to the
-  episode or absolute; shared character assets can be referenced directly. Use image for asset/composition/image stages; use video for the video stage. Register every required asset before generation; image_plan
-  uses the entry's id as assetId and its image path as the output destination.
-- `complete` takes `stage`. It reads nonempty text, decodes each image and stores hashes.
-  A status flag, missing file or renamed text file cannot substitute for an image.
-- `rewind` takes `stage`, invalidates that stage and every later receipt, and keeps media.
-  Begin and complete those stages again, reusing unchanged media where appropriate.
+Checks were removed for speed: only the story order and the episode cast (2026-11-01) are
+enforced, and reviews, Blender
+compositions and other checks come back once the quality is known. Spending limits,
+generation authorization and adapter input validation stay. Work in this order:
 
-An empty characters/props/backgrounds stage uses `entries:[]` plus a concrete
-`notApplicable` reason. Text and image storyboards cannot be skipped. A characterless
-explainer does not need a manufactured actor. Register every real subject, not one
-placeholder for the category. For text_storyboard, reference a dedicated text artifact;
-for sheet text, reference a stable export or identity file rather than mutable scenes.js.
+1. Characters — identity text (`character_manage`) and sheet images (`character_panel`, which draws
+   each panel from the identity's body and face fields; `assets/characters/<id>/`, `panels.json`),
+   then the episode cast in `storyboard/cast.json`:
+   `{"characters":[{"id":"mina","source":"../../../assets/characters/mina/identity.md"}]}`.
+   A narrator who is never seen takes `"voiceOnly": true` and needs no panels.
+2. Story, one layer at a time: `story_sequence` → `story_scene` → `story_shot`.
+3. Each shot's characters (`shot_characters`, at most two), then their lines (`shot_dialogue`).
+4. Each shot's icon attributes (`shot_icons`): render route, size, angle, camera move,
+   focus, depth, frame plan (`reference` is MSR) and the transition into the next shot (`next`).
+   After lines and provisional camera staging, compare the uncut scene with every join
+   using [shot boundary decisions](../storyboard/references/shot-boundaries.md). Read
+   `storyboard_read.boundaryReview` and `videoTiming`, revise unnecessary boundaries, and
+   preserve speech/performance/continuity before images. This is authoring, not a new gate.
+5. Props and backgrounds — `SB_DOC.props` and `SB_DOC.locations` with their images.
+   Backgrounds default to two separate opposing camera views in `panels.front` and
+   `panels.back`; follow [asset sheets](../storyboard/references/asset-sheets.md).
+   Set each shot's opening `shot_icons.backgroundView` against that layout before
+   `shot_image` selects its matching panel (front by default).
+6. Each shot's start image (`shot_image`), composed from its characters' sheet panels,
+   its place and props; then the end image (`frame:"end"`) only for a `first_last` shot.
+   A place whose sheet names a built set is rendered from the shot's own camera first (below).
+7. Each `generated_video` shot's video prompt (`shot_prompt`), from its icon attributes,
+   lines and an English action. A later change to what it came from warns and marks the
+   prompt stale on the review page; rewrite it with `shot_prompt`.
+8. Each shot's video: `video_plan` → the user's approval (`video_approve`) → `video_execute`.
+9. Assembly and delivery (produce).
 
-Example begin request:
-```json
-{"episode":"/workspace/data/channel/episodes/topic","action":"begin","stage":"characters","entries":[{"id":"hero","text":"../../../assets/characters/hero/identity.md","image":"../../../assets/characters/hero/front.png"}]}
-```
+The story tools refuse a layer whose parent is missing (`story_order`): `shot_characters`
+waits for a story with no gaps, `shot_icons` for every shot's characters, `shot_image` for
+every shot's icon attributes, and `shot_prompt` for every picture shot's start image (and
+the end image a `first_last` plan needs).
 
-For CLI use, put the same JSON in a request file and run
+The cast gate (user directive, 2026-11-01): `story_sequence` refuses to start a board inside an
+episode, and `story_scene`/`story_shot` refuse to continue a story-first one, until `cast.json` names at least one character (`cast_required`), each entry's `source`
+is an existing `assets/characters/<id>/identity.md` (`cast_source_missing`) and every entry
+without `voiceOnly` has its face, front and back panels (`character_panel_missing`). On a
+story-first board `shot_characters` and `shot_dialogue` repeat that check, take the cast from
+`cast.json` alone and refuse a `voiceOnly` character on screen (`cast_voice_only`). Nothing else
+blocks a step. A text-only request stops after step 4, with the cast's panels made first under
+spending authorization; an image request stops after step 6. Missing character media or
+spending authorization is reported, never silently bypassed.
+
+## Images (step 6)
+
+`shot_image` runs `image_plan` → `image_execute` with the saved image model and the
+existing spending authorization, then records `visual.frames.start` and `visual.bg` (or
+`frames.end`), `visual.references`, `locationId` and `props`. One character's references are
+its face, headless front and headless back panels; two characters take each face, then
+each front. The place is the edit's first input: when its sheet names a built set
+(`SB_DOC.locations[].manifest`), that set rendered in Blender from the shot's own camera — its size
+and angle, aimed at its cast where `location_manage bind` gave them blocking — and the sheet picture
+follows the panels as a look reference, or stays out with a warning when the model has no room;
+without a set the sheet picture leads, with a warning (`location-assets.md`, Shot frames). The
+render rides as `role:"composition"`, `use:"image"`, never into a video call, and
+`visual.locationFrame` records its camera and fingerprint. The saved image model has to take every
+picture the frame composes (gpt-image up to 16; astra-genai-native or an MLX Qwen-Image-2.1
+pack up to 10; MLX FLUX.2 klein or Mage-Flow Edit up to 4); otherwise — a one-picture model
+such as astra-genai `z-image-turbo` included — it refuses with `image_references_unsupported`,
+so ask the user which model to use rather than switching silently. Every call writes a new versioned file; a new start
+image takes the end image made from the old one off the shot.
+
+## Approval before each video (user directive, 2026-10-31)
+
+Before a shot's video, show the user its `video_plan`: the prompt, the start (and end)
+image and the cost. On their yes, record it with `video_approve {planIds}` in their own
+words; when they approve every shot at once, `video_approve {auto:true}`. `video_execute`
+refuses a plan without one (`video_approval_required`). A changed prompt, image or model
+makes a new plan, which needs a new yes unless auto is on, and `video_approve` refuses a plan
+that went stale before the yes (`video_plan_stale`). The review page reads
+`storyboard/video-approvals.js` and marks a shot whose prompt, start/end image or lines changed
+after its yes; a changed model shows when `video_execute` refuses the old plan. Never call `video_approve`
+without the user's answer; it records their approval, not a step taken for them. On MSR
+the start image rides in the background slot, and the plain place picture stays out.
+
+## Review and Blender on request
+
+[review-context](../review-context/SKILL.md), [review-camera](../review-camera/SKILL.md),
+[compose-blender](../compose-blender/SKILL.md), [review-cut-images](../review-cut-images/SKILL.md)
+and [review-cut-videos](../review-cut-videos/SKILL.md) run only when the user asks for them.
+[generate-cut-images](../generate-cut-images/SKILL.md) is step 6 and
+[generate-cut-videos](../generate-cut-videos/SKILL.md) steps 7–8. Autoproduce coordinates.
+`storyboard_check` runs every storyboard rule when the user asks; `storyboard_apply`
+refuses only an unreadable board and the story order.
+
+## Progress record
+
+`production_workflow` keeps an optional record per episode (absolute `episode` path):
+`begin` registers a stage's files (`entries:[{id,text,image,images,video}]`), `complete`
+stores their hashes, `rewind` drops a stage's record and `status` shows them. Stages
+complete in any order and no other tool reads this record. The one check left: a story-v2
+`text_storyboard` completes only once every shot has its story and characters
+(`story_outline_required`). For CLI use, put the same JSON in a request file and run
 `node "$CLAUDE_PLUGIN_ROOT/server/dist/bundle.js" --workflow request.json`.
-All built-in image/video routing plans and execution, storyboard_apply and the canonical
-video assembler enforce the relevant prerequisites for managed episode paths. Legacy
-provider entrypoints route through the same services. Existing episodes without receipts
-must register their existing artifacts in order; there is no silent legacy exemption.
-Read/status recovery remains available and does not submit another generation.
-
-Host image/video tools and arbitrary shell writes are outside the MCP server boundary.
-Obtain the corresponding image_plan/video_plan before a host call and complete the
-artifact stage afterward. Do not claim the server can intercept host tools. A user or
-agent with unrestricted filesystem access can also alter receipts; this is an execution
-contract, not a security sandbox. Hashes prove file stability, not narrative completeness
-or visual quality. Independent review and actual generation/publishing authorization still apply.
-
-Storyboard plans the text and shots; produce performs authorized image generation in
-stage order and then video. Autoproduce coordinates both. A text-only request stops after
-the text stage, and an image-board request stops after image_review. If required
-character media or spending authorization is missing, report the blocked stage. Do not
-silently bypass it or start paid work beyond the user's scope.
-
-## Fixed cut workflow (owner directive, 2026-10-19)
-
-For cut storyboard images, this contract supersedes the guidance-only review policy. Asset sheets keep their preparation roles. The full
-server sequence is:
-
-`characters -> text_storyboard -> context_review -> props -> backgrounds -> camera_review
--> blender_composition -> image_storyboard -> image_review -> video -> video_review`.
-
-The seven stage skills, in order, are [review-context](../review-context/SKILL.md),
-[review-camera](../review-camera/SKILL.md), [compose-blender](../compose-blender/SKILL.md),
-[generate-cut-images](../generate-cut-images/SKILL.md),
-[review-cut-images](../review-cut-images/SKILL.md),
-[generate-cut-videos](../generate-cut-videos/SKILL.md) and
-[review-cut-videos](../review-cut-videos/SKILL.md).
-Autoproduce coordinates state and invokes them; it does not substitute its own verdict.
-Produce supplies the shared generation, assembly and delivery implementations.
-
-There is no skip, force, waiver or renderer fallback in this sequence. The generation
-stages stop before their review stage. Reviews use a fresh independent host reviewer;
-the author fixes defects and a reviewer rechecks. No invented numeric score target is
-required: all required corrections must be resolved with actual evidence. Unsupported
-playback or unavailable independent review leaves the stage incomplete. Keep work and
-report the blocker. Three unsuccessful improvement rounds without a resolved defect,
-provider attempt limits, or an exhausted spending budget stop the loop with its findings;
-none of these makes a failed stage complete. No repeated human approval is needed within
-already authorized work and budgets.
-
-Text-only requests may stop at text_storyboard; requests to review text stop after
-context_review. A camera-only review stops after camera_review. Later work cannot treat
-those limited deliverables as a complete image/video pipeline.
-
-## Review receipt
-
-Use a dedicated, revision-specific JSON file as the review entry's `text`. Before `begin`,
-write its `criteria` object with an absolute rubric path and SHA256. Begin freezes that
-hash, including across rewinds. The rubric must exist before the reviewer reads the work.
-The reviewer supplies the completed receipt; the coordinator never fabricates its content.
-Use the same whole-sequence receipt for all camera cut entries if appropriate.
-
-A passing receipt has this shape (paths and hashes below are descriptive placeholders):
 
 ```json
-{
-  "stage": "context_review",
-  "author": "author-session-id",
-  "reviewer": "independent-reviewer-session-id",
-  "independent": true,
-  "verdict": "pass",
-  "coverage": "text",
-  "criteria": {"path": "/episode/rubric.md", "sha256": "actual SHA256"},
-  "inputs": {"/episode/audience-text.md": "actual SHA256"},
-  "observations": ["Specific observed evidence and its effect on audience understanding."],
-  "unresolved": [],
-  "audienceRead": {
-    "blind": true,
-    "reconstruction": "What an unbriefed viewer understands from the presented events.",
-    "transitions": [{
-      "from": "beat-1", "to": "beat-2",
-      "viewerUnderstands": "What shown information supports the next choice.",
-      "evidence": [{"path": "/episode/audience-text.md", "quote": "Exact source quotation", "cutId": "beat-1"}]
-    }],
-    "missingContext": []
-  }
-}
+{"episode":"/workspace/data/channel/episodes/topic","action":"begin","stage":"characters","entries":[{"id":"hero","text":"../../../assets/characters/hero/identity.md","image":"../../../assets/characters/hero/face.png"}]}
 ```
 
-For camera/image/video reviews include `cutIds` covering every relevant cut. Camera
-review entries define the full cut inventory; Blender and image stages must match it.
-Use coverage `text`, `images`, `video_playback` respectively. Only context review needs
-`audienceRead`. Inputs include every source-stage artifact and its hash: text_storyboard
-for context/camera, image_storyboard for image review, video for video review. Camera
-review also includes the stable camera-plan export. Include relevant prior visual inputs
-when comparing images and clips. Dedicated exports prevent later receipt edits to
-scenes.js from invalidating otherwise unchanged text or camera evidence.
-
-Complete checks actual files/hashes, reviewer/author distinction, coverage, cut inventory,
-quoted context evidence and unresolved corrections. This does not prove perception or
-reviewer identity: those are host attestations, not cryptographic facts. An unrestricted
-agent can edit local files or call tools outside the server. Do not claim a security sandbox.
-
-## Generation and delivery
-
-Blender entries use `{id,text,image,blend}`: text is the renderer's composition.json receipt,
-image is its actual start frame and blend is its real .blend source. `location_manage render`
-returns `compositionReceipt`. Image generation requires the corresponding composition in
-`imagePath`, `refImagePaths` or host `referenced_image_paths`, not a prompt mention.
-Video entries use `{id,text,video}` with id equal to video_plan's shotId. Register all clips
-that will be used, including existing clips; completion probes real video streams/duration.
-Review all registered clips before final assembly. The canonical assembler requires
-video_review completion and compares every source video path/hash from the assembly
-manifest against the reviewed clips. An unrelated passing review cannot authorize a
-substituted clip. The final master still receives produce's normal delivery checks.
-
-## Re-enter an existing storyboard
-
-`/social-flow:review-context <episode-or-storyboard-path>` reviews and improves existing
-text only. `/social-flow:review-camera <path>` targets direction after context has passed.
-The other stage skills have the same path argument. In a host without namespaced slash
-commands invoke the corresponding installed skill by name and provide the path.
-For end-to-end improvement use `/social-flow:autoproduce <path>` and explicitly request
-improvement of the existing episode; keep its story, approved scope and spending authority.
-
-Resolve a storyboard/scenes.js path to its episode directory. Inspect existing assets;
-register them in order without regeneration. Version-1 workflow receipts retain character
-and text preparation only; they resume at context_review, never import an old quality pass.
-No receipts means register actual preparation artifacts first. Missing preparation is
-reported rather than paid generation being inferred from a review request.
-
-For a completed stage use rewind before rerunning it. For an upstream correction rewind
-the earliest changed artifact stage, edit, and complete/review its descendants in order.
-Unchanged files may be reused but changed hashes require fresh review. Rewind archives
-state and existing review text, leaves all media intact and preserves frozen rubric hashes.
-A review-only command stops at its own boundary; it does not regenerate downstream media.
-
-## Multiple images per cut
-
-For image_storyboard, keep one entry per cut ID: `image` is the primary file and
-`images` lists additional ending/intermediate images and appearance references.
-The inventory must cover every structured `visual.frames`/`visual.references` path.
-All registered images are decoded, hashed and covered by image_review. Generation may
-write any registered image for the cut; an unregistered output is refused. Video plans
-with structured references can use only reviewed files. Existing one-image records remain
-readable; migration must reuse inspected assets and rewind affected stages.
+Existing episodes are regenerated in this order rather than migrated.

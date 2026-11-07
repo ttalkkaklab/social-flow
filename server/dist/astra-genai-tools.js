@@ -1,3 +1,4 @@
+import { NATIVE_GENAI_TOOLS } from './astra-genai-native-tools.js';
 import { GENAI_CAMERA_MOTIONS, GENAI_VIDEO_MODELS } from './astra-genai-video.js';
 const output = {
     outputPath: { type: 'string', description: 'Local output directory; configured production keeps outputs inside its episode/workspace.' },
@@ -16,15 +17,18 @@ const video = {
 };
 const generation = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true };
 export const GENAI_TOOLS = [
+    ...NATIVE_GENAI_TOOLS,
     { name: 'astra_genai_text2video', title: 'Generate GenAI LTX video from text',
         description: 'Generate and save an MP4 through the unified ASTRA GenAI LTX v2 gateway. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY, a separate gk_ token from ASTRA_VIDEO. Persists job identity before polling; recover the same receipt after timeout. Supports text only; for a supplied audio track use astra_genai_audio2video. No LoRA, retake or keyframes. Legacy astra_text2video remains a separate server adapter.',
         inputSchema: { type: 'object', properties: video, required: ['prompt', 'model', 'duration', 'resolution', 'reserveUsd'], additionalProperties: false }, annotations: generation },
     { name: 'astra_genai_img2video', title: 'Generate GenAI LTX video from an image URI',
-        description: 'Animate an image URI through ASTRA GenAI LTX v2 and save an MP4. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Pass a server-supported image URI, never a local path or legacy upload ID; this adapter does not upload files. Supports optional last-frame URI, not intermediate keyframes or supplied speech. Unsupported provider options return errors without fallback.',
+        description: 'Animate a start image through ASTRA GenAI LTX v2 and save an MP4. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Give exactly one imageUri (public HTTPS or PNG/JPEG data URI) or imagePath (local PNG/JPEG sent as a data URI); never a legacy upload ID. Supports an optional last frame, not intermediate keyframes or supplied speech. Unsupported provider options return errors without fallback.',
         inputSchema: { type: 'object', properties: { ...video,
-                imageUri: { type: 'string', description: 'Provider-supported source image URI; gateway validates URI schemes and access. No local file upload is performed.' },
-                lastFrameUri: { type: ['string', 'null'], description: 'Optional final-frame URI; gateway validates model support.' },
-            }, required: ['prompt', 'model', 'duration', 'resolution', 'reserveUsd', 'imageUri'], additionalProperties: false }, annotations: generation },
+                imageUri: { type: 'string', description: 'Public HTTPS PNG/JPEG URL or PNG/JPEG data URI. Mutually exclusive with imagePath.' },
+                imagePath: { type: 'string', description: 'Local PNG/JPEG start image (at most 32 MiB, 4096 px per side), sent as a data URI.' },
+                lastFrameUri: { type: ['string', 'null'], description: 'Optional final-frame HTTPS URL or data URI; gateway validates model support.' },
+                lastFramePath: { type: 'string', description: 'Optional local PNG/JPEG final frame, sent as a data URI.' },
+            }, required: ['prompt', 'model', 'duration', 'resolution', 'reserveUsd'], additionalProperties: false }, annotations: generation },
     { name: 'astra_genai_audio2video', title: 'Generate GenAI LTX video driven by an audio track',
         description: 'Render a clip whose length and motion follow a supplied speech or sound track through ASTRA GenAI LTX v2 audio-to-video, then save an MP4. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. The output length equals the audio length (local maximum 361 frames: 15.04 s at 24 fps, 14.44 s at 25, 7.52 s at 48, 7.22 s at 50; longer audio returns 422). Mono or stereo only; three or more channels return 422 instead of a downmix. The sample rate is kept, so only AAC standard rates 7350-96000 Hz (e.g. 48000, 44100) are accepted; others such as 192000 return 422. The gateway copies the backend soundtrack without a second encode, but the backend encodes it once, so the result is not bit-identical to the input. Only ltx-2.5-22b-dev runs this pipeline; no duration, generateAudio, cameraMotion, seed or frame controls. Lip-sync quality is unmeasured; inspect mouths before acceptance. Persists job identity before polling; recover with astra_genai_video_status.',
         inputSchema: { type: 'object', properties: {
@@ -68,7 +72,7 @@ export const GENAI_TOOLS = [
                 ...output,
             }, required: ['model', 'prompt', 'mode'], additionalProperties: false }, annotations: generation },
     { name: 'astra_genai_msr', title: 'Generate an LTX video from subject and background references',
-        description: 'Combine character, clothing, object and background references in one MSR video through ASTRA GenAI. Use video_plan operation reference and video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Up to four subject images and one background; place the background last and number prompt images in that order. Local PNG/JPEG files become data URIs. MSR is a server-selected deployment with no model parameter, independent of saved LTX v2 weights. It cannot pin first/last frames or condition on recorded speech; use img2video for frame control. Saves a job receipt and resumes via video_status without resubmission.',
+        description: 'Combine character, clothing, object and background references in one MSR video through ASTRA GenAI. Use video_plan operation reference and video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Up to four subject images and one background; place the background last and number prompt images in that order. Local PNG/JPEG files are shrunk to the render size and, with local voice samples, uploaded in chunks as gateway file ids (data URIs where the gateway has no upload API). MSR is a server-selected deployment with no model parameter, independent of saved LTX v2 weights. It cannot pin first/last frames; use img2video for frame control. Speech and effects are rendered natively. Subjects 1 and 2 may carry an optional voice sample of the character (audioPath or audioUri, at most 10 s, about 5 s used); write any dialogue in the prompt. The model imitates the timbre of the sample and does not preserve it; without a sample the voice follows the prompt. A request with a sample is refused before submission when the gateway MSR backend does not accept samples (GET /v1/ltx/msr/capabilities). Saves a job receipt and resumes via video_status without resubmission.',
         inputSchema: { type: 'object', properties: {
                 prompt: { type: 'string', minLength: 1, maxLength: 2000, description: 'Action and reference roles, e.g. person in image 1 wearing the jacket in image 2.' },
                 references: { type: 'array', minItems: 1, maxItems: 5, description: 'At most four subjects and one background. Exactly one URI or path per reference.', items: {
@@ -76,6 +80,8 @@ export const GENAI_TOOLS = [
                             imageUri: { type: 'string', description: 'Public HTTPS PNG/JPEG or data URI.' },
                             imagePath: { type: 'string', description: 'Local PNG/JPEG path, instead of imageUri.' },
                             background: { type: 'boolean', default: false, description: 'Marks the single background reference; put it last.' },
+                            audioPath: { type: 'string', description: 'Local voice sample (wav, mp3, m4a, ogg) for this subject; subjects 1 and 2 only. Voice only, no background sound.' },
+                            audioUri: { type: 'string', description: 'HTTPS or audio data URI voice sample, instead of audioPath.' },
                         }, additionalProperties: false,
                     } },
                 referenceStrength: { type: 'number', minimum: 0, maximum: 1, default: 1, description: 'Reference adherence strength.' },

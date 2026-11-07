@@ -166,8 +166,8 @@ ffmpeg -y -i cover-motion.mp4 -filter_complex \
   at a time.
 - **Boundary detection is made by periods** — a long comma-spliced sentence produces no silence
   and goes down the proportional fallback path.
-- **Stretching a square image to 9:16 with `veo_img2video` bakes in letterboxing** — use
-  `veo_reference` for character speech.
+- **Image-to-video keeps the source's ratio** — a square still stretched to 9:16 bakes in
+  letterboxing; character speech goes to the plan's reference adapter instead.
 - **Speech clip scale** — frame-persona-clip.py fixes position but can't fix scale. Put "subject
   appears small in the frame" in the prompt and regenerate only the misaligned clips. An hstack
   comparison is the only way to detect it.

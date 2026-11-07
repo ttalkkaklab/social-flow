@@ -64,7 +64,7 @@ export const config = {
   pexelsApiKey: process.env.PEXELS_API_KEY || '',
   /** Pixabay API key (optional — stock_search skips Pixabay without it) — https://pixabay.com/api/docs/ */
   pixabayApiKey: process.env.PIXABAY_API_KEY || '',
-  /** Gemini API key (shared requirement of the veo_ and omni_ video, tts_* speech, and music_* music tools) — https://aistudio.google.com/apikey */
+  /** Gemini API key (shared requirement of the tts_* speech and music_* music tools) — https://aistudio.google.com/apikey */
   geminiApiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '',
   /** OpenAI API key (required by the gpt_image_* image generation tools) — https://platform.openai.com/api-keys */
   openaiApiKey: process.env.OPENAI_API_KEY || '',
@@ -340,9 +340,9 @@ export function requireDataGoKrKey(): string {
 export function requireGeminiKey(): string {
   if (!config.geminiApiKey) {
     throw new Error(
-      'GEMINI_API_KEY (or GOOGLE_API_KEY) is not set. veo_*/omni_* (video), tts_* (speech), and music_* (Lyria) ' +
+      'GEMINI_API_KEY (or GOOGLE_API_KEY) is not set. tts_* (speech) and music_* (Lyria) ' +
         'generation tools all require a Gemini API key (https://aistudio.google.com/apikey). ' +
-        'Video, speech, and music generation are unavailable until the key is set — search, publish, and image tools work fine without it.',
+        'Speech and music generation are unavailable until the key is set — search, publish, and image tools work fine without it.',
     );
   }
   return config.geminiApiKey;
@@ -408,12 +408,10 @@ export function requireArkKey(): string {
         '(https://ai.byteplus.com/ark/region:ap-southeast-1/apikey). ' +
         'The key is the API Key the console issues separately (starts with ark-), not the signing AccessKeyId/SecretAccessKey. ' +
         "And the key alone isn't enough — each model must first be switched on under the console's Model activation, " +
-        'or task creation fails with ModelNotOpen (seedance-1-5-pro included, measured 2026-08-15). First activation asks for ' +
+        'or task creation fails with ModelNotOpen (measured 2026-08-15). First activation asks for ' +
         'TOS, VPC, and ML-platform cross-service authorization grants, which the account owner has to click. ' +
-        'The Dreamina Seedance 2.5/2.0 family adds one more gate on top: an account balance above $30 or a resource-pack purchase ' +
-        '(the seedance-1-5-pro/1-0-pro family only lacks the balance gate). ' +
-        'Without this key, veo_* video generation still works via GEMINI_API_KEY — for which one to use, ' +
-        'see skills/produce/references/video-model-selection.md.',
+        'Dreamina Seedance 2.5/2.0 adds one more gate on top: an account balance above $30 or a resource-pack purchase. ' +
+        'For which video engine to use, see skills/produce/references/video-model-selection.md.',
     );
   }
   return config.arkApiKey;
@@ -436,7 +434,7 @@ export function requireAstraVideoKey(): string {
         '(https://video.astravision.co.kr) and it rejects every route but /healthz without a key. ' +
         'Ask the server operator for a key and export ASTRA_VIDEO; point ASTRA_VIDEO_URL at another host only ' +
         'if you run a second box of the same server. ' +
-        'Without it, veo_* (GEMINI_API_KEY), seedance_* (ARK_API_KEY) and mlx_video_generate (on-device) still work.',
+        'Without it, astra_genai_* (ASTRA_GENAI_API_KEY), seedance_* (ARK_API_KEY) and ltx_video_generate (on-device) still work.',
     );
   }
   return config.astraVideoApiKey;

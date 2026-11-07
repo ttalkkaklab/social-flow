@@ -26,7 +26,7 @@ Example `setup-input.json` (illustrative choices, never automatic defaults):
     "project": {"name":"History stories","channel":"history"},
     "videoType": {"id":"documentary"},
     "models": {
-      "video": {"engine":"seedance","model":"seedance-1-5-pro-251215","resolution":"720p"},
+      "video": {"engine":"seedance","model":"dreamina-seedance-2-0-fast-260128","resolution":"720p"},
       "speech": {"engine":"gemini","model":"gemini-3.8-flash-tts"},
       "image": {"engine":"host","model":"host-managed","host":"codex"}
     },

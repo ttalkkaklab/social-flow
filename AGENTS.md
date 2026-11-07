@@ -1,6 +1,6 @@
 # AGENTS.md — working rules for this repository
 
-social-flow is a Claude Code plugin: 28 skills, 5 reviewer agents, and one bundled
+social-flow is a Claude Code plugin: 29 skills, 5 reviewer agents, and one bundled
 MCP server. [README.md](README.md) is the source of truth for structure and the tool
 list; [CLAUDE.md](CLAUDE.md) holds the owner's dated production directives (the later
 date wins), the branch flow, the commit rules and the Korean prose rules. **Read
@@ -39,6 +39,29 @@ so and stops; it does not reach for a second browser. Two of these lanes exist
 because a fallback lane rotted in place — six `chrome-devtools` tools and eighteen
 `claude-in-chrome` tools sat in `allowed-tools` for versions after the servers were
 gone from every machine that runs this plugin.
+
+## Local GenAI connection — owner directive, 2026-11-07
+
+For `/Volumes/data/story/insight`, `astra-genai-native` / `qwen-image-fast` means
+the local GenAI gateway at `http://127.0.0.1:18081`, backed by MLX Serve
+(`qwen-image-2.1-turbo`). Before generation, verify the image endpoint and credential
+are available to the **MCP server process**, then call `astra_genai_catalog kind:image`
+and confirm that alias and protocol. A shell's environment is not evidence that an
+already-running MCP server inherited it. Forward `ASTRA_GENAI_IMAGE_URL` and
+`ASTRA_GENAI_IMAGE_API_KEY`; speech uses the corresponding `SPEECH` variables.
+Keep the existing remote video route separate. Never print or persist secret values.
+For a Codex STDIO connection, include the six `ASTRA_GENAI_*` names (base URL/key,
+image URL/key and speech URL/key) in `mcp_servers.social-flow.env_vars`; write variable
+names only. Verify a fresh connection with that whitelist. Updating config does not
+change the environment of a server that is already running.
+
+If a call unexpectedly reaches `https://genai.astravision.co.kr`, returns an empty
+model list or says `Model capability is disabled`, compare its receipt's `baseUrl`
+with the last successful receipt. Restore the same local route before proposing a
+different model or asking the user to select one. Check uncertain requests before
+retrying; do not discard their receipts. A fresh invocation of this plugin's own
+MCP server may inherit the correct shell environment when the session's connection
+is stale. Verify recovery with an actual requested image and its local receipt.
 
 ## Images containing text
 
@@ -86,3 +109,12 @@ the tested module's existing file, and only for behavior the change adds or alte
 Anything under `data/` is a local artifact and never gets committed. `server/dist/`
 is a build artifact that **must** be committed, because marketplace installs never
 run `npm install`.
+
+## 워크트리 경로 — 사용자 지침, 2026-10-10
+
+- 새 워크트리는 이 저장소의 기본 체크아웃 루트 아래 `.worktree/<이름>/`에 만든다.
+- 연결된 워크트리에서 작업 중이면 `git worktree list --porcelain`의 첫 `worktree` 경로를 기본 루트로 사용한다. 현재 디렉토리 아래에 다시 중첩하지 않는다.
+- `.worktrees/`, 저장소 옆 디렉토리, 공용 워크트리 폴더를 생성 경로로 쓰지 않는다. ASTRA와 다른 도구의 기본 경로보다 이 사용자 지침을 우선한다.
+- `.gitignore`에 `/.worktree/`를 등록한다. 이 워크스페이스에서는 `git wt-add <이름> <새-브랜치> [기준-브랜치]`로 생성할 수 있다.
+- 별칭이 없으면 기본 루트에서 `git worktree add -b <새-브랜치> .worktree/<이름> <기준-브랜치>`를 실행한다. 기존 브랜치 정책을 따른다.
+- 머지 여부와 미커밋 변경을 확인한 뒤 `git worktree remove`로 정리한다. 미완료 작업과 로컬 자료는 보존하고 경로 이동에는 `git worktree move`를 쓴다.

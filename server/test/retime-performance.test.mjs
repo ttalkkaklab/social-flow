@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const { retime } = require('../../skills/produce/references/retime-performance.js');
-const { designDirectionConflict } = require('../../skills/produce/references/prepare-astra-shot.js');
 const scene = {duration: 8.041667, narration:[{id:'line', speaker:'actor', tts:'Line', acting:{leadInSeconds:0.12,tailOutSeconds:0.35}}], performance:[{kind:'action',text:'Speak',withGroup:1,durationSeconds:7.9},{kind:'dialogue',character:'actor',group:1}]};
 test('explicit speech-bound retiming removes inherited length without changing speech or the input', () => {
   const result = retime(scene, {speechBoundActions:true}, () => 2.13);
@@ -16,11 +15,6 @@ test('default retiming preserves authored action and standalone action edits are
   const silent = {performance:[{kind:'action',text:'Leave',durationSeconds:8.041667}]};
   assert.equal(retime(silent, {actions:[[0,4]]}, () => null).scene.duration, 4);
   assert.throws(() => retime(scene,{actions:[[1,2]]},()=>2), /action index/);
-});
-test('continuity warning compares the same jamb statement, not arbitrary left and right nouns', () => {
-  assert.equal(designDirectionConflict('beyond image-left jamb','beyond image RIGHT jamb'),true);
-  assert.equal(designDirectionConflict('desk image-left','door image-right'),false);
-  assert.equal(designDirectionConflict('image-left jamb','image LEFT jamb'),false);
 });
 
 const { prefixCompatible } = require('../../skills/_shared/performance-retiming.js');

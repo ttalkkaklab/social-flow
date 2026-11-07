@@ -5,8 +5,8 @@
  *
  * Today a missing key surfaces one way only: you call the tool, it fails, and the error
  * message explains what to set. That message is well written — but it arrives **after** the
- * plan was made around a tool that was never going to run. A storyboard that plans two Veo
- * b-roll slots on a machine with no `GEMINI_API_KEY` has already spent the review rounds
+ * plan was made around a tool that was never going to run. A storyboard that plans two Seedance
+ * b-roll slots on a machine with no `ARK_API_KEY` has already spent the review rounds
  * before anyone finds out.
  *
  * The server knows the answer before any of that. It reads the same environment at startup to
@@ -71,23 +71,21 @@ export function capabilityStatus(): {
     {
       capability: 'video_generation',
       providers: [
-        { provider: 'veo (Gemini)', configured: gemini, needs: 'GEMINI_API_KEY',
-          note: 'veo_text2video · veo_img2video · veo_reference · veo_extension' },
-        { provider: 'gemini omni (Gemini)', configured: gemini, needs: 'GEMINI_API_KEY',
-          note: 'omni_text2video · omni_img2video · omni_extend · omni_edit — 360p drafts, 3-10s lengths, instruction editing' },
         { provider: 'seedance (BytePlus ModelArk)', configured: has(config.arkApiKey), needs: 'ARK_API_KEY',
-          note: 'seedance_text2video · seedance_img2video · seedance_reference' },
+          note: 'seedance_text2video · seedance_img2video · seedance_reference (Seedance 2.x; spoken cuts need seedance_reference with voice samples)' },
         { provider: 'mlx-serve (local, MLX Core)', configured: mlx, needs: 'MLX Core.app or mlx-serve on PATH',
-          note: 'mlx_video_generate — 24fps rgb8 muxed to mp4, RAM-capped; not the default path' },
+          note: 'ltx_video_generate · fasth3_omni_reference — 24fps rgb8 muxed to mp4, RAM-capped; not the default path' },
+        { provider: 'astra-genai-desktop', configured: has(config.astraGenaiApiKey), needs: 'ASTRA_GENAI_API_KEY', note: 'Gateway text/image/audio video, extend/retake/keyframes; discover installed models and LoRA refs with astra_genai_catalog.' },
         { provider: 'astra-genai (LTX v2 gateway)', configured: has(config.astraGenaiApiKey), needs: 'ASTRA_GENAI_API_KEY',
           note: 'astra_genai_text2video · astra_genai_img2video · astra_genai_audio2video (audio-length clip, mono/stereo, 7350-96000 Hz, data URI ≤15,000,000 base64 chars) · astra_genai_msr (four subjects + background) · astra_genai_video_status; separate gateway token, no LoRA; configuration is not a live check' },
         { provider: 'astra video (self-hosted LTX-2.5)', configured: has(config.astraVideoApiKey), needs: 'ASTRA_VIDEO',
-          note: 'astra_text2video · astra_img2video · astra_keyframe_video · astra_audio2video · astra_ic_lora · astra_video_retake · astra_video_capabilities · astra_video_list_uploads · astra_video_delete_upload (upload management requires server endpoint support; configuration is not a live check) — our own box, no per-call bill, but ONE render at a time (66-184s each plus queue); the batch lane, not the interactive one' },
+          note: 'astra_text2video · astra_img2video · astra_keyframe_video · astra_audio2video · astra_ic_lora · astra_video_upscale (pixel-upscaler-x2, 2x of a source up to about 512x896) · astra_video_retake · astra_video_capabilities · astra_video_list_uploads · astra_video_delete_upload (upload management requires server endpoint support; configuration is not a live check) — our own box, no per-call bill, but ONE render at a time (66-184s each plus queue); the batch lane, not the interactive one' },
       ],
     },
     {
       capability: 'image_generation',
       providers: [
+        { provider: 'astra-genai-native', configured: has(config.astraGenaiApiKey), needs: 'ASTRA_GENAI_API_KEY', note: 'Model-bound images; up to ten references and registered LoRAs according to image catalog.' },
         { provider: 'astra-genai (DashScope gateway)', configured: has(config.astraGenaiApiKey), needs: 'ASTRA_GENAI_API_KEY',
           note: 'astra_genai_text2img / astra_genai_edit — text, single-source img2img/inpaint, optional prompt expansion, 800-character prompt limit; gateway model availability requires verification' },
         { provider: 'z-image (local, mflux)', configured: binOk(mfluxZImageBin()), needs: 'mflux on this machine',
@@ -101,6 +99,7 @@ export function capabilityStatus(): {
     {
       capability: 'tts',
       providers: [
+        { provider: 'astra-genai', configured: has(config.astraGenaiApiKey), needs: 'ASTRA_GENAI_API_KEY', note: 'tts_astra_genai; discover aliases, voices and capabilities with astra_genai_catalog kind:speech. Configuration is not a health check.' },
         { provider: 'gemini', configured: gemini, needs: 'GEMINI_API_KEY',
           note: 'tts_generate · tts_multi_speaker · tts_gemini_38' },
         { provider: 'elevenlabs', configured: has(config.elevenLabsApiKey), needs: 'ELEVENLABS_API_KEY',

@@ -12,7 +12,7 @@ const compiler = new URL('../../skills/produce/references/compile-sound-plan.js'
 const intent = { effects: [{ id: 'hangup', delivery: 'auto', description: 'Short Bakelite clack', trigger: 'When receiver contacts cradle, once' }] };
 
 test('model/mode routing validates adapter payloads and preserves explicit flags and legacy cues', () => {
-  for (const tool of ['veo_text2video', 'omni_text2video', 'seedance_text2video', 'astra_text2video']) {
+  for (const tool of ['seedance_text2video', 'astra_text2video']) {
     const p = prepareVideoSound(tool, { prompt: 'Man hangs up.' }, intent);
     assert.equal(p.sound.effects[0].delivery, 'native', tool);
     assert.equal(p.sound.audioSource, 'video');
@@ -23,27 +23,24 @@ test('model/mode routing validates adapter payloads and preserves explicit flags
   const a2v = prepareVideoSound('astra_audio2video', { prompt: 'Man hangs up.', audioPath: '/tmp/voice.wav' }, intent);
   assert.equal(a2v.sound.effects[0].delivery, 'post');
   assert.doesNotMatch(a2v.arguments.prompt, /Bakelite/);
-  const silent = prepareVideoSound('seedance_text2video', { prompt: 'Man hangs up.', model: 'seedance-1-0-pro-250528' }, intent);
-  assert.equal(silent.sound.effects[0].delivery, 'post');
   assert.equal(prepareVideoSound('seedance_text2video', { prompt: 'Man', generateAudio: false }, intent).sound.effects[0].delivery, 'post');
   assert.equal(prepareVideoSound('seedance_text2video', { prompt: 'Man' }, { effects: [{ sfx: 'old' }] }).arguments.generateAudio, false);
-  assert.equal(prepareVideoSound('veo_text2video', { prompt: 'Man' }, { ...intent, audioSource: 'speech' }).sound.effects[0].delivery, 'post');
+  assert.equal(prepareVideoSound('astra_text2video', { prompt: 'Man' }, { ...intent, audioSource: 'speech' }).sound.effects[0].delivery, 'post');
   assert.throws(() => prepareVideoSound('astra_audio2video', { prompt: 'Man', audioPath: '/tmp/a.wav' }, { effects: [{ ...intent.effects[0], delivery: 'native' }] }), /Native SFX/);
-  assert.throws(() => prepareVideoSound('veo_text2video', { prompt: 'Man' }, { effects: [{ ...intent.effects[0], delivery: 'input' }] }), /Input SFX/);
-  assert.throws(() => prepareVideoSound('veo_text2video', { prompt: 'Man', fakeOption: 1 }, intent), /Unsupported/);
+  assert.throws(() => prepareVideoSound('astra_text2video', { prompt: 'Man' }, { effects: [{ ...intent.effects[0], delivery: 'input' }] }), /Input SFX/);
+  assert.throws(() => prepareVideoSound('astra_text2video', { prompt: 'Man', fakeOption: 1 }, intent), /Unsupported/);
   assert.throws(() => prepareVideoSound('seedance_text2video', { prompt: 'Man', model: 'future-model' }, intent), /Unknown/);
-  assert.throws(() => prepareVideoSound('veo_text2video', {}, intent));
+  assert.throws(() => prepareVideoSound('astra_text2video', {}, intent));
   assert.throws(() => prepareVideoSound('seedance_text2video', {prompt:'Man',generateAudio:false}, {audioSource:'video',effects:[]}), /silent output/);
   for (const effects of [[], [{delivery:'post',sfx:'click',atSeconds:1}]]) {
     const retained = prepareVideoSound('seedance_text2video', {prompt:'Man'}, {audioSource:'video',effects});
     assert.equal(retained.arguments.generateAudio,true,'explicit source soundtrack overrides only the silent default, including post-only and empty plans');
     assert.throws(() => prepareVideoSound('seedance_text2video', {prompt:'Man',generateAudio:false}, {audioSource:'video',effects}), /silent output/);
-    assert.throws(() => prepareVideoSound('seedance_text2video', {prompt:'Man',model:'seedance-1-0-pro-250528'}, {audioSource:'video',effects}), /silent output/);
   }
-  assert.throws(() => prepareVideoSound('veo_text2video', {prompt:'Man. Audio: silent'}, intent), /conflict/);
-  assert.throws(() => prepareVideoSound('veo_text2video', {prompt:'Man'}, {effects:[intent.effects[0],intent.effects[0]]}), /unique/);
-  const once = prepareVideoSound('veo_text2video', {prompt:'Man'}, intent);
-  assert.equal(prepareVideoSound('veo_text2video', once.arguments, once.sound).arguments.prompt, once.arguments.prompt);
+  assert.throws(() => prepareVideoSound('astra_text2video', {prompt:'Man. Audio: silent'}, intent), /conflict/);
+  assert.throws(() => prepareVideoSound('astra_text2video', {prompt:'Man'}, {effects:[intent.effects[0],intent.effects[0]]}), /unique/);
+  const once = prepareVideoSound('astra_text2video', {prompt:'Man'}, intent);
+  assert.equal(prepareVideoSound('astra_text2video', once.arguments, once.sound).arguments.prompt, once.arguments.prompt);
 });
 
 test('real audio extraction preserves source samples once, compiler omits native/input and rejects unresolved post', () => {
@@ -113,4 +110,26 @@ test('complete builder keeps post SFX audible when the retained source is silent
     const receipt=JSON.parse(readFileSync(join(dir,'silent.json'),'utf8'));
     assert.equal(receipt.silent,true);assert.ok(receipt.postRms>.001);assert.ok(receipt.beforePostRms<.0001);
   } finally {rmSync(dir,{recursive:true,force:true});}
+});
+
+test('MSR renders effects natively and its own soundtrack carries the dialogue', async () => {
+  const msrArgs = { prompt: 'Man hangs up.', references: [{ imageUri: 'https://example.com/p.png', audioUri: 'https://example.com/v.wav' }], reserveUsd: 0 };
+  const msr = prepareVideoSound('astra_genai_msr', msrArgs, intent);
+  assert.equal(msr.sound.effects[0].delivery, 'native');
+  assert.equal(msr.arguments.generateAudio, undefined);
+  assert.equal(msr.capabilities.inputAudio, 'reference');
+  assert.throws(() => prepareVideoSound('astra_genai_msr', msrArgs, { ...intent, audioSource: 'speech' }), /not allowed/);
+  const { prepare: prepareSound } = require('../../skills/produce/references/prepare-video-sound.js');
+  const dir = mkdtempSync(join(tmpdir(), 'msr-sound-'));
+  try {
+    const scene = { id: 's1', narration: [{ id: 'l1', speaker: 'hero', tts: 'Hello.', delivery: 'on_screen' }], visual: { video: { engine: 'astra-genai' } }, sound: { effects: intent.effects } };
+    writeFileSync(join(dir, 'scenes.js'), `window.SCENES=${JSON.stringify([scene])};`);
+    const sound = (await prepareSound(dir, 's1', 'astra_genai_msr', msrArgs)).sound;
+    assert.equal(sound.audioSource, 'video');
+    assert.equal(sound.effects[0].delivery, 'native');
+    // The registry's engine decides, not the tool-name prefix: 'astra' must not admit astra_genai_*.
+    scene.visual.video.engine = 'astra';
+    writeFileSync(join(dir, 'scenes.js'), `window.SCENES=${JSON.stringify([scene])};`);
+    await assert.rejects(prepareSound(dir, 's1', 'astra_genai_msr', msrArgs), /differs from the authored video engine/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
 });

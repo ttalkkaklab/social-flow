@@ -114,7 +114,7 @@ topic_keywords: ["Vietnam visa", "expat paperwork"]   # only with topic_source: 
 ## AI disclosure policy
 
 Default `always` — `containsSyntheticMedia` stays on. This channel's videos use
-Veo and Lyria, so they're in disclosure scope, and disclosure costs nothing in
+generated video and Lyria, so they're in disclosure scope, and disclosure costs nothing in
 exposure or revenue.
 If a topic ever falls entirely under the exemptions (script, subtitles, cloning
 your own voice, unrealistic animation only), write that topic here as an

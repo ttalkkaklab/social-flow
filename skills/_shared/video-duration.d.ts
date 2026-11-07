@@ -4,6 +4,7 @@ export interface DurationLimits {
   max?: number;
   step?: number;
   frameRate?: number;
+  frameOffset?: number;
 }
 export interface DurationPlan {
   requiredSeconds: number;

@@ -10,7 +10,7 @@
  * ## Why this exists
  *
  * Approval at storyboard §7 is the last free moment. After it, every generated-video
- * slot turns into an API call that bills, and a 4-second b-roll on Veo costs more than
+ * slot turns into an API call that bills, and one generated b-roll can cost more than
  * every image in the episode put together. So the approval screen has to say two
  * numbers: what has gone out already (images, from the ledger) and what saying yes
  * commits (the video slots, from scenes.js).
@@ -72,36 +72,18 @@ function die(msg, code) {
  * The source of truth for the rules is ../../produce/references/video-model-selection.md
  * §The four selection rules; what is frozen here is only the price key each route bills on.
  *
- *   b-roll keeps the clip's own sound (produce absolute rule 9) -> Veo. It needs no
- *   reference image, no extension and no 4K, so rule 2 picks the cheapest tier that
- *   qualifies: lite. 1080p is 8s-only, so a 4-second cut still generates and bills 8.
- *
- *   A motion background has its sound discarded by the builder, so silent Seedance wins
- *   with no downside, and it bills the seconds actually requested.
- *
- *   A quote speech clip goes through veo_reference, which refuses the lite model and is
- *   pinned to 8 seconds — so fast is the floor there.
+ *   Every slot defaults to Seedance 2.0 and bills the seconds actually requested. Veo left
+ *   on 2026-10-31 (no voice reference); a board that still names it fails in scenePlan.
+ *   A quote speech clip is planned by scenePlan on the fixed-voice reference route.
  */
 const ROUTES = {
-  'broll/veo': {
-    key: 'veo.lite.1080p', fixedSeconds: 8,
-    why: 'veo_img2video · lite · 1080p generates 8s whatever the cut uses'
-  },
   'broll/seedance': {
-    key: 'seedance.1-5-pro-audio.1080p',
+    key: 'seedance.2-0.1080p',
     why: 'seedance_img2video · generateAudio true — the slot plays the clip\'s own sound'
   },
   'motion/seedance': {
-    key: 'seedance.1-5-pro-silent.1080p',
+    key: 'seedance.2-0.1080p',
     why: 'seedance_img2video · silent — the builder keeps only the video track'
-  },
-  'motion/veo': {
-    key: 'veo.lite.1080p', fixedSeconds: 8,
-    why: 'veo_img2video · lite — an explicit engine:"veo" motion slot (a previz cut never routes here; render-routing refuses it) · 1080p is 8s-only'
-  },
-  'quote/veo': {
-    key: 'veo.fast.1080p', fixedSeconds: 8,
-    why: 'veo_reference · fast (lite has no reference images) · pinned to 8s'
   },
   /* The host lane (owner directive 2026-09-07): under Grok the CLI's own image_to_video takes
      the clip on the subscription allowance, so the row bills the requested seconds at $0 — the
@@ -151,12 +133,8 @@ const ROUTES = {
      it bills the seconds each shot asks for. These shots are outside generatedVideoMax; the
      forecast is where their spend becomes visible, and storyboard §5's gate is where it is approved. */
   'footage/seedance': {
-    key: 'seedance.1-5-pro-silent.1080p',
+    key: 'seedance.2-0.1080p',
     why: 'seedance_img2video · silent — a footage slide clip; the builder keeps only the video track'
-  },
-  'footage/veo': {
-    key: 'veo.lite.1080p', fixedSeconds: 8,
-    why: 'veo_img2video · lite — a footage slide clip on the no-ARK_API_KEY route · 1080p is 8s-only'
   },
   /* Stills moved behind the approval gate on 2026-09-04 (owner directive — a plan the user
      rejects must cost nothing), so they are a projection now, not a ledger line. Every still
@@ -196,7 +174,7 @@ const ROUTES = {
  * default — which is why a new engine has to be added here and in ROUTES on the same change:
  * a missing name does not error, it quietly bills the fallback vendor for a call we never make. */
 function routeEngine(named, fallback) {
-  return ['host', 'veo', 'seedance', 'astra'].includes(named) ? named : fallback;
+  return ['host', 'seedance', 'astra'].includes(named) ? named : fallback;
 }
 
 /**
@@ -237,7 +215,7 @@ function videoSlots(scenes) {
       slots.push({ shot: shotNo, kind: plan.kind, engine: plan.engine, duration: Number(s.duration),
         plan, label: plan.kind === 'motion' ? 'motion background' : plan.kind === 'quote' ? 'speech clip' : 'b-roll' });
     } else if (s.type === 'broll') {
-      const engine = routeEngine(v.engine, 'veo');
+      const engine = routeEngine(v.engine, 'seedance');
       slots.push({ shot: shotNo, kind: 'broll', engine, duration: Number(s.duration) || 0,
                    label: 'b-roll after scene ' + (s.after === undefined ? '?' : s.after) });
     } else if (v.video) {
@@ -245,7 +223,7 @@ function videoSlots(scenes) {
       slots.push({ shot: shotNo, kind: 'motion', engine, duration: Number(s.duration) || 0,
                    label: 'motion background' });
     } else if (s.type === 'quote' && v.clip && typeof v.clip === 'object') {
-      slots.push({ shot: shotNo, kind: 'quote', engine: routeEngine(v.clip.engine || v.engine, 'veo'), duration: Number(s.duration) || 0,
+      slots.push({ shot: shotNo, kind: 'quote', engine: routeEngine(v.clip.engine || v.engine, 'seedance'), duration: Number(s.duration) || 0,
                    label: 'speech clip' + (s.speaker ? ' · ' + s.speaker : '') });
     }
     const sl = v.slide;
@@ -332,10 +310,10 @@ function costFingerprint(scenes) {
     var s = scenes[i] || {}, v = s.visual || {};
     if (v.reuse !== undefined) parts.push((i + 1) + ":reuse:" + encodeURIComponent(JSON.stringify(v.reuse)));
     var slot = null;
-    var route = function (named, fallback) { return named === "host" || named === "veo" || named === "seedance" ? named : fallback; };
-    if (s.type === "broll") slot = ["broll", route(v.engine, "veo"), Number(s.duration) || 0];
+    var route = function (named, fallback) { return named === "host" || named === "seedance" ? named : fallback; };
+    if (s.type === "broll") slot = ["broll", route(v.engine, "seedance"), Number(s.duration) || 0];
     else if (v.video) slot = ["motion", route(v.video.engine || v.engine, "seedance"), Number(s.duration) || 0];
-    else if (s.type === "quote" && v.clip && typeof v.clip === "object") slot = ["quote", route(v.clip.engine || v.engine, "veo"), Number(s.duration) || 8];
+    else if (s.type === "quote" && v.clip && typeof v.clip === "object") slot = ["quote", route(v.clip.engine || v.engine, "seedance"), Number(s.duration) || 8];
     if (slot) {
       var config = Object.assign({}, v, slot[0] === "motion" ? v.video : slot[0] === "quote" ? v.clip : {});
       var fields = ["model", "modelPurpose", "modelReason", "resolution", "generateAudio", "realFaceInput", "referenceImagePaths", "referenceAudioPaths", "previz", "frames", "references"];
@@ -402,7 +380,7 @@ function runReport(tsvPath) {
   return { exit: r.status === null ? 3 : r.status, items, total, unresolved, raw: out };
 }
 
-/** Groups report items by price-key family — image / veo / seedance / tts / music. */
+/** Groups report items by price-key family — image / seedance / tts / music (veo · omni on earlier ledgers). */
 function byFamily(items) {
   const acc = {};
   items.forEach((it) => {
@@ -422,7 +400,7 @@ function usd(n) { return '$' + n.toFixed(2); }
    is `!!` and exit 1 — storyboard §5 fits the board first (scenes-schema §Channel true-motion policy,
    "Fitting the board to videoBudgetUsd", has the ladder) and asks the user only for a number that fits. */
 const VIDEO_BUDGET_DEFAULT_USD = 10;
-const VIDEO_FAMILIES = ['seedance', 'veo'];
+const VIDEO_FAMILIES = ['seedance', 'veo', 'omni']; // veo · omni: spend on earlier ledgers still counts
 
 function findProfile(startDir) {
   let dir = startDir;
@@ -482,7 +460,7 @@ function selftest() {
   };
 
   // Every route a slot can resolve to has a price key.
-  ['broll/veo', 'broll/seedance', 'motion/seedance', 'motion/veo', 'quote/veo', 'footage/seedance', 'footage/veo']
+  ['broll/seedance', 'motion/seedance', 'footage/seedance']
     .forEach((r) => ok('route ' + r + ' has a price key', !!(ROUTES[r] && ROUTES[r].key)));
 
   // Every price key the routing table names exists in prices.tsv — an invented key
@@ -494,9 +472,6 @@ function selftest() {
     ok('prices.tsv carries ' + ROUTES[r].key, prices.indexOf(ROUTES[r].key) !== -1);
   });
 
-  // Veo bills its generated length, not the used length — a 4s b-roll still bills 8.
-  const brollRow = forecastRows([{ shot: 2, kind: 'broll', engine: 'veo', duration: 4, label: 'x' }])[0];
-  ok('a 4s Veo b-roll is forecast at 8 seconds', brollRow.qty === 8);
   // Seedance bills the seconds asked for.
   const motionRow = forecastRows([{ shot: 3, kind: 'motion', engine: 'seedance', duration: 6, label: 'x' }])[0];
   ok('a 6s silent Seedance motion background is forecast at 6 seconds', motionRow.qty === 6);
@@ -504,20 +479,20 @@ function selftest() {
   // Slot detection: a still shot costs nothing, the three paid kinds are caught.
   const sample = [
     { type: 'cover', visual: { picture: 'still' } },
-    { type: 'points', duration: 6, visual: { video: { prompt: 'x' } } },
-    { type: 'quote', duration: 5, visual: { clip: { prompt: 'x' } } },
+    { type: 'points', duration: 6, visual: { video: { prompt: 'x', realFaceInput: false } } },
+    { type: 'quote', duration: 5, visual: { clip: { prompt: 'x', realFaceInput: false } } },
     { type: 'points', duration: 5, visual: { clip: '.work/x.mp4' } },
-    { type: 'broll', after: 0, duration: 4, visual: {} }
+    { type: 'broll', after: 0, duration: 4, visual: { realFaceInput: false } }
   ];
   const slots = videoSlots(sample);
   ok('the still cover and a string clip path are not billed', slots.length === 3);
   ok('the motion background is detected', slots[0].kind === 'motion' && slots[0].engine === 'seedance');
   ok('the quote speech clip is detected', slots[1].kind === 'quote');
-  ok('the b-roll is detected', slots[2].kind === 'broll' && slots[2].engine === 'veo');
-  // A footage slide bills one clip per shot, on the silent Seedance route unless the shot says veo.
+  ok('the b-roll is detected', slots[2].kind === 'broll' && slots[2].engine === 'seedance');
+  // A footage slide bills one clip per shot, on the silent Seedance route unless the shot names another engine.
   const footage = videoSlots([{ type: 'points', visual: { slide: { treatment: 'footage', motion: true,
-    shots: [{ group: 1, clip: 'slides/footage/s1-g1.mp4', duration: 5 }, { group: 2, clip: 'slides/footage/s1-g2.mp4', duration: 4, engine: 'veo' }] } } }]);
-  ok('footage shots are detected one per clip', footage.length === 2 && footage[0].kind === 'footage' && footage[0].engine === 'seedance' && footage[1].engine === 'veo');
+    shots: [{ group: 1, clip: 'slides/footage/s1-g1.mp4', duration: 5 }, { group: 2, clip: 'slides/footage/s1-g2.mp4', duration: 4, engine: 'host' }] } } }]);
+  ok('footage shots are detected one per clip', footage.length === 2 && footage[0].kind === 'footage' && footage[0].engine === 'seedance' && footage[1].engine === 'host');
   ok('a 5s footage clip on Seedance is forecast at 5 seconds', forecastRows([footage[0]])[0].qty === 5);
 
   // The host lane (2026-09-07): the CLI's own video tool bills nothing and still shows as a slot.
@@ -535,7 +510,7 @@ function selftest() {
   ok('a host motion background is forecast at the requested seconds on video.host',
      hostRows[0].key === 'video.host' && hostRows[0].qty === 6);
   ok('a 5s host speech clip books the minimum 6 seconds', hostRows[1].qty === 6);
-  ok('a host b-roll bills its used length, not Veo\'s 8', hostRows[2].qty === 4);
+  ok('a host b-roll bills its used length', hostRows[2].qty === 4);
   ok('switching a slot to the host engine changes the fingerprint',
      costFingerprint(hostScenes) !== costFingerprint(sample) && /1:motion\/host\/6/.test(costFingerprint(hostScenes)));
   const hostStills = stillSlots([{ type: 'cover', visual: { bgPrompt: 'p' } },
@@ -546,7 +521,7 @@ function selftest() {
   // the per-episode video budget (2026-09-03)
   const spentItems = [{ key: 'seedance.1-5-pro-silent.1080p', subtotalUsd: 2.09 }, { key: 'image.gpt-image-2.high', subtotalUsd: 0.44 },
                       { key: 'tts.elevenlabs', subtotalUsd: 0.22 }];
-  ok('only seedance/veo rows count as video spend', Math.abs(videoSpent(spentItems) - 2.09) < 1e-9);
+  ok('only video rows count as video spend', Math.abs(videoSpent(spentItems) - 2.09) < 1e-9);
   const overV = budgetVerdict(spentItems, 12.93, 10);
   ok('spent video plus the forecast over the budget is a !! line', overV.over && /^!! video budget \$15\.02 committed of \$10\.00/.test(overV.line));
   const underV = budgetVerdict(spentItems, 7.5, 10);
@@ -600,8 +575,8 @@ function selftest() {
   const sourced = stillSlots([
     { type: 'cover', visual: { bgPrompt: 'p' } },
     { type: 'points', visual: { bgPrompt: 'p' } },
-    { type: 'points', visual: { bgPrompt: 'p', video: { prompt: 'x' } } },
-    { type: 'broll', after: 1, visual: { src: 'images/scene-2.png' } }
+    { type: 'points', visual: { bgPrompt: 'p', video: { prompt: 'x', realFaceInput: false } } },
+    { type: 'broll', after: 1, visual: { src: 'images/scene-2.png', realFaceInput: false } }
   ]);
   ok('the scene a b-roll takes its source from is gpt high',
      sourced[1].engine === 'gpt' && /video source/.test(sourced[1].label));

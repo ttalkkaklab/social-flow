@@ -12,11 +12,15 @@ async function prepare(board, shotId, tool, request, apply = false) {
   if (!scene) throw new Error('Unknown shotId: ' + shotId);
   if (scene.visual?.reuse) throw new Error('Imported footage uses post effects; do not prepare new generation');
   const engine = scene.visual?.video?.engine;
-  if (engine && !tool.startsWith(engine + '_')) throw new Error('Selected tool differs from the authored video engine');
+  // The registry owns each adapter's engine; tool-name prefixes don't ('astra_' would admit astra_genai_*).
+  if (engine && runtime.VIDEO_ADAPTERS[tool]?.engine !== engine) throw new Error('Selected tool differs from the authored video engine');
   const sound = { ...scene.sound };
   // Exact authored dialogue stays on its existing speech lane unless the board explicitly
   // selects the mixed source soundtrack. Never replace pinned TTS as a side effect of auto SFX.
-  if (sound.audioSource === undefined && scene.narration?.some(line => (line.tts || '').trim())) sound.audioSource = 'speech';
+  // MSR is the exception: it speaks the dialogue in each speaker's sampled voice, so its own
+  // speech-and-effects soundtrack is the cut's audio.
+  const spoken = (scene.narration || []).filter(line => (line.tts || '').trim());
+  if (sound.audioSource === undefined && spoken.length) sound.audioSource = tool === 'astra_genai_msr' ? 'video' : 'speech';
   const plan = runtime.prepareVideoSound(tool, request, sound);
   if (apply) {
     scene.sound = plan.sound;

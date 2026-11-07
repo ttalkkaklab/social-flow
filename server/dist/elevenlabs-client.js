@@ -330,7 +330,7 @@ export function describeElevenLabsError(httpStatus, bodyText) {
         case 'concurrent_limit_exceeded':
         case 'rate_limit_exceeded':
         case 'system_busy':
-            return `${message} — concurrency/rate limit (${CONCURRENCY_HINT}); the server already retried ${MAX_ATTEMPTS}x. Run the scenes one at a time.`;
+            return `${message} — concurrency/rate limit (${CONCURRENCY_HINT}); paid requests are submitted once and never retried automatically. Run the scenes one at a time.`;
         case 'output_format_not_allowed':
             return `${message} — pick wav_24000 or wav_48000 (every plan) or upgrade the plan.`;
         case 'voice_not_found':
@@ -616,7 +616,6 @@ export async function listElevenLabsVoices(request) {
         return { success: false, error: message };
     }
 }
-/** Keep source names intact; multilingual_v2 uses aliases, v3 also supports non-English IPA. */
 /** Text → sound effect — POST /v1/sound-generation (eleven_text_to_sound_v2). */
 export async function generateElevenLabsSoundEffect(request) {
     const outputDir = request.outputPath || process.cwd();
@@ -627,7 +626,7 @@ export async function generateElevenLabsSoundEffect(request) {
             `${request.durationSeconds !== undefined ? `${request.durationSeconds}s` : 'auto length'}` +
             `${request.loop ? ', loop' : ''}, ${request.outputFormat})`);
         const body = soundEffectRequestBody(request);
-        const response = await elevenFetch(`/v1/sound-generation?output_format=${request.outputFormat}`, { method: 'POST', body: JSON.stringify(body) }, 120_000);
+        const response = await elevenFetch(`/v1/sound-generation?output_format=${request.outputFormat}`, { method: 'POST', body: JSON.stringify(body) }, 120_000, 1);
         const meta = readMeta(response);
         const raw = Buffer.from(await response.arrayBuffer());
         const audio = ext === '.wav' ? pcmToWav(raw, sfxSampleRateForFormat(request.outputFormat), 1) : raw;
@@ -690,7 +689,7 @@ export async function createElevenLabsDictionary(input) {
     const request = elevenLabsDictionarySchema.parse(input);
     const response = await elevenFetch('/v1/pronunciation-dictionaries/add-from-rules', {
         method: 'POST', body: JSON.stringify({ name: request.name, rules: request.rules.map(r => ({ type: r.type, string_to_replace: r.stringToReplace, ...(r.type === 'alias' ? { alias: r.alias } : { phoneme: r.phoneme, alphabet: r.alphabet }) })) }),
-    }, 30000);
+    }, 30000, 1); // not idempotent: a retried POST can create a second dictionary
     const result = z.object({ id: z.string().min(1), version_id: z.string().min(1) }).parse(await response.json());
     return { pronunciationDictionaryId: result.id, versionId: result.version_id };
 }

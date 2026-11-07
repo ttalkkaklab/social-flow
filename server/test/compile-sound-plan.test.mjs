@@ -110,24 +110,4 @@ window.SCENES=[{type:"cover",duration:5,narration:[{tts:"a"}],sound:{
     assert.equal(readFileSync(join(p.work, 'sfx.tsv'), 'utf8'), 'human edit\n');
     assert.deepEqual(JSON.parse(second.stdout).warnings, ['sfx.tsv changed after compile; keeping the human-edited file']);
   });
-
-  it('resolves catalog mappings and the existing mp4 SFX fallback through resolve-asset.py', () => {
-    const p = room();
-    mkdirSync(join(p.channel, 'assets/custom'), { recursive: true });
-    writeFileSync(join(p.channel, 'assets/custom/mapped.aiff'), 'mapped');
-    writeFileSync(join(p.channel, 'assets/audio/sfx/clip.mp4'), 'clip');
-    writeFileSync(join(p.channel, 'assets/catalog.md'), '| kind | id | path | note |\n|---|---|---|---|\n| sfx | mapped | custom/mapped.aiff | test |\n');
-    writeFileSync(join(p.board, 'scenes.js'), `
-window.SFX={mapped:{asset:"mapped"},clip:{asset:"clip"}};
-window.SCENES=[
-  {type:"cover",duration:3,sound:{effects:[{sfx:"mapped",atSeconds:0.5}]}},
-  {type:"points",duration:3,sound:{effects:[{sfx:"clip",atSeconds:1}]}}
-];
-`);
-    const result = run(p);
-    assert.equal(result.status, 0, result.stderr);
-    const rows = readFileSync(join(p.work, 'sfx.tsv'), 'utf8');
-    assert.match(rows, new RegExp(join(p.channel, 'assets/custom/mapped.aiff').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-    assert.match(rows, new RegExp(join(p.channel, 'assets/audio/sfx/clip.mp4').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-  });
 });

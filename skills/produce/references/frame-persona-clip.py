@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Unifies persona speech-clip framing + palindrome loop.
 
-Even on the same prompt, veo wobbles the subject's size and position from run to run. Used as-is, the
+Even on the same prompt, a video model wobbles the subject's size and position from run to run. Used as-is, the
 face looks a different size on every card, so this measures the face center and the top of the head
 from skin-tone pixels and works the crop back from them (face center x -> 540, head top y -> TOP).
 Then it concatenates forward + reverse (a palindrome) into a double-length clip with no jump at the

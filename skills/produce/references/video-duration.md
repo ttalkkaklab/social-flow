@@ -1,9 +1,10 @@
 # Generate the shortest supported source
 
 New shots must use `requiredSeconds` instead of accepting a provider's default 8 seconds.
-This optional input is available on Veo text/image/reference, Omni text/image, Seedance
-text/image/reference, ASTRA text/image/keyframe/audio and MLX video generation. Explicit
-legacy durations still work. Extension, edit and retake tools keep their own contracts.
+This optional input is available on Seedance text/image/reference, self-hosted ASTRA
+text/image/keyframe/audio, MLX `ltx_video_generate` and `fasth3_omni_reference`. Explicit
+legacy durations still work. The ASTRA GenAI gateway and desktop tools, extension, edit and
+retake tools keep their own length inputs.
 
 1. Measure the composed audio and performance, then resolve the edit plan. Source coverage
    is source trim + frame-rounded body + outgoing live transition handle. The body must
@@ -11,7 +12,7 @@ legacy durations still work. Extension, edit and retake tools keep their own con
 2. Run the local read-only planner (no generation or upload):
 
    ```bash
-   node skills/produce/references/plan-video-duration.js storyboard/ SHOT_ID veo_img2video '{"resolution":"720p","model":"veo-3.1-lite-generate-preview"}' /absolute/shot.wav
+   node skills/produce/references/plan-video-duration.js storyboard/ SHOT_ID seedance_img2video '{"resolution":"1080p","model":"dreamina-seedance-2-0-260128"}' /absolute/shot.wav
    ```
 
    The exported `plan` function also accepts measured `performanceSeconds`. The CLI cannot
@@ -37,22 +38,16 @@ legacy durations still work. Extension, edit and retake tools keep their own con
 
 | Route | Minimum covering request | Evidence |
 | --- | --- | --- |
-| Veo 3.1 at 720p, text/image | 4, 6 or 8 seconds | [Google Veo API guide](https://ai.google.dev/gemini-api/docs/veo) |
-| Veo 1080p/4k or reference images | 8 seconds only | Same guide; lowering resolution needs an explicit model plan change |
-| Omni text/image | Integer 3–10 seconds | Existing repository live API measurements; [current guide](https://ai.google.dev/gemini-api/docs/omni) does not specify this numeric output range. Keep the measured adapter contract |
-| Seedance 1.5 / 2.0 / 2.5 | Integers 4–12 / 4–15 / 4–30 seconds | [BytePlus task API](https://docs.byteplus.com/en/docs/modelark/create-video-generation-task-api) |
-| Seedance 1.0 Pro/Fast | 29–289 frames, 1 mod 4, at 24 fps; legacy integer seconds 2–12 | Same API, `frames` only on these two models. Prefer upward frame rounding: 2.4 seconds → 61 frames, not vendor's nearest-frame example of 57 |
+| Seedance 2.0 (with Fast, Mini) / 2.5 | Integers 4–15 / 4–30 seconds | [BytePlus task API](https://docs.byteplus.com/en/docs/modelark/create-video-generation-task-api) |
 | ASTRA (every mode but retake) | 25–361 frames, 8k+1 | Live server's published `/v1/models` limit, 1–60 fps (24 default); above 121 only some modes and sizes are measured. Not a claim about every LTX deployment |
 | MLX video | 9–241 frames, 8k+1 at 24 fps | Bundled local server contract; memory/resolution validation still applies |
+| FastH3 Omni reference | 124–362 frames, 17k+5 at 24 fps | Bundled local pack contract (`FASTH3_FRAME_LIMITS`) |
 
-Examples: a 3.2-second need requests 4 seconds on Veo 720p, 8 on Veo 1080p,
-4 on Seedance 1.5, 77/24 seconds on Seedance 1.0, or 81/24 on ASTRA at 24 fps.
+Examples: a 3.2-second need requests 4 seconds on Seedance, or 81/24 on ASTRA at 24 fps.
 Five seconds on ASTRA requires 121 frames (5.0417 seconds); eight requires 193.
-Omni currently uses a measured flat per-call price, so shorter output does not imply a
-lower bill. Host-native tools have separate schemas: use their supported duration input
+Host-native tools have separate schemas: use their supported duration input
 when present, record actual requested seconds, and do not invent `requiredSeconds` support.
 
 Storyboard forecasts use authored durations before speech exists. Final requests must be
-replanned from measured media. Existing Seedance storyboard/previz plans retain their whole-
-second contract; using its 1.0 frame mode requires regenerating the previz and quote for
-that precise request rather than reusing an integer-duration approval.
+replanned from measured media. Seedance storyboard/previz plans keep their whole-second
+contract.

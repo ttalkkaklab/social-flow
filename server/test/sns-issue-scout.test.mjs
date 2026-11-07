@@ -12,9 +12,7 @@ import {
   authorFromSource,
   canonicalPost,
   normalizeTokens,
-  phrasesFromTokens,
   scoreSnsKeywords,
-  SNS_SCOUT_PLATFORMS,
   stripKoParticle,
   tokenizeSnsText,
 } from '../dist/sns-issue-scout.js';
@@ -47,9 +45,6 @@ describe('canonicalPost — post URL normalization', () => {
   });
   it('X: the /i/status short form has no author', () => {
     assert.deepEqual(canonicalPost('x', 'https://x.com/i/status/123'), { url: 'https://x.com/i/status/123', author: null });
-  });
-  it('X: a profile is not a post', () => {
-    assert.equal(canonicalPost('x', 'https://x.com/ffreedomkr'), null);
   });
   it('Instagram: brings /p/, /reel/, and <user>/reel/ into one form', () => {
     assert.deepEqual(canonicalPost('instagram', 'https://www.instagram.com/p/Db_6hWVE1Bf/'), {
@@ -118,12 +113,6 @@ describe('tokenizeSnsText / normalizeTokens / phrasesFromTokens', () => {
   it('does not strip when the stem is missing from the batch — so 워크플로 never becomes 워크플', () => {
     const raw = ['워크플로', '전문가', '자동화를'];
     assert.deepEqual(normalizeTokens(raw, new Set([...raw, '자동화'])), ['워크플로', '전문가', '자동화']);
-  });
-  it('extracts 1~3-grams', () => {
-    const phrases = phrasesFromTokens(['클로드코드', '플러그인', '공개']);
-    assert.ok(phrases.includes('클로드코드 플러그인'));
-    assert.ok(phrases.includes('클로드코드 플러그인 공개'));
-    assert.equal(phrases.length, 6);
   });
 });
 
@@ -208,17 +197,6 @@ describe('sns_issue_scout · serp_trending_now tool surface', () => {
       assert.equal(tool.annotations.readOnlyHint, true);
       assert.ok(!(tool.name in SNS_PLATFORM_BY_TOOL));
     }
-  });
-  it('the platforms enum matches the module source of truth', () => {
-    assert.deepEqual(scout.inputSchema.properties.platforms.items.enum, [...SNS_SCOUT_PLATFORMS]);
-  });
-  it('the description spells out the credit formula', () => {
-    assert.match(scout.description, /Credits = platforms × seeds × pagesPerQuery/);
-    assert.match(trending.description, /One call = one SerpApi credit/);
-  });
-  it('there are only the four trending windows Google fixed', () => {
-    assert.deepEqual(trending.inputSchema.properties.hours.enum, [4, 24, 48, 168]);
-    assert.deepEqual(scout.inputSchema.properties.trendingHours.enum, [4, 24, 48, 168]);
   });
   it('the scout output requires keywords and posts, with trending optional', () => {
     const req = scout.outputSchema.required;

@@ -97,11 +97,30 @@ in editorial metadata. Automatic cross-episode propagation is not enabled.
 
 The shared `prop-continuity.js` validates MCP writes, `check-scenes.js`
 and prompt generation. It computes snapshots without mutating input.
+`check` warns about a registered prop that no shot links (`visual.props`,
+`frames.endProps` or an event's `shotIds`): link it to its shots, or drop it if the
+story does not need it.
+
+`shot_image` reads the same snapshot for the props a frame shows. A prop hidden in
+the shot (`visible:false`) stays out of the picture. Each other prop sends one
+picture: the start image takes the reference drawn in the condition the prop has
+when the shot opens, the end image the one for its closing state. A reference whose
+`condition` matches comes before one without a condition, and one of the current
+`appearanceVersion` before an older one. When none fits, `imageUrl` stands in, else
+a reference of the current version; a known condition without its own reference is
+warned about. The prop's `Image N` line carries its English description, holder,
+location, condition and screen position; fields in another script stay out with a
+warning. A prop without any picture is described in the prompt and warned about.
+Ledger errors never stop the frame (`snapshot(..., {lenient:true})`): each prop is
+checked on its own slice — its sheet entry, its initial state and events, and its
+usage in this shot. A prop whose slice has errors, or whose ledger is malformed,
+goes in without a state and with a warning naming them; the other props keep
+their states whatever else on the board is broken.
+
 The ordinary still assembler and spatial assembler include per-shot prop states;
 source image arguments include prop reference images (`--json` on the ordinary
-still CLI exports its snapshot and image arguments). References with a condition
-are selected for the opening/closing state instead of mixing intact and damaged
-images. Appearance-only props also carry description, version and references,
+still CLI exports its snapshot and image arguments), with the same reference order.
+Appearance-only props also carry description, version and references,
 without a custody claim. Save `propSnapshot`
 with generated asset records: it pins the appearance version, reference paths,
 story points and before/after state. A snapshot is a plan, not visual verification.

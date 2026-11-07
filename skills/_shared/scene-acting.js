@@ -35,7 +35,7 @@ function directionSupport(voice, acting) {
   }
   const stylePrompt=resolvedStyle(voice,acting);
   const gemini38=voice?.engine==='gemini' && voice.model?.trim().startsWith('gemini-3.8-');
-  const supported=!stylePrompt || (voice?.engine==='gemini' && (!gemini38 || stylePrompt.length<=500));
+  const supported=(voice?.engine==='astra-genai' && stylePrompt.length<=2000) || !stylePrompt || (voice?.engine==='gemini' && (!gemini38 || stylePrompt.length<=500));
   return {stylePrompt,supported,warnings:supported?[]:[gemini38?'Resolved acting exceeds the Gemini 3.8 turn style limit of 500 characters; shorten it before generation.':`The selected ${voice?.engine} adapter cannot carry free-text acting direction; review delivery or explicitly choose a capable adapter.`]};
 }
 // Omit absent acting to retain revisions of existing episodes byte-for-byte.
@@ -118,6 +118,10 @@ function cameraLock(camera = {}) {
 }
 function sceneDirection(scene = {}, performance = []) {
   const design = scene.shot?.videoDesign || {}, camera = scene.visual?.camera || {};
+  const view = require('../storyboard/references/shot-view.js').checked(camera.view);
+  const catalogue = require('../storyboard/references/film-techniques.js');
+  const directed = view ? {...scene, shot:{...scene.shot, techniques:(scene.shot?.techniques || []).filter(t =>
+    catalogue.byId[t.id]?.category !== 'framing' && !catalogue.byId[t.id]?.fields.viewpoint)}} : scene;
   const lock = cameraLock(camera);
   const actions = new Set(performance.filter(event => event.kind === 'action').map(event => event.videoDirection || event.text));
   const keys = ['before','action','after','continuity'].filter(key => design[key] && !(key === 'action' && actions.has(design[key])));
@@ -129,8 +133,9 @@ function sceneDirection(scene = {}, performance = []) {
   return [
     ...keys.map(key => `${key}: ${design[key]}`),
     ...states,
-    require('../storyboard/references/film-techniques.js').instructions(scene),
-    ...['framing','movement',...(lock ? [] : ['speed']),'end'].filter(key => camera[key]).map(key => `Camera ${key}: ${camera[key]}`),
+    catalogue.instructions(directed),
+    ...(view ? [require('../storyboard/references/shot-view.js').instructions(view)] : []),
+    ...[...(view ? [] : ['framing']),'movement',...(lock ? [] : ['speed']),'end'].filter(key => camera[key]).map(key => `Camera ${key}: ${camera[key]}`),
     ...(lock ? [lock] : []),
   ].join('\n');
 }
@@ -138,6 +143,8 @@ const VIDEO_TEXT_POLICY = 'Keep the entire video image text-free: no subtitles, 
 function sceneVideoPrompt(performance, mode, scene = {}) {
   const route = !performance.some(event => event.kind !== 'action')
     ? 'This is a silent scene. Perform the ordered visible actions without invented speech or voiceover.'
+    : mode === 'native'
+    ? 'Speak each authored line in its speaker\'s voice from the quoted words; no audio is supplied. Only on_screen lines move a visible mouth. Keep off_screen speakers unseen and voiceover separate from physical speech. Do not transcribe speech into the image.'
     : mode === 'audio_conditioned'
     ? 'Use the supplied audio as the sole source of spoken words. Synchronize visible mouths only during each on_screen speech interval; follow the delivery instruction for every beat. Do not transcribe speech into the image.'
     : mode === 'post_lipsync'
@@ -157,7 +164,9 @@ function sceneVideoPrompt(performance, mode, scene = {}) {
     }
     const acting = {...line.acting, ...(line.videoDirection ? {visual:line.videoDirection} : {})};
     const delivery = line.delivery || 'voiceover';
-    const mouth = delivery === 'on_screen'
+    const mouth = delivery === 'on_screen' && mode === 'native'
+      ? `Show this speaker physically saying "${line.text}"; every other visible mouth stays closed.`
+      : delivery === 'on_screen'
       ? 'Show this speaker physically speaking; synchronize only this speaker\'s mouth to their supplied audio during this interval using the selected synchronization route.'
       : delivery === 'off_screen'
         ? 'This speaker stays off screen. All visible mouths stay closed during this interval; show the planned listener reaction or action.'
@@ -166,9 +175,9 @@ function sceneVideoPrompt(performance, mode, scene = {}) {
       .map(key => `${key}: ${visualDirection(acting[key])}`);
     if (acting.tags?.length) fields.push(`vocal events: ${acting.tags.map(visualDirection).join(', ')}`);
     const timing = line.speechStartSeconds == null || line.speechEndSeconds == null
-      ? 'Use the measured speech interval once audio is attached.'
+      ? (mode === 'native' ? 'The model paces this line within the shot.' : 'Use the measured speech interval once audio is attached.')
       : `Speech interval ${line.speechStartSeconds}–${line.speechEndSeconds} seconds.`;
-    return `Beat ${index + 1} (speaker: ${visualDirection(line.speaker || 'unspecified')}; delivery: ${delivery}): ${mouth} ${line.to ? 'Addressed to '+visualDirection(line.to)+'. Preserve this eyeline and the listener in the planned framing.' : ''} ${fields.join(' ')} ${timing} Anticipation ${line.leadInSeconds || 0} seconds; reaction ${line.tailOutSeconds || 0} seconds.`;
+    return `Beat ${index + 1} (speaker: ${visualDirection(line.speaker || 'unspecified')}; delivery: ${delivery}): ${mouth} ${mode === 'native' && delivery !== 'on_screen' ? 'Speak "'+line.text+'". ' : ''}${line.to ? 'Addressed to '+visualDirection(line.to)+'. Preserve this eyeline and the listener in the planned framing.' : ''} ${fields.join(' ')} ${timing} Anticipation ${line.leadInSeconds || 0} seconds; reaction ${line.tailOutSeconds || 0} seconds.`;
   });
   return ['A clean cinematic image with an unobstructed scene and text-free surfaces.', route, visualDirection(sceneDirection(scene, performance)), ...beats, VIDEO_TEXT_POLICY].join('\n');
 }

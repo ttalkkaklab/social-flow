@@ -2,6 +2,27 @@
 
 Channel-based short-form/long-form content pipeline Claude Code plugin.
 
+## Local GenAI routing (owner directive, 2026-11-07)
+
+`/Volumes/data/story/insight` uses local GenAI (`http://127.0.0.1:18081`) for
+`astra-genai-native` / `qwen-image-fast`, implemented by MLX Serve's
+`qwen-image-2.1-turbo`. Before generation, confirm the MCP process receives
+`ASTRA_GENAI_IMAGE_URL` and `ASTRA_GENAI_IMAGE_API_KEY`, and inspect
+`astra_genai_catalog kind:image`. Shell variables alone do not verify a running
+MCP connection. Speech has separate `ASTRA_GENAI_SPEECH_*` variables; preserve
+the remote video route. Do not print or save credential values.
+Codex's STDIO server also needs the six GenAI variable names in
+`mcp_servers.social-flow.env_vars` (base, image and speech URL/key pairs).
+Forward names without writing their values; verify a fresh connection with that
+whitelist. A running server keeps its original environment until it reconnects.
+
+An unexpected remote `baseUrl`, empty catalog or `Model capability is disabled`
+requires checking the last successful receipt and restoring the local connection
+before suggesting a model change. Inspect uncertain calls before retrying. When
+needed, invoke this plugin's own MCP server with the correct inherited environment;
+do not bypass its tools, reservations or receipts. Confirm recovery with a requested
+image and its local receipt. See AGENTS.md's local GenAI connection directive.
+
 ## Owner decisions (2026-10-18)
 
 - Precedence: the later-dated directive wins, and a superseded sentence is deleted in place, not kept under a banner.
@@ -17,46 +38,36 @@ Channel-based short-form/long-form content pipeline Claude Code plugin.
 - Initial style, ratio and format are asked once at project setup, then reused.
 - The static-ground limit is guidance.
 
-## Production order (owner directive, 2026-10-19)
+## Production order (owner directive, 2026-10-19; checks removed 2026-10-31; cast gate 2026-11-01)
 
-Project setup must be ready before any episode authoring. Then complete characters
-(text + images), text storyboard (content, dialogue and narration), props (text + images),
-backgrounds (text + images), image storyboard, and finally video, in that order.
-Use `production_workflow` to register and complete each stage. Actual files and their
-hashes are required; pending images do not complete a visual stage. Changed upstream
-files require rewind and revalidation of downstream stages. Reuse inspected artifacts;
-never regenerate solely to migrate an existing episode. This ordering is an explicit
-execution contract and overrides the older guidance-only rule for production order.
-Explicit text-only requests stop at text; missing required images are reported, not
-silently skipped or generated without spending authorization. Empty character, prop or
-background categories need an explicit not-applicable reason. Present the scenario
-before detailed text authoring; presentation does not add an approval pause.
-Use the bundled storyboard HTML and verify its export. Delegated authors use the same
+Project setup must be ready before any episode authoring. Then characters (text + images),
+the story and its shots, props (text + images), backgrounds (text + images), the shots'
+images, and finally video, in that order. Explicit text-only requests stop at text, but the
+episode cast comes first even then: `story_sequence` refuses to start a board inside an episode,
+and `story_scene`/`story_shot` refuse to continue a story-first one, until `storyboard/cast.json` names its characters, each with `assets/characters/<id>/identity.md`
+and, unless the entry is `voiceOnly` (a narrator who is never seen), its face, front and back
+sheet panels (`cast_required`, `cast_source_missing`, `character_panel_missing`). Other missing
+images are reported, and missing panels are made with `character_panel` under spending
+authorization, never skipped or generated without it. Present the scenario before detailed text authoring; presentation does not
+add an approval pause. Use the bundled storyboard HTML. Delegated authors use the same
 order and deliverables. See `skills/_shared/production-workflow.md`.
 
-## Fixed cut stages (owner directive, 2026-10-19, later clarification)
+## Checks removed for speed (user directive, 2026-10-31)
 
-Cut storyboard production uses seven separate skills in fixed order: review-context ->
-review-camera -> compose-blender -> generate-cut-images -> review-cut-images ->
-generate-cut-videos -> review-cut-videos. Autoproduce coordinates; the server enforces
-stage completion, current evidence and rewind. Character, prop and background sheets
-remain preparation assets. Context review follows text; props/backgrounds finish before
-camera review. Required Blender still compositions precede cut image generation. Animated
-video previz remains optional. No renderer fallback or review skip is permitted for these
-cut stages. This overrides the earlier guidance-only review policy for this scope.
-
-Context review uses a fresh independent reviewer with audience-visible actions and words
-only, before synopsis, motives or author explanations. Test what an unbriefed viewer can
-understand and cite the planned beat/cut showing each consequential fact. Missing causes,
-knowledge acquisition or required shots need actual story repairs, not metadata excuses.
-Authors repair; independent reviewers recheck. Scores alone cannot complete a stage.
-Existing boards can re-enter a stage by command; reuse inspected media and rewind only
-affected dependencies. No review command implies new paid generation or publication.
-See skills/_shared/production-workflow.md for receipts, limits and command boundaries.
+Production is too slow, so every check except the story order and the episode cast (2026-11-01,
+above) goes until the quality is known; checks come back afterwards. `production_workflow` is an optional progress record:
+stages complete in any order and no other tool reads it. Image and video plans, storyboard
+writes, Blender renders and assembly no longer wait for workflow stages, independent
+reviews, Blender compositions or reviewed media. `storyboard_apply` refuses only an
+unreadable board and the story order; `storyboard_check` runs every other rule on request.
+review-context, review-camera, compose-blender, review-cut-images and review-cut-videos run
+only when the user asks. Spending limits, generation authorization, adapter input validation,
+`video_prompt_language`, `msr_character_limit` and the voice-lane rules stay. Existing
+episodes are regenerated in the new order rather than migrated.
 
 ## Guided automation (owner directive, 2026-10-16)
 
-CTA checks are removed. Outside the fixed cut workflow, creative structure, writing style,
+CTA checks are removed. Creative structure, writing style,
 camera direction, review scores, frozen stamps and subjective quality belong primarily
 in skills as guidance, not automatic execution gates. Continue authorized work with honest findings and
 `not_reviewed` or stale evidence instead of manufacturing a passing review. A user
@@ -82,6 +93,134 @@ provenance so the user can request targeted corrections later through `edit-spee
 `speech_manage`. This supersedes previous speech-quality and final-listening gates, including
 voice-lock ASR. Follow `skills/produce/references/shot-speech.md`. Narrator and character
 lines use explicit speakers; video models are replaceable adapters with declared capabilities.
+
+## Dialogue coverage (user directive, 2026-11-07)
+
+For face-to-face generated dialogue, prefer speaker-facing OTS/reverse coverage when
+expressions matter. In each OTS clip the far, visible face speaks and the foreground
+listener stays silent; put the reply in a separately generated reverse shot. Retain a
+two-speaker two-shot when both faces and mouths are readable and the shared performance
+needs it. Do not ban OTS or two-speaker MSR, split every line, or mistake two visible
+characters for two speakers. Follow `skills/storyboard/references/dialogue-coverage.md`
+for authoring, images, bindings, continuity and explicit creative exceptions. This is
+production guidance, not a new execution gate or a reason to regenerate approved media.
+
+## MSR voice and LTX default (user directive, 2026-10-30; voice optional 2026-10-31)
+
+Two-speaker MSR dialogue stays supported (user directive, 2026-11-03). Both the
+human and orc left/right trials had correct speaker turns according to the user.
+Bind each visible speaker to the inspected start image's viewer-relative position
+and appearance with `shot_prompt.speakerBindings`; repeat that identity and its
+image/audio mapping on each compiled turn. Do not impose one speaker per shot.
+Keep dialogue in `shot_dialogue` and action in `shot_prompt`; never skip a turn
+because its words appear somewhere in a prompt. Recompile saved action with current
+icons at video planning time and report each setting's delivery route. Experimental
+success is not a guarantee of model adherence, voice identity or subtitle absence.
+
+MSR renders a cut from subject and background images; any dialogue is written in the
+prompt, and MSR's own speech-and-effects soundtrack is the cut's audio. A speaker's pinned
+voice sample is optional: when the speaker is subject 1 or 2 and the gateway accepts
+samples, the sample rides on that subject image; otherwise the prompt voices the speaker
+and the plan records a warning. A request that sends a sample to a gateway without sample
+support is a hard `msr_voice_unsupported` error. There is no external TTS lane for MSR,
+so its lines get no per-line TTS: `speech_manage` plans and binds an MSR shot as `native`
+(line revisions, no line audio) and an edited line marks the clip stale (2026-10-31).
+A cut without dialogue can use MSR or img2video. A character's default MSR references are
+its sheet panels — face close-up, headless front and headless back (2026-10-31): one
+character uses all three; two use each face, then each front; the shot's start image (its characters,
+place and props composed by `shot_image`) takes the background slot, and the plain place picture stays out.
+At most two characters take references; anyone else on screen is described in the action
+and drawn by the model. For a declared MSR cast, storyboard writes and video planning rebuild
+the character references from the cast's shared panels.json in that same order. Missing
+faces cannot fall back to a body-only picture or an old transport alias; planning reports
+the missing panel. Storyboard writes also synchronize the displayed face/front/back links.
+Pinned samples follow the registered panel owner even when an old voiceReference names
+transport copies. On boards without a declared cast, legacy explicit image ownership stays.
+`video_plan` refuses references for a third character
+(`msr_character_limit`). `video_plan` names the panels that show one character and lays the
+prompt out as the model card does: reference descriptions first, then the action, then
+`Audio N (Image M): "…"` lines.
+
+## Voice-consistent video models only (user directive, 2026-10-31)
+
+Video models that cannot keep a character's voice are not supported: Veo, Gemini Omni and
+Seedance 1.x left the plugin. Every adapter in `server/src/video-registry.ts` declares a voice
+lane — `reference` (a pinned per-character voice sample: `astra_genai_msr`, `seedance_reference`,
+`fasth3_omni_reference`), `supplied` (the pinned TTS track drives the clip: the three
+audio2video adapters) or `none`. `video_plan` refuses `voice_lane_required` when a `none`
+adapter would show a character speaking (an `on_screen` line) or voice lines natively;
+narration over a non-speaking picture runs on any adapter. A saved or override selection
+naming a retired engine reads `migration_required` in settings and fails `video_plan` with
+`video_engine_unsupported`. Their existing clips stay reusable through `visual.reuse`; never
+regenerate solely to migrate. MSR keeps the contract above. Seedance binds each speaker's
+image and sample in the prompt (`@Image N`/`@Audio N` on 2.5, `Image N`/`Audio N` on 2.0) and
+rejects real human faces, so photoreal people go to the LTX lanes.
+
+## One storyboard template (user directive, 2026-10-31)
+
+`skills/storyboard/references/storyboard-html-template.html` is the storyboard design for every
+episode. `storyboard-html.js` copies it with its helpers, keeping only `<title>` and the
+`SB_DOC` block. Design changes go into the bundled template, not into an episode or library copy. Each shot and
+`STRUCTURE` scene carries a one-sentence `summary` of its story for the review.
+
+## Story, characters and lines, icons, images, prompt, approved video (user directive, 2026-10-31)
+
+Once the scenario is settled, the storyboard's first step writes only the story, one layer at a
+time: `story_sequence` → `story_scene` → `story_shot` (one sentence per shot). No image, speech,
+prompt, camera or dialogue work happens in it. The second step sets each shot's characters with
+`shot_characters` (at most two, or none), then each character's lines with `shot_dialogue`. The
+third sets the attributes the review's icon row shows with `shot_icons`: render route, size,
+angle, camera move, focus, depth, frame plan (`reference` is MSR) and the transition into the
+next shot (`next`, stored on that shot's `transition`, which assembly reads). Each tool refuses a layer
+whose parent is missing (`story_order`); `shot_characters` waits for a story with no gaps and
+`shot_icons` for every shot's characters. Inside an episode a new board starts with
+`story_sequence` — `storyboard_apply` does not create one — and carries
+`STORY.authoring:"story-first"`; on such a board every writer refuses a shot without its story,
+and lines or icon attributes before the shot's characters. Its cast comes from
+`storyboard/cast.json` alone (`SB_DOC.characters` adds detail, not members), and `shot_characters`
+and `shot_dialogue` repeat the cast check above; `shot_characters` refuses a `voiceOnly` character
+on screen (`cast_voice_only`). Older boards keep their contract.
+`production_workflow` completes a story-v2 `text_storyboard` only with every shot story and
+every shot's characters written (`story_outline_required`).
+
+The fourth step makes each picture shot's start image with `shot_image`, from its characters'
+sheet panels (one character: face, headless front, headless back; two: each face, then each
+front), its place and props, with a prompt built from its size, angle, depth and techniques,
+the episode style and an English description. When the place's sheet names a built set
+(`SB_DOC.locations[].manifest`), Image 1 is that set rendered in Blender from a camera the shot's
+size and angle set, aimed at its cast's blocking, and the sheet image only gives the look
+(2026-11-01); without a set the sheet image leads, with a warning. It runs
+`image_plan` → `image_execute` with the saved model. An end image follows only for a
+`first_last` shot (`frame:"end"`, edited from the start image). A model that takes one
+picture refuses (`image_references_unsupported`); the user chooses the replacement. The fifth
+writes each `generated_video` shot's English video prompt with `shot_prompt` from its icon
+attributes, on-screen lines and an English action; `video_plan` sends it when its args name no
+prompt. `shot_image` waits for every shot's icon attributes and `shot_prompt` for every
+picture shot's images. On MSR the start image rides in the background slot and the plain
+place picture stays out. Each shot's video then waits for the user's yes to its plan
+(`video_approve {planIds}`), or their approval of every shot (`video_approve {auto:true}`);
+`video_execute` refuses otherwise (`video_approval_required`). The session never records an
+approval the user did not give.
+
+## English video prompts (user directive, 2026-10-31)
+
+Every video prompt is English on every adapter, Seedance 2.5 included. Only dialogue uses the
+video's language, inside quotation marks. `video_plan` and the Seedance adapter refuse
+non-Latin letters outside quotes (`video_prompt_language`). Assembled prompts name a cast member
+with a non-Latin name by character id and report a non-English voice description for translation;
+`speech_manage` warns when its scene videoPrompt carries authored text in another language.
+
+## Two principal characters per shot (user directive, 2026-10-31)
+
+From the storyboard on, a shot's `visual.character` lists at most two principal characters;
+`check-scenes.js` rejects a third (`[character-limit]`). When a beat needs three principal
+characters, split it into shots — pairs, reverse angles or a cutaway — instead of crowding one
+frame. Extras and unnamed figures stay out of `visual.character` and are described by
+appearance in the action, without a reference image.
+Choosing LTX at project setup saves `{engine:"astra-genai", operation:"reference"}`
+with `resolution:"1792x1024"` for 16:9 (`1024x1792` for 9:16), so `video_plan` plans
+MSR when a call names no operation. GenAI submissions wait up to 15 minutes for the
+gateway's acknowledgement. See `skills/_shared/astra-genai.md`.
 
 ## Style ban — report-style stative verbs (user directive, 2026-08-12)
 
@@ -302,8 +441,8 @@ local generation and host image tools are explicit alternatives. Text-bearing im
 require GPT Image 2. At first video setup, a supported host video tool is recommended;
 once saved, the saved choice governs every generated still, slide art, clip, candidate logo,
 intro keyframe and growth-post image — channel assets follow `.social-flow/models.json` like
-episodes. The storyboard records the saved providers in `window.PRODUCTION.imageProvider` and
-`videoProvider` (`host` | `astra` | `api`); the fallback from a failed host call is asked for,
+episodes. The storyboard records the saved providers in `window.PRODUCTION.imageProvider`
+(`host` | `api`; ASTRA GenAI images are `api`) and `videoProvider` (`host` | `astra` | `api`); the fallback from a failed host call is asked for,
 never silent. Host output is logged as `image.host` / `video.host` at $0 with the allowance
 noted. Contracts: `skills/produce/references/still-generation.md` §1 and
 `skills/produce/references/video-model-selection.md`.
@@ -321,10 +460,10 @@ blocking when the model takes a reference clip (Seedance 2.x `reference_video`: 
 still and the prompt and is advice. When a previz exists, the source still is edited from its
 first frame, and its move and the shot's `visual.camera.movement` must agree; a prompt that
 fights the clip drifts. Imported clips (`visual.reuse`), stock footage, recordings and the outro
-carry none, and neither do b-roll and speech clips on the Veo sound lane. The renderer is the
+carry none, and neither do b-roll and speech clips. The renderer is the
 saved `production.previzRenderer` (`PRODUCTION.previz`); when none is saved, the author picks one
 and records it as an assistant decision — no renderer or model question is asked. Episode video
-runs through `video_catalog → video_plan → video_execute`; a direct adapter call on a configured
+runs through `video_catalog → video_plan → video_approve → video_execute`; a direct adapter call on a configured
 episode needs `videoContext`. Contract: `skills/storyboard/references/blender-previz.md` §6 and
 `production-mode.md`.
 
@@ -333,8 +472,8 @@ episode needs `videoContext`. Contract: `skills/storyboard/references/blender-pr
 Cuts inherit the saved video model and resolution: `PRODUCTION.videoModel` comes from
 `.social-flow/models.json` through the episode handoff (`selection.kind:'standing'`). A per-cut
 change is an explicit user exception recorded in `PRODUCTION.modelSettings.overrides`;
-`model:'mixed'` describes such a plan. Seedance 1.5 Pro is allowed.
-A 1.x previz uses `frame_and_prompt`; 2.x may send `reference_video`. Keep real API input
+`model:'mixed'` describes such a plan. Seedance 2.x may send the previz as
+`reference_video`. Keep real API input
 constraints, cost quotes and approved budgets. `modelReason` is optional.
 
 ## Local storyboard storage
@@ -348,6 +487,10 @@ locally. Follow `skills/storyboard/references/storyboard-design.md`.
 `server/test/` grew from 9 files on 2026-08-23 to 126 files and 2,314 cases on
 2026-10-18, mostly because every task added its own file named after its directive.
 This section overrides the test-writing defaults of TDD, test-scenario and similar skills.
+On 2026-11-02 the suite was cut again from 2,703 cases (35 s) to about 1,580 (17 s), keeping a
+case only where a miss is costly: money (budgets, ledger, no re-submission), public posting,
+security boundaries, data integrity, the rules this file keeps, branchy pure logic, real
+regressions and the tool-surface contract.
 
 - **One file per module.** `render-routing.js` (or `render-routing.ts`) is tested in
   `server/test/render-routing.test.mjs`. Add cases to the module's file; create a file
@@ -365,6 +508,13 @@ This section overrides the test-writing defaults of TDD, test-scenario and simil
 - **No real waiting.** `npm test` runs in about 30 s. Advance the clock instead of
   sleeping through polls and rate limits (see the top of `astra-video-client.test.mjs`)
   and clear every timer a case starts.
+- **Hermetic runs.** `npm test` loads `server/test/isolate.mjs` into every file: it drops the
+  shell's provider keys and gateway URLs and gives each file an empty home, so your own
+  `~/.config/social-flow` (`.env`, `disabled-tools.json`, tokens) never changes a result.
+  Blender and Chrome stay found. Every Chrome launch passes `--use-mock-keychain`: the empty home
+  has no login keychain, and without the flag macOS pops a "keychain cannot be found" dialog. Run one file the same way:
+  `cd server && node --import ./test/isolate.mjs --test test/<module>.test.mjs`. A provider whose
+  variables use a new prefix adds it to `PROVIDER` in `isolate.mjs`.
 - **Readable over DRY.** Inputs that decide the result stay in the test body. Shared
   setup is a factory with defaults, not a `beforeEach` that hides them.
 
@@ -406,3 +556,7 @@ feat/<name> | fix/<name>  (integration)  →  dev  →  staging  →  main
 Multiple Claude Code sessions work in this repo at the same time.
 Before committing or merging, check `git status` and recently modified files
 (`find . -mmin -30`) so you don't sweep up files another session is editing.
+
+## 워크트리 경로
+
+워크트리는 기본 체크아웃 루트의 `.worktree/<이름>/`에 만든다. 연결된 워크트리에서도 기본 루트를 기준으로 삼는다. `AGENTS.md`의 2026-10-10 사용자 지침을 적용하며 ASTRA나 도구의 기본 경로보다 우선한다.

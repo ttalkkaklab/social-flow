@@ -102,4 +102,52 @@ function boardPanelFindings(win, boardDir, channelDir) {
   }
   return findings;
 }
-module.exports = { SPECS, dimensions, inspectPanels, boardPanelFindings };
+// Resolve ownership from the episode cast, never from a transport filename or a scene image.
+function sheetPanels(boardDir, ids) {
+  let cast = [];
+  const castFile = path.join(boardDir, 'cast.json');
+  if (fs.existsSync(castFile)) {
+    const value = JSON.parse(fs.readFileSync(castFile, 'utf8')).characters;
+    cast = Array.isArray(value) ? value : Object.entries(value || {}).map(([id, entry]) => ({ ...entry, id }));
+  }
+  return new Map(ids.map(id => {
+    const entry = cast.find(c => c.id === id);
+    let folder;
+    if (entry?.source) {
+      const identity = path.resolve(boardDir, entry.source);
+      folder = path.dirname(identity);
+      if (path.basename(identity) !== 'identity.md' || path.basename(folder) !== id
+        || path.basename(path.dirname(folder)) !== 'characters' || path.basename(path.dirname(path.dirname(folder))) !== 'assets')
+        throw new Error(`cast_source_missing: ${id} needs its own assets/characters/${id}/identity.md`);
+    }
+    else for (let dir = boardDir; ; dir = path.dirname(dir)) {
+      const candidate = path.join(dir, 'assets', 'characters', id);
+      if (fs.existsSync(path.join(candidate, 'panels.json'))) { folder = candidate; break; }
+      if (path.dirname(dir) === dir) break;
+    }
+    if (!folder) throw new Error(`character_sheet_missing: ${id} needs its shared panels.json`);
+    let manifest;
+    try { manifest = JSON.parse(fs.readFileSync(path.join(folder, 'panels.json'), 'utf8')); }
+    catch { throw new Error(`character_sheet_missing: ${id} has an unreadable panels.json`); }
+    const panels = {};
+    for (const view of ['face', 'front', 'back']) {
+      const panel = manifest.panels?.[view];
+      const file = localFile(folder, panel?.file);
+      // Older manifests omitted these tags; an explicitly different tag is never a character panel.
+      if ((manifest.schemaVersion !== undefined && manifest.schemaVersion !== 1)
+        || (panel?.purpose !== undefined && panel.purpose !== 'character_reference')
+        || (panel?.view !== undefined && panel.view !== view) || !file)
+        throw new Error(`character_panel_missing: ${id} has no ${view} panel with a valid character-reference registration`);
+      panels[view] = path.relative(boardDir, file).split(path.sep).join('/');
+    }
+    return [id, panels];
+  }));
+}
+function canonicalReferences(boardDir, shotId, ids, use) {
+  if (ids.length > 2) throw new Error('msr_character_limit: at most two principal characters');
+  const sheets = sheetPanels(boardDir, ids);
+  const views = ids.length === 1 ? ['face', 'front', 'back'] : ['face', 'front'];
+  return views.flatMap(view => ids.map(id => ({ id: `${shotId}-${id}-${view}`, path: sheets.get(id)[view],
+    role: 'character', use, purpose: view === 'face' ? `${id}'s face and hair` : `${id}'s body and outfit, ${view}` })));
+}
+module.exports = { SPECS, dimensions, inspectPanels, boardPanelFindings, sheetPanels, canonicalReferences };

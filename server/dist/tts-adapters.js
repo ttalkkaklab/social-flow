@@ -1,9 +1,10 @@
 /** One registry of executable adapters. Planning never invokes a provider. */
+import { genaiSpeechSchema, generateGenaiSpeech } from './astra-genai-speech.js';
 import { z } from 'zod';
 import * as gemini from './tts-client.js';
 import * as eleven from './elevenlabs-client.js';
 import { resolveTtsModel } from './tts-models.js';
-export const SPEECH_GENERATORS = ['tts_generate', 'tts_multi_speaker', 'tts_gemini_38', 'tts_elevenlabs_generate', 'tts_elevenlabs_dialogue'];
+export const SPEECH_GENERATORS = ['tts_astra_genai', 'tts_generate', 'tts_multi_speaker', 'tts_gemini_38', 'tts_elevenlabs_generate', 'tts_elevenlabs_dialogue'];
 function adapter(schema, run, describe) {
     return (input) => {
         const args = schema.parse(input);
@@ -12,6 +13,7 @@ function adapter(schema, run, describe) {
 }
 const withoutTags = (text) => text.replace(/\[[^\]]*\]/g, '');
 const adapters = {
+    tts_astra_genai: adapter(genaiSpeechSchema, generateGenaiSpeech, p => ({ spokenText: p.text, singleSpeaker: true })),
     tts_generate: adapter(gemini.ttsGenerateSchema, gemini.generateSpeech, p => ({ spokenText: p.text, singleSpeaker: true })),
     tts_multi_speaker: adapter(gemini.ttsMultiSpeakerSchema, gemini.generateDialogue, p => ({ spokenText: p.script.split('\n').map(line => {
             const speaker = p.speakers.find(s => line.trimStart().startsWith(s.speakerName + ':'));
@@ -24,7 +26,7 @@ const adapters = {
 export function prepareSpeech(generator, generation) {
     const selected = z.enum(SPEECH_GENERATORS).parse(generator);
     const prepared = adapters[selected](generation);
-    const contract = resolveTtsModel(selected.startsWith('tts_elevenlabs_') ? 'elevenlabs' : 'gemini', prepared.args.model);
+    const contract = resolveTtsModel(selected === 'tts_astra_genai' ? 'astra-genai' : selected.startsWith('tts_elevenlabs_') ? 'elevenlabs' : 'gemini', prepared.args.model);
     if (![contract.single, contract.dialogue].includes(selected))
         throw new Error('TTS adapter/model mismatch');
     return { ...prepared, generator: selected };

@@ -2,24 +2,18 @@
 
 // Planning constraints mirror the server table; seedance-route.test.mjs checks drift.
 const MODELS = {
-  'seedance-1-5-pro-251215': { family: '1-5-pro', duration: [4, 12], resolutions: ['480p', '720p', '1080p'], images: 0, videos: 0, audio: true },
   'dreamina-seedance-2-0-260128': { family: '2-0', duration: [4, 15], resolutions: ['480p', '720p', '1080p', '4k'], images: 9, videos: 3, audio: true },
   'dreamina-seedance-2-5-260628': { family: '2-5', duration: [4, 30], resolutions: ['480p', '720p', '1080p'], images: 30, videos: 10, audio: true },
   'dreamina-seedance-2-0-fast-260128': { family: '2-0-fast', duration: [4, 15], resolutions: ['480p', '720p'], images: 9, videos: 3, audio: true },
-  'dreamina-seedance-2-0-mini-260615': { family: '2-0-mini', duration: [4, 15], resolutions: ['480p', '720p'], images: 9, videos: 3, audio: true },
-  'seedance-1-0-pro-250528': { family: '1-0-pro', duration: [2, 12], resolutions: ['480p', '720p', '1080p'], images: 0, videos: 0, audio: false },
-  'seedance-1-0-pro-fast-251015': { family: '1-0-pro-fast', duration: [2, 12], resolutions: ['480p', '720p', '1080p'], images: 0, videos: 0, audio: false }
+  'dreamina-seedance-2-0-mini-260615': { family: '2-0-mini', duration: [4, 15], resolutions: ['480p', '720p'], images: 9, videos: 3, audio: true }
 };
-const DEFAULT_MODEL = 'seedance-1-5-pro-251215';
+const DEFAULT_MODEL = 'dreamina-seedance-2-0-260128';
 const { checkFrames, framePlan, previzHandoff } = require('../../storyboard/references/render-routing.js');
 
 // A model may render a resolution the price table has no row for. Forecasting silently drops
 // such a shot, so the plan is rejected here instead. Mirrors autoproduce/references/prices.tsv;
 // seedance-route.test.mjs checks the drift.
 const PRICED = new Set([
-  'seedance.1-0-pro-fast.1080p', 'seedance.1-0-pro-fast.720p',
-  'seedance.1-5-pro-silent.1080p', 'seedance.1-5-pro-silent.720p',
-  'seedance.1-5-pro-audio.1080p', 'seedance.1-0-pro.1080p',
   'seedance.2-0-mini.720p', 'seedance.2-0-fast.720p',
   'seedance.2-0.1080p', 'seedance.2-5.720p', 'seedance.2-5.1080p',
   // with a reference video (the previz lane): input + output seconds at the with-video rate
@@ -27,7 +21,7 @@ const PRICED = new Set([
   'seedance.2-0-fast-video.720p', 'seedance.2-0-mini-video.720p',
 ]);
 
-// Seedance-only settings on a slot that defaults to Veo would skip every check below.
+// Seedance-only settings on another engine's slot would skip every check below.
 const SEEDANCE_KEYS = ['model', 'modelPurpose', 'modelReason', 'referenceImagePaths', 'referenceAudioPaths', 'previz'];
 
 /** Resolve a planned shot before either forecasting or calling the generation tool. */
@@ -50,37 +44,25 @@ function scenePlan(scene) {
   const endFrame = framePlan(scene).end;
   if (endFrame) settings.lastImagePath = endFrame;
   // `host` is the CLI's own video tool (Grok image_to_video — owner directive 2026-09-07); it takes
-  // the same source and prompt as Veo and none of the Seedance planning fields.
+  // a source and prompt and none of the Seedance planning fields.
   // `astra` is our own LTX-2.5 box (`astra_*`, video-model-selection §ASTRA). It is opt-in per
   // shot and never a default: a call costs wall clock instead of money and renders one job at a
-  // time, so a board only asks for it where nobody is waiting. Like `host` it takes the same
-  // source and prompt as Veo and none of the Seedance planning fields.
-  const engine = settings.engine || (kind === 'motion' ? 'seedance' : 'veo');
-  if (!['seedance', 'veo', 'host', 'astra'].includes(engine)) throw new Error('unknown video engine: ' + engine);
+  // time, so a board only asks for it where nobody is waiting. Like `host` it takes none of the
+  // Seedance planning fields. Veo left on 2026-10-31 (no voice reference); a board that still names
+  // it is asked to choose again rather than silently rerouted.
+  const engine = settings.engine || 'seedance';
+  if (engine === 'veo') throw new Error('video_engine_unsupported: Veo cannot keep a character\'s voice; set engine to seedance, astra or host (reuse an existing clip with visual.reuse)');
+  if (!['seedance', 'host', 'astra'].includes(engine)) throw new Error('unknown video engine: ' + engine);
   if (engine !== 'seedance') {
     const refs = Array.isArray(v.references) ? v.references.filter(ref => ['video', 'both'].includes(ref.use)) : [];
-    if (refs.length && engine !== 'veo' && engine !== 'host') throw new Error('image_plan_unsupported: this forecast route does not accept video references');
+    if (refs.length && engine !== 'host') throw new Error('image_plan_unsupported: this forecast route does not accept video references');
     if (refs.length && v.frames?.mode !== 'reference') throw new Error('image_plan_unsupported: pinned frames cannot be combined with video references');
     // A host video tool takes no reference clip, so a previz on that lane shapes the still and the
     // prompt instead (handoff frame_and_prompt, render-routing checkPreviz) and is not a Seedance field.
-    const named = SEEDANCE_KEYS.filter((k) => settings[k] !== undefined && !(engine === 'veo' && k === 'model') &&
+    const named = SEEDANCE_KEYS.filter((k) => settings[k] !== undefined &&
       !(k === 'previz' && (engine === 'host' || engine === 'astra') && previzHandoff(scene) === 'frame_and_prompt'));
     if (named.length)
       throw new Error(named.join(', ') + ' only applies to Seedance — set engine:"seedance" or drop the setting');
-    if (engine === 'veo') {
-      const resolution = settings.resolution || '1080p';
-      const tool = kind === 'quote' || refs.length ? 'veo_reference' : 'veo_img2video';
-      const models = { 'veo-3.1-lite-generate-preview': 'lite', 'veo-3.1-fast-generate-preview': 'fast', 'veo-3.1-generate-preview': 'standard' };
-      const model = settings.model || (kind === 'quote' ? 'veo-3.1-fast-generate-preview' : 'veo-3.1-lite-generate-preview');
-      const tier = models[model];
-      if (!tier || !['720p', '1080p', '4k'].includes(resolution) || (tier === 'lite' && (resolution === '4k' || tool === 'veo_reference')))
-        throw new Error('Unsupported Veo model/resolution/route; select a supported model explicitly');
-      const duration = require('../../_shared/video-duration.js').minimumDuration(scene.duration,
-        { seconds: tool === 'veo_reference' || resolution !== '720p' ? [8] : [4, 6, 8] });
-      return { kind, engine, resolution, tool, model, durationSeconds: duration.requestedSeconds,
-        ...(refs.length ? { referenceImagePaths: refs.map(ref => ref.path) } : {}),
-        priceKey: 'veo.' + tier + '.' + resolution, reason: 'minimum supported shot duration' };
-    }
     return { kind, engine };
   }
   const purpose = settings.modelPurpose || 'standard';
@@ -122,11 +104,11 @@ function scenePlan(scene) {
   if (referencePreviz && !spec.videos)
     throw new Error(model + ' takes no reference video — use previz.handoff:"frame_and_prompt" and omit reference arrays, or choose a model with video input');
   if (spec.images && settings.realFaceInput !== false)
-    throw new Error('Seedance 2.x requires realFaceInput:false after inspecting all source/reference images; photoreal faces use 1.5 or Veo');
+    throw new Error('Seedance requires realFaceInput:false after inspecting all source/reference images; photoreal faces use an LTX engine (astra)');
   if (needsReference && !spec.images) throw new Error(model + ' does not accept reference images/audio');
   if (references.length > spec.images) throw new Error(model + ' accepts at most ' + spec.images + ' reference images');
   if (needsReference && !references.length && !voices.length) throw new Error('reference route needs referenceImagePaths or referenceAudioPaths');
-  if (settings.lastImagePath !== undefined && (typeof settings.lastImagePath !== 'string' || !settings.lastImagePath.trim() || needsReference || spec.family === '1-0-pro-fast'))
+  if (settings.lastImagePath !== undefined && (typeof settings.lastImagePath !== 'string' || !settings.lastImagePath.trim() || needsReference))
     throw new Error('lastImagePath needs a supported image-to-video route and a nonempty local path');
   if (needsVoice && (!voices.length || spec.family !== '2-5')) throw new Error('fixed-voice route requires Seedance 2.5 and referenceAudioPaths');
   if (voices.length > 10) throw new Error('Seedance 2.5 accepts at most 10 reference audio clips');
@@ -147,7 +129,7 @@ function scenePlan(scene) {
     if (referencePreviz && !spec.videos) throw new Error(model + ' does not accept a reference video');
     if (previz.seconds !== durationSeconds) throw new Error('previz.seconds (' + previz.seconds + ') must equal the billed length ' + durationSeconds + 's — render the previz at the cut length');
   }
-  const family = (spec.family === '1-5-pro' ? spec.family + (generateAudio ? '-audio' : '-silent') : spec.family) + (referencePreviz ? '-video' : '');
+  const family = spec.family + (referencePreviz ? '-video' : '');
   const priceKey = 'seedance.' + family + '.' + resolution;
   if (!PRICED.has(priceKey)) {
     const priced = [...PRICED].filter((k) => k.startsWith('seedance.' + family + '.'))

@@ -67,11 +67,10 @@
 </header>
 
 <div class="warn">
-  <strong>2026-08-16 update — three things changed since.</strong> The body stays exactly as the August 11 research left it; the places where the code moved are collected here.
+  <strong>What changed after the research.</strong> The body builds on the August 11 research; the places where the code moved are collected here.
   <ul style="margin:10px 0 0">
-    <li><strong>There are two video engines now.</strong> Seedance (<code>seedance_*</code>) joined and makes 2–30 seconds in 1-second steps — the "8-second grid" in §2 below is now a constraint on the Veo side only. Which engine when: <a href="../../../skills/produce/references/video-model-selection.md">video-model-selection.md</a> is the source of truth.</li>
-    <li><strong><code>negativePrompt</code> exists.</strong> The field written up as "missing" in the §7 table is now on <code>veo_text2video</code> and <code>veo_img2video</code> (reference and extension reject it upstream, so 0.75.0 dropped it there). The negative-prompt rule in §3 is directly usable.</li>
-    <li><strong>Per-episode cost has numbers.</strong> The hole §9 described as "not one value passed verification" was filled by <code>skills/autoproduce/references/prices.tsv</code> and <code>cost-tiers.md</code>. The economy tier — the default for autonomous authoring — never calls Veo once and runs <strong>about $0.27–0.29</strong> per episode (plan cap default $1.00).</li>
+    <li><strong>The video engines changed.</strong> <span class="badge key">2026-10-31</span> Veo, Gemini Omni and Seedance 1.x left the plugin on 2026-10-31 because none takes a voice reference. The engines now are the LTX lanes (ASTRA GenAI <code>astra_genai_*</code>, our own box <code>astra_*</code>, local <code>ltx_video_generate</code>) and Dreamina Seedance 2.x. A spoken cut goes to an adapter with a voice lane (<code>astra_genai_msr</code>, <code>seedance_reference</code>); narration over a non-speaking picture works on any adapter. Which engine when: <a href="../../../skills/produce/references/video-model-selection.md">video-model-selection.md</a> is the source of truth.</li>
+    <li><strong>Per-episode cost has numbers.</strong> The hole §9 described as "not one value passed verification" was filled by <code>skills/autoproduce/references/prices.tsv</code> and <code>cost-tiers.md</code>. The economy tier — the default for autonomous authoring — never calls generated video once and runs <strong>about $0.27–0.29</strong> per episode (plan cap default $1.00).</li>
   </ul>
 </div>
 
@@ -79,7 +78,7 @@
   <div class="toc-title">Contents</div>
   <ol>
     <li><a href="#route">There's no route to choose</a></li>
-    <li><a href="#spec">The Veo specs decide the pipeline</a></li>
+    <li><a href="#spec">Video engine specs and language</a></li>
     <li><a href="#prompt">Prompt design — four official rules</a></li>
     <li><a href="#consistency">Consistency across clips — tools and limits</a></li>
     <li><a href="#audio">Narration comes first</a></li>
@@ -93,16 +92,16 @@
 
 <section id="route">
   <h2>1. There's no route to choose</h2>
-  <p class="lede"><strong>Hybrid is the default — not by taste, but because Veo makes at most 8 seconds per call.</strong></p>
+  <p class="lede"><strong>Hybrid is the default — not by taste, but because generated video comes as short clips that each hold one moment.</strong></p>
   <p>For a 30–60 second short, people assume there are three options: generate everything with a video model, lay narration over images like a slideshow, or mix the two. In practice there's nothing to choose.</p>
-  <p>Veo 3.1 makes <strong>8 seconds at most</strong> per call. On top of that, Google's docs recommend putting "one moment per prompt" for short videos — cram several events into one prompt and the result often smears. The prescription in that same doc is to split generation into "Clip 1 / Clip 2 / Clip 3". Use it the way Google recommends and the output is a bundle of clips from the start: 4 of them for 30 seconds, 8 for 60.</p>
+  <p>Google's video-generation docs recommend putting "one moment per prompt" for short videos — cram several events into one prompt and the result often smears. The prescription in that same doc is to split generation into "Clip 1 / Clip 2 / Clip 3". Use it the way it recommends and the output is a bundle of clips from the start.</p>
   <p>Which means an editing layer that joins clips is needed either way. Once that layer exists, the only remaining decision is "which slots get generated video and which get stills". That's the hybrid.</p>
 
   <div class="route-row">
     <div class="route">
       <div class="r-tag">A</div>
       <h4>Generated video only</h4>
-      <p>Pull every clip from Veo. The 8-second ceiling means you end up joining clips anyway, so despite the name it isn't "only".</p>
+      <p>Pull every clip from a generation model. One moment per clip means you end up joining clips anyway, so despite the name it isn't "only".</p>
     </div>
     <div class="route">
       <div class="r-tag">B</div>
@@ -119,62 +118,17 @@
   <p><span class="badge key">added 2026-08-18</span> The engines that fill those slots have grown too. Still backgrounds default to on-device <code>image_local_generate</code> (Z-Image Turbo via mflux/MLX) — no API key, no network, no billing. Only frames carrying text go to <code>gpt_image_text2img</code>, because local generation breaks Korean jamo apart. Narration has the same shape: on-device by default (§5).</p>
 
   <div class="note">
-    <strong>Confidence in this conclusion is low.</strong> <span class="badge free">derived inference</span> The three facts under it (the 8-second ceiling, the one-moment rule, the split-into-clips prescription) each landed 3-0, but tying them into "hybrid is the default" is us, not the sources. And <strong>there's no comparative evidence for A over B or B over A</strong> — turning "where to use generated video" into a principle needs per-episode cost, and not one of those numbers passed verification in this round (§9).
+    <strong>Confidence in this conclusion is low.</strong> <span class="badge free">derived inference</span> The two facts under it (the one-moment rule, the split-into-clips prescription) each landed 3-0, but tying them into "hybrid is the default" is us, not the sources. And <strong>there's no comparative evidence for A over B or B over A</strong> — turning "where to use generated video" into a principle needs per-episode cost, and not one of those numbers passed verification in this round (§9).
   </div>
 </section>
 
 <section id="spec">
-  <h2>2. The Veo specs decide the pipeline</h2>
-  <p>These numbers can't be changed by preference. The pipeline's structure follows from them.</p>
-
-  <div class="metric-row">
-    <div class="metric"><div class="m-k">Clip length</div><div class="m-v">4 · 6 · 8s</div></div>
-    <div class="metric"><div class="m-k">Frame rate</div><div class="m-v">24fps fixed</div></div>
-    <div class="metric"><div class="m-k">9:16 portrait</div><div class="m-v">native</div></div>
-    <div class="metric"><div class="m-k">Videos per request</div><div class="m-v">1</div></div>
-  </div>
-
-  <div class="table-scroll">
-  <table>
-    <thead><tr><th>Item</th><th>Detail</th><th>Confidence</th></tr></thead>
-    <tbody>
-      <tr><td>Ceiling per generation</td><td><strong>8 seconds</strong>. 30s = 4 clips, 60s = 8 clips</td><td><span class="badge ro">official · 3-0</span></td></tr>
-      <tr><td>Frame rate</td><td>24fps, <strong>fixed</strong> — not selectable</td><td><span class="badge ro">official · 3-0</span></td></tr>
-      <tr><td>Aspect ratio</td><td>16:9 (default) and <strong>9:16</strong>. Portrait comes out directly, no crop or reframe</td><td><span class="badge ro">official · 3-0</span></td></tr>
-      <tr><td>Resolution</td><td>720p at every length, <strong>1080p and 4K at 8 seconds only</strong></td><td><span class="badge ro">official · 3-0</span></td></tr>
-      <tr><td>Video extension</td><td>+7 seconds, up to 20 times. But <strong>extending drops you to 720p</strong></td><td><span class="badge ro">official · 3-0</span></td></tr>
-      <tr><td>Audio</td><td>Veo 3.1 is <strong>always on</strong> — there's no option to ask for silence</td><td><span class="badge wr">official · 2-1</span></td></tr>
-      <tr><td>Prompt language</td><td>The model card's <code>Prompt languages</code> reads <strong>English only</strong> on every variant</td><td><span class="badge ro">official · 3-0</span></td></tr>
-    </tbody>
-  </table>
-  </div>
+  <h2>2. Video engine specs and language</h2>
+  <p><span class="badge key">updated 2026-10-31</span> The research-time spec table and engine comparison described engines that have left the plugin, so they're gone. For the remaining engines' length, resolution and reference limits, the <a href="../../api-reference/seedance.en.html">Seedance reference</a> and <a href="../../../skills/produce/references/video-model-selection.md">video-model-selection.md</a> are the source of truth. §1's conclusion holds with any engine — because of <strong>Google's "one moment per prompt" recommendation</strong>, pulling 30 seconds in one piece is not the recommended usage.</p>
 
   <h3>Where Korean goes</h3>
-  <p>The asymmetry in the docs is real. The Vertex model card lists English as the only prompt language for every Veo 3.1 variant, and the Gemini API docs say English is fully supported while other languages haven't been evaluated. The Gemini TTS docs, in the other direction, list <code>Korean | ko</code> explicitly in a table of 87 languages.</p>
-  <p>So <strong>write video prompts in English and keep Korean in the narration and subtitle layers.</strong> That's the only arrangement the docs support.</p>
-  <div class="note">
-    <strong>Overstate it and you're wrong.</strong> "Not evaluated" is not "doesn't work". Veo 3.x producing Korean speech is common in practice, so turning this into "Veo can't do Korean" makes it false. What the docs let you say stops at <strong>there's no vendor guarantee</strong>, and "generate TTS separately and mix it in" is an architecture decision of ours, not something Google said.
-  </div>
-  <div class="warn">
-    <strong>The docs disagree with each other in places.</strong> Vertex's "Generate videos from text" page lists 4K as "Preview models only", which collides with the GA model card (the model card wins), and the <code>Sound generation: Not supported</code> line on the <code>veo-3.1-generate-001</code> card sits badly with other Google docs. Treating individual fields as spot-check material is the safe move. <strong>The 9:16 + 1080p combination is also worth generating once to confirm</strong> — the older Veo 3.0 had a constraint where 1080p was 16:9 only.
-  </div>
-
-  <h3>That grid is now a Veo-side constraint <span class="badge key">added 2026-08-16</span></h3>
-  <p>At research time Veo was the only video engine, so the 8-second grid was the pipeline's constraint. Seedance (<code>seedance_*</code>, BytePlus ModelArk) is here too now, and the two engines aren't substitutes — they're good at different things.</p>
-  <div class="table-scroll">
-  <table>
-    <thead><tr><th>Item</th><th>Veo 3.1</th><th>Seedance</th></tr></thead>
-    <tbody>
-      <tr><td>Length</td><td>4 · 6 · 8s grid</td><td><strong>2–30s in 1-second steps</strong> — billed for what you request</td></tr>
-      <tr><td>Ratios</td><td>16:9 · 9:16</td><td>7 of them (21:9 · 4:3 · 1:1 · 3:4 …)</td></tr>
-      <tr><td>Audio</td><td>Always on — dialogue and sound effects are its strength</td><td>Can be turned off — which makes silent cuts far cheaper</td></tr>
-      <tr><td>Reference images</td><td>Up to 3 · fixed 8s</td><td>Up to 30 · has an asset registry (<code>asset://</code>)</td></tr>
-      <tr><td>Live-action person input</td><td>Adult faces pass (children blocked)</td><td><strong>The 2.x family rejects them</strong> — only 1.5 pro and the 1.0 family accept</td></tr>
-      <tr><td>Extension</td><td><code>veo_extension</code> — +7s, up to 20 times</td><td>No counterpart tool</td></tr>
-    </tbody>
-  </table>
-  </div>
-  <p>So §1's "hybrid is the default" conclusion stands, with one more reason behind it. The length constraint loosened, but <strong>Google's "one moment per prompt" recommendation didn't</strong>, so pulling 30 seconds in one piece is still not the recommended usage. The axis that splits the cost isn't length, it's <strong>whether that segment uses its sound</strong> — motion backgrounds throw the sound away, so they go to Seedance silent; b-roll that uses the clip's own sound goes to Veo. The decision table's source of truth is <a href="../../../skills/produce/references/video-model-selection.md">video-model-selection.md</a>, and the API contract is the <a href="../../api-reference/seedance.en.html">Seedance reference</a>.</p>
+  <p>At research time Google's video model card listed English as the only prompt language, and the Gemini TTS docs list <code>Korean | ko</code> explicitly in a table of 87 languages. Today's engines are much the same — the Seedance 2.0 family reads the prompt body in English and Chinese only (Korean on 2.5 alone), and Korean dialogue placed inside quotes is spoken.</p>
+  <p>So <strong>write the directions in a video prompt in English, and keep Korean to narration and dialogue.</strong></p>
 </section>
 
 <section id="prompt">
@@ -214,6 +168,7 @@
   <div class="note">
     <strong>Watch the scope.</strong> The generic-name rule applies only to "a character inside the source image" — people the prompt newly introduces aren't covered. And the rule addresses the visual layer only (audio prompting is separate).
   </div>
+  <p><span class="badge key">updated 2026-10-31</span> <strong>The Seedance image lane differs from this rule.</strong> Keep the source image prompt's identity words (who and what the subject is), drop the layout words, add the motion and close with a consistency lock. Re-describe the layout, facing or lighting and the model redesigns the scene. Seedance also has no <code>negativePrompt</code> field, so an unwanted element is designed out of the sentence and what must hold goes into a closing lock paragraph. Each tool's description is the source of truth for that engine's prompt contract.</p>
 </section>
 
 <section id="consistency">
@@ -222,13 +177,13 @@
 
   <div class="table-scroll">
   <table>
-    <thead><tr><th>Tool</th><th>Detail</th><th>Limit</th></tr></thead>
+    <thead><tr><th>Tool</th><th>What it does</th><th>Limit</th></tr></thead>
     <tbody>
-      <tr><td>Reference images</td><td>Up to <strong>3</strong> — assets of one person, character, or product</td><td>The docs only say <code>asset</code> and <strong>never use the word style</strong></td></tr>
-      <tr><td>First-frame pinning</td><td>The input image becomes the first frame as-is</td><td>Sets only where the next clip starts; the middle is uncontrolled</td></tr>
-      <tr><td>First/last frame interpolation</td><td>Specify the end frame with <code>lastFrame</code></td><td>—</td></tr>
-      <tr><td>Video extension</td><td>+7 seconds, up to 20 times</td><td>Extending is <strong>720p only</strong></td></tr>
-      <tr><td>Referencing several videos</td><td colspan="2"><strong>Not supported</strong> — "Referencing or reasoning across multiple videos is not currently supported."</td></tr>
+      <tr><td>Character sheet reference</td><td><code>astra_genai_msr</code> takes the character sheet panels (face close-up, headless front and back) and the background as references</td><td>Two characters at most take references; a third is drawn from the action description alone (<code>msr_character_limit</code>)</td></tr>
+      <tr><td>Reference images</td><td><code>seedance_reference</code> — up to 9 on the 2.0 family, up to 30 on 2.5</td><td>2.x rejects photoreal face input</td></tr>
+      <tr><td>Voice reference</td><td><code>astra_genai_msr</code> (the speaker's sample, when the gateway accepts one) · <code>seedance_reference</code> (<code>referenceAudioPaths</code>)</td><td>Sending a sample to a gateway without sample support stops with <code>msr_voice_unsupported</code></td></tr>
+      <tr><td>First/last frame</td><td><code>seedance_img2video</code> takes a first frame and a last frame</td><td>It sets the start and end only; the middle isn't controlled</td></tr>
+      <tr><td>Video reference</td><td><code>referenceVideoPaths</code> on <code>seedance_reference</code> — takes camera, blocking and timing from a previz clip</td><td>A local clip has to be served at a public URL to go in</td></tr>
     </tbody>
   </table>
   </div>
@@ -236,7 +191,7 @@
   <div class="warn">
     <strong>"Paste the description block + pin the seed" is not the answer to consistency.</strong> <span class="badge de">3-0 refuted</span> The claim presenting this two-step recipe as a rule was rebutted by all three verifiers. The docs do <em>describe</em> such a workflow, but there's no efficacy evidence, and the claim ran harder than the docs. In the docs <code>seed</code> is a reproducibility lever, not a cross-clip consistency technique — the docs themselves say it doesn't guarantee determinism and only improves it slightly.
   </div>
-  <p style="font-size:14px;color:var(--text-soft)">This section's confirmation level is 2-1. The verification session ran out of WebSearch budget, so the third-party refutation sweep and the Vertex-side cross-check never ran.</p>
+  <p style="font-size:14px;color:var(--text-soft)"><span class="badge key">updated 2026-10-31</span> The table above follows the current tool contracts. At research time this section's confirmation level was 2-1. The verification session ran out of WebSearch budget, so the third-party refutation sweep and the Vertex-side cross-check never ran.</p>
 </section>
 
 <section id="audio">
@@ -264,7 +219,7 @@
   </div>
 
   <div class="note">
-    <strong>This isn't comparative evidence.</strong> It's not "audio-first beats video-first", it's an existence proof that "this is how it actually ships". And both ShortGPT and MoneyPrinterTurbo <strong>use stock footage, so they've never hit the fragmentation Veo's 8-second ceiling creates</strong> — don't cite them as evidence that the same order carries over to a generated-video stack.
+    <strong>This isn't comparative evidence.</strong> It's not "audio-first beats video-first", it's an existence proof that "this is how it actually ships". And both ShortGPT and MoneyPrinterTurbo <strong>use stock footage, so they've never hit the clip fragmentation of generated video</strong> — don't cite them as evidence that the same order carries over to a generated-video stack.
   </div>
 </section>
 
@@ -337,12 +292,12 @@
     <tbody>
       <tr>
         <td><code>negativePrompt</code> field</td>
-        <td><strong>It exists now.</strong> <span class="badge key">updated 2026-08-16</span> Added to all four Veo tools. At research time it was missing, so §3's negative-prompt rule was unusable; now it applies — what you want excluded goes into this field as noun phrases, not into the prompt body</td>
-        <td>source check (<code>tools.ts</code> ×4 · <code>video-client.ts</code>)</td>
+        <td><strong>It depends on the engine.</strong> <span class="badge key">updated 2026-10-31</span> Our own LTX box (<code>astra_*</code>) takes it on the guided tiers only. Seedance has none, so an unwanted element is designed out of the sentence and held by a closing lock paragraph (§3)</td>
+        <td>source check (<code>tools.ts</code>)</td>
       </tr>
       <tr>
-        <td>Veo <code>seed</code></td>
-        <td><strong>Still missing.</strong> Nothing on the Veo side even now; Seedance takes <code>seed</code>, but only on the 1.5 pro and 1.0 families (2.x refuses). Since the vendor docs don't promise that the same seed reproduces, <strong>we don't hang cross-cut consistency on it</strong> — that's the job of reference images and first/last frames</td>
+        <td><code>seed</code></td>
+        <td><strong>Not on Seedance 2.x.</strong> Even on an engine that takes one, since the vendor docs don't promise that the same seed reproduces, <strong>we don't hang cross-cut consistency on it</strong> — that's the job of reference images and first/last frames</td>
         <td>source check (<code>tools.ts</code>)</td>
       </tr>
       <tr>
@@ -389,9 +344,7 @@
   <table>
     <thead><tr><th>Claim</th><th>Verdict</th></tr></thead>
     <tbody>
-      <tr><td><strong>Veo output always carries a SynthID watermark and the caller can't remove it</strong></td><td><span class="badge de">3-0 refuted</span></td></tr>
       <tr><td><strong>Pasting a character description block + pinning the seed is the answer to consistency</strong></td><td><span class="badge de">3-0 refuted</span></td></tr>
-      <tr><td><strong>Veo's native dialogue + lip sync is a first-class alternative to separate TTS</strong></td><td><span class="badge de">3-0 refuted</span></td></tr>
       <tr><td>Burned-in subtitles break at 15 characters / 5 words</td><td><span class="badge de">1-2 refuted</span></td></tr>
       <tr><td>Narration past 57 seconds gets compressed with <code>atempo</code> · script budget is 20.5 characters per second</td><td><span class="badge de">3-0 refuted</span></td></tr>
       <tr><td>Word-level subtitles need WhisperX forced alignment (2 related claims)</td><td><span class="badge de">3-0 refuted</span></td></tr>
@@ -401,9 +354,6 @@
   </table>
   </div>
 
-  <div class="note">
-    <strong>Don't misread what the SynthID refutation means.</strong> What was refuted is the <em>flat assertion</em> "always attached and impossible to remove", not "SynthID doesn't exist". How far watermarking actually reaches on Veo output is <strong>still unconfirmed</strong> (§9).
-  </div>
 </section>
 
 <section id="unknown">
@@ -414,10 +364,10 @@
   <table>
     <thead><tr><th>Area</th><th>Status</th></tr></thead>
     <tbody>
-      <tr><td><strong>Cost and re-roll economics</strong> <span class="badge key">closed</span></td><td>All unsettled at research time. Now <code>skills/autoproduce/references/prices.tsv</code> is the unit-price source of truth and <code>cost-tiers.md</code> sets the model ladder and promotion rules — the economy tier, the default for autonomous authoring, uses no generated video in any cut and runs $0.26–0.29 per episode, promoting only the 4-second cover to <code>veo-3.1-lite</code> when hook metrics fall below threshold. "The hole we can fill fastest" below was that work</td></tr>
+      <tr><td><strong>Cost and re-roll economics</strong> <span class="badge key">closed</span></td><td>All unsettled at research time. Now <code>skills/autoproduce/references/prices.tsv</code> is the unit-price source of truth and <code>cost-tiers.md</code> sets the model ladder and promotion rules — the economy tier, the default for autonomous authoring, uses no generated video in any cut and runs $0.26–0.29 per episode. Generated video is made on the saved video model only when a cut truly needs continuous motion</td></tr>
       <tr><td><strong>Sequencing rules</strong></td><td>Which material suits the hook (first 1–3 seconds), the body, and the close; cut lengths; subtitle design — zero surviving claims. Separating subtitles in §6 was also decided on <strong>features, not performance</strong></td></tr>
       <tr><td><strong>Quality gates</strong></td><td>How to automatically catch broken hands, mangled text, morphing, and flicker — nothing passed verification</td></tr>
-      <tr><td><strong>Platform AI policy</strong></td><td>SynthID's coverage unconfirmed. The folk belief that "disclosure cuts your reach" was neither refuted nor proven</td></tr>
+      <tr><td><strong>Platform AI policy</strong></td><td>The folk belief that "disclosure cuts your reach" was neither refuted nor proven</td></tr>
     </tbody>
   </table>
   </div>
@@ -426,15 +376,10 @@
     <strong>One disclosure-policy question has an answer from outside this research.</strong> An earlier round confirmed it in YouTube's official docs as a primary source and it's already in <code>skills/publish/SKILL.md</code> — <em>"Disclosing AI content won't limit a video's audience or impact its eligibility to earn money."</em> Disclosure doesn't affect reach or monetization eligibility; what it does warn about is forced labels, removal, and YPP suspension for habitual non-disclosure. Details are in the <a href="../youtube-shorts-growth/index.en.html">YouTube Shorts growth guide</a>.
   </div>
 
-  <h3>The hole we can fill fastest</h3>
-  <p>Cost. The search step did turn up figures from the official pricing page — Veo 3.1 per second: standard $0.40, Fast $0.10 (720p) / $0.12 (1080p), Lite $0.05 / $0.08. Over 8 seconds that's <strong>$3.20 / $0.80 / $0.40</strong>. <strong>These numbers were since confirmed directly on the official pricing page</strong> <span class="badge key">confirmed 2026-08-15</span> — the same values sit in <code>skills/autoproduce/references/prices.tsv</code> at official grade, and that file is the unit-price source of truth. What was confirmed, though, is <strong>a pricing page, not an invoice</strong>. A summarizer hallucination was caught in this same research (§7), so measuring once with a real billed call hasn't been done yet.</p>
-
   <h3>Worth doing next</h3>
   <p style="color:var(--text-soft);font-size:14.5px">In the 2026-08-16 cross-check, <s>struck-through</s> items are the ones finished since.</p>
   <ul>
-    <li><s>Expose <code>negativePrompt</code> and <code>seed</code> on the <code>veo_*</code> tools</s> — <code>negativePrompt</code> was added to all four. <code>seed</code> was <strong>deliberately left out</strong>: the vendor doesn't promise the same seed reproduces, so cross-cut consistency is held by reference images and first/last frames</li>
     <li><s>Pin <strong>video prompts are English</strong> into the storyboard and produce instructions (§2)</s> — it's in <code>produce/SKILL.md</code>. The same rule catches Seedance too, whose prompt body takes Chinese and English only</li>
-    <li>Generate once to confirm 1080p and 4K actually come out at 9:16</li>
     <li>Add <code>is_ai_generated</code> to <code>instagram_publish</code> — YouTube discloses AI and IG doesn't (§7)</li>
     <li><strong>Run the subtitle path through one real publish</strong> — the request bytes are verified, but whether the platform accepts them is only known by publishing. Two things in particular: reissuing the YouTube token with <code>force-ssl</code>, and whether the caption call catches while FB processes the video asynchronously</li>
     <li>Check that CRLF line endings in subtitles pass on both platforms — we matched the original SubRip spec, but whether some parsers take LF only is unconfirmed</li>
@@ -447,8 +392,6 @@
 
   <h3>Official docs (primary)</h3>
   <ul>
-    <li><a href="https://ai.google.dev/gemini-api/docs/veo">Generate videos with Veo — Gemini API</a> — hard specs, consistency tools, language support</li>
-    <li><a href="https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/veo/3-1-generate">Veo 3.1 model card — Vertex AI</a> — per-model resolution, prompt language</li>
     <li><a href="https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/video/video-gen-prompt-guide">Video generation prompt guide</a> — prompt anatomy, negative prompts, dialogue notation</li>
     <li><a href="https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/video/best-practice">Video generation best practices</a> — image-to-video rules, character consistency</li>
     <li><a href="https://ai.google.dev/gemini-api/docs/speech-generation">Speech generation — Gemini API</a> — the 87-language support table (<code>ko</code> included)</li>
@@ -476,7 +419,7 @@
   </div>
 
   <div class="warn">
-    <strong>Limits of the verification itself.</strong> Several verification sessions ran out of WebSearch budget, so the third-party refutation sweep never ran. For claims about "what the docs say", reading the original is the decisive test, so the impact is small — but <strong>claims about actual behavior (consistency tools and Korean handling especially) got less cross-checking.</strong> Paid Veo calls weren't measured, on cost grounds.
+    <strong>Limits of the verification itself.</strong> Several verification sessions ran out of WebSearch budget, so the third-party refutation sweep never ran. For claims about "what the docs say", reading the original is the decisive test, so the impact is small — but <strong>claims about actual behavior (consistency tools and Korean handling especially) got less cross-checking.</strong>
   </div>
 </section>
 

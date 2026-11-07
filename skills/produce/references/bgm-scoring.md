@@ -157,6 +157,9 @@ against the named cues in `window.MUSIC` — see the scenes.js contract.
 
 Our working defaults, all of them ours to overturn:
 
+- **Choose the unit before the place.** The sequence holds one cue, a beat inside a scene starts
+  or stops it, and a shot only takes accents. On a story board this maps onto `story_sequence`,
+  the scene's `turn` and `sound.effects` (scenes-schema §Placing cues on a story board).
 - **Change the cue where the episode changes what it is doing**, not on a timer — the turn out of
   the hook into the body, the turn into the close. On a 45-second short that is usually one
   change, sometimes none. Three cues in a short is scoring for its own sake.

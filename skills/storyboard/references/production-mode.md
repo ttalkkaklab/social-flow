@@ -111,7 +111,7 @@ node ${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/references/production-cost.js stor
 ```
 
 The calculator uses `prices.tsv`, `cost-report.sh` and the production model router. It
-counts **generated** seconds, including Seedance's minimum duration and Veo's fixed grid.
+counts **generated** seconds, including Seedance's minimum duration.
 It never calls an API. Never use the earlier conversation's Replicate prices or a consumer
 subscription price for this plugin's BytePlus API calls. Report unknown prices as an incomplete quote. They prevent unbounded paid calls, not local authoring.
 
@@ -150,7 +150,7 @@ If approval is missing, wait. A timeout, silence or a cheaper estimate is not a 
 
 A generated cut may be pre-rendered in 3D (blender-previz.md §6); the previz is optional. It
 carries camera and blocking to a model that takes a reference clip (Seedance 2.x
-`reference_video`); on `frame_and_prompt` adapters it shapes the still and the prompt as
+`reference_video`); on a host video tool (`frame_and_prompt`) it shapes the still and the prompt as
 advice. No checker refuses a generated cut without one.
 
 **Which renderer.** Reuse `.social-flow/models.json` `production.previzRenderer`, which the
@@ -163,8 +163,8 @@ Every rendered shot's `visual.video.previz.renderer` matches the recorded render
 **Which video model.** Follow [directory model settings](../../_shared/model-settings.md):
 copy the saved video selection into `PRODUCTION.videoModel` without another question. Only
 missing first-time settings or an explicit change request opens model selection, and that
-first-setup menu lists every installed adapter from `video_catalog` (host video, Seedance,
-Veo, ASTRA, MLX where available), not one vendor. Preserve a legacy board's existing approved
+first-setup menu lists every installed adapter from `video_catalog` (host video, Seedance
+2.x, ASTRA, MLX where available), not one vendor. Preserve a legacy board's existing approved
 choices. Quotes still bind the actual episode models; print the table with real numbers
 before quoting:
 
@@ -175,13 +175,10 @@ node ${CLAUDE_PLUGIN_ROOT}/skills/produce/references/video-model-options.js stor
 Persist `PRODUCTION.videoModel = { model, resolution, selection }` as an episode default,
 or use `model: 'mixed'` to describe a per-cut choice. Each cut's `visual.video.model` and
 `resolution` control its route and cost; they may differ across the episode. For example,
-the first three cuts may use Seedance 2.5 and the rest Seedance 1.5 Pro. The options table
-includes 1.5 Pro at 720p and 1080p. `modelReason` is optional.
-
-For 1.5, use `previz.handoff: 'frame_and_prompt'` (also inferred from a 1.x model), omit
-`referenceImagePaths` and `referenceAudioPaths`, and keep `visual.bg` as the start image.
-The previz still supplies the composition and camera prompt; its clip is not sent or billed.
-2.x can use `reference_video` as before. Actual model capabilities and price rows still apply.
+the first three cuts may use Seedance 2.5 and the rest Seedance 2.0 Fast. `modelReason` is
+optional. Veo, Gemini Omni and Seedance 1.x left the plugin on 2026-10-31 because none takes a
+voice reference; a cut naming one fails as `video_engine_unsupported`. A 2.x previz may go as
+`reference_video`. Actual model capabilities and price rows still apply.
 Under `videoProvider:'host'`, the record is `{ model: 'host' }` or absent.
 Changes to cut models or resolutions change the quote fingerprint; retain the budget and
 approval checks. A recorded choice covering the mixed plan needs no extra model-selection question.
@@ -218,7 +215,7 @@ window.PRODUCTION = {
   videoProvider: 'host',              // host | astra | api — from the saved video selection
   maxAttempts: 3,                     // total per shot, first attempt included
   videoBudgetUsd: 15,                 // example ONLY: use the cap actually approved
-  comparison: { model: 'seedance-1-5-pro-251215', resolution: '1080p' },
+  comparison: { model: 'dreamina-seedance-2-0-fast-260128', resolution: '720p' },
   previz: { renderer: 'blender',        // optional; blender | threejs — copied from models.json production.previzRenderer
     selection: { kind: 'standing', reference: '.social-flow/models.json' } },   // kind:'assistant' when nothing was saved and the author picked one
   videoModel: { model: 'dreamina-seedance-2-0-260128', resolution: '1080p',   // the saved directory selection (model-settings.md)
@@ -264,7 +261,7 @@ For full_video, follow `full-video.md` in the produce skill and use the stored s
 every shot. Each generated shot's camera is the four `visual.camera` slots; `videoDesign`
 holds the subject plan only, and `spatial-prompts.js` assembles the motion prompt from both.
 The camera slots name a move the viewer can see at `slow`, `steady` or `fast` (no `very
-slow`/`subtle`/`gentle`/`hold composition`; `cameraFixed` only under `static`) — that is the
+slow`/`subtle`/`gentle`/`hold composition`) — that is the
 generated-video vocabulary; still-camera cuts use render-routing.md's `very slow`/`slow`/`fast`/
 `very fast`. As advice, `production-mode.js` flags a full-video episode that holds a static camera
 on more than one shot in three or frames more than half its shots wide (full-video.md §Camera

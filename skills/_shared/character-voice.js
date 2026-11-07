@@ -19,10 +19,11 @@ function voiceErrors(tts) {
     if (typeof tts[field] !== 'string' || !tts[field].trim() || tts[field].trim().length > max) errors.push(`tts.${field} must be a non-empty string of at most ${max} characters`);
     else tts[field] = tts[field].trim();
   }
-  if (!['gemini', 'elevenlabs'].includes(tts.engine)) errors.push('tts.engine must name a supported engine');
+  if (!['gemini', 'elevenlabs', 'astra-genai'].includes(tts.engine)) errors.push('tts.engine must name a supported engine');
   if (typeof tts.voiceId !== 'string' || !tts.voiceId.trim()) errors.push('tts.voiceId is required');
   if (typeof tts.language !== 'string' || !tts.language.trim()) errors.push('tts.language is required');
   if (typeof tts.speed !== 'number' || !Number.isFinite(tts.speed) || tts.speed < 0.7 || tts.speed > 1.2) errors.push('tts.speed must be between 0.7 and 1.2');
+  if (tts.engine === 'astra-genai' && !tts.model) errors.push('Gateway speech requires a model alias');
   if (tts.engine === 'gemini' && !GEMINI_VOICES.has(tts.voiceId) && !(typeof tts.model === 'string' && tts.model.startsWith('gemini-3.8-') && /^[A-Za-z][A-Za-z0-9_-]*$/.test(tts.voiceId))) errors.push('Unknown Gemini voiceId');
   const language=normalizeLanguage(tts.language);
   if (!/^[a-z]{2}$/.test(language)) errors.push('tts.language must be a two-letter language code or supported language name');
@@ -32,7 +33,7 @@ function voiceErrors(tts) {
   if (tts.engine === 'elevenlabs' && !/^[A-Za-z0-9_-]{1,64}$/.test(tts.voiceId)) errors.push('Invalid ElevenLabs voiceId');
   for (const key of ['stability','similarity']) if (tts[key] !== undefined && (tts.engine !== 'elevenlabs' || typeof tts[key] !== 'number' || !Number.isFinite(tts[key]) || tts[key] < 0 || tts[key] > 1)) errors.push(`tts.${key} requires ElevenLabs and a number between 0 and 1`);
   if (tts.stylePrompt !== undefined && (tts.engine !== 'gemini' || (typeof tts.model === 'string' && tts.model.startsWith('gemini-3.8-')))) errors.push('This engine does not accept stylePrompt');
-  if (tts.voiceDirection !== undefined && tts.engine !== 'gemini') errors.push('Stable voiceDirection is supported by Gemini only');
+  if (tts.voiceDirection !== undefined && !['gemini', 'astra-genai'].includes(tts.engine)) errors.push('Stable voiceDirection is supported by Gemini only');
   return errors;
 }
 
@@ -42,7 +43,7 @@ function generationVoiceErrors(expected, proof, line) {
   if (errors.length) return errors;
   const settings = proof?.voiceSettings;
   if (!settings) return ['Character speech requires recorded generation voiceSettings'];
-  const engines = {tts_generate:'gemini',tts_gemini_38:'gemini',tts_elevenlabs_generate:'elevenlabs'};
+  const engines = {tts_astra_genai:'astra-genai',tts_generate:'gemini',tts_gemini_38:'gemini',tts_elevenlabs_generate:'elevenlabs'};
   if (!engines[proof.generator] || settings.speakers || settings.inputs) return ['Character speech requires a single-speaker generation proof'];
   if (engines[proof.generator] === 'elevenlabs' && settings.model !== undefined && settings.model !== 'eleven_v4') errors.push('Unsupported ElevenLabs generation model');
   let compiled;
@@ -61,7 +62,7 @@ function generationVoiceErrors(expected, proof, line) {
       if (!Array.isArray(settings.turns) || settings.turns.length!==1 || settings.turns[0]?.speaker!==undefined || (typeof text==='string' && settings.turns[0]?.text!==text)) errors.push('Generation turns differ from the clean single-speaker line');
     }
   }
-  const voiceField={tts_generate:'voiceName',tts_gemini_38:'voice',tts_elevenlabs_generate:'voiceId'}[proof.generator];
+  const voiceField={tts_astra_genai:'voice',tts_generate:'voiceName',tts_gemini_38:'voice',tts_elevenlabs_generate:'voiceId'}[proof.generator];
   const actualVoice=settings[voiceField]===undefined && engines[proof.generator]==='gemini' ? 'Kore' : settings[voiceField];
   for(const alias of ['voiceId','voiceName','voice']) if(alias!==voiceField && settings[alias]!==undefined && settings[alias]!==actualVoice) errors.push('Conflicting voice alias: '+alias+' differs from '+voiceField);
   const actualLanguage=normalizeLanguage(proof.generator==='tts_elevenlabs_generate' && settings.languageCode!==undefined ? settings.languageCode : proof.language);

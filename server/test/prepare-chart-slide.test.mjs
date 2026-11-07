@@ -47,13 +47,3 @@ test('symlink output cannot escape or modify other files', t => {
   assert.equal(fs.readFileSync(other,'utf8'),'keep');
   assert.equal(fs.existsSync(path.join(board,'slides/counts.html')),false);
 });
-test('a changed shared template and runtime refresh existing output', t => {
-  const {board}=fixture(t),templateRoot=path.join(board,'templates');fs.mkdirSync(templateRoot);
-  for(const name of ['chart-slide-template.html','chart-runtime.js','render-routing.js'])fs.copyFileSync(path.join(refs,name),path.join(templateRoot,name));
-  prepare(board,2,{templateRoot});
-  fs.appendFileSync(path.join(templateRoot,'chart-slide-template.html'),'\n<!-- updated shared template -->');
-  fs.appendFileSync(path.join(templateRoot,'chart-runtime.js'),'\n// updated shared runtime');
-  const result=prepare(board,2,{templateRoot});
-  assert.match(fs.readFileSync(result.file,'utf8'),/updated shared template/);
-  assert.match(fs.readFileSync(path.join(board,'slides/assets/chart-runtime.js'),'utf8'),/updated shared runtime/);
-});

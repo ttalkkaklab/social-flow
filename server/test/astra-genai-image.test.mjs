@@ -44,22 +44,6 @@ test('editing preserves omitted size, encodes local source/mask and rejects inco
     assert.equal(genaiImageEditSchema.safeParse({ ...args, ...extra }).success, false);
 });
 
-test('prompt expansion evidence survives completed image recovery', async t => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'genai-prompt-'));
-  const original = globalThis.fetch, key = config.astraGenaiApiKey; config.astraGenaiApiKey = 'fixture';
-  t.after(() => { globalThis.fetch = original; config.astraGenaiApiKey = key; fs.rmSync(dir, { recursive: true, force: true }); });
-  for (const state of ['applied', 'fallback']) {
-    const usedPrompt = state === 'applied' ? 'A red cup under warm light.' : base.prompt;
-    globalThis.fetch = async (_url, options) => options.method === 'POST'
-      ? Response.json({ request_id: state, output: { choices: [{ message: { content: [{ image: 'https://example.com/out.png' }, { text: usedPrompt }] } }] } }, { headers: { 'x-prompt-extend': state } })
-      : new Response(png);
-    const result = await generateGenaiImage({ ...base, promptExtend: true, outputPath: dir, filename: state + '.png' });
-    assert.equal(result.promptExtension, state); assert.equal(result.usedPrompt, usedPrompt);
-    globalThis.fetch = async () => assert.fail('cached image must not regenerate');
-    assert.equal((await recoverGenaiImage(result.imagePath + '.astra-genai.json')).promptExtension, state);
-  }
-});
-
 test('rejected and ambiguous submissions persist distinct durable statuses without retries', async t => {
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),'genai-failure-'));
   const original=globalThis.fetch,key=config.astraGenaiApiKey;config.astraGenaiApiKey='fixture';

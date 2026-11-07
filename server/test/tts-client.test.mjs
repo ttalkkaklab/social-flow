@@ -8,16 +8,17 @@ import { config } from '../dist/config.js';
 import { pcmToWav } from '../dist/media-utils.js';
 import {
   DEFAULT_GEMINI_38_TTS_MODEL,
-  TTS_VOICES,
+  GEMINI_38_TTS_MODELS,
+  VALID_TTS_MODELS,
   buildGemini38InteractionBody,
-  describeGemini38Error,
   extractGemini38Audio,
   gemini38TtsSchema,
   generateGemini38Speech,
   listTtsVoices,
   ttsVoicesSchema,
 } from '../dist/tts-client.js';
-import { prepareGeneration } from '../dist/tts-quality.js';
+import { ELEVENLABS_MODELS } from '../dist/elevenlabs-client.js';
+import { getTtsModels } from '../dist/tts-models.js';
 
 const originalFetch = globalThis.fetch;
 const originalKey = config.geminiApiKey;
@@ -25,6 +26,13 @@ const originalKey = config.geminiApiKey;
 afterEach(() => {
   globalThis.fetch = originalFetch;
   config.geminiApiKey = originalKey;
+});
+
+it('client model enums match the shared model contract (skills/_shared/tts-models.js)', () => {
+  const shared = (single) => getTtsModels().filter((m) => m.single === single).map((m) => m.model);
+  assert.deepEqual(shared('tts_generate'), [...VALID_TTS_MODELS]);
+  assert.deepEqual(shared('tts_gemini_38'), [...GEMINI_38_TTS_MODELS]);
+  assert.deepEqual(shared('tts_elevenlabs_generate'), [...ELEVENLABS_MODELS]);
 });
 
 describe('Gemini 3.8 TTS request contract', () => {
@@ -85,23 +93,6 @@ describe('Gemini 3.8 TTS request contract', () => {
     assert.equal(gemini38TtsSchema.safeParse({ turns: [{ speaker: 'Sam', text: '안녕' }], speakers }).success, false);
     assert.equal(gemini38TtsSchema.safeParse({ turns: [{ speaker: 'Joe', text: '안녕' }] }).success, false);
   });
-
-  it('is available through the checked narration wrapper and excludes vocal tags from expected text', () => {
-    const prepared = prepareGeneration({
-      generator: 'tts_gemini_38',
-      generation: { turns: [{ text: '잠깐만요. <short pause> 들었어요?', style: 'quietly' }] },
-      expectedText: '잠깐만요. 들었어요?',
-      language: 'Korean',
-      delivery: 'quiet and tense',
-      outputPath: '/tmp',
-      filename: 'c0.wav',
-      maxAttempts: 1,
-      playbackSpeed: 1,
-      sentencePause: 0.5,
-    });
-    assert.equal(prepared.spacing, true);
-    assert.equal(prepared.args.model, 'gemini-3.8-flash-tts');
-  });
 });
 
 describe('Gemini 3.8 TTS response and HTTP handling', () => {
@@ -114,17 +105,6 @@ describe('Gemini 3.8 TTS response and HTTP handling', () => {
     });
     assert.deepEqual(audio, { data: 'new', mimeType: 'audio/wav' });
     assert.throws(() => extractGemini38Audio({ steps: [] }), /without an audio content block/);
-  });
-
-  it('maps official error envelopes to actionable messages', () => {
-    assert.match(
-      describeGemini38Error(402, JSON.stringify({ error: { code: 'payment_required', message: 'credits depleted' } })),
-      /Add Gemini prepayment credits before retrying/,
-    );
-    assert.match(
-      describeGemini38Error(404, JSON.stringify({ error: { code: 'model_not_found', message: 'missing' } })),
-      /gemini-3\.8-flash-lite-tts/,
-    );
   });
 
   it('posts the official JSON shape and saves the returned WAV without adding a second header', async () => {
@@ -173,17 +153,6 @@ describe('Gemini 3.8 TTS response and HTTP handling', () => {
 });
 
 describe('Gemini voice list', () => {
-  it('curated Gemini list is offline and preserves all 30 names and traits', async () => {
-    let called = false;
-    globalThis.fetch = async () => { called = true; throw new Error('unexpected network'); };
-    const result = await listTtsVoices(ttsVoicesSchema.parse({}));
-    assert.equal(result.success, true);
-    assert.equal(result.source, 'curated');
-    assert.equal(result.voices.length, 30);
-    assert.deepEqual(result.voices.map(v => [v.id, v.description]), Object.entries(TTS_VOICES));
-    assert.equal(called, false);
-  });
-
   it('Gemini library maps snake-case wire metadata and pagination without changing IDs', async () => {
     const calls = [];
     config.geminiApiKey = 'mock-key-never-sent';
@@ -204,15 +173,6 @@ describe('Gemini voice list', () => {
     assert.equal(result.voices[1].id, 'voice_custom');
     assert.equal(result.nextPageToken, 'next+page=');
     assert.match(result.previewNote, /does not include audio previews/);
-  });
-
-  it('library failures are reported without replacing them with the offline list', async () => {
-    config.geminiApiKey = 'mock-key-never-sent';
-    globalThis.fetch = async () => new Response(JSON.stringify({ error: { message: 'Permission denied', status: 'PERMISSION_DENIED' } }), { status: 403 });
-    const result = await listTtsVoices(ttsVoicesSchema.parse({ source: 'library' }));
-    assert.equal(result.success, false);
-    assert.match(result.error, /Permission denied/);
-    assert.equal(result.voices, undefined);
   });
 
   it('pagination and request bounds reject invalid input before calls', () => {

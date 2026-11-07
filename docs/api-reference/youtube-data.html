@@ -121,7 +121,7 @@ Content-Type: video/mp4
       <tr><td><code>snippet.tags</code></td><td>키워드 배열</td><td>미노출 — 쇼츠는 태그보다 제목·설명 키워드의 비중이 크다</td></tr>
       <tr><td><code>status.privacyStatus</code></td><td><code>public</code> · <code>unlisted</code> · <code>private</code></td><td>기본 <code>public</code></td></tr>
       <tr><td><code>status.selfDeclaredMadeForKids</code></td><td>bool — COPPA 자기 선언</td><td><strong><code>madeForKids</code> 인자로 노출</strong> · 기본 <code>false</code>. 아동 대상 콘텐츠는 반드시 <code>true</code>로 선언해야 한다(허위 선언은 채널 제재 사유, <code>true</code>면 댓글·개인화 광고 비활성)</td></tr>
-      <tr><td><code>status.containsSyntheticMedia</code></td><td>bool — AI 생성·변형 콘텐츠 자기 고지</td><td><strong><code>containsSyntheticMedia</code> 인자로 노출 · 기본 <code>true</code></strong>. 이 파이프라인은 Veo 영상과 Lyria 음악을 쓰므로 켜 두는 것이 기본값이다. 고지는 노출·수익 자격에 영향을 주지 않는다고 YouTube 가 명시하므로 애매하면 켜 두는 쪽이 손해가 없고, <code>false</code>로 내릴 자리는 명확한 면제뿐이다 — 대본·제목·썸네일 생성, 자막 생성, 자기 목소리 복제, 사실적이지 않은 애니메이션, 색보정·뷰티 필터</td></tr>
+      <tr><td><code>status.containsSyntheticMedia</code></td><td>bool — AI 생성·변형 콘텐츠 자기 고지</td><td><strong><code>containsSyntheticMedia</code> 인자로 노출 · 기본 <code>true</code></strong>. 이 파이프라인은 생성 영상과 Lyria 음악을 쓰므로 켜 두는 것이 기본값이다. 고지는 노출·수익 자격에 영향을 주지 않는다고 YouTube 가 명시하므로 애매하면 켜 두는 쪽이 손해가 없고, <code>false</code>로 내릴 자리는 명확한 면제뿐이다 — 대본·제목·썸네일 생성, 자막 생성, 자기 목소리 복제, 사실적이지 않은 애니메이션, 색보정·뷰티 필터</td></tr>
     </tbody>
   </table>
   </div>

@@ -398,7 +398,7 @@ export DATA_GO_KR_API_KEY="..."    <span class="c"># 공공데이터 API 호출<
       <tr>
         <td><code>GEMINI_API_KEY</code><br>(또는 <code>GOOGLE_API_KEY</code>)<br><span class="badge req">제작 키</span></td>
         <td>aistudio.google.com/apikey</td>
-        <td>생성 영상(Veo 3.1)·배경음악·연기 목소리가 막힌다. 내레이션 본문은 로컬 엔진(<code>tts_local_generate</code>)이 기본이라 이 키 없이도 소리는 들어간다</td>
+        <td>배경음악·연기 목소리가 막힌다. 생성 영상은 이 키와 상관없다. 내레이션 본문은 로컬 엔진(<code>tts_local_generate</code>)이 기본이라 이 키 없이도 소리는 들어간다</td>
       </tr>
       <tr>
         <td><code>NAVER_CLIENT_ID</code><br><code>NAVER_CLIENT_SECRET</code><br><span class="badge opt">선택</span></td>
@@ -413,7 +413,7 @@ export DATA_GO_KR_API_KEY="..."    <span class="c"># 공공데이터 API 호출<
       <tr>
         <td><code>ARK_API_KEY</code><br><span class="badge opt">선택</span></td>
         <td>ai.byteplus.com/ark</td>
-        <td>두 번째 영상 엔진 Seedance 만 막힌다. 2~30초를 1초 단위로 끊어 쓰고 무음 컷이 싸다는 게 이 엔진의 자리다 — Veo 쪽은 <code>GEMINI_API_KEY</code> 로 그대로 돈다</td>
+        <td>Dreamina Seedance 2.x 영상만 막힌다. 4~30초를 1초 단위로 끊어 쓰고 <code>seedance_reference</code> 로 캐릭터 목소리를 참조하는 게 이 엔진의 자리다 — LTX 레인(<code>astra_genai_*</code>·<code>astra_*</code>·<code>ltx_video_generate</code>)은 그대로 돈다</td>
       </tr>
       <tr>
         <td><code>SUNO_API_KEY</code><br><span class="badge opt">선택</span></td>

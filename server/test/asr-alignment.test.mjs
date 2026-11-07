@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { alignmentFromWords, matchLetters, transcriptLetters } from '../dist/asr-alignment.js';
+import { alignmentFromWords } from '../dist/asr-alignment.js';
 import { locateSegments, respace } from '../dist/sentence-spacing.js';
 import { pcmToWav } from '../dist/media-utils.js';
 
@@ -10,19 +10,6 @@ const words = [
   { text: '누구도', start: 2.6, end: 3.0 }, { text: '말이', start: 3.0, end: 3.3 }, { text: '없었습니다.', start: 3.3, end: 4.2 },
 ];
 const script = '그는 활을 잡았어요. 누구도 말이 없었습니다.';
-
-test('transcript letters spread a word\'s span evenly and skip punctuation', () => {
-  const letters = transcriptLetters([{ text: '잡았어요.', start: 1.0, end: 2.0 }]);
-  assert.deepEqual(letters.map(l => l.char), ['잡', '았', '어', '요']);
-  assert.equal(letters[0].start, 1.0); assert.equal(letters[3].end, 2.0); assert.equal(letters[1].start, 1.25);
-});
-
-test('script letters match the transcript by edit distance, a misheard syllable stays unmatched', () => {
-  const heard = [...'그는화를잡았어요'];
-  const matched = matchLetters([...'그는활을잡았어요'], heard);
-  assert.deepEqual(matched, [0, 1, -1, -1, 4, 5, 6, 7]);
-  assert.deepEqual(matchLetters([...'가나'], []), [-1, -1]);
-});
 
 test('the table covers every script character, is monotone, and sentence boundaries land on the words', () => {
   const heard = words.map(w => ({ ...w, text: w.text.replace('활을', '화를') }));

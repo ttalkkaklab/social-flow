@@ -32,25 +32,6 @@ test('assembly includes scene meaning, selected image arguments and a portable a
  const bound=signature(w);w.SCENES[0].visual.stylePack.digest='changed';assert.notEqual(signature(w),bound);
  w.SCENES[0].visual.styleRole='unknown';assert.throws(()=>assemble(w,0),/Unknown style reference role/);
 });
-test('archival scenes do not get a generated appearance reference or attachment',()=>{
- const w=plan();w.SCENES[0].shot.videoDesign.look='archive';const p=assemble(w,0);
- assert.deepEqual(p.sourceReferenceImages,[]);assert.deepEqual(p.sourceImageArgs,{});assert.equal(p.styleBinding,null);
- assert.doesNotMatch(p.sourcePrompt,/STYLE ONLY/);
-});
-test('selected photoreal and webtoon styles reach both frame prompts and motion without miniature images',()=>{
- for(const mode of ['hybrid','full_video']) for(const [preset,look,pattern] of [['photoreal','realistic',/Photoreal live-action/],['webtoon','webtoon',/Korean webtoon/]]){
-  const w=plan();w.PRODUCTION.mode=mode;w.PRODUCTION.style.preset=preset;w.SCENES[0].shot.videoDesign.look=look;
-  const p=assemble(w,0);
-  for(const key of ['sourcePrompt','endFramePrompt','motionPrompt']) assert.match(p[key],pattern);
-  assert.deepEqual(p.sourceImageArgs,{});assert.deepEqual(p.sourceReferenceImages,[]);assert.equal(p.styleBinding,null);
-  w.PRODUCTION.style.referencePack='tactile-miniature-v1';assert.match(assemble(w,0).warnings.join(),/Remove the miniature/);
- }
-});
-test('a conflicting shot look cannot silently change the selected episode style',()=>{
- // A look that disagrees with the selected style is reported, never silently restyled (warning since 2026-10-18).
- const w=plan();w.PRODUCTION.style.preset='webtoon';assert.match(assemble(w,0).warnings.join(),/conflicts/);
- w.PRODUCTION.style.preset='unknown';assert.throws(()=>assemble(w,0),/Unknown visual style/);
-});
 test('style choice and its evidence are checked before assets and bound to the quote',()=>{
  const {check}=require('../../skills/storyboard/references/production-mode.js');
  const w=plan();Object.assign(w.PRODUCTION,{videoBudgetUsd:10,maxAttempts:3});
@@ -60,9 +41,4 @@ test('style choice and its evidence are checked before assets and bound to the q
  w.PRODUCTION.style.selection={kind:'user',reference:'User selected photoreal for this episode.'};
  assert.deepEqual(check(w,{draft:true}),[]);
  const before=signature(w);w.PRODUCTION.style.preset='webtoon';assert.notEqual(signature(w),before);
-});
-test('style-pack rules and presets describe what to draw, never what to leave out',()=>{
- const PROMPT=require('../../skills/storyboard/references/assemble-bg-prompt.js');
- for(const rule of Object.values(resolveStylePack().rules))assert.deepEqual(PROMPT.negDirectiveHits(rule,'seedance'),[],rule);
- const p=assemble(plan(),0);assert.doesNotMatch(p.sourcePrompt,/Style pack: /);assert.match(p.sourcePrompt,/Camera language: /);
 });

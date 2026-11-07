@@ -4,10 +4,10 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync, existsSync
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { config } from '../dist/config.js';
 import { pcmToWav } from '../dist/media-utils.js';
-import { executeSpeech, withSpeechRequestId } from '../dist/tts-execution.js';
+import { executeSpeech, speechSlotsDir, withSpeechRequestId } from '../dist/tts-execution.js';
 import { routeSpeech } from '../dist/tts-routing.js';
 import { prepareSpeech } from '../dist/tts-adapters.js';
 import { generateSpeech, generateDialogue, generateGemini38Speech } from '../dist/tts-client.js';
@@ -80,6 +80,16 @@ test('media and alignment validators reject corrupt payloads and nonfinite timin
  for(const bad of [{...good,characters:['a']},{...good,character_end_times_seconds:[0.2,Infinity]},{...good,character_start_times_seconds:[0.3,0.2]},{...good,character_end_times_seconds:[0.2,2]}])assert.throws(()=>validateSpeechAlignment(bad,1));
 });
 
+test('a slot left by a killed process is reclaimed; a live holder still blocks',async () => {
+ const previous=process.env.SOCIAL_FLOW_TTS_MAX_CONCURRENCY; process.env.SOCIAL_FLOW_TTS_MAX_CONCURRENCY='1';
+ const slot=join(speechSlotsDir('gemini',config.geminiApiKey),'0');
+ try {
+  mkdirSync(slot,{recursive:true}); writeFileSync(join(slot,'pid'),String(spawnSync('true').pid));
+  assert.equal((await executeSpeech('tts_generate',args('stale'),synth)).success,true);
+  mkdirSync(slot,{recursive:true}); writeFileSync(join(slot,'pid'),String(process.pid));
+  await assert.rejects(executeSpeech('tts_generate',args('held'),synth),error=>/concurrency/.test(error.message)&&error.message.includes(speechSlotsDir('gemini',config.geminiApiKey)));
+ } finally {rmSync(slot,{recursive:true,force:true}); if(previous===undefined) delete process.env.SOCIAL_FLOW_TTS_MAX_CONCURRENCY; else process.env.SOCIAL_FLOW_TTS_MAX_CONCURRENCY=previous;}
+});
 test('router submits one request, preserves usage, and charges no duplicate ledger row on replay',async()=>{
  const originalFetch=globalThis.fetch,originalKey=config.elevenLabsApiKey;
  config.elevenLabsApiKey='test-'+randomUUID(); let submits=0;
@@ -89,8 +99,9 @@ test('router submits one request, preserves usage, and charges no duplicate ledg
   const request={action:'execute',requestId:'line-r1',generator:'tts_elevenlabs_generate',generation:{text:'hello',voiceId:'voice123',outputPath:join(episode,'.work','speech'),filename:'line.wav'}};
   const first=await routeSpeech(request),second=await routeSpeech(request);
   assert.equal(first.success,true,first.error);assert.equal(second.replayed,true);assert.equal(submits,1);
-  assert.equal(readFileSync(join(episode,'.work','events.jsonl'),'utf8').trim().split('\n').length,1);
-  assert.equal(first.characterCost,2);
+  const events=readFileSync(join(episode,'.work','events.jsonl'),'utf8').trim().split('\n').map(JSON.parse);
+  assert.equal(events.length,1);
+  assert.equal(first.characterCost,2);assert.equal(events[0].quantity,0.002);
   for(const status of [429,500]){globalThis.fetch=async()=>{submits++;return new Response('busy',{status});};const before=submits;
    const result=await routeSpeech({...request,requestId:'failure-'+status});assert.equal(result.success,false);assert.equal(submits,before+1);
   }

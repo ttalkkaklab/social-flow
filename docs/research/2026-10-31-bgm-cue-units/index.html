@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>배경음악 연출 단위</title>
+<meta name="description" content="영화 배경음악은 시퀀스·씬·샷 중 어느 단위로 연출하나 — 큐 경계는 씬과 감정 비트, 싱크는 샷과 프레임, 테마는 시퀀스와 영화 전체">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --paper:#f3f5f7; --card:#ffffff; --ink:#151b24; --muted:#616c7a; --rule:#d7dde5; --code:#e9edf2;
+    --music:#d48a17; --music-soft:#f6e3bf; --voice:#1c8c86; --voice-soft:#c9ebe8;
+    --warn:#c2453a; --grid:#e3e8ee;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#0f141b; --card:#161d27; --ink:#e7ebf1; --muted:#98a3b1; --rule:#28313d; --code:#1f2733;
+      --music:#f0a83a; --music-soft:#3a2d13; --voice:#3fc2bb; --voice-soft:#123532;
+      --warn:#f08a80; --grid:#222b36;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#0f141b; --card:#161d27; --ink:#e7ebf1; --muted:#98a3b1; --rule:#28313d; --code:#1f2733;
+    --music:#f0a83a; --music-soft:#3a2d13; --voice:#3fc2bb; --voice-soft:#123532;
+    --warn:#f08a80; --grid:#222b36;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--paper);color:var(--ink);
+    font-family:"IBM Plex Sans KR","Pretendard Variable","Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    font-size:17px;line-height:1.78;-webkit-font-smoothing:antialiased;word-break:keep-all}
+  a{color:var(--voice);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--voice) 40%,transparent)}
+  .wrap{max-width:720px;margin:0 auto;padding-block:52px 96px;padding-inline:16px}
+  .eyebrow{font-family:"IBM Plex Mono",Menlo,monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  h1,h2,h3{font-weight:700;letter-spacing:-.02em;text-wrap:balance;margin:0}
+  h1{font-size:clamp(28px,6vw,40px);line-height:1.22;margin-top:10px}
+  h2{font-size:22px;line-height:1.35;margin-top:64px;padding-top:22px;border-top:1px solid var(--rule)}
+  h2 .n{font-family:"IBM Plex Mono",Menlo,monospace;font-size:13px;color:var(--music);margin-right:10px;letter-spacing:.08em}
+  h3{font-size:17px;margin-top:26px}
+  p{margin:12px 0}
+  ul{padding-left:20px} li{margin:8px 0}
+  b{font-weight:600}
+  .lede{font-size:18.5px}
+  .lede b{color:var(--music)}
+  .note{font-size:14px;color:var(--muted)}
+
+  /* 결론 박스 */
+  .answer{margin:26px 0 0;background:var(--card);border:1px solid var(--rule);border-left:4px solid var(--music);border-radius:10px;padding:16px 18px}
+  .answer p{margin:6px 0}
+
+  /* 세로 단위 사다리 */
+  .ladder{list-style:none;padding:0;margin:22px 0 0;display:flex;flex-direction:column;gap:0}
+  .ladder li{margin:0;background:var(--card);border:1px solid var(--rule);border-radius:12px;padding:16px 18px;position:relative}
+  .ladder li + li{margin-top:26px}
+  .ladder li + li::before{content:"";position:absolute;left:32px;top:-27px;width:2px;height:26px;background:var(--rule)}
+  .ladder .u{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .ladder .u strong{font-size:18px}
+  .ladder .tag{font-family:"IBM Plex Mono",Menlo,monospace;font-size:11.5px;letter-spacing:.06em;padding:1px 9px;border-radius:999px;border:1px solid var(--muted);color:var(--muted);white-space:nowrap}
+  .ladder .key{border-color:var(--music);color:var(--music)}
+  .ladder .sync{border-color:var(--voice);color:var(--voice)}
+  .ladder p{margin:6px 0 0;font-size:15.5px}
+  .ladder .tools{font-size:13.5px;color:var(--muted);margin-top:6px}
+
+  /* 그림 */
+  figure{margin:22px 0 0;background:var(--card);border:1px solid var(--rule);border-radius:12px;padding:14px 14px 12px}
+  figure .fw{overflow-x:auto}
+  figure svg{display:block;width:100%;min-width:540px;height:auto}
+  figcaption{font-size:13.5px;color:var(--muted);margin-top:10px;line-height:1.6}
+  .svgtxt{font-family:"IBM Plex Sans KR","Pretendard",sans-serif}
+
+  /* 항목 카드 */
+  .item{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:14px 16px;margin-top:12px}
+  .item .t{font-weight:600}
+  .item p{margin:4px 0 0;font-size:15.5px}
+
+  code{font-family:"IBM Plex Mono",Menlo,monospace;font-size:.86em;background:var(--code);padding:1px 6px;border-radius:5px}
+  .srcs{font-size:14px;color:var(--muted);padding-left:18px}
+  .srcs li{margin:5px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="eyebrow">social-flow · research · 2026-10-31</div>
+<h1>배경음악은 감정이 바뀌는 자리에서 자르고 컷에 맞춰 친다</h1>
+<p class="lede">영화 음악은 시퀀스·씬·샷 세 단위를 다 쓰지만 단위마다 맡는 일이 다르다. <b>큐(cue)를 어디서 시작하고 끝낼지</b>는 씬과 그 안의 감정 비트가 정하고, <b>박자와 악센트를 맞추는 기준</b>은 샷과 프레임이다. 테마와 곡의 큰 흐름은 시퀀스와 영화 전체에서 설계한다.</p>
+
+<div class="answer">
+  <p><b>한 줄 답</b> — 큐 경계는 씬·비트, 싱크는 샷·프레임, 테마는 시퀀스·영화 전체.</p>
+  <p class="note">스포팅 세션·히트 포인트·클릭 트랙 관련 실무 문서와 용어집을 대조해 정리했다. 「1M1」 큐 번호 표기는 업계 관행으로 적었고 이번 조사에서 출처로 확인하지는 못했다.</p>
+</div>
+
+<!-- 01 ─────────────────────────── -->
+<h2><span class="n">01</span>단위마다 정하는 것</h2>
+<p>위에서 아래로 갈수록 시간 단위가 짧아진다. 색이 붙은 두 단위가 실무의 중심이다.</p>
+<ol class="ladder">
+  <li>
+    <div class="u"><strong>영화 전체</strong><span class="tag">팔레트</span></div>
+    <p>테마(라이트모티프), 악기 편성, 음악을 쓸 구간과 비워 둘 구간의 배분.</p>
+    <div class="tools">작곡가와 감독의 톤 회의</div>
+  </li>
+  <li>
+    <div class="u"><strong>시퀀스</strong><span class="tag">곡의 흐름</span></div>
+    <p>여러 씬을 곡 하나로 덮을지 정하고 빌드업 → 정점 → 해소의 곡선을 설계한다.</p>
+    <div class="tools">몽타주·추격·클라이맥스 큐</div>
+  </li>
+  <li>
+    <div class="u"><strong>씬 / 비트</strong><span class="tag key">큐 경계</span></div>
+    <p><b>큐의 시작(in)과 끝(out)</b>을 정한다. 기준은 장소가 바뀌는 컷보다 감정이나 국면이 바뀌는 비트다.</p>
+    <div class="tools">스포팅 세션 · 스포팅 노트 · 큐 번호</div>
+  </li>
+  <li>
+    <div class="u"><strong>샷 / 프레임</strong><span class="tag sync">싱크</span></div>
+    <p>큐를 자르는 단위가 아니다. 이미 정한 큐 안에서 특정 컷·동작·시선에 악센트가 떨어질 자리를 맞춘다.</p>
+    <div class="tools">히트 포인트 · 클릭 트랙 · 템포 맵 · 스트리머 · 펀치</div>
+  </li>
+</ol>
+
+<!-- 02 ─────────────────────────── -->
+<h2><span class="n">02</span>큐 경계와 씬 경계는 자주 어긋난다</h2>
+<p>아래 그림은 네 씬짜리 구간에 큐 두 개가 어떻게 걸치는지 보여 준다. 큐 경계(주황)는 씬 경계(회색 세로선)와 거의 겹치지 않고, 히트 포인트(청록 마름모)는 샷 컷 위에 놓인다.</p>
+<figure>
+<div class="fw"><svg viewBox="0 0 640 300" role="img" aria-label="씬 네 개 위에 큐 두 개와 히트 포인트를 배치한 타임라인" class="svgtxt">
+  <style>
+    .lab{font-size:15px;fill:var(--muted)}
+    .scn{font-size:14px;fill:var(--ink);font-weight:600}
+    .cue{fill:var(--music-soft);stroke:var(--music);stroke-width:1.5}
+    .cuet{font-size:15px;fill:var(--ink);font-weight:600}
+    .ann{font-size:14px;fill:var(--muted)}
+    .sb{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 4}
+    .shot{stroke:var(--rule);stroke-width:1.5}
+    .hit{fill:var(--voice)}
+  </style>
+  <!-- 행 라벨 -->
+  <text x="0" y="46" class="lab">씬</text>
+  <text x="0" y="104" class="lab">샷</text>
+  <text x="0" y="172" class="lab">음악</text>
+  <!-- 씬 블록 -->
+  <rect x="60" y="28" width="140" height="28" rx="6" fill="var(--grid)"/>
+  <rect x="200" y="28" width="130" height="28" rx="6" fill="var(--code)"/>
+  <rect x="330" y="28" width="150" height="28" rx="6" fill="var(--grid)"/>
+  <rect x="480" y="28" width="160" height="28" rx="6" fill="var(--code)"/>
+  <text x="130" y="47" text-anchor="middle" class="scn">씬 1 · 대화</text>
+  <text x="265" y="47" text-anchor="middle" class="scn">씬 2 · 이동</text>
+  <text x="405" y="47" text-anchor="middle" class="scn">씬 3 · 추격</text>
+  <text x="560" y="47" text-anchor="middle" class="scn">씬 4 · 추격</text>
+  <!-- 씬 경계 -->
+  <line x1="200" y1="20" x2="200" y2="250" class="sb"/>
+  <line x1="330" y1="20" x2="330" y2="250" class="sb"/>
+  <line x1="480" y1="20" x2="480" y2="250" class="sb"/>
+  <!-- 샷 컷 -->
+  <g>
+    <line x1="60" y1="88" x2="640" y2="88" stroke="var(--rule)" stroke-width="1"/>
+    <line x1="60" y1="82" x2="60" y2="112" class="shot"/>
+    <line x1="105" y1="82" x2="105" y2="112" class="shot"/>
+    <line x1="150" y1="82" x2="150" y2="112" class="shot"/>
+    <line x1="200" y1="82" x2="200" y2="112" class="shot"/>
+    <line x1="250" y1="82" x2="250" y2="112" class="shot"/>
+    <line x1="290" y1="82" x2="290" y2="112" class="shot"/>
+    <line x1="330" y1="82" x2="330" y2="112" class="shot"/>
+    <line x1="360" y1="82" x2="360" y2="112" class="shot"/>
+    <line x1="390" y1="82" x2="390" y2="112" class="shot"/>
+    <line x1="420" y1="82" x2="420" y2="112" class="shot"/>
+    <line x1="450" y1="82" x2="450" y2="112" class="shot"/>
+    <line x1="480" y1="82" x2="480" y2="112" class="shot"/>
+    <line x1="505" y1="82" x2="505" y2="112" class="shot"/>
+    <line x1="530" y1="82" x2="530" y2="112" class="shot"/>
+    <line x1="560" y1="82" x2="560" y2="112" class="shot"/>
+    <line x1="595" y1="82" x2="595" y2="112" class="shot"/>
+    <line x1="640" y1="82" x2="640" y2="112" class="shot"/>
+  </g>
+  <!-- 큐 1M1: 씬1 중간 비트에서 시작, 씬2 안에서 끝 -->
+  <path class="cue" d="M125 172 L160 156 L262 156 L262 188 L160 188 Z"/>
+  <text x="200" y="177" text-anchor="middle" class="cuet">1M1</text>
+  <!-- 큐 1M2: 씬2 끝에서 프리랩, 씬3~4 덮음 -->
+  <rect class="cue" x="306" y="156" width="324" height="32" rx="6"/>
+  <text x="468" y="177" text-anchor="middle" class="cuet">1M2 · 시퀀스 한 곡</text>
+  <!-- 히트 포인트 -->
+  <path class="hit" d="M390 120 l6 7 l-6 7 l-6 -7 z"/>
+  <path class="hit" d="M480 120 l6 7 l-6 7 l-6 -7 z"/>
+  <path class="hit" d="M595 120 l6 7 l-6 7 l-6 -7 z"/>
+  <!-- 주석 -->
+  <line x1="125" y1="192" x2="110" y2="222" stroke="var(--muted)" stroke-width="1"/>
+  <text x="62" y="238" class="ann">비트에서 슬며시 진입</text>
+  <line x1="262" y1="192" x2="250" y2="262" stroke="var(--muted)" stroke-width="1"/>
+  <text x="196" y="278" class="ann">씬 2 안에서 퇴장</text>
+  <line x1="306" y1="192" x2="318" y2="222" stroke="var(--muted)" stroke-width="1"/>
+  <text x="336" y="238" class="ann">다음 씬보다 먼저 깔림</text>
+  <text x="638" y="278" text-anchor="end" class="ann">◆ 컷에 맞춘 악센트</text>
+</svg></div>
+<figcaption>도식 예시다. 실제 영화의 큐 배치를 옮긴 것이 아니고 실무 문서가 말하는 진입·퇴장·싱크 방식을 한 그림에 모았다.</figcaption>
+</figure>
+
+<!-- 03 ─────────────────────────── -->
+<h2><span class="n">03</span>스포팅 세션 — 큐 경계를 정하는 자리</h2>
+<p>감독과 작곡가, 보통 음악 편집자까지 편집본을 함께 보면서 큐마다 시작과 끝 타임코드, 그 큐가 전할 감정을 정한다. 음악 없이 비워 둘 구간과 기성곡(source music)을 쓸 구간도 이 자리에서 함께 정한다.</p>
+<div class="item">
+  <div class="t">결과물: 스포팅 노트</div>
+  <p>큐마다 시작·끝 타임코드, 장면 내용, 연출 의도를 적은 문서. 큐 이름은 보통 <code>1M1</code>(1번 릴의 첫 음악 큐)처럼 릴 번호와 순번으로 붙인다.</p>
+</div>
+<div class="item">
+  <div class="t">판단 질문: 이 음악이 이야기에 무엇을 해 주나</div>
+  <p>관객이 그 순간 무엇을 느껴야 하는지 감독에게 묻는다. 답이 없는 자리에는 음악을 넣지 않는다.</p>
+</div>
+
+<!-- 04 ─────────────────────────── -->
+<h2><span class="n">04</span>씬 / 비트 — 감정이 바뀌는 지점에서 자른다</h2>
+<p>큐를 자르는 기준은 씬 컷보다 극의 국면이 바뀌는 순간이다. 그래서 위 그림처럼 큐 경계가 씬 경계와 어긋나는 일이 흔하다.</p>
+<div class="item">
+  <div class="t">씬 중간 진입</div>
+  <p>인물이 무언가를 깨닫거나 결심하는 비트에서 음악이 슬며시 들어온다(sneak in).</p>
+</div>
+<div class="item">
+  <div class="t">씬을 넘기는 연결</div>
+  <p>큐가 다음 씬까지 이어지거나 다음 씬의 음악이 앞 씬 끝에 먼저 깔리면서(pre-lap) 두 씬을 잇는다.</p>
+</div>
+<div class="item">
+  <div class="t">티 나지 않는 진입·퇴장</div>
+  <p>대사 사이 틈이나 문 닫히는 소리처럼 큰 효과음이 나는 순간에 들고 나서 관객이 음악의 시작을 의식하지 못하게 한다.</p>
+</div>
+
+<!-- 05 ─────────────────────────── -->
+<h2><span class="n">05</span>시퀀스 — 여러 씬을 곡 하나로 묶는다</h2>
+<p>몽타주, 추격, 클라이맥스처럼 여러 씬과 수십 개 샷을 하나의 흐름으로 보여 줘야 하면 긴 큐 하나로 전체를 덮는다. 씬마다 다른 곡을 붙이지 않고 시퀀스 전체의 긴장 곡선에 맞춰 곡을 키우고 정점을 찍은 뒤 풀어 준다.</p>
+
+<!-- 06 ─────────────────────────── -->
+<h2><span class="n">06</span>샷 / 프레임 — 자르지 않고 맞춘다</h2>
+<p>샷은 큐 안에서 악센트를 맞추는 기준이다.</p>
+<div class="item">
+  <div class="t">히트 포인트</div>
+  <p>스포팅 때 목록을 만들고 이후 프레임 단위로 다듬는다. 템포를 조금씩 조정해 여러 히트 포인트에 박이 떨어지게 만든다.</p>
+</div>
+<div class="item">
+  <div class="t">클릭 트랙 · 스트리머 · 펀치</div>
+  <p>녹음할 때 화면과 박자를 맞추는 장치다. 클릭은 템포에 맞춘 메트로놈 소리, 스트리머는 화면을 가로지르는 세로선, 펀치는 히트 순간을 알리는 표시다.</p>
+</div>
+<div class="item">
+  <div class="t">재편집 대응</div>
+  <p>편집이 바뀌면 히트 포인트가 밀려서 음악 타이밍을 다시 맞춰야 한다.</p>
+</div>
+<div class="item">
+  <div class="t">미키마우징</div>
+  <p>컷과 동작마다 음악을 맞추는 방식이다. 만화나 코미디 느낌이 강해서 장르를 보고 고르는 연출이다.</p>
+</div>
+
+<!-- 07 ─────────────────────────── -->
+<h2><span class="n">07</span>숏폼에 옮긴다면</h2>
+<ul>
+  <li><b>1분 안팎 숏폼</b> — 에피소드 전체에 곡 하나를 깔고 감정이 바뀌는 비트 한두 곳에서 곡을 바꾸거나 멈추면 영화식 구조와 같다.</li>
+  <li><b>롱폼</b> — 비트나 씬 단위로 큐를 나누고 핵심 컷만 히트 포인트로 맞춘다. 샷마다 곡을 바꾸면 산만해지고 미키마우징처럼 들린다.</li>
+</ul>
+<p class="note">레벨·더킹·주파수 분담과 생성 프롬프트는 <a href="../2026-09-16-bgm-direction/index.html">배경음악 연출 스코어 맵</a>(2026-09-16)에 따로 정리해 두었다.</p>
+
+<!-- 출처 ─────────────────────────── -->
+<h2><span class="n">08</span>출처</h2>
+<ul class="srcs">
+  <li><a href="https://artofcomposing.com/how-to-spot-a-film">how to spot a film — Art of Composing</a></li>
+  <li><a href="https://soundbridge.io/spotting-session-film">Spotting Session in Film — Soundbridge</a></li>
+  <li><a href="https://post-super.com/blog/spotting-sessions">Spotting sessions — Post Super</a></li>
+  <li><a href="https://sounddesign.irpr.agency/glossary/spotting-notes/">Spotting notes — IRPR Sound glossary</a></li>
+  <li><a href="https://sounddesign.irpr.agency/glossary/hit-point/">Hit point — IRPR Sound glossary</a></li>
+  <li><a href="https://sounddesign.irpr.agency/glossary/cue/">Cue — IRPR Sound glossary</a></li>
+  <li><a href="https://en.wikipedia.org/wiki/Click_track">Click track — Wikipedia</a></li>
+  <li><a href="https://www.sweetwater.com/insync/streamer/">Streamer — Sweetwater InSync</a></li>
+  <li><a href="https://vi-control.net/community/threads/clickbooks-streamers-etc-still-relevant.29618/">Clickbooks, streamers etc. still relevant? — VI-Control</a></li>
+  <li><a href="https://newenglandfilm.com/?p=13714">See, Spot, Run: Working with Composers — New England Film</a></li>
+  <li><a href="https://acousticstoday.org/issues/2013AT/Apr2013/files/basic-html/page23.html">Acoustics Today, Spring 2013</a></li>
+</ul>
+</div>
+</body>
+</html>

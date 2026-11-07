@@ -12,7 +12,7 @@ function compileActing(text, acting, voice) {
   for(const key of ['voiceId','model','stylePrompt','voiceDirection'])if(typeof voice[key]==='string')voice[key]=voice[key].trim();
   if(typeof voice.language==='string')voice.language=require('./character-voice.js').normalizeLanguage(voice.language);
   const {resolveTtsModel}=require('./tts-models.js');
-  if (!['gemini','elevenlabs'].includes(voice.engine)) throw new Error('Choose a supported engine: Gemini or ElevenLabs v4; local TTS has been removed');
+  if (!['gemini','elevenlabs','astra-genai'].includes(voice.engine)) throw new Error('Choose a supported engine: Gemini or ElevenLabs v4; local TTS has been removed');
   if (voice.engine==='elevenlabs' && voice.model!==undefined && voice.model!=='eleven_v4') throw new Error('Explicitly update this character to eleven_v4 before generating new speech');
   const contract=resolveTtsModel(voice.engine,voice.model);
   const performance = acting || {};
@@ -21,6 +21,11 @@ function compileActing(text, acting, voice) {
   const direction=resolvedStyle(voice,acting),support=directionSupport(voice,acting);
   if (!support.supported && voice.engine === 'gemini') throw new Error(support.warnings.join('; '));
   const tags = performance.tags || [];
+  if (contract.direction === 'gateway') {
+    if (tags.length) throw new Error('Gateway speech does not support inline acting tags');
+    return {generator:'tts_astra_genai',generation:{model:voice.model,text,voice:voice.voiceId,speed:voice.speed ?? 1,
+      ...(direction ? {instructions:direction} : {})}};
+  }
   if (contract.direction === 'inline') {
     if (voice.model !== undefined && voice.model !== 'eleven_v4') throw new Error('Explicitly update this character to eleven_v4 before generating new speech');
     const controls = [performance.direction?.trim(), ...tags].filter(Boolean).map(tag => `[${tag}]`).join(' ');

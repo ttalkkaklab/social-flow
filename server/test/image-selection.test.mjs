@@ -27,4 +27,7 @@ test('image selection keeps snapshot, applies scoped explicit changes and valida
   assert.equal(readImageContext(episode, 's2').selection.engine, 'zimage');
   assert.throws(() => settings.validateModels({ image: { engine: 'gpt-image', model: 'invented' } }, true), /Unsupported image model/);
   assert.throws(() => settings.validateModels({ image: { engine: 'gpt-image', model: 'gpt-image-2', quality: 'max' } }, true), /Invalid image quality/);
+  // gpt-image-1 shut down 2026-10-23: a new selection is refused, an old record still reads as retired.
+  assert.throws(() => settings.validateModels({ image: { engine: 'gpt-image', model: 'gpt-image-1' } }, true), /shutdown/);
+  assert.doesNotThrow(() => settings.validateModels({ image: { engine: 'gpt-image', model: 'gpt-image-1' } }, true, true));
 });

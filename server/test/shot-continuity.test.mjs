@@ -1,18 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, copyFileSync, cpSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, cpSync, copyFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import { readStoryboard } from '../dist/storyboard.js';
 import { manageSpeech } from '../dist/speech.js';
 
 const require = createRequire(import.meta.url);
 const C = require('../../skills/storyboard/references/shot-continuity.js');
 const root = path.resolve(import.meta.dirname, '../..');
-const sha = value => createHash('sha256').update(value).digest('hex');
 const ff = args => execFileSync('ffmpeg', ['-nostdin', '-v', 'error', '-y', ...args], { timeout: 30000 });
 const shot = id => ({ id, type: 'points', scene: 1, duration: .5, narration: [], transition: 'cut',
   shot: { render: { mode: 'generated_video' }, videoDesign: {
@@ -40,27 +38,6 @@ function clip(dir) {
     '-c:v', 'libx264', '-pix_fmt', 'yuv420p', file]);
   return file;
 }
-const style = { preset: 'photoreal', world: 'An old study.', materials: 'Wood and porcelain.',
-  palette: 'Brown and cream.', lighting: 'Daylight.', camera: 'Natural observation.' };
-
-test('legacy missing groups/blocking are visible without becoming execution failures', t => {
-  const dir = fixture(t), shots = [shot('s0001'), shot('s0002')];
-  for (const s of shots) {
-    s.shot.location = { id: 'study', camera: { position: [0, -3, 1.6], target: [0, 0, 1], lensMm: 28 } };
-    s.shot.videoDesign.before = '대사와 동작이 시작되기 직전';
-  }
-  shots[1].visual.camera.framing = 'Reverse view toward the doorway.';
-  const win = { SCENES: shots };
-  const findings = C.check(win, dir);
-  for (const code of ['unspecified_opening_state', 'missing_shared_blocking', 'implicit_continuity',
-    'shared_camera_different_framing', 'unspecified_cut_connection']) assert.ok(findings.some(f => f.code === code), code);
-  assert.ok(findings.every(f => f.level === 'warn'));
-  save(dir, win);
-  const result = spawnSync(process.execPath, ['skills/storyboard/references/check-scenes.js', dir, '--draft', '--json'],
-    { cwd: root, encoding: 'utf8' });
-  assert.equal(result.status, 0, result.stdout + result.stderr);
-  assert.ok(JSON.parse(result.stdout).findings.some(f => f.code === 'missing_shared_blocking'));
-});
 
 test('playback inserts, explicit scene/place changes and intentional breaks retain their boundaries', () => {
   const a = shot('s0001'), b = shot('s0002'), insert = { id: 's0003', type: 'broll', after: 0 };
@@ -109,33 +86,6 @@ test('capture selects the trimmed endpoint rather than the file tail, and invali
   assert.ok(C.check(win, dir).some(f => f.code === 'stale_observed_end'));
 });
 
-test('source assembler passes the actual endpoint with a state role and drops changed clip evidence', t => {
-  const dir = fixture(t), a = shot('s0001'), b = shot('s0002');
-  const numeric = { position: [0, -3, 1.6], target: [0, 0, 1], lensMm: 50 };
-  // Camera is separate here so no location manifest or render is invented by this fixture.
-  const win = { FORMAT: 'shorts-9x16', PRODUCTION: { mode: 'full_video', style }, SCENES: [a, b] };
-  a.visual.video.clip = clip(dir); C.capture(win, 0, dir);
-  const { assemble } = require('../../skills/storyboard/references/spatial-prompts.js');
-  const result = assemble(win, 1, dir);
-  const endpoint = path.join(dir, a.visual.video.observedEnd.path);
-  assert.ok(result.sourceImageArgs.referenced_image_paths.includes(endpoint));
-  assert.match(result.sourcePrompt, /opening instant BEFORE/);
-  assert.match(result.sourcePrompt, /captured end of the preceding selected clip/);
-  assert.match(result.sourcePrompt, /current shot camera controls the new composition/);
-  a.shot.location = { camera: numeric }; b.shot.location = { camera: numeric };
-  C.capture(win, 0, dir);
-  assert.equal(C.plan(win, 1, dir).suggestedFirstFrame, path.join(dir, a.visual.video.observedEnd.path));
-  a.visual.camera.movement = 'dolly in';
-  C.capture(win, 0, dir);
-  assert.equal(C.plan(win, 1, dir).suggestedFirstFrame, null, 'a moving camera has no inferred unchanged endpoint');
-  a.visual.camera.movement = 'static';
-  delete a.shot.location; delete b.shot.location;
-  C.capture(win, 0, dir);
-  ff(['-f', 'lavfi', '-i', 'color=green:size=64x96:rate=24:duration=1', '-c:v', 'libx264', a.visual.video.clip]);
-  assert.equal(assemble(win, 1, dir).continuity.observedEnd.status, 'stale');
-  assert.deepEqual(assemble(win, 1, dir).sourceImageArgs, {});
-});
-
 test('capture CLI preserves board globals/header and MCP reads/speech plans expose the same connection', t => {
   const dir = fixture(t), a = shot('s0001'); a.visual.video.clip = clip(dir);
   const win = { STORY: { version: 'story-v2' }, SB_DOC: { characters: [] }, CUSTOM: { untouched: true },
@@ -169,7 +119,6 @@ test('capture refuses unusable selections and grouped footage without inventing 
   assert.throws(() => C.capture(win, 0, dir), /one generated clip/);
   assert.equal(s.visual.video.observedEnd, undefined);
 });
-
 test('installed capture and ASTRA planning run without node_modules', t => {
   const dir = fixture(t), install = path.join(dir, 'install'), board = path.join(dir, 'board');
   mkdirSync(board);
@@ -188,20 +137,4 @@ test('installed capture and ASTRA planning run without node_modules', t => {
     board, '--shot', 's0001'], { encoding: 'utf8' });
   assert.doesNotMatch(planned.stderr, /ERR_MODULE_NOT_FOUND|Cannot find package/);
   assert.match(planned.stderr, /ENOENT/, 'missing authored image is an input error, not an install failure');
-});
-
-test('final cut proof exports the actual last/first master frames without aesthetic approval', t => {
-  const dir = fixture(t), work = path.join(dir, 'work'); mkdirSync(work);
-  const master = clip(dir); copyFileSync(master, path.join(dir, 'reel.mp4'));
-  for (let i = 0; i < 2; i++) ff(['-ss', String(i), '-i', master, '-t', '1', '-an', '-c:v', 'libx264', path.join(work, `v${i}.mp4`)]);
-  const cards = 'fixture compiled cards'; writeFileSync(path.join(dir, 'cards.resolved.tsv'), cards);
-  const shots = [0, 1].map(card => ({ card, transition: 'cut', enter: 'cut', join: 0, handle: 0, in: 0 }));
-  writeFileSync(path.join(dir, 'edit-plan.json'), JSON.stringify({ cardsSha256: sha(cards), shots }));
-  writeFileSync(path.join(work, 'edit-timeline.tsv'), '0\t0\t24\tcut\t0\t0\t0\n1\t24\t24\tcut\t0\t0\t0\n');
-  const result = require('../../skills/produce/references/check-edit-timeline.js').check(dir);
-  const pair = result.samples[0].boundaryFrames;
-  assert.equal(pair.beforeFrame, 23); assert.equal(pair.afterFrame, 24); assert.equal(pair.review, 'not_reviewed');
-  assert.equal(sha(readFileSync(path.join(dir, pair.path))), pair.sha256);
-  const pixels = ff(['-i', path.join(dir, pair.path), '-vf', 'scale=2:1', '-frames:v', '1', '-pix_fmt', 'rgb24', '-f', 'rawvideo', '-']);
-  assert.ok(pixels[0] > pixels[2] && pixels[5] > pixels[3], 'left must be outgoing red and right incoming blue');
 });

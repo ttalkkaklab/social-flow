@@ -1,6 +1,7 @@
 # Video routing contract
 
-Use `video_catalog` → `video_plan` → `video_execute` for episode video. The registry
+Use `video_catalog` → `video_plan` → `video_approve` (the user's yes to that shot, or `auto:true`
+for every shot) → `video_execute` for episode video. The registry
 contains installed adapter contracts, not a vendor availability claim. MiniMax H3
 and the official LTX API remain unimplemented; ASTRA is a separate self-hosted
 LTX deployment. Do not substitute one for another.
@@ -16,12 +17,13 @@ the last explicit change wins. Workspace edits affect future snapshots only.
 `skills/_shared/video-catalog.json` is its committed build projection for CommonJS planners.
 `node skills/_shared/model-settings.js catalog` reads the same projection.
 
-An override replaces the whole video selection. Record the user's actual instruction:
+An override replaces the whole video selection; one naming Veo, Gemini Omni or Seedance 1.x
+fails with `video_engine_unsupported`. Record the user's actual instruction:
 
 ```js
 window.PRODUCTION.modelSettings = { overrides: [
-  { scope: 'shot', shotId: 's1', request: 'Use Veo Fast for this shot',
-    video: { engine: 'veo', model: 'veo-3.1-fast-generate-preview', resolution: '720p' } }
+  { scope: 'shot', shotId: 's1', request: 'Use Seedance 2.0 Fast for this shot',
+    video: { engine: 'seedance', model: 'dreamina-seedance-2-0-fast-260128', resolution: '720p' } }
 ] };
 ```
 
@@ -40,8 +42,10 @@ requests, pinned character samples with explicit speaker/image/audio mappings.
 It saves original `sourceArgs` separately from the compiled request and records
 `voiceContinuity` with hashes, warnings and four independent `not_reviewed` fields.
 Revalidation includes dialogue, acting, cast voice settings and sample bytes.
-The catalog's operation-specific `voice` fields distinguish sample imitation from
-supplied-speech animation. They never certify perceptual consistency or exact lip sync.
+The catalog's `voice.lane` is `reference` (sample imitation), `supplied` (animates supplied
+speech) or `none`, with `voice.dialogue: allowed|refused`. `video_plan` refuses a spoken cut
+on a `none` lane as `voice_lane_required`; narration over a non-speaking picture passes on any
+adapter. These fields never certify perceptual consistency or exact lip sync.
 
 `video_execute` takes `episode` and `planId`. It rechecks selection, inputs, prices,
 provider configuration and disabled-tool settings, then reserves budget under an
@@ -68,7 +72,8 @@ window.PRODUCTION.videoAuthorization = {
 Limits apply per episode across processes on a local filesystem. The cap includes
 completed estimated/settled costs, pending reservations and imported historical
 video events. Unknown historical spending stops migration; reconcile it against
-provider billing first. This is an application reservation limit, not a provider-side
+provider billing first, then record the total as `videoAuthorization.openingSpendUsd`,
+which replaces the event import when the episode's routing state is first created. This is an application reservation limit, not a provider-side
 guaranteed invoice cap. Self-hosted API cost is zero; infrastructure is excluded.
 Seedance reserves padded pixel costs and maximum reference duration, then settles
 reported completion tokens. Other providers retain the quoted estimate, explicitly
@@ -85,11 +90,15 @@ its reseed count is that script's own setting, and each reseed is a separately r
 If an adapter unexpectedly submits multiple jobs, every reported provider ID is
 retained and the request remains ambiguous even if the adapter returns an earlier clip. `video_status`
 reads the original provider ID, reserved cost, tokens and result without network I/O.
-After a timeout or crash, inspect that provider ID at the provider and reconcile the
-terminal state and billing. There is no automated provider polling/reconciliation
-command yet. Do not release reservations, invent a new request ID or delete state
-merely because the client timed out. A stale lock requires confirming its owning
-process has exited before manually removing only `state.lock`.
+A request the provider explicitly rejected (a 4xx on submission, an adapter error before
+submission, or a job the provider reports failed) closes as `failed` and frees its
+concurrency slot; one never submitted is settled at $0, a submitted one keeps its
+reservation until reconciled. After a timeout or crash, inspect that provider ID at the
+provider, then close the request with `video_status action:reconcile` with the terminal
+`evidence` and the verified `spentUsd` (`executorStopped:true` for a request still marked
+submitting). Do not release reservations, invent a new request ID or delete state
+merely because the client timed out. A `state.lock` whose owning process has exited on
+this host, or that is older than a minute, is recovered by the next transaction.
 
 Managed requests write the existing usage event stream once after dispatch, using
 normalized arguments. Legacy cost reports remain estimates. Routing state is the

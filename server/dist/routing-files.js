@@ -5,9 +5,10 @@ export function atomicJson(file, value) {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     const temporary = file + '.' + randomUUID() + '.tmp';
     try {
-        fs.writeFileSync(temporary, JSON.stringify(value, null, 2) + '\n', { mode: 0o600, flag: 'wx' });
-        const fd = fs.openSync(temporary, 'r');
+        // fsync through the descriptor that wrote: Windows refuses it on a read-only one (EPERM).
+        const fd = fs.openSync(temporary, 'wx', 0o600);
         try {
+            fs.writeFileSync(fd, JSON.stringify(value, null, 2) + '\n');
             fs.fsyncSync(fd);
         }
         finally {

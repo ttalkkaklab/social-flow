@@ -1,14 +1,21 @@
+import { zodToJsonSchema } from 'zod-to-json-schema';
+import { fasth3OmniSchema } from './fasth3-omni.js';
 import { MUSIC_ADAPTERS } from './music-registry.js';
 import { MUSIC_TOOLS } from './music-tools.js';
 import { GENAI_TOOLS } from './astra-genai-tools.js';
-import { GPT_IMAGE_MODELS } from './image-models.js';
+import { GPT_IMAGE_MODELS, assertImageModelAvailable } from './image-models.js';
+
 import { IMAGE_ADAPTERS } from './image-registry.js';
 import { VIDEO_ADAPTERS } from './video-registry.js';
 import { DURATION_TOOLS } from './video-duration.js';
+import { characterFieldsProperty } from './character-manage.js';
 import { CHANNEL_SLUG_RE } from './config.js';
-import { techniqueContract, cameraContract, motionThemeContract, motionGraphicTypes, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
+import { techniqueContract, cameraContract, motionThemeContract, motionGraphicTypes, renderPurposes, stillCameraEffectList, shotViewContract, contract as storyboardContract } from './storyboard.js';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
+
+/** Advertise only models that have not reached their shutdown date; the schema still rejects retired ones by name. */
+const AVAILABLE_GPT_IMAGE_MODELS = GPT_IMAGE_MODELS.filter(model => { try { assertImageModelAvailable(model); return true; } catch { return false; } });
 
 import {
   ASTRA_VIDEO_FAST_DIMENSION_STEP,
@@ -28,10 +35,8 @@ import {
 import {
   DEFAULT_SEEDANCE_DURATION,
   DEFAULT_SEEDANCE_MODEL,
-  DEFAULT_SEEDANCE_REFERENCE_MODEL,
   DEFAULT_SEEDANCE_RESOLUTION,
   SEEDANCE_FPS,
-  SEEDANCE_REFERENCE_MODELS,
   VALID_SEEDANCE_MODELS,
   VALID_SEEDANCE_RATIOS,
   VALID_SEEDANCE_RESOLUTIONS,
@@ -100,7 +105,7 @@ import {
 } from './blender-bridge.js';
 import {
   DEFAULT_SUNO_MODEL,
-  SUNO_MODELS,
+  SUNO_V6_MODELS,
   SUNO_PERSONA_MODELS,
   SUNO_SOUND_KEYS,
   SUNO_VOCAL_GENDERS,
@@ -145,23 +150,19 @@ import {
  * review gate, so a call is an immediately public post, and the descriptions
  * say never to call without user approval.
  *
- * Generation tools are ported from fect-mcp-server — image (gpt_image_*,
- * OPENAI_API_KEY) comes from the gpt-image module; video (veo_*), speech
- * (tts_*), and music (music_*) come from the video/tts/music modules, all
- * three on GEMINI_API_KEY. Sung full songs and loopable beds are suno_*
- * (sunoapi.org third-party REST, SUNO_API_KEY). Lyria stays the default
- * 30s instrumental BGM path. Descriptions inherit the originals, minus
- * cross-references to tools this server doesn't have, plus the short-form
- * pipeline context (channel profile voice, pinned seeds). Keys are validated
- * at call time.
+ * Generation tools: image (gpt_image_*) on OPENAI_API_KEY; speech (tts_*) and
+ * music (music_*) on GEMINI_API_KEY. Sung full songs are suno_generate
+ * (sunoapi.org third-party REST, SUNO_API_KEY). New music runs music_plan →
+ * music_execute with the saved models.music; sound effects are
+ * sfx_elevenlabs_generate. Descriptions carry the short-form pipeline context
+ * (channel profile voice, pinned seeds). Keys are validated at call time.
  *
- * Video alone has two engines — veo_* (Google Veo 3.1, GEMINI_API_KEY) and
- * seedance_* (ByteDance Seedance, ARK_API_KEY). They are not substitutes;
- * each is good at different jobs, and the source of truth for which to use
- * when is skills/produce/references/video-model-selection.md. Each tool
- * description carries its own summary of that decision table — a caller who
- * sees only the tool list, without reading the skill doc, still has to be
- * able to pick an engine.
+ * Video engines are the ones that can keep a character's voice (owner directive
+ * 2026-10-31): LTX through the ASTRA gateways and local runtimes, and Seedance 2.x
+ * (ARK_API_KEY). Veo, Gemini Omni and Seedance 1.x left the plugin because none of
+ * them takes a voice reference. The source of truth for which to use when is
+ * skills/produce/references/video-model-selection.md; each tool description carries
+ * its own summary so a caller who sees only the tool list can still pick an engine.
  *
  * Voice, scale, and mode lists derive from the canonical constants in each
  * client module — copying a 30-entry list into the schema invites the
@@ -173,77 +174,6 @@ import {
  * description prose reaches only the model, never the approval UI.
  * The verdict table in docs/api-reference/mcp-tools.html §7 is the source of truth.
  */
-
-/**
- * Shared Veo property definitions (Veo 3.1 family).
- *
- * Why the default is fast rather than standard is written down in the
- * DEFAULT_VIDEO_MODEL comment in video-client.ts — the three tiers are
- * statistically tied on blind-arena Elo.
- */
-const VEO_MODEL_PROPERTY = {
-  type: 'string',
-  description:
-    'Veo model (default: "veo-3.1-fast-generate-preview"). Blind-arena Elo puts the three tiers within overlapping confidence intervals on every board — the tier buys features and resolution, not measurably better video — so pick the CHEAPEST tier that has the features you need. lite is 1/2 the cost of fast and 1/8 of standard but drops 4k, extension, and reference images; standard costs 4x fast for no measured preference gain.',
-  enum: ['veo-3.1-generate-preview', 'veo-3.1-fast-generate-preview', 'veo-3.1-lite-generate-preview'],
-  default: 'veo-3.1-fast-generate-preview',
-} as const;
-
-const VEO_RESOLUTION_PROPERTY = {
-  type: 'string',
-  description: 'Output resolution (default: "720p"). 1080p and 4k require durationSeconds=8; 4k is not supported by the lite model.',
-  enum: ['720p', '1080p', '4k'],
-  default: '720p',
-} as const;
-
-const VEO_DURATION_PROPERTY = {
-  type: 'number',
-  description: 'Clip length in seconds (default: 8). 1080p/4k output requires 8.',
-  enum: [4, 6, 8],
-  default: 8,
-} as const;
-
-/**
- * Exclusions — sent through this field, never in the prompt body.
- *
- * The official docs pin the grammar: comma-separated noun/adjective phrases,
- * not instructions. Writing "no ~" in the body tends to draw the very noun
- * (measured on local images: 4 out of 4 failed).
- */
-const VEO_NEGATIVE_PROMPT_PROPERTY = {
-  type: 'string',
-  description:
-    'What to keep OUT of the frame, as comma-separated noun or adjective phrases: "wall, frame, on-screen text, subtitles". Accepted by the API on veo-3.1 fast/standard only — veo-3.1-lite rejects it (400, measured 2026-08-26), so on lite write the exclusion into the prompt as positive description; veo_reference and veo_extension have no such field (400, measured 2026-08-15). Do NOT write instructions such as "no walls" or "don\'t show walls" — Google\'s prompt guide names that form as not recommended, and writing an exclusion into the prompt body tends to summon the very noun you named. Put every exclusion here instead of in prompt.',
-} as const;
-
-/**
- * Shared Gemini Omni property definitions (gemini-omni-1.1-flash).
- *
- * Omni is one model with a task mode, so there is no tier to choose — the levers are
- * resolution and length. 360p has no counterpart on Veo and exists for drafts.
- */
-const OMNI_RESOLUTION_PROPERTY = {
-  type: 'string',
-  description:
-    'Output resolution (default: "720p"). Resolution does not change the bill — every call costs the same flat amount — so 360p buys only speed; 1080p and 4k are upscales of the generated frames, not native renders.',
-  enum: ['360p', '720p', '1080p', '4k'],
-  default: '720p',
-} as const;
-
-const OMNI_DURATION_PROPERTY = {
-  type: 'number',
-  description: 'Clip length in whole seconds, 3 to 10 (default: 8). Unlike Veo there is no 4/6/8 grid — any integer in range is accepted, and 11 is rejected by the API.',
-  minimum: 3,
-  maximum: 10,
-  default: 8,
-} as const;
-
-const OMNI_ASPECT_RATIO_PROPERTY = {
-  type: 'string',
-  description: 'Aspect ratio of the generated video (default: "16:9")',
-  enum: ['16:9', '9:16'],
-  default: '16:9',
-} as const;
 
 /**
  * Shared ASTRA video property definitions (self-hosted LTX-2.5).
@@ -402,16 +332,15 @@ const ASTRA_LIMITS_LINE = 'Uploads: 10/min per key. Job acceptance: 5/min and 60
 /**
  * Shared Seedance property definitions (BytePlus ModelArk) — lists and
  * defaults derive from the capability table in seedance-client.ts. Per-model
- * constraints (resolution, duration, audio, seed) can't be expressed in a
+ * constraints (resolution, duration, references) can't be expressed in a
  * single schema enum, so the client's superRefine rejects them before the call.
  */
 const SEEDANCE_MODEL_PROPERTY = {
   type: 'string',
   description:
-    `Seedance model (default: "${DEFAULT_SEEDANCE_MODEL}" — the cheapest model that reaches 1080p, accepts photoreal human faces as input, supports seed, and has no balance gate — every ModelArk model still needs console activation). ` +
-    'Quality, from the Artificial Analysis blind image-to-video arena: dreamina-seedance-2-0-260128 ranks 1st overall (Elo 1,198), the three Veo 3.1 tiers sit at 1,066-1,086, and seedance-1-5-pro-251215 is the arena baseline at 1,000 — so 2.0 is clearly the best Seedance, and 1.5 pro trades roughly a 59:41 preference against Veo for about a third of the price. ' +
-    'dreamina-seedance-2-5-260628, the 2.0 fast/mini variants, and seedance-1-0-pro-fast-251015 have NO public evaluation at all — prefer them only for cost or for a capability the tested models lack, not for a shot that matters. ' +
-    'The 2.x models REJECT input images containing real human faces and need account balance > $30 to activate, which rules them out for photoreal-person sources.',
+    `Seedance model (default: "${DEFAULT_SEEDANCE_MODEL}" — rank 1 on the Artificial Analysis blind image-to-video arena, Elo 1,198, and it outputs 1080p and 4k; every ModelArk model still needs console activation). ` +
+    'dreamina-seedance-2-5-260628 and the 2.0 fast/mini variants have NO public evaluation — prefer them only for cost or for a capability 2.0 lacks (2.5: more than 9 references, more than 15 seconds, Korean prompts). ' +
+    'Every model REJECTS input images containing real human faces and needs account balance > $30 to activate.',
   enum: [...VALID_SEEDANCE_MODELS],
   default: DEFAULT_SEEDANCE_MODEL,
 } as const;
@@ -419,7 +348,7 @@ const SEEDANCE_MODEL_PROPERTY = {
 const SEEDANCE_RESOLUTION_PROPERTY = {
   type: 'string',
   description:
-    `Output resolution (default: "${DEFAULT_SEEDANCE_RESOLUTION}"). Support differs per model — 1080p needs 2.5, 2.0, 1.5 pro, or 1.0 pro/fast; 4k is 2.0 only; the 2.0 fast/mini models top out at 720p.`,
+    `Output resolution (default: "${DEFAULT_SEEDANCE_RESOLUTION}"). Support differs per model — 1080p needs 2.5 or 2.0; 4k is 2.0 only; the 2.0 fast/mini models top out at 720p.`,
   enum: [...VALID_SEEDANCE_RESOLUTIONS],
   default: DEFAULT_SEEDANCE_RESOLUTION,
 } as const;
@@ -427,14 +356,14 @@ const SEEDANCE_RESOLUTION_PROPERTY = {
 const SEEDANCE_DURATION_PROPERTY = {
   type: 'number',
   description:
-    `Clip length in seconds (default: ${DEFAULT_SEEDANCE_DURATION}). Range differs per model — 2.5 accepts 4-30, the 2.0 series 4-15, 1.5 pro 4-12, and 1.0 pro/fast 2-12. Frame rate is fixed at ${SEEDANCE_FPS} fps. Cost scales linearly with duration.`,
+    `Clip length in seconds (default: ${DEFAULT_SEEDANCE_DURATION}). Range differs per model — 2.5 accepts 4-30, the 2.0 series 4-15. Frame rate is fixed at ${SEEDANCE_FPS} fps. Cost scales linearly with duration.`,
   default: DEFAULT_SEEDANCE_DURATION,
 } as const;
 
 const SEEDANCE_AUDIO_PROPERTY = {
   type: 'boolean',
   description:
-    'Generate a soundtrack with the video (default: false — this pipeline adds narration separately with tts_*, and on seedance-1-5-pro audio doubles the price). The vendor default is true; set it to true only when you want the model to voice the clip. The 1.0 pro/fast models are silent-only and reject true.',
+    'Generate a soundtrack with the video (default: false — this pipeline adds narration separately with tts_*). The vendor default is true. A character who speaks in the clip goes through seedance_reference with the speaker\'s voice sample; video_plan refuses spoken cuts on the text and image lanes.',
   default: false,
 } as const;
 
@@ -442,18 +371,6 @@ const SEEDANCE_WATERMARK_PROPERTY = {
   type: 'boolean',
   description: 'Burn a visible "AI Generated" mark into the bottom-right corner (default: false).',
   default: false,
-} as const;
-
-const SEEDANCE_SEED_PROPERTY = {
-  type: 'number',
-  description:
-    'Random seed, -1 to 2147483647 (default -1). Supported only by seedance-1-5-pro and the 1.0 pro/fast models — the 2.x models reject it, so the reference lane has no seed at all. The API reference calls it a random seed and does not promise that the same seed reproduces the same video: do NOT build shot-to-shot consistency on it. Consistency belongs on reference images (seedance_reference) or first+last frames.',
-} as const;
-
-const SEEDANCE_CAMERA_FIXED_PROPERTY = {
-  type: 'boolean',
-  description:
-    'Ask the model to hold the camera still. Supported only by seedance-1-5-pro and the 1.0 pro/fast models — on 2.x, describe the camera in the prompt instead.',
 } as const;
 
 const SEEDANCE_RATIO_VALUES = [...VALID_SEEDANCE_RATIOS];
@@ -471,7 +388,7 @@ const TTS_VOICE_PROPERTY = {
 const TTS_MODEL_PROPERTY = {
   type: 'string',
   description:
-    'TTS model (default: gemini-2.5-flash-preview-tts — cheapest, free tier). gemini-2.5-pro-preview-tts: higher quality, no free tier, and the fallback when flash keeps returning no audio for a script. gemini-3.1-flash-tts-preview: newest, streaming-capable, 2x price.',
+    'TTS model (default: gemini-2.5-flash-preview-tts — cheapest, free tier). gemini-2.5-pro-preview-tts: higher quality, no free tier, and the fallback when flash keeps returning no audio for a script. gemini-3.1-flash-tts-preview: newest, streaming-capable; unit price unconfirmed in prices.tsv.',
   enum: [...VALID_TTS_MODELS],
   default: DEFAULT_TTS_MODEL,
 };
@@ -968,6 +885,10 @@ const depthInput = (() => {
   try { return { type: 'object', additionalProperties: true, description: 'Optional depth and readable-plane plan. The skill guides artistic choices.' }; }
   catch { return { type: 'object', description: 'Depth contract unavailable: restore skills/storyboard/references/structure-contract.js' }; }
 })();
+const shotViewInput = (() => {
+  try { return shotViewContract().SCHEMA; }
+  catch { return { type: 'object', description: 'Opening view; restore the missing skills tree before calling storyboard tools.' }; }
+})();
 const storyboardVocabulary = (() => {
   try { return storyboardContract().VOCAB; } catch { return null; }
 })();
@@ -977,6 +898,7 @@ const shotCameraInput = (() => {
 })();
 const enumInput = (values: string[] | undefined, description: string) => ({ type: 'string', ...(values?.length ? { enum: values } : {}), description });
 const techniqueIds = (() => { try { return techniqueContract().entries.map(entry => String(entry.id)); } catch { return []; } })();
+const cameraMoves = (() => { try { return techniqueContract().entries.filter(entry => (entry.fields as Record<string, unknown> | undefined)?.movement).map(entry => String(entry.id)); } catch { return []; } })();
 
 const motionThemes = (() => { try { return Object.keys(motionThemeContract().THEMES); } catch { return []; } })();
 const motionTypes = (() => { try { return motionGraphicTypes(); } catch { return []; } })();
@@ -985,7 +907,7 @@ const stillCameraEffects = (() => { try { return stillCameraEffectList(); } catc
 // The still lane's window move (render-routing.js, still-camera.js) — the camera a photograph gets.
 const stillCameraInput = {
   type: 'object', additionalProperties: true, required: ['effect'],
-  description: 'Required on still_camera. The eased window move the builder drives over the photograph: push (slow zoom-in, the default) · pull · approach · focus-in · rack-focus · pan · tilt (L13: a pan or tilt travels from focusFrom to focusTo, the vertical tilt being the scale-by-time move) · reveal · parallax (prepared layers). The ease holds the opening and closing pictures on its own.',
+  description: 'Required on still_camera. The eased window move the builder drives over the photograph: push (slow zoom-in, the default) · pull · approach · focus-in · rack-focus · pan · tilt (L13: a pan or tilt travels from focusFrom to focusTo, the vertical tilt being the scale-by-time move; with both regions the window centres each, zooming up to 1.2 within a 1.5× upscale of the source) · reveal · parallax (prepared layers) · hold (the frame stays put on focusTo or the centre, a deliberate still beat). The ease holds the opening and closing pictures on its own.',
   properties: {
     effect: enumInput(stillCameraEffects, 'The window move. Choose from the cut\'s meaning (directing-grammar §5 Still column), never repeat one on every cut.'),
     target: { type: 'string', description: 'What the move arrives on or travels over, in the picture.' },
@@ -1014,6 +936,8 @@ const storyboardShotInput = {
         techniques: { type: 'array', description: 'Authored choices from storyboard_read techniqueCatalog. Persist each technique id and this shot’s reason. Match size/angle/camera fields to its fields; provider prompts consume its instructions. Icons do not verify actual footage.', items: { type: 'object', additionalProperties: false, required: ['id','reason'], properties: {
           id: { type: 'string', ...(techniqueIds.length ? { enum: techniqueIds } : {}), description: 'Stable semantic technique id, including independent focus and viewpoint choices.' },
           reason: { type: 'string', minLength: 1, description: 'The visible information or action that motivates this selection.' },
+          from: { type: 'string', minLength: 1, description: 'camera.rack-focus: the subject sharp first, in English' },
+          to: { type: 'string', minLength: 1, description: 'camera.rack-focus: the subject sharp last, in English' },
         } } },
         size: { type: 'string', description: 'Canonical framing size: mfs=mid-thigh, ms=waist-up. Keep two-shot/POV roles in separate technique or framing prose.' },
         angle: { type: 'string', description: 'Camera angle. Recommended vocabulary is in the directing skill.' },
@@ -1097,6 +1021,8 @@ const ACTING_PROPERTY = { type: 'object', additionalProperties: false, descripti
   direction: { type: 'string', maxLength: 500, description: 'Short plain delivery direction; no bracket markup.' },
   tags: { type: 'array', maxItems: 6, items: { type: 'string', maxLength: 60 }, description: 'Bare English vocal events prepended to this line, e.g. sigh. Split the line for later changes.' }
 } };
+const CHARACTER_PENDING = { type: 'object', additionalProperties: false, required: ['status', 'reason'], description: 'An undecided required basic', properties: {
+  status: { type: 'string', enum: ['pending'], description: 'Always pending' }, reason: { type: 'string', minLength: 1, maxLength: 2000, description: 'What is still undecided, e.g. 나이를 아직 정하지 않았다.' } } };
 const VOICE_PROFILE_PROPERTY = { type: 'object', additionalProperties: false, description: 'Explicit acoustic targets; never infer voice gender from names or roles.', properties: {
   vocalGender: { type: 'string', enum: ['female','male','neutral','unspecified'], description: 'Desired audible gender, e.g. female; unspecified preserves uncertainty.' },
   perceivedAge: { type: 'string', maxLength: 100, description: 'Desired age impression, e.g. adult in her fifties; defaults to confirmed character age.' },
@@ -1120,9 +1046,9 @@ export const SERVER_INSTRUCTIONS = `social-flow plans, produces and publishes sh
 
 Start: \`capability_status\` shows which providers are configured on this machine; \`project_manage\` holds the saved project settings (models, visual style, ratio, SNS targets). Reuse saved choices instead of asking again.
 
-Episode video: \`video_catalog\` → \`video_plan\` → \`video_execute\`, and \`video_status\` after an interruption. The provider tools (veo_*, seedance_*, astra_*, omni_*, mlx_video_generate) are the adapters that route calls; call one directly only when the user names it.
+Episode video: \`video_catalog\` → \`video_plan\` → \`video_approve\` (the user's yes to that shot, or to every shot) → \`video_execute\`, and \`video_status\` after an interruption. The provider tools (seedance_*, astra_*, ltx_video_generate, fasth3_omni_reference) are the adapters that route calls; call one directly only when the user names it.
 
-Storyboard: \`storyboard_read\`, \`storyboard_apply\`, \`storyboard_check\`. Speech: \`speech_manage\` owns dialogue lines and audio bindings; \`tts_route\` and the tts_* tools generate. Review: \`host_review\` prepares media evidence and records the host's own observations; it never scores.
+Storyboard: write the story first with \`story_sequence\` → \`story_scene\` → \`story_shot\`, then each shot's characters and lines with \`shot_characters\` → \`shot_dialogue\`, its icon attributes with \`shot_icons\`, its start (and first_last end) image with \`shot_image\`, its video prompt with \`shot_prompt\`; then \`storyboard_read\`, \`storyboard_apply\`, \`storyboard_check\`. Speech: \`speech_manage\` owns dialogue lines and audio bindings; \`tts_route\` and the tts_* tools generate. Review: \`host_review\` prepares media evidence and records the host's own observations; it never scores.
 
 Images: \`image_catalog\` → \`image_plan\` → \`image_execute\`, then \`image_status\` after interruption. Preserve the saved model choice; legacy image adapters require imageContext for configured production. Host selections remain external handoffs. Music: music_*, suno_*. Sound effects: \`sfx_elevenlabs_generate\`. Free stock footage: \`stock_search\`. Research: serp_*, \`naver_search\`, datago_*, \`youtube_topic_scout\`.
 
@@ -1135,7 +1061,7 @@ Search words: 영상 video clip, 이미지 image, 음성 TTS narration voice, �
 export const TOOLS: Tool[] = [
   {
     name: 'tts_route', title: 'Speech model routing', annotations: HINT.generate,
-    description: 'Discover implemented speech models, plan a selected generator, or execute it with durable request identity. Use capabilities without credentials; plan validates generation without network or writes. execute needs generator, generation.outputPath and requestId, reuses matching completed audio, and refuses changed or uncertain prior requests. Returns capabilities or audioPath, receiptPath, attempts and not_reviewed; no listening, model fallback or automatic retries. Use speech_manage plan_audio for pinned character/acting arguments. Only implemented Gemini and ElevenLabs v4 adapters are available. Raw tools remain compatible and share execution checks. Plans do not quote or authorize spending.',
+    description: 'Discover implemented speech models, plan a selected generator, or execute it with durable request identity. Use capabilities without credentials; plan validates generation without network or writes. execute needs generator, generation.outputPath and requestId, reuses matching completed audio, and refuses changed or uncertain prior requests. Returns capabilities or audioPath, receiptPath, attempts and not_reviewed; no listening, model fallback or automatic retries. Use speech_manage plan_audio for pinned character/acting arguments. Implemented Gemini, ElevenLabs v4 and model-bound ASTRA GenAI adapters are available; gateway model capabilities require astra_genai_catalog kind:speech. Raw tools remain compatible and share execution checks. Plans do not quote or authorize spending.',
     inputSchema: { type: 'object', additionalProperties: false, properties: {
       action: { type: 'string', enum: ['capabilities', 'plan', 'execute'], description: 'Read capabilities, validate a pure plan, or submit one explicitly identified take.' },
       generator: { type: 'string', enum: [...GENERATORS], description: 'Exact implemented raw synthesis tool. Required for plan and execute.' },
@@ -1294,18 +1220,52 @@ export const TOOLS: Tool[] = [
     }, required: ['audioPath','expectedText','direction','requestedBy','outputPath'] }
   },
   {
+    name: 'character_manage', title: 'Create or update a shared character identity',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    description: `Write a shared character's identity.md and refresh the channel's character sheets.
+
+Use for a new character or a requested character edit. The sheet's basics are required on every call: name, gender, species, age, role, summary and heightCm; pass {status:"pending",reason} for a basic the user has not decided, never an invented value. Read the existing identity.md first and pass its current basics when only optional fields change. Every other catalog field (personality, speech, acting, story, continuity, other body fields) is optional: omit it to keep it, pass a value to confirm it, {status,reason} for pending or not_applicable, or null to remove it. The tts block, voice selection, voice profile and prose stay untouched; voices come from character_voice_audition, images from image_plan/image_execute.
+Returns {identityPath,id,version,created,missing:{basics,images,voice},sheet}: missing lists pending basics, absent face/front/back panels and an unselected voice, the production requirements still open. No paid calls.
+Do NOT use for voices, images or episode cast handoffs (character-sheet.js compiles those). Refuses a legacy identity.md without a structured JSON block.`,
+    inputSchema: { type: 'object', additionalProperties: false, required: ['identityPath', 'name', 'gender', 'species', 'age', 'role', 'summary', 'heightCm'], properties: {
+      identityPath: { type: 'string', description: 'Absolute <channel>/assets/characters/<kebab-id>/identity.md; created when missing.' },
+      name: { type: 'string', minLength: 1, maxLength: 200, description: 'Display name written as the # heading, e.g. 이도윤.' },
+      ...Object.fromEntries([['gender', 'Gender, e.g. 남성, 여성 or 무성 로봇'], ['species', 'Species or type, e.g. 인간'], ['age', 'Age or age band, e.g. 20대 후반'],
+        ['role', 'Role in the channel, e.g. 주인공'], ['summary', 'One-line summary']].map(([key, description]) => [key, { description: description + '; {status:"pending",reason} while undecided.', anyOf: [
+        { type: 'string', minLength: 1, maxLength: 2000, description: 'Confirmed value' }, CHARACTER_PENDING] }])),
+      heightCm: { description: 'Height in cm, e.g. 178; {status:"pending",reason} while undecided.', anyOf: [{ type: 'number', exclusiveMinimum: 0, description: 'Confirmed height in cm' }, CHARACTER_PENDING] },
+      fields: characterFieldsProperty(),
+    } }
+  },
+  {
+    name: 'character_panel', title: "Make a character sheet panel from the identity",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    description: `Make one panel of a shared character's sheet — the face close-up, the headless front or the headless back — from its identity.md, with no hand-written prompt.
+
+Use for a new character's panels, or a requested redo after its identity changed. The prompt is built from the sheet: the face takes physical.appearance; the front and back take height, weight, build, proportions and outfit with every clause naming the head left out, so every channel and storyboard draws the same body. The project style preset and the character-panels framing (1:1 face; 2:3 body at 85 % height, neutral grey, even light) are added. By default the face is drawn from text, the front is edited from the face panel and the back from the front panel alone, turned 180 degrees with front-only details ruled out; pass references to edit from other pictures (e.g. an approved full-body design). Runs image_plan → image_execute with the saved image model and the existing spending authorization, saves <id>-<view>-vN.png next to identity.md, records the slot in panels.json (framing not_reviewed) and refreshes the sheets. On the GenAI gateway's 800-character cap it drops the style sentence.
+Returns the file, the inputs in order, the prompt and warnings (a non-English physical field is left out and named); a host selection returns the handoff instead of generating.
+Do NOT use it for scene images (shot_image) or text-bearing art. Refused (character_panel_missing) when a default reference panel does not exist yet, and (image_references_unsupported) when the saved model cannot take that many pictures — ask the user before changing models. A story-first board picks the new files up on its next story or shot write, which syncs SB_DOC.characters panels from the character's panels.json; an older board updates its SB_DOC.characters panels by hand.`,
+    inputSchema: { type: 'object', additionalProperties: false, required: ['identityPath', 'view'], properties: {
+      identityPath: { type: 'string', description: 'Absolute <channel>/assets/characters/<id>/identity.md' },
+      view: { type: 'string', enum: ['face', 'front', 'back'], description: 'face: 1:1 head close-up · front / back: 2:3 headless body' },
+      references: { type: 'array', maxItems: 4, items: { type: 'string' }, description: 'Pictures to edit from, in order (absolute or relative to the character folder); [] draws from text. Default: none for face, the face panel for front, the front panel for back' },
+      negativePrompt: { type: 'string', minLength: 1, maxLength: 1000, description: 'Extra things to keep out, added to the default (front/back: head, face, hair, ears, tusks, helmet; every view: text, watermark, collage), e.g. beard. Sent only to models that take one (astra-genai-native).' },
+      reserveUsd: { type: 'number', minimum: 0, description: 'API reservation estimate, as in image_plan' },
+    } }
+  },
+  {
     name: 'character_voice_audition', title: 'Audition three character voices and save the user choice',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-    description: 'Create character voice auditions or plan acoustic targets.\n\nUse for casting, sample voices or character voice matching. plan reads confirmed age, timbre, speech and personality without synthesis; compare real provider metadata and expose unknowns. create generates three paid previews, composes a compact Gemini voiceDirection with acting and saves target/metadata/request/hash evidence without changing identity. select requires the actual user choice and verifies hashes before saving its voice settings. Returns target, candidate comparisons, auditionPath, previewPath and selection state. Do NOT use for ordinary dialogue — use speech_manage plan_audio and its raw TTS tool. Never auto-select or score without a requested audio review; inspect partial failures before retrying.',
+    description: 'Create a character\'s voice sample, a voice audition, or plan acoustic targets.\n\nUse for a character\'s sample voice, casting or character voice matching. By default cast one voice from the plan\'s target and create with that single candidate: it generates the sample and sets it at once (identity tts, voiceSelection, the sheet\'s voice.wav and sample.txt). Pass three candidates only when the user asks to compare voices; then they choose and select pins it. plan reads confirmed age, timbre, body (species, height, weight, build), speech, personality and the impression (role, personality traits) without synthesis; compare real provider metadata and expose unknowns. A voice-design voice (gateway voiceId default) hears only its direction: write an English voiceDirection from target.designDirection, naming timbre explicitly. create generates the paid sample (or three previews), composes a compact Gemini voiceDirection with acting and saves target/metadata/request/hash evidence without changing identity. select requires the actual user choice and verifies hashes before saving its voice settings. Returns target, candidate comparisons, auditionPath, previewPath and selection state. Do NOT use for ordinary dialogue — use speech_manage plan_audio and its raw TTS tool. Never auto-select or score without a requested audio review; inspect partial failures before retrying, then continue a failed audition with create plus its auditionPath so only the missing candidates are generated.',
     inputSchema: { type: 'object', additionalProperties: false, properties: {
-      action: { type: 'string', enum: ['plan','create','read','select'], description: 'plan reads identity without generating; create generates three choices; read inspects; select saves an explicit user choice.' },
+      action: { type: 'string', enum: ['plan','create','read','select'], description: 'plan reads identity without generating; create generates one sample and sets it, or three choices; read inspects; select saves an explicit user choice from three.' },
       identityPath: { type: 'string', description: 'Existing character identity.md with one structured character JSON block. Draft tts may be absent before selection.' },
-      auditionPath: { type: 'string', description: 'Manifest path returned by create; required for read/select.' },
-      sampleText: { type: 'string', minLength: 5, maxLength: 300, description: 'Same natural spoken sample for all three candidates; no tag markup.' },
+      auditionPath: { type: 'string', description: 'Manifest path returned by create; required for read/select. With create, a failed audition to continue with the same identity, sample and voices.' },
+      sampleText: { type: 'string', minLength: 5, maxLength: 300, description: 'Natural spoken sample, the same for every candidate; no tag markup.' },
       sampleTurns: {type:'array',minItems:2,maxItems:10,description:'Optional Gemini 3.8 sample excerpts with separate acting. Texts joined with spaces must reproduce sampleText exactly; omit top-level acting. Each turn retains the same candidate voice and stable baseline.',items:{type:'object',additionalProperties:false,required:['text'],properties:{text:{type:'string',minLength:1,maxLength:300,description:'Exact spoken excerpt in sample order, e.g. I will help you.'},acting:ACTING_PROPERTY}}},
       acting: ACTING_PROPERTY,
       voiceProfile: VOICE_PROFILE_PROPERTY,
-      candidates: { type: 'array', minItems: 3, maxItems: 3, description: 'Exactly three distinct voice IDs on one selected engine/model/language.', items: { type: 'object', additionalProperties: false, required: ['label','reason','tts'], properties: {
+      candidates: { type: 'array', minItems: 1, maxItems: 3, description: 'One voice for a sample set at once, or exactly three distinct voice IDs on one engine/model/language for an audition.', items: { type: 'object', additionalProperties: false, required: ['label','reason','tts'], properties: {
         label: { type: 'string', maxLength: 100, description: 'Human-readable candidate label.' },
         reason: { type: 'string', maxLength: 500, description: 'Why this voice suits the character.' },
         metadata: {type:'object',additionalProperties:false,description:'Actual voice lookup evidence, e.g. Gemini library metadata; omitted fields stay unknown.',properties:{
@@ -1314,7 +1274,7 @@ export const TOOLS: Tool[] = [
           gender:{type:'string',maxLength:100,description:'Provider-reported vocal gender, e.g. female; omit when absent.'},age:{type:'string',maxLength:200,description:'Provider age label, e.g. 35-year-old; omit when absent.'},pitch:{type:'string',maxLength:100,description:'Provider pitch label, e.g. low; omit when absent.'},description:{type:'string',maxLength:2000,description:'Exact provider voice description, e.g. warm low voice; no invented attributes.'}
         },required:['voiceId','source','retrievedAt']},
         tts: { type: 'object', description: 'Candidate voice settings saved unchanged only after user selection.', additionalProperties: false, required: ['engine','model','voiceId','language','speed'], properties: {
-          engine: { type: 'string', enum: ['gemini','elevenlabs'], description: 'Selected speech provider.' },
+          engine: { type: 'string', enum: ['gemini','elevenlabs','astra-genai'], description: 'Selected speech provider.' },
           model: { type: 'string', description: 'Explicit supported Gemini model or eleven_v4.' },
           voiceId: { type: 'string', description: 'Voice ID obtained from lookup; never invent it.' },
           language: { type: 'string', description: 'Text language e.g. ko.' },
@@ -1322,7 +1282,7 @@ export const TOOLS: Tool[] = [
           stability: { type: 'number', minimum: 0, maximum: 1, description: 'Optional ElevenLabs v4 consistency.' },
           similarity: { type: 'number', minimum: 0, maximum: 1, description: 'Optional ElevenLabs v4 voice similarity.' },
           stylePrompt: { type: 'string', description: 'Only for pre-3.8 Gemini baseline style.' },
-          voiceDirection: { type: 'string', maxLength:400, description:'Short habitual Gemini delivery; plan/create derives speech pace, register and habits when omitted. Base voice selection carries age, gender and timbre. Preserved alongside scene acting.' }
+          voiceDirection: { type: 'string', maxLength:400, description:'Stable voice direction, saved and reused for every later line. Gemini: short habitual delivery; base voice selection carries age, gender and timbre. Gateway voiceId default (voice design, e.g. voxcpm2): who speaks and how they come across, in English, e.g. "A very deep bass male voice of a huge orc warrior". Omitted: plan/create derives target.baselineDirection (Gemini) or target.designDirection (voice design). Preserved alongside scene acting.' }
         } }
       } } },
       candidateId: { type: 'string', enum: ['1','2','3'], description: 'Candidate selected by the user.' },
@@ -1334,7 +1294,7 @@ export const TOOLS: Tool[] = [
     annotations: {readOnlyHint:false, destructiveHint:false, idempotentHint:false, openWorldHint:false},
     description: `Create and update local Blender sets, shot blocking and spatial previz.
 
-Use for recurring locations, floor plans, actor facing/gaze and shot continuity before storyboard images. build writes root/id/vN; bind stores manifest/stateId/cameraId plus optional blocking/endStateId/continuityGroup on board/shotId; render writes clean start/end, top/side images and spatial.json (world coordinates, actor distances, five camera visibility samples and gaze blockers on authored meshes); previz uses the same set, camera and actors to write a silent H.264 clip, first/middle/last PNGs and a shot previz record (seconds required, fps defaults to 24). No paid calls.
+Use for recurring locations, floor plans, actor facing/gaze and shot continuity before storyboard images. build writes root/id/vN; bind stores manifest/stateId/cameraId plus optional blocking/endStateId/continuityGroup on board/shotId; render writes clean start/end, top/side images and spatial.json (world coordinates, actor distances, five camera visibility samples and gaze blockers on authored meshes); sheet renders the registered cameras plus eight compass angles and a plan view of one state into the set's angle sheet; previz uses the same set, camera and actors to write a silent H.264 clip, first/middle/last PNGs and a shot previz record (seconds required, fps defaults to 24). No paid calls.
 Returns: build {manifest,sha256}; render {fingerprint,frames}; previz {clip,blend,firstFrame,sha256,fps,seconds,locationBinding}; references absolute image paths/roles/hashes plus spatial report and spatialPaths for LLM inspection; check ordered findings with level/where/what. ready requires fresh files; actual reviews remain optional. Coordinates: metres, Z up, actors face -Y at zero rotation.
 Do NOT use for independent body posing or to read an arbitrary .blend — use blender_pose_key or blender_scene_read. Read an existing location with action read; see skills/storyboard/references/location-assets.md for camera proposals and generation receipts.`,
     inputSchema: { type: 'object', required: ['action'], additionalProperties: false, properties: {
@@ -1343,7 +1303,8 @@ Do NOT use for independent body posing or to read an arbitrary .blend — use bl
       provider:{type:'string',description:'Actual output provider for receipt',enum:['host','api','blender']}, callId:{type:'string',description:'Actual tool call or render job identifier'}, referencePaths:{type:'array',description:'Absolute paths actually sent to generation',items:{type:'string'}},
       spec: {oneOf:[{type:'string'},{type:'object',additionalProperties:true}], description:'Location spec file or object for build'},
       root: {type:'string',description:'Channel assets/locations directory'}, manifest:{type:'string',description:'location.json path'},
-      output:{type:'string',description:'New sheet output directory'}, board:{type:'string',description:'scenes.js path'},
+      output:{type:'string',description:'New sheet output directory; omit to replace the set\'s managed angle sheet at <revision>/angles/<stateId>/, which review pages show'},
+      cameras:{type:'object',description:'sheet: extra angles to keep on the managed angle sheet, keyed by a new id, e.g. {"view-1":{position:[3,-5,2],target:[0,1,1.4],lensMm:35,width:768,height:432}} from the 3D viewer\'s angle export; null removes one',additionalProperties:{oneOf:[{type:'null'},{type:'object',required:['position','target','lensMm','width','height'],properties:{position:{type:'array',items:{type:'number'},minItems:3,maxItems:3},target:{type:'array',items:{type:'number'},minItems:3,maxItems:3},lensMm:{type:'number'},width:{type:'integer'},height:{type:'integer'}}}]}}, board:{type:'string',description:'scenes.js path'},
       shotId:{type:'string',description:'Stable shot id'}, stateId:{description:'Registered location state id',type:'string'}, cameraId:{description:'Registered numerical camera id',type:'string'},
       mustShow:{description:'Object IDs that must be visible; review actual images',type:'array',items:{type:'string'}}, continuityGroup:{description:'Related shots sharing location continuity',type:'string'},
       endStateId:{type:'string',description:'Optional registered end state for moving props or doors, e.g. open; omitted holds stateId'},
@@ -1657,7 +1618,7 @@ Do NOT use for independent body posing or to read an arbitrary .blend — use bl
     },
   },
 
-  // ── Image generation (OpenAI GPT Image — ported from the fect-mcp gpt-image module) ──
+  // ── Image generation (OpenAI GPT Image) ──
   {
     name: 'gpt_image_text2img',
     title: 'Image generation (text → image)',
@@ -1674,7 +1635,7 @@ Do NOT use for independent body posing or to read an arbitrary .blend — use bl
         model: {
           type: 'string',
           description: 'OpenAI GPT Image model (default: "gpt-image-2")',
-          enum: [...GPT_IMAGE_MODELS],
+          enum: AVAILABLE_GPT_IMAGE_MODELS,
           default: 'gpt-image-2',
         },
         size: {
@@ -1704,7 +1665,7 @@ Do NOT use for independent body posing or to read an arbitrary .blend — use bl
         },
         savePath: {
           type: 'string',
-          description: 'Absolute file path to save the generated image. Supports .png/.jpg/.jpeg/.gif/.webp/.bmp. Parent directories are created automatically.',
+          description: 'Absolute file path to save the generated image; its extension matches outputFormat (.png, .jpg/.jpeg or .webp). An existing file is never replaced. Parent directories are created automatically.',
         },
       },
       required: ['prompt'],
@@ -1743,7 +1704,7 @@ Do NOT use for independent body posing or to read an arbitrary .blend — use bl
         model: {
           type: 'string',
           description: 'OpenAI GPT Image model (default: "gpt-image-2")',
-          enum: [...GPT_IMAGE_MODELS],
+          enum: AVAILABLE_GPT_IMAGE_MODELS,
           default: 'gpt-image-2',
         },
         size: {
@@ -1778,7 +1739,7 @@ Do NOT use for independent body posing or to read an arbitrary .blend — use bl
         },
         savePath: {
           type: 'string',
-          description: 'Absolute file path to save the edited image. Supports .png/.jpg/.jpeg/.gif/.webp/.bmp.',
+          description: 'Absolute file path to save the edited image; its extension matches outputFormat (.png, .jpg/.jpeg or .webp). An existing file is never replaced.',
         },
       },
       required: ['prompt', 'sourceImagesBase64'],
@@ -1967,379 +1928,6 @@ Do NOT use for independent body posing or to read an arbitrary .blend — use bl
       required: ['prompt', 'imagePath'],
     },
   },
-
-  // ── Video generation (Google Veo 3.1 — ported from the fect-mcp video module) ──────────
-  {
-    name: 'veo_text2video',
-    title: 'Video generation (text → video)',
-    annotations: HINT.generate,
-    description: `Generate a video with native audio from a text prompt using Google Veo 3.1.
-
-Use when the user asks to create, generate, or make a video, clip, footage, or short ad from a description alone (비디오 생성, 영상 만들어줘). Audio is generated natively: wrap dialogue in double quotes, and describe SFX ("engine roaring") and ambient sound explicitly in the prompt.
-Do NOT use when a source visual exists — use veo_img2video to animate a still image, veo_extension to continue a Veo-generated video, or veo_reference to keep a specific subject consistent from photos.
-The Seedance counterpart is seedance_text2video (lengths off the 4/6/8-second grid, 21:9 or 4:3 frames, optional silence); the saved model decides which engine runs.
-Cost lever: the default is now fast ($0.10/s at 720p) because blind-arena Elo shows no measurable quality gap between the tiers; drop to lite ($0.05/s) whenever 4k, extension, and reference images are not needed. Generation is asynchronous and typically takes 1-6 minutes.
-
-Returns: a text block with the saved .mp4 file path, model, aspect ratio, resolution, and duration in seconds. Videos carry an invisible SynthID watermark.`,
-    inputSchema: {
-      type: 'object',
-      properties: {
-        prompt: {
-          type: 'string',
-          description: 'Descriptive text prompt for video generation (English recommended)',
-        },
-        negativePrompt: VEO_NEGATIVE_PROMPT_PROPERTY,
-        model: VEO_MODEL_PROPERTY,
-        aspectRatio: {
-          type: 'string',
-          description: 'Aspect ratio of the generated video (default: "16:9")',
-          enum: ['16:9', '9:16'],
-          default: '16:9',
-        },
-        resolution: VEO_RESOLUTION_PROPERTY,
-        durationSeconds: VEO_DURATION_PROPERTY,
-        outputPath: {
-          type: 'string',
-          description: 'Directory path to save the generated video (default: current working directory)',
-        },
-        filename: {
-          type: 'string',
-          description: 'Filename for the generated video (default: video_<timestamp>.mp4)',
-        },
-      },
-      required: ['prompt'],
-    },
-  },
-  {
-    name: 'veo_img2video',
-    title: 'Video generation (image → video)',
-    annotations: HINT.generate,
-    description: `Animate a still image into a video (first frame, or first+last frame interpolation) using Google Veo 3.1.
-
-Use when the user provides an image to bring to life, animate, or add motion to (이미지로 영상 만들기) — e.g. animate a product photo. Provide sourceImagePath as the first frame; optionally add lastImagePath for a smooth transition between two images. The prompt should describe the desired motion.
-Do NOT use for pure text-to-video (use veo_text2video), continuing an existing video (use veo_extension), or subject consistency from reference photos (use veo_reference).
-The Seedance counterpart is seedance_img2video; the saved model decides which engine runs.
-Person policy, measured 2026-08-15: an adult photoreal face in the source image passes here and holds for the clip, while Seedance 2.x rejects the very same file — so this is the image lane for photoreal people. A face that reads as a MINOR is blocked whether it arrives as a photo or an illustration (Support code 17301594); blocked generations are not billed, so redraw the cut instead of hunting for a way around it.
-For composition control — a subject appearing, vanishing, or changing pose exactly as drawn — pass lastImagePath. Reference images (veo_reference) carry appearance, not layout.
-Generation is asynchronous and typically takes 1-6 minutes.
-
-Returns: a text block with the saved .mp4 file path, source/last frame image paths, model, aspect ratio, resolution, and duration in seconds.`,
-    inputSchema: {
-      type: 'object',
-      properties: {
-        prompt: {
-          type: 'string',
-          description: 'Text description for video animation/motion',
-        },
-        negativePrompt: VEO_NEGATIVE_PROMPT_PROPERTY,
-        sourceImagePath: {
-          type: 'string',
-          description: 'Absolute path to the first frame (starting) image file',
-        },
-        lastImagePath: {
-          type: 'string',
-          description: 'Optional: Absolute path to the last frame (ending) image file. When provided, the video will smoothly transition from the first image to this last image.',
-        },
-        model: VEO_MODEL_PROPERTY,
-        aspectRatio: {
-          type: 'string',
-          description: 'Aspect ratio of the generated video (default: "16:9")',
-          enum: ['16:9', '9:16'],
-          default: '16:9',
-        },
-        resolution: VEO_RESOLUTION_PROPERTY,
-        durationSeconds: VEO_DURATION_PROPERTY,
-        outputPath: {
-          type: 'string',
-          description: 'Directory path to save the generated video (default: current working directory)',
-        },
-        filename: {
-          type: 'string',
-          description: 'Filename for the generated video (default: video_<timestamp>.mp4)',
-        },
-      },
-      required: ['prompt', 'sourceImagePath'],
-    },
-  },
-  {
-    name: 'veo_extension',
-    title: 'Video extension (+7s)',
-    annotations: HINT.generate,
-    description: `Extend a Veo-generated video by adding 7 seconds of new content per call.
-
-Use when the user asks to continue, lengthen, or extend a video that was previously generated by Veo (비디오 연장, 이어서 만들기). Up to 20 extensions per video; input must be a Veo output at 720p, 16:9, and 141 seconds or shorter. A 9:16 vertical clip is refused outright (\`Aspect ratio of the input video must be 16:9, but got: 9:16\`, measured 2026-09-06) — a vertical short cannot be lengthened this way, so shoot the extra seconds as separate cuts.
-The API extends the copy it still holds on its own server, not the bytes of your file: the clip must have been generated by one of these veo_* tools and still carry its \`<name>.mp4.veo.json\` handle, which the server keeps for 48 hours. A clip with no handle, or one downloaded from anywhere else, cannot be extended at all — generate it again.
-Do NOT use on videos not generated by Veo, and do NOT use the lite model (unsupported). For a brand-new scene use veo_text2video instead. Seedance has no equivalent for local files — its video input accepts only public URLs — so extension of a local clip always lands here.
-Output is always 720p and keeps the input's 16:9. Voice cannot be effectively extended if absent from the last 1 second of the input. Takes 1-6 minutes.
-
-Returns: a text block with the saved .mp4 file path, source video path, model, resolution, and the added duration (+7 seconds).`,
-    inputSchema: {
-      type: 'object',
-      properties: {
-        prompt: {
-          type: 'string',
-          description: 'Text description for the video continuation',
-        },
-        sourceVideoPath: {
-          type: 'string',
-          description: 'Absolute path to the source video file to extend (must be a Veo-generated 720p video, 141 seconds or shorter, saved with its .veo.json handle)',
-        },
-        sourceVideoUri: {
-          type: 'string',
-          description: 'Files API uri of the source clip (https://generativelanguage.googleapis.com/v1beta/files/...). Only needed when the .veo.json handle beside the file is missing — normally leave it out.',
-        },
-        model: {
-          type: 'string',
-          description: 'Veo model (default: "veo-3.1-fast-generate-preview"). The lite model does NOT support extension. Blind-arena Elo has fast and standard statistically tied, so standard only buys 4k here.',
-          enum: ['veo-3.1-generate-preview', 'veo-3.1-fast-generate-preview'],
-          default: 'veo-3.1-fast-generate-preview',
-        },
-        outputPath: {
-          type: 'string',
-          description: 'Directory path to save the extended video (default: current working directory)',
-        },
-        filename: {
-          type: 'string',
-          description: 'Filename for the extended video (default: video_extended_<timestamp>.mp4)',
-        },
-      },
-      required: ['prompt', 'sourceVideoPath'],
-    },
-  },
-  {
-    name: 'veo_reference',
-    title: 'Video generation (reference images · fixed 8s)',
-    annotations: HINT.generate,
-    description: `Generate an 8-second video that keeps subjects from 1-3 reference images consistent, using Google Veo 3.1.
-
-Use when the user wants a video featuring a specific person, character, product, or garment shown in reference photos — fashion videos, brand/product marketing, consistent character animation (캐릭터 일관성, 제품 영상). Provide 1-3 clear, well-lit reference images (multiple angles improve consistency) and a detailed prompt describing the scene and interactions.
-Do NOT use the lite model (unsupported). To animate a single image as-is use veo_img2video; for free-form generation use veo_text2video.
-This is the reference tool for REAL people — Seedance's seedance_reference rejects real human faces, while it accepts far more reference images (up to 30) and a free duration, so route drawn characters and products there. The person policy here is documented as the same allow_adult contract veo_img2video runs under, but it is unmeasured on this mode; only the image lane was probed.
-Reference images are ASSET only: they preserve ONE subject's appearance, NOT the layout of the picture. For a cut that must match a drawn composition use veo_img2video with sourceImagePath + lastImagePath. Veo 3.1 has no style reference at all — the official docs send style images to the experimental veo-2.0 model, so route sketch or toon style transfer to seedance_reference instead.
-Duration is fixed at 8 seconds when reference images are used. Takes 1-6 minutes.
-
-Returns: a text block with the saved .mp4 file path, reference image list, model, aspect ratio, resolution, and duration.`,
-    inputSchema: {
-      type: 'object',
-      properties: {
-        prompt: {
-          type: 'string',
-          description: 'Detailed text description of the video scene and subject interactions',
-        },
-        referenceImagePaths: {
-          type: 'array',
-          items: {
-            type: 'string',
-          },
-          minItems: 1,
-          maxItems: 3,
-          description: 'Array of 1-3 absolute paths to reference images. These images guide the video generation to preserve subject appearance.',
-        },
-        model: {
-          type: 'string',
-          description: 'Veo model (default: "veo-3.1-fast-generate-preview"). The lite model does NOT support reference images. Blind-arena Elo has fast and standard statistically tied, so standard only buys 4k here.',
-          enum: ['veo-3.1-generate-preview', 'veo-3.1-fast-generate-preview'],
-          default: 'veo-3.1-fast-generate-preview',
-        },
-        aspectRatio: {
-          type: 'string',
-          description: 'Aspect ratio of the generated video (default: "16:9")',
-          enum: ['16:9', '9:16'],
-          default: '16:9',
-        },
-        resolution: VEO_RESOLUTION_PROPERTY,
-        outputPath: {
-          type: 'string',
-          description: 'Directory path to save the generated video (default: current working directory)',
-        },
-        filename: {
-          type: 'string',
-          description: 'Filename for the generated video (default: video_ref_<timestamp>.mp4)',
-        },
-      },
-      required: ['prompt', 'referenceImagePaths'],
-    },
-  },
-
-  // ── Video generation (Gemini Omni 1.1 Flash — the Interactions API lane) ──────────
-  {
-    name: 'omni_text2video',
-    title: 'Omni video generation (text → video)',
-    annotations: HINT.generate,
-    description: `Generate a video with native audio from a text prompt using Gemini Omni 1.1 Flash.
-
-Use when the shot needs a length off Veo's 4/6/8 grid (any whole 3-10 seconds), or when the cut will be edited or extended afterwards — omni_edit and omni_extend continue from the interactionId this returns.
-Do NOT use when a source visual exists — omni_img2video animates a still, omni_extend continues a clip, omni_edit rewrites one.
-COST, measured 2026-09-06: this model bills a FLAT ~$1.01 per call, not per second. A 3-second 360p draft costs the same as a full 10-second 4k render. Ask for the seconds you actually want; a shorter clip refunds nothing.
-Audio is always generated and cannot be turned off: wrap dialogue in double quotes and name SFX and ambience in the prompt. There is no negative-prompt field on this model — write exclusions as positive description instead.
-
-Returns: a text block with the saved .mp4 path, the interaction id to continue from, resolution, aspect ratio, and duration.`,
-    inputSchema: {
-      type: 'object',
-      properties: {
-        prompt: {
-          type: 'string',
-          description: 'Descriptive text prompt for video generation (English recommended)',
-        },
-        aspectRatio: OMNI_ASPECT_RATIO_PROPERTY,
-        resolution: OMNI_RESOLUTION_PROPERTY,
-        durationSeconds: OMNI_DURATION_PROPERTY,
-        seed: {
-          type: 'number',
-          description: 'Optional decoding seed for reproducibility.',
-        },
-        outputPath: {
-          type: 'string',
-          description: 'Directory path to save the generated video (default: current working directory)',
-        },
-        filename: {
-          type: 'string',
-          description: 'Filename for the generated video (default: omni_<timestamp>.mp4)',
-        },
-      },
-      required: ['prompt'],
-    },
-  },
-  {
-    name: 'omni_img2video',
-    title: 'Omni video generation (image → video)',
-    annotations: HINT.generate,
-    description: `Animate a still image, or interpolate between two images, using Gemini Omni 1.1 Flash.
-
-Use when a generated background or photo has to move and the cut wants an off-grid length, or will be edited afterwards. Pass sourceImagePath as the first frame; add lastImagePath and the model renders the transition between the two. Billing is a flat ~$1.01 per call regardless of length or resolution.
-Do NOT use for pure text-to-video (omni_text2video) or for continuing an existing clip (omni_extend).
-veo_img2video remains the lane for a photoreal adult face, whose policy is measured there; Omni's person policy is unmeasured, so route people to Veo until it is.
-Composition control lives here — a subject appearing, vanishing, or ending in an exact pose — because both frames are yours.
-
-Returns: a text block with the saved .mp4 path, the interaction id to continue from, the source frames, resolution, aspect ratio, and duration.`,
-    inputSchema: {
-      type: 'object',
-      properties: {
-        prompt: {
-          type: 'string',
-          description: 'Text description of the motion to add',
-        },
-        sourceImagePath: {
-          type: 'string',
-          description: 'Absolute path to the first frame (starting) image file',
-        },
-        lastImagePath: {
-          type: 'string',
-          description: 'Optional: absolute path to the last frame image. When given, the video renders the transition from the first image to this one.',
-        },
-        aspectRatio: OMNI_ASPECT_RATIO_PROPERTY,
-        resolution: OMNI_RESOLUTION_PROPERTY,
-        durationSeconds: OMNI_DURATION_PROPERTY,
-        seed: {
-          type: 'number',
-          description: 'Optional decoding seed for reproducibility.',
-        },
-        outputPath: {
-          type: 'string',
-          description: 'Directory path to save the generated video (default: current working directory)',
-        },
-        filename: {
-          type: 'string',
-          description: 'Filename for the generated video (default: omni_<timestamp>.mp4)',
-        },
-      },
-      required: ['prompt', 'sourceImagePath'],
-    },
-  },
-  {
-    name: 'omni_extend',
-    title: 'Omni video extension (3-10s per call, 40s cumulative)',
-    annotations: HINT.generate,
-    description: `Continue a clip with Gemini Omni 1.1 Flash, adding 3-10 seconds of new content per call.
-
-Use when a shot has to run longer than one generation. Name the source exactly one of two ways: previousInteractionId, from an earlier omni_* call in this session, or sourceVideoPath, a local mp4 of at most 10 seconds. Google caps the cumulative length at 40 seconds.
-Do NOT expect only the new tail back — the saved file is the WHOLE cut, input included (measured: a 3s clip extended by 8s came back 11s), so do not concatenate it onto the source yourself.
-Against veo_extension: that one adds a fixed 7s, takes only Veo output, and needs a Veo model tier; this one takes any mp4 you have, adds a length you pick, and works on Omni output. Each call is a flat ~$1.01 whatever it adds, so add the full 10 seconds when you can. Aspect ratio is not settable here — the input video's ratio wins.
-
-Returns: a text block with the saved .mp4 path, the new interaction id, the source, and the seconds added.`,
-    inputSchema: {
-      type: 'object',
-      properties: {
-        prompt: {
-          type: 'string',
-          description: 'What happens next — describe the continuation ("the camera keeps pushing in as the door opens").',
-        },
-        previousInteractionId: {
-          type: 'string',
-          description: 'Interaction id returned by an earlier omni_* call. Give this OR sourceVideoPath, not both.',
-        },
-        sourceVideoPath: {
-          type: 'string',
-          description: 'Absolute path to a local mp4 of at most 10 seconds. Give this OR previousInteractionId, not both.',
-        },
-        resolution: OMNI_RESOLUTION_PROPERTY,
-        durationSeconds: {
-          type: 'number',
-          description: 'Seconds of NEW content to add, 3 to 10 (default: 8). The returned file is the whole cut, so it runs source + this.',
-          minimum: 3,
-          maximum: 10,
-          default: 8,
-        },
-        seed: {
-          type: 'number',
-          description: 'Optional decoding seed for reproducibility.',
-        },
-        outputPath: {
-          type: 'string',
-          description: 'Directory path to save the extended video (default: current working directory)',
-        },
-        filename: {
-          type: 'string',
-          description: 'Filename for the extended video (default: omni_<timestamp>.mp4)',
-        },
-      },
-      required: ['prompt'],
-    },
-  },
-  {
-    name: 'omni_edit',
-    title: 'Omni video edit (instruction, same length)',
-    annotations: HINT.generate,
-    description: `Rewrite what is inside a clip by instruction, keeping its length, using Gemini Omni 1.1 Flash.
-
-Use when a generated cut is right in movement and framing but wrong in content — swap an object, change a colour, drop something from the frame — instead of re-rolling the whole shot and losing the camera move. State the change plainly ("change the persimmon to a green apple, keep the camera move identical"). Source is exactly one of previousInteractionId (an earlier omni_* call) or sourceVideoPath (a local mp4 of at most 10 seconds).
-Do NOT use to make a clip longer — that is omni_extend. Veo has no instruction-edit lane at all, so a Veo clip that needs one comes here by file path.
-The output runs the same length as the input (measured 3.008s in, 3.008s out); aspect ratio is inherited and not settable. Each edit is a fresh generation billed at the flat ~$1.01, not a cheap patch.
-
-Returns: a text block with the saved .mp4 path, the new interaction id, and the source.`,
-    inputSchema: {
-      type: 'object',
-      properties: {
-        prompt: {
-          type: 'string',
-          description: 'The change to make, stated plainly. Say what to keep as well as what to change.',
-        },
-        previousInteractionId: {
-          type: 'string',
-          description: 'Interaction id returned by an earlier omni_* call. Give this OR sourceVideoPath, not both.',
-        },
-        sourceVideoPath: {
-          type: 'string',
-          description: 'Absolute path to a local mp4 of at most 10 seconds. Give this OR previousInteractionId, not both.',
-        },
-        resolution: OMNI_RESOLUTION_PROPERTY,
-        seed: {
-          type: 'number',
-          description: 'Optional decoding seed for reproducibility.',
-        },
-        outputPath: {
-          type: 'string',
-          description: 'Directory path to save the edited video (default: current working directory)',
-        },
-        filename: {
-          type: 'string',
-          description: 'Filename for the edited video (default: omni_<timestamp>.mp4)',
-        },
-      },
-      required: ['prompt'],
-    },
-  },
-
 
   // ── Video generation (ASTRA video API — self-hosted LTX-2.5) ──────────────
   // The only lane that is ours: no per-call bill, no vendor policy, weights on our box.
@@ -2643,6 +2231,30 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
     },
   },
   {
+    name: 'astra_video_upscale',
+    title: 'ASTRA video 2x upscale (pixel-upscaler-x2)',
+    annotations: HINT.generate,
+    description: `Double an existing clip's resolution with the LTX pixel-upscaler-x2 IC-LoRA on the self-hosted ASTRA video API. Use only when the user asks to upscale a clip; the final canvas scale stays the default for a 720p or smaller source.
+
+The tool measures the clip and sends exactly twice its width and height, its frame rate and the largest 8k+1 frame count that fits (trailing frames beyond it are dropped and reported). The source sides must be multiples of 32 and the doubled frame at most ${ASTRA_VIDEO_MAX_REFERENCE_PIXELS} pixels: 512x896 or 896x512 fits, a 720p clip does not. The source soundtrack is copied back onto the result.
+This is a generative re-render, not a scaler. Measured 2026-10-30: with the shot's own description the scene held, but the face, mouth shapes and a prop colour drifted; a bare "upscale" prompt invented content. Inspect identity, lip sync and props against the source before using the result. Not reviewed by the tool.
+${ASTRA_LIMITS_LINE}
+
+Returns: the saved .mp4 path, the job id, source size and frame count, dropped frames and the audio handling.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        sourceVideoPath: { type: 'string', description: 'Local source clip (.mp4 up to 100 MiB). Uploaded automatically; never overwritten.' },
+        prompt: { type: 'string', description: 'What the clip shows: subject, action, setting and light, as in the shot plan. Required; a one-word prompt invents content. 1-2000 characters.' },
+        referenceStrength: { type: 'number', minimum: 0, maximum: 1, description: 'Reference conditioning strength, 0.0-1.0 (server default: 1.0).' },
+        seed: ASTRA_SEED_PROPERTY,
+        outputPath: { type: 'string', description: 'Output directory (default: the source clip\'s directory).' },
+        filename: { type: 'string', description: 'Bare .mp4 filename (default: <source name>-x2.mp4).' },
+      },
+      required: ['sourceVideoPath', 'prompt'],
+    },
+  },
+  {
     name: 'astra_video_retake',
     title: 'ASTRA video retake (re-roll a span)',
     annotations: HINT.generate,
@@ -2714,17 +2326,17 @@ Returns: the server's JSON report verbatim. No arguments.`,
       additionalProperties: false,
     },
   },
-  // ── Video generation (ByteDance Seedance — BytePlus ModelArk) ─────────────
-  // The second engine sharing Veo's slot. The source of truth for which to use
-  // when is skills/produce/references/video-model-selection.md.
+  // ── Video generation (ByteDance Seedance 2.x — BytePlus ModelArk) ─────────
+  // The source of truth for which engine to use when is
+  // skills/produce/references/video-model-selection.md.
   {
     name: 'seedance_text2video',
     title: 'Video generation (text → video, Seedance)',
     annotations: HINT.generate,
     description: `Generate a video from a text prompt using ByteDance Seedance (BytePlus ModelArk).
 
-Use when you need a clip that Veo's fixed 4/6/8-second grid cannot express — an odd length (2-30 seconds, any whole second), a 21:9 or 4:3 frame, or a silent shot billed for the requested duration. Korean prompts are understood only by dreamina-seedance-2-5; every other model expects English.
-Do NOT use when you need Veo's native dialogue audio quality or its +7s extension of an existing clip — veo_text2video and veo_extension keep those. When a source visual already exists use seedance_img2video, and for subject consistency from photos use seedance_reference.
+Use for a cut no character speaks in: any whole-second length from 4 to 30, a 21:9 or 4:3 frame, billed for the requested duration. Korean prompts are understood only by dreamina-seedance-2-5; every other model expects English.
+Do NOT use for a cut where a character speaks — that needs the speaker's voice sample through seedance_reference (or astra_genai_msr). When a source visual already exists use seedance_img2video, and for subject consistency from photos use seedance_reference.
 Model choice drives both price and limits; read the model parameter before overriding the default. Generation is asynchronous and typically takes 1-6 minutes.
 
 Returns: a text block with the saved .mp4 file path, model, ratio, resolution, duration, and the billed completion token count.`,
@@ -2733,7 +2345,7 @@ Returns: a text block with the saved .mp4 file path, model, ratio, resolution, d
       properties: {
         prompt: {
           type: 'string',
-          description: 'Video description. Vendor formula: Subject + Movement + Environment + Camera movement + Aesthetic description + Sound. Write camera as a span, not a verb — "starting frame composition + movement + movement amplitude + ending frame composition" (combos the docs name: Hitchcock = dolly-in/out + zoom-out/in, bullet time = time slowdown + surround). Shot size follows the example word order, "Close-up of the man on the left". Do NOT write timecodes such as "0-3 seconds" — the vendor states precise-timing support is unstable and forcing it degrades the result; cut timing in the edit instead, and write an in-clip state change in words ("in under half a second"). Multi-cut in one call is supported via "Shot 1: ... Shot 2: ..." or "The shot cuts to ..." — open on the wide so the later cuts inherit one floor plan, time each cut by a dialogue or action beat, and give each its own shot size. There is no negativePrompt parameter on this engine: an unwanted element is designed out of the sentence, never forbidden in it, and what must hold goes into a closing positive-locks paragraph ("the lantern stays lit in every cut; only two people ever appear") — the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative. Prompt body must be English or Chinese (Korean only on dreamina-seedance-2-5-260628) — Korean dialogue still works inside quotes on 1.5-pro, which lip-syncs it.',
+          description: 'Video description. Vendor formula: Subject + Movement + Environment + Camera movement + Aesthetic description + Sound. Write camera as a span, not a verb — "starting frame composition + movement + movement amplitude + ending frame composition" (combos the docs name: Hitchcock = dolly-in/out + zoom-out/in, bullet time = time slowdown + surround). Shot size follows the example word order, "Close-up of the man on the left". Do NOT write timecodes such as "0-3 seconds" — the vendor states precise-timing support is unstable and forcing it degrades the result; cut timing in the edit instead, and write an in-clip state change in words ("in under half a second"). Multi-cut in one call is supported via "Shot 1: ... Shot 2: ..." or "The shot cuts to ..." — open on the wide so the later cuts inherit one floor plan, time each cut by a dialogue or action beat, and give each its own shot size. There is no negativePrompt parameter on this engine: an unwanted element is designed out of the sentence, never forbidden in it, and what must hold goes into a closing positive-locks paragraph ("the lantern stays lit in every cut; only two people ever appear") — the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative. Prompt body must be English on every model; only quoted dialogue uses the video\'s language.',
         },
         model: SEEDANCE_MODEL_PROPERTY,
         ratio: {
@@ -2746,8 +2358,6 @@ Returns: a text block with the saved .mp4 file path, model, ratio, resolution, d
         durationSeconds: SEEDANCE_DURATION_PROPERTY,
         generateAudio: SEEDANCE_AUDIO_PROPERTY,
         watermark: SEEDANCE_WATERMARK_PROPERTY,
-        seed: SEEDANCE_SEED_PROPERTY,
-        cameraFixed: SEEDANCE_CAMERA_FIXED_PROPERTY,
         outputPath: {
           type: 'string',
           description: 'Directory path to save the generated video (default: current working directory)',
@@ -2766,9 +2376,9 @@ Returns: a text block with the saved .mp4 file path, model, ratio, resolution, d
     annotations: HINT.generate,
     description: `Animate a still image into a video (first frame, or first+last frame interpolation) using ByteDance Seedance.
 
-Use for the cheap b-roll lane of this pipeline: animating an already-generated cover or point background PNG. ratio defaults to "adaptive" so the source image is not center-cropped — pass an explicit ratio only when you intend a different frame. Billing follows the requested duration, so ask for the length you will actually cut in.
-The default model (seedance-1-5-pro) accepts photoreal human faces. The dreamina-seedance-2.5/2.0 models REJECT input images containing real human faces, so never route a photoreal-person background through them.
-Do NOT use for pure text-to-video (use seedance_text2video) or for subject consistency across several photos (use seedance_reference). Veo's veo_img2video remains the choice when you want its native audio or Veo-only extension afterwards.
+Use for a b-roll cut no character speaks in: animating an already-generated cover or point background PNG. ratio defaults to "adaptive" so the source image is not center-cropped — pass an explicit ratio only when you intend a different frame. Billing follows the requested duration, so ask for the length you will actually cut in.
+Every Seedance model REJECTS input images containing real human faces, so never route a photoreal-person background through it.
+Do NOT use for pure text-to-video (use seedance_text2video), for subject consistency across several photos, or for a cut where a character speaks (both use seedance_reference).
 
 Returns: a text block with the saved .mp4 file path, source/last frame image paths, model, ratio, resolution, duration, and the billed completion token count.`,
     inputSchema: {
@@ -2776,7 +2386,7 @@ Returns: a text block with the saved .mp4 file path, source/last frame image pat
       properties: {
         prompt: {
           type: 'string',
-          description: 'Identity words stay, layout words go — the Seedance image lane is not motion-only (that is Veo\'s rule). Reuse the source image prompt\'s identity words (who and what the subject is), drop the composition words (where things sit — the frame already holds that), add the motion, write camera as a span ("starting frame composition + movement + ending frame composition"), and CLOSE WITH A CONSISTENCY LOCK: "the subject stays exactly consistent with the input frame; appearance, proportions and materials hold; no unrelated elements appear". Re-describe the layout, facing or lighting and the model redesigns the scene. Do NOT write timecodes such as "0-3 seconds" (vendor: precise-timing support is unstable) — an in-clip state change goes in words ("in under half a second"), and the length lives in durationSeconds. English or Chinese only (Korean on dreamina-seedance-2-5 alone, and inside dialogue quotes on 1.5-pro). There is no negativePrompt parameter on this engine: an unwanted element is designed out of the sentence and pinned by the lock, never forbidden in it — the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative.',
+          description: 'Identity words stay, layout words go — the Seedance image lane is not motion-only. Reuse the source image prompt\'s identity words (who and what the subject is), drop the composition words (where things sit — the frame already holds that), add the motion, write camera as a span ("starting frame composition + movement + ending frame composition"), and CLOSE WITH A CONSISTENCY LOCK: "the subject stays exactly consistent with the input frame; appearance, proportions and materials hold; no unrelated elements appear". Re-describe the layout, facing or lighting and the model redesigns the scene. Do NOT write timecodes such as "0-3 seconds" (vendor: precise-timing support is unstable) — an in-clip state change goes in words ("in under half a second"), and the length lives in durationSeconds. English on every model; only quoted dialogue uses the video\'s language. There is no negativePrompt parameter on this engine: an unwanted element is designed out of the sentence and pinned by the lock, never forbidden in it — the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative.',
         },
         sourceImagePath: {
           type: 'string',
@@ -2784,7 +2394,7 @@ Returns: a text block with the saved .mp4 file path, source/last frame image pat
         },
         lastImagePath: {
           type: 'string',
-          description: 'Optional: Absolute path to the last frame (ending) image file for a smooth interpolation. Not supported by seedance-1-0-pro-fast-251015 (first frame only).',
+          description: 'Optional: Absolute path to the last frame (ending) image file for a smooth interpolation.',
         },
         model: SEEDANCE_MODEL_PROPERTY,
         ratio: {
@@ -2797,8 +2407,6 @@ Returns: a text block with the saved .mp4 file path, source/last frame image pat
         durationSeconds: SEEDANCE_DURATION_PROPERTY,
         generateAudio: SEEDANCE_AUDIO_PROPERTY,
         watermark: SEEDANCE_WATERMARK_PROPERTY,
-        seed: SEEDANCE_SEED_PROPERTY,
-        cameraFixed: SEEDANCE_CAMERA_FIXED_PROPERTY,
         outputPath: {
           type: 'string',
           description: 'Directory path to save the generated video (default: current working directory)',
@@ -2813,15 +2421,15 @@ Returns: a text block with the saved .mp4 file path, source/last frame image pat
   },
   {
     name: 'seedance_reference',
-    title: 'Video generation (reference images, Seedance 2.x)',
+    title: 'Video generation (reference images and voices, Seedance 2.x)',
     annotations: HINT.generate,
     description: `Generate a video that keeps subjects from reference images consistent, using Dreamina Seedance 2.x.
 
-Use when a character, product, or garment must stay the same across the shot and you have several photos of it (캐릭터 일관성, 제품 영상). dreamina-seedance-2-5-260628 takes 1-30 reference images and up to 30 seconds; the 2.0 series takes 1-9 and up to 15 seconds. Unlike veo_reference the length is not pinned to 8 seconds.
-Do NOT pass reference images containing real human faces — the 2.x models reject them; use veo_reference for real people. The seedance-1-5-pro and 1.0 models do not accept reference images at all and are rejected before the call. These models also need account balance > $30 to activate.
-References carry the artistic STYLE through along with the subject. That is the feature when you want a sketch or toon look transferred — this is the only style-transfer lane in the plugin, since Veo 3.1 dropped style references — and a defect when you only wanted the layout: a storyboard frame passed here returns its drawing style, not its composition. For composition use seedance_img2video with sourceImagePath + lastImagePath.
+Use when a character, product, or garment must stay the same across the shot and you have several photos of it (캐릭터 일관성, 제품 영상), and for every Seedance cut where a character speaks: each speaker gets their image and voice sample, as MSR does on LTX. dreamina-seedance-2-5-260628 takes 1-30 reference images and up to 30 seconds; the 2.0 series takes 1-9 and up to 15 seconds.
+Do NOT pass reference images containing real human faces — every Seedance model rejects them. These models also need account balance > $30 to activate.
+References carry the artistic STYLE through along with the subject. That is the feature when you want a sketch or toon look transferred — this is the only style-transfer lane in the plugin — and a defect when you only wanted the layout: a storyboard frame passed here returns its drawing style, not its composition. For composition use seedance_img2video with sourceImagePath + lastImagePath.
 Do NOT feed a three-view or multi-view character sheet. ByteDance's own docs advise against it twice: the model reads the separate angles as separate people, which worsens identity drift and produces duplicate characters in one frame. Send a headshot (face only, neutral expression, minimal shoulders and background) plus one full-body shot instead — the docs call those two sufficient. Order is weight: put the asset that must be matched most precisely first in the array.
-Reference AUDIO gives a character a fixed voice. Pass the clip in referenceAudioPaths with generateAudio: true and bind it in the prompt the way the 2.5 guide does — "Images 1-2 are Character 1 and correspond to Audio 1; Image 3 is Character 2 and speaks with the voice of Audio 2" (@Image N and @Audio N are each list's own order). Route this to dreamina-seedance-2-5-260628: only its guide documents the per-character mapping and only it takes audio-only input; the 2.0 series takes at most 3 clips and needs an image alongside. A channel character's fixed voice sample lives at data/<channel>/assets/characters/<id>/voice.wav. Veo has no audio reference at all.
+Reference AUDIO gives a character a fixed voice. Pass the clip in referenceAudioPaths with generateAudio: true and bind it in the prompt the way the 2.5 guide does — "Images 1-2 are Character 1 and correspond to Audio 1; Image 3 is Character 2 and speaks with the voice of Audio 2" (@Image N and @Audio N are each list's own order). Route this to dreamina-seedance-2-5-260628: only its guide documents the per-character mapping and only it takes audio-only input; the 2.0 series takes at most 3 clips and needs an image alongside. A channel character's fixed voice sample lives at data/<channel>/assets/characters/<id>/voice.wav; video_plan binds it from the character's voiceReference.
 Reference VIDEO hands over camera movement, blocking and motion timing — the Blender previz lane (blender_render_previz → referenceVideoPaths). The vendor's own "3D clay-model reference" recipe: a grey primitive render, each actor its own flat colour, no stamp or gizmos, 24 fps, a whole number of seconds equal to durationSeconds; the styled source still goes first in referenceImagePaths ("Image 1 is the first frame" — first_frame cannot be mixed with a reference video); the prompt names "Video 1" as the ONLY reference for camera, shot rhythm, subject trajectory and blocking, maps each coloured model to its Image, and says "Do not reference its visual content". The vendor takes video by public URL only, so a local file is published for the life of the task — through MEDIA_UPLOAD_URL when set, else a cloudflared quick tunnel — and released afterwards. Input seconds are billed alongside output seconds at a lower per-token rate.
 
 Returns: a text block with the saved .mp4 file path, reference image, video and audio lists, model, ratio, resolution, duration, and the billed completion token count.`,
@@ -2830,7 +2438,7 @@ Returns: a text block with the saved .mp4 file path, reference image, video and 
       properties: {
         prompt: {
           type: 'string',
-          description: 'Scene and subject interactions. The 2.x advanced formula: precise subject + action details + scene/environment + lighting & color tone + camera movement + visual style + image quality + constraints. For multi-cut, write a "Shot 1 / Shot 2 / Shot 3" storyboard and order each shot as camera movement -> subject action and expression -> position change -> audio; open on the wide so the later cuts inherit one floor plan, and time each cut by an action beat. Do NOT put timecodes on the shots — the vendor states precise-timing support is unstable (dreamina-seedance-2-5-260628 alone takes integer-second forms). Close with the constraints slot as a POSITIVE-LOCKS paragraph — what holds in every frame, said positively, with each reference given its scope ("@ocean_location controls water and sky only"; "the lantern stays lit in every cut") — because this engine has no negativePrompt parameter; the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative. English or Chinese only (Korean on dreamina-seedance-2-5-260628 alone; for audio-conditioned speech, use the supplied audio and omit literal dialogue quotes from the visual prompt). Unwanted subtitles cannot be fully blocked at 9:16: the vendor notes portrait output hallucinates burned-in text noticeably more often than landscape, so inspect the frames.',
+          description: 'Scene and subject interactions. The 2.x advanced formula: precise subject + action details + scene/environment + lighting & color tone + camera movement + visual style + image quality + constraints. For multi-cut, write a "Shot 1 / Shot 2 / Shot 3" storyboard and order each shot as camera movement -> subject action and expression -> position change -> audio; open on the wide so the later cuts inherit one floor plan, and time each cut by an action beat. Do NOT put timecodes on the shots — the vendor states precise-timing support is unstable (dreamina-seedance-2-5-260628 alone takes integer-second forms). Close with the constraints slot as a POSITIVE-LOCKS paragraph — what holds in every frame, said positively, with each reference given its scope ("@ocean_location controls water and sky only"; "the lantern stays lit in every cut") — because this engine has no negativePrompt parameter; the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative. English on every model; only quoted dialogue uses the video\'s language (for audio-conditioned speech, use the supplied audio and omit literal dialogue quotes from the visual prompt). Unwanted subtitles cannot be fully blocked at 9:16: the vendor notes portrait output hallucinates burned-in text noticeably more often than landscape, so inspect the frames.',
         },
         referenceImagePaths: {
           type: 'array',
@@ -2858,9 +2466,9 @@ Returns: a text block with the saved .mp4 file path, reference image, video and 
         },
         model: {
           type: 'string',
-          description: `Seedance model (default: "${DEFAULT_SEEDANCE_REFERENCE_MODEL}" — the only reference-capable model with independent quality data: rank 1 on the Artificial Analysis blind image-to-video arena, and it also outputs 1080p and 4k). Only the 2.x models accept reference images. Switch to dreamina-seedance-2-5-260628 when you actually need more than 9 reference images or more than 15 seconds — it is untested in every public arena, so do not pick it for a shot that matters without comparing first. fast and mini trade quality for cost and are likewise untested.`,
-          enum: [...SEEDANCE_REFERENCE_MODELS],
-          default: DEFAULT_SEEDANCE_REFERENCE_MODEL,
+          description: `Seedance model (default: "${DEFAULT_SEEDANCE_MODEL}" — the only model with independent quality data: rank 1 on the Artificial Analysis blind image-to-video arena, and it also outputs 1080p and 4k). Switch to dreamina-seedance-2-5-260628 when you actually need more than 9 reference images or more than 15 seconds — it is untested in every public arena, so do not pick it for a shot that matters without comparing first. fast and mini trade quality for cost and are likewise untested.`,
+          enum: [...VALID_SEEDANCE_MODELS],
+          default: DEFAULT_SEEDANCE_MODEL,
         },
         ratio: {
           type: 'string',
@@ -2894,7 +2502,7 @@ Returns: a text block with the saved .mp4 file path, reference image, video and 
     description: `Generate a video on this machine via MLX Core / mlx-serve. The server returns raw rgb8 frames (plus optional PCM), which this tool muxes to mp4 with ffmpeg (libx264 yuv420p). No vendor bill. This plugin never launches the app.
 
 Use as an optional local clip when MLX Core is running with a video model (LTX 2.5 MLX pack — install runbook in docs/mlx-ltx-2.5.md). Default canvas is ${DEFAULT_MLX_VIDEO_WIDTH}×${DEFAULT_MLX_VIDEO_HEIGHT} at ${DEFAULT_MLX_VIDEO_FRAMES} frames / ${MLX_VIDEO_FPS} fps (~2s). Width/height must be a multiple of ${MLX_VIDEO_DIMENSION_STEP} (two-stage LTX grid), or of ${MLX_VIDEO_DIMENSION_STEP_ONE_STAGE} when you pass pipeline:"one_stage" — 1080 is on neither grid; use 1088×1920 or the default. numFrames is ${MLX_VIDEO_FRAME_STEP}k+1 (${MIN_MLX_VIDEO_FRAMES}, 17, … ${DEFAULT_MLX_VIDEO_FRAMES} …): any other count is answered 200 with the server's own default. Decoded RGB is capped at ${Math.round(MAX_VIDEO_RGB_BYTES / (1024 * 1024))}MB — 1088×1920 at 8s/24fps is ~1.2GB and is refused. lastFrameImagePath needs at least ${MIN_MLX_VIDEO_FRAMES} frames.
-Do NOT use this as the default generated-video path — that stays veo_* / seedance_* per video-model-selection.md. Do NOT put this tool on the Veo/Seedance face-policy table; it is a separate local engine. Output is ${MLX_VIDEO_FPS} fps; produce's builder is 30 fps, so a splice re-encodes. ffmpeg must be on PATH. Shares the GPU with Z-Image and the chat model — LTX wants 24GB+ on its own.
+Do NOT use this as the default generated-video path — that follows the saved model per video-model-selection.md, and video_plan refuses spoken cuts here (no voice lane). Output is ${MLX_VIDEO_FPS} fps; produce's builder is 30 fps, so a splice re-encodes. ffmpeg must be on PATH. Shares the GPU with Z-Image and the chat model — LTX wants 24GB+ on its own.
 Requires Apple Silicon, macOS 26.2+, MLX Core.app or mlx-serve (or MLX_SERVE_URL), and ffmpeg. brew install --cask mlx-core if :11234 is down.
 
 Returns: a text block with the saved .mp4 path, model, size, frame count, fps, and whether audio was muxed.`,
@@ -3501,7 +3109,7 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
     },
   },
 
-  // ── Speech synthesis (Google Gemini TTS — ported from the fect-mcp tts module) ─────────
+  // ── Speech synthesis (Google Gemini TTS) ─────────
   {
     name: 'tts_review_final', title: 'Review assembled speech', annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     description: "Legacy alias of host_review prepare for the assembled episode audio (mediaPath of the final media, the full expectedText, optional segments): returns local evidence for the host LLM to listen to end to end. Use only when the user asks for a final listening review and an existing plan already calls tts_review_final; new reviews use host_review. Returns status=not_reviewed, score=null, mediaPath, SHA256, duration in seconds, rubric, nextAction and the segments as sent. It does not judge, upload or call an external evaluator, and assembly never waits on it. Do NOT use for synthesis.",
@@ -3523,7 +3131,7 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
       name: { description: 'Descriptive name of the new dictionary.', type: 'string', minLength: 1, maxLength: 200 },
       rules: { description: 'Approved source spelling and intended spoken aliases.', type: 'array', minItems: 1, maxItems: 100, items: { type: 'object', additionalProperties: false, properties: {
         stringToReplace: { description: 'Source name as written in the narration.', type: 'string', minLength: 1, maxLength: 200 }, alias: { description: 'Intended pronunciation in Hangul for an alias rule.', type: 'string', minLength: 1, maxLength: 200 },
-        type: { description: 'Rule kind; alias by default. Non-English phonemes require v3.', type: 'string', enum: ['alias','phoneme'], default: 'alias' },
+        type: { description: 'Rule kind; alias by default.', type: 'string', enum: ['alias','phoneme'], default: 'alias' },
         phoneme: { description: 'Phonetic notation for a phoneme rule.', type: 'string', minLength: 1, maxLength: 200 },
         alphabet: { description: 'Alphabet of the phoneme rule.', type: 'string', enum: ['ipa','cmu-arpabet'] },
       }, required: ['stringToReplace'] } },
@@ -3552,9 +3160,9 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
           texts: { description: 'Complete scene texts in playback order.', type: 'array', minItems: 1, maxItems: 80, items: { type: 'string', minLength: 1, maxLength: 4000 } },
           index: { description: 'Index of this scene in texts, starting at zero.', type: 'integer', minimum: 0 }, seed: { description: 'One seed fixed across the episode and all retakes.', type: 'integer', minimum: 0, maximum: 4294967295 },
         }, required: ['texts','index','seed'] },
-        segments: { type: 'array', minItems: 1, maxItems: 80, items: { type: 'string', minLength: 1, maxLength: 1000 }, description: 'The scene\'s narration[].tts sentences in order (joined they read as expectedText). Every single-voice take gets a fixed pause at each segment boundary — the boundary the builder\'s reveals and subtitle cues use. Without it, pauses go after sentence-final punctuation.' },
-        sentencePause: { type: 'number', minimum: 0.25, maximum: 1.5, default: 0.5, description: 'Silence between sentences in the take\'s own timeline, seconds. The builder detects pauses from 0.16s and fits a 0.35s reveal fade inside one.' },
-        playbackSpeed: { type: 'number', minimum: 0.5, maximum: 3, default: 1, description: 'ElevenLabs requires 1: use generation.speed for the requested rate and keep assembly at 1. Other engines require an explicit user request in outputPath/speed-authorization.json for any non-1 factor; this controls subtitle pause sizing.' },
+        segments: { type: 'array', minItems: 1, maxItems: 80, items: { type: 'string', minLength: 1, maxLength: 1000 }, description: 'Legacy field; the single-take path inserts no pauses. The scene\'s narration[].tts sentences in order (joined they read as expectedText). Every single-voice take gets a fixed pause at each segment boundary — the boundary the builder\'s reveals and subtitle cues use. Without it, pauses go after sentence-final punctuation.' },
+        sentencePause: { type: 'number', minimum: 0.25, maximum: 1.5, default: 0.5, description: 'Legacy field; the single-take path inserts no pauses. Silence between sentences in the take\'s own timeline, seconds. The builder detects pauses from 0.16s and fits a 0.35s reveal fade inside one.' },
+        playbackSpeed: { type: 'number', minimum: 0.5, maximum: 3, default: 1, description: 'Legacy field; the single-take path does not apply it. ElevenLabs requires 1 — eleven_v4 has no speed control, so pace goes in [audio tags]. Another engine needs an explicit user request in outputPath/speed-authorization.json for any non-1 factor.' },
         transcriptCheck: { type: 'object', additionalProperties: false, required: ['requestedBy','reason'], description: 'Present only when the user asked for a blind-transcription (STT) check; it is recorded for the host review. No transcription or listening runs automatically. Carries who asked and their actual words — there is no environment default.', properties: {
           requestedBy: { type: 'string', minLength: 1, maxLength: 200, description: 'Who asked for the dictation check, e.g. "user".' }, reason: { type: 'string', minLength: 10, maxLength: 1000, description: 'The actual request that turned it on, quoted or referenced.' },
         } },
@@ -3642,7 +3250,7 @@ Returns: a text block with the saved 24kHz mono RIFF WAV path, model, voice or s
           minLength: 1,
           maxLength: 300,
           default: DEFAULT_VOICE,
-          description: 'Single-voice selection: curated name, extended-library voice, designed voice_ ID, or replicated voice_ / voicekey_ ID. Ignored when speakers is present.',
+          description: 'Single-voice selection: curated name, extended-library voice, designed voice_ ID, or replicated voice_ / voicekey_ ID. Omit it when speakers is present — a voice there is rejected.',
         },
         speakers: {
           type: 'array',
@@ -3726,7 +3334,7 @@ Returns: a text block with the saved .wav file path, speaker/voice assignments, 
     name: 'tts_voice_design', title: 'Design a persistent Gemini character voice', annotations: HINT.generate,
     description: 'Create a paid stored Gemini voice from character age, vocal gender, timbre and accent using POST /v1beta/voices. Use when casting a custom character or changing perceived age/identity; turn style only controls delivery. Optional baseVoice remixes an existing voice. Returns voiceId, local WAV preview, hash, usage and receipt; use that ID with tts_gemini_38. Does not edit character sheets or episodes and does not certify age by listening. Requires GEMINI_API_KEY and a new outputPath per creation; never blindly retry an uncertain call. For catalog discovery use tts_list_voices source:library with filters; for ordinary lines use speech_manage plan_audio.',
     inputSchema: { type: 'object', additionalProperties: false, properties: {
-      model: { type: 'string', enum: ['gemini-3.8-flash-tts', 'gemini-3.8-flash-lite-tts'], description: 'Explicit voice creation model.' },
+      model: { type: 'string', enum: [...GEMINI_38_TTS_MODELS], description: 'Explicit voice creation model.' },
       displayName: { type: 'string', minLength: 1, maxLength: 100, description: 'Distinct name for later catalog reconciliation.' },
       prompt: { type: 'string', minLength: 1, maxLength: 4000, description: 'Stable voice identity: perceived age, timbre, accent and baseline delivery; relative changes if baseVoice is supplied.' },
       languageCode: { type: 'string', minLength: 1, description: 'BCP-47 primary language, e.g. ko-KR.' },
@@ -3793,7 +3401,7 @@ Returns: a text block with the saved .wav file path, speaker/voice assignments, 
     description: `Generate one sound effect from a text description with ElevenLabs (${ELEVENLABS_SFX_MODEL}) — the lane that fills a channel's sfx catalog so a shot's \`sound.sfx\` has a file behind it.
 
 Use for the cut effects a storyboard names in window.SFX (scenes-schema §sound effects): a whoosh on a whip transition, a low hit on the line before a drop, a tick or pop when a figure lands on a slide, a riser under a build, a 30-second room-tone loop for a bed. Write the prompt as a description in the vendor's own vocabulary (whoosh · impact · braam · riser · click · texture · ambience), one sound per call, with its shape spelled out ("short soft whoosh, fabric through air, no tail"); set durationSeconds for one-shots (a whoosh 0.6–1.0 s, a hit 1–2 s, a riser 2–4 s) and loop: true with 10–30 s for a bed. promptInfluence above the ${DEFAULT_ELEVENLABS_SFX_PROMPT_INFLUENCE} default reads the prompt more literally; below it, more freely. Save straight into the channel catalog — outputPath data/<channel>/assets/audio/sfx, filename <id>.wav — then register the row with resolve-asset.py --ensure and point its note at the .json sidecar this tool writes next to the file (tool, model, prompt, seconds, request id, date, rights). Generated once, an effect is a channel asset reused at $0 in every later episode.
-Do NOT use for music or a melodic bed — that is music_generate_clip / suno_generate_sound. Do NOT use for a clip's own soundtrack — that is the model's native audio through visual.audio. Do NOT request a loop under 5 s (it seams audibly under narration). The endpoint has no WAV format of its own: the server asks for PCM and writes the RIFF header itself, so the file is a mono 16-bit WAV the builder reads directly; a 403 output_format_not_allowed means the plan lacks that rate — retry with pcm_24000. API pricing is per minute of generated audio, $${ELEVENLABS_SFX_USD_PER_MINUTE.toFixed(2)} on every plan (pricing/api, read 2026-09-16), so a one-second effect is about $0.002; the ledger key is sfx.elevenlabs with the measured seconds as the quantity. Free-tier output is non-commercial and needs attribution — check the plan before publishing.
+Do NOT use for music or a melodic bed — that is music_plan → music_execute with the saved music model. Do NOT use for a clip's own soundtrack — that is the model's native audio through visual.audio. Do NOT request a loop under 5 s (it seams audibly under narration). The endpoint has no WAV format of its own: the server asks for PCM and writes the RIFF header itself, so the file is a mono 16-bit WAV the builder reads directly; a 403 output_format_not_allowed means the plan lacks that rate — retry with pcm_24000. API pricing is per minute of generated audio, $${ELEVENLABS_SFX_USD_PER_MINUTE.toFixed(2)} on every plan (pricing/api, read 2026-09-16), so a one-second effect is about $0.002; the ledger key is sfx.elevenlabs with the measured seconds as the quantity. Free-tier output is non-commercial and needs attribution — check the plan before publishing.
 
 Returns: a text block with the saved WAV path, the provenance sidecar path, the model, format, the measured duration, the USD estimate at the per-minute rate, and the request id.`,
     inputSchema: {
@@ -3895,14 +3503,14 @@ Returns: a text block with the saved .json path, detected language, segment coun
     },
   },
 
-  // ── Music generation (Google Lyria — ported from the fect-mcp music module) ────────────
+  // ── Music generation (Google Lyria) ────────────
   {
     name: 'music_generate_clip',
     title: 'Music generation (30s clip)',
     annotations: HINT.generate,
     description: `Generate a fixed 30-second music clip from a text prompt using Google Lyria 3 (batch, single call).
 
-Use as the DEFAULT for short-form BGM, jingles, and post background music (배경음악, BGM) — cheaper ($0.04/clip) and simpler than the streaming tools. Lyria 3 has no structured parameters: describe genre, instruments, BPM, key, mood, and structure in natural language inside the prompt, optionally with section tags ([Intro] [Verse] [Chorus] [Outro]) or timestamps ("[0:00 - 0:10] Intro: ..."). Can generate vocals and lyrics — add "instrumental only, no vocals" to the prompt if unwanted. Output carries a SynthID audio watermark.
+Use as a standalone 30-second Lyria clip for short-form BGM, jingles, and post background music (배경음악, BGM) — cheaper ($0.04/clip) and simpler than the streaming tools. Not the configured default: music_plan sends a saved lyria-3-clip-preview selection to music_generate_song. Lyria 3 has no structured parameters: describe genre, instruments, BPM, key, mood, and structure in natural language inside the prompt, optionally with section tags ([Intro] [Verse] [Chorus] [Outro]) or timestamps ("[0:00 - 0:10] Intro: ..."). Can generate vocals and lyrics — add "instrumental only, no vocals" to the prompt if unwanted. Output carries a SynthID audio watermark.
 If the request is blocked for "an unspecified policy reason", that is prompt filtering, not a bug — reword the prompt more plainly and retry once rather than repeating the same text.
 Do NOT use when an exact non-30s duration is required, or when the same music must be reproducible — use music_generate / music_generate_advanced (seed) instead. Non-deterministic: the same prompt returns different music each call, so store signature BGM as a reusable asset.
 
@@ -3932,7 +3540,7 @@ Returns: a text block with the saved .mp3 file path (44.1kHz stereo, exactly 30 
     annotations: HINT.generate,
     description: `Generate instrumental music from a text prompt using Google Lyria RealTime (streaming).
 
-Use when the requested duration must be controlled (5-300s) — e.g. matching a narration length. For standard 30-second short-form BGM, prefer music_generate_clip (cheaper, single call). Optionally constrain genre, mood, instruments, BPM (60-200). Genre/mood/instrument values are free text — music_list_options shows suggestions, not a closed list.
+Use when the requested duration must be controlled (5-300s) — e.g. matching a narration length. For a fixed 30-second bed, music_generate_clip is cheaper (single call); configured production uses music_plan with the saved model. Optionally constrain genre, mood, instruments, BPM (60-200). Genre/mood/instrument values are free text — music_list_options shows suggestions, not a closed list.
 Do NOT use for vocals or lyrics — Lyria RealTime is instrumental-only. For a sung song use suno_generate. For blending multiple weighted musical ideas or tuning density/brightness/seed, use music_generate_advanced.
 For BGM under narration, say so in the prompt (e.g. "leaves space for a spoken voiceover, no melody in the vocal frequency range").
 
@@ -4103,7 +3711,7 @@ Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), d
     description: `Generate music on this machine via MLX Core / mlx-serve POST /v1/audio/music-generations. Returns raw WAV. No vendor bill. This plugin never launches the app.
 
 Use as an optional local bed when MLX Core is running with a music model. Default is instrumental:true and durationSeconds ${DEFAULT_MLX_MUSIC_SECONDS} (${MIN_MLX_MUSIC_SECONDS}–${MAX_MLX_MUSIC_SECONDS}). instrumental:true cannot be sent beside lyrics — mlx-serve returns 400; set instrumental false to sing, or drop lyrics for a bed.
-Do NOT use as the default BGM path — that stays music_generate_clip (Lyria, GEMINI_API_KEY). Autoproduce unattended still takes the Lyria clip. Vocals fight voiceover; keep instrumental true under narration.
+Do NOT use in place of the saved music model — new music runs music_plan → music_execute with models.music; the legacy unattended bed still takes music_generate_clip. Vocals fight voiceover; keep instrumental true under narration.
 Requires Apple Silicon, macOS 26.2+, and MLX Core.app or mlx-serve (or MLX_SERVE_URL). brew install --cask mlx-core if :11234 is down.
 
 Returns: a text block with the saved .wav path, model, duration, and generation time.`,
@@ -4159,18 +3767,18 @@ Returns: a text block with the saved .wav path, model, duration, and generation 
   },
   {
     name: 'production_workflow',
-    title: 'Advance verified production stages',
+    title: 'Record production stage progress',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    description: 'Enforce fixed episode order: characters, text_storyboard, context_review, props, backgrounds, camera_review, blender_composition, image_storyboard, image_review, video, video_review. Reviews require independent evidence against current input hashes, a frozen rubric, no unresolved corrections and actual playback for video. Context review reconstructs audience understanding from cited text and cut IDs. Blender compositions must be actual render receipts and actual image-generation references. begin registers artifacts; complete validates them; rewind archives receipts and invalidates descendants. No skip, waiver or alternate renderer. Host tools and arbitrary shell writes remain outside this server boundary.',
+    description: 'Record an episode\'s progress through the stages characters, text_storyboard, context_review, props, backgrounds, camera_review, blender_composition, image_storyboard, image_review, video and video_review. A record, not a gate: stages begin and complete in any order, no other tool reads this state, and complete stores the hashes of the files a stage registered. begin registers a stage\'s files; complete records them; rewind drops a stage\'s record. The one check left: a story-v2 text_storyboard completes only once every shot has its story and characters (story_outline_required). Local file only; no generation.',
     inputSchema: { type: 'object', additionalProperties: false, required: ['episode', 'action'], properties: {
       episode: { type: 'string', description: 'Absolute episode directory.' },
       action: { type: 'string', description: 'Inspect, register, finish or invalidate a stage.', enum: ['status', 'begin', 'complete', 'rewind'] },
       stage: { type: 'string', description: 'Required for begin, complete and rewind.', enum: ['characters', 'text_storyboard', 'context_review', 'props', 'backgrounds', 'camera_review', 'blender_composition', 'image_storyboard', 'image_review', 'video', 'video_review'] },
-      entries: { type: 'array', description: 'Complete inventory for the stage, required on begin unless notApplicable.', items: { type: 'object', additionalProperties: false, required: ['id', 'text'], properties: {
+      entries: { type: 'array', description: 'The stage\'s files, registered on begin.', items: { type: 'object', additionalProperties: false, required: ['id', 'text'], properties: {
         id: { type: 'string', description: 'Use this exact assetId in image_plan.' },
-        text: { type: 'string', description: 'Text artifact, review JSON, or Blender composition.json receipt path. Review begin requires criteria path/hash before evaluation.' },
-        images: { type: 'array', items: { type: 'string' }, description: 'Additional image_storyboard files for this cut: ending, intermediate and appearance references. All are decoded, hashed and included in image review.' },
-        image: { type: 'string', description: 'Actual or planned image path for asset/image stages. Use the same cut id as camera_review and blender_composition.' },
+        text: { type: 'string', description: 'Text artifact or report path.' },
+        images: { type: 'array', items: { type: 'string' }, description: 'Additional image_storyboard files for this cut: ending, intermediate and appearance references.' },
+        image: { type: 'string', description: 'Image path for asset and image stages.' },
         blend: { type: 'string', description: 'Actual .blend source file for blender_composition only.' },
         video: { type: 'string', description: 'Actual or planned video file for video stage only; entry id is video_plan shotId.' },
       } } },
@@ -4209,10 +3817,11 @@ Returns JSON: status, missing fields, canonical paths, config and revision; epis
             models: { type: 'object', additionalProperties: false, description: 'Select video and check credentials, then image and check credentials, then decide whether TTS is needed. Use speech:{engine:"none"} to skip TTS; otherwise select speech and check credentials. Music is optional. Use capability_status and host schemas for availability.', properties: Object.fromEntries(['video', 'speech', 'image', 'music'].map(kind => [kind, {
               type: 'object', additionalProperties: false, description: `${kind} selection; fixed engines omit model, host uses host-managed.`,
               properties: {
-                engine: { type: 'string', enum: kind === 'video' ? ['host', 'seedance', 'veo', 'astra', 'astra-genai', 'mlx'] : kind === 'speech' ? ['none', 'gemini', 'elevenlabs'] : kind === 'music' ? ['lyria', 'suno-api', 'elevenlabs', 'mlx'] : ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai'], description: 'Selected engine, e.g. host for an exposed host media tool.' },
+                engine: { type: 'string', enum: kind === 'video' ? ['host', 'seedance', 'astra', 'astra-genai', 'astra-genai-desktop', 'mlx'] : kind === 'speech' ? ['none', 'gemini', 'elevenlabs', 'astra-genai'] : kind === 'music' ? ['lyria', 'suno-api', 'elevenlabs', 'mlx'] : ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai', 'astra-genai-native'], description: 'Selected engine, e.g. host for an exposed host media tool.' },
                 model: { type: 'string', description: 'Supported model ID, e.g. host-managed. Omit for astra, zimage and speech engine none.' },
                 ...(!['speech', 'music'].includes(kind) ? { host: { type: 'string', description: 'Host CLI when engine is host, e.g. codex.' } } : {}),
-                ...(kind === 'video' ? { resolution: { type: 'string', description: 'Supported source resolution, e.g. 720p.' } } : {}),
+                ...(kind === 'video' ? { resolution: { type: 'string', description: 'Supported source resolution, e.g. 720p; MSR takes WIDTHxHEIGHT, e.g. 1792x1024.' },
+                  operation: { type: 'string', enum: ['text', 'image', 'audio', 'reference'], description: 'Default video_plan operation when a call names none. An LTX (astra-genai) project saves reference: MSR with character voice samples.' } } : {}),
                 ...(kind === 'image' ? { quality: { type: 'string', description: 'Supported quality, e.g. high; a prompt preference on host tools without a quality parameter.' } } : {}),
               }, required: ['engine'],
             }])) },
@@ -4249,7 +3858,7 @@ Returns JSON: status, missing fields, canonical paths, config and revision; epis
     annotations: HINT.local,
     description: `Report which generation and research capabilities are configured on this machine, grouped by capability with an "N of M configured" count per group, plus the env vars that would unlock the rest.
 
-Use it BEFORE planning anything that spends money or depends on a provider — the top of a storyboard, produce, or autoproduce run. Without it, a missing key shows up only when the call fails, which is after the plan was built around a tool that was never going to run: planning two Veo b-roll slots on a machine with no GEMINI_API_KEY costs the review rounds before anyone finds out. Also use it when the user asks what they can make, or why a tool is failing.
+Use it BEFORE planning anything that spends money or depends on a provider — the top of a storyboard, produce, or autoproduce run. Without it, a missing key shows up only when the call fails, which is after the plan was built around a tool that was never going to run: planning two Seedance b-roll slots on a machine with no ARK_API_KEY costs the review rounds before anyone finds out. Also use it when the user asks what they can make, or why a tool is failing.
 Do NOT use it to test whether a key still works. It reports CONFIGURATION, not reachability — a revoked key reads as configured here and fails at the call. Local engines report only whether their binary resolves (mflux, python3, mlx-qwen3-asr) or whether MLX Core.app / mlx-serve is installed — not whether :11234 is up. Read-only; makes no API call, so one call per session is enough.
 
 Returns: a capability menu — video_generation, image_generation, tts, music_generation, 3d_generation, speech_to_text, stock_footage, research — each listing its providers with the env var or local install each one needs, then the publishing platforms, the env vars grouped by what each would turn on.`,
@@ -4267,7 +3876,7 @@ Returns: a capability menu — video_generation, image_generation, tts, music_ge
     description: `List suggested genres, moods, and instruments for music generation.
 
 Use when the user asks what music styles are available (장르 목록) or wants inspiration. The lists are SUGGESTIONS, not a closed set — all music tools accept free-text descriptions beyond these. Read-only; makes no API call.
-Do NOT use to generate music — use music_generate_clip, music_generate, or music_generate_advanced. The list is static; one call per session is enough.
+Do NOT use to generate music — use music_plan → music_execute. The list is static; one call per session is enough.
 
 Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exhaustive).`,
     inputSchema: {
@@ -4312,7 +3921,7 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
         model: {
           type: 'string',
           description: 'sunoapi.org model ID; current generation supports the V6 family.',
-          enum: [...SUNO_MODELS],
+          enum: [...SUNO_V6_MODELS],
           default: DEFAULT_SUNO_MODEL,
         },
         duration: {
@@ -4682,7 +4291,7 @@ Returns: integer credit balance.`,
         containsSyntheticMedia: {
           type: 'boolean',
           description:
-            'Synthetic-media self-disclosure — **default true** (this pipeline uses Veo video and Lyria music). YouTube requires disclosure for realistic-looking AI-generated or altered content (AI-generated music, realistic generated footage of real places or people) and warns that habitual non-disclosure brings forced labels, removal, and YPP suspension. It also states outright that disclosure "does not affect exposure or monetization eligibility", so when in doubt leaving it on costs nothing. It may be set false only for clearly exempt uses — script/title/thumbnail generation, subtitle generation, idea generation, cloning your own voice, non-realistic animation or fantasy footage, color grading and beauty filters.',
+            'Synthetic-media self-disclosure — **default true** (this pipeline uses generated video and Lyria music). YouTube requires disclosure for realistic-looking AI-generated or altered content (AI-generated music, realistic generated footage of real places or people) and warns that habitual non-disclosure brings forced labels, removal, and YPP suspension. It also states outright that disclosure "does not affect exposure or monetization eligibility", so when in doubt leaving it on costs nothing. It may be set false only for clearly exempt uses — script/title/thumbnail generation, subtitle generation, idea generation, cloning your own voice, non-realistic animation or fantasy footage, color grading and beauty filters.',
           default: true,
         },
         channel: SNS_CHANNEL_PROPERTY,
@@ -5048,7 +4657,7 @@ Returns: integer credit balance.`,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     description: `Update shot dialogue, line acting and local audio/video bindings.
 
-Use for dialogue edits, expression or intonation corrections, stable speaker routing and generation planning. list finds lines; prepare assigns stable ids; update replaces requested line fields; attach_audio returns measured timing; retime updates the complete shot clock from current speech and explicit action edits. attach_video binds generated files; reuse:tail_trim accepts only unchanged audio and performance starts with a shorter tail. plan_audio resolves the pinned voice and each line's scene direction into raw generator arguments; plan_video resolves the selected adapter's capabilities and carries the same acting/timing context. Scene direction overrides baseline style without changing voice identity. Local files only: plans do not generate, listen, score or approve. Read first and pass expectedRevision for writes; unknown speakers, ambiguous targets, stale revisions and unsupported lip-sync routes fail. Keeps source backups.
+Use for dialogue edits, expression or intonation corrections, stable speaker routing and generation planning. list finds lines; prepare assigns stable ids; update replaces requested line fields; attach_audio returns measured timing; retime updates the complete shot clock from current speech and explicit action edits. attach_video binds generated files; reuse:tail_trim accepts only unchanged audio and performance starts with a shorter tail. plan_audio resolves the pinned voice and each line's scene direction into raw generator arguments; plan_video resolves the selected adapter's capabilities (tool names the shot's video tool when it differs from the saved default operation) and carries the same acting/timing context. A native-speech shot (MSR) needs no line audio: the clip speaks its prompt's lines, attach_video binds their revisions and sets sound.audioSource video, and a line edit marks the clip stale. Scene direction overrides baseline style without changing voice identity. Local files only: plans do not generate, listen, score or approve. Read first and pass expectedRevision for writes; unknown speakers, ambiguous targets, stale revisions and unsupported lip-sync routes fail. Keeps source backups.
 
 Do NOT use to generate media: call the planned raw TTS tool or selected video adapter, then attach the result. Do NOT use for read-only whole-story inspection: use storyboard_read instead. Never group different emotional beats or nonconsecutive shots by shared image and slice them into unrelated reactions.
 
@@ -5077,9 +4686,9 @@ Returns revision, ordered matching lines with generationPlan and voice/audio has
           actions: { type: 'array', description: 'Explicit [zero-based performance index, positive seconds] edits for actions', items: { type: 'array', minItems: 2, maxItems: 2, items: { type: 'number' } } }
         } },
         reuse: { type: 'string', enum: ['tail_trim'], description: 'Only attach_video: preserve existing generated bytes for a verified temporal prefix; rejects changed audio, moved speech, changed action semantics or extension. Does not certify visual quality.' },
-        audioPath: { type: 'string', description: 'Generated audio file; absolute or relative to storyboard directory' }, videoPath: { type: 'string', description: 'New video file to bind to the shot and current audio' },
+        audioPath: { type: 'string', description: 'Generated audio file; absolute or relative to storyboard directory' }, videoPath: { type: 'string', description: 'New video file to bind to the shot and current audio' }, tool: { type: 'string', description: 'plan_video/attach_video: the shot\'s video adapter tool from video_plan, e.g. astra_genai_msr; defaults to the saved operation' },
         generation: { type: 'object', description: 'Raw TTS request and declared text language; no listening score', properties: { generator: { type: 'string', description: 'Raw TTS tool that generated this file' }, voiceSettings: { type: 'object', description: 'Exact voice and language settings sent to the generator' }, text: { type: 'string', description: 'Exact clean line text; voiceSettings stores the actual tagged provider request from plan_audio' }, language: { type: 'string', description: 'Declared text language, e.g. ko; metadata for engines without a language argument, never an invented API parameter' } }, required: ['generator','voiceSettings','text'], additionalProperties: false },
-        capabilities: { type: 'object', description: 'Selected adapter capabilities from verified schema/documentation, with evidence', properties: { provider: { type: 'string', description: 'Selected video adapter provider id, matching the shot engine' }, model: { type: 'string', description: 'Selected model id, matching the shot model when set' }, audioConditioning: { type: 'boolean', description: 'Whether the adapter accepts supplied speech as conditioning' }, lipSync: { type: 'boolean', description: 'Whether supplied speech drives visible mouth motion' }, postLipSync: { type: 'boolean', description: 'Whether a separately selected post lip-sync adapter is available' }, evidence: { type: 'string', description: 'Documentation or verified capability record supporting these settings' } }, required: ['provider','model','audioConditioning','lipSync','postLipSync','evidence'], additionalProperties: false }
+        capabilities: { type: 'object', description: 'Selected adapter capabilities from verified schema/documentation, with evidence', properties: { provider: { type: 'string', description: 'Selected video adapter provider id, matching the shot engine' }, model: { type: 'string', description: 'Selected model id, matching the shot model when set' }, audioConditioning: { type: 'boolean', description: 'Whether the adapter accepts supplied speech as conditioning' }, lipSync: { type: 'boolean', description: 'Whether supplied speech drives visible mouth motion' }, postLipSync: { type: 'boolean', description: 'Whether a separately selected post lip-sync adapter is available' }, nativeSpeech: { type: 'boolean', description: 'Whether the video model voices the dialogue written in its prompt (MSR), taking no line audio' }, evidence: { type: 'string', description: 'Documentation or verified capability record supporting these settings' } }, required: ['provider','model','audioConditioning','lipSync','postLipSync','evidence'], additionalProperties: false }
       }, required: ['path','action'], additionalProperties: false
     }
   },
@@ -5110,35 +4719,294 @@ Returns revision, ordered matching lines with generationPlan and voice/audio has
 The default techniqueCatalog provides the four filmmaking elements and per-technique selection guidance. Store intentional choices as shot.techniques:[{id,reason}] and keep existing camera/size/angle fields consistent.
 
 Use it before editing an existing board, and after storyboard_apply to see the board the way the approval page groups it. level=outline is enough to plan a change; level=full carries every raw shot object (large — one shot is ~40 fields).
-Do NOT use it to validate — storyboard_check runs the contract. A board with no window.STRUCTURE comes back with every shot under unplacedShots; write the structure with storyboard_apply.
+Do NOT use it to validate — storyboard_check runs the contract. A board with no window.STRUCTURE comes back with every shot under unplacedShots; write the structure with story_sequence and story_scene.
 
 For inspection, the default includeContext:true adds reviewContext.story (STORY), production (PRODUCTION) and document (SB_DOC: characters, props, setting and recorded reviews). shotId adds selectedShot with the raw shot, scene and previous/next shot IDs while preserving the whole flow. Referenced asset paths are authored locators, not proof the files exist or have been viewed. inspection.mediaViewed is always false; evidenceStatus is not_verified. Read assets and run their contract checks before declaring continuity or a current review pass.
 
-Returns: JSON — { file, mediaBaseDirectory, sha256, version, format, shots, sequences[…scenes[…shots]], unplacedShots, splicedShots (broll · outro), playback (actual insertion order), unscheduledShots, propSheet?, inspection, reviewContext?, selectedShot? }.`,
+Includes boundaryReview (shot-boundaries-v1): every actual playback join with full ordered speech/performance, camera context, incoming join ownership and factual review signals. It is read-only and always not_reviewed; repeated speakers/cast or reasons are not merge commands. For splices incoming is null: inspect the edit plan. Missing evidence stays unknown. Compare the uncut scene before images, and audit line ids/order/acting, performance groups, references and outer joins after edits. If this field is absent on an older connection, update/reconnect rather than guessing a bundle path.
+
+Includes videoTiming for generated shots: selected route, planned source coverage, frame grid, maximum seconds, and fits/split_required/timing_unknown/limits_unknown. This is not measured speech or output duration.
+
+Returns: JSON — { file, mediaBaseDirectory, sha256, version, format, shots, sequences[…scenes[…shots]], unplacedShots, splicedShots (broll · outro), playback (actual insertion order), unscheduledShots, propSheet?, inspection, boundaryReview, videoTiming, reviewContext?, selectedShot? }.`,
     inputSchema: {
       type: 'object',
       properties: {
         path: { type: 'string', description: 'The storyboard directory (data/<channel>/episodes/<topic>/storyboard/) or its scenes.js' },
         level: { type: 'string', enum: ['outline', 'scenes', 'shots', 'full'], description: 'outline = sequences with scene numbers · scenes = scene cards with shot numbers · shots (default) = every shot summarised under its scene · full = raw shot objects too' },
         shotId: { type: 'string', description: 'Stable shot ID; adds raw selectedShot with scene and neighboring IDs without removing the overall flow. Unknown or duplicate IDs fail.' },
-        includeTechniques: { type: 'boolean', description: 'Default true: return canonical techniqueCatalog with ids, purposes, unique icons, provider instructions, current selections and conflicting-plan advice.' },
+        includeTechniques: { type: 'boolean', description: 'Default true: return canonical techniqueCatalog with ids, purposes, unique icons, provider instructions, decision notes (avoid, pair, specify, vertical), guides for the shot_icons values without an entry, current selections and conflicting-plan advice.' },
         includeContext: { type: 'boolean', description: 'Default true: return STORY, PRODUCTION and SB_DOC for character, background, prop and scenario inspection. Recorded evidence is not verified by this read.' },
       },
       required: ['path'],
     },
   },
   {
+    name: 'story_sequence',
+    title: 'Write storyboard sequences (story step 1 of 3)',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `The first storyboard step after the scenario is settled writes only the story, in three layers: story_sequence → story_scene → story_shot. Use it first: it upserts sequences by id (title · purpose · question · payoff — a payoff outside the sequence's scenes warns) and creates scenes.js as a story-v2 board when it is missing. A sequence's scene list is filled by story_scene. Local file only; no image, speech or prompt. Inside an episode the board starts only after the cast is ready, and story_scene and story_shot repeat this check on a story-first board: refused (cast_required) until storyboard/cast.json names at least one character, (cast_source_missing) for an entry whose source is not an existing assets/characters/<id>/identity.md, and (character_panel_missing) for an entry without "voiceOnly": true that lacks its face, front or back sheet panel — make those with character_manage and character_panel first.
+
+Do NOT write scenes, shots, dialogue or pictures here. Characters and lines come after the shot stories (shot_characters → shot_dialogue); camera and image plans after that, through storyboard_apply.
+
+Returns: the file written or not, counts, and findings (! violation · warning).`,
+    inputSchema: {
+      type: 'object', additionalProperties: false,
+      properties: {
+        path: { type: 'string', description: 'The storyboard directory (data/<channel>/episodes/<topic>/storyboard/) or its scenes.js' },
+        sequences: { type: 'array', minItems: 1, description: 'Sequences in playback order', items: { type: 'object', additionalProperties: false, required: ['id', 'title', 'purpose'], properties: {
+          id: { type: 'string', description: 'Stable id, e.g. "q1"' },
+          title: { type: 'string', description: 'The heading the review page draws' },
+          purpose: { type: 'string', description: 'The one purpose that binds its scenes; two purposes are two sequences' },
+          question: { type: 'string', description: 'The dramatic question this stretch opens' },
+          payoff: { type: 'integer', minimum: 1, description: 'The scene number that answers the question' },
+        } } },
+      },
+      required: ['path', 'sequences'],
+    },
+  },
+  {
+    name: 'story_scene',
+    title: 'Write storyboard scenes (story step 2 of 3)',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Use it after story_sequence to upsert scenes by number into a sequence: place, time, the one event, and a one- or two-sentence summary of the scene's story. A scene moved to another sequence leaves its old one. Refused (story_order) before any sequence exists or for an unknown sequence id, and on a story-first episode board by story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
+
+Do NOT write shots or dialogue here — story_shot comes next.
+
+Returns: the file written or not, counts, and findings (! violation · warning).`,
+    inputSchema: {
+      type: 'object', additionalProperties: false,
+      properties: {
+        path: { type: 'string', description: 'The storyboard directory or its scenes.js' },
+        scenes: { type: 'array', minItems: 1, description: 'Scenes in playback order', items: { type: 'object', additionalProperties: false, required: ['sequence', 'no', 'place', 'time', 'event', 'summary'], properties: {
+          sequence: { type: 'string', description: 'The sequence id this scene belongs to' },
+          no: { type: 'integer', minimum: 1, description: 'Scene number, unique on the board' },
+          place: { type: 'string', description: 'One place — the slugline location' },
+          time: { type: 'string', description: 'One continuous stretch of time — 낮 · 밤 · 새벽' },
+          event: { type: 'string', description: 'The one thing that happens in this scene' },
+          summary: { type: 'string', description: "The scene's story in one sentence" },
+          turn: { type: 'string', description: 'What flipped between the open and the close' },
+          out: { type: 'string', description: 'The sentence the scene goes out on' },
+        } } },
+      },
+      required: ['path', 'scenes'],
+    },
+  },
+  {
+    name: 'story_shot',
+    title: 'Write shot stories (story step 3 of 3)',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    description: `Use it after story_scene to write each provisional shot as one sentence summarizing a coherent performance in its scene. A summary may cover several lines and turns; never allocate one shot per sentence or gesture. Revisit boundaries after shot_dialogue using storyboard_read.boundaryReview and inspect videoTiming before images. Without an id the shot is added at the end of its scene and gets a stable id (s0001…); with an id that shot's scene and summary are revised and everything else on it is kept; a new scene moves it to the end of that scene. Refused (story_order) before any scene exists or for a scene outside a sequence. A story-first episode board also repeats story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
+
+Do NOT pass characters, dialogue, narration, camera, visual fields or a title — the input refuses them; a shot's title is on-screen text, which a full_video cut never carries. Once every shot has its story, shot_characters and shot_dialogue come next, then shot_icons; on a board these tools started (STORY.authoring "story-first") storyboard_apply refuses a shot without scene and summary.
+
+Returns: the file written or not, counts, and findings (! violation · warning).`,
+    inputSchema: {
+      type: 'object', additionalProperties: false,
+      properties: {
+        path: { type: 'string', description: 'The storyboard directory or its scenes.js' },
+        shots: { type: 'array', minItems: 1, description: 'Shot stories in playback order', items: { type: 'object', additionalProperties: false, required: ['scene', 'summary'], properties: {
+          id: { type: 'string', pattern: '^s\\d{4,}$', description: 'Stable shot id to revise; omit to add a shot' },
+          scene: { type: 'integer', minimum: 1, description: 'The scene number' },
+          summary: { type: 'string', description: 'The story this shot tells, in one sentence' },
+        } } },
+      },
+      required: ['path', 'shots'],
+    },
+  },
+  {
+    name: 'shot_characters',
+    title: "Set each shot's characters (step 2: characters, then lines)",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Use it once every sequence, scene and shot story is written (story_sequence → story_scene → story_shot): set who from the episode cast is on screen in each shot, at most two principal characters with the subject first, or [] when nobody is. It writes visual.character and keeps a kept character's scope. A character who leaves a shot keeps their lines, now off_screen, with a warning, and their sheet panels leave visual.references; a start image made for the old cast is flagged for shot_image. Refused (story_order) while the story has a gap — a sequence without scenes, a scene without a shot or summary, a shot without its story — and for an id outside the episode cast (cast_unknown) — storyboard/cast.json alone on a story-first board, which repeats story_sequence's cast check (cast_source_missing, character_panel_missing), plus SB_DOC.characters on an older board — or one marked voiceOnly there (cast_voice_only). Local file only; no image, speech or prompt.
+
+Do NOT list extras, unnamed figures or a narrator who is never seen — extras are described in the action later, and an off-screen narrator speaks through shot_dialogue. Lines come next, through shot_dialogue.
+
+Returns: the file written or not, counts, and findings (! violation · warning).`,
+    inputSchema: {
+      type: 'object', additionalProperties: false,
+      properties: {
+        path: { type: 'string', description: 'The storyboard directory or its scenes.js' },
+        shots: { type: 'array', minItems: 1, description: 'Shots to set', items: { type: 'object', additionalProperties: false, required: ['id', 'characters'], properties: {
+          id: { type: 'string', pattern: '^s\\d{4,}$', description: 'Stable shot id' },
+          characters: { type: 'array', maxItems: 2, uniqueItems: true, items: { type: 'string', description: 'Character id from the episode cast' }, description: 'On-screen principal characters, subject first; [] for nobody' },
+        } } },
+      },
+      required: ['path', 'shots'],
+    },
+  },
+  {
+    name: 'shot_dialogue',
+    title: "Write each shot's lines by character",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    description: `Use it after shot_characters to write a shot's lines in spoken order, each attributed to a character from the episode cast. The given lines replace the shot's lines; [] makes it silent. Keep consecutive lines from a speaker or a readable exchange in the same shot. After writing the complete scene, inspect every storyboard_read.boundaryReview join against an uninterrupted performance, merge only redundant boundaries and compare revised performance duration with videoTiming; split only for a motivated visual change or verified model capacity. Delivery defaults to on_screen for one of the shot's characters and voiceover for anyone else — a narrator is a character who speaks without being seen. A line with a known id keeps its acting and audio binding, and changed text makes that audio stale. Refused (story_order) before the shot's characters are set and for an on_screen speaker outside them; an unknown speaker is cast_unknown, and a story-first board repeats story_sequence's cast check (cast_source_missing, character_panel_missing). Local file only; no audio, image or prompt is generated.
+
+Do NOT generate speech here — speech_manage plans and binds audio later. Do NOT write icon attributes or visual plans; shot_icons comes next, then storyboard_apply.
+
+Returns: the file written or not, counts, and findings (! violation · warning).`,
+    inputSchema: {
+      type: 'object', additionalProperties: false,
+      properties: {
+        path: { type: 'string', description: 'The storyboard directory or its scenes.js' },
+        shots: { type: 'array', minItems: 1, description: 'Shots whose lines to write', items: { type: 'object', additionalProperties: false, required: ['id', 'lines'], properties: {
+          id: { type: 'string', pattern: '^s\\d{4,}$', description: 'Stable shot id' },
+          lines: { type: 'array', description: 'Every line in spoken order; [] for a silent shot', items: { type: 'object', additionalProperties: false, required: ['speaker', 'tts'], properties: {
+            id: { type: 'string', description: 'Stable line id to revise; omit for a new line' },
+            speaker: { type: 'string', description: 'Character id of the speaker' },
+            tts: { type: 'string', description: "The spoken line, in the video's language" },
+            sub: { type: 'string', description: 'Written notation when it differs from tts' },
+            delivery: { type: 'string', enum: ['voiceover', 'on_screen', 'off_screen'], description: 'on_screen needs the speaker among the shot\'s characters' },
+          } } },
+        } } },
+      },
+      required: ['path', 'shots'],
+    },
+  },
+  {
+    name: 'shot_icons',
+    title: "Set each shot's icon attributes (step 3)",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Use it after every shot has its story and characters (story_shot → shot_characters), normally after shot_dialogue, set its render route, size, angle, opening view, move, focus, depth, frame plan and next transition. Local file only; generates no media. Do NOT generate images or video here.
+
+Choose from what the audience must see, not shot index, dialogue count or a diversity quota. Read storyboard_read's techniqueCatalog and shot-view.md. A monologue may need the changing face (cu), a revealing hand (insert/ecu) or isolation in the surroundings (ls/els). Compare one useful alternative and state the story-specific reason.
+
+Set backgroundView to front or back relative to the location sheet layout; shot_image uses its matching panels.front or panels.back. This is the direction through the space, independent of the visible side of a subject.
+
+Set view with subject (visible evidence), reason, crop and mode. It writes visual.camera.view, shot.info and shot.why. Subject and crop are English provider text. This view supersedes old opening framing, rear/pov flags and viewpoint/framing techniques in the image and video prompts. Left/right name the visible side of the subject; angle separately controls height. Set subjectId for a blocked actor or set object; ots/pov also need a different viewerId. Built-set body inserts/ecu need target with the actual staged world point and vertical span; objects use their subjectId. Missing set targets cannot silently become frontal portraits. Use storyboard_apply for blocking and closing camera endpoints.
+
+Size is distance (els … ecu, insert). Set size and view.crop together when changing the crop. Person shots keep anatomical size boundaries even with a view; set view.subjectType to object or detail when the subject is a prop or body detail despite a character being in the cast. Explicit contradictory crop declarations fail image planning with shot_framing_conflict. Composition labels two/three/ots/pov/back/cutaway/reaction carry no crop; new boards use a distance with view. The technique catalogue gives use, avoid, specify, neighbouring-shot and vertical guidance; these are directing conventions, not measured emotional effects. On 9:16 the result includes the chosen values' vertical advice.
+
+On still_camera, move is a still effect stored in shot.render.camera; other routes use a camera technique and synchronize visual.camera.movement. Route changes drop the old route's movement. A different move replaces its speed/target; the same move keeps them unless provided. Video moves take slow/steady/fast and an English target; rack focus takes English from/to subjects. A new size without why drops the old why. A still hold is deliberate, not an unset move.
+
+Frame reference means MSR. Changing away from first_last removes the end-image binding; switching to/from reference updates panel use. Camera/view/size/depth/focus changes warn to remake existing images; changed inputs to a written video prompt warn to rewrite it with shot_prompt. next sets the transition into the following shot, with the same checks as storyboard_apply, and is refused on the last shot. Omitted attributes stay unchanged.
+
+Refused: missing story/characters (story_order), invalid attributes, incompatible move/focus for the route, non-English prompt targets, or an invalid transition. Returns: written file, counts and findings (! violation · warning).`,
+    inputSchema: {
+      type: 'object', additionalProperties: false,
+      properties: {
+        path: { type: 'string', description: 'The storyboard directory or its scenes.js' },
+        shots: { type: 'array', minItems: 1, description: 'Shots to set; omit an attribute to keep it', items: { type: 'object', additionalProperties: false, required: ['id'], properties: {
+          id: { type: 'string', pattern: '^s\\d{4,}$', description: 'Stable shot id' },
+          render: { type: 'object', additionalProperties: false, required: ['mode', 'reason'], description: 'Render route icon', properties: {
+            mode: enumInput(storyboardVocabulary?.RENDER_MODES, 'still_camera, generated_video, stock_video, or an HTML/data route (render-routing.md)'),
+            purpose: enumInput(purposes, 'What the viewer needs from the cut'),
+            reason: { type: 'string', description: 'Why this route carries this cut' },
+          } },
+          size: enumInput(storyboardVocabulary?.SIZES, 'Shot size icon: the distance (els … ecu, insert); composition labels carry no crop — techniqueCatalog guides.size'),
+          why: { type: 'string', description: 'The beat this size serves' },
+          angle: enumInput(storyboardVocabulary?.ANGLES, 'Camera angle icon: the camera height and tilt; ground and over have cards in techniqueCatalog guides.angle'),
+          view: shotViewInput,
+          backgroundView: { type: 'string', enum: ['front', 'back'], description: 'Opening direction relative to the location sheet: front is the establishing view, back is the opposite side. Saves visual.camera.backgroundView; omitted keeps the choice, initially front. Independent of the subject view.' },
+          move: { type: 'object', additionalProperties: false, required: ['id', 'reason'], description: 'Camera move icon', properties: {
+            id: { type: 'string', enum: [...cameraMoves, ...stillCameraEffects], description: 'A camera.* technique with a movement, or on a still_camera cut a still effect' },
+            reason: { type: 'string', description: 'What the move or the hold does for this beat' },
+            target: { type: 'string', description: 'What the move is aimed at, in English on a video cut: what it pushes toward or pans and tilts to, or the person it follows, circles or rises above — the prompt reads "pushes in toward <target>", "follows behind <target>"' },
+            speed: { type: 'string', enum: ['very slow', 'slow', 'steady', 'fast', 'very fast'], description: 'Pace: slow, steady or fast on a video cut; very slow (default), slow, fast or very fast on a still effect' },
+          } },
+          focus: { type: ['object', 'null'], additionalProperties: false, required: ['id', 'reason'], description: 'Focus technique (camera.rack-focus); null removes it', properties: {
+            id: { type: 'string', description: 'camera.rack-focus' }, reason: { type: 'string', description: 'Which subject hands focus to which, and why' },
+            from: { type: 'string', description: 'The subject sharp first, in English (the start image stages it in focus)' },
+            to: { type: 'string', description: 'The subject sharp last, in English' },
+          } },
+          depth: depthInput,
+          frames: { type: 'object', additionalProperties: false, required: ['mode', 'reason'], description: 'Frame plan; reference = MSR (subject images + start image), which shows the MSR icon', properties: {
+            mode: { type: 'string', enum: ['first', 'first_last', 'reference'], description: 'first = start image · first_last = start and end images · reference = MSR' },
+            reason: { type: 'string', description: 'Why this shot needs this frame plan' },
+            endState: { type: 'string', description: 'first_last: the visible final state' },
+          } },
+          next: { type: 'object', additionalProperties: false, required: ['transition', 'reason'], description: 'Transition icon: the join from this shot into the next one, stored on the next shot\'s transition (the field the assembly builder reads)', properties: {
+            transition: { type: 'string', enum: ['cut','dip','dip:white','jcut','dissolve','iris','blur','zoom','push:l2r','push:r2l','push:u2d','push:d2u','whip:l2r','whip:r2l','whip:u2d','whip:d2u'], description: 'scenes-schema §scene transition: what moved between the two shots picks the join' },
+            transitionSeconds: { type: 'number', minimum: 0.08, maximum: 0.8, description: 'Moving joins only; omit for cut, dip and dip:white' },
+            reason: { type: 'string', minLength: 1, description: 'Why this boundary uses this effect' },
+            continuity: { type: 'string', minLength: 1, description: 'What connects the two pictures' },
+          } },
+        } } },
+      },
+      required: ['path', 'shots'],
+    },
+  },
+  {
+    name: 'shot_image',
+    title: "Make a shot's start or end image (step 4)",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    description: `Create a shot’s start or end image.
+
+Use it after shot_icons to compose a start image or a first_last end image from character panels, place and props using saved framing and style. Write English action, layout, gaze and light in prompt. One character uses face/front/back panels; two use each face then each front. References supply appearance; the authored view controls crop and viewpoint.
+
+For a targeted correction, set editExisting:true and describe only the change in prompt. preserve adds explicit invariants. The saved start or end image becomes the sole input, source dimensions are reused unless size is supplied, and original scene instructions are not reassembled. Omit location and props; update their storyboard metadata first if needed. Refuses image_edit_source_missing without that saved frame and image_edit_scope if location/props are supplied.
+To correct a generated start image's crop, set editExisting:true and reframe:true. The saved size, crop and viewpoint are recompiled with prompt as the opening action/correction; dimensions default to the current delivery aspect. Inspect the actual result; this does not certify visual adherence or clear stale source evidence. Reframe is only for frame:start.
+If text-only reframing fails, sourceCrop prepares an inspected source-pixel rectangle as a separate reference, recording its source hash and crop. It must fit and match output aspect (image_crop_bounds/image_crop_aspect). The saved model still generates the final image. Describe action, not another zoom; never guess coordinates without viewing the source.
+
+For normal generation, a location with a built set uses a camera-matched Blender render as Image 1 and its sheet as a look reference when capacity allows. visual.camera.backgroundView chooses front/back (default front). Without a set, the corresponding location panel leads and retains its landmark layout; authored subject framing still applies. Missing directional panels refuse background_view_missing; legacy front-only sheets can reuse imageUrl with a warning. A built set with conflicting direction refuses background_view_conflict; a render failure refuses location_render_failed without substituting the sheet. Props use their frame-specific ledger state and references; hidden props stay out, missing images or state references warn, and ledger errors omit only the affected state.
+
+frame:end edits the opening image using the closing composition, story state and final focus. A built set supplies its numeric end camera when available; a moving shot without one warns and follows the prompt's landing. An end image keeps the start's location (location is refused) and records endProps separately.
+
+Runs image_plan → image_execute under the saved model and existing spending authorization. Saves a new version under storyboard/images and records visual.frames.start/bg or frames.end, prompt, references and asset bindings. Framing contradictions refuse shot_framing_conflict. Flexible-size models use delivery aspect; fixed-size GPT models warn with their supported preset. Revising a start invalidates its old end with a warning; files are preserved. storyboard_read.imageFraming compares the recorded start inputs with the current plan (current/stale/unknown), separately from visual review. Inspect the returned image against the saved size and crop; a matching prompt is not pixel evidence. GPT inputs of mixed PNG/JPEG types become PNG copies.
+
+Do NOT use it just to inspect a shot — use storyboard_read. Do NOT use it for routes other than still_camera and generated_video. story_order refuses missing icon attributes, an end before its start or outside first_last. image_references_unsupported refuses inputs beyond the saved model's capacity; never switch models silently. Text-bearing images follow the GPT Image 2 directive. Returns: file, input order, prompt and warnings; a host selection returns a handoff instead of generating.`,
+    inputSchema: {
+      type: 'object', additionalProperties: false,
+      properties: {
+        path: { type: 'string', description: 'The storyboard directory or its scenes.js, e.g. data/channel/episodes/topic/storyboard' },
+        id: { type: 'string', pattern: '^s\\d{4,}$', description: 'Stable shot id, e.g. s0001' },
+        frame: { type: 'string', enum: ['start', 'end'], default: 'start', description: 'start: the first image · end: the last image of a first_last shot' },
+        prompt: { type: 'string', description: 'What the frame shows, in English: who is where, doing what, facing which way, expression and light, e.g. Mina waits with closed relaxed lips.' },
+        editExisting: { type: 'boolean', description: 'Edit the saved frame using prompt as the change instruction; save a new version. Omit location and props.' },
+        reframe: { type: 'boolean', description: 'With editExisting and frame:start, recompile saved shot size, crop and viewpoint to correct the generated image; prompt gives opening action and correction.' },
+        sourceCrop: { type: 'object', additionalProperties: false, description: 'Inspected rectangle in saved source-image pixels, e.g. {x:72,y:64,width:720,height:1280}; requires reframe, in bounds and matching output aspect. Prepared as a reference before GenAI generation.', properties: {
+          x: { type: 'integer', minimum: 0, description: 'Left pixel, e.g. 72' }, y: { type: 'integer', minimum: 0, description: 'Top pixel, e.g. 64' },
+          width: { type: 'integer', minimum: 1, description: 'Crop width in pixels, e.g. 720' }, height: { type: 'integer', minimum: 1, description: 'Crop height in pixels, e.g. 1280' },
+        }, required: ['x', 'y', 'width', 'height'] },
+        preserve: { type: 'string', description: 'Details to preserve during editExisting, e.g. Keep the navy blazer.' },
+        location: { type: 'string', description: 'SB_DOC.locations id of the place (e.g. studio), for the start image; an earlier choice stays when omitted, and an end image keeps the start\'s place (refused there)' },
+        props: { type: 'array', items: { type: 'string' }, description: 'SB_DOC.props ids seen in the frame (e.g. ["cup"]); an earlier choice stays when omitted' },
+        size: { type: 'string', pattern: '^\\d{3,4}x\\d{3,4}$', description: 'Output WIDTHxHEIGHT; default 1536x864 on a 16:9 board, 864x1536 otherwise; fixed-size GPT models use their supported preset with a warning' },
+        reserveUsd: { type: 'number', minimum: 0, description: 'API reservation estimate in USD, as in image_plan; e.g. 0 for an authorized local run' },
+      },
+      required: ['path', 'id', 'prompt'],
+    },
+  },
+  {
+    name: 'shot_prompt',
+    title: "Write a shot's video prompt (step 5)",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Use it after every picture-route shot has its images (shot_image): write one generated_video shot's English video prompt into visual.video.prompt from its icon attributes — camera move in the video model's camera words (pushes in, pulls back, pans, tilts upward, static frame) with its speed, target and the closing composition, the rack focus subjects, and on an MSR (reference) shot its size, angle and depth, since MSR pins no frame; a first or first_last shot starts from its given frames — plus your English action, closing picture and sound, and the shot's on-screen lines in quotes (MSR adds its lines in video_plan with their image bindings). video_plan sends this prompt when its args name none. It records what the prompt came from (visual.video.promptBasis), so a later change of cast, lines, frame plan, camera, focus or MSR framing shows as stale. Local file only; no generation.
+
+Do NOT write Korean outside quotes: action, end and sound are English (video_prompt_language). Refused (story_order) while a picture-route shot lacks its start image or a first_last shot its end image, and for a cut that is not generated_video.
+
+For MSR with two on-screen speakers, inspect the start image and pass speakerBindings for each speaker: viewer-relative left/center/right and a short English appearance description. Image numbers are reference slots, not screen positions. Each generated turn repeats the binding and mapped voice. Keep dialogue in shot_dialogue; do NOT duplicate its quotes in action/end/sound (video_dialogue_embedded). Bindings are pinned to the start image; reauthor after it changes. Two speakers remain supported.
+
+Returns: the file written and the prompt. Stores promptSource so video_plan recompiles the current icon attributes at request time.`,
+    inputSchema: {
+      type: 'object', additionalProperties: false,
+      properties: {
+        path: { type: 'string', description: 'The storyboard directory or its scenes.js' },
+        id: { type: 'string', pattern: '^s\\d{4,}$', description: 'Stable shot id' },
+        action: { type: 'string', description: "What happens in the shot, in English: the subjects' movement from the opening picture" },
+        end: { type: 'string', description: 'The closing picture, in English' },
+        sound: { type: 'string', description: "Ambient sound and effects, in English; the shot's lines come from shot_dialogue. \"no music\" is added unless it names music — the episode bed is laid in assembly" },
+        speakerBindings: { type: 'array', maxItems: 2, description: 'Visible speakers matched to the start image, e.g. hero at viewer-left in black armor. Required for two MSR on-screen speakers.', items: {
+          type: 'object', additionalProperties: false, required: ['speaker', 'screenPosition', 'description'], properties: {
+            speaker: { type: 'string', minLength: 1, description: 'Visible cast id, e.g. hero.' },
+            screenPosition: { type: 'string', enum: ['left', 'center', 'right'], description: 'Position from the viewer perspective, e.g. left; never inferred from Image N.' },
+            description: { type: 'string', minLength: 1, description: 'Short English appearance cue, e.g. the orc in black armor.' },
+          },
+        } },
+      },
+      required: ['path', 'id', 'action'],
+    },
+  },
+  {
     name: 'storyboard_apply',
     title: 'Write or patch a storyboard with validation',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    description: `Write a storyboard's scenes.js from a sequence → scene → shot model, or patch part of it, in one call. Every shot is checked against the shot schema (type and render.mode vocabularies, transition join, stable id format and uniqueness, camera input, line-crossing and motion-graphic records), the structure against its schema (version, typed scenes and sequences), location references are checked, and the derived shot labels (sceneSlug · sequence) are written from the structure. Nothing is written when a violation is found — the findings come back instead. Warnings are written and reported; creative choices (beat, size, angle, charge) are not validated here.
+    description: `Write a storyboard's scenes.js from a sequence → scene → shot model, or patch part of it, in one call. Every shot is checked against the shot schema (type and render.mode vocabularies, transition join, stable id format and uniqueness, camera input, line-crossing and motion-graphic records), the structure against its schema (version, typed scenes and sequences) and the story order, and the derived shot labels (sceneSlug · sequence) are written from the structure. Nothing is written when a violation is found — the findings come back instead. No creative or production rule runs on a write; storyboard_check runs them on request.
 
-Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard §4), and to change one thing later (scenes / sequences by key, shots by id — shotsById · insertShots.afterId · removeShotIds — or by position, globals for FORMAT · THEME · COMPREHENSION · STORY · PRODUCTION · MUSIC · SFX). Address shots by id once the board has them (every board written by this tool does): a review note names s0007, and positions shift with every insert; a patch mixes id and position addressing at its own peril — it is refused. Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. One call carries the whole change — do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
+A new episode board starts with its story (story_sequence → story_scene → story_shot), then each shot's characters and lines (shot_characters → shot_dialogue), then its icon attributes (shot_icons), its images (shot_image) and its video prompt (shot_prompt); storyboard_apply refuses to create a board inside an episode. Use it after those steps to add camera endpoints, blocking and visual plans (storyboard §4), and to change one thing later (scenes / sequences by key, shots by id — shotsById · insertShots.afterId · removeShotIds — or by position, globals for FORMAT · THEME · COMPREHENSION · STORY · PRODUCTION · MUSIC · SFX). Address shots by id once the board has them (every board written by this tool does): a review note names s0007, and positions shift with every insert; a patch mixes id and position addressing at its own peril — it is refused. Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. One call carries the whole change — do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
 storyboard_apply assigns stable shot ids (s0001…) and advances STRUCTURE.nextShotId; preserve those ids and do not edit them by hand.
 Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign, visual.camera and the three plan records shot.eyeline · shot.composition · shot.depth in the input schema. shot.depth (L11): count what the viewer must read in the frame at once — one thing → shallow with focus (a person's eyes), two or more → deep with the planes listed front to back; a departure needs a reason, and a still_camera focus-in/rack-focus cut cannot be deep. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
 Do NOT pass a shot's visual plan through a summary — pass the object scenes-schema.md defines (visual · shot.space · visual.camera · visual.video …); unknown keys on a shot pass through untouched. Editing a board drops its stale \`// approved:\` line; existing task authorization is unchanged.
 
-Scene: { no, place, time, event, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? }. Sequence: { id, title, purpose, question?, payoff?, scenes: [no…] }. The reasons for each field are in scenes-schema.md §structure.
+Scene: { no, place, time, event, summary, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? } — on a story-first board a scene without its one-sentence summary is refused (story_order). The cast membership, voiceOnly and two-character checks run in shot_characters and storyboard_check, not here. Sequence: { id, title, purpose, question?, payoff?, scenes: [no…] }. The reasons for each field are in scenes-schema.md §structure.
 
 Returns: the file written or not, counts, and findings (! violation · warning).`,
     inputSchema: {
@@ -5156,7 +5024,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
         },
         structure: { type: 'object', description: 'Replace window.STRUCTURE only' },
         sequences: { type: 'array', items: { type: 'object', description: '{ id, title, purpose, question?, payoff?, scenes }' }, description: 'Upsert sequences by id' },
-        scenes: { type: 'array', items: { type: 'object', description: '{ no, place, time, event, charge, turn, out? }' }, description: 'Upsert scenes by no' },
+        scenes: { type: 'array', items: { type: 'object', description: '{ no, place, time, event, summary, charge, turn, out? }' }, description: 'Upsert scenes by no' },
         shots: { type: 'array', items: { type: 'object', description: 'One positional upsert', properties: { no: { type: 'number', description: '1-based position' }, shot: storyboardShotInput }, required: ['no', 'shot'] }, description: 'Upsert shots by 1-based position; no = length + 1 appends. Not with the id fields in the same patch' },
         shotsById: { type: 'array', items: { type: 'object', description: 'One upsert by id', properties: { id: { type: 'string', pattern: '^s\\d{4,}$', description: 'The stable shot id (s0007) to replace' }, shot: storyboardShotInput }, required: ['id', 'shot'] }, description: 'Replace shots by their stable id — the shot keeps that id, an unknown id writes nothing. Preferred over shots once the board has ids: positions shift with every insert, ids do not' },
         insertShots: { type: 'array', items: { type: 'object', description: 'One insert', properties: { after: { type: 'number', description: '1-based position to insert after; 0 = at the start' }, afterId: { type: 'string', pattern: '^s\\d{4,}$', description: 'The shot id to insert after — instead of after' }, shots: { type: 'array', items: storyboardShotInput, description: 'Shots to insert, in order' } }, required: ['shots'] }, description: 'Insert shots after a 1-based position (0 = at the start) or after the shot with afterId — exactly one of the two per entry' },
@@ -5201,7 +5069,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
     annotations: HINT.local,
     description: `Run the sequence → scene → shot rules and the full scenes.js contract (check-scenes.js: vocabularies, beat order, camera slots, motion policy, production mode) on a board and return every finding. Reads the file and runs a local script; no API call.
 
-Use it after storyboard_apply and before delegating a reviewer or generating anything — the same command the storyboard skill runs by hand (\`node check-scenes.js storyboard/\`). draft:true is the story pass (§4a): machine-layer absences are deferred and counted; structure/address errors fail, creative findings are warnings.
+Use it when the user asks for a check or a concrete doubt needs one — no write or generation waits for it (only the story order and the episode cast refuse a write) — the same command the storyboard skill runs by hand (\`node check-scenes.js storyboard/\`). draft:true is the story pass (§4a): machine-layer absences are deferred and counted; structure/address errors fail, creative findings are warnings.
 Do NOT treat a pass as visual quality — frame overflow, hero-stat width and speech rate are measured on the rendered canvas in storyboard.html's check strip.
 
 Returns: counts (violations · warnings · deferred) and two lists — structure findings, then shot-contract findings — each line "! where what" (violation) or "· where what" (warning).`,
@@ -5241,6 +5109,16 @@ Returns: JSON — { files, violations, warnings, findings: [{ level, where, what
  * an unconfigured platform directly returns an explicit missing-token error.
  */
 TOOLS.push(...GENAI_TOOLS);
+const legacyLtxTool = TOOLS.find(tool => tool.name === 'mlx_video_generate')!;
+TOOLS.push({ ...legacyLtxTool, name: 'ltx_video_generate', title: 'Generate an LTX video',
+  description: legacyLtxTool.description!.replace('Generate a video on this machine via MLX Core / mlx-serve.', 'Create an LTX video on this machine using the MLX-Serve backend.') + '\nDo NOT use for FastH3 references — use fasth3_omni_reference. Inspect video_catalog for contracts without generating.',
+  inputSchema: { ...legacyLtxTool.inputSchema } });
+legacyLtxTool.description = 'Deprecated compatibility alias for ltx_video_generate. Use ltx_video_generate for new LTX requests. ' + legacyLtxTool.description;
+TOOLS.push({ name: 'fasth3_omni_reference', title: 'Generate FastH3 Omni video from references',
+  description: 'Create a FastH3 Omni video with sound from local references.\nUse for reference-to-video, character photos, motion clips and voice samples on Apple Silicon. Runs the installed MLX-Serve pack with eight steps; writes MP4 via ffmpeg. Inputs: up to nine PNG/JPEG images, three videos and three audio files, twelve total, with at least one image or video. Videos are decoded at 24 fps; unsupported tail lengths require explicit trimReferenceVideos:true. Video soundtracks precede standalone audio in <Audio N> numbering. Voice samples guide timbre; exact words, lip-sync and original audio preservation are not guaranteed. No cloud request, download or app launch.\nDo NOT use to inspect availability — use video_catalog; for LTX generation use ltx_video_generate. Returns success, local path, model, width/height, frames, fps, durationSeconds, hasAudio and elapsedSeconds; failures include error. Production output still needs playback review.',
+  inputSchema: zodToJsonSchema(fasth3OmniSchema, { $refStrategy: 'none' }) as Tool['inputSchema'],
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false } });
+
 
 // New generations can state the coverage needed; exact legacy requests keep their schema.
 for (const tool of TOOLS) {
@@ -5249,9 +5127,6 @@ for (const tool of TOOLS) {
     type: 'number', exclusiveMinimum: 0,
     description: 'Required source coverage in seconds, e.g. 3.2. Include the measured shot body, source trim and outgoing transition handle. Selects the shortest supported duration without changing model/resolution. Mutually exclusive with duration, durationSeconds, numFrames, frames, autoDuration and audioMaxDuration. Use for new shots; exact legacy requests may retain their explicit length. Over-limit shots must be split; never truncated.',
   } };
-  if (tool.name === 'seedance_text2video' || tool.name === 'seedance_img2video') tool.inputSchema.properties.frames = {
-    type: 'integer', minimum: 29, maximum: 289, description: 'Exact output frames, 1 mod 4 at 24 fps. Only Seedance 1.0 Pro/Fast. Mutually exclusive with durationSeconds and requiredSeconds. Use requiredSeconds to round upward automatically.',
-  };
   tool.description += '\nFor shot-length optimization, pass requiredSeconds (e.g. 3.2) instead of a fixed duration/frame count. Returns the required/requested/excess seconds as a duration plan; these are not measured output seconds. Do NOT use this option for extending, editing or retaking existing footage.';
 }
 
@@ -5287,20 +5162,32 @@ for (const tool of TOOLS) {
 TOOLS.push(
   { name: 'video_catalog', title: 'Inspect installed video adapters', description: 'List installed video adapter contracts, deployment identifiers and supported operations. Read-only; no generation or live authentication probe. Use before video_plan; model availability is configuration, not a successful API test.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } },
-  { name: 'video_plan', title: 'Plan a video with saved model settings', description: 'Prepare an episode video request from saved model selection and explicit overrides. Compiles storyboard frames and role-labelled references into adapter inputs; returns imageBindings with dimensions, hashes and planned inclusion (host mapping stays unverified). Refuses unsupported combinations and unreviewed structured images. Compiles pinned character voice descriptions and Seedance voice-reference mappings, reports voiceContinuity limits without claiming a listening review, validates the final adapter payload, and pins prices and local input hashes. No media generation. Returns a plan ID, provenance and cost estimate; use video_execute under existing spending authorization. Re-plan after speech, voice or reference edits. Exact supplied-speech synchronization is separate from native voice imitation.',
+  { name: 'video_plan', title: 'Plan a video with saved model settings', description: 'Prepare an episode video request from saved model selection and explicit overrides. Compiles storyboard frames and role-labelled references into adapter inputs; returns imageBindings with dimensions, hashes and planned inclusion (host mapping stays unverified). On MSR the shot\'s start image takes the background slot. A call without args.prompt sends the shot\'s visual.video.prompt (shot_prompt). Refuses unsupported combinations. Compiles pinned character voice descriptions and Seedance voice-reference mappings, reports voiceContinuity limits without claiming a listening review, validates the final adapter payload, and pins prices and local input hashes. No media generation. Returns a plan ID, provenance and cost estimate; use video_execute under existing spending authorization. Re-plan after speech, voice or reference edits. Exact supplied-speech synchronization is separate from native voice imitation.',
     inputSchema: { ...videoContextSchema, properties: { ...videoContextSchema.properties,
       operation: { type: 'string', enum: ['text','image','reference','audio','keyframe','control','extend','edit','retake'], description: 'Operation; the selected engine determines the tool.' },
       tool: { type: 'string', description: 'Optional exact installed adapter tool, checked against the saved selection.' },
       args: { type: 'object', additionalProperties: true, description: 'Adapter-specific fields. Omit model/resolution to inherit saved selection; unknown fields fail.' } } },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false } },
-  { name: 'video_execute', title: 'Execute an authorized video plan', description: 'Execute a saved video_plan under the episode spending authorization. Revalidates selection, inputs, price and provider configuration, reserves budget atomically and records submission identity. Repeated completed requests reuse their result; pending or ambiguous submissions are never resubmitted. API work can incur charges; host-managed video requires an external host handoff.',
+  { name: 'video_execute', title: 'Execute an authorized video plan', description: 'Execute a saved video_plan under the episode spending authorization. Refused (video_approval_required) until the user approves this plan with video_approve, or approves every shot (auto). Revalidates selection, inputs, price and provider configuration, reserves budget atomically and records submission identity. Repeated completed requests reuse their result; pending or ambiguous submissions are never resubmitted. API work can incur charges; host-managed video requires an external host handoff.',
     inputSchema: { type: 'object', additionalProperties: false, properties: { episode: { type: 'string', description: 'Absolute episode directory used by video_plan.' }, planId: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'Plan ID returned by video_plan.' } }, required: ['episode','planId'] },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true } },
+  { name: 'video_approve', title: "Record the user's approval of a shot's video",
+    description: `Use it right after the user says yes to a shot's video — once you have shown them that shot's video_plan prompt, start (and end) image and cost — or when they approve every shot at once (auto:true). video_execute runs a plan only after this. Record the user's own words in request.
+
+Do NOT call it without the user's answer to that question: it is the record of their approval, not a step you take for them. auto:false asks before each shot again. A plan whose shot frames, prompt, lines or settings changed after it was made is refused (video_plan_stale): plan again and show the user the new one. It also writes storyboard/video-approvals.js, from which the review page shows each shot's approval and whether its prompt, frames or lines changed since. Local file only; no generation.
+
+Returns: the approval record (auto and approved plans).`,
+    inputSchema: { type: 'object', additionalProperties: false, properties: {
+      episode: { type: 'string', description: 'Absolute episode directory used by video_plan.' },
+      planIds: { type: 'array', minItems: 1, items: { type: 'string', pattern: '^[a-f0-9]{64}$' }, description: 'Plans the user approved after seeing each shot\'s prompt, images and cost' },
+      auto: { type: 'boolean', description: 'true: the user approves every shot\'s video from now on; false: ask before each shot again' },
+      request: { type: 'string', description: 'The user\'s own words that gave this approval' } }, required: ['episode', 'request'] },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false } },
 );
 
 TOOLS.push({ name: 'video_status', title: 'Read a saved video request receipt',
-  description: 'Read a managed video receipt. Default action:read is local only. action:refresh queries an existing ASTRA GenAI job, downloads completed media and updates the receipt without generation. Other providers do not support refresh. Use after interruption; ambiguous requests keep their reservation until explicit provider and billing reconciliation.',
-  inputSchema: { type: 'object', additionalProperties: false, properties: { episode: { type: 'string', description: 'Absolute episode directory.' }, requestId: { type: 'string', description: 'Original logical request ID from video_plan.' }, action: { type: 'string', enum: ['read', 'refresh'], default: 'read', description: 'read is local only; refresh recovers an existing GenAI job and can save completed video.' } }, required: ['episode','requestId'] },
+  description: 'Read a managed video receipt. Default action:read is local only. action:refresh queries an existing ASTRA GenAI job, downloads completed media and updates the receipt without generation. Other providers do not support refresh. action:reconcile closes a submission_unknown, interrupted or failed request as failed with the verified charge, freeing its concurrency slot, only after the caller supplies terminal/billing evidence and spentUsd. A request the provider rejected outright is already failed. Use after interruption; ambiguous requests keep their reservation until reconciled. Do not reconcile a request still running at the provider.',
+  inputSchema: { type: 'object', additionalProperties: false, properties: { episode: { type: 'string', description: 'Absolute episode directory.' }, requestId: { type: 'string', description: 'Original logical request ID from video_plan.' }, action: { type: 'string', enum: ['read', 'refresh', 'reconcile'], default: 'read', description: 'read is local only; refresh recovers an existing GenAI job and can save completed video; reconcile settles an unknown request from billing evidence.' }, executorStopped: { type: 'boolean', description: 'Required true to reconcile a submitting or submitted request: the executing process has exited and the provider job is terminal.' }, evidence: { type: 'string', description: 'For reconcile: the provider\'s terminal status and billing evidence reference.' }, spentUsd: { type: 'number', minimum: 0, description: 'For reconcile: verified total charge, including failed generation.' } }, required: ['episode','requestId'] },
   annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true } });
 
 const imageContextSchema = { type: 'object' as const, additionalProperties: false,
@@ -5344,7 +5231,7 @@ const musicContextSchema = { type: 'object', description: 'Managed music context
   directory: { type: 'string', description: 'Absolute episode or workspace directory, e.g. /work/data/demo/episodes/intro.' },
   assetId: { type: 'string', description: 'Stable cue/asset ID, e.g. base.' },
   requestId: { type: 'string', description: 'Stable attempt ID, e.g. base-1. Reuse after interruption.' },
-  reserveUsd: { type: 'number', minimum: 0, description: 'Total provider cost estimate for all tracks, e.g. 0.5; zero for local. Not an invoice cap.' },
+  reserveUsd: { type: 'number', minimum: 0, description: 'Total provider cost estimate for all tracks, e.g. 0.5. Required and positive for API engines; omit or 0 for local MLX. Not an invoice cap.' },
 }, required: ['directory', 'assetId', 'requestId'] };
 for (const tool of TOOLS) {
   if (!MUSIC_ADAPTERS[tool.name]) continue;
@@ -5352,7 +5239,7 @@ for (const tool of TOOLS) {
   tool.inputSchema.properties = { ...tool.inputSchema.properties, musicContext: musicContextSchema };
   if (tool.name === 'suno_generate_sound') tool.description = 'Retired V5 sounds adapter; generation is rejected before submission. Use music_catalog and explicitly select a supported V6 instrumental song instead. Does not automatically substitute models.';
   if (tool.name === 'suno_generate') {
-    tool.inputSchema.properties.model = { type: 'string', enum: ['V6', 'V6_MINI', 'V6_WILD'], default: 'V6', description: 'sunoapi.org third-party model ID, not a Suno Platform identifier.' };
+    tool.inputSchema.properties.model = { type: 'string', enum: [...SUNO_V6_MODELS], default: DEFAULT_SUNO_MODEL, description: 'sunoapi.org third-party model ID, not a Suno Platform identifier.' };
     tool.inputSchema.properties.lyrics = { type: 'string', maxLength: 5000, description: 'Lyrics, e.g. [Verse] followed by Korean lyrics. Preferred over prompt in custom mode.' };
     tool.description = 'Generate songs using sunoapi.org, a third-party provider. Configured calls require musicContext. Use music_catalog to inspect choices; do NOT treat this as the Suno Platform official API. Returns local tracks and provider task ID. V6 custom mode requires style, lyrics or negativeTags; duration is 10–360 seconds. Non-custom mode requires style or lyrics; prompt alone is insufficient. Old V4/V5 models are retired.';
   }
