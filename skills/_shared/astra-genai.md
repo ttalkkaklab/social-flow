@@ -109,6 +109,25 @@ Measure actual output duration before assembly; do not assume it covers an exact
 speech duration. `requiredSeconds`, first/last frames, LoRA, retake and a supplied
 speech track are not part of this MSR contract.
 
+Every MSR prompt includes an audio-only speech instruction forbidding subtitles,
+captions, on-screen text, labels, logos and watermarks. This also applies to direct
+adapter calls and explicit prompts. The full prompt must fit 2,000 characters;
+shorten action prose when needed, never silently truncate dialogue. This is model
+direction, not proof that the resulting pixels contain no text.
+
+`negativePrompt` maps to `negative_prompt`; `guidanceScale` maps to `guidance_scale`
+(1–10). Separate negatives require an explicit scale above 1: the gateway's default
+CFG=1 ignores them. Before a new submission using negatives or CFG above 1, the
+adapter checks `/v1/ltx/msr/capabilities` and refuses absent or false
+`negative_prompt` support without uploading or submitting. It never silently drops
+the requested conditioning or raises CFG. Ordinary requests retain distilled CFG=1.
+On 2026-11-08 at 00:38 KST, the live remote gateway returned
+`{"msr":true,"voice_references":true,"negative_prompt":true,"prompt_max_chars":2000}`.
+Its [OpenAPI contract](https://genai.astravision.co.kr/openapi.json) exposes these
+fields. Check capabilities on each new conditioned submission because deployment
+support can change. The always-included prompt instruction also applies when
+negatives are supplied; inspect generated footage before claiming subtitle absence.
+
 MSR renders speech and diegetic effects into its own soundtrack. **Voice samples are
 optional (2026-10-31, user directive).** `video_plan` lays the prompt out as the model
 card does (2026-10-31): the reference block first (`Image N: <role>, <purpose>` per image,

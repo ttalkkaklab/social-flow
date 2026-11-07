@@ -91094,6 +91094,8 @@ var require_video_catalog = __commonJS({
           },
           fields: [
             "prompt",
+            "negativePrompt",
+            "guidanceScale",
             "references",
             "referenceStrength",
             "referenceFrames",
@@ -110892,8 +110894,12 @@ function buildGenaiAudioBody(args) {
   };
 }
 var GENAI_MSR_FRAMES = { min: 25, max: 361, step: 8, frameRate: 24 };
+var GENAI_MSR_NO_TEXT = "Speech is audio only. No subtitles, captions, on-screen text, labels, logos or watermarks.";
 var genaiMsrSchema = external_exports.object({
-  prompt: external_exports.string().trim().min(1).max(2e3),
+  prompt: external_exports.string().trim().min(1).transform((prompt) => prompt.endsWith(GENAI_MSR_NO_TEXT) ? prompt : `${prompt}
+${GENAI_MSR_NO_TEXT}`).pipe(external_exports.string().max(2e3, "MSR prompt including the subtitle-free instruction must fit 2000 characters; shorten the action without dropping dialogue")),
+  negativePrompt: external_exports.string().trim().min(1).max(5e3).optional(),
+  guidanceScale: external_exports.number().finite().min(1).max(10).optional(),
   references: external_exports.array(external_exports.object({
     imageUri: genaiImageUriSchema.optional(),
     imagePath: external_exports.string().min(1).optional(),
@@ -110918,6 +110924,8 @@ var genaiMsrSchema = external_exports.object({
   filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use a .mp4 filename").optional()
 }).strict().superRefine((args, ctx) => {
   const issue2 = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  if (args.negativePrompt !== void 0 && (args.guidanceScale ?? 1) <= 1)
+    issue2("MSR negativePrompt requires guidanceScale > 1; CFG=1 ignores negative conditioning");
   const backgrounds = args.references.filter((ref) => ref.background).length;
   if (backgrounds > 1 || args.references.length - backgrounds > 4) issue2("MSR supports at most four subjects and one background");
   let subject = 0;
@@ -110937,6 +110945,8 @@ var genaiMsrSchema = external_exports.object({
 function buildGenaiMsrBody(args) {
   return {
     prompt: args.prompt,
+    ...args.negativePrompt === void 0 ? {} : { negative_prompt: args.negativePrompt },
+    ...args.guidanceScale === void 0 ? {} : { guidance_scale: args.guidanceScale },
     references: args.references.map((ref) => ({
       image_uri: genaiSourceUri(ref.imageUri, ref.imagePath),
       background: ref.background,
@@ -111075,6 +111085,11 @@ async function generateGenaiVideo(operation, input) {
     recordVideoSubmission(previous.jobId);
   } else {
     if (fs10.existsSync(videoPath)) throw new Error("GenAI output already exists");
+    if ("references" in args && (args.negativePrompt !== void 0 || (args.guidanceScale ?? 1) > 1)) {
+      const capabilities = external_exports.object({ negative_prompt: external_exports.boolean().optional() }).passthrough().parse(await requestGenai("GET", "/v1/ltx/msr/capabilities", void 0, 15e3));
+      if (capabilities.negative_prompt !== true)
+        throw new Error("msr_negative_unsupported: the GenAI MSR backend does not advertise negative conditioning; no request was submitted");
+    }
     if (operation === "msr" && "references" in args && args.references.some((ref) => oneOf(ref.audioUri, ref.audioPath)) && !await refreshGenaiMsrVoice(true))
       throw new Error("msr_voice_unsupported: the GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities)");
     const submitted = "references" in args ? await prepareGenaiMsrSources(body) : body;
@@ -111211,7 +111226,9 @@ var GENAI_TOOLS = [
     title: "Generate an LTX video from subject and background references",
     description: "Combine character, clothing, object and background references in one MSR video through ASTRA GenAI. Use video_plan operation reference and video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Up to four subject images and one background; place the background last and number prompt images in that order. Local PNG/JPEG files are shrunk to the render size and, with local voice samples, uploaded in chunks as gateway file ids (data URIs where the gateway has no upload API). MSR is a server-selected deployment with no model parameter, independent of saved LTX v2 weights. It cannot pin first/last frames; use img2video for frame control. Speech and effects are rendered natively. Subjects 1 and 2 may carry an optional voice sample of the character (audioPath or audioUri, at most 10 s, about 5 s used); write any dialogue in the prompt. The model imitates the timbre of the sample and does not preserve it; without a sample the voice follows the prompt. A request with a sample is refused before submission when the gateway MSR backend does not accept samples (GET /v1/ltx/msr/capabilities). Saves a job receipt and resumes via video_status without resubmission.",
     inputSchema: { type: "object", properties: {
-      prompt: { type: "string", minLength: 1, maxLength: 2e3, description: "Action and reference roles, e.g. person in image 1 wearing the jacket in image 2." },
+      prompt: { type: "string", minLength: 1, maxLength: 2e3, description: "Action and reference roles. A subtitle-free instruction is always appended; the combined prompt must fit 2000 characters." },
+      negativePrompt: { type: "string", minLength: 1, maxLength: 5e3, description: "Separate negative conditioning, e.g. subtitles, captions, text overlays. Requires guidanceScale > 1 and live backend negative_prompt support; otherwise refused before submission." },
+      guidanceScale: { type: "number", minimum: 1, maximum: 10, description: "Classifier-free guidance; omitted keeps gateway default 1. Values above 1 require backend negative conditioning support and change distilled sampling." },
       references: { type: "array", minItems: 1, maxItems: 5, description: "At most four subjects and one background. Exactly one URI or path per reference.", items: {
         type: "object",
         properties: {
