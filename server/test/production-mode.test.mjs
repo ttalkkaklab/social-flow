@@ -9,6 +9,9 @@ import { spawnSync } from 'node:child_process';
 const require = createRequire(import.meta.url);
 const root = path.resolve(import.meta.dirname, '../..');
 const runtimeMode = require('../../skills/storyboard/references/production-mode.js');
+test('an authored opening view satisfies the framing slot without legacy prose', () => {
+  assert.deepEqual(runtimeMode.missingCameraSlots({ movement:'static', view:{crop:'Only the hand and key'}, end:'The fingers release the key' }), []);
+});
 // Existing policy cases inspect diagnostics, not whether automatic execution must stop.
 const mode = {...runtimeMode, cameraErrors:(scene)=>{const advice=[];return runtimeMode.cameraErrors(scene,{advice}).concat(advice);}, check:(win,options={})=>{const advice=[];return runtimeMode.check(win,{...options,advice}).concat(advice);}};
 const { quote, digest, comparisonResolution } = require('../../skills/autoproduce/references/production-cost.js');

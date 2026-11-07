@@ -12,6 +12,9 @@ export function compileVideoPrompt(shot, source, names = {}) {
     const plan = object(shot.shot), visual = object(shot.visual), frames = object(visual.frames), camera = object(visual.camera);
     const msr = frames.mode === 'reference';
     const words = load('../../skills/storyboard/references/assemble-bg-prompt.js');
+    const views = load('../../skills/storyboard/references/shot-view.js');
+    const viewWords = camera.view === undefined ? '' : views.instructions(camera.view);
+    const sizes = viewWords ? words.SIZE_WORDS_OBJECT : words.SIZE_WORDS;
     const catalogue = load('../../skills/storyboard/references/film-techniques.js');
     const contract = load('../../skills/storyboard/references/structure-contract.js');
     const travels = load('../../skills/storyboard/references/production-mode.js').travels;
@@ -27,20 +30,20 @@ export function compileVideoPrompt(shot, source, names = {}) {
         : move?.prompt ? sentence(`The camera ${pace ? pace + ' ' : ''}${move.prompt.replace('{target}', target || 'the subject')}${speed && !pace ? ` at a ${speed} pace` : ''}${ends}`)
             : sentence(`Camera: ${[speed, movement].filter(Boolean).join(' ')}` + (target ? ` toward ${target}` : '') + ends);
     const focusWords = !rack ? '' : sentence(rack.from && rack.to ? `Rack focus from ${rack.from} to ${rack.to}` : `${rack.entry.label.en} from the near subject to the far subject`);
-    const sizeWords = sentence(words.SIZE_WORDS[text(plan.size)] || ''), angleWords = sentence(words.ANGLE_WORDS[text(plan.angle)] || '');
-    const framing = sentence([words.SIZE_WORDS[text(plan.size)], words.ANGLE_WORDS[text(plan.angle)]].filter(Boolean).join(', '));
+    const sizeWords = sentence(sizes[text(plan.size)] || ''), angleWords = sentence(words.ANGLE_WORDS[text(plan.angle)] || '');
+    const framing = sentence([sizes[text(plan.size)], words.ANGLE_WORDS[text(plan.angle)]].filter(Boolean).join(', '));
     const depthWords = plan.depth ? sentence(contract.depthText(plan.depth)) : '';
     // Viewpoint and framing techniques were previously displayed as icons but omitted from shot_prompt.
     const other = picked.filter(t => t.entry && ['camera', 'framing'].includes(t.entry.category) &&
-        !t.entry.fields.movement && !t.entry.fields.focus && !t.entry.fields.size && !t.entry.fields.angle);
+        !t.entry.fields.movement && !t.entry.fields.focus && !t.entry.fields.size && !t.entry.fields.angle && !(viewWords && t.entry.fields.viewpoint));
     const lines = (Array.isArray(shot.narration) ? shot.narration : []).map(object);
     const prompt = [
         msr ? framing : 'Start from the given first frame.',
         msr ? depthWords : '', moveWords, settle ? sentence(`Closing frame: ${settle}`) : '', focusWords,
         ...other.map(t => sentence(t.entry.instruction)),
-        text(camera.framing) ? sentence(`Opening composition: ${text(camera.framing)}`) : '',
-        camera.rear && !other.some(t => t.entry.fields.viewpoint === 'rear') ? 'View the subject from behind.' : '',
-        camera.pov && !other.some(t => t.entry.fields.viewpoint === 'pov') ? sentence(`Point of view: ${text(camera.pov) || 'the named character'}`) : '',
+        viewWords || (text(camera.framing) ? sentence(`Opening composition: ${text(camera.framing)}`) : ''),
+        !viewWords && camera.rear && !other.some(t => t.entry.fields.viewpoint === 'rear') ? 'View the subject from behind.' : '',
+        !viewWords && camera.pov && !other.some(t => t.entry.fields.viewpoint === 'pov') ? sentence(`Point of view: ${text(camera.pov) || 'the named character'}`) : '',
         sentence(source.action),
         ...(msr ? [] : lines.filter(line => line.delivery === 'on_screen' && text(line.tts)).map(line => {
             const id = text(line.speaker), name = names[id];
@@ -56,6 +59,7 @@ export function compileVideoPrompt(shot, source, names = {}) {
         { attribute: 'render', value: object(plan.render).mode, via: 'adapter' },
         { attribute: 'size', value: plan.size, via: !sizeWords ? 'unmapped' : msr ? 'prompt' : 'image', instruction: sizeWords },
         { attribute: 'angle', value: plan.angle, via: !angleWords ? 'unmapped' : msr ? 'prompt' : 'image', instruction: angleWords },
+        { attribute: 'view', value: camera.view, via: 'prompt', instruction: viewWords },
         { attribute: 'move', value: camera, via: movement ? 'prompt' : 'unmapped', instruction: moveWords },
         { attribute: 'focus', value: rack ? { id: rack.id, from: rack.from, to: rack.to } : undefined, via: 'prompt', instruction: focusWords },
         { attribute: 'depth', value: plan.depth, via: msr ? 'prompt' : 'image', instruction: depthWords },

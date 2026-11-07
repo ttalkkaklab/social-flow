@@ -2392,7 +2392,7 @@ window.STORYBOARD_READY = (async function () {
   function camHtml(cam) {
     if (!cam) return "";
     return '<div class="cam">' + CAM_SLOTS.map(function (slot) {
-      var v = cam[slot];
+      var v = slot === 'framing' && cam.view ? [cam.view.subject, cam.view.crop, cam.view.mode, cam.view.reason].filter(Boolean).join(' · ') : cam[slot];
       return "<span" + (v ? "" : ' class="miss"') + "><b>" + esc(T.cam[slot]) + "</b>" +
              esc(v || T.notWritten) + "</span>";
     }).join("") + "</div>";
@@ -4171,7 +4171,7 @@ window.STORYBOARD_READY = (async function () {
     // A static camera has no speed (full-video.md §Camera dynamics: speed belongs to a move),
     // so the slot is empty by contract on that shot and is not a gap.
     var isStatic = /^\s*static\b/i.test(String(cam.movement || ""));
-    var missing = CAM_SLOTS.filter(function (slot) { return !cam[slot] && !(slot === "speed" && isStatic); });
+    var missing = CAM_SLOTS.filter(function (slot) { return !cam[slot] && !(slot === 'framing' && cam.view) && !(slot === "speed" && isStatic); });
     if (missing.length) {
       camGaps++;
       flag("warn", T.shotCap(i + 1), "visual.camera is missing " + missing.join(", ") +

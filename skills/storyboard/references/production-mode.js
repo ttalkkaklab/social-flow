@@ -121,7 +121,7 @@
   const normalize = value => String(value || '').toLowerCase().replace(/[\s\p{P}\p{S}]/gu, '');
   // A static camera has no speed to state (the span reads "static camera"), so that one slot may stay empty.
   const staticCamera = camera => /^(static|fixed|locked)/i.test(String(camera?.movement || '').trim());
-  const missingCameraSlots = camera => CAMERA_SLOTS.filter(slot => !text(camera?.[slot]) && !(slot === 'speed' && staticCamera(camera)));
+  const missingCameraSlots = camera => CAMERA_SLOTS.filter(slot => !text(camera?.[slot]) && !(slot === 'framing' && text(camera?.view?.crop)) && !(slot === 'speed' && staticCamera(camera)));
   // A move written to be invisible is a still with extra steps. ep402 (2026-09-06) asked for
   // "very small optical focus change", "gentle focus", "hold composition with subtle light
   // variation" and got clips whose every frame repeats the last; ep411 (2026-09-09) asked for

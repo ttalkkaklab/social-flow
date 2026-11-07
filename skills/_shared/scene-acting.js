@@ -118,6 +118,10 @@ function cameraLock(camera = {}) {
 }
 function sceneDirection(scene = {}, performance = []) {
   const design = scene.shot?.videoDesign || {}, camera = scene.visual?.camera || {};
+  const view = require('../storyboard/references/shot-view.js').checked(camera.view);
+  const catalogue = require('../storyboard/references/film-techniques.js');
+  const directed = view ? {...scene, shot:{...scene.shot, techniques:(scene.shot?.techniques || []).filter(t =>
+    catalogue.byId[t.id]?.category !== 'framing' && !catalogue.byId[t.id]?.fields.viewpoint)}} : scene;
   const lock = cameraLock(camera);
   const actions = new Set(performance.filter(event => event.kind === 'action').map(event => event.videoDirection || event.text));
   const keys = ['before','action','after','continuity'].filter(key => design[key] && !(key === 'action' && actions.has(design[key])));
@@ -129,8 +133,9 @@ function sceneDirection(scene = {}, performance = []) {
   return [
     ...keys.map(key => `${key}: ${design[key]}`),
     ...states,
-    require('../storyboard/references/film-techniques.js').instructions(scene),
-    ...['framing','movement',...(lock ? [] : ['speed']),'end'].filter(key => camera[key]).map(key => `Camera ${key}: ${camera[key]}`),
+    catalogue.instructions(directed),
+    ...(view ? [require('../storyboard/references/shot-view.js').instructions(view)] : []),
+    ...[...(view ? [] : ['framing']),'movement',...(lock ? [] : ['speed']),'end'].filter(key => camera[key]).map(key => `Camera ${key}: ${camera[key]}`),
     ...(lock ? [lock] : []),
   ].join('\n');
 }

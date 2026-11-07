@@ -238,6 +238,11 @@ A review is useful evidence, not a standing numerical gate.
 
 ## 4. Cut and stage the scenes without losing their events
 
+Read and apply [content-led opening views](references/shot-view.md) for every picture shot:
+choose its visible evidence, crop, horizontal viewpoint and camera height from the story,
+then save `shot_icons view` with size and angle. This is the common decision procedure for
+the start image and set camera; a monologue does not automatically mean a portrait.
+
 For narrated or mixed scenes, apply [narration and visual grounding](references/narration-visual-grounding.md)
 before writing any source-image prompt. Decide what the picture contributes to the line,
 then stage that contribution; shared character, prop and background sheets constrain

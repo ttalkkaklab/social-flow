@@ -1110,6 +1110,11 @@ function promptNotes(shot) {
 const choice = z.object({ id: nonEmpty, reason: nonEmpty }).strict();
 // The two routes keep their own pace words (render-routing.md): a video move is seen, a still window crawls.
 const VIDEO_SPEEDS = ['slow', 'steady', 'fast'], STILL_SPEEDS = ['very slow', 'slow', 'fast', 'very fast'];
+export const shotViewContract = () => loadFromHere(join(REFERENCES_DIR, 'shot-view.js'));
+const shotViewSchema = z.custom().superRefine((view, ctx) => {
+    for (const message of shotViewContract().validate(view))
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+});
 export const shotIconsSchema = z.object({
     path: outlinePath,
     shots: z.array(z.object({
@@ -1120,6 +1125,7 @@ export const shotIconsSchema = z.object({
         why: nonEmpty.optional().describe('Why this size'),
         angle: tuple(V.ANGLES).optional(),
         backgroundView: z.enum(['front', 'back']).optional().describe('Opening camera direction relative to the location sheet: front is its establishing view; back is the opposite view, 180 degrees around the same space. Saved as visual.camera.backgroundView; omitted keeps the choice, initially front.'),
+        view: shotViewSchema.optional().describe('Content-led opening subject, crop and viewpoint; saved as visual.camera.view'),
         move: choice.extend({ target: nonEmpty.optional(), speed: z.enum(['very slow', 'slow', 'steady', 'fast', 'very fast']).optional() }).strict().optional()
             .describe('A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold …)'),
         focus: choice.extend({ from: nonEmpty.optional(), to: nonEmpty.optional() }).strict().nullable().optional()
@@ -1142,7 +1148,7 @@ export function writeShotIcons(args) {
     const notes = [];
     // A 9:16 board gets each chosen value's vertical note back as a warning — advice for the choice, never a refusal.
     const vertical = !/16x9/.test(String(win.FORMAT ?? ''));
-    for (const { id, render, size, why, angle, backgroundView, move, focus, depth, frames, next } of args.shots) {
+    for (const { id, render, size, why, angle, view, backgroundView, move, focus, depth, frames, next } of args.shots) {
         const index = shotIndex(shots, id, 'shot_icons');
         const plan = { ...(shots[index].shot ?? {}) };
         const visual = { ...(shots[index].visual ?? {}) };
@@ -1184,6 +1190,18 @@ export function writeShotIcons(args) {
             plan.angle = angle;
         if (backgroundView)
             visual.camera = { ...visual.camera, backgroundView };
+        if (view) {
+            shotViewSchema.parse(view);
+            for (const [key, value] of [['subject', view.subject], ['crop', view.crop]]) {
+                if (nonEnglishOutsideQuotes(value))
+                    throw new Error(`video_prompt_language: shot_icons ${id} view.${key} must be English`);
+            }
+            // The structured view replaces old opening prose and flags, not the closing camera.
+            const { framing: _framing, rear: _rear, pov: _pov, ...camera } = (visual.camera ?? {});
+            visual.camera = { ...camera, view };
+            plan.info = view.subject;
+            plan.why = view.reason;
+        }
         if (depth) {
             const errors = contract().validateDepth(depth);
             if (errors.length)
@@ -1428,6 +1446,14 @@ export function shotImageRequest(args) {
     const place = typeof selected === 'string' && selected ? selected : entry?.imageUrl;
     if (entry && !selected && args.frame === 'start')
         warnings.push({ level: 'warn', where: args.id, what: `background_view_missing: ${location} has no ${backgroundView} panel; ${place ? 'its legacy imageUrl supplies the look' : 'no background image is available'} — generate front and back panels on the location sheet` });
+    const view = visual.camera?.view;
+    if (view !== undefined) {
+        shotViewSchema.parse(view);
+        if (nonEnglishOutsideQuotes(view.subject + ' ' + view.crop))
+            throw new Error('image_prompt_language: view.subject and view.crop must be English');
+    }
+    else if (args.frame === 'start')
+        warnings.push({ level: 'warn', where: args.id, what: 'no content-led opening view: choose the attention subject, crop and viewpoint with shot_icons view before making a new production image; legacy framing is used' });
     // A sheet with a built set (SB_DOC.locations[].manifest) is rendered from this shot's own camera — its size and
     // angle, aimed at its blocked cast — and that render is the picture's composition; the sheet image only gives the look.
     const set = typeof entry?.manifest === 'string' ? locationContract().shotFrame(win, shots.indexOf(shot), boardDir, { manifest: entry.manifest, cast, size: plan.size, angle: plan.angle, width, height }) : null;
@@ -1470,13 +1496,16 @@ export function shotImageRequest(args) {
         ...(set ? { location: { prompt: args.frame === 'end' ? set.endPrompt : set.prompt, paths: [] } } : {}) }).prompt;
     const roles = ordered.map((ref, i) => `Image ${i + 1} shows ${ref.purpose}.`).join(' ');
     const at = (ref) => ordered.indexOf(ref) + 1;
-    const lock = !set ? '' : args.frame === 'end'
+    const lock = !set ? (view && selected && args.frame === 'start'
+        ? `Keep the background's ${backgroundView} viewing direction and landmark arrangement. The character sheets supply appearance and identity only; recompose the subject to the authored opening crop and subject viewpoint within that space. Character panel poses do not constrain this shot.`
+        : view ? `The location and character sheets supply appearance and identity only. Recompose them to the authored ${args.frame === 'end' ? 'closing' : 'opening'} crop and viewpoint; the sheet pose and camera do not constrain this shot.` : '') : args.frame === 'end'
         ? composition.length ? `Use Image ${at(composition[0])}'s closing camera, lens, framing and final object and figure positions. Image 1 supplies the look and every identity; its opening camera does not constrain this closing view.`
             : `Image 1 supplies the opening appearance and identities. Follow the closing camera direction below while preserving the set's world layout.`
         : `Keep Image 1's camera position, ${lens}${dutch ? '' : ', horizon'} and world layout, and keep every object${set.blocked ? ' and figure' : ''} at its world position in Image 1. The authored composition below controls the final crop, headroom and subject screen placement. Paint its plain unpainted surfaces as the real place, and continue the place into any flat dark area past the set's edge.`
             + (dutch ? ' Image 1 is level; tilt the whole picture to the dutch angle described below.' : '')
             + (look.some((ref) => ordered.includes(ref)) ? ` Take only materials, colours and light from Image ${at(look[0])}.` : '');
     const prompt = [ordered.length ? 'Compose one picture from these images.' : '', roles, lock, heightSentence(win, cast),
+        view ? 'Character panels identify the subject; include only the body regions named by the crop. A face reference does not require a face in the output.' : '',
         args.frame === 'end' ? 'This is the last frame of the shot that opens on Image 1: keep its place, light and every identity, applying the planned action, camera landing and final focus.' : '',
         ...propPictures.unseen, body.charAt(0).toUpperCase() + body.slice(1)].filter(Boolean).join(' ');
     const call = imageCall({ directory: episode, assetId: args.id, inputs, prompt, width, height, outDir: join(boardDir, 'images'), stem: `${args.id}-${args.frame}`, what: 'this frame' });
