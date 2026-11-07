@@ -116330,6 +116330,89 @@ function boardReadiness(win, boardDir) {
     note: "Diagnostics only; no overall production-ready or visual-quality claim."
   };
 }
+function boundaryReview(win, playback, videoTiming) {
+  const record2 = (value) => value !== null && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const text4 = (value) => typeof value === "string" && value.trim() ? value : null;
+  const source = win.SCENES || [];
+  const ids = source.map((shot) => shot.id);
+  const timings = Array.isArray(videoTiming) ? videoTiming : [];
+  const shots = playback.map(({ no }, index) => {
+    const shot = source[no - 1];
+    const visual = record2(shot.visual), plan2 = record2(shot.shot), camera = record2(visual.camera);
+    const edit2 = record2(shot.edit), design = record2(plan2.videoDesign);
+    const id = text4(shot.id), uniqueId = id !== null && ids.filter((value) => value === id).length === 1;
+    const cast = contract().castOf(shot);
+    return {
+      no,
+      id,
+      playbackPosition: index + 1,
+      identity: uniqueId ? "stable" : "missing_or_duplicate",
+      scene: typeof shot.scene === "number" ? shot.scene : null,
+      type: shot.type,
+      summary: text4(shot.summary),
+      principals: cast ?? null,
+      location: text4(visual.locationId),
+      camera,
+      size: plan2.size ?? null,
+      angle: plan2.angle ?? null,
+      depth: plan2.depth ?? null,
+      eyeline: plan2.eyeline ?? null,
+      composition: plan2.composition ?? null,
+      opening: design.before ?? null,
+      action: visual.action ?? design.action ?? null,
+      ending: camera.end ?? design.after ?? null,
+      // Preserve line ids, delivery, acting and performance group references, including silent actions.
+      narration: shot.narration ?? null,
+      performance: shot.performance ?? null,
+      estimatedSeconds: typeof shot.duration === "number" && Number.isFinite(shot.duration) && shot.duration > 0 ? shot.duration : null,
+      timing: uniqueId ? timings.find((row) => record2(row).shotId === id) ?? null : null,
+      storedIncoming: { transition: shot.transition ?? null, reason: text4(edit2.reason), continuity: text4(edit2.continuity) }
+    };
+  });
+  const reasons = shots.map((shot) => shot.storedIncoming.reason).filter((reason) => reason !== null);
+  const boundaries = shots.slice(1).map((right, index) => {
+    const left = shots[index];
+    const spliced = [left, right].some((shot) => shot.type === "broll" || shot.type === "outro");
+    const sameScene = left.scene !== null && right.scene !== null ? left.scene === right.scene : null;
+    const sameLocation = left.location !== null && right.location !== null ? left.location === right.location : null;
+    const knownCast = left.principals !== null && right.principals !== null;
+    const samePrincipals = knownCast ? left.principals.length === right.principals.length && left.principals.every((id) => right.principals.includes(id)) : null;
+    const spoken = (lines) => (Array.isArray(lines) ? lines : []).map(record2).filter((line) => text4(line.tts));
+    const last = spoken(left.narration).at(-1), first = spoken(right.narration)[0];
+    const lastSpeaker = text4(last?.speaker), firstSpeaker = text4(first?.speaker);
+    const continuingSpeaker = lastSpeaker !== null && firstSpeaker !== null ? lastSpeaker === firstSpeaker : null;
+    const signals = [];
+    if (sameScene === true && !spliced) {
+      if (continuingSpeaker === true) signals.push("continuing_speaker");
+      if (samePrincipals === true && left.principals.length > 0) signals.push("same_principals");
+      const silentAction = (shot) => Array.isArray(shot.narration) && shot.narration.length === 0 && (shot.action !== null || Array.isArray(shot.performance) && shot.performance.some((beat) => record2(beat).kind === "action"));
+      if (silentAction(left) && silentAction(right)) signals.push("consecutive_silent_actions");
+    }
+    const reason = right.storedIncoming.reason;
+    if (!spliced && reason && reasons.filter((value) => value === reason).length >= 3) signals.push("repeated_reason");
+    return {
+      from: { id: left.id, no: left.no },
+      to: { id: right.id, no: right.no },
+      sameScene,
+      sameLocation,
+      samePrincipals,
+      continuingSpeaker,
+      signals,
+      // Inserted footage has its own edit scheduling. A raw-array join is not proof of its playback join.
+      incoming: spliced ? null : right.storedIncoming,
+      joinEvidence: spliced ? "inspect_splice_edit" : "authored_not_verified",
+      question: sameScene === false ? "What time, place or event change motivates this boundary?" : "What would a continuous held or motivated moving frame lose here? Preserve an earned reveal, reaction or viewpoint.",
+      decision: "needs_editorial_review"
+    };
+  });
+  return {
+    version: "shot-boundaries-v1",
+    status: "not_reviewed",
+    shots,
+    boundaries,
+    note: "Signals are review prompts, never merge instructions or quality failures. Compare the complete scene, including offscreen action. Recompute a proposed continuous performance and its selected video route before claiming it fits; separate-shot timing is not merged capacity. No files or approvals are changed."
+  };
+}
 function readStoryboard(args) {
   const { win, file, sha256: sha2562 } = readBoard(args.path);
   const result = contract().outline(win, args.level);
@@ -116346,6 +116429,7 @@ function readStoryboard(args) {
       return { shotId: shot.id, status: "not_verified", reason: error2.message };
     }
   });
+  result.boundaryReview = boundaryReview(win, result.playback, result.videoTiming);
   if (args.includeTechniques !== false) result.techniqueCatalog = {
     version: techniqueContract().VERSION,
     entries: techniqueContract().entries,
@@ -126016,9 +126100,11 @@ Do NOT use it to validate \u2014 storyboard_check runs the contract. A board wit
 
 For inspection, the default includeContext:true adds reviewContext.story (STORY), production (PRODUCTION) and document (SB_DOC: characters, props, setting and recorded reviews). shotId adds selectedShot with the raw shot, scene and previous/next shot IDs while preserving the whole flow. Referenced asset paths are authored locators, not proof the files exist or have been viewed. inspection.mediaViewed is always false; evidenceStatus is not_verified. Read assets and run their contract checks before declaring continuity or a current review pass.
 
+Includes boundaryReview (shot-boundaries-v1): every actual playback join with full ordered speech/performance, camera context, incoming join ownership and factual review signals. It is read-only and always not_reviewed; repeated speakers/cast or reasons are not merge commands. For splices incoming is null: inspect the edit plan. Missing evidence stays unknown. Compare the uncut scene before images, and audit line ids/order/acting, performance groups, references and outer joins after edits. If this field is absent on an older connection, update/reconnect rather than guessing a bundle path.
+
 Includes videoTiming for generated shots: selected route, planned source coverage, frame grid, maximum seconds, and fits/split_required/timing_unknown/limits_unknown. This is not measured speech or output duration.
 
-Returns: JSON \u2014 { file, mediaBaseDirectory, sha256, version, format, shots, sequences[\u2026scenes[\u2026shots]], unplacedShots, splicedShots (broll \xB7 outro), playback (actual insertion order), unscheduledShots, propSheet?, inspection, reviewContext?, selectedShot? }.`,
+Returns: JSON \u2014 { file, mediaBaseDirectory, sha256, version, format, shots, sequences[\u2026scenes[\u2026shots]], unplacedShots, splicedShots (broll \xB7 outro), playback (actual insertion order), unscheduledShots, propSheet?, inspection, boundaryReview, videoTiming, reviewContext?, selectedShot? }.`,
     inputSchema: {
       type: "object",
       properties: {
@@ -126088,7 +126174,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     name: "story_shot",
     title: "Write shot stories (story step 3 of 3)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    description: `Use it after story_scene to write each provisional shot as one sentence summarizing a coherent performance in its scene. A summary may cover several lines and turns; never allocate one shot per sentence or gesture. Revisit boundaries after shot_dialogue and inspect storyboard_read.videoTiming before images. Without an id the shot is added at the end of its scene and gets a stable id (s0001\u2026); with an id that shot's scene and summary are revised and everything else on it is kept; a new scene moves it to the end of that scene. Refused (story_order) before any scene exists or for a scene outside a sequence. A story-first episode board also repeats story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
+    description: `Use it after story_scene to write each provisional shot as one sentence summarizing a coherent performance in its scene. A summary may cover several lines and turns; never allocate one shot per sentence or gesture. Revisit boundaries after shot_dialogue using storyboard_read.boundaryReview and inspect videoTiming before images. Without an id the shot is added at the end of its scene and gets a stable id (s0001\u2026); with an id that shot's scene and summary are revised and everything else on it is kept; a new scene moves it to the end of that scene. Refused (story_order) before any scene exists or for a scene outside a sequence. A story-first episode board also repeats story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
 
 Do NOT pass characters, dialogue, narration, camera, visual fields or a title \u2014 the input refuses them; a shot's title is on-screen text, which a full_video cut never carries. Once every shot has its story, shot_characters and shot_dialogue come next, then shot_icons; on a board these tools started (STORY.authoring "story-first") storyboard_apply refuses a shot without scene and summary.
 
@@ -126133,7 +126219,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     name: "shot_dialogue",
     title: "Write each shot's lines by character",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    description: `Use it after shot_characters to write a shot's lines in spoken order, each attributed to a character from the episode cast. The given lines replace the shot's lines; [] makes it silent. Keep consecutive lines from a speaker or a readable exchange in the same shot. After writing the complete scene, merge redundant boundaries and compare performance duration with storyboard_read.videoTiming; split only for a motivated visual change or verified model capacity. Delivery defaults to on_screen for one of the shot's characters and voiceover for anyone else \u2014 a narrator is a character who speaks without being seen. A line with a known id keeps its acting and audio binding, and changed text makes that audio stale. Refused (story_order) before the shot's characters are set and for an on_screen speaker outside them; an unknown speaker is cast_unknown, and a story-first board repeats story_sequence's cast check (cast_source_missing, character_panel_missing). Local file only; no audio, image or prompt is generated.
+    description: `Use it after shot_characters to write a shot's lines in spoken order, each attributed to a character from the episode cast. The given lines replace the shot's lines; [] makes it silent. Keep consecutive lines from a speaker or a readable exchange in the same shot. After writing the complete scene, inspect every storyboard_read.boundaryReview join against an uninterrupted performance, merge only redundant boundaries and compare revised performance duration with videoTiming; split only for a motivated visual change or verified model capacity. Delivery defaults to on_screen for one of the shot's characters and voiceover for anyone else \u2014 a narrator is a character who speaks without being seen. A line with a known id keeps its acting and audio binding, and changed text makes that audio stale. Refused (story_order) before the shot's characters are set and for an on_screen speaker outside them; an unknown speaker is cast_unknown, and a story-first board repeats story_sequence's cast check (cast_source_missing, character_panel_missing). Local file only; no audio, image or prompt is generated.
 
 Do NOT generate speech here \u2014 speech_manage plans and binds audio later. Do NOT write icon attributes or visual plans; shot_icons comes next, then storyboard_apply.
 

@@ -20,6 +20,10 @@ generation authorization and adapter input validation stay. Work in this order:
 3. Each shot's characters (`shot_characters`, at most two), then their lines (`shot_dialogue`).
 4. Each shot's icon attributes (`shot_icons`): render route, size, angle, camera move,
    focus, depth, frame plan (`reference` is MSR) and the transition into the next shot (`next`).
+   After lines and provisional camera staging, compare the uncut scene with every join
+   using [shot boundary decisions](../storyboard/references/shot-boundaries.md). Read
+   `storyboard_read.boundaryReview` and `videoTiming`, revise unnecessary boundaries, and
+   preserve speech/performance/continuity before images. This is authoring, not a new gate.
 5. Props and backgrounds — `SB_DOC.props` and `SB_DOC.locations` with their images.
    Backgrounds default to two separate opposing camera views in `panels.front` and
    `panels.back`; follow [asset sheets](../storyboard/references/asset-sheets.md).

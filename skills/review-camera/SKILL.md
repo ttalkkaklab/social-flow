@@ -19,6 +19,10 @@ against each speaking shot: fixed OTS with two speakers, unreadable profile two-
 valid one-speaker OTS and valid two-speaker two-shots. Inspect the whole reverse sequence
 for speech ownership, eyelines and preserved lines; these findings are guidance, not gates.
 
+Use [shot boundary decisions](../storyboard/references/shot-boundaries.md) and
+`storyboard_read.boundaryReview` to challenge every playback join against an uninterrupted
+scene. Preserve justified cuts; fewer shots alone is not improvement.
+
 Map every required audience-visible beat to one or more cuts. Export the camera plan
 separately from mutable scenes.js and give it to the reviewer. Inspect what the
 viewer first notices, angle/size, focus endpoints, motivated movement or hold, actor blocking,

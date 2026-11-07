@@ -1043,6 +1043,80 @@ describe('storyboard_read inspection', () => {
     assert.equal(event.text, null);
     assert.equal(event.speaker, null);
   });
+  it('boundary evidence preserves the whole performance without deciding or mutating the edit', () => {
+    const win = readWin();
+    win.SCENES[0].narration = [{ id: 'line-1', speaker: 'child', tts: 'I brought it back.', delivery: 'on_screen' }];
+    win.SCENES[0].performance.push({ kind: 'dialogue', character: 'child', to: 'father', group: 1 });
+    for (const row of win.SCENES) {
+      row.scene = 1;
+      row.visual = { character: ['child', 'father'], locationId: 'room', camera: {
+        movement: 'static', view: { mode: 'front', subject: 'Both listen and answer', crop: 'waist up' }, end: 'Father looks away' } };
+      row.shot = { size: 'ms', angle: 'eye', depth: { mode: 'deep' } };
+    }
+    win.SCENES[1].narration[0].speaker = 'child';
+    win.SCENES[1].narration[0].acting = { intent: 'Wait for an answer' };
+    win.SCENES[1].edit = { reason: 'The reply reveals a hidden fear', continuity: 'Keep their positions' };
+    withBoard(dir => {
+      const file = join(dir, 'scenes.js'), before = readFileSync(file, 'utf8');
+      const report = readStoryboard(storyboardReadSchema.parse({ path: dir, level: 'outline', includeContext: false, includeTechniques: false })).boundaryReview;
+      assert.equal(report.version, 'shot-boundaries-v1');
+      assert.equal(report.status, 'not_reviewed');
+      assert.equal(report.boundaries.length, 1);
+      assert.deepEqual(report.boundaries[0].signals, ['continuing_speaker', 'same_principals']);
+      assert.equal(report.boundaries[0].decision, 'needs_editorial_review');
+      assert.equal(report.boundaries[0].incoming.reason, 'The reply reveals a hidden fear');
+      assert.deepEqual(report.shots.map(row => row.narration), win.SCENES.map(row => row.narration));
+      assert.deepEqual(report.shots.map(row => row.performance), win.SCENES.map(row => row.performance));
+      assert.deepEqual(report.shots[1].camera, win.SCENES[1].visual.camera);
+      assert.equal(readFileSync(file, 'utf8'), before);
+    }, win);
+  });
+  it('boundary review covers changed speakers, silent action, reverse views and explicit scene changes', () => {
+    const win = readWin(), first = win.SCENES[0];
+    win.SCENES = Array.from({ length: 5 }, (_, i) => ({ ...structuredClone(first), id: `s000${i + 1}`, scene: i === 4 ? 2 : 1,
+      narration: i === 2 || i === 3 ? [] : [{ id: `line-${i}`, speaker: i === 1 ? 'father' : 'child', tts: 'A complete line', delivery: 'on_screen' }],
+      visual: { character: ['child', 'father'], locationId: 'room', camera: { view: {
+        mode: i === 1 ? 'ots' : 'front', subjectId: i === 1 ? 'father' : 'child', viewerId: i === 1 ? 'child' : undefined } } },
+      edit: { reason: i === 4 ? 'The next morning' : 'Continue the action' },
+    }));
+    withBoard(dir => {
+      const { boundaries, shots } = readStoryboard(storyboardReadSchema.parse({ path: dir })).boundaryReview;
+      assert.equal(boundaries.length, 4);
+      assert.equal(boundaries[0].continuingSpeaker, false);
+      assert.ok(boundaries[0].signals.includes('same_principals'));
+      assert.equal(shots[1].camera.view.viewerId, 'child');
+      assert.equal(shots[1].camera.view.subjectId, 'father');
+      assert.ok(boundaries[2].signals.includes('consecutive_silent_actions'));
+      assert.ok(boundaries[2].signals.includes('repeated_reason'));
+      assert.equal(boundaries[3].sameScene, false);
+      assert.deepEqual(boundaries[3].signals, []);
+      assert.equal(boundaries[3].incoming.reason, 'The next morning');
+    }, win);
+  });
+  it('missing evidence and duplicate ids remain unknown rather than matching or borrowing timing', () => {
+    const win = readWin();
+    win.SCENES[1].id = win.SCENES[0].id;
+    for (const row of win.SCENES) {
+      delete row.scene; delete row.visual;
+      row.duration = undefined;
+      row.narration = [{ tts: 'Unknown speaker' }];
+    }
+    withBoard(dir => {
+      const { shots, boundaries } = readStoryboard(storyboardReadSchema.parse({ path: dir })).boundaryReview;
+      assert.ok(shots.every(row => row.identity === 'missing_or_duplicate' && row.timing === null && row.estimatedSeconds === null));
+      assert.equal(boundaries[0].sameScene, null);
+      assert.equal(boundaries[0].sameLocation, null);
+      assert.equal(boundaries[0].samePrincipals, null);
+      assert.equal(boundaries[0].continuingSpeaker, null);
+      assert.equal(boundaries[0].decision, 'needs_editorial_review');
+    }, win);
+    for (const row of win.SCENES) { delete row.narration; row.scene = 1; }
+    withBoard(dir => {
+      const { shots, boundaries } = readStoryboard(storyboardReadSchema.parse({ path: dir })).boundaryReview;
+      assert.ok(shots.every(row => row.narration === null));
+      assert.ok(!boundaries[0].signals.includes('consecutive_silent_actions'));
+    }, win);
+  });
   it('duplicate shot IDs fail targeted inspection instead of inspecting the wrong shot', () => {
     const win = readWin(); win.SCENES[1].id = 's0001';
     withBoard(dir => assert.throws(() => readStoryboard(storyboardReadSchema.parse({ path: dir, shotId: 's0001' })), /found 2/), win);
@@ -1055,6 +1129,10 @@ describe('storyboard_read inspection', () => {
     withBoard(dir => {
       const result = readStoryboard(storyboardReadSchema.parse({ path: dir, shotId: 's0003' }));
       assert.deepEqual(result.playback.map(row => row.id), ['s0001','s0003','s0002','s0004']);
+      assert.deepEqual(result.boundaryReview.shots.map(row => row.id), ['s0001','s0003','s0002','s0004']);
+      assert.deepEqual(result.boundaryReview.boundaries.map(row => [row.from.id, row.to.id]),
+        [['s0001','s0003'],['s0003','s0002'],['s0002','s0004']]);
+      assert.ok(result.boundaryReview.boundaries.every(row => row.incoming === null && row.joinEvidence === 'inspect_splice_edit'));
       assert.deepEqual(result.unscheduledShots.map(row => row.id), ['s0005']);
       assert.deepEqual(result.selectedShot.previous, { id: 's0001', no: 1 });
       assert.deepEqual(result.selectedShot.next, { id: 's0002', no: 2 });
