@@ -116126,6 +116126,9 @@ var REFERENCES_DIR = join10(PLUGIN_ROOT, "skills", "storyboard", "references");
 var CONTRACT_FILE = join10(REFERENCES_DIR, "structure-contract.js");
 var CHECK_SCENES_FILE = join10(REFERENCES_DIR, "check-scenes.js");
 var CHECK_SCENARIO_FILE = join10(REFERENCES_DIR, "check-scenario.js");
+var runtimeFile = fileURLToPath8(import.meta.url);
+var runtimeModuleSha256 = createHash14("sha256").update(readFileSync24(runtimeFile)).digest("hex");
+var runtimeLoadedAt = (/* @__PURE__ */ new Date()).toISOString();
 var loadFromHere2 = nodeModule3.createRequire(import.meta.url);
 var contractCache;
 function contract() {
@@ -116353,12 +116356,31 @@ function boundaryReview(win, playback, videoTiming) {
   const source = win.SCENES || [];
   const ids = source.map((shot) => shot.id);
   const timings = Array.isArray(videoTiming) ? videoTiming : [];
+  const acting = loadFromHere2(join10(PLUGIN_ROOT, "skills", "_shared", "scene-acting.js"));
   const shots = playback.map(({ no }, index) => {
     const shot = source[no - 1];
     const visual = record2(shot.visual), plan2 = record2(shot.shot), camera = record2(visual.camera);
     const edit2 = record2(shot.edit), design = record2(plan2.videoDesign);
     const id = text4(shot.id), uniqueId = id !== null && ids.filter((value) => value === id).length === 1;
     const cast = contract().castOf(shot);
+    let performanceTiming;
+    try {
+      const legacyAction = text4(visual.action) ?? text4(design.action);
+      const explicit = Array.isArray(shot.performance) && shot.performance.length > 0;
+      const clock = !explicit && (legacyAction || !shot.narration?.length) ? { performance: [
+        ...legacyAction ? [{ kind: "action", text: legacyAction, order: "unresolved" }] : [],
+        ...(shot.narration ?? []).map((line) => ({ kind: line.delivery === "voiceover" ? "narration" : "dialogue", lineId: line.id, speaker: line.speaker, text: line.tts, delivery: line.delivery, acting: line.acting, order: "unresolved" }))
+      ], durationSeconds: null, warnings: ["No ordered performance: action order and timing remain unresolved."], timing: "unknown" } : acting.planScenePerformance(shot, (line) => typeof line.estimatedSeconds === "number" ? line.estimatedSeconds : null);
+      performanceTiming = {
+        ...clock,
+        basis: "authored_estimates",
+        physicalFeasibility: "not_reviewed",
+        timing: clock.durationSeconds === null ? "unknown" : "estimated",
+        differsFromStored: typeof shot.duration === "number" && clock.durationSeconds !== null ? Math.abs(shot.duration - clock.durationSeconds) > 0.05 : null
+      };
+    } catch (error2) {
+      performanceTiming = { status: "unresolved", reason: error2.message, physicalFeasibility: "not_reviewed" };
+    }
     return {
       no,
       id,
@@ -116381,11 +116403,24 @@ function boundaryReview(win, playback, videoTiming) {
       // Preserve line ids, delivery, acting and performance group references, including silent actions.
       narration: shot.narration ?? null,
       performance: shot.performance ?? null,
+      performanceTiming,
       estimatedSeconds: typeof shot.duration === "number" && Number.isFinite(shot.duration) && shot.duration > 0 ? shot.duration : null,
       timing: uniqueId ? timings.find((row) => record2(row).shotId === id) ?? null : null,
       storedIncoming: { transition: shot.transition ?? null, reason: text4(edit2.reason), continuity: text4(edit2.continuity) }
     };
   });
+  const sceneRuns = [];
+  for (const shot of shots) {
+    let run = sceneRuns.at(-1);
+    if (!run || shot.scene === null || run.scene !== shot.scene) {
+      run = { scene: shot.scene, shotIds: [], events: [] };
+      sceneRuns.push(run);
+    }
+    run.shotIds.push(shot.id);
+    const events = shot.performanceTiming.performance;
+    if (Array.isArray(events)) run.events.push(...events.map((event) => ({ ...record2(event), shotId: shot.id })));
+    else run.events.push({ shotId: shot.id, status: "unresolved", reason: shot.performanceTiming.reason });
+  }
   const reasons = shots.map((shot) => shot.storedIncoming.reason).filter((reason) => reason !== null);
   const boundaries = shots.slice(1).map((right, index) => {
     const left = shots[index];
@@ -116425,6 +116460,7 @@ function boundaryReview(win, playback, videoTiming) {
   return {
     version: "shot-boundaries-v1",
     status: "not_reviewed",
+    sceneRuns,
     shots,
     boundaries,
     note: "Signals are review prompts, never merge instructions or quality failures. Compare the complete scene, including offscreen action. Recompute a proposed continuous performance and its selected video route before claiming it fits; separate-shot timing is not merged capacity. No files or approvals are changed."
@@ -116436,6 +116472,16 @@ function readStoryboard(args) {
   result.file = file;
   result.mediaBaseDirectory = dirname5(file);
   result.sha256 = sha2562;
+  result.runtime = {
+    contract: "storyboard-integrity-v1",
+    modulePath: runtimeFile,
+    loadedAt: runtimeLoadedAt,
+    loadedModuleSha256: runtimeModuleSha256,
+    diskModuleSha256: createHash14("sha256").update(readFileSync24(runtimeFile)).digest("hex"),
+    features: ["boundaryReview", "videoTiming", "imageFraming", "editImpact"],
+    referenceModules: "not_verified; module hashes exclude runtime-loaded skills and their require cache",
+    note: "Loaded-module identity, not an install/update action. Compare with the intended build; reconnect after updating."
+  };
   result.readiness = boardReadiness(win, dirname5(file));
   result.videoTiming = (win.SCENES || []).filter((shot) => shot.shot?.render?.mode === "generated_video").map((shot) => {
     if (shot.visual?.reuse) return { shotId: shot.id, status: "reused", note: "Inspect the existing clip; no new generation limit applies." };
@@ -116799,7 +116845,7 @@ function applyPatch(win, patch, opts = {}) {
       return { ...shot, visual: { ...shot.visual, video: rest } };
     });
   }
-  const findings = [...joinNotes];
+  const findings = [...joinNotes, ...editImpact(win, next)];
   if (!shots.length && !opts.outline) findings.push({ level: "bad", where: "board", what: "the board has no shots" });
   if (win.STORY?.authoring === "story-first" && next.STORY?.authoring !== "story-first")
     findings.push({ level: "bad", where: "STORY", what: 'story_order: STORY.authoring "story-first" stays on a board started with story_sequence' });
@@ -116811,6 +116857,57 @@ function applyPatch(win, patch, opts = {}) {
     findings.push(...contract().executionCheck(next).filter((f3) => shots.length || !opts.outline || f3.where !== "board"));
   }
   return { win: next, findings, synced };
+}
+function editImpact(before, after) {
+  const findings = [];
+  const oldShots = before.SCENES ?? [], newShots = after.SCENES ?? [];
+  const warn = (code, where, what) => findings.push({ level: "warn", code, where, what: `${code}: ${what}` });
+  const lines = (board) => {
+    const shots = board.SCENES ?? [];
+    const playback = contract().outline(board, "shots").playback;
+    return playback.flatMap(({ no }) => {
+      const shot = shots[no - 1], narration = shot.narration ?? [];
+      const events = Array.isArray(shot.performance) ? shot.performance.filter((event) => event.kind === "dialogue" || event.kind === "narration") : [];
+      const groups = Array.isArray(shot.performance) ? events.map((event) => event.group) : narration.map((_, i2) => i2 + 1);
+      const missing = narration.map((_, i2) => i2 + 1).filter((group) => !groups.includes(group));
+      if (missing.length || groups.some((group) => !Number.isInteger(group) || !narration[group - 1]))
+        warn("edit_speech_order_unresolved", String(shot.id), "performance does not resolve every speech group; inspect the ordered lines before changing boundaries.");
+      return [...groups, ...missing].map((group) => {
+        const line = narration[group - 1];
+        return line ? { id: line.id, tts: line.tts, speaker: line.speaker, delivery: line.delivery, acting: line.acting } : { unresolvedGroup: group };
+      });
+    });
+  };
+  const oldLines = lines(before), newLines = lines(after);
+  if (oldShots.length && JSON.stringify(oldLines) !== JSON.stringify(newLines)) {
+    const missing = oldLines.filter((line) => line.id && !newLines.some((next) => next.id === line.id)).map((line) => line.id);
+    warn("edit_speech_changed", "board", `ordered speech/acting changed${missing.length ? `; removed line ids: ${missing.join(", ")}` : ""}. Check intended wording, order, speakers, delivery and acting; moving intact lines between shots does not trigger this note.`);
+  }
+  for (const old of oldShots) {
+    const current = newShots.find((shot) => shot.id === old.id);
+    if (!current) {
+      const design = old.shot?.videoDesign;
+      if (Array.isArray(old.performance) && old.performance.some((event) => event.kind === "action") || old.visual?.action || old.visual?.camera || design?.action || design?.before || design?.after)
+        warn("edit_action_removed", String(old.id), "shot removed with performance/visual.action/videoDesign evidence; verify its required actions and physical states survive elsewhere or were deliberately omitted.");
+      continue;
+    }
+    const changed = startImageBasis(old, before.FORMAT) !== startImageBasis(current, after.FORMAT) || old.visual?.bgPrompt !== current.visual?.bgPrompt;
+    if (changed) {
+      warn("edit_staging_changed", String(current.id), "staging/performance changed; reconcile performance, visual.action, camera endpoints, videoDesign and acting, then re-estimate duration and inspect both joins.");
+      const oldVisual = old.visual;
+      const visual = current.visual;
+      const oldFrames = oldVisual?.frames;
+      const frames = visual?.frames;
+      if (frames?.start && frames.start === oldFrames?.start)
+        warn("edit_image_inherited", String(current.id), `retained ${frames.start} after staging changed; inspect opening pose, hands, cast and props before reuse. No media was regenerated.`);
+    }
+  }
+  const doc = after.SB_DOC;
+  for (const event of doc?.propContinuity?.events ?? []) {
+    const dangling = event.shotIds?.filter((id) => !newShots.some((shot) => shot.id === id)) ?? [];
+    if (dangling.length) warn("edit_prop_reference", String(event.id ?? "prop event"), `unresolved shot ids: ${dangling.join(", ")}; retarget the event to the shot that now depicts it.`);
+  }
+  return findings;
 }
 function applyStoryboard(args, opts = {}) {
   const file = scenesPath(args.path);
@@ -117373,17 +117470,24 @@ function startImageBasis(shot, format) {
     cast: contract().castOf(shot),
     location: visual.locationId,
     locationBinding: plan2.location,
-    props: visual.props
+    props: visual.props,
+    action: visual.action,
+    videoDesign: plan2.videoDesign,
+    performance: shot.performance,
+    acting: shot.narration?.map((line) => line.acting?.visual)
   })).digest("hex");
 }
 function imageFramingStatus(shot, format) {
-  const frames = shot.visual?.frames;
+  const visual = shot.visual;
+  const frames = visual?.frames;
+  const promptHash = typeof visual?.bgPrompt === "string" ? createHash14("sha256").update(visual.bgPrompt).digest("hex") : null;
+  const changed = !!frames?.startBasis && frames.startBasis !== startImageBasis(shot, format) || !!frames?.startPromptSha256 && frames.startPromptSha256 !== promptHash;
   return {
     id: shot.id,
     image: frames?.start,
-    status: !frames?.startBasis ? "unknown" : frames.startBasis === startImageBasis(shot, format) ? "current" : "stale",
+    status: changed ? "stale" : !frames?.startBasis || !frames.startPromptSha256 ? "unknown" : "current",
     visualReview: "not_reviewed",
-    note: "Current means the saved framing inputs match. Inspect the actual image crop before using it."
+    note: "Current means saved staging and prompt inputs match, not that the image obeys them. Inspect the pixels before reuse."
   };
 }
 var locationContract = () => loadFromHere2(join10(REFERENCES_DIR, "location-assets.js"));
@@ -117610,11 +117714,20 @@ function shotImageRequest(args) {
   for (const file of inputs) if (!existsSync22(file)) throw new Error(`image_input_missing: ${file}`);
   const imagePrompts = loadFromHere2(join10(REFERENCES_DIR, "assemble-bg-prompt.js"));
   const style = loadFromHere2(join10(REFERENCES_DIR, "production-mode.js")).shotStyle(win, shots.indexOf(shot));
+  const authoredOpening = plan2.videoDesign?.before;
+  const opening = args.frame === "start" ? latin(authoredOpening) : "";
+  if (args.frame === "start" && authoredOpening && !opening)
+    warnings.push({
+      level: "warn",
+      code: "opening_translation_required",
+      where: args.id,
+      what: "opening_translation_required: videoDesign.before is not English; preserve its physical state in the English shot_image prompt."
+    });
   const body = imagePrompts.assemble({
     ...imagePrompts.frameOptions(shot, args.frame),
     ...args.frame === "end" && set?.endCamera && JSON.stringify(set.camera) !== JSON.stringify(set.endCamera) ? { omitFraming: true } : {},
     style: style.preset ? style : null,
-    scene: args.prompt,
+    scene: [opening && `Authored opening state: ${opening}`, args.prompt].filter(Boolean).join(" "),
     noPerson: !cast.length,
     ...set ? { location: { prompt: args.frame === "end" ? set.endPrompt : set.prompt, paths: [] } } : {}
   }).prompt;
@@ -117702,6 +117815,7 @@ function recordShotImage(args, request) {
   if (args.frame === "start") {
     if (request.startBasis) frames.startBasis = request.startBasis;
     else delete frames.startBasis;
+    frames.startPromptSha256 = createHash14("sha256").update(request.prompt).digest("hex");
     Object.assign(visual, {
       bg: rel,
       bgPrompt: request.prompt,
@@ -126117,11 +126231,13 @@ Do NOT use it to validate \u2014 storyboard_check runs the contract. A board wit
 
 For inspection, the default includeContext:true adds reviewContext.story (STORY), production (PRODUCTION) and document (SB_DOC: characters, props, setting and recorded reviews). shotId adds selectedShot with the raw shot, scene and previous/next shot IDs while preserving the whole flow. Referenced asset paths are authored locators, not proof the files exist or have been viewed. inspection.mediaViewed is always false; evidenceStatus is not_verified. Read assets and run their contract checks before declaring continuity or a current review pass.
 
+The runtime field identifies the loaded module and its on-disk hash; it does not certify runtime-loaded reference modules. Compare the intended installation and reconnect after changes. imageFraming tracks staging/performance and generated-prompt provenance separately from pixel inspection.
+
 Includes boundaryReview (shot-boundaries-v1): every actual playback join with full ordered speech/performance, camera context, incoming join ownership and factual review signals. It is read-only and always not_reviewed; repeated speakers/cast or reasons are not merge commands. For splices incoming is null: inspect the edit plan. Missing evidence stays unknown. Compare the uncut scene before images, and audit line ids/order/acting, performance groups, references and outer joins after edits. If this field is absent on an older connection, update/reconnect rather than guessing a bundle path.
 
 Includes videoTiming for generated shots: selected route, planned source coverage, frame grid, maximum seconds, and fits/split_required/timing_unknown/limits_unknown. This is not measured speech or output duration.
 
-Returns: JSON \u2014 { file, mediaBaseDirectory, sha256, version, format, shots, sequences[\u2026scenes[\u2026shots]], unplacedShots, splicedShots (broll \xB7 outro), playback (actual insertion order), unscheduledShots, propSheet?, inspection, boundaryReview, videoTiming, reviewContext?, selectedShot? }.`,
+Returns: JSON \u2014 { file, mediaBaseDirectory, sha256, version, format, shots, sequences[\u2026scenes[\u2026shots]], unplacedShots, splicedShots (broll \xB7 outro), playback (actual insertion order), unscheduledShots, propSheet?, inspection, runtime, imageFraming, boundaryReview, videoTiming, reviewContext?, selectedShot? }.`,
     inputSchema: {
       type: "object",
       properties: {
@@ -126191,7 +126307,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     name: "story_shot",
     title: "Write shot stories (story step 3 of 3)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    description: `Use it after story_scene to write each provisional shot as one sentence summarizing a coherent performance in its scene. A summary may cover several lines and turns; never allocate one shot per sentence or gesture. Revisit boundaries after shot_dialogue using storyboard_read.boundaryReview and inspect videoTiming before images. Without an id the shot is added at the end of its scene and gets a stable id (s0001\u2026); with an id that shot's scene and summary are revised and everything else on it is kept; a new scene moves it to the end of that scene. Refused (story_order) before any scene exists or for a scene outside a sequence. A story-first episode board also repeats story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
+    description: `Use it after story_scene to write each provisional shot as one sentence summarizing a coherent performance in its scene. A summary may cover several lines and turns; never allocate one shot per sentence or gesture. Revisit boundaries after shot_dialogue using storyboard_read.boundaryReview.sceneRuns (the uninterrupted scene) and boundaries (hold, reframe or cut); inspect performanceTiming and videoTiming before images. Without an id the shot is added at the end of its scene and gets a stable id (s0001\u2026); with an id that shot's scene and summary are revised and everything else on it is kept; a new scene moves it to the end of that scene. Refused (story_order) before any scene exists or for a scene outside a sequence. A story-first episode board also repeats story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
 
 Do NOT pass characters, dialogue, narration, camera, visual fields or a title \u2014 the input refuses them; a shot's title is on-screen text, which a full_video cut never carries. Once every shot has its story, shot_characters and shot_dialogue come next, then shot_icons; on a board these tools started (STORY.authoring "story-first") storyboard_apply refuses a shot without scene and summary.
 
@@ -126412,7 +126528,7 @@ Returns: the file written and the prompt. Stores promptSource so video_plan reco
 A new episode board starts with its story (story_sequence \u2192 story_scene \u2192 story_shot), then each shot's characters and lines (shot_characters \u2192 shot_dialogue), then its icon attributes (shot_icons), its images (shot_image) and its video prompt (shot_prompt); storyboard_apply refuses to create a board inside an episode. Use it after those steps to add camera endpoints, blocking and visual plans (storyboard \xA74), and to change one thing later (scenes / sequences by key, shots by id \u2014 shotsById \xB7 insertShots.afterId \xB7 removeShotIds \u2014 or by position, globals for FORMAT \xB7 THEME \xB7 COMPREHENSION \xB7 STORY \xB7 PRODUCTION \xB7 MUSIC \xB7 SFX). Address shots by id once the board has them (every board written by this tool does): a review note names s0007, and positions shift with every insert; a patch mixes id and position addressing at its own peril \u2014 it is refused. Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. One call carries the whole change \u2014 do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
 storyboard_apply assigns stable shot ids (s0001\u2026) and advances STRUCTURE.nextShotId; preserve those ids and do not edit them by hand.
 Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign, visual.camera and the three plan records shot.eyeline \xB7 shot.composition \xB7 shot.depth in the input schema. shot.depth (L11): count what the viewer must read in the frame at once \u2014 one thing \u2192 shallow with focus (a person's eyes), two or more \u2192 deep with the planes listed front to back; a departure needs a reason, and a still_camera focus-in/rack-focus cut cannot be deep. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
-Do NOT pass a shot's visual plan through a summary \u2014 pass the object scenes-schema.md defines (visual \xB7 shot.space \xB7 visual.camera \xB7 visual.video \u2026); unknown keys on a shot pass through untouched. Editing a board drops its stale \`// approved:\` line; existing task authorization is unchanged.
+Do NOT pass a shot's visual plan through a summary \u2014 pass the object scenes-schema.md defines (visual \xB7 shot.space \xB7 visual.camera \xB7 visual.video \u2026); unknown keys on a shot pass through untouched. Nonblocking edit_* findings expose performed-speech changes, removed actions, inherited images and dangling prop-event shot ids. They require an editorial comparison, not regeneration or approval. Editing a board drops its stale \`// approved:\` line; existing task authorization is unchanged.
 
 Scene: { no, place, time, event, summary, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? } \u2014 on a story-first board a scene without its one-sentence summary is refused (story_order). The cast membership, voiceOnly and two-character checks run in shot_characters and storyboard_check, not here. Sequence: { id, title, purpose, question?, payoff?, scenes: [no\u2026] }. The reasons for each field are in scenes-schema.md \xA7structure.
 

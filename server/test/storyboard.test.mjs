@@ -397,7 +397,7 @@ describe('story first, then characters and lines', () => {
     assert.deepEqual(shot.narration.map((l) => [l.id, l.speaker, l.delivery]), [['s0001-l1', 'mina', 'on_screen'], ['s0001-l2', 'narrator', 'voiceover']]);
     const recast = writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['joon'] }] });
     assert.equal(recast.written, true);
-    assert.deepEqual(recast.findings.filter((f) => f.where === 's0001').map((f) => f.level), ['warn']);
+    assert.deepEqual(recast.findings.filter((f) => f.where === 's0001' && !f.code).map((f) => f.level), ['warn']);
     assert.deepEqual(readBoard(dir).win.SCENES[0].narration.map((l) => [l.speaker, l.delivery]), [['mina', 'off_screen'], ['narrator', 'voiceover']]);
     const back = writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }] });
     assert.ok(back.findings.some((f) => f.where === 's0001' && /off_screen lines/.test(f.what)));
@@ -591,6 +591,27 @@ describe('images and the video prompt follow the icon attributes', () => {
     recordShotImage(args, request);
     return request;
   };
+  it('tracks physical opening, performance and prompt changes without certifying inherited images', () => {
+    const { dir } = pictureBoard(); icons(dir); make(dir, 's0001');
+    const status = () => readStoryboard(storyboardReadSchema.parse({ path: dir, includeTechniques: false })).imageFraming[0];
+    assert.equal(status().status, 'current');
+    for (const change of [
+      s => { s.shot.videoDesign = { before: 'Left hand holds the guard', after: 'Left hand releases' }; },
+      s => { s.visual.action = 'She turns before he arrives'; },
+      s => { s.performance = [{ kind: 'action', character: 'mina', text: 'She kneels', durationSeconds: 2 }]; },
+      s => { s.visual.bgPrompt = 'A contradictory revised opening'; },
+    ]) {
+      const s = readBoard(dir).win.SCENES[0], image = s.visual.frames.start;
+      change(s); applyStoryboard({ path: dir, shotsById: [{ id: s.id, shot: s }] });
+      assert.equal(status().status, 'stale');
+      assert.equal(readBoard(dir).win.SCENES[0].visual.frames.start, image);
+      make(dir, 's0001'); assert.equal(status().status, 'current');
+    }
+    const s = readBoard(dir).win.SCENES[0];
+    delete s.visual.frames.startPromptSha256;
+    applyStoryboard({ path: dir, shotsById: [{ id: s.id, shot: s }] });
+    assert.equal(status().status, 'unknown');
+  });
   it('selects the opening camera background panel and preserves the choice across icon edits', () => {
     const { dir } = pictureBoard();
     icons(dir);
@@ -1201,5 +1222,70 @@ describe('shot camera MCP input', () => {
         { set: { structure: structure([scene(1)]), shots: [s] } },
       ]) assert.equal(storyboardApplySchema.safeParse({ path: '.', ...patch }).success, false);
     }
+  });
+});
+
+
+describe('edit impact and uninterrupted scene evidence', () => {
+  const fixture = () => ({ FORMAT: 'youtube-long-16x9', SCENES: [
+    { id: 's0001', type: 'points', scene: 1, duration: 3,
+      narration: [{ id: 'a', speaker: 'alice', delivery: 'on_screen', tts: 'Wait.', estimatedSeconds: 2, acting: { visual: 'Hold still' } }],
+      performance: [{ kind: 'dialogue', character: 'alice', group: 1 }, { kind: 'action', character: 'alice', text: 'Turn', durationSeconds: 1 }],
+      visual: { frames: { start: 'old.png' }, action: 'Turn' } },
+    { id: 's0002', type: 'points', scene: 1, duration: 4,
+      narration: [{ id: 'b', speaker: 'bob', delivery: 'on_screen', tts: 'I know.', estimatedSeconds: 3 }],
+      performance: [{ kind: 'dialogue', character: 'bob', group: 1 }, { kind: 'action', character: 'bob', text: 'Nod', durationSeconds: 1 }] },
+  ] });
+  it('reports changed speech, inherited staging and dangling props but preserves an intact merge', () => {
+    const win = fixture(), merged = structuredClone(win.SCENES[0]);
+    merged.narration.push(...structuredClone(win.SCENES[1].narration));
+    merged.performance.push(...structuredClone(win.SCENES[1].performance).map(e => e.kind === 'dialogue' ? { ...e, group: 2 } : e));
+    const patch = { path: 'unused', shotsById: [{ id: merged.id, shot: merged }], removeShotIds: ['s0002'] };
+    const r = applyPatch(win, patch);
+    assert.ok(!r.findings.some(f => f.code === 'edit_speech_changed'));
+    assert.ok(r.findings.some(f => f.code === 'edit_staging_changed'));
+    assert.ok(r.findings.some(f => f.code === 'edit_image_inherited'));
+    assert.equal(r.win.SCENES[0].visual.frames.start, 'old.png');
+    assert.equal(win.SCENES.length, 2);
+    const reordered = structuredClone(merged);
+    const unmapped = structuredClone(merged);
+    unmapped.performance = [{ kind: 'action', text: 'Wave', durationSeconds: 1 }];
+    assert.ok(applyPatch({ SCENES: [merged] }, { path: 'unused', shotsById: [{ id: merged.id, shot: unmapped }] }).findings.some(f => f.code === 'edit_speech_order_unresolved'));
+    reordered.performance = [merged.performance[2], merged.performance[0], merged.performance[1], merged.performance[3]];
+    assert.ok(applyPatch({ SCENES: [merged] }, { path: 'unused', shotsById: [{ id: merged.id, shot: reordered }] }).findings.some(f => f.code === 'edit_speech_changed'));
+    merged.narration[1].acting = { visual: 'Wave' };
+    assert.ok(applyPatch(win, patch).findings.some(f => f.code === 'edit_speech_changed'));
+    const drop = applyPatch({ ...win, SB_DOC: { propContinuity: { events: [{ id: 'handoff', shotIds: ['s0002'] }] } } }, { path: 'unused', removeShotIds: ['s0002'] });
+    for (const code of ['edit_speech_changed', 'edit_action_removed', 'edit_prop_reference'])
+      assert.ok(drop.findings.some(f => f.code === code), code);
+    const legacy = { SCENES: [{ id: 's0001', type: 'points', narration: [], visual: { action: 'Pack the camera' } }, { id: 's0002', type: 'points' }] };
+    assert.ok(applyPatch(legacy, { path: 'unused', removeShotIds: ['s0001'] }).findings.some(f => f.code === 'edit_action_removed'));
+
+  });
+  it('returns ordered resolved events, estimate mismatches and running-module identity', () => {
+    const dir = tmp(), win = fixture();
+    win.SCENES[0].duration = 1;
+    writeFileSync(join(dir, 'scenes.js'), serializeBoard(win));
+    const r = readStoryboard(storyboardReadSchema.parse({ path: dir, includeTechniques: false }));
+    assert.equal(r.runtime.loadedModuleSha256, r.runtime.diskModuleSha256);
+    assert.match(r.runtime.loadedModuleSha256, /^[a-f0-9]{64}$/);
+    assert.ok(r.runtime.features.includes('boundaryReview'));
+    assert.deepEqual(r.boundaryReview.sceneRuns[0].events.map(e => e.text), ['Wait.', 'Turn', 'I know.', 'Nod']);
+    assert.equal(r.boundaryReview.shots[0].performanceTiming.durationSeconds, 3);
+    assert.equal(r.boundaryReview.shots[0].performanceTiming.differsFromStored, true);
+    assert.equal(r.boundaryReview.shots[0].performanceTiming.physicalFeasibility, 'not_reviewed');
+    win.SCENES[0].narration = []; delete win.SCENES[0].performance;
+    writeFileSync(join(dir, 'scenes.js'), serializeBoard(win));
+    const legacy = readStoryboard(storyboardReadSchema.parse({ path: dir, includeTechniques: false })).boundaryReview;
+    assert.equal(legacy.sceneRuns[0].events[0].text, 'Turn');
+    assert.equal(legacy.sceneRuns[0].events[0].order, 'unresolved');
+    assert.equal(legacy.shots[0].performanceTiming.durationSeconds, null);
+    win.SCENES[0].narration = [{ id: 'legacy-voice', tts: 'Earlier that day.', speaker: 'a', delivery: 'voiceover', acting: { vocal: 'quietly' } }];
+    writeFileSync(join(dir, 'scenes.js'), serializeBoard(win));
+    const speech = readStoryboard(storyboardReadSchema.parse({ path: dir, includeTechniques: false })).boundaryReview.sceneRuns[0].events[1];
+    assert.equal(speech.kind, 'narration');
+    assert.equal(speech.delivery, 'voiceover');
+    assert.deepEqual(speech.acting, { vocal: 'quietly' });
+
   });
 });

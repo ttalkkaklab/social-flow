@@ -32829,6 +32829,9 @@ var REFERENCES_DIR = join4(PLUGIN_ROOT, "skills", "storyboard", "references");
 var CONTRACT_FILE = join4(REFERENCES_DIR, "structure-contract.js");
 var CHECK_SCENES_FILE = join4(REFERENCES_DIR, "check-scenes.js");
 var CHECK_SCENARIO_FILE = join4(REFERENCES_DIR, "check-scenario.js");
+var runtimeFile = fileURLToPath5(import.meta.url);
+var runtimeModuleSha256 = createHash3("sha256").update(readFileSync7(runtimeFile)).digest("hex");
+var runtimeLoadedAt = (/* @__PURE__ */ new Date()).toISOString();
 var loadFromHere2 = nodeModule2.createRequire(import.meta.url);
 var contractCache;
 function contract() {
