@@ -215,7 +215,8 @@ function lockMissing(text, engine) {
 }
 
 function clipAssemble(opts) {
-  const cam = opts.camera || {};
+  const original = opts.camera || {}, view = require('./shot-view.js').checked(original.view);
+  const cam = view ? {...original, framing:require('./shot-view.js').instructions(view)} : original;
   // The produce §3 recipe: framing, then speed movement, then ending on end. A static
   // camera has no speed to state — "static camera" is the whole move, so that slot may stay empty.
   const isStatic = /^(static|fixed|locked)/i.test((cam.movement || "").trim());
@@ -227,9 +228,11 @@ function clipAssemble(opts) {
   const dot = s => s.replace(/[.!?\s]*$/, "") + ".";
 
   const parts = [];
-  const techniqueInstructions = require('./film-techniques.js').instructions({shot:{techniques:opts.techniques}});
+  const catalogue = require('./film-techniques.js');
+  const selected = view ? (opts.techniques || []).filter(t => catalogue.byId[t.id]?.category !== 'framing' && !catalogue.byId[t.id]?.fields.viewpoint) : opts.techniques;
+  const techniqueInstructions = catalogue.instructions({shot:{techniques:selected}});
   if (techniqueInstructions) parts.push(techniqueInstructions);
-  const space = opts.withSpace ? spaceSentence(opts) : "";
+  const space = opts.withSpace && !view ? spaceSentence(opts) : "";
   if (space) parts.push(space);
   if (opts.propPrompt) parts.push(opts.propPrompt);
   if (scene) parts.push(dot(scene));
@@ -313,6 +316,7 @@ function spaceSentence(opts) {
 // Keep the MCP frame path and the CLI on the same camera/composition inputs.
 function frameOptions(scene, frame = 'start') {
   const sh = scene.shot || {}, visual = scene.visual || {}, camera = visual.camera || {}, sp = sh.space || {};
+  const view = require('./shot-view.js').checked(camera.view);
   const end = frame === 'end', moving = camera.movement && !/^(static|fixed|locked)/i.test(String(camera.movement).trim());
   const endpoint = end && !!(camera.end || moving);
   const rack = require('./film-techniques.js').selected(scene).find(t => t.entry?.fields.focus === 'rack');
@@ -322,15 +326,19 @@ function frameOptions(scene, frame = 'start') {
   return { frame, omitFraming: endpoint, size: endpoint ? undefined : sh.size, angle: endpoint ? undefined : sh.angle,
     techniques: sh.techniques, depth, camera, stillCamera: sh.render?.mode === 'still_camera' ? sh.render.camera : null,
     ...(end ? { endState: visual.frames?.endState } : { layout: sp.layout, facing: sp.facing, line: sp.line, light: sp.light,
-      composition: sh.composition, eyeline: sh.eyeline }) };
+      composition: sh.composition, eyeline: sh.eyeline }),
+    // A view owns the opening crop and orientation. Old free-text fields cannot compete.
+    ...(view ? { layout: undefined, facing: undefined, composition: undefined, eyeline: undefined } : {}) };
 }
 
 function cameraSourceInstructions(opts) {
   const cam = opts.camera || {}, end = opts.frame === 'end', parts = [];
+  const view = require('./shot-view.js').checked(cam.view);
+  if (view && !opts.omitFraming) parts.push(require('./shot-view.js').instructions(view));
   if (end && cam.end) parts.push('Closing composition: ' + cam.end + '. This closing view takes priority over the opening crop and viewpoint.');
-  else if (!end && cam.framing) parts.push('Opening composition: ' + cam.framing + '.');
+  else if (!end && !view && cam.framing) parts.push('Opening composition: ' + cam.framing + '.');
   if (end && opts.endState) parts.push('Closing story state: ' + opts.endState + '.');
-  if (!(end && cam.end)) {
+  if (!view && !(end && cam.end)) {
     if (cam.rear) parts.push('View the subject from behind.');
     if (cam.pov) parts.push('Point of view: ' + (typeof cam.pov === 'string' ? cam.pov : 'the named character') + '.');
   }
@@ -365,9 +373,9 @@ function cameraSourceInstructions(opts) {
     else if (/dolly zoom/.test(movement)) parts.push('Keep the subject at the planned screen size, with distinct foreground and background depth for the later perspective change.');
     else if (/dolly|zoom in/.test(movement)) parts.push('Begin at the opening crop with margin for the closer landing and readable foreground/background depth.');
     else if (/arc|truck|tracking/.test(movement)) parts.push('Keep foreground, subject and background spatially distinct, with clear travel room along the planned path.');
-    if (!end && /tracking from behind/.test(movement)) parts.push('Show the subject from behind at the start of the following path.');
-    if (!end && /backward in front|body-mounted/.test(movement)) parts.push('Show the subject facing the camera in the opening frame.');
-    if (!end && /truck parallel/.test(movement)) parts.push('Show the subject from the side with travel room alongside it.');
+    if (!view && !end && /tracking from behind/.test(movement)) parts.push('Show the subject from behind at the start of the following path.');
+    if (!view && !end && /backward in front|body-mounted/.test(movement)) parts.push('Show the subject facing the camera in the opening frame.');
+    if (!view && !end && /truck parallel/.test(movement)) parts.push('Show the subject from the side with travel room alongside it.');
     if (!end && /crane up/.test(movement)) parts.push('Begin at the lower view, preserving the upper space the rising camera will reveal.');
   }
   return parts.join(' ');
@@ -381,7 +389,8 @@ function assemble(opts) {
   const exclude = (opts.exclude || "").trim();
   const tail = (opts.tail === undefined ? "the picture fills the frame from the top edge to the bottom edge, even brightness top to bottom" : opts.tail).trim();
 
-  const ladder = opts.noPerson ? SIZE_WORDS_OBJECT : SIZE_WORDS;
+  const view = require('./shot-view.js').checked(opts.camera?.view);
+  const ladder = opts.noPerson || view ? SIZE_WORDS_OBJECT : SIZE_WORDS;
   const sizeWords = ladder[size] || SIZE_WORDS[size] || (size ? size : "");
   const angleWords = ANGLE_WORDS[angle] || angle || ANGLE_WORDS.eye;
   const unknown = [];
@@ -394,7 +403,12 @@ function assemble(opts) {
     if (sizeWords) parts.push(sizeWords + ", " + angleWords + ".");
     else parts.push(angleWords + ".");
   }
-  const sourceTechnique = require('./film-techniques.js').sourceInstructions({shot:{techniques:opts.techniques}}, opts.frame, opts.omitFraming);
+  const techniques = require('./film-techniques.js');
+  const selected = view ? (opts.techniques || []).filter(t => {
+    const e = techniques.byId[t.id];
+    return e?.category !== 'framing' && !e?.fields.viewpoint;
+  }) : opts.techniques;
+  const sourceTechnique = techniques.sourceInstructions({shot:{techniques:selected}}, opts.frame, opts.omitFraming);
   if (sourceTechnique) parts.push(sourceTechnique);
   if (space) parts.push(space);
   const cameraWords = cameraSourceInstructions(opts);

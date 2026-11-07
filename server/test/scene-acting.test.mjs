@@ -5,6 +5,16 @@ import {createRequire} from 'node:module';
 const require = createRequire(import.meta.url);
 const {sceneDirection, sceneVideoPrompt} = require('../../skills/_shared/scene-acting.js');
 
+test('speech planning uses the same detail view as image generation', () => {
+  const prompt = sceneDirection({ shot: { techniques: [{id:'camera.rear'}, {id:'framing.cu'}] }, visual: { camera: {
+    view: {subject:'Mina’s hand',crop:'Only fingers and the key fill the frame',reason:'Reveal the hidden grip',mode:'profile-left'},
+    framing:'frontal portrait', movement:'static'
+  } } });
+  assert.match(prompt,/Only fingers and the key/);
+  assert.match(prompt,/left profile/);
+  assert.doesNotMatch(prompt,/frontal portrait|from behind/);
+});
+
 test('a static camera preserves framing without freezing the planned actor action', () => {
   const scene = {
     shot: {videoDesign: {action: 'The woman walks left with the tea tray.'}},

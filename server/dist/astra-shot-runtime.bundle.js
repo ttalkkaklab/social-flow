@@ -31099,7 +31099,7 @@ import * as path3 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.120.0",
+  version: "0.121.0",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -33119,6 +33119,10 @@ var shotDialogueSchema = external_exports.object({
   }).strict()).min(1)
 }).strict();
 var choice = external_exports.object({ id: nonEmpty, reason: nonEmpty }).strict();
+var shotViewContract = () => loadFromHere2(join4(REFERENCES_DIR, "shot-view.js"));
+var shotViewSchema = external_exports.custom().superRefine((view, ctx) => {
+  for (const message of shotViewContract().validate(view)) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+});
 var shotIconsSchema = external_exports.object({
   path: outlinePath,
   shots: external_exports.array(external_exports.object({
@@ -33127,6 +33131,7 @@ var shotIconsSchema = external_exports.object({
     size: tuple(V.SIZES).optional(),
     why: nonEmpty.optional().describe("Why this size"),
     angle: tuple(V.ANGLES).optional(),
+    view: shotViewSchema.optional().describe("Content-led opening subject, crop and viewpoint; saved as visual.camera.view"),
     move: choice.extend({ target: nonEmpty.optional(), speed: external_exports.enum(["very slow", "slow", "steady", "fast", "very fast"]).optional() }).strict().optional().describe("A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold \u2026)"),
     focus: choice.extend({ from: nonEmpty.optional(), to: nonEmpty.optional() }).strict().nullable().optional().describe("A camera technique with a focus field (camera.rack-focus) and the subjects it hands focus between; null removes it"),
     depth: depthSchema.optional(),

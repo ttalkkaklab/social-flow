@@ -105,6 +105,34 @@ function project(camera,point){
 }
 const mina=(extra={})=>({id:'mina',height:1.7,color:'#d0342c',position:[0,0,0],rotationZDeg:0,...extra});
 const frameOf=(size,angle='eye',actors=[mina()],cast=['mina'],width=960,height=540)=>L.shotCamera(spec,{stateId:'day',actors,cast,size,angle,width,height});
+test('authored views retain their bearing, target body details and never substitute a face for a missing target',()=>{
+  const m=structuredClone(spec);m.objects=m.objects.filter(o=>o.role!=='wall');
+  const view={subject:'Mina deciding',crop:'Face and shoulder tops',reason:'Read the hesitation',mode:'profile-right',subjectId:'mina'};
+  const args={stateId:'day',actors:[mina()],cast:['mina'],size:'cu',angle:'eye',width:960,height:540,side:{position:[0,-5,1.6],target:[0,0,1.5]},view};
+  const profile=L.shotCamera(m,args).camera;
+  assert.ok(profile.position[0]<0&&Math.abs(profile.position[1])<.001);
+  const three=L.shotCamera(m,{...args,view:{...view,mode:'three-quarter-left'}}).camera;
+  assert.ok(three.position[0]>0&&three.position[1]<0);
+  assert.ok(Math.abs(three.position[0]/three.position[1]+1)<.005);
+  const side=L.shotCamera(m,{...args,view:undefined,side:{position:[5,0,1.6],target:[0,0,1.5]}}).camera;
+  assert.ok(side.position[0]>0&&Math.abs(side.position[1])<.001,'an authored legacy side camera is not reset to the front');
+  const point=[.3,-.1,.9],detail={...view,subject:'Mina’s right hand',crop:'Only the hand and key fill the frame',target:{point,span:.25}};
+  for(const size of ['insert','ecu']){
+    const c=L.shotCamera(m,{...args,size,view:detail}).camera;
+    assert.deepEqual(c.target,point);
+    assert.equal(c.position[2],.9);
+    assert.ok(Math.abs(project(c,point)[1])<.001);
+    assert.ok(Math.abs(project(c,[0,0,1.58])[1])>1,'face is outside the hand crop');
+    assert.throws(()=>L.shotCamera(m,{...args,size}),/shot_view_target_required/);
+  }
+  assert.throws(()=>L.shotCamera(m,{...args,view:{...view,subjectId:'missing'}}),/shot_view_subject_missing/);
+  const obj=m.objects.find(o=>o.id==='toolbox');
+  assert.deepEqual(L.shotCamera(m,{...args,size:'insert',view:{...view,subjectId:'toolbox'}}).camera.target,obj.position);
+  const observer=mina({id:'jun',position:[0,-2,0],gazeTarget:'mina'});
+  const pov=L.shotCamera(m,{...args,actors:[mina(),observer],view:{...view,mode:'pov',viewerId:'jun'}}).camera;
+  assert.ok(Math.abs(pov.position[1]+2)<.35&&Math.abs(pov.position[2]-1.581)<.01);
+  assert.throws(()=>L.shotCamera(m,{...args,view:{...view,mode:'ots',viewerId:'jun'}}),/shot_view_observer_missing/);
+});
 test('shot sizes frame the blocked person by their crop lines',()=>{
   const at=(size,z)=>project(frameOf(size).camera,[0,0,z])[1];
   const fs_=frameOf('fs').camera,ms=frameOf('ms').camera,cu=frameOf('cu').camera;

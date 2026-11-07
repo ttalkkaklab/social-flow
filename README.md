@@ -6,6 +6,11 @@ Blender compositions run on request. See [the production order](skills/_shared/p
 
 # social-flow
 
+[Content-led opening views](skills/storyboard/references/shot-view.md) connect the story's
+visible evidence to `shot_icons view`, the Blender camera and the image/video prompt. Explicit
+profiles and three-quarter views retain their bearing; body inserts target their staged
+detail instead of a face-height default. Inspect generated pixels before accepting a shot.
+
 [Character depth](skills/storyboard/references/character-depth.md) connects shared identities
 to episode choices, personal costs and relationship-specific behavior. Channel, storyboard
 and autoproduce use the same guidance; blind review checks the performed evidence before

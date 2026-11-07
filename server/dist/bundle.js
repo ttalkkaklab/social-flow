@@ -92311,7 +92311,7 @@ var require_production_mode = __commonJS({
       const CAMERA_SLOTS = ["movement", "speed", "framing", "end"];
       const normalize2 = (value) => String(value || "").toLowerCase().replace(/[\s\p{P}\p{S}]/gu, "");
       const staticCamera = (camera) => /^(static|fixed|locked)/i.test(String(camera?.movement || "").trim());
-      const missingCameraSlots = (camera) => CAMERA_SLOTS.filter((slot) => !text4(camera?.[slot]) && !(slot === "speed" && staticCamera(camera)));
+      const missingCameraSlots = (camera) => CAMERA_SLOTS.filter((slot) => !text4(camera?.[slot]) && !(slot === "framing" && text4(camera?.view?.crop)) && !(slot === "speed" && staticCamera(camera)));
       const CAMERA_PRESETS = { "drone-flythrough": { label: "\uB4DC\uB860 \uACBD\uB85C \uBE44\uD589", variants: { cinematic: "\uBD80\uB4DC\uB7EC\uC6B4 \uD56D\uACF5 \uCD2C\uC601", fpv: "\uAE30\uC6B8\uC5B4\uC9C0\uB294 FPV" } } };
       const CAMERA_VECTOR_SCHEMA = { type: "array", minItems: 3, maxItems: 3, items: { type: "number" }, description: "Local metres [X right, Y forward, Z up], not latitude/longitude." };
       const CAMERA_INPUT_SCHEMA = {
@@ -92957,6 +92957,64 @@ var require_production_mode = __commonJS({
   }
 });
 
+// ../skills/storyboard/references/shot-view.js
+var require_shot_view = __commonJS({
+  "../skills/storyboard/references/shot-view.js"(exports, module) {
+    "use strict";
+    var BEARINGS = { front: 0, "three-quarter-left": 45, "three-quarter-right": -45, "profile-left": 90, "profile-right": -90, rear: 180 };
+    var MODES = [...Object.keys(BEARINGS), "ots", "pov"];
+    var SCHEMA = { type: "object", additionalProperties: false, required: ["subject", "reason", "crop", "mode"], properties: {
+      subject: { type: "string", minLength: 1, description: "English: what the audience must read, including the owner of a body detail." },
+      reason: { type: "string", minLength: 1, description: "Why this evidence or reaction matters in this shot; editorial guidance, not provider text." },
+      crop: { type: "string", minLength: 1, description: "English: visible boundaries, e.g. only Mina\u2019s clenched right hand and the key fill the frame." },
+      mode: { type: "string", enum: MODES, description: "Opening viewpoint. Left/right name the visible side of the subject. Independent of shot.angle (height)." },
+      subjectId: { type: "string", minLength: 1, description: "Blocked actor or set object to frame. Defaults to the shot cast for ordinary person shots." },
+      viewerId: { type: "string", minLength: 1, description: "Blocked observer for pov/ots; required for those modes." },
+      target: { type: "object", additionalProperties: false, required: ["point", "span"], description: "Exact body/detail crop in a built set. Use the actual opening blocking, never a guessed face-height substitute.", properties: {
+        point: { type: "array", minItems: 3, maxItems: 3, items: { type: "number" }, description: "World-space target [x,y,z] in metres, taken from the staged opening pose." },
+        span: { type: "number", exclusiveMinimum: 0, description: "Visible vertical extent in metres around the target; controls detail magnification." }
+      } }
+    } };
+    function validate2(view) {
+      if (!view || typeof view !== "object" || Array.isArray(view)) return ["view must be an object"];
+      const errors = Object.keys(view).filter((k) => !Object.hasOwn(SCHEMA.properties, k)).map((k) => "unknown view field " + k);
+      for (const key of ["subject", "reason", "crop", "mode"]) if (typeof view[key] !== "string" || !view[key].trim()) errors.push("view." + key + " is required");
+      if (!MODES.includes(view.mode)) errors.push("unknown view mode");
+      for (const key of ["subjectId", "viewerId"]) if (view[key] !== void 0 && (typeof view[key] !== "string" || !view[key].trim())) errors.push("invalid view." + key);
+      if (["ots", "pov"].includes(view.mode) && !view.viewerId) errors.push("view.viewerId is required for ots/pov");
+      if (["ots", "pov"].includes(view.mode) && !view.subjectId) errors.push("view.subjectId is required for ots/pov");
+      if (view.viewerId && view.viewerId === view.subjectId) errors.push("the observer and subject must differ");
+      if (view.target !== void 0) {
+        const t2 = view.target;
+        if (!t2 || typeof t2 !== "object" || Object.keys(t2).some((k) => !["point", "span"].includes(k)) || !Array.isArray(t2.point) || t2.point.length !== 3 || !t2.point.every(Number.isFinite) || !Number.isFinite(t2.span) || t2.span <= 0) errors.push("view.target needs a finite point and positive span");
+        if (["ots", "pov"].includes(view.mode)) errors.push("detail targets use a direct viewpoint, not ots/pov");
+      }
+      return errors;
+    }
+    function checked(view) {
+      if (view === void 0) return void 0;
+      const errors = validate2(view);
+      if (errors.length) throw new Error("shot_view_invalid: " + errors.join("; "));
+      return view;
+    }
+    var WORDS = {
+      front: "frontal view of the subject; gaze follows the action, not automatically the lens",
+      "three-quarter-left": "the left side of the subject is visible in three-quarter view, facing camera-left",
+      "three-quarter-right": "the right side of the subject is visible in three-quarter view, facing camera-right",
+      "profile-left": "the left profile of the subject is visible, facing camera-left",
+      "profile-right": "the right profile of the subject is visible, facing camera-right",
+      rear: "the subject is seen from behind",
+      ots: "over the named observer\u2019s shoulder toward the subject",
+      pov: "through the named observer\u2019s eyes toward the subject"
+    };
+    function instructions(view) {
+      if (!checked(view)) return "";
+      return "Opening attention: " + view.subject + ". Opening crop: " + view.crop + ". Opening viewpoint: " + WORDS[view.mode] + (view.viewerId ? " (observer " + view.viewerId + ")" : "") + ".";
+    }
+    module.exports = { BEARINGS, MODES, SCHEMA, validate: validate2, checked, instructions };
+  }
+});
+
 // ../skills/storyboard/references/film-techniques.js
 var require_film_techniques = __commonJS({
   "../skills/storyboard/references/film-techniques.js"(exports, module) {
@@ -93314,6 +93372,9 @@ var require_scene_acting = __commonJS({
     }
     function sceneDirection(scene = {}, performance2 = []) {
       const design = scene.shot?.videoDesign || {}, camera = scene.visual?.camera || {};
+      const view = require_shot_view().checked(camera.view);
+      const catalogue = require_film_techniques();
+      const directed = view ? { ...scene, shot: { ...scene.shot, techniques: (scene.shot?.techniques || []).filter((t2) => catalogue.byId[t2.id]?.category !== "framing" && !catalogue.byId[t2.id]?.fields.viewpoint) } } : scene;
       const lock2 = cameraLock(camera);
       const actions = new Set(performance2.filter((event) => event.kind === "action").map((event) => event.videoDirection || event.text));
       const keys2 = ["before", "action", "after", "continuity"].filter((key) => design[key] && !(key === "action" && actions.has(design[key])));
@@ -93328,8 +93389,9 @@ var require_scene_acting = __commonJS({
       return [
         ...keys2.map((key) => `${key}: ${design[key]}`),
         ...states,
-        require_film_techniques().instructions(scene),
-        ...["framing", "movement", ...lock2 ? [] : ["speed"], "end"].filter((key) => camera[key]).map((key) => `Camera ${key}: ${camera[key]}`),
+        catalogue.instructions(directed),
+        ...view ? [require_shot_view().instructions(view)] : [],
+        ...[...view ? [] : ["framing"], "movement", ...lock2 ? [] : ["speed"], "end"].filter((key) => camera[key]).map((key) => `Camera ${key}: ${camera[key]}`),
         ...lock2 ? [lock2] : []
       ].join("\n");
     }
@@ -112567,7 +112629,7 @@ import * as path13 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.120.0",
+  version: "0.121.0",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -115057,6 +115119,9 @@ function compileVideoPrompt(shot, source, names = {}) {
   const plan2 = object4(shot.shot), visual = object4(shot.visual), frames = object4(visual.frames), camera = object4(visual.camera);
   const msr = frames.mode === "reference";
   const words = load4("../../skills/storyboard/references/assemble-bg-prompt.js");
+  const views = load4("../../skills/storyboard/references/shot-view.js");
+  const viewWords = camera.view === void 0 ? "" : views.instructions(camera.view);
+  const sizes = viewWords ? words.SIZE_WORDS_OBJECT : words.SIZE_WORDS;
   const catalogue = load4("../../skills/storyboard/references/film-techniques.js");
   const contract2 = load4("../../skills/storyboard/references/structure-contract.js");
   const travels = load4("../../skills/storyboard/references/production-mode.js").travels;
@@ -115073,10 +115138,10 @@ function compileVideoPrompt(shot, source, names = {}) {
   const ends = travels(camera) ? ", with a short pause on the opening and closing pictures" : "";
   const moveWords = !movement ? "" : /^(static|fixed|locked)/i.test(movement) ? "The camera holds a static frame." : move?.prompt ? sentence(`The camera ${pace ? pace + " " : ""}${move.prompt.replace("{target}", target || "the subject")}${speed && !pace ? ` at a ${speed} pace` : ""}${ends}`) : sentence(`Camera: ${[speed, movement].filter(Boolean).join(" ")}` + (target ? ` toward ${target}` : "") + ends);
   const focusWords = !rack ? "" : sentence(rack.from && rack.to ? `Rack focus from ${rack.from} to ${rack.to}` : `${rack.entry.label.en} from the near subject to the far subject`);
-  const sizeWords = sentence(words.SIZE_WORDS[text2(plan2.size)] || ""), angleWords = sentence(words.ANGLE_WORDS[text2(plan2.angle)] || "");
-  const framing = sentence([words.SIZE_WORDS[text2(plan2.size)], words.ANGLE_WORDS[text2(plan2.angle)]].filter(Boolean).join(", "));
+  const sizeWords = sentence(sizes[text2(plan2.size)] || ""), angleWords = sentence(words.ANGLE_WORDS[text2(plan2.angle)] || "");
+  const framing = sentence([sizes[text2(plan2.size)], words.ANGLE_WORDS[text2(plan2.angle)]].filter(Boolean).join(", "));
   const depthWords = plan2.depth ? sentence(contract2.depthText(plan2.depth)) : "";
-  const other = picked.filter((t2) => t2.entry && ["camera", "framing"].includes(t2.entry.category) && !t2.entry.fields.movement && !t2.entry.fields.focus && !t2.entry.fields.size && !t2.entry.fields.angle);
+  const other = picked.filter((t2) => t2.entry && ["camera", "framing"].includes(t2.entry.category) && !t2.entry.fields.movement && !t2.entry.fields.focus && !t2.entry.fields.size && !t2.entry.fields.angle && !(viewWords && t2.entry.fields.viewpoint));
   const lines = (Array.isArray(shot.narration) ? shot.narration : []).map(object4);
   const prompt = [
     msr ? framing : "Start from the given first frame.",
@@ -115085,9 +115150,9 @@ function compileVideoPrompt(shot, source, names = {}) {
     settle ? sentence(`Closing frame: ${settle}`) : "",
     focusWords,
     ...other.map((t2) => sentence(t2.entry.instruction)),
-    text2(camera.framing) ? sentence(`Opening composition: ${text2(camera.framing)}`) : "",
-    camera.rear && !other.some((t2) => t2.entry.fields.viewpoint === "rear") ? "View the subject from behind." : "",
-    camera.pov && !other.some((t2) => t2.entry.fields.viewpoint === "pov") ? sentence(`Point of view: ${text2(camera.pov) || "the named character"}`) : "",
+    viewWords || (text2(camera.framing) ? sentence(`Opening composition: ${text2(camera.framing)}`) : ""),
+    !viewWords && camera.rear && !other.some((t2) => t2.entry.fields.viewpoint === "rear") ? "View the subject from behind." : "",
+    !viewWords && camera.pov && !other.some((t2) => t2.entry.fields.viewpoint === "pov") ? sentence(`Point of view: ${text2(camera.pov) || "the named character"}`) : "",
     sentence(source.action),
     ...msr ? [] : lines.filter((line) => line.delivery === "on_screen" && text2(line.tts)).map((line) => {
       const id = text2(line.speaker), name = names[id];
@@ -115102,6 +115167,7 @@ function compileVideoPrompt(shot, source, names = {}) {
     { attribute: "render", value: object4(plan2.render).mode, via: "adapter" },
     { attribute: "size", value: plan2.size, via: !sizeWords ? "unmapped" : msr ? "prompt" : "image", instruction: sizeWords },
     { attribute: "angle", value: plan2.angle, via: !angleWords ? "unmapped" : msr ? "prompt" : "image", instruction: angleWords },
+    { attribute: "view", value: camera.view, via: "prompt", instruction: viewWords },
     { attribute: "move", value: camera, via: movement ? "prompt" : "unmapped", instruction: moveWords },
     { attribute: "focus", value: rack ? { id: rack.id, from: rack.from, to: rack.to } : void 0, via: "prompt", instruction: focusWords },
     { attribute: "depth", value: plan2.depth, via: msr ? "prompt" : "image", instruction: depthWords },
@@ -116302,6 +116368,10 @@ function promptNotes(shot) {
 var choice = external_exports.object({ id: nonEmpty, reason: nonEmpty }).strict();
 var VIDEO_SPEEDS = ["slow", "steady", "fast"];
 var STILL_SPEEDS = ["very slow", "slow", "fast", "very fast"];
+var shotViewContract = () => loadFromHere2(join10(REFERENCES_DIR, "shot-view.js"));
+var shotViewSchema = external_exports.custom().superRefine((view, ctx) => {
+  for (const message of shotViewContract().validate(view)) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+});
 var shotIconsSchema = external_exports.object({
   path: outlinePath,
   shots: external_exports.array(external_exports.object({
@@ -116310,6 +116380,7 @@ var shotIconsSchema = external_exports.object({
     size: tuple(V.SIZES).optional(),
     why: nonEmpty.optional().describe("Why this size"),
     angle: tuple(V.ANGLES).optional(),
+    view: shotViewSchema.optional().describe("Content-led opening subject, crop and viewpoint; saved as visual.camera.view"),
     move: choice.extend({ target: nonEmpty.optional(), speed: external_exports.enum(["very slow", "slow", "steady", "fast", "very fast"]).optional() }).strict().optional().describe("A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold \u2026)"),
     focus: choice.extend({ from: nonEmpty.optional(), to: nonEmpty.optional() }).strict().nullable().optional().describe("A camera technique with a focus field (camera.rack-focus) and the subjects it hands focus between; null removes it"),
     depth: depthSchema.optional(),
@@ -116326,7 +116397,7 @@ function writeShotIcons(args) {
   const shots = (win.SCENES ?? []).slice();
   const notes = [];
   const vertical = !/16x9/.test(String(win.FORMAT ?? ""));
-  for (const { id, render, size, why, angle, move, focus, depth, frames, next } of args.shots) {
+  for (const { id, render, size, why, angle, view, move, focus, depth, frames, next } of args.shots) {
     const index = shotIndex(shots, id, "shot_icons");
     const plan2 = { ...shots[index].shot ?? {} };
     const visual = { ...shots[index].visual ?? {} };
@@ -116362,6 +116433,16 @@ function writeShotIcons(args) {
     if (size) plan2.size = size;
     if (why) plan2.why = why;
     if (angle) plan2.angle = angle;
+    if (view) {
+      shotViewSchema.parse(view);
+      for (const [key, value] of [["subject", view.subject], ["crop", view.crop]]) {
+        if (nonEnglishOutsideQuotes(value)) throw new Error(`video_prompt_language: shot_icons ${id} view.${key} must be English`);
+      }
+      const { framing: _framing, rear: _rear, pov: _pov, ...camera } = visual.camera ?? {};
+      visual.camera = { ...camera, view };
+      plan2.info = view.subject;
+      plan2.why = view.reason;
+    }
     if (depth) {
       const errors = contract().validateDepth(depth);
       if (errors.length) throw new Error(`shot_icons ${id}: depth \u2014 ${errors.join("; ")}`);
@@ -116559,6 +116640,11 @@ function shotImageRequest(args) {
   const [width, height] = (args.size ?? (/16x9/.test(String(win.FORMAT ?? "")) ? "1536x1024" : "1024x1536")).split("x").map(Number);
   const entry2 = location ? docEntry(win, "locations", location) : void 0, place = entry2?.imageUrl;
   const warnings = [];
+  const view = visual.camera?.view;
+  if (view !== void 0) {
+    shotViewSchema.parse(view);
+    if (nonEnglishOutsideQuotes(view.subject + " " + view.crop)) throw new Error("image_prompt_language: view.subject and view.crop must be English");
+  } else if (args.frame === "start") warnings.push({ level: "warn", where: args.id, what: "no content-led opening view: choose the attention subject, crop and viewpoint with shot_icons view before making a new production image; legacy framing is used" });
   const set = typeof entry2?.manifest === "string" ? locationContract().shotFrame(
     win,
     shots.indexOf(shot),
@@ -116611,12 +116697,13 @@ function shotImageRequest(args) {
   }).prompt;
   const roles = ordered.map((ref, i2) => `Image ${i2 + 1} shows ${ref.purpose}.`).join(" ");
   const at = (ref) => ordered.indexOf(ref) + 1;
-  const lock2 = !set ? "" : args.frame === "end" ? composition.length ? `Use Image ${at(composition[0])}'s closing camera, lens, framing and final object and figure positions. Image 1 supplies the look and every identity; its opening camera does not constrain this closing view.` : `Image 1 supplies the opening appearance and identities. Follow the closing camera direction below while preserving the set's world layout.` : `Keep Image 1's camera position, ${lens}${dutch ? "" : ", horizon"} and world layout, and keep every object${set.blocked ? " and figure" : ""} at its world position in Image 1. The authored composition below controls the final crop, headroom and subject screen placement. Paint its plain unpainted surfaces as the real place, and continue the place into any flat dark area past the set's edge.` + (dutch ? " Image 1 is level; tilt the whole picture to the dutch angle described below." : "") + (look.some((ref) => ordered.includes(ref)) ? ` Take only materials, colours and light from Image ${at(look[0])}.` : "");
+  const lock2 = !set ? view ? `The location and character sheets supply appearance and identity only. Recompose them to the authored ${args.frame === "end" ? "closing" : "opening"} crop and viewpoint; the sheet pose and camera do not constrain this shot.` : "" : args.frame === "end" ? composition.length ? `Use Image ${at(composition[0])}'s closing camera, lens, framing and final object and figure positions. Image 1 supplies the look and every identity; its opening camera does not constrain this closing view.` : `Image 1 supplies the opening appearance and identities. Follow the closing camera direction below while preserving the set's world layout.` : `Keep Image 1's camera position, ${lens}${dutch ? "" : ", horizon"} and world layout, and keep every object${set.blocked ? " and figure" : ""} at its world position in Image 1. The authored composition below controls the final crop, headroom and subject screen placement. Paint its plain unpainted surfaces as the real place, and continue the place into any flat dark area past the set's edge.` + (dutch ? " Image 1 is level; tilt the whole picture to the dutch angle described below." : "") + (look.some((ref) => ordered.includes(ref)) ? ` Take only materials, colours and light from Image ${at(look[0])}.` : "");
   const prompt = [
     ordered.length ? "Compose one picture from these images." : "",
     roles,
     lock2,
     heightSentence(win, cast),
+    view ? "Character panels identify the subject; include only the body regions named by the crop. A face reference does not require a face in the output." : "",
     args.frame === "end" ? "This is the last frame of the shot that opens on Image 1: keep its place, light and every identity, applying the planned action, camera landing and final focus." : "",
     ...propPictures.unseen,
     body.charAt(0).toUpperCase() + body.slice(1)
@@ -121167,6 +121254,13 @@ var depthInput = (() => {
     return { type: "object", description: "Depth contract unavailable: restore skills/storyboard/references/structure-contract.js" };
   }
 })();
+var shotViewInput = (() => {
+  try {
+    return shotViewContract().SCHEMA;
+  } catch {
+    return { type: "object", description: "Opening view; restore the missing skills tree before calling storyboard tools." };
+  }
+})();
 var storyboardVocabulary = (() => {
   try {
     return contract().VOCAB;
@@ -125238,13 +125332,19 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     name: "shot_icons",
     title: "Set each shot's icon attributes (step 3)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    description: `Use it after every shot has its story and characters (story_shot \u2192 shot_characters), and normally after its lines (shot_dialogue): set the attributes the review's icon row shows, per shot \u2014 render route (shot.render), size and why, angle, camera move, focus, depth, the frame plan, where reference means MSR, and next, the transition into the following shot (stored as that shot's transition and edit.reason, which assembly draws; the same checks as storyboard_apply transitions). A move on a still_camera cut is the still effect (shot.render.camera.effect); on any other route it is a camera technique, written to shot.techniques with visual.camera.movement kept consistent. Switching to still_camera drops the camera technique and visual.camera move; switching from it drops the still effect. A different move replaces the old one's speed and target (the same move \u2014 its technique, or an authored visual.camera move before any technique \u2014 keeps them unless given), and a new size without its own why drops the old why. Changing size, angle, depth, camera movement or rack-focus subjects after the start image exists warns to remake it and any end image with shot_image. A frame plan other than first_last takes the end image off (with a warning), and switching to or from reference re-marks the character panels for the video call. A change to what a written video prompt came from (cast, on-screen lines, frame plan, camera, focus, MSR framing) warns to rewrite it with shot_prompt; the review page marks it too. Only the attributes given change. Refused (story_order) while a sequence, scene or shot story or any shot's characters are missing. Also refused: a move target or focus subject outside English (video_prompt_language); on a still_camera cut a move outside the still effects, a speed outside the still speeds, or a focus technique; elsewhere a move that is not a camera move, a speed outside the camera speeds, or a focus id that is not a focus technique; an invalid depth; next on the last shot, or a join the transition checks refuse. Local file only; no image, video, speech or prompt is generated.
+    description: `Use it after every shot has its story and characters (story_shot \u2192 shot_characters), normally after shot_dialogue, set its render route, size, angle, opening view, move, focus, depth, frame plan and next transition. Local file only; generates no media. Do NOT generate images or video here.
 
-Choose each attribute from the beat it serves, never from a quota. A card's use is a practitioners' convention, not a measured effect \u2014 no experiment shows a camera move's emotional effect, and the angle effects (low strong, high weak) appeared only when pictures ran as a story \u2014 so the neighbouring shots carry the meaning. storyboard_read's techniqueCatalog carries a card per choice \u2014 entries for sizes, moves, angles, focus and timing, and guides for the values without an entry (composition sizes, ground and over, depth, still effects). Every card gives use, avoid and specify (what the start image and video prompt must name \u2014 crop line, endpoints, focus target); where one applies it also gives pair (what the neighbouring shots should be: establish \u2192 cut in \u2192 reestablish; look \u2192 POV \u2192 reaction; matched sizes in shot/reverse shot) and vertical (how a 9:16 frame changes it). Size is the distance: els \u2026 ecu, or insert for one object. two, three, ots, pov, back, cutaway and reaction name a composition with no crop of its own; on a new board pick the distance and carry the composition in the cast, camera.pov, camera.rear or the camera framing. Write why, move.reason and focus.reason as the beat the choice serves. Give a video move its speed and target, and a rack focus its from and to subjects: shot_image stages them and shot_prompt writes them. A still effect hold keeps the frame put as a deliberate beat. On a 9:16 board the result lists the vertical note of every chosen value \u2014 advice, never a refusal.
+Choose from what the audience must see, not shot index, dialogue count or a diversity quota. Read storyboard_read's techniqueCatalog and shot-view.md. A monologue may need the changing face (cu), a revealing hand (insert/ecu) or isolation in the surroundings (ls/els). Compare one useful alternative and state the story-specific reason.
 
-Do NOT write camera endpoints, blocking, eyeline, composition or prompts here \u2014 storyboard_apply carries those after this step (action-direction.md camera-direction pass).
+Set view with subject (visible evidence), reason, crop and mode. It writes visual.camera.view, shot.info and shot.why. Subject and crop are English provider text. This view supersedes old opening framing, rear/pov flags and viewpoint/framing techniques in the image and video prompts. Left/right name the visible side of the subject; angle separately controls height. Set subjectId for a blocked actor or set object; ots/pov also need a different viewerId. Built-set body inserts/ecu need target with the actual staged world point and vertical span; objects use their subjectId. Missing set targets cannot silently become frontal portraits. Use storyboard_apply for blocking and closing camera endpoints.
 
-Returns: the file written or not, counts, and findings (! violation \xB7 warning).`,
+Size is distance (els \u2026 ecu, insert). Composition labels two/three/ots/pov/back/cutaway/reaction carry no crop; new boards use a distance with view. The technique catalogue gives use, avoid, specify, neighbouring-shot and vertical guidance; these are directing conventions, not measured emotional effects. On 9:16 the result includes the chosen values' vertical advice.
+
+On still_camera, move is a still effect stored in shot.render.camera; other routes use a camera technique and synchronize visual.camera.movement. Route changes drop the old route's movement. A different move replaces its speed/target; the same move keeps them unless provided. Video moves take slow/steady/fast and an English target; rack focus takes English from/to subjects. A new size without why drops the old why. A still hold is deliberate, not an unset move.
+
+Frame reference means MSR. Changing away from first_last removes the end-image binding; switching to/from reference updates panel use. Camera/view/size/depth/focus changes warn to remake existing images; changed inputs to a written video prompt warn to rewrite it with shot_prompt. next sets the transition into the following shot, with the same checks as storyboard_apply, and is refused on the last shot. Omitted attributes stay unchanged.
+
+Refused: missing story/characters (story_order), invalid attributes, incompatible move/focus for the route, non-English prompt targets, or an invalid transition. Returns: written file, counts and findings (! violation \xB7 warning).`,
     inputSchema: {
       type: "object",
       additionalProperties: false,
@@ -125260,6 +125360,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
           size: enumInput(storyboardVocabulary?.SIZES, "Shot size icon: the distance (els \u2026 ecu, insert); composition labels carry no crop \u2014 techniqueCatalog guides.size"),
           why: { type: "string", description: "The beat this size serves" },
           angle: enumInput(storyboardVocabulary?.ANGLES, "Camera angle icon: the camera height and tilt; ground and over have cards in techniqueCatalog guides.angle"),
+          view: shotViewInput,
           move: { type: "object", additionalProperties: false, required: ["id", "reason"], description: "Camera move icon", properties: {
             id: { type: "string", enum: [...cameraMoves, ...stillCameraEffects], description: "A camera.* technique with a movement, or on a still_camera cut a still effect" },
             reason: { type: "string", description: "What the move or the hold does for this beat" },
@@ -135192,7 +135293,7 @@ ROUTES.music_status = async (args) => args?.action === "resume" ? resumeMusic2(a
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.120.0" },
+  { name: "social-flow", version: "0.121.0" },
   { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

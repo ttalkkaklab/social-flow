@@ -589,6 +589,27 @@ describe('images and the video prompt follow the icon attributes', () => {
     recordShotImage(args, request);
     return request;
   };
+  it('content-led view survives icon writes and image planning, replaces legacy direction and invalidates saved media', () => {
+    const { dir } = pictureBoard();
+    icons(dir);
+    const view = { subject: 'Mina’s clenched hand', reason: 'The hand betrays the calm words', crop: 'Only the hand and key fill the frame', mode: 'profile-left', subjectId: 'mina' };
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', size: 'insert', view }] });
+    let shot = readBoard(dir).win.SCENES[0];
+    assert.deepEqual(shot.visual.camera.view, view);
+    const request = make(dir, 's0001', 'start', { location: 'room', prompt: 'The fingers tighten around the key.' });
+    assert.match(request.prompt, /Only the hand and key fill the frame/);
+    assert.match(request.prompt, /left profile.*facing camera-left/);
+    assert.match(request.prompt, /appearance and identity only/);
+    assert.doesNotMatch(request.prompt, /waist up|face from forehead/);
+    make(dir, 's0002'); make(dir, 's0002', 'end');
+    writeShotPrompt({ path: dir, id: 's0001', action: 'The fingers tighten around the key.' });
+    const change = writeShotIcons({ path: dir, shots: [{ id: 's0001', view: { ...view, mode: 'profile-right' } }] });
+    assert.ok(change.findings.some(f => /remake it/.test(f.what)));
+    assert.ok(change.findings.some(f => /rewrite it with shot_prompt/.test(f.what)));
+    shot = readBoard(dir).win.SCENES[0];
+    assert.match(shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'The fingers tighten.' }).prompt, /right profile.*facing camera-right/);
+    assert.throws(() => shotIconsSchema.parse({ path: dir, shots: [{ id: 's0001', view: { ...view, mode: 'pov' } }] }), /viewerId/);
+  });
   it('MSR cast and frame changes synchronize sheet panels without waiting for shot_image', () => {
     const { root, dir } = pictureBoard();
     castFile(dir, ['mina', 'friend'], { root: join(root, 'data/c') });

@@ -211,7 +211,8 @@ function hitsBody(p,q,x){
  * The camera a shot's size and angle ask for in this set: aimed at the shot's blocked cast (or the set when
  * nobody is blocked), from the side the reference camera stands on, distance fitted to the lens's field of view.
  */
-function shotCamera(m,{stateId,actors=[],cast=[],size,angle,width,height,side,mustShow=[],viewpoint}){
+function shotCamera(m,{stateId,actors=[],cast=[],size,angle,width,height,side,mustShow=[],viewpoint,view}){
+  const V=require('./shot-view.js');V.checked(view);
   const warnings=[],deg=Math.PI/180,r3=v=>v.map(x=>Math.round(x*1000)/1000);
   const unit=v=>{const n=Math.hypot(...v);return n>1e-9?v.map(x=>x/n):null;},dot=(a,b)=>a[0]*b[0]+a[1]*b[1];
   // Zero body rotation faces -Y; +90 degrees faces +X (location-assets.md).
@@ -219,26 +220,34 @@ function shotCamera(m,{stateId,actors=[],cast=[],size,angle,width,height,side,mu
   const frame=PERSON_SPAN[size]?size:COMPOSED[size]||'ms';
   if(!PERSON_SPAN[size]&&!COMPOSED[size])warnings.push(`size ${size||'(none)'} names no crop, so the set render frames a medium shot`);
   const sensorV=36*height/width,objects=C.resolvedObjects(m,stateId).filter(o=>o.visible!==false);
-  const people=cast.map(id=>actors.find(a=>a.id===id)).filter(Boolean),unblocked=cast.filter(id=>!actors.some(a=>a.id===id));
+  const subject=view?.subjectId&&actors.find(x=>x.id===view.subjectId),objectSubject=view?.subjectId&&objects.find(x=>x.id===view.subjectId);
+  if(view?.subjectId&&!subject&&!objectSubject)throw new Error('shot_view_subject_missing: '+view.subjectId+' is not blocked or visible in this set');
+  const people=subject?[subject]:objectSubject?[]:cast.map(id=>actors.find(a=>a.id===id)).filter(Boolean),unblocked=cast.filter(id=>!actors.some(a=>a.id===id));
+  if(view&&!view.target&&!objectSubject&&!people.length)throw new Error('shot_view_subject_missing: bind the opening subject before rendering its view');
+  if(view&&['insert','ecu'].includes(size)&&!view.target&&!objectSubject)throw new Error('shot_view_target_required: name the set object or give the body detail point and span from the opening blocking');
+  if(view&&angle==='over'&&view.mode!=='ots')throw new Error('shot_view_conflict: angle over needs view.mode ots');
+  if(view?.mode==='pov'&&angle&&angle!=='eye')throw new Error('shot_view_conflict: pov uses the observer eye height');
   // The floor is where the people stand, else the lowest top surface (a floor slab's top, not its underside).
   const floor=people.length?Math.min(...people.map(x=>x.position[2])):Math.min(...objects.map(o=>o.position[2]+o.size[2]/2));
   if(unblocked.length)warnings.push(`${unblocked.join(' and ')} ${unblocked.length>1?'are':'is'} not blocked in the ${m.id} set: the render is framed on the set and the prompt places them — bind the shot's blocking with location_manage for exact places`);
   const ref=side||Object.values(m.cameras)[0],a=angle||'eye';
   let lensMm=SIZE_LENS[frame],target,span,spread=0,u,eye,position;
   const fit=(dist,height,width=0)=>Math.max(12,Math.min(135,(sensorV/2)*dist/(height/2),width?18*dist/(width/2):Infinity));
-  const pov=size==='pov'||viewpoint==='pov';
-  const viewer=pov?actors.find(x=>!cast.includes(x.id)&&x.gazeTarget&&(cast.includes(x.gazeTarget)||!cast.length))||people[1]:null;
+  const pov=view?view.mode==='pov':size==='pov'||viewpoint==='pov';
+  const observer=view?.viewerId?actors.find(x=>x.id===view.viewerId):null;
+  if(view?.viewerId&&!observer)throw new Error('shot_view_observer_missing: '+view.viewerId+' needs opening blocking');
+  const viewer=pov?(observer||actors.find(x=>!cast.includes(x.id)&&x.gazeTarget&&(cast.includes(x.gazeTarget)||!cast.length))||people[1]):null;
   if(pov&&!viewer)warnings.push('pov needs a blocked viewer whose gaze names the seen character or object; the render frames the shot from the front');
   if(viewer){
     // Point of view: the lens sits just in front of the viewer's eyes and looks where they look.
-    const seen=actors.find(x=>x.id===viewer.gazeTarget),object=objects.find(o=>o.id===viewer.gazeTarget);
+    const seen=subject||actors.find(x=>x.id===viewer.gazeTarget),object=objectSubject||objects.find(o=>o.id===viewer.gazeTarget);
     const from=[viewer.position[0],viewer.position[1],viewer.position[2]+viewer.height*.93];
     target=seen?[seen.position[0],seen.position[1],seen.position[2]+seen.height*.93]:object?object.position:[from[0]+facing(viewer)[0]*3,from[1]+facing(viewer)[1]*3,from[2]];
     const dir=unit(target.map((v,i)=>v-from[i]))||[0,-1,0];
     position=from.map((v,i)=>v+dir[i]*.3);lensMm=35;
-  } else if((size==='ots'||a==='over')&&people.length>=2){
+  } else if((view?view.mode==='ots':size==='ots'||a==='over')&&(observer?people.length>=1:people.length>=2)){
     // Over the shoulder: past the second listed person's shoulder onto the first, on the reference camera's side of their line.
-    const [far,near]=people,dir=unit([far.position[0]-near.position[0],far.position[1]-near.position[1]])||[0,1];
+    const [far,near]=observer?[people[0],observer]:people,dir=unit([far.position[0]-near.position[0],far.position[1]-near.position[1]])||[0,1];
     let lateral=[-dir[1],dir[0]];
     if(dot(lateral,[ref.position[0]-near.position[0],ref.position[1]-near.position[1]])<0)lateral=lateral.map(v=>-v);
     position=[near.position[0]-dir[0]*.55+lateral[0]*.32,near.position[1]-dir[1]*.55+lateral[1]*.32,near.position[2]+near.height*.95];
@@ -247,11 +256,16 @@ function shotCamera(m,{stateId,actors=[],cast=[],size,angle,width,height,side,mu
     lensMm=fit(Math.hypot(...position.map((v,i)=>v-target[i])),(hi-lo)*far.height*1.25);
   } else {
     if(size==='ots'||a==='over')warnings.push('over the shoulder needs two blocked people; the render frames the first from the front');
-    if(people.length&&size!=='insert'&&size!=='cutaway'){
+    if(view?.mode==='ots')throw new Error('shot_view_subject_missing: ots needs a blocked subject and observer');
+    if(view?.target){
+      target=[...view.target.point];span=view.target.span;eye=target[2];
+      // The detail itself is centred. Identity references do not force the face into this crop.
+      u=people.length?facing(people[0]):[0,-1];
+    } else if(people.length&&size!=='insert'&&size!=='cutaway'){
       const [lo,hi]=PERSON_SPAN[frame],bottom=Math.min(...people.map(x=>x.position[2]+lo*x.height)),top=Math.max(...people.map(x=>x.position[2]+hi*x.height));
       const centre=[0,1].map(i=>people.reduce((s,x)=>s+x.position[i],0)/people.length);
       target=[centre[0],centre[1],(bottom+top)/2];span=top-bottom;eye=Math.max(...people.map(x=>x.position[2]+x.height*.93));
-      if(people.length===1)u=facing(people[0]);
+      if(people.length===1)u=!view&&side&&!viewpoint?unit([ref.position[0]-target[0],ref.position[1]-target[1]])||facing(people[0]):facing(people[0]);
       else{
         // Two or more: square to their line, on the side their faces turn to, or — facing each other — the reference camera's side (180° rule).
         const axis=[people[1].position[0]-people[0].position[0],people[1].position[1]-people[0].position[1]];
@@ -261,20 +275,28 @@ function shotCamera(m,{stateId,actors=[],cast=[],size,angle,width,height,side,mu
         const lateral=[-u[1],u[0]],across=people.map(x=>dot(lateral,x.position));
         spread=Math.max(...across)-Math.min(...across)+1;   // half a metre beyond each centre holds the shoulders and arms
       }
-      if(viewpoint==='side'&&people.length===1){
+      if(!view&&viewpoint==='side'&&people.length===1){
         u=[-u[1],u[0]];
         if(dot(u,[ref.position[0]-centre[0],ref.position[1]-centre[1]])<0)u=u.map(v=>-v);
       }
-      if(size==='back'||viewpoint==='rear')u=u.map(v=>-v);
+      if(!view&&(size==='back'||viewpoint==='rear'))u=u.map(v=>-v);
     } else {
       // Nobody blocked, an insert or a cutaway: frame the required landmarks, or the standing set without its walls.
       if(size==='insert'&&!mustShow.length)warnings.push('insert names no object: bind the shot with mustShow so the render closes on it');
-      const named=objects.filter(o=>mustShow.includes(o.id)),standing=objects.filter(o=>o.size[2]>=.3&&o.role!=='wall');
+      const named=objectSubject?[objectSubject]:objects.filter(o=>mustShow.includes(o.id)),standing=objects.filter(o=>o.size[2]>=.3&&o.role!=='wall');
       const box=boundsOf(named.length?named:standing.length?standing:objects),scale=size==='insert'&&named.length?1.3:SET_SCALE[frame];
       target=box.map(([lo,hi])=>(lo+hi)/2);
       u=unit([ref.position[0]-target[0],ref.position[1]-target[1]])||[0,-1];
       const lateral=[-u[1],u[0]],extent=box.map(([lo,hi])=>hi-lo);
       span=extent[2]*scale;spread=(Math.abs(lateral[0])*extent[0]+Math.abs(lateral[1])*extent[1])*scale;eye=floor+1.6;
+    }
+    if(view&&V.BEARINGS[view.mode]!==undefined){
+      const f=people.length?facing(people[0]):[0,-1],r=V.BEARINGS[view.mode]*deg;
+      u=[f[0]*Math.cos(r)-f[1]*Math.sin(r),f[0]*Math.sin(r)+f[1]*Math.cos(r)];
+      if(objectSubject&&!view.target){
+        const scale=size==='insert'?1.3:SET_SCALE[frame],e=objectSubject.size;
+        span=e[2]*scale;spread=(Math.abs(u[1])*e[0]+Math.abs(u[0])*e[1])*scale;eye=target[2];
+      }
     }
     const d=Math.max(span/2/((sensorV/2)/lensMm),spread/2/(18/lensMm),.35);
     if(a==='dutch')warnings.push('dutch: the renderer has no camera roll, so the set render stays level and the prompt tilts the horizon');
@@ -293,7 +315,7 @@ function shotCamera(m,{stateId,actors=[],cast=[],size,angle,width,height,side,mu
       return {p,lens,v};
     };
     let best=place(u);
-    if(people.length&&size!=='insert'&&size!=='cutaway'){
+    if(!view?.target&&people.length&&size!=='insert'&&size!=='cutaway'){
       // Someone off the shot or a standing object between the lens and a framed face: swing round the subject, the reference camera's side first.
       // Each framed person is checked at their face and two lower heights the size keeps in frame, across their width.
       const [lo]=PERSON_SPAN[frame],base=Math.max(lo,0),others=actors.filter(x=>!people.includes(x)),solids=objects.filter(o=>o.size[2]>=.3&&o.role!=='wall');
@@ -310,7 +332,7 @@ function shotCamera(m,{stateId,actors=[],cast=[],size,angle,width,height,side,mu
       const hidden=p=>solids.some(o=>inBox(p,o))?Infinity:marks(p).filter(q=>others.some(x=>hitsBody(p,q,x))||solids.some(o=>!inBox(q,o)&&entersBox(p,q,o)!==null)).length;
       const toward=Math.sign(u[0]*(ref.position[1]-target[1])-u[1]*(ref.position[0]-target[0]))||1;
       // Turns stay within 80° so the framed faces still turn toward the lens.
-      const tried=[0,20,40,60,80].flatMap(t=>t?[t*toward,-t*toward]:[0]).map(t=>{const c=Math.cos(t*deg),s=Math.sin(t*deg),x=place([u[0]*c-u[1]*s,u[0]*s+u[1]*c]);
+      const tried=(view?[0]:[0,20,40,60,80]).flatMap(t=>t?[t*toward,-t*toward]:[0]).map(t=>{const c=Math.cos(t*deg),s=Math.sin(t*deg),x=place([u[0]*c-u[1]*s,u[0]*s+u[1]*c]);
         const n=hidden(x.p);return {t,...x,n,score:n*10+fills(x.p,x.lens)};});
       // The first clean side, else the least blocked one.
       const clear=tried.reduce((m,x)=>x.score<m.score?x:m);
@@ -329,6 +351,7 @@ function shotCamera(m,{stateId,actors=[],cast=[],size,angle,width,height,side,mu
  */
 function shotViewpoint(s){
   const cam=s.visual?.camera||{},picked=require('./film-techniques.js').selected(s);
+  if(cam.view)return require('./shot-view.js').checked(cam.view).mode;
   const explicit=picked.find(t=>t.entry?.fields.viewpoint)?.entry.fields.viewpoint||(cam.rear?'rear':cam.pov?'pov':undefined);
   const move=String(cam.movement||picked.find(t=>t.entry?.fields.movement)?.entry.fields.movement||'');
   return explicit||(/tracking from behind/i.test(move)?'rear':/truck parallel/i.test(move)?'side':undefined);
@@ -345,7 +368,7 @@ function shotFrame(win,index,dir,{manifest,cast=[],size,angle,width,height}){
   const k=Math.min(1,1280/Math.max(width,height)),w=2*Math.round(width*k/2),h=2*Math.round(height*k/2);
   const ref=bound?(bound.camera||m.cameras[bound.cameraId]):undefined,cam=s.visual?.camera||{};
   const viewpoint=shotViewpoint(s);
-  const shot=shotCamera(m,{stateId,actors:C.actorsAt(blocking,'start'),cast,size,angle,width:w,height:h,side:ref,mustShow:bound?.mustShow||[],viewpoint});
+  const shot=shotCamera(m,{stateId,actors:C.actorsAt(blocking,'start'),cast,size,angle,width:w,height:h,side:ref,mustShow:bound?.mustShow||[],viewpoint,view:cam.view});
   // Text cannot specify a Blender transform. Without an authored endpoint a moving shot uses text for its landing,
   // rather than locking its end image to a second render of the opening camera.
   const fixed=/^(static|fixed|locked)/i.test(String(cam.movement||'').trim());
