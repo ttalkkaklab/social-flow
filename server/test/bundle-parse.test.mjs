@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
-import { copyFileSync, mkdirSync, mkdtempSync } from 'node:fs';
+import { appendFileSync, copyFileSync, cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -56,4 +56,47 @@ test('dist/bundle.js boots without the skills tree; the storyboard routes name t
     assert.match(line, /structure-contract\.js/, 'call ' + id + ' did not name the missing file: ' + line.slice(0, 300));
     assert.doesNotMatch(line, /__contract-missing__/, 'call ' + id + ' leaked the placeholder vocabulary');
   }
+});
+
+
+test('a running installed bundle reports disk replacement without claiming it reloaded', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'sf-runtime-'));
+  mkdirSync(join(dir, 'server', 'dist'), { recursive: true });
+  const copy = join(dir, 'server', 'dist', 'bundle.js');
+  copyFileSync(bundle, copy);
+  cpSync(join(here, '../../skills'), join(dir, 'skills'), { recursive: true });
+  const board = join(dir, 'board'); mkdirSync(board);
+  writeFileSync(join(board, 'scenes.js'), 'window.SCENES = [{id:"s0001",type:"points",narration:[]}];');
+  const p = spawn(process.execPath, [copy], { cwd: dir, env: process.env });
+  const send = message => p.stdin.write(JSON.stringify(message) + '\n');
+  try {
+    const responses = await new Promise((resolve, reject) => {
+      const results = []; let buffer = '';
+      const timer = setTimeout(() => reject(new Error('runtime smoke timed out')), 10000);
+      const call = id => send({ jsonrpc: '2.0', id, method: 'tools/call', params: { name: 'storyboard_read', arguments: { path: board, includeTechniques: false } } });
+      p.on('error', error => { clearTimeout(timer); reject(error); });
+      p.stdout.on('data', data => {
+        buffer += data;
+        let end;
+        while ((end = buffer.indexOf('\n')) >= 0) {
+          const line = buffer.slice(0, end); buffer = buffer.slice(end + 1);
+          let reply; try { reply = JSON.parse(line); } catch { continue; }
+          if (reply.id === 1) { send({ jsonrpc: '2.0', method: 'notifications/initialized' }); call(2); }
+          if (reply.id === 2 || reply.id === 3) {
+            try {
+              assert.ok(!reply.result.isError);
+              results.push(JSON.parse(reply.result.content[0].text));
+              if (reply.id === 2) { appendFileSync(copy, '\n// disk-only replacement\n'); call(3); }
+              else { clearTimeout(timer); resolve(results); }
+            } catch (error) { clearTimeout(timer); reject(error); }
+          }
+        }
+      });
+      send({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'runtime-test', version: '1' } } });
+    });
+    assert.equal(responses[0].runtime.loadedModuleSha256, responses[0].runtime.diskModuleSha256);
+    assert.equal(responses[1].runtime.loadedModuleSha256, responses[0].runtime.loadedModuleSha256);
+    assert.notEqual(responses[1].runtime.loadedModuleSha256, responses[1].runtime.diskModuleSha256);
+    assert.equal(responses[1].boundaryReview.status, 'not_reviewed');
+  } finally { p.kill(); rmSync(dir, { recursive: true, force: true }); }
 });

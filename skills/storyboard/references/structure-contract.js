@@ -603,28 +603,17 @@
     // ── coverage inside a scene (directing-grammar §6 rules 1–3 and 11, scenario-craft §2, §13) ──
     const groups = new Map();
     placed.forEach(x => { if (byNo.has(x.s.scene)) (groups.get(x.s.scene) || groups.set(x.s.scene, []).get(x.s.scene)).push(x); });
+    // Text equality is metadata evidence, not proof that two performances are redundant.
     const infos = [];
     placed.forEach(x => {
       const k = x.s.shot && x.s.shot.info;
       if (!text(k)) return;
-      const stagedK = /^연출\s?[—–-]/.test(k.trim());
-      const twin = infos.find(e => bare(e.k) === bare(k) || overlap(e.k, k) >= 0.6 || (e.scene === x.s.scene && !stagedK && !e.staged && overlap(e.k, k) >= 0.4 && bare(k).length >= 12));
-      if (twin) warn('shot ' + x.no, `shot.info says what shot ${twin.no}'s already said — one shot, one new piece of information; one of them can go (coverage design)`);
-      else infos.push({ k, no: x.no, scene: x.s.scene, staged: stagedK });
+      const twin = infos.find(e => compact(e.k) === compact(k));
+      if (twin) warn('shot ' + x.no, `repeated shot.info text from shot ${twin.no}; compare the complete performances and viewpoints before changing either boundary`);
+      else infos.push({ k, no: x.no });
     });
     const lastNo = runs[runs.length - 1];
     const spokenOf = x => (x.s.narration || []).map(seg => seg && (seg.tts || seg.sub) || '').join(' ');
-    // shot.info names what the shot adds; an earlier shot that already said it out loud makes this shot a repeat.
-    placed.forEach((x, i) => {
-      const k = x.s.shot && x.s.shot.info;
-      if (!text(k)) return;
-      for (let j = 0; j < i; j++) {
-        if (overlap(k, spokenOf(placed[j])) >= 0.6) {
-          warn('shot ' + x.no, `shot.info "${k.trim()}" repeats what shot ${placed[j].no} already said out loud — info is the new thing this shot adds; the line that is new here is the info, or the shot goes`);
-          break;
-        }
-      }
-    });
     placed.forEach(x => {
       if (performanceStory) return; // Event-grounded review owns meaning, dialogue and visual subtext.
       const segs = (x.s.narration || []).map(seg => seg && (seg.tts || seg.sub) || '').filter(text);

@@ -3961,7 +3961,7 @@ window.STORYBOARD_READY = (async function () {
         if (info.length < 2) return;
         if (seenInfo[info] != null)
           flag("warn", "S#" + sc, "shot " + (seenInfo[info] + 1) + " and shot " + (row.i + 1) +
-               " carry the same new information — one of them is enough");
+               " repeat shot.info text — compare performances and viewpoints before changing either boundary");
         else seenInfo[info] = row.i;
       });
       // Establish, then close (directing-grammar §6 rule 2) — a scene opening close (the mcu hook,
