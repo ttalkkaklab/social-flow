@@ -12,9 +12,11 @@ import { dirname, join } from 'node:path';
 const here = dirname(fileURLToPath(import.meta.url));
 const bundle = join(here, '..', 'dist', 'bundle.js');
 
-test('dist/bundle.js parses as a module (node --check)', () => {
-  const r = spawnSync(process.execPath, ['--check', bundle], { encoding: 'utf8' });
-  assert.equal(r.status, 0, `node --check failed:\n${r.stderr}`);
+test('installed server and shot runtime bundles parse as modules (node --check)', () => {
+  for (const file of [bundle, join(here, '..', 'dist', 'astra-shot-runtime.bundle.js')]) {
+    const r = spawnSync(process.execPath, ['--check', file], { encoding: 'utf8' });
+    assert.equal(r.status, 0, `node --check failed for ${file}:\n${r.stderr}`);
+  }
 });
 
 // The rules file lives in the plugin tree and is read at runtime; a copy of the bundle with no

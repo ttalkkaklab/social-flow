@@ -305,7 +305,10 @@ the performance; a text field alone is not proof of an executable or rendered ac
 Estimate shot time only after laying out words and actions. Per-line `acting.visual`
 happens with speech; an independent action or response may need its own interval. Do not
 use a universal speech-plus-padding formula. Match later measured audio and clip timing to
-this plan. If the take exceeds an adapter limit, split at an action boundary while keeping
+this plan. After writing all lines, revisit provisional shot boundaries: merge a continuing
+performance before comparing its total source coverage with `storyboard_read.videoTiming`.
+Use the selected operation, fps and frame grid, not a model-family duration guess. If the
+take exceeds a verified adapter limit, split at a meaningful performance boundary while keeping
 the necessary setup and consequence. If a user duration limit cannot fit the story, simplify
 or split the episode; do not silently omit causal events. 9:16 and 16:9 describe canvas,
 not how long the story must run.

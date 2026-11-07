@@ -118,7 +118,9 @@ The review displays planned lengths with unknown values intact. Its bars compare
 shot lengths, not absolute timecode. Actual assembly uses measured media and trims;
 generated source duration, usable edited duration and billed duration may differ.
 Respect adapter minimum frames and include retries in actual spending authorization.
-Prefer one readable action per generated shot. Multi-cut generation is optional
+Prefer one coherent performance per generated shot. It may include several lines, gestures
+and responses; an individual gesture or sentence is not a shot boundary. Keep it together
+while the frame conveys the event and the selected adapter can cover its full duration. Multi-cut generation is optional
 only when the selected adapter and inspected result support it; it does not replace
 stable shot references or authorize extra generation calls.
 

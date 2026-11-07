@@ -154,7 +154,9 @@ Use this as a thinking aid, not a demand to make characters explain themselves a
 settled, the first storyboard step writes only the story: `story_sequence` (each sequence's
 title and purpose) → `story_scene` (place, time, event and a one- or two-sentence summary,
 inside its sequence) → `story_shot` (each shot as one sentence of story in its scene; a
-revised shot given another scene moves to the end of that scene). No
+revised shot given another scene moves to the end of that scene). These are provisional
+performance units, not one unit per sentence, gesture or speaker turn. One summary may cover
+a continuous exchange with several lines. Revisit boundaries after the lines are written. No
 image, speech, prompt, camera or dialogue work happens in this step. Each tool refuses a layer
 whose parent is missing (`story_order`). The next step starts once every sequence has scenes,
 every scene has shots and every shot has its story: `shot_characters` sets who is on screen in
@@ -264,6 +266,16 @@ Before committing the shot list, read each complete scene without cuts, then com
 proposed boundaries. Merge adjacent shots whose frame already carries the continuing
 exchange or action. Split when a reveal, reaction, action boundary, viewpoint or necessary
 geography changes what the audience follows. A close-up is one possible reason, not a rule.
+After `shot_dialogue`, read each scene's complete speech and action without the shot breaks.
+Keep a continuing speaker in the same shot while the frame carries the performance; a pause,
+new sentence, changed speech purpose, glance or hand gesture alone does not require a cut.
+Keep a two-person exchange together when both responses are readable. A cut needs a reveal,
+reaction or viewpoint that the current frame cannot convey, or verified generation capacity.
+Revise provisional shots before images: preserve line IDs, order, speaker, delivery and acting;
+use `storyboard_apply.shotsById` and `removeShotIds` to merge, or `story_shot` followed by
+characters/lines to split. Reconcile performance groups, story/event references and continuity
+links after either change. Do not regenerate existing assets or discard approvals implicitly.
+
 Describe the meaningful opening, change and consequence of each retained shot. Remove
 redundant pauses and repeated setup. Derive its estimated length from those events and
 speech; timing cards and provider minimums never allocate seconds to fill. Preserve
@@ -357,6 +369,30 @@ individual line IDs for this review or pass an invented shot-payload argument. R
 warnings and source/motion prompt against the scene. An MSR shot plans as `native`: the
 model voices its lines, so the storyboard plans no per-line TTS for it.
 A line-only plan cannot prove that the independent actions or listener reactions survived.
+
+Before finalizing boundaries, set each generated shot's finite estimated `duration` from the
+complete performance and read `storyboard_read.videoTiming`. It resolves the episode snapshot
+and scoped model overrides, reports the selected route's `maxSeconds`, frame grid, source
+coverage and the shortest covering request. A maximum is a ceiling, never a target length or
+a reason to pad a short scene. `fits` covers the authored timing only; native speech remains
+an estimate until the generated clip is inspected. Retime from measured speech when available.
+
+Resolve `split_required` before making images. Split the smallest necessary number of times
+at a complete thought, action or motivated reaction; keep continued speech ordered and avoid
+repeated setup or empty pauses. Do not split at every sentence, divide the total equally,
+speed up speech, cut off words, reduce fps or switch models to make a long shot pass. Allow
+source trim and outgoing transition handles within the same cap. Re-read timing after every
+merge, split, dialogue, action, edit, model, resolution or fps change. The report uses the
+saved shot's `visual.video.frameRate` (or the adapter default); `video_plan` repeats the check
+with the actual request parameters. Pass that same fps to the request.
+
+A `timing_unknown` result needs a performance estimate. `limits_unknown` or `not_verified`
+is not permission to assume 5, 10 or 15 seconds: inspect the selected deployment's live
+catalog/contract (host tools use their actual schema), report the missing evidence and keep
+the timing provisional. Do not present that shot as ready for generation. Text-only work
+may retain an explicitly unresolved timing note. `video_plan` supports `requiredSeconds` on
+registered routes including MSR and rounds upward to a legal request without truncation;
+use the report's exact request or total required coverage instead of a provider default.
 
 Compare the resulting length with explicit user limits, verified publishing limits and
 budget. If it exceeds one, remove repetition, simplify the event or split the episode at a
