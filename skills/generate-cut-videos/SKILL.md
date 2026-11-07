@@ -12,6 +12,12 @@ Steps 7–8 of [the production order](../_shared/production-workflow.md) (user d
 2026-10-31). Read [video model selection](../produce/references/video-model-selection.md)
 and [duration planning](../produce/references/video-duration.md).
 
+For dialogue, read [dialogue coverage](../storyboard/references/dialogue-coverage.md)
+before writing prompts. Confirm the visible speaking face and silent foreground listener
+in OTS; two speakers in one clip need readable faces or an explicit creative exception.
+If coverage is wrong, return to the earlier authoring/image stages rather than patching
+the prompt alone. Preserve MSR two-speaker bindings and the selected voice lane.
+
 **Prompt.** After every picture shot has its images, write each `generated_video` shot's
 prompt with `shot_prompt`. Give `action` (what moves from the opening picture), `end` (the
 closing picture) and `sound` in English; the tool builds the rest from the shot's icon

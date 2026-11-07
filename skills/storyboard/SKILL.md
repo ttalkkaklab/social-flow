@@ -269,7 +269,10 @@ geography changes what the audience follows. A close-up is one possible reason, 
 After `shot_dialogue`, read each scene's complete speech and action without the shot breaks.
 Keep a continuing speaker in the same shot while the frame carries the performance; a pause,
 new sentence, changed speech purpose, glance or hand gesture alone does not require a cut.
-Keep a two-person exchange together when both responses are readable. A cut needs a reveal,
+Keep a two-person exchange together when both responses are readable.
+For face-to-face generated dialogue, apply [dialogue coverage](references/dialogue-coverage.md):
+prefer speaker-facing OTS/reverse when expressions matter; split a fixed OTS that gives
+lines to both people, or retain a two-shot when both speaking faces are readable. A cut needs a reveal,
 reaction or viewpoint that the current frame cannot convey, or verified generation capacity.
 Revise provisional shots before images: preserve line IDs, order, speaker, delivery and acting;
 use `storyboard_apply.shotsById` and `removeShotIds` to merge, or `story_shot` followed by

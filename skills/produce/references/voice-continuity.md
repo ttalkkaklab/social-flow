@@ -67,6 +67,9 @@ Both speakers need distinct positions. The compiler repeats each turn's name,
 position, appearance, Image N and Audio N, with the other visible mouths closed.
 The start-image hash pins these bindings; changed image bytes require reauthoring.
 Two-speaker dialogue remains supported; this does not split shots automatically.
+Apply [dialogue coverage](../../storyboard/references/dialogue-coverage.md) during authoring:
+OTS/reverse can keep one speaking face per clip while retaining two visible characters;
+a readable two-shot can retain both speakers. Bindings do not repair an occluded mouth.
 
 Keep spoken words in `shot_dialogue`. MSR refuses quotes of those words in the
 action or an explicit request prompt (`video_dialogue_embedded`) rather than
@@ -128,7 +131,7 @@ their existing clips stay reusable through `visual.reuse`.
 | --- | --- | --- |
 | Seedance 2.5 reference | Pass `generateAudio:true`; map each speaker to its sample and explicitly owned images using `@Audio N` / `@Image N`. | No promise of waveform preservation or exact line timing. |
 | Seedance 2.0 / Fast / Mini reference | Same ownership mapping with `Audio N` / `Image N`; obey model input limits. | Do not automatically upgrade to 2.5. The installed schema requires an image with reference audio. |
-| ASTRA GenAI MSR | Write the dialogue in the prompt; a pinned sample rides on the speaker's subject image when the speaker is subject 1 or 2 and the gateway accepts samples ([GenAI MSR](../../_shared/astra-genai.md#msr-and-v2-video)). | Without a usable sample the prompt voices the speaker and the plan warns. A sample sent to a gateway without sample support fails (`msr_voice_unsupported`). Every MSR line is spoken on screen; no TTS take. |
+| ASTRA GenAI MSR | Write the dialogue in the prompt; a pinned sample rides on the speaker's subject image when the speaker is subject 1 or 2 and the gateway accepts samples ([GenAI MSR](../../_shared/astra-genai.md#msr-and-v2-video)). | Without a usable sample the prompt voices the speaker and the plan warns. A sample sent to a gateway without sample support fails (`msr_voice_unsupported`). MSR compiles explicit off_screen/voiceover turns too, instructing the speaker to stay out of frame and visible mouths to stay still; no TTS take. |
 | FastH3 Omni reference (local) | Same ownership mapping; the plan writes each pinned sample's actual reference index. | No promise of waveform preservation or exact line timing. |
 | Supplied lane: ASTRA, ASTRA GenAI and desktop audio2video | Generate final pinned-voice lines, compose the shot WAV, then animate from that WAV. | The track is re-encoded; mouth and speaker correctness stay unreviewed. |
 | Lane `none`: image/text-to-video, keyframes, retake, `ltx_video_generate` | Non-speaking pictures only; narration stays a separate pinned TTS track. | An on-screen line or native voicing is refused (`voice_lane_required`). Do not enable sound just to fill a quota. |

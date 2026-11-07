@@ -8,6 +8,11 @@ allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent", "mcp__social-flow__sho
 
 # Generate Cut Images
 
+For dialogue images, apply [dialogue coverage](../storyboard/references/dialogue-coverage.md).
+An OTS shows the speaking far face and the silent near listener; a two-speaker two-shot
+needs both mouths readable. Inspect the actual image, including portrait crops, before
+handing it to video prompting. Correct the plan first if the intended coverage cannot fit.
+
 Step 6 of [the production order](../_shared/production-workflow.md) (user directive
 2026-10-31): after every shot has its icon attributes and the props and backgrounds exist,
 make each picture shot's start image with `shot_image`, then — only for a `first_last`
