@@ -116,8 +116,8 @@ shorten action prose when needed, never silently truncate dialogue. This is mode
 direction, not proof that the resulting pixels contain no text.
 
 `negativePrompt` maps to `negative_prompt`; `guidanceScale` maps to `guidance_scale`
-(1–10). Separate negatives require an explicit scale above 1: the gateway's default
-CFG=1 ignores them. Before a new submission using negatives or CFG above 1, the
+(1–10). Separate negatives require `guidanceScale > 1` or `nagScale > 0`: ordinary
+CFG=1 without NAG ignores them. Before a new submission using negatives or CFG above 1, the
 adapter checks `/v1/ltx/msr/capabilities` and refuses absent or false
 `negative_prompt` support without uploading or submitting. It never silently drops
 the requested conditioning or raises CFG. Ordinary requests retain distilled CFG=1.
@@ -127,6 +127,18 @@ Its [OpenAPI contract](https://genai.astravision.co.kr/openapi.json) exposes the
 fields. Check capabilities on each new conditioned submission because deployment
 support can change. The always-included prompt instruction also applies when
 negatives are supplied; inspect generated footage before claiming subtitle absence.
+
+Optional video-only NAG uses `nagScale` (0–100), `nagAlpha` (0–1) and `nagTau`
+(0–10), mapped to `nag_scale`, `nag_alpha` and `nag_tau`. Omitted or zero scale
+keeps NAG off and omits all three wire fields for older gateways. A positive scale
+requires a nonempty `negativePrompt` and live `nag:true` capability; unknown support
+is refused before uploads or submission. Alpha and tau default to 0.25 and 2.5 on
+the gateway. For an explicit trial, pass `negativePrompt:"subtitles, captions, text
+overlays", guidanceScale:1, nagScale:11, nagAlpha:0.25, nagTau:2.5` in `video_plan.args`.
+Plans and request fingerprints preserve these controls for execution and recovery.
+NAG does not target audio attention. The local LTX-2.5 trial rendered successfully,
+but both baseline and NAG clips were subtitle-free, so it did not establish suppression
+effectiveness. Do not silently enable NAG or promise subtitle absence.
 
 MSR renders speech and diegetic effects into its own soundtrack. **Voice samples are
 optional (2026-10-31, user directive).** `video_plan` lays the prompt out as the model

@@ -359,10 +359,16 @@ test('a saved reference operation plans MSR with the speaker sample, dimensions 
   assert.equal(fs.existsSync(path.join(f.episode, '.work/video-routing/state.json')), false);
   const p = planVideo({ episode: f.episode, shotId: 's1', requestId: 'msr', args: {
     prompt: 'Person in image 1 says hello.', references: [{ imagePath: 'person.png' }], duration: 5, reserveUsd: 0.25,
+    negativePrompt: 'subtitles', guidanceScale: 1, nagScale: 11, nagAlpha: 0.25, nagTau: 2.5,
   } });
   assert.equal(p.tool, 'astra_genai_msr'); assert.equal(p.args.model, undefined); assert.equal(p.args.resolution, undefined);
   assert.equal(p.args.width, 1792); assert.equal(p.args.height, 1024); assert.equal(p.args.references[0].imagePath, ref);
   assert.equal(p.args.references[0].audioPath, voice); assert.equal(p.quote.reserveUsd, 0.25);
+  const stored = JSON.parse(fs.readFileSync(path.join(f.episode, '.work/video-routing/plans', p.id + '.json')));
+  assert.deepEqual([stored.args.nagScale, stored.args.nagAlpha, stored.args.nagTau], [11, 0.25, 2.5]);
+  const replanned = planVideo({ episode: f.episode, shotId: p.shotId, requestId: p.requestId, tool: p.tool, args: stored.sourceArgs });
+  assert.equal(replanned.id, p.id);
+  assert.deepEqual(replanned.args, stored.args);
   fs.appendFileSync(ref, 'changed');
   await assert.rejects(f.execute(p, async () => assert.fail('stale reference must not generate')), /stale/);
 });

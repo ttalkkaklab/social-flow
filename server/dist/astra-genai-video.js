@@ -107,6 +107,9 @@ export const genaiMsrSchema = z.object({
         .pipe(z.string().max(2000, 'MSR prompt including the subtitle-free instruction must fit 2000 characters; shorten the action without dropping dialogue')),
     negativePrompt: z.string().trim().min(1).max(5000).optional(),
     guidanceScale: z.number().finite().min(1).max(10).optional(),
+    nagScale: z.number().finite().min(0).max(100).optional(),
+    nagAlpha: z.number().finite().min(0).max(1).optional(),
+    nagTau: z.number().finite().min(0).max(10).optional(),
     references: z.array(z.object({
         imageUri: genaiImageUriSchema.optional(), imagePath: z.string().min(1).optional(),
         background: z.boolean().default(false),
@@ -127,8 +130,10 @@ export const genaiMsrSchema = z.object({
     filename: bareFilenameSchema('video').refine(name => name.endsWith('.mp4'), 'Use a .mp4 filename').optional(),
 }).strict().superRefine((args, ctx) => {
     const issue = (message) => ctx.addIssue({ code: z.ZodIssueCode.custom, message });
-    if (args.negativePrompt !== undefined && (args.guidanceScale ?? 1) <= 1)
-        issue('MSR negativePrompt requires guidanceScale > 1; CFG=1 ignores negative conditioning');
+    if ((args.nagScale ?? 0) > 0 && args.negativePrompt === undefined)
+        issue('MSR nagScale > 0 requires negativePrompt');
+    if (args.negativePrompt !== undefined && (args.guidanceScale ?? 1) <= 1 && (args.nagScale ?? 0) === 0)
+        issue('MSR negativePrompt requires guidanceScale > 1 or nagScale > 0');
     const backgrounds = args.references.filter(ref => ref.background).length;
     if (backgrounds > 1 || args.references.length - backgrounds > 4)
         issue('MSR supports at most four subjects and one background');
@@ -156,6 +161,9 @@ export function buildGenaiMsrBody(args) {
     return { prompt: args.prompt,
         ...(args.negativePrompt === undefined ? {} : { negative_prompt: args.negativePrompt }),
         ...(args.guidanceScale === undefined ? {} : { guidance_scale: args.guidanceScale }),
+        ...((args.nagScale ?? 0) > 0 ? { nag_scale: args.nagScale,
+            ...(args.nagAlpha === undefined ? {} : { nag_alpha: args.nagAlpha }),
+            ...(args.nagTau === undefined ? {} : { nag_tau: args.nagTau }) } : {}),
         references: args.references.map(ref => ({ image_uri: genaiSourceUri(ref.imageUri, ref.imagePath), background: ref.background,
             ...(oneOf(ref.audioUri, ref.audioPath) ? { audio_uri: genaiAudioUri(ref.audioUri, ref.audioPath) } : {}) })),
         reference_strength: args.referenceStrength, reference_frames: args.referenceFrames,
@@ -309,8 +317,10 @@ export async function generateGenaiVideo(operation, input) {
         if (fs.existsSync(videoPath))
             throw new Error('GenAI output already exists');
         if ('references' in args && (args.negativePrompt !== undefined || (args.guidanceScale ?? 1) > 1)) {
-            const capabilities = z.object({ negative_prompt: z.boolean().optional() }).passthrough()
+            const capabilities = z.object({ negative_prompt: z.boolean().optional(), nag: z.boolean().optional() }).passthrough()
                 .parse(await requestGenai('GET', '/v1/ltx/msr/capabilities', undefined, 15_000));
+            if ((args.nagScale ?? 0) > 0 && capabilities.nag !== true)
+                throw new Error('msr_nag_unsupported: the GenAI MSR backend does not advertise NAG; no request was submitted');
             if (capabilities.negative_prompt !== true)
                 throw new Error('msr_negative_unsupported: the GenAI MSR backend does not advertise negative conditioning; no request was submitted');
         }
