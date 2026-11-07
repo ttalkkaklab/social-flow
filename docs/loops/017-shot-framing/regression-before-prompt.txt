@@ -1,0 +1,37 @@
+▶ images and the video prompt follow the icon attributes
+  ✖ selects the opening camera background panel and preserves the choice across icon edits (27.411667ms)
+✖ images and the video prompt follow the icon attributes (28.061917ms)
+ℹ tests 1
+ℹ suites 1
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 192.639042
+
+✖ failing tests:
+
+test at test/storyboard.test.mjs:594:3
+✖ selects the opening camera background panel and preserves the choice across icon edits (27.411667ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /front directional geography/. Input:
+  
+  "Compose one picture from these images. Image 1 shows the room location seen from its front camera direction; preserve this view and its landmark arrangement. Image 2 shows mina's face and hair. Image 3 shows mina's body and outfit, front. Image 4 shows mina's body and outfit, back. Keep the background's front viewing direction and landmark arrangement. The character sheets supply appearance and identity only; recompose the subject to the authored opening crop and subject viewpoint within that space. Character panel poses do not constrain this shot. Medium shot, waist up, at eye level. This is the opening still for a dolly in; show one instant, with no motion trail or montage. Begin at the opening crop with margin for the closer landing and readable foreground/background depth. Mina waits. the picture fills the frame from the top edge to the bottom edge."
+  
+      at TestContext.<anonymous> (file:///Users/zeans/orca/workspaces/social-flow/ridgehead/server/test/storyboard.test.mjs:603:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at node:internal/test_runner/test:1903:71
+      at node:internal/per_context/primordials:504:82
+      at new Promise (<anonymous>)
+      at new SafePromise (node:internal/per_context/primordials:478:3)
+      at node:internal/per_context/primordials:504:9
+      at Array.map (<anonymous>) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: "Compose one picture from these images. Image 1 shows the room location seen from its front camera direction; preserve this view and its landmark arrangement. Image 2 shows mina's face and hair. Image 3 shows mina's body and outfit, front. Image 4 shows mina's body and outfit, back. Keep the background's front viewing direction and landmark arrangement. The character sheets supply appearance and identity only; recompose the subject to the authored opening crop and subject viewpoint within that space. Character panel poses do not constrain this shot. Medium shot, waist up, at eye level. This is the opening still for a dolly in; show one instant, with no motion trail or montage. Begin at the opening crop with margin for the closer landing and readable foreground/background depth. Mina waits. the picture fills the frame from the top edge to the bottom edge.",
+    expected: /front directional geography/,
+    operator: 'match',
+    diff: 'simple'
+  }

@@ -423,7 +423,7 @@ export function readStoryboard(args) {
     result.continuityFindings = continuity.check(win, dirname(file));
     result.cameraDirectionFindings = cameraContract().cameraDirectionWarnings(win.SCENES).map(what => ({ level: 'warn', where: 'camera direction', what }));
     result.imageFraming = (win.SCENES || []).filter(shot => shot.visual?.frames?.start)
-        .map(shot => imageFramingStatus(shot, win.FORMAT));
+        .map(shot => imageFramingStatus(shot, win.FORMAT, dirname(file)));
     result.techniqueFindings = (win.SCENES || []).flatMap((scene, index) => techniqueContract().findings(scene).map(what => ({ level: 'warn', where: 'shot ' + (index + 1), what })));
     if (args.includeContext)
         result.reviewContext = {
@@ -1502,8 +1502,10 @@ export function writeShotIcons(args) {
 export const shotImageSchema = z.object({
     path: outlinePath,
     id: shotIdSchema,
+    action: z.enum(['generate', 'complete']).default('generate').describe('generate plans/runs a new image; complete adopts a saved host output without generating'),
+    requestId: nonEmpty.optional().describe('The host handoff requestId to complete'),
     frame: z.enum(['start', 'end']).default('start').describe('start: the first image; end: the last image of a first_last shot'),
-    prompt: nonEmpty.describe('What the frame shows, in English: who is where, doing what, facing which way, expression and light'),
+    prompt: nonEmpty.optional().describe('What the frame shows, in English: who is where, doing what, facing which way, expression and light'),
     editExisting: z.boolean().optional().describe('Edit the saved frame in place conceptually, saving a new version; prompt describes only the change'),
     reframe: z.boolean().optional().describe('With editExisting, reapply the saved start-frame size, crop and viewpoint to correct a generated composition; prompt describes the opening action and correction'),
     sourceCrop: z.object({ x: z.number().int().nonnegative(), y: z.number().int().nonnegative(), width: z.number().int().positive(), height: z.number().int().positive() }).strict().optional()
@@ -1526,13 +1528,14 @@ function startImageBasis(shot, format) {
         acting: shot.narration?.map(line => line.acting?.visual),
     })).digest('hex');
 }
-function imageFramingStatus(shot, format) {
+function imageFramingStatus(shot, format, boardDir) {
     const visual = shot.visual;
     const frames = visual?.frames;
+    const availability = !boardDir ? undefined : frames?.start && existsSync(resolve(boardDir, frames.start)) ? 'present' : 'missing';
     const promptHash = typeof visual?.bgPrompt === 'string' ? createHash('sha256').update(visual.bgPrompt).digest('hex') : null;
     const changed = !!frames?.startBasis && frames.startBasis !== startImageBasis(shot, format)
         || !!frames?.startPromptSha256 && frames.startPromptSha256 !== promptHash;
-    return { id: shot.id, image: frames?.start, status: changed ? 'stale' : !frames?.startBasis || !frames.startPromptSha256 ? 'unknown' : 'current',
+    return { id: shot.id, image: frames?.start, ...(availability ? { availability } : {}), status: changed ? 'stale' : !frames?.startBasis || !frames.startPromptSha256 ? 'unknown' : 'current',
         visualReview: 'not_reviewed', note: 'Current means saved staging and prompt inputs match, not that the image obeys them. Inspect the pixels before reuse.' };
 }
 const locationContract = () => loadFromHere(join(REFERENCES_DIR, 'location-assets.js'));
@@ -1627,7 +1630,33 @@ function docEntry(win, kind, id) {
     return entry;
 }
 /** Plan inputs for shot_image: the ordered pictures, the assembled prompt and the adapter arguments. */
+function shotImageSourceBasis(path, id, request) {
+    const { win } = readOutline(path);
+    const shot = (win.SCENES ?? [])[shotIndex(win.SCENES ?? [], id, 'shot_image')];
+    const doc = (win.SB_DOC ?? {});
+    const rows = (value) => Array.isArray(value) ? value : [];
+    const ledger = (doc.propContinuity ?? {});
+    const assets = { location: rows(doc.locations).find(entry => entry.id === request.location),
+        props: rows(doc.props).filter(entry => request.props.includes(String(entry.id))),
+        characters: (contract().castOf(shot) ?? []).map(character => castEntry(win, character)),
+        continuity: request.props.length ? { version: ledger.version, timelineId: ledger.timelineId,
+            initial: rows(ledger.initial).filter(entry => request.props.includes(String(entry.propId))),
+            events: rows(ledger.events).filter(entry => request.props.includes(String(entry.propId))) } : undefined };
+    const style = loadFromHere(join(REFERENCES_DIR, 'production-mode.js')).shotStyle(win, (win.SCENES ?? []).indexOf(shot));
+    const panels = request.canonicalPanels ? characterPanels().canonicalReferences(dirname(scenesPath(path)), id, contract().castOf(shot) ?? [], 'image')
+        .map(ref => ({ id: ref.id, path: resolve(dirname(scenesPath(path)), ref.path) })) : undefined;
+    return createHash('sha256').update(JSON.stringify({ shot, format: win.FORMAT, assets, style, panels })).digest('hex');
+}
 export function shotImageRequest(args) {
+    if (args.action === 'complete')
+        throw new Error('shot_image_action: use completeShotImage for a host completion');
+    if (!args.prompt)
+        throw new Error('shot_image_prompt_required: generate needs prompt');
+    const request = buildShotImageRequest({ ...args, prompt: args.prompt });
+    const sourceBasis = shotImageSourceBasis(args.path, args.id, request);
+    return { ...request, sourceBasis, inputHashes: Object.fromEntries([...new Set([...request.inputs, ...(request.originalInputs ?? [])])].map(file => [file, createHash('sha256').update(readFileSync(file)).digest('hex')])) };
+}
+function buildShotImageRequest(args) {
     const { win } = readOutline(args.path);
     const shots = win.SCENES ?? [];
     const shot = shots[shotIndex(shots, args.id, 'shot_image')];
@@ -1708,7 +1737,7 @@ export function shotImageRequest(args) {
             warnings.push({ level: 'warn', where: args.id, what: 'image_framing_stale: this edit inherits an image made from older shot inputs; normal generation rebuilds all current references and framing' });
         if (Math.abs(editWidth / editHeight - (wide ? 16 / 9 : 9 / 16)) > 0.001)
             warnings.push({ level: 'warn', where: args.id, what: `image_aspect_mismatch: ${editWidth}x${editHeight} differs from the delivery aspect; inspect its final crop` });
-        return { episode, assetId: args.id, ...call, refs: (visual.references ?? []),
+        return { episode, assetId: args.id, ...call, originalInputs: [resolve(boardDir, source), ...call.originalInputs], refs: (visual.references ?? []),
             ...(location ? { location } : {}), ...(visual.locationFrame ? { locationFrame: visual.locationFrame } : {}), props, prompt,
             startBasis: frames.startBasis,
             warnings };
@@ -1754,7 +1783,7 @@ export function shotImageRequest(args) {
         ...propPictures.refs,
         // MSR takes the start image in its background slot, so the place only conditions the picture.
         ...(typeof place === 'string' ? [{ id: `${args.id}-place`, path: place, role: 'background', use: 'image',
-                purpose: set ? `how the ${location} location looks — materials, colours and light only, not its viewpoint or layout` : `the ${location} location${selected ? ` seen from its ${backgroundView} camera direction; preserve this view and its landmark arrangement` : ''}` }] : []),
+                purpose: set ? `how the ${location} location looks — materials, colours and light only, not its viewpoint or layout` : `the ${location} location${selected ? ` with ${backgroundView} directional geography` : ''}; use its appearance and the spatial relationships of visible landmarks, not its frame extent` }] : []),
     ];
     // The edit starts from the set render, else the place (or, for an end image, the start image); the rest are references.
     // Beside a set render the place picture comes last and stays out when the saved model has no room for it.
@@ -1783,7 +1812,7 @@ export function shotImageRequest(args) {
     const roles = ordered.map((ref, i) => `Image ${i + 1} shows ${ref.purpose}.`).join(' ');
     const at = (ref) => ordered.indexOf(ref) + 1;
     const lock = !set ? (selected && args.frame === 'start'
-        ? `Keep the background's ${backgroundView} viewing direction and landmark arrangement. The character sheets supply appearance and identity only; recompose the subject to the authored opening crop and subject viewpoint within that space. Character panel poses do not constrain this shot.`
+        ? `Preserve the selected background's ${backgroundView} directional geography and the spatial relationships of visible landmarks. The authored crop, camera height and subject viewpoint control the output; do not copy the background sheet's wide framing. Landmarks outside that crop stay outside the frame. The character sheets supply appearance and identity only; their panel poses do not constrain this shot.`
         : view ? `The location and character sheets supply appearance and identity only. Recompose them to the authored ${args.frame === 'end' ? 'closing' : 'opening'} crop and viewpoint; the sheet pose and camera do not constrain this shot.` : '') : args.frame === 'end'
         ? composition.length ? `Use Image ${at(composition[0])}'s closing camera, lens, framing and final object and figure positions. Image 1 supplies the look and every identity; its opening camera does not constrain this closing view.`
             : `Image 1 supplies the opening appearance and identities. Follow the closing camera direction below while preserving the set's world layout.`
@@ -1800,7 +1829,7 @@ export function shotImageRequest(args) {
     const locationFrame = set && args.frame === 'start' ? { set: set.id, revision: set.revision, manifest: set.manifest, manifestSha256: set.manifestSha256, stateId: set.stateId,
         camera: set.camera, endCamera: set.endCamera, blocked: set.blocked, fingerprint: set.fingerprint, start: set.start, end: set.end } : undefined;
     const startBasis = startImageBasis({ ...shot, visual: { ...visual, ...(location ? { locationId: location } : {}), props } }, win.FORMAT);
-    return { episode, assetId: args.id, ...call, refs: sent, ...(location ? { location } : {}), ...(locationFrame ? { locationFrame } : {}), props, prompt, warnings, startBasis };
+    return { episode, assetId: args.id, ...call, canonicalPanels: true, refs: sent, ...(location ? { location } : {}), ...(locationFrame ? { locationFrame } : {}), props, prompt, warnings, startBasis };
 }
 /**
  * The adapter call for one generated picture with the saved image model: the next free versioned
@@ -1839,7 +1868,7 @@ export function imageCall(o) {
     const sent = new Set(mimes).size > 1 ? inputs.map((f, i) => mimes[i] === 'image/png' ? f : toPng(f)) : inputs;
     const jobs = readImageState(directory)?.jobs ?? {};
     let k = 1;
-    while (existsSync(join(o.outDir, `${o.stem}-v${k}.png`)) || Object.hasOwn(jobs, `${o.stem}-v${k}`))
+    while (existsSync(join(o.outDir, `${o.stem}-v${k}.png`)) || existsSync(join(o.outDir, `${o.stem}-v${k}.pending.json`)) || Object.hasOwn(jobs, `${o.stem}-v${k}`))
         k += 1;
     const requestId = `${o.stem}-v${k}`, file = join(o.outDir, `${requestId}.png`);
     mkdirSync(dirname(file), { recursive: true });
@@ -1855,10 +1884,41 @@ export function imageCall(o) {
     const negativeSent = !!o.negativePrompt && guidance !== undefined;
     if (negativeSent)
         Object.assign(args, { negativePrompt: o.negativePrompt, guidanceScale: guidance });
-    return { requestId, ...(tool ? { tool } : {}), operation: (edit ? 'edit' : 'text'), args, file, inputs: sent, negativeSent };
+    return { requestId, ...(tool ? { tool } : {}), operation: (edit ? 'edit' : 'text'), args, file, inputs: sent, originalInputs: inputs, negativeSent };
 }
-/** Record a generated (or host-handed) frame on the board: frames.start/bg or frames.end, with its inputs. */
+/** Keep the immutable host request beside its reserved output, without touching active frames. */
+export function deferShotImage(args, request) {
+    const file = join(dirname(request.file), `${request.requestId}.pending.json`);
+    writeFileSync(file, JSON.stringify({ path: scenesPath(args.path), id: args.id, frame: args.frame, request }, null, 2) + '\n', { flag: 'wx' });
+}
+export function completeShotImage(args) {
+    if (!args.requestId || !new RegExp(`^${args.id}-${args.frame}-v[1-9][0-9]*$`).test(args.requestId))
+        throw new Error('shot_image_request_required: complete needs the matching handoff requestId and frame');
+    if (args.prompt !== undefined || args.editExisting !== undefined || args.reframe !== undefined || args.sourceCrop !== undefined || args.preserve !== undefined || args.location !== undefined || args.props !== undefined || args.size !== undefined || args.reserveUsd !== undefined)
+        throw new Error('shot_image_completion_scope: complete uses the saved request; omit generation options');
+    const file = join(dirname(scenesPath(args.path)), 'images', `${args.requestId}.pending.json`);
+    if (!existsSync(file))
+        throw new Error('shot_image_request_missing: no saved host handoff');
+    const pending = JSON.parse(readFileSync(file, 'utf8'));
+    if (pending.completed)
+        throw new Error('shot_image_already_completed: this handoff was already adopted');
+    if (pending.path !== scenesPath(args.path) || pending.id !== args.id || pending.frame !== args.frame || pending.request.requestId !== args.requestId || pending.request.file !== join(dirname(file), `${args.requestId}.png`))
+        throw new Error('shot_image_request_mismatch: the handoff belongs to another frame');
+    const result = recordShotImage(args, pending.request);
+    writeFileSync(file, JSON.stringify({ ...pending, completed: true }, null, 2) + '\n');
+    return result;
+}
+/** Record only a decoded output whose planned inputs still match the board. */
 export function recordShotImage(args, request) {
+    if (!existsSync(request.file))
+        throw new Error('shot_image_output_missing: generate and save the requested output before completing');
+    verifyImageFile(request.file);
+    if (request.sourceBasis && request.sourceBasis !== shotImageSourceBasis(args.path, args.id, request))
+        throw new Error('shot_image_request_stale: the shot or asset plan changed after generation was requested; keep the output and plan a new request');
+    for (const [file, hash] of Object.entries(request.inputHashes ?? {})) {
+        if (!existsSync(file) || createHash('sha256').update(readFileSync(file)).digest('hex') !== hash)
+            throw new Error('shot_image_input_changed: a reference changed after generation was requested');
+    }
     const { win, st } = readOutline(args.path);
     const shots = (win.SCENES ?? []).slice();
     const index = shotIndex(shots, args.id, 'shot_image');

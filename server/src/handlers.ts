@@ -1670,6 +1670,10 @@ ROUTES.character_panel = async args => {
 ROUTES.shot_image = async args => {
   storyboard.contract();
   const input = parseArgs(storyboard.shotImageSchema, args);
+  if (input.action === 'complete') {
+    const result = storyboard.completeShotImage(input);
+    return text(storyboard.renderApply(result), result.findings.some(f => f.level === 'bad'));
+  }
   const request = storyboard.shotImageRequest(input);
   const plan = planImage({ directory: request.episode, assetId: request.assetId, requestId: request.requestId, operation: request.operation,
     ...(request.tool ? { tool: request.tool } : {}), ...(input.reserveUsd !== undefined ? { reserveUsd: input.reserveUsd } : {}), args: request.args });
@@ -1677,11 +1681,13 @@ ROUTES.shot_image = async args => {
     const result = await executeImage({ directory: plan.directory, planId: plan.id }, dispatchImage);
     if (result.isError) return result;
   }
-  const r = storyboard.recordShotImage(input, request);
-  const lines = [storyboard.renderApply(r), '', `${input.frame} image: ${request.file}`, 'Inputs, in order:',
+  if (plan.execution === 'host_handoff') storyboard.deferShotImage(input, request);
+  const r = plan.execution === 'server' ? storyboard.recordShotImage(input, request) : null;
+  const lines = [r ? storyboard.renderApply(r) : `Pending host request: ${request.requestId}; active frames are unchanged.`, '', `${input.frame} image: ${request.file}`, 'Inputs, in order:',
     ...request.inputs.map((file, i) => `  Image ${i + 1}: ${file}`), '', 'Prompt:', request.prompt];
-  if (plan.execution === 'host_handoff') lines.push('', 'host_handoff: generate this picture with the selected host image tool from the inputs above, in order, and save it to the image path.');
-  return text(lines.join('\n'), r.findings.some((f) => f.level === 'bad'));
+  if (plan.execution === 'host_handoff' && request.warnings.length) lines.push('', 'Warnings:', ...request.warnings.map(w => `${w.level}: ${w.where}: ${w.what}`));
+  if (plan.execution === 'host_handoff') lines.push('', 'host_handoff: generate this picture with the selected host image tool from the inputs above, in order, and save it to the image path. Then call shot_image with action:"complete", the same path/id/frame and requestId:"' + request.requestId + '"; omit prompt and other generation options.');
+  return text(lines.join('\n'), r?.findings.some((f) => f.level === 'bad') ?? false);
 };
 
 // Music adapters cannot bypass saved selection or reservations in a configured workspace.

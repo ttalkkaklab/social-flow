@@ -116514,7 +116514,7 @@ function readStoryboard(args) {
   const continuity = loadFromHere2(join10(REFERENCES_DIR, "shot-continuity.js"));
   result.continuityFindings = continuity.check(win, dirname5(file));
   result.cameraDirectionFindings = cameraContract().cameraDirectionWarnings(win.SCENES).map((what) => ({ level: "warn", where: "camera direction", what }));
-  result.imageFraming = (win.SCENES || []).filter((shot) => shot.visual?.frames?.start).map((shot) => imageFramingStatus(shot, win.FORMAT));
+  result.imageFraming = (win.SCENES || []).filter((shot) => shot.visual?.frames?.start).map((shot) => imageFramingStatus(shot, win.FORMAT, dirname5(file)));
   result.techniqueFindings = (win.SCENES || []).flatMap((scene, index) => techniqueContract().findings(scene).map((what) => ({ level: "warn", where: "shot " + (index + 1), what })));
   if (args.includeContext) result.reviewContext = {
     story: win.STORY || null,
@@ -117443,8 +117443,10 @@ function writeShotIcons(args) {
 var shotImageSchema = external_exports.object({
   path: outlinePath,
   id: shotIdSchema,
+  action: external_exports.enum(["generate", "complete"]).default("generate").describe("generate plans/runs a new image; complete adopts a saved host output without generating"),
+  requestId: nonEmpty.optional().describe("The host handoff requestId to complete"),
   frame: external_exports.enum(["start", "end"]).default("start").describe("start: the first image; end: the last image of a first_last shot"),
-  prompt: nonEmpty.describe("What the frame shows, in English: who is where, doing what, facing which way, expression and light"),
+  prompt: nonEmpty.optional().describe("What the frame shows, in English: who is where, doing what, facing which way, expression and light"),
   editExisting: external_exports.boolean().optional().describe("Edit the saved frame in place conceptually, saving a new version; prompt describes only the change"),
   reframe: external_exports.boolean().optional().describe("With editExisting, reapply the saved start-frame size, crop and viewpoint to correct a generated composition; prompt describes the opening action and correction"),
   sourceCrop: external_exports.object({ x: external_exports.number().int().nonnegative(), y: external_exports.number().int().nonnegative(), width: external_exports.number().int().positive(), height: external_exports.number().int().positive() }).strict().optional().describe("With reframe, an inspected rectangle in source-image pixels, e.g. {x:72,y:64,width:720,height:1280}; must fit the source and match output aspect. It becomes the GenAI composition reference, not the final output."),
@@ -117477,14 +117479,16 @@ function startImageBasis(shot, format) {
     acting: shot.narration?.map((line) => line.acting?.visual)
   })).digest("hex");
 }
-function imageFramingStatus(shot, format) {
+function imageFramingStatus(shot, format, boardDir) {
   const visual = shot.visual;
   const frames = visual?.frames;
+  const availability = !boardDir ? void 0 : frames?.start && existsSync22(resolve5(boardDir, frames.start)) ? "present" : "missing";
   const promptHash = typeof visual?.bgPrompt === "string" ? createHash14("sha256").update(visual.bgPrompt).digest("hex") : null;
   const changed = !!frames?.startBasis && frames.startBasis !== startImageBasis(shot, format) || !!frames?.startPromptSha256 && frames.startPromptSha256 !== promptHash;
   return {
     id: shot.id,
     image: frames?.start,
+    ...availability ? { availability } : {},
     status: changed ? "stale" : !frames?.startBasis || !frames.startPromptSha256 ? "unknown" : "current",
     visualReview: "not_reviewed",
     note: "Current means saved staging and prompt inputs match, not that the image obeys them. Inspect the pixels before reuse."
@@ -117565,7 +117569,35 @@ function docEntry(win, kind, id) {
   if (!entry2) throw new Error(`${kind === "locations" ? "location" : "prop"}_unknown: ${id} is not in SB_DOC.${kind}`);
   return entry2;
 }
+function shotImageSourceBasis(path32, id, request) {
+  const { win } = readOutline(path32);
+  const shot = (win.SCENES ?? [])[shotIndex(win.SCENES ?? [], id, "shot_image")];
+  const doc = win.SB_DOC ?? {};
+  const rows = (value) => Array.isArray(value) ? value : [];
+  const ledger = doc.propContinuity ?? {};
+  const assets = {
+    location: rows(doc.locations).find((entry2) => entry2.id === request.location),
+    props: rows(doc.props).filter((entry2) => request.props.includes(String(entry2.id))),
+    characters: (contract().castOf(shot) ?? []).map((character) => castEntry(win, character)),
+    continuity: request.props.length ? {
+      version: ledger.version,
+      timelineId: ledger.timelineId,
+      initial: rows(ledger.initial).filter((entry2) => request.props.includes(String(entry2.propId))),
+      events: rows(ledger.events).filter((entry2) => request.props.includes(String(entry2.propId)))
+    } : void 0
+  };
+  const style = loadFromHere2(join10(REFERENCES_DIR, "production-mode.js")).shotStyle(win, (win.SCENES ?? []).indexOf(shot));
+  const panels = request.canonicalPanels ? characterPanels().canonicalReferences(dirname5(scenesPath(path32)), id, contract().castOf(shot) ?? [], "image").map((ref) => ({ id: ref.id, path: resolve5(dirname5(scenesPath(path32)), ref.path) })) : void 0;
+  return createHash14("sha256").update(JSON.stringify({ shot, format: win.FORMAT, assets, style, panels })).digest("hex");
+}
 function shotImageRequest(args) {
+  if (args.action === "complete") throw new Error("shot_image_action: use completeShotImage for a host completion");
+  if (!args.prompt) throw new Error("shot_image_prompt_required: generate needs prompt");
+  const request = buildShotImageRequest({ ...args, prompt: args.prompt });
+  const sourceBasis = shotImageSourceBasis(args.path, args.id, request);
+  return { ...request, sourceBasis, inputHashes: Object.fromEntries([.../* @__PURE__ */ new Set([...request.inputs, ...request.originalInputs ?? []])].map((file) => [file, createHash14("sha256").update(readFileSync24(file)).digest("hex")])) };
+}
+function buildShotImageRequest(args) {
   const { win } = readOutline(args.path);
   const shots = win.SCENES ?? [];
   const shot = shots[shotIndex(shots, args.id, "shot_image")];
@@ -117645,6 +117677,7 @@ function shotImageRequest(args) {
       episode,
       assetId: args.id,
       ...call3,
+      originalInputs: [resolve5(boardDir, source), ...call3.originalInputs],
       refs: visual.references ?? [],
       ...location ? { location } : {},
       ...visual.locationFrame ? { locationFrame: visual.locationFrame } : {},
@@ -117700,7 +117733,7 @@ function shotImageRequest(args) {
       path: place,
       role: "background",
       use: "image",
-      purpose: set ? `how the ${location} location looks \u2014 materials, colours and light only, not its viewpoint or layout` : `the ${location} location${selected ? ` seen from its ${backgroundView} camera direction; preserve this view and its landmark arrangement` : ""}`
+      purpose: set ? `how the ${location} location looks \u2014 materials, colours and light only, not its viewpoint or layout` : `the ${location} location${selected ? ` with ${backgroundView} directional geography` : ""}; use its appearance and the spatial relationships of visible landmarks, not its frame extent`
     }] : []
   ];
   const look = refs.filter((ref) => ref.role === "background"), others = refs.filter((ref) => ref.role !== "background" && ref.role !== "composition");
@@ -117733,7 +117766,7 @@ function shotImageRequest(args) {
   }).prompt;
   const roles = ordered.map((ref, i2) => `Image ${i2 + 1} shows ${ref.purpose}.`).join(" ");
   const at = (ref) => ordered.indexOf(ref) + 1;
-  const lock2 = !set ? selected && args.frame === "start" ? `Keep the background's ${backgroundView} viewing direction and landmark arrangement. The character sheets supply appearance and identity only; recompose the subject to the authored opening crop and subject viewpoint within that space. Character panel poses do not constrain this shot.` : view ? `The location and character sheets supply appearance and identity only. Recompose them to the authored ${args.frame === "end" ? "closing" : "opening"} crop and viewpoint; the sheet pose and camera do not constrain this shot.` : "" : args.frame === "end" ? composition.length ? `Use Image ${at(composition[0])}'s closing camera, lens, framing and final object and figure positions. Image 1 supplies the look and every identity; its opening camera does not constrain this closing view.` : `Image 1 supplies the opening appearance and identities. Follow the closing camera direction below while preserving the set's world layout.` : `Keep Image 1's camera position, ${lens}${dutch ? "" : ", horizon"} and world layout, and keep every object${set.blocked ? " and figure" : ""} at its world position in Image 1. The authored composition below controls the final crop, headroom and subject screen placement. Paint its plain unpainted surfaces as the real place, and continue the place into any flat dark area past the set's edge.` + (dutch ? " Image 1 is level; tilt the whole picture to the dutch angle described below." : "") + (look.some((ref) => ordered.includes(ref)) ? ` Take only materials, colours and light from Image ${at(look[0])}.` : "");
+  const lock2 = !set ? selected && args.frame === "start" ? `Preserve the selected background's ${backgroundView} directional geography and the spatial relationships of visible landmarks. The authored crop, camera height and subject viewpoint control the output; do not copy the background sheet's wide framing. Landmarks outside that crop stay outside the frame. The character sheets supply appearance and identity only; their panel poses do not constrain this shot.` : view ? `The location and character sheets supply appearance and identity only. Recompose them to the authored ${args.frame === "end" ? "closing" : "opening"} crop and viewpoint; the sheet pose and camera do not constrain this shot.` : "" : args.frame === "end" ? composition.length ? `Use Image ${at(composition[0])}'s closing camera, lens, framing and final object and figure positions. Image 1 supplies the look and every identity; its opening camera does not constrain this closing view.` : `Image 1 supplies the opening appearance and identities. Follow the closing camera direction below while preserving the set's world layout.` : `Keep Image 1's camera position, ${lens}${dutch ? "" : ", horizon"} and world layout, and keep every object${set.blocked ? " and figure" : ""} at its world position in Image 1. The authored composition below controls the final crop, headroom and subject screen placement. Paint its plain unpainted surfaces as the real place, and continue the place into any flat dark area past the set's edge.` + (dutch ? " Image 1 is level; tilt the whole picture to the dutch angle described below." : "") + (look.some((ref) => ordered.includes(ref)) ? ` Take only materials, colours and light from Image ${at(look[0])}.` : "");
   const prompt = [
     args.frame === "start" && view ? `Create one opening image with this required crop: ${view.crop}.` : ordered.length ? "Compose one picture from these images." : "",
     roles,
@@ -117761,7 +117794,7 @@ function shotImageRequest(args) {
     end: set.end
   } : void 0;
   const startBasis = startImageBasis({ ...shot, visual: { ...visual, ...location ? { locationId: location } : {}, props } }, win.FORMAT);
-  return { episode, assetId: args.id, ...call2, refs: sent, ...location ? { location } : {}, ...locationFrame ? { locationFrame } : {}, props, prompt, warnings, startBasis };
+  return { episode, assetId: args.id, ...call2, canonicalPanels: true, refs: sent, ...location ? { location } : {}, ...locationFrame ? { locationFrame } : {}, props, prompt, warnings, startBasis };
 }
 var PANEL_NEGATIVE_GUIDANCE = { "qwen-image-fast": 4, "qwen-image-2.1-turbo": 4 };
 function imageAdapter(selection) {
@@ -117792,7 +117825,7 @@ function imageCall(o) {
   const sent = new Set(mimes).size > 1 ? inputs.map((f3, i2) => mimes[i2] === "image/png" ? f3 : toPng(f3)) : inputs;
   const jobs = readImageState(directory2)?.jobs ?? {};
   let k = 1;
-  while (existsSync22(join10(o.outDir, `${o.stem}-v${k}.png`)) || Object.hasOwn(jobs, `${o.stem}-v${k}`)) k += 1;
+  while (existsSync22(join10(o.outDir, `${o.stem}-v${k}.png`)) || existsSync22(join10(o.outDir, `${o.stem}-v${k}.pending.json`)) || Object.hasOwn(jobs, `${o.stem}-v${k}`)) k += 1;
   const requestId = `${o.stem}-v${k}`, file = join10(o.outDir, `${requestId}.png`);
   mkdirSync11(dirname5(file), { recursive: true });
   const base642 = (f3) => readFileSync24(f3).toString("base64");
@@ -117802,9 +117835,36 @@ function imageCall(o) {
   const guidance = selection.engine === "astra-genai-native" ? PANEL_NEGATIVE_GUIDANCE[selection.model ?? ""] : void 0;
   const negativeSent = !!o.negativePrompt && guidance !== void 0;
   if (negativeSent) Object.assign(args, { negativePrompt: o.negativePrompt, guidanceScale: guidance });
-  return { requestId, ...tool2 ? { tool: tool2 } : {}, operation: edit2 ? "edit" : "text", args, file, inputs: sent, negativeSent };
+  return { requestId, ...tool2 ? { tool: tool2 } : {}, operation: edit2 ? "edit" : "text", args, file, inputs: sent, originalInputs: inputs, negativeSent };
+}
+function deferShotImage(args, request) {
+  const file = join10(dirname5(request.file), `${request.requestId}.pending.json`);
+  writeFileSync17(file, JSON.stringify({ path: scenesPath(args.path), id: args.id, frame: args.frame, request }, null, 2) + "\n", { flag: "wx" });
+}
+function completeShotImage(args) {
+  if (!args.requestId || !new RegExp(`^${args.id}-${args.frame}-v[1-9][0-9]*$`).test(args.requestId))
+    throw new Error("shot_image_request_required: complete needs the matching handoff requestId and frame");
+  if (args.prompt !== void 0 || args.editExisting !== void 0 || args.reframe !== void 0 || args.sourceCrop !== void 0 || args.preserve !== void 0 || args.location !== void 0 || args.props !== void 0 || args.size !== void 0 || args.reserveUsd !== void 0)
+    throw new Error("shot_image_completion_scope: complete uses the saved request; omit generation options");
+  const file = join10(dirname5(scenesPath(args.path)), "images", `${args.requestId}.pending.json`);
+  if (!existsSync22(file)) throw new Error("shot_image_request_missing: no saved host handoff");
+  const pending2 = JSON.parse(readFileSync24(file, "utf8"));
+  if (pending2.completed) throw new Error("shot_image_already_completed: this handoff was already adopted");
+  if (pending2.path !== scenesPath(args.path) || pending2.id !== args.id || pending2.frame !== args.frame || pending2.request.requestId !== args.requestId || pending2.request.file !== join10(dirname5(file), `${args.requestId}.png`))
+    throw new Error("shot_image_request_mismatch: the handoff belongs to another frame");
+  const result = recordShotImage(args, pending2.request);
+  writeFileSync17(file, JSON.stringify({ ...pending2, completed: true }, null, 2) + "\n");
+  return result;
 }
 function recordShotImage(args, request) {
+  if (!existsSync22(request.file)) throw new Error("shot_image_output_missing: generate and save the requested output before completing");
+  verifyImageFile(request.file);
+  if (request.sourceBasis && request.sourceBasis !== shotImageSourceBasis(args.path, args.id, request))
+    throw new Error("shot_image_request_stale: the shot or asset plan changed after generation was requested; keep the output and plan a new request");
+  for (const [file, hash7] of Object.entries(request.inputHashes ?? {})) {
+    if (!existsSync22(file) || createHash14("sha256").update(readFileSync24(file)).digest("hex") !== hash7)
+      throw new Error("shot_image_input_changed: a reference changed after generation was requested");
+  }
   const { win, st } = readOutline(args.path);
   const shots = (win.SCENES ?? []).slice();
   const index = shotIndex(shots, args.id, "shot_image");
@@ -126447,19 +126507,19 @@ Refused: missing story/characters (story_order), invalid attributes, incompatibl
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     description: `Create a shot\u2019s start or end image.
 
-Use it after shot_icons to compose a start image or a first_last end image from character panels, place and props using saved framing and style. Write English action, layout, gaze and light in prompt. One character uses face/front/back panels; two use each face then each front. References supply appearance; the authored view controls crop and viewpoint.
+Use it after shot_icons to compose a start image or a first_last end image from character panels, place and props using saved framing and style. Write English action, layout, gaze and light in prompt. References supply appearance; the authored view controls crop and viewpoint.
 
-For a targeted correction, set editExisting:true and describe only the change in prompt. preserve adds explicit invariants. The saved start or end image becomes the sole input, source dimensions are reused unless size is supplied, and original scene instructions are not reassembled. Omit location and props; update their storyboard metadata first if needed. Refuses image_edit_source_missing without that saved frame and image_edit_scope if location/props are supplied.
-To correct a generated start image's crop, set editExisting:true and reframe:true. The saved size, crop and viewpoint are recompiled with prompt as the opening action/correction; dimensions default to the current delivery aspect. Inspect the actual result; this does not certify visual adherence or clear stale source evidence. Reframe is only for frame:start.
+For a targeted correction, set editExisting:true and describe only the change in prompt. preserve adds explicit invariants. The saved frame is the sole input, reusing its dimensions unless size is supplied. Omit location and props. Refuses image_edit_source_missing without that saved frame and image_edit_scope if location/props are supplied.
+To correct a generated start image's crop, set editExisting:true and reframe:true. The saved size, crop and viewpoint are recompiled with prompt as the opening action/correction; dimensions default to the current delivery aspect. Reframe is only for frame:start and never certifies pixels or clears stale evidence.
 If text-only reframing fails, sourceCrop prepares an inspected source-pixel rectangle as a separate reference, recording its source hash and crop. It must fit and match output aspect (image_crop_bounds/image_crop_aspect). The saved model still generates the final image. Describe action, not another zoom; never guess coordinates without viewing the source.
 
-For normal generation, a location with a built set uses a camera-matched Blender render as Image 1 and its sheet as a look reference when capacity allows. visual.camera.backgroundView chooses front/back (default front). Without a set, the corresponding location panel leads and retains its landmark layout; authored subject framing still applies. Missing directional panels refuse background_view_missing; legacy front-only sheets can reuse imageUrl with a warning. A built set with conflicting direction refuses background_view_conflict; a render failure refuses location_render_failed without substituting the sheet. Props use their frame-specific ledger state and references; hidden props stay out, missing images or state references warn, and ledger errors omit only the affected state.
+For normal generation, a location with a built set uses a camera-matched Blender render as Image 1 and its sheet as a look reference when capacity allows. visual.camera.backgroundView chooses front/back (default front). Without a set, its panel supplies directional geography; authored crop, height and viewpoint control output and off-frame landmarks stay out. Missing directional panels refuse background_view_missing; legacy front-only sheets can reuse imageUrl with a warning. A built set with conflicting direction refuses background_view_conflict; a render failure refuses location_render_failed without substituting the sheet. Props use frame-specific ledger state/references; hidden props stay out, missing references warn and ledger errors omit affected state.
 
 frame:end edits the opening image using the closing composition, story state and final focus. A built set supplies its numeric end camera when available; a moving shot without one warns and follows the prompt's landing. An end image keeps the start's location (location is refused) and records endProps separately.
 
 Runs image_plan \u2192 image_execute under the saved model and existing spending authorization. Saves a new version under storyboard/images and records visual.frames.start/bg or frames.end, prompt, references and asset bindings. Framing contradictions refuse shot_framing_conflict. Flexible-size models use delivery aspect; fixed-size GPT models warn with their supported preset. Revising a start invalidates its old end with a warning; files are preserved. storyboard_read.imageFraming compares the recorded start inputs with the current plan (current/stale/unknown), separately from visual review. Inspect the returned image against the saved size and crop; a matching prompt is not pixel evidence. GPT inputs of mixed PNG/JPEG types become PNG copies.
 
-Do NOT use it just to inspect a shot \u2014 use storyboard_read. Do NOT use it for routes other than still_camera and generated_video. story_order refuses missing icon attributes, an end before its start or outside first_last. image_references_unsupported refuses inputs beyond the saved model's capacity; never switch models silently. Text-bearing images follow the GPT Image 2 directive. Returns: file, input order, prompt and warnings; a host selection returns a handoff instead of generating.`,
+Do NOT use it just to inspect a shot \u2014 use storyboard_read. Do NOT use it for routes other than still_camera and generated_video. story_order refuses missing icon attributes, an end before its start or outside first_last. image_references_unsupported refuses inputs beyond the saved model's capacity; never switch models silently. Text-bearing images follow the GPT Image 2 directive. Returns: file, input order, prompt and warnings; a host selection returns a requestId and handoff while preserving active frames. Save the output, inspect it, then call action:complete with path/id/frame/requestId only. Completion decodes the file and checks the saved shot/reference inputs before adoption; changed inputs refuse shot_image_request_stale or shot_image_input_changed. Missing output refuses shot_image_output_missing. Generation requires prompt; completion never generates or charges again.`,
     inputSchema: {
       type: "object",
       additionalProperties: false,
@@ -126467,6 +126527,8 @@ Do NOT use it just to inspect a shot \u2014 use storyboard_read. Do NOT use it f
         path: { type: "string", description: "The storyboard directory or its scenes.js, e.g. data/channel/episodes/topic/storyboard" },
         id: { type: "string", pattern: "^s\\d{4,}$", description: "Stable shot id, e.g. s0001" },
         frame: { type: "string", enum: ["start", "end"], default: "start", description: "start: the first image \xB7 end: the last image of a first_last shot" },
+        action: { type: "string", enum: ["generate", "complete"], default: "generate", description: "generate requests a new image; complete adopts an existing host output without generating" },
+        requestId: { type: "string", description: "Exact host handoff requestId for action:complete, e.g. s0001-start-v2" },
         prompt: { type: "string", description: "What the frame shows, in English: who is where, doing what, facing which way, expression and light, e.g. Mina waits with closed relaxed lips." },
         editExisting: { type: "boolean", description: "Edit the saved frame using prompt as the change instruction; save a new version. Omit location and props." },
         reframe: { type: "boolean", description: "With editExisting and frame:start, recompile saved shot size, crop and viewpoint to correct the generated image; prompt gives opening action and correction." },
@@ -126482,7 +126544,7 @@ Do NOT use it just to inspect a shot \u2014 use storyboard_read. Do NOT use it f
         size: { type: "string", pattern: "^\\d{3,4}x\\d{3,4}$", description: "Output WIDTHxHEIGHT; default 1536x864 on a 16:9 board, 864x1536 otherwise; fixed-size GPT models use their supported preset with a warning" },
         reserveUsd: { type: "number", minimum: 0, description: "API reservation estimate in USD, as in image_plan; e.g. 0 for an authorized local run" }
       },
-      required: ["path", "id", "prompt"]
+      required: ["path", "id"]
     }
   },
   {
@@ -135732,6 +135794,10 @@ ROUTES.character_panel = async (args) => {
 ROUTES.shot_image = async (args) => {
   contract();
   const input = parseArgs(shotImageSchema, args);
+  if (input.action === "complete") {
+    const result = completeShotImage(input);
+    return text3(renderApply(result), result.findings.some((f3) => f3.level === "bad"));
+  }
   const request = shotImageRequest(input);
   const plan2 = planImage({
     directory: request.episode,
@@ -135746,9 +135812,10 @@ ROUTES.shot_image = async (args) => {
     const result = await executeImage({ directory: plan2.directory, planId: plan2.id }, dispatchImage);
     if (result.isError) return result;
   }
-  const r2 = recordShotImage(input, request);
+  if (plan2.execution === "host_handoff") deferShotImage(input, request);
+  const r2 = plan2.execution === "server" ? recordShotImage(input, request) : null;
   const lines = [
-    renderApply(r2),
+    r2 ? renderApply(r2) : `Pending host request: ${request.requestId}; active frames are unchanged.`,
     "",
     `${input.frame} image: ${request.file}`,
     "Inputs, in order:",
@@ -135757,8 +135824,9 @@ ROUTES.shot_image = async (args) => {
     "Prompt:",
     request.prompt
   ];
-  if (plan2.execution === "host_handoff") lines.push("", "host_handoff: generate this picture with the selected host image tool from the inputs above, in order, and save it to the image path.");
-  return text3(lines.join("\n"), r2.findings.some((f3) => f3.level === "bad"));
+  if (plan2.execution === "host_handoff" && request.warnings.length) lines.push("", "Warnings:", ...request.warnings.map((w) => `${w.level}: ${w.where}: ${w.what}`));
+  if (plan2.execution === "host_handoff") lines.push("", 'host_handoff: generate this picture with the selected host image tool from the inputs above, in order, and save it to the image path. Then call shot_image with action:"complete", the same path/id/frame and requestId:"' + request.requestId + '"; omit prompt and other generation options.');
+  return text3(lines.join("\n"), r2?.findings.some((f3) => f3.level === "bad") ?? false);
 };
 var musicDispatch = Object.fromEntries(Object.keys(MUSIC_ADAPTERS).map((name) => [name, ROUTES[name]]));
 var dispatchMusic = (name, args) => musicDispatch[name](args);
