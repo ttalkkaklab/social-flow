@@ -101,8 +101,12 @@ export function buildGenaiAudioBody(args) {
         ...(image === undefined ? {} : { image_uri: image }), ...(last === undefined ? {} : { last_frame_uri: last }) };
 }
 export const GENAI_MSR_FRAMES = { min: 25, max: 361, step: 8, frameRate: 24 };
+export const GENAI_MSR_NO_TEXT = 'Speech is audio only. No subtitles, captions, on-screen text, labels, logos or watermarks.';
 export const genaiMsrSchema = z.object({
-    prompt: z.string().trim().min(1).max(2000),
+    prompt: z.string().trim().min(1).transform(prompt => prompt.endsWith(GENAI_MSR_NO_TEXT) ? prompt : `${prompt}\n${GENAI_MSR_NO_TEXT}`)
+        .pipe(z.string().max(2000, 'MSR prompt including the subtitle-free instruction must fit 2000 characters; shorten the action without dropping dialogue')),
+    negativePrompt: z.string().trim().min(1).max(5000).optional(),
+    guidanceScale: z.number().finite().min(1).max(10).optional(),
     references: z.array(z.object({
         imageUri: genaiImageUriSchema.optional(), imagePath: z.string().min(1).optional(),
         background: z.boolean().default(false),
@@ -123,6 +127,8 @@ export const genaiMsrSchema = z.object({
     filename: bareFilenameSchema('video').refine(name => name.endsWith('.mp4'), 'Use a .mp4 filename').optional(),
 }).strict().superRefine((args, ctx) => {
     const issue = (message) => ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+    if (args.negativePrompt !== undefined && (args.guidanceScale ?? 1) <= 1)
+        issue('MSR negativePrompt requires guidanceScale > 1; CFG=1 ignores negative conditioning');
     const backgrounds = args.references.filter(ref => ref.background).length;
     if (backgrounds > 1 || args.references.length - backgrounds > 4)
         issue('MSR supports at most four subjects and one background');
@@ -148,6 +154,8 @@ export const genaiMsrSchema = z.object({
 });
 export function buildGenaiMsrBody(args) {
     return { prompt: args.prompt,
+        ...(args.negativePrompt === undefined ? {} : { negative_prompt: args.negativePrompt }),
+        ...(args.guidanceScale === undefined ? {} : { guidance_scale: args.guidanceScale }),
         references: args.references.map(ref => ({ image_uri: genaiSourceUri(ref.imageUri, ref.imagePath), background: ref.background,
             ...(oneOf(ref.audioUri, ref.audioPath) ? { audio_uri: genaiAudioUri(ref.audioUri, ref.audioPath) } : {}) })),
         reference_strength: args.referenceStrength, reference_frames: args.referenceFrames,
@@ -300,6 +308,12 @@ export async function generateGenaiVideo(operation, input) {
     else {
         if (fs.existsSync(videoPath))
             throw new Error('GenAI output already exists');
+        if ('references' in args && (args.negativePrompt !== undefined || (args.guidanceScale ?? 1) > 1)) {
+            const capabilities = z.object({ negative_prompt: z.boolean().optional() }).passthrough()
+                .parse(await requestGenai('GET', '/v1/ltx/msr/capabilities', undefined, 15_000));
+            if (capabilities.negative_prompt !== true)
+                throw new Error('msr_negative_unsupported: the GenAI MSR backend does not advertise negative conditioning; no request was submitted');
+        }
         if (operation === 'msr' && 'references' in args && args.references.some(ref => oneOf(ref.audioUri, ref.audioPath)) && !await refreshGenaiMsrVoice(true))
             throw new Error('msr_voice_unsupported: the GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities)');
         // Upload before the receipt exists: a failed upload leaves nothing to recover and the call can simply run again.

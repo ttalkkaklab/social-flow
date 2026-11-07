@@ -90,6 +90,46 @@ test('MSR validates slots, geometry and frame timing against its independent con
     assert.equal(genaiMsrSchema.safeParse({ ...args, ...extra }).success, false);
 });
 
+test('MSR suppresses text by default and only sends effective negatives to an advertised backend', async t => {
+  const { genaiMsrSchema, buildGenaiMsrBody, GENAI_MSR_NO_TEXT } = await import('../dist/astra-genai-video.js');
+  const dir = setup(t);
+  const args = { prompt: 'The person says "Hello."', references: [{ imageUri: 'https://example.com/person.png' }], reserveUsd: 0, outputPath: dir, filename: 'negative.mp4' };
+  const parsed = genaiMsrSchema.parse(args), body = buildGenaiMsrBody(parsed);
+  assert.equal(body.prompt, args.prompt + '\n' + GENAI_MSR_NO_TEXT);
+  assert.deepEqual(genaiMsrSchema.parse(parsed), parsed); // Planning and execution both parse.
+  assert.equal(body.negative_prompt, undefined);
+  assert.equal(body.guidance_scale, undefined); // Keep distilled CFG=1 unless explicitly changed.
+  assert.equal(genaiMsrSchema.safeParse({ ...args, prompt: 'x'.repeat(2000) }).success, false);
+  const negative = { ...args, negativePrompt: 'subtitles, captions', guidanceScale: 2 };
+  for (const extra of [{ guidanceScale: undefined }, { guidanceScale: 1 }, { guidanceScale: 11 }, { negativePrompt: ' ' }])
+    assert.equal(genaiMsrSchema.safeParse({ ...negative, ...extra }).success, false);
+  for (const capability of [false, undefined]) {
+    globalThis.fetch = async (url, options) => {
+      assert.equal(options.method, 'GET');
+      assert.ok(String(url).endsWith('/v1/ltx/msr/capabilities'));
+      return Response.json({ negative_prompt: capability });
+    };
+    await assert.rejects(generateGenaiVideo('msr', negative), /msr_negative_unsupported/);
+    assert.equal(fs.existsSync(path.join(dir, 'negative.mp4.astra-genai.json')), false);
+  }
+  let posts = 0;
+  globalThis.fetch = async (url, options) => {
+    if (String(url).endsWith('/capabilities')) return Response.json({ negative_prompt: true });
+    if (options.method === 'POST') {
+      posts++;
+      const sent = JSON.parse(options.body);
+      assert.equal(sent.negative_prompt, negative.negativePrompt);
+      assert.equal(sent.guidance_scale, 2);
+      assert.equal(sent.prompt, body.prompt);
+      return Response.json({ id: 'negative-job' }, { status: 202 });
+    }
+    return Response.json({ id: 'negative-job', status: 'unrecognized' });
+  };
+  await assert.rejects(generateGenaiVideo('msr', negative));
+  await assert.rejects(generateGenaiVideo('msr', negative));
+  assert.equal(posts, 1);
+});
+
 test('MSR recovery uses the MSR route and never submits twice', async t => {
   const dir = setup(t), source = path.join(dir, 'reference.png');
   fs.writeFileSync(source, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=', 'base64'));

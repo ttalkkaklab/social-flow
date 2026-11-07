@@ -31842,8 +31842,12 @@ var genaiAudioToVideoSchema = external_exports.object({
   if (oneOf(args.lastFramePath, args.lastFrameUri) && !oneOf(args.imagePath, args.imageUri)) issue("A last frame requires a first image");
 });
 var GENAI_MSR_FRAMES = { min: 25, max: 361, step: 8, frameRate: 24 };
+var GENAI_MSR_NO_TEXT = "Speech is audio only. No subtitles, captions, on-screen text, labels, logos or watermarks.";
 var genaiMsrSchema = external_exports.object({
-  prompt: external_exports.string().trim().min(1).max(2e3),
+  prompt: external_exports.string().trim().min(1).transform((prompt) => prompt.endsWith(GENAI_MSR_NO_TEXT) ? prompt : `${prompt}
+${GENAI_MSR_NO_TEXT}`).pipe(external_exports.string().max(2e3, "MSR prompt including the subtitle-free instruction must fit 2000 characters; shorten the action without dropping dialogue")),
+  negativePrompt: external_exports.string().trim().min(1).max(5e3).optional(),
+  guidanceScale: external_exports.number().finite().min(1).max(10).optional(),
   references: external_exports.array(external_exports.object({
     imageUri: genaiImageUriSchema.optional(),
     imagePath: external_exports.string().min(1).optional(),
@@ -31868,6 +31872,8 @@ var genaiMsrSchema = external_exports.object({
   filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use a .mp4 filename").optional()
 }).strict().superRefine((args, ctx) => {
   const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  if (args.negativePrompt !== void 0 && (args.guidanceScale ?? 1) <= 1)
+    issue("MSR negativePrompt requires guidanceScale > 1; CFG=1 ignores negative conditioning");
   const backgrounds = args.references.filter((ref) => ref.background).length;
   if (backgrounds > 1 || args.references.length - backgrounds > 4) issue("MSR supports at most four subjects and one background");
   let subject = 0;

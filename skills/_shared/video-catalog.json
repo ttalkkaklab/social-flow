@@ -830,6 +830,8 @@
       },
       "fields": [
         "prompt",
+        "negativePrompt",
+        "guidanceScale",
         "references",
         "referenceStrength",
         "referenceFrames",
