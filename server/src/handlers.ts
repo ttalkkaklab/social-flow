@@ -935,7 +935,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   //    Acceptance and result are separate calls, so the client polls; these routes only
   //    parse, call, and report. Failures arrive as thrown errors carrying the server's own
   //    message — never the request headers, which is where the key lives.
-  astra_genai_catalog: async args => text(JSON.stringify(await genaiCatalog(z.enum(['image','speech','video','loras','contracts']).parse((args as Record<string, unknown>).kind)))),
+  astra_genai_catalog: async args => text(JSON.stringify(await genaiCatalog(z.enum(['image','speech','video','desktop_video','loras','contracts']).parse((args as Record<string, unknown>).kind)))),
   tts_astra_genai: async args => {
     const generation = genaiSpeechSchema.parse(args);
     const result = await routeSpeech({ action: 'execute', generator: 'tts_astra_genai', requestId: generation.requestId || randomUUID(),

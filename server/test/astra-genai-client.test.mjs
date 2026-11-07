@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { config } from '../dist/config.js';
-import { requestGenai, downloadGenaiResult } from '../dist/astra-genai-client.js';
+import { requestGenai, downloadGenaiResult, genaiCatalog } from '../dist/astra-genai-client.js';
 
 test('gateway authentication is separate, POST errors are redacted and never retried, downloads carry no token', async t => {
   const original = globalThis.fetch, key = config.astraGenaiApiKey, legacy = config.astraVideoApiKey;
@@ -49,4 +49,23 @@ test('a synchronous gateway call waits for headers as long as its own timeout, n
   globalThis.fetch = async (_url, options) => { seen.push(options.dispatcher); return new Response('{}'); };
   await requestGenai('POST', '/v1/images/generations', {}, 30 * 60_000);
   assert.ok(seen[0] instanceof Agent);
+});
+
+
+test('general video catalog works without Desktop; Desktop discovery stays explicit', async t => {
+  const original = globalThis.fetch, key = config.astraGenaiApiKey, env = { ...process.env };
+  t.after(() => { globalThis.fetch = original; config.astraGenaiApiKey = key; process.env = env; });
+  config.astraGenaiApiKey = 'remote-key'; process.env.ASTRA_GENAI_URL = 'https://remote.example';
+  process.env.ASTRA_GENAI_IMAGE_URL = 'http://127.0.0.1:18081';
+  const seen = [], models = { data: [{ id: 'ltx-msr', kind: 'video' }] };
+  globalThis.fetch = async (url, options) => {
+    seen.push(url);
+    assert.equal(options.headers.Authorization, 'Bearer remote-key');
+    if (url === 'https://remote.example/v1/models') return new Response(JSON.stringify(models));
+    return new Response(JSON.stringify({ error: 'Desktop is not configured' }), { status: 503 });
+  };
+  assert.deepEqual(await genaiCatalog('video'), models);
+  assert.deepEqual(seen, ['https://remote.example/v1/models']);
+  await assert.rejects(genaiCatalog('desktop_video'), /503.*Desktop/);
+  assert.equal(seen[1], 'https://remote.example/v1/ltx/desktop/models');
 });

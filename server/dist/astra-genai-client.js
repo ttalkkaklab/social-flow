@@ -149,7 +149,8 @@ export async function requestGenaiMedia(route, body) {
 }
 /** Read deployment configuration without performing inference. */
 export async function genaiCatalog(kind) {
-    const routes = { image: '/v1/images/models', speech: '/v1/audio/models', video: '/v1/ltx/desktop/models',
+    const routes = { image: '/v1/images/models', speech: '/v1/audio/models', video: '/v1/models',
+        desktop_video: '/v1/ltx/desktop/models',
         loras: '/v1/ltx/desktop/loras', contracts: '/v1/ltx/desktop/contracts' };
     return requestGenai('GET', routes[kind]);
 }
