@@ -56,6 +56,21 @@ three-quarter/profile +45°/+90°, right -45°/-90°, rear 180° relative to the
 For an object, bearings use the set's -Y front axis. OTS and POV require `subjectId` and
 `viewerId` of different staged subjects; OTS needs a person as its subject. POV uses eye height.
 
+`shot.size` owns the scale and `view.crop` refines that same scale. A person MS keeps
+waist-up boundaries, MCU chest-up, CU face and shoulder tops, and FS head to toe even
+when a view is present. Write both size and crop when changing the scale. Set
+`view.subjectType:"object"|"detail"` when framing a prop or body detail despite a
+character being in the cast; the ordinary default is `person`, while insert/ecu and
+an explicit detail target use detail wording. Do not use an object override to hide a
+contradictory person crop. A detail in a built set needs its actual target or object id.
+
+Image planning and set-camera planning refuse explicit contradictory declarations
+with `shot_framing_conflict` (for example CU plus “full body, head to toe”). Correct
+size/crop or the second camera instruction in the image's action prompt, then retry.
+This is an input-consistency check, not a judgment that the story needs a close-up,
+and it cannot understand every natural-language description. The image prompt keeps
+one size instruction rather than adding an older framing technique as a second size.
+
 For a built set, name the blocked subject or visible object with `subjectId`. For a body
 detail (`insert`/`ecu`), supply `target:{point:[x,y,z],span:...}`: the actual world-space
 centre of the opening detail and its visible vertical extent in metres. Derive it from the

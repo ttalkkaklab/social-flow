@@ -127,6 +127,8 @@ test('authored views retain their bearing, target body details and never substit
   const view={subject:'Mina deciding',crop:'Face and shoulder tops',reason:'Read the hesitation',mode:'profile-right',subjectId:'mina'};
   const args={stateId:'day',actors:[mina()],cast:['mina'],size:'cu',angle:'eye',width:960,height:540,side:{position:[0,-5,1.6],target:[0,0,1.5]},view};
   const profile=L.shotCamera(m,args).camera;
+  assert.throws(()=>L.shotCamera(m,{...args,view:{...view,crop:'Full body, head to toe'}}),/shot_framing_conflict/);
+  assert.throws(()=>L.shotCamera(m,{...args,view:{...view,subjectType:'detail',crop:'Only the hand'}}),/shot_view_target_required/);
   assert.ok(profile.position[0]<0&&Math.abs(profile.position[1])<.001);
   const three=L.shotCamera(m,{...args,view:{...view,mode:'three-quarter-left'}}).camera;
   assert.ok(three.position[0]>0&&three.position[1]<0);
@@ -232,10 +234,10 @@ test('shotFrame renders the set once per camera and reuses the render',()=>{
     fs.writeFileSync(path.join(asset,'location.json'),JSON.stringify(m));
     const board=path.join(dir,'storyboard');fs.mkdirSync(board);
     const win={FORMAT:'youtube-long-16x9',SCENES:[{id:'s0001',shot:{size:'cu'}}]};
-    const ask=()=>L.shotFrame(win,0,board,{manifest:'../set/location.json',cast:['mina'],size:'cu',angle:'eye',width:1536,height:1024});
+    const ask=()=>L.shotFrame(win,0,board,{manifest:'../set/location.json',cast:['mina'],size:'cu',angle:'eye',width:1536,height:864});
     const first=ask();
     assert.match(first.start.path,/^locations\/s0001-frame-[0-9a-f]{16}\/start\.png$/);
-    assert.deepEqual([first.camera.width,first.camera.height],[1280,854]);   // the picture's 3:2, not the set camera's 16:9
+    assert.deepEqual([first.camera.width,first.camera.height],[1280,720]);   // the image and set camera share the delivery aspect
     assert.ok(first.warnings.some(w=>/not blocked/.test(w))&&first.warnings.some(w=>/first state/.test(w)));
     ask();
     assert.equal(fs.readFileSync(path.join(dir,'runs'),'utf8'),'x');

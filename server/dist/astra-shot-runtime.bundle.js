@@ -32716,7 +32716,7 @@ import { createRequire as createRequire5 } from "node:module";
 var load4 = createRequire5(import.meta.url);
 
 // src/storyboard.ts
-import { createHash as createHash3 } from "node:crypto";
+import { createHash as createHash3, randomUUID } from "node:crypto";
 
 // src/scenes-vm.ts
 import vm from "node:vm";
@@ -33146,10 +33146,12 @@ var shotImageSchema = external_exports.object({
   frame: external_exports.enum(["start", "end"]).default("start").describe("start: the first image; end: the last image of a first_last shot"),
   prompt: nonEmpty.describe("What the frame shows, in English: who is where, doing what, facing which way, expression and light"),
   editExisting: external_exports.boolean().optional().describe("Edit the saved frame in place conceptually, saving a new version; prompt describes only the change"),
+  reframe: external_exports.boolean().optional().describe("With editExisting, reapply the saved start-frame size, crop and viewpoint to correct a generated composition; prompt describes the opening action and correction"),
+  sourceCrop: external_exports.object({ x: external_exports.number().int().nonnegative(), y: external_exports.number().int().nonnegative(), width: external_exports.number().int().positive(), height: external_exports.number().int().positive() }).strict().optional().describe("With reframe, an inspected rectangle in source-image pixels, e.g. {x:72,y:64,width:720,height:1280}; must fit the source and match output aspect. It becomes the GenAI composition reference, not the final output."),
   preserve: nonEmpty.optional().describe("Details to preserve when editExisting is true"),
   location: nonEmpty.optional().describe("SB_DOC.locations id of the place, for the start image; an earlier call's choice stays when omitted, and an end image keeps the start's place"),
   props: external_exports.array(nonEmpty).optional().describe("SB_DOC.props ids seen in the frame; an earlier call's choice stays when omitted"),
-  size: external_exports.string().regex(/^\d{3,4}x\d{3,4}$/).optional().describe("Output WIDTHxHEIGHT; default 1536x1024 for a 16:9 board, 1024x1536 otherwise"),
+  size: external_exports.string().regex(/^\d{3,4}x\d{3,4}$/).optional().describe("Output WIDTHxHEIGHT; default 1536x864 for 16:9, 864x1536 for 9:16. Fixed-size GPT models keep their supported preset with a framing warning."),
   reserveUsd: external_exports.number().finite().nonnegative().optional()
 }).strict();
 var shotPromptSchema = external_exports.object({
@@ -33202,7 +33204,7 @@ var videoApproveSchema = external_exports.object({
 }).strict().refine((input) => input.planIds !== void 0 || input.auto !== void 0, "name planIds or auto");
 
 // src/speech.ts
-import { createHash as createHash4, randomUUID } from "node:crypto";
+import { createHash as createHash4, randomUUID as randomUUID2 } from "node:crypto";
 import { readFileSync as readFileSync8, writeFileSync as writeFileSync5, renameSync as renameSync3, mkdirSync as mkdirSync3, existsSync as existsSync6 } from "node:fs";
 import { dirname as dirname5, resolve as resolve5, join as join5 } from "node:path";
 import * as nodeModule4 from "node:module";
@@ -33350,7 +33352,7 @@ function manageSpeech(args) {
     for (const scene of scenes) {
       scene.id ||= "s" + String(++next).padStart(4, "0");
       for (const line of scene.narration || []) {
-        line.id ||= "d-" + randomUUID();
+        line.id ||= "d-" + randomUUID2();
         line.speaker ||= doc.narratorCharacterId;
         line.delivery ||= line.speaker === doc.narratorCharacterId ? "voiceover" : "on_screen";
       }
@@ -33545,7 +33547,7 @@ function manageSpeech(args) {
     if (!existsSync6(backup)) writeFileSync5(backup, before);
     const nextSource = serializeBoard(win, header);
     if (hash(readFileSync8(file)) !== revision) throw new Error("Storyboard changed during speech edit");
-    const tmp = file + "." + randomUUID() + ".tmp";
+    const tmp = file + "." + randomUUID2() + ".tmp";
     writeFileSync5(tmp, nextSource);
     renameSync3(tmp, file);
   }
