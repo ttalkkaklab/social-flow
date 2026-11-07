@@ -1429,6 +1429,8 @@ export function shotImageRequest(args: z.infer<typeof shotImageSchema>): ShotIma
   const backgroundView = (visual.camera as { backgroundView?: string } | undefined)?.backgroundView ?? 'front';
   const panels = entry?.panels as { front?: string; back?: string } | undefined;
   const selected = backgroundView === 'back' ? panels?.back : panels?.front;
+  if (entry && args.frame === 'start' && !entry.manifest && !selected && (backgroundView === 'back' || panels))
+    throw new Error(`background_view_missing: ${location} needs its ${backgroundView} panel before generating the opening image; generate or register that direction instead of substituting imageUrl`);
   const place = typeof selected === 'string' && selected ? selected : entry?.imageUrl;
   if (entry && !selected && args.frame === 'start')
     warnings.push({ level: 'warn', where: args.id, what: `background_view_missing: ${location} has no ${backgroundView} panel; ${place ? 'its legacy imageUrl supplies the look' : 'no background image is available'} — generate front and back panels on the location sheet` });
@@ -1479,7 +1481,7 @@ export function shotImageRequest(args: z.infer<typeof shotImageSchema>): ShotIma
     ...(set ? { location: { prompt: args.frame === 'end' ? set.endPrompt : set.prompt, paths: [] } } : {}) }).prompt;
   const roles = ordered.map((ref, i) => `Image ${i + 1} shows ${ref.purpose}.`).join(' ');
   const at = (ref: unknown) => ordered.indexOf(ref as ImageRef) + 1;
-  const lock = !set ? (view && selected && args.frame === 'start'
+  const lock = !set ? (selected && args.frame === 'start'
     ? `Keep the background's ${backgroundView} viewing direction and landmark arrangement. The character sheets supply appearance and identity only; recompose the subject to the authored opening crop and subject viewpoint within that space. Character panel poses do not constrain this shot.`
     : view ? `The location and character sheets supply appearance and identity only. Recompose them to the authored ${args.frame === 'end' ? 'closing' : 'opening'} crop and viewpoint; the sheet pose and camera do not constrain this shot.` : '') : args.frame === 'end'
     ? composition.length ? `Use Image ${at(composition[0])}'s closing camera, lens, framing and final object and figure positions. Image 1 supplies the look and every identity; its opening camera does not constrain this closing view.`
