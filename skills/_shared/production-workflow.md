@@ -21,6 +21,10 @@ generation authorization and adapter input validation stay. Work in this order:
 4. Each shot's icon attributes (`shot_icons`): render route, size, angle, camera move,
    focus, depth, frame plan (`reference` is MSR) and the transition into the next shot (`next`).
 5. Props and backgrounds — `SB_DOC.props` and `SB_DOC.locations` with their images.
+   Backgrounds default to two separate opposing camera views in `panels.front` and
+   `panels.back`; follow [asset sheets](../storyboard/references/asset-sheets.md).
+   Set each shot's opening `shot_icons.backgroundView` against that layout before
+   `shot_image` selects its matching panel (front by default).
 6. Each shot's start image (`shot_image`), composed from its characters' sheet panels,
    its place and props; then the end image (`frame:"end"`) only for a `first_last` shot.
    A place whose sheet names a built set is rendered from the shot's own camera first (below).

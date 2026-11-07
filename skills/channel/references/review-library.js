@@ -335,7 +335,7 @@ function exportChannel(channelDirectory, { check = false } = {}) {
         if (!entry || typeof entry !== 'object') continue;
         count++;
         const name = entry.name || entry.id || '—';
-        const reference = entry.imageUrl || (Array.isArray(entry.references) ? entry.references.find(ref => ref && !ref.condition)?.path : '');
+        const reference = (kind === 'locations' && entry.panels?.front) || entry.imageUrl || (Array.isArray(entry.references) ? entry.references.find(ref => ref && !ref.condition)?.path : '');
         const target = typeof reference === 'string' && reference && !/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(reference) ? path.resolve(folder, reference) : null;
         const preview = target && regular(dir, target) ? image(file, target, name) : empty('참조 이미지 대기', 'Reference image pending');
         const fields = kind === 'locations' ? [['layout', '배치·동선', 'Layout / movement'], ['lighting', '시간·조명', 'Time / lighting'], ['invariants', '고정 요소', 'Invariants']] : [['tracking', '추적 방식', 'Tracking']];
@@ -362,7 +362,11 @@ function exportChannel(channelDirectory, { check = false } = {}) {
               frames: Object.fromEntries(Object.entries(set.frames).map(([k, f]) => [k, {...f, path: rel(detailFile, f.path)}]))});
           }
           for (const name of ['location-review-runtime.js','location-review.css']) put(path.join(dir,'assets','review',name), fs.readFileSync(path.join(LOCATION_ASSETS,name)));
-          const media = target && regular(dir,target) ? zoomImage(detailFile,target,name) : empty('참조 이미지 대기','Reference image pending');
+          const directional = ['front', 'back'].map(view => {
+            const panel = localRef(folder, entry.panels?.[view]);
+            return panel && regular(dir, panel) ? `<figure>${zoomImage(detailFile, panel, name)}<figcaption>${view === 'front' ? t('전면 카메라', 'Front camera') : t('후면 카메라', 'Back camera')}</figcaption></figure>` : '';
+          }).join('');
+          const media = directional || (target && regular(dir,target) ? zoomImage(detailFile,target,name) : empty('참조 이미지 대기','Reference image pending'));
           const viewer = views.length ? '<div id="location-viewer-host"></div>' : empty('연결된 3D 세트가 없습니다. location_manage build 로 세트를 만들고 시트의 manifest 에 적거나 샷에 연결하세요.','No bound 3D set. Build a location with location_manage, then write its manifest on the sheet or bind a shot.');
           render(detailFile, name, 'locations', heading(esc(name),esc(entry.description || '')) + media + viewer + '<dl>'+details+'</dl>'+
             `<p><a href="${rel(detailFile,file)}">${t('배경 시트 목록','Background sheets')}</a></p>`+

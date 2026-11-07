@@ -92324,6 +92324,7 @@ var require_production_mode = __commonJS({
           purpose: { type: "string", description: "Shot-specific reason for this camera choice. Review context only; executable targets, focus order and timing belong in framing/end, not only here or in technique reasons." },
           movement: { type: "string", description: "One camera move in vendor vocabulary, chosen from shot.feel (directing-grammar \xA74\u2013\xA75): static \xB7 dolly in/out \xB7 zoom in/out (lens only) \xB7 dolly zoom in/out \xB7 pan left/right \xB7 tilt up/down \xB7 whip pan \xB7 truck left/right \xB7 pedestal up/down \xB7 crane up/down \xB7 arc shot \xB7 tracking \xB7 handheld \xB7 aerial. Not push in, orbit, boom or a Korean word (storyboard_check enforces the vocabulary and the conditions below). A pan, tilt, truck, pedestal or dolly is a sentence from framing to end, so end must differ from framing. A whip pan needs the hit in sound.sfx or visual.audio. A dolly zoom needs shot.depth deep (the background that stretches), a stationary subject, with a scene-specific purpose. For drone shots copy the trajectory-derived value from drone-previz.js." },
           speed: { type: "string", description: "Movement pace as slow, steady or fast \u2014 never inside movement, never a word the viewer cannot see (very slow, subtle). Empty on static. Generated from the trajectory on drone shots." },
+          backgroundView: { type: "string", enum: ["front", "back"], description: "Opening camera direction relative to the location sheet; front is the establishing view, back is the opposite view. Defaults to front." },
           framing: { type: "string", description: "Opening composition \u2014 what the camera holds before the move starts (hold in). Generated from the trajectory on drone shots." },
           end: { type: "string", description: "Closing composition \u2014 where the move settles and holds (hold out); on a pan, tilt, truck, pedestal or dolly it names a different picture from framing. Generated from the trajectory on drone shots." },
           trajectory: {
@@ -92379,6 +92380,7 @@ var require_production_mode = __commonJS({
       function cameraInputErrors(camera) {
         if (!camera || typeof camera !== "object" || Array.isArray(camera)) return ["camera must be an object"];
         const errors = [];
+        if (camera.backgroundView !== void 0 && !["front", "back"].includes(camera.backgroundView)) errors.push("backgroundView must be front or back");
         for (const slot of CAMERA_SLOTS) if (camera[slot] !== void 0 && typeof camera[slot] !== "string") errors.push(slot + " must be text");
         if (camera.preset !== void 0 && !Object.keys(CAMERA_PRESETS).includes(camera.preset)) errors.push("unknown camera preset");
         if (camera.variant !== void 0 && !Object.keys(CAMERA_PRESETS["drone-flythrough"].variants).includes(camera.variant)) errors.push("unknown drone variant");
@@ -116310,6 +116312,7 @@ var shotIconsSchema = external_exports.object({
     size: tuple(V.SIZES).optional(),
     why: nonEmpty.optional().describe("Why this size"),
     angle: tuple(V.ANGLES).optional(),
+    backgroundView: external_exports.enum(["front", "back"]).optional().describe("Opening camera direction relative to the location sheet: front is its establishing view; back is the opposite view, 180 degrees around the same space. Saved as visual.camera.backgroundView; omitted keeps the choice, initially front."),
     move: choice.extend({ target: nonEmpty.optional(), speed: external_exports.enum(["very slow", "slow", "steady", "fast", "very fast"]).optional() }).strict().optional().describe("A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold \u2026)"),
     focus: choice.extend({ from: nonEmpty.optional(), to: nonEmpty.optional() }).strict().nullable().optional().describe("A camera technique with a focus field (camera.rack-focus) and the subjects it hands focus between; null removes it"),
     depth: depthSchema.optional(),
@@ -116326,7 +116329,7 @@ function writeShotIcons(args) {
   const shots = (win.SCENES ?? []).slice();
   const notes = [];
   const vertical = !/16x9/.test(String(win.FORMAT ?? ""));
-  for (const { id, render, size, why, angle, move, focus, depth, frames, next } of args.shots) {
+  for (const { id, render, size, why, angle, backgroundView, move, focus, depth, frames, next } of args.shots) {
     const index = shotIndex(shots, id, "shot_icons");
     const plan2 = { ...shots[index].shot ?? {} };
     const visual = { ...shots[index].visual ?? {} };
@@ -116362,6 +116365,7 @@ function writeShotIcons(args) {
     if (size) plan2.size = size;
     if (why) plan2.why = why;
     if (angle) plan2.angle = angle;
+    if (backgroundView) visual.camera = { ...visual.camera, backgroundView };
     if (depth) {
       const errors = contract().validateDepth(depth);
       if (errors.length) throw new Error(`shot_icons ${id}: depth \u2014 ${errors.join("; ")}`);
@@ -116557,8 +116561,14 @@ function shotImageRequest(args) {
   const props = args.props ?? (Array.isArray(recorded) ? recorded.filter((id) => typeof id === "string") : []);
   const cast = contract().castOf(shot) ?? [];
   const [width, height] = (args.size ?? (/16x9/.test(String(win.FORMAT ?? "")) ? "1536x1024" : "1024x1536")).split("x").map(Number);
-  const entry2 = location ? docEntry(win, "locations", location) : void 0, place = entry2?.imageUrl;
+  const entry2 = location ? docEntry(win, "locations", location) : void 0;
   const warnings = [];
+  const backgroundView = visual.camera?.backgroundView ?? "front";
+  const panels = entry2?.panels;
+  const selected = backgroundView === "back" ? panels?.back : panels?.front;
+  const place = typeof selected === "string" && selected ? selected : entry2?.imageUrl;
+  if (entry2 && !selected && args.frame === "start")
+    warnings.push({ level: "warn", where: args.id, what: `background_view_missing: ${location} has no ${backgroundView} panel; ${place ? "its legacy imageUrl supplies the look" : "no background image is available"} \u2014 generate front and back panels on the location sheet` });
   const set = typeof entry2?.manifest === "string" ? locationContract().shotFrame(
     win,
     shots.indexOf(shot),
@@ -116567,7 +116577,7 @@ function shotImageRequest(args) {
   ) : null;
   if (set) warnings.push(...set.warnings.map((what) => ({ level: "warn", where: args.id, what })));
   else if (location && args.frame === "start")
-    warnings.push({ level: "warn", where: args.id, what: `the ${location} sheet names no built set, so Image 1 is its picture at whatever angle that was made, not this shot's camera \u2014 build the set (location_manage build) and write its manifest on the sheet for a camera-matched start image` });
+    warnings.push({ level: "warn", where: args.id, what: `the ${location} sheet names no built set, so its ${backgroundView} view supplies the background; exact framing follows the shot prompt \u2014 build the set (location_manage build) and write its manifest on the sheet for a camera-matched start image` });
   const lens = set ? `${set.camera.lensMm} mm lens` : "", dutch = plan2.angle === "dutch";
   const composition = set && (args.frame === "start" || set.endCamera) ? [{
     id: `${args.id}-set`,
@@ -116587,7 +116597,7 @@ function shotImageRequest(args) {
       path: place,
       role: "background",
       use: "image",
-      purpose: set ? `how the ${location} location looks \u2014 materials, colours and light only, not its viewpoint or layout` : `the ${location} location`
+      purpose: set ? `how the ${location} location looks \u2014 materials, colours and light only, not its viewpoint or layout` : `the ${location} location${selected ? ` seen from its ${backgroundView} camera direction; preserve this view and its landmark arrangement` : ""}`
     }] : []
   ];
   const look = refs.filter((ref) => ref.role === "background"), others = refs.filter((ref) => ref.role !== "background" && ref.role !== "composition");

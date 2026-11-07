@@ -18,7 +18,14 @@ For each shot, read its story, characters, lines and icon attributes with `story
 then write `prompt` in English: who is where, doing what, facing which way, with which
 expression and light, at the moment the shot opens (for an end image, the closing moment
 and what changed). Name the place with `location` (an `SB_DOC.locations` id) and the props
-seen in the frame with `props`; later calls keep them. An end image keeps the start image's
+seen in the frame with `props`; later calls keep them. Read the location's front/back
+layout and the shot's `visual.camera.backgroundView` before calling. Set the opening
+camera direction with `shot_icons.backgroundView` during icon authoring (or correct it
+there before generation): `front` for the establishing direction, `back` for the opposite
+side. `shot_image` selects `SB_DOC.locations[].panels.front` or `.back`, defaulting to front;
+character facing, shot height and camera motion do not choose a background direction.
+A missing panel produces a warning and uses legacy `imageUrl` if present; complete the
+missing view within existing authorization. Follow [asset sheets](../storyboard/references/asset-sheets.md). An end image keeps the start image's
 place (`location` is refused) and records its own props in `frames.endProps`, so a prop that
 appears only at the end goes in the end call. Each prop goes in through the prop ledger
 ([prop continuity](../storyboard/references/prop-continuity.md#production-and-review)):

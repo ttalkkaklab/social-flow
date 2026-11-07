@@ -277,6 +277,13 @@ compares still-camera portraits, contextual 3D character scenes and object mecha
 installed entrypoint and asset hashes. These silent previews wait for user feedback and are not
 publishable episodes. Improve reusable plugin templates and rebuild; do not hand-edit their outputs.
 
+Background sheets default to separate front and back camera images in
+`SB_DOC.locations[].panels.front` and `.back`. `shot_icons.backgroundView` records the
+opening camera direction (`front` or `back`) in `visual.camera.backgroundView`, and
+`shot_image` selects the matching panel. Front is the establishing view; back looks
+across the same space from the opposite side. Existing `imageUrl` sheets remain readable
+with a missing-view warning. See [asset sheets](skills/storyboard/references/asset-sheets.md).
+
 ## Persistent 3D locations
 
 `location_manage` builds versioned Blender sets, exports GLB, renders multi-view sheets and shot references, binds them to stable shots, and rejects stale references or changed asset bytes. The shared storyboard adds an offline 3D viewer with orbit, top view, wall visibility, object inspection, camera-path scrub and camera proposal export. Spatial image prompts include the location render as a scoped image input; actual review status stays explicit. See [location workflow](skills/storyboard/references/location-assets.md). Blender and a local HTTP server are needed for this workflow. Existing boards are unaffected until a shot binds a location; no paid generation is implicit.

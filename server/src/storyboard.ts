@@ -1133,6 +1133,7 @@ export const shotIconsSchema = z.object({
     size: tuple(V.SIZES).optional(),
     why: nonEmpty.optional().describe('Why this size'),
     angle: tuple(V.ANGLES).optional(),
+    backgroundView: z.enum(['front', 'back']).optional().describe('Opening camera direction relative to the location sheet: front is its establishing view; back is the opposite view, 180 degrees around the same space. Saved as visual.camera.backgroundView; omitted keeps the choice, initially front.'),
     move: choice.extend({ target: nonEmpty.optional(), speed: z.enum(['very slow', 'slow', 'steady', 'fast', 'very fast']).optional() }).strict().optional()
       .describe('A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold …)'),
     focus: choice.extend({ from: nonEmpty.optional(), to: nonEmpty.optional() }).strict().nullable().optional()
@@ -1155,7 +1156,7 @@ export function writeShotIcons(args: z.infer<typeof shotIconsSchema>): ApplyResu
   const notes: Finding[] = [];
   // A 9:16 board gets each chosen value's vertical note back as a warning — advice for the choice, never a refusal.
   const vertical = !/16x9/.test(String(win.FORMAT ?? ''));
-  for (const { id, render, size, why, angle, move, focus, depth, frames, next } of args.shots) {
+  for (const { id, render, size, why, angle, backgroundView, move, focus, depth, frames, next } of args.shots) {
     const index = shotIndex(shots, id, 'shot_icons');
     const plan = { ...(shots[index].shot ?? {}) } as Record<string, unknown>;
     const visual = { ...(shots[index].visual ?? {}) } as Record<string, unknown>;
@@ -1184,6 +1185,7 @@ export function writeShotIcons(args: z.infer<typeof shotIconsSchema>): ApplyResu
     if (size) plan.size = size;
     if (why) plan.why = why;
     if (angle) plan.angle = angle;
+    if (backgroundView) visual.camera = { ...(visual.camera as Record<string, unknown> | undefined), backgroundView };
     if (depth) {
       const errors = contract().validateDepth(depth);
       if (errors.length) throw new Error(`shot_icons ${id}: depth — ${errors.join('; ')}`);
@@ -1400,15 +1402,21 @@ export function shotImageRequest(args: z.infer<typeof shotImageSchema>): ShotIma
   const props = args.props ?? (Array.isArray(recorded) ? recorded.filter((id): id is string => typeof id === 'string') : []);
   const cast = contract().castOf(shot) ?? [];
   const [width, height] = (args.size ?? (/16x9/.test(String(win.FORMAT ?? '')) ? '1536x1024' : '1024x1536')).split('x').map(Number);
-  const entry = location ? docEntry(win, 'locations', location) : undefined, place = entry?.imageUrl;
+  const entry = location ? docEntry(win, 'locations', location) : undefined;
   const warnings: Finding[] = [];
+  const backgroundView = (visual.camera as { backgroundView?: string } | undefined)?.backgroundView ?? 'front';
+  const panels = entry?.panels as { front?: string; back?: string } | undefined;
+  const selected = backgroundView === 'back' ? panels?.back : panels?.front;
+  const place = typeof selected === 'string' && selected ? selected : entry?.imageUrl;
+  if (entry && !selected && args.frame === 'start')
+    warnings.push({ level: 'warn', where: args.id, what: `background_view_missing: ${location} has no ${backgroundView} panel; ${place ? 'its legacy imageUrl supplies the look' : 'no background image is available'} — generate front and back panels on the location sheet` });
   // A sheet with a built set (SB_DOC.locations[].manifest) is rendered from this shot's own camera — its size and
   // angle, aimed at its blocked cast — and that render is the picture's composition; the sheet image only gives the look.
   const set = typeof entry?.manifest === 'string' ? locationContract().shotFrame(win, shots.indexOf(shot), boardDir,
     { manifest: entry.manifest, cast, size: plan.size, angle: plan.angle, width, height }) : null;
   if (set) warnings.push(...set.warnings.map((what) => ({ level: 'warn' as const, where: args.id, what })));
   else if (location && args.frame === 'start')
-    warnings.push({ level: 'warn', where: args.id, what: `the ${location} sheet names no built set, so Image 1 is its picture at whatever angle that was made, not this shot's camera — build the set (location_manage build) and write its manifest on the sheet for a camera-matched start image` });
+    warnings.push({ level: 'warn', where: args.id, what: `the ${location} sheet names no built set, so its ${backgroundView} view supplies the background; exact framing follows the shot prompt — build the set (location_manage build) and write its manifest on the sheet for a camera-matched start image` });
   // The renderer has no roll, so a dutch shot's render is level and the prompt alone tilts it.
   const lens = set ? `${set.camera.lensMm} mm lens` : '', dutch = plan.angle === 'dutch';
   const composition: ImageRef[] = set && (args.frame === 'start' || set.endCamera) ? [{ id: `${args.id}-set`, path: set[args.frame].path, role: 'composition', use: 'image',
@@ -1421,7 +1429,7 @@ export function shotImageRequest(args: z.infer<typeof shotImageSchema>): ShotIma
     ...propPictures.refs,
     // MSR takes the start image in its background slot, so the place only conditions the picture.
     ...(typeof place === 'string' ? [{ id: `${args.id}-place`, path: place, role: 'background', use: 'image',
-      purpose: set ? `how the ${location} location looks — materials, colours and light only, not its viewpoint or layout` : `the ${location} location` }] : []),
+      purpose: set ? `how the ${location} location looks — materials, colours and light only, not its viewpoint or layout` : `the ${location} location${selected ? ` seen from its ${backgroundView} camera direction; preserve this view and its landmark arrangement` : ''}` }] : []),
   ];
   // The edit starts from the set render, else the place (or, for an end image, the start image); the rest are references.
   // Beside a set render the place picture comes last and stays out when the saved model has no room for it.

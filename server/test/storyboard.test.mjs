@@ -589,6 +589,39 @@ describe('images and the video prompt follow the icon attributes', () => {
     recordShotImage(args, request);
     return request;
   };
+  it('selects the opening camera background panel and preserves the choice across icon edits', () => {
+    const { dir } = pictureBoard();
+    icons(dir);
+    writeFileSync(join(dir, 'places/back.png'), png);
+    const doc = readBoard(dir).win.SB_DOC;
+    applyStoryboard({ path: dir, draft: true, globals: { SB_DOC: { ...doc,
+      locations: [{ id: 'room', panels: { front: 'places/room.png', back: 'places/back.png' } }] } } });
+    const args = { path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits.', location: 'room' };
+    assert.equal(shotImageRequest(args).inputs[0], join(dir, 'places/room.png'));
+    make(dir, 's0001', 'start', { location: 'room' });
+    const changed = writeShotIcons({ path: dir, shots: [{ id: 's0001', backgroundView: 'back' }] });
+    assert.ok(changed.findings.some(f => f.level === 'warn' && /remake/.test(f.what)));
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', angle: 'high' }] });
+    const back = shotImageRequest(args);
+    assert.equal(back.inputs[0], join(dir, 'places/back.png'));
+    assert.equal(back.refs.filter(r => r.role === 'background').length, 1);
+    assert.ok(!back.inputs.includes(join(dir, 'places/room.png')));
+    assert.equal(readBoard(dir).win.SCENES[0].visual.camera.backgroundView, 'back');
+    rmSync(join(dir, 'places/back.png'));
+    assert.throws(() => shotImageRequest(args), /image_input_missing/);
+  });
+  it('reports a missing direction on legacy backgrounds and keeps end images based on their start', () => {
+    const { dir } = pictureBoard();
+    icons(dir);
+    writeShotIcons({ path: dir, shots: [{ id: 's0002', backgroundView: 'back' }] });
+    const start = make(dir, 's0002', 'start', { location: 'room' });
+    assert.equal(start.inputs[0], join(dir, 'places/room.png'));
+    assert.ok(start.warnings.some(f => /background_view_missing/.test(f.what)));
+    const end = shotImageRequest({ path: dir, id: 's0002', frame: 'end', prompt: 'Mina leaves.' });
+    assert.equal(end.inputs[0], start.file);
+    assert.ok(!end.inputs.includes(join(dir, 'places/room.png')));
+    assert.equal(shotIconsSchema.safeParse({ path: dir, shots: [{ id: 's0002', backgroundView: 'left' }] }).success, false);
+  });
   it('MSR cast and frame changes synchronize sheet panels without waiting for shot_image', () => {
     const { root, dir } = pictureBoard();
     castFile(dir, ['mina', 'friend'], { root: join(root, 'data/c') });

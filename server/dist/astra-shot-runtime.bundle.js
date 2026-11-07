@@ -33127,6 +33127,7 @@ var shotIconsSchema = external_exports.object({
     size: tuple(V.SIZES).optional(),
     why: nonEmpty.optional().describe("Why this size"),
     angle: tuple(V.ANGLES).optional(),
+    backgroundView: external_exports.enum(["front", "back"]).optional().describe("Opening camera direction relative to the location sheet: front is its establishing view; back is the opposite view, 180 degrees around the same space. Saved as visual.camera.backgroundView; omitted keeps the choice, initially front."),
     move: choice.extend({ target: nonEmpty.optional(), speed: external_exports.enum(["very slow", "slow", "steady", "fast", "very fast"]).optional() }).strict().optional().describe("A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold \u2026)"),
     focus: choice.extend({ from: nonEmpty.optional(), to: nonEmpty.optional() }).strict().nullable().optional().describe("A camera technique with a focus field (camera.rack-focus) and the subjects it hands focus between; null removes it"),
     depth: depthSchema.optional(),

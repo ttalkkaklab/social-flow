@@ -142,6 +142,7 @@
       purpose: { type: 'string', description: 'Shot-specific reason for this camera choice. Review context only; executable targets, focus order and timing belong in framing/end, not only here or in technique reasons.' },
       movement: { type: 'string', description: 'One camera move in vendor vocabulary, chosen from shot.feel (directing-grammar §4–§5): static · dolly in/out · zoom in/out (lens only) · dolly zoom in/out · pan left/right · tilt up/down · whip pan · truck left/right · pedestal up/down · crane up/down · arc shot · tracking · handheld · aerial. Not push in, orbit, boom or a Korean word (storyboard_check enforces the vocabulary and the conditions below). A pan, tilt, truck, pedestal or dolly is a sentence from framing to end, so end must differ from framing. A whip pan needs the hit in sound.sfx or visual.audio. A dolly zoom needs shot.depth deep (the background that stretches), a stationary subject, with a scene-specific purpose. For drone shots copy the trajectory-derived value from drone-previz.js.' },
       speed: { type: 'string', description: 'Movement pace as slow, steady or fast — never inside movement, never a word the viewer cannot see (very slow, subtle). Empty on static. Generated from the trajectory on drone shots.' },
+      backgroundView: { type: 'string', enum: ['front', 'back'], description: 'Opening camera direction relative to the location sheet; front is the establishing view, back is the opposite view. Defaults to front.' },
       framing: { type: 'string', description: 'Opening composition — what the camera holds before the move starts (hold in). Generated from the trajectory on drone shots.' },
       end: { type: 'string', description: 'Closing composition — where the move settles and holds (hold out); on a pan, tilt, truck, pedestal or dolly it names a different picture from framing. Generated from the trajectory on drone shots.' },
       trajectory: {
@@ -191,6 +192,7 @@
   function cameraInputErrors(camera) {
     if (!camera || typeof camera !== 'object' || Array.isArray(camera)) return ['camera must be an object'];
     const errors = [];
+    if (camera.backgroundView !== undefined && !['front', 'back'].includes(camera.backgroundView)) errors.push('backgroundView must be front or back');
     for (const slot of CAMERA_SLOTS) if (camera[slot] !== undefined && typeof camera[slot] !== 'string') errors.push(slot + ' must be text');
     if (camera.preset !== undefined && !Object.keys(CAMERA_PRESETS).includes(camera.preset)) errors.push('unknown camera preset');
     if (camera.variant !== undefined && !Object.keys(CAMERA_PRESETS['drone-flythrough'].variants).includes(camera.variant)) errors.push('unknown drone variant');

@@ -67,4 +67,11 @@ test('review HTML never turns javascript: or data: board values into links', () 
   assert.doesNotMatch(render(), /(?:src|href)="(?:javascript|data):/);
   context.doc.locations[0].imageUrl = '../media/room.png';
   assert.match(render(), /src="\.\.\/media\/room\.png"/);
+  context.doc.locations[0].panels = { front: '../media/front.png', back: '../media/back.png' };
+  assert.match(render(), /src="\.\.\/media\/front\.png"/);
+  assert.match(render(), /src="\.\.\/media\/back\.png"/);
+  assert.doesNotMatch(render(), /src="\.\.\/media\/room\.png"/);
+  context.doc.locations[0].panels.back = 'javascript:alert(1)';
+  assert.doesNotMatch(render(), /(?:src|href)="javascript:/);
+
 });
