@@ -45,14 +45,12 @@ test('each panel prompt comes from the sheet: the face from appearance, the body
   assert.match(back.prompt, /about 7\.5 heads tall/);
 });
 
-test('on the GenAI 800-character cap the style sentence goes', (t) => {
+test('the GenAI cap reports overlength without dropping style or identity', (t) => {
   const { root, identityPath } = orc(t);
   const current = settings.readSettings(root);
   settings.saveSettings(root, { ...current.config.models, image: { engine: 'astra-genai', model: 'z-image-turbo' } },
     { expectedRevision: current.revision, request: 'Fixture: the GenAI gateway image model' });
-  const front = characterPanelRequest({ identityPath, view: 'front', references: [] });
-  assert.ok(front.prompt.length <= 800, `${front.prompt.length} characters`);
-  assert.match(front.prompt, /225 cm tall; about 200 kg/);
+  assert.throws(() => characterPanelRequest({ identityPath, view: 'front', references: [] }), /image_prompt_too_long/);
 });
 
 test('body panels rule the head out with a negative prompt on models that take one', (t) => {
@@ -65,4 +63,24 @@ test('body panels rule the head out with a negative prompt on models that take o
   assert.equal(front.args.guidanceScale, 4, 'the gateway refuses a negative prompt without CFG');
   assert.equal(characterPanelRequest({ identityPath, view: 'face' }).args.negativePrompt.includes('head'), false);
   assert.match(characterPanelRequest({ identityPath, view: 'back', references: [] }).args.negativePrompt, /^front view, chest, .*, head, face/);
+});
+
+
+test('confirmed multilingual clothing and body-part clothing clauses survive', () => {
+  const { panelPrompt } = createRequire(import.meta.url)('../../skills/_shared/character-identity.js');
+  const result = panelPrompt({ physical: { outfit: { status: 'confirmed', value: '붉은 두루마기; red coat with a hood behind the head; black boots' } } }, 'front');
+  assert.match(result.text, /붉은 두루마기/);
+  assert.match(result.text, /red coat with a hood behind the head/);
+  assert.deepEqual(result.skipped, []);
+});
+
+test('another native gateway model does not inherit Qwen panel guidance', t => {
+  const { root, identityPath } = orc(t);
+  const current = settings.readSettings(root);
+  settings.saveSettings(root, { ...current.config.models, image: { engine: 'astra-genai-native', model: 'another-model' } },
+    { expectedRevision: current.revision, request: 'Fixture: another model' });
+  const result = characterPanelRequest({ identityPath, view: 'face', negativePrompt: 'beard' });
+  assert.equal(result.args.guidanceScale, undefined);
+  assert.equal(result.args.negativePrompt, undefined);
+  assert.match(result.prompt, /Exclude: beard/);
 });

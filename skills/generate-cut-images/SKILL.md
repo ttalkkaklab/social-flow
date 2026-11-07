@@ -63,3 +63,18 @@ better view/blocking/prompt within the attempt and spending limits. Check the vi
 crop, profile/three-quarter/rear side, camera height and action against the saved view;
 face-reference inputs do not justify a visible face in a hand-only insert. Text in an image follows the GPT
 Image 2 rule. Stop before the video prompt; review-cut-images runs only when the user asks.
+
+## Targeted revisions
+
+For a correction to an existing frame, call `shot_image` with `editExisting:true`.
+Write only the requested change in `prompt`; use `preserve` for explicit invariants.
+The saved frame is the sole image input, its dimensions are reused unless `size` is
+specified, and the output is a new version. Omit `location` and `props`; update their
+storyboard metadata first if the revision changes them. A start revision still makes
+its old end image stale. Use normal generation for a new composition.
+
+Keep confirmed identity attributes in their original language when no faithful English
+translation is available. Do not delete clothing because its description mentions a
+head, hood or other body part. Describe the intended crop separately. Known Qwen edit
+routes use concise character reference roles instead of repeating the sheet's appearance.
+Scene lighting is authored per shot; the compiler does not add uniform brightness.

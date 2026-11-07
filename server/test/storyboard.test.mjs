@@ -664,6 +664,38 @@ describe('images and the video prompt follow the icon attributes', () => {
     win = readBoard(dir).win;
     assert.deepEqual(win.SCENES[0].visual.references.map(r => r.id), ['s0001-friend-face', 's0001-friend-front', 's0001-friend-back']);
   });
+  it('known Qwen routes use identity reference roles without repeating appearance prose', () => {
+    const { root, dir } = pictureBoard();
+    icons(dir);
+    const board = readBoard(dir).win;
+    board.SB_DOC.characters[0].character = { physical: { appearance: { status: 'confirmed', value: 'distinctive amber eyes' } } };
+    writeFileSync(join(dir, 'scenes.js'), serializeBoard(board));
+    const normal = shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits.' });
+    assert.match(normal.prompt, /distinctive amber eyes/);
+    const current = settings.readSettings(root);
+    settings.saveSettings(root, { ...current.config.models, image: { engine: 'astra-genai-native', model: 'qwen-image-fast' } },
+      { expectedRevision: current.revision, request: 'Fixture: Qwen references' });
+    const qwen = shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits.' });
+    assert.doesNotMatch(qwen.prompt, /distinctive amber eyes/);
+    assert.match(qwen.prompt, /mina's face and hair/);
+    assert.deepEqual(qwen.inputs, normal.inputs);
+  });
+  it('targeted edits use the saved frame and preserve its metadata without rebuilding the scene', () => {
+    const { dir } = pictureBoard();
+    icons(dir);
+    assert.throws(() => shotImageRequest({ path: dir, id: 's0001', frame: 'start', editExisting: true, prompt: 'Make the coat blue.' }), /image_edit_source_missing/);
+    const start = make(dir, 's0001', 'start', { location: 'room' });
+    const edit = shotImageRequest({ path: dir, id: 's0001', frame: 'start', editExisting: true, prompt: 'Make the coat blue.', preserve: 'Keep the face unchanged.' });
+    assert.deepEqual(edit.inputs, [start.file]);
+    assert.deepEqual(edit.refs, start.refs);
+    assert.equal(edit.location, 'room');
+    assert.match(edit.prompt, /Change only: Make the coat blue/);
+    assert.match(edit.prompt, /Keep the face unchanged/);
+    assert.doesNotMatch(edit.prompt, /Compose one picture|Opening attention|even brightness/);
+    assert.notEqual(edit.file, start.file);
+    assert.throws(() => shotImageRequest({ path: dir, id: 's0001', frame: 'start', preserve: 'face', prompt: 'x' }), /image_edit_required/);
+    assert.throws(() => shotImageRequest({ path: dir, id: 's0001', frame: 'start', editExisting: true, props: [], prompt: 'x' }), /image_edit_scope/);
+  });
   it('a sheet panel missing from panels.json or disk stops the frame instead of being dropped', () => {
     const { root, dir } = pictureBoard();
     icons(dir);

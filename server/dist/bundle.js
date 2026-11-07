@@ -93614,7 +93614,6 @@ var require_character_identity = __commonJS({
       };
     }
     var BODY_FIELDS = ["heightCm", "weightKg", "build", "proportions", "outfit"];
-    var HEAD_WORDS = /\b(head|face|hair|ears?|eyes?|tusks?|helmet)\b/i;
     function panelPrompt(character, view) {
       const physical = character?.physical || {}, skipped = [];
       const words = (view === "face" ? ["appearance"] : BODY_FIELDS).flatMap((key) => {
@@ -93623,13 +93622,8 @@ var require_character_identity = __commonJS({
         if (key === "heightCm") return [`${field2.value} cm tall`];
         if (key === "weightKg") return [`about ${field2.value} kg`];
         const value = (Array.isArray(field2.value) ? field2.value.join(", ") : String(field2.value)).trim();
-        if (/[^\P{L}\p{Script=Latin}]/u.test(value)) {
-          skipped.push(`physical.${key}`);
-          return [];
-        }
-        if (view === "face") return [value];
-        const body = value.split(/\s*[,;]\s*/).filter((clause) => clause && !HEAD_WORDS.test(clause)).join(", ");
-        return body ? [body] : [];
+        const text5 = view === "face" ? value : value.split(/\s*[,;]\s*/).filter((clause) => !/^head not oversized[.!]?$/i.test(clause)).join(", ");
+        return text5 ? [text5] : [];
       });
       return { text: words.join("; "), skipped };
     }
@@ -112631,7 +112625,7 @@ import * as path13 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.121.0",
+  version: "0.121.1",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -116542,6 +116536,8 @@ var shotImageSchema = external_exports.object({
   id: shotIdSchema,
   frame: external_exports.enum(["start", "end"]).default("start").describe("start: the first image; end: the last image of a first_last shot"),
   prompt: nonEmpty.describe("What the frame shows, in English: who is where, doing what, facing which way, expression and light"),
+  editExisting: external_exports.boolean().optional().describe("Edit the saved frame in place conceptually, saving a new version; prompt describes only the change"),
+  preserve: nonEmpty.optional().describe("Details to preserve when editExisting is true"),
   location: nonEmpty.optional().describe("SB_DOC.locations id of the place, for the start image; an earlier call's choice stays when omitted, and an end image keeps the start's place"),
   props: external_exports.array(nonEmpty).optional().describe("SB_DOC.props ids seen in the frame; an earlier call's choice stays when omitted"),
   size: external_exports.string().regex(/^\d{3,4}x\d{3,4}$/).optional().describe("Output WIDTHxHEIGHT; default 1536x1024 for a 16:9 board, 1024x1536 otherwise"),
@@ -116567,10 +116563,11 @@ function castEntry(win, id) {
   const entries = Array.isArray(list) ? list : Object.entries(list ?? {}).map(([key, value]) => ({ ...value, id: key }));
   return entries.find((entry2) => entry2?.id === id);
 }
-function characterRefs(boardDir, win, shotId, ids, use, warnings) {
+function characterRefs(boardDir, win, shotId, ids, use, warnings, concise = false) {
   return characterPanels().canonicalReferences(boardDir, shotId, ids, use).map((ref) => {
     const view = ref.id.split("-").at(-1);
     const id = ids.find((id2) => ref.id === `${shotId}-${id2}-${view}`);
+    if (concise) return ref;
     const { text: detail, skipped } = identityCatalog().panelPrompt(castEntry(win, id)?.character, view);
     for (const field2 of skipped) warnings.push({ level: "warn", where: shotId, what: `${id}'s ${field2} is not English and stays out of the image prompt \u2014 write it in English on the character sheet` });
     return { ...ref, purpose: ref.purpose + (detail ? `: ${detail}` : "") };
@@ -116642,6 +116639,43 @@ function shotImageRequest(args) {
   const props = args.props ?? (Array.isArray(recorded) ? recorded.filter((id) => typeof id === "string") : []);
   const cast = contract().castOf(shot) ?? [];
   const [width, height] = (args.size ?? (/16x9/.test(String(win.FORMAT ?? "")) ? "1536x1024" : "1024x1536")).split("x").map(Number);
+  if (args.preserve && !args.editExisting) throw new Error("image_edit_required: preserve requires editExisting");
+  if (args.editExisting) {
+    if (args.location || args.props) throw new Error("image_edit_scope: update location and prop metadata before editing; omit location and props here");
+    const source = frames[args.frame];
+    if (!source) throw new Error(`image_edit_source_missing: ${args.id} has no saved ${args.frame} image`);
+    const input = resolve5(boardDir, source);
+    if (!existsSync20(input)) throw new Error(`image_input_missing: ${input}`);
+    const metadata = readImageMetadata(input);
+    const [editWidth, editHeight] = args.size ? [width, height] : [metadata.width, metadata.height];
+    const prompt2 = [
+      "Edit Image 1. Change only: " + args.prompt,
+      "Preserve all other visible details, identities, composition, lighting and rendering style unless the requested change requires otherwise.",
+      args.preserve ? "Preserve explicitly: " + args.preserve : ""
+    ].filter(Boolean).join("\n");
+    const call3 = imageCall({
+      directory: episode,
+      assetId: args.id,
+      inputs: [input],
+      prompt: prompt2,
+      width: editWidth,
+      height: editHeight,
+      outDir: join10(boardDir, "images"),
+      stem: `${args.id}-${args.frame}`,
+      what: "this frame edit"
+    });
+    return {
+      episode,
+      assetId: args.id,
+      ...call3,
+      refs: visual.references ?? [],
+      ...location ? { location } : {},
+      ...visual.locationFrame ? { locationFrame: visual.locationFrame } : {},
+      props,
+      prompt: prompt2,
+      warnings: []
+    };
+  }
   const entry2 = location ? docEntry(win, "locations", location) : void 0;
   const warnings = [];
   const backgroundView = visual.camera?.backgroundView ?? "front";
@@ -116674,10 +116708,12 @@ function shotImageRequest(args) {
     use: "image",
     purpose: args.frame === "end" ? `the ${set.name} set from the closing camera (${set.endCamera.lensMm} mm lens), where every object${set.blocked ? " and figure" : ""} stands when it ends` : `the ${set.name} set seen from this shot's camera (${lens}): its viewpoint, framing${dutch ? "" : " and horizon"}, the architecture and where every object${set.blocked ? " and coloured figure" : ""} stands; its plain unpainted surfaces are placeholders`
   }] : [];
+  const selectedImage = imageContext(episode, args.id).selection;
+  const conciseIdentity = selectedImage.engine === "astra-genai-native" && ["qwen-image-fast", "qwen-image-2.1-turbo"].includes(selectedImage.model ?? "") || selectedImage.engine === "mlx" && mlxImageFamily(selectedImage.model ?? "") === "qwen-2.1";
   const propPictures = propRefs(win, shots.indexOf(shot), args.id, props, args.frame, warnings);
   const refs = [
     ...composition,
-    ...characterRefs(boardDir, win, args.id, cast, frames.mode === "reference" ? "both" : "image", warnings),
+    ...characterRefs(boardDir, win, args.id, cast, frames.mode === "reference" ? "both" : "image", warnings, conciseIdentity),
     ...propPictures.refs,
     // MSR takes the start image in its background slot, so the place only conditions the picture.
     ...typeof place === "string" ? [{
@@ -116737,7 +116773,7 @@ function shotImageRequest(args) {
   } : void 0;
   return { episode, assetId: args.id, ...call2, refs: sent, ...location ? { location } : {}, ...locationFrame ? { locationFrame } : {}, props, prompt, warnings };
 }
-var NEGATIVE_PROMPT_ENGINES = /* @__PURE__ */ new Set(["astra-genai-native"]);
+var PANEL_NEGATIVE_GUIDANCE = { "qwen-image-fast": 4, "qwen-image-2.1-turbo": 4 };
 function imageAdapter(selection) {
   return selection.engine === "mlx" ? { tool: "mlx_image_edit", max: MLX_INPUTS[mlxImageFamily(selection.model ?? "")] ?? 0 } : IMAGE_INPUTS[selection.engine] ?? { max: 0 };
 }
@@ -116773,8 +116809,9 @@ function imageCall(o) {
   const edit2 = sent.length > 0, tool2 = edit2 ? adapter2.tool : void 0;
   const output2 = { outputPath: dirname5(file), filename: basename6(file) };
   const args = selection.engine === "host" ? { prompt, referenceImages: sent, savePath: file, size: `${width}x${height}` } : selection.engine === "gpt-image" ? { prompt, savePath: file, size: `${width}x${height}`, ...edit2 ? { sourceImagesBase64: sent.map(base642), sourceMimeType: readImageMetadata(sent[0]).mimeType || "image/png" } : {} } : selection.engine === "astra-genai" ? { prompt, size: `${width}*${height}`, ...output2, ...edit2 ? { mode: "img2img", imagePath: sent[0] } : {} } : ["mlx", "zimage"].includes(selection.engine) ? { prompt, width, height, ...output2, ...edit2 ? { imagePath: sent[0], refImagePaths: sent.slice(1) } : {} } : { prompt, size: `${width}x${height}`, ...output2, ...edit2 ? { imagePath: sent[0], refImagePaths: sent.slice(1), mode: "edit" } : {} };
-  const negativeSent = !!o.negativePrompt && NEGATIVE_PROMPT_ENGINES.has(selection.engine);
-  if (negativeSent) Object.assign(args, { negativePrompt: o.negativePrompt, guidanceScale: 4 });
+  const guidance = selection.engine === "astra-genai-native" ? PANEL_NEGATIVE_GUIDANCE[selection.model ?? ""] : void 0;
+  const negativeSent = !!o.negativePrompt && guidance !== void 0;
+  if (negativeSent) Object.assign(args, { negativePrompt: o.negativePrompt, guidanceScale: guidance });
   return { requestId, ...tool2 ? { tool: tool2 } : {}, operation: edit2 ? "edit" : "text", args, file, inputs: sent, negativeSent };
 }
 function recordShotImage(args, request) {
@@ -125409,11 +125446,17 @@ Refused: missing story/characters (story_order), invalid attributes, incompatibl
     name: "shot_image",
     title: "Make a shot's start or end image (step 4)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-    description: `Use it after every shot has its icon attributes (shot_icons): make one shot's start image from its characters' sheet panels (assets/characters/<id>/panels.json \u2014 face, headless front and back; two characters take each face, then each front), its place and its props, with a prompt assembled from the shot's size, angle, depth, techniques, screen layout, facing, composition and eyeline, camera framing and POV/rear flags, move-specific opening guidance, the episode style and your English description. Still-camera pans and tilts prepare a source canvas containing both crop endpoints. When the place's sheet names a built set (SB_DOC.locations manifest), Image 1 is that set rendered locally in Blender from the camera the shot's size and angle ask for \u2014 aimed at its cast's blocking from location_manage bind, kept on the selected background side with obstruction warnings, kept inside the walls with a wider lens, at the picture's aspect \u2014 and the sheet image follows as a look reference when the model has room; the render is cached per input fingerprint under storyboard/locations/ and recorded in visual.locationFrame. visual.camera.backgroundView selects panels.front or panels.back (default front). Without a set the selected panel leads, and the authored view controls the subject and crop while preserving that background direction. Missing directional panels refuse (background_view_missing); legacy front-only sheets may reuse imageUrl. Built sets follow cameras.front (else the first camera); opposing subject views refuse (background_view_conflict). Each prop seen in the frame goes in through the prop ledger: a prop hidden in the shot (propUsage visible:false) stays out, the picture is its reference drawn in the condition it has when the frame opens (start) or closes (end), and its Image line carries its English description, holder, location and condition; a prop without a picture or a reference for that condition is a warning, and ledger errors only drop the state of a prop whose own entry, history or usage in this shot has them, never refuse. Set names and labels in another script stay out of the prompt. frame:"end" makes the last image of a first_last shot from its start image, with its closing composition (visual.camera.end), story state (frames.endState) and final rack-focus target. A set uses the authored numeric endpoint (shot.location.camera.end, or the bound set camera's end); a static camera stays fixed. A moving shot with no numeric endpoint warns and omits the set end render from the inputs, so the prompt can follow the planned landing without locking to the opening camera. Runs image_plan \u2192 image_execute with the saved image model and the existing spending authorization, then writes visual.frames.start and visual.bg (or frames.end), visual.references, locationId and props. Each call saves a new versioned file under storyboard/images/. A new start image takes the shot's end image off (it was edited from the old start; the file stays) and warns, so make the end image again. An end image keeps the start image's place (location is refused) and records its own props in frames.endProps. GPT Image gets a mixed PNG/JPEG set as PNG copies in storyboard/images/inputs/.
+    description: `Use it after shot_icons to make a shot's start image, or the end image of a first_last shot. Normal generation composes character sheet panels, the location and props with the saved shot framing, action, lighting and episode style. Write prompt in English. One character uses face/front/back panels; two use each face then each front. Reference images identify appearance; the authored view determines crop and viewpoint. Actor layout and gaze stay in the prompt.
 
-Do NOT use it for a cut with no picture route \u2014 only still_camera and generated_video cuts are accepted. The saved image model has to take every picture the frame composes (gpt-image up to 16; astra-genai-native or an MLX Qwen-Image-2.1 pack up to 10; MLX FLUX.2 klein or Mage-Flow Edit up to 4); otherwise it refuses with image_references_unsupported, so ask the user before changing models. Refused (story_order) while a shot lacks icon attributes, or for an end image before the start image or outside first_last; location_render_failed when Blender cannot render the set (it never falls back to the sheet image).
+For a targeted correction, set editExisting:true and describe only the change in prompt. preserve adds explicit invariants. The saved start or end image becomes the sole input, source dimensions are reused unless size is supplied, and original scene instructions are not reassembled. Omit location and props; update their storyboard metadata first if needed. Refuses image_edit_source_missing without that saved frame and image_edit_scope if location/props are supplied.
 
-Returns: the file written, the image path, the inputs in order and the prompt; a host selection returns the handoff instead of generating.`,
+For normal generation, a location with a built set uses a camera-matched Blender render as Image 1 and its sheet as a look reference when capacity allows. visual.camera.backgroundView chooses front/back (default front). Without a set, the corresponding location panel leads and retains its landmark layout; authored subject framing still applies. Missing directional panels refuse background_view_missing; legacy front-only sheets can reuse imageUrl with a warning. A built set with conflicting direction refuses background_view_conflict; a render failure refuses location_render_failed without substituting the sheet. Props use their frame-specific ledger state and references; hidden props stay out, missing images or state references warn, and ledger errors omit only the affected state.
+
+frame:end edits the opening image using the closing composition, story state and final focus. A built set supplies its numeric end camera when available; a moving shot without one warns and follows the prompt's landing. An end image keeps the start's location (location is refused) and records endProps separately.
+
+Runs image_plan \u2192 image_execute under the saved model and existing spending authorization. Saves a new version under storyboard/images and records visual.frames.start/bg or frames.end, prompt, references and asset bindings. Revising a start invalidates its old end with a warning; files are preserved. GPT inputs of mixed PNG/JPEG types become PNG copies.
+
+Do NOT use it for routes other than still_camera and generated_video. story_order refuses missing icon attributes, an end before its start or outside first_last. image_references_unsupported refuses inputs beyond the saved model's capacity; never switch models silently. Text-bearing images follow the GPT Image 2 directive. Returns: file, input order, prompt and warnings; a host selection returns a handoff instead of generating.`,
     inputSchema: {
       type: "object",
       additionalProperties: false,
@@ -125422,6 +125465,8 @@ Returns: the file written, the image path, the inputs in order and the prompt; a
         id: { type: "string", pattern: "^s\\d{4,}$", description: "Stable shot id" },
         frame: { type: "string", enum: ["start", "end"], default: "start", description: "start: the first image \xB7 end: the last image of a first_last shot" },
         prompt: { type: "string", description: "What the frame shows, in English: who is where, doing what, facing which way, expression and light" },
+        editExisting: { type: "boolean", description: "Edit the saved frame using prompt as the change instruction; save a new version. Omit location and props." },
+        preserve: { type: "string", description: "Details to preserve during editExisting" },
         location: { type: "string", description: "SB_DOC.locations id of the place, for the start image; an earlier choice stays when omitted, and an end image keeps the start's place (refused there)" },
         props: { type: "array", items: { type: "string" }, description: "SB_DOC.props ids seen in the frame; an earlier choice stays when omitted" },
         size: { type: "string", pattern: "^\\d{3,4}x\\d{3,4}$", description: "Output WIDTHxHEIGHT; default 1536x1024 on a 16:9 board, 1024x1536 otherwise" },
@@ -133698,23 +133743,20 @@ function characterPanelRequest(raw) {
   const { STYLES } = shared4("storyboard/references/production-mode.js");
   const style = preset && STYLES[preset] ? STYLES[preset].prompt : "";
   const words = panelPrompt(character, args.view);
-  const compose = (withStyle) => [
+  const compose = () => [
     references.length && args.view !== "back" ? "Keep this exact character from the reference images." : "",
     FRAMING[args.view].text,
     `Character: ${words.text}.`,
-    withStyle ? style : "",
+    style,
     "Soft even studio lighting, plain neutral grey background. One view only. No text, watermark, collage or border."
   ].filter(Boolean).join(" ");
   const limit2 = PROMPT_LIMIT[readImageContext(workspace, `${id}-${args.view}`).selection.engine] ?? Infinity;
-  const full = compose(true), prompt = full.length <= limit2 ? full : compose(false);
+  const prompt = [compose(), args.negativePrompt ? `Exclude: ${args.negativePrompt}.` : ""].filter(Boolean).join(" ");
+  if (prompt.length > limit2) throw new Error(`image_prompt_too_long: ${prompt.length} characters exceeds ${limit2}; shorten redundant sheet wording while preserving identity, outfit and style`);
   const [width, height] = FRAMING[args.view].size;
   const negativePrompt = [NEGATIVE[args.view], args.negativePrompt].filter(Boolean).join(", ");
   const call2 = imageCall({ directory: workspace, assetId: `${id}-${args.view}`, inputs: references, prompt, negativePrompt, width, height, outDir: folder, stem: `${id}-${args.view}`, what: "this panel" });
-  const warnings = [
-    ...call2.negativeSent ? [] : ["the saved image model takes no negative prompt; only the prompt keeps the head out"],
-    ...words.skipped.map((field2) => `${field2} is not English and stays out of the prompt \u2014 write it in English on the sheet`),
-    ...prompt.length > limit2 ? [`the prompt is ${prompt.length} characters, over the image model's ${limit2}; shorten the sheet's physical fields`] : []
-  ];
+  const warnings = [...call2.negativeSent ? [] : ["no tested negative-prompt setting for this model; exclusions must be expressed in the main prompt"], ...words.skipped.map((field2) => `${field2} is not English and stays out of the prompt \u2014 write it in English on the sheet`)];
   return { workspace, folder, id, view: args.view, panelsFile, prompt, negativePrompt: call2.negativeSent ? negativePrompt : void 0, warnings, ...call2 };
 }
 function recordCharacterPanel(request) {
@@ -135308,7 +135350,7 @@ ROUTES.music_status = async (args) => args?.action === "resume" ? resumeMusic2(a
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.121.0" },
+  { name: "social-flow", version: "0.121.1" },
   { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

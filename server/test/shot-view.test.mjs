@@ -25,3 +25,14 @@ test('one explicit opening view overrides legacy source directions and yields to
     { ...view, target: { point: [0, 0, Infinity], span: .2 } }, { ...view, target: { point: [0, 0, 0], span: 0 } },
     { ...view, mode: 'pov' }, { ...view, surprise: true }]) assert.ok(V.validate(bad).length);
 });
+
+
+test('opening view preserves actor relationships without flattening authored lighting', () => {
+  const scene = { shot: { size: 'two', space: { layout: 'Mina on the left, Jun on the right', facing: 'They look at each other' } },
+    visual: { camera: { view: { subject: 'Mina and Jun', reason: 'exchange', crop: 'both waist up', mode: 'front' } } } };
+  const prompt = P.assemble({ ...P.frameOptions(scene), scene: 'Overhead spotlight with deep shadows below.' }).prompt;
+  assert.match(prompt, /Mina on the left, Jun on the right/);
+  assert.match(prompt, /They look at each other/);
+  assert.match(prompt, /deep shadows below/);
+  assert.doesNotMatch(prompt, /even brightness/);
+});
