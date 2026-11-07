@@ -31,8 +31,11 @@ camera direction with `shot_icons.backgroundView` during icon authoring (or corr
 there before generation): `front` for the establishing direction, `back` for the opposite
 side. `shot_image` selects `SB_DOC.locations[].panels.front` or `.back`, defaulting to front;
 character facing, shot height and camera motion do not choose a background direction.
-A missing panel produces a warning and uses legacy `imageUrl` if present; complete the
-missing view within existing authorization. Follow [asset sheets](../storyboard/references/asset-sheets.md). An end image keeps the start image's
+Without a built set, a missing back panel or a missing selected panel on a directional
+sheet stops with `background_view_missing`; complete that view within existing authorization.
+Only legacy front-only sheets may reuse `imageUrl` with a warning. Built sets use the
+selected direction relative to their establishing camera; an opposing subject view reports
+`background_view_conflict` before rendering. Correct the direction, view or blocking. Follow [asset sheets](../storyboard/references/asset-sheets.md). An end image keeps the start image's
 place (`location` is refused) and records its own props in `frames.endProps`, so a prop that
 appears only at the end goes in the end call. Each prop goes in through the prop ledger
 ([prop continuity](../storyboard/references/prop-continuity.md#production-and-review)):

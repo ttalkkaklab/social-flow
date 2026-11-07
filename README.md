@@ -287,7 +287,9 @@ Background sheets default to separate front and back camera images in
 opening camera direction (`front` or `back`) in `visual.camera.backgroundView`, and
 `shot_image` selects the matching panel. Front is the establishing view; back looks
 across the same space from the opposite side. Existing `imageUrl` sheets remain readable
-with a missing-view warning. See [asset sheets](skills/storyboard/references/asset-sheets.md).
+for the default front view with a missing-view warning; a missing back panel is not substituted.
+Built sets use the same direction against their establishing camera and reject an opposing
+subject viewpoint before rendering. See [asset sheets](skills/storyboard/references/asset-sheets.md).
 
 ## Persistent 3D locations
 

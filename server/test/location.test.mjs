@@ -105,6 +105,23 @@ function project(camera,point){
 }
 const mina=(extra={})=>({id:'mina',height:1.7,color:'#d0342c',position:[0,0,0],rotationZDeg:0,...extra});
 const frameOf=(size,angle='eye',actors=[mina()],cast=['mina'],width=960,height=540)=>L.shotCamera(spec,{stateId:'day',actors,cast,size,angle,width,height});
+test('background direction controls the world camera and rejects an opposing subject view',()=>{
+  const m=structuredClone(spec);
+  m.cameras.front={position:[0,-6,2],target:[0,0,1],lensMm:35,width:960,height:540};
+  const args={stateId:'day',actors:[mina({rotationZDeg:180})],cast:['mina'],size:'ms',angle:'eye',width:960,height:540};
+  const front=L.shotCamera(m,{...args,backgroundView:'front'}).camera;
+  const back=L.shotCamera(m,{...args,backgroundView:'back'}).camera;
+  assert.ok(front.position[1]<front.target[1]);
+  assert.ok(back.position[1]>back.target[1]);
+  assert.deepEqual(front.target,back.target);
+  const view={subject:'Mina',reason:'Reaction',crop:'Her upper body',mode:'front'};
+  assert.throws(()=>L.shotCamera(m,{...args,backgroundView:'front',view}),/background_view_conflict/);
+  assert.doesNotThrow(()=>L.shotCamera(m,{...args,backgroundView:'back',view}));
+  const viewer=mina({id:'jun',position:[0,2,0],rotationZDeg:0});
+  assert.throws(()=>L.shotCamera(m,{...args,actors:[mina(),viewer],backgroundView:'front',view:{...view,mode:'pov',subjectId:'mina',viewerId:'jun'}}),/background_view_conflict/);
+  m.cameras.front.position=[0,0,6];
+  assert.throws(()=>L.shotCamera(m,{...args,backgroundView:'front'}),/background_camera_required/);
+});
 test('authored views retain their bearing, target body details and never substitute a face for a missing target',()=>{
   const m=structuredClone(spec);m.objects=m.objects.filter(o=>o.role!=='wall');
   const view={subject:'Mina deciding',crop:'Face and shoulder tops',reason:'Read the hesitation',mode:'profile-right',subjectId:'mina'};
@@ -222,6 +239,14 @@ test('shotFrame renders the set once per camera and reuses the render',()=>{
     assert.ok(first.warnings.some(w=>/not blocked/.test(w))&&first.warnings.some(w=>/first state/.test(w)));
     ask();
     assert.equal(fs.readFileSync(path.join(dir,'runs'),'utf8'),'x');
+    win.SCENES[0].visual={camera:{backgroundView:'back'}};
+    const reverse=ask();
+    assert.notEqual(reverse.fingerprint,first.fingerprint);
+    const direction=c=>c.position.map((v,i)=>v-c.target[i]);
+    assert.ok(direction(first.camera).slice(0,2).reduce((sum,v,i)=>sum+v*direction(reverse.camera)[i],0)<0);
+    ask();assert.equal(fs.readFileSync(path.join(dir,'runs'),'utf8'),'xx');
+    win.SCENES[0].visual.camera.backgroundView='front';
+    assert.equal(ask().fingerprint,first.fingerprint);
     // A numeric landing changes both the render and the cache; fixed shots retain the opening camera.
     L.bind(win,0,board,{manifest:path.join(asset,'location.json'),stateId:'day',cameraId:'wide'});
     win.SCENES[0].shot.render={mode:'generated_video'};

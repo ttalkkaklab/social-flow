@@ -211,7 +211,7 @@ function hitsBody(p,q,x){
  * The camera a shot's size and angle ask for in this set: aimed at the shot's blocked cast (or the set when
  * nobody is blocked), from the side the reference camera stands on, distance fitted to the lens's field of view.
  */
-function shotCamera(m,{stateId,actors=[],cast=[],size,angle,width,height,side,mustShow=[],viewpoint,view}){
+function shotCamera(m,{stateId,actors=[],cast=[],size,angle,width,height,side,mustShow=[],viewpoint,view,backgroundView}){
   const V=require('./shot-view.js');V.checked(view);
   const warnings=[],deg=Math.PI/180,r3=v=>v.map(x=>Math.round(x*1000)/1000);
   const unit=v=>{const n=Math.hypot(...v);return n>1e-9?v.map(x=>x/n):null;},dot=(a,b)=>a[0]*b[0]+a[1]*b[1];
@@ -231,6 +231,12 @@ function shotCamera(m,{stateId,actors=[],cast=[],size,angle,width,height,side,mu
   const floor=people.length?Math.min(...people.map(x=>x.position[2])):Math.min(...objects.map(o=>o.position[2]+o.size[2]/2));
   if(unblocked.length)warnings.push(`${unblocked.join(' and ')} ${unblocked.length>1?'are':'is'} not blocked in the ${m.id} set: the render is framed on the set and the prompt places them — bind the shot's blocking with location_manage for exact places`);
   const ref=side||Object.values(m.cameras)[0],a=angle||'eye';
+  // The sheet's establishing camera defines world front, independently of actor facing or a shot camera.
+  const front=m.cameras.front||Object.values(m.cameras)[0];
+  const direction=backgroundView===undefined?null:unit([front.position[0]-front.target[0],front.position[1]-front.target[1]]);
+  if(backgroundView!==undefined&&!['front','back'].includes(backgroundView))throw new Error('background_view_invalid: use front or back');
+  if(backgroundView!==undefined&&!direction)throw new Error('background_camera_required: the set needs a non-overhead front camera');
+  const background=direction?.map(v=>backgroundView==='back'?-v:v);
   let lensMm=SIZE_LENS[frame],target,span,spread=0,u,eye,position;
   const fit=(dist,height,width=0)=>Math.max(12,Math.min(135,(sensorV/2)*dist/(height/2),width?18*dist/(width/2):Infinity));
   const pov=view?view.mode==='pov':size==='pov'||viewpoint==='pov';
@@ -298,6 +304,19 @@ function shotCamera(m,{stateId,actors=[],cast=[],size,angle,width,height,side,mu
         span=e[2]*scale;spread=(Math.abs(u[1])*e[0]+Math.abs(u[0])*e[1])*scale;eye=target[2];
       }
     }
+    if(background&&!view&&!viewpoint&&size!=='back'){
+      const authored=side&&unit([ref.position[0]-target[0],ref.position[1]-target[1]]);
+      u=authored&&dot(authored,background)>0?authored:background;
+      // Refit the horizontal span after changing the world bearing.
+      if(people.length&&size!=='insert'&&size!=='cutaway'){
+        const across=people.map(x=>dot([-u[1],u[0]],x.position));
+        spread=people.length>1?Math.max(...across)-Math.min(...across)+1:0;
+      } else {
+        const named=objects.filter(o=>mustShow.includes(o.id)),standing=objects.filter(o=>o.size[2]>=.3&&o.role!=='wall');
+        const box=boundsOf(named.length?named:standing.length?standing:objects),e=box.map(([lo,hi])=>hi-lo);
+        spread=(Math.abs(u[1])*e[0]+Math.abs(u[0])*e[1])*(size==='insert'&&named.length?1.3:SET_SCALE[frame]);
+      }
+    }
     const d=Math.max(span/2/((sensorV/2)/lensMm),spread/2/(18/lensMm),.35);
     if(a==='dutch')warnings.push('dutch: the renderer has no camera roll, so the set render stays level and the prompt tilts the horizon');
     else if(!['eye','over','pov','high','low','ground','overhead'].includes(a))warnings.push(`angle ${a} has no camera height, so the set render stays at eye level`);
@@ -332,7 +351,7 @@ function shotCamera(m,{stateId,actors=[],cast=[],size,angle,width,height,side,mu
       const hidden=p=>solids.some(o=>inBox(p,o))?Infinity:marks(p).filter(q=>others.some(x=>hitsBody(p,q,x))||solids.some(o=>!inBox(q,o)&&entersBox(p,q,o)!==null)).length;
       const toward=Math.sign(u[0]*(ref.position[1]-target[1])-u[1]*(ref.position[0]-target[0]))||1;
       // Turns stay within 80° so the framed faces still turn toward the lens.
-      const tried=(view?[0]:[0,20,40,60,80]).flatMap(t=>t?[t*toward,-t*toward]:[0]).map(t=>{const c=Math.cos(t*deg),s=Math.sin(t*deg),x=place([u[0]*c-u[1]*s,u[0]*s+u[1]*c]);
+      const tried=(view||background?[0]:[0,20,40,60,80]).flatMap(t=>t?[t*toward,-t*toward]:[0]).map(t=>{const c=Math.cos(t*deg),s=Math.sin(t*deg),x=place([u[0]*c-u[1]*s,u[0]*s+u[1]*c]);
         const n=hidden(x.p);return {t,...x,n,score:n*10+fills(x.p,x.lens)};});
       // The first clean side, else the least blocked one.
       const clear=tried.reduce((m,x)=>x.score<m.score?x:m);
@@ -343,6 +362,8 @@ function shotCamera(m,{stateId,actors=[],cast=[],size,angle,width,height,side,mu
     if(best.lens<lensMm-.05)warnings.push(`the walls hold the camera ${Math.hypot(...best.p.map((x,i)=>x-target[i])).toFixed(1)} m from the subject, so the lens widens from ${lensMm} to ${best.lens.toFixed(0)} mm`);
     position=best.p;lensMm=best.lens;
   }
+  if(background&&dot([position[0]-target[0],position[1]-target[1]],background)<-1e-6)
+    throw new Error('background_view_conflict: the opening subject view faces the opposite background direction; correct backgroundView, the subject view or actor blocking before generating');
   return {camera:{position:r3(position),target:r3(target),lensMm:Math.round(lensMm*10)/10,width,height},warnings};
 }
 /**
@@ -368,7 +389,7 @@ function shotFrame(win,index,dir,{manifest,cast=[],size,angle,width,height}){
   const k=Math.min(1,1280/Math.max(width,height)),w=2*Math.round(width*k/2),h=2*Math.round(height*k/2);
   const ref=bound?(bound.camera||m.cameras[bound.cameraId]):undefined,cam=s.visual?.camera||{};
   const viewpoint=shotViewpoint(s);
-  const shot=shotCamera(m,{stateId,actors:C.actorsAt(blocking,'start'),cast,size,angle,width:w,height:h,side:ref,mustShow:bound?.mustShow||[],viewpoint,view:cam.view});
+  const shot=shotCamera(m,{stateId,actors:C.actorsAt(blocking,'start'),cast,size,angle,width:w,height:h,side:ref,mustShow:bound?.mustShow||[],viewpoint,view:cam.view,backgroundView:cam.backgroundView??'front'});
   // Text cannot specify a Blender transform. Without an authored endpoint a moving shot uses text for its landing,
   // rather than locking its end image to a second render of the opening camera.
   const fixed=/^(static|fixed|locked)/i.test(String(cam.movement||'').trim());

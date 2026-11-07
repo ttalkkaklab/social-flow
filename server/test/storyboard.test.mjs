@@ -598,6 +598,7 @@ describe('images and the video prompt follow the icon attributes', () => {
       locations: [{ id: 'room', panels: { front: 'places/room.png', back: 'places/back.png' } }] } } });
     const args = { path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits.', location: 'room' };
     assert.equal(shotImageRequest(args).inputs[0], join(dir, 'places/room.png'));
+    assert.match(shotImageRequest(args).prompt, /Keep the background's front viewing direction/);
     make(dir, 's0001', 'start', { location: 'room' });
     const changed = writeShotIcons({ path: dir, shots: [{ id: 's0001', backgroundView: 'back' }] });
     assert.ok(changed.findings.some(f => f.level === 'warn' && /remake/.test(f.what)));
@@ -612,10 +613,12 @@ describe('images and the video prompt follow the icon attributes', () => {
     rmSync(join(dir, 'places/back.png'));
     assert.throws(() => shotImageRequest(args), /image_input_missing/);
   });
-  it('reports a missing direction on legacy backgrounds and keeps end images based on their start', () => {
+  it('refuses a missing reverse background and keeps end images based on their start', () => {
     const { dir } = pictureBoard();
     icons(dir);
     writeShotIcons({ path: dir, shots: [{ id: 's0002', backgroundView: 'back' }] });
+    assert.throws(() => shotImageRequest({ path: dir, id: 's0002', frame: 'start', prompt: 'Mina waits.', location: 'room' }), /background_view_missing/);
+    writeShotIcons({ path: dir, shots: [{ id: 's0002', backgroundView: 'front' }] });
     const start = make(dir, 's0002', 'start', { location: 'room' });
     assert.equal(start.inputs[0], join(dir, 'places/room.png'));
     assert.ok(start.warnings.some(f => /background_view_missing/.test(f.what)));

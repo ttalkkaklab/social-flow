@@ -41,9 +41,16 @@ silently bypassed; it stops no other step except the episode cast's own panels (
   A reverse shot uses `back` when it looks toward the opposite side of this space;
   a character turning around, a high/low angle or camera movement alone does not change it.
   `shot_image` selects that panel, never both opposing views. Legacy `imageUrl` is reused
-  with a missing-view warning when the selected panel is absent. It does not replace the production `visual.location` binding.
+  with a missing-view warning only for legacy front-only sheets. A missing back panel or a
+  missing selected panel on a directional sheet refuses generation without a built set. It does not replace the production `visual.location` binding.
   For built sets, also follow [location assets](location-assets.md); link the real manifest
-  and its shared views. A written location sheet does not require Blender or a 3D render.
+  and its shared views. For a built set, align `cameras.front` (or the first manifest camera
+  when unnamed) with the sheet's establishing front view. Its horizontal position-to-target
+  axis defines front; back is the opposite direction. `shot_image` uses `backgroundView`
+  (default front) when rendering the opening camera. An authored subject view or POV/OTS
+  on the opposite side reports `background_view_conflict`; correct the view, background
+  direction or blocking rather than rotating the actor or substituting a picture silently.
+  A written location sheet does not require Blender or a 3D render.
 
 If a category has no subjects, set `SB_DOC.assetSheetNotes.characters`, `.props` or
 `.locations` to an explicit not-applicable reason. Do not manufacture a character for a

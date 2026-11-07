@@ -112,6 +112,15 @@ falls back to the sheet picture.
 
 `shotCamera` builds the camera:
 
+- `visual.camera.backgroundView` (default `front`) selects the side of the space. Align
+  the manifest's `cameras.front`, or its first camera when unnamed, with the front sheet
+  image. Its horizontal camera-to-target axis defines the establishing direction; `back`
+  reverses it. A top-down camera cannot define that axis (`background_camera_required`).
+  The subject view, including POV/OTS, must face the selected background hemisphere;
+  `background_view_conflict` reports an opposite direction before rendering. Correct the
+  direction, subject view or blocking. Do not mirror a panel or silently turn an actor.
+  Directional shots keep their chosen bearing instead of orbiting to avoid an obstruction.
+
 - New shots use [the authored opening view](shot-view.md). Its subject, crop and mode drive
   the prompt and set camera together. An explicit mode fixes the horizontal bearing relative
   to the subject (front 0°, three-quarter ±45°, profile ±90°, rear 180°). A body insert/ecu
