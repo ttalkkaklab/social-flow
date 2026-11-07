@@ -54,6 +54,9 @@ labels or filenames do not establish different pictures.
 Choose boundaries when an action, discovery, relationship or emotional state changes.
 A speaker change, text message or subtitle boundary alone does not require a new shot.
 Several lines can play over one coherent action; preserve their attributed speech events.
+For generated dialogue, follow [dialogue coverage](dialogue-coverage.md): face-to-face
+OTS/reverse coverage is preferred when expressions matter. A fixed OTS with two speakers
+is a production reason to split; a readable two-speaker two-shot remains valid.
 
 Before choosing movement, describe what the viewer sees now that the previous shot did
 not show. Compare neighboring frames by subject, scale, viewpoint, occupied screen area,

@@ -14,6 +14,9 @@ For action-led episodes, carry the storyboard's [action direction](../storyboard
 into generation and editing. Compare the actual clip with the planned camera and
 action; camera icons and a successful API response do not verify footage quality. Use `storyboard_read` techniqueCatalog and set the move and focus with `shot_icons`, which persists `shot.techniques:[{id,reason}]`; [film-techniques.js](../storyboard/references/film-techniques.js) owns icons, selection guidance and provider instructions. Keep fields consistent; inspect actual footage before certifying a technique.
 Before source images or video, complete the storyboard's required camera-direction pass if the production plan still has generic static defaults. Preserve motivated holds; carry the selected framing, focus endpoints and move into the prompt and any spatial references. Reassemble prompts after camera edits and report unverified footage honestly. For connected shots, follow [shot continuity](../storyboard/references/shot-continuity.md).
+For generated dialogue, follow [dialogue coverage](../storyboard/references/dialogue-coverage.md)
+before images and prompts: prefer OTS/reverse for face-to-face expression beats and keep
+two-speaker clips only with suitable visible faces or a deliberate creative exception.
 Capture the preceding accepted clip's selected endpoint before authoring the next opening;
 use the spatial assembler's actual reference-image arguments. After any crop, trim or
 replacement, inspect that shot with both neighbours and refresh stale endpoint evidence.

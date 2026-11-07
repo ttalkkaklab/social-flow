@@ -13,7 +13,11 @@ Follow [the production order](../_shared/production-workflow.md).
 
 Read
 [action direction](../storyboard/references/action-direction.md) and
-[shot continuity](../storyboard/references/shot-continuity.md).
+[shot continuity](../storyboard/references/shot-continuity.md) and
+[dialogue coverage](../storyboard/references/dialogue-coverage.md). Test its worked cases
+against each speaking shot: fixed OTS with two speakers, unreadable profile two-shots,
+valid one-speaker OTS and valid two-speaker two-shots. Inspect the whole reverse sequence
+for speech ownership, eyelines and preserved lines; these findings are guidance, not gates.
 
 Map every required audience-visible beat to one or more cuts. Export the camera plan
 separately from mutable scenes.js and give it to the reviewer. Inspect what the

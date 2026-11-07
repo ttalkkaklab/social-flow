@@ -94,6 +94,17 @@ provenance so the user can request targeted corrections later through `edit-spee
 voice-lock ASR. Follow `skills/produce/references/shot-speech.md`. Narrator and character
 lines use explicit speakers; video models are replaceable adapters with declared capabilities.
 
+## Dialogue coverage (user directive, 2026-11-07)
+
+For face-to-face generated dialogue, prefer speaker-facing OTS/reverse coverage when
+expressions matter. In each OTS clip the far, visible face speaks and the foreground
+listener stays silent; put the reply in a separately generated reverse shot. Retain a
+two-speaker two-shot when both faces and mouths are readable and the shared performance
+needs it. Do not ban OTS or two-speaker MSR, split every line, or mistake two visible
+characters for two speakers. Follow `skills/storyboard/references/dialogue-coverage.md`
+for authoring, images, bindings, continuity and explicit creative exceptions. This is
+production guidance, not a new execution gate or a reason to regenerate approved media.
+
 ## MSR voice and LTX default (user directive, 2026-10-30; voice optional 2026-10-31)
 
 Two-speaker MSR dialogue stays supported (user directive, 2026-11-03). Both the
