@@ -1,3 +1,4 @@
+import { readShotVideoTiming } from './video-routing.js';
 import { manageProject } from './project.js';
 import { readImageMetadata, verifyImageFile } from './image-media.js';
 import { gptImageContract, mlxImageFamily } from './image-models.js';
@@ -342,6 +343,15 @@ export function readStoryboard(args: z.infer<typeof storyboardReadSchema>): Reco
   result.mediaBaseDirectory = dirname(file);
   result.sha256 = sha256;
   result.readiness = boardReadiness(win, dirname(file));
+  result.videoTiming = (win.SCENES || []).filter(shot => shot.shot?.render?.mode === 'generated_video').map(shot => {
+    if (shot.visual?.reuse) return { shotId: shot.id, status: 'reused', note: 'Inspect the existing clip; no new generation limit applies.' };
+    try {
+      if (basename(file) !== 'scenes.js' || basename(dirname(file)) !== 'storyboard') throw new Error('Timing needs the episode storyboard/scenes.js');
+      return readShotVideoTiming(dirname(dirname(file)), String(shot.id));
+    } catch (error) {
+      return { shotId: shot.id, status: 'not_verified', reason: (error as Error).message };
+    }
+  });
   if (args.includeTechniques !== false) result.techniqueCatalog = {
     version: techniqueContract().VERSION, entries: techniqueContract().entries, guides: techniqueContract().VALUES,
     selections: (win.SCENES || []).map((scene, i) => ({ id: scene.id, no: i + 1,

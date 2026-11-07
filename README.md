@@ -1204,3 +1204,12 @@ Use `astra_genai_catalog` to discover image/speech/video aliases and LoRAs. Save
 `astra-genai-native` images, `astra-genai` speech and `astra-genai-desktop` video
 use the new gateway contracts; existing DashScope/LTX v2 settings retain their
 behavior. See [configuration and recovery](skills/_shared/astra-genai.md#model-bound-gateway-2026-10-25).
+
+
+Storyboard authoring keeps continuous speech and readable exchanges together, then revisits
+provisional shot boundaries after dialogue. `storyboard_read.videoTiming` compares each generated
+shot's planned source coverage (body, source trim and outgoing edit handle) with its selected
+adapter's duration grid and maximum. It follows episode settings and scoped overrides; unknown
+limits remain explicit. `video_plan` rechecks the actual request, rejects over-limit or shorter
+coverage and resolves unspecified lengths upward, including MSR via `requiredSeconds`.
+These are planned timings; native speech and generated playback still need measurement.

@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { spawn, spawnSync, execFileSync } from 'node:child_process';
-import { planVideo, executeVideo, routeLegacyVideo, routingContext, approveVideo } from '../dist/video-routing.js';
+import { planVideo, executeVideo, routeLegacyVideo, routingContext, approveVideo, readShotVideoTiming } from '../dist/video-routing.js';
 import { VIDEO_ADAPTERS, videoCatalog, speechVideoCapabilities } from '../dist/video-registry.js';
 import { videoTransaction } from '../dist/video-state.js';
 import { recordVideoSubmission, recordVideoTokens } from '../dist/video-events.js';
@@ -381,4 +381,53 @@ test('a saved engine that cannot keep a voice is refused by name, not as a missi
   assert.throws(()=>f.plan(),/video_engine_unsupported/);
  }
  assert.throws(()=>speechVideoCapabilities('veo','veo-3.1-fast-generate-preview'),/video_engine_unsupported/);
+});
+
+
+test('storyboard timing follows snapshot, scoped overrides, source trim and outgoing handles before media', async t => {
+  const f = fixture(t, { engine: 'astra-genai', model: 'ltx-2.5-22b-distilled', resolution: '1792x1024', operation: 'reference' });
+  Object.assign(f.board.SCENES[0], { duration: 14, edit: { in: .5 }, shot: { render: { mode: 'generated_video' } } });
+  f.board.SCENES[1].transition = 'dissolve';
+  f.save();
+  const fit = readShotVideoTiming(f.episode, 's1');
+  assert.equal(fit.status, 'fits');
+  assert.equal(fit.maxSeconds, 361 / 24);
+  assert.ok(Math.abs(fit.requiredSeconds - 14.9) < 1e-9);
+  assert.equal(fit.request.numFrames, 361);
+  const { readStoryboard, storyboardReadSchema } = await import('../dist/storyboard.js');
+  assert.equal(readStoryboard(storyboardReadSchema.parse({ path: path.join(f.episode, 'storyboard') })).videoTiming[0].status, 'fits');
+  f.board.SCENES[0].duration = 21; f.save();
+  assert.equal(readShotVideoTiming(f.episode, 's1').status, 'split_required');
+  assert.throws(() => planVideo({ episode: f.episode, shotId: 's1', requestId: 'over', args: {} }), /video_duration_exceeded/);
+  assert.equal(fs.existsSync(path.join(f.episode, '.work/video-routing/plans')), false);
+  f.board.PRODUCTION.modelSettings = { overrides: [{ scope: 'shot', shotId: 's1', request: 'Fixture route change',
+    video: { engine: 'seedance', model: 'dreamina-seedance-2-0-260128', resolution: '720p', operation: 'reference' } }] };
+  // Use the registered 30-second model, not a family-wide limit.
+  const { SEEDANCE_MODEL_SPECS } = await import('../dist/seedance-client.js');
+  f.board.PRODUCTION.modelSettings.overrides[0].video.model = Object.entries(SEEDANCE_MODEL_SPECS).find(([, spec]) => spec.duration[1] === 30)[0];
+  delete f.board.SCENES[0].visual.video;
+  f.save();
+  const changed = readShotVideoTiming(f.episode, 's1');
+  assert.equal(changed.source, 'shot_override');
+  assert.equal(changed.maxSeconds, 30);
+  assert.equal(changed.status, 'fits');
+});
+
+test('MSR plans cover the whole shot, reject short exact requests and recheck changed timing', async t => {
+  const f = fixture(t, { engine: 'astra-genai', model: 'ltx-2.5-22b-distilled', resolution: '1792x1024', operation: 'reference' });
+  const ref = path.join(f.episode, 'person.png');
+  fs.writeFileSync(ref, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=', 'base64'));
+  f.board.SCENES[0].duration = 5.1; f.save();
+  const args = { prompt: 'A person listens.', references: [{ imagePath: ref }], reserveUsd: .25 };
+  const plan = extra => planVideo({ episode: f.episode, shotId: 's1', requestId: 'timed', args: { ...args, ...extra } });
+  const p = plan({});
+  assert.equal(p.args.numFrames, 129);
+  assert.equal(p.args.duration, undefined);
+  assert.equal(p.durationPlan.status, 'fits');
+  assert.throws(() => plan({ duration: 5.1 }), /video_duration_short/); // nearest-frame legacy duration rounds down
+  assert.throws(() => plan({ numFrames: 121 }), /video_duration_short/);
+  assert.throws(() => plan({ requiredSeconds: 5, duration: 6 }), /mutually exclusive/);
+  assert.equal(plan({ requiredSeconds: 1 }).args.numFrames, 129); // cannot understate board coverage
+  f.board.SCENES[0].duration = 21; f.save();
+  await assert.rejects(f.execute(p, async () => assert.fail('Over-limit revision must not submit')), /video_duration_exceeded|stale/);
 });

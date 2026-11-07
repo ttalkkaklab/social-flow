@@ -1,4 +1,4 @@
-import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);
+import { createRequire as __socialFlowRequire } from 'node:module'; const require = __socialFlowRequire(import.meta.url);
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -25955,108 +25955,11 @@ var require_video_duration = __commonJS({
   }
 });
 
-// src/project.ts
-import * as nodeModule from "node:module";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-var loadFromHere = nodeModule.createRequire(import.meta.url);
-var helper = resolve(dirname(fileURLToPath(import.meta.url)), "../../skills/_shared/project-settings.js");
-
-// src/image-media.ts
-import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
-function imageMetadata(bytes) {
-  let width = 0, height = 0, mimeType = "";
-  if (bytes.length >= 33 && bytes.subarray(0, 8).equals(Buffer.from("89504e470d0a1a0a", "hex")) && bytes.toString("ascii", 12, 16) === "IHDR") {
-    width = bytes.readUInt32BE(16);
-    height = bytes.readUInt32BE(20);
-    mimeType = "image/png";
-  } else if (bytes.length > 12 && bytes[0] === 255 && bytes[1] === 216) {
-    mimeType = "image/jpeg";
-    for (let i = 2; i + 8 < bytes.length; ) {
-      if (bytes[i] !== 255) break;
-      const marker = bytes[i + 1];
-      if (marker === 255) {
-        i++;
-        continue;
-      }
-      if (marker === 217 || marker === 218) break;
-      const length = bytes.readUInt16BE(i + 2);
-      if (length < 2 || i + 2 + length > bytes.length) break;
-      if ([192, 193, 194, 195, 197, 198, 199, 201, 202, 203, 205, 206, 207].includes(marker)) {
-        height = bytes.readUInt16BE(i + 5);
-        width = bytes.readUInt16BE(i + 7);
-        break;
-      }
-      i += 2 + length;
-    }
-  } else if (bytes.length >= 30 && bytes.toString("ascii", 0, 4) === "RIFF" && bytes.toString("ascii", 8, 12) === "WEBP") {
-    mimeType = "image/webp";
-    const kind = bytes.toString("ascii", 12, 16);
-    if (kind === "VP8X") {
-      width = bytes.readUIntLE(24, 3) + 1;
-      height = bytes.readUIntLE(27, 3) + 1;
-    }
-    if (kind === "VP8L" && bytes[20] === 47) {
-      const bits = bytes.readUInt32LE(21);
-      width = (bits & 16383) + 1;
-      height = (bits >>> 14 & 16383) + 1;
-    }
-    if (kind === "VP8 " && bytes.subarray(23, 26).equals(Buffer.from([157, 1, 42]))) {
-      width = bytes.readUInt16LE(26) & 16383;
-      height = bytes.readUInt16LE(28) & 16383;
-    }
-  }
-  if (!width || !height) throw new Error("image_invalid: expected a readable PNG, JPEG or WebP header");
-  return { width, height, mimeType, bytes: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") };
-}
-function readImageMetadata(file) {
-  return imageMetadata(readFileSync(file));
-}
-
-// src/image-models.ts
-var GPT_IMAGE_MODELS = [
-  "gpt-image-2",
-  "gpt-image-1.5",
-  "gpt-image-1",
-  "gpt-image-1-mini",
-  "gpt-image-2-2026-04-21",
-  "gpt-image-1.5-2025-12-16"
-];
-function gptImageFamily(model2) {
-  if (model2 === "gpt-image-2-2026-04-21") return "gpt-image-2";
-  if (model2 === "gpt-image-1.5-2025-12-16") return "gpt-image-1.5";
-  return model2;
-}
-var GPT_IMAGE_CONTRACTS = {
-  "gpt-image-2": { shutdown: null, flexibleSize: true, transparency: "preview", fidelity: [], rates: { text: 5, image: 8, output: 30 } },
-  "gpt-image-1.5": { shutdown: "2026-12-01", flexibleSize: false, transparency: "supported", fidelity: ["low", "high"], rates: { text: 5, image: 8, output: 32 } },
-  "gpt-image-1": { shutdown: "2026-10-23", flexibleSize: false, transparency: "supported", fidelity: ["low", "high"], rates: { text: 5, image: 10, output: 40 } },
-  "gpt-image-1-mini": { shutdown: "2026-12-01", flexibleSize: false, transparency: "supported", fidelity: ["low"], rates: { text: 2, image: 2.5, output: 8 } }
-};
-function gptImageContract(model2) {
-  return GPT_IMAGE_CONTRACTS[gptImageFamily(model2)];
-}
-function mlxImageFamily(model2 = "") {
-  if (/qwen.*image.*2[.-]1/i.test(model2)) return "qwen-2.1";
-  if (/mage[-_]?flow/i.test(model2)) return /edit/i.test(model2) ? "mage-edit" : "mage";
-  if (/krea[-_]?2/i.test(model2)) return "krea";
-  if (/flux[.-]?2[-_]?klein/i.test(model2)) return "flux-klein";
-  return "unknown";
-}
-function validateMlxImageOperation(model2, operation, args) {
-  const family = mlxImageFamily(model2);
-  if (operation === "edit" && !["flux-klein", "mage-edit", "qwen-2.1"].includes(family))
-    throw new Error("image_operation_unsupported: select an identified editing pack");
-  if (operation === "variation" && !["flux-klein", "krea"].includes(family))
-    throw new Error("image_operation_unsupported: this pack has no verified strength-based variation");
-  if (args.transparent === true && family !== "qwen-2.1")
-    throw new Error("image_transparency_unsupported: transparent requires Qwen-Image-2.1");
-  const refs = Array.isArray(args.refImagePaths) ? args.refImagePaths.length : 0;
-  if (refs > (family === "qwen-2.1" ? 9 : 3)) throw new Error("image_reference_limit");
-  if (family === "qwen-2.1" && /turbo/i.test(model2 || "") && args.steps !== void 0 && args.steps !== 8)
-    throw new Error("image_schedule_fixed: Qwen Turbo uses its saved 8-step schedule");
-}
+// src/fasth3-omni.ts
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync as readFileSync2, readdirSync, rmSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join as join2 } from "node:path";
 
 // node_modules/zod/v3/external.js
 var external_exports = {};
@@ -30099,32 +30002,6 @@ var coerce = {
 };
 var NEVER = INVALID;
 
-// src/production-workflow.ts
-var STAGES = [
-  "characters",
-  "text_storyboard",
-  "context_review",
-  "props",
-  "backgrounds",
-  "camera_review",
-  "blender_composition",
-  "image_storyboard",
-  "image_review",
-  "video",
-  "video_review"
-];
-var stageSchema = external_exports.enum(STAGES);
-var entrySchema = external_exports.object({ images: external_exports.array(external_exports.string().min(1)).optional(), id: external_exports.string().min(1), text: external_exports.string().min(1), image: external_exports.string().min(1).optional(), blend: external_exports.string().min(1).optional(), video: external_exports.string().min(1).optional() }).strict();
-var recordSchema = external_exports.object({ stage: stageSchema, entries: external_exports.array(entrySchema), notApplicable: external_exports.string().optional(), hashes: external_exports.record(external_exports.string()).optional() }).passthrough();
-var stateSchema = external_exports.object({ version: external_exports.literal(2), completed: external_exports.array(recordSchema), active: recordSchema.optional() }).passthrough();
-var workflowSchema = external_exports.object({
-  episode: external_exports.string().min(1),
-  action: external_exports.enum(["status", "begin", "complete", "rewind"]),
-  stage: stageSchema.optional(),
-  entries: external_exports.array(entrySchema).optional(),
-  notApplicable: external_exports.string().optional()
-}).strict();
-
 // src/media-utils.ts
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -30167,20 +30044,212 @@ function bareFilenameSchema(kind) {
   });
 }
 
-// src/astra-genai-client.ts
-var import_undici = __toESM(require_undici(), 1);
+// src/image-media.ts
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+function imageMetadata(bytes) {
+  let width = 0, height = 0, mimeType = "";
+  if (bytes.length >= 33 && bytes.subarray(0, 8).equals(Buffer.from("89504e470d0a1a0a", "hex")) && bytes.toString("ascii", 12, 16) === "IHDR") {
+    width = bytes.readUInt32BE(16);
+    height = bytes.readUInt32BE(20);
+    mimeType = "image/png";
+  } else if (bytes.length > 12 && bytes[0] === 255 && bytes[1] === 216) {
+    mimeType = "image/jpeg";
+    for (let i = 2; i + 8 < bytes.length; ) {
+      if (bytes[i] !== 255) break;
+      const marker = bytes[i + 1];
+      if (marker === 255) {
+        i++;
+        continue;
+      }
+      if (marker === 217 || marker === 218) break;
+      const length = bytes.readUInt16BE(i + 2);
+      if (length < 2 || i + 2 + length > bytes.length) break;
+      if ([192, 193, 194, 195, 197, 198, 199, 201, 202, 203, 205, 206, 207].includes(marker)) {
+        height = bytes.readUInt16BE(i + 5);
+        width = bytes.readUInt16BE(i + 7);
+        break;
+      }
+      i += 2 + length;
+    }
+  } else if (bytes.length >= 30 && bytes.toString("ascii", 0, 4) === "RIFF" && bytes.toString("ascii", 8, 12) === "WEBP") {
+    mimeType = "image/webp";
+    const kind = bytes.toString("ascii", 12, 16);
+    if (kind === "VP8X") {
+      width = bytes.readUIntLE(24, 3) + 1;
+      height = bytes.readUIntLE(27, 3) + 1;
+    }
+    if (kind === "VP8L" && bytes[20] === 47) {
+      const bits = bytes.readUInt32LE(21);
+      width = (bits & 16383) + 1;
+      height = (bits >>> 14 & 16383) + 1;
+    }
+    if (kind === "VP8 " && bytes.subarray(23, 26).equals(Buffer.from([157, 1, 42]))) {
+      width = bytes.readUInt16LE(26) & 16383;
+      height = bytes.readUInt16LE(28) & 16383;
+    }
+  }
+  if (!width || !height) throw new Error("image_invalid: expected a readable PNG, JPEG or WebP header");
+  return { width, height, mimeType, bytes: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") };
+}
+function readImageMetadata(file) {
+  return imageMetadata(readFileSync(file));
+}
+
+// src/fasth3-omni.ts
+var FASTH3_OMNI_MODEL = "ddalcu/FastH3-Omni-MLX-Serve-8bit";
+var FASTH3_FRAME_LIMITS = { min: 124, max: 362, step: 17, frameRate: 24, frameOffset: 5 };
+var FASTH3_MAX_RGB_BYTES = 256 * 1024 * 1024;
+var MAX_REQUEST_BYTES = 60 * 1024 * 1024;
+var dimension = external_exports.number().int().min(256).max(1536).refine((n) => n % 32 === 0, "Dimensions must be multiples of 32");
+var paths = (max) => external_exports.array(external_exports.string().min(1)).max(max).default([]);
+var fasth3OmniSchema = external_exports.object({
+  prompt: external_exports.string().min(1).max(32e3).describe("Scene and sound, e.g. The person in <Picture 1> waves; birds chirp. References are numbered per type."),
+  model: external_exports.literal(FASTH3_OMNI_MODEL).default(FASTH3_OMNI_MODEL).describe("Installed FastH3 Omni MLX-Serve pack."),
+  width: dimension.default(768).describe("Output width in pixels, e.g. 768."),
+  height: dimension.default(448).describe("Output height in pixels, e.g. 448."),
+  numFrames: external_exports.number().int().min(124).max(362).default(124).describe("Exact 17k+5 frame count at 24 fps, e.g. 124, 243, 362; RGB output must fit 256 MiB."),
+  steps: external_exports.literal(8).default(8).describe("The trained eight-step schedule."),
+  seed: external_exports.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional().describe("Reproducible seed, e.g. 2026."),
+  referenceImagePaths: paths(9).describe('Ordered PNG/JPEG paths, e.g. ["/tmp/character.png"]; <Picture 1> etc.'),
+  referenceVideoPaths: paths(3).describe('Ordered local video paths, e.g. ["/tmp/motion.mp4"]; 2\u201315 seconds each, 15 seconds total. Video sound is included.'),
+  referenceAudioPaths: paths(3).describe('Ordered voice/music paths, e.g. ["/tmp/voice.wav"]; 2\u201315 seconds each. Voice imitation does not preserve exact speech timing.'),
+  trimReferenceVideos: external_exports.boolean().default(false).describe("Allow trimming reference video tails to output length and the 17k+5 ladder; false refuses any trim."),
+  referenceSize: external_exports.enum(["match", "max"]).default("match").describe("match caps references to output area; max preserves more detail at higher memory/time cost."),
+  outputPath: external_exports.string().optional().describe("Output directory, e.g. /tmp/video-test."),
+  filename: bareFilenameSchema("video").optional().describe("MP4 filename, e.g. fasth3.mp4.")
+}).strict().superRefine((v, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  if (!(v.referenceImagePaths.length + v.referenceVideoPaths.length)) issue("FastH3 Omni needs at least one image or video reference");
+  if (v.referenceImagePaths.length + v.referenceVideoPaths.length + v.referenceAudioPaths.length > 12) issue("At most twelve reference files are supported");
+  if ((v.numFrames - 5) % 17) issue("FastH3 frame counts must be 17k+5");
+  if (v.width * v.height * v.numFrames * 3 > FASTH3_MAX_RGB_BYTES) issue("Decoded RGB exceeds the adapter 256 MiB compatibility limit; reduce dimensions or frames");
+});
+function probe(file) {
+  const data = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration:stream=codec_type", "-of", "json", file], { encoding: "utf8", timeout: 15e3 }));
+  const duration2 = Number(data.format?.duration);
+  if (!Number.isFinite(duration2) || duration2 < 2 || duration2 > 15) throw new Error("Reference media must be 2\u201315 seconds: " + file);
+  return { duration: duration2, hasAudio: data.streams?.some((s) => s.codec_type === "audio") === true };
+}
+function ffmpeg(args) {
+  execFileSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-nostdin", "-y", ...args], { timeout: 12e4, maxBuffer: 1024 * 1024 });
+}
+function buildFasth3Body(raw) {
+  const r = fasth3OmniSchema.parse(raw);
+  const temp = mkdtempSync(join2(tmpdir(), "fasth3-refs-"));
+  let encodedBytes = 0;
+  const encode = (file) => {
+    encodedBytes += 4 * Math.ceil(statSync(file).size / 3);
+    if (encodedBytes > MAX_REQUEST_BYTES - 64e3) throw new Error("Reference payload exceeds the 60 MiB upload limit");
+    return readFileSync2(file).toString("base64");
+  };
+  const audio = (file, name, seconds) => {
+    const target = join2(temp, name + ".wav");
+    ffmpeg(["-i", file, "-vn", "-ar", "32000", "-ac", "2", "-c:a", "pcm_s16le", ...seconds === void 0 ? [] : ["-t", String(seconds)], target]);
+    return encode(target);
+  };
+  try {
+    const images = r.referenceImagePaths.map((file) => {
+      if (statSync(file).size * 4 / 3 > MAX_REQUEST_BYTES - 64e3) throw new Error("Reference image exceeds upload limit");
+      const meta = readImageMetadata(file);
+      if (!["image/png", "image/jpeg"].includes(meta.mimeType)) throw new Error("FastH3 reference images must be PNG or JPEG");
+      return encode(file);
+    });
+    let videoSeconds = 0;
+    const videos = r.referenceVideoPaths.map((file, i) => {
+      const meta = probe(file);
+      videoSeconds += meta.duration;
+      if (videoSeconds > 15) throw new Error("Reference videos exceed fifteen seconds total");
+      const prefix = `video-${i}-`;
+      ffmpeg(["-i", file, "-an", "-vf", "fps=24,scale=768:768:force_original_aspect_ratio=decrease", "-frames:v", "362", join2(temp, prefix + "%04d.jpg")]);
+      const files = readdirSync(temp).filter((f) => f.startsWith(prefix)).sort();
+      const count = Math.min(files.length, r.numFrames);
+      const accepted = count - (count - 5) % 17;
+      if (accepted < 5) throw new Error("Reference video has too few decoded frames");
+      if (accepted < files.length && !r.trimReferenceVideos) throw new Error("Reference video must fit the requested output frame count and 17k+5 ladder; trim it explicitly before submitting");
+      return { frames: files.slice(0, accepted).map((f) => encode(join2(temp, f))), ...meta.hasAudio ? { audio: audio(file, `video-audio-${i}`, accepted / 24) } : {} };
+    });
+    const audios = r.referenceAudioPaths.map((file, i) => {
+      probe(file);
+      return audio(file, `audio-${i}`);
+    });
+    return {
+      stream: true,
+      model: r.model,
+      prompt: r.prompt,
+      width: r.width,
+      height: r.height,
+      num_frames: r.numFrames,
+      steps: r.steps,
+      ...r.seed === void 0 ? {} : { seed: r.seed },
+      ref_image_size: r.referenceSize,
+      ref_images: images,
+      ref_videos: videos,
+      ref_audios: audios
+    };
+  } finally {
+    rmSync(temp, { recursive: true, force: true });
+  }
+}
+
+// src/mlx-serve-client.ts
+import { existsSync as existsSync2, mkdtempSync as mkdtempSync2, readFileSync as readFileSync4, rmSync as rmSync2, writeFileSync as writeFileSync2 } from "node:fs";
+
+// src/image-models.ts
+var GPT_IMAGE_MODELS = [
+  "gpt-image-2",
+  "gpt-image-1.5",
+  "gpt-image-1",
+  "gpt-image-1-mini",
+  "gpt-image-2-2026-04-21",
+  "gpt-image-1.5-2025-12-16"
+];
+function gptImageFamily(model2) {
+  if (model2 === "gpt-image-2-2026-04-21") return "gpt-image-2";
+  if (model2 === "gpt-image-1.5-2025-12-16") return "gpt-image-1.5";
+  return model2;
+}
+var GPT_IMAGE_CONTRACTS = {
+  "gpt-image-2": { shutdown: null, flexibleSize: true, transparency: "preview", fidelity: [], rates: { text: 5, image: 8, output: 30 } },
+  "gpt-image-1.5": { shutdown: "2026-12-01", flexibleSize: false, transparency: "supported", fidelity: ["low", "high"], rates: { text: 5, image: 8, output: 32 } },
+  "gpt-image-1": { shutdown: "2026-10-23", flexibleSize: false, transparency: "supported", fidelity: ["low", "high"], rates: { text: 5, image: 10, output: 40 } },
+  "gpt-image-1-mini": { shutdown: "2026-12-01", flexibleSize: false, transparency: "supported", fidelity: ["low"], rates: { text: 2, image: 2.5, output: 8 } }
+};
+function gptImageContract(model2) {
+  return GPT_IMAGE_CONTRACTS[gptImageFamily(model2)];
+}
+function mlxImageFamily(model2 = "") {
+  if (/qwen.*image.*2[.-]1/i.test(model2)) return "qwen-2.1";
+  if (/mage[-_]?flow/i.test(model2)) return /edit/i.test(model2) ? "mage-edit" : "mage";
+  if (/krea[-_]?2/i.test(model2)) return "krea";
+  if (/flux[.-]?2[-_]?klein/i.test(model2)) return "flux-klein";
+  return "unknown";
+}
+function validateMlxImageOperation(model2, operation, args) {
+  const family = mlxImageFamily(model2);
+  if (operation === "edit" && !["flux-klein", "mage-edit", "qwen-2.1"].includes(family))
+    throw new Error("image_operation_unsupported: select an identified editing pack");
+  if (operation === "variation" && !["flux-klein", "krea"].includes(family))
+    throw new Error("image_operation_unsupported: this pack has no verified strength-based variation");
+  if (args.transparent === true && family !== "qwen-2.1")
+    throw new Error("image_transparency_unsupported: transparent requires Qwen-Image-2.1");
+  const refs = Array.isArray(args.refImagePaths) ? args.refImagePaths.length : 0;
+  if (refs > (family === "qwen-2.1" ? 9 : 3)) throw new Error("image_reference_limit");
+  if (family === "qwen-2.1" && /turbo/i.test(model2 || "") && args.steps !== void 0 && args.steps !== 8)
+    throw new Error("image_schedule_fixed: Qwen Turbo uses its saved 8-step schedule");
+}
 
 // src/config.ts
-import { accessSync, constants, existsSync, readFileSync as readFileSync2, readdirSync, statSync } from "node:fs";
+import { accessSync, constants, existsSync, readFileSync as readFileSync3, readdirSync as readdirSync2, statSync as statSync2 } from "node:fs";
 import { homedir } from "node:os";
-import { delimiter, join as join2 } from "node:path";
-function loadEnvFile(file = join2(process.env.SNS_TOKEN_DIR || join2(homedir(), ".config", "social-flow"), ".env")) {
+import { delimiter, join as join3 } from "node:path";
+function loadEnvFile(file = join3(process.env.SNS_TOKEN_DIR || join3(homedir(), ".config", "social-flow"), ".env")) {
   for (const [key, value] of Object.entries(process.env)) {
     if (value && /^\$\{[A-Za-z_][A-Za-z0-9_]*(:-[^}]*)?\}$/.test(value)) delete process.env[key];
   }
   let text2;
   try {
-    text2 = readFileSync2(file, "utf8");
+    text2 = readFileSync3(file, "utf8");
   } catch {
     return [];
   }
@@ -30254,14 +30323,14 @@ var config = {
   youtubeApiKey: process.env.YOUTUBE_API_KEY || "",
   requestTimeoutMs: 15e3
 };
-var snsTokenDir = process.env.SNS_TOKEN_DIR || join2(homedir(), ".config", "social-flow");
+var snsTokenDir = process.env.SNS_TOKEN_DIR || join3(homedir(), ".config", "social-flow");
 var defaultSnsCredentialFiles = {
-  THREADS: process.env.THREADS_TOKEN_FILE || join2(snsTokenDir, "threads_token"),
-  INSTAGRAM: process.env.INSTAGRAM_TOKEN_FILE || join2(snsTokenDir, "instagram_token"),
-  FACEBOOK: process.env.FACEBOOK_PAGE_TOKEN_FILE || join2(snsTokenDir, "facebook_page_token"),
-  YOUTUBE: process.env.YOUTUBE_OAUTH_FILE || join2(snsTokenDir, "youtube-oauth-client.json")
+  THREADS: process.env.THREADS_TOKEN_FILE || join3(snsTokenDir, "threads_token"),
+  INSTAGRAM: process.env.INSTAGRAM_TOKEN_FILE || join3(snsTokenDir, "instagram_token"),
+  FACEBOOK: process.env.FACEBOOK_PAGE_TOKEN_FILE || join3(snsTokenDir, "facebook_page_token"),
+  YOUTUBE: process.env.YOUTUBE_OAUTH_FILE || join3(snsTokenDir, "youtube-oauth-client.json")
 };
-var disabledToolsFile = join2(snsTokenDir, "disabled-tools.json");
+var disabledToolsFile = join3(snsTokenDir, "disabled-tools.json");
 function astraVideoBaseUrl() {
   return (process.env.ASTRA_VIDEO_URL || "https://video.astravision.co.kr").replace(/\/+$/, "");
 }
@@ -30273,193 +30342,6 @@ function requireAstraVideoKey() {
   }
   return config.astraVideoApiKey;
 }
-
-// src/astra-genai-client.ts
-var genaiImageUriSchema = external_exports.string().min(1).refine((value) => {
-  if (/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/]+=*$/.test(value)) return true;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" && !url.username && !url.password;
-  } catch {
-    return false;
-  }
-}, "Use a public HTTPS PNG/JPEG URL or PNG/JPEG data URI");
-
-// src/astra-genai-native-image.ts
-var nativeImageSchema = external_exports.object({
-  model: external_exports.string().trim().min(1).max(200),
-  prompt: external_exports.string().trim().min(1).max(16e3),
-  size: external_exports.string().regex(/^[0-9]{2,4}x[0-9]{2,4}$/).default("1024x1024"),
-  seed: external_exports.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).optional(),
-  steps: external_exports.number().int().min(0).max(100).optional(),
-  guidanceScale: external_exports.number().finite().min(0).max(20).optional(),
-  negativePrompt: external_exports.string().max(16e3).optional(),
-  transparent: external_exports.boolean().optional(),
-  loras: external_exports.array(external_exports.object({ id: external_exports.string().min(1), scale: external_exports.number().finite().min(0).max(2).default(1) }).strict()).min(1).max(8).refine((rows) => new Set(rows.map((r) => r.id)).size === rows.length, "Duplicate LoRA IDs").optional(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("image").refine((n) => n.endsWith(".png")).optional()
-}).strict();
-var nativeImageEditSchema = nativeImageSchema.extend({
-  imagePath: external_exports.string().min(1),
-  refImagePaths: external_exports.array(external_exports.string().min(1)).max(9).optional(),
-  mode: external_exports.enum(["edit", "variation"]).default("edit"),
-  strength: external_exports.number().finite().gt(0).max(1).optional(),
-  refResolution: external_exports.number().int().min(256).max(1024).optional()
-}).strict();
-var imageResponse = external_exports.object({ data: external_exports.array(external_exports.object({ b64_json: external_exports.string().min(1) })).length(1) }).passthrough();
-
-// src/image-routing.ts
-import { createRequire as createRequire2 } from "node:module";
-import { fileURLToPath as fileURLToPath2 } from "node:url";
-
-// src/astra-genai-image.ts
-var genaiImageSchema = external_exports.object({
-  model: external_exports.string().min(1),
-  prompt: external_exports.string().min(1).max(800),
-  size: external_exports.string().min(1).default("1024*1536"),
-  seed: external_exports.number().int().min(0).max(2147483647).nullable().optional(),
-  promptExtend: external_exports.boolean().default(false),
-  steps: external_exports.number().int().min(1).max(12).optional(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("image").refine((name) => name.endsWith(".png"), "Use a .png filename").optional()
-}).strict();
-var genaiImageEditSchema = genaiImageSchema.extend({
-  mode: external_exports.enum(["img2img", "inpaint"]),
-  size: external_exports.string().min(1).optional(),
-  imageUri: genaiImageUriSchema.optional(),
-  imagePath: external_exports.string().min(1).optional(),
-  maskUri: genaiImageUriSchema.optional(),
-  maskPath: external_exports.string().min(1).optional(),
-  strength: external_exports.number().finite().gt(0).max(1).optional()
-}).strict().superRefine((args, ctx) => {
-  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-  if (Number(!!args.imageUri) + Number(!!args.imagePath) !== 1) issue("Supply exactly one imageUri or imagePath");
-  const masks = Number(!!args.maskUri) + Number(!!args.maskPath);
-  if (args.mode === "inpaint" ? masks !== 1 : masks !== 0) issue("Only inpaint requires exactly one maskUri or maskPath");
-});
-var responseSchema = external_exports.object({
-  request_id: external_exports.string().min(1),
-  usage: external_exports.record(external_exports.unknown()).optional(),
-  output: external_exports.object({ choices: external_exports.array(external_exports.object({
-    message: external_exports.object({ content: external_exports.array(external_exports.object({ image: external_exports.string().optional(), text: external_exports.string().optional() }).passthrough()) }).passthrough()
-  }).passthrough()).length(1) }).passthrough()
-}).passthrough();
-
-// src/image-client.ts
-var VALID_GPT_IMAGE_MODELS = GPT_IMAGE_MODELS;
-var DEFAULT_MODEL = "gpt-image-2";
-var GPT_IMAGE_SIZE_PRESETS = [
-  "auto",
-  "1024x1024",
-  "1536x1024",
-  // landscape
-  "1024x1536"
-  // portrait
-];
-var WH_SIZE_RE = /^(\d+)x(\d+)$/;
-var GPT_IMAGE_MAX_EDGE = 3840;
-var GPT_IMAGE_MIN_TOTAL_PIXELS = 655360;
-var GPT_IMAGE_MAX_TOTAL_PIXELS = 8294400;
-var GPT_IMAGE_MAX_ASPECT = 3;
-var GptImageSizeSchema = external_exports.string().refine(
-  (s) => GPT_IMAGE_SIZE_PRESETS.includes(s) || WH_SIZE_RE.test(s),
-  {
-    message: 'size must be one of auto/1024x1024/1536x1024/1024x1536, or a custom "WIDTHxHEIGHT" string (e.g. "1536x864").'
-  }
-);
-var VALID_GPT_IMAGE_QUALITIES = ["low", "medium", "high", "auto"];
-var VALID_GPT_IMAGE_BACKGROUNDS = ["opaque", "transparent", "auto"];
-var VALID_GPT_IMAGE_FORMATS = ["png", "jpeg", "webp"];
-var VALID_GPT_IMAGE_INPUT_FIDELITY = ["high", "low"];
-var VALID_GPT_IMAGE_INPUT_MIME = ["image/png", "image/jpeg", "image/webp"];
-function validateSizeAgainstModel(model2, size, ctx) {
-  if (GPT_IMAGE_SIZE_PRESETS.includes(size)) return;
-  const match = WH_SIZE_RE.exec(size);
-  if (!match) return;
-  if (!gptImageContract(model2)?.flexibleSize) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["size"],
-      message: `Custom resolutions ("${size}") are only supported on gpt-image-2. On other models use ${GPT_IMAGE_SIZE_PRESETS.join(" / ")} only.`
-    });
-    return;
-  }
-  const width = Number(match[1]);
-  const height = Number(match[2]);
-  const violations = [];
-  if (width % 16 !== 0 || height % 16 !== 0) {
-    violations.push("width and height must be multiples of 16");
-  }
-  if (Math.max(width, height) > GPT_IMAGE_MAX_EDGE) {
-    violations.push(`the longest edge must be at most ${GPT_IMAGE_MAX_EDGE}px`);
-  }
-  const shortEdge = Math.min(width, height);
-  if (shortEdge === 0 || Math.max(width, height) / shortEdge > GPT_IMAGE_MAX_ASPECT) {
-    violations.push("the aspect ratio must be within 1:3 ~ 3:1");
-  }
-  const totalPixels = width * height;
-  if (totalPixels < GPT_IMAGE_MIN_TOTAL_PIXELS || totalPixels > GPT_IMAGE_MAX_TOTAL_PIXELS) {
-    violations.push(
-      `the total pixel count must be within ${GPT_IMAGE_MIN_TOTAL_PIXELS.toLocaleString()}~${GPT_IMAGE_MAX_TOTAL_PIXELS.toLocaleString()}`
-    );
-  }
-  if (violations.length > 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["size"],
-      message: `Custom resolution "${size}" violates constraints: ${violations.join(", ")}`
-    });
-  }
-}
-function validateBackground(background, outputFormat, ctx) {
-  if (background !== "transparent") return;
-  if (outputFormat === "jpeg") {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["outputFormat"],
-      message: "Transparent backgrounds are only possible with png or webp output (not jpeg)."
-    });
-  }
-}
-var text2ImageSchema = external_exports.object({
-  prompt: external_exports.string().min(1, "Prompt is required").max(32e3, "Prompt exceeds the 32,000-character limit for GPT Image models"),
-  model: external_exports.enum(VALID_GPT_IMAGE_MODELS).optional().default(DEFAULT_MODEL),
-  size: GptImageSizeSchema.optional().default("auto"),
-  quality: external_exports.enum(VALID_GPT_IMAGE_QUALITIES).optional().default("auto"),
-  background: external_exports.enum(VALID_GPT_IMAGE_BACKGROUNDS).optional().default("opaque"),
-  outputFormat: external_exports.enum(VALID_GPT_IMAGE_FORMATS).optional().default("png"),
-  savePath: external_exports.string().optional()
-}).superRefine((data, ctx) => {
-  validateSizeAgainstModel(data.model, data.size, ctx);
-  validateBackground(data.background, data.outputFormat, ctx);
-});
-var img2ImgSchema = external_exports.object({
-  prompt: external_exports.string().min(1, "Prompt is required").max(32e3, "Prompt exceeds the 32,000-character limit for GPT Image models"),
-  sourceImagesBase64: external_exports.array(external_exports.string().min(1)).min(1, "At least one source image is required").max(16, "At most 16 source images are supported"),
-  sourceMimeType: external_exports.enum(VALID_GPT_IMAGE_INPUT_MIME).optional().default("image/png"),
-  maskBase64: external_exports.string().optional(),
-  model: external_exports.enum(VALID_GPT_IMAGE_MODELS).optional().default(DEFAULT_MODEL),
-  size: GptImageSizeSchema.optional().default("auto"),
-  quality: external_exports.enum(VALID_GPT_IMAGE_QUALITIES).optional().default("auto"),
-  background: external_exports.enum(VALID_GPT_IMAGE_BACKGROUNDS).optional().default("opaque"),
-  outputFormat: external_exports.enum(VALID_GPT_IMAGE_FORMATS).optional().default("png"),
-  inputFidelity: external_exports.enum(VALID_GPT_IMAGE_INPUT_FIDELITY).optional(),
-  savePath: external_exports.string().optional()
-}).superRefine((data, ctx) => {
-  validateSizeAgainstModel(data.model, data.size, ctx);
-  validateBackground(data.background, data.outputFormat, ctx);
-  const allowed = gptImageContract(data.model)?.fidelity ?? [];
-  if (data.inputFidelity && !allowed.includes(data.inputFidelity)) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["inputFidelity"],
-      message: allowed.length ? `${data.model} accepts inputFidelity ${allowed.join("/")} only.` : `${data.model} does not accept inputFidelity (fixed high fidelity). Omit the parameter.`
-    });
-  }
-});
-
-// src/mlx-serve-client.ts
-import { existsSync as existsSync2, mkdtempSync, readFileSync as readFileSync3, rmSync, writeFileSync as writeFileSync2 } from "node:fs";
 
 // src/http.ts
 async function requestRaw(method, url, headers, body, timeoutMs) {
@@ -30641,7 +30523,7 @@ function videoMemoryMessage(width, height, frames) {
 function fileToBase64(filePath) {
   if (!existsSync2(filePath)) return { ok: false, error: `File not found: ${filePath}` };
   try {
-    return { ok: true, b64: readFileSync3(filePath).toString("base64") };
+    return { ok: true, b64: readFileSync4(filePath).toString("base64") };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
@@ -30671,162 +30553,6 @@ function buildLtxVideoBody(request) {
   return body;
 }
 
-// src/zimage-client.ts
-var DEFAULT_ZIMAGE_STEPS = 9;
-var DEFAULT_ZIMAGE_QUANTIZE = 8;
-var ZIMAGE_DIMENSION_STEP = 16;
-var MIN_ZIMAGE_DIMENSION = 256;
-var MAX_ZIMAGE_DIMENSION = 2048;
-var dimensionSchema = external_exports.number().int().min(MIN_ZIMAGE_DIMENSION).max(MAX_ZIMAGE_DIMENSION).refine((v) => v % ZIMAGE_DIMENSION_STEP === 0, {
-  message: `width/height must be a multiple of ${ZIMAGE_DIMENSION_STEP} (for 9:16 that's 1088\xD71920, not 1080\xD71920)`
-});
-var WEIGHT_DOWNLOAD_ALLOWANCE_MS = 60 * 6e4;
-var zimageGenerateSchema = external_exports.object({
-  prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
-  width: dimensionSchema.optional().default(1024),
-  height: dimensionSchema.optional().default(1024),
-  steps: external_exports.number().int().min(1).max(50).optional().default(DEFAULT_ZIMAGE_STEPS),
-  seed: external_exports.number().int().min(0).optional(),
-  quantize: external_exports.union([external_exports.literal(4), external_exports.literal(6), external_exports.literal(8)]).optional().default(DEFAULT_ZIMAGE_QUANTIZE),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("image").optional()
-});
-
-// src/image-registry.ts
-var IMAGE_ADAPTERS = Object.freeze({
-  astra_genai_image_generate: { engine: "astra-genai-native", operation: "text", schema: nativeImageSchema },
-  astra_genai_image_edit: { engine: "astra-genai-native", operation: "edit", schema: nativeImageEditSchema },
-  astra_genai_text2img: { engine: "astra-genai", operation: "text", schema: genaiImageSchema },
-  astra_genai_edit: { engine: "astra-genai", operation: "edit", schema: genaiImageEditSchema },
-  gpt_image_text2img: { engine: "gpt-image", operation: "text", schema: text2ImageSchema },
-  gpt_image_img2img: { engine: "gpt-image", operation: "edit", schema: img2ImgSchema },
-  image_local_generate: { engine: "zimage", operation: "text", schema: zimageGenerateSchema },
-  mlx_image_generate: { engine: "mlx", operation: "text", schema: mlxImageGenerateSchema },
-  mlx_image_edit: { engine: "mlx", operation: "edit", schema: mlxImageEditSchema }
-});
-
-// src/image-state.ts
-var money = external_exports.number().finite().nonnegative();
-var imageJobSchema = external_exports.object({
-  outputFile: external_exports.string(),
-  planId: external_exports.string(),
-  requestId: external_exports.string(),
-  assetId: external_exports.string(),
-  tool: external_exports.string(),
-  status: external_exports.enum(["submitting", "submission_unknown", "completed", "failed"]),
-  ownerPid: external_exports.number().int().positive().optional(),
-  ownerHost: external_exports.string().optional(),
-  reserveUsd: money,
-  spentUsd: money.optional(),
-  usage: external_exports.unknown().optional(),
-  providerId: external_exports.string().optional(),
-  result: external_exports.record(external_exports.unknown()).optional(),
-  output: external_exports.record(external_exports.unknown()).optional(),
-  evidence: external_exports.string().optional(),
-  updatedAt: external_exports.string()
-}).strict();
-var stateSchema2 = external_exports.object({ version: external_exports.literal(1), openingSpendUsd: money, jobs: external_exports.record(imageJobSchema) }).strict();
-
-// src/fasth3-omni.ts
-import { execFileSync } from "node:child_process";
-import { mkdtempSync as mkdtempSync2, readFileSync as readFileSync4, readdirSync as readdirSync2, rmSync as rmSync2, statSync as statSync2 } from "node:fs";
-import { tmpdir } from "node:os";
-import { join as join3 } from "node:path";
-var FASTH3_OMNI_MODEL = "ddalcu/FastH3-Omni-MLX-Serve-8bit";
-var FASTH3_FRAME_LIMITS = { min: 124, max: 362, step: 17, frameRate: 24, frameOffset: 5 };
-var FASTH3_MAX_RGB_BYTES = 256 * 1024 * 1024;
-var MAX_REQUEST_BYTES = 60 * 1024 * 1024;
-var dimension = external_exports.number().int().min(256).max(1536).refine((n) => n % 32 === 0, "Dimensions must be multiples of 32");
-var paths = (max) => external_exports.array(external_exports.string().min(1)).max(max).default([]);
-var fasth3OmniSchema = external_exports.object({
-  prompt: external_exports.string().min(1).max(32e3).describe("Scene and sound, e.g. The person in <Picture 1> waves; birds chirp. References are numbered per type."),
-  model: external_exports.literal(FASTH3_OMNI_MODEL).default(FASTH3_OMNI_MODEL).describe("Installed FastH3 Omni MLX-Serve pack."),
-  width: dimension.default(768).describe("Output width in pixels, e.g. 768."),
-  height: dimension.default(448).describe("Output height in pixels, e.g. 448."),
-  numFrames: external_exports.number().int().min(124).max(362).default(124).describe("Exact 17k+5 frame count at 24 fps, e.g. 124, 243, 362; RGB output must fit 256 MiB."),
-  steps: external_exports.literal(8).default(8).describe("The trained eight-step schedule."),
-  seed: external_exports.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional().describe("Reproducible seed, e.g. 2026."),
-  referenceImagePaths: paths(9).describe('Ordered PNG/JPEG paths, e.g. ["/tmp/character.png"]; <Picture 1> etc.'),
-  referenceVideoPaths: paths(3).describe('Ordered local video paths, e.g. ["/tmp/motion.mp4"]; 2\u201315 seconds each, 15 seconds total. Video sound is included.'),
-  referenceAudioPaths: paths(3).describe('Ordered voice/music paths, e.g. ["/tmp/voice.wav"]; 2\u201315 seconds each. Voice imitation does not preserve exact speech timing.'),
-  trimReferenceVideos: external_exports.boolean().default(false).describe("Allow trimming reference video tails to output length and the 17k+5 ladder; false refuses any trim."),
-  referenceSize: external_exports.enum(["match", "max"]).default("match").describe("match caps references to output area; max preserves more detail at higher memory/time cost."),
-  outputPath: external_exports.string().optional().describe("Output directory, e.g. /tmp/video-test."),
-  filename: bareFilenameSchema("video").optional().describe("MP4 filename, e.g. fasth3.mp4.")
-}).strict().superRefine((v, ctx) => {
-  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-  if (!(v.referenceImagePaths.length + v.referenceVideoPaths.length)) issue("FastH3 Omni needs at least one image or video reference");
-  if (v.referenceImagePaths.length + v.referenceVideoPaths.length + v.referenceAudioPaths.length > 12) issue("At most twelve reference files are supported");
-  if ((v.numFrames - 5) % 17) issue("FastH3 frame counts must be 17k+5");
-  if (v.width * v.height * v.numFrames * 3 > FASTH3_MAX_RGB_BYTES) issue("Decoded RGB exceeds the adapter 256 MiB compatibility limit; reduce dimensions or frames");
-});
-function probe(file) {
-  const data = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration:stream=codec_type", "-of", "json", file], { encoding: "utf8", timeout: 15e3 }));
-  const duration2 = Number(data.format?.duration);
-  if (!Number.isFinite(duration2) || duration2 < 2 || duration2 > 15) throw new Error("Reference media must be 2\u201315 seconds: " + file);
-  return { duration: duration2, hasAudio: data.streams?.some((s) => s.codec_type === "audio") === true };
-}
-function ffmpeg(args) {
-  execFileSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-nostdin", "-y", ...args], { timeout: 12e4, maxBuffer: 1024 * 1024 });
-}
-function buildFasth3Body(raw) {
-  const r = fasth3OmniSchema.parse(raw);
-  const temp = mkdtempSync2(join3(tmpdir(), "fasth3-refs-"));
-  let encodedBytes = 0;
-  const encode = (file) => {
-    encodedBytes += 4 * Math.ceil(statSync2(file).size / 3);
-    if (encodedBytes > MAX_REQUEST_BYTES - 64e3) throw new Error("Reference payload exceeds the 60 MiB upload limit");
-    return readFileSync4(file).toString("base64");
-  };
-  const audio = (file, name, seconds) => {
-    const target = join3(temp, name + ".wav");
-    ffmpeg(["-i", file, "-vn", "-ar", "32000", "-ac", "2", "-c:a", "pcm_s16le", ...seconds === void 0 ? [] : ["-t", String(seconds)], target]);
-    return encode(target);
-  };
-  try {
-    const images = r.referenceImagePaths.map((file) => {
-      if (statSync2(file).size * 4 / 3 > MAX_REQUEST_BYTES - 64e3) throw new Error("Reference image exceeds upload limit");
-      const meta = readImageMetadata(file);
-      if (!["image/png", "image/jpeg"].includes(meta.mimeType)) throw new Error("FastH3 reference images must be PNG or JPEG");
-      return encode(file);
-    });
-    let videoSeconds = 0;
-    const videos = r.referenceVideoPaths.map((file, i) => {
-      const meta = probe(file);
-      videoSeconds += meta.duration;
-      if (videoSeconds > 15) throw new Error("Reference videos exceed fifteen seconds total");
-      const prefix = `video-${i}-`;
-      ffmpeg(["-i", file, "-an", "-vf", "fps=24,scale=768:768:force_original_aspect_ratio=decrease", "-frames:v", "362", join3(temp, prefix + "%04d.jpg")]);
-      const files = readdirSync2(temp).filter((f) => f.startsWith(prefix)).sort();
-      const count = Math.min(files.length, r.numFrames);
-      const accepted = count - (count - 5) % 17;
-      if (accepted < 5) throw new Error("Reference video has too few decoded frames");
-      if (accepted < files.length && !r.trimReferenceVideos) throw new Error("Reference video must fit the requested output frame count and 17k+5 ladder; trim it explicitly before submitting");
-      return { frames: files.slice(0, accepted).map((f) => encode(join3(temp, f))), ...meta.hasAudio ? { audio: audio(file, `video-audio-${i}`, accepted / 24) } : {} };
-    });
-    const audios = r.referenceAudioPaths.map((file, i) => {
-      probe(file);
-      return audio(file, `audio-${i}`);
-    });
-    return {
-      stream: true,
-      model: r.model,
-      prompt: r.prompt,
-      width: r.width,
-      height: r.height,
-      num_frames: r.numFrames,
-      steps: r.steps,
-      ...r.seed === void 0 ? {} : { seed: r.seed },
-      ref_image_size: r.referenceSize,
-      ref_images: images,
-      ref_videos: videos,
-      ref_audios: audios
-    };
-  } finally {
-    rmSync2(temp, { recursive: true, force: true });
-  }
-}
-
 // src/local-video-models.ts
 var LOCAL_VIDEO_MODELS = {
   ltx_video_generate: {
@@ -30851,12 +30577,17 @@ function localVideoStrategy(tool) {
   return Object.hasOwn(LOCAL_VIDEO_MODELS, name) ? LOCAL_VIDEO_MODELS[name] : void 0;
 }
 
-// src/usage-ledger.ts
-import { execFileSync as execFileSync2 } from "node:child_process";
-import path4 from "node:path";
-
-// src/video-duration.ts
-var import_video_duration = __toESM(require_video_duration(), 1);
+// src/astra-genai-client.ts
+var import_undici = __toESM(require_undici(), 1);
+var genaiImageUriSchema = external_exports.string().min(1).refine((value) => {
+  if (/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/]+=*$/.test(value)) return true;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}, "Use a public HTTPS PNG/JPEG URL or PNG/JPEG data URI");
 
 // src/video-events.ts
 import { AsyncLocalStorage } from "node:async_hooks";
@@ -30865,236 +30596,92 @@ function recordVideoSubmission(id) {
   if (id) videoEvents.getStore()?.submitted(id);
 }
 
-// src/seedance-client.ts
-import * as path2 from "node:path";
-
-// src/prompt-language.ts
-var QUOTED_SEGMENT = /"[^"]*"|“[^”]*”|「[^」]*」/g;
-var NON_LATIN_RUN = /[^\P{L}\p{Script=Latin}]+(?:[ \t]+[^\P{L}\p{Script=Latin}]+)*/u;
-function nonEnglishOutsideQuotes(prompt) {
-  const match = prompt.replace(QUOTED_SEGMENT, " ").match(NON_LATIN_RUN);
-  return match ? match[0] : null;
-}
-
-// src/seedance-client.ts
-var VALID_SEEDANCE_RESOLUTIONS = ["480p", "720p", "1080p", "4k"];
-var VALID_SEEDANCE_RATIOS = ["16:9", "9:16", "4:3", "3:4", "1:1", "21:9", "adaptive"];
-var SEEDANCE_MODEL_SPECS = {
-  // 1080p opened on 2026-08-17 (UTC+8) — 10-bit color, and the only tier the discount
-  // campaign covers (28% off list through 2026-09-17). 2.5 has no 4K; 2.0 does.
-  "dreamina-seedance-2-5-260628": {
-    resolutions: ["480p", "720p", "1080p"],
-    duration: [4, 30],
-    lastFrame: true,
-    referenceImages: [1, 30],
-    referenceAudio: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30, audioOnly: true },
-    referenceVideos: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30 },
-    audio: true,
-    realFaceInput: false,
-    activationGate: true
-  },
-  "dreamina-seedance-2-0-260128": {
-    resolutions: ["480p", "720p", "1080p", "4k"],
-    duration: [4, 15],
-    lastFrame: true,
-    referenceImages: [1, 9],
-    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
-    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
-    audio: true,
-    realFaceInput: false,
-    activationGate: true
-  },
-  "dreamina-seedance-2-0-fast-260128": {
-    resolutions: ["480p", "720p"],
-    duration: [4, 15],
-    lastFrame: true,
-    referenceImages: [1, 9],
-    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
-    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
-    audio: true,
-    realFaceInput: false,
-    activationGate: true
-  },
-  "dreamina-seedance-2-0-mini-260615": {
-    resolutions: ["480p", "720p"],
-    duration: [4, 15],
-    lastFrame: true,
-    referenceImages: [1, 9],
-    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
-    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
-    audio: true,
-    realFaceInput: false,
-    activationGate: true
-  }
-};
-var VALID_SEEDANCE_MODELS = Object.keys(SEEDANCE_MODEL_SPECS);
-var DEFAULT_SEEDANCE_MODEL = "dreamina-seedance-2-0-260128";
-var DEFAULT_SEEDANCE_RESOLUTION = "720p";
-var DEFAULT_SEEDANCE_DURATION = 5;
-var MAX_INPUT_IMAGE_BYTES = 30 * 1024 * 1024;
-var MAX_REQUEST_BYTES2 = 64 * 1024 * 1024;
-var MAX_INPUT_AUDIO_BYTES = 15 * 1024 * 1024;
-var MAX_INPUT_VIDEO_BYTES = 200 * 1024 * 1024;
-var SEEDANCE_REFERENCE_AUDIO_EXTENSIONS = [".wav", ".mp3"];
-var SEEDANCE_REFERENCE_VIDEO_EXTENSIONS = [".mp4", ".mov"];
-var commonFields = {
-  prompt: external_exports.string().min(1, "Prompt is required"),
-  model: external_exports.enum(VALID_SEEDANCE_MODELS).optional().default(DEFAULT_SEEDANCE_MODEL),
-  resolution: external_exports.enum(VALID_SEEDANCE_RESOLUTIONS).optional().default(DEFAULT_SEEDANCE_RESOLUTION),
-  durationSeconds: external_exports.number().int().optional(),
-  generateAudio: external_exports.boolean().optional().default(false),
-  watermark: external_exports.boolean().optional().default(false),
+// src/astra-genai-desktop.ts
+var model = external_exports.enum(["ltx-2.3-fast", "ltx-2.5-fast"]);
+var resolution = external_exports.enum(["270p", "360p", "540p", "720p", "1080p", "1440p", "2160p"]);
+var duration = external_exports.number().int().refine((n) => [2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 18, 20].includes(n));
+var aspect = external_exports.enum(["21:9", "16:9", "3:2", "4:3", "1:1", "4:5", "9:16"]);
+var loras = external_exports.array(external_exports.object({ ref: external_exports.string().min(1), scale: external_exports.number().finite().min(0).max(4).default(1) }).strict()).min(1).refine((rows) => new Set(rows.map((r) => r.ref)).size === rows.length, "Duplicate LoRA refs");
+var local = {
+  reserveUsd: external_exports.number().finite().nonnegative(),
   outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").optional()
+  filename: bareFilenameSchema("video").refine((n) => n.endsWith(".mp4")).optional()
 };
-function validateCommon(data, ctx) {
-  const spec = SEEDANCE_MODEL_SPECS[data.model];
-  const foreign = nonEnglishOutsideQuotes(data.prompt);
-  if (foreign) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["prompt"],
-      message: `video_prompt_language: "${foreign}" sits outside quotation marks. Write the video prompt in English; only dialogue, inside quotes, uses the video's language.`
-    });
-  }
-  if (!spec.resolutions.includes(data.resolution)) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["resolution"],
-      message: `${data.model} does not support ${data.resolution} (supported: ${spec.resolutions.join(", ")}).`
-    });
-  }
-  const [minDuration, maxDuration] = spec.duration;
-  if ((data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) < minDuration || (data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) > maxDuration) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["durationSeconds"],
-      message: `${data.model} supports durations of ${minDuration}~${maxDuration}s (requested: ${data.durationSeconds}s).`
-    });
-  }
-  if (data.generateAudio && !spec.audio) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["generateAudio"],
-      message: `${data.model} is silent-only and cannot generate audio.`
-    });
-  }
-}
-var seedanceText2VideoSchema = external_exports.object({
-  ...commonFields,
-  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("16:9")
-}).superRefine(validateCommon).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
-var seedanceImg2VideoSchema = external_exports.object({
-  ...commonFields,
-  sourceImagePath: external_exports.string().min(1, "Source image path is required"),
-  lastImagePath: external_exports.string().optional(),
-  // Following the input image's ratio is the default — specifying a different
-  // ratio makes the server center-crop the source image (the incident where a
-  // 9:16 cover got cropped).
-  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("adaptive")
-}).superRefine((data, ctx) => {
-  validateCommon(data, ctx);
-  if (data.lastImagePath && !SEEDANCE_MODEL_SPECS[data.model].lastFrame) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["lastImagePath"],
-      message: `${data.model} accepts a first frame only.`
-    });
-  }
-}).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
-var seedanceReferenceSchema = external_exports.object({
-  ...commonFields,
-  referenceImagePaths: external_exports.array(external_exports.string()).optional().default([]),
-  referenceAudioPaths: external_exports.array(external_exports.string()).optional().default([]),
-  referenceVideoPaths: external_exports.array(external_exports.string()).optional().default([]),
-  referenceVideoUrls: external_exports.array(external_exports.string().url()).optional().default([]),
-  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("adaptive")
-}).superRefine((data, ctx) => {
-  validateCommon(data, ctx);
-  const spec = SEEDANCE_MODEL_SPECS[data.model];
-  const [, maxImages] = spec.referenceImages;
-  if (data.referenceImagePaths.length > maxImages) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["referenceImagePaths"],
-      message: `${data.model} allows at most ${maxImages} reference images (requested: ${data.referenceImagePaths.length}).`
-    });
-  }
-  const videoCount = data.referenceVideoPaths.length + data.referenceVideoUrls.length;
-  if (data.referenceImagePaths.length === 0 && data.referenceAudioPaths.length === 0 && videoCount === 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["referenceImagePaths"],
-      message: "At least one reference is required \u2014 referenceImagePaths, referenceAudioPaths, referenceVideoPaths/Urls, or a mix."
-    });
-    return;
-  }
-  if (videoCount > 0) {
-    const video = spec.referenceVideos;
-    if (videoCount > video.maxClips) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["referenceVideoPaths"],
-        message: `${data.model} allows at most ${video.maxClips} reference videos (requested: ${videoCount}).`
-      });
-    }
-    for (const filePath of data.referenceVideoPaths) {
-      const ext = path2.extname(filePath).toLowerCase();
-      if (!SEEDANCE_REFERENCE_VIDEO_EXTENSIONS.includes(ext)) {
-        ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
-          path: ["referenceVideoPaths"],
-          message: `Reference video must be mp4 or mov (got "${ext}" in ${path2.basename(filePath)}).`
-        });
-      }
-    }
-    if (!/\bvideo\s*1\b/i.test(data.prompt)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["prompt"],
-        message: 'A reference video is bound in the prompt by index \u2014 write "Video 1" (2.5: "@Video 1") and say what it supplies (camera movement, blocking, motion timing) and what it must not (its visual content).'
-      });
-    }
-  }
-  if (data.referenceAudioPaths.length === 0) return;
-  const audio = spec.referenceAudio;
-  if (data.referenceAudioPaths.length > audio.maxClips) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["referenceAudioPaths"],
-      message: `${data.model} allows at most ${audio.maxClips} reference audio clips (requested: ${data.referenceAudioPaths.length}).`
-    });
-  }
-  if (!audio.audioOnly && data.referenceImagePaths.length === 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["referenceImagePaths"],
-      message: `${data.model} needs at least one reference image alongside reference audio \u2014 audio-only input is dreamina-seedance-2-5-260628 only.`
-    });
-  }
-  for (const filePath of data.referenceAudioPaths) {
-    const ext = path2.extname(filePath).toLowerCase();
-    if (!SEEDANCE_REFERENCE_AUDIO_EXTENSIONS.includes(ext)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["referenceAudioPaths"],
-        message: `Reference audio must be wav or mp3 (got "${ext}" in ${path2.basename(filePath)}).`
-      });
-    }
-  }
-  if (!data.generateAudio) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["generateAudio"],
-      message: "Reference audio with generateAudio: false produces a silent video, so the voice reference has nothing to shape. Set generateAudio: true."
-    });
-  }
-}).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
+var common = external_exports.object({
+  model,
+  prompt: external_exports.string().trim().min(1),
+  resolution,
+  seed: external_exports.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
+  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
+  cameraMotion: external_exports.enum(["none", "dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"]).optional(),
+  ...local
+}).strict();
+var desktopTextSchema = common.extend({ duration, aspectRatio: aspect.default("16:9"), loras: loras.optional() }).strict();
+var desktopImageSchema = common.extend({
+  duration,
+  aspectRatio: external_exports.union([aspect, external_exports.literal("auto")]).default("auto"),
+  imagePath: external_exports.string().min(1),
+  lastFramePath: external_exports.string().min(1).optional()
+}).strict();
+var desktopAudioSchema = common.extend({
+  audioPath: external_exports.string().min(1),
+  imagePath: external_exports.string().min(1).optional(),
+  aspectRatio: external_exports.union([aspect, external_exports.literal("auto")]).default("16:9"),
+  allowAudioTruncation: external_exports.boolean().default(false)
+}).strict();
+var edit = external_exports.object({
+  model,
+  prompt: external_exports.string().default(""),
+  sourceVideoPath: external_exports.string().min(1),
+  targetResolution: external_exports.object({ width: external_exports.number().int().positive(), height: external_exports.number().int().positive() }).strict().optional(),
+  seed: external_exports.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).optional(),
+  ...local
+}).strict();
+var desktopExtendSchema = edit.extend({ duration: external_exports.number().finite().min(2).max(20), mode: external_exports.enum(["start", "end"]).default("end") }).strict();
+var desktopRetakeSchema = edit.extend({
+  duration: external_exports.number().finite().min(2).max(10),
+  startTime: external_exports.number().finite().nonnegative(),
+  mode: external_exports.enum(["replace_audio_and_video", "replace_video", "replace_audio"]).default("replace_audio_and_video")
+}).strict();
+var desktopKeyframesSchema = desktopTextSchema.extend({
+  audio: external_exports.boolean().default(false),
+  keyframes: external_exports.array(external_exports.object({
+    imagePath: external_exports.string().min(1),
+    frameIndex: external_exports.number().int().nonnegative(),
+    strength: external_exports.number().finite().min(0).max(1).default(1)
+  }).strict()).min(1).max(10)
+}).strict().superRefine((args, ctx) => {
+  const indices = args.keyframes.map((f) => f.frameIndex);
+  if (new Set(indices).size !== indices.length || Math.max(...indices) >= Math.floor(args.duration * args.fps / 8) * 8 + 1)
+    ctx.addIssue({ code: "custom", message: "Keyframes require unique indices within the requested duration" });
+});
+var DESKTOP_SCHEMAS = {
+  "text-to-video": desktopTextSchema,
+  "image-to-video": desktopImageSchema,
+  "audio-to-video": desktopAudioSchema,
+  extend: desktopExtendSchema,
+  retake: desktopRetakeSchema,
+  keyframes: desktopKeyframesSchema
+};
+var receiptSchema = external_exports.object({
+  protocol: external_exports.literal("gateway-desktop-v1"),
+  baseUrl: external_exports.string(),
+  operation: external_exports.enum(["text-to-video", "image-to-video", "audio-to-video", "extend", "retake", "keyframes"]),
+  fingerprint: external_exports.string(),
+  videoPath: external_exports.string(),
+  status: external_exports.enum(["submitting", "submitted", "completed"]),
+  jobId: external_exports.string().optional(),
+  sha256: external_exports.string().optional()
+}).strict();
+
+// src/video-routing.ts
+import { createRequire as createRequire4 } from "node:module";
+import { fileURLToPath as fileURLToPath2 } from "node:url";
 
 // src/astra-video-client.ts
 import { createHash as createHash2, randomInt } from "node:crypto";
 import * as fs2 from "node:fs";
-import * as path3 from "node:path";
+import * as path2 from "node:path";
 
 // package.json
 var package_default = {
@@ -31113,8 +30700,8 @@ var package_default = {
     test: "node --import ./test/isolate.mjs --test test/*.test.mjs",
     check: "npm run build && npm test",
     "check:dist": "npm run build && node check-dist.mjs",
-    bundle: `esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/bundle.js --banner:js="import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);"`,
-    "bundle:shot": `esbuild src/astra-shot-runtime.ts --bundle --platform=node --format=esm --outfile=dist/astra-shot-runtime.bundle.js --banner:js="import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);"`,
+    bundle: `esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/bundle.js --banner:js="import { createRequire as __socialFlowRequire } from 'node:module'; const require = __socialFlowRequire(import.meta.url);"`,
+    "bundle:shot": `esbuild src/astra-shot-runtime.ts --bundle --platform=node --format=esm --outfile=dist/astra-shot-runtime.bundle.js --banner:js="import { createRequire as __socialFlowRequire } from 'node:module'; const require = __socialFlowRequire(import.meta.url);"`,
     "bundle:mesh": "node build-mesh.mjs"
   },
   dependencies: {
@@ -31983,7 +31570,7 @@ var CONTENT_TYPE_BY_EXTENSION = {
   ".mp3": { contentType: "audio/mpeg", kind: "audio" }
 };
 function uploadContentType(filePath) {
-  const ext = path3.extname(filePath).toLowerCase();
+  const ext = path2.extname(filePath).toLowerCase();
   const found = CONTENT_TYPE_BY_EXTENSION[ext];
   if (!found) {
     throw new Error(
@@ -31993,13 +31580,13 @@ function uploadContentType(filePath) {
   return found;
 }
 async function uploadFile(filePath) {
-  const resolved = path3.resolve(filePath);
+  const resolved = path2.resolve(filePath);
   if (!fs2.existsSync(resolved)) throw new Error(`File not found: ${filePath}`);
   const { contentType, kind } = uploadContentType(resolved);
   const bytes = fs2.statSync(resolved).size;
   const limit = ASTRA_VIDEO_UPLOAD_LIMITS[kind];
   if (bytes > limit) {
-    throw new Error(`${path3.basename(resolved)} is ${bytes} bytes; the ${kind} upload ceiling is ${limit} bytes.`);
+    throw new Error(`${path2.basename(resolved)} is ${bytes} bytes; the ${kind} upload ceiling is ${limit} bytes.`);
   }
   await waitForUploadSlot();
   const headers = authHeaders();
@@ -32017,7 +31604,7 @@ async function uploadFile(filePath) {
       return { ok: false, status: 502, body: `Upload unreachable: ${message}` };
     }
   });
-  if (!result.ok) throw redactedFailure(`upload of ${path3.basename(resolved)}`, result.status, result.body);
+  if (!result.ok) throw redactedFailure(`upload of ${path2.basename(resolved)}`, result.status, result.body);
   const parsed = JSON.parse(result.body);
   return {
     uploadId: parsed.upload_id,
@@ -32196,6 +31783,357 @@ function annotateReceipt(videoPath, extra) {
   fs2.renameSync(temp, receiptPath);
 }
 
+// src/astra-genai-upload.ts
+var GENAI_FILE_SCHEME = "genai-file://";
+var UPLOAD_MAX_BYTES = 32 * 1024 * 1024;
+var sessionSchema = external_exports.object({
+  upload_id: external_exports.string().min(1),
+  chunk_size: external_exports.number().int().positive().max(5 * 1024 * 1024),
+  chunks: external_exports.number().int().positive()
+}).passthrough();
+var fileSchema = external_exports.object({ file_id: external_exports.string().min(1), uri: external_exports.string().startsWith(GENAI_FILE_SCHEME), expires_at: external_exports.string().optional() }).passthrough();
+var statusSchema = external_exports.object({ missing: external_exports.array(external_exports.number().int().nonnegative()) }).passthrough();
+
+// src/astra-genai-video.ts
+var GENAI_VIDEO_MODELS = ["ltx-2.5-22b-distilled", "ltx-2.5-22b-dev"];
+var GENAI_CAMERA_MOTIONS = ["dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"];
+var genaiTextToVideoSchema = external_exports.object({
+  prompt: external_exports.string().min(1).max(5e3),
+  model: external_exports.enum(GENAI_VIDEO_MODELS),
+  duration: external_exports.number().int().nullable(),
+  resolution: external_exports.string().min(1),
+  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
+  generateAudio: external_exports.boolean().default(true),
+  cameraMotion: external_exports.enum(GENAI_CAMERA_MOTIONS).nullable().optional(),
+  reserveUsd: external_exports.number().finite().nonnegative(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
+}).strict();
+var genaiImageToVideoSchema = genaiTextToVideoSchema.extend({
+  imageUri: genaiImageUriSchema.optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  lastFrameUri: genaiImageUriSchema.nullable().optional(),
+  lastFramePath: external_exports.string().min(1).optional()
+}).strict().superRefine((args, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  if (Number(args.imageUri !== void 0) + Number(args.imagePath !== void 0) !== 1) issue("Supply exactly one imageUri or imagePath");
+  if (args.lastFrameUri != null && args.lastFramePath !== void 0) issue("Supply at most one lastFrameUri or lastFramePath");
+});
+var oneOf = (a, b) => Number(a !== void 0) + Number(b !== void 0);
+var genaiAudioToVideoSchema = external_exports.object({
+  prompt: external_exports.string().trim().min(1).max(5e3),
+  model: external_exports.literal("ltx-2.5-22b-dev"),
+  resolution: external_exports.string().min(1),
+  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
+  audioPath: external_exports.string().min(1).optional(),
+  audioUri: external_exports.string().min(1).optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  imageUri: genaiImageUriSchema.optional(),
+  lastFramePath: external_exports.string().min(1).optional(),
+  lastFrameUri: genaiImageUriSchema.optional(),
+  reserveUsd: external_exports.number().finite().nonnegative(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
+}).strict().superRefine((args, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  if (oneOf(args.audioPath, args.audioUri) !== 1) issue("Supply exactly one audioPath or audioUri");
+  if (oneOf(args.imagePath, args.imageUri) > 1) issue("Supply at most one imagePath or imageUri");
+  if (oneOf(args.lastFramePath, args.lastFrameUri) > 1) issue("Supply at most one lastFramePath or lastFrameUri");
+  if (oneOf(args.lastFramePath, args.lastFrameUri) && !oneOf(args.imagePath, args.imageUri)) issue("A last frame requires a first image");
+});
+var GENAI_MSR_FRAMES = { min: 25, max: 361, step: 8, frameRate: 24 };
+var genaiMsrSchema = external_exports.object({
+  prompt: external_exports.string().trim().min(1).max(2e3),
+  references: external_exports.array(external_exports.object({
+    imageUri: genaiImageUriSchema.optional(),
+    imagePath: external_exports.string().min(1).optional(),
+    background: external_exports.boolean().default(false),
+    // Voice sample for this subject; the gateway pairs it with the same picture slot.
+    audioUri: external_exports.string().min(1).optional(),
+    audioPath: external_exports.string().min(1).optional()
+  }).strict().refine(
+    (ref) => Number(!!ref.imageUri) + Number(!!ref.imagePath) === 1,
+    "Supply exactly one imageUri or imagePath"
+  ).refine((ref) => oneOf(ref.audioUri, ref.audioPath) <= 1, "Supply at most one audioUri or audioPath")).min(1).max(5),
+  referenceStrength: external_exports.number().finite().min(0).max(1).default(1),
+  referenceFrames: external_exports.union([external_exports.literal(25), external_exports.literal(33)]).default(33),
+  width: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1536),
+  height: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1024),
+  numFrames: external_exports.number().int().min(GENAI_MSR_FRAMES.min).max(GENAI_MSR_FRAMES.max).refine((n) => (n - 1) % GENAI_MSR_FRAMES.step === 0).optional(),
+  duration: external_exports.number().finite().gt(0).max(360).optional(),
+  frameRate: external_exports.number().finite().min(1).max(60).default(24),
+  seed: external_exports.number().int().min(0).max(2147483647).default(42),
+  reserveUsd: external_exports.number().finite().nonnegative(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use a .mp4 filename").optional()
+}).strict().superRefine((args, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  const backgrounds = args.references.filter((ref) => ref.background).length;
+  if (backgrounds > 1 || args.references.length - backgrounds > 4) issue("MSR supports at most four subjects and one background");
+  let subject = 0;
+  for (const ref of args.references) {
+    subject += Number(!ref.background);
+    if (!oneOf(ref.audioUri, ref.audioPath)) continue;
+    if (ref.background) issue("MSR voice samples belong to subjects, not the background");
+    else if (subject > 2) issue("MSR voice samples fit the first two subjects only");
+  }
+  if (args.width * args.height > 2064384) issue("MSR maximum is 2,064,384 pixels");
+  if (args.duration !== void 0) {
+    if (args.numFrames !== void 0) issue("Omit numFrames when using duration");
+    const frames = 1 + 8 * Math.ceil((args.duration * args.frameRate - 1) / 8 - 0.5 - 1e-9);
+    if (frames < GENAI_MSR_FRAMES.min || frames > GENAI_MSR_FRAMES.max) issue("MSR duration must round to 25..361 frames");
+  }
+});
+var operationSchema = external_exports.enum(["text-to-video", "image-to-video", "audio-to-video", "msr"]);
+var receiptSchema2 = external_exports.object({
+  version: external_exports.literal(1),
+  baseUrl: external_exports.string(),
+  operation: operationSchema,
+  fingerprint: external_exports.string(),
+  videoPath: external_exports.string(),
+  jobId: external_exports.string().min(1).optional(),
+  status: external_exports.enum(["submitting", "submitted", "completed"]),
+  sha256: external_exports.string().optional()
+}).strict();
+var statusSchema2 = external_exports.object({
+  id: external_exports.string().min(1),
+  status: external_exports.enum(["pending", "processing", "completed", "failed"]),
+  result: external_exports.object({ video_url: external_exports.string().min(1) }).passthrough().nullish(),
+  error: external_exports.unknown().optional()
+}).passthrough();
+var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
+var GENAI_MSR_INLINE_MAX_BYTES = 8 * 1e3 * 1e3;
+var SUBMIT_TIMEOUT_MS2 = 15 * 6e4;
+
+// src/video-duration.ts
+var import_video_duration = __toESM(require_video_duration(), 1);
+
+// src/seedance-client.ts
+import * as path3 from "node:path";
+
+// src/prompt-language.ts
+var QUOTED_SEGMENT = /"[^"]*"|“[^”]*”|「[^」]*」/g;
+var NON_LATIN_RUN = /[^\P{L}\p{Script=Latin}]+(?:[ \t]+[^\P{L}\p{Script=Latin}]+)*/u;
+function nonEnglishOutsideQuotes(prompt) {
+  const match = prompt.replace(QUOTED_SEGMENT, " ").match(NON_LATIN_RUN);
+  return match ? match[0] : null;
+}
+
+// src/seedance-client.ts
+var VALID_SEEDANCE_RESOLUTIONS = ["480p", "720p", "1080p", "4k"];
+var VALID_SEEDANCE_RATIOS = ["16:9", "9:16", "4:3", "3:4", "1:1", "21:9", "adaptive"];
+var SEEDANCE_MODEL_SPECS = {
+  // 1080p opened on 2026-08-17 (UTC+8) — 10-bit color, and the only tier the discount
+  // campaign covers (28% off list through 2026-09-17). 2.5 has no 4K; 2.0 does.
+  "dreamina-seedance-2-5-260628": {
+    resolutions: ["480p", "720p", "1080p"],
+    duration: [4, 30],
+    lastFrame: true,
+    referenceImages: [1, 30],
+    referenceAudio: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30, audioOnly: true },
+    referenceVideos: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30 },
+    audio: true,
+    realFaceInput: false,
+    activationGate: true
+  },
+  "dreamina-seedance-2-0-260128": {
+    resolutions: ["480p", "720p", "1080p", "4k"],
+    duration: [4, 15],
+    lastFrame: true,
+    referenceImages: [1, 9],
+    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
+    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
+    audio: true,
+    realFaceInput: false,
+    activationGate: true
+  },
+  "dreamina-seedance-2-0-fast-260128": {
+    resolutions: ["480p", "720p"],
+    duration: [4, 15],
+    lastFrame: true,
+    referenceImages: [1, 9],
+    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
+    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
+    audio: true,
+    realFaceInput: false,
+    activationGate: true
+  },
+  "dreamina-seedance-2-0-mini-260615": {
+    resolutions: ["480p", "720p"],
+    duration: [4, 15],
+    lastFrame: true,
+    referenceImages: [1, 9],
+    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
+    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
+    audio: true,
+    realFaceInput: false,
+    activationGate: true
+  }
+};
+var VALID_SEEDANCE_MODELS = Object.keys(SEEDANCE_MODEL_SPECS);
+var DEFAULT_SEEDANCE_MODEL = "dreamina-seedance-2-0-260128";
+var DEFAULT_SEEDANCE_RESOLUTION = "720p";
+var DEFAULT_SEEDANCE_DURATION = 5;
+var MAX_INPUT_IMAGE_BYTES = 30 * 1024 * 1024;
+var MAX_REQUEST_BYTES2 = 64 * 1024 * 1024;
+var MAX_INPUT_AUDIO_BYTES = 15 * 1024 * 1024;
+var MAX_INPUT_VIDEO_BYTES = 200 * 1024 * 1024;
+var SEEDANCE_REFERENCE_AUDIO_EXTENSIONS = [".wav", ".mp3"];
+var SEEDANCE_REFERENCE_VIDEO_EXTENSIONS = [".mp4", ".mov"];
+var commonFields = {
+  prompt: external_exports.string().min(1, "Prompt is required"),
+  model: external_exports.enum(VALID_SEEDANCE_MODELS).optional().default(DEFAULT_SEEDANCE_MODEL),
+  resolution: external_exports.enum(VALID_SEEDANCE_RESOLUTIONS).optional().default(DEFAULT_SEEDANCE_RESOLUTION),
+  durationSeconds: external_exports.number().int().optional(),
+  generateAudio: external_exports.boolean().optional().default(false),
+  watermark: external_exports.boolean().optional().default(false),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").optional()
+};
+function validateCommon(data, ctx) {
+  const spec = SEEDANCE_MODEL_SPECS[data.model];
+  const foreign = nonEnglishOutsideQuotes(data.prompt);
+  if (foreign) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["prompt"],
+      message: `video_prompt_language: "${foreign}" sits outside quotation marks. Write the video prompt in English; only dialogue, inside quotes, uses the video's language.`
+    });
+  }
+  if (!spec.resolutions.includes(data.resolution)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["resolution"],
+      message: `${data.model} does not support ${data.resolution} (supported: ${spec.resolutions.join(", ")}).`
+    });
+  }
+  const [minDuration, maxDuration] = spec.duration;
+  if ((data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) < minDuration || (data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) > maxDuration) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["durationSeconds"],
+      message: `${data.model} supports durations of ${minDuration}~${maxDuration}s (requested: ${data.durationSeconds}s).`
+    });
+  }
+  if (data.generateAudio && !spec.audio) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["generateAudio"],
+      message: `${data.model} is silent-only and cannot generate audio.`
+    });
+  }
+}
+var seedanceText2VideoSchema = external_exports.object({
+  ...commonFields,
+  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("16:9")
+}).superRefine(validateCommon).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
+var seedanceImg2VideoSchema = external_exports.object({
+  ...commonFields,
+  sourceImagePath: external_exports.string().min(1, "Source image path is required"),
+  lastImagePath: external_exports.string().optional(),
+  // Following the input image's ratio is the default — specifying a different
+  // ratio makes the server center-crop the source image (the incident where a
+  // 9:16 cover got cropped).
+  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("adaptive")
+}).superRefine((data, ctx) => {
+  validateCommon(data, ctx);
+  if (data.lastImagePath && !SEEDANCE_MODEL_SPECS[data.model].lastFrame) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["lastImagePath"],
+      message: `${data.model} accepts a first frame only.`
+    });
+  }
+}).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
+var seedanceReferenceSchema = external_exports.object({
+  ...commonFields,
+  referenceImagePaths: external_exports.array(external_exports.string()).optional().default([]),
+  referenceAudioPaths: external_exports.array(external_exports.string()).optional().default([]),
+  referenceVideoPaths: external_exports.array(external_exports.string()).optional().default([]),
+  referenceVideoUrls: external_exports.array(external_exports.string().url()).optional().default([]),
+  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("adaptive")
+}).superRefine((data, ctx) => {
+  validateCommon(data, ctx);
+  const spec = SEEDANCE_MODEL_SPECS[data.model];
+  const [, maxImages] = spec.referenceImages;
+  if (data.referenceImagePaths.length > maxImages) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["referenceImagePaths"],
+      message: `${data.model} allows at most ${maxImages} reference images (requested: ${data.referenceImagePaths.length}).`
+    });
+  }
+  const videoCount = data.referenceVideoPaths.length + data.referenceVideoUrls.length;
+  if (data.referenceImagePaths.length === 0 && data.referenceAudioPaths.length === 0 && videoCount === 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["referenceImagePaths"],
+      message: "At least one reference is required \u2014 referenceImagePaths, referenceAudioPaths, referenceVideoPaths/Urls, or a mix."
+    });
+    return;
+  }
+  if (videoCount > 0) {
+    const video = spec.referenceVideos;
+    if (videoCount > video.maxClips) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["referenceVideoPaths"],
+        message: `${data.model} allows at most ${video.maxClips} reference videos (requested: ${videoCount}).`
+      });
+    }
+    for (const filePath of data.referenceVideoPaths) {
+      const ext = path3.extname(filePath).toLowerCase();
+      if (!SEEDANCE_REFERENCE_VIDEO_EXTENSIONS.includes(ext)) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["referenceVideoPaths"],
+          message: `Reference video must be mp4 or mov (got "${ext}" in ${path3.basename(filePath)}).`
+        });
+      }
+    }
+    if (!/\bvideo\s*1\b/i.test(data.prompt)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["prompt"],
+        message: 'A reference video is bound in the prompt by index \u2014 write "Video 1" (2.5: "@Video 1") and say what it supplies (camera movement, blocking, motion timing) and what it must not (its visual content).'
+      });
+    }
+  }
+  if (data.referenceAudioPaths.length === 0) return;
+  const audio = spec.referenceAudio;
+  if (data.referenceAudioPaths.length > audio.maxClips) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["referenceAudioPaths"],
+      message: `${data.model} allows at most ${audio.maxClips} reference audio clips (requested: ${data.referenceAudioPaths.length}).`
+    });
+  }
+  if (!audio.audioOnly && data.referenceImagePaths.length === 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["referenceImagePaths"],
+      message: `${data.model} needs at least one reference image alongside reference audio \u2014 audio-only input is dreamina-seedance-2-5-260628 only.`
+    });
+  }
+  for (const filePath of data.referenceAudioPaths) {
+    const ext = path3.extname(filePath).toLowerCase();
+    if (!SEEDANCE_REFERENCE_AUDIO_EXTENSIONS.includes(ext)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["referenceAudioPaths"],
+        message: `Reference audio must be wav or mp3 (got "${ext}" in ${path3.basename(filePath)}).`
+      });
+    }
+  }
+  if (!data.generateAudio) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["generateAudio"],
+      message: "Reference audio with generateAudio: false produces a silent video, so the voice reference has nothing to shape. Set generateAudio: true."
+    });
+  }
+}).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
+
 // src/video-duration.ts
 var DURATION_TOOLS = [
   "seedance_text2video",
@@ -32205,39 +32143,101 @@ var DURATION_TOOLS = [
   "astra_img2video",
   "astra_keyframe_video",
   "astra_audio2video",
+  "astra_genai_msr",
   "mlx_video_generate",
   "ltx_video_generate",
   "fasth3_omni_reference"
 ];
-function resolveVideoDuration(tool, input) {
-  if (input.requiredSeconds === void 0) return { args: input, timing: null };
-  if (!DURATION_TOOLS.includes(tool)) throw new Error("requiredSeconds is not supported for " + tool);
-  for (const key of ["duration", "durationSeconds", "numFrames", "frames", "autoDuration", "audioMaxDuration"]) {
-    if (input[key] !== void 0) throw new Error("requiredSeconds is mutually exclusive with " + key + "; supply the shot need or an exact legacy request, not both");
-  }
+function videoDurationLimits(tool, input = {}) {
   let limits;
   if (tool.startsWith("seedance_")) {
     const model2 = input.model ?? DEFAULT_SEEDANCE_MODEL;
     const spec = SEEDANCE_MODEL_SPECS[model2];
     if (!spec) throw new Error("Unknown Seedance model: " + String(model2));
     limits = { min: spec.duration[0], max: spec.duration[1] };
-  } else if (tool.startsWith("astra_")) {
+  } else if (tool === "astra_genai_msr") {
+    limits = { ...GENAI_MSR_FRAMES, frameRate: input.frameRate ?? GENAI_MSR_FRAMES.frameRate };
+  } else if (DURATION_TOOLS.includes(tool) && tool.startsWith("astra_")) {
     const mode = tool === "astra_audio2video" ? "audio2video" : tool === "astra_keyframe_video" ? "keyframe" : input.tier === "guided" ? "guided" : input.tier === "fast" ? "guided_fast" : input.tier === "hq" ? "guided_hq" : "generate";
     const frameRate = input.frameRate ?? 24;
     if (typeof frameRate !== "number" || !Number.isFinite(frameRate) || frameRate < 1 || frameRate > 60)
       throw new Error("frameRate must be finite in 1..60");
     limits = { min: ASTRA_VIDEO_MIN_FRAMES, max: ASTRA_VIDEO_FRAME_LIMITS[mode], step: ASTRA_VIDEO_FRAME_STEP, frameRate };
   } else {
-    limits = localVideoStrategy(tool).frames;
+    const local2 = localVideoStrategy(tool);
+    if (!local2) return null;
+    limits = { ...local2.frames };
+    if (tool === "fasth3_omni_reference") {
+      const width = input.width ?? 768, height = input.height ?? 448;
+      if (typeof width !== "number" || typeof height !== "number" || width <= 0 || height <= 0)
+        throw new Error("Invalid FastH3 dimensions");
+      const offset = limits.frameOffset ?? 1;
+      limits.max = offset + limits.step * Math.floor((Math.min(limits.max, Math.floor(FASTH3_MAX_RGB_BYTES / (width * height * 3))) - offset) / limits.step);
+    }
   }
-  const timing = (0, import_video_duration.minimumDuration)(input.requiredSeconds, limits);
+  if (limits.frameRate !== void 0 && (typeof limits.frameRate !== "number" || !Number.isFinite(limits.frameRate) || limits.frameRate < 1 || limits.frameRate > 60))
+    throw new Error("frameRate must be finite in 1..60");
+  return limits;
+}
+function resolveVideoDuration(tool, input) {
+  if (input.requiredSeconds === void 0) return { args: input, timing: null };
+  if (!DURATION_TOOLS.includes(tool)) throw new Error("requiredSeconds is not supported for " + tool);
+  for (const key of ["duration", "durationSeconds", "numFrames", "frames", "autoDuration", "audioMaxDuration"]) {
+    if (input[key] !== void 0) throw new Error("requiredSeconds is mutually exclusive with " + key + "; supply the shot need or an exact legacy request, not both");
+  }
+  const timing = (0, import_video_duration.minimumDuration)(input.requiredSeconds, videoDurationLimits(tool, input));
   const { requiredSeconds: _required, ...args } = input;
   if (timing.numFrames !== void 0) args.numFrames = timing.numFrames;
   else args.durationSeconds = timing.durationSeconds;
   return { args, timing };
 }
 
+// src/video-registry.ts
+var entry = (engine, deployment, operation, schema) => ({ engine, deployment, operation, schema, voice: operation === "audio" ? "supplied" : "none" });
+var reference = (engine, deployment, schema) => ({ ...entry(engine, deployment, "reference", schema), voice: "reference" });
+var VIDEO_ADAPTERS = Object.freeze({
+  seedance_text2video: entry("seedance", "byteplus", "text", seedanceText2VideoSchema),
+  seedance_img2video: entry("seedance", "byteplus", "image", seedanceImg2VideoSchema),
+  seedance_reference: reference("seedance", "byteplus", seedanceReferenceSchema),
+  ...Object.fromEntries(Object.entries(DESKTOP_SCHEMAS).map(([feature, schema]) => [
+    "astra_genai_desktop_" + ({ "text-to-video": "text2video", "image-to-video": "img2video", "audio-to-video": "audio2video" }[feature] || feature),
+    entry("astra-genai-desktop", "gateway-desktop-v1", { "text-to-video": "text", "image-to-video": "image", "audio-to-video": "audio", keyframes: "keyframe" }[feature] || feature, schema)
+  ])),
+  astra_genai_text2video: entry("astra-genai", "genai-ltx-v2", "text", genaiTextToVideoSchema),
+  astra_genai_img2video: entry("astra-genai", "genai-ltx-v2", "image", genaiImageToVideoSchema),
+  astra_genai_audio2video: entry("astra-genai", "genai-ltx-v2", "audio", genaiAudioToVideoSchema),
+  astra_genai_msr: reference("astra-genai", "genai-ltx-msr", genaiMsrSchema),
+  astra_text2video: entry("astra", "self-hosted-ltx", "text", astraText2VideoSchema),
+  astra_img2video: entry("astra", "self-hosted-ltx", "image", astraImg2VideoSchema),
+  astra_keyframe_video: entry("astra", "self-hosted-ltx", "keyframe", astraKeyframeVideoSchema),
+  astra_audio2video: entry("astra", "self-hosted-ltx", "audio", astraAudio2VideoSchema),
+  astra_ic_lora: entry("astra", "self-hosted-ltx", "control", astraIcLoraSchema),
+  astra_video_retake: entry("astra", "self-hosted-ltx", "retake", astraVideoRetakeSchema),
+  ...Object.fromEntries(Object.entries(LOCAL_VIDEO_MODELS).map(([tool, model2]) => [
+    tool,
+    model2.operation === "reference" ? reference("mlx", "local-mlx", model2.schema) : entry("mlx", "local-mlx", model2.operation, model2.schema)
+  ])),
+  mlx_video_generate: entry("mlx", "local-mlx", "text", mlxVideoGenerateSchema)
+});
+function speechVideoCapabilities(provider, model2, operation) {
+  if (["veo", "omni"].includes(provider) || provider === "seedance" && !Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
+    throw new Error(`video_engine_unsupported: ${provider} ${model2} cannot keep a character's voice; choose a video model again with project_manage`);
+  if (provider === "astra-genai" && operation === "reference") return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio" };
+  if (provider === "astra-genai-desktop") return { provider, model: model2, audioConditioning: true, lipSync: false, postLipSync: false, evidence: "Gateway A2V reencodes supplied audio; timing/voice identity not guaranteed; installed model capabilities must be checked" };
+  if (provider === "astra") return { provider, model: model2, audioConditioning: true, lipSync: true, postLipSync: false, evidence: "astra_audio2video adapter contract" };
+  if (provider === "seedance" && Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
+    return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "Reference audio does not promise exact recorded-speech timing; no post-lipsync adapter installed" };
+  if (["host", "mlx", "astra-genai"].includes(provider))
+    return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "No verified external-speech synchronization adapter; voiceover remains available" };
+  throw new Error("No verified speech synchronization contract for selected deployment/model");
+}
+
+// src/video-pricing.ts
+import { fileURLToPath } from "node:url";
+
 // src/usage-ledger.ts
+import { execFileSync as execFileSync2 } from "node:child_process";
+import path4 from "node:path";
 var EPISODE_MARKER = path4.join("storyboard", "scenes.js");
 var SEEDANCE_FAMILY = {
   "dreamina-seedance-2-5-260628": "2-5",
@@ -32405,279 +32405,23 @@ function charUnits(args) {
   return Math.round(rawChars(args) / 1e3 * 1e3) / 1e3;
 }
 
-// src/image-routing.ts
-var load = createRequire2(import.meta.url);
-var selectionHelper = fileURLToPath2(new URL("../../skills/_shared/image-selection.js", import.meta.url));
-var idSchema = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
-var imagePlanSchema = external_exports.object({
-  directory: external_exports.string().min(1),
-  assetId: idSchema,
-  requestId: idSchema,
-  operation: external_exports.enum(["text", "edit", "variation"]).optional(),
-  tool: external_exports.string().optional(),
-  reserveUsd: external_exports.number().finite().nonnegative().optional(),
-  args: external_exports.record(external_exports.unknown()).default({})
-}).strict();
-var imageExecuteSchema = external_exports.object({ directory: external_exports.string().min(1), planId: external_exports.string().regex(/^[a-f0-9]{64}$/) }).strict();
-var authorizationSchema = external_exports.object({
-  reference: external_exports.string().min(1),
-  maxUsd: external_exports.number().finite().nonnegative(),
-  maxConcurrent: external_exports.number().int().min(1).max(16).default(1),
-  maxAttempts: external_exports.number().int().min(1).max(20).default(3),
-  openingSpendUsd: external_exports.number().finite().nonnegative().optional()
-}).strict();
+// src/video-pricing.ts
+var PRICE_FILE = fileURLToPath(new URL("../../skills/autoproduce/references/prices.tsv", import.meta.url));
+
+// src/video-image-inputs.ts
+import { createRequire } from "node:module";
+var load = createRequire(import.meta.url);
 
 // src/video-voice.ts
 import { existsSync as existsSync4, readFileSync as readFileSync6, realpathSync } from "node:fs";
 import path5 from "node:path";
-import { createRequire as createRequire3 } from "node:module";
-
-// src/astra-genai-desktop.ts
-var model = external_exports.enum(["ltx-2.3-fast", "ltx-2.5-fast"]);
-var resolution = external_exports.enum(["270p", "360p", "540p", "720p", "1080p", "1440p", "2160p"]);
-var duration = external_exports.number().int().refine((n) => [2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 18, 20].includes(n));
-var aspect = external_exports.enum(["21:9", "16:9", "3:2", "4:3", "1:1", "4:5", "9:16"]);
-var loras = external_exports.array(external_exports.object({ ref: external_exports.string().min(1), scale: external_exports.number().finite().min(0).max(4).default(1) }).strict()).min(1).refine((rows) => new Set(rows.map((r) => r.ref)).size === rows.length, "Duplicate LoRA refs");
-var local = {
-  reserveUsd: external_exports.number().finite().nonnegative(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").refine((n) => n.endsWith(".mp4")).optional()
-};
-var common = external_exports.object({
-  model,
-  prompt: external_exports.string().trim().min(1),
-  resolution,
-  seed: external_exports.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
-  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
-  cameraMotion: external_exports.enum(["none", "dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"]).optional(),
-  ...local
-}).strict();
-var desktopTextSchema = common.extend({ duration, aspectRatio: aspect.default("16:9"), loras: loras.optional() }).strict();
-var desktopImageSchema = common.extend({
-  duration,
-  aspectRatio: external_exports.union([aspect, external_exports.literal("auto")]).default("auto"),
-  imagePath: external_exports.string().min(1),
-  lastFramePath: external_exports.string().min(1).optional()
-}).strict();
-var desktopAudioSchema = common.extend({
-  audioPath: external_exports.string().min(1),
-  imagePath: external_exports.string().min(1).optional(),
-  aspectRatio: external_exports.union([aspect, external_exports.literal("auto")]).default("16:9"),
-  allowAudioTruncation: external_exports.boolean().default(false)
-}).strict();
-var edit = external_exports.object({
-  model,
-  prompt: external_exports.string().default(""),
-  sourceVideoPath: external_exports.string().min(1),
-  targetResolution: external_exports.object({ width: external_exports.number().int().positive(), height: external_exports.number().int().positive() }).strict().optional(),
-  seed: external_exports.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).optional(),
-  ...local
-}).strict();
-var desktopExtendSchema = edit.extend({ duration: external_exports.number().finite().min(2).max(20), mode: external_exports.enum(["start", "end"]).default("end") }).strict();
-var desktopRetakeSchema = edit.extend({
-  duration: external_exports.number().finite().min(2).max(10),
-  startTime: external_exports.number().finite().nonnegative(),
-  mode: external_exports.enum(["replace_audio_and_video", "replace_video", "replace_audio"]).default("replace_audio_and_video")
-}).strict();
-var desktopKeyframesSchema = desktopTextSchema.extend({
-  audio: external_exports.boolean().default(false),
-  keyframes: external_exports.array(external_exports.object({
-    imagePath: external_exports.string().min(1),
-    frameIndex: external_exports.number().int().nonnegative(),
-    strength: external_exports.number().finite().min(0).max(1).default(1)
-  }).strict()).min(1).max(10)
-}).strict().superRefine((args, ctx) => {
-  const indices = args.keyframes.map((f) => f.frameIndex);
-  if (new Set(indices).size !== indices.length || Math.max(...indices) >= Math.floor(args.duration * args.fps / 8) * 8 + 1)
-    ctx.addIssue({ code: "custom", message: "Keyframes require unique indices within the requested duration" });
-});
-var DESKTOP_SCHEMAS = {
-  "text-to-video": desktopTextSchema,
-  "image-to-video": desktopImageSchema,
-  "audio-to-video": desktopAudioSchema,
-  extend: desktopExtendSchema,
-  retake: desktopRetakeSchema,
-  keyframes: desktopKeyframesSchema
-};
-var receiptSchema = external_exports.object({
-  protocol: external_exports.literal("gateway-desktop-v1"),
-  baseUrl: external_exports.string(),
-  operation: external_exports.enum(["text-to-video", "image-to-video", "audio-to-video", "extend", "retake", "keyframes"]),
-  fingerprint: external_exports.string(),
-  videoPath: external_exports.string(),
-  status: external_exports.enum(["submitting", "submitted", "completed"]),
-  jobId: external_exports.string().optional(),
-  sha256: external_exports.string().optional()
-}).strict();
-
-// src/astra-genai-upload.ts
-var GENAI_FILE_SCHEME = "genai-file://";
-var UPLOAD_MAX_BYTES = 32 * 1024 * 1024;
-var sessionSchema = external_exports.object({
-  upload_id: external_exports.string().min(1),
-  chunk_size: external_exports.number().int().positive().max(5 * 1024 * 1024),
-  chunks: external_exports.number().int().positive()
-}).passthrough();
-var fileSchema = external_exports.object({ file_id: external_exports.string().min(1), uri: external_exports.string().startsWith(GENAI_FILE_SCHEME), expires_at: external_exports.string().optional() }).passthrough();
-var statusSchema = external_exports.object({ missing: external_exports.array(external_exports.number().int().nonnegative()) }).passthrough();
-
-// src/astra-genai-video.ts
-var GENAI_VIDEO_MODELS = ["ltx-2.5-22b-distilled", "ltx-2.5-22b-dev"];
-var GENAI_CAMERA_MOTIONS = ["dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"];
-var genaiTextToVideoSchema = external_exports.object({
-  prompt: external_exports.string().min(1).max(5e3),
-  model: external_exports.enum(GENAI_VIDEO_MODELS),
-  duration: external_exports.number().int().nullable(),
-  resolution: external_exports.string().min(1),
-  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
-  generateAudio: external_exports.boolean().default(true),
-  cameraMotion: external_exports.enum(GENAI_CAMERA_MOTIONS).nullable().optional(),
-  reserveUsd: external_exports.number().finite().nonnegative(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
-}).strict();
-var genaiImageToVideoSchema = genaiTextToVideoSchema.extend({
-  imageUri: genaiImageUriSchema.optional(),
-  imagePath: external_exports.string().min(1).optional(),
-  lastFrameUri: genaiImageUriSchema.nullable().optional(),
-  lastFramePath: external_exports.string().min(1).optional()
-}).strict().superRefine((args, ctx) => {
-  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-  if (Number(args.imageUri !== void 0) + Number(args.imagePath !== void 0) !== 1) issue("Supply exactly one imageUri or imagePath");
-  if (args.lastFrameUri != null && args.lastFramePath !== void 0) issue("Supply at most one lastFrameUri or lastFramePath");
-});
-var oneOf = (a, b) => Number(a !== void 0) + Number(b !== void 0);
-var genaiAudioToVideoSchema = external_exports.object({
-  prompt: external_exports.string().trim().min(1).max(5e3),
-  model: external_exports.literal("ltx-2.5-22b-dev"),
-  resolution: external_exports.string().min(1),
-  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
-  audioPath: external_exports.string().min(1).optional(),
-  audioUri: external_exports.string().min(1).optional(),
-  imagePath: external_exports.string().min(1).optional(),
-  imageUri: genaiImageUriSchema.optional(),
-  lastFramePath: external_exports.string().min(1).optional(),
-  lastFrameUri: genaiImageUriSchema.optional(),
-  reserveUsd: external_exports.number().finite().nonnegative(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
-}).strict().superRefine((args, ctx) => {
-  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-  if (oneOf(args.audioPath, args.audioUri) !== 1) issue("Supply exactly one audioPath or audioUri");
-  if (oneOf(args.imagePath, args.imageUri) > 1) issue("Supply at most one imagePath or imageUri");
-  if (oneOf(args.lastFramePath, args.lastFrameUri) > 1) issue("Supply at most one lastFramePath or lastFrameUri");
-  if (oneOf(args.lastFramePath, args.lastFrameUri) && !oneOf(args.imagePath, args.imageUri)) issue("A last frame requires a first image");
-});
-var genaiMsrSchema = external_exports.object({
-  prompt: external_exports.string().trim().min(1).max(2e3),
-  references: external_exports.array(external_exports.object({
-    imageUri: genaiImageUriSchema.optional(),
-    imagePath: external_exports.string().min(1).optional(),
-    background: external_exports.boolean().default(false),
-    // Voice sample for this subject; the gateway pairs it with the same picture slot.
-    audioUri: external_exports.string().min(1).optional(),
-    audioPath: external_exports.string().min(1).optional()
-  }).strict().refine(
-    (ref) => Number(!!ref.imageUri) + Number(!!ref.imagePath) === 1,
-    "Supply exactly one imageUri or imagePath"
-  ).refine((ref) => oneOf(ref.audioUri, ref.audioPath) <= 1, "Supply at most one audioUri or audioPath")).min(1).max(5),
-  referenceStrength: external_exports.number().finite().min(0).max(1).default(1),
-  referenceFrames: external_exports.union([external_exports.literal(25), external_exports.literal(33)]).default(33),
-  width: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1536),
-  height: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1024),
-  numFrames: external_exports.number().int().min(25).max(361).refine((n) => (n - 1) % 8 === 0).optional(),
-  duration: external_exports.number().finite().gt(0).max(360).optional(),
-  frameRate: external_exports.number().finite().min(1).max(60).default(24),
-  seed: external_exports.number().int().min(0).max(2147483647).default(42),
-  reserveUsd: external_exports.number().finite().nonnegative(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use a .mp4 filename").optional()
-}).strict().superRefine((args, ctx) => {
-  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-  const backgrounds = args.references.filter((ref) => ref.background).length;
-  if (backgrounds > 1 || args.references.length - backgrounds > 4) issue("MSR supports at most four subjects and one background");
-  let subject = 0;
-  for (const ref of args.references) {
-    subject += Number(!ref.background);
-    if (!oneOf(ref.audioUri, ref.audioPath)) continue;
-    if (ref.background) issue("MSR voice samples belong to subjects, not the background");
-    else if (subject > 2) issue("MSR voice samples fit the first two subjects only");
-  }
-  if (args.width * args.height > 2064384) issue("MSR maximum is 2,064,384 pixels");
-  if (args.duration !== void 0) {
-    if (args.numFrames !== void 0) issue("Omit numFrames when using duration");
-    const frames = 1 + 8 * Math.ceil((args.duration * args.frameRate - 1) / 8 - 0.5 - 1e-9);
-    if (frames < 25 || frames > 361) issue("MSR duration must round to 25..361 frames");
-  }
-});
-var operationSchema = external_exports.enum(["text-to-video", "image-to-video", "audio-to-video", "msr"]);
-var receiptSchema2 = external_exports.object({
-  version: external_exports.literal(1),
-  baseUrl: external_exports.string(),
-  operation: operationSchema,
-  fingerprint: external_exports.string(),
-  videoPath: external_exports.string(),
-  jobId: external_exports.string().min(1).optional(),
-  status: external_exports.enum(["submitting", "submitted", "completed"]),
-  sha256: external_exports.string().optional()
-}).strict();
-var statusSchema2 = external_exports.object({
-  id: external_exports.string().min(1),
-  status: external_exports.enum(["pending", "processing", "completed", "failed"]),
-  result: external_exports.object({ video_url: external_exports.string().min(1) }).passthrough().nullish(),
-  error: external_exports.unknown().optional()
-}).passthrough();
-var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
-var GENAI_MSR_INLINE_MAX_BYTES = 8 * 1e3 * 1e3;
-var SUBMIT_TIMEOUT_MS2 = 15 * 6e4;
-
-// src/video-registry.ts
-var entry = (engine, deployment, operation, schema) => ({ engine, deployment, operation, schema, voice: operation === "audio" ? "supplied" : "none" });
-var reference = (engine, deployment, schema) => ({ ...entry(engine, deployment, "reference", schema), voice: "reference" });
-var VIDEO_ADAPTERS = Object.freeze({
-  seedance_text2video: entry("seedance", "byteplus", "text", seedanceText2VideoSchema),
-  seedance_img2video: entry("seedance", "byteplus", "image", seedanceImg2VideoSchema),
-  seedance_reference: reference("seedance", "byteplus", seedanceReferenceSchema),
-  ...Object.fromEntries(Object.entries(DESKTOP_SCHEMAS).map(([feature, schema]) => [
-    "astra_genai_desktop_" + ({ "text-to-video": "text2video", "image-to-video": "img2video", "audio-to-video": "audio2video" }[feature] || feature),
-    entry("astra-genai-desktop", "gateway-desktop-v1", { "text-to-video": "text", "image-to-video": "image", "audio-to-video": "audio", keyframes: "keyframe" }[feature] || feature, schema)
-  ])),
-  astra_genai_text2video: entry("astra-genai", "genai-ltx-v2", "text", genaiTextToVideoSchema),
-  astra_genai_img2video: entry("astra-genai", "genai-ltx-v2", "image", genaiImageToVideoSchema),
-  astra_genai_audio2video: entry("astra-genai", "genai-ltx-v2", "audio", genaiAudioToVideoSchema),
-  astra_genai_msr: reference("astra-genai", "genai-ltx-msr", genaiMsrSchema),
-  astra_text2video: entry("astra", "self-hosted-ltx", "text", astraText2VideoSchema),
-  astra_img2video: entry("astra", "self-hosted-ltx", "image", astraImg2VideoSchema),
-  astra_keyframe_video: entry("astra", "self-hosted-ltx", "keyframe", astraKeyframeVideoSchema),
-  astra_audio2video: entry("astra", "self-hosted-ltx", "audio", astraAudio2VideoSchema),
-  astra_ic_lora: entry("astra", "self-hosted-ltx", "control", astraIcLoraSchema),
-  astra_video_retake: entry("astra", "self-hosted-ltx", "retake", astraVideoRetakeSchema),
-  ...Object.fromEntries(Object.entries(LOCAL_VIDEO_MODELS).map(([tool, model2]) => [
-    tool,
-    model2.operation === "reference" ? reference("mlx", "local-mlx", model2.schema) : entry("mlx", "local-mlx", model2.operation, model2.schema)
-  ])),
-  mlx_video_generate: entry("mlx", "local-mlx", "text", mlxVideoGenerateSchema)
-});
-function speechVideoCapabilities(provider, model2, operation) {
-  if (["veo", "omni"].includes(provider) || provider === "seedance" && !Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
-    throw new Error(`video_engine_unsupported: ${provider} ${model2} cannot keep a character's voice; choose a video model again with project_manage`);
-  if (provider === "astra-genai" && operation === "reference") return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio" };
-  if (provider === "astra-genai-desktop") return { provider, model: model2, audioConditioning: true, lipSync: false, postLipSync: false, evidence: "Gateway A2V reencodes supplied audio; timing/voice identity not guaranteed; installed model capabilities must be checked" };
-  if (provider === "astra") return { provider, model: model2, audioConditioning: true, lipSync: true, postLipSync: false, evidence: "astra_audio2video adapter contract" };
-  if (provider === "seedance" && Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
-    return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "Reference audio does not promise exact recorded-speech timing; no post-lipsync adapter installed" };
-  if (["host", "mlx", "astra-genai"].includes(provider))
-    return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "No verified external-speech synchronization adapter; voiceover remains available" };
-  throw new Error("No verified speech synchronization contract for selected deployment/model");
-}
-
-// src/video-voice.ts
+import { createRequire as createRequire2 } from "node:module";
 var speakerBindingSchema = external_exports.object({
   speaker: external_exports.string().trim().min(1),
   screenPosition: external_exports.enum(["left", "center", "right"]),
   description: external_exports.string().trim().min(1)
 }).strict();
-var load2 = createRequire3(import.meta.url);
+var load2 = createRequire2(import.meta.url);
 var object = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
 var text = (value) => typeof value === "string" ? value.trim() : "";
 function resolveCharacterVoice(character, context, warnings) {
@@ -32708,12 +32452,314 @@ function resolveCharacterVoice(character, context, warnings) {
 }
 
 // src/video-prompt.ts
-import { createRequire as createRequire4 } from "node:module";
-var load3 = createRequire4(import.meta.url);
+import { createRequire as createRequire3 } from "node:module";
+var load3 = createRequire3(import.meta.url);
 
-// src/video-image-inputs.ts
-import { createRequire as createRequire5 } from "node:module";
-var load4 = createRequire5(import.meta.url);
+// src/video-routing.ts
+var load4 = createRequire4(import.meta.url);
+var shared = fileURLToPath2(new URL("../../skills/_shared/video-selection.js", import.meta.url));
+var modelSettings = fileURLToPath2(new URL("../../skills/_shared/model-settings.js", import.meta.url));
+var routingContext = (episode, shotId) => load4(shared).readVideoContext(episode, shotId);
+var idSchema = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
+var videoPlanSchema = external_exports.object({
+  episode: external_exports.string().min(1),
+  shotId: external_exports.string().min(1),
+  requestId: idSchema,
+  operation: external_exports.string().optional(),
+  tool: external_exports.string().optional(),
+  args: external_exports.record(external_exports.unknown()).default({})
+}).strict();
+var videoExecuteSchema = external_exports.object({ episode: external_exports.string().min(1), planId: external_exports.string().regex(/^[a-f0-9]{64}$/) }).strict();
+var videoApproveSchema = external_exports.object({
+  episode: external_exports.string().min(1),
+  planIds: external_exports.array(external_exports.string().regex(/^[a-f0-9]{64}$/)).min(1).optional().describe("Video plans the user approved after seeing each shot's prompt, images and cost"),
+  auto: external_exports.boolean().optional().describe("true: the user approves every shot's video from now on; false: ask before each shot again"),
+  request: external_exports.string().trim().min(1).describe("The user's own words that gave this approval")
+}).strict().refine((input) => input.planIds !== void 0 || input.auto !== void 0, "name planIds or auto");
+
+// src/project.ts
+import * as nodeModule from "node:module";
+import { dirname as dirname3, resolve as resolve3 } from "node:path";
+import { fileURLToPath as fileURLToPath3 } from "node:url";
+var loadFromHere = nodeModule.createRequire(import.meta.url);
+var helper = resolve3(dirname3(fileURLToPath3(import.meta.url)), "../../skills/_shared/project-settings.js");
+
+// src/production-workflow.ts
+var STAGES = [
+  "characters",
+  "text_storyboard",
+  "context_review",
+  "props",
+  "backgrounds",
+  "camera_review",
+  "blender_composition",
+  "image_storyboard",
+  "image_review",
+  "video",
+  "video_review"
+];
+var stageSchema = external_exports.enum(STAGES);
+var entrySchema = external_exports.object({ images: external_exports.array(external_exports.string().min(1)).optional(), id: external_exports.string().min(1), text: external_exports.string().min(1), image: external_exports.string().min(1).optional(), blend: external_exports.string().min(1).optional(), video: external_exports.string().min(1).optional() }).strict();
+var recordSchema = external_exports.object({ stage: stageSchema, entries: external_exports.array(entrySchema), notApplicable: external_exports.string().optional(), hashes: external_exports.record(external_exports.string()).optional() }).passthrough();
+var stateSchema = external_exports.object({ version: external_exports.literal(2), completed: external_exports.array(recordSchema), active: recordSchema.optional() }).passthrough();
+var workflowSchema = external_exports.object({
+  episode: external_exports.string().min(1),
+  action: external_exports.enum(["status", "begin", "complete", "rewind"]),
+  stage: stageSchema.optional(),
+  entries: external_exports.array(entrySchema).optional(),
+  notApplicable: external_exports.string().optional()
+}).strict();
+
+// src/astra-genai-native-image.ts
+var nativeImageSchema = external_exports.object({
+  model: external_exports.string().trim().min(1).max(200),
+  prompt: external_exports.string().trim().min(1).max(16e3),
+  size: external_exports.string().regex(/^[0-9]{2,4}x[0-9]{2,4}$/).default("1024x1024"),
+  seed: external_exports.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).optional(),
+  steps: external_exports.number().int().min(0).max(100).optional(),
+  guidanceScale: external_exports.number().finite().min(0).max(20).optional(),
+  negativePrompt: external_exports.string().max(16e3).optional(),
+  transparent: external_exports.boolean().optional(),
+  loras: external_exports.array(external_exports.object({ id: external_exports.string().min(1), scale: external_exports.number().finite().min(0).max(2).default(1) }).strict()).min(1).max(8).refine((rows) => new Set(rows.map((r) => r.id)).size === rows.length, "Duplicate LoRA IDs").optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("image").refine((n) => n.endsWith(".png")).optional()
+}).strict();
+var nativeImageEditSchema = nativeImageSchema.extend({
+  imagePath: external_exports.string().min(1),
+  refImagePaths: external_exports.array(external_exports.string().min(1)).max(9).optional(),
+  mode: external_exports.enum(["edit", "variation"]).default("edit"),
+  strength: external_exports.number().finite().gt(0).max(1).optional(),
+  refResolution: external_exports.number().int().min(256).max(1024).optional()
+}).strict();
+var imageResponse = external_exports.object({ data: external_exports.array(external_exports.object({ b64_json: external_exports.string().min(1) })).length(1) }).passthrough();
+
+// src/image-routing.ts
+import { createRequire as createRequire6 } from "node:module";
+import { fileURLToPath as fileURLToPath4 } from "node:url";
+
+// src/astra-genai-image.ts
+var genaiImageSchema = external_exports.object({
+  model: external_exports.string().min(1),
+  prompt: external_exports.string().min(1).max(800),
+  size: external_exports.string().min(1).default("1024*1536"),
+  seed: external_exports.number().int().min(0).max(2147483647).nullable().optional(),
+  promptExtend: external_exports.boolean().default(false),
+  steps: external_exports.number().int().min(1).max(12).optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("image").refine((name) => name.endsWith(".png"), "Use a .png filename").optional()
+}).strict();
+var genaiImageEditSchema = genaiImageSchema.extend({
+  mode: external_exports.enum(["img2img", "inpaint"]),
+  size: external_exports.string().min(1).optional(),
+  imageUri: genaiImageUriSchema.optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  maskUri: genaiImageUriSchema.optional(),
+  maskPath: external_exports.string().min(1).optional(),
+  strength: external_exports.number().finite().gt(0).max(1).optional()
+}).strict().superRefine((args, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  if (Number(!!args.imageUri) + Number(!!args.imagePath) !== 1) issue("Supply exactly one imageUri or imagePath");
+  const masks = Number(!!args.maskUri) + Number(!!args.maskPath);
+  if (args.mode === "inpaint" ? masks !== 1 : masks !== 0) issue("Only inpaint requires exactly one maskUri or maskPath");
+});
+var responseSchema = external_exports.object({
+  request_id: external_exports.string().min(1),
+  usage: external_exports.record(external_exports.unknown()).optional(),
+  output: external_exports.object({ choices: external_exports.array(external_exports.object({
+    message: external_exports.object({ content: external_exports.array(external_exports.object({ image: external_exports.string().optional(), text: external_exports.string().optional() }).passthrough()) }).passthrough()
+  }).passthrough()).length(1) }).passthrough()
+}).passthrough();
+
+// src/image-client.ts
+var VALID_GPT_IMAGE_MODELS = GPT_IMAGE_MODELS;
+var DEFAULT_MODEL = "gpt-image-2";
+var GPT_IMAGE_SIZE_PRESETS = [
+  "auto",
+  "1024x1024",
+  "1536x1024",
+  // landscape
+  "1024x1536"
+  // portrait
+];
+var WH_SIZE_RE = /^(\d+)x(\d+)$/;
+var GPT_IMAGE_MAX_EDGE = 3840;
+var GPT_IMAGE_MIN_TOTAL_PIXELS = 655360;
+var GPT_IMAGE_MAX_TOTAL_PIXELS = 8294400;
+var GPT_IMAGE_MAX_ASPECT = 3;
+var GptImageSizeSchema = external_exports.string().refine(
+  (s) => GPT_IMAGE_SIZE_PRESETS.includes(s) || WH_SIZE_RE.test(s),
+  {
+    message: 'size must be one of auto/1024x1024/1536x1024/1024x1536, or a custom "WIDTHxHEIGHT" string (e.g. "1536x864").'
+  }
+);
+var VALID_GPT_IMAGE_QUALITIES = ["low", "medium", "high", "auto"];
+var VALID_GPT_IMAGE_BACKGROUNDS = ["opaque", "transparent", "auto"];
+var VALID_GPT_IMAGE_FORMATS = ["png", "jpeg", "webp"];
+var VALID_GPT_IMAGE_INPUT_FIDELITY = ["high", "low"];
+var VALID_GPT_IMAGE_INPUT_MIME = ["image/png", "image/jpeg", "image/webp"];
+function validateSizeAgainstModel(model2, size, ctx) {
+  if (GPT_IMAGE_SIZE_PRESETS.includes(size)) return;
+  const match = WH_SIZE_RE.exec(size);
+  if (!match) return;
+  if (!gptImageContract(model2)?.flexibleSize) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["size"],
+      message: `Custom resolutions ("${size}") are only supported on gpt-image-2. On other models use ${GPT_IMAGE_SIZE_PRESETS.join(" / ")} only.`
+    });
+    return;
+  }
+  const width = Number(match[1]);
+  const height = Number(match[2]);
+  const violations = [];
+  if (width % 16 !== 0 || height % 16 !== 0) {
+    violations.push("width and height must be multiples of 16");
+  }
+  if (Math.max(width, height) > GPT_IMAGE_MAX_EDGE) {
+    violations.push(`the longest edge must be at most ${GPT_IMAGE_MAX_EDGE}px`);
+  }
+  const shortEdge = Math.min(width, height);
+  if (shortEdge === 0 || Math.max(width, height) / shortEdge > GPT_IMAGE_MAX_ASPECT) {
+    violations.push("the aspect ratio must be within 1:3 ~ 3:1");
+  }
+  const totalPixels = width * height;
+  if (totalPixels < GPT_IMAGE_MIN_TOTAL_PIXELS || totalPixels > GPT_IMAGE_MAX_TOTAL_PIXELS) {
+    violations.push(
+      `the total pixel count must be within ${GPT_IMAGE_MIN_TOTAL_PIXELS.toLocaleString()}~${GPT_IMAGE_MAX_TOTAL_PIXELS.toLocaleString()}`
+    );
+  }
+  if (violations.length > 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["size"],
+      message: `Custom resolution "${size}" violates constraints: ${violations.join(", ")}`
+    });
+  }
+}
+function validateBackground(background, outputFormat, ctx) {
+  if (background !== "transparent") return;
+  if (outputFormat === "jpeg") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["outputFormat"],
+      message: "Transparent backgrounds are only possible with png or webp output (not jpeg)."
+    });
+  }
+}
+var text2ImageSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required").max(32e3, "Prompt exceeds the 32,000-character limit for GPT Image models"),
+  model: external_exports.enum(VALID_GPT_IMAGE_MODELS).optional().default(DEFAULT_MODEL),
+  size: GptImageSizeSchema.optional().default("auto"),
+  quality: external_exports.enum(VALID_GPT_IMAGE_QUALITIES).optional().default("auto"),
+  background: external_exports.enum(VALID_GPT_IMAGE_BACKGROUNDS).optional().default("opaque"),
+  outputFormat: external_exports.enum(VALID_GPT_IMAGE_FORMATS).optional().default("png"),
+  savePath: external_exports.string().optional()
+}).superRefine((data, ctx) => {
+  validateSizeAgainstModel(data.model, data.size, ctx);
+  validateBackground(data.background, data.outputFormat, ctx);
+});
+var img2ImgSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required").max(32e3, "Prompt exceeds the 32,000-character limit for GPT Image models"),
+  sourceImagesBase64: external_exports.array(external_exports.string().min(1)).min(1, "At least one source image is required").max(16, "At most 16 source images are supported"),
+  sourceMimeType: external_exports.enum(VALID_GPT_IMAGE_INPUT_MIME).optional().default("image/png"),
+  maskBase64: external_exports.string().optional(),
+  model: external_exports.enum(VALID_GPT_IMAGE_MODELS).optional().default(DEFAULT_MODEL),
+  size: GptImageSizeSchema.optional().default("auto"),
+  quality: external_exports.enum(VALID_GPT_IMAGE_QUALITIES).optional().default("auto"),
+  background: external_exports.enum(VALID_GPT_IMAGE_BACKGROUNDS).optional().default("opaque"),
+  outputFormat: external_exports.enum(VALID_GPT_IMAGE_FORMATS).optional().default("png"),
+  inputFidelity: external_exports.enum(VALID_GPT_IMAGE_INPUT_FIDELITY).optional(),
+  savePath: external_exports.string().optional()
+}).superRefine((data, ctx) => {
+  validateSizeAgainstModel(data.model, data.size, ctx);
+  validateBackground(data.background, data.outputFormat, ctx);
+  const allowed = gptImageContract(data.model)?.fidelity ?? [];
+  if (data.inputFidelity && !allowed.includes(data.inputFidelity)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["inputFidelity"],
+      message: allowed.length ? `${data.model} accepts inputFidelity ${allowed.join("/")} only.` : `${data.model} does not accept inputFidelity (fixed high fidelity). Omit the parameter.`
+    });
+  }
+});
+
+// src/zimage-client.ts
+var DEFAULT_ZIMAGE_STEPS = 9;
+var DEFAULT_ZIMAGE_QUANTIZE = 8;
+var ZIMAGE_DIMENSION_STEP = 16;
+var MIN_ZIMAGE_DIMENSION = 256;
+var MAX_ZIMAGE_DIMENSION = 2048;
+var dimensionSchema = external_exports.number().int().min(MIN_ZIMAGE_DIMENSION).max(MAX_ZIMAGE_DIMENSION).refine((v) => v % ZIMAGE_DIMENSION_STEP === 0, {
+  message: `width/height must be a multiple of ${ZIMAGE_DIMENSION_STEP} (for 9:16 that's 1088\xD71920, not 1080\xD71920)`
+});
+var WEIGHT_DOWNLOAD_ALLOWANCE_MS = 60 * 6e4;
+var zimageGenerateSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
+  width: dimensionSchema.optional().default(1024),
+  height: dimensionSchema.optional().default(1024),
+  steps: external_exports.number().int().min(1).max(50).optional().default(DEFAULT_ZIMAGE_STEPS),
+  seed: external_exports.number().int().min(0).optional(),
+  quantize: external_exports.union([external_exports.literal(4), external_exports.literal(6), external_exports.literal(8)]).optional().default(DEFAULT_ZIMAGE_QUANTIZE),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("image").optional()
+});
+
+// src/image-registry.ts
+var IMAGE_ADAPTERS = Object.freeze({
+  astra_genai_image_generate: { engine: "astra-genai-native", operation: "text", schema: nativeImageSchema },
+  astra_genai_image_edit: { engine: "astra-genai-native", operation: "edit", schema: nativeImageEditSchema },
+  astra_genai_text2img: { engine: "astra-genai", operation: "text", schema: genaiImageSchema },
+  astra_genai_edit: { engine: "astra-genai", operation: "edit", schema: genaiImageEditSchema },
+  gpt_image_text2img: { engine: "gpt-image", operation: "text", schema: text2ImageSchema },
+  gpt_image_img2img: { engine: "gpt-image", operation: "edit", schema: img2ImgSchema },
+  image_local_generate: { engine: "zimage", operation: "text", schema: zimageGenerateSchema },
+  mlx_image_generate: { engine: "mlx", operation: "text", schema: mlxImageGenerateSchema },
+  mlx_image_edit: { engine: "mlx", operation: "edit", schema: mlxImageEditSchema }
+});
+
+// src/image-state.ts
+var money = external_exports.number().finite().nonnegative();
+var imageJobSchema = external_exports.object({
+  outputFile: external_exports.string(),
+  planId: external_exports.string(),
+  requestId: external_exports.string(),
+  assetId: external_exports.string(),
+  tool: external_exports.string(),
+  status: external_exports.enum(["submitting", "submission_unknown", "completed", "failed"]),
+  ownerPid: external_exports.number().int().positive().optional(),
+  ownerHost: external_exports.string().optional(),
+  reserveUsd: money,
+  spentUsd: money.optional(),
+  usage: external_exports.unknown().optional(),
+  providerId: external_exports.string().optional(),
+  result: external_exports.record(external_exports.unknown()).optional(),
+  output: external_exports.record(external_exports.unknown()).optional(),
+  evidence: external_exports.string().optional(),
+  updatedAt: external_exports.string()
+}).strict();
+var stateSchema2 = external_exports.object({ version: external_exports.literal(1), openingSpendUsd: money, jobs: external_exports.record(imageJobSchema) }).strict();
+
+// src/image-routing.ts
+var load5 = createRequire6(import.meta.url);
+var selectionHelper = fileURLToPath4(new URL("../../skills/_shared/image-selection.js", import.meta.url));
+var idSchema2 = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
+var imagePlanSchema = external_exports.object({
+  directory: external_exports.string().min(1),
+  assetId: idSchema2,
+  requestId: idSchema2,
+  operation: external_exports.enum(["text", "edit", "variation"]).optional(),
+  tool: external_exports.string().optional(),
+  reserveUsd: external_exports.number().finite().nonnegative().optional(),
+  args: external_exports.record(external_exports.unknown()).default({})
+}).strict();
+var imageExecuteSchema = external_exports.object({ directory: external_exports.string().min(1), planId: external_exports.string().regex(/^[a-f0-9]{64}$/) }).strict();
+var authorizationSchema = external_exports.object({
+  reference: external_exports.string().min(1),
+  maxUsd: external_exports.number().finite().nonnegative(),
+  maxConcurrent: external_exports.number().int().min(1).max(16).default(1),
+  maxAttempts: external_exports.number().int().min(1).max(20).default(3),
+  openingSpendUsd: external_exports.number().finite().nonnegative().optional()
+}).strict();
 
 // src/storyboard.ts
 import { createHash as createHash3, randomUUID } from "node:crypto";
@@ -32771,8 +32817,8 @@ function evaluateWindowScript(source, options = {}) {
 import { existsSync as existsSync5, mkdirSync as mkdirSync2, readFileSync as readFileSync7, renameSync as renameSync2, statSync as statSync4, unlinkSync, writeFileSync as writeFileSync4 } from "node:fs";
 import * as nodeModule2 from "node:module";
 import { basename as basename3, dirname as dirname4, join as join4, relative, resolve as resolve4 } from "node:path";
-import { fileURLToPath as fileURLToPath3 } from "node:url";
-var PLUGIN_ROOT = resolve4(dirname4(fileURLToPath3(import.meta.url)), "..", "..");
+import { fileURLToPath as fileURLToPath5 } from "node:url";
+var PLUGIN_ROOT = resolve4(dirname4(fileURLToPath5(import.meta.url)), "..", "..");
 var REFERENCES_DIR = join4(PLUGIN_ROOT, "skills", "storyboard", "references");
 var CONTRACT_FILE = join4(REFERENCES_DIR, "structure-contract.js");
 var CHECK_SCENES_FILE = join4(REFERENCES_DIR, "check-scenes.js");
@@ -33172,36 +33218,6 @@ var scenarioCheckResultSchema = external_exports.object({
     what: external_exports.string()
   }))
 });
-
-// src/video-routing.ts
-import { createRequire as createRequire7 } from "node:module";
-import { fileURLToPath as fileURLToPath5 } from "node:url";
-
-// src/video-pricing.ts
-import { fileURLToPath as fileURLToPath4 } from "node:url";
-var PRICE_FILE = fileURLToPath4(new URL("../../skills/autoproduce/references/prices.tsv", import.meta.url));
-
-// src/video-routing.ts
-var load5 = createRequire7(import.meta.url);
-var shared = fileURLToPath5(new URL("../../skills/_shared/video-selection.js", import.meta.url));
-var modelSettings = fileURLToPath5(new URL("../../skills/_shared/model-settings.js", import.meta.url));
-var routingContext = (episode, shotId) => load5(shared).readVideoContext(episode, shotId);
-var idSchema2 = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
-var videoPlanSchema = external_exports.object({
-  episode: external_exports.string().min(1),
-  shotId: external_exports.string().min(1),
-  requestId: idSchema2,
-  operation: external_exports.string().optional(),
-  tool: external_exports.string().optional(),
-  args: external_exports.record(external_exports.unknown()).default({})
-}).strict();
-var videoExecuteSchema = external_exports.object({ episode: external_exports.string().min(1), planId: external_exports.string().regex(/^[a-f0-9]{64}$/) }).strict();
-var videoApproveSchema = external_exports.object({
-  episode: external_exports.string().min(1),
-  planIds: external_exports.array(external_exports.string().regex(/^[a-f0-9]{64}$/)).min(1).optional().describe("Video plans the user approved after seeing each shot's prompt, images and cost"),
-  auto: external_exports.boolean().optional().describe("true: the user approves every shot's video from now on; false: ask before each shot again"),
-  request: external_exports.string().trim().min(1).describe("The user's own words that gave this approval")
-}).strict().refine((input) => input.planIds !== void 0 || input.auto !== void 0, "name planIds or auto");
 
 // src/speech.ts
 import { createHash as createHash4, randomUUID as randomUUID2 } from "node:crypto";

@@ -10,6 +10,8 @@ import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { config, disabledToolPatterns, disabledToolsFile, mlxServeConfigured } from './config.js';
 import { resolveToolGate } from './tool-gate.js';
+import { framesForSeconds } from './astra-video-client.js';
+import { assessVideoDuration, DURATION_TOOLS, resolveVideoDuration } from './video-duration.js';
 import { VIDEO_ADAPTERS, parseVideoArgs } from './video-registry.js';
 import { SEEDANCE_MODEL_SPECS } from './seedance-client.js';
 import { quoteVideo, type VideoQuote } from './video-pricing.js';
@@ -37,6 +39,40 @@ interface Context {
 }
 export const routingContext = (episode: string, shotId: string): Context =>
   (load(shared) as { readVideoContext(episode: string, shotId: string): Context }).readVideoContext(episode, shotId);
+function selectedVideoTool(selection: Selection, operation = selection.operation): string | undefined {
+  return Object.entries(VIDEO_ADAPTERS).find(([name, a]) => a.engine === selection.engine && a.operation === operation &&
+    (a.engine !== 'mlx' || !selection.model || localVideoStrategy(name)?.acceptsModel(selection.model)))?.[0];
+}
+
+/** The same source coverage and duration grid inform authoring and the executable plan. */
+function shotVideoTiming(context: Context, tool: string, args: Record<string, unknown>) {
+  const { shot } = context;
+  let coverage: { requiredSeconds: number } | undefined;
+  if (shot.duration !== undefined) {
+    const edit = load(fileURLToPath(new URL('../../skills/produce/references/edit-plan.js', import.meta.url))).preview(context.board.SCENES, { videoWarningsApproved: true });
+    const index = (context.board.SCENES as unknown[]).indexOf(shot);
+    const timing = load(fileURLToPath(new URL('../../skills/_shared/video-duration.js', import.meta.url)));
+    coverage = timing.shotTiming(shot, { edit: edit.find((entry: { card: number }) => entry.card === index) });
+  }
+  if (args.requiredSeconds !== undefined && (typeof args.requiredSeconds !== 'number' || !Number.isFinite(args.requiredSeconds) || args.requiredSeconds <= 0))
+    throw new Error('requiredSeconds must be finite positive seconds');
+  const required = coverage || args.requiredSeconds !== undefined
+    ? Math.max(coverage?.requiredSeconds ?? 0, args.requiredSeconds as number ?? 0) : undefined;
+  return { ...assessVideoDuration(tool, args, required), basis: 'planned' as const, coverage,
+    note: 'Fit of authored source coverage, not measured performance or generated output. Recheck after speech/action timing or generation changes.' };
+}
+
+/** No generation, image preparation, prompt or credentials needed to inspect shot limits. */
+export function readShotVideoTiming(episode: string, shotId: string) {
+  const context = routingContext(episode, shotId);
+  requireSupportedSelection(context.selection);
+  const video = (context.shot.visual as { video?: Record<string, unknown> } | undefined)?.video ?? {};
+  const tool = selectedVideoTool(context.selection);
+  const args = tool ? bindSelection(tool, video, context.selection) : video;
+  return { shotId, selection: context.selection, source: context.source,
+    ...shotVideoTiming(context, tool ?? 'unresolved', args) };
+}
+
 function stable(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(stable);
   if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => [k, stable(v)]));
@@ -54,6 +90,7 @@ export interface VideoPlan {
   inputs: Record<string, string>; quote: VideoQuote; execution: 'server' | 'host_handoff';
   sourceArgs?: Record<string, unknown>; voiceContinuity?: VoiceContinuity;
   directionBindings?: DirectionBinding[]; directionWarnings?: string[];
+  durationPlan?: ReturnType<typeof shotVideoTiming>;
 }
 function within(root: string, file: string): boolean {
   const relative = path.relative(root, file);
@@ -153,7 +190,7 @@ export function planVideo(raw: unknown): VideoPlan {
       'Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.'] };
   // A saved default operation (an LTX project saves 'reference', i.e. MSR) applies when the call names neither.
   const operation = input.operation ?? (input.tool ? undefined : selection.operation);
-  const tool = input.tool || Object.entries(VIDEO_ADAPTERS).find(([name, a]) => a.engine === selection.engine && a.operation === operation && (a.engine !== 'mlx' || !selection.model || localVideoStrategy(name)?.acceptsModel(selection.model)))?.[0];
+  const tool = input.tool || selectedVideoTool(selection, operation);
   if (input.tool && input.operation && VIDEO_ADAPTERS[input.tool]?.operation !== input.operation) throw new Error('Tool and operation disagree');
   if (selection.engine === 'host') {
     if (input.tool) throw new Error('model_selection_mismatch: host has no server adapter');
@@ -166,9 +203,26 @@ export function planVideo(raw: unknown): VideoPlan {
     return plan;
   }
   if (!tool) throw new Error('Selected deployment has no adapter for this operation');
-  const images = prepareVideoImages(tool, bindSelection(tool, callArgs, selection), context.shot, context.episode);
+  let bound = bindSelection(tool, callArgs, selection);
+  const durationPlan = shotVideoTiming(context, tool, bound);
+  if (durationPlan.status === 'split_required')
+    throw new Error(`video_duration_exceeded: ${input.shotId} needs ${durationPlan.requiredSeconds}s; ${tool} allows ${durationPlan.maxSeconds}s. Split at a meaningful performance boundary; never truncate or switch models.`);
+  // Legacy boards without a duration keep their exact request. Timed new shots cannot fall back to a short adapter default.
+  if (durationPlan.status === 'fits' && VIDEO_ADAPTERS[tool].voice !== 'supplied' && (DURATION_TOOLS as readonly string[]).includes(tool)) {
+    const exact = ['duration', 'durationSeconds', 'numFrames', 'frames', 'autoDuration', 'audioMaxDuration'].some(key => bound[key] !== undefined);
+    if (!exact) bound = resolveVideoDuration(tool, { ...bound, requiredSeconds: durationPlan.requiredSeconds }).args;
+  }
+  const images = prepareVideoImages(tool, bound, context.shot, context.episode);
   const voice = prepareVideoVoice(tool, images.args, { ...context, msrVoice: genaiMsrVoiceReferences() });
   const args = parseVideoArgs(tool, voice.args);
+  if (durationPlan.status === 'fits') {
+    const fps = durationPlan.limits?.frameRate ?? 1;
+    const frames = typeof args.numFrames === 'number' ? args.numFrames : typeof args.duration === 'number' && durationPlan.limits?.frameRate
+      ? framesForSeconds(args.duration, fps) : undefined;
+    const requested = frames !== undefined ? frames / fps : args.durationSeconds;
+    if (typeof requested === 'number' && requested < durationPlan.requiredSeconds!)
+      throw new Error(`video_duration_short: ${input.shotId} needs ${durationPlan.requiredSeconds}s but the request covers ${requested}s. Use requiredSeconds or revise the shot timing.`);
+  }
   const foreign = typeof args.prompt === 'string' ? nonEnglishOutsideQuotes(args.prompt) : null;
   if (foreign) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks. Write the video prompt in English; only dialogue, inside quotes, uses the video's language.`);
   const output = canonical(path.resolve(context.episode, typeof args.outputPath === 'string' ? args.outputPath : '.work/video'));
@@ -189,7 +243,7 @@ export function planVideo(raw: unknown): VideoPlan {
   const quote = quoteVideo(tool, args);
   const body = { version: 1 as const, episode: context.episode, shotId: input.shotId, requestId: input.requestId, tool, args,
     ...(images.imageBindings ? { imageBindings: images.imageBindings } : {}),
-    sourceArgs: input.args, ...direction, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
+    sourceArgs: input.args, durationPlan, ...direction, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
     selection, source: context.source, contextRevision: context.revision, inputs, quote, execution: 'server' as const };
   const plan = { ...body, id: hash(body) };
   atomicJson(path.join(context.episode, '.work/video-routing/plans', plan.id + '.json'), plan);
