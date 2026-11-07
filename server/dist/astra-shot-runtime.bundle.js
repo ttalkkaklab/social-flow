@@ -31842,10 +31842,8 @@ var genaiAudioToVideoSchema = external_exports.object({
   if (oneOf(args.lastFramePath, args.lastFrameUri) && !oneOf(args.imagePath, args.imageUri)) issue("A last frame requires a first image");
 });
 var GENAI_MSR_FRAMES = { min: 25, max: 361, step: 8, frameRate: 24 };
-var GENAI_MSR_NO_TEXT = "Speech is audio only. No subtitles, captions, on-screen text, labels, logos or watermarks.";
 var genaiMsrSchema = external_exports.object({
-  prompt: external_exports.string().trim().min(1).transform((prompt) => prompt.endsWith(GENAI_MSR_NO_TEXT) ? prompt : `${prompt}
-${GENAI_MSR_NO_TEXT}`).pipe(external_exports.string().max(2e3, "MSR prompt including the subtitle-free instruction must fit 2000 characters; shorten the action without dropping dialogue")),
+  prompt: external_exports.string().trim().min(1).max(2e3),
   negativePrompt: external_exports.string().trim().min(1).max(5e3).optional(),
   guidanceScale: external_exports.number().finite().min(1).max(10).optional(),
   nagScale: external_exports.number().finite().min(0).max(100).optional(),

@@ -109,11 +109,12 @@ Measure actual output duration before assembly; do not assume it covers an exact
 speech duration. `requiredSeconds`, first/last frames, LoRA, retake and a supplied
 speech track are not part of this MSR contract.
 
-Every MSR prompt includes an audio-only speech instruction forbidding subtitles,
-captions, on-screen text, labels, logos and watermarks. This also applies to direct
-adapter calls and explicit prompts. The full prompt must fit 2,000 characters;
-shorten action prose when needed, never silently truncate dialogue. This is model
-direction, not proof that the resulting pixels contain no text.
+MSR preserves the positive prompt without appending text-suppression instructions.
+Keep unwanted text terms in `negativePrompt` when negative conditioning is enabled;
+write the positive prompt as the desired action and spoken dialogue. Existing authored
+prompts are not rewritten automatically: remove old subtitle instructions before replanning.
+The full prompt must fit 2,000 characters; shorten action prose when needed, never
+silently truncate dialogue. Inspect the output before claiming that it contains no text.
 
 `negativePrompt` maps to `negative_prompt`; `guidanceScale` maps to `guidance_scale`
 (1–10). Separate negatives require `guidanceScale > 1` or `nagScale > 0`: ordinary

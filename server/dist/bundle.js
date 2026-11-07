@@ -110898,10 +110898,8 @@ function buildGenaiAudioBody(args) {
   };
 }
 var GENAI_MSR_FRAMES = { min: 25, max: 361, step: 8, frameRate: 24 };
-var GENAI_MSR_NO_TEXT = "Speech is audio only. No subtitles, captions, on-screen text, labels, logos or watermarks.";
 var genaiMsrSchema = external_exports.object({
-  prompt: external_exports.string().trim().min(1).transform((prompt) => prompt.endsWith(GENAI_MSR_NO_TEXT) ? prompt : `${prompt}
-${GENAI_MSR_NO_TEXT}`).pipe(external_exports.string().max(2e3, "MSR prompt including the subtitle-free instruction must fit 2000 characters; shorten the action without dropping dialogue")),
+  prompt: external_exports.string().trim().min(1).max(2e3),
   negativePrompt: external_exports.string().trim().min(1).max(5e3).optional(),
   guidanceScale: external_exports.number().finite().min(1).max(10).optional(),
   nagScale: external_exports.number().finite().min(0).max(100).optional(),
@@ -111242,7 +111240,7 @@ var GENAI_TOOLS = [
     title: "Generate an LTX video from subject and background references",
     description: "Combine character, clothing, object and background references in one MSR video through ASTRA GenAI. Use video_plan operation reference and video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Up to four subject images and one background; place the background last and number prompt images in that order. Local PNG/JPEG files are shrunk to the render size and, with local voice samples, uploaded in chunks as gateway file ids (data URIs where the gateway has no upload API). MSR is a server-selected deployment with no model parameter, independent of saved LTX v2 weights. It cannot pin first/last frames; use img2video for frame control. Speech and effects are rendered natively. Subjects 1 and 2 may carry an optional voice sample of the character (audioPath or audioUri, at most 10 s, about 5 s used); write any dialogue in the prompt. The model imitates the timbre of the sample and does not preserve it; without a sample the voice follows the prompt. A request with a sample is refused before submission when the gateway MSR backend does not accept samples (GET /v1/ltx/msr/capabilities). Saves a job receipt and resumes via video_status without resubmission.",
     inputSchema: { type: "object", properties: {
-      prompt: { type: "string", minLength: 1, maxLength: 2e3, description: "Action and reference roles. A subtitle-free instruction is always appended; the combined prompt must fit 2000 characters." },
+      prompt: { type: "string", minLength: 1, maxLength: 2e3, description: "Positive action and reference roles, up to 2000 characters. No automatic subtitle instructions are appended. Put unwanted text terms in negativePrompt when negative conditioning is enabled." },
       negativePrompt: { type: "string", minLength: 1, maxLength: 5e3, description: "Separate negative conditioning, e.g. subtitles, captions, text overlays. Requires guidanceScale > 1 or nagScale > 0, plus live backend negative_prompt support; otherwise refused before submission." },
       guidanceScale: { type: "number", minimum: 1, maximum: 10, description: "Classifier-free guidance; omitted keeps gateway default 1. Values above 1 require backend negative conditioning support and change distilled sampling." },
       nagScale: { type: "number", minimum: 0, maximum: 100, description: "Video-only normalized attention guidance. Omitted or 0 disables NAG; a positive value requires negativePrompt and live backend nag support. Example 11 is experimental, not a subtitle-free guarantee; works at CFG 1." },
@@ -114910,18 +114908,11 @@ function prepareVideoVoice(tool2, input, context2) {
   const args = { ...input };
   const lines = (Array.isArray(context2.shot.narration) ? context2.shot.narration : []).map(object3).filter((line) => text(line.tts));
   const msr = tool2 === "astra_genai_msr";
-  const finishArgs = () => {
-    if (msr && typeof args.prompt === "string") {
-      const policy = load3("../../skills/_shared/scene-acting.js").VIDEO_TEXT_POLICY;
-      if (!args.prompt.endsWith(policy)) args.prompt += "\n\n" + policy;
-    }
-    return args;
-  };
   if (msr) {
     if (object3(context2.shot.visual).video && object3(object3(context2.shot.visual).video).voice !== void 0)
       throw new Error("visual.video.voice is retired: MSR uses the speaker's voice sample when one is pinned");
   }
-  if (!lines.length) return { args: finishArgs() };
+  if (!lines.length) return { args };
   const doc = object3(context2.board.SB_DOC), raw = doc.characters;
   const characters = Array.isArray(raw) ? raw.map(object3) : Object.entries(object3(raw)).map(([id, value]) => ({ ...object3(value), id }));
   const visual = object3(context2.shot.visual);
@@ -115063,7 +115054,7 @@ function prepareVideoVoice(tool2, input, context2) {
   }
   if (strategy === "supplied_audio") warnings.push("Use the final composed pinned-voice WAV. ASTRA re-encodes supplied audio; mouth motion and speaker identity remain unreviewed.");
   if (prompt.length && typeof args.prompt === "string") args.prompt += (msr ? "\n\n" : "\n\nVoice continuity guidance:\n") + prompt.join("\n");
-  return { args: finishArgs(), voiceContinuity: {
+  return { args, voiceContinuity: {
     version: 1,
     strategy,
     speakers,
