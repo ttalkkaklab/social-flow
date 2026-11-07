@@ -1124,6 +1124,7 @@ export const shotIconsSchema = z.object({
         size: tuple(V.SIZES).optional(),
         why: nonEmpty.optional().describe('Why this size'),
         angle: tuple(V.ANGLES).optional(),
+        backgroundView: z.enum(['front', 'back']).optional().describe('Opening camera direction relative to the location sheet: front is its establishing view; back is the opposite view, 180 degrees around the same space. Saved as visual.camera.backgroundView; omitted keeps the choice, initially front.'),
         view: shotViewSchema.optional().describe('Content-led opening subject, crop and viewpoint; saved as visual.camera.view'),
         move: choice.extend({ target: nonEmpty.optional(), speed: z.enum(['very slow', 'slow', 'steady', 'fast', 'very fast']).optional() }).strict().optional()
             .describe('A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold …)'),
@@ -1147,7 +1148,7 @@ export function writeShotIcons(args) {
     const notes = [];
     // A 9:16 board gets each chosen value's vertical note back as a warning — advice for the choice, never a refusal.
     const vertical = !/16x9/.test(String(win.FORMAT ?? ''));
-    for (const { id, render, size, why, angle, view, move, focus, depth, frames, next } of args.shots) {
+    for (const { id, render, size, why, angle, view, backgroundView, move, focus, depth, frames, next } of args.shots) {
         const index = shotIndex(shots, id, 'shot_icons');
         const plan = { ...(shots[index].shot ?? {}) };
         const visual = { ...(shots[index].visual ?? {}) };
@@ -1187,6 +1188,8 @@ export function writeShotIcons(args) {
             plan.why = why;
         if (angle)
             plan.angle = angle;
+        if (backgroundView)
+            visual.camera = { ...visual.camera, backgroundView };
         if (view) {
             shotViewSchema.parse(view);
             for (const [key, value] of [['subject', view.subject], ['crop', view.crop]]) {
@@ -1435,8 +1438,14 @@ export function shotImageRequest(args) {
     const props = args.props ?? (Array.isArray(recorded) ? recorded.filter((id) => typeof id === 'string') : []);
     const cast = contract().castOf(shot) ?? [];
     const [width, height] = (args.size ?? (/16x9/.test(String(win.FORMAT ?? '')) ? '1536x1024' : '1024x1536')).split('x').map(Number);
-    const entry = location ? docEntry(win, 'locations', location) : undefined, place = entry?.imageUrl;
+    const entry = location ? docEntry(win, 'locations', location) : undefined;
     const warnings = [];
+    const backgroundView = visual.camera?.backgroundView ?? 'front';
+    const panels = entry?.panels;
+    const selected = backgroundView === 'back' ? panels?.back : panels?.front;
+    const place = typeof selected === 'string' && selected ? selected : entry?.imageUrl;
+    if (entry && !selected && args.frame === 'start')
+        warnings.push({ level: 'warn', where: args.id, what: `background_view_missing: ${location} has no ${backgroundView} panel; ${place ? 'its legacy imageUrl supplies the look' : 'no background image is available'} — generate front and back panels on the location sheet` });
     const view = visual.camera?.view;
     if (view !== undefined) {
         shotViewSchema.parse(view);
@@ -1451,7 +1460,7 @@ export function shotImageRequest(args) {
     if (set)
         warnings.push(...set.warnings.map((what) => ({ level: 'warn', where: args.id, what })));
     else if (location && args.frame === 'start')
-        warnings.push({ level: 'warn', where: args.id, what: `the ${location} sheet names no built set, so Image 1 is its picture at whatever angle that was made, not this shot's camera — build the set (location_manage build) and write its manifest on the sheet for a camera-matched start image` });
+        warnings.push({ level: 'warn', where: args.id, what: `the ${location} sheet names no built set, so its ${backgroundView} view supplies the background; exact framing follows the shot prompt — build the set (location_manage build) and write its manifest on the sheet for a camera-matched start image` });
     // The renderer has no roll, so a dutch shot's render is level and the prompt alone tilts it.
     const lens = set ? `${set.camera.lensMm} mm lens` : '', dutch = plan.angle === 'dutch';
     const composition = set && (args.frame === 'start' || set.endCamera) ? [{ id: `${args.id}-set`, path: set[args.frame].path, role: 'composition', use: 'image',
@@ -1464,7 +1473,7 @@ export function shotImageRequest(args) {
         ...propPictures.refs,
         // MSR takes the start image in its background slot, so the place only conditions the picture.
         ...(typeof place === 'string' ? [{ id: `${args.id}-place`, path: place, role: 'background', use: 'image',
-                purpose: set ? `how the ${location} location looks — materials, colours and light only, not its viewpoint or layout` : `the ${location} location` }] : []),
+                purpose: set ? `how the ${location} location looks — materials, colours and light only, not its viewpoint or layout` : `the ${location} location${selected ? ` seen from its ${backgroundView} camera direction; preserve this view and its landmark arrangement` : ''}` }] : []),
     ];
     // The edit starts from the set render, else the place (or, for an end image, the start image); the rest are references.
     // Beside a set render the place picture comes last and stays out when the saved model has no room for it.
@@ -1487,7 +1496,9 @@ export function shotImageRequest(args) {
         ...(set ? { location: { prompt: args.frame === 'end' ? set.endPrompt : set.prompt, paths: [] } } : {}) }).prompt;
     const roles = ordered.map((ref, i) => `Image ${i + 1} shows ${ref.purpose}.`).join(' ');
     const at = (ref) => ordered.indexOf(ref) + 1;
-    const lock = !set ? (view ? `The location and character sheets supply appearance and identity only. Recompose them to the authored ${args.frame === 'end' ? 'closing' : 'opening'} crop and viewpoint; the sheet pose and camera do not constrain this shot.` : '') : args.frame === 'end'
+    const lock = !set ? (view && selected && args.frame === 'start'
+        ? `Keep the background's ${backgroundView} viewing direction and landmark arrangement. The character sheets supply appearance and identity only; recompose the subject to the authored opening crop and subject viewpoint within that space. Character panel poses do not constrain this shot.`
+        : view ? `The location and character sheets supply appearance and identity only. Recompose them to the authored ${args.frame === 'end' ? 'closing' : 'opening'} crop and viewpoint; the sheet pose and camera do not constrain this shot.` : '') : args.frame === 'end'
         ? composition.length ? `Use Image ${at(composition[0])}'s closing camera, lens, framing and final object and figure positions. Image 1 supplies the look and every identity; its opening camera does not constrain this closing view.`
             : `Image 1 supplies the opening appearance and identities. Follow the closing camera direction below while preserving the set's world layout.`
         : `Keep Image 1's camera position, ${lens}${dutch ? '' : ', horizon'} and world layout, and keep every object${set.blocked ? ' and figure' : ''} at its world position in Image 1. The authored composition below controls the final crop, headroom and subject screen placement. Paint its plain unpainted surfaces as the real place, and continue the place into any flat dark area past the set's edge.`

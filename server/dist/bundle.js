@@ -92324,6 +92324,7 @@ var require_production_mode = __commonJS({
           purpose: { type: "string", description: "Shot-specific reason for this camera choice. Review context only; executable targets, focus order and timing belong in framing/end, not only here or in technique reasons." },
           movement: { type: "string", description: "One camera move in vendor vocabulary, chosen from shot.feel (directing-grammar \xA74\u2013\xA75): static \xB7 dolly in/out \xB7 zoom in/out (lens only) \xB7 dolly zoom in/out \xB7 pan left/right \xB7 tilt up/down \xB7 whip pan \xB7 truck left/right \xB7 pedestal up/down \xB7 crane up/down \xB7 arc shot \xB7 tracking \xB7 handheld \xB7 aerial. Not push in, orbit, boom or a Korean word (storyboard_check enforces the vocabulary and the conditions below). A pan, tilt, truck, pedestal or dolly is a sentence from framing to end, so end must differ from framing. A whip pan needs the hit in sound.sfx or visual.audio. A dolly zoom needs shot.depth deep (the background that stretches), a stationary subject, with a scene-specific purpose. For drone shots copy the trajectory-derived value from drone-previz.js." },
           speed: { type: "string", description: "Movement pace as slow, steady or fast \u2014 never inside movement, never a word the viewer cannot see (very slow, subtle). Empty on static. Generated from the trajectory on drone shots." },
+          backgroundView: { type: "string", enum: ["front", "back"], description: "Opening camera direction relative to the location sheet; front is the establishing view, back is the opposite view. Defaults to front." },
           framing: { type: "string", description: "Opening composition \u2014 what the camera holds before the move starts (hold in). Generated from the trajectory on drone shots." },
           end: { type: "string", description: "Closing composition \u2014 where the move settles and holds (hold out); on a pan, tilt, truck, pedestal or dolly it names a different picture from framing. Generated from the trajectory on drone shots." },
           trajectory: {
@@ -92379,6 +92380,7 @@ var require_production_mode = __commonJS({
       function cameraInputErrors(camera) {
         if (!camera || typeof camera !== "object" || Array.isArray(camera)) return ["camera must be an object"];
         const errors = [];
+        if (camera.backgroundView !== void 0 && !["front", "back"].includes(camera.backgroundView)) errors.push("backgroundView must be front or back");
         for (const slot of CAMERA_SLOTS) if (camera[slot] !== void 0 && typeof camera[slot] !== "string") errors.push(slot + " must be text");
         if (camera.preset !== void 0 && !Object.keys(CAMERA_PRESETS).includes(camera.preset)) errors.push("unknown camera preset");
         if (camera.variant !== void 0 && !Object.keys(CAMERA_PRESETS["drone-flythrough"].variants).includes(camera.variant)) errors.push("unknown drone variant");
@@ -116380,6 +116382,7 @@ var shotIconsSchema = external_exports.object({
     size: tuple(V.SIZES).optional(),
     why: nonEmpty.optional().describe("Why this size"),
     angle: tuple(V.ANGLES).optional(),
+    backgroundView: external_exports.enum(["front", "back"]).optional().describe("Opening camera direction relative to the location sheet: front is its establishing view; back is the opposite view, 180 degrees around the same space. Saved as visual.camera.backgroundView; omitted keeps the choice, initially front."),
     view: shotViewSchema.optional().describe("Content-led opening subject, crop and viewpoint; saved as visual.camera.view"),
     move: choice.extend({ target: nonEmpty.optional(), speed: external_exports.enum(["very slow", "slow", "steady", "fast", "very fast"]).optional() }).strict().optional().describe("A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold \u2026)"),
     focus: choice.extend({ from: nonEmpty.optional(), to: nonEmpty.optional() }).strict().nullable().optional().describe("A camera technique with a focus field (camera.rack-focus) and the subjects it hands focus between; null removes it"),
@@ -116397,7 +116400,7 @@ function writeShotIcons(args) {
   const shots = (win.SCENES ?? []).slice();
   const notes = [];
   const vertical = !/16x9/.test(String(win.FORMAT ?? ""));
-  for (const { id, render, size, why, angle, view, move, focus, depth, frames, next } of args.shots) {
+  for (const { id, render, size, why, angle, view, backgroundView, move, focus, depth, frames, next } of args.shots) {
     const index = shotIndex(shots, id, "shot_icons");
     const plan2 = { ...shots[index].shot ?? {} };
     const visual = { ...shots[index].visual ?? {} };
@@ -116433,6 +116436,7 @@ function writeShotIcons(args) {
     if (size) plan2.size = size;
     if (why) plan2.why = why;
     if (angle) plan2.angle = angle;
+    if (backgroundView) visual.camera = { ...visual.camera, backgroundView };
     if (view) {
       shotViewSchema.parse(view);
       for (const [key, value] of [["subject", view.subject], ["crop", view.crop]]) {
@@ -116638,8 +116642,14 @@ function shotImageRequest(args) {
   const props = args.props ?? (Array.isArray(recorded) ? recorded.filter((id) => typeof id === "string") : []);
   const cast = contract().castOf(shot) ?? [];
   const [width, height] = (args.size ?? (/16x9/.test(String(win.FORMAT ?? "")) ? "1536x1024" : "1024x1536")).split("x").map(Number);
-  const entry2 = location ? docEntry(win, "locations", location) : void 0, place = entry2?.imageUrl;
+  const entry2 = location ? docEntry(win, "locations", location) : void 0;
   const warnings = [];
+  const backgroundView = visual.camera?.backgroundView ?? "front";
+  const panels = entry2?.panels;
+  const selected = backgroundView === "back" ? panels?.back : panels?.front;
+  const place = typeof selected === "string" && selected ? selected : entry2?.imageUrl;
+  if (entry2 && !selected && args.frame === "start")
+    warnings.push({ level: "warn", where: args.id, what: `background_view_missing: ${location} has no ${backgroundView} panel; ${place ? "its legacy imageUrl supplies the look" : "no background image is available"} \u2014 generate front and back panels on the location sheet` });
   const view = visual.camera?.view;
   if (view !== void 0) {
     shotViewSchema.parse(view);
@@ -116653,7 +116663,7 @@ function shotImageRequest(args) {
   ) : null;
   if (set) warnings.push(...set.warnings.map((what) => ({ level: "warn", where: args.id, what })));
   else if (location && args.frame === "start")
-    warnings.push({ level: "warn", where: args.id, what: `the ${location} sheet names no built set, so Image 1 is its picture at whatever angle that was made, not this shot's camera \u2014 build the set (location_manage build) and write its manifest on the sheet for a camera-matched start image` });
+    warnings.push({ level: "warn", where: args.id, what: `the ${location} sheet names no built set, so its ${backgroundView} view supplies the background; exact framing follows the shot prompt \u2014 build the set (location_manage build) and write its manifest on the sheet for a camera-matched start image` });
   const lens = set ? `${set.camera.lensMm} mm lens` : "", dutch = plan2.angle === "dutch";
   const composition = set && (args.frame === "start" || set.endCamera) ? [{
     id: `${args.id}-set`,
@@ -116673,7 +116683,7 @@ function shotImageRequest(args) {
       path: place,
       role: "background",
       use: "image",
-      purpose: set ? `how the ${location} location looks \u2014 materials, colours and light only, not its viewpoint or layout` : `the ${location} location`
+      purpose: set ? `how the ${location} location looks \u2014 materials, colours and light only, not its viewpoint or layout` : `the ${location} location${selected ? ` seen from its ${backgroundView} camera direction; preserve this view and its landmark arrangement` : ""}`
     }] : []
   ];
   const look = refs.filter((ref) => ref.role === "background"), others = refs.filter((ref) => ref.role !== "background" && ref.role !== "composition");
@@ -116697,7 +116707,7 @@ function shotImageRequest(args) {
   }).prompt;
   const roles = ordered.map((ref, i2) => `Image ${i2 + 1} shows ${ref.purpose}.`).join(" ");
   const at = (ref) => ordered.indexOf(ref) + 1;
-  const lock2 = !set ? view ? `The location and character sheets supply appearance and identity only. Recompose them to the authored ${args.frame === "end" ? "closing" : "opening"} crop and viewpoint; the sheet pose and camera do not constrain this shot.` : "" : args.frame === "end" ? composition.length ? `Use Image ${at(composition[0])}'s closing camera, lens, framing and final object and figure positions. Image 1 supplies the look and every identity; its opening camera does not constrain this closing view.` : `Image 1 supplies the opening appearance and identities. Follow the closing camera direction below while preserving the set's world layout.` : `Keep Image 1's camera position, ${lens}${dutch ? "" : ", horizon"} and world layout, and keep every object${set.blocked ? " and figure" : ""} at its world position in Image 1. The authored composition below controls the final crop, headroom and subject screen placement. Paint its plain unpainted surfaces as the real place, and continue the place into any flat dark area past the set's edge.` + (dutch ? " Image 1 is level; tilt the whole picture to the dutch angle described below." : "") + (look.some((ref) => ordered.includes(ref)) ? ` Take only materials, colours and light from Image ${at(look[0])}.` : "");
+  const lock2 = !set ? view && selected && args.frame === "start" ? `Keep the background's ${backgroundView} viewing direction and landmark arrangement. The character sheets supply appearance and identity only; recompose the subject to the authored opening crop and subject viewpoint within that space. Character panel poses do not constrain this shot.` : view ? `The location and character sheets supply appearance and identity only. Recompose them to the authored ${args.frame === "end" ? "closing" : "opening"} crop and viewpoint; the sheet pose and camera do not constrain this shot.` : "" : args.frame === "end" ? composition.length ? `Use Image ${at(composition[0])}'s closing camera, lens, framing and final object and figure positions. Image 1 supplies the look and every identity; its opening camera does not constrain this closing view.` : `Image 1 supplies the opening appearance and identities. Follow the closing camera direction below while preserving the set's world layout.` : `Keep Image 1's camera position, ${lens}${dutch ? "" : ", horizon"} and world layout, and keep every object${set.blocked ? " and figure" : ""} at its world position in Image 1. The authored composition below controls the final crop, headroom and subject screen placement. Paint its plain unpainted surfaces as the real place, and continue the place into any flat dark area past the set's edge.` + (dutch ? " Image 1 is level; tilt the whole picture to the dutch angle described below." : "") + (look.some((ref) => ordered.includes(ref)) ? ` Take only materials, colours and light from Image ${at(look[0])}.` : "");
   const prompt = [
     ordered.length ? "Compose one picture from these images." : "",
     roles,
@@ -125336,6 +125346,8 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
 
 Choose from what the audience must see, not shot index, dialogue count or a diversity quota. Read storyboard_read's techniqueCatalog and shot-view.md. A monologue may need the changing face (cu), a revealing hand (insert/ecu) or isolation in the surroundings (ls/els). Compare one useful alternative and state the story-specific reason.
 
+Set backgroundView to front or back relative to the location sheet layout; shot_image uses its matching panels.front or panels.back. This is the direction through the space, independent of the visible side of a subject.
+
 Set view with subject (visible evidence), reason, crop and mode. It writes visual.camera.view, shot.info and shot.why. Subject and crop are English provider text. This view supersedes old opening framing, rear/pov flags and viewpoint/framing techniques in the image and video prompts. Left/right name the visible side of the subject; angle separately controls height. Set subjectId for a blocked actor or set object; ots/pov also need a different viewerId. Built-set body inserts/ecu need target with the actual staged world point and vertical span; objects use their subjectId. Missing set targets cannot silently become frontal portraits. Use storyboard_apply for blocking and closing camera endpoints.
 
 Size is distance (els \u2026 ecu, insert). Composition labels two/three/ots/pov/back/cutaway/reaction carry no crop; new boards use a distance with view. The technique catalogue gives use, avoid, specify, neighbouring-shot and vertical guidance; these are directing conventions, not measured emotional effects. On 9:16 the result includes the chosen values' vertical advice.
@@ -125361,6 +125373,7 @@ Refused: missing story/characters (story_order), invalid attributes, incompatibl
           why: { type: "string", description: "The beat this size serves" },
           angle: enumInput(storyboardVocabulary?.ANGLES, "Camera angle icon: the camera height and tilt; ground and over have cards in techniqueCatalog guides.angle"),
           view: shotViewInput,
+          backgroundView: { type: "string", enum: ["front", "back"], description: "Opening direction relative to the location sheet: front is the establishing view, back is the opposite side. Saves visual.camera.backgroundView; omitted keeps the choice, initially front. Independent of the subject view." },
           move: { type: "object", additionalProperties: false, required: ["id", "reason"], description: "Camera move icon", properties: {
             id: { type: "string", enum: [...cameraMoves, ...stillCameraEffects], description: "A camera.* technique with a movement, or on a still_camera cut a still effect" },
             reason: { type: "string", description: "What the move or the hold does for this beat" },
@@ -125394,7 +125407,7 @@ Refused: missing story/characters (story_order), invalid attributes, incompatibl
     name: "shot_image",
     title: "Make a shot's start or end image (step 4)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-    description: `Use it after every shot has its icon attributes (shot_icons): make one shot's start image from its characters' sheet panels (assets/characters/<id>/panels.json \u2014 face, headless front and back; two characters take each face, then each front), its place and its props, with a prompt assembled from the shot's size, angle, depth, techniques, screen layout, facing, composition and eyeline, camera framing and POV/rear flags, move-specific opening guidance, the episode style and your English description. Still-camera pans and tilts prepare a source canvas containing both crop endpoints. When the place's sheet names a built set (SB_DOC.locations manifest), Image 1 is that set rendered locally in Blender from the camera the shot's size and angle ask for \u2014 aimed at its cast's blocking from location_manage bind, swung round the subject when someone or something blocks the view, kept inside the walls with a wider lens, at the picture's aspect \u2014 and the sheet image follows as a look reference when the model has room; the render is cached per input fingerprint under storyboard/locations/ and recorded in visual.locationFrame. Without a set the sheet image (imageUrl) leads and a warning says the angle is not the shot's. Each prop seen in the frame goes in through the prop ledger: a prop hidden in the shot (propUsage visible:false) stays out, the picture is its reference drawn in the condition it has when the frame opens (start) or closes (end), and its Image line carries its English description, holder, location and condition; a prop without a picture or a reference for that condition is a warning, and ledger errors only drop the state of a prop whose own entry, history or usage in this shot has them, never refuse. Set names and labels in another script stay out of the prompt. frame:"end" makes the last image of a first_last shot from its start image, with its closing composition (visual.camera.end), story state (frames.endState) and final rack-focus target. A set uses the authored numeric endpoint (shot.location.camera.end, or the bound set camera's end); a static camera stays fixed. A moving shot with no numeric endpoint warns and omits the set end render from the inputs, so the prompt can follow the planned landing without locking to the opening camera. Runs image_plan \u2192 image_execute with the saved image model and the existing spending authorization, then writes visual.frames.start and visual.bg (or frames.end), visual.references, locationId and props. Each call saves a new versioned file under storyboard/images/. A new start image takes the shot's end image off (it was edited from the old start; the file stays) and warns, so make the end image again. An end image keeps the start image's place (location is refused) and records its own props in frames.endProps. GPT Image gets a mixed PNG/JPEG set as PNG copies in storyboard/images/inputs/.
+    description: `Use it after every shot has its icon attributes (shot_icons): make one shot's start image from its characters' sheet panels (assets/characters/<id>/panels.json \u2014 face, headless front and back; two characters take each face, then each front), its place and its props, with a prompt assembled from the shot's size, angle, depth, techniques, screen layout, facing, composition and eyeline, camera framing and POV/rear flags, move-specific opening guidance, the episode style and your English description. Still-camera pans and tilts prepare a source canvas containing both crop endpoints. When the place's sheet names a built set (SB_DOC.locations manifest), Image 1 is that set rendered locally in Blender from the camera the shot's size and angle ask for \u2014 aimed at its cast's blocking from location_manage bind, swung round the subject when someone or something blocks the view, kept inside the walls with a wider lens, at the picture's aspect \u2014 and the sheet image follows as a look reference when the model has room; the render is cached per input fingerprint under storyboard/locations/ and recorded in visual.locationFrame. The shot's visual.camera.backgroundView selects panels.front or panels.back on the location sheet (front by default); only that direction goes in. Without a set the selected panel leads, and the authored view controls the subject and crop while preserving that background direction. A missing panel warns and falls back to legacy imageUrl when present. Each prop seen in the frame goes in through the prop ledger: a prop hidden in the shot (propUsage visible:false) stays out, the picture is its reference drawn in the condition it has when the frame opens (start) or closes (end), and its Image line carries its English description, holder, location and condition; a prop without a picture or a reference for that condition is a warning, and ledger errors only drop the state of a prop whose own entry, history or usage in this shot has them, never refuse. Set names and labels in another script stay out of the prompt. frame:"end" makes the last image of a first_last shot from its start image, with its closing composition (visual.camera.end), story state (frames.endState) and final rack-focus target. A set uses the authored numeric endpoint (shot.location.camera.end, or the bound set camera's end); a static camera stays fixed. A moving shot with no numeric endpoint warns and omits the set end render from the inputs, so the prompt can follow the planned landing without locking to the opening camera. Runs image_plan \u2192 image_execute with the saved image model and the existing spending authorization, then writes visual.frames.start and visual.bg (or frames.end), visual.references, locationId and props. Each call saves a new versioned file under storyboard/images/. A new start image takes the shot's end image off (it was edited from the old start; the file stays) and warns, so make the end image again. An end image keeps the start image's place (location is refused) and records its own props in frames.endProps. GPT Image gets a mixed PNG/JPEG set as PNG copies in storyboard/images/inputs/.
 
 Do NOT use it for a cut with no picture route \u2014 only still_camera and generated_video cuts are accepted. The saved image model has to take every picture the frame composes (gpt-image up to 16; astra-genai-native or an MLX Qwen-Image-2.1 pack up to 10; MLX FLUX.2 klein or Mage-Flow Edit up to 4); otherwise it refuses with image_references_unsupported, so ask the user before changing models. Refused (story_order) while a shot lacks icon attributes, or for an end image before the start image or outside first_last; location_render_failed when Blender cannot render the set (it never falls back to the sheet image).
 

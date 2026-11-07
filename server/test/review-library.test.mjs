@@ -74,3 +74,20 @@ test('preflight refuses unowned HTML and symlinked outputs before writing anythi
     assert.ok(!existsSync(join(f.dir, 'assets/review')));
   } finally { f.clean(); }
 });
+
+
+test('background details show both camera panels without a legacy imageUrl', () => {
+  const f = fixture();
+  try {
+    f.write('episodes/one/storyboard/front.png', 'front');
+    f.write('episodes/one/storyboard/back.png', 'back');
+    f.write('episodes/one/storyboard/scenes.js', 'window.SCENES = []; window.SB_DOC = ' + JSON.stringify({
+      locations: [{ id: 'room', name: 'Room', panels: { front: 'front.png', back: 'back.png' } }],
+    }) + ';');
+    exportChannel(f.dir);
+    const { detailFilename } = require('../../skills/storyboard/references/location-assets.js');
+    const html = readFileSync(join(f.dir, 'assets/locations/details', detailFilename('one', 'room')), 'utf8');
+    assert.match(html, /src="[^"\n]*front\.png"/);
+    assert.match(html, /src="[^"\n]*back\.png"/);
+  } finally { f.clean(); }
+});

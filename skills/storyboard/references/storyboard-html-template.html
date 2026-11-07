@@ -1447,7 +1447,7 @@ window.SB_DOC = {
   performanceTimingVersion: 1, // new boards time independent actions before production
   // Canonical asset sheets belong in scenes.js SB_DOC, not a second editable copy here.
   // props: [{id, name, description, imageUrl, tracking}], propContinuity: {...}
-  // locations: [{id, name, description, layout, lighting, invariants, imageUrl, sheetPath, manifest}]
+  // locations: [{id, name, description, layout, lighting, invariants, panels: {front, back}, imageUrl, sheetPath, manifest}]
   // Shots link planning locations with visual.locationId; shot.location binds a built set
   // (location-assets.js bind); visual.location holds that set's render results.
   // assetSheetNotes: {characters: "Not applicable: ...", props: "...", locations: "..."}
@@ -5225,7 +5225,11 @@ window.STORYBOARD_READY = (async function () {
       var frames = set && !set.error ? Object.keys(set.frames || {}).map(function (k) { return set.frames[k]; }) : [];
       var states = frames.reduce(function (a, f) { if (a.indexOf(f.stateId) < 0) a.push(f.stateId); return a; }, []);
       var panels = [];
-      if (safePath(entry.imageUrl)) panels.push({ src: entry.imageUrl, label: word("참조 이미지", "Reference image") });
+      ["front", "back"].forEach(function (view) {
+        var src = (entry.panels || {})[view];
+        if (safePath(src)) panels.push({ src: src, label: view === "front" ? word("전면 카메라", "Front camera") : word("후면 카메라", "Back camera") });
+      });
+      if (!panels.length && safePath(entry.imageUrl)) panels.push({ src: entry.imageUrl, label: word("참조 이미지", "Reference image") });
       frames.forEach(function (f) {
         panels.push({ src: f.path, label: angleLabel(f, set) + (states.length > 1 ? " · " + ((set.states[f.stateId] || {}).label || f.stateId) : "") });
       });
