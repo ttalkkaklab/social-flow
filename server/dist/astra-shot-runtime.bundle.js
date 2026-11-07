@@ -31099,7 +31099,7 @@ import * as path3 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.121.0",
+  version: "0.121.1",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -33145,6 +33145,8 @@ var shotImageSchema = external_exports.object({
   id: shotIdSchema,
   frame: external_exports.enum(["start", "end"]).default("start").describe("start: the first image; end: the last image of a first_last shot"),
   prompt: nonEmpty.describe("What the frame shows, in English: who is where, doing what, facing which way, expression and light"),
+  editExisting: external_exports.boolean().optional().describe("Edit the saved frame in place conceptually, saving a new version; prompt describes only the change"),
+  preserve: nonEmpty.optional().describe("Details to preserve when editExisting is true"),
   location: nonEmpty.optional().describe("SB_DOC.locations id of the place, for the start image; an earlier call's choice stays when omitted, and an end image keeps the start's place"),
   props: external_exports.array(nonEmpty).optional().describe("SB_DOC.props ids seen in the frame; an earlier call's choice stays when omitted"),
   size: external_exports.string().regex(/^\d{3,4}x\d{3,4}$/).optional().describe("Output WIDTHxHEIGHT; default 1536x1024 for a 16:9 board, 1024x1536 otherwise"),

@@ -1299,6 +1299,8 @@ export const shotImageSchema = z.object({
   id: shotIdSchema,
   frame: z.enum(['start', 'end']).default('start').describe('start: the first image; end: the last image of a first_last shot'),
   prompt: nonEmpty.describe('What the frame shows, in English: who is where, doing what, facing which way, expression and light'),
+  editExisting: z.boolean().optional().describe('Edit the saved frame in place conceptually, saving a new version; prompt describes only the change'),
+  preserve: nonEmpty.optional().describe('Details to preserve when editExisting is true'),
   location: nonEmpty.optional().describe('SB_DOC.locations id of the place, for the start image; an earlier call\'s choice stays when omitted, and an end image keeps the start\'s place'),
   props: z.array(nonEmpty).optional().describe('SB_DOC.props ids seen in the frame; an earlier call\'s choice stays when omitted'),
   size: z.string().regex(/^\d{3,4}x\d{3,4}$/).optional().describe('Output WIDTHxHEIGHT; default 1536x1024 for a 16:9 board, 1024x1536 otherwise'),
@@ -1338,10 +1340,11 @@ function castEntry(win: Board, id: string): Record<string, unknown> | undefined 
   return entries.find((entry) => (entry as { id?: unknown })?.id === id) as Record<string, unknown> | undefined;
 }
 /** The sheet panels assets/characters/<id>/panels.json names — face, headless front and back — in MSR order. */
-function characterRefs(boardDir: string, win: Board, shotId: string, ids: string[], use: string, warnings: Finding[]): ImageRef[] {
+function characterRefs(boardDir: string, win: Board, shotId: string, ids: string[], use: string, warnings: Finding[], concise = false): ImageRef[] {
   return characterPanels().canonicalReferences(boardDir, shotId, ids, use).map(ref => {
     const view = ref.id.split('-').at(-1)!;
     const id = ids.find(id => ref.id === `${shotId}-${id}-${view}`)!;
+    if (concise) return ref;
     const { text: detail, skipped } = identityCatalog().panelPrompt(castEntry(win, id)?.character, view);
     for (const field of skipped) warnings.push({ level: 'warn', where: shotId, what: `${id}'s ${field} is not English and stays out of the image prompt — write it in English on the character sheet` });
     return { ...ref, purpose: ref.purpose + (detail ? `: ${detail}` : '') };
@@ -1407,7 +1410,7 @@ export function shotImageRequest(args: z.infer<typeof shotImageSchema>): ShotIma
   const shots = win.SCENES ?? [];
   const shot = shots[shotIndex(shots, args.id, 'shot_image')];
   const plan = (shot.shot ?? {}) as Record<string, unknown>, visual = (shot.visual ?? {}) as Record<string, unknown>;
-  const frames = (visual.frames ?? {}) as { mode?: string; start?: string; endProps?: unknown };
+  const frames = (visual.frames ?? {}) as { mode?: string; start?: string; end?: string; endProps?: unknown };
   if (args.frame === 'start') {
     const gaps = contract().iconGaps(win);
     if (gaps.length) throw new Error('story_order: set every shot\'s icon attributes with shot_icons first — ' + gaps.join('; '));
@@ -1424,6 +1427,23 @@ export function shotImageRequest(args: z.infer<typeof shotImageSchema>): ShotIma
   const props = args.props ?? (Array.isArray(recorded) ? recorded.filter((id): id is string => typeof id === 'string') : []);
   const cast = contract().castOf(shot) ?? [];
   const [width, height] = (args.size ?? (/16x9/.test(String(win.FORMAT ?? '')) ? '1536x1024' : '1024x1536')).split('x').map(Number);
+  if (args.preserve && !args.editExisting) throw new Error('image_edit_required: preserve requires editExisting');
+  if (args.editExisting) {
+    if (args.location || args.props) throw new Error('image_edit_scope: update location and prop metadata before editing; omit location and props here');
+    const source = frames[args.frame];
+    if (!source) throw new Error(`image_edit_source_missing: ${args.id} has no saved ${args.frame} image`);
+    const input = resolve(boardDir, source);
+    if (!existsSync(input)) throw new Error(`image_input_missing: ${input}`);
+    const metadata = readImageMetadata(input);
+    const [editWidth, editHeight] = args.size ? [width, height] : [metadata.width, metadata.height];
+    const prompt = ['Edit Image 1. Change only: ' + args.prompt,
+      'Preserve all other visible details, identities, composition, lighting and rendering style unless the requested change requires otherwise.',
+      args.preserve ? 'Preserve explicitly: ' + args.preserve : ''].filter(Boolean).join('\n');
+    const call = imageCall({ directory: episode, assetId: args.id, inputs: [input], prompt,
+      width: editWidth, height: editHeight, outDir: join(boardDir, 'images'), stem: `${args.id}-${args.frame}`, what: 'this frame edit' });
+    return { episode, assetId: args.id, ...call, refs: (visual.references ?? []) as ImageRef[],
+      ...(location ? { location } : {}), ...(visual.locationFrame ? { locationFrame: visual.locationFrame as Record<string, unknown> } : {}), props, prompt, warnings: [] };
+  }
   const entry = location ? docEntry(win, 'locations', location) : undefined;
   const warnings: Finding[] = [];
   const backgroundView = (visual.camera as { backgroundView?: string } | undefined)?.backgroundView ?? 'front';
@@ -1451,10 +1471,13 @@ export function shotImageRequest(args: z.infer<typeof shotImageSchema>): ShotIma
   const composition: ImageRef[] = set && (args.frame === 'start' || set.endCamera) ? [{ id: `${args.id}-set`, path: set[args.frame].path, role: 'composition', use: 'image',
     purpose: args.frame === 'end' ? `the ${set.name} set from the closing camera (${set.endCamera!.lensMm} mm lens), where every object${set.blocked ? ' and figure' : ''} stands when it ends`
       : `the ${set.name} set seen from this shot's camera (${lens}): its viewpoint, framing${dutch ? '' : ' and horizon'}, the architecture and where every object${set.blocked ? ' and coloured figure' : ''} stands; its plain unpainted surfaces are placeholders` }] : [];
+  const selectedImage = imageContext(episode, args.id).selection;
+  const conciseIdentity = (selectedImage.engine === 'astra-genai-native' && ['qwen-image-fast', 'qwen-image-2.1-turbo'].includes(selectedImage.model ?? ''))
+    || (selectedImage.engine === 'mlx' && mlxImageFamily(selectedImage.model ?? '') === 'qwen-2.1');
   const propPictures = propRefs(win, shots.indexOf(shot), args.id, props, args.frame, warnings);
   const refs: ImageRef[] = [
     ...composition,
-    ...characterRefs(boardDir, win, args.id, cast, frames.mode === 'reference' ? 'both' : 'image', warnings),
+    ...characterRefs(boardDir, win, args.id, cast, frames.mode === 'reference' ? 'both' : 'image', warnings, conciseIdentity),
     ...propPictures.refs,
     // MSR takes the start image in its background slot, so the place only conditions the picture.
     ...(typeof place === 'string' ? [{ id: `${args.id}-place`, path: place, role: 'background', use: 'image',
@@ -1505,8 +1528,8 @@ export function shotImageRequest(args: z.infer<typeof shotImageSchema>): ShotIma
  * The adapter call for one generated picture with the saved image model: the next free versioned
  * file <outDir>/<stem>-vN.png and the engine's own argument shape, editing from the inputs in order.
  */
-// Adapters whose request carries a negative prompt; the others ignore it and the caller says so.
-const NEGATIVE_PROMPT_ENGINES = new Set(['astra-genai-native']);
+// Measured panel setting on the local Qwen route; never apply it to another gateway model.
+const PANEL_NEGATIVE_GUIDANCE: Record<string, number> = { 'qwen-image-fast': 4, 'qwen-image-2.1-turbo': 4 };
 function imageAdapter(selection: { engine: string; model?: string }) {
   return selection.engine === 'mlx' ? { tool: 'mlx_image_edit', max: MLX_INPUTS[mlxImageFamily(selection.model ?? '')] ?? 0 } : IMAGE_INPUTS[selection.engine] ?? { max: 0 };
 }
@@ -1546,10 +1569,9 @@ export function imageCall(o: { directory: string; assetId: string; inputs: strin
     : selection.engine === 'astra-genai' ? { prompt, size: `${width}*${height}`, ...output, ...(edit ? { mode: 'img2img', imagePath: sent[0] } : {}) }
     : ['mlx', 'zimage'].includes(selection.engine) ? { prompt, width, height, ...output, ...(edit ? { imagePath: sent[0], refImagePaths: sent.slice(1) } : {}) }
     : { prompt, size: `${width}x${height}`, ...output, ...(edit ? { imagePath: sent[0], refImagePaths: sent.slice(1), mode: 'edit' } : {}) };
-  const negativeSent = !!o.negativePrompt && NEGATIVE_PROMPT_ENGINES.has(selection.engine);
-  // The gateway refuses a negative prompt at guidance 1 (no CFG). ponytail: one value measured on qwen-image-2.1-turbo
-  // for the kardum front panel (2.5 kept the head, 4 removed it, about 290 s); make it per model when another one lands.
-  if (negativeSent) Object.assign(args, { negativePrompt: o.negativePrompt, guidanceScale: 4 });
+  const guidance = selection.engine === 'astra-genai-native' ? PANEL_NEGATIVE_GUIDANCE[selection.model ?? ''] : undefined;
+  const negativeSent = !!o.negativePrompt && guidance !== undefined;
+  if (negativeSent) Object.assign(args, { negativePrompt: o.negativePrompt, guidanceScale: guidance });
   return { requestId, ...(tool ? { tool } : {}), operation: (edit ? 'edit' : 'text') as 'edit' | 'text', args, file, inputs: sent, negativeSent };
 }
 

@@ -327,8 +327,10 @@ function frameOptions(scene, frame = 'start') {
     techniques: sh.techniques, depth, camera, stillCamera: sh.render?.mode === 'still_camera' ? sh.render.camera : null,
     ...(end ? { endState: visual.frames?.endState } : { layout: sp.layout, facing: sp.facing, line: sp.line, light: sp.light,
       composition: sh.composition, eyeline: sh.eyeline }),
-    // A view owns the opening crop and orientation. Old free-text fields cannot compete.
-    ...(view ? { layout: undefined, facing: undefined, composition: undefined, eyeline: undefined } : {}) };
+    // A view replaces camera crop/orientation, not actor placement or interaction.
+    ...(view ? { composition: undefined,
+      facing: end ? undefined : String(sp.facing || '').split(/(?<=[.!?;])\s+/)
+        .filter(clause => !/^(?:faces?|facing|view(?:ed)? from|seen from) (?:the )?(?:camera|front|back|behind)[.!;]?$/i.test(clause.trim())).join(' ') } : {}) };
 }
 
 function cameraSourceInstructions(opts) {
@@ -387,7 +389,7 @@ function assemble(opts) {
   const scene = (opts.scene || "").trim();
   const mood = (opts.mood || "").trim();
   const exclude = (opts.exclude || "").trim();
-  const tail = (opts.tail === undefined ? "the picture fills the frame from the top edge to the bottom edge, even brightness top to bottom" : opts.tail).trim();
+  const tail = (opts.tail === undefined ? "the picture fills the frame from the top edge to the bottom edge" : opts.tail).trim();
 
   const view = require('./shot-view.js').checked(opts.camera?.view);
   const ladder = opts.noPerson || view ? SIZE_WORDS_OBJECT : SIZE_WORDS;
@@ -511,7 +513,7 @@ function selftest() {
   ok("facing is the visible result", a.prompt.includes("faces camera-right"));
   ok("scene follows space", /From the camera:.*a Korean woman/.test(a.prompt));
   ok("exclusions sit after the mood, before the tail",
-    a.prompt.endsWith("warm tungsten. no text, no logos. the picture fills the frame from the top edge to the bottom edge, even brightness top to bottom."));
+    a.prompt.endsWith("warm tungsten. no text, no logos. the picture fills the frame from the top edge to the bottom edge."));
   eq("no banned hits on a good prompt", a.hits.length, 0);
 
   // Banned language in --scene / --mood / --exclude is caught too — it ships to the model.

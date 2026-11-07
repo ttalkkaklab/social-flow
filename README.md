@@ -11,6 +11,13 @@ visible evidence to `shot_icons view`, the Blender camera and the image/video pr
 profiles and three-quarter views retain their bearing; body inserts target their staged
 detail instead of a face-height default. Inspect generated pixels before accepting a shot.
 
+Image revisions can use `shot_image editExisting:true` with a change-only `prompt` and
+optional `preserve` details. The current frame supplies the image and dimensions; each
+edit saves a new version and a revised start invalidates its old end. Normal generation
+preserves actor layout and gaze alongside the authored camera view, without adding
+uniform lighting. Character attributes retain their original language and clothing
+clauses; overlong panel prompts report the transport limit instead of dropping style.
+
 [Character depth](skills/storyboard/references/character-depth.md) connects shared identities
 to episode choices, personal costs and relationship-specific behavior. Channel, storyboard
 and autoproduce use the same guidance; blind review checks the performed evidence before

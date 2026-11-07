@@ -106,13 +106,9 @@ function direction(character, options) {
   };
 }
 
-// The English prompt words for one sheet panel. The face close-up carries the head (appearance);
-// the headless front and back carry the body: height, weight, build, proportions, outfit.
-// Image prompts are English, so a text value in another script is named in `skipped`, not sent.
-// A headless panel never names the head: relativeScale ("measured to the top of the head; ears not
-// included") and clauses such as "head not oversized" drew a head and ears back onto the body panels.
+// Preserve confirmed attributes, including their original language. Body crops are
+// specified by the caller; clothing clauses must not be deleted for naming a body part.
 const BODY_FIELDS = ['heightCm', 'weightKg', 'build', 'proportions', 'outfit'];
-const HEAD_WORDS = /\b(head|face|hair|ears?|eyes?|tusks?|helmet)\b/i;
 function panelPrompt(character, view) {
   const physical = character?.physical || {}, skipped = [];
   const words = (view === 'face' ? ['appearance'] : BODY_FIELDS).flatMap(key => {
@@ -121,10 +117,10 @@ function panelPrompt(character, view) {
     if (key === 'heightCm') return [`${field.value} cm tall`];
     if (key === 'weightKg') return [`about ${field.value} kg`];
     const value = (Array.isArray(field.value) ? field.value.join(', ') : String(field.value)).trim();
-    if (/[^\P{L}\p{Script=Latin}]/u.test(value)) { skipped.push(`physical.${key}`); return []; }
-    if (view === 'face') return [value];
-    const body = value.split(/\s*[,;]\s*/).filter(clause => clause && !HEAD_WORDS.test(clause)).join(', ');
-    return body ? [body] : [];
+    // A standalone crop disclaimer is redundant; an outfit mentioning a hood is not.
+    const text = view === 'face' ? value : value.split(/\s*[,;]\s*/)
+      .filter(clause => !/^head not oversized[.!]?$/i.test(clause)).join(', ');
+    return text ? [text] : [];
   });
   return { text: words.join('; '), skipped };
 }

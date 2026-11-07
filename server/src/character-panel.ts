@@ -68,16 +68,16 @@ export function characterPanelRequest(raw: unknown) {
   const { STYLES } = shared('storyboard/references/production-mode.js') as { STYLES: Record<string, { prompt: string }> };
   const style = preset && STYLES[preset] ? STYLES[preset].prompt : '';
   const words = panelPrompt(character, args.view);
-  const compose = (withStyle: boolean) => [references.length && args.view !== 'back' ? 'Keep this exact character from the reference images.' : '', FRAMING[args.view].text,
-    `Character: ${words.text}.`, withStyle ? style : '', 'Soft even studio lighting, plain neutral grey background. One view only. No text, watermark, collage or border.'].filter(Boolean).join(' ');
-  // A prompt over the adapter's cap drops the style sentence.
+  const compose = () => [references.length && args.view !== 'back' ? 'Keep this exact character from the reference images.' : '', FRAMING[args.view].text,
+    `Character: ${words.text}.`, style, 'Soft even studio lighting, plain neutral grey background. One view only. No text, watermark, collage or border.'].filter(Boolean).join(' ');
+  // Never drop identity or style to fit a transport limit. Report it before submission.
   const limit = PROMPT_LIMIT[readImageContext(workspace, `${id}-${args.view}`).selection.engine] ?? Infinity;
-  const full = compose(true), prompt = full.length <= limit ? full : compose(false);
+  const prompt = [compose(), args.negativePrompt ? `Exclude: ${args.negativePrompt}.` : ''].filter(Boolean).join(' ');
+  if (prompt.length > limit) throw new Error(`image_prompt_too_long: ${prompt.length} characters exceeds ${limit}; shorten redundant sheet wording while preserving identity, outfit and style`);
   const [width, height] = FRAMING[args.view].size;
   const negativePrompt = [NEGATIVE[args.view], args.negativePrompt].filter(Boolean).join(', ');
   const call = imageCall({ directory: workspace, assetId: `${id}-${args.view}`, inputs: references, prompt, negativePrompt, width, height, outDir: folder, stem: `${id}-${args.view}`, what: 'this panel' });
-  const warnings = [...(call.negativeSent ? [] : ['the saved image model takes no negative prompt; only the prompt keeps the head out']),...words.skipped.map((field) => `${field} is not English and stays out of the prompt — write it in English on the sheet`),
-    ...(prompt.length > limit ? [`the prompt is ${prompt.length} characters, over the image model's ${limit}; shorten the sheet's physical fields`] : [])];
+  const warnings = [...(call.negativeSent ? [] : ['no tested negative-prompt setting for this model; exclusions must be expressed in the main prompt']),...words.skipped.map((field) => `${field} is not English and stays out of the prompt — write it in English on the sheet`)];
   return { workspace, folder, id, view: args.view, panelsFile, prompt, negativePrompt: call.negativeSent ? negativePrompt : undefined, warnings, ...call };
 }
 
