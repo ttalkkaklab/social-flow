@@ -266,6 +266,9 @@ Before committing the shot list, read each complete scene without cuts, then com
 proposed boundaries. Merge adjacent shots whose frame already carries the continuing
 exchange or action. Split when a reveal, reaction, action boundary, viewpoint or necessary
 geography changes what the audience follows. A close-up is one possible reason, not a rule.
+Follow [shot boundary decisions](references/shot-boundaries.md) after `shot_dialogue` and
+after later framing/timing changes. Use `storyboard_read.boundaryReview` to inspect every
+actual playback join, including silent action and speaker changes.
 After `shot_dialogue`, read each scene's complete speech and action without the shot breaks.
 Keep a continuing speaker in the same shot while the frame carries the performance; a pause,
 new sentence, changed speech purpose, glance or hand gesture alone does not require a cut.

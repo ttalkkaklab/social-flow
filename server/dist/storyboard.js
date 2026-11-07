@@ -271,6 +271,75 @@ function boardReadiness(win, boardDir) {
     return { configuration, assets, references: { status: !channel ? 'not_checked' : findings.length ? 'needs_attention' : 'checked', findings },
         visualReview: 'not_reviewed', note: 'Diagnostics only; no overall production-ready or visual-quality claim.' };
 }
+/** Editorial evidence, not a cut classifier. Keep every playback join for the author's judgment. */
+function boundaryReview(win, playback, videoTiming) {
+    const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    const text = (value) => typeof value === 'string' && value.trim() ? value : null;
+    const source = win.SCENES || [];
+    const ids = source.map(shot => shot.id);
+    const timings = Array.isArray(videoTiming) ? videoTiming : [];
+    const shots = playback.map(({ no }, index) => {
+        const shot = source[no - 1];
+        const visual = record(shot.visual), plan = record(shot.shot), camera = record(visual.camera);
+        const edit = record(shot.edit), design = record(plan.videoDesign);
+        const id = text(shot.id), uniqueId = id !== null && ids.filter(value => value === id).length === 1;
+        const cast = contract().castOf(shot);
+        return {
+            no, id, playbackPosition: index + 1, identity: uniqueId ? 'stable' : 'missing_or_duplicate',
+            scene: typeof shot.scene === 'number' ? shot.scene : null, type: shot.type,
+            summary: text(shot.summary), principals: cast ?? null,
+            location: text(visual.locationId), camera, size: plan.size ?? null, angle: plan.angle ?? null,
+            depth: plan.depth ?? null, eyeline: plan.eyeline ?? null, composition: plan.composition ?? null,
+            opening: design.before ?? null, action: visual.action ?? design.action ?? null,
+            ending: camera.end ?? design.after ?? null,
+            // Preserve line ids, delivery, acting and performance group references, including silent actions.
+            narration: shot.narration ?? null, performance: shot.performance ?? null,
+            estimatedSeconds: typeof shot.duration === 'number' && Number.isFinite(shot.duration) && shot.duration > 0 ? shot.duration : null,
+            timing: uniqueId ? timings.find(row => record(row).shotId === id) ?? null : null,
+            storedIncoming: { transition: shot.transition ?? null, reason: text(edit.reason), continuity: text(edit.continuity) },
+        };
+    });
+    const reasons = shots.map(shot => shot.storedIncoming.reason).filter(reason => reason !== null);
+    const boundaries = shots.slice(1).map((right, index) => {
+        const left = shots[index];
+        const spliced = [left, right].some(shot => shot.type === 'broll' || shot.type === 'outro');
+        const sameScene = left.scene !== null && right.scene !== null ? left.scene === right.scene : null;
+        const sameLocation = left.location !== null && right.location !== null ? left.location === right.location : null;
+        const knownCast = left.principals !== null && right.principals !== null;
+        const samePrincipals = knownCast ? left.principals.length === right.principals.length &&
+            left.principals.every(id => right.principals.includes(id)) : null;
+        const spoken = (lines) => (Array.isArray(lines) ? lines : []).map(record).filter(line => text(line.tts));
+        const last = spoken(left.narration).at(-1), first = spoken(right.narration)[0];
+        const lastSpeaker = text(last?.speaker), firstSpeaker = text(first?.speaker);
+        const continuingSpeaker = lastSpeaker !== null && firstSpeaker !== null ? lastSpeaker === firstSpeaker : null;
+        const signals = [];
+        if (sameScene === true && !spliced) {
+            if (continuingSpeaker === true)
+                signals.push('continuing_speaker');
+            if (samePrincipals === true && left.principals.length > 0)
+                signals.push('same_principals');
+            const silentAction = (shot) => Array.isArray(shot.narration) && shot.narration.length === 0 &&
+                (shot.action !== null || (Array.isArray(shot.performance) && shot.performance.some(beat => record(beat).kind === 'action')));
+            if (silentAction(left) && silentAction(right))
+                signals.push('consecutive_silent_actions');
+        }
+        const reason = right.storedIncoming.reason;
+        if (!spliced && reason && reasons.filter(value => value === reason).length >= 3)
+            signals.push('repeated_reason');
+        return {
+            from: { id: left.id, no: left.no }, to: { id: right.id, no: right.no },
+            sameScene, sameLocation, samePrincipals, continuingSpeaker, signals,
+            // Inserted footage has its own edit scheduling. A raw-array join is not proof of its playback join.
+            incoming: spliced ? null : right.storedIncoming,
+            joinEvidence: spliced ? 'inspect_splice_edit' : 'authored_not_verified',
+            question: sameScene === false ? 'What time, place or event change motivates this boundary?' :
+                'What would a continuous held or motivated moving frame lose here? Preserve an earned reveal, reaction or viewpoint.',
+            decision: 'needs_editorial_review',
+        };
+    });
+    return { version: 'shot-boundaries-v1', status: 'not_reviewed', shots, boundaries,
+        note: 'Signals are review prompts, never merge instructions or quality failures. Compare the complete scene, including offscreen action. Recompute a proposed continuous performance and its selected video route before claiming it fits; separate-shot timing is not merged capacity. No files or approvals are changed.' };
+}
 /** Read plans and recorded evidence without claiming to have inspected media or validated reviews. */
 export function readStoryboard(args) {
     const { win, file, sha256 } = readBoard(args.path);
@@ -291,6 +360,7 @@ export function readStoryboard(args) {
             return { shotId: shot.id, status: 'not_verified', reason: error.message };
         }
     });
+    result.boundaryReview = boundaryReview(win, result.playback, result.videoTiming);
     if (args.includeTechniques !== false)
         result.techniqueCatalog = {
             version: techniqueContract().VERSION, entries: techniqueContract().entries, guides: techniqueContract().VALUES,
