@@ -1,0 +1,71 @@
+Excerpt: warning, cropped-source and converted-source failures against iteration 2.
+The style fixture failure in this run is excluded; regression-before-style.txt contains its corrected reproduction.
+
+test at test/storyboard.test.mjs:693:3
+✖ shows host generation warnings before the pending output is generated (23.424583ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /Warnings:/. Input:
+  
+  'Pending host request: s0001-start-v1; active frames are unchanged.\n' +
+    '\n' +
+    'start image: /var/folders/15/60g2wtt90rl8vms1ydjcq_2h0000gn/T/sb-odG7H0/data/c/episodes/e/storyboard/images/s0001-start-v1.png\n' +
+    'Inputs, in order:\n' +
+    '  Image 1: /var/folders/15/60g2wtt90rl8vms1ydjcq_2h0000gn/T/sb-odG7H0/data/c/episodes/e/storyboard/places/room.png\n' +
+    '  Image 2: /var/folders/15/60g2wtt90rl8vms1ydjcq_2h0000gn/T/sb-odG7H0/data/c/assets/characters/mina/face.png\n' +
+    '  Image 3: /var/folders/15/60g2wtt90rl8vms1ydjcq_2h0000gn/T/sb-odG7H0/data/c/assets/characters/mina/body.png\n' +
+    '  Image 4: /var/folders/15/60g2wtt90rl8vms1ydjcq_2h0000gn/T/sb-odG7H0/data/c/assets/characters/mina/back.png\n' +
+    '\n' +
+    'Prompt:\n' +
+    "Compose one picture from these images. Image 1 shows the room location; use its appearance and the spatial relationships of visible landmarks, not its frame extent. Image 2 shows mina's face and hair. Image 3 shows mina's body and outfit, front. Image 4 shows mina's body and outfit, back. Medium shot, waist up, at eye level. This is the opening still for a dolly in; show one instant, with no motion trail or montage. Begin at the opening crop with margin for the closer landing and readable foreground/background depth. Mina waits. the picture fills the frame from the top edge to the bottom edge.\n" +
+    '\n' +
+    'host_handoff: generate this picture with the selected host image tool from the inputs above, in order, and save it to the image path. Then call shot_image with action:"complete", the same path/id/frame and requestId:"s0001-start-v1"; omit prompt and other generation options.'
+  
+      at TestContext.<anonymous> (file:///Users/zeans/orca/workspaces/social-flow/ridgehead/server/test/storyboard.test.mjs:697:12)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: `Pending host request: s0001-start-v1; active frames are unchanged.\n\nstart image: /var/folders/15/60g2wtt90rl8vms1ydjcq_2h0000gn/T/sb-odG7H0/data/c/episodes/e/storyboard/images/s0001-start-v1.png\nInputs, in order:\n  Image 1: /var/folders/15/60g2wtt90rl8vms1ydjcq_2h0000gn/T/sb-odG7H0/data/c/episodes/e/storyboard/places/room.png\n  Image 2: /var/folders/15/60g2wtt90rl8vms1ydjcq_2h0000gn/T/sb-odG7H0/data/c/assets/characters/mina/face.png\n  Image 3: /var/folders/15/60g2wtt90rl8vms1ydjcq_2h0000gn/T/sb-odG7H0/data/c/assets/characters/mina/body.png\n  Image 4: /var/folders/15/60g2wtt90rl8vms1ydjcq_2h0000gn/T/sb-odG7H0/data/c/assets/characters/mina/back.png\n\nPrompt:\nCompose one picture from these images. Image 1 shows the room location; use its appearance and the spatial relationships of visible landmarks, not its frame extent. Image 2 shows mina's face and hair. Image 3 shows mina's body and outfit, front. Image 4 shows mina's body and outfit, back. Medium shot, waist up, at eye level. This is the opening still for a dolly in; show one instant, with no motion trail or montage. Begin at the opening crop with margin for the closer landing and readable foreground/background depth. Mina waits. the picture fills the frame from the top edge to the bottom edge.\n\nhost_handoff: generate this picture with the selected host image tool from the inputs above, in order, and save it to the image path. Then call shot_image with action:"complete", the same path/id/frame and requestId:"s0001-start-v1"; omit prompt and other generation options.`,
+    expected: /Warnings:/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at test/storyboard.test.mjs:881:3
+✖ prepares an inspected crop as the generation input without replacing the saved output (162.163042ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception.
+      at TestContext.<anonymous> (file:///Users/zeans/orca/workspaces/social-flow/ridgehead/server/test/storyboard.test.mjs:906:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Suite.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at node:internal/test_runner/test:1305:31
+      at node:internal/process/task_queues:151:7
+      at AsyncResource.runInAsyncScope (node:async_hooks:227:14)
+      at AsyncResource.runMicrotask (node:internal/process/task_queues:148:8) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /input_changed/,
+    operator: 'throws',
+    diff: 'simple'
+  }
+
+test at test/storyboard.test.mjs:1098:3
+✖ GPT Image gets a mixed PNG and JPEG set as PNG copies (81.7445ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception.
+      at TestContext.<anonymous> (file:///Users/zeans/orca/workspaces/social-flow/ridgehead/server/test/storyboard.test.mjs:1116:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Suite.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at node:internal/test_runner/test:1305:31
+      at node:internal/process/task_queues:151:7
+      at AsyncResource.runInAsyncScope (node:async_hooks:227:14)
+      at AsyncResource.runMicrotask (node:internal/process/task_queues:148:8) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /input_changed/,
+    operator: 'throws',
+    diff: 'simple'
+  }

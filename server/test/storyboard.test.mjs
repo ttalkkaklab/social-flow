@@ -35,6 +35,7 @@ import {
   writeStorySequences,
   writeStoryShots,
 } from '../dist/storyboard.js';
+import * as storyboardImages from '../dist/storyboard.js';
 import { TOOLS } from '../dist/tools.js';
 import { ROUTES } from '../dist/handlers.js';
 import { buildNativeImageBody } from '../dist/astra-genai-native-image.js';
@@ -612,6 +613,121 @@ describe('images and the video prompt follow the icon attributes', () => {
     applyStoryboard({ path: dir, shotsById: [{ id: s.id, shot: s }] });
     assert.equal(status().status, 'unknown');
   });
+  it('does not replace a usable start/end pair with an absent or invalid generated output', () => {
+    const { dir } = pictureBoard(); icons(dir);
+    make(dir, 's0002'); make(dir, 's0002', 'end');
+    const before = readFileSync(join(dir, 'scenes.js'), 'utf8');
+    const args = { path: dir, id: 's0002', frame: 'start', prompt: 'Mina returns.' };
+    const request = shotImageRequest(args);
+    assert.throws(() => recordShotImage(args, request), /shot_image_output_missing/);
+    assert.equal(readFileSync(join(dir, 'scenes.js'), 'utf8'), before);
+    writeFileSync(request.file, 'not an image');
+    assert.throws(() => recordShotImage(args, request), /image_invalid/);
+    assert.equal(readFileSync(join(dir, 'scenes.js'), 'utf8'), before);
+  });
+  it('reserves distinct host requests and completes exactly the saved output without another generation', () => {
+    const { dir } = pictureBoard(); icons(dir);
+    make(dir, 's0002'); make(dir, 's0002', 'end');
+    const before = readFileSync(join(dir, 'scenes.js'), 'utf8');
+    const args = { path: dir, id: 's0002', frame: 'start', prompt: 'Mina returns.' };
+    const request = shotImageRequest(args);
+    storyboardImages.deferShotImage(args, request);
+    const next = shotImageRequest(args);
+    storyboardImages.deferShotImage(args, next);
+    assert.notEqual(next.file, request.file);
+    assert.equal(readFileSync(join(dir, 'scenes.js'), 'utf8'), before);
+    const complete = { path: dir, id: args.id, frame: args.frame, action: 'complete', requestId: request.requestId };
+    assert.throws(() => storyboardImages.completeShotImage(complete), /shot_image_output_missing/);
+    writeFileSync(request.file, png);
+    assert.equal(storyboardImages.completeShotImage(complete).written, true);
+    const shot = readBoard(dir).win.SCENES[1];
+    assert.equal(shot.visual.frames.start, relative(dir, request.file));
+    assert.equal(shot.visual.frames.end, undefined);
+    assert.equal(shot.visual.frames.startBasis, request.startBasis);
+    assert.throws(() => storyboardImages.completeShotImage(complete), /already_completed/);
+    writeFileSync(next.file, png);
+    assert.throws(() => storyboardImages.completeShotImage({ ...complete, requestId: next.requestId }), /request_stale/);
+  });
+  it('the host route preserves active frames and completes without generation options', async () => {
+    const { dir } = pictureBoard(); icons(dir);
+    make(dir, 's0001');
+    const before = readFileSync(join(dir, 'scenes.js'), 'utf8');
+    const args = { path: dir, id: 's0001', prompt: 'Mina waits by the window.' };
+    const response = await ROUTES.shot_image(args);
+    assert.equal(response.isError, false);
+    const text = response.content[0].text;
+    const requestId = /Pending host request: ([^;]+)/.exec(text)[1];
+    assert.equal(readFileSync(join(dir, 'scenes.js'), 'utf8'), before);
+    writeFileSync(join(dir, 'images', requestId + '.png'), png);
+    // An unrelated asset change must not discard this valid pending output.
+    const doc = readBoard(dir).win.SB_DOC;
+    applyStoryboard({ path: dir, draft: true, globals: { SB_DOC: { ...doc, locations: [...doc.locations, { id: 'elsewhere', name: 'Other' }] } } });
+    const completed = await ROUTES.shot_image({ path: dir, id: args.id, action: 'complete', requestId });
+    assert.equal(completed.isError, false);
+    assert.equal(readBoard(dir).win.SCENES[0].visual.frames.start, 'images/' + requestId + '.png');
+  });
+  it('refuses host completion after a plan or reference changes without relabelling its framing', () => {
+    const { dir } = pictureBoard(); icons(dir);
+    const args = { path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits.' };
+    const request = shotImageRequest(args);
+    storyboardImages.deferShotImage(args, request); writeFileSync(request.file, png);
+    writeShotIcons({ path: dir, shots: [{ id: args.id, size: 'cu' }] });
+    const complete = { path: dir, id: args.id, frame: args.frame, action: 'complete', requestId: request.requestId };
+    assert.throws(() => storyboardImages.completeShotImage(complete), /request_stale/);
+    const current = shotImageRequest(args);
+    storyboardImages.deferShotImage(args, current); writeFileSync(current.file, png);
+    writeFileSync(current.inputs[0], Buffer.concat([png, Buffer.from('changed')]));
+    assert.throws(() => storyboardImages.completeShotImage({ ...complete, requestId: current.requestId }), /input_changed/);
+    assert.throws(() => storyboardImages.completeShotImage({ ...complete, requestId: '../outside' }), /request_required/);
+    assert.throws(() => storyboardImages.completeShotImage({ ...complete, prompt: 'different' }), /completion_scope/);
+  });
+  it('rejects a changed canonical panel selection while preserving the active pair, but keeps direct edits source-only', () => {
+    const { root, dir } = pictureBoard(); icons(dir);
+    make(dir, 's0002'); make(dir, 's0002', 'end');
+    const args = { path: dir, id: 's0002', frame: 'start', prompt: 'Mina waits.' };
+    const request = shotImageRequest(args);
+    storyboardImages.deferShotImage(args, request); writeFileSync(request.file, png);
+    const before = readFileSync(join(dir, 'scenes.js'), 'utf8');
+    const panelDir = join(root, 'data/c/assets/characters/mina');
+    const registry = join(panelDir, 'panels.json');
+    const panels = JSON.parse(readFileSync(registry, 'utf8'));
+    writeFileSync(join(panelDir, 'new-face.png'), png);
+    panels.panels.face.file = 'new-face.png';
+    writeFileSync(registry, JSON.stringify(panels));
+    assert.ok(shotImageRequest(args).inputs.includes(join(panelDir, 'new-face.png')));
+    assert.throws(() => storyboardImages.completeShotImage({ path: dir, id: args.id, frame: args.frame, action: 'complete', requestId: request.requestId }), /request_stale/);
+    assert.equal(readFileSync(join(dir, 'scenes.js'), 'utf8'), before);
+    const edit = shotImageRequest({ ...args, editExisting: true, prompt: 'Make the coat blue.' });
+    storyboardImages.deferShotImage(args, edit); writeFileSync(edit.file, png);
+    panels.panels.face.file = 'face.png';
+    writeFileSync(registry, JSON.stringify(panels));
+    assert.equal(storyboardImages.completeShotImage({ path: dir, id: args.id, frame: args.frame, action: 'complete', requestId: edit.requestId }).written, true);
+  });
+  it('rejects completion after the effective production style changes', () => {
+    const { dir } = pictureBoard(); icons(dir);
+    const args = { path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits.' };
+    const request = shotImageRequest(args);
+    storyboardImages.deferShotImage(args, request); writeFileSync(request.file, png);
+    const production = readBoard(dir).win.PRODUCTION ?? {};
+    applyStoryboard({ path: dir, draft: true, globals: { PRODUCTION: { ...production, style: { ...production.style, preset: 'cinematic' } } } });
+    assert.throws(() => storyboardImages.completeShotImage({ path: dir, id: args.id, frame: args.frame, action: 'complete', requestId: request.requestId }), /request_stale/);
+  });
+  it('shows host generation warnings before the pending output is generated', async () => {
+    const { dir } = pictureBoard(); icons(dir);
+    const response = await ROUTES.shot_image({ path: dir, id: 's0001', prompt: 'Mina waits.', location: 'room' });
+    assert.equal(response.isError, false);
+    assert.match(response.content[0].text, /Warnings:/);
+    assert.match(response.content[0].text, /background_view_missing/);
+  });
+  it('reports a missing active image independently of unchanged framing inputs', () => {
+    const { dir } = pictureBoard(); icons(dir);
+    const request = make(dir, 's0001');
+    rmSync(request.file);
+    const evidence = readStoryboard({ path: dir }).imageFraming.find(row => row.id === 's0001');
+    assert.equal(evidence.status, 'current');
+    assert.equal(evidence.availability, 'missing');
+    assert.equal(evidence.visualReview, 'not_reviewed');
+  });
   it('selects the opening camera background panel and preserves the choice across icon edits', () => {
     const { dir } = pictureBoard();
     icons(dir);
@@ -621,14 +737,18 @@ describe('images and the video prompt follow the icon attributes', () => {
       locations: [{ id: 'room', panels: { front: 'places/room.png', back: 'places/back.png' } }] } } });
     const args = { path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits.', location: 'room' };
     assert.equal(shotImageRequest(args).inputs[0], join(dir, 'places/room.png'));
-    assert.match(shotImageRequest(args).prompt, /Keep the background's front viewing direction/);
+    assert.match(shotImageRequest(args).prompt, /front directional geography/);
+    assert.doesNotMatch(shotImageRequest(args).prompt, /preserve this view and its landmark arrangement/);
     make(dir, 's0001', 'start', { location: 'room' });
     const changed = writeShotIcons({ path: dir, shots: [{ id: 's0001', backgroundView: 'back' }] });
     assert.ok(changed.findings.some(f => f.level === 'warn' && /remake/.test(f.what)));
     writeShotIcons({ path: dir, shots: [{ id: 's0001', angle: 'high', view: { subject: 'Mina', reason: 'Watch her reaction', crop: 'Her face fills the frame', mode: 'profile-left' } }] });
     const back = shotImageRequest(args);
     assert.equal(back.inputs[0], join(dir, 'places/back.png'));
-    assert.match(back.prompt, /Keep the background's back viewing direction/);
+    assert.match(back.prompt, /back directional geography/);
+    assert.match(back.prompt, /authored crop, camera height and subject viewpoint control the output/);
+    assert.match(back.prompt, /Landmarks outside that crop stay outside the frame/);
+    assert.doesNotMatch(back.prompt, /Keep the background's back viewing direction and landmark arrangement/);
     assert.doesNotMatch(back.prompt, /sheet pose and camera do not constrain/);
     assert.equal(back.refs.filter(r => r.role === 'background').length, 1);
     assert.ok(!back.inputs.includes(join(dir, 'places/room.png')));
@@ -803,6 +923,9 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.throws(() => shotImageRequest({ ...args, reframe: false }), /image_edit_scope/);
     assert.throws(() => shotImageRequest({ ...args, sourceCrop: { ...args.sourceCrop, x: 20 } }), /image_crop_bounds/);
     assert.throws(() => shotImageRequest({ ...args, sourceCrop: { ...args.sourceCrop, width: 20 } }), /image_crop_aspect/);
+    storyboardImages.deferShotImage(args, request); writeFileSync(request.file, png);
+    writeFileSync(start.file, Buffer.concat([original, Buffer.from('changed')]));
+    assert.throws(() => storyboardImages.completeShotImage({ path: dir, id: args.id, frame: args.frame, action: 'complete', requestId: request.requestId }), /input_changed/);
   });
   it('a sheet panel missing from panels.json or disk stops the frame instead of being dropped', () => {
     const { root, dir } = pictureBoard();
@@ -822,7 +945,7 @@ describe('images and the video prompt follow the icon attributes', () => {
     icons(dir);
     const start = make(dir, 's0001', 'start', { location: 'room' });
     assert.deepEqual(start.inputs.map((f) => f.split('/').slice(-2).join('/')), ['places/room.png', 'mina/face.png', 'mina/body.png', 'mina/back.png']);
-    assert.match(start.prompt, /Image 1 shows the room location\. Image 2 shows mina's face and hair\..*Medium shot, waist up, at eye level/);
+    assert.match(start.prompt, /Image 1 shows the room location[;.].*Image 2 shows mina's face and hair\..*Medium shot, waist up, at eye level/);
     const shot = readBoard(dir).win.SCENES[0];
     assert.equal(shot.visual.frames.start, 'images/s0001-start-v1.png');
     assert.equal(shot.visual.bg, shot.visual.frames.start);
@@ -1009,6 +1132,10 @@ describe('images and the video prompt follow the icon attributes', () => {
     const request = ask();
     assert.match(request.inputs[0], /images\/inputs\/[0-9a-f]{16}\.png$/);
     assert.equal(request.args.sourceMimeType, 'image/png');
+    const original = join(dir, 'places/yard.jpg');
+    writeFileSync(request.file, png);
+    writeFileSync(original, Buffer.concat([readFileSync(original), Buffer.from('changed')]));
+    assert.throws(() => recordShotImage({ path: dir, id: 's0001', frame: 'start' }, request), /input_changed/);
   });
 });
 

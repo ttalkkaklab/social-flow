@@ -33198,8 +33198,10 @@ var shotIconsSchema = external_exports.object({
 var shotImageSchema = external_exports.object({
   path: outlinePath,
   id: shotIdSchema,
+  action: external_exports.enum(["generate", "complete"]).default("generate").describe("generate plans/runs a new image; complete adopts a saved host output without generating"),
+  requestId: nonEmpty.optional().describe("The host handoff requestId to complete"),
   frame: external_exports.enum(["start", "end"]).default("start").describe("start: the first image; end: the last image of a first_last shot"),
-  prompt: nonEmpty.describe("What the frame shows, in English: who is where, doing what, facing which way, expression and light"),
+  prompt: nonEmpty.optional().describe("What the frame shows, in English: who is where, doing what, facing which way, expression and light"),
   editExisting: external_exports.boolean().optional().describe("Edit the saved frame in place conceptually, saving a new version; prompt describes only the change"),
   reframe: external_exports.boolean().optional().describe("With editExisting, reapply the saved start-frame size, crop and viewpoint to correct a generated composition; prompt describes the opening action and correction"),
   sourceCrop: external_exports.object({ x: external_exports.number().int().nonnegative(), y: external_exports.number().int().nonnegative(), width: external_exports.number().int().positive(), height: external_exports.number().int().positive() }).strict().optional().describe("With reframe, an inspected rectangle in source-image pixels, e.g. {x:72,y:64,width:720,height:1280}; must fit the source and match output aspect. It becomes the GenAI composition reference, not the final output."),
