@@ -297,7 +297,9 @@ origin they used. Production may run without MLX.
 ```
 
 This is a `models` fragment, not a complete project configuration. Replace aliases
-with `astra_genai_catalog kind:image/speech/video` results. Preserve project, SNS,
+with `astra_genai_catalog kind:image/speech/video` results. `video` reads the general
+`/v1/models` catalog, including LTX/MSR. For the Desktop engine, use `kind:desktop_video`
+to read `/v1/ltx/desktop/models`; `loras` and `contracts` also require Desktop. Preserve project, SNS,
 style and production fields when updating; existing episode snapshots stay fixed.
 No example grants spending permission. `capability_status` checks credentials only.
 

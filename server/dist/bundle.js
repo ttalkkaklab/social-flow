@@ -109916,7 +109916,8 @@ async function genaiCatalog(kind) {
   const routes = {
     image: "/v1/images/models",
     speech: "/v1/audio/models",
-    video: "/v1/ltx/desktop/models",
+    video: "/v1/models",
+    desktop_video: "/v1/ltx/desktop/models",
     loras: "/v1/ltx/desktop/loras",
     contracts: "/v1/ltx/desktop/contracts"
   };
@@ -110635,8 +110636,8 @@ function tool(name, description, schema, readOnly = false) {
 var NATIVE_GENAI_TOOLS = [
   tool(
     "astra_genai_catalog",
-    "Read configured gateway image/speech/video models, registered voice IDs, LoRA refs or native schemas. Requires ASTRA_GENAI_API_KEY and optional ASTRA_GENAI_URL. Configuration discovery is not an inference health check. Select the returned model alias; never infer a runtime or fall back to a different engine.",
-    external_exports.object({ kind: external_exports.enum(["image", "speech", "video", "loras", "contracts"]) }).strict(),
+    "Read configured gateway models and native schemas. Use video for the general /v1/models catalog (including LTX/MSR); desktop_video for Desktop models, which requires a configured Desktop. image/speech read their respective models, loras/contracts are Desktop-only. Requires ASTRA_GENAI_API_KEY and optional ASTRA_GENAI_URL. Configuration discovery is not an inference health check. Select the returned model alias; never infer a runtime or fall back to a different engine.",
+    external_exports.object({ kind: external_exports.enum(["image", "speech", "video", "desktop_video", "loras", "contracts"]) }).strict(),
     true
   ),
   tool("astra_genai_image_generate", "Generate one PNG with the configured gateway model alias. Use image_plan/image_execute with engine astra-genai-native and explicit reserveUsd. Optional registered LoRA IDs/scales; consult image catalog for model constraints. No reference images on text requests. Returns verified local output; retain the receipt after errors. Use GPT Image 2 for readable text.", nativeImageSchema),
@@ -134950,7 +134951,7 @@ GLB. Inspect the mesh and materials, then use it in an HTML mesh slide (mesh-obj
   //    Acceptance and result are separate calls, so the client polls; these routes only
   //    parse, call, and report. Failures arrive as thrown errors carrying the server's own
   //    message — never the request headers, which is where the key lives.
-  astra_genai_catalog: async (args) => text3(JSON.stringify(await genaiCatalog(external_exports.enum(["image", "speech", "video", "loras", "contracts"]).parse(args.kind)))),
+  astra_genai_catalog: async (args) => text3(JSON.stringify(await genaiCatalog(external_exports.enum(["image", "speech", "video", "desktop_video", "loras", "contracts"]).parse(args.kind)))),
   tts_astra_genai: async (args) => {
     const generation2 = genaiSpeechSchema.parse(args);
     const result = await routeSpeech({
