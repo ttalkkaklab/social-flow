@@ -152,6 +152,29 @@ function checkLegacy(work, board) {
   return media;
 }
 /** Production checks provenance only. Listening and approval are not production gates. */
+function retainedSoundtrack(scene, board, cast, media) {
+  const repair=scene.visual?.video?.soundtrackRepair;
+  if(repair?.kind!=='preserved_soundtrack')return false;
+  if(scene.sound?.audioSource!=='video'||scene.visual.video.speechBinding)
+    throw new Error('A retained soundtrack repair needs source video audio and no adapter speech binding');
+  const video=path.resolve(board,scene.visual.video.clip||'');
+  if(typeof repair.videoPath!=='string'||path.resolve(board,repair.videoPath)!==video||hash(fs.readFileSync(video))!==repair.videoSha256)
+    throw new Error('Retained soundtrack video changed');
+  const lines=(scene.narration||[]).filter(n=>(n.tts||'').trim());
+  const revisions=lines.map(n=>({lineId:n.id,revision:speechRevision(n,{tts:cast.find(c=>c.id===n.speaker)?.tts})}));
+  if(JSON.stringify(repair.lines)!==JSON.stringify(revisions))throw new Error('Retained soundtrack dialogue or voice changed');
+  if(!Array.isArray(repair.sources)||!repair.sources.length||
+      JSON.stringify(repair.sources.flatMap(source=>source.lineIds||[]))!==JSON.stringify(lines.map(n=>n.id)))
+    throw new Error('Retained soundtrack sources must cover the current lines in order');
+  for(const source of repair.sources){
+    if(!['native_video','selected_line_audio'].includes(source.kind)||typeof source.path!=='string')throw new Error('Invalid retained soundtrack source');
+    const file=path.resolve(board,source.path);
+    if(hash(fs.readFileSync(file))!==source.sha256)throw new Error('Retained soundtrack source changed');
+    media[file]=source.sha256;
+  }
+  media[video]=repair.videoSha256;
+  return true; // Provenance only: neither adapter capability nor listening/lip-sync approval.
+}
 function check(work, board) {
   work=path.resolve(work); board=path.resolve(board);
   const file=path.join(board,'scenes.js');
@@ -171,11 +194,12 @@ function check(work, board) {
     const characters=win.SB_DOC?.characters||[];
     const cast=Array.isArray(characters)?characters:Object.entries(characters).map(([id,c])=>({...c,id}));
     const binding=s.visual?.video?.speechBinding;
+    const retained=retainedSoundtrack(s,board,cast,media);
     // A native-speech clip (MSR) spoke these lines from its prompt: they have no audio, and its soundtrack is the card audio.
     const native=binding?.mode==='native';
     if(native && s.sound?.audioSource!=='video')throw new Error('Native speech video needs sound.audioSource video for card '+i);
-    if(win.SB_DOC?.speechPlanVersion===1 && (s.narration||[]).some(n=>n.delivery==='on_screen') && s.visual?.video && !binding)throw new Error('On-screen dialogue needs a video speech binding for card '+i+'; bind the clip with speech_manage attach_video');
-    for(const line of native?[]:s.narration||[]) {
+    if(win.SB_DOC?.speechPlanVersion===1 && (s.narration||[]).some(n=>n.delivery==='on_screen') && s.visual?.video && !binding&&!retained)throw new Error('On-screen dialogue needs a video speech binding for card '+i+'; bind the clip with speech_manage attach_video');
+    for(const line of native||retained?[]:s.narration||[]) {
       if(line.mediaStatus==='needs_audio')throw new Error('Regenerate modified dialogue '+line.id);
       if(win.SB_DOC?.speechPlanVersion===1 && (line.tts||'').trim() && !line.audio)throw new Error('Attach generated dialogue audio: '+line.id);
       if(line.audio) {
@@ -208,7 +232,11 @@ function check(work, board) {
         throw new Error('Missing or stale source soundtrack extraction for card ' + i);
       if (binding && path.resolve(extraction.video) !== path.resolve(binding.videoPath))
         throw new Error('Source soundtrack differs from bound speech video for card ' + i);
+      if (retained && (path.resolve(extraction.video) !== path.resolve(board,s.visual.video.soundtrackRepair.videoPath) ||
+          extraction.sourceSha256 !== s.visual.video.soundtrackRepair.videoSha256))
+        throw new Error('Source soundtrack differs from retained repaired video for card ' + i);
       media[extraction.video] = extraction.sourceSha256;
+      if(retained)warnings.push('card '+i+': retained soundtrack repair has current source/line provenance; visible lip-sync and audio listening not_reviewed');
       warnings.push('card ' + i + ': source soundtrack retained; perceptual audio quality not_reviewed');
       continue; // Line/voice/video provenance above still applies; this WAV was extracted, not TTS-composed.
     }
@@ -247,7 +275,7 @@ function checkTempo(work,speed,min=1,max=1) {
   });
   if(generated&&[speed,min,max].some(n=>Number(n)!==1))throw new Error('ElevenLabs narration forbids post-synthesis tempo changes; set SPEED=1 and ATEMPO_MIN=ATEMPO_MAX=1, use generation.speed');
 }
-module.exports={characterVoice,checkLegacy,check,decide,approve,lastReport,findings,verifyProof,normalize,cer,checkTempo};
+module.exports={characterVoice,checkLegacy,check,decide,approve,lastReport,findings,verifyProof,normalize,cer,checkTempo,retainedSoundtrack};
 if(require.main===module){
   try{
     const [command,work,arg]=process.argv.slice(2);

@@ -21,6 +21,20 @@ function setup(t){
  let r=manageSpeech({path:target,action:'list'});r=manageSpeech({path:target,action:'prepare',expectedRevision:r.revision});
  return {dir,target,r};
 }
+test('binding a generated clip creates player cuts, replaces its source, and preserves authored multi-cut edits',t=>{
+ const {dir,target,r}=setup(t),file=join(target,'scenes.js'),video=join(dir,'generated.mp4');
+ require('node:child_process').execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=s=16x16:r=24','-t','0.25','-c:v','libx264','-pix_fmt','yuv420p',video]);
+ const native={...caps,audioConditioning:false,lipSync:false,nativeSpeech:true};
+ const attach=()=>manageSpeech({path:target,action:'attach_video',shotId:r.lines[0].shotId,
+  expectedRevision:manageSpeech({path:target,action:'list'}).revision,videoPath:video,capabilities:native});
+ const board=()=>require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file,'utf8'));
+ attach();let win=board();
+ assert.deepEqual(win.SCENES[0].productionPlan.cuts,[{kind:'generated_video',path:'../generated.mp4',start:0,seconds:0.25}]);
+ attach();assert.deepEqual(board().SCENES[0].productionPlan.cuts,win.SCENES[0].productionPlan.cuts);
+ win.SCENES[0].productionPlan.cuts.push({kind:'image',path:'ending.png',seconds:1});
+ writeFileSync(file,Object.entries(win).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+ attach();assert.deepEqual(board().SCENES[0].productionPlan.cuts,win.SCENES[0].productionPlan.cuts);
+});
 test('stable dialogue addresses survive prepare; edits target one character and mark dependent media',t=>{
  const {target,r}=setup(t),first=r.lines[0],second=r.lines[1];
  assert.equal(second.speaker,'narrator');assert.equal(second.delivery,'voiceover');
@@ -31,6 +45,19 @@ test('stable dialogue addresses survive prepare; edits target one character and 
  assert.ok(next.invalidated.video);assert.equal(next.lines[0].mediaStatus,'needs_audio');
  assert.equal(manageSpeech({path:target,action:'list',speaker:'narrator'}).lines[0].tts,'Outside');
  assert.throws(()=>manageSpeech({path:target,action:'update',lineId:first.id,expectedRevision:next.revision,patch:{speaker:'missing'}}),/Unknown speaker/);
+});
+test('a speechless replacement retains a real soundtrack but clears an inherited source when no audio stream exists',t=>{
+ const {dir,target,r}=setup(t),file=join(target,'scenes.js');
+ const read=()=>require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file,'utf8'));
+ const win=read();win.SCENES[0].narration=[];win.SCENES[0].sound={audioSource:'video',room:'classroom'};
+ writeFileSync(file,Object.entries(win).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+ const withAudio=join(dir,'ambient.mp4'),silent=join(dir,'silent.mp4'),ff=require('node:child_process').execFileSync;
+ ff('ffmpeg',['-v','error','-f','lavfi','-i','color=s=16x16:r=24','-f','lavfi','-i','anullsrc=r=48000:cl=mono','-t','0.25','-c:v','libx264','-pix_fmt','yuv420p','-c:a','aac',withAudio]);
+ ff('ffmpeg',['-v','error','-f','lavfi','-i','color=s=16x16:r=24','-t','0.25','-c:v','libx264','-pix_fmt','yuv420p',silent]);
+ const attach=videoPath=>manageSpeech({path:target,action:'attach_video',shotId:r.lines[0].shotId,expectedRevision:manageSpeech({path:target,action:'list'}).revision,videoPath,capabilities:{...caps,audioConditioning:false,lipSync:false}});
+ attach(withAudio);assert.equal(read().SCENES[0].sound.audioSource,'video');
+ const result=attach(silent);assert.equal(read().SCENES[0].sound.audioSource,undefined);assert.equal(read().SCENES[0].sound.room,'classroom');
+ assert.match(result.plan.warnings.join(),/no audio stream/);assert.equal(read().SCENES[0].visual.video.speechBinding.quality.review,'not_reviewed');
 });
 test('video adapters select by capabilities, never a provider name',()=>{
  const lines=[{id:'a',speaker:'hero',delivery:'on_screen',tts:'Hello'}];

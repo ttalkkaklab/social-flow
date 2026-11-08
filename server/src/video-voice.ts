@@ -145,13 +145,18 @@ function msrSubject(character: Record<string, unknown>, refs: Record<string, unk
   const declared = ([] as unknown[]).concat(object(context.shot.visual).character ?? [])
     .map(entry => typeof entry === 'string' ? entry : text(object(entry).id));
   if (declared.includes(text(character.id)) && existsSync(path.join(context.episode, 'storyboard', 'cast.json'))) {
-    const { sheetPanels } = load('../../skills/channel/references/character-panels.js') as {
+    const { sheetPanels, canonicalReferences } = load('../../skills/channel/references/character-panels.js') as {
       sheetPanels(dir: string, ids: string[]): Map<string, Record<string, string>>;
+      canonicalReferences(dir: string, shotId: string, ids: string[], use: string, options: { combined: boolean }): Array<{ path: string }>;
     };
     const dir = path.join(context.episode, 'storyboard');
     // Planning rebuilt these references from this same registered owner; transport aliases no longer identify the slot.
     const panels = sheetPanels(dir, [text(character.id)]).get(text(character.id))!;
-    ownedPaths = Object.values(panels).map(file => realpathSync(path.resolve(dir, file)));
+    const combined = object(object(context.shot.visual).video).referenceLayout === 'combined';
+    const files = combined
+      ? canonicalReferences(dir, text(context.shot.id), [text(character.id)], 'video', { combined: true }).map(ref => ref.path)
+      : Object.values(panels);
+    ownedPaths = files.map(file => realpathSync(path.resolve(dir, file)));
   } else ownedPaths = Array.isArray(owned) ? owned.map(value => realpathSync(path.resolve(context.episode, 'storyboard', String(value)))) : [];
   let subject = 0, index = -1, slot = 0;
   refs.forEach((ref, i) => {

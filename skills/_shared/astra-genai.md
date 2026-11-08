@@ -222,13 +222,13 @@ saves `{engine:"astra-genai", model:"ltx-2.5-22b-distilled", operation:"referenc
 resolution:"1792x1024"}` (16:9; `1024x1792` for 9:16). `video_plan` uses the saved
 `operation` when a call names none, so episode cuts plan MSR. A direct "LTX로 만들어줘"
 request means `astra_genai_msr` with the character image, the dialogue in the prompt
-and the character's voice sample when one is pinned. The v2 operations (text, image and audio to video) take
-only `1280x720`, `720x1280`, `720x720`, `1080x720` or `720x1080` (gateway `/v1/models`,
-2026-11-02; `1792x1024` there is `unknown provider resolution`), so `video_plan` sends a v2 call
-the size closest to the saved one in aspect ratio — `1280x720` for `1792x1024`, `720x1280` for
-`1024x1792` — while MSR keeps the saved size. A first-frame shot in an MSR project therefore plans
-image-to-video without changing the saved settings. Text and image to video take `duration`
-6–20 seconds in even steps.
+and the character's voice sample when one is pinned. The v2 operations preserve the saved
+resolution. Do not convert it to historical 720-pixel presets: the live gateway can reject
+those dimensions (observed 2026-11-08). Its current catalog advertises dimensions in multiples
+of 64 and a 2,064,384-pixel ceiling; actual backend restrictions still apply. If the selected
+size is rejected, inspect the live contract instead of silently selecting a different size.
+A first-frame shot in an MSR project plans image-to-video without changing the saved settings.
+Text and image to video take integer `duration`; the current frame ceiling also limits it.
 
 The gateway acknowledged an MSR submission after 480 seconds while busy (2026-10-30), so
 GenAI video submissions wait up to 15 minutes for the job ID.
@@ -330,6 +330,12 @@ No example grants spending permission. `capability_status` checks credentials on
   Resolution/fps/duration combinations are device dependent; inspect the live catalog.
   I2V takes `imagePath` and optional `lastFramePath` (two temporal references).
   A2V takes `audioPath` and optional `imagePath`; no last frame or duration override.
+  Text/I2V/A2V/keyframes accept `promptProvenance:"typed"|"enhanced"`.
+  Omitted preserves the Desktop default (`typed`), which can rewrite the prompt
+  according to the app's enhancement settings. Use `enhanced` for a caller-finished
+  prompt that must reach generation without another rewrite. This is the native
+  contract's provenance label, not evidence of approval or visual quality; it does
+  not guarantee that the generated action will follow the prompt.
   `allowAudioTruncation` defaults false: pad audio to the next 8k+1 frame boundary
   or explicitly opt into frame-grid loss. No automatic trim or padding occurs.
   Extend/retake use `sourceVideoPath` and optional `targetResolution:{width,height}`.
@@ -349,3 +355,14 @@ Use `image_status action:refresh`, `video_status action:refresh`, or the corresp
 receipt recovery tool. Do not delete receipts or change request IDs to retry an
 ambiguous generation. The gateway token must retain access to those jobs/assets.
 LoRA compatibility and perceptual voice/video quality still need actual renders.
+
+For an explicitly selected combined character reference, set
+`visual.video.referenceLayout:"combined"`. Each declared character must register
+`panels.msr` in its shared `panels.json`: a single clothed person image with
+`purpose:"character_reference"`, `view:"msr"`, its `sha256`, and
+`sourceHashes.face` / `sourceHashes.front` matching the current canonical panels.
+Planning rejects missing or stale combined references; it does not fall back.
+Each person takes one subject slot and retains that person's pinned voice sample.
+The start image still takes the background slot. The default panel layout is unchanged.
+Review derived images against the original sheets before selecting this layout;
+fewer references alone do not establish better model adherence.

@@ -325,9 +325,9 @@ test('GenAI selection binds its model and reservation; managed recovery complete
  const make=extra=>planVideo({episode:f.episode,shotId:'s1',requestId:'genai',operation:'text',args:{...args,...extra}});
  assert.throws(()=>make({reserveUsd:undefined}));
  const p=make();assert.equal(p.tool,'astra_genai_text2video');assert.equal(p.quote.reserveUsd,0.25);
- assert.equal(p.args.model,'ltx-2.5-22b-distilled');assert.equal(p.args.resolution,'1280x720');
- // The saved MSR size reaches v2 as the gateway size closest in aspect ratio; MSR keeps its own dimensions.
- for (const [saved,v2] of [['1792x1024','1280x720'],['1024x1792','720x1280'],['1080x720','1080x720']]) {
+ assert.equal(p.args.model,'ltx-2.5-22b-distilled');assert.equal(p.args.resolution,'1280x704');
+ // A stale preset conversion must not replace the explicitly selected geometry.
+ for (const [saved,v2] of [['1792x1024','1792x1024'],['1024x1792','1024x1792'],['1080x720','1080x720']]) {
   const g=fixture(t,{engine:'astra-genai',model:'ltx-2.5-22b-dev',resolution:saved});
   assert.equal(planVideo({episode:g.episode,shotId:'s1',requestId:'v2',operation:'text',args}).args.resolution,v2);
  }

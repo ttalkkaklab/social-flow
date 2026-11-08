@@ -1549,8 +1549,13 @@ const identityCatalog = () => loadFromHere(join(PLUGIN_ROOT, 'skills', '_shared'
 // Two people in one frame: their sheet heights, so the picture keeps the difference the panels cannot show.
 function heightSentence(win: Board, ids: string[]): string {
   const heights = ids.map((id) => [id, ((castEntry(win, id)?.character as { physical?: { heightCm?: { status?: string; value?: unknown } } } | undefined)?.physical?.heightCm)] as const)
-    .filter(([, field]) => field?.status === 'confirmed' && typeof field.value === 'number').map(([id, field]) => `${id} is ${field!.value} cm tall`);
-  return heights.length > 1 ? `Keep their real heights: ${heights.join(' and ')}.` : '';
+    .filter(([, field]) => field?.status === 'confirmed' && typeof field.value === 'number' && Number.isFinite(field.value) && field.value > 0)
+    .map(([id, field]) => ({ id, cm: field!.value as number }));
+  if (heights.length < 2) return '';
+  const ordered = [...heights].sort((a, b) => b.cm - a.cm), tall = ordered[0], short = ordered.at(-1)!;
+  return `Keep their real heights: ${heights.map(h => `${h.id} is ${h.cm} cm tall`).join(' and ')}. `
+    + `${tall.id} is ${Number((tall.cm - short.cm).toFixed(2))} cm taller than ${short.id} (height ratio ${(tall.cm / short.cm).toFixed(3)}). `
+    + 'For upright figures at equal camera distance on the same ground plane, preserve that relative scale. Follow the authored depth and pose; do not equalize head levels or compare seated and standing head heights. Independently framed sheet panels do not establish relative scale.';
 }
 function castEntry(win: Board, id: string): Record<string, unknown> | undefined {
   const list = (win.SB_DOC as { characters?: unknown } | undefined)?.characters;
@@ -1786,7 +1791,13 @@ function buildShotImageRequest(args: z.infer<typeof shotImageSchema> & { prompt:
     ...(args.frame === 'end' && set?.endCamera && JSON.stringify(set.camera) !== JSON.stringify(set.endCamera) ? { omitFraming: true } : {}),
     style: style.preset ? style : null, scene: [opening && `Authored opening state: ${opening}`, args.prompt].filter(Boolean).join(' '), noPerson: !cast.length,
     ...(set ? { location: { prompt: args.frame === 'end' ? set.endPrompt : set.prompt, paths: [] } } : {}) }).prompt;
-  const roles = ordered.map((ref, i) => `Image ${i + 1} shows ${ref.purpose}.`).join(' ');
+  const roles = ordered.map((ref, i) => {
+    const character = refs.find(r => r.path === ref.path && r.role === 'character');
+    const role = !character ? '' : character.id.endsWith('-face')
+      ? ' Use only the head and hair above the collar; ignore clothing in this panel.'
+      : /-(front|back)$/.test(character.id) ? ' Use this panel for physique and all clothing, including collar, tie and sleeve state.' : '';
+    return `Image ${i + 1} shows ${ref.purpose}.${role}`;
+  }).join(' ');
   const at = (ref: unknown) => ordered.indexOf(ref as ImageRef) + 1;
   const lock = !set ? (selected && args.frame === 'start'
     ? `Preserve the selected background's ${backgroundView} directional geography and the spatial relationships of visible landmarks. The authored crop, camera height and subject viewpoint control the output; do not copy the background sheet's wide framing. Landmarks outside that crop stay outside the frame. The character sheets supply appearance and identity only; their panel poses do not constrain this shot.`
