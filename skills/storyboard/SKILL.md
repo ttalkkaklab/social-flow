@@ -184,7 +184,13 @@ shot's order: story, characters, then lines and icons. `production_workflow` com
 and lines say.
 
 **Music spotting (guidance).** Once the lines are written and before `shot_prompt`, decide
-where the music changes. One bed under the whole episode is a complete answer. Otherwise write
+where music enters, continues and leaves; no music is a valid choice. For new timeline-scored
+work, write named `window.MUSIC` cues and `$timeline` spans using stable shot-ID/offset anchors
+through `storyboard_apply` (scenes-schema §Music cues). A span can begin inside one shot and
+continue across others with one gain curve. Plan the dramatic trigger now; confirm its offset
+against accepted footage, and let assembly resolve actual frame boundaries. `$timeline:[]`
+means no score without removing dialogue or ambience. Legacy boards can retain one bed.
+Otherwise write
 `window.MUSIC` cues, each with a one-sentence `reason`, and each changing shot's `sound` through
 `storyboard_apply`, following scenes-schema §Placing cues on a story board: one cue per sequence,
 a change or drop where the scene's `turn` flips the sequence's question. Nothing waits for this

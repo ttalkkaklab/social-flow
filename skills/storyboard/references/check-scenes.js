@@ -48,6 +48,7 @@ const FORMAT_RESOLVE = path.resolve(SELF_DIR, '..', '..', 'platform-guide', 'ref
 const PROMPT = require(path.join(SELF_DIR, 'assemble-bg-prompt.js'));
 const { scenePlan } = require('../../produce/references/seedance-route.js');
 const { mixFindings, musicEnvelopeFindings } = require('../../produce/references/sound-mix-contract.js');
+const { timelineFindings } = require('../../produce/references/music-timeline.js');
 const { assemble: assembleSpatialPrompt } = require('./spatial-prompts.js');
 const { APPEARANCE_WORDS } = require('./cut-treatments.js');
 
@@ -1593,7 +1594,8 @@ function check(win, fmt, opts) {
   if (win.MUSIC && typeof win.MUSIC === 'object') {
     const mix = win.MUSIC.$mix;
     for (const finding of mixFindings(mix)) bad('window.MUSIC.$mix', finding);
-    Object.keys(win.MUSIC).filter((name) => name !== '$mix').forEach((name) => {
+    for (const finding of timelineFindings(win.MUSIC, scenes)) bad('window.MUSIC.$timeline', finding);
+    Object.keys(win.MUSIC).filter((name) => name !== '$mix' && name !== '$timeline').forEach((name) => {
       const c = win.MUSIC[name];
       const at = `window.MUSIC.${name}`;
       if (!c || typeof c !== 'object') {
