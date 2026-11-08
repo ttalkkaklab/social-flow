@@ -540,6 +540,11 @@ Each development pays part of the opening promise with evidence or a changed exp
 The board maps those beats to visible changes, sound events and the final payoff. Production
 checks that map against the finished video at delivery speed, including a listen to the mix.
 Autoproduce can reuse multiple music cues or generate them within its authorized allocation.
+New timeline-scored boards use `MUSIC.$timeline`: music enters at a stable shot-ID/offset,
+continues across cuts without restarting, and follows one span-relative gain curve until
+its authored exit. Assembly resolves actual rendered frame boundaries before mixing.
+`$timeline:[]` needs no BGM file and retains dialogue/ambience. Legacy cue boards keep their
+existing defaults. See [timeline scoring](skills/storyboard/references/scenes-schema.md#music-cues-windowmusic-sound).
 Shot-relative music gain curves and configurable ducking shape dialogue and reveals; low
 speech-to-music separation is a review warning, not an assembly gate.
 An unverified playback check is recorded as `not_reviewed`; it does not hold the episode from
