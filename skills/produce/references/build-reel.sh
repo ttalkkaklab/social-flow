@@ -125,6 +125,8 @@ CHANNEL_DIR=$(node -e 'const p=require("path"), s=p.resolve(process.argv[1]), ep
 # values. Removing a field must remove its previous row instead of reviving stale audio.
 node "$HERE/compile-sound-plan.js" "$STORYBOARD/scenes.js" "$WORKDIR" "$CHANNEL_DIR"
 cd "$WORKDIR"
+# The compiler's current ownership marker selects the mode, never an orphaned/edited file.
+MUSIC_TIMELINE=$(node -e 'const fs=require("fs");const p="sound-plan.json";console.log(fs.existsSync(p)&&Object.hasOwn(JSON.parse(fs.readFileSync(p,"utf8")).files||{},"music-timeline.json")?1:0)')
 VIDEO_WARNINGS_APPROVED=$(node -e 'console.log(require(process.argv[1]).videoGate.continueWithWarnings ? 1 : 0)' "$PWD/build-plan-check.json")
 # verify-build-plan.js writes production-preflight.json after the video warning/HITL check.
 REUSED_VIDEO_SHOTS=$(node -e 'const p=require(process.argv[1]); console.log((p.reusedShots || []).join(" "))' "$PWD/production-preflight.json")
@@ -279,7 +281,7 @@ autotimes() { node "$HERE/subtitle-clock.js" "$TOTF" "$FRAMES" "$FPS" "$(srttime
 
 [ -f cards.tsv ] || { echo "cards.tsv missing"; exit 1; }
 [ -f segs.tsv ] || { echo "segs.tsv missing"; exit 1; }
-[ "${SILENT:-0}" = "1" ] || [ -f bgm.wav ] || { echo "bgm.wav missing"; exit 1; }
+[ "${SILENT:-0}" = "1" ] || [ "$MUSIC_TIMELINE" = "1" ] || [ -f bgm.wav ] || { echo "bgm.wav missing"; exit 1; }
 
 say "── make-reels build v3 ($(basename "$WORKDIR"))"
 
@@ -1054,7 +1056,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   fi
 
   # Resolve authored music curves against the actual rendered shot duration.
-  if [ -f music-gain.tsv ]; then
+  if [ "$MUSIC_TIMELINE" != "1" ] && [ -f music-gain.tsv ]; then
     while IFS=$'\t' read -r _ POINTS; do
       END=$(awk -v s="$CS0" -v d="$D" 'BEGIN{printf "%.4f", s+d}')
       printf '%s\t%s\t%s\n' "$CS0" "$END" "$POINTS" >> work/music-gain.list
@@ -1294,6 +1296,11 @@ else
 fi
 BED_I=$(awk -v s="$MIX_REFERENCE_I" -v d="$BGM_SEP" 'BEGIN{printf "%.2f", s-d}')
 
+if [ "$MUSIC_TIMELINE" = "1" ]; then
+  # Picture editing is complete: anchors use actual frame counts, never draft lengths.
+  node "$HERE/music-timeline.js" music-timeline.json work/edit-timeline.tsv "$FPS" "$NT" "$BED_I" work/bed.wav
+else
+rm -f work/music-timeline-resolved.json
 : > work/bgmcue.list
 if [ -f bgm.tsv ]; then
   while IFS=$'\t' read -r CI CF || [ -n "${CI:-}" ]; do
@@ -1314,6 +1321,7 @@ say "── BGM bed: speech ${SPEECH_I} LUFS → bed ${BED_I} LUFS (${BGM_SEP} L
 "$HERE/bgm-bed.sh" work/bed.wav "$NT" "$BED_I" work/bgmcue.list > work/bed.log 2>&1 \
   || { cat work/bed.log; say "✗ the music bed failed to render"; exit 1; }
 while IFS= read -r L; do say "$L"; done < work/bed.log
+fi
 
 # ── 10) BGM ducking mix (same as v2) — with sfx.tsv, the sfx track and BGM mute windows go on top
 FOUT=$(awk -v t="$NT" -v f="$BGM_FADE_OUT" 'BEGIN{s=t-f; if(s<0)s=0; printf "%.3f", s}')
@@ -1397,7 +1405,7 @@ fi
 #      ${BGM_GATE_R}s ramp. gate = max(falling slope, rising slope) — 1 outside the window, 0 inside.
 BGMGATE=""
 MUSICGAIN=""
-if [ -s work/music-gain.list ]; then
+if [ "${MUSIC_TIMELINE:-0}" != "1" ] && [ -s work/music-gain.list ]; then
   MUSICGAIN=$(node "$HERE/sound-mix-contract.js" work/music-gain.list)
 fi
 # Advance only the detector; voice and picture keep their original timestamps.
@@ -1419,7 +1427,7 @@ fi
 #      A one-card build has no card 1 and gets no attenuation.
 HOOKVOL=""
 C1=$(awk -F'\t' '$1==1{print $2; exit}' work/cardstart.tsv)
-if [ -n "$C1" ] && awk -v h="$BGM_HOOK_LU" -v r="$BGM_HOOK_R" 'BEGIN{exit !(h > 0 && r > 0)}'; then
+if [ "${MUSIC_TIMELINE:-0}" != "1" ] && [ -n "$C1" ] && awk -v h="$BGM_HOOK_LU" -v r="$BGM_HOOK_R" 'BEGIN{exit !(h > 0 && r > 0)}'; then
   HOOKG=$(awk -v h="$BGM_HOOK_LU" 'BEGIN{printf "%.4f", 10^(-h/20)}')
   HOOKVOL=$(awk -v g="$HOOKG" -v c="$C1" -v r="$BGM_HOOK_R" \
     'BEGIN{printf "volume=eval=frame:volume='"'"'if(lt(t\\,%s)\\,%s\\,if(lt(t\\,%s+%s)\\,%s+(1-%s)*(t-%s)/%s\\,1))'"'"',", c, g, c, r, g, g, c, r}')
@@ -1441,6 +1449,10 @@ FADEOUT=""
 if awk -v f="$BGM_FADE_OUT" 'BEGIN{exit !(f > 0)}'; then
   FADEOUT="afade=t=out:st=$FOUT:d=$BGM_FADE_OUT,"
 fi
+MUSICFADEIN="afade=t=in:st=0:d=1.2,"
+MUSICFADEOUT="$FADEOUT"
+# Explicit spans own their entrances/exits; the room-tone lane keeps its existing fades.
+if [ "${MUSIC_TIMELINE:-0}" = "1" ]; then MUSICFADEIN=""; MUSICFADEOUT=""; fi
 if [ -n "$AMBIN" ]; then
   AMBLEG="[${AMBIDX}:a]aformat=channel_layouts=stereo,afade=t=in:st=0:d=1.2,${FADEOUT}anull[amb];"
   FINALMIX="[vo_mix][duck][amb]amix=inputs=3:duration=first:dropout_transition=0"
@@ -1457,7 +1469,7 @@ ffmpeg -y -v error -i work/narration.wav -i work/bed.wav $SFXIN $AMBIN -filter_c
   $AMBLEG
   $VOMIX
   [1:a]atrim=0:$NT,asetpts=PTS-STARTPTS,${BEDEQ}${MUSICGAIN}
-       afade=t=in:st=0:d=1.2,${FADEOUT}${HOOKVOL}anull$BGMGATE[bgv];
+       ${MUSICFADEIN}${MUSICFADEOUT}${HOOKVOL}anull$BGMGATE[bgv];
   [bgv][vo_key]sidechaincompress=threshold=$DUCK_THRESHOLD:mix=$DUCK_MIX:ratio=$DUCK_RATIO:attack=$DUCK_ATTACK:release=$DUCK_RELEASE:makeup=1,
        asplit=2[duck][duckqa];
   ${FINALMIX},

@@ -48557,49 +48557,49 @@ var require_fast_uri = __commonJS({
       schemelessOptions.skipEscape = true;
       return serialize(resolved, schemelessOptions);
     }
-    function resolveComponent(base, relative2, options, skipNormalization) {
+    function resolveComponent(base, relative3, options, skipNormalization) {
       const target = {};
       if (!skipNormalization) {
         base = parse4(serialize(base, options), options);
-        relative2 = parse4(serialize(relative2, options), options);
+        relative3 = parse4(serialize(relative3, options), options);
       }
       options = options || {};
-      if (!options.tolerant && relative2.scheme) {
-        target.scheme = relative2.scheme;
-        target.userinfo = relative2.userinfo;
-        target.host = relative2.host;
-        target.port = relative2.port;
-        target.path = removeDotSegments(relative2.path || "");
-        target.query = relative2.query;
+      if (!options.tolerant && relative3.scheme) {
+        target.scheme = relative3.scheme;
+        target.userinfo = relative3.userinfo;
+        target.host = relative3.host;
+        target.port = relative3.port;
+        target.path = removeDotSegments(relative3.path || "");
+        target.query = relative3.query;
       } else {
-        if (relative2.userinfo !== void 0 || relative2.host !== void 0 || relative2.port !== void 0) {
-          target.userinfo = relative2.userinfo;
-          target.host = relative2.host;
-          target.port = relative2.port;
-          target.path = removeDotSegments(relative2.path || "");
-          target.query = relative2.query;
+        if (relative3.userinfo !== void 0 || relative3.host !== void 0 || relative3.port !== void 0) {
+          target.userinfo = relative3.userinfo;
+          target.host = relative3.host;
+          target.port = relative3.port;
+          target.path = removeDotSegments(relative3.path || "");
+          target.query = relative3.query;
         } else {
-          if (!relative2.path) {
+          if (!relative3.path) {
             target.path = base.path;
-            if (relative2.query !== void 0) {
-              target.query = relative2.query;
+            if (relative3.query !== void 0) {
+              target.query = relative3.query;
             } else {
               target.query = base.query;
             }
           } else {
-            if (relative2.path[0] === "/") {
-              target.path = removeDotSegments(relative2.path);
+            if (relative3.path[0] === "/") {
+              target.path = removeDotSegments(relative3.path);
             } else {
               if ((base.userinfo !== void 0 || base.host !== void 0 || base.port !== void 0) && !base.path) {
-                target.path = "/" + relative2.path;
+                target.path = "/" + relative3.path;
               } else if (!base.path) {
-                target.path = relative2.path;
+                target.path = relative3.path;
               } else {
-                target.path = base.path.slice(0, base.path.lastIndexOf("/") + 1) + relative2.path;
+                target.path = base.path.slice(0, base.path.lastIndexOf("/") + 1) + relative3.path;
               }
               target.path = removeDotSegments(target.path);
             }
-            target.query = relative2.query;
+            target.query = relative3.query;
           }
           target.userinfo = base.userinfo;
           target.host = base.host;
@@ -48607,7 +48607,7 @@ var require_fast_uri = __commonJS({
         }
         target.scheme = base.scheme;
       }
-      target.fragment = relative2.fragment;
+      target.fragment = relative3.fragment;
       return target;
     }
     function equal(uriA, uriB, options) {
@@ -90798,6 +90798,7 @@ var require_video_catalog = __commonJS({
             "model",
             "prompt",
             "resolution",
+            "promptProvenance",
             "seed",
             "fps",
             "cameraMotion",
@@ -90830,6 +90831,7 @@ var require_video_catalog = __commonJS({
             "model",
             "prompt",
             "resolution",
+            "promptProvenance",
             "seed",
             "fps",
             "cameraMotion",
@@ -90863,6 +90865,7 @@ var require_video_catalog = __commonJS({
             "model",
             "prompt",
             "resolution",
+            "promptProvenance",
             "seed",
             "fps",
             "cameraMotion",
@@ -90957,6 +90960,7 @@ var require_video_catalog = __commonJS({
             "model",
             "prompt",
             "resolution",
+            "promptProvenance",
             "seed",
             "fps",
             "cameraMotion",
@@ -91094,6 +91098,11 @@ var require_video_catalog = __commonJS({
           },
           fields: [
             "prompt",
+            "negativePrompt",
+            "guidanceScale",
+            "nagScale",
+            "nagAlpha",
+            "nagTau",
             "references",
             "referenceStrength",
             "referenceFrames",
@@ -94517,6 +94526,28 @@ var require_check_tts_quality = __commonJS({
       decide(work, warnings, inputs);
       return media;
     }
+    function retainedSoundtrack(scene, board, cast, media) {
+      const repair = scene.visual?.video?.soundtrackRepair;
+      if (repair?.kind !== "preserved_soundtrack") return false;
+      if (scene.sound?.audioSource !== "video" || scene.visual.video.speechBinding)
+        throw new Error("A retained soundtrack repair needs source video audio and no adapter speech binding");
+      const video2 = path32.resolve(board, scene.visual.video.clip || "");
+      if (typeof repair.videoPath !== "string" || path32.resolve(board, repair.videoPath) !== video2 || hash7(fs23.readFileSync(video2)) !== repair.videoSha256)
+        throw new Error("Retained soundtrack video changed");
+      const lines = (scene.narration || []).filter((n) => (n.tts || "").trim());
+      const revisions = lines.map((n) => ({ lineId: n.id, revision: speechRevision2(n, { tts: cast.find((c) => c.id === n.speaker)?.tts }) }));
+      if (JSON.stringify(repair.lines) !== JSON.stringify(revisions)) throw new Error("Retained soundtrack dialogue or voice changed");
+      if (!Array.isArray(repair.sources) || !repair.sources.length || JSON.stringify(repair.sources.flatMap((source) => source.lineIds || [])) !== JSON.stringify(lines.map((n) => n.id)))
+        throw new Error("Retained soundtrack sources must cover the current lines in order");
+      for (const source of repair.sources) {
+        if (!["native_video", "selected_line_audio"].includes(source.kind) || typeof source.path !== "string") throw new Error("Invalid retained soundtrack source");
+        const file = path32.resolve(board, source.path);
+        if (hash7(fs23.readFileSync(file)) !== source.sha256) throw new Error("Retained soundtrack source changed");
+        media[file] = source.sha256;
+      }
+      media[video2] = repair.videoSha256;
+      return true;
+    }
     function check2(work, board) {
       work = path32.resolve(work);
       board = path32.resolve(board);
@@ -94537,10 +94568,11 @@ var require_check_tts_quality = __commonJS({
         const characters = win.SB_DOC?.characters || [];
         const cast = Array.isArray(characters) ? characters : Object.entries(characters).map(([id, c]) => ({ ...c, id }));
         const binding = s2.visual?.video?.speechBinding;
+        const retained = retainedSoundtrack(s2, board, cast, media);
         const native = binding?.mode === "native";
         if (native && s2.sound?.audioSource !== "video") throw new Error("Native speech video needs sound.audioSource video for card " + i2);
-        if (win.SB_DOC?.speechPlanVersion === 1 && (s2.narration || []).some((n) => n.delivery === "on_screen") && s2.visual?.video && !binding) throw new Error("On-screen dialogue needs a video speech binding for card " + i2 + "; bind the clip with speech_manage attach_video");
-        for (const line of native ? [] : s2.narration || []) {
+        if (win.SB_DOC?.speechPlanVersion === 1 && (s2.narration || []).some((n) => n.delivery === "on_screen") && s2.visual?.video && !binding && !retained) throw new Error("On-screen dialogue needs a video speech binding for card " + i2 + "; bind the clip with speech_manage attach_video");
+        for (const line of native || retained ? [] : s2.narration || []) {
           if (line.mediaStatus === "needs_audio") throw new Error("Regenerate modified dialogue " + line.id);
           if (win.SB_DOC?.speechPlanVersion === 1 && (line.tts || "").trim() && !line.audio) throw new Error("Attach generated dialogue audio: " + line.id);
           if (line.audio) {
@@ -94571,7 +94603,10 @@ var require_check_tts_quality = __commonJS({
             throw new Error("Missing or stale source soundtrack extraction for card " + i2);
           if (binding && path32.resolve(extraction.video) !== path32.resolve(binding.videoPath))
             throw new Error("Source soundtrack differs from bound speech video for card " + i2);
+          if (retained && (path32.resolve(extraction.video) !== path32.resolve(board, s2.visual.video.soundtrackRepair.videoPath) || extraction.sourceSha256 !== s2.visual.video.soundtrackRepair.videoSha256))
+            throw new Error("Source soundtrack differs from retained repaired video for card " + i2);
           media[extraction.video] = extraction.sourceSha256;
+          if (retained) warnings.push("card " + i2 + ": retained soundtrack repair has current source/line provenance; visible lip-sync and audio listening not_reviewed");
           warnings.push("card " + i2 + ": source soundtrack retained; perceptual audio quality not_reviewed");
           continue;
         }
@@ -94610,7 +94645,7 @@ var require_check_tts_quality = __commonJS({
       });
       if (generated && [speed, min, max].some((n) => Number(n) !== 1)) throw new Error("ElevenLabs narration forbids post-synthesis tempo changes; set SPEED=1 and ATEMPO_MIN=ATEMPO_MAX=1, use generation.speed");
     }
-    module.exports = { characterVoice, checkLegacy, check: check2, decide, approve, lastReport, findings, verifyProof, normalize: normalize2, cer, checkTempo };
+    module.exports = { characterVoice, checkLegacy, check: check2, decide, approve, lastReport, findings, verifyProof, normalize: normalize2, cer, checkTempo, retainedSoundtrack };
     if (__require.main === module) {
       try {
         const [command, work, arg] = process.argv.slice(2);
@@ -98795,8 +98830,8 @@ function canonicalPath(file) {
   return path.join(canonicalPath(parent), path.basename(file));
 }
 function withinDirectory(root, file) {
-  const relative2 = path.relative(root, file);
-  return relative2 === "" || !relative2.startsWith(".." + path.sep) && relative2 !== ".." && !path.isAbsolute(relative2);
+  const relative3 = path.relative(root, file);
+  return relative3 === "" || !relative3.startsWith(".." + path.sep) && relative3 !== ".." && !path.isAbsolute(relative3);
 }
 
 // src/production-workflow.ts
@@ -109911,7 +109946,8 @@ async function genaiCatalog(kind) {
   const routes = {
     image: "/v1/images/models",
     speech: "/v1/audio/models",
-    video: "/v1/ltx/desktop/models",
+    video: "/v1/models",
+    desktop_video: "/v1/ltx/desktop/models",
     loras: "/v1/ltx/desktop/loras",
     contracts: "/v1/ltx/desktop/contracts"
   };
@@ -110044,6 +110080,7 @@ var common = external_exports.object({
   model,
   prompt: external_exports.string().trim().min(1),
   resolution,
+  promptProvenance: external_exports.enum(["typed", "enhanced"]).optional().describe("Desktop rewrite policy: typed follows the app's automatic enhancement settings; enhanced sends a caller-finished prompt without another rewrite, e.g. 'enhanced'. Omitted keeps the Desktop default. This is not a quality review."),
   seed: external_exports.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
   fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
   cameraMotion: external_exports.enum(["none", "dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"]).optional(),
@@ -110558,6 +110595,7 @@ var descriptions = {
   kind: "Catalog to read, e.g. speech for registered voices; discovery never generates media.",
   model: "Exact public model alias from astra_genai_catalog, e.g. qwen-image-fast or ltx-2.5-fast.",
   prompt: "Requested subject/action or changes, e.g. A blue ball rolls across a table.",
+  promptProvenance: "Desktop rewrite policy, e.g. enhanced for a caller-finished prompt that must not be rewritten again; typed follows the app's enhancement settings. Omitted keeps its default. Does not certify quality.",
   size: "Image width x height, e.g. 1024x1024. Supported grid depends on the selected model.",
   seed: "Optional reproducibility seed, e.g. 42; omit for provider handling.",
   steps: "Optional sampling steps, e.g. 8 for Qwen Turbo. Omit to preserve model schedule.",
@@ -110630,8 +110668,8 @@ function tool(name, description, schema, readOnly = false) {
 var NATIVE_GENAI_TOOLS = [
   tool(
     "astra_genai_catalog",
-    "Read configured gateway image/speech/video models, registered voice IDs, LoRA refs or native schemas. Requires ASTRA_GENAI_API_KEY and optional ASTRA_GENAI_URL. Configuration discovery is not an inference health check. Select the returned model alias; never infer a runtime or fall back to a different engine.",
-    external_exports.object({ kind: external_exports.enum(["image", "speech", "video", "loras", "contracts"]) }).strict(),
+    "Read configured gateway models and native schemas. Use video for the general /v1/models catalog (including LTX/MSR); desktop_video for Desktop models, which requires a configured Desktop. image/speech read their respective models, loras/contracts are Desktop-only. Requires ASTRA_GENAI_API_KEY and optional ASTRA_GENAI_URL. Configuration discovery is not an inference health check. Select the returned model alias; never infer a runtime or fall back to a different engine.",
+    external_exports.object({ kind: external_exports.enum(["image", "speech", "video", "desktop_video", "loras", "contracts"]) }).strict(),
     true
   ),
   tool("astra_genai_image_generate", "Generate one PNG with the configured gateway model alias. Use image_plan/image_execute with engine astra-genai-native and explicit reserveUsd. Optional registered LoRA IDs/scales; consult image catalog for model constraints. No reference images on text requests. Returns verified local output; retain the receipt after errors. Use GPT Image 2 for readable text.", nativeImageSchema),
@@ -110803,16 +110841,8 @@ function shrinkImageToFit(bytes, width, height) {
 
 // src/astra-genai-video.ts
 var GENAI_VIDEO_MODELS = ["ltx-2.5-22b-distilled", "ltx-2.5-22b-dev"];
-var GENAI_V2_SIZES = ["1280x720", "720x1280", "720x720", "1080x720", "720x1080"];
 function genaiV2Resolution(saved) {
-  const match2 = /^(\d+)x(\d+)$/.exec(saved);
-  if (!match2 || GENAI_V2_SIZES.includes(saved)) return saved;
-  const aspect2 = (w, h2) => Math.log(w / h2), want = aspect2(Number(match2[1]), Number(match2[2]));
-  const gap = (size) => {
-    const [w, h2] = size.split("x").map(Number);
-    return Math.abs(aspect2(w, h2) - want);
-  };
-  return GENAI_V2_SIZES.reduce((best, size) => gap(size) < gap(best) ? size : best);
+  return saved;
 }
 var GENAI_CAMERA_MOTIONS = ["dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"];
 var genaiTextToVideoSchema = external_exports.object({
@@ -110894,6 +110924,11 @@ function buildGenaiAudioBody(args) {
 var GENAI_MSR_FRAMES = { min: 25, max: 361, step: 8, frameRate: 24 };
 var genaiMsrSchema = external_exports.object({
   prompt: external_exports.string().trim().min(1).max(2e3),
+  negativePrompt: external_exports.string().trim().min(1).max(5e3).optional(),
+  guidanceScale: external_exports.number().finite().min(1).max(10).optional(),
+  nagScale: external_exports.number().finite().min(0).max(100).optional(),
+  nagAlpha: external_exports.number().finite().min(0).max(1).optional(),
+  nagTau: external_exports.number().finite().min(0).max(10).optional(),
   references: external_exports.array(external_exports.object({
     imageUri: genaiImageUriSchema.optional(),
     imagePath: external_exports.string().min(1).optional(),
@@ -110918,6 +110953,10 @@ var genaiMsrSchema = external_exports.object({
   filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use a .mp4 filename").optional()
 }).strict().superRefine((args, ctx) => {
   const issue2 = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  if ((args.nagScale ?? 0) > 0 && args.negativePrompt === void 0)
+    issue2("MSR nagScale > 0 requires negativePrompt");
+  if (args.negativePrompt !== void 0 && (args.guidanceScale ?? 1) <= 1 && (args.nagScale ?? 0) === 0)
+    issue2("MSR negativePrompt requires guidanceScale > 1 or nagScale > 0");
   const backgrounds = args.references.filter((ref) => ref.background).length;
   if (backgrounds > 1 || args.references.length - backgrounds > 4) issue2("MSR supports at most four subjects and one background");
   let subject = 0;
@@ -110937,6 +110976,13 @@ var genaiMsrSchema = external_exports.object({
 function buildGenaiMsrBody(args) {
   return {
     prompt: args.prompt,
+    ...args.negativePrompt === void 0 ? {} : { negative_prompt: args.negativePrompt },
+    ...args.guidanceScale === void 0 ? {} : { guidance_scale: args.guidanceScale },
+    ...(args.nagScale ?? 0) > 0 ? {
+      nag_scale: args.nagScale,
+      ...args.nagAlpha === void 0 ? {} : { nag_alpha: args.nagAlpha },
+      ...args.nagTau === void 0 ? {} : { nag_tau: args.nagTau }
+    } : {},
     references: args.references.map((ref) => ({
       image_uri: genaiSourceUri(ref.imageUri, ref.imagePath),
       background: ref.background,
@@ -111075,6 +111121,13 @@ async function generateGenaiVideo(operation, input) {
     recordVideoSubmission(previous.jobId);
   } else {
     if (fs10.existsSync(videoPath)) throw new Error("GenAI output already exists");
+    if ("references" in args && (args.negativePrompt !== void 0 || (args.guidanceScale ?? 1) > 1)) {
+      const capabilities = external_exports.object({ negative_prompt: external_exports.boolean().optional(), nag: external_exports.boolean().optional() }).passthrough().parse(await requestGenai("GET", "/v1/ltx/msr/capabilities", void 0, 15e3));
+      if ((args.nagScale ?? 0) > 0 && capabilities.nag !== true)
+        throw new Error("msr_nag_unsupported: the GenAI MSR backend does not advertise NAG; no request was submitted");
+      if (capabilities.negative_prompt !== true)
+        throw new Error("msr_negative_unsupported: the GenAI MSR backend does not advertise negative conditioning; no request was submitted");
+    }
     if (operation === "msr" && "references" in args && args.references.some((ref) => oneOf(ref.audioUri, ref.audioPath)) && !await refreshGenaiMsrVoice(true))
       throw new Error("msr_voice_unsupported: the GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities)");
     const submitted = "references" in args ? await prepareGenaiMsrSources(body) : body;
@@ -111211,7 +111264,12 @@ var GENAI_TOOLS = [
     title: "Generate an LTX video from subject and background references",
     description: "Combine character, clothing, object and background references in one MSR video through ASTRA GenAI. Use video_plan operation reference and video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Up to four subject images and one background; place the background last and number prompt images in that order. Local PNG/JPEG files are shrunk to the render size and, with local voice samples, uploaded in chunks as gateway file ids (data URIs where the gateway has no upload API). MSR is a server-selected deployment with no model parameter, independent of saved LTX v2 weights. It cannot pin first/last frames; use img2video for frame control. Speech and effects are rendered natively. Subjects 1 and 2 may carry an optional voice sample of the character (audioPath or audioUri, at most 10 s, about 5 s used); write any dialogue in the prompt. The model imitates the timbre of the sample and does not preserve it; without a sample the voice follows the prompt. A request with a sample is refused before submission when the gateway MSR backend does not accept samples (GET /v1/ltx/msr/capabilities). Saves a job receipt and resumes via video_status without resubmission.",
     inputSchema: { type: "object", properties: {
-      prompt: { type: "string", minLength: 1, maxLength: 2e3, description: "Action and reference roles, e.g. person in image 1 wearing the jacket in image 2." },
+      prompt: { type: "string", minLength: 1, maxLength: 2e3, description: "Positive action and reference roles, up to 2000 characters. No automatic subtitle instructions are appended. Put unwanted text terms in negativePrompt when negative conditioning is enabled." },
+      negativePrompt: { type: "string", minLength: 1, maxLength: 5e3, description: "Separate negative conditioning, e.g. subtitles, captions, text overlays. Requires guidanceScale > 1 or nagScale > 0, plus live backend negative_prompt support; otherwise refused before submission." },
+      guidanceScale: { type: "number", minimum: 1, maximum: 10, description: "Classifier-free guidance; omitted keeps gateway default 1. Values above 1 require backend negative conditioning support and change distilled sampling." },
+      nagScale: { type: "number", minimum: 0, maximum: 100, description: "Video-only normalized attention guidance. Omitted or 0 disables NAG; a positive value requires negativePrompt and live backend nag support. Example 11 is experimental, not a subtitle-free guarantee; works at CFG 1." },
+      nagAlpha: { type: "number", minimum: 0, maximum: 1, description: "NAG mixing coefficient; gateway default 0.25. Sent only when nagScale > 0." },
+      nagTau: { type: "number", minimum: 0, maximum: 10, description: "NAG clipping threshold; gateway default 2.5. Sent only when nagScale > 0." },
       references: { type: "array", minItems: 1, maxItems: 5, description: "At most four subjects and one background. Exactly one URI or path per reference.", items: {
         type: "object",
         properties: {
@@ -114594,6 +114652,8 @@ var FRAME_FIELDS = {
   astra_img2video: ["firstFramePath", "lastFramePath"],
   astra_audio2video: ["imagePath"],
   astra_genai_img2video: ["imageUri", "lastFrameUri"],
+  astra_genai_desktop_img2video: ["imagePath", "lastFramePath"],
+  astra_genai_desktop_audio2video: ["imagePath"],
   astra_genai_audio2video: ["imagePath", "lastFramePath"],
   mlx_video_generate: ["firstFrameImagePath", "lastFrameImagePath"],
   ltx_video_generate: ["firstFrameImagePath", "lastFrameImagePath"]
@@ -114612,7 +114672,7 @@ function msrPanelBinding(paths2, refs, compact5 = false) {
     const view = Object.entries(panels).find(([, panel]) => panel.file === path17.basename(file))?.[0];
     if (view && PANEL_VIEWS[view]) groups.set(path17.dirname(file), [...groups.get(path17.dirname(file)) ?? [], `Image ${i2 + 1} (${PANEL_VIEWS[view]})`]);
   });
-  return [...groups].filter(([, items]) => items.length > 1).map(([folder, items]) => compact5 ? `Images ${items.map((item) => item.replace(/Image (\d+) \(([^)]+)\)/, "$1($2)")).join(", ")}: ONE ${path17.basename(folder)}; combine head and outfit.` : `${items.join(", ")} show one character, ${path17.basename(folder)}: render one complete character with the head and hair from the face and the body and outfit from the headless panels.`).join("\n");
+  return [...groups].filter(([, items]) => items.length > 1).map(([folder, items]) => compact5 ? `Images ${items.map((item) => item.replace(/Image (\d+) \(([^)]+)\)/, "$1($2)")).join(", ")}: ONE ${path17.basename(folder)}; head/hair only from face; physique/clothes only from body; ignore face-panel clothing.` : `${items.join(", ")} show one character, ${path17.basename(folder)}: render one complete character with the head and hair from the face and the body and outfit from the headless panels. Ignore clothing visible in the face panel; never duplicate a person for separate panels.`).join("\n");
 }
 function characterKey(file) {
   try {
@@ -114637,8 +114697,16 @@ function prepareVideoImages(tool2, input, shot, episode) {
   const canonicalMsr = tool2 === "astra_genai_msr" && frames.mode === "reference" && rawCast !== void 0 && existsSync17(path17.join(episode, "storyboard", "cast.json"));
   if (canonicalMsr) {
     const ids = [].concat(rawCast ?? []).map((entry2) => typeof entry2 === "string" ? entry2 : entry2.id);
+    if (visual.video?.referenceLayout !== void 0 && !["panels", "combined"].includes(visual.video.referenceLayout))
+      throw new Error("image_plan_invalid: unknown MSR referenceLayout");
     references = [
-      ...characterPanels().canonicalReferences(path17.join(episode, "storyboard"), String(shot.id ?? "shot"), ids, "both"),
+      ...characterPanels().canonicalReferences(
+        path17.join(episode, "storyboard"),
+        String(shot.id ?? "shot"),
+        ids,
+        "both",
+        { combined: visual.video?.referenceLayout === "combined" }
+      ),
       ...references.filter((ref) => ref.role !== "character")
     ];
   }
@@ -114838,10 +114906,12 @@ function msrSubject(character, refs, context2) {
   let ownedPaths;
   const declared = [].concat(object3(context2.shot.visual).character ?? []).map((entry2) => typeof entry2 === "string" ? entry2 : text(object3(entry2).id));
   if (declared.includes(text(character.id)) && existsSync18(path18.join(context2.episode, "storyboard", "cast.json"))) {
-    const { sheetPanels } = load3("../../skills/channel/references/character-panels.js");
+    const { sheetPanels, canonicalReferences } = load3("../../skills/channel/references/character-panels.js");
     const dir = path18.join(context2.episode, "storyboard");
     const panels = sheetPanels(dir, [text(character.id)]).get(text(character.id));
-    ownedPaths = Object.values(panels).map((file) => realpathSync5(path18.resolve(dir, file)));
+    const combined = object3(object3(context2.shot.visual).video).referenceLayout === "combined";
+    const files3 = combined ? canonicalReferences(dir, text(context2.shot.id), [text(character.id)], "video", { combined: true }).map((ref) => ref.path) : Object.values(panels);
+    ownedPaths = files3.map((file) => realpathSync5(path18.resolve(dir, file)));
   } else ownedPaths = Array.isArray(owned) ? owned.map((value) => realpathSync5(path18.resolve(context2.episode, "storyboard", String(value)))) : [];
   let subject = 0, index = -1, slot = 0;
   refs.forEach((ref, i2) => {
@@ -114874,18 +114944,11 @@ function prepareVideoVoice(tool2, input, context2) {
   const args = { ...input };
   const lines = (Array.isArray(context2.shot.narration) ? context2.shot.narration : []).map(object3).filter((line) => text(line.tts));
   const msr = tool2 === "astra_genai_msr";
-  const finishArgs = () => {
-    if (msr && typeof args.prompt === "string") {
-      const policy = load3("../../skills/_shared/scene-acting.js").VIDEO_TEXT_POLICY;
-      if (!args.prompt.endsWith(policy)) args.prompt += "\n\n" + policy;
-    }
-    return args;
-  };
   if (msr) {
     if (object3(context2.shot.visual).video && object3(object3(context2.shot.visual).video).voice !== void 0)
       throw new Error("visual.video.voice is retired: MSR uses the speaker's voice sample when one is pinned");
   }
-  if (!lines.length) return { args: finishArgs() };
+  if (!lines.length) return { args };
   const doc = object3(context2.board.SB_DOC), raw = doc.characters;
   const characters = Array.isArray(raw) ? raw.map(object3) : Object.entries(object3(raw)).map(([id, value]) => ({ ...object3(value), id }));
   const visual = object3(context2.shot.visual);
@@ -115027,7 +115090,7 @@ function prepareVideoVoice(tool2, input, context2) {
   }
   if (strategy === "supplied_audio") warnings.push("Use the final composed pinned-voice WAV. ASTRA re-encodes supplied audio; mouth motion and speaker identity remain unreviewed.");
   if (prompt.length && typeof args.prompt === "string") args.prompt += (msr ? "\n\n" : "\n\nVoice continuity guidance:\n") + prompt.join("\n");
-  return { args: finishArgs(), voiceContinuity: {
+  return { args, voiceContinuity: {
     version: 1,
     strategy,
     speakers,
@@ -115175,8 +115238,8 @@ var videoPlanSchema = external_exports.object({
 }).strict();
 var videoExecuteSchema = external_exports.object({ episode: external_exports.string().min(1), planId: external_exports.string().regex(/^[a-f0-9]{64}$/) }).strict();
 function within(root, file) {
-  const relative2 = path19.relative(root, file);
-  return relative2 === "" || !relative2.startsWith(".." + path19.sep) && relative2 !== ".." && !path19.isAbsolute(relative2);
+  const relative3 = path19.relative(root, file);
+  return relative3 === "" || !relative3.startsWith(".." + path19.sep) && relative3 !== ".." && !path19.isAbsolute(relative3);
 }
 function canonical2(file) {
   if (fs16.existsSync(file)) return fs16.realpathSync(file);
@@ -116109,6 +116172,9 @@ var REFERENCES_DIR = join10(PLUGIN_ROOT, "skills", "storyboard", "references");
 var CONTRACT_FILE = join10(REFERENCES_DIR, "structure-contract.js");
 var CHECK_SCENES_FILE = join10(REFERENCES_DIR, "check-scenes.js");
 var CHECK_SCENARIO_FILE = join10(REFERENCES_DIR, "check-scenario.js");
+var runtimeFile = fileURLToPath8(import.meta.url);
+var runtimeModuleSha256 = createHash14("sha256").update(readFileSync24(runtimeFile)).digest("hex");
+var runtimeLoadedAt = (/* @__PURE__ */ new Date()).toISOString();
 var loadFromHere2 = nodeModule3.createRequire(import.meta.url);
 var contractCache;
 function contract() {
@@ -116336,12 +116402,31 @@ function boundaryReview(win, playback, videoTiming) {
   const source = win.SCENES || [];
   const ids = source.map((shot) => shot.id);
   const timings = Array.isArray(videoTiming) ? videoTiming : [];
+  const acting = loadFromHere2(join10(PLUGIN_ROOT, "skills", "_shared", "scene-acting.js"));
   const shots = playback.map(({ no }, index) => {
     const shot = source[no - 1];
     const visual = record2(shot.visual), plan2 = record2(shot.shot), camera = record2(visual.camera);
     const edit2 = record2(shot.edit), design = record2(plan2.videoDesign);
     const id = text4(shot.id), uniqueId = id !== null && ids.filter((value) => value === id).length === 1;
     const cast = contract().castOf(shot);
+    let performanceTiming;
+    try {
+      const legacyAction = text4(visual.action) ?? text4(design.action);
+      const explicit = Array.isArray(shot.performance) && shot.performance.length > 0;
+      const clock = !explicit && (legacyAction || !shot.narration?.length) ? { performance: [
+        ...legacyAction ? [{ kind: "action", text: legacyAction, order: "unresolved" }] : [],
+        ...(shot.narration ?? []).map((line) => ({ kind: line.delivery === "voiceover" ? "narration" : "dialogue", lineId: line.id, speaker: line.speaker, text: line.tts, delivery: line.delivery, acting: line.acting, order: "unresolved" }))
+      ], durationSeconds: null, warnings: ["No ordered performance: action order and timing remain unresolved."], timing: "unknown" } : acting.planScenePerformance(shot, (line) => typeof line.estimatedSeconds === "number" ? line.estimatedSeconds : null);
+      performanceTiming = {
+        ...clock,
+        basis: "authored_estimates",
+        physicalFeasibility: "not_reviewed",
+        timing: clock.durationSeconds === null ? "unknown" : "estimated",
+        differsFromStored: typeof shot.duration === "number" && clock.durationSeconds !== null ? Math.abs(shot.duration - clock.durationSeconds) > 0.05 : null
+      };
+    } catch (error2) {
+      performanceTiming = { status: "unresolved", reason: error2.message, physicalFeasibility: "not_reviewed" };
+    }
     return {
       no,
       id,
@@ -116364,11 +116449,24 @@ function boundaryReview(win, playback, videoTiming) {
       // Preserve line ids, delivery, acting and performance group references, including silent actions.
       narration: shot.narration ?? null,
       performance: shot.performance ?? null,
+      performanceTiming,
       estimatedSeconds: typeof shot.duration === "number" && Number.isFinite(shot.duration) && shot.duration > 0 ? shot.duration : null,
       timing: uniqueId ? timings.find((row) => record2(row).shotId === id) ?? null : null,
       storedIncoming: { transition: shot.transition ?? null, reason: text4(edit2.reason), continuity: text4(edit2.continuity) }
     };
   });
+  const sceneRuns = [];
+  for (const shot of shots) {
+    let run = sceneRuns.at(-1);
+    if (!run || shot.scene === null || run.scene !== shot.scene) {
+      run = { scene: shot.scene, shotIds: [], events: [] };
+      sceneRuns.push(run);
+    }
+    run.shotIds.push(shot.id);
+    const events = shot.performanceTiming.performance;
+    if (Array.isArray(events)) run.events.push(...events.map((event) => ({ ...record2(event), shotId: shot.id })));
+    else run.events.push({ shotId: shot.id, status: "unresolved", reason: shot.performanceTiming.reason });
+  }
   const reasons = shots.map((shot) => shot.storedIncoming.reason).filter((reason) => reason !== null);
   const boundaries = shots.slice(1).map((right, index) => {
     const left = shots[index];
@@ -116408,6 +116506,7 @@ function boundaryReview(win, playback, videoTiming) {
   return {
     version: "shot-boundaries-v1",
     status: "not_reviewed",
+    sceneRuns,
     shots,
     boundaries,
     note: "Signals are review prompts, never merge instructions or quality failures. Compare the complete scene, including offscreen action. Recompute a proposed continuous performance and its selected video route before claiming it fits; separate-shot timing is not merged capacity. No files or approvals are changed."
@@ -116419,6 +116518,16 @@ function readStoryboard(args) {
   result.file = file;
   result.mediaBaseDirectory = dirname5(file);
   result.sha256 = sha2562;
+  result.runtime = {
+    contract: "storyboard-integrity-v1",
+    modulePath: runtimeFile,
+    loadedAt: runtimeLoadedAt,
+    loadedModuleSha256: runtimeModuleSha256,
+    diskModuleSha256: createHash14("sha256").update(readFileSync24(runtimeFile)).digest("hex"),
+    features: ["boundaryReview", "videoTiming", "imageFraming", "editImpact"],
+    referenceModules: "not_verified; module hashes exclude runtime-loaded skills and their require cache",
+    note: "Loaded-module identity, not an install/update action. Compare with the intended build; reconnect after updating."
+  };
   result.readiness = boardReadiness(win, dirname5(file));
   result.videoTiming = (win.SCENES || []).filter((shot) => shot.shot?.render?.mode === "generated_video").map((shot) => {
     if (shot.visual?.reuse) return { shotId: shot.id, status: "reused", note: "Inspect the existing clip; no new generation limit applies." };
@@ -116451,7 +116560,7 @@ function readStoryboard(args) {
   const continuity = loadFromHere2(join10(REFERENCES_DIR, "shot-continuity.js"));
   result.continuityFindings = continuity.check(win, dirname5(file));
   result.cameraDirectionFindings = cameraContract().cameraDirectionWarnings(win.SCENES).map((what) => ({ level: "warn", where: "camera direction", what }));
-  result.imageFraming = (win.SCENES || []).filter((shot) => shot.visual?.frames?.start).map((shot) => imageFramingStatus(shot, win.FORMAT));
+  result.imageFraming = (win.SCENES || []).filter((shot) => shot.visual?.frames?.start).map((shot) => imageFramingStatus(shot, win.FORMAT, dirname5(file)));
   result.techniqueFindings = (win.SCENES || []).flatMap((scene, index) => techniqueContract().findings(scene).map((what) => ({ level: "warn", where: "shot " + (index + 1), what })));
   if (args.includeContext) result.reviewContext = {
     story: win.STORY || null,
@@ -116782,7 +116891,7 @@ function applyPatch(win, patch, opts = {}) {
       return { ...shot, visual: { ...shot.visual, video: rest } };
     });
   }
-  const findings = [...joinNotes];
+  const findings = [...joinNotes, ...editImpact(win, next)];
   if (!shots.length && !opts.outline) findings.push({ level: "bad", where: "board", what: "the board has no shots" });
   if (win.STORY?.authoring === "story-first" && next.STORY?.authoring !== "story-first")
     findings.push({ level: "bad", where: "STORY", what: 'story_order: STORY.authoring "story-first" stays on a board started with story_sequence' });
@@ -116794,6 +116903,57 @@ function applyPatch(win, patch, opts = {}) {
     findings.push(...contract().executionCheck(next).filter((f3) => shots.length || !opts.outline || f3.where !== "board"));
   }
   return { win: next, findings, synced };
+}
+function editImpact(before, after) {
+  const findings = [];
+  const oldShots = before.SCENES ?? [], newShots = after.SCENES ?? [];
+  const warn = (code, where, what) => findings.push({ level: "warn", code, where, what: `${code}: ${what}` });
+  const lines = (board) => {
+    const shots = board.SCENES ?? [];
+    const playback = contract().outline(board, "shots").playback;
+    return playback.flatMap(({ no }) => {
+      const shot = shots[no - 1], narration = shot.narration ?? [];
+      const events = Array.isArray(shot.performance) ? shot.performance.filter((event) => event.kind === "dialogue" || event.kind === "narration") : [];
+      const groups = Array.isArray(shot.performance) ? events.map((event) => event.group) : narration.map((_, i2) => i2 + 1);
+      const missing = narration.map((_, i2) => i2 + 1).filter((group) => !groups.includes(group));
+      if (missing.length || groups.some((group) => !Number.isInteger(group) || !narration[group - 1]))
+        warn("edit_speech_order_unresolved", String(shot.id), "performance does not resolve every speech group; inspect the ordered lines before changing boundaries.");
+      return [...groups, ...missing].map((group) => {
+        const line = narration[group - 1];
+        return line ? { id: line.id, tts: line.tts, speaker: line.speaker, delivery: line.delivery, acting: line.acting } : { unresolvedGroup: group };
+      });
+    });
+  };
+  const oldLines = lines(before), newLines = lines(after);
+  if (oldShots.length && JSON.stringify(oldLines) !== JSON.stringify(newLines)) {
+    const missing = oldLines.filter((line) => line.id && !newLines.some((next) => next.id === line.id)).map((line) => line.id);
+    warn("edit_speech_changed", "board", `ordered speech/acting changed${missing.length ? `; removed line ids: ${missing.join(", ")}` : ""}. Check intended wording, order, speakers, delivery and acting; moving intact lines between shots does not trigger this note.`);
+  }
+  for (const old of oldShots) {
+    const current = newShots.find((shot) => shot.id === old.id);
+    if (!current) {
+      const design = old.shot?.videoDesign;
+      if (Array.isArray(old.performance) && old.performance.some((event) => event.kind === "action") || old.visual?.action || old.visual?.camera || design?.action || design?.before || design?.after)
+        warn("edit_action_removed", String(old.id), "shot removed with performance/visual.action/videoDesign evidence; verify its required actions and physical states survive elsewhere or were deliberately omitted.");
+      continue;
+    }
+    const changed = startImageBasis(old, before.FORMAT) !== startImageBasis(current, after.FORMAT) || old.visual?.bgPrompt !== current.visual?.bgPrompt;
+    if (changed) {
+      warn("edit_staging_changed", String(current.id), "staging/performance changed; reconcile performance, visual.action, camera endpoints, videoDesign and acting, then re-estimate duration and inspect both joins.");
+      const oldVisual = old.visual;
+      const visual = current.visual;
+      const oldFrames = oldVisual?.frames;
+      const frames = visual?.frames;
+      if (frames?.start && frames.start === oldFrames?.start)
+        warn("edit_image_inherited", String(current.id), `retained ${frames.start} after staging changed; inspect opening pose, hands, cast and props before reuse. No media was regenerated.`);
+    }
+  }
+  const doc = after.SB_DOC;
+  for (const event of doc?.propContinuity?.events ?? []) {
+    const dangling = event.shotIds?.filter((id) => !newShots.some((shot) => shot.id === id)) ?? [];
+    if (dangling.length) warn("edit_prop_reference", String(event.id ?? "prop event"), `unresolved shot ids: ${dangling.join(", ")}; retarget the event to the shot that now depicts it.`);
+  }
+  return findings;
 }
 function applyStoryboard(args, opts = {}) {
   const file = scenesPath(args.path);
@@ -117329,8 +117489,10 @@ function writeShotIcons(args) {
 var shotImageSchema = external_exports.object({
   path: outlinePath,
   id: shotIdSchema,
+  action: external_exports.enum(["generate", "complete"]).default("generate").describe("generate plans/runs a new image; complete adopts a saved host output without generating"),
+  requestId: nonEmpty.optional().describe("The host handoff requestId to complete"),
   frame: external_exports.enum(["start", "end"]).default("start").describe("start: the first image; end: the last image of a first_last shot"),
-  prompt: nonEmpty.describe("What the frame shows, in English: who is where, doing what, facing which way, expression and light"),
+  prompt: nonEmpty.optional().describe("What the frame shows, in English: who is where, doing what, facing which way, expression and light"),
   editExisting: external_exports.boolean().optional().describe("Edit the saved frame in place conceptually, saving a new version; prompt describes only the change"),
   reframe: external_exports.boolean().optional().describe("With editExisting, reapply the saved start-frame size, crop and viewpoint to correct a generated composition; prompt describes the opening action and correction"),
   sourceCrop: external_exports.object({ x: external_exports.number().int().nonnegative(), y: external_exports.number().int().nonnegative(), width: external_exports.number().int().positive(), height: external_exports.number().int().positive() }).strict().optional().describe("With reframe, an inspected rectangle in source-image pixels, e.g. {x:72,y:64,width:720,height:1280}; must fit the source and match output aspect. It becomes the GenAI composition reference, not the final output."),
@@ -117356,17 +117518,26 @@ function startImageBasis(shot, format) {
     cast: contract().castOf(shot),
     location: visual.locationId,
     locationBinding: plan2.location,
-    props: visual.props
+    props: visual.props,
+    action: visual.action,
+    videoDesign: plan2.videoDesign,
+    performance: shot.performance,
+    acting: shot.narration?.map((line) => line.acting?.visual)
   })).digest("hex");
 }
-function imageFramingStatus(shot, format) {
-  const frames = shot.visual?.frames;
+function imageFramingStatus(shot, format, boardDir) {
+  const visual = shot.visual;
+  const frames = visual?.frames;
+  const availability = !boardDir ? void 0 : frames?.start && existsSync22(resolve5(boardDir, frames.start)) ? "present" : "missing";
+  const promptHash = typeof visual?.bgPrompt === "string" ? createHash14("sha256").update(visual.bgPrompt).digest("hex") : null;
+  const changed = !!frames?.startBasis && frames.startBasis !== startImageBasis(shot, format) || !!frames?.startPromptSha256 && frames.startPromptSha256 !== promptHash;
   return {
     id: shot.id,
     image: frames?.start,
-    status: !frames?.startBasis ? "unknown" : frames.startBasis === startImageBasis(shot, format) ? "current" : "stale",
+    ...availability ? { availability } : {},
+    status: changed ? "stale" : !frames?.startBasis || !frames.startPromptSha256 ? "unknown" : "current",
     visualReview: "not_reviewed",
-    note: "Current means the saved framing inputs match. Inspect the actual image crop before using it."
+    note: "Current means saved staging and prompt inputs match, not that the image obeys them. Inspect the pixels before reuse."
   };
 }
 var locationContract = () => loadFromHere2(join10(REFERENCES_DIR, "location-assets.js"));
@@ -117381,8 +117552,10 @@ var MLX_INPUTS = { "qwen-2.1": 10, "flux-klein": 4, "mage-edit": 4 };
 var latin = (value) => typeof value === "string" && value.trim() && !nonEnglishOutsideQuotes(value) ? value.trim() : "";
 var identityCatalog = () => loadFromHere2(join10(PLUGIN_ROOT, "skills", "_shared", "character-identity.js"));
 function heightSentence(win, ids) {
-  const heights = ids.map((id) => [id, castEntry(win, id)?.character?.physical?.heightCm]).filter(([, field2]) => field2?.status === "confirmed" && typeof field2.value === "number").map(([id, field2]) => `${id} is ${field2.value} cm tall`);
-  return heights.length > 1 ? `Keep their real heights: ${heights.join(" and ")}.` : "";
+  const heights = ids.map((id) => [id, castEntry(win, id)?.character?.physical?.heightCm]).filter(([, field2]) => field2?.status === "confirmed" && typeof field2.value === "number" && Number.isFinite(field2.value) && field2.value > 0).map(([id, field2]) => ({ id, cm: field2.value }));
+  if (heights.length < 2) return "";
+  const ordered = [...heights].sort((a, b) => b.cm - a.cm), tall = ordered[0], short = ordered.at(-1);
+  return `Keep their real heights: ${heights.map((h2) => `${h2.id} is ${h2.cm} cm tall`).join(" and ")}. ${tall.id} is ${Number((tall.cm - short.cm).toFixed(2))} cm taller than ${short.id} (height ratio ${(tall.cm / short.cm).toFixed(3)}). For upright figures at equal camera distance on the same ground plane, preserve that relative scale. Follow the authored depth and pose; do not equalize head levels or compare seated and standing head heights. Independently framed sheet panels do not establish relative scale.`;
 }
 function castEntry(win, id) {
   const list = win.SB_DOC?.characters;
@@ -117444,7 +117617,35 @@ function docEntry(win, kind, id) {
   if (!entry2) throw new Error(`${kind === "locations" ? "location" : "prop"}_unknown: ${id} is not in SB_DOC.${kind}`);
   return entry2;
 }
+function shotImageSourceBasis(path32, id, request) {
+  const { win } = readOutline(path32);
+  const shot = (win.SCENES ?? [])[shotIndex(win.SCENES ?? [], id, "shot_image")];
+  const doc = win.SB_DOC ?? {};
+  const rows = (value) => Array.isArray(value) ? value : [];
+  const ledger = doc.propContinuity ?? {};
+  const assets = {
+    location: rows(doc.locations).find((entry2) => entry2.id === request.location),
+    props: rows(doc.props).filter((entry2) => request.props.includes(String(entry2.id))),
+    characters: (contract().castOf(shot) ?? []).map((character) => castEntry(win, character)),
+    continuity: request.props.length ? {
+      version: ledger.version,
+      timelineId: ledger.timelineId,
+      initial: rows(ledger.initial).filter((entry2) => request.props.includes(String(entry2.propId))),
+      events: rows(ledger.events).filter((entry2) => request.props.includes(String(entry2.propId)))
+    } : void 0
+  };
+  const style = loadFromHere2(join10(REFERENCES_DIR, "production-mode.js")).shotStyle(win, (win.SCENES ?? []).indexOf(shot));
+  const panels = request.canonicalPanels ? characterPanels().canonicalReferences(dirname5(scenesPath(path32)), id, contract().castOf(shot) ?? [], "image").map((ref) => ({ id: ref.id, path: resolve5(dirname5(scenesPath(path32)), ref.path) })) : void 0;
+  return createHash14("sha256").update(JSON.stringify({ shot, format: win.FORMAT, assets, style, panels })).digest("hex");
+}
 function shotImageRequest(args) {
+  if (args.action === "complete") throw new Error("shot_image_action: use completeShotImage for a host completion");
+  if (!args.prompt) throw new Error("shot_image_prompt_required: generate needs prompt");
+  const request = buildShotImageRequest({ ...args, prompt: args.prompt });
+  const sourceBasis = shotImageSourceBasis(args.path, args.id, request);
+  return { ...request, sourceBasis, inputHashes: Object.fromEntries([.../* @__PURE__ */ new Set([...request.inputs, ...request.originalInputs ?? []])].map((file) => [file, createHash14("sha256").update(readFileSync24(file)).digest("hex")])) };
+}
+function buildShotImageRequest(args) {
   const { win } = readOutline(args.path);
   const shots = win.SCENES ?? [];
   const shot = shots[shotIndex(shots, args.id, "shot_image")];
@@ -117524,6 +117725,7 @@ function shotImageRequest(args) {
       episode,
       assetId: args.id,
       ...call3,
+      originalInputs: [resolve5(boardDir, source), ...call3.originalInputs],
       refs: visual.references ?? [],
       ...location ? { location } : {},
       ...visual.locationFrame ? { locationFrame: visual.locationFrame } : {},
@@ -117579,7 +117781,7 @@ function shotImageRequest(args) {
       path: place,
       role: "background",
       use: "image",
-      purpose: set ? `how the ${location} location looks \u2014 materials, colours and light only, not its viewpoint or layout` : `the ${location} location${selected ? ` seen from its ${backgroundView} camera direction; preserve this view and its landmark arrangement` : ""}`
+      purpose: set ? `how the ${location} location looks \u2014 materials, colours and light only, not its viewpoint or layout` : `the ${location} location${selected ? ` with ${backgroundView} directional geography` : ""}; use its appearance and the spatial relationships of visible landmarks, not its frame extent`
     }] : []
   ];
   const look = refs.filter((ref) => ref.role === "background"), others = refs.filter((ref) => ref.role !== "background" && ref.role !== "composition");
@@ -117593,17 +117795,30 @@ function shotImageRequest(args) {
   for (const file of inputs) if (!existsSync22(file)) throw new Error(`image_input_missing: ${file}`);
   const imagePrompts = loadFromHere2(join10(REFERENCES_DIR, "assemble-bg-prompt.js"));
   const style = loadFromHere2(join10(REFERENCES_DIR, "production-mode.js")).shotStyle(win, shots.indexOf(shot));
+  const authoredOpening = plan2.videoDesign?.before;
+  const opening = args.frame === "start" ? latin(authoredOpening) : "";
+  if (args.frame === "start" && authoredOpening && !opening)
+    warnings.push({
+      level: "warn",
+      code: "opening_translation_required",
+      where: args.id,
+      what: "opening_translation_required: videoDesign.before is not English; preserve its physical state in the English shot_image prompt."
+    });
   const body = imagePrompts.assemble({
     ...imagePrompts.frameOptions(shot, args.frame),
     ...args.frame === "end" && set?.endCamera && JSON.stringify(set.camera) !== JSON.stringify(set.endCamera) ? { omitFraming: true } : {},
     style: style.preset ? style : null,
-    scene: args.prompt,
+    scene: [opening && `Authored opening state: ${opening}`, args.prompt].filter(Boolean).join(" "),
     noPerson: !cast.length,
     ...set ? { location: { prompt: args.frame === "end" ? set.endPrompt : set.prompt, paths: [] } } : {}
   }).prompt;
-  const roles = ordered.map((ref, i2) => `Image ${i2 + 1} shows ${ref.purpose}.`).join(" ");
+  const roles = ordered.map((ref, i2) => {
+    const character = refs.find((r2) => r2.path === ref.path && r2.role === "character");
+    const role = !character ? "" : character.id.endsWith("-face") ? " Use only the head and hair above the collar; ignore clothing in this panel." : /-(front|back)$/.test(character.id) ? " Use this panel for physique and all clothing, including collar, tie and sleeve state." : "";
+    return `Image ${i2 + 1} shows ${ref.purpose}.${role}`;
+  }).join(" ");
   const at = (ref) => ordered.indexOf(ref) + 1;
-  const lock2 = !set ? selected && args.frame === "start" ? `Keep the background's ${backgroundView} viewing direction and landmark arrangement. The character sheets supply appearance and identity only; recompose the subject to the authored opening crop and subject viewpoint within that space. Character panel poses do not constrain this shot.` : view ? `The location and character sheets supply appearance and identity only. Recompose them to the authored ${args.frame === "end" ? "closing" : "opening"} crop and viewpoint; the sheet pose and camera do not constrain this shot.` : "" : args.frame === "end" ? composition.length ? `Use Image ${at(composition[0])}'s closing camera, lens, framing and final object and figure positions. Image 1 supplies the look and every identity; its opening camera does not constrain this closing view.` : `Image 1 supplies the opening appearance and identities. Follow the closing camera direction below while preserving the set's world layout.` : `Keep Image 1's camera position, ${lens}${dutch ? "" : ", horizon"} and world layout, and keep every object${set.blocked ? " and figure" : ""} at its world position in Image 1. The authored composition below controls the final crop, headroom and subject screen placement. Paint its plain unpainted surfaces as the real place, and continue the place into any flat dark area past the set's edge.` + (dutch ? " Image 1 is level; tilt the whole picture to the dutch angle described below." : "") + (look.some((ref) => ordered.includes(ref)) ? ` Take only materials, colours and light from Image ${at(look[0])}.` : "");
+  const lock2 = !set ? selected && args.frame === "start" ? `Preserve the selected background's ${backgroundView} directional geography and the spatial relationships of visible landmarks. The authored crop, camera height and subject viewpoint control the output; do not copy the background sheet's wide framing. Landmarks outside that crop stay outside the frame. The character sheets supply appearance and identity only; their panel poses do not constrain this shot.` : view ? `The location and character sheets supply appearance and identity only. Recompose them to the authored ${args.frame === "end" ? "closing" : "opening"} crop and viewpoint; the sheet pose and camera do not constrain this shot.` : "" : args.frame === "end" ? composition.length ? `Use Image ${at(composition[0])}'s closing camera, lens, framing and final object and figure positions. Image 1 supplies the look and every identity; its opening camera does not constrain this closing view.` : `Image 1 supplies the opening appearance and identities. Follow the closing camera direction below while preserving the set's world layout.` : `Keep Image 1's camera position, ${lens}${dutch ? "" : ", horizon"} and world layout, and keep every object${set.blocked ? " and figure" : ""} at its world position in Image 1. The authored composition below controls the final crop, headroom and subject screen placement. Paint its plain unpainted surfaces as the real place, and continue the place into any flat dark area past the set's edge.` + (dutch ? " Image 1 is level; tilt the whole picture to the dutch angle described below." : "") + (look.some((ref) => ordered.includes(ref)) ? ` Take only materials, colours and light from Image ${at(look[0])}.` : "");
   const prompt = [
     args.frame === "start" && view ? `Create one opening image with this required crop: ${view.crop}.` : ordered.length ? "Compose one picture from these images." : "",
     roles,
@@ -117631,7 +117846,7 @@ function shotImageRequest(args) {
     end: set.end
   } : void 0;
   const startBasis = startImageBasis({ ...shot, visual: { ...visual, ...location ? { locationId: location } : {}, props } }, win.FORMAT);
-  return { episode, assetId: args.id, ...call2, refs: sent, ...location ? { location } : {}, ...locationFrame ? { locationFrame } : {}, props, prompt, warnings, startBasis };
+  return { episode, assetId: args.id, ...call2, canonicalPanels: true, refs: sent, ...location ? { location } : {}, ...locationFrame ? { locationFrame } : {}, props, prompt, warnings, startBasis };
 }
 var PANEL_NEGATIVE_GUIDANCE = { "qwen-image-fast": 4, "qwen-image-2.1-turbo": 4 };
 function imageAdapter(selection) {
@@ -117662,7 +117877,7 @@ function imageCall(o) {
   const sent = new Set(mimes).size > 1 ? inputs.map((f3, i2) => mimes[i2] === "image/png" ? f3 : toPng(f3)) : inputs;
   const jobs = readImageState(directory2)?.jobs ?? {};
   let k = 1;
-  while (existsSync22(join10(o.outDir, `${o.stem}-v${k}.png`)) || Object.hasOwn(jobs, `${o.stem}-v${k}`)) k += 1;
+  while (existsSync22(join10(o.outDir, `${o.stem}-v${k}.png`)) || existsSync22(join10(o.outDir, `${o.stem}-v${k}.pending.json`)) || Object.hasOwn(jobs, `${o.stem}-v${k}`)) k += 1;
   const requestId = `${o.stem}-v${k}`, file = join10(o.outDir, `${requestId}.png`);
   mkdirSync11(dirname5(file), { recursive: true });
   const base642 = (f3) => readFileSync24(f3).toString("base64");
@@ -117672,9 +117887,36 @@ function imageCall(o) {
   const guidance = selection.engine === "astra-genai-native" ? PANEL_NEGATIVE_GUIDANCE[selection.model ?? ""] : void 0;
   const negativeSent = !!o.negativePrompt && guidance !== void 0;
   if (negativeSent) Object.assign(args, { negativePrompt: o.negativePrompt, guidanceScale: guidance });
-  return { requestId, ...tool2 ? { tool: tool2 } : {}, operation: edit2 ? "edit" : "text", args, file, inputs: sent, negativeSent };
+  return { requestId, ...tool2 ? { tool: tool2 } : {}, operation: edit2 ? "edit" : "text", args, file, inputs: sent, originalInputs: inputs, negativeSent };
+}
+function deferShotImage(args, request) {
+  const file = join10(dirname5(request.file), `${request.requestId}.pending.json`);
+  writeFileSync17(file, JSON.stringify({ path: scenesPath(args.path), id: args.id, frame: args.frame, request }, null, 2) + "\n", { flag: "wx" });
+}
+function completeShotImage(args) {
+  if (!args.requestId || !new RegExp(`^${args.id}-${args.frame}-v[1-9][0-9]*$`).test(args.requestId))
+    throw new Error("shot_image_request_required: complete needs the matching handoff requestId and frame");
+  if (args.prompt !== void 0 || args.editExisting !== void 0 || args.reframe !== void 0 || args.sourceCrop !== void 0 || args.preserve !== void 0 || args.location !== void 0 || args.props !== void 0 || args.size !== void 0 || args.reserveUsd !== void 0)
+    throw new Error("shot_image_completion_scope: complete uses the saved request; omit generation options");
+  const file = join10(dirname5(scenesPath(args.path)), "images", `${args.requestId}.pending.json`);
+  if (!existsSync22(file)) throw new Error("shot_image_request_missing: no saved host handoff");
+  const pending2 = JSON.parse(readFileSync24(file, "utf8"));
+  if (pending2.completed) throw new Error("shot_image_already_completed: this handoff was already adopted");
+  if (pending2.path !== scenesPath(args.path) || pending2.id !== args.id || pending2.frame !== args.frame || pending2.request.requestId !== args.requestId || pending2.request.file !== join10(dirname5(file), `${args.requestId}.png`))
+    throw new Error("shot_image_request_mismatch: the handoff belongs to another frame");
+  const result = recordShotImage(args, pending2.request);
+  writeFileSync17(file, JSON.stringify({ ...pending2, completed: true }, null, 2) + "\n");
+  return result;
 }
 function recordShotImage(args, request) {
+  if (!existsSync22(request.file)) throw new Error("shot_image_output_missing: generate and save the requested output before completing");
+  verifyImageFile(request.file);
+  if (request.sourceBasis && request.sourceBasis !== shotImageSourceBasis(args.path, args.id, request))
+    throw new Error("shot_image_request_stale: the shot or asset plan changed after generation was requested; keep the output and plan a new request");
+  for (const [file, hash7] of Object.entries(request.inputHashes ?? {})) {
+    if (!existsSync22(file) || createHash14("sha256").update(readFileSync24(file)).digest("hex") !== hash7)
+      throw new Error("shot_image_input_changed: a reference changed after generation was requested");
+  }
   const { win, st } = readOutline(args.path);
   const shots = (win.SCENES ?? []).slice();
   const index = shotIndex(shots, args.id, "shot_image");
@@ -117685,6 +117927,7 @@ function recordShotImage(args, request) {
   if (args.frame === "start") {
     if (request.startBasis) frames.startBasis = request.startBasis;
     else delete frames.startBasis;
+    frames.startPromptSha256 = createHash14("sha256").update(request.prompt).digest("hex");
     Object.assign(visual, {
       bg: rel,
       bgPrompt: request.prompt,
@@ -118498,8 +118741,8 @@ var ELEVENLABS_SFX_MODEL = "eleven_text_to_sound_v2";
 var ELEVENLABS_SFX_SECONDS = { min: 0.5, max: 30 };
 var DEFAULT_ELEVENLABS_SFX_PROMPT_INFLUENCE = 0.3;
 var MAX_ELEVENLABS_SFX_TEXT_CHARS = 450;
-var ELEVENLABS_SFX_OUTPUT_FORMATS = ["pcm_48000", "pcm_44100", "pcm_24000", "mp3_44100_128"];
-var DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT = "pcm_48000";
+var ELEVENLABS_SFX_OUTPUT_FORMATS = ["wav_48000", "wav_44100", "wav_24000", "pcm_48000", "pcm_44100", "pcm_24000", "mp3_44100_128"];
+var DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT = "wav_48000";
 var ELEVENLABS_SFX_USD_PER_MINUTE = 0.12;
 function sfxExtensionForFormat(format) {
   return format.startsWith("mp3_") ? ".mp3" : ".wav";
@@ -118838,7 +119081,10 @@ async function generateElevenLabsSoundEffect(request) {
     );
     const meta = readMeta(response);
     const raw = Buffer.from(await response.arrayBuffer());
-    const audio = ext === ".wav" ? pcmToWav(raw, sfxSampleRateForFormat(request.outputFormat), 1) : raw;
+    const isWav = raw.subarray(0, 4).toString() === "RIFF" && raw.subarray(8, 12).toString() === "WAVE";
+    if (request.outputFormat.startsWith("wav_") && !isWav) throw new Error("Sound effect response is not the requested WAV container");
+    const audio = ext === ".wav" && !isWav ? pcmToWav(raw, sfxSampleRateForFormat(request.outputFormat), 2) : raw;
+    validateSpeechAudio(audio, ext.slice(1));
     const audioPath = saveAudioFile(outputDir, filename, audio);
     const durationSeconds = ext === ".wav" ? wavDurationSeconds(audio) : void 0;
     const sidecar = {
@@ -124793,7 +125039,7 @@ Returns: a text block with the saved .wav file path, speaker/voice assignments, 
     description: `Generate one sound effect from a text description with ElevenLabs (${ELEVENLABS_SFX_MODEL}) \u2014 the lane that fills a channel's sfx catalog so a shot's \`sound.sfx\` has a file behind it.
 
 Use for the cut effects a storyboard names in window.SFX (scenes-schema \xA7sound effects): a whoosh on a whip transition, a low hit on the line before a drop, a tick or pop when a figure lands on a slide, a riser under a build, a 30-second room-tone loop for a bed. Write the prompt as a description in the vendor's own vocabulary (whoosh \xB7 impact \xB7 braam \xB7 riser \xB7 click \xB7 texture \xB7 ambience), one sound per call, with its shape spelled out ("short soft whoosh, fabric through air, no tail"); set durationSeconds for one-shots (a whoosh 0.6\u20131.0 s, a hit 1\u20132 s, a riser 2\u20134 s) and loop: true with 10\u201330 s for a bed. promptInfluence above the ${DEFAULT_ELEVENLABS_SFX_PROMPT_INFLUENCE} default reads the prompt more literally; below it, more freely. Save straight into the channel catalog \u2014 outputPath data/<channel>/assets/audio/sfx, filename <id>.wav \u2014 then register the row with resolve-asset.py --ensure and point its note at the .json sidecar this tool writes next to the file (tool, model, prompt, seconds, request id, date, rights). Generated once, an effect is a channel asset reused at $0 in every later episode.
-Do NOT use for music or a melodic bed \u2014 that is music_plan \u2192 music_execute with the saved music model. Do NOT use for a clip's own soundtrack \u2014 that is the model's native audio through visual.audio. Do NOT request a loop under 5 s (it seams audibly under narration). The endpoint has no WAV format of its own: the server asks for PCM and writes the RIFF header itself, so the file is a mono 16-bit WAV the builder reads directly; a 403 output_format_not_allowed means the plan lacks that rate \u2014 retry with pcm_24000. API pricing is per minute of generated audio, $${ELEVENLABS_SFX_USD_PER_MINUTE.toFixed(2)} on every plan (pricing/api, read 2026-09-16), so a one-second effect is about $0.002; the ledger key is sfx.elevenlabs with the measured seconds as the quantity. Free-tier output is non-commercial and needs attribution \u2014 check the plan before publishing.
+Do NOT use for music or a melodic bed \u2014 that is music_plan \u2192 music_execute with the saved music model. Do NOT use for a clip's own soundtrack \u2014 that is the model's native audio through visual.audio. Do NOT request a loop under 5 s (it seams audibly under narration). Prefer the provider's WAV format, which preserves its channel metadata. Legacy PCM sound effects are wrapped as stereo WAV, separately from mono speech. A 403 output_format_not_allowed means the plan lacks that rate; pcm_24000 is the supported lower-rate alternative. API pricing is per minute of generated audio, $${ELEVENLABS_SFX_USD_PER_MINUTE.toFixed(2)} on every plan (pricing/api, read 2026-09-16), so a one-second effect is about $0.002; the ledger key is sfx.elevenlabs with the measured seconds as the quantity. Free-tier output is non-commercial and needs attribution \u2014 check the plan before publishing.
 
 Returns: a text block with the saved WAV path, the provenance sidecar path, the model, format, the measured duration, the USD estimate at the per-minute rate, and the request id.`,
     inputSchema: {
@@ -124823,7 +125069,7 @@ Returns: a text block with the saved WAV path, the provenance sidecar path, the 
         },
         outputFormat: {
           type: "string",
-          description: `Vendor output format (default "${DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT}" \u2014 mono 16-bit PCM at 48 kHz, wrapped as WAV here; the builder mixes at 48 kHz). pcm_44100 and pcm_24000 are the same wrapped as WAV at those rates \u2014 pcm_24000 is the fallback when the plan refuses the higher rate (403 output_format_not_allowed). mp3_44100_128 is a preview only; it never enters the build.`,
+          description: `Vendor output format (default "${DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT}" \u2014 the provider's self-describing WAV at 48 kHz). WAV preserves the supplied channel layout; legacy PCM is interleaved stereo wrapped as WAV. pcm_24000 is the lower-rate alternative when the plan refuses a higher rate (403 output_format_not_allowed). mp3_44100_128 is a preview only; it never enters the build.`,
           enum: [...ELEVENLABS_SFX_OUTPUT_FORMATS],
           default: DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT
         },
@@ -126100,11 +126346,13 @@ Do NOT use it to validate \u2014 storyboard_check runs the contract. A board wit
 
 For inspection, the default includeContext:true adds reviewContext.story (STORY), production (PRODUCTION) and document (SB_DOC: characters, props, setting and recorded reviews). shotId adds selectedShot with the raw shot, scene and previous/next shot IDs while preserving the whole flow. Referenced asset paths are authored locators, not proof the files exist or have been viewed. inspection.mediaViewed is always false; evidenceStatus is not_verified. Read assets and run their contract checks before declaring continuity or a current review pass.
 
+The runtime field identifies the loaded module and its on-disk hash; it does not certify runtime-loaded reference modules. Compare the intended installation and reconnect after changes. imageFraming tracks staging/performance and generated-prompt provenance separately from pixel inspection.
+
 Includes boundaryReview (shot-boundaries-v1): every actual playback join with full ordered speech/performance, camera context, incoming join ownership and factual review signals. It is read-only and always not_reviewed; repeated speakers/cast or reasons are not merge commands. For splices incoming is null: inspect the edit plan. Missing evidence stays unknown. Compare the uncut scene before images, and audit line ids/order/acting, performance groups, references and outer joins after edits. If this field is absent on an older connection, update/reconnect rather than guessing a bundle path.
 
 Includes videoTiming for generated shots: selected route, planned source coverage, frame grid, maximum seconds, and fits/split_required/timing_unknown/limits_unknown. This is not measured speech or output duration.
 
-Returns: JSON \u2014 { file, mediaBaseDirectory, sha256, version, format, shots, sequences[\u2026scenes[\u2026shots]], unplacedShots, splicedShots (broll \xB7 outro), playback (actual insertion order), unscheduledShots, propSheet?, inspection, boundaryReview, videoTiming, reviewContext?, selectedShot? }.`,
+Returns: JSON \u2014 { file, mediaBaseDirectory, sha256, version, format, shots, sequences[\u2026scenes[\u2026shots]], unplacedShots, splicedShots (broll \xB7 outro), playback (actual insertion order), unscheduledShots, propSheet?, inspection, runtime, imageFraming, boundaryReview, videoTiming, reviewContext?, selectedShot? }.`,
     inputSchema: {
       type: "object",
       properties: {
@@ -126174,7 +126422,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     name: "story_shot",
     title: "Write shot stories (story step 3 of 3)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    description: `Use it after story_scene to write each provisional shot as one sentence summarizing a coherent performance in its scene. A summary may cover several lines and turns; never allocate one shot per sentence or gesture. Revisit boundaries after shot_dialogue using storyboard_read.boundaryReview and inspect videoTiming before images. Without an id the shot is added at the end of its scene and gets a stable id (s0001\u2026); with an id that shot's scene and summary are revised and everything else on it is kept; a new scene moves it to the end of that scene. Refused (story_order) before any scene exists or for a scene outside a sequence. A story-first episode board also repeats story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
+    description: `Use it after story_scene to write each provisional shot as one sentence summarizing a coherent performance in its scene. A summary may cover several lines and turns; never allocate one shot per sentence or gesture. Revisit boundaries after shot_dialogue using storyboard_read.boundaryReview.sceneRuns (the uninterrupted scene) and boundaries (hold, reframe or cut); inspect performanceTiming and videoTiming before images. Without an id the shot is added at the end of its scene and gets a stable id (s0001\u2026); with an id that shot's scene and summary are revised and everything else on it is kept; a new scene moves it to the end of that scene. Refused (story_order) before any scene exists or for a scene outside a sequence. A story-first episode board also repeats story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
 
 Do NOT pass characters, dialogue, narration, camera, visual fields or a title \u2014 the input refuses them; a shot's title is on-screen text, which a full_video cut never carries. Once every shot has its story, shot_characters and shot_dialogue come next, then shot_icons; on a board these tools started (STORY.authoring "story-first") storyboard_apply refuses a shot without scene and summary.
 
@@ -126314,19 +126562,19 @@ Refused: missing story/characters (story_order), invalid attributes, incompatibl
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     description: `Create a shot\u2019s start or end image.
 
-Use it after shot_icons to compose a start image or a first_last end image from character panels, place and props using saved framing and style. Write English action, layout, gaze and light in prompt. One character uses face/front/back panels; two use each face then each front. References supply appearance; the authored view controls crop and viewpoint.
+Use it after shot_icons to compose a start image or a first_last end image from character panels, place and props using saved framing and style. Write English action, layout, gaze and light in prompt. References supply appearance; the authored view controls crop and viewpoint.
 
-For a targeted correction, set editExisting:true and describe only the change in prompt. preserve adds explicit invariants. The saved start or end image becomes the sole input, source dimensions are reused unless size is supplied, and original scene instructions are not reassembled. Omit location and props; update their storyboard metadata first if needed. Refuses image_edit_source_missing without that saved frame and image_edit_scope if location/props are supplied.
-To correct a generated start image's crop, set editExisting:true and reframe:true. The saved size, crop and viewpoint are recompiled with prompt as the opening action/correction; dimensions default to the current delivery aspect. Inspect the actual result; this does not certify visual adherence or clear stale source evidence. Reframe is only for frame:start.
+For a targeted correction, set editExisting:true and describe only the change in prompt. preserve adds explicit invariants. The saved frame is the sole input, reusing its dimensions unless size is supplied. Omit location and props. Refuses image_edit_source_missing without that saved frame and image_edit_scope if location/props are supplied.
+To correct a generated start image's crop, set editExisting:true and reframe:true. The saved size, crop and viewpoint are recompiled with prompt as the opening action/correction; dimensions default to the current delivery aspect. Reframe is only for frame:start and never certifies pixels or clears stale evidence.
 If text-only reframing fails, sourceCrop prepares an inspected source-pixel rectangle as a separate reference, recording its source hash and crop. It must fit and match output aspect (image_crop_bounds/image_crop_aspect). The saved model still generates the final image. Describe action, not another zoom; never guess coordinates without viewing the source.
 
-For normal generation, a location with a built set uses a camera-matched Blender render as Image 1 and its sheet as a look reference when capacity allows. visual.camera.backgroundView chooses front/back (default front). Without a set, the corresponding location panel leads and retains its landmark layout; authored subject framing still applies. Missing directional panels refuse background_view_missing; legacy front-only sheets can reuse imageUrl with a warning. A built set with conflicting direction refuses background_view_conflict; a render failure refuses location_render_failed without substituting the sheet. Props use their frame-specific ledger state and references; hidden props stay out, missing images or state references warn, and ledger errors omit only the affected state.
+For normal generation, a location with a built set uses a camera-matched Blender render as Image 1 and its sheet as a look reference when capacity allows. visual.camera.backgroundView chooses front/back (default front). Without a set, its panel supplies directional geography; authored crop, height and viewpoint control output and off-frame landmarks stay out. Missing directional panels refuse background_view_missing; legacy front-only sheets can reuse imageUrl with a warning. A built set with conflicting direction refuses background_view_conflict; a render failure refuses location_render_failed without substituting the sheet. Props use frame-specific ledger state/references; hidden props stay out, missing references warn and ledger errors omit affected state.
 
 frame:end edits the opening image using the closing composition, story state and final focus. A built set supplies its numeric end camera when available; a moving shot without one warns and follows the prompt's landing. An end image keeps the start's location (location is refused) and records endProps separately.
 
 Runs image_plan \u2192 image_execute under the saved model and existing spending authorization. Saves a new version under storyboard/images and records visual.frames.start/bg or frames.end, prompt, references and asset bindings. Framing contradictions refuse shot_framing_conflict. Flexible-size models use delivery aspect; fixed-size GPT models warn with their supported preset. Revising a start invalidates its old end with a warning; files are preserved. storyboard_read.imageFraming compares the recorded start inputs with the current plan (current/stale/unknown), separately from visual review. Inspect the returned image against the saved size and crop; a matching prompt is not pixel evidence. GPT inputs of mixed PNG/JPEG types become PNG copies.
 
-Do NOT use it just to inspect a shot \u2014 use storyboard_read. Do NOT use it for routes other than still_camera and generated_video. story_order refuses missing icon attributes, an end before its start or outside first_last. image_references_unsupported refuses inputs beyond the saved model's capacity; never switch models silently. Text-bearing images follow the GPT Image 2 directive. Returns: file, input order, prompt and warnings; a host selection returns a handoff instead of generating.`,
+Do NOT use it just to inspect a shot \u2014 use storyboard_read. Do NOT use it for routes other than still_camera and generated_video. story_order refuses missing icon attributes, an end before its start or outside first_last. image_references_unsupported refuses inputs beyond the saved model's capacity; never switch models silently. Text-bearing images follow the GPT Image 2 directive. Returns: file, input order, prompt and warnings; a host selection returns a requestId and handoff while preserving active frames. Save the output, inspect it, then call action:complete with path/id/frame/requestId only. Completion decodes the file and checks the saved shot/reference inputs before adoption; changed inputs refuse shot_image_request_stale or shot_image_input_changed. Missing output refuses shot_image_output_missing. Generation requires prompt; completion never generates or charges again.`,
     inputSchema: {
       type: "object",
       additionalProperties: false,
@@ -126334,6 +126582,8 @@ Do NOT use it just to inspect a shot \u2014 use storyboard_read. Do NOT use it f
         path: { type: "string", description: "The storyboard directory or its scenes.js, e.g. data/channel/episodes/topic/storyboard" },
         id: { type: "string", pattern: "^s\\d{4,}$", description: "Stable shot id, e.g. s0001" },
         frame: { type: "string", enum: ["start", "end"], default: "start", description: "start: the first image \xB7 end: the last image of a first_last shot" },
+        action: { type: "string", enum: ["generate", "complete"], default: "generate", description: "generate requests a new image; complete adopts an existing host output without generating" },
+        requestId: { type: "string", description: "Exact host handoff requestId for action:complete, e.g. s0001-start-v2" },
         prompt: { type: "string", description: "What the frame shows, in English: who is where, doing what, facing which way, expression and light, e.g. Mina waits with closed relaxed lips." },
         editExisting: { type: "boolean", description: "Edit the saved frame using prompt as the change instruction; save a new version. Omit location and props." },
         reframe: { type: "boolean", description: "With editExisting and frame:start, recompile saved shot size, crop and viewpoint to correct the generated image; prompt gives opening action and correction." },
@@ -126349,7 +126599,7 @@ Do NOT use it just to inspect a shot \u2014 use storyboard_read. Do NOT use it f
         size: { type: "string", pattern: "^\\d{3,4}x\\d{3,4}$", description: "Output WIDTHxHEIGHT; default 1536x864 on a 16:9 board, 864x1536 otherwise; fixed-size GPT models use their supported preset with a warning" },
         reserveUsd: { type: "number", minimum: 0, description: "API reservation estimate in USD, as in image_plan; e.g. 0 for an authorized local run" }
       },
-      required: ["path", "id", "prompt"]
+      required: ["path", "id"]
     }
   },
   {
@@ -126395,7 +126645,7 @@ Returns: the file written and the prompt. Stores promptSource so video_plan reco
 A new episode board starts with its story (story_sequence \u2192 story_scene \u2192 story_shot), then each shot's characters and lines (shot_characters \u2192 shot_dialogue), then its icon attributes (shot_icons), its images (shot_image) and its video prompt (shot_prompt); storyboard_apply refuses to create a board inside an episode. Use it after those steps to add camera endpoints, blocking and visual plans (storyboard \xA74), and to change one thing later (scenes / sequences by key, shots by id \u2014 shotsById \xB7 insertShots.afterId \xB7 removeShotIds \u2014 or by position, globals for FORMAT \xB7 THEME \xB7 COMPREHENSION \xB7 STORY \xB7 PRODUCTION \xB7 MUSIC \xB7 SFX). Address shots by id once the board has them (every board written by this tool does): a review note names s0007, and positions shift with every insert; a patch mixes id and position addressing at its own peril \u2014 it is refused. Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. One call carries the whole change \u2014 do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
 storyboard_apply assigns stable shot ids (s0001\u2026) and advances STRUCTURE.nextShotId; preserve those ids and do not edit them by hand.
 Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign, visual.camera and the three plan records shot.eyeline \xB7 shot.composition \xB7 shot.depth in the input schema. shot.depth (L11): count what the viewer must read in the frame at once \u2014 one thing \u2192 shallow with focus (a person's eyes), two or more \u2192 deep with the planes listed front to back; a departure needs a reason, and a still_camera focus-in/rack-focus cut cannot be deep. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
-Do NOT pass a shot's visual plan through a summary \u2014 pass the object scenes-schema.md defines (visual \xB7 shot.space \xB7 visual.camera \xB7 visual.video \u2026); unknown keys on a shot pass through untouched. Editing a board drops its stale \`// approved:\` line; existing task authorization is unchanged.
+Do NOT pass a shot's visual plan through a summary \u2014 pass the object scenes-schema.md defines (visual \xB7 shot.space \xB7 visual.camera \xB7 visual.video \u2026); unknown keys on a shot pass through untouched. Nonblocking edit_* findings expose performed-speech changes, removed actions, inherited images and dangling prop-event shot ids. They require an editorial comparison, not regeneration or approval. Editing a board drops its stale \`// approved:\` line; existing task authorization is unchanged.
 
 Scene: { no, place, time, event, summary, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? } \u2014 on a story-first board a scene without its one-sentence summary is refused (story_order). The cast membership, voiceOnly and two-character checks run in shot_characters and storyboard_check, not here. Sequence: { id, title, purpose, question?, payoff?, scenes: [no\u2026] }. The reasons for each field are in scenes-schema.md \xA7structure.
 
@@ -127814,7 +128064,7 @@ async function manageLocation(args) {
 // src/speech.ts
 import { createHash as createHash20, randomUUID as randomUUID8 } from "node:crypto";
 import { readFileSync as readFileSync32, writeFileSync as writeFileSync25, renameSync as renameSync8, mkdirSync as mkdirSync19, existsSync as existsSync30 } from "node:fs";
-import { dirname as dirname8, resolve as resolve9, join as join15 } from "node:path";
+import { dirname as dirname8, resolve as resolve9, join as join15, relative as relative2 } from "node:path";
 import * as nodeModule7 from "node:module";
 import { execFileSync as execFileSync14 } from "node:child_process";
 var voiceContract = () => nodeModule7.createRequire(import.meta.url)("../../skills/_shared/character-voice.js");
@@ -127839,6 +128089,37 @@ var speechManageSchema = external_exports.object({
 }).strict();
 var hash4 = (s2) => createHash20("sha256").update(s2).digest("hex");
 var object5 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
+function syncProductionClip(scene, boardDir, videoPath, oldClip, warnings) {
+  const duration4 = (file) => Number(execFileSync14(
+    "ffprobe",
+    ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=duration", "-of", "default=nw=1:nk=1", file],
+    { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }
+  ).trim());
+  const production = object5(scene.productionPlan), cuts = production.cuts;
+  if (Array.isArray(cuts) && cuts.length) {
+    const cut = object5(cuts[0]);
+    if (cuts.length !== 1 || cut.kind !== "generated_video" || Number(cut.start ?? 0) !== 0 || typeof oldClip !== "string" || typeof cut.path !== "string" || resolve9(boardDir, cut.path) !== resolve9(boardDir, oldClip)) {
+      warnings.push("The bound video changed; the authored production cuts were preserved and need an explicit edit before playback uses this clip.");
+      return;
+    }
+    try {
+      if (Math.abs(Number(cut.seconds) - duration4(resolve9(boardDir, oldClip))) > 0.05) {
+        warnings.push("The existing production cut has an authored duration; it was preserved for an explicit edit.");
+        return;
+      }
+    } catch {
+      warnings.push("Could not verify the existing production cut duration; it was preserved for an explicit edit.");
+      return;
+    }
+  }
+  try {
+    const seconds = duration4(videoPath);
+    if (!Number.isFinite(seconds) || seconds <= 0) throw new Error("Missing video duration");
+    scene.productionPlan = { ...production, cuts: [{ kind: "generated_video", path: relative2(boardDir, videoPath), start: 0, seconds }] };
+  } catch {
+    warnings.push("Could not measure the bound video stream; production cuts were not changed.");
+  }
+}
 function speechRevision(line, character) {
   return hash4(JSON.stringify(actingContract().speechRevisionPayload(line, character?.tts)));
 }
@@ -128087,6 +128368,7 @@ function manageSpeech(args) {
         video2.speechStatus = "stale";
         invalidated = { video: video2, edit: true };
       } else {
+        if (!tailTrim) syncProductionClip(scene, dirname8(file), videoPath, video2.clip, plan2.warnings);
         video2.clip = args.videoPath;
         video2.speechBinding = {
           ...plan2,
@@ -128107,6 +128389,22 @@ function manageSpeech(args) {
       if (native) {
         scene.sound = { ...sound, audioSource: "video" };
         for (const { line } of selected) if (line.mediaStatus === "needs_audio") delete line.mediaStatus;
+      } else if (!selected.length && sound.audioSource === "video") {
+        try {
+          const streams = execFileSync14(
+            "ffprobe",
+            ["-v", "error", "-select_streams", "a", "-show_entries", "stream=index", "-of", "csv=p=0", videoPath],
+            { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }
+          ).trim();
+          if (!streams) {
+            const silentSound = { ...sound };
+            delete silentSound.audioSource;
+            scene.sound = silentSound;
+            plan2.warnings.push("The bound speechless clip has no audio stream; the previous video soundtrack source was removed. Supply the silent card clock separately.");
+          }
+        } catch {
+          plan2.warnings.push("Could not inspect the bound clip audio streams; the existing sound source was preserved for inspection before assembly.");
+        }
       }
       visual.video = video2;
       scene.visual = visual;
@@ -133997,13 +134295,13 @@ var characterPanelSchema = external_exports.object({
   reserveUsd: external_exports.number().finite().nonnegative().optional()
 }).strict();
 var FRAMING = {
-  face: { size: [1024, 1024], text: "Close head portrait of one character, front facing, neutral expression, the complete head and hair visible, the head filling 70 percent of the image height." },
+  face: { size: [1024, 1024], text: "Head-only identity portrait, front facing, neutral expression, complete hair, ears and chin visible, head filling 70 percent of image height with plain background around it. No shoulders, torso or clothing: outfit comes from the body panels." },
   front: { size: [1024, 1536], text: "Headless front costume mannequin of this character: nothing above the neck, from the neck and shoulders down to the shoes, neutral stance, arms relaxed, the subject filling 85 percent of the image height." },
   back: { size: [1024, 1536], text: "Turn this headless costume mannequin around 180 degrees so its back faces the camera, keeping the same costume. Show it from directly behind, from the neck down to the heels: the back of the garments, straps and belt and the heels of the footwear; anything worn on one side now sits on the other side of the image. Nothing above the neck. The subject fills 85 percent of the image height." }
 };
 var BODY = "head, face, hair, ears, tusks, helmet, text, watermark, collage, multiple views, border";
 var NEGATIVE = {
-  face: "text, watermark, collage, multiple views, border",
+  face: "shoulders, torso, clothing, shirt, text, watermark, collage, multiple views, border",
   front: BODY,
   back: `front view, chest, belt buckle, palms facing camera, toes facing camera, ${BODY}`
 };
@@ -134737,7 +135035,7 @@ GLB. Inspect the mesh and materials, then use it in an HTML mesh slide (mesh-obj
   //    Acceptance and result are separate calls, so the client polls; these routes only
   //    parse, call, and report. Failures arrive as thrown errors carrying the server's own
   //    message — never the request headers, which is where the key lives.
-  astra_genai_catalog: async (args) => text3(JSON.stringify(await genaiCatalog(external_exports.enum(["image", "speech", "video", "loras", "contracts"]).parse(args.kind)))),
+  astra_genai_catalog: async (args) => text3(JSON.stringify(await genaiCatalog(external_exports.enum(["image", "speech", "video", "desktop_video", "loras", "contracts"]).parse(args.kind)))),
   tts_astra_genai: async (args) => {
     const generation2 = genaiSpeechSchema.parse(args);
     const result = await routeSpeech({
@@ -135599,6 +135897,10 @@ ROUTES.character_panel = async (args) => {
 ROUTES.shot_image = async (args) => {
   contract();
   const input = parseArgs(shotImageSchema, args);
+  if (input.action === "complete") {
+    const result = completeShotImage(input);
+    return text3(renderApply(result), result.findings.some((f3) => f3.level === "bad"));
+  }
   const request = shotImageRequest(input);
   const plan2 = planImage({
     directory: request.episode,
@@ -135613,9 +135915,10 @@ ROUTES.shot_image = async (args) => {
     const result = await executeImage({ directory: plan2.directory, planId: plan2.id }, dispatchImage);
     if (result.isError) return result;
   }
-  const r2 = recordShotImage(input, request);
+  if (plan2.execution === "host_handoff") deferShotImage(input, request);
+  const r2 = plan2.execution === "server" ? recordShotImage(input, request) : null;
   const lines = [
-    renderApply(r2),
+    r2 ? renderApply(r2) : `Pending host request: ${request.requestId}; active frames are unchanged.`,
     "",
     `${input.frame} image: ${request.file}`,
     "Inputs, in order:",
@@ -135624,8 +135927,9 @@ ROUTES.shot_image = async (args) => {
     "Prompt:",
     request.prompt
   ];
-  if (plan2.execution === "host_handoff") lines.push("", "host_handoff: generate this picture with the selected host image tool from the inputs above, in order, and save it to the image path.");
-  return text3(lines.join("\n"), r2.findings.some((f3) => f3.level === "bad"));
+  if (plan2.execution === "host_handoff" && request.warnings.length) lines.push("", "Warnings:", ...request.warnings.map((w) => `${w.level}: ${w.where}: ${w.what}`));
+  if (plan2.execution === "host_handoff") lines.push("", 'host_handoff: generate this picture with the selected host image tool from the inputs above, in order, and save it to the image path. Then call shot_image with action:"complete", the same path/id/frame and requestId:"' + request.requestId + '"; omit prompt and other generation options.');
+  return text3(lines.join("\n"), r2?.findings.some((f3) => f3.level === "bad") ?? false);
 };
 var musicDispatch = Object.fromEntries(Object.keys(MUSIC_ADAPTERS).map((name) => [name, ROUTES[name]]));
 var dispatchMusic = (name, args) => musicDispatch[name](args);

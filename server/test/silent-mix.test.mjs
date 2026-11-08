@@ -20,6 +20,8 @@ test('explicit silent mix preserves fractional-frame audio clock and rejects sou
 
 import silentPlan from '../../skills/produce/references/silent-plan.js';
 test('silent film refuses authored speech and legacy or extended sound cues',()=>{
+ assert.doesNotThrow(()=>silentPlan.checkSilentPlan({MUSIC:{$timeline:[]},SCENES:[]}));
+ assert.throws(()=>silentPlan.checkSilentPlan({MUSIC:{$timeline:[{cue:'piano'}]},SCENES:[]}),/timeline spans/);
  assert.doesNotThrow(()=>silentPlan.checkSilentPlan({SCENES:[{narration:[],sound:{effects:[]}}]}));
  for(const key of ['cue','sfx','ambience','effects'])
   assert.throws(()=>silentPlan.checkSilentPlan({MUSIC:{base:{}},SCENES:[{sound:{[key]:key==='effects'?['door']:'rain'}}]}),/conflicts/);

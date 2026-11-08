@@ -90,6 +90,85 @@ test('MSR validates slots, geometry and frame timing against its independent con
     assert.equal(genaiMsrSchema.safeParse({ ...args, ...extra }).success, false);
 });
 
+test('MSR preserves positive prompts and only sends effective negatives to an advertised backend', async t => {
+  const { genaiMsrSchema, buildGenaiMsrBody } = await import('../dist/astra-genai-video.js');
+  const dir = setup(t);
+  const args = { prompt: 'The person says "Hello."', references: [{ imageUri: 'https://example.com/person.png' }], reserveUsd: 0, outputPath: dir, filename: 'negative.mp4' };
+  const parsed = genaiMsrSchema.parse(args), body = buildGenaiMsrBody(parsed);
+  assert.equal(body.prompt, args.prompt);
+  assert.deepEqual(genaiMsrSchema.parse(parsed), parsed); // Planning and execution both parse.
+  assert.equal(body.negative_prompt, undefined);
+  assert.equal(body.guidance_scale, undefined); // Keep distilled CFG=1 unless explicitly changed.
+  assert.equal(genaiMsrSchema.safeParse({ ...args, prompt: 'x'.repeat(2000) }).success, true);
+  assert.equal(genaiMsrSchema.safeParse({ ...args, prompt: 'x'.repeat(2001) }).success, false);
+  const negative = { ...args, negativePrompt: 'subtitles, captions', guidanceScale: 2 };
+  for (const extra of [{ guidanceScale: undefined }, { guidanceScale: 1 }, { guidanceScale: 11 }, { negativePrompt: ' ' }])
+    assert.equal(genaiMsrSchema.safeParse({ ...negative, ...extra }).success, false);
+  for (const capability of [false, undefined]) {
+    globalThis.fetch = async (url, options) => {
+      assert.equal(options.method, 'GET');
+      assert.ok(String(url).endsWith('/v1/ltx/msr/capabilities'));
+      return Response.json({ negative_prompt: capability });
+    };
+    await assert.rejects(generateGenaiVideo('msr', negative), /msr_negative_unsupported/);
+    assert.equal(fs.existsSync(path.join(dir, 'negative.mp4.astra-genai.json')), false);
+  }
+  let posts = 0;
+  globalThis.fetch = async (url, options) => {
+    if (String(url).endsWith('/capabilities')) return Response.json({ negative_prompt: true });
+    if (options.method === 'POST') {
+      posts++;
+      const sent = JSON.parse(options.body);
+      assert.equal(sent.negative_prompt, negative.negativePrompt);
+      assert.equal(sent.guidance_scale, 2);
+      assert.equal(sent.prompt, body.prompt);
+      return Response.json({ id: 'negative-job' }, { status: 202 });
+    }
+    return Response.json({ id: 'negative-job', status: 'unrecognized' });
+  };
+  await assert.rejects(generateGenaiVideo('msr', negative));
+  await assert.rejects(generateGenaiVideo('msr', negative));
+  assert.equal(posts, 1);
+});
+
+test('MSR NAG validates controls, checks support and preserves recovery identity', async t => {
+  const { genaiMsrSchema, buildGenaiMsrBody } = await import('../dist/astra-genai-video.js');
+  const dir = setup(t);
+  const args = { prompt: 'A teacher speaks.', references: [{ imageUri: 'https://example.com/person.png' }],
+    negativePrompt: 'subtitles', guidanceScale: 1, nagScale: 11, nagAlpha: 0.25, nagTau: 2.5,
+    reserveUsd: 0, outputPath: dir, filename: 'nag.mp4' };
+  for (const extra of [{ nagScale: 0 }, { nagScale: 101 }, { nagScale: NaN }, { nagAlpha: -1 },
+    { nagTau: 11 }, { negativePrompt: undefined }, { negativePrompt: ' ' }])
+    assert.equal(genaiMsrSchema.safeParse({ ...args, ...extra }).success, false);
+  const parsed = genaiMsrSchema.parse(args);
+  assert.deepEqual(genaiMsrSchema.parse(parsed), parsed);
+  const body = buildGenaiMsrBody(parsed);
+  assert.deepEqual([body.nag_scale, body.nag_alpha, body.nag_tau], [11, 0.25, 2.5]);
+  const disabled = buildGenaiMsrBody(genaiMsrSchema.parse({ ...args, guidanceScale: 2, nagScale: 0 }));
+  for (const field of ['nag_scale', 'nag_alpha', 'nag_tau']) assert.equal(disabled[field], undefined);
+  for (const nag of [false, undefined]) {
+    globalThis.fetch = async (url, options) => {
+      assert.equal(options.method, 'GET'); assert.ok(String(url).endsWith('/capabilities'));
+      return Response.json({ negative_prompt: true, nag });
+    };
+    await assert.rejects(generateGenaiVideo('msr', args), /msr_nag_unsupported/);
+    assert.equal(fs.existsSync(path.join(dir, 'nag.mp4.astra-genai.json')), false);
+  }
+  let posts = 0;
+  globalThis.fetch = async (url, options) => {
+    if (String(url).endsWith('/capabilities')) return Response.json({ negative_prompt: true, nag: true });
+    if (options.method === 'POST') {
+      posts++; assert.deepEqual(JSON.parse(options.body), body);
+      return Response.json({ id: 'nag-job' }, { status: 202 });
+    }
+    return Response.json({ id: 'nag-job', status: 'unrecognized' });
+  };
+  await assert.rejects(generateGenaiVideo('msr', args));
+  await assert.rejects(generateGenaiVideo('msr', args));
+  await assert.rejects(generateGenaiVideo('msr', { ...args, nagScale: 12 }), /conflicts/);
+  assert.equal(posts, 1);
+});
+
 test('MSR recovery uses the MSR route and never submits twice', async t => {
   const dir = setup(t), source = path.join(dir, 'reference.png');
   fs.writeFileSync(source, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=', 'base64'));

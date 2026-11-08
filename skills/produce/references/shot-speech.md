@@ -431,3 +431,21 @@ for offline previews: `BOARD SHOT_ID --speech-bound-actions`, optional
 Do not copy provider frame counts into action or scene durations. Refresh selected endpoints
 and the edit manifest after retiming. Playback and voice quality remain unverified unless
 actually inspected; capability flags and schema checks cannot verify either one.
+
+## Retaining a soundtrack while repairing the picture
+
+A video import may preserve an existing native soundtrack or selected line audio while
+replacing its picture. Do not call the replacement a native-speech generation or invent
+an adapter lip-sync capability. Import the actual clip with `sound.audioSource:"video"`
+and omit the obsolete `visual.video.speechBinding`.
+
+For assembly, `visual.video.soundtrackRepair` can declare `kind:"preserved_soundtrack"`,
+the actual `videoPath` and `videoSha256`, current `lines:[{lineId,revision}]` (the standard
+speech revision, including the pinned voice), and ordered
+`sources:[{kind,path,sha256,lineIds}]`. Source kind is `native_video` or
+`selected_line_audio`; their line IDs must cover the current spoken lines exactly once
+in order. Preserve source receipts and the mux/edit operation alongside that record.
+The checker validates the current clip, source bytes and line/voice revisions, then
+requires its normal hash-bound soundtrack extraction. Changed speech or media invalidates
+the record. This proves provenance only: keep listening, word accuracy, performance
+timing and lip-sync `not_reviewed` until actually inspected.

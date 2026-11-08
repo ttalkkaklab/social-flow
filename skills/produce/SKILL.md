@@ -483,6 +483,13 @@ All `still_camera` cuts use the unchanged shared camera HTML template and runtim
 - **BGM**: the storyboard already decided this. Read `window.MUSIC` and each shot's `sound`
   (scenes-schema §music cues) and turn them into files the builder can find.
 
+  **`MUSIC.$timeline` takes precedence:** follow [timeline scoring](../storyboard/references/scenes-schema.md#music-cues-windowmusic-sound).
+  Prepare only referenced files (`base` → `.work/bgm.wav`, others → `.work/bgm-<name>.wav`, or catalog assets).
+  Do not fetch/generate a default bed; `[]` means no music. Omit `sound.cue` / `sound.musicGain`.
+  Plan entry/exit by dramatic event, then set shot-ID/offset anchors from accepted footage.
+  Assembly resolves actual frames, preserves music across cuts and writes `work/music-timeline-resolved.json` (`not_reviewed`).
+  Prepare enough source audio for each span. This covers build-reel cards, not separately spliced clips/outros or build-screencast.
+
   **No `window.MUSIC`** — a one-bed episode, which is the common case:
   ```bash
   ASSET=${CLAUDE_PLUGIN_ROOT}/skills/channel/references/resolve-asset.py

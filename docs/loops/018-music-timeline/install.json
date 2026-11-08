@@ -1,0 +1,52 @@
+{
+  "installations": [
+    {
+      "installedAt": "2026-11-08T07:38:05.796Z",
+      "target": "/Users/zeans/.local/state/social-flow-installed/builds/0.121.1-a7fa755f17ca",
+      "backup": "/Users/zeans/.local/state/social-flow-props/backups/2026-11-08T07-37-52-724Z/0",
+      "verifiedFiles": 14,
+      "preservedLocalChanges": [
+        "skills/storyboard/references/storyboard-html-template.html"
+      ],
+      "verification": {
+        "tests": 10,
+        "passed": 10,
+        "exitCode": 0,
+        "coverage": "actual FFmpeg/full-builder timeline, silence and storyboard regressions"
+      },
+      "rendererSha256": "c9b32ff1bff83faab6d42f9929da5354d49a9ddad2728125cfa7e40779022ee7"
+    },
+    {
+      "installedAt": "2026-11-08T07:38:06.163Z",
+      "target": "/Users/zeans/.codex/plugins/cache/social-flow/social-flow/0.121.1",
+      "backup": "/Users/zeans/.local/state/social-flow-props/backups/2026-11-08T07-37-53-139Z/0",
+      "verifiedFiles": 14,
+      "preservedLocalChanges": [
+        "skills/storyboard/references/storyboard-html-template.html"
+      ],
+      "verification": {
+        "tests": 10,
+        "passed": 10,
+        "exitCode": 0,
+        "coverage": "actual FFmpeg/full-builder timeline, silence and storyboard regressions"
+      },
+      "rendererSha256": "c9b32ff1bff83faab6d42f9929da5354d49a9ddad2728125cfa7e40779022ee7"
+    },
+    {
+      "installedAt": "2026-11-08T07:38:06.526Z",
+      "target": "/Users/zeans/.claude/plugins/cache/social-flow/social-flow/0.121.1",
+      "backup": "/Users/zeans/.local/state/social-flow-props/backups/2026-11-08T07-37-53-547Z/0",
+      "verifiedFiles": 14,
+      "preservedLocalChanges": [],
+      "verification": {
+        "tests": 10,
+        "passed": 10,
+        "exitCode": 0,
+        "coverage": "actual FFmpeg/full-builder timeline, silence and storyboard regressions"
+      },
+      "rendererSha256": "c9b32ff1bff83faab6d42f9929da5354d49a9ddad2728125cfa7e40779022ee7"
+    }
+  ],
+  "spending": 0,
+  "review": "code review 100/100; perceptual listening not performed"
+}

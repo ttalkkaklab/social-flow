@@ -30611,6 +30611,7 @@ var common = external_exports.object({
   model,
   prompt: external_exports.string().trim().min(1),
   resolution,
+  promptProvenance: external_exports.enum(["typed", "enhanced"]).optional().describe("Desktop rewrite policy: typed follows the app's automatic enhancement settings; enhanced sends a caller-finished prompt without another rewrite, e.g. 'enhanced'. Omitted keeps the Desktop default. This is not a quality review."),
   seed: external_exports.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
   fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
   cameraMotion: external_exports.enum(["none", "dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"]).optional(),
@@ -31844,6 +31845,11 @@ var genaiAudioToVideoSchema = external_exports.object({
 var GENAI_MSR_FRAMES = { min: 25, max: 361, step: 8, frameRate: 24 };
 var genaiMsrSchema = external_exports.object({
   prompt: external_exports.string().trim().min(1).max(2e3),
+  negativePrompt: external_exports.string().trim().min(1).max(5e3).optional(),
+  guidanceScale: external_exports.number().finite().min(1).max(10).optional(),
+  nagScale: external_exports.number().finite().min(0).max(100).optional(),
+  nagAlpha: external_exports.number().finite().min(0).max(1).optional(),
+  nagTau: external_exports.number().finite().min(0).max(10).optional(),
   references: external_exports.array(external_exports.object({
     imageUri: genaiImageUriSchema.optional(),
     imagePath: external_exports.string().min(1).optional(),
@@ -31868,6 +31874,10 @@ var genaiMsrSchema = external_exports.object({
   filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use a .mp4 filename").optional()
 }).strict().superRefine((args, ctx) => {
   const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  if ((args.nagScale ?? 0) > 0 && args.negativePrompt === void 0)
+    issue("MSR nagScale > 0 requires negativePrompt");
+  if (args.negativePrompt !== void 0 && (args.guidanceScale ?? 1) <= 1 && (args.nagScale ?? 0) === 0)
+    issue("MSR negativePrompt requires guidanceScale > 1 or nagScale > 0");
   const backgrounds = args.references.filter((ref) => ref.background).length;
   if (backgrounds > 1 || args.references.length - backgrounds > 4) issue("MSR supports at most four subjects and one background");
   let subject = 0;
@@ -32823,6 +32833,9 @@ var REFERENCES_DIR = join4(PLUGIN_ROOT, "skills", "storyboard", "references");
 var CONTRACT_FILE = join4(REFERENCES_DIR, "structure-contract.js");
 var CHECK_SCENES_FILE = join4(REFERENCES_DIR, "check-scenes.js");
 var CHECK_SCENARIO_FILE = join4(REFERENCES_DIR, "check-scenario.js");
+var runtimeFile = fileURLToPath5(import.meta.url);
+var runtimeModuleSha256 = createHash3("sha256").update(readFileSync7(runtimeFile)).digest("hex");
+var runtimeLoadedAt = (/* @__PURE__ */ new Date()).toISOString();
 var loadFromHere2 = nodeModule2.createRequire(import.meta.url);
 var contractCache;
 function contract() {
@@ -33189,8 +33202,10 @@ var shotIconsSchema = external_exports.object({
 var shotImageSchema = external_exports.object({
   path: outlinePath,
   id: shotIdSchema,
+  action: external_exports.enum(["generate", "complete"]).default("generate").describe("generate plans/runs a new image; complete adopts a saved host output without generating"),
+  requestId: nonEmpty.optional().describe("The host handoff requestId to complete"),
   frame: external_exports.enum(["start", "end"]).default("start").describe("start: the first image; end: the last image of a first_last shot"),
-  prompt: nonEmpty.describe("What the frame shows, in English: who is where, doing what, facing which way, expression and light"),
+  prompt: nonEmpty.optional().describe("What the frame shows, in English: who is where, doing what, facing which way, expression and light"),
   editExisting: external_exports.boolean().optional().describe("Edit the saved frame in place conceptually, saving a new version; prompt describes only the change"),
   reframe: external_exports.boolean().optional().describe("With editExisting, reapply the saved start-frame size, crop and viewpoint to correct a generated composition; prompt describes the opening action and correction"),
   sourceCrop: external_exports.object({ x: external_exports.number().int().nonnegative(), y: external_exports.number().int().nonnegative(), width: external_exports.number().int().positive(), height: external_exports.number().int().positive() }).strict().optional().describe("With reframe, an inspected rectangle in source-image pixels, e.g. {x:72,y:64,width:720,height:1280}; must fit the source and match output aspect. It becomes the GenAI composition reference, not the final output."),
@@ -33222,7 +33237,7 @@ var scenarioCheckResultSchema = external_exports.object({
 // src/speech.ts
 import { createHash as createHash4, randomUUID as randomUUID2 } from "node:crypto";
 import { readFileSync as readFileSync8, writeFileSync as writeFileSync5, renameSync as renameSync3, mkdirSync as mkdirSync3, existsSync as existsSync6 } from "node:fs";
-import { dirname as dirname5, resolve as resolve5, join as join5 } from "node:path";
+import { dirname as dirname5, resolve as resolve5, join as join5, relative as relative2 } from "node:path";
 import * as nodeModule4 from "node:module";
 import { execFileSync as execFileSync3 } from "node:child_process";
 
@@ -33275,6 +33290,37 @@ var speechManageSchema = external_exports.object({
 }).strict();
 var hash = (s) => createHash4("sha256").update(s).digest("hex");
 var object2 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
+function syncProductionClip(scene, boardDir, videoPath, oldClip, warnings) {
+  const duration2 = (file) => Number(execFileSync3(
+    "ffprobe",
+    ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=duration", "-of", "default=nw=1:nk=1", file],
+    { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }
+  ).trim());
+  const production = object2(scene.productionPlan), cuts = production.cuts;
+  if (Array.isArray(cuts) && cuts.length) {
+    const cut = object2(cuts[0]);
+    if (cuts.length !== 1 || cut.kind !== "generated_video" || Number(cut.start ?? 0) !== 0 || typeof oldClip !== "string" || typeof cut.path !== "string" || resolve5(boardDir, cut.path) !== resolve5(boardDir, oldClip)) {
+      warnings.push("The bound video changed; the authored production cuts were preserved and need an explicit edit before playback uses this clip.");
+      return;
+    }
+    try {
+      if (Math.abs(Number(cut.seconds) - duration2(resolve5(boardDir, oldClip))) > 0.05) {
+        warnings.push("The existing production cut has an authored duration; it was preserved for an explicit edit.");
+        return;
+      }
+    } catch {
+      warnings.push("Could not verify the existing production cut duration; it was preserved for an explicit edit.");
+      return;
+    }
+  }
+  try {
+    const seconds = duration2(videoPath);
+    if (!Number.isFinite(seconds) || seconds <= 0) throw new Error("Missing video duration");
+    scene.productionPlan = { ...production, cuts: [{ kind: "generated_video", path: relative2(boardDir, videoPath), start: 0, seconds }] };
+  } catch {
+    warnings.push("Could not measure the bound video stream; production cuts were not changed.");
+  }
+}
 function speechRevision(line, character) {
   return hash(JSON.stringify(actingContract().speechRevisionPayload(line, character?.tts)));
 }
@@ -33523,6 +33569,7 @@ function manageSpeech(args) {
         video.speechStatus = "stale";
         invalidated = { video, edit: true };
       } else {
+        if (!tailTrim) syncProductionClip(scene, dirname5(file), videoPath, video.clip, plan.warnings);
         video.clip = args.videoPath;
         video.speechBinding = {
           ...plan,
@@ -33543,6 +33590,22 @@ function manageSpeech(args) {
       if (native) {
         scene.sound = { ...sound, audioSource: "video" };
         for (const { line } of selected) if (line.mediaStatus === "needs_audio") delete line.mediaStatus;
+      } else if (!selected.length && sound.audioSource === "video") {
+        try {
+          const streams = execFileSync3(
+            "ffprobe",
+            ["-v", "error", "-select_streams", "a", "-show_entries", "stream=index", "-of", "csv=p=0", videoPath],
+            { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }
+          ).trim();
+          if (!streams) {
+            const silentSound = { ...sound };
+            delete silentSound.audioSource;
+            scene.sound = silentSound;
+            plan.warnings.push("The bound speechless clip has no audio stream; the previous video soundtrack source was removed. Supply the silent card clock separately.");
+          }
+        } catch {
+          plan.warnings.push("Could not inspect the bound clip audio streams; the existing sound source was preserved for inspection before assembly.");
+        }
       }
       visual.video = video;
       scene.visual = visual;

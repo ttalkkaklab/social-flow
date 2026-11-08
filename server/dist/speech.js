@@ -4,7 +4,7 @@ import { speechVideoCapabilities, VIDEO_ADAPTERS } from './video-registry.js';
 /** Model-independent dialogue addressing, revision tracking and media dependencies. */
 import { createHash, randomUUID } from 'node:crypto';
 import { readFileSync, writeFileSync, renameSync, mkdirSync, existsSync } from 'node:fs';
-import { dirname, resolve, join } from 'node:path';
+import { dirname, resolve, join, relative } from 'node:path';
 import { z } from 'zod';
 import * as nodeModule from 'node:module';
 import { execFileSync } from 'node:child_process';
@@ -31,6 +31,38 @@ export const speechManageSchema = z.object({
 }).strict();
 const hash = (s) => createHash('sha256').update(s).digest('hex');
 const object = (v) => v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+/** Keep the storyboard player on the bound clip without replacing authored multi-cut edits. */
+function syncProductionClip(scene, boardDir, videoPath, oldClip, warnings) {
+    const duration = (file) => Number(execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=duration', '-of', 'default=nw=1:nk=1', file], { encoding: 'utf8', timeout: 10000, stdio: ['ignore', 'pipe', 'ignore'] }).trim());
+    const production = object(scene.productionPlan), cuts = production.cuts;
+    if (Array.isArray(cuts) && cuts.length) {
+        const cut = object(cuts[0]);
+        if (cuts.length !== 1 || cut.kind !== 'generated_video' || Number(cut.start ?? 0) !== 0
+            || typeof oldClip !== 'string' || typeof cut.path !== 'string' || resolve(boardDir, cut.path) !== resolve(boardDir, oldClip)) {
+            warnings.push('The bound video changed; the authored production cuts were preserved and need an explicit edit before playback uses this clip.');
+            return;
+        }
+        try {
+            if (Math.abs(Number(cut.seconds) - duration(resolve(boardDir, oldClip))) > 0.05) {
+                warnings.push('The existing production cut has an authored duration; it was preserved for an explicit edit.');
+                return;
+            }
+        }
+        catch {
+            warnings.push('Could not verify the existing production cut duration; it was preserved for an explicit edit.');
+            return;
+        }
+    }
+    try {
+        const seconds = duration(videoPath);
+        if (!Number.isFinite(seconds) || seconds <= 0)
+            throw new Error('Missing video duration');
+        scene.productionPlan = { ...production, cuts: [{ kind: 'generated_video', path: relative(boardDir, videoPath), start: 0, seconds }] };
+    }
+    catch {
+        warnings.push('Could not measure the bound video stream; production cuts were not changed.');
+    }
+}
 export function speechRevision(line, character) {
     return hash(JSON.stringify(actingContract().speechRevisionPayload(line, character?.tts)));
 }
@@ -331,6 +363,8 @@ export function manageSpeech(args) {
                 invalidated = { video, edit: true };
             }
             else {
+                if (!tailTrim)
+                    syncProductionClip(scene, dirname(file), videoPath, video.clip, plan.warnings);
                 video.clip = args.videoPath;
                 video.speechBinding = { ...plan, audio, videoPath, videoSha256, quality,
                     ...(tailTrim ? { reuse: { kind: 'tail_trim', sourcePerformanceRevision: priorBinding.performanceRevision,
@@ -344,6 +378,20 @@ export function manageSpeech(args) {
                 for (const { line } of selected)
                     if (line.mediaStatus === 'needs_audio')
                         delete line.mediaStatus;
+            }
+            else if (!selected.length && sound.audioSource === 'video') {
+                try {
+                    const streams = execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'a', '-show_entries', 'stream=index', '-of', 'csv=p=0', videoPath], { encoding: 'utf8', timeout: 10000, stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+                    if (!streams) {
+                        const silentSound = { ...sound };
+                        delete silentSound.audioSource;
+                        scene.sound = silentSound;
+                        plan.warnings.push('The bound speechless clip has no audio stream; the previous video soundtrack source was removed. Supply the silent card clock separately.');
+                    }
+                }
+                catch {
+                    plan.warnings.push('Could not inspect the bound clip audio streams; the existing sound source was preserved for inspection before assembly.');
+                }
             }
             visual.video = video;
             scene.visual = visual;

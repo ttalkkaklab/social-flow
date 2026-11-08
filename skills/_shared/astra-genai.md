@@ -109,6 +109,38 @@ Measure actual output duration before assembly; do not assume it covers an exact
 speech duration. `requiredSeconds`, first/last frames, LoRA, retake and a supplied
 speech track are not part of this MSR contract.
 
+MSR preserves the positive prompt without appending text-suppression instructions.
+Keep unwanted text terms in `negativePrompt` when negative conditioning is enabled;
+write the positive prompt as the desired action and spoken dialogue. Existing authored
+prompts are not rewritten automatically: remove old subtitle instructions before replanning.
+The full prompt must fit 2,000 characters; shorten action prose when needed, never
+silently truncate dialogue. Inspect the output before claiming that it contains no text.
+
+`negativePrompt` maps to `negative_prompt`; `guidanceScale` maps to `guidance_scale`
+(1–10). Separate negatives require `guidanceScale > 1` or `nagScale > 0`: ordinary
+CFG=1 without NAG ignores them. Before a new submission using negatives or CFG above 1, the
+adapter checks `/v1/ltx/msr/capabilities` and refuses absent or false
+`negative_prompt` support without uploading or submitting. It never silently drops
+the requested conditioning or raises CFG. Ordinary requests retain distilled CFG=1.
+On 2026-11-08 at 00:38 KST, the live remote gateway returned
+`{"msr":true,"voice_references":true,"negative_prompt":true,"prompt_max_chars":2000}`.
+Its [OpenAPI contract](https://genai.astravision.co.kr/openapi.json) exposes these
+fields. Check capabilities on each new conditioned submission because deployment
+support can change. The always-included prompt instruction also applies when
+negatives are supplied; inspect generated footage before claiming subtitle absence.
+
+Optional video-only NAG uses `nagScale` (0–100), `nagAlpha` (0–1) and `nagTau`
+(0–10), mapped to `nag_scale`, `nag_alpha` and `nag_tau`. Omitted or zero scale
+keeps NAG off and omits all three wire fields for older gateways. A positive scale
+requires a nonempty `negativePrompt` and live `nag:true` capability; unknown support
+is refused before uploads or submission. Alpha and tau default to 0.25 and 2.5 on
+the gateway. For an explicit trial, pass `negativePrompt:"subtitles, captions, text
+overlays", guidanceScale:1, nagScale:11, nagAlpha:0.25, nagTau:2.5` in `video_plan.args`.
+Plans and request fingerprints preserve these controls for execution and recovery.
+NAG does not target audio attention. The local LTX-2.5 trial rendered successfully,
+but both baseline and NAG clips were subtitle-free, so it did not establish suppression
+effectiveness. Do not silently enable NAG or promise subtitle absence.
+
 MSR renders speech and diegetic effects into its own soundtrack. **Voice samples are
 optional (2026-10-31, user directive).** `video_plan` lays the prompt out as the model
 card does (2026-10-31): the reference block first (`Image N: <role>, <purpose>` per image,
@@ -190,13 +222,13 @@ saves `{engine:"astra-genai", model:"ltx-2.5-22b-distilled", operation:"referenc
 resolution:"1792x1024"}` (16:9; `1024x1792` for 9:16). `video_plan` uses the saved
 `operation` when a call names none, so episode cuts plan MSR. A direct "LTX로 만들어줘"
 request means `astra_genai_msr` with the character image, the dialogue in the prompt
-and the character's voice sample when one is pinned. The v2 operations (text, image and audio to video) take
-only `1280x720`, `720x1280`, `720x720`, `1080x720` or `720x1080` (gateway `/v1/models`,
-2026-11-02; `1792x1024` there is `unknown provider resolution`), so `video_plan` sends a v2 call
-the size closest to the saved one in aspect ratio — `1280x720` for `1792x1024`, `720x1280` for
-`1024x1792` — while MSR keeps the saved size. A first-frame shot in an MSR project therefore plans
-image-to-video without changing the saved settings. Text and image to video take `duration`
-6–20 seconds in even steps.
+and the character's voice sample when one is pinned. The v2 operations preserve the saved
+resolution. Do not convert it to historical 720-pixel presets: the live gateway can reject
+those dimensions (observed 2026-11-08). Its current catalog advertises dimensions in multiples
+of 64 and a 2,064,384-pixel ceiling; actual backend restrictions still apply. If the selected
+size is rejected, inspect the live contract instead of silently selecting a different size.
+A first-frame shot in an MSR project plans image-to-video without changing the saved settings.
+Text and image to video take integer `duration`; the current frame ceiling also limits it.
 
 The gateway acknowledged an MSR submission after 480 seconds while busy (2026-10-30), so
 GenAI video submissions wait up to 15 minutes for the job ID.
@@ -266,7 +298,9 @@ origin they used. Production may run without MLX.
 ```
 
 This is a `models` fragment, not a complete project configuration. Replace aliases
-with `astra_genai_catalog kind:image/speech/video` results. Preserve project, SNS,
+with `astra_genai_catalog kind:image/speech/video` results. `video` reads the general
+`/v1/models` catalog, including LTX/MSR. For the Desktop engine, use `kind:desktop_video`
+to read `/v1/ltx/desktop/models`; `loras` and `contracts` also require Desktop. Preserve project, SNS,
 style and production fields when updating; existing episode snapshots stay fixed.
 No example grants spending permission. `capability_status` checks credentials only.
 
@@ -296,6 +330,12 @@ No example grants spending permission. `capability_status` checks credentials on
   Resolution/fps/duration combinations are device dependent; inspect the live catalog.
   I2V takes `imagePath` and optional `lastFramePath` (two temporal references).
   A2V takes `audioPath` and optional `imagePath`; no last frame or duration override.
+  Text/I2V/A2V/keyframes accept `promptProvenance:"typed"|"enhanced"`.
+  Omitted preserves the Desktop default (`typed`), which can rewrite the prompt
+  according to the app's enhancement settings. Use `enhanced` for a caller-finished
+  prompt that must reach generation without another rewrite. This is the native
+  contract's provenance label, not evidence of approval or visual quality; it does
+  not guarantee that the generated action will follow the prompt.
   `allowAudioTruncation` defaults false: pad audio to the next 8k+1 frame boundary
   or explicitly opt into frame-grid loss. No automatic trim or padding occurs.
   Extend/retake use `sourceVideoPath` and optional `targetResolution:{width,height}`.
@@ -315,3 +355,14 @@ Use `image_status action:refresh`, `video_status action:refresh`, or the corresp
 receipt recovery tool. Do not delete receipts or change request IDs to retry an
 ambiguous generation. The gateway token must retain access to those jobs/assets.
 LoRA compatibility and perceptual voice/video quality still need actual renders.
+
+For an explicitly selected combined character reference, set
+`visual.video.referenceLayout:"combined"`. Each declared character must register
+`panels.msr` in its shared `panels.json`: a single clothed person image with
+`purpose:"character_reference"`, `view:"msr"`, its `sha256`, and
+`sourceHashes.face` / `sourceHashes.front` matching the current canonical panels.
+Planning rejects missing or stale combined references; it does not fall back.
+Each person takes one subject slot and retains that person's pinned voice sample.
+The start image still takes the background slot. The default panel layout is unchanged.
+Review derived images against the original sheets before selecting this layout;
+fewer references alone do not establish better model adherence.

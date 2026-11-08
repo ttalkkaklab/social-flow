@@ -1,0 +1,34 @@
+▶ images and the video prompt follow the icon attributes
+  ✖ rejects completion after the effective production style changes (52.187042ms)
+✖ images and the video prompt follow the icon attributes (52.789084ms)
+ℹ tests 1
+ℹ suites 1
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 188.572709
+
+✖ failing tests:
+
+test at test/storyboard.test.mjs:684:3
+✖ rejects completion after the effective production style changes (52.187042ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception.
+      at TestContext.<anonymous> (file:///Users/zeans/orca/workspaces/social-flow/ridgehead/server/test/storyboard.test.mjs:691:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at node:internal/test_runner/test:1903:71
+      at node:internal/per_context/primordials:504:82
+      at new Promise (<anonymous>)
+      at new SafePromise (node:internal/per_context/primordials:478:3)
+      at node:internal/per_context/primordials:504:9
+      at Array.map (<anonymous>) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /request_stale/,
+    operator: 'throws',
+    diff: 'simple'
+  }

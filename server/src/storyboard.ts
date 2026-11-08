@@ -52,8 +52,14 @@ export const CONTRACT_FILE = join(REFERENCES_DIR, 'structure-contract.js');
 export const CHECK_SCENES_FILE = join(REFERENCES_DIR, 'check-scenes.js');
 export const CHECK_SCENARIO_FILE = join(REFERENCES_DIR, 'check-scenario.js');
 
+// Capture once at module load: replacing files does not upgrade an existing MCP process.
+const runtimeFile = fileURLToPath(import.meta.url);
+const runtimeModuleSha256 = createHash('sha256').update(readFileSync(runtimeFile)).digest('hex');
+const runtimeLoadedAt = new Date().toISOString();
+
 export interface Finding {
   level: 'bad' | 'warn' | 'later';
+  code?: string;
   where: string;
   what: string;
 }
@@ -343,12 +349,34 @@ function boundaryReview(win: Board, playback: Array<{ no: number }>, videoTiming
   const source = win.SCENES || [];
   const ids = source.map(shot => shot.id);
   const timings = Array.isArray(videoTiming) ? videoTiming : [];
+  const acting = loadFromHere(join(PLUGIN_ROOT, 'skills', '_shared', 'scene-acting.js')) as {
+    planScenePerformance(shot: Shot, duration: (line: { estimatedSeconds?: number }) => number | null): {
+      performance: Array<Record<string, unknown>>; durationSeconds: number | null; warnings: string[];
+    };
+  };
   const shots = playback.map(({ no }, index) => {
     const shot = source[no - 1];
     const visual = record(shot.visual), plan = record(shot.shot), camera = record(visual.camera);
     const edit = record(shot.edit), design = record(plan.videoDesign);
     const id = text(shot.id), uniqueId = id !== null && ids.filter(value => value === id).length === 1;
     const cast = contract().castOf(shot);
+    let performanceTiming: Record<string, unknown>;
+    try {
+      const legacyAction = text(visual.action) ?? text(design.action);
+      const explicit = Array.isArray(shot.performance) && shot.performance.length > 0;
+      const clock = !explicit && (legacyAction || !shot.narration?.length)
+        ? { performance: [
+          ...(legacyAction ? [{ kind: 'action', text: legacyAction, order: 'unresolved' }] : []),
+          ...(shot.narration ?? []).map(line => ({ kind: line.delivery === 'voiceover' ? 'narration' : 'dialogue', lineId: line.id, speaker: line.speaker, text: line.tts, delivery: line.delivery, acting: line.acting, order: 'unresolved' })),
+        ], durationSeconds: null, warnings: ['No ordered performance: action order and timing remain unresolved.'], timing: 'unknown' }
+        : acting.planScenePerformance(shot, line => typeof line.estimatedSeconds === 'number' ? line.estimatedSeconds : null);
+      performanceTiming = { ...clock, basis: 'authored_estimates', physicalFeasibility: 'not_reviewed',
+        timing: clock.durationSeconds === null ? 'unknown' : 'estimated',
+        differsFromStored: typeof shot.duration === 'number' && clock.durationSeconds !== null
+          ? Math.abs(shot.duration - clock.durationSeconds) > 0.05 : null };
+    } catch (error) {
+      performanceTiming = { status: 'unresolved', reason: (error as Error).message, physicalFeasibility: 'not_reviewed' };
+    }
     return {
       no, id, playbackPosition: index + 1, identity: uniqueId ? 'stable' : 'missing_or_duplicate',
       scene: typeof shot.scene === 'number' ? shot.scene : null, type: shot.type,
@@ -359,11 +387,24 @@ function boundaryReview(win: Board, playback: Array<{ no: number }>, videoTiming
       ending: camera.end ?? design.after ?? null,
       // Preserve line ids, delivery, acting and performance group references, including silent actions.
       narration: shot.narration ?? null, performance: shot.performance ?? null,
+      performanceTiming,
       estimatedSeconds: typeof shot.duration === 'number' && Number.isFinite(shot.duration) && shot.duration > 0 ? shot.duration : null,
       timing: uniqueId ? timings.find(row => record(row).shotId === id) ?? null : null,
       storedIncoming: { transition: shot.transition ?? null, reason: text(edit.reason), continuity: text(edit.continuity) },
     };
   });
+  // Runs follow playback, including intercuts. Unknown scene ids never imply continuity.
+  const sceneRuns: Array<{ scene: number | null; shotIds: Array<string | null>; events: Array<Record<string, unknown>> }> = [];
+  for (const shot of shots) {
+    let run = sceneRuns.at(-1);
+    if (!run || shot.scene === null || run.scene !== shot.scene) {
+      run = { scene: shot.scene, shotIds: [], events: [] }; sceneRuns.push(run);
+    }
+    run.shotIds.push(shot.id);
+    const events = shot.performanceTiming.performance;
+    if (Array.isArray(events)) run.events.push(...events.map(event => ({ ...record(event), shotId: shot.id })));
+    else run.events.push({ shotId: shot.id, status: 'unresolved', reason: shot.performanceTiming.reason });
+  }
   const reasons = shots.map(shot => shot.storedIncoming.reason).filter(reason => reason !== null);
   const boundaries = shots.slice(1).map((right, index) => {
     const left = shots[index];
@@ -398,7 +439,7 @@ function boundaryReview(win: Board, playback: Array<{ no: number }>, videoTiming
       decision: 'needs_editorial_review',
     };
   });
-  return { version: 'shot-boundaries-v1', status: 'not_reviewed', shots, boundaries,
+  return { version: 'shot-boundaries-v1', status: 'not_reviewed', sceneRuns, shots, boundaries,
     note: 'Signals are review prompts, never merge instructions or quality failures. Compare the complete scene, including offscreen action. Recompute a proposed continuous performance and its selected video route before claiming it fits; separate-shot timing is not merged capacity. No files or approvals are changed.' };
 }
 
@@ -409,6 +450,14 @@ export function readStoryboard(args: z.infer<typeof storyboardReadSchema>): Reco
   result.file = file;
   result.mediaBaseDirectory = dirname(file);
   result.sha256 = sha256;
+  result.runtime = {
+    contract: 'storyboard-integrity-v1', modulePath: runtimeFile,
+    loadedAt: runtimeLoadedAt, loadedModuleSha256: runtimeModuleSha256,
+    diskModuleSha256: createHash('sha256').update(readFileSync(runtimeFile)).digest('hex'),
+    features: ['boundaryReview', 'videoTiming', 'imageFraming', 'editImpact'],
+    referenceModules: 'not_verified; module hashes exclude runtime-loaded skills and their require cache',
+    note: 'Loaded-module identity, not an install/update action. Compare with the intended build; reconnect after updating.',
+  };
   result.readiness = boardReadiness(win, dirname(file));
   result.videoTiming = (win.SCENES || []).filter(shot => shot.shot?.render?.mode === 'generated_video').map(shot => {
     if (shot.visual?.reuse) return { shotId: shot.id, status: 'reused', note: 'Inspect the existing clip; no new generation limit applies.' };
@@ -436,7 +485,7 @@ export function readStoryboard(args: z.infer<typeof storyboardReadSchema>): Reco
   result.continuityFindings = continuity.check(win, dirname(file));
   result.cameraDirectionFindings = cameraContract().cameraDirectionWarnings(win.SCENES).map(what => ({ level: 'warn', where: 'camera direction', what }));
   result.imageFraming = (win.SCENES || []).filter(shot => (shot.visual as { frames?: { start?: string } } | undefined)?.frames?.start)
-    .map(shot => imageFramingStatus(shot, win.FORMAT));
+    .map(shot => imageFramingStatus(shot, win.FORMAT, dirname(file)));
   result.techniqueFindings = (win.SCENES || []).flatMap((scene, index) => techniqueContract().findings(scene).map(what => ({level:'warn', where:'shot '+(index+1), what})));
   if (args.includeContext) result.reviewContext = {
     story: win.STORY || null, production: win.PRODUCTION || null, document: doc || null,
@@ -810,7 +859,7 @@ export function applyPatch(win: Board, patch: StoryboardApplyArgs, opts: { outli
       return { ...shot, visual: { ...shot.visual, video: rest } } as Shot;
     });
   }
-  const findings: Finding[] = [...joinNotes];
+  const findings: Finding[] = [...joinNotes, ...editImpact(win, next)];
   if (!shots.length && !opts.outline) findings.push({ level: 'bad', where: 'board', what: 'the board has no shots' });
   if ((win.STORY as { authoring?: unknown } | undefined)?.authoring === 'story-first' && (next.STORY as { authoring?: unknown } | undefined)?.authoring !== 'story-first')
     findings.push({ level: 'bad', where: 'STORY', what: 'story_order: STORY.authoring "story-first" stays on a board started with story_sequence' });
@@ -824,6 +873,62 @@ export function applyPatch(win: Board, patch: StoryboardApplyArgs, opts: { outli
     findings.push(...contract().executionCheck(next).filter((f) => shots.length || !opts.outline || f.where !== 'board'));
   }
   return { win: next, findings, synced };
+}
+
+/** Report factual edit effects without guessing intent, deleting assets or blocking creative edits. */
+function editImpact(before: Board, after: Board): Finding[] {
+  const findings: Finding[] = [];
+  const oldShots = before.SCENES ?? [], newShots = after.SCENES ?? [];
+  const warn = (code: string, where: string, what: string) => findings.push({ level: 'warn', code, where, what: `${code}: ${what}` });
+  const lines = (board: Board) => {
+    const shots = board.SCENES ?? [];
+    const playback = contract().outline(board, 'shots').playback as Array<{ no: number }>;
+    return playback.flatMap(({ no }) => {
+      const shot = shots[no - 1], narration = shot.narration ?? [];
+      const events = Array.isArray(shot.performance) ? shot.performance.filter(event => event.kind === 'dialogue' || event.kind === 'narration') : [];
+      const groups = Array.isArray(shot.performance) ? events.map(event => event.group) : narration.map((_, i) => i + 1);
+      const missing = narration.map((_, i) => i + 1).filter(group => !groups.includes(group));
+      if (missing.length || groups.some(group => !Number.isInteger(group) || !narration[group - 1]))
+        warn('edit_speech_order_unresolved', String(shot.id), 'performance does not resolve every speech group; inspect the ordered lines before changing boundaries.');
+      return [...groups, ...missing].map(group => {
+        const line = narration[group - 1];
+        return line ? { id: line.id, tts: line.tts, speaker: line.speaker, delivery: line.delivery, acting: line.acting }
+          : { unresolvedGroup: group };
+      });
+    });
+  };
+  const oldLines = lines(before), newLines = lines(after);
+  if (oldShots.length && JSON.stringify(oldLines) !== JSON.stringify(newLines)) {
+    const missing = oldLines.filter(line => line.id && !newLines.some(next => next.id === line.id)).map(line => line.id);
+    warn('edit_speech_changed', 'board', `ordered speech/acting changed${missing.length ? `; removed line ids: ${missing.join(', ')}` : ''}. Check intended wording, order, speakers, delivery and acting; moving intact lines between shots does not trigger this note.`);
+  }
+  for (const old of oldShots) {
+    const current = newShots.find(shot => shot.id === old.id);
+    if (!current) {
+      const design = old.shot?.videoDesign as { action?: unknown; before?: unknown; after?: unknown } | undefined;
+      if (Array.isArray(old.performance) && old.performance.some(event => event.kind === 'action')
+        || old.visual?.action || old.visual?.camera || design?.action || design?.before || design?.after)
+        warn('edit_action_removed', String(old.id), 'shot removed with performance/visual.action/videoDesign evidence; verify its required actions and physical states survive elsewhere or were deliberately omitted.');
+      continue;
+    }
+    const changed = startImageBasis(old, before.FORMAT) !== startImageBasis(current, after.FORMAT)
+      || old.visual?.bgPrompt !== current.visual?.bgPrompt;
+    if (changed) {
+      warn('edit_staging_changed', String(current.id), 'staging/performance changed; reconcile performance, visual.action, camera endpoints, videoDesign and acting, then re-estimate duration and inspect both joins.');
+      const oldVisual = old.visual as Record<string, unknown> | undefined;
+      const visual = current.visual as Record<string, unknown> | undefined;
+      const oldFrames = oldVisual?.frames as { start?: string } | undefined;
+      const frames = visual?.frames as { start?: string } | undefined;
+      if (frames?.start && frames.start === oldFrames?.start)
+        warn('edit_image_inherited', String(current.id), `retained ${frames.start} after staging changed; inspect opening pose, hands, cast and props before reuse. No media was regenerated.`);
+    }
+  }
+  const doc = after.SB_DOC as { propContinuity?: { events?: Array<{ id?: string; shotIds?: string[] }> } } | undefined;
+  for (const event of doc?.propContinuity?.events ?? []) {
+    const dangling = event.shotIds?.filter(id => !newShots.some(shot => shot.id === id)) ?? [];
+    if (dangling.length) warn('edit_prop_reference', String(event.id ?? 'prop event'), `unresolved shot ids: ${dangling.join(', ')}; retarget the event to the shot that now depicts it.`);
+  }
+  return findings;
 }
 
 /** storyboard_apply — read, patch, validate, write unless a violation or a dry run. */
@@ -1378,8 +1483,10 @@ export function writeShotIcons(args: z.infer<typeof shotIconsSchema>): ApplyResu
 export const shotImageSchema = z.object({
   path: outlinePath,
   id: shotIdSchema,
+  action: z.enum(['generate', 'complete']).default('generate').describe('generate plans/runs a new image; complete adopts a saved host output without generating'),
+  requestId: nonEmpty.optional().describe('The host handoff requestId to complete'),
   frame: z.enum(['start', 'end']).default('start').describe('start: the first image; end: the last image of a first_last shot'),
-  prompt: nonEmpty.describe('What the frame shows, in English: who is where, doing what, facing which way, expression and light'),
+  prompt: nonEmpty.optional().describe('What the frame shows, in English: who is where, doing what, facing which way, expression and light'),
   editExisting: z.boolean().optional().describe('Edit the saved frame in place conceptually, saving a new version; prompt describes only the change'),
   reframe: z.boolean().optional().describe('With editExisting, reapply the saved start-frame size, crop and viewpoint to correct a generated composition; prompt describes the opening action and correction'),
   sourceCrop: z.object({ x: z.number().int().nonnegative(), y: z.number().int().nonnegative(), width: z.number().int().positive(), height: z.number().int().positive() }).strict().optional()
@@ -1395,6 +1502,10 @@ export interface ShotImageRequest {
   episode: string; assetId: string; requestId: string; tool?: string; operation: 'text' | 'edit';
   args: Record<string, unknown>; file: string; inputs: string[]; refs: ImageRef[]; location?: string; locationFrame?: Record<string, unknown>; props: string[]; prompt: string; warnings: Finding[];
   startBasis?: string;
+  sourceBasis?: string;
+  inputHashes?: Record<string, string>;
+  originalInputs?: string[];
+  canonicalPanels?: boolean;
 }
 // Evidence of the inputs used, not a claim that a model obeyed them. Exclude generated bindings.
 function startImageBasis(shot: Shot, format: unknown): string {
@@ -1402,12 +1513,21 @@ function startImageBasis(shot: Shot, format: unknown): string {
   return createHash('sha256').update(JSON.stringify({ format, size: plan.size, angle: plan.angle,
     space: plan.space, composition: plan.composition, eyeline: plan.eyeline, depth: plan.depth,
     techniques: plan.techniques, render: plan.render, camera: visual.camera,
-    cast: contract().castOf(shot), location: visual.locationId, locationBinding: plan.location, props: visual.props })).digest('hex');
+    cast: contract().castOf(shot), location: visual.locationId, locationBinding: plan.location, props: visual.props,
+    action: visual.action, videoDesign: plan.videoDesign,
+    performance: shot.performance,
+    acting: shot.narration?.map(line => (line.acting as { visual?: unknown } | undefined)?.visual),
+  })).digest('hex');
 }
-function imageFramingStatus(shot: Shot, format: unknown) {
-  const frames = (shot.visual as { frames?: { start?: string; startBasis?: string } } | undefined)?.frames;
-  return { id: shot.id, image: frames?.start, status: !frames?.startBasis ? 'unknown' : frames.startBasis === startImageBasis(shot, format) ? 'current' : 'stale',
-    visualReview: 'not_reviewed', note: 'Current means the saved framing inputs match. Inspect the actual image crop before using it.' };
+function imageFramingStatus(shot: Shot, format: unknown, boardDir?: string) {
+  const visual = shot.visual as { frames?: { start?: string; startBasis?: string; startPromptSha256?: string }; bgPrompt?: string } | undefined;
+  const frames = visual?.frames;
+  const availability = !boardDir ? undefined : frames?.start && existsSync(resolve(boardDir, frames.start)) ? 'present' : 'missing';
+  const promptHash = typeof visual?.bgPrompt === 'string' ? createHash('sha256').update(visual.bgPrompt).digest('hex') : null;
+  const changed = !!frames?.startBasis && frames.startBasis !== startImageBasis(shot, format)
+    || !!frames?.startPromptSha256 && frames.startPromptSha256 !== promptHash;
+  return { id: shot.id, image: frames?.start, ...(availability ? { availability } : {}), status: changed ? 'stale' : !frames?.startBasis || !frames.startPromptSha256 ? 'unknown' : 'current',
+    visualReview: 'not_reviewed', note: 'Current means saved staging and prompt inputs match, not that the image obeys them. Inspect the pixels before reuse.' };
 }
 type ShotFrame = { id: string; name: string; revision: number; manifest: string; manifestSha256: string; stateId: string; camera: { lensMm: number } & Record<string, unknown>; endCamera: ({ lensMm: number } & Record<string, unknown>) | null;
   blocked: boolean; fingerprint: string; start: { path: string; sha256: string }; end: { path: string; sha256: string }; prompt: string; endPrompt: string; warnings: string[] };
@@ -1429,8 +1549,13 @@ const identityCatalog = () => loadFromHere(join(PLUGIN_ROOT, 'skills', '_shared'
 // Two people in one frame: their sheet heights, so the picture keeps the difference the panels cannot show.
 function heightSentence(win: Board, ids: string[]): string {
   const heights = ids.map((id) => [id, ((castEntry(win, id)?.character as { physical?: { heightCm?: { status?: string; value?: unknown } } } | undefined)?.physical?.heightCm)] as const)
-    .filter(([, field]) => field?.status === 'confirmed' && typeof field.value === 'number').map(([id, field]) => `${id} is ${field!.value} cm tall`);
-  return heights.length > 1 ? `Keep their real heights: ${heights.join(' and ')}.` : '';
+    .filter(([, field]) => field?.status === 'confirmed' && typeof field.value === 'number' && Number.isFinite(field.value) && field.value > 0)
+    .map(([id, field]) => ({ id, cm: field!.value as number }));
+  if (heights.length < 2) return '';
+  const ordered = [...heights].sort((a, b) => b.cm - a.cm), tall = ordered[0], short = ordered.at(-1)!;
+  return `Keep their real heights: ${heights.map(h => `${h.id} is ${h.cm} cm tall`).join(' and ')}. `
+    + `${tall.id} is ${Number((tall.cm - short.cm).toFixed(2))} cm taller than ${short.id} (height ratio ${(tall.cm / short.cm).toFixed(3)}). `
+    + 'For upright figures at equal camera distance on the same ground plane, preserve that relative scale. Follow the authored depth and pose; do not equalize head levels or compare seated and standing head heights. Independently framed sheet panels do not establish relative scale.';
 }
 function castEntry(win: Board, id: string): Record<string, unknown> | undefined {
   const list = (win.SB_DOC as { characters?: unknown } | undefined)?.characters;
@@ -1503,7 +1628,34 @@ function docEntry(win: Board, kind: 'locations' | 'props', id: string): Record<s
 }
 
 /** Plan inputs for shot_image: the ordered pictures, the assembled prompt and the adapter arguments. */
+function shotImageSourceBasis(path: string, id: string, request: ShotImageRequest): string {
+  const { win } = readOutline(path);
+  const shot = (win.SCENES ?? [])[shotIndex(win.SCENES ?? [], id, 'shot_image')];
+  const doc = (win.SB_DOC ?? {}) as Record<string, unknown>;
+  const rows = (value: unknown) => Array.isArray(value) ? value as Record<string, unknown>[] : [];
+  const ledger = (doc.propContinuity ?? {}) as Record<string, unknown>;
+  const assets = { location: rows(doc.locations).find(entry => entry.id === request.location),
+    props: rows(doc.props).filter(entry => request.props.includes(String(entry.id))),
+    characters: (contract().castOf(shot) ?? []).map(character => castEntry(win, character)),
+    continuity: request.props.length ? { version: ledger.version, timelineId: ledger.timelineId,
+      initial: rows(ledger.initial).filter(entry => request.props.includes(String(entry.propId))),
+      events: rows(ledger.events).filter(entry => request.props.includes(String(entry.propId))) } : undefined };
+  const style = (loadFromHere(join(REFERENCES_DIR, 'production-mode.js')) as { shotStyle(win: Board, index: number): unknown }).shotStyle(win, (win.SCENES ?? []).indexOf(shot));
+  const panels = request.canonicalPanels ? characterPanels().canonicalReferences(dirname(scenesPath(path)), id, contract().castOf(shot) ?? [], 'image')
+    .map(ref => ({ id: ref.id, path: resolve(dirname(scenesPath(path)), ref.path) })) : undefined;
+  return createHash('sha256').update(JSON.stringify({ shot, format: win.FORMAT, assets, style, panels })).digest('hex');
+}
+
 export function shotImageRequest(args: z.infer<typeof shotImageSchema>): ShotImageRequest {
+  if (args.action === 'complete') throw new Error('shot_image_action: use completeShotImage for a host completion');
+  if (!args.prompt) throw new Error('shot_image_prompt_required: generate needs prompt');
+  const request = buildShotImageRequest({ ...args, prompt: args.prompt });
+  const sourceBasis = shotImageSourceBasis(args.path, args.id, request);
+  return { ...request, sourceBasis, inputHashes: Object.fromEntries([...new Set([...request.inputs, ...(request.originalInputs ?? [])])].map(file =>
+    [file, createHash('sha256').update(readFileSync(file)).digest('hex')])) };
+}
+
+function buildShotImageRequest(args: z.infer<typeof shotImageSchema> & { prompt: string }): ShotImageRequest {
   const { win } = readOutline(args.path);
   const shots = win.SCENES ?? [];
   const shot = shots[shotIndex(shots, args.id, 'shot_image')];
@@ -1570,7 +1722,7 @@ export function shotImageRequest(args: z.infer<typeof shotImageSchema>): ShotIma
     if (imageFramingStatus(shot, win.FORMAT).status === 'stale') warnings.push({ level: 'warn', where: args.id, what: 'image_framing_stale: this edit inherits an image made from older shot inputs; normal generation rebuilds all current references and framing' });
     if (Math.abs(editWidth / editHeight - (wide ? 16 / 9 : 9 / 16)) > 0.001)
       warnings.push({ level: 'warn', where: args.id, what: `image_aspect_mismatch: ${editWidth}x${editHeight} differs from the delivery aspect; inspect its final crop` });
-    return { episode, assetId: args.id, ...call, refs: (visual.references ?? []) as ImageRef[],
+    return { episode, assetId: args.id, ...call, originalInputs: [resolve(boardDir, source), ...call.originalInputs], refs: (visual.references ?? []) as ImageRef[],
       ...(location ? { location } : {}), ...(visual.locationFrame ? { locationFrame: visual.locationFrame as Record<string, unknown> } : {}), props, prompt,
       startBasis: frames.startBasis,
       warnings };
@@ -1613,7 +1765,7 @@ export function shotImageRequest(args: z.infer<typeof shotImageSchema>): ShotIma
     ...propPictures.refs,
     // MSR takes the start image in its background slot, so the place only conditions the picture.
     ...(typeof place === 'string' ? [{ id: `${args.id}-place`, path: place, role: 'background', use: 'image',
-      purpose: set ? `how the ${location} location looks — materials, colours and light only, not its viewpoint or layout` : `the ${location} location${selected ? ` seen from its ${backgroundView} camera direction; preserve this view and its landmark arrangement` : ''}` }] : []),
+      purpose: set ? `how the ${location} location looks — materials, colours and light only, not its viewpoint or layout` : `the ${location} location${selected ? ` with ${backgroundView} directional geography` : ''}; use its appearance and the spatial relationships of visible landmarks, not its frame extent` }] : []),
   ];
   // The edit starts from the set render, else the place (or, for an end image, the start image); the rest are references.
   // Beside a set render the place picture comes last and stays out when the saved model has no room for it.
@@ -1630,14 +1782,25 @@ export function shotImageRequest(args: z.infer<typeof shotImageSchema>): ShotIma
     frameOptions(scene: Shot, frame: string): Record<string, unknown>; assemble(opts: Record<string, unknown>): { prompt: string };
   };
   const style = (loadFromHere(join(REFERENCES_DIR, 'production-mode.js')) as { shotStyle(win: Board, index: number): { preset?: string } }).shotStyle(win, shots.indexOf(shot));
+  const authoredOpening = (plan.videoDesign as { before?: unknown } | undefined)?.before;
+  const opening = args.frame === 'start' ? latin(authoredOpening) : '';
+  if (args.frame === 'start' && authoredOpening && !opening)
+    warnings.push({ level: 'warn', code: 'opening_translation_required', where: args.id,
+      what: 'opening_translation_required: videoDesign.before is not English; preserve its physical state in the English shot_image prompt.' });
   const body = imagePrompts.assemble({ ...imagePrompts.frameOptions(shot, args.frame),
     ...(args.frame === 'end' && set?.endCamera && JSON.stringify(set.camera) !== JSON.stringify(set.endCamera) ? { omitFraming: true } : {}),
-    style: style.preset ? style : null, scene: args.prompt, noPerson: !cast.length,
+    style: style.preset ? style : null, scene: [opening && `Authored opening state: ${opening}`, args.prompt].filter(Boolean).join(' '), noPerson: !cast.length,
     ...(set ? { location: { prompt: args.frame === 'end' ? set.endPrompt : set.prompt, paths: [] } } : {}) }).prompt;
-  const roles = ordered.map((ref, i) => `Image ${i + 1} shows ${ref.purpose}.`).join(' ');
+  const roles = ordered.map((ref, i) => {
+    const character = refs.find(r => r.path === ref.path && r.role === 'character');
+    const role = !character ? '' : character.id.endsWith('-face')
+      ? ' Use only the head and hair above the collar; ignore clothing in this panel.'
+      : /-(front|back)$/.test(character.id) ? ' Use this panel for physique and all clothing, including collar, tie and sleeve state.' : '';
+    return `Image ${i + 1} shows ${ref.purpose}.${role}`;
+  }).join(' ');
   const at = (ref: unknown) => ordered.indexOf(ref as ImageRef) + 1;
   const lock = !set ? (selected && args.frame === 'start'
-    ? `Keep the background's ${backgroundView} viewing direction and landmark arrangement. The character sheets supply appearance and identity only; recompose the subject to the authored opening crop and subject viewpoint within that space. Character panel poses do not constrain this shot.`
+    ? `Preserve the selected background's ${backgroundView} directional geography and the spatial relationships of visible landmarks. The authored crop, camera height and subject viewpoint control the output; do not copy the background sheet's wide framing. Landmarks outside that crop stay outside the frame. The character sheets supply appearance and identity only; their panel poses do not constrain this shot.`
     : view ? `The location and character sheets supply appearance and identity only. Recompose them to the authored ${args.frame === 'end' ? 'closing' : 'opening'} crop and viewpoint; the sheet pose and camera do not constrain this shot.` : '') : args.frame === 'end'
     ? composition.length ? `Use Image ${at(composition[0])}'s closing camera, lens, framing and final object and figure positions. Image 1 supplies the look and every identity; its opening camera does not constrain this closing view.`
       : `Image 1 supplies the opening appearance and identities. Follow the closing camera direction below while preserving the set's world layout.`
@@ -1655,7 +1818,7 @@ export function shotImageRequest(args: z.infer<typeof shotImageSchema>): ShotIma
   const locationFrame = set && args.frame === 'start' ? { set: set.id, revision: set.revision, manifest: set.manifest, manifestSha256: set.manifestSha256, stateId: set.stateId,
     camera: set.camera, endCamera: set.endCamera, blocked: set.blocked, fingerprint: set.fingerprint, start: set.start, end: set.end } : undefined;
   const startBasis = startImageBasis({ ...shot, visual: { ...visual, ...(location ? { locationId: location } : {}), props } } as Shot, win.FORMAT);
-  return { episode, assetId: args.id, ...call, refs: sent, ...(location ? { location } : {}), ...(locationFrame ? { locationFrame } : {}), props, prompt, warnings, startBasis };
+  return { episode, assetId: args.id, ...call, canonicalPanels: true, refs: sent, ...(location ? { location } : {}), ...(locationFrame ? { locationFrame } : {}), props, prompt, warnings, startBasis };
 }
 
 /**
@@ -1691,7 +1854,7 @@ export function imageCall(o: { directory: string; assetId: string; inputs: strin
   const sent = new Set(mimes).size > 1 ? inputs.map((f, i) => mimes[i] === 'image/png' ? f : toPng(f)) : inputs;
   const jobs = readImageState(directory)?.jobs ?? {};
   let k = 1;
-  while (existsSync(join(o.outDir, `${o.stem}-v${k}.png`)) || Object.hasOwn(jobs, `${o.stem}-v${k}`)) k += 1;
+  while (existsSync(join(o.outDir, `${o.stem}-v${k}.png`)) || existsSync(join(o.outDir, `${o.stem}-v${k}.pending.json`)) || Object.hasOwn(jobs, `${o.stem}-v${k}`)) k += 1;
   const requestId = `${o.stem}-v${k}`, file = join(o.outDir, `${requestId}.png`);
   mkdirSync(dirname(file), { recursive: true });
   const base64 = (f: string) => readFileSync(f).toString('base64');
@@ -1706,11 +1869,41 @@ export function imageCall(o: { directory: string; assetId: string; inputs: strin
   const guidance = selection.engine === 'astra-genai-native' ? PANEL_NEGATIVE_GUIDANCE[selection.model ?? ''] : undefined;
   const negativeSent = !!o.negativePrompt && guidance !== undefined;
   if (negativeSent) Object.assign(args, { negativePrompt: o.negativePrompt, guidanceScale: guidance });
-  return { requestId, ...(tool ? { tool } : {}), operation: (edit ? 'edit' : 'text') as 'edit' | 'text', args, file, inputs: sent, negativeSent };
+  return { requestId, ...(tool ? { tool } : {}), operation: (edit ? 'edit' : 'text') as 'edit' | 'text', args, file, inputs: sent, originalInputs: inputs, negativeSent };
 }
 
-/** Record a generated (or host-handed) frame on the board: frames.start/bg or frames.end, with its inputs. */
+/** Keep the immutable host request beside its reserved output, without touching active frames. */
+export function deferShotImage(args: z.infer<typeof shotImageSchema>, request: ShotImageRequest): void {
+  const file = join(dirname(request.file), `${request.requestId}.pending.json`);
+  writeFileSync(file, JSON.stringify({ path: scenesPath(args.path), id: args.id, frame: args.frame, request }, null, 2) + '\n', { flag: 'wx' });
+}
+
+export function completeShotImage(args: z.infer<typeof shotImageSchema>): ApplyResult {
+  if (!args.requestId || !new RegExp(`^${args.id}-${args.frame}-v[1-9][0-9]*$`).test(args.requestId))
+    throw new Error('shot_image_request_required: complete needs the matching handoff requestId and frame');
+  if (args.prompt !== undefined || args.editExisting !== undefined || args.reframe !== undefined || args.sourceCrop !== undefined || args.preserve !== undefined || args.location !== undefined || args.props !== undefined || args.size !== undefined || args.reserveUsd !== undefined)
+    throw new Error('shot_image_completion_scope: complete uses the saved request; omit generation options');
+  const file = join(dirname(scenesPath(args.path)), 'images', `${args.requestId}.pending.json`);
+  if (!existsSync(file)) throw new Error('shot_image_request_missing: no saved host handoff');
+  const pending = JSON.parse(readFileSync(file, 'utf8')) as { path: string; id: string; frame: string; request: ShotImageRequest; completed?: boolean };
+  if (pending.completed) throw new Error('shot_image_already_completed: this handoff was already adopted');
+  if (pending.path !== scenesPath(args.path) || pending.id !== args.id || pending.frame !== args.frame || pending.request.requestId !== args.requestId || pending.request.file !== join(dirname(file), `${args.requestId}.png`))
+    throw new Error('shot_image_request_mismatch: the handoff belongs to another frame');
+  const result = recordShotImage(args, pending.request);
+  writeFileSync(file, JSON.stringify({ ...pending, completed: true }, null, 2) + '\n');
+  return result;
+}
+
+/** Record only a decoded output whose planned inputs still match the board. */
 export function recordShotImage(args: z.infer<typeof shotImageSchema>, request: ShotImageRequest): ApplyResult {
+  if (!existsSync(request.file)) throw new Error('shot_image_output_missing: generate and save the requested output before completing');
+  verifyImageFile(request.file);
+  if (request.sourceBasis && request.sourceBasis !== shotImageSourceBasis(args.path, args.id, request))
+    throw new Error('shot_image_request_stale: the shot or asset plan changed after generation was requested; keep the output and plan a new request');
+  for (const [file, hash] of Object.entries(request.inputHashes ?? {})) {
+    if (!existsSync(file) || createHash('sha256').update(readFileSync(file)).digest('hex') !== hash)
+      throw new Error('shot_image_input_changed: a reference changed after generation was requested');
+  }
   const { win, st } = readOutline(args.path);
   const shots = (win.SCENES ?? []).slice();
   const index = shotIndex(shots, args.id, 'shot_image');
@@ -1721,6 +1914,7 @@ export function recordShotImage(args: z.infer<typeof shotImageSchema>, request: 
   if (args.frame === 'start') {
     // An edit inherits the source's basis, so a colour correction cannot certify an old crop.
     if (request.startBasis) frames.startBasis = request.startBasis; else delete frames.startBasis;
+    frames.startPromptSha256 = createHash('sha256').update(request.prompt).digest('hex');
     Object.assign(visual, { bg: rel, bgPrompt: request.prompt, references: request.refs, props: request.props,
       ...(request.location ? { locationId: request.location } : {}) });
     // The set render the start image was composed from: its camera, inputs and fingerprint.
