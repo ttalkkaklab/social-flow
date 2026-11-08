@@ -94603,6 +94603,8 @@ var require_check_tts_quality = __commonJS({
             throw new Error("Missing or stale source soundtrack extraction for card " + i2);
           if (binding && path32.resolve(extraction.video) !== path32.resolve(binding.videoPath))
             throw new Error("Source soundtrack differs from bound speech video for card " + i2);
+          if (retained && (path32.resolve(extraction.video) !== path32.resolve(board, s2.visual.video.soundtrackRepair.videoPath) || extraction.sourceSha256 !== s2.visual.video.soundtrackRepair.videoSha256))
+            throw new Error("Source soundtrack differs from retained repaired video for card " + i2);
           media[extraction.video] = extraction.sourceSha256;
           if (retained) warnings.push("card " + i2 + ": retained soundtrack repair has current source/line provenance; visible lip-sync and audio listening not_reviewed");
           warnings.push("card " + i2 + ": source soundtrack retained; perceptual audio quality not_reviewed");
