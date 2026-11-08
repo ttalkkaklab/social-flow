@@ -9,6 +9,19 @@ const require = createRequire(import.meta.url);
 const { FONT_ASSETS } = require('../../skills/channel/references/review-fonts.js');
 const { storyboardHtml } = require('../../skills/storyboard/references/storyboard-html.js');
 
+test('music lanes show one anchored span across scenes and label the score-free opening', () => {
+  const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
+  const start = template.indexOf('  var cueAt = []');
+  const source = template.slice(start, template.indexOf('  var seqNo =', start));
+  const SCENES = [1, 2, 3].map(i => ({ id: 's000' + i }));
+  const context = { SCENES, MUSIC: { $timeline: [{ cue: 'piano', start: { shotId: 's0002', atSeconds: 0.8 }, end: { shotId: 's0003', atSeconds: 'end' } }] },
+    LANG: 'en', esc: value => String(value), T: {} };
+  assert.match(runInNewContext(source + '\nmusicLane([{i:0,s:SCENES[0]}])', context), /No score/);
+  for (const index of [1, 2]) assert.match(runInNewContext(source + `\nmusicLane([{i:${index},s:SCENES[${index}]}])`, context), /piano \(s0002 \+0.8s → s0003 end\)/);
+  context.MUSIC.$timeline[0].start.atSeconds = 'end';
+  assert.match(runInNewContext(source + '\nmusicLane([{i:1,s:SCENES[1]}])', context), /No score/);
+});
+
 test('HTML creation and refresh keep one design while preserving episode metadata', () => {
   const dir = mkdtempSync(join(tmpdir(), 'sf-board-html-'));
   try {

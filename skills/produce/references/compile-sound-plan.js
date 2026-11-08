@@ -16,6 +16,7 @@ const crypto = require('crypto');
 const { spawnSync } = require('child_process');
 const { evaluateWindowScript } = require('../../_shared/scenes-vm.js');
 const { mixFindings, mixEnvironment, musicEnvelopeFindings } = require('./sound-mix-contract.js');
+const { timelineFindings, compileTimeline } = require('./music-timeline.js');
 const assetResolver = path.resolve(__dirname, '../../channel/references/resolve-asset.py');
 
 function die(message) { process.stderr.write(`compile-sound-plan: ${message}\n`); process.exit(1); }
@@ -35,9 +36,12 @@ const scenes = Array.isArray(win.SCENES) ? win.SCENES : die(`${source} has no wi
 const music = record(win.MUSIC), sfxBook = record(win.SFX), mix = record(music.$mix);
 const mixErrors = mixFindings(music.$mix);
 if (mixErrors.length) die(`window.MUSIC.$mix: ${mixErrors.join('; ')}`);
+const timelineErrors = timelineFindings(music, scenes);
+if (timelineErrors.length) die(timelineErrors.join('; '));
+const hasTimeline = Object.prototype.hasOwnProperty.call(music, '$timeline');
 fs.mkdirSync(work, { recursive: true });
 const markerFile = path.join(work, 'sound-plan.json');
-const ownedNames = new Set(['bgm.tsv', 'sfx.tsv', 'amb.tsv', 'silence.tsv', 'music-gain.tsv', 'sound.env']);
+const ownedNames = new Set(['bgm.tsv', 'sfx.tsv', 'amb.tsv', 'silence.tsv', 'music-gain.tsv', 'sound.env', 'music-timeline.json']);
 let previous = {};
 if (fs.existsSync(markerFile)) {
   try { previous = record(JSON.parse(fs.readFileSync(markerFile, 'utf8')).files); }
@@ -72,7 +76,7 @@ function cleanPrevious() {
   }
 }
 
-const extended = Object.keys(mix).length > 0 || scenes.some((shot) => {
+const extended = hasTimeline || Object.keys(mix).length > 0 || scenes.some((shot) => {
   const sound = record(shot && shot.sound);
   return Array.isArray(sound.effects) || Array.isArray(sound.silence) || sound.musicGain !== undefined;
 });
@@ -115,6 +119,7 @@ function cueFile(name) {
   return file;
 }
 
+const timelinePlan = hasTimeline ? compileTimeline(music, scenes, cueFile) : null;
 const bgm = [], effects = [], ambience = [], silence = [], musicGain = [];
 const intensitySeparation = { subtle: 10, normal: 6, strong: 3 };
 scenes.forEach((shot, idx) => {
@@ -175,6 +180,7 @@ writeRows('silence.tsv', silence);
 writeRows('music-gain.tsv', musicGain);
 
 const env = mixEnvironment(mix);
+if (hasTimeline) writeOwned('music-timeline.json', JSON.stringify(timelinePlan, null, 2) + '\n');
 if (env.length) writeOwned('sound.env', env.join('\n') + '\n');
 cleanPrevious();
 fs.writeFileSync(markerFile, JSON.stringify({

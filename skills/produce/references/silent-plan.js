@@ -8,6 +8,7 @@ function active(value) {
   return true;
 }
 function checkSilentPlan(win) {
+  if (active(win.MUSIC?.$timeline)) throw new Error('SILENT=1 conflicts with music timeline spans');
   for (const [i,shot] of (win.SCENES || []).entries()) {
     if ((shot.narration || []).some(line=>typeof line.tts==='string' && line.tts.trim()))
       throw new Error(`SILENT=1 conflicts with spoken text in shot ${i+1}`);
