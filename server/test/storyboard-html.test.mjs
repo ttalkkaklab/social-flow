@@ -37,7 +37,24 @@ test('bound video displays before assembly, while explicit edit cuts retain thei
   shot.productionPlan.cuts[0].seconds = undefined;
   assert.match(render(shot), /class="production-cut-error">/); // Invalid explicit ranges stay visible.
   assert.equal(render({ visual: { video: { prompt: 'planned only' } } }), '');
-  assert.doesNotMatch(render({ visual: { video: { clip: 'javascript:evil.mp4' } } }), /<video /);
+  for (const path of ['javascript:evil.mp4', ' https://example.test/x.mp4', '\njavascript:alert(1)//.svg',
+    'h\nttps://example.test/x.mp4', '\\\\example.test\\x.mp4', '/\\example.test/x.svg']) {
+    assert.doesNotMatch(render({ visual: { video: { clip: path } } }), /<(?:video|a|img)\b/);
+    assert.doesNotMatch(render({ productionPlan: { cuts: [{ path, start: 0, seconds: 1 }] } }), /<(?:video|a|img)\b/);
+  }
+});
+
+test('music lanes show one anchored span across scenes and label the score-free opening', () => {
+  const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
+  const start = template.indexOf('  var cueAt = []');
+  const source = template.slice(start, template.indexOf('  var seqNo =', start));
+  const SCENES = [1, 2, 3].map(i => ({ id: 's000' + i }));
+  const context = { SCENES, MUSIC: { $timeline: [{ cue: 'piano', start: { shotId: 's0002', atSeconds: 0.8 }, end: { shotId: 's0003', atSeconds: 'end' } }] },
+    LANG: 'en', esc: value => String(value), T: {} };
+  assert.match(runInNewContext(source + '\nmusicLane([{i:0,s:SCENES[0]}])', context), /No score/);
+  for (const index of [1, 2]) assert.match(runInNewContext(source + `\nmusicLane([{i:${index},s:SCENES[${index}]}])`, context), /piano \(s0002 \+0.8s → s0003 end\)/);
+  context.MUSIC.$timeline[0].start.atSeconds = 'end';
+  assert.match(runInNewContext(source + '\nmusicLane([{i:1,s:SCENES[1]}])', context), /No score/);
 });
 
 test('HTML creation and refresh keep one design while preserving episode metadata', () => {

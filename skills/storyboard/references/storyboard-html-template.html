@@ -2362,8 +2362,8 @@ window.STORYBOARD_READY = (async function () {
     var heading = ko ? '제작 컷 전체' : 'All production cuts';
     var rows = cuts.map(function (entry, index) {
       var cut = entry || {};
-      var src = typeof cut.path === 'string' ? cut.path : '';
-      var local = src && !/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(src);
+      var src = typeof cut.path === 'string' ? cut.path.trim() : '';
+      var local = src && !/^(?:[a-z][a-z0-9+.-]*:|[/\\]{2})|[\x00-\x1f\x7f]/i.test(src);
       var duration = fullSource ? (ko ? '원본 전체' : 'Full source') :
         Number.isFinite(cut.seconds) && cut.seconds > 0 ? cut.seconds + 's' : (ko ? '길이 미확인' : 'Duration unknown');
       var label = (ko ? '컷 ' : 'Cut ') + (index + 1) + ' · ' + (cut.kind || '?') + ' · ' + duration;
@@ -4862,6 +4862,22 @@ window.STORYBOARD_READY = (async function () {
   var musicAuthored = SCENES.some(function (s) { var d = s.sound; return d && (d.cue || d.drop || (Array.isArray(d.silence) && d.silence.length)); });
   SCENES.forEach(function (s, i) { if (s.sound && s.sound.cue) cueNow = s.sound.cue; cueAt[i] = cueNow; });
   var musicLane = function (items) {
+    if (MUSIC && Array.isArray(MUSIC.$timeline)) {
+      var anchorText = function (a) { return a.shotId + (a.atSeconds === "end" ? (LANG === "ko" ? " 끝" : " end") : " +" + a.atSeconds + "s"); };
+      var spans = MUSIC.$timeline.filter(function (span) {
+        if (!span || !span.start || !span.end) return false;
+        var first = SCENES.findIndex(function (s) { return s.id === span.start.shotId; });
+        var last = SCENES.findIndex(function (s) { return s.id === span.end.shotId; });
+        if (first < 0 || last < 0) return false;
+        if (span.start.atSeconds === "end") first++;
+        if (span.end.atSeconds === 0) last--;
+        return first >= 0 && items.some(function (it) { return it.i >= first && it.i <= last; });
+      });
+      var text = spans.length ? spans.map(function (span) {
+        return span.cue + " (" + anchorText(span.start) + " → " + anchorText(span.end) + ")";
+      }).join(" · ") : (LANG === "ko" ? "음악 없음" : "No score");
+      return '<span class="music-lane">' + esc(text) + '</span>';
+    }
     if (!musicAuthored) return "";
     var names = [], gaps = 0;
     items.forEach(function (it) {
@@ -5342,7 +5358,7 @@ window.STORYBOARD_READY = (async function () {
   }
   h += "<tr><th>" + esc(T.cRate) + "</th><td>" +
      esc(STORY_V2 ? T.contentTiming : allRec ? T.rateAllRec : hasRec ? T.rateMixed : T.rateGen(FMT.sceneMax)) + "</td></tr>";
-  var cueKeys = MUSIC ? Object.keys(MUSIC).filter(function (k) { return k !== "$mix"; }) : [];
+  var cueKeys = MUSIC ? Object.keys(MUSIC).filter(function (k) { return k !== "$mix" && k !== "$timeline"; }) : [];
   h += "<tr><th>" + esc(T.cMusic) + "</th><td>" + esc(T.musicBadge(MUSIC ? cueKeys.length : null, dropCount)) +
      cueKeys.map(function (k) { return MUSIC[k] && MUSIC[k].reason ? "<br><code>" + esc(k) + "</code> " + esc(MUSIC[k].reason) : ""; }).join("") + "</td></tr>";
   h += "<tr><th>" + esc(T.cTheme) + "</th><td>" + ["accent", "accent2", "ink"].map(function (k) {
