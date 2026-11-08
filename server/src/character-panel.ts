@@ -26,7 +26,7 @@ export type CharacterPanelInput = z.infer<typeof characterPanelSchema>;
 
 // character-panels.md: 1:1 face with the head at 60-75 % of the height; 2:3 headless body panels at 80-90 %.
 const FRAMING = {
-  face: { size: [1024, 1024], text: 'Close head portrait of one character, front facing, neutral expression, the complete head and hair visible, the head filling 70 percent of the image height.' },
+  face: { size: [1024, 1024], text: 'Head-only identity portrait, front facing, neutral expression, complete hair, ears and chin visible, head filling 70 percent of image height with plain background around it. No shoulders, torso or clothing: outfit comes from the body panels.' },
   front: { size: [1024, 1536], text: 'Headless front costume mannequin of this character: nothing above the neck, from the neck and shoulders down to the shoes, neutral stance, arms relaxed, the subject filling 85 percent of the image height.' },
   back: { size: [1024, 1536], text: 'Turn this headless costume mannequin around 180 degrees so its back faces the camera, keeping the same costume. Show it from directly behind, from the neck down to the heels: the back of the garments, straps and belt and the heels of the footwear; anything worn on one side now sits on the other side of the image. Nothing above the neck. The subject fills 85 percent of the image height.' },
 } as const;
@@ -34,7 +34,7 @@ const FRAMING = {
 // The back is edited from the front alone with a turn-around instruction: a face reference brings the head back,
 // and "keep this character" keeps the front's pose, so its negative also rules out what only the front shows.
 const BODY = 'head, face, hair, ears, tusks, helmet, text, watermark, collage, multiple views, border';
-const NEGATIVE = { face: 'text, watermark, collage, multiple views, border', front: BODY,
+const NEGATIVE = { face: 'shoulders, torso, clothing, shirt, text, watermark, collage, multiple views, border', front: BODY,
   back: `front view, chest, belt buckle, palms facing camera, toes facing camera, ${BODY}` } as const;
 // ponytail: only the GenAI gateway's 800-character prompt cap is known here; add others when an adapter declares one.
 const PROMPT_LIMIT: Record<string, number> = { 'astra-genai': 800 };

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { prepareVideoImages } from '../dist/video-image-inputs.js';
 import { parseVideoArgs } from '../dist/video-registry.js';
 import { png } from './workflow-fixture.mjs';
@@ -17,7 +18,7 @@ const ref=(id='hero',use='video',role='character')=>({id,path:id+'.png',role,use
 const shot=(mode='first_last',references=[])=>({visual:{frames:{mode,...(mode==='reference'?{}:{start:'start.png'}),...(mode==='first_last'?{end:'end.png'}:{})},references}});
 test('frame mappings use board-relative files, decoded metadata and explicit use:image references',t=>{
  const root=fixture(t),s=shot('first_last',[ref('hero','image')]);
- for(const [tool,start,end] of [['seedance_img2video','sourceImagePath','lastImagePath'],['astra_img2video','firstFramePath','lastFramePath'],['astra_genai_audio2video','imagePath','lastFramePath'],['mlx_video_generate','firstFrameImagePath','lastFrameImagePath']]) {
+ for(const [tool,start,end] of [['seedance_img2video','sourceImagePath','lastImagePath'],['astra_img2video','firstFramePath','lastFramePath'],['astra_genai_audio2video','imagePath','lastFramePath'],['astra_genai_desktop_img2video','imagePath','lastFramePath'],['mlx_video_generate','firstFrameImagePath','lastFrameImagePath']]) {
   const p=prepareVideoImages(tool,{prompt:'Move'},s,root);
   assert.equal(p.args[start],path.join(root,'storyboard/start.png'));assert.equal(p.args[end],path.join(root,'storyboard/end.png'));
   assert.equal(p.imageBindings.length,3);assert.equal(p.imageBindings[2].submitted,false);
@@ -26,6 +27,11 @@ test('frame mappings use board-relative files, decoded metadata and explicit use
  const genai=prepareVideoImages('astra_genai_img2video',{prompt:'Move',model:'ltx-2.5-22b-dev',resolution:'720p',duration:5,reserveUsd:0},s,root);
  assert.match(genai.args.imageUri,/^data:image\/png;base64,/);assert.match(genai.args.lastFrameUri,/^data:image\/png;base64,/);
  assert.doesNotThrow(()=>parseVideoArgs('astra_genai_img2video',genai.args));
+ const desktop=prepareVideoImages('astra_genai_desktop_img2video',{prompt:'Move',model:'ltx-2.5-fast',resolution:'720p',duration:3,reserveUsd:0},s,root);
+ assert.doesNotThrow(()=>parseVideoArgs('astra_genai_desktop_img2video',desktop.args));
+ const audio=prepareVideoImages('astra_genai_desktop_audio2video',{},shot('first'),root);
+ assert.equal(audio.args.imagePath,path.join(root,'storyboard/start.png'));
+ assert.throws(()=>prepareVideoImages('astra_genai_desktop_audio2video',{},s,root),/cannot carry/);
 });
 test('reference-only inputs keep order and roles; installed adapters enforce their actual limits',t=>{
  const root=fixture(t),s=shot('reference',[ref(),ref('room','both','background')]);
@@ -105,8 +111,21 @@ test('declared MSR principals rebuild canonical faces and bodies despite stale t
   'assets/characters/hero/face.png','assets/characters/ally/face.png',
   'assets/characters/hero/front.png','assets/characters/ally/front.png','storyboard/start.png']);
  assert.match(p.args.prompt,/Images 1\(face\), 3\(headless front body\): ONE hero/);
+ assert.match(p.args.prompt,/head\/hair only from face; physique\/clothes only from body/);
+ assert.match(p.args.prompt,/ignore face-panel clothing/);
  assert.equal(p.imageBindings.filter(r=>r.submitted).length,5);
  assert.throws(()=>prepareVideoImages('astra_genai_msr',{prompt:'Exchange',references:[{imagePath:path.join(board,'mid.png')}]},s,root),/image_plan_mismatch/);
+ const hash=createHash('sha256').update(png).digest('hex');
+ for(const id of chars){
+  const folder=path.join(root,'assets/characters',id),file=path.join(folder,'panels.json'),doc=JSON.parse(fs.readFileSync(file));
+  fs.writeFileSync(path.join(folder,'msr.png'),png);
+  doc.panels.msr={file:'msr.png',purpose:'character_reference',view:'msr',sha256:hash,sourceHashes:{face:hash,front:hash}};fs.writeFileSync(file,JSON.stringify(doc));
+ }
+ s.visual.video={referenceLayout:'combined'};
+ const unified=prepareVideoImages('astra_genai_msr',{prompt:'Exchange'},s,root);
+ assert.deepEqual(unified.args.references.map(r=>path.basename(r.imagePath)),['msr.png','msr.png','start.png']);
+ assert.equal(unified.imageBindings.filter(r=>r.submitted).length,3);
+ assert.match(unified.args.prompt,/Image 3: opening composition/);
  fs.unlinkSync(path.join(root,'assets/characters/ally/face.png'));
  assert.throws(()=>prepareVideoImages('astra_genai_msr',{prompt:'Exchange'},s,root),/character_panel_missing: ally.*face/);
 });

@@ -250,6 +250,15 @@ test('declared MSR cast maps pinned voices to canonical faces instead of stale t
  const result=prepareVideoVoice('astra_genai_msr',{prompt:'Exchange.',references},ctx);
  assert.deepEqual(result.voiceContinuity.speakers.map(s=>s.imageIndices),[[1],[2]]);
  assert.deepEqual(result.args.references.map(r=>r.audioPath),characters.map(c=>c.voiceReference.path));
+ for(const c of characters){
+  const folder=path.join(ctx.episode,'assets/characters',c.id),file=path.join(folder,'panels.json'),doc=JSON.parse(fs.readFileSync(file));
+  fs.writeFileSync(path.join(folder,'msr.png'),'combined');
+  doc.panels.msr={file:'msr.png',purpose:'character_reference',view:'msr',sha256:digest('combined'),sourceHashes:{face:digest('panel'),front:digest('panel')}};fs.writeFileSync(file,JSON.stringify(doc));
+ }
+ ctx.shot.visual.video={...(ctx.shot.visual.video??{}),referenceLayout:'combined'};
+ const unified=prepareVideoVoice('astra_genai_msr',{prompt:'Exchange.',references:characters.map(c=>({imagePath:path.join(ctx.episode,'assets/characters',c.id,'msr.png')}))},ctx);
+ assert.deepEqual(unified.voiceContinuity.speakers.map(s=>s.imageIndices),[[1],[2]]);
+ assert.deepEqual(unified.args.references.map(r=>r.audioPath),characters.map(c=>c.voiceReference.path));
 });
 
 test('legacy MSR cast keeps explicit voice ownership without requiring shared panels',t=>{

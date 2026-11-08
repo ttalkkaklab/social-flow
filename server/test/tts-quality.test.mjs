@@ -4,6 +4,7 @@ import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { createHash } from 'node:crypto';
 import { checkedSpeechSchema, prepareGeneration, generateCheckedSpeech } from '../dist/tts-quality.js';
 import { pcmToWav } from '../dist/media-utils.js';
 import { config } from '../dist/config.js';
@@ -66,4 +67,30 @@ test('episode derives bounded v4 context and retains its seed at native speed',t
   assert.throws(()=>prepareGeneration({...r,generation:{...r.generation,model:'eleven_v3'}}));
   assert.equal(checkedSpeechSchema.safeParse({...r,episode:{...r.episode,index:99}}).success,false);
   assert.equal(checkedSpeechSchema.safeParse({...r,playbackSpeed:1.2}).success,false);
+});
+test('a preserved soundtrack repair binds the actual sources and current lines without claiming adapter speech',t=>{
+  const f=setup(t),board=path.join(f.dir,'storyboard');
+  const video=path.join(board,'repair.mp4'),source=path.join(board,'source.mp4');
+  writeFileSync(video,'repaired picture and preserved soundtrack');writeFileSync(source,'original native speech');
+  const sha=file=>createHash('sha256').update(readFileSync(file)).digest('hex');
+  const {speechRevision}=require('../../skills/_shared/speech-contract.js');
+  const line={id:'s0001-l1',speaker:'a',delivery:'on_screen',tts:'다시.'},cast=[{id:'a',tts:{engine:'astra-genai',voiceId:'pinned',language:'ko',speed:1}}];
+  const repair={kind:'preserved_soundtrack',videoPath:video,videoSha256:sha(video),lines:[{lineId:line.id,revision:speechRevision(line,{tts:cast[0].tts})}],sources:[{kind:'native_video',path:source,sha256:sha(source),lineIds:[line.id]}],review:'not_reviewed'};
+  const scene={narration:[line],sound:{audioSource:'video'},visual:{video:{clip:video,soundtrackRepair:repair}}};
+  const media={};assert.equal(legacyChecker.retainedSoundtrack(scene,board,cast,media),true);assert.equal(media[source],sha(source));assert.equal(repair.review,'not_reviewed');
+  const work=path.join(f.dir,'.work'),other=path.join(board,'other-shot.mp4');
+  writeFileSync(f.file,pcmToWav(Buffer.alloc(4800),24000,1));writeFileSync(other,'another shot soundtrack');
+  writeFileSync(path.join(board,'scenes.js'),`window.SB_DOC=${JSON.stringify({speechPlanVersion:1,characters:cast})};window.SCENES=${JSON.stringify([scene])};`);
+  const extraction={card:'0',video,sourceSha256:sha(video),audio:f.file,audioSha256:sha(f.file)};
+  const extractionFile=path.join(work,'source-audio.json');
+  writeFileSync(extractionFile,JSON.stringify([extraction]));
+  assert.equal(legacyChecker.check(work,board)[video],sha(video));
+  writeFileSync(extractionFile,JSON.stringify([{...extraction,video:other,sourceSha256:sha(other)}]));
+  assert.throws(()=>legacyChecker.check(work,board),/Source soundtrack differs from retained repaired video/);
+  assert.throws(()=>legacyChecker.retainedSoundtrack({...scene,narration:[{...line,tts:'바뀐 대사.'}]},board,cast,{}),/dialogue or voice changed/);
+  assert.throws(()=>legacyChecker.retainedSoundtrack(scene,board,[{...cast[0],tts:{...cast[0].tts,voiceId:'other'}}],{}),/dialogue or voice changed/);
+  assert.throws(()=>legacyChecker.retainedSoundtrack({...scene,visual:{video:{...scene.visual.video,speechBinding:{mode:'native'}}}},board,cast,{}),/no adapter speech binding/);
+  repair.sources[0].lineIds=[];assert.throws(()=>legacyChecker.retainedSoundtrack(scene,board,cast,{}),/cover the current lines/);repair.sources[0].lineIds=[line.id];
+  writeFileSync(source,'changed source');assert.throws(()=>legacyChecker.retainedSoundtrack(scene,board,cast,{}),/source changed/);
+  writeFileSync(video,'changed output');assert.throws(()=>legacyChecker.retainedSoundtrack(scene,board,cast,{}),/video changed/);
 });

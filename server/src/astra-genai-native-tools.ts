@@ -11,6 +11,7 @@ const descriptions: Record<string, string> = {
   kind: 'Catalog to read, e.g. speech for registered voices; discovery never generates media.',
   model: 'Exact public model alias from astra_genai_catalog, e.g. qwen-image-fast or ltx-2.5-fast.',
   prompt: 'Requested subject/action or changes, e.g. A blue ball rolls across a table.',
+  promptProvenance: "Desktop rewrite policy, e.g. enhanced for a caller-finished prompt that must not be rewritten again; typed follows the app's enhancement settings. Omitted keeps its default. Does not certify quality.",
   size: 'Image width x height, e.g. 1024x1024. Supported grid depends on the selected model.',
   seed: 'Optional reproducibility seed, e.g. 42; omit for provider handling.',
   steps: 'Optional sampling steps, e.g. 8 for Qwen Turbo. Omit to preserve model schedule.',

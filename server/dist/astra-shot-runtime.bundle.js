@@ -30611,6 +30611,7 @@ var common = external_exports.object({
   model,
   prompt: external_exports.string().trim().min(1),
   resolution,
+  promptProvenance: external_exports.enum(["typed", "enhanced"]).optional().describe("Desktop rewrite policy: typed follows the app's automatic enhancement settings; enhanced sends a caller-finished prompt without another rewrite, e.g. 'enhanced'. Omitted keeps the Desktop default. This is not a quality review."),
   seed: external_exports.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
   fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
   cameraMotion: external_exports.enum(["none", "dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"]).optional(),
@@ -33236,7 +33237,7 @@ var scenarioCheckResultSchema = external_exports.object({
 // src/speech.ts
 import { createHash as createHash4, randomUUID as randomUUID2 } from "node:crypto";
 import { readFileSync as readFileSync8, writeFileSync as writeFileSync5, renameSync as renameSync3, mkdirSync as mkdirSync3, existsSync as existsSync6 } from "node:fs";
-import { dirname as dirname5, resolve as resolve5, join as join5 } from "node:path";
+import { dirname as dirname5, resolve as resolve5, join as join5, relative as relative2 } from "node:path";
 import * as nodeModule4 from "node:module";
 import { execFileSync as execFileSync3 } from "node:child_process";
 
@@ -33289,6 +33290,37 @@ var speechManageSchema = external_exports.object({
 }).strict();
 var hash = (s) => createHash4("sha256").update(s).digest("hex");
 var object2 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
+function syncProductionClip(scene, boardDir, videoPath, oldClip, warnings) {
+  const duration2 = (file) => Number(execFileSync3(
+    "ffprobe",
+    ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=duration", "-of", "default=nw=1:nk=1", file],
+    { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }
+  ).trim());
+  const production = object2(scene.productionPlan), cuts = production.cuts;
+  if (Array.isArray(cuts) && cuts.length) {
+    const cut = object2(cuts[0]);
+    if (cuts.length !== 1 || cut.kind !== "generated_video" || Number(cut.start ?? 0) !== 0 || typeof oldClip !== "string" || typeof cut.path !== "string" || resolve5(boardDir, cut.path) !== resolve5(boardDir, oldClip)) {
+      warnings.push("The bound video changed; the authored production cuts were preserved and need an explicit edit before playback uses this clip.");
+      return;
+    }
+    try {
+      if (Math.abs(Number(cut.seconds) - duration2(resolve5(boardDir, oldClip))) > 0.05) {
+        warnings.push("The existing production cut has an authored duration; it was preserved for an explicit edit.");
+        return;
+      }
+    } catch {
+      warnings.push("Could not verify the existing production cut duration; it was preserved for an explicit edit.");
+      return;
+    }
+  }
+  try {
+    const seconds = duration2(videoPath);
+    if (!Number.isFinite(seconds) || seconds <= 0) throw new Error("Missing video duration");
+    scene.productionPlan = { ...production, cuts: [{ kind: "generated_video", path: relative2(boardDir, videoPath), start: 0, seconds }] };
+  } catch {
+    warnings.push("Could not measure the bound video stream; production cuts were not changed.");
+  }
+}
 function speechRevision(line, character) {
   return hash(JSON.stringify(actingContract().speechRevisionPayload(line, character?.tts)));
 }
@@ -33537,6 +33569,7 @@ function manageSpeech(args) {
         video.speechStatus = "stale";
         invalidated = { video, edit: true };
       } else {
+        if (!tailTrim) syncProductionClip(scene, dirname5(file), videoPath, video.clip, plan.warnings);
         video.clip = args.videoPath;
         video.speechBinding = {
           ...plan,
@@ -33557,6 +33590,22 @@ function manageSpeech(args) {
       if (native) {
         scene.sound = { ...sound, audioSource: "video" };
         for (const { line } of selected) if (line.mediaStatus === "needs_audio") delete line.mediaStatus;
+      } else if (!selected.length && sound.audioSource === "video") {
+        try {
+          const streams = execFileSync3(
+            "ffprobe",
+            ["-v", "error", "-select_streams", "a", "-show_entries", "stream=index", "-of", "csv=p=0", videoPath],
+            { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }
+          ).trim();
+          if (!streams) {
+            const silentSound = { ...sound };
+            delete silentSound.audioSource;
+            scene.sound = silentSound;
+            plan.warnings.push("The bound speechless clip has no audio stream; the previous video soundtrack source was removed. Supply the silent card clock separately.");
+          }
+        } catch {
+          plan.warnings.push("Could not inspect the bound clip audio streams; the existing sound source was preserved for inspection before assembly.");
+        }
       }
       visual.video = video;
       scene.visual = visual;

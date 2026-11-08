@@ -592,6 +592,23 @@ describe('images and the video prompt follow the icon attributes', () => {
     recordShotImage(args, request);
     return request;
   };
+  it('separates face clothing from outfit references and describes confirmed relative height without flattening poses', () => {
+    const { root, dir } = pictureBoard(); icons(dir);
+    const sheet = join(root, 'data/c/assets/characters');
+    mkdirSync(join(sheet, 'ally'));
+    for (const name of ['face', 'body', 'back']) writeFileSync(join(sheet, 'ally', name + '.png'), png);
+    writeFileSync(join(sheet, 'ally/panels.json'), readFileSync(join(sheet, 'mina/panels.json')));
+    for (const [id, height] of [['mina', 190], ['ally', 178]])
+      writeFileSync(join(sheet, id, 'identity.md'), '# ' + id + '\n```json\n' + JSON.stringify({ character: { schemaVersion: 1, version: 1, physical: { heightCm: { status: 'confirmed', value: height } },
+        identity: { gender: { status: 'confirmed', value: 'male' }, species: { status: 'confirmed', value: 'human' }, age: { status: 'confirmed', value: '20s' }, role: { status: 'confirmed', value: 'lead' }, summary: { status: 'confirmed', value: 'a student' } } } }) + '\n```');
+    writeFileSync(join(dir, 'cast.json'), JSON.stringify({ characters: ['mina', 'ally'].map(id => ({ id, source: '../../../assets/characters/' + id + '/identity.md' })) }));
+    writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina', 'ally'] }] });
+    const request = shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'Mina stands beside seated Ally.' });
+    assert.match(request.prompt, /12 cm taller than ally \(height ratio 1.067\)/);
+    assert.match(request.prompt, /do not equalize head levels or compare seated and standing head heights/);
+    assert.match(request.prompt, /ignore clothing in this panel/);
+    assert.match(request.prompt, /including collar, tie and sleeve state/);
+  });
   it('tracks physical opening, performance and prompt changes without certifying inherited images', () => {
     const { dir } = pictureBoard(); icons(dir); make(dir, 's0001');
     const status = () => readStoryboard(storyboardReadSchema.parse({ path: dir, includeTechniques: false })).imageFraming[0];

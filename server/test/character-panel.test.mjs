@@ -25,7 +25,8 @@ test('each panel prompt comes from the sheet: the face from appearance, the body
   const { identityPath } = orc(t);
   const face = characterPanelRequest({ identityPath, view: 'face' });
   assert.deepEqual(face.inputs, []);
-  assert.match(face.prompt, /Close head portrait.*Character: olive green skin, amber eyes\..*Korean webtoon illustration/);
+  assert.match(face.prompt, /Head-only identity portrait.*Character: olive green skin, amber eyes\..*Korean webtoon illustration/);
+  assert.match(face.prompt, /No shoulders, torso or clothing/);
   assert.throws(() => characterPanelRequest({ identityPath, view: 'front' }), /character_panel_missing: make kardum's face panel first/);
   writeFileSync(face.file, png);
   recordCharacterPanel(face);
@@ -62,6 +63,7 @@ test('body panels rule the head out with a negative prompt on models that take o
   assert.match(front.args.negativePrompt, /^head, face, hair.*, beard$/);
   assert.equal(front.args.guidanceScale, 4, 'the gateway refuses a negative prompt without CFG');
   assert.equal(characterPanelRequest({ identityPath, view: 'face' }).args.negativePrompt.includes('head'), false);
+  assert.match(characterPanelRequest({ identityPath, view: 'face' }).args.negativePrompt, /shoulders, torso, clothing, shirt/);
   assert.match(characterPanelRequest({ identityPath, view: 'back', references: [] }).args.negativePrompt, /^front view, chest, .*, head, face/);
 });
 

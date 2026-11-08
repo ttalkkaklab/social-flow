@@ -2375,7 +2375,7 @@ window.STORYBOARD_READY = (async function () {
         var rangeError = ko ? '재생 구간을 확인할 수 없습니다. 원본 길이와 시작·종료 시간을 확인하세요.' : 'Cannot verify this range. Check source duration and start/end times.';
         var end = validRange ? from + cut.seconds : 0;
         var handlers = validRange
-          ? ' onloadedmetadata="if(this.duration &lt; Number(this.dataset.end)){this.nextElementSibling.hidden=false;}this.currentTime=Number(this.dataset.start)"' +
+          ? ' onloadedmetadata="if(this.duration + 0.001 &lt; Number(this.dataset.end)){this.nextElementSibling.hidden=false;}this.currentTime=Number(this.dataset.start)"' +
             ' onplay="if(this.currentTime &lt; Number(this.dataset.start)||this.currentTime >= Number(this.dataset.end)){this.currentTime=Number(this.dataset.start)}"' +
             ' ontimeupdate="if(this.currentTime &lt; Number(this.dataset.start)){this.currentTime=Number(this.dataset.start)}if(this.currentTime >= Number(this.dataset.end)){this.pause();if(this.currentTime > Number(this.dataset.end)){this.currentTime=Number(this.dataset.end)}}"'
           : '';

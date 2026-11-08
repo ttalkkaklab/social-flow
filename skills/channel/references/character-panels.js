@@ -82,6 +82,7 @@ function boardPanelFindings(win, boardDir, channelDir) {
       try { registered = JSON.parse(fs.readFileSync(manifestFile, 'utf8')).panels || {}; } catch { registered = {}; }
     }
     for (const [slot, entry] of Object.entries(registered || {})) {
+      if (slot === 'msr') continue; // Optional derived transport reference, not a displayed canonical panel.
       const source = entry?.purpose === 'character_reference' && entry.view === slot && localFile(folder, entry.file);
       const linked = c.panels?.[slot] || (slot === 'front' && c.panels?.body);
       if (source && !(typeof linked === 'string' && linked.trim())) findings.push({
@@ -143,9 +144,26 @@ function sheetPanels(boardDir, ids) {
     return [id, panels];
   }));
 }
-function canonicalReferences(boardDir, shotId, ids, use) {
+function canonicalReferences(boardDir, shotId, ids, use, options = {}) {
   if (ids.length > 2) throw new Error('msr_character_limit: at most two principal characters');
   const sheets = sheetPanels(boardDir, ids);
+  if (options.combined) return ids.map(id => {
+    const sources = sheets.get(id);
+    let folder = path.dirname(path.resolve(boardDir, sources.face));
+    while (path.basename(folder) !== id || path.basename(path.dirname(folder)) !== 'characters') {
+      const parent = path.dirname(folder);
+      if (parent === folder) throw new Error(`character_sheet_missing: ${id} has no shared character folder`);
+      folder = parent;
+    }
+    const entry = JSON.parse(fs.readFileSync(path.join(folder, 'panels.json'), 'utf8')).panels?.msr;
+    const file = localFile(folder, entry?.file);
+    if (!file || entry.purpose !== 'character_reference' || entry.view !== 'msr')
+      throw new Error(`character_msr_reference_missing: ${id} needs a registered unified identity/outfit reference`);
+    if (entry.sha256 !== sha(file) || ['face', 'front'].some(view => entry.sourceHashes?.[view] !== sha(path.resolve(boardDir, sources[view]))))
+      throw new Error(`character_msr_reference_stale: ${id} unified reference or its canonical sources changed`);
+    return { id: `${shotId}-${id}-msr`, path: path.relative(boardDir, file).split(path.sep).join('/'),
+      role: 'character', use, purpose: `${id}: ONE person, exact face, hair, physique and outfit` };
+  });
   const views = ids.length === 1 ? ['face', 'front', 'back'] : ['face', 'front'];
   return views.flatMap(view => ids.map(id => ({ id: `${shotId}-${id}-${view}`, path: sheets.get(id)[view],
     role: 'character', use, purpose: view === 'face' ? `${id}'s face and hair` : `${id}'s body and outfit, ${view}` })));

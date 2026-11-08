@@ -48557,49 +48557,49 @@ var require_fast_uri = __commonJS({
       schemelessOptions.skipEscape = true;
       return serialize(resolved, schemelessOptions);
     }
-    function resolveComponent(base, relative2, options, skipNormalization) {
+    function resolveComponent(base, relative3, options, skipNormalization) {
       const target = {};
       if (!skipNormalization) {
         base = parse4(serialize(base, options), options);
-        relative2 = parse4(serialize(relative2, options), options);
+        relative3 = parse4(serialize(relative3, options), options);
       }
       options = options || {};
-      if (!options.tolerant && relative2.scheme) {
-        target.scheme = relative2.scheme;
-        target.userinfo = relative2.userinfo;
-        target.host = relative2.host;
-        target.port = relative2.port;
-        target.path = removeDotSegments(relative2.path || "");
-        target.query = relative2.query;
+      if (!options.tolerant && relative3.scheme) {
+        target.scheme = relative3.scheme;
+        target.userinfo = relative3.userinfo;
+        target.host = relative3.host;
+        target.port = relative3.port;
+        target.path = removeDotSegments(relative3.path || "");
+        target.query = relative3.query;
       } else {
-        if (relative2.userinfo !== void 0 || relative2.host !== void 0 || relative2.port !== void 0) {
-          target.userinfo = relative2.userinfo;
-          target.host = relative2.host;
-          target.port = relative2.port;
-          target.path = removeDotSegments(relative2.path || "");
-          target.query = relative2.query;
+        if (relative3.userinfo !== void 0 || relative3.host !== void 0 || relative3.port !== void 0) {
+          target.userinfo = relative3.userinfo;
+          target.host = relative3.host;
+          target.port = relative3.port;
+          target.path = removeDotSegments(relative3.path || "");
+          target.query = relative3.query;
         } else {
-          if (!relative2.path) {
+          if (!relative3.path) {
             target.path = base.path;
-            if (relative2.query !== void 0) {
-              target.query = relative2.query;
+            if (relative3.query !== void 0) {
+              target.query = relative3.query;
             } else {
               target.query = base.query;
             }
           } else {
-            if (relative2.path[0] === "/") {
-              target.path = removeDotSegments(relative2.path);
+            if (relative3.path[0] === "/") {
+              target.path = removeDotSegments(relative3.path);
             } else {
               if ((base.userinfo !== void 0 || base.host !== void 0 || base.port !== void 0) && !base.path) {
-                target.path = "/" + relative2.path;
+                target.path = "/" + relative3.path;
               } else if (!base.path) {
-                target.path = relative2.path;
+                target.path = relative3.path;
               } else {
-                target.path = base.path.slice(0, base.path.lastIndexOf("/") + 1) + relative2.path;
+                target.path = base.path.slice(0, base.path.lastIndexOf("/") + 1) + relative3.path;
               }
               target.path = removeDotSegments(target.path);
             }
-            target.query = relative2.query;
+            target.query = relative3.query;
           }
           target.userinfo = base.userinfo;
           target.host = base.host;
@@ -48607,7 +48607,7 @@ var require_fast_uri = __commonJS({
         }
         target.scheme = base.scheme;
       }
-      target.fragment = relative2.fragment;
+      target.fragment = relative3.fragment;
       return target;
     }
     function equal(uriA, uriB, options) {
@@ -90798,6 +90798,7 @@ var require_video_catalog = __commonJS({
             "model",
             "prompt",
             "resolution",
+            "promptProvenance",
             "seed",
             "fps",
             "cameraMotion",
@@ -90830,6 +90831,7 @@ var require_video_catalog = __commonJS({
             "model",
             "prompt",
             "resolution",
+            "promptProvenance",
             "seed",
             "fps",
             "cameraMotion",
@@ -90863,6 +90865,7 @@ var require_video_catalog = __commonJS({
             "model",
             "prompt",
             "resolution",
+            "promptProvenance",
             "seed",
             "fps",
             "cameraMotion",
@@ -90957,6 +90960,7 @@ var require_video_catalog = __commonJS({
             "model",
             "prompt",
             "resolution",
+            "promptProvenance",
             "seed",
             "fps",
             "cameraMotion",
@@ -94522,6 +94526,28 @@ var require_check_tts_quality = __commonJS({
       decide(work, warnings, inputs);
       return media;
     }
+    function retainedSoundtrack(scene, board, cast, media) {
+      const repair = scene.visual?.video?.soundtrackRepair;
+      if (repair?.kind !== "preserved_soundtrack") return false;
+      if (scene.sound?.audioSource !== "video" || scene.visual.video.speechBinding)
+        throw new Error("A retained soundtrack repair needs source video audio and no adapter speech binding");
+      const video2 = path32.resolve(board, scene.visual.video.clip || "");
+      if (typeof repair.videoPath !== "string" || path32.resolve(board, repair.videoPath) !== video2 || hash7(fs23.readFileSync(video2)) !== repair.videoSha256)
+        throw new Error("Retained soundtrack video changed");
+      const lines = (scene.narration || []).filter((n) => (n.tts || "").trim());
+      const revisions = lines.map((n) => ({ lineId: n.id, revision: speechRevision2(n, { tts: cast.find((c) => c.id === n.speaker)?.tts }) }));
+      if (JSON.stringify(repair.lines) !== JSON.stringify(revisions)) throw new Error("Retained soundtrack dialogue or voice changed");
+      if (!Array.isArray(repair.sources) || !repair.sources.length || JSON.stringify(repair.sources.flatMap((source) => source.lineIds || [])) !== JSON.stringify(lines.map((n) => n.id)))
+        throw new Error("Retained soundtrack sources must cover the current lines in order");
+      for (const source of repair.sources) {
+        if (!["native_video", "selected_line_audio"].includes(source.kind) || typeof source.path !== "string") throw new Error("Invalid retained soundtrack source");
+        const file = path32.resolve(board, source.path);
+        if (hash7(fs23.readFileSync(file)) !== source.sha256) throw new Error("Retained soundtrack source changed");
+        media[file] = source.sha256;
+      }
+      media[video2] = repair.videoSha256;
+      return true;
+    }
     function check2(work, board) {
       work = path32.resolve(work);
       board = path32.resolve(board);
@@ -94542,10 +94568,11 @@ var require_check_tts_quality = __commonJS({
         const characters = win.SB_DOC?.characters || [];
         const cast = Array.isArray(characters) ? characters : Object.entries(characters).map(([id, c]) => ({ ...c, id }));
         const binding = s2.visual?.video?.speechBinding;
+        const retained = retainedSoundtrack(s2, board, cast, media);
         const native = binding?.mode === "native";
         if (native && s2.sound?.audioSource !== "video") throw new Error("Native speech video needs sound.audioSource video for card " + i2);
-        if (win.SB_DOC?.speechPlanVersion === 1 && (s2.narration || []).some((n) => n.delivery === "on_screen") && s2.visual?.video && !binding) throw new Error("On-screen dialogue needs a video speech binding for card " + i2 + "; bind the clip with speech_manage attach_video");
-        for (const line of native ? [] : s2.narration || []) {
+        if (win.SB_DOC?.speechPlanVersion === 1 && (s2.narration || []).some((n) => n.delivery === "on_screen") && s2.visual?.video && !binding && !retained) throw new Error("On-screen dialogue needs a video speech binding for card " + i2 + "; bind the clip with speech_manage attach_video");
+        for (const line of native || retained ? [] : s2.narration || []) {
           if (line.mediaStatus === "needs_audio") throw new Error("Regenerate modified dialogue " + line.id);
           if (win.SB_DOC?.speechPlanVersion === 1 && (line.tts || "").trim() && !line.audio) throw new Error("Attach generated dialogue audio: " + line.id);
           if (line.audio) {
@@ -94576,7 +94603,10 @@ var require_check_tts_quality = __commonJS({
             throw new Error("Missing or stale source soundtrack extraction for card " + i2);
           if (binding && path32.resolve(extraction.video) !== path32.resolve(binding.videoPath))
             throw new Error("Source soundtrack differs from bound speech video for card " + i2);
+          if (retained && (path32.resolve(extraction.video) !== path32.resolve(board, s2.visual.video.soundtrackRepair.videoPath) || extraction.sourceSha256 !== s2.visual.video.soundtrackRepair.videoSha256))
+            throw new Error("Source soundtrack differs from retained repaired video for card " + i2);
           media[extraction.video] = extraction.sourceSha256;
+          if (retained) warnings.push("card " + i2 + ": retained soundtrack repair has current source/line provenance; visible lip-sync and audio listening not_reviewed");
           warnings.push("card " + i2 + ": source soundtrack retained; perceptual audio quality not_reviewed");
           continue;
         }
@@ -94615,7 +94645,7 @@ var require_check_tts_quality = __commonJS({
       });
       if (generated && [speed, min, max].some((n) => Number(n) !== 1)) throw new Error("ElevenLabs narration forbids post-synthesis tempo changes; set SPEED=1 and ATEMPO_MIN=ATEMPO_MAX=1, use generation.speed");
     }
-    module.exports = { characterVoice, checkLegacy, check: check2, decide, approve, lastReport, findings, verifyProof, normalize: normalize2, cer, checkTempo };
+    module.exports = { characterVoice, checkLegacy, check: check2, decide, approve, lastReport, findings, verifyProof, normalize: normalize2, cer, checkTempo, retainedSoundtrack };
     if (__require.main === module) {
       try {
         const [command, work, arg] = process.argv.slice(2);
@@ -98800,8 +98830,8 @@ function canonicalPath(file) {
   return path.join(canonicalPath(parent), path.basename(file));
 }
 function withinDirectory(root, file) {
-  const relative2 = path.relative(root, file);
-  return relative2 === "" || !relative2.startsWith(".." + path.sep) && relative2 !== ".." && !path.isAbsolute(relative2);
+  const relative3 = path.relative(root, file);
+  return relative3 === "" || !relative3.startsWith(".." + path.sep) && relative3 !== ".." && !path.isAbsolute(relative3);
 }
 
 // src/production-workflow.ts
@@ -110050,6 +110080,7 @@ var common = external_exports.object({
   model,
   prompt: external_exports.string().trim().min(1),
   resolution,
+  promptProvenance: external_exports.enum(["typed", "enhanced"]).optional().describe("Desktop rewrite policy: typed follows the app's automatic enhancement settings; enhanced sends a caller-finished prompt without another rewrite, e.g. 'enhanced'. Omitted keeps the Desktop default. This is not a quality review."),
   seed: external_exports.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
   fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
   cameraMotion: external_exports.enum(["none", "dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"]).optional(),
@@ -110564,6 +110595,7 @@ var descriptions = {
   kind: "Catalog to read, e.g. speech for registered voices; discovery never generates media.",
   model: "Exact public model alias from astra_genai_catalog, e.g. qwen-image-fast or ltx-2.5-fast.",
   prompt: "Requested subject/action or changes, e.g. A blue ball rolls across a table.",
+  promptProvenance: "Desktop rewrite policy, e.g. enhanced for a caller-finished prompt that must not be rewritten again; typed follows the app's enhancement settings. Omitted keeps its default. Does not certify quality.",
   size: "Image width x height, e.g. 1024x1024. Supported grid depends on the selected model.",
   seed: "Optional reproducibility seed, e.g. 42; omit for provider handling.",
   steps: "Optional sampling steps, e.g. 8 for Qwen Turbo. Omit to preserve model schedule.",
@@ -110809,16 +110841,8 @@ function shrinkImageToFit(bytes, width, height) {
 
 // src/astra-genai-video.ts
 var GENAI_VIDEO_MODELS = ["ltx-2.5-22b-distilled", "ltx-2.5-22b-dev"];
-var GENAI_V2_SIZES = ["1280x720", "720x1280", "720x720", "1080x720", "720x1080"];
 function genaiV2Resolution(saved) {
-  const match2 = /^(\d+)x(\d+)$/.exec(saved);
-  if (!match2 || GENAI_V2_SIZES.includes(saved)) return saved;
-  const aspect2 = (w, h2) => Math.log(w / h2), want = aspect2(Number(match2[1]), Number(match2[2]));
-  const gap = (size) => {
-    const [w, h2] = size.split("x").map(Number);
-    return Math.abs(aspect2(w, h2) - want);
-  };
-  return GENAI_V2_SIZES.reduce((best, size) => gap(size) < gap(best) ? size : best);
+  return saved;
 }
 var GENAI_CAMERA_MOTIONS = ["dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"];
 var genaiTextToVideoSchema = external_exports.object({
@@ -114628,6 +114652,8 @@ var FRAME_FIELDS = {
   astra_img2video: ["firstFramePath", "lastFramePath"],
   astra_audio2video: ["imagePath"],
   astra_genai_img2video: ["imageUri", "lastFrameUri"],
+  astra_genai_desktop_img2video: ["imagePath", "lastFramePath"],
+  astra_genai_desktop_audio2video: ["imagePath"],
   astra_genai_audio2video: ["imagePath", "lastFramePath"],
   mlx_video_generate: ["firstFrameImagePath", "lastFrameImagePath"],
   ltx_video_generate: ["firstFrameImagePath", "lastFrameImagePath"]
@@ -114646,7 +114672,7 @@ function msrPanelBinding(paths2, refs, compact5 = false) {
     const view = Object.entries(panels).find(([, panel]) => panel.file === path17.basename(file))?.[0];
     if (view && PANEL_VIEWS[view]) groups.set(path17.dirname(file), [...groups.get(path17.dirname(file)) ?? [], `Image ${i2 + 1} (${PANEL_VIEWS[view]})`]);
   });
-  return [...groups].filter(([, items]) => items.length > 1).map(([folder, items]) => compact5 ? `Images ${items.map((item) => item.replace(/Image (\d+) \(([^)]+)\)/, "$1($2)")).join(", ")}: ONE ${path17.basename(folder)}; combine head and outfit.` : `${items.join(", ")} show one character, ${path17.basename(folder)}: render one complete character with the head and hair from the face and the body and outfit from the headless panels.`).join("\n");
+  return [...groups].filter(([, items]) => items.length > 1).map(([folder, items]) => compact5 ? `Images ${items.map((item) => item.replace(/Image (\d+) \(([^)]+)\)/, "$1($2)")).join(", ")}: ONE ${path17.basename(folder)}; head/hair only from face; physique/clothes only from body; ignore face-panel clothing.` : `${items.join(", ")} show one character, ${path17.basename(folder)}: render one complete character with the head and hair from the face and the body and outfit from the headless panels. Ignore clothing visible in the face panel; never duplicate a person for separate panels.`).join("\n");
 }
 function characterKey(file) {
   try {
@@ -114671,8 +114697,16 @@ function prepareVideoImages(tool2, input, shot, episode) {
   const canonicalMsr = tool2 === "astra_genai_msr" && frames.mode === "reference" && rawCast !== void 0 && existsSync17(path17.join(episode, "storyboard", "cast.json"));
   if (canonicalMsr) {
     const ids = [].concat(rawCast ?? []).map((entry2) => typeof entry2 === "string" ? entry2 : entry2.id);
+    if (visual.video?.referenceLayout !== void 0 && !["panels", "combined"].includes(visual.video.referenceLayout))
+      throw new Error("image_plan_invalid: unknown MSR referenceLayout");
     references = [
-      ...characterPanels().canonicalReferences(path17.join(episode, "storyboard"), String(shot.id ?? "shot"), ids, "both"),
+      ...characterPanels().canonicalReferences(
+        path17.join(episode, "storyboard"),
+        String(shot.id ?? "shot"),
+        ids,
+        "both",
+        { combined: visual.video?.referenceLayout === "combined" }
+      ),
       ...references.filter((ref) => ref.role !== "character")
     ];
   }
@@ -114872,10 +114906,12 @@ function msrSubject(character, refs, context2) {
   let ownedPaths;
   const declared = [].concat(object3(context2.shot.visual).character ?? []).map((entry2) => typeof entry2 === "string" ? entry2 : text(object3(entry2).id));
   if (declared.includes(text(character.id)) && existsSync18(path18.join(context2.episode, "storyboard", "cast.json"))) {
-    const { sheetPanels } = load3("../../skills/channel/references/character-panels.js");
+    const { sheetPanels, canonicalReferences } = load3("../../skills/channel/references/character-panels.js");
     const dir = path18.join(context2.episode, "storyboard");
     const panels = sheetPanels(dir, [text(character.id)]).get(text(character.id));
-    ownedPaths = Object.values(panels).map((file) => realpathSync5(path18.resolve(dir, file)));
+    const combined = object3(object3(context2.shot.visual).video).referenceLayout === "combined";
+    const files3 = combined ? canonicalReferences(dir, text(context2.shot.id), [text(character.id)], "video", { combined: true }).map((ref) => ref.path) : Object.values(panels);
+    ownedPaths = files3.map((file) => realpathSync5(path18.resolve(dir, file)));
   } else ownedPaths = Array.isArray(owned) ? owned.map((value) => realpathSync5(path18.resolve(context2.episode, "storyboard", String(value)))) : [];
   let subject = 0, index = -1, slot = 0;
   refs.forEach((ref, i2) => {
@@ -115202,8 +115238,8 @@ var videoPlanSchema = external_exports.object({
 }).strict();
 var videoExecuteSchema = external_exports.object({ episode: external_exports.string().min(1), planId: external_exports.string().regex(/^[a-f0-9]{64}$/) }).strict();
 function within(root, file) {
-  const relative2 = path19.relative(root, file);
-  return relative2 === "" || !relative2.startsWith(".." + path19.sep) && relative2 !== ".." && !path19.isAbsolute(relative2);
+  const relative3 = path19.relative(root, file);
+  return relative3 === "" || !relative3.startsWith(".." + path19.sep) && relative3 !== ".." && !path19.isAbsolute(relative3);
 }
 function canonical2(file) {
   if (fs16.existsSync(file)) return fs16.realpathSync(file);
@@ -117516,8 +117552,10 @@ var MLX_INPUTS = { "qwen-2.1": 10, "flux-klein": 4, "mage-edit": 4 };
 var latin = (value) => typeof value === "string" && value.trim() && !nonEnglishOutsideQuotes(value) ? value.trim() : "";
 var identityCatalog = () => loadFromHere2(join10(PLUGIN_ROOT, "skills", "_shared", "character-identity.js"));
 function heightSentence(win, ids) {
-  const heights = ids.map((id) => [id, castEntry(win, id)?.character?.physical?.heightCm]).filter(([, field2]) => field2?.status === "confirmed" && typeof field2.value === "number").map(([id, field2]) => `${id} is ${field2.value} cm tall`);
-  return heights.length > 1 ? `Keep their real heights: ${heights.join(" and ")}.` : "";
+  const heights = ids.map((id) => [id, castEntry(win, id)?.character?.physical?.heightCm]).filter(([, field2]) => field2?.status === "confirmed" && typeof field2.value === "number" && Number.isFinite(field2.value) && field2.value > 0).map(([id, field2]) => ({ id, cm: field2.value }));
+  if (heights.length < 2) return "";
+  const ordered = [...heights].sort((a, b) => b.cm - a.cm), tall = ordered[0], short = ordered.at(-1);
+  return `Keep their real heights: ${heights.map((h2) => `${h2.id} is ${h2.cm} cm tall`).join(" and ")}. ${tall.id} is ${Number((tall.cm - short.cm).toFixed(2))} cm taller than ${short.id} (height ratio ${(tall.cm / short.cm).toFixed(3)}). For upright figures at equal camera distance on the same ground plane, preserve that relative scale. Follow the authored depth and pose; do not equalize head levels or compare seated and standing head heights. Independently framed sheet panels do not establish relative scale.`;
 }
 function castEntry(win, id) {
   const list = win.SB_DOC?.characters;
@@ -117774,7 +117812,11 @@ function buildShotImageRequest(args) {
     noPerson: !cast.length,
     ...set ? { location: { prompt: args.frame === "end" ? set.endPrompt : set.prompt, paths: [] } } : {}
   }).prompt;
-  const roles = ordered.map((ref, i2) => `Image ${i2 + 1} shows ${ref.purpose}.`).join(" ");
+  const roles = ordered.map((ref, i2) => {
+    const character = refs.find((r2) => r2.path === ref.path && r2.role === "character");
+    const role = !character ? "" : character.id.endsWith("-face") ? " Use only the head and hair above the collar; ignore clothing in this panel." : /-(front|back)$/.test(character.id) ? " Use this panel for physique and all clothing, including collar, tie and sleeve state." : "";
+    return `Image ${i2 + 1} shows ${ref.purpose}.${role}`;
+  }).join(" ");
   const at = (ref) => ordered.indexOf(ref) + 1;
   const lock2 = !set ? selected && args.frame === "start" ? `Preserve the selected background's ${backgroundView} directional geography and the spatial relationships of visible landmarks. The authored crop, camera height and subject viewpoint control the output; do not copy the background sheet's wide framing. Landmarks outside that crop stay outside the frame. The character sheets supply appearance and identity only; their panel poses do not constrain this shot.` : view ? `The location and character sheets supply appearance and identity only. Recompose them to the authored ${args.frame === "end" ? "closing" : "opening"} crop and viewpoint; the sheet pose and camera do not constrain this shot.` : "" : args.frame === "end" ? composition.length ? `Use Image ${at(composition[0])}'s closing camera, lens, framing and final object and figure positions. Image 1 supplies the look and every identity; its opening camera does not constrain this closing view.` : `Image 1 supplies the opening appearance and identities. Follow the closing camera direction below while preserving the set's world layout.` : `Keep Image 1's camera position, ${lens}${dutch ? "" : ", horizon"} and world layout, and keep every object${set.blocked ? " and figure" : ""} at its world position in Image 1. The authored composition below controls the final crop, headroom and subject screen placement. Paint its plain unpainted surfaces as the real place, and continue the place into any flat dark area past the set's edge.` + (dutch ? " Image 1 is level; tilt the whole picture to the dutch angle described below." : "") + (look.some((ref) => ordered.includes(ref)) ? ` Take only materials, colours and light from Image ${at(look[0])}.` : "");
   const prompt = [
@@ -118699,8 +118741,8 @@ var ELEVENLABS_SFX_MODEL = "eleven_text_to_sound_v2";
 var ELEVENLABS_SFX_SECONDS = { min: 0.5, max: 30 };
 var DEFAULT_ELEVENLABS_SFX_PROMPT_INFLUENCE = 0.3;
 var MAX_ELEVENLABS_SFX_TEXT_CHARS = 450;
-var ELEVENLABS_SFX_OUTPUT_FORMATS = ["pcm_48000", "pcm_44100", "pcm_24000", "mp3_44100_128"];
-var DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT = "pcm_48000";
+var ELEVENLABS_SFX_OUTPUT_FORMATS = ["wav_48000", "wav_44100", "wav_24000", "pcm_48000", "pcm_44100", "pcm_24000", "mp3_44100_128"];
+var DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT = "wav_48000";
 var ELEVENLABS_SFX_USD_PER_MINUTE = 0.12;
 function sfxExtensionForFormat(format) {
   return format.startsWith("mp3_") ? ".mp3" : ".wav";
@@ -119039,7 +119081,10 @@ async function generateElevenLabsSoundEffect(request) {
     );
     const meta = readMeta(response);
     const raw = Buffer.from(await response.arrayBuffer());
-    const audio = ext === ".wav" ? pcmToWav(raw, sfxSampleRateForFormat(request.outputFormat), 1) : raw;
+    const isWav = raw.subarray(0, 4).toString() === "RIFF" && raw.subarray(8, 12).toString() === "WAVE";
+    if (request.outputFormat.startsWith("wav_") && !isWav) throw new Error("Sound effect response is not the requested WAV container");
+    const audio = ext === ".wav" && !isWav ? pcmToWav(raw, sfxSampleRateForFormat(request.outputFormat), 2) : raw;
+    validateSpeechAudio(audio, ext.slice(1));
     const audioPath = saveAudioFile(outputDir, filename, audio);
     const durationSeconds = ext === ".wav" ? wavDurationSeconds(audio) : void 0;
     const sidecar = {
@@ -124994,7 +125039,7 @@ Returns: a text block with the saved .wav file path, speaker/voice assignments, 
     description: `Generate one sound effect from a text description with ElevenLabs (${ELEVENLABS_SFX_MODEL}) \u2014 the lane that fills a channel's sfx catalog so a shot's \`sound.sfx\` has a file behind it.
 
 Use for the cut effects a storyboard names in window.SFX (scenes-schema \xA7sound effects): a whoosh on a whip transition, a low hit on the line before a drop, a tick or pop when a figure lands on a slide, a riser under a build, a 30-second room-tone loop for a bed. Write the prompt as a description in the vendor's own vocabulary (whoosh \xB7 impact \xB7 braam \xB7 riser \xB7 click \xB7 texture \xB7 ambience), one sound per call, with its shape spelled out ("short soft whoosh, fabric through air, no tail"); set durationSeconds for one-shots (a whoosh 0.6\u20131.0 s, a hit 1\u20132 s, a riser 2\u20134 s) and loop: true with 10\u201330 s for a bed. promptInfluence above the ${DEFAULT_ELEVENLABS_SFX_PROMPT_INFLUENCE} default reads the prompt more literally; below it, more freely. Save straight into the channel catalog \u2014 outputPath data/<channel>/assets/audio/sfx, filename <id>.wav \u2014 then register the row with resolve-asset.py --ensure and point its note at the .json sidecar this tool writes next to the file (tool, model, prompt, seconds, request id, date, rights). Generated once, an effect is a channel asset reused at $0 in every later episode.
-Do NOT use for music or a melodic bed \u2014 that is music_plan \u2192 music_execute with the saved music model. Do NOT use for a clip's own soundtrack \u2014 that is the model's native audio through visual.audio. Do NOT request a loop under 5 s (it seams audibly under narration). The endpoint has no WAV format of its own: the server asks for PCM and writes the RIFF header itself, so the file is a mono 16-bit WAV the builder reads directly; a 403 output_format_not_allowed means the plan lacks that rate \u2014 retry with pcm_24000. API pricing is per minute of generated audio, $${ELEVENLABS_SFX_USD_PER_MINUTE.toFixed(2)} on every plan (pricing/api, read 2026-09-16), so a one-second effect is about $0.002; the ledger key is sfx.elevenlabs with the measured seconds as the quantity. Free-tier output is non-commercial and needs attribution \u2014 check the plan before publishing.
+Do NOT use for music or a melodic bed \u2014 that is music_plan \u2192 music_execute with the saved music model. Do NOT use for a clip's own soundtrack \u2014 that is the model's native audio through visual.audio. Do NOT request a loop under 5 s (it seams audibly under narration). Prefer the provider's WAV format, which preserves its channel metadata. Legacy PCM sound effects are wrapped as stereo WAV, separately from mono speech. A 403 output_format_not_allowed means the plan lacks that rate; pcm_24000 is the supported lower-rate alternative. API pricing is per minute of generated audio, $${ELEVENLABS_SFX_USD_PER_MINUTE.toFixed(2)} on every plan (pricing/api, read 2026-09-16), so a one-second effect is about $0.002; the ledger key is sfx.elevenlabs with the measured seconds as the quantity. Free-tier output is non-commercial and needs attribution \u2014 check the plan before publishing.
 
 Returns: a text block with the saved WAV path, the provenance sidecar path, the model, format, the measured duration, the USD estimate at the per-minute rate, and the request id.`,
     inputSchema: {
@@ -125024,7 +125069,7 @@ Returns: a text block with the saved WAV path, the provenance sidecar path, the 
         },
         outputFormat: {
           type: "string",
-          description: `Vendor output format (default "${DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT}" \u2014 mono 16-bit PCM at 48 kHz, wrapped as WAV here; the builder mixes at 48 kHz). pcm_44100 and pcm_24000 are the same wrapped as WAV at those rates \u2014 pcm_24000 is the fallback when the plan refuses the higher rate (403 output_format_not_allowed). mp3_44100_128 is a preview only; it never enters the build.`,
+          description: `Vendor output format (default "${DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT}" \u2014 the provider's self-describing WAV at 48 kHz). WAV preserves the supplied channel layout; legacy PCM is interleaved stereo wrapped as WAV. pcm_24000 is the lower-rate alternative when the plan refuses a higher rate (403 output_format_not_allowed). mp3_44100_128 is a preview only; it never enters the build.`,
           enum: [...ELEVENLABS_SFX_OUTPUT_FORMATS],
           default: DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT
         },
@@ -128019,7 +128064,7 @@ async function manageLocation(args) {
 // src/speech.ts
 import { createHash as createHash20, randomUUID as randomUUID8 } from "node:crypto";
 import { readFileSync as readFileSync32, writeFileSync as writeFileSync25, renameSync as renameSync8, mkdirSync as mkdirSync19, existsSync as existsSync30 } from "node:fs";
-import { dirname as dirname8, resolve as resolve9, join as join15 } from "node:path";
+import { dirname as dirname8, resolve as resolve9, join as join15, relative as relative2 } from "node:path";
 import * as nodeModule7 from "node:module";
 import { execFileSync as execFileSync14 } from "node:child_process";
 var voiceContract = () => nodeModule7.createRequire(import.meta.url)("../../skills/_shared/character-voice.js");
@@ -128044,6 +128089,37 @@ var speechManageSchema = external_exports.object({
 }).strict();
 var hash4 = (s2) => createHash20("sha256").update(s2).digest("hex");
 var object5 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
+function syncProductionClip(scene, boardDir, videoPath, oldClip, warnings) {
+  const duration4 = (file) => Number(execFileSync14(
+    "ffprobe",
+    ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=duration", "-of", "default=nw=1:nk=1", file],
+    { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }
+  ).trim());
+  const production = object5(scene.productionPlan), cuts = production.cuts;
+  if (Array.isArray(cuts) && cuts.length) {
+    const cut = object5(cuts[0]);
+    if (cuts.length !== 1 || cut.kind !== "generated_video" || Number(cut.start ?? 0) !== 0 || typeof oldClip !== "string" || typeof cut.path !== "string" || resolve9(boardDir, cut.path) !== resolve9(boardDir, oldClip)) {
+      warnings.push("The bound video changed; the authored production cuts were preserved and need an explicit edit before playback uses this clip.");
+      return;
+    }
+    try {
+      if (Math.abs(Number(cut.seconds) - duration4(resolve9(boardDir, oldClip))) > 0.05) {
+        warnings.push("The existing production cut has an authored duration; it was preserved for an explicit edit.");
+        return;
+      }
+    } catch {
+      warnings.push("Could not verify the existing production cut duration; it was preserved for an explicit edit.");
+      return;
+    }
+  }
+  try {
+    const seconds = duration4(videoPath);
+    if (!Number.isFinite(seconds) || seconds <= 0) throw new Error("Missing video duration");
+    scene.productionPlan = { ...production, cuts: [{ kind: "generated_video", path: relative2(boardDir, videoPath), start: 0, seconds }] };
+  } catch {
+    warnings.push("Could not measure the bound video stream; production cuts were not changed.");
+  }
+}
 function speechRevision(line, character) {
   return hash4(JSON.stringify(actingContract().speechRevisionPayload(line, character?.tts)));
 }
@@ -128292,6 +128368,7 @@ function manageSpeech(args) {
         video2.speechStatus = "stale";
         invalidated = { video: video2, edit: true };
       } else {
+        if (!tailTrim) syncProductionClip(scene, dirname8(file), videoPath, video2.clip, plan2.warnings);
         video2.clip = args.videoPath;
         video2.speechBinding = {
           ...plan2,
@@ -128312,6 +128389,22 @@ function manageSpeech(args) {
       if (native) {
         scene.sound = { ...sound, audioSource: "video" };
         for (const { line } of selected) if (line.mediaStatus === "needs_audio") delete line.mediaStatus;
+      } else if (!selected.length && sound.audioSource === "video") {
+        try {
+          const streams = execFileSync14(
+            "ffprobe",
+            ["-v", "error", "-select_streams", "a", "-show_entries", "stream=index", "-of", "csv=p=0", videoPath],
+            { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }
+          ).trim();
+          if (!streams) {
+            const silentSound = { ...sound };
+            delete silentSound.audioSource;
+            scene.sound = silentSound;
+            plan2.warnings.push("The bound speechless clip has no audio stream; the previous video soundtrack source was removed. Supply the silent card clock separately.");
+          }
+        } catch {
+          plan2.warnings.push("Could not inspect the bound clip audio streams; the existing sound source was preserved for inspection before assembly.");
+        }
       }
       visual.video = video2;
       scene.visual = visual;
@@ -134202,13 +134295,13 @@ var characterPanelSchema = external_exports.object({
   reserveUsd: external_exports.number().finite().nonnegative().optional()
 }).strict();
 var FRAMING = {
-  face: { size: [1024, 1024], text: "Close head portrait of one character, front facing, neutral expression, the complete head and hair visible, the head filling 70 percent of the image height." },
+  face: { size: [1024, 1024], text: "Head-only identity portrait, front facing, neutral expression, complete hair, ears and chin visible, head filling 70 percent of image height with plain background around it. No shoulders, torso or clothing: outfit comes from the body panels." },
   front: { size: [1024, 1536], text: "Headless front costume mannequin of this character: nothing above the neck, from the neck and shoulders down to the shoes, neutral stance, arms relaxed, the subject filling 85 percent of the image height." },
   back: { size: [1024, 1536], text: "Turn this headless costume mannequin around 180 degrees so its back faces the camera, keeping the same costume. Show it from directly behind, from the neck down to the heels: the back of the garments, straps and belt and the heels of the footwear; anything worn on one side now sits on the other side of the image. Nothing above the neck. The subject fills 85 percent of the image height." }
 };
 var BODY = "head, face, hair, ears, tusks, helmet, text, watermark, collage, multiple views, border";
 var NEGATIVE = {
-  face: "text, watermark, collage, multiple views, border",
+  face: "shoulders, torso, clothing, shirt, text, watermark, collage, multiple views, border",
   front: BODY,
   back: `front view, chest, belt buckle, palms facing camera, toes facing camera, ${BODY}`
 };

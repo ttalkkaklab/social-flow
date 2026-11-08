@@ -12,6 +12,7 @@ export const characterPanels = () => load(fileURLToPath(new URL('../../skills/ch
 const FRAME_FIELDS = {
     seedance_img2video: ['sourceImagePath', 'lastImagePath'], astra_img2video: ['firstFramePath', 'lastFramePath'],
     astra_audio2video: ['imagePath'], astra_genai_img2video: ['imageUri', 'lastFrameUri'],
+    astra_genai_desktop_img2video: ['imagePath', 'lastFramePath'], astra_genai_desktop_audio2video: ['imagePath'],
     astra_genai_audio2video: ['imagePath', 'lastFramePath'], mlx_video_generate: ['firstFrameImagePath', 'lastFrameImagePath'], ltx_video_generate: ['firstFrameImagePath', 'lastFrameImagePath'],
 };
 // No framing words here: "face close-up" in this sentence opened every 2026-10-31 test render on a close-up.
@@ -38,8 +39,8 @@ function msrPanelBinding(paths, refs, compact = false) {
             groups.set(path.dirname(file), [...(groups.get(path.dirname(file)) ?? []), `Image ${i + 1} (${PANEL_VIEWS[view]})`]);
     });
     return [...groups].filter(([, items]) => items.length > 1).map(([folder, items]) => compact
-        ? `Images ${items.map(item => item.replace(/Image (\d+) \(([^)]+)\)/, '$1($2)')).join(', ')}: ONE ${path.basename(folder)}; combine head and outfit.`
-        : `${items.join(', ')} show one character, ${path.basename(folder)}: render one complete character with the head and hair from the face and the body and outfit from the headless panels.`).join('\n');
+        ? `Images ${items.map(item => item.replace(/Image (\d+) \(([^)]+)\)/, '$1($2)')).join(', ')}: ONE ${path.basename(folder)}; head/hair only from face; physique/clothes only from body; ignore face-panel clothing.`
+        : `${items.join(', ')} show one character, ${path.basename(folder)}: render one complete character with the head and hair from the face and the body and outfit from the headless panels. Ignore clothing visible in the face panel; never duplicate a person for separate panels.`).join('\n');
 }
 /** A character-sheet panel counts once per sheet folder; any other character image counts alone. */
 function characterKey(file) {
@@ -72,7 +73,9 @@ export function prepareVideoImages(tool, input, shot, episode) {
     if (canonicalMsr) {
         const ids = [].concat(rawCast ?? []).map(entry => typeof entry === 'string' ? entry : entry.id);
         // Old combined pictures and omitted faces cannot redefine a declared principal's identity.
-        references = [...characterPanels().canonicalReferences(path.join(episode, 'storyboard'), String(shot.id ?? 'shot'), ids, 'both'),
+        if (visual.video?.referenceLayout !== undefined && !['panels', 'combined'].includes(visual.video.referenceLayout))
+            throw new Error('image_plan_invalid: unknown MSR referenceLayout');
+        references = [...characterPanels().canonicalReferences(path.join(episode, 'storyboard'), String(shot.id ?? 'shot'), ids, 'both', { combined: visual.video?.referenceLayout === 'combined' }),
             ...references.filter(ref => ref.role !== 'character')];
     }
     const videoRefs = references.filter(ref => ['video', 'both'].includes(ref.use));

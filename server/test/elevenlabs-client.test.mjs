@@ -375,6 +375,32 @@ describe('ElevenLabs provider boundary (mocked fetch)', () => {
     }
   });
 
+  it('preserves SFX WAV headers and stereo PCM duration without using the mono speech wrapper', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'eleven-sfx-channels-'));
+    const savedFetch = globalThis.fetch, savedKey = config.elevenLabsApiKey;
+    const pcm = Buffer.alloc(24_000 * 2 * 2 * 3);
+    const wav = pcmToWav(pcm, 24_000, 2);
+    config.elevenLabsApiKey = 'test-key';
+    try {
+      for (const format of ['pcm_24000', 'wav_24000']) {
+        globalThis.fetch = async () => new Response(format.startsWith('wav') ? wav : pcm);
+        const result = await generateElevenLabsSoundEffect(elevenLabsSfxSchema.parse({ text: 'paper', durationSeconds: 3, outputFormat: format, outputPath: dir, filename: format + '.wav' }));
+        assert.equal(result.success, true);
+        const bytes = readFileSync(result.audioPath);
+        assert.deepEqual(bytes, wav);
+        assert.equal(bytes.readUInt16LE(22), 2);
+        assert.equal(result.durationSeconds, 3);
+      }
+      globalThis.fetch = async () => new Response(pcm);
+      const invalid = await generateElevenLabsSoundEffect(elevenLabsSfxSchema.parse({ text: 'paper', outputFormat: 'wav_24000', outputPath: dir, filename: 'invalid.wav' }));
+      assert.equal(invalid.success, false);
+    } finally {
+      globalThis.fetch = savedFetch;
+      config.elevenLabsApiKey = savedKey;
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('a paid sound effect and a dictionary POST are submitted once, even on a 5xx', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'eleven-once-'));
     const savedFetch = globalThis.fetch, savedKey = config.elevenLabsApiKey;
