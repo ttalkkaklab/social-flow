@@ -2350,14 +2350,22 @@ window.STORYBOARD_READY = (async function () {
   // Production cuts are the review unit; a representative frame cannot certify them.
   function productionCutsHtml(s) {
     var cuts = s.productionPlan && s.productionPlan.cuts;
-    if (!Array.isArray(cuts) || !cuts.length) return '';
+    // attach_video binds the source clip before assembly creates an edit's cut list.
+    // Keep explicit cuts authoritative; otherwise preview the complete bound source.
+    var fullSource = !Array.isArray(cuts) || !cuts.length;
+    if (fullSource) {
+      var clip = s.visual && s.visual.video && s.visual.video.clip;
+      if (typeof clip !== 'string' || !clip.trim()) return '';
+      cuts = [{ kind: 'generated_video', path: clip }];
+    }
     var ko = LANG === 'ko';
     var heading = ko ? '제작 컷 전체' : 'All production cuts';
     var rows = cuts.map(function (entry, index) {
       var cut = entry || {};
-      var src = typeof cut.path === 'string' ? cut.path : '';
-      var local = src && !/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(src);
-      var duration = Number.isFinite(cut.seconds) && cut.seconds > 0 ? cut.seconds + 's' : (ko ? '길이 미확인' : 'Duration unknown');
+      var src = typeof cut.path === 'string' ? cut.path.trim() : '';
+      var local = src && !/^(?:[a-z][a-z0-9+.-]*:|[/\\]{2})|[\x00-\x1f\x7f]/i.test(src);
+      var duration = fullSource ? (ko ? '원본 전체' : 'Full source') :
+        Number.isFinite(cut.seconds) && cut.seconds > 0 ? cut.seconds + 's' : (ko ? '길이 미확인' : 'Duration unknown');
       var label = (ko ? '컷 ' : 'Cut ') + (index + 1) + ' · ' + (cut.kind || '?') + ' · ' + duration;
       var media = '';
       var fail = ko ? '파일을 표시할 수 없습니다. 경로를 확인하세요.' : 'Cannot display this file. Check its path.';
@@ -2374,7 +2382,7 @@ window.STORYBOARD_READY = (async function () {
         media = '<video src="' + esc(src) + '" controls playsinline preload="metadata" data-start="' + (validRange ? from : '') +
           '" data-end="' + (validRange ? end : '') + '" aria-label="' + esc(label) + '"' + handlers +
           ' onerror="this.nextElementSibling.textContent=this.dataset.error;this.nextElementSibling.hidden=false" data-error="' + esc(fail) + '"></video>' +
-          '<p class="production-cut-error"' + (validRange ? ' hidden' : '') + '>' + esc(rangeError) + '</p>';
+          '<p class="production-cut-error"' + (validRange || fullSource ? ' hidden' : '') + '>' + esc(rangeError) + '</p>';
       } else if (local && /\.(?:png|jpe?g|webp|gif|avif|svg)$/i.test(src)) {
         media = '<a href="' + esc(src) + '" target="_blank" rel="noopener"><img src="' + esc(src) + '" alt="' + esc(label) + '" loading="lazy" onerror="this.parentNode.nextElementSibling.hidden=false"></a>' +
           '<p class="production-cut-error" hidden>' + esc(fail) + '</p>';

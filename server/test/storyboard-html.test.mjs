@@ -9,6 +9,41 @@ const require = createRequire(import.meta.url);
 const { FONT_ASSETS } = require('../../skills/channel/references/review-fonts.js');
 const { storyboardHtml } = require('../../skills/storyboard/references/storyboard-html.js');
 
+test('bound video displays before assembly, while explicit edit cuts retain their ranges', () => {
+  const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
+  const start = template.indexOf('  function productionCutsHtml(s)');
+  const source = template.slice(start, template.indexOf('  function camOf(s)', start));
+  const render = shot => runInNewContext(source + '\nproductionCutsHtml(shot)', {
+    shot, LANG: 'en', WIDE: true,
+    esc: v => String(v ?? '').replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;'),
+  });
+  const shot = { duration: 2, visual: { video: { clip: '../.work/video/native.mp4' } } };
+  for (const productionPlan of [undefined, { cuts: [] }]) {
+    const html = render({ ...shot, productionPlan });
+    assert.match(html, /<video src="\.\.\/\.work\/video\/native\.mp4" controls/);
+    assert.match(html, /class="production-cut-error" hidden/);
+    assert.doesNotMatch(html, /ontimeupdate=/); // Full source, never truncate to the authored estimate.
+  }
+  shot.visual.video.clip = '/Volumes/data/replacement.mp4';
+  assert.match(render(shot), /src="\/Volumes\/data\/replacement\.mp4"/);
+  shot.productionPlan = { cuts: [
+    { kind: 'generated_video', path: '../edit/a.mp4', start: 1, seconds: 2 },
+    { kind: 'generated_video', path: '../edit/b.mp4', start: 0, seconds: 3 },
+  ] };
+  const edit = render(shot);
+  assert.equal((edit.match(/<video /g) || []).length, 2);
+  assert.match(edit, /data-start="1" data-end="3"/);
+  assert.doesNotMatch(edit, /replacement\.mp4/);
+  shot.productionPlan.cuts[0].seconds = undefined;
+  assert.match(render(shot), /class="production-cut-error">/); // Invalid explicit ranges stay visible.
+  assert.equal(render({ visual: { video: { prompt: 'planned only' } } }), '');
+  for (const path of ['javascript:evil.mp4', ' https://example.test/x.mp4', '\njavascript:alert(1)//.svg',
+    'h\nttps://example.test/x.mp4', '\\\\example.test\\x.mp4', '/\\example.test/x.svg']) {
+    assert.doesNotMatch(render({ visual: { video: { clip: path } } }), /<(?:video|a|img)\b/);
+    assert.doesNotMatch(render({ productionPlan: { cuts: [{ path, start: 0, seconds: 1 }] } }), /<(?:video|a|img)\b/);
+  }
+});
+
 test('music lanes show one anchored span across scenes and label the score-free opening', () => {
   const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
   const start = template.indexOf('  var cueAt = []');

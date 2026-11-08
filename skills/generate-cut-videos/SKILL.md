@@ -26,6 +26,11 @@ and quotes its on-screen lines. MSR's lines and image bindings are added by `vid
 The tool records what the prompt came from; when the shot's characters, on-screen lines,
 frame plan, camera, focus or MSR framing change later, the stage tools warn and the review
 page marks the prompt stale. Rewrite it with `shot_prompt` before planning that shot.
+MSR submits the composed opening image as a background reference; it does not pin that
+image to frame zero. Do not promise exact framing from that input alone. If the actual
+result repeatedly changes a required locked setup or duplicates a referenced person,
+explain the limitation and prepare a scoped first-frame-conditioned alternative. Preserve
+the saved model and resolution unless the user authorizes a change, and keep attempt limits.
 
 **Approval.** Plan each shot with `video_plan` (it sends the stored prompt when args name
 none, and on MSR the start image rides in the background slot). Before `video_execute`,
@@ -41,6 +46,25 @@ approval, or changed (prompt, start/end image or lines) after its yes. `render-a
 
 **Generate.** Run `video_execute` within the saved models and existing budgets; use
 `video_status` after an interruption. Import usable existing clips instead of regenerating.
+For a requested correction, reconcile the opening image, camera endpoints, performance,
+line acting and prompt before replanning. Remove the superseded action from all of them:
+an empty-handed report must not retain equipment handling, and a distant recognition
+must not retain a call-and-response. Repeated camera setups keep their position, lens,
+background scale and screen sides. Name each visible person's appearance, position and
+speaking turn; reference panels identify one person, not additional cast members.
+Trace an exit through visible free space in the opening image before choosing a screen
+edge. A character cannot leave through a wall merely because the prompt says "exit left".
+Inspect the entire departure interval, including the edge crossing; correct identity
+does not establish a valid walking path.
+After generation, inspect whether those particular corrections appear in the actual clip.
+A successful receipt or an attached player does not establish correct blocking. Preserve
+failed versions and distinguish generated, connected and visually verified results.
 Bind a clip with on-screen dialogue through `speech_manage attach_video`; an MSR clip binds
-as `native`, with no line audio (shot-speech.md adapter layer). Look at each clip before
+as `native`, with no line audio (shot-speech.md adapter layer). Before reporting that the
+storyboard is connected, open the user's review page and verify that every completed
+shot has a video player whose metadata loads without a media error. File existence and
+`visual.video.clip` alone do not prove the page displays it. The bundled template previews
+that bound source when `productionPlan.cuts` is absent; an explicit cut list takes priority.
+Refresh an older review shell from the bundled template instead of inventing edit cuts
+just to expose a source clip. Look at each clip before
 assembly. Stop before assembly; review-cut-videos runs only when the user asks.
