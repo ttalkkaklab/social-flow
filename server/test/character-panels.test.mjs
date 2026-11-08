@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync, symlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
@@ -57,5 +57,27 @@ test('canonical panel selection keeps ownership and rejects wrong-purpose or mis
   rmSync(join(f.board,'cast.json'));
   f.manifest.panels.face.purpose='episode_scene';f.save();
   assert.throws(()=>canonicalReferences(f.board,'s0001',['hero'],'both'),/character_panel_missing: hero.*face/);
+ }finally{f.clean();}
+});
+
+test('unified MSR references require explicit selection and current canonical source hashes',()=>{
+ const f=fixture();try {
+  const {canonicalReferences,sheetPanels,boardPanelFindings}=require('../../skills/channel/references/character-panels.js');
+  const refs=()=>canonicalReferences(f.board,'s0001',['hero'],'both',{combined:true});
+  assert.throws(refs,/character_msr_reference_missing/);
+  const digest=file=>createHash('sha256').update(readFileSync(join(f.folder,file))).digest('hex');
+  writeFileSync(join(f.folder,'msr.ppm'),ppm(100,120));
+  f.manifest.panels.msr={file:'msr.ppm',purpose:'character_reference',view:'msr',sha256:digest('msr.ppm'),sourceHashes:{face:digest('face.ppm'),front:digest('front.ppm')}};f.save();
+  assert.equal(refs().length,1);
+  assert.equal(canonicalReferences(f.board,'s0001',['hero'],'image').length,3);
+  assert.equal(boardPanelFindings({SB_DOC:{characters:[{id:'hero',panels:sheetPanels(f.board,['hero']).get('hero')}]}},f.board,f.root).some(x=>x.slot==='msr'),false);
+  mkdirSync(join(f.folder,'heads'));
+  writeFileSync(join(f.folder,'heads/face.ppm'),readFileSync(join(f.folder,'face.ppm')));
+  f.manifest.panels.face.file='heads/face.ppm';f.save();
+  assert.equal(refs().length,1);
+  writeFileSync(join(f.folder,'heads/face.ppm'),ppm(100,100,99));
+  assert.throws(refs,/character_msr_reference_stale/);
+  f.manifest.panels.msr.file='../identity.md';f.save();
+  assert.throws(refs,/character_msr_reference_missing/);
  }finally{f.clean();}
 });

@@ -21,6 +21,7 @@ const local = {
   filename: bareFilenameSchema('video').refine(n => n.endsWith('.mp4')).optional(),
 };
 const common = z.object({ model, prompt: z.string().trim().min(1), resolution,
+  promptProvenance: z.enum(['typed', 'enhanced']).optional().describe("Desktop rewrite policy: typed follows the app's automatic enhancement settings; enhanced sends a caller-finished prompt without another rewrite, e.g. 'enhanced'. Omitted keeps the Desktop default. This is not a quality review."),
   seed: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
   fps: z.union([z.literal(24), z.literal(25), z.literal(48), z.literal(50)]).default(24),
   cameraMotion: z.enum(['none','dolly_in','dolly_out','dolly_left','dolly_right','jib_up','jib_down','static','focus_shift']).optional(),

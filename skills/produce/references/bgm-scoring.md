@@ -146,6 +146,15 @@ scenes-schema §sound effects.
 
 ## 3. Cues — this part is craft
 
+For new timeline-scored work, use `MUSIC.$timeline` (scenes-schema §Music cues). One span
+names the cue, entry/exit shot-ID anchors, fades and a span-relative gain curve. Assembly
+resolves the actual edited frame clock before adding the music; cuts inside a span never
+restart its file or gain. `[]` means no score. This path skips the legacy hook and global
+music fades below; it retains optional EQ, ducking and music-only silence/drop windows.
+The rules below describe the legacy bed path and optional editorial choices, not compulsory
+music placement. The renderer resolves authored timing; it cannot identify an emotional
+turn in the accepted footage. Listen when a listening review is requested.
+
 A single bed can support the whole episode. Choose changes from the story's turns using
 [retention-direction.md](../../storyboard/references/retention-direction.md) §4, then listen
 to the final mix using §5. Cue placement is an editorial decision. Autoproduce may reuse multiple cues or generate them within its authorized allocation.

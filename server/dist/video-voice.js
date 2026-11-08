@@ -118,11 +118,15 @@ function msrSubject(character, refs, context) {
     const declared = [].concat(object(context.shot.visual).character ?? [])
         .map(entry => typeof entry === 'string' ? entry : text(object(entry).id));
     if (declared.includes(text(character.id)) && existsSync(path.join(context.episode, 'storyboard', 'cast.json'))) {
-        const { sheetPanels } = load('../../skills/channel/references/character-panels.js');
+        const { sheetPanels, canonicalReferences } = load('../../skills/channel/references/character-panels.js');
         const dir = path.join(context.episode, 'storyboard');
         // Planning rebuilt these references from this same registered owner; transport aliases no longer identify the slot.
         const panels = sheetPanels(dir, [text(character.id)]).get(text(character.id));
-        ownedPaths = Object.values(panels).map(file => realpathSync(path.resolve(dir, file)));
+        const combined = object(object(context.shot.visual).video).referenceLayout === 'combined';
+        const files = combined
+            ? canonicalReferences(dir, text(context.shot.id), [text(character.id)], 'video', { combined: true }).map(ref => ref.path)
+            : Object.values(panels);
+        ownedPaths = files.map(file => realpathSync(path.resolve(dir, file)));
     }
     else
         ownedPaths = Array.isArray(owned) ? owned.map(value => realpathSync(path.resolve(context.episode, 'storyboard', String(value)))) : [];
@@ -163,14 +167,6 @@ export function prepareVideoVoice(tool, input, context) {
     const args = { ...input };
     const lines = (Array.isArray(context.shot.narration) ? context.shot.narration : []).map(object).filter(line => text(line.tts));
     const msr = tool === 'astra_genai_msr';
-    const finishArgs = () => {
-        if (msr && typeof args.prompt === 'string') {
-            const policy = load('../../skills/_shared/scene-acting.js').VIDEO_TEXT_POLICY;
-            if (!args.prompt.endsWith(policy))
-                args.prompt += '\n\n' + policy;
-        }
-        return args;
-    };
     // MSR renders authored dialogue and voiceover into its own soundtrack; a pinned sample, when the
     // gateway takes one, sets the timbre (user directive 2026-10-31). A cut without dialogue is fine.
     if (msr) {
@@ -178,7 +174,7 @@ export function prepareVideoVoice(tool, input, context) {
             throw new Error('visual.video.voice is retired: MSR uses the speaker\'s voice sample when one is pinned');
     }
     if (!lines.length)
-        return { args: finishArgs() };
+        return { args };
     const doc = object(context.board.SB_DOC), raw = doc.characters;
     const characters = Array.isArray(raw) ? raw.map(object) : Object.entries(object(raw)).map(([id, value]) => ({ ...object(value), id }));
     const visual = object(context.shot.visual);
@@ -359,7 +355,7 @@ export function prepareVideoVoice(tool, input, context) {
         warnings.push('Use the final composed pinned-voice WAV. ASTRA re-encodes supplied audio; mouth motion and speaker identity remain unreviewed.');
     if (prompt.length && typeof args.prompt === 'string')
         args.prompt += (msr ? '\n\n' : '\n\nVoice continuity guidance:\n') + prompt.join('\n');
-    return { args: finishArgs(), voiceContinuity: { version: 1, strategy, speakers, warnings,
+    return { args, voiceContinuity: { version: 1, strategy, speakers, warnings,
             revision: hash({ lines, speakers, strategy, performance: context.shot.performance }),
             review: { voiceIdentity: 'not_reviewed', dialogue: 'not_reviewed', speakerAssignment: 'not_reviewed', lipSync: 'not_reviewed' } } };
 }

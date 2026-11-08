@@ -48,6 +48,7 @@ const FORMAT_RESOLVE = path.resolve(SELF_DIR, '..', '..', 'platform-guide', 'ref
 const PROMPT = require(path.join(SELF_DIR, 'assemble-bg-prompt.js'));
 const { scenePlan } = require('../../produce/references/seedance-route.js');
 const { mixFindings, musicEnvelopeFindings } = require('../../produce/references/sound-mix-contract.js');
+const { timelineFindings } = require('../../produce/references/music-timeline.js');
 const { assemble: assembleSpatialPrompt } = require('./spatial-prompts.js');
 const { APPEARANCE_WORDS } = require('./cut-treatments.js');
 
@@ -128,6 +129,7 @@ function parseTransition(t) {
 
 function isStillCard(scene) {
   const v = (scene && scene.visual) || {};
+  if (scene && scene.shot && scene.shot.render && scene.shot.render.mode === 'generated_video') return false;
   if (scene && (scene.type === 'broll' || scene.type === 'outro')) return false;
   if (v.source === 'recording' || v.source === 'screencast' || v.picture === 'recording') return false;
   if (v.source === 'stock' && v.clip) return false;
@@ -967,24 +969,8 @@ function check(win, fmt, opts) {
     });
   }
 
-  /* Consecutive stills of the same size and angle in one scene read as a jump cut
-     (30-degree / two-step-size rule). Filmed cards are the vlog exception, and so is an
-     HTML explanation screen (shot.render.mode) — the whole picture changes there. */
-  const isExplainScreen = (s) => s.shot && s.shot.render &&
-    ['motion_html', 'data_graph', 'editorial_html', 'object_html', 'character_html'].indexOf(s.shot.render.mode) !== -1;
-  for (let i = 1; i < scenes.length; i++) {
-    const prev = scenes[i - 1], cur = scenes[i];
-    if (!isStillCard(prev) || !isStillCard(cur)) continue;
-    if (isExplainScreen(prev) || isExplainScreen(cur)) continue;
-    if (prev.scene === undefined || prev.scene !== cur.scene) continue;
-    const pr = SIZE_RANK[prev.shot && prev.shot.size];
-    const cr = SIZE_RANK[cur.shot && cur.shot.size];
-    const pa = (prev.shot && prev.shot.angle) || 'eye';
-    const ca = (cur.shot && cur.shot.angle) || 'eye';
-    if (pr !== undefined && pr === cr && pa === ca)
-      warn('shot ' + (i + 1), 'same size and angle as the previous still in scene ' + cur.scene +
-                              ' — a jump cut. Change size by two steps or the angle (directing-grammar §6)');
-  }
+  // Size and eye-level angle do not establish a jump cut: subjects, reverse views and
+  // reactions may change. storyboard_read.boundaryReview exposes each join for review.
 
   // The format owns the default cap; an explicit channel motion policy may raise or lower it.
   // This is a screen-policy cap: imported generated clips count even when they cost $0.
@@ -1608,7 +1594,8 @@ function check(win, fmt, opts) {
   if (win.MUSIC && typeof win.MUSIC === 'object') {
     const mix = win.MUSIC.$mix;
     for (const finding of mixFindings(mix)) bad('window.MUSIC.$mix', finding);
-    Object.keys(win.MUSIC).filter((name) => name !== '$mix').forEach((name) => {
+    for (const finding of timelineFindings(win.MUSIC, scenes)) bad('window.MUSIC.$timeline', finding);
+    Object.keys(win.MUSIC).filter((name) => name !== '$mix' && name !== '$timeline').forEach((name) => {
       const c = win.MUSIC[name];
       const at = `window.MUSIC.${name}`;
       if (!c || typeof c !== 'object') {
@@ -2174,6 +2161,9 @@ function selftest() {
   ok('a dissolve inside one scene is flagged',
      has(run([cover, Object.assign({}, goodShot, { scene: 2 }),
               dz({ transition: 'dissolve', scene: 2 })]), /same place and time/));
+  ok('a generated-video plan without a clip is not a still card',
+     !isStillCard({ type: 'points', visual: {}, shot: { render: { mode: 'generated_video' } } }) &&
+     isStillCard({ type: 'points', visual: {}, shot: { render: { mode: 'still_camera' } } }));
   ok('an explanation screen after a still of the same size is not a jump cut',
      !run([cover,
            Object.assign({}, goodShot, { scene: 2, shot: { feel: 'a', size: 'ls', angle: 'eye', info: 'one', infoType: 'other' } }),
@@ -2195,11 +2185,6 @@ function selftest() {
            Object.assign({}, goodShot, { scene: 1, shot: { feel: 'b', size: 'ls', angle: 'eye', info: 'two', infoType: 'other' } }),
            Object.assign({}, goodShot, { scene: 1, shot: { feel: 'c', size: 'insert', angle: 'eye', info: 'three', infoType: 'other' } }), ctaShot])
        .some((f) => /close opening owes/.test(f.what)));
-  ok('same size and angle on consecutive stills in one scene is flagged',
-     has(run([cover,
-              Object.assign({}, goodShot, { scene: 2, shot: { feel: 'a', size: 'ms', angle: 'eye', info: 'one', infoType: 'other' } }),
-              Object.assign({}, goodShot, { scene: 2, shot: { feel: 'b', size: 'ms', angle: 'eye', info: 'two', infoType: 'other' } })]),
-         /jump cut/));
   const axis = (line, azimuth, extra) => Object.assign({}, goodShot, { scene: 2,
     shot: Object.assign({}, goodShot.shot, { size: 'ms', info: 'axis ' + azimuth, space: { frame: 'camera', layout: 'A와 B', facing: '서로 마주 본다', line }, coverage: { azimuth } }, extra || {}) });
   const axisStructure = { version: 'structure-v1', scenes: [
@@ -2680,9 +2665,7 @@ function selftest() {
     ok('one size across a scene is a coverage warning',
        has(run([at(cover, 1), at(goodShot, 1), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1), scene(2)]) }), /coverage is two sizes/));
     ok('a repeated shot.info anywhere on the board is a coverage warning',
-       has(run([at(cover, 1), at(goodShot, 1, { shot: Object.assign({}, goodShot.shot, { size: 'ls', info: '질문' }) }), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1), scene(2)]) }), /shot\.info says what shot/));
-    ok('a near-duplicate shot.info warns too',
-       has(run([at(cover, 1, { shot: Object.assign({}, cover.shot, { info: '땅속 온도는 겨울에도 거의 변하지 않는다' }) }), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { info: '겨울에도 땅속 온도는 거의 변하지 않아요' }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /says what shot 1/));
+       has(run([at(cover, 1), at(goodShot, 1, { shot: Object.assign({}, goodShot.shot, { size: 'ls', info: '질문' }) }), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1), scene(2)]) }), /repeated shot\.info text/));
     ok('a purpose that repeats the question warns',
        has(run(board, { STRUCTURE: structure(clean, [{ id: 'q1', title: 't', purpose: '김치가 왜 안 얼었는지 알아낸다', question: '김치가 왜 안 얼었을까', payoff: 2, scenes: [1, 2] }]) }), /purpose repeats question|says what the viewer learns/));
     ok('a payoff scene another scene out-answers warns',
@@ -2704,8 +2687,6 @@ function selftest() {
        has(run(board, { STRUCTURE: structure(clean, [{ id: 'q1', title: 't', purpose: '한 목적', question: '세종은 왜 눈을 상하면서 몰래 글자를 지었을까', payoff: 2, scenes: [1, 2] }]) }), /asks two things/));
     ok('a purpose that chains two actions warns',
        has(run(board, { STRUCTURE: structure(clean, [{ id: 'q1', title: 't', purpose: '홀로 글자를 만든 세종이 반대를 딛고 그 글자를 세상에 낸다', scenes: [1, 2] }]) }), /purpose chains two actions/));
-    ok('a shot.info an earlier shot already said out loud warns',
-       has(run([at(cover, 1, { narration: [{ tts: '오늘 한 가지가 달라졌어요' }] }), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { info: '오늘 한 가지가 달라졌다' }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /repeats what shot 1 already said out loud/));
     ok('a gaze at something with no space.line in the scene warns',
        has(run([at(cover, 1, { shot: Object.assign({}, cover.shot, { space: { frame: 'x', layout: '단상 앞 인물들' } }) }), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { space: { frame: 'x', layout: '인물들', facing: '인물들은 단상을 향해 서 있음' } }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /writes space\.line/) &&
        !has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { space: { frame: 'x', layout: 'y', facing: '인물이 카메라를 정면으로 바라봄' } }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /writes space\.line/));

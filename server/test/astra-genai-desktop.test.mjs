@@ -13,6 +13,9 @@ test('native feature bodies separate temporal references, audio opt-in, edit cap
   assert.deepEqual(image.inputs,{startFrame:{assetId:'asset-a'},endFrame:{assetId:'asset-b'}});
   const {duration,...audio}=base;
   assert.equal(buildDesktopBody('audio-to-video',{...audio,audioPath:'wav'},{wav:'asset-w'}).allowAudioTruncation,false);
+  assert.equal(buildDesktopBody('audio-to-video',{...audio,audioPath:'wav',promptProvenance:'enhanced'},{wav:'asset-w'}).params.promptProvenance,'enhanced');
+  assert.equal(image.params.promptProvenance,undefined);
+  assert.throws(()=>buildDesktopBody('image-to-video',{...base,imagePath:'a',promptProvenance:'skip'},{a:'asset-a'}));
   assert.throws(()=>buildDesktopBody('audio-to-video',{...base,audioPath:'wav'},{wav:'w'}));
   assert.throws(()=>buildDesktopBody('image-to-video',{...base,imagePath:'a',loras:[{ref:'opaque'}]},{a:'a'}));
   const edit=buildDesktopBody('retake',{model:base.model,sourceVideoPath:'v',startTime:0,duration:2,targetResolution:{width:576,height:320},reserveUsd:0},{v:'video'});

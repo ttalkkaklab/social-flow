@@ -61,3 +61,17 @@ describe('shot ids', () => {
     assert.match(duplicate[0].what, /duplicate s0002 \(already used by shot 1\)/);
   });
 });
+
+
+test('shared English staging words do not certify duplicated story information', () => {
+  const win = { STORY: { version: 'story-v2' }, STRUCTURE: { version: 'structure-v1',
+    sequences: [{ id: 'q1', scenes: [1], title: 'Night', purpose: 'Find a friend' }],
+    scenes: [{ no: 1, place: 'Club', time: 'Night', event: 'A friend arrives', summary: 'A friend arrives' }] }, SCENES: [
+    { id: 's0001', type: 'points', scene: 1, shot: { info: 'Jeong-eun faces the lens of her tripod camcorder, standing left of the nightclub entrance at night; the closed heavy door is visible behind her right shoulder.' } },
+    { id: 's0002', type: 'points', scene: 1, shot: { info: 'Tight close-up of Kang Jin-su speaking seriously to a person outside frame, then glancing toward his friend outside frame. Only Jin-su face and shoulders are visible, warm lounge lights blurred behind him.' } },
+  ] };
+  const findings = structure.check(win, { draft: true });
+  assert.ok(!findings.some(f => /shot.info.*(already|repeats|repeated|says)/.test(f.what)));
+  win.SCENES[1].shot.info = win.SCENES[0].shot.info;
+  assert.ok(structure.check(win, { draft: true }).some(f => /repeated shot.info text/.test(f.what)));
+});

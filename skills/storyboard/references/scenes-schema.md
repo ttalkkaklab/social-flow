@@ -467,20 +467,14 @@ answer to each.
    adapter limit. A close-up is one useful reason, not the only reason. Never pad a scene
    with a wide/close pair or divide dialogue merely to distribute speakers.
 
-10. **A shot says one new thing.** The unit is the information, not the sentence: a shot may
-    speak several segments, but if they do not rewrite as one `shot.info` line, it is two
-    shots. When a line addresses two things (an answer to the other character and a question
-    to the viewer; a fact and its term explained; a freezing point and a fermentation rate),
-    that is two shots. A term and its meaning are one info when the term is what the shot
-    adds (소비기한은 먹어도 안전한 기한이다) — `COMPREHENSION.terms[].firstShot` explains the
-    term in that shot; a fact plus a term plus its meaning is two shots. The cover's sentences
-    are infos too — a second cover sentence that names
-    what the first one hid has spent the hook, and a cover that says the next shot's fact
-    leaves that shot nothing to add. `shot.info` is the one thing this shot adds, and the
-    shot's own lines say it — when the picture carries it (a visual gag, the water jet) write
-    the info with the cover's "연출 —" prefix; a `shot.info` any other shot already gave, or a
-    line that says again what an earlier shot's info gave, is a repeat, whatever the scene
-    (the checker's repeat is the same words or a 0.6 character-bigram overlap). On an
+10. **A shot carries a readable performance.** One frame may convey several facts,
+    lines, decisions or reactions. `shot.info` summarizes the intended contribution;
+    it does not allocate shots. Shared wording, a question followed by an answer, or
+    a change of speech purpose alone does not require a cut. A repeated description
+    may accompany a meaningful reaction or return to the same view. Compare the whole
+    scene and actual framing using [shot boundaries](shot-boundaries.md), including
+    silence, offscreen events, physical timing and the selected adapter's capacity.
+    On an
     explanation screen `size` is the framing of the drawn subject (`ls` the whole mechanism,
     `cu` the detail, `insert` a bare chart) and `shot.space` is skipped; every generated or
     filmed picture shot writes `shot.space`. The values a chart will draw live in
@@ -2311,6 +2305,47 @@ slots describe the opening cut; each further cut names its own framing in its `S
 sentence, with the reason the scene needs a sequence written on the shot.
 
 ### Music cues (`window.MUSIC` · `sound`)
+
+**Timeline scoring for new work.** Plan the musical role in the storyboard, prepare/reuse
+the cue files, and add music after the picture edit has established the actual shot clock.
+`window.MUSIC.$timeline` is an explicit list of music spans. It replaces the opening default
+bed and shot-level `sound.cue` / `sound.musicGain`; omit it to retain the legacy path below.
+An empty list means no score, with dialogue, native sound and ambience still available.
+
+```js
+window.MUSIC = {
+  piano: { asset: "parting-theme", reason: "the listener accepts the separation" },
+  $timeline: [{
+    id: "parting", cue: "piano",
+    start: { shotId: "s0003", atSeconds: 0.8 },
+    end: { shotId: "s0005", atSeconds: "end" },
+    fadeInSeconds: 0.4, fadeOutSeconds: 1,
+    gain: [{ atSeconds: 0, gainDb: -6 }, { atSeconds: 2, gainDb: 0 }]
+  }]
+};
+```
+
+This starts the file at source time zero **0.8 seconds into s0003**, continues through
+s0004 without restarting, and ends at the actual end of s0005. Gaps between spans contain
+no score. Anchors use stable shot IDs; numeric `atSeconds` counts from the rendered shot
+start and `"end"` follows its actual end. Times/fades use whole milliseconds. Gain points
+start at zero, are relative to the entire span and hold their last value across cuts.
+Each span owns its fades; the legacy opening fade, hook attenuation and ending music fade
+are not added. Ducking, optional EQ and music-only drop/silence windows still apply.
+Overlapping spans mix together, allowing explicitly authored crossfades. Fade lengths must
+fit without overlapping within one span. Match each fade/curve to the selected take.
+
+`compile-sound-plan.js` writes `music-timeline.json` with resolved cue files. After picture
+assembly, `music-timeline.js` resolves anchors against `work/edit-timeline.tsv` at the actual
+FPS, renders `work/bed.wav`, and records `work/music-timeline-resolved.json` with spans and
+`not_reviewed`. It never infers an event from pixels or words: observe the accepted take,
+then set its offset. Missing/repeated IDs, missing rendered cards, offsets outside actual
+shots, reversed spans and curves beyond their actual span fail before replacing the bed.
+Only rendered cards are supported; separately spliced b-roll/outro and build-screencast
+do not consume this contract. Plan music after those insertions only when their assembly
+route gains an explicit final clock. Never claim their timing is covered by this renderer.
+Cues shorter than the span use the existing seamless-loop renderer; prepare sufficient
+music or an intentional loop, and do not silently generate another paid take.
 
 One bed under the whole episode is the default and a perfectly good design. This is for when the
 episode changes what it is doing and the music should say so.

@@ -56,6 +56,19 @@ three-quarter/profile +45°/+90°, right -45°/-90°, rear 180° relative to the
 For an object, bearings use the set's -Y front axis. OTS and POV require `subjectId` and
 `viewerId` of different staged subjects; OTS needs a person as its subject. POV uses eye height.
 
+Write `crop` as visible boundaries, not a copy of `subject` or the action. “Mina reaches
+for the key” describes an event but leaves the camera undecided. A usable insert crop is
+“Only Mina's right hand and the key on the desk; wrist enters at bottom-left, fingertips
+stop short of the key at centre-right; face and torso outside the frame.” Name the
+body boundary for a portrait, the evidence that must fit, and relevant screen placement.
+Do not add a face or the whole room just because their reference sheets show them.
+
+Before generating, compare the previous shot's ending with this opening: who holds each
+prop, which anatomical hand acts, who stands on each screen side, and what has already
+happened. Anatomical left/right is not screen left/right. State a deliberate reverse or
+new axis when screen positions change. Show the moment before the planned movement;
+an opening that already completes it removes the action the video needs to perform.
+
 `shot.size` owns the scale and `view.crop` refines that same scale. A person MS keeps
 waist-up boundaries, MCU chest-up, CU face and shoulder tops, and FS head to toe even
 when a view is present. Write both size and crop when changing the scale. Set
@@ -93,7 +106,10 @@ silently swing around an obstruction; fix the blocking or revise the view when t
 reports an obstruction. Missing subjects, observers or detail coordinates are invalid set
 inputs, not permission to substitute a frontal portrait or room-wide crop.
 
-Without a set, location and character sheets supply appearance only. Even with a face panel
+Without a set, the selected front/back location panel supplies directional geography and
+appearance, not a required wide frame. Preserve spatial relationships of visible landmarks;
+landmarks outside the authored crop stay out. The authored size, angle and subject viewpoint
+control the output. Character sheets supply identity, not pose. Even with a face panel
 among the references, a hand-only crop must show the hand only. For each returned image,
 compare the actual pixels with subject, crop, visible side, camera height and the opening
 action. If the picture hides the evidence or contradicts the view, correct the earliest

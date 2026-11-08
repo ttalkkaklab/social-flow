@@ -18,6 +18,13 @@ preserves actor layout and gaze alongside the authored camera view, without addi
 uniform lighting. Character attributes retain their original language and clothing
 clauses; overlong panel prompts report the transport limit instead of dropping style.
 
+Host `shot_image` requests keep the active frames while generation is pending. Save and
+inspect the returned output, then call `shot_image` with `action:"complete"`, its
+`requestId`, and the same `path`, `id` and `frame`. Completion verifies usable image bytes
+and unchanged request inputs before adoption; it does not generate again. Input freshness,
+file availability and visual review are separate evidence. Location references preserve
+directional geography while the authored crop decides which landmarks fit in the frame.
+
 [Character depth](skills/storyboard/references/character-depth.md) connects shared identities
 to episode choices, personal costs and relationship-specific behavior. Channel, storyboard
 and autoproduce use the same guidance; blind review checks the performed evidence before
@@ -533,6 +540,11 @@ Each development pays part of the opening promise with evidence or a changed exp
 The board maps those beats to visible changes, sound events and the final payoff. Production
 checks that map against the finished video at delivery speed, including a listen to the mix.
 Autoproduce can reuse multiple music cues or generate them within its authorized allocation.
+New timeline-scored boards use `MUSIC.$timeline`: music enters at a stable shot-ID/offset,
+continues across cuts without restarting, and follows one span-relative gain curve until
+its authored exit. Assembly resolves actual rendered frame boundaries before mixing.
+`$timeline:[]` needs no BGM file and retains dialogue/ambience. Legacy cue boards keep their
+existing defaults. See [timeline scoring](skills/storyboard/references/scenes-schema.md#music-cues-windowmusic-sound).
 Shot-relative music gain curves and configurable ducking shape dialogue and reveals; low
 speech-to-music separation is a review warning, not an assembly gate.
 An unverified playback check is recorded as `not_reviewed`; it does not hold the episode from

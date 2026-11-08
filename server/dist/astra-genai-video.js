@@ -10,16 +10,9 @@ import { atomicJson } from './routing-files.js';
 import { GENAI_FILE_GONE, GENAI_FILE_SCHEME, forgetGenaiUploads, genaiUploadable, shrinkImageToFit, uploadGenaiFile } from './astra-genai-upload.js';
 import { recordVideoSubmission } from './video-events.js';
 export const GENAI_VIDEO_MODELS = ['ltx-2.5-22b-distilled', 'ltx-2.5-22b-dev'];
-// Sizes the gateway's v2 text/image/audio-to-video calls take (GET /v1/models, 2026-11-02); MSR takes any multiple of 64.
-export const GENAI_V2_SIZES = ['1280x720', '720x1280', '720x720', '1080x720', '720x1080'];
-/** A saved size v2 does not take (an MSR 1792x1024) becomes the v2 size closest in aspect ratio. */
+/** Preserve selected geometry; the live gateway validates its current backend's supported sizes. */
 export function genaiV2Resolution(saved) {
-    const match = /^(\d+)x(\d+)$/.exec(saved);
-    if (!match || GENAI_V2_SIZES.includes(saved))
-        return saved;
-    const aspect = (w, h) => Math.log(w / h), want = aspect(Number(match[1]), Number(match[2]));
-    const gap = (size) => { const [w, h] = size.split('x').map(Number); return Math.abs(aspect(w, h) - want); };
-    return GENAI_V2_SIZES.reduce((best, size) => gap(size) < gap(best) ? size : best);
+    return saved;
 }
 export const GENAI_CAMERA_MOTIONS = ['dolly_in', 'dolly_out', 'dolly_left', 'dolly_right', 'jib_up', 'jib_down', 'static', 'focus_shift'];
 export const genaiTextToVideoSchema = z.object({
@@ -103,6 +96,11 @@ export function buildGenaiAudioBody(args) {
 export const GENAI_MSR_FRAMES = { min: 25, max: 361, step: 8, frameRate: 24 };
 export const genaiMsrSchema = z.object({
     prompt: z.string().trim().min(1).max(2000),
+    negativePrompt: z.string().trim().min(1).max(5000).optional(),
+    guidanceScale: z.number().finite().min(1).max(10).optional(),
+    nagScale: z.number().finite().min(0).max(100).optional(),
+    nagAlpha: z.number().finite().min(0).max(1).optional(),
+    nagTau: z.number().finite().min(0).max(10).optional(),
     references: z.array(z.object({
         imageUri: genaiImageUriSchema.optional(), imagePath: z.string().min(1).optional(),
         background: z.boolean().default(false),
@@ -123,6 +121,10 @@ export const genaiMsrSchema = z.object({
     filename: bareFilenameSchema('video').refine(name => name.endsWith('.mp4'), 'Use a .mp4 filename').optional(),
 }).strict().superRefine((args, ctx) => {
     const issue = (message) => ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+    if ((args.nagScale ?? 0) > 0 && args.negativePrompt === undefined)
+        issue('MSR nagScale > 0 requires negativePrompt');
+    if (args.negativePrompt !== undefined && (args.guidanceScale ?? 1) <= 1 && (args.nagScale ?? 0) === 0)
+        issue('MSR negativePrompt requires guidanceScale > 1 or nagScale > 0');
     const backgrounds = args.references.filter(ref => ref.background).length;
     if (backgrounds > 1 || args.references.length - backgrounds > 4)
         issue('MSR supports at most four subjects and one background');
@@ -148,6 +150,11 @@ export const genaiMsrSchema = z.object({
 });
 export function buildGenaiMsrBody(args) {
     return { prompt: args.prompt,
+        ...(args.negativePrompt === undefined ? {} : { negative_prompt: args.negativePrompt }),
+        ...(args.guidanceScale === undefined ? {} : { guidance_scale: args.guidanceScale }),
+        ...((args.nagScale ?? 0) > 0 ? { nag_scale: args.nagScale,
+            ...(args.nagAlpha === undefined ? {} : { nag_alpha: args.nagAlpha }),
+            ...(args.nagTau === undefined ? {} : { nag_tau: args.nagTau }) } : {}),
         references: args.references.map(ref => ({ image_uri: genaiSourceUri(ref.imageUri, ref.imagePath), background: ref.background,
             ...(oneOf(ref.audioUri, ref.audioPath) ? { audio_uri: genaiAudioUri(ref.audioUri, ref.audioPath) } : {}) })),
         reference_strength: args.referenceStrength, reference_frames: args.referenceFrames,
@@ -300,6 +307,14 @@ export async function generateGenaiVideo(operation, input) {
     else {
         if (fs.existsSync(videoPath))
             throw new Error('GenAI output already exists');
+        if ('references' in args && (args.negativePrompt !== undefined || (args.guidanceScale ?? 1) > 1)) {
+            const capabilities = z.object({ negative_prompt: z.boolean().optional(), nag: z.boolean().optional() }).passthrough()
+                .parse(await requestGenai('GET', '/v1/ltx/msr/capabilities', undefined, 15_000));
+            if ((args.nagScale ?? 0) > 0 && capabilities.nag !== true)
+                throw new Error('msr_nag_unsupported: the GenAI MSR backend does not advertise NAG; no request was submitted');
+            if (capabilities.negative_prompt !== true)
+                throw new Error('msr_negative_unsupported: the GenAI MSR backend does not advertise negative conditioning; no request was submitted');
+        }
         if (operation === 'msr' && 'references' in args && args.references.some(ref => oneOf(ref.audioUri, ref.audioPath)) && !await refreshGenaiMsrVoice(true))
             throw new Error('msr_voice_unsupported: the GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities)');
         // Upload before the receipt exists: a failed upload leaves nothing to recover and the call can simply run again.

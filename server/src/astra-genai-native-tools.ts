@@ -11,6 +11,7 @@ const descriptions: Record<string, string> = {
   kind: 'Catalog to read, e.g. speech for registered voices; discovery never generates media.',
   model: 'Exact public model alias from astra_genai_catalog, e.g. qwen-image-fast or ltx-2.5-fast.',
   prompt: 'Requested subject/action or changes, e.g. A blue ball rolls across a table.',
+  promptProvenance: "Desktop rewrite policy, e.g. enhanced for a caller-finished prompt that must not be rewritten again; typed follows the app's enhancement settings. Omitted keeps its default. Does not certify quality.",
   size: 'Image width x height, e.g. 1024x1024. Supported grid depends on the selected model.',
   seed: 'Optional reproducibility seed, e.g. 42; omit for provider handling.',
   steps: 'Optional sampling steps, e.g. 8 for Qwen Turbo. Omit to preserve model schedule.',
@@ -75,8 +76,8 @@ function tool(name: string, description: string, schema: z.ZodTypeAny, readOnly 
     annotations: readOnly ? { readOnlyHint: true, openWorldHint: true } : { readOnlyHint: false, destructiveHint: false, idempotentHint: name.endsWith('_status'), openWorldHint: true } };
 }
 export const NATIVE_GENAI_TOOLS: Tool[] = [
-  tool('astra_genai_catalog', 'Read configured gateway image/speech/video models, registered voice IDs, LoRA refs or native schemas. Requires ASTRA_GENAI_API_KEY and optional ASTRA_GENAI_URL. Configuration discovery is not an inference health check. Select the returned model alias; never infer a runtime or fall back to a different engine.',
-    z.object({ kind: z.enum(['image','speech','video','loras','contracts']) }).strict(), true),
+  tool('astra_genai_catalog', 'Read configured gateway models and native schemas. Use video for the general /v1/models catalog (including LTX/MSR); desktop_video for Desktop models, which requires a configured Desktop. image/speech read their respective models, loras/contracts are Desktop-only. Requires ASTRA_GENAI_API_KEY and optional ASTRA_GENAI_URL. Configuration discovery is not an inference health check. Select the returned model alias; never infer a runtime or fall back to a different engine.',
+    z.object({ kind: z.enum(['image','speech','video','desktop_video','loras','contracts']) }).strict(), true),
   tool('astra_genai_image_generate', 'Generate one PNG with the configured gateway model alias. Use image_plan/image_execute with engine astra-genai-native and explicit reserveUsd. Optional registered LoRA IDs/scales; consult image catalog for model constraints. No reference images on text requests. Returns verified local output; retain the receipt after errors. Use GPT Image 2 for readable text.', nativeImageSchema),
   tool('astra_genai_image_edit', 'Edit or vary a source PNG/JPEG with a configured gateway alias; up to nine additional local references, ten total in order. Use image_plan operation edit and engine astra-genai-native. Model catalog determines edit/variation, guidance, transparency and registered LoRA support. No arbitrary LoRA paths, masks or silent reference dropping. Returns local PNG and durable receipt; no automatic generation retries.', nativeImageEditSchema),
   tool('tts_astra_genai', 'Synthesize one speaker through gateway /v1/audio/speech using an explicit model alias and optional registered voice. Use tts_route or supply a stable requestId for durable replay and use speech_manage plan_audio for character lines. Discover model voices/formats/speed/instructions first. VoxCPM2 allows WAV and speed 1; voice cloning uses operator-registered IDs, never client audio paths. Returns local audio and receipt; no automatic retries or listening score.', genaiSpeechSchema),

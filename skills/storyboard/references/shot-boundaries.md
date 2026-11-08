@@ -9,7 +9,8 @@ approval, score or execution gate. Requested `review-camera` adds an independent
 1. Read each complete scene's ordered speech and physical actions without its proposed
    shot breaks. Mark the discovery, decision or consequence that changes attention.
 2. Call `storyboard_read` and use `boundaryReview.shots` and `boundaries` in **playback**
-   order. It includes every join, not just suspected mistakes. `no` is a storage locator,
+   order. Read `sceneRuns.events` as the uninterrupted scene, then compare each boundary.
+   It includes every join, not just suspected mistakes. `no` is a storage locator,
    not a stable id; use `id` for edits and `playbackPosition` for order. Missing or duplicate
    ids must be resolved before an id-addressed change. Review silent actions and readable
    two-person exchanges too; a change of speaker is not automatically a cut.
@@ -28,7 +29,12 @@ approval, score or execution gate. Requested `review-camera` adds an independent
    action”, “change attention” and a repeated camera adjective do not explain a boundary.
    For inserted b-roll/outro, `incoming:null` means inspect the splice/edit plan; do not
    borrow an unrelated raw-array join. No hint is a verdict or a reason to delete a cut.
-5. Estimate the resulting whole performance, overlapping simultaneous speech/actions and
+5. Inspect `shots[].performanceTiming`: it totals authored action and speech estimates,
+   exposes missing groups/timing and compares the total with stored duration. It does not
+   measure physical feasibility. Walk through preparation, travel, contact/handling and
+   response, especially packing, dressing, lifting or carrying another person. Simplify or
+   deliberately elide redundant handling rather than assign one short duration to a list.
+   Estimate the resulting whole performance, overlapping simultaneous speech/actions and
    allowing independent handling, travel and reactions. Check its selected `videoTiming`
    route after the revision. Per-shot `fits` values do not establish a merged shot fits.
    Unknown timing/limits stay unknown; fetch the actual adapter limits before generating.
@@ -41,7 +47,10 @@ prompts, not “merge candidates” certified by code. Camera, focus, depth, blo
 may distinguish two otherwise similar setups. Missing fields are unknown, not matching.
 The output does not measure performance, inspect images or mutate the board.
 If this field or `videoTiming` is absent, the running MCP server lacks this workflow.
-Check the active plugin/server installation and reconnect after updating. Do not assume
+Check `storyboard_read.runtime`: compare `loadedModuleSha256` and `modulePath` with
+ the intended installation, and `diskModuleSha256` with the loaded hash. A disk update
+ does not reload the process. A matching plugin version alone is insufficient; check
+ the active plugin/server installation and reconnect after updating. Do not assume
 updated skill files updated an already-running server, hardcode an older bundle path, or
 invent the missing report. A manual scene comparison can continue; report unavailable
 capacity evidence honestly.
@@ -68,6 +77,10 @@ Before and after, compare:
   targets and other inbound links to removed ids. A two-character reference limit is not
   a reason to omit a third person's essential visible action. Reblock or keep necessary
   coverage; use offscreen speech only when the scene supports it.
+- Read `storyboard_apply` findings with `edit_*` codes. They report changed speech,
+  staging, retained images and unresolved prop references; they neither approve a
+  merge nor block a deliberate omission. `imageFraming` checks saved staging and prompt
+  provenance, not model adherence; unknown provenance requires inspection too.
 - Outer joins into/out of the new shot; reassess them after removal, not just internal
   joins. Invalidate stale image/prompt/clip evidence and retain the actual approval state.
   Reusing the opening image requires that it still matches the new opening, not merely

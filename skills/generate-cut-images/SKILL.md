@@ -27,6 +27,11 @@ view on an older board warns and keeps its legacy behaviour; do not treat that a
 decision for new production. Keep the prompt consistent with this view rather than writing
 a second camera direction in prose. For a built set, inspect its target and camera first;
 a missing detail target is corrected from the opening blocking, never replaced with a face.
+Check that `crop` names actual frame boundaries rather than repeating `subject` or an action.
+Read the neighbouring ending/opening states before a batch: preserve anatomical hand,
+prop ownership and screen sides, or describe the motivated change of axis. The starting
+image must leave the planned action to happen. A background panel supplies appearance
+and directional geography; its full room and all landmarks need not fit a tight crop.
 Then write `prompt` in English: who is where, doing what, facing which way, with which
 expression and light, at the moment the shot opens (for an end image, the closing moment
 and what changed). Name the place with `location` (an `SB_DOC.locations` id) and the props
@@ -65,10 +70,15 @@ A model that takes fewer pictures than the frame composes refuses
 (`image_references_unsupported`): report it and ask which model to use — gpt-image takes up
 to 16, astra-genai-native and an MLX Qwen-Image-2.1 pack up to 10, MLX FLUX.2 klein and
 Mage-Flow Edit up to 4; never switch silently. GPT Image takes one format per request, so a
-mixed PNG/JPEG set goes up as PNG copies in `storyboard/images/inputs/`. A host selection returns the inputs and the save path for the host tool; the
-review page shows that frame as pending until the file is there.
+mixed PNG/JPEG set goes up as PNG copies in `storyboard/images/inputs/`. A host selection
+returns the inputs, save path and `requestId` without replacing the active frame. Generate
+with the selected host tool, save the exact requested file, inspect it, then call
+`shot_image {path, id, frame, action:"complete", requestId}` without generation options.
+Completion decodes the output and verifies that the saved request still matches its inputs;
+it does not generate or charge again. If the request is stale, retain the candidate file
+and plan from the current shot. A failed or unfinished generation keeps the old frames.
 
-Each call writes a new versioned file under `storyboard/images/` and records
+Each completed generation writes a new versioned file under `storyboard/images/` and records
 `visual.frames.start` and `visual.bg` (or `frames.end`), `visual.references`, `locationId`
 and `props`. A new start image takes the shot's end image off the shot with a warning,
 because the end was edited from the old start; make the end image again. Look at every
@@ -79,7 +89,7 @@ face-reference inputs do not justify a visible face in a hand-only insert. Text 
 Image 2 rule. Stop before the video prompt; review-cut-images runs only when the user asks.
 
 `storyboard_read.imageFraming` reports whether a start image's recorded inputs are
-`current`, `stale` or `unknown`. Current is not a visual pass. Inspect the actual file at
+`current`, `stale` or `unknown`, separately from file availability. Current is not a visual pass. Inspect the actual file at
 delivery aspect: FS must retain both feet, MS its waist boundary, MCU its chest boundary,
 and CU the intended face/shoulder crop; object/detail shots must retain their named evidence.
 Compare the result with the opening action as well as the label. Correct the earliest
@@ -87,6 +97,12 @@ wrong input and regenerate within existing authorization; never mark unviewed pi
 verified. An edit inherits its source's framing status and cannot turn stale source
 evidence into current evidence. Use normal generation when changed shot inputs need
 new references, blocking or a different place.
+
+Inspect the exact returned version, not an older preview or contact-sheet thumbnail.
+Check hand/prop continuity against its neighbours as well as the single-frame composition.
+In a requested review, record the inspected path and file hash with the finding so later
+replacement cannot inherit a review of different pixels. File existence, input freshness
+and visual judgment are separate evidence; none stands in for the other two.
 
 When the saved shot is correct but the model drew the wrong crop, use
 `shot_image {editExisting:true, reframe:true, frame:"start", ...}`. This uses the

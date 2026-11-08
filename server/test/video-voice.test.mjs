@@ -201,7 +201,7 @@ test('MSR voices a speaker it cannot sample from the prompt and refuses the reti
   const unsupported = prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: false });
   assert.ok(unsupported.args.references.every(ref => ref.audioPath === undefined));
   const silent = prepareVideoVoice('astra_genai_msr', input, { ...ctx, shot: { ...ctx.shot, narration: [] }, msrVoice: false });
-  assert.match(silent.args.prompt, /^They talk\.\n\nKeep the entire video image text-free:/);
+  assert.equal(silent.args.prompt, input.prompt);
   ctx.shot.narration[0].delivery = 'voiceover';
   const voiceover = prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true });
   assert.match(voiceover.args.prompt, /hero speaks in voiceover/);
@@ -209,15 +209,14 @@ test('MSR voices a speaker it cannot sample from the prompt and refuses the reti
   ctx.shot.visual.video = { voice: 'prompt' };
   assert.throws(() => prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true }), /retired/);
 });
-test('MSR leaves the text-free policy after compiled dialogue, including silent shots', t => {
+test('MSR compiles dialogue without injecting text suppression terms into the positive prompt', t => {
   const ctx = fixture(t), [hero, friend] = ctx.board.SB_DOC.characters;
   const input = { prompt: 'They talk.', references: [hero, friend].map(c => ({ imagePath: c.voiceReference.imagePaths[0] })) };
   const spoken = prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true }).args.prompt;
-  assert.ok(spoken.lastIndexOf('Keep the entire video image text-free:') > spoken.indexOf('"Hello friend"'));
-  assert.match(spoken, /including during speech\.$/);
+  assert.match(spoken, /"Hello friend"/);
+  assert.doesNotMatch(spoken, /subtitles|captions|text-free|watermarks/);
   const silent = prepareVideoVoice('astra_genai_msr', input, { ...ctx, shot: { ...ctx.shot, narration: [] } }).args.prompt;
-  assert.match(silent, /no subtitles, captions/);
-  assert.match(silent, /including during speech\.$/);
+  assert.equal(silent, input.prompt);
 });
 test('MSR keeps a phone caller off screen without borrowing the visible listener voice', t => {
   const ctx = fixture(t), [hero, friend] = ctx.board.SB_DOC.characters;
@@ -251,6 +250,15 @@ test('declared MSR cast maps pinned voices to canonical faces instead of stale t
  const result=prepareVideoVoice('astra_genai_msr',{prompt:'Exchange.',references},ctx);
  assert.deepEqual(result.voiceContinuity.speakers.map(s=>s.imageIndices),[[1],[2]]);
  assert.deepEqual(result.args.references.map(r=>r.audioPath),characters.map(c=>c.voiceReference.path));
+ for(const c of characters){
+  const folder=path.join(ctx.episode,'assets/characters',c.id),file=path.join(folder,'panels.json'),doc=JSON.parse(fs.readFileSync(file));
+  fs.writeFileSync(path.join(folder,'msr.png'),'combined');
+  doc.panels.msr={file:'msr.png',purpose:'character_reference',view:'msr',sha256:digest('combined'),sourceHashes:{face:digest('panel'),front:digest('panel')}};fs.writeFileSync(file,JSON.stringify(doc));
+ }
+ ctx.shot.visual.video={...(ctx.shot.visual.video??{}),referenceLayout:'combined'};
+ const unified=prepareVideoVoice('astra_genai_msr',{prompt:'Exchange.',references:characters.map(c=>({imagePath:path.join(ctx.episode,'assets/characters',c.id,'msr.png')}))},ctx);
+ assert.deepEqual(unified.voiceContinuity.speakers.map(s=>s.imageIndices),[[1],[2]]);
+ assert.deepEqual(unified.args.references.map(r=>r.audioPath),characters.map(c=>c.voiceReference.path));
 });
 
 test('legacy MSR cast keeps explicit voice ownership without requiring shared panels',t=>{

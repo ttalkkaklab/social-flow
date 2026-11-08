@@ -231,14 +231,12 @@ export const DEFAULT_ELEVENLABS_SFX_PROMPT_INFLUENCE = 0.3;
  */
 export const MAX_ELEVENLABS_SFX_TEXT_CHARS = 450;
 /**
- * PCM first: mono 16-bit little-endian, wrapped as WAV here. 48 kHz is the mix rate of
- * build-reel.sh (no resample on the way in); 44.1 kHz is the CD rate; 24 kHz is the
- * ungated fallback on plans that refuse the higher rates (403 output_format_not_allowed —
- * the speech lane measured wav_44100 gated and wav_48000 open, so try 48 first). mp3 is kept
- * for a preview that never enters the build.
+ * Prefer the provider's WAV container so its channel count stays explicit. Legacy
+ * SFX PCM is interleaved stereo, unlike the mono speech lane; a mono header doubles
+ * its duration and changes playback. Keep MP3 for previews.
  */
-export const ELEVENLABS_SFX_OUTPUT_FORMATS = ['pcm_48000', 'pcm_44100', 'pcm_24000', 'mp3_44100_128'];
-export const DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT = 'pcm_48000';
+export const ELEVENLABS_SFX_OUTPUT_FORMATS = ['wav_48000', 'wav_44100', 'wav_24000', 'pcm_48000', 'pcm_44100', 'pcm_24000', 'mp3_44100_128'];
+export const DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT = 'wav_48000';
 /** Per minute of generated audio, USD, every plan (pricing/api, read 2026-09-16). */
 export const ELEVENLABS_SFX_USD_PER_MINUTE = 0.12;
 export function sfxExtensionForFormat(format) {
@@ -629,7 +627,11 @@ export async function generateElevenLabsSoundEffect(request) {
         const response = await elevenFetch(`/v1/sound-generation?output_format=${request.outputFormat}`, { method: 'POST', body: JSON.stringify(body) }, 120_000, 1);
         const meta = readMeta(response);
         const raw = Buffer.from(await response.arrayBuffer());
-        const audio = ext === '.wav' ? pcmToWav(raw, sfxSampleRateForFormat(request.outputFormat), 1) : raw;
+        const isWav = raw.subarray(0, 4).toString() === 'RIFF' && raw.subarray(8, 12).toString() === 'WAVE';
+        if (request.outputFormat.startsWith('wav_') && !isWav)
+            throw new Error('Sound effect response is not the requested WAV container');
+        const audio = ext === '.wav' && !isWav ? pcmToWav(raw, sfxSampleRateForFormat(request.outputFormat), 2) : raw;
+        validateSpeechAudio(audio, ext.slice(1));
         const audioPath = saveAudioFile(outputDir, filename, audio);
         const durationSeconds = ext === '.wav'
             ? wavDurationSeconds(audio)
