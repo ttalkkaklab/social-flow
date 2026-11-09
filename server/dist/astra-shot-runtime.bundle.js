@@ -30696,7 +30696,7 @@ var package_default = {
     node: ">=20"
   },
   scripts: {
-    build: "tsc && node build-video-catalog.mjs && node build-image-catalog.mjs && node build-music-catalog.mjs && npm run bundle && npm run bundle:shot && npm run bundle:mesh",
+    build: "tsc && node build-upscale.mjs && node build-video-catalog.mjs && node build-image-catalog.mjs && node build-music-catalog.mjs && npm run bundle && npm run bundle:shot && npm run bundle:mesh",
     start: "node dist/index.js",
     test: "node --import ./test/isolate.mjs --test test/*.test.mjs",
     check: "npm run build && npm test",

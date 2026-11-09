@@ -173,7 +173,8 @@ mkdir -p work-fast
 rm -f work-fast/*.mp4 work-fast/*.wav work-fast/join-*.txt 2>/dev/null || true
 
 # Same encoder settings as the builders, so the two pieces concat without a re-encode at the seam.
-VENC=(-c:v libx264 -profile:v high -level 4.1 -preset slow -crf 19 -pix_fmt yuv420p
+# Let x264 select the level from the canvas and frame rate, including 4K masters.
+VENC=(-c:v libx264 -profile:v high -preset slow -crf 19 -pix_fmt yuv420p
       -g $((FPS*2)) -keyint_min "$FPS" -sc_threshold 0 -r "$FPS")
 AENC=(-c:a aac -b:a 192k -ar 48000 -ac 2)
 

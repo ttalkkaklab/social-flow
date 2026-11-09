@@ -5,6 +5,17 @@ import {createRequire} from 'node:module';
 const require = createRequire(import.meta.url);
 const {sceneDirection, sceneVideoPrompt} = require('../../skills/_shared/scene-acting.js');
 
+test('gateway reference voices work without voice-design instructions', () => {
+  const {directionSupport} = require('../../skills/_shared/scene-acting.js');
+  const {compileActing} = require('../../skills/_shared/speech-contract.js');
+  const voice = {engine:'astra-genai', model:'voxcpm2', voiceId:'actor', speed:1};
+  for (const acting of [undefined, {visual:'Facing the board', leadInSeconds:0}]) {
+    assert.equal(directionSupport(voice, acting).supported, true);
+    assert.deepEqual(compileActing('Hello.', acting, voice).generation,
+      {model:'voxcpm2', text:'Hello.', voice:'actor', speed:1});
+  }
+});
+
 test('speech planning uses the same detail view as image generation', () => {
   const prompt = sceneDirection({ shot: { techniques: [{id:'camera.rear'}, {id:'framing.cu'}] }, visual: { camera: {
     view: {subject:'Mina’s hand',crop:'Only fingers and the key fill the frame',reason:'Reveal the hidden grip',mode:'profile-left'},
