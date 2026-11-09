@@ -1,3 +1,4 @@
+import { UPSCALE_TOOLS } from './video-upscale.js';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { fasth3OmniSchema } from './fasth3-omni.js';
 import { MUSIC_ADAPTERS } from './music-registry.js';
@@ -5248,3 +5249,5 @@ for (const tool of TOOLS) {
     tool.description = 'Generate songs using sunoapi.org, a third-party provider. Configured calls require musicContext. Use music_catalog to inspect choices; do NOT treat this as the Suno Platform official API. Returns local tracks and provider task ID. V6 custom mode requires style, lyrics or negativeTags; duration is 10–360 seconds. Non-custom mode requires style or lyrics; prompt alone is insufficient. Old V4/V5 models are retired.';
   }
 }
+
+TOOLS.push(...UPSCALE_TOOLS);

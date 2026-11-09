@@ -1555,7 +1555,8 @@ fi
 #      The final video has no captions; requested subtitle files stay separate.
 # Split into video and audio halves — the outro splice encodes the picture on its own
 # and then stream-copies it, so the two halves have to be usable separately.
-VENC=(-c:v libx264 -profile:v high -level 4.1 -preset slow -crf 19 -pix_fmt yuv420p
+# Let x264 select the level from the canvas and frame rate, including 4K masters.
+VENC=(-c:v libx264 -profile:v high -preset slow -crf 19 -pix_fmt yuv420p
       -g $((FPS*2)) -keyint_min "$FPS" -sc_threshold 0 -r "$FPS")
 AENC=(-c:a aac -b:a 192k -ar 48000 -ac 2)
 ENC=("${VENC[@]}" "${AENC[@]}" -movflags +faststart)

@@ -1,3 +1,4 @@
+import { upscaleCatalog, startUpscale, controlUpscale } from './video-upscale.js';
 import { existsSync } from 'node:fs';
 import { generateLocalVideo } from './local-video-models.js';
 import { manageWorkflow } from './production-workflow.js';
@@ -922,6 +923,9 @@ export const ROUTES = {
             `\nAdapter: ${parsed.adapter}\nReference: ${parsed.referencePath}` +
             (parsed.conditioningMaskPath ? `\nConditioning mask: ${parsed.conditioningMaskPath}` : ''));
     },
+    video_upscale_catalog: async (args) => text(JSON.stringify(upscaleCatalog(args), null, 2)),
+    video_upscale_start: async (args) => text(JSON.stringify(startUpscale(args), null, 2)),
+    video_upscale_job: async (args) => text(JSON.stringify(controlUpscale(args), null, 2)),
     astra_video_upscale: async (args) => {
         const result = await astraVideo.upscaleVideo(parseArgs(astraVideo.astraVideoUpscaleSchema, args));
         return text(`${astraVideoReport('Clip upscaled 2x through pixel-upscaler-x2 on the ASTRA video API', result)}` +

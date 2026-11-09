@@ -56,6 +56,12 @@ added narration margins (0..2 seconds). Default pre is zero, post is 0.12 second
 Sync footage retains its original timing and has no added margins. There is no default
 four-second minimum. Short inserts can stay short.
 
+When every spoken card retains its source video soundtrack, incomplete character identity
+or generation voice settings are recorded in `source-voice-warnings.json` rather than
+blocking assembly. This does not approve the speech or repair stale bindings. Source media,
+soundtrack extraction hashes, dialogue provenance and timing are still checked. A card that
+needs separate generated speech keeps the character and voice validation.
+
 Moving joins accept `transitionSeconds` from 0.08 to 0.8 seconds and must fit within one
 third of the incoming card. Defaults: J-cut/whip 0.24, dissolve/iris/blur 0.40, push/zoom
 0.32. These durations are rounded up to a whole output frame. Dip uses two 0.30-second

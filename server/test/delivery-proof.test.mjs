@@ -23,3 +23,27 @@ test('delivery gate rejects ad hoc exports, stale media and changed storyboards'
   writeFileSync(path.join(dir,'.work/edit.json'),'{}');assert.throws(()=>delivery.record(path.join(dir,'.work'),1),/cannot waive/);
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
+
+test('nested assembly directories record unreviewed speech from the explicit source board',()=>{
+ const dir=mkdtempSync(path.join(tmpdir(),'nested-delivery-'));
+ const assembled=require('../../skills/produce/references/verify-assembled.js'),original=assembled.check;
+ try{
+  const board=path.join(dir,'storyboard'),work=path.join(dir,'.work/upscale/assembly');
+  mkdirSync(board,{recursive:true});mkdirSync(work,{recursive:true});
+  const source='window.SCENES=[{id:"s1",type:"points",narration:[{tts:"hello",sub:"hello"}]}];';
+  writeFileSync(path.join(board,'scenes.js'),source);
+  writeFileSync(path.join(work,'build-plan-check.json'),JSON.stringify({storyboard:board,scenesSha256:hash(source)}));
+  writeFileSync(path.join(work,'edit-check.json'),'{}');writeFileSync(path.join(work,'assembled-check.json'),'{}');
+  writeFileSync(path.join(work,'reel-fast.mp4'),'checked master');
+  // This regression tests board resolution, not the separately tested media verifier.
+  assembled.check=()=>{};
+  delivery.record(work,1);
+  const proof=JSON.parse(require('node:fs').readFileSync(path.join(work,'delivery-proof.json'),'utf8'));
+  assert.equal(proof.requiresFinalSpeech,true);
+  assert.equal(proof.finalSpeech.policy,'speech-unreviewed-v1');
+  assert.equal(proof.finalSpeech.mediaSha256,hash('checked master'));
+  const speech=require('../../skills/produce/references/check-final-tts.js');
+  speech.review(work);
+  assert.equal(JSON.parse(require('node:fs').readFileSync(path.join(work,'final-tts-warnings.json'),'utf8')).status,'not_reviewed');
+ }finally{assembled.check=original;rmSync(dir,{recursive:true,force:true});}
+});

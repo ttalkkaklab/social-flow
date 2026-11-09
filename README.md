@@ -681,10 +681,10 @@ social-flow/
 ├── mcp.json                     #   its stdio server entry
 ├── manifest.json                # Claude Desktop extension (.mcpb) manifest — .mcpbignore picks the contents
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 139 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 142 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
-│       ├── tools.ts             # tool definitions — 139 tools, including voice auditions and opt-in acting review
+│       ├── tools.ts             # tool definitions — 142 tools, including voice auditions and opt-in acting review
 │       ├── handlers.ts          # zod validation + routing
 │       ├── sns-client.ts        # Threads·IG·FB·YouTube publish/comments
 │       ├── serp-client.ts       # SerpApi (key masking + response slimming)
@@ -718,7 +718,7 @@ social-flow/
 │   ├── produce/                 # /social-flow:produce — stills (§1.5) → clips → slides (§3.6) → video build + per-platform text
 │   │   └── references/          #   build-reel.sh (subtitle-free master; `SUB_MODE` is a legacy burn-in switch the builder ignores) · speedup.sh (required final pace pass, 1.0 default, ≤6.2 chars/s) · bgm-bed.sh · bgm-scoring.md · video-template.html · render-motion-slide.mjs (motion slide → one clip per reveal group, no npm dependency) · QA harness
 │   ├── edit-speech/             # /social-flow:edit-speech — targeted speech corrections for one shot or character (speech_manage · raw TTS · not_reviewed)
-│   ├── upscale-video/           # /social-flow:upscale-video — opt-in 2x LTX upscale of an existing clip (astra_video_upscale · inspect against the source · not_reviewed)
+│   ├── upscale-video/           # /social-flow:upscale-video — local Real-ESRGAN/Lanczos adapters, resumable batches; opt-in LTX re-render
 │   ├── autoproduce/             # storyboard workflow → authorized production; scenario presentation does not add an approval pause
 │   │   └── references/          #   cost-tiers.md (legacy model ladder; the saved model governs) · prices.tsv (price SoT) · cost-report.sh
 │   │                            #   cost-tally.md (per-episode cost ledger convention — shared by storyboard/produce)
@@ -755,7 +755,7 @@ visual style, video ratio and format live in the workspace's `.social-flow/model
 each episode snapshots them in `.work/model-settings.json`, and `profile.md` keeps the
 channel's tone, theme and pinned character voice IDs (the speech model itself is the saved `models.speech`).
 
-## MCP tool surface (139 tools)
+## MCP tool surface (142 tools)
 
 `project_manage`: options · status · init · update · episode. Local project setup
 with genre, models, style, ratio, format and SNS records; no generation or publishing.
@@ -787,6 +787,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Image generation | `mlx_image_generate` / `mlx_image_edit` | MLX Core / mlx-serve on loopback (**no vendor bill**. Optional local lane — initial image setup recommends ASTRA GenAI. Inspect actual Hangul. Model-specific edit/variation/alpha contracts apply. Fail closed if :11234 is down; this plugin never launches the app. `brew install --cask mlx-core`) |
 | Image generation | `gpt_image_text2img` / `gpt_image_img2img` | OpenAI GPT Image (OPENAI_API_KEY — **saved selection takes precedence**: model-dependent sizes, up to 16 references, mask inpainting, usage receipts; GPT Image 2 transparent output is preview) |
 | Video routing | `video_catalog` / `video_plan` / `video_approve` / `video_execute` / `video_status` | Saved model selection, adapter validation, atomic episode budget reservations and durable request receipts. Each shot's plan runs only after the user's yes (`video_approve`), or their approval of every shot (`auto:true`). [Routing contract](skills/_shared/video-routing.md). A spoken cut needs a voice lane — `reference` (`astra_genai_msr`, `seedance_reference`, `fasth3_omni_reference` take a per-character voice sample) or `supplied` (the audio2video tools animate a pinned TTS track); on any other adapter `video_plan` refuses it with `voice_lane_required`, while narration over a non-speaking picture runs anywhere. Veo, Gemini Omni and Seedance 1.x left the plugin on 2026-10-31 because none takes a voice reference: a saved choice of one reports `migration_required`, and their existing clips stay reusable. |
+| Local video upscale | `video_upscale_catalog` / `video_upscale_start` / `video_upscale_job` | Adapter-based local Real-ESRGAN restoration or Lanczos resize, including 4K batches. Detached jobs expose progress/cancel/resume, preserve source frames and encoded audio, verify hashes and write per-clip receipts. No character settings, API calls or automatic downloads. Does not change storyboards or assemble the master; continue with produce when requested. [Setup and workflow](skills/upscale-video/SKILL.md). |
 | Video generation | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Dreamina Seedance 2.x (ARK_API_KEY, BytePlus ModelArk — 480p–4k, **2–30s in 1-second steps** billed for what you request, 7 aspect ratios, up to 30 reference images plus reference audio — a character's fixed voice (`referenceAudioPaths`) — plus reference video (`referenceVideoPaths`): an optional 3D previz as `Video 1`, the vendor's clay-model reference — a generated cut may pre-render in Blender or three.js first (user directive 2026-09-11, optional since 2026-10-18), so the camera path and timing land as planned; a local clip is served through `MEDIA_UPLOAD_URL` or a cloudflared quick tunnel for the life of the task. Audio can be turned off. Seedance 2.x rejects real human faces, so photoreal real-person sources go to an LTX lane. Every generated cut uses the saved video model and resolution (`PRODUCTION.videoModel`, from `.social-flow/models.json`); a per-cut change is an explicit user exception in `PRODUCTION.modelSettings.overrides`. The storyboard forecasts that model's cost. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
 | Video references | `fasth3_omni_reference` | FastH3 Omni via MLX-Serve: image/video/audio references, eight steps, video with sound. [Setup and adapter contract](docs/fasth3-omni.md) |
 | Video generation | `ltx_video_generate` | MLX Core / mlx-serve (24fps rgb8 muxed to mp4 with ffmpeg. Default 768×1280, RAM-capped at 800MB decoded RGB. Not the default path and not on the Seedance face-policy table. Pack install, request grid and measured render times: [LTX 2.5 runbook](docs/mlx-ltx-2.5.md)) |

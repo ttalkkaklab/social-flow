@@ -42,10 +42,49 @@ test('grouped manifest import and direct build-plan CLI both run, continuing qua
   assert.equal(report.groupPlans[0].groups.length,2);
 
   assert.deepEqual(readFileSync(path.join(board,'scenes.js')),source);
+  const staleCast = `window.SB_DOC={characters:[{id:'existing-speaker',tts:{}}]};`;
+  writeFileSync(path.join(board,'scenes.js'),source + staleCast);
+  result=run();
+  assert.equal(result.status,0,result.stderr);
+  const warnings=JSON.parse(readFileSync(path.join(work,'source-voice-warnings.json')));
+  assert.equal(warnings.sourceAudioOnly,true);
+  assert.ok(warnings.warnings.some(w=>w.includes('existing-speaker')));
+  const spoken={...s,narration:[{tts:'New speech',speaker:'existing-speaker'}]};
+  writeFileSync(path.join(board,'scenes.js'),`window.SCENES=${JSON.stringify([spoken])};`+staleCast);
+  result=run();
+  assert.equal(result.status,1);
+  assert.match(result.stderr,/tts/);
+  writeFileSync(path.join(board,'scenes.js'),source);
   writeFileSync(path.join(work,'segs.tsv'),rows.replace('0\t1\t','0\t0\t'));
   result=run();
   assert.equal(result.status,1);
   assert.match(result.stderr,/manifest source\/order differs/);
   assert.doesNotMatch(result.stderr,/is not a function|circular dependency|Video checks need HITL/);
+ } finally {rmSync(dir,{recursive:true,force:true});}
+});
+
+test('existing synchronized soundtrack tolerates incomplete cast metadata but still rejects changed media',()=>{
+ const dir=mkdtempSync(path.join(tmpdir(),'build-source-audio-'));
+ const board=path.join(dir,'storyboard'),work=path.join(dir,'.work');
+ mkdirSync(board);mkdirSync(work);
+ try {
+  const clip=path.join(work,'source.mp4');
+  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','testsrc2=size=160x90:rate=30:duration=1','-f','lavfi','-i','sine=frequency=440:duration=1','-c:v','libx264','-c:a','aac',clip]);
+  const s={id:'s0001',type:'cover',duration:1,transition:'cut',sound:{audioSource:'video'},
+   narration:[{tts:'Existing line',speaker:'speaker'}],shot:{render:{mode:'generated_video'}},visual:{video:{clip}}};
+  writeFileSync(path.join(board,'scenes.js'),`window.FORMAT='youtube-long-16x9';window.PRODUCTION={mode:'full_video'};window.SB_DOC={characters:[{id:'speaker',tts:{}}]};window.SCENES=${JSON.stringify([s])};`);
+  writeFileSync(path.join(work,'cards.tsv'),'0\tunused.wav\t0\tnone\tsync=1\n');
+  writeFileSync(path.join(work,'segs.tsv'),`0\t0\t${clip}\tExisting line\tExisting line\n`);
+  require('../../skills/produce/references/prepare-source-audio.js').prepare(work,board);
+  const run=()=>spawnSync(process.execPath,[cli,work,board],{encoding:'utf8'});
+  let result=run();
+  assert.equal(result.status,0,result.stderr);
+  assert.equal(JSON.parse(readFileSync(path.join(work,'source-voice-warnings.json'))).sourceAudioOnly,true);
+  const extraction=JSON.parse(readFileSync(path.join(work,'source-audio.json')));
+  extraction[0].sourceSha256='0'.repeat(64);
+  writeFileSync(path.join(work,'source-audio.json'),JSON.stringify(extraction));
+  result=run();
+  assert.equal(result.status,1);
+  assert.match(result.stderr,/stale source soundtrack extraction/);
  } finally {rmSync(dir,{recursive:true,force:true});}
 });
