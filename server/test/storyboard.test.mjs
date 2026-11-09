@@ -392,14 +392,15 @@ describe('story first, then characters and lines', () => {
     writeFileSync(join(dir, 'cast.json'), JSON.stringify({ characters: keyed }));
     writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }, { id: 's0002', characters: [] }] });
     assert.throws(() => writeShotDialogue({ path: dir, shots: [{ id: 's0001', lines: [{ speaker: 'joon', tts: '야', delivery: 'on_screen' }] }] }), /story_order/);
-    writeShotDialogue({ path: dir, shots: [{ id: 's0001', lines: [{ speaker: 'mina', tts: '안녕' }, { speaker: 'narrator', tts: '그날 밤.' }] }] });
+    assert.throws(() => writeShotDialogue({ path: dir, shots: [{ id: 's0001', lines: [{ speaker: 'mina', tts: '안녕' }, { speaker: 'narrator', tts: '그날 밤.' }] }] }), /shot_speaker_limit/);
+    writeShotDialogue({ path: dir, shots: [{ id: 's0001', lines: [{ speaker: 'mina', tts: '안녕' }, { speaker: 'mina', tts: '괜찮아?' }] }, { id: 's0002', lines: [{ speaker: 'narrator', tts: '그날 밤.' }] }] });
     const shot = readBoard(dir).win.SCENES[0];
     assert.deepEqual(shot.visual.character, ['mina']);
-    assert.deepEqual(shot.narration.map((l) => [l.id, l.speaker, l.delivery]), [['s0001-l1', 'mina', 'on_screen'], ['s0001-l2', 'narrator', 'voiceover']]);
+    assert.deepEqual(shot.narration.map((l) => [l.id, l.speaker, l.delivery]), [['s0001-l1', 'mina', 'on_screen'], ['s0001-l2', 'mina', 'on_screen']]);
     const recast = writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['joon'] }] });
     assert.equal(recast.written, true);
     assert.deepEqual(recast.findings.filter((f) => f.where === 's0001' && !f.code).map((f) => f.level), ['warn']);
-    assert.deepEqual(readBoard(dir).win.SCENES[0].narration.map((l) => [l.speaker, l.delivery]), [['mina', 'off_screen'], ['narrator', 'voiceover']]);
+    assert.deepEqual(readBoard(dir).win.SCENES[0].narration.map((l) => [l.speaker, l.delivery]), [['mina', 'off_screen'], ['mina', 'off_screen']]);
     const back = writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }] });
     assert.ok(back.findings.some((f) => f.where === 's0001' && /off_screen lines/.test(f.what)));
     const bad = (patch) => applyStoryboard({ path: dir, draft: true, dryRun: true, ...patch }).findings.filter((f) => f.level === 'bad').map((f) => f.what);

@@ -310,20 +310,23 @@ For the selected provider/model, resolve and record capabilities with evidence:
 
 | Speech | Route | When speech changes |
 |---|---|---|
-| any delivery + nativeSpeech (MSR) | native | Regenerate the clip from the edited prompt; no line audio exists |
+| one physical speaker + nativeSpeech (MSR) | native | Regenerate the clip from the edited prompt; no line audio exists |
 | voiceover/off_screen | voiceover | Replace audio, retime subtitles/edit; keep suitable action footage |
 | on_screen + audioConditioning and lipSync | audio_conditioned | Regenerate affected animation from the final voice WAV |
 | on_screen + separate postLipSync | post_lipsync | Rerun the selected lip-sync adapter on affected footage |
 | on_screen + neither capability | unsupported | Select a suitable adapter; do not mute the character |
 
-A native-speech shot preserves each line's delivery: on-screen speech moves its speaker's
-mouth, off-screen dialogue keeps its speaker unseen, and voiceover leaves visible mouths
-closed. Its binding records each line's revision instead of an audio hash.
+A native-speech shot has one physical speaker: on-screen speech moves that speaker's
+mouth and off-screen dialogue keeps the speaker unseen. Silent/inner-thought shots use
+image2video instead. Thoughts are character `voiceover` with external pinned TTS; compose
+measured speech with lead-in/tail-out and action timing before planning video coverage.
+Keep visible mouths closed and `sound.audioSource:"speech"` for assembly. Never write
+thoughts as MSR native dialogue. Missing TTS setup is reported before generation. Its binding records each line's revision instead of an audio hash.
 `attach_video` sets `sound.audioSource:"video"` so the clip's soundtrack is the card audio,
 and a line edit marks the clip stale rather than asking for a take.
 
-`video_plan` keeps the text-free instruction after the compiled native dialogue, including
-silent MSR shots. This is prompt guidance; inspect the generated frames for unwanted captions.
+`video_plan` keeps the text-free instruction after the compiled native dialogue, on
+single-speaker MSR shots. This is prompt guidance; inspect the generated frames for unwanted captions.
 
 Store the route in `visual.video.speechBinding` with line ids and audio hashes. Mark stale
 bindings after edits and clear `speechStatus:stale` only after the new media is generated and

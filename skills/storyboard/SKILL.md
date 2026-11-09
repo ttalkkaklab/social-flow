@@ -11,6 +11,11 @@ allowed-tools: ["mcp__social-flow__character_manage", "mcp__social-flow__charact
 ---
 For motion-graphic shots, follow [motion type selection and design](references/motion-graphics.md): persist `shot.motionGraphic` with a common `THEME.motionGraphicTheme` when the episode needs consistency and contextual `style.theme` (`auto` or an explicit channel theme), choose the type from viewer intent and available evidence, and keep style, choreography and renderer separate. Built-in abstract scenes use the installed `prepare-motion-graphic.js`; asset-dependent types retain their authored or mesh routes.
 
+Follow [dialogue coverage](references/dialogue-coverage.md): split at every speaker
+change, then set each shot's size and angle for its speaker and action. Keep silent
+listeners in the cast when visible. Use `frames.mode:"first"` and image2video for
+silent/inner-thought shots; thoughts use character `voiceover` with measured, timed TTS.
+
 Follow [host evaluation](../_shared/host-review.md) for every requested review.
 
 
@@ -26,7 +31,8 @@ approved videos.
 
 For saved GenAI selections, use [GenAI operation selection](../_shared/astra-genai.md)
 while preparing sheets and shots. Plan img2img for whole-image changes, inpaint for
-local corrections and MSR for character/outfit/prop/background continuity in video.
+local corrections and MSR for one character's physical dialogue. Silent shots and
+inner thoughts use image2video; thoughts get timed character TTS.
 Record the source, mask or numbered reference roles and the intended operation.
 MSR references are not first/last frames. Preserve the GPT Image 2 rule for readable
 text; do not generate assets merely to test a planning choice.
@@ -269,8 +275,8 @@ One shot may carry a complete exchange. Use the ordered `performance` and speech
 references in character-scenarios so that every story event survives the translation.
 Do not add coverage merely to meet a size count or repeat a medium close-up for every line.
 Before committing the shot list, read each complete scene without cuts, then compare the
-proposed boundaries. Merge adjacent shots whose frame already carries the continuing
-exchange or action. Split when a reveal, reaction, action boundary, viewpoint or necessary
+proposed boundaries. Merge adjacent shots only when they keep one speaker and the frame carries the
+continuing action. Split when a reveal, reaction, action boundary, viewpoint or necessary
 geography changes what the audience follows. A close-up is one possible reason, not a rule.
 Follow [shot boundary decisions](references/shot-boundaries.md) after `shot_dialogue` and
 after later framing/timing changes. Use `storyboard_read.boundaryReview` to inspect every
@@ -278,11 +284,11 @@ actual playback join, including silent action and speaker changes.
 After `shot_dialogue`, read each scene's complete speech and action without the shot breaks.
 Keep a continuing speaker in the same shot while the frame carries the performance; a pause,
 new sentence, changed speech purpose, glance or hand gesture alone does not require a cut.
-Keep a two-person exchange together when both responses are readable.
+Split a two-person exchange at every speaker change, even when both faces are readable.
 For face-to-face generated dialogue, apply [dialogue coverage](references/dialogue-coverage.md):
-prefer speaker-facing OTS/reverse when expressions matter; split a fixed OTS that gives
-lines to both people, or retain a two-shot when both speaking faces are readable. A cut needs a reveal,
-reaction or viewpoint that the current frame cannot convey, or verified generation capacity.
+use speaker-facing OTS/reverse when expressions matter. Each resulting shot gets its
+own size and angle; a two-shot still has only one speaker. Speaker changes require a
+cut; other cuts need a reveal, reaction, viewpoint change or verified generation limit.
 Revise provisional shots before images: preserve line IDs, order, speaker, delivery and acting;
 use `storyboard_apply.shotsById` and `removeShotIds` to merge, or `story_shot` followed by
 characters/lines to split. Reconcile performance groups, story/event references and continuity

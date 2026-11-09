@@ -220,8 +220,10 @@ audio.
 **LTX project default (2026-10-30, user directive).** Choosing LTX at project setup
 saves `{engine:"astra-genai", model:"ltx-2.5-22b-distilled", operation:"reference",
 resolution:"1792x1024"}` (16:9; `1024x1792` for 9:16). `video_plan` uses the saved
-`operation` when a call names none, so episode cuts plan MSR. A direct "LTX로 만들어줘"
-request means `astra_genai_msr` with the character image, the dialogue in the prompt
+`operation` for physical dialogue when a call names none. Silent/voiceover-only
+shots resolve to image-to-video; thoughts use timed character TTS. Each shot has one
+speaking character; split replies and set their own camera size/angle. A direct "LTX로 만들어줘"
+physical-dialogue request means `astra_genai_msr` with the character image, the dialogue in the prompt
 and the character's voice sample when one is pinned. The v2 operations preserve the saved
 resolution. Do not convert it to historical 720-pixel presets: the live gateway can reject
 those dimensions (observed 2026-11-08). Its current catalog advertises dimensions in multiples
