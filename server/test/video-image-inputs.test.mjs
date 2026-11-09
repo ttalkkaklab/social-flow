@@ -59,6 +59,12 @@ test('GenAI I2V preserves first/end frames alongside independent subject and bac
  assert.match(p.args.prompt,/Image 2: background, Preserve room appearance/);
  assert.doesNotThrow(()=>parseVideoArgs('astra_genai_img2video',p.args));
  assert.throws(()=>parseVideoArgs('astra_genai_img2video',{...p.args,model:'ltx-2.5-22b-dev'}),/distilled/);
+ // A declared cast cannot promote a source-image-only character into video references.
+ fs.writeFileSync(path.join(root,'storyboard/cast.json'),JSON.stringify({characters:[{id:'hero',source:'../assets/characters/hero/identity.md'}]}));
+ s.visual.character=['hero'];s.visual.references=[ref('hero','image'),ref('room','video','prop')];
+ const prop=prepareVideoImages('astra_genai_img2video',{prompt:'Walk',model:'ltx-2.5-22b-distilled',resolution:'1280x704',duration:5,reserveUsd:0},s,root);
+ assert.deepEqual(prop.args.references.map(r=>path.basename(r.imagePath)),['room.png']);
+ assert.equal(prop.imageBindings.find(b=>b.id==='hero').submitted,false);
 });
 test('MSR preserves explicit image references on a legacy board without a declared cast',t=>{
  const root=fixture(t),s=shot('reference',[ref()]);

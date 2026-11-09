@@ -68,9 +68,7 @@ export function prepareVideoImages(tool, input, shot, episode) {
     const frames = routing.framePlan(shot);
     let references = routing.imageReferences(shot);
     const rawCast = shot.visual?.character;
-    const msrReferences = tool === 'astra_genai_msr' && frames.mode === 'reference'
-        || tool === 'astra_genai_img2video' && references.some(ref => ['video', 'both'].includes(ref.use));
-    const canonicalMsr = msrReferences && rawCast !== undefined
+    const canonicalMsr = tool === 'astra_genai_msr' && frames.mode === 'reference' && rawCast !== undefined
         && existsSync(path.join(episode, 'storyboard', 'cast.json'));
     if (canonicalMsr) {
         const ids = [].concat(rawCast ?? []).map(entry => typeof entry === 'string' ? entry : entry.id);

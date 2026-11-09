@@ -308,10 +308,16 @@ export async function generateGenaiVideo(operation: Operation, input: unknown) {
   } else {
     if (fs.existsSync(videoPath)) throw new Error('GenAI output already exists');
     if (operation === 'image-to-video' && usesReferences) {
-      const capabilities = z.object({ image_conditioning: z.boolean().optional() }).passthrough()
-        .parse(await requestGenai('GET', '/v1/ltx/msr/capabilities', undefined, 15_000));
+      let capabilities;
+      try {
+        capabilities = z.object({ image_conditioning: z.boolean().optional() }).passthrough()
+          .parse(await requestGenai('GET', '/v1/ltx/msr/capabilities', undefined, 15_000));
+      } catch {
+        // No generation or upload was attempted; release the managed reservation.
+        throw new GenaiRequestError('image_references_capability_unavailable: cannot verify combined image conditioning before submission; no generation was requested', true, 503);
+      }
       if (capabilities.image_conditioning !== true)
-        throw new Error('image_references_unsupported: the GenAI backend does not advertise combined start/end frames and subject references; no request was submitted');
+        throw new GenaiRequestError('image_references_unsupported: the GenAI backend does not advertise combined start/end frames and subject references; no request was submitted', true, 422);
     }
     const msrArgs = operation === 'msr' ? args as z.infer<typeof genaiMsrSchema> : undefined;
     if (msrArgs && (msrArgs.negativePrompt !== undefined || (msrArgs.guidanceScale ?? 1) > 1)) {
