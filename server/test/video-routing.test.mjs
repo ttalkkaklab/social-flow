@@ -392,6 +392,7 @@ test('a saved engine that cannot keep a voice is refused by name, not as a missi
 
 test('storyboard timing follows snapshot, scoped overrides, source trim and outgoing handles before media', async t => {
   const f = fixture(t, { engine: 'astra-genai', model: 'ltx-2.5-22b-distilled', resolution: '1792x1024', operation: 'reference' });
+  f.board.SCENES[0].narration = [{ id: 'l1', speaker: 'hero', delivery: 'on_screen', tts: 'Hello' }];
   Object.assign(f.board.SCENES[0], { duration: 14, edit: { in: .5 }, shot: { render: { mode: 'generated_video' } } });
   f.board.SCENES[1].transition = 'dissolve';
   f.save();
@@ -423,6 +424,7 @@ test('MSR plans cover the whole shot, reject short exact requests and recheck ch
   const f = fixture(t, { engine: 'astra-genai', model: 'ltx-2.5-22b-distilled', resolution: '1792x1024', operation: 'reference' });
   const ref = path.join(f.episode, 'person.png');
   fs.writeFileSync(ref, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=', 'base64'));
+  f.board.SCENES[0].narration = [{ id: 'l1', speaker: 'hero', delivery: 'on_screen', tts: 'Hello' }];
   f.board.SCENES[0].duration = 5.1; f.save();
   const args = { prompt: 'A person listens.', references: [{ imagePath: ref }], reserveUsd: .25 };
   const plan = extra => planVideo({ episode: f.episode, shotId: 's1', requestId: 'timed', args: { ...args, ...extra } });
@@ -436,4 +438,42 @@ test('MSR plans cover the whole shot, reject short exact requests and recheck ch
   assert.equal(plan({ requiredSeconds: 1 }).args.numFrames, 129); // cannot understate board coverage
   f.board.SCENES[0].duration = 21; f.save();
   await assert.rejects(f.execute(p, async () => assert.fail('Over-limit revision must not submit')), /video_duration_exceeded|stale/);
+});
+
+
+test('MSR projects route silent and thought shots to I2V and split speaker changes before planning', async t => {
+ const {manageSpeech}=await import('../dist/speech.js');
+ const f=fixture(t,{engine:'astra-genai',model:'ltx-2.5-22b-distilled',resolution:'1792x1024',operation:'reference'});
+ const img=path.join(f.episode,'opening.png');
+ fs.writeFileSync(img,Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=','base64'));
+ const shot=f.board.SCENES[0];
+ shot.visual.frames={mode:'reference',start:'../opening.png'};
+ shot.visual.video.promptSource={action:'The character notices the open door.'};
+ f.board.SB_DOC={characters:[{id:'hero',tts:{engine:'gemini',voiceId:'Kore',language:'ko',speed:1}}]};
+ const plan=()=>planVideo({episode:f.episode,shotId:'s1',requestId:'thought',args:{duration:5,reserveUsd:0.25}});
+ for(const narration of [[],[{id:'l1',speaker:'hero',delivery:'voiceover',tts:'A secret thought.'}]]) {
+  shot.narration=narration;f.save();
+  const p=plan();
+  assert.equal(p.tool,'astra_genai_img2video');assert.equal(p.selection.operation,'image');
+  assert.equal(p.selection.model,'ltx-2.5-22b-distilled');assert.equal(p.args.resolution,'1792x1024');
+  assert.equal(p.args.generateAudio,false);assert.equal(p.args.imageUri,'data:image/png;base64,'+fs.readFileSync(img).toString('base64'));
+  assert.equal(p.imageBindings.find(b=>b.id==='start').path,img);
+  assert.match(p.args.prompt,/Start from the given first frame/);assert.match(p.args.prompt,/mouths stay closed/);
+  assert.doesNotMatch(p.args.prompt,/A secret thought/);
+  assert.equal(p.args.references,undefined);
+  assert.equal(manageSpeech({path:path.join(f.episode,'storyboard'),action:'plan_video',shotId:'s1'}).plan.mode,'voiceover');
+  assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'wrong',tool:'astra_genai_msr'}),/msr_speech_route/);
+ }
+ shot.duration=5.1;f.save();
+ assert.throws(plan,/video_duration_short/);
+ const timed=planVideo({episode:f.episode,shotId:'s1',requestId:'timed-thought',args:{reserveUsd:0.25}});
+ assert.equal(timed.args.duration,6);assert.ok(Math.abs(timed.durationPlan.requiredSeconds-5.1)<1e-9);
+ const required=seconds=>planVideo({episode:f.episode,shotId:'s1',requestId:'required-thought',args:{requiredSeconds:seconds,reserveUsd:0.25}});
+ assert.equal(required(5.1).args.duration,6);assert.equal(required(8.1).args.duration,9);
+ assert.equal(required(1).args.duration,6);assert.equal(required(5.1).args.requiredSeconds,undefined);
+ assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'conflict',args:{requiredSeconds:5.1,duration:6,reserveUsd:0.25}}),/mutually exclusive/);
+ shot.narration=[{id:'l1',speaker:'hero',delivery:'on_screen',tts:'Hello'},{id:'l2',speaker:'friend',delivery:'on_screen',tts:'Hi'}];f.save();
+ assert.throws(plan,/shot_speaker_limit/);
+ shot.narration[1]={id:'l2',speaker:'hero',delivery:'voiceover',tts:'A thought'};f.save();
+ assert.throws(plan,/msr_speech_route/);
 });

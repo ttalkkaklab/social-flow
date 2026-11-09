@@ -67,12 +67,14 @@ test('video adapters select by capabilities, never a provider name',()=>{
  assert.throws(()=>speechVideoPlan(lines,{...caps,audioConditioning:false}),/cannot synchronize/);
  assert.equal(speechVideoPlan([{...lines[0],delivery:'voiceover'}],caps).mode,'voiceover');
  const native={...caps,audioConditioning:false,lipSync:false,nativeSpeech:true},msr=speechVideoPlan(lines,native);
+ assert.throws(()=>speechVideoPlan([...lines,{...lines[0],id:'thought',delivery:'voiceover'}],native),/msr_speech_route/);
  assert.equal(msr.mode,'native');assert.equal(msr.audioFirst,false);assert.equal(msr.timing,'model_timed');
  assert.match(msr.videoPrompt,/physically saying "Hello"/);
  for (const delivery of ['off_screen','voiceover']) {
   const outside=speechVideoPlan([{...lines[0],delivery}],native);
-  assert.equal(outside.mode,'native');assert.equal(outside.audioFirst,false);
-  assert.match(outside.videoPrompt,/Speak "Hello"/);
+  assert.equal(outside.mode,delivery==='voiceover'?'voiceover':'native');assert.equal(outside.audioFirst,delivery==='voiceover');
+  if(delivery==='off_screen')assert.match(outside.videoPrompt,/Speak "Hello"/);
+  else {assert.equal(outside.timing,'needs_audio_duration');assert.doesNotMatch(outside.videoPrompt,/Hello/);}
   assert.doesNotMatch(outside.videoPrompt,/Show this speaker physically saying/);
  }
 });
@@ -398,7 +400,17 @@ describe('scene direction', () => {
   const {board,work,r}=fixture(t,[{tts:'First',speaker:'host',delivery:'voiceover',acting:{emotion:'Confused',leadInSeconds:0.25,tailOutSeconds:0.5}},{tts:'Second',speaker:'host',delivery:'voiceover',acting:{emotion:'Relieved',leadInSeconds:0.1,tailOutSeconds:0.2}}]);
   let next=r;
   for(const [i,line] of r.lines.entries()){const audio=path.join(work,`raw${i}.wav`);writeFileSync(audio,wav(i+1));next=manageSpeech({path:board,action:'attach_audio',lineId:line.id,expectedRevision:next.revision,audioPath:audio,generation:proof(line)});}
-  const plan=manageSpeech({path:board,action:'plan_video',shotId:r.lines[0].shotId,capabilities:caps}).plan;
+  const stored={};new Function('window',readFileSync(path.join(board,'scenes.js'),'utf8'))(stored);
+  stored.SCENES[0].sound={audioSource:'video'};
+  writeFileSync(path.join(board,'scenes.js'),Object.entries(stored).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+  const candidate=path.join(work,'thought.mp4');writeFileSync(candidate,'image2video candidate');
+  const attached=manageSpeech({path:board,action:'attach_video',shotId:r.lines[0].shotId,
+   expectedRevision:manageSpeech({path:board,action:'list'}).revision,videoPath:candidate,
+   capabilities:{...caps,nativeSpeech:true}});
+  assert.equal(attached.plan.mode,'voiceover');assert.equal(attached.plan.audioFirst,true);
+  const bound={};new Function('window',readFileSync(path.join(board,'scenes.js'),'utf8'))(bound);
+  assert.equal(bound.SCENES[0].sound.audioSource,'speech');
+  const plan=attached.plan;
   assert.equal(plan.boundary,'one_shot_per_generation');assert.equal(plan.timing,'measured');assert.equal(plan.durationSeconds,4.05);assert.equal(plan.performance[1].startSeconds,1.75);assert.equal(plan.performance[1].speechStartSeconds,1.85);
   writeFileSync(path.join(work,'cards.tsv'),'0\traw0.wav\t1\n');
   const {compose,duration}=require('../../skills/produce/references/compose-speech.js'),checker=require('../../skills/produce/references/check-tts-quality.js');

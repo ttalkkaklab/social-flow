@@ -94,28 +94,31 @@ provenance so the user can request targeted corrections later through `edit-spee
 voice-lock ASR. Follow `skills/produce/references/shot-speech.md`. Narrator and character
 lines use explicit speakers; video models are replaceable adapters with declared capabilities.
 
-## Dialogue coverage (user directive, 2026-11-07)
+## Dialogue coverage (user directive, 2026-11-09)
 
-For face-to-face generated dialogue, prefer speaker-facing OTS/reverse coverage when
-expressions matter. In each OTS clip the far, visible face speaks and the foreground
-listener stays silent; put the reply in a separately generated reverse shot. Retain a
-two-speaker two-shot when both faces and mouths are readable and the shared performance
-needs it. Do not ban OTS or two-speaker MSR, split every line, or mistake two visible
-characters for two speakers. Follow `skills/storyboard/references/dialogue-coverage.md`
-for authoring, images, bindings, continuity and explicit creative exceptions. This is
-production guidance, not a new execution gate or a reason to regenerate approved media.
+Each shot contains lines from at most one character. Split at every speaker change,
+including readable two-shots; consecutive lines by that character may share a shot.
+Keep two visible principal characters when the listener belongs in frame, but keep the
+listener silent. Set size and angle for the resulting speaker/action: speaker-facing
+OTS/reverse for exchanges, medium close-ups or close-ups for expressions, and wider
+views for shared action. Preserve the axis, eyelines, story order, acting and line IDs.
+Follow `skills/storyboard/references/dialogue-coverage.md`.
+
+Silent and inner-thought shots use image2video rather than MSR. Mark thoughts as
+`voiceover` attributed to the thinking character, generate pinned-voice TTS, measure
+and compose it with the shot's action, lead-in and tail-out, then plan the full video
+coverage. Keep mouths closed and use the composed TTS as assembly audio. Split mixed
+physical/inner speech before generation. Missing TTS setup is reported, never replaced
+with native MSR thoughts. Existing usable clips do not require regeneration.
 
 ## MSR voice and LTX default (user directive, 2026-10-30; voice optional 2026-10-31)
 
-Two-speaker MSR dialogue stays supported (user directive, 2026-11-03). Both the
-human and orc left/right trials had correct speaker turns according to the user.
-Bind each visible speaker to the inspected start image's viewer-relative position
-and appearance with `shot_prompt.speakerBindings`; repeat that identity and its
-image/audio mapping on each compiled turn. Do not impose one speaker per shot.
-Keep dialogue in `shot_dialogue` and action in `shot_prompt`; never skip a turn
-because its words appear somewhere in a prompt. Recompile saved action with current
-icons at video planning time and report each setting's delivery route. Experimental
-success is not a guarantee of model adherence, voice identity or subtitle absence.
+MSR dialogue has one speaking character per shot. Bind that speaker to the inspected
+start image's viewer-relative position and appearance with `shot_prompt.speakerBindings`;
+repeat the identity and image/audio mapping on compiled turns. Keep dialogue in
+`shot_dialogue` and action in `shot_prompt`. Recompile saved action with current icons
+at video planning time and report each setting's delivery route. Experimental success
+is not a guarantee of model adherence, voice identity or subtitle absence.
 
 MSR renders a cut from subject and background images; any dialogue is written in the
 prompt, and MSR's own speech-and-effects soundtrack is the cut's audio. A speaker's pinned
@@ -125,7 +128,7 @@ and the plan records a warning. A request that sends a sample to a gateway witho
 support is a hard `msr_voice_unsupported` error. There is no external TTS lane for MSR,
 so its lines get no per-line TTS: `speech_manage` plans and binds an MSR shot as `native`
 (line revisions, no line audio) and an edited line marks the clip stale (2026-10-31).
-A cut without dialogue can use MSR or img2video. A character's default MSR references are
+A cut without physical dialogue uses img2video; inner thoughts use separate timed TTS. A character's default MSR references are
 its sheet panels — face close-up, headless front and headless back (2026-10-31): one
 character uses all three; two use each face, then each front; the shot's start image (its characters,
 place and props composed by `shot_image`) takes the background slot, and the plain place picture stays out.

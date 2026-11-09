@@ -115,8 +115,11 @@ export function speechVideoPlan(input: Line[] | {narration?: Line[]; [key: strin
   const scene = Array.isArray(input) ? {narration:input} : input;
   const lines = scene.narration || [];
   const onScreen = lines.some(line => line.delivery === 'on_screen');
-  // Native speech renders every authored delivery in the soundtrack; only on-screen speech moves a visible mouth.
-  const mode = capabilities.nativeSpeech ? 'native' : !onScreen ? 'voiceover' : capabilities.audioConditioning && capabilities.lipSync ? 'audio_conditioned' : capabilities.postLipSync ? 'post_lipsync' : null;
+  // Inner thoughts stay external TTS even when the project's dialogue adapter is MSR.
+  const physicalSpeech = lines.some(line => line.delivery === 'on_screen' || line.delivery === 'off_screen');
+  if (capabilities.nativeSpeech && physicalSpeech && lines.some(line => line.delivery === 'voiceover'))
+    throw new Error('msr_speech_route: split physical dialogue and inner thoughts into separate shots; thoughts use image2video with timed TTS');
+  const mode = capabilities.nativeSpeech && physicalSpeech ? 'native' : !onScreen ? 'voiceover' : capabilities.audioConditioning && capabilities.lipSync ? 'audio_conditioned' : capabilities.postLipSync ? 'post_lipsync' : null;
   if (!mode) throw new Error('Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting');
   const timeline = actingContract().planScenePerformance(scene,measuredDuration);
   const videoPrompt = actingContract().sceneVideoPrompt(timeline.performance,mode,scene);
@@ -129,7 +132,7 @@ export function speechVideoPlan(input: Line[] | {narration?: Line[]; [key: strin
   if (promptLength?.exceeded) warnings.push(`ASTRA video prompt has ${promptLength.characters} characters; the adapter limit is ${promptLength.maxCharacters}. Shorten repeated descriptions or split at a natural action boundary while preserving necessary actions. The plan is unchanged.`);
   const performancePayload = actingContract().scenePerformancePayload(scene) as Record<string, unknown>;
   const { performance: _performance, narration: _narration, ...reuseContext } = performancePayload;
-  return { ...timeline, ...(mode === 'native' && timeline.timing === 'needs_audio_duration' ? { timing: 'model_timed' } : {}), warnings, promptLength, reuseContextRevision:hash(JSON.stringify(reuseContext)), performanceRevision:hash(JSON.stringify(performancePayload)), videoPrompt, textPolicy:'no_visible_text', boundary:'one_shot_per_generation', instructions:'Generate only this shot. Preserve the ordered actions, addressees and reactions, including silent events. Concurrent actions share their speech interval. Match the source frame to the opening state; do not concatenate other shots sharing a reference image. '+actingContract().VIDEO_TEXT_POLICY, mode, provider: capabilities.provider, model: capabilities.model, capabilities, audioFirst: onScreen && mode !== 'native', lineIds: lines.map(line => line.id), review: 'not_reviewed' };
+  return { ...timeline, ...(mode === 'native' && timeline.timing === 'needs_audio_duration' ? { timing: 'model_timed' } : {}), warnings, promptLength, reuseContextRevision:hash(JSON.stringify(reuseContext)), performanceRevision:hash(JSON.stringify(performancePayload)), videoPrompt, textPolicy:'no_visible_text', boundary:'one_shot_per_generation', instructions:'Generate only this shot. Preserve the ordered actions, addressees and reactions, including silent events. Concurrent actions share their speech interval. Match the source frame to the opening state; do not concatenate other shots sharing a reference image. '+actingContract().VIDEO_TEXT_POLICY, mode, provider: capabilities.provider, model: capabilities.model, capabilities, audioFirst: lines.length > 0 && mode !== 'native', lineIds: lines.map(line => line.id), review: 'not_reviewed' };
 }
 
 export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
@@ -321,6 +324,8 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
         // The clip's soundtrack carries the dialogue, so it is the card's audio.
         scene.sound = {...sound, audioSource:'video'};
         for (const {line} of selected) if (line.mediaStatus === 'needs_audio') delete line.mediaStatus;
+      } else if (selected.length && plan.mode === 'voiceover') {
+        scene.sound = { ...sound, audioSource: 'speech' };
       } else if (!selected.length && sound.audioSource === 'video') {
         try {
           const streams = execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'a', '-show_entries', 'stream=index', '-of', 'csv=p=0', videoPath],

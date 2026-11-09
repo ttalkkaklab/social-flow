@@ -115460,16 +115460,31 @@ function planVideo(raw) {
   const context2 = routingContext(input.episode, input.shotId);
   const { selection } = context2;
   requireSupportedSelection(selection);
-  const video2 = context2.shot.visual?.video;
-  const rawCast = context2.board.SB_DOC?.characters;
-  const names = Object.fromEntries((Array.isArray(rawCast) ? rawCast : []).map((c) => [c.id, String(c.name ?? "")]));
-  const compiled = input.args.prompt === void 0 && video2?.promptSource ? compileVideoPrompt(context2.shot, video2.promptSource, names) : void 0;
-  const authored = compiled?.prompt ?? video2?.prompt;
-  const callArgs = input.args.prompt === void 0 && typeof authored === "string" ? { ...input.args, prompt: authored } : input.args;
-  const direction = compiled ? { directionBindings: compiled.directionBindings, directionWarnings: compiled.warnings } : { directionWarnings: [input.args.prompt !== void 0 ? "Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons." : "Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time."] };
+  const lines = (context2.shot.narration ?? []).filter((line) => line.tts?.trim());
+  if (new Set(lines.map((line) => line.speaker)).size > 1)
+    throw new Error("shot_speaker_limit: split speaker changes into separate shots, then set each shot's framing and camera angle");
+  const msrRequested = input.tool === "astra_genai_msr" || selection.engine === "astra-genai" && (input.operation ?? (input.tool ? void 0 : selection.operation)) === "reference";
+  if (msrRequested && (!lines.length || lines.some((line) => line.delivery === "voiceover")))
+    throw new Error("msr_speech_route: silent and voiceover/inner-thought shots use image2video with external timed TTS for voiceover; split mixed deliveries first");
   const operation = input.operation ?? (input.tool ? void 0 : selection.operation);
   const tool2 = input.tool || selectedVideoTool(selection, operation);
   if (input.tool && input.operation && VIDEO_ADAPTERS[input.tool]?.operation !== input.operation) throw new Error("Tool and operation disagree");
+  const visual = context2.shot.visual;
+  const silentPicture = !lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen");
+  const shot = tool2 === "astra_genai_img2video" && silentPicture && visual?.frames?.mode === "reference" ? { ...context2.shot, visual: {
+    ...visual,
+    frames: { mode: "first", start: visual.frames.start },
+    references: (visual.references ?? []).map((ref) => ({ ...ref, use: "image" }))
+  } } : context2.shot;
+  const video2 = visual?.video;
+  const rawCast = context2.board.SB_DOC?.characters;
+  const names = Object.fromEntries((Array.isArray(rawCast) ? rawCast : []).map((c) => [c.id, String(c.name ?? "")]));
+  const compiled = input.args.prompt === void 0 && video2?.promptSource ? compileVideoPrompt(shot, video2.promptSource, names) : void 0;
+  const authored = compiled?.prompt ?? video2?.prompt;
+  let callArgs = input.args.prompt === void 0 && typeof authored === "string" ? { ...input.args, prompt: authored } : input.args;
+  if (tool2 === "astra_genai_img2video" && silentPicture)
+    callArgs = { ...callArgs, generateAudio: false, prompt: [callArgs.prompt, "No speech or vocalization. All visible mouths stay closed; perform the planned silent action."].filter(Boolean).join(" ") };
+  const direction = compiled ? { directionBindings: compiled.directionBindings, directionWarnings: compiled.warnings } : { directionWarnings: [input.args.prompt !== void 0 ? "Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons." : "Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time."] };
   if (selection.engine === "host") {
     if (input.tool) throw new Error("model_selection_mismatch: host has no server adapter");
     const images2 = prepareVideoImages("host_external", callArgs, context2.shot, context2.episode);
@@ -115498,12 +115513,22 @@ function planVideo(raw) {
   const durationPlan = shotVideoTiming(context2, tool2, bound);
   if (durationPlan.status === "split_required")
     throw new Error(`video_duration_exceeded: ${input.shotId} needs ${durationPlan.requiredSeconds}s; ${tool2} allows ${durationPlan.maxSeconds}s. Split at a meaningful performance boundary; never truncate or switch models.`);
+  if (tool2 === "astra_genai_img2video" && durationPlan.requiredSeconds !== void 0) {
+    if (bound.requiredSeconds !== void 0) {
+      if (["duration", "durationSeconds", "numFrames", "frames", "autoDuration", "audioMaxDuration"].some((key) => bound[key] !== void 0))
+        throw new Error("requiredSeconds is mutually exclusive with exact duration arguments; supply the shot need or an exact request, not both");
+      delete bound.requiredSeconds;
+    }
+    if (typeof bound.duration === "number" && bound.duration < durationPlan.requiredSeconds)
+      throw new Error(`video_duration_short: ${input.shotId} needs ${durationPlan.requiredSeconds}s but the request covers ${bound.duration}s`);
+    bound.duration ??= Math.ceil(durationPlan.requiredSeconds);
+  }
   if (durationPlan.status === "fits" && VIDEO_ADAPTERS[tool2].voice !== "supplied" && DURATION_TOOLS.includes(tool2)) {
     const exact = ["duration", "durationSeconds", "numFrames", "frames", "autoDuration", "audioMaxDuration"].some((key) => bound[key] !== void 0);
     if (!exact) bound = resolveVideoDuration(tool2, { ...bound, requiredSeconds: durationPlan.requiredSeconds }).args;
   }
-  const images = prepareVideoImages(tool2, bound, context2.shot, context2.episode);
-  const voice = prepareVideoVoice(tool2, images.args, { ...context2, msrVoice: genaiMsrVoiceReferences() });
+  const images = prepareVideoImages(tool2, bound, shot, context2.episode);
+  const voice = prepareVideoVoice(tool2, images.args, { ...context2, shot, msrVoice: genaiMsrVoiceReferences() });
   const args = parseVideoArgs(tool2, voice.args);
   if (durationPlan.status === "fits") {
     const fps = durationPlan.limits?.frameRate ?? 1;
@@ -117434,6 +117459,8 @@ function writeShotDialogue(args) {
     const index = shotIndex(shots, id, "shot_dialogue");
     const cast = contract().castOf(shots[index]);
     if (!cast) throw new Error(`story_order: set ${id}'s characters with shot_characters before its lines`);
+    if (new Set(lines.map((line) => line.speaker)).size > 1)
+      throw new Error(`shot_speaker_limit: ${id} has more than one speaker; split at each speaker change, then set each shot's size and angle`);
     const old = shots[index].narration ?? [];
     for (const line of old) if (line.id) used.delete(line.id);
     const next = lines.map((line, n) => {
@@ -126610,7 +126637,9 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     name: "shot_dialogue",
     title: "Write each shot's lines by character",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    description: `Use it after shot_characters to write a shot's lines in spoken order, each attributed to a character from the episode cast. The given lines replace the shot's lines; [] makes it silent. Keep consecutive lines from a speaker or a readable exchange in the same shot. After writing the complete scene, inspect every storyboard_read.boundaryReview join against an uninterrupted performance, merge only redundant boundaries and compare revised performance duration with videoTiming; split only for a motivated visual change or verified model capacity. Delivery defaults to on_screen for one of the shot's characters and voiceover for anyone else \u2014 a narrator is a character who speaks without being seen. A line with a known id keeps its acting and audio binding, and changed text makes that audio stale. Refused (story_order) before the shot's characters are set and for an on_screen speaker outside them; an unknown speaker is cast_unknown, and a story-first board repeats story_sequence's cast check (cast_source_missing, character_panel_missing). Local file only; no audio, image or prompt is generated.
+    description: `Write one character's lines per shot after shot_characters.
+
+Use it to write a shot's lines in spoken order, each attributed to a character from the episode cast. The given lines replace the shot's lines; [] makes it silent. Keep consecutive lines from one speaker in the same shot. Split every speaker change first (shot_speaker_limit), including a readable two-shot; visible listeners stay silent. Set each resulting shot's size and angle with shot_icons. Inner thoughts use the character's speaker id and voiceover delivery, with image2video and measured, timed TTS instead of MSR. After writing the complete scene, inspect every storyboard_read.boundaryReview join against an uninterrupted performance, merge only redundant boundaries and compare revised performance duration with videoTiming; split for speaker changes, motivated visual changes or verified model capacity. Delivery defaults to on_screen for one of the shot's characters and voiceover for anyone else \u2014 a narrator is a character who speaks without being seen. A line with a known id keeps its acting and audio binding, and changed text makes that audio stale. Refused (story_order) before the shot's characters are set and for an on_screen speaker outside them; an unknown speaker is cast_unknown, and a story-first board repeats story_sequence's cast check (cast_source_missing, character_panel_missing). Local file only; no audio, image or prompt is generated.
 
 Do NOT generate speech here \u2014 speech_manage plans and binds audio later. Do NOT write icon attributes or visual plans; shot_icons comes next, then storyboard_apply.
 
@@ -128319,7 +128348,10 @@ function speechVideoPlan(input, capabilities) {
   const scene = Array.isArray(input) ? { narration: input } : input;
   const lines = scene.narration || [];
   const onScreen = lines.some((line) => line.delivery === "on_screen");
-  const mode = capabilities.nativeSpeech ? "native" : !onScreen ? "voiceover" : capabilities.audioConditioning && capabilities.lipSync ? "audio_conditioned" : capabilities.postLipSync ? "post_lipsync" : null;
+  const physicalSpeech = lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen");
+  if (capabilities.nativeSpeech && physicalSpeech && lines.some((line) => line.delivery === "voiceover"))
+    throw new Error("msr_speech_route: split physical dialogue and inner thoughts into separate shots; thoughts use image2video with timed TTS");
+  const mode = capabilities.nativeSpeech && physicalSpeech ? "native" : !onScreen ? "voiceover" : capabilities.audioConditioning && capabilities.lipSync ? "audio_conditioned" : capabilities.postLipSync ? "post_lipsync" : null;
   if (!mode) throw new Error("Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting");
   const timeline = actingContract().planScenePerformance(scene, measuredDuration);
   const videoPrompt = actingContract().sceneVideoPrompt(timeline.performance, mode, scene);
@@ -128330,7 +128362,7 @@ function speechVideoPlan(input, capabilities) {
   if (promptLength?.exceeded) warnings.push(`ASTRA video prompt has ${promptLength.characters} characters; the adapter limit is ${promptLength.maxCharacters}. Shorten repeated descriptions or split at a natural action boundary while preserving necessary actions. The plan is unchanged.`);
   const performancePayload = actingContract().scenePerformancePayload(scene);
   const { performance: _performance, narration: _narration, ...reuseContext } = performancePayload;
-  return { ...timeline, ...mode === "native" && timeline.timing === "needs_audio_duration" ? { timing: "model_timed" } : {}, warnings, promptLength, reuseContextRevision: hash4(JSON.stringify(reuseContext)), performanceRevision: hash4(JSON.stringify(performancePayload)), videoPrompt, textPolicy: "no_visible_text", boundary: "one_shot_per_generation", instructions: "Generate only this shot. Preserve the ordered actions, addressees and reactions, including silent events. Concurrent actions share their speech interval. Match the source frame to the opening state; do not concatenate other shots sharing a reference image. " + actingContract().VIDEO_TEXT_POLICY, mode, provider: capabilities.provider, model: capabilities.model, capabilities, audioFirst: onScreen && mode !== "native", lineIds: lines.map((line) => line.id), review: "not_reviewed" };
+  return { ...timeline, ...mode === "native" && timeline.timing === "needs_audio_duration" ? { timing: "model_timed" } : {}, warnings, promptLength, reuseContextRevision: hash4(JSON.stringify(reuseContext)), performanceRevision: hash4(JSON.stringify(performancePayload)), videoPrompt, textPolicy: "no_visible_text", boundary: "one_shot_per_generation", instructions: "Generate only this shot. Preserve the ordered actions, addressees and reactions, including silent events. Concurrent actions share their speech interval. Match the source frame to the opening state; do not concatenate other shots sharing a reference image. " + actingContract().VIDEO_TEXT_POLICY, mode, provider: capabilities.provider, model: capabilities.model, capabilities, audioFirst: lines.length > 0 && mode !== "native", lineIds: lines.map((line) => line.id), review: "not_reviewed" };
 }
 function manageSpeech(args) {
   args = speechManageSchema.parse(args);
@@ -128533,6 +128565,8 @@ function manageSpeech(args) {
       if (native) {
         scene.sound = { ...sound, audioSource: "video" };
         for (const { line } of selected) if (line.mediaStatus === "needs_audio") delete line.mediaStatus;
+      } else if (selected.length && plan2.mode === "voiceover") {
+        scene.sound = { ...sound, audioSource: "speech" };
       } else if (!selected.length && sound.audioSource === "video") {
         try {
           const streams = execFileSync15(

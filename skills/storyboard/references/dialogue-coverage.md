@@ -2,40 +2,43 @@
 
 ## Contents
 
-- [Choose the view from the exchange](#choose-the-view-from-the-exchange)
+- [One speaking character per shot](#one-speaking-character-per-shot)
 - [Author before generating](#author-before-generating)
-- [Worked coverage and review cases](#worked-coverage-and-review-cases)
-- [Evidence and limits](#evidence-and-limits-2026-11-07)
+- [Silent pictures and inner thoughts](#silent-pictures-and-inner-thoughts)
+- [Worked cases](#worked-cases)
 
-## Choose the view from the exchange
+## One speaking character per shot
 
-For face-to-face dialogue, prefer speaker-facing over-the-shoulder (OTS) and reverse
-coverage when the beat needs each speaker's expression. A two-shot is useful for shared
-action, distance or simultaneous reactions; do not force characters to face the camera
-merely to keep both mouths visible. These are authoring defaults, not execution gates,
-a ban on two-speaker MSR, or proof of generated-media quality.
+Each shot carries lines from at most one character (user directive, 2026-11-09).
+Split at every speaker change, including a reply in an otherwise readable two-shot.
+Consecutive lines by the same speaker can share a shot. A → B → A needs three shots;
+never gather A's nonconsecutive lines and lose the reply's order. Keep line IDs, exact
+words, delivery, acting, pauses and reactions. This reduces MSR speaker-assignment risk;
+it does not guarantee model adherence.
 
-| Intended beat | Coverage | Speech in each generated clip |
+A shot may still show two principal characters: the listener stays silent. Choose size
+and angle after allocating lines. Do not reuse the original two-shot camera plan on
+both halves or ask a single generated clip to invent the reverse cut.
+
+| Beat | Shot size and camera angle | Audio |
 | --- | --- | --- |
-| Face-to-face exchange; each expression matters | Over B's shoulder toward A, then reverse over A toward B | A speaks in the first clip; B speaks in the reverse. The foreground listener stays silent. |
-| Short exchange whose shared action/reaction matters | Medium two-shot with both faces and mouths readable at delivery size | Both may speak in explicit order; the other listens silently during each turn. |
-| Two-shot with strict profiles, overlapping faces, tiny mouths or one soft face | Reblock if that preserves the scene; otherwise use speaker-facing coverage | Do not treat the label `two` as evidence that two-speaker delivery is suitable. |
-| One speaker continues across several lines | Hold the existing speaker-facing view while it serves the beat | Keep the same speaker's lines together; do not cut at every sentence or pause. |
-| Intentional listener reaction under another person's speech | Purposeful reaction coverage with explicit speech ownership | Check the selected adapter's delivery contract; do not relabel a hidden speaker merely to bypass it. |
+| Face-to-face exchange | Speaker-facing medium/medium close-up OTS, then complementary reverse | Only the far visible character speaks; foreground listener stays silent. |
+| Small emotional change | Close-up at eye level or a motivated three-quarter angle, mouth readable | One speaker's consecutive lines. |
+| Shared action or spatial relation | Medium/wide two-shot when the action needs both bodies | One speaker only; reply gets its own shot. |
+| Listener reaction, insert or establishing view | Reaction close-up, relevant detail or wide view | No dialogue: image2video. Purposeful off-screen physical speech retains one explicit speaker. |
+| Inner thought | Reaction close-up or purposeful POV/detail; no speaking mouth | image2video plus timed character TTS. |
 
-The reliability concern is **two speaking identities in a fixed OTS composition where
-only one face is readable**, not OTS itself. Default to separate generation units for
-A and B in that case, rather than asking one generation to invent a reverse cut.
-This is a production-motivated boundary, not a universal one-line/one-speaker rule.
-Keep listening, pauses, action and the exchange's meaning when redistributing lines.
-Overlapping speech or a camera orbit that hides mouths adds another difficulty; simplify
-coverage or explicitly retain it as an unverified creative exception, not guaranteed output.
+Keep both cameras on the same side of the dialogue axis, complementary eyelines,
+world positions, prop ownership, lighting and action state. A low/high angle needs a
+story reason. Set size, angle, view, focus, movement and opening/closing action for each
+resulting shot with `shot_icons`; then create its own opening image.
 
 ## Author before generating
 
-1. After `shot_dialogue` and before final `shot_icons`, compare speaking identities with
-   planned visible faces. Snapshot the complete affected shots and narration records before
-   splitting. Create the reverse story with `story_shot`, then set its `shot_characters`.
+1. Before `shot_dialogue`, split the planned exchange at every speaker change and
+   compare the single speaking identity with the planned visible face. For an existing
+   multi-speaker board, repair it before final `shot_icons`. Snapshot the complete affected
+   shots and narration records before splitting. Create the reverse story with `story_shot`, then set its `shot_characters`.
    `story_shot` appends a new shot to its scene: read it back, then move the complete new
    record immediately after the source with one `storyboard_apply` using `removeShotIds`
    and `insertShots:[{afterId:sourceId,shots:[completeNewShot]}]`. Keep its stable ID;
@@ -61,13 +64,13 @@ coverage or explicitly retain it as an unverified creative exception, not guaran
    background view to the camera, using the shared location layout.
 4. Set framing/icons and blocking for each resulting shot, then make its own start image.
    Inspect actual pixels at the delivery aspect: the speaking mouth is unobstructed and
-   sufficiently large; for a two-speaker two-shot both faces stay readable and in focus.
-   Portrait layouts and foreground depth must not hide the second speaking face. A frame
+   sufficiently large; the silent listener may stay soft while the speaking face stays readable.
+   Portrait layouts and foreground depth must not hide the speaking face. A frame
    label or a current receipt is not visual verification.
 5. After images, write `shot_prompt` action/end/sound in English. Dialogue stays only in
-   `shot_dialogue`; do not paste spoken quotes into action. With two MSR on-screen speakers,
-   inspect each start image and pass `speakerBindings` with distinct viewer-relative
-   positions and appearance. Image/Audio indices are reference slots, not left/right.
+   `shot_dialogue`; do not paste spoken quotes into action. For an MSR speaker, inspect
+   the start image and pass `speakerBindings` with its viewer-relative position and
+   appearance. Image/Audio indices are reference slots, not left/right.
    Rebuild bindings after image changes, including a reverse; never copy them blindly.
 6. Plan the revised clips and reconcile duration and cost with existing authorization.
    A split is not permission to generate more media, exceed the budget or replace an
@@ -76,53 +79,45 @@ coverage or explicitly retain it as an unverified creative exception, not guaran
    Re-export the canonical storyboard after edits. If discovered at the video stage,
    return to the story/lines/icons/image steps; a prompt-only patch cannot fix wrong coverage.
 
-Keep the selected model and voice lane. MSR uses its native soundtrack; no external TTS
-workaround is introduced here. The MSR compiler supports intentional `off_screen` and `voiceover` turns, instructing
-it not to show that speaker or animate visible mouths. That is not the same composition
-as a visible foreground shoulder speaking. For a deliberate listener-only reaction, keep
-the speaker entirely outside frame, preserve explicit delivery and identity, and verify
-the actual result; native off-screen speech is not guaranteed by a prompt. Do not relabel
-a visible hidden-mouth speaker as off-screen just to avoid bindings. Other routes retain
-their existing delivery contracts. Already usable clips remain reusable;
-this guidance does not trigger retroactive regeneration.
+## Silent pictures and inner thoughts
 
-## Worked coverage and review cases
+In an MSR project, use MSR only for a single character's physical dialogue
+(`on_screen`, or intentional `off_screen`). Silent shots and shots containing only
+`voiceover` use image2video, keeping the saved engine/model/resolution. Set
+`frames.mode:"first"`, not `reference`; use the composed shot image as the first frame.
+Never send inner thoughts as MSR prompt dialogue or a character voice reference.
+Separate a character's physical speech and inner thoughts into shots with their own
+route. `shot_dialogue` and `video_plan` report `shot_speaker_limit` for multiple speakers;
+explicit silent/voiceover MSR plans report `msr_speech_route` before generation.
 
-- **Fixed OTS, A asks and B answers:** make clip 1 over B toward A with A's question;
-  clip 2 over A toward B with B's answer. Both casts include A and B. Keep a purposeful
-  listening beat, but no duplicated question in clip 2. Generate independently and join
-  at the authored transition; do not put both turns into clip 1's prompt.
-- **A continues for three lines:** one speaker-facing OTS can carry all three; a line
-  boundary alone is not a cut. Preserve B's reaction when it changes the scene.
-- **Both faces readable, short shared exchange:** retain one two-shot. Bind A and B from
-  the image and author sequential turns; do not split solely because the speaker changes.
-- **Face-to-face two-shot, mouths only in strict profile:** prefer OTS/reverse when facial
-  performance matters. Do not rotate both actors toward the lens against their eyelines.
-- **Listener-only reaction, MSR:** the speaker is entirely outside the frame and the line
-  explicitly uses `off_screen`; the visible listener stays silent. Keep native audio and
-  inspect playback for wrong mouth movement. Do not silently switch models/TTS.
-- **OTS already has only the far speaker's lines:** retain it. This is the intended case,
-  not a warning merely because two characters are visible.
+Mark an inner thought `delivery:"voiceover"` with the character's own speaker ID, not
+the narrator's. Retain its acting/performance metadata and explain the thought in the
+story/action. Keep visible mouths closed and omit speech text from the video prompt.
+Generate each line with the pinned character voice using the saved TTS provider, attach
+its real audio and measure it. Use `speech_manage` timing and `compose-speech.js` to
+place it at the authored lead-in, speech interval and tail-out alongside action beats.
+Retime from measured audio before `video_plan`; plan video for the full composed/action
+duration and split if it exceeds the adapter limit. Never truncate a thought, accelerate
+speech silently, loop footage or freeze-pad a short clip to cover missing action.
 
-When a review is requested, inspect all affected shots and their joins, not just labels.
-Try to find swapped lines/voices, listener mouth movement, hidden speaking mouths,
-missing/duplicated turns, axis jumps and prop discontinuity. Playback evidence is required
-to claim a generated clip passes; a text-plan score assesses guidance only. Do not add an
-automatic review or regeneration requirement to otherwise authorized production.
+Use `generateAudio:false` for these image2video plans and `sound.audioSource:"speech"`
+for thought shots so assembly uses the composed TTS track, not an old MSR soundtrack.
+Silent shots need only a finite visual clock and no TTS call. If TTS is disabled or
+unconfigured, report the missing speech setup; do not invent a voice or send the thought
+to MSR instead. See [shot speech](../../produce/references/shot-speech.md).
 
-## Evidence and limits (2026-11-07)
+## Worked cases
 
-- [LTX-2 technical report](https://videos.ltx.io/LTX-2/grants/LTX_2_Technical_Report_compressed.pdf)
-  identifies incorrect assignment of speech to characters in multi-speaker scenes. This
-  is a base-model limitation report, not an OTS-versus-two-shot benchmark for MSR V2.
-- [Licon MSR V2 model card](https://huggingface.co/LiconStudio/LTX-2.5-Multiple-Subject-Reference/blob/aa19b48f845995525d8ace60cdc89b842e951ce6/README.md)
-  supports two voice references paired with their images and recommends explicit subject
-  relationships. Its [sample workflow](https://huggingface.co/LiconStudio/LTX-2.5-Multiple-Subject-Reference/blob/2b35039311ef46aedaf309897beb0398ae8ade6e/LTX2.5-MSR-sample-workflow-V2.json)
-  demonstrates OTS coverage: OTS is possible, not prohibited by the model.
-- [Runway performance guidance](https://help.runwayml.com/hc/en-us/articles/42311337895827-Performance-Capture-with-Act-Two)
-  recommends a visible face; its [multi-character workflow](https://help.runwayml.com/hc/en-us/articles/41748090660499-Creating-Multi-Character-Dialogues-with-Act-Two)
-  isolates each performance before compositing. Those are Act-Two practices, not MSR API requirements.
+- **A asks, B answers, A reacts aloud:** three independently generated shots in that
+  order. Use OTS toward A, reverse toward B, then A's reaction framing. Each shot may
+  include the silent listener. Bind the one speaker from that shot's actual image.
+- **A continues for three lines:** one speaker-facing shot can carry all three lines.
+- **Both faces readable:** a two-shot still has just one speaker; cut for the reply.
+- **A thinks, then speaks:** thought close-up uses image2video plus A's timed TTS;
+  the next shot uses MSR for A's physical speech. The thought never animates a mouth.
+- **Silent action/reaction:** image2video with no invented dialogue or TTS take.
 
-The coverage defaults combine these sources with the user's observed OTS failures and
-preferred face-to-face staging. No comparative success rate was established. Visibility
-and simpler speaker assignment are the rationale, not a claim that every two-shot succeeds.
+Re-export the canonical storyboard. Already usable clips remain reusable; these rules
+do not authorize paid regeneration. When a review is requested, inspect actual frames,
+voices, mouth movement, thought timing, joins and omitted/duplicated lines. A successful
+request or text-plan score is not proof of generated-media quality.

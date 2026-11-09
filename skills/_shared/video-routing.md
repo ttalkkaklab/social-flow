@@ -125,3 +125,19 @@ historical spend before the first managed call. Add a new provider by implementi
 its adapter/schema and registering its deployment; update pricing and behavioral
 tests, regenerate the catalog/bundle, then expose it in settings. Research alone
 never enables an unimplemented API.
+
+## Single-speaker shots and MSR routing
+
+Split every speaker change before final camera icons and images. Each shot has at most
+one speaking character, while a silent listener may share the picture. For a saved
+GenAI MSR (`operation:"reference"`) project, silent and voiceover-only shots resolve to
+`operation:"image"` with the same engine/model/resolution. This is the standing
+2026-11-09 operation rule, not a provider fallback. Explicit MSR requests for those
+shots fail before generation (`msr_speech_route`); multiple speakers report
+`shot_speaker_limit`. Split physical speech and inner thoughts into their own shots.
+
+Use the composed opening image, `generateAudio:false` and closed-mouth action for
+thoughts. `speech_manage` plans external TTS voiceover and binds assembly to
+`sound.audioSource:"speech"`. Generate/attach the character's pinned TTS, compose real
+measured intervals with action and lead-in/tail-out, and plan the full video coverage.
+Missing speech setup must be reported; it does not authorize a new voice or native MSR.

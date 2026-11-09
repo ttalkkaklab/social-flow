@@ -25,11 +25,16 @@ function readVideoContext(episode, shotId) {
   if (matches.length !== 1) throw new Error('shotId must identify exactly one storyboard shot');
   const shot = matches[0];
   const { resolveVideoChoice } = require('../storyboard/references/production-mode.js');
-  const { selection, source } = resolveVideoChoice(production, shot, snapshot?.config.models.video);
+  let { selection, source } = resolveVideoChoice(production, shot, snapshot?.config.models.video);
   const overrides = production.modelSettings?.overrides || [];
   // A retired engine loads here so video_plan can refuse it as video_engine_unsupported.
   for (const change of overrides) if (change.video) settings.validateModels({ video: change.video }, true, true);
   if (snapshot || source.endsWith('_override')) settings.validateModels({ video: selection }, true, true);
+  // Silent pictures and inner thoughts use I2V in an MSR project (2026-11-09).
+  const spoken = (shot.narration || []).filter(line => typeof line.tts === 'string' && line.tts.trim());
+  if (selection.engine === 'astra-genai' && selection.operation === 'reference' &&
+      !spoken.some(line => line.delivery === 'on_screen' || line.delivery === 'off_screen'))
+    selection = { ...selection, operation: 'image' };
   return { episode: root, shotId, selection, source, snapshotRevision: snapshot?.revision || null,
     revision: hash({ selection, source, snapshotRevision: snapshot?.revision, overrides, imagePlan: { frames: shot.visual?.frames, references: shot.visual?.references, bg: shot.visual?.bg }, shotPrompt: shot.visual?.video?.prompt, shotLines: videoLines(shot), authorization: production.videoAuthorization,
       budget: production.videoBudgetUsd, approval: production.approval, maxAttempts: production.maxAttempts }),

@@ -175,22 +175,36 @@ export function planVideo(raw) {
     const context = routingContext(input.episode, input.shotId);
     const { selection } = context;
     requireSupportedSelection(selection);
-    // New shot_prompt records retain action separately so icon edits cannot leave the submitted direction stale.
-    const video = context.shot.visual?.video;
-    const rawCast = context.board.SB_DOC?.characters;
-    const names = Object.fromEntries((Array.isArray(rawCast) ? rawCast : []).map(c => [c.id, String(c.name ?? '')]));
-    const compiled = input.args.prompt === undefined && video?.promptSource
-        ? compileVideoPrompt(context.shot, video.promptSource, names) : undefined;
-    const authored = compiled?.prompt ?? video?.prompt;
-    const callArgs = input.args.prompt === undefined && typeof authored === 'string' ? { ...input.args, prompt: authored } : input.args;
-    const direction = compiled ? { directionBindings: compiled.directionBindings, directionWarnings: compiled.warnings } :
-        { directionWarnings: [input.args.prompt !== undefined ? 'Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons.' :
-                    'Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.'] };
-    // A saved default operation (an LTX project saves 'reference', i.e. MSR) applies when the call names neither.
+    const lines = (context.shot.narration ?? [])
+        .filter(line => line.tts?.trim());
+    if (new Set(lines.map(line => line.speaker)).size > 1)
+        throw new Error('shot_speaker_limit: split speaker changes into separate shots, then set each shot\'s framing and camera angle');
+    const msrRequested = input.tool === 'astra_genai_msr' || selection.engine === 'astra-genai' &&
+        (input.operation ?? (input.tool ? undefined : selection.operation)) === 'reference';
+    if (msrRequested && (!lines.length || lines.some(line => line.delivery === 'voiceover')))
+        throw new Error('msr_speech_route: silent and voiceover/inner-thought shots use image2video with external timed TTS for voiceover; split mixed deliveries first');
     const operation = input.operation ?? (input.tool ? undefined : selection.operation);
     const tool = input.tool || selectedVideoTool(selection, operation);
     if (input.tool && input.operation && VIDEO_ADAPTERS[input.tool]?.operation !== input.operation)
         throw new Error('Tool and operation disagree');
+    const visual = context.shot.visual;
+    const silentPicture = !lines.some(line => line.delivery === 'on_screen' || line.delivery === 'off_screen');
+    // Apply the standing MSR-to-I2V rule to old reference-frame boards without rewriting their media.
+    const shot = tool === 'astra_genai_img2video' && silentPicture && visual?.frames?.mode === 'reference'
+        ? { ...context.shot, visual: { ...visual, frames: { mode: 'first', start: visual.frames.start },
+                references: (visual.references ?? []).map(ref => ({ ...ref, use: 'image' })) } } : context.shot;
+    const video = visual?.video;
+    const rawCast = context.board.SB_DOC?.characters;
+    const names = Object.fromEntries((Array.isArray(rawCast) ? rawCast : []).map(c => [c.id, String(c.name ?? '')]));
+    const compiled = input.args.prompt === undefined && video?.promptSource
+        ? compileVideoPrompt(shot, video.promptSource, names) : undefined;
+    const authored = compiled?.prompt ?? video?.prompt;
+    let callArgs = input.args.prompt === undefined && typeof authored === 'string' ? { ...input.args, prompt: authored } : input.args;
+    if (tool === 'astra_genai_img2video' && silentPicture)
+        callArgs = { ...callArgs, generateAudio: false, prompt: [callArgs.prompt, 'No speech or vocalization. All visible mouths stay closed; perform the planned silent action.'].filter(Boolean).join(' ') };
+    const direction = compiled ? { directionBindings: compiled.directionBindings, directionWarnings: compiled.warnings } :
+        { directionWarnings: [input.args.prompt !== undefined ? 'Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons.' :
+                    'Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.'] };
     if (selection.engine === 'host') {
         if (input.tool)
             throw new Error('model_selection_mismatch: host has no server adapter');
@@ -208,14 +222,25 @@ export function planVideo(raw) {
     const durationPlan = shotVideoTiming(context, tool, bound);
     if (durationPlan.status === 'split_required')
         throw new Error(`video_duration_exceeded: ${input.shotId} needs ${durationPlan.requiredSeconds}s; ${tool} allows ${durationPlan.maxSeconds}s. Split at a meaningful performance boundary; never truncate or switch models.`);
+    // GenAI I2V's live backend owns the maximum; its integer duration must still cover the shot.
+    if (tool === 'astra_genai_img2video' && durationPlan.requiredSeconds !== undefined) {
+        if (bound.requiredSeconds !== undefined) {
+            if (['duration', 'durationSeconds', 'numFrames', 'frames', 'autoDuration', 'audioMaxDuration'].some(key => bound[key] !== undefined))
+                throw new Error('requiredSeconds is mutually exclusive with exact duration arguments; supply the shot need or an exact request, not both');
+            delete bound.requiredSeconds;
+        }
+        if (typeof bound.duration === 'number' && bound.duration < durationPlan.requiredSeconds)
+            throw new Error(`video_duration_short: ${input.shotId} needs ${durationPlan.requiredSeconds}s but the request covers ${bound.duration}s`);
+        bound.duration ??= Math.ceil(durationPlan.requiredSeconds);
+    }
     // Legacy boards without a duration keep their exact request. Timed new shots cannot fall back to a short adapter default.
     if (durationPlan.status === 'fits' && VIDEO_ADAPTERS[tool].voice !== 'supplied' && DURATION_TOOLS.includes(tool)) {
         const exact = ['duration', 'durationSeconds', 'numFrames', 'frames', 'autoDuration', 'audioMaxDuration'].some(key => bound[key] !== undefined);
         if (!exact)
             bound = resolveVideoDuration(tool, { ...bound, requiredSeconds: durationPlan.requiredSeconds }).args;
     }
-    const images = prepareVideoImages(tool, bound, context.shot, context.episode);
-    const voice = prepareVideoVoice(tool, images.args, { ...context, msrVoice: genaiMsrVoiceReferences() });
+    const images = prepareVideoImages(tool, bound, shot, context.episode);
+    const voice = prepareVideoVoice(tool, images.args, { ...context, shot, msrVoice: genaiMsrVoiceReferences() });
     const args = parseVideoArgs(tool, voice.args);
     if (durationPlan.status === 'fits') {
         const fps = durationPlan.limits?.frameRate ?? 1;

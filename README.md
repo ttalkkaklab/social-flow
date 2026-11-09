@@ -40,8 +40,11 @@ unreviewed identity/dialogue/speaker/lip-sync findings. Saved plans become stale
 speech, voice settings or reference bytes change. Selected audition samples travel
 with the character handoff; no automatic listening gate or paid generation is added.
 
-MSR supports two-speaker turns with start-image `speakerBindings`: viewer-relative
-position and appearance are repeated with each line's image and voice mapping.
+Each shot now has one speaking character; speaker changes get separate shots with
+speaker-facing framing and camera angles. Two characters may share the picture while
+the listener stays silent. Silent shots and inner thoughts use image2video instead of
+MSR; thoughts use pinned character TTS composed to the measured speech/action clock.
+See [dialogue coverage](skills/storyboard/references/dialogue-coverage.md).
 `shot_prompt` stores action separately; `video_plan` recompiles current icons and
 reports `directionBindings` for prompt, image, adapter and assembly inputs.
 

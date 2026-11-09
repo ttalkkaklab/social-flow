@@ -14,9 +14,16 @@ and [duration planning](../produce/references/video-duration.md).
 
 For dialogue, read [dialogue coverage](../storyboard/references/dialogue-coverage.md)
 before writing prompts. Confirm the visible speaking face and silent foreground listener
-in OTS; two speakers in one clip need readable faces or an explicit creative exception.
+in OTS; each clip has at most one speaking character, even in a readable two-shot.
+Split speaker changes and set each resulting shot's size and angle before images.
 If coverage is wrong, return to the earlier authoring/image stages rather than patching
-the prompt alone. Preserve MSR two-speaker bindings and the selected voice lane.
+the prompt alone. Preserve the single MSR speaker's binding and selected voice.
+Silent/inner-thought clips use image2video with `frames.mode:"first"` and
+`generateAudio:false`. Thoughts use character `voiceover`: generate and attach pinned
+TTS, compose measured speech/action intervals and lead-in/tail-out, then plan the full
+video duration. Keep mouths closed and assembly on `sound.audioSource:"speech"`.
+If speech is disabled, report missing TTS setup rather than sending thoughts to MSR.
+See [shot speech](../produce/references/shot-speech.md).
 
 **Prompt.** After every picture shot has its images, write each `generated_video` shot's
 prompt with `shot_prompt`. Give `action` (what moves from the opening picture), `end` (the

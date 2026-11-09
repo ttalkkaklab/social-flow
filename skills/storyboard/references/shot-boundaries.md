@@ -13,13 +13,13 @@ approval, score or execution gate. Requested `review-camera` adds an independent
    It includes every join, not just suspected mistakes. `no` is a storage locator,
    not a stable id; use `id` for edits and `playbackPosition` for order. Missing or duplicate
    ids must be resolved before an id-addressed change. Review silent actions and readable
-   two-person exchanges too; a change of speaker is not automatically a cut.
+   two-person exchanges too; split at every speaker change and choose the new shot's size and angle.
 3. For each join compare three options: hold the current frame, motivate a move/reframe,
-   or cut. Choose the simplest option that carries the whole performance. Do not replace
+   or cut within the one-speaking-character-per-shot rule. Choose the simplest option that carries the whole performance. Do not replace
    every cut with a complicated camera move. State what the viewer must see that the
    current frame cannot convey, or the time/place change or verified generation limit.
-   Check [dialogue coverage](dialogue-coverage.md): a fixed OTS with only one readable
-   speaking face may need a reverse for the other speaker; never force a two-shot or
+   Check [dialogue coverage](dialogue-coverage.md): a reply needs its own shot, usually the complementary
+   speaker-facing reverse; never force a two-shot or
    relabel a visible hidden-mouth speaker as offscreen merely to reduce cuts.
    A glance, pause, new sentence or hand movement alone is insufficient. Intentional
    reaction shots, reveals, POVs and spatial clarification can earn a cut even with the
@@ -96,7 +96,7 @@ keep a cut when its removal loses information, geography, performance or feasibl
 | One student introduces a report, then announces entry in the same locked camera | One performance through the head turn; cut when the newly noticed person is shown. |
 | Refusing a question, then stating a condition, same speaker and listener | Keep the complete answer unless the next view reveals evidence the current frame cannot. |
 | Boss confirms identity, grants permission and sends regards | One sustained performance can include pauses and departure; do not allocate a shot to each clause. |
-| Two people exchange several lines in a readable two-shot | Keep responses together; changed speakers alone do not justify cuts. |
+| Two people exchange several lines in a readable two-shot | Split at each speaker change; consecutive lines by the same character may stay together. |
 | Same face/size but an offscreen sound changes its meaning | Keep an earned reaction cut when timing/viewpoint supports it; matching metadata does not mandate merging. |
 | Block then counterattack, adjacent silent beats | Prefer continuous readable action; keep an insert/reverse only for a concrete contact or geography need. |
 | Opposing OTS views have identical size and cast | Compare viewer/subject, axis, reveal and reaction; size/cast equality does not mean the same frame. |
