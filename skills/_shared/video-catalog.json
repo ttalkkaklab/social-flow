@@ -774,14 +774,21 @@
         "imageUri",
         "imagePath",
         "lastFrameUri",
-        "lastFramePath"
+        "lastFramePath",
+        "references"
       ],
       "modelConstraints": {
         "models": [
           "ltx-2.5-22b-distilled",
           "ltx-2.5-22b-dev"
         ],
-        "note": "Explicit duration and resolution; server validates deployment limits. No supplied audio, keyframes or LoRA."
+        "references": {
+          "subjects": 4,
+          "background": 1,
+          "model": "ltx-2.5-22b-distilled",
+          "capability": "/v1/ltx/msr/capabilities:image_conditioning"
+        },
+        "note": "Start image and optional end frame; additional references use the distilled MSR IC-LoRA with explicit duration. Dev takes start/end only. generateAudio:false removes the soundtrack. No intermediate keyframes or supplied speech."
       }
     },
     {

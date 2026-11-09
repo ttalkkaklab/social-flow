@@ -36,6 +36,14 @@ selected resolution without adding unsupported width/height fields.
 Remote URL contents cannot be pinned; use immutable provider assets or local files.
 Re-plan after changes. No network submission occurs during planning.
 
+GenAI I2V on `ltx-2.5-22b-distilled` can combine a first image, optional last
+image and four subject references plus one background. `video_plan` keeps the
+temporal frames distinct from `references` and hashes every submitted local
+image. Execution checks the gateway's `image_conditioning` MSR capability
+before upload/submission; an unsupported combination never drops references or
+switches the saved model. Dev and the direct Desktop adapter take start/end
+only. See [GenAI image conditioning](astra-genai.md).
+
 Character speech also uses the [voice continuity contract](../produce/references/voice-continuity.md).
 The planner adds stable acoustic descriptions and, on audible Seedance reference
 requests, pinned character samples with explicit speaker/image/audio mappings.

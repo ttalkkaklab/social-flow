@@ -31,10 +31,22 @@ export const genaiTextToVideoSchema = z.object({
 export const genaiImageToVideoSchema = genaiTextToVideoSchema.extend({
   imageUri: genaiImageUriSchema.optional(), imagePath: z.string().min(1).optional(),
   lastFrameUri: genaiImageUriSchema.nullable().optional(), lastFramePath: z.string().min(1).optional(),
+  references: z.array(z.object({
+    imageUri: genaiImageUriSchema.optional(), imagePath: z.string().min(1).optional(),
+    background: z.boolean().default(false),
+  }).strict().refine(ref => Number(ref.imageUri !== undefined) + Number(ref.imagePath !== undefined) === 1,
+    'Supply exactly one imageUri or imagePath per reference')).min(1).max(5).optional(),
 }).strict().superRefine((args, ctx) => {
   const issue = (message: string) => ctx.addIssue({ code: z.ZodIssueCode.custom, message });
   if (Number(args.imageUri !== undefined) + Number(args.imagePath !== undefined) !== 1) issue('Supply exactly one imageUri or imagePath');
   if (args.lastFrameUri != null && args.lastFramePath !== undefined) issue('Supply at most one lastFrameUri or lastFramePath');
+  if (args.references) {
+    if (args.model !== 'ltx-2.5-22b-distilled') issue('Additional references require ltx-2.5-22b-distilled (MSR conditioning)');
+    if (args.duration === null) issue('Additional references require an explicit duration');
+    const backgrounds = args.references.filter(ref => ref.background).length;
+    if (backgrounds > 1 || args.references.length - backgrounds > 4 || backgrounds === args.references.length)
+      issue('References require 1..4 subjects and at most one background');
+  }
 });
 // Gateway contract (genai-gateway#13): four data URI MIME types, 15,000,000 base64 characters.
 export const GENAI_AUDIO_TYPES: Readonly<Record<string, string>> = { '.wav': 'audio/wav', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.ogg': 'audio/ogg', '.opus': 'audio/ogg' };
@@ -165,6 +177,7 @@ export function genaiMsrVoiceReferences(): boolean { return msrVoiceCache?.value
 
 export type GenaiVideoRequest = z.infer<typeof genaiTextToVideoSchema> & {
   imageUri?: string; imagePath?: string; lastFrameUri?: string | null; lastFramePath?: string;
+  references?: z.infer<typeof genaiImageToVideoSchema>['references'];
 };
 
 /** Only provider fields cross the wire; local output/budget controls never do. */
@@ -177,6 +190,9 @@ export function buildGenaiVideoBody(args: GenaiVideoRequest): Record<string, unk
     ...(args.imageUri === undefined && args.imagePath === undefined ? {} : { image_uri: genaiSourceUri(args.imageUri, args.imagePath) }),
     ...(args.lastFramePath !== undefined ? { last_frame_uri: genaiSourceUri(undefined, args.lastFramePath) }
       : args.lastFrameUri === undefined ? {} : { last_frame_uri: args.lastFrameUri === null ? null : genaiSourceUri(args.lastFrameUri) }),
+    ...(args.references === undefined ? {} : { references: args.references.map(ref => ({
+      image_uri: genaiSourceUri(ref.imageUri, ref.imagePath), background: ref.background,
+    })) }),
   };
 }
 
@@ -235,12 +251,19 @@ export const GENAI_MSR_INLINE_MAX_BYTES = 8 * 1000 * 1000;
  * chunked uploads, so the MSR body carries file ids instead of base64. HTTPS sources pass
  * untouched; a gateway without the upload API keeps the (shrunk) data URIs.
  */
-export async function prepareGenaiMsrSources(body: ReturnType<typeof buildGenaiMsrBody>) {
+interface GenaiReferenceBody {
+  references: { image_uri: string; background: boolean; audio_uri?: string }[];
+  width?: number; height?: number; resolution?: string;
+  image_uri?: string; last_frame_uri?: string | null;
+}
+export async function prepareGenaiMsrSources(body: GenaiReferenceBody) {
+  const size = /^(\d+)x(\d+)$/.exec(body.resolution ?? '');
+  const width = body.width ?? Number(size?.[1]), height = body.height ?? Number(size?.[2]);
   let supported = true;
   const send = async (uri: string, shrink: boolean) => {
     const match = /^data:([^;,]+);base64,(.*)$/s.exec(uri);
     if (!match) return uri;
-    const bytes = shrink ? shrinkImageToFit(Buffer.from(match[2], 'base64'), body.width, body.height) : Buffer.from(match[2], 'base64');
+    const bytes = shrink && width > 0 && height > 0 ? shrinkImageToFit(Buffer.from(match[2], 'base64'), width, height) : Buffer.from(match[2], 'base64');
     // Only a gateway answer (no upload API, a limit, a full disk) stops later uploads; a type it does not take goes inline alone.
     const uploadable = supported && genaiUploadable(bytes, match[1]);
     const id = uploadable ? await uploadGenaiFile(bytes, match[1]) : undefined;
@@ -250,10 +273,13 @@ export async function prepareGenaiMsrSources(body: ReturnType<typeof buildGenaiM
   const references = [];
   for (const ref of body.references) references.push({ ...ref, image_uri: await send(ref.image_uri, true),
     ...('audio_uri' in ref && typeof ref.audio_uri === 'string' ? { audio_uri: await send(ref.audio_uri, false) } : {}) });
-  const prepared = { ...body, references };
-  const size = Buffer.byteLength(JSON.stringify(prepared));
-  if (size > GENAI_MSR_INLINE_MAX_BYTES)
-    throw new Error(`msr_body_too_large: the gateway did not take the chunked upload and the inline request is ${(size / 1e6).toFixed(1)} MB (limit 8 MB); nothing was submitted. Try again later, or use a shorter voice sample.`);
+  const prepared = { ...body, references,
+    ...(body.image_uri === undefined ? {} : { image_uri: await send(body.image_uri, false) }),
+    ...(body.last_frame_uri == null ? {} : { last_frame_uri: await send(body.last_frame_uri, false) }),
+  };
+  const bytes = Buffer.byteLength(JSON.stringify(prepared));
+  if (bytes > GENAI_MSR_INLINE_MAX_BYTES)
+    throw new Error(`msr_body_too_large: the gateway did not take the chunked upload and the inline request is ${(bytes / 1e6).toFixed(1)} MB (limit 8 MB); nothing was submitted. Try again later, or use a shorter voice sample.`);
   return prepared;
 }
 
@@ -267,8 +293,9 @@ export async function generateGenaiVideo(operation: Operation, input: unknown) {
   const args = (operation === 'msr' ? genaiMsrSchema : operation === 'audio-to-video' ? genaiAudioToVideoSchema
     : operation === 'text-to-video' ? genaiTextToVideoSchema : genaiImageToVideoSchema).parse(input);
   requireAstraGenaiKey();
-  const body = 'references' in args ? buildGenaiMsrBody(args) : operation === 'audio-to-video'
+  const body = operation === 'msr' ? buildGenaiMsrBody(args as z.infer<typeof genaiMsrSchema>) : operation === 'audio-to-video'
     ? buildGenaiAudioBody(args as z.infer<typeof genaiAudioToVideoSchema>) : buildGenaiVideoBody(args as GenaiVideoRequest);
+  const usesReferences = 'references' in body && Array.isArray(body.references) && body.references.length > 0;
   const fingerprint = createHash('sha256').update(JSON.stringify(body)).digest('hex');
   const videoPath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.mp4`, 'video');
   const receiptPath = videoPath + '.astra-genai.json';
@@ -280,19 +307,32 @@ export async function generateGenaiVideo(operation: Operation, input: unknown) {
     recordVideoSubmission(previous.jobId);
   } else {
     if (fs.existsSync(videoPath)) throw new Error('GenAI output already exists');
-    if ('references' in args && (args.negativePrompt !== undefined || (args.guidanceScale ?? 1) > 1)) {
+    if (operation === 'image-to-video' && usesReferences) {
+      let capabilities;
+      try {
+        capabilities = z.object({ image_conditioning: z.boolean().optional() }).passthrough()
+          .parse(await requestGenai('GET', '/v1/ltx/msr/capabilities', undefined, 15_000));
+      } catch {
+        // No generation or upload was attempted; release the managed reservation.
+        throw new GenaiRequestError('image_references_capability_unavailable: cannot verify combined image conditioning before submission; no generation was requested', true, 503);
+      }
+      if (capabilities.image_conditioning !== true)
+        throw new GenaiRequestError('image_references_unsupported: the GenAI backend does not advertise combined start/end frames and subject references; no request was submitted', true, 422);
+    }
+    const msrArgs = operation === 'msr' ? args as z.infer<typeof genaiMsrSchema> : undefined;
+    if (msrArgs && (msrArgs.negativePrompt !== undefined || (msrArgs.guidanceScale ?? 1) > 1)) {
       const capabilities = z.object({ negative_prompt: z.boolean().optional(), nag: z.boolean().optional() }).passthrough()
         .parse(await requestGenai('GET', '/v1/ltx/msr/capabilities', undefined, 15_000));
-      if ((args.nagScale ?? 0) > 0 && capabilities.nag !== true)
+      if ((msrArgs.nagScale ?? 0) > 0 && capabilities.nag !== true)
         throw new Error('msr_nag_unsupported: the GenAI MSR backend does not advertise NAG; no request was submitted');
       if (capabilities.negative_prompt !== true)
         throw new Error('msr_negative_unsupported: the GenAI MSR backend does not advertise negative conditioning; no request was submitted');
     }
-    if (operation === 'msr' && 'references' in args && args.references.some(ref => oneOf(ref.audioUri, ref.audioPath)) && !await refreshGenaiMsrVoice(true))
+    if (operation === 'msr' && (args as z.infer<typeof genaiMsrSchema>).references.some(ref => oneOf(ref.audioUri, ref.audioPath)) && !await refreshGenaiMsrVoice(true))
       throw new Error('msr_voice_unsupported: the GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities)');
     // Upload before the receipt exists: a failed upload leaves nothing to recover and the call can simply run again.
     // The fingerprint stays on the request as written, so a resumed receipt still matches.
-    const submitted = 'references' in args ? await prepareGenaiMsrSources(body as ReturnType<typeof buildGenaiMsrBody>) : body;
+    const submitted = usesReferences ? await prepareGenaiMsrSources(body as GenaiReferenceBody) : body;
     const receipt = { version: 1 as const, baseUrl: astraGenaiBaseUrl(), operation, fingerprint, videoPath, status: 'submitting' as const };
     fs.writeFileSync(receiptPath, JSON.stringify(receipt), { flag: 'wx', mode: 0o600 });
     let response: unknown;
@@ -303,7 +343,7 @@ export async function generateGenaiVideo(operation: Operation, input: unknown) {
         if (!JSON.stringify(submitted).includes(GENAI_FILE_SCHEME) || !(error instanceof GenaiRequestError && error.httpStatus === 400 && GENAI_FILE_GONE.test(error.message))) throw error;
         forgetGenaiUploads();
         let again: unknown;
-        try { again = await prepareGenaiMsrSources(body as ReturnType<typeof buildGenaiMsrBody>); }
+        try { again = await prepareGenaiMsrSources(body as GenaiReferenceBody); }
         catch (uploadError) { fs.rmSync(receiptPath, { force: true }); throw uploadError; }
         response = await requestGenai('POST', genaiVideoRoute(operation), again, SUBMIT_TIMEOUT_MS);
       }

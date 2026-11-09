@@ -88,7 +88,7 @@ export function prepareVideoImages(tool: string, input: Record<string, unknown>,
   if (keyframes !== undefined && (!Array.isArray(keyframes) || !keyframes.length || keyframes.length > 6 || frames.mode !== 'first_last'))
     throw new Error('image_plan_invalid: intermediate frames require first_last and 1..6 entries');
   const host = tool === 'host_external';
-  if (!host && videoRefs.length && frameMode) throw new Error('image_plan_unsupported: installed adapters cannot combine pinned start/end frames with additional video references; retain references with use:image or explicitly replan mode:reference');
+  if (!host && videoRefs.length && frameMode && tool !== 'astra_genai_img2video') throw new Error('image_plan_unsupported: this adapter cannot combine pinned start/end frames with additional video references; retain references with use:image or explicitly replan mode:reference');
   if (!host && keyframes && tool !== 'astra_keyframe_video') throw new Error('image_plan_unsupported: this adapter cannot accept intermediate frames');
   const args = { ...(host ? input : resolveVideoDuration(tool, input).args) };
   const assigned = new Set<string>();
@@ -175,6 +175,15 @@ export function prepareVideoImages(tool: string, input: Record<string, unknown>,
     };
     put(fields[0], value('start', frames.start));
     if (frames.end) put(fields[1]!, value('end', frames.end));
+    if (tool === 'astra_genai_img2video' && videoRefs.length) {
+      const ordered = [...videoRefs].sort((a, b) => Number(a.role === 'background') - Number(b.role === 'background'));
+      const paths = ordered.map(ref => bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, true));
+      const characters = new Set(ordered.flatMap((ref, i) => ref.role === 'character' ? [characterKey(paths[i])] : []));
+      if (characters.size > 2) throw new Error('msr_character_limit: reference at most two principal characters');
+      put('references', paths.map((imagePath, i) => ({ imagePath, ...(ordered[i].role === 'background' ? { background: true } : {}) })));
+      args.prompt = [...ordered.map((ref, i) => `Image ${i + 1}: ${ref.role}, ${ref.purpose}`),
+        msrPanelBinding(paths, ordered), '', String(args.prompt ?? '')].filter(Boolean).join('\n');
+    }
   }
   for (const key of ['sourceImagePath', 'lastImagePath', 'firstFramePath', 'lastFramePath', 'imagePath', 'imageUri', 'lastFrameUri', 'firstFrameImagePath', 'lastFrameImagePath', 'referenceImagePaths', 'references', 'images']) {
     if (input[key] !== undefined && !assigned.has(key)) throw new Error('image_plan_mismatch: unplanned ' + key);

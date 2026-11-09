@@ -46,6 +46,34 @@ test('submission is persisted before status failure and the same receipt resumes
   assert.equal(posts, 1);
   await assert.rejects(generateGenaiVideo('text-to-video', { ...args, prompt: 'changed' }), /conflicts/);
 });
+test('I2V references retain their v2 route and frame fields, and unsupported backends never submit', async t => {
+  const dir=setup(t), args={...base,imageUri:'https://example.com/start.png',lastFrameUri:'https://example.com/end.png',
+    references:[{imageUri:'https://example.com/hero.png'},{imageUri:'https://example.com/room.png',background:true}],
+    generateAudio:false,outputPath:dir,filename:'combined.mp4'};
+  assert.equal(genaiImageToVideoSchema.safeParse({...args,model:'ltx-2.5-22b-dev'}).success,false);
+  assert.equal(genaiImageToVideoSchema.safeParse({...args,duration:null}).success,false);
+  assert.equal(genaiImageToVideoSchema.safeParse({...args,references:[{imageUri:args.imageUri,background:true}]}).success,false);
+  let supported=false,posts=0;
+  globalThis.fetch=async(url,options)=>{
+    if(String(url).endsWith('/msr/capabilities'))return Response.json({image_conditioning:supported});
+    if(options.method==='POST'){
+      posts++;assert.ok(String(url).endsWith('/v1/ltx/v2/image-to-video'));
+      const body=JSON.parse(options.body);
+      assert.equal(body.image_uri,args.imageUri);assert.equal(body.last_frame_uri,args.lastFrameUri);
+      assert.equal(body.model,args.model);assert.equal(body.generate_audio,false);
+      assert.deepEqual(body.references,[{image_uri:args.references[0].imageUri,background:false},{image_uri:args.references[1].imageUri,background:true}]);
+      return Response.json({id:'combined-job'}, {status:202});
+    }
+    return Response.json({id:'combined-job',status:'failed',error:'fixture'});
+  };
+  await assert.rejects(generateGenaiVideo('image-to-video',args),/image_references_unsupported/);
+  assert.equal(posts,0);assert.equal(fs.existsSync(path.join(dir,'combined.mp4.astra-genai.json')),false);
+  supported=true;
+  await assert.rejects(generateGenaiVideo('image-to-video',args),error=>error.terminal===true);
+  assert.equal(posts,1);
+  await assert.rejects(generateGenaiVideo('image-to-video',args),error=>error.terminal===true);
+  assert.equal(posts,1);
+});
 test('a rejected submission frees its output name; one status 5xx is polled through and a failed job is terminal', async t => {
   const dir = setup(t), args = { ...base, outputPath: dir, filename: 'clip.mp4' };
   const realSetTimeout = globalThis.setTimeout;

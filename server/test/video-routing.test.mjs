@@ -143,6 +143,27 @@ test('ambiguous failure retains budget and ID across process-like reentry',async
  assert.equal(f.state().jobs.a.status,'submission_unknown');assert.equal(f.state().jobs.a.providerId,'accepted-1');
  await assert.rejects(f.execute(p,async()=>{calls++;return result;}),/pending/);assert.equal(calls,1);
 });
+test('I2V reference capability refusals release managed budget and concurrency before any submission',async t=>{
+ const {generateGenaiVideo}=await import('../dist/astra-genai-video.js');
+ const f=fixture(t,{engine:'astra-genai',model:'ltx-2.5-22b-distilled',resolution:'1280x704',operation:'image'},{maxConcurrent:1});
+ const oldFetch=globalThis.fetch,oldKey=config.astraGenaiApiKey;config.astraGenaiApiKey='fixture';
+ t.after(()=>{globalThis.fetch=oldFetch;config.astraGenaiApiKey=oldKey;});
+ fs.writeFileSync(path.join(f.episode,'image.png'),Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=','base64'));
+ f.board.SCENES[0].visual={frames:{mode:'first',start:'../image.png'},references:[{id:'hero',path:'../image.png',role:'character',use:'video',purpose:'Preserve appearance'}]};
+ f.save();let calls=0;
+ for(const failure of ['unsupported','network','schema']){
+  globalThis.fetch=async(url,options)=>{
+   calls++;assert.ok(String(url).endsWith('/msr/capabilities'));assert.equal(options.method,'GET');
+   if(failure==='network')throw new Error('Network unavailable');
+   return Response.json({image_conditioning:failure==='unsupported'?false:'invalid'});
+  };
+  const p=planVideo({episode:f.episode,shotId:'s1',requestId:failure,operation:'image',args:{prompt:'The hero walks.',duration:5,reserveUsd:0.25}});
+  await assert.rejects(f.execute(p,async(tool,args)=>{assert.equal(tool,'astra_genai_img2video');return generateGenaiVideo('image-to-video',args);}),error=>error.terminal===true);
+  const job=f.state().jobs[failure];
+  assert.equal(job.status,'failed');assert.equal(job.settledUsd,0);assert.equal(job.providerId,undefined);
+ }
+ assert.equal(calls,3);
+});
 test('a terminal adapter failure closes as failed and frees the slot; reconcile settles an unknown request',async t=>{
  const { videoStatus } = await import('../dist/video-routing.js');
  const { GenaiRequestError } = await import('../dist/astra-genai-client.js');

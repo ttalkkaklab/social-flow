@@ -91038,14 +91038,21 @@ var require_video_catalog = __commonJS({
             "imageUri",
             "imagePath",
             "lastFrameUri",
-            "lastFramePath"
+            "lastFramePath",
+            "references"
           ],
           modelConstraints: {
             models: [
               "ltx-2.5-22b-distilled",
               "ltx-2.5-22b-dev"
             ],
-            note: "Explicit duration and resolution; server validates deployment limits. No supplied audio, keyframes or LoRA."
+            references: {
+              subjects: 4,
+              background: 1,
+              model: "ltx-2.5-22b-distilled",
+              capability: "/v1/ltx/msr/capabilities:image_conditioning"
+            },
+            note: "Start image and optional end frame; additional references use the distilled MSR IC-LoRA with explicit duration. Dev takes start/end only. generateAudio:false removes the soundtrack. No intermediate keyframes or supplied speech."
           }
         },
         {
@@ -111004,11 +111011,26 @@ var genaiImageToVideoSchema = genaiTextToVideoSchema.extend({
   imageUri: genaiImageUriSchema.optional(),
   imagePath: external_exports.string().min(1).optional(),
   lastFrameUri: genaiImageUriSchema.nullable().optional(),
-  lastFramePath: external_exports.string().min(1).optional()
+  lastFramePath: external_exports.string().min(1).optional(),
+  references: external_exports.array(external_exports.object({
+    imageUri: genaiImageUriSchema.optional(),
+    imagePath: external_exports.string().min(1).optional(),
+    background: external_exports.boolean().default(false)
+  }).strict().refine(
+    (ref) => Number(ref.imageUri !== void 0) + Number(ref.imagePath !== void 0) === 1,
+    "Supply exactly one imageUri or imagePath per reference"
+  )).min(1).max(5).optional()
 }).strict().superRefine((args, ctx) => {
   const issue2 = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
   if (Number(args.imageUri !== void 0) + Number(args.imagePath !== void 0) !== 1) issue2("Supply exactly one imageUri or imagePath");
   if (args.lastFrameUri != null && args.lastFramePath !== void 0) issue2("Supply at most one lastFrameUri or lastFramePath");
+  if (args.references) {
+    if (args.model !== "ltx-2.5-22b-distilled") issue2("Additional references require ltx-2.5-22b-distilled (MSR conditioning)");
+    if (args.duration === null) issue2("Additional references require an explicit duration");
+    const backgrounds = args.references.filter((ref) => ref.background).length;
+    if (backgrounds > 1 || args.references.length - backgrounds > 4 || backgrounds === args.references.length)
+      issue2("References require 1..4 subjects and at most one background");
+  }
 });
 var GENAI_AUDIO_TYPES = { ".wav": "audio/wav", ".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".ogg": "audio/ogg", ".opus": "audio/ogg" };
 var GENAI_AUDIO_DATA_URI_MAX = 15e6;
@@ -111167,7 +111189,11 @@ function buildGenaiVideoBody(args) {
     ...args.cameraMotion === void 0 ? {} : { camera_motion: args.cameraMotion },
     // Local frames travel as checked data URIs, like MSR and audio-to-video.
     ...args.imageUri === void 0 && args.imagePath === void 0 ? {} : { image_uri: genaiSourceUri(args.imageUri, args.imagePath) },
-    ...args.lastFramePath !== void 0 ? { last_frame_uri: genaiSourceUri(void 0, args.lastFramePath) } : args.lastFrameUri === void 0 ? {} : { last_frame_uri: args.lastFrameUri === null ? null : genaiSourceUri(args.lastFrameUri) }
+    ...args.lastFramePath !== void 0 ? { last_frame_uri: genaiSourceUri(void 0, args.lastFramePath) } : args.lastFrameUri === void 0 ? {} : { last_frame_uri: args.lastFrameUri === null ? null : genaiSourceUri(args.lastFrameUri) },
+    ...args.references === void 0 ? {} : { references: args.references.map((ref) => ({
+      image_uri: genaiSourceUri(ref.imageUri, ref.imagePath),
+      background: ref.background
+    })) }
   };
 }
 var operationSchema = external_exports.enum(["text-to-video", "image-to-video", "audio-to-video", "msr"]);
@@ -111223,15 +111249,17 @@ async function getGenaiVideoStatus(input) {
 }
 var GENAI_MSR_INLINE_MAX_BYTES = 8 * 1e3 * 1e3;
 async function prepareGenaiMsrSources(body) {
+  const size = /^(\d+)x(\d+)$/.exec(body.resolution ?? "");
+  const width = body.width ?? Number(size?.[1]), height = body.height ?? Number(size?.[2]);
   let supported = true;
   const send = async (uri, shrink) => {
     const match2 = /^data:([^;,]+);base64,(.*)$/s.exec(uri);
     if (!match2) return uri;
-    const bytes = shrink ? shrinkImageToFit(Buffer.from(match2[2], "base64"), body.width, body.height) : Buffer.from(match2[2], "base64");
-    const uploadable = supported && genaiUploadable(bytes, match2[1]);
-    const id = uploadable ? await uploadGenaiFile(bytes, match2[1]) : void 0;
+    const bytes2 = shrink && width > 0 && height > 0 ? shrinkImageToFit(Buffer.from(match2[2], "base64"), width, height) : Buffer.from(match2[2], "base64");
+    const uploadable = supported && genaiUploadable(bytes2, match2[1]);
+    const id = uploadable ? await uploadGenaiFile(bytes2, match2[1]) : void 0;
     if (uploadable && id === void 0) supported = false;
-    return id ?? `data:${match2[1]};base64,${bytes.toString("base64")}`;
+    return id ?? `data:${match2[1]};base64,${bytes2.toString("base64")}`;
   };
   const references = [];
   for (const ref of body.references) references.push({
@@ -111239,10 +111267,15 @@ async function prepareGenaiMsrSources(body) {
     image_uri: await send(ref.image_uri, true),
     ..."audio_uri" in ref && typeof ref.audio_uri === "string" ? { audio_uri: await send(ref.audio_uri, false) } : {}
   });
-  const prepared = { ...body, references };
-  const size = Buffer.byteLength(JSON.stringify(prepared));
-  if (size > GENAI_MSR_INLINE_MAX_BYTES)
-    throw new Error(`msr_body_too_large: the gateway did not take the chunked upload and the inline request is ${(size / 1e6).toFixed(1)} MB (limit 8 MB); nothing was submitted. Try again later, or use a shorter voice sample.`);
+  const prepared = {
+    ...body,
+    references,
+    ...body.image_uri === void 0 ? {} : { image_uri: await send(body.image_uri, false) },
+    ...body.last_frame_uri == null ? {} : { last_frame_uri: await send(body.last_frame_uri, false) }
+  };
+  const bytes = Buffer.byteLength(JSON.stringify(prepared));
+  if (bytes > GENAI_MSR_INLINE_MAX_BYTES)
+    throw new Error(`msr_body_too_large: the gateway did not take the chunked upload and the inline request is ${(bytes / 1e6).toFixed(1)} MB (limit 8 MB); nothing was submitted. Try again later, or use a shorter voice sample.`);
   return prepared;
 }
 var SUBMIT_TIMEOUT_MS = 15 * 6e4;
@@ -111252,7 +111285,8 @@ function genaiVideoRoute(operation) {
 async function generateGenaiVideo(operation, input) {
   const args = (operation === "msr" ? genaiMsrSchema : operation === "audio-to-video" ? genaiAudioToVideoSchema : operation === "text-to-video" ? genaiTextToVideoSchema : genaiImageToVideoSchema).parse(input);
   requireAstraGenaiKey();
-  const body = "references" in args ? buildGenaiMsrBody(args) : operation === "audio-to-video" ? buildGenaiAudioBody(args) : buildGenaiVideoBody(args);
+  const body = operation === "msr" ? buildGenaiMsrBody(args) : operation === "audio-to-video" ? buildGenaiAudioBody(args) : buildGenaiVideoBody(args);
+  const usesReferences = "references" in body && Array.isArray(body.references) && body.references.length > 0;
   const fingerprint = createHash9("sha256").update(JSON.stringify(body)).digest("hex");
   const videoPath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.mp4`, "video");
   const receiptPath = videoPath + ".astra-genai.json";
@@ -111264,16 +111298,27 @@ async function generateGenaiVideo(operation, input) {
     recordVideoSubmission(previous.jobId);
   } else {
     if (fs11.existsSync(videoPath)) throw new Error("GenAI output already exists");
-    if ("references" in args && (args.negativePrompt !== void 0 || (args.guidanceScale ?? 1) > 1)) {
+    if (operation === "image-to-video" && usesReferences) {
+      let capabilities;
+      try {
+        capabilities = external_exports.object({ image_conditioning: external_exports.boolean().optional() }).passthrough().parse(await requestGenai("GET", "/v1/ltx/msr/capabilities", void 0, 15e3));
+      } catch {
+        throw new GenaiRequestError("image_references_capability_unavailable: cannot verify combined image conditioning before submission; no generation was requested", true, 503);
+      }
+      if (capabilities.image_conditioning !== true)
+        throw new GenaiRequestError("image_references_unsupported: the GenAI backend does not advertise combined start/end frames and subject references; no request was submitted", true, 422);
+    }
+    const msrArgs = operation === "msr" ? args : void 0;
+    if (msrArgs && (msrArgs.negativePrompt !== void 0 || (msrArgs.guidanceScale ?? 1) > 1)) {
       const capabilities = external_exports.object({ negative_prompt: external_exports.boolean().optional(), nag: external_exports.boolean().optional() }).passthrough().parse(await requestGenai("GET", "/v1/ltx/msr/capabilities", void 0, 15e3));
-      if ((args.nagScale ?? 0) > 0 && capabilities.nag !== true)
+      if ((msrArgs.nagScale ?? 0) > 0 && capabilities.nag !== true)
         throw new Error("msr_nag_unsupported: the GenAI MSR backend does not advertise NAG; no request was submitted");
       if (capabilities.negative_prompt !== true)
         throw new Error("msr_negative_unsupported: the GenAI MSR backend does not advertise negative conditioning; no request was submitted");
     }
-    if (operation === "msr" && "references" in args && args.references.some((ref) => oneOf(ref.audioUri, ref.audioPath)) && !await refreshGenaiMsrVoice(true))
+    if (operation === "msr" && args.references.some((ref) => oneOf(ref.audioUri, ref.audioPath)) && !await refreshGenaiMsrVoice(true))
       throw new Error("msr_voice_unsupported: the GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities)");
-    const submitted = "references" in args ? await prepareGenaiMsrSources(body) : body;
+    const submitted = usesReferences ? await prepareGenaiMsrSources(body) : body;
     const receipt = { version: 1, baseUrl: astraGenaiBaseUrl(), operation, fingerprint, videoPath, status: "submitting" };
     fs11.writeFileSync(receiptPath, JSON.stringify(receipt), { flag: "wx", mode: 384 });
     let response;
@@ -111336,13 +111381,23 @@ var GENAI_TOOLS = [
   {
     name: "astra_genai_img2video",
     title: "Generate GenAI LTX video from an image URI",
-    description: "Animate a start image through ASTRA GenAI LTX v2 and save an MP4. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Give exactly one imageUri (public HTTPS or PNG/JPEG data URI) or imagePath (local PNG/JPEG sent as a data URI); never a legacy upload ID. Supports an optional last frame, not intermediate keyframes or supplied speech. Unsupported provider options return errors without fallback.",
+    description: "Generate an MP4 from a start image, optional end and subject references.\nUse for image-to-video, first/last-frame animation and character or object reference guidance. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Give exactly one imageUri or imagePath. Optional references are separate from the start/end frames: 1..4 subject images and at most one background, supported on ltx-2.5-22b-distilled with explicit duration and a backend advertising combined MSR image conditioning. The selected distilled weights run with the MSR IC-LoRA; generateAudio:false removes the generated soundtrack. Dev supports start/end without additional references. No intermediate keyframes. Do NOT use for supplied speech or recovery \u2014 use astra_genai_audio2video or astra_genai_video_status. Returns: jobId, status, videoPath, downloaded, review and receiptPath; resume that receipt without resubmitting.",
     inputSchema: { type: "object", properties: {
       ...video,
       imageUri: { type: "string", description: "Public HTTPS PNG/JPEG URL or PNG/JPEG data URI. Mutually exclusive with imagePath." },
       imagePath: { type: "string", description: "Local PNG/JPEG start image (at most 32 MiB, 4096 px per side), sent as a data URI." },
       lastFrameUri: { type: ["string", "null"], description: "Optional final-frame HTTPS URL or data URI; gateway validates model support." },
-      lastFramePath: { type: "string", description: "Optional local PNG/JPEG final frame, sent as a data URI." }
+      lastFramePath: { type: "string", description: "Optional local PNG/JPEG final frame, sent as a data URI." },
+      references: { type: "array", minItems: 1, maxItems: 5, description: 'Additional subject references, separate from start/end. Up to 4 subjects + 1 background; e.g. [{imagePath:"/tmp/hero.png"}]. Requires distilled and explicit duration.', items: {
+        type: "object",
+        properties: {
+          imageUri: { type: "string", description: "HTTPS/data PNG/JPEG reference, e.g. https://example.com/hero.png; exclusive with imagePath." },
+          imagePath: { type: "string", description: "Local PNG/JPEG reference, e.g. /tmp/hero.png; exclusive with imageUri." },
+          background: { type: "boolean", default: false, description: "True for the single background reference, e.g. true; false for subjects." }
+        },
+        oneOf: [{ required: ["imageUri"] }, { required: ["imagePath"] }],
+        additionalProperties: false
+      } }
     }, required: ["prompt", "model", "duration", "resolution", "reserveUsd"], additionalProperties: false },
     annotations: generation
   },
@@ -114243,7 +114298,7 @@ function videoCatalog() {
       voice: videoVoiceCapabilities(tool2),
       ...tool2 === "mlx_video_generate" ? { deprecated: true, replacement: "ltx_video_generate" } : {},
       fields: keys(a.schema),
-      modelConstraints: localVideoStrategy(tool2) ? { frames: localVideoStrategy(tool2).frames, note: tool2 === "fasth3_omni_reference" ? "8 steps; 9 images, 3 videos, 3 audios, 12 total; visual reference required; 256 MiB RGB cap; no exact speech preservation." : "LTX 8k+1 frames; MLX-Serve backend." } : a.engine === "seedance" ? SEEDANCE_MODEL_SPECS : a.engine === "astra-genai-desktop" ? { discovery: "astra_genai_catalog", note: "Gateway /models and /contracts specify installed matrices. I2V: start/end only; A2V: audio and optional start; keyframes: 1..10. LoRA only on text/keyframes; audio truncation defaults false." } : tool2 === "astra_genai_msr" ? { note: "Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. Speech and effects are rendered natively; an optional character voice sample on subject 1 or 2 sets the timbre of that speaker, and the dialogue goes in the prompt." } : tool2 === "astra_genai_audio2video" ? { models: ["ltx-2.5-22b-dev"], note: "Length equals the audio, at most 361 frames per fps. Mono/stereo wav, mp3, m4a or ogg; 3+ channels 422. Sample rate kept: AAC standard 7350-96000 Hz only, others 422. Data URI at most 15,000,000 base64 characters." } : a.engine === "astra-genai" ? { models: GENAI_VIDEO_MODELS, note: "Explicit duration and resolution; server validates deployment limits. No supplied audio, keyframes or LoRA." } : { note: "Use video_plan; deployment-specific schema is authoritative" }
+      modelConstraints: localVideoStrategy(tool2) ? { frames: localVideoStrategy(tool2).frames, note: tool2 === "fasth3_omni_reference" ? "8 steps; 9 images, 3 videos, 3 audios, 12 total; visual reference required; 256 MiB RGB cap; no exact speech preservation." : "LTX 8k+1 frames; MLX-Serve backend." } : a.engine === "seedance" ? SEEDANCE_MODEL_SPECS : a.engine === "astra-genai-desktop" ? { discovery: "astra_genai_catalog", note: "Gateway /models and /contracts specify installed matrices. I2V: start/end only; A2V: audio and optional start; keyframes: 1..10. LoRA only on text/keyframes; audio truncation defaults false." } : tool2 === "astra_genai_msr" ? { note: "Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. Speech and effects are rendered natively; an optional character voice sample on subject 1 or 2 sets the timbre of that speaker, and the dialogue goes in the prompt." } : tool2 === "astra_genai_audio2video" ? { models: ["ltx-2.5-22b-dev"], note: "Length equals the audio, at most 361 frames per fps. Mono/stereo wav, mp3, m4a or ogg; 3+ channels 422. Sample rate kept: AAC standard 7350-96000 Hz only, others 422. Data URI at most 15,000,000 base64 characters." } : tool2 === "astra_genai_img2video" ? { models: GENAI_VIDEO_MODELS, references: { subjects: 4, background: 1, model: "ltx-2.5-22b-distilled", capability: "/v1/ltx/msr/capabilities:image_conditioning" }, note: "Start image and optional end frame; additional references use the distilled MSR IC-LoRA with explicit duration. Dev takes start/end only. generateAudio:false removes the soundtrack. No intermediate keyframes or supplied speech." } : a.engine === "astra-genai" ? { models: GENAI_VIDEO_MODELS, note: "Explicit duration and resolution; server validates deployment limits. No supplied audio, keyframes or LoRA." } : { note: "Use video_plan; deployment-specific schema is authoritative" }
     })),
     host: { execution: "external", note: "Host tools are outside MCP enforcement; never claim an API gate protects their calls." },
     unimplemented: ["minimax-h3-api", "ltx-official-api"]
@@ -114859,7 +114914,7 @@ function prepareVideoImages(tool2, input, shot, episode) {
   if (keyframes !== void 0 && (!Array.isArray(keyframes) || !keyframes.length || keyframes.length > 6 || frames.mode !== "first_last"))
     throw new Error("image_plan_invalid: intermediate frames require first_last and 1..6 entries");
   const host = tool2 === "host_external";
-  if (!host && videoRefs.length && frameMode) throw new Error("image_plan_unsupported: installed adapters cannot combine pinned start/end frames with additional video references; retain references with use:image or explicitly replan mode:reference");
+  if (!host && videoRefs.length && frameMode && tool2 !== "astra_genai_img2video") throw new Error("image_plan_unsupported: this adapter cannot combine pinned start/end frames with additional video references; retain references with use:image or explicitly replan mode:reference");
   if (!host && keyframes && tool2 !== "astra_keyframe_video") throw new Error("image_plan_unsupported: this adapter cannot accept intermediate frames");
   const args = { ...host ? input : resolveVideoDuration(tool2, input).args };
   const assigned = /* @__PURE__ */ new Set();
@@ -114947,6 +115002,19 @@ function prepareVideoImages(tool2, input, shot, episode) {
     };
     put2(fields2[0], value("start", frames.start));
     if (frames.end) put2(fields2[1], value("end", frames.end));
+    if (tool2 === "astra_genai_img2video" && videoRefs.length) {
+      const ordered = [...videoRefs].sort((a, b) => Number(a.role === "background") - Number(b.role === "background"));
+      const paths2 = ordered.map((ref) => bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, true));
+      const characters = new Set(ordered.flatMap((ref, i2) => ref.role === "character" ? [characterKey(paths2[i2])] : []));
+      if (characters.size > 2) throw new Error("msr_character_limit: reference at most two principal characters");
+      put2("references", paths2.map((imagePath, i2) => ({ imagePath, ...ordered[i2].role === "background" ? { background: true } : {} })));
+      args.prompt = [
+        ...ordered.map((ref, i2) => `Image ${i2 + 1}: ${ref.role}, ${ref.purpose}`),
+        msrPanelBinding(paths2, ordered),
+        "",
+        String(args.prompt ?? "")
+      ].filter(Boolean).join("\n");
+    }
   }
   for (const key of ["sourceImagePath", "lastImagePath", "firstFramePath", "lastFramePath", "imagePath", "imageUri", "lastFrameUri", "firstFrameImagePath", "lastFrameImagePath", "referenceImagePaths", "references", "images"]) {
     if (input[key] !== void 0 && !assigned.has(key)) throw new Error("image_plan_mismatch: unplanned " + key);
@@ -115474,7 +115542,7 @@ function planVideo(raw) {
   const shot = tool2 === "astra_genai_img2video" && silentPicture && visual?.frames?.mode === "reference" ? { ...context2.shot, visual: {
     ...visual,
     frames: { mode: "first", start: visual.frames.start },
-    references: (visual.references ?? []).map((ref) => ({ ...ref, use: "image" }))
+    references: visual.references ?? []
   } } : context2.shot;
   const video2 = visual?.video;
   const rawCast = context2.board.SB_DOC?.characters;
