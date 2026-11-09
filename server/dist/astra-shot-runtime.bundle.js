@@ -31814,11 +31814,26 @@ var genaiImageToVideoSchema = genaiTextToVideoSchema.extend({
   imageUri: genaiImageUriSchema.optional(),
   imagePath: external_exports.string().min(1).optional(),
   lastFrameUri: genaiImageUriSchema.nullable().optional(),
-  lastFramePath: external_exports.string().min(1).optional()
+  lastFramePath: external_exports.string().min(1).optional(),
+  references: external_exports.array(external_exports.object({
+    imageUri: genaiImageUriSchema.optional(),
+    imagePath: external_exports.string().min(1).optional(),
+    background: external_exports.boolean().default(false)
+  }).strict().refine(
+    (ref) => Number(ref.imageUri !== void 0) + Number(ref.imagePath !== void 0) === 1,
+    "Supply exactly one imageUri or imagePath per reference"
+  )).min(1).max(5).optional()
 }).strict().superRefine((args, ctx) => {
   const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
   if (Number(args.imageUri !== void 0) + Number(args.imagePath !== void 0) !== 1) issue("Supply exactly one imageUri or imagePath");
   if (args.lastFrameUri != null && args.lastFramePath !== void 0) issue("Supply at most one lastFrameUri or lastFramePath");
+  if (args.references) {
+    if (args.model !== "ltx-2.5-22b-distilled") issue("Additional references require ltx-2.5-22b-distilled (MSR conditioning)");
+    if (args.duration === null) issue("Additional references require an explicit duration");
+    const backgrounds = args.references.filter((ref) => ref.background).length;
+    if (backgrounds > 1 || args.references.length - backgrounds > 4 || backgrounds === args.references.length)
+      issue("References require 1..4 subjects and at most one background");
+  }
 });
 var oneOf = (a, b) => Number(a !== void 0) + Number(b !== void 0);
 var genaiAudioToVideoSchema = external_exports.object({

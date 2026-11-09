@@ -192,7 +192,7 @@ export function planVideo(raw) {
     // Apply the standing MSR-to-I2V rule to old reference-frame boards without rewriting their media.
     const shot = tool === 'astra_genai_img2video' && silentPicture && visual?.frames?.mode === 'reference'
         ? { ...context.shot, visual: { ...visual, frames: { mode: 'first', start: visual.frames.start },
-                references: (visual.references ?? []).map(ref => ({ ...ref, use: 'image' })) } } : context.shot;
+                references: visual.references ?? [] } } : context.shot;
     const video = visual?.video;
     const rawCast = context.board.SB_DOC?.characters;
     const names = Object.fromEntries((Array.isArray(rawCast) ? rawCast : []).map(c => [c.id, String(c.name ?? '')]));

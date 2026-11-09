@@ -13,7 +13,7 @@ of packaging, signs and lettered clothing; apply the scoped image-model override
 | Change an existing image's style or overall appearance | image `edit` / `astra_genai_edit`, `mode:"img2img"` | Reuse one inspected source. Start near strength 0.6 and specify what to preserve. |
 | Correct one region while keeping the surrounding image | image `edit` / `astra_genai_edit`, `mode:"inpaint"` | Source plus same-size mask: white (grayscale ≥128) changes, black stays. |
 | Preserve a character, outfit, prop and setting in a moving shot | video `reference` / `astra_genai_msr` | Reuse inspected character, clothing, prop and location sheets; up to four subject images plus one background. |
-| Animate a particular first frame or reach a final frame | video `image` / `astra_genai_img2video` | Source image (path or URI) and optional last frame. MSR references do not pin temporal frames. |
+| Animate a particular first frame or reach a final frame | video `image` / `astra_genai_img2video` | Start image and optional last frame; distilled can also carry separate subject/background references with combined MSR conditioning. |
 | Motion without identity references | video `text` / `astra_genai_text2video` | Explicit action, timing and camera intent. |
 | A clip that follows a recorded speech or sound track | video `audio` / `astra_genai_audio2video` | One mono/stereo audio file; optional first/last image. The clip length equals the audio. |
 
@@ -22,6 +22,24 @@ edit when the existing asset already fits most of the shot. Prefer MSR when cont
 requires separate identity/outfit/prop/background sheets. A single reference also
 works; do not invent extra references to fill slots. Z-Image cannot fuse multiple
 source images into one still. Never hide that limit by dropping references.
+
+`astra_genai_img2video` accepts `imagePath`/`imageUri`, optional
+`lastFramePath`/`lastFrameUri`, and an independent `references` array. Each
+reference has exactly one `imagePath` or `imageUri` plus optional `background`.
+The limit is four subjects and one background in addition to the two temporal
+frames. With references, select `ltx-2.5-22b-distilled` and an explicit duration;
+the gateway must advertise `image_conditioning:true` at
+`/v1/ltx/msr/capabilities`. This runs the distilled MSR IC-LoRA path; dev and
+direct Desktop I2V take start/end only. Unsupported inputs are rejected, never
+dropped. `generateAudio:false` strips the generated soundtrack. The image
+adapter keeps its `none` voice lane: physical dialogue still uses a voice-capable
+adapter, and thoughts/voiceover retain timed external TTS.
+
+For a structured `first`/`first_last` shot, `video_plan` binds every reference
+whose `use` is `video` or `both`, orders the background last and records its
+hash. `use:image` stays an input to the source image only. Legacy silent
+reference-frame shots use their opening image as the first frame and preserve
+their authored video references.
 
 Write each reference's role and prompt index in the shot's generation plan. Put
 non-background references first and the background last: the gateway moves the
