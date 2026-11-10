@@ -57,6 +57,7 @@ function compose(work,board) {
       if(!line.audio || line.audio.generation.text!==line.tts || line.audio.revision!==hash(JSON.stringify(speechRevisionPayload(line,voice))))throw new Error('Attach current audio for '+line.id);
       const source=path.resolve(board,line.audio.path);
       if(hash(fs.readFileSync(source))!==line.audio.sha256)throw new Error('Audio changed for '+line.id);
+      require('../../_shared/character-speech.js').verifiedSpeechGeneration(source,line.audio.generation,voice,line);
       sources.push(source);
     });
     const timing=sceneTiming(scene,board,win.SB_DOC?.performanceTimingVersion),intervals=timing.intervals;

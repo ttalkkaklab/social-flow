@@ -83,6 +83,13 @@ model explicitly to the raw tool so its own default cannot drift between episode
 Resolve speaker to character.tts. Call `speech_manage action:plan_audio` to compile
 line acting into the selected provider’s arguments; use its generator/generation
 output (`arguments` is an alias of `generation`). Do not overwrite the planned
+gateway `speechContext`: it binds the request to the current board and line. A selected
+sample with `voiceId:"default"` is not a cloned character voice; use the sample's
+operator-registered voice ID. A stale shared voice requires an explicit episode pin
+update or recorded voice exception before a new take. For gateway attachment include
+the completed generator's `receiptPath` inside `generation`; caller-written settings
+cannot replace that receipt. Keep it available for composition and assembly.
+Do not overwrite the planned
 scene direction with the character baseline stylePrompt. Attach with clean expectedText as `generation.text` and the actual tagged
 request in `generation.voiceSettings`. Generate with the corresponding raw engine tool, not
 `tts_generate_checked`. Save a generation receipt beside each scene WAV as `.generation.json`

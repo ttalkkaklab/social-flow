@@ -211,6 +211,8 @@ function check(work, board) {
         media[source]=line.audio.sha256;
         if(!line.audio.generation || line.audio.generation.text!==line.tts)throw new Error('Missing dialogue generation receipt: '+line.id);
         characterVoice(win,{narration:[line]},line.audio.generation);
+        require('../../_shared/character-speech.js').verifiedSpeechGeneration(source,line.audio.generation,voice,line);
+        if(line.audio.generation.receiptPath)media[line.audio.generation.receiptPath]=hash(fs.readFileSync(line.audio.generation.receiptPath));
       }
     }
     if(binding) {

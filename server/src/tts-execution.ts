@@ -10,6 +10,7 @@ import { resolveToolGate } from './tool-gate.js';
 import { resolveTtsModel } from './tts-models.js';
 import { validateFilePath } from './media-utils.js';
 import { validateSpeechAudio } from './tts-audio.js';
+import { createRequire } from 'node:module';
 
 export interface SpeechResult {
   success: boolean;
@@ -69,6 +70,9 @@ export async function executeSpeech<T extends SpeechResult>(
   args: Record<string, unknown>,
   run: (output: { outputPath: string; filename: string }) => Promise<T>,
 ): Promise<T & SpeechResult> {
+  (createRequire(import.meta.url)('../../skills/_shared/character-speech.js') as {
+    validateSpeechContext(generator: string, args: unknown): void;
+  }).validateSpeechContext(generator, args);
   const provider = generator === 'tts_astra_genai' ? 'astra-genai' : generator.startsWith('tts_elevenlabs_') ? 'elevenlabs' : 'gemini';
   const contract = resolveTtsModel(provider, String(args.model));
   if (![contract.single, contract.dialogue].includes(generator)) throw new Error('Generator does not implement selected TTS model');
