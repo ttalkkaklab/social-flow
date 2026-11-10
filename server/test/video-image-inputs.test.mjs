@@ -24,7 +24,7 @@ test('frame mappings use board-relative files, decoded metadata and explicit use
   assert.equal(p.imageBindings.length,3);assert.equal(p.imageBindings[2].submitted,false);
   assert.equal(p.imageBindings[0].width,1);assert.match(p.imageBindings[0].sha256,/^[a-f0-9]{64}$/);
  }
- const genai=prepareVideoImages('astra_genai_img2video',{prompt:'Move',model:'ltx-2.5-22b-dev',resolution:'720p',duration:5,reserveUsd:0},s,root);
+ const genai=prepareVideoImages('astra_genai_img2video',{prompt:'Move',model:'ltx-2.5-22b-dev',resolution:'1280x720',duration:5,reserveUsd:0},s,root);
  assert.match(genai.args.imageUri,/^data:image\/png;base64,/);assert.match(genai.args.lastFrameUri,/^data:image\/png;base64,/);
  assert.doesNotThrow(()=>parseVideoArgs('astra_genai_img2video',genai.args));
  const desktop=prepareVideoImages('astra_genai_desktop_img2video',{prompt:'Move',model:'ltx-2.5-fast',resolution:'720p',duration:3,reserveUsd:0},s,root);

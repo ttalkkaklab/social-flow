@@ -5,7 +5,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { bareFilenameSchema, resolveOutputFile } from './media-utils.js';
-import { GenaiRequestError, astraGenaiBaseUrl, downloadGenaiResult, pollGenaiJob, requestGenai, requireAstraGenaiKey, genaiImageUriSchema, genaiSourceUri } from './astra-genai-client.js';
+import { GenaiRequestError, astraGenaiBaseUrl, downloadGenaiResult, pollGenaiJob, requestGenai, requireAstraGenaiKey, requestGenaiMedia, genaiImageUriSchema, genaiSourceUri } from './astra-genai-client.js';
 import { atomicJson } from './routing-files.js';
 import { GENAI_FILE_GONE, GENAI_FILE_SCHEME, forgetGenaiUploads, genaiUploadable, shrinkImageToFit, uploadGenaiFile } from './astra-genai-upload.js';
 import { recordVideoSubmission } from './video-events.js';
@@ -14,20 +14,28 @@ export const GENAI_VIDEO_MODELS = ['ltx-2.5-22b-distilled', 'ltx-2.5-22b-dev'];
 export function genaiV2Resolution(saved) {
     return saved;
 }
-export const GENAI_CAMERA_MOTIONS = ['dolly_in', 'dolly_out', 'dolly_left', 'dolly_right', 'jib_up', 'jib_down', 'static', 'focus_shift'];
-export const genaiTextToVideoSchema = z.object({
-    prompt: z.string().min(1).max(5000),
+const localResolution = z.string().regex(/^[1-9]\d*x[1-9]\d*$/).refine(value => {
+    const [w, h] = value.split('x').map(Number), width = Math.ceil(w / 64) * 64, height = Math.ceil(h / 64) * 64;
+    return Number.isSafeInteger(w) && Number.isSafeInteger(h) && Math.min(w, h) >= 64 && w % 2 === 0 && h % 2 === 0 &&
+        Math.max(width, height) <= 1920 && width * height <= 2064384;
+}, 'Use even WIDTHxHEIGHT sides of at least 64; rounded-up /64 sides must fit 1920 and 2,064,384 pixels');
+const textVideoFields = z.object({
+    prompt: z.string().min(1).max(2000),
     model: z.enum(GENAI_VIDEO_MODELS),
-    duration: z.number().int().nullable(),
-    resolution: z.string().min(1),
+    duration: z.number().int().min(1).nullable(),
+    resolution: localResolution,
     fps: z.union([z.literal(24), z.literal(25), z.literal(48), z.literal(50)]).default(24),
     generateAudio: z.boolean().default(true),
-    cameraMotion: z.enum(GENAI_CAMERA_MOTIONS).nullable().optional(),
     reserveUsd: z.number().finite().nonnegative(),
     outputPath: z.string().optional(),
     filename: bareFilenameSchema('video').refine(name => name.endsWith('.mp4'), 'Use an .mp4 filename').optional(),
 }).strict();
-export const genaiImageToVideoSchema = genaiTextToVideoSchema.extend({
+function localVideoTiming(args, ctx) {
+    if (args.duration !== null && 8 * Math.ceil((args.duration * args.fps - 1) / 8) + 1 > 361)
+        ctx.addIssue({ code: 'custom', path: ['duration'], message: 'Duration and fps exceed the local 361-frame limit' });
+}
+export const genaiTextToVideoSchema = textVideoFields.superRefine(localVideoTiming);
+export const genaiImageToVideoSchema = textVideoFields.extend({
     imageUri: genaiImageUriSchema.optional(), imagePath: z.string().min(1).optional(),
     lastFrameUri: genaiImageUriSchema.nullable().optional(), lastFramePath: z.string().min(1).optional(),
     references: z.array(z.object({
@@ -36,6 +44,9 @@ export const genaiImageToVideoSchema = genaiTextToVideoSchema.extend({
     }).strict().refine(ref => Number(ref.imageUri !== undefined) + Number(ref.imagePath !== undefined) === 1, 'Supply exactly one imageUri or imagePath per reference')).min(1).max(5).optional(),
 }).strict().superRefine((args, ctx) => {
     const issue = (message) => ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+    localVideoTiming(args, ctx);
+    if (args.duration === null && (args.lastFrameUri != null || args.lastFramePath !== undefined))
+        issue('A last frame requires an explicit duration');
     if (Number(args.imageUri !== undefined) + Number(args.imagePath !== undefined) !== 1)
         issue('Supply exactly one imageUri or imagePath');
     if (args.lastFrameUri != null && args.lastFramePath !== undefined)
@@ -200,7 +211,6 @@ export function buildGenaiVideoBody(args) {
     return {
         prompt: args.prompt, model: args.model, duration: args.duration, resolution: args.resolution,
         fps: args.fps, generate_audio: args.generateAudio,
-        ...(args.cameraMotion === undefined ? {} : { camera_motion: args.cameraMotion }),
         // Local frames travel as checked data URIs, like MSR and audio-to-video.
         ...(args.imageUri === undefined && args.imagePath === undefined ? {} : { image_uri: genaiSourceUri(args.imageUri, args.imagePath) }),
         ...(args.lastFramePath !== undefined ? { last_frame_uri: genaiSourceUri(undefined, args.lastFramePath) }
@@ -217,8 +227,8 @@ const receiptSchema = z.object({
     status: z.enum(['submitting', 'submitted', 'completed']), sha256: z.string().optional(),
 }).strict();
 // The gateway advertises LTX provider compatibility; response fields come from LTX v2 docs.
-const statusSchema = z.object({ id: z.string().min(1), status: z.enum(['pending', 'processing', 'completed', 'failed']),
-    result: z.object({ video_url: z.string().min(1) }).passthrough().nullish(), error: z.unknown().optional(),
+const statusSchema = z.object({ id: z.string().min(1), status: z.enum(['pending', 'processing', 'completed', 'failed', 'cancelled']),
+    result: z.object({ video_url: z.string().min(1).optional() }).passthrough().nullish(), error: z.unknown().optional(),
 }).passthrough();
 export const genaiVideoStatusSchema = z.object({ receiptPath: z.string().min(1), download: z.boolean().default(false) }).strict();
 export async function getGenaiVideoStatus(input) {
@@ -238,13 +248,22 @@ export async function getGenaiVideoStatus(input) {
     if (job.id !== receipt.jobId)
         throw new Error('GenAI status job ID mismatch');
     // The gateway's own failed status is terminal job evidence (managed routing frees the slot).
-    if (job.status === 'failed')
-        throw new GenaiRequestError(`GenAI video ${receipt.jobId} failed: ${JSON.stringify(job.error ?? 'No details').slice(0, 1000)}`, true, 200);
+    if (job.status === 'failed' || job.status === 'cancelled')
+        throw new GenaiRequestError(`GenAI video ${receipt.jobId} ${job.status}: ${JSON.stringify(job.error ?? 'No details').slice(0, 1000)}`, true, 200);
     if (job.status !== 'completed' || !input.download)
         return { jobId: receipt.jobId, status: job.status, downloaded: false, review: 'not_reviewed' };
     if (!job.result?.video_url)
         throw new Error('GenAI completed without result.video_url; retain the receipt, do not resubmit.');
-    const bytes = await downloadGenaiResult(job.result.video_url);
+    let bytes;
+    if (job.result.authentication === 'same GatewayToken required') {
+        const url = new URL(job.result.video_url, astraGenaiBaseUrl() + '/');
+        if (url.origin !== new URL(astraGenaiBaseUrl()).origin || url.username || url.password || url.search || url.hash ||
+            !/^\/v1\/ltx\/desktop\/assets\/[A-Za-z0-9_-]+\/bytes$/.test(url.pathname))
+            throw new Error('Invalid private GenAI video URL; retain receipt');
+        bytes = await requestGenaiMedia(url.pathname);
+    }
+    else
+        bytes = await downloadGenaiResult(job.result.video_url);
     // Reject HTML/JSON and probe the actual container before recording completion.
     if (bytes.length < 12 || bytes.toString('ascii', 4, 8) !== 'ftyp')
         throw new Error('GenAI result is not MP4');

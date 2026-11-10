@@ -1,18 +1,17 @@
 import { NATIVE_GENAI_TOOLS } from './astra-genai-native-tools.js';
-import { GENAI_CAMERA_MOTIONS, GENAI_VIDEO_MODELS } from './astra-genai-video.js';
+import { GENAI_VIDEO_MODELS } from './astra-genai-video.js';
 const output = {
     outputPath: { type: 'string', description: 'Local output directory; configured production keeps outputs inside its episode/workspace.' },
     filename: { type: 'string', description: 'Bare output filename (.mp4 for video, .png for image). Reuse its receipt after interruption; never overwrite existing media.' },
 };
 const video = {
-    prompt: { type: 'string', minLength: 1, maxLength: 5000, description: 'Scene and action prompt, at most 5000 characters.' },
+    prompt: { type: 'string', minLength: 1, maxLength: 2000, description: 'Scene and action prompt, at most 2000 characters, e.g. A leaf sways as the camera moves closer. Describe camera motion here.' },
     model: { type: 'string', enum: [...GENAI_VIDEO_MODELS], description: 'Local gateway model. Cloud ltx-2-5-fast/pro models are not supported.' },
-    duration: { type: ['integer', 'null'], description: 'Explicit provider duration in seconds, or null for provider handling. Deployment limits and null semantics are server-validated; no legacy frame rounding.' },
-    resolution: { type: 'string', description: 'Explicit provider resolution string. Server validates supported dimensions; no legacy 64-pixel grid is imposed here.' },
+    duration: { type: ['integer', 'null'], minimum: 1, description: 'Whole seconds, e.g. 5, or null for automatic duration without an end frame. Rounded-up 8k+1 frames must fit 361 at the selected fps.' },
+    resolution: { type: 'string', description: 'WIDTHxHEIGHT with even sides of at least 64. Round each side up to 64 for backend limits: at most 1920 per side and 2,064,384 pixels. 1280x720 is supported; 1920x1080 exceeds the padded pixel cap.' },
     fps: { type: 'integer', enum: [24, 25, 48, 50], default: 24, description: 'Requested output frame rate.' },
     generateAudio: { type: 'boolean', default: true, description: 'Request generated audio. External speech conditioning is not supported by this gateway.' },
-    cameraMotion: { type: ['string', 'null'], enum: [...GENAI_CAMERA_MOTIONS, null], description: 'Optional provider camera motion; not a local camera preset or free-form phrase.' },
-    reserveUsd: { type: 'number', minimum: 0, description: 'Explicit total budget reservation; gateway prices are unverified. Use zero only when the deployment has no per-call bill. This is not a provider invoice cap.' },
+    reserveUsd: { type: 'number', minimum: 0, description: 'Explicit total budget reservation; gateway prices are unverified. Use zero only when the deployment has no per-call bill, e.g. 0. This is not a provider invoice cap.' },
     ...output,
 };
 const generation = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true };
@@ -26,8 +25,8 @@ export const GENAI_TOOLS = [
         inputSchema: { type: 'object', properties: { ...video,
                 imageUri: { type: 'string', description: 'Public HTTPS PNG/JPEG URL or PNG/JPEG data URI. Mutually exclusive with imagePath.' },
                 imagePath: { type: 'string', description: 'Local PNG/JPEG start image (at most 32 MiB, 4096 px per side), sent as a data URI.' },
-                lastFrameUri: { type: ['string', 'null'], description: 'Optional final-frame HTTPS URL or data URI; gateway validates model support.' },
-                lastFramePath: { type: 'string', description: 'Optional local PNG/JPEG final frame, sent as a data URI.' },
+                lastFrameUri: { type: ['string', 'null'], description: 'Optional final-frame HTTPS URL or data URI, e.g. https://example.com/end.png; requires an explicit duration.' },
+                lastFramePath: { type: 'string', description: 'Optional local PNG/JPEG final frame, e.g. /tmp/end.png; sent as a data URI and requires an explicit duration.' },
                 references: { type: 'array', minItems: 1, maxItems: 5, description: 'Additional subject references, separate from start/end. Up to 4 subjects + 1 background; e.g. [{imagePath:"/tmp/hero.png"}]. Requires distilled and explicit duration.', items: {
                         type: 'object', properties: {
                             imageUri: { type: 'string', description: 'HTTPS/data PNG/JPEG reference, e.g. https://example.com/hero.png; exclusive with imagePath.' },
