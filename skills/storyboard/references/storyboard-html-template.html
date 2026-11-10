@@ -298,6 +298,32 @@
   .sec .aside { float: right; font-weight: 500; letter-spacing: 0; color: var(--faint); }
 
   /* ── Section menu ─────────────────────────────────────── */
+  .shot-nav {
+    position: sticky; top: 8px; z-index: 30;
+    display: flex; align-items: flex-start; gap: var(--s3);
+    margin-bottom: var(--s4); padding: var(--s3);
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; box-shadow: var(--shadow);
+  }
+  .shot-nav-label { flex: none; padding-block: 12px; font-size: var(--t-cap); font-weight: 700; }
+  .shot-nav-links {
+    display: flex; flex-wrap: wrap; gap: 4px; min-width: 0;
+    max-height: min(24vh, 188px); overflow-y: auto; overscroll-behavior: contain;
+  }
+  .shot-nav a {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 44px; min-height: 44px; padding: 4px 8px;
+    border: 1px solid var(--hair); border-radius: 8px;
+    background: var(--sunk); color: var(--text); text-decoration: none;
+    font-size: var(--t-cap); font-weight: 700; font-variant-numeric: tabular-nums;
+  }
+  .shot-nav a:hover, .shot-nav a[aria-current="location"] {
+    color: var(--accent-ink); border-color: var(--accent); background: var(--card);
+  }
+  .shot-nav a[aria-current="location"] { box-shadow: inset 0 0 0 1px var(--accent); }
+  .shot-nav a:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+  .review-board .scene, .review-board .sec { scroll-margin-top: var(--shot-nav-offset, 24px); }
+  @media print { .shot-nav { display: none; } }
   .docnav {
     position: sticky; top: 0; z-index: 20;
     display: flex; flex-wrap: wrap; gap: var(--s1);
@@ -5496,6 +5522,57 @@ window.STORYBOARD_READY = window.STORYBOARD_READY.then(async function () {
       }; script.onerror = reject;
       document.body.appendChild(script);
     });
+  }
+  // Build from the rendered cards so numbering also matches boards with grouped scenes.
+  const cards = Array.from(document.querySelectorAll('.review-shots article.scene[id^="shot-"]'));
+  if (cards.length) {
+    const ko = document.documentElement.lang === 'ko';
+    const nav = document.createElement('nav');
+    nav.className = 'shot-nav'; nav.setAttribute('aria-label', ko ? '샷 바로가기' : 'Jump to shot');
+    const label = document.createElement('span');
+    label.className = 'shot-nav-label'; label.textContent = ko ? '샷' : 'Shot';
+    const list = document.createElement('div'); list.className = 'shot-nav-links';
+    const links = cards.map(function (card) {
+      const number = card.id.slice(5);
+      const link = document.createElement('a');
+      link.href = '#' + card.id; link.textContent = number.padStart(2, '0');
+      link.setAttribute('aria-label', ko ? '샷 ' + number + '번으로 이동' : 'Go to shot ' + number);
+      list.appendChild(link); return link;
+    });
+    nav.append(label, list); document.getElementById('app').prepend(nav);
+    let current = -1, pending = false;
+    function updateCurrent() {
+      pending = false;
+      const edge = nav.getBoundingClientRect().bottom + 24;
+      let next = -1;
+      for (let i = 0; i < cards.length; i++) {
+        if (cards[i].getBoundingClientRect().top > edge) break;
+        next = i;
+      }
+      if (next === current) return;
+      if (current >= 0) links[current].removeAttribute('aria-current');
+      current = next;
+      if (current >= 0) {
+        const link = links[current]; link.setAttribute('aria-current', 'location');
+        // Scroll only the number list; never move the document while tracking a shot.
+        const item = link.getBoundingClientRect(), bounds = list.getBoundingClientRect();
+        if (item.top < bounds.top) list.scrollTop += item.top - bounds.top;
+        else if (item.bottom > bounds.bottom) list.scrollTop += item.bottom - bounds.bottom;
+      }
+    }
+    function scheduleCurrent() {
+      if (!pending) { pending = true; requestAnimationFrame(updateCurrent); }
+    }
+    function measureNav() {
+      document.documentElement.style.setProperty('--shot-nav-offset', (nav.offsetHeight + 24) + 'px');
+      scheduleCurrent();
+    }
+    measureNav();
+    new ResizeObserver(measureNav).observe(nav);
+    window.addEventListener('scroll', scheduleCurrent, { passive: true });
+    window.addEventListener('resize', measureNav);
+    // review-layout.js handles these fragments locally, including the library's base URL.
+    nav.addEventListener('click', scheduleCurrent);
   }
   document.documentElement.dataset.reviewReady = 'true';
   if (/^#shot-\d+$/.test(location.hash)) {
