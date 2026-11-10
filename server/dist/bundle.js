@@ -90998,7 +90998,6 @@ var require_video_catalog = __commonJS({
             "resolution",
             "fps",
             "generateAudio",
-            "cameraMotion",
             "reserveUsd",
             "outputPath",
             "filename"
@@ -91031,7 +91030,6 @@ var require_video_catalog = __commonJS({
             "resolution",
             "fps",
             "generateAudio",
-            "cameraMotion",
             "reserveUsd",
             "outputPath",
             "filename",
@@ -111205,20 +111203,27 @@ var GENAI_VIDEO_MODELS = ["ltx-2.5-22b-distilled", "ltx-2.5-22b-dev"];
 function genaiV2Resolution(saved) {
   return saved;
 }
-var GENAI_CAMERA_MOTIONS = ["dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"];
-var genaiTextToVideoSchema = external_exports.object({
-  prompt: external_exports.string().min(1).max(5e3),
+var localResolution = external_exports.string().regex(/^[1-9]\d*x[1-9]\d*$/).refine((value) => {
+  const [w, h2] = value.split("x").map(Number), width = Math.ceil(w / 64) * 64, height = Math.ceil(h2 / 64) * 64;
+  return Number.isSafeInteger(w) && Number.isSafeInteger(h2) && Math.min(w, h2) >= 64 && w % 2 === 0 && h2 % 2 === 0 && Math.max(width, height) <= 1920 && width * height <= 2064384;
+}, "Use even WIDTHxHEIGHT sides of at least 64; rounded-up /64 sides must fit 1920 and 2,064,384 pixels");
+var textVideoFields = external_exports.object({
+  prompt: external_exports.string().min(1).max(2e3),
   model: external_exports.enum(GENAI_VIDEO_MODELS),
-  duration: external_exports.number().int().nullable(),
-  resolution: external_exports.string().min(1),
+  duration: external_exports.number().int().min(1).nullable(),
+  resolution: localResolution,
   fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
   generateAudio: external_exports.boolean().default(true),
-  cameraMotion: external_exports.enum(GENAI_CAMERA_MOTIONS).nullable().optional(),
   reserveUsd: external_exports.number().finite().nonnegative(),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
 }).strict();
-var genaiImageToVideoSchema = genaiTextToVideoSchema.extend({
+function localVideoTiming(args, ctx) {
+  if (args.duration !== null && 8 * Math.ceil((args.duration * args.fps - 1) / 8) + 1 > 361)
+    ctx.addIssue({ code: "custom", path: ["duration"], message: "Duration and fps exceed the local 361-frame limit" });
+}
+var genaiTextToVideoSchema = textVideoFields.superRefine(localVideoTiming);
+var genaiImageToVideoSchema = textVideoFields.extend({
   imageUri: genaiImageUriSchema.optional(),
   imagePath: external_exports.string().min(1).optional(),
   lastFrameUri: genaiImageUriSchema.nullable().optional(),
@@ -111233,6 +111238,9 @@ var genaiImageToVideoSchema = genaiTextToVideoSchema.extend({
   )).min(1).max(5).optional()
 }).strict().superRefine((args, ctx) => {
   const issue2 = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  localVideoTiming(args, ctx);
+  if (args.duration === null && (args.lastFrameUri != null || args.lastFramePath !== void 0))
+    issue2("A last frame requires an explicit duration");
   if (Number(args.imageUri !== void 0) + Number(args.imagePath !== void 0) !== 1) issue2("Supply exactly one imageUri or imagePath");
   if (args.lastFrameUri != null && args.lastFramePath !== void 0) issue2("Supply at most one lastFrameUri or lastFramePath");
   if (args.references) {
@@ -111397,7 +111405,6 @@ function buildGenaiVideoBody(args) {
     resolution: args.resolution,
     fps: args.fps,
     generate_audio: args.generateAudio,
-    ...args.cameraMotion === void 0 ? {} : { camera_motion: args.cameraMotion },
     // Local frames travel as checked data URIs, like MSR and audio-to-video.
     ...args.imageUri === void 0 && args.imagePath === void 0 ? {} : { image_uri: genaiSourceUri(args.imageUri, args.imagePath) },
     ...args.lastFramePath !== void 0 ? { last_frame_uri: genaiSourceUri(void 0, args.lastFramePath) } : args.lastFrameUri === void 0 ? {} : { last_frame_uri: args.lastFrameUri === null ? null : genaiSourceUri(args.lastFrameUri) },
@@ -111420,8 +111427,8 @@ var receiptSchema2 = external_exports.object({
 }).strict();
 var statusSchema2 = external_exports.object({
   id: external_exports.string().min(1),
-  status: external_exports.enum(["pending", "processing", "completed", "failed"]),
-  result: external_exports.object({ video_url: external_exports.string().min(1) }).passthrough().nullish(),
+  status: external_exports.enum(["pending", "processing", "completed", "failed", "cancelled"]),
+  result: external_exports.object({ video_url: external_exports.string().min(1).optional() }).passthrough().nullish(),
   error: external_exports.unknown().optional()
 }).passthrough();
 var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
@@ -111437,11 +111444,17 @@ async function getGenaiVideoStatus(input) {
   const route = `${genaiVideoRoute(receipt.operation)}/${encodeURIComponent(receipt.jobId)}`;
   const job = statusSchema2.parse(await requestGenai("GET", route));
   if (job.id !== receipt.jobId) throw new Error("GenAI status job ID mismatch");
-  if (job.status === "failed") throw new GenaiRequestError(`GenAI video ${receipt.jobId} failed: ${JSON.stringify(job.error ?? "No details").slice(0, 1e3)}`, true, 200);
+  if (job.status === "failed" || job.status === "cancelled") throw new GenaiRequestError(`GenAI video ${receipt.jobId} ${job.status}: ${JSON.stringify(job.error ?? "No details").slice(0, 1e3)}`, true, 200);
   if (job.status !== "completed" || !input.download)
     return { jobId: receipt.jobId, status: job.status, downloaded: false, review: "not_reviewed" };
   if (!job.result?.video_url) throw new Error("GenAI completed without result.video_url; retain the receipt, do not resubmit.");
-  const bytes = await downloadGenaiResult(job.result.video_url);
+  let bytes;
+  if (job.result.authentication === "same GatewayToken required") {
+    const url = new URL(job.result.video_url, astraGenaiBaseUrl() + "/");
+    if (url.origin !== new URL(astraGenaiBaseUrl()).origin || url.username || url.password || url.search || url.hash || !/^\/v1\/ltx\/desktop\/assets\/[A-Za-z0-9_-]+\/bytes$/.test(url.pathname))
+      throw new Error("Invalid private GenAI video URL; retain receipt");
+    bytes = await requestGenaiMedia(url.pathname);
+  } else bytes = await downloadGenaiResult(job.result.video_url);
   if (bytes.length < 12 || bytes.toString("ascii", 4, 8) !== "ftyp") throw new Error("GenAI result is not MP4");
   const temp = `${receipt.videoPath}.${process.pid}.download.mp4`;
   try {
@@ -111569,14 +111582,13 @@ var output = {
   filename: { type: "string", description: "Bare output filename (.mp4 for video, .png for image). Reuse its receipt after interruption; never overwrite existing media." }
 };
 var video = {
-  prompt: { type: "string", minLength: 1, maxLength: 5e3, description: "Scene and action prompt, at most 5000 characters." },
+  prompt: { type: "string", minLength: 1, maxLength: 2e3, description: "Scene and action prompt, at most 2000 characters, e.g. A leaf sways as the camera moves closer. Describe camera motion here." },
   model: { type: "string", enum: [...GENAI_VIDEO_MODELS], description: "Local gateway model. Cloud ltx-2-5-fast/pro models are not supported." },
-  duration: { type: ["integer", "null"], description: "Explicit provider duration in seconds, or null for provider handling. Deployment limits and null semantics are server-validated; no legacy frame rounding." },
-  resolution: { type: "string", description: "Explicit provider resolution string. Server validates supported dimensions; no legacy 64-pixel grid is imposed here." },
+  duration: { type: ["integer", "null"], minimum: 1, description: "Whole seconds, e.g. 5, or null for automatic duration without an end frame. Rounded-up 8k+1 frames must fit 361 at the selected fps." },
+  resolution: { type: "string", description: "WIDTHxHEIGHT with even sides of at least 64. Round each side up to 64 for backend limits: at most 1920 per side and 2,064,384 pixels. 1280x720 is supported; 1920x1080 exceeds the padded pixel cap." },
   fps: { type: "integer", enum: [24, 25, 48, 50], default: 24, description: "Requested output frame rate." },
   generateAudio: { type: "boolean", default: true, description: "Request generated audio. External speech conditioning is not supported by this gateway." },
-  cameraMotion: { type: ["string", "null"], enum: [...GENAI_CAMERA_MOTIONS, null], description: "Optional provider camera motion; not a local camera preset or free-form phrase." },
-  reserveUsd: { type: "number", minimum: 0, description: "Explicit total budget reservation; gateway prices are unverified. Use zero only when the deployment has no per-call bill. This is not a provider invoice cap." },
+  reserveUsd: { type: "number", minimum: 0, description: "Explicit total budget reservation; gateway prices are unverified. Use zero only when the deployment has no per-call bill, e.g. 0. This is not a provider invoice cap." },
   ...output
 };
 var generation = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true };
@@ -111597,8 +111609,8 @@ var GENAI_TOOLS = [
       ...video,
       imageUri: { type: "string", description: "Public HTTPS PNG/JPEG URL or PNG/JPEG data URI. Mutually exclusive with imagePath." },
       imagePath: { type: "string", description: "Local PNG/JPEG start image (at most 32 MiB, 4096 px per side), sent as a data URI." },
-      lastFrameUri: { type: ["string", "null"], description: "Optional final-frame HTTPS URL or data URI; gateway validates model support." },
-      lastFramePath: { type: "string", description: "Optional local PNG/JPEG final frame, sent as a data URI." },
+      lastFrameUri: { type: ["string", "null"], description: "Optional final-frame HTTPS URL or data URI, e.g. https://example.com/end.png; requires an explicit duration." },
+      lastFramePath: { type: "string", description: "Optional local PNG/JPEG final frame, e.g. /tmp/end.png; sent as a data URI and requires an explicit duration." },
       references: { type: "array", minItems: 1, maxItems: 5, description: 'Additional subject references, separate from start/end. Up to 4 subjects + 1 background; e.g. [{imagePath:"/tmp/hero.png"}]. Requires distilled and explicit duration.', items: {
         type: "object",
         properties: {

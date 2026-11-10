@@ -734,7 +734,6 @@
         "resolution",
         "fps",
         "generateAudio",
-        "cameraMotion",
         "reserveUsd",
         "outputPath",
         "filename"
@@ -767,7 +766,6 @@
         "resolution",
         "fps",
         "generateAudio",
-        "cameraMotion",
         "reserveUsd",
         "outputPath",
         "filename",

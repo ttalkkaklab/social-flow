@@ -386,3 +386,24 @@ Each person takes one subject slot and retains that person's pinned voice sample
 The start image still takes the background slot. The default panel layout is unchanged.
 Review derived images against the original sheets before selecting this layout;
 fewer references alone do not establish better model adherence.
+
+### Local image-to-video input limits
+
+The `astra-genai` adapter uses local LTX weights, not the Lightricks cloud API.
+For text/image-to-video, prompts have at most 2,000 characters. Put camera movement
+in the prompt; `cameraMotion` is unsupported. Request `WIDTHxHEIGHT` with even sides
+of at least 64. The gateway rounds each side up to 64 for generation, within 1920
+per side and 2,064,384 pixels, then crops to the requested size. For example,
+1280x720 works; 1920x1080 exceeds the padded pixel cap. It verifies the output size.
+
+Duration is a positive whole number of seconds or null for automatic duration.
+The rounded-up 8k+1 frame count must fit 361: at 24 fps, 15 seconds works and 16 does
+not. An end frame requires an explicit duration. Additional subject references
+still require distilled and an advertised MSR image-conditioning backend.
+
+Desktop has its own `astra-genai-desktop` schemas and installed capability matrix.
+Its common gateway facade takes duration in seconds, not `num_frames`, and cannot
+suppress generated audio. Do not copy local-weight limits onto that native adapter.
+Cancelled jobs are terminal; recover their receipts without another submission.
+Private Desktop results require the same token, restricted to the same gateway's
+asset-bytes route; signed external results are downloaded without credentials.
