@@ -31797,20 +31797,27 @@ var statusSchema = external_exports.object({ missing: external_exports.array(ext
 
 // src/astra-genai-video.ts
 var GENAI_VIDEO_MODELS = ["ltx-2.5-22b-distilled", "ltx-2.5-22b-dev"];
-var GENAI_CAMERA_MOTIONS = ["dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"];
-var genaiTextToVideoSchema = external_exports.object({
-  prompt: external_exports.string().min(1).max(5e3),
+var localResolution = external_exports.string().regex(/^[1-9]\d*x[1-9]\d*$/).refine((value) => {
+  const [w, h] = value.split("x").map(Number), width = Math.ceil(w / 64) * 64, height = Math.ceil(h / 64) * 64;
+  return Number.isSafeInteger(w) && Number.isSafeInteger(h) && Math.min(w, h) >= 64 && w % 2 === 0 && h % 2 === 0 && Math.max(width, height) <= 1920 && width * height <= 2064384;
+}, "Use even WIDTHxHEIGHT sides of at least 64; rounded-up /64 sides must fit 1920 and 2,064,384 pixels");
+var textVideoFields = external_exports.object({
+  prompt: external_exports.string().min(1).max(2e3),
   model: external_exports.enum(GENAI_VIDEO_MODELS),
-  duration: external_exports.number().int().nullable(),
-  resolution: external_exports.string().min(1),
+  duration: external_exports.number().int().min(1).nullable(),
+  resolution: localResolution,
   fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
   generateAudio: external_exports.boolean().default(true),
-  cameraMotion: external_exports.enum(GENAI_CAMERA_MOTIONS).nullable().optional(),
   reserveUsd: external_exports.number().finite().nonnegative(),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
 }).strict();
-var genaiImageToVideoSchema = genaiTextToVideoSchema.extend({
+function localVideoTiming(args, ctx) {
+  if (args.duration !== null && 8 * Math.ceil((args.duration * args.fps - 1) / 8) + 1 > 361)
+    ctx.addIssue({ code: "custom", path: ["duration"], message: "Duration and fps exceed the local 361-frame limit" });
+}
+var genaiTextToVideoSchema = textVideoFields.superRefine(localVideoTiming);
+var genaiImageToVideoSchema = textVideoFields.extend({
   imageUri: genaiImageUriSchema.optional(),
   imagePath: external_exports.string().min(1).optional(),
   lastFrameUri: genaiImageUriSchema.nullable().optional(),
@@ -31825,6 +31832,9 @@ var genaiImageToVideoSchema = genaiTextToVideoSchema.extend({
   )).min(1).max(5).optional()
 }).strict().superRefine((args, ctx) => {
   const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  localVideoTiming(args, ctx);
+  if (args.duration === null && (args.lastFrameUri != null || args.lastFramePath !== void 0))
+    issue("A last frame requires an explicit duration");
   if (Number(args.imageUri !== void 0) + Number(args.imagePath !== void 0) !== 1) issue("Supply exactly one imageUri or imagePath");
   if (args.lastFrameUri != null && args.lastFramePath !== void 0) issue("Supply at most one lastFrameUri or lastFramePath");
   if (args.references) {
@@ -31922,8 +31932,8 @@ var receiptSchema2 = external_exports.object({
 }).strict();
 var statusSchema2 = external_exports.object({
   id: external_exports.string().min(1),
-  status: external_exports.enum(["pending", "processing", "completed", "failed"]),
-  result: external_exports.object({ video_url: external_exports.string().min(1) }).passthrough().nullish(),
+  status: external_exports.enum(["pending", "processing", "completed", "failed", "cancelled"]),
+  result: external_exports.object({ video_url: external_exports.string().min(1).optional() }).passthrough().nullish(),
   error: external_exports.unknown().optional()
 }).passthrough();
 var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
