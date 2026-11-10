@@ -94279,6 +94279,198 @@ var require_story_contract = __commonJS({
   }
 });
 
+// ../skills/channel/references/character-sheet.js
+var require_character_sheet = __commonJS({
+  "../skills/channel/references/character-sheet.js"(exports, module) {
+    "use strict";
+    var fs24 = __require("node:fs");
+    var path33 = __require("node:path");
+    var { createHash: createHash25 } = __require("node:crypto");
+    var { isDeepStrictEqual: isDeepStrictEqual2 } = __require("node:util");
+    var { identityCharacter, direction, panelPrompt, requiresSpeech, isVoiceOnly } = require_character_identity();
+    var { identityVoice, voiceErrors } = require_character_voice();
+    function episodeVoiceOverride(win, tts) {
+      const override2 = win?.PRODUCTION?.modelSettings?.overrides?.speech;
+      return typeof override2?.request === "string" && override2.request.trim().length > 0 && typeof override2.model === "string" && override2.model.trim().length > 0 && override2.engine === tts?.engine && override2.model === tts?.model && voiceErrors(tts).length === 0;
+    }
+    function handoff(file, { requireSpeech = true, voiceOnly = false } = {}) {
+      const source = fs24.readFileSync(file, "utf8");
+      const options = { ready: !voiceOnly };
+      const character = identityCharacter(source, options);
+      const name = /^#\s+(.+)$/m.exec(source)?.[1]?.trim();
+      if (!name) throw new Error("identity.md needs a # Name heading");
+      const id = path33.basename(path33.dirname(path33.resolve(file)));
+      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) throw new Error("Character folder needs a kebab-case id");
+      const tts = identityVoice(source, { optional: !requireSpeech });
+      return { id, name, character, tts, direction: direction(character, options), identitySha256: createHash25("sha256").update(source).digest("hex"), ...voiceOnly ? { voiceOnly: true } : {}, ...selectedVoiceReference(source, tts) };
+    }
+    function selectedVoiceReference(source, tts) {
+      if (!tts) return {};
+      const document2 = [...source.matchAll(/```json\s*\n([\s\S]*?)```/g)].map((m2) => JSON.parse(m2[1])).find((v) => v?.character);
+      const selection = document2?.voiceSelection;
+      if (!selection?.auditionPath) return selection ? { voiceSelection: selection } : {};
+      try {
+        const audition = JSON.parse(fs24.readFileSync(selection.auditionPath, "utf8"));
+        const chosen = audition.candidates?.find((c) => c.id === selection.candidateId);
+        const registration = selection.registration;
+        const registered = registration?.engine === "astra-genai" && registration.model === chosen?.tts?.model && chosen?.tts?.engine === "astra-genai" && typeof registration.request === "string" && registration.request.trim() && typeof registration.voiceId === "string" && registration.voiceId.trim().toLowerCase() !== "default" && registration.audioSha256 === chosen?.audioSha256 && isDeepStrictEqual2({ ...chosen.tts, voiceId: registration.voiceId }, tts);
+        if (!chosen || !isDeepStrictEqual2(chosen.tts, tts) && !registered || chosen.audioSha256 !== selection.audioSha256 || !path33.isAbsolute(chosen.audioPath))
+          throw new Error("Selected voice sample no longer matches the pinned character voice");
+        return { voiceSelection: selection, voiceReference: { path: chosen.audioPath, sha256: chosen.audioSha256, tts } };
+      } catch (error2) {
+        return { voiceSelection: selection, voiceReferenceWarning: error2.message };
+      }
+    }
+    if (__require.main === module) {
+      try {
+        const args = process.argv.slice(2);
+        const view = args[1] === "--panel" && ["face", "front", "back"].includes(args[2]) ? args[2] : void 0;
+        if (args.length !== 1 && !view) throw new Error("Usage: character-sheet.js <identity.md> [--panel face|front|back]");
+        if (view) {
+          const { text: text4, skipped } = panelPrompt(identityCharacter(fs24.readFileSync(args[0], "utf8")), view);
+          if (skipped.length) console.error(`Not English, left out: ${skipped.join(", ")}`);
+          console.log(text4);
+        } else console.log(JSON.stringify(handoff(args[0]), null, 2));
+      } catch (e2) {
+        console.error(e2.message);
+        process.exitCode = 1;
+      }
+    }
+    function sourceErrors(win, boardDir) {
+      const entries = win?.SB_DOC?.characters;
+      const chars = (Array.isArray(entries) ? entries : Object.entries(entries || {}).map(([id, c]) => ({ ...c, id }))).filter((c) => c?.character !== void 0 || win?.SB_DOC?.characterSchemaVersion === 1);
+      if (!chars.length) return [];
+      let channel = path33.resolve(boardDir);
+      while (!fs24.existsSync(path33.join(channel, "profile.md")) && path33.dirname(channel) !== channel) channel = path33.dirname(channel);
+      const errors = [];
+      for (const c of chars) {
+        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(c?.id || "")) {
+          errors.push("Invalid character id");
+          continue;
+        }
+        const file = path33.join(channel, "assets", "characters", c.id, "identity.md");
+        try {
+          const current = handoff(file, { requireSpeech: requiresSpeech(win, c.id), voiceOnly: isVoiceOnly(win, c.id) });
+          const voiceChanged = JSON.stringify(current.tts) !== JSON.stringify(c.tts);
+          if (current.identitySha256 !== c.identitySha256 || JSON.stringify(current.character) !== JSON.stringify(c.character) || voiceChanged && !episodeVoiceOverride(win, c.tts))
+            errors.push(`Character ${c.id}: local identity changed; regenerate handoff and affected assets`);
+        } catch (error2) {
+          errors.push(`Character ${c.id}: ${error2.message}`);
+        }
+      }
+      return errors;
+    }
+    module.exports = { handoff, sourceErrors, selectedVoiceReference };
+  }
+});
+
+// ../skills/_shared/character-speech.js
+var require_character_speech = __commonJS({
+  "../skills/_shared/character-speech.js"(exports, module) {
+    "use strict";
+    var fs24 = __require("node:fs");
+    var path33 = __require("node:path");
+    var { createHash: createHash25 } = __require("node:crypto");
+    var { isDeepStrictEqual: isDeepStrictEqual2 } = __require("node:util");
+    var { voiceErrors, generationVoiceErrors, normalizeLanguage } = require_character_voice();
+    var hash7 = (bytes) => createHash25("sha256").update(bytes).digest("hex");
+    var normalizeVoice = (voice) => Object.fromEntries(Object.entries(voice || {}).map(([key, value]) => [key, key === "language" ? normalizeLanguage(value) : typeof value === "string" ? value.trim() : value]));
+    function explicitVoiceOverride(board, voice, current) {
+      const override2 = board?.PRODUCTION?.modelSettings?.overrides?.speech;
+      return typeof override2?.request === "string" && override2.request.trim() && override2.engine === voice?.engine && override2.model === voice?.model && (override2.voiceId === voice?.voiceId || voice?.voiceId !== "default" && (voice?.engine !== current?.tts?.engine || voice?.model !== current?.tts?.model));
+    }
+    function characterSpeech(character, { boardDir, board } = {}) {
+      let current;
+      if (boardDir && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(character?.id || "")) {
+        let channel = path33.resolve(boardDir);
+        while (!fs24.existsSync(path33.join(channel, "profile.md")) && path33.dirname(channel) !== channel) channel = path33.dirname(channel);
+        const identity = path33.join(channel, "assets/characters", character.id, "identity.md");
+        if (fs24.existsSync(identity)) current = require_character_sheet().handoff(identity, { voiceOnly: character.voiceOnly === true });
+      }
+      const resolved = character?.tts ? character : { ...current, ...character, tts: current?.tts };
+      const voice = resolved.tts;
+      const invalid = voiceErrors(voice);
+      if (invalid.length) throw new Error("character_voice_invalid: " + invalid.join("; "));
+      const override2 = explicitVoiceOverride(board, voice, current);
+      if (current && !override2 && !isDeepStrictEqual2(normalizeVoice(current.tts), normalizeVoice(voice)))
+        throw new Error(`character_voice_stale: ${resolved.id} differs from the shared character voice; apply the requested sheet voice to SB_DOC.characters, or record an explicit episode speech override with request and voiceId`);
+      if (current?.voiceReference && resolved.voiceReference && !override2 && current.voiceReference.sha256 !== resolved.voiceReference.sha256)
+        throw new Error(`character_voice_stale: ${resolved.id} selected sample changed; refresh the episode voice reference explicitly`);
+      const reference2 = resolved.voiceReference || (!override2 ? current?.voiceReference : void 0);
+      const selected = reference2 || resolved.voiceSelection || resolved.voiceReferenceWarning || !override2 && (current?.voiceSelection || current?.voiceReferenceWarning);
+      if (voice.engine === "astra-genai" && voice.voiceId.trim().toLowerCase() === "default" && selected && !override2)
+        throw new Error(`character_voice_unregistered: ${resolved.id} has a selected sample but voiceId is default; register that sample with the gateway and pin its returned voice ID. A direction prompt does not clone a sample`);
+      if (!override2 && (resolved.voiceReferenceWarning || current?.voiceReferenceWarning))
+        throw new Error(`character_voice_sample_invalid: ${resolved.id} selected sample cannot be resolved`);
+      if (reference2) {
+        if (reference2.tts && !isDeepStrictEqual2(normalizeVoice(reference2.tts), normalizeVoice(voice)))
+          throw new Error(`character_voice_sample_stale: ${resolved.id} sample uses different TTS settings`);
+        const file = path33.resolve(boardDir || process.cwd(), reference2.path);
+        if (!reference2.sha256 || hash7(fs24.readFileSync(file)) !== reference2.sha256)
+          throw new Error(`character_voice_sample_stale: ${resolved.id} selected sample bytes changed or lack a pinned hash`);
+        return { ...resolved, voiceReference: { ...reference2, path: file } };
+      }
+      return resolved;
+    }
+    function physicalPath(file) {
+      let current = path33.resolve(file), suffix = [];
+      while (!fs24.existsSync(current) && path33.dirname(current) !== current) {
+        suffix.unshift(path33.basename(current));
+        current = path33.dirname(current);
+      }
+      return path33.join(fs24.realpathSync(current), ...suffix);
+    }
+    function episodeBoardForOutput(outputPath) {
+      let folder = physicalPath(outputPath || process.cwd());
+      while (true) {
+        if (path33.basename(folder) === "assets" && fs24.existsSync(path33.join(path33.dirname(folder), "profile.md"))) return void 0;
+        const board = path33.join(folder, "storyboard/scenes.js");
+        if (fs24.existsSync(board)) return fs24.realpathSync(board);
+        if (path33.dirname(folder) === folder) return void 0;
+        folder = path33.dirname(folder);
+      }
+    }
+    function validateSpeechContext(generator, args) {
+      const context2 = args.speechContext;
+      const outputBoard = generator === "tts_astra_genai" ? episodeBoardForOutput(args.outputPath) : void 0;
+      if (!context2) {
+        if (outputBoard) throw new Error("speech_context_required: use speech_manage plan_audio for episode TTS");
+        return;
+      }
+      const file = fs24.realpathSync(context2.path);
+      if (outputBoard && file !== outputBoard) throw new Error("speech_context_mismatch: output belongs to a different episode");
+      const source = fs24.readFileSync(file, "utf8");
+      if (hash7(source) !== context2.expectedRevision) throw new Error("speech_context_stale: re-plan audio after storyboard changes");
+      const board = require_scenes_vm().evaluateWindowScript(source, { filename: file });
+      const matches = (board.SCENES || []).flatMap((shot) => shot.narration || []).filter((line2) => line2.id === context2.lineId);
+      if (matches.length !== 1 || !matches[0].speaker) throw new Error("speech_context_invalid: select one explicit stable line ID");
+      const line = matches[0], raw = board.SB_DOC?.characters;
+      const characters = Array.isArray(raw) ? raw : Object.entries(raw || {}).map(([id, value]) => ({ ...value, id }));
+      const cast = characters.filter((character2) => character2.id === line.speaker);
+      if (cast.length !== 1) throw new Error("speech_context_invalid: speaker needs one character entry");
+      const character = characterSpeech(cast[0], { boardDir: path33.dirname(file), board });
+      const errors = generationVoiceErrors(character.tts, { generator, voiceSettings: args, text: line.tts, language: character.tts.language }, line);
+      if (args.text !== require_speech_contract().compileActing(line.tts, line.acting, character.tts).generation.text)
+        errors.push("Speech text differs from the current line");
+      if (errors.length) throw new Error("speech_context_mismatch: " + errors.join("; "));
+    }
+    function verifiedSpeechGeneration(audioPath, proof, voice, line, { required: required2 = false } = {}) {
+      if (!proof?.receiptPath) {
+        if (required2) throw new Error("speech_receipt_required: attach the completed TTS receiptPath");
+        return proof;
+      }
+      const receipt = JSON.parse(fs24.readFileSync(proof.receiptPath, "utf8"));
+      if (receipt.status !== "completed" || receipt.result?.success !== true || receipt.generator !== proof.generator || !receipt.result?.audioPath || fs24.realpathSync(receipt.result.audioPath) !== fs24.realpathSync(audioPath) || receipt.audioSha256 !== hash7(fs24.readFileSync(audioPath)))
+        throw new Error("speech_receipt_mismatch: receipt must cover this completed generator and these exact audio bytes");
+      const actual = { ...proof, voiceSettings: receipt.generation };
+      const errors = generationVoiceErrors(voice, actual, line);
+      if (errors.length) throw new Error("speech_receipt_voice_mismatch: " + errors.join("; "));
+      return actual;
+    }
+    module.exports = { characterSpeech, validateSpeechContext, verifiedSpeechGeneration };
+  }
+});
+
 // ../skills/produce/references/compose-speech.js
 var require_compose_speech = __commonJS({
   "../skills/produce/references/compose-speech.js"(exports, module) {
@@ -94342,6 +94534,7 @@ var require_compose_speech = __commonJS({
           if (!line.audio || line.audio.generation.text !== line.tts || line.audio.revision !== hash7(JSON.stringify(speechRevisionPayload(line, voice)))) throw new Error("Attach current audio for " + line.id);
           const source = path33.resolve(board, line.audio.path);
           if (hash7(fs24.readFileSync(source)) !== line.audio.sha256) throw new Error("Audio changed for " + line.id);
+          require_character_speech().verifiedSpeechGeneration(source, line.audio.generation, voice, line);
           sources.push(source);
         });
         const timing = sceneTiming(scene, board, win.SB_DOC?.performanceTimingVersion), intervals = timing.intervals;
@@ -94591,6 +94784,8 @@ var require_check_tts_quality = __commonJS({
             media[source] = line.audio.sha256;
             if (!line.audio.generation || line.audio.generation.text !== line.tts) throw new Error("Missing dialogue generation receipt: " + line.id);
             characterVoice(win, { narration: [line] }, line.audio.generation);
+            require_character_speech().verifiedSpeechGeneration(source, line.audio.generation, voice, line);
+            if (line.audio.generation.receiptPath) media[line.audio.generation.receiptPath] = hash7(fs24.readFileSync(line.audio.generation.receiptPath));
           }
         }
         if (binding) {
@@ -110554,6 +110749,7 @@ function validateSpeechSegments(value, duration4, inputs) {
 }
 
 // src/tts-execution.ts
+import { createRequire as createRequire3 } from "node:module";
 var executionId = new AsyncLocalStorage2();
 function withSpeechRequestId(id, run) {
   if (!/^[A-Za-z0-9_-]{1,100}$/.test(id)) throw new Error("Invalid speech requestId");
@@ -110600,6 +110796,7 @@ function staleSlot(slot) {
   }
 }
 async function executeSpeech(generator, args, run) {
+  createRequire3(import.meta.url)("../../skills/_shared/character-speech.js").validateSpeechContext(generator, args);
   const provider = generator === "tts_astra_genai" ? "astra-genai" : generator.startsWith("tts_elevenlabs_") ? "elevenlabs" : "gemini";
   const contract2 = resolveTtsModel(provider, String(args.model));
   if (![contract2.single, contract2.dialogue].includes(generator)) throw new Error("Generator does not implement selected TTS model");
@@ -110704,6 +110901,7 @@ async function executeSpeech(generator, args, run) {
 
 // src/astra-genai-speech.ts
 var genaiSpeechSchema = external_exports.object({
+  speechContext: external_exports.object({ path: external_exports.string().min(1), lineId: external_exports.string().min(1), expectedRevision: external_exports.string().regex(/^[a-f0-9]{64}$/) }).strict().optional(),
   requestId: external_exports.string().regex(/^[A-Za-z0-9_-]{1,100}$/).optional(),
   model: external_exports.string().trim().min(1).max(200),
   text: external_exports.string().trim().min(1).max(16e3),
@@ -110742,6 +110940,10 @@ async function generateGenaiSpeech(input) {
 // src/astra-genai-native-tools.ts
 var descriptions = {
   requestId: "Stable local speech request ID, e.g. shot1-line1-v1; repeat unchanged to reuse the recorded result without another synthesis.",
+  speechContext: 'Local character binding returned by speech_manage plan_audio, e.g. {path:"/work/episode/storyboard/scenes.js",lineId:"s1-l1",expectedRevision:"64 hex characters"}. Required for episode TTS; never sent to the gateway.',
+  path: "Absolute scenes.js path from plan_audio, e.g. /work/episode/storyboard/scenes.js.",
+  lineId: "Stable dialogue line ID from plan_audio, e.g. s1-l1.",
+  expectedRevision: "Current storyboard SHA-256 from plan_audio, e.g. 64 lowercase hexadecimal characters; re-plan after edits.",
   kind: "Catalog to read, e.g. speech for registered voices; discovery never generates media.",
   model: "Exact public model alias from astra_genai_catalog, e.g. qwen-image-fast or ltx-2.5-fast.",
   prompt: "Requested subject/action or changes, e.g. A blue ball rolls across a table.",
@@ -110824,7 +111026,7 @@ var NATIVE_GENAI_TOOLS = [
   ),
   tool("astra_genai_image_generate", "Generate one PNG with the configured gateway model alias. Use image_plan/image_execute with engine astra-genai-native and explicit reserveUsd. Optional registered LoRA IDs/scales; consult image catalog for model constraints. No reference images on text requests. Returns verified local output; retain the receipt after errors. Use GPT Image 2 for readable text.", nativeImageSchema),
   tool("astra_genai_image_edit", "Edit or vary a source PNG/JPEG with a configured gateway alias; up to nine additional local references, ten total in order. Use image_plan operation edit and engine astra-genai-native. Model catalog determines edit/variation, guidance, transparency and registered LoRA support. No arbitrary LoRA paths, masks or silent reference dropping. Returns local PNG and durable receipt; no automatic generation retries.", nativeImageEditSchema),
-  tool("tts_astra_genai", "Synthesize one speaker through gateway /v1/audio/speech using an explicit model alias and optional registered voice. Use tts_route or supply a stable requestId for durable replay and use speech_manage plan_audio for character lines. Discover model voices/formats/speed/instructions first. VoxCPM2 allows WAV and speed 1; voice cloning uses operator-registered IDs, never client audio paths. Returns local audio and receipt; no automatic retries or listening score.", genaiSpeechSchema),
+  tool("tts_astra_genai", "Create one speech take with a gateway model and registered voice. Use for TTS, narration and character retakes. For episode lines copy speech_manage plan_audio arguments including speechContext unchanged; stale character selections, default in place of a selected sample, edited arguments and missing episode context fail before synthesis. Discover models/voices with astra_genai_catalog kind:speech. VoxCPM2 accepts WAV and speed 1; voice cloning needs an operator-registered ID, never a client sample path. Use requestId for durable replay. Returns audioPath, receiptPath and not_reviewed; pass receiptPath to attach_audio. Do NOT use to select a character sample: use character_voice_audition. No automatic retries or listening score.", genaiSpeechSchema),
   ...Object.entries(DESKTOP_SCHEMAS).map(([feature, schema2]) => tool(
     "astra_genai_desktop_" + ({ "text-to-video": "text2video", "image-to-video": "img2video", "audio-to-video": "audio2video" }[feature] || feature),
     `Generate ${feature} using gateway-owned Desktop assets/jobs. Select engine astra-genai-desktop and use video_plan/video_execute with explicit reserveUsd. Discover installed model matrices and LoRA refs first. Local input files upload to the gateway; no upstream paths. I2V accepts start/end, A2V audio plus optional start; audio truncation defaults false. Text/keyframes accept registered LoRA refs. Keyframes require the active selected model. Edits cap resolution without upscaling. Returns local MP4 and receipt; recover the same job after timeout, never resubmit blindly.`,
@@ -114334,9 +114536,9 @@ function isManagedVideoCall(tool2, input) {
 
 // src/character-manage.ts
 import { existsSync as existsSync14, mkdirSync as mkdirSync5, readFileSync as readFileSync16, writeFileSync as writeFileSync14 } from "node:fs";
-import { createRequire as createRequire3 } from "node:module";
+import { createRequire as createRequire4 } from "node:module";
 import path15 from "node:path";
-var load = createRequire3(import.meta.url);
+var load = createRequire4(import.meta.url);
 var catalog = () => load("../../skills/_shared/character-identity.js");
 var pending = external_exports.object({ status: external_exports.literal("pending"), reason: external_exports.string().trim().min(1).max(2e3) }).strict();
 var basic = external_exports.union([external_exports.string().trim().min(1).max(2e3), pending]);
@@ -114464,7 +114666,7 @@ function characterFieldsProperty() {
 import * as fs17 from "node:fs";
 import { execFileSync as execFileSync11 } from "node:child_process";
 import path20 from "node:path";
-import { createRequire as createRequire7 } from "node:module";
+import { createRequire as createRequire8 } from "node:module";
 import { fileURLToPath as fileURLToPath6 } from "node:url";
 import { createHash as createHash14 } from "node:crypto";
 
@@ -114840,9 +115042,9 @@ function videoTransaction(episode, update, openingSpendUsd) {
 // src/video-image-inputs.ts
 import path18 from "node:path";
 import { existsSync as existsSync17, realpathSync as realpathSync4, readFileSync as readFileSync19 } from "node:fs";
-import { createRequire as createRequire4 } from "node:module";
+import { createRequire as createRequire5 } from "node:module";
 import { fileURLToPath as fileURLToPath5 } from "node:url";
-var load2 = createRequire4(import.meta.url);
+var load2 = createRequire5(import.meta.url);
 var imageRouting = () => load2(fileURLToPath5(new URL("../../skills/storyboard/references/render-routing.js", import.meta.url)));
 var characterPanels = () => load2(fileURLToPath5(new URL("../../skills/channel/references/character-panels.js", import.meta.url)));
 var FRAME_FIELDS = {
@@ -115028,13 +115230,13 @@ import { createHash as createHash13 } from "node:crypto";
 import { existsSync as existsSync18, readFileSync as readFileSync20, realpathSync as realpathSync5 } from "node:fs";
 import { execFileSync as execFileSync10 } from "node:child_process";
 import path19 from "node:path";
-import { createRequire as createRequire5 } from "node:module";
+import { createRequire as createRequire6 } from "node:module";
 var speakerBindingSchema = external_exports.object({
   speaker: external_exports.string().trim().min(1),
   screenPosition: external_exports.enum(["left", "center", "right"]),
   description: external_exports.string().trim().min(1)
 }).strict();
-var load3 = createRequire5(import.meta.url);
+var load3 = createRequire6(import.meta.url);
 var object3 = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
 var text = (value) => typeof value === "string" ? value.trim() : "";
 var stable2 = (value) => Array.isArray(value) ? value.map(stable2) : value && typeof value === "object" ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, v]) => [key, stable2(v)])) : value;
@@ -115312,8 +115514,8 @@ function prepareVideoVoice(tool2, input, context2) {
 }
 
 // src/video-prompt.ts
-import { createRequire as createRequire6 } from "node:module";
-var load4 = createRequire6(import.meta.url);
+import { createRequire as createRequire7 } from "node:module";
+var load4 = createRequire7(import.meta.url);
 var object4 = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
 var text2 = (value) => typeof value === "string" ? value.trim() : "";
 var sentence = (value) => {
@@ -115392,7 +115594,7 @@ function compileVideoPrompt(shot, source, names = {}) {
 }
 
 // src/video-routing.ts
-var load5 = createRequire7(import.meta.url);
+var load5 = createRequire8(import.meta.url);
 var shared2 = fileURLToPath6(new URL("../../skills/_shared/video-selection.js", import.meta.url));
 var modelSettings = fileURLToPath6(new URL("../../skills/_shared/model-settings.js", import.meta.url));
 var CHANNEL_ASSET_RE = /^data\/[a-z0-9][a-z0-9-]*\/assets(\/|$)/;
@@ -115921,7 +116123,7 @@ function manageProject(args) {
 import * as fs19 from "node:fs";
 import path22 from "node:path";
 import os4 from "node:os";
-import { createRequire as createRequire9 } from "node:module";
+import { createRequire as createRequire10 } from "node:module";
 import { fileURLToPath as fileURLToPath8 } from "node:url";
 
 // src/image-pricing.ts
@@ -116011,7 +116213,7 @@ function imageTransaction(directory2, openingSpendUsd, update) {
 }
 
 // src/image-routing.ts
-var load6 = createRequire9(import.meta.url);
+var load6 = createRequire10(import.meta.url);
 var selectionHelper = fileURLToPath8(new URL("../../skills/_shared/image-selection.js", import.meta.url));
 var imageContext = (directory2, assetId) => load6(selectionHelper).readImageContext(directory2, assetId);
 var idSchema2 = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
@@ -119391,6 +119593,7 @@ async function generateElevenLabsDialogue(request) {
 }
 
 // src/tts-adapters.ts
+import { createRequire as createRequire12 } from "node:module";
 var SPEECH_GENERATORS = ["tts_astra_genai", "tts_generate", "tts_multi_speaker", "tts_gemini_38", "tts_elevenlabs_generate", "tts_elevenlabs_dialogue"];
 function adapter(schema2, run, describe) {
   return (input) => {
@@ -119433,6 +119636,7 @@ var adapters = {
 function prepareSpeech(generator, generation2) {
   const selected = external_exports.enum(SPEECH_GENERATORS).parse(generator);
   const prepared = adapters[selected](generation2);
+  createRequire12(import.meta.url)("../../skills/_shared/character-speech.js").validateSpeechContext(selected, prepared.args);
   const contract2 = resolveTtsModel(selected === "tts_astra_genai" ? "astra-genai" : selected.startsWith("tts_elevenlabs_") ? "elevenlabs" : "gemini", prepared.args.model);
   if (![contract2.single, contract2.dialogue].includes(selected)) throw new Error("TTS adapter/model mismatch");
   return { ...prepared, generator: selected };
@@ -123104,10 +123308,12 @@ Do NOT use it for scene images (shot_image) or text-bearing art. Refused (charac
     name: "character_voice_audition",
     title: "Audition three character voices and save the user choice",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-    description: "Create a character's voice sample, a voice audition, or plan acoustic targets.\n\nUse for a character's sample voice, casting or character voice matching. By default cast one voice from the plan's target and create with that single candidate: it generates the sample and sets it at once (identity tts, voiceSelection, the sheet's voice.wav and sample.txt). Pass three candidates only when the user asks to compare voices; then they choose and select pins it. plan reads confirmed age, timbre, body (species, height, weight, build), speech, personality and the impression (role, personality traits) without synthesis; compare real provider metadata and expose unknowns. A voice-design voice (gateway voiceId default) hears only its direction: write an English voiceDirection from target.designDirection, naming timbre explicitly. create generates the paid sample (or three previews), composes a compact Gemini voiceDirection with acting and saves target/metadata/request/hash evidence without changing identity. select requires the actual user choice and verifies hashes before saving its voice settings. Returns target, candidate comparisons, auditionPath, previewPath and selection state. Do NOT use for ordinary dialogue \u2014 use speech_manage plan_audio and its raw TTS tool. Never auto-select or score without a requested audio review; inspect partial failures before retrying, then continue a failed audition with create plus its auditionPath so only the missing candidates are generated.",
+    description: "Create a character's voice sample, a voice audition, or plan acoustic targets.\n\nUse for a character's sample voice, casting or character voice matching. By default cast one voice from the plan's target and create with that single candidate: it generates the sample and sets it at once (identity tts, voiceSelection, the sheet's voice.wav and sample.txt). Pass three candidates only when the user asks to compare voices; then they choose and select pins it. plan reads confirmed age, timbre, body (species, height, weight, build), speech, personality and the impression (role, personality traits) without synthesis; compare real provider metadata and expose unknowns. A voice-design voice (gateway voiceId default) hears only its direction: write an English voiceDirection from target.designDirection, naming timbre explicitly. create generates the paid sample (or three previews), composes a compact Gemini voiceDirection with acting and saves target/metadata/request/hash evidence without changing identity. select requires the actual user choice and verifies hashes before saving its voice settings. bind_registered locally maps an operator-returned gateway ID to the chosen sample hash, retaining original audition settings; requires current expectedIdentitySha256, registeredVoiceId and actual confirmation in userSelection. It does not upload, remotely register or generate; refresh requested episode pins explicitly afterward. Returns target, candidate comparisons, auditionPath, previewPath and selection state. Do NOT use for ordinary dialogue \u2014 use speech_manage plan_audio and its raw TTS tool. Never auto-select or score without a requested audio review; inspect partial failures before retrying, then continue a failed audition with create plus its auditionPath so only the missing candidates are generated.",
     inputSchema: { type: "object", additionalProperties: false, properties: {
-      action: { type: "string", enum: ["plan", "create", "read", "select"], description: "plan reads identity without generating; create generates one sample and sets it, or three choices; read inspects; select saves an explicit user choice from three." },
-      identityPath: { type: "string", description: "Existing character identity.md with one structured character JSON block. Draft tts may be absent before selection." },
+      action: { type: "string", enum: ["plan", "create", "read", "select", "bind_registered"], description: "plan reads identity; create generates a sample or three choices; read inspects; select saves a user choice; bind_registered records an operator-confirmed gateway ID for the already selected sample without generation or remote registration." },
+      identityPath: { type: "string", description: "Existing character identity.md, e.g. /work/channel/assets/characters/hero/identity.md, with one structured character JSON block. Draft tts may be absent before selection." },
+      registeredVoiceId: { type: "string", minLength: 1, maxLength: 200, description: "bind_registered only: exact gateway ID returned by the operator for the selected sample, e.g. hero-v1; never default or an invented character name. Does not perform remote registration." },
+      expectedIdentitySha256: { type: "string", pattern: "^[a-f0-9]{64}$", description: "bind_registered only: current identity SHA-256, e.g. the 64 lowercase hex characters from the character handoff. Prevents overwriting concurrent changes." },
       auditionPath: { type: "string", description: "Manifest path returned by create; required for read/select. With create, a failed audition to continue with the same identity, sample and voices." },
       sampleText: { type: "string", minLength: 5, maxLength: 300, description: "Natural spoken sample, the same for every candidate; no tag markup." },
       sampleTurns: { type: "array", minItems: 2, maxItems: 10, description: "Optional Gemini 3.8 sample excerpts with separate acting. Texts joined with spaces must reproduce sampleText exactly; omit top-level acting. Each turn retains the same candidate voice and stable baseline.", items: { type: "object", additionalProperties: false, required: ["text"], properties: { text: { type: "string", minLength: 1, maxLength: 300, description: "Exact spoken excerpt in sample order, e.g. I will help you." }, acting: ACTING_PROPERTY } } },
@@ -123138,7 +123344,7 @@ Do NOT use it for scene images (shot_image) or text-bearing art. Refused (charac
         } }
       } } },
       candidateId: { type: "string", enum: ["1", "2", "3"], description: "Candidate selected by the user." },
-      userSelection: { type: "string", maxLength: 1e3, description: "Actual user response selecting the candidate. Required for select; never fabricate." }
+      userSelection: { type: "string", maxLength: 1e3, description: "Actual user selection, e.g. candidate 2, or operator registration confirmation, e.g. registered this chosen sample as hero-v1. Required for select/bind_registered; never fabricate." }
     }, required: ["action"] }
   },
   {
@@ -126504,7 +126710,7 @@ Returns: integer credit balance.`,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     description: `Update shot dialogue, line acting and local audio/video bindings.
 
-Use for dialogue edits, expression or intonation corrections, stable speaker routing and generation planning. list finds lines; prepare assigns stable ids; update replaces requested line fields; attach_audio returns measured timing; retime updates the complete shot clock from current speech and explicit action edits. attach_video binds generated files; reuse:tail_trim accepts only unchanged audio and performance starts with a shorter tail. plan_audio resolves the pinned voice and each line's scene direction into raw generator arguments; plan_video resolves the selected adapter's capabilities (tool names the shot's video tool when it differs from the saved default operation) and carries the same acting/timing context. A native-speech shot (MSR) needs no line audio: the clip speaks its prompt's lines, attach_video binds their revisions and sets sound.audioSource video, and a line edit marks the clip stale. Scene direction overrides baseline style without changing voice identity. Local files only: plans do not generate, listen, score or approve. Read first and pass expectedRevision for writes; unknown speakers, ambiguous targets, stale revisions and unsupported lip-sync routes fail. Keeps source backups.
+Use for dialogue edits, expression or intonation corrections, stable speaker routing and generation planning. list finds lines; prepare assigns stable ids; update replaces requested line fields; attach_audio returns measured timing; retime updates the complete shot clock from current speech and explicit action edits. attach_video binds generated files; reuse:tail_trim accepts only unchanged audio and performance starts with a shorter tail. plan_audio resolves the pinned voice and each line's scene direction into raw generator arguments, refusing unregistered selected samples and stale shared voices; gateway arguments include a revision-bound speechContext and attach_audio requires its completed receiptPath; plan_video resolves the selected adapter's capabilities (tool names the shot's video tool when it differs from the saved default operation) and carries the same acting/timing context. A native-speech shot (MSR) needs no line audio: the clip speaks its prompt's lines, attach_video binds their revisions and sets sound.audioSource video, and a line edit marks the clip stale. Scene direction overrides baseline style without changing voice identity. Local files only: plans do not generate, listen, score or approve. Read first and pass expectedRevision for writes; unknown speakers, ambiguous targets, stale revisions and unsupported lip-sync routes fail. Keeps source backups.
 
 Do NOT use to generate media: call the planned raw TTS tool or selected video adapter, then attach the result. Do NOT use for read-only whole-story inspection: use storyboard_read instead. Never group different emotional beats or nonconsecutive shots by shared image and slice them into unrelated reactions.
 
@@ -126543,7 +126749,7 @@ Returns revision, ordered matching lines with generationPlan and voice/audio has
         audioPath: { type: "string", description: "Generated audio file; absolute or relative to storyboard directory" },
         videoPath: { type: "string", description: "New video file to bind to the shot and current audio" },
         tool: { type: "string", description: "plan_video/attach_video: the shot's video adapter tool from video_plan, e.g. astra_genai_msr; defaults to the saved operation" },
-        generation: { type: "object", description: "Raw TTS request and declared text language; no listening score", properties: { generator: { type: "string", description: "Raw TTS tool that generated this file" }, voiceSettings: { type: "object", description: "Exact voice and language settings sent to the generator" }, text: { type: "string", description: "Exact clean line text; voiceSettings stores the actual tagged provider request from plan_audio" }, language: { type: "string", description: "Declared text language, e.g. ko; metadata for engines without a language argument, never an invented API parameter" } }, required: ["generator", "voiceSettings", "text"], additionalProperties: false },
+        generation: { type: "object", description: "Raw TTS request and declared text language; gateway attachments require the completed receiptPath, verified against actual bytes and recorded voice", properties: { receiptPath: { type: "string", description: "Completed TTS execution receipt, e.g. /work/speech/.speech-runs/line-v1.json; required for new ASTRA GenAI audio attachments. Preserve it for assembly verification." }, generator: { type: "string", description: "Raw TTS tool that generated this file" }, voiceSettings: { type: "object", description: "Exact voice and language settings sent to the generator" }, text: { type: "string", description: "Exact clean line text; voiceSettings stores the actual tagged provider request from plan_audio" }, language: { type: "string", description: "Declared text language, e.g. ko; metadata for engines without a language argument, never an invented API parameter" } }, required: ["generator", "voiceSettings", "text"], additionalProperties: false },
         capabilities: { type: "object", description: "Selected adapter capabilities from verified schema/documentation, with evidence", properties: { provider: { type: "string", description: "Selected video adapter provider id, matching the shot engine" }, model: { type: "string", description: "Selected model id, matching the shot model when set" }, audioConditioning: { type: "boolean", description: "Whether the adapter accepts supplied speech as conditioning" }, lipSync: { type: "boolean", description: "Whether supplied speech drives visible mouth motion" }, postLipSync: { type: "boolean", description: "Whether a separately selected post lip-sync adapter is available" }, nativeSpeech: { type: "boolean", description: "Whether the video model voices the dialogue written in its prompt (MSR), taking no line audio" }, evidence: { type: "string", description: "Documentation or verified capability record supporting these settings" } }, required: ["provider", "model", "audioConditioning", "lipSync", "postLipSync", "evidence"], additionalProperties: false }
       },
       required: ["path", "action"],
@@ -127180,7 +127386,7 @@ import * as fs23 from "node:fs";
 import path27 from "node:path";
 import os5 from "node:os";
 import { execFileSync as execFileSync14 } from "node:child_process";
-import { createRequire as createRequire11 } from "node:module";
+import { createRequire as createRequire13 } from "node:module";
 import { fileURLToPath as fileURLToPath10 } from "node:url";
 
 // src/music-state.ts
@@ -127325,7 +127531,7 @@ function normalizeMusicFile(source, target) {
 }
 
 // src/music-routing.ts
-var load7 = createRequire11(import.meta.url);
+var load7 = createRequire13(import.meta.url);
 var selectionHelper2 = fileURLToPath10(new URL("../../skills/_shared/music-selection.js", import.meta.url));
 var musicContext = (directory2, assetId) => load7(selectionHelper2).readMusicContext(directory2, assetId);
 var idSchema3 = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
@@ -127970,7 +128176,7 @@ import { createHash as createHash20, randomUUID as randomUUID7 } from "node:cryp
 import { appendFileSync as appendFileSync3, copyFileSync, existsSync as existsSync29, mkdirSync as mkdirSync18, readFileSync as readFileSync31, writeFileSync as writeFileSync24, renameSync as renameSync7 } from "node:fs";
 import { basename as basename9, dirname as dirname7, join as join13, resolve as resolve8 } from "node:path";
 import { isDeepStrictEqual } from "node:util";
-import { createRequire as createRequire14 } from "node:module";
+import { createRequire as createRequire16 } from "node:module";
 
 // src/voice-lock-config.ts
 var VOICE_LOCK_MODEL = "eleven_multilingual_sts_v2";
@@ -128048,8 +128254,10 @@ var candidate = external_exports.object({ label: external_exports.string().trim(
 });
 var sampleTurn = external_exports.object({ text: external_exports.string().trim().min(1).max(300), acting: actingSchema.optional() }).strict();
 var voiceAuditionSchema = external_exports.object({
-  action: external_exports.enum(["plan", "create", "read", "select"]),
+  action: external_exports.enum(["plan", "create", "read", "select", "bind_registered"]),
   identityPath: external_exports.string().min(1).optional(),
+  registeredVoiceId: external_exports.string().trim().min(1).max(200).refine((value) => value.toLowerCase() !== "default", "Use the operator-returned registered ID, not default").optional(),
+  expectedIdentitySha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional(),
   auditionPath: external_exports.string().min(1).optional(),
   sampleText: external_exports.string().trim().min(5).max(300).optional(),
   candidates: external_exports.array(candidate).min(1).max(3).optional(),
@@ -128065,6 +128273,10 @@ var voiceAuditionSchema = external_exports.object({
   if (["read", "select"].includes(args.action) && !args.auditionPath) ctx.addIssue({ code: "custom", message: "auditionPath is required" });
   if (args.action === "select" && (!args.candidateId || !args.userSelection))
     ctx.addIssue({ code: "custom", message: "select requires candidateId and the actual user selection; never auto-select" });
+  if (args.action === "bind_registered" && (!args.identityPath || !args.registeredVoiceId || !args.expectedIdentitySha256 || !args.userSelection))
+    ctx.addIssue({ code: "custom", message: "bind_registered requires identityPath, expectedIdentitySha256, the operator-returned registeredVoiceId and actual registration confirmation in userSelection" });
+  if (args.action !== "bind_registered" && (args.registeredVoiceId || args.expectedIdentitySha256))
+    ctx.addIssue({ code: "custom", message: "Registration fields are only used by bind_registered" });
   if (args.candidates) {
     if (args.candidates.length === 2) ctx.addIssue({ code: "custom", message: "Pass one candidate for a sample or three for an audition" });
     if (args.candidates.length === 3 && new Set(args.candidates.map((c) => c.tts.voiceId)).size !== 3) ctx.addIssue({ code: "custom", message: "Use three distinct voices" });
@@ -128088,7 +128300,7 @@ function compileSample(text4, acting, voice, turns) {
   const normalize2 = (value) => value.replace(/\s+/g, " ").trim();
   if (acting || normalize2(turns.map((turn) => turn.text).join(" ")) !== normalize2(text4)) throw new Error("Sample turns must reproduce sampleText with per-turn acting only");
   if (voice.engine !== "gemini" || !String(voice.model).startsWith("gemini-3.8-")) throw new Error("Per-turn sample acting requires Gemini 3.8 TTS");
-  const { directionSupport } = createRequire14(import.meta.url)("../../skills/_shared/scene-acting.js");
+  const { directionSupport } = createRequire16(import.meta.url)("../../skills/_shared/scene-acting.js");
   if (turns.some((turn) => !directionSupport(voice, turn.acting).supported)) throw new Error("Per-turn resolved vocal style exceeds the Gemini 3.8 limit of 500 characters; shorten the controls");
   const compiled = turns.map((turn) => compileActing(turn.text, turn.acting, voice));
   return { generator: "tts_gemini_38", generation: { ...compiled[0].generation, turns: compiled.flatMap((turn) => turn.generation.turns) } };
@@ -128097,7 +128309,7 @@ function refreshSheet(identityPath) {
   const folder = dirname7(identityPath);
   if (basename9(dirname7(folder)) !== "characters" || basename9(dirname7(dirname7(folder))) !== "assets") return void 0;
   try {
-    createRequire14(import.meta.url)("../../skills/channel/references/review-library.js").exportChannel(resolve8(folder, "../../.."));
+    createRequire16(import.meta.url)("../../skills/channel/references/review-library.js").exportChannel(resolve8(folder, "../../.."));
     return join13(folder, "index.html");
   } catch (error2) {
     return `sheet refresh failed: ${error2 instanceof Error ? error2.message : String(error2)}`;
@@ -128112,6 +128324,8 @@ function preview(audition) {
   return `<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Voice audition</title><style>body{font:18px system-ui;max-width:800px;margin:40px auto;padding:24px;color:#17212b;background:#f5f3ee}article{padding:24px;margin:20px 0;background:white;border:1px solid #d8d4cc;border-radius:12px}audio{width:100%}small{color:#52616b}</style><h1>\uC74C\uC131 \uD6C4\uBCF4 3\uAC1C</h1><p>\uAC19\uC740 \uB300\uC0AC\uB97C \uB4E3\uACE0 \uC6D0\uD558\uB294 \uD6C4\uBCF4 \uBC88\uD638\uB97C \uB300\uD654\uCC3D\uC5D0\uC11C \uC120\uD0DD\uD558\uC138\uC694. \uC120\uD0DD \uC804\uC5D0\uB294 \uCE90\uB9AD\uD130 \uC74C\uC131\uC744 \uD655\uC815\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.</p><blockquote>${escape2(audition.sampleText)}</blockquote>${audition.candidates.map((c) => `<article><h2>${c.id}. ${escape2(c.label)}</h2><p>${escape2(c.reason)}</p><audio controls preload="metadata" src="candidate-${c.id}.wav"></audio><small>${escape2(c.tts.engine)} \xB7 ${escape2(c.tts.model || "")} \xB7 ${escape2(c.tts.voiceId)}</small></article>`).join("")}</html>`;
 }
 async function manageVoiceAudition(args) {
+  args = voiceAuditionSchema.parse(args);
+  if (args.action === "bind_registered") return bindRegisteredVoice(args);
   if (args.action === "create" || args.action === "plan") {
     const identityPath = resolve8(args.identityPath);
     const source = readFileSync31(identityPath, "utf8");
@@ -128190,6 +128404,47 @@ async function manageVoiceAudition(args) {
   if (args.action === "read") return { auditionPath, ...audition };
   if (audition.candidates.length !== 3) throw new Error("Select only from a complete, unselected three-voice audition");
   return selectCandidate(auditionPath, args.candidateId, args.userSelection);
+}
+function bindRegisteredVoice(args) {
+  const identityPath = resolve8(args.identityPath), source = readFileSync31(identityPath, "utf8");
+  if (hash3(source) !== args.expectedIdentitySha256) throw new Error("voice_registration_stale: re-read the character identity before binding");
+  const blocks = [...source.matchAll(/```json\s*\n([\s\S]*?)```/g)];
+  const documents = blocks.map((block2) => ({ block: block2, value: JSON.parse(block2[1]) })).filter((entry2) => entry2.value.character);
+  if (documents.length !== 1) throw new Error("Registration needs one structured character JSON block");
+  const { block, value } = documents[0];
+  const selection = value.voiceSelection;
+  if (!selection?.auditionPath) throw new Error("voice_registration_sample_required: select a recorded audition sample first");
+  const audition = JSON.parse(readFileSync31(selection.auditionPath, "utf8"));
+  const chosen = audition.candidates.find((candidate2) => candidate2.id === selection.candidateId);
+  if (!chosen || audition.status !== "selected" || chosen.tts.engine !== "astra-genai" || chosen.audioSha256 !== selection.audioSha256 || hash3(readFileSync31(chosen.audioPath)) !== chosen.audioSha256)
+    throw new Error("voice_registration_sample_stale: the selected gateway sample or its bytes changed");
+  const handoff = createRequire16(import.meta.url)("../../skills/channel/references/character-sheet.js").selectedVoiceReference(source, ttsSchema.parse(value.tts));
+  if (handoff.voiceReference?.sha256 !== chosen.audioSha256) throw new Error("voice_registration_sample_stale: restore the selected sample settings before binding");
+  const tts = ttsSchema.parse({ ...chosen.tts, voiceId: args.registeredVoiceId });
+  const registration = {
+    engine: tts.engine,
+    model: tts.model,
+    voiceId: tts.voiceId,
+    audioSha256: chosen.audioSha256,
+    request: args.userSelection,
+    at: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  const next = source.replace(block[0], "```json\n" + JSON.stringify({ ...value, tts, voiceSelection: { ...selection, registration } }, null, 2) + "\n```");
+  const backup = join13(dirname7(selection.auditionPath), "identity-before-registration-" + randomUUID7() + ".md");
+  writeFileSync24(backup, source, { flag: "wx" });
+  if (hash3(readFileSync31(identityPath)) !== args.expectedIdentitySha256) throw new Error("voice_registration_stale: identity changed during registration binding");
+  const temporary = identityPath + "." + randomUUID7() + ".tmp";
+  writeFileSync24(temporary, next);
+  renameSync7(temporary, identityPath);
+  return {
+    identityPath,
+    identitySha256: hash3(next),
+    tts,
+    registration,
+    voicePath: chosen.audioPath,
+    sheet: refreshSheet(identityPath),
+    instruction: "Registered ID binding recorded without generation or changing the audition. Explicitly refresh requested episode tts and voiceReference from the character handoff before plan_audio. This records operator confirmation; it does not verify remote registration or listening quality."
+  };
 }
 function selectCandidate(auditionPath, candidateId, userSelection) {
   const audition = JSON.parse(readFileSync31(auditionPath, "utf8"));
@@ -128309,6 +128564,7 @@ import { dirname as dirname8, resolve as resolve9, join as join15, relative as r
 import * as nodeModule7 from "node:module";
 import { execFileSync as execFileSync15 } from "node:child_process";
 var voiceContract = () => nodeModule7.createRequire(import.meta.url)("../../skills/_shared/character-voice.js");
+var characterSpeechContract = () => nodeModule7.createRequire(import.meta.url)("../../skills/_shared/character-speech.js");
 var actingContract = () => nodeModule7.createRequire(import.meta.url)("../../skills/_shared/scene-acting.js");
 var delivery = external_exports.enum(["voiceover", "on_screen", "off_screen"]);
 var speechManageSchema = external_exports.object({
@@ -128325,7 +128581,7 @@ var speechManageSchema = external_exports.object({
   tool: external_exports.string().optional(),
   reuse: external_exports.literal("tail_trim").optional(),
   timingPatch: external_exports.object({ speechBoundActions: external_exports.boolean().optional(), actions: external_exports.array(external_exports.tuple([external_exports.number().int().nonnegative(), external_exports.number().finite().positive()])).optional() }).strict().optional(),
-  generation: external_exports.object({ generator: external_exports.string().min(1), voiceSettings: external_exports.record(external_exports.unknown()), text: external_exports.string().min(1), language: external_exports.string().min(1).optional() }).strict().optional(),
+  generation: external_exports.object({ generator: external_exports.string().min(1), voiceSettings: external_exports.record(external_exports.unknown()), text: external_exports.string().min(1), language: external_exports.string().min(1).optional(), receiptPath: external_exports.string().min(1).optional() }).strict().optional(),
   capabilities: external_exports.object({ provider: external_exports.string().min(1), model: external_exports.string().min(1), audioConditioning: external_exports.boolean(), lipSync: external_exports.boolean(), postLipSync: external_exports.boolean(), nativeSpeech: external_exports.boolean().optional(), evidence: external_exports.string().min(1) }).strict().optional()
 }).strict();
 var hash4 = (s2) => createHash21("sha256").update(s2).digest("hex");
@@ -128366,12 +128622,14 @@ function speechRevision(line, character) {
 }
 function currentAudio(line, character) {
   try {
+    if (line.audio) characterSpeechContract().verifiedSpeechGeneration(line.audio.path, line.audio.generation, character?.tts, line);
     return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync30(line.audio.path) && hash4(readFileSync32(line.audio.path)) === line.audio.sha256;
   } catch {
     return false;
   }
 }
-function speechAudioPlan(line, character) {
+function speechAudioPlan(line, character, context2) {
+  if (character) character = characterSpeechContract().characterSpeech(character, context2);
   const voice = character?.tts;
   if (!voice) throw new Error("Missing pinned character voice");
   const validator = nodeModule7.createRequire(import.meta.url)("../../skills/_shared/character-voice.js");
@@ -128383,10 +128641,10 @@ function speechAudioPlan(line, character) {
   const modelContract = resolveTtsModel(String(voice.engine), typeof voice.model === "string" ? voice.model.trim() : void 0);
   return { ...compiled, capabilities: modelContract, arguments: compiled.generation, expectedText: line.tts, speechRevision: speechRevision(line, character), language, direction, review: "not_reviewed" };
 }
-function inspectionAudioPlan(line, character) {
+function inspectionAudioPlan(line, character, context2) {
   if (!character?.tts) return { available: false, warnings: ["Missing pinned character voice"], review: "not_reviewed" };
   try {
-    return { available: true, ...speechAudioPlan(line, character) };
+    return { available: true, ...speechAudioPlan(line, character, context2) };
   } catch (error2) {
     return { available: false, warnings: [error2 instanceof Error ? error2.message : String(error2)], review: "not_reviewed" };
   }
@@ -128444,6 +128702,7 @@ function manageSpeech(args) {
   const voiceWarnings = [];
   const characters = (Array.isArray(rawCharacters) ? rawCharacters : Object.entries(object5(rawCharacters)).map(([id, c]) => ({ ...object5(c), id }))).map((c) => resolveCharacterVoice(object5(c), { episode: dirname8(dirname8(file)), board: win, shot: {} }, voiceWarnings));
   const character = (id) => characters.find((c) => c.id === id);
+  const audioCharacter = (id) => characterSpeechContract().characterSpeech(character(id), { boardDir: dirname8(file), board: win });
   const scenes = win.SCENES;
   let changed = false;
   let timing;
@@ -128503,11 +128762,18 @@ function manageSpeech(args) {
       if (!args.audioPath) throw new Error("audioPath is required");
       const audioPath = resolve9(dirname8(file), args.audioPath);
       if (!args.generation || args.generation.text !== line.tts) throw new Error("Attach the actual generation arguments and exact line text");
-      const voice = character(line.speaker)?.tts;
+      const voice = audioCharacter(line.speaker)?.tts;
       const voiceErrors = voiceContract().generationVoiceErrors(voice, args.generation, line);
       if (voiceErrors.length) throw new Error("Generation arguments do not match the pinned character voice: " + voiceErrors.join("; "));
       const bytes = readFileSync32(audioPath);
       if (!bytes.length) throw new Error("Audio file is empty");
+      const generation2 = characterSpeechContract().verifiedSpeechGeneration(
+        audioPath,
+        args.generation,
+        voice,
+        line,
+        { required: voice?.engine === "astra-genai" }
+      );
       const priorAudio = line.audio;
       const audioHash = hash4(bytes), lineRevision = speechRevision(line, character(line.speaker));
       const video2 = object5(object5(scene.visual).video), binding = object5(video2.speechBinding);
@@ -128517,7 +128783,7 @@ function manageSpeech(args) {
         invalidated = { audio: priorAudio || null, video: dependsOnSpeech && Object.keys(video2).length ? video2 : null, edit: true };
         if (invalidated.video) video2.speechStatus = "stale";
       }
-      line.audio = { path: audioPath, sha256: audioHash, revision: lineRevision, status: "not_reviewed", generation: args.generation };
+      line.audio = { path: audioPath, sha256: audioHash, revision: lineRevision, status: "not_reviewed", generation: generation2 };
       line.mediaStatus = "audio_ready";
     }
     const clock = actingContract().planScenePerformance(scene, measuredDuration);
@@ -128675,7 +128941,14 @@ function manageSpeech(args) {
     writeFileSync25(tmp, nextSource);
     renameSync8(tmp, file);
   }
-  return { revision: hash4(readFileSync32(file)), changed, invalidated, plan: plan2, timing, ...voiceWarnings.length ? { voiceWarnings } : {}, ...args.action === "plan_audio" ? { audioPlans: selected.map(({ scene, line }) => ({ shotId: scene.id, lineId: line.id, ...speechAudioPlan(line, character(line.speaker)) })) } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker)), audioProvenanceStatus: object5(object5(object5(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
+  const audioPlans = args.action === "plan_audio" ? selected.map(({ scene, line }) => {
+    const result = speechAudioPlan(line, character(line.speaker), { boardDir: dirname8(file), board: win });
+    const generation2 = { ...result.generation, ...result.generator === "tts_astra_genai" ? {
+      speechContext: { path: file, lineId: line.id, expectedRevision: revision }
+    } : {} };
+    return { shotId: scene.id, lineId: line.id, ...result, generation: generation2, arguments: generation2 };
+  }) : void 0;
+  return { revision: hash4(readFileSync32(file)), changed, invalidated, plan: plan2, timing, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname8(file), board: win }), audioProvenanceStatus: object5(object5(object5(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
 }
 
 // src/acting-review.ts
@@ -134529,9 +134802,9 @@ function renderCapabilityStatus() {
 
 // src/character-panel.ts
 import { existsSync as existsSync36, readFileSync as readFileSync36, writeFileSync as writeFileSync30 } from "node:fs";
-import { createRequire as createRequire17 } from "node:module";
+import { createRequire as createRequire19 } from "node:module";
 import path32 from "node:path";
-var load9 = createRequire17(import.meta.url);
+var load9 = createRequire19(import.meta.url);
 var shared4 = (file) => load9(`../../skills/${file}`);
 var characterPanelSchema = external_exports.object({
   identityPath: external_exports.string().min(1).describe("<channel>/assets/characters/<id>/identity.md"),

@@ -33,3 +33,57 @@ test('public speech requestId replays and a new ID cannot bill over an existing 
  fs.writeFileSync(path.join(dir,'line.wav'),'existing media');let calls=0;globalThis.fetch=async()=>{calls++;throw new Error('unexpected inference');};
  await assert.rejects(generateGenaiSpeech({model:'vox',text:'Hello',requestId:'new',outputPath:dir,filename:'line.wav'}),/already exists/);assert.equal(calls,0);
 });
+
+test('managed retakes validate the speaker before raw synthesis and bind the completed receipt through assembly', async t=>{
+ const {manageSpeech}=await import('../dist/speech.js');
+ const {generateGenaiSpeech}=await import('../dist/astra-genai-speech.js');
+ const {pcmToWav}=await import('../dist/media-utils.js');
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'managed-voice-')),target=path.join(dir,'storyboard'),output=path.join(dir,'speech');
+ fs.mkdirSync(target);t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
+ const voice={engine:'astra-genai',model:'voxcpm2',voiceId:'hero',language:'ko',speed:1};
+ const line={id:'l1',speaker:'hero',tts:'Hello',delivery:'voiceover',acting:{direction:'Calm'}};
+ const board={SB_DOC:{speechPlanVersion:1,characters:[{id:'hero',tts:voice}]},SCENES:[{id:'s1',narration:[line]}]};
+ fs.writeFileSync(path.join(target,'scenes.js'),Object.entries(board).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+ const plan=manageSpeech({path:target,action:'plan_audio',lineId:'l1'}).audioPlans[0];
+ const args={...plan.generation,requestId:'managed',outputPath:output,filename:'take.wav'};
+ let calls=0;const oldFetch=globalThis.fetch,key=config.astraGenaiApiKey;config.astraGenaiApiKey='fixture';
+ t.after(()=>{globalThis.fetch=oldFetch;config.astraGenaiApiKey=key;});
+ globalThis.fetch=async(_url,opts)=>{calls++;const body=JSON.parse(opts.body);assert.equal(body.voice,'hero');assert.equal(body.speechContext,undefined);return new Response(pcmToWav(Buffer.alloc(1600),8000,1));};
+ await assert.rejects(generateGenaiSpeech({...args,voice:'default'}),/speech_context_mismatch/);
+ await assert.rejects(generateGenaiSpeech({...args,speechContext:undefined}),/speech_context_required/);
+ assert.equal(calls,0);
+ const result=await routeSpeech({action:'execute',generator:'tts_astra_genai',requestId:'managed',generation:args});
+ assert.equal(result.success,true);assert.equal(calls,1);
+ const attach=generation=>manageSpeech({path:target,action:'attach_audio',lineId:'l1',expectedRevision:manageSpeech({path:target,action:'list'}).revision,audioPath:result.audioPath,generation});
+ const proof={generator:'tts_astra_genai',voiceSettings:args,text:'Hello',language:'ko'};
+ assert.throws(()=>attach(proof),/speech_receipt_required/);
+ const bound=attach({...proof,receiptPath:result.receiptPath});assert.equal(bound.lines[0].audioCurrent,true);
+ assert.equal(bound.lines[0].audio.generation.receiptPath,result.receiptPath);
+ const work=path.join(dir,'.work');fs.mkdirSync(work,{recursive:true});fs.writeFileSync(path.join(work,'cards.tsv'),'0\t../speech/take.wav\t1\n');
+ const checker=require('../../skills/produce/references/check-tts-quality.js');
+ assert.ok(checker.check(work,target)[result.receiptPath]);
+ const receipt=JSON.parse(fs.readFileSync(result.receiptPath,'utf8'));receipt.generation.voice='default';
+ fs.writeFileSync(result.receiptPath,JSON.stringify(receipt));
+ assert.throws(()=>attach({...proof,receiptPath:result.receiptPath}),/speech_receipt_voice_mismatch/);
+ assert.equal(manageSpeech({path:target,action:'list'}).lines[0].audioCurrent,false);
+ assert.throws(()=>checker.check(work,target),/speech_receipt_voice_mismatch/);
+ assert.throws(()=>require('../../skills/produce/references/compose-speech.js').compose(work,target),/speech_receipt_voice_mismatch/);
+});
+
+test('an explicit episode default-voice exception survives planning and inspection without losing board context',async t=>{
+ const {manageSpeech}=await import('../dist/speech.js');
+ const {createHash}=await import('node:crypto');
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'voice-exception-'));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
+ const sample=path.join(dir,'sample.wav');fs.writeFileSync(sample,'sample');
+ const voice={engine:'astra-genai',model:'voxcpm2',voiceId:'default',language:'ko',speed:1};
+ const board={PRODUCTION:{modelSettings:{overrides:{speech:{...voice,request:'Use default for this episode explicitly'}}}},
+  SB_DOC:{characters:[{id:'hero',tts:voice,voiceReference:{path:sample,sha256:createHash('sha256').update('sample').digest('hex'),tts:voice}}]},
+  SCENES:[{id:'s1',narration:[{id:'l1',speaker:'hero',tts:'Hello',delivery:'voiceover'}]}]};
+ const file=path.join(dir,'scenes.js');fs.writeFileSync(file,Object.entries(board).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+ const result=manageSpeech({path:file,action:'plan_audio',lineId:'l1'});
+ assert.equal(result.audioPlans[0].generation.voice,'default');assert.equal(result.lines[0].generationPlan.available,true);
+ const original=fs.readFileSync(file,'utf8');delete board.PRODUCTION;
+ fs.writeFileSync(file,Object.entries(board).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+ assert.throws(()=>manageSpeech({path:file,action:'plan_audio',lineId:'l1'}),/character_voice_unregistered/);
+ assert.notEqual(fs.readFileSync(file,'utf8'),original);
+});

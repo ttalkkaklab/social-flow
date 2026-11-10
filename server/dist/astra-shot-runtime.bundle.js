@@ -33284,6 +33284,7 @@ function resolveTtsModel(provider, model2) {
 
 // src/speech.ts
 var voiceContract = () => nodeModule4.createRequire(import.meta.url)("../../skills/_shared/character-voice.js");
+var characterSpeechContract = () => nodeModule4.createRequire(import.meta.url)("../../skills/_shared/character-speech.js");
 var actingContract = () => nodeModule4.createRequire(import.meta.url)("../../skills/_shared/scene-acting.js");
 var delivery = external_exports.enum(["voiceover", "on_screen", "off_screen"]);
 var speechManageSchema = external_exports.object({
@@ -33300,7 +33301,7 @@ var speechManageSchema = external_exports.object({
   tool: external_exports.string().optional(),
   reuse: external_exports.literal("tail_trim").optional(),
   timingPatch: external_exports.object({ speechBoundActions: external_exports.boolean().optional(), actions: external_exports.array(external_exports.tuple([external_exports.number().int().nonnegative(), external_exports.number().finite().positive()])).optional() }).strict().optional(),
-  generation: external_exports.object({ generator: external_exports.string().min(1), voiceSettings: external_exports.record(external_exports.unknown()), text: external_exports.string().min(1), language: external_exports.string().min(1).optional() }).strict().optional(),
+  generation: external_exports.object({ generator: external_exports.string().min(1), voiceSettings: external_exports.record(external_exports.unknown()), text: external_exports.string().min(1), language: external_exports.string().min(1).optional(), receiptPath: external_exports.string().min(1).optional() }).strict().optional(),
   capabilities: external_exports.object({ provider: external_exports.string().min(1), model: external_exports.string().min(1), audioConditioning: external_exports.boolean(), lipSync: external_exports.boolean(), postLipSync: external_exports.boolean(), nativeSpeech: external_exports.boolean().optional(), evidence: external_exports.string().min(1) }).strict().optional()
 }).strict();
 var hash = (s) => createHash4("sha256").update(s).digest("hex");
@@ -33341,12 +33342,14 @@ function speechRevision(line, character) {
 }
 function currentAudio(line, character) {
   try {
+    if (line.audio) characterSpeechContract().verifiedSpeechGeneration(line.audio.path, line.audio.generation, character?.tts, line);
     return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync6(line.audio.path) && hash(readFileSync8(line.audio.path)) === line.audio.sha256;
   } catch {
     return false;
   }
 }
-function speechAudioPlan(line, character) {
+function speechAudioPlan(line, character, context) {
+  if (character) character = characterSpeechContract().characterSpeech(character, context);
   const voice = character?.tts;
   if (!voice) throw new Error("Missing pinned character voice");
   const validator = nodeModule4.createRequire(import.meta.url)("../../skills/_shared/character-voice.js");
@@ -33358,10 +33361,10 @@ function speechAudioPlan(line, character) {
   const modelContract = resolveTtsModel(String(voice.engine), typeof voice.model === "string" ? voice.model.trim() : void 0);
   return { ...compiled, capabilities: modelContract, arguments: compiled.generation, expectedText: line.tts, speechRevision: speechRevision(line, character), language, direction, review: "not_reviewed" };
 }
-function inspectionAudioPlan(line, character) {
+function inspectionAudioPlan(line, character, context) {
   if (!character?.tts) return { available: false, warnings: ["Missing pinned character voice"], review: "not_reviewed" };
   try {
-    return { available: true, ...speechAudioPlan(line, character) };
+    return { available: true, ...speechAudioPlan(line, character, context) };
   } catch (error) {
     return { available: false, warnings: [error instanceof Error ? error.message : String(error)], review: "not_reviewed" };
   }
@@ -33419,6 +33422,7 @@ function manageSpeech(args) {
   const voiceWarnings = [];
   const characters = (Array.isArray(rawCharacters) ? rawCharacters : Object.entries(object2(rawCharacters)).map(([id, c]) => ({ ...object2(c), id }))).map((c) => resolveCharacterVoice(object2(c), { episode: dirname5(dirname5(file)), board: win, shot: {} }, voiceWarnings));
   const character = (id) => characters.find((c) => c.id === id);
+  const audioCharacter = (id) => characterSpeechContract().characterSpeech(character(id), { boardDir: dirname5(file), board: win });
   const scenes = win.SCENES;
   let changed = false;
   let timing;
@@ -33478,11 +33482,18 @@ function manageSpeech(args) {
       if (!args.audioPath) throw new Error("audioPath is required");
       const audioPath = resolve5(dirname5(file), args.audioPath);
       if (!args.generation || args.generation.text !== line.tts) throw new Error("Attach the actual generation arguments and exact line text");
-      const voice = character(line.speaker)?.tts;
+      const voice = audioCharacter(line.speaker)?.tts;
       const voiceErrors = voiceContract().generationVoiceErrors(voice, args.generation, line);
       if (voiceErrors.length) throw new Error("Generation arguments do not match the pinned character voice: " + voiceErrors.join("; "));
       const bytes = readFileSync8(audioPath);
       if (!bytes.length) throw new Error("Audio file is empty");
+      const generation = characterSpeechContract().verifiedSpeechGeneration(
+        audioPath,
+        args.generation,
+        voice,
+        line,
+        { required: voice?.engine === "astra-genai" }
+      );
       const priorAudio = line.audio;
       const audioHash = hash(bytes), lineRevision = speechRevision(line, character(line.speaker));
       const video = object2(object2(scene.visual).video), binding = object2(video.speechBinding);
@@ -33492,7 +33503,7 @@ function manageSpeech(args) {
         invalidated = { audio: priorAudio || null, video: dependsOnSpeech && Object.keys(video).length ? video : null, edit: true };
         if (invalidated.video) video.speechStatus = "stale";
       }
-      line.audio = { path: audioPath, sha256: audioHash, revision: lineRevision, status: "not_reviewed", generation: args.generation };
+      line.audio = { path: audioPath, sha256: audioHash, revision: lineRevision, status: "not_reviewed", generation };
       line.mediaStatus = "audio_ready";
     }
     const clock = actingContract().planScenePerformance(scene, measuredDuration);
@@ -33650,7 +33661,14 @@ function manageSpeech(args) {
     writeFileSync5(tmp, nextSource);
     renameSync3(tmp, file);
   }
-  return { revision: hash(readFileSync8(file)), changed, invalidated, plan, timing, ...voiceWarnings.length ? { voiceWarnings } : {}, ...args.action === "plan_audio" ? { audioPlans: selected.map(({ scene, line }) => ({ shotId: scene.id, lineId: line.id, ...speechAudioPlan(line, character(line.speaker)) })) } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker)), audioProvenanceStatus: object2(object2(object2(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
+  const audioPlans = args.action === "plan_audio" ? selected.map(({ scene, line }) => {
+    const result = speechAudioPlan(line, character(line.speaker), { boardDir: dirname5(file), board: win });
+    const generation = { ...result.generation, ...result.generator === "tts_astra_genai" ? {
+      speechContext: { path: file, lineId: line.id, expectedRevision: revision }
+    } : {} };
+    return { shotId: scene.id, lineId: line.id, ...result, generation, arguments: generation };
+  }) : void 0;
+  return { revision: hash(readFileSync8(file)), changed, invalidated, plan, timing, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname5(file), board: win }), audioProvenanceStatus: object2(object2(object2(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
 }
 
 // src/video-sound.ts

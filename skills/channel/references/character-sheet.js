@@ -34,17 +34,23 @@ function selectedVoiceReference(source, tts) {
   if (!tts) return {};
   const document = [...source.matchAll(/```json\s*\n([\s\S]*?)```/g)].map(m => JSON.parse(m[1])).find(v => v?.character);
   const selection = document?.voiceSelection;
-  if (!selection?.auditionPath) return {};
+  if (!selection?.auditionPath) return selection ? {voiceSelection: selection} : {};
   try {
     const audition = JSON.parse(fs.readFileSync(selection.auditionPath, 'utf8'));
     const chosen = audition.candidates?.find(c => c.id === selection.candidateId);
-    if (!chosen || !isDeepStrictEqual(chosen.tts, tts) || chosen.audioSha256 !== selection.audioSha256 || !path.isAbsolute(chosen.audioPath))
+    const registration = selection.registration;
+    const registered = registration?.engine === 'astra-genai' && registration.model === chosen?.tts?.model &&
+      chosen?.tts?.engine === 'astra-genai' && typeof registration.request === 'string' && registration.request.trim() &&
+      typeof registration.voiceId === 'string' && registration.voiceId.trim().toLowerCase() !== 'default' &&
+      registration.audioSha256 === chosen?.audioSha256 &&
+      isDeepStrictEqual({...chosen.tts, voiceId:registration.voiceId}, tts);
+    if (!chosen || (!isDeepStrictEqual(chosen.tts, tts) && !registered) || chosen.audioSha256 !== selection.audioSha256 || !path.isAbsolute(chosen.audioPath))
       throw new Error('Selected voice sample no longer matches the pinned character voice');
     // Byte validation belongs to video_plan when this sample is actually an input.
-    return {voiceReference:{path: chosen.audioPath, sha256: chosen.audioSha256, tts}};
+    return {voiceSelection: selection, voiceReference:{path: chosen.audioPath, sha256: chosen.audioSha256, tts}};
   } catch (error) {
     // Missing optional samples must not block stills or ordinary TTS production.
-    return {voiceReferenceWarning: error.message};
+    return {voiceSelection: selection, voiceReferenceWarning: error.message};
   }
 }
 if (require.main === module) {
@@ -81,4 +87,4 @@ function sourceErrors(win, boardDir) {
   }
   return errors;
 }
-module.exports = { handoff, sourceErrors };
+module.exports = { handoff, sourceErrors, selectedVoiceReference };

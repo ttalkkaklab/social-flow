@@ -33,6 +33,42 @@ completed bytes only if arguments and audio/sidecar hashes match. It returns
 requires a new ID. `speech_manage plan_audio` remains the character/line planning
 entrypoint; its generator/arguments can be passed to this common tool.
 
+## Character retakes
+
+A selected sample is not a registered TTS voice. Gateway character speech with a
+selected sample cannot use `voiceId:"default"`; register the chosen sample with the
+gateway operator and save its returned voice ID in the identity and requested episode
+pin. After registration, use `character_voice_audition action:bind_registered` with
+identityPath, its current expectedIdentitySha256 (from the character handoff), the
+operator-returned registeredVoiceId and the actual confirmation in userSelection.
+This local operation binds that ID to the chosen sample hash and preserves the
+audition's original synthesis settings. It does not upload or remotely register a
+voice. Then refresh the requested episode's tts and voiceReference from the handoff.
+Never guess that a character ID is a registered voice. Auditions may still design
+a new voice with `default`. Samples used by native MSR retain their separate contract.
+
+`speech_manage plan_audio` checks the shared character voice against the episode pin
+without rewriting it. A mismatch refuses a new take and `list` exposes it in
+`generationPlan.warnings`; existing recordings stay reusable. Applying the current
+sheet requires an explicit episode update. An intentional same-model exception uses
+`PRODUCTION.modelSettings.overrides.speech` with engine, model, the exact voiceId and
+the user's request. Existing explicit engine/model changes remain supported.
+
+Gateway plans include `generation.speechContext:{path,lineId,expectedRevision}`.
+Copy it unchanged, along with the planned voice and instructions. The raw gateway
+tool and common router verify the current board, speaker, selected sample hash and
+provider arguments before submission. Missing context for an episode output refuses
+generation; channel asset auditions are separate. Context is local provenance and
+is not sent to `/v1/audio/speech`.
+
+For new gateway `attach_audio`, pass the completed execution `receiptPath` inside
+`generation`, with the clean line text, declared language and actual voiceSettings.
+Attachment checks the receipt's actual generator arguments and exact output bytes,
+then stores those arguments. Composition and assembly recheck attached receipts.
+Do not relabel transformed audio with an original take's receipt: it covers only the
+original bytes. Historical attachments without a receipt remain reusable with their
+existing checks; the new requirement applies when attaching a new gateway take.
+
 The existing five raw synthesis tools remain available and share these runtime
 checks. They allocate a fresh request ID per call, so callers needing restart-safe
 replay must use `tts_route execute`. Auditions and the legacy checked wrapper use

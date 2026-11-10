@@ -9,6 +9,10 @@ import { z } from 'zod';
 import * as nodeModule from 'node:module';
 import { execFileSync } from 'node:child_process';
 const voiceContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/character-voice.js') as { generationVoiceErrors(voice: unknown, proof: unknown, line?: unknown): string[] };
+const characterSpeechContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/character-speech.js') as {
+  characterSpeech(character: unknown, context?: {boardDir: string; board: unknown}): Character;
+  verifiedSpeechGeneration(audioPath: string, proof: unknown, voice: unknown, line: unknown, options?: {required: boolean}): NonNullable<z.infer<typeof speechManageSchema>['generation']>;
+};
 import { readBoard, serializeBoard } from './storyboard.js';
 import { actingSchema, compileActing, type SpeechActing } from './speech-acting.js';
 import { resolveTtsModel } from './tts-models.js';
@@ -27,7 +31,7 @@ export const speechManageSchema = z.object({
   audioPath: z.string().optional(), videoPath: z.string().optional(), tool: z.string().optional(),
   reuse: z.literal('tail_trim').optional(),
   timingPatch: z.object({ speechBoundActions: z.boolean().optional(), actions: z.array(z.tuple([z.number().int().nonnegative(), z.number().finite().positive()])).optional() }).strict().optional(),
-  generation: z.object({ generator: z.string().min(1), voiceSettings: z.record(z.unknown()), text: z.string().min(1), language: z.string().min(1).optional() }).strict().optional(),
+  generation: z.object({ generator: z.string().min(1), voiceSettings: z.record(z.unknown()), text: z.string().min(1), language: z.string().min(1).optional(), receiptPath:z.string().min(1).optional() }).strict().optional(),
   capabilities: z.object({ provider: z.string().min(1), model: z.string().min(1), audioConditioning: z.boolean(), lipSync: z.boolean(), postLipSync: z.boolean(), nativeSpeech: z.boolean().optional(), evidence: z.string().min(1) }).strict().optional(),
 }).strict();
 type Line = { id?: string; speaker?: string; tts: string; sub?: string; delivery?: z.infer<typeof delivery>; acting?: z.infer<typeof actingSchema> | null; audio?: { path: string; sha256: string; revision: string; status: string; generation: NonNullable<z.infer<typeof speechManageSchema>['generation']> }; [key: string]: unknown };
@@ -69,12 +73,14 @@ export function speechRevision(line: Line, character: Character | undefined): st
 }
 function currentAudio(line: Line, character: Character | undefined): boolean {
   try {
+    if (line.audio) characterSpeechContract().verifiedSpeechGeneration(line.audio.path, line.audio.generation, character?.tts, line);
     return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts &&
       voiceContract().generationVoiceErrors(character?.tts,line.audio.generation,line).length===0 &&
       existsSync(line.audio.path) && hash(readFileSync(line.audio.path))===line.audio.sha256;
   } catch { return false; }
 }
-export function speechAudioPlan(line: Line, character: Character | undefined) {
+export function speechAudioPlan(line: Line, character: Character | undefined, context?: {boardDir: string; board: unknown}) {
+  if (character) character = characterSpeechContract().characterSpeech(character, context);
   const voice = character?.tts;
   if (!voice) throw new Error('Missing pinned character voice');
   // Validate the identity before building raw adapter arguments.
@@ -88,9 +94,9 @@ export function speechAudioPlan(line: Line, character: Character | undefined) {
   return {...compiled, capabilities: modelContract, arguments:compiled.generation, expectedText:line.tts, speechRevision:speechRevision(line,character), language, direction, review:'not_reviewed'};
 }
 
-function inspectionAudioPlan(line: Line, character: Character | undefined) {
+function inspectionAudioPlan(line: Line, character: Character | undefined, context?: {boardDir: string; board: unknown}) {
   if (!character?.tts) return {available:false, warnings:['Missing pinned character voice'],review:'not_reviewed'};
-  try { return {available:true,...speechAudioPlan(line,character)}; }
+  try { return {available:true,...speechAudioPlan(line,character,context)}; }
   catch (error) { return {available:false,warnings:[error instanceof Error ? error.message : String(error)],review:'not_reviewed'}; }
 }
 function audioProvenanceStatus(line: Line, character: Character | undefined): string {
@@ -148,6 +154,7 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
   const characters = (Array.isArray(rawCharacters) ? rawCharacters : Object.entries(object(rawCharacters)).map(([id, c]) => ({ ...object(c), id })))
     .map(c => resolveCharacterVoice(object(c), { episode: dirname(dirname(file)), board: win, shot: {} }, voiceWarnings)) as Character[];
   const character = (id: string | undefined) => characters.find(c => c.id === id);
+  const audioCharacter = (id: string | undefined) => characterSpeechContract().characterSpeech(character(id), {boardDir: dirname(file), board: win});
   const scenes = win.SCENES!;
   let changed = false;
   let timing: Record<string, unknown> | undefined;
@@ -208,11 +215,13 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
       if (!args.audioPath) throw new Error('audioPath is required');
       const audioPath = resolve(dirname(file), args.audioPath);
       if (!args.generation || args.generation.text !== line.tts) throw new Error('Attach the actual generation arguments and exact line text');
-      const voice = character(line.speaker)?.tts;
+      const voice = audioCharacter(line.speaker)?.tts;
       const voiceErrors = voiceContract().generationVoiceErrors(voice, args.generation, line);
       if (voiceErrors.length) throw new Error('Generation arguments do not match the pinned character voice: '+voiceErrors.join('; '));
       const bytes = readFileSync(audioPath);
       if (!bytes.length) throw new Error('Audio file is empty');
+      const generation = characterSpeechContract().verifiedSpeechGeneration(audioPath, args.generation, voice, line,
+        {required: voice?.engine === 'astra-genai'});
       const priorAudio = line.audio;
       const audioHash = hash(bytes), lineRevision = speechRevision(line, character(line.speaker));
       const video = object(object(scene.visual).video), binding = object(video.speechBinding);
@@ -222,7 +231,7 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
         invalidated = { audio: priorAudio || null, video: dependsOnSpeech && Object.keys(video).length ? video : null, edit: true };
         if (invalidated.video) video.speechStatus = 'stale';
       }
-      line.audio = { path: audioPath, sha256: audioHash, revision: lineRevision, status: 'not_reviewed', generation: args.generation };
+      line.audio = { path: audioPath, sha256: audioHash, revision: lineRevision, status: 'not_reviewed', generation };
       line.mediaStatus = 'audio_ready';
     }
     const clock = actingContract().planScenePerformance(scene, measuredDuration);
@@ -362,5 +371,12 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
     const tmp = file + '.' + randomUUID() + '.tmp';
     writeFileSync(tmp, nextSource); renameSync(tmp, file);
   }
-  return { revision: hash(readFileSync(file)), changed, invalidated, plan, timing, ...(voiceWarnings.length ? {voiceWarnings} : {}), ...(args.action === 'plan_audio' ? {audioPlans:selected.map(({scene,line})=>({shotId:scene.id,lineId:line.id,...speechAudioPlan(line,character(line.speaker))}))} : {}), lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line,character(line.speaker)), audioProvenanceStatus:object(object(object(scene.visual).video).speechBinding).mode==='native'?'native_speech':audioProvenanceStatus(line,character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line,character(line.speaker)) })) };
+  const audioPlans = args.action === 'plan_audio' ? selected.map(({scene,line}) => {
+    const result = speechAudioPlan(line, character(line.speaker), {boardDir: dirname(file), board: win});
+    const generation = {...result.generation, ...(result.generator === 'tts_astra_genai' ? {
+      speechContext: {path: file, lineId: line.id, expectedRevision: revision},
+    } : {})};
+    return {shotId: scene.id, lineId: line.id, ...result, generation, arguments: generation};
+  }) : undefined;
+  return { revision: hash(readFileSync(file)), changed, invalidated, plan, timing, ...(voiceWarnings.length ? {voiceWarnings} : {}), ...(audioPlans ? {audioPlans} : {}), lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line,character(line.speaker),{boardDir: dirname(file), board: win}), audioProvenanceStatus:object(object(object(scene.visual).video).speechBinding).mode==='native'?'native_speech':audioProvenanceStatus(line,character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line,character(line.speaker)) })) };
 }
