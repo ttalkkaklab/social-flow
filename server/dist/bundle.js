@@ -94430,6 +94430,17 @@ var require_character_speech = __commonJS({
         folder = path33.dirname(folder);
       }
     }
+    function plannedGenerationErrors(voice, proof, line) {
+      const errors = generationVoiceErrors(voice, proof, line);
+      if (errors.length) return errors;
+      const expected = require_speech_contract().compileActing(line?.tts ?? proof.text, line?.acting, voice);
+      const fields2 = proof.generator === "tts_astra_genai" ? ["model", "text", "voice", "speed", "instructions"] : proof.generator === "tts_gemini_38" ? ["turns"] : ["text"];
+      for (const key of fields2) {
+        if (!isDeepStrictEqual2(proof.voiceSettings[key], expected.generation[key]))
+          errors.push("Actual provider arguments differ from plan_audio: " + key);
+      }
+      return errors;
+    }
     function validateSpeechContext(generator, args) {
       const context2 = args.speechContext;
       const outputBoard = generator === "tts_astra_genai" ? episodeBoardForOutput(args.outputPath) : void 0;
@@ -94449,9 +94460,7 @@ var require_character_speech = __commonJS({
       const cast = characters.filter((character2) => character2.id === line.speaker);
       if (cast.length !== 1) throw new Error("speech_context_invalid: speaker needs one character entry");
       const character = characterSpeech(cast[0], { boardDir: path33.dirname(file), board });
-      const errors = generationVoiceErrors(character.tts, { generator, voiceSettings: args, text: line.tts, language: character.tts.language }, line);
-      if (args.text !== require_speech_contract().compileActing(line.tts, line.acting, character.tts).generation.text)
-        errors.push("Speech text differs from the current line");
+      const errors = plannedGenerationErrors(character.tts, { generator, voiceSettings: args, text: line.tts, language: character.tts.language }, line);
       if (errors.length) throw new Error("speech_context_mismatch: " + errors.join("; "));
     }
     function verifiedSpeechGeneration(audioPath, proof, voice, line, { required: required2 = false } = {}) {
@@ -94463,7 +94472,7 @@ var require_character_speech = __commonJS({
       if (receipt.status !== "completed" || receipt.result?.success !== true || receipt.generator !== proof.generator || !receipt.result?.audioPath || fs24.realpathSync(receipt.result.audioPath) !== fs24.realpathSync(audioPath) || receipt.audioSha256 !== hash7(fs24.readFileSync(audioPath)))
         throw new Error("speech_receipt_mismatch: receipt must cover this completed generator and these exact audio bytes");
       const actual = { ...proof, voiceSettings: receipt.generation };
-      const errors = generationVoiceErrors(voice, actual, line);
+      const errors = plannedGenerationErrors(voice, actual, line);
       if (errors.length) throw new Error("speech_receipt_voice_mismatch: " + errors.join("; "));
       return actual;
     }

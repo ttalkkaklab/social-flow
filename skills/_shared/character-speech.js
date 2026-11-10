@@ -71,6 +71,20 @@ function episodeBoardForOutput(outputPath) {
   }
 }
 
+// Old recording metadata may omit provider text. New contexts and execution receipts may not.
+function plannedGenerationErrors(voice, proof, line) {
+  const errors = generationVoiceErrors(voice, proof, line);
+  if (errors.length) return errors;
+  const expected = require('./speech-contract.js').compileActing(line?.tts ?? proof.text, line?.acting, voice);
+  const fields = proof.generator === 'tts_astra_genai' ? ['model','text','voice','speed','instructions']
+    : proof.generator === 'tts_gemini_38' ? ['turns'] : ['text'];
+  for (const key of fields) {
+    if (!isDeepStrictEqual(proof.voiceSettings[key], expected.generation[key]))
+      errors.push('Actual provider arguments differ from plan_audio: ' + key);
+  }
+  return errors;
+}
+
 /** Pure local preflight used by both the gateway raw tool and tts_route. */
 function validateSpeechContext(generator, args) {
   const context = args.speechContext;
@@ -91,9 +105,7 @@ function validateSpeechContext(generator, args) {
   const cast = characters.filter(character => character.id === line.speaker);
   if (cast.length !== 1) throw new Error('speech_context_invalid: speaker needs one character entry');
   const character = characterSpeech(cast[0], {boardDir: path.dirname(file), board});
-  const errors = generationVoiceErrors(character.tts, {generator, voiceSettings: args, text: line.tts, language: character.tts.language}, line);
-  if (args.text !== require('./speech-contract.js').compileActing(line.tts, line.acting, character.tts).generation.text)
-    errors.push('Speech text differs from the current line');
+  const errors = plannedGenerationErrors(character.tts, {generator, voiceSettings: args, text: line.tts, language: character.tts.language}, line);
   if (errors.length) throw new Error('speech_context_mismatch: ' + errors.join('; '));
 }
 
@@ -110,7 +122,7 @@ function verifiedSpeechGeneration(audioPath, proof, voice, line, {required = fal
       receipt.audioSha256 !== hash(fs.readFileSync(audioPath)))
     throw new Error('speech_receipt_mismatch: receipt must cover this completed generator and these exact audio bytes');
   const actual = {...proof, voiceSettings: receipt.generation};
-  const errors = generationVoiceErrors(voice, actual, line);
+  const errors = plannedGenerationErrors(voice, actual, line);
   if (errors.length) throw new Error('speech_receipt_voice_mismatch: ' + errors.join('; '));
   return actual;
 }

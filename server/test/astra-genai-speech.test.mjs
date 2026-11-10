@@ -72,6 +72,8 @@ test('managed retakes validate the speaker before raw synthesis and bind the com
 
 test('an explicit episode default-voice exception survives planning and inspection without losing board context',async t=>{
  const {manageSpeech}=await import('../dist/speech.js');
+ const {generateGenaiSpeech}=await import('../dist/astra-genai-speech.js');
+ const {pcmToWav}=await import('../dist/media-utils.js');
  const {createHash}=await import('node:crypto');
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'voice-exception-'));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
  const sample=path.join(dir,'sample.wav');fs.writeFileSync(sample,'sample');
@@ -79,9 +81,26 @@ test('an explicit episode default-voice exception survives planning and inspecti
  const board={PRODUCTION:{modelSettings:{overrides:{speech:{...voice,request:'Use default for this episode explicitly'}}}},
   SB_DOC:{characters:[{id:'hero',tts:voice,voiceReference:{path:sample,sha256:createHash('sha256').update('sample').digest('hex'),tts:voice}}]},
   SCENES:[{id:'s1',narration:[{id:'l1',speaker:'hero',tts:'Hello',delivery:'voiceover'}]}]};
- const file=path.join(dir,'scenes.js');fs.writeFileSync(file,Object.entries(board).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+ const target=path.join(dir,'storyboard');fs.mkdirSync(target);
+ const file=path.join(target,'scenes.js');fs.writeFileSync(file,Object.entries(board).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
  const result=manageSpeech({path:file,action:'plan_audio',lineId:'l1'});
  assert.equal(result.audioPlans[0].generation.voice,'default');assert.equal(result.lines[0].generationPlan.available,true);
+ const args={...result.audioPlans[0].generation,outputPath:path.join(dir,'speech'),filename:'take.wav'};
+ const oldFetch=globalThis.fetch,key=config.astraGenaiApiKey;config.astraGenaiApiKey='fixture';let calls=0;
+ t.after(()=>{globalThis.fetch=oldFetch;config.astraGenaiApiKey=key;});
+ globalThis.fetch=async()=>{calls++;return new Response(pcmToWav(Buffer.alloc(1600),8000,1));};
+ await assert.rejects(generateGenaiSpeech({...args,instructions:'Use another speaker.'}),/speech_context_mismatch/);
+ await assert.rejects(routeSpeech({action:'plan',generator:'tts_astra_genai',generation:{...args,instructions:'Use another speaker.'}}),/speech_context_mismatch/);
+ assert.equal(calls,0);
+ const take=await routeSpeech({action:'execute',generator:'tts_astra_genai',requestId:'explicit',generation:args});assert.equal(take.success,true);
+ const proof={generator:'tts_astra_genai',voiceSettings:args,text:'Hello',language:'ko',receiptPath:take.receiptPath};
+ const attach=()=>manageSpeech({path:file,action:'attach_audio',lineId:'l1',expectedRevision:manageSpeech({path:file,action:'list'}).revision,audioPath:take.audioPath,generation:proof});
+ assert.equal(attach().lines[0].audioCurrent,true);
+ const work=path.join(dir,'.work');fs.writeFileSync(path.join(work,'cards.tsv'),'0\t../speech/take.wav\t1\n');
+ const checker=require('../../skills/produce/references/check-tts-quality.js');assert.ok(checker.check(work,target)[take.receiptPath]);
+ const receipt=JSON.parse(fs.readFileSync(take.receiptPath,'utf8'));delete receipt.generation.text;fs.writeFileSync(take.receiptPath,JSON.stringify(receipt));
+ assert.throws(attach,/speech_receipt_voice_mismatch/);
+ assert.throws(()=>checker.check(work,target),/speech_receipt_voice_mismatch/);
  const original=fs.readFileSync(file,'utf8');delete board.PRODUCTION;
  fs.writeFileSync(file,Object.entries(board).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
  assert.throws(()=>manageSpeech({path:file,action:'plan_audio',lineId:'l1'}),/character_voice_unregistered/);

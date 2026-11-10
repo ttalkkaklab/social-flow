@@ -65,6 +65,9 @@ For new gateway `attach_audio`, pass the completed execution `receiptPath` insid
 `generation`, with the clean line text, declared language and actual voiceSettings.
 Attachment checks the receipt's actual generator arguments and exact output bytes,
 then stores those arguments. Composition and assembly recheck attached receipts.
+The actual provider text/turns must be present; a clean text claim beside a receipt
+does not replace its request text. Gateway instructions must match the compiled
+plan even when the line has no acting and the character has no baseline direction.
 Do not relabel transformed audio with an original take's receipt: it covers only the
 original bytes. Historical attachments without a receipt remain reusable with their
 existing checks; the new requirement applies when attaching a new gateway take.

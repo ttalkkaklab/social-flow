@@ -59,6 +59,7 @@ test('episode gateway preflight refuses context omission, argument substitution,
   assert.throws(() => validateSpeechContext('tts_astra_genai',{...args,speechContext:undefined}), /speech_context_required/);
   assert.throws(() => validateSpeechContext('tts_astra_genai',{...args,voice:'default'}), /speech_context_mismatch/);
   assert.throws(() => validateSpeechContext('tts_astra_genai',{...args,text:'Other words'}), /speech_context_mismatch/);
+  assert.throws(() => validateSpeechContext('tts_astra_genai',{...args,instructions:'Use a different speaker instead.'}), /speech_context_mismatch/);
   symlinkSync(join(f.dir,'episodes/one'),join(f.dir,'alias'));
   assert.throws(() => validateSpeechContext('tts_astra_genai',{...generation,outputPath:join(f.dir,'alias/output')}), /speech_context_required/);
   f.board.SCENES[0].narration[0].tts='Edited'; f.save();
@@ -75,6 +76,10 @@ test('a receipt is bound to the actual generator, voice and WAV; caller metadata
   const save=()=>writeFileSync(receiptPath,JSON.stringify(receipt)); save();
   assert.deepEqual(verifiedSpeechGeneration(audio,proof,voice,f.line).voiceSettings,generation);
   receipt.generation={...generation,voice:'default'};save();
+  assert.throws(()=>verifiedSpeechGeneration(audio,proof,voice,f.line),/speech_receipt_voice_mismatch/);
+  receipt.generation={...generation};delete receipt.generation.text;save();
+  assert.throws(()=>verifiedSpeechGeneration(audio,proof,voice,f.line),/speech_receipt_voice_mismatch/);
+  receipt.generation={...generation,instructions:'Use a different speaker instead.'};save();
   assert.throws(()=>verifiedSpeechGeneration(audio,proof,voice,f.line),/speech_receipt_voice_mismatch/);
   receipt.generation=generation;receipt.status='uncertain';save();
   assert.throws(()=>verifiedSpeechGeneration(audio,proof,voice,f.line),/speech_receipt_mismatch/);
