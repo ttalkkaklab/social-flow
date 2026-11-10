@@ -5546,6 +5546,7 @@ window.STORYBOARD_READY = window.STORYBOARD_READY.then(async function () {
       const edge = nav.getBoundingClientRect().bottom + 24;
       let next = -1;
       for (let i = 0; i < cards.length; i++) {
+        if (cards[i].closest('details:not([open])')) continue;
         if (cards[i].getBoundingClientRect().top > edge) break;
         next = i;
       }
@@ -5571,6 +5572,7 @@ window.STORYBOARD_READY = window.STORYBOARD_READY.then(async function () {
     new ResizeObserver(measureNav).observe(nav);
     window.addEventListener('scroll', scheduleCurrent, { passive: true });
     window.addEventListener('resize', measureNav);
+    document.addEventListener('toggle', scheduleCurrent, true);
     // review-layout.js handles these fragments locally, including the library's base URL.
     nav.addEventListener('click', scheduleCurrent);
   }
