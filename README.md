@@ -31,6 +31,13 @@ and autoproduce use the same guidance; blind review checks the performed evidenc
 reading author intentions. Existing schemas remain unchanged, and narrators or incidental
 roles do not acquire compulsory subplots or character arcs.
 
+[Story interest](skills/storyboard/references/story-interest.md) is the guidance for whether a
+viewer wants the next scene: the question each stretch holds open, the order of telling, who
+knows more, pressure that changes and how scenes and serial episodes end. It reuses
+`sequence.question`/`payoff` and `scene.turn`/`charge`/`out`, adds no gate, and grades each
+claim by its evidence ([survey](docs/research/2026-11-11-story-engagement-craft/index.html)).
+The reviewer's interest rubric is an on-request read.
+
 The [filmmaking guide](docs/guides/ai-film-four-elements/index.html) explains character references, camera direction, framing and shot timing. `storyboard_read` exposes the shared 45-entry technique catalogue; `shot.techniques` stores stable IDs with shot-specific reasons. The offline storyboard exports the same catalogue, with a distinct pictogram and explanation for every entry. Camera instructions reach the generic, speech-planning and ASTRA prompt paths. See [technique selection](skills/storyboard/references/film-techniques.md).
 
 Character video requests now compile [voice continuity](skills/produce/references/voice-continuity.md)

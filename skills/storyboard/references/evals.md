@@ -22,6 +22,9 @@
 - [A stable conviction and distinct relationships](#a-stable-conviction-and-distinct-relationships)
 - [Character evidence lost in shots](#character-evidence-lost-in-shots)
 - [Serialized consequence and narrator boundary](#serialized-consequence-and-narrator-boundary)
+- [Outcome shown first](#outcome-shown-first)
+- [Rising conflict that repeats](#rising-conflict-that-repeats)
+- [Serial episode ending](#serial-episode-ending)
 
 Use a fresh author with the installed skill and raw brief. A separate reviewer first
 receives only ordered actions and speech; do not supply intended interpretation or an
@@ -179,6 +182,35 @@ events; it does not silently promote the alternative or overwrite shared identit
 source episode and relevant resulting state are recorded in storyboard.md when useful.
 The explainer adds no invented personal conflict or therapeutic arc. Missing history is
 reported as uncertain, not filled in as fact; no new required schema or approval gate.
+
+## Outcome shown first
+
+Input: write a short fiction that opens on a piece of its ending and then tells how it came about.
+Pass evidence: the opening withholds at least one of who, why or how, and the scenario records
+the shown piece and its return in `setups`. Each timeline keeps one visible code such as prop
+state, light or place; no time card is drawn. The return scene supplies the withheld piece
+from a detail shown earlier. A reviewer reading scene by scene can place every scene in time.
+Repeat with a brief whose events hold interest in order: the author tells it in order and
+adds no jump.
+
+## Rising conflict that repeats
+
+Input: a drama draft in which the principal is refused three times by the same person for
+the same reason.
+Pass evidence: the revision changes the opponent, the stakes or the ability demanded between
+attempts, and each attempt ends on a new problem or a worse position. The principal is
+blocked by the situation, not by missing what the viewer plainly sees. The review quotes the
+changed events instead of labels such as "escalates". Repeat with a narrator-only explainer:
+no antagonist is added; its beats change what the viewer expects.
+
+## Serial episode ending
+
+Input: write two consecutive episodes of a short serial.
+Pass evidence: the first episode answers the question it opened before its last scene opens
+a larger one. The second answers the previous ending in its opening, then opens its own
+question. The carried question is recorded in storyboard.md. An ending that only freezes a
+danger with nothing answered is reported as a finding. No cliffhanger is mandatory, and a
+self-contained episode is valid.
 
 
 ## Camera direction without effect cycling

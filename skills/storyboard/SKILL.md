@@ -48,7 +48,8 @@ video prompt (`shot_prompt`) → export the bundled review template. Each shot's
 for the user's approval (`video_approve`); do not jump from a text plan directly to video.
 Scenario presentation is a progress update, not an approval request. In an interactive
 session, show the premise, characters, causal sequence, ending and selection reason before
-writing the detailed board. Continue unless the user requested selection/approval first;
+writing the detailed board. For story-led work also state the question the viewer waits on
+to the end and, when the order of telling differs from the order of events, why. Continue unless the user requested selection/approval first;
 in that case wait for their answer. For an unattended run, save the same preview in
 `scenario.md` and include it in the run report. Do not invent a user approval.
 
@@ -154,12 +155,21 @@ while establishing the rules and details that make its eventual answer fair.
 beat disappears. A trope name, emotion label or “advances the story” is not that basis.
 Use this as a thinking aid, not a demand to make characters explain themselves aloud.
 
+Once the causal skeleton holds, read [story interest](references/story-interest.md) for
+story-led work: drama, comedy, mystery, serial fiction and narrative documentary. Causality
+makes the story followable; that reference asks whether the viewer wants the next scene.
+Decide the question each sequence holds open and which scene answers it, the order of
+telling, who knows more at each stage, how the pressure changes from scene to scene and
+what each scene ends on. These are choices to make on purpose, not devices to add: a story
+told in order with no twist is valid, and an explainer needs no manufactured opponent.
+
 ## 3. Write complete scenes before cutting them into shots
 
 **Story first, one layer at a time (user directive, 2026-10-31).** Once the scenario is
 settled, the first storyboard step writes only the story: `story_sequence` (each sequence's
-title and purpose) → `story_scene` (place, time, event and a one- or two-sentence summary,
-inside its sequence) → `story_shot` (each shot as one sentence of story in its scene; a
+title and purpose, and for story-led work the `question` it holds open with the `payoff`
+scene that answers it) → `story_scene` (place, time, event and a one- or two-sentence summary,
+inside its sequence, with optional `turn`, `charge` and `out`) → `story_shot` (each shot as one sentence of story in its scene; a
 revised shot given another scene moves to the end of that scene). These are provisional
 performance units, not one unit per sentence, gesture or speaker turn. One summary may cover
 a continuous exchange with several lines. Revisit boundaries after the lines are written. No
@@ -234,7 +244,10 @@ viewer may be the addressee; narrator-only and fully visual stories are both val
 Use `STRUCTURE.scenes` for place, time, event, turn and out when mapping the scenes to the
 board. These are the existing fields, not a new mandatory planning form. In story-v2 the
 out may be the final visible action. The change may be subtle; no forced twist, moral,
-positive ending, threat or cliffhanger is required. Do not fill missing causality with
+positive ending, threat or cliffhanger is required. On story-led work read the turns in a
+row: when several scenes flip the same way against the same obstacle, change the barrier or
+the stakes, and check that each `out` leaves the viewer wanting the next scene
+([story interest](references/story-interest.md) §4–§5). Do not fill missing causality with
 extra dialogue when an observable choice or consequence can carry it.
 
 Read the scene sequence as an audience member before detailing shots. For an independent
@@ -328,6 +341,8 @@ The saved previz renderer applies only to optional animated video references.
 Bind each shot's camera and complete actor start/end blocking, including off-camera actors,
 body facing and gaze. Within a `continuityGroup`, carry the previous cut's end state into the
 next start; explain time skips with `continuityBreak` and axis crossings with `lineCrossing`.
+A flash-forward or flashback is a time break too: give each timeline a fixed visible code such
+as prop state, light or place ([story interest](references/story-interest.md) §2), never drawn text.
 When the user asked for Blender compositions, render and inspect the shared space in cut order. Previz rendering is
 optional and belongs to produce (`location_manage` action `previz` on a Blender set) so motion
 shares the same set, camera and blocking. Camera, actor or endpoint changes invalidate those

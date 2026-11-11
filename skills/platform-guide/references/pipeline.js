@@ -282,7 +282,7 @@ const REVIEWERS = [
     // the default flow stopped calling them in 0.50.0.
     bar: null,
     rounds: null,
-    modes: ['scenario', 'narration', 'copy', 'scene', 'vocabulary', 'camera', 'sound', 'image'],
+    modes: ['scenario', 'narration', 'copy', 'scene', 'vocabulary', 'camera', 'sound', 'image', 'interest'],
     surfaces: ['storyboard copy'],
   },
   {

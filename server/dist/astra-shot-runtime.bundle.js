@@ -33171,7 +33171,9 @@ var storySceneSchema = external_exports.object({
     event: nonEmpty.describe("The one thing that happens in this scene"),
     summary: nonEmpty.describe("The scene's story in one sentence"),
     turn: nonEmpty.optional(),
-    out: nonEmpty.optional()
+    out: nonEmpty.optional(),
+    // The same signs structure-contract.js reads: the value at the open and at the close.
+    charge: external_exports.object({ open: external_exports.enum(["+", "-"]), close: external_exports.enum(["+", "-", "++", "--"]) }).strict().optional()
   }).strict()).min(1)
 }).strict();
 var storyShotSchema = external_exports.object({

@@ -1,0 +1,1417 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="스토리를 재미있게 만드는 구성 기법 조사. 미래 장면을 먼저 보여 주는 배열, 갈등 점증, 클리프행어를 현장 방법과 연구 근거로 대조하고 숏폼·롱폼 설계 지침으로 정리한 A4 문서.">
+<meta name="color-scheme" content="light">
+<title>질문을 여는 순서가 다음 장면을 부른다 · 스토리 구성 기법 조사</title>
+<style>
+@font-face{font-family:"Pretendard Variable";src:local("Pretendard Variable"),url("../../../skills/channel/references/review-assets/fonts/PretendardVariable.woff2") format("woff2");font-weight:45 920;font-display:swap}
+:root{--paper:#f2f5f9;--surface:#fff;--ink:#18181b;--muted:#4b5565;--line:#dce2eb;--hair:#ebebee;--sunk:#f4f6f9;--accent:#1d4ed8;--accent-soft:#edf2ff;--field:#c2570c;--field-soft:#fff3e8;--ok:#147a4b;--warn:#855400;--bad:#b52f24;--font:"Pretendard Variable","Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+*{box-sizing:border-box}
+html{-webkit-print-color-adjust:exact;print-color-adjust:exact;scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:13px/1.66 var(--font);word-break:keep-all;overflow-wrap:break-word;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4,p,figure,ul,ol{margin:0}
+a{color:var(--accent);text-decoration:none}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+strong{font-weight:700}
+svg{display:block;width:100%;height:auto;overflow:visible}
+svg text{font-family:var(--font)}
+
+/* A4 세로 한 장 */
+.sheet{width:210mm;min-height:297mm;margin:10mm auto;padding:13mm 16mm 11mm;background:var(--surface);display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(24,24,27,.06),0 12px 32px rgba(29,35,48,.08)}
+.run{display:flex;justify-content:space-between;gap:16px;font-size:10px;color:var(--muted);padding-bottom:7px;border-bottom:1px solid var(--line);margin-bottom:16px}
+.foot{margin-top:auto;padding-top:10px;display:flex;justify-content:space-between;gap:16px;font-size:10px;color:var(--muted)}
+.foot .pn{font-variant-numeric:tabular-nums}
+
+/* 글 */
+h2{font-size:21px;line-height:1.36;font-weight:740;letter-spacing:-.035em}
+h3{font-size:14px;line-height:1.45;font-weight:700;letter-spacing:-.02em}
+h4{font-size:12.5px;font-weight:700}
+.chap{display:flex;align-items:baseline;gap:8px;font-size:12px;font-weight:700;color:var(--accent);margin-bottom:5px}
+.lead{margin-top:8px;font-size:13.5px;line-height:1.72;color:var(--ink)}
+.lead.narrow{max-width:150mm}
+p+p{margin-top:7px}
+.sm{font-size:11.5px;line-height:1.62}
+.mut{color:var(--muted)}
+.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}.mt20{margin-top:20px}
+ul.pts{padding:0;list-style:none}
+ul.pts li{position:relative;padding-left:11px;margin-top:5px;font-size:12.2px;line-height:1.62}
+ul.pts li::before{content:"";position:absolute;left:0;top:.78em;width:5px;height:1.5px;background:var(--muted)}
+ol.steps{padding-left:18px}
+ol.steps li{margin-top:5px;font-size:12.2px;line-height:1.62}
+.ref{font-size:8.5px;line-height:0;margin-left:1px;font-weight:600}
+.ref a{padding:0 1.5px}
+.ref a+a::before{content:"·";color:var(--muted)}
+
+/* 실무·학술 표지: 색과 모양을 함께 쓴다 */
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--ink);white-space:nowrap}
+.chip::before{content:"";width:8px;height:8px;flex:none}
+.chip.field::before{background:var(--field)}
+.chip.study::before{background:var(--accent);border-radius:50%}
+.chip.both::before{background:linear-gradient(135deg,var(--field) 50%,var(--accent) 50%);transform:rotate(45deg) scale(.82)}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.lane{padding-top:9px;border-top:2px solid var(--ink)}
+.lane.field{border-color:var(--field)}
+.lane.study{border-color:var(--accent)}
+.lane h3{margin-top:5px}
+.synth{position:relative;padding:11px 14px 12px 18px;background:var(--sunk);border-radius:0 10px 10px 0}
+.synth::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(var(--field) 50%,var(--accent) 50%)}
+.synth h3{margin-top:4px}
+.synth p{font-size:12.5px;margin-top:5px}
+.card{padding:13px 15px;border:1px solid var(--line);border-radius:12px}
+.note{font-size:11px;line-height:1.6;color:var(--muted)}
+.note b{color:var(--ink)}
+
+/* 증거 강도 표지: 기호와 낱말을 함께 쓴다 */
+.ev{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;white-space:nowrap;padding:1px 7px 1px 5px;border-radius:999px;border:1px solid var(--line);color:var(--ink);background:#fff}
+.ev::before{font-size:10px;line-height:1}
+.ev.multi{border-color:var(--ok)}.ev.multi::before{content:"●●";letter-spacing:-2px;color:var(--ok);margin-right:2px}
+.ev.single::before{content:"●";color:var(--muted)}
+.ev.field::before{content:"■";color:var(--field)}
+.ev.theory::before{content:"◇";color:var(--muted)}
+.ev.mixed{border-color:var(--warn)}.ev.mixed::before{content:"◐";color:var(--warn)}
+.ev.hearsay{border-color:var(--warn);border-style:dashed}.ev.hearsay::before{content:"?";color:var(--warn);font-weight:800}
+.ev.refuted{border-color:var(--bad)}.ev.refuted::before{content:"✕";color:var(--bad);font-weight:800}
+
+/* 그림 */
+.fig{margin-top:14px}
+.fig .frame{background:var(--sunk);border-radius:10px;padding:14px 16px}
+.fig .frame.plain{background:none;padding:0}
+figcaption{margin-top:6px;font-size:10.8px;line-height:1.55;color:var(--muted)}
+figcaption b{color:var(--ink);font-weight:700}
+.kind{display:inline-block;font-size:9.5px;font-weight:700;line-height:1.5;padding:0 5px;border-radius:4px;border:1px solid currentColor;margin-right:5px;vertical-align:1px}
+.kind.data{color:var(--ok)}.kind.concept{color:var(--muted)}.kind.infer{color:var(--warn)}
+svg .t{fill:var(--ink);font-size:11.5px}
+svg .tm{fill:var(--muted);font-size:10.5px}
+svg .ts{fill:var(--muted);font-size:9.5px}
+svg .tb{fill:var(--ink);font-size:12px;font-weight:700}
+svg .th{fill:var(--ink);font-size:14px;font-weight:740;letter-spacing:-.02em}
+svg .tw{fill:#fff;font-size:11.5px;font-weight:650}
+svg .ta{fill:var(--accent);font-size:11px;font-weight:700}
+svg .mid{text-anchor:middle}.end{text-anchor:end}
+svg .halo{paint-order:stroke;stroke:var(--sunk);stroke-width:5px;stroke-linejoin:round}
+svg .halo.w{stroke:#fff}
+svg .bx{fill:#fff;stroke:#b7c2d2;stroke-width:1}
+svg .bk{fill:var(--ink)}
+svg .ba{fill:var(--accent)}
+svg .bf{fill:var(--field)}
+svg .bs{fill:var(--accent-soft)}
+svg .bg{fill:#d5dbe5}
+svg .bd{fill:#fff;stroke:var(--ink);stroke-width:1.2;stroke-dasharray:4 3}
+svg .ln{stroke:var(--muted);stroke-width:1.2;fill:none}
+svg .lk{stroke:var(--ink);stroke-width:1.5;fill:none}
+svg .la{stroke:var(--accent);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+svg .lf{stroke:var(--field);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+svg .grid{stroke:var(--line);stroke-width:1;fill:none}
+svg .dash{stroke-dasharray:4 3}
+svg [data-tip]{cursor:default}
+svg [data-tip]:hover,svg [data-tip]:focus{filter:brightness(1.18);outline:none}
+#tip{position:fixed;z-index:9;pointer-events:none;max-width:260px;padding:6px 9px;border-radius:7px;background:var(--ink);color:#fff;font-size:11.5px;line-height:1.5;opacity:0;transition:opacity .12s}
+#tip.on{opacity:1}
+#tip b{display:block;font-size:13px}
+
+/* 표 */
+.tbl{width:100%;border-collapse:collapse;font-size:11.8px;line-height:1.56}
+.tbl th{font-size:10.5px;font-weight:700;color:var(--muted);text-align:left;padding:5px 8px;border-bottom:1.5px solid var(--ink);white-space:nowrap}
+.tbl td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl td:first-child,.tbl th:first-child{padding-left:0}
+.tbl td:last-child,.tbl th:last-child{padding-right:0}
+.tbl td.k{font-weight:700;white-space:nowrap}
+.tbl.tight td{padding-top:4px;padding-bottom:4px}
+
+/* 표지 */
+.cover-meta{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);padding-bottom:9px;border-bottom:1.5px solid var(--ink)}
+h1{margin-top:30px;font-size:37px;line-height:1.22;font-weight:780;letter-spacing:-.045em}
+.cover-sub{margin-top:12px;font-size:15px;line-height:1.6;color:var(--muted);max-width:140mm}
+.toc{margin-top:auto;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(4,auto);grid-auto-flow:column;column-gap:26px;font-size:12px}
+.toc a{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--line);color:var(--ink)}
+.toc a span:last-child{color:var(--muted);font-variant-numeric:tabular-nums}
+.toc b{font-weight:700}
+
+/* 출처 */
+ol.src{padding:0;margin:0;list-style:none;columns:2;column-gap:20px;font-size:9.6px;line-height:1.5;counter-reset:src}
+ol.src li{counter-increment:src;position:relative;padding-left:20px;margin-bottom:3.2px;break-inside:avoid}
+ol.src li::before{content:counter(src);position:absolute;left:0;width:15px;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+ol.src a{color:var(--ink)}
+ol.src li:target{background:var(--accent-soft)}
+
+@media screen and (max-width:840px){
+  body{font-size:14px}
+  .sheet{width:auto;min-height:0;margin:0 0 10px;padding:26px 18px 20px;box-shadow:none}
+  .sheet>*,.duo>*,.trio>*{min-width:0;max-width:100%}
+  .run{flex-wrap:wrap;gap:2px 16px}
+  .duo,.trio,.toc{grid-template-columns:1fr}
+  .toc{grid-template-rows:none;grid-auto-flow:row;margin-top:18px}
+  h1{font-size:30px;margin-top:22px}
+  .fig .frame{overflow-x:auto}
+  .fig .frame svg{min-width:560px}
+  .tbl{display:block;overflow-x:auto}
+  ol.src{columns:1}
+}
+@page{size:A4 portrait;margin:0}
+@media print{
+  body{background:#fff}
+  .sheet{margin:0;box-shadow:none;min-height:296.4mm;break-after:page;break-inside:avoid}
+  .sheet:last-of-type{break-after:auto}
+  #tip{display:none}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<marker id="ar" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5 9 5 1 8.5z" fill="#4b5565"/></marker>
+<marker id="arK" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5 9 5 1 8.5z" fill="#18181b"/></marker>
+<marker id="arA" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M1 1.5 9 5 1 8.5z" fill="#1d4ed8"/></marker>
+<marker id="arF" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M1 1.5 9 5 1 8.5z" fill="#c2570c"/></marker>
+</defs></svg>
+
+<!-- 1쪽 표지 -->
+<section class="sheet" id="cover">
+  <div class="cover-meta"><span>social-flow 조사 문서</span><span>2026-11-11</span></div>
+  <h1>질문을 여는 순서가<br>다음 장면을 부른다</h1>
+  <p class="cover-sub">스토리를 재미있게 만드는 구성 기법을 현장 작가·편집자의 방법과 서사학·인지심리학 연구로 대조했다.</p>
+
+  <figure class="fig" style="margin-top:28px">
+    <div class="frame">
+      <svg viewBox="0 0 640 326" role="img" aria-label="같은 다섯 사건을 시간순으로 놓은 배열과 결과의 한 조각을 맨 앞으로 옮긴 배열. 뒤쪽 배열에서는 큰 질문 하나가 처음에 열려 끝에 닫히고 장면마다 작은 질문이 열리고 닫힌다.">
+        <text class="tb" x="0" y="52">일어난 순서</text><text class="tm" x="0" y="68">시간순</text>
+        <g>
+          <rect class="bx" x="96" y="34" width="100" height="44" rx="6"/><text class="ts mid" x="146" y="50">1</text><text class="t mid" x="146" y="67">평범한 하루</text>
+          <rect class="bx" x="207" y="34" width="100" height="44" rx="6"/><text class="ts mid" x="257" y="50">2</text><text class="t mid" x="257" y="67">균열</text>
+          <rect class="bx" x="318" y="34" width="100" height="44" rx="6"/><text class="ts mid" x="368" y="50">3</text><text class="t mid" x="368" y="67">충돌</text>
+          <rect class="bx" x="429" y="34" width="100" height="44" rx="6"/><text class="ts mid" x="479" y="50">4</text><text class="t mid" x="479" y="67">무너짐</text>
+          <rect class="bk" x="540" y="34" width="100" height="44" rx="6"/><text class="mid" x="590" y="50" fill="#fff" font-size="9.5">5</text><text class="tw mid" x="590" y="67">그날 밤</text>
+        </g>
+        <path class="la" d="M590,82 C590,150 137,122 137,189" marker-end="url(#arA)"/>
+        <text class="ta mid halo" x="364" y="139">결과의 한 조각만 맨 앞으로</text>
+
+        <text class="tb" x="0" y="214">들려주는 순서</text><text class="tm" x="0" y="230">재배열</text>
+        <g>
+          <rect class="bk" x="96" y="196" width="82" height="44" rx="6"/><text class="mid" x="137" y="212" fill="#fff" font-size="9.5">5의 한 조각</text><text class="tw mid" x="137" y="229">그날 밤</text>
+          <rect class="bx" x="188.4" y="196" width="82" height="44" rx="6"/><text class="ts mid" x="229.4" y="212">1</text><text class="t mid" x="229.4" y="229">평범한 하루</text>
+          <rect class="bx" x="280.8" y="196" width="82" height="44" rx="6"/><text class="ts mid" x="321.8" y="212">2</text><text class="t mid" x="321.8" y="229">균열</text>
+          <rect class="bx" x="373.2" y="196" width="82" height="44" rx="6"/><text class="ts mid" x="414.2" y="212">3</text><text class="t mid" x="414.2" y="229">충돌</text>
+          <rect class="bx" x="465.6" y="196" width="82" height="44" rx="6"/><text class="ts mid" x="506.6" y="212">4</text><text class="t mid" x="506.6" y="229">무너짐</text>
+          <rect class="bk" x="558" y="196" width="82" height="44" rx="6"/><text class="mid" x="599" y="212" fill="#fff" font-size="9.5">5</text><text class="tw mid" x="599" y="229">그날 밤 전체</text>
+        </g>
+        <!-- 작은 질문 -->
+        <g class="la" style="stroke-width:1.4">
+          <path d="M233.4,247 Q275.6,267 317.8,247"/><path d="M325.8,247 Q368,267 410.2,247"/><path d="M418.2,247 Q460.4,267 502.6,247"/><path d="M510.6,247 Q552.8,267 595,247"/>
+        </g>
+        <g fill="#fff" stroke="#1d4ed8" stroke-width="1.4"><circle cx="233.4" cy="247" r="3"/><circle cx="325.8" cy="247" r="3"/><circle cx="418.2" cy="247" r="3"/><circle cx="510.6" cy="247" r="3"/></g>
+        <g fill="#1d4ed8"><circle cx="317.8" cy="247" r="3"/><circle cx="410.2" cy="247" r="3"/><circle cx="502.6" cy="247" r="3"/><circle cx="595" cy="247" r="3"/></g>
+        <text class="tm mid" x="414" y="282">장면마다 부분 답 하나, 새 질문 하나</text>
+        <!-- 큰 질문 -->
+        <path class="la" d="M116,247 C116,326 620,326 620,247"/>
+        <circle cx="116" cy="247" r="4" fill="#fff" stroke="#1d4ed8" stroke-width="2"/><circle cx="620" cy="247" r="4" fill="#1d4ed8"/>
+        <text class="ta mid halo" x="368" y="310">큰 질문 「어쩌다 여기까지 왔나」</text>
+        <circle cx="5" cy="290" r="3.5" fill="#fff" stroke="#1d4ed8" stroke-width="1.6"/><text class="tm" x="14" y="294">질문이 열린다</text>
+        <circle cx="5" cy="308" r="3.5" fill="#1d4ed8"/><text class="tm" x="14" y="312">질문이 닫힌다</text>
+      </svg>
+    </div>
+    <figcaption><span class="kind concept">개념도</span><b>같은 사건, 다른 순서.</b> 결과의 한 조각을 맨 앞에 두면 큰 질문이 열리고 이어지는 과거 장면이 그 질문을 조금씩 좁힌다.</figcaption>
+  </figure>
+
+  <p class="lead mt20">재미를 만드는 가장 큰 손잡이는 사건 자체보다 <strong>시청자가 무엇을 언제 아느냐</strong>다. 미래 장면은 질문을 여는 열쇠이고 플래시백은 그 질문의 부분 답이다. 갈등 점증은 답을 미루는 동안 판돈을 키우는 일이며 회차 끝은 하나를 닫고 더 큰 하나를 여는 경계다.</p>
+
+  <nav class="toc" aria-label="차례">
+    <a href="#sum"><span><b>한눈에 보기</b> 두 방법과 조건</span><span>2</span></a>
+    <a href="#ch1a"><span><b>1장</b> 결과를 먼저 보여 주기</span><span>3</span></a>
+    <a href="#ch2a"><span><b>2장</b> 누가 더 많이 아는가</span><span>6</span></a>
+    <a href="#ch3a"><span><b>3장</b> 답답함을 다음 장면으로</span><span>8</span></a>
+    <a href="#ch4a"><span><b>4장</b> 클리프행어의 실제</span><span>11</span></a>
+    <a href="#ch5a"><span><b>5장</b> 숏폼·롱폼 설계 지침</span><span>13</span></a>
+    <a href="#fail"><span><b>점검표</b> 실패 유형과 증거 강도</span><span>15</span></a>
+    <a href="#end"><span><b>결론</b> 다음 실험과 출처</span><span>17</span></a>
+  </nav>
+  <footer class="foot"><span>스토리 구성 기법 조사</span><span class="pn">1 / 18</span></footer>
+</section>
+
+<!-- 2쪽 한눈에 보기 -->
+<section class="sheet" id="sum">
+  <header class="run"><span>질문을 여는 순서가 다음 장면을 부른다</span><span>한눈에 보기</span></header>
+  <h2>두 방법 모두 통한다. 다만 조건이 붙는다</h2>
+  <p class="lead narrow">질문에서 든 두 방법을 현장 사례와 연구로 대조했다. 둘 다 효과가 있지만 아래 조건을 갖출 때만 그렇다.</p>
+
+  <div class="duo mt16">
+    <div class="card">
+      <h3>미래를 먼저 보여 주고 회상으로 잇기</h3>
+      <p class="sm mut mt8">「어떻게 될까」(서스펜스)를 「어쩌다 여기까지 왔나」(호기심)로 바꾸는 장치다.</p>
+      <ul class="pts mt8">
+        <li><strong>결과의 일부만</strong> 보여 준다. 누가·왜·어떻게 중 하나 이상은 숨긴다.</li>
+        <li>시청자가 답을 <strong>반쯤 추측</strong>할 수 있어야 한다. 맥락 없는 수수께끼는 호기심이 약하다.</li>
+        <li>과거 장면마다 부분 답 하나를 주고 새 질문 하나를 연다.</li>
+        <li>결말 전체를 첫머리에 밝힌 배열은 실험에서 즐거움이 가장 낮았다(초록 기준).</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>갈등을 점점 키워 답답하게 만들기</h3>
+      <p class="sm mut mt8">네 조건을 갖추면 답답함이 「그래도 다음이 궁금한」 상태가 된다.</p>
+      <ul class="pts mt8">
+        <li><strong>공감이 위협보다 먼저</strong> 온다. 아끼지 않는 인물의 좌절은 무관심을 부른다.</li>
+        <li><strong>적은 강하고 부당</strong>하다.</li>
+        <li>장면마다 장벽이나 판돈이 <strong>커지고 종류가 바뀐다</strong>.</li>
+        <li>답답함의 원인을 <strong>상황의 무게</strong>에 둔다. 인물의 어리석음에 두지 않는다.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 class="mt16">현장의 통념과 연구가 어긋난 세 곳</h3>
+  <table class="tbl mt8">
+    <thead><tr><th>현장의 통념</th><th>연구 결과</th><th>증거</th></tr></thead>
+    <tbody>
+      <tr><td style="width:34%">끝나지 않은 일은 더 잘 기억된다. 그래서 클리프행어가 통한다 (Zeigarnik 효과)</td><td>2025년 메타분석에서 기억 이점이 확인되지 않았다. 중단한 일을 다시 하려는 경향만 확인됐다.</td><td><span class="ev refuted">반박됨</span></td></tr>
+      <tr><td>클리프행어가 다음 화를 보게 만든다</td><td>133명 실험에서 각성만 올랐다. 즐거움과 계속 볼 의향은 높아지지 않았다.</td><td><span class="ev single">단일 연구</span></td></tr>
+      <tr><td>스포일러는 재미를 해치지 않는다</td><td>2011년 결과는 2015년과 2016년 연구에서 재현되지 않았다. 앞에 둔 결말 공개는 손해 쪽이다.</td><td><span class="ev refuted">반박됨</span></td></tr>
+    </tbody>
+  </table>
+  <p class="note mt8">방법은 맞고 이유가 달랐다. 그래서 회차 끝은 위기 직전에 멈추기만 하지 말고 <b>이번 질문 하나를 닫고 더 큰 질문 하나를 여는</b> 구성을 권한다. 직접 검증된 처방은 아니고 연구에서 끌어낸 추론이다.</p>
+
+  <h3 class="mt16">이 문서의 표지 읽는 법</h3>
+  <div class="duo mt8" style="gap:14px 18px">
+    <div>
+      <p class="sm"><span class="chip field">실무</span>&nbsp; 작가·쇼러너·편집자·작법서의 방법</p>
+      <p class="sm"><span class="chip study">학술</span>&nbsp; 논문과 이론</p>
+      <p class="sm mt8"><span class="kind data">실측</span>자료가 보고한 숫자나 판정을 옮긴 그림</p>
+      <p class="sm"><span class="kind concept">개념도</span>이론이나 방법의 구조를 그린 그림. 실험 값이 아니다</p>
+      <p class="sm"><span class="kind infer">추론</span>현장 방법과 연구를 조합해 이 문서가 끌어낸 설계</p>
+    </div>
+    <div>
+      <table class="tbl tight" style="font-size:11.2px">
+        <tbody>
+          <tr><td><span class="ev multi">여러 연구 일치</span></td><td>독립된 둘 이상의 연구가 같은 방향</td></tr>
+          <tr><td><span class="ev single">단일 연구</span></td><td>실험 하나 또는 한 연구실의 결과</td></tr>
+          <tr><td><span class="ev field">실무 합의</span></td><td>여러 실무자가 따로 같은 말을 함</td></tr>
+          <tr><td><span class="ev theory">이론·해설</span></td><td>실험 없이 모델이나 해설로만 제시</td></tr>
+          <tr><td><span class="ev mixed">혼재</span></td><td>연구마다 결과 방향이 다름</td></tr>
+          <tr><td><span class="ev hearsay">2차 전언</span></td><td>원 발언·원 자료를 추적하지 못함</td></tr>
+          <tr><td><span class="ev refuted">반박됨</span></td><td>반복 연구나 메타분석에서 지지받지 못함</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="synth mt12">
+    <span class="chip both">조사의 한계</span>
+    <p>숏폼 영상에서 이 원리를 직접 검증한 동료심사 연구는 찾지 못했다. 5장의 숏폼 지침은 장편 연구와 실무 사례에서 끌어온 외삽이다. 학술 출처 상당수는 초록·보도자료로 확인했다.</p>
+  </div>
+  <footer class="foot"><span>스토리 구성 기법 조사</span><span class="pn">2 / 18</span></footer>
+</section>
+
+<!-- 3쪽 1장-1 -->
+<section class="sheet" id="ch1a">
+  <header class="run"><span>질문을 여는 순서가 다음 장면을 부른다</span><span>1장 결과를 먼저 보여 주기</span></header>
+  <div class="chap">1장</div>
+  <h2>결과를 먼저 보여 주면 서스펜스가 호기심으로 바뀐다</h2>
+  <p class="lead"><span class="chip study">학술</span>&nbsp; 서사학은 사건이 일어난 순서(fabula)와 들려주는 순서(syuzhet)를 나눈다. Brewer와 Lichtenstein의 구조-정서 이론은 이 배열과 감정을 짝지었다. 같은 사건이라도 무엇을 먼저 알리느냐에 따라 시청자가 품는 질문이 달라진다.<sup class="ref"><a href="#src-1">1</a></sup></p>
+
+  <figure class="fig">
+    <div class="frame">
+      <svg viewBox="0 0 640 214" role="img" aria-label="폭탄 이야기의 세 배열. 원인을 먼저 주면 서스펜스, 결과를 먼저 주고 원인을 비워 두면 호기심, 신호 없이 숨겼다가 밝히면 놀람이 생긴다.">
+        <g>
+          <text class="th" x="0" y="26">서스펜스</text><text class="tm" x="0" y="42">「어떻게 될까」</text>
+          <rect class="bk" x="128" y="8" width="152" height="38" rx="6"/><text class="tw mid" x="204" y="31">원인 · 폭탄을 설치한다</text>
+          <path class="ln" d="M284,27H303" marker-end="url(#ar)"/>
+          <rect class="bx" x="308" y="8" width="152" height="38" rx="6"/><text class="t mid" x="384" y="31">경과 · 모르고 대화한다</text>
+          <path class="ln" d="M464,27H483" marker-end="url(#ar)"/>
+          <rect class="bd" x="488" y="8" width="152" height="38" rx="6"/><text class="t mid" x="564" y="31">결과 · 터질까</text>
+          <text class="tm" x="128" y="62">원인을 먼저 알린다. 시청자는 결과를 기다린다.</text>
+        </g>
+        <g transform="translate(0,72)">
+          <text class="th" x="0" y="26">호기심</text><text class="tm" x="0" y="42">「어쩌다 이렇게 됐나」</text>
+          <rect class="bk" x="128" y="8" width="152" height="38" rx="6"/><text class="tw mid" x="204" y="31">결과 · 폐허가 된 방</text>
+          <path class="ln" d="M284,27H303" marker-end="url(#ar)"/>
+          <rect class="bx" x="308" y="8" width="152" height="38" rx="6"/><text class="t mid" x="384" y="31">경과 · 조사가 이어진다</text>
+          <path class="ln" d="M464,27H483" marker-end="url(#ar)"/>
+          <rect class="bd" x="488" y="8" width="152" height="38" rx="6"/><text class="t mid" x="564" y="31">원인 · 누가 왜 그랬나</text>
+          <text class="tm" x="128" y="62">결과를 먼저 준다. 원인이 빠졌다는 것을 시청자가 안다.</text>
+        </g>
+        <g transform="translate(0,144)">
+          <text class="th" x="0" y="26">놀람</text><text class="tm" x="0" y="42">「방금 뭐였지」</text>
+          <rect class="bx" x="128" y="8" width="152" height="38" rx="6"/><text class="t mid" x="204" y="31">경과 · 평범한 대화</text>
+          <path class="ln" d="M284,27H303" marker-end="url(#ar)"/>
+          <rect class="bk" x="308" y="8" width="152" height="38" rx="6"/><text class="tw mid" x="384" y="31">결과 · 예고 없이 터진다</text>
+          <path class="ln" d="M464,27H483" marker-end="url(#ar)"/>
+          <rect class="bx" x="488" y="8" width="152" height="38" rx="6"/><text class="t mid" x="564" y="31">원인 · 뒤늦게 밝혀진다</text>
+          <text class="tm" x="128" y="62">결정적 사건을 신호 없이 숨겼다가 결과 뒤에 밝힌다. 기다리는 빈칸이 없다.</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption><span class="kind concept">개념도</span><b>그림 1. 배열이 감정을 정한다.</b> 검은 칸은 먼저 준 정보, 점선 칸은 시청자가 기다리는 빈칸이다. 구조-정서 이론을 폭탄 이야기로 옮겼다.<sup class="ref"><a href="#src-1">1</a></sup></figcaption>
+  </figure>
+
+  <figure class="fig">
+    <div class="frame">
+      <svg viewBox="0 0 640 122" role="img" aria-label="1981년 폭탄 이야기 실험의 평균 선호도. 서스펜스 판 4.85, 놀람 판 4.30, 폭발을 첫 쪽에 둔 판 3.65, 위협 없는 기본판 2.15. 이야기답다는 평가는 결말이 있으면 4.85, 없으면 2.75.">
+        <text class="tb" x="0" y="12">평균 선호도</text>
+        <path class="grid" d="M176,22V116"/>
+        <g class="ba">
+          <path tabindex="0" data-tip="원인 먼저 (서스펜스 판)|평균 선호도 4.85" d="M176,26h141.5a4,4 0 0 1 4,4v4a4,4 0 0 1-4,4h-141.5z"/>
+          <path tabindex="0" data-tip="신호 없이 숨김 (놀람 판)|평균 선호도 4.30" d="M176,50h125a4,4 0 0 1 4,4v4a4,4 0 0 1-4,4h-125z"/>
+          <path tabindex="0" data-tip="폭발을 첫 쪽에 (뒤섞은 판)|평균 선호도 3.65" d="M176,74h105.5a4,4 0 0 1 4,4v4a4,4 0 0 1-4,4h-105.5z"/>
+          <path tabindex="0" data-tip="위협 없음 (기본판)|평균 선호도 2.15" d="M176,98h60.5a4,4 0 0 1 4,4v4a4,4 0 0 1-4,4h-60.5z"/>
+        </g>
+        <g class="t end"><text x="168" y="36">원인 먼저 (서스펜스 판)</text><text x="168" y="60">신호 없이 숨김 (놀람 판)</text><text x="168" y="84">폭발을 첫 쪽에 (뒤섞은 판)</text><text x="168" y="108">위협 없음 (기본판)</text></g>
+        <g class="tb"><text x="328" y="36">4.85</text><text x="311.5" y="60">4.30</text><text x="292" y="84">3.65</text><text x="247" y="108">2.15</text></g>
+
+        <text class="tb" x="400" y="12">「이야기답다」는 평가</text>
+        <path class="grid" d="M462,22V68"/>
+        <g class="ba">
+          <path tabindex="0" data-tip="결말 있음|이야기답다 4.85" d="M462,26h141.5a4,4 0 0 1 4,4v4a4,4 0 0 1-4,4h-141.5z"/>
+          <path tabindex="0" data-tip="결말 없음|이야기답다 2.75" d="M462,50h78.5a4,4 0 0 1 4,4v4a4,4 0 0 1-4,4h-78.5z"/>
+        </g>
+        <g class="t end"><text x="454" y="36">결말 있음</text><text x="454" y="60">결말 없음</text></g>
+        <g class="tb"><text x="614" y="36">4.85</text><text x="551" y="60">2.75</text></g>
+        <text class="tm" x="400" y="90">결말을 빼면 이야기로 읽히지 않는다.</text>
+      </svg>
+    </div>
+    <figcaption><span class="kind data">실측</span><b>그림 2. 폭탄 이야기 실험(1981)의 평균 평정.</b> 평균만 보고된 단일 실험이다. 폭발을 앞에 둔 판은 서스펜스 이야기를 뒤섞은 변형이었고 호기심을 노린 설계는 없었다. 「플래시포워드는 손해」라는 근거로 읽으면 안 된다.<sup class="ref"><a href="#src-2">2</a></sup></figcaption>
+  </figure>
+
+  <div class="duo mt16">
+    <div class="lane study">
+      <span class="chip study">학술</span>
+      <h3>다른 실험도 같은 방향이다</h3>
+      <ul class="pts">
+        <li>Knobloch 외(2004)의 세 연구에서 <strong>선형은 서스펜스를, 역전은 호기심을</strong> 가장 크게 만들었다. 두 구조 모두 역피라미드보다 즐거웠고 뉴스든 소설이든 같았다.<sup class="ref"><a href="#src-3">3</a></sup></li>
+        <li>Delatorre 외(2018, 68명)에서 결말을 첫머리에 밝히면 첫 읽기의 서스펜스가 유의하게 낮았다.<sup class="ref"><a href="#src-4">4</a></sup></li>
+      </ul>
+      <p class="note mt8">초록은 구조 이름만 준다. 「역전은 결과를 먼저 주고 경위를 숨김」, 「역피라미드는 결말까지 다 밝힘」이라는 풀이는 조사 노트의 해석이다.</p>
+      <p class="mt8"><span class="ev multi">여러 연구 일치</span> <span class="note">원문 수치 일부 미확인</span></p>
+    </div>
+    <div class="lane study">
+      <span class="chip study">학술</span>
+      <h3>플래시포워드는 드물어서 눈에 띈다</h3>
+      <ul class="pts">
+        <li>Genette는 뒷일을 미리 보여 주는 prolepsis(플래시포워드)가 앞선 일을 꺼내는 analepsis(플래시백)보다 <strong>문학과 영화 모두에서 훨씬 드물다</strong>고 관찰했다.<sup class="ref"><a href="#src-5">5</a></sup></li>
+        <li>드문 만큼 강한 장치이고 남용하면 기교로 읽힌다.</li>
+        <li>Fry(2025)는 「결과 먼저」 배열이 호기심의 필요조건도 충분조건도 아니라고 비판한다.<sup class="ref"><a href="#src-6">6</a></sup></li>
+      </ul>
+      <p class="mt8"><span class="ev theory">이론·해설</span></p>
+    </div>
+  </div>
+  <footer class="foot"><span>스토리 구성 기법 조사</span><span class="pn">3 / 18</span></footer>
+</section>
+
+<!-- 4쪽 1장-2 -->
+<section class="sheet" id="ch1b">
+  <header class="run"><span>질문을 여는 순서가 다음 장면을 부른다</span><span>1장 결과를 먼저 보여 주기</span></header>
+  <h2>현장은 미래 조각을 잘게 나눠 여러 번 틀었다</h2>
+  <p class="lead"><span class="chip field">실무</span>&nbsp; 미래 장면으로 여는 드라마들은 결과를 한 번에 풀지 않았다. 상황, 장소, 시체의 존재 같은 결과의 한 부분만 보여 주고 누가·왜·어떻게는 감췄다.</p>
+
+  <table class="tbl mt12">
+    <thead><tr><th>작품</th><th>먼저 보여 준 것</th><th>숨긴 것</th><th>회수와 변주</th></tr></thead>
+    <tbody>
+      <tr><td class="k">〈브레이킹 배드〉 시즌2</td><td>수영장에 떠 있는 분홍 곰인형. 흑백 화면에 곰인형만 분홍색이다</td><td>무슨 일이 왜 일어났나</td><td>네 회에 걸쳐 조각을 보태고 시즌 끝의 비행기 충돌로 회수한다<sup class="ref"><a href="#src-7">7</a><a href="#src-8">8</a></sup></td></tr>
+      <tr><td class="k">〈데미지스〉</td><td>같은 미래 장면</td><td>누가·왜·어떻게</td><td>시즌 내내 다시 재생하고 섞고 덧붙였다<sup class="ref"><a href="#src-9">9</a></sup></td></tr>
+      <tr><td class="k">〈빅 리틀 라이즈〉 시즌1</td><td>경찰 조사를 받는 마을 사람들</td><td>누가 죽었고 누가 죽였나</td><td>미래 컷을 그리스 코러스처럼 끼워 넣고 피날레까지 숨겼다<sup class="ref"><a href="#src-10">10</a><a href="#src-11">11</a></sup></td></tr>
+      <tr><td class="k">〈SKY캐슬〉 1회</td><td>모두의 부러움을 사던 이명주가 눈밭에서 생을 마감한다</td><td>왜 그랬나</td><td>시청자가 이유를 추리하기 시작했다<sup class="ref"><a href="#src-12">12</a></sup></td></tr>
+      <tr><td class="k">〈시그널〉</td><td>과거에서 걸려 온 무전이 현재와 과거의 형사를 잇는다</td><td>해당 없음. 플래시포워드가 아닌 변형이다</td><td>과거가 실시간으로 바뀌어 과거 장면에도 서스펜스가 생긴다<sup class="ref"><a href="#src-13">13</a></sup></td></tr>
+    </tbody>
+  </table>
+  <p class="note mt8">언론은 〈SKY캐슬〉 1회의 이 장면을 시청률이 1.7%에서 4.6%로 오른 계기로 꼽았다. 두 수치는 집계 기준이 전국과 수도권으로 달라 추세로 읽을 수 없고 배우·입소문 같은 다른 요인과도 떼어 낼 수 없다.<sup class="ref"><a href="#src-14">14</a></sup></p>
+
+  <figure class="fig">
+    <div class="frame">
+      <svg viewBox="0 0 640 194" role="img" aria-label="호기심은 답을 맞힐 확신이 약 50%일 때 가장 높은 역U자 곡선이다. 확신이 0에 가까운 맥락 없는 수수께끼와 확신이 100%인 결말 전체 공개는 둘 다 호기심이 약하다.">
+        <rect x="250" y="28" width="160" height="112" fill="#1d4ed8" opacity=".08" rx="6"/>
+        <path class="ln" d="M60,30V140H600"/>
+        <text class="tm" x="52" y="36" text-anchor="end">호기심</text>
+        <path class="la" d="M60,140 Q330,-40 600,140"/>
+        <circle cx="330" cy="50" r="5" fill="#1d4ed8" stroke="#f4f6f9" stroke-width="2"/>
+        <text class="tb mid" x="330" y="18">결과의 일부만 보여 줄 때</text>
+        <text class="tm mid" x="330" y="78">답을 반쯤 추측한다</text>
+        <text class="tm" x="60" y="157">0%</text><text class="tm mid" x="330" y="157">약 50%</text><text class="tm end" x="600" y="157">100%</text>
+        <text class="tb" x="60" y="176">맥락 없는 수수께끼</text><text class="tm" x="60" y="191">짐작도 못 해 호기심이 약하다</text>
+        <text class="tm mid" x="330" y="176">답을 맞힐 확신</text>
+        <text class="tb end" x="600" y="176">결말 전체 공개</text><text class="tm end" x="600" y="191">빈칸이 사라진다</text>
+      </svg>
+    </div>
+    <figcaption><span class="kind concept">개념도</span><b>그림 3. 호기심은 반쯤 알 때 가장 크다.</b> Kang 외(2009)가 보고한 역U자의 모양만 옮겼고 세로 눈금에 값은 없다. 상식 퀴즈 실험(19명)이라 이야기 훅에 옮기는 것은 외삽이다.<sup class="ref"><a href="#src-15">15</a></sup></figcaption>
+  </figure>
+
+  <div class="duo mt16">
+    <div class="lane study">
+      <span class="chip study">학술</span>
+      <h3>호기심은 빈칸을 알아챌 때 생긴다</h3>
+      <ul class="pts">
+        <li>Loewenstein(1994)은 호기심을 <strong>자기 지식의 빈칸을 알아챌 때 생기는 인지적 결핍</strong>으로 다시 정의했다.<sup class="ref"><a href="#src-16">16</a></sup></li>
+        <li>Kang 외(2009)에서 호기심이 클수록 피험자는 답을 알려고 토큰과 대기 시간을 더 썼다. 처음 추측이 틀렸던 답은 1~2주 뒤에도 더 잘 기억했다.<sup class="ref"><a href="#src-15">15</a></sup></li>
+        <li>Gruber 외(2014)에서는 호기심이 걸린 동안 본 <strong>무관한 얼굴 사진까지</strong> 더 잘 기억됐다.<sup class="ref"><a href="#src-17">17</a></sup></li>
+      </ul>
+      <p class="mt8"><span class="ev single">단일 연구</span> <span class="note">서사 적용은 외삽</span></p>
+    </div>
+    <div class="lane">
+      <span class="chip both">둘을 합치면</span>
+      <h3>미래 조각은 질문을 여는 열쇠이지 답이 아니다</h3>
+      <ul class="pts">
+        <li>미래 장면은 시청자가 답을 반쯤 추측할 수 있을 만큼 보여 준다.</li>
+        <li>〈빅 리틀 라이즈〉가 「누가 죽었나」를 숨긴 방식과 〈브레이킹 배드〉가 원인을 숨긴 방식은 이론이 예측하는 최적 지점에 가깝다.</li>
+        <li>Gruber의 결과대로라면 큰 질문이 열려 있는 동안이 세계관·인물 설명을 넣기에 가장 좋은 구간이다.</li>
+      </ul>
+    </div>
+  </div>
+  <footer class="foot"><span>스토리 구성 기법 조사</span><span class="pn">4 / 18</span></footer>
+</section>
+
+<!-- 5쪽 1장-3 -->
+<section class="sheet" id="ch1c">
+  <header class="run"><span>질문을 여는 순서가 다음 장면을 부른다</span><span>1장 결과를 먼저 보여 주기</span></header>
+  <h2>과거 장면은 부분 답을 주고 새 질문을 연다</h2>
+  <p class="lead narrow">미래 조각으로 연 질문은 한 번에 닫지 않는다. 과거 장면이 그 질문에 한 걸음 다가가면서 새 하위 질문을 열고 같은 미래 장면을 다시 틀 때마다 정보 한 조각을 더한다.</p>
+
+  <figure class="fig">
+    <div class="frame">
+      <svg viewBox="0 0 640 196" role="img" aria-label="질문 사슬. 미래 조각이 큰 질문을 열고 과거 장면과 미래 장면 재생을 되풀이하며 작은 질문이 열리고 닫힌다. 두 시간대가 만나면 큰 질문이 닫히고 그 답이 다음 질문을 연다.">
+        <rect class="bk" x="0" y="6" width="140" height="50" rx="7"/><text class="tw mid" x="70" y="27">미래 조각</text><text class="mid" x="70" y="44" fill="#fff" font-size="10" opacity=".86">결과의 일부만 보여 준다</text>
+        <path class="ln" d="M144,31H161" marker-end="url(#ar)"/>
+        <rect class="bx" x="166.7" y="6" width="140" height="50" rx="7"/><text class="tb mid" x="236.7" y="27">과거 장면</text><text class="tm mid" x="236.7" y="44">부분 답 + 새 하위 질문</text>
+        <path class="ln" d="M310.7,31H327.6" marker-end="url(#ar)"/>
+        <rect class="bx" x="333.3" y="6" width="140" height="50" rx="7"/><text class="tb mid" x="403.3" y="27">미래 장면 다시</text><text class="tm mid" x="403.3" y="44">새 정보 한 조각을 더한다</text>
+        <path class="ln" d="M477.3,31H494.3" marker-end="url(#ar)"/>
+        <rect class="bx" x="500" y="6" width="140" height="50" rx="7"/><text class="tb mid" x="570" y="27">두 시간대가 만난다</text><text class="tm mid" x="570" y="44">큰 질문을 닫는다</text>
+        <path class="ln" d="M403.3,60 C403.3,86 236.7,86 236.7,63" marker-end="url(#ar)"/>
+        <text class="tm mid" x="320" y="99">큰 질문이 닫힐 때까지 되풀이한다</text>
+        <path class="grid dash" d="M70,60V132M570,60V180"/>
+
+        <text class="tb" x="0" y="140">큰 질문</text>
+        <path class="la" d="M74,136H566"/>
+        <circle cx="70" cy="136" r="4" fill="#f4f6f9" stroke="#1d4ed8" stroke-width="2"/><circle cx="570" cy="136" r="4" fill="#1d4ed8"/>
+        <text class="tm" x="0" y="164">작은 질문</text>
+        <g class="la" style="stroke-width:1.4"><path d="M240.7,160H316"/><path d="M324,160H399.3"/><path d="M407.3,160H482.6"/><path d="M490.6,160H566"/></g>
+        <g fill="#f4f6f9" stroke="#1d4ed8" stroke-width="1.4"><circle cx="236.7" cy="160" r="3"/><circle cx="321" cy="160" r="3" transform="translate(3,0)"/><circle cx="403.3" cy="160" r="3" transform="translate(3,0)"/><circle cx="486.6" cy="160" r="3" transform="translate(3,0)"/></g>
+        <g fill="#1d4ed8"><circle cx="316" cy="160" r="3"/><circle cx="399.3" cy="160" r="3"/><circle cx="482.6" cy="160" r="3"/><circle cx="566" cy="160" r="3"/></g>
+        <text class="tm" x="0" y="188">다음 질문</text>
+        <path class="la" d="M578,184H632" marker-end="url(#arA)"/>
+        <circle cx="574" cy="184" r="4" fill="#f4f6f9" stroke="#1d4ed8" stroke-width="2"/>
+      </svg>
+    </div>
+    <figcaption><span class="kind infer">추론</span><b>그림 4. 질문 사슬.</b> 위는 장면의 흐름, 아래는 그동안 열려 있는 질문이다. 〈브레이킹 배드〉는 시즌2의 질문을 닫으며 건져 올린 곰인형 눈알로 시즌3의 질문을 열었다.<sup class="ref"><a href="#src-8">8</a></sup></figcaption>
+  </figure>
+
+  <div class="duo mt16">
+    <div class="lane field">
+      <span class="chip field">실무</span>
+      <h3>플래시백을 짜는 규칙</h3>
+      <ul class="pts">
+        <li>Linda Aronson은 과거와 현재 두 이야기를 <strong>각자의 시간대 안에서 완결된 이야기</strong>로 만들라고 가르친다. 특별한 한 장면에서 둘을 잇고 정해진 클리프행어 지점에서 시간대를 오간다.<sup class="ref"><a href="#src-18">18</a></sup></li>
+        <li>이런 구조의 현재 이야기는 보통 2막 전환점이나 클라이맥스에서 시작한다.</li>
+        <li>〈21그램〉의 플래시포워드는 관객에게 사후 지식을 미리 줘서 긴 설정 구간도 지루하지 않게 만든다.</li>
+        <li>Script Reader Pro는 플래시백마다 <strong>이해관계를 올려야 한다</strong>고 쓴다. 이야기를 진전시키거나 인물·주제를 드러내지 못하면 대본에 자리가 없다.<sup class="ref"><a href="#src-19">19</a></sup></li>
+        <li>들어갈 때는 소리나 이미지 트리거를 쓴다. 지루한 구간을 살리려고 쓰지 않는다. 플래시백이 2~3개를 넘으면 과의존을 의심한다.</li>
+      </ul>
+    </div>
+    <div class="lane field">
+      <span class="chip field">실무</span>
+      <h3>비용도 뚜렷하다</h3>
+      <ul class="pts">
+        <li>〈하우 투 겟 어웨이 위드 머더〉의 Pete Nowalk는 현재가 플래시포워드를 따라잡아 자연스럽게 맞물리게 하는 일이 「늘 어렵다」고 말했다.<sup class="ref"><a href="#src-20">20</a></sup></li>
+        <li>〈로스트〉의 Damon Lindelof는 플래시백이 <strong>「유한한」 자원</strong>이었다고 회고했다.<sup class="ref"><a href="#src-21">21</a></sup></li>
+        <li>〈알함브라 궁전의 추억〉은 종영 뒤 회상 장면 남발을 비판받았다.<sup class="ref"><a href="#src-22">22</a></sup></li>
+        <li>반대로 〈응답하라〉 시리즈의 반복 회상은 시청자 욕구를 채운다고 본 연구가 있다.<sup class="ref"><a href="#src-23">23</a></sup></li>
+      </ul>
+      <p class="note mt8"><b>회상의 양보다 그 회상이 현재의 질문에 답하느냐가 관건이다.</b></p>
+    </div>
+  </div>
+
+  <div class="synth mt16">
+    <span class="chip both">1장 정리</span>
+    <h3>결과의 일부로 열고, 부분 답으로 좁히고, 합류점에서 닫는다</h3>
+    <p>아무 맥락 없는 수수께끼는 확신이 0에 가까워 호기심이 약하다. 결말 전체를 보여 주면 빈칸이 사라진다. 그 사이에서 시청자가 답을 반쯤 추측하게 만들고 두 시간대가 만나는 곳에서 큰 질문을 닫는다. 그 답이 다음 질문을 연다.</p>
+  </div>
+  <footer class="foot"><span>스토리 구성 기법 조사</span><span class="pn">5 / 18</span></footer>
+</section>
+
+<!-- 6쪽 2장-1 -->
+<section class="sheet" id="ch2a">
+  <header class="run"><span>질문을 여는 순서가 다음 장면을 부른다</span><span>2장 누가 더 많이 아는가</span></header>
+  <div class="chap">2장</div>
+  <h2>시청자가 인물보다 많이 알면 걱정하고 같이 모르면 추리한다</h2>
+  <p class="lead"><span class="chip field">실무</span>&nbsp; 히치콕은 트뤼포에게 탁자 밑 폭탄 비유를 들었다. 같은 폭발이라도 관객이 미리 아느냐에 따라 15초의 놀람이 되거나 15분의 서스펜스가 된다.<sup class="ref"><a href="#src-24">24</a></sup></p>
+
+  <figure class="fig">
+    <div class="frame">
+      <svg viewBox="0 0 640 90" role="img" aria-label="히치콕의 비유. 예고 없이 터지면 놀람 15초, 관객이 1시에 터진다는 것을 알면 서스펜스 15분.">
+        <text class="tb" x="0" y="12">놀람</text><text class="tm" x="34" y="12">예고 없이 터진다</text>
+        <path class="ba" tabindex="0" data-tip="놀람|15초" d="M0,20h5a4,4 0 0 1 4,4v4a4,4 0 0 1-4,4h-5z"/><text class="tb" x="16" y="30">15초</text>
+        <text class="tb" x="0" y="60">서스펜스</text><text class="tm" x="56" y="60">1시에 터진다는 것을 관객이 알고 무대에 시계가 있다</text>
+        <path class="ba" tabindex="0" data-tip="서스펜스|15분" d="M0,68h536a4,4 0 0 1 4,4v4a4,4 0 0 1-4,4h-536z"/><text class="tb" x="548" y="78">15분</text>
+      </svg>
+    </div>
+    <figcaption><span class="kind concept">개념도</span><b>그림 5. 탁자 밑 폭탄.</b> 히치콕이 비유로 든 두 길이를 같은 눈금에 그렸다. 실험 수치가 아니다. 히치콕은 예상 밖 결말 자체가 하이라이트일 때는 놀람이 맞다는 단서를 달았고 〈사이코〉에서는 놀람에 기댔다.<sup class="ref"><a href="#src-24">24</a></sup></figcaption>
+  </figure>
+
+  <figure class="fig">
+    <div class="frame">
+      <svg viewBox="0 0 640 230" role="img" aria-label="정보 배분 판단 흐름. 시청자가 인물을 걱정하길 원하면 더 준다. 함께 알아내길 원하면 인물과 같은 만큼 준다. 앞 장면을 다시 보길 원하면 신호 없이 숨긴다.">
+        <rect class="bk" x="190" y="0" width="260" height="34" rx="7"/><text class="tw mid" x="320" y="22">시청자가 무엇을 하길 원하나</text>
+        <path class="ln" d="M320,34V50M100,50H540"/>
+        <path class="ln" d="M100,50V61" marker-end="url(#ar)"/><path class="ln" d="M320,50V61" marker-end="url(#ar)"/><path class="ln" d="M540,50V61" marker-end="url(#ar)"/>
+        <g>
+          <rect class="bx" x="0" y="66" width="200" height="162" rx="8"/>
+          <text class="tm mid" x="100" y="86">인물을 걱정하길</text>
+          <text class="th mid" x="100" y="108">시청자에게 더 준다</text>
+          <text class="tm mid" x="100" y="125">위협·시한·계획을 먼저 알린다</text>
+          <text class="ts" x="20" y="148">시청자</text><rect class="ba" x="62" y="140" width="100" height="9" rx="2"/>
+          <text class="ts" x="20" y="164">인물</text><rect class="bg" x="62" y="156" width="50" height="9" rx="2"/>
+          <text class="ts mid" x="100" y="184">시청자만 위협을 안다</text>
+          <path class="grid" d="M16,194H184"/>
+          <text class="tb mid" x="100" y="214">서스펜스 · 극적 아이러니</text>
+        </g>
+        <g transform="translate(220,0)">
+          <rect class="bx" x="0" y="66" width="200" height="162" rx="8"/>
+          <text class="tm mid" x="100" y="86">인물과 함께 알아내길</text>
+          <text class="th mid" x="100" y="108">인물과 같은 만큼 준다</text>
+          <text class="tm mid" x="100" y="125">인물이 아는 범위에 묶는다</text>
+          <text class="ts" x="20" y="148">시청자</text><rect class="ba" x="62" y="140" width="50" height="9" rx="2"/><rect class="bd" x="114" y="140" width="48" height="9" rx="2" style="stroke-width:1"/>
+          <text class="ts" x="20" y="164">인물</text><rect class="bg" x="62" y="156" width="50" height="9" rx="2"/><rect class="bd" x="114" y="156" width="48" height="9" rx="2" style="stroke-width:1"/>
+          <text class="ts mid" x="100" y="184">둘 다 빈칸이 있다는 것을 안다</text>
+          <path class="grid" d="M16,194H184"/>
+          <text class="tb mid" x="100" y="214">미스터리</text>
+        </g>
+        <g transform="translate(440,0)">
+          <rect class="bx" x="0" y="66" width="200" height="162" rx="8"/>
+          <text class="tm mid" x="100" y="86">앞 장면을 다시 보길</text>
+          <text class="th mid" x="100" y="108">신호 없이 숨긴다</text>
+          <text class="tm mid" x="100" y="125">결과 뒤에 밝힌다</text>
+          <text class="ts" x="20" y="148">시청자</text><rect class="ba" x="62" y="140" width="50" height="9" rx="2"/>
+          <text class="ts" x="20" y="164">인물</text><rect class="bg" x="62" y="156" width="50" height="9" rx="2"/>
+          <text class="ts mid" x="100" y="184">빈칸이 있는 줄 모른다</text>
+          <path class="grid" d="M16,194H184"/>
+          <text class="tb mid" x="100" y="214">반전 · 놀람</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption><span class="kind infer">추론</span><b>그림 6. 정보를 누구에게 얼마나 줄까.</b> 막대는 아는 양, 점선 칸은 알아챈 빈칸이다. 플래시포워드는 앞의 두 방식을 한 번에 쓴다. 〈빅 리틀 라이즈〉의 경찰 조사 컷은 현재 장면 전체에 탁자 밑 폭탄을 깔면서 누가·왜는 숨겼다.</figcaption>
+  </figure>
+
+  <div class="duo mt16">
+    <div class="lane study">
+      <span class="chip study">학술</span>
+      <h3>서술의 범위가 감정을 정한다</h3>
+      <ul class="pts">
+        <li>Bordwell은 관객 지식을 인물보다 넓히면(비제한 서술) 서스펜스와 극적 아이러니가, 인물과 같은 만큼 묶으면(제한 서술) 인물과 함께 겪는 놀람이 생긴다고 정리한다.<sup class="ref"><a href="#src-24">24</a></sup></li>
+        <li>서스펜스에는 <strong>위협의 존재는 알되 결과는 몰라야</strong> 한다. 이 구분은 Lessing(1766) 이래 잘 짜인 극 전통에서 이미 당연하게 쓰였다.</li>
+        <li>Brewer(1982)의 사례에서 인물은 평범하게 차를 몰고 귀가할 뿐인데 독자만 연료관이 새는 것을 안다. 인물의 목표에 어려움이 없는데도 피험자들은 이 글을 이야기로 판정했다.<sup class="ref"><a href="#src-25">25</a></sup></li>
+      </ul>
+    </div>
+    <div class="lane study">
+      <span class="chip study">학술</span>
+      <h3>시간 압박은 몰입을 움직인다</h3>
+      <ul class="pts">
+        <li>Cabañas 외(2023, 42명)에서 인물이 모르는 정보를 받은 관객은 장면을 묘사할 때 인물의 믿음을 가리키는 단어를 더 많이 썼다. 개념 증명이고 서스펜스를 직접 재지는 않았다.<sup class="ref"><a href="#src-26">26</a></sup></li>
+        <li>Tal-Or와 Cohen(2010)에서 <strong>사건이 언제 벌어지는지 알려 주는 정보</strong>는 몰입만 움직였고 즐거움에 기여한 쪽은 몰입이었다.<sup class="ref"><a href="#src-27">27</a></sup></li>
+        <li>「곧 무슨 일이 벌어진다」는 시간 압박을 분명히 보여 주는 일이 인물 호감을 쌓는 일만큼 중요하다는 추론이 나온다.</li>
+      </ul>
+      <p class="mt8"><span class="ev field">실무 합의</span> <span class="note">소규모 연구가 보강</span></p>
+    </div>
+  </div>
+  <footer class="foot"><span>스토리 구성 기법 조사</span><span class="pn">6 / 18</span></footer>
+</section>
+
+<!-- 7쪽 2장-2 -->
+<section class="sheet" id="ch2b">
+  <header class="run"><span>질문을 여는 순서가 다음 장면을 부른다</span><span>2장 누가 더 많이 아는가</span></header>
+  <h2>반전은 놀랍되 되돌아보면 필연이어야 한다</h2>
+  <p class="lead narrow"><span class="chip study">학술</span>&nbsp; 경제학자 Ely, Frankel, Kamenica(2015)는 서스펜스와 놀람을 시청자 믿음의 움직임으로 정식화했다. 놀람은 이미 일어난 변화이고 서스펜스는 앞으로 일어날 수 있는 변화다.<sup class="ref"><a href="#src-28">28</a></sup></p>
+
+  <figure class="fig">
+    <div class="frame">
+      <svg viewBox="0 0 640 172" role="img" aria-label="시청자의 믿음이 시간에 따라 움직이는 선. 방금 크게 바뀐 폭이 놀람이고 다음 순간 바뀔 수 있는 폭이 서스펜스다.">
+        <path class="ln" d="M40,16V150H612"/>
+        <text class="tm" x="48" y="20">시청자의 믿음</text><text class="ts" x="48" y="34">예: 주인공이 이길 가능성</text>
+        <text class="tm end" x="612" y="166">시간</text>
+        <polygon points="330,70 520,18 520,140" fill="#1d4ed8" opacity=".12"/>
+        <path class="la dash" style="stroke-width:1.4" d="M330,70L520,18M330,70L520,140"/>
+        <path class="lk" style="stroke-width:2" d="M40,118L100,108L160,114L205,110L216,58L270,64L330,70"/>
+        <path class="lf" style="stroke-width:1.6" d="M221,60H229M225,60V108M221,108H229"/>
+        <text class="tb" x="236" y="98">놀람</text><text class="tm" x="236" y="113">방금 믿음이 얼마나 바뀌었나</text>
+        <circle cx="330" cy="70" r="4.5" fill="#18181b" stroke="#f4f6f9" stroke-width="2"/>
+        <text class="tm mid" x="330" y="54">지금</text>
+        <text class="tb" x="532" y="66">서스펜스</text><text class="tm" x="532" y="82">다음 순간 믿음이</text><text class="tm" x="532" y="96">얼마나 바뀔 수 있나</text>
+      </svg>
+    </div>
+    <figcaption><span class="kind concept">개념도</span><b>그림 7. 놀람은 지나간 폭, 서스펜스는 남은 폭.</b> Ely 외(2015)의 정의를 그림으로 옮겼다. 선의 모양은 예시다.<sup class="ref"><a href="#src-28">28</a></sup></figcaption>
+  </figure>
+
+  <div class="duo mt16">
+    <div class="lane field">
+      <span class="chip field">실무·고전</span>
+      <h3>공정한 반전의 규칙</h3>
+      <ul class="pts">
+        <li>Aristotle 『시학』은 사건이 갑자기 닥치면서 원인과 결과로 이어질 때 효과가 크다고 썼다. <strong>가장 좋은 발견은 상황의 반전과 동시에 일어난다.</strong> 오이디푸스를 안심시키러 온 사자가 그의 정체를 밝히는 장면이 예다.<sup class="ref"><a href="#src-29">29</a></sup></li>
+        <li>Ronald Knox의 탐정소설 10계명(1929) 8조는 탐정이 독자에게 보여 주지 않은 단서에 기대서는 안 된다고 정했다.<sup class="ref"><a href="#src-30">30</a></sup></li>
+        <li>체호프는 아무도 쏠 계획이 없다면 장전된 총을 무대에 올리지 말라고 편지에 썼다.<sup class="ref"><a href="#src-31">31</a></sup></li>
+      </ul>
+      <p class="note mt8">둘 다 절대 규칙은 아니다. 체호프 본인의 『벚꽃 동산』에 쏘지 않는 총이 두 자루 있고 Knox도 규칙이 너무 많으면 문체를 옥죈다고 경고했다.</p>
+    </div>
+    <div class="lane study">
+      <span class="chip study">학술</span>
+      <h3>서스펜스 점검 질문 하나</h3>
+      <ul class="pts">
+        <li>Wilmot와 Keller(2020)의 계산 모델에서 사람의 서스펜스 평정을 가장 잘 예측한 변수는 사후적 놀람이 아니었다. <strong>다음 전개의 가능성 폭이 얼마나 줄어드는가</strong>였다.<sup class="ref"><a href="#src-32">32</a></sup></li>
+        <li>장면마다 「이 장면이 다음 전개의 가능성을 얼마나 바꾸는가」를 물으면 서스펜스 점검으로 쓸 만하다.</li>
+        <li>Ely는 대중 해설에서 창작자들이 놀람을 과용한다고 주장했다. 반전마다 관객이 다음 반전을 기대하게 되므로 반전을 줄여야 각 반전의 값이 커진다.<sup class="ref"><a href="#src-33">33</a></sup></li>
+      </ul>
+      <p class="mt8"><span class="ev theory">이론·해설</span> <span class="note">반전 수와 즐거움을 직접 잰 실험은 찾지 못했다</span></p>
+    </div>
+  </div>
+
+  <div class="duo mt16">
+    <div class="lane field">
+      <span class="chip field">실무·비평</span>
+      <h3>미스터리 박스는 반대 사례다</h3>
+      <ul class="pts">
+        <li>Slate의 Forrest Wickman은 J.J. Abrams의 상자에 「대개 거의 정확히 예상한 것」이 들어 있다고 썼다. 다른 비평은 미스터리가 인물 심리보다 관객용 볼거리에 쓰인다고 지적했다.<sup class="ref"><a href="#src-34">34</a></sup></li>
+        <li>질문을 쌓기만 하고 인물 감정으로 닫지 않으면 피로가 쌓인다.</li>
+      </ul>
+    </div>
+    <div class="lane study">
+      <span class="chip study">학술</span>
+      <h3>맞아떨어지는 추론도 즐겁다</h3>
+      <ul class="pts">
+        <li>Ellithorpe와 Brookes(2018)의 장기 시리즈 피날레 전후 설문에서 팬 이론을 믿은 시청자와 스포일러를 접한 시청자의 즐거움이 오히려 높았다.<sup class="ref"><a href="#src-35">35</a></sup></li>
+        <li>추론할 단서를 공정하게 깔아 두는 일은 반전의 충격만큼 값어치가 있다.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="synth mt16">
+    <span class="chip both">2장 정리</span>
+    <h3>더 주면 걱정하고, 같이 묶으면 추리하고, 숨기면 놀란다</h3>
+    <p>정보 배분은 시청자에게 시키고 싶은 일에서 거꾸로 정한다. 반전은 단서를 공정하게 깔아 두었을 때 값이 나고 질문은 인물의 감정으로 닫아야 피로가 쌓이지 않는다.</p>
+  </div>
+  <footer class="foot"><span>스토리 구성 기법 조사</span><span class="pn">7 / 18</span></footer>
+</section>
+
+<!-- 3장-1 -->
+<section class="sheet" id="ch3a">
+  <header class="run"><span>질문을 여는 순서가 다음 장면을 부른다</span><span>3장 답답함을 다음 장면으로</span></header>
+  <div class="chap">3장</div>
+  <h2>갈등 엔진은 기대와 결과의 간극이다</h2>
+  <p class="lead"><span class="chip field">실무</span>&nbsp; McKee는 「갈등을 거치지 않고는 이야기에서 아무것도 앞으로 나아가지 않는다」고 썼다. 인물의 행동에 <strong>세계가 예상과 다르게 또는 예상보다 세게 반응하는 순간</strong>(Gap)이 되돌릴 수 없는 지점을 만든다.<sup class="ref"><a href="#src-36">36</a></sup></p>
+
+  <figure class="fig">
+    <div class="frame">
+      <svg viewBox="0 0 640 218" role="img" aria-label="시도와 결과의 계단. 세 번의 시도는 yes but 또는 no and로 끝나고 후반에 yes and로 넘어가 목표에 닿는다.">
+        <path class="grid dash" d="M40,24H600"/><text class="tm end" x="600" y="16">목표</text>
+        <path class="ln" d="M40,24V180H600M170,176V184M300,176V184M430,176V184"/>
+        <text class="ts" x="48" y="42">위로 갈수록 목표에 가깝다</text>
+        <path class="lk" style="stroke-width:2" d="M40,128L170,106L300,146L430,120"/>
+        <path class="la" style="stroke-width:2.6" d="M430,120L600,30"/>
+        <g fill="#18181b" stroke="#f4f6f9" stroke-width="2"><circle cx="40" cy="128" r="4.5"/><circle cx="170" cy="106" r="4.5"/><circle cx="300" cy="146" r="4.5"/><circle cx="430" cy="120" r="4.5"/></g>
+        <circle cx="600" cy="30" r="5" fill="#1d4ed8" stroke="#f4f6f9" stroke-width="2"/>
+        <text class="tb mid" x="105" y="96">yes, but</text>
+        <text class="tb mid" x="235" y="154">no, and</text>
+        <text class="tb mid" x="365" y="114">yes, but</text>
+        <text class="tb end" x="500" y="58">yes, and</text>
+        <g class="bf"><rect x="178" y="87" width="7" height="7"/><rect x="308" y="155" width="7" height="7"/><rect x="438" y="129" width="7" height="7"/></g>
+        <g class="ts"><text x="189" y="94">대가</text><text x="319" y="162">대가</text><text x="449" y="136">대가</text></g>
+        <g class="t mid"><text x="105" y="198">시도 1</text><text x="235" y="198">시도 2</text><text x="365" y="198">시도 3</text><text x="515" y="198">해결</text></g>
+        <text class="tm mid" x="235" y="214">yes-but와 no-and로 굴린다</text><text class="tm mid" x="515" y="214">yes-and로 옮긴다</text>
+      </svg>
+    </div>
+    <figcaption><span class="kind concept">개념도</span><b>그림 8. 좌절과 전진의 비율.</b> yes-but는 목표 쪽으로 가되 대가가 붙는 결과, no-and는 목표에서 멀어지고 대가까지 붙는 결과다. 이야기 앞 3분의 2에서 4분의 3은 대부분 이 둘로 굴리고 후반에 인물이 문제를 풀기 시작하면 yes-and로 옮긴다. 선의 높낮이는 예시다.<sup class="ref"><a href="#src-37">37</a></sup></figcaption>
+  </figure>
+
+  <figure class="fig">
+    <div class="frame">
+      <svg viewBox="0 0 640 98" role="img" aria-label="장면과 후속의 교대. 목표, 갈등, 재앙으로 이루어진 장면 뒤에 반응, 딜레마, 결정으로 이루어진 후속이 오고 결정이 다음 장면의 목표가 된다.">
+        <text class="tb" x="0" y="12">장면</text><text class="tb" x="330" y="12">후속</text>
+        <g>
+          <rect class="bx" x="0" y="20" width="90" height="32" rx="6"/><text class="t mid" x="45" y="40">목표</text>
+          <rect class="bx" x="110" y="20" width="90" height="32" rx="6"/><text class="t mid" x="155" y="40">갈등</text>
+          <rect class="bk" x="220" y="20" width="90" height="32" rx="6"/><text class="tw mid" x="265" y="40">재앙</text>
+          <rect class="bx" x="330" y="20" width="90" height="32" rx="6"/><text class="t mid" x="375" y="40">반응</text>
+          <rect class="bx" x="440" y="20" width="90" height="32" rx="6"/><text class="t mid" x="485" y="40">딜레마</text>
+          <rect class="bk" x="550" y="20" width="90" height="32" rx="6"/><text class="tw mid" x="595" y="40">결정</text>
+        </g>
+        <g class="ln"><path d="M93,36H105" marker-end="url(#ar)"/><path d="M203,36H215" marker-end="url(#ar)"/><path d="M313,36H325" marker-end="url(#ar)"/><path d="M423,36H435" marker-end="url(#ar)"/><path d="M533,36H545" marker-end="url(#ar)"/></g>
+        <path class="ln" d="M595,56 C595,86 45,86 45,59" marker-end="url(#ar)"/>
+        <text class="tm mid halo" x="320" y="83">결정이 다음 장면의 목표가 된다</text>
+      </svg>
+    </div>
+    <figcaption><span class="kind concept">개념도</span><b>그림 9. 장면과 후속의 교대.</b> Dwight Swain의 구조다. 장면은 재앙으로 끝나고 후속의 결정이 다음 장면을 민다.<sup class="ref"><a href="#src-38">38</a></sup></figcaption>
+  </figure>
+
+  <div class="duo mt16">
+    <div class="lane field">
+      <span class="chip field">실무</span>
+      <h3>장면 단위의 도구</h3>
+      <ul class="pts">
+        <li>장면의 시작과 끝에서 <strong>가치의 부호</strong>(희망↔두려움)가 바뀌어야 한다. 바뀌지 않으면 사건이 아니다.<sup class="ref"><a href="#src-39">39</a></sup></li>
+        <li>이야기가 진짜로 진행되면 점점 더 큰 인간적 역량을 요구한다. 욕망의 가치는 그것을 쫓을 때 걸린 위험에 비례한다.<sup class="ref"><a href="#src-36">36</a></sup></li>
+        <li>〈사우스 파크〉의 Parker와 Stone은 비트 사이를 <strong>「그래서」 또는 「그런데」</strong>로 이어야 이야기가 된다고 말했다. 「그리고 나서」로 이으면 나열에 그친다.<sup class="ref"><a href="#src-40">40</a></sup></li>
+      </ul>
+    </div>
+    <div class="lane field">
+      <span class="chip field">실무</span>
+      <h3>같은 장벽을 되풀이하지 않는다</h3>
+      <ul class="pts">
+        <li>시도 횟수는 독자가 대략 세 번을 기대한다.</li>
+        <li>no가 너무 많으면 진행이 느려 보인다.</li>
+        <li><strong>장벽과 실패가 매번 똑같으면</strong> 인물이 성장하지 않는 것처럼 느껴진다.<sup class="ref"><a href="#src-37">37</a></sup></li>
+        <li>이 구조가 고구마에서 사이다로 넘어가는 흐름의 서구식 표현에 가깝다.</li>
+      </ul>
+      <p class="mt8"><span class="ev field">실무 합의</span></p>
+    </div>
+  </div>
+  <footer class="foot"><span>스토리 구성 기법 조사</span><span class="pn">8 / 18</span></footer>
+</section>
+
+<!-- 3장-2 -->
+<section class="sheet" id="ch3b">
+  <header class="run"><span>질문을 여는 순서가 다음 장면을 부른다</span><span>3장 답답함을 다음 장면으로</span></header>
+  <h2>강하고 부당한 적, 그리고 시청자만 아는 계획</h2>
+  <p class="lead narrow">답답함이 다음 장면을 보게 만들려면 적의 설계와 정보의 배분이 맞아야 한다.</p>
+
+  <figure class="fig">
+    <div class="frame">
+      <svg viewBox="0 0 640 158" role="img" aria-label="적의 힘과 부당함으로 나눈 네 칸. 강하고 부당한 적만 좌절을 승리를 기다리는 시간으로 만든다. 부도덕하지만 약한 적은 분노만, 강하지만 부도덕하지 않은 적은 긴장만 준다.">
+        <text class="tm" x="0" y="30">부당함</text><text class="tb" x="0" y="46">높다</text>
+        <text class="tm" x="0" y="100">부당함</text><text class="tb" x="0" y="116">낮다</text>
+        <rect class="bx" x="70" y="6" width="280" height="60" rx="8"/><text class="tb mid" x="210" y="33">부도덕하지만 약한 적</text><text class="tm mid" x="210" y="50">분노만 준다</text>
+        <rect class="bk" x="360" y="6" width="280" height="60" rx="8"/><text class="tw mid" x="500" y="33" style="font-size:13px">강하고 부당한 적</text><text class="mid" x="500" y="50" fill="#fff" font-size="10.5" opacity=".88">좌절이 승리를 기다리는 시간이 된다</text>
+        <rect class="bx" x="70" y="76" width="280" height="60" rx="8" style="stroke-dasharray:4 3"/><text class="tb mid" x="210" y="103">약하고 부도덕하지도 않은 적</text><text class="tm mid" x="210" y="120">긴장도 분노도 없다</text>
+        <rect class="bx" x="360" y="76" width="280" height="60" rx="8"/><text class="tb mid" x="500" y="103">강하지만 부도덕하지 않은 적</text><text class="tm mid" x="500" y="120">긴장만 준다</text>
+        <text class="tb mid" x="210" y="154">약한 적</text><text class="tb mid" x="500" y="154">강한 적</text>
+      </svg>
+    </div>
+    <figcaption><span class="kind infer">추론</span><b>그림 10. 적은 강하고 부당해야 한다.</b> 세 칸은 Truby, McKee, 성향 이론을 겹쳐 얻었다. 점선 칸은 나머지 세 칸에서 미룬 것이다.<sup class="ref"><a href="#src-41">41</a><a href="#src-36">36</a><a href="#src-42">42</a></sup></figcaption>
+  </figure>
+
+  <div class="duo mt16">
+    <div class="lane field">
+      <span class="chip field">실무</span>
+      <h3>적과 주인공을 세우는 법</h3>
+      <ul class="pts">
+        <li>Truby가 보는 최선의 적은 <strong>주인공과 같은 목표를 놓고 다투며 주인공의 핵심 결함을 정확히 찌르는 인물</strong>이다. 진짜 적은 길만 막지 않고 경쟁한다.<sup class="ref"><a href="#src-41">41</a></sup></li>
+        <li>Hauge는 동정(부당한 불행의 피해자로 만들기)과 위기(처지를 걱정하게 만들기)로 시청자를 주인공 편에 세운다.<sup class="ref"><a href="#src-43">43</a></sup></li>
+        <li>Sanderson의 캐릭터 슬라이더는 능력·능동성·공감 세 축이다. Sanderson은 <strong>능동성</strong>이 인물을 읽히게 만드는 가장 중요한 단일 요소일 수 있다고 본다. 이 세 축은 흔히 Hauge의 것으로 잘못 알려져 있다.<sup class="ref"><a href="#src-44">44</a><a href="#src-45">45</a></sup></li>
+      </ul>
+    </div>
+    <div class="lane field">
+      <span class="chip field">실무·한국</span>
+      <h3>고구마와 사이다</h3>
+      <ul class="pts">
+        <li>이융희의 논의를 정리한 글에 따르면 독자의 사이다·고구마 분류는 서사 형식보다 감정 변화를 따른다. 서사는 <strong>「결핍생성–욕망충족」의 반복</strong>을 지향한다.<sup class="ref"><a href="#src-46">46</a></sup></li>
+        <li>사이다만 반복하면 쾌감이 줄어 자극을 키우는 악순환이 생긴다. 「사이다를 잘 쓰는 작가는 오히려 고구마를 잘 다루는 작가」라는 평이 있다.<sup class="ref"><a href="#src-47">47</a></sup></li>
+        <li>작가 산경이 「3편 이상 밋밋하면 이탈이 시작된다」고 했다고 전해지지만 원 발언 출처는 확인하지 못했다. <span class="ev hearsay">2차 전언</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <figure class="fig">
+    <div class="frame">
+      <svg viewBox="0 0 640 80" role="img" aria-label="복수극의 정보 격차. 주인공과 시청자는 계획을 알고 적은 모른다. 그러면 답답함이 기다림으로 읽힌다.">
+        <rect class="bx" x="0" y="4" width="150" height="72" rx="8"/><text class="tb mid" x="75" y="26">주인공</text><rect class="bk" x="20" y="36" width="110" height="9" rx="2"/><text class="ts mid" x="75" y="64">계획을 안다</text>
+        <rect class="bx" x="170" y="4" width="150" height="72" rx="8"/><text class="tb mid" x="245" y="26">시청자</text><rect class="bk" x="190" y="36" width="110" height="9" rx="2"/><text class="ts mid" x="245" y="64">계획을 안다</text>
+        <rect class="bx" x="340" y="4" width="150" height="72" rx="8"/><text class="tb mid" x="415" y="26">적</text><rect class="bd" x="360" y="36" width="110" height="9" rx="2" style="stroke-width:1"/><text class="ts mid" x="415" y="64">계획을 모른다</text>
+        <path class="ln" d="M498,40H520" marker-end="url(#ar)"/>
+        <text class="tb" x="530" y="30">답답함이</text><text class="tb" x="530" y="46">기다림으로</text><text class="tb" x="530" y="62">읽힌다</text>
+      </svg>
+    </div>
+    <figcaption><span class="kind concept">개념도</span><b>그림 11. 복수극의 정보 격차.</b> 김태권은 복수 서사의 핵심을 정보 격차로 본다. 몬테크리스토 백작은 적들의 약점을 속속들이 아는데 적들은 백작이 누구인지 짐작도 못 한다. 회귀·빙의·환생은 전생의 기억으로 같은 격차를 만든다.<sup class="ref"><a href="#src-48">48</a></sup></figcaption>
+  </figure>
+
+  <div class="duo mt16">
+    <div class="lane field">
+      <span class="chip field">실무·한국</span>
+      <h3>실패한 답답함</h3>
+      <ul class="pts">
+        <li>평론가 공희정은 막장 요소가 유기적으로 이어지면 긴장을 주지만 그렇지 못하면 피로도가 높다고 평했다.<sup class="ref"><a href="#src-49">49</a></sup></li>
+        <li>〈펜트하우스〉는 죽은 인물을 다음 시즌에 되살리는 「좀비」 전개로 비판받았다.<sup class="ref"><a href="#src-50">50</a></sup></li>
+        <li>〈한 번 다녀왔습니다〉의 느닷없는 악역 사기극에는 시청자가 반발했고 평론가는 개연성 부족을 원인으로 지목했다.<sup class="ref"><a href="#src-51">51</a></sup></li>
+      </ul>
+    </div>
+    <div class="lane field">
+      <span class="chip field">실무</span>
+      <h3>바보 플롯은 짜증을 부른다</h3>
+      <ul class="pts">
+        <li>Roger Ebert는 「등장인물이 바보가 아니라면 즉시 풀렸을 문제를 담은 플롯」을 <strong>바보 플롯</strong>이라 불렀다.<sup class="ref"><a href="#src-52">52</a></sup></li>
+        <li>갈등을 늘리려고 인물을 어리석게 만들면 시청자는 답답함 대신 짜증과 불신을 느낀다.</li>
+        <li>복수극이 지지받는 배경으로 백소연 교수는 부당함의 경험과 제도 앞의 무력감을 들었다.<sup class="ref"><a href="#src-53">53</a></sup></li>
+      </ul>
+    </div>
+  </div>
+  <footer class="foot"><span>스토리 구성 기법 조사</span><span class="pn">9 / 18</span></footer>
+</section>
+
+<!-- 3장-3 -->
+<section class="sheet" id="ch3c">
+  <header class="run"><span>질문을 여는 순서가 다음 장면을 부른다</span><span>3장 답답함을 다음 장면으로</span></header>
+  <h2>연구는 승리를 기다리는 시간을 즐거움의 원천으로 본다</h2>
+  <p class="lead"><span class="chip study">학술</span>&nbsp; Zillmann과 Cantor(1977)의 성향 이론에 따르면 시청자는 인물을 도덕적으로 판단해 좋아하는 인물의 성공과 싫어하는 인물의 실패를 바란다. 이론은 <strong>그 결과가 늦춰질수록 서스펜스와 각성이 커진다</strong>고 예측한다.<sup class="ref"><a href="#src-42">42</a></sup></p>
+
+  <figure class="fig">
+    <div class="frame">
+      <svg viewBox="0 0 640 92" role="img" aria-label="성향 이론의 일곱 단계. 행동 지각, 도덕성 판단, 성향 형성, 결과 예상, 결과 지각, 정서 반응, 결과 승인. 결과 예상 단계가 고구마, 뒤의 세 단계가 사이다에 해당한다.">
+        <g>
+          <rect class="bx" x="0" y="4" width="80" height="40" rx="6"/><text class="ts" x="7" y="16">1</text><text class="t mid" x="40" y="33">행동 지각</text>
+          <rect class="bx" x="93.3" y="4" width="80" height="40" rx="6"/><text class="ts" x="100.3" y="16">2</text><text class="t mid" x="133.3" y="33">도덕성 판단</text>
+          <rect class="bx" x="186.7" y="4" width="80" height="40" rx="6"/><text class="ts" x="193.7" y="16">3</text><text class="t mid" x="226.7" y="33">성향 형성</text>
+          <rect class="bk" x="280" y="4" width="80" height="40" rx="6"/><text x="287" y="16" fill="#fff" font-size="9.5">4</text><text class="tw mid" x="320" y="33">결과 예상</text>
+          <rect class="bx" x="373.3" y="4" width="80" height="40" rx="6"/><text class="ts" x="380.3" y="16">5</text><text class="t mid" x="413.3" y="33">결과 지각</text>
+          <rect class="bx" x="466.7" y="4" width="80" height="40" rx="6"/><text class="ts" x="473.7" y="16">6</text><text class="t mid" x="506.7" y="33">정서 반응</text>
+          <rect class="bx" x="560" y="4" width="80" height="40" rx="6"/><text class="ts" x="567" y="16">7</text><text class="t mid" x="600" y="33">결과 승인</text>
+        </g>
+        <g class="ln"><path d="M83,20l5,4l-5,4"/><path d="M176.3,20l5,4l-5,4"/><path d="M269.7,20l5,4l-5,4"/><path d="M363,20l5,4l-5,4"/><path d="M456.3,20l5,4l-5,4"/><path d="M549.7,20l5,4l-5,4"/></g>
+        <path class="ln" d="M0,50v5H266.7v-5M280,50v5H360v-5M373.3,50v5H640v-5"/>
+        <text class="tb mid" x="133.3" y="72">편이 정해진다</text><text class="tm mid" x="133.3" y="87">좋아할 인물과 싫어할 인물</text>
+        <text class="tb mid" x="320" y="72">고구마</text><text class="tm mid" x="320" y="87">해를 입을까 염려한다</text>
+        <text class="tb mid" x="506.7" y="72">사이다</text><text class="tm mid" x="506.7" y="87">성향에 맞는 결과를 보고 승인한다</text>
+      </svg>
+    </div>
+    <figcaption><span class="kind concept">개념도</span><b>그림 12. 성향 이론의 일곱 단계.</b> 고구마·사이다와 맞댄 것은 조사 노트의 해석이다. 마지막 단계에서 시청자는 결과가 정의로운지 승인한다. 응징이 과하거나 부당하면 승인이 약해지고 사이다의 질도 떨어진다.<sup class="ref"><a href="#src-42">42</a></sup></figcaption>
+  </figure>
+
+  <div class="duo mt16">
+    <div class="lane study">
+      <span class="chip study">학술</span>
+      <h3>실증은 혼재한다</h3>
+      <ul class="pts">
+        <li>Kaspar 외(2016)는 뉴스 기사로 세 온라인 실험을 했다. <strong>호감 조작이 서스펜스를 올린 것은 첫 연구뿐</strong>이었다.<sup class="ref"><a href="#src-54">54</a></sup></li>
+        <li>그래도 서스펜스는 세 연구에서 일관되게 읽기 만족과 지속 관심을 예측했다. 좋은 결말 조작은 오히려 지속 관심을 높였다.</li>
+        <li>각성이 해소와 결합해 즐거움이 된다는 흥분 전이 이론도 실증이 서로 다른 방향을 보인다.<sup class="ref"><a href="#src-55">55</a></sup></li>
+        <li>「결국 이길 것」이라는 믿음이 고구마를 견디게 한다는 현장 직관(장르 계약, 사이다 예고)과는 맞는다.</li>
+      </ul>
+      <p class="mt8"><span class="ev mixed">혼재</span> <span class="note">뉴스 기사 대상 실험</span></p>
+    </div>
+    <div>
+      <table class="tbl" style="margin-top:9px">
+        <thead><tr><th>Kaspar 외(2016)</th><th>연구 1<br>263명</th><th>연구 2<br>255명</th><th>연구 3<br>599명</th></tr></thead>
+        <tbody>
+          <tr><td>호감 조작이 서스펜스를 올렸나</td><td class="k">● 유의</td><td class="k">◐ 경향</td><td class="k">○ 없음</td></tr>
+          <tr><td>서스펜스가 읽기 만족과 지속 관심을 예측했나</td><td class="k">● 예측</td><td class="k">● 예측</td><td class="k">● 예측</td></tr>
+        </tbody>
+      </table>
+      <p class="note mt8"><span class="kind data">실측</span>논문이 보고한 유의성 판정만 옮겼다. 효과 크기는 싣지 않았다.<sup class="ref"><a href="#src-54">54</a></sup></p>
+    </div>
+  </div>
+
+  <h3 class="mt20"><span class="chip both">3장 정리</span>&nbsp; 답답함이 다음 장면을 부르는 네 조건</h3>
+  <div class="duo mt8" style="gap:10px 18px">
+    <div class="card">
+      <h4>1. 공감이 위협보다 먼저 온다</h4>
+      <p class="sm mt8">시청자가 아끼지 않는 인물의 좌절은 무관심을 부른다.</p>
+      <p class="note">성향 이론, Hauge</p>
+    </div>
+    <div class="card">
+      <h4>2. 적은 강하고 부당해야 한다</h4>
+      <p class="sm mt8">강하지만 부도덕하지 않은 적은 긴장만, 부도덕하지만 약한 적은 분노만 준다.</p>
+      <p class="note">Truby, McKee, 성향 이론</p>
+    </div>
+    <div class="card">
+      <h4>3. 장면마다 무언가 커져야 한다</h4>
+      <p class="sm mt8">반대 세력의 강도, 잃을 것의 크기, 주인공이 쓰는 능력 중 하나 이상이 커지고 장벽의 종류가 바뀐다.</p>
+      <p class="note">McKee, Writing Excuses</p>
+    </div>
+    <div class="card">
+      <h4>4. 답답함의 원인은 상황의 무게다</h4>
+      <p class="sm mt8">적이 정보를 더 가졌거나 주인공이 알면서도 대가 때문에 못 움직이거나 주인공의 결함이 판단을 흐린다. 시청자에게 뻔한 사실을 주인공만 모르는 구조는 피한다.</p>
+      <p class="note">Ebert, Truby</p>
+    </div>
+  </div>
+  <div class="synth mt12">
+    <p style="margin-top:0">여기에 시청자 쪽 정보 격차를 더한다. 주인공의 계획을 시청자만 알면 고구마 구간이 기다림으로 바뀐다.</p>
+  </div>
+  <footer class="foot"><span>스토리 구성 기법 조사</span><span class="pn">10 / 18</span></footer>
+</section>
+
+<!-- 4장-1 -->
+<section class="sheet" id="ch4a">
+  <header class="run"><span>질문을 여는 순서가 다음 장면을 부른다</span><span>4장 클리프행어의 실제</span></header>
+  <div class="chap">4장</div>
+  <h2>클리프행어는 심장을 뛰게 하지만 다음 화를 보장하지 않는다</h2>
+  <p class="lead"><span class="chip field">실무</span>&nbsp; 현장은 회차 끝에 위기와 선택을 몰아 둔다. 미국 네트워크 1시간 드라마는 티저, 5막(케이블은 4막), 태그로 짜고 각 막 끝을 광고 뒤로 시청자를 끌고 가는 미니 클라이맥스로 썼다.<sup class="ref"><a href="#src-56">56</a></sup> 스트리밍이 광고 휴지를 없애면서 막 단위 충격은 대부분 사라졌다.<sup class="ref"><a href="#src-57">57</a></sup></p>
+
+  <figure class="fig">
+    <div class="frame">
+      <svg viewBox="0 0 640 120" role="img" aria-label="네트워크 드라마는 티저, 다섯 막, 태그로 나뉘고 막 끝마다 미니 클라이맥스가 있다. 스트리밍 회차는 막 구분 없이 이어지고 끝에서 약 5초 뒤 다음 회가 자동재생된다.">
+        <text class="tb" x="0" y="12">네트워크 1시간 드라마</text>
+        <g>
+          <rect class="bx" x="0" y="24" width="52" height="24" rx="4"/><text class="t mid" x="26" y="40">티저</text>
+          <rect class="bx" x="62" y="24" width="90" height="24" rx="4"/><text class="t mid" x="107" y="40">1막</text>
+          <rect class="bx" x="162" y="24" width="90" height="24" rx="4"/><text class="t mid" x="207" y="40">2막</text>
+          <rect class="bx" x="262" y="24" width="90" height="24" rx="4"/><text class="t mid" x="307" y="40">3막</text>
+          <rect class="bx" x="362" y="24" width="90" height="24" rx="4"/><text class="t mid" x="407" y="40">4막</text>
+          <rect class="bx" x="462" y="24" width="90" height="24" rx="4"/><text class="t mid" x="507" y="40">5막</text>
+          <rect class="bx" x="562" y="24" width="38" height="24" rx="4"/><text class="t mid" x="581" y="40">태그</text>
+        </g>
+        <g class="ba"><path d="M47,13h10l-5,8z"/><path d="M147,13h10l-5,8z"/><path d="M247,13h10l-5,8z"/><path d="M347,13h10l-5,8z"/><path d="M447,13h10l-5,8z"/><path d="M547,13h10l-5,8z"/></g>
+        <path class="ba" d="M0,56h10l-5,8z"/><text class="tm" x="16" y="64">막 끝의 미니 클라이맥스. 광고 뒤로 시청자를 끌고 간다</text>
+        <text class="tb" x="0" y="88">스트리밍 회차</text>
+        <rect class="bx" x="0" y="94" width="500" height="24" rx="4"/><text class="t mid" x="250" y="110">막 단위 충격 없이 이어진다</text>
+        <path class="ba" d="M495,84h10l-5,8z"/>
+        <rect class="bk" x="510" y="94" width="130" height="24" rx="12"/><text class="tw mid" x="575" y="110">약 5초 뒤 다음 회</text>
+      </svg>
+    </div>
+    <figcaption><span class="kind concept">개념도</span><b>그림 13. 막 끝에서 회차 끝으로.</b> 주간 대기는 약 5초 뒤 다음 회를 자동재생하는 버튼으로 바뀌었다. 모든 막 끝이 충격일 필요는 없다. 조용하고 불안한 순간이나 답이 없는 감정적 질문이 더 나을 때가 있다.<sup class="ref"><a href="#src-56">56</a><a href="#src-57">57</a></sup></figcaption>
+  </figure>
+
+  <div class="duo mt16">
+    <div class="lane field">
+      <span class="chip field">실무·숏폼</span>
+      <h3>세로형 숏드라마</h3>
+      <ul class="pts">
+        <li>회당 대개 60~90초, 시리즈당 50~100회이고 <strong>매회 클리프행어</strong>로 끝난다. ReelShort는 작가 20명이 월 15~20편을 쓰며 잘 팔린 트로프를 데이터로 고른다.<sup class="ref"><a href="#src-58">58</a></sup></li>
+        <li>이준익 감독은 관객이 <strong>「셋업 없는 끊임없는 보상」</strong>을 요구한다고 말했다. 윤석진 교수는 「개연성은 무시되고 즉각적 전환이 우선」이라고 평했다.<sup class="ref"><a href="#src-59">59</a></sup></li>
+        <li>윤수영 작가는 <strong>훅과 엔딩만 두세 줄로 먼저 쓰고</strong> 전 회차를 채운다. 「쇼츠는 1분 안에 계속 터져야 한다」고 말했다.<sup class="ref"><a href="#src-60">60</a></sup></li>
+        <li>유입 광고는 첫 몇 회를 압축해 가장 극적인 장면에서 끊고 무료 회차 뒤 결제로 이끈다.<sup class="ref"><a href="#src-61">61</a></sup></li>
+      </ul>
+    </div>
+    <div class="lane field">
+      <span class="chip field">실무·한국</span>
+      <h3>웹소설의 회차 끝과 연재 리듬</h3>
+      <ul class="pts">
+        <li>웹소설 작법 글은 회차 끝을 다음 화로 이어질 <strong>선택이나 위기</strong>로 닫으라고 권한다.<sup class="ref"><a href="#src-62">62</a></sup></li>
+        <li>문피아 연재작을 분석한 2020년 연구는 주 5회 이상 연재해야 구독자를 모으고 유료작은 <strong>3일 이상 휴재하면 대거 이탈</strong>한다고 보고했다.<sup class="ref"><a href="#src-63">63</a></sup> <span class="ev single">단일 연구</span></li>
+        <li>「Netflix 데이터상 클리프행어가 안 통한다」는 주장은 한 작가가 전한 임원 발언의 2차 보도뿐이다.<sup class="ref"><a href="#src-64">64</a></sup> <span class="ev hearsay">2차 전언</span></li>
+        <li>「3초 훅, 7초에 판돈 고정」, 「55~58초 정지 화면」 같은 수치는 업체 블로그가 반복할 뿐 1차 근거가 없다. <span class="ev hearsay">2차 전언</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <figure class="fig">
+    <div class="frame">
+      <svg viewBox="0 0 640 158" role="img" aria-label="MrBeast 제작 매뉴얼. 한 영상을 클릭한 6,000만 명 중 2,100만 명이 첫 1분에 이탈했다. 매뉴얼은 3분과 6분 지점에 재몰입 장치를 두고 끝은 예고 없이 끊으라고 정했다.">
+        <text class="tb" x="0" y="12">한 영상을 클릭한 6,000만 명</text>
+        <rect class="ba" tabindex="0" data-tip="첫 1분에 이탈|2,100만 명 (35%)" x="0" y="20" width="223" height="28" rx="4"/><text class="tw" x="10" y="38">첫 1분에 이탈 2,100만 · 35%</text>
+        <rect class="bg" tabindex="0" data-tip="1분 뒤에도 시청|3,900만 명 (65%)" x="225" y="20" width="415" height="28" rx="4"/><text class="t" x="235" y="38">1분 뒤에도 시청 3,900만 · 65%</text>
+
+        <text class="tb" x="0" y="76">매뉴얼이 정한 긴 영상의 구조</text>
+        <rect x="0" y="88" width="60" height="18" fill="#1d4ed8" opacity=".16" rx="3"/>
+        <path class="lk" d="M0,106H488M512,106H640"/><path class="ln" d="M492,100l-6,12M514,100l-6,12"/>
+        <path class="ln" d="M60,100V112"/>
+        <g class="bk"><path d="M180,99l7,7l-7,7l-7,-7z"/><path d="M360,99l7,7l-7,7l-7,-7z"/><rect x="633" y="99" width="7" height="14"/></g>
+        <text class="tb" x="0" y="126">0~1분</text><text class="tm" x="0" y="140">말하지 말고</text><text class="tm" x="0" y="154">보여 주기 시작한다</text>
+        <text class="tb mid" x="180" y="126">3분</text><text class="tm mid" x="180" y="140">재몰입 장치</text>
+        <text class="tb mid" x="360" y="126">6분</text><text class="tm mid" x="360" y="140">재몰입 장치</text>
+        <text class="tb end" x="640" y="126">끝</text><text class="tm end" x="640" y="140">예고 없이 끊는다</text><text class="tm end" x="640" y="154">강한 보상을 끝에 둔다</text>
+      </svg>
+    </div>
+    <figcaption><span class="kind data">실측</span><b>그림 14. MrBeast 제작 매뉴얼(2024년 유출).</b> 위는 한 영상의 사례다. 3,900만은 6,000만에서 2,100만을 뺀 값이다. 평균 시청 시간이 1분 38초 더 긴 영상의 조회수는 약 3배였다(1억 2,000만 대 4,500만). 전반부를 보게 하면 끝까지 볼 확률이 매우 높다고 적혀 있다.<sup class="ref"><a href="#src-65">65</a></sup></figcaption>
+  </figure>
+  <p class="note mt8">Shorts는 YouTube 공식 지표 「Viewed vs. Swiped away」가 훅 성과를 직접 잰다.<sup class="ref"><a href="#src-66">66</a></sup> 「성공한 TikTok 광고의 63%가 첫 3초에 핵심을 전달한다」는 통계는 1차 연구를 찾을 수 없다.<sup class="ref"><a href="#src-67">67</a></sup></p>
+  <footer class="foot"><span>스토리 구성 기법 조사</span><span class="pn">11 / 18</span></footer>
+</section>
+
+<!-- 4장-2 -->
+<section class="sheet" id="ch4b">
+  <header class="run"><span>질문을 여는 순서가 다음 장면을 부른다</span><span>4장 클리프행어의 실제</span></header>
+  <h2>연구는 현장의 설명 하나를 무너뜨렸다</h2>
+  <p class="lead"><span class="chip study">학술</span>&nbsp; 현장이 클리프행어의 근거로 자주 드는 Zeigarnik 효과(끝나지 않은 일이 더 잘 기억된다)는 2025년 메타분석에서 <strong>기억 이점이 확인되지 않았다</strong>. <span class="ev refuted">반박됨</span> 대신 중단된 일을 다시 하려는 경향(Ovsiankina 효과)은 일반적 경향으로 확인됐다.<sup class="ref"><a href="#src-68">68</a></sup> <span class="ev multi">여러 연구 일치</span></p>
+
+  <figure class="fig">
+    <div class="frame">
+      <svg viewBox="0 0 640 80" role="img" aria-label="Wirz 외 2023년 실험. 133명에게 드라마 3~4화를 보여 주며 클리프행어 유무를 조작했다. 각성은 높아졌고 즐거움과 계속 시청 의도는 높아지지 않았다.">
+        <rect class="bx" x="0" y="4" width="214" height="72" rx="8"/>
+        <text class="tb" x="14" y="24">Wirz 외(2023), 133명</text>
+        <text class="tm" x="14" y="40">드라마 3~4화를 보여 주며</text><text class="tm" x="14" y="54">회차 끝의 클리프행어 유무를</text><text class="tm" x="14" y="68">조작했다</text>
+        <path class="ln" d="M220,40H244" marker-end="url(#ar)"/>
+        <text class="t" x="258" y="20">각성 (피부전도·코르티솔)</text><path class="la" d="M448,23V9m-5,5l5,-6l5,6"/><text class="tb" x="470" y="20">높아졌다</text>
+        <path class="grid" d="M258,30H640"/>
+        <text class="t" x="258" y="46">즐거움</text><path class="ln" style="stroke-width:2" d="M440,42h16"/><text class="tb" x="470" y="46">높아지지 않았다</text>
+        <path class="grid" d="M258,56H640"/>
+        <text class="t" x="258" y="72">계속 시청 의도</text><path class="ln" style="stroke-width:2" d="M440,68h16"/><text class="tb" x="470" y="72">높아지지 않았다</text>
+      </svg>
+    </div>
+    <figcaption><span class="kind data">실측</span><b>그림 15. 클리프행어 통제 실험.</b> 논문이 보고한 결론의 방향만 옮겼다. 단일 실험이지만 통념을 정면으로 시험했다.<sup class="ref"><a href="#src-69">69</a></sup> <span class="ev single">단일 연구</span></figcaption>
+  </figure>
+
+  <figure class="fig">
+    <div class="frame">
+      <svg viewBox="0 0 640 128" role="img" aria-label="스포일러 연구의 흐름. 2011년 연구는 스포일러가 즐거움을 높였다고 보고했지만 2015년과 2016년 연구는 낮췄다고 보고했다. 2017년 평론은 결론 낼 수 없다고 정리했고 2019년 공포영화 연구는 일부 관객에게 득이 됐다고 보고했다.">
+        <path class="ln" d="M24,34H616"/>
+        <g class="tb mid"><text x="64" y="14">2011</text><text x="192" y="14">2015</text><text x="320" y="14">2016</text><text x="448" y="14">2017</text><text x="576" y="14">2019</text></g>
+        <path class="ba" stroke="#f4f6f9" stroke-width="2" d="M57,40h14l-7,-12z"/>
+        <path class="bk" stroke="#f4f6f9" stroke-width="2" d="M185,28h14l-7,12z"/>
+        <path class="bk" stroke="#f4f6f9" stroke-width="2" d="M313,28h14l-7,12z"/>
+        <circle cx="448" cy="34" r="5.5" fill="#f4f6f9" stroke="#4b5565" stroke-width="1.6"/>
+        <path d="M569,40h14l-7,-12z" fill="#f4f6f9" stroke="#1d4ed8" stroke-width="1.8" stroke-linejoin="round"/>
+        <g class="tb mid"><text x="64" y="60">Leavitt 외</text><text x="192" y="60">Johnson 외</text><text x="320" y="60">Levine 외</text><text x="448" y="60">평론</text><text x="576" y="60">공포영화 연구</text></g>
+        <g class="tm mid">
+          <text x="64" y="76">단편 소설에서</text><text x="64" y="90">즐거움이 높았다</text>
+          <text x="192" y="76">412명. 서스펜스·재미·</text><text x="192" y="90">감동·몰입이 낮았다</text>
+          <text x="320" y="76">앞 스포일러는 낮췄고</text><text x="320" y="90">중간 스포일러는 무효과</text>
+          <text x="448" y="76">어느 쪽으로도</text><text x="448" y="90">결론 낼 수 없다</text>
+          <text x="576" y="76">작은 스포일러가</text><text x="576" y="90">일부 관객에게 득</text>
+        </g>
+        <path class="ba" d="M0,123h10l-5,-9z"/><text class="tm" x="15" y="123">즐거움을 높였다</text>
+        <path class="bk" d="M120,114h10l-5,9z"/><text class="tm" x="135" y="123">낮췄다</text>
+        <path d="M190,123h10l-5,-9z" fill="none" stroke="#1d4ed8" stroke-width="1.4"/><text class="tm" x="205" y="123">일부에게만 높였다</text>
+        <circle cx="323" cy="118.5" r="4.5" fill="none" stroke="#4b5565" stroke-width="1.4"/><text class="tm" x="333" y="123">결론 없음</text>
+      </svg>
+    </div>
+    <figcaption><span class="kind data">실측</span><b>그림 16. 스포일러 연구의 흐름.</b> 2011년 결과는 재현되지 않았다. 앞에 둔 결말 공개가 손해 쪽이라는 방향은 1장과 겹친다. 출처는 대부분 보도자료 수준이다.<sup class="ref"><a href="#src-70">70</a><a href="#src-71">71</a><a href="#src-72">72</a><a href="#src-73">73</a><a href="#src-74">74</a></sup> <span class="ev refuted">반박됨</span></figcaption>
+  </figure>
+
+  <h3 class="mt16">그래서 회차 끝은 하나를 닫고 더 큰 하나를 연다</h3>
+  <figure class="fig" style="margin-top:8px">
+    <div class="frame">
+      <svg viewBox="0 0 640 114" role="img" aria-label="회차 끝 설계 두 가지. 위기에서 멈추기만 하면 회차마다 질문이 열리기만 한다. 하나를 닫고 하나를 여는 구성은 회차 끝에서 답과 새 질문을 짝짓고 다음 회 앞부분에서 보상을 준다.">
+        <text class="tb" x="0" y="22">위기에서 멈추기만 한다</text><text class="tm" x="0" y="38">각성만 오른다</text>
+        <g>
+          <rect class="bx" x="160" y="8" width="150" height="28" rx="5"/><text class="ts" x="168" y="26">1화</text>
+          <rect class="bx" x="320" y="8" width="150" height="28" rx="5"/><text class="ts" x="328" y="26">2화</text>
+          <rect class="bx" x="480" y="8" width="150" height="28" rx="5"/><text class="ts" x="488" y="26">3화</text>
+        </g>
+        <g fill="#fff" stroke="#1d4ed8" stroke-width="1.8"><circle cx="298" cy="22" r="4"/><circle cx="458" cy="22" r="4"/><circle cx="618" cy="22" r="4"/></g>
+
+        <text class="tb" x="0" y="74">하나를 닫고 하나를 연다</text><text class="tm" x="0" y="90">해소와 새 질문을 짝짓는다</text>
+        <g>
+          <rect class="bx" x="160" y="60" width="150" height="28" rx="5"/><text class="ts" x="168" y="78">1화</text>
+          <rect class="bx" x="320" y="60" width="150" height="28" rx="5"/><text class="ts" x="328" y="78">2화</text>
+          <rect class="bx" x="480" y="60" width="150" height="28" rx="5"/><text class="ts" x="488" y="78">3화</text>
+        </g>
+        <g fill="#1d4ed8"><circle cx="282" cy="74" r="4"/><circle cx="442" cy="74" r="4"/><circle cx="602" cy="74" r="4"/><circle cx="356" cy="74" r="3"/><circle cx="516" cy="74" r="3"/></g>
+        <g fill="#fff" stroke="#1d4ed8" stroke-width="1.8"><circle cx="298" cy="74" r="4"/><circle cx="458" cy="74" r="4"/><circle cx="618" cy="74" r="4"/></g>
+        <g class="la" style="stroke-width:1.4"><path d="M298,68 Q327,40 356,69"/><path d="M458,68 Q487,40 516,69"/></g>
+        <circle cx="164" cy="106" r="3.5" fill="#1d4ed8"/><text class="tm" x="173" y="110">답</text>
+        <circle cx="204" cy="106" r="3.5" fill="#fff" stroke="#1d4ed8" stroke-width="1.6"/><text class="tm" x="213" y="110">새 질문</text>
+        <path class="la" style="stroke-width:1.4" d="M262,109 Q273,97 284,109"/><text class="tm" x="291" y="110">보상은 다음 회 앞부분에서 준다</text>
+      </svg>
+    </div>
+    <figcaption><span class="kind infer">추론</span><b>그림 17. 회차 끝 설계.</b> 증거에서 끌어온 처방이고 직접 검증되지는 않았다. 클리프행어의 보상은 다음 회 앞부분에서 빨리 준다.</figcaption>
+  </figure>
+
+  <div class="duo mt16">
+    <div class="lane study">
+      <span class="chip study">학술</span>
+      <h3>결말을 알아도 서스펜스는 생긴다</h3>
+      <ul class="pts">
+        <li>Gerrig(1989)은 결과를 확실히 아는 독자도 불확실성을 느끼는 <strong>「이례적 서스펜스」</strong>를 실증했다.<sup class="ref"><a href="#src-75">75</a></sup> Delatorre 외(2018)에서 두 번째 읽기의 서스펜스는 오히려 더 높았다.<sup class="ref"><a href="#src-4">4</a></sup> <span class="ev multi">여러 연구 일치</span></li>
+        <li>사람은 <strong>예측 오류가 갑자기 커지는 지점</strong>을 사건 경계로 지각한다.<sup class="ref"><a href="#src-76">76</a></sup> 목표·장소·인과가 바뀌는 곳에서 끊는다.</li>
+        <li>Richardson 외(2020)에서 자기보고 몰입은 영상판이 높았지만 심박·피부전도 반응은 오디오판이 컸다.<sup class="ref"><a href="#src-77">77</a></sup> 각성을 재미로 읽으면 안 된다.</li>
+      </ul>
+    </div>
+    <div class="lane">
+      <span class="chip both">4장 정리</span>
+      <h3>방법은 맞고 이유가 달랐다</h3>
+      <ul class="pts">
+        <li>클리프행어의 힘은 미완료 기억보다 <strong>반쯤 추측 가능한 질문(정보 격차)과 재개 경향</strong>으로 설명하는 편이 증거와 맞는다.</li>
+        <li>위기 직전에 멈추기만 하면 각성만 오른다. 해소 하나와 새 질문 하나를 짝짓는다.</li>
+        <li>매회 세게 끊을 필요는 없다. 큰 훅은 시즌 피날레에 몬다.<sup class="ref"><a href="#src-78">78</a></sup> 열린 결말이 완결 본능에 어긋나 시청자를 묶어 둔다는 분석도 있다.<sup class="ref"><a href="#src-79">79</a></sup></li>
+      </ul>
+    </div>
+  </div>
+  <footer class="foot"><span>스토리 구성 기법 조사</span><span class="pn">12 / 18</span></footer>
+</section>
+
+<!-- 5장-1 -->
+<section class="sheet" id="ch5a">
+  <header class="run"><span>질문을 여는 순서가 다음 장면을 부른다</span><span>5장 숏폼·롱폼 설계 지침</span></header>
+  <div class="chap">5장</div>
+  <h2>숏폼 한 편은 결과의 조각으로 열고 합류점에서 닫는다</h2>
+  <p class="lead">이 장의 지침은 앞 장의 실무 방법과 연구 결과를 조합해 끌어낸 것이며 그대로 검증된 처방은 아니다. 숏폼 적용은 특히 외삽이므로 채널 데이터로 확인해야 한다. 숏폼 한 편(30~90초)은 목표 하나와 전환 하나를 담는 시퀀스 하나 크기에 가깝다.</p>
+
+  <figure class="fig">
+    <div class="frame">
+      <svg viewBox="0 0 640 98" role="img" aria-label="소설 감정 곡선의 여섯 모양. 상승, 하강, 하강 후 상승, 상승 후 하강, 상승 하강 상승, 하강 상승 하강. 숏폼의 기본 모양으로 하강 후 상승 한 번을 고른다.">
+        <g>
+          <rect class="bx" x="0" y="0" width="100" height="96" rx="7"/><path class="lk" style="stroke-width:2" transform="translate(5,8)" d="M0,40 C30,38 60,12 90,8"/><text class="tb mid" x="50" y="72" style="font-size:10.5px">Rags to riches</text><text class="ts mid" x="50" y="87">상승</text>
+          <rect class="bx" x="108" y="0" width="100" height="96" rx="7"/><path class="lk" style="stroke-width:2" transform="translate(113,8)" d="M0,8 C30,10 60,38 90,42"/><text class="tb mid" x="158" y="72" style="font-size:10.5px">Tragedy</text><text class="ts mid" x="158" y="87">하강</text>
+          <rect x="216" y="0" width="100" height="96" rx="7" fill="#fff" stroke="#1d4ed8" stroke-width="1.6"/><path class="la" style="stroke-width:2.4" transform="translate(221,8)" d="M0,12 C20,12 30,42 45,42 S70,12 90,10"/><text class="tb mid" x="266" y="72" style="font-size:10.5px">구덩이에 빠진 사람</text><text class="ts mid" x="266" y="87">하강 → 상승</text>
+          <rect class="bx" x="324" y="0" width="100" height="96" rx="7"/><path class="lk" style="stroke-width:2" transform="translate(329,8)" d="M0,40 C20,40 30,8 45,8 S70,40 90,42"/><text class="tb mid" x="374" y="72" style="font-size:10.5px">Icarus</text><text class="ts mid" x="374" y="87">상승 → 하강</text>
+          <rect class="bx" x="432" y="0" width="100" height="96" rx="7"/><path class="lk" style="stroke-width:2" transform="translate(437,8)" d="M0,40 C12,40 18,12 30,12 S48,38 60,38 S78,10 90,8"/><text class="tb mid" x="482" y="72" style="font-size:10.5px">Cinderella</text><text class="ts mid" x="482" y="87">상승 → 하강 → 상승</text>
+          <rect class="bx" x="540" y="0" width="100" height="96" rx="7"/><path class="lk" style="stroke-width:2" transform="translate(545,8)" d="M0,10 C12,10 18,38 30,38 S48,12 60,12 S78,40 90,42"/><text class="tb mid" x="590" y="72" style="font-size:10.5px">Oedipus</text><text class="ts mid" x="590" y="87">하강 → 상승 → 하강</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption><span class="kind concept">개념도</span><b>그림 18. 감정 곡선의 여섯 모양.</b> Reagan 외(2016)가 소설 1,327편에서 찾았다. 다운로드가 많았던 쪽은 방향이 한 번 이상 꺾이는 곡선이었다. 다운로드는 거친 대리 지표이고 꺾임이 많을수록 좋다는 증거도 아니다. 숏폼의 기본 모양으로 파란 칸 한 번을 고른 것은 이 문서의 판단이다.<sup class="ref"><a href="#src-80">80</a></sup> <span class="ev single">단일 연구</span></figcaption>
+  </figure>
+
+  <figure class="fig">
+    <div class="frame">
+      <svg viewBox="0 0 640 200" role="img" aria-label="60초 숏폼의 장면 순서. 0에서 3초는 결과의 일부, 3에서 10초는 과거로 넘어가 주인공의 처지, 10에서 45초는 비트 두세 개, 45에서 55초는 두 시간대의 합류, 마지막 1에서 3초는 보상 직후 끊기.">
+        <text class="tm" x="150" y="14">감정 곡선은 내려갔다가 한 번 올라온다</text>
+        <path class="la" d="M20,34 C120,34 330,92 450,90 S570,40 606,22"/>
+        <text class="tb" x="20" y="80">0~3초</text><text class="tm" x="20" y="95">결과의 일부를 먼저</text>
+        <rect class="bk" x="20" y="104" width="30" height="22" rx="3"/>
+        <rect class="bg" x="52" y="104" width="66" height="22" rx="3"/>
+        <rect class="bg" x="120" y="104" width="115" height="22" rx="3"/><rect class="bg" x="237" y="104" width="115" height="22" rx="3"/><rect class="bg" x="354" y="104" width="114" height="22" rx="3"/>
+        <g class="t mid"><text x="177" y="119">비트 1</text><text x="294" y="119">비트 2</text><text x="411" y="119">비트 3</text></g>
+        <rect class="ba" x="470" y="104" width="118" height="22" rx="3"/><text class="tw mid" x="529" y="119">합류</text>
+        <rect class="bk" x="590" y="104" width="30" height="22" rx="3"/>
+        <g class="ts mid"><text x="20" y="138">0</text><text x="51" y="138">3</text><text x="119" y="138">10</text><text x="469" y="138">45</text><text x="570" y="138">55</text><text x="618" y="138">60초</text></g>
+        <text class="tb mid" x="294" y="156">10~45초</text><text class="tm mid" x="294" y="170">「그래서」「그런데」로 잇는 비트 2~3개</text>
+        <text class="tb end" x="620" y="156">마지막 1~3초</text><text class="tm end" x="620" y="170">보상 직후 끊는다</text>
+        <path class="ln" d="M85,128V181M500,128V181"/>
+        <text class="tb" x="50" y="194">3~10초</text><text class="tm" x="95" y="194">과거로 넘어가 주인공의 처지를 보여 준다</text>
+        <text class="tb" x="382" y="194">45~55초</text><text class="tm" x="433" y="194">두 시간대가 만나 빈 조각을 채운다</text>
+      </svg>
+    </div>
+    <figcaption><span class="kind infer">추론</span><b>그림 19. 60초 숏폼의 장면 순서.</b> 막대 길이는 초에 비례한다. 구간 경계는 대략의 기준이고 근거는 아래 표에 있다.</figcaption>
+  </figure>
+
+  <table class="tbl mt12">
+    <thead><tr><th>구간</th><th>할 일</th><th>근거</th></tr></thead>
+    <tbody>
+      <tr><td class="k">0~3초</td><td>결과의 일부를 먼저 보여 준다. 상황은 보이고 원인·인물·결말 중 하나 이상은 숨긴다. 장면 자체가 「왜?」를 묻게 만든다</td><td style="width:31%">역전 구조의 호기심(Knobloch), 정보 격차와 확신 50% 지점(Loewenstein, Kang), 〈빅 리틀 라이즈〉</td></tr>
+      <tr><td class="k">3~10초</td><td>시각 코드로 과거로 넘어가 주인공이 부당한 처지에 있거나 위기에 놓인 모습을 보여 준다</td><td>동일시 도구(Hauge), 성향이 위협보다 먼저(Zillmann)</td></tr>
+      <tr><td class="k">10~45초</td><td>「그래서」「그런데」로 잇는 비트 2~3개. 각 비트는 yes-but 또는 no-and로 끝나고 매번 장벽 종류나 판돈이 바뀐다</td><td>Parker &amp; Stone, Writing Excuses, McKee의 가치 전환</td></tr>
+      <tr><td class="k">45~55초</td><td>과거가 오프닝 장면에 도달하면서 빠졌던 조각(누가·왜)을 채운다. 반전과 발견을 한 장면에 겹치고 그 원인은 앞 비트에서 보여 준 사물·행동으로 둔다</td><td>Aristotle의 반전과 발견, Knox의 공정한 단서</td></tr>
+      <tr><td class="k">마지막 1~3초</td><td>보상 직후 예고 없이 끊는다. 연작이면 새 질문 하나를 연다</td><td>MrBeast의 갑작스러운 엔딩, 해소와 새 질문의 짝</td></tr>
+    </tbody>
+  </table>
+  <footer class="foot"><span>스토리 구성 기법 조사</span><span class="pn">13 / 18</span></footer>
+</section>
+
+<!-- 5장-2 -->
+<section class="sheet" id="ch5b">
+  <header class="run"><span>질문을 여는 순서가 다음 장면을 부른다</span><span>5장 숏폼·롱폼 설계 지침</span></header>
+  <h2>연작 숏드라마와 롱폼 시리즈는 회차 단위로 질문을 관리한다</h2>
+
+  <table class="tbl mt12">
+    <thead><tr><th>단위</th><th>숏드라마 (회당 1~2분, 50~100회)</th><th>롱폼 (10분 이상 유튜브, 6~16부작)</th></tr></thead>
+    <tbody>
+      <tr><td class="k">기획 순서</td><td style="width:43%">회차별 훅과 엔딩을 두세 줄로 먼저 확정한 뒤 본문을 채운다(윤수영)</td><td>클라이맥스를 먼저 잡고 거꾸로 다시 쓴다(McKee). 플래시포워드를 쓰면 과거·현재 이야기를 각각 완결된 이야기로 짠 뒤 잇는다(Aronson)</td></tr>
+      <tr><td class="k">오프닝</td><td>바로 위기로 들어간다. 앞 회 클리프행어의 보상을 첫 몇 초 안에 준다</td><td>미래 조각 하나로 시리즈 질문을 연다. 현재 이야기는 2막 전환점이나 위기 지점에서 시작한다(Aronson)</td></tr>
+      <tr><td class="k">중간</td><td>회차 안에 반전 하나. 고구마가 이어져도 작은 yes-but(정보 획득, 동맹, 적의 약점 노출)을 넣어 진행 중이라는 신호를 준다</td><td>3분·6분 무렵 재몰입 장치(MrBeast). 같은 미래 장면을 다시 틀 때마다 정보를 더한다. 플래시백은 현재 장면의 트리거에서 들어가 새 질문이 열린 지점에서 돌아온다</td></tr>
+      <tr><td class="k">회차 끝</td><td>주인공이 반격하기 직전, 또는 선택·폭로 직후에 끊는다</td><td>이번 회 질문 하나를 닫고 더 큰 질문 하나를 연다. 모든 막 끝이 충격일 필요는 없다(GLCoverage)</td></tr>
+      <tr><td class="k">시즌 리듬</td><td>큰 사이다는 첫 큰 갈등이 터지는 지점과 중간점에 둔다. 무료 회차 수는 출처마다 5~15회로 다르다</td><td>장벽의 종류(사람·제도·내면)를 바꿔 가며 점증한다. 회차 수를 먼저 정하고 이야기를 늘리지 않는다. 16부작은 후반에 힘이 빠진다는 제작사 발언이 있다<sup class="ref"><a href="#src-81">81</a></sup></td></tr>
+    </tbody>
+  </table>
+  <p class="note mt8"><span class="kind infer">추론</span>앞 장의 실무 방법과 연구를 회차 단위로 다시 배치한 표다.</p>
+
+  <h3 class="mt20">시간 이동은 글자 없이 알린다</h3>
+  <p class="sm mt8">이 프로젝트는 영상 위에 자막·표지를 올리지 않는다. 「3시간 전」 같은 시점 표지를 글자로 띄우지 않고 시각 코드나 내레이션으로 시간 이동을 알린다. 〈브레이킹 배드〉는 흑백 화면에 분홍 곰인형 하나로 시간대를 구분했다.</p>
+  <figure class="fig" style="margin-top:10px">
+    <div class="frame">
+      <svg viewBox="0 0 640 86" role="img" aria-label="시간대를 구분하는 시각 코드 다섯 가지. 색 보정, 의상, 조명, 소품의 상태, 장소. 그리고 내레이션.">
+        <g>
+          <rect x="0" y="0" width="98" height="52" rx="7" fill="#fff" stroke="#b7c2d2"/><rect x="10" y="10" width="36" height="32" rx="4" fill="#d5dbe5"/><rect x="52" y="10" width="36" height="32" rx="4" fill="#1d4ed8" opacity=".55"/>
+          <rect x="108" y="0" width="98" height="52" rx="7" fill="#fff" stroke="#b7c2d2"/><path d="M128,42V22l8,-8h12l8,8V42z" fill="#d5dbe5"/><path d="M160,42V22l8,-8h12l8,8V42z" fill="#18181b"/>
+          <rect x="216" y="0" width="98" height="52" rx="7" fill="#fff" stroke="#b7c2d2"/><circle cx="244" cy="26" r="11" fill="none" stroke="#4b5565" stroke-width="1.4"/><circle cx="286" cy="26" r="11" fill="#18181b"/><path class="ln" d="M244,9v-4M244,47v-4M227,26h-4M265,26h-4"/>
+          <rect x="324" y="0" width="98" height="52" rx="7" fill="#fff" stroke="#b7c2d2"/><path d="M340,14h20v22a6,6 0 0 1-6,6h-8a6,6 0 0 1-6,-6z" fill="none" stroke="#18181b" stroke-width="1.5"/><path d="M386,14h20v22a6,6 0 0 1-6,6h-8a6,6 0 0 1-6,-6z" fill="none" stroke="#18181b" stroke-width="1.5"/><path d="M396,14l-4,9l6,5l-4,9" fill="none" stroke="#18181b" stroke-width="1.5"/>
+          <rect x="432" y="0" width="98" height="52" rx="7" fill="#fff" stroke="#b7c2d2"/><path d="M446,42V24l12,-10l12,10V42z" fill="#d5dbe5"/><rect x="492" y="14" width="24" height="28" fill="#18181b"/><path d="M497,20h4M507,20h4M497,27h4M507,27h4M497,34h4M507,34h4" stroke="#fff" stroke-width="2"/>
+          <rect x="540" y="0" width="100" height="52" rx="7" fill="#fff" stroke="#b7c2d2"/><path class="lk" d="M562,26h4M570,18v16M578,12v28M586,20v12M594,15v22M602,22v8M610,18v16M618,26h4"/>
+        </g>
+        <g class="tb mid"><text x="49" y="68">색 보정</text><text x="157" y="68">의상</text><text x="265" y="68">조명</text><text x="373" y="68">소품의 상태</text><text x="481" y="68">장소</text><text x="590" y="68">내레이션</text></g>
+        <g class="ts mid"><text x="49" y="82">흑백과 컬러</text><text x="157" y="82">옷차림의 차이</text><text x="265" y="82">낮과 밤</text><text x="373" y="82">깨지기 전과 후의 컵</text><text x="481" y="82">집과 사무실</text><text x="590" y="82">말로 알린다</text></g>
+      </svg>
+    </div>
+    <figcaption><span class="kind concept">개념도</span><b>그림 20. 시간대를 가르는 표지.</b> 숏폼에서 시간 점프는 오프닝의 미래 조각 하나와 끝의 회수 하나가 상한에 가깝다. 같은 미래 장면을 여러 번 다시 트는 〈데미지스〉식 변주는 회차형 롱폼에 맞는다. 점프가 늘수록 시각 코드만으로 시점을 알려야 하는 비용과 혼란이 커진다.</figcaption>
+  </figure>
+
+  <div class="duo mt16">
+    <div class="lane field">
+      <span class="chip field">실무</span>
+      <h3>구조 프레임워크는 진단 도구로 쓴다</h3>
+      <ul class="pts">
+        <li>Save the Cat 15비트, Vogler의 영웅의 여정, Harmon의 Story Circle, Gulino의 8시퀀스는 <strong>초안을 쓴 뒤 빠진 비트를 찾을 때</strong> 가장 쓸모가 있다.</li>
+        <li>Peter Suderman은 블록버스터가 Save the Cat 공식에 기대면서 서로 비슷해졌다고 비판했다.<sup class="ref"><a href="#src-82">82</a></sup></li>
+        <li>Vogler 본인도 단계는 삭제·추가·재배열될 수 있다며 「패러다임을 알고 깨라」고 말한다.<sup class="ref"><a href="#src-83">83</a></sup></li>
+      </ul>
+    </div>
+    <div class="lane field">
+      <span class="chip field">실무</span>
+      <h3>갈등 고조가 맞지 않는 영상이라면</h3>
+      <ul class="pts">
+        <li>생활·정보형 숏폼에는 대립 대신 <strong>관점 전환</strong>으로 흥미를 만드는 기승전결이 대안이 될 수 있다.<sup class="ref"><a href="#src-84">84</a></sup></li>
+        <li>이것이 「갈등 없는 구조」인지는 갈등을 어떻게 정의하느냐의 문제다.</li>
+      </ul>
+    </div>
+  </div>
+  <footer class="foot"><span>스토리 구성 기법 조사</span><span class="pn">14 / 18</span></footer>
+</section>
+
+<!-- 실패 유형 -->
+<section class="sheet" id="fail">
+  <header class="run"><span>질문을 여는 순서가 다음 장면을 부른다</span><span>점검표</span></header>
+  <div class="chap">점검표</div>
+  <h2>증상에서 출발해 원인과 처방을 찾는다</h2>
+  <p class="lead narrow">초안이나 완성본을 보고 드는 느낌을 왼쪽 칸에서 찾는다. 원인과 처방은 앞 장의 실무 방법과 연구에서 끌어온 것이다.</p>
+
+  <table class="tbl mt16">
+    <thead><tr><th style="width:23%">증상</th><th style="width:33%">원인</th><th>처방</th></tr></thead>
+    <tbody>
+      <tr><td colspan="3" class="k" style="padding-top:12px;color:var(--accent);border-bottom-color:var(--ink)">오프닝과 시간 배열</td></tr>
+      <tr><td class="k" style="white-space:normal">첫 장면을 보고도 궁금하지 않다</td><td>맥락 없는 수수께끼(확신 0%) 또는 결말 전체 공개(확신 100%)</td><td>답을 반쯤 추측할 만큼만 보여 준다. 누가·왜·어떻게 중 하나 이상은 숨긴다</td></tr>
+      <tr><td class="k" style="white-space:normal">지금이 어느 시간대인지 모르겠다</td><td>시간대가 너무 많거나 표지가 없다</td><td>시간대를 둘로 줄이고 색·의상·조명·소품 상태로 구분한다. 시간대마다 질문은 하나</td></tr>
+      <tr><td class="k" style="white-space:normal">플래시포워드가 기교처럼 보인다</td><td>미래 조각이 주제·인물 선택과 연결되지 않았다</td><td>연결이 없으면 시간순으로 되돌린다. 〈브레이킹 배드〉 작가실은 큰 주제를 「심판」으로 합의했다고 Gilligan이 말했다(2차 보도)<sup class="ref"><a href="#src-85">85</a></sup></td></tr>
+      <tr><td colspan="3" class="k" style="padding-top:12px;color:var(--accent);border-bottom-color:var(--ink)">갈등과 해소</td></tr>
+      <tr><td class="k" style="white-space:normal">답답함이 짜증으로 변한다</td><td>시청자에게 뻔한 사실을 주인공만 모르는 바보 플롯</td><td>유능한 적, 알고도 못 움직이는 딜레마, 주인공 결함 중 하나로 원인을 옮긴다</td></tr>
+      <tr><td class="k" style="white-space:normal">갈등이 쌓이는데 지루하다</td><td>같은 장벽·같은 실패의 반복</td><td>반대 세력, 판돈, 요구 능력 중 하나 이상을 키우고 장벽 종류를 바꾼다</td></tr>
+      <tr><td class="k" style="white-space:normal">사이다가 시원하지 않다</td><td>악역 빌드업 부족, 주인공 공감 부족, 과하거나 부당한 응징</td><td>악역에 시간을 주고 주인공 공감을 먼저 쌓는다. 응징은 시청자가 정의롭다고 승인할 수준으로 맞춘다</td></tr>
+      <tr><td class="k" style="white-space:normal">자극이 점점 세지는데 반응은 줄어든다</td><td>사이다·반전 남발, 사건 사이 인과 단절</td><td>사건의 강도보다 인과 연결을 챙긴다. 반전 수를 줄여 각 반전의 값을 올린다(Ely)</td></tr>
+      <tr><td colspan="3" class="k" style="padding-top:12px;color:var(--accent);border-bottom-color:var(--ink)">질문 관리와 회차 끝</td></tr>
+      <tr><td class="k" style="white-space:normal">질문만 쌓이고 피로하다</td><td>닫지 않고 열기만 하는 미스터리 박스</td><td>큰 질문 하나는 오래, 작은 질문은 짧게 끈다. 하나를 닫을 때 그 답에서 새 질문을 연다</td></tr>
+      <tr><td class="k" style="white-space:normal">클리프행어 뒤 이탈한다</td><td>위기 정지만 있고 해소가 없다. 다음 회 보상이 늦다</td><td>해소 하나와 새 질문 하나를 짝짓고 보상은 다음 회 앞부분에 준다</td></tr>
+    </tbody>
+  </table>
+  <p class="note mt12"><span class="kind infer">추론</span>증상과 처방의 짝은 검증된 진단 기준이 아니다. 채널 데이터로 확인하면서 고쳐 쓴다.</p>
+  <footer class="foot"><span>스토리 구성 기법 조사</span><span class="pn">15 / 18</span></footer>
+</section>
+
+<!-- 증거 강도 -->
+<section class="sheet" id="evid">
+  <header class="run"><span>질문을 여는 순서가 다음 장면을 부른다</span><span>점검표</span></header>
+  <h2>주장마다 증거의 무게가 다르다</h2>
+  <div class="duo mt12" style="align-items:center">
+    <figure class="fig" style="margin-top:0">
+      <div class="frame">
+        <svg viewBox="0 0 295 136" role="img" aria-label="이 문서의 주장 17개를 증거 강도로 나눈 수. 단일 연구 5, 여러 연구 일치 4, 실무 합의 2, 반박됨 2, 2차 전언 2, 혼재 1, 이론·해설 1.">
+          <path class="grid" d="M104,2V134"/>
+          <g class="t end"><text x="96" y="14">단일 연구</text><text x="96" y="33">여러 연구 일치</text><text x="96" y="52">실무 합의</text><text x="96" y="71">반박됨</text><text x="96" y="90">2차 전언</text><text x="96" y="109">혼재</text><text x="96" y="128">이론·해설</text></g>
+          <g class="ba">
+            <path tabindex="0" data-tip="단일 연구|5개" d="M104,4h166a4,4 0 0 1 4,4v4a4,4 0 0 1-4,4h-166z"/>
+            <path tabindex="0" data-tip="여러 연구 일치|4개" d="M104,23h132a4,4 0 0 1 4,4v4a4,4 0 0 1-4,4h-132z"/>
+            <path tabindex="0" data-tip="실무 합의|2개" d="M104,42h64a4,4 0 0 1 4,4v4a4,4 0 0 1-4,4h-64z"/>
+            <path tabindex="0" data-tip="반박됨|2개" d="M104,61h64a4,4 0 0 1 4,4v4a4,4 0 0 1-4,4h-64z"/>
+            <path tabindex="0" data-tip="2차 전언|2개" d="M104,80h64a4,4 0 0 1 4,4v4a4,4 0 0 1-4,4h-64z"/>
+            <path tabindex="0" data-tip="혼재|1개" d="M104,99h30a4,4 0 0 1 4,4v4a4,4 0 0 1-4,4h-30z"/>
+            <path tabindex="0" data-tip="이론·해설|1개" d="M104,118h30a4,4 0 0 1 4,4v4a4,4 0 0 1-4,4h-30z"/>
+          </g>
+          <g class="tb"><text x="280" y="14">5</text><text x="246" y="33">4</text><text x="178" y="52">2</text><text x="178" y="71">2</text><text x="178" y="90">2</text><text x="144" y="109">1</text><text x="144" y="128">1</text></g>
+        </svg>
+      </div>
+      <figcaption><span class="kind data">실측</span><b>그림 21. 아래 표의 주장 17개를 센 수.</b></figcaption>
+    </figure>
+    <div>
+      <ul class="pts">
+        <li>여러 연구나 여러 실무자가 같은 쪽을 가리킨 주장은 17개 중 <strong>6개</strong>다.</li>
+        <li>단일 연구·혼재·해설에 기댄 주장이 <strong>7개</strong>다. 방향은 참고하되 숫자를 그대로 믿지 않는다.</li>
+        <li>반박됐거나 출처를 추적하지 못한 주장이 <strong>4개</strong>다. 현장에서 가장 자주 인용되는 숫자들이 여기에 든다.</li>
+      </ul>
+      <p class="note mt8">괄호 안 한정어는 표본 규모와 확인 수준이다. 학술 출처 상당수는 초록·보도자료로 확인했다.</p>
+    </div>
+  </div>
+
+  <table class="tbl tight mt16" style="font-size:11.2px">
+    <thead><tr><th>주장</th><th>근거와 한정</th><th style="width:17%">강도</th></tr></thead>
+    <tbody>
+      <tr><td style="width:38%">공개 순서만 바꿔도 서스펜스·호기심·놀람이 달라진다</td><td>Brewer &amp; Lichtenstein 1981(평균만), Knobloch 2004(초록) <span class="note">원문 수치 일부 미확인.</span></td><td><span class="ev multi">여러 연구 일치</span></td></tr>
+      <tr><td>결말을 첫머리에 다 밝히면 즐거움·서스펜스가 낮다</td><td>Knobloch 2004, Delatorre 2018, Johnson &amp; Rosenbaum 2015, Levine 2016 <span class="note">스포일러 연구는 보도자료 수준.</span></td><td><span class="ev multi">여러 연구 일치</span></td></tr>
+      <tr><td>결말을 알아도 서스펜스가 생긴다</td><td>Gerrig 1989, Delatorre 2018</td><td><span class="ev multi">여러 연구 일치</span></td></tr>
+      <tr><td>중단된 일을 다시 하려는 경향이 있다 (Ovsiankina)</td><td>Ghibellini &amp; Meier 2025 메타분석 <span class="note">초록 확인.</span></td><td><span class="ev multi">여러 연구 일치</span></td></tr>
+      <tr><td>시청자가 인물보다 더 알면 평범한 장면도 긴장된다</td><td>Brewer 1982 사례, Cabañas 2023(42명), 히치콕·Bordwell <span class="note">소규모 연구가 보강.</span></td><td><span class="ev field">실무 합의</span></td></tr>
+      <tr><td>갈등은 같은 장벽을 반복하지 말고 키워야 한다</td><td>McKee, Writing Excuses, Truby</td><td><span class="ev field">실무 합의</span></td></tr>
+      <tr><td>호기심은 확신 약 50%에서 가장 크다</td><td>Kang 2009(19명, 상식 퀴즈) <span class="note">서사 적용은 외삽.</span></td><td><span class="ev single">단일 연구</span></td></tr>
+      <tr><td>호기심이 걸린 동안 본 정보가 더 잘 기억된다</td><td>Gruber 2014(상식 퀴즈) <span class="note">서사 적용은 외삽.</span></td><td><span class="ev single">단일 연구</span></td></tr>
+      <tr><td>클리프행어는 각성만 올리고 즐거움·시청 의도는 올리지 않는다</td><td>Wirz 2023(133명) <span class="note">통념과 반대 결과.</span></td><td><span class="ev single">단일 연구</span></td></tr>
+      <tr><td>방향이 꺾이는 감정 곡선이 더 많이 읽힌다</td><td>Reagan 2016(다운로드) <span class="note">상관. 다운로드는 대리 지표.</span></td><td><span class="ev single">단일 연구</span></td></tr>
+      <tr><td>웹소설 유료작은 3일 이상 휴재하면 대거 이탈한다</td><td>2020년 문피아 분석 <span class="note">관찰 자료.</span></td><td><span class="ev single">단일 연구</span></td></tr>
+      <tr><td>주인공 호감이 서스펜스를 키운다</td><td>성향 이론, Kaspar 2016(3개 중 1개만 유의, 뉴스 대상)</td><td><span class="ev mixed">혼재</span></td></tr>
+      <tr><td>반전을 남발하면 각 반전의 값이 떨어진다</td><td>Ely의 팟캐스트 해설</td><td><span class="ev theory">이론·해설</span></td></tr>
+      <tr><td>스포일러가 재미를 높인다</td><td>Leavitt &amp; Christenfeld 2011 <span class="note">이후 연구에서 재현 실패.</span></td><td><span class="ev refuted">반박됨</span></td></tr>
+      <tr><td>미완료 일이 더 잘 기억된다 (Zeigarnik)</td><td>Ghibellini &amp; Meier 2025 메타분석(초록)</td><td><span class="ev refuted">반박됨</span></td></tr>
+      <tr><td>고구마가 3편 이상 이어지면 이탈이 시작된다</td><td>나무위키가 전한 산경 발언</td><td><span class="ev hearsay">2차 전언</span></td></tr>
+      <tr><td>첫 3초 63%, 55~58초 정지 화면, 3-7-21 규칙</td><td>마케팅·업체 블로그 <span class="note">출처 추적 불가.</span></td><td><span class="ev hearsay">2차 전언</span></td></tr>
+    </tbody>
+  </table>
+  <footer class="foot"><span>스토리 구성 기법 조사</span><span class="pn">16 / 18</span></footer>
+</section>
+
+<!-- 결론 -->
+<section class="sheet" id="end">
+  <header class="run"><span>질문을 여는 순서가 다음 장면을 부른다</span><span>결론</span></header>
+  <div class="chap">결론</div>
+  <h2>재미의 설계 단위는 지금 열려 있는 질문이다</h2>
+  <p class="lead">작가가 장면마다 <strong>열리고 닫히는 질문</strong>, 시청자가 <strong>그 답을 추측할 수 있는 정도</strong>, 시청자와 인물 중 <strong>더 많이 아는 쪽</strong>을 장부처럼 적어 두면 플래시포워드, 극적 아이러니, 고구마와 사이다, 클리프행어가 모두 같은 장부 위의 다른 칸으로 보인다.</p>
+
+  <figure class="fig">
+    <div class="frame">
+      <svg viewBox="0 0 640 184" role="img" aria-label="질문 장부. 미래 장면이 질문을 열고 플래시백이 부분 답을 준다. 갈등 점증은 답을 미루는 동안 판돈을 키운다. 회차 끝에서 하나를 닫고 더 큰 하나를 연다. 극적 아이러니는 시청자가 인물보다 먼저 아는 구간이다.">
+        <text class="tb" x="0" y="18">더 많이 아는 쪽</text>
+        <rect x="150" y="4" width="350" height="20" rx="4" fill="#1d4ed8" opacity=".13"/>
+        <text class="tm mid" x="325" y="18">극적 아이러니: 시청자가 인물보다 먼저 안다</text>
+
+        <text class="tb" x="0" y="72">열려 있는 질문</text>
+        <text class="tb mid" x="150" y="50">미래 장면</text>
+        <text class="tb mid" x="330" y="50">플래시백</text>
+        <text class="tb mid" x="506" y="50">회차 끝</text>
+        <path class="la" d="M154,68H496"/>
+        <circle cx="150" cy="68" r="4.5" fill="#f4f6f9" stroke="#1d4ed8" stroke-width="2"/>
+        <g fill="#1d4ed8"><circle cx="240" cy="68" r="3"/><circle cx="330" cy="68" r="3"/><circle cx="420" cy="68" r="3"/><circle cx="500" cy="68" r="4.5"/></g>
+        <path class="la" style="stroke-width:3.2" d="M518,68H628" marker-end="url(#arA)"/>
+        <circle cx="514" cy="68" r="4.5" fill="#f4f6f9" stroke="#1d4ed8" stroke-width="2"/>
+        <text class="tm mid" x="150" y="90">질문을 여는 열쇠</text>
+        <text class="tm mid" x="330" y="90">그 질문의 부분 답</text>
+        <text class="tm end" x="640" y="90">하나를 닫고 더 큰 하나를 연다</text>
+
+        <text class="tb" x="0" y="140">판돈</text>
+        <path class="lk" style="stroke-width:2" d="M150,160H240V148H330V134H420V118H500"/>
+        <path class="grid dash" d="M150,74V160M500,74V118"/>
+        <text class="tm mid" x="325" y="178">갈등 점증: 답을 미루는 동안 판돈을 키운다</text>
+      </svg>
+    </div>
+    <figcaption><span class="kind infer">추론</span><b>그림 22. 질문 장부.</b> 네 기법을 한 줄의 질문 위에 놓았다. 미래 장면은 질문을 여는 열쇠, 플래시백은 그 질문의 부분 답, 갈등 점증은 답을 미루는 동안 판돈을 키우는 일, 회차 끝은 하나를 닫고 더 큰 하나를 여는 경계다.</figcaption>
+  </figure>
+
+  <div class="duo mt16">
+    <div class="lane">
+      <span class="chip both">맞은 것</span>
+      <h3>현장의 방법은 연구가 예측하는 방향과 대체로 맞았다</h3>
+      <ul class="pts">
+        <li>결과의 일부만 보여 준다.</li>
+        <li>공감을 위협보다 먼저 쌓는다.</li>
+        <li>적을 강하고 부당하게 세운다.</li>
+        <li>해소와 새 질문을 짝짓는다.</li>
+      </ul>
+    </div>
+    <div class="lane">
+      <span class="chip both">틀린 것</span>
+      <h3>방법을 설명하던 통념 일부는 지지받지 못했다</h3>
+      <ul class="pts">
+        <li>Zeigarnik 효과, 스포일러 무해론, 「각성이 곧 재미」라는 믿음이 그렇다.</li>
+        <li>이유를 바로잡으면 남용을 피할 수 있다. 위기 정지만 반복하는 값싼 클리프행어와 결말 전체를 앞에 두는 오프닝이 그 예다.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 class="mt20">가장 큰 빈칸은 숏폼이다. 채널 데이터로 먼저 답한다</h3>
+  <p class="sm mt8">60초 이하 영상에서 호기심 역U자, 서스펜스 지연, 클리프행어 효과를 직접 잰 동료심사 연구는 찾지 못했다. 업계가 반복하는 초 단위 수치는 출처를 추적할 수 없다. 같은 이야기를 두 가지 배열로 만들어 YouTube Shorts의 두 지표로 비교하면 이 빈칸을 채널이 먼저 채울 수 있다.<sup class="ref"><a href="#src-66">66</a></sup></p>
+  <figure class="fig" style="margin-top:10px">
+    <div class="frame">
+      <svg viewBox="0 0 640 132" role="img" aria-label="다음 실험. 같은 이야기를 시간순 배열과 결과 일부 먼저 배열로 만들어 Viewed vs Swiped away와 평균 시청 비율을 비교한다. 첫 지표가 낮으면 오프닝의 질문이, 둘째 지표가 낮으면 중간의 점증이 문제다.">
+        <rect class="bk" x="0" y="48" width="120" height="44" rx="7"/><text class="tw mid" x="60" y="67">같은 이야기</text><text class="mid" x="60" y="82" fill="#fff" font-size="10" opacity=".86">한 편을 두 가지로</text>
+        <path class="ln" d="M122,62L147,38" marker-end="url(#ar)"/><path class="ln" d="M122,78L147,102" marker-end="url(#ar)"/>
+        <rect class="bx" x="152" y="14" width="146" height="40" rx="7"/><text class="ts" x="162" y="28">배열 A</text><text class="tb" x="162" y="44">시간순</text>
+        <rect class="bx" x="152" y="90" width="146" height="40" rx="7"/><text class="ts" x="162" y="104">배열 B</text><text class="tb" x="162" y="120">결과의 일부를 먼저</text>
+        <g class="ln"><path d="M300,34H332" marker-end="url(#ar)"/><path d="M300,110H332" marker-end="url(#ar)"/><path d="M300,38L332,104"/><path d="M300,106L332,40"/></g>
+        <rect class="bx" x="338" y="14" width="152" height="40" rx="7"/><text class="ts" x="348" y="28">첫 지표</text><text class="tb" x="348" y="44">Viewed vs. Swiped away</text>
+        <rect class="bx" x="338" y="90" width="152" height="40" rx="7"/><text class="ts" x="348" y="104">둘째 지표</text><text class="tb" x="348" y="120">평균 시청 비율</text>
+        <path class="ln" d="M492,34H512" marker-end="url(#ar)"/><path class="ln" d="M492,110H512" marker-end="url(#ar)"/>
+        <text class="tm" x="520" y="28">낮으면</text><text class="tb" x="520" y="44">오프닝의 질문</text>
+        <text class="tm" x="520" y="104">낮으면</text><text class="tb" x="520" y="120">중간의 점증</text>
+      </svg>
+    </div>
+    <figcaption><span class="kind infer">추론</span><b>그림 23. 다음 실험.</b> 첫 지표가 낮으면 오프닝의 질문이, 둘째 지표가 낮으면 중간의 점증이 문제라고 진단할 수 있다.</figcaption>
+  </figure>
+  <footer class="foot"><span>스토리 구성 기법 조사</span><span class="pn">17 / 18</span></footer>
+</section>
+
+<!-- 출처 -->
+<section class="sheet" id="src">
+  <header class="run"><span>질문을 여는 순서가 다음 장면을 부른다</span><span>출처</span></header>
+  <h2>출처</h2>
+  <p class="note mt8">번호는 본문 위 첨자와 같다. 2026-11-11에 조사했다. 학술 출처 상당수는 초록·보도자료로 확인했고 그런 경우 본문에 밝혔다.</p>
+  <ol class="src" style="margin-top:16px"><li id="src-1"><a href="https://www.aminer.cn/pub/53e9b823b7602d97043dc075/suspense-curiosity-and-surprise-how-discourse-structure-influences-the-affective-and-cognitive">Brewer &amp; Lichtenstein, Suspense, curiosity, and surprise (aminer 초록)</a></li><li id="src-2"><a href="https://sites.ualberta.ca/~dmiall/694Empirical/Brewer_Lichtenstein_1981.htm">U. Alberta, Brewer &amp; Lichtenstein 1981 실험 요약</a></li><li id="src-3"><a href="https://api.crossref.org/works/10.1177%2F0093650203261517">Knobloch 외 2004, Communication Research (Crossref 초록)</a></li><li id="src-4"><a href="https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2018.01392">Delatorre 외 2018, Frontiers in Psychology</a></li><li id="src-5"><a href="https://personal.unizar.es/garciala/publicaciones/structuralnarratology/3.Story/3.2.Order.html">García Landa, Structural Narratology 3.2 Order (Genette 정리)</a></li><li id="src-6"><a href="https://jcla.in/wp-content/uploads/2025/04/JCLA-48.2_Summer-2025_Leslie-T.-Fry.pdf">Fry 2025, JCLA 48.2</a></li><li id="src-7"><a href="https://inverse.com/culture/breaking-bad-seven-thirty-seven-14-year-anniversary">Inverse, 〈브레이킹 배드〉 「Seven Thirty-Seven」 14주년</a></li><li id="src-8"><a href="https://www.looper.com/248802/what-you-never-noticed-about-breaking-bads-pink-teddy-bear/">Looper, 〈브레이킹 배드〉 분홍 곰인형</a></li><li id="src-9"><a href="https://www.thedailybeast.com/so-why-arent-you-watching-damages">The Daily Beast, 〈데미지스〉</a></li><li id="src-10"><a href="https://www.hollywoodreporter.com/live-feed/big-little-lies-season-2-refresher-1215843">The Hollywood Reporter, 〈빅 리틀 라이즈〉 시즌1 정리</a></li><li id="src-11"><a href="https://www.theringer.com/2017/2/20/16040520/yuppie-investigative-unit-who-died-on-big-little-lies-dfb7fd5505cf">The Ringer, 〈빅 리틀 라이즈〉 누가 죽었나</a></li><li id="src-12"><a href="https://www.imaeil.com/page/view/2018112414090644798">매일신문, 〈SKY캐슬〉 1회</a></li><li id="src-13"><a href="https://www.dailian.co.kr/news/view/1048693/">데일리안, 〈시그널〉</a></li><li id="src-14"><a href="https://www.imaeil.com/page/view/2018120709023854080">매일신문, 〈SKY캐슬〉 시청률</a></li><li id="src-15"><a href="https://www.cmu.edu/dietrich/sds/docs/loewenstein/WickCandleLearning.pdf">Kang 외 2009, The wick in the candle of learning</a></li><li id="src-16"><a href="https://stafforini.com/works/loewenstein-1994-psychology-curiosity-review/">Loewenstein 1994, The psychology of curiosity (서지·초록)</a></li><li id="src-17"><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4252494">Gruber 외 2014 (PMC4252494)</a></li><li id="src-18"><a href="https://scriptangel.com/writing-non-linear-flashback-and-ensemble-scripts-by-linda-aronson/">Script Angel, Linda Aronson의 비선형·플래시백 구조</a></li><li id="src-19"><a href="https://www.scriptreaderpro.com/how-to-write-a-flashback-in-a-script/">Script Reader Pro, 플래시백 쓰는 법</a></li><li id="src-20"><a href="https://www.tvline.com/interviews/how-to-get-away-with-murder-season-2-spoilers-annalise-wes-648969/">TVLine, Pete Nowalk 인터뷰</a></li><li id="src-21"><a href="https://www.slashfilm.com/1199936/even-damon-lindelof-had-a-problem-with-all-of-those-lost-flashbacks">/Film, Damon Lindelof와 〈로스트〉 플래시백</a></li><li id="src-22"><a href="https://www.dailian.co.kr/news/view/767507/">데일리안, 〈알함브라 궁전의 추억〉 회상 비판</a></li><li id="src-23"><a href="https://www.koreascience.or.kr/article/JAKO201630762633885.pdf">KoreaScience, 〈응답하라〉 시리즈 회상 연구</a></li><li id="src-24"><a href="https://davidbordwell.net/blog/2013/11/29/hitchcock-lessing-and-the-bomb-under-the-table/">David Bordwell, Hitchcock, Lessing, and the bomb under the table</a></li><li id="src-25"><a href="https://cdn.aaai.org/AAAI/1982/AAAI82-063.pdf">Brewer 1982, AAAI-82</a></li><li id="src-26"><a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10353302/">Cabañas 외 2023 (PMC10353302)</a></li><li id="src-27"><a href="https://cris.haifa.ac.il/en/publications/understanding-audience-involvement-conceptualizing-and-manipulati/">Tal-Or &amp; Cohen 2010, 하이파대 기록</a></li><li id="src-28"><a href="https://econpapers.repec.org/RePEc:ucp:jpolec:doi:10.1086/677350">Ely, Frankel &amp; Kamenica 2015, Suspense and Surprise</a></li><li id="src-29"><a href="https://classics.mit.edu/Aristotle/poetics.1.1.html">Aristotle, Poetics (MIT Classics)</a></li><li id="src-30"><a href="https://nofilmschool.com/ronald-knox-detective-fiction-commandments">No Film School, Ronald Knox의 탐정소설 10계명</a></li><li id="src-31"><a href="https://en.wikipedia.org/wiki/Chekhov%27s_gun">Wikipedia, Chekhov&#x27;s gun</a></li><li id="src-32"><a href="https://aclanthology.org/2020.acl-main.161/">Wilmot &amp; Keller 2020, ACL</a></li><li id="src-33"><a href="https://freakonomics.com/podcast/how-to-create-suspense/">Freakonomics Radio, How to Create Suspense</a></li><li id="src-34"><a href="https://en.wikipedia.org/wiki/Mystery_box_show">Wikipedia, Mystery box show</a></li><li id="src-35"><a href="https://www.ovid.com/journals/ppmc/pdf/10.1037/ppm0000134~i-didnt-see-that-coming-spoilers-fan-theories-and-their">Ellithorpe &amp; Brookes 2018, Psychology of Popular Media Culture</a></li><li id="src-36"><a href="https://sive.rs/book/Story">Derek Sivers, McKee 『Story』 노트</a></li><li id="src-37"><a href="https://writingexcuses.com/?p=22664">Writing Excuses 21.14</a></li><li id="src-38"><a href="https://en.wikipedia.org/wiki/Scene_and_sequel">Wikipedia, Scene and sequel</a></li><li id="src-39"><a href="https://mckeestory.com/do-your-scenes-turn/">Robert McKee, Do Your Scenes Turn?</a></li><li id="src-40"><a href="https://thewrap.com/south-park-creators-visit-nyu-class-lessons-storytelling-30806">TheWrap, Parker와 Stone의 NYU 강의</a></li><li id="src-41"><a href="https://publishingcrawl.com/p/john-trubys-theory-of-opponents">Publishing Crawl, John Truby의 적대자 이론</a></li><li id="src-42"><a href="https://en.wikipedia.org/wiki/Affective_disposition_theory">Wikipedia, Affective disposition theory</a></li><li id="src-43"><a href="https://storymastery.com/story-essentials-3-empathy/">Michael Hauge, Story Essentials 3: Empathy</a></li><li id="src-44"><a href="https://writingexcuses.com/writing-excuses-9-13-three-prong-character-development/">Writing Excuses 9.13</a></li><li id="src-45"><a href="https://brandonsanderson.com/blogs/blog/creating-proactive-relatable-and-capable-characters-brandon-sandersons-writing-lecture-5-2025">Brandon Sanderson, Writing Lecture #5</a></li><li id="src-46"><a href="https://seoulalien.substack.com/p/181">서울에일리언 #181, 이융희의 웹소설 논의 정리</a></li><li id="src-47"><a href="https://namu.wiki/w/%EC%82%AC%EC%9D%B4%EB%8B%A4(%ED%81%B4%EB%A6%AC%EC%85%B0)">나무위키, 사이다(클리셰)</a></li><li id="src-48"><a href="https://www.khan.co.kr/article/202301120300055">경향신문, 김태권 칼럼</a></li><li id="src-49"><a href="https://isplus.com/article/view/isp202303270139">일간스포츠, 공희정 평론가의 막장 평</a></li><li id="src-50"><a href="https://www.tenasia.co.kr/article/2021072719374">텐아시아, 〈펜트하우스〉 전개 비판</a></li><li id="src-51"><a href="https://sports.khan.co.kr/article/202007201457003">스포츠경향, 〈한 번 다녀왔습니다〉</a></li><li id="src-52"><a href="https://en.wikipedia.org/wiki/Idiot_plot">Wikipedia, Idiot plot</a></li><li id="src-53"><a href="http://chunchu.yonsei.ac.kr/news/articleView.html?idxno=32677">연세춘추, 복수극 수용 기사</a></li><li id="src-54"><a href="https://frontiersin.org/articles/10.3389/fpsyg.2016.01913/full">Kaspar 외 2016, Frontiers in Psychology</a></li><li id="src-55"><a href="https://en.wikipedia.org/wiki/Excitation-transfer_theory">Wikipedia, Excitation-transfer theory</a></li><li id="src-56"><a href="https://glcoverage.com/2024/10/10/tv-drama-act-structure/">GLCoverage, TV 드라마 막 구조</a></li><li id="src-57"><a href="https://nofilmschool.com/storytelling-tricks-we-lost-streaming">No Film School, 스트리밍으로 사라진 작법</a></li><li id="src-58"><a href="https://www.thewrap.com/vertical-short-dramas-industry-explained-8-billion-business/">TheWrap, 세로형 숏드라마 산업</a></li><li id="src-59"><a href="https://koreatimes.co.kr/entertainment/shows-dramas/20260824/korea-turns-to-short-dramas-as-mobile-viewing-takes-off">Korea Times, 한국 숏드라마(2026-08-24)</a></li><li id="src-60"><a href="https://lady.khan.co.kr/culture/article/202410310700011">레이디경향, 윤수영 작가 인터뷰</a></li><li id="src-61"><a href="https://v.daum.net/v/6EXCtBQ9vA">중앙일보 비크닉, 숏폼 드라마</a></li><li id="src-62"><a href="https://miso.kr/blog/thread/%EC%9B%B9%EC%86%8C%EC%84%A4-%EB%AC%B4%ED%98%91-%EA%BF%80%ED%8C%81">miso.kr, 웹소설 작법 글</a></li><li id="src-63"><a href="https://scholar.kyobobook.co.kr/article/detail/4010027982764">교보 스콜라, 문피아 연재 주기 연구(2020)</a></li><li id="src-64"><a href="https://giantfreakinrobot.com/?p=512338">GiantFreakinRobot, Netflix 클리프행어 2차 보도</a></li><li id="src-65"><a href="https://www.alexanderjarvis.com/memo-how-to-succeed-in-mrbeast-production/">MrBeast 제작 매뉴얼 게재본</a></li><li id="src-66"><a href="https://support.google.com/youtube/answer/12220281">YouTube 고객센터, Shorts 지표</a></li><li id="src-67"><a href="https://houseofmarketers.com/importance-of-tiktok-ad-hooks-first-3-seconds/">House of Marketers, TikTok 첫 3초</a></li><li id="src-68"><a href="https://ideas.repec.org/a/pal/palcom/v12y2025i1d10.1057_s41599-025-05000-w.html">Ghibellini &amp; Meier 2025 메타분석</a></li><li id="src-69"><a href="https://folia.unifr.ch/unifr/documents/319990">Wirz 외 2023, Fribourg대 저장소</a></li><li id="src-70"><a href="https://psychologytoday.com/gb/blog/the-psychology-of-fiction/201110/spoilers-dont-spoil-stories">Psychology Today, Leavitt &amp; Christenfeld 2011 해설</a></li><li id="src-71"><a href="https://sciencedaily.com/releases/2015/12/151210101816.htm">ScienceDaily, Johnson &amp; Rosenbaum 2015</a></li><li id="src-72"><a href="https://news.uark.edu/articles/38085/fulbright-college-research-team-explores-how-spoilers-affect-reading-enjoyment">아칸소대 보도, Levine 외 2016</a></li><li id="src-73"><a href="https://www.onfiction.ca/2017/04/research-bulletin-spoiler-alert-not-all.html">OnFiction 2017, 스포일러 연구 정리</a></li><li id="src-74"><a href="https://neurosciencenews.com/movie-spoilers-14685/">Neuroscience News, 공포영화 스포일러</a></li><li id="src-75"><a href="https://researchconnect.stonybrook.edu/en/publications/suspense-in-the-absence-of-uncertainty/">Gerrig 1989, Suspense in the absence of uncertainty (초록)</a></li><li id="src-76"><a href="https://doi.org/10.1016/j.tics.2007.11.004">Kurby &amp; Zacks 2008, Trends in Cognitive Sciences</a></li><li id="src-77"><a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7347852/">Richardson 외 2020 (PMC7347852)</a></li><li id="src-78"><a href="https://fiveable.me/writing-the-episodic-drama/unit-10/binge-watching-considerations/study-guide/s10NKFRabrRYHCAI">Fiveable, 몰아 보기 시대의 회차 설계</a></li><li id="src-79"><a href="https://www.earticle.net/Article/A391339">조윤숙 2021 (earticle)</a></li><li id="src-80"><a href="https://ar5iv.labs.arxiv.org/html/1606.07772">Reagan 외 2016, 감정 곡선 여섯 모양 (ar5iv)</a></li><li id="src-81"><a href="https://news.mtn.co.kr/news-detail/2025012216183965673">MTN, 16부작에서 12부작으로</a></li><li id="src-82"><a href="https://nofilmschool.com/2013/07/screenwriter-reliance-story-structure-ruined-movies">No Film School, Save the Cat 공식 비판</a></li><li id="src-83"><a href="https://networkisa.org/creative-screenwriting/view/know-the-paradigm-break-the-paradigm-christopher-vogler">Creative Screenwriting, Christopher Vogler 인터뷰</a></li><li id="src-84"><a href="https://storytellingdb.com/kishotenketsu/">StorytellingDB, 기승전결</a></li><li id="src-85"><a href="https://www.cheatsheet.com/news/breaking-bad-all-the-terrible-symbolism-of-the-pink-teddy-bear-from-the-eyeball-of-morality-to-schindlers-list.html">Cheat Sheet, 분홍 곰인형의 상징 (2차 보도)</a></li></ol>
+  <footer class="foot"><span>스토리 구성 기법 조사</span><span class="pn">18 / 18</span></footer>
+</section>
+<div id="tip" role="tooltip"></div>
+<script>
+(function(){
+  var tip=document.getElementById('tip');
+  function show(el,x,y){
+    var p=el.getAttribute('data-tip').split('|');
+    tip.textContent='';
+    var b=document.createElement('b');b.textContent=p[1]||p[0];tip.appendChild(b);
+    if(p[1])tip.appendChild(document.createTextNode(p[0]));
+    tip.style.left=Math.min(x+12,innerWidth-270)+'px';tip.style.top=(y+14)+'px';tip.classList.add('on');
+  }
+  function hide(){tip.classList.remove('on')}
+  document.querySelectorAll('[data-tip]').forEach(function(el){
+    el.addEventListener('pointermove',function(e){show(el,e.clientX,e.clientY)});
+    el.addEventListener('pointerleave',hide);
+    el.addEventListener('focus',function(){var r=el.getBoundingClientRect();show(el,r.right,r.top)});
+    el.addEventListener('blur',hide);
+  });
+})();
+</script>
+</body>
+</html>
