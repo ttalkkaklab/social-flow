@@ -70,6 +70,15 @@ of the person appear in their conduct, and how does this particular relationship
 their tactic? Quote the performed evidence and mark genuine ambiguity. A generic but
 coherent character is a different finding from an unmotivated decisive choice.
 
+When the delegator asks for an interest read, keep a viewing log while reading. Read one
+scene at a time in playback order. Before opening the next scene, write down: the question
+you are holding or the thing you want to see next, in specific terms; your guess at the
+answer and how sure you are (low, medium, high); whether you know more than, the same as or
+less than the principal character; and which earlier question this scene closed. Write
+"nothing" when nothing is wanted. Do not go back and edit an entry after reading on. After
+the last scene, list every question that was never answered and say whether you could place
+each scene in time when it began. This log is the only evidence for forward pull in §3.
+
 ## 2. Compare intent and inspect the handoff
 
 Now read the selected scenario, actual identities, STORY, STRUCTURE, visual plan and relevant
@@ -168,6 +177,30 @@ surprise from actual events; mere absence of contradictions does not earn comedy
 Do not invent media deductions or claim measured audience enjoyment. Preserve the initial
 blind read, then compare canon and the full text before final grading.
 
+For an explicitly requested interest review of story content, use this rubric unless the
+caller froze another one. It asks whether a viewer would want the next scene, and it scores
+the viewing log from §1, not the author's stated design:
+
+| Axis | Maximum | Evidence |
+|---|---:|---|
+| Comprehension and causality | 20 | the blind reconstruction matches the events; choices cause consequences; each move in time was placeable when it happened |
+| Opening question | 15 | after the first scene the log names a specific question the story can answer, with a guess that is neither empty nor certain |
+| Forward pull at each join | 25 | the entry written before each next scene names something specific that is wanted; a scene that closes a question leaves another open |
+| Changing pressure | 20 | each development changes the obstacle, the stakes, the viewer's knowledge against the characters' or the viewer's expectation; trouble comes from the situation |
+| Payoff and ending | 20 | the governing question is answered with material shown earlier; the ending keeps what the story built; a serial episode answers its own question before opening a larger one |
+
+Points are earned by log entries and quoted events. A join where the log says "nothing", a
+guess that was certain and correct, a repeated barrier or an answer that arrives from nowhere
+each lose points on its axis; absence of contradictions earns none. A quiet story with no
+opponent can earn the pressure axis through changes in what the viewer expects. Do not reward
+a time jump, twist or cliffhanger for being present, and do not penalize their absence.
+Interest P0s, added to the list below: the governing question the opening raised is never
+answered and is not carried as a stated larger question of a serial; the order of events
+cannot be reconstructed from what is shown; the decisive conflict lasts only because a
+character ignores what the events show they know; the ending cancels the event the story
+built toward. This yields an interest content score. It is an editorial judgment of a plan,
+not a measurement of retention, and it does not certify staging or rendered media.
+
 A P0 is a defect that makes a decisive event unintelligible or unearned: contradictory world
 rule, essential unsupported factual claim, undisclosed fiction presented as fact, unknown
 speaker, unmotivated decisive choice, essential knowledge with no plausible access, a reveal
@@ -203,7 +236,8 @@ STORYBOARD_REVIEW: mode=narration score=92 p0=1
 ```
 
 Use `mode=scenario candidate=d1` (or d2/d3) for candidates, one tail per candidate when
-batched; include `primary=<engine> secondary=<engine|none>` when supplied. Retain existing
+batched; include `primary=<engine> secondary=<engine|none>` when supplied. Use
+`mode=interest` for a requested interest review and include the viewing log. Retain existing
 wire names for specifically requested layer reviews. `narration` means whole performance
 for story-v2, including silent actions. A vocabulary-only review reads spoken words with
 character context; no speech means not applicable, never an invented score. For image or

@@ -560,7 +560,10 @@ completion is the first distribution signal under 60 s, and a curiosity loop —
 the answer delayed and paid in stages — is the strongest hold short-form has (user-relayed,
 2026-08-23 — field-practice grade; own-channel retention, n=4, 2026-08-26 — the body that paid
 in installments held flat, the body that explained something already accepted slid from the
-third second). Zeigarnik is the name for the mechanism, not a measurement of it.
+third second). The first-seconds figure is relayed field practice whose source could not be
+traced (2026-11-11 survey). Do not cite Zeigarnik as the reason: a 2025 meta-analysis did not
+confirm better memory for unfinished tasks, though it did confirm the urge to resume an
+interrupted one. See [story interest](story-interest.md) §9 for the grades.
 
 The channel brief that asked for a first-second layer (owner, 2026-09-07) reports viewers
 leaving inside the first second — field-practice grade, and unmeasured on our channel. Our own

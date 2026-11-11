@@ -31,6 +31,7 @@ import {
   writeShotPrompt,
   shotImageRequest,
   recordShotImage,
+  storySceneSchema,
   writeStoryScenes,
   writeStorySequences,
   writeStoryShots,
@@ -368,6 +369,15 @@ describe('story first, then characters and lines', () => {
     const moved = readBoard(dir).win.SCENES;
     assert.equal(moved.find((s) => s.id === 's0001').shot.eyeline.matchShot, moved.findIndex((s) => s.id === 's0003') + 1);
     assert.deepEqual(readStoryboard(storyboardReadSchema.parse({ path: dir })).playback.map((row) => row.summary), ['a2', 'a3', 'b', 'a1 moved']);
+  });
+  it('story_scene writes the scene charge and refuses a sign the contract does not read', () => {
+    const dir = tmp();
+    writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
+    const scene = { sequence: 'q1', no: 1, place: '숲', time: '낮', event: 'e', summary: '씬', turn: '믿음이 깨진다' };
+    writeStoryScenes(storySceneSchema.parse({ path: dir, scenes: [{ ...scene, charge: { open: '-', close: '--' } }] }));
+    assert.deepEqual(readBoard(dir).win.STRUCTURE.scenes[0].charge, { open: '-', close: '--' });
+    assert.equal(storySceneSchema.safeParse({ path: dir, scenes: [{ ...scene, charge: { open: '+', close: '+++' } }] }).success, false);
+    assert.deepEqual(TOOLS.find((t) => t.name === 'story_scene').inputSchema.properties.scenes.items.properties.charge.properties.close.enum, ['+', '-', '++', '--']);
   });
   it('characters wait for a complete story; lines wait for the shot\'s characters', () => {
     const dir = tmp();

@@ -117531,7 +117531,9 @@ var storySceneSchema = external_exports.object({
     event: nonEmpty.describe("The one thing that happens in this scene"),
     summary: nonEmpty.describe("The scene's story in one sentence"),
     turn: nonEmpty.optional(),
-    out: nonEmpty.optional()
+    out: nonEmpty.optional(),
+    // The same signs structure-contract.js reads: the value at the open and at the close.
+    charge: external_exports.object({ open: external_exports.enum(["+", "-"]), close: external_exports.enum(["+", "-", "++", "--"]) }).strict().optional()
   }).strict()).min(1)
 }).strict();
 var storyShotSchema = external_exports.object({
@@ -126848,8 +126850,8 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
           id: { type: "string", description: 'Stable id, e.g. "q1"' },
           title: { type: "string", description: "The heading the review page draws" },
           purpose: { type: "string", description: "The one purpose that binds its scenes; two purposes are two sequences" },
-          question: { type: "string", description: "The dramatic question this stretch opens" },
-          payoff: { type: "integer", minimum: 1, description: "The scene number that answers the question" }
+          question: { type: "string", description: "Story-led work: the one question the viewer holds across these scenes \u2014 specific and answerable (who, why, how, whether)" },
+          payoff: { type: "integer", minimum: 1, description: "The scene number that answers the question \u2014 a later scene of this sequence" }
         } } }
       },
       required: ["path", "sequences"]
@@ -126859,7 +126861,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     name: "story_scene",
     title: "Write storyboard scenes (story step 2 of 3)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    description: `Use it after story_sequence to upsert scenes by number into a sequence: place, time, the one event, and a one- or two-sentence summary of the scene's story. A scene moved to another sequence leaves its old one. Refused (story_order) before any sequence exists or for an unknown sequence id, and on a story-first episode board by story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
+    description: `Use it after story_sequence to upsert scenes by number into a sequence: place, time, the one event, and a one- or two-sentence summary of the scene's story. On story-led work also give turn, charge and out, so the scenes can be read in a row for pressure that changes and ends that hand over the next question (skills/storyboard/references/story-interest.md). A scene moved to another sequence leaves its old one. Refused (story_order) before any sequence exists or for an unknown sequence id, and on a story-first episode board by story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
 
 Do NOT write shots or dialogue here \u2014 story_shot comes next.
 
@@ -126877,7 +126879,11 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
           event: { type: "string", description: "The one thing that happens in this scene" },
           summary: { type: "string", description: "The scene's story in one sentence" },
           turn: { type: "string", description: "What flipped between the open and the close" },
-          out: { type: "string", description: "The sentence the scene goes out on" }
+          out: { type: "string", description: "The line or visible action the scene goes out on \u2014 it leaves the next thing wanted" },
+          charge: { type: "object", additionalProperties: false, required: ["open", "close"], description: "The value at the open and at the close; ++ or -- deepens the direction the scene opened in", properties: {
+            open: { type: "string", enum: ["+", "-"] },
+            close: { type: "string", enum: ["+", "-", "++", "--"] }
+          } }
         } } }
       },
       required: ["path", "scenes"]

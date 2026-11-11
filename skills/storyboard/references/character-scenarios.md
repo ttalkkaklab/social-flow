@@ -101,8 +101,9 @@ particular audience experience; the points below are craft options, not a univer
    early. Do not postpone every answer or manufacture danger to fill the middle.
 5. For a **twist**, plant an honest detail that supports an initial interpretation and a later
    reinterpretation. Record the setup/payoff; do not introduce a new world rule at the reveal.
-   A result stated upfront can sustain interest through its cause, cost or limit. No twist is
-   also valid (`reveal: none`).
+   A result stated upfront can sustain interest through its cause, cost or limit: show part
+   of it, keep at least one of who, why or how back, and record the shown piece and the beat
+   that returns the rest in `setups` (`reveal: upfront`). No twist is also valid (`reveal: none`).
 6. For **comedy**, establish an expectation, let a character's specific pursuit complicate it,
    then break or reconnect the pattern. Test audience context and whether the violation feels
    safe enough to laugh at. Do not append an explanation of the punchline or a compulsory moral.
@@ -111,6 +112,11 @@ particular audience experience; the points below are craft options, not a univer
    ending. Do not force grief, a positive ending or a downward-then-upward numeric curve.
 8. Remove repeated explanation. Preserve subtext: what the character wants is author metadata;
    what the viewer sees/hears is the evidence. Theme may be inferred rather than spoken aloud.
+
+For story-led work, read [story interest](story-interest.md) after these steps. It covers the
+question each stretch holds open, the order of telling, who knows more, pressure that changes
+from scene to scene, and scene and episode endings, each with its evidence grade. They are
+options chosen for this story, not a formula; steps 1–8 above stay the base.
 
 Store the subject in `premise` and group the story into ordered `beats`. Existing hook,
 development and ending labels remain compatible, but the actual events decide how many
@@ -397,6 +403,10 @@ and action continuity 25; rhythm/economy 15. Cite performed events and the relev
 handoff, and subtract concrete defects rather than awarding metadata. No secondary-engine
 bonus and no compulsory fear/twist/moral. If only an early scenario is available, describe
 staging as provisional instead of pretending a full production plan was reviewed.
+
+An explicitly requested interest review is a separate read with the reviewer's own interest
+rubric and viewing log; it scores whether a viewer wants the next scene and is never a
+prerequisite for authoring or production.
 
 Ordinary authoring has no numerical pass threshold. A user-requested improvement loop keeps
 their exact criterion; “over 95” is strictly >95 for each requested story with zero P0.

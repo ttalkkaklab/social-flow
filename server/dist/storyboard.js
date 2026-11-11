@@ -1005,6 +1005,8 @@ export const storySceneSchema = z.object({
         event: nonEmpty.describe('The one thing that happens in this scene'),
         summary: nonEmpty.describe("The scene's story in one sentence"),
         turn: nonEmpty.optional(), out: nonEmpty.optional(),
+        // The same signs structure-contract.js reads: the value at the open and at the close.
+        charge: z.object({ open: z.enum(['+', '-']), close: z.enum(['+', '-', '++', '--']) }).strict().optional(),
     }).strict()).min(1),
 }).strict();
 export const storyShotSchema = z.object({

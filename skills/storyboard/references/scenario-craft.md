@@ -493,7 +493,9 @@ Catharsis is not a strong feeling; it is a feeling let go after being held. Aris
 purgation, StudioBinder's repression → breaking point → aftermath, Zak's lab reading of the
 same shape (cortisol while the stakes are live, oxytocin when they resolve, and a flat story
 producing neither — no attention, no action afterwards): three descriptions of one mechanism,
-and the mechanism has a prerequisite. Something has to be pressed down first. Reagan et al.
+and the mechanism has a prerequisite. Zak's account is a popular-press summary, not graded
+here as measured, and arousal alone is not the goal: in a 2023 cliffhanger experiment arousal
+rose while the intention to keep watching did not ([story interest](story-interest.md) §9). Something has to be pressed down first. Reagan et al.
 (2016, **measured** on 1,327 Gutenberg novels — the transfer to a 60 s short is our bet) found
 six arc shapes and that the most-downloaded ones all dip before they lift: Icarus, Oedipus,
 and two "man in a hole" arcs back to back. A straight climb was the least popular shape. The
