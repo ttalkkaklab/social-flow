@@ -2338,6 +2338,18 @@ are not added. Ducking, optional EQ and music-only drop/silence windows still ap
 Overlapping spans mix together, allowing explicitly authored crossfades. Fade lengths must
 fit without overlapping within one span. Match each fade/curve to the selected take.
 
+**`sourceStartSeconds`** (optional, whole milliseconds) starts the cue that far into its file
+instead of at zero. Use it to skip a quiet opening on a short span, or to play a later section
+of one motif in a later scene. A point that leaves less than half a second of the file is an error; a cue with less
+audio after that point than the span needs loops, and the build report says so.
+
+**Each scene's decision lives on the scene.** `story_music` writes
+`STRUCTURE.scenes[].music = { decision: "score" | "none", reason, span? }` together with the
+span it describes, where `span` is the `$timeline` id. A scene on a story-first board without
+it is `undecided`: the review page, `storyboard_read.musicSpotting`, `shot_prompt` and the
+build report name those scenes, and a scene whose decision the timeline contradicts is a
+`mismatch`. These are reports; the build goes on.
+
 `compile-sound-plan.js` writes `music-timeline.json` with resolved cue files. After picture
 assembly, `music-timeline.js` resolves anchors against `work/edit-timeline.tsv` at the actual
 FPS, renders `work/bed.wav`, and records `work/music-timeline-resolved.json` with spans and
@@ -2358,6 +2370,7 @@ window.MUSIC = {
   $mix: {                               // optional; omit the whole block for today's builder defaults
     targetLufs: -14, truePeakDbtp: -1, // project delivery values, not a published YouTube upload spec
     bedSeparationLu: 10, minimumSeparationLu: 4,
+    maximumSeparationLu: 20,           // a timeline span resting further under the speech is reported as too quiet
     ambienceSeparationLu: 15,          // room tone under the speech (amb.tsv)
     cueCrossfadeSeconds: 2,
     hook: { attenuationLu: 6, releaseSeconds: 2 },
@@ -2434,6 +2447,9 @@ the builder's existing defaults, and omitting `$mix` entirely leaves a legacy bo
 manifest and mix path. `targetLufs` and `truePeakDbtp` are this project's delivery values; YouTube's
 public help describes Stable volume but does not publish a numeric upload target. `bedSeparationLu`
 sets the music below measured narration; `minimumSeparationLu` is a speech-time review warning, never an execution gate.
+`maximumSeparationLu` (`BGM_SEP_MAX`, 20 by default) is the review line on the other side: after the
+timeline bed is rendered, each span is measured before ducking, and one resting further under the
+speech than this is reported with its distance. It is our practice, not a published figure.
 `ambienceSeparationLu` does the same for the room-tone bed (`AMB_SEP`, 15 by default), which is laid
 once and never ducked.
 
@@ -2513,6 +2529,8 @@ cue starts and stops, and the shot is where an accent lands. The sources are pra
 and glossaries ([research](../../../docs/research/2026-10-31-bgm-cue-units/index.html)), so read
 these as working practice, as in bgm-scoring §3. On a story-v2 board:
 
+- **On a board the story tools started, `story_music` records the decision.** Every scene gets
+  `score` or `none` with a reason (storyboard §3 Music spotting); the points below say where.
 - **One cue per `story_sequence` by default.** Write the `sound.cue` on the sequence's first
   shot. A chase, montage or climax that runs across scenes stays on that one cue.
 - **Change or drop where the sequence's `question` turns.** That is the scene whose `turn` flips

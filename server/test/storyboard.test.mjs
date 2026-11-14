@@ -35,6 +35,8 @@ import {
   writeStoryScenes,
   writeStorySequences,
   writeStoryShots,
+  storyMusicSchema,
+  writeStoryMusic,
 } from '../dist/storyboard.js';
 import * as storyboardImages from '../dist/storyboard.js';
 import { TOOLS } from '../dist/tools.js';
@@ -43,6 +45,7 @@ import { buildNativeImageBody } from '../dist/astra-genai-native-image.js';
 import { readImageMetadata } from '../dist/image-media.js';
 import editPlan from '../../skills/produce/references/edit-plan.js';
 import { setupProject, png } from './workflow-fixture.mjs';
+import { manageProject } from '../dist/project.js';
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
 const settings = createRequire(import.meta.url)('../../skills/_shared/model-settings.js');
@@ -416,6 +419,72 @@ describe('story first, then characters and lines', () => {
     const bad = (patch) => applyStoryboard({ path: dir, draft: true, dryRun: true, ...patch }).findings.filter((f) => f.level === 'bad').map((f) => f.what);
     assert.match(bad({ shotsById: [{ id: 's0001', shot: { ...shot, visual: {} } }] }).join(), /story_order: lines before characters/);
     assert.match(bad({ insertShots: [{ after: 0, shots: [{ type: 'points', title: 'no story' }] }] }).join(), /story_order: no summary/);
+  });
+});
+
+describe('music is decided scene by scene', () => {
+  // Three scenes in one sequence whose question scene 2 answers; shots s0001 · s0002 s0003 · s0004.
+  const outline = (dir = tmp()) => {
+    writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남', question: '편지는 누가 썼나', payoff: 2 }] });
+    writeStoryScenes({ path: dir, scenes: [1, 2, 3].map((no) => ({ sequence: 'q1', no, place: '숲', time: '낮', event: 'e', summary: '씬 ' + no })) });
+    writeStoryShots({ path: dir, shots: [{ scene: 1, summary: 'a' }, { scene: 2, summary: 'b' }, { scene: 2, summary: 'c' }, { scene: 3, summary: 'd' }] });
+    return dir;
+  };
+  const tension = { name: 'tension', prompt: 'low strings, 76 BPM, leaves room for speech', reason: '오해가 깊어진다' };
+
+  it('records score or none with its reason, writes the span, and lists what is still open', () => {
+    const dir = outline();
+    const open = writeStoryMusic({ path: dir });
+    assert.equal(open.written, false);
+    assert.deepEqual(open.spotting.undecided, [1, 2, 3]);
+    assert.match(open.findings.find((f) => f.where === 'music').what, /3 scene\(s\) have no music decision — 1, 2 \(payoff\), 3/);
+    assert.deepEqual(readStoryboard({ path: dir, level: 'outline' }).musicSpotting.undecided, [1, 2, 3]);
+
+    const r = writeStoryMusic(storyMusicSchema.parse({ path: dir, cues: [tension], spots: [
+      { scenes: [1], decision: 'none', reason: '대사만 듣게 한다' },
+      { scenes: [2, 3], decision: 'score', cue: 'tension', reason: '오해가 풀릴 때까지', sourceStartSeconds: 4, gainDb: -2 }] }));
+    assert.equal(r.written, true);
+    const { win } = readBoard(dir);
+    assert.deepEqual(win.MUSIC.$timeline, [{ id: 'scene-2-3', cue: 'tension', start: { shotId: 's0002', atSeconds: 0 }, end: { shotId: 's0004', atSeconds: 'end' },
+      sourceStartSeconds: 4, fadeInSeconds: 0.5, fadeOutSeconds: 1, gain: [{ atSeconds: 0, gainDb: -2 }] }]);
+    assert.deepEqual(win.STRUCTURE.scenes.map((s) => s.music), [{ decision: 'none', reason: '대사만 듣게 한다' },
+      { decision: 'score', reason: '오해가 풀릴 때까지', span: 'scene-2-3' }, { decision: 'score', reason: '오해가 풀릴 때까지', span: 'scene-2-3' }]);
+    assert.deepEqual(r.spotting.undecided, []);
+    assert.deepEqual(r.spotting.cues, [{ name: 'tension', source: 'generated', reason: '오해가 깊어진다' }]);
+
+    // Spotting one scene of a shared span again takes the span away and reopens the other scene.
+    const again = writeStoryMusic({ path: dir, spots: [{ scenes: [2], decision: 'none', reason: '침묵이 답이다' }] });
+    assert.deepEqual(readBoard(dir).win.MUSIC.$timeline, []);
+    assert.deepEqual(again.spotting.undecided, [3]);
+    assert.ok(again.findings.some((f) => f.where === 'cue tension' && /no span plays this cue/.test(f.what)));
+  });
+
+  it('refuses a cue nobody defined, scenes that do not follow each other and an anchor outside the scene', () => {
+    const dir = outline();
+    const spot = { scenes: [2], decision: 'score', cue: 'tension', reason: 'r' };
+    assert.throws(() => writeStoryMusic({ path: dir, spots: [spot] }), /a scored spot names a cue defined in cues/);
+    assert.throws(() => writeStoryMusic({ path: dir, cues: [tension], spots: [{ ...spot, scenes: [1, 3] }] }), /follow each other/);
+    assert.throws(() => writeStoryMusic({ path: dir, cues: [tension], spots: [{ ...spot, start: { shotId: 's0001', atSeconds: 0 } }] }), /s0001 is not a shot of scenes 2/);
+    assert.throws(() => writeStoryMusic({ path: dir, spots: [{ scenes: [9], decision: 'none', reason: 'r' }] }), /story_order: scene 9/);
+    assert.equal(storyMusicSchema.safeParse({ path: dir, cues: [{ ...tension, asset: 'default' }] }).success, false);
+    assert.equal(readBoard(dir).win.MUSIC, undefined, 'a refused call writes nothing');
+    // A hand-broken STRUCTURE: the report still answers, and a write says what is wrong instead of a TypeError.
+    writeFileSync(join(dir, 'scenes.js'), 'window.STRUCTURE={version:"structure-v1",sequences:{},scenes:[null]};window.SCENES=[{id:"s0001",type:"points",scene:1}];');
+    assert.deepEqual(writeStoryMusic({ path: dir }).spotting.undecided, []);
+    assert.throws(() => writeStoryMusic({ path: dir, spots: [{ scenes: [1], decision: 'none', reason: 'r' }] }), /story_music: STRUCTURE\.sequences and STRUCTURE\.scenes are arrays of objects/);
+  });
+
+  it('shows the channel\'s saved music direction and says when no music model is saved', () => {
+    const root = tmp(), dir = join(root, 'drafts/storyboard');
+    const ready = setupProject(root);
+    const note = '2026-11-08 user: music under every shot is too much; score the turns';
+    manageProject({ action: 'update', workspace: root, expectedRevision: ready.revision, request: 'Record the music feedback',
+      settings: { production: { ...ready.config.production, musicDirection: [note] } } });
+    mkdirSync(dir, { recursive: true });
+    outline(dir);
+    const r = writeStoryMusic({ path: dir, cues: [tension], spots: [{ scenes: [1, 2, 3], decision: 'score', cue: 'tension', reason: 'r' }] });
+    assert.deepEqual(r.spotting.direction, [note]);
+    assert.ok(r.findings.some((f) => /no music model is saved \(models\.music\)/.test(f.what)));
   });
 });
 
@@ -1097,7 +1166,9 @@ describe('images and the video prompt follow the icon attributes', () => {
     const ended = make(dir, 's0002', 'end', { props: ['key'] });
     assert.match(ended.inputs[0], /images\/s0002-start-v1\.png$/);
     assert.deepEqual([ended.inputs.length, readBoard(dir).win.SCENES[1].visual.frames.endProps], [5, ['key']]);
-    const msr = writeShotPrompt({ path: dir, id: 's0001', action: 'Mina turns to the door.' }).prompt;
+    const prompted = writeShotPrompt({ path: dir, id: 's0001', action: 'Mina turns to the door.' }), msr = prompted.prompt;
+    // The clip is about to be made, so an open music decision on its scene is said here (warning only).
+    assert.ok(prompted.written && prompted.findings.some((f) => f.level === 'warn' && /scene 1 has no music decision/.test(f.what)));
     assert.equal(msr, 'Medium shot, waist up, at eye level. The camera pushes in toward the subject, with a short pause on the opening and closing pictures. Mina turns to the door. Audio: no music.');
     writeShotPrompt({ path: join(dir, 'scenes.js'), id: 's0001', action: 'Mina turns to the door.', speakerBindings: [
       { speaker: 'mina', screenPosition: 'left', description: 'the woman in blue' }
@@ -1170,7 +1241,7 @@ describe('images and the video prompt follow the icon attributes', () => {
 describe('tool surface', () => {
   it('the four tools exist with handlers and local hints', () => {
     for (const name of ['storyboard_read', 'storyboard_apply', 'storyboard_check', 'scenario_check',
-      'story_sequence', 'story_scene', 'story_shot', 'shot_characters', 'shot_dialogue', 'shot_icons', 'shot_image', 'shot_prompt']) {
+      'story_sequence', 'story_scene', 'story_shot', 'story_music', 'shot_characters', 'shot_dialogue', 'shot_icons', 'shot_image', 'shot_prompt']) {
       const tool = TOOLS.find((t) => t.name === name);
       assert.ok(tool, `missing tool ${name}`);
       assert.equal(typeof ROUTES[name], 'function');

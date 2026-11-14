@@ -1582,6 +1582,11 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     const r = storyboard.writeStoryShots(parseArgs(storyboard.storyShotSchema, args));
     return text(storyboard.renderApply(r), r.findings.some((f) => f.level === 'bad'));
   },
+  story_music: async (args) => {
+    storyboard.contract();
+    const r = storyboard.writeStoryMusic(parseArgs(storyboard.storyMusicSchema, args));
+    return text(storyboard.renderApply(r) + '\n\nMusic spotting:\n' + JSON.stringify(r.spotting, null, 2), r.findings.some((f) => f.level === 'bad'));
+  },
   shot_characters: async (args) => {
     storyboard.contract();
     const r = storyboard.writeShotCharacters(parseArgs(storyboard.shotCharactersSchema, args));

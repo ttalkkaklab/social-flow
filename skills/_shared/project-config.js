@@ -28,11 +28,15 @@ function validateProjectFields(config) {
     if (Object.values(config.style).some(value => !text(value))) throw new Error('Style values must be nonempty text');
   }
   if (config.production !== undefined) {
-    keys(config.production, ['mode', 'renderRatioVersion', 'format', 'previzRenderer', 'episodeBudgetUsd'], 'production');
+    keys(config.production, ['mode', 'renderRatioVersion', 'format', 'previzRenderer', 'episodeBudgetUsd', 'musicDirection'], 'production');
     const p = config.production;
     if (!CHOICES.includes(p.mode) || p.renderRatioVersion !== 1) throw new Error('Choose one of the six production modes and renderRatioVersion:1');
     if (!Object.hasOwn(FORMATS, p.format || '')) throw new Error('Choose a supported production.format');
     if (p.previzRenderer !== undefined && !Object.hasOwn(PREVIZ_RENDERERS, p.previzRenderer)) throw new Error('Invalid production.previzRenderer');
+    // What the user has said about music on this channel, one dated sentence each; story_music shows it at every spotting.
+    if (p.musicDirection !== undefined && (!Array.isArray(p.musicDirection) || p.musicDirection.length > 20 ||
+        p.musicDirection.some(note => typeof note !== 'string' || !note.trim() || note.length > 300)))
+      throw new Error('production.musicDirection is up to 20 notes of at most 300 characters each');
     if (p.episodeBudgetUsd !== undefined && (typeof p.episodeBudgetUsd !== 'number' || !Number.isFinite(p.episodeBudgetUsd) || p.episodeBudgetUsd < 0)) throw new Error('episodeBudgetUsd must be a finite nonnegative number');
   }
   if (config.sns !== undefined) {

@@ -123,7 +123,7 @@ node "$HERE/verify-build-plan.js" "$WORKDIR" "$STORYBOARD"
 CHANNEL_DIR=$(node -e 'const p=require("path"), s=p.resolve(process.argv[1]), episode=p.dirname(s), episodes=p.dirname(episode); console.log(p.basename(episodes)==="episodes"?p.dirname(episodes):p.dirname(s))' "$STORYBOARD")
 # Rebuild every compiler-owned sound manifest from the current scenes.js before sourcing mix
 # values. Removing a field must remove its previous row instead of reviving stale audio.
-node "$HERE/compile-sound-plan.js" "$STORYBOARD/scenes.js" "$WORKDIR" "$CHANNEL_DIR"
+node "$HERE/compile-sound-plan.js" "$STORYBOARD/scenes.js" "$WORKDIR" "$CHANNEL_DIR" | tee "$WORKDIR/sound-plan.out"
 cd "$WORKDIR"
 # The compiler's current ownership marker selects the mode, never an orphaned/edited file.
 MUSIC_TIMELINE=$(node -e 'const fs=require("fs");const p="sound-plan.json";console.log(fs.existsSync(p)&&Object.hasOwn(JSON.parse(fs.readFileSync(p,"utf8")).files||{},"music-timeline.json")?1:0)')
@@ -166,6 +166,7 @@ RATE_LO=${RATE_LO:-$(awk -v f="$SPEED" 'BEGIN{printf "%.2f", 3.2 / f}')}
 RATE_HI=${RATE_HI:-$(awk -v f="$SPEED" 'BEGIN{printf "%.2f", 6.2 / f}')}
 BGM_SEP=${BGM_SEP:-10}             # LU the bed sits under the measured speech loudness (see bgm-scoring.md)
 BGM_SEP_MIN=${BGM_SEP_MIN:-4}      # review warning below this separation; never an execution gate
+BGM_SEP_MAX=${BGM_SEP_MAX:-20}     # review warning when a timeline span rests further under the speech than this (our practice)
 BGM_LOOP_XF=${BGM_LOOP_XF:-2.0}    # crossfade when a cue is shorter than its span
 BGM_CUE_XF=${BGM_CUE_XF:-2.0}      # crossfade between two cues (bgm.tsv)
 export BGM_LOOP_XF BGM_CUE_XF
@@ -284,6 +285,9 @@ autotimes() { node "$HERE/subtitle-clock.js" "$TOTF" "$FRAMES" "$FPS" "$(srttime
 [ "${SILENT:-0}" = "1" ] || [ "$MUSIC_TIMELINE" = "1" ] || [ -f bgm.wav ] || { echo "bgm.wav missing"; exit 1; }
 
 say "── make-reels build v3 ($(basename "$WORKDIR"))"
+# The sound compiler's warnings — a scene with no music decision, a cue file with no generation
+# receipt in this episode — belong in the report, not only on the console.
+while IFS= read -r L; do say "⚠ $L"; WARN=1; done < <(node -e 'const fs=require("fs");const line=fs.readFileSync("sound-plan.out","utf8").trim().split("\n").pop();for(const w of JSON.parse(line||"{}").warnings||[])console.log(w)')
 
 # Total reveal-state count per card — capture-reveals.sh records it while capturing. When present,
 # the build also checks "was the last state actually used" (a defect filenames alone can't show).
@@ -1298,7 +1302,10 @@ BED_I=$(awk -v s="$MIX_REFERENCE_I" -v d="$BGM_SEP" 'BEGIN{printf "%.2f", s-d}')
 
 if [ "$MUSIC_TIMELINE" = "1" ]; then
   # Picture editing is complete: anchors use actual frame counts, never draft lengths.
-  node "$HERE/music-timeline.js" music-timeline.json work/edit-timeline.tsv "$FPS" "$NT" "$BED_I" work/bed.wav
+  #   Each span is measured against the speech before ducking; one past BGM_SEP_MAX is reported, never refused.
+  node "$HERE/music-timeline.js" music-timeline.json work/edit-timeline.tsv "$FPS" "$NT" "$BED_I" work/bed.wav "$MIX_REFERENCE_I" "$BGM_SEP_MAX" > work/music-timeline.log \
+    || { cat work/music-timeline.log; say "✗ the music timeline failed to render"; exit 1; }
+  while IFS= read -r L; do say "$L"; case "$L" in "⚠"*) WARN=1;; esac; done < work/music-timeline.log
 else
 rm -f work/music-timeline-resolved.json
 : > work/bgmcue.list
@@ -1318,6 +1325,8 @@ if [ -z "$CUE0" ] || ! awk -v s="$CUE0" 'BEGIN{exit !(s < 0.001)}'; then
   mv work/bgmcue.tmp work/bgmcue.list
 fi
 say "── BGM bed: speech ${SPEECH_I} LUFS → bed ${BED_I} LUFS (${BGM_SEP} LU under) · $(wc -l < work/bgmcue.list | tr -d ' ') cue(s)"
+awk -v d="$BGM_SEP" -v m="$BGM_SEP_MAX" 'BEGIN{exit !(d > m)}' \
+  && { say "⚠ music the bed rests ${BGM_SEP} LU under the speech, past the ${BGM_SEP_MAX} LU quiet review line — listen for a bed that is lost"; WARN=1; }
 "$HERE/bgm-bed.sh" work/bed.wav "$NT" "$BED_I" work/bgmcue.list > work/bed.log 2>&1 \
   || { cat work/bed.log; say "✗ the music bed failed to render"; exit 1; }
 while IFS= read -r L; do say "$L"; done < work/bed.log

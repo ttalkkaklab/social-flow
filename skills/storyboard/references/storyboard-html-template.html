@@ -4887,7 +4887,13 @@ window.STORYBOARD_READY = (async function () {
   var cueAt = [], cueNow = MUSIC && MUSIC.base ? "base" : "";
   var musicAuthored = SCENES.some(function (s) { var d = s.sound; return d && (d.cue || d.drop || (Array.isArray(d.silence) && d.silence.length)); });
   SCENES.forEach(function (s, i) { if (s.sound && s.sound.cue) cueNow = s.sound.cue; cueAt[i] = cueNow; });
-  var musicLane = function (items) {
+  /* A scene header passes its STRUCTURE scene: the lane then carries the decision story_music
+     recorded (scene.music) and its reason, and a story-first scene nobody decided reads
+     "undecided", so silence on the page is a choice somebody made. */
+  var storyFirst = !!(window.STORY && window.STORY.authoring === "story-first");
+  var musicLane = function (items, scene) {
+    var decided = scene && scene.music && (scene.music.decision === "score" || scene.music.decision === "none") ? scene.music : null;
+    var undecided = scene && storyFirst && !decided;
     if (MUSIC && Array.isArray(MUSIC.$timeline)) {
       var anchorText = function (a) { return a.shotId + (a.atSeconds === "end" ? (LANG === "ko" ? " 끝" : " end") : " +" + a.atSeconds + "s"); };
       var spans = MUSIC.$timeline.filter(function (span) {
@@ -4901,9 +4907,12 @@ window.STORYBOARD_READY = (async function () {
       });
       var text = spans.length ? spans.map(function (span) {
         return span.cue + " (" + anchorText(span.start) + " → " + anchorText(span.end) + ")";
-      }).join(" · ") : (LANG === "ko" ? "음악 없음" : "No score");
-      return '<span class="music-lane">' + esc(text) + '</span>';
+      }).join(" · ") : undecided ? (LANG === "ko" ? "음악 미정" : "Music undecided") : (LANG === "ko" ? "음악 없음" : "No score");
+      if (spans.length && undecided) text += LANG === "ko" ? " · 결정 미기록" : " · decision not recorded";
+      if (decided && decided.reason) text += " — " + decided.reason;
+      return '<span class="music-lane">' + esc("♪ " + text) + '</span>';
     }
+    if (undecided && !musicAuthored) return '<span class="music-lane">' + esc(LANG === "ko" ? "♪ 음악 미정" : "♪ Music undecided") + '</span>';
     if (!musicAuthored) return "";
     var names = [], gaps = 0;
     items.forEach(function (it) {
@@ -4949,7 +4958,7 @@ window.STORYBOARD_READY = (async function () {
            '<span class="scene-band-main">' +
            (scPlace || (sc && sc.place) ? '<span class="scene-band-kicker"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>' + esc(scPlace && scPlace.name || sc.place) + "</span>" : "") +
            '<span class="scene-band-title">' + esc(scTitle) + "</span>" +
-           (scTurn ? '<span class="scene-turn">' + esc(scTurn) + "</span>" : "") + musicLane(grp.items) +
+           (scTurn ? '<span class="scene-turn">' + esc(scTurn) + "</span>" : "") + musicLane(grp.items, sc) +
            (scSummary ? '<p class="scene-band-synopsis">' + esc(scSummary) + "</p>" : "") +
            sceneOutHtml(sc) + "</span>" +
            '<span class="scene-band-stats">' + esc(T.shotsN(grp.items.length)) + (scLen !== null ? " · " + esc(durTxt(scLen)) : "") + "</span>" +

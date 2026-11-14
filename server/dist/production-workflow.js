@@ -11,7 +11,7 @@ import { atomicJson, canonicalPath } from './routing-files.js';
  * other tool consults this state. The one check left is the story order a story-v2 text
  * storyboard completes with.
  */
-export const STAGES = ['characters', 'text_storyboard', 'context_review', 'props', 'backgrounds',
+export const STAGES = ['characters', 'text_storyboard', 'music_spotting', 'context_review', 'props', 'backgrounds',
     'camera_review', 'blender_composition', 'image_storyboard', 'image_review', 'video', 'video_review'];
 const stageSchema = z.enum(STAGES);
 const entrySchema = z.object({ images: z.array(z.string().min(1)).optional(), id: z.string().min(1), text: z.string().min(1), image: z.string().min(1).optional(), blend: z.string().min(1).optional(), video: z.string().min(1).optional() }).strict();

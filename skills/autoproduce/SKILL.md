@@ -82,8 +82,8 @@ Read [the production order](../_shared/production-workflow.md) (user directive 2
 Only the story order is enforced; checks come back once the quality is known.
 
 1. Storyboard: the story (`story_sequence` → `story_scene` → `story_shot`), each shot's
-   characters and lines (`shot_characters` → `shot_dialogue`), then its icon attributes
-   (`shot_icons`). Prepare props and backgrounds with their images.
+   characters and lines (`shot_characters` → `shot_dialogue`), each scene's music decision
+   (`story_music`), then its icon attributes (`shot_icons`). Prepare props and backgrounds with their images.
 2. Invoke [generate-cut-images](../generate-cut-images/SKILL.md): each shot's start image,
    and the end image a `first_last` shot needs, with `shot_image`.
 3. Invoke [generate-cut-videos](../generate-cut-videos/SKILL.md): each video prompt with

@@ -32523,6 +32523,7 @@ var helper = resolve3(dirname3(fileURLToPath3(import.meta.url)), "../../skills/_
 var STAGES = [
   "characters",
   "text_storyboard",
+  "music_spotting",
   "context_review",
   "props",
   "backgrounds",
@@ -32937,7 +32938,8 @@ var sceneSchema = external_exports.object({
   charge: external_exports.record(external_exports.unknown()).optional(),
   turn: external_exports.string().optional().describe("What flipped between the open and the close"),
   summary: external_exports.string().optional().describe("The scene's story in one sentence; the storyboard scene header shows it"),
-  out: nonEmpty.optional().describe("The sentence the scene goes out on \u2014 the one that forces a \uADF8\uB7F0\uB370 or \uADF8\uB798\uC11C into the next scene")
+  out: nonEmpty.optional().describe("The sentence the scene goes out on \u2014 the one that forces a \uADF8\uB7F0\uB370 or \uADF8\uB798\uC11C into the next scene"),
+  music: external_exports.object({ decision: external_exports.enum(["score", "none"]), reason: nonEmpty, span: nonEmpty.optional() }).strict().optional().describe("The music decision story_music records: score (with its $timeline span id) or none, and why")
 }).strict();
 var sequenceSchema = external_exports.object({
   id: nonEmpty.describe('Stable id, e.g. "q1"'),
@@ -33183,6 +33185,29 @@ var storyShotSchema = external_exports.object({
     scene: external_exports.number().int().positive().describe("The scene number \u2014 written first with story_scene"),
     summary: nonEmpty.describe("The story this shot tells, in one sentence")
   }).strict()).min(1)
+}).strict();
+var musicSeconds = external_exports.number().finite().nonnegative();
+var musicAnchorSchema = external_exports.object({ shotId: shotIdSchema, atSeconds: external_exports.union([musicSeconds, external_exports.literal("end")]) }).strict();
+var storyMusicSchema = external_exports.object({
+  path: outlinePath,
+  cues: external_exports.array(external_exports.object({
+    name: external_exports.string().regex(/^[a-zA-Z][a-zA-Z0-9_-]*$/, "a cue name starts with a letter and uses letters, digits, _ and -"),
+    prompt: nonEmpty.optional().describe("What to generate for this episode, in English"),
+    asset: nonEmpty.optional().describe("A channel bed id (assets/audio/bgm/<id>.wav) used as it is"),
+    reason: nonEmpty.describe("What this cue does for the story, in one sentence")
+  }).strict().refine((cue) => cue.prompt === void 0 !== (cue.asset === void 0), { message: "give a prompt (generated for this episode) or an asset (a channel bed), not both" })).optional(),
+  spots: external_exports.array(external_exports.object({
+    scenes: external_exports.array(external_exports.number().int().positive()).min(1).describe("One scene, or scenes that follow each other and share one unbroken span"),
+    decision: external_exports.enum(["score", "none"]),
+    reason: nonEmpty.describe("Why music plays here, or why this scene stays without it"),
+    cue: nonEmpty.optional(),
+    start: musicAnchorSchema.optional(),
+    end: musicAnchorSchema.optional(),
+    sourceStartSeconds: musicSeconds.optional(),
+    fadeInSeconds: musicSeconds.optional(),
+    fadeOutSeconds: musicSeconds.optional(),
+    gainDb: external_exports.number().finite().min(-60).max(12).optional()
+  }).strict()).optional()
 }).strict();
 var shotCharactersSchema = external_exports.object({
   path: outlinePath,
