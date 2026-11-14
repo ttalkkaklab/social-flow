@@ -99047,6 +99047,7 @@ function withinDirectory(root, file) {
 var STAGES = [
   "characters",
   "text_storyboard",
+  "music_spotting",
   "context_review",
   "props",
   "backgrounds",
@@ -116714,7 +116715,8 @@ var sceneSchema = external_exports.object({
   charge: external_exports.record(external_exports.unknown()).optional(),
   turn: external_exports.string().optional().describe("What flipped between the open and the close"),
   summary: external_exports.string().optional().describe("The scene's story in one sentence; the storyboard scene header shows it"),
-  out: nonEmpty.optional().describe("The sentence the scene goes out on \u2014 the one that forces a \uADF8\uB7F0\uB370 or \uADF8\uB798\uC11C into the next scene")
+  out: nonEmpty.optional().describe("The sentence the scene goes out on \u2014 the one that forces a \uADF8\uB7F0\uB370 or \uADF8\uB798\uC11C into the next scene"),
+  music: external_exports.object({ decision: external_exports.enum(["score", "none"]), reason: nonEmpty, span: nonEmpty.optional() }).strict().optional().describe("The music decision story_music records: score (with its $timeline span id) or none, and why")
 }).strict();
 var sequenceSchema = external_exports.object({
   id: nonEmpty.describe('Stable id, e.g. "q1"'),
@@ -116988,6 +116990,10 @@ function readStoryboard(args) {
     note: "Loaded-module identity, not an install/update action. Compare with the intended build; reconnect after updating."
   };
   result.readiness = boardReadiness(win, dirname5(file));
+  if (win.STORY?.authoring === "story-first") {
+    const { undecided, mismatch } = musicTimeline().spottingReport(win);
+    result.musicSpotting = { undecided, mismatch, note: "Scenes with no music decision, and scenes whose decision the timeline contradicts. story_music records each decision; nothing waits for it." };
+  }
   result.videoTiming = (win.SCENES || []).filter((shot) => shot.shot?.render?.mode === "generated_video").map((shot) => {
     if (shot.visual?.reuse) return { shotId: shot.id, status: "reused", note: "Inspect the existing clip; no new generation limit applies." };
     try {
@@ -117616,6 +117622,137 @@ function writeStoryShots(args) {
     return eyeline && at && at !== eyeline.matchShot ? { ...shot, shot: { ...shot.shot, eyeline: { ...eyeline, matchShot: at } } } : shot;
   });
   return writeOutline(args.path, win, st, renumbered);
+}
+var musicTimeline = () => loadFromHere2(join10(PLUGIN_ROOT, "skills/produce/references/music-timeline.js"));
+var musicSeconds = external_exports.number().finite().nonnegative();
+var musicAnchorSchema = external_exports.object({ shotId: shotIdSchema, atSeconds: external_exports.union([musicSeconds, external_exports.literal("end")]) }).strict();
+var storyMusicSchema = external_exports.object({
+  path: outlinePath,
+  cues: external_exports.array(external_exports.object({
+    name: external_exports.string().regex(/^[a-zA-Z][a-zA-Z0-9_-]*$/, "a cue name starts with a letter and uses letters, digits, _ and -"),
+    prompt: nonEmpty.optional().describe("What to generate for this episode, in English"),
+    asset: nonEmpty.optional().describe("A channel bed id (assets/audio/bgm/<id>.wav) used as it is"),
+    reason: nonEmpty.describe("What this cue does for the story, in one sentence")
+  }).strict().refine((cue) => cue.prompt === void 0 !== (cue.asset === void 0), { message: "give a prompt (generated for this episode) or an asset (a channel bed), not both" })).optional(),
+  spots: external_exports.array(external_exports.object({
+    scenes: external_exports.array(external_exports.number().int().positive()).min(1).describe("One scene, or scenes that follow each other and share one unbroken span"),
+    decision: external_exports.enum(["score", "none"]),
+    reason: nonEmpty.describe("Why music plays here, or why this scene stays without it"),
+    cue: nonEmpty.optional(),
+    start: musicAnchorSchema.optional(),
+    end: musicAnchorSchema.optional(),
+    sourceStartSeconds: musicSeconds.optional(),
+    fadeInSeconds: musicSeconds.optional(),
+    fadeOutSeconds: musicSeconds.optional(),
+    gainDb: external_exports.number().finite().min(-60).max(12).optional()
+  }).strict()).optional()
+}).strict();
+function projectMusic(boardDir) {
+  let root = boardDir;
+  while (!existsSync22(join10(root, ".social-flow/models.json")) && dirname5(root) !== root) root = dirname5(root);
+  try {
+    const config3 = manageProject({ action: "status", workspace: root }).config;
+    return { saved: !!config3, direction: config3?.production?.musicDirection ?? [], model: config3?.models?.music };
+  } catch {
+    return { saved: false, direction: [] };
+  }
+}
+function sceneList(report, numbers) {
+  return numbers.map((no) => {
+    const scene = report.scenes.find((item) => item.scene === no);
+    const marks = [scene?.payoff ? "payoff" : "", scene?.turn ? "turn" : ""].filter(Boolean);
+    return marks.length ? `${no} (${marks.join(", ")})` : String(no);
+  }).join(", ");
+}
+function writeStoryMusic(args) {
+  const { file, win } = readBoard(args.path);
+  const st = win.STRUCTURE ?? emptyStructure(), shots = win.SCENES ?? [];
+  const patchable = Array.isArray(st.sequences) && Array.isArray(st.scenes) && st.scenes.every((scene) => scene && typeof scene === "object") && st.sequences.every((q) => q && typeof q === "object" && Array.isArray(q.scenes));
+  if (!patchable && (args.cues?.length || args.spots?.length))
+    throw new Error("story_music: STRUCTURE.sequences and STRUCTURE.scenes are arrays of objects \u2014 this board was hand-edited into a shape the tools cannot patch; rewrite it with storyboard_apply `set`");
+  const order = patchable ? st.sequences.flatMap((q) => q.scenes) : [];
+  const music = { ...win.MUSIC && typeof win.MUSIC === "object" ? win.MUSIC : {} };
+  for (const { name, ...cue } of args.cues ?? []) {
+    const { prompt: _prompt, prompts: _prompts, asset: _asset, ...kept } = music[name] ?? {};
+    music[name] = { ...kept, ...cue };
+  }
+  let scenes = patchable ? st.scenes.slice() : [];
+  let timeline = Array.isArray(music.$timeline) ? music.$timeline.slice() : [];
+  for (const spot of args.spots ?? []) {
+    const ranks = spot.scenes.map((no) => order.indexOf(no));
+    const unknown2 = spot.scenes.find((no, i2) => ranks[i2] < 0 || !scenes.some((scene) => scene.no === no));
+    if (unknown2 !== void 0) throw new Error(`story_order: scene ${unknown2} does not exist in a sequence \u2014 write it with story_scene`);
+    if (ranks.some((rank, i2) => i2 > 0 && rank !== ranks[i2 - 1] + 1))
+      throw new Error("story_music: one spot takes scenes that follow each other in playback order \u2014 give the others their own spots");
+    const stale = new Set(scenes.filter((scene) => spot.scenes.includes(scene.no) && scene.music?.span).map((scene) => scene.music.span));
+    timeline = timeline.filter((span2) => !stale.has(String(span2.id)));
+    scenes = scenes.map((scene) => {
+      if (!scene.music?.span || !stale.has(scene.music.span)) return scene;
+      const { music: _music, ...rest } = scene;
+      return rest;
+    });
+    let span;
+    if (spot.decision === "score") {
+      const cue = spot.cue === void 0 || spot.cue.startsWith("$") ? void 0 : music[spot.cue];
+      if (!cue || typeof cue !== "object") throw new Error(`story_music: a scored spot names a cue defined in cues \u2014 ${spot.cue ?? "none given"} is not one`);
+      const cards = shots.filter((shot) => spot.scenes.includes(shot.scene) && !["broll", "outro"].includes(shot.type));
+      if (!cards.length || cards.some((shot) => typeof shot.id !== "string"))
+        throw new Error(`story_order: scenes ${spot.scenes.join(", ")} need their shots (with ids) first \u2014 write them with story_shot`);
+      for (const anchor of [spot.start, spot.end])
+        if (anchor && !cards.some((shot) => shot.id === anchor.shotId)) throw new Error(`story_music: ${anchor.shotId} is not a shot of scenes ${spot.scenes.join(", ")}`);
+      span = `scene-${spot.scenes.join("-")}`;
+      timeline = timeline.filter((item) => item.id !== span);
+      timeline.push({
+        id: span,
+        cue: spot.cue,
+        start: spot.start ?? { shotId: cards[0].id, atSeconds: 0 },
+        end: spot.end ?? { shotId: cards[cards.length - 1].id, atSeconds: "end" },
+        ...spot.sourceStartSeconds ? { sourceStartSeconds: spot.sourceStartSeconds } : {},
+        fadeInSeconds: spot.fadeInSeconds ?? 0.5,
+        fadeOutSeconds: spot.fadeOutSeconds ?? 1,
+        ...spot.gainDb === void 0 ? {} : { gain: [{ atSeconds: 0, gainDb: spot.gainDb }] }
+      });
+    } else if (Object.keys(spot).some((key) => !["scenes", "decision", "reason"].includes(key))) {
+      throw new Error("story_music: a scene decided none takes only its reason");
+    }
+    scenes = scenes.map((scene) => spot.scenes.includes(scene.no) ? { ...scene, music: { decision: spot.decision, reason: spot.reason, ...span ? { span } : {} } } : scene);
+  }
+  const writing = Boolean(args.cues?.length || args.spots?.length);
+  let result = {
+    file,
+    written: false,
+    created: false,
+    approvalDropped: false,
+    shots: shots.length,
+    scenes: scenes.length,
+    sequences: patchable ? st.sequences.length : 0,
+    synced: 0,
+    findings: []
+  };
+  if (writing) {
+    music.$timeline = timeline;
+    const refused = musicTimeline().timelineFindings(music, shots);
+    if (refused.length) throw new Error("story_music: " + refused.join("; "));
+    result = applyStoryboard({ path: args.path, draft: true, dryRun: false, structure: { ...st, scenes }, globals: { MUSIC: music } });
+  }
+  const board = result.written ? readBoard(args.path).win : win;
+  const report = musicTimeline().spottingReport(board), project = projectMusic(dirname5(file));
+  const cues = Object.entries(board.MUSIC ?? {}).filter(([name]) => !name.startsWith("$"));
+  const used = new Set((board.MUSIC?.$timeline ?? []).map((span) => span.cue));
+  const notes = [];
+  if (report.undecided.length) notes.push({ level: "warn", where: "music", what: `${report.undecided.length} scene(s) have no music decision \u2014 ${sceneList(report, report.undecided)}: decide score or none for each` });
+  if (report.mismatch.length) notes.push({ level: "warn", where: "music", what: `the timeline disagrees with the decision on scenes ${sceneList(report, report.mismatch)} \u2014 spot them again` });
+  for (const [name, cue] of cues) {
+    if (!cue?.asset && !cue?.prompt && !cue?.prompts) notes.push({ level: "warn", where: `cue ${name}`, what: "no prompt and no asset \u2014 produce has nothing to generate or fetch" });
+    if (!used.has(name)) notes.push({ level: "warn", where: `cue ${name}`, what: "no span plays this cue" });
+  }
+  if (project.saved && !project.model && cues.some(([, cue]) => cue?.prompt || cue?.prompts))
+    notes.push({ level: "warn", where: "music", what: "no music model is saved (models.music) \u2014 choose one through project_manage before these cues are generated; a file made for another episode is not a substitute" });
+  return {
+    ...result,
+    findings: [...result.findings, ...notes],
+    spotting: { ...report, cues: cues.map(([name, cue]) => ({ name, source: cue?.asset ? "asset" : "generated", ...cue?.reason ? { reason: cue.reason } : {} })), direction: project.direction }
+  };
 }
 var shotCharactersSchema = external_exports.object({
   path: outlinePath,
@@ -118459,7 +118596,8 @@ function writeShotPrompt(args) {
     ...speakerBindings.length ? { speakerBindings, speakerBindingImageSha256: createHash15("sha256").update(readFileSync24(resolve5(dirname5(scenesPath(args.path)), start))).digest("hex") } : {}
   } } };
   const result = writeOutline(args.path, win, st, shots);
-  return { ...result, findings: [...result.findings, ...compiled.warnings.map((what) => ({ level: "warn", where: args.id, what }))], prompt };
+  const open2 = win.STORY?.authoring === "story-first" && musicTimeline().spottingReport(win).undecided.includes(shot.scene) ? [{ level: "warn", where: args.id, what: `scene ${shot.scene} has no music decision \u2014 record score or none with story_music` }] : [];
+  return { ...result, findings: [...result.findings, ...compiled.warnings.map((what) => ({ level: "warn", where: args.id, what })), ...open2], prompt };
 }
 var scenarioCheckResultSchema = external_exports.object({
   files: external_exports.array(external_exports.string()),
@@ -123104,7 +123242,7 @@ Start: \`capability_status\` shows which providers are configured on this machin
 
 Episode video: \`video_catalog\` \u2192 \`video_plan\` \u2192 \`video_approve\` (the user's yes to that shot, or to every shot) \u2192 \`video_execute\`, and \`video_status\` after an interruption. The provider tools (seedance_*, astra_*, ltx_video_generate, fasth3_omni_reference) are the adapters that route calls; call one directly only when the user names it.
 
-Storyboard: write the story first with \`story_sequence\` \u2192 \`story_scene\` \u2192 \`story_shot\`, then each shot's characters and lines with \`shot_characters\` \u2192 \`shot_dialogue\`, its icon attributes with \`shot_icons\`, its start (and first_last end) image with \`shot_image\`, its video prompt with \`shot_prompt\`; then \`storyboard_read\`, \`storyboard_apply\`, \`storyboard_check\`. Speech: \`speech_manage\` owns dialogue lines and audio bindings; \`tts_route\` and the tts_* tools generate. Review: \`host_review\` prepares media evidence and records the host's own observations; it never scores.
+Storyboard: write the story first with \`story_sequence\` \u2192 \`story_scene\` \u2192 \`story_shot\`, then each shot's characters and lines with \`shot_characters\` \u2192 \`shot_dialogue\`, each scene's music decision with \`story_music\`, its icon attributes with \`shot_icons\`, its start (and first_last end) image with \`shot_image\`, its video prompt with \`shot_prompt\`; then \`storyboard_read\`, \`storyboard_apply\`, \`storyboard_check\`. Speech: \`speech_manage\` owns dialogue lines and audio bindings; \`tts_route\` and the tts_* tools generate. Review: \`host_review\` prepares media evidence and records the host's own observations; it never scores.
 
 Images: \`image_catalog\` \u2192 \`image_plan\` \u2192 \`image_execute\`, then \`image_status\` after interruption. Preserve the saved model choice; legacy image adapters require imageContext for configured production. Host selections remain external handoffs. Music: music_*, suno_*. Sound effects: \`sfx_elevenlabs_generate\`. Free stock footage: \`stock_search\`. Research: serp_*, \`naver_search\`, datago_*, \`youtube_topic_scout\`.
 
@@ -125869,11 +126007,11 @@ Returns: a text block with the saved .wav path, model, duration, and generation 
     name: "production_workflow",
     title: "Record production stage progress",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    description: "Record an episode's progress through the stages characters, text_storyboard, context_review, props, backgrounds, camera_review, blender_composition, image_storyboard, image_review, video and video_review. A record, not a gate: stages begin and complete in any order, no other tool reads this state, and complete stores the hashes of the files a stage registered. begin registers a stage's files; complete records them; rewind drops a stage's record. The one check left: a story-v2 text_storyboard completes only once every shot has its story and characters (story_outline_required). Local file only; no generation.",
+    description: "Record an episode's progress through the stages characters, text_storyboard, music_spotting, context_review, props, backgrounds, camera_review, blender_composition, image_storyboard, image_review, video and video_review. A record, not a gate: stages begin and complete in any order, no other tool reads this state, and complete stores the hashes of the files a stage registered. begin registers a stage's files; complete records them; rewind drops a stage's record. The one check left: a story-v2 text_storyboard completes only once every shot has its story and characters (story_outline_required). Local file only; no generation.",
     inputSchema: { type: "object", additionalProperties: false, required: ["episode", "action"], properties: {
       episode: { type: "string", description: "Absolute episode directory." },
       action: { type: "string", description: "Inspect, register, finish or invalidate a stage.", enum: ["status", "begin", "complete", "rewind"] },
-      stage: { type: "string", description: "Required for begin, complete and rewind.", enum: ["characters", "text_storyboard", "context_review", "props", "backgrounds", "camera_review", "blender_composition", "image_storyboard", "image_review", "video", "video_review"] },
+      stage: { type: "string", description: "Required for begin, complete and rewind.", enum: ["characters", "text_storyboard", "music_spotting", "context_review", "props", "backgrounds", "camera_review", "blender_composition", "image_storyboard", "image_review", "video", "video_review"] },
       entries: { type: "array", description: "The stage's files, registered on begin.", items: { type: "object", additionalProperties: false, required: ["id", "text"], properties: {
         id: { type: "string", description: "Use this exact assetId in image_plan." },
         text: { type: "string", description: "Text artifact or report path." },
@@ -126910,6 +127048,48 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
         } } }
       },
       required: ["path", "shots"]
+    }
+  },
+  {
+    name: "story_music",
+    title: "Decide each scene's music (music spotting)",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Use it once the lines are written (shot_dialogue) and before shot_prompt to decide, scene by scene, where music plays and where it stays out. Read the report's direction first: it is what the user already said about music on this channel. Then define the cues (each generated for this episode from a prompt, or a channel bed named as an asset) and give every scene one decision with its reason: score with a cue, or none. Scenes that follow each other can share one unbroken span. A scored scene plays from its first shot to its last unless start and end name a shot and a time inside it; sourceStartSeconds starts the cue later than its first second. Called with path alone it reports and writes nothing.
+
+Do NOT leave a scene without a decision because silence is the default \u2014 a scene nobody decided reads undecided, and the report lists payoff and turn scenes first. Do NOT name another episode's file as a cue: a prompt cue is generated for this episode after the user authorizes the spend. For gain curves or overlapping spans, edit window.MUSIC.$timeline through storyboard_apply afterwards.
+
+Returns: the file written or not, counts, findings (! violation \xB7 warning), and the spotting report \u2014 each scene's decision, cue and mismatch, the undecided scenes, the cues, and the saved direction.`,
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        path: { type: "string", description: "The storyboard directory or its scenes.js" },
+        cues: { type: "array", description: "Named cues to add or revise", items: { type: "object", additionalProperties: false, required: ["name", "reason"], properties: {
+          name: { type: "string", pattern: "^[a-zA-Z][a-zA-Z0-9_-]*$", description: 'Cue name, e.g. "tension"' },
+          prompt: { type: "string", description: "What to generate for this episode, in English: instruments, tempo, mood, how it starts and ends, room for speech. Give this or asset" },
+          asset: { type: "string", description: "A channel bed id (assets/audio/bgm/<id>.wav) used as it is. Give this or prompt" },
+          reason: { type: "string", description: "What this cue does for the story, in one sentence" }
+        } } },
+        spots: { type: "array", description: "One decision per scene, or per run of scenes sharing a span", items: { type: "object", additionalProperties: false, required: ["scenes", "decision", "reason"], properties: {
+          scenes: { type: "array", minItems: 1, items: { type: "integer", minimum: 1 }, description: "Scene numbers; several only when they follow each other in playback order" },
+          decision: { type: "string", enum: ["score", "none"], description: "score plays a cue; none keeps the scene without music" },
+          reason: { type: "string", description: "Why music plays here, or why this scene stays without it" },
+          cue: { type: "string", description: "The cue a scored spot plays" },
+          start: { type: "object", additionalProperties: false, required: ["shotId", "atSeconds"], description: "Where the music enters; default is the first shot at 0", properties: {
+            shotId: { type: "string", pattern: "^s\\d{4,}$" },
+            atSeconds: { description: 'Seconds from the shot start, or "end"', anyOf: [{ type: "number", minimum: 0 }, { type: "string", enum: ["end"] }] }
+          } },
+          end: { type: "object", additionalProperties: false, required: ["shotId", "atSeconds"], description: "Where the music leaves; default is the end of the last shot", properties: {
+            shotId: { type: "string", pattern: "^s\\d{4,}$" },
+            atSeconds: { description: 'Seconds from the shot start, or "end"', anyOf: [{ type: "number", minimum: 0 }, { type: "string", enum: ["end"] }] }
+          } },
+          sourceStartSeconds: { type: "number", minimum: 0, description: "Start the cue this far into its file, e.g. past a quiet opening or for a later section of one motif" },
+          fadeInSeconds: { type: "number", minimum: 0, description: "Default 0.5" },
+          fadeOutSeconds: { type: "number", minimum: 0, description: "Default 1" },
+          gainDb: { type: "number", minimum: -60, maximum: 12, description: "Level against the measured bed; omit for 0 dB. The build reports a span that ends up too quiet" }
+        } } }
+      },
+      required: ["path"]
     }
   },
   {
@@ -136351,6 +136531,11 @@ ${styleWarnings.join("\n")}` : head;
     contract();
     const r2 = writeStoryShots(parseArgs(storyShotSchema, args));
     return text3(renderApply(r2), r2.findings.some((f3) => f3.level === "bad"));
+  },
+  story_music: async (args) => {
+    contract();
+    const r2 = writeStoryMusic(parseArgs(storyMusicSchema, args));
+    return text3(renderApply(r2) + "\n\nMusic spotting:\n" + JSON.stringify(r2.spotting, null, 2), r2.findings.some((f3) => f3.level === "bad"));
   },
   shot_characters: async (args) => {
     contract();

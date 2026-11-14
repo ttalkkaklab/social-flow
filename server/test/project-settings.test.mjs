@@ -171,3 +171,13 @@ test('resuming an existing episode still requires complete project setup', t => 
   fs.rmSync(path.join(root, 'data/history/profile.md'));
   assert.throws(() => call(root, 'episode', { topic: 'resume' }), /project_setup_required/);
 });
+
+test('the channel music direction is saved with the production settings and bad notes are refused', t => {
+  const root = workspace(t), ready = init(root);
+  const note = '2026-11-08 user: music under every shot is too much; score the turns';
+  const saved = call(root, 'update', { expectedRevision: ready.revision, request: 'Record the music feedback',
+    settings: { production: { ...defaults().production, musicDirection: [note] } } });
+  assert.deepEqual(call(root, 'status').config.production.musicDirection, [note]);
+  assert.throws(() => call(root, 'update', { expectedRevision: saved.revision, request: 'Empty note',
+    settings: { production: { ...defaults().production, musicDirection: [''] } } }), /musicDirection/);
+});

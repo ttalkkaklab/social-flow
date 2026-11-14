@@ -16,7 +16,7 @@ const crypto = require('crypto');
 const { spawnSync } = require('child_process');
 const { evaluateWindowScript } = require('../../_shared/scenes-vm.js');
 const { mixFindings, mixEnvironment, musicEnvelopeFindings } = require('./sound-mix-contract.js');
-const { timelineFindings, compileTimeline } = require('./music-timeline.js');
+const { timelineFindings, compileTimeline, spottingReport } = require('./music-timeline.js');
 const assetResolver = path.resolve(__dirname, '../../channel/references/resolve-asset.py');
 
 function die(message) { process.stderr.write(`compile-sound-plan: ${message}\n`); process.exit(1); }
@@ -53,6 +53,21 @@ for (const [idx, shot] of scenes.entries()) {
 }
 const removed = [], warnings = [], generated = {};
 const digest = (bytes) => crypto.createHash('sha256').update(bytes).digest('hex');
+function warn(message) { warnings.push(message); process.stderr.write(`compile-sound-plan: warning: ${message}\n`); }
+// A board written with the story tools decides music per scene (story_music). Silence nobody
+// decided is reported here; the build goes on.
+if (win.STORY?.authoring === 'story-first') {
+  const { undecided, mismatch } = spottingReport(win);
+  if (undecided.length) warn(`${undecided.length} scene(s) have no music decision (scenes ${undecided.join(', ')}) — record score or none with story_music`);
+  if (mismatch.length) warn(`the music timeline disagrees with the decision on scenes ${mismatch.join(', ')} — spot them again with story_music`);
+}
+// Files music_execute made for this episode, by content hash (.work/music-routing/state.json).
+const receipts = new Set();
+try {
+  const state = JSON.parse(fs.readFileSync(path.join(path.dirname(path.dirname(source)), '.work/music-routing/state.json'), 'utf8'));
+  for (const job of Object.values(record(state.jobs))) if (typeof record(job.output).sha256 === 'string') receipts.add(job.output.sha256);
+} catch { /* no music was generated for this episode */ }
+const cueFiles = new Map();
 function writeOwned(name, content) {
   const file = path.join(work, name);
   fs.writeFileSync(file, content);
@@ -69,9 +84,7 @@ function cleanPrevious() {
     const current = digest(fs.readFileSync(file));
     if (current === hash) { fs.rmSync(file); removed.push(name); }
     else {
-      const warning = `${name} changed after compile; keeping the human-edited file`;
-      warnings.push(warning);
-      process.stderr.write(`compile-sound-plan: warning: ${warning}\n`);
+      warn(`${name} changed after compile; keeping the human-edited file`);
     }
   }
 }
@@ -112,10 +125,16 @@ function sfxFile(id) {
   return catalog('sfx', typeof entry.asset === 'string' && entry.asset.trim() ? entry.asset.trim() : id);
 }
 function cueFile(name) {
+  if (cueFiles.has(name)) return cueFiles.get(name);
   const cue = record(music[name]);
   if (typeof cue.asset === 'string' && cue.asset.trim()) return catalog('bgm', cue.asset.trim());
   const file = path.join(work, name === 'base' ? 'bgm.wav' : `bgm-${safeCell(name, 'music cue')}.wav`);
   if (!fs.existsSync(file)) die(`generated music cue "${name}" is missing at ${file}`);
+  // A cue without `asset` is generated for this episode. A file with no receipt here was made for
+  // another episode or cue, or copied in by hand: say so, and leave the choice to the author.
+  if (!receipts.has(digest(fs.readFileSync(file))))
+    warn(`music cue "${name}": ${file} has no generation receipt in this episode (.work/music-routing) — generate it with music_plan → music_execute, or name a channel asset; a file made for another episode is not this cue`);
+  cueFiles.set(name, file);
   return file;
 }
 

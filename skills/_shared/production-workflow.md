@@ -18,6 +18,9 @@ generation authorization and adapter input validation stay. Work in this order:
    A narrator who is never seen takes `"voiceOnly": true` and needs no panels.
 2. Story, one layer at a time: `story_sequence` → `story_scene` → `story_shot`.
 3. Each shot's characters (`shot_characters`, at most two), then their lines (`shot_dialogue`).
+   Then each scene's music decision (`story_music`, user directive 2026-11-14): `score` with a
+   cue or `none`, each with its reason, read against the channel's saved music direction.
+   Nothing waits for it; an undecided scene is reported on the review page and at assembly.
 4. Each shot's icon attributes (`shot_icons`): render route, size, angle, camera move,
    focus, depth, frame plan (`reference` is MSR) and the transition into the next shot (`next`).
    After lines and provisional camera staging, compare the uncut scene with every join

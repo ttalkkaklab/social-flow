@@ -88,6 +88,12 @@ Instagram and TikTok publish nothing we could verify either.
   the first A/B to run — `DUCK_RATIO`, `DUCK_ATTACK` (20 ms) and `DUCK_RELEASE` (250 ms) are env
   knobs on both builders for exactly that. Guide ranges: attack 10–20 or 30–60 ms, release
   200–500 ms and 400–700 if it pumps; all of it craft grade.
+- **Too quiet is reported too.** The warning above only looks one way. On a timeline bed,
+  `music-timeline.js` measures each span before ducking and reports one that rests more than
+  `BGM_SEP_MAX` (20 LU, `$mix.maximumSeparationLu`) under the speech, with the distance. No
+  listening test gives an upper bound, so 20 is our practice: three insight episodes ran 23 to
+  32 LU under the voice while it was up, and their short emotional spans sat 22 to 27 dB under
+  it. Ducking only lowers a span further, so one past the line before ducking is quiet everywhere.
 - **The hook opens over a quieter bed.** `build-reel.sh` adds `BGM_HOOK_LU` (6) to the distance
   while card 0 runs and ramps back over `BGM_HOOK_R` (2.0 s) from the start of card 1, on the
   one-bed path too. That is §3's own rule made mechanical, not evidence — measured −32.3 LUFS
@@ -149,7 +155,8 @@ scenes-schema §sound effects.
 For new timeline-scored work, use `MUSIC.$timeline` (scenes-schema §Music cues). One span
 names the cue, entry/exit shot-ID anchors, fades and a span-relative gain curve. Assembly
 resolves the actual edited frame clock before adding the music; cuts inside a span never
-restart its file or gain. `[]` means no score. This path skips the legacy hook and global
+restart its file or gain. `sourceStartSeconds` starts a span later in its file, which is how a
+short span skips a quiet opening and how one motif serves several scenes. `[]` means no score. This path skips the legacy hook and global
 music fades below; it retains optional EQ, ducking and music-only silence/drop windows.
 The rules below describe the legacy bed path and optional editorial choices, not compulsory
 music placement. The renderer resolves authored timing; it cannot identify an emotional
@@ -157,7 +164,7 @@ turn in the accepted footage. Listen when a listening review is requested.
 
 A single bed can support the whole episode. Choose changes from the story's turns using
 [retention-direction.md](../../storyboard/references/retention-direction.md) §4, then listen
-to the final mix using §5. Cue placement is an editorial decision. Autoproduce may reuse multiple cues or generate them within its authorized allocation.
+to the final mix using §5. Cue placement is an editorial decision. Autoproduce names channel beds as `asset` cues or generates this episode's cues within its authorized allocation.
 A single bed remains an economical option.
 
 `bgm.tsv` (`idx <TAB> audio-file`) changes the bed at a card and keeps it until the next row;
@@ -194,8 +201,8 @@ Our working defaults, all of them ours to overturn:
 ## 4. Generating a bed
 
 Use the saved `models.music` through [music routing](../../_shared/music-routing.md).
-Reuse a suitable channel asset first; assess its dramatic role rather than copying the default
-regardless of content. Translate prompt intent into the selected adapter's native fields.
+Name a channel bed as the cue's `asset` only when its dramatic role fits the scene; otherwise the
+cue is generated for this episode, and a file made for another episode's cue is not used. Translate prompt intent into the selected adapter's native fields.
 Do not switch providers because an example below uses Lyria. Output duration is measured;
 the builder handles looping and placement. Provider controls are requests, not proof that
 a generated track follows every transition or preserves a motif.

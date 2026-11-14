@@ -146,6 +146,11 @@ prices. A configured credential does not guarantee a successful generation.
    valid; new music generation reports `music_setup_required` until a choice exists.
    Reusing a channel bed requires no music model choice. A configured model is not
    spending authorization. See [music routing](music-routing.md).
+   **Music direction.** `production.musicDirection` keeps what the user has said about music
+   on this channel: up to 20 dated one-sentence notes, e.g. `"2026-11-08 user: music under
+   every shot is too much; score the turns"`. Add a note with `project_manage update` (pass
+   the whole `production` block with the new list) in the turn the user gives the feedback.
+   `story_music` shows the list at every spotting, so the next episode starts from it.
 
 Complete each model selection and its credential step below before asking for the next category.
 Do not batch video, image and speech choices ahead of credential setup. Reuse

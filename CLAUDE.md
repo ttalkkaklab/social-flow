@@ -205,6 +205,23 @@ place picture stays out. Each shot's video then waits for the user's yes to its 
 `video_execute` refuses otherwise (`video_approval_required`). The session never records an
 approval the user did not give.
 
+## Music spotting (user directive, 2026-11-14)
+
+Three episodes got their music at assembly, from files made for other episodes, and the
+user placed each cue by hand. So every scene on a story-first board gets a music decision
+once its lines are written: `story_music` records `score` with a cue or `none`, each with
+its reason, and writes the `$timeline` span. A scene nobody decided reads `undecided`;
+`$timeline: []` without decisions is not a choice of silence. A `prompt` cue is generated
+for its episode after the user authorizes the spend, never filled with another episode's
+file, and the sound compiler reports a cue file with no `music_execute` receipt in the
+episode. The user's music feedback is saved as dated notes in `production.musicDirection`
+and shown at every spotting. A span can start later in its file (`sourceStartSeconds`), and
+a span resting more than `maximumSeparationLu` (20) under the speech is reported. Each of
+these reports; none refuses a write or a build, except input the tools cannot use: an unknown
+cue, scenes that do not follow each other, or an offset that leaves no cue to play. The
+receipt check reads cues the board names, so a channel bed copied in as the legacy `bgm.wav`
+is outside it. See `skills/storyboard/SKILL.md` §3.
+
 ## English video prompts (user directive, 2026-10-31)
 
 Every video prompt is English on every adapter, Seedance 2.5 included. Only dialogue uses the

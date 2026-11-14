@@ -893,7 +893,7 @@ Start: \`capability_status\` shows which providers are configured on this machin
 
 Episode video: \`video_catalog\` → \`video_plan\` → \`video_approve\` (the user's yes to that shot, or to every shot) → \`video_execute\`, and \`video_status\` after an interruption. The provider tools (seedance_*, astra_*, ltx_video_generate, fasth3_omni_reference) are the adapters that route calls; call one directly only when the user names it.
 
-Storyboard: write the story first with \`story_sequence\` → \`story_scene\` → \`story_shot\`, then each shot's characters and lines with \`shot_characters\` → \`shot_dialogue\`, its icon attributes with \`shot_icons\`, its start (and first_last end) image with \`shot_image\`, its video prompt with \`shot_prompt\`; then \`storyboard_read\`, \`storyboard_apply\`, \`storyboard_check\`. Speech: \`speech_manage\` owns dialogue lines and audio bindings; \`tts_route\` and the tts_* tools generate. Review: \`host_review\` prepares media evidence and records the host's own observations; it never scores.
+Storyboard: write the story first with \`story_sequence\` → \`story_scene\` → \`story_shot\`, then each shot's characters and lines with \`shot_characters\` → \`shot_dialogue\`, each scene's music decision with \`story_music\`, its icon attributes with \`shot_icons\`, its start (and first_last end) image with \`shot_image\`, its video prompt with \`shot_prompt\`; then \`storyboard_read\`, \`storyboard_apply\`, \`storyboard_check\`. Speech: \`speech_manage\` owns dialogue lines and audio bindings; \`tts_route\` and the tts_* tools generate. Review: \`host_review\` prepares media evidence and records the host's own observations; it never scores.
 
 Images: \`image_catalog\` → \`image_plan\` → \`image_execute\`, then \`image_status\` after interruption. Preserve the saved model choice; legacy image adapters require imageContext for configured production. Host selections remain external handoffs. Music: music_*, suno_*. Sound effects: \`sfx_elevenlabs_generate\`. Free stock footage: \`stock_search\`. Research: serp_*, \`naver_search\`, datago_*, \`youtube_topic_scout\`.
 
@@ -3582,11 +3582,11 @@ Returns: a text block with the saved .wav path, model, duration, and generation 
         name: 'production_workflow',
         title: 'Record production stage progress',
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-        description: 'Record an episode\'s progress through the stages characters, text_storyboard, context_review, props, backgrounds, camera_review, blender_composition, image_storyboard, image_review, video and video_review. A record, not a gate: stages begin and complete in any order, no other tool reads this state, and complete stores the hashes of the files a stage registered. begin registers a stage\'s files; complete records them; rewind drops a stage\'s record. The one check left: a story-v2 text_storyboard completes only once every shot has its story and characters (story_outline_required). Local file only; no generation.',
+        description: 'Record an episode\'s progress through the stages characters, text_storyboard, music_spotting, context_review, props, backgrounds, camera_review, blender_composition, image_storyboard, image_review, video and video_review. A record, not a gate: stages begin and complete in any order, no other tool reads this state, and complete stores the hashes of the files a stage registered. begin registers a stage\'s files; complete records them; rewind drops a stage\'s record. The one check left: a story-v2 text_storyboard completes only once every shot has its story and characters (story_outline_required). Local file only; no generation.',
         inputSchema: { type: 'object', additionalProperties: false, required: ['episode', 'action'], properties: {
                 episode: { type: 'string', description: 'Absolute episode directory.' },
                 action: { type: 'string', description: 'Inspect, register, finish or invalidate a stage.', enum: ['status', 'begin', 'complete', 'rewind'] },
-                stage: { type: 'string', description: 'Required for begin, complete and rewind.', enum: ['characters', 'text_storyboard', 'context_review', 'props', 'backgrounds', 'camera_review', 'blender_composition', 'image_storyboard', 'image_review', 'video', 'video_review'] },
+                stage: { type: 'string', description: 'Required for begin, complete and rewind.', enum: ['characters', 'text_storyboard', 'music_spotting', 'context_review', 'props', 'backgrounds', 'camera_review', 'blender_composition', 'image_storyboard', 'image_review', 'video', 'video_review'] },
                 entries: { type: 'array', description: 'The stage\'s files, registered on begin.', items: { type: 'object', additionalProperties: false, required: ['id', 'text'], properties: {
                             id: { type: 'string', description: 'Use this exact assetId in image_plan.' },
                             text: { type: 'string', description: 'Text artifact or report path.' },
@@ -4589,6 +4589,45 @@ Returns: the file written or not, counts, and findings (! violation · warning).
                         } } },
             },
             required: ['path', 'shots'],
+        },
+    },
+    {
+        name: 'story_music',
+        title: 'Decide each scene\'s music (music spotting)',
+        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+        description: `Use it once the lines are written (shot_dialogue) and before shot_prompt to decide, scene by scene, where music plays and where it stays out. Read the report's direction first: it is what the user already said about music on this channel. Then define the cues (each generated for this episode from a prompt, or a channel bed named as an asset) and give every scene one decision with its reason: score with a cue, or none. Scenes that follow each other can share one unbroken span. A scored scene plays from its first shot to its last unless start and end name a shot and a time inside it; sourceStartSeconds starts the cue later than its first second. Called with path alone it reports and writes nothing.
+
+Do NOT leave a scene without a decision because silence is the default — a scene nobody decided reads undecided, and the report lists payoff and turn scenes first. Do NOT name another episode's file as a cue: a prompt cue is generated for this episode after the user authorizes the spend. For gain curves or overlapping spans, edit window.MUSIC.$timeline through storyboard_apply afterwards.
+
+Returns: the file written or not, counts, findings (! violation · warning), and the spotting report — each scene's decision, cue and mismatch, the undecided scenes, the cues, and the saved direction.`,
+        inputSchema: {
+            type: 'object', additionalProperties: false,
+            properties: {
+                path: { type: 'string', description: 'The storyboard directory or its scenes.js' },
+                cues: { type: 'array', description: 'Named cues to add or revise', items: { type: 'object', additionalProperties: false, required: ['name', 'reason'], properties: {
+                            name: { type: 'string', pattern: '^[a-zA-Z][a-zA-Z0-9_-]*$', description: 'Cue name, e.g. "tension"' },
+                            prompt: { type: 'string', description: 'What to generate for this episode, in English: instruments, tempo, mood, how it starts and ends, room for speech. Give this or asset' },
+                            asset: { type: 'string', description: 'A channel bed id (assets/audio/bgm/<id>.wav) used as it is. Give this or prompt' },
+                            reason: { type: 'string', description: 'What this cue does for the story, in one sentence' },
+                        } } },
+                spots: { type: 'array', description: 'One decision per scene, or per run of scenes sharing a span', items: { type: 'object', additionalProperties: false, required: ['scenes', 'decision', 'reason'], properties: {
+                            scenes: { type: 'array', minItems: 1, items: { type: 'integer', minimum: 1 }, description: 'Scene numbers; several only when they follow each other in playback order' },
+                            decision: { type: 'string', enum: ['score', 'none'], description: 'score plays a cue; none keeps the scene without music' },
+                            reason: { type: 'string', description: 'Why music plays here, or why this scene stays without it' },
+                            cue: { type: 'string', description: 'The cue a scored spot plays' },
+                            start: { type: 'object', additionalProperties: false, required: ['shotId', 'atSeconds'], description: 'Where the music enters; default is the first shot at 0', properties: {
+                                    shotId: { type: 'string', pattern: '^s\\d{4,}$' }, atSeconds: { description: 'Seconds from the shot start, or "end"', anyOf: [{ type: 'number', minimum: 0 }, { type: 'string', enum: ['end'] }] }
+                                } },
+                            end: { type: 'object', additionalProperties: false, required: ['shotId', 'atSeconds'], description: 'Where the music leaves; default is the end of the last shot', properties: {
+                                    shotId: { type: 'string', pattern: '^s\\d{4,}$' }, atSeconds: { description: 'Seconds from the shot start, or "end"', anyOf: [{ type: 'number', minimum: 0 }, { type: 'string', enum: ['end'] }] }
+                                } },
+                            sourceStartSeconds: { type: 'number', minimum: 0, description: 'Start the cue this far into its file, e.g. past a quiet opening or for a later section of one motif' },
+                            fadeInSeconds: { type: 'number', minimum: 0, description: 'Default 0.5' },
+                            fadeOutSeconds: { type: 'number', minimum: 0, description: 'Default 1' },
+                            gainDb: { type: 'number', minimum: -60, maximum: 12, description: 'Level against the measured bed; omit for 0 dB. The build reports a span that ends up too quiet' },
+                        } } },
+            },
+            required: ['path'],
         },
     },
     {

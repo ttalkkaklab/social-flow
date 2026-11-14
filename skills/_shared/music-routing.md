@@ -1,7 +1,7 @@
 # Music selection and execution
 
 New generated music follows `music_catalog → music_plan → music_execute`. Read
-`music_status` after interruptions. Reuse existing channel beds first. No provider
+`music_status` after interruptions. A channel bed is reused by naming it as a cue's `asset`; a file made for another episode's cue is never a substitute (user directive 2026-11-14). No provider
 fallback or quality score changes the saved choice.
 
 ## Settings and layers

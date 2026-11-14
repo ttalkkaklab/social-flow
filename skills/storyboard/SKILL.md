@@ -7,7 +7,7 @@ description: >
   action and attributed speech, then plans shots and content-led timing. Saves the local
   review board. Produce builds an approved board; autoproduce runs both unattended.
 argument-hint: "<channel> <topic or topic hint>"
-allowed-tools: ["mcp__social-flow__character_manage", "mcp__social-flow__character_panel", "mcp__plugin_social-flow_social-flow__character_manage", "mcp__plugin_social-flow_social-flow__character_panel", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "mcp__social-flow__host_review", "mcp__plugin_social-flow_social-flow__host_review", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__location_manage", "mcp__plugin_social-flow_social-flow__location_manage", "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "mcp__social-flow__story_sequence", "mcp__plugin_social-flow_social-flow__story_sequence", "mcp__social-flow__story_scene", "mcp__plugin_social-flow_social-flow__story_scene", "mcp__social-flow__story_shot", "mcp__plugin_social-flow_social-flow__story_shot", "mcp__social-flow__shot_characters", "mcp__plugin_social-flow_social-flow__shot_characters", "mcp__social-flow__shot_dialogue", "mcp__plugin_social-flow_social-flow__shot_dialogue", "mcp__social-flow__shot_icons", "mcp__plugin_social-flow_social-flow__shot_icons", "mcp__social-flow__shot_image", "mcp__plugin_social-flow_social-flow__shot_image", "mcp__social-flow__shot_prompt", "mcp__plugin_social-flow_social-flow__shot_prompt", "mcp__social-flow__storyboard_apply", "mcp__plugin_social-flow_social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__plugin_social-flow_social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__plugin_social-flow_social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__plugin_social-flow_social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__plugin_social-flow_social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__plugin_social-flow_social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__plugin_social-flow_social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__plugin_social-flow_social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__plugin_social-flow_social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__plugin_social-flow_social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__plugin_social-flow_social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__plugin_social-flow_social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__plugin_social-flow_social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics", "mcp__plugin_social-flow_social-flow__suno_generate_lyrics"]
+allowed-tools: ["mcp__social-flow__character_manage", "mcp__social-flow__character_panel", "mcp__plugin_social-flow_social-flow__character_manage", "mcp__plugin_social-flow_social-flow__character_panel", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "mcp__social-flow__host_review", "mcp__plugin_social-flow_social-flow__host_review", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__location_manage", "mcp__plugin_social-flow_social-flow__location_manage", "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "mcp__social-flow__story_sequence", "mcp__plugin_social-flow_social-flow__story_sequence", "mcp__social-flow__story_scene", "mcp__plugin_social-flow_social-flow__story_scene", "mcp__social-flow__story_shot", "mcp__plugin_social-flow_social-flow__story_shot", "mcp__social-flow__story_music", "mcp__plugin_social-flow_social-flow__story_music", "mcp__social-flow__shot_characters", "mcp__plugin_social-flow_social-flow__shot_characters", "mcp__social-flow__shot_dialogue", "mcp__plugin_social-flow_social-flow__shot_dialogue", "mcp__social-flow__shot_icons", "mcp__plugin_social-flow_social-flow__shot_icons", "mcp__social-flow__shot_image", "mcp__plugin_social-flow_social-flow__shot_image", "mcp__social-flow__shot_prompt", "mcp__plugin_social-flow_social-flow__shot_prompt", "mcp__social-flow__storyboard_apply", "mcp__plugin_social-flow_social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__plugin_social-flow_social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__plugin_social-flow_social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__plugin_social-flow_social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__plugin_social-flow_social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__plugin_social-flow_social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__plugin_social-flow_social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__plugin_social-flow_social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__plugin_social-flow_social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__plugin_social-flow_social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__plugin_social-flow_social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__plugin_social-flow_social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__plugin_social-flow_social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics", "mcp__plugin_social-flow_social-flow__suno_generate_lyrics"]
 ---
 For motion-graphic shots, follow [motion type selection and design](references/motion-graphics.md): persist `shot.motionGraphic` with a common `THEME.motionGraphicTheme` when the episode needs consistency and contextual `style.theme` (`auto` or an explicit channel theme), choose the type from viewer intent and available evidence, and keep style, choreography and renderer separate. Built-in abstract scenes use the installed `prepare-motion-graphic.js`; asset-dependent types retain their authored or mesh routes.
 
@@ -199,18 +199,33 @@ shot's order: story, characters, then lines and icons. `production_workflow` com
 (`story_outline_required`). The guidance below shapes what those summaries
 and lines say.
 
-**Music spotting (guidance).** Once the lines are written and before `shot_prompt`, decide
-where music enters, continues and leaves; no music is a valid choice. For new timeline-scored
-work, write named `window.MUSIC` cues and `$timeline` spans using stable shot-ID/offset anchors
-through `storyboard_apply` (scenes-schema §Music cues). A span can begin inside one shot and
-continue across others with one gain curve. Plan the dramatic trigger now; confirm its offset
-against accepted footage, and let assembly resolve actual frame boundaries. `$timeline:[]`
-means no score without removing dialogue or ambience. Legacy boards can retain one bed.
-Otherwise write
-`window.MUSIC` cues, each with a one-sentence `reason`, and each changing shot's `sound` through
-`storyboard_apply`, following scenes-schema §Placing cues on a story board: one cue per sequence,
-a change or drop where the scene's `turn` flips the sequence's question. Nothing waits for this
-step and no tool refuses a board without it.
+**Music spotting (user directive, 2026-11-14).** Once the lines are written and before
+`shot_prompt`, decide each scene's music with `story_music`. Start with `story_music {path}`:
+its report lists the scenes still undecided, payoff and turn scenes marked, and `direction`,
+the notes saved from what the user has said about music on this channel. Follow those notes
+before your own taste. Then give every scene one decision with its reason:
+
+- `score` with a cue, where the story needs it: the scene that turns the sequence's question,
+  the answer, a stretch without lines that carries feeling or motion. Scenes that follow each
+  other on one feeling share one spot, so the music runs unbroken across them.
+- `none`, where the lines or the room should be heard alone. The reason says why, e.g. "the
+  refusal lands harder dry". Silence nobody decided reads `undecided` on the review page.
+
+Define each cue for this episode with a `prompt` (instruments, tempo, mood, how it starts and
+ends, room for speech) and a `reason`, or name a channel bed as an `asset`. A cue made for
+another episode is not a cue for this one. A cue whose opening is quiet starts later with
+`sourceStartSeconds`, and one motif serves several scenes by starting each span at a different
+point of the same file. `start` and `end` move the entrance and exit inside a shot. Gain curves
+and overlapping spans go through `storyboard_apply` on `window.MUSIC.$timeline` afterwards
+(scenes-schema §Music cues). Plan the dramatic trigger now and confirm its offset against the
+accepted footage.
+
+When the user corrects the music (too much, wrong mood, where it belongs), save the correction
+in the same turn as a dated line in `production.musicDirection` with `project_manage update`
+([model settings](../_shared/model-settings.md)), so the next episode starts from it. Nothing
+waits for this step and no tool refuses a board without it; `storyboard_read.musicSpotting`,
+`shot_prompt`, the review page and the build report say which scenes are still open. Legacy
+boards that play one bed keep `sound.cue` (scenes-schema §Placing cues on a story board).
 
 For dialogue-led work and existing-story rewrites, read [causal dialogue and situational
 comedy](references/causal-dialogue.md). Check what triggers each consequential line, what

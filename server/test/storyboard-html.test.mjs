@@ -50,8 +50,12 @@ test('music lanes show one anchored span across scenes and label the score-free 
   const source = template.slice(start, template.indexOf('  var seqNo =', start));
   const SCENES = [1, 2, 3].map(i => ({ id: 's000' + i }));
   const context = { SCENES, MUSIC: { $timeline: [{ cue: 'piano', start: { shotId: 's0002', atSeconds: 0.8 }, end: { shotId: 's0003', atSeconds: 'end' } }] },
-    LANG: 'en', esc: value => String(value), T: {} };
+    LANG: 'en', esc: value => String(value), T: {}, window: { STORY: { authoring: 'story-first' } } };
   assert.match(runInNewContext(source + '\nmusicLane([{i:0,s:SCENES[0]}])', context), /No score/);
+  // A scene header passes its scene: silence nobody decided reads undecided, a decision shows its reason.
+  assert.match(runInNewContext(source + '\nmusicLane([{i:0,s:SCENES[0]}], {no:1})', context), /Music undecided/);
+  assert.match(runInNewContext(source + '\nmusicLane([{i:0,s:SCENES[0]}], {no:1,music:{decision:"none",reason:"only the line"}})', context), /No score — only the line/);
+  assert.match(runInNewContext(source + '\nmusicLane([{i:1,s:SCENES[1]}], {no:2,music:{decision:"score",reason:"regret"}})', context), /piano \(s0002 \+0.8s → s0003 end\) — regret/);
   for (const index of [1, 2]) assert.match(runInNewContext(source + `\nmusicLane([{i:${index},s:SCENES[${index}]}])`, context), /piano \(s0002 \+0.8s → s0003 end\)/);
   context.MUSIC.$timeline[0].start.atSeconds = 'end';
   assert.match(runInNewContext(source + '\nmusicLane([{i:1,s:SCENES[1]}])', context), /No score/);
