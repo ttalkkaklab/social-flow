@@ -38,6 +38,13 @@ knows more, pressure that changes and how scenes and serial episodes end. It reu
 claim by its evidence ([survey](docs/research/2026-11-11-story-engagement-craft/index.html)).
 The reviewer's interest rubric is an on-request read.
 
+[Material research](skills/storyboard/references/story-material-research.md) now precedes
+new story selection: read existing case collections, verify consequential decisions and
+counterexamples, then choose material suited to the cast. Storyboard handles synopsis-only
+requests as prose and carries costly choices, secrets and their consequences into scenarios
+and shots. Research inspiration stays distinct from documented history; search volume is
+not a quality score. SerpApi setup verifies the MCP process with an actual fresh search.
+
 The [filmmaking guide](docs/guides/ai-film-four-elements/index.html) explains character references, camera direction, framing and shot timing. `storyboard_read` exposes the shared 45-entry technique catalogue; `shot.techniques` stores stable IDs with shot-specific reasons. The offline storyboard exports the same catalogue, with a distinct pictogram and explanation for every entry. Camera instructions reach the generic, speech-planning and ASTRA prompt paths. See [technique selection](skills/storyboard/references/film-techniques.md).
 
 Character video requests now compile [voice continuity](skills/produce/references/voice-continuity.md)

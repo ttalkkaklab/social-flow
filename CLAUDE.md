@@ -23,6 +23,21 @@ needed, invoke this plugin's own MCP server with the correct inherited environme
 do not bypass its tools, reservations or receipts. Confirm recovery with a requested
 image and its local receipt. See AGENTS.md's local GenAI connection directive.
 
+## Researched story material and tension (user directive, 2026-11-14)
+
+Before recommending a new story-led synopsis, read the existing real-event collection and
+supplement missing decisions, consequences and counterexamples. Explicit research requests
+include actual searches and opened sources; fiction is not an excuse to skip that request.
+Follow `skills/storyboard/references/story-material-research.md`. Distinguish documented
+events, disputed accounts and invented adaptation; search counts do not certify sufficiency.
+Verify credentials in the MCP process, not only the shell. For Codex STDIO forward the name
+`SERPAPI_API_KEY` in the relevant `mcp_servers.social-flow.env_vars` and test a fresh connection.
+
+Carry costly choices, motivated secrets, competing claims and changing alliances from the
+synopsis into acted scenes and visible storyboard evidence. Use `story-interest.md` as
+guidance, without new score gates or compulsory twists. Synopsis-only requests stop at prose;
+they do not create episode assets. Existing cast, calendar, narrator and ending rules hold.
+
 ## Owner decisions (2026-10-18)
 
 - Precedence: the later-dated directive wins, and a superseded sentence is deleted in place, not kept under a banner.

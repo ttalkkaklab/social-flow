@@ -28,6 +28,11 @@ allowed-tools: ["mcp__social-flow__character_manage", "mcp__social-flow__charact
 Read [automation guidance](../_shared/automation-guidance.md). This skill coordinates
 [storyboard](../storyboard/SKILL.md) and [produce](../produce/SKILL.md); it does not contain
 another writing recipe. Use their current contracts. For new episodes follow storyboard's
+[material research](../storyboard/references/story-material-research.md) before selecting
+new story material: reuse the case collection, verify missing decisions and consequences,
+compare candidate conflicts and distinguish evidence from invention. In unattended work,
+save the selected sources, adaptation limits and choice reason with the scenario; research
+failures stay visible and never become fabricated evidence. Then use the
 single `scenario-v2` → `story-v2` flow: causal alternatives, complete acted scenes, blind
 comprehension, shot planning, then content-derived timing. Read
 [character-led scenarios](../storyboard/references/character-scenarios.md).

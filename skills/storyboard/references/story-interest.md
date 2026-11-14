@@ -20,6 +20,7 @@ progression is instead.
 - [5. End a scene on the next question](#5-end-a-scene-on-the-next-question)
 - [6. End a serial episode](#6-end-a-serial-episode)
 - [7. A short as one sequence](#7-a-short-as-one-sequence)
+- [Carry tension from synopsis to shots](#carry-tension-from-synopsis-to-shots)
 - [8. When it is not working](#8-when-it-is-not-working)
 - [9. Evidence and limits](#9-evidence-and-limits)
 
@@ -142,8 +143,10 @@ Frustration pulls the viewer forward under four conditions. Without them it is i
 
 1. **Sympathy before threat.** The viewer sides with the principal before the trouble starts:
    an unfair position, a small competence, something they protect.
-2. **A strong and unjust opponent.** The opposing force is able enough to win and wrong
-   enough to deserve losing. A weak or reasonable opponent gives the wait no charge.
+2. **An opposing claim that can win.** The opposing person or force can actually prevent
+   the goal. An unjust opponent can drive indignation; incompatible but defensible needs
+   can drive a dilemma. A rescuer's duty, a worker's right to refuse and a patient's need
+   may all be credible. Do not make a rival foolish or cruel merely to vindicate the lead.
 3. **The barrier or the stakes change scene by scene.** The same obstacle met the same way is
    repetition. Move at least one of: who opposes, what is at risk, what ability is demanded.
    Rotate the kind of barrier among a person, a system and the principal's own flaw.
@@ -179,6 +182,38 @@ Frustration pulls the viewer forward under four conditions. Without them it is i
 Quiet and explanatory work has the same need in another form. Its pressure is the viewer's
 expectation: each beat changes what the viewer believes about the subject, and the turn is a
 shift of viewpoint, not a defeat. Do not add an antagonist to a story about noticing.
+
+### When the request is for a more gripping story
+
+Make the pressure concrete in events before adding atmosphere. Select the devices the
+story needs; this is not a requirement for every scene to contain betrayal or danger.
+
+- **Give each viable choice a different cost.** Confessing can clear an innocent person
+  while costing the lead control; silence can preserve a useful arrangement while letting
+  suspicion grow. Establish what each option could still save. Do not disguise an obvious,
+  cost-free solution by making everyone overlook it.
+- **Let the viewer see a consequential secret when anticipation is stronger than surprise.**
+  Show who hides what, the immediate reason and who can expose it. The open question becomes
+  when they act and what they will demand. Keep a character ignorant through credible access
+  or a motivated lie, not a conversation everyone inexplicably avoids.
+- **Make a useful action create leverage.** Care, protection, labor or a shared secret can
+  earn trust and later become a demand. Show the benefit first and the exact request later.
+  Do not jump from one kind act to unquestioned leadership, or treat a vulnerable person's
+  dependency as consent. Attraction may complicate an established relationship; forced
+  romance, extra nudity or victim humiliation is not a default tension repair.
+- **Let the ally negotiate.** A person who can expose the lead has an independent objective,
+  a credible reason to bargain and a way to refuse. A switch of allegiance changes access,
+  work, risk or authority now; a knowing smile alone changes none of these.
+- **Keep a material clock honest.** Weather, a search party's return or a dwindling reserve
+  can close an option. Establish it before it decides the scene, make elapsed time readable,
+  and check the available resources. Invented countdowns and instant starvation weaken the
+  choice. A tense conversation can work without a literal clock.
+- **Earn a harder next problem.** A lie saves today's meal but creates a witness; a rescue
+  restores trust but exposes a broken promise. Give the answer a consequence rather than
+  attaching an unrelated attack or unexplained new villain to the final minute.
+- **Allow relief to matter.** A joke, a shared meal or unsolicited help can show the
+  relationship worth keeping. The next pressure tests that specific bond. Constant shouting
+  and repeated deprivation flatten the difference between danger and release.
 
 ## 5. End a scene on the next question
 
@@ -236,6 +271,28 @@ schedule, and no beat owns a number of seconds:
    out of order, this is where the two timelines meet.
 5. End right after the payoff. A serial opens one new question here.
 
+## Carry tension from synopsis to shots
+
+The same causal decision must survive each representation. Reuse existing fields and prose
+notes; do not add a compulsory tension schema or a new approval pause.
+
+| Artifact | What the author makes concrete | What does not count |
+|---|---|---|
+| Synopsis | A specific want, opposing claim, costly choice, changed relationship and actual episode payoff; identify a hidden fact and its disclosure when used | A teaser that withholds the ending from the author, or adjectives such as shocking and tense |
+| Scenario | What each person knows, how they obtain it, the attempted tactic, refusal or counteroffer, the decision and its immediate cost in actions and attributed speech | Motives and consequences present only in character biographies or explanatory summaries |
+| Storyboard | The reveal's prop or action, its recipient, necessary listener response, opening state and resulting state visible in the selected shots; preserve the sequence's question/payoff and scene turn/out | A close-up with no readable evidence, a reaction before the trigger, or a source image that already reveals a later secret |
+
+After converting, read only the ordered performance and reconstruct who knows the secret,
+what each option costs and what changed. Then compare that reconstruction with the synopsis.
+Repair a lost cue where it belongs rather than add a narrator explaining an unperformed
+betrayal. Respect one speaking character per shot and at most two principal characters in
+frame; split coverage without changing the disclosure order or losing a silent listener.
+An actual requested review is separate from this author's preservation pass.
+
+For serials, carry losses, promises, material state and leverage into the next week. Preserve
+the user's fixed arrival schedule and narrator/ending order. Newcomers can test the rule
+this episode created, but their entrance does not excuse leaving its central choice unpaid.
+
 ## 8. When it is not working
 
 | Symptom | Likely cause | Repair |
@@ -260,6 +317,14 @@ as diagnosis after a draft, to find a missing beat. Do not fill them in as a for
 
 These are editorial tests, not predictions of retention. Sources and the full grading are in
 the [2026-11-11 survey](../../../docs/research/2026-11-11-story-engagement-craft/index.html).
+
+The practical additions on costly choices, disclosure and consequences draw on practitioner
+accounts: [Scriptnotes 655, Conflict and Stakes](https://johnaugust.com/2024/scriptnotes-episode-655-conflict-and-stakes-compendium-transcript),
+[Scriptnotes 632, Mystery and Suspense](https://johnaugust.com/2024/scriptnotes-episode-632-mystery-and-suspense-transcript),
+[Vince Gilligan's Television Academy interview](https://interviews.televisionacademy.com/interviews/vince-gilligan),
+and [Tony Gilroy's BAFTA lecture](https://www.bafta.org/media-centre/press-releases/screenwriters-lecture-series-2013-tony-gilroy/).
+Their application to the three artifacts above is editorial synthesis, not a measured
+retention improvement or a guarantee that morally ambiguous characters are more enjoyable.
 
 | Claim | Grade |
 |---|---|
