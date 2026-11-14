@@ -25,6 +25,9 @@
 - [Outcome shown first](#outcome-shown-first)
 - [Rising conflict that repeats](#rising-conflict-that-repeats)
 - [Serial episode ending](#serial-episode-ending)
+- [Research before a synopsis](#research-before-a-synopsis)
+- [A known secret across three artifacts](#a-known-secret-across-three-artifacts)
+- [Plausible pressure and a fixed ending](#plausible-pressure-and-a-fixed-ending)
 
 Use a fresh author with the installed skill and raw brief. A separate reviewer first
 receives only ordered actions and speech; do not supply intended interpretation or an
@@ -212,6 +215,55 @@ question. The carried question is recorded in storyboard.md. An ending that only
 danger with nothing answered is reported as a finding. No cliffhanger is mandatory, and a
 self-contained episode is valid.
 
+
+## Research before a synopsis
+
+Input: ask for a more gripping fictional survival synopsis and more real-event research.
+Provide an existing collection with many cases, a shell search key and a stale MCP server
+that reports the key missing. Include a popular mutiny anecdote contradicted by an
+institutional history. Baseline: the author skips research because the work is fiction or
+returns more search snippets without reading them.
+
+Pass evidence: the author inventories the collection, repairs an authorized connection
+using variable names only and verifies an actual fresh search. It targets missing decisions,
+opens useful sources, records the correction and separates invented story uses from facts.
+The shortlist has genuinely different conflicts and a cooperation example or relevant
+counterexample. Timeouts and unread sources stay visible. No fixed search quota, secret
+logging, unrelated episode creation or unsolicited media generation. A supplied settled
+premise without a research request only needs relevant gap checks.
+
+## A known secret across three artifacts
+
+Input: a keeper hides shared supplies to preserve an emergency reserve. Another person is
+suspected. Ask first for a synopsis, then a scenario and finally a board. Both the keeper
+and the accuser have plausible aims. Baseline: the first draft says tension rises, conceals
+the culprit until a final unplanted twist and turns the accuser into an irrational villain.
+
+Pass evidence: the revised synopsis specifies the choice, the cost of confession and silence,
+the actual resolution and its consequence. If the viewer knows the secret first, the scene
+shows its origin and each character's information access. A witness can refuse or negotiate
+for an independent reason. The board preserves the hiding, trigger and response in the
+correct order and gives each speaking character separate coverage. No new required fields,
+quota of twists or automatic review. A synopsis-only request stops at prose.
+
+## Plausible pressure and a fixed ending
+
+Input: a five-person serial covers one week. Two newcomers arrive on Sunday after a closing
+narrator finishes. A draft introduces starvation after one missed meal, a convenient new
+reserve, a Monday arrival and an unexplained attack at the cut. Ask for more excitement.
+
+Pass evidence: the author checks supply origin and access, gives the pressure a believable
+timescale, and derives the harder choice from prior actions. Cooperation or relief makes
+the threatened bond legible. The episode resolves its central choice, then the established
+arrival tests the resulting rule. Losses and promises carry forward. No extra arrivals,
+post-arrival narration, forced romance or unsupported survival procedure. A quiet factual
+explainer keeps its supplied facts and gains no invented villain or withholding gimmick.
+
+Variant: add one modern object per Sunday at a different location from the two newcomers,
+with both locations changing under a hidden rule the protagonist discovers first. Expect
+separate author truth, arrival/discovery records, character observations and a tested
+prediction. No extra object, unexplained foreknowledge, instant knowledge of object type or
+object insert after the fixed final newcomers shot. Keep the world's rule in project notes.
 
 ## Camera direction without effect cycling
 

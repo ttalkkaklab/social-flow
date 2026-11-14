@@ -98,6 +98,14 @@ character/motivation axis. No new score gate, compulsory transformation, moral a
 trauma or inner-conflict subplot for narrators/incidental roles. A complex stable conviction
 is valid. Do not demand explanatory dialogue when behavior permits a fair inference.
 
+For a requested tension or material-grounding review, reconstruct the available choices
+and their costs, who knows each secret, why an ally changes sides and the actual payoff.
+An equally defensible opposing claim is valid. Flag a cost-free escape ignored by everyone,
+implausible scarcity, coerced dependence presented as consent and a reveal supplied only
+by the synopsis. Check that source notes distinguish documented events from invention;
+search counts and grim subject matter earn no quality credit. This remains an on-request
+review, not a new gate or claim of measured audience engagement.
+
 Compare performance with planned shots, source/end states and generation directions:
 
 For narrated or mixed scenes, use [narration and visual grounding](../skills/storyboard/references/narration-visual-grounding.md).

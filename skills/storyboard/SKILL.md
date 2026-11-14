@@ -1,8 +1,8 @@
 ---
 name: storyboard
 description: >
-  Presents a scenario and template board; stops before media generation. Use when the
-  user asks to "스토리보드 만들어", "스토리보드 작성", "촬영 대본 만들어", "make a storyboard",
+  Develops synopses, scenarios and boards; stops at the requested plan. Use when the
+  user asks to "시놉시스 추천", "시나리오 작성", "스토리보드 만들어", "스토리보드 작성", "촬영 대본 만들어", "make a storyboard",
   or "plan a video". Casts characters, develops causal alternatives, writes observable
   action and attributed speech, then plans shots and content-led timing. Saves the local
   review board. Produce builds an approved board; autoproduce runs both unattended.
@@ -20,6 +20,13 @@ Follow [host evaluation](../_shared/host-review.md) for every requested review.
 
 
 # Storyboard: make the story understandable, then plan its images
+
+For synopsis recommendations, read the established cast, world and prior research first;
+deliver the requested prose without creating an episode, changing canon or generating
+assets. Follow [material research](references/story-material-research.md) before choosing
+new story material and [story interest](references/story-interest.md) from the synopsis
+onward. A scenario develops complete scenes; a storyboard additionally delivers the shared
+review HTML. Keep that scope distinction when the user asks to make a story more gripping.
 
 **Production order (user directive, 2026-10-31):** Follow [production order](../_shared/production-workflow.md).
 Only the story order is enforced; context, camera, image and video reviews and Blender
@@ -132,6 +139,13 @@ Store local plans under `data/<channel>/episodes/<topic>/storyboard/` following
 
 ## 2. Choose a story from causes and consequences
 
+Before a new story-led synopsis, follow [material research](references/story-material-research.md):
+read the existing case collection, find missing causes, decisions and consequences, then
+compare usable material before committing to a plot. An explicit research request includes
+actual searches and source reading, even for fiction. A settled supplied premise or targeted
+line edit needs only relevant gap checks. Reuse good evidence; do not repeat searches to
+fill a quota or turn research into a new approval or execution gate.
+
 Follow character-scenarios for evidence/fiction/adapted grounding. Research the claims a
 story actually presents as facts; fiction does not need fabricated citations or a research
 quota. Distinguish factual evidence, inferred interpretation and invented staging.
@@ -162,6 +176,10 @@ Decide the question each sequence holds open and which scene answers it, the ord
 telling, who knows more at each stage, how the pressure changes from scene to scene and
 what each scene ends on. These are choices to make on purpose, not devices to add: a story
 told in order with no twist is valid, and an explainer needs no manufactured opponent.
+For a tension-led revision, change a consequential choice, the cost of an available
+alternative or who can use a secret. Carry the same mechanism from synopsis to performed
+scenes to visible shot evidence using that reference's handoff table. Stronger adjectives,
+unmotivated violence and a surprise with no prior cause do not revise the story.
 
 ## 3. Write complete scenes before cutting them into shots
 

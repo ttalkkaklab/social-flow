@@ -37,8 +37,10 @@ Use the user's established intent; ask only when the distinction is genuinely un
   Keep numbered Verified rows in research.md, with actual sources, dates and uncertainty.
   Two independent sources for time-sensitive claims (one official origin may suffice under
   the channel policy). Judge sufficiency by the story's claims, not a search-count quota.
-- **Fiction:** invent events, dialogue and worlds. No research.md, minimum searches, Verified
-  count, popular misconception or factual wow is required. Check motivation, causal continuity,
+- **Fiction:** invent events, dialogue and worlds. Read existing material before choosing a
+  new premise and follow storyboard's material-research guidance for inspiration and gaps.
+  Explicit research requests still require actual research. No research.md schema, minimum
+  searches, Verified count, popular misconception or factual wow is required. Check motivation, causal continuity,
   world rules and earned resolution. Any assertion presented as real-world fact still cites
   Verified rows; putting it in a character's mouth does not exempt it.
 - **Adapted:** research the real basis and state `adaptationBoundary`: what is documented,
