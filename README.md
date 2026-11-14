@@ -1095,7 +1095,8 @@ home, `assets/characters/index.html`, `assets/characters/<id>/index.html`,
 `assets/props/index.html`, `assets/props/details/<hash>.html`, `assets/locations/index.html`, `storyboards/index.html`
 and `storyboards/<episode>/index.html`. The sidebar links to storyboards, character
 sheets, prop sheets and background sheets. Prop and background catalogues read each
-episode’s canonical `SB_DOC` in `scenes.js` and link back to its storyboard. All open directly
+episode’s canonical `SB_DOC` in `scenes.js` and link back to its storyboard; backgrounds
+shared by the whole channel come first, from `assets/locations/<id>/background.json`. All open directly
 with file://, with bundled Wanted Sans and no network request. Character sheets
 show front/back/face, additional images, identity and voice. Prop detail pages use the
 same layout: reference images with their condition variants, identifying facts, continuity

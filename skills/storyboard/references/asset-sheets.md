@@ -51,6 +51,12 @@ silently bypassed; it stops no other step except the episode cast's own panels (
   on the opposite side reports `background_view_conflict`; correct the view, background
   direction or blocking rather than rotating the actor or substituting a picture silently.
   A written location sheet does not require Blender or a 3D render.
+- **Channel-shared backgrounds:** a place every episode returns to (a series set on one
+  island, one house) may be written once at `assets/locations/<id>/background.json` — the
+  same fields as an `SB_DOC.locations` entry, its paths relative to that folder, the folder
+  name as its `id`. The channel library lists these before episode sheets. An episode that
+  uses the place still copies the entry into its own `SB_DOC.locations`, pointing `panels`
+  at the shared files, so its board stays self-contained.
 
 If a category has no subjects, set `SB_DOC.assetSheetNotes.characters`, `.props` or
 `.locations` to an explicit not-applicable reason. Do not manufacture a character for a
