@@ -96,6 +96,12 @@ the ordered `performance`. Only include pauses or reactions that affect understa
 Translate the current situation into existing per-line `acting.context`, `intent`,
 `vocal` and `visual` when useful. These notes guide delivery; they never replace performed
 events. Preserve the pinned voice while its immediate purpose and emotional restraint vary.
+`acting.context` describes what this speaker has experienced immediately before the line;
+do not copy the scene synopsis, later confession or eventual resolution into it. `intent`
+names what the speaker wants from this listener now, not the author's theme, future arc or
+the visible gesture already in `visual`. These notes cannot prove a missing trigger. An
+external narrator may interpret feelings within the project's voice, but should not settle
+an ambiguous motive or future outcome that the performed evidence leaves open.
 
 Frame the evidence: a withdrawn hand needs visible hands; a refusal may need the listener
 in frame or a motivated reaction cut. Set the opening image before the choice and give the

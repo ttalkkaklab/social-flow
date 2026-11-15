@@ -36,6 +36,8 @@ cite shot/event. For candidates, use only their ordered `events`, not premise, n
 goals, expected feelings or the desired ending. Do not open synopsis, intent, scores,
 previous favorable reviews or production notes before writing the initial reconstruction.
 If only a full board path is supplied, extract its blind text before reading other fields.
+Keep the map alongside the text: stable shot/line IDs, event order, addressees and delivery
+are evidence, not author intention. Never drop listeners or move all action before speech.
 
 Write what happened, what each important character wanted as inferred from the events,
 why the decisive choices occurred, how they obtained the information and what the ending
@@ -48,6 +50,15 @@ no twist or fiction without citations. Dialogue to another character is not view
 Record this first reading before opening the author metadata. This separation matters more
 than whether the prose uses a particular form. The renderer's technical labels are not
 information the audience sees, unless the plan explicitly presents them.
+
+For every genre, read the lines again from each speaker's position at that moment. Track
+what they witnessed, heard, infer and do not know; a future line cannot justify a present
+reply. For suspect lines cite the prior trigger, listener and immediate purpose. Check
+group-knowledge claims, mind-reading, answers to unspoken proposals and explanations only
+the author needs. Record line-ID coverage for every speaker, including narrators. Distinguish
+hard contradictions from missing cues and stylistic concerns, and test a plausible counter-
+reading. Lies, questions, guesses and costly self-disclosure can be intentional. Do not
+invent an off-screen exchange or turn ordinary inference into explanatory dialogue.
 
 For dialogue comedy, also record where the audience forms an expectation, which specific
 response changes it, and whether a character's attempted solution creates the next

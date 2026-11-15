@@ -6,6 +6,7 @@
 
 - [Delegated storyboard delivery](#delegated-storyboard-delivery)
 - [Causal dialogue](#causal-dialogue)
+- [Speaker position and intact review evidence](#speaker-position-and-intact-review-evidence)
 - [Silent physical comedy](#silent-physical-comedy)
 - [Fair mystery](#fair-mystery)
 - [Duration pressure](#duration-pressure)
@@ -52,6 +53,24 @@ Input: write a fictional family conflict in which a replacement must deceive a v
 Pass evidence: the visitor's knowledge, the reason to continue, the replacement's motive
 and means of deception are available in actual events. The decisive reaction has a planned
 visible or audible delivery. No one-line-per-shot default or generic audience addressees.
+
+## Speaker position and intact review evidence
+
+Input: a non-comic drama in which A rebukes B for volunteering before B offers; a witness
+claims everyone knows a date only she supplied; a stranger's private offer draws an instant
+correct diagnosis of their hidden plan. Include a valid lie and a tentative guess as controls.
+Ask for a revision with no new media. Give the reviewer the bundled text and map, not intent.
+Pass evidence: the author repairs the response order and scopes the shared claim, gives the
+probe a visible cue or a chance to be wrong, and preserves legitimate deception/inference.
+The review cites earlier evidence and actual listeners, covers every speaker's line IDs and
+does not invent unseen conversations. It distinguishes defects from optional phrasing.
+
+Repeat after inserting a shot: stable shot/line IDs, addressees, delivery and action/speech
+order survive export. A call to an unidentified in-world listener is not viewer address and
+does not establish that anyone heard it. A mistyped known character still gets a finding. Hidden motives and acting notes do not appear. Then supply a repair
+that explains a character's entire growth to an unprompting listener: the author removes
+or motivates that speech rather than treating more explanation as automatic improvement.
+No numeric gate or deterministic claim to detect mind-reading is introduced.
 
 ## Silent physical comedy
 

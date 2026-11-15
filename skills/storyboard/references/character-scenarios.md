@@ -170,6 +170,9 @@ scene reads coherently. The first speaker's line, second speaker's answer and li
 response can share a shot. Set dialogue `to` to the actual addressee; `audience` means a real
 address to the viewer, not a placeholder for unknown blocking. A narrator-only explanation
 and a silent visual story are valid expressions.
+Use `to: unidentified` only for an in-world listener whose identity is unknown, such as a
+call for help into an empty forest. It does not mean somebody heard the line or learned
+the information. Keep a known off-screen listener's character ID; visibility is not identity.
 
 Test important transitions with concrete questions: what caused this next choice; how did
 this character learn the information; what can they see/hear from their position; who holds
@@ -225,7 +228,7 @@ order are warnings too. The rest below is recommended:
   `훅`, `전개 #1`, `전개 #2`, `전개 #3`, `마무리`. A CTA row is optional and may be empty
   or appear where it serves the story; no CTA reason or prescribed position is required.
 - `events: [{kind, character, text, basis, to?, claims?}]`: kind is action, dialogue or
-  narration; character is a cast ID; dialogue `to` is another ID, self or audience. `text`
+  narration; character is a cast ID; dialogue `to` is another ID, self, audience or unidentified. `text`
   describes observable action or actual spoken words. `basis` is fact, interpretation or
   invented; fact/interpretation requires `claims: [N]` pointing to Verified rows.
 - `setups: [{open, pay, detail, reinterpretation}]`, 1-based beat indices, open before pay

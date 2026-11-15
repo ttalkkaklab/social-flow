@@ -19,6 +19,9 @@ Create an audience-only export with stable beat/cut IDs, in presentation order. 
 only visible action, audible dialogue and narration. Exclude synopsis, hidden motives,
 character biographies, necessity arguments, intended meaning and prior scores. At this
 stage a cut ID names a required presentation unit, not a finished camera specification.
+Use the bundled check-story.js --text and --map exports. Preserve stable shot/line IDs,
+event order, speakers, actual addressees and delivery. A listener is observable staging,
+not hidden motivation. Do not replace this with an action-first, speech-second summary.
 
 Give a fresh independent host reviewer only that export and the frozen rubric. First ask
 them to reconstruct what happened without explaining the author's intention. For every
@@ -27,6 +30,17 @@ why that supports the next choice, and what the viewer can understand at that po
 Check entrances, elapsed time, listening distance, object transfers and setup/payoff.
 A character's knowledge cannot come from the writer's knowledge. A line such as “realizes
 the betrayal and leaves” is not evidence that the audience saw how they learned it.
+
+Then read every line from its speaker's position immediately before it is spoken, across
+all genres. For consequential or suspicious lines, cite the earlier cue, the actual listener
+and what response the speaker wants. Check replies to unspoken proposals, individual facts
+presented as group knowledge, effortless mind-reading, unsolicited self-explanations and
+character-arc recaps. Cover every speaking character, including the narrator; record reviewed
+line IDs so a whole-story verdict is not inferred from a few major transitions. Missing
+history stays uncertain. Questions, lies, guesses and deliberate self-disclosure are not
+automatically knowledge errors. Distinguish contradictions, missing evidence and editorial
+preferences, with the strongest plausible counter-reading. Do not require dialogue to
+explain ordinary inference or add a scene for every piece of background knowledge.
 
 Require quoted source evidence and beat/cut IDs in audienceRead.transitions. Cover the
 whole story, including silent events and the ending. Record uncertainty and missing

@@ -252,6 +252,12 @@ revisits the existing ending as well as the revised opening. For a content-only 
 deliver a readable sequence of acted scenes without generating images or inheriting
 old media approvals; score only that layer with a rubric fixed before authoring.
 
+Apply the speaker-position pass in causal-dialogue while writing the lines, before icons:
+read the exchange in order, check the actual listener and earlier trigger of each reply,
+and keep inference separate from confirmed knowledge. Use only the speaker's current
+experience in acting.context; a scene's later outcome is not their present knowledge.
+This is an authoring pass, not an automatic independent review or a new execution gate.
+
 Content-only branch: retain place/time, entrances, listening distance and prop handling
 needed to understand the events. Defer camera specifications, renderer selection, image
 prompts, voice production and measured timings in steps 4–5. Deliver the canonical text
@@ -483,7 +489,10 @@ node "${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/check-scenes.js" storyb
 ```
 
 `--text` exports every observable action and spoken line, including silent generated shots,
-for the blind audience read; `--map` maps findings to shot/event. `make-script.js` serves
+for the blind audience read; `--map` retains shot/line IDs, event order and addressees for
+findings. Use these exports rather than flattening all actions before all speech or dropping
+listeners. Unknown addressees stay unknown; do not infer them from the author's intention.
+`make-script.js` serves
 user-recorded filming/voice preparation and is not the general whole-story export. A checker
 confirms only what it measures. Inspect events across adjacent shots and compare crucial
 actions with the visual handoff yourself. Vocabulary review uses speech alone; a silent
