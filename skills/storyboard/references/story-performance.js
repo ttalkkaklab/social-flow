@@ -20,7 +20,10 @@ function storyPerformance(win) {
     const transcript = validGroup && Array.isArray(transcriptGroups) ? transcriptGroups[e.group - 1] : undefined;
     const quote = e?.kind === 'action' ? (text(e.text) ? e.text : '')
       : ['dialogue', 'narration'].includes(e?.kind) ? [n?.sub, n?.tts, transcript?.text].find(text) || '' : '';
-    return { shot: i + 1, event: j + 1, kind: e?.kind, character: e?.character,
+    return { shot: i + 1, ...(text(s.id) ? { shotId: s.id } : {}), event: j + 1,
+      ...(['dialogue', 'narration'].includes(e?.kind) && text(n?.id) ? { lineId: n.id } : {}),
+      ...(['dialogue', 'narration'].includes(e?.kind) && text(n?.delivery) ? { delivery: n.delivery } : {}),
+      kind: e?.kind, character: e?.character,
       to: e?.to, group: e?.group, quote, ...(!quote ? {unresolved: true} : {}) };
   }));
 }
@@ -75,7 +78,7 @@ function checkPerformanceStory(win, { requireReview = false, hash } = {}) {
         if (!text(n?.tts) && !text(n?.sub) && !text(n?.text)) fail('speech group is empty');
         if (n?.speaker !== e.character) fail('speech speaker must equal performance character');
         if (e.text !== undefined) fail('speech event must reference a group, not duplicate text');
-        if (e.kind === 'dialogue' && !ids.has(e.to) && !['self', 'audience'].includes(e.to)) fail('dialogue requires a known addressee');
+        if (e.kind === 'dialogue' && !ids.has(e.to) && !['self', 'audience', 'unidentified'].includes(e.to)) fail('dialogue requires a known addressee or unidentified in-world listener');
       }
     });
     if (seen.size !== spoken.length) fail('performance must include every speech group exactly once');

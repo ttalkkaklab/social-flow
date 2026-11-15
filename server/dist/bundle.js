@@ -93950,7 +93950,10 @@ var require_story_performance = __commonJS({
         const quote = e2?.kind === "action" ? text4(e2.text) ? e2.text : "" : ["dialogue", "narration"].includes(e2?.kind) ? [n?.sub, n?.tts, transcript?.text].find(text4) || "" : "";
         return {
           shot: i2 + 1,
+          ...text4(s2.id) ? { shotId: s2.id } : {},
           event: j + 1,
+          ...["dialogue", "narration"].includes(e2?.kind) && text4(n?.id) ? { lineId: n.id } : {},
+          ...["dialogue", "narration"].includes(e2?.kind) && text4(n?.delivery) ? { delivery: n.delivery } : {},
           kind: e2?.kind,
           character: e2?.character,
           to: e2?.to,
@@ -94018,7 +94021,7 @@ var require_story_performance = __commonJS({
             if (!text4(n?.tts) && !text4(n?.sub) && !text4(n?.text)) fail5("speech group is empty");
             if (n?.speaker !== e2.character) fail5("speech speaker must equal performance character");
             if (e2.text !== void 0) fail5("speech event must reference a group, not duplicate text");
-            if (e2.kind === "dialogue" && !ids.has(e2.to) && !["self", "audience"].includes(e2.to)) fail5("dialogue requires a known addressee");
+            if (e2.kind === "dialogue" && !ids.has(e2.to) && !["self", "audience", "unidentified"].includes(e2.to)) fail5("dialogue requires a known addressee or unidentified in-world listener");
           }
         });
         if (seen.size !== spoken.length) fail5("performance must include every speech group exactly once");
@@ -127119,6 +127122,8 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     title: "Write each shot's lines by character",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     description: `Write one character's lines per shot after shot_characters.
+
+Before writing, read the exchange in order from each speaker's current knowledge: who hears this, what earlier event triggers it, and what response does the speaker want now? A future proposal or scene outcome cannot motivate an earlier reply. Set the actual addressee in performance.to through storyboard_apply; do not assume every line addresses the audience. Use check-story.js --text/--map for review so listeners and event order survive export. See storyboard's causal-dialogue reference. This guidance is editorial, not an automated judgment of meaning.
 
 Use it to write a shot's lines in spoken order, each attributed to a character from the episode cast. The given lines replace the shot's lines; [] makes it silent. Keep consecutive lines from one speaker in the same shot. Split every speaker change first (shot_speaker_limit), including a readable two-shot; visible listeners stay silent. Set each resulting shot's size and angle with shot_icons. Inner thoughts use the character's speaker id and voiceover delivery, with image2video and measured, timed TTS instead of MSR. After writing the complete scene, inspect every storyboard_read.boundaryReview join against an uninterrupted performance, merge only redundant boundaries and compare revised performance duration with videoTiming; split for speaker changes, motivated visual changes or verified model capacity. Delivery defaults to on_screen for one of the shot's characters and voiceover for anyone else \u2014 a narrator is a character who speaks without being seen. A line with a known id keeps its acting and audio binding, and changed text makes that audio stale. Refused (story_order) before the shot's characters are set and for an on_screen speaker outside them; an unknown speaker is cast_unknown, and a story-first board repeats story_sequence's cast check (cast_source_missing, character_panel_missing). Local file only; no audio, image or prompt is generated.
 

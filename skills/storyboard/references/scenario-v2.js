@@ -81,8 +81,8 @@ function checkScenarioV2(meta, body, research, opts = {}) {
       if (!object(e) || !['action', 'dialogue', 'narration'].includes(e.kind) || !text(e.text)) { bad('events need kind and text'); return; }
       if (!ids.has(e.character)) bad('event character is not cast: ' + e.character);
       used.add(e.character);
-      if (e.kind === 'dialogue' && !text(e.to)) bad('dialogue needs an addressee (character ID, self or audience)');
-      if (e.to && !ids.has(e.to) && !['self', 'audience'].includes(e.to)) bad('unknown dialogue addressee: ' + e.to);
+      if (e.kind === 'dialogue' && !text(e.to)) bad('dialogue needs an addressee (character ID, self, audience or unidentified)');
+      if (e.to && !ids.has(e.to) && !['self', 'audience', 'unidentified'].includes(e.to)) bad('unknown dialogue addressee: ' + e.to);
       if (!['fact', 'invented', 'interpretation'].includes(e.basis)) bad('each event needs fact, invented or interpretation basis');
       if (e.basis === 'fact' || e.basis === 'interpretation') {
         factual.push(e);

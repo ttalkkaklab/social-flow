@@ -41,6 +41,13 @@ test('unknown cast, missing events and unearned held reveals fail', () => {
   c.beats[0].events = []; assert.match(JSON.stringify(run(c)), /observable/);
   c.reveal = 'held'; assert.match(JSON.stringify(run(c)), /planted/);
 });
+test('an unidentified listener does not require inventing a cast member or addressing the viewer', () => {
+  const c = candidate();
+  c.beats[0].events = [{kind:'dialogue',character:'father',to:'unidentified',text:'Anybody there?',basis:'invented'}];
+  assert.deepEqual(run(c), []);
+  c.beats[0].events[0].to = 'fathre';
+  assert.match(JSON.stringify(run(c)), /unknown dialogue addressee/);
+});
 test('malformed events and speech in a visual candidate fail without throwing', () => {
   for (const expression of ['dialogue', 'narration']) {
     const malformed = candidate(); malformed.expression = expression; malformed.beats[0].events = [null];
