@@ -2,6 +2,10 @@
 
 ## Contents
 
+- [Mutual affection with an inert middle](#mutual-affection-with-an-inert-middle)
+- [Payoff lost during shot planning](#payoff-lost-during-shot-planning)
+- [Known outcome without a forced twist](#known-outcome-without-a-forced-twist)
+
 - [Camera direction without effect cycling](#camera-direction-without-effect-cycling)
 
 - [Delegated storyboard delivery](#delegated-storyboard-delivery)
@@ -283,6 +287,44 @@ with both locations changing under a hidden rule the protagonist discovers first
 separate author truth, arrival/discovery records, character observations and a tested
 prediction. No extra object, unexplained foreknowledge, instant knowledge of object type or
 object insert after the fixed final newcomers shot. Keep the world's rule in project notes.
+
+## Mutual affection with an inert middle
+
+Input: ask for an anthology romance synopsis. Both characters' confession letters are shown
+at the start; the rest repeats almost-confessions until they exchange letters. A previous
+episode had different jobs and personalities. Baseline: the draft labels the pauses tender
+and claims increasing anticipation without changing a choice or the audience's expectation.
+
+Pass evidence: material determines fresh episode roles under the anthology contract. The
+synopsis names the actual ending and changes a meaningful attempt, interpretation or cost
+between beats. Mutual affection can stay known; the route to expressing it becomes worth
+following. The final response pays this episode's promise. No forced rival, contrived
+deadline, new mandatory twist, EP1 relationship, cliffhanger, media or episode creation
+for a synopsis-only request. This is an author pass, not an independent passing score.
+
+## Payoff lost during shot planning
+
+Input: a scenario plants a small practical favor, reveals its meaning and lets the recipient
+answer with the same action. The board gives away the meaning in its first image, crops
+out the relevant prop and ends before the recipient acts. Ask to improve the storyboard.
+
+Pass evidence: clue, discovery and response have identifiable presentation units in their
+intended order. The final response is restored as part of the payoff, without adding a new
+unrelated threat. Each meaningful join has a specific anticipated development or necessary
+reaction, not a new hook per speaker cut. Changes reach action, dialogue and framing, not
+only expectation metadata. Existing media and generation pauses remain protected.
+
+## Known outcome without a forced twist
+
+Input: a gentle reunion whose happy outcome is already supplied, then a factual demonstration
+with a known answer. Request engaging episode plans without suspense or invented secrets.
+
+Pass evidence: the reunion progresses through attempts and responses toward a specific
+desired encounter. The demonstration develops a useful prediction, evidence and application
+while giving essential information when needed. The author can name what the viewer wants
+next without adding a villain, fabricated fact, deceptive withholding or cliffhanger.
+Quiet relief and necessary acceptance stay; repeated padding does not. No fixed beat count,
+timestamp formula, retention guarantee or automatic reviewer is added.
 
 ## Camera direction without effect cycling
 

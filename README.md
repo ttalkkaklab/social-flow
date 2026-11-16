@@ -36,11 +36,17 @@ viewer wants the next scene: the question each stretch holds open, the order of 
 knows more, pressure that changes and how scenes and serial episodes end. It reuses
 `sequence.question`/`payoff` and `scene.turn`/`charge`/`out`, adds no gate, and grades each
 claim by its evidence ([survey](docs/research/2026-11-11-story-engagement-craft/index.html)).
-The reviewer's interest rubric is an on-request read.
+The reviewer's interest rubric is an on-request read. The
+[episode anticipation pass](skills/storyboard/references/episode-anticipation.md) runs during
+every new or substantially revised synopsis and storyboard: concrete promise, evolving
+expectations, earned payoff and performed response. It changes the writing process without
+adding a score gate or forcing a twist. Standalone stories resolve within their episode.
 
 [Material research](skills/storyboard/references/story-material-research.md) now precedes
 new story selection: read existing case collections, verify consequential decisions and
-counterexamples, then choose material suited to the cast. Storyboard handles synopsis-only
+counterexamples, then choose material under the channel's continuity contract. Anthologies
+assign fresh roles after choosing material; serials preserve their established cast and world.
+Storyboard handles synopsis-only
 requests as prose and carries costly choices, secrets and their consequences into scenarios
 and shots. Research inspiration stays distinct from documented history; search volume is
 not a quality score. SerpApi setup verifies the MCP process with an actual fresh search.

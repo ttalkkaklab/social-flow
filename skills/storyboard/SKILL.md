@@ -4,7 +4,8 @@ description: >
   Develops synopses, scenarios and boards; stops at the requested plan. Use when the
   user asks to "시놉시스 추천", "시나리오 작성", "스토리보드 만들어", "스토리보드 작성", "촬영 대본 만들어", "make a storyboard",
   or "plan a video". Casts characters, develops causal alternatives, writes observable
-  action and attributed speech, then plans shots and content-led timing. Saves the local
+  action and attributed speech with evolving viewer expectations and earned payoffs,
+  then plans shots and content-led timing. Saves the local
   review board. Produce builds an approved board; autoproduce runs both unattended.
 argument-hint: "<channel> <topic or topic hint>"
 allowed-tools: ["mcp__social-flow__character_manage", "mcp__social-flow__character_panel", "mcp__plugin_social-flow_social-flow__character_manage", "mcp__plugin_social-flow_social-flow__character_panel", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "mcp__social-flow__host_review", "mcp__plugin_social-flow_social-flow__host_review", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__location_manage", "mcp__plugin_social-flow_social-flow__location_manage", "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "mcp__social-flow__story_sequence", "mcp__plugin_social-flow_social-flow__story_sequence", "mcp__social-flow__story_scene", "mcp__plugin_social-flow_social-flow__story_scene", "mcp__social-flow__story_shot", "mcp__plugin_social-flow_social-flow__story_shot", "mcp__social-flow__story_music", "mcp__plugin_social-flow_social-flow__story_music", "mcp__social-flow__shot_characters", "mcp__plugin_social-flow_social-flow__shot_characters", "mcp__social-flow__shot_dialogue", "mcp__plugin_social-flow_social-flow__shot_dialogue", "mcp__social-flow__shot_icons", "mcp__plugin_social-flow_social-flow__shot_icons", "mcp__social-flow__shot_image", "mcp__plugin_social-flow_social-flow__shot_image", "mcp__social-flow__shot_prompt", "mcp__plugin_social-flow_social-flow__shot_prompt", "mcp__social-flow__storyboard_apply", "mcp__plugin_social-flow_social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__plugin_social-flow_social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__plugin_social-flow_social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__plugin_social-flow_social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__plugin_social-flow_social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__plugin_social-flow_social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__plugin_social-flow_social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__plugin_social-flow_social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__plugin_social-flow_social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__plugin_social-flow_social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__plugin_social-flow_social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__plugin_social-flow_social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__plugin_social-flow_social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics", "mcp__plugin_social-flow_social-flow__suno_generate_lyrics"]
@@ -21,12 +22,19 @@ Follow [host evaluation](../_shared/host-review.md) for every requested review.
 
 # Storyboard: make the story understandable, then plan its images
 
-For synopsis recommendations, read the established cast, world and prior research first;
-deliver the requested prose without creating an episode, changing canon or generating
+For synopsis recommendations, read the channel's continuity contract and prior research first.
+For an anthology, choose material before assigning episode roles; do not inherit a prior
+episode's relationships or personalities. For a serial, read its established cast and world.
+In either case, deliver the requested prose without creating an episode, changing canon or generating
 assets. Follow [material research](references/story-material-research.md) before choosing
 new story material and [story interest](references/story-interest.md) from the synopsis
 onward. A scenario develops complete scenes; a storyboard additionally delivers the shared
 review HTML. Keep that scope distinction when the user asks to make a story more gripping.
+
+For every new or substantially revised synopsis and board, apply
+[episode anticipation](references/episode-anticipation.md). Build a specific opening promise,
+changing expectations, an earned payoff and an observable response into the actual story.
+Do this while authoring, even when no separate interest review is requested.
 
 **Production order (user directive, 2026-10-31):** Follow [production order](../_shared/production-workflow.md).
 Only the story order is enforced; context, camera, image and video reviews and Blender
@@ -176,6 +184,11 @@ Decide the question each sequence holds open and which scene answers it, the ord
 telling, who knows more at each stage, how the pressure changes from scene to scene and
 what each scene ends on. These are choices to make on purpose, not devices to add: a story
 told in order with no twist is valid, and an explainer needs no manufactured opponent.
+Before presenting the synopsis, trace its opening question, the evidence or attempts that
+change the audience's guess, the actual resolution and the response it enables. State the
+ending in the author-facing synopsis. Repair a middle that only postpones the same answer;
+do not hide the missing progression behind a teaser or an emotion label. Use ordinary prose
+or existing expectation/change/setup notes, not an added planning schema.
 For a tension-led revision, change a consequential choice, the cost of an available
 alternative or who can use a secret. Carry the same mechanism from synopsis to performed
 scenes to visible shot evidence using that reference's handoff table. Stronger adjectives,
@@ -300,6 +313,13 @@ row: when several scenes flip the same way against the same obstacle, change the
 the stakes, and check that each `out` leaves the viewer wanting the next scene
 ([story interest](references/story-interest.md) §4–§5). Do not fill missing causality with
 extra dialogue when an observable choice or consequence can carry it.
+
+Before detailing shots, apply the episode-anticipation audience pass to the ordered actions
+and words alone. At each meaningful beat or scene join, name what the viewer now wants to
+see and the new evidence that changed that expectation. Preserve necessary reactions and
+quiet relief; do not demand a new question at every camera cut. Carry each clue, discovery
+and response into the planned shots in the same disclosure order. Fix the performed event
+when the progression exists only in notes. This author pass is not an independent review.
 
 Read the scene sequence as an audience member before detailing shots. For an independent
 review, hand a fresh reviewer only the ordered actions and actual words first. Withhold

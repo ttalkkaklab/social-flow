@@ -16,8 +16,11 @@ presenting a researched recommendation. This is authoring guidance, not a tool g
 
 ## 1. Inventory before searching
 
-Read the channel profile, character identities, world rules, canonical prior endings and
-the local research directory. Summarize what the collection already covers, what was only
+Read the channel profile, continuity contract and local research directory. For a serial,
+also read character identities, world rules and canonical prior endings. For an anthology,
+choose material before assigning fresh episode roles; prior personalities and relationships
+are not constraints unless the user carries them forward. Preserve fixed visual identities
+when reusing character designs. Summarize what the collection already covers, what was only
 a search lead and which missing details would change the story. Keep old case IDs and
 source links; add dated supplements rather than replacing another author's collection.
 Prior drafts and imagined character arcs are not events that already happened.
@@ -26,7 +29,7 @@ Search for mechanisms, not only similar settings: rationing exceptions, hidden r
 information control, disputed rescue decisions, unequal risks, care work, refusal to work,
 control of tools, newcomers, exit rights, private bargains and changing alliances. Also look
 for cooperation, repaired trust and evidence against the attractive sensational account.
-Choose the mechanisms that fit these characters; do not make every story use all of them.
+Choose mechanisms that fit the episode's roles and continuity contract; do not use all of them.
 
 ## 2. Verify the search connection
 
@@ -85,7 +88,9 @@ research is still shallow. Target the gap. If access or quota prevents filling i
 what is missing and label any resulting draft as provisional; never claim exhaustive work.
 
 Present a short material shortlist: source case, verified event, possible fictional choice,
-why it fits this cast, what must change and why it is selected or deferred. Avoid a catalogue
+why it fits the episode's situation and continuity requirements, what must change and why it
+is selected or deferred. For an anthology, select the material before proposing fresh roles;
+existing cast personalities are not a selection constraint. Avoid a catalogue
 dump when only a few cases affect this episode. Preserve unused leads for later episodes.
 Keep research local under `data/<channel>/research/`; carry selected case IDs and links in
 the existing scenario or `storyboard.md` notes. No new mandatory schema is needed.
