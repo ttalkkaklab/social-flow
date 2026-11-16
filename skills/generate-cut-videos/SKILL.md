@@ -29,7 +29,11 @@ See [shot speech](../produce/references/shot-speech.md).
 prompt with `shot_prompt`. Give `action` (what moves from the opening picture), `end` (the
 closing picture) and `sound` in English; the tool builds the rest from the shot's icon
 attributes — camera move and speed, focus, and on an MSR shot its size, angle and depth —
-and quotes its on-screen lines. MSR's lines and image bindings are added by `video_plan`.
+and quotes its on-screen lines. It also names each character's `expression` from
+`shot_characters` and asks the model to hold it to the last frame (user directive 2026-11-16).
+Write `action` as visible behaviour that fits that state, name a change of expression as one
+step of it, and say in `end` how the face looks when the shot closes. After generation watch
+the last second: a mouth drifting back to a smile is a failed clip. MSR's lines and image bindings are added by `video_plan`.
 The tool records what the prompt came from; when the shot's characters, on-screen lines,
 frame plan, camera, focus or MSR framing change later, the stage tools warn and the review
 page marks the prompt stale. Rewrite it with `shot_prompt` before planning that shot.

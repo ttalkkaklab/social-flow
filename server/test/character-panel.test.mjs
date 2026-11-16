@@ -76,6 +76,13 @@ test('confirmed multilingual clothing and body-part clothing clauses survive', (
   assert.deepEqual(result.skipped, []);
 });
 
+test('a smile on the sheet stays out of the neutral face panel and is reported', () => {
+  const { panelPrompt } = createRequire(import.meta.url)('../../skills/_shared/character-identity.js');
+  const result = panelPrompt({ physical: { appearance: { status: 'confirmed', value: 'Round glasses, small nose, gentle smile, fair skin. Short black hair.' } } }, 'face');
+  assert.equal(result.text, 'Round glasses, small nose, fair skin. Short black hair.');
+  assert.deepEqual(result.expression, ['gentle smile,']);
+});
+
 test('another native gateway model does not inherit Qwen panel guidance', t => {
   const { root, identityPath } = orc(t);
   const current = settings.readSettings(root);

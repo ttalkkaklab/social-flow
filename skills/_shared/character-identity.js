@@ -109,8 +109,12 @@ function direction(character, options) {
 // Preserve confirmed attributes, including their original language. Body crops are
 // specified by the caller; clothing clauses must not be deleted for naming a body part.
 const BODY_FIELDS = ['heightCm', 'weightKg', 'build', 'proportions', 'outfit'];
+// The face panel is a neutral identity reference that every shot receives, so a smile written on the
+// sheet would be drawn into every shot. Expression belongs to the shot (shot_characters expression).
+// ponytail: keyword filter on smile/grin/laugh clauses; widen the list when another expression leaks.
+const EXPRESSION = /\b(?:smil|grin|laugh)\w*/i;
 function panelPrompt(character, view) {
-  const physical = character?.physical || {}, skipped = [];
+  const physical = character?.physical || {}, skipped = [], expression = [];
   const words = (view === 'face' ? ['appearance'] : BODY_FIELDS).flatMap(key => {
     const field = physical[key];
     if (field?.status !== 'confirmed') return [];
@@ -118,11 +122,13 @@ function panelPrompt(character, view) {
     if (key === 'weightKg') return [`about ${field.value} kg`];
     const value = (Array.isArray(field.value) ? field.value.join(', ') : String(field.value)).trim();
     // A standalone crop disclaimer is redundant; an outfit mentioning a hood is not.
-    const text = view === 'face' ? value : value.split(/\s*[,;]\s*/)
+    const clauses = view === 'face' ? value.split(/(?<=[.;,])\s+/) : [];
+    expression.push(...clauses.filter(clause => EXPRESSION.test(clause)));
+    const text = view === 'face' ? clauses.filter(clause => !EXPRESSION.test(clause)).join(' ').replace(/[,;]$/, '.') : value.split(/\s*[,;]\s*/)
       .filter(clause => !/^head not oversized[.!]?$/i.test(clause)).join(', ');
     return text ? [text] : [];
   });
-  return { text: words.join('; '), skipped };
+  return { text: words.join('; '), skipped, expression };
 }
 
 function requiresSpeech(win, id) {

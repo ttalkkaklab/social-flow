@@ -7,7 +7,7 @@ import { imageContext } from './image-routing.js';
 import { readImageState } from './image-state.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { speakerBindingSchema } from './video-voice.js';
-import { compileVideoPrompt } from './video-prompt.js';
+import { compileVideoPrompt, expressionWords } from './video-prompt.js';
 import { characterPanels } from './video-image-inputs.js';
 /**
  * Storyboard module — the sequence → scene → shot data behind four tools
@@ -1235,6 +1235,8 @@ export const shotCharactersSchema = z.object({
         id: shotIdSchema,
         characters: z.array(nonEmpty).max(2).refine((ids) => new Set(ids).size === ids.length, 'a character is listed once')
             .describe('Principal characters on screen, subject first; [] when nobody from the cast is on screen'),
+        expression: z.record(nonEmpty, nonEmpty).optional()
+            .describe('Each listed character\'s visible state as the shot opens, in English physical cues read from the scene\'s situation: brows, eyes, mouth, posture. Silent listeners too. An earlier call\'s entry stays when omitted.'),
     }).strict()).min(1),
 }).strict();
 export const shotDialogueSchema = z.object({
@@ -1345,8 +1347,14 @@ export function writeShotCharacters(args) {
     const known = castRegistry(args.path, win);
     const shots = (win.SCENES ?? []).slice();
     const notes = [];
-    for (const { id, characters } of args.shots) {
+    for (const { id, characters, expression } of args.shots) {
         const index = shotIndex(shots, id, 'shot_characters');
+        for (const [character, cue] of Object.entries(expression ?? {})) {
+            if (!characters.includes(character))
+                throw new Error(`shot_expression_unknown: ${character} is not among ${id}'s characters`);
+            if (nonEnglishOutsideQuotes(cue))
+                throw new Error(`image_prompt_language: ${id}'s expression for ${character} must be English; it goes into the image and video prompts`);
+        }
         for (const character of characters) {
             if (!known.ids.has(character))
                 throw new Error(`cast_unknown: ${character} is not in the episode cast`);
@@ -1369,7 +1377,11 @@ export function writeShotCharacters(args) {
         const references = Array.isArray(visual.references) && gone.length
             ? visual.references.filter((ref) => ref?.role !== 'character' || !theirs(ref))
             : visual.references;
-        shots[index] = { ...shots[index], visual: { ...visual, character: entries.length ? entries : null, ...(references !== visual.references ? { references } : {}) },
+        // A character who stays keeps the state an earlier call gave them; one who leaves takes theirs along.
+        const states = { ...visual.expression, ...expression };
+        const worn = Object.fromEntries(characters.filter((character) => states[character]).map((character) => [character, states[character]]));
+        const { expression: _old, ...rest } = visual;
+        shots[index] = { ...shots[index], visual: { ...rest, character: entries.length ? entries : null, ...(Object.keys(worn).length ? { expression: worn } : {}), ...(references !== visual.references ? { references } : {}) },
             ...(left.length ? { narration: lines.map((line) => line.delivery === 'on_screen' && left.includes(line.speaker) ? { ...line, delivery: 'off_screen' } : line) } : {}) };
         if (left.length)
             notes.push({ level: 'warn', where: id, what: `${left.join(', ')} left the frame, so their on-screen lines are now off_screen — revise them with shot_dialogue if they should change` });
@@ -1658,7 +1670,7 @@ function startImageBasis(shot, format) {
         space: plan.space, composition: plan.composition, eyeline: plan.eyeline, depth: plan.depth,
         techniques: plan.techniques, render: plan.render, camera: visual.camera,
         cast: contract().castOf(shot), location: visual.locationId, locationBinding: plan.location, props: visual.props,
-        action: visual.action, videoDesign: plan.videoDesign,
+        action: visual.action, videoDesign: plan.videoDesign, ...(visual.expression ? { expression: visual.expression } : {}),
         performance: shot.performance,
         acting: shot.narration?.map(line => line.acting?.visual),
     })).digest('hex');
@@ -1958,6 +1970,13 @@ function buildShotImageRequest(args) {
         return `Image ${i + 1} shows ${ref.purpose}.${role}`;
     }).join(' ');
     const at = (ref) => ordered.indexOf(ref) + 1;
+    // The shot's authored states, stated positively and late in the prompt; a hand or prop detail shows no face.
+    const faces = args.frame === 'start' && cast.length > 0 && !['object', 'detail'].includes(view?.subjectType ?? '') && view?.mode !== 'rear';
+    const worn = faces ? expressionWords(shot) : '';
+    const blank = faces ? cast.filter((id) => !visual.expression?.[id]) : [];
+    if (blank.length)
+        warnings.push({ level: 'warn', code: 'expression_missing', where: args.id,
+            what: `expression_missing: ${blank.join(', ')} ${blank.length > 1 ? 'have' : 'has'} no expression for this shot, so the model draws its default pleasant face — set it with shot_characters expression from the scene's situation, or describe brows, eyes and mouth in prompt` });
     const lock = !set ? (selected && args.frame === 'start'
         ? `Preserve the selected background's ${backgroundView} directional geography and the spatial relationships of visible landmarks. The authored crop, camera height and subject viewpoint control the output; do not copy the background sheet's wide framing. Landmarks outside that crop stay outside the frame. The character sheets supply appearance and identity only; their panel poses do not constrain this shot.`
         : view ? `The location and character sheets supply appearance and identity only. Recompose them to the authored ${args.frame === 'end' ? 'closing' : 'opening'} crop and viewpoint; the sheet pose and camera do not constrain this shot.` : '') : args.frame === 'end'
@@ -1967,9 +1986,11 @@ function buildShotImageRequest(args) {
             + (dutch ? ' Image 1 is level; tilt the whole picture to the dutch angle described below.' : '')
             + (look.some((ref) => ordered.includes(ref)) ? ` Take only materials, colours and light from Image ${at(look[0])}.` : '');
     const prompt = [args.frame === 'start' && view ? `Create one opening image with this required crop: ${view.crop}.` : ordered.length ? 'Compose one picture from these images.' : '', roles, lock, heightSentence(win, cast),
-        view ? 'Character panels identify the subject; include only the body regions named by the crop. A face reference does not require a face in the output. The opening action determines expression and gaze; do not copy a reference smile when the action asks for a different expression.' : '',
+        view ? 'Character panels identify the subject; include only the body regions named by the crop. A face reference does not require a face in the output.' : '',
+        cast.length ? `The face panels give identity only; each expression and gaze comes from the ${args.frame === 'end' ? 'closing' : 'opening'} moment described below.` : '',
         args.frame === 'end' ? 'This is the last frame of the shot that opens on Image 1: keep its place, light and every identity, applying the planned action, camera landing and final focus.' : '',
         ...propPictures.unseen, body.charAt(0).toUpperCase() + body.slice(1),
+        worn ? `Expressions in this frame: ${worn}.` : '',
         args.frame === 'start' && view ? `Final frame boundaries: ${view.crop}.` : ''].filter(Boolean).join(' ');
     const call = imageCall({ directory: episode, assetId: args.id, inputs, prompt, width, height, outDir: join(boardDir, 'images'), stem: `${args.id}-${args.frame}`, what: 'this frame' });
     const sent = refs.filter((ref) => ordered.includes(ref));

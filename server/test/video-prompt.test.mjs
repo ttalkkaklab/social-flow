@@ -38,3 +38,10 @@ test('current icon values compile with viewpoint and explicit delivery bindings'
   shot.shot.techniques.push({ id: 'timing.dialogue' });
   assert.equal(compileVideoPrompt(shot, source).directionBindings.find(b => b.value === 'timing.dialogue').via, 'guidance');
 });
+
+test('the shot expression is named and held in the video prompt', () => {
+  const shot = { shot: { size: 'mcu', angle: 'eye' }, visual: { frames: { mode: 'first' }, camera: { movement: 'static' },
+    expression: { 'na-ri': 'brows drawn together, lips pressed shut.' } } };
+  const { prompt } = compileVideoPrompt(shot, { action: 'She nods once.' }, { 'na-ri': 'Na-ri' });
+  assert.match(prompt, /She nods once\. Expressions, held to the last frame unless the action changes them: Na-ri: brows drawn together, lips pressed shut\./);
+});
