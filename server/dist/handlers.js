@@ -1,3 +1,4 @@
+import * as tiktok from './tiktok-client.js';
 import { upscaleCatalog, startUpscale, controlUpscale } from './video-upscale.js';
 import { existsSync } from 'node:fs';
 import { generateLocalVideo } from './local-video-models.js';
@@ -1362,6 +1363,12 @@ export const ROUTES = {
         const input = parseArgs(snsIssueScoutSchema, args);
         return fromApi(await snsScout.snsIssueScout(input));
     },
+    tiktok_auth: async (args) => text(JSON.stringify(await tiktok.tiktokAuth(args))),
+    tiktok_creator_info: async (args) => text(JSON.stringify(await tiktok.tiktokCreatorInfo(args))),
+    tiktok_upload: async (args) => text(JSON.stringify(await tiktok.tiktokPublish(args, 'upload'))),
+    tiktok_publish: async (args) => text(JSON.stringify(await tiktok.tiktokPublish(args, 'direct'))),
+    tiktok_status: async (args) => text(JSON.stringify(await tiktok.tiktokStatus(args))),
+    tiktok_videos: async (args) => text(JSON.stringify(await tiktok.tiktokVideos(args))),
     sns_account_check: async (args) => {
         const input = parseArgs(accountCheckSchema, args);
         return fromApi(await sns.checkAccounts(input.channel));

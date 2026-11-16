@@ -1,3 +1,4 @@
+import { checkTikTokAccount } from './tiktok-client.js';
 import { createHash, randomUUID } from 'node:crypto';
 import {
   existsSync,
@@ -2676,9 +2677,9 @@ export async function moderateComment(input: CommentModerateInput): Promise<ApiR
 // ── Account checks ───────────────────────────────────────────────
 
 /**
- * Checks all four platforms for one credential set (a single channel or the default tokens)
+ * Checks configured platforms for one credential set (a single channel or the default tokens)
  * — token values are never included. The platform checks are independent, so they run in
- * parallel (4 serial round trips → the latency of one).
+ * parallel.
  */
 async function checkPlatformSet(channel?: string): Promise<Record<string, unknown>> {
   const metaChecks = (
@@ -2728,7 +2729,7 @@ async function checkPlatformSet(channel?: string): Promise<Record<string, unknow
     }
   })();
 
-  return Object.fromEntries(await Promise.all([...metaChecks, youtubeCheck]));
+  return Object.fromEntries(await Promise.all([...metaChecks, youtubeCheck, checkTikTokAccount(channel).then(result => ['tiktok', result] as const)]));
 }
 
 /**
