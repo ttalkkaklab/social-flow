@@ -42,6 +42,17 @@ function directionSupport(voice, acting) {
 function speechRevisionPayload(line, voice) {
   return {tts:line.tts,sub:line.sub,speaker:line.speaker,delivery:line.delivery,voice,...(line.acting!=null?{acting:line.acting}:{})};
 }
+// A native-speech line has no audio to measure before its clip exists. Fitted on 150 MSR clips
+// that had room to spare (2026-11-16): 4.5 Hangul syllables a second, 0.35 s for each pause
+// inside the line and 0.4 s of margin, which covered 85% of the measured spans. It errs long so
+// a line is not planned shorter than it is spoken. Other scripts have no measurement: null.
+function estimateSpeechSeconds(text) {
+  const words = typeof text === 'string' ? text : '';
+  const syllables = (words.match(/[가-힣0-9]/g) || []).length;
+  if (!syllables || !/[가-힣]/.test(words)) return null;
+  const pauses = (words.match(/[.?!…,]+(?=\s*\S)/g) || []).length;
+  return Math.round((syllables / 4.5 + 0.35 * pauses + 0.4) * 100) / 100;
+}
 // One performance timeline serves video prompts and audio composition. Drafts retain
 // unknown durations; production must supply measured speech and authored action timing.
 function planScenePerformance(input, measureAudio = () => null) {
@@ -181,4 +192,4 @@ function sceneVideoPrompt(performance, mode, scene = {}) {
   });
   return ['A clean cinematic image with an unobstructed scene and text-free surfaces.', route, visualDirection(sceneDirection(scene, performance)), ...beats, VIDEO_TEXT_POLICY].join('\n');
 }
-module.exports={actingErrors,resolvedStyle,directionSupport,speechRevisionPayload,VIDEO_TEXT_POLICY,sceneVideoPrompt,planScenePerformance,sceneDirection,scenePerformancePayload,cameraLock};
+module.exports={estimateSpeechSeconds,actingErrors,resolvedStyle,directionSupport,speechRevisionPayload,VIDEO_TEXT_POLICY,sceneVideoPrompt,planScenePerformance,sceneDirection,scenePerformancePayload,cameraLock};

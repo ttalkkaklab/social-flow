@@ -30,6 +30,9 @@ prompt with `shot_prompt`. Give `action` (what moves from the opening picture), 
 closing picture) and `sound` in English; the tool builds the rest from the shot's icon
 attributes — camera move and speed, focus, and on an MSR shot its size, angle and depth —
 and quotes its on-screen lines. MSR's lines and image bindings are added by `video_plan`.
+On a speaking shot, do not close `action` or `end` on waiting, holding a look or listening
+for an answer unless that reaction is in the shot's performance with its seconds: the model
+plays it as silence after the line, and the next shot already carries the reaction.
 The tool records what the prompt came from; when the shot's characters, on-screen lines,
 frame plan, camera, focus or MSR framing change later, the stage tools warn and the review
 page marks the prompt stale. Rewrite it with `shot_prompt` before planning that shot.
@@ -51,6 +54,12 @@ stale before the yes (`video_plan_stale`), so plan it again and show the new one
 writes `storyboard/video-approvals.js`, so the review page marks each shot approved, awaiting
 approval, or changed (prompt, start/end image or lines) after its yes. `render-astra-shot.js` runs only after the same yes.
 
+**Length.** `video_plan` returns `speechFit` on a natively voiced shot. When it carries a
+warning, the request is longer than the lines and timed actions need and the model will fill
+the difference with silent acting. Plan the shortest covering request it names, or put the
+pause the story needs into the performance; an explicit `duration` or `numFrames` copied
+from another shot is the usual cause.
+
 **Generate.** Run `video_execute` within the saved models and existing budgets; use
 `video_status` after an interruption. Import usable existing clips instead of regenerating.
 For a requested correction, reconcile the opening image, camera endpoints, performance,
@@ -67,7 +76,10 @@ After generation, inspect whether those particular corrections appear in the act
 A successful receipt or an attached player does not establish correct blocking. Preserve
 failed versions and distinguish generated, connected and visually verified results.
 Bind a clip with on-screen dialogue through `speech_manage attach_video`; an MSR clip binds
-as `native`, with no line audio (shot-speech.md adapter layer). Before reporting that the
+as `native`, with no line audio (shot-speech.md adapter layer). Its result's `soundtrack`
+says where the line sits in the clip; when it suggests a trim, listen to the clip and set
+`edit.in`/`edit.out` and the shot `duration` with `storyboard_apply` instead of regenerating
+or cutting a copy of the file. Before reporting that the
 storyboard is connected, open the user's review page and verify that every completed
 shot has a video player whose metadata loads without a media error. File existence and
 `visual.video.clip` alone do not prove the page displays it. The bundled template previews

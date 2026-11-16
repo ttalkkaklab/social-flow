@@ -56,6 +56,15 @@ added narration margins (0..2 seconds). Default pre is zero, post is 0.12 second
 Sync footage retains its original timing and has no added margins. There is no default
 four-second minimum. Short inserts can stay short.
 
+A card that plays its clip's own soundtrack (`sound.audioSource:"video"`, every MSR shot)
+trims as one body: `edit.in` and `edit.out` are source seconds, the card plays that range,
+and picture and sound move together. `pre` and `post` stay zero there. Use it for the silent
+acting MSR leaves around a line: `speech_manage attach_video` returns the measured line span
+and a suggested range, and assembly prints a `⚠` for a card with a second or more of silence
+before its line. Set the shot `duration` to the trimmed length; times inside the shot
+(`sound.effects[].atSeconds`, music starts) count from the trimmed start. `edit.out` is
+refused on any other card, and user-filmed sync footage keeps `in=0`.
+
 When every spoken card retains its source video soundtrack, incomplete character identity
 or generation voice settings are recorded in `source-voice-warnings.json` rather than
 blocking assembly. This does not approve the speech or repair stale bindings. Source media,

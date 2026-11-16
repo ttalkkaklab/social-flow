@@ -159,6 +159,16 @@ test('mixed-rate source covers a rounded output clock only while its last sample
  r=runRender(dir,settings+'; FRAMES=411; RENDER_FRAMES=411; D=17.125; D1=$D; RENDER_D=$D');
  assert.notEqual(r.status,0);assert.match(r.stdout,/including live handle/);
 });
+test('a sync card trimmed with in= opens on that source frame', t=>{
+ const dir=mkdtempSync(path.join(tmpdir(),'sync-trim-card-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));
+ mkdirSync(path.join(dir,'work'));
+ ff(['-f','lavfi','-i','testsrc2=size=160x90:rate=24','-frames:v','96','-c:v','libx264','-pix_fmt','yuv420p',path.join(dir,'a.mp4')]);
+ const r=runRender(dir,'IDX=0; SYNC=1; MV=1; FVIS=(a.mp4); FOFF=(0); FDUR=(0.35); FPS=24; HANDLE_FRAMES=0; FRAMES=48; RENDER_FRAMES=48; D=2; D1=$D; RENDER_D=$D; SOURCE_IN=1.5');
+ assert.equal(r.status,0,r.stdout+r.stderr);
+ assert.equal(Number(probeFrames(path.join(dir,'work/v0.mp4')).nb_read_frames),48);
+ const first=gray(path.join(dir,'work/v0.mp4'),0,.04);
+ assert.ok(mae(first,gray(path.join(dir,'a.mp4'),1.5,.04))<mae(first,gray(path.join(dir,'a.mp4'),0,.04)),'the card starts at the trimmed source frame');
+});
 test('live outgoing frames continue across J-cut; every transition preserves frame count', {timeout:120000},()=>{
  const dir=mkdtempSync(path.join(tmpdir(),'cinematic-edit-'));
  try{

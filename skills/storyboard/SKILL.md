@@ -426,9 +426,19 @@ First lay out anticipation, words, physical actions and responses. Then estimate
 they take. Walk through the source pose, travel to the object, contact/handling and response
 in their physical order. Combine them only where the person can actually do both at once;
 a list of several actions does not fit one brief interval merely because it is one event.
-Label estimates until actual speech/media exist. Do not use speech duration plus
-one fixed padding value as the whole shot duration, and do not add simultaneous actions
-as if they all occur in sequence.
+Label estimates until actual speech/media exist. Do not add one fixed padding value to
+every shot, and do not add simultaneous actions as if they all occur in sequence.
+
+A natively voiced shot (MSR) plays exactly the length it is given, and the model fills
+whatever the line does not need with silent acting, mostly before the line. On 299 clips
+measured 2026-11-16 half of each clip was silence around its line; clips within a second of
+their line's length opened on the line. So its `duration` is the line plus the pauses the
+story asks for, and each such pause is written down: a standalone timed action
+(`durationSeconds`) or the line's `leadInSeconds`/`tailOutSeconds`. `storyboard_read`
+times an untimed Korean line from its syllables (about 4.5 a second, 0.35 s a pause inside
+the line, 0.4 s of margin) and reports `performanceTiming.storedExcessSeconds`; bring a
+positive value down to the performance length before images, or name the action that needs
+it. Do not go under the estimate: a line that starts on the first frame loses its first word.
 
 A standalone performance action may carry `durationSeconds`; `withGroup: 1` means it runs
 with that 1-based speech group; without its own duration the concurrent action spans that group. Per-line

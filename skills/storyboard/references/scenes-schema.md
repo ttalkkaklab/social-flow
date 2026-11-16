@@ -1800,7 +1800,8 @@ different from the last join — the same join five times in a row is right when
 thing happened five times.
 
 **Every moving join uses live outgoing frames.** Follow
-[cinematic-edit.md](../../produce/references/cinematic-edit.md) for `edit.in`, `edit.pre`,
+[cinematic-edit.md](../../produce/references/cinematic-edit.md) for `edit.in`, `edit.out`
+(only on a card that plays its clip soundtrack), `edit.pre`,
 `edit.post`, `edit.transitionSeconds`, `edit.reason` and `edit.continuity`. New boundaries
 record the intended action/visual connection and why this join fits. Reserve source duration
 for the outgoing handle before generation and quoting. The builder compiles joins from this
