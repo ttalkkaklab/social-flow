@@ -102,6 +102,10 @@ for provider mappings and the distinction between sample imitation and exact spe
    (`view` face, front, back). It builds the prompt from the sheet — the face takes
    `appearance`; the headless front and back take height, weight, relative scale,
    build, proportions and outfit — and adds the project style and the panel framing.
+   Describe structure in `appearance` — bone shape, eyes, skin, hair — and leave expressions
+   out: a smile written there reaches every shot through the face panel, so the tool drops
+   smile, grin and laugh clauses from the face prompt and reports them. Habitual expressions
+   belong in personality or acting, and each shot sets its own with `shot_characters`.
    Do not write panel prompts by hand; `character-sheet.js <identity.md> --panel <view>`
    prints the same words for inspection. Image prompts are
    English, so write those physical text fields in English; a field in another script

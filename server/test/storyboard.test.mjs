@@ -709,6 +709,22 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.match(request.prompt, /ignore clothing in this panel/);
     assert.match(request.prompt, /including collar, tie and sleeve state/);
   });
+  it('puts each character\'s shot expression into the image prompt and reports a face without one', () => {
+    const { dir } = pictureBoard(); icons(dir);
+    const set = (shot) => writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'], ...shot }] });
+    assert.throws(() => set({ expression: { ghost: 'brows drawn together' } }), /shot_expression_unknown/);
+    assert.throws(() => set({ expression: { mina: '찡그린 눈썹' } }), /image_prompt_language/);
+    const args = { path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits by the window.' };
+    assert.ok(shotImageRequest(args).warnings.some(w => w.code === 'expression_missing'));
+    set({ expression: { mina: 'brows drawn together, lips pressed shut' } });
+    set({});   // a later call without expression keeps it
+    const request = shotImageRequest(args);
+    assert.match(request.prompt, /Expressions in this frame: mina: brows drawn together, lips pressed shut\./);
+    assert.doesNotMatch(request.prompt, /smile/);
+    assert.equal(request.warnings.some(w => w.code === 'expression_missing'), false);
+    writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: [] }] });
+    assert.equal(readBoard(dir).win.SCENES[0].visual.expression, undefined, 'a character who leaves takes the state along');
+  });
   it('tracks physical opening, performance and prompt changes without certifying inherited images', () => {
     const { dir } = pictureBoard(); icons(dir); make(dir, 's0001');
     const status = () => readStoryboard(storyboardReadSchema.parse({ path: dir, includeTechniques: false })).imageFraming[0];

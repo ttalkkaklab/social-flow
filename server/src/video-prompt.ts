@@ -13,6 +13,12 @@ const sentence = (value: string) => {
   return !s ? '' : /[.!?]["'”’)]+$/.test(capped) ? capped : capped.replace(/[.!?]*$/, '') + '.';
 };
 
+/** Each on-screen character's visible state (shot_characters expression): "id: cue; id: cue", or '' when none is set. */
+export function expressionWords(shot: Record<string, unknown>, names: Record<string, string> = {}): string {
+  return Object.entries(object(object(shot.visual).expression)).filter(([, cue]) => text(cue))
+    .map(([id, cue]) => `${names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id}: ${text(cue).replace(/[.\s]+$/, '')}`).join('; ');
+}
+
 /** Compile the current storyboard values at authoring and request time. Never writes the board. */
 export function compileVideoPrompt(shot: Record<string, unknown>, source: VideoPromptSource, names: Record<string, string> = {}) {
   const plan = object(shot.shot), visual = object(shot.visual), frames = object(visual.frames), camera = object(visual.camera);
@@ -43,6 +49,7 @@ export function compileVideoPrompt(shot: Record<string, unknown>, source: VideoP
   const other = picked.filter(t => t.entry && ['camera', 'framing'].includes(t.entry.category) &&
     !t.entry.fields.movement && !t.entry.fields.focus && !t.entry.fields.size && !t.entry.fields.angle && !(viewWords && t.entry.fields.viewpoint));
   const lines = (Array.isArray(shot.narration) ? shot.narration : []).map(object);
+  const worn = expressionWords(shot, names);
   const prompt = [
     msr ? framing : 'Start from the given first frame.',
     msr ? depthWords : '', moveWords, settle ? sentence(`Closing frame: ${settle}`) : '', focusWords,
@@ -56,6 +63,8 @@ export function compileVideoPrompt(shot: Record<string, unknown>, source: VideoP
       const id = text(line.speaker), name = names[id];
       return sentence(`${name && !nonEnglishOutsideQuotes(name) ? name : id} says: "${text(line.tts)}"`);
     })),
+    // The model's default face is pleasant; the authored state has to be named and held (LTX guide: physical cues, state after the action).
+    worn ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : '',
     frames.mode === 'first_last' ? sentence(`End on the given last frame${source.end ? ': ' + source.end : ''}`) : source.end ? sentence(`End on ${source.end}`) : '',
     sentence(`Audio: ${source.sound ? source.sound + (/\b(music|soundtrack|score|bgm|melody|orchestral|song)\b/i.test(source.sound) ? '' : ', no music') : 'no music'}`),
   ].filter(Boolean).join(' ');

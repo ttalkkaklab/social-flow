@@ -93684,18 +93684,21 @@ var require_character_identity = __commonJS({
       };
     }
     var BODY_FIELDS = ["heightCm", "weightKg", "build", "proportions", "outfit"];
+    var EXPRESSION = /\b(?:smil|grin|laugh)\w*/i;
     function panelPrompt(character, view) {
-      const physical = character?.physical || {}, skipped = [];
+      const physical = character?.physical || {}, skipped = [], expression = [];
       const words = (view === "face" ? ["appearance"] : BODY_FIELDS).flatMap((key) => {
         const field2 = physical[key];
         if (field2?.status !== "confirmed") return [];
         if (key === "heightCm") return [`${field2.value} cm tall`];
         if (key === "weightKg") return [`about ${field2.value} kg`];
         const value = (Array.isArray(field2.value) ? field2.value.join(", ") : String(field2.value)).trim();
-        const text5 = view === "face" ? value : value.split(/\s*[,;]\s*/).filter((clause) => !/^head not oversized[.!]?$/i.test(clause)).join(", ");
+        const clauses = view === "face" ? value.split(/(?<=[.;,])\s+/) : [];
+        expression.push(...clauses.filter((clause) => EXPRESSION.test(clause)));
+        const text5 = view === "face" ? clauses.filter((clause) => !EXPRESSION.test(clause)).join(" ").replace(/[,;]$/, ".") : value.split(/\s*[,;]\s*/).filter((clause) => !/^head not oversized[.!]?$/i.test(clause)).join(", ");
         return text5 ? [text5] : [];
       });
-      return { text: words.join("; "), skipped };
+      return { text: words.join("; "), skipped, expression };
     }
     function requiresSpeech(win, id) {
       if (win?.STORY?.version !== "story-v2" || !Array.isArray(win.SCENES)) return true;
@@ -115572,6 +115575,9 @@ var sentence = (value) => {
   const s2 = value.trim(), capped2 = s2.charAt(0).toUpperCase() + s2.slice(1);
   return !s2 ? "" : /[.!?]["'”’)]+$/.test(capped2) ? capped2 : capped2.replace(/[.!?]*$/, "") + ".";
 };
+function expressionWords(shot, names = {}) {
+  return Object.entries(object4(object4(shot.visual).expression)).filter(([, cue]) => text2(cue)).map(([id, cue]) => `${names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id}: ${text2(cue).replace(/[.\s]+$/, "")}`).join("; ");
+}
 function compileVideoPrompt(shot, source, names = {}) {
   const plan2 = object4(shot.shot), visual = object4(shot.visual), frames = object4(visual.frames), camera = object4(visual.camera);
   const msr = frames.mode === "reference";
@@ -115601,6 +115607,7 @@ function compileVideoPrompt(shot, source, names = {}) {
   const depthWords = plan2.depth ? sentence(contract2.depthText(plan2.depth)) : "";
   const other = picked.filter((t2) => t2.entry && ["camera", "framing"].includes(t2.entry.category) && !t2.entry.fields.movement && !t2.entry.fields.focus && !t2.entry.fields.size && !t2.entry.fields.angle && !(viewWords && t2.entry.fields.viewpoint));
   const lines = (Array.isArray(shot.narration) ? shot.narration : []).map(object4);
+  const worn = expressionWords(shot, names);
   const prompt = [
     msr ? framing : "Start from the given first frame.",
     msr ? depthWords : "",
@@ -115617,6 +115624,8 @@ function compileVideoPrompt(shot, source, names = {}) {
       const id = text2(line.speaker), name = names[id];
       return sentence(`${name && !nonEnglishOutsideQuotes(name) ? name : id} says: "${text2(line.tts)}"`);
     }),
+    // The model's default face is pleasant; the authored state has to be named and held (LTX guide: physical cues, state after the action).
+    worn ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : "",
     frames.mode === "first_last" ? sentence(`End on the given last frame${source.end ? ": " + source.end : ""}`) : source.end ? sentence(`End on ${source.end}`) : "",
     sentence(`Audio: ${source.sound ? source.sound + (/\b(music|soundtrack|score|bgm|melody|orchestral|song)\b/i.test(source.sound) ? "" : ", no music") : "no music"}`)
   ].filter(Boolean).join(" ");
@@ -117789,7 +117798,8 @@ var shotCharactersSchema = external_exports.object({
   path: outlinePath,
   shots: external_exports.array(external_exports.object({
     id: shotIdSchema,
-    characters: external_exports.array(nonEmpty).max(2).refine((ids) => new Set(ids).size === ids.length, "a character is listed once").describe("Principal characters on screen, subject first; [] when nobody from the cast is on screen")
+    characters: external_exports.array(nonEmpty).max(2).refine((ids) => new Set(ids).size === ids.length, "a character is listed once").describe("Principal characters on screen, subject first; [] when nobody from the cast is on screen"),
+    expression: external_exports.record(nonEmpty, nonEmpty).optional().describe("Each listed character's visible state as the shot opens, in English physical cues read from the scene's situation: brows, eyes, mouth, posture. Silent listeners too. An earlier call's entry stays when omitted.")
   }).strict()).min(1)
 }).strict();
 var shotDialogueSchema = external_exports.object({
@@ -117880,8 +117890,12 @@ function writeShotCharacters(args) {
   const known = castRegistry(args.path, win);
   const shots = (win.SCENES ?? []).slice();
   const notes = [];
-  for (const { id, characters } of args.shots) {
+  for (const { id, characters, expression } of args.shots) {
     const index = shotIndex(shots, id, "shot_characters");
+    for (const [character, cue] of Object.entries(expression ?? {})) {
+      if (!characters.includes(character)) throw new Error(`shot_expression_unknown: ${character} is not among ${id}'s characters`);
+      if (nonEnglishOutsideQuotes(cue)) throw new Error(`image_prompt_language: ${id}'s expression for ${character} must be English; it goes into the image and video prompts`);
+    }
     for (const character of characters) {
       if (!known.ids.has(character)) throw new Error(`cast_unknown: ${character} is not in the episode cast`);
       if (known.voiceOnly.has(character)) throw new Error(`cast_voice_only: ${character} is voiceOnly in cast.json and is never on screen \u2014 give them sheet panels and drop voiceOnly first`);
@@ -117895,9 +117909,12 @@ function writeShotCharacters(args) {
     const gone = (before ?? []).filter((character) => !characters.includes(character));
     const theirs = (ref) => gone.some((character) => String(ref.path ?? "").match(/characters\/([^/]+)\//)?.[1] === character || ["face", "front", "back"].some((view) => ref.id === `${id}-${character}-${view}`));
     const references = Array.isArray(visual.references) && gone.length ? visual.references.filter((ref) => ref?.role !== "character" || !theirs(ref)) : visual.references;
+    const states = { ...visual.expression, ...expression };
+    const worn = Object.fromEntries(characters.filter((character) => states[character]).map((character) => [character, states[character]]));
+    const { expression: _old, ...rest } = visual;
     shots[index] = {
       ...shots[index],
-      visual: { ...visual, character: entries.length ? entries : null, ...references !== visual.references ? { references } : {} },
+      visual: { ...rest, character: entries.length ? entries : null, ...Object.keys(worn).length ? { expression: worn } : {}, ...references !== visual.references ? { references } : {} },
       ...left.length ? { narration: lines.map((line) => line.delivery === "on_screen" && left.includes(line.speaker) ? { ...line, delivery: "off_screen" } : line) } : {}
     };
     if (left.length) notes.push({ level: "warn", where: id, what: `${left.join(", ")} left the frame, so their on-screen lines are now off_screen \u2014 revise them with shot_dialogue if they should change` });
@@ -118169,6 +118186,7 @@ function startImageBasis(shot, format) {
     props: visual.props,
     action: visual.action,
     videoDesign: plan2.videoDesign,
+    ...visual.expression ? { expression: visual.expression } : {},
     performance: shot.performance,
     acting: shot.narration?.map((line) => line.acting?.visual)
   })).digest("hex");
@@ -118466,16 +118484,27 @@ function buildShotImageRequest(args) {
     return `Image ${i2 + 1} shows ${ref.purpose}.${role}`;
   }).join(" ");
   const at = (ref) => ordered.indexOf(ref) + 1;
+  const faces = args.frame === "start" && cast.length > 0 && !["object", "detail"].includes(view?.subjectType ?? "") && view?.mode !== "rear";
+  const worn = faces ? expressionWords(shot) : "";
+  const blank = faces ? cast.filter((id) => !visual.expression?.[id]) : [];
+  if (blank.length) warnings.push({
+    level: "warn",
+    code: "expression_missing",
+    where: args.id,
+    what: `expression_missing: ${blank.join(", ")} ${blank.length > 1 ? "have" : "has"} no expression for this shot, so the model draws its default pleasant face \u2014 set it with shot_characters expression from the scene's situation, or describe brows, eyes and mouth in prompt`
+  });
   const lock2 = !set ? selected && args.frame === "start" ? `Preserve the selected background's ${backgroundView} directional geography and the spatial relationships of visible landmarks. The authored crop, camera height and subject viewpoint control the output; do not copy the background sheet's wide framing. Landmarks outside that crop stay outside the frame. The character sheets supply appearance and identity only; their panel poses do not constrain this shot.` : view ? `The location and character sheets supply appearance and identity only. Recompose them to the authored ${args.frame === "end" ? "closing" : "opening"} crop and viewpoint; the sheet pose and camera do not constrain this shot.` : "" : args.frame === "end" ? composition.length ? `Use Image ${at(composition[0])}'s closing camera, lens, framing and final object and figure positions. Image 1 supplies the look and every identity; its opening camera does not constrain this closing view.` : `Image 1 supplies the opening appearance and identities. Follow the closing camera direction below while preserving the set's world layout.` : `Keep Image 1's camera position, ${lens}${dutch ? "" : ", horizon"} and world layout, and keep every object${set.blocked ? " and figure" : ""} at its world position in Image 1. The authored composition below controls the final crop, headroom and subject screen placement. Paint its plain unpainted surfaces as the real place, and continue the place into any flat dark area past the set's edge.` + (dutch ? " Image 1 is level; tilt the whole picture to the dutch angle described below." : "") + (look.some((ref) => ordered.includes(ref)) ? ` Take only materials, colours and light from Image ${at(look[0])}.` : "");
   const prompt = [
     args.frame === "start" && view ? `Create one opening image with this required crop: ${view.crop}.` : ordered.length ? "Compose one picture from these images." : "",
     roles,
     lock2,
     heightSentence(win, cast),
-    view ? "Character panels identify the subject; include only the body regions named by the crop. A face reference does not require a face in the output. The opening action determines expression and gaze; do not copy a reference smile when the action asks for a different expression." : "",
+    view ? "Character panels identify the subject; include only the body regions named by the crop. A face reference does not require a face in the output." : "",
+    cast.length ? `The face panels give identity only; each expression and gaze comes from the ${args.frame === "end" ? "closing" : "opening"} moment described below.` : "",
     args.frame === "end" ? "This is the last frame of the shot that opens on Image 1: keep its place, light and every identity, applying the planned action, camera landing and final focus." : "",
     ...propPictures.unseen,
     body.charAt(0).toUpperCase() + body.slice(1),
+    worn ? `Expressions in this frame: ${worn}.` : "",
     args.frame === "start" && view ? `Final frame boundaries: ${view.crop}.` : ""
   ].filter(Boolean).join(" ");
   const call2 = imageCall({ directory: episode, assetId: args.id, inputs, prompt, width, height, outDir: join10(boardDir, "images"), stem: `${args.id}-${args.frame}`, what: "this frame" });
@@ -127154,6 +127183,8 @@ Returns: the file written or not, counts, findings (! violation \xB7 warning), a
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     description: `Use it once every sequence, scene and shot story is written (story_sequence \u2192 story_scene \u2192 story_shot): set who from the episode cast is on screen in each shot, at most two principal characters with the subject first, or [] when nobody is. It writes visual.character and keeps a kept character's scope. A character who leaves a shot keeps their lines, now off_screen, with a warning, and their sheet panels leave visual.references; a start image made for the old cast is flagged for shot_image. Refused (story_order) while the story has a gap \u2014 a sequence without scenes, a scene without a shot or summary, a shot without its story \u2014 and for an id outside the episode cast (cast_unknown) \u2014 storyboard/cast.json alone on a story-first board, which repeats story_sequence's cast check (cast_source_missing, character_panel_missing), plus SB_DOC.characters on an older board \u2014 or one marked voiceOnly there (cast_voice_only). Local file only; no image, speech or prompt.
 
+Give each listed character an expression: what their face and body show in this shot, read from the scene's situation (what just happened and what is at stake), since the one-sentence shot story names an action and not a feeling. Write visible cues \u2014 brows, eyes, mouth, shoulders, hands \u2014 and no emotion label alone: "worried" leaves the face to the model, and a model with no cue draws a pleasant face. The silent listener gets one too. shot_image and shot_prompt put these words into the image and video prompts, and shot_image warns (expression_missing) for a face without one. English only (image_prompt_language); a character outside the shot is refused (shot_expression_unknown).
+
 Do NOT list extras, unnamed figures or a narrator who is never seen \u2014 extras are described in the action later, and an off-screen narrator speaks through shot_dialogue. Lines come next, through shot_dialogue.
 
 Returns: the file written or not, counts, and findings (! violation \xB7 warning).`,
@@ -127164,7 +127195,8 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
         path: { type: "string", description: "The storyboard directory or its scenes.js" },
         shots: { type: "array", minItems: 1, description: "Shots to set", items: { type: "object", additionalProperties: false, required: ["id", "characters"], properties: {
           id: { type: "string", pattern: "^s\\d{4,}$", description: "Stable shot id" },
-          characters: { type: "array", maxItems: 2, uniqueItems: true, items: { type: "string", description: "Character id from the episode cast" }, description: "On-screen principal characters, subject first; [] for nobody" }
+          characters: { type: "array", maxItems: 2, uniqueItems: true, items: { type: "string", description: "Character id from the episode cast" }, description: "On-screen principal characters, subject first; [] for nobody" },
+          expression: { type: "object", additionalProperties: { type: "string", minLength: 1 }, description: `Visible state of each listed character as the shot opens, by character id, in English physical cues, e.g. {"na-ri":"brows drawn together, eyes wide and searching, lips pressed shut, shoulders raised"}. Read it from the scene's situation, not the one shot sentence; include silent listeners. An earlier entry stays when omitted.` }
         } } }
       },
       required: ["path", "shots"]
@@ -127300,7 +127332,7 @@ Do NOT use it just to inspect a shot \u2014 use storyboard_read. Do NOT use it f
         frame: { type: "string", enum: ["start", "end"], default: "start", description: "start: the first image \xB7 end: the last image of a first_last shot" },
         action: { type: "string", enum: ["generate", "complete"], default: "generate", description: "generate requests a new image; complete adopts an existing host output without generating" },
         requestId: { type: "string", description: "Exact host handoff requestId for action:complete, e.g. s0001-start-v2" },
-        prompt: { type: "string", description: "What the frame shows, in English: who is where, doing what, facing which way, expression and light, e.g. Mina waits with closed relaxed lips." },
+        prompt: { type: "string", description: "What the frame shows, in English: who is where, doing what, facing which way, expression and light, e.g. Mina grips the strap, brows drawn together, eyes fixed on the door. Leave a face to shot_characters expression when one is set, and do not contradict it." },
         editExisting: { type: "boolean", description: "Edit the saved frame using prompt as the change instruction; save a new version. Omit location and props." },
         reframe: { type: "boolean", description: "With editExisting and frame:start, recompile saved shot size, crop and viewpoint to correct the generated image; prompt gives opening action and correction." },
         sourceCrop: { type: "object", additionalProperties: false, description: "Inspected rectangle in saved source-image pixels, e.g. {x:72,y:64,width:720,height:1280}; requires reframe, in bounds and matching output aspect. Prepared as a reference before GenAI generation.", properties: {
@@ -127322,7 +127354,7 @@ Do NOT use it just to inspect a shot \u2014 use storyboard_read. Do NOT use it f
     name: "shot_prompt",
     title: "Write a shot's video prompt (step 5)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    description: `Use it after every picture-route shot has its images (shot_image): write one generated_video shot's English video prompt into visual.video.prompt from its icon attributes \u2014 camera move in the video model's camera words (pushes in, pulls back, pans, tilts upward, static frame) with its speed, target and the closing composition, the rack focus subjects, and on an MSR (reference) shot its size, angle and depth, since MSR pins no frame; a first or first_last shot starts from its given frames \u2014 plus your English action, closing picture and sound, and the shot's on-screen lines in quotes (MSR adds its lines in video_plan with their image bindings). video_plan sends this prompt when its args name none. It records what the prompt came from (visual.video.promptBasis), so a later change of cast, lines, frame plan, camera, focus or MSR framing shows as stale. Local file only; no generation.
+    description: `Use it after every picture-route shot has its images (shot_image): write one generated_video shot's English video prompt into visual.video.prompt from its icon attributes \u2014 camera move in the video model's camera words (pushes in, pulls back, pans, tilts upward, static frame) with its speed, target and the closing composition, the rack focus subjects, and on an MSR (reference) shot its size, angle and depth, since MSR pins no frame; a first or first_last shot starts from its given frames \u2014 plus your English action, closing picture and sound, each character's expression from shot_characters (held to the last frame unless your action changes it), and the shot's on-screen lines in quotes (MSR adds its lines in video_plan with their image bindings). video_plan sends this prompt when its args name none. It records what the prompt came from (visual.video.promptBasis), so a later change of cast, lines, frame plan, camera, focus or MSR framing shows as stale. Local file only; no generation.
 
 Do NOT write Korean outside quotes: action, end and sound are English (video_prompt_language). Refused (story_order) while a picture-route shot lacks its start image or a first_last shot its end image, and for a cut that is not generated_video.
 
@@ -135131,7 +135163,11 @@ function characterPanelRequest(raw) {
   const [width, height] = FRAMING[args.view].size;
   const negativePrompt = [NEGATIVE[args.view], args.negativePrompt].filter(Boolean).join(", ");
   const call2 = imageCall({ directory: workspace, assetId: `${id}-${args.view}`, inputs: references, prompt, negativePrompt, width, height, outDir: folder, stem: `${id}-${args.view}`, what: "this panel" });
-  const warnings = [...call2.negativeSent ? [] : ["no tested negative-prompt setting for this model; exclusions must be expressed in the main prompt"], ...words.skipped.map((field2) => `${field2} is not English and stays out of the prompt \u2014 write it in English on the sheet`)];
+  const warnings = [
+    ...call2.negativeSent ? [] : ["no tested negative-prompt setting for this model; exclusions must be expressed in the main prompt"],
+    ...words.skipped.map((field2) => `${field2} is not English and stays out of the prompt \u2014 write it in English on the sheet`),
+    ...words.expression.length ? [`the sheet's appearance names an expression (${words.expression.join(" ")}) \u2014 it stays out of this neutral face panel; set expressions per shot with shot_characters`] : []
+  ];
   return { workspace, folder, id, view: args.view, panelsFile, prompt, negativePrompt: call2.negativeSent ? negativePrompt : void 0, warnings, ...call2 };
 }
 function recordCharacterPanel(request) {
