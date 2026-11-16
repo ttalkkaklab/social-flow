@@ -15,6 +15,7 @@ import { actingSchema, compileActing } from './speech-acting.js';
 import { resolveTtsModel } from './tts-models.js';
 import { ASTRA_VIDEO_MAX_PROMPT_CHARS } from './astra-video-client.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
+const speechSpanContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/speech-span.js');
 const actingContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/scene-acting.js');
 export { actingSchema } from './speech-acting.js';
 const delivery = z.enum(['voiceover', 'on_screen', 'off_screen']);
@@ -177,6 +178,8 @@ export function manageSpeech(args) {
     const scenes = win.SCENES;
     let changed = false;
     let timing;
+    let soundtrack;
+    let clearedTrim;
     if (args.timingPatch && args.action !== 'retime')
         throw new Error('timingPatch is only used by retime');
     if (args.reuse && args.action !== 'attach_video')
@@ -375,6 +378,14 @@ export function manageSpeech(args) {
             else {
                 if (!tailTrim)
                     syncProductionClip(scene, dirname(file), videoPath, video.clip, plan.warnings);
+                // edit.in / edit.out were measured on the clip they trimmed; on other bytes they would cut somewhere else, perhaps into the line.
+                const trim = object(scene.edit);
+                if (native && priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256 && (trim.in !== undefined || trim.out !== undefined)) {
+                    const { in: sourceIn, out: sourceOut, ...kept } = trim;
+                    scene.edit = kept;
+                    clearedTrim = { ...(sourceIn !== undefined ? { in: sourceIn } : {}), ...(sourceOut !== undefined ? { out: sourceOut } : {}),
+                        note: 'The previous clip\'s trim was removed: it was measured on other footage. Set the shot duration and a new trim from soundtrack.' };
+                }
                 video.clip = args.videoPath;
                 video.speechBinding = { ...plan, audio, videoPath, videoSha256, quality,
                     ...(tailTrim ? { reuse: { kind: 'tail_trim', sourcePerformanceRevision: priorBinding.performanceRevision,
@@ -383,6 +394,16 @@ export function manageSpeech(args) {
                 video.speechStatus = 'current';
             }
             if (native) {
+                // Where the line sits in the clip: MSR often opens and closes on silent acting. Reported with a trim to listen to, never applied.
+                try {
+                    const span = speechSpanContract().measure(videoPath);
+                    if (span) {
+                        const trim = speechSpanContract().suggestTrim(span, scene);
+                        soundtrack = { ...span, method: 'audio_energy', review: 'not_reviewed', ...(trim ? { suggestedEdit: trim.edit, suggestedDurationSeconds: trim.durationSeconds,
+                                note: 'Silent acting surrounds the line. If the pause is not the story\'s, set these edit.in / edit.out source seconds and the shot duration with storyboard_apply; times inside the shot (sound.effects atSeconds, music starts) then count from the trimmed start. Listen first: loudness can miss a quiet first or last syllable.' } : {}) };
+                    }
+                }
+                catch { /* advisory measurement; a clip that cannot be decoded is reported elsewhere */ }
                 // The clip's soundtrack carries the dialogue, so it is the card's audio.
                 scene.sound = { ...sound, audioSource: 'video' };
                 for (const { line } of selected)
@@ -442,5 +463,5 @@ export function manageSpeech(args) {
             } : {}) };
         return { shotId: scene.id, lineId: line.id, ...result, generation, arguments: generation };
     }) : undefined;
-    return { revision: hash(readFileSync(file)), changed, invalidated, plan, timing, ...(voiceWarnings.length ? { voiceWarnings } : {}), ...(audioPlans ? { audioPlans } : {}), lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname(file), board: win }), audioProvenanceStatus: object(object(object(scene.visual).video).speechBinding).mode === 'native' ? 'native_speech' : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
+    return { revision: hash(readFileSync(file)), changed, invalidated, plan, timing, ...(soundtrack ? { soundtrack } : {}), ...(clearedTrim ? { clearedTrim } : {}), ...(voiceWarnings.length ? { voiceWarnings } : {}), ...(audioPlans ? { audioPlans } : {}), lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname(file), board: win }), audioProvenanceStatus: object(object(object(scene.visual).video).speechBinding).mode === 'native' ? 'native_speech' : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
 }

@@ -48,6 +48,12 @@ Five seconds on ASTRA requires 121 frames (5.0417 seconds); eight requires 193.
 Host-native tools have separate schemas: use their supported duration input
 when present, record actual requested seconds, and do not invent `requiredSeconds` support.
 
+A natively voiced clip (MSR) has no speech to measure before it is made, so its request is
+checked against the lines: `video_plan` returns `speechFit` with the seconds the lines and
+timed actions need and warns when the request runs more than half a second over, naming the
+shortest covering request. Surplus length is not headroom there; the model plays it as silent
+acting around the line.
+
 Storyboard forecasts use authored durations before speech exists. Final requests must be
 replanned from measured media. Seedance storyboard/previz plans keep their whole-second
 contract.

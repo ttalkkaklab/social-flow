@@ -33325,6 +33325,7 @@ function resolveTtsModel(provider, model2) {
 // src/speech.ts
 var voiceContract = () => nodeModule4.createRequire(import.meta.url)("../../skills/_shared/character-voice.js");
 var characterSpeechContract = () => nodeModule4.createRequire(import.meta.url)("../../skills/_shared/character-speech.js");
+var speechSpanContract = () => nodeModule4.createRequire(import.meta.url)("../../skills/_shared/speech-span.js");
 var actingContract = () => nodeModule4.createRequire(import.meta.url)("../../skills/_shared/scene-acting.js");
 var delivery = external_exports.enum(["voiceover", "on_screen", "off_screen"]);
 var speechManageSchema = external_exports.object({
@@ -33466,6 +33467,8 @@ function manageSpeech(args) {
   const scenes = win.SCENES;
   let changed = false;
   let timing;
+  let soundtrack;
+  let clearedTrim;
   if (args.timingPatch && args.action !== "retime") throw new Error("timingPatch is only used by retime");
   if (args.reuse && args.action !== "attach_video") throw new Error("reuse is only used by attach_video");
   if (args.action === "prepare") {
@@ -33639,6 +33642,16 @@ function manageSpeech(args) {
         invalidated = { video, edit: true };
       } else {
         if (!tailTrim) syncProductionClip(scene, dirname5(file), videoPath, video.clip, plan.warnings);
+        const trim = object2(scene.edit);
+        if (native && priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256 && (trim.in !== void 0 || trim.out !== void 0)) {
+          const { in: sourceIn, out: sourceOut, ...kept } = trim;
+          scene.edit = kept;
+          clearedTrim = {
+            ...sourceIn !== void 0 ? { in: sourceIn } : {},
+            ...sourceOut !== void 0 ? { out: sourceOut } : {},
+            note: "The previous clip's trim was removed: it was measured on other footage. Set the shot duration and a new trim from soundtrack."
+          };
+        }
         video.clip = args.videoPath;
         video.speechBinding = {
           ...plan,
@@ -33657,6 +33670,18 @@ function manageSpeech(args) {
         video.speechStatus = "current";
       }
       if (native) {
+        try {
+          const span = speechSpanContract().measure(videoPath);
+          if (span) {
+            const trim = speechSpanContract().suggestTrim(span, scene);
+            soundtrack = { ...span, method: "audio_energy", review: "not_reviewed", ...trim ? {
+              suggestedEdit: trim.edit,
+              suggestedDurationSeconds: trim.durationSeconds,
+              note: "Silent acting surrounds the line. If the pause is not the story's, set these edit.in / edit.out source seconds and the shot duration with storyboard_apply; times inside the shot (sound.effects atSeconds, music starts) then count from the trimmed start. Listen first: loudness can miss a quiet first or last syllable."
+            } : {} };
+          }
+        } catch {
+        }
         scene.sound = { ...sound, audioSource: "video" };
         for (const { line } of selected) if (line.mediaStatus === "needs_audio") delete line.mediaStatus;
       } else if (selected.length && plan.mode === "voiceover") {
@@ -33708,7 +33733,7 @@ function manageSpeech(args) {
     } : {} };
     return { shotId: scene.id, lineId: line.id, ...result, generation, arguments: generation };
   }) : void 0;
-  return { revision: hash(readFileSync8(file)), changed, invalidated, plan, timing, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname5(file), board: win }), audioProvenanceStatus: object2(object2(object2(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
+  return { revision: hash(readFileSync8(file)), changed, invalidated, plan, timing, ...soundtrack ? { soundtrack } : {}, ...clearedTrim ? { clearedTrim } : {}, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname5(file), board: win }), audioProvenanceStatus: object2(object2(object2(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
 }
 
 // src/video-sound.ts

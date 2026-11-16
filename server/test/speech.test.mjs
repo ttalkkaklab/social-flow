@@ -102,6 +102,20 @@ test('a native-speech clip binds line revisions and assembles from its soundtrac
  const board={};new Function('window',readFileSync(file,'utf8'))(board);board.SCENES[0].sound.audioSource='speech';
  writeFileSync(file,Object.entries(board).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
  assert.throws(()=>checker.check(work,target),/needs sound.audioSource video/);
+ // A clip that opens on silent acting comes back with where its line sits and a trim to listen to.
+ const voiced=path.join(dir,'msr-3.mp4');
+ require('node:child_process').execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=s=16x16:r=24:d=4','-f','lavfi','-i','aevalsrc=if(between(t\\,2\\,3.5)\\,0.3*sin(2*PI*440*t)\\,0):s=48000:d=4','-c:v','libx264','-pix_fmt','yuv420p','-c:a','aac','-shortest',voiced]);
+ board.SCENES[0].sound.audioSource='video';writeFileSync(file,Object.entries(board).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+ const {soundtrack}=attach(voiced);
+ assert.ok(Math.abs(soundtrack.leadSilenceSeconds-2)<.06,JSON.stringify(soundtrack));
+ assert.ok(soundtrack.suggestedEdit.in>1.5&&soundtrack.suggestedEdit.in<2);assert.equal(shot().edit?.in,undefined);
+ // A trim belongs to the clip it was measured on: other footage drops it instead of cutting at the old points.
+ const trimmed={};new Function('window',readFileSync(file,'utf8'))(trimmed);trimmed.SCENES[0].edit={...trimmed.SCENES[0].edit,in:1.7,out:3.9};
+ writeFileSync(file,Object.entries(trimmed).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+ assert.equal(attach(voiced).clearedTrim,undefined);assert.equal(shot().edit.in,1.7);
+ const other=path.join(dir,'msr-4.mp4');
+ require('node:child_process').execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=s=16x16:r=24:d=1','-f','lavfi','-i','sine=frequency=440:sample_rate=48000:duration=1','-c:v','libx264','-pix_fmt','yuv420p','-c:a','aac','-shortest',other]);
+ assert.deepEqual({in:attach(other).clearedTrim.in,kept:shot().edit.in,out:shot().edit.out},{in:1.7,kept:undefined,out:undefined});
 });
 test('id-only story-first speakers use their character voice when listing and binding native video',t=>{
  const {dir,target,r}=setup(t),file=join(target,'scenes.js'),win={};

@@ -6,6 +6,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 const { createHash } = require('crypto');
 const { evaluateWindowScript } = require('../../_shared/scenes-vm.js');
+const speechSpan = require('../../_shared/speech-span.js');
 function prepare(work, board) {
   work = path.resolve(work); board = path.resolve(board);
   const win = evaluateWindowScript(fs.readFileSync(path.join(board, 'scenes.js'), 'utf8'));
@@ -33,26 +34,41 @@ function prepare(work, board) {
       throw new Error('audioSource=video needs one continuous, unprefixed source video per card');
     const video = path.resolve(work, visuals[0]);
     const options = (fields[4] || '').split(',').filter(Boolean);
-    if (Number(scene.edit?.in || 0) || Number(scene.edit?.pre || 0) || Number(scene.edit?.post || 0) ||
-        options.some(option => /^(in|pre|post)=/.test(option) && Number(option.split('=')[1]) !== 0))
-      throw new Error('audioSource=video currently requires in/pre/post=0; trim the source clip explicitly first');
+    if (Number(scene.edit?.pre || 0) || Number(scene.edit?.post || 0) ||
+        options.some(option => /^(pre|post)=/.test(option) && Number(option.split('=')[1]) !== 0))
+      throw new Error('audioSource=video requires pre/post=0; trim the card with edit.in and edit.out, which move picture and sound together');
     const probe = JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-show_streams', '-show_format', '-of', 'json', video], { encoding: 'utf8' }));
-    if (!probe.streams.some(stream => stream.codec_type === 'video') || !probe.streams.some(stream => stream.codec_type === 'audio'))
+    const picture = probe.streams.find(stream => stream.codec_type === 'video');
+    if (!picture || !probe.streams.some(stream => stream.codec_type === 'audio'))
       throw new Error('audioSource=video requires both video and audio streams: ' + video);
-    const seconds = Number(probe.streams.find(stream => stream.codec_type === 'video').duration ?? probe.format.duration);
-    if (!Number.isFinite(seconds) || seconds <= 0) throw new Error('Unmeasurable source video duration');
+    const clipSeconds = Number(picture.duration ?? probe.format.duration);
+    if (!Number.isFinite(clipSeconds) || clipSeconds <= 0) throw new Error('Unmeasurable source video duration');
+    // The build opens the picture at the first source frame at or after edit.in; the sound starts on that same frame.
+    const [num, den] = String(picture.avg_frame_rate).split('/').map(Number), fps = num / den;
+    const requested = Number(scene.edit?.in || 0);
+    const sourceIn = Number.isFinite(fps) && fps > 0 ? Math.ceil(requested * fps - 1e-6) / fps : requested;
+    const sourceOut = scene.edit?.out === undefined ? clipSeconds : Number(scene.edit.out);
+    if (!(sourceIn >= 0) || !(sourceOut > sourceIn) || sourceOut > clipSeconds + 1 / (fps || 24))
+      throw new Error(`shot ${Number(fields[0]) + 1}: edit.in ${requested} / edit.out ${scene.edit?.out ?? 'end'} fall outside the ${clipSeconds}s clip`);
+    const seconds = Math.min(sourceOut, clipSeconds) - sourceIn;
     const hash = file => createHash('sha256').update(fs.readFileSync(file)).digest('hex');
     const sourceSha256 = hash(video);
     const audioDir = path.join(work, '.source-audio'); fs.mkdirSync(audioDir, { recursive: true });
-    const audio = path.join(audioDir, sourceSha256 + '.wav');
-    execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', video, '-map', '0:a:0', '-af', 'apad', '-t', String(seconds), '-ar', '48000', '-ac', '2', '-c:a', 'pcm_s16le', audio]);
+    const trimmed = sourceIn > 0 || seconds < clipSeconds;
+    const audio = path.join(audioDir, sourceSha256 + (trimmed ? `-${sourceIn.toFixed(4)}-${seconds.toFixed(4)}` : '') + '.wav');
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', video, '-map', '0:a:0', '-af', trimmed ? `atrim=start=${sourceIn},asetpts=PTS-STARTPTS,apad` : 'apad', '-t', String(seconds), '-ar', '48000', '-ac', '2', '-c:a', 'pcm_s16le', audio]);
+    // Silent acting around the line is reported, not cut: the trim is the author's (edit.in / edit.out).
+    let speech = null;
+    try { speech = speechSpan.measure(audio); } catch { /* measurement is advisory */ }
+    if (speech && (speech.leadSilenceSeconds >= 1 || speech.tailSilenceSeconds >= 1.5))
+      console.error(`⚠ shot ${Number(fields[0]) + 1} (${scene.id}): ${speech.leadSilenceSeconds}s before the line and ${speech.tailSilenceSeconds}s after it are silent; trim the card with edit.in / edit.out if the pause is not the story's`);
     const originalAudio = old && fields[1] === old.audio ? old.originalAudio : fields[1];
     const originalSync = old && fields[1] === old.audio ? old.originalSync : options.filter(option => option.startsWith('sync='));
     fields[1] = audio;
     fields[4] = [...options.filter(option => !option.startsWith('sync=')), 'sync=1'].join(',');
     rows[i] = fields.join('\t');
     changed = true;
-    receipts.push({ card: fields[0], shotId: scene.id, originalAudio, originalSync, video, sourceSha256, audio, audioSha256: hash(audio), seconds, review: 'not_reviewed' });
+    receipts.push({ card: fields[0], shotId: scene.id, originalAudio, originalSync, video, sourceSha256, audio, audioSha256: hash(audio), seconds, sourceIn, ...(speech ? { speech } : {}), review: 'not_reviewed' });
   }
   if (changed) fs.writeFileSync(cards, rows.join('\n'));
   fs.writeFileSync(receiptFile, JSON.stringify(receipts, null, 2) + '\n');

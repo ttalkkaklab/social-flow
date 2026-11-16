@@ -42,7 +42,10 @@ function shotVideoTiming(context, tool, args) {
         const edit = load(fileURLToPath(new URL('../../skills/produce/references/edit-plan.js', import.meta.url))).preview(context.board.SCENES, { videoWarningsApproved: true });
         const index = context.board.SCENES.indexOf(shot);
         const timing = load(fileURLToPath(new URL('../../skills/_shared/video-duration.js', import.meta.url)));
-        coverage = timing.shotTiming(shot, { edit: edit.find((entry) => entry.card === index) });
+        const planned = edit.find((entry) => entry.card === index);
+        // edit.in on a card that plays its clip soundtrack trims the clip it has; a new clip owes no extra head.
+        const ownVoice = shot.sound?.audioSource === 'video';
+        coverage = timing.shotTiming(shot, { edit: ownVoice && planned ? { ...planned, in: 0 } : planned });
     }
     if (args.requiredSeconds !== undefined && (typeof args.requiredSeconds !== 'number' || !Number.isFinite(args.requiredSeconds) || args.requiredSeconds <= 0))
         throw new Error('requiredSeconds must be finite positive seconds');
@@ -51,6 +54,42 @@ function shotVideoTiming(context, tool, args) {
     return { ...assessVideoDuration(tool, args, required), basis: 'planned', coverage,
         note: 'Fit of authored source coverage, not measured performance or generated output. Recheck after speech/action timing or generation changes.' };
 }
+/**
+ * A natively voiced clip plays exactly the requested length, and the model spends whatever the
+ * lines and timed actions do not fill on silent acting, mostly before the line (299 MSR clips
+ * measured 2026-11-16: half of each clip was silence around its line). A report, never a refusal.
+ */
+function nativeSpeechFit(shot, requestedSeconds, limits) {
+    const acting = load(fileURLToPath(new URL('../../skills/_shared/scene-acting.js', import.meta.url)));
+    let estimatedSeconds;
+    try {
+        estimatedSeconds = acting.planScenePerformance(shot, line => acting.estimateSpeechSeconds(line.tts)).durationSeconds;
+    }
+    catch {
+        return undefined;
+    }
+    // An untimed standalone action or a line in another script leaves the clock open: nothing to compare.
+    if (estimatedSeconds === null || !(estimatedSeconds > 0))
+        return undefined;
+    let shortest;
+    try {
+        shortest = load(fileURLToPath(new URL('../../skills/_shared/video-duration.js', import.meta.url))).minimumDuration(estimatedSeconds, limits);
+    }
+    catch {
+        return undefined;
+    }
+    const round = (n) => Math.round(n * 100) / 100;
+    const excessSeconds = round(requestedSeconds - estimatedSeconds);
+    const request = shortest.numFrames !== undefined ? `numFrames ${shortest.numFrames}` : `durationSeconds ${shortest.durationSeconds}`;
+    return { estimatedSeconds, requestedSeconds: round(requestedSeconds), excessSeconds,
+        shortestRequest: { ...(shortest.numFrames !== undefined ? { numFrames: shortest.numFrames } : { durationSeconds: shortest.durationSeconds }), seconds: round(shortest.requestedSeconds) },
+        ...(excessSeconds > SPEECH_SLACK_SECONDS && shortest.requestedSeconds < requestedSeconds - 1e-6 ? {
+            warning: `The request runs ${round(requestedSeconds)}s; the lines and timed actions need about ${estimatedSeconds}s. The model plays the other ${excessSeconds}s as silent acting, usually before the line. ` +
+                `${request} (${round(shortest.requestedSeconds)}s) covers them. A pause the story needs belongs in the performance as a timed action or the line's leadInSeconds/tailOutSeconds.`
+        } : {}) };
+}
+/** Slack a line keeps: under this the measured clips opened on the line; from 2 s they opened on 1.4 s of silence. */
+const SPEECH_SLACK_SECONDS = 0.5;
 /** No generation, image preparation, prompt or credentials needed to inspect shot limits. */
 export function readShotVideoTiming(episode, shotId) {
     const context = routingContext(episode, shotId);
@@ -250,6 +289,12 @@ export function planVideo(raw) {
         if (typeof requested === 'number' && requested < durationPlan.requiredSeconds)
             throw new Error(`video_duration_short: ${input.shotId} needs ${durationPlan.requiredSeconds}s but the request covers ${requested}s. Use requiredSeconds or revise the shot timing.`);
     }
+    // Seconds this request plays: an exact frame count, a duration, or the adapter's own default.
+    const playFps = durationPlan.limits?.frameRate, playFrames = typeof args.numFrames === 'number' ? args.numFrames
+        : typeof args.duration === 'number' && playFps ? framesForSeconds(args.duration, playFps) : tool === 'astra_genai_msr' ? 121 : undefined;
+    const playSeconds = playFrames !== undefined && playFps ? playFrames / playFps : typeof args.durationSeconds === 'number' ? args.durationSeconds : undefined;
+    const speechFit = VIDEO_ADAPTERS[tool].voice === 'reference' && playSeconds !== undefined && durationPlan.limits && lines.some(line => line.delivery !== 'voiceover')
+        ? nativeSpeechFit(shot, playSeconds, durationPlan.limits) : undefined;
     const foreign = typeof args.prompt === 'string' ? nonEnglishOutsideQuotes(args.prompt) : null;
     if (foreign)
         throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks. Write the video prompt in English; only dialogue, inside quotes, uses the video's language.`);
@@ -276,7 +321,7 @@ export function planVideo(raw) {
     const quote = quoteVideo(tool, args);
     const body = { version: 1, episode: context.episode, shotId: input.shotId, requestId: input.requestId, tool, args,
         ...(images.imageBindings ? { imageBindings: images.imageBindings } : {}),
-        sourceArgs: input.args, durationPlan, ...direction, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
+        sourceArgs: input.args, durationPlan, ...(speechFit ? { speechFit } : {}), ...direction, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
         selection, source: context.source, contextRevision: context.revision, inputs, quote, execution: 'server' };
     const plan = { ...body, id: hash(body) };
     atomicJson(path.join(context.episode, '.work/video-routing/plans', plan.id + '.json'), plan);

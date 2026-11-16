@@ -353,9 +353,10 @@ function boundaryReview(win: Board, playback: Array<{ no: number }>, videoTiming
   const ids = source.map(shot => shot.id);
   const timings = Array.isArray(videoTiming) ? videoTiming : [];
   const acting = loadFromHere(join(PLUGIN_ROOT, 'skills', '_shared', 'scene-acting.js')) as {
-    planScenePerformance(shot: Shot, duration: (line: { estimatedSeconds?: number }) => number | null): {
+    planScenePerformance(shot: Shot, duration: (line: { estimatedSeconds?: number; tts?: string }) => number | null): {
       performance: Array<Record<string, unknown>>; durationSeconds: number | null; warnings: string[];
     };
+    estimateSpeechSeconds(text: unknown): number | null;
   };
   const shots = playback.map(({ no }, index) => {
     const shot = source[no - 1];
@@ -372,11 +373,14 @@ function boundaryReview(win: Board, playback: Array<{ no: number }>, videoTiming
           ...(legacyAction ? [{ kind: 'action', text: legacyAction, order: 'unresolved' }] : []),
           ...(shot.narration ?? []).map(line => ({ kind: line.delivery === 'voiceover' ? 'narration' : 'dialogue', lineId: line.id, speaker: line.speaker, text: line.tts, delivery: line.delivery, acting: line.acting, order: 'unresolved' })),
         ], durationSeconds: null, warnings: ['No ordered performance: action order and timing remain unresolved.'], timing: 'unknown' }
-        : acting.planScenePerformance(shot, line => typeof line.estimatedSeconds === 'number' ? line.estimatedSeconds : null);
-      performanceTiming = { ...clock, basis: 'authored_estimates', physicalFeasibility: 'not_reviewed',
+        // A line nobody timed is estimated from its syllables, so a stored duration can be read against its lines.
+        : acting.planScenePerformance(shot, line => typeof line.estimatedSeconds === 'number' ? line.estimatedSeconds : acting.estimateSpeechSeconds(line.tts));
+      const stored = typeof shot.duration === 'number' && clock.durationSeconds !== null ? shot.duration - clock.durationSeconds : null;
+      performanceTiming = { ...clock, basis: 'authored_estimates', speechBasis: 'syllable_rate', physicalFeasibility: 'not_reviewed',
         timing: clock.durationSeconds === null ? 'unknown' : 'estimated',
-        differsFromStored: typeof shot.duration === 'number' && clock.durationSeconds !== null
-          ? Math.abs(shot.duration - clock.durationSeconds) > 0.05 : null };
+        differsFromStored: stored === null ? null : Math.abs(stored) > 0.05,
+        // Positive: seconds the stored duration holds beyond the lines and timed actions. A native-speech clip plays them as silence.
+        storedExcessSeconds: stored === null ? null : Math.round(stored * 100) / 100 };
     } catch (error) {
       performanceTiming = { status: 'unresolved', reason: (error as Error).message, physicalFeasibility: 'not_reviewed' };
     }

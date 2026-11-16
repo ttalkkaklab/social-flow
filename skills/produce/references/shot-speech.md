@@ -330,7 +330,10 @@ measured speech with lead-in/tail-out and action timing before planning video co
 Keep visible mouths closed and `sound.audioSource:"speech"` for assembly. Never write
 thoughts as MSR native dialogue. Missing TTS setup is reported before generation. Its binding records each line's revision instead of an audio hash.
 `attach_video` sets `sound.audioSource:"video"` so the clip's soundtrack is the card audio,
-and a line edit marks the clip stale rather than asking for a take.
+and a line edit marks the clip stale rather than asking for a take. It also measures where
+the line sits in the clip and returns `soundtrack` with a suggested `edit.in`/`edit.out`
+when silence the performance did not ask for surrounds the line
+([cinematic edit](cinematic-edit.md)); the measurement is loudness, `not_reviewed`.
 
 `video_plan` keeps the text-free instruction after the compiled native dialogue, on
 single-speaker MSR shots. This is prompt guidance; inspect the generated frames for unwanted captions.
