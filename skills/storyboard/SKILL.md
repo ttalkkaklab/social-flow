@@ -536,6 +536,8 @@ convention, not a measured effect. Set the camera move and focus with `shot_icon
 `shot.techniques:[{id,reason}]`; give a video move its `speed` (slow, steady, fast) and `target`,
 and a rack focus its `from` and `to` subjects in English, because `shot_image` stages them and
 `shot_prompt` writes them ("The camera slowly pushes in toward …", "Rack focus from … to …").
+An action beat can lay a beat accent over its move with `shot_icons accents` — `camera.speed-ramp`
+or `camera.impact-shake`, each with `on`, the one moment it fires on in English.
 On a 9:16 board the result lists each chosen value's vertical note; read it before the images.
 Persist other purposeful choices there through `storyboard_apply`.
 The shared source is [film-techniques.js](references/film-techniques.js); exported boards also

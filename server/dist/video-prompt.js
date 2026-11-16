@@ -19,7 +19,7 @@ export function compileVideoPrompt(shot, source, names = {}) {
     const contract = load('../../skills/storyboard/references/structure-contract.js');
     const travels = load('../../skills/storyboard/references/production-mode.js').travels;
     const picked = (Array.isArray(plan.techniques) ? plan.techniques : []).map(object).map(t => ({
-        id: text(t.id), from: text(t.from), to: text(t.to), entry: catalogue.byId[text(t.id)],
+        id: text(t.id), from: text(t.from), to: text(t.to), on: text(t.on), entry: catalogue.byId[text(t.id)],
     }));
     const movement = text(camera.movement), speed = text(camera.speed), target = text(camera.target), settle = text(camera.end);
     const move = picked.find(t => t.entry?.fields.movement && movement.toLowerCase().startsWith(t.entry.fields.movement))?.entry;
@@ -40,7 +40,8 @@ export function compileVideoPrompt(shot, source, names = {}) {
     const prompt = [
         msr ? framing : 'Start from the given first frame.',
         msr ? depthWords : '', moveWords, settle ? sentence(`Closing frame: ${settle}`) : '', focusWords,
-        ...other.map(t => sentence(t.entry.instruction)),
+        // A beat accent (speed ramp, impact shake) names the moment it fires on.
+        ...other.map(t => sentence(t.entry.fields.accent && t.entry.prompt ? t.entry.prompt.replace('{cue}', t.on || t.entry.fields.cue) : t.entry.instruction)),
         viewWords || (text(camera.framing) ? sentence(`Opening composition: ${text(camera.framing)}`) : ''),
         !viewWords && camera.rear && !other.some(t => t.entry.fields.viewpoint === 'rear') ? 'View the subject from behind.' : '',
         !viewWords && camera.pov && !other.some(t => t.entry.fields.viewpoint === 'pov') ? sentence(`Point of view: ${text(camera.pov) || 'the named character'}`) : '',

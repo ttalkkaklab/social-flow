@@ -93102,6 +93102,14 @@ var require_film_techniques = __commonJS({
       add("camera.tilt-up", "camera", "\uD2F8\uD2B8 \uC5C5", "Tilt up", "\uC81C\uC790\uB9AC\uC5D0\uC11C \uC704\uB85C \uACE0\uAC1C\uB97C \uB4E0\uB2E4. \uB192\uC774\uC640 \uADDC\uBAA8, \uC774\uC57C\uAE30\uAC00 \uC774\uBBF8 \uD798\uC744 \uC2E4\uC5B4 \uC900 \uC778\uBB3C\uC744 \uC62C\uB824 \uC7A1\uAE30, \uC778\uBB3C\uC774 \uC62C\uB824\uB2E4\uBCF4\uB294 \uC18D\uB3C4\uC5D0 \uB9DE\uCD98 \uACF5\uAC1C.", "The camera tilts upward from the named starting target and settles on the named ending target.", "M4 16h10v8H4zM22 28V4m-5 5 5-5 5 5M3 29h12", { movement: "tilt up" });
       add("camera.tilt-down", "camera", "\uD2F8\uD2B8 \uB2E4\uC6B4", "Tilt down", "\uC81C\uC790\uB9AC\uC5D0\uC11C \uC544\uB798\uB85C \uB0B4\uB824\uAC04\uB2E4. \uC5BC\uAD74\uC5D0\uC11C \uC190\uC5D0 \uB4E0 \uBB3C\uAC74\uC73C\uB85C \uB0B4\uB824\uAC00\uB294 \uBC1C\uACAC, \uB192\uC740 \uACF3\uC5D0\uC11C \uC778\uBB3C\uB85C \uB0B4\uB824\uC624\uB294 \uC124\uC815, \uC778\uBB3C\uC744 \uC791\uAC8C.", "The camera tilts downward from the named starting target and settles on the named ending target.", "M4 4h10v8H4zM22 4v24m-5-5 5 5 5-5M3 29h12", { movement: "tilt down" });
       add("camera.eye", "camera", "\uB208\uB192\uC774", "Eye level", "\uC778\uBB3C \uB208\uB192\uC774\uC758 \uC911\uB9BD \uC2DC\uC810. \uB300\uD654\xB7\uC778\uD130\uBDF0\xB7\uCE74\uBA54\uB77C\uB97C \uBCF4\uACE0 \uB9D0\uD558\uB294 \uCEF7\uC758 \uAE30\uBCF8\uC774\uBA70, \uC2E4\uD5D8\uC5D0\uC11C \uC2E0\uB8B0\uB97C \uAC00\uC7A5 \uB9CE\uC774 \uBC1B\uC558\uB2E4.", "Keep the lens level at the eye height of the named subject.", camera + "M19 12h10M23 4v24", { angle: "eye" });
+      add("camera.crash-zoom", "camera", "\uD06C\uB798\uC2DC \uC90C", "Crash zoom", "\uD654\uAC01\uC744 \uC21C\uC2DD\uAC04\uC5D0 \uC881\uD600 \uD55C \uB300\uC0C1\uC5D0 \uAF42\uB294\uB2E4. \uC561\uC158\xB7\uC2A4\uB9B4\uB7EC\uC5D0\uC11C \uC704\uD611\uC774\uB098 \uB2E8\uC11C\uB97C \uBC1C\uACAC\uD558\uB294 \uC21C\uAC04, \uCF54\uBBF8\uB514\uC758 \uD380\uCE58\uB77C\uC778.", "Crash zoom: from a fixed camera position the lens snaps in under half a second from the wide opening frame to a tight close-up of the named target, then holds.", "M3 3h26v26H3zM12 12h8v8h-8zM4 4l6 6m-4 0h4V6M28 28l-6-6m4 0h-4v4", { movement: "zoom in crash", speed: "fast" });
+      add("camera.blast-pushback", "camera", "\uBE14\uB798\uC2A4\uD2B8 \uD478\uC2DC\uBC31", "Blast pushback", "\uD3ED\uBC1C\uC774\uB098 \uCDA9\uACA9\uD30C\uAC00 \uCE74\uBA54\uB77C\uAE4C\uC9C0 \uBC00\uC5B4\uB0B8\uB2E4. \uAD00\uAC1D\uC774 \uCDA9\uACA9\uC744 \uAD6C\uACBD\uD558\uC9C0 \uC54A\uACE0 \uC9C1\uC811 \uB9DE\uAC8C \uD55C\uB2E4.", "The shockwave reaches the camera: it is thrown straight back from the named source, jolts once, and settles on a wider frame that shows the aftermath.", camera + "M19 27H5m4-4-4 4 4 4M26 4v8m-4-6 8 4m-8 0 8-4", { movement: "dolly out blast", speed: "fast" });
+      add("camera.weapon-cam", "camera", "\uC6E8\uD3F0 \uCEA0", "Weapon cam", "\uCE74\uBA54\uB77C\uAC00 \uD654\uC0B4\xB7\uCE7C\xB7\uCD1D\uC54C\uCC98\uB7FC \uB0A0\uC544\uAC00\uB294 \uBB3C\uCCB4\uC5D0 \uC62C\uB77C\uD0C4\uB2E4. \uB358\uC9C0\uAC70\uB098 \uC3DC \uC21C\uAC04\uBD80\uD130 \uBA85\uC911 \uC9C1\uC804\uAE4C\uC9C0\uB97C \uBC1C\uC0AC\uCCB4\uC758 \uC790\uB9AC\uC5D0\uC11C \uC787\uB294\uB2E4.", "The camera rides on the named projectile from its release, the tip fixed low in the frame while the surroundings streak past, and stops just short of the target.", "M3 25 27 9m-7 0h7v7M7 17l6-4 3 5-6 4z", { movement: "tracking mounted on the projectile", speed: "fast" });
+      add("camera.pass-through", "camera", "\uAD00\uD1B5 \uC0F7", "Pass-through shot", "\uB2EC\uC544\uB098\uB294 \uC778\uBB3C \uBC14\uB85C \uB4A4\uB97C \uCAD3\uC73C\uBA70 \uC778\uBB3C\uC774 \uD53C\uD574 \uAC00\uB294 \uC7A5\uC560\uBB3C\uC744 \uCE74\uBA54\uB77C\uB294 \uADF8\uB300\uB85C \uB6AB\uACE0 \uC9C0\uB098\uAC04\uB2E4. \uC881\uC740 \uACF5\uAC04\uC758 \uCD94\uACA9\uC5D0 \uC18D\uB3C4\uC640 \uC5F0\uC18D\uAC10\uC744 \uC900\uB2E4.", "The camera chases close behind the subject in one take and flies straight through each named opening or soft obstacle while the subject ducks under or goes around it.", "M10 3v9m0 8v9M20 3v9m0 8v9M2 16h27m-5-5 5 5-5 5", { movement: "tracking through openings", speed: "fast" });
+      add("camera.drone-dive", "camera", "\uB4DC\uB860 \uB2E4\uC774\uBE0C", "Drone dive", "\uB0AE\uACE0 \uBE60\uB974\uAC8C \uC218\uD3C9\uC73C\uB85C \uB0A0\uB2E4\uAC00 \uAC00\uC7A5\uC790\uB9AC\uC5D0\uC11C \uC544\uB798\uB85C \uAEBE\uC5EC \uB5A8\uC5B4\uC9C4\uB2E4. \uB192\uC774\uAC00 \uC788\uB294 \uCD94\uACA9\uACFC \uB6F0\uC5B4\uB0B4\uB9BC.", "An FPV drone camera flies low and level behind the subject, then pitches straight down at the named edge and dives alongside the fall.", "M3 5h6M13 5h6M6 5l2 3h6l2-3M8 8h6v4H8zM3 18h14q8 0 8 8v3m-4-4 4 4 4-4", { movement: "aerial dive", speed: "fast" });
+      add("camera.relay", "camera", "\uB9B4\uB808\uC774 \uC6D0\uD14C\uC774\uD06C", "Relay one-take", "\uCEF7 \uC5C6\uC774 \uD55C \uC0AC\uB78C\uC5D0\uC11C \uB2E4\uC74C \uC0AC\uB78C\uC73C\uB85C \uCE74\uBA54\uB77C\uB97C \uB118\uAE34\uB2E4. \uC5EC\uB7EC \uBA85\uC774 \uD55C \uACF5\uAC04\uC5D0\uC11C \uC2F8\uC6B0\uB294 \uC7A5\uBA74\uC744 \uD55C \uD638\uD761\uC73C\uB85C \uC787\uB294\uB2E4.", "One unbroken take: the camera stays with one fighter, swings to the next on a named handoff action such as a duck or a throw, and ends on a wider frame that holds everyone.", "M6 4a3 3 0 1 0 .01 0M16 4a3 3 0 1 0 .01 0M26 4a3 3 0 1 0 .01 0M6 13q4.5 8 9 0m-4 1 4-1 1 4M17 13q4.5 8 9 0m-4 1 4-1 1 4M3 27h26", { movement: "handheld relay" });
+      add("camera.speed-ramp", "camera", "\uC2A4\uD53C\uB4DC \uB7A8\uD504", "Speed ramp", "\uC815\uC0C1 \uC18D\uB3C4\uB85C \uAC00\uB2E4\uAC00 \uD55C \uC21C\uAC04\uB9CC \uAC70\uC758 \uBA48\uCD94\uACE0 \uB2E4\uC2DC \uD480\uB9B0\uB2E4. \uACB0\uC815\uD0C0\uAC00 \uB2FF\uB294 \uC21C\uAC04\uC744 \uAE38\uAC8C \uBCF4\uC5EC \uC900\uB2E4. \uBB34\uBE0C \uC704\uC5D0 \uC5B9\uB294 \uC21C\uAC04 \uAC15\uC870\uB2E4.", "Speed ramp: the action runs at normal speed, slows almost to a stop at one named moment, then snaps back to normal speed.", "M3 8h7l4 15h4l4-15h7M3 28h26", { accent: "time", cue: "the moment of contact" });
+      add("camera.impact-shake", "camera", "\uC784\uD329\uD2B8 \uC170\uC774\uD06C", "Impact shake", "\uC0AC\uAC74\uC774 \uC77C\uC5B4\uB0A0 \uB54C\uB9C8\uB2E4 \uD654\uBA74\uC774 \uD55C \uBC88 \uD280\uACE0 \uAC00\uB77C\uC549\uB294\uB2E4. \uAC70\uB300\uD55C \uC874\uC7AC\uC758 \uAC78\uC74C, \uCC29\uC9C0, \uCDA9\uB3CC\uC758 \uBB34\uAC8C. \uBB34\uBE0C \uC704\uC5D0 \uC5B9\uB294 \uC21C\uAC04 \uAC15\uC870\uB2E4.", "Impact shake: the frame jolts once at each named impact and settles completely still between impacts.", "M6 4h20v13H6zM3 25h9l2-5 3 9 2-6 1.5 2H29", { accent: "shake", cue: "each impact" });
       const sizes = [
         ["els", "\uC775\uC2A4\uD2B8\uB9BC \uB871\uC0F7", "Extreme long shot", "\uC778\uBB3C\uC744 \uD658\uACBD \uC18D \uC791\uC740 \uC810\uC73C\uB85C \uB450\uC5B4 \uC7A5\uC18C\xB7\uADDC\uBAA8\xB7\uACE0\uB9BD\uC744 \uBCF4\uC5EC \uC900\uB2E4. \uC7A5\uBA74\uC758 \uCCAB \uCEF7\uC774\uB098 \uB9C8\uC9C0\uB9C9 \uCEF7.", "extreme long shot, the subject tiny within the surroundings, under a tenth of the frame height", 9],
         ["ls", "\uB871\uC0F7", "Long shot", "\uC7A5\uBA74 \uCCAB\uBA38\uB9AC\uC758 \uC124\uC815\uC0F7. \uC5B4\uB514\uC778\uC9C0, \uBA87 \uBA85\uC778\uC9C0, \uC11C\uB85C \uC5BC\uB9C8\uB098 \uB5A8\uC5B4\uC84C\uB294\uC9C0\uB97C \uD55C \uBC88\uC5D0 \uBCF4\uC5EC \uC900\uB2E4.", "wide establishing shot, full body with room above and below, the surroundings readable", 21],
@@ -93134,8 +93142,8 @@ var require_film_techniques = __commonJS({
         "camera.static": { "avoid": "\uB530\uB77C\uAC00\uAE30\uB098 \uC5F0\uC18D \uACF5\uAC1C\uCC98\uB7FC \uACE0\uC815\uC73C\uB85C\uB294 \uB0BC \uC218 \uC5C6\uB294 \uD6A8\uACFC\uAC00 \uD544\uC694\uD55C \uBE44\uD2B8.", "specify": "\uD504\uB808\uC784 \uC548\uC5D0\uC11C \uBB34\uC5C7\uC774 \uC5B8\uC81C \uC5B4\uB514\uB85C \uC6C0\uC9C1\uC774\uB294\uC9C0(\uC67C\uCABD 3\uBD84\uC758 1, \uAC00\uC6B4\uB370\uCC98\uB7FC \uD504\uB808\uC784 \uAE30\uC900)." },
         "camera.dolly-in": { "avoid": "\uC2B5\uAD00\uCC98\uB7FC \uBC18\uBCF5\uD558\uB294 \uD478\uC2DC(\uD798\uC774 \uBE60\uC9C4\uB2E4). \uC5FF\uBCF4\uB294 \uAD00\uCC30\uC790 \uC2DC\uC810\uC774 \uBAA9\uC801\uC774\uBA74 \uC90C.", "pair": "\uACE0\uC815 \uC0F7\uC774 \uC774\uC5B4\uC9C4 \uB4A4\uC758 \uC57D\uD55C \uD478\uC2DC\uAC00 \uD06C\uAC8C \uC77D\uD78C\uB2E4.", "specify": "\uC2DC\uC791 \uD06C\uB86D\uACFC \uB05D \uD06C\uB86D(\uB05D\uC5D0 \uC5BC\uAD74\uC774 \uD654\uBA74\uC744 \uC5B4\uB5BB\uAC8C \uCC44\uC6B0\uB294\uC9C0), \uC6C0\uC9C1\uC774\uAE30 \uC2DC\uC791\uD558\uB294 \uB300\uC0AC\uB098 \uBC18\uC751, \uC18D\uB3C4. 2\uCD08 \uC548\uD30E\uC758 \uB290\uB9B0 \uD478\uC2DC\uB294 \uD45C\uB958\uCC98\uB7FC \uBCF4\uC778\uB2E4." },
         "camera.dolly-out": { "avoid": "\uB4DC\uB7EC\uB098\uB294 \uB0B4\uC6A9\uACFC \uADF8 \uC2DC\uC810\uC774 \uC774\uC57C\uAE30\uC640 \uB9DE\uC9C0 \uC54A\uC744 \uB54C. \uC6D0\uADFC\uC774 \uACE0\uC815\uB41C \uAD11\uD559\uC801 \uD6C4\uD1F4\uBA74 \uC90C \uC544\uC6C3.", "pair": "\uC7A5\uBA74\uC774\uB098 \uC778\uBB3C \uC774\uC57C\uAE30\uC758 \uB9C8\uC9C0\uB9C9 \uCEF7.", "specify": "\uB05D \uD504\uB808\uC784\uC5D0 \uC0C8\uB85C \uB4E4\uC5B4\uC624\uB294 \uAC83\uACFC \uADF8\uB54C \uC778\uBB3C\uC758 \uD06C\uAE30, \uC18D\uB3C4(\uB290\uB9AC\uBA74 \uAC10\uC815\uC774 \uC313\uC774\uACE0 \uBE60\uB974\uBA74 \uCDA9\uACA9\xB7\uD380\uCE58\uB77C\uC778)." },
-        "camera.slow-zoom-in": { "avoid": "\uAD00\uAC1D\uC774 \uACF5\uAC04 \uC548\uC73C\uB85C \uB4E4\uC5B4\uAC00\uB294 \uB290\uB08C\uC774 \uBAA9\uC801\uC774\uBA74 \uB2EC\uB9AC \uC778. \uC90C\uC744 \uB418\uD480\uC774\uD558\uBA74 \uAC70\uC2AC\uB9AC\uACE0, \uBE60\uB978 \uD06C\uB798\uC2DC \uC90C\uC740 \uCF54\uBBF8\uB514 \uC0C9\uC774 \uC788\uB2E4.", "specify": "\uB113\uAC8C \uC2DC\uC791\uD574 \uBB34\uC5C7\uC774 \uD654\uBA74\uC744 \uCC44\uC6B0\uBA70 \uB05D\uB098\uB294\uC9C0, \uC18D\uB3C4." },
-        "camera.arc": { "avoid": "\uBA4B\uC744 \uB0B4\uB824\uB294 \uC7A5\uC2DD\uC6A9 \uC544\uD06C, \uC5B4\uC9C0\uB7EC\uC6B4 \uBE60\uB978 \uC544\uD06C. \uD070 \uC544\uD06C\uB294 180\uB3C4 \uC120\uC744 \uB118\uC73C\uB2C8 \uB2E4\uC74C \uCEF7 \uBC29\uD5A5\uC744 \uBBF8\uB9AC \uB9DE\uCD98\uB2E4.", "specify": "\uD68C\uC804 \uBC29\uD5A5(\uC2DC\uACC4\xB7\uBC18\uC2DC\uACC4)\uACFC \uAC01\uB3C4(90\xB0\xB7180\xB0\xB7360\xB0), \uC18D\uB3C4, \uB05D\uC5D0\uC11C \uBCF4\uC774\uB294 \uC778\uBB3C\uC758 \uBA74, \uC778\uBB3C\uC774 \uBA48\uCDB0 \uC788\uB294\uC9C0." },
+        "camera.slow-zoom-in": { "avoid": "\uAD00\uAC1D\uC774 \uACF5\uAC04 \uC548\uC73C\uB85C \uB4E4\uC5B4\uAC00\uB294 \uB290\uB08C\uC774 \uBAA9\uC801\uC774\uBA74 \uB2EC\uB9AC \uC778. \uC90C\uC744 \uB418\uD480\uC774\uD558\uBA74 \uAC70\uC2AC\uB9B0\uB2E4. \uC21C\uC2DD\uAC04\uC5D0 \uAF42\uB294 \uC90C\uC740 \uD06C\uB798\uC2DC \uC90C\uC73C\uB85C \uACE0\uB978\uB2E4.", "specify": "\uB113\uAC8C \uC2DC\uC791\uD574 \uBB34\uC5C7\uC774 \uD654\uBA74\uC744 \uCC44\uC6B0\uBA70 \uB05D\uB098\uB294\uC9C0, \uC18D\uB3C4." },
+        "camera.arc": { "avoid": "\uBA4B\uC744 \uB0B4\uB824\uB294 \uC7A5\uC2DD\uC6A9 \uC544\uD06C, \uC5B4\uC9C0\uB7EC\uC6B4 \uBE60\uB978 \uC544\uD06C. \uD070 \uC544\uD06C\uB294 180\uB3C4 \uC120\uC744 \uB118\uC73C\uB2C8 \uB2E4\uC74C \uCEF7 \uBC29\uD5A5\uC744 \uBBF8\uB9AC \uB9DE\uCD98\uB2E4.", "specify": "\uD68C\uC804 \uBC29\uD5A5(\uC2DC\uACC4\xB7\uBC18\uC2DC\uACC4)\uACFC \uAC01\uB3C4(90\xB0\xB7180\xB0\xB7360\xB0), \uC18D\uB3C4, \uB05D\uC5D0\uC11C \uBCF4\uC774\uB294 \uC778\uBB3C\uC758 \uBA74, \uC778\uBB3C\uC774 \uBA48\uCDB0 \uC788\uB294\uC9C0. \uD55C \uBC14\uD034\uB97C \uB3C4\uB294 \uB300\uCE58\uB77C\uBA74 \uB3C4\uB294 \uB3D9\uC548 \uBC14\uB00C\uB294 \uAC83(\uBB34\uAE30\uB97C \uBF51\uB294\uB2E4, \uD3EC\uC704\uAC00 \uC881\uD600\uC9C4\uB2E4)\uC744 \uD568\uAED8 \uC801\uB294\uB2E4." },
         "camera.follow": { "avoid": "\uC704\uD611\uC744 \uC758\uB3C4\uD558\uC9C0 \uC54A\uC558\uB294\uB370 \uCC28\uAC11\uACE0 \uB9E4\uB044\uB7FD\uAC8C \uB4A4\uB530\uB974\uBA74 \uAC10\uC2DC\uC790\uCC98\uB7FC \uC77D\uD78C\uB2E4. \uC5BC\uAD74 \uBC18\uC751\uC774 \uD575\uC2EC\uC774\uBA74 \uB4A4\uC5D0\uC11C\uB294 \uAC00\uB824\uC9C4\uB2E4.", "pair": "\uB4B7\uBAA8\uC2B5 \uC2DC\uC810(camera.rear)\uACFC \uD568\uAED8 \uACE0\uB974\uAE30 \uC27D\uB2E4.", "specify": "\uB530\uB974\uB294 \uAC70\uB9AC\uC640 \uCE74\uBA54\uB77C \uB192\uC774, \uACBD\uB85C\xB7\uB79C\uB4DC\uB9C8\uD06C\xB7\uAC77\uB294 \uC18D\uB3C4, \uBA48\uCD94\uB294 \uB05D \uD504\uB808\uC784, \uB4A4\uC5D0\uC11C \uC54C\uC544\uBCFC \uB2E8\uC11C(\uBA38\uB9AC\xB7\uC637).", "vertical": "\uAE38\xB7\uD1B5\uB85C\xB7\uBCF5\uB3C4\uB97C \uB530\uB77C \uC55E\uC73C\uB85C \uB098\uC544\uAC00\uB294 \uC6C0\uC9C1\uC784\uC774 \uC138\uB85C \uD654\uBA74\uC5D0 \uB9DE\uB294\uB2E4." },
         "camera.reverse-tracking": { "avoid": "\uC2B5\uAD00\uC774 \uB41C walk and talk(\uAD00\uB840\uC774\uC790 \uD074\uB9AC\uC170\uB77C\uB294 \uBE44\uD310\uC774 \uC788\uB2E4).", "specify": "\uC778\uBB3C \uC218\uC640 \uB300\uC5F4, \uAC77\uB294 \uC18D\uB3C4, \uC720\uC9C0\uD560 \uD06C\uAE30, \uBC30\uACBD\uC5D0 \uC9C0\uB098\uAC08 \uC7A5\uC18C, \uBA48\uCD94\uB294 \uC9C0\uC810\uACFC \uADF8\uB54C \uBCF4\uC774\uB294 \uAC83." },
         "camera.handheld": { "avoid": "\uAD00\uAC1D\uC774 \uACF5\uAC04\uC744 \uD30C\uC545\uD574\uC57C \uD558\uB294 \uCD94\uACA9(\uC9C0\uB9AC\uB97C \uBA3C\uC800 \uC138\uC6E0\uC744 \uB54C\uB9CC), \uC5F0\uAE30 \uB514\uD14C\uC77C\uC774 \uD544\uC694\uD55C \uD074\uB85C\uC988\uC5C5, \uB0A8\uC6A9.", "specify": "\uAC15\uB3C4 \uB2E8\uACC4(\uC228\uC26C\uB4EF\xB7\uAD00\uCC30\uD615\xB7\uACA9\uB82C), \uB530\uB77C\uAC00\uB294 \uB300\uC0C1, \uB05D\uC5D0 \uD504\uB808\uC784\uC774 \uBA48\uCD94\uB294\uC9C0, \uACC4\uC18D \uC77D\uD600\uC57C \uD560 \uC5BC\uAD74\uC774\uB098 \uB79C\uB4DC\uB9C8\uD06C." },
@@ -93158,6 +93166,14 @@ var require_film_techniques = __commonJS({
         "camera.tilt-up": { "avoid": "\uB05D\uC5D0 \uC0C8 \uC815\uBCF4\uAC00 \uC5C6\uB294 \uD2F8\uD2B8. \uD5E4\uB4DC\uB8F8\uC744 \uB9DE\uCD94\uB294 \uC791\uC740 \uD2F8\uD2B8\uB294 \uAE30\uBC95\uC774 \uC544\uB2C8\uB77C \uB9AC\uD504\uB808\uC774\uBC0D\uC774\uB2E4.", "specify": "\uC2DC\uC791 \uB300\uC0C1\uACFC \uB05D \uB300\uC0C1, \uB05D\uC5D0\uC11C \uB300\uC0C1\uC774 \uB193\uC77C \uC704\uCE58, \uC18D\uB3C4.", "vertical": "\uC138\uB85C \uD654\uBA74\uC740 \uB192\uC774\uB97C \uBCF4\uC5EC \uC8FC\uB294 \uD2F8\uD2B8\uC5D0 \uB9DE\uB294\uB2E4." },
         "camera.tilt-down": { "avoid": "\uC57D\uD568\uC744 \uC758\uB3C4\uD558\uC9C0 \uC54A\uC740 \uC778\uBB3C\uC744 \uB0B4\uB824 \uC7A1\uB294 \uAC83, \uD5E4\uB4DC\uB8F8 \uB9DE\uCD94\uAE30\uB97C \uAE30\uBC95\uC73C\uB85C \uC801\uB294 \uAC83.", "specify": "\uC2DC\uC791 \uB300\uC0C1\uACFC \uB05D \uB300\uC0C1, \uB05D\uC5D0\uC11C \uB300\uC0C1\uC774 \uB193\uC77C \uC704\uCE58." },
         "camera.eye": { "avoid": "\uD0A4\uB098 \uC790\uC138\uAC00 \uB2E4\uB978 \uB450 \uC0AC\uB78C\uC774 \uD568\uAED8 \uC788\uC73C\uBA74 \uB204\uAD6C\uC758 \uB208\uB192\uC774\uC778\uC9C0 \uC815\uD574\uC57C \uB73B\uC774 \uC0DD\uAE34\uB2E4.", "specify": "\uAE30\uC900 \uC778\uBB3C\uACFC \uC790\uC138(\uC11C \uC788\uC74C\xB7\uC549\uC74C), \uC2DC\uC120 \uBC29\uD5A5(\uB80C\uC988 \uC815\uBA74, \uD654\uBA74 \uBC16 \uC67C\uCABD\xB7\uC624\uB978\uCABD)." },
+        "camera.crash-zoom": { "avoid": "\uC870\uC6A9\uD55C \uC815\uADF9\uC758 \uAE68\uB2EC\uC74C(\uCF54\uBBF8\uB514\uB85C \uC77D\uD788\uAE30 \uC27D\uB2E4. \uADF8 \uBE44\uD2B8\uB294 \uBE60\uB978 \uB2EC\uB9AC \uC778). \uD55C \uC7A5\uBA74\uC5D0 \uB450 \uBC88 \uC774\uC0C1, \uB3C4\uCC29 \uB300\uC0C1\uC774 \uB458 \uC774\uC0C1\uC77C \uB54C.", "pair": "\uBCF4\uB294 \uC5BC\uAD74 \u2192 \uD06C\uB798\uC2DC \uC90C \u2192 \uBC18\uC751 \uC5BC\uAD74. \uB113\uC740 \uC2DC\uC791 \uD504\uB808\uC784\uC744 \uC7A0\uAE50 \uBD99\uC7A1\uC740 \uB4A4\uC5D0 \uB4E4\uC5B4\uAC04\uB2E4.", "specify": "\uB3C4\uCC29 \uB300\uC0C1 \uD558\uB098\uC640 \uB05D \uD06C\uB86D, \uC90C\uC774 \uC2DC\uC791\uB418\uB294 \uACC4\uAE30(\uC18C\uB9AC\xB7\uBD88\uBE5B\xB7\uC2DC\uC120). \uD504\uB808\uC784 \uACC4\uD68D\uC774 first_last\uBA74 \uB05D \uC774\uBBF8\uC9C0\uAC00 \uB3C4\uCC29 \uAD6C\uB3C4\uB97C \uACE0\uC815\uD55C\uB2E4." },
+        "camera.blast-pushback": { "avoid": "\uCDA9\uACA9\uC758 \uC6D0\uC778\uC774 \uD654\uBA74\uC5D0 \uC5C6\uC744 \uB54C, \uD55C \uC7A5\uBA74\uC5D0 \uB418\uD480\uC774\uD560 \uB54C.", "pair": "\uBC1C\uB3D9 \uB3D9\uC791(\uB0B4\uB9AC\uCE58\uAE30\xB7\uC810\uD654)\uC744 \uBA3C\uC800 \uBCF4\uC5EC \uC900 \uB4A4\uC5D0 \uC628\uB2E4. \uB05D \uD504\uB808\uC784\uC740 \uACB0\uACFC\uB97C \uBD99\uC7A1\uB294\uB2E4.", "specify": "\uCDA9\uACA9\uC6D0\uACFC \uD130\uC9C0\uB294 \uACC4\uAE30 \uB3D9\uC791, \uBC00\uB824\uB09C \uB4A4\uC758 \uB113\uC740 \uB05D \uD504\uB808\uC784\uC5D0 \uBCF4\uC774\uB294 \uAC83(\uD30C\uC778 \uBC14\uB2E5\xB7\uC4F0\uB7EC\uC9C4 \uC0C1\uB300). \uD504\uB808\uC784 \uACC4\uD68D\uC774 first_last\uBA74 \uB05D \uC774\uBBF8\uC9C0\uC5D0 \uACB0\uACFC\uB97C \uADF8\uB9B0\uB2E4." },
+        "camera.weapon-cam": { "avoid": "\uC3D8\uB294 \uC0AC\uB78C\uACFC \uD45C\uC801\uC758 \uC704\uCE58\uB97C \uC55E\uC5D0\uC11C \uBCF4\uC5EC \uC8FC\uC9C0 \uC54A\uC740 \uCEF7, \uBC1C\uC0AC\uCCB4\uAC00 \uC5EC\uB7FF\uC77C \uB54C.", "pair": "\uB2F9\uAE30\uAC70\uB098 \uACA8\uB204\uB294 \uCEF7 \u2192 \uC6E8\uD3F0 \uCEA0 \u2192 \uBA85\uC911\uC774\uB098 \uBE57\uB098\uAC10\uC758 \uACB0\uACFC \uCEF7.", "specify": "\uD45C\uC801(shot_icons move\uC758 target), \uBC1C\uC0AC\uCCB4\uC640 \uD654\uBA74\uC5D0 \uAC78\uB9AC\uB294 \uBD80\uBD84(\uD654\uC0B4\uCD09\xB7\uCE7C\uB05D)\uC740 action \uBB38\uC7A5\uC5D0, \uC9C0\uB098\uAC00\uB294 \uB79C\uB4DC\uB9C8\uD06C, \uBA48\uCD94\uB294 \uC9C0\uC810\uACFC \uADF8\uB54C \uD45C\uC801\uC758 \uC0C1\uD0DC." },
+        "camera.pass-through": { "avoid": "\uD1B5\uACFC\uD560 \uD2C8\uC774 \uC5C6\uB294 \uD2B8\uC778 \uACF5\uAC04, \uC9C0\uB9AC\uB97C \uC138\uC6B0\uC9C0 \uC54A\uC740 \uCD94\uACA9. \uBB38 \uD558\uB098\uB97C \uC9C0\uB098 \uBA48\uCD94\uB294 \uC9C4\uC785\uC774\uBA74 \uD478\uC2DC \uD328\uC2A4\uD2B8.", "pair": "\uCD94\uACA9\uC758 \uBC29\uD5A5\uACFC \uCD9C\uAD6C\uB97C \uBCF4\uC5EC \uC900 \uB113\uC740 \uCEF7 \uB4A4\uC5D0 \uC628\uB2E4.", "specify": "\uD1B5\uACFC\uD560 \uAC83\uC744 \uC21C\uC11C\uB300\uB85C(\uBE68\uB7AB\uC904\uC758 \uCC9C, \uCC3D\uBB38, \uB09C\uAC04 \uC0AC\uC774), \uADF8\uB54C\uB9C8\uB2E4 \uC778\uBB3C\uC774 \uD558\uB294 \uB2E4\uB978 \uB3D9\uC791(\uC219\uC784\xB7\uB3CC\uC544\uAC10), \uB05D \uD504\uB808\uC784." },
+        "camera.drone-dive": { "avoid": "\uB192\uC774 \uCC28\uAC00 \uC5C6\uB294 \uC7A5\uC18C, \uAEBE\uC774\uB294 \uC9C0\uC810\uC774 \uB450 \uACF3 \uC774\uC0C1\uC778 \uACBD\uB85C. \uC9C0\uD615 \uC0AC\uC774\uC758 \uAD7D\uC740 \uAE38\uC744 \uBCF4\uC5EC \uC8FC\uB294 \uBE44\uD589\uC740 \uB4DC\uB860 \uACBD\uB85C \uD504\uB9AC\uC14B(drone-flythrough)\uC774 \uB9E1\uB294\uB2E4.", "pair": "\uAC00\uC7A5\uC790\uB9AC\uC640 \uADF8 \uC544\uB798 \uB192\uC774\uB97C \uBCF4\uC5EC \uC900 \uCEF7 \uB4A4\uC5D0 \uC628\uB2E4.", "specify": "\uC218\uD3C9 \uAD6C\uAC04\uC758 \uB192\uC774\uC640 \uB530\uB77C\uAC00\uB294 \uB300\uC0C1, \uC218\uD3C9\uC5D0\uC11C \uC218\uC9C1\uC73C\uB85C \uAEBE\uC774\uB294 \uC9C0\uC810(\uC808\uBCBD \uB05D\xB7\uC625\uC0C1 \uB09C\uAC04), \uAEBE\uC778 \uB4A4 \uD654\uBA74 \uC544\uB798\uC5D0 \uBCF4\uC774\uB294 \uAC83. \uD504\uB808\uC784 \uACC4\uD68D\uC774 first_last\uBA74 \uC218\uD3C9 \uC2DC\uC791\uACFC \uB0B4\uB824\uB2E4\uBCF4\uB294 \uB05D\uC744 \uB530\uB85C \uADF8\uB9B0\uB2E4." },
+        "camera.relay": { "avoid": "\uB300\uC0AC\uAC00 \uC624\uAC00\uB294 \uC7A5\uBA74(\uC0F7\uB2F9 \uD654\uC790\uB294 \uD55C \uBA85), \uC778\uBB3C \uC704\uCE58\uB97C \uC138\uC6B0\uC9C0 \uC54A\uC740 \uCCAB \uCEF7, \uC5B4\uB311\uD130 \uAE38\uC774 \uC0C1\uD55C\uC744 \uB118\uB294 \uBD84\uB7C9. \uD55C \uBC88\uC5D0 \uB098\uC624\uC9C0 \uC54A\uC73C\uBA74 \uC0F7\uC744 \uB098\uB220 \uD729 \uC804\uD658\uC73C\uB85C \uC787\uB294\uB2E4.", "pair": "\uACF5\uAC04\uACFC \uC778\uC6D0\uC744 \uBCF4\uC5EC \uC900 \uB113\uC740 \uCEF7 \uB4A4\uC5D0 \uC628\uB2E4. \uB871\uD14C\uC774\uD06C \uC2DC\uAC04(timing.long-take)\uACFC \uD568\uAED8 \uACE0\uB978\uB2E4.", "specify": "\uB118\uAE30\uB294 \uC21C\uC11C(\uB204\uAD6C \u2192 \uB204\uAD6C \u2192 \uB204\uAD6C), \uB118\uAE38 \uB54C\uB9C8\uB2E4\uC758 \uACC4\uAE30 \uB3D9\uC791(\uC219\uC784\xB7\uBA54\uCE58\uAE30), \uB05D \uD504\uB808\uC784. \uCC38\uC870 \uC774\uBBF8\uC9C0\uB97C \uBC1B\uB294 \uC8FC\uC694 \uC778\uBB3C\uC740 \uB450 \uBA85\uAE4C\uC9C0\uC774\uACE0 \uB098\uBA38\uC9C0\uB294 \uAC89\uBAA8\uC2B5\uC73C\uB85C \uC801\uB294\uB2E4." },
+        "camera.speed-ramp": { "avoid": "\uB290\uB824\uC9C0\uB294 \uC9C0\uC810\uC774 \uB450 \uACF3 \uC774\uC0C1\uC778 \uCEF7, \uB300\uC0AC\uAC00 \uC788\uB294 \uCEF7(\uC785 \uBAA8\uC591\uACFC \uC18C\uB9AC\uAC00 \uC5B4\uAE0B\uB09C\uB2E4), \uD0C0\uACA9\uC774 \uC5EC\uB7EC \uBC88\uC778 \uB09C\uC804.", "pair": "\uC55E\uB4A4 \uCEF7\uC740 \uC815\uC0C1 \uC18D\uB3C4\uB85C \uB454\uB2E4. \uB290\uB824\uC9C4 \uB3D9\uC548 \uCE74\uBA54\uB77C\uB294 \uACE0\uC815\uD558\uAC70\uB098 \uCC9C\uCC9C\uD788 \uC606\uC73C\uB85C \uD750\uB978\uB2E4.", "specify": "\uB290\uB824\uC9C0\uB294 \uC21C\uAC04 \uD558\uB098(shot_icons accents\uC758 on\uC5D0 \uC601\uC5B4\uB85C), \uADF8\uB3D9\uC548 \uACF5\uC911\uC5D0 \uB5A0 \uC788\uB294 \uAC83(\uBB3C\uBC29\uC6B8\xB7\uD30C\uD3B8), \uD480\uB9AC\uB294 \uC2DC\uC810." },
+        "camera.impact-shake": { "avoid": "\uACC4\uC18D \uC774\uC5B4\uC9C0\uB294 \uD754\uB4E4\uB9BC(\uADF8\uAC74 \uD578\uB4DC\uD5EC\uB4DC\uB2E4), \uD45C\uC815\uC744 \uC77D\uC5B4\uC57C \uD558\uB294 \uD074\uB85C\uC988\uC5C5, \uC6D0\uC778\uC774 \uD654\uBA74\uC774\uB098 \uC18C\uB9AC\uC5D0 \uC5C6\uB294 \uD754\uB4E4\uB9BC.", "pair": "\uACE0\uC815 \uD504\uB808\uC784 \uC704\uC5D0 \uC5B9\uC744 \uB54C \uAC00\uC7A5 \uD06C\uAC8C \uC77D\uD78C\uB2E4. \uCDA9\uACA9\uC74C\uC744 \uAC19\uC740 \uC0F7\uC758 \uD6A8\uACFC\uC74C\uC5D0 \uC801\uB294\uB2E4.", "specify": "\uD754\uB4E4\uB9BC\uC758 \uC6D0\uC778\uC774 \uB418\uB294 \uC0AC\uAC74(shot_icons accents\uC758 on\uC5D0 \uC601\uC5B4\uB85C: each footfall, the landing), \uD69F\uC218, \uC0AC\uC774\uC0AC\uC774\uC758 \uBA48\uCDA4." },
         "framing.els": { "avoid": "\uC778\uBB3C\uC744 \uC54C\uC544\uBCF4\uAC70\uB098 \uD45C\uC815\uC744 \uC77D\uC5B4\uC57C \uD558\uB294 \uCEF7. \uD734\uB300\uD3F0 \uD654\uBA74\uC5D0\uC11C\uB294 \uB113\uC740 \uD48D\uACBD\uC758 \uD798\uC774 \uC904\uC5B4\uB4E0\uB2E4.", "pair": "\uAC10\uC815 \uD074\uB85C\uC988\uC5C5\uACFC \uBC88\uAC08\uC544 \uBD99\uC774\uBA74 \uC7A5\uBA74\uC758 \uAC15\uB3C4\uAC00 \uC720\uC9C0\uB41C\uB2E4.", "specify": "\uC778\uBB3C \uC218\uC640 \uD654\uBA74 \uC18D \uC704\uCE58, \uD654\uBA74 \uB192\uC774 \uB300\uBE44 \uD06C\uAE30, \uAE30\uC900 \uB79C\uB4DC\uB9C8\uD06C, \uC9C0\uD3C9\uC120 \uB192\uC774, \uC2DC\uAC04\uB300\xB7\uB0A0\uC528.", "vertical": "\uAC74\uBB3C\xB7\uC808\uBCBD\xB7\uD558\uB298 \uAC19\uC740 \uC138\uB85C \uC694\uC18C\uB97C \uCD95\uC73C\uB85C \uC4F0\uACE0, \uCE74\uBA54\uB77C\uB97C \uBE44\uC2A4\uB4EC\uD788 \uB450\uC5B4 \uD3ED\uC744 \uB9CC\uB4E0\uB2E4. \uC9C0\uD3C9\uC120\uC740 \uD654\uBA74 \uD55C\uAC00\uC6B4\uB370\uB97C \uD53C\uD55C\uB2E4." },
         "framing.ls": { "avoid": "\uD45C\uC815\uACFC \uBC18\uC751\uC774 \uC815\uBCF4\uC778 \uC21C\uAC04(\uD074\uB85C\uC988\uC5C5\uC73C\uB85C \uC881\uD78C\uB2E4).", "pair": "\uC124\uC815\uC0F7 \u2192 \uAC19\uC740 \uACF5\uAC04 \uC548\uC73C\uB85C \uCEF7\uC778 \u2192 \uD074\uB85C\uC988\uC5C5\uC774 \uC774\uC5B4\uC9C4 \uB4A4 \uC7AC\uC124\uC815\uC0F7. \uAC00\uAE4C\uC6B4 \uD06C\uAE30\uB85C \uC5F0 \uC7A5\uBA74\uC740 \uB2E4\uC74C \uADF8\uB9BC \uCEF7\uC5D0\uC11C \uC774 \uD06C\uAE30\uB85C \uACF5\uAC04\uC744 \uBCF4\uC5EC \uC900\uB2E4.", "specify": "\uC778\uBB3C \uC218, \uAC01\uC790\uC758 \uD654\uBA74 \uC704\uCE58(\uC88C\uC6B0\xB7\uC55E\uB4A4), \uC11C\uB85C\uC758 \uAC04\uACA9, \uBB38\xB7\uCC3D \uAC19\uC740 \uACF5\uAC04 \uAE30\uC900\uC810. \uAC70\uB9AC\uB294 \uC22B\uC790\uAC00 \uC544\uB2C8\uB77C \uD06C\uAE30\uC640 \uBC30\uCE58\uB85C \uC801\uB294\uB2E4.", "vertical": "\uC138\uB85C \uD654\uBA74\uC740 \uC640\uC774\uB4DC\uB85C \uB300\uD654\uB97C \uC138\uC6B0\uAE30 \uC5B4\uB835\uB2E4. \uC778\uBB3C\uC744 \uC606\uC73C\uB85C \uB098\uB780\uD788 \uB450\uC9C0 \uB9D0\uACE0 \uC55E\uB4A4\uB85C \uC313\uACE0, \uCE74\uBA54\uB77C \uCABD\uC73C\uB85C \uC624\uAC00\uAC8C \uC6C0\uC9C1\uC778\uB2E4." },
         "framing.fs": { "avoid": "\uD45C\uC815\uC774 \uD575\uC2EC\uC778 \uC21C\uAC04. \uBC1C\uBAA9\xB7\uBB34\uB98E \uAC19\uC740 \uAD00\uC808\uC5D0\uC11C \uC790\uB974\uC9C0 \uC54A\uB294\uB2E4.", "pair": "\uB3D9\uC791\uC758 \uC2DC\uC791\uC740 \uD480\uC0F7\uC73C\uB85C \uBCF4\uC5EC \uC8FC\uACE0 \uACB0\uACFC\uB098 \uBC18\uC751\uC740 \uB354 \uAC00\uAE4C\uC6B4 \uD06C\uAE30\uB85C \uBC1B\uB294\uB2E4.", "specify": "\uB3D9\uC791 \uB3D9\uC0AC, \uBC1C\uC774 \uB2FF\uB294 \uBC14\uB2E5, \uC758\uC0C1, \uBC1C\uB05D \uC544\uB798 \uC5EC\uBC31.", "vertical": "\uC138\uB85C \uD654\uBA74\uC740 \uC0AC\uB78C \uD55C \uBA85\uC744 \uBA38\uB9AC\uBD80\uD130 \uBC1C\uB05D\uAE4C\uC9C0 \uB2F4\uAE30\uC5D0 \uC54C\uB9DE\uB2E4. \uC804\uC2E0\uACFC \uCE74\uC6B0\uBCF4\uC774\uC0F7\uC774 \uC138\uB85C\uC5D0\uC11C \uAC00\uC7A5 \uC798 \uB9DE\uB294\uB2E4." },
@@ -93193,7 +93209,16 @@ var require_film_techniques = __commonJS({
         "camera.pan-left": "pans left to {target}",
         "camera.pan-right": "pans right to {target}",
         "camera.tilt-up": "tilts upward to {target}",
-        "camera.tilt-down": "tilts downward to {target}"
+        "camera.tilt-down": "tilts downward to {target}",
+        "camera.crash-zoom": "crash zooms onto {target} in under half a second",
+        "camera.blast-pushback": "recoils backward from the shockwave of {target}, jolting once before it settles",
+        "camera.weapon-cam": "rides on the projectile as it flies toward {target}, its tip fixed low in the frame while the surroundings streak past",
+        "camera.pass-through": "chases close behind {target} and flies straight through each opening on the way",
+        "camera.drone-dive": "flies low and level behind {target}, then pitches straight down at the edge and dives",
+        "camera.relay": "stays in one unbroken take with {target}, then swings to the next fighter on each handoff action",
+        // A beat accent is a whole sentence; {cue} is the moment it fires on (the technique's `on`, else fields.cue).
+        "camera.speed-ramp": "Speed ramp: the action runs at normal speed, slows almost to a stop at {cue}, then snaps back to normal speed",
+        "camera.impact-shake": "Impact shake: the frame jolts once on {cue} and settles completely still in between"
       };
       for (const [id, prompt] of Object.entries(PROMPT)) byId[id].prompt = prompt;
       const VALUES = {
@@ -115561,6 +115586,7 @@ function compileVideoPrompt(shot, source, names = {}) {
     id: text2(t2.id),
     from: text2(t2.from),
     to: text2(t2.to),
+    on: text2(t2.on),
     entry: catalogue.byId[text2(t2.id)]
   }));
   const movement = text2(camera.movement), speed = text2(camera.speed), target = text2(camera.target), settle = text2(camera.end);
@@ -115581,7 +115607,8 @@ function compileVideoPrompt(shot, source, names = {}) {
     moveWords,
     settle ? sentence(`Closing frame: ${settle}`) : "",
     focusWords,
-    ...other.map((t2) => sentence(t2.entry.instruction)),
+    // A beat accent (speed ramp, impact shake) names the moment it fires on.
+    ...other.map((t2) => sentence(t2.entry.fields.accent && t2.entry.prompt ? t2.entry.prompt.replace("{cue}", t2.on || t2.entry.fields.cue) : t2.entry.instruction)),
     viewWords || (text2(camera.framing) ? sentence(`Opening composition: ${text2(camera.framing)}`) : ""),
     !viewWords && camera.rear && !other.some((t2) => t2.entry.fields.viewpoint === "rear") ? "View the subject from behind." : "",
     !viewWords && camera.pov && !other.some((t2) => t2.entry.fields.viewpoint === "pov") ? sentence(`Point of view: ${text2(camera.pov) || "the named character"}`) : "",
@@ -116654,7 +116681,8 @@ var techniqueSelectionSchema = external_exports.array(external_exports.object({
   id: nonEmptyTechniqueId(),
   reason: external_exports.string().trim().min(1).describe("Why this technique serves this shot\u2019s information or action"),
   from: external_exports.string().trim().min(1).optional().describe("Rack focus: the subject sharp first, in English"),
-  to: external_exports.string().trim().min(1).optional().describe("Rack focus: the subject sharp last, in English")
+  to: external_exports.string().trim().min(1).optional().describe("Rack focus: the subject sharp last, in English"),
+  on: external_exports.string().trim().min(1).optional().describe("Beat accent: the moment it fires on, in English")
 }).strict()).superRefine((value, ctx) => {
   for (const message of techniqueContract().validate(value))
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
@@ -117913,8 +117941,11 @@ function writeShotDialogue(args) {
   const result = writeOutline(args.path, win, st, shots);
   return { ...result, findings: [...result.findings, ...notes] };
 }
-var isFocus = (id) => !!techniqueContract().entries.find((entry2) => entry2.id === id)?.fields?.focus;
-var DRIFT_WORDS = { frames: "frame plan", cast: "characters", lines: "on-screen lines", camera: "camera move", focus: "focus", framing: "size, angle or depth" };
+var isFocus = (id) => {
+  const fields2 = techniqueContract().entries.find((entry2) => entry2.id === id)?.fields;
+  return !!(fields2?.focus || fields2?.accent);
+};
+var DRIFT_WORDS = { frames: "frame plan", cast: "characters", lines: "on-screen lines", camera: "camera move", focus: "focus or beat accent", framing: "size, angle or depth" };
 function promptNotes(shot) {
   const drift = contract().promptDrift(shot, isFocus);
   return drift.length ? [{ level: "warn", where: String(shot.id), what: `the video prompt predates a change of ${drift.map((key) => DRIFT_WORDS[key] ?? key).join(", ")} \u2014 rewrite it with shot_prompt` }] : [];
@@ -117938,6 +117969,7 @@ var shotIconsSchema = external_exports.object({
     view: shotViewSchema.optional().describe("Content-led opening subject, crop and viewpoint; saved as visual.camera.view"),
     move: choice.extend({ target: nonEmpty.optional(), speed: external_exports.enum(["very slow", "slow", "steady", "fast", "very fast"]).optional() }).strict().optional().describe("A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold \u2026)"),
     focus: choice.extend({ from: nonEmpty.optional(), to: nonEmpty.optional() }).strict().nullable().optional().describe("A camera technique with a focus field (camera.rack-focus) and the subjects it hands focus between; null removes it"),
+    accents: external_exports.array(choice.extend({ on: nonEmpty.optional() }).strict()).optional().describe("Beat accents laid over the move (camera.speed-ramp, camera.impact-shake), each with the moment it fires on in English; [] removes them"),
     depth: depthSchema.optional(),
     frames: external_exports.object({ mode: external_exports.enum(["first", "first_last", "reference"]), reason: nonEmpty, endState: nonEmpty.optional() }).strict().optional().describe("Frame plan: reference is MSR (subject images + start image)"),
     next: nextTransitionSchema.optional().describe("The join from this shot into the next one, written on the next shot's transition")
@@ -117952,7 +117984,7 @@ function writeShotIcons(args) {
   const shots = (win.SCENES ?? []).slice();
   const notes = [];
   const vertical = !/16x9/.test(String(win.FORMAT ?? ""));
-  for (const { id, render, size, why, angle, view, backgroundView, move, focus, depth, frames, next } of args.shots) {
+  for (const { id, render, size, why, angle, view, backgroundView, move, focus, accents, depth, frames, next } of args.shots) {
     const index = shotIndex(shots, id, "shot_icons");
     const plan2 = { ...shots[index].shot ?? {} };
     const visual = { ...shots[index].visual ?? {} };
@@ -117975,7 +118007,7 @@ function writeShotIcons(args) {
     const previous = plan2.render?.mode;
     if (render && previous && previous !== render.mode) {
       if (render.mode === "still_camera") {
-        if (Array.isArray(plan2.techniques)) plan2.techniques = plan2.techniques.filter((t2) => !field2(t2.id, "movement") && !field2(t2.id, "focus"));
+        if (Array.isArray(plan2.techniques)) plan2.techniques = plan2.techniques.filter((t2) => !field2(t2.id, "movement") && !field2(t2.id, "focus") && !field2(t2.id, "accent"));
         const { movement: _movement, speed: _speed, target: _target, ...camera } = visual.camera ?? {};
         if (visual.camera) visual.camera = Object.keys(camera).length ? camera : void 0;
       } else if (previous === "still_camera") {
@@ -118004,7 +118036,12 @@ function writeShotIcons(args) {
       if (errors.length) throw new Error(`shot_icons ${id}: depth \u2014 ${errors.join("; ")}`);
       plan2.depth = depth;
     }
-    for (const [name, value] of [["move.target", routed.mode === "still_camera" ? void 0 : move?.target], ["focus.from", focus?.from], ["focus.to", focus?.to]]) {
+    for (const [name, value] of [
+      ["move.target", routed.mode === "still_camera" ? void 0 : move?.target],
+      ["focus.from", focus?.from],
+      ["focus.to", focus?.to],
+      ...(accents ?? []).map((accent) => ["accents.on", accent.on])
+    ]) {
       const foreign = value ? nonEnglishOutsideQuotes(value) : "";
       if (foreign) throw new Error(`video_prompt_language: shot_icons ${id} ${name} has "${foreign}"; write it in English, the image and video prompts quote it`);
     }
@@ -118046,7 +118083,15 @@ function writeShotIcons(args) {
       if (focus && !(focus.from && focus.to)) notes.push({ level: "warn", where: id, what: `${focus.id} names no subjects \u2014 give from and to, the subject sharp first and the one sharp last, so the video prompt can say what the focus moves between` });
       techniques = [...techniques.filter((t2) => !field2(t2.id, "focus")), ...focus ? [focus] : []];
     }
-    if (move && routed.mode !== "still_camera" || focus !== void 0) plan2.techniques = techniques;
+    if (accents !== void 0) {
+      if (accents.length && routed.mode === "still_camera") throw new Error(`shot_icons ${id}: a still_camera cut takes no beat accent \u2014 it has no video prompt to carry one`);
+      for (const accent of accents) {
+        if (!field2(accent.id, "accent")) throw new Error(`shot_icons ${id}: ${accent.id} is not a beat accent`);
+        if (!accent.on) notes.push({ level: "warn", where: id, what: `${accent.id} names no moment \u2014 give on (the kick landing, each footfall); without it the video prompt says "${field2(accent.id, "cue")}"` });
+      }
+      techniques = [...techniques.filter((t2) => !field2(t2.id, "accent")), ...accents];
+    }
+    if (move && routed.mode !== "still_camera" || focus !== void 0 || accents !== void 0) plan2.techniques = techniques;
     if (frames) {
       const old = visual.frames ?? {}, next2 = { ...old, ...frames };
       if (frames.mode !== "first_last") {
@@ -123053,6 +123098,13 @@ var cameraMoves = (() => {
     return [];
   }
 })();
+var beatAccents = (() => {
+  try {
+    return techniqueContract().entries.filter((entry2) => entry2.fields?.accent).map((entry2) => String(entry2.id));
+  } catch {
+    return [];
+  }
+})();
 var motionThemes = (() => {
   try {
     return Object.keys(motionThemeContract().THEMES);
@@ -123124,7 +123176,8 @@ var storyboardShotInput = {
           id: { type: "string", ...techniqueIds.length ? { enum: techniqueIds } : {}, description: "Stable semantic technique id, including independent focus and viewpoint choices." },
           reason: { type: "string", minLength: 1, description: "The visible information or action that motivates this selection." },
           from: { type: "string", minLength: 1, description: "camera.rack-focus: the subject sharp first, in English" },
-          to: { type: "string", minLength: 1, description: "camera.rack-focus: the subject sharp last, in English" }
+          to: { type: "string", minLength: 1, description: "camera.rack-focus: the subject sharp last, in English" },
+          on: { type: "string", minLength: 1, description: "camera.speed-ramp / camera.impact-shake: the moment the accent fires on, in English" }
         } } },
         size: { type: "string", description: "Canonical framing size: mfs=mid-thigh, ms=waist-up. Keep two-shot/POV roles in separate technique or framing prose." },
         angle: { type: "string", description: "Camera angle. Recommended vocabulary is in the directing skill." },
@@ -127163,7 +127216,7 @@ Set view with subject (visible evidence), reason, crop and mode. It writes visua
 
 Size is distance (els \u2026 ecu, insert). Set size and view.crop together when changing the crop. Person shots keep anatomical size boundaries even with a view; set view.subjectType to object or detail when the subject is a prop or body detail despite a character being in the cast. Explicit contradictory crop declarations fail image planning with shot_framing_conflict. Composition labels two/three/ots/pov/back/cutaway/reaction carry no crop; new boards use a distance with view. The technique catalogue gives use, avoid, specify, neighbouring-shot and vertical guidance; these are directing conventions, not measured emotional effects. On 9:16 the result includes the chosen values' vertical advice.
 
-On still_camera, move is a still effect stored in shot.render.camera; other routes use a camera technique and synchronize visual.camera.movement. Route changes drop the old route's movement. A different move replaces its speed/target; the same move keeps them unless provided. Video moves take slow/steady/fast and an English target; rack focus takes English from/to subjects. A new size without why drops the old why. A still hold is deliberate, not an unset move.
+On still_camera, move is a still effect stored in shot.render.camera; other routes use a camera technique and synchronize visual.camera.movement. Route changes drop the old route's movement. A different move replaces its speed/target; the same move keeps them unless provided. Video moves take slow/steady/fast and an English target; rack focus takes English from/to subjects. accents lays camera.speed-ramp or camera.impact-shake over the move, each with the English moment it fires on; they reach the video prompt as one sentence each, and a hero landing is camera.static + angle ground + an impact shake on the landing. A new size without why drops the old why. A still hold is deliberate, not an unset move.
 
 Frame reference means MSR. Changing away from first_last removes the end-image binding; switching to/from reference updates panel use. Camera/view/size/depth/focus changes warn to remake existing images; changed inputs to a written video prompt warn to rewrite it with shot_prompt. next sets the transition into the following shot, with the same checks as storyboard_apply, and is refused on the last shot. Omitted attributes stay unchanged.
 
@@ -127188,7 +127241,7 @@ Refused: missing story/characters (story_order), invalid attributes, incompatibl
           move: { type: "object", additionalProperties: false, required: ["id", "reason"], description: "Camera move icon", properties: {
             id: { type: "string", enum: [...cameraMoves, ...stillCameraEffects], description: "A camera.* technique with a movement, or on a still_camera cut a still effect" },
             reason: { type: "string", description: "What the move or the hold does for this beat" },
-            target: { type: "string", description: 'What the move is aimed at, in English on a video cut: what it pushes toward or pans and tilts to, or the person it follows, circles or rises above \u2014 the prompt reads "pushes in toward <target>", "follows behind <target>"' },
+            target: { type: "string", description: 'What the move is aimed at, in English on a video cut: what it pushes toward or pans and tilts to, or the person it follows, circles or rises above \u2014 the prompt reads "pushes in toward <target>", "follows behind <target>". A blast pushback names the source of the blast, a weapon cam what the projectile flies toward, a relay one-take the fighter it starts with' },
             speed: { type: "string", enum: ["very slow", "slow", "steady", "fast", "very fast"], description: "Pace: slow, steady or fast on a video cut; very slow (default), slow, fast or very fast on a still effect" }
           } },
           focus: { type: ["object", "null"], additionalProperties: false, required: ["id", "reason"], description: "Focus technique (camera.rack-focus); null removes it", properties: {
@@ -127197,6 +127250,11 @@ Refused: missing story/characters (story_order), invalid attributes, incompatibl
             from: { type: "string", description: "The subject sharp first, in English (the start image stages it in focus)" },
             to: { type: "string", description: "The subject sharp last, in English" }
           } },
+          accents: { type: "array", description: "Beat accent icons laid over the move; [] removes them. An accent fires on one named moment \u2014 the model is asked, not guaranteed, to follow it", items: { type: "object", additionalProperties: false, required: ["id", "reason"], properties: {
+            id: { type: "string", enum: beatAccents, description: "camera.speed-ramp (time slows at one moment) or camera.impact-shake (the frame jolts once per impact)" },
+            reason: { type: "string", description: "What the accent does for this beat" },
+            on: { type: "string", description: 'The moment it fires on, in English: "the moment the kick lands", "each footfall of the golem"' }
+          } } },
           depth: depthInput,
           frames: { type: "object", additionalProperties: false, required: ["mode", "reason"], description: "Frame plan; reference = MSR (subject images + start image), which shows the MSR icon", properties: {
             mode: { type: "string", enum: ["first", "first_last", "reference"], description: "first = start image \xB7 first_last = start and end images \xB7 reference = MSR" },
