@@ -61,6 +61,15 @@ test('real audio extraction preserves source samples once, compiler omits native
     assert.deepEqual(actual, expected);
     prepare(dir, board); // Repeated assembly cannot layer another copy.
     assert.equal(readFileSync(join(dir,'cards.tsv'),'utf8').match(/sync=1/g).length, 1);
+    // edit.in / edit.out cut the same source range from the sound that the build cuts from the picture.
+    writeFileSync(join(board, 'scenes.js'), `window.SCENES=${JSON.stringify([{id:'s1',duration:1,sound,edit:{in:.5,out:1.5}}])};`);
+    const trimmed = prepare(dir, board)[0];
+    assert.equal(trimmed.seconds, 1); assert.equal(trimmed.sourceIn, .5);
+    assert.notEqual(trimmed.audio, evidence[0].audio);
+    assert.deepEqual(execFileSync('ffmpeg',['-v','error','-i',trimmed.audio,'-f','s16le','-']), expected.subarray(.5*48000*4, 1.5*48000*4));
+    writeFileSync(join(board, 'scenes.js'), `window.SCENES=${JSON.stringify([{id:'s1',duration:2,sound,edit:{out:9}}])};`);
+    assert.throws(() => prepare(dir, board), /fall outside/);
+    save(); prepare(dir, board);
     const run = () => spawnSync(process.execPath,[compiler,join(board,'scenes.js'),dir,dir],{encoding:'utf8'});
     assert.equal(run().status,0);
     assert.equal(existsSync(join(dir,'sfx.tsv')),false);

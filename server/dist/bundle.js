@@ -93377,6 +93377,13 @@ var require_scene_acting = __commonJS({
     function speechRevisionPayload(line, voice) {
       return { tts: line.tts, sub: line.sub, speaker: line.speaker, delivery: line.delivery, voice, ...line.acting != null ? { acting: line.acting } : {} };
     }
+    function estimateSpeechSeconds(text4) {
+      const words = typeof text4 === "string" ? text4 : "";
+      const syllables = (words.match(/[가-힣0-9]/g) || []).length;
+      if (!syllables || !/[가-힣]/.test(words)) return null;
+      const pauses = (words.match(/[.?!…,]+(?=\s*\S)/g) || []).length;
+      return Math.round((syllables / 4.5 + 0.35 * pauses + 0.4) * 100) / 100;
+    }
     function planScenePerformance(input, measureAudio = () => null) {
       const scene = Array.isArray(input) ? { narration: input } : input;
       const lines = scene.narration || [], warnings = [];
@@ -93500,7 +93507,7 @@ var require_scene_acting = __commonJS({
       const visualDirection = (value) => performance2.filter((line) => line.kind !== "action" && line.text).reduce((text4, line) => text4.split(line.text).join("the supplied speech"), String(value));
       return ["A clean cinematic image with an unobstructed scene and text-free surfaces.", route, visualDirection(sceneDirection(scene, performance2)), ...beats, VIDEO_TEXT_POLICY].join("\n");
     }
-    module.exports = { actingErrors, resolvedStyle, directionSupport, speechRevisionPayload, VIDEO_TEXT_POLICY, sceneVideoPrompt, planScenePerformance, sceneDirection, scenePerformancePayload, cameraLock, performanceBeats };
+    module.exports = { estimateSpeechSeconds, actingErrors, resolvedStyle, directionSupport, speechRevisionPayload, VIDEO_TEXT_POLICY, sceneVideoPrompt, planScenePerformance, sceneDirection, scenePerformancePayload, cameraLock, performanceBeats };
   }
 });
 
@@ -115726,7 +115733,9 @@ function shotVideoTiming(context2, tool2, args) {
     const edit2 = load5(fileURLToPath6(new URL("../../skills/produce/references/edit-plan.js", import.meta.url))).preview(context2.board.SCENES, { videoWarningsApproved: true });
     const index = context2.board.SCENES.indexOf(shot);
     const timing = load5(fileURLToPath6(new URL("../../skills/_shared/video-duration.js", import.meta.url)));
-    coverage2 = timing.shotTiming(shot, { edit: edit2.find((entry2) => entry2.card === index) });
+    const planned = edit2.find((entry2) => entry2.card === index);
+    const ownVoice = shot.sound?.audioSource === "video";
+    coverage2 = timing.shotTiming(shot, { edit: ownVoice && planned ? { ...planned, in: 0 } : planned });
   }
   if (args.requiredSeconds !== void 0 && (typeof args.requiredSeconds !== "number" || !Number.isFinite(args.requiredSeconds) || args.requiredSeconds <= 0))
     throw new Error("requiredSeconds must be finite positive seconds");
@@ -115738,6 +115747,35 @@ function shotVideoTiming(context2, tool2, args) {
     note: "Fit of authored source coverage, not measured performance or generated output. Recheck after speech/action timing or generation changes."
   };
 }
+function nativeSpeechFit(shot, requestedSeconds, limits) {
+  const acting = load5(fileURLToPath6(new URL("../../skills/_shared/scene-acting.js", import.meta.url)));
+  let estimatedSeconds;
+  try {
+    estimatedSeconds = acting.planScenePerformance(shot, (line) => acting.estimateSpeechSeconds(line.tts)).durationSeconds;
+  } catch {
+    return void 0;
+  }
+  if (estimatedSeconds === null || !(estimatedSeconds > 0)) return void 0;
+  let shortest;
+  try {
+    shortest = load5(fileURLToPath6(new URL("../../skills/_shared/video-duration.js", import.meta.url))).minimumDuration(estimatedSeconds, limits);
+  } catch {
+    return void 0;
+  }
+  const round2 = (n) => Math.round(n * 100) / 100;
+  const excessSeconds = round2(requestedSeconds - estimatedSeconds);
+  const request = shortest.numFrames !== void 0 ? `numFrames ${shortest.numFrames}` : `durationSeconds ${shortest.durationSeconds}`;
+  return {
+    estimatedSeconds,
+    requestedSeconds: round2(requestedSeconds),
+    excessSeconds,
+    shortestRequest: { ...shortest.numFrames !== void 0 ? { numFrames: shortest.numFrames } : { durationSeconds: shortest.durationSeconds }, seconds: round2(shortest.requestedSeconds) },
+    ...excessSeconds > SPEECH_SLACK_SECONDS && shortest.requestedSeconds < requestedSeconds - 1e-6 ? {
+      warning: `The request runs ${round2(requestedSeconds)}s; the lines and timed actions need about ${estimatedSeconds}s. The model plays the other ${excessSeconds}s as silent acting, usually before the line. ${request} (${round2(shortest.requestedSeconds)}s) covers them. A pause the story needs belongs in the performance as a timed action or the line's leadInSeconds/tailOutSeconds.`
+    } : {}
+  };
+}
+var SPEECH_SLACK_SECONDS = 0.5;
 function readShotVideoTiming(episode, shotId) {
   const context2 = routingContext(episode, shotId);
   requireSupportedSelection(context2.selection);
@@ -115952,6 +115990,9 @@ function planVideo(raw) {
     if (typeof requested === "number" && requested < durationPlan.requiredSeconds)
       throw new Error(`video_duration_short: ${input.shotId} needs ${durationPlan.requiredSeconds}s but the request covers ${requested}s. Use requiredSeconds or revise the shot timing.`);
   }
+  const playFps = durationPlan.limits?.frameRate, playFrames = typeof args.numFrames === "number" ? args.numFrames : typeof args.duration === "number" && playFps ? framesForSeconds(args.duration, playFps) : tool2 === "astra_genai_msr" ? 121 : void 0;
+  const playSeconds = playFrames !== void 0 && playFps ? playFrames / playFps : typeof args.durationSeconds === "number" ? args.durationSeconds : void 0;
+  const speechFit = VIDEO_ADAPTERS[tool2].voice === "reference" && playSeconds !== void 0 && durationPlan.limits && lines.some((line) => line.delivery !== "voiceover") ? nativeSpeechFit(shot, playSeconds, durationPlan.limits) : void 0;
   const foreign = typeof args.prompt === "string" ? nonEnglishOutsideQuotes(args.prompt) : null;
   if (foreign) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks. Write the video prompt in English; only dialogue, inside quotes, uses the video's language.`);
   const output2 = canonical2(path21.resolve(context2.episode, typeof args.outputPath === "string" ? args.outputPath : ".work/video"));
@@ -115981,6 +116022,7 @@ function planVideo(raw) {
     ...images.imageBindings ? { imageBindings: images.imageBindings } : {},
     sourceArgs: input.args,
     durationPlan,
+    ...speechFit ? { speechFit } : {},
     ...direction,
     ...voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {},
     selection,
@@ -117017,13 +117059,17 @@ function boundaryReview(win, playback, videoTiming) {
       const clock = !explicit && (legacyAction || !shot.narration?.length) ? { performance: [
         ...legacyAction ? [{ kind: "action", text: legacyAction, order: "unresolved" }] : [],
         ...(shot.narration ?? []).map((line) => ({ kind: line.delivery === "voiceover" ? "narration" : "dialogue", lineId: line.id, speaker: line.speaker, text: line.tts, delivery: line.delivery, acting: line.acting, order: "unresolved" }))
-      ], durationSeconds: null, warnings: ["No ordered performance: action order and timing remain unresolved."], timing: "unknown" } : acting.planScenePerformance(shot, (line) => typeof line.estimatedSeconds === "number" ? line.estimatedSeconds : null);
+      ], durationSeconds: null, warnings: ["No ordered performance: action order and timing remain unresolved."], timing: "unknown" } : acting.planScenePerformance(shot, (line) => typeof line.estimatedSeconds === "number" ? line.estimatedSeconds : acting.estimateSpeechSeconds(line.tts));
+      const stored = typeof shot.duration === "number" && clock.durationSeconds !== null ? shot.duration - clock.durationSeconds : null;
       performanceTiming = {
         ...clock,
         basis: "authored_estimates",
+        speechBasis: "syllable_rate",
         physicalFeasibility: "not_reviewed",
         timing: clock.durationSeconds === null ? "unknown" : "estimated",
-        differsFromStored: typeof shot.duration === "number" && clock.durationSeconds !== null ? Math.abs(shot.duration - clock.durationSeconds) > 0.05 : null
+        differsFromStored: stored === null ? null : Math.abs(stored) > 0.05,
+        // Positive: seconds the stored duration holds beyond the lines and timed actions. A native-speech clip plays them as silence.
+        storedExcessSeconds: stored === null ? null : Math.round(stored * 100) / 100
       };
     } catch (error2) {
       performanceTiming = { status: "unresolved", reason: error2.message, physicalFeasibility: "not_reviewed" };
@@ -127067,7 +127113,7 @@ Returns: integer credit balance.`,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     description: `Update shot dialogue, line acting and local audio/video bindings.
 
-Use for dialogue edits, expression or intonation corrections, stable speaker routing and generation planning. list finds lines; prepare assigns stable ids; update replaces requested line fields; attach_audio returns measured timing; retime updates the complete shot clock from current speech and explicit action edits. attach_video binds generated files; reuse:tail_trim accepts only unchanged audio and performance starts with a shorter tail. plan_audio resolves the pinned voice and each line's scene direction into raw generator arguments, refusing unregistered selected samples and stale shared voices; gateway arguments include a revision-bound speechContext and attach_audio requires its completed receiptPath; plan_video resolves the selected adapter's capabilities (tool names the shot's video tool when it differs from the saved default operation) and carries the same acting/timing context. A native-speech shot (MSR) needs no line audio: the clip speaks its prompt's lines, attach_video binds their revisions and sets sound.audioSource video, and a line edit marks the clip stale. Scene direction overrides baseline style without changing voice identity. Local files only: plans do not generate, listen, score or approve. Read first and pass expectedRevision for writes; unknown speakers, ambiguous targets, stale revisions and unsupported lip-sync routes fail. Keeps source backups.
+Use for dialogue edits, expression or intonation corrections, stable speaker routing and generation planning. list finds lines; prepare assigns stable ids; update replaces requested line fields; attach_audio returns measured timing; retime updates the complete shot clock from current speech and explicit action edits. attach_video binds generated files; reuse:tail_trim accepts only unchanged audio and performance starts with a shorter tail. plan_audio resolves the pinned voice and each line's scene direction into raw generator arguments, refusing unregistered selected samples and stale shared voices; gateway arguments include a revision-bound speechContext and attach_audio requires its completed receiptPath; plan_video resolves the selected adapter's capabilities (tool names the shot's video tool when it differs from the saved default operation) and carries the same acting/timing context. A native-speech shot (MSR) needs no line audio: the clip speaks its prompt's lines, attach_video binds their revisions and sets sound.audioSource video, and a line edit marks the clip stale. For such a clip attach_video also returns soundtrack: where the line starts and ends in the clip (loudness, not_reviewed), the silent seconds around it, and suggestedEdit {in, out} with suggestedDurationSeconds when silent acting the performance did not ask for surrounds the line. Nothing is trimmed here; apply it with storyboard_apply after listening. Attaching different footage to a trimmed native shot removes that trim and returns it as clearedTrim. Scene direction overrides baseline style without changing voice identity. Local files only: plans do not generate, listen, score or approve. Read first and pass expectedRevision for writes; unknown speakers, ambiguous targets, stale revisions and unsupported lip-sync routes fail. Keeps source backups.
 
 Do NOT use to generate media: call the planned raw TTS tool or selected video adapter, then attach the result. Do NOT use for read-only whole-story inspection: use storyboard_read instead. Never group different emotional beats or nonconsecutive shots by shared image and slice them into unrelated reactions.
 
@@ -127151,7 +127197,7 @@ The runtime field identifies the loaded module and its on-disk hash; it does not
 
 Includes boundaryReview (shot-boundaries-v1): every actual playback join with full ordered speech/performance, camera context, incoming join ownership and factual review signals. It is read-only and always not_reviewed; repeated speakers/cast or reasons are not merge commands. For splices incoming is null: inspect the edit plan. Missing evidence stays unknown. Compare the uncut scene before images, and audit line ids/order/acting, performance groups, references and outer joins after edits. If this field is absent on an older connection, update/reconnect rather than guessing a bundle path.
 
-Includes videoTiming for generated shots: selected route, planned source coverage, frame grid, maximum seconds, and fits/split_required/timing_unknown/limits_unknown. This is not measured speech or output duration.
+Includes videoTiming for generated shots: selected route, planned source coverage, frame grid, maximum seconds, and fits/split_required/timing_unknown/limits_unknown. This is not measured speech or output duration. boundaryReview.shots[].performanceTiming times a Korean line nobody timed from its syllables and gives storedExcessSeconds: the seconds the stored duration holds beyond its lines and timed actions, which a native-speech clip (MSR) plays as silent acting around the line.
 
 Returns: JSON \u2014 { file, mediaBaseDirectory, sha256, version, format, shots, sequences[\u2026scenes[\u2026shots]], unplacedShots, splicedShots (broll \xB7 outro), playback (actual insertion order), unscheduledShots, propSheet?, inspection, runtime, imageFraming, boundaryReview, videoTiming, reviewContext?, selectedShot? }.`,
     inputSchema: {
@@ -127675,7 +127721,7 @@ TOOLS.push(
   {
     name: "video_plan",
     title: "Plan a video with saved model settings",
-    description: "Prepare an episode video request from saved model selection and explicit overrides. Compiles storyboard frames and role-labelled references into adapter inputs; returns imageBindings with dimensions, hashes and planned inclusion (host mapping stays unverified). On MSR the shot's start image takes the background slot. A call without args.prompt sends the shot's visual.video.prompt (shot_prompt). Refuses unsupported combinations. Compiles pinned character voice descriptions and Seedance voice-reference mappings, reports voiceContinuity limits without claiming a listening review, validates the final adapter payload, and pins prices and local input hashes. No media generation. Returns a plan ID, provenance and cost estimate; use video_execute under existing spending authorization. Re-plan after speech, voice or reference edits. Exact supplied-speech synchronization is separate from native voice imitation.",
+    description: "Prepare an episode video request from saved model selection and explicit overrides. Compiles storyboard frames and role-labelled references into adapter inputs; returns imageBindings with dimensions, hashes and planned inclusion (host mapping stays unverified). On MSR the shot's start image takes the background slot. A call without args.prompt sends the shot's visual.video.prompt (shot_prompt). Refuses unsupported combinations. On a natively voiced shot it returns speechFit: the seconds the lines and timed actions need, the seconds requested, and when the request runs over, a warning with the shortest covering request, because the model fills the rest with silent acting. Compiles pinned character voice descriptions and Seedance voice-reference mappings, reports voiceContinuity limits without claiming a listening review, validates the final adapter payload, and pins prices and local input hashes. No media generation. Returns a plan ID, provenance and cost estimate; use video_execute under existing spending authorization. Re-plan after speech, voice or reference edits. Exact supplied-speech synchronization is separate from native voice imitation.",
     inputSchema: { ...videoContextSchema, properties: {
       ...videoContextSchema.properties,
       purpose: { type: "string", enum: ["draft", "final", "revision"], description: "Candidate purpose; does not change model, resolution or authorization." },
@@ -128981,6 +129027,7 @@ import * as nodeModule7 from "node:module";
 import { execFileSync as execFileSync15 } from "node:child_process";
 var voiceContract = () => nodeModule7.createRequire(import.meta.url)("../../skills/_shared/character-voice.js");
 var characterSpeechContract = () => nodeModule7.createRequire(import.meta.url)("../../skills/_shared/character-speech.js");
+var speechSpanContract = () => nodeModule7.createRequire(import.meta.url)("../../skills/_shared/speech-span.js");
 var actingContract = () => nodeModule7.createRequire(import.meta.url)("../../skills/_shared/scene-acting.js");
 var delivery = external_exports.enum(["voiceover", "on_screen", "off_screen"]);
 var speechManageSchema = external_exports.object({
@@ -129129,6 +129176,8 @@ function manageSpeech(args) {
   const scenes = win.SCENES;
   let changed = false;
   let timing;
+  let soundtrack;
+  let clearedTrim;
   if (args.timingPatch && args.action !== "retime") throw new Error("timingPatch is only used by retime");
   if (args.reuse && args.action !== "attach_video") throw new Error("reuse is only used by attach_video");
   if (args.action === "prepare") {
@@ -129302,6 +129351,16 @@ function manageSpeech(args) {
         invalidated = { video: video2, edit: true };
       } else {
         if (!tailTrim) syncProductionClip(scene, dirname8(file), videoPath, video2.clip, plan2.warnings);
+        const trim = object5(scene.edit);
+        if (native && priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256 && (trim.in !== void 0 || trim.out !== void 0)) {
+          const { in: sourceIn, out: sourceOut, ...kept } = trim;
+          scene.edit = kept;
+          clearedTrim = {
+            ...sourceIn !== void 0 ? { in: sourceIn } : {},
+            ...sourceOut !== void 0 ? { out: sourceOut } : {},
+            note: "The previous clip's trim was removed: it was measured on other footage. Set the shot duration and a new trim from soundtrack."
+          };
+        }
         video2.clip = args.videoPath;
         video2.speechBinding = {
           ...plan2,
@@ -129320,6 +129379,18 @@ function manageSpeech(args) {
         video2.speechStatus = "current";
       }
       if (native) {
+        try {
+          const span = speechSpanContract().measure(videoPath);
+          if (span) {
+            const trim = speechSpanContract().suggestTrim(span, scene);
+            soundtrack = { ...span, method: "audio_energy", review: "not_reviewed", ...trim ? {
+              suggestedEdit: trim.edit,
+              suggestedDurationSeconds: trim.durationSeconds,
+              note: "Silent acting surrounds the line. If the pause is not the story's, set these edit.in / edit.out source seconds and the shot duration with storyboard_apply; times inside the shot (sound.effects atSeconds, music starts) then count from the trimmed start. Listen first: loudness can miss a quiet first or last syllable."
+            } : {} };
+          }
+        } catch {
+        }
         scene.sound = { ...sound, audioSource: "video" };
         for (const { line } of selected) if (line.mediaStatus === "needs_audio") delete line.mediaStatus;
       } else if (selected.length && plan2.mode === "voiceover") {
@@ -129372,7 +129443,7 @@ function manageSpeech(args) {
     } : {} };
     return { shotId: scene.id, lineId: line.id, ...result, generation: generation2, arguments: generation2 };
   }) : void 0;
-  return { revision: hash4(readFileSync32(file)), changed, invalidated, plan: plan2, timing, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname8(file), board: win }), audioProvenanceStatus: object5(object5(object5(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
+  return { revision: hash4(readFileSync32(file)), changed, invalidated, plan: plan2, timing, ...soundtrack ? { soundtrack } : {}, ...clearedTrim ? { clearedTrim } : {}, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname8(file), board: win }), audioProvenanceStatus: object5(object5(object5(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
 }
 
 // src/acting-review.ts

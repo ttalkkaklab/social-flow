@@ -56,3 +56,14 @@ test('a travelling camera retains its authored speed and endpoint without a stat
   assert.doesNotMatch(prompt, /Locked camera:/);
   assert.doesNotMatch(sceneDirection({}), /Locked camera:/);
 });
+
+test('a native line is timed from its Hangul syllables and pauses; other scripts stay unknown', () => {
+  const {estimateSpeechSeconds, planScenePerformance} = require('../../skills/_shared/scene-acting.js');
+  assert.equal(estimateSpeechSeconds('너도 담배냐?'), 1.51);
+  assert.ok(estimateSpeechSeconds('자진신고해라. 안 하면 정학이다.') > estimateSpeechSeconds('자진신고해라 안 하면 정학이다'));
+  assert.equal(estimateSpeechSeconds('Hello there'), null);
+  assert.equal(estimateSpeechSeconds(undefined), null);
+  const shot = {narration: [{id: 'l1', speaker: 'a', tts: '너도 담배냐?', acting: {tailOutSeconds: 0.5}}],
+    performance: [{kind: 'dialogue', character: 'a', group: 1}, {kind: 'action', text: 'He waits.', durationSeconds: 0.7}]};
+  assert.equal(planScenePerformance(shot, line => estimateSpeechSeconds(line.tts)).durationSeconds, 1.51 + 0.5 + 0.7);
+});

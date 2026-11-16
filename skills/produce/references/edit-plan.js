@@ -26,7 +26,7 @@ function compile(scenes, text, {videoWarningsApproved=false}={}) {
   const plan = shots.map(({s,i},k)=>{
     const opts = parseOptions(rows[k][4]), edit = s.edit === undefined ? {} : s.edit;
     if (!edit || typeof edit !== 'object' || Array.isArray(edit)) throw new Error('shot '+(i+1)+': edit must be an object');
-    for (const key of Object.keys(edit)) if (!['in','pre','post','transitionSeconds','reason','continuity'].includes(key)) throw new Error('Unknown edit field: '+key);
+    for (const key of Object.keys(edit)) if (!['in','out','pre','post','transitionSeconds','reason','continuity'].includes(key)) throw new Error('Unknown edit field: '+key);
     // A missing transition is a cut on every shot (check-scenes.js reports the omission at plan time).
     const t = s.transition === undefined ? 'cut' : s.transition;
     if (!(carry.test(t) || ['cut','dip','dip:white'].includes(t))) throw new Error('shot '+(i+1)+': unknown transition "'+t+'"; choose a transition in scenes.js');
@@ -40,7 +40,12 @@ function compile(scenes, text, {videoWarningsApproved=false}={}) {
     const post = seconds(edit.post,.12,'edit.post');
     if (carry.test(t) && pre!==0) throw new Error('A split edit must start the next voice at the card boundary (pre=0)');
     if (start && s.visual?.slide) throw new Error('Slide reveal timing cannot use edit.in; author the source animation timing');
-    if (opts.sync==='1' && (start || pre || edit.post>0 || carry.test(t))) throw new Error('Sync footage requires cut, in=0 and no audio margins');
+    // A clip that carries its own voice (audioSource video) is trimmed as one body: in and out
+    // move picture and sound together, so the silent acting around a native line can go.
+    const ownVoice = s.sound?.audioSource==='video';
+    if (edit.out!==undefined && (!ownVoice || typeof edit.out!=='number' || !Number.isFinite(edit.out) || edit.out<=start))
+      throw new Error('shot '+(i+1)+': edit.out is the source second where a card that plays its clip soundtrack (audioSource video) ends; it must be later than edit.in');
+    if (opts.sync==='1' && ((start && !ownVoice) || pre || edit.post>0 || carry.test(t))) throw new Error('Sync footage requires cut, in=0 and no audio margins');
     return {card:i, transition:t, enter, join, handle:0, in:start, pre:opts.sync==='1'?0:pre, post:opts.sync==='1'?0:post, exit:'cut', opts,
       reason:edit.reason||'', continuity:edit.continuity||''};
   });

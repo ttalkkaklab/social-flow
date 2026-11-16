@@ -457,6 +457,15 @@ test('MSR plans cover the whole shot, reject short exact requests and recheck ch
   assert.throws(() => plan({ numFrames: 121 }), /video_duration_short/);
   assert.throws(() => plan({ requiredSeconds: 5, duration: 6 }), /mutually exclusive/);
   assert.equal(plan({ requiredSeconds: 1 }).args.numFrames, 129); // cannot understate board coverage
+  // A request longer than its lines is reported with the shortest covering one, never refused.
+  f.board.SCENES[0].narration[0].tts = '너도 담배냐?'; f.board.SCENES[0].duration = 4; f.save();
+  const padded = plan({});
+  assert.equal(padded.args.numFrames, 97);
+  assert.deepEqual(padded.speechFit.shortestRequest, { numFrames: 41, seconds: 1.71 });
+  assert.equal(padded.speechFit.excessSeconds, 2.53);
+  assert.match(padded.speechFit.warning, /numFrames 41/);
+  f.board.SCENES[0].duration = 1.6; f.save();
+  assert.equal(plan({}).speechFit.warning, undefined);
   f.board.SCENES[0].duration = 21; f.save();
   await assert.rejects(f.execute(p, async () => assert.fail('Over-limit revision must not submit')), /video_duration_exceeded|stale/);
 });

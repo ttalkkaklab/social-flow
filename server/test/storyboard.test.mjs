@@ -1552,6 +1552,13 @@ describe('edit impact and uninterrupted scene evidence', () => {
     assert.equal(speech.kind, 'narration');
     assert.equal(speech.delivery, 'voiceover');
     assert.deepEqual(speech.acting, { vocal: 'quietly' });
-
+    // A line nobody timed is estimated from its syllables; the stored duration reads against it.
+    win.SCENES[0].narration = [{ id: 'k1', tts: '너도 담배냐?', speaker: 'a', delivery: 'on_screen' }];
+    win.SCENES[0].performance = [{ kind: 'dialogue', character: 'a', group: 1 }];
+    win.SCENES[0].duration = 4;
+    writeFileSync(join(dir, 'scenes.js'), serializeBoard(win));
+    const timed = readStoryboard(storyboardReadSchema.parse({ path: dir, includeTechniques: false })).boundaryReview.shots[0].performanceTiming;
+    assert.equal(timed.durationSeconds, 1.51);
+    assert.equal(timed.storedExcessSeconds, 2.49);
   });
 });

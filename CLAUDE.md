@@ -121,6 +121,22 @@ sheet's `appearance` describes structure: `character_panel` leaves smile, grin a
 out of the neutral face panel and reports them. The moment-before rule is about movement; the
 opening face already shows the shot's emotion. See `skills/storyboard/SKILL.md` §3.
 
+## Silence around native lines (user directive, 2026-11-16)
+
+MSR clips kept opening and closing on a silent character: on 299 measured clips half of each
+clip was silence around its line. A natively voiced clip plays exactly the requested length
+and the model fills what the line does not need with silent acting. So the length follows the
+line: `storyboard_read` times an untimed Korean line from its syllables and reports
+`performanceTiming.storedExcessSeconds`, and `video_plan` returns `speechFit` with a warning
+and the shortest covering request when a request runs more than half a second over. A pause
+the story needs is written into the performance (a timed action, `leadInSeconds`,
+`tailOutSeconds`). For clips already made, `speech_manage attach_video` returns where the
+line sits (`soundtrack`) with a suggested `edit.in`/`edit.out`, and a card that plays its
+clip soundtrack trims picture and sound together with those fields; assembly prints a warning
+for a second or more of silence before a line. Each of these reports; none refuses, and no
+trim is applied without the author. Attaching other footage removes the old trim. Filmed sync
+footage keeps `in=0`. See `skills/produce/references/cinematic-edit.md`.
+
 ## Dialogue coverage (user directive, 2026-11-09)
 
 Each shot contains lines from at most one character. Split at every speaker change,

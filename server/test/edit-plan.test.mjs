@@ -21,3 +21,11 @@ test('dip halves, source trims, authored breathing room and durations survive co
  const r=compile(s,cards);assert.equal(r.plan[0].exit,'white');assert.equal(r.plan[1].enter,'white');assert.equal(r.plan[1].in,.5);
  const a=scenes();a[1].edit={transitionSeconds:.2};assert.equal(compile(a,cards).plan[0].handle,.2);
 });
+test('a card that plays its clip soundtrack trims with in and out; filmed sync footage and other cards do not',()=>{
+ const sync=cards.replace('0\tvoice.wav\t0\tnone','0\tvoice.wav\t0\tnone\tsync=1');
+ const own=()=>[{sound:{audioSource:'video'},edit:{in:1.5,out:4}},{}];
+ const r=compile(own(),sync);assert.equal(r.plan[0].in,1.5);assert.match(r.cards,/sync=1,.*in=1\.5/);
+ assert.throws(()=>compile([{edit:{in:1.5}},{}],sync),/Sync footage/);
+ assert.throws(()=>compile([{edit:{out:4}},{}],cards),/edit\.out/);
+ const short=own();short[0].edit.out=1;assert.throws(()=>compile(short,sync),/edit\.out/);
+});
