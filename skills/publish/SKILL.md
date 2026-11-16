@@ -1,8 +1,8 @@
 ---
 name: publish
 description: >
-  Posts finished episode files to Threads, Instagram, Facebook and YouTube. Use when the
-  user asks to "게시해", "올려줘", "SNS 게시", "publish to social", "스레드/인스타/페북/유튜브에 올려", or once
+  Publishes finished episodes to SNS, including TikTok drafts or Direct Post. Use when the
+  user asks to "게시해", "올려줘", "SNS 게시", "publish to social", "스레드/인스타/페북/유튜브/틱톡에 올려", or once
   production is done. Takes the per-platform content under
   data/[channel]/episodes/[topic]/output/ through account checks and public media hosting,
   stops for the user's publishing authorization, publishes through the social-flow platform
@@ -528,3 +528,33 @@ Credentials stay in the external channel token directory; `credentialRef` never
 contains a token. After verification, refresh the workspace SNS record through
 `project_manage update` if it targets this channel, preserving other platforms and
 all existing episode snapshots. Pending connection state does not authorize upload.
+
+
+## TikTok video delivery
+
+Use the channel's clean `output/video.mp4` and Vietnamese caption for Mochi & Bơ.
+Run `sns_account_check(channel)` and match the live handle/open_id. Missing OAuth
+or scopes routes to [setup-tiktok](../setup-tiktok/SKILL.md). Do not send media merely
+because the channel was configured. Present the actual video and editable caption
+and use the user's post-specific authorization.
+
+- Inbox workflow: `tiktok_upload` with channel, absolute videoFilePath,
+  expectedOpenId, stable requestId and consent:true. It has no caption field; give
+  the approved caption to the user for the TikTok editing flow. Explain that they
+  must open the inbox notification, set caption/privacy/AI disclosure and finish.
+- Direct Post: first call `tiktok_creator_info`. Show nickname/avatar, allowed
+  privacy levels, current max duration and disabled interactions. Privacy has no
+  default; comments/duet/stitch start unchecked. Let the user choose commercial
+  disclosure and mark AI-generated videos with isAigc:true. Show TikTok's
+  [Music Usage Confirmation](https://www.tiktok.com/legal/page/global/music-usage-confirmation/en)
+  and obtain acceptance; branded content also requires the
+  [Branded Content Policy](https://www.tiktok.com/legal/page/global/bc-policy/en).
+  Only then pass those choices to `tiktok_publish`. SELF_ONLY cannot carry branded
+  content. Public posting requires a genuinely audited client; see setup-tiktok's
+  eligibility restriction. Do not silently change account privacy or claim review.
+- Save requestId, publishId and the receipt path in publish-log.md, then call
+  `tiktok_status`. Never resubmit after a timeout. SEND_TO_USER_INBOX is a delivered
+  draft; only PUBLISH_COMPLETE confirms a post. Report FAILED or unknown explicitly.
+  Use publicaly_available_post_id when returned to identify public posts.
+- `tiktok_videos` can report public view/like/comment/share counts later. It does not
+  supply audience geography, watch time or comment moderation.

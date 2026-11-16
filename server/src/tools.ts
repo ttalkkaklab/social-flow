@@ -1,3 +1,4 @@
+import { TIKTOK_TOOLS } from './tiktok-tools.js';
 import { UPSCALE_TOOLS } from './video-upscale.js';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { fasth3OmniSchema } from './fasth3-omni.js';
@@ -1054,6 +1055,8 @@ Episode video: \`video_catalog\` → \`video_plan\` → \`video_approve\` (the u
 Storyboard: write the story first with \`story_sequence\` → \`story_scene\` → \`story_shot\`, then each shot's characters and lines with \`shot_characters\` → \`shot_dialogue\`, each scene's music decision with \`story_music\`, its icon attributes with \`shot_icons\`, its start (and first_last end) image with \`shot_image\`, its video prompt with \`shot_prompt\`; then \`storyboard_read\`, \`storyboard_apply\`, \`storyboard_check\`. Speech: \`speech_manage\` owns dialogue lines and audio bindings; \`tts_route\` and the tts_* tools generate. Review: \`host_review\` prepares media evidence and records the host's own observations; it never scores.
 
 Images: \`image_catalog\` → \`image_plan\` → \`image_execute\`, then \`image_status\` after interruption. Preserve the saved model choice; legacy image adapters require imageContext for configured production. Host selections remain external handoffs. Music: music_*, suno_*. Sound effects: \`sfx_elevenlabs_generate\`. Free stock footage: \`stock_search\`. Research: serp_*, \`naver_search\`, datago_*, \`youtube_topic_scout\`.
+
+TikTok: use \`tiktok_auth\` for OAuth, \`tiktok_upload\` for inbox drafts or \`tiktok_publish\` for approved Direct Post; each upload requires post-specific consent. Track the durable requestId with \`tiktok_status\`; never resubmit an uncertain request.
 
 SNS: run \`sns_account_check\` first; publish tools appear only for platforms with a credential file. \`threads_publish\`, \`instagram_publish\`, \`facebook_publish\`, \`youtube_publish\` and \`sns_comment_reply\` are public the moment they run — call them only with the user's approval for that post or inside a growth-plan.md standing authorization.
 
@@ -3841,7 +3844,7 @@ Returns JSON: status, missing fields, canonical paths, config and revision; epis
               previzRenderer: { type: 'string', enum: ['blender', 'threejs'], description: 'Optional saved previz choice; e.g. blender. Ask only when needed and missing.' },
               episodeBudgetUsd: { type: 'number', minimum: 0, description: 'Optional per-episode USD ceiling, e.g. 5. Does not replace an actual quote and spending authorization.' },
             }, required: ['mode', 'renderRatioVersion', 'format'] },
-            sns: { type: 'object', additionalProperties: false, description: 'All four platform records, including disabled ones. Replacement updates must preserve unchanged platforms. Never pass credentials.', properties: Object.fromEntries(['threads', 'instagram', 'facebook', 'youtube'].map(platform => [platform, {
+            sns: { type: 'object', additionalProperties: false, description: 'Four legacy platform records plus optional TikTok, including disabled ones. Replacement updates must preserve unchanged platforms. Never pass credentials.', properties: Object.fromEntries(['threads', 'instagram', 'facebook', 'youtube', 'tiktok'].map(platform => [platform, {
               type: 'object', additionalProperties: false, description: `${platform} publishing preference and historical account check.`,
               properties: {
                 enabled: { type: 'boolean', description: 'Whether this project targets the platform, e.g. true.' },
@@ -4429,7 +4432,7 @@ Returns: integer credit balance.`,
     annotations: HINT.read,
     outputSchema: ACCOUNT_CHECK_OUTPUT,
     description:
-      'Checks the local SNS publishing credentials in one pass — /me lookups for Threads/Instagram/Facebook Pages, refresh-token exchange plus channel lookup for YouTube. With channel set, only that channel (brand) token set; omitted, it checks every channel directory under <SNS_TOKEN_DIR> plus the default (flat) tokens and returns them grouped per channel. Returns only account ids, names, and validity — token values are never exposed. Use as the pre-flight before each platform\'s *_publish (confirming which account will post) and for timing the 60-day Meta token renewal. Platforms without credentials show as ok:false with a reason.',
+      'Checks the local SNS publishing credentials in one pass — /me lookups for Threads/Instagram/Facebook Pages, refresh-token exchange plus channel lookup for YouTube, and rotated OAuth tokens plus user info for TikTok. With channel set, only that channel (brand) token set; omitted, it checks every channel directory under <SNS_TOKEN_DIR> plus the default (flat) tokens and returns them grouped per channel. Returns only account ids, names, and validity — token values are never exposed. Use as the pre-flight before each platform\'s *_publish (confirming which account will post) and for timing the 60-day Meta token renewal. Platforms without credentials show as ok:false with a reason.',
     inputSchema: { type: 'object', properties: { channel: SNS_CHANNEL_PROPERTY } },
   },
 
@@ -5192,7 +5195,7 @@ for (const tool of TOOLS) {
   tool.description += '\nFor shot-length optimization, pass requiredSeconds (e.g. 3.2) instead of a fixed duration/frame count. Returns the required/requested/excess seconds as a duration plan; these are not measured output seconds. Do NOT use this option for extending, editing or retaking existing footage.';
 }
 
-export const SNS_PLATFORM_BY_TOOL: Record<string, 'THREADS' | 'INSTAGRAM' | 'FACEBOOK' | 'YOUTUBE'> = {
+export const SNS_PLATFORM_BY_TOOL: Record<string, 'THREADS' | 'INSTAGRAM' | 'FACEBOOK' | 'YOUTUBE' | 'TIKTOK'> = {
   threads_publish: 'THREADS',
   threads_draft_create: 'THREADS',
   threads_review_submit: 'THREADS',
@@ -5204,6 +5207,11 @@ export const SNS_PLATFORM_BY_TOOL: Record<string, 'THREADS' | 'INSTAGRAM' | 'FAC
   facebook_comment: 'FACEBOOK',
   youtube_publish: 'YOUTUBE',
   youtube_insights: 'YOUTUBE',
+  tiktok_creator_info: 'TIKTOK',
+  tiktok_upload: 'TIKTOK',
+  tiktok_publish: 'TIKTOK',
+  tiktok_status: 'TIKTOK',
+  tiktok_videos: 'TIKTOK',
 };
 
 const videoContextSchema = {
@@ -5311,3 +5319,5 @@ for (const tool of TOOLS) {
 }
 
 TOOLS.push(...UPSCALE_TOOLS);
+
+TOOLS.push(...TIKTOK_TOOLS);

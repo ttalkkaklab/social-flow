@@ -146,3 +146,10 @@ chmod 600 ~/.config/social-flow/<channel-slug>/*
 - A Meta token past 60 days can't be refreshed — start over from the issuance procedure.
 - Drop any platform where `sns_account_check` returns ok:false from the publish
   targets and report why — don't try to fix a token problem by guessing.
+
+
+## TikTok
+
+Use [setup-tiktok](../../setup-tiktok/SKILL.md) for Desktop Login Kit OAuth.
+App credentials: `${SNS_TOKEN_DIR}/<channel>/tiktok-client.json`; rotating tokens:
+`tiktok-oauth.json` in the same directory. Browser login does not create API credentials.

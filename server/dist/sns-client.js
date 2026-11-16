@@ -1,3 +1,4 @@
+import { checkTikTokAccount } from './tiktok-client.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync as nodeMkdirSync, readFileSync as nodeReadFileSync, rmSync as nodeRmSync, writeFileSync as nodeWriteFileSync, } from 'node:fs';
 import { open as nodeOpen, readFile, stat } from 'node:fs/promises';
@@ -2251,9 +2252,9 @@ export async function moderateComment(input) {
 }
 // ── Account checks ───────────────────────────────────────────────
 /**
- * Checks all four platforms for one credential set (a single channel or the default tokens)
+ * Checks configured platforms for one credential set (a single channel or the default tokens)
  * — token values are never included. The platform checks are independent, so they run in
- * parallel (4 serial round trips → the latency of one).
+ * parallel.
  */
 async function checkPlatformSet(channel) {
     const metaChecks = [
@@ -2303,7 +2304,7 @@ async function checkPlatformSet(channel) {
             return ['youtube', { ok: false, reason: error instanceof Error ? error.message : String(error) }];
         }
     })();
-    return Object.fromEntries(await Promise.all([...metaChecks, youtubeCheck]));
+    return Object.fromEntries(await Promise.all([...metaChecks, youtubeCheck, checkTikTokAccount(channel).then(result => ['tiktok', result])]));
 }
 /**
  * Batch check of the SNS publishing credentials — with channel given, only that channel's

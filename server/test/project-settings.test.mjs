@@ -181,3 +181,15 @@ test('the channel music direction is saved with the production settings and bad 
   assert.throws(() => call(root, 'update', { expectedRevision: saved.revision, request: 'Empty note',
     settings: { production: { ...defaults().production, musicDirection: [''] } } }), /musicDirection/);
 });
+
+test('TikTok can be added to a legacy four-platform project without changing other connections', t => {
+  const root = workspace(t);
+  const initial = init(root);
+  const updated = call(root, 'update', { expectedRevision: initial.revision, request: 'Connect TikTok', settings: {
+    sns: { ...initial.config.sns, tiktok: { enabled: true, status: 'pending', handle: 'mochiandbovn' } },
+  } });
+  assert.deepEqual(updated.config.sns.youtube, initial.config.sns.youtube);
+  assert.equal(updated.config.sns.tiktok.credentialRef, '${SNS_TOKEN_DIR}/history/tiktok-oauth.json');
+  assert.ok(updated.pendingConnections.includes('tiktok'));
+  assert.ok(call(root, 'episode', { topic: 'with-tiktok' }).snapshot.config.sns.tiktok.enabled);
+});

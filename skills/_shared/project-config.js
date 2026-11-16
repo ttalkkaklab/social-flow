@@ -2,8 +2,8 @@
 
 const { STYLES, CHOICES, MODES, BANDS, PREVIZ_RENDERERS } = require('../storyboard/references/production-mode.js');
 const { FORMATS } = require('../platform-guide/references/formats.js');
-const PLATFORMS = ['threads', 'instagram', 'facebook', 'youtube'];
-const TOKEN_FILES = { threads: 'threads_token', instagram: 'instagram_token', facebook: 'facebook_page_token', youtube: 'youtube-oauth-client.json' };
+const PLATFORMS = ['threads', 'instagram', 'facebook', 'youtube', 'tiktok'];
+const TOKEN_FILES = { threads: 'threads_token', instagram: 'instagram_token', facebook: 'facebook_page_token', youtube: 'youtube-oauth-client.json', tiktok: 'tiktok-oauth.json' };
 const PROJECT_FIELDS = ['project', 'style', 'production', 'sns'];
 const SLUG = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -43,6 +43,8 @@ function validateProjectFields(config) {
     keys(config.sns, PLATFORMS, 'sns');
     for (const platform of PLATFORMS) {
       const account = config.sns[platform];
+      // Existing four-platform projects remain valid until TikTok is configured.
+      if (platform === 'tiktok' && account === undefined) continue;
       keys(account, ['enabled', 'status', 'accountId', 'handle', 'checkedAt', 'credentialRef'], `sns.${platform}`);
       if (typeof account.enabled !== 'boolean' || !['pending', 'connected', 'disabled'].includes(account.status)) throw new Error(`Invalid sns.${platform} enabled/status`);
       if ((account.status === 'disabled') !== !account.enabled) throw new Error(`sns.${platform} disabled status must match enabled:false`);

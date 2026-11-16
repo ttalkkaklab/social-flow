@@ -229,7 +229,7 @@ export function mlxServeConfigured(): boolean {
  */
 export const snsTokenDir = process.env.SNS_TOKEN_DIR || join(homedir(), '.config', 'social-flow');
 
-export const SNS_PLATFORMS = ['THREADS', 'INSTAGRAM', 'FACEBOOK', 'YOUTUBE'] as const;
+export const SNS_PLATFORMS = ['THREADS', 'INSTAGRAM', 'FACEBOOK', 'YOUTUBE', 'TIKTOK'] as const;
 export type SnsPlatform = (typeof SNS_PLATFORMS)[number];
 
 /** Conventional filename per platform — the same names are used inside channel directories. */
@@ -238,6 +238,7 @@ const SNS_CREDENTIAL_FILENAMES: Record<SnsPlatform, string> = {
   INSTAGRAM: 'instagram_token',
   FACEBOOK: 'facebook_page_token',
   YOUTUBE: 'youtube-oauth-client.json',
+  TIKTOK: 'tiktok-oauth.json',
 };
 
 /** Default (no-channel) credentials — flat files. The *_TOKEN_FILE envs apply to these paths only. */
@@ -246,6 +247,7 @@ const defaultSnsCredentialFiles: Record<SnsPlatform, string> = {
   INSTAGRAM: process.env.INSTAGRAM_TOKEN_FILE || join(snsTokenDir, 'instagram_token'),
   FACEBOOK: process.env.FACEBOOK_PAGE_TOKEN_FILE || join(snsTokenDir, 'facebook_page_token'),
   YOUTUBE: process.env.YOUTUBE_OAUTH_FILE || join(snsTokenDir, 'youtube-oauth-client.json'),
+  TIKTOK: process.env.TIKTOK_OAUTH_FILE || join(snsTokenDir, 'tiktok-oauth.json'),
 };
 
 /** Channel slug convention — the same kebab-case as data/<slug>. Used in path assembly, so traversal is blocked at the source. */
