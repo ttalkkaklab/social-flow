@@ -15,6 +15,19 @@ test('MSR and frame video prompts keep the authored detail view instead of old p
   }
 });
 
+test('an action move and its beat accents compile into the prompt, each accent on its named moment', () => {
+  const shot = { shot: { render: { mode: 'generated_video' }, techniques: [{ id: 'camera.crash-zoom' },
+    { id: 'camera.speed-ramp', on: 'the moment the kick lands' }, { id: 'camera.impact-shake' }] },
+    visual: { frames: { mode: 'first' }, camera: { movement: 'zoom in crash', speed: 'fast', target: 'the drone lens' } } };
+  const { prompt, directionBindings, warnings } = compileVideoPrompt(shot, { action: 'The courier stops.' });
+  assert.match(prompt, /The camera quickly crash zooms onto the drone lens in under half a second/);
+  assert.match(prompt, /slows almost to a stop at the moment the kick lands, then snaps back/);
+  assert.match(prompt, /jolts once on each impact and settles/); // no moment given: the accent's own default
+  assert.doesNotMatch(prompt, /\{(cue|target)\}/);
+  assert.equal(directionBindings.find(b => b.value === 'camera.speed-ramp').via, 'prompt');
+  assert.deepEqual(warnings, []);
+});
+
 test('current icon values compile with viewpoint and explicit delivery bindings', () => {
   const shot = { shot: { render: { mode: 'generated_video' }, size: 'ms', angle: 'eye',
     techniques: [{ id: 'camera.dolly-in' }, { id: 'camera.rear' }, { id: 'camera.rack-focus', from: 'the pouch', to: 'the leader' }] },
@@ -37,4 +50,11 @@ test('current icon values compile with viewpoint and explicit delivery bindings'
   assert.equal(compileVideoPrompt(shot, source).directionBindings.find(b => b.value === 'unknown.technique').via, 'unmapped');
   shot.shot.techniques.push({ id: 'timing.dialogue' });
   assert.equal(compileVideoPrompt(shot, source).directionBindings.find(b => b.value === 'timing.dialogue').via, 'guidance');
+});
+
+test('the shot expression is named and held in the video prompt', () => {
+  const shot = { shot: { size: 'mcu', angle: 'eye' }, visual: { frames: { mode: 'first' }, camera: { movement: 'static' },
+    expression: { 'na-ri': 'brows drawn together, lips pressed shut.' } } };
+  const { prompt } = compileVideoPrompt(shot, { action: 'She nods once.' }, { 'na-ri': 'Na-ri' });
+  assert.match(prompt, /She nods once\. Expressions, held to the last frame unless the action changes them: Na-ri: brows drawn together, lips pressed shut\./);
 });

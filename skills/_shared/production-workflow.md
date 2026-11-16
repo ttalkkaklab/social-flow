@@ -17,7 +17,8 @@ generation authorization and adapter input validation stay. Work in this order:
    `{"characters":[{"id":"mina","source":"../../../assets/characters/mina/identity.md"}]}`.
    A narrator who is never seen takes `"voiceOnly": true` and needs no panels.
 2. Story, one layer at a time: `story_sequence` → `story_scene` → `story_shot`.
-3. Each shot's characters (`shot_characters`, at most two), then their lines (`shot_dialogue`).
+3. Each shot's characters (`shot_characters`, at most two) with each one's `expression` — the
+   visible state the scene's situation puts on their face — then their lines (`shot_dialogue`).
    Then each scene's music decision (`story_music`, user directive 2026-11-14): `score` with a
    cue or `none`, each with its reason, read against the channel's saved music direction.
    Nothing waits for it; an undecided scene is reported on the review page and at assembly.

@@ -75,13 +75,28 @@ neither judge the art nor block tool execution. Do not invent image or motion re
 | Purpose | Possible camera direction | What must be specified |
 | --- | --- | --- |
 | Show isolation or the surrounding space | crane / pedestal up | starting subject, revealed space, ending composition |
-| Sudden discovery | fast zoom in — a crash zoom reads comic, so a straight dramatic beat takes a fast dolly in | the discovered detail and readable reaction |
+| Sudden discovery | crash zoom in action, thriller and comedy; a quiet dramatic realization takes a fast dolly in, where a snap zoom reads comic | the one landing target, the cue and the readable reaction |
 | Build pressure | dolly in | approach direction, subject action, stopping frame |
 | Stay with a chase | tracking / handheld | direction of travel and landmarks |
 | Reveal height around a climber | rising arc | subject, height change and path; a name alone does not define a helix |
 | Shift attention between depth planes | rack focus | near/far subjects and focus order; camera may remain static |
 | Reveal a hidden situation | dolly out | what the wider ending frame reveals |
 | Connect two targets quickly | whip pan | both endpoints, landing frame and motivated sound |
+| A hero drops into the fight | static, ground angle, impact shake on the landing | the fixed low frame the body falls into and the landing pose; the camera never follows the fall |
+| One decisive hit | speed ramp over the shot's move | the single moment that slows; everything before and after runs at normal speed |
+| A giant's steps, a crash | impact shake over a held frame | the event behind each jolt and the stillness between jolts |
+| A blast or shockwave | blast pushback | the trigger action, the source and the wider ending frame with the aftermath |
+| Something thrown or fired | weapon cam | the projectile, what of it stays in frame, where it stops |
+| A chase through tight space | pass-through shot, or drone dive where the route drops | each opening in order and what the runner does instead; for a dive, the one point where level flight turns down |
+| Several fighters in one space | relay one-take | the handoff order and the action that motivates each handoff |
+| The stand-off before the clash | arc shot, a full turn | direction, what changes during the turn (weapons drawn, the ring closing) |
+
+The action rows name what a planner asks for, not what a model guarantees. A `first_last` frame
+plan pins the landing of a crash zoom, a blast pushback, a drone dive or a hero landing with its
+end image. A previz steers a path only on an adapter that takes a reference clip. Speed ramp and
+impact shake reach the model as prompt sentences alone, so inspect the clip. When a relay one-take
+does not come back in one piece, split it into shots and join them with a `whip:` transition,
+which is an edit operation and not the camera's whip pan.
 
 Store generated camera directions only in `visual.camera`: opening `view`, `movement`,
 `speed`, and `end` (`framing` is legacy opening prose). Follow the opening-view procedure
@@ -142,3 +157,6 @@ fan loyalty or monetization. Keep the existing review-recent workflow for real d
 Source inspiration: https://www.youtube.com/watch?v=Xozqqt4seAw (2026-10-08).
 The video's camera examples inform this guide; its fixed cut lengths and commercial
 claims are not plugin defaults.
+The action rows come from https://www.youtube.com/watch?v=muYZFUNhnsI (2026-11-16), a sponsored
+tutorial that shows one Seedance 2.5 result per move; its claim that a move's name alone steers
+the camera is not adopted, and no other model was tested.
