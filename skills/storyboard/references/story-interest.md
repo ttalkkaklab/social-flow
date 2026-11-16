@@ -4,7 +4,8 @@
 nothing here is a quota, a score or a required field. Read it with
 [character-led scenarios](character-scenarios.md) once the causal skeleton exists. That file
 makes the story understandable; this one asks whether the viewer wants the next scene.
-Every technique below is a conditional option. A story that needs no time jump, no twist and
+The authoring pass in episode-anticipation.md applies by default; individual devices here
+remain conditional options. A story that needs no time jump, no twist and
 no cliffhanger is complete without them.
 
 Use it for story-led work: drama, comedy, mystery, serial fiction and narrative documentary.
@@ -233,7 +234,8 @@ what the scene was about and leaves the next thing wanted.
 - **The last scene pays.** The governing question is answered with material the story
   already planted. An ending keeps what the story charged for: no "it was not certain after
   all", no frame that makes the events matter less. After the turn, a beat that only
-  confirms the settled result is a lap of honour: cut it, or give it a new cost.
+  confirms the settled result is a lap of honour. Keep the recipient's consequential response
+  and changed behavior as part of the payoff; cut repetition after that response lands.
 - **Keep a long plant alive.** A setup paid several scenes later is touched once in between,
   inside an action that does a present job, or the viewer forgets it and the payoff arrives
   as something new.
@@ -269,7 +271,8 @@ schedule, and no beat owns a number of seconds:
 3. Two or three attempts joined by "therefore" or "but", each changing the barrier or stakes.
 4. The turn: the governing question is answered with a planted detail. When the story began
    out of order, this is where the two timelines meet.
-5. End right after the payoff. A serial opens one new question here.
+5. Complete the recipient's response or changed behavior, then end. Only an explicit serial
+   may hand a new question to another episode; an independent story closes here.
 
 ## Carry tension from synopsis to shots
 

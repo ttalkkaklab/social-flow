@@ -90,6 +90,17 @@ less than the principal character; and which earlier question this scene closed.
 the last scene, list every question that was never answered and say whether you could place
 each scene in time when it began. This log is the only evidence for forward pull in §3.
 
+For that requested interest read, also track what each partial answer changes: the viewer's
+guess, the available options, the cost or the desired next action. Flag repeated hesitation
+with no new evidence and an ending whose decisive information arrives only from an outsider.
+Distinguish a plausible witness from a witness who makes the principals' choice for them.
+Check the original promise, the planted evidence when a detail is reinterpreted, and the
+recipient's consequential response. A clear story can still have inert joins; a known ending
+can still sustain interest in how it is reached. Quiet relief and a necessary reaction are
+not defects merely because they introduce no new question. Do not prescribe twists, hook
+counts, cliffhangers or a guaranteed retention score. Anthology episodes close their own
+question; do not demand an EP1 relationship in an independent episode.
+
 ## 2. Compare intent and inspect the handoff
 
 Now read the selected scenario, actual identities, STORY, STRUCTURE, visual plan and relevant

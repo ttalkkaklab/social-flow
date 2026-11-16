@@ -38,6 +38,20 @@ synopsis into acted scenes and visible storyboard evidence. Use `story-interest.
 guidance, without new score gates or compulsory twists. Synopsis-only requests stop at prose;
 they do not create episode assets. Existing cast, calendar, narrator and ending rules hold.
 
+## Episode anticipation (user directive, 2026-11-16)
+
+Every new or substantially revised synopsis and storyboard gets an authoring pass for
+what makes the viewer want the next development. Apply
+`skills/storyboard/references/episode-anticipation.md`: establish a specific promise,
+change the viewer's expectation through consequential clues or attempts, pay the promise
+inside the episode and show the recipient's response or changed behavior. A known outcome
+can still hold a question about how it happens or what it costs. Quiet and factual work
+uses discovery, application or consequence without invented conflict or withheld essentials.
+Carry this progression from synopsis prose into acted scenes and shot evidence; metadata
+and repeated hesitation do not count. This is the default writing process, not an automatic
+review, score threshold, schema requirement or media approval. Standalone stories close
+their central question; only explicit serials carry a question into another episode.
+
 ## Owner decisions (2026-10-18)
 
 - Precedence: the later-dated directive wins, and a superseded sentence is deleted in place, not kept under a banner.

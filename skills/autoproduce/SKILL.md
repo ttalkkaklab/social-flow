@@ -43,6 +43,10 @@ roles need no compulsory inner-conflict subplot. For story-led episodes also rea
 [story interest](../storyboard/references/story-interest.md) once the causal skeleton holds:
 the question each stretch keeps open, the order of telling, who knows more and how each scene
 ends are chosen on purpose. An unattended run records those choices in `scenario.md`.
+Apply [episode anticipation](../storyboard/references/episode-anticipation.md) during synopsis
+and storyboard authoring on every run: a concrete promise, evolving expectations, an earned
+payoff and a performed response. Repair inert joins in the scenes, not just the notes.
+This author pass adds no automatic review or score gate and does not force a serial ending.
 
 Use [legacy unattended notes](references/legacy-unattended.md) only to understand a resumed
 unversioned or story-v1 episode's old files. Never load them as instructions for a new story.
