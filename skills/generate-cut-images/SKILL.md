@@ -34,7 +34,13 @@ image must leave the planned action to happen. A background panel supplies appea
 and directional geography; its full room and all landmarks need not fit a tight crop.
 Then write `prompt` in English: who is where, doing what, facing which way, with which
 expression and light, at the moment the shot opens (for an end image, the closing moment
-and what changed). Name the place with `location` (an `SB_DOC.locations` id) and the props
+and what changed). Faces come from `shot_characters` `expression` (user directive
+2026-11-16): the tool writes each character's state near the end of the prompt and warns
+`expression_missing` for a face without one. Set it there from the scene's situation —
+visible cues, not an emotion label — and do not contradict it in `prompt`. The
+moment-before rule covers movement, not feeling: the opening face already shows the shot's
+emotion. Someone who has just woken on a strange shore is not calm in the frame before
+they speak, and comforting a stranger there is not a reason to smile. Name the place with `location` (an `SB_DOC.locations` id) and the props
 seen in the frame with `props`; later calls keep them. Read the location's front/back
 layout and the shot's `visual.camera.backgroundView` before calling. Set the opening
 camera direction with `shot_icons.backgroundView` during icon authoring (or correct it
@@ -82,7 +88,8 @@ Each completed generation writes a new versioned file under `storyboard/images/`
 `visual.frames.start` and `visual.bg` (or `frames.end`), `visual.references`, `locationId`
 and `props`. A new start image takes the shot's end image off the shot with a warning,
 because the end was edited from the old start; make the end image again. Look at every
-image you make before moving on; regenerate a wrong one with a
+image you make before moving on, each face against the scene's situation as well as the
+crop: a smile in a scene of alarm is a wrong image. Regenerate a wrong one with a
 better view/blocking/prompt within the attempt and spending limits. Check the visible subject,
 crop, profile/three-quarter/rear side, camera height and action against the saved view;
 face-reference inputs do not justify a visible face in a hand-only insert. Text in an image follows the GPT
@@ -110,7 +117,7 @@ generated image as the sole reference and recompiles the saved size, crop and vi
 at the current delivery aspect.
 Describe the opening action and the observed correction in `prompt`: for example,
 "Zoom in until the bottom edge cuts through mid-chest; leave a narrow margin above
-the hair. Eyes look slightly camera-left, lips closed and relaxed." Do not change the
+the hair. Eyes look slightly camera-left, brows drawn together, lips pressed shut." Do not change the
 icons to excuse a wider generated image. For a CU, inspect whether the crown and
 shoulder tops meet the authored boundaries; retaining a whole chest is not a CU.
 Preserve visible identity and clothing while correcting expression copied from a

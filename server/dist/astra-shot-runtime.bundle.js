@@ -33213,7 +33213,8 @@ var shotCharactersSchema = external_exports.object({
   path: outlinePath,
   shots: external_exports.array(external_exports.object({
     id: shotIdSchema,
-    characters: external_exports.array(nonEmpty).max(2).refine((ids) => new Set(ids).size === ids.length, "a character is listed once").describe("Principal characters on screen, subject first; [] when nobody from the cast is on screen")
+    characters: external_exports.array(nonEmpty).max(2).refine((ids) => new Set(ids).size === ids.length, "a character is listed once").describe("Principal characters on screen, subject first; [] when nobody from the cast is on screen"),
+    expression: external_exports.record(nonEmpty, nonEmpty).optional().describe("Each listed character's visible state as the shot opens, in English physical cues read from the scene's situation: brows, eyes, mouth, posture. Silent listeners too. An earlier call's entry stays when omitted.")
   }).strict()).min(1)
 }).strict();
 var shotDialogueSchema = external_exports.object({

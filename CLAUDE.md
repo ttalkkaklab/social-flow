@@ -109,6 +109,18 @@ provenance so the user can request targeted corrections later through `edit-spee
 voice-lock ASR. Follow `skills/produce/references/shot-speech.md`. Narrator and character
 lines use explicit speakers; video models are replaceable adapters with declared capabilities.
 
+## Shot expressions (user directive, 2026-11-16)
+
+Characters smiled through scenes of alarm: the shot story names an action, the face panels and
+sheets carried smiles, and nothing told the model what the face shows. `shot_characters` takes
+an `expression` per on-screen character — English visible cues (brows, eyes, mouth, posture)
+read from the scene's situation, silent listeners included — and `shot_image` and `shot_prompt`
+write it into the image and video prompts; the video prompt asks for it to be held to the last
+frame. `shot_image` warns `expression_missing` for a face without one and never refuses. A
+sheet's `appearance` describes structure: `character_panel` leaves smile, grin and laugh clauses
+out of the neutral face panel and reports them. The moment-before rule is about movement; the
+opening face already shows the shot's emotion. See `skills/storyboard/SKILL.md` §3.
+
 ## Dialogue coverage (user directive, 2026-11-09)
 
 Each shot contains lines from at most one character. Split at every speaker change,
