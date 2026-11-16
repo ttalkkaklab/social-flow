@@ -67,7 +67,8 @@ function read(directory, board, {verifyInputs=true} = {}) {
    directionBindings:plan.directionBindings||[],voiceContinuity:plan.voiceContinuity?{strategy:plan.voiceContinuity.strategy,speakers:(plan.voiceContinuity.speakers||[]).map(s=>({speaker:s.speaker,audioIndex:s.audioIndex,imageIndices:s.imageIndices,screenBinding:s.screenBinding,reference:s.reference?{path:path.relative(dir,s.reference.path).split(path.sep).join('/'),sha256:s.reference.sha256}:null})),warnings:plan.voiceContinuity.warnings}:null,
    performance:plan.performance||null,warnings:plan.directionWarnings||[],stale,clip,selected,
    cost:{reservedUsd:job?.reserveUsd??plan.quote?.reserveUsd,settledUsd:job?.settledUsd??null,basis:plan.quote?.basis||'unknown'},
-   review:selected&&verifyInputs&&video.speechBinding?.videoSha256===hash(output)?video.speechBinding?.quality?.review||'not_reviewed':'not_reviewed',
+   review:selected&&video.speechBinding?.quality?.review==='pass'?
+    verifyInputs?(video.speechBinding.videoSha256===hash(output)?'pass':'not_reviewed'):'unverified':'not_reviewed',
    recovery:job&&!['completed','failed'].includes(job.status)?{tool:'video_status',episode,requestId:plan.requestId,action:/^astra_genai_/.test(plan.tool)?'refresh':'read'}:null});
  }
  candidates.sort((a,b)=>a.createdAt.localeCompare(b.createdAt)||a.planId.localeCompare(b.planId));
@@ -78,7 +79,7 @@ function read(directory, board, {verifyInputs=true} = {}) {
  const unique=status=>new Set(candidates.filter(c=>status(c)).map(c=>c.shotId)).size;
  const jobList=Object.values(jobs);
  return {version:1,storyboardPath:dir,asOf:[...candidates.flatMap(c=>[c.createdAt,c.updatedAt,c.observedAt]).filter(Boolean)].sort().at(-1)||null,
-  summary:{plannedShots:new Set(candidates.map(c=>c.shotId)).size,completedShots:unique(c=>c.status==='completed'&&!!c.clip),attachedShots:unique(c=>c.selected),reviewedShots:unique(c=>c.selected&&c.review==='pass'),
+  summary:{plannedShots:new Set(candidates.map(c=>c.shotId)).size,completedShots:unique(c=>c.status==='completed'&&!!c.clip),attachedShots:unique(c=>c.selected),reviewedShots:candidates.some(c=>c.review==='unverified')?null:unique(c=>c.selected&&c.review==='pass'),
    pendingRequests:jobList.filter(j=>!['completed','failed'].includes(j.status)).length,unknownRequests:jobList.filter(j=>j.status==='submission_unknown').length,
    reservedOrSpentUsd:jobList.reduce((n,j)=>n+(j.settledUsd??j.reserveUsd??0),state.openingSpendUsd||0)},candidates,warnings,repairs};
 }
@@ -116,8 +117,8 @@ function renderSummary(report,language) {
  if(!report?.candidates?.length)return '';
  const ko=language==='ko',s=report.summary;
  return '<section class="production-review"><h3>'+(ko?'영상 제작 현황':'Video production')+'</h3><p>'+
-  (ko?'생성 완료 '+s.completedShots+'샷 · 연결 '+s.attachedShots+'샷 · 검수 통과 '+s.reviewedShots+'샷 · 진행/확인 대기 '+s.pendingRequests+'건 · 결과 불명 '+s.unknownRequests+'건'
-     :'Generated '+s.completedShots+' shots · Attached '+s.attachedShots+' · Reviewed '+s.reviewedShots+' · Pending '+s.pendingRequests+' requests · Unknown '+s.unknownRequests)+
+  (ko?'생성 완료 '+s.completedShots+'샷 · 연결 '+s.attachedShots+'샷 · 검수 통과 '+(s.reviewedShots===null?'미확인':s.reviewedShots+'샷')+' · 진행/확인 대기 '+s.pendingRequests+'건 · 결과 불명 '+s.unknownRequests+'건'
+     :'Generated '+s.completedShots+' shots · Attached '+s.attachedShots+' · Reviewed '+(s.reviewedShots===null?'unverified':s.reviewedShots)+' · Pending '+s.pendingRequests+' requests · Unknown '+s.unknownRequests)+
   '</p><p>'+(ko?'저장된 상태 기준: ':'Snapshot: ')+esc(report.asOf||'—')+'</p>'+report.warnings.map(w=>'<p>'+esc(w)+'</p>').join('')+'</section>';
 }
 const api={read,write,render,renderSummary,changes,repairs};

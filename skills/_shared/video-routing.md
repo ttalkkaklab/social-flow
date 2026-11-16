@@ -180,6 +180,8 @@ saved authored prompt, final adapter prompt, reference/voice mappings, changed i
 candidate lineage, attached file, costs and recorded runtime endpoint. Completed-shot
 counts deduplicate attempts and require a local output; review counts remain separate.
 Only a matching bound file with explicit review evidence counts as reviewed. A missing
+background hash check leaves claimed review passes unverified (`reviewedShots: null`),
+not zero; an explicit read or HTML export verifies the attached bytes. A missing
 runtime observation or unmeasured duration is unknown, never a fabricated healthy state
 or ETA. API cost zero excludes hardware and elapsed time.
 

@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { createRequire } from 'node:module';
+import { createHash } from 'node:crypto';
 const require=createRequire(import.meta.url);
 const review=require('../../skills/storyboard/references/video-production.js');
 
@@ -31,4 +32,24 @@ test('local review preserves ambiguous jobs and strips provider secrets; export 
  c.clip='javascript:alert(1)';assert.doesNotMatch(review.render(report,'s0001','en'),/<video/);
  fs.writeFileSync(path.join(store,'plans','b'.repeat(64)+'.json'),'broken');
  assert.equal(review.read(board).warnings.length,1);
+});
+
+test('background snapshots distinguish unchecked review evidence from zero passed reviews',t=>{
+ const episode=fs.mkdtempSync(path.join(os.tmpdir(),'sf-reviewed-'));
+ t.after(()=>fs.rmSync(episode,{recursive:true,force:true}));
+ const board=path.join(episode,'storyboard'),store=path.join(episode,'.work/video-routing');
+ fs.mkdirSync(board,{recursive:true});fs.mkdirSync(path.join(store,'plans'),{recursive:true});
+ const bytes=Buffer.from('reviewed fixture'),id='b'.repeat(64);
+ fs.writeFileSync(path.join(episode,'take.mp4'),bytes);
+ fs.writeFileSync(path.join(board,'scenes.js'),'window.SCENES='+JSON.stringify([{id:'s1',visual:{video:{clip:'../take.mp4',speechBinding:{videoSha256:createHash('sha256').update(bytes).digest('hex'),quality:{review:'pass'}}}}}])+';');
+ fs.writeFileSync(path.join(store,'plans',id+'.json'),JSON.stringify({id,episode,shotId:'s1',requestId:'r1',args:{outputPath:episode,filename:'take.mp4'},inputs:{}}));
+ fs.writeFileSync(path.join(store,'state.json'),JSON.stringify({jobs:{r1:{planId:id,status:'completed'}}}));
+ assert.equal(review.read(board).summary.reviewedShots,1);
+ review.write(episode);
+ const snapshot=JSON.parse(fs.readFileSync(path.join(board,'video-production-data.js'),'utf8').slice('window.VIDEO_PRODUCTION = '.length,-2));
+ assert.equal(snapshot.summary.reviewedShots,null);
+ assert.equal(snapshot.candidates[0].review,'unverified');
+ assert.match(review.renderSummary(snapshot,'ko'),/검수 통과 미확인/);
+ fs.writeFileSync(path.join(episode,'take.mp4'),'changed bytes');
+ assert.equal(review.read(board).summary.reviewedShots,0);
 });
