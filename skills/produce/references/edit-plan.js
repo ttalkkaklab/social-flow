@@ -44,7 +44,7 @@ function compile(scenes, text, {videoWarningsApproved=false}={}) {
     // move picture and sound together, so the silent acting around a native line can go.
     const ownVoice = s.sound?.audioSource==='video';
     if (edit.out!==undefined && (!ownVoice || typeof edit.out!=='number' || !Number.isFinite(edit.out) || edit.out<=start))
-      throw new Error('shot '+(i+1)+': edit.out is the source end of a card that plays its clip soundtrack (audioSource video), in seconds after edit.in');
+      throw new Error('shot '+(i+1)+': edit.out is the source second where a card that plays its clip soundtrack (audioSource video) ends; it must be later than edit.in');
     if (opts.sync==='1' && ((start && !ownVoice) || pre || edit.post>0 || carry.test(t))) throw new Error('Sync footage requires cut, in=0 and no audio margins');
     return {card:i, transition:t, enter, join, handle:0, in:start, pre:opts.sync==='1'?0:pre, post:opts.sync==='1'?0:post, exit:'cut', opts,
       reason:edit.reason||'', continuity:edit.continuity||''};

@@ -127002,7 +127002,7 @@ Returns: integer credit balance.`,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     description: `Update shot dialogue, line acting and local audio/video bindings.
 
-Use for dialogue edits, expression or intonation corrections, stable speaker routing and generation planning. list finds lines; prepare assigns stable ids; update replaces requested line fields; attach_audio returns measured timing; retime updates the complete shot clock from current speech and explicit action edits. attach_video binds generated files; reuse:tail_trim accepts only unchanged audio and performance starts with a shorter tail. plan_audio resolves the pinned voice and each line's scene direction into raw generator arguments, refusing unregistered selected samples and stale shared voices; gateway arguments include a revision-bound speechContext and attach_audio requires its completed receiptPath; plan_video resolves the selected adapter's capabilities (tool names the shot's video tool when it differs from the saved default operation) and carries the same acting/timing context. A native-speech shot (MSR) needs no line audio: the clip speaks its prompt's lines, attach_video binds their revisions and sets sound.audioSource video, and a line edit marks the clip stale. For such a clip attach_video also returns soundtrack: where the line starts and ends in the clip (loudness, not_reviewed), the silent seconds around it, and suggestedEdit {in, out} with suggestedDurationSeconds when silent acting the performance did not ask for surrounds the line. Nothing is trimmed here; apply it with storyboard_apply after listening. Scene direction overrides baseline style without changing voice identity. Local files only: plans do not generate, listen, score or approve. Read first and pass expectedRevision for writes; unknown speakers, ambiguous targets, stale revisions and unsupported lip-sync routes fail. Keeps source backups.
+Use for dialogue edits, expression or intonation corrections, stable speaker routing and generation planning. list finds lines; prepare assigns stable ids; update replaces requested line fields; attach_audio returns measured timing; retime updates the complete shot clock from current speech and explicit action edits. attach_video binds generated files; reuse:tail_trim accepts only unchanged audio and performance starts with a shorter tail. plan_audio resolves the pinned voice and each line's scene direction into raw generator arguments, refusing unregistered selected samples and stale shared voices; gateway arguments include a revision-bound speechContext and attach_audio requires its completed receiptPath; plan_video resolves the selected adapter's capabilities (tool names the shot's video tool when it differs from the saved default operation) and carries the same acting/timing context. A native-speech shot (MSR) needs no line audio: the clip speaks its prompt's lines, attach_video binds their revisions and sets sound.audioSource video, and a line edit marks the clip stale. For such a clip attach_video also returns soundtrack: where the line starts and ends in the clip (loudness, not_reviewed), the silent seconds around it, and suggestedEdit {in, out} with suggestedDurationSeconds when silent acting the performance did not ask for surrounds the line. Nothing is trimmed here; apply it with storyboard_apply after listening. Attaching different footage to a trimmed native shot removes that trim and returns it as clearedTrim. Scene direction overrides baseline style without changing voice identity. Local files only: plans do not generate, listen, score or approve. Read first and pass expectedRevision for writes; unknown speakers, ambiguous targets, stale revisions and unsupported lip-sync routes fail. Keeps source backups.
 
 Do NOT use to generate media: call the planned raw TTS tool or selected video adapter, then attach the result. Do NOT use for read-only whole-story inspection: use storyboard_read instead. Never group different emotional beats or nonconsecutive shots by shared image and slice them into unrelated reactions.
 
@@ -129056,6 +129056,7 @@ function manageSpeech(args) {
   let changed = false;
   let timing;
   let soundtrack;
+  let clearedTrim;
   if (args.timingPatch && args.action !== "retime") throw new Error("timingPatch is only used by retime");
   if (args.reuse && args.action !== "attach_video") throw new Error("reuse is only used by attach_video");
   if (args.action === "prepare") {
@@ -129229,6 +129230,16 @@ function manageSpeech(args) {
         invalidated = { video: video2, edit: true };
       } else {
         if (!tailTrim) syncProductionClip(scene, dirname8(file), videoPath, video2.clip, plan2.warnings);
+        const trim = object5(scene.edit);
+        if (native && priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256 && (trim.in !== void 0 || trim.out !== void 0)) {
+          const { in: sourceIn, out: sourceOut, ...kept } = trim;
+          scene.edit = kept;
+          clearedTrim = {
+            ...sourceIn !== void 0 ? { in: sourceIn } : {},
+            ...sourceOut !== void 0 ? { out: sourceOut } : {},
+            note: "The previous clip's trim was removed: it was measured on other footage. Set the shot duration and a new trim from soundtrack."
+          };
+        }
         video2.clip = args.videoPath;
         video2.speechBinding = {
           ...plan2,
@@ -129310,7 +129321,7 @@ function manageSpeech(args) {
     } : {} };
     return { shotId: scene.id, lineId: line.id, ...result, generation: generation2, arguments: generation2 };
   }) : void 0;
-  return { revision: hash4(readFileSync32(file)), changed, invalidated, plan: plan2, timing, ...soundtrack ? { soundtrack } : {}, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname8(file), board: win }), audioProvenanceStatus: object5(object5(object5(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
+  return { revision: hash4(readFileSync32(file)), changed, invalidated, plan: plan2, timing, ...soundtrack ? { soundtrack } : {}, ...clearedTrim ? { clearedTrim } : {}, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname8(file), board: win }), audioProvenanceStatus: object5(object5(object5(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
 }
 
 // src/acting-review.ts
