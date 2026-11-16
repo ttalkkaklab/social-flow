@@ -149,3 +149,52 @@ thoughts. `speech_manage` plans external TTS voiceover and binds assembly to
 `sound.audioSource:"speech"`. Generate/attach the character's pinned TTS, compose real
 measured intervals with action and lead-in/tail-out, and plan the full video coverage.
 Missing speech setup must be reported; it does not authorize a new voice or native MSR.
+
+## Plans, candidate takes and local review
+
+`video_plan` compiles the storyboard's `performance` events and the current camera
+settings through the same compiler as `speech_manage plan_video`. It preserves action
+order, concurrent speech/action groups and lead-in/tail-out. Attached, hash-matching
+speech can supply measured intervals; native speech stays `model_timed` until measured.
+Do not invent timestamps for unresolved speech. MSR dialogue is still added once, with
+its actual image/audio bindings. Passing `args.prompt` bypasses this compilation and
+returns a warning; prefer updating the board and omitting that argument.
+
+Optional `visual.references[].preserve` and `.avoid` are arrays of English instructions.
+They say what to retain and what not to copy from that reference. Image authoring keeps
+these fields when refreshing the same reference, and video mapping carries them to the
+actual input slot. A reference used only for the opening image is not claimed as a
+separately submitted video input.
+
+Use `purpose: "draft" | "final" | "revision"`, `basedOnRequestId` and `changeNote` on
+`video_plan` to compare takes. These fields do not change models or resolution. An
+optional cheaper draft uses a supported, explicitly selected setting; never switch the
+saved model silently or force every shot through two generations. A new high-resolution
+take can drift from the draft. Every attempt keeps its own output filename, plan and
+receipt; execution refuses to overwrite another candidate. These are all real attempts
+under the existing budget and concurrency limits, not extra free retries.
+
+`video_status {episode}` reads the episode's candidate list without provider calls.
+`storyboard_read.videoProduction` returns the same view. The shared board shows the
+saved authored prompt, final adapter prompt, reference/voice mappings, changed inputs,
+candidate lineage, attached file, costs and recorded runtime endpoint. Completed-shot
+counts deduplicate attempts and require a local output; review counts remain separate.
+Only a matching bound file with explicit review evidence counts as reviewed. A missing
+background hash check leaves claimed review passes unverified (`reviewedShots: null`),
+not zero; an explicit read or HTML export verifies the attached bytes. A missing
+runtime observation or unmeasured duration is unknown, never a fabricated healthy state
+or ETA. API cost zero excludes hardware and elapsed time.
+
+The board loads `video-production-data.js`, a local snapshot refreshed by planning,
+state changes, storyboard/speech edits or `storyboard-html.js`. Reload the page after
+changes. Background exports do not rehash all media; an explicit read/export checks
+input bytes. The snapshot is advisory and cannot execute, approve, attach or retry a
+request. Use `speech_manage attach_video` for a chosen take so existing speech and
+performance binding checks still apply. Provider credentials, full result payloads,
+signed URLs and arbitrary request fields are not included in the snapshot.
+
+When repairing a reviewed defect, start with the smallest applicable change: trim an
+ending, adjust volume, upscale resolution, revise speech, or fix the source image or
+staging before regeneration. Keep the original file. Dubbing native dialogue can break
+lip sync; do not apply it automatically. Unknown submissions retain their original
+request ID and reservation; the review view supplies the same-request status command.

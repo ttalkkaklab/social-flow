@@ -1083,16 +1083,16 @@ var require_util = __commonJS({
     function isStream(obj) {
       return obj && typeof obj === "object" && typeof obj.pipe === "function" && typeof obj.on === "function";
     }
-    function isBlobLike(object3) {
-      if (object3 === null) {
+    function isBlobLike(object4) {
+      if (object4 === null) {
         return false;
-      } else if (object3 instanceof Blob) {
+      } else if (object4 instanceof Blob) {
         return true;
-      } else if (typeof object3 !== "object") {
+      } else if (typeof object4 !== "object") {
         return false;
       } else {
-        const sTag = object3[Symbol.toStringTag];
-        return (sTag === "Blob" || sTag === "File") && ("stream" in object3 && typeof object3.stream === "function" || "arrayBuffer" in object3 && typeof object3.arrayBuffer === "function");
+        const sTag = object4[Symbol.toStringTag];
+        return (sTag === "Blob" || sTag === "File") && ("stream" in object4 && typeof object4.stream === "function" || "arrayBuffer" in object4 && typeof object4.arrayBuffer === "function");
       }
     }
     function pathHasQueryOrFragment(url) {
@@ -1382,8 +1382,8 @@ var require_util = __commonJS({
         }
       );
     }
-    function isFormDataLike(object3) {
-      return object3 && typeof object3 === "object" && typeof object3.append === "function" && typeof object3.delete === "function" && typeof object3.get === "function" && typeof object3.getAll === "function" && typeof object3.has === "function" && typeof object3.set === "function" && object3[Symbol.toStringTag] === "FormData";
+    function isFormDataLike(object4) {
+      return object4 && typeof object4 === "object" && typeof object4.append === "function" && typeof object4.delete === "function" && typeof object4.get === "function" && typeof object4.getAll === "function" && typeof object4.has === "function" && typeof object4.set === "function" && object4[Symbol.toStringTag] === "FormData";
     }
     function addAbortListener(signal, listener) {
       if ("addEventListener" in signal) {
@@ -5074,8 +5074,8 @@ var require_util2 = __commonJS({
       }
       return "allowed";
     }
-    function isErrorLike(object3) {
-      return object3 instanceof Error || (object3?.constructor?.name === "Error" || object3?.constructor?.name === "DOMException");
+    function isErrorLike(object4) {
+      return object4 instanceof Error || (object4?.constructor?.name === "Error" || object4?.constructor?.name === "DOMException");
     }
     function isValidReasonPhrase(statusText) {
       for (let i = 0; i < statusText.length; ++i) {
@@ -5418,7 +5418,7 @@ var require_util2 = __commonJS({
         return new FastIterableIterator(target, kind);
       };
     }
-    function iteratorMixin(name, object3, kInternalIterator, keyIndex = 0, valueIndex = 1) {
+    function iteratorMixin(name, object4, kInternalIterator, keyIndex = 0, valueIndex = 1) {
       const makeIterator = createIterator(name, kInternalIterator, keyIndex, valueIndex);
       const properties = {
         keys: {
@@ -5426,7 +5426,7 @@ var require_util2 = __commonJS({
           enumerable: true,
           configurable: true,
           value: function keys() {
-            webidl.brandCheck(this, object3);
+            webidl.brandCheck(this, object4);
             return makeIterator(this, "key");
           }
         },
@@ -5435,7 +5435,7 @@ var require_util2 = __commonJS({
           enumerable: true,
           configurable: true,
           value: function values() {
-            webidl.brandCheck(this, object3);
+            webidl.brandCheck(this, object4);
             return makeIterator(this, "value");
           }
         },
@@ -5444,7 +5444,7 @@ var require_util2 = __commonJS({
           enumerable: true,
           configurable: true,
           value: function entries() {
-            webidl.brandCheck(this, object3);
+            webidl.brandCheck(this, object4);
             return makeIterator(this, "key+value");
           }
         },
@@ -5453,7 +5453,7 @@ var require_util2 = __commonJS({
           enumerable: true,
           configurable: true,
           value: function forEach(callbackfn, thisArg = globalThis) {
-            webidl.brandCheck(this, object3);
+            webidl.brandCheck(this, object4);
             webidl.argumentLengthCheck(arguments, 1, `${name}.forEach`);
             if (typeof callbackfn !== "function") {
               throw new TypeError(
@@ -5466,7 +5466,7 @@ var require_util2 = __commonJS({
           }
         }
       };
-      return Object.defineProperties(object3.prototype, {
+      return Object.defineProperties(object4.prototype, {
         ...properties,
         [Symbol.iterator]: {
           writable: true,
@@ -6325,13 +6325,13 @@ var require_body = __commonJS({
         stream.cancel("Response object has been garbage collected").catch(noop);
       }
     });
-    function extractBody(object3, keepalive = false) {
+    function extractBody(object4, keepalive = false) {
       let stream = null;
       let controller = null;
-      if (webidl.is.ReadableStream(object3)) {
-        stream = object3;
-      } else if (webidl.is.Blob(object3)) {
-        stream = object3.stream();
+      if (webidl.is.ReadableStream(object4)) {
+        stream = object4;
+      } else if (webidl.is.Blob(object4)) {
+        stream = object4.stream();
       } else {
         stream = new ReadableStream({
           pull() {
@@ -6349,15 +6349,15 @@ var require_body = __commonJS({
       let source = null;
       let length = null;
       let type = null;
-      if (typeof object3 === "string") {
-        source = object3;
+      if (typeof object4 === "string") {
+        source = object4;
         type = "text/plain;charset=UTF-8";
-      } else if (webidl.is.URLSearchParams(object3)) {
-        source = object3.toString();
+      } else if (webidl.is.URLSearchParams(object4)) {
+        source = object4.toString();
         type = "application/x-www-form-urlencoded;charset=UTF-8";
-      } else if (webidl.is.BufferSource(object3)) {
-        source = webidl.util.getCopyOfBytesHeldByBufferSource(object3);
-      } else if (webidl.is.FormData(object3)) {
+      } else if (webidl.is.BufferSource(object4)) {
+        source = webidl.util.getCopyOfBytesHeldByBufferSource(object4);
+      } else if (webidl.is.FormData(object4)) {
         const boundary = `----formdata-undici-0${`${random(1e11)}`.padStart(11, "0")}`;
         const prefix = `--${boundary}\r
 Content-Disposition: form-data`;
@@ -6367,7 +6367,7 @@ Content-Disposition: form-data`;
         const rn = new Uint8Array([13, 10]);
         length = 0;
         let hasUnknownSizeValue = false;
-        for (const [name, value] of object3) {
+        for (const [name, value] of object4) {
           if (typeof value === "string") {
             const chunk2 = textEncoder.encode(prefix + `; name="${formdataEscape(normalizeLinefeeds(name))}"\r
 \r
@@ -6395,7 +6395,7 @@ Content-Type: ${value.type || "application/octet-stream"}\r
         if (hasUnknownSizeValue) {
           length = null;
         }
-        source = object3;
+        source = object4;
         action = async function* () {
           for (const part of blobParts) {
             if (part.stream) {
@@ -6406,22 +6406,22 @@ Content-Type: ${value.type || "application/octet-stream"}\r
           }
         };
         type = `multipart/form-data; boundary=${boundary}`;
-      } else if (webidl.is.Blob(object3)) {
-        source = object3;
-        length = object3.size;
-        if (object3.type) {
-          type = object3.type;
+      } else if (webidl.is.Blob(object4)) {
+        source = object4;
+        length = object4.size;
+        if (object4.type) {
+          type = object4.type;
         }
-      } else if (typeof object3[Symbol.asyncIterator] === "function") {
+      } else if (typeof object4[Symbol.asyncIterator] === "function") {
         if (keepalive) {
           throw new TypeError("keepalive");
         }
-        if (util2.isDisturbed(object3) || object3.locked) {
+        if (util2.isDisturbed(object4) || object4.locked) {
           throw new TypeError(
             "Response body object should not be disturbed or locked"
           );
         }
-        stream = webidl.is.ReadableStream(object3) ? object3 : ReadableStreamFrom(object3);
+        stream = webidl.is.ReadableStream(object4) ? object4 : ReadableStreamFrom(object4);
       }
       if (typeof source === "string" || isUint8Array(source)) {
         action = () => {
@@ -6450,12 +6450,12 @@ Content-Type: ${value.type || "application/octet-stream"}\r
       const body = { stream, source, length };
       return [body, type];
     }
-    function safelyExtractBody(object3, keepalive = false) {
-      if (webidl.is.ReadableStream(object3)) {
-        assert(!util2.isDisturbed(object3), "The body has already been consumed.");
-        assert(!object3.locked, "The stream is locked.");
+    function safelyExtractBody(object4, keepalive = false) {
+      if (webidl.is.ReadableStream(object4)) {
+        assert(!util2.isDisturbed(object4), "The body has already been consumed.");
+        assert(!object4.locked, "The stream is locked.");
       }
-      return extractBody(object3, keepalive);
+      return extractBody(object4, keepalive);
     }
     function cloneBody(body) {
       const { 0: out1, 1: out2 } = body.stream.tee();
@@ -6527,14 +6527,14 @@ Content-Type: ${value.type || "application/octet-stream"}\r
     function mixinBody(prototype, getInternalState) {
       Object.assign(prototype.prototype, bodyMixinMethods(prototype, getInternalState));
     }
-    function consumeBody(object3, convertBytesToJSValue, instance, getInternalState) {
+    function consumeBody(object4, convertBytesToJSValue, instance, getInternalState) {
       try {
-        webidl.brandCheck(object3, instance);
+        webidl.brandCheck(object4, instance);
       } catch (e) {
         return Promise.reject(e);
       }
-      object3 = getInternalState(object3);
-      if (bodyUnusable(object3)) {
+      object4 = getInternalState(object4);
+      if (bodyUnusable(object4)) {
         return Promise.reject(new TypeError("Body is unusable: Body has already been read"));
       }
       const promise = createDeferredPromise();
@@ -6546,15 +6546,15 @@ Content-Type: ${value.type || "application/octet-stream"}\r
           errorSteps(e);
         }
       };
-      if (object3.body == null) {
+      if (object4.body == null) {
         successSteps(Buffer.allocUnsafe(0));
         return promise.promise;
       }
-      fullyReadBody(object3.body, successSteps, errorSteps);
+      fullyReadBody(object4.body, successSteps, errorSteps);
       return promise.promise;
     }
-    function bodyUnusable(object3) {
-      const body = object3.body;
+    function bodyUnusable(object4) {
+      const body = object4.body;
       return body != null && (body.stream.locked || util2.isDisturbed(body.stream));
     }
     function bodyMimeType(requestOrResponse) {
@@ -18768,10 +18768,10 @@ var require_headers = __commonJS({
       while (j > i && isHTTPWhiteSpaceCharCode(potentialValue.charCodeAt(i))) ++i;
       return i === 0 && j === potentialValue.length ? potentialValue : potentialValue.substring(i, j);
     }
-    function fill(headers, object3) {
-      if (Array.isArray(object3)) {
-        for (let i = 0; i < object3.length; ++i) {
-          const header = object3[i];
+    function fill(headers, object4) {
+      if (Array.isArray(object4)) {
+        for (let i = 0; i < object4.length; ++i) {
+          const header = object4[i];
           if (header.length !== 2) {
             throw webidl.errors.exception({
               header: "Headers constructor",
@@ -18780,10 +18780,10 @@ var require_headers = __commonJS({
           }
           appendHeader(headers, header[0], header[1]);
         }
-      } else if (typeof object3 === "object" && object3 !== null) {
-        const keys = Object.keys(object3);
+      } else if (typeof object4 === "object" && object4 !== null) {
+        const keys = Object.keys(object4);
         for (let i = 0; i < keys.length; ++i) {
-          appendHeader(headers, keys[i], object3[keys[i]]);
+          appendHeader(headers, keys[i], object4[keys[i]]);
         }
       } else {
         throw webidl.errors.conversionFailed({
@@ -23557,15 +23557,15 @@ var require_connection = __commonJS({
       });
       return controller;
     }
-    function closeWebSocketConnection(object3, code, reason, validate = false) {
+    function closeWebSocketConnection(object4, code, reason, validate = false) {
       code ??= null;
       reason ??= "";
       if (validate) validateCloseCodeAndReason(code, reason);
-      if (isClosed(object3.readyState) || isClosing(object3.readyState)) {
-      } else if (!isEstablished(object3.readyState)) {
-        failWebsocketConnection(object3);
-        object3.readyState = states.CLOSING;
-      } else if (!object3.closeState.has(sentCloseFrameState.SENT) && !object3.closeState.has(sentCloseFrameState.RECEIVED)) {
+      if (isClosed(object4.readyState) || isClosing(object4.readyState)) {
+      } else if (!isEstablished(object4.readyState)) {
+        failWebsocketConnection(object4);
+        object4.readyState = states.CLOSING;
+      } else if (!object4.closeState.has(sentCloseFrameState.SENT) && !object4.closeState.has(sentCloseFrameState.RECEIVED)) {
         const frame = new WebsocketFrameSend();
         if (reason.length !== 0 && code === null) {
           code = 1e3;
@@ -23583,11 +23583,11 @@ var require_connection = __commonJS({
         } else {
           frame.frameData = emptyBuffer;
         }
-        object3.socket.write(frame.createFrame(opcodes.CLOSE));
-        object3.closeState.add(sentCloseFrameState.SENT);
-        object3.readyState = states.CLOSING;
+        object4.socket.write(frame.createFrame(opcodes.CLOSE));
+        object4.closeState.add(sentCloseFrameState.SENT);
+        object4.readyState = states.CLOSING;
       } else {
-        object3.readyState = states.CLOSING;
+        object4.readyState = states.CLOSING;
       }
     }
     function failWebsocketConnection(handler, code, reason, cause) {
@@ -26105,10 +26105,10 @@ var util;
       return obj[e];
     });
   };
-  util2.objectKeys = typeof Object.keys === "function" ? (obj) => Object.keys(obj) : (object3) => {
+  util2.objectKeys = typeof Object.keys === "function" ? (obj) => Object.keys(obj) : (object4) => {
     const keys = [];
-    for (const key in object3) {
-      if (Object.prototype.hasOwnProperty.call(object3, key)) {
+    for (const key in object4) {
+      if (Object.prototype.hasOwnProperty.call(object4, key)) {
         keys.push(key);
       }
     }
@@ -30247,14 +30247,14 @@ function loadEnvFile(file = join3(process.env.SNS_TOKEN_DIR || join3(homedir(), 
   for (const [key, value] of Object.entries(process.env)) {
     if (value && /^\$\{[A-Za-z_][A-Za-z0-9_]*(:-[^}]*)?\}$/.test(value)) delete process.env[key];
   }
-  let text2;
+  let text3;
   try {
-    text2 = readFileSync3(file, "utf8");
+    text3 = readFileSync3(file, "utf8");
   } catch {
     return [];
   }
   const filled = [];
-  for (const raw of text2.split("\n")) {
+  for (const raw of text3.split("\n")) {
     const line = raw.trim();
     if (!line || line.startsWith("#")) continue;
     const eq = line.indexOf("=");
@@ -30356,8 +30356,8 @@ async function requestRaw(method, url, headers, body, timeoutMs) {
       body: body !== void 0 ? JSON.stringify(body) : void 0,
       signal: AbortSignal.timeout(effectiveTimeoutMs)
     });
-    const text2 = await res.text();
-    return { ok: res.ok, status: res.status, body: text2 };
+    const text3 = await res.text();
+    return { ok: res.ok, status: res.status, body: text3 };
   } catch (error) {
     if (error instanceof Error && error.name === "TimeoutError") {
       return { ok: false, status: 504, body: `Request timed out after ${effectiveTimeoutMs}ms: ${url}` };
@@ -30676,7 +30676,7 @@ var receiptSchema = external_exports.object({
 }).strict();
 
 // src/video-routing.ts
-import { createRequire as createRequire4 } from "node:module";
+import { createRequire as createRequire5 } from "node:module";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 
 // src/astra-video-client.ts
@@ -32443,20 +32443,31 @@ function charUnits(args) {
 // src/video-pricing.ts
 var PRICE_FILE = fileURLToPath(new URL("../../skills/autoproduce/references/prices.tsv", import.meta.url));
 
-// src/video-image-inputs.ts
+// src/video-review.ts
 import { createRequire } from "node:module";
-var load = createRequire(import.meta.url);
+var review = () => createRequire(import.meta.url)("../../skills/storyboard/references/video-production.js");
+function refreshVideoReview(episode) {
+  try {
+    review().write(episode);
+  } catch {
+    process.stderr.write("Video review export needs a refresh; request receipts remain authoritative.\n");
+  }
+}
+
+// src/video-image-inputs.ts
+import { createRequire as createRequire2 } from "node:module";
+var load = createRequire2(import.meta.url);
 
 // src/video-voice.ts
 import { existsSync as existsSync4, readFileSync as readFileSync6, realpathSync } from "node:fs";
 import path5 from "node:path";
-import { createRequire as createRequire2 } from "node:module";
+import { createRequire as createRequire3 } from "node:module";
 var speakerBindingSchema = external_exports.object({
   speaker: external_exports.string().trim().min(1),
   screenPosition: external_exports.enum(["left", "center", "right"]),
   description: external_exports.string().trim().min(1)
 }).strict();
-var load2 = createRequire2(import.meta.url);
+var load2 = createRequire3(import.meta.url);
 var object = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
 var text = (value) => typeof value === "string" ? value.trim() : "";
 function resolveCharacterVoice(character, context, warnings) {
@@ -32487,11 +32498,110 @@ function resolveCharacterVoice(character, context, warnings) {
 }
 
 // src/video-prompt.ts
-import { createRequire as createRequire3 } from "node:module";
-var load3 = createRequire3(import.meta.url);
+import { createRequire as createRequire4 } from "node:module";
+var load3 = createRequire4(import.meta.url);
+var object2 = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
+var text2 = (value) => typeof value === "string" ? value.trim() : "";
+function planVideoPerformance(shot, options = {}) {
+  const acting = load3("../../skills/_shared/scene-acting.js");
+  const timeline = acting.planScenePerformance(shot, options.measureAudio);
+  return { ...timeline, timing: options.mode === "native" && timeline.timing === "needs_audio_duration" ? "model_timed" : timeline.timing };
+}
+var sentence = (value) => {
+  const s = value.trim(), capped2 = s.charAt(0).toUpperCase() + s.slice(1);
+  return !s ? "" : /[.!?]["'”’)]+$/.test(capped2) ? capped2 : capped2.replace(/[.!?]*$/, "") + ".";
+};
+function expressionWords(shot, names = {}) {
+  return Object.entries(object2(object2(shot.visual).expression)).filter(([, cue]) => text2(cue)).map(([id, cue]) => `${names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id}: ${text2(cue).replace(/[.\s]+$/, "")}`).join("; ");
+}
+function compileVideoPrompt(shot, source, names = {}, options = {}) {
+  const plan = object2(shot.shot), visual = object2(shot.visual), frames = object2(visual.frames), camera = object2(visual.camera);
+  const msr = frames.mode === "reference";
+  const words = load3("../../skills/storyboard/references/assemble-bg-prompt.js");
+  const views = load3("../../skills/storyboard/references/shot-view.js");
+  const viewWords = camera.view === void 0 ? "" : views.instructions(camera.view);
+  const sizes = viewWords ? words.SIZE_WORDS_OBJECT : words.SIZE_WORDS;
+  const catalogue = load3("../../skills/storyboard/references/film-techniques.js");
+  const contract2 = load3("../../skills/storyboard/references/structure-contract.js");
+  const travels = load3("../../skills/storyboard/references/production-mode.js").travels;
+  const picked = (Array.isArray(plan.techniques) ? plan.techniques : []).map(object2).map((t) => ({
+    id: text2(t.id),
+    from: text2(t.from),
+    to: text2(t.to),
+    on: text2(t.on),
+    entry: catalogue.byId[text2(t.id)]
+  }));
+  const movement = text2(camera.movement), speed = text2(camera.speed), target = text2(camera.target), settle = text2(camera.end);
+  const move = picked.find((t) => t.entry?.fields.movement && movement.toLowerCase().startsWith(t.entry.fields.movement))?.entry;
+  const rack = picked.find((t) => t.entry?.fields.focus);
+  const pace = { slow: "slowly", steady: "steadily", fast: "quickly" }[speed];
+  const ends = travels(camera) ? ", with a short pause on the opening and closing pictures" : "";
+  const moveWords = !movement ? "" : /^(static|fixed|locked)/i.test(movement) ? "The camera holds a static frame." : move?.prompt ? sentence(`The camera ${pace ? pace + " " : ""}${move.prompt.replace("{target}", target || "the subject")}${speed && !pace ? ` at a ${speed} pace` : ""}${ends}`) : sentence(`Camera: ${[speed, movement].filter(Boolean).join(" ")}` + (target ? ` toward ${target}` : "") + ends);
+  const focusWords = !rack ? "" : sentence(rack.from && rack.to ? `Rack focus from ${rack.from} to ${rack.to}` : `${rack.entry.label.en} from the near subject to the far subject`);
+  const sizeWords = sentence(sizes[text2(plan.size)] || ""), angleWords = sentence(words.ANGLE_WORDS[text2(plan.angle)] || "");
+  const framing = sentence([sizes[text2(plan.size)], words.ANGLE_WORDS[text2(plan.angle)]].filter(Boolean).join(", "));
+  const depthWords = plan.depth ? sentence(contract2.depthText(plan.depth)) : "";
+  const other = picked.filter((t) => t.entry && ["camera", "framing"].includes(t.entry.category) && !t.entry.fields.movement && !t.entry.fields.focus && !t.entry.fields.size && !t.entry.fields.angle && !(viewWords && t.entry.fields.viewpoint));
+  const lines = (Array.isArray(shot.narration) ? shot.narration : []).map(object2);
+  const mode = options.mode ?? (lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen") ? "native" : "voiceover");
+  const design = object2(plan.videoDesign);
+  const motion = object2(design.motion);
+  const states = [...new Set((Array.isArray(motion.beats) ? motion.beats : []).map((beat) => text2(object2(beat).state)).filter(Boolean))];
+  const performance2 = planVideoPerformance(shot, { ...options, mode });
+  const acting = load3("../../skills/_shared/scene-acting.js");
+  const beats = acting.performanceBeats(performance2.performance, mode, !msr);
+  const worn = expressionWords(shot, names);
+  const prompt = [
+    msr ? framing : "Start from the given first frame.",
+    msr ? depthWords : "",
+    moveWords,
+    settle ? sentence(`Closing frame: ${settle}`) : "",
+    focusWords,
+    // A beat accent (speed ramp, impact shake) names the moment it fires on.
+    ...other.map((t) => sentence(t.entry.fields.accent && t.entry.prompt ? t.entry.prompt.replace("{cue}", t.on || t.entry.fields.cue) : t.entry.instruction)),
+    viewWords || (text2(camera.framing) ? sentence(`Opening composition: ${text2(camera.framing)}`) : ""),
+    !viewWords && camera.rear && !other.some((t) => t.entry.fields.viewpoint === "rear") ? "View the subject from behind." : "",
+    !viewWords && camera.pov && !other.some((t) => t.entry.fields.viewpoint === "pov") ? sentence(`Point of view: ${text2(camera.pov) || "the named character"}`) : "",
+    sentence(source.action),
+    ...["before", "after", "continuity"].map((key) => text2(design[key]) ? sentence(`${key}: ${text2(design[key])}`) : ""),
+    ...states.filter((state) => ![source.action, design.before, design.after, design.continuity].includes(state)).map((state) => sentence(`Visible state: ${state}`)),
+    !lines.length && beats.length ? "This is a silent scene. Perform the planned action without invented speech or voiceover." : "",
+    ...beats,
+    // The model's default face is pleasant; the authored state has to be named and held (LTX guide: physical cues, state after the action).
+    worn ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : "",
+    frames.mode === "first_last" ? sentence(`End on the given last frame${source.end ? ": " + source.end : ""}`) : source.end ? sentence(`End on ${source.end}`) : "",
+    sentence(`Audio: ${source.sound ? source.sound + (/\b(music|soundtrack|score|bgm|melody|orchestral|song)\b/i.test(source.sound) ? "" : ", no music") : "no music"}`),
+    acting.VIDEO_TEXT_POLICY
+  ].filter(Boolean).join(" ");
+  const foreign = nonEnglishOutsideQuotes(prompt);
+  if (foreign && options.validateLanguage !== false) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks; write action and direction in English`);
+  const bindings = [
+    { attribute: "render", value: object2(plan.render).mode, via: "adapter" },
+    { attribute: "size", value: plan.size, via: !sizeWords ? "unmapped" : msr ? "prompt" : "image", instruction: sizeWords },
+    { attribute: "angle", value: plan.angle, via: !angleWords ? "unmapped" : msr ? "prompt" : "image", instruction: angleWords },
+    { attribute: "view", value: camera.view, via: "prompt", instruction: viewWords },
+    { attribute: "move", value: camera, via: movement ? "prompt" : "unmapped", instruction: moveWords },
+    { attribute: "focus", value: rack ? { id: rack.id, from: rack.from, to: rack.to } : void 0, via: "prompt", instruction: focusWords },
+    { attribute: "depth", value: plan.depth, via: msr ? "prompt" : "image", instruction: depthWords },
+    { attribute: "framePlan", value: frames.mode, via: "adapter" },
+    ...picked.map((t) => ({
+      attribute: "technique",
+      value: t.id,
+      via: !t.entry ? "unmapped" : t.entry.category === "character" ? "image" : t.entry.category === "timing" ? "guidance" : t.entry.category === "framing" || t.entry.fields.angle ? msr ? "prompt" : "image" : "prompt",
+      instruction: t.entry?.instruction
+    })),
+    { attribute: "transition", value: shot.transition, via: "assembly" },
+    ...beats.length ? [{ attribute: "performance", value: performance2, via: "prompt", instruction: beats.join("\n") }] : []
+  ];
+  return { prompt, performance: performance2, directionBindings: bindings.filter((b) => b.value !== void 0), warnings: [
+    ...performance2.warnings,
+    ...bindings.filter((b) => b.value !== void 0 && b.via === "unmapped").map((b) => `No prompt mapping for ${b.attribute}: ${JSON.stringify(b.value)}`),
+    ...rack && !(rack.from && rack.to) ? ["the rack focus names no subjects \u2014 give focus.from and focus.to in shot_icons"] : []
+  ] };
+}
 
 // src/video-routing.ts
-var load4 = createRequire4(import.meta.url);
+var load4 = createRequire5(import.meta.url);
 var shared = fileURLToPath2(new URL("../../skills/_shared/video-selection.js", import.meta.url));
 var modelSettings = fileURLToPath2(new URL("../../skills/_shared/model-settings.js", import.meta.url));
 var routingContext = (episode, shotId) => load4(shared).readVideoContext(episode, shotId);
@@ -32500,6 +32610,9 @@ var videoPlanSchema = external_exports.object({
   episode: external_exports.string().min(1),
   shotId: external_exports.string().min(1),
   requestId: idSchema,
+  purpose: external_exports.enum(["draft", "final", "revision"]).optional(),
+  basedOnRequestId: idSchema.optional(),
+  changeNote: external_exports.string().min(1).max(1e3).optional(),
   operation: external_exports.string().optional(),
   tool: external_exports.string().optional(),
   args: external_exports.record(external_exports.unknown()).default({})
@@ -32570,7 +32683,7 @@ var nativeImageEditSchema = nativeImageSchema.extend({
 var imageResponse = external_exports.object({ data: external_exports.array(external_exports.object({ b64_json: external_exports.string().min(1) })).length(1) }).passthrough();
 
 // src/image-routing.ts
-import { createRequire as createRequire6 } from "node:module";
+import { createRequire as createRequire7 } from "node:module";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
 
 // src/astra-genai-image.ts
@@ -32776,7 +32889,7 @@ var imageJobSchema = external_exports.object({
 var stateSchema2 = external_exports.object({ version: external_exports.literal(1), openingSpendUsd: money, jobs: external_exports.record(imageJobSchema) }).strict();
 
 // src/image-routing.ts
-var load5 = createRequire6(import.meta.url);
+var load5 = createRequire7(import.meta.url);
 var selectionHelper = fileURLToPath4(new URL("../../skills/_shared/image-selection.js", import.meta.url));
 var idSchema2 = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var imagePlanSchema = external_exports.object({
@@ -33310,14 +33423,14 @@ var actingSchema = external_exports.object({
   direction: external_exports.string().trim().min(1).max(500).regex(/^[^<>\[\]|\r\n]+$/, "Use plain delivery direction, without tag markup").optional(),
   tags: external_exports.array(external_exports.string().trim().min(1).max(60).regex(/^[A-Za-z][A-Za-z ,'-]*$/, "Use bare English vocal tag names")).max(6).optional()
 }).strict();
-function compileActing(text2, acting, voice) {
+function compileActing(text3, acting, voice) {
   const shared3 = nodeModule3.createRequire(import.meta.url)("../../skills/_shared/speech-contract.js");
-  return shared3.compileActing(text2, actingSchema.parse(acting || {}), voice);
+  return shared3.compileActing(text3, actingSchema.parse(acting || {}), voice);
 }
 
 // src/tts-models.ts
-import { createRequire as createRequire9 } from "node:module";
-var shared2 = () => createRequire9(import.meta.url)("../../skills/_shared/tts-models.js");
+import { createRequire as createRequire10 } from "node:module";
+var shared2 = () => createRequire10(import.meta.url)("../../skills/_shared/tts-models.js");
 function resolveTtsModel(provider, model2) {
   return shared2().resolveTtsModel(provider, model2);
 }
@@ -33346,16 +33459,16 @@ var speechManageSchema = external_exports.object({
   capabilities: external_exports.object({ provider: external_exports.string().min(1), model: external_exports.string().min(1), audioConditioning: external_exports.boolean(), lipSync: external_exports.boolean(), postLipSync: external_exports.boolean(), nativeSpeech: external_exports.boolean().optional(), evidence: external_exports.string().min(1) }).strict().optional()
 }).strict();
 var hash = (s) => createHash4("sha256").update(s).digest("hex");
-var object2 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
+var object3 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
 function syncProductionClip(scene, boardDir, videoPath, oldClip, warnings) {
   const duration2 = (file) => Number(execFileSync3(
     "ffprobe",
     ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=duration", "-of", "default=nw=1:nk=1", file],
     { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }
   ).trim());
-  const production = object2(scene.productionPlan), cuts = production.cuts;
+  const production = object3(scene.productionPlan), cuts = production.cuts;
   if (Array.isArray(cuts) && cuts.length) {
-    const cut = object2(cuts[0]);
+    const cut = object3(cuts[0]);
     if (cuts.length !== 1 || cut.kind !== "generated_video" || Number(cut.start ?? 0) !== 0 || typeof oldClip !== "string" || typeof cut.path !== "string" || resolve5(boardDir, cut.path) !== resolve5(boardDir, oldClip)) {
       warnings.push("The bound video changed; the authored production cuts were preserved and need an explicit edit before playback uses this clip.");
       return;
@@ -33440,10 +33553,17 @@ function speechVideoPlan(input, capabilities) {
     throw new Error("msr_speech_route: split physical dialogue and inner thoughts into separate shots; thoughts use image2video with timed TTS");
   const mode = capabilities.nativeSpeech && physicalSpeech ? "native" : !onScreen ? "voiceover" : capabilities.audioConditioning && capabilities.lipSync ? "audio_conditioned" : capabilities.postLipSync ? "post_lipsync" : null;
   if (!mode) throw new Error("Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting");
-  const timeline = actingContract().planScenePerformance(scene, measuredDuration);
-  const videoPrompt = actingContract().sceneVideoPrompt(timeline.performance, mode, scene);
+  const saved = object3(object3(object3(scene.visual).video).promptSource);
+  const design = object3(object3(scene.shot).videoDesign);
+  const compiled = compileVideoPrompt(scene, {
+    action: typeof saved.action === "string" ? saved.action : typeof design.action === "string" ? design.action : "",
+    ...typeof saved.end === "string" ? { end: saved.end } : {},
+    ...typeof saved.sound === "string" ? { sound: saved.sound } : {}
+  }, {}, { mode, measureAudio: (line) => mode === "native" ? null : measuredDuration(line), validateLanguage: false });
+  const timeline = compiled.performance;
+  const videoPrompt = compiled.prompt;
   const promptLength = capabilities.provider.trim().toLowerCase() === "astra" ? { characters: videoPrompt.length, maxCharacters: ASTRA_VIDEO_MAX_PROMPT_CHARS, exceeded: videoPrompt.length > ASTRA_VIDEO_MAX_PROMPT_CHARS } : void 0;
-  const warnings = [...timeline.warnings];
+  const warnings = [...compiled.warnings];
   const foreign = nonEnglishOutsideQuotes(videoPrompt);
   if (foreign) warnings.push(`videoPrompt carries authored text in another language ("${foreign}"); write the video prompt in English before video_plan, which refuses it. Only quoted dialogue keeps the video's language.`);
   if (promptLength?.exceeded) warnings.push(`ASTRA video prompt has ${promptLength.characters} characters; the adapter limit is ${promptLength.maxCharacters}. Shorten repeated descriptions or split at a natural action boundary while preserving necessary actions. The plan is unchanged.`);
@@ -33458,10 +33578,10 @@ function manageSpeech(args) {
   const revision = hash(before);
   const mutates = ["prepare", "update", "attach_audio", "attach_video", "retime"].includes(args.action);
   if (mutates && args.expectedRevision !== revision) throw new Error("Read speech first and supply its current expectedRevision; the storyboard may have changed");
-  const doc = object2(win.SB_DOC);
+  const doc = object3(win.SB_DOC);
   const rawCharacters = doc.characters;
   const voiceWarnings = [];
-  const characters = (Array.isArray(rawCharacters) ? rawCharacters : Object.entries(object2(rawCharacters)).map(([id, c]) => ({ ...object2(c), id }))).map((c) => resolveCharacterVoice(object2(c), { episode: dirname5(dirname5(file)), board: win, shot: {} }, voiceWarnings));
+  const characters = (Array.isArray(rawCharacters) ? rawCharacters : Object.entries(object3(rawCharacters)).map(([id, c]) => ({ ...object3(c), id }))).map((c) => resolveCharacterVoice(object3(c), { episode: dirname5(dirname5(file)), board: win, shot: {} }, voiceWarnings));
   const character = (id) => characters.find((c) => c.id === id);
   const audioCharacter = (id) => characterSpeechContract().characterSpeech(character(id), { boardDir: dirname5(file), board: win });
   const scenes = win.SCENES;
@@ -33472,7 +33592,7 @@ function manageSpeech(args) {
   if (args.timingPatch && args.action !== "retime") throw new Error("timingPatch is only used by retime");
   if (args.reuse && args.action !== "attach_video") throw new Error("reuse is only used by attach_video");
   if (args.action === "prepare") {
-    const needsNarrator = object2(win.STORY).version !== "story-v2" || scenes.some((scene) => (scene.narration || []).some((line) => !line.speaker));
+    const needsNarrator = object3(win.STORY).version !== "story-v2" || scenes.some((scene) => (scene.narration || []).some((line) => !line.speaker));
     if ((needsNarrator || doc.narratorCharacterId !== void 0) && (typeof doc.narratorCharacterId !== "string" || !character(doc.narratorCharacterId)))
       throw new Error("Set SB_DOC.characters and narratorCharacterId before preparing speech without explicit speakers; no voice is invented");
     let next = Math.max(0, ...scenes.map((s) => Number(String(s.id || "").replace(/^s/, "")) || 0));
@@ -33504,17 +33624,17 @@ function manageSpeech(args) {
       const oldDelivery = line.delivery;
       Object.assign(line, args.patch);
       if (args.patch.acting === null) delete line.acting;
-      if (args.patch.speaker && object2(win.STORY).version === "story-v2") {
+      if (args.patch.speaker && object3(win.STORY).version === "story-v2") {
         const group = (scene.narration || []).indexOf(line) + 1;
         for (const event of Array.isArray(scene.performance) ? scene.performance : []) {
-          const performance2 = object2(event);
+          const performance2 = object3(event);
           if (performance2.group === group && ["dialogue", "narration"].includes(String(performance2.kind)))
             performance2.character = line.speaker;
         }
       }
       if (speechRevision(line, character(line.speaker)) !== prior) {
-        const video = object2(object2(scene.visual).video);
-        const binding = object2(video.speechBinding);
+        const video = object3(object3(scene.visual).video);
+        const binding = object3(video.speechBinding);
         invalidated = { audio: oldAudio || null, video: Object.keys(video).length && (line.delivery === "on_screen" || oldDelivery === "on_screen" || Object.hasOwn(args.patch, "acting")) || ["audio_conditioned", "post_lipsync"].includes(String(binding.mode)) ? video : null, edit: true };
         delete line.audio;
         if (binding.mode !== "native") line.mediaStatus = "needs_audio";
@@ -33539,8 +33659,8 @@ function manageSpeech(args) {
       );
       const priorAudio = line.audio;
       const audioHash = hash(bytes), lineRevision = speechRevision(line, character(line.speaker));
-      const video = object2(object2(scene.visual).video), binding = object2(video.speechBinding);
-      const boundAudio = Array.isArray(binding.audio) ? binding.audio.map(object2).find((a) => a.lineId === line.id) : void 0;
+      const video = object3(object3(scene.visual).video), binding = object3(video.speechBinding);
+      const boundAudio = Array.isArray(binding.audio) ? binding.audio.map(object3).find((a) => a.lineId === line.id) : void 0;
       if (priorAudio?.sha256 !== audioHash || priorAudio?.revision !== lineRevision || boundAudio && (boundAudio.sha256 !== audioHash || boundAudio.revision !== lineRevision)) {
         const dependsOnSpeech = binding.mode !== "native" && (line.delivery === "on_screen" || ["audio_conditioned", "post_lipsync"].includes(String(binding.mode)));
         invalidated = { audio: priorAudio || null, video: dependsOnSpeech && Object.keys(video).length ? video : null, edit: true };
@@ -33570,7 +33690,7 @@ function manageSpeech(args) {
     const result = contract2.retime(scene, args.timingPatch || {}, measuredDuration);
     scene.performance = result.scene.performance;
     scene.duration = result.scene.duration;
-    const video = object2(object2(scene.visual).video);
+    const video = object3(object3(scene.visual).video);
     if (Object.keys(video).length) video.speechStatus = "stale";
     timing = {
       shotId: scene.id,
@@ -33609,7 +33729,7 @@ function manageSpeech(args) {
       const bytes = readFileSync8(videoPath);
       if (!bytes.length) throw new Error("Video file is empty");
       const native = plan.mode === "native";
-      const sound = object2(scene.sound);
+      const sound = object3(scene.sound);
       if (native && sound.audioSource === "speech") throw new Error("Native video speech lives in the clip soundtrack; sound.audioSource speech would drop it");
       const audio = selected.map(({ line }) => {
         if (native) return { lineId: line.id, revision: speechRevision(line, character(line.speaker)) };
@@ -33618,10 +33738,10 @@ function manageSpeech(args) {
         if (line.audio.generation.text !== line.tts || errors.length) throw new Error("Speech generation evidence changed: " + errors.join("; "));
         return { lineId: line.id, sha256: line.audio.sha256, revision: line.audio.revision };
       });
-      const visual = object2(scene.visual);
-      const video = object2(visual.video);
+      const visual = object3(scene.visual);
+      const video = object3(visual.video);
       if (video.engine && video.engine !== plan.provider || video.model && video.model !== plan.model) throw new Error("Adapter does not match the selected shot model");
-      const priorBinding = object2(video.speechBinding);
+      const priorBinding = object3(video.speechBinding);
       const videoSha256 = hash(bytes);
       const performanceChanged = priorBinding.performanceRevision && priorBinding.performanceRevision !== plan.performanceRevision;
       const audioChanged = Array.isArray(priorBinding.audio) && JSON.stringify(priorBinding.audio) !== JSON.stringify(audio);
@@ -33642,7 +33762,7 @@ function manageSpeech(args) {
         invalidated = { video, edit: true };
       } else {
         if (!tailTrim) syncProductionClip(scene, dirname5(file), videoPath, video.clip, plan.warnings);
-        const trim = object2(scene.edit);
+        const trim = object3(scene.edit);
         if (native && priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256 && (trim.in !== void 0 || trim.out !== void 0)) {
           const { in: sourceIn, out: sourceOut, ...kept } = trim;
           scene.edit = kept;
@@ -33725,6 +33845,7 @@ function manageSpeech(args) {
     const tmp = file + "." + randomUUID2() + ".tmp";
     writeFileSync5(tmp, nextSource);
     renameSync3(tmp, file);
+    refreshVideoReview(dirname5(dirname5(file)));
   }
   const audioPlans = args.action === "plan_audio" ? selected.map(({ scene, line }) => {
     const result = speechAudioPlan(line, character(line.speaker), { boardDir: dirname5(file), board: win });
@@ -33733,7 +33854,7 @@ function manageSpeech(args) {
     } : {} };
     return { shotId: scene.id, lineId: line.id, ...result, generation, arguments: generation };
   }) : void 0;
-  return { revision: hash(readFileSync8(file)), changed, invalidated, plan, timing, ...soundtrack ? { soundtrack } : {}, ...clearedTrim ? { clearedTrim } : {}, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname5(file), board: win }), audioProvenanceStatus: object2(object2(object2(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
+  return { revision: hash(readFileSync8(file)), changed, invalidated, plan, timing, ...soundtrack ? { soundtrack } : {}, ...clearedTrim ? { clearedTrim } : {}, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname5(file), board: win }), audioProvenanceStatus: object3(object3(object3(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
 }
 
 // src/video-sound.ts

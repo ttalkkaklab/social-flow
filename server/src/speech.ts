@@ -18,6 +18,8 @@ import { actingSchema, compileActing, type SpeechActing } from './speech-acting.
 import { resolveTtsModel } from './tts-models.js';
 import { ASTRA_VIDEO_MAX_PROMPT_CHARS } from './astra-video-client.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
+import { compileVideoPrompt } from './video-prompt.js';
+import { refreshVideoReview } from './video-review.js';
 
 const speechSpanContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/speech-span.js') as {
   measure(file: string): { startSeconds: number; endSeconds: number; clipSeconds: number; leadSilenceSeconds: number; tailSilenceSeconds: number } | null;
@@ -131,12 +133,19 @@ export function speechVideoPlan(input: Line[] | {narration?: Line[]; [key: strin
     throw new Error('msr_speech_route: split physical dialogue and inner thoughts into separate shots; thoughts use image2video with timed TTS');
   const mode = capabilities.nativeSpeech && physicalSpeech ? 'native' : !onScreen ? 'voiceover' : capabilities.audioConditioning && capabilities.lipSync ? 'audio_conditioned' : capabilities.postLipSync ? 'post_lipsync' : null;
   if (!mode) throw new Error('Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting');
-  const timeline = actingContract().planScenePerformance(scene,measuredDuration);
-  const videoPrompt = actingContract().sceneVideoPrompt(timeline.performance,mode,scene);
+  const saved = object(object(object(scene.visual).video).promptSource);
+  const design = object(object(scene.shot).videoDesign);
+  const compiled = compileVideoPrompt(scene, {
+    action: typeof saved.action === 'string' ? saved.action : typeof design.action === 'string' ? design.action : '',
+    ...(typeof saved.end === 'string' ? { end: saved.end } : {}),
+    ...(typeof saved.sound === 'string' ? { sound: saved.sound } : {}),
+  }, {}, { mode, measureAudio: line => mode === 'native' ? null : measuredDuration(line as Line), validateLanguage: false });
+  const timeline = compiled.performance;
+  const videoPrompt = compiled.prompt;
   const promptLength = capabilities.provider.trim().toLowerCase() === 'astra'
     ? {characters:videoPrompt.length,maxCharacters:ASTRA_VIDEO_MAX_PROMPT_CHARS,exceeded:videoPrompt.length > ASTRA_VIDEO_MAX_PROMPT_CHARS}
     : undefined;
-  const warnings = [...timeline.warnings];
+  const warnings = [...compiled.warnings];
   const foreign = nonEnglishOutsideQuotes(videoPrompt);
   if (foreign) warnings.push(`videoPrompt carries authored text in another language ("${foreign}"); write the video prompt in English before video_plan, which refuses it. Only quoted dialogue keeps the video's language.`);
   if (promptLength?.exceeded) warnings.push(`ASTRA video prompt has ${promptLength.characters} characters; the adapter limit is ${promptLength.maxCharacters}. Shorten repeated descriptions or split at a natural action boundary while preserving necessary actions. The plan is unchanged.`);
@@ -393,6 +402,7 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
     if (hash(readFileSync(file)) !== revision) throw new Error('Storyboard changed during speech edit');
     const tmp = file + '.' + randomUUID() + '.tmp';
     writeFileSync(tmp, nextSource); renameSync(tmp, file);
+    refreshVideoReview(dirname(dirname(file)));
   }
   const audioPlans = args.action === 'plan_audio' ? selected.map(({scene,line}) => {
     const result = speechAudioPlan(line, character(line.speaker), {boardDir: dirname(file), board: win});

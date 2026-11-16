@@ -146,3 +146,13 @@ test('declared MSR principals rebuild canonical faces and bodies despite stale t
  fs.unlinkSync(path.join(root,'assets/characters/ally/face.png'));
  assert.throws(()=>prepareVideoImages('astra_genai_msr',{prompt:'Exchange'},s,root),/character_panel_missing: ally.*face/);
 });
+
+test('reference preserve and avoid rules reach the mapped image slot and remain visible in bindings',t=>{
+ const root=fixture(t),s=shot('reference',[{...ref(),preserve:['the blue coat'],avoid:['the seated pose']}]);
+ const p=prepareVideoImages('seedance_reference',{prompt:'Walk',model:'dreamina-seedance-2-0-260128'},s,root);
+ assert.match(p.args.prompt,/Image 1.*Preserve: the blue coat.*Do not take from this reference: the seated pose/);
+ assert.deepEqual(p.imageBindings[0].preserve,['the blue coat']);
+ assert.deepEqual(p.imageBindings[0].avoid,['the seated pose']);
+ s.visual.references[0].avoid='bad';
+ assert.throws(()=>prepareVideoImages('seedance_reference',{prompt:'Walk'},s,root),/image_plan_invalid/);
+});

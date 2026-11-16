@@ -4,6 +4,7 @@ import path from 'node:path';
 import { atomicJson } from './routing-files.js';
 export { atomicJson } from './routing-files.js';
 import { fileURLToPath } from 'node:url';
+import { refreshVideoReview } from './video-review.js';
 /** Import old video spend exactly once. Unknown historical costs require explicit reconciliation. */
 function historicalSpend(episode) {
     const events = path.join(episode, '.work/events.jsonl');
@@ -112,6 +113,7 @@ export function videoTransaction(episode, update, openingSpendUsd) {
         }
         const result = update(state);
         atomicJson(file, state);
+        refreshVideoReview(episode);
         return result;
     }
     finally {

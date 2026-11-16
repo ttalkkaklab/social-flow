@@ -151,23 +151,15 @@ function sceneDirection(scene = {}, performance = []) {
   ].join('\n');
 }
 const VIDEO_TEXT_POLICY = 'Keep the entire video image text-free: no subtitles, captions, dialogue text, typography, letters, logos or watermarks, including during speech.';
-function sceneVideoPrompt(performance, mode, scene = {}) {
-  const route = !performance.some(event => event.kind !== 'action')
-    ? 'This is a silent scene. Perform the ordered visible actions without invented speech or voiceover.'
-    : mode === 'native'
-    ? 'Speak each authored line in its speaker\'s voice from the quoted words; no audio is supplied. Only on_screen lines move a visible mouth. Keep off_screen speakers unseen and voiceover separate from physical speech. Do not transcribe speech into the image.'
-    : mode === 'audio_conditioned'
-    ? 'Use the supplied audio as the sole source of spoken words. Synchronize visible mouths only during each on_screen speech interval; follow the delivery instruction for every beat. Do not transcribe speech into the image.'
-    : mode === 'post_lipsync'
-      ? 'Animate the planned action; the selected post lip-sync adapter supplies mouth synchronization from the original audio.'
-      : 'Perform the planned action while the separately supplied voiceover plays; do not turn narration into visible writing.';
+// Shared temporal instructions; native MSR dialogue is mapped to image/audio slots later.
+function performanceBeats(performance, mode, includeDialogue = true) {
   const dialogue = performance.filter(line => line.kind !== 'action').map(line => line.text).filter(text => typeof text === 'string' && text.length);
   const visualDirection = value => {
     let text = String(value);
     for (const words of dialogue) text = text.split(words).join('the supplied speech');
     return text;
   };
-  const beats = performance.map((line, index) => {
+  return performance.map((line, index) => {
     if (line.kind === 'action') {
       const relation = line.withGroup === undefined ? 'in this event order' : `concurrently with speech group ${line.withGroup}; do not add a separate pause`;
       const timing = line.startSeconds === null || line.endSeconds === null ? 'Timing unresolved; preserve this action when timing is planned.' : `Action interval ${line.startSeconds}–${line.endSeconds} seconds.`;
@@ -175,8 +167,10 @@ function sceneVideoPrompt(performance, mode, scene = {}) {
     }
     const acting = {...line.acting, ...(line.videoDirection ? {visual:line.videoDirection} : {})};
     const delivery = line.delivery || 'voiceover';
-    const mouth = delivery === 'on_screen' && mode === 'native'
+    const mouth = delivery === 'on_screen' && mode === 'native' && includeDialogue
       ? `Show this speaker physically saying "${line.text}"; every other visible mouth stays closed.`
+      : delivery === 'on_screen' && mode === 'native'
+      ? 'Only this speaker speaks the separately mapped authored line; other visible mouths stay closed.'
       : delivery === 'on_screen'
       ? 'Show this speaker physically speaking; synchronize only this speaker\'s mouth to their supplied audio during this interval using the selected synchronization route.'
       : delivery === 'off_screen'
@@ -188,8 +182,21 @@ function sceneVideoPrompt(performance, mode, scene = {}) {
     const timing = line.speechStartSeconds == null || line.speechEndSeconds == null
       ? (mode === 'native' ? 'The model paces this line within the shot.' : 'Use the measured speech interval once audio is attached.')
       : `Speech interval ${line.speechStartSeconds}–${line.speechEndSeconds} seconds.`;
-    return `Beat ${index + 1} (speaker: ${visualDirection(line.speaker || 'unspecified')}; delivery: ${delivery}): ${mouth} ${mode === 'native' && delivery !== 'on_screen' ? 'Speak "'+line.text+'". ' : ''}${line.to ? 'Addressed to '+visualDirection(line.to)+'. Preserve this eyeline and the listener in the planned framing.' : ''} ${fields.join(' ')} ${timing} Anticipation ${line.leadInSeconds || 0} seconds; reaction ${line.tailOutSeconds || 0} seconds.`;
+    return `Beat ${index + 1} (speaker: ${visualDirection(line.speaker || 'unspecified')}; delivery: ${delivery}): ${mouth} ${includeDialogue && mode === 'native' && delivery !== 'on_screen' ? 'Speak "'+line.text+'". ' : ''}${line.to ? 'Addressed to '+visualDirection(line.to)+'. Preserve this eyeline and the listener in the planned framing.' : ''} ${fields.join(' ')} ${timing} Anticipation ${line.leadInSeconds || 0} seconds; reaction ${line.tailOutSeconds || 0} seconds.`;
   });
+}
+function sceneVideoPrompt(performance, mode, scene = {}) {
+  const route = !performance.some(event => event.kind !== 'action')
+    ? 'This is a silent scene. Perform the ordered visible actions without invented speech or voiceover.'
+    : mode === 'native'
+    ? 'Speak each authored line in its speaker\'s voice from the quoted words; no audio is supplied. Only on_screen lines move a visible mouth. Keep off_screen speakers unseen and voiceover separate from physical speech. Do not transcribe speech into the image.'
+    : mode === 'audio_conditioned'
+    ? 'Use the supplied audio as the sole source of spoken words. Synchronize visible mouths only during each on_screen speech interval; follow the delivery instruction for every beat. Do not transcribe speech into the image.'
+    : mode === 'post_lipsync'
+      ? 'Animate the planned action; the selected post lip-sync adapter supplies mouth synchronization from the original audio.'
+      : 'Perform the planned action while the separately supplied voiceover plays; do not turn narration into visible writing.';
+  const beats = performanceBeats(performance, mode);
+  const visualDirection = value => performance.filter(line => line.kind !== 'action' && line.text).reduce((text,line) => text.split(line.text).join('the supplied speech'), String(value));
   return ['A clean cinematic image with an unobstructed scene and text-free surfaces.', route, visualDirection(sceneDirection(scene, performance)), ...beats, VIDEO_TEXT_POLICY].join('\n');
 }
-module.exports={estimateSpeechSeconds,actingErrors,resolvedStyle,directionSupport,speechRevisionPayload,VIDEO_TEXT_POLICY,sceneVideoPrompt,planScenePerformance,sceneDirection,scenePerformancePayload,cameraLock};
+module.exports={estimateSpeechSeconds,actingErrors,resolvedStyle,directionSupport,speechRevisionPayload,VIDEO_TEXT_POLICY,sceneVideoPrompt,planScenePerformance,sceneDirection,scenePerformancePayload,cameraLock,performanceBeats};

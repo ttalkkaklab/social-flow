@@ -24,6 +24,7 @@ import { prepareVideoImages } from './video-image-inputs.js';
 import { prepareVideoVoice } from './video-voice.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { compileVideoPrompt } from './video-prompt.js';
+import { readVideoProduction, refreshVideoReview } from './video-review.js';
 const load = createRequire(import.meta.url);
 const shared = fileURLToPath(new URL('../../skills/_shared/video-selection.js', import.meta.url));
 const modelSettings = fileURLToPath(new URL('../../skills/_shared/model-settings.js', import.meta.url));
@@ -110,6 +111,8 @@ function stable(value) {
 const hash = (value) => createHash('sha256').update(JSON.stringify(stable(value))).digest('hex');
 const idSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 export const videoPlanSchema = z.object({ episode: z.string().min(1), shotId: z.string().min(1), requestId: idSchema,
+    purpose: z.enum(['draft', 'final', 'revision']).optional(),
+    basedOnRequestId: idSchema.optional(), changeNote: z.string().min(1).max(1000).optional(),
     operation: z.string().optional(), tool: z.string().optional(), args: z.record(z.unknown()).default({}) }).strict();
 export const videoExecuteSchema = z.object({ episode: z.string().min(1), planId: z.string().regex(/^[a-f0-9]{64}$/) }).strict();
 function within(root, file) {
@@ -212,6 +215,17 @@ export function checkVideoEnvironment(tool) {
 export function planVideo(raw) {
     const input = videoPlanSchema.parse(raw);
     const context = routingContext(input.episode, input.shotId);
+    const take = { ...(input.purpose ? { purpose: input.purpose } : {}), ...(input.basedOnRequestId ? { basedOnRequestId: input.basedOnRequestId } : {}), ...(input.changeNote ? { changeNote: input.changeNote } : {}) };
+    if (input.basedOnRequestId) {
+        const directory = path.join(context.episode, '.work/video-routing/plans');
+        const parent = input.basedOnRequestId !== input.requestId && fs.existsSync(directory) && fs.readdirSync(directory)
+            .filter(file => /^[a-f0-9]{64}\.json$/.test(file)).some(file => {
+            const plan = JSON.parse(fs.readFileSync(path.join(directory, file), 'utf8'));
+            return plan.requestId === input.basedOnRequestId && plan.shotId === input.shotId && plan.episode === context.episode;
+        });
+        if (!parent)
+            throw new Error('video_parent_missing: name a different existing request for this shot');
+    }
     const { selection } = context;
     requireSupportedSelection(selection);
     const lines = (context.shot.narration ?? [])
@@ -235,24 +249,43 @@ export function planVideo(raw) {
     const video = visual?.video;
     const rawCast = context.board.SB_DOC?.characters;
     const names = Object.fromEntries((Array.isArray(rawCast) ? rawCast : []).map(c => [c.id, String(c.name ?? '')]));
+    const performanceInputs = {};
+    const mode = silentPicture ? 'voiceover' : tool && VIDEO_ADAPTERS[tool]?.voice === 'supplied' ? 'audio_conditioned' : 'native';
+    const measureAudio = (line) => {
+        const audio = line.audio;
+        if (mode === 'native' || !audio?.path || !audio.sha256)
+            return null;
+        const file = path.resolve(context.episode, 'storyboard', audio.path);
+        if (!fs.existsSync(file) || createHash('sha256').update(fs.readFileSync(file)).digest('hex') !== audio.sha256)
+            return null;
+        const seconds = Number(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'default=nw=1:nk=1', file], { encoding: 'utf8', timeout: 10000 }));
+        if (!Number.isFinite(seconds) || seconds <= 0)
+            return null;
+        performanceInputs[file] = audio.sha256;
+        return seconds;
+    };
     const compiled = input.args.prompt === undefined && video?.promptSource
-        ? compileVideoPrompt(shot, video.promptSource, names) : undefined;
+        ? compileVideoPrompt(shot, video.promptSource, names, { mode, measureAudio }) : undefined;
     const authored = compiled?.prompt ?? video?.prompt;
     let callArgs = input.args.prompt === undefined && typeof authored === 'string' ? { ...input.args, prompt: authored } : input.args;
     if (tool === 'astra_genai_img2video' && silentPicture)
         callArgs = { ...callArgs, generateAudio: false, prompt: [callArgs.prompt, 'No speech or vocalization. All visible mouths stay closed; perform the planned silent action.'].filter(Boolean).join(' ') };
-    const direction = compiled ? { directionBindings: compiled.directionBindings, directionWarnings: compiled.warnings } :
-        { directionWarnings: [input.args.prompt !== undefined ? 'Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons.' :
+    const sourcePrompt = typeof video?.prompt === 'string' ? video.prompt : '';
+    const direction = compiled ? { sourcePrompt, directionBindings: compiled.directionBindings, directionWarnings: compiled.warnings, performance: compiled.performance } :
+        { sourcePrompt, directionWarnings: [input.args.prompt !== undefined ? 'Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons.' :
                     'Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.'] };
     if (selection.engine === 'host') {
         if (input.tool)
             throw new Error('model_selection_mismatch: host has no server adapter');
         const images = prepareVideoImages('host_external', callArgs, context.shot, context.episode);
-        const body = { version: 1, episode: context.episode, shotId: input.shotId, requestId: input.requestId,
+        const body = { ...take, version: 1, episode: context.episode, shotId: input.shotId, requestId: input.requestId,
             tool: 'host_external', args: callArgs, ...direction, ...(images.imageBindings ? { imageBindings: images.imageBindings, imageHandoff: images.imageHandoff } : {}), selection, source: context.source, contextRevision: context.revision,
-            inputs: Object.fromEntries((images.imageBindings ?? []).map(binding => [binding.path, binding.sha256])), quote: { reserveUsd: 0, estimatedUsd: 0, revision: 'host-allowance-v1', basis: 'External host allowance; limits and actual tool schema must be checked by host; not API enforcement' }, execution: 'host_handoff' };
+            inputs: { ...Object.fromEntries((images.imageBindings ?? []).map(binding => [binding.path, binding.sha256])), ...performanceInputs }, quote: { reserveUsd: 0, estimatedUsd: 0, revision: 'host-allowance-v1', basis: 'External host allowance; limits and actual tool schema must be checked by host; not API enforcement' }, execution: 'host_handoff' };
         const plan = { ...body, id: hash(body) };
-        atomicJson(path.join(context.episode, '.work/video-routing/plans', plan.id + '.json'), plan);
+        const planFile = path.join(context.episode, '.work/video-routing/plans', plan.id + '.json');
+        if (!fs.existsSync(planFile))
+            atomicJson(planFile, plan);
+        refreshVideoReview(context.episode);
         return plan;
     }
     if (!tool)
@@ -303,7 +336,7 @@ export function planVideo(raw) {
         throw new Error('Video output must stay inside the selected episode');
     args.outputPath = output;
     args.filename ??= `video-${input.requestId}.mp4`;
-    const inputs = inputFiles(args, context.episode);
+    const inputs = { ...inputFiles(args, context.episode), ...performanceInputs };
     for (const binding of images.imageBindings ?? [])
         inputs[binding.path] = binding.sha256;
     if (tool === 'fasth3_omni_reference')
@@ -319,12 +352,15 @@ export function planVideo(raw) {
             throw new Error('model_selection_mismatch: retake inherits source dimensions; select the source resolution');
     }
     const quote = quoteVideo(tool, args);
-    const body = { version: 1, episode: context.episode, shotId: input.shotId, requestId: input.requestId, tool, args,
+    const body = { ...take, version: 1, episode: context.episode, shotId: input.shotId, requestId: input.requestId, tool, args,
         ...(images.imageBindings ? { imageBindings: images.imageBindings } : {}),
         sourceArgs: input.args, durationPlan, ...(speechFit ? { speechFit } : {}), ...direction, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
         selection, source: context.source, contextRevision: context.revision, inputs, quote, execution: 'server' };
     const plan = { ...body, id: hash(body) };
-    atomicJson(path.join(context.episode, '.work/video-routing/plans', plan.id + '.json'), plan);
+    const planFile = path.join(context.episode, '.work/video-routing/plans', plan.id + '.json');
+    if (!fs.existsSync(planFile))
+        atomicJson(planFile, plan);
+    refreshVideoReview(context.episode);
     return plan;
 }
 function authorization(context) {
@@ -412,7 +448,7 @@ export async function executeVideo(raw, dispatch) {
         throw new Error('video_plan_stale: the shot\'s frames, prompt, lines, selection or authorization changed');
     if (plan.tool === 'astra_genai_msr')
         await refreshGenaiMsrVoice();
-    const refreshed = planVideo({ episode, shotId: plan.shotId, requestId: plan.requestId, tool: plan.tool, args: plan.sourceArgs ?? plan.args });
+    const refreshed = planVideo({ episode, shotId: plan.shotId, requestId: plan.requestId, tool: plan.tool, args: plan.sourceArgs ?? plan.args, purpose: plan.purpose, basedOnRequestId: plan.basedOnRequestId, changeNote: plan.changeNote });
     if (refreshed.id !== id)
         throw new Error('video_plan_stale: inputs, price or adapter contract changed');
     checkVideoEnvironment(plan.tool);
@@ -429,6 +465,12 @@ export async function executeVideo(raw, dispatch) {
             throw new Error(`video_request_pending: ${existing.status}; provider ID ${existing.providerId || 'unknown'}; do not resubmit`);
         }
         const jobs = Object.values(state.jobs);
+        const target = path.resolve(String(plan.args.outputPath), String(plan.args.filename));
+        if (fs.existsSync(target) || jobs.some(job => {
+            const previous = JSON.parse(fs.readFileSync(path.join(episode, '.work/video-routing/plans', job.planId + '.json'), 'utf8'));
+            return path.resolve(String(previous.args.outputPath), String(previous.args.filename)) === target;
+        }))
+            throw new Error('video_output_conflict: use a unique filename for each candidate; preserve existing takes');
         const occupied = jobs.filter(job => !['completed', 'failed'].includes(job.status));
         if (occupied.length >= auth.maxConcurrent)
             throw new Error('video_concurrency_limit: pending jobs include ambiguous submissions');
@@ -438,7 +480,7 @@ export async function executeVideo(raw, dispatch) {
         if (jobs.filter(job => job.shotId === plan.shotId).length >= auth.maxAttempts)
             throw new Error('video_attempt_limit');
         state.jobs[plan.requestId] = { planId: id, requestId: plan.requestId, shotId: plan.shotId, tool: plan.tool,
-            status: 'submitting', reserveUsd: plan.quote.reserveUsd, updatedAt: new Date().toISOString() };
+            status: 'submitting', reserveUsd: plan.quote.reserveUsd, startedAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
         return undefined;
     }, auth.openingSpendUsd);
     if (cached)
@@ -451,7 +493,7 @@ export async function executeVideo(raw, dispatch) {
     // submission_unknown until video_status reconciles it.
     const settle = (terminal, evidence, result) => videoTransaction(episode, state => {
         const job = state.jobs[plan.requestId];
-        Object.assign(job, { status: terminal ? 'failed' : 'submission_unknown', evidence, updatedAt: new Date().toISOString() }, result ? { result } : {});
+        Object.assign(job, { status: terminal ? 'failed' : 'submission_unknown', ...(terminal ? { finishedAt: new Date().toISOString() } : {}), evidence, updatedAt: new Date().toISOString() }, result ? { result } : {});
         if (terminal && !job.providerId)
             job.settledUsd = 0;
     });
@@ -480,6 +522,7 @@ export async function executeVideo(raw, dispatch) {
             job.status = 'completed';
             job.result = result;
             job.updatedAt = new Date().toISOString();
+            job.finishedAt = job.updatedAt;
             if (job.tokens !== undefined && plan.quote.tokenRate !== undefined)
                 job.settledUsd = job.tokens * plan.quote.tokenRate / 1e6;
             // Unmetered success retains its reservation, explicitly an estimate, never fabricated usage.
@@ -564,9 +607,15 @@ export async function routeLegacyVideo(tool, raw, dispatch) {
 }
 /** Read persisted receipts; refresh polls an existing GenAI job; reconcile settles an unknown request from billing evidence. */
 export async function videoStatus(raw) {
-    const input = z.object({ episode: z.string().min(1), requestId: idSchema, action: z.enum(['read', 'refresh', 'reconcile']).default('read'),
+    const input = z.object({ episode: z.string().min(1), requestId: idSchema.optional(), action: z.enum(['read', 'refresh', 'reconcile']).default('read'),
         executorStopped: z.boolean().optional(), evidence: z.string().min(1).optional(), spentUsd: z.number().finite().nonnegative().optional() }).strict().parse(raw);
     const episode = fs.realpathSync(input.episode);
+    if (!input.requestId) {
+        if (input.action !== 'read')
+            throw new Error('requestId is required to refresh or reconcile');
+        return readVideoProduction(episode);
+    }
+    const requestId = input.requestId;
     const file = path.join(episode, '.work/video-routing/state.json');
     if (!fs.existsSync(file))
         return { requestId: input.requestId, status: 'not_started' };
@@ -575,7 +624,7 @@ export async function videoStatus(raw) {
         if (!input.evidence || input.spentUsd === undefined)
             throw new Error('video_reconciliation_requires_billing_evidence');
         videoTransaction(episode, current => {
-            const job = Object.hasOwn(current.jobs, input.requestId) ? current.jobs[input.requestId] : undefined;
+            const job = Object.hasOwn(current.jobs, requestId) ? current.jobs[requestId] : undefined;
             if (!job || job.status === 'completed')
                 throw new Error('video_reconciliation_requires_unknown_terminal_request');
             if (['reserved', 'submitting', 'submitted'].includes(job.status) && input.executorStopped !== true)
@@ -599,9 +648,10 @@ export async function videoStatus(raw) {
         const result = job.tool.startsWith('astra_genai_desktop_') ? await desktopVideoStatus(receiptPath, true) : await getGenaiVideoStatus({ receiptPath, download: true });
         if (job.providerId && result.jobId !== job.providerId)
             throw new Error('GenAI recovery job ID mismatch');
+        videoTransaction(episode, current => Object.assign(current.jobs[requestId], { providerStatus: result.status, observedAt: new Date().toISOString() }));
         if (result.downloaded) {
             const response = { content: [{ type: 'text', text: JSON.stringify({ ...result, receiptPath }) }] };
-            videoTransaction(episode, current => Object.assign(current.jobs[input.requestId], { status: 'completed', providerId: result.jobId, result: response, updatedAt: new Date().toISOString() }));
+            videoTransaction(episode, current => Object.assign(current.jobs[requestId], { status: 'completed', providerId: result.jobId, result: response, updatedAt: new Date().toISOString(), finishedAt: new Date().toISOString() }));
             return videoStatus({ episode, requestId: input.requestId });
         }
         return { ...job, providerStatus: result.status, recovery: 'Poll this same request with action:refresh; do not resubmit.' };
