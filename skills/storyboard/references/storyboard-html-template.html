@@ -881,6 +881,8 @@
   .size-ico.c-follow { background: linear-gradient(150deg, #6fd88a, #23995a); }
   .size-ico.c-rise { background: linear-gradient(150deg, #ffd25e, #e0901a); }
   .size-ico.c-body { background: linear-gradient(150deg, #ff8a8a, #d63c5a); }
+  /* Beat accents ride on a move, so a shot can show one beside its move chip */
+  .size-ico.c-accent { background: linear-gradient(150deg, #f29be0, #b0379a); }
   /* Transition families — a hard change, a blend through or over the old picture, a moving wipe */
   .size-ico.t-cut { background: linear-gradient(150deg, #9aa6b8, #4b5566); }
   .size-ico.t-blend { background: linear-gradient(150deg, #f29ad8, #a83fa0); }
@@ -1653,7 +1655,7 @@ window.STORYBOARD_READY = (async function () {
       angleKey: "camera angle",
       depthKey: "depth of field",
       camMoveKey: "camera move · one per shot", camFocusKey: "focus · adds to a move",
-      camGroup: { fix: "Locked", travel: "Travel", lens: "Lens", turn: "Rotate", follow: "Follow", rise: "Orbit · height", body: "Body-mounted" },
+      camGroup: { fix: "Locked", travel: "Travel", lens: "Lens", turn: "Rotate", follow: "Follow", rise: "Orbit · height", body: "Body-mounted", accent: "Beat accent" },
       depth: { shallow: "shallow depth", deep: "deep focus", none: "no depth choice", unset: "depth not planned" },
       depthHint: {
         shallow: "One plane stays sharp and the rest falls soft. Name the sharp target: whose eye, which object. A blurred background is never the default.",
@@ -2025,7 +2027,7 @@ window.STORYBOARD_READY = (async function () {
       angleKey: "카메라 앵글",
       depthKey: "심도",
       camMoveKey: "카메라 이동 · 샷당 하나", camFocusKey: "초점 · 이동에 더함",
-      camGroup: { fix: "고정", travel: "앞뒤 이동", lens: "렌즈", turn: "회전", follow: "따라가기", rise: "궤도·높이", body: "몸에 붙은 카메라" },
+      camGroup: { fix: "고정", travel: "앞뒤 이동", lens: "렌즈", turn: "회전", follow: "따라가기", rise: "궤도·높이", body: "몸에 붙은 카메라", accent: "순간 강조" },
       depth: { shallow: "얕은 심도", deep: "딥포커스", none: "심도 선택 없음", unset: "심도 미설정" },
       depthHint: { unset: "이 샷에는 심도 계획이 기록되지 않았습니다." },
       depthRule: "출발점: 읽을 정보 1개 → 얕은 심도, 2개 이상 → 딥포커스, 또는 랙 포커스로 초점을 넘깁니다. 다르게 고르면 이유를 적습니다.",
@@ -2822,12 +2824,13 @@ window.STORYBOARD_READY = (async function () {
      the angle tiles, and the arrow is its path; a lens move redraws the frame instead. */
   var CAM_GROUPS = [
     ["fix", ["camera.static"]],
-    ["travel", ["camera.dolly-in", "camera.dolly-out", "camera.push-past", "camera.drone-pullback"]],
-    ["lens", ["camera.slow-zoom-in", "camera.dolly-zoom"]],
+    ["travel", ["camera.dolly-in", "camera.dolly-out", "camera.push-past", "camera.drone-pullback", "camera.blast-pushback", "camera.drone-dive"]],
+    ["lens", ["camera.slow-zoom-in", "camera.dolly-zoom", "camera.crash-zoom"]],
     ["turn", ["camera.pan-left", "camera.pan-right", "camera.tilt-up", "camera.tilt-down", "camera.whip-pan"]],
-    ["follow", ["camera.follow", "camera.reverse-tracking", "camera.side-tracking"]],
+    ["follow", ["camera.follow", "camera.reverse-tracking", "camera.side-tracking", "camera.pass-through"]],
     ["rise", ["camera.arc", "camera.crane-up"]],
-    ["body", ["camera.handheld", "camera.snorricam"]]
+    ["body", ["camera.handheld", "camera.snorricam", "camera.weapon-cam", "camera.relay"]],
+    ["accent", ["camera.speed-ramp", "camera.impact-shake"]]
   ];
   var CAM_FAMILY = { "camera.rack-focus": "d-depth" };
   CAM_GROUPS.forEach(function (g) { g[1].forEach(function (id) { CAM_FAMILY[id] = "c-" + g[0]; }); });
@@ -2848,6 +2851,11 @@ window.STORYBOARD_READY = (async function () {
       var x1 = cx + r * Math.cos(a1 * R), y1 = cy + r * Math.sin(a1 * R);
       return '<path d="M' + f(cx + r * Math.cos(a0 * R)) + " " + f(cy + r * Math.sin(a0 * R)) + "A" + r + " " + r + " 0 0 " + (s > 0 ? 1 : 0) + " " + f(x1) + " " + f(y1) +
         tip(x1, y1, -s * Math.sin(a1 * R), s * Math.cos(a1 * R)) + '"/>';
+    }
+    // A fast move: the arrow carries a second head behind the first
+    function fast(x1, y1, x2, y2) {
+      var l = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1)), ux = (x2 - x1) / l, uy = (y2 - y1) / l;
+      return line(x1, y1, x2, y2) + '<path d="' + tip(x2 - ux * 3.2, y2 - uy * 3.2, ux, uy) + '"/>';
     }
     var rails = '<path d="M3 27.5h17" class="ico-dim"/>', pan = O(16, 24, 2.6);
     return {
@@ -2875,7 +2883,24 @@ window.STORYBOARD_READY = (async function () {
         '<path d="M5 27q2.75-3 5.5 0t5.5 0 5.5 0 5.5 0"/>',
       "camera.snorricam": '<circle cx="12" cy="11" r="4.5"/><path d="M4 29q0-9.5 8-9.5t8 9.5"/><path d="M17 23.5h9.5V12.5"/>' +
         O(26.5, 9, 2.6) + '<path d="M23.5 9.5h-5" class="ico-dim"/>',
-      "camera.rack-focus": '<g style="opacity:.32">' + DEPTH_NEAR + "</g>" + DEPTH_FAR + line(9.5, 8.5, 18.5, 5.5)
+      "camera.rack-focus": '<g style="opacity:.32">' + DEPTH_NEAR + "</g>" + DEPTH_FAR + line(9.5, 8.5, 18.5, 5.5),
+      // Action moves: the lens snaps in from every corner, the blast throws the camera back, the camera rides a projectile,
+      // flies through two openings, levels then dives, or hops between fighters inside one take.
+      "camera.crash-zoom": '<rect x="4" y="6" width="24" height="20" rx="3" class="ico-dim"/><rect x="13.5" y="13" width="5" height="6" rx="1.2"/>' +
+        line(5.5, 7.5, 11, 11) + line(26.5, 24.5, 21, 21) + line(26.5, 7.5, 21, 11) + line(5.5, 24.5, 11, 21),
+      "camera.blast-pushback": O(12.5, 16) + fast(9.5, 16, 2.5, 16) + '<path d="M19.5 11.5a6.5 6.5 0 0 0 0 9M16.5 8.5a11 11 0 0 0 0 15" class="ico-dim"/>' +
+        '<path d="M26 11.5v9M22.2 13.8l7.6 4.4M22.2 18.2l7.6-4.4"/>',
+      "camera.weapon-cam": '<path d="M3.5 20.5l2.5 5M1.5 23l5 .5" class="ico-dim"/>' + line(4, 23, 21, 12.6) + O(10.5, 19, 2.6) +
+        '<circle cx="26.5" cy="9" r="3.8"/><circle cx="26.5" cy="9" r="1" class="ico-fill"/>',
+      "camera.pass-through": '<path d="M11.5 4v8.5M11.5 19.5V28M20.5 4v8.5M20.5 19.5V28"/>' + O(3.6, 16, 2.2) + fast(6.8, 16, 29, 16),
+      "camera.drone-dive": '<path d="M3 5h4.5M9.5 5H14M5.5 5v2.5M11.5 5v2.5M5 7.5h7"/>' + O(8.5, 9.9, 1.6) +
+        '<path d="M3 16.5h14.5V28" class="ico-dim"/><path d="M13.5 11.5h6.5q5 0 5 5"/>' + line(25, 16, 25, 28),
+      "camera.relay": '<circle cx="6" cy="6.5" r="2.8"/><circle cx="16" cy="6.5" r="2.8"/><circle cx="26" cy="6.5" r="2.8"/>' +
+        turn(10.5, 13, 4.2, 180, 0) + turn(20.5, 13, 4.2, 180, 0) + '<path d="M4 25h8M20 25h8" class="ico-dim"/>' + O(16, 25, 2.6),
+      // Beat accents: speed dips to a near stop at one moment; the frame jolts once and settles
+      "camera.speed-ramp": '<path d="M3 27.5h26" class="ico-dim"/><path d="M3 8h6.5l4.5 15h4l4.5-15H29"/>',
+      "camera.impact-shake": '<rect x="6" y="4.5" width="20" height="13" rx="2.5"/><path d="M3 6v4.5M29 11.5V16" class="ico-dim"/>' +
+        '<path d="M3 25h8.5l2-4.5 3 8.5 2-6 1.5 2H29"/>'
     };
   })();
   function camIcon(id) {
@@ -5107,6 +5132,10 @@ window.STORYBOARD_READY = (async function () {
     }
     if (focusSel) chips += chip(camIcon(focusSel.id), focusSel.entry.label[LANG], camTitle(focusSel.id) +
       (focusSel.from && focusSel.to ? "\n" + focusSel.from + " → " + focusSel.to : "") + (focusSel.reason ? "\n\n" + focusSel.reason : ""));
+    // Beat accents (speed ramp, impact shake) sit beside the move they ride on, each with the moment it fires on.
+    camSel.filter(function (t) { return t.entry.fields.accent; }).forEach(function (t) {
+      chips += chip(camIcon(t.id), t.entry.label[LANG], camTitle(t.id) + (t.on ? "\n" + t.on : "") + (t.reason ? "\n\n" + t.reason : ""));
+    });
     chips += chip(depthIcon(dmode), dlabel || T.depth.unset, dtip || T.depth.unset);
     if (msrLane(s, rmode))
       chips += chip('<svg class="size-ico r-msr" viewBox="0 0 32 32" aria-hidden="true"><text x="16" y="19.5" text-anchor="middle" font-size="10" font-weight="800" letter-spacing="-.3" class="ico-fill">MSR</text></svg>',

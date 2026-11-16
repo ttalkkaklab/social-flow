@@ -7,7 +7,7 @@ import { imageContext } from './image-routing.js';
 import { readImageState } from './image-state.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { speakerBindingSchema } from './video-voice.js';
-import { compileVideoPrompt } from './video-prompt.js';
+import { compileVideoPrompt, expressionWords } from './video-prompt.js';
 import { refreshVideoReview } from './video-review.js';
 import { characterPanels } from './video-image-inputs.js';
 /**
@@ -130,6 +130,7 @@ export const techniqueSelectionSchema = z.array(z.object({
   reason: z.string().trim().min(1).describe('Why this technique serves this shot’s information or action'),
   from: z.string().trim().min(1).optional().describe('Rack focus: the subject sharp first, in English'),
   to: z.string().trim().min(1).optional().describe('Rack focus: the subject sharp last, in English'),
+  on: z.string().trim().min(1).optional().describe('Beat accent: the moment it fires on, in English'),
 }).strict()).superRefine((value, ctx) => {
   for (const message of techniqueContract().validate(value))
     ctx.addIssue({ code: z.ZodIssueCode.custom, message });
@@ -1278,6 +1279,8 @@ export const shotCharactersSchema = z.object({
     id: shotIdSchema,
     characters: z.array(nonEmpty).max(2).refine((ids) => new Set(ids).size === ids.length, 'a character is listed once')
       .describe('Principal characters on screen, subject first; [] when nobody from the cast is on screen'),
+    expression: z.record(nonEmpty, nonEmpty).optional()
+      .describe('Each listed character\'s visible state as the shot opens, in English physical cues read from the scene\'s situation: brows, eyes, mouth, posture. Silent listeners too. An earlier call\'s entry stays when omitted.'),
   }).strict()).min(1),
 }).strict();
 export const shotDialogueSchema = z.object({
@@ -1369,8 +1372,12 @@ export function writeShotCharacters(args: z.infer<typeof shotCharactersSchema>):
   const known = castRegistry(args.path, win);
   const shots = (win.SCENES ?? []).slice();
   const notes: Finding[] = [];
-  for (const { id, characters } of args.shots) {
+  for (const { id, characters, expression } of args.shots) {
     const index = shotIndex(shots, id, 'shot_characters');
+    for (const [character, cue] of Object.entries(expression ?? {})) {
+      if (!characters.includes(character)) throw new Error(`shot_expression_unknown: ${character} is not among ${id}'s characters`);
+      if (nonEnglishOutsideQuotes(cue)) throw new Error(`image_prompt_language: ${id}'s expression for ${character} must be English; it goes into the image and video prompts`);
+    }
     for (const character of characters) {
       if (!known.ids.has(character)) throw new Error(`cast_unknown: ${character} is not in the episode cast`);
       if (known.voiceOnly.has(character)) throw new Error(`cast_voice_only: ${character} is voiceOnly in cast.json and is never on screen — give them sheet panels and drop voiceOnly first`);
@@ -1391,7 +1398,11 @@ export function writeShotCharacters(args: z.infer<typeof shotCharactersSchema>):
     const references = Array.isArray(visual.references) && gone.length
       ? (visual.references as Array<Record<string, unknown>>).filter((ref) => ref?.role !== 'character' || !theirs(ref))
       : visual.references;
-    shots[index] = { ...shots[index], visual: { ...visual, character: entries.length ? entries : null, ...(references !== visual.references ? { references } : {}) },
+    // A character who stays keeps the state an earlier call gave them; one who leaves takes theirs along.
+    const states = { ...(visual.expression as Record<string, string> | undefined), ...expression };
+    const worn = Object.fromEntries(characters.filter((character) => states[character]).map((character) => [character, states[character]]));
+    const { expression: _old, ...rest } = visual;
+    shots[index] = { ...shots[index], visual: { ...rest, character: entries.length ? entries : null, ...(Object.keys(worn).length ? { expression: worn } : {}), ...(references !== visual.references ? { references } : {}) },
       ...(left.length ? { narration: lines.map((line) => line.delivery === 'on_screen' && left.includes(line.speaker) ? { ...line, delivery: 'off_screen' as const } : line) } : {}) };
     if (left.length) notes.push({ level: 'warn', where: id, what: `${left.join(', ')} left the frame, so their on-screen lines are now off_screen — revise them with shot_dialogue if they should change` });
     const back = [...new Set(lines.filter((line) => line.delivery === 'off_screen' && line.speaker && characters.includes(line.speaker)).map((line) => line.speaker))];
@@ -1439,8 +1450,10 @@ export function writeShotDialogue(args: z.infer<typeof shotDialogueSchema>): App
 }
 
 // A video prompt shot_prompt wrote goes stale when what it was written from changes (structure-contract.js promptDrift).
-const isFocus = (id: string) => !!(techniqueContract().entries.find((entry) => entry.id === id)?.fields as Record<string, unknown> | undefined)?.focus;
-const DRIFT_WORDS: Record<string, string> = { frames: 'frame plan', cast: 'characters', lines: 'on-screen lines', camera: 'camera move', focus: 'focus', framing: 'size, angle or depth' };
+// The techniques a written video prompt quotes besides the move: focus and beat accents.
+const isFocus = (id: string) => { const fields = techniqueContract().entries.find((entry) => entry.id === id)?.fields as Record<string, unknown> | undefined;
+  return !!(fields?.focus || fields?.accent); };
+const DRIFT_WORDS: Record<string, string> = { frames: 'frame plan', cast: 'characters', lines: 'on-screen lines', camera: 'camera move', focus: 'focus or beat accent', framing: 'size, angle or depth' };
 function promptNotes(shot: Shot): Finding[] {
   const drift = contract().promptDrift(shot, isFocus);
   return drift.length ? [{ level: 'warn', where: String(shot.id), what: `the video prompt predates a change of ${drift.map((key) => DRIFT_WORDS[key] ?? key).join(', ')} — rewrite it with shot_prompt` }] : [];
@@ -1476,6 +1489,8 @@ export const shotIconsSchema = z.object({
       .describe('A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold …)'),
     focus: choice.extend({ from: nonEmpty.optional(), to: nonEmpty.optional() }).strict().nullable().optional()
       .describe('A camera technique with a focus field (camera.rack-focus) and the subjects it hands focus between; null removes it'),
+    accents: z.array(choice.extend({ on: nonEmpty.optional() }).strict()).optional()
+      .describe('Beat accents laid over the move (camera.speed-ramp, camera.impact-shake), each with the moment it fires on in English; [] removes them'),
     depth: depthSchema.optional(),
     frames: z.object({ mode: z.enum(['first', 'first_last', 'reference']), reason: nonEmpty, endState: nonEmpty.optional() }).strict().optional()
       .describe('Frame plan: reference is MSR (subject images + start image)'),
@@ -1494,7 +1509,7 @@ export function writeShotIcons(args: z.infer<typeof shotIconsSchema>): ApplyResu
   const notes: Finding[] = [];
   // A 9:16 board gets each chosen value's vertical note back as a warning — advice for the choice, never a refusal.
   const vertical = !/16x9/.test(String(win.FORMAT ?? ''));
-  for (const { id, render, size, why, angle, view, backgroundView, move, focus, depth, frames, next } of args.shots) {
+  for (const { id, render, size, why, angle, view, backgroundView, move, focus, accents, depth, frames, next } of args.shots) {
     const index = shotIndex(shots, id, 'shot_icons');
     const plan = { ...(shots[index].shot ?? {}) } as Record<string, unknown>;
     const visual = { ...(shots[index].visual ?? {}) } as Record<string, unknown>;
@@ -1509,7 +1524,7 @@ export function writeShotIcons(args: z.infer<typeof shotIconsSchema>): ApplyResu
     const previous = (plan.render as { mode?: string } | undefined)?.mode;
     if (render && previous && previous !== render.mode) {
       if (render.mode === 'still_camera') {
-        if (Array.isArray(plan.techniques)) plan.techniques = (plan.techniques as Array<{ id: string }>).filter((t) => !field(t.id, 'movement') && !field(t.id, 'focus'));
+        if (Array.isArray(plan.techniques)) plan.techniques = (plan.techniques as Array<{ id: string }>).filter((t) => !field(t.id, 'movement') && !field(t.id, 'focus') && !field(t.id, 'accent'));
         const { movement: _movement, speed: _speed, target: _target, ...camera } = (visual.camera ?? {}) as Record<string, unknown>;
         if (visual.camera) visual.camera = Object.keys(camera).length ? camera : undefined;
       } else if (previous === 'still_camera') {
@@ -1541,7 +1556,8 @@ export function writeShotIcons(args: z.infer<typeof shotIconsSchema>): ApplyResu
       plan.depth = depth;
     }
     // The prompts quote these words, so another language is refused here rather than later at shot_prompt.
-    for (const [name, value] of [['move.target', routed.mode === 'still_camera' ? undefined : move?.target], ['focus.from', focus?.from], ['focus.to', focus?.to]] as Array<[string, string | undefined]>) {
+    for (const [name, value] of [['move.target', routed.mode === 'still_camera' ? undefined : move?.target], ['focus.from', focus?.from], ['focus.to', focus?.to],
+      ...(accents ?? []).map((accent) => ['accents.on', accent.on])] as Array<[string, string | undefined]>) {
       const foreign = value ? nonEnglishOutsideQuotes(value) : '';
       if (foreign) throw new Error(`video_prompt_language: shot_icons ${id} ${name} has "${foreign}"; write it in English, the image and video prompts quote it`);
     }
@@ -1583,7 +1599,16 @@ export function writeShotIcons(args: z.infer<typeof shotIconsSchema>): ApplyResu
       if (focus && !(focus.from && focus.to)) notes.push({ level: 'warn', where: id, what: `${focus.id} names no subjects — give from and to, the subject sharp first and the one sharp last, so the video prompt can say what the focus moves between` });
       techniques = [...techniques.filter((t) => !field(t.id, 'focus')), ...(focus ? [focus] : [])];
     }
-    if ((move && routed.mode !== 'still_camera') || focus !== undefined) plan.techniques = techniques;
+    if (accents !== undefined) {
+      // An accent is a sentence of the video prompt; a still cut has none.
+      if (accents.length && routed.mode === 'still_camera') throw new Error(`shot_icons ${id}: a still_camera cut takes no beat accent — it has no video prompt to carry one`);
+      for (const accent of accents) {
+        if (!field(accent.id, 'accent')) throw new Error(`shot_icons ${id}: ${accent.id} is not a beat accent`);
+        if (!accent.on) notes.push({ level: 'warn', where: id, what: `${accent.id} names no moment — give on (the kick landing, each footfall); without it the video prompt says "${field(accent.id, 'cue')}"` });
+      }
+      techniques = [...techniques.filter((t) => !field(t.id, 'accent')), ...accents];
+    }
+    if ((move && routed.mode !== 'still_camera') || focus !== undefined || accents !== undefined) plan.techniques = techniques;
     if (frames) {
       const old = (visual.frames ?? {}) as Record<string, unknown>, next: Record<string, unknown> = { ...old, ...frames };
       // Only a first_last plan carries an end image; any other plan takes it off (the file stays in images/).
@@ -1655,7 +1680,7 @@ function startImageBasis(shot: Shot, format: unknown): string {
     space: plan.space, composition: plan.composition, eyeline: plan.eyeline, depth: plan.depth,
     techniques: plan.techniques, render: plan.render, camera: visual.camera,
     cast: contract().castOf(shot), location: visual.locationId, locationBinding: plan.location, props: visual.props,
-    action: visual.action, videoDesign: plan.videoDesign,
+    action: visual.action, videoDesign: plan.videoDesign, ...(visual.expression ? { expression: visual.expression } : {}),
     performance: shot.performance,
     acting: shot.narration?.map(line => (line.acting as { visual?: unknown } | undefined)?.visual),
   })).digest('hex');
@@ -1945,6 +1970,12 @@ function buildShotImageRequest(args: z.infer<typeof shotImageSchema> & { prompt:
     return `Image ${i + 1} shows ${ref.purpose}.${role} ${constraints}`;
   }).join(' ');
   const at = (ref: unknown) => ordered.indexOf(ref as ImageRef) + 1;
+  // The shot's authored states, stated positively and late in the prompt; a hand or prop detail shows no face.
+  const faces = args.frame === 'start' && cast.length > 0 && !['object', 'detail'].includes(view?.subjectType ?? '') && view?.mode !== 'rear';
+  const worn = faces ? expressionWords(shot) : '';
+  const blank = faces ? cast.filter((id) => !(visual.expression as Record<string, string> | undefined)?.[id]) : [];
+  if (blank.length) warnings.push({ level: 'warn', code: 'expression_missing', where: args.id,
+    what: `expression_missing: ${blank.join(', ')} ${blank.length > 1 ? 'have' : 'has'} no expression for this shot, so the model draws its default pleasant face — set it with shot_characters expression from the scene's situation, or describe brows, eyes and mouth in prompt` });
   const lock = !set ? (selected && args.frame === 'start'
     ? `Preserve the selected background's ${backgroundView} directional geography and the spatial relationships of visible landmarks. The authored crop, camera height and subject viewpoint control the output; do not copy the background sheet's wide framing. Landmarks outside that crop stay outside the frame. The character sheets supply appearance and identity only; their panel poses do not constrain this shot.`
     : view ? `The location and character sheets supply appearance and identity only. Recompose them to the authored ${args.frame === 'end' ? 'closing' : 'opening'} crop and viewpoint; the sheet pose and camera do not constrain this shot.` : '') : args.frame === 'end'
@@ -1954,9 +1985,11 @@ function buildShotImageRequest(args: z.infer<typeof shotImageSchema> & { prompt:
       + (dutch ? ' Image 1 is level; tilt the whole picture to the dutch angle described below.' : '')
       + (look.some((ref) => ordered.includes(ref)) ? ` Take only materials, colours and light from Image ${at(look[0])}.` : '');
   const prompt = [args.frame === 'start' && view ? `Create one opening image with this required crop: ${view.crop}.` : ordered.length ? 'Compose one picture from these images.' : '', roles, lock, heightSentence(win, cast),
-    view ? 'Character panels identify the subject; include only the body regions named by the crop. A face reference does not require a face in the output. The opening action determines expression and gaze; do not copy a reference smile when the action asks for a different expression.' : '',
+    view ? 'Character panels identify the subject; include only the body regions named by the crop. A face reference does not require a face in the output.' : '',
+    cast.length ? `The face panels give identity only; each expression and gaze comes from the ${args.frame === 'end' ? 'closing' : 'opening'} moment described below.` : '',
     args.frame === 'end' ? 'This is the last frame of the shot that opens on Image 1: keep its place, light and every identity, applying the planned action, camera landing and final focus.' : '',
     ...propPictures.unseen, body.charAt(0).toUpperCase() + body.slice(1),
+    worn ? `Expressions in this frame: ${worn}.` : '',
     args.frame === 'start' && view ? `Final frame boundaries: ${view.crop}.` : ''].filter(Boolean).join(' ');
 
   const call = imageCall({ directory: episode, assetId: args.id, inputs, prompt, width, height, outDir: join(boardDir, 'images'), stem: `${args.id}-${args.frame}`, what: 'this frame' });

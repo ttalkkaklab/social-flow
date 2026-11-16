@@ -36,6 +36,16 @@
   add('camera.tilt-up','camera','틸트 업','Tilt up','제자리에서 위로 고개를 든다. 높이와 규모, 이야기가 이미 힘을 실어 준 인물을 올려 잡기, 인물이 올려다보는 속도에 맞춘 공개.','The camera tilts upward from the named starting target and settles on the named ending target.','M4 16h10v8H4zM22 28V4m-5 5 5-5 5 5M3 29h12',{movement:'tilt up'});
   add('camera.tilt-down','camera','틸트 다운','Tilt down','제자리에서 아래로 내려간다. 얼굴에서 손에 든 물건으로 내려가는 발견, 높은 곳에서 인물로 내려오는 설정, 인물을 작게.','The camera tilts downward from the named starting target and settles on the named ending target.','M4 4h10v8H4zM22 4v24m-5-5 5 5 5-5M3 29h12',{movement:'tilt down'});
   add('camera.eye','camera','눈높이','Eye level','인물 눈높이의 중립 시점. 대화·인터뷰·카메라를 보고 말하는 컷의 기본이며, 실험에서 신뢰를 가장 많이 받았다.','Keep the lens level at the eye height of the named subject.',camera+'M19 12h10M23 4v24',{angle:'eye'});
+  // Action moves and beat accents (2026-11-16). A move's movement opens with a vendor word (production-mode.js
+  // MOVES); an accent rides on whatever move the shot has, so it carries no movement.
+  add('camera.crash-zoom','camera','크래시 줌','Crash zoom','화각을 순식간에 좁혀 한 대상에 꽂는다. 액션·스릴러에서 위협이나 단서를 발견하는 순간, 코미디의 펀치라인.','Crash zoom: from a fixed camera position the lens snaps in under half a second from the wide opening frame to a tight close-up of the named target, then holds.','M3 3h26v26H3zM12 12h8v8h-8zM4 4l6 6m-4 0h4V6M28 28l-6-6m4 0h-4v4',{movement:'zoom in crash',speed:'fast'});
+  add('camera.blast-pushback','camera','블래스트 푸시백','Blast pushback','폭발이나 충격파가 카메라까지 밀어낸다. 관객이 충격을 구경하지 않고 직접 맞게 한다.','The shockwave reaches the camera: it is thrown straight back from the named source, jolts once, and settles on a wider frame that shows the aftermath.',camera+'M19 27H5m4-4-4 4 4 4M26 4v8m-4-6 8 4m-8 0 8-4',{movement:'dolly out blast',speed:'fast'});
+  add('camera.weapon-cam','camera','웨폰 캠','Weapon cam','카메라가 화살·칼·총알처럼 날아가는 물체에 올라탄다. 던지거나 쏜 순간부터 명중 직전까지를 발사체의 자리에서 잇는다.','The camera rides on the named projectile from its release, the tip fixed low in the frame while the surroundings streak past, and stops just short of the target.','M3 25 27 9m-7 0h7v7M7 17l6-4 3 5-6 4z',{movement:'tracking mounted on the projectile',speed:'fast'});
+  add('camera.pass-through','camera','관통 샷','Pass-through shot','달아나는 인물 바로 뒤를 쫓으며 인물이 피해 가는 장애물을 카메라는 그대로 뚫고 지나간다. 좁은 공간의 추격에 속도와 연속감을 준다.','The camera chases close behind the subject in one take and flies straight through each named opening or soft obstacle while the subject ducks under or goes around it.','M10 3v9m0 8v9M20 3v9m0 8v9M2 16h27m-5-5 5 5-5 5',{movement:'tracking through openings',speed:'fast'});
+  add('camera.drone-dive','camera','드론 다이브','Drone dive','낮고 빠르게 수평으로 날다가 가장자리에서 아래로 꺾여 떨어진다. 높이가 있는 추격과 뛰어내림.','An FPV drone camera flies low and level behind the subject, then pitches straight down at the named edge and dives alongside the fall.','M3 5h6M13 5h6M6 5l2 3h6l2-3M8 8h6v4H8zM3 18h14q8 0 8 8v3m-4-4 4 4 4-4',{movement:'aerial dive',speed:'fast'});
+  add('camera.relay','camera','릴레이 원테이크','Relay one-take','컷 없이 한 사람에서 다음 사람으로 카메라를 넘긴다. 여러 명이 한 공간에서 싸우는 장면을 한 호흡으로 잇는다.','One unbroken take: the camera stays with one fighter, swings to the next on a named handoff action such as a duck or a throw, and ends on a wider frame that holds everyone.','M6 4a3 3 0 1 0 .01 0M16 4a3 3 0 1 0 .01 0M26 4a3 3 0 1 0 .01 0M6 13q4.5 8 9 0m-4 1 4-1 1 4M17 13q4.5 8 9 0m-4 1 4-1 1 4M3 27h26',{movement:'handheld relay'});
+  add('camera.speed-ramp','camera','스피드 램프','Speed ramp','정상 속도로 가다가 한 순간만 거의 멈추고 다시 풀린다. 결정타가 닿는 순간을 길게 보여 준다. 무브 위에 얹는 순간 강조다.','Speed ramp: the action runs at normal speed, slows almost to a stop at one named moment, then snaps back to normal speed.','M3 8h7l4 15h4l4-15h7M3 28h26',{accent:'time',cue:'the moment of contact'});
+  add('camera.impact-shake','camera','임팩트 셰이크','Impact shake','사건이 일어날 때마다 화면이 한 번 튀고 가라앉는다. 거대한 존재의 걸음, 착지, 충돌의 무게. 무브 위에 얹는 순간 강조다.','Impact shake: the frame jolts once at each named impact and settles completely still between impacts.','M6 4h20v13H6zM3 25h9l2-5 3 9 2-6 1.5 2H29',{accent:'shake',cue:'each impact'});
   const sizes = [
     ['els','익스트림 롱샷','Extreme long shot','인물을 환경 속 작은 점으로 두어 장소·규모·고립을 보여 준다. 장면의 첫 컷이나 마지막 컷.','extreme long shot, the subject tiny within the surroundings, under a tenth of the frame height',9],
     ['ls','롱샷','Long shot','장면 첫머리의 설정샷. 어디인지, 몇 명인지, 서로 얼마나 떨어졌는지를 한 번에 보여 준다.','wide establishing shot, full body with room above and below, the surroundings readable',21],
@@ -69,8 +79,8 @@
     "camera.static": {"avoid": "따라가기나 연속 공개처럼 고정으로는 낼 수 없는 효과가 필요한 비트.", "specify": "프레임 안에서 무엇이 언제 어디로 움직이는지(왼쪽 3분의 1, 가운데처럼 프레임 기준)."},
     "camera.dolly-in": {"avoid": "습관처럼 반복하는 푸시(힘이 빠진다). 엿보는 관찰자 시점이 목적이면 줌.", "pair": "고정 샷이 이어진 뒤의 약한 푸시가 크게 읽힌다.", "specify": "시작 크롭과 끝 크롭(끝에 얼굴이 화면을 어떻게 채우는지), 움직이기 시작하는 대사나 반응, 속도. 2초 안팎의 느린 푸시는 표류처럼 보인다."},
     "camera.dolly-out": {"avoid": "드러나는 내용과 그 시점이 이야기와 맞지 않을 때. 원근이 고정된 광학적 후퇴면 줌 아웃.", "pair": "장면이나 인물 이야기의 마지막 컷.", "specify": "끝 프레임에 새로 들어오는 것과 그때 인물의 크기, 속도(느리면 감정이 쌓이고 빠르면 충격·펀치라인)."},
-    "camera.slow-zoom-in": {"avoid": "관객이 공간 안으로 들어가는 느낌이 목적이면 달리 인. 줌을 되풀이하면 거슬리고, 빠른 크래시 줌은 코미디 색이 있다.", "specify": "넓게 시작해 무엇이 화면을 채우며 끝나는지, 속도."},
-    "camera.arc": {"avoid": "멋을 내려는 장식용 아크, 어지러운 빠른 아크. 큰 아크는 180도 선을 넘으니 다음 컷 방향을 미리 맞춘다.", "specify": "회전 방향(시계·반시계)과 각도(90°·180°·360°), 속도, 끝에서 보이는 인물의 면, 인물이 멈춰 있는지."},
+    "camera.slow-zoom-in": {"avoid": "관객이 공간 안으로 들어가는 느낌이 목적이면 달리 인. 줌을 되풀이하면 거슬린다. 순식간에 꽂는 줌은 크래시 줌으로 고른다.", "specify": "넓게 시작해 무엇이 화면을 채우며 끝나는지, 속도."},
+    "camera.arc": {"avoid": "멋을 내려는 장식용 아크, 어지러운 빠른 아크. 큰 아크는 180도 선을 넘으니 다음 컷 방향을 미리 맞춘다.", "specify": "회전 방향(시계·반시계)과 각도(90°·180°·360°), 속도, 끝에서 보이는 인물의 면, 인물이 멈춰 있는지. 한 바퀴를 도는 대치라면 도는 동안 바뀌는 것(무기를 뽑는다, 포위가 좁혀진다)을 함께 적는다."},
     "camera.follow": {"avoid": "위협을 의도하지 않았는데 차갑고 매끄럽게 뒤따르면 감시자처럼 읽힌다. 얼굴 반응이 핵심이면 뒤에서는 가려진다.", "pair": "뒷모습 시점(camera.rear)과 함께 고르기 쉽다.", "specify": "따르는 거리와 카메라 높이, 경로·랜드마크·걷는 속도, 멈추는 끝 프레임, 뒤에서 알아볼 단서(머리·옷).", "vertical": "길·통로·복도를 따라 앞으로 나아가는 움직임이 세로 화면에 맞는다."},
     "camera.reverse-tracking": {"avoid": "습관이 된 walk and talk(관례이자 클리셰라는 비판이 있다).", "specify": "인물 수와 대열, 걷는 속도, 유지할 크기, 배경에 지나갈 장소, 멈추는 지점과 그때 보이는 것."},
     "camera.handheld": {"avoid": "관객이 공간을 파악해야 하는 추격(지리를 먼저 세웠을 때만), 연기 디테일이 필요한 클로즈업, 남용.", "specify": "강도 단계(숨쉬듯·관찰형·격렬), 따라가는 대상, 끝에 프레임이 멈추는지, 계속 읽혀야 할 얼굴이나 랜드마크."},
@@ -93,6 +103,14 @@
     "camera.tilt-up": {"avoid": "끝에 새 정보가 없는 틸트. 헤드룸을 맞추는 작은 틸트는 기법이 아니라 리프레이밍이다.", "specify": "시작 대상과 끝 대상, 끝에서 대상이 놓일 위치, 속도.", "vertical": "세로 화면은 높이를 보여 주는 틸트에 맞는다."},
     "camera.tilt-down": {"avoid": "약함을 의도하지 않은 인물을 내려 잡는 것, 헤드룸 맞추기를 기법으로 적는 것.", "specify": "시작 대상과 끝 대상, 끝에서 대상이 놓일 위치."},
     "camera.eye": {"avoid": "키나 자세가 다른 두 사람이 함께 있으면 누구의 눈높이인지 정해야 뜻이 생긴다.", "specify": "기준 인물과 자세(서 있음·앉음), 시선 방향(렌즈 정면, 화면 밖 왼쪽·오른쪽)."},
+    "camera.crash-zoom": {"avoid": "조용한 정극의 깨달음(코미디로 읽히기 쉽다. 그 비트는 빠른 달리 인). 한 장면에 두 번 이상, 도착 대상이 둘 이상일 때.", "pair": "보는 얼굴 → 크래시 줌 → 반응 얼굴. 넓은 시작 프레임을 잠깐 붙잡은 뒤에 들어간다.", "specify": "도착 대상 하나와 끝 크롭, 줌이 시작되는 계기(소리·불빛·시선). 프레임 계획이 first_last면 끝 이미지가 도착 구도를 고정한다."},
+    "camera.blast-pushback": {"avoid": "충격의 원인이 화면에 없을 때, 한 장면에 되풀이할 때.", "pair": "발동 동작(내리치기·점화)을 먼저 보여 준 뒤에 온다. 끝 프레임은 결과를 붙잡는다.", "specify": "충격원과 터지는 계기 동작, 밀려난 뒤의 넓은 끝 프레임에 보이는 것(파인 바닥·쓰러진 상대). 프레임 계획이 first_last면 끝 이미지에 결과를 그린다."},
+    "camera.weapon-cam": {"avoid": "쏘는 사람과 표적의 위치를 앞에서 보여 주지 않은 컷, 발사체가 여럿일 때.", "pair": "당기거나 겨누는 컷 → 웨폰 캠 → 명중이나 빗나감의 결과 컷.", "specify": "표적(shot_icons move의 target), 발사체와 화면에 걸리는 부분(화살촉·칼끝)은 action 문장에, 지나가는 랜드마크, 멈추는 지점과 그때 표적의 상태."},
+    "camera.pass-through": {"avoid": "통과할 틈이 없는 트인 공간, 지리를 세우지 않은 추격. 문 하나를 지나 멈추는 진입이면 푸시 패스트.", "pair": "추격의 방향과 출구를 보여 준 넓은 컷 뒤에 온다.", "specify": "통과할 것을 순서대로(빨랫줄의 천, 창문, 난간 사이), 그때마다 인물이 하는 다른 동작(숙임·돌아감), 끝 프레임."},
+    "camera.drone-dive": {"avoid": "높이 차가 없는 장소, 꺾이는 지점이 두 곳 이상인 경로. 지형 사이의 굽은 길을 보여 주는 비행은 드론 경로 프리셋(drone-flythrough)이 맡는다.", "pair": "가장자리와 그 아래 높이를 보여 준 컷 뒤에 온다.", "specify": "수평 구간의 높이와 따라가는 대상, 수평에서 수직으로 꺾이는 지점(절벽 끝·옥상 난간), 꺾인 뒤 화면 아래에 보이는 것. 프레임 계획이 first_last면 수평 시작과 내려다보는 끝을 따로 그린다."},
+    "camera.relay": {"avoid": "대사가 오가는 장면(샷당 화자는 한 명), 인물 위치를 세우지 않은 첫 컷, 어댑터 길이 상한을 넘는 분량. 한 번에 나오지 않으면 샷을 나눠 휩 전환으로 잇는다.", "pair": "공간과 인원을 보여 준 넓은 컷 뒤에 온다. 롱테이크 시간(timing.long-take)과 함께 고른다.", "specify": "넘기는 순서(누구 → 누구 → 누구), 넘길 때마다의 계기 동작(숙임·메치기), 끝 프레임. 참조 이미지를 받는 주요 인물은 두 명까지이고 나머지는 겉모습으로 적는다."},
+    "camera.speed-ramp": {"avoid": "느려지는 지점이 두 곳 이상인 컷, 대사가 있는 컷(입 모양과 소리가 어긋난다), 타격이 여러 번인 난전.", "pair": "앞뒤 컷은 정상 속도로 둔다. 느려진 동안 카메라는 고정하거나 천천히 옆으로 흐른다.", "specify": "느려지는 순간 하나(shot_icons accents의 on에 영어로), 그동안 공중에 떠 있는 것(물방울·파편), 풀리는 시점."},
+    "camera.impact-shake": {"avoid": "계속 이어지는 흔들림(그건 핸드헬드다), 표정을 읽어야 하는 클로즈업, 원인이 화면이나 소리에 없는 흔들림.", "pair": "고정 프레임 위에 얹을 때 가장 크게 읽힌다. 충격음을 같은 샷의 효과음에 적는다.", "specify": "흔들림의 원인이 되는 사건(shot_icons accents의 on에 영어로: each footfall, the landing), 횟수, 사이사이의 멈춤."},
     "framing.els": {"avoid": "인물을 알아보거나 표정을 읽어야 하는 컷. 휴대폰 화면에서는 넓은 풍경의 힘이 줄어든다.", "pair": "감정 클로즈업과 번갈아 붙이면 장면의 강도가 유지된다.", "specify": "인물 수와 화면 속 위치, 화면 높이 대비 크기, 기준 랜드마크, 지평선 높이, 시간대·날씨.", "vertical": "건물·절벽·하늘 같은 세로 요소를 축으로 쓰고, 카메라를 비스듬히 두어 폭을 만든다. 지평선은 화면 한가운데를 피한다."},
     "framing.ls": {"avoid": "표정과 반응이 정보인 순간(클로즈업으로 좁힌다).", "pair": "설정샷 → 같은 공간 안으로 컷인 → 클로즈업이 이어진 뒤 재설정샷. 가까운 크기로 연 장면은 다음 그림 컷에서 이 크기로 공간을 보여 준다.", "specify": "인물 수, 각자의 화면 위치(좌우·앞뒤), 서로의 간격, 문·창 같은 공간 기준점. 거리는 숫자가 아니라 크기와 배치로 적는다.", "vertical": "세로 화면은 와이드로 대화를 세우기 어렵다. 인물을 옆으로 나란히 두지 말고 앞뒤로 쌓고, 카메라 쪽으로 오가게 움직인다."},
     "framing.fs": {"avoid": "표정이 핵심인 순간. 발목·무릎 같은 관절에서 자르지 않는다.", "pair": "동작의 시작은 풀샷으로 보여 주고 결과나 반응은 더 가까운 크기로 받는다.", "specify": "동작 동사, 발이 닿는 바닥, 의상, 발끝 아래 여백.", "vertical": "세로 화면은 사람 한 명을 머리부터 발끝까지 담기에 알맞다. 전신과 카우보이샷이 세로에서 가장 잘 맞는다."},
@@ -132,7 +150,16 @@
     'camera.pan-left': 'pans left to {target}',
     'camera.pan-right': 'pans right to {target}',
     'camera.tilt-up': 'tilts upward to {target}',
-    'camera.tilt-down': 'tilts downward to {target}'
+    'camera.tilt-down': 'tilts downward to {target}',
+    'camera.crash-zoom': 'crash zooms onto {target} in under half a second',
+    'camera.blast-pushback': 'recoils backward from the shockwave of {target}, jolting once before it settles',
+    'camera.weapon-cam': 'rides on the projectile as it flies toward {target}, its tip fixed low in the frame while the surroundings streak past',
+    'camera.pass-through': 'chases close behind {target} and flies straight through each opening on the way',
+    'camera.drone-dive': 'flies low and level behind {target}, then pitches straight down at the edge and dives',
+    'camera.relay': 'stays in one unbroken take with {target}, then swings to the next fighter on each handoff action',
+    // A beat accent is a whole sentence; {cue} is the moment it fires on (the technique's `on`, else fields.cue).
+    'camera.speed-ramp': 'Speed ramp: the action runs at normal speed, slows almost to a stop at {cue}, then snaps back to normal speed',
+    'camera.impact-shake': 'Impact shake: the frame jolts once on {cue} and settles completely still in between'
   };
   for (const [id, prompt] of Object.entries(PROMPT)) byId[id].prompt = prompt;
   // shot_icons values without a catalogue entry: composition sizes, ground/over angles, depth, still effects.

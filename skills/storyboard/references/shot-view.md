@@ -68,6 +68,8 @@ prop, which anatomical hand acts, who stands on each screen side, and what has a
 happened. Anatomical left/right is not screen left/right. State a deliberate reverse or
 new axis when screen positions change. Show the moment before the planned movement;
 an opening that already completes it removes the action the video needs to perform.
+That rule is about movement. The face opens in the shot's emotion (`shot_characters`
+`expression`): a video model keeps an opening expression far more readily than it changes one.
 
 `shot.size` owns the scale and `view.crop` refines that same scale. A person MS keeps
 waist-up boundaries, MCU chest-up, CU face and shoulder tops, and FS head to toe even

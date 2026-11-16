@@ -32511,6 +32511,9 @@ var sentence = (value) => {
   const s = value.trim(), capped2 = s.charAt(0).toUpperCase() + s.slice(1);
   return !s ? "" : /[.!?]["'”’)]+$/.test(capped2) ? capped2 : capped2.replace(/[.!?]*$/, "") + ".";
 };
+function expressionWords(shot, names = {}) {
+  return Object.entries(object2(object2(shot.visual).expression)).filter(([, cue]) => text2(cue)).map(([id, cue]) => `${names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id}: ${text2(cue).replace(/[.\s]+$/, "")}`).join("; ");
+}
 function compileVideoPrompt(shot, source, names = {}, options = {}) {
   const plan = object2(shot.shot), visual = object2(shot.visual), frames = object2(visual.frames), camera = object2(visual.camera);
   const msr = frames.mode === "reference";
@@ -32525,6 +32528,7 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
     id: text2(t.id),
     from: text2(t.from),
     to: text2(t.to),
+    on: text2(t.on),
     entry: catalogue.byId[text2(t.id)]
   }));
   const movement = text2(camera.movement), speed = text2(camera.speed), target = text2(camera.target), settle = text2(camera.end);
@@ -32546,13 +32550,15 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
   const performance2 = planVideoPerformance(shot, { ...options, mode });
   const acting = load3("../../skills/_shared/scene-acting.js");
   const beats = acting.performanceBeats(performance2.performance, mode, !msr);
+  const worn = expressionWords(shot, names);
   const prompt = [
     msr ? framing : "Start from the given first frame.",
     msr ? depthWords : "",
     moveWords,
     settle ? sentence(`Closing frame: ${settle}`) : "",
     focusWords,
-    ...other.map((t) => sentence(t.entry.instruction)),
+    // A beat accent (speed ramp, impact shake) names the moment it fires on.
+    ...other.map((t) => sentence(t.entry.fields.accent && t.entry.prompt ? t.entry.prompt.replace("{cue}", t.on || t.entry.fields.cue) : t.entry.instruction)),
     viewWords || (text2(camera.framing) ? sentence(`Opening composition: ${text2(camera.framing)}`) : ""),
     !viewWords && camera.rear && !other.some((t) => t.entry.fields.viewpoint === "rear") ? "View the subject from behind." : "",
     !viewWords && camera.pov && !other.some((t) => t.entry.fields.viewpoint === "pov") ? sentence(`Point of view: ${text2(camera.pov) || "the named character"}`) : "",
@@ -32561,6 +32567,8 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
     ...states.filter((state) => ![source.action, design.before, design.after, design.continuity].includes(state)).map((state) => sentence(`Visible state: ${state}`)),
     !lines.length && beats.length ? "This is a silent scene. Perform the planned action without invented speech or voiceover." : "",
     ...beats,
+    // The model's default face is pleasant; the authored state has to be named and held (LTX guide: physical cues, state after the action).
+    worn ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : "",
     frames.mode === "first_last" ? sentence(`End on the given last frame${source.end ? ": " + source.end : ""}`) : source.end ? sentence(`End on ${source.end}`) : "",
     sentence(`Audio: ${source.sound ? source.sound + (/\b(music|soundtrack|score|bgm|melody|orchestral|song)\b/i.test(source.sound) ? "" : ", no music") : "no music"}`),
     acting.VIDEO_TEXT_POLICY
@@ -32983,7 +32991,8 @@ var techniqueSelectionSchema = external_exports.array(external_exports.object({
   id: nonEmptyTechniqueId(),
   reason: external_exports.string().trim().min(1).describe("Why this technique serves this shot\u2019s information or action"),
   from: external_exports.string().trim().min(1).optional().describe("Rack focus: the subject sharp first, in English"),
-  to: external_exports.string().trim().min(1).optional().describe("Rack focus: the subject sharp last, in English")
+  to: external_exports.string().trim().min(1).optional().describe("Rack focus: the subject sharp last, in English"),
+  on: external_exports.string().trim().min(1).optional().describe("Beat accent: the moment it fires on, in English")
 }).strict()).superRefine((value, ctx) => {
   for (const message of techniqueContract().validate(value))
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
@@ -33318,7 +33327,8 @@ var shotCharactersSchema = external_exports.object({
   path: outlinePath,
   shots: external_exports.array(external_exports.object({
     id: shotIdSchema,
-    characters: external_exports.array(nonEmpty).max(2).refine((ids) => new Set(ids).size === ids.length, "a character is listed once").describe("Principal characters on screen, subject first; [] when nobody from the cast is on screen")
+    characters: external_exports.array(nonEmpty).max(2).refine((ids) => new Set(ids).size === ids.length, "a character is listed once").describe("Principal characters on screen, subject first; [] when nobody from the cast is on screen"),
+    expression: external_exports.record(nonEmpty, nonEmpty).optional().describe("Each listed character's visible state as the shot opens, in English physical cues read from the scene's situation: brows, eyes, mouth, posture. Silent listeners too. An earlier call's entry stays when omitted.")
   }).strict()).min(1)
 }).strict();
 var shotDialogueSchema = external_exports.object({
@@ -33351,6 +33361,7 @@ var shotIconsSchema = external_exports.object({
     view: shotViewSchema.optional().describe("Content-led opening subject, crop and viewpoint; saved as visual.camera.view"),
     move: choice.extend({ target: nonEmpty.optional(), speed: external_exports.enum(["very slow", "slow", "steady", "fast", "very fast"]).optional() }).strict().optional().describe("A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold \u2026)"),
     focus: choice.extend({ from: nonEmpty.optional(), to: nonEmpty.optional() }).strict().nullable().optional().describe("A camera technique with a focus field (camera.rack-focus) and the subjects it hands focus between; null removes it"),
+    accents: external_exports.array(choice.extend({ on: nonEmpty.optional() }).strict()).optional().describe("Beat accents laid over the move (camera.speed-ramp, camera.impact-shake), each with the moment it fires on in English; [] removes them"),
     depth: depthSchema.optional(),
     frames: external_exports.object({ mode: external_exports.enum(["first", "first_last", "reference"]), reason: nonEmpty, endState: nonEmpty.optional() }).strict().optional().describe("Frame plan: reference is MSR (subject images + start image)"),
     next: nextTransitionSchema.optional().describe("The join from this shot into the next one, written on the next shot's transition")

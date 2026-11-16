@@ -1216,7 +1216,7 @@ Checks were removed for speed (user directive, 2026-10-31): only the story order
 episode cast (2026-11-01) are enforced, and checks come back once the quality is known. An
 episode goes cast (`storyboard/cast.json`: each character's `identity.md` and, unless
 `voiceOnly`, its face, front and back panels) → story (`story_sequence` → `story_scene` → `story_shot`) → each shot's characters and lines
-(`shot_characters` → `shot_dialogue`) → each scene's music decision (`story_music`) → icon attributes (`shot_icons`) → props and
+(`shot_characters`, with each one's expression → `shot_dialogue`) → each scene's music decision (`story_music`) → icon attributes (`shot_icons`) → props and
 backgrounds → each shot's start image, and the end image a first_last shot needs
 (`shot_image`, generate-cut-images) → video prompt (`shot_prompt`) → each shot's video
 after the user's yes (`video_plan` → `video_approve` → `video_execute`, generate-cut-videos).

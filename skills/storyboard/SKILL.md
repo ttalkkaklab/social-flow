@@ -197,7 +197,19 @@ every scene has shots and every shot has its story: `shot_characters` sets who i
 each shot — at most two principal characters, `[]` for nobody — and then `shot_dialogue` writes
 each shot's lines in spoken order, each attributed to a character from `cast.json`. An on-screen
 speaker is one of the shot's characters; a narrator is a character who speaks in `voiceover`
-without being seen. When a character leaves a shot later, `shot_characters` keeps their lines
+without being seen.
+
+Give each on-screen character an `expression` in the same `shot_characters` call (user
+directive 2026-11-16): what their face and body show as the shot opens, in English. A shot
+story names an action, not a feeling, so read the scene's situation first — what just
+happened to these people and what they stand to lose — then write what a camera sees: brows,
+eyes, mouth, shoulders, hands. "Worried" alone leaves the face to the model, and a model with
+no cue draws a pleasant one; "brows drawn together, eyes searching the tree line, lips pressed
+shut" does not. A mixed label such as "bewildered but grateful" comes out as a smile. The
+silent listener gets a state too. Keep one state per shot: a change of state is the shot's
+action or the next shot. `shot_image` and `shot_prompt` put these words into the prompts.
+
+When a character leaves a shot later, `shot_characters` keeps their lines
 as `off_screen` and warns, and it warns when the start image shows the old cast; revise them
 with `shot_dialogue` and `shot_image`. The third step, once every shot has its characters, sets what the review's
 icon row shows with `shot_icons` (§4): render route, size, angle, camera move, focus, depth,
@@ -536,6 +548,8 @@ convention, not a measured effect. Set the camera move and focus with `shot_icon
 `shot.techniques:[{id,reason}]`; give a video move its `speed` (slow, steady, fast) and `target`,
 and a rack focus its `from` and `to` subjects in English, because `shot_image` stages them and
 `shot_prompt` writes them ("The camera slowly pushes in toward …", "Rack focus from … to …").
+An action beat can lay a beat accent over its move with `shot_icons accents` — `camera.speed-ramp`
+or `camera.impact-shake`, each with `on`, the one moment it fires on in English.
 On a 9:16 board the result lists each chosen value's vertical note; read it before the images.
 Persist other purposeful choices there through `storyboard_apply`.
 The shared source is [film-techniques.js](references/film-techniques.js); exported boards also

@@ -12,6 +12,11 @@ const sentence = (value) => {
     const s = value.trim(), capped = s.charAt(0).toUpperCase() + s.slice(1);
     return !s ? '' : /[.!?]["'”’)]+$/.test(capped) ? capped : capped.replace(/[.!?]*$/, '') + '.';
 };
+/** Each on-screen character's visible state (shot_characters expression): "id: cue; id: cue", or '' when none is set. */
+export function expressionWords(shot, names = {}) {
+    return Object.entries(object(object(shot.visual).expression)).filter(([, cue]) => text(cue))
+        .map(([id, cue]) => `${names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id}: ${text(cue).replace(/[.\s]+$/, '')}`).join('; ');
+}
 /** Compile the current storyboard values at authoring and request time. Never writes the board. */
 export function compileVideoPrompt(shot, source, names = {}, options = {}) {
     const plan = object(shot.shot), visual = object(shot.visual), frames = object(visual.frames), camera = object(visual.camera);
@@ -24,7 +29,7 @@ export function compileVideoPrompt(shot, source, names = {}, options = {}) {
     const contract = load('../../skills/storyboard/references/structure-contract.js');
     const travels = load('../../skills/storyboard/references/production-mode.js').travels;
     const picked = (Array.isArray(plan.techniques) ? plan.techniques : []).map(object).map(t => ({
-        id: text(t.id), from: text(t.from), to: text(t.to), entry: catalogue.byId[text(t.id)],
+        id: text(t.id), from: text(t.from), to: text(t.to), on: text(t.on), entry: catalogue.byId[text(t.id)],
     }));
     const movement = text(camera.movement), speed = text(camera.speed), target = text(camera.target), settle = text(camera.end);
     const move = picked.find(t => t.entry?.fields.movement && movement.toLowerCase().startsWith(t.entry.fields.movement))?.entry;
@@ -49,10 +54,12 @@ export function compileVideoPrompt(shot, source, names = {}, options = {}) {
     const performance = planVideoPerformance(shot, { ...options, mode });
     const acting = load('../../skills/_shared/scene-acting.js');
     const beats = acting.performanceBeats(performance.performance, mode, !msr);
+    const worn = expressionWords(shot, names);
     const prompt = [
         msr ? framing : 'Start from the given first frame.',
         msr ? depthWords : '', moveWords, settle ? sentence(`Closing frame: ${settle}`) : '', focusWords,
-        ...other.map(t => sentence(t.entry.instruction)),
+        // A beat accent (speed ramp, impact shake) names the moment it fires on.
+        ...other.map(t => sentence(t.entry.fields.accent && t.entry.prompt ? t.entry.prompt.replace('{cue}', t.on || t.entry.fields.cue) : t.entry.instruction)),
         viewWords || (text(camera.framing) ? sentence(`Opening composition: ${text(camera.framing)}`) : ''),
         !viewWords && camera.rear && !other.some(t => t.entry.fields.viewpoint === 'rear') ? 'View the subject from behind.' : '',
         !viewWords && camera.pov && !other.some(t => t.entry.fields.viewpoint === 'pov') ? sentence(`Point of view: ${text(camera.pov) || 'the named character'}`) : '',
@@ -61,6 +68,8 @@ export function compileVideoPrompt(shot, source, names = {}, options = {}) {
         ...states.filter(state => ![source.action, design.before, design.after, design.continuity].includes(state)).map(state => sentence(`Visible state: ${state}`)),
         !lines.length && beats.length ? 'This is a silent scene. Perform the planned action without invented speech or voiceover.' : '',
         ...beats,
+        // The model's default face is pleasant; the authored state has to be named and held (LTX guide: physical cues, state after the action).
+        worn ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : '',
         frames.mode === 'first_last' ? sentence(`End on the given last frame${source.end ? ': ' + source.end : ''}`) : source.end ? sentence(`End on ${source.end}`) : '',
         sentence(`Audio: ${source.sound ? source.sound + (/\b(music|soundtrack|score|bgm|melody|orchestral|song)\b/i.test(source.sound) ? '' : ', no music') : 'no music'}`),
         acting.VIDEO_TEXT_POLICY,
