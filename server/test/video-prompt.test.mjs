@@ -15,6 +15,19 @@ test('MSR and frame video prompts keep the authored detail view instead of old p
   }
 });
 
+test('an action move and its beat accents compile into the prompt, each accent on its named moment', () => {
+  const shot = { shot: { render: { mode: 'generated_video' }, techniques: [{ id: 'camera.crash-zoom' },
+    { id: 'camera.speed-ramp', on: 'the moment the kick lands' }, { id: 'camera.impact-shake' }] },
+    visual: { frames: { mode: 'first' }, camera: { movement: 'zoom in crash', speed: 'fast', target: 'the drone lens' } } };
+  const { prompt, directionBindings, warnings } = compileVideoPrompt(shot, { action: 'The courier stops.' });
+  assert.match(prompt, /The camera quickly crash zooms onto the drone lens in under half a second/);
+  assert.match(prompt, /slows almost to a stop at the moment the kick lands, then snaps back/);
+  assert.match(prompt, /jolts once on each impact and settles/); // no moment given: the accent's own default
+  assert.doesNotMatch(prompt, /\{(cue|target)\}/);
+  assert.equal(directionBindings.find(b => b.value === 'camera.speed-ramp').via, 'prompt');
+  assert.deepEqual(warnings, []);
+});
+
 test('current icon values compile with viewpoint and explicit delivery bindings', () => {
   const shot = { shot: { render: { mode: 'generated_video' }, size: 'ms', angle: 'eye',
     techniques: [{ id: 'camera.dolly-in' }, { id: 'camera.rear' }, { id: 'camera.rack-focus', from: 'the pouch', to: 'the leader' }] },

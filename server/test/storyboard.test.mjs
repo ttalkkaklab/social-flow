@@ -573,6 +573,26 @@ describe('icon attributes come after every shot\'s characters', () => {
     assert.deepEqual([wide.written, notes(wide)], [true, []]);
     assert.ok(wide.findings.some((f) => f.level === 'warn' && f.where === 's0001' && /camera.rack-focus names no subjects/.test(f.what)));
   });
+  it('beat accents ride on the move: set, replaced and removed without touching it, refused on a still cut', () => {
+    const dir = storyBoard();
+    writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }, { id: 's0002', characters: [] }] });
+    const set = writeShotIcons({ path: dir, shots: [
+      { id: 's0001', render: { mode: 'generated_video', reason: 'r' }, move: { id: 'camera.static', reason: 'the frame she falls into' },
+        accents: [{ id: 'camera.impact-shake', reason: 'the landing has weight', on: 'the landing' }, { id: 'camera.speed-ramp', reason: 'r' }] },
+      { id: 's0002', render: { mode: 'still_camera', reason: 'r' } },
+    ] });
+    assert.deepEqual(readBoard(dir).win.SCENES[0].shot.techniques, [{ id: 'camera.static', reason: 'the frame she falls into' },
+      { id: 'camera.impact-shake', reason: 'the landing has weight', on: 'the landing' }, { id: 'camera.speed-ramp', reason: 'r' }]);
+    // an accent without its moment is reported, not refused
+    assert.deepEqual(set.findings.filter((f) => /names no moment/.test(f.what)).map((f) => [f.level, f.where]), [['warn', 's0001']]);
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', move: { id: 'camera.crash-zoom', reason: 'the lens lights up', target: 'the drone lens' }, accents: [] }] });
+    const snapped = readBoard(dir).win.SCENES[0];
+    assert.deepEqual(snapped.shot.techniques.map((t) => t.id), ['camera.crash-zoom']);
+    assert.deepEqual(snapped.visual.camera, { movement: 'zoom in crash', speed: 'fast', target: 'the drone lens' });
+    assert.throws(() => writeShotIcons({ path: dir, shots: [{ id: 's0001', accents: [{ id: 'camera.dolly-in', reason: 'r' }] }] }), /not a beat accent/);
+    assert.throws(() => writeShotIcons({ path: dir, shots: [{ id: 's0001', accents: [{ id: 'camera.speed-ramp', reason: 'r', on: '발차기' }] }] }), /video_prompt_language: shot_icons s0001 accents.on/);
+    assert.throws(() => writeShotIcons({ path: dir, shots: [{ id: 's0002', accents: [{ id: 'camera.speed-ramp', reason: 'r' }] }] }), /still_camera cut takes no beat accent/);
+  });
   it('next writes the join into the following shot, where the builder reads it', () => {
     const dir = storyBoard();
     writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }, { id: 's0002', characters: [] }] });

@@ -900,6 +900,7 @@ const shotCameraInput = (() => {
 const enumInput = (values: string[] | undefined, description: string) => ({ type: 'string', ...(values?.length ? { enum: values } : {}), description });
 const techniqueIds = (() => { try { return techniqueContract().entries.map(entry => String(entry.id)); } catch { return []; } })();
 const cameraMoves = (() => { try { return techniqueContract().entries.filter(entry => (entry.fields as Record<string, unknown> | undefined)?.movement).map(entry => String(entry.id)); } catch { return []; } })();
+const beatAccents = (() => { try { return techniqueContract().entries.filter(entry => (entry.fields as Record<string, unknown> | undefined)?.accent).map(entry => String(entry.id)); } catch { return []; } })();
 
 const motionThemes = (() => { try { return Object.keys(motionThemeContract().THEMES); } catch { return []; } })();
 const motionTypes = (() => { try { return motionGraphicTypes(); } catch { return []; } })();
@@ -939,6 +940,7 @@ const storyboardShotInput = {
           reason: { type: 'string', minLength: 1, description: 'The visible information or action that motivates this selection.' },
           from: { type: 'string', minLength: 1, description: 'camera.rack-focus: the subject sharp first, in English' },
           to: { type: 'string', minLength: 1, description: 'camera.rack-focus: the subject sharp last, in English' },
+          on: { type: 'string', minLength: 1, description: 'camera.speed-ramp / camera.impact-shake: the moment the accent fires on, in English' },
         } } },
         size: { type: 'string', description: 'Canonical framing size: mfs=mid-thigh, ms=waist-up. Keep two-shot/POV roles in separate technique or framing prose.' },
         angle: { type: 'string', description: 'Camera angle. Recommended vocabulary is in the directing skill.' },
@@ -4928,7 +4930,7 @@ Set view with subject (visible evidence), reason, crop and mode. It writes visua
 
 Size is distance (els … ecu, insert). Set size and view.crop together when changing the crop. Person shots keep anatomical size boundaries even with a view; set view.subjectType to object or detail when the subject is a prop or body detail despite a character being in the cast. Explicit contradictory crop declarations fail image planning with shot_framing_conflict. Composition labels two/three/ots/pov/back/cutaway/reaction carry no crop; new boards use a distance with view. The technique catalogue gives use, avoid, specify, neighbouring-shot and vertical guidance; these are directing conventions, not measured emotional effects. On 9:16 the result includes the chosen values' vertical advice.
 
-On still_camera, move is a still effect stored in shot.render.camera; other routes use a camera technique and synchronize visual.camera.movement. Route changes drop the old route's movement. A different move replaces its speed/target; the same move keeps them unless provided. Video moves take slow/steady/fast and an English target; rack focus takes English from/to subjects. A new size without why drops the old why. A still hold is deliberate, not an unset move.
+On still_camera, move is a still effect stored in shot.render.camera; other routes use a camera technique and synchronize visual.camera.movement. Route changes drop the old route's movement. A different move replaces its speed/target; the same move keeps them unless provided. Video moves take slow/steady/fast and an English target; rack focus takes English from/to subjects. accents lays camera.speed-ramp or camera.impact-shake over the move, each with the English moment it fires on; they reach the video prompt as one sentence each, and a hero landing is camera.static + angle ground + an impact shake on the landing. A new size without why drops the old why. A still hold is deliberate, not an unset move.
 
 Frame reference means MSR. Changing away from first_last removes the end-image binding; switching to/from reference updates panel use. Camera/view/size/depth/focus changes warn to remake existing images; changed inputs to a written video prompt warn to rewrite it with shot_prompt. next sets the transition into the following shot, with the same checks as storyboard_apply, and is refused on the last shot. Omitted attributes stay unchanged.
 
@@ -4952,7 +4954,7 @@ Refused: missing story/characters (story_order), invalid attributes, incompatibl
           move: { type: 'object', additionalProperties: false, required: ['id', 'reason'], description: 'Camera move icon', properties: {
             id: { type: 'string', enum: [...cameraMoves, ...stillCameraEffects], description: 'A camera.* technique with a movement, or on a still_camera cut a still effect' },
             reason: { type: 'string', description: 'What the move or the hold does for this beat' },
-            target: { type: 'string', description: 'What the move is aimed at, in English on a video cut: what it pushes toward or pans and tilts to, or the person it follows, circles or rises above — the prompt reads "pushes in toward <target>", "follows behind <target>"' },
+            target: { type: 'string', description: 'What the move is aimed at, in English on a video cut: what it pushes toward or pans and tilts to, or the person it follows, circles or rises above — the prompt reads "pushes in toward <target>", "follows behind <target>". A blast pushback names the source of the blast, a weapon cam what the projectile flies toward, a relay one-take the fighter it starts with' },
             speed: { type: 'string', enum: ['very slow', 'slow', 'steady', 'fast', 'very fast'], description: 'Pace: slow, steady or fast on a video cut; very slow (default), slow, fast or very fast on a still effect' },
           } },
           focus: { type: ['object', 'null'], additionalProperties: false, required: ['id', 'reason'], description: 'Focus technique (camera.rack-focus); null removes it', properties: {
@@ -4960,6 +4962,11 @@ Refused: missing story/characters (story_order), invalid attributes, incompatibl
             from: { type: 'string', description: 'The subject sharp first, in English (the start image stages it in focus)' },
             to: { type: 'string', description: 'The subject sharp last, in English' },
           } },
+          accents: { type: 'array', description: 'Beat accent icons laid over the move; [] removes them. An accent fires on one named moment — the model is asked, not guaranteed, to follow it', items: { type: 'object', additionalProperties: false, required: ['id', 'reason'], properties: {
+            id: { type: 'string', enum: beatAccents, description: 'camera.speed-ramp (time slows at one moment) or camera.impact-shake (the frame jolts once per impact)' },
+            reason: { type: 'string', description: 'What the accent does for this beat' },
+            on: { type: 'string', description: 'The moment it fires on, in English: "the moment the kick lands", "each footfall of the golem"' },
+          } } },
           depth: depthInput,
           frames: { type: 'object', additionalProperties: false, required: ['mode', 'reason'], description: 'Frame plan; reference = MSR (subject images + start image), which shows the MSR icon', properties: {
             mode: { type: 'string', enum: ['first', 'first_last', 'reference'], description: 'first = start image · first_last = start and end images · reference = MSR' },
