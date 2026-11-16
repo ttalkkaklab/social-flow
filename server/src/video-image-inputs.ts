@@ -13,14 +13,15 @@ const imageRouting = () => load(fileURLToPath(new URL('../../skills/storyboard/r
   framePlan(scene: unknown): { mode: string; start: string; end: string };
   checkFrames(scene: unknown): string[];
   imageReferences(scene: unknown): ImageReference[];
+  referenceConstraints(ref: ImageReference): string;
 };
-interface ImageReference { id: string; path: string; role: string; use: string; purpose: string }
+interface ImageReference { id: string; path: string; role: string; use: string; purpose: string; preserve?: string[]; avoid?: string[] }
 export const characterPanels = () => load(fileURLToPath(new URL('../../skills/channel/references/character-panels.js', import.meta.url))) as {
   canonicalReferences(boardDir: string, shotId: string, ids: string[], use: string, options?: { combined?: boolean }): ImageReference[];
   sheetPanels(boardDir: string, ids: string[]): Map<string, Record<string, string>>;
 };
 export interface ImageBinding extends ImageMetadata {
-  id: string; path: string; role: string; use: string; purpose: string; submitted: boolean;
+  id: string; path: string; role: string; use: string; purpose: string; submitted: boolean; preserve?: string[]; avoid?: string[];
 }
 interface ShotVisual {
   video?: { strength?: number; referenceLayout?: 'panels' | 'combined' };
@@ -82,6 +83,10 @@ export function prepareVideoImages(tool: string, input: Record<string, unknown>,
       { combined: visual.video?.referenceLayout === 'combined' }),
       ...references.filter(ref => ref.role !== 'character')];
   }
+  references = references.map(ref => {
+    const authored = visual.references?.find(item => item.id === ref.id || path.resolve(episode, 'storyboard', item.path) === path.resolve(episode, 'storyboard', ref.path));
+    return { ...ref, ...(authored?.preserve ? { preserve: authored.preserve } : {}), ...(authored?.avoid ? { avoid: authored.avoid } : {}) };
+  });
   const videoRefs = references.filter(ref => ['video', 'both'].includes(ref.use));
   const frameMode = frames.mode !== 'reference';
   const keyframes = visual.frames?.keyframes;
@@ -98,7 +103,9 @@ export function prepareVideoImages(tool: string, input: Record<string, unknown>,
   const bind = (id: string, file: string, role: string, use: string, purpose: string, submitted: boolean) => {
     const absolute = resolve(file);
     const metadata = verifyImageFile(absolute);
-    bindings.push({ id, path: absolute, role, use, purpose, submitted, ...metadata });
+    const ref = references.find(item => item.id === id);
+    bindings.push({ id, path: absolute, role, use, purpose, submitted, ...metadata,
+      ...(ref?.preserve ? { preserve: ref.preserve } : {}), ...(ref?.avoid ? { avoid: ref.avoid } : {}) });
     return absolute;
   };
   if (host) {
@@ -143,11 +150,11 @@ export function prepareVideoImages(tool: string, input: Record<string, unknown>,
       if (characters.size > 2) throw new Error(`msr_character_limit: references show ${characters.size} characters; reference two principal characters and describe anyone else in the action`);
       // The model card describes each reference first ("Image 1: ..."), then the action.
       const binding = msrPanelBinding(paths, sent, canonicalMsr);
-      args.prompt = [...sent.map((ref, i) => `Image ${i + 1}: ${canonicalMsr && ref.role === 'character' ? '' : ref.role + ', '}${ref.purpose}`),
+      args.prompt = [...sent.map((ref, i) => `Image ${i + 1}: ${canonicalMsr && ref.role === 'character' ? '' : ref.role + ', '}${ref.purpose}${routing.referenceConstraints(ref) ? " " + routing.referenceConstraints(ref) : ""}`),
         ...(start ? [`Image ${sent.length + 1}: ${canonicalMsr ? 'opening composition (people, place, props)' : 'the opening picture, the characters, place and props as the shot begins'}`] : []),
         ...(binding ? [binding] : []), '', String(args.prompt ?? '')].join('\n');
     } else {
-      const guidance = videoRefs.map((ref, i) => `${tool === 'fasth3_omni_reference' ? '<Picture ' + (i + 1) + '>' : 'Image ' + (i + 1)} (${ref.id}, ${ref.role}): ${ref.purpose}`).join('\n');
+      const guidance = videoRefs.map((ref, i) => `${tool === 'fasth3_omni_reference' ? '<Picture ' + (i + 1) + '>' : 'Image ' + (i + 1)} (${ref.id}, ${ref.role}): ${ref.purpose}${routing.referenceConstraints(ref) ? " " + routing.referenceConstraints(ref) : ""}`).join('\n');
       args.prompt = String(args.prompt ?? '') + '\nImage reference roles:\n' + guidance;
     }
   } else if (keyframes) {
@@ -181,7 +188,7 @@ export function prepareVideoImages(tool: string, input: Record<string, unknown>,
       const characters = new Set(ordered.flatMap((ref, i) => ref.role === 'character' ? [characterKey(paths[i])] : []));
       if (characters.size > 2) throw new Error('msr_character_limit: reference at most two principal characters');
       put('references', paths.map((imagePath, i) => ({ imagePath, ...(ordered[i].role === 'background' ? { background: true } : {}) })));
-      args.prompt = [...ordered.map((ref, i) => `Image ${i + 1}: ${ref.role}, ${ref.purpose}`),
+      args.prompt = [...ordered.map((ref, i) => `Image ${i + 1}: ${ref.role}, ${ref.purpose}${routing.referenceConstraints(ref) ? " " + routing.referenceConstraints(ref) : ""}`),
         msrPanelBinding(paths, ordered), '', String(args.prompt ?? '')].filter(Boolean).join('\n');
     }
   }

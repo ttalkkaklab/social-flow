@@ -1252,3 +1252,19 @@ adapter's duration grid and maximum. It follows episode settings and scoped over
 limits remain explicit. `video_plan` rechecks the actual request, rejects over-limit or shorter
 coverage and resolves unspecified lengths upward, including MSR via `requiredSeconds`.
 These are planned timings; native speech and generated playback still need measurement.
+
+## Video plans and candidate review
+
+The shared storyboard shows each saved video request beside its candidate footage:
+authored and adapter prompts, temporal performance, image/voice mappings, changed inputs,
+draft/final/revision lineage, recorded runtime endpoint, elapsed time and estimated or
+settled cost. `video_status {episode}` reads that local overview; a request ID still
+selects one receipt and its existing recovery path. `storyboard_read.videoProduction`
+returns the same data. No status read starts generation.
+
+`shot_prompt` and `speech_manage plan_video` share the camera/performance compiler.
+Native speech remains model-timed; attached speech supplies measured intervals.
+References can declare English `preserve`/`avoid` arrays. Candidate labels and repair
+suggestions do not change saved models, add approval gates or certify footage. Each
+attempt uses a unique filename and the existing authorization; choose a take with the
+existing attachment tool. See [video routing](skills/_shared/video-routing.md#plans-candidate-takes-and-local-review).

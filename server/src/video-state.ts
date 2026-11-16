@@ -4,6 +4,7 @@ import path from 'node:path';
 import { atomicJson } from './routing-files.js';
 export { atomicJson } from './routing-files.js';
 import { fileURLToPath } from 'node:url';
+import { refreshVideoReview } from './video-review.js';
 
 export interface VideoJob {
   planId: string;
@@ -18,6 +19,10 @@ export interface VideoJob {
   providerIds?: string[];
   result?: unknown;
   evidence?: string;
+  startedAt?: string;
+  finishedAt?: string;
+  observedAt?: string;
+  providerStatus?: string;
   updatedAt: string;
 }
 export interface VideoState { version: 1; openingSpendUsd?: number; jobs: Record<string, VideoJob> }
@@ -104,6 +109,7 @@ export function videoTransaction<T>(episode: string, update: (state: VideoState)
     }
     const result = update(state);
     atomicJson(file, state);
+    refreshVideoReview(episode);
     return result;
   } finally { fs.closeSync(fd); fs.unlinkSync(lock); }
 }

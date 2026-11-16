@@ -1169,7 +1169,9 @@ describe('images and the video prompt follow the icon attributes', () => {
     const prompted = writeShotPrompt({ path: dir, id: 's0001', action: 'Mina turns to the door.' }), msr = prompted.prompt;
     // The clip is about to be made, so an open music decision on its scene is said here (warning only).
     assert.ok(prompted.written && prompted.findings.some((f) => f.level === 'warn' && /scene 1 has no music decision/.test(f.what)));
-    assert.equal(msr, 'Medium shot, waist up, at eye level. The camera pushes in toward the subject, with a short pause on the opening and closing pictures. Mina turns to the door. Audio: no music.');
+    assert.match(msr, /^Medium shot, waist up, at eye level\. The camera pushes in toward the subject/);
+    assert.match(msr, /Mina turns to the door\. Audio: no music\./);
+    assert.match(msr, /Keep the entire video image text-free/);
     writeShotPrompt({ path: join(dir, 'scenes.js'), id: 's0001', action: 'Mina turns to the door.', speakerBindings: [
       { speaker: 'mina', screenPosition: 'left', description: 'the woman in blue' }
     ] });
@@ -1178,14 +1180,16 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.equal(bound.speakerBindings[0].screenPosition, 'left');
     assert.match(bound.speakerBindingImageSha256, /^[a-f0-9]{64}$/);
     const framed = writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', end: 'she smiles' }).prompt;
-    assert.equal(framed, 'Start from the given first frame. Mina looks up. Mina says: "안녕". End on the given last frame: she smiles. Audio: no music.');
-    assert.match(writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', sound: 'rain on the window' }).prompt, /Audio: rain on the window, no music\.$/);
-    assert.match(writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', sound: 'a radio plays a song' }).prompt, /Audio: a radio plays a song\.$/);
+    assert.match(framed, /^Start from the given first frame\. Mina looks up\./);
+    assert.match(framed, /speaker: mina; delivery: on_screen.*physically saying "안녕"/);
+    assert.match(framed, /End on the given last frame: she smiles\. Audio: no music\./);
+    assert.match(writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', sound: 'rain on the window' }).prompt, /Audio: rain on the window, no music\./);
+    assert.match(writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', sound: 'a radio plays a song' }).prompt, /Audio: a radio plays a song\./);
     writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', end: 'she smiles' });
     assert.equal(readBoard(dir).win.SCENES[1].visual.video.prompt, framed);
     const relined = writeShotDialogue({ path: dir, shots: [{ id: 's0002', lines: [{ speaker: 'mina', tts: '잠깐!' }] }] });
     assert.ok(relined.findings.some((f) => f.where === 's0002' && /video prompt predates a change of on-screen lines/.test(f.what)));
-    assert.match(writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.' }).prompt, /Mina says: "잠깐!" End on/);
+    assert.match(writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.' }).prompt, /physically saying "잠깐!"/);
     assert.deepEqual(contract().promptDrift(readBoard(dir).win.SCENES[1], () => false), []);
     assert.throws(() => writeShotPrompt({ path: dir, id: 's0002', action: '미나가 웃는다' }), /video_prompt_language/);
     // A new start image takes the end image edited from the old one off the shot.

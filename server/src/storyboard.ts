@@ -8,6 +8,7 @@ import { readImageState } from './image-state.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { speakerBindingSchema } from './video-voice.js';
 import { compileVideoPrompt } from './video-prompt.js';
+import { refreshVideoReview } from './video-review.js';
 import { characterPanels } from './video-image-inputs.js';
 /**
  * Storyboard module — the sequence → scene → shot data behind four tools
@@ -461,6 +462,7 @@ export function readStoryboard(args: z.infer<typeof storyboardReadSchema>): Reco
     note: 'Loaded-module identity, not an install/update action. Compare with the intended build; reconnect after updating.',
   };
   result.readiness = boardReadiness(win, dirname(file));
+  result.videoProduction = (loadFromHere(join(REFERENCES_DIR, 'video-production.js')) as { read(dir: string, board: unknown): unknown }).read(dirname(file), win);
   if ((win.STORY as { authoring?: unknown } | undefined)?.authoring === 'story-first') {
     const { undecided, mismatch } = musicTimeline().spottingReport(win);
     result.musicSpotting = { undecided, mismatch, note: 'Scenes with no music decision, and scenes whose decision the timeline contradicts. story_music records each decision; nothing waits for it.' };
@@ -993,7 +995,11 @@ export function applyStoryboard(args: StoryboardApplyArgs, opts: { outline?: boo
       const visual = shot.visual as Record<string, unknown> | undefined;
       if ((visual?.frames as { mode?: string } | undefined)?.mode !== 'reference'
         || !(contract().castOf(shot) ?? []).every(id => sheets.has(id))) continue;
-      visual!.references = [...characterPanels().canonicalReferences(dirname(file), String(shot.id), contract().castOf(shot) ?? [], 'both'),
+      const authored = Array.isArray(visual!.references) ? visual!.references as Array<Record<string, unknown>> : [];
+      visual!.references = [...characterPanels().canonicalReferences(dirname(file), String(shot.id), contract().castOf(shot) ?? [], 'both').map(ref => {
+        const previous = authored.find(item => item.id === ref.id || item.path === ref.path);
+        return { ...ref, ...(previous?.preserve ? { preserve: previous.preserve } : {}), ...(previous?.avoid ? { avoid: previous.avoid } : {}) };
+      }),
         ...(Array.isArray(visual!.references) ? visual!.references as Array<Record<string, unknown>> : []).filter(ref => ref.role !== 'character')];
     }
   }
@@ -1020,6 +1026,7 @@ export function applyStoryboard(args: StoryboardApplyArgs, opts: { outline?: boo
     try { unlinkSync(tmp); } catch { /* nothing to clean */ }
     throw err;
   }
+  refreshVideoReview(dirname(dirname(file)));
   result.written = true;
   return result;
 }
@@ -1901,6 +1908,10 @@ function buildShotImageRequest(args: z.infer<typeof shotImageSchema> & { prompt:
     ...(typeof place === 'string' ? [{ id: `${args.id}-place`, path: place, role: 'background', use: 'image',
       purpose: set ? `how the ${location} location looks — materials, colours and light only, not its viewpoint or layout` : `the ${location} location${selected ? ` with ${backgroundView} directional geography` : ''}; use its appearance and the spatial relationships of visible landmarks, not its frame extent` }] : []),
   ];
+  for (const ref of refs) {
+    const previous = (visual.references as Array<Record<string, unknown>> | undefined)?.find(item => item.id === ref.id || item.path === ref.path);
+    for (const key of ['preserve', 'avoid']) if (previous?.[key] !== undefined) (ref as unknown as Record<string, unknown>)[key] = previous[key];
+  }
   // The edit starts from the set render, else the place (or, for an end image, the start image); the rest are references.
   // Beside a set render the place picture comes last and stays out when the saved model has no room for it.
   const look = refs.filter((ref) => ref.role === 'background'), others = refs.filter((ref) => ref.role !== 'background' && ref.role !== 'composition');
@@ -1930,7 +1941,8 @@ function buildShotImageRequest(args: z.infer<typeof shotImageSchema> & { prompt:
     const role = !character ? '' : character.id.endsWith('-face')
       ? ' Use only the head and hair above the collar; ignore clothing in this panel.'
       : /-(front|back)$/.test(character.id) ? ' Use this panel for physique and all clothing, including collar, tie and sleeve state.' : '';
-    return `Image ${i + 1} shows ${ref.purpose}.${role}`;
+    const constraints = (loadFromHere(join(REFERENCES_DIR, 'render-routing.js')) as { referenceConstraints(ref: unknown): string }).referenceConstraints(ref);
+    return `Image ${i + 1} shows ${ref.purpose}.${role} ${constraints}`;
   }).join(' ');
   const at = (ref: unknown) => ordered.indexOf(ref as ImageRef) + 1;
   const lock = !set ? (selected && args.frame === 'start'

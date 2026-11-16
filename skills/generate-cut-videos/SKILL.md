@@ -75,3 +75,13 @@ that bound source when `productionPlan.cuts` is absent; an explicit cut list tak
 Refresh an older review shell from the bundled template instead of inventing edit cuts
 just to expose a source clip. Look at each clip before
 assembly. Stop before assembly; review-cut-videos runs only when the user asks.
+
+For the shot's actual request and prior takes, read `video_status {episode}` or
+`storyboard_read.videoProduction`. Prefer omitting `args.prompt`: `shot_prompt` and
+`speech_manage plan_video` share the camera/performance compiler. Keep unresolved native
+speech timing explicit. Reference `preserve`/`avoid` instructions remain attached to their
+image slots. A new take may carry `purpose`, `basedOnRequestId` and `changeNote`; use a
+unique filename. Draft/final labels do not authorize a resolution or model switch.
+Offer low-resolution drafts only when they help test an uncertain shot; reuse completed
+footage and existing authorization. Refresh the shared board to compare candidates,
+then use the existing attachment path. Never treat generation completion as review.

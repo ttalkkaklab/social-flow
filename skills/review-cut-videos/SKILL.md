@@ -24,3 +24,10 @@ The author returns to the earliest defective layer and preserves failed clips an
 Retry generation only within authorized attempt/spending limits and the user's approval of
 each new plan. Recheck corrected clips and affected joins independently, and name the
 actual video files the report covers. This stage does not publish.
+
+Use the candidate comparison on the shared board to match the footage to its actual
+adapter prompt, references and plan version. Record the smallest useful repair: trim,
+audio mix, upscale, speech revision or source-plan correction. Dubbing native speech is
+a choice with lip-sync consequences, not an automatic fallback. Preserve each candidate;
+a regeneration gets its own request ID, output and change note only after the prior
+request is terminal. Report generated shots, attached takes and reviewed shots separately.

@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { spawn, spawnSync, execFileSync } from 'node:child_process';
-import { planVideo, executeVideo, routeLegacyVideo, routingContext, approveVideo, readShotVideoTiming } from '../dist/video-routing.js';
+import { planVideo, executeVideo, routeLegacyVideo, routingContext, approveVideo, readShotVideoTiming, videoStatus } from '../dist/video-routing.js';
 import { VIDEO_ADAPTERS, videoCatalog, speechVideoCapabilities } from '../dist/video-registry.js';
 import { videoTransaction } from '../dist/video-state.js';
 import { recordVideoSubmission, recordVideoTokens } from '../dist/video-events.js';
@@ -497,4 +497,24 @@ test('MSR projects route silent and thought shots to I2V and split speaker chang
  assert.throws(plan,/shot_speaker_limit/);
  shot.narration[1]={id:'l2',speaker:'hero',delivery:'voiceover',tts:'A thought'};f.save();
  assert.throws(plan,/msr_speech_route/);
+});
+
+test('candidate lineage survives revalidation; overview is local and output files cannot be reused',async t=>{
+ const f=fixture(t);
+ const first=planVideo({episode:f.episode,shotId:'s1',requestId:'draft-a',purpose:'draft',operation:'text',args:{prompt:'Open the door.',durationSeconds:8}});
+ await f.execute(first,async(_tool,args)=>{fs.mkdirSync(args.outputPath,{recursive:true});fs.writeFileSync(path.join(args.outputPath,args.filename),'fixture');return result;});
+ const second=planVideo({episode:f.episode,shotId:'s1',requestId:'final-b',purpose:'final',basedOnRequestId:'draft-a',changeNote:'End on the doorway.',operation:'text',args:{prompt:'Hold on the doorway.',durationSeconds:8}});
+ await f.execute(second,async()=>result);
+ const report=await videoStatus({episode:f.episode});
+ assert.equal(report.candidates.length,2);
+ assert.equal(report.summary.completedShots,1);
+ const candidate=report.candidates.find(c=>c.requestId==='final-b');
+ assert.equal(candidate.purpose,'final');assert.ok(candidate.changes.includes('prompt'));
+ assert.equal(candidate.status,'completed');assert.equal(candidate.review,'not_reviewed');
+ assert.ok(candidate.finishedAt);assert.ok(candidate.startedAt);
+ assert.throws(()=>planVideo({episode:f.episode,shotId:'s2',requestId:'wrong',basedOnRequestId:'draft-a',operation:'text',args:{prompt:'x'}}),/video_parent_missing/);
+ const conflict=f.plan('conflict',{filename:first.args.filename});
+ await assert.rejects(f.execute(conflict,async()=>{assert.fail('must not dispatch');}),/video_output_conflict/);
+ await assert.rejects(videoStatus({episode:f.episode,action:'refresh'}),/requestId is required/);
+ assert.ok(fs.readFileSync(path.join(f.episode,'storyboard/video-production-data.js'),'utf8').startsWith('window.VIDEO_PRODUCTION = '));
 });

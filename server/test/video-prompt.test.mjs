@@ -38,3 +38,22 @@ test('current icon values compile with viewpoint and explicit delivery bindings'
   shot.shot.techniques.push({ id: 'timing.dialogue' });
   assert.equal(compileVideoPrompt(shot, source).directionBindings.find(b => b.value === 'timing.dialogue').via, 'guidance');
 });
+
+test('temporal action, measured speech and reactions use one timeline; MSR dialogue stays slot-bound', () => {
+  const shot = { performance: [{kind:'action',character:'hero',text:'Opens the door.',durationSeconds:1},
+    {kind:'dialogue',character:'hero',group:1},{kind:'action',character:'hero',text:'Turns away.',durationSeconds:2}],
+    narration:[{id:'l1',speaker:'hero',delivery:'on_screen',tts:'Wait.',acting:{leadInSeconds:.2,tailOutSeconds:.3}}],
+    visual:{frames:{mode:'reference'}},shot:{videoDesign:{motion:{beats:[{state:'The handle is fully released.'}]}}} };
+  const compiled=compileVideoPrompt(shot,{action:'The hero enters.'},{},{mode:'native'});
+  assert.equal(compiled.performance.timing,'model_timed');
+  assert.equal(compiled.performance.performance[2].startSeconds,null);
+  assert.doesNotMatch(compiled.prompt,/"Wait\."/);
+  assert.match(compiled.prompt,/Opens the door/);
+  assert.match(compiled.prompt,/Visible state: The handle is fully released/);
+  const measured=compileVideoPrompt(shot,{action:'The hero enters.'},{},{mode:'audio_conditioned',measureAudio:()=>2});
+  assert.equal(measured.performance.durationSeconds,5.5);
+  assert.equal(measured.performance.performance[1].speechStartSeconds,1.2);
+  assert.equal(measured.performance.performance[2].startSeconds,3.5);
+  assert.match(measured.prompt,/Speech interval 1.2–3.2/);
+  assert.doesNotMatch(measured.prompt,/"Wait\."/);
+});
