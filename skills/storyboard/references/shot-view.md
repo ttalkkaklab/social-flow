@@ -1,8 +1,48 @@
 # From the story beat to the opening image
 
+## Contents
+
+- [Plan attention across the scene](#plan-attention-across-the-scene)
+- [Decide what the picture must prove](#decide-what-the-picture-must-prove)
+- [Save one opening view](#save-one-opening-view)
+- [Make and inspect the same picture](#make-and-inspect-the-same-picture)
+
 Use this decision procedure for every new picture shot. It is the authoring source of
 truth for content-led framing; the technique catalogue supplies vocabulary and examples.
 Do not choose a camera by shot index, dialogue count, or a diversity quota.
+
+## Plan attention across the scene
+
+Before assigning each unit's visible cast and lines, read the complete scene as action
+and speech. Name what changes, its visible cause and the response that proves the change.
+Use existing story summaries and action fields; this is an authoring pass, not a new schema
+or approval gate. Then compare the scene's views in playback order before making images:
+
+1. Choose what the audience follows at each beat: a face, a consequential hand action,
+   object state, observer's discovery or spatial relationship. A speaking character and
+   the picture's attention subject are separate choices. Close-ups and two-shots remain
+   valid when their performances carry the evidence.
+2. Challenge runs of speaker A / speaker B / two-shot. Describe what each picture adds
+   beyond identifying the voice. Compare a relevant action, POV or space view; replace a
+   redundant portrait only when the alternative makes the event clearer. Different size
+   labels, OTS shoulders or camera motion do not by themselves change the information.
+3. Trace emotional continuity in visible behavior until a specific event changes it.
+   Someone intimidated by a manager may grip a bag, stop at a doorway or follow at a
+   distance. An invitation alone need not release that tension. Show the discovery and
+   the manager's unexpected response before the first relaxed smile. Do not demand
+   exaggerated fear, a new gesture every line or the same emotional arc in every story.
+4. Select on_screen/off_screen from the chosen crop. Physical speech over a hand insert
+   keeps its actual speaker and addressee; voiceover is for thoughts/narration, not a way
+   to bypass speech routing. Retain visible body parts in the cast, keep unseen faces
+   outside the crop and preserve axis, prop ownership and audible presence.
+5. Reconcile story, expression, blocking, view, delivery and prompt together. If an old
+   image already shows a relaxed pose before the release, replace that source image
+   under the existing authorization before regenerating video. Metadata alone cannot
+   turn an accepted portrait into an insert or establish a performance in the pixels.
+
+Do not enforce insert/wide percentages or cut-count targets. Decorative object shots,
+repeated nervous gestures and withheld essential reactions fail this pass even when the
+size distribution looks varied. A sustained facial performance can be the best choice.
 
 ## Decide what the picture must prove
 

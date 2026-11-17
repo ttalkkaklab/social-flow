@@ -16,6 +16,10 @@ For dialogue, read [dialogue coverage](../storyboard/references/dialogue-coverag
 before writing prompts. Confirm the visible speaking face and silent foreground listener
 in OTS; each clip has at most one speaking character, even in a readable two-shot.
 Split speaker changes and set each resulting shot's size and angle before images.
+Choose the attention subject independently of the speaker using the dialogue coverage
+guide: intentional off_screen physical speech may accompany a hand insert, listener
+reaction or spatial view. Keep its voice ownership without adding a speaking face;
+screen-position bindings describe on_screen speakers only.
 If coverage is wrong, return to the earlier authoring/image stages rather than patching
 the prompt alone. Preserve the single MSR speaker's binding and selected voice.
 Silent/inner-thought clips use image2video with `frames.mode:"first"` and

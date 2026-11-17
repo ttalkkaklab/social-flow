@@ -63,8 +63,12 @@ unreviewed identity/dialogue/speaker/lip-sync findings. Saved plans become stale
 speech, voice settings or reference bytes change. Selected audition samples travel
 with the character handoff; no automatic listening gate or paid generation is added.
 
-Each shot now has one speaking character; speaker changes get separate shots with
-speaker-facing framing and camera angles. Two characters may share the picture while
+Each shot has one speaking character; speaker changes get separate generation units.
+[Scene attention](skills/storyboard/references/shot-view.md#plan-attention-across-the-scene)
+chooses the visible evidence independently of the voice: faces, consequential details,
+discovery POVs or spatial relationships. Addressing someone does not pull that listener
+into the crop; off-screen speech can accompany a hand insert without adding a portrait.
+Two characters may share the picture while
 the listener stays silent. Silent shots and inner thoughts use image2video instead of
 MSR; thoughts use pinned character TTS composed to the measured speech/action clock.
 See [dialogue coverage](skills/storyboard/references/dialogue-coverage.md).

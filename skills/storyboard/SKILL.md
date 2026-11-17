@@ -13,7 +13,9 @@ allowed-tools: ["mcp__social-flow__character_manage", "mcp__social-flow__charact
 For motion-graphic shots, follow [motion type selection and design](references/motion-graphics.md): persist `shot.motionGraphic` with a common `THEME.motionGraphicTheme` when the episode needs consistency and contextual `style.theme` (`auto` or an explicit channel theme), choose the type from viewer intent and available evidence, and keep style, choreography and renderer separate. Built-in abstract scenes use the installed `prepare-motion-graphic.js`; asset-dependent types retain their authored or mesh routes.
 
 Follow [dialogue coverage](references/dialogue-coverage.md): split at every speaker
-change, then set each shot's size and angle for its speaker and action. Keep silent
+change without making every new speaker the picture's subject. First plan the scene's
+[attention and visible changes](references/shot-view.md#plan-attention-across-the-scene),
+then set each shot's size, angle and delivery. Keep silent
 listeners in the cast when visible. Use `frames.mode:"first"` and image2video for
 silent/inner-thought shots; thoughts use character `voiceover` with measured, timed TTS.
 
@@ -211,7 +213,9 @@ scene that answers it) → `story_scene` (place, time, event and a one- or two-s
 inside its sequence, with optional `turn`, `charge` and `out`) → `story_shot` (each shot as one sentence of story in its scene; a
 revised shot given another scene moves to the end of that scene). These are provisional
 performance units, not one unit per sentence, gesture or speaker turn. One summary may cover
-a continuous exchange with several lines. Revisit boundaries after the lines are written. No
+a continuous exchange with several lines. Name the visible cause, discovery or changed
+behavior in these summaries before choosing the cast; do not reduce every unit to
+"A says / B answers". Revisit boundaries after the lines are written. No
 image, speech, prompt, camera or dialogue work happens in this step. Each tool refuses a layer
 whose parent is missing (`story_order`). The next step starts once every sequence has scenes,
 every scene has shots and every shot has its story: `shot_characters` sets who is on screen in
@@ -382,7 +386,9 @@ Keep a continuing speaker in the same shot while the frame carries the performan
 new sentence, changed speech purpose, glance or hand gesture alone does not require a cut.
 Split a two-person exchange at every speaker change, even when both faces are readable.
 For face-to-face generated dialogue, apply [dialogue coverage](references/dialogue-coverage.md):
-use speaker-facing OTS/reverse when expressions matter. Each resulting shot gets its
+use speaker-facing OTS/reverse when the speaking face carries the new information, or
+purposeful off_screen speech over a reaction, detail or spatial view when that carries it.
+Each resulting shot gets its
 own size and angle; a two-shot still has only one speaker. Speaker changes require a
 cut; other cuts need a reveal, reaction, viewpoint change or verified generation limit.
 Revise provisional shots before images: preserve line IDs, order, speaker, delivery and acting;

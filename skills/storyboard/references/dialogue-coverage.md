@@ -16,16 +16,21 @@ never gather A's nonconsecutive lines and lose the reply's order. Keep line IDs,
 words, delivery, acting, pauses and reactions. This reduces MSR speaker-assignment risk;
 it does not guarantee model adherence.
 
-A shot may still show two principal characters: the listener stays silent. Choose size
-and angle after allocating lines. Do not reuse the original two-shot camera plan on
-both halves or ask a single generated clip to invent the reverse cut.
+A shot may still show two principal characters: the listener stays silent. The single
+speaker contract divides generation units; it does not make the speaker the picture's
+subject. Before allocating lines, choose the visible evidence for the complete scene
+using [shot-view](shot-view.md#plan-attention-across-the-scene). Then set size, angle and
+delivery for each unit. A reply may stay on a meaningful detail or listener reaction;
+it does not automatically need a reverse. Never ask one generated clip to invent cuts.
 
 | Beat | Shot size and camera angle | Audio |
 | --- | --- | --- |
-| Face-to-face exchange | Speaker-facing medium/medium close-up OTS, then complementary reverse | Only the far visible character speaks; foreground listener stays silent. |
-| Small emotional change | Close-up at eye level or a motivated three-quarter angle, mouth readable | One speaker's consecutive lines. |
+| The speaker's expression carries new information | Speaker-facing OTS or close-up; reverse only when the reply's face matters | One on_screen speaker; other visible mouths stay closed. |
+| Words conceal an action or emotion | Insert on a tightening grip, hidden object or hesitant foot | Physical speech is off_screen when the speaking face is outside the crop; retain the speaker's identity and voice. |
+| The listener's response changes the meaning | Listener reaction or their consequential action | The other character speaks off_screen; the listener does not mouth their words. |
+| Distance, access or a power relation matters | Wide view, doorway framing or motivated rear view exposing the relation | One physical speaker; choose delivery from the actual crop, not a desire for more sizes. |
 | Shared action or spatial relation | Medium/wide two-shot when the action needs both bodies | One speaker only; reply gets its own shot. |
-| Listener reaction, insert or establishing view | Reaction close-up, relevant detail or wide view | No dialogue: image2video. Purposeful off-screen physical speech retains one explicit speaker. |
+| Discovery before a reaction | Named observer's POV of the clue, then the changed response when needed | Silent image2video or purposeful off_screen physical speech; do not reveal the reaction before its cause. |
 | Inner thought | Reaction close-up or purposeful POV/detail; no speaking mouth | image2video plus timed character TTS. |
 
 Keep both cameras on the same side of the dialogue axis, complementary eyelines,
@@ -36,9 +41,9 @@ resulting shot with `shot_icons`; then create its own opening image.
 ## Author before generating
 
 1. Before `shot_dialogue`, split the planned exchange at every speaker change and
-   compare the single speaking identity with the planned visible face. For an existing
+   compare the single speaking identity and delivery with the authored crop. For an existing
    multi-speaker board, repair it before final `shot_icons`. Snapshot the complete affected
-   shots and narration records before splitting. Create the reverse story with `story_shot`, then set its `shot_characters`.
+   shots and narration records before splitting. Create the next visual beat with `story_shot`, then set its `shot_characters`.
    `story_shot` appends a new shot to its scene: read it back, then move the complete new
    record immediately after the source with one `storyboard_apply` using `removeShotIds`
    and `insertShots:[{afterId:sourceId,shots:[completeNewShot]}]`. Keep its stable ID;
@@ -63,15 +68,20 @@ resulting shot with `shot_icons`; then create its own opening image.
    state; do not mirror the image or move actors to manufacture a reverse. Match the
    background view to the camera, using the shared location layout.
 4. Set framing/icons and blocking for each resulting shot, then make its own start image.
-   Inspect actual pixels at the delivery aspect: the speaking mouth is unobstructed and
+   For on_screen speech, inspect actual pixels at the delivery aspect: the speaking mouth is unobstructed and
    sufficiently large; the silent listener may stay soft while the speaking face stays readable.
    Portrait layouts and foreground depth must not hide the speaking face. A frame
-   label or a current receipt is not visual verification.
+   label or a current receipt is not visual verification. For intentional off_screen
+   speech, inspect the planned detail, listener or space instead; do not widen the crop
+   to add the speaker's face. A visible hand still belongs in the cast. Explain why the
+   face is outside the crop; off_screen is not a workaround for accidental occlusion.
 5. After images, write `shot_prompt` action/end/sound in English. Dialogue stays only in
-   `shot_dialogue`; do not paste spoken quotes into action. For an MSR speaker, inspect
+   `shot_dialogue`; do not paste spoken quotes into action. For an on_screen MSR speaker, inspect
    the start image and pass `speakerBindings` with its viewer-relative position and
    appearance. Image/Audio indices are reference slots, not left/right.
    Rebuild bindings after image changes, including a reverse; never copy them blindly.
+   Off_screen speech keeps its character voice/sample ownership; do not invent a visible
+   face or screen position to supply a binding. A voice reference is not a framing command.
 6. Plan the revised clips and reconcile duration and cost with existing authorization.
    A split is not permission to generate more media, exceed the budget or replace an
    approved clip. Changed inputs require fresh plans and the existing `video_approve`
@@ -108,10 +118,13 @@ to MSR instead. See [shot speech](../../produce/references/shot-speech.md).
 
 ## Worked cases
 
-- **A asks, B answers, A reacts aloud:** three independently generated shots in that
-  order. Use OTS toward A, reverse toward B, then A's reaction framing. Each shot may
-  include the silent listener. Bind the one speaker from that shot's actual image.
-- **A continues for three lines:** one speaker-facing shot can carry all three lines.
+- **A asks, B answers, A reacts aloud:** three independently generated units in that
+  order. Compare the speaking face with the evidence that changes: B's tightened grip
+  under A's question, the obstacle B indicates while answering, then A's changed face.
+  Use that alternative only if those actions belong to the story. OTS/reverse remains
+  valid when the faces carry the change; preserve one speaker and the authored delivery.
+- **A continues for three lines:** one sustained view can carry all three; the view may
+  show A, the listener or a meaningful action. Do not add cutaways just to vary the sizes.
 - **Both faces readable:** a two-shot still has just one speaker; cut for the reply.
 - **A thinks, then speaks:** thought close-up uses image2video plus A's timed TTS;
   the next shot uses MSR for A's physical speech. The thought never animates a mouth.

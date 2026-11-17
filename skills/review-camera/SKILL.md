@@ -16,8 +16,16 @@ Read
 [shot continuity](../storyboard/references/shot-continuity.md) and
 [dialogue coverage](../storyboard/references/dialogue-coverage.md). Test its worked cases
 against each speaking shot: fixed OTS with two speakers, unreadable profile two-shots,
-valid one-speaker OTS and valid two-speaker two-shots. Inspect the whole reverse sequence
+valid one-speaker OTS and two-person shots with one speaker. Inspect the whole sequence
 for speech ownership, eyelines and preserved lines; these findings are guidance, not gates.
+
+Apply [scene attention](../storyboard/references/shot-view.md#plan-attention-across-the-scene).
+Challenge a sequence whose voices are correctly assigned but whose pictures only identify
+the current speaker. Name missing action, object, discovery or spatial evidence and compare
+an alternative; changing size labels or inserting decorative props is not a repair.
+Check emotional behavior across joins until its visible cause of change, not one face at
+a time. Preserve justified sustained faces and inspect purposeful off_screen coverage
+without demanding a speaking face inside its crop.
 
 Use [shot boundary decisions](../storyboard/references/shot-boundaries.md) and
 `storyboard_read.boundaryReview` to challenge every playback join against an uninterrupted
