@@ -59,4 +59,9 @@ test('the direction plan reads as counts: scene order, runs, lengths by size and
   // A sentence shared by two shots is listed in the reading, and reported as a copy only from three.
   assert.deepEqual(direction.copiedReasons(win.SCENES.slice(0, 3)), []);
   assert.equal(direction.copiedReasons(win.SCENES)[0].shots.length, 3);
+  // Held shots are counted by size; only a wide hold with no reason of its own is listed.
+  assert.deepEqual(facts.held, { sizes: { cu: 2, insert: 1 }, wideWithoutReason: [] });
+  const hold = (id, size, reason) => ({ id, shot: { size, techniques: [{ id: 'camera.static', ...(reason ? { reason } : {}) }] }, visual: { camera: { movement: 'static' } } });
+  assert.deepEqual(direction.held([hold('s0001', 'ls'), hold('s0002', 'fs', 'the frame he walks out of'), hold('s0003', 'cu'), hold('s0004', 'els')]),
+    { sizes: { ls: 1, fs: 1, cu: 1, els: 1 }, wideWithoutReason: ['s0001', 's0004'] });
 });

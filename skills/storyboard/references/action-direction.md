@@ -35,13 +35,16 @@ observable scenes and before source-image prompts. Explicit content-only work de
 2. Choose shot size, angle, camera distance and depth/focus together. Compare a held
    frame with a motivated move: approach a withheld reaction, follow a travelling subject,
    pull back to reveal a relationship, or shift focus from evidence to its observer.
-   A move earns its place when something enters the frame, the subject travels, or the
-   frame says something new about the space by its end. A face or a body that changes while
-   the viewer watches is a reason to hold: the size already gives the closeness, and an
-   approach laid over it competes with the acting it was meant to serve. The opposite
-   holds where the space itself is the change — a reveal of scale, destruction, many people
-   at once, a chase (the purpose table below): compare a move that travels with the change
-   and a wider size against the hold before choosing.
+   A move earns its place when something enters the frame, the subject travels, the
+   frame says something new about the space by its end, or the beat turns while the shot
+   runs. A face or a body that changes while the viewer watches leaves the hold and the
+   approach both open, and this beat chooses between them: an approach needs its trigger
+   inside the shot — a realization landing, a reaction held back until it breaks — and
+   where the beat has none the size already gives the closeness. What wears out is the same
+   slow approach on one close-up after another, not the approach. Where the space itself is
+   the change — a reveal of scale, destruction, many people at once, a chase (the purpose
+   table below) — compare a move that travels with the change and a wider size against the
+   hold before choosing.
 3. Set the choice with `shot_icons` — `view` (subject, reason, crop, mode and any set target),
    size, angle, camera move or still effect, focus,
    depth, render route and frame plan. Size, view and a camera move each take this beat's own
@@ -58,7 +61,10 @@ observable scenes and before source-image prompts. Explicit content-only work de
    (step 2), its reason is what the move would have cost in that beat; text copied across
    held shots, or action text copied into purpose, is not a decision.
    Do not supply static as a placeholder when the choice has not been made, and do not
-   supply a slow approach on each close-up as a placeholder for direction.
+   supply a slow approach on each close-up as a placeholder for direction. `shot_icons`
+   names the wide shots (els, ls, ws, fs) it left held with no reason, and
+   `storyboard_read {level:"direction"}` counts the held shots by size; both report what
+   was written and refuse nothing.
 5. Read consecutive shots in scene order. Reconsider repeated framing, copied reasons
    and unchanging focus where the subject, discovery or pressure changes. Keep intentional
    stillness. Never alternate moves by index, enforce a moving-shot percentage or add

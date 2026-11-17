@@ -962,6 +962,11 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.deepEqual([board[0].shot.techniques, board[1].edit.reason], [[{ id: 'camera.static' }], 'time passes']);
     writeShotIcons({ path: dir, shots: [{ id: 's0001', next: { transition: 'cut' } }] });
     assert.equal(readBoard(dir).win.SCENES[1].edit.reason, undefined, 'a cut does not keep the dissolve\'s reason');
+    // A wide shot held with no reason is written and named in the result; with its reason, or closer, it is not.
+    const heldWide = (shot) => writeShotIcons({ path: dir, shots: [{ id: 's0001', why: 'w', ...shot }] }).findings.filter((f) => f.level === 'warn' && /wide shots held with no reason: s0001/.test(f.what)).length;
+    assert.deepEqual([heldWide({ size: 'ls', move: { id: 'camera.static' } }), heldWide({ size: 'ls', move: { id: 'camera.static', reason: 'the doorway he leaves through' } }),
+      heldWide({ size: 'cu', move: { id: 'camera.static' } })], [1, 0, 0]);
+    assert.equal(readBoard(dir).win.SCENES[0].shot.size, 'cu');
     // The same sentence as one kind of reason on three shots is reported with its shots, not refused.
     writeStoryShots({ path: dir, shots: [{ scene: 1, summary: 'c' }] });
     writeShotCharacters({ path: dir, shots: [{ id: 's0003', characters: [] }] });
