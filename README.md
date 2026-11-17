@@ -41,6 +41,9 @@ The reviewer's interest rubric is an on-request read. The
 every new or substantially revised synopsis and storyboard: concrete promise, evolving
 expectations, earned payoff and performed response. It changes the writing process without
 adding a score gate or forcing a twist. Standalone stories resolve within their episode.
+For channels choosing a provocative opening followed by a rewind, that pass carries the
+opening event and recipient reaction into enacted earlier context, a clear time jump and
+one catch-up. It preserves held motives, user-scoped time labels and the eventual payoff.
 
 [Material research](skills/storyboard/references/story-material-research.md) now precedes
 new story selection: read existing case collections, verify consequential decisions and

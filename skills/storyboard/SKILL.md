@@ -39,6 +39,10 @@ For every new or substantially revised synopsis and board, apply
 [episode anticipation](references/episode-anticipation.md). Build a specific opening promise,
 changing expectations, an earned payoff and an observable response into the actual story.
 Do this while authoring, even when no separate interest review is requested.
+Read the channel's chosen opening format. When it calls for a provocative opening and
+rewind, follow the reference's opening procedure: consequential event, recipient reaction,
+clear earlier-time cue, enacted context and one catch-up into new action. Preserve held
+motives and the channel's text policy; the opening incident need not reveal the ending.
 
 **Production order (user directive, 2026-10-31):** Follow [production order](../_shared/production-workflow.md).
 Only the story order is enforced; context, camera, image and video reviews and Blender
