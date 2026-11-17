@@ -52,7 +52,18 @@ and repeated hesitation do not count. This is the default writing process, not a
 review, score threshold, schema requirement or media approval. Standalone stories close
 their central question; only explicit serials carry a question into another episode.
 
+## Hook and rewind (user directive, 2026-11-17)
+
+Support a channel's chosen series format of a provocative opening, immediate recipient
+reaction, brief rewind with clear time orientation, enacted relationship context and one
+catch-up into the continuing story. Follow `episode-anticipation.md` in the storyboard
+references. Show why the event is surprising rather than merely calling a character strict.
+The opening incident may precede its causes without revealing a held motive or confession.
+Honor an explicitly requested time label as a scoped text exception; it does not authorize
+dialogue subtitles. This is writing guidance, not an automatic score or generation gate.
+
 ## Owner decisions (2026-10-18)
+
 
 - Precedence: the later-dated directive wins, and a superseded sentence is deleted in place, not kept under a banner.
 - Delivered video is subtitle-free, including speech (2026-10-17): no subtitle, caption, label or mark of any kind over a moving picture; a separate SRT only when the user asks.
