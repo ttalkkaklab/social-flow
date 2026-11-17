@@ -51,7 +51,7 @@ test('the direction plan reads as counts: scene order, runs, lengths by size and
   const before = JSON.stringify(win), facts = direction.facts(win);
   assert.equal(JSON.stringify(win), before, 'reading changes nothing');
   assert.deepEqual([facts.shots, facts.seconds, facts.sizes, facts.moves], [5, 13, { ls: 1, cu: 2, insert: 1, ms: 1 }, { 'dolly-in': 1, static: 3, unset: 1 }]);
-  assert.deepEqual(facts.scenes[0], { scene: 1, seconds: 10, shots: ['s0001 ls eye dolly-in 4s', 's0002 cu eye static 2s line', 's0003 cu eye static 2s', 's0004 insert eye static 2s'] });
+  assert.deepEqual(facts.scenes[0], { scene: 1, seconds: 10, widest: 'ls', present: [], alone: 0, shots: ['s0001 ls eye dolly-in 4s', 's0002 cu eye static 2s line', 's0003 cu eye static 2s', 's0004 insert eye static 2s'] });
   assert.deepEqual(facts.runs, { size: [{ value: 'cu', shots: 2, from: 's0002', to: 's0003' }], held: [{ value: 'held', shots: 3, from: 's0002', to: 's0004' }] });
   assert.deepEqual(facts.lengths.bySize.map((row) => [row.size, row.shots, row.median]), [['ls', 1, 4], ['ms', 1, 3], ['cu', 2, 2], ['insert', 1, 2]]);
   assert.deepEqual([facts.lengths.common[0], facts.lengths.longest[0]], [{ seconds: 2, shots: 3 }, { id: 's0001', seconds: 4, actions: 0, lines: 0 }]);
@@ -59,4 +59,20 @@ test('the direction plan reads as counts: scene order, runs, lengths by size and
   // A sentence shared by two shots is listed in the reading, and reported as a copy only from three.
   assert.deepEqual(direction.copiedReasons(win.SCENES.slice(0, 3)), []);
   assert.equal(direction.copiedReasons(win.SCENES)[0].shots.length, 3);
+});
+
+test('the board digest counts who is in frame, the widest shot of each scene and the shots that carry a line', () => {
+  const shot = (id, scene, size, character, extra = {}) => ({ id, scene, shot: { size, angle: 'eye' }, visual: { character, ...extra.visual }, narration: extra.line ? [{ tts: 'x' }] : [] });
+  const win = { SCENES: [shot('s0001', 1, 'ms', ['a', 'b'], { line: true }), shot('s0002', 1, 'mcu', ['a'], { line: true }),
+    shot('s0003', 2, 'ls', [{ id: 'a' }], { visual: { bystanders: ['c'], extras: 'four children chase a ball' } })] };
+  const facts = direction.facts(win);
+  assert.deepEqual(facts.people, { onScreen: { 2: 2, 1: 1 }, extras: 1, withLine: 2, withoutLine: 1 });
+  assert.deepEqual(facts.scenes.map((row) => [row.widest, row.present, row.alone]), [['ms', ['a', 'b'], 1], ['ls', ['a', 'c'], 0]]);
+  assert.deepEqual(direction.digest(win).slice(0, 4), [
+    '3 shots — on screen: one 1 · two 2 · with extras 1 — a line in 2, none in 1',
+    'one person framed where the scene has several: scene 1 1/2',
+    'sizes ms 1 · mcu 1 · ls 1 — angles eye 3',
+    'widest shot of each scene: ls in 2 · ms in 1']);
+  // A board with only its story written has nothing to count yet.
+  assert.deepEqual(direction.digest({ SCENES: [{ id: 's0001', scene: 1 }] }), []);
 });

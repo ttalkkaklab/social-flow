@@ -192,7 +192,9 @@ speakers sit on subjects 1 and 2, where a voice sample can ride. At most two cha
 references (user directive, 2026-10-31): describe anyone else on screen in the action and let
 the model draw them; `video_plan` refuses references for a third character
 (`msr_character_limit`), and the storyboard keeps two principal characters per shot
-(`[character-limit]`). The shot's start image goes last, in the background slot. A test on 2026-10-31
+(`[character-limit]`). A third cast member seen without a line (`visual.bystanders`) and unnamed
+extras (`visual.extras`) reach the clip through the start image and the prompt, never as a
+reference (user directive 2026-11-17); how well a clip holds a bystander's look is not measured yet. The shot's start image goes last, in the background slot. A test on 2026-10-31
 (Kardum, same prompt and seed) kept one complete orc with the sheet's outfit front and back
 with all three panels; the face alone invented a different armour. The panels-only render
 dropped the topknot, which the face-panel hair instruction addresses.

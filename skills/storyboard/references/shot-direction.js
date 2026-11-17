@@ -166,6 +166,8 @@
     return [...seen.values()].filter(row => row.shots.length >= (least || 3)).sort((a, b) => b.shots.length - a.shots.length);
   }
   const SIZE_ORDER = ['els', 'ls', 'ws', 'fs', 'mfs', 'ms', 'mcu', 'cu', 'choker', 'ecu', 'insert'];
+  // Cast ids of visual.character or visual.bystanders: an id string or an { id } entry.
+  const idsOf = value => [].concat(value || []).map(x => typeof x === 'string' ? x : x && x.id).filter(text);
   function facts(win) {
     const scenes = win.SCENES || [];
     const shots = playbackEntries(scenes).filter(({ s }) => !['broll', 'outro'].includes(s.type)).map(({ s, i }) => {
@@ -173,6 +175,7 @@
       return { id: s.id || String(i + 1), scene: s.scene === undefined ? null : s.scene, size: s.shot?.size || '-', angle: s.shot?.angle || '-',
         move: !camera.raw ? 'unset' : camera.key === 'other' ? camera.raw : String(camera.key).replace(/^camera\./, ''),
         seconds: secondsOf(s), lines: (s.narration || []).length,
+        cast: idsOf(s.visual?.character), bystanders: idsOf(s.visual?.bystanders), extras: !!text(s.visual?.extras),
         actions: (Array.isArray(s.performance) ? s.performance : []).filter(event => event?.kind === 'action').length };
     });
     const tally = key => shots.reduce((m, x) => { m[x[key]] = (m[x[key]] || 0) + 1; return m; }, {});
@@ -196,9 +199,16 @@
       note: 'Counts of the plan as written, for one reading of the whole board. Nothing here is a target.',
       shots: shots.length, seconds: round(timed.reduce((sum, x) => sum + x.seconds, 0)),
       sizes: tally('size'), angles: tally('angle'), moves: tally('move'),
+      people: { onScreen: shots.reduce((m, x) => { const n = x.cast.length + x.bystanders.length; m[n] = (m[n] || 0) + 1; return m; }, {}),
+        extras: shots.filter(x => x.extras).length, withLine: shots.filter(x => x.lines).length, withoutLine: shots.filter(x => !x.lines).length },
       scenes: [...new Set(shots.map(x => x.scene))].map(no => {
         const own = shots.filter(x => x.scene === no);
+        // Who the scene shows at all, and how its shots frame them: the widest distance and the shots showing one person.
+        const present = [...new Set(own.flatMap(x => x.cast.concat(x.bystanders)))];
+        const widest = own.map(x => SIZE_ORDER.indexOf(x.size)).filter(at => at !== -1 && SIZE_ORDER[at] !== 'insert').sort((a, b) => a - b)[0];
         return { scene: no, seconds: round(own.reduce((sum, x) => sum + (x.seconds || 0), 0)),
+          widest: widest === undefined ? null : SIZE_ORDER[widest], present,
+          alone: present.length > 1 ? own.filter(x => x.cast.length + x.bystanders.length === 1).length : 0,
           shots: own.map(x => [x.id, x.size, x.angle, x.move, x.seconds === null ? '?' : x.seconds + 's', x.lines ? 'line' : ''].filter(Boolean).join(' ')) };
       }),
       runs: { size: runs(x => x.size === '-' ? null : x.size), held: runs(x => ['static', 'still-hold'].includes(x.move) ? 'held' : null) },
@@ -214,7 +224,29 @@
       },
     };
   }
-  const api = { cameraOf, secondsOf, changedAxes, playbackEntries, summary, timeline, copiedReasons, facts };
+  /** facts() as the few lines a writing tool prints first: what the whole board shows, as counts. A line appears
+      once its layer is written — people after shot_characters, distances after shot_icons. Nothing here is a target. */
+  function digest(win) {
+    const f = facts(win), lines = [];
+    const list = tallied => Object.entries(tallied).filter(([key]) => key !== '-' && key !== 'unset').sort((a, b) => b[1] - a[1]).map(([key, n]) => key + ' ' + n).join(' · ');
+    const placed = Object.keys(f.people.onScreen).some(n => n !== '0');
+    if (placed || f.people.withLine) lines.push(`${f.shots} shots — on screen: ` + ['nobody', 'one', 'two', 'three'].map((word, n) => f.people.onScreen[n] ? word + ' ' + f.people.onScreen[n] : '').filter(Boolean).join(' · ')
+      + ` · with extras ${f.people.extras} — a line in ${f.people.withLine}, none in ${f.people.withoutLine}`);
+    const alone = f.scenes.filter(sc => sc.alone);
+    if (alone.length) lines.push('one person framed where the scene has several: ' + alone.map(sc => `scene ${sc.scene} ${sc.alone}/${sc.shots.length}`).join(' · '));
+    if (list(f.sizes)) {
+      lines.push([['sizes', f.sizes], ['angles', f.angles], ['moves', f.moves]].filter(([, tallied]) => list(tallied)).map(([word, tallied]) => word + ' ' + list(tallied)).join(' — '));
+      const byWidest = {};
+      f.scenes.forEach(sc => { if (sc.widest) (byWidest[sc.widest] = byWidest[sc.widest] || []).push(sc.scene); });
+      lines.push('widest shot of each scene: ' + SIZE_ORDER.filter(size => byWidest[size]).map(size => `${size} in ${byWidest[size].sort((a, b) => a - b).join(', ')}`).join(' · '));
+      const run = f.runs.size[0];
+      if (run && run.shots > 2) lines.push(`longest run of one size: ${run.value} × ${run.shots} (${run.from}–${run.to})`);
+    }
+    const copied = f.reasons.copied.filter(row => row.shots.length > 2).slice(0, 3);
+    if (copied.length) lines.push('one sentence as the reason on several shots: ' + copied.map(row => `${row.field} × ${row.shots.length}`).join(' · '));
+    return lines;
+  }
+  const api = { cameraOf, secondsOf, changedAxes, playbackEntries, summary, timeline, copiedReasons, facts, digest };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.SHOT_DIRECTION = api;
 })(typeof window === 'object' ? window : globalThis);

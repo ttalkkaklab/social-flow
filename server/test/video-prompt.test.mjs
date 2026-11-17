@@ -77,3 +77,11 @@ test('the shot expression is named and held in the video prompt', () => {
   const { prompt } = compileVideoPrompt(shot, { action: 'She nods once.' }, { 'na-ri': 'Na-ri' });
   assert.match(prompt, /She nods once\. Expressions, held to the last frame unless the action changes them: Na-ri: brows drawn together, lips pressed shut\./);
 });
+
+test('a bystander and extras stay in the video prompt as people the opening picture shows', () => {
+  const shot = { shot: { size: 'ls', angle: 'eye' }, visual: { frames: { mode: 'reference' }, character: ['coach'], bystanders: ['bin'], extras: 'four children in orange bibs chase a ball' } };
+  const { prompt } = compileVideoPrompt(shot, { action: 'The coach points at the far goal.' });
+  assert.match(prompt, /The opening picture also shows bin, who stays in the frame and never speaks\./);
+  assert.match(prompt, /Unnamed people in the frame: four children in orange bibs chase a ball\./);
+  assert.doesNotMatch(compileVideoPrompt({ ...shot, visual: { frames: { mode: 'reference' }, character: ['coach'] } }, { action: 'x' }).prompt, /opening picture also|Unnamed people/);
+});

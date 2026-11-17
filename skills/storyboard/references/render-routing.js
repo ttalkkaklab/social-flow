@@ -57,7 +57,7 @@
   return errors.concat(checkImageReferences(scene,{draft}));
  }
  // References describe conditioning assets, never implicit temporal frames.
- const IMAGE_ROLES=['character','prop','background','style','composition','continuity'];
+ const IMAGE_ROLES=['character','bystander','prop','background','style','composition','continuity'];
  const IMAGE_USES=['image','video','both'];
  function hasStructuredImages(scene){return scene.visual?.frames?.start!==undefined||scene.visual?.references!==undefined;}
  function imageReferences(scene){
