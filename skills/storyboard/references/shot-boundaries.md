@@ -18,8 +18,9 @@ approval, score or execution gate. Requested `review-camera` adds an independent
    or cut within the one-speaking-character-per-shot rule. Choose the simplest option that carries the whole performance. Do not replace
    every cut with a complicated camera move. State what the viewer must see that the
    current frame cannot convey, or the time/place change or verified generation limit.
-   Check [dialogue coverage](dialogue-coverage.md): a reply needs its own shot, usually the complementary
-   speaker-facing reverse; never force a two-shot or
+   Check [dialogue coverage](dialogue-coverage.md): a reply needs its own generation unit,
+   but its attention subject may be a meaningful action, listener, detail or space instead
+   of the speaker's face. Choose a reverse when the face carries the change; never force a two-shot or
    relabel a visible hidden-mouth speaker as offscreen merely to reduce cuts.
    A glance, pause, new sentence or hand movement alone is insufficient. Intentional
    reaction shots, reveals, POVs and spatial clarification can earn a cut even with the

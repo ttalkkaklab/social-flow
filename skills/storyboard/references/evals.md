@@ -7,6 +7,7 @@
 - [Known outcome without a forced twist](#known-outcome-without-a-forced-twist)
 
 - [Camera direction without effect cycling](#camera-direction-without-effect-cycling)
+- [Dialogue without portrait cycling](#dialogue-without-portrait-cycling)
 
 - [Delegated storyboard delivery](#delegated-storyboard-delivery)
 - [Causal dialogue](#causal-dialogue)
@@ -37,6 +38,32 @@
 Use a fresh author with the installed skill and raw brief. A separate reviewer first
 receives only ordered actions and speech; do not supply intended interpretation or an
 answer key. Keep artifacts local under data/. No paid generation is implied.
+
+## Dialogue without portrait cycling
+
+Input: a nervous employee accepts an intimidating manager's invitation, follows them
+home, discovers a playful collection and first relaxes when the manager is embarrassed.
+Keep the established words and one speaker per generated unit. Supply a draft that
+alternates speaker portraits and friendly two-shots before the discovery. Ask for a
+revision without media generation.
+
+Pass evidence: the author maps fear, discovery and release to visible behavior in order;
+compares the talking faces with relevant details, POVs and spatial relationships; and
+replaces redundant views where those alternatives carry information. No fixed insert
+count, obligatory camera motion, invented props or added lines. The invitation does not
+automatically earn a relaxed smile. A justified facial performance remains intact.
+
+For each revised unit preserve stable shot/line IDs, words, speaker, addressee and order.
+Set delivery from the authored crop: a hand-only physical line is off_screen, not an
+inner thought. Keep that hand's owner in the cast. The composed prompt must retain the
+detail without adding the speaking face or forcing the addressee into the frame. Preserve
+the selected voice identity; correct speaker labels do not certify the generated voice.
+Reconcile expressions, blocking, camera, action and stale source images before video.
+
+Controls: a silent confession reaction whose only evidence is the face may stay close;
+an unrelated vase insert and cosmetic OTS alternation fail despite varied size counts.
+Repeat with an existing old image showing a relaxed pose: metadata edits alone cannot
+be reported as a corrected picture. Mark uninspected motion and sound unverified.
 
 ## Delegated storyboard delivery
 

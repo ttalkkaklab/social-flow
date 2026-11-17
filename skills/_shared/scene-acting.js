@@ -174,7 +174,7 @@ function performanceBeats(performance, mode, includeDialogue = true) {
       : delivery === 'on_screen'
       ? 'Show this speaker physically speaking; synchronize only this speaker\'s mouth to their supplied audio during this interval using the selected synchronization route.'
       : delivery === 'off_screen'
-        ? 'This speaker stays off screen. All visible mouths stay closed during this interval; show the planned listener reaction or action.'
+        ? 'Keep the speaking face outside the authored crop; retain any planned hands or body detail. All visible mouths stay closed during this interval; show the planned reaction, detail or action without adding a portrait.'
         : 'This is voiceover or narration, not visible physical speech. All visible mouths stay closed during this interval; show the planned action.';
     const fields = ['direction', 'context', 'intent', 'emotion', 'vocal', 'visual'].filter(key => acting[key])
       .map(key => `${key}: ${visualDirection(acting[key])}`);
@@ -182,14 +182,14 @@ function performanceBeats(performance, mode, includeDialogue = true) {
     const timing = line.speechStartSeconds == null || line.speechEndSeconds == null
       ? (mode === 'native' ? 'The model paces this line within the shot.' : 'Use the measured speech interval once audio is attached.')
       : `Speech interval ${line.speechStartSeconds}–${line.speechEndSeconds} seconds.`;
-    return `Beat ${index + 1} (speaker: ${visualDirection(line.speaker || 'unspecified')}; delivery: ${delivery}): ${mouth} ${includeDialogue && mode === 'native' && delivery !== 'on_screen' ? 'Speak "'+line.text+'". ' : ''}${line.to ? 'Addressed to '+visualDirection(line.to)+'. Preserve this eyeline and the listener in the planned framing.' : ''} ${fields.join(' ')} ${timing} Anticipation ${line.leadInSeconds || 0} seconds; reaction ${line.tailOutSeconds || 0} seconds.`;
+    return `Beat ${index + 1} (speaker: ${visualDirection(line.speaker || 'unspecified')}; delivery: ${delivery}): ${mouth} ${includeDialogue && mode === 'native' && delivery !== 'on_screen' ? 'Speak "'+line.text+'". ' : ''}${line.to ? 'Addressed to '+visualDirection(line.to)+'. Preserve the authored crop and any planned eyeline; the addressee need not appear in frame.' : ''} ${fields.join(' ')} ${timing} Anticipation ${line.leadInSeconds || 0} seconds; reaction ${line.tailOutSeconds || 0} seconds.`;
   });
 }
 function sceneVideoPrompt(performance, mode, scene = {}) {
   const route = !performance.some(event => event.kind !== 'action')
     ? 'This is a silent scene. Perform the ordered visible actions without invented speech or voiceover.'
     : mode === 'native'
-    ? 'Speak each authored line in its speaker\'s voice from the quoted words; no audio is supplied. Only on_screen lines move a visible mouth. Keep off_screen speakers unseen and voiceover separate from physical speech. Do not transcribe speech into the image.'
+    ? 'Speak each authored line in its speaker\'s voice from the quoted words; no audio is supplied. Only on_screen lines move a visible mouth. Keep off_screen speaking faces outside the authored crop and voiceover separate from physical speech. Do not transcribe speech into the image.'
     : mode === 'audio_conditioned'
     ? 'Use the supplied audio as the sole source of spoken words. Synchronize visible mouths only during each on_screen speech interval; follow the delivery instruction for every beat. Do not transcribe speech into the image.'
     : mode === 'post_lipsync'
