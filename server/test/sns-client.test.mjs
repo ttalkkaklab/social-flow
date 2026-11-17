@@ -13,11 +13,54 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const { uploadResumable } = await import('../dist/sns-client.js');
+const { facebookCaptions } = await import('../dist/sns-client.js');
+const { snsCredentialFile } = await import('../dist/config.js');
+
+test('existing Facebook captions check ownership, preserve defaults and recover uncertainty', async t => {
+  const channel = 'caption-test';
+  const tokenPath = snsCredentialFile('FACEBOOK', channel);
+  mkdirSync(join(tokenPath, '..'), { recursive: true });
+  writeFileSync(tokenPath, 'fixture-token');
+  const dir = mkdtempSync(join(tmpdir(), 'sf-caption-'));
+  const filePath = join(dir, 'en.srt');
+  writeFileSync(filePath, '1\n00:00:00,000 --> 00:00:01,000\nHello\n');
+  t.after(() => { rmSync(dir, { recursive: true, force: true }); rmSync(join(tokenPath, '..'), { recursive: true, force: true }); });
+  let page = '12', owner = '12', writes = 0, loseResponse = false;
+  const tracks = [{ locale: 'ko_KR', is_default: true }];
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    const path = new URL(url).pathname;
+    if (options.method === 'POST') {
+      writes++;
+      assert.equal(options.body.get('default_locale'), null);
+      assert.equal(options.body.get('captions_file').name, 'caption.en_US.srt');
+      tracks.push({ locale: 'en_US', is_default: false });
+      if (loseResponse) throw new Error('response lost');
+      return Response.json({ success: true });
+    }
+    if (path.endsWith('/me')) return Response.json({ id: page });
+    if (path.endsWith('/captions')) return Response.json({ data: tracks });
+    return Response.json({ id: '34', from: { id: owner } });
+  });
+  const input = { action: 'add', channel, videoId: '34', expectedPageId: '12', tracks: [{ filePath, locale: 'en_US' }] };
+  page = '99'; assert.equal((await facebookCaptions(input)).status, 409);
+  page = '12'; owner = '99'; assert.equal((await facebookCaptions(input)).status, 409);
+  assert.equal(writes, 0); owner = '12';
+  loseResponse = true;
+  const uncertain = JSON.parse((await facebookCaptions(input)).body);
+  assert.equal(uncertain.results[0].status, 'unconfirmed');
+  assert.equal(writes, 1);
+  assert.equal(JSON.parse((await facebookCaptions({ ...input, action: 'list', tracks: undefined })).body).tracks.length, 2);
+  assert.equal(JSON.parse((await facebookCaptions(input)).body).results[0].status, 'already_exists');
+  assert.equal(writes, 1);
+  tracks.pop(); loseResponse = false;
+  assert.equal(JSON.parse((await facebookCaptions(input)).body).results[0].status, 'verified');
+  assert.equal(tracks[0].is_default, true);
+});
 
 /** The test picks the chunk size — at the 8MiB default the fixture gets needlessly large. */
 process.env.SOCIAL_FLOW_YT_CHUNK_MB = String(256 * 1024 / (1024 * 1024)); // 256KiB = the minimum unit

@@ -132,3 +132,8 @@ The plugin's `hooks/hooks.json` supplies read-only SessionStart context in Claud
 Code. It never chooses preferences, starts setup or prevents unrelated work.
 Other hosts use this skill and the same CLI/MCP status call; setup does not rely
 on a hook being available.
+
+Optional `settings.languages` stores BCP-47 `speech`, `subtitles` and `review` defaults
+when the user specifies them, for example `{speech:"vi",subtitles:["ko","en","zh-Hans","ja"],review:["vi","ko","en","zh-Hans","ja"]}`.
+Episode handoffs include `LANGUAGES`; older projects remain valid without it. Follow
+[review translations](../storyboard/references/review-localization.md) for authoring.

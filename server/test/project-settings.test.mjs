@@ -18,6 +18,15 @@ const defaults = () => ({
   sns: Object.fromEntries(['threads', 'instagram', 'facebook', 'youtube'].map(p => [p, { enabled: p === 'youtube', status: p === 'youtube' ? 'pending' : 'disabled' }])),
 });
 const profileMarkdown = '---\nname: History\nslug: history\n---\n# History\n\nAn existing authored channel profile.\n';
+test('optional spoken/subtitle/review languages survive a new episode snapshot', t => {
+  const root = workspace(t);
+  const languages = { speech: 'vi', subtitles: ['ko', 'en', 'zh-Hans', 'ja'], review: ['vi', 'ko', 'en', 'zh-Hans', 'ja'] };
+  assert.equal(init(root, { ...defaults(), languages }).status, 'ready');
+  const episode = call(root, 'episode', { topic: 'one' });
+  assert.deepEqual(episode.handoff.LANGUAGES, languages);
+  assert.throws(() => call(root, 'update', { expectedRevision: call(root, 'status').revision, request: 'Use invalid language', settings: { languages: { ...languages, speech: 'vi_VN' } } }), /languages requires/);
+  assert.deepEqual(call(root, 'status').config.languages, languages);
+});
 function workspace(t) {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'social flow project ')));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

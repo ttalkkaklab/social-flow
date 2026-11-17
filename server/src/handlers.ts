@@ -1439,6 +1439,14 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
       SNS_PUBLISHED_NOTE,
     );
   },
+  facebook_captions: async (args) => {
+    const input = parseArgs(z.object({
+      action: z.enum(['list', 'add']), channel: channelSlugSchema.unwrap(),
+      videoId: z.string().regex(/^\d+$/), expectedPageId: z.string().regex(/^\d+$/),
+      tracks: z.array(z.object({ filePath: z.string().min(1), locale: z.string().regex(/^[a-z]{2}_[A-Z]{2}$/) })).min(1).optional(),
+    }), args);
+    return fromApi(await sns.facebookCaptions(input));
+  },
   facebook_publish: async (args) => {
     const input = parseArgs(facebookPublishSchema, args);
     return fromApi(

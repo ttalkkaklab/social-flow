@@ -4,7 +4,7 @@ const { STYLES, CHOICES, MODES, BANDS, PREVIZ_RENDERERS } = require('../storyboa
 const { FORMATS } = require('../platform-guide/references/formats.js');
 const PLATFORMS = ['threads', 'instagram', 'facebook', 'youtube', 'tiktok'];
 const TOKEN_FILES = { threads: 'threads_token', instagram: 'instagram_token', facebook: 'facebook_page_token', youtube: 'youtube-oauth-client.json', tiktok: 'tiktok-oauth.json' };
-const PROJECT_FIELDS = ['project', 'style', 'production', 'sns'];
+const PROJECT_FIELDS = ['project', 'style', 'production', 'sns', 'languages'];
 const SLUG = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const text = value => typeof value === 'string' && !!value.trim();
@@ -18,6 +18,15 @@ function credentialRef(channel, platform) {
 }
 
 function validateProjectFields(config) {
+  if (config.languages !== undefined) {
+    keys(config.languages, ['speech', 'subtitles', 'review'], 'languages');
+    const valid = value => typeof value === 'string' && /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/.test(value);
+    const l = config.languages;
+    if (!valid(l.speech) || !Array.isArray(l.subtitles) || !Array.isArray(l.review) ||
+        [...l.subtitles, ...l.review].some(value => !valid(value)) ||
+        new Set(l.subtitles).size !== l.subtitles.length || new Set(l.review).size !== l.review.length)
+      throw new Error('languages requires speech and unique subtitles/review arrays of BCP-47 tags');
+  }
   if (config.project !== undefined) {
     keys(config.project, ['name', 'channel'], 'project');
     if (!text(config.project.name) || !SLUG.test(config.project.channel || '')) throw new Error('project requires name and a channel slug (1–64 lowercase letters, digits or hyphens)');
@@ -60,7 +69,7 @@ function validateProjectFields(config) {
 }
 
 function missingProjectFields(config) {
-  return ['videoType', 'models', ...PROJECT_FIELDS].filter(key => config?.[key] === undefined);
+  return ['videoType', 'models', ...PROJECT_FIELDS.filter(key => key !== 'languages')].filter(key => config?.[key] === undefined);
 }
 
 function options() {

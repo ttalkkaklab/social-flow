@@ -9,6 +9,7 @@ const HELPERS = ['video-production.js', 'source-context.js', 'render-routing.js'
 const REVIEW_ASSETS = path.join(__dirname, '..', '..', 'channel', 'references', 'review-assets');
 const { FONT_ASSETS } = require('../../channel/references/review-fonts.js');
 const ASSETS = ['design-system.css', 'review.css', ...FONT_ASSETS];
+HELPERS.push('review-localization.js');
 const TITLE = /<title>[^]*?<\/title>/g;
 const METADATA = /\/\* ✎ SB_DOC BEGIN[^]*?\/\* ✎ SB_DOC END \*\//g;
 
@@ -70,7 +71,11 @@ function storyboardHtml(directory, check = false) {
   let videoSnapshot = null;
   try { videoSnapshot = JSON.parse(fs.readFileSync(path.join(dir, '..', '.work', 'model-settings.json'), 'utf8')).config.models.video || null; } catch { /* none */ }
   const panelFindings = win ? require('../../channel/references/character-panels.js').boardPanelFindings(win, dir, path.resolve(dir, '../../..')) : [];
-  const reviewData = 'window.LOCATION_DETAIL_LINKS = '+JSON.stringify(locationLinks).replace(/</g,'\\u003c')+';\n' +
+  const translationFile = path.join(dir, 'review-localization.json');
+  const translations = fs.existsSync(translationFile)
+    ? require('./review-localization.js').validate(JSON.parse(fs.readFileSync(translationFile, 'utf8'))) : null;
+  const reviewData = 'window.REVIEW_LOCALIZATION = ' + JSON.stringify(translations).replace(/</g, '\\u003c') + ';\n' +
+    'window.LOCATION_DETAIL_LINKS = '+JSON.stringify(locationLinks).replace(/</g,'\\u003c')+';\n' +
     'window.REVIEW_PANEL_FINDINGS = ' + JSON.stringify(panelFindings).replace(/</g, '\\u003c') + ';\n' +
     'window.REVIEW_FILES = ' + JSON.stringify(available) + ';\n' +
     'window.REVIEW_VIDEO_SNAPSHOT = ' + JSON.stringify(videoSnapshot).replace(/</g, '\\u003c') + ';\n' +
