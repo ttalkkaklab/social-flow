@@ -406,7 +406,7 @@ Before image prompts, perform the required camera-direction pass in
 [action direction](references/action-direction.md#required-camera-direction-pass).
 Choose framing, angle, focus and movement from each beat; never initialize every shot
 with static or copy one generic hold rationale, and never lay a slow approach over every
-close-up in its place: a face changing on screen is usually held. Set the icon attributes — render route, size,
+close-up in its place: a changing face can be held or approached, and its beat decides which. Set the icon attributes — render route, size,
 angle, move, focus, depth, frame plan, transition to the next shot — with `shot_icons`, then persist the executable
 endpoints through `storyboard_apply`, then review the sequence for purposeful holds and
 changes of attention. This is authoring work, not a moving-shot quota or approval gate.
@@ -544,8 +544,9 @@ do not accelerate speech or discard its reaction merely to fit one model call.
 
 Once every shot has its icons and a length, read the whole plan once with
 `storyboard_read {level:"direction"}`. It returns each scene's shots in order with size, angle,
-move and length, the longest runs of one size and of held shots, lengths by size, the longest
-shots with their action counts, and any sentence standing as the same reason on several shots.
+move and length, the longest runs of one size and of held shots, held shots by size with the
+wide ones held without a reason, lengths by size, the longest shots with their action counts,
+and any sentence standing as the same reason on several shots.
 These are counts of what was written, not targets. Revisit the shots where the reading and
 the content disagree before exporting the review.
 

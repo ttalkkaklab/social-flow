@@ -1272,10 +1272,11 @@ These are planned timings; native speech and generated playback still need measu
 
 `storyboard_read {level:"direction"}` returns the direction plan alone, as counts: each scene's
 shots in order (size, angle, move, length), the longest runs of one size and of held shots,
-lengths by size, the longest shots with their action counts, and sentences standing as the
-same reason on several shots. Nothing in it is a target. A reason belongs to a choice
-(2026-11-17): size, viewpoint and a camera move carry one; a hold, a plain cut, the episode's
-own render route and a first or reference frame plan need none.
+held shots by size, lengths by size, the longest shots with their action counts, and sentences
+standing as the same reason on several shots. Nothing in it is a target. A reason belongs to a
+choice (2026-11-17): size, viewpoint and a camera move carry one; a hold, a plain cut, the
+episode's own render route and a first or reference frame plan need none. `shot_icons` and
+the direction read name the wide shots (els, ls, ws, fs) held without a reason and refuse none.
 
 ## Video plans and candidate review
 
