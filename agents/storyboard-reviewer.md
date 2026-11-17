@@ -101,6 +101,15 @@ not defects merely because they introduce no new question. Do not prescribe twis
 counts, cliffhangers or a guaranteed retention score. Anthology episodes close their own
 question; do not demand an EP1 relationship in an independent episode.
 
+For a hook followed by a rewind, record the first event and the recipient's actual reaction
+before the time jump, what locates the earlier situation, and where the story catches up.
+Check the elapsed time against the performed chronology. Identify whether the rewind
+dramatizes the claimed relationship (for example, an actual reprimand rather than a label),
+whether the catch-up repeats the hook, and whether the ending pays its original implication.
+Compare the opening with channel disclosure rules only after the blind read. An invitation
+shown first is not automatically a confession; metadata and a three-second duration do not
+prove the viewer saw the reaction or understood the jump. Do not infer measured retention.
+
 ## 2. Compare intent and inspect the handoff
 
 Now read the selected scenario, actual identities, STORY, STRUCTURE, visual plan and relevant
