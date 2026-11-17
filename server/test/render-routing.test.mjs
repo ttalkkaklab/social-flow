@@ -142,6 +142,14 @@ test('conditional frames preserve legacy images and forward the actual end image
  const s=framed();assert.deepEqual(checkFrames(s),[]);assert.equal(scenePlan(s).lastImagePath,s.visual.frames.end);
  delete s.visual.frames.end;assert.deepEqual(checkFrames(s,{draft:true}),[]);assert.match(checkFrames(s).join(' '),/both start and end/);assert.throws(()=>scenePlan(s),/both start and end/);
 });
+test('a reason is asked for where the route or the frame plan is a choice',()=>{
+ const bare=()=>{const s=video();delete s.shot.render.reason;delete s.visual.why;return s;};
+ assert.doesNotMatch(checkScene(bare(),{production:{mode:'full_video'}}).join(' '),/reason must explain|visual\.why/);
+ assert.match(checkScene(bare(),{production:{mode:'video_50'}}).join(' '),/reason must explain/);
+ assert.match(checkScene(bare(),{production:{mode:'video_50'}}).join(' '),/visual\.why/);
+ const frames=mode=>{const advice=[];checkFrames({visual:{frames:{mode}}},{draft:true,advice});return advice.join(' ');};
+ assert.equal(frames('first'),'');assert.equal(frames('reference'),'');assert.match(frames('first_last'),/pins its end frame/);
+});
 test('contradictory frame inputs and unsupported end-frame models cannot generate',()=>{
  const s=framed();s.visual.video.lastImagePath='different.png';assert.throws(()=>scenePlan(s),/disagree/);
  delete s.visual.video.lastImagePath;s.visual.frames.mode='first';assert.throws(()=>scenePlan(s),/first-only/);

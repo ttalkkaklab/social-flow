@@ -215,7 +215,8 @@
       if(!item || !byId[item.id]) errors.push('Unknown technique: '+String(item?.id));
       if(seen.has(item?.id)) errors.push('Duplicate technique: '+String(item?.id));
       seen.add(item?.id);
-      if(typeof item?.reason!=='string'||!item.reason.trim()) errors.push('Technique needs this shot’s reason: '+String(item?.id));
+      // A hold is where the camera rests: it may stand without a sentence. Every other technique is a choice with its reason.
+      if(item?.id!=='camera.static'&&(typeof item?.reason!=='string'||!item.reason.trim())) errors.push('Technique needs this shot’s reason: '+String(item?.id));
     }
     return errors;
   }

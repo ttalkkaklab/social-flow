@@ -67,8 +67,10 @@ function checkPerformanceStory(win, { requireReview = false, hash } = {}) {
     let lastGroup = 0;
     events.forEach(e => {
       if (!object(e) || !['action', 'dialogue', 'narration'].includes(e.kind)) { fail('invalid performance event'); return; }
-      if (!ids.has(e.character)) fail('performance character is not cast: ' + e.character);
-      used.add(e.character);
+      // An action nobody performs is an event in the world: a door slams in the wind, the power goes out.
+      const worldEvent = e.kind === 'action' && e.character === undefined;
+      if (!worldEvent && !ids.has(e.character)) fail('performance character is not cast: ' + e.character);
+      if (!worldEvent) used.add(e.character);
       if (e.kind === 'action') {
         if (!text(e.text) || e.group !== undefined) fail('action requires visible text and no speech group');
       } else {

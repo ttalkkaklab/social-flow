@@ -122,8 +122,10 @@ action is large. Arcade clips keep a static or sideways-panning camera and no HU
 
 Retain each scene's real `shot.infoType` and `shot.render.purpose`. In full-video mode its
 `render.mode` is `generated_video` even for a mechanism or a place; do not relabel every
-purpose as `live_action` to dodge semantic checks. Supply `render.reason`, `render.action`,
-`visual.why`, `visual.action` and the four `visual.camera` slots (scenes-schema §camera). A
+purpose as `live_action` to dodge semantic checks. Supply `render.action`, `visual.action`
+and the four `visual.camera` slots (scenes-schema §camera). The episode chose video for every
+cut, so a generated cut needs no `render.reason` or `visual.why`: what the cut shows and why
+it is framed that way already sit in its story, opening view, size and move reasons. A
 statistic or timeline also keeps the source-backed `render.data` contract. Each generated
 scene carries:
 

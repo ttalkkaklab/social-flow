@@ -304,6 +304,10 @@ Write each scene as continuous observable action and attributed speech. Include 
 objects being passed, interruptions, listener responses and meaningful silence where they
 change the event. Decide the initial situation, pressure, character's choice and resulting
 change. Keep the scene readable without its synopsis or character goals.
+When the scenario was supplied or approved, its quoted lines are the dialogue. Where it
+reports that someone speaks without giving the words, stage that moment so the words are
+not needed — the listener's face, the speaker's back, distance — or ask for them; a line
+you write is a new line, and the delivery report names it as one.
 
 A scene can contain multiple speakers and silent stretches. A line does not create a shot.
 Keep one speech purpose and vocal contour per line: self-identification followed by a
@@ -395,7 +399,8 @@ for continuous dialogue, rapid action and an earned reaction cut.
 Before image prompts, perform the required camera-direction pass in
 [action direction](references/action-direction.md#required-camera-direction-pass).
 Choose framing, angle, focus and movement from each beat; never initialize every shot
-with static or copy one generic hold rationale. Set the icon attributes — render route, size,
+with static or copy one generic hold rationale, and never lay a slow approach over every
+close-up in its place: a face changing on screen is usually held. Set the icon attributes — render route, size,
 angle, move, focus, depth, frame plan, transition to the next shot — with `shot_icons`, then persist the executable
 endpoints through `storyboard_apply`, then review the sequence for purposeful holds and
 changes of attention. This is authoring work, not a moving-shot quota or approval gate.
@@ -434,7 +439,8 @@ show the same actor placement, views and evidence.
 
 Read [render routing](references/render-routing.md) and
 [visual direction](references/visual-direction.md) for relevant rendering choices, not old
-quotas. Choose the medium that can deliver the event. Maintain the saved visual style with
+quotas. Choose the medium that can deliver the event; a card or HTML shot has no camera, but
+its `shot.why` still says what it gives the beat. Maintain the saved visual style with
 [visual-style.md](references/visual-style.md) and authorized production ratio with
 [production-mode.md](references/production-mode.md). Respect clean footage: no dialogue
 subtitles or explanatory marks burned into video. Explanatory graphics use their supported
@@ -468,6 +474,14 @@ in their physical order. Combine them only where the person can actually do both
 a list of several actions does not fit one brief interval merely because it is one event.
 Label estimates until actual speech/media exist. Do not add one fixed padding value to
 every shot, and do not add simultaneous actions as if they all occur in sequence.
+A spoken line sets the length of the shot that carries it; every other shot is set by the
+one visible thing it shows. An insert, a glance, a reaction or an impact shows one small
+action and ends once it is read, often in a second or two, shorter than the close-up beside
+it; a wait, a slow realization or a long walk takes as long as it takes. When shots of different kinds come out at the same round length, the length was
+assigned rather than derived: walk through each again
+([cut length](references/action-direction.md#cut-on-a-meaningful-change)). A cut shorter
+than the selected model's minimum is trimmed from a longer take in the edit, so the
+minimum never lengthens the cut.
 
 A natively voiced shot (MSR) plays exactly the length it is given, and the model fills
 whatever the line does not need with silent acting, mostly before the line. On 299 clips
@@ -521,6 +535,13 @@ budget. If it exceeds one, remove repetition, simplify the event or split the ep
 meaningful boundary. Preserve the setup needed to understand the turn and its consequence.
 Split a long generated take at a motivated action boundary to fit the selected adapter;
 do not accelerate speech or discard its reaction merely to fit one model call.
+
+Once every shot has its icons and a length, read the whole plan once with
+`storyboard_read {level:"direction"}`. It returns each scene's shots in order with size, angle,
+move and length, the longest runs of one size and of held shots, lengths by size, the longest
+shots with their action counts, and any sentence standing as the same reason on several shots.
+These are counts of what was written, not targets. Revisit the shots where the reading and
+the content disagree before exporting the review.
 
 ## 6. Validate and deliver the plan honestly
 
@@ -583,7 +604,7 @@ Read the catalogue returned by `storyboard_read` (`includeTechniques:true`) befo
 choosing techniques. Each value `shot_icons` takes has a card there — use, avoid, the shots
 around it, what the prompt must name, and how 9:16 changes it — and a use is a practitioners'
 convention, not a measured effect. Set the camera move and focus with `shot_icons`, which writes
-`shot.techniques:[{id,reason}]`; give a video move its `speed` (slow, steady, fast) and `target`,
+`shot.techniques:[{id,reason}]` (a hold, `camera.static`, may go without its reason); give a video move its `speed` (slow, steady, fast) and `target`,
 and a rack focus its `from` and `to` subjects in English, because `shot_image` stages them and
 `shot_prompt` writes them ("The camera slowly pushes in toward …", "Rack focus from … to …").
 An action beat can lay a beat accent over its move with `shot_icons accents` — `camera.speed-ramp`

@@ -151,6 +151,9 @@ test('authored views retain their bearing, target body details and never substit
   const pov=L.shotCamera(m,{...args,actors:[mina(),observer],view:{...view,mode:'pov',viewerId:'jun'}}).camera;
   assert.ok(Math.abs(pov.position[1]+2)<.35&&Math.abs(pov.position[2]-1.581)<.01);
   assert.throws(()=>L.shotCamera(m,{...args,view:{...view,mode:'ots',viewerId:'jun'}}),/shot_view_observer_missing/);
+  // A pov of the place itself: nobody is on screen and no id stands for what is seen, so the lens looks where the observer faces.
+  const room=L.shotCamera(m,{...args,actors:[mina({id:'jun',position:[0,-2,0]})],cast:[],size:'ls',view:{subject:'the empty room',reason:'r',crop:'the whole room',mode:'pov',viewerId:'jun'}}).camera;
+  assert.ok(Math.abs(room.position[2]-1.581)<.01&&room.target[1]<room.position[1]);
 });
 test('shot sizes frame the blocked person by their crop lines',()=>{
   const at=(size,z)=>project(frameOf(size).camera,[0,0,z])[1];

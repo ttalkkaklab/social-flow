@@ -41,7 +41,8 @@
   const bad=s=>errors.push('visual.frames: '+s);
   if(f){
    if(!['first','first_last','reference'].includes(f.mode))bad('mode must be first, first_last or reference');
-   if(!text(f.reason))advice.push('visual.frames: record why this shot needs one or two frames');
+   // first follows from a silent shot and reference from an on-screen line; only a pinned end frame is a choice to explain.
+   if(f.mode==='first_last'&&!text(f.reason))advice.push('visual.frames: record why this shot pins its end frame');
    if(f.mode==='first_last'&&!text(f.endState))advice.push('visual.frames: describe the visible final state');
   }
   const starts=[v.frames?.start,v.bg,v.imagePair?.start].filter(Boolean);
@@ -179,7 +180,8 @@
   if(!LABELS[r.mode])bad('unknown mode; use '+Object.keys(LABELS).join(', '));
   else if(fullVideo&&r.mode!=='stock_video'){if(r.mode!=='generated_video')warn(r.purpose+' requires generated_video, not '+r.mode)}
   else if(options.length&&!options.includes(r.mode)&&!(drone&&r.purpose==='place'&&r.mode==='generated_video'))warn(r.purpose+' requires '+options.join(' or ')+', not '+r.mode);
-  if(!text(r.reason))warn('reason must explain why this treatment conveys the cut');
+  // In a full_video episode video is the episode's choice, so a generated cut needs no sentence for its route.
+  if(!text(r.reason)&&!(fullVideo&&r.mode==='generated_video'))warn('reason must explain why this treatment conveys the cut');
   if(scene.shot?.motionGraphic){
    const mg=typeof module==='object'&&module.exports?require('./motion-graphics.js'):root.MOTION_GRAPHICS;
    if(mg){const result=mg.inspect(scene);result.errors.forEach(bad);result.advice.forEach(warn);}
@@ -260,7 +262,7 @@ if(r.mode==='data_graph'||(fullVideo&&CHARTS[r.purpose])){
     if(['character_html','object_html'].includes(r.mode)&&(slide?.subject?.kind!=='object'||slide?.object?.renderer!=='mesh'))bad('physical explanation needs a real mesh object subject');
    }
    if(r.mode==='generated_video'&&(!generated||slide))bad('generated video needs a video handoff without a slide');
-   if(r.mode==='generated_video'&&!text(v.why))warn('visual.why can describe why video conveys the cut');
+   if(r.mode==='generated_video'&&!fullVideo&&!text(v.why))warn('visual.why can describe why video conveys the cut');
    if(r.mode==='generated_video'&&v.video&&v.reuse===undefined&&v.video.previz===undefined)warn('A Blender or three.js previz can guide camera and blocking; record visual.video.previz when supplying that reference to the model');
    if(r.mode==='editorial_html'&&(generated||!slide||slide.kind!=='diagram'||slide.motion!==true||slide.treatment!=='editorial'||slide.subject?.kind!=='type'||slide.object))bad('editorial quote/verdict needs a text subject on an editorial motion diagram');
    if(r.mode==='data_graph'&&slide?.chartRenderer!=='svg-v1')bad('data graphs require chartRenderer svg-v1 and the shared chart template');

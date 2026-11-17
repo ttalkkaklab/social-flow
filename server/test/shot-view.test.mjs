@@ -24,6 +24,10 @@ test('one explicit opening view overrides legacy source directions and yields to
   for (const bad of [null, { ...view, mode: 'sideways' }, { ...view, target: { point: [0, 0], span: .2 } },
     { ...view, target: { point: [0, 0, Infinity], span: .2 } }, { ...view, target: { point: [0, 0, 0], span: 0 } },
     { ...view, mode: 'pov' }, { ...view, surprise: true }]) assert.ok(V.validate(bad).length);
+  // A pov names its observer; what they see may be something no id stands for. OTS still frames a staged person.
+  const seen = { subject: 'the empty platform', reason: 'r', crop: 'the whole platform', mode: 'pov', viewerId: 'mina' };
+  assert.deepEqual(V.validate(seen), []);
+  assert.match(V.validate({ ...seen, mode: 'ots' }).join(), /subjectId is required for ots/);
 });
 
 

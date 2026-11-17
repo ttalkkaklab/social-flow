@@ -225,7 +225,8 @@ function shotCamera(m,{stateId,actors=[],cast=[],size,angle,width,height,side,mu
   const subject=view?.subjectId&&actors.find(x=>x.id===view.subjectId),objectSubject=view?.subjectId&&objects.find(x=>x.id===view.subjectId);
   if(view?.subjectId&&!subject&&!objectSubject)throw new Error('shot_view_subject_missing: '+view.subjectId+' is not blocked or visible in this set');
   const people=subject?[subject]:objectSubject?[]:cast.map(id=>actors.find(a=>a.id===id)).filter(Boolean),unblocked=cast.filter(id=>!actors.some(a=>a.id===id));
-  if(view&&!view.target&&!objectSubject&&!people.length)throw new Error('shot_view_subject_missing: bind the opening subject before rendering its view');
+  // A pov looks from its observer: with nobody else staged it aims where the observer looks.
+  if(view&&view.mode!=='pov'&&!view.target&&!objectSubject&&!people.length)throw new Error('shot_view_subject_missing: bind the opening subject before rendering its view');
   if(view&&(['insert','ecu'].includes(size)||view.subjectType==='detail')&&!view.target&&!objectSubject)throw new Error('shot_view_target_required: name the set object or give the body detail point and span from the opening blocking');
   if(view?.subjectType==='object'&&!objectSubject&&!view.target)throw new Error('shot_view_target_required: an object crop needs its set object subjectId or an explicit target');
   if(view&&angle==='over'&&view.mode!=='ots')throw new Error('shot_view_conflict: angle over needs view.mode ots');

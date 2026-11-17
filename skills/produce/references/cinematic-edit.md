@@ -23,7 +23,8 @@ the following shot's `transition`. To patch effects without replacing shots, cal
 moving-join duration. Dip uses up to 0.30 seconds on each side, not
 `edit.transitionSeconds`. The approval page displays the effect below each shot.
 
-For every new boundary, write `transition` and `edit.reason`. In `edit.continuity`, name
+For every new boundary, write `transition`; a join other than a plain cut also carries
+`edit.reason`. In `edit.continuity`, name
 what carries across the join: subject position, gaze, motion direction, framing, light,
 colour or a sound. Explain an intentional discontinuity. Match neighbouring source images
 before generating video; an effect cannot repair a different face or inconsistent geography.

@@ -21,26 +21,36 @@ the story. Keep the character in the shot cast even when only their hand or foot
 | Two people negotiate or confront each other | ms/mfs for simultaneous action; ots/reverse when one person's response matters | Automatic single shots for every line lose simultaneous reactions |
 | Distance or isolation is the information | ls/els with the person and the relevant surroundings; eye/high as the geography requires | Close-up erases the relationship; high angle is chosen only to signify weakness |
 | A whole-body action changes the situation | fs or mfs if the feet are irrelevant; side/three-quarter to expose contact and travel | Front view hides contact, or the crop removes a needed limb |
+| The scene turns on what happens to an object | insert or cu on the object at the moment it changes, the hand or foot that changes it entering the crop | The object stays small inside a person's medium shot, so the event the scene turns on reads as background |
+| Something vast comes into view, or the space changes around the people | ls/els, or a move that opens from the observer onto the whole | A medium shot crops the scale, so the reveal reads as a detail |
 
 Height and horizontal viewpoint are separate: `angle:eye` never means “face the camera”.
 Use low/high/overhead only for a visible relationship or useful view of the evidence.
+When the angle is not eye, write in `view.reason` what that height shows that eye level
+would hide: the ground a foot stands on, the layout of things on a table, how large
+something looms over the person.
 Front is deliberate when direct address, symmetry or a readable reaction calls for it.
 Compare the candidate with one alternative and write why the chosen view shows the evidence
-better. Repeated setups are valid when their content calls for them; no close-up limit applies.
+better. Name this beat's own object, gesture or place in the reason: one sentence frame
+reused across shots with the nouns swapped says nothing about any of them. Repeated setups
+are valid when their content calls for them; no close-up limit applies.
 
 ## Save one opening view
 
 Use `shot_icons` to write size, angle and `view` together. It saves `view` at
-`visual.camera.view` and uses its subject/reason as `shot.info`/`shot.why`.
+`visual.camera.view` and uses its subject as `shot.info`. `why` is the size's reason and
+`view.reason` the viewpoint's and height's. Neither is copied into the other: a shot written
+without `why` keeps none, and the result names it.
 
 ```json
 {
   "id": "s0001",
   "size": "cu",
   "angle": "eye",
+  "why": "The admission is one small change in her face",
   "view": {
     "subject": "Mina's hesitation before admitting the truth",
-    "reason": "Her unfinished answer becomes visible in her expression",
+    "reason": "From the listener's side her eyes slide away before she answers",
     "crop": "Mina's face and shoulder tops fill the frame, gaze toward the listener off camera-right",
     "mode": "three-quarter-left",
     "subjectId": "mina"
@@ -53,8 +63,10 @@ placement and gaze in `crop` when relevant. Modes are front, three-quarter-left/
 profile-left/right, rear, ots and pov. Left/right name the visible side of the subject:
 profile-left exposes the left side, with the nose pointing camera-left. Front is 0°, left
 three-quarter/profile +45°/+90°, right -45°/-90°, rear 180° relative to the subject's body.
-For an object, bearings use the set's -Y front axis. OTS and POV require `subjectId` and
-`viewerId` of different staged subjects; OTS needs a person as its subject. POV uses eye height.
+For an object, bearings use the set's -Y front axis. OTS requires `subjectId` and `viewerId`
+of different staged subjects, with a person as its subject. POV requires the observer's
+`viewerId`; give `subjectId` when what they see is a staged actor or set object, and leave it
+out when no id stands for what they see and `subject` describes it. POV uses eye height.
 
 Write `crop` as visible boundaries, not a copy of `subject` or the action. “Mina reaches
 for the key” describes an event but leaves the camera undecided. A usable insert crop is

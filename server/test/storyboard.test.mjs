@@ -474,6 +474,14 @@ describe('music is decided scene by scene', () => {
     assert.throws(() => writeStoryMusic({ path: dir, spots: [{ scenes: [1], decision: 'none', reason: 'r' }] }), /story_music: STRUCTURE\.sequences and STRUCTURE\.scenes are arrays of objects/);
   });
 
+  it('a scene replaced through storyboard_apply keeps the music decision story_music recorded', () => {
+    const dir = outline();
+    writeStoryMusic(storyMusicSchema.parse({ path: dir, spots: [{ scenes: [1], decision: 'none', reason: '대사만 듣게 한다' }] }));
+    applyStoryboard({ path: dir, draft: true, scenes: [{ no: 1, place: '숲', time: '밤', event: 'e', summary: '씬 1', out: '문이 닫힌다' }] });
+    const first = readBoard(dir).win.STRUCTURE.scenes.find((s) => s.no === 1);
+    assert.deepEqual([first.time, first.music], ['밤', { decision: 'none', reason: '대사만 듣게 한다' }]);
+  });
+
   it('shows the channel\'s saved music direction and says when no music model is saved', () => {
     const root = tmp(), dir = join(root, 'drafts/storyboard');
     const ready = setupProject(root);
@@ -657,6 +665,15 @@ describe('icon attributes come after every shot\'s characters', () => {
     assert.equal(start().written, true);
     rmSync(join(root, 'data/c/assets/characters/mina/face.png'));
     assert.throws(() => writeStoryScenes({ path: dir, scenes: [{ sequence: 'q1', no: 1, place: '숲', time: '낮', event: 'e', summary: '씬' }] }), /character_panel_missing: mina has no face/);
+  });
+  it('a story-first board inside an episode starts on the canvas and production its snapshot hands off', () => {
+    const root = tmp();
+    setupProject(root);
+    const dir = join(manageProject({ action: 'episode', workspace: root, topic: 'e1' }).episode, 'storyboard');
+    castFile(dir, ['mina'], { root: join(root, 'data/c') });
+    writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
+    const { win } = readBoard(dir);
+    assert.deepEqual([win.FORMAT, win.PRODUCTION?.mode, win.STORY.authoring], ['shorts-9x16', 'video_50', 'story-first']);
   });
 });
 
@@ -923,6 +940,57 @@ describe('images and the video prompt follow the icon attributes', () => {
     shot = readBoard(dir).win.SCENES[0];
     assert.match(shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'The fingers tighten.' }).prompt, /right profile.*facing camera-right/);
     assert.throws(() => shotIconsSchema.parse({ path: dir, shots: [{ id: 's0001', view: { ...view, mode: 'pov' } }] }), /viewerId/);
+  });
+  it('a shot_icons call with both why and view keeps both reasons', () => {
+    const { dir } = pictureBoard();
+    icons(dir);
+    const view = { subject: 'Mina’s clenched hand', reason: 'From the side the fingers show their grip', crop: 'Only the hand and key fill the frame', mode: 'profile-left', subjectId: 'mina' };
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', size: 'insert', why: 'The hand is the whole beat', view }] });
+    assert.equal(readBoard(dir).win.SCENES[0].shot.why, 'The hand is the whole beat');
+    // Without a why the size keeps none: the view reason is not copied in, and the result names the shot.
+    const bare = writeShotIcons({ path: dir, shots: [{ id: 's0001', size: 'cu', view }] });
+    assert.equal(readBoard(dir).win.SCENES[0].shot.why, undefined);
+    assert.ok(bare.findings.some((f) => f.level === 'warn' && f.where === 'shot_icons' && /no why on s0001/.test(f.what)));
+  });
+  it('a reason is asked of a choice: a hold and a plain cut go without, a move and another join do not, and a copied sentence is named', () => {
+    const { dir } = pictureBoard();
+    const parse = (shot) => shotIconsSchema.safeParse({ path: dir, shots: [{ id: 's0001', ...shot }] }).success;
+    assert.deepEqual([parse({ move: { id: 'camera.static' } }), parse({ move: { id: 'camera.dolly-in' } }),
+      parse({ next: { transition: 'cut' } }), parse({ next: { transition: 'dissolve' } })], [true, false, true, false]);
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', render: { mode: 'generated_video' }, size: 'ms', why: 'w', move: { id: 'camera.static' }, next: { transition: 'dissolve', reason: 'time passes' } }] });
+    let board = readBoard(dir).win.SCENES;
+    assert.deepEqual([board[0].shot.techniques, board[1].edit.reason], [[{ id: 'camera.static' }], 'time passes']);
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', next: { transition: 'cut' } }] });
+    assert.equal(readBoard(dir).win.SCENES[1].edit.reason, undefined, 'a cut does not keep the dissolve\'s reason');
+    // The same sentence as one kind of reason on three shots is reported with its shots, not refused.
+    writeStoryShots({ path: dir, shots: [{ scene: 1, summary: 'c' }] });
+    writeShotCharacters({ path: dir, shots: [{ id: 's0003', characters: [] }] });
+    const same = { size: 'cu', why: 'Her face carries the beat' };
+    const copied = writeShotIcons({ path: dir, shots: ['s0001', 's0002', 's0003'].map((id) => ({ id, ...same })) });
+    assert.ok(copied.written && copied.findings.some((f) => f.level === 'warn' && /shot\.why stands on 3 shots \(s0001, s0002, s0003\)/.test(f.what)));
+  });
+  it('a finding repeated across shots prints once with its shots, and the direction read returns the plan alone', () => {
+    const { dir } = pictureBoard(); icons(dir);
+    const text = storyboardImages.renderFindings([{ level: 'warn', where: 'shot 1', what: 'w' }, { level: 'warn', where: 'shot 2', what: 'w' },
+      { level: 'warn', where: 'shot 4', what: 'w' }, { level: 'bad', where: 'shot 2', what: 'w' }, { level: 'warn', where: 'scene 1', what: 'w' }]);
+    assert.deepEqual(text.split('\n').map((line) => line.trim().replace(/\s+/g, ' ')), ['· shots 1–2, 4 w', '! shot 2 w', '· scene 1 w']);
+    const read = readStoryboard({ path: dir, level: 'direction' });
+    assert.deepEqual(Object.keys(read), ['file', 'sha256', 'format', 'direction']);
+    assert.deepEqual([read.direction.shots, read.direction.sizes], [2, { ms: 1, mcu: 1 }]);
+  });
+  it('a route and a frame plan are accepted without reasons, and a new mode does not inherit the old reason', () => {
+    const { dir } = pictureBoard();
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', render: { mode: 'generated_video' }, frames: { mode: 'first_last', reason: 'the arrival must be pinned', endState: 'She stands at the door.' } }] });
+    let shot = readBoard(dir).win.SCENES[0];
+    assert.deepEqual([shot.shot.render.reason, shot.visual.frames.reason], [undefined, 'the arrival must be pinned']);
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', frames: { mode: 'first_last' } }] });
+    assert.equal(readBoard(dir).win.SCENES[0].visual.frames.reason, 'the arrival must be pinned', 'the same mode keeps its reason');
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', frames: { mode: 'first' } }] });
+    assert.equal(readBoard(dir).win.SCENES[0].visual.frames.reason, undefined);
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', render: { mode: 'still_camera', reason: 'a quiet place' }, move: { id: 'push', reason: 'settle in' } }] });
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', render: { mode: 'generated_video' } }] });
+    shot = readBoard(dir).win.SCENES[0];
+    assert.deepEqual([shot.shot.render.mode, shot.shot.render.reason], ['generated_video', undefined]);
   });
   it('MSR cast and frame changes synchronize sheet panels without waiting for shot_image', () => {
     const { root, dir } = pictureBoard();

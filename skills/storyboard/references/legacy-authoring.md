@@ -211,7 +211,7 @@ one without it (`[style-missing]`). A per-shot preset stays in `shot.style` with
 [drone-flythrough.md](drone-flythrough.md). The quote bound to an existing approval stays
 bound; changed inputs need a fresh quote, not a new preference question.
 Only for the cinematic-miniature style, load the bundled [style guide and image pack](../assets/styles/tactile-miniature-v1/STYLE.md); choose `visual.styleRole` by the narrated subject/action, not the shot number. The assembler emits real reference-image arguments and a portable style binding. Never use a reference's historical props as a substitute for the new topic. Read [full-video.md](../../produce/references/full-video.md), write the spatial style
-and each `videoDesign`, including the subject-motion contract and timed action states in full-video.md, fill the four `visual.camera` slots under its §Camera dynamics (a move the viewer can see, static on at most one shot in three, wide on at most half), then use [spatial-prompts.js](spatial-prompts.js), which assembles both prompts and runs the Seedance prompt gate. This branch
+and each `videoDesign`, including the subject-motion contract and timed action states in full-video.md, fill the four `visual.camera` slots under its §Camera dynamics (a move the viewer can see; no share of held, moving or wide shots applies), then use [spatial-prompts.js](spatial-prompts.js), which assembles both prompts and runs the Seedance prompt gate. This branch
 supersedes hybrid's shot cap, mandatory HTML explanation and person-required source clauses.
 Keep facts, narration reviews and the no-marks-over-video rule. Copy `production-mode.js`
 with the HTML template, render-routing.js, structure-contract.js and style-samples.js; `cost-preview.js --sbdoc` supplies both prices.

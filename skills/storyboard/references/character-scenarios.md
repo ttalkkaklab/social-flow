@@ -299,7 +299,8 @@ performance: [
 ```
 
 Speech events reference 1-based narration groups, exactly once in their playback order;
-action events carry text and no speech-reference `group`. Optional `durationSeconds` gives
+action events carry text and no speech-reference `group`; an event nobody performs (a door
+slams in the wind, the power goes out) omits `character`. Optional `durationSeconds` gives
 an authored action estimate. Optional `withGroup: 1` starts it with that 1-based speech
 group; without its own duration it spans that group, and a longer duration extends the
 interval by the maximum, not by adding two simultaneous events. An independent action

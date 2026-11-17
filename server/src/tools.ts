@@ -928,7 +928,7 @@ const storyboardShotInput = {
     id: { type: 'string', pattern: '^s\\d{4,}$', description: 'Stable shot id. storyboard_apply assigns it; preserve it and do not edit it by hand.' },
     type: enumInput(storyboardVocabulary?.TYPES, 'Playback role, distinct from shot.render.mode and the camera preset.'),
     scene: { type: 'integer', minimum: 1, description: 'Parent scene number in STRUCTURE.' },
-    duration: { type: 'number', exclusiveMinimum: 0, description: 'Shot duration in seconds; model duration may round up.' },
+    duration: { type: 'number', exclusiveMinimum: 0, description: 'Shot duration in seconds, set by the line the shot carries or else by the one visible thing it shows (an insert, glance or impact ends once read); the model request may round up and the edit trims it.' },
     title: { type: 'string', description: 'Visible title where the shot treatment permits it.' },
     narration: { type: 'array', description: 'Approved speech and optional subtitle text, in order.', items: { type: 'object', additionalProperties: true, required: ['tts'], properties: { tts: { type: 'string', description: 'Text to speak.' }, sub: { type: 'string', description: 'Subtitle text; omit to use the speech text.' } } } },
     beat: { type: 'string', description: 'Narrative beat in playback order. Recommended vocabulary is in the directing skill.' },
@@ -4748,6 +4748,7 @@ Returns revision, ordered matching lines with generationPlan and voice/audio has
 The default techniqueCatalog provides the four filmmaking elements and per-technique selection guidance. Store intentional choices as shot.techniques:[{id,reason}] and keep existing camera/size/angle fields consistent.
 
 Use it before editing an existing board, and after storyboard_apply to see the board the way the approval page groups it. level=outline is enough to plan a change; level=full carries every raw shot object (large — one shot is ~40 fields).
+level=direction returns only { file, sha256, format, direction }: each scene's shots in order (size, angle, move, length), the longest runs of one size and of held shots, lengths by size and the most common lengths, the longest shots with their action and line counts, and reasons — sentences standing as the same reason on several shots, sizes without a why. Counts of the plan as written, not targets; read it once the icons and lengths are written.
 Do NOT use it to validate — storyboard_check runs the contract. A board with no window.STRUCTURE comes back with every shot under unplacedShots; write the structure with story_sequence and story_scene.
 
 For inspection, the default includeContext:true adds reviewContext.story (STORY), production (PRODUCTION) and document (SB_DOC: characters, props, setting and recorded reviews). shotId adds selectedShot with the raw shot, scene and previous/next shot IDs while preserving the whole flow. Referenced asset paths are authored locators, not proof the files exist or have been viewed. inspection.mediaViewed is always false; evidenceStatus is not_verified. Read assets and run their contract checks before declaring continuity or a current review pass.
@@ -4763,7 +4764,7 @@ Returns: JSON — { file, mediaBaseDirectory, sha256, version, format, shots, se
       type: 'object',
       properties: {
         path: { type: 'string', description: 'The storyboard directory (data/<channel>/episodes/<topic>/storyboard/) or its scenes.js' },
-        level: { type: 'string', enum: ['outline', 'scenes', 'shots', 'full'], description: 'outline = sequences with scene numbers · scenes = scene cards with shot numbers · shots (default) = every shot summarised under its scene · full = raw shot objects too' },
+        level: { type: 'string', enum: ['outline', 'scenes', 'shots', 'full', 'direction'], description: 'outline = sequences with scene numbers · scenes = scene cards with shot numbers · shots (default) = every shot summarised under its scene · full = raw shot objects too · direction = only the direction plan as counts' },
         shotId: { type: 'string', description: 'Stable shot ID; adds raw selectedShot with scene and neighboring IDs without removing the overall flow. Unknown or duplicate IDs fail.' },
         includeTechniques: { type: 'boolean', description: 'Default true: return canonical techniqueCatalog with ids, purposes, unique icons, provider instructions, decision notes (avoid, pair, specify, vertical), guides for the shot_icons values without an entry, current selections and conflicting-plan advice.' },
         includeContext: { type: 'boolean', description: 'Default true: return STORY, PRODUCTION and SB_DOC for character, background, prop and scenario inspection. Recorded evidence is not verified by this read.' },
@@ -4775,7 +4776,7 @@ Returns: JSON — { file, mediaBaseDirectory, sha256, version, format, shots, se
     name: 'story_sequence',
     title: 'Write storyboard sequences (story step 1 of 3)',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    description: `The first storyboard step after the scenario is settled writes only the story, in three layers: story_sequence → story_scene → story_shot. Use it first: it upserts sequences by id (title · purpose · question · payoff — a payoff outside the sequence's scenes warns) and creates scenes.js as a story-v2 board when it is missing. A sequence's scene list is filled by story_scene. Local file only; no image, speech or prompt. Inside an episode the board starts only after the cast is ready, and story_scene and story_shot repeat this check on a story-first board: refused (cast_required) until storyboard/cast.json names at least one character, (cast_source_missing) for an entry whose source is not an existing assets/characters/<id>/identity.md, and (character_panel_missing) for an entry without "voiceOnly": true that lacks its face, front or back sheet panel — make those with character_manage and character_panel first.
+    description: `The first storyboard step after the scenario is settled writes only the story, in three layers: story_sequence → story_scene → story_shot. Use it first: it upserts sequences by id (title · purpose · question · payoff — a payoff outside the sequence's scenes warns) and creates scenes.js as a story-v2 board when it is missing, inside an episode on the FORMAT and PRODUCTION its saved snapshot hands off. A sequence's scene list is filled by story_scene. Local file only; no image, speech or prompt. Inside an episode the board starts only after the cast is ready, and story_scene and story_shot repeat this check on a story-first board: refused (cast_required) until storyboard/cast.json names at least one character, (cast_source_missing) for an entry whose source is not an existing assets/characters/<id>/identity.md, and (character_panel_missing) for an entry without "voiceOnly": true that lacks its face, front or back sheet panel — make those with character_manage and character_panel first.
 
 Do NOT write scenes, shots, dialogue or pictures here. Characters and lines come after the shot stories (shot_characters → shot_dialogue); camera and image plans after that, through storyboard_apply.
 
@@ -4919,7 +4920,7 @@ Before writing, read the exchange in order from each speaker's current knowledge
 
 Use it to write a shot's lines in spoken order, each attributed to a character from the episode cast. The given lines replace the shot's lines; [] makes it silent. Keep consecutive lines from one speaker in the same shot. Split every speaker change first (shot_speaker_limit), including a readable two-shot; visible listeners stay silent. Set each resulting shot's size and angle with shot_icons. Inner thoughts use the character's speaker id and voiceover delivery, with image2video and measured, timed TTS instead of MSR. After writing the complete scene, inspect every storyboard_read.boundaryReview join against an uninterrupted performance, merge only redundant boundaries and compare revised performance duration with videoTiming; split for speaker changes, motivated visual changes or verified model capacity. Delivery defaults to on_screen for one of the shot's characters and voiceover for anyone else — a narrator is a character who speaks without being seen. A line with a known id keeps its acting and audio binding, and changed text makes that audio stale. Refused (story_order) before the shot's characters are set and for an on_screen speaker outside them; an unknown speaker is cast_unknown, and a story-first board repeats story_sequence's cast check (cast_source_missing, character_panel_missing). Local file only; no audio, image or prompt is generated.
 
-Do NOT generate speech here — speech_manage plans and binds audio later. Do NOT write icon attributes or visual plans; shot_icons comes next, then storyboard_apply.
+Do NOT write a line the approved scenario does not give: where it reports that someone speaks without the words, write no line for that moment — stage it so the words are not needed (the listener's face, the speaker's back, distance) or ask. Do NOT generate speech here — speech_manage plans and binds audio later. Do NOT write icon attributes or visual plans; shot_icons comes next, then storyboard_apply.
 
 Returns: the file written or not, counts, and findings (! violation · warning).`,
     inputSchema: {
@@ -4948,15 +4949,17 @@ Returns: the file written or not, counts, and findings (! violation · warning).
 
 Choose from what the audience must see, not shot index, dialogue count or a diversity quota. Read storyboard_read's techniqueCatalog and shot-view.md. A monologue may need the changing face (cu), a revealing hand (insert/ecu) or isolation in the surroundings (ls/els). Compare one useful alternative and state the story-specific reason.
 
-Set backgroundView to front or back relative to the location sheet layout; shot_image uses its matching panels.front or panels.back. This is the direction through the space, independent of the visible side of a subject.
+Set backgroundView to front or back relative to the location sheet layout; shot_image uses its matching panels.front or panels.back.
 
-Set view with subject (visible evidence), reason, crop and mode. It writes visual.camera.view, shot.info and shot.why. Subject and crop are English provider text. This view supersedes old opening framing, rear/pov flags and viewpoint/framing techniques in the image and video prompts. Left/right name the visible side of the subject; angle separately controls height. Set subjectId for a blocked actor or set object; ots/pov also need a different viewerId. Built-set body inserts/ecu need target with the actual staged world point and vertical span; objects use their subjectId. Missing set targets cannot silently become frontal portraits. Use storyboard_apply for blocking and closing camera endpoints.
+Set view with subject (visible evidence), reason, crop and mode. It writes visual.camera.view and shot.info. why is the size's reason and view.reason the viewpoint's; neither is copied into the other, and the result names shots left without a why. Subject and crop are English provider text. This view supersedes old opening framing, rear/pov flags and viewpoint/framing techniques in the image and video prompts. Left/right name the visible side of the subject; angle separately controls height. Set subjectId for a blocked actor or set object; ots also needs a different viewerId, pov only viewerId (what it sees stays in subject when no id stands for it). Built-set body inserts/ecu need target with the actual staged world point and vertical span; objects use their subjectId. Use storyboard_apply for blocking and closing camera endpoints.
 
 Size is distance (els … ecu, insert). Set size and view.crop together when changing the crop. Person shots keep anatomical size boundaries even with a view; set view.subjectType to object or detail when the subject is a prop or body detail despite a character being in the cast. Explicit contradictory crop declarations fail image planning with shot_framing_conflict. Composition labels two/three/ots/pov/back/cutaway/reaction carry no crop; new boards use a distance with view. The technique catalogue gives use, avoid, specify, neighbouring-shot and vertical guidance; these are directing conventions, not measured emotional effects. On 9:16 the result includes the chosen values' vertical advice.
 
 On still_camera, move is a still effect stored in shot.render.camera; other routes use a camera technique and synchronize visual.camera.movement. Route changes drop the old route's movement. A different move replaces its speed/target; the same move keeps them unless provided. Video moves take slow/steady/fast and an English target; rack focus takes English from/to subjects. accents lays camera.speed-ramp or camera.impact-shake over the move, each with the English moment it fires on; they reach the video prompt as one sentence each, and a hero landing is camera.static + angle ground + an impact shake on the landing. A new size without why drops the old why. A still hold is deliberate, not an unset move.
 
-Frame reference means MSR. Changing away from first_last removes the end-image binding; switching to/from reference updates panel use. Camera/view/size/depth/focus changes warn to remake existing images; changed inputs to a written video prompt warn to rewrite it with shot_prompt. next sets the transition into the following shot, with the same checks as storyboard_apply, and is refused on the last shot. Omitted attributes stay unchanged.
+A reason belongs to a choice: size (why), view and a camera move take this shot's reason; a hold (camera.static), a plain cut, the episode's own route and a first or reference frame plan need none, and a new route or frame mode given without a reason drops the old one. Frame reference means MSR. Changing away from first_last removes the end-image binding; switching to/from reference updates panel use. Camera/view/size/depth/focus changes warn to remake existing images; changed inputs to a written video prompt warn to rewrite it with shot_prompt. next sets the transition into the following shot, with the same checks as storyboard_apply, and is refused on the last shot. Omitted attributes stay unchanged.
+
+storyboard_read level:"direction" then shows the whole plan as counts.
 
 Refused: missing story/characters (story_order), invalid attributes, incompatible move/focus for the route, non-English prompt targets, or an invalid transition. Returns: written file, counts and findings (! violation · warning).`,
     inputSchema: {
@@ -4965,19 +4968,19 @@ Refused: missing story/characters (story_order), invalid attributes, incompatibl
         path: { type: 'string', description: 'The storyboard directory or its scenes.js' },
         shots: { type: 'array', minItems: 1, description: 'Shots to set; omit an attribute to keep it', items: { type: 'object', additionalProperties: false, required: ['id'], properties: {
           id: { type: 'string', pattern: '^s\\d{4,}$', description: 'Stable shot id' },
-          render: { type: 'object', additionalProperties: false, required: ['mode', 'reason'], description: 'Render route icon', properties: {
+          render: { type: 'object', additionalProperties: false, required: ['mode'], description: 'Render route icon', properties: {
             mode: enumInput(storyboardVocabulary?.RENDER_MODES, 'still_camera, generated_video, stock_video, or an HTML/data route (render-routing.md)'),
             purpose: enumInput(purposes, 'What the viewer needs from the cut'),
-            reason: { type: 'string', description: 'Why this route carries this cut' },
+            reason: { type: 'string', description: 'Optional. Why this cut takes this route when the route is this cut\'s own choice — a still, a card or a graph, or any route in a mixed-ratio episode. Leave it out for generated_video in a full_video episode: the episode already chose video, and a sentence restating that on every shot says nothing' },
           } },
           size: enumInput(storyboardVocabulary?.SIZES, 'Shot size icon: the distance (els … ecu, insert); composition labels carry no crop — techniqueCatalog guides.size'),
-          why: { type: 'string', description: 'The beat this size serves' },
+          why: { type: 'string', description: 'Why this size for this shot. view.reason carries the viewpoint and height and is not copied here' },
           angle: enumInput(storyboardVocabulary?.ANGLES, 'Camera angle icon: the camera height and tilt; ground and over have cards in techniqueCatalog guides.angle'),
           view: shotViewInput,
           backgroundView: { type: 'string', enum: ['front', 'back'], description: 'Opening direction relative to the location sheet: front is the establishing view, back is the opposite side. Saves visual.camera.backgroundView; omitted keeps the choice, initially front. Independent of the subject view.' },
-          move: { type: 'object', additionalProperties: false, required: ['id', 'reason'], description: 'Camera move icon', properties: {
+          move: { type: 'object', additionalProperties: false, required: ['id'], description: 'Camera move icon', properties: {
             id: { type: 'string', enum: [...cameraMoves, ...stillCameraEffects], description: 'A camera.* technique with a movement, or on a still_camera cut a still effect' },
-            reason: { type: 'string', description: 'What the move or the hold does for this beat' },
+            reason: { type: 'string', description: 'Why the camera moves this way in this shot. Required for every move and still effect; camera.static may go without one' },
             target: { type: 'string', description: 'What the move is aimed at, in English on a video cut: what it pushes toward or pans and tilts to, or the person it follows, circles or rises above — the prompt reads "pushes in toward <target>", "follows behind <target>". A blast pushback names the source of the blast, a weapon cam what the projectile flies toward, a relay one-take the fighter it starts with' },
             speed: { type: 'string', enum: ['very slow', 'slow', 'steady', 'fast', 'very fast'], description: 'Pace: slow, steady or fast on a video cut; very slow (default), slow, fast or very fast on a still effect' },
           } },
@@ -4992,15 +4995,15 @@ Refused: missing story/characters (story_order), invalid attributes, incompatibl
             on: { type: 'string', description: 'The moment it fires on, in English: "the moment the kick lands", "each footfall of the golem"' },
           } } },
           depth: depthInput,
-          frames: { type: 'object', additionalProperties: false, required: ['mode', 'reason'], description: 'Frame plan; reference = MSR (subject images + start image), which shows the MSR icon', properties: {
+          frames: { type: 'object', additionalProperties: false, required: ['mode'], description: 'Frame plan; reference = MSR (subject images + start image), which shows the MSR icon', properties: {
             mode: { type: 'string', enum: ['first', 'first_last', 'reference'], description: 'first = start image · first_last = start and end images · reference = MSR' },
-            reason: { type: 'string', description: 'Why this shot needs this frame plan' },
+            reason: { type: 'string', description: 'Optional. first follows from a silent shot and reference from an on-screen line, so neither needs a sentence; give the reason when the plan is a choice — first_last says what the pinned end frame controls' },
             endState: { type: 'string', description: 'first_last: the visible final state' },
           } },
-          next: { type: 'object', additionalProperties: false, required: ['transition', 'reason'], description: 'Transition icon: the join from this shot into the next one, stored on the next shot\'s transition (the field the assembly builder reads)', properties: {
+          next: { type: 'object', additionalProperties: false, required: ['transition'], description: 'Transition icon: the join from this shot into the next one, stored on the next shot\'s transition (the field the assembly builder reads)', properties: {
             transition: { type: 'string', enum: ['cut','dip','dip:white','jcut','dissolve','iris','blur','zoom','push:l2r','push:r2l','push:u2d','push:d2u','whip:l2r','whip:r2l','whip:u2d','whip:d2u'], description: 'scenes-schema §scene transition: what moved between the two shots picks the join' },
             transitionSeconds: { type: 'number', minimum: 0.08, maximum: 0.8, description: 'Moving joins only; omit for cut, dip and dip:white' },
-            reason: { type: 'string', minLength: 1, description: 'Why this boundary uses this effect' },
+            reason: { type: 'string', minLength: 1, description: 'Why this boundary uses this effect; a plain cut needs none, any other join carries one' },
             continuity: { type: 'string', minLength: 1, description: 'What connects the two pictures' },
           } },
         } } },
@@ -5110,7 +5113,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
         },
         structure: { type: 'object', description: 'Replace window.STRUCTURE only' },
         sequences: { type: 'array', items: { type: 'object', description: '{ id, title, purpose, question?, payoff?, scenes }' }, description: 'Upsert sequences by id' },
-        scenes: { type: 'array', items: { type: 'object', description: '{ no, place, time, event, summary, charge, turn, out? }' }, description: 'Upsert scenes by no' },
+        scenes: { type: 'array', items: { type: 'object', description: '{ no, place, time, event, summary, charge, turn, out? }' }, description: 'Upsert scenes by no: the given fields replace the scene, and its story_music decision is kept' },
         shots: { type: 'array', items: { type: 'object', description: 'One positional upsert', properties: { no: { type: 'number', description: '1-based position' }, shot: storyboardShotInput }, required: ['no', 'shot'] }, description: 'Upsert shots by 1-based position; no = length + 1 appends. Not with the id fields in the same patch' },
         shotsById: { type: 'array', items: { type: 'object', description: 'One upsert by id', properties: { id: { type: 'string', pattern: '^s\\d{4,}$', description: 'The stable shot id (s0007) to replace' }, shot: storyboardShotInput }, required: ['id', 'shot'] }, description: 'Replace shots by their stable id — the shot keeps that id, an unknown id writes nothing. Preferred over shots once the board has ids: positions shift with every insert, ids do not' },
         insertShots: { type: 'array', items: { type: 'object', description: 'One insert', properties: { after: { type: 'number', description: '1-based position to insert after; 0 = at the start' }, afterId: { type: 'string', pattern: '^s\\d{4,}$', description: 'The shot id to insert after — instead of after' }, shots: { type: 'array', items: storyboardShotInput, description: 'Shots to insert, in order' } }, required: ['shots'] }, description: 'Insert shots after a 1-based position (0 = at the start) or after the shot with afterId — exactly one of the two per entry' },
@@ -5121,9 +5124,9 @@ Returns: the file written or not, counts, and findings (! violation · warning).
             no: { type: 'integer', minimum: 1, description: 'Incoming shot, 1-based' },
             transition: { type: 'string', enum: ['cut','dip','dip:white','jcut','dissolve','iris','blur','zoom','push:l2r','push:r2l','push:u2d','push:d2u','whip:l2r','whip:r2l','whip:u2d','whip:d2u'], description: 'dip = previous picture fades to black, then this picture fades in (up to 0.30s each). dissolve blends pictures without black. jcut leads with sound, then cuts.' },
             transitionSeconds: { type: 'number', minimum: 0.08, maximum: 0.8, description: 'Moving joins only; omit for cut, dip and dip:white' },
-            reason: { type: 'string', minLength: 1, description: 'Why this boundary uses this effect' },
+            reason: { type: 'string', minLength: 1, description: 'Why this boundary uses this effect; a plain cut needs none, any other join carries one' },
             continuity: { type: 'string', minLength: 1, description: 'What connects the two pictures' },
-          }, required: ['no', 'transition', 'reason'] },
+          }, required: ['no', 'transition'] },
         },
         removeShots: { type: 'array', items: { type: 'number', description: '1-based position' }, description: '1-based positions to drop (resolved before inserts)' },
         removeShotIds: { type: 'array', items: { type: 'string', pattern: '^s\\d{4,}$', description: 'A stable shot id' }, description: 'Shot ids to drop (resolved before inserts). Not with the position fields in the same patch' },
