@@ -21,6 +21,26 @@ test('localized copy is escaped while media attributes and source stay unchanged
   assert.equal(result[1], '../speech.wav');
 });
 
+test('review language survives source typography and prepares the selected font', async () => {
+  const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
+  const start = template.indexOf('  window.ReviewTypography.apply(DOC, SCENES);');
+  const source = template.slice(start, template.indexOf('  if (fontFailures.length)', start));
+  const node = { lang: '', setAttribute(key, value) { this[key] = value; } };
+  runInNewContext(source, {
+    DOC: { contentLanguage: 'vi' }, SCENES: [], CONTENT: { language: 'ja' },
+    app: { querySelectorAll: () => [node] },
+    window: { ReviewTypography: { apply: () => { node.lang = 'vi'; } } },
+  });
+  assert.equal(node.lang, 'ja');
+  const loaded = [];
+  const context = { document: { documentElement: { lang: 'en' }, fonts: { load: async font => { loaded.push(font); return [{}]; } } } };
+  context.window = context;
+  runInNewContext(readFileSync(new URL('../../skills/channel/references/review-assets/review-typography.js', import.meta.url), 'utf8'), context);
+  await context.ReviewTypography.prepare({ contentLanguage: 'vi' }, [], ['ja', 'zh-Hans']);
+  assert.ok(loaded.some(font => font.includes('Noto Sans JP')));
+  assert.ok(loaded.some(font => font.includes('Noto Sans SC')));
+});
+
 test('bound video displays before assembly, while explicit edit cuts retain their ranges', () => {
   const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
   const start = template.indexOf('  function productionCutsHtml(s)');

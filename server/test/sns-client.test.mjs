@@ -30,7 +30,7 @@ test('existing Facebook captions check ownership, preserve defaults and recover 
   const filePath = join(dir, 'en.srt');
   writeFileSync(filePath, '1\n00:00:00,000 --> 00:00:01,000\nHello\n');
   t.after(() => { rmSync(dir, { recursive: true, force: true }); rmSync(join(tokenPath, '..'), { recursive: true, force: true }); });
-  let page = '12', owner = '12', writes = 0, loseResponse = false;
+  let page = '12', owner = '12', writes = 0, loseResponse = false, invalidVerification = false;
   const tracks = [{ locale: 'ko_KR', is_default: true }];
   t.mock.method(globalThis, 'fetch', async (url, options) => {
     const path = new URL(url).pathname;
@@ -43,7 +43,7 @@ test('existing Facebook captions check ownership, preserve defaults and recover 
       return Response.json({ success: true });
     }
     if (path.endsWith('/me')) return Response.json({ id: page });
-    if (path.endsWith('/captions')) return Response.json({ data: tracks });
+    if (path.endsWith('/captions')) return invalidVerification && tracks.length > 1 ? new Response('not-json') : Response.json({ data: tracks });
     return Response.json({ id: '34', from: { id: owner } });
   });
   const input = { action: 'add', channel, videoId: '34', expectedPageId: '12', tracks: [{ filePath, locale: 'en_US' }] };
@@ -60,6 +60,12 @@ test('existing Facebook captions check ownership, preserve defaults and recover 
   tracks.pop(); loseResponse = false;
   assert.equal(JSON.parse((await facebookCaptions(input)).body).results[0].status, 'verified');
   assert.equal(tracks[0].is_default, true);
+  tracks.pop(); invalidVerification = true;
+  const receipt = JSON.parse((await facebookCaptions(input)).body);
+  assert.equal(receipt.results[0].status, 'accepted');
+  assert.match(receipt.results[0].sha256, /^[a-f0-9]{64}$/);
+  assert.match(receipt.verificationError, /invalid JSON/);
+  assert.equal(writes, 3);
 });
 
 /** The test picks the chunk size — at the 8MiB default the fixture gets needlessly large. */

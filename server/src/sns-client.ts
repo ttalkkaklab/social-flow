@@ -1143,10 +1143,18 @@ export async function facebookCaptions(input: {
     if (warning) break;
   }
   const after = await list();
-  const current = after.ok ? JSON.parse(after.body).data : null;
+  let current = null;
+  let verificationError = after.ok ? '' : after.body;
+  if (after.ok) {
+    try {
+      const parsed = JSON.parse(after.body);
+      if (!Array.isArray(parsed.data) || parsed.paging?.next) verificationError = 'Caption verification list incomplete';
+      else current = parsed.data;
+    } catch { verificationError = 'Caption verification returned invalid JSON'; }
+  }
   for (const result of results) if (result.status === 'accepted' && Array.isArray(current) && current.some((item: { locale?: string }) => item.locale === result.locale)) result.status = 'verified';
   return okJson({ videoId: input.videoId, pageId: input.expectedPageId, results, tracks: current,
-    ...(after.ok ? {} : { verificationError: after.body }), note: 'No default locale changed. Presence verifies the locale, not its text; never retry an uncertain write without listing first.' });
+    ...(verificationError ? { verificationError } : {}), note: 'No default locale changed. Presence verifies the locale, not its text; never retry an uncertain write without listing first.' });
 }
 
 async function setYoutubeThumbnail(

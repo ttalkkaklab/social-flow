@@ -2352,7 +2352,7 @@ window.STORYBOARD_READY = (async function () {
     T[k] = Object.assign({}, STRINGS.en[k], (STRINGS[LANG] || {})[k]);
   });
   document.documentElement.lang = LANG;
-  var fontFailures = await window.ReviewTypography.prepare(DOC, SCENES);
+  var fontFailures = await window.ReviewTypography.prepare(DOC, SCENES, [CONTENT.language]);
 
   /* ── Author-language heuristics ──
      These read scenes.js, which is written in the channel's language — not the reviewer's — so
@@ -5561,10 +5561,10 @@ window.STORYBOARD_READY = (async function () {
   });
 
 
+  window.ReviewTypography.apply(DOC, SCENES);
   if (CONTENT.language) app.querySelectorAll('.speech-text, .speech-subtitle, .shot-story, .scene-band-synopsis, .seq-title, .seq-purpose, .seq-question, .doc-title').forEach(function (node) {
     node.setAttribute('lang', CONTENT.language);
   });
-  window.ReviewTypography.apply(DOC, SCENES);
   if (fontFailures.length) {
     var notice = document.createElement('p');
     notice.className = 'review-font-warning'; notice.setAttribute('role', 'status');
