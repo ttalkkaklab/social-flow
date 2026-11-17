@@ -1165,15 +1165,15 @@ regenerate frame.html → recapture only that state → rebuild.
 
 ### 9. Write the per-platform text
 
-**Don't write the first sentence straight away — jot down 3 or 4 entry points first** —
-something that happened, a number, a question turned back, a described scene. Write without
-doing that and the model converges on the safest opening every time, so the copy passes the
-gate episode after episode while the channel feed sounds like one voice throughout. The
-evidence grade is low (an English-language creative-writing preprint, 1.6–2.1× diversity —
-`korean-style.md` §Evidence grades).
+For story episodes, also prepare each target's `output/<platform>/first-comment.md`
+using [episode first comments](../_shared/first-comment.md): brief character roles and
+relationship, then the surprising opening incident without its payoff. Adapt to the
+channel language and platform. Include any approved Facebook source/related link in
+that same comment. Respect opt-outs; production prepares this copy without posting it.
 
-Read the platform-guide playbook
-(`../platform-guide/references/platform-playbook.md`) and rewrite per platform — a short Threads
+Before drafting, jot down 3–4 entry points: an event, number, question or scene. Evidence for varying openings is limited (`korean-style.md` §Evidence grades).
+
+Read `../platform-guide/references/platform-playbook.md` and rewrite per platform — a short Threads
 body in casual (반말) spoken register carrying one judgment of ours (§3) + the video link on the last line / an IG caption with a hook in
 the first 125 characters and a save CTA / an FB structured body plus the first-comment link copy /
 YouTube in the playbook §6 contract — one spoken sentence for the title with the topic noun in its
