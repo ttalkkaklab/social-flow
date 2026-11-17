@@ -354,6 +354,16 @@ test('GenAI selection binds its model and reservation; managed recovery complete
  }
  // Audio-to-video exists on GenAI but has no duration; its length comes from the audio.
  assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'speech',operation:'audio',args}),/Unsupported astra_genai_audio2video argument: duration/);
+ // A negative prompt in video_plan.args reaches the guided dev lanes and survives the replan; distilled has no negative pass.
+ const dev=fixture(t,{engine:'astra-genai',model:'ltx-2.5-22b-dev',resolution:'1280x704'}),negativePrompt='has_subtitles, captions';
+ const wav=path.join(dev.episode,'line.wav');fs.writeFileSync(wav,'RIFF');
+ for (const [operation,tool,extra] of [['text','astra_genai_text2video',args],['audio','astra_genai_audio2video',{prompt:args.prompt,audioPath:wav,reserveUsd:0.25}]]) {
+  const n=planVideo({episode:dev.episode,shotId:'s1',requestId:'negative-'+operation,operation,args:{...extra,negativePrompt}});
+  assert.equal(n.tool,tool);assert.equal(n.args.negativePrompt,negativePrompt);
+  const stored=JSON.parse(fs.readFileSync(path.join(dev.episode,'.work/video-routing/plans',n.id+'.json')));
+  assert.equal(planVideo({episode:dev.episode,shotId:n.shotId,requestId:n.requestId,tool:n.tool,args:stored.sourceArgs}).id,n.id);
+ }
+ assert.throws(()=>make({negativePrompt}),/negativePrompt requires ltx-2.5-22b-dev/);
  let calls=0;
  await assert.rejects(f.execute(p,async (_tool,input)=>{
    calls++;recordVideoSubmission('recover-1');fs.mkdirSync(input.outputPath,{recursive:true});

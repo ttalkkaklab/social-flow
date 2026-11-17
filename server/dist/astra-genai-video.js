@@ -19,8 +19,42 @@ const localResolution = z.string().regex(/^[1-9]\d*x[1-9]\d*$/).refine(value => 
     return Number.isSafeInteger(w) && Number.isSafeInteger(h) && Math.min(w, h) >= 64 && w % 2 === 0 && h % 2 === 0 &&
         Math.max(width, height) <= 1920 && width * height <= 2064384;
 }, 'Use even WIDTHxHEIGHT sides of at least 64; rounded-up /64 sides must fit 1920 and 2,064,384 pixels');
+/** MSR's guidance knobs: the only way distilled sampling gets a negative pass. */
+const msrGuidanceFields = {
+    guidanceScale: z.number().finite().min(1).max(10).optional(),
+    nagScale: z.number().finite().min(0).max(100).optional(),
+    nagAlpha: z.number().finite().min(0).max(1).optional(),
+    nagTau: z.number().finite().min(0).max(10).optional(),
+};
+function msrNegativeRule(args, issue) {
+    if ((args.nagScale ?? 0) > 0 && args.negativePrompt === undefined)
+        issue('MSR nagScale > 0 requires negativePrompt');
+    if (args.negativePrompt !== undefined && (args.guidanceScale ?? 1) <= 1 && (args.nagScale ?? 0) === 0)
+        issue('MSR negativePrompt requires guidanceScale > 1 or nagScale > 0');
+}
+/** Wire fields are sent only when set, so an older gateway keeps taking ordinary requests. */
+function negativeBody(args) {
+    return {
+        ...(args.negativePrompt === undefined ? {} : { negative_prompt: args.negativePrompt }),
+        ...(args.guidanceScale === undefined ? {} : { guidance_scale: args.guidanceScale }),
+        ...((args.nagScale ?? 0) > 0 ? { nag_scale: args.nagScale,
+            ...(args.nagAlpha === undefined ? {} : { nag_alpha: args.nagAlpha }),
+            ...(args.nagTau === undefined ? {} : { nag_tau: args.nagTau }) } : {}),
+    };
+}
+/** The dev pipelines run guided, so their backend takes a negative prompt of at most 2000 characters; distilled has no negative pass. */
+function devNegativeRule(args, ctx) {
+    if (args.negativePrompt === undefined)
+        return;
+    const issue = (message) => ctx.addIssue({ code: 'custom', path: ['negativePrompt'], message });
+    if (args.model !== 'ltx-2.5-22b-dev')
+        issue('negativePrompt requires ltx-2.5-22b-dev, or image-to-video references with guidanceScale > 1 or nagScale > 0');
+    if (args.negativePrompt.length > 2000)
+        issue('The dev backend accepts a negativePrompt of at most 2000 characters');
+}
 const textVideoFields = z.object({
     prompt: z.string().min(1).max(2000),
+    negativePrompt: z.string().trim().min(1).max(5000).optional(),
     model: z.enum(GENAI_VIDEO_MODELS),
     duration: z.number().int().min(1).nullable(),
     resolution: localResolution,
@@ -34,7 +68,7 @@ function localVideoTiming(args, ctx) {
     if (args.duration !== null && 8 * Math.ceil((args.duration * args.fps - 1) / 8) + 1 > 361)
         ctx.addIssue({ code: 'custom', path: ['duration'], message: 'Duration and fps exceed the local 361-frame limit' });
 }
-export const genaiTextToVideoSchema = textVideoFields.superRefine(localVideoTiming);
+export const genaiTextToVideoSchema = textVideoFields.superRefine((args, ctx) => { localVideoTiming(args, ctx); devNegativeRule(args, ctx); });
 export const genaiImageToVideoSchema = textVideoFields.extend({
     imageUri: genaiImageUriSchema.optional(), imagePath: z.string().min(1).optional(),
     lastFrameUri: genaiImageUriSchema.nullable().optional(), lastFramePath: z.string().min(1).optional(),
@@ -42,6 +76,7 @@ export const genaiImageToVideoSchema = textVideoFields.extend({
         imageUri: genaiImageUriSchema.optional(), imagePath: z.string().min(1).optional(),
         background: z.boolean().default(false),
     }).strict().refine(ref => Number(ref.imageUri !== undefined) + Number(ref.imagePath !== undefined) === 1, 'Supply exactly one imageUri or imagePath per reference')).min(1).max(5).optional(),
+    ...msrGuidanceFields,
 }).strict().superRefine((args, ctx) => {
     const issue = (message) => ctx.addIssue({ code: z.ZodIssueCode.custom, message });
     localVideoTiming(args, ctx);
@@ -51,7 +86,13 @@ export const genaiImageToVideoSchema = textVideoFields.extend({
         issue('Supply exactly one imageUri or imagePath');
     if (args.lastFrameUri != null && args.lastFramePath !== undefined)
         issue('Supply at most one lastFrameUri or lastFramePath');
-    if (args.references) {
+    if (!args.references) {
+        if (Object.keys(msrGuidanceFields).some(key => args[key] !== undefined))
+            issue('guidanceScale and NAG require references (MSR conditioning); ltx-2.5-22b-dev already runs guided');
+        devNegativeRule(args, ctx);
+    }
+    else {
+        msrNegativeRule(args, issue);
         if (args.model !== 'ltx-2.5-22b-distilled')
             issue('Additional references require ltx-2.5-22b-distilled (MSR conditioning)');
         if (args.duration === null)
@@ -67,6 +108,7 @@ export const GENAI_AUDIO_DATA_URI_MAX = 15_000_000;
 const oneOf = (a, b) => Number(a !== undefined) + Number(b !== undefined);
 export const genaiAudioToVideoSchema = z.object({
     prompt: z.string().trim().min(1).max(5000),
+    negativePrompt: z.string().trim().min(1).max(2000).optional(),
     model: z.literal('ltx-2.5-22b-dev'),
     resolution: z.string().min(1),
     fps: z.union([z.literal(24), z.literal(25), z.literal(48), z.literal(50)]).default(24),
@@ -115,16 +157,14 @@ export function buildGenaiAudioBody(args) {
     const image = oneOf(args.imagePath, args.imageUri) ? genaiSourceUri(args.imageUri, args.imagePath) : undefined;
     const last = oneOf(args.lastFramePath, args.lastFrameUri) ? genaiSourceUri(args.lastFrameUri, args.lastFramePath) : undefined;
     return { audio_uri: genaiAudioUri(args.audioUri, args.audioPath), prompt: args.prompt, model: args.model, resolution: args.resolution, fps: args.fps,
-        ...(image === undefined ? {} : { image_uri: image }), ...(last === undefined ? {} : { last_frame_uri: last }) };
+        ...(image === undefined ? {} : { image_uri: image }), ...(last === undefined ? {} : { last_frame_uri: last }),
+        ...negativeBody({ negativePrompt: args.negativePrompt }) };
 }
 export const GENAI_MSR_FRAMES = { min: 25, max: 361, step: 8, frameRate: 24 };
 export const genaiMsrSchema = z.object({
     prompt: z.string().trim().min(1).max(2000),
     negativePrompt: z.string().trim().min(1).max(5000).optional(),
-    guidanceScale: z.number().finite().min(1).max(10).optional(),
-    nagScale: z.number().finite().min(0).max(100).optional(),
-    nagAlpha: z.number().finite().min(0).max(1).optional(),
-    nagTau: z.number().finite().min(0).max(10).optional(),
+    ...msrGuidanceFields,
     references: z.array(z.object({
         imageUri: genaiImageUriSchema.optional(), imagePath: z.string().min(1).optional(),
         background: z.boolean().default(false),
@@ -145,10 +185,7 @@ export const genaiMsrSchema = z.object({
     filename: bareFilenameSchema('video').refine(name => name.endsWith('.mp4'), 'Use a .mp4 filename').optional(),
 }).strict().superRefine((args, ctx) => {
     const issue = (message) => ctx.addIssue({ code: z.ZodIssueCode.custom, message });
-    if ((args.nagScale ?? 0) > 0 && args.negativePrompt === undefined)
-        issue('MSR nagScale > 0 requires negativePrompt');
-    if (args.negativePrompt !== undefined && (args.guidanceScale ?? 1) <= 1 && (args.nagScale ?? 0) === 0)
-        issue('MSR negativePrompt requires guidanceScale > 1 or nagScale > 0');
+    msrNegativeRule(args, issue);
     const backgrounds = args.references.filter(ref => ref.background).length;
     if (backgrounds > 1 || args.references.length - backgrounds > 4)
         issue('MSR supports at most four subjects and one background');
@@ -173,12 +210,7 @@ export const genaiMsrSchema = z.object({
     }
 });
 export function buildGenaiMsrBody(args) {
-    return { prompt: args.prompt,
-        ...(args.negativePrompt === undefined ? {} : { negative_prompt: args.negativePrompt }),
-        ...(args.guidanceScale === undefined ? {} : { guidance_scale: args.guidanceScale }),
-        ...((args.nagScale ?? 0) > 0 ? { nag_scale: args.nagScale,
-            ...(args.nagAlpha === undefined ? {} : { nag_alpha: args.nagAlpha }),
-            ...(args.nagTau === undefined ? {} : { nag_tau: args.nagTau }) } : {}),
+    return { prompt: args.prompt, ...negativeBody(args),
         references: args.references.map(ref => ({ image_uri: genaiSourceUri(ref.imageUri, ref.imagePath), background: ref.background,
             ...(oneOf(ref.audioUri, ref.audioPath) ? { audio_uri: genaiAudioUri(ref.audioUri, ref.audioPath) } : {}) })),
         reference_strength: args.referenceStrength, reference_frames: args.referenceFrames,
@@ -218,6 +250,7 @@ export function buildGenaiVideoBody(args) {
         ...(args.references === undefined ? {} : { references: args.references.map(ref => ({
                 image_uri: genaiSourceUri(ref.imageUri, ref.imagePath), background: ref.background,
             })) }),
+        ...negativeBody(args),
     };
 }
 const operationSchema = z.enum(['text-to-video', 'image-to-video', 'audio-to-video', 'msr']);
@@ -356,7 +389,8 @@ export async function generateGenaiVideo(operation, input) {
             if (capabilities.image_conditioning !== true)
                 throw new GenaiRequestError('image_references_unsupported: the GenAI backend does not advertise combined start/end frames and subject references; no request was submitted', true, 422);
         }
-        const msrArgs = operation === 'msr' ? args : undefined;
+        // References on image-to-video run on the same MSR backend, so its negatives need the same advertisement.
+        const msrArgs = operation === 'msr' || usesReferences ? args : undefined;
         if (msrArgs && (msrArgs.negativePrompt !== undefined || (msrArgs.guidanceScale ?? 1) > 1)) {
             const capabilities = z.object({ negative_prompt: z.boolean().optional(), nag: z.boolean().optional() }).passthrough()
                 .parse(await requestGenai('GET', '/v1/ltx/msr/capabilities', undefined, 15_000));
