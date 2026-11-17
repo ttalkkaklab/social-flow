@@ -91708,7 +91708,7 @@ var require_render_routing = __commonJS({
         }
         return errors.concat(checkImageReferences(scene, { draft }));
       }
-      const IMAGE_ROLES = ["character", "prop", "background", "style", "composition", "continuity"];
+      const IMAGE_ROLES = ["character", "bystander", "prop", "background", "style", "composition", "continuity"];
       const IMAGE_USES = ["image", "video", "both"];
       function hasStructuredImages2(scene) {
         return scene.visual?.frames?.start !== void 0 || scene.visual?.references !== void 0;
@@ -116143,6 +116143,8 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
   const acting = load4("../../skills/_shared/scene-acting.js");
   const beats = acting.performanceBeats(performance2.performance, mode, !msr);
   const worn = expressionWords(shot, names);
+  const called = (id) => names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id;
+  const seen = (Array.isArray(visual.bystanders) ? visual.bystanders : []).map(text2).filter(Boolean), extras = text2(visual.extras);
   const prompt = [
     msr ? framing : "Start from the given first frame.",
     msr ? depthWords : "",
@@ -116155,6 +116157,8 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
     !viewWords && camera.rear && !other.some((t2) => t2.entry.fields.viewpoint === "rear") ? "View the subject from behind." : "",
     !viewWords && camera.pov && !other.some((t2) => t2.entry.fields.viewpoint === "pov") ? sentence(`Point of view: ${text2(camera.pov) || "the named character"}`) : "",
     sentence(source.action),
+    seen.length ? sentence(`The opening picture also shows ${seen.map(called).join(" and ")}, who ${seen.length > 1 ? "stay" : "stays"} in the frame and never speaks`) : "",
+    extras ? sentence(`Unnamed people in the frame: ${extras}`) : "",
     ...["before", "after", "continuity"].map((key) => text2(design[key]) ? sentence(`${key}: ${text2(design[key])}`) : ""),
     ...states.filter((state) => ![source.action, design.before, design.after, design.continuity].includes(state)).map((state) => sentence(`Visible state: ${state}`)),
     !lines.length && beats.length ? "This is a silent scene. Perform the planned action without invented speech or voiceover." : "",
@@ -118120,7 +118124,7 @@ function applyStoryboard(args, opts = {}) {
   if (changesProps && exists && args.expectedSha256 !== originalHash)
     throw new Error("head_moved: propSheet requires the current expectedSha256 from storyboard_read");
   const { win: next, findings, synced } = applyPatch(win, args, opts);
-  const panelIds = [...new Set((next.SCENES ?? []).flatMap((shot) => contract().castOf(shot) ?? []))];
+  const panelIds = [...new Set((next.SCENES ?? []).flatMap((shot) => [...contract().castOf(shot) ?? [], ...bystandersOf(shot)]))];
   if (panelIds.length && existsSync24(join12(dirname6(file), "cast.json"))) {
     const sheets = /* @__PURE__ */ new Map();
     for (const id of panelIds) {
@@ -118178,8 +118182,16 @@ function applyStoryboard(args, opts = {}) {
     shots: (next.SCENES ?? []).length,
     scenes: st ? st.scenes.length : 0,
     sequences: st ? st.sequences.length : 0,
+    // A report only: a board it cannot read still gets written.
     synced,
-    findings
+    findings,
+    board: (() => {
+      try {
+        return shotDirection().digest(next);
+      } catch {
+        return [];
+      }
+    })()
   };
   if (bad || args.dryRun) return result;
   const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
@@ -118453,7 +118465,9 @@ var shotCharactersSchema = external_exports.object({
   shots: external_exports.array(external_exports.object({
     id: shotIdSchema,
     characters: external_exports.array(nonEmpty).max(2).refine((ids) => new Set(ids).size === ids.length, "a character is listed once").describe("Principal characters on screen, subject first; [] when nobody from the cast is on screen"),
-    expression: external_exports.record(nonEmpty, nonEmpty).optional().describe("Each listed character's visible state as the shot opens, in English physical cues read from the scene's situation: brows, eyes, mouth, posture. Silent listeners too. An earlier call's entry stays when omitted.")
+    expression: external_exports.record(nonEmpty, nonEmpty).optional().describe("Each listed character's visible state as the shot opens, in English physical cues read from the scene's situation: brows, eyes, mouth, posture. Silent listeners and bystanders too. An earlier call's entry stays when omitted."),
+    bystanders: external_exports.array(nonEmpty).max(2).refine((ids) => new Set(ids).size === ids.length, "a character is listed once").optional().describe("Cast members also seen in this shot who have no on-screen line and take no video reference: the start image draws them from their sheet panels and the clip keeps them from that picture. With characters, at most three of the cast on screen. An earlier call's list stays when omitted; [] clears it."),
+    extras: external_exports.string().optional().describe(`Unnamed people in the frame, in English: how many, what they look like and what they are doing ("six children in orange bibs chasing a ball across the pitch"). The image and video prompts draw them from these words, without a reference. An earlier call's text stays when omitted; "" clears it.`)
   }).strict()).min(1)
 }).strict();
 var shotDialogueSchema = external_exports.object({
@@ -118532,6 +118546,10 @@ function castRegistry(path34, win) {
   if (!ids.size) throw new Error("cast_required: snapshot the episode cast in storyboard/cast.json first (storyboard \xA71)");
   return { ids, voiceOnly: new Set(cast.filter((entry2) => entry2.voiceOnly === true).map((entry2) => entry2.id)) };
 }
+function bystandersOf(shot) {
+  const listed = shot.visual?.bystanders;
+  return (Array.isArray(listed) ? listed : []).filter((id) => typeof id === "string" && !!id);
+}
 function shotIndex(shots, id, tool2) {
   const index = shots.findIndex((shot) => shot.id === id);
   if (index < 0) throw new Error(`${tool2}: no shot with id ${id} on this board`);
@@ -118544,13 +118562,18 @@ function writeShotCharacters(args) {
   const known = castRegistry(args.path, win);
   const shots = (win.SCENES ?? []).slice();
   const notes = [];
-  for (const { id, characters, expression } of args.shots) {
+  for (const { id, characters, expression, bystanders: asked, extras: askedExtras } of args.shots) {
     const index = shotIndex(shots, id, "shot_characters");
+    const bystanders = (asked ?? bystandersOf(shots[index])).filter((character) => asked || !characters.includes(character));
+    const extras = (askedExtras ?? String(shots[index].visual?.extras ?? "")).trim();
+    if (bystanders.some((character) => characters.includes(character))) throw new Error(`shot_bystander_listed: a bystander of ${id} is also among its characters \u2014 list each person once`);
+    if (characters.length + bystanders.length > 3) throw new Error(`character_limit: ${id} shows ${characters.length + bystanders.length} of the cast; at most three, two of them as characters \u2014 describe anyone else in extras`);
+    if (nonEnglishOutsideQuotes(extras)) throw new Error(`image_prompt_language: ${id}'s extras must be English; they go into the image and video prompts`);
     for (const [character, cue] of Object.entries(expression ?? {})) {
-      if (!characters.includes(character)) throw new Error(`shot_expression_unknown: ${character} is not among ${id}'s characters`);
+      if (!characters.includes(character) && !bystanders.includes(character)) throw new Error(`shot_expression_unknown: ${character} is not among ${id}'s characters`);
       if (nonEnglishOutsideQuotes(cue)) throw new Error(`image_prompt_language: ${id}'s expression for ${character} must be English; it goes into the image and video prompts`);
     }
-    for (const character of characters) {
+    for (const character of [...characters, ...bystanders]) {
       if (!known.ids.has(character)) throw new Error(`cast_unknown: ${character} is not in the episode cast`);
       if (known.voiceOnly.has(character)) throw new Error(`cast_voice_only: ${character} is voiceOnly in cast.json and is never on screen \u2014 give them sheet panels and drop voiceOnly first`);
     }
@@ -118559,23 +118582,26 @@ function writeShotCharacters(args) {
     const scoped = [].concat(visual.character ?? []).filter((e2) => !!e2 && typeof e2 === "object");
     const entries = characters.map((character) => scoped.find((e2) => e2.id === character) ?? character);
     const lines = shots[index].narration ?? [];
+    const speaking = bystanders.filter((character) => lines.some((line) => line.delivery === "on_screen" && line.speaker === character));
+    if (speaking.length) throw new Error(`shot_bystander_speaks: ${speaking.join(", ")} ${speaking.length > 1 ? "have" : "has"} an on-screen line in ${id} \u2014 the speaker belongs in characters, where the video call references them`);
     const left = [...new Set(lines.filter((line) => line.delivery === "on_screen" && line.speaker && !characters.includes(line.speaker)).map((line) => line.speaker))];
     const gone = (before ?? []).filter((character) => !characters.includes(character));
     const theirs = (ref) => gone.some((character) => String(ref.path ?? "").match(/characters\/([^/]+)\//)?.[1] === character || ["face", "front", "back"].some((view) => ref.id === `${id}-${character}-${view}`));
     const references = Array.isArray(visual.references) && gone.length ? visual.references.filter((ref) => ref?.role !== "character" || !theirs(ref)) : visual.references;
     const states = { ...visual.expression, ...expression };
-    const worn = Object.fromEntries(characters.filter((character) => states[character]).map((character) => [character, states[character]]));
-    const { expression: _old, ...rest } = visual;
+    const worn = Object.fromEntries([...characters, ...bystanders].filter((character) => states[character]).map((character) => [character, states[character]]));
+    const { expression: _old, bystanders: _seen, extras: _crowd, ...rest } = visual;
+    const others = JSON.stringify([bystandersOf(shots[index]), String(visual.extras ?? "").trim()]) !== JSON.stringify([bystanders, extras]);
     shots[index] = {
       ...shots[index],
-      visual: { ...rest, character: entries.length ? entries : null, ...Object.keys(worn).length ? { expression: worn } : {}, ...references !== visual.references ? { references } : {} },
+      visual: { ...rest, character: entries.length ? entries : null, ...bystanders.length ? { bystanders } : {}, ...extras ? { extras } : {}, ...Object.keys(worn).length ? { expression: worn } : {}, ...references !== visual.references ? { references } : {} },
       ...left.length ? { narration: lines.map((line) => line.delivery === "on_screen" && left.includes(line.speaker) ? { ...line, delivery: "off_screen" } : line) } : {}
     };
     if (left.length) notes.push({ level: "warn", where: id, what: `${left.join(", ")} left the frame, so their on-screen lines are now off_screen \u2014 revise them with shot_dialogue if they should change` });
     const back = [...new Set(lines.filter((line) => line.delivery === "off_screen" && line.speaker && characters.includes(line.speaker)).map((line) => line.speaker))];
     if (back.length) notes.push({ level: "warn", where: id, what: `${back.join(", ")} ${back.length > 1 ? "are" : "is"} in the frame with off_screen lines \u2014 set their delivery with shot_dialogue if they speak on screen` });
-    if (before && visual.frames?.start && [...before].sort().join() !== [...characters].sort().join())
-      notes.push({ level: "warn", where: id, what: "the start image shows the previous characters \u2014 remake it with shot_image" });
+    if (visual.frames?.start && (before && [...before].sort().join() !== [...characters].sort().join() || others))
+      notes.push({ level: "warn", where: id, what: "the start image shows the previous people \u2014 remake it with shot_image" });
     notes.push(...promptNotes(shots[index]));
   }
   const result = writeOutline(args.path, win, st, shots);
@@ -118616,7 +118642,7 @@ var isFocus = (id) => {
   const fields2 = techniqueContract().entries.find((entry2) => entry2.id === id)?.fields;
   return !!(fields2?.focus || fields2?.accent);
 };
-var DRIFT_WORDS = { frames: "frame plan", cast: "characters", lines: "on-screen lines", camera: "camera move", focus: "focus or beat accent", framing: "size, angle or depth" };
+var DRIFT_WORDS = { frames: "frame plan", cast: "characters", lines: "on-screen lines", camera: "camera move", focus: "focus or beat accent", framing: "size, angle or depth", people: "bystanders or extras" };
 function promptNotes(shot) {
   const drift = contract().promptDrift(shot, isFocus);
   return drift.length ? [{ level: "warn", where: String(shot.id), what: `the video prompt predates a change of ${drift.map((key) => DRIFT_WORDS[key] ?? key).join(", ")} \u2014 rewrite it with shot_prompt` }] : [];
@@ -118846,6 +118872,9 @@ function startImageBasis(shot, format) {
     location: visual.locationId,
     locationBinding: plan2.location,
     props: visual.props,
+    // Joined only when set, so a basis recorded before they existed still matches.
+    ...bystandersOf(shot).length ? { bystanders: bystandersOf(shot) } : {},
+    ...visual.extras ? { extras: visual.extras } : {},
     action: visual.action,
     videoDesign: plan2.videoDesign,
     ...visual.expression ? { expression: visual.expression } : {},
@@ -118954,7 +118983,7 @@ function shotImageSourceBasis(path34, id, request) {
   const assets = {
     location: rows(doc.locations).find((entry2) => entry2.id === request.location),
     props: rows(doc.props).filter((entry2) => request.props.includes(String(entry2.id))),
-    characters: (contract().castOf(shot) ?? []).map((character) => castEntry(win, character)),
+    characters: [...contract().castOf(shot) ?? [], ...bystandersOf(shot)].map((character) => castEntry(win, character)),
     continuity: request.props.length ? {
       version: ledger.version,
       timelineId: ledger.timelineId,
@@ -118993,6 +119022,7 @@ function buildShotImageRequest(args) {
   const recorded = args.frame === "end" && Array.isArray(frames.endProps) ? frames.endProps : visual.props;
   const props = args.props ?? (Array.isArray(recorded) ? recorded.filter((id) => typeof id === "string") : []);
   const cast = contract().castOf(shot) ?? [];
+  const seen = bystandersOf(shot).filter((id) => !cast.includes(id)), extras = String(visual.extras ?? "").trim();
   const selectedImage = imageContext(episode, args.id).selection;
   const wide = /16x9/.test(String(win.FORMAT ?? ""));
   const fixedSize = selectedImage.engine === "gpt-image" && !gptImageContract(selectedImage.model ?? "gpt-image-2")?.flexibleSize;
@@ -119102,6 +119132,8 @@ function buildShotImageRequest(args) {
   const refs = [
     ...composition,
     ...characterRefs(boardDir, win, args.id, cast, frames.mode === "reference" ? "both" : "image", warnings, conciseIdentity),
+    // A bystander's face and front panels identify them in this picture only; the back panel stays out to leave room.
+    ...seen.flatMap((id) => characterRefs(boardDir, win, args.id, [id], "image", warnings, conciseIdentity).filter((ref) => !ref.id.endsWith("-back")).map((ref) => ({ ...ref, role: "bystander" }))),
     ...propPictures.refs,
     // MSR takes the start image in its background slot, so the place only conditions the picture.
     ...typeof place === "string" ? [{
@@ -119119,6 +119151,12 @@ function buildShotImageRequest(args) {
   const look = refs.filter((ref) => ref.role === "background"), others = refs.filter((ref) => ref.role !== "background" && ref.role !== "composition");
   const head = args.frame === "end" ? [{ path: frames.start, purpose: "the opening picture of this shot" }, ...composition] : set ? composition : look;
   let ordered = [...head, ...others, ...set && args.frame === "start" ? look : []];
+  for (const view2 of ["-front", "-face"]) {
+    const spare = ordered.filter((ref) => ref.role === "bystander" && ref.id.endsWith(view2));
+    if (ordered.length <= imageInputLimit(episode, args.id) || !spare.length) continue;
+    ordered = ordered.filter((ref) => !spare.includes(ref));
+    warnings.push({ level: "warn", where: args.id, what: `the saved image model has no room for the bystander ${view2.slice(1)} panel(s), so ${view2 === "-face" ? "the prompt alone draws them \u2014 describe them in prompt" : "their outfit comes from the prompt"}` });
+  }
   if (set && look.length && ordered.length > imageInputLimit(episode, args.id)) {
     ordered = ordered.filter((ref) => !look.includes(ref));
     warnings.push({ level: "warn", where: args.id, what: `the saved image model has no room for the ${location} sheet picture beside the set render, so the look comes from the style and prompt alone` });
@@ -119141,11 +119179,11 @@ function buildShotImageRequest(args) {
     ...args.frame === "end" && set?.endCamera && JSON.stringify(set.camera) !== JSON.stringify(set.endCamera) ? { omitFraming: true } : {},
     style: style.preset ? style : null,
     scene: [opening && `Authored opening state: ${opening}`, args.prompt].filter(Boolean).join(" "),
-    noPerson: !cast.length,
+    noPerson: !cast.length && !seen.length && !extras,
     ...set ? { location: { prompt: args.frame === "end" ? set.endPrompt : set.prompt, paths: [] } } : {}
   }).prompt;
   const roles = ordered.map((ref, i2) => {
-    const character = refs.find((r2) => r2.path === ref.path && r2.role === "character");
+    const character = refs.find((r2) => r2.path === ref.path && (r2.role === "character" || r2.role === "bystander"));
     const role = !character ? "" : character.id.endsWith("-face") ? " Use only the head and hair above the collar; ignore clothing in this panel." : /-(front|back)$/.test(character.id) ? " Use this panel for physique and all clothing, including collar, tie and sleeve state." : "";
     const constraints = loadFromHere2(join12(REFERENCES_DIR, "render-routing.js")).referenceConstraints(ref);
     return `Image ${i2 + 1} shows ${ref.purpose}.${role} ${constraints}`;
@@ -119165,9 +119203,11 @@ function buildShotImageRequest(args) {
     args.frame === "start" && view ? `Create one opening image with this required crop: ${view.crop}.` : ordered.length ? "Compose one picture from these images." : "",
     roles,
     lock2,
-    heightSentence(win, cast),
+    heightSentence(win, [...cast, ...seen]),
+    seen.length ? `Also in this frame, without a line: ${seen.join(" and ")}, ${ordered.some((ref) => ref.role === "bystander") ? "drawn from the reference images that name them" : "drawn as described below"} and placed as the description below says.` : "",
+    extras ? `Unnamed people in the frame, drawn without a reference: ${extras.replace(/[.\s]+$/, "")}.` : "",
     view ? "Character panels identify the subject; include only the body regions named by the crop. A face reference does not require a face in the output." : "",
-    cast.length ? `The face panels give identity only; each expression and gaze comes from the ${args.frame === "end" ? "closing" : "opening"} moment described below.` : "",
+    cast.length || seen.length ? `The face panels give identity only; each expression and gaze comes from the ${args.frame === "end" ? "closing" : "opening"} moment described below.` : "",
     args.frame === "end" ? "This is the last frame of the shot that opens on Image 1: keep its place, light and every identity, applying the planned action, camera landing and final focus." : "",
     ...propPictures.unseen,
     body.charAt(0).toUpperCase() + body.slice(1),
@@ -119433,23 +119473,26 @@ function renderFindings(findings) {
   const mark = { bad: "!", warn: "\xB7", later: "\u2026" };
   const rows = [], grouped = /* @__PURE__ */ new Map();
   for (const f3 of findings) {
-    const shot = /^shot (\d+)$/.exec(f3.where), key = f3.level + "\0" + f3.what;
-    const row = shot ? grouped.get(key) : void 0;
-    if (row && shot) {
-      row.shots.push(Number(shot[1]));
+    const shot = /^shot (\d+)$/.exec(f3.where), id = /^s\d+$/.test(f3.where), key = f3.level + "\0" + f3.what;
+    const row = shot || id ? grouped.get(key) : void 0;
+    if (row) {
+      if (shot) row.shots.push(Number(shot[1]));
+      else row.ids.push(f3.where);
       continue;
     }
-    const next = { ...f3, shots: shot ? [Number(shot[1])] : [] };
+    const next = { ...f3, shots: shot ? [Number(shot[1])] : [], ids: id ? [f3.where] : [] };
     rows.push(next);
-    if (shot) grouped.set(key, next);
+    if (shot || id) grouped.set(key, next);
   }
-  return rows.map((r2) => `  ${mark[r2.level]} ${(r2.shots.length > 1 ? `shots ${shotRanges(r2.shots)}` : r2.where).padEnd(12)} ${r2.what}`).join("\n");
+  const where = (r2) => r2.shots.length + r2.ids.length < 2 ? r2.where : [r2.shots.length ? `shots ${shotRanges(r2.shots)}` : "", r2.ids.length > 4 ? `${r2.ids.slice(0, 3).join(", ")} +${r2.ids.length - 3} more` : r2.ids.join(", ")].filter(Boolean).join(", ");
+  return rows.map((r2) => `  ${mark[r2.level]} ${where(r2).padEnd(12)} ${r2.what}`).join("\n");
 }
 function renderApply(r2) {
   const bad = r2.findings.filter((f3) => f3.level === "bad");
   const head = r2.written ? `${r2.created ? "Created" : "Wrote"} ${r2.file}` : bad.length ? `NOT written \u2014 ${bad.length} violation(s) in ${r2.file}` : `Dry run \u2014 ${r2.file} untouched`;
   const lines = [head, `  ${r2.sequences} sequence(s) \xB7 ${r2.scenes} scene(s) \xB7 ${r2.shots} shot(s) \xB7 ${r2.synced} shot label(s) synced from the structure`];
   if (r2.approvalDropped && r2.written) lines.push("  the stale `// approved:` line was dropped; existing task authorization is unchanged");
+  if (r2.board?.length) lines.push('Board as written \u2014 counts, not targets (storyboard_read level "direction" lists every shot):', ...r2.board.map((line) => "  " + line));
   lines.push("Findings:", renderFindings(r2.findings));
   return lines.join("\n");
 }
@@ -127900,7 +127943,11 @@ Returns: the file written or not, counts, findings (! violation \xB7 warning), a
 
 Give each listed character an expression: what their face and body show in this shot, read from the scene's situation (what just happened and what is at stake), since the one-sentence shot story names an action and not a feeling. Write visible cues \u2014 brows, eyes, mouth, shoulders, hands \u2014 and no emotion label alone: "worried" leaves the face to the model, and a model with no cue draws a pleasant face. The silent listener gets one too. shot_image and shot_prompt put these words into the image and video prompts, and shot_image warns (expression_missing) for a face without one. English only (image_prompt_language); a character outside the shot is refused (shot_expression_unknown).
 
-Do NOT list extras, unnamed figures or a narrator who is never seen \u2014 extras are described in the action later, and an off-screen narrator speaks through shot_dialogue. Lines come next, through shot_dialogue.
+One speaker per shot limits who talks, not who is seen. bystanders lists cast members also in view without an on-screen line \u2014 the listener's friend at the table, the child beside the coach: at most three of the cast on screen, the two characters first. extras describes unnamed people in English (how many, what they look like, what they are doing). shot_image draws bystanders from their face and front panels and extras from the words; the video call references neither, and shot_prompt keeps them in the prompt. Refused: a bystander who is also a character (shot_bystander_listed), more than three of the cast (character_limit), a bystander with an on-screen line (shot_bystander_speaks), non-English extras (image_prompt_language).
+
+Every board write answers with the board first, as counts: people in frame, shots with and without a line, sizes, the widest shot of each scene. They are counts, not targets.
+
+Do NOT list a narrator who is never seen in characters or bystanders \u2014 an off-screen narrator speaks through shot_dialogue. Lines come next, through shot_dialogue.
 
 Returns: the file written or not, counts, and findings (! violation \xB7 warning).`,
     inputSchema: {
@@ -127911,7 +127958,9 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
         shots: { type: "array", minItems: 1, description: "Shots to set", items: { type: "object", additionalProperties: false, required: ["id", "characters"], properties: {
           id: { type: "string", pattern: "^s\\d{4,}$", description: "Stable shot id" },
           characters: { type: "array", maxItems: 2, uniqueItems: true, items: { type: "string", description: "Character id from the episode cast" }, description: "On-screen principal characters, subject first; [] for nobody" },
-          expression: { type: "object", additionalProperties: { type: "string", minLength: 1 }, description: `Visible state of each listed character as the shot opens, by character id, in English physical cues, e.g. {"na-ri":"brows drawn together, eyes wide and searching, lips pressed shut, shoulders raised"}. Read it from the scene's situation, not the one shot sentence; include silent listeners. An earlier entry stays when omitted.` }
+          expression: { type: "object", additionalProperties: { type: "string", minLength: 1 }, description: `Visible state of each listed character as the shot opens, by character id, in English physical cues, e.g. {"na-ri":"brows drawn together, eyes wide and searching, lips pressed shut, shoulders raised"}. Read it from the scene's situation, not the one shot sentence; include silent listeners and bystanders. An earlier entry stays when omitted.` },
+          bystanders: { type: "array", maxItems: 2, uniqueItems: true, items: { type: "string", description: "Character id from the episode cast" }, description: "Cast members also in view without an on-screen line; with characters, at most three of the cast. The start image draws them from their sheet panels; the video call does not reference them. An earlier list stays when omitted; [] clears it." },
+          extras: { type: "string", description: 'Unnamed people in the frame, in English: how many, what they look like, what they are doing, e.g. "six children in orange bibs chasing a ball across the pitch". An earlier text stays when omitted; "" clears it.' }
         } } }
       },
       required: ["path", "shots"]

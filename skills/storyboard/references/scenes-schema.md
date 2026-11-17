@@ -2187,10 +2187,17 @@ character: [                         // an entry may carry its jurisdiction inst
 
 **Two principal characters per shot (user directive, 2026-10-31).** `visual.character` lists at
 most two ids; `check-scenes.js` rejects a third (`[character-limit]`) in draft and full checks.
-When a beat needs three principal characters, split it into shots — the two who act, then the
-reaction or reverse angle — instead of crowding one frame. Extras and unnamed figures stay out
-of `visual.character`; describe them by appearance in `videoDesign.action` and the model draws
-them without a reference.
+A third cast member in view and unnamed figures stay out of `visual.character`.
+
+**People in the frame (user directive, 2026-11-17).** `shot_characters` also writes
+`visual.bystanders` — up to two cast ids seen without an on-screen line, three of the cast in a
+shot at most — and `visual.extras`, one English description of unnamed people ("six children in
+orange bibs chasing a ball"). `shot_image` adds each bystander's face and front panels as
+`role:"bystander", use:"image"` references and writes the extras into the image prompt; when the
+saved image model has no room, the bystander panels give way before the place or the two
+characters. The video call references neither: the start image carries them and the compiled
+video prompt says they stay in the frame without speaking. A bystander who has an on-screen line
+is refused (`shot_bystander_speaks`); the speaker belongs in `visual.character`.
 
 **`scope` is the reference's jurisdiction** — one clause saying what that reference governs, and
 where it may appear. It exists because a reference leaks: hand over a character sheet and the

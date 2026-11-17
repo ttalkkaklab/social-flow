@@ -216,10 +216,22 @@ performance units, not one unit per sentence, gesture or speaker turn. One summa
 a continuous exchange with several lines. Name the visible cause, discovery or changed
 behavior in these summaries before choosing the cast; do not reduce every unit to
 "A says / B answers". Revisit boundaries after the lines are written. No
-image, speech, prompt, camera or dialogue work happens in this step. Each tool refuses a layer
+image, speech, prompt, camera or dialogue work happens in this step.
+
+A scene's lines do not make its shot list (user directive 2026-11-17). Before any line, write the
+pictures that carry none: where this is and who else is there, a character's work while it is
+happening, the person a line lands on, the walk or wait between two exchanges. A role the cast
+names — a coach, a shop owner — is seen once in the act. One speaker per shot limits who talks,
+not who is seen: the listener, a third cast member (`bystanders`) and unnamed people (`extras`)
+can share the frame. Every board write then prints the board as counts — people in frame, shots
+with and without a line, the widest shot of each scene; read them as the board's shape, not as
+targets to reach.
+
+Each tool refuses a layer
 whose parent is missing (`story_order`). The next step starts once every sequence has scenes,
 every scene has shots and every shot has its story: `shot_characters` sets who is on screen in
-each shot — at most two principal characters, `[]` for nobody — and then `shot_dialogue` writes
+each shot — at most two principal characters, `[]` for nobody, with a third cast member in view as a
+`bystanders` entry and unnamed people as `extras` (user directive 2026-11-17) — and then `shot_dialogue` writes
 each shot's lines in spoken order, each attributed to a character from `cast.json`. An on-screen
 speaker is one of the shot's characters; a narrator is a character who speaks in `voiceover`
 without being seen.
@@ -452,8 +464,8 @@ its `shot.why` still says what it gives the beat. Maintain the saved visual styl
 subtitles or explanatory marks burned into video. Explanatory graphics use their supported
 HTML/diagram route; full-video episodes follow [full-video](../produce/references/full-video.md).
 
-Plan each shot with at most two principal characters in `visual.character`; split a beat that
-needs three into shots, and describe extras by appearance in the action
+Plan each shot with at most two principal characters in `visual.character`. A third cast member
+who is in view without a line is a bystander, and unnamed people are extras
 ([character reference](references/scenes-schema.md#character-reference-visualcharacter)).
 For every new generated shot, declare `visual.frames` with explicit start/end planning
 and `visual.references` (empty when none). Each extra image has id, path, role, use

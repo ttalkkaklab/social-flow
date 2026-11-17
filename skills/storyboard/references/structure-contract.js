@@ -1277,6 +1277,8 @@
       camera: [cam.movement, cam.speed, cam.target].concat(cam.end ? [cam.end] : []).concat(cam.view ? [JSON.stringify(cam.view)] : []).map(x => x == null ? '' : String(x)).join(' | '),
       focus: (Array.isArray(p.techniques) ? p.techniques : []).filter(t => t && t.id && isFocus(t.id)).map(t => t.from && t.to ? t.id + ': ' + t.from + ' → ' + t.to : t.on ? t.id + ' @ ' + t.on : t.id),
       framing: msr ? [p.size || '', p.angle || '', p.depth ? JSON.stringify(p.depth) : ''] : [],
+      // Bystanders and extras (shot_characters) join only when set, so a basis recorded before they existed still matches.
+      ...(Array.isArray(v.bystanders) && v.bystanders.length || text(v.extras) ? { people: [].concat(v.bystanders || [], text(v.extras) ? [v.extras.trim()] : []) } : {}),
     };
   }
   /** The lines a video call voices or shows — every line but voiceover — as [speaker, delivery, text]. */

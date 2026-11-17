@@ -16,7 +16,9 @@ never gather A's nonconsecutive lines and lose the reply's order. Keep line IDs,
 words, delivery, acting, pauses and reactions. This reduces MSR speaker-assignment risk;
 it does not guarantee model adherence.
 
-A shot may still show two principal characters: the listener stays silent. The single
+A shot may still show two principal characters: the listener stays silent. A third cast
+member in view is a bystander and unnamed people are extras (`shot_characters`), all silent;
+the start image draws them and the video call references only the two. The single
 speaker contract divides generation units; it does not make the speaker the picture's
 subject. Before allocating lines, choose the visible evidence for the complete scene
 using [shot-view](shot-view.md#plan-attention-across-the-scene). Then set size, angle and

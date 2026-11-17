@@ -32552,6 +32552,8 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
   const acting = load3("../../skills/_shared/scene-acting.js");
   const beats = acting.performanceBeats(performance2.performance, mode, !msr);
   const worn = expressionWords(shot, names);
+  const called = (id) => names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id;
+  const seen = (Array.isArray(visual.bystanders) ? visual.bystanders : []).map(text2).filter(Boolean), extras = text2(visual.extras);
   const prompt = [
     msr ? framing : "Start from the given first frame.",
     msr ? depthWords : "",
@@ -32564,6 +32566,8 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
     !viewWords && camera.rear && !other.some((t) => t.entry.fields.viewpoint === "rear") ? "View the subject from behind." : "",
     !viewWords && camera.pov && !other.some((t) => t.entry.fields.viewpoint === "pov") ? sentence(`Point of view: ${text2(camera.pov) || "the named character"}`) : "",
     sentence(source.action),
+    seen.length ? sentence(`The opening picture also shows ${seen.map(called).join(" and ")}, who ${seen.length > 1 ? "stay" : "stays"} in the frame and never speaks`) : "",
+    extras ? sentence(`Unnamed people in the frame: ${extras}`) : "",
     ...["before", "after", "continuity"].map((key) => text2(design[key]) ? sentence(`${key}: ${text2(design[key])}`) : ""),
     ...states.filter((state) => ![source.action, design.before, design.after, design.continuity].includes(state)).map((state) => sentence(`Visible state: ${state}`)),
     !lines.length && beats.length ? "This is a silent scene. Perform the planned action without invented speech or voiceover." : "",
@@ -33330,7 +33334,9 @@ var shotCharactersSchema = external_exports.object({
   shots: external_exports.array(external_exports.object({
     id: shotIdSchema,
     characters: external_exports.array(nonEmpty).max(2).refine((ids) => new Set(ids).size === ids.length, "a character is listed once").describe("Principal characters on screen, subject first; [] when nobody from the cast is on screen"),
-    expression: external_exports.record(nonEmpty, nonEmpty).optional().describe("Each listed character's visible state as the shot opens, in English physical cues read from the scene's situation: brows, eyes, mouth, posture. Silent listeners too. An earlier call's entry stays when omitted.")
+    expression: external_exports.record(nonEmpty, nonEmpty).optional().describe("Each listed character's visible state as the shot opens, in English physical cues read from the scene's situation: brows, eyes, mouth, posture. Silent listeners and bystanders too. An earlier call's entry stays when omitted."),
+    bystanders: external_exports.array(nonEmpty).max(2).refine((ids) => new Set(ids).size === ids.length, "a character is listed once").optional().describe("Cast members also seen in this shot who have no on-screen line and take no video reference: the start image draws them from their sheet panels and the clip keeps them from that picture. With characters, at most three of the cast on screen. An earlier call's list stays when omitted; [] clears it."),
+    extras: external_exports.string().optional().describe(`Unnamed people in the frame, in English: how many, what they look like and what they are doing ("six children in orange bibs chasing a ball across the pitch"). The image and video prompts draw them from these words, without a reference. An earlier call's text stays when omitted; "" clears it.`)
   }).strict()).min(1)
 }).strict();
 var shotDialogueSchema = external_exports.object({

@@ -726,6 +726,34 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.match(request.prompt, /ignore clothing in this panel/);
     assert.match(request.prompt, /including collar, tie and sleeve state/);
   });
+  it('draws a bystander and extras into the start image, keeps them out of the video references and prints the board first', () => {
+    const { root, dir } = pictureBoard();
+    const sheet = join(root, 'data/c/assets/characters');
+    mkdirSync(join(sheet, 'ally'));
+    for (const name of ['face', 'body', 'back']) writeFileSync(join(sheet, 'ally', name + '.png'), png);
+    writeFileSync(join(sheet, 'ally/panels.json'), readFileSync(join(sheet, 'mina/panels.json')));
+    writeFileSync(join(sheet, 'ally/identity.md'), '# ally\n');
+    writeFileSync(join(dir, 'cast.json'), JSON.stringify({ characters: ['mina', 'ally'].map(id => ({ id, source: '../../../assets/characters/' + id + '/identity.md' })) }));
+    const set = (shot) => writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'], ...shot }] });
+    assert.throws(() => set({ bystanders: ['mina'] }), /shot_bystander_listed/);
+    assert.throws(() => set({ characters: ['mina', 'ally'], bystanders: ['x', 'y'] }), /character_limit/);
+    assert.throws(() => set({ extras: '아이들 넷' }), /image_prompt_language/);
+    assert.throws(() => writeShotCharacters({ path: dir, shots: [{ id: 's0002', characters: ['ally'], bystanders: ['mina'] }] }), /shot_bystander_speaks/);
+    set({ bystanders: ['ally'], extras: 'four children in orange bibs chase a ball', expression: { ally: 'arms folded, watching' } });
+    set({});   // a later call keeps both
+    const printed = storyboardImages.renderApply(icons(dir));
+    assert.match(printed, /Board as written[^\n]*\n  2 shots — on screen: one 1 · two 1 · with extras 1[\s\S]*sizes ms 1 · mcu 1[\s\S]*Findings:/);
+    const request = shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits by the window while Ally watches from the door.' });
+    assert.deepEqual(request.refs.filter(ref => ref.role === 'bystander').map(ref => [ref.id, ref.use]), [['s0001-ally-face', 'image'], ['s0001-ally-front', 'image']]);
+    assert.match(request.prompt, /Also in this frame, without a line: ally, drawn from the reference images/);
+    assert.match(request.prompt, /Unnamed people in the frame, drawn without a reference: four children in orange bibs chase a ball\./);
+    assert.match(request.prompt, /ally: arms folded, watching/);
+    assert.deepEqual(readBoard(dir).win.SCENES[0].visual.character, ['mina'], 'the video call still references the one character');
+    set({ bystanders: [], extras: '' });
+    assert.deepEqual([readBoard(dir).win.SCENES[0].visual.bystanders, readBoard(dir).win.SCENES[0].visual.extras], [undefined, undefined]);
+    // The same note on several shots prints once.
+    assert.equal(storyboardImages.renderFindings([{ level: 'warn', where: 's0001', what: 'x' }, { level: 'warn', where: 's0002', what: 'x' }]), '  · s0001, s0002 x');
+  });
   it('puts each character\'s shot expression into the image prompt and reports a face without one', () => {
     const { dir } = pictureBoard(); icons(dir);
     const set = (shot) => writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'], ...shot }] });

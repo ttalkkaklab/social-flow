@@ -72,6 +72,9 @@ export function compileVideoPrompt(shot: Record<string, unknown>, source: VideoP
   const acting = load('../../skills/_shared/scene-acting.js') as { performanceBeats(plan: unknown[], mode: string, dialogue: boolean): string[]; VIDEO_TEXT_POLICY: string };
   const beats = acting.performanceBeats(performance.performance, mode, !msr);
   const worn = expressionWords(shot, names);
+  // Cast seen without a line and unnamed extras (shot_characters): the opening picture carries them, the prompt keeps them.
+  const called = (id: string) => names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id;
+  const seen = (Array.isArray(visual.bystanders) ? visual.bystanders : []).map(text).filter(Boolean), extras = text(visual.extras);
   const prompt = [
     msr ? framing : 'Start from the given first frame.',
     msr ? depthWords : '', moveWords, settle ? sentence(`Closing frame: ${settle}`) : '', focusWords,
@@ -81,6 +84,8 @@ export function compileVideoPrompt(shot: Record<string, unknown>, source: VideoP
     !viewWords && camera.rear && !other.some(t => t.entry.fields.viewpoint === 'rear') ? 'View the subject from behind.' : '',
     !viewWords && camera.pov && !other.some(t => t.entry.fields.viewpoint === 'pov') ? sentence(`Point of view: ${text(camera.pov) || 'the named character'}`) : '',
     sentence(source.action),
+    seen.length ? sentence(`The opening picture also shows ${seen.map(called).join(' and ')}, who ${seen.length > 1 ? 'stay' : 'stays'} in the frame and never speaks`) : '',
+    extras ? sentence(`Unnamed people in the frame: ${extras}`) : '',
     ...['before', 'after', 'continuity'].map(key => text(design[key]) ? sentence(`${key}: ${text(design[key])}`) : ''),
     ...states.filter(state => ![source.action, design.before, design.after, design.continuity].includes(state)).map(state => sentence(`Visible state: ${state}`)),
     !lines.length && beats.length ? 'This is a silent scene. Perform the planned action without invented speech or voiceover.' : '',

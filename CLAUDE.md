@@ -305,14 +305,30 @@ with a non-Latin name by character id and report a non-English voice description
 ## Two principal characters per shot (user directive, 2026-10-31)
 
 From the storyboard on, a shot's `visual.character` lists at most two principal characters;
-`check-scenes.js` rejects a third (`[character-limit]`). When a beat needs three principal
-characters, split it into shots — pairs, reverse angles or a cutaway — instead of crowding one
-frame. Extras and unnamed figures stay out of `visual.character` and are described by
-appearance in the action, without a reference image.
+`check-scenes.js` rejects a third (`[character-limit]`). A third cast member in view and unnamed
+figures stay out of `visual.character`: see People in the frame (2026-11-17).
 Choosing LTX at project setup saves `{engine:"astra-genai", operation:"reference"}`
 with `resolution:"1792x1024"` for 16:9 (`1024x1792` for 9:16), so `video_plan` plans
 MSR when a call names no operation. GenAI submissions wait up to 15 minutes for the
 gateway's acknowledgement. See `skills/_shared/astra-genai.md`.
+
+## People in the frame (user directive, 2026-11-17)
+
+An episode came out as fifty waist-up pictures of whoever was speaking: its shots were cut one
+per line, so none showed the place, the work a character does or the person a line lands on.
+One speaker per shot limits who talks in an LTX clip, not who is seen. `shot_characters` takes
+`bystanders` — cast members seen without an on-screen line — and `extras`, unnamed people
+described in English. `visual.character` still lists the two the video call references; a shot
+shows at most three of the cast. `shot_image` draws a bystander from their face and front
+panels and extras from the words; the video call references neither, since the start image
+carries them, and `shot_prompt` keeps them in the prompt. A bystander with an on-screen line is
+refused (`shot_bystander_speaks`). Whether a clip holds a bystander's look from the start image
+alone is not measured yet.
+
+Every board write prints the board first as counts: people in frame, shots with and without a
+line, sizes, the widest shot of each scene, one person framed where a scene has several, and a
+reason sentence repeated across shots. A note shared by several shots prints once. These are
+counts, never targets or gates. See `skills/storyboard/SKILL.md` §3 and `dialogue-coverage.md`.
 
 ## Style ban — report-style stative verbs (user directive, 2026-08-12)
 

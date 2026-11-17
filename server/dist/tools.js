@@ -4670,7 +4670,11 @@ Returns: the file written or not, counts, findings (! violation · warning), and
 
 Give each listed character an expression: what their face and body show in this shot, read from the scene's situation (what just happened and what is at stake), since the one-sentence shot story names an action and not a feeling. Write visible cues — brows, eyes, mouth, shoulders, hands — and no emotion label alone: "worried" leaves the face to the model, and a model with no cue draws a pleasant face. The silent listener gets one too. shot_image and shot_prompt put these words into the image and video prompts, and shot_image warns (expression_missing) for a face without one. English only (image_prompt_language); a character outside the shot is refused (shot_expression_unknown).
 
-Do NOT list extras, unnamed figures or a narrator who is never seen — extras are described in the action later, and an off-screen narrator speaks through shot_dialogue. Lines come next, through shot_dialogue.
+One speaker per shot limits who talks, not who is seen. bystanders lists cast members also in view without an on-screen line — the listener's friend at the table, the child beside the coach: at most three of the cast on screen, the two characters first. extras describes unnamed people in English (how many, what they look like, what they are doing). shot_image draws bystanders from their face and front panels and extras from the words; the video call references neither, and shot_prompt keeps them in the prompt. Refused: a bystander who is also a character (shot_bystander_listed), more than three of the cast (character_limit), a bystander with an on-screen line (shot_bystander_speaks), non-English extras (image_prompt_language).
+
+Every board write answers with the board first, as counts: people in frame, shots with and without a line, sizes, the widest shot of each scene. They are counts, not targets.
+
+Do NOT list a narrator who is never seen in characters or bystanders — an off-screen narrator speaks through shot_dialogue. Lines come next, through shot_dialogue.
 
 Returns: the file written or not, counts, and findings (! violation · warning).`,
         inputSchema: {
@@ -4680,7 +4684,9 @@ Returns: the file written or not, counts, and findings (! violation · warning).
                 shots: { type: 'array', minItems: 1, description: 'Shots to set', items: { type: 'object', additionalProperties: false, required: ['id', 'characters'], properties: {
                             id: { type: 'string', pattern: '^s\\d{4,}$', description: 'Stable shot id' },
                             characters: { type: 'array', maxItems: 2, uniqueItems: true, items: { type: 'string', description: 'Character id from the episode cast' }, description: 'On-screen principal characters, subject first; [] for nobody' },
-                            expression: { type: 'object', additionalProperties: { type: 'string', minLength: 1 }, description: 'Visible state of each listed character as the shot opens, by character id, in English physical cues, e.g. {"na-ri":"brows drawn together, eyes wide and searching, lips pressed shut, shoulders raised"}. Read it from the scene\'s situation, not the one shot sentence; include silent listeners. An earlier entry stays when omitted.' },
+                            expression: { type: 'object', additionalProperties: { type: 'string', minLength: 1 }, description: 'Visible state of each listed character as the shot opens, by character id, in English physical cues, e.g. {"na-ri":"brows drawn together, eyes wide and searching, lips pressed shut, shoulders raised"}. Read it from the scene\'s situation, not the one shot sentence; include silent listeners and bystanders. An earlier entry stays when omitted.' },
+                            bystanders: { type: 'array', maxItems: 2, uniqueItems: true, items: { type: 'string', description: 'Character id from the episode cast' }, description: 'Cast members also in view without an on-screen line; with characters, at most three of the cast. The start image draws them from their sheet panels; the video call does not reference them. An earlier list stays when omitted; [] clears it.' },
+                            extras: { type: 'string', description: 'Unnamed people in the frame, in English: how many, what they look like, what they are doing, e.g. "six children in orange bibs chasing a ball across the pitch". An earlier text stays when omitted; "" clears it.' },
                         } } },
             },
             required: ['path', 'shots'],
