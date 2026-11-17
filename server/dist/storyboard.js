@@ -1738,8 +1738,12 @@ export function writeShotIcons(args) {
     }
     if (unreasoned.length)
         notes.push({ level: 'warn', where: 'shot_icons', what: `no why on ${unreasoned.join(', ')} — the size stands without a reason of its own` });
-    // A sentence this call left standing as the same reason on several shots is reported with its shots.
     const touched = new Set(args.shots.map((shot) => shot.id));
+    // A wide shot this call left held with no reason is named, never refused: the board does not show a move was compared there.
+    const heldWide = shotDirection().held(shots).wideWithoutReason.filter((id) => touched.has(id));
+    if (heldWide.length)
+        notes.push({ level: 'warn', where: 'shot_icons', what: `wide shots held with no reason: ${heldWide.join(', ')} — the board does not show whether a move was compared there (action-direction.md step 2)` });
+    // A sentence this call left standing as the same reason on several shots is reported with its shots.
     for (const copy of shotDirection().copiedReasons(shots))
         if (copy.shots.some((id) => touched.has(id)))
             notes.push({ level: 'warn', where: 'shot_icons', what: `the same ${copy.field} stands on ${copy.shots.length} shots (${copy.shots.join(', ')}): "${copy.text.slice(0, 80)}"` });

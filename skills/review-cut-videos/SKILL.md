@@ -16,6 +16,11 @@ the real clips, reviewed images and direction plan. Review all clips and their i
 sequence for cause/effect, action timing, physical contact, camera path, focus, prop state,
 identity and continuity. Name defects by time and consequence, with the smallest repair.
 
+Review the sequence's [attention and visible changes](../storyboard/references/shot-view.md#plan-attention-across-the-scene),
+not only individual faces. Check whether promised detail/POV/space views survived generation,
+whether an addressee was incorrectly pulled into an insert, and whether an unearned smile
+releases tension before its cause. A varied shot-size count does not prove varied evidence.
+
 Use actual playback. Sampled frames establish composition only. If playback or
 independent review is unavailable, report the limitation; never convert not_reviewed into pass. Speech/audio judgments require
 actual listening when requested, and no automated STT or speech-scoring loop is introduced.

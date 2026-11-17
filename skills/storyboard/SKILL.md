@@ -13,7 +13,9 @@ allowed-tools: ["mcp__social-flow__character_manage", "mcp__social-flow__charact
 For motion-graphic shots, follow [motion type selection and design](references/motion-graphics.md): persist `shot.motionGraphic` with a common `THEME.motionGraphicTheme` when the episode needs consistency and contextual `style.theme` (`auto` or an explicit channel theme), choose the type from viewer intent and available evidence, and keep style, choreography and renderer separate. Built-in abstract scenes use the installed `prepare-motion-graphic.js`; asset-dependent types retain their authored or mesh routes.
 
 Follow [dialogue coverage](references/dialogue-coverage.md): split at every speaker
-change, then set each shot's size and angle for its speaker and action. Keep silent
+change without making every new speaker the picture's subject. First plan the scene's
+[attention and visible changes](references/shot-view.md#plan-attention-across-the-scene),
+then set each shot's size, angle and delivery. Keep silent
 listeners in the cast when visible. Use `frames.mode:"first"` and image2video for
 silent/inner-thought shots; thoughts use character `voiceover` with measured, timed TTS.
 
@@ -211,7 +213,9 @@ scene that answers it) → `story_scene` (place, time, event and a one- or two-s
 inside its sequence, with optional `turn`, `charge` and `out`) → `story_shot` (each shot as one sentence of story in its scene; a
 revised shot given another scene moves to the end of that scene). These are provisional
 performance units, not one unit per sentence, gesture or speaker turn. One summary may cover
-a continuous exchange with several lines. Revisit boundaries after the lines are written. No
+a continuous exchange with several lines. Name the visible cause, discovery or changed
+behavior in these summaries before choosing the cast; do not reduce every unit to
+"A says / B answers". Revisit boundaries after the lines are written. No
 image, speech, prompt, camera or dialogue work happens in this step.
 
 A scene's lines do not make its shot list (user directive 2026-11-17). Before any line, write the
@@ -394,7 +398,9 @@ Keep a continuing speaker in the same shot while the frame carries the performan
 new sentence, changed speech purpose, glance or hand gesture alone does not require a cut.
 Split a two-person exchange at every speaker change, even when both faces are readable.
 For face-to-face generated dialogue, apply [dialogue coverage](references/dialogue-coverage.md):
-use speaker-facing OTS/reverse when expressions matter. Each resulting shot gets its
+use speaker-facing OTS/reverse when the speaking face carries the new information, or
+purposeful off_screen speech over a reaction, detail or spatial view when that carries it.
+Each resulting shot gets its
 own size and angle; a two-shot still has only one speaker. Speaker changes require a
 cut; other cuts need a reveal, reaction, viewpoint change or verified generation limit.
 Revise provisional shots before images: preserve line IDs, order, speaker, delivery and acting;
@@ -412,7 +418,7 @@ Before image prompts, perform the required camera-direction pass in
 [action direction](references/action-direction.md#required-camera-direction-pass).
 Choose framing, angle, focus and movement from each beat; never initialize every shot
 with static or copy one generic hold rationale, and never lay a slow approach over every
-close-up in its place: a face changing on screen is usually held. Set the icon attributes — render route, size,
+close-up in its place: a changing face can be held or approached, and its beat decides which. Set the icon attributes — render route, size,
 angle, move, focus, depth, frame plan, transition to the next shot — with `shot_icons`, then persist the executable
 endpoints through `storyboard_apply`, then review the sequence for purposeful holds and
 changes of attention. This is authoring work, not a moving-shot quota or approval gate.
@@ -550,8 +556,9 @@ do not accelerate speech or discard its reaction merely to fit one model call.
 
 Once every shot has its icons and a length, read the whole plan once with
 `storyboard_read {level:"direction"}`. It returns each scene's shots in order with size, angle,
-move and length, the longest runs of one size and of held shots, lengths by size, the longest
-shots with their action counts, and any sentence standing as the same reason on several shots.
+move and length, the longest runs of one size and of held shots, held shots by size with the
+wide ones held without a reason, lengths by size, the longest shots with their action counts,
+and any sentence standing as the same reason on several shots.
 These are counts of what was written, not targets. Revisit the shots where the reading and
 the content disagree before exporting the review.
 

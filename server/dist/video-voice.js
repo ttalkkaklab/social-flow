@@ -310,7 +310,7 @@ export function prepareVideoVoice(tool, input, context) {
                 const label = nonEnglishOutsideQuotes(speaker?.name ?? '') ? id : speaker?.name ?? id;
                 const delivery = line.delivery === 'off_screen' ? 'off screen' : 'in voiceover';
                 return `${label} speaks ${delivery}${direction ? ` (${direction})` : ''}${audio ? ` using Audio ${audio}` : ''}. ` +
-                    `Do not show this speaker or animate any visible mouth during this line. ${audio ? `Audio ${audio} (${label})` : label}: "${text(line.tts)}"`;
+                    `Keep the speaking face outside the authored crop; retain any planned hands or body detail. Do not add a portrait or animate any visible mouth during this line. ${audio ? `Audio ${audio} (${label})` : label}: "${text(line.tts)}"`;
             }
             const binding = speaker?.screenBinding;
             const label = nonEnglishOutsideQuotes(speaker?.name ?? '') ? id : speaker?.name ?? id;

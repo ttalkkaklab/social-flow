@@ -167,9 +167,13 @@ footage keeps `in=0`. See `skills/produce/references/cinematic-edit.md`.
 Each shot contains lines from at most one character. Split at every speaker change,
 including readable two-shots; consecutive lines by that character may share a shot.
 Keep two visible principal characters when the listener belongs in frame, but keep the
-listener silent. Set size and angle for the resulting speaker/action: speaker-facing
-OTS/reverse for exchanges, medium close-ups or close-ups for expressions, and wider
-views for shared action. Preserve the axis, eyelines, story order, acting and line IDs.
+listener silent. The speaker limit divides generation units, not attention subjects.
+Choose the scene's visible evidence before cast/lines: speaker-facing OTS or close-ups
+when the face matters, purposeful off_screen speech over listener reactions, details,
+POVs or spatial views when those carry the change. Addressing a listener never requires
+that listener in the crop. Preserve emotional behavior until a visible event changes it;
+inspect the sequence rather than imposing shot-size quotas. Preserve the axis, eyelines,
+story order, acting and line IDs.
 Follow `skills/storyboard/references/dialogue-coverage.md`.
 
 Silent and inner-thought shots use image2video rather than MSR. Mark thoughts as

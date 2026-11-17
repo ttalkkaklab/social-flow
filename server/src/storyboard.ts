@@ -127,7 +127,7 @@ export function techniqueContract(): TechniqueContract {
 }
 interface CopiedReason { field: string; text: string; shots: string[] }
 /** The direction plan as counts and the sentences that repeat as a reason (shot-direction.js). */
-function shotDirection(): { facts(board: unknown): Record<string, unknown>; digest(board: unknown): string[]; copiedReasons(scenes: unknown, least?: number): CopiedReason[] } {
+function shotDirection(): { facts(board: unknown): Record<string, unknown>; digest(board: unknown): string[]; copiedReasons(scenes: unknown, least?: number): CopiedReason[]; held(scenes: unknown): { sizes: Record<string, number>; wideWithoutReason: string[] } } {
   return loadFromHere(join(REFERENCES_DIR, 'shot-direction.js')) as ReturnType<typeof shotDirection>;
 }
 export const techniqueSelectionSchema = z.array(z.object({
@@ -1697,8 +1697,11 @@ export function writeShotIcons(args: z.infer<typeof shotIconsSchema>): ApplyResu
     }
   }
   if (unreasoned.length) notes.push({ level: 'warn', where: 'shot_icons', what: `no why on ${unreasoned.join(', ')} — the size stands without a reason of its own` });
-  // A sentence this call left standing as the same reason on several shots is reported with its shots.
   const touched = new Set(args.shots.map((shot) => shot.id));
+  // A wide shot this call left held with no reason is named, never refused: the board does not show a move was compared there.
+  const heldWide = shotDirection().held(shots).wideWithoutReason.filter((id) => touched.has(id));
+  if (heldWide.length) notes.push({ level: 'warn', where: 'shot_icons', what: `wide shots held with no reason: ${heldWide.join(', ')} — the board does not show whether a move was compared there (action-direction.md step 2)` });
+  // A sentence this call left standing as the same reason on several shots is reported with its shots.
   for (const copy of shotDirection().copiedReasons(shots)) if (copy.shots.some((id) => touched.has(id)))
     notes.push({ level: 'warn', where: 'shot_icons', what: `the same ${copy.field} stands on ${copy.shots.length} shots (${copy.shots.join(', ')}): "${copy.text.slice(0, 80)}"` });
   const result = writeOutline(args.path, win, st, shots);

@@ -168,6 +168,20 @@
   const SIZE_ORDER = ['els', 'ls', 'ws', 'fs', 'mfs', 'ms', 'mcu', 'cu', 'choker', 'ecu', 'insert'];
   // Cast ids of visual.character or visual.bystanders: an id string or an { id } entry.
   const idsOf = value => [].concat(value || []).map(x => typeof x === 'string' ? x : x && x.id).filter(text);
+  const WIDE = ['els', 'ls', 'ws', 'fs'];
+  // Held shots counted by size, and the wide ones whose hold carries no reason: there the board
+  // does not show whether a move was compared. Counts and ids only; nothing here is refused.
+  function held(scenes) {
+    const sizes = {}, wideWithoutReason = [];
+    (scenes || []).forEach((s, i) => {
+      if (['broll', 'outro'].includes(s.type) || !['static', 'still-hold'].includes(String(cameraOf(s, 'en').key).replace(/^camera\./, ''))) return;
+      const size = s.shot?.size || '-';
+      sizes[size] = (sizes[size] || 0) + 1;
+      const reasons = [...(s.shot?.techniques || []).filter(t => t?.id === 'camera.static').map(t => t.reason), s.shot?.render?.camera?.reason, s.visual?.camera?.purpose];
+      if (WIDE.includes(size) && !reasons.some(text)) wideWithoutReason.push(s.id || String(i + 1));
+    });
+    return { sizes, wideWithoutReason };
+  }
   function facts(win) {
     const scenes = win.SCENES || [];
     const shots = playbackEntries(scenes).filter(({ s }) => !['broll', 'outro'].includes(s.type)).map(({ s, i }) => {
@@ -217,6 +231,7 @@
         common: Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([seconds, n]) => ({ seconds: Number(seconds), shots: n })),
         longest: timed.slice().sort((a, b) => b.seconds - a.seconds).slice(0, 5).map(x => ({ id: x.id, seconds: x.seconds, actions: x.actions, lines: x.lines })),
       },
+      held: held(scenes),
       reasons: {
         copied: copiedReasons(scenes, 2),
         sizeWithoutWhy: scenes.filter(s => s.shot?.size && !text(s.shot?.why)).map((s, i) => s.id || String(i + 1)),
@@ -246,7 +261,7 @@
     if (copied.length) lines.push('one sentence as the reason on several shots: ' + copied.map(row => `${row.field} × ${row.shots.length}`).join(' · '));
     return lines;
   }
-  const api = { cameraOf, secondsOf, changedAxes, playbackEntries, summary, timeline, copiedReasons, facts, digest };
+  const api = { cameraOf, secondsOf, changedAxes, playbackEntries, summary, timeline, copiedReasons, held, facts, digest };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.SHOT_DIRECTION = api;
 })(typeof window === 'object' ? window : globalThis);
