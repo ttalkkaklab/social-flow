@@ -126766,6 +126766,11 @@ Returns JSON: status, missing fields, canonical paths, config and revision; epis
               name: { type: "string", description: "Display name, e.g. History." },
               channel: { type: "string", pattern: "^[a-z0-9][a-z0-9-]{0,63}$", description: "Primary channel slug, e.g. history; immutable after setup." }
             }, required: ["name", "channel"] },
+            languages: { type: "object", additionalProperties: false, description: "Optional language defaults for NEW stories; display translations never change generated audio. Example: speech:vi, subtitles:[ko,en,zh-Hans,ja], review:[vi,ko,en,zh-Hans,ja].", properties: {
+              speech: { type: "string", description: "Original spoken language BCP-47 tag, e.g. vi. Author dialogue and character voice language accordingly." },
+              subtitles: { type: "array", uniqueItems: true, items: { type: "string" }, description: "Separate subtitle languages, e.g. [ko,en,zh-Hans,ja]; no burned-in subtitles." },
+              review: { type: "array", uniqueItems: true, items: { type: "string" }, description: "Storyboard review languages, e.g. [vi,ko,en,zh-Hans,ja]. Author translations in review-localization.json." }
+            }, required: ["speech", "subtitles", "review"] },
             videoType: { type: "object", additionalProperties: false, description: "Saved genre from options, e.g. {id:documentary}.", properties: {
               id: { type: "string", description: "Type ID from options, e.g. drama or documentary." },
               detail: { type: "string", description: "Required for custom, e.g. Documentary with acted historical scenes." }
@@ -127126,6 +127131,22 @@ Returns: integer credit balance.`,
       },
       required: ["caption"]
     }
+  },
+  {
+    name: "facebook_captions",
+    title: "Facebook existing video subtitles",
+    annotations: HINT.publish,
+    description: "List or add subtitle tracks on an existing Facebook Page video. \u26A0\uFE0F\n\nUse for multilingual captions, SRT upload, \uAE30\uC874 \uC601\uC0C1 \uC790\uB9C9 \uCD94\uAC00 after the user authorizes the caption publication. list is read-only; for add, never call without the user\u2019s approval. add immediately attaches public tracks without republishing. Do not use for new posts: use facebook_publish. Checks expected Page and video ownership, skips existing locales without comparing or replacing their text, preserves the default language, and stops after an uncertain write. Example: action:list, channel:mochi-bo, videoId:123, expectedPageId:456; add also takes tracks:[{filePath:/tmp/en.srt,locale:en_US}]. Returns videoId, pageId and tracks; add returns per-locale verified/accepted/unconfirmed/already_exists results and file hashes. List again before retrying uncertain writes.",
+    inputSchema: { type: "object", additionalProperties: false, properties: {
+      action: { type: "string", enum: ["list", "add"], description: "list reads tracks; add attaches authorized SRT files." },
+      channel: { ...SNS_CHANNEL_PROPERTY, description: "Required channel slug, e.g. mochi-bo. No fallback credentials." },
+      videoId: { type: "string", pattern: "^[0-9]+$", description: "Existing Facebook video/Reel ID, e.g. 123." },
+      expectedPageId: { type: "string", pattern: "^[0-9]+$", description: "Verified Page ID from sns_account_check, e.g. 456." },
+      tracks: { type: "array", minItems: 1, description: "Required only for add; one local UTF-8 SRT per locale, at most 200KB each.", items: { type: "object", additionalProperties: false, properties: {
+        filePath: { type: "string", description: "Absolute SRT file path, e.g. /tmp/en.srt." },
+        locale: { type: "string", pattern: "^[a-z]{2}_[A-Z]{2}$", description: "Facebook locale, e.g. en_US, ko_KR, zh_CN or ja_JP." }
+      }, required: ["filePath", "locale"] } }
+    }, required: ["action", "channel", "videoId", "expectedPageId"] }
   },
   {
     name: "facebook_publish",
@@ -128160,6 +128181,7 @@ var SNS_PLATFORM_BY_TOOL = {
   instagram_publish: "INSTAGRAM",
   instagram_insights: "INSTAGRAM",
   facebook_publish: "FACEBOOK",
+  facebook_captions: "FACEBOOK",
   facebook_comment: "FACEBOOK",
   youtube_publish: "YOUTUBE",
   youtube_insights: "YOUTUBE",
@@ -132523,11 +132545,72 @@ async function uploadFacebookCaption(token, videoId, caption) {
       body: form,
       signal: AbortSignal.timeout(6e4)
     });
-    if (res.ok) return null;
-    return `captions ${res.status}: ${(await res.text()).slice(0, 300)}`;
+    const body = await res.text();
+    if (res.ok && JSON.parse(body)?.success === true) return null;
+    return `captions ${res.status}: ${body.slice(0, 300)}`;
   } catch (error2) {
     return `caption upload failed: ${error2 instanceof Error ? error2.message : String(error2)}`;
   }
+}
+async function facebookCaptions(input) {
+  if (!/^[0-9]+$/.test(input.videoId) || !/^[0-9]+$/.test(input.expectedPageId) || !/^[a-z0-9][a-z0-9-]{0,63}$/.test(input.channel) || !["list", "add"].includes(input.action))
+    return fail2(400, "Use a channel slug, numeric videoId/expectedPageId and action list or add");
+  const tracks = input.tracks || [];
+  if (input.action === "add" && !tracks.length || input.action === "list" && tracks.length || tracks.some((t2) => !/^[a-z]{2}_[A-Z]{2}$/.test(t2.locale)) || new Set(tracks.map((t2) => t2.locale)).size !== tracks.length)
+    return fail2(400, "add requires unique locale tracks; list takes no tracks");
+  const files3 = [];
+  for (const track of tracks) {
+    const read4 = await readCaptionFile(track.filePath, CAPTION_MAX_BYTES_FB);
+    if (!read4.bytes) return read4.error;
+    if (!/^\d+\r?\n\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3}\r?\n/m.test(read4.bytes.toString("utf8")))
+      return fail2(400, `Invalid SRT cues: ${track.locale}`);
+    files3.push({ bytes: read4.bytes, locale: track.locale, sha256: createHash25("sha256").update(read4.bytes).digest("hex") });
+  }
+  const { token, error: error2 } = await loadTokenFile("FACEBOOK", input.channel);
+  if (error2 || !token) return error2 || fail2(400, "Missing Facebook token");
+  const me = await fetchMe(FB_BASE, token, "id,name");
+  if (!me.ok) return me;
+  if (JSON.parse(me.body).id !== input.expectedPageId) return fail2(409, "Facebook Page differs from expectedPageId");
+  const owner = await graphRequest("get", `${FB_BASE}/${input.videoId}`, { fields: "id,from", access_token: token });
+  if (!owner.ok) return owner;
+  if (JSON.parse(owner.body).from?.id !== input.expectedPageId) return fail2(409, "Video ownership could not be verified for this Page");
+  const list = () => graphRequest("get", `${FB_BASE}/${input.videoId}/captions`, { fields: "id,locale,is_default", limit: "100", access_token: token });
+  const before = await list();
+  if (!before.ok) return before;
+  const initial = JSON.parse(before.body);
+  if (!Array.isArray(initial.data) || initial.paging?.next) return fail2(502, "Caption list incomplete; no tracks were added");
+  if (input.action === "list") return okJson({ videoId: input.videoId, pageId: input.expectedPageId, tracks: initial.data });
+  const results = [];
+  for (const track of files3) {
+    if (initial.data.some((item) => item.locale === track.locale)) {
+      results.push({ locale: track.locale, status: "already_exists", note: "Existing content was not compared or replaced" });
+      continue;
+    }
+    const warning = await uploadFacebookCaption(token, input.videoId, { ...track, isDefault: false });
+    results.push({ locale: track.locale, sha256: track.sha256, status: warning ? "unconfirmed" : "accepted", ...warning ? { warning } : {} });
+    if (warning) break;
+  }
+  const after = await list();
+  let current = null;
+  let verificationError = after.ok ? "" : after.body;
+  if (after.ok) {
+    try {
+      const parsed = JSON.parse(after.body);
+      if (!Array.isArray(parsed.data) || parsed.paging?.next) verificationError = "Caption verification list incomplete";
+      else current = parsed.data;
+    } catch {
+      verificationError = "Caption verification returned invalid JSON";
+    }
+  }
+  for (const result of results) if (result.status === "accepted" && Array.isArray(current) && current.some((item) => item.locale === result.locale)) result.status = "verified";
+  return okJson({
+    videoId: input.videoId,
+    pageId: input.expectedPageId,
+    results,
+    tracks: current,
+    ...verificationError ? { verificationError } : {},
+    note: "No default locale changed. Presence verifies the locale, not its text; never retry an uncertain write without listing first."
+  });
 }
 async function setYoutubeThumbnail(token, videoId, thumb) {
   try {
@@ -137155,6 +137238,16 @@ ${styleWarnings.join("\n")}` : head;
       ),
       SNS_PUBLISHED_NOTE
     );
+  },
+  facebook_captions: async (args) => {
+    const input = parseArgs(external_exports.object({
+      action: external_exports.enum(["list", "add"]),
+      channel: channelSlugSchema.unwrap(),
+      videoId: external_exports.string().regex(/^\d+$/),
+      expectedPageId: external_exports.string().regex(/^\d+$/),
+      tracks: external_exports.array(external_exports.object({ filePath: external_exports.string().min(1), locale: external_exports.string().regex(/^[a-z]{2}_[A-Z]{2}$/) })).min(1).optional()
+    }), args);
+    return fromApi(await facebookCaptions(input));
   },
   facebook_publish: async (args) => {
     const input = parseArgs(facebookPublishSchema, args);

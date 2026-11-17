@@ -22,6 +22,10 @@ Follow [host evaluation](../_shared/host-review.md) for every requested review.
 
 # Storyboard: make the story understandable, then plan its images
 
+Follow [story language and review translations](references/review-localization.md)
+when saved `languages` or the user requests multilingual review. The floating story
+language selector reads a separate translation file; it never changes spoken source.
+
 For synopsis recommendations, read the channel's continuity contract and prior research first.
 For an anthology, choose material before assigning episode roles; do not inherit a prior
 episode's relationships or personalities. For a serial, read its established cast and world.

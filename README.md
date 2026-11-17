@@ -715,10 +715,10 @@ social-flow/
 ├── mcp.json                     #   its stdio server entry
 ├── manifest.json                # Claude Desktop extension (.mcpb) manifest — .mcpbignore picks the contents
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 149 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 150 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
-│       ├── tools.ts             # tool definitions — 149 tools, including voice auditions and opt-in acting review
+│       ├── tools.ts             # tool definitions — 150 tools, including voice auditions and opt-in acting review
 │       ├── handlers.ts          # zod validation + routing
 │       ├── sns-client.ts        # Threads·IG·FB·YouTube publish/comments
 │       ├── serp-client.ts       # SerpApi (key masking + response slimming)
@@ -791,7 +791,7 @@ visual style, video ratio and format live in the workspace's `.social-flow/model
 each episode snapshots them in `.work/model-settings.json`, and `profile.md` keeps the
 channel's tone, theme and pinned character voice IDs (the speech model itself is the saved `models.speech`).
 
-## MCP tool surface (149 tools)
+## MCP tool surface (150 tools)
 
 `project_manage`: options · status · init · update · episode. Local project setup
 with genre, models, style, ratio, format and SNS records; no generation or publishing.
@@ -852,6 +852,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | 3D previz | `blender_scene_read` / `blender_scene_build` / `blender_camera_set` / `blender_object_animate` / `blender_pose_key` / `blender_motion_import` / `blender_render_previz` | **Optional before a generated video cut** (user directive 2026-09-11, optional since 2026-10-18) — the same plan renders in three.js through `previz-template.html` + `previz-runtime.js` when Blender is not installed. The local Blender, headless (**no API key, no network, no add-on, no GUI** — needs Blender 4.2+). Reads a .blend; builds a set of grey proxies — a person is a jointed mannequin on a 19-bone rig — plus dog·car·box·cylinder·sphere and GLB imports at the cut's frame range and resolution; places and keys the camera by location, look-at target and lens in metres, degrees and mm; keys objects and people's roots through space; poses a person by channel (raise, elbow, knee, bow …) or retargets a BVH/FBX motion-capture clip onto it, scaled, faced and floored; renders a clean H.264 previz plus stamped stills in Workbench or Eevee. Camera, blocking and body timing as numbers, iterated for free before any paid generation, then handed through `video_plan` → `video_execute` as the reference video of a Seedance 2.x cut — the hand-off (previz → camera and timing, still → first frame, sheets → look, prompt → acting) is in [blender-previz.md](skills/storyboard/references/blender-previz.md) §6 |
 | Growth review | `threads_draft_create` / `threads_review_submit` | Persist drafts and quote-grounded voice/purpose/flow reviews; no model API calls |
 | TikTok | `tiktok_auth` / `tiktok_creator_info` / `tiktok_upload` / `tiktok_publish` / `tiktok_status` / `tiktok_videos` | Channel-scoped Desktop OAuth, inbox draft upload, conditional Direct Post, durable upload receipts and public video metrics. [Setup and review limits](skills/setup-tiktok/SKILL.md). App approval and creator consent are required; browser login is insufficient. |
+| Existing subtitles | `facebook_captions` | List or add language tracks on an owned Facebook video/Reel without republishing; preserve existing locales and default language. |
 | Publish | `threads_publish` / `instagram_publish` / `facebook_publish` / `facebook_comment` / `youtube_publish` / `youtube_update` | Direct platform API calls — **exposed only for platforms with a credential file**, except `youtube_update`, which is always listed and errors without a token; it edits title/description/tags/visibility of an already-uploaded video and is the only way an upload goes public (`youtube_publish` starts `private`) |
 | Comment inbox | `sns_comment_inbox` / `sns_comment_reply` / `sns_comment_moderate` | Cross-platform normalized inbox · replies · hiding (no deletes). Inbox and replies cover all 4 platforms; hiding excludes YouTube (its API only offers held-for-review, which means something else) |
 | Storyboard | `story_sequence` / `story_scene` / `story_shot` / `story_music` / `shot_characters` / `shot_dialogue` / `shot_icons` / `shot_image` / `shot_prompt` / `storyboard_read` / `storyboard_apply` / `storyboard_check` / `scenario_check` | A new board is written in order: sequences → scenes → one-sentence shot stories, then each shot's characters → each character's lines, then each scene's music decision (`story_music`: score with a cue or none, each with its reason), then the icon-row attributes, then each shot's start (and first_last end) image composed from its sheet panels, place and props — a place whose sheet names a built set starts from that set rendered in Blender at the shot's size and angle — then its English video prompt (`story_order` refuses a layer before its parent). Inside an episode `story_sequence` starts the board, and `story_scene`/`story_shot` continue a story-first one, only once `storyboard/cast.json` names its characters, each with an existing `assets/characters/<id>/identity.md` and, unless `voiceOnly`, its face, front and back sheet panels (`cast_required` · `cast_source_missing` · `character_panel_missing`). `storyboard_read.boundaryReview` exposes every playback join as unverified editorial evidence; follow [shot boundary decisions](skills/storyboard/references/shot-boundaries.md) before images. It never merges or blocks production. The episode board as sequences → scenes → shots (`window.STRUCTURE` beside the flat `SCENES` produce reads), plus the scenario input contract. `read` returns the tree at four levels; `apply` writes or patches the board and refuses only an unreadable board or a story-order violation; `storyboard_check` runs the structure rules plus the full `check-scenes.js` contract; `scenario_check` runs S1–S12 on `candidates/` or `scenario.md` and returns the checker JSON. Local files only — the board rules live in [structure-contract.js](skills/storyboard/references/structure-contract.js), shared with the checker and approval page |
@@ -1286,3 +1287,8 @@ existing attachment tool. See [video routing](skills/_shared/video-routing.md#pl
 
 `/social-flow:setup-tiktok mochi-bo` connects the intended channel without publishing.
 See [the setup skill](skills/setup-tiktok/SKILL.md) and [official API mapping](skills/setup-tiktok/references/api.md).
+
+Storyboard language defaults use optional project `languages.speech`, `subtitles`
+and `review`. The shared review template reads `review-localization.json` and shows
+a floating story/dialogue language selector while production keeps its source text.
+See [review translations](skills/storyboard/references/review-localization.md).

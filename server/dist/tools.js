@@ -3633,6 +3633,11 @@ Returns JSON: status, missing fields, canonical paths, config and revision; epis
                                 name: { type: 'string', description: 'Display name, e.g. History.' },
                                 channel: { type: 'string', pattern: '^[a-z0-9][a-z0-9-]{0,63}$', description: 'Primary channel slug, e.g. history; immutable after setup.' },
                             }, required: ['name', 'channel'] },
+                        languages: { type: 'object', additionalProperties: false, description: 'Optional language defaults for NEW stories; display translations never change generated audio. Example: speech:vi, subtitles:[ko,en,zh-Hans,ja], review:[vi,ko,en,zh-Hans,ja].', properties: {
+                                speech: { type: 'string', description: 'Original spoken language BCP-47 tag, e.g. vi. Author dialogue and character voice language accordingly.' },
+                                subtitles: { type: 'array', uniqueItems: true, items: { type: 'string' }, description: 'Separate subtitle languages, e.g. [ko,en,zh-Hans,ja]; no burned-in subtitles.' },
+                                review: { type: 'array', uniqueItems: true, items: { type: 'string' }, description: 'Storyboard review languages, e.g. [vi,ko,en,zh-Hans,ja]. Author translations in review-localization.json.' },
+                            }, required: ['speech', 'subtitles', 'review'] },
                         videoType: { type: 'object', additionalProperties: false, description: 'Saved genre from options, e.g. {id:documentary}.', properties: {
                                 id: { type: 'string', description: 'Type ID from options, e.g. drama or documentary.' },
                                 detail: { type: 'string', description: 'Required for custom, e.g. Documentary with acted historical scenes.' },
@@ -3979,6 +3984,22 @@ Returns: integer credit balance.`,
             },
             required: ['caption'],
         },
+    },
+    {
+        name: 'facebook_captions',
+        title: 'Facebook existing video subtitles',
+        annotations: HINT.publish,
+        description: 'List or add subtitle tracks on an existing Facebook Page video. ⚠️\n\nUse for multilingual captions, SRT upload, 기존 영상 자막 추가 after the user authorizes the caption publication. list is read-only; for add, never call without the user’s approval. add immediately attaches public tracks without republishing. Do not use for new posts: use facebook_publish. Checks expected Page and video ownership, skips existing locales without comparing or replacing their text, preserves the default language, and stops after an uncertain write. Example: action:list, channel:mochi-bo, videoId:123, expectedPageId:456; add also takes tracks:[{filePath:/tmp/en.srt,locale:en_US}]. Returns videoId, pageId and tracks; add returns per-locale verified/accepted/unconfirmed/already_exists results and file hashes. List again before retrying uncertain writes.',
+        inputSchema: { type: 'object', additionalProperties: false, properties: {
+                action: { type: 'string', enum: ['list', 'add'], description: 'list reads tracks; add attaches authorized SRT files.' },
+                channel: { ...SNS_CHANNEL_PROPERTY, description: 'Required channel slug, e.g. mochi-bo. No fallback credentials.' },
+                videoId: { type: 'string', pattern: '^[0-9]+$', description: 'Existing Facebook video/Reel ID, e.g. 123.' },
+                expectedPageId: { type: 'string', pattern: '^[0-9]+$', description: 'Verified Page ID from sns_account_check, e.g. 456.' },
+                tracks: { type: 'array', minItems: 1, description: 'Required only for add; one local UTF-8 SRT per locale, at most 200KB each.', items: { type: 'object', additionalProperties: false, properties: {
+                            filePath: { type: 'string', description: 'Absolute SRT file path, e.g. /tmp/en.srt.' },
+                            locale: { type: 'string', pattern: '^[a-z]{2}_[A-Z]{2}$', description: 'Facebook locale, e.g. en_US, ko_KR, zh_CN or ja_JP.' },
+                        }, required: ['filePath', 'locale'] } },
+            }, required: ['action', 'channel', 'videoId', 'expectedPageId'] },
     },
     {
         name: 'facebook_publish',
@@ -4977,6 +4998,7 @@ export const SNS_PLATFORM_BY_TOOL = {
     instagram_publish: 'INSTAGRAM',
     instagram_insights: 'INSTAGRAM',
     facebook_publish: 'FACEBOOK',
+    facebook_captions: 'FACEBOOK',
     facebook_comment: 'FACEBOOK',
     youtube_publish: 'YOUTUBE',
     youtube_insights: 'YOUTUBE',

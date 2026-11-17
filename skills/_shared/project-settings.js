@@ -122,6 +122,7 @@ function handoff(snapshot) {
     projectSettings: { source: snapshot.source, revision: snapshot.revision, snapshot: snapshot.file },
   };
   return { FORMAT: c.production?.format, PRODUCTION: production, sns: c.sns,
+    ...(c.languages ? { LANGUAGES: c.languages } : {}),
     episodeBudgetUsd: c.production?.episodeBudgetUsd,
     note: 'Copy into a NEW board only, then translate models into adapter fields using model-settings.md. Preserve explicit episode overrides. A saved preference is not a cost quote or publication approval.' };
 }

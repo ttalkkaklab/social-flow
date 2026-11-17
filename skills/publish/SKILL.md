@@ -12,7 +12,7 @@ argument-hint: "<channel> <topic> [platformCSV|auto]"
 # *_publish/facebook_comment are deliberately left un-pre-approved — the native
 # permission prompt on every irreversible publish call has to act as a second line of
 # defense, separate from the HITL approval gate.
-allowed-tools: ["mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check", "mcp__plugin_social-flow_social-flow__sns_account_check", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status"]
+allowed-tools: ["mcp__social-flow__facebook_captions", "mcp__plugin_social-flow_social-flow__facebook_captions", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check", "mcp__plugin_social-flow_social-flow__sns_account_check", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status"]
 ---
 **Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
 
@@ -558,3 +558,21 @@ and use the user's post-specific authorization.
   Use publicaly_available_post_id when returned to identify public posts.
 - `tiktok_videos` can report public view/like/comment/share counts later. It does not
   supply audience geography, watch time or comment moderation.
+
+## Existing video subtitles
+
+When the user requests translated captions on an already published video, preserve
+the video ID and clean master. Use `facebook_captions action:list` with the checked
+channel, video ID and expected Page ID, then `action:add` with authorized SRT tracks.
+The tool preserves the default and skips existing locales; a presence check does not
+compare their text. Save the per-language result and re-list uncertain writes before
+retrying. Never republish a video to recover a caption error.
+
+YouTube accepts multiple caption tracks on existing videos in Studio or via
+`captions.insert` with `youtube.force-ssl`. When the channel has no such OAuth token,
+use the logged-in Studio with ego lite. Instagram and TikTok publishing APIs do not
+accept an uploaded SRT as a video subtitle track; their post `caption` fields are
+post copy. Check their current in-app caption/translation controls separately.
+
+See [review translations](../storyboard/references/review-localization.md) for the
+separate storyboard language picker. No picker changes a viewer's platform settings.

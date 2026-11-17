@@ -1386,6 +1386,10 @@
     .fr, .badge, .tl-seg { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
 .motion-plan{flex-basis:100%;padding:12px 0;font-size:13px;line-height:1.5}.motion-plan p{margin:4px 0}.motion-plan small{opacity:.7}
+.story-language{position:fixed;z-index:100;top:12px;right:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:calc(100vw - 32px);padding:8px 12px;background:var(--paper,#fff);color:var(--ink,#222);border:1px solid #aaa6;border-radius:16px;box-shadow:0 4px 20px #0002;font-size:13px}
+.story-language select{min-height:44px;background:transparent;color:inherit;border:0;font:inherit;max-width:140px}.story-language small{flex-basis:100%;font-size:10px;opacity:.7}
+@media(max-width:1023px){body.review-board:has(.story-language){padding-top:100px}.story-language{top:8px;right:8px;max-width:calc(100vw - 16px)}}
+@media print{.story-language{display:none}}
 </style>
 <link rel="stylesheet" href="./review.css">
 </head>
@@ -1394,6 +1398,7 @@
 
 <script src="./review-typography.js"></script>
 <script src="./review-files.js"></script>
+<script src="./review-localization.js"></script>
 <script src="./video-production.js"></script>
 <script src="./video-production-data.js"></script>
 <script src="./location-review-data.js"></script>
@@ -2334,6 +2339,9 @@ window.STORYBOARD_READY = (async function () {
     return "en";
   }
   var LANG = pickLang();
+  var contentRequested = new URLSearchParams(location.search).get('storyLang');
+  if (!contentRequested) try { contentRequested = localStorage.getItem('social-flow.storyLang'); } catch (e) { /* offline storage may be disabled */ }
+  var CONTENT = window.ReviewLocalization.reader(window.REVIEW_LOCALIZATION, contentRequested);
   // English backs every key, so an untranslated entry shows an English word, not an undefined.
   var T = Object.assign({}, STRINGS.en, STRINGS[LANG] || {});
   /* The tables merge one level deeper. A language that translates most of a table but not all
@@ -2344,7 +2352,7 @@ window.STORYBOARD_READY = (async function () {
     T[k] = Object.assign({}, STRINGS.en[k], (STRINGS[LANG] || {})[k]);
   });
   document.documentElement.lang = LANG;
-  var fontFailures = await window.ReviewTypography.prepare(DOC, SCENES);
+  var fontFailures = await window.ReviewTypography.prepare(DOC, SCENES, [CONTENT.language]);
 
   /* ── Author-language heuristics ──
      These read scenes.js, which is written in the channel's language — not the reviewer's — so
@@ -2369,11 +2377,12 @@ window.STORYBOARD_READY = (async function () {
 
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
     return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function copy(s) { return esc(CONTENT.text(s)); }
   function strip(s) { return String(s == null ? "" : s).replace(/\*\*/g, ""); }
   /** **emphasis** in the document body — restrained color emphasis */
-  function mark(s) { return esc(s).replace(/\*\*(.+?)\*\*/g, '<span class="mark">$1</span>'); }
+  function mark(s) { return copy(s).replace(/\*\*(.+?)\*\*/g, '<span class="mark">$1</span>'); }
   /** **emphasis** inside a frame — the gradient, the way it actually renders */
-  function femph(s) { return esc(s).replace(/\*\*(.+?)\*\*/g, '<span class="f-em">$1</span>'); }
+  function femph(s) { return copy(s).replace(/\*\*(.+?)\*\*/g, '<span class="f-em">$1</span>'); }
   // Character count: displayed = full length after ** is stripped / net = whitespace and punctuation excluded
   function dispLen(s) { return strip(s).length; }
   function netLen(s) { return strip(s).replace(/[\s.,·:;!?…"'“”‘’()\[\]〔〕\-–—~%]/g, "").length; }
@@ -2570,7 +2579,7 @@ window.STORYBOARD_READY = (async function () {
       (slots ? '<div class="ref-slots">' + slots + "</div>"
              : '<p class="shot-refs-none">' + (ko ? "이 방식은 시작·종료 이미지만 받습니다. 참조 이미지는 보내지 않습니다." : "This lane takes only the start and end images; no reference images are sent.") + "</p>") + "</div>";
     // Right: story (the shot's one-line summary), lines, prompt — CSS radio tabs
-    var story = s.summary ? '<p class="shot-story">' + esc(s.summary) + "</p>" : "";
+    var story = s.summary ? '<p class="shot-story">' + copy(s.summary) + "</p>" : "";
     // The place and props shot_image composed into the start image (SB_DOC.locations · SB_DOC.props)
     var docName = function (list, id) { var e = (Array.isArray(list) ? list : []).filter(function (x) { return x && x.id === id; })[0]; return (e && e.name) || id; };
     var setting = [(s.visual || {}).locationId ? (ko ? "장소 " : "Place ") + docName(DOC.locations, s.visual.locationId) : "",
@@ -2654,9 +2663,9 @@ window.STORYBOARD_READY = (async function () {
       (n.id ? ' data-line-id="' + esc(n.id) + '"' : '') + '>' + avatar + '<div class="speech-content">' +
       '<div class="speech-meta"><b>' + esc(name) + '</b>' + (narrator ? '<span>' + esc(T.speechNarrator) + '</span>' : '') +
       '<span class="speech-delivery">' + esc(T.speechDelivery[delivery] || delivery) + '</span></div>' +
-      '<div class="speech-bubble"><p class="speech-text">' + esc(n.tts || n.sub || '') + '</p>' +
-      (n.sub && strip(n.tts) !== strip(n.sub) ? '<div class="sub-diff"><b>' + esc(T.subtitleLabel) + '</b> ' + '<span class="speech-subtitle">' + esc(n.sub) + '</span></div>' : '') + '</div>' +
-      (n.deliveryReason ? '<p class="speech-reason">' + esc(n.deliveryReason) + '</p>' : '') +
+      '<div class="speech-bubble"><p class="speech-text">' + copy(n.tts || n.sub || '') + '</p>' +
+      (n.sub && strip(n.tts) !== strip(n.sub) ? '<div class="sub-diff"><b>' + esc(T.subtitleLabel) + '</b> ' + '<span class="speech-subtitle">' + copy(n.sub) + '</span></div>' : '') + '</div>' +
+      (n.deliveryReason ? '<p class="speech-reason">' + copy(n.deliveryReason) + '</p>' : '') +
       '<div class="speech-reference">' + (index + 1) + (n.id ? ' · ' + esc(n.id) : '') + ' · ' + esc(T.chars(netLen(n.tts || n.sub))) + '</div>' +
       '</div></div>';
   }
@@ -3382,29 +3391,29 @@ window.STORYBOARD_READY = (async function () {
     // overlay none is the picture alone — even an empty text slot lays a film over the preview.
 
     if (overlayOf(s) === "none") {
-      if (seg && seg.sub) h += '<div class="f-sub">' + esc(seg.sub) + "</div>";
+      if (seg && seg.sub) h += '<div class="f-sub">' + copy(seg.sub) + "</div>";
       h += '<div class="fsafe"></div></div>';
       return h;
     }
 
     if (recTall(s)) {
       h += '<div class="f-band">' + esc(T.recordedScreen) + '</div><div class="f-top">';
-      if (s.kicker) h += '<div class="f-kicker">' + esc(s.kicker) + "</div>";
+      if (s.kicker) h += '<div class="f-kicker">' + copy(s.kicker) + "</div>";
       h += '<div class="f-title">' + femph(s.title || "") + "</div>";
       if (s.type === "cover" && s.stat)
         h += '<div class="f-statrow"><div class="f-stat f-em">' + esc(s.stat) + "</div>" +
-             (s.statLabel ? '<div class="f-statlabel">' + esc(s.statLabel) + "</div>" : "") + "</div>";
+             (s.statLabel ? '<div class="f-statlabel">' + copy(s.statLabel) + "</div>" : "") + "</div>";
       h += "</div>";
     } else if (s.type === "cover") {
       // In illustration (light) mode the cover anchors to the top — the body.light branch in video-template.html
       h += '<div class="fzone' + (light ? " top" : "") + '">';
-      if (s.kicker) h += '<div class="f-kicker">' + esc(s.kicker) + "</div>";
+      if (s.kicker) h += '<div class="f-kicker">' + copy(s.kicker) + "</div>";
       h += '<div class="f-title">' + femph(s.title || "") + "</div>";
       if (s.stat)
         h += '<div class="f-statwrap' + (idx < 1 ? " fhide" : "") + '"><div class="f-stat f-em"' +
              (statScale ? ' style="--stat-fs:' + statScale.toFixed(5) + '"' : "") +
              ">" + esc(s.stat) + "</div>" +
-             (s.statLabel ? '<div class="f-statlabel">' + esc(s.statLabel) + "</div>" : "") + "</div>";
+             (s.statLabel ? '<div class="f-statlabel">' + copy(s.statLabel) + "</div>" : "") + "</div>";
       h += "</div>";
     } else if (s.type === "points") {
       // A landscape shooting scene uses the lower third (bottom left of the zone) — the same spot as .zone.l3 in video-template.
@@ -3416,7 +3425,7 @@ window.STORYBOARD_READY = (async function () {
           return '<div class="f-cap' + (k === st.cap ? "" : " fhide") + '"><div class="t">' + femph(b.t) + "</div>" +
                  (b.d ? '<div class="d">' + esc(b.d) + "</div>" : "") + "</div>"; }).join("") + "</div>";
       }
-      if (s.footnote) h += '<div class="f-foot">' + esc(s.footnote) + "</div>";
+      if (s.footnote) h += '<div class="f-foot">' + copy(s.footnote) + "</div>";
       h += "</div>";
     } else if (s.type === "quote") {
       // When a speech clip is planned, produce captures with alpha — only the signature goes
@@ -3432,10 +3441,10 @@ window.STORYBOARD_READY = (async function () {
     } else if (s.type === "outro") {
       h += '<div class="fzone center"><div class="f-obrand f-em">' + esc(THEME.brand || "") + "</div>" +
            '<div class="f-otitle">' + femph(s.title || "") + "</div>" +
-           (s.sub ? '<div class="f-osub">' + esc(s.sub) + "</div>" : "") + "</div>";
+           (s.sub ? '<div class="f-osub">' + copy(s.sub) + "</div>" : "") + "</div>";
     }
 
-    if (seg && seg.sub) h += '<div class="f-sub">' + esc(seg.sub) + "</div>";
+    if (seg && seg.sub) h += '<div class="f-sub">' + copy(seg.sub) + "</div>";
     h += '<div class="fsafe"></div></div>';
     return h;
   }
@@ -3714,7 +3723,7 @@ window.STORYBOARD_READY = (async function () {
   var channelName = DOC.channelName || DOC.channel || THEME.brand;
   h += '<div class="doc-kicker">' + esc(channelName) +
        (DOC.series && DOC.series !== channelName ? " · " + esc(DOC.series) : "") + "</div>";
-  h += '<h1 class="doc-title">' + esc(DOC.displayTitle || DOC.topic || "") + "</h1>";
+  h += '<h1 class="doc-title">' + copy(DOC.displayTitle || DOC.topic || "") + "</h1>";
   if (THEME.motionGraphicTheme) {
     var commonMotion = THEME.motionGraphicTheme;
     var commonMotionInfo = window.MOTION_GRAPHICS && MOTION_GRAPHICS.THEMES[commonMotion.id];
@@ -4650,8 +4659,8 @@ window.STORYBOARD_READY = (async function () {
     var out = '<h2 class="sec" id="scenario">' + esc(T.scenarioHead) +
               '<span class="aside">' + esc(T.scenarioAside) + "</span></h2>";
     out += '<div class="scenario-summary">' +
-      '<div class="scenario-card"><span class="k">' + esc(T.scenarioDirection) + '</span><div class="v"><b>' + esc(SCENARIO.direction || "—") + '</b></div></div>' +
-      '<div class="scenario-card"><span class="k">' + esc(T.scenarioMessage) + '</span><div class="v"><b>' + esc(SCENARIO.message || "—") + '</b></div></div>' +
+      '<div class="scenario-card"><span class="k">' + esc(T.scenarioDirection) + '</span><div class="v"><b>' + copy(SCENARIO.direction || "—") + '</b></div></div>' +
+      '<div class="scenario-card"><span class="k">' + esc(T.scenarioMessage) + '</span><div class="v"><b>' + copy(SCENARIO.message || "—") + '</b></div></div>' +
       '<div class="scenario-card wide"><span class="k">' + esc(T.scenarioWow) + '</span><div class="v"><small>' + esc(T.scenarioBelief) + '</small> ' +
         mark(SCENARIO.wow_belief || "—") + '<span class="scenario-arrow">→</span><small>' + esc(T.scenarioTruth) + '</small> ' + mark(SCENARIO.wow_truth || "—") +
         '<br><span class="badge">' + esc(T.scenarioType) + ' · ' + esc(SCENARIO.wow_type || "—") + '</span> ' +
@@ -4870,6 +4879,14 @@ window.STORYBOARD_READY = (async function () {
          return '<option value="' + code + '"' + (code === LANG ? " selected" : "") + ">" +
                 esc(LANG_LABELS[code] || code) + "</option>"; }).join("") +
        "</select></nav>";
+  if (CONTENT.languages.length) {
+    h += '<aside class="story-language" aria-label="Story language"><label for="story-language">🌐 <span>' +
+      (LANG === 'ko' ? '이야기·대사' : 'Story & dialogue') + '</span></label>' +
+      '<select id="story-language" aria-label="Story and dialogue language">' + CONTENT.languages.map(function (code) {
+        return '<option value="' + code + '"' + (code === CONTENT.language ? ' selected' : '') + '>' + esc(CONTENT.labels[code] || code) + '</option>';
+      }).join('') + '</select><small>' + CONTENT.translated + '/' + CONTENT.total +
+      (LANG === 'ko' ? ' 번역 · 미번역은 원문' : ' translated · missing text uses source') + '</small></aside>';
+  }
 
   /* ══ Scenario handoff ══ — absent on older boards, so they draw exactly as before */
   if (SCENARIO) h += scenarioSection();
@@ -4965,9 +4982,9 @@ window.STORYBOARD_READY = (async function () {
     return '<details class="seq" open><summary class="seq-head">' +
       '<span class="seq-no">' + (seqNo < 10 ? "0" : "") + seqNo + "</span>" +
       '<span class="seq-main"><span class="seq-kicker">' + esc(T.seqKicker) + "</span>" +
-      '<span class="seq-title">' + esc(title) + "</span>" +
-      (q && q.purpose ? '<span class="seq-purpose">' + esc(q.purpose) + "</span>" : "") +
-      (q && q.question ? '<span class="seq-question">' + esc(q.question) + (q.payoff ? ' <b>→ S#' + esc(String(q.payoff)) + "</b>" : "") + "</span>" : "") +
+      '<span class="seq-title">' + copy(title) + "</span>" +
+      (q && q.purpose ? '<span class="seq-purpose">' + copy(q.purpose) + "</span>" : "") +
+      (q && q.question ? '<span class="seq-question">' + copy(q.question) + (q.payoff ? ' <b>→ S#' + esc(String(q.payoff)) + "</b>" : "") + "</span>" : "") +
       musicLane(groups.reduce(function (a, g) { return a.concat(g.items); }, [])) +
       "</span>" + '<span class="seq-stats">' + esc(T.seqStats(groups.length, shotsIn)) + "</span>" +
       '</summary><div class="seq-body">';
@@ -4991,10 +5008,10 @@ window.STORYBOARD_READY = (async function () {
       var scPlace = sc && sc.place ? ((window.SB_DOC && window.SB_DOC.locations) || []).filter(function (l) { return l && l.id === sc.place; })[0] : null;
       h += '<details class="scene-band" open><summary class="scene-band-head"><span class="sn"><small>' + esc(T.sceneKicker) + "</small><b>" + esc(String(grp.scene)) + "</b></span>" +
            '<span class="scene-band-main">' +
-           (scPlace || (sc && sc.place) ? '<span class="scene-band-kicker"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>' + esc(scPlace && scPlace.name || sc.place) + "</span>" : "") +
-           '<span class="scene-band-title">' + esc(scTitle) + "</span>" +
-           (scTurn ? '<span class="scene-turn">' + esc(scTurn) + "</span>" : "") + musicLane(grp.items, sc) +
-           (scSummary ? '<p class="scene-band-synopsis">' + esc(scSummary) + "</p>" : "") +
+           (scPlace || (sc && sc.place) ? '<span class="scene-band-kicker"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>' + copy(scPlace && scPlace.name || sc.place) + "</span>" : "") +
+           '<span class="scene-band-title">' + copy(scTitle) + "</span>" +
+           (scTurn ? '<span class="scene-turn">' + copy(scTurn) + "</span>" : "") + musicLane(grp.items, sc) +
+           (scSummary ? '<p class="scene-band-synopsis">' + copy(scSummary) + "</p>" : "") +
            sceneOutHtml(sc) + "</span>" +
            '<span class="scene-band-stats">' + esc(T.shotsN(grp.items.length)) + (scLen !== null ? " · " + esc(durTxt(scLen)) : "") + "</span>" +
            '</summary><div class="scene-band-body">';
@@ -5529,6 +5546,13 @@ window.STORYBOARD_READY = (async function () {
       : '<div class="clean">' + esc(T.auditCleanNote) + "</div>");
 
   var langSel = document.getElementById("lang");
+  var storyLangSel = document.getElementById('story-language');
+  if (storyLangSel) storyLangSel.addEventListener('change', function () {
+    try { localStorage.setItem('social-flow.storyLang', storyLangSel.value); } catch (e) { /* storage blocked */ }
+    var u = new URL(location.href);
+    u.searchParams.set('storyLang', storyLangSel.value);
+    location.href = u.toString();
+  });
   if (langSel) langSel.addEventListener("change", function () {
     try { localStorage.setItem("social-flow.lang", langSel.value); } catch (e) { /* storage blocked */ }
     var u = new URL(location.href);
@@ -5538,6 +5562,9 @@ window.STORYBOARD_READY = (async function () {
 
 
   window.ReviewTypography.apply(DOC, SCENES);
+  if (CONTENT.language) app.querySelectorAll('.speech-text, .speech-subtitle, .shot-story, .scene-band-synopsis, .seq-title, .seq-purpose, .seq-question, .doc-title').forEach(function (node) {
+    node.setAttribute('lang', CONTENT.language);
+  });
   if (fontFailures.length) {
     var notice = document.createElement('p');
     notice.className = 'review-font-warning'; notice.setAttribute('role', 'status');
@@ -5545,7 +5572,7 @@ window.STORYBOARD_READY = (async function () {
     app.prepend(notice);
   }
   var who = DOC.channelName || DOC.channel || THEME.brand || "";
-  document.title = (DOC.displayTitle || DOC.topic || "Storyboard") + (who ? " — Storyboard · " + who : " — Storyboard");
+  document.title = CONTENT.text(DOC.displayTitle || DOC.topic || "Storyboard") + (who ? " — Storyboard · " + who : " — Storyboard");
 })();
 </script>
 <link rel="stylesheet" href="./location-review.css">

@@ -21,10 +21,11 @@
   function family(lang) {
     return { ko: 'Pretendard', ja: 'Noto Sans JP', 'zh-Hans': 'Noto Sans SC', 'zh-Hant': 'Noto Sans TC' }[language(lang)] || 'Inter';
   }
-  async function prepare(doc, scenes) {
+  async function prepare(doc, scenes, reviewLanguages) {
     if (!root.document || !root.document.fonts) return [];
     var text = JSON.stringify([doc, scenes]);
     var families = new Set(['Inter']);
+    (reviewLanguages || []).forEach(function (lang) { families.add(family(lang)); });
     families.add(family(contentLanguage(doc)));
     scenes.forEach(function (scene, index) { families.add(family(contentLanguage(doc, scene, index))); });
     if (/[\uac00-\ud7af]/.test(text) || root.document.documentElement.lang === 'ko') families.add('Pretendard');

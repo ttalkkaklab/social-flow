@@ -1090,11 +1090,71 @@ async function uploadFacebookCaption(
       body: form,
       signal: AbortSignal.timeout(60_000),
     });
-    if (res.ok) return null;
-    return `captions ${res.status}: ${(await res.text()).slice(0, 300)}`;
+    const body = await res.text();
+    if (res.ok && JSON.parse(body)?.success === true) return null;
+    return `captions ${res.status}: ${body.slice(0, 300)}`;
   } catch (error) {
     return `caption upload failed: ${error instanceof Error ? error.message : String(error)}`;
   }
+}
+
+/** Add tracks to an existing owned video without republishing or replacing a locale. */
+export async function facebookCaptions(input: {
+  action: 'list' | 'add'; channel: string; videoId: string; expectedPageId: string;
+  tracks?: { filePath: string; locale: string }[];
+}): Promise<ApiResult> {
+  if (!/^[0-9]+$/.test(input.videoId) || !/^[0-9]+$/.test(input.expectedPageId) ||
+      !/^[a-z0-9][a-z0-9-]{0,63}$/.test(input.channel) || !['list', 'add'].includes(input.action))
+    return fail(400, 'Use a channel slug, numeric videoId/expectedPageId and action list or add');
+  const tracks = input.tracks || [];
+  if ((input.action === 'add' && !tracks.length) || (input.action === 'list' && tracks.length) ||
+      tracks.some(t => !/^[a-z]{2}_[A-Z]{2}$/.test(t.locale)) || new Set(tracks.map(t => t.locale)).size !== tracks.length)
+    return fail(400, 'add requires unique locale tracks; list takes no tracks');
+  const files: { bytes: Buffer; locale: string; sha256: string }[] = [];
+  for (const track of tracks) {
+    const read = await readCaptionFile(track.filePath, CAPTION_MAX_BYTES_FB);
+    if (!read.bytes) return read.error;
+    if (!/^\d+\r?\n\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3}\r?\n/m.test(read.bytes.toString('utf8')))
+      return fail(400, `Invalid SRT cues: ${track.locale}`);
+    files.push({ bytes: read.bytes, locale: track.locale, sha256: createHash('sha256').update(read.bytes).digest('hex') });
+  }
+  const { token, error } = await loadTokenFile('FACEBOOK', input.channel);
+  if (error || !token) return error || fail(400, 'Missing Facebook token');
+  const me = await fetchMe(FB_BASE, token, 'id,name');
+  if (!me.ok) return me;
+  if (JSON.parse(me.body).id !== input.expectedPageId) return fail(409, 'Facebook Page differs from expectedPageId');
+  const owner = await graphRequest('get', `${FB_BASE}/${input.videoId}`, { fields: 'id,from', access_token: token });
+  if (!owner.ok) return owner;
+  if (JSON.parse(owner.body).from?.id !== input.expectedPageId) return fail(409, 'Video ownership could not be verified for this Page');
+  const list = () => graphRequest('get', `${FB_BASE}/${input.videoId}/captions`, { fields: 'id,locale,is_default', limit: '100', access_token: token });
+  const before = await list();
+  if (!before.ok) return before;
+  const initial = JSON.parse(before.body);
+  if (!Array.isArray(initial.data) || initial.paging?.next) return fail(502, 'Caption list incomplete; no tracks were added');
+  if (input.action === 'list') return okJson({ videoId: input.videoId, pageId: input.expectedPageId, tracks: initial.data });
+  const results = [];
+  for (const track of files) {
+    if (initial.data.some((item: { locale?: string }) => item.locale === track.locale)) {
+      results.push({ locale: track.locale, status: 'already_exists', note: 'Existing content was not compared or replaced' });
+      continue;
+    }
+    const warning = await uploadFacebookCaption(token, input.videoId, { ...track, isDefault: false });
+    results.push({ locale: track.locale, sha256: track.sha256, status: warning ? 'unconfirmed' : 'accepted', ...(warning ? { warning } : {}) });
+    if (warning) break;
+  }
+  const after = await list();
+  let current = null;
+  let verificationError = after.ok ? '' : after.body;
+  if (after.ok) {
+    try {
+      const parsed = JSON.parse(after.body);
+      if (!Array.isArray(parsed.data) || parsed.paging?.next) verificationError = 'Caption verification list incomplete';
+      else current = parsed.data;
+    } catch { verificationError = 'Caption verification returned invalid JSON'; }
+  }
+  for (const result of results) if (result.status === 'accepted' && Array.isArray(current) && current.some((item: { locale?: string }) => item.locale === result.locale)) result.status = 'verified';
+  return okJson({ videoId: input.videoId, pageId: input.expectedPageId, results, tracks: current,
+    ...(verificationError ? { verificationError } : {}), note: 'No default locale changed. Presence verifies the locale, not its text; never retry an uncertain write without listing first.' });
 }
 
 async function setYoutubeThumbnail(

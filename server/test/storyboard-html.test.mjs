@@ -9,6 +9,38 @@ const require = createRequire(import.meta.url);
 const { FONT_ASSETS } = require('../../skills/channel/references/review-fonts.js');
 const { storyboardHtml } = require('../../skills/storyboard/references/storyboard-html.js');
 
+test('localized copy is escaped while media attributes and source stay unchanged', () => {
+  const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
+  const source = template.slice(template.indexOf('  function esc(s)'), template.indexOf('  function strip(s)'));
+  const CONTENT = require('../../skills/storyboard/references/review-localization.js').reader({ version: 1, sourceLanguage: 'vi', languages: ['vi', 'ja'], entries: [
+    { source: 'Xin chào', translations: { ja: '<img src=x onerror=alert(1)>' } },
+    { source: '../speech.wav', translations: { ja: 'wrong-path' } },
+  ] }, 'ja');
+  const result = runInNewContext(source + '\n[copy("Xin chào"), esc("../speech.wav")]', { CONTENT });
+  assert.equal(result[0], '&lt;img src=x onerror=alert(1)&gt;');
+  assert.equal(result[1], '../speech.wav');
+});
+
+test('review language survives source typography and prepares the selected font', async () => {
+  const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
+  const start = template.indexOf('  window.ReviewTypography.apply(DOC, SCENES);');
+  const source = template.slice(start, template.indexOf('  if (fontFailures.length)', start));
+  const node = { lang: '', setAttribute(key, value) { this[key] = value; } };
+  runInNewContext(source, {
+    DOC: { contentLanguage: 'vi' }, SCENES: [], CONTENT: { language: 'ja' },
+    app: { querySelectorAll: () => [node] },
+    window: { ReviewTypography: { apply: () => { node.lang = 'vi'; } } },
+  });
+  assert.equal(node.lang, 'ja');
+  const loaded = [];
+  const context = { document: { documentElement: { lang: 'en' }, fonts: { load: async font => { loaded.push(font); return [{}]; } } } };
+  context.window = context;
+  runInNewContext(readFileSync(new URL('../../skills/channel/references/review-assets/review-typography.js', import.meta.url), 'utf8'), context);
+  await context.ReviewTypography.prepare({ contentLanguage: 'vi' }, [], ['ja', 'zh-Hans']);
+  assert.ok(loaded.some(font => font.includes('Noto Sans JP')));
+  assert.ok(loaded.some(font => font.includes('Noto Sans SC')));
+});
+
 test('bound video displays before assembly, while explicit edit cuts retain their ranges', () => {
   const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
   const start = template.indexOf('  function productionCutsHtml(s)');
@@ -65,7 +97,7 @@ test('HTML creation and refresh keep one design while preserving episode metadat
   const dir = mkdtempSync(join(tmpdir(), 'sf-board-html-'));
   try {
     // No scenes, credentials, or network are required to create the review shell.
-    assert.equal(storyboardHtml(dir).length, 22 + FONT_ASSETS.length);
+    assert.equal(storyboardHtml(dir).length, 23 + FONT_ASSETS.length);
     const file = join(dir, 'storyboard.html');
     const original = readFileSync(file, 'utf8');
     const title = '<title>Episode $& — 로컬 검토</title>';
@@ -93,7 +125,7 @@ test('check is read-only and malformed existing metadata is preserved for repair
   const root = mkdtempSync(join(tmpdir(), 'sf-board-html-check-'));
   try {
     const dir = join(root, 'storyboard');
-    assert.equal(storyboardHtml(dir, true).length, 22 + FONT_ASSETS.length);
+    assert.equal(storyboardHtml(dir, true).length, 23 + FONT_ASSETS.length);
     assert.equal(existsSync(dir), false);
     storyboardHtml(dir);
     const file = join(dir, 'storyboard.html');
