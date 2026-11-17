@@ -25,6 +25,12 @@ and unchanged request inputs before adoption; it does not generate again. Input 
 file availability and visual review are separate evidence. Location references preserve
 directional geography while the authored crop decides which landmarks fit in the frame.
 
+[Episode first comments](skills/_shared/first-comment.md) introduce the characters and
+their relationship, then tease the opening incident without its payoff. Produce prepares
+platform-specific copy; publish sends authorized comments from the channel account,
+verifies the posted author/text and records receipts so an interrupted run does not
+duplicate them. Existing posts can receive the same treatment without uploading again.
+
 [Character depth](skills/storyboard/references/character-depth.md) connects shared identities
 to episode choices, personal costs and relationship-specific behavior. Channel, storyboard
 and autoproduce use the same guidance; blind review checks the performed evidence before
