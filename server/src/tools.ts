@@ -1056,7 +1056,7 @@ Storyboard: write the story first with \`story_sequence\` → \`story_scene\` �
 
 Images: \`image_catalog\` → \`image_plan\` → \`image_execute\`, then \`image_status\` after interruption. Preserve the saved model choice; legacy image adapters require imageContext for configured production. Host selections remain external handoffs. Music: music_*, suno_*. Sound effects: \`sfx_elevenlabs_generate\`. Free stock footage: \`stock_search\`. Research: serp_*, \`naver_search\`, datago_*, \`youtube_topic_scout\`.
 
-TikTok: use \`tiktok_auth\` for OAuth, \`tiktok_upload\` for inbox drafts or \`tiktok_publish\` for approved Direct Post; each upload requires post-specific consent. Track the durable requestId with \`tiktok_status\`; never resubmit an uncertain request.
+TikTok: use \`tiktok_auth\` for OAuth, \`tiktok_upload\` for inbox drafts or \`tiktok_publish\` for approved Direct Post; each upload requires post-specific consent. Start private (SELF_ONLY), edit and verify the saved cover in ego lite, then make the same post public in the browser. If cover editing is blocked, keep it private. Direct Post completion is not public verification; never call tiktok_publish again to change visibility. Track the durable requestId with \`tiktok_status\`; never resubmit an uncertain request.
 
 SNS: run \`sns_account_check\` first; publish tools appear only for platforms with a credential file. \`threads_publish\`, \`instagram_publish\`, \`facebook_publish\`, \`youtube_publish\` and \`sns_comment_reply\` are public the moment they run — call them only with the user's approval for that post or inside a growth-plan.md standing authorization.
 

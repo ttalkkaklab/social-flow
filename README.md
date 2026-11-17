@@ -1301,6 +1301,14 @@ attempt uses a unique filename and the existing authorization; choose a take wit
 existing attachment tool. See [video routing](skills/_shared/video-routing.md#plans-candidate-takes-and-local-review).
 
 
+### TikTok publishing
+
+TikTok publication follows **private upload → browser cover edit and verification
+→ public visibility** on the same post. Use ego lite to save the cover, reopen it
+and inspect the profile crop before making the post public. If that step is blocked,
+keep the post private and report it. Inbox delivery and private Direct Post completion
+are intermediate states. See [the workflow](skills/publish/references/tiktok-private-cover.md).
+
 ### TikTok setup
 
 `/social-flow:setup-tiktok mochi-bo` connects the intended channel without publishing.
