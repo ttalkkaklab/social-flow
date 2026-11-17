@@ -75,6 +75,48 @@ test('I2V references retain their v2 route and frame fields, and unsupported bac
   await assert.rejects(generateGenaiVideo('image-to-video',args),error=>error.terminal===true);
   assert.equal(posts,1);
 });
+test('v2 negatives travel only when set and only where the gateway has a negative pass', async t => {
+  const { genaiAudioToVideoSchema, buildGenaiAudioBody } = await import('../dist/astra-genai-video.js');
+  const negativePrompt = 'has_subtitles, captions, text overlays', imageUri = 'https://example.com/start.png';
+  const dev = { ...base, model: 'ltx-2.5-22b-dev', negativePrompt };
+  const audio = { prompt: 'A presenter speaks to camera.', model: 'ltx-2.5-22b-dev', resolution: '1280x720', reserveUsd: 0, audioUri: 'https://example.com/line.wav' };
+  // The guided dev pipelines take it as is; leaving it out keeps the engine's own default negative.
+  assert.equal(buildGenaiVideoBody(genaiTextToVideoSchema.parse(dev)).negative_prompt, negativePrompt);
+  assert.equal(buildGenaiVideoBody(genaiImageToVideoSchema.parse({ ...dev, imageUri })).negative_prompt, negativePrompt);
+  assert.equal(buildGenaiAudioBody(genaiAudioToVideoSchema.parse({ ...audio, negativePrompt })).negative_prompt, negativePrompt);
+  assert.equal('negative_prompt' in buildGenaiVideoBody(genaiTextToVideoSchema.parse(base)), false);
+  assert.equal('negative_prompt' in buildGenaiAudioBody(genaiAudioToVideoSchema.parse(audio)), false);
+  // Distilled has no negative pass without references; the dev backend caps the text at 2000 characters.
+  for (const bad of [{ ...base, negativePrompt }, { ...dev, negativePrompt: ' ' }, { ...dev, negativePrompt: 'x'.repeat(2001) }])
+    assert.equal(genaiTextToVideoSchema.safeParse(bad).success, false, JSON.stringify(bad).slice(0, 120));
+  for (const bad of [{ negativePrompt: ' ' }, { negativePrompt: 'x'.repeat(2001) }])
+    assert.equal(genaiAudioToVideoSchema.safeParse({ ...audio, ...bad }).success, false);
+  // The MSR guidance knobs exist only on the reference path, under the MSR pairing rule.
+  const refs = { ...base, imageUri, references: [{ imageUri: 'https://example.com/hero.png' }], negativePrompt };
+  for (const bad of [{ ...dev, imageUri, guidanceScale: 2 }, { ...dev, imageUri, nagScale: 11 }, { ...base, imageUri, negativePrompt }, refs,
+    { ...refs, guidanceScale: 1 }, { ...refs, negativePrompt: undefined, nagScale: 11 }, { ...refs, nagScale: 11, negativePrompt: 'x'.repeat(5001) }])
+    assert.equal(genaiImageToVideoSchema.safeParse(bad).success, false, JSON.stringify(bad).slice(0, 160));
+  const guided = buildGenaiVideoBody(genaiImageToVideoSchema.parse({ ...refs, guidanceScale: 2 }));
+  assert.deepEqual([guided.negative_prompt, guided.guidance_scale, 'nag_scale' in guided], [negativePrompt, 2, false]);
+  const dir = setup(t), args = { ...refs, nagScale: 11, nagTau: 3, outputPath: dir, filename: 'negative.mp4' };
+  let nag = false, posts = 0;
+  globalThis.fetch = async (url, options) => {
+    if (String(url).endsWith('/msr/capabilities')) return Response.json({ image_conditioning: true, negative_prompt: true, nag });
+    if (options.method === 'POST') {
+      posts++;
+      const body = JSON.parse(options.body);
+      assert.deepEqual([body.negative_prompt, body.nag_scale, body.nag_tau], [negativePrompt, 11, 3]);
+      assert.equal('nag_alpha' in body, false); assert.equal('guidance_scale' in body, false);
+      return Response.json({ id: 'negative-job' }, { status: 202 });
+    }
+    return Response.json({ id: 'negative-job', status: 'failed', error: 'fixture' });
+  };
+  await assert.rejects(generateGenaiVideo('image-to-video', args), /msr_nag_unsupported/);
+  assert.equal(posts, 0); assert.equal(fs.existsSync(path.join(dir, 'negative.mp4.astra-genai.json')), false);
+  nag = true;
+  await assert.rejects(generateGenaiVideo('image-to-video', args), error => error.terminal === true);
+  assert.equal(posts, 1);
+});
 test('a rejected submission frees its output name; one status 5xx is polled through and a failed job is terminal', async t => {
   const dir = setup(t), args = { ...base, outputPath: dir, filename: 'clip.mp4' };
   const realSetTimeout = globalThis.setTimeout;

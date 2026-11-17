@@ -265,7 +265,8 @@ The v2 tools retain explicit `duration` (integer or null) and `resolution`, opti
 `fps` 24/25/48/50, `generateAudio` and provider `cameraMotion`. Image-to-video adds
 exactly one `imagePath` or `imageUri` (HTTPS or PNG/JPEG data URI; a local file travels
 as a data URI) and an optional `lastFramePath` or `lastFrameUri`. The gateway
-validates deployment limits. Do not send MSR fields to v2 or reuse legacy upload IDs.
+validates deployment limits. Do not send MSR fields to v2, apart from the negative
+controls below, or reuse legacy upload IDs.
 
 Audio-to-video takes exactly one `audioPath` (local `.wav`/`.mp3`/`.m4a`/`.ogg`/`.opus`,
 sent as a data URI) or `audioUri` (HTTPS, or an `audio/wav`, `audio/mpeg`, `audio/mp4`
@@ -280,6 +281,31 @@ changed: only AAC standard rates 7350–96000 Hz (e.g. 48000, 44100) pass; other
 as 192000 are 422. The
 soundtrack is the supplied audio after one backend encode, not a bit-identical copy.
 Lip-sync quality is not yet measured on this gateway; inspect mouths before acceptance.
+
+### Negative prompt on the v2 tools
+
+LTX has no subtitle switch; negative conditioning is the only control. Pass
+`negativePrompt` in `video_plan.args` (it maps to `negative_prompt`). Nothing adds it
+automatically, and it is sent only when set.
+
+| Tool and model | What happens |
+|---|---|
+| `astra_genai_audio2video` (dev only) | Forwarded. The pipeline already runs guided, so it costs no extra GPU time. |
+| `astra_genai_text2video` / `astra_genai_img2video` on `ltx-2.5-22b-dev` | Forwarded, same as above. |
+| `astra_genai_img2video` on distilled with `references` | Forwarded on the MSR path. Needs `guidanceScale > 1` or `nagScale > 0` (optional `nagAlpha`, `nagTau`), and the adapter checks `negative_prompt`/`nag` at `/v1/ltx/msr/capabilities` before uploading. |
+| distilled without `references` | Refused before submission: distilled sampling has no negative pass. Switch the cut to dev, or add a reference. |
+
+On the dev pipelines an omitted `negativePrompt` keeps the engine default, which
+(in `ltx_pipelines` 1.6.0) begins `has_subtitles, has_blurbox` and continues with quality terms. A
+supplied value replaces that default, it is not appended. So leave it out unless the
+default failed on this cut, and when you do write one, start from the default terms
+you still want, e.g. `has_subtitles, has_blurbox, captions, text overlays, blurry,
+distorted proportions`. The dev backend takes at most 2000 characters.
+`guidanceScale` and the NAG fields without `references` are refused.
+
+A gateway older than this contract answers 400 for the unknown field and creates no
+job; drop the argument or upgrade the gateway. Negative conditioning steers the model
+and does not guarantee text-free frames: keep the OCR check on the clip.
 
 ## Recovery and evidence
 

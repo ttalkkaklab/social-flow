@@ -31802,8 +31802,27 @@ var localResolution = external_exports.string().regex(/^[1-9]\d*x[1-9]\d*$/).ref
   const [w, h] = value.split("x").map(Number), width = Math.ceil(w / 64) * 64, height = Math.ceil(h / 64) * 64;
   return Number.isSafeInteger(w) && Number.isSafeInteger(h) && Math.min(w, h) >= 64 && w % 2 === 0 && h % 2 === 0 && Math.max(width, height) <= 1920 && width * height <= 2064384;
 }, "Use even WIDTHxHEIGHT sides of at least 64; rounded-up /64 sides must fit 1920 and 2,064,384 pixels");
+var msrGuidanceFields = {
+  guidanceScale: external_exports.number().finite().min(1).max(10).optional(),
+  nagScale: external_exports.number().finite().min(0).max(100).optional(),
+  nagAlpha: external_exports.number().finite().min(0).max(1).optional(),
+  nagTau: external_exports.number().finite().min(0).max(10).optional()
+};
+function msrNegativeRule(args, issue) {
+  if ((args.nagScale ?? 0) > 0 && args.negativePrompt === void 0)
+    issue("MSR nagScale > 0 requires negativePrompt");
+  if (args.negativePrompt !== void 0 && (args.guidanceScale ?? 1) <= 1 && (args.nagScale ?? 0) === 0)
+    issue("MSR negativePrompt requires guidanceScale > 1 or nagScale > 0");
+}
+function devNegativeRule(args, ctx) {
+  if (args.negativePrompt === void 0) return;
+  const issue = (message) => ctx.addIssue({ code: "custom", path: ["negativePrompt"], message });
+  if (args.model !== "ltx-2.5-22b-dev") issue("negativePrompt requires ltx-2.5-22b-dev, or image-to-video references with guidanceScale > 1 or nagScale > 0");
+  if (args.negativePrompt.length > 2e3) issue("The dev backend accepts a negativePrompt of at most 2000 characters");
+}
 var textVideoFields = external_exports.object({
   prompt: external_exports.string().min(1).max(2e3),
+  negativePrompt: external_exports.string().trim().min(1).max(5e3).optional(),
   model: external_exports.enum(GENAI_VIDEO_MODELS),
   duration: external_exports.number().int().min(1).nullable(),
   resolution: localResolution,
@@ -31817,7 +31836,10 @@ function localVideoTiming(args, ctx) {
   if (args.duration !== null && 8 * Math.ceil((args.duration * args.fps - 1) / 8) + 1 > 361)
     ctx.addIssue({ code: "custom", path: ["duration"], message: "Duration and fps exceed the local 361-frame limit" });
 }
-var genaiTextToVideoSchema = textVideoFields.superRefine(localVideoTiming);
+var genaiTextToVideoSchema = textVideoFields.superRefine((args, ctx) => {
+  localVideoTiming(args, ctx);
+  devNegativeRule(args, ctx);
+});
 var genaiImageToVideoSchema = textVideoFields.extend({
   imageUri: genaiImageUriSchema.optional(),
   imagePath: external_exports.string().min(1).optional(),
@@ -31830,7 +31852,8 @@ var genaiImageToVideoSchema = textVideoFields.extend({
   }).strict().refine(
     (ref) => Number(ref.imageUri !== void 0) + Number(ref.imagePath !== void 0) === 1,
     "Supply exactly one imageUri or imagePath per reference"
-  )).min(1).max(5).optional()
+  )).min(1).max(5).optional(),
+  ...msrGuidanceFields
 }).strict().superRefine((args, ctx) => {
   const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
   localVideoTiming(args, ctx);
@@ -31838,7 +31861,12 @@ var genaiImageToVideoSchema = textVideoFields.extend({
     issue("A last frame requires an explicit duration");
   if (Number(args.imageUri !== void 0) + Number(args.imagePath !== void 0) !== 1) issue("Supply exactly one imageUri or imagePath");
   if (args.lastFrameUri != null && args.lastFramePath !== void 0) issue("Supply at most one lastFrameUri or lastFramePath");
-  if (args.references) {
+  if (!args.references) {
+    if (Object.keys(msrGuidanceFields).some((key) => args[key] !== void 0))
+      issue("guidanceScale and NAG require references (MSR conditioning); ltx-2.5-22b-dev already runs guided");
+    devNegativeRule(args, ctx);
+  } else {
+    msrNegativeRule(args, issue);
     if (args.model !== "ltx-2.5-22b-distilled") issue("Additional references require ltx-2.5-22b-distilled (MSR conditioning)");
     if (args.duration === null) issue("Additional references require an explicit duration");
     const backgrounds = args.references.filter((ref) => ref.background).length;
@@ -31849,6 +31877,7 @@ var genaiImageToVideoSchema = textVideoFields.extend({
 var oneOf = (a, b) => Number(a !== void 0) + Number(b !== void 0);
 var genaiAudioToVideoSchema = external_exports.object({
   prompt: external_exports.string().trim().min(1).max(5e3),
+  negativePrompt: external_exports.string().trim().min(1).max(2e3).optional(),
   model: external_exports.literal("ltx-2.5-22b-dev"),
   resolution: external_exports.string().min(1),
   fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
@@ -31872,10 +31901,7 @@ var GENAI_MSR_FRAMES = { min: 25, max: 361, step: 8, frameRate: 24 };
 var genaiMsrSchema = external_exports.object({
   prompt: external_exports.string().trim().min(1).max(2e3),
   negativePrompt: external_exports.string().trim().min(1).max(5e3).optional(),
-  guidanceScale: external_exports.number().finite().min(1).max(10).optional(),
-  nagScale: external_exports.number().finite().min(0).max(100).optional(),
-  nagAlpha: external_exports.number().finite().min(0).max(1).optional(),
-  nagTau: external_exports.number().finite().min(0).max(10).optional(),
+  ...msrGuidanceFields,
   references: external_exports.array(external_exports.object({
     imageUri: genaiImageUriSchema.optional(),
     imagePath: external_exports.string().min(1).optional(),
@@ -31900,10 +31926,7 @@ var genaiMsrSchema = external_exports.object({
   filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use a .mp4 filename").optional()
 }).strict().superRefine((args, ctx) => {
   const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-  if ((args.nagScale ?? 0) > 0 && args.negativePrompt === void 0)
-    issue("MSR nagScale > 0 requires negativePrompt");
-  if (args.negativePrompt !== void 0 && (args.guidanceScale ?? 1) <= 1 && (args.nagScale ?? 0) === 0)
-    issue("MSR negativePrompt requires guidanceScale > 1 or nagScale > 0");
+  msrNegativeRule(args, issue);
   const backgrounds = args.references.filter((ref) => ref.background).length;
   if (backgrounds > 1 || args.references.length - backgrounds > 4) issue("MSR supports at most four subjects and one background");
   let subject = 0;

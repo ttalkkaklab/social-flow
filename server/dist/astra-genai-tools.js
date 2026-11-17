@@ -4,8 +4,17 @@ const output = {
     outputPath: { type: 'string', description: 'Local output directory; configured production keeps outputs inside its episode/workspace.' },
     filename: { type: 'string', description: 'Bare output filename (.mp4 for video, .png for image). Reuse its receipt after interruption; never overwrite existing media.' },
 };
+/** MSR's guidance knobs, shared by astra_genai_msr and the reference path of astra_genai_img2video. */
+const msrGuidance = {
+    guidanceScale: { type: 'number', minimum: 1, maximum: 10, description: 'Classifier-free guidance; omitted keeps gateway default 1. Values above 1 require backend negative conditioning support and change distilled sampling.' },
+    nagScale: { type: 'number', minimum: 0, maximum: 100, description: 'Video-only normalized attention guidance. Omitted or 0 disables NAG; a positive value requires negativePrompt and live backend nag support. Example 11 is experimental, not a subtitle-free guarantee; works at CFG 1.' },
+    nagAlpha: { type: 'number', minimum: 0, maximum: 1, description: 'NAG mixing coefficient; gateway default 0.25. Sent only when nagScale > 0.' },
+    nagTau: { type: 'number', minimum: 0, maximum: 10, description: 'NAG clipping threshold; gateway default 2.5. Sent only when nagScale > 0.' },
+};
+const devNegative = 'Negative conditioning, e.g. has_subtitles, captions, text overlays. Omit it to keep the engine default negative, which starts with has_subtitles, has_blurbox and continues with quality terms (ltx_pipelines 1.6.0); a supplied value replaces that default, so repeat the terms still wanted. At most 2000 characters on ltx-2.5-22b-dev. Not a subtitle-free guarantee; inspect the clip.';
 const video = {
     prompt: { type: 'string', minLength: 1, maxLength: 2000, description: 'Scene and action prompt, at most 2000 characters, e.g. A leaf sways as the camera moves closer. Describe camera motion here.' },
+    negativePrompt: { type: 'string', minLength: 1, maxLength: 5000, description: devNegative + ' Requires ltx-2.5-22b-dev: distilled sampling has no negative pass, except image-to-video references with guidanceScale > 1 or nagScale > 0.' },
     model: { type: 'string', enum: [...GENAI_VIDEO_MODELS], description: 'Local gateway model. Cloud ltx-2-5-fast/pro models are not supported.' },
     duration: { type: ['integer', 'null'], minimum: 1, description: 'Whole seconds, e.g. 5, or null for automatic duration without an end frame. Rounded-up 8k+1 frames must fit 361 at the selected fps.' },
     resolution: { type: 'string', description: 'WIDTHxHEIGHT with even sides of at least 64. Round each side up to 64 for backend limits: at most 1920 per side and 2,064,384 pixels. 1280x720 is supported; 1920x1080 exceeds the padded pixel cap.' },
@@ -34,11 +43,14 @@ export const GENAI_TOOLS = [
                             background: { type: 'boolean', default: false, description: 'True for the single background reference, e.g. true; false for subjects.' },
                         }, oneOf: [{ required: ['imageUri'] }, { required: ['imagePath'] }], additionalProperties: false,
                     } },
+                // Only with references: they run on the MSR backend, which needs one of these to evaluate negativePrompt.
+                ...msrGuidance,
             }, required: ['prompt', 'model', 'duration', 'resolution', 'reserveUsd'], additionalProperties: false }, annotations: generation },
     { name: 'astra_genai_audio2video', title: 'Generate GenAI LTX video driven by an audio track',
         description: 'Render a clip whose length and motion follow a supplied speech or sound track through ASTRA GenAI LTX v2 audio-to-video, then save an MP4. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. The output length equals the audio length (local maximum 361 frames: 15.04 s at 24 fps, 14.44 s at 25, 7.52 s at 48, 7.22 s at 50; longer audio returns 422). Mono or stereo only; three or more channels return 422 instead of a downmix. The sample rate is kept, so only AAC standard rates 7350-96000 Hz (e.g. 48000, 44100) are accepted; others such as 192000 return 422. The gateway copies the backend soundtrack without a second encode, but the backend encodes it once, so the result is not bit-identical to the input. Only ltx-2.5-22b-dev runs this pipeline; no duration, generateAudio, cameraMotion, seed or frame controls. Lip-sync quality is unmeasured; inspect mouths before acceptance. Persists job identity before polling; recover with astra_genai_video_status.',
         inputSchema: { type: 'object', properties: {
                 prompt: { ...video.prompt, description: 'Speaker, setting and action. Required even with an image; the local backend accepts at most 2000 characters (longer returns 422).' },
+                negativePrompt: { type: 'string', minLength: 1, maxLength: 2000, description: devNegative },
                 model: { type: 'string', enum: ['ltx-2.5-22b-dev'], description: 'Only the two-stage dev pipeline runs audio-to-video; distilled returns 422.' },
                 resolution: video.resolution, fps: video.fps,
                 audioPath: { type: 'string', description: 'Local .wav/.mp3/.m4a/.ogg/.opus sent as a data URI; at most about 11.25 MB (15,000,000 base64 characters); sample rate 7350-96000 Hz standard values. Mutually exclusive with audioUri.' },
@@ -82,10 +94,7 @@ export const GENAI_TOOLS = [
         inputSchema: { type: 'object', properties: {
                 prompt: { type: 'string', minLength: 1, maxLength: 2000, description: 'Positive action and reference roles, up to 2000 characters. No automatic subtitle instructions are appended. Put unwanted text terms in negativePrompt when negative conditioning is enabled.' },
                 negativePrompt: { type: 'string', minLength: 1, maxLength: 5000, description: 'Separate negative conditioning, e.g. subtitles, captions, text overlays. Requires guidanceScale > 1 or nagScale > 0, plus live backend negative_prompt support; otherwise refused before submission.' },
-                guidanceScale: { type: 'number', minimum: 1, maximum: 10, description: 'Classifier-free guidance; omitted keeps gateway default 1. Values above 1 require backend negative conditioning support and change distilled sampling.' },
-                nagScale: { type: 'number', minimum: 0, maximum: 100, description: 'Video-only normalized attention guidance. Omitted or 0 disables NAG; a positive value requires negativePrompt and live backend nag support. Example 11 is experimental, not a subtitle-free guarantee; works at CFG 1.' },
-                nagAlpha: { type: 'number', minimum: 0, maximum: 1, description: 'NAG mixing coefficient; gateway default 0.25. Sent only when nagScale > 0.' },
-                nagTau: { type: 'number', minimum: 0, maximum: 10, description: 'NAG clipping threshold; gateway default 2.5. Sent only when nagScale > 0.' },
+                ...msrGuidance,
                 references: { type: 'array', minItems: 1, maxItems: 5, description: 'At most four subjects and one background. Exactly one URI or path per reference.', items: {
                         type: 'object', properties: {
                             imageUri: { type: 'string', description: 'Public HTTPS PNG/JPEG or data URI.' },

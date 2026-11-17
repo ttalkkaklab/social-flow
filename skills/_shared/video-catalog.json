@@ -729,6 +729,7 @@
       },
       "fields": [
         "prompt",
+        "negativePrompt",
         "model",
         "duration",
         "resolution",
@@ -761,6 +762,7 @@
       },
       "fields": [
         "prompt",
+        "negativePrompt",
         "model",
         "duration",
         "resolution",
@@ -773,7 +775,11 @@
         "imagePath",
         "lastFrameUri",
         "lastFramePath",
-        "references"
+        "references",
+        "guidanceScale",
+        "nagScale",
+        "nagAlpha",
+        "nagTau"
       ],
       "modelConstraints": {
         "models": [
@@ -804,6 +810,7 @@
       },
       "fields": [
         "prompt",
+        "negativePrompt",
         "model",
         "resolution",
         "fps",

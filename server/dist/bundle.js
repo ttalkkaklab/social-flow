@@ -90993,6 +90993,7 @@ var require_video_catalog = __commonJS({
           },
           fields: [
             "prompt",
+            "negativePrompt",
             "model",
             "duration",
             "resolution",
@@ -91025,6 +91026,7 @@ var require_video_catalog = __commonJS({
           },
           fields: [
             "prompt",
+            "negativePrompt",
             "model",
             "duration",
             "resolution",
@@ -91037,7 +91039,11 @@ var require_video_catalog = __commonJS({
             "imagePath",
             "lastFrameUri",
             "lastFramePath",
-            "references"
+            "references",
+            "guidanceScale",
+            "nagScale",
+            "nagAlpha",
+            "nagTau"
           ],
           modelConstraints: {
             models: [
@@ -91068,6 +91074,7 @@ var require_video_catalog = __commonJS({
           },
           fields: [
             "prompt",
+            "negativePrompt",
             "model",
             "resolution",
             "fps",
@@ -111729,8 +111736,38 @@ var localResolution = external_exports.string().regex(/^[1-9]\d*x[1-9]\d*$/).ref
   const [w, h2] = value.split("x").map(Number), width = Math.ceil(w / 64) * 64, height = Math.ceil(h2 / 64) * 64;
   return Number.isSafeInteger(w) && Number.isSafeInteger(h2) && Math.min(w, h2) >= 64 && w % 2 === 0 && h2 % 2 === 0 && Math.max(width, height) <= 1920 && width * height <= 2064384;
 }, "Use even WIDTHxHEIGHT sides of at least 64; rounded-up /64 sides must fit 1920 and 2,064,384 pixels");
+var msrGuidanceFields = {
+  guidanceScale: external_exports.number().finite().min(1).max(10).optional(),
+  nagScale: external_exports.number().finite().min(0).max(100).optional(),
+  nagAlpha: external_exports.number().finite().min(0).max(1).optional(),
+  nagTau: external_exports.number().finite().min(0).max(10).optional()
+};
+function msrNegativeRule(args, issue2) {
+  if ((args.nagScale ?? 0) > 0 && args.negativePrompt === void 0)
+    issue2("MSR nagScale > 0 requires negativePrompt");
+  if (args.negativePrompt !== void 0 && (args.guidanceScale ?? 1) <= 1 && (args.nagScale ?? 0) === 0)
+    issue2("MSR negativePrompt requires guidanceScale > 1 or nagScale > 0");
+}
+function negativeBody(args) {
+  return {
+    ...args.negativePrompt === void 0 ? {} : { negative_prompt: args.negativePrompt },
+    ...args.guidanceScale === void 0 ? {} : { guidance_scale: args.guidanceScale },
+    ...(args.nagScale ?? 0) > 0 ? {
+      nag_scale: args.nagScale,
+      ...args.nagAlpha === void 0 ? {} : { nag_alpha: args.nagAlpha },
+      ...args.nagTau === void 0 ? {} : { nag_tau: args.nagTau }
+    } : {}
+  };
+}
+function devNegativeRule(args, ctx) {
+  if (args.negativePrompt === void 0) return;
+  const issue2 = (message) => ctx.addIssue({ code: "custom", path: ["negativePrompt"], message });
+  if (args.model !== "ltx-2.5-22b-dev") issue2("negativePrompt requires ltx-2.5-22b-dev, or image-to-video references with guidanceScale > 1 or nagScale > 0");
+  if (args.negativePrompt.length > 2e3) issue2("The dev backend accepts a negativePrompt of at most 2000 characters");
+}
 var textVideoFields = external_exports.object({
   prompt: external_exports.string().min(1).max(2e3),
+  negativePrompt: external_exports.string().trim().min(1).max(5e3).optional(),
   model: external_exports.enum(GENAI_VIDEO_MODELS),
   duration: external_exports.number().int().min(1).nullable(),
   resolution: localResolution,
@@ -111744,7 +111781,10 @@ function localVideoTiming(args, ctx) {
   if (args.duration !== null && 8 * Math.ceil((args.duration * args.fps - 1) / 8) + 1 > 361)
     ctx.addIssue({ code: "custom", path: ["duration"], message: "Duration and fps exceed the local 361-frame limit" });
 }
-var genaiTextToVideoSchema = textVideoFields.superRefine(localVideoTiming);
+var genaiTextToVideoSchema = textVideoFields.superRefine((args, ctx) => {
+  localVideoTiming(args, ctx);
+  devNegativeRule(args, ctx);
+});
 var genaiImageToVideoSchema = textVideoFields.extend({
   imageUri: genaiImageUriSchema.optional(),
   imagePath: external_exports.string().min(1).optional(),
@@ -111757,7 +111797,8 @@ var genaiImageToVideoSchema = textVideoFields.extend({
   }).strict().refine(
     (ref) => Number(ref.imageUri !== void 0) + Number(ref.imagePath !== void 0) === 1,
     "Supply exactly one imageUri or imagePath per reference"
-  )).min(1).max(5).optional()
+  )).min(1).max(5).optional(),
+  ...msrGuidanceFields
 }).strict().superRefine((args, ctx) => {
   const issue2 = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
   localVideoTiming(args, ctx);
@@ -111765,7 +111806,12 @@ var genaiImageToVideoSchema = textVideoFields.extend({
     issue2("A last frame requires an explicit duration");
   if (Number(args.imageUri !== void 0) + Number(args.imagePath !== void 0) !== 1) issue2("Supply exactly one imageUri or imagePath");
   if (args.lastFrameUri != null && args.lastFramePath !== void 0) issue2("Supply at most one lastFrameUri or lastFramePath");
-  if (args.references) {
+  if (!args.references) {
+    if (Object.keys(msrGuidanceFields).some((key) => args[key] !== void 0))
+      issue2("guidanceScale and NAG require references (MSR conditioning); ltx-2.5-22b-dev already runs guided");
+    devNegativeRule(args, ctx);
+  } else {
+    msrNegativeRule(args, issue2);
     if (args.model !== "ltx-2.5-22b-distilled") issue2("Additional references require ltx-2.5-22b-distilled (MSR conditioning)");
     if (args.duration === null) issue2("Additional references require an explicit duration");
     const backgrounds = args.references.filter((ref) => ref.background).length;
@@ -111778,6 +111824,7 @@ var GENAI_AUDIO_DATA_URI_MAX = 15e6;
 var oneOf = (a, b) => Number(a !== void 0) + Number(b !== void 0);
 var genaiAudioToVideoSchema = external_exports.object({
   prompt: external_exports.string().trim().min(1).max(5e3),
+  negativePrompt: external_exports.string().trim().min(1).max(2e3).optional(),
   model: external_exports.literal("ltx-2.5-22b-dev"),
   resolution: external_exports.string().min(1),
   fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
@@ -111824,17 +111871,15 @@ function buildGenaiAudioBody(args) {
     resolution: args.resolution,
     fps: args.fps,
     ...image === void 0 ? {} : { image_uri: image },
-    ...last === void 0 ? {} : { last_frame_uri: last }
+    ...last === void 0 ? {} : { last_frame_uri: last },
+    ...negativeBody({ negativePrompt: args.negativePrompt })
   };
 }
 var GENAI_MSR_FRAMES = { min: 25, max: 361, step: 8, frameRate: 24 };
 var genaiMsrSchema = external_exports.object({
   prompt: external_exports.string().trim().min(1).max(2e3),
   negativePrompt: external_exports.string().trim().min(1).max(5e3).optional(),
-  guidanceScale: external_exports.number().finite().min(1).max(10).optional(),
-  nagScale: external_exports.number().finite().min(0).max(100).optional(),
-  nagAlpha: external_exports.number().finite().min(0).max(1).optional(),
-  nagTau: external_exports.number().finite().min(0).max(10).optional(),
+  ...msrGuidanceFields,
   references: external_exports.array(external_exports.object({
     imageUri: genaiImageUriSchema.optional(),
     imagePath: external_exports.string().min(1).optional(),
@@ -111859,10 +111904,7 @@ var genaiMsrSchema = external_exports.object({
   filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use a .mp4 filename").optional()
 }).strict().superRefine((args, ctx) => {
   const issue2 = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-  if ((args.nagScale ?? 0) > 0 && args.negativePrompt === void 0)
-    issue2("MSR nagScale > 0 requires negativePrompt");
-  if (args.negativePrompt !== void 0 && (args.guidanceScale ?? 1) <= 1 && (args.nagScale ?? 0) === 0)
-    issue2("MSR negativePrompt requires guidanceScale > 1 or nagScale > 0");
+  msrNegativeRule(args, issue2);
   const backgrounds = args.references.filter((ref) => ref.background).length;
   if (backgrounds > 1 || args.references.length - backgrounds > 4) issue2("MSR supports at most four subjects and one background");
   let subject = 0;
@@ -111882,13 +111924,7 @@ var genaiMsrSchema = external_exports.object({
 function buildGenaiMsrBody(args) {
   return {
     prompt: args.prompt,
-    ...args.negativePrompt === void 0 ? {} : { negative_prompt: args.negativePrompt },
-    ...args.guidanceScale === void 0 ? {} : { guidance_scale: args.guidanceScale },
-    ...(args.nagScale ?? 0) > 0 ? {
-      nag_scale: args.nagScale,
-      ...args.nagAlpha === void 0 ? {} : { nag_alpha: args.nagAlpha },
-      ...args.nagTau === void 0 ? {} : { nag_tau: args.nagTau }
-    } : {},
+    ...negativeBody(args),
     references: args.references.map((ref) => ({
       image_uri: genaiSourceUri(ref.imageUri, ref.imagePath),
       background: ref.background,
@@ -111933,7 +111969,8 @@ function buildGenaiVideoBody(args) {
     ...args.references === void 0 ? {} : { references: args.references.map((ref) => ({
       image_uri: genaiSourceUri(ref.imageUri, ref.imagePath),
       background: ref.background
-    })) }
+    })) },
+    ...negativeBody(args)
   };
 }
 var operationSchema = external_exports.enum(["text-to-video", "image-to-video", "audio-to-video", "msr"]);
@@ -112054,7 +112091,7 @@ async function generateGenaiVideo(operation, input) {
       if (capabilities.image_conditioning !== true)
         throw new GenaiRequestError("image_references_unsupported: the GenAI backend does not advertise combined start/end frames and subject references; no request was submitted", true, 422);
     }
-    const msrArgs = operation === "msr" ? args : void 0;
+    const msrArgs = operation === "msr" || usesReferences ? args : void 0;
     if (msrArgs && (msrArgs.negativePrompt !== void 0 || (msrArgs.guidanceScale ?? 1) > 1)) {
       const capabilities = external_exports.object({ negative_prompt: external_exports.boolean().optional(), nag: external_exports.boolean().optional() }).passthrough().parse(await requestGenai("GET", "/v1/ltx/msr/capabilities", void 0, 15e3));
       if ((msrArgs.nagScale ?? 0) > 0 && capabilities.nag !== true)
@@ -112103,8 +112140,16 @@ var output = {
   outputPath: { type: "string", description: "Local output directory; configured production keeps outputs inside its episode/workspace." },
   filename: { type: "string", description: "Bare output filename (.mp4 for video, .png for image). Reuse its receipt after interruption; never overwrite existing media." }
 };
+var msrGuidance = {
+  guidanceScale: { type: "number", minimum: 1, maximum: 10, description: "Classifier-free guidance; omitted keeps gateway default 1. Values above 1 require backend negative conditioning support and change distilled sampling." },
+  nagScale: { type: "number", minimum: 0, maximum: 100, description: "Video-only normalized attention guidance. Omitted or 0 disables NAG; a positive value requires negativePrompt and live backend nag support. Example 11 is experimental, not a subtitle-free guarantee; works at CFG 1." },
+  nagAlpha: { type: "number", minimum: 0, maximum: 1, description: "NAG mixing coefficient; gateway default 0.25. Sent only when nagScale > 0." },
+  nagTau: { type: "number", minimum: 0, maximum: 10, description: "NAG clipping threshold; gateway default 2.5. Sent only when nagScale > 0." }
+};
+var devNegative = "Negative conditioning, e.g. has_subtitles, captions, text overlays. Omit it to keep the engine default negative, which starts with has_subtitles, has_blurbox and continues with quality terms (ltx_pipelines 1.6.0); a supplied value replaces that default, so repeat the terms still wanted. At most 2000 characters on ltx-2.5-22b-dev. Not a subtitle-free guarantee; inspect the clip.";
 var video = {
   prompt: { type: "string", minLength: 1, maxLength: 2e3, description: "Scene and action prompt, at most 2000 characters, e.g. A leaf sways as the camera moves closer. Describe camera motion here." },
+  negativePrompt: { type: "string", minLength: 1, maxLength: 5e3, description: devNegative + " Requires ltx-2.5-22b-dev: distilled sampling has no negative pass, except image-to-video references with guidanceScale > 1 or nagScale > 0." },
   model: { type: "string", enum: [...GENAI_VIDEO_MODELS], description: "Local gateway model. Cloud ltx-2-5-fast/pro models are not supported." },
   duration: { type: ["integer", "null"], minimum: 1, description: "Whole seconds, e.g. 5, or null for automatic duration without an end frame. Rounded-up 8k+1 frames must fit 361 at the selected fps." },
   resolution: { type: "string", description: "WIDTHxHEIGHT with even sides of at least 64. Round each side up to 64 for backend limits: at most 1920 per side and 2,064,384 pixels. 1280x720 is supported; 1920x1080 exceeds the padded pixel cap." },
@@ -112142,7 +112187,9 @@ var GENAI_TOOLS = [
         },
         oneOf: [{ required: ["imageUri"] }, { required: ["imagePath"] }],
         additionalProperties: false
-      } }
+      } },
+      // Only with references: they run on the MSR backend, which needs one of these to evaluate negativePrompt.
+      ...msrGuidance
     }, required: ["prompt", "model", "duration", "resolution", "reserveUsd"], additionalProperties: false },
     annotations: generation
   },
@@ -112152,6 +112199,7 @@ var GENAI_TOOLS = [
     description: "Render a clip whose length and motion follow a supplied speech or sound track through ASTRA GenAI LTX v2 audio-to-video, then save an MP4. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. The output length equals the audio length (local maximum 361 frames: 15.04 s at 24 fps, 14.44 s at 25, 7.52 s at 48, 7.22 s at 50; longer audio returns 422). Mono or stereo only; three or more channels return 422 instead of a downmix. The sample rate is kept, so only AAC standard rates 7350-96000 Hz (e.g. 48000, 44100) are accepted; others such as 192000 return 422. The gateway copies the backend soundtrack without a second encode, but the backend encodes it once, so the result is not bit-identical to the input. Only ltx-2.5-22b-dev runs this pipeline; no duration, generateAudio, cameraMotion, seed or frame controls. Lip-sync quality is unmeasured; inspect mouths before acceptance. Persists job identity before polling; recover with astra_genai_video_status.",
     inputSchema: { type: "object", properties: {
       prompt: { ...video.prompt, description: "Speaker, setting and action. Required even with an image; the local backend accepts at most 2000 characters (longer returns 422)." },
+      negativePrompt: { type: "string", minLength: 1, maxLength: 2e3, description: devNegative },
       model: { type: "string", enum: ["ltx-2.5-22b-dev"], description: "Only the two-stage dev pipeline runs audio-to-video; distilled returns 422." },
       resolution: video.resolution,
       fps: video.fps,
@@ -112209,10 +112257,7 @@ var GENAI_TOOLS = [
     inputSchema: { type: "object", properties: {
       prompt: { type: "string", minLength: 1, maxLength: 2e3, description: "Positive action and reference roles, up to 2000 characters. No automatic subtitle instructions are appended. Put unwanted text terms in negativePrompt when negative conditioning is enabled." },
       negativePrompt: { type: "string", minLength: 1, maxLength: 5e3, description: "Separate negative conditioning, e.g. subtitles, captions, text overlays. Requires guidanceScale > 1 or nagScale > 0, plus live backend negative_prompt support; otherwise refused before submission." },
-      guidanceScale: { type: "number", minimum: 1, maximum: 10, description: "Classifier-free guidance; omitted keeps gateway default 1. Values above 1 require backend negative conditioning support and change distilled sampling." },
-      nagScale: { type: "number", minimum: 0, maximum: 100, description: "Video-only normalized attention guidance. Omitted or 0 disables NAG; a positive value requires negativePrompt and live backend nag support. Example 11 is experimental, not a subtitle-free guarantee; works at CFG 1." },
-      nagAlpha: { type: "number", minimum: 0, maximum: 1, description: "NAG mixing coefficient; gateway default 0.25. Sent only when nagScale > 0." },
-      nagTau: { type: "number", minimum: 0, maximum: 10, description: "NAG clipping threshold; gateway default 2.5. Sent only when nagScale > 0." },
+      ...msrGuidance,
       references: { type: "array", minItems: 1, maxItems: 5, description: "At most four subjects and one background. Exactly one URI or path per reference.", items: {
         type: "object",
         properties: {
