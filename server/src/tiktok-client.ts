@@ -272,7 +272,7 @@ export async function tiktokStatus(raw: unknown) {
     receipt.remote = remote;
     receipt.updatedAt = new Date().toISOString();
     await atomicJson(file, receipt);
-    return { ...receipt, next: remote.status === 'PUBLISH_COMPLETE' ? 'TikTok confirmed publication.' : remote.status === 'FAILED' ? 'TikTok processing failed; inspect remote.fail_reason before deciding on a new attempt.' : receipt.mode === 'upload' ? 'Open the TikTok inbox notification, review and finish posting in the app. Upload is not publication.' : 'Only PUBLISH_COMPLETE confirms publication; processing can take minutes.' };
+    return { ...receipt, next: remote.status === 'PUBLISH_COMPLETE' ? 'TikTok confirmed processing, not public visibility or the saved cover. Inspect the same post in ego lite; while private, edit and verify its cover, then make it public and verify. Do not re-upload.' : remote.status === 'FAILED' ? 'TikTok processing failed; inspect remote.fail_reason before deciding on a new attempt.' : receipt.mode === 'upload' ? 'Open the TikTok inbox notification and finish as Only you. Then edit and verify the saved cover in ego lite before making the same post public. Inbox delivery is not public publication.' : 'Wait for PUBLISH_COMPLETE to confirm processing, then verify private visibility and the saved cover in ego lite before making the same post public.' };
   });
 }
 export async function tiktokPublish(raw: unknown, mode: 'upload' | 'direct') {
@@ -348,6 +348,6 @@ export async function tiktokPublish(raw: unknown, mode: 'upload' | 'direct') {
     }
     receipt.updatedAt = new Date().toISOString();
     await atomicJson(file, receipt);
-    return { ...receipt, receiptFile: file, next: 'Use tiktok_status with this requestId. Do not resubmit. Inbox uploads must be finalized in TikTok.' };
+    return { ...receipt, receiptFile: file, next: 'Use tiktok_status with this requestId. Do not resubmit. Inbox uploads must be finalized as Only you in TikTok. Then edit and verify the saved cover in ego lite before making the same post public.' };
   });
 }

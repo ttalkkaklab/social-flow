@@ -62,6 +62,17 @@ The opening incident may precede its causes without revealing a held motive or c
 Honor an explicitly requested time label as a scoped text exception; it does not authorize
 dialogue subtitles. This is writing guidance, not an automatic score or generation gate.
 
+## TikTok private upload and cover (user directive, 2026-11-18)
+
+Every new TikTok publication starts private (Only you / SELF_ONLY). Edit and save
+its cover in ego lite while private, reopen it to inspect the saved image and
+profile crop, then switch that same post to Everyone and verify the public cover.
+A successful upload is not public completion. If cover editing or verification is
+blocked, keep the post private and report the blocker; never publish first, remove
+truthful disclosures, or re-upload to work around it. Reuse the episode's existing
+publishing authorization. Follow `skills/publish/references/tiktok-private-cover.md`.
+This is the publishing workflow, not a new backend quality gate.
+
 ## Owner decisions (2026-10-18)
 
 

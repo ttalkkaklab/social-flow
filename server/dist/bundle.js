@@ -110202,7 +110202,7 @@ async function tiktokStatus(raw) {
     receipt.remote = remote;
     receipt.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
     await atomicJson2(file, receipt);
-    return { ...receipt, next: remote.status === "PUBLISH_COMPLETE" ? "TikTok confirmed publication." : remote.status === "FAILED" ? "TikTok processing failed; inspect remote.fail_reason before deciding on a new attempt." : receipt.mode === "upload" ? "Open the TikTok inbox notification, review and finish posting in the app. Upload is not publication." : "Only PUBLISH_COMPLETE confirms publication; processing can take minutes." };
+    return { ...receipt, next: remote.status === "PUBLISH_COMPLETE" ? "TikTok confirmed processing, not public visibility or the saved cover. Inspect the same post in ego lite; while private, edit and verify its cover, then make it public and verify. Do not re-upload." : remote.status === "FAILED" ? "TikTok processing failed; inspect remote.fail_reason before deciding on a new attempt." : receipt.mode === "upload" ? "Open the TikTok inbox notification and finish as Only you. Then edit and verify the saved cover in ego lite before making the same post public. Inbox delivery is not public publication." : "Wait for PUBLISH_COMPLETE to confirm processing, then verify private visibility and the saved cover in ego lite before making the same post public." };
   });
 }
 async function tiktokPublish(raw, mode) {
@@ -110289,7 +110289,7 @@ async function tiktokPublish(raw, mode) {
     }
     receipt.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
     await atomicJson2(file, receipt);
-    return { ...receipt, receiptFile: file, next: "Use tiktok_status with this requestId. Do not resubmit. Inbox uploads must be finalized in TikTok." };
+    return { ...receipt, receiptFile: file, next: "Use tiktok_status with this requestId. Do not resubmit. Inbox uploads must be finalized as Only you in TikTok. Then edit and verify the saved cover in ego lite before making the same post public." };
   });
 }
 
@@ -110314,21 +110314,21 @@ var definitions = [
     title: "Upload a TikTok inbox draft",
     schema: tiktokUploadSchema,
     readOnly: false,
-    description: "Send a local video to the authorized TikTok account inbox with video.upload. Requires explicit approval for this media and expectedOpenId from sns_account_check. Validates media with ffprobe and uploads sequential FILE_UPLOAD chunks. Returns a durable requestId/publishId and processing or uncertain state; use tiktok_status. The user must open the TikTok inbox notification to edit caption, disclosures, privacy and finish posting. This is NOT a published post. Reusing requestId returns its receipt without resubmission; changed arguments are rejected. Do not create another requestId after a timeout or lost response. No public URL hosting needed."
+    description: "Send a local video to the authorized TikTok account inbox with video.upload. Requires explicit approval for this media and expectedOpenId from sns_account_check. Validates media with ffprobe and uploads sequential FILE_UPLOAD chunks. Returns a durable requestId/publishId and processing or uncertain state; use tiktok_status. The user must open the TikTok inbox notification and finish as Only you, preserving caption and disclosures. Then use ego lite to edit and verify the saved cover before making that same post public. If cover editing is blocked, keep it private. This inbox delivery is NOT a published post. Reusing requestId returns its receipt without resubmission; changed arguments are rejected. Do not create another requestId after a timeout or lost response. No public URL hosting needed."
   },
   {
     name: "tiktok_publish",
     title: "Direct-post a TikTok video",
     schema: tiktokPublishSchema,
     readOnly: false,
-    description: "\u26A0\uFE0F HITL: never call without the user\u2019s explicit approval for this post. Submit a local video via TikTok Direct Post (video.publish). Can publish publicly: show media preview, editable caption, fresh tiktok_creator_info, account nickname, user-selected privacy and interactions, commercial/AI disclosures and Music Usage Confirmation before calling. Branded content also needs Branded Content Policy acceptance. Rechecks account/creator limits before sending. Unaudited clients are SELF_ONLY and TikTok also requires private accounts; audited public use requires direct_post_audited:true in the external client file after actual audit approval. Internal team-only upload utilities are ineligible for that audit; never claim this adapter alone meets TikTok review UX. Returns durable receipt; only tiktok_status PUBLISH_COMPLETE confirms completion. Never blindly retry; reuse requestId after interruption."
+    description: "\u26A0\uFE0F HITL: never call without the user\u2019s explicit approval for this post. Submit a local video via TikTok Direct Post (video.publish). For the standard publish workflow submit SELF_ONLY, then edit and verify the cover in ego lite before making the same post public in the browser; if cover editing is blocked, leave it private. This tool does not update an existing post or its visibility. The adapter supports other privacy levels but they bypass that workflow. Show media preview, editable caption, fresh tiktok_creator_info, account nickname, user-selected privacy and interactions, commercial/AI disclosures and Music Usage Confirmation before calling. Branded content also needs Branded Content Policy acceptance. Rechecks account/creator limits before sending. Unaudited clients are SELF_ONLY and TikTok also requires private accounts; audited public use requires direct_post_audited:true in the external client file after actual audit approval. Internal team-only upload utilities are ineligible for that audit; never claim this adapter alone meets TikTok review UX. Returns durable receipt; tiktok_status PUBLISH_COMPLETE confirms processing, not public visibility or the saved cover. Never blindly retry; reuse requestId after interruption."
   },
   {
     name: "tiktok_status",
     title: "Check a TikTok upload receipt",
     schema: tiktokStatusSchema,
     readOnly: false,
-    description: "Refresh a channel-scoped durable TikTok upload receipt by requestId. Queries publish/status/fetch using its original publish_id and open_id and saves the remote status without resubmitting media. Distinguishes SEND_TO_USER_INBOX, PUBLISH_COMPLETE, FAILED and processing; an inbox draft is not publication. If initialization lost its response, returns submission_unknown with no guessed publish ID. Do NOT create a new upload to recover uncertainty. Requires the original account credentials and relevant posting scope; returns remote failure/status fields without upload URLs or tokens."
+    description: "Refresh a channel-scoped durable TikTok upload receipt by requestId. Queries publish/status/fetch using its original publish_id and open_id and saves the remote status without resubmitting media. Distinguishes SEND_TO_USER_INBOX, PUBLISH_COMPLETE, FAILED and processing; an inbox draft is not publication and PUBLISH_COMPLETE for SELF_ONLY is still private, not completion of the browser cover and public steps. If initialization lost its response, returns submission_unknown with no guessed publish ID. Do NOT create a new upload to recover uncertainty. Requires the original account credentials and relevant posting scope; returns remote failure/status fields without upload URLs or tokens."
   },
   {
     name: "tiktok_videos",
@@ -124065,7 +124065,7 @@ Storyboard: write the story first with \`story_sequence\` \u2192 \`story_scene\`
 
 Images: \`image_catalog\` \u2192 \`image_plan\` \u2192 \`image_execute\`, then \`image_status\` after interruption. Preserve the saved model choice; legacy image adapters require imageContext for configured production. Host selections remain external handoffs. Music: music_*, suno_*. Sound effects: \`sfx_elevenlabs_generate\`. Free stock footage: \`stock_search\`. Research: serp_*, \`naver_search\`, datago_*, \`youtube_topic_scout\`.
 
-TikTok: use \`tiktok_auth\` for OAuth, \`tiktok_upload\` for inbox drafts or \`tiktok_publish\` for approved Direct Post; each upload requires post-specific consent. Track the durable requestId with \`tiktok_status\`; never resubmit an uncertain request.
+TikTok: use \`tiktok_auth\` for OAuth, \`tiktok_upload\` for inbox drafts or \`tiktok_publish\` for approved Direct Post; each upload requires post-specific consent. Start private (SELF_ONLY), edit and verify the saved cover in ego lite, then make the same post public in the browser. If cover editing is blocked, keep it private. Direct Post completion is not public verification; never call tiktok_publish again to change visibility. Track the durable requestId with \`tiktok_status\`; never resubmit an uncertain request.
 
 SNS: run \`sns_account_check\` first; publish tools appear only for platforms with a credential file. \`threads_publish\`, \`instagram_publish\`, \`facebook_publish\`, \`youtube_publish\` and \`sns_comment_reply\` are public the moment they run \u2014 call them only with the user's approval for that post or inside a growth-plan.md standing authorization.
 

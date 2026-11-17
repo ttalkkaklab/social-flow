@@ -53,7 +53,9 @@ Approval of one scope does not prove approval of another.
 uploading to the owner's or team's accounts are not an acceptable audit use case.
 An unaudited client can only post SELF_ONLY and TikTok requires the account to be
 private. Do not change account privacy just to bypass this restriction. Prefer
-inbox upload with the owner's approval; the owner finishes the post inside TikTok.
+browser upload in ego lite, or an approved inbox upload finished as Only you.
+Every publication follows [private upload → browser cover → public](../publish/references/tiktok-private-cover.md);
+connection success does not complete or authorize those steps.
 A publicly distributed integration still needs TikTok's review and required UX;
 this plugin's adapter is not proof of approval. See [API reference](references/api.md).
 
