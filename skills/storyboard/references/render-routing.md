@@ -107,8 +107,12 @@ per short and at most 20% of generated cut length in long-form, and a text-led c
 typography into subject motion. Other cuts take the time their action needs. `evidence_quote` records
 `evidence:{source,quote}`; to show the document itself, use a still-camera cut.
 
-Every generated cut needs `mode`, `purpose` and `reason`, set with `shot_icons` as the
-storyboard's third step; recordings and the shared outro are exempt. Characters need `actors` and `action`; objects need `action`. Generated video also
+Every generated cut needs `mode` and `purpose`, set with `shot_icons` as the storyboard's
+third step; recordings and the shared outro are exempt. `reason` belongs to a route that was
+chosen for this cut: every cut of a mixed-ratio episode, and in a `full_video` episode the cut
+that is not generated video (a title card, a graph). A `full_video` episode already chose video
+for every cut, so its generated cuts carry no route reason and no `visual.why`; a sentence
+restating the episode's choice on each shot is noise that hides the reasons that matter. Characters need `actors` and `action`; objects need `action`. Generated video also
 needs `motionEssential:true`, `action` and `whyNotStill`. A stock clip needs `action` (what
 the viewer sees happen), `visual.source: "stock"` and the `visual.license` record — provider,
 url, license, licenseUrl, `commercial` and `modify` both true, `attributionRequired` with the
@@ -135,7 +139,7 @@ the sentence, so compare the narration with the reasons once more before approva
 | `object_html` | The same mesh path, without characters the explanation does not need. |
 | `data_graph` | `subject.kind:"data"` moves values and relations. A graph is never a decorative 3D object. |
 | `editorial_html` | `kind:"diagram"`, `motion:true`, `treatment:"editorial"`, `subject.kind:"type"` for a short quotation or verdict. |
-| `generated_video` | `visual.video` or a video cut, with the reason in `visual.why`, and an optional 3D previz in `visual.video.previz` (§A previz can guide a generated video cut). The existing engine, cost and reference-image rules apply; under `PRODUCTION.videoProvider:"host"` the slot is `engine:"host"` (the CLI's own `image_to_video`) and a previz, when used, shapes the still and the prompt. |
+| `generated_video` | `visual.video` or a video cut, with the reason in `visual.why` where video was this cut's choice (not in a `full_video` episode), and an optional 3D previz in `visual.video.previz` (§A previz can guide a generated video cut). The existing engine, cost and reference-image rules apply; under `PRODUCTION.videoProvider:"host"` the slot is `engine:"host"` (the CLI's own `image_to_video`) and a previz, when used, shapes the still and the prompt. |
 | `stock_video` | `visual.source: "stock"` and `visual.clip` under `footage/` — the same supplied-file lane as a recording. Produce downloads and normalizes it, drops its audio and trims from `visual.in`; TTS and BGM run over it, nothing is drawn on it. It bills nothing and sits outside the generated-video cap. |
 | `motion_html` | `visual.slide` with `kind:"diagram"`, `motion:true`, `treatment:"editorial"`, `renderer:"motion-svg-v1"` and `shot.motionGraphic`; built-in types render through `prepare-motion-graphic.js` ([motion-graphics.md](motion-graphics.md)). |
 
@@ -199,7 +203,9 @@ in [blender-previz.md](blender-previz.md) §6.
 ## Start and end frame planning
 
 For every newly authored image-to-video shot, set `visual.frames.mode` to `first` or
-`first_last` and write `reason` (`shot_icons` `frames`; `reference` plans MSR and shows its icon). Use `first_last` when the final position, a camera destination,
+`first_last` (`shot_icons` `frames`; `reference` plans MSR and shows its icon). `first` follows
+from a silent shot and `reference` from an on-screen line, so neither takes a `reason`; a
+`first_last` plan is a choice and says in `reason` what its pinned end frame controls. Use `first_last` when the final position, a camera destination,
 opening/closing, assembly, removal or another visible state change must be controlled. Write
 `endState` before generating images. Use `first` for a mood shot or subtle ambient motion with
 no required destination. The decision is per shot, independent of hybrid/full-video choice —

@@ -1266,6 +1266,13 @@ limits remain explicit. `video_plan` rechecks the actual request, rejects over-l
 coverage and resolves unspecified lengths upward, including MSR via `requiredSeconds`.
 These are planned timings; native speech and generated playback still need measurement.
 
+`storyboard_read {level:"direction"}` returns the direction plan alone, as counts: each scene's
+shots in order (size, angle, move, length), the longest runs of one size and of held shots,
+lengths by size, the longest shots with their action counts, and sentences standing as the
+same reason on several shots. Nothing in it is a target. A reason belongs to a choice
+(2026-11-17): size, viewpoint and a camera move carry one; a hold, a plain cut, the episode's
+own render route and a first or reference frame plan need none.
+
 ## Video plans and candidate review
 
 The shared storyboard shows each saved video request beside its candidate footage:

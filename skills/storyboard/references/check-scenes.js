@@ -550,7 +550,9 @@ function perShotLookFindings(win, { bad, machine, warn }) {
       if (generated && cutType === undefined)
         machine(where, '[cutType-missing] generated cuts with visual.bg need shot.cutType');
 
-      refs.filter((id) => !own(cast, id)).forEach((id) =>
+      // Without an episode cast in PRODUCTION every id is a channel cast reference (storyboard/cast.json on a
+      // story-first board): there is nothing for it to be missing from.
+      if (production.cast !== undefined) refs.filter((id) => !own(cast, id)).forEach((id) =>
         warn(where, `[character-unresolved] visual.character "${id}" is not in PRODUCTION.cast; treating it as a channel cast reference`));
 
       const episodeRefs = refs.filter((id) => own(cast, id));
@@ -1346,7 +1348,9 @@ function check(win, fmt, opts) {
     // A still never sits frozen under the voice (owner directive 2026-09-03). The builder's
     // Ken Burns is the floor on every still card — build-reel.sh refuses zoom=none and a bare
     // hold there — so a storyboard that asks a still to stand still is caught here first.
-    if (motionKind(s) === null && s.type !== 'outro' && v.camera &&
+    // A cut routed generated_video is a moving picture whose camera may hold on purpose: before
+    // its clip exists it has no video record yet, and it is still not a still.
+    if (motionKind(s) === null && s.type !== 'outro' && v.camera && s.shot?.render?.mode !== 'generated_video' &&
         /^\s*(static|still|hold|none|no move(?:ment)?|fixed|lock(?:ed)?|lock-off|고정|정지)\s*$/i.test(String(v.camera.movement || '')))
       machine(where, `a still with camera.movement "${v.camera.movement}" — a still never sits frozen under the voice; ` +
                      'write dolly in / dolly out / truck / handheld, or leave camera empty for the default drift');
@@ -2875,6 +2879,10 @@ function selftest() {
        goodShot, ctaShot])), /never sits frozen/));
   ok('the frozen-still check waits for the camera pass (--draft)',
      !has(bads(run([cover, frozenStill, goodShot, ctaShot], null, { draft: true })), /never sits frozen/));
+  ok('a cut planned as generated video may hold its camera before its clip exists',
+     !has(run([cover, Object.assign({}, frozenStill, {
+       shot: Object.assign({}, goodShot.shot, { render: { mode: 'generated_video', purpose: 'live_action', reason: 'r', action: 'a' } }) }),
+       goodShot, ctaShot]), /never sits frozen/));
 
   // ── the move is a vendor word with what it needs (L13–L15, production-mode.js) ──
   const moveShot = (camera, over) => Object.assign({}, goodShot, {
@@ -2961,6 +2969,11 @@ function selftest() {
       lookHas(perShot(unsafe), 'bad', /\[cast-sheet\].*negative directive/) &&
       lookHas(perShot(unsafe), 'bad', /\[cast-sheet\].*Korean text/) &&
       !perShot(perShotFixture()).some(f => /\[cast-sheet\]/.test(f.what));
+  })());
+  ok('a character id is unresolved only against an episode cast the board declares', (() => {
+    const declared = perShotFixture(); declared.SCENES[0].visual.character = ['stranger'];
+    const channel = perShotFixture(); channel.SCENES[0].visual.character = ['stranger']; delete channel.PRODUCTION.cast;
+    return lookHas(perShot(declared), 'warn', /\[character-unresolved\]/) && !lookHas(perShot(channel), 'warn', /\[character-unresolved\]/);
   })());
   ok('cutType-missing rejects a generated image cut and accepts a declared type', (() => {
     const missing = perShotFixture(); delete missing.SCENES[0].shot.cutType;

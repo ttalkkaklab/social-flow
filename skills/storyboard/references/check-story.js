@@ -18,7 +18,7 @@ try {
       : storySpeech(win).map((x, i) => ({number: i + 1, shot: x.shot,
       group: x.group, quote: x.n.sub || x.n.tts}));
     process.stdout.write(args.includes('--map') ? JSON.stringify(rows, null, 2) + '\n'
-      : rows.map(x => `${x.number}. ${x.kind ? '[' + (x.lineId || x.shotId || 'shot-' + x.shot) + '/e' + x.event + ' · ' + x.kind + ' · ' + x.character + (x.to ? ' → ' + x.to : '') + (x.delivery ? ' · ' + x.delivery : '') + '] ' : ''}${x.quote}`).join('\n') + '\n');
+      : rows.map(x => `${x.number}. ${x.kind ? '[' + (x.lineId || x.shotId || 'shot-' + x.shot) + '/e' + x.event + ' · ' + x.kind + (x.character ? ' · ' + x.character : '') + (x.to ? ' → ' + x.to : '') + (x.delivery ? ' · ' + x.delivery : '') + '] ' : ''}${x.quote}`).join('\n') + '\n');
   } else {
     const findings = checkStory(win, { requireReview: args.includes('--review') });
     process.stdout.write(JSON.stringify({ violations: 0, errors: [], warnings: findings.length,

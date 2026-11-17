@@ -35,19 +35,30 @@ observable scenes and before source-image prompts. Explicit content-only work de
 2. Choose shot size, angle, camera distance and depth/focus together. Compare a held
    frame with a motivated move: approach a withheld reaction, follow a travelling subject,
    pull back to reveal a relationship, or shift focus from evidence to its observer.
+   A move earns its place when something enters the frame, the subject travels, or the
+   frame says something new about the space by its end. A face or a body that changes while
+   the viewer watches is a reason to hold: the size already gives the closeness, and an
+   approach laid over it competes with the acting it was meant to serve. The opposite
+   holds where the space itself is the change — a reveal of scale, destruction, many people
+   at once, a chase (the purpose table below): compare a move that travels with the change
+   and a wider size against the hold before choosing.
 3. Set the choice with `shot_icons` — `view` (subject, reason, crop, mode and any set target),
    size, angle, camera move or still effect, focus,
-   depth, render route and frame plan, each with a scene-specific reason; it writes
+   depth, render route and frame plan. Size, view and a camera move each take this beat's own
+   reason. A hold, a plain cut, the episode's own route and a first or reference frame plan
+   need none; the route and the frame plan take one where they are this shot's choice (a card
+   in a full-video episode, a pinned end frame). It writes
    `shot.techniques` and keeps `visual.camera.movement` consistent. Then write the actual
    motion pace/path and ending picture in `visual.camera` through
    `storyboard_apply`; the starting picture is already in `visual.camera.view`. For rack focus name both subjects
    and the focus order in `framing`/`end`, including the action cue or focus timing.
    `shot.techniques[].reason` and `camera.purpose` are review context; their prose is
    not copied into provider prompts. A static camera can still direct attention through focus/blocking.
-4. For static, explain what the fixed frame preserves: simultaneous reactions, a tiny
-   hand action, a deliberate wait or a readable spatial relationship. “Keep action legible”
-   copied across unrelated beats, or action text copied into purpose, is not a decision.
-   Do not supply static as a placeholder when the choice has not been made.
+4. A hold on acting stands without a sentence. Where a hold is chosen against a move
+   (step 2), its reason is what the move would have cost in that beat; text copied across
+   held shots, or action text copied into purpose, is not a decision.
+   Do not supply static as a placeholder when the choice has not been made, and do not
+   supply a slow approach on each close-up as a placeholder for direction.
 5. Read consecutive shots in scene order. Reconsider repeated framing, copied reasons
    and unchanging focus where the subject, discovery or pressure changes. Keep intentional
    stillness. Never alternate moves by index, enforce a moving-shot percentage or add
@@ -115,13 +126,21 @@ evidence that the returned footage followed it. No separate icon fields are stor
 
 ## Cut on a meaningful change
 
-Choose length from readable action, dialogue and reaction. A 1–1.5 second cut can
-serve a brief impact or insert; it is not a default for every shot. Hold a difficult
-action or emotional reaction long enough to understand it. Changing size, angle and
-movement together is optional, not a quota or a quality score.
+Choose length from readable action, dialogue and reaction. Before writing a duration, say
+what sets it: a spoken line sets the length of the shot that carries it (the words and the
+pause the scene needs); every other shot is set by the one visible thing it shows and the
+time that thing takes to read. An insert, a glance, a reaction or an impact shows a single
+small action and ends when it has been read; a 1–1.5 second cut can serve it, and that is
+not a default for every shot. An insert held as long as the close-up beside it reads as one
+more close-up. Hold a difficult action, a wait or an emotional change for as long as the
+change takes. When neighbouring shots of different kinds come out at the same round length,
+the lengths were assigned, not derived: reread each one against its action. A cut shorter than
+the selected model's minimum is trimmed from a longer take in the edit (`edit.in`/`edit.out`);
+the minimum is a transport limit and never a reason to lengthen the cut. Changing size, angle
+and movement together is optional, not a quota or a quality score.
 
-Use `transition` for the join entering a shot. Use `edit.reason` for its purpose and
-`edit.continuity` for what crosses the boundary: action, screen direction, gaze,
+Use `transition` for the join entering a shot. Use `edit.reason` for the purpose of a join
+other than a plain cut and `edit.continuity` for what crosses the boundary: action, screen direction, gaze,
 prop state or sound. Camera `whip pan` and edit `whip:left` are different operations.
 Use the shot-continuity workflow for concrete start/end poses, observed endpoint capture
 and reference-image handoff. A generic "before action" opening or a still showing the

@@ -1,5 +1,5 @@
 import { readShotVideoTiming } from './video-routing.js';
-import { manageProject } from './project.js';
+import { episodeHandoff, manageProject } from './project.js';
 import { readImageMetadata, verifyImageFile } from './image-media.js';
 import { gptImageContract, mlxImageFamily } from './image-models.js';
 import { workflowEpisode } from './production-workflow.js';
@@ -68,9 +68,13 @@ export function cameraContract() {
 export function techniqueContract() {
     return loadFromHere(join(REFERENCES_DIR, 'film-techniques.js'));
 }
+/** The direction plan as counts and the sentences that repeat as a reason (shot-direction.js). */
+function shotDirection() {
+    return loadFromHere(join(REFERENCES_DIR, 'shot-direction.js'));
+}
 export const techniqueSelectionSchema = z.array(z.object({
     id: nonEmptyTechniqueId(),
-    reason: z.string().trim().min(1).describe('Why this technique serves this shot’s information or action'),
+    reason: z.string().trim().min(1).optional().describe('Why this technique serves this shot’s information or action; camera.static may go without one'),
     from: z.string().trim().min(1).optional().describe('Rack focus: the subject sharp first, in English'),
     to: z.string().trim().min(1).optional().describe('Rack focus: the subject sharp last, in English'),
     on: z.string().trim().min(1).optional().describe('Beat accent: the moment it fires on, in English'),
@@ -230,10 +234,10 @@ export const shotSchema = z
     sound: z.record(z.unknown()).optional(),
 })
     .passthrough();
-export const readLevelSchema = z.enum(['outline', 'scenes', 'shots', 'full']);
+export const readLevelSchema = z.enum(['outline', 'scenes', 'shots', 'full', 'direction']);
 export const storyboardReadSchema = z.object({
     path: z.string().min(1).describe('The storyboard directory, or its scenes.js'),
-    level: readLevelSchema.default('shots').describe('outline = sequences with scene numbers · scenes = scene cards with shot numbers · shots = every shot summarised under its scene · full = the raw shot objects too'),
+    level: readLevelSchema.default('shots').describe('outline = sequences with scene numbers · scenes = scene cards with shot numbers · shots = every shot summarised under its scene · full = the raw shot objects too · direction = only the direction plan as counts'),
     shotId: z.string().min(1).optional().describe('Stable shot ID to inspect, with its raw plan and neighboring shot IDs'),
     includeTechniques: z.boolean().default(true).describe('Return canonical technique ids, purposes, icons and provider instructions'),
     includeContext: z.boolean().default(true).describe('Include STORY, PRODUCTION and SB_DOC as unverified review context'),
@@ -389,6 +393,9 @@ function boundaryReview(win, playback, videoTiming) {
 /** Read plans and recorded evidence without claiming to have inspected media or validated reviews. */
 export function readStoryboard(args) {
     const { win, file, sha256 } = readBoard(args.path);
+    // The direction plan alone, small enough to read whole: no tree, catalogue or review context.
+    if (args.level === 'direction')
+        return { file, sha256, format: String(win.FORMAT ?? 'shorts-9x16'), direction: shotDirection().facts(win) };
     const result = contract().outline(win, args.level);
     result.file = file;
     result.mediaBaseDirectory = dirname(file);
@@ -478,18 +485,20 @@ const transitionFields = {
     transition: z.enum(['cut', 'dip', 'dip:white', 'jcut', 'dissolve', 'iris', 'blur', 'zoom',
         'push:l2r', 'push:r2l', 'push:u2d', 'push:d2u', 'whip:l2r', 'whip:r2l', 'whip:u2d', 'whip:d2u']),
     transitionSeconds: z.number().finite().min(.08).max(.8).optional(),
-    reason: nonEmpty,
+    reason: nonEmpty.optional(),
     continuity: nonEmpty.optional(),
 };
+// A reason belongs to a choice: a plain cut is the default join, any other join says why it is there.
+const reasonOnChosenJoins = [(v) => v.transition === 'cut' || !!v.reason, 'a join other than a plain cut carries its reason'];
 const STILL_JOINS = ['cut', 'dip', 'dip:white'];
 const secondsOnMovingJoins = [(v) => !STILL_JOINS.includes(v.transition) || v.transitionSeconds === undefined,
     'cut and dip do not accept transitionSeconds; dip fades each side for up to 0.30 seconds'];
 export const transitionPatchSchema = z.object({
     no: z.number().int().positive().describe('Incoming shot number, 1-based, after removals and inserts'),
     ...transitionFields,
-}).strict().refine(...secondsOnMovingJoins);
+}).strict().refine(...secondsOnMovingJoins).refine(...reasonOnChosenJoins);
 // shot_icons sets the join out of a shot; it is stored on the next shot's transition, which the builder reads.
-const nextTransitionSchema = z.object(transitionFields).strict().refine(...secondsOnMovingJoins);
+const nextTransitionSchema = z.object(transitionFields).strict().refine(...secondsOnMovingJoins).refine(...reasonOnChosenJoins);
 // Writes the join in front of shots[at] (storyboard_apply transitions, shot_icons next).
 function applyTransition(shots, at, change) {
     const source = shots[at];
@@ -507,7 +516,12 @@ function applyTransition(shots, at, change) {
         if (previous.visual?.sync === true || source.visual?.sync === true)
             throw new Error('Sync footage requires cut or dip, not a moving carry');
     }
-    const edit = { ...(source.edit ?? {}), reason: change.reason };
+    const edit = { ...(source.edit ?? {}) };
+    // A reason explains one join: a cut given without one does not keep the old join's.
+    if (change.reason)
+        edit.reason = change.reason;
+    else
+        delete edit.reason;
     if (!moving || source.transition !== change.transition)
         delete edit.transitionSeconds;
     if (change.transitionSeconds !== undefined)
@@ -674,8 +688,13 @@ export function applyPatch(win, patch, opts = {}) {
     let scenes = st.scenes.slice();
     if (patch.sequences)
         sequences = upsertBy(sequences, patch.sequences, 'id');
+    // story_music owns a scene's music decision: a scene replaced here without one keeps the decision
+    // it had, so editing a scene's text does not silently send it back to undecided.
     if (patch.scenes)
-        scenes = upsertBy(scenes, patch.scenes, 'no');
+        scenes = upsertBy(scenes, patch.scenes.map((scene) => {
+            const kept = scenes.find((old) => old.no === scene.no)?.music;
+            return kept && !('music' in scene) ? { ...scene, music: kept } : scene;
+        }), 'no');
     if (patch.removeScenes) {
         const drop = new Set(patch.removeScenes);
         scenes = scenes.filter((sc) => !drop.has(sc.no));
@@ -1041,11 +1060,20 @@ function readOutline(path) {
     return { win, st: win.STRUCTURE ?? emptyStructure() };
 }
 function writeOutline(path, win, structure, shots) {
+    // A board the story tools start is story-first: every writer keeps its layer order (structure-contract.js).
+    // Inside an episode it also starts on the episode's saved canvas and production choice, the handoff
+    // project_manage gives a new board; without it the board reads as the 9:16 default.
+    const episode = win.STORY ? undefined : workflowEpisode(dirname(scenesPath(path)));
+    const handoff = episode ? episodeHandoff(episode) : undefined;
+    const globals = win.STORY ? undefined : {
+        STORY: { version: 'story-v2', authoring: 'story-first' },
+        ...(handoff?.FORMAT && win.FORMAT === undefined ? { FORMAT: handoff.FORMAT } : {}),
+        ...(handoff?.PRODUCTION && win.PRODUCTION === undefined ? { PRODUCTION: handoff.PRODUCTION } : {}),
+    };
     return applyStoryboard({
         path, draft: true, dryRun: false, structure,
         ...(shots?.length ? { set: { structure, shots } } : {}),
-        // A board the story tools start is story-first: every writer keeps its layer order (structure-contract.js).
-        ...(win.STORY ? {} : { globals: { STORY: { version: 'story-v2', authoring: 'story-first' } } }),
+        ...(globals ? { globals } : {}),
     }, { outline: true });
 }
 export function writeStorySequences(args) {
@@ -1469,21 +1497,22 @@ export const shotIconsSchema = z.object({
     path: outlinePath,
     shots: z.array(z.object({
         id: shotIdSchema,
-        render: z.object({ mode: tuple(V.RENDER_MODES), purpose: nonEmpty.refine((v) => renderPurposes().includes(v), (v) => ({ message: `${v} is not a render purpose (render-routing.js PURPOSES)` })).optional(), reason: nonEmpty }).strict().optional()
+        render: z.object({ mode: tuple(V.RENDER_MODES), purpose: nonEmpty.refine((v) => renderPurposes().includes(v), (v) => ({ message: `${v} is not a render purpose (render-routing.js PURPOSES)` })).optional(), reason: nonEmpty.optional() }).strict().optional()
             .describe('Render route: shot.render'),
         size: tuple(V.SIZES).optional(),
-        why: nonEmpty.optional().describe('Why this size'),
+        why: nonEmpty.optional().describe('Why this size for this shot'),
         angle: tuple(V.ANGLES).optional(),
         backgroundView: z.enum(['front', 'back']).optional().describe('Opening camera direction relative to the location sheet: front is its establishing view; back is the opposite view, 180 degrees around the same space. Saved as visual.camera.backgroundView; omitted keeps the choice, initially front.'),
         view: shotViewSchema.optional().describe('Content-led opening subject, crop and viewpoint; saved as visual.camera.view'),
-        move: choice.extend({ target: nonEmpty.optional(), speed: z.enum(['very slow', 'slow', 'steady', 'fast', 'very fast']).optional() }).strict().optional()
+        move: z.object({ id: nonEmpty, reason: nonEmpty.optional(), target: nonEmpty.optional(), speed: z.enum(['very slow', 'slow', 'steady', 'fast', 'very fast']).optional() }).strict()
+            .refine((v) => v.id === 'camera.static' || !!v.reason, 'a camera move carries its reason; only camera.static may go without one').optional()
             .describe('A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold …)'),
         focus: choice.extend({ from: nonEmpty.optional(), to: nonEmpty.optional() }).strict().nullable().optional()
             .describe('A camera technique with a focus field (camera.rack-focus) and the subjects it hands focus between; null removes it'),
         accents: z.array(choice.extend({ on: nonEmpty.optional() }).strict()).optional()
             .describe('Beat accents laid over the move (camera.speed-ramp, camera.impact-shake), each with the moment it fires on in English; [] removes them'),
         depth: depthSchema.optional(),
-        frames: z.object({ mode: z.enum(['first', 'first_last', 'reference']), reason: nonEmpty, endState: nonEmpty.optional() }).strict().optional()
+        frames: z.object({ mode: z.enum(['first', 'first_last', 'reference']), reason: nonEmpty.optional(), endState: nonEmpty.optional() }).strict().optional()
             .describe('Frame plan: reference is MSR (subject images + start image)'),
         next: nextTransitionSchema.optional()
             .describe('The join from this shot into the next one, written on the next shot\'s transition'),
@@ -1497,7 +1526,7 @@ export function writeShotIcons(args) {
     const catalog = Object.fromEntries(techniqueContract().entries.map((entry) => [String(entry.id), entry]));
     const field = (id, name) => catalog[id]?.category === 'camera' ? catalog[id].fields[name] : undefined;
     const shots = (win.SCENES ?? []).slice();
-    const notes = [];
+    const notes = [], unreasoned = [];
     // A 9:16 board gets each chosen value's vertical note back as a warning — advice for the choice, never a refusal.
     const vertical = !/16x9/.test(String(win.FORMAT ?? ''));
     for (const { id, render, size, why, angle, view, backgroundView, move, focus, accents, depth, frames, next } of args.shots) {
@@ -1515,6 +1544,9 @@ export function writeShotIcons(args) {
         const routed = { ...plan.render, ...render };
         // A new route drops the old route's move: a still cut moves its window (render.camera), any other route moves the camera.
         const previous = plan.render?.mode;
+        // A reason explains one route: a new route given without its own reason does not inherit the old one.
+        if (render && previous && previous !== render.mode && !render.reason)
+            delete routed.reason;
         if (render && previous && previous !== render.mode) {
             if (render.mode === 'still_camera') {
                 if (Array.isArray(plan.techniques))
@@ -1552,8 +1584,10 @@ export function writeShotIcons(args) {
             const { framing: _framing, rear: _rear, pov: _pov, ...camera } = (visual.camera ?? {});
             visual.camera = { ...camera, view };
             plan.info = view.subject;
-            plan.why = view.reason;
         }
+        // why is the size's reason and view.reason the viewpoint's: neither is copied into the other.
+        if ((size || view) && plan.size && !plan.why)
+            unreasoned.push(id);
         if (depth) {
             const errors = contract().validateDepth(depth);
             if (errors.length)
@@ -1596,7 +1630,7 @@ export function writeShotIcons(args) {
             // The same move: its technique, or — before any move technique was recorded — the authored visual.camera move.
             const prior = String(visual.camera?.movement ?? '').toLowerCase();
             const same = techniques.some((t) => t.id === move.id) || (!techniques.some((t) => field(t.id, 'movement')) && prior.startsWith(movement));
-            techniques = [...techniques.filter((t) => !field(t.id, 'movement')), { id: move.id, reason: move.reason }];
+            techniques = [...techniques.filter((t) => !field(t.id, 'movement')), { id: move.id, ...(move.reason ? { reason: move.reason } : {}) }];
             // A different move replaces the old one's speed and target; the same move keeps what it had unless given.
             const { speed: oldSpeed, target: oldTarget, ...camera } = (visual.camera ?? {});
             const speed = move.speed ?? field(move.id, 'speed') ?? (same ? oldSpeed : undefined), target = move.target ?? (same ? oldTarget : undefined);
@@ -1630,6 +1664,9 @@ export function writeShotIcons(args) {
             plan.techniques = techniques;
         if (frames) {
             const old = (visual.frames ?? {}), next = { ...old, ...frames };
+            // A reason explains one plan: a new mode given without its own reason does not inherit the old one.
+            if (old.mode !== frames.mode && !frames.reason)
+                delete next.reason;
             // Only a first_last plan carries an end image; any other plan takes it off (the file stays in images/).
             if (frames.mode !== 'first_last') {
                 if (typeof old.end === 'string')
@@ -1671,6 +1708,13 @@ export function writeShotIcons(args) {
                     notes.push({ level: 'warn', where: id, what: `9:16 note, ${attribute} ${value}: ${card.vertical}` });
         }
     }
+    if (unreasoned.length)
+        notes.push({ level: 'warn', where: 'shot_icons', what: `no why on ${unreasoned.join(', ')} — the size stands without a reason of its own` });
+    // A sentence this call left standing as the same reason on several shots is reported with its shots.
+    const touched = new Set(args.shots.map((shot) => shot.id));
+    for (const copy of shotDirection().copiedReasons(shots))
+        if (copy.shots.some((id) => touched.has(id)))
+            notes.push({ level: 'warn', where: 'shot_icons', what: `the same ${copy.field} stands on ${copy.shots.length} shots (${copy.shots.join(', ')}): "${copy.text.slice(0, 80)}"` });
     const result = writeOutline(args.path, win, st, shots);
     return { ...result, findings: [...result.findings, ...notes] };
 }
@@ -2257,6 +2301,9 @@ export function checkStoryboard(args) {
         seen.add(key);
         return true;
     });
+    // One sentence standing as the same reason on several shots is a copy, whatever field it sits in.
+    for (const copy of shotDirection().copiedReasons(win.SCENES ?? []))
+        structure.push({ level: 'warn', where: 'reasons', what: `the same ${copy.field} stands on ${copy.shots.length} shots (${copy.shots.join(', ')}): "${copy.text.slice(0, 80)}"` });
     const argv = [CHECK_SCENES_FILE, file, '--json'];
     if (args.draft)
         argv.push('--draft');
@@ -2290,11 +2337,37 @@ export function checkStoryboard(args) {
     };
 }
 // ── Rendering for the tool results ──────────────────────────────
+/** "1–3, 7, 9–12": shot numbers as ranges. */
+function shotRanges(numbers) {
+    const sorted = [...new Set(numbers)].sort((a, b) => a - b), parts = [];
+    for (let i = 0; i < sorted.length; i++) {
+        let j = i;
+        while (j + 1 < sorted.length && sorted[j + 1] === sorted[j] + 1)
+            j++;
+        parts.push(j > i ? `${sorted[i]}–${sorted[j]}` : String(sorted[i]));
+        i = j;
+    }
+    return parts.join(', ');
+}
 export function renderFindings(findings) {
     if (!findings.length)
         return '  (none)';
     const mark = { bad: '!', warn: '·', later: '…' };
-    return findings.map((f) => `  ${mark[f.level]} ${f.where.padEnd(12)} ${f.what}`).join('\n');
+    // The same sentence on several shots is one finding about the board: it prints once with its shots.
+    const rows = [], grouped = new Map();
+    for (const f of findings) {
+        const shot = /^shot (\d+)$/.exec(f.where), key = f.level + '\0' + f.what;
+        const row = shot ? grouped.get(key) : undefined;
+        if (row && shot) {
+            row.shots.push(Number(shot[1]));
+            continue;
+        }
+        const next = { ...f, shots: shot ? [Number(shot[1])] : [] };
+        rows.push(next);
+        if (shot)
+            grouped.set(key, next);
+    }
+    return rows.map((r) => `  ${mark[r.level]} ${(r.shots.length > 1 ? `shots ${shotRanges(r.shots)}` : r.where).padEnd(12)} ${r.what}`).join('\n');
 }
 export function renderApply(r) {
     const bad = r.findings.filter((f) => f.level === 'bad');

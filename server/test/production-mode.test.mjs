@@ -122,6 +122,23 @@ function stillsBoard(n = 9, policy = { generatedVideoMax: 0, videoBudgetUsd: 0 }
   }
   return win;
 }
+test('full_video reports a cut routed elsewhere, not a generated cut that waits for its video plan', () => {
+  const win = fixture(2);
+  delete win.SCENES[0].visual.video;
+  win.SCENES[1].shot.render.mode = 'editorial_html';
+  const routed = mode.check(win).filter((line) => /aims at video here/.test(line));
+  assert.equal(routed.length, 1);
+  assert.match(routed[0], /^shot 2: .*routed editorial_html/);
+});
+test('three holds at different sizes are not three identical set-ups', () => {
+  const win = fixture(3);
+  const hold = (size) => (s) => { s.shot.size = size; s.shot.angle = 'eye';
+    s.visual.camera = { view: { subject: 'the stream', mode: 'front', crop: 'the whole bed', reason: 'r' }, movement: 'static' }; };
+  ['ls', 'ms', 'cu'].forEach((size, i) => hold(size)(win.SCENES[i]));
+  assert.doesNotMatch(mode.check(win).join('\n'), /three times in a row/);
+  win.SCENES.forEach(hold('ms'));
+  assert.match(mode.check(win).join('\n'), /three times in a row/);
+});
 test('stills_only accepts nine still cuts, keeps the four cost choices and preserves the channel cap', () => {
   const win = stillsBoard();
   assert.deepEqual(mode.coverageErrors(win), []);

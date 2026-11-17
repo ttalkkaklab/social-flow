@@ -32628,7 +32628,7 @@ var videoApproveSchema = external_exports.object({
 
 // src/project.ts
 import * as nodeModule from "node:module";
-import { dirname as dirname3, resolve as resolve3 } from "node:path";
+import { dirname as dirname3, join as join4, resolve as resolve3 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 var loadFromHere = nodeModule.createRequire(import.meta.url);
 var helper = resolve3(dirname3(fileURLToPath3(import.meta.url)), "../../skills/_shared/project-settings.js");
@@ -32966,13 +32966,13 @@ function evaluateWindowScript(source, options = {}) {
 // src/storyboard.ts
 import { existsSync as existsSync5, mkdirSync as mkdirSync2, readFileSync as readFileSync7, renameSync as renameSync2, statSync as statSync4, unlinkSync, writeFileSync as writeFileSync4 } from "node:fs";
 import * as nodeModule2 from "node:module";
-import { basename as basename3, dirname as dirname4, join as join4, relative, resolve as resolve4 } from "node:path";
+import { basename as basename3, dirname as dirname4, join as join5, relative, resolve as resolve4 } from "node:path";
 import { fileURLToPath as fileURLToPath5 } from "node:url";
 var PLUGIN_ROOT = resolve4(dirname4(fileURLToPath5(import.meta.url)), "..", "..");
-var REFERENCES_DIR = join4(PLUGIN_ROOT, "skills", "storyboard", "references");
-var CONTRACT_FILE = join4(REFERENCES_DIR, "structure-contract.js");
-var CHECK_SCENES_FILE = join4(REFERENCES_DIR, "check-scenes.js");
-var CHECK_SCENARIO_FILE = join4(REFERENCES_DIR, "check-scenario.js");
+var REFERENCES_DIR = join5(PLUGIN_ROOT, "skills", "storyboard", "references");
+var CONTRACT_FILE = join5(REFERENCES_DIR, "structure-contract.js");
+var CHECK_SCENES_FILE = join5(REFERENCES_DIR, "check-scenes.js");
+var CHECK_SCENARIO_FILE = join5(REFERENCES_DIR, "check-scenario.js");
 var runtimeFile = fileURLToPath5(import.meta.url);
 var runtimeModuleSha256 = createHash3("sha256").update(readFileSync7(runtimeFile)).digest("hex");
 var runtimeLoadedAt = (/* @__PURE__ */ new Date()).toISOString();
@@ -32983,14 +32983,14 @@ function contract() {
   return contractCache;
 }
 function cameraContract() {
-  return loadFromHere2(join4(REFERENCES_DIR, "production-mode.js"));
+  return loadFromHere2(join5(REFERENCES_DIR, "production-mode.js"));
 }
 function techniqueContract() {
-  return loadFromHere2(join4(REFERENCES_DIR, "film-techniques.js"));
+  return loadFromHere2(join5(REFERENCES_DIR, "film-techniques.js"));
 }
 var techniqueSelectionSchema = external_exports.array(external_exports.object({
   id: nonEmptyTechniqueId(),
-  reason: external_exports.string().trim().min(1).describe("Why this technique serves this shot\u2019s information or action"),
+  reason: external_exports.string().trim().min(1).optional().describe("Why this technique serves this shot\u2019s information or action; camera.static may go without one"),
   from: external_exports.string().trim().min(1).optional().describe("Rack focus: the subject sharp first, in English"),
   to: external_exports.string().trim().min(1).optional().describe("Rack focus: the subject sharp last, in English"),
   on: external_exports.string().trim().min(1).optional().describe("Beat accent: the moment it fires on, in English")
@@ -33002,14 +33002,14 @@ function nonEmptyTechniqueId() {
   return external_exports.string().trim().min(1).describe("Stable id from storyboard_read techniqueCatalog");
 }
 function motionThemeContract() {
-  return loadFromHere2(join4(REFERENCES_DIR, "motion-graphics.js"));
+  return loadFromHere2(join5(REFERENCES_DIR, "motion-graphics.js"));
 }
 function motionGraphicTypes() {
-  const registry = loadFromHere2(join4(REFERENCES_DIR, "motion-graphics.js"));
+  const registry = loadFromHere2(join5(REFERENCES_DIR, "motion-graphics.js"));
   return Object.keys(registry.TYPES);
 }
 function renderPurposes() {
-  const routing = loadFromHere2(join4(REFERENCES_DIR, "render-routing.js"));
+  const routing = loadFromHere2(join5(REFERENCES_DIR, "render-routing.js"));
   return Object.keys(routing.PURPOSES);
 }
 var tuple = (list) => external_exports.enum(list);
@@ -33146,10 +33146,10 @@ var shotSchema = external_exports.object({
   }).passthrough().optional(),
   sound: external_exports.record(external_exports.unknown()).optional()
 }).passthrough();
-var readLevelSchema = external_exports.enum(["outline", "scenes", "shots", "full"]);
+var readLevelSchema = external_exports.enum(["outline", "scenes", "shots", "full", "direction"]);
 var storyboardReadSchema = external_exports.object({
   path: external_exports.string().min(1).describe("The storyboard directory, or its scenes.js"),
-  level: readLevelSchema.default("shots").describe("outline = sequences with scene numbers \xB7 scenes = scene cards with shot numbers \xB7 shots = every shot summarised under its scene \xB7 full = the raw shot objects too"),
+  level: readLevelSchema.default("shots").describe("outline = sequences with scene numbers \xB7 scenes = scene cards with shot numbers \xB7 shots = every shot summarised under its scene \xB7 full = the raw shot objects too \xB7 direction = only the direction plan as counts"),
   shotId: external_exports.string().min(1).optional().describe("Stable shot ID to inspect, with its raw plan and neighboring shot IDs"),
   includeTechniques: external_exports.boolean().default(true).describe("Return canonical technique ids, purposes, icons and provider instructions"),
   includeContext: external_exports.boolean().default(true).describe("Include STORY, PRODUCTION and SB_DOC as unverified review context")
@@ -33187,9 +33187,10 @@ var transitionFields = {
     "whip:d2u"
   ]),
   transitionSeconds: external_exports.number().finite().min(0.08).max(0.8).optional(),
-  reason: nonEmpty,
+  reason: nonEmpty.optional(),
   continuity: nonEmpty.optional()
 };
+var reasonOnChosenJoins = [(v) => v.transition === "cut" || !!v.reason, "a join other than a plain cut carries its reason"];
 var STILL_JOINS = ["cut", "dip", "dip:white"];
 var secondsOnMovingJoins = [
   (v) => !STILL_JOINS.includes(v.transition) || v.transitionSeconds === void 0,
@@ -33198,8 +33199,8 @@ var secondsOnMovingJoins = [
 var transitionPatchSchema = external_exports.object({
   no: external_exports.number().int().positive().describe("Incoming shot number, 1-based, after removals and inserts"),
   ...transitionFields
-}).strict().refine(...secondsOnMovingJoins);
-var nextTransitionSchema = external_exports.object(transitionFields).strict().refine(...secondsOnMovingJoins);
+}).strict().refine(...secondsOnMovingJoins).refine(...reasonOnChosenJoins);
+var nextTransitionSchema = external_exports.object(transitionFields).strict().refine(...secondsOnMovingJoins).refine(...reasonOnChosenJoins);
 var storyboardApplySchema = external_exports.object({
   path: external_exports.string().min(1).describe("The storyboard directory (scenes.js is created there when missing), or its scenes.js"),
   draft: external_exports.boolean().default(false).describe("The story pass (storyboard \xA74a) \u2014 camera-continuity records (lineCrossing, coverage) are deferred, not violations"),
@@ -33230,7 +33231,7 @@ var storyboardApplySchema = external_exports.object({
 function scenesPath(target) {
   const abs = resolve4(target);
   if (basename3(abs) === "scenes.js") return abs;
-  return join4(abs, "scenes.js");
+  return join5(abs, "scenes.js");
 }
 function readBoard(target) {
   const file = scenesPath(target);
@@ -33346,7 +33347,7 @@ var shotDialogueSchema = external_exports.object({
   }).strict()).min(1)
 }).strict();
 var choice = external_exports.object({ id: nonEmpty, reason: nonEmpty }).strict();
-var shotViewContract = () => loadFromHere2(join4(REFERENCES_DIR, "shot-view.js"));
+var shotViewContract = () => loadFromHere2(join5(REFERENCES_DIR, "shot-view.js"));
 var shotViewSchema = external_exports.custom().superRefine((view, ctx) => {
   for (const message of shotViewContract().validate(view)) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
 });
@@ -33354,17 +33355,17 @@ var shotIconsSchema = external_exports.object({
   path: outlinePath,
   shots: external_exports.array(external_exports.object({
     id: shotIdSchema,
-    render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: nonEmpty.refine((v) => renderPurposes().includes(v), (v) => ({ message: `${v} is not a render purpose (render-routing.js PURPOSES)` })).optional(), reason: nonEmpty }).strict().optional().describe("Render route: shot.render"),
+    render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: nonEmpty.refine((v) => renderPurposes().includes(v), (v) => ({ message: `${v} is not a render purpose (render-routing.js PURPOSES)` })).optional(), reason: nonEmpty.optional() }).strict().optional().describe("Render route: shot.render"),
     size: tuple(V.SIZES).optional(),
-    why: nonEmpty.optional().describe("Why this size"),
+    why: nonEmpty.optional().describe("Why this size for this shot"),
     angle: tuple(V.ANGLES).optional(),
     backgroundView: external_exports.enum(["front", "back"]).optional().describe("Opening camera direction relative to the location sheet: front is its establishing view; back is the opposite view, 180 degrees around the same space. Saved as visual.camera.backgroundView; omitted keeps the choice, initially front."),
     view: shotViewSchema.optional().describe("Content-led opening subject, crop and viewpoint; saved as visual.camera.view"),
-    move: choice.extend({ target: nonEmpty.optional(), speed: external_exports.enum(["very slow", "slow", "steady", "fast", "very fast"]).optional() }).strict().optional().describe("A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold \u2026)"),
+    move: external_exports.object({ id: nonEmpty, reason: nonEmpty.optional(), target: nonEmpty.optional(), speed: external_exports.enum(["very slow", "slow", "steady", "fast", "very fast"]).optional() }).strict().refine((v) => v.id === "camera.static" || !!v.reason, "a camera move carries its reason; only camera.static may go without one").optional().describe("A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold \u2026)"),
     focus: choice.extend({ from: nonEmpty.optional(), to: nonEmpty.optional() }).strict().nullable().optional().describe("A camera technique with a focus field (camera.rack-focus) and the subjects it hands focus between; null removes it"),
     accents: external_exports.array(choice.extend({ on: nonEmpty.optional() }).strict()).optional().describe("Beat accents laid over the move (camera.speed-ramp, camera.impact-shake), each with the moment it fires on in English; [] removes them"),
     depth: depthSchema.optional(),
-    frames: external_exports.object({ mode: external_exports.enum(["first", "first_last", "reference"]), reason: nonEmpty, endState: nonEmpty.optional() }).strict().optional().describe("Frame plan: reference is MSR (subject images + start image)"),
+    frames: external_exports.object({ mode: external_exports.enum(["first", "first_last", "reference"]), reason: nonEmpty.optional(), endState: nonEmpty.optional() }).strict().optional().describe("Frame plan: reference is MSR (subject images + start image)"),
     next: nextTransitionSchema.optional().describe("The join from this shot into the next one, written on the next shot's transition")
   }).strict()).min(1)
 }).strict();
@@ -33406,7 +33407,7 @@ var scenarioCheckResultSchema = external_exports.object({
 // src/speech.ts
 import { createHash as createHash4, randomUUID as randomUUID2 } from "node:crypto";
 import { readFileSync as readFileSync8, writeFileSync as writeFileSync5, renameSync as renameSync3, mkdirSync as mkdirSync3, existsSync as existsSync6 } from "node:fs";
-import { dirname as dirname5, resolve as resolve5, join as join5, relative as relative2 } from "node:path";
+import { dirname as dirname5, resolve as resolve5, join as join6, relative as relative2 } from "node:path";
 import * as nodeModule4 from "node:module";
 import { execFileSync as execFileSync3 } from "node:child_process";
 
@@ -33712,7 +33713,7 @@ function manageSpeech(args) {
     if (args.lineId || args.speaker || args.query) throw new Error("Video planning uses all lines in the shot; remove line filters");
     for (const { line } of selected) actingSchema.nullable().optional().parse(line.acting);
     const episode = dirname5(dirname5(file));
-    if (existsSync6(join5(episode, ".work/model-settings.json"))) {
+    if (existsSync6(join6(episode, ".work/model-settings.json"))) {
       const { selection } = routingContext(episode, args.shotId);
       const adapter = args.tool ? VIDEO_ADAPTERS[args.tool] : void 0;
       if (args.tool && adapter?.engine !== selection.engine) throw new Error("model_selection_mismatch: tool does not match selected engine");
@@ -33839,7 +33840,7 @@ function manageSpeech(args) {
     }
     const work = resolve5(dirname5(file), "../.work/speech-history");
     mkdirSync3(work, { recursive: true });
-    const backup = join5(work, revision + ".js");
+    const backup = join6(work, revision + ".js");
     if (!existsSync6(backup)) writeFileSync5(backup, before);
     const nextSource = serializeBoard(win, header);
     if (hash(readFileSync8(file)) !== revision) throw new Error("Storyboard changed during speech edit");

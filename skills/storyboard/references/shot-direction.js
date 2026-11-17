@@ -141,7 +141,80 @@
     });
     return html + '</div></section>';
   }
-  const api = { cameraOf, secondsOf, changedAxes, playbackEntries, summary, timeline };
+  // ── The plan as counts (storyboard_read level "direction") ─────────────────────────────
+  // One reading of the whole board: the order of sizes, angles, moves and lengths inside each
+  // scene, the longest runs, the lengths by size and the sentences that stand as a reason on
+  // several shots. Counts only: nothing here is a target, and the author decides what they mean.
+  const text = value => typeof value === 'string' && !!value.trim();
+  const REASONS = [
+    ['shot.why', s => [s.shot?.why]], ['view.reason', s => [s.visual?.camera?.view?.reason]],
+    ['techniques.reason', s => (s.shot?.techniques || []).map(t => t?.reason)],
+    ['depth.reason', s => [s.shot?.depth?.reason]], ['composition.reason', s => [s.shot?.composition?.reason]],
+    ['eyeline.reason', s => [s.shot?.eyeline?.reason]], ['render.reason', s => [s.shot?.render?.reason]],
+    ['frames.reason', s => [s.visual?.frames?.reason]], ['edit.reason', s => [s.edit?.reason]],
+    ['visual.why', s => [s.visual?.why]], ['deliveryReason', s => (s.narration || []).map(n => n?.deliveryReason)]
+  ];
+  // The same sentence standing as one kind of reason on several shots, most repeated first.
+  function copiedReasons(scenes, least) {
+    const seen = new Map();
+    (scenes || []).forEach((s, i) => REASONS.forEach(([field, read]) => read(s).filter(text).forEach(value => {
+      const sentence = value.trim().replace(/\s+/g, ' '), key = field + '\u0000' + sentence, id = s.id || String(i + 1);
+      const row = seen.get(key) || { field, text: sentence, shots: [] };
+      if (!row.shots.includes(id)) row.shots.push(id);
+      seen.set(key, row);
+    })));
+    return [...seen.values()].filter(row => row.shots.length >= (least || 3)).sort((a, b) => b.shots.length - a.shots.length);
+  }
+  const SIZE_ORDER = ['els', 'ls', 'ws', 'fs', 'mfs', 'ms', 'mcu', 'cu', 'choker', 'ecu', 'insert'];
+  function facts(win) {
+    const scenes = win.SCENES || [];
+    const shots = playbackEntries(scenes).filter(({ s }) => !['broll', 'outro'].includes(s.type)).map(({ s, i }) => {
+      const camera = cameraOf(s, 'en');
+      return { id: s.id || String(i + 1), scene: s.scene === undefined ? null : s.scene, size: s.shot?.size || '-', angle: s.shot?.angle || '-',
+        move: !camera.raw ? 'unset' : camera.key === 'other' ? camera.raw : String(camera.key).replace(/^camera\./, ''),
+        seconds: secondsOf(s), lines: (s.narration || []).length,
+        actions: (Array.isArray(s.performance) ? s.performance : []).filter(event => event?.kind === 'action').length };
+    });
+    const tally = key => shots.reduce((m, x) => { m[x[key]] = (m[x[key]] || 0) + 1; return m; }, {});
+    const round = value => Math.round(value * 10) / 10;
+    const median = values => { const v = values.slice().sort((a, b) => a - b), mid = v.length >> 1; return v.length ? round(v.length % 2 ? v[mid] : (v[mid - 1] + v[mid]) / 2) : null; };
+    // Consecutive shots of one scene that share a value; the three longest runs.
+    const runs = value => {
+      const out = []; let run = [];
+      const flush = () => { if (run.length > 1) out.push({ value: value(run[0]), shots: run.length, from: run[0].id, to: run[run.length - 1].id }); run = []; };
+      for (const x of shots) {
+        if (run.length && (run[0].scene !== x.scene || value(run[0]) !== value(x))) flush();
+        if (value(x) !== null) run.push(x);
+      }
+      flush();
+      return out.sort((a, b) => b.shots - a.shots).slice(0, 3);
+    };
+    const timed = shots.filter(x => x.seconds !== null), counts = {};
+    timed.forEach(x => { counts[x.seconds] = (counts[x.seconds] || 0) + 1; });
+    const sizes = [...new Set(timed.map(x => x.size))].sort((a, b) => (SIZE_ORDER.indexOf(a) + 1 || 99) - (SIZE_ORDER.indexOf(b) + 1 || 99));
+    return {
+      note: 'Counts of the plan as written, for one reading of the whole board. Nothing here is a target.',
+      shots: shots.length, seconds: round(timed.reduce((sum, x) => sum + x.seconds, 0)),
+      sizes: tally('size'), angles: tally('angle'), moves: tally('move'),
+      scenes: [...new Set(shots.map(x => x.scene))].map(no => {
+        const own = shots.filter(x => x.scene === no);
+        return { scene: no, seconds: round(own.reduce((sum, x) => sum + (x.seconds || 0), 0)),
+          shots: own.map(x => [x.id, x.size, x.angle, x.move, x.seconds === null ? '?' : x.seconds + 's', x.lines ? 'line' : ''].filter(Boolean).join(' ')) };
+      }),
+      runs: { size: runs(x => x.size === '-' ? null : x.size), held: runs(x => ['static', 'still-hold'].includes(x.move) ? 'held' : null) },
+      lengths: {
+        bySize: sizes.map(size => { const own = timed.filter(x => x.size === size); return { size, shots: own.length, median: median(own.map(x => x.seconds)) }; }),
+        common: Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([seconds, n]) => ({ seconds: Number(seconds), shots: n })),
+        longest: timed.slice().sort((a, b) => b.seconds - a.seconds).slice(0, 5).map(x => ({ id: x.id, seconds: x.seconds, actions: x.actions, lines: x.lines })),
+      },
+      reasons: {
+        copied: copiedReasons(scenes, 2),
+        sizeWithoutWhy: scenes.filter(s => s.shot?.size && !text(s.shot?.why)).map((s, i) => s.id || String(i + 1)),
+        whyEqualsViewReason: scenes.filter(s => text(s.shot?.why) && s.shot.why === s.visual?.camera?.view?.reason).map((s, i) => s.id || String(i + 1)),
+      },
+    };
+  }
+  const api = { cameraOf, secondsOf, changedAxes, playbackEntries, summary, timeline, copiedReasons, facts };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.SHOT_DIRECTION = api;
 })(typeof window === 'object' ? window : globalThis);

@@ -49,7 +49,9 @@ timing; this compatibility path does not certify that actions fit the old video.
 
 `performance` is the ordered source for `speech_manage plan_video` and audio
 composition. Speech events reference the existing 1-based `narration` group and
-retain their `character` and `to`. An action uses `{kind:"action", character, text}`.
+retain their `character` and `to`. An action uses `{kind:"action", character, text}`; an
+event nobody performs — a door slams in the wind, the power goes out, rain starts — omits `character`
+rather than borrowing a cast member who does not do it.
 Optionally add `durationSeconds` (finite and positive) after staging it. An action
 with `withGroup:1` starts with speech group 1: its duration defaults to that speech
 interval, or its own authored duration may extend it. Concurrent action and speech
@@ -938,7 +940,7 @@ wants the handoff):
 |---|---|---|
 | `mode` | ✅ | one of the eight routes above |
 | `purpose` | ✅ | `motion_explanation` · `portrait` · `atmosphere` · `place` · `detail` · `human_process` · `mechanism` · `physical_state` · `comparison` · `trend` · `share` · `distribution` · `geographic` · `timeline` · `live_action` · `evidence_quote` · `verdict` · `archive` — each has a default route (render-routing.md §Routes; the list is `render-routing.js` `PURPOSES`) |
-| `reason` | ✅ | why this treatment conveys the cut; one generic reason repeated across the episode fails visual-direction |
+| `reason` | ✅ where the route is this cut's choice | why this treatment conveys the cut; one generic reason repeated across the episode fails visual-direction. Optional on `generated_video` in a `full_video` episode, where the episode chose the route |
 | `camera` | ✅ on `still_camera` | `{effect, target, reason}` — `effect` one of `focus-in` · `rack-focus` · `approach` · `pull` · `pan` · `tilt` · `push` · `reveal` · `parallax`; `focusTo` (and `focusFrom` for rack-focus) as normalized `[x, y, rx, ry]` from the actual image; `pan` and `tilt` travel from `focusFrom` to `focusTo` (both required, and different — a pan is a sentence from A to B, L13; `tilt` is the vertical pan, the scale-by-time move); `layersPlan` and, before production, `layers` for reveal/parallax |
 | `action` | ✅ on `character_html` · `object_html` · `generated_video` · `stock_video` | the visible subject change, before and after |
 | `actors` | ✅ on `character_html`, forbidden on `object_html` | who performs the action |
@@ -1069,7 +1071,8 @@ Choose delivery from the story: an explainer can be all narrator `voiceover`; dr
 `on_screen` for visible characters physically speaking to each other. Reserve `off_screen`
 for a motivated listener reaction, insert or speaker outside the frame. Visible narrators,
 inner thoughts and text messages may use `voiceover`; physical presentation to camera uses
-`on_screen`. Optional `deliveryReason` explains an exception on the review card. Do not
+`on_screen`. Optional `deliveryReason` explains an exception on the review card, naming that
+line's own situation; the same note on every line of one delivery is not an exception. Do not
 replace an entire dramatic exchange with closed-mouth action to avoid lip synchronization.
 The review renders lines in order with the speaker's profile image, name and delivery label
 beside a speech bubble. A shot without lines displays “No dialogue”; it does not acquire a
@@ -1291,7 +1294,8 @@ policy; a profile may raise, lower, or switch each off with `off`:
 - **`hook_video` (false)** — no mandatory generated-video opening. Every cut, including the
   cover, uses `shot.render` from [render-routing.md](render-routing.md). An explicitly enabled
   channel policy still requires a moving opening; design essential continuous action for it.
-  Video caps and budget are ceilings, not quotas. Every generated cut writes `visual.why`.
+  Video caps and budget are ceilings, not quotas. Every generated cut writes `visual.why`,
+  except in a `full_video` episode, where the episode chose video for every cut.
 - **`max_static_ground_seconds` (8)** — guidance, not a gate (owner decision 2026-10-18):
   one still comfortably holds one cut. The clock resets only
   when the picture itself changes: a generated clip (a motion background, a b-roll, a quote
@@ -1803,7 +1807,8 @@ thing happened five times.
 [cinematic-edit.md](../../produce/references/cinematic-edit.md) for `edit.in`, `edit.out`
 (only on a card that plays its clip soundtrack), `edit.pre`,
 `edit.post`, `edit.transitionSeconds`, `edit.reason` and `edit.continuity`. New boundaries
-record the intended action/visual connection and why this join fits. Reserve source duration
+record the intended action/visual connection; a join other than a plain cut records why it
+fits. Reserve source duration
 for the outgoing handle before generation and quoting. The builder compiles joins from this
 source plan, uses unseen moving frames after the outgoing card boundary and preserves the
 audio/subtitle timeline. It does not freeze the last frame. Default pre-roll is zero and
@@ -1922,10 +1927,9 @@ The rules that applied to the old one-string camera line now apply per slot:
   `zoom in`, travel → `truck`, presence → `handheld`, closing → `pedestal up` …). The measured
   part is narrow — a move on its own didn't change what viewers felt (p=.84, camera research
   §07); what it raised was immersion, on cuts whose character wasn't set yet. So size, angle,
-  the picture and the sound carry the feel, the move makes the audience move with it, and on a
-  partial-ratio board most body shots can honestly say `movement: "static"` — in `full_video`,
-  where every scene is a clip, the §Camera dynamics ration above (static on at most one shot in
-  three, never twice in a row) applies instead. The finding is a move that
+  the picture and the sound carry the feel, the move makes the audience move with it, and a
+  shot whose performance is the content can honestly say `movement: "static"` on any board,
+  `full_video` included: no share of held or moving shots applies. The finding is a move that
   **contradicts** the declared feel, or a feel left to ride on the move alone.
 
 `shot.size` and `shot.angle` are different axes and stay where they are — `size` is where the
@@ -2020,8 +2024,10 @@ composition: {
 | `leadRoom` | required except none; `left`, `right`, `balanced`, `none` |
 | `reason` | required for intentional and none; none carries only mode and reason |
 
-**New authoring:** record composition for visible faces, oriented subjects and directional
-action. Mark unrelated cuts `none` with a reason or omit the property. Body and object cuts
+**New authoring:** a shot with a structured opening view (`visual.camera.view`) has its
+framing intent written and needs no composition record; add one when headroom, look room or
+lead room must be fixed. On a board without views, record composition for visible faces,
+oriented subjects and directional action. Mark unrelated cuts `none` with a reason or omit the property. Body and object cuts
 do not require eye height. A POV normally has no visible face. An ECU of eyes can use
 `headroom:"cropped"`; an object insert uses `subjectKind:"object"`.
 

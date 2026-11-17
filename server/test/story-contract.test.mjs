@@ -98,6 +98,12 @@ test('unknown speakers, duplicate/missing speech, fabricated action quotes and m
   w = board(); w.SCENES[2].performance[0].text = 12;
   assert.match(checkStory(w).join(), /action requires|exact observable/);
 });
+test('an action nobody performs is a world event, while a mistyped actor still fails', () => {
+  const w = board(); w.SCENES[1].performance.push({ kind: 'action', text: 'The lid of the empty pot rattles.' });
+  assert.deepEqual(checkStory(w, { requireReview: false }), []);
+  w.SCENES[1].performance[2].character = 'chlid';
+  assert.match(checkStory(w, { requireReview: false }).join(), /not cast: chlid/);
+});
 test('a call to an unidentified in-world listener is distinct from viewer address and mistyped cast', () => {
   const w = board(); w.SCENES[0].performance[0].to = 'unidentified';
   assert.deepEqual(checkStory(w, { requireReview: false }), []);

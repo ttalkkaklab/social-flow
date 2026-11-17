@@ -24,9 +24,10 @@ approval, score or execution gate. Requested `review-camera` adds an independent
    A glance, pause, new sentence or hand movement alone is insufficient. Intentional
    reaction shots, reveals, POVs and spatial clarification can earn a cut even with the
    same speaker and framing.
-4. Set a concrete reason through `shot_icons.next` on the outgoing shot. The tool stores
-   that incoming transition and its `edit.reason` on the **following** shot. “Continue the
-   action”, “change attention” and a repeated camera adjective do not explain a boundary.
+4. Set the join through `shot_icons.next` on the outgoing shot; the tool stores it on the
+   **following** shot. A plain cut needs no sentence. Any other join carries its reason in
+   `edit.reason`: “continue the action”, “change attention” and a repeated camera adjective
+   do not explain a boundary.
    For inserted b-roll/outro, `incoming:null` means inspect the splice/edit plan; do not
    borrow an unrelated raw-array join. No hint is a verdict or a reason to delete a cut.
 5. Inspect `shots[].performanceTiming`: it totals authored action and speech estimates,
