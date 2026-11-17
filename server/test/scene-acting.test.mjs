@@ -26,6 +26,28 @@ test('speech planning uses the same detail view as image generation', () => {
   assert.doesNotMatch(prompt,/frontal portrait|from behind/);
 });
 
+test('addressed speech preserves an insert instead of adding the listener or a speaking face', () => {
+  const {performanceBeats} = require('../../skills/_shared/scene-acting.js');
+  const scene = {visual: {character: ['hero'], camera: {movement: 'static', view: {
+    subject: 'The employee gripping a bag strap', subjectType: 'detail', mode: 'profile-left',
+    crop: 'Only the hands and bag strap; both faces outside frame', reason: 'The grip betrays fear'
+  }}}};
+  const performance = [{kind: 'dialogue', speaker: 'hero', to: 'manager', delivery: 'off_screen',
+    text: 'I will check it.', leadInSeconds: 0, tailOutSeconds: 0}];
+  const prompt = sceneVideoPrompt(performance, 'native', scene);
+  assert.match(prompt, /Only the hands and bag strap/);
+  assert.match(prompt, /Addressed to manager/);
+  assert.match(prompt, /retain any planned hands or body detail/);
+  assert.doesNotMatch(prompt, /Preserve this eyeline and the listener|speakers unseen|speaker stays off screen/);
+  // The MSR compiler consumes these beats without quoted dialogue, too.
+  const mapped = performanceBeats(performance, 'native', false).join('\n');
+  assert.match(mapped, /the addressee need not appear in frame/);
+  assert.doesNotMatch(mapped, /I will check it/);
+  const onScreen = performanceBeats([{...performance[0], delivery: 'on_screen'}], 'native').join('\n');
+  assert.match(onScreen, /Show this speaker physically saying/);
+  assert.match(onScreen, /every other visible mouth stays closed/);
+});
+
 test('a static camera preserves framing without freezing the planned actor action', () => {
   const scene = {
     shot: {videoDesign: {action: 'The woman walks left with the tea tray.'}},
