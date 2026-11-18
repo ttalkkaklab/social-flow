@@ -6,8 +6,9 @@ const {TTS_MODELS}=require('./tts-models.js');
 const GEMINI_MODELS=new Set(TTS_MODELS.filter(m=>m.provider==='gemini').map(m=>m.model));
 const ELEVENLABS_MODELS=new Set(TTS_MODELS.filter(m=>m.provider==='elevenlabs').map(m=>m.model));
 function normalizeLanguage(value) {
-  const raw=typeof value==='string'?value.trim().toLowerCase():'';
-  return ({korean:'ko',english:'en',japanese:'ja',chinese:'zh',spanish:'es',french:'fr',portuguese:'pt'})[raw]||raw;
+  // A BCP-47 story language (zh-Hans, es-MX) pins as its primary subtag.
+  const raw=typeof value==='string'?value.trim().toLowerCase().replace(/^([a-z]{2})[-_][a-z0-9_-]+$/,'$1'):'';
+  return ({korean:'ko',english:'en',japanese:'ja',chinese:'zh',spanish:'es',french:'fr',german:'de',vietnamese:'vi',portuguese:'pt'})[raw]||raw;
 }
 
 function voiceErrors(tts) {

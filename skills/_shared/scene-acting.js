@@ -45,14 +45,55 @@ function speechRevisionPayload(line, voice) {
 // A native-speech line has no audio to measure before its clip exists. Fitted on 150 MSR clips
 // that had room to spare (2026-11-16): 4.5 Hangul syllables a second, 0.35 s for each pause
 // inside the line and 0.4 s of margin, which covered 85% of the measured spans. It errs long so
-// a line is not planned shorter than it is spoken. Other scripts have no measurement: null.
-function estimateSpeechSeconds(text) {
+// a line is not planned shorter than it is spoken.
+// Only Korean is measured. The other rates are the read-speech syllable rates of Pellegrino,
+// Coupé & Marsico 2011 (Language 87(3), table 1) times 0.6, the factor that puts English near
+// 150 words a minute: uncalibrated, and slow on purpose. Refit a rate when its clips are measured.
+const SPEECH_RATES = { ko: 4.5, ja: 4.7, es: 4.7, fr: 4.3, en: 3.7, de: 3.6, zh: 3.1, vi: 3.1, latin: 3.6 };
+const LATIN_RULES = ['en', 'es', 'fr', 'de', 'vi'];
+const count = (words, pattern) => (words.match(pattern) || []).length;
+// The script decides first; the board's language (BCP-47) separates what a script cannot:
+// kanji-only Japanese from Chinese, and the Latin-script languages from each other.
+function speechLanguage(text, hint) {
   const words = typeof text === 'string' ? text : '';
-  const syllables = (words.match(/[가-힣0-9]/g) || []).length;
-  if (!syllables || !/[가-힣]/.test(words)) return null;
-  const pauses = (words.match(/[.?!…,]+(?=\s*\S)/g) || []).length;
-  return Math.round((syllables / 4.5 + 0.35 * pauses + 0.4) * 100) / 100;
+  const tag = typeof hint === 'string' ? hint.trim().toLowerCase().split(/[-_]/)[0] : '';
+  if (/[가-힣]/.test(words)) return 'ko';
+  if (/[぀-ヿ]/.test(words)) return 'ja';
+  if (/\p{Script=Han}/u.test(words)) return tag === 'ja' ? 'ja' : 'zh';
+  // A line of digits alone is read in the board's language.
+  if (!/\p{Script=Latin}/u.test(words)) return /[0-9]/.test(words) && SPEECH_RATES[tag] ? tag : null;
+  if (LATIN_RULES.includes(tag)) return tag;
+  return /[ăơưđẠ-ỹ]/i.test(words) ? 'vi' : 'latin';
 }
+function latinSyllables(words, language) {
+  return (words.match(/[\p{Script=Latin}'’]+/gu) || []).reduce((total, word) => {
+    const groups = count(word.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase(), /[aeiouyæœø]+/g);
+    // A final unaccented e is silent in English and French, except English consonant + le (table).
+    const silent = (language === 'en' || language === 'fr') && groups > 1 && /[^aeiouy]es?$/i.test(word) && !(language === 'en' && /[^aeiouy]le$/i.test(word));
+    return total + Math.max(1, groups - (silent ? 1 : 0));
+  }, 0);
+}
+function speechUnits(words, language) {
+  const digits = count(words, /[0-9]/g);
+  if (language === 'ko') return count(words, /[가-힣0-9]/g);
+  // Morae: a kana is one, a small ゃ-row kana joins the one before it, a kanji or a digit averages two.
+  if (language === 'ja') return count(words, /[぀-ヿ]/g) - count(words, /[ぁぃぅぇぉゃゅょゎァィゥェォャュョヮ]/g) + 2 * (count(words, /\p{Script=Han}/gu) + digits);
+  if (language === 'zh') return count(words, /\p{Script=Han}/gu) + digits;
+  // A Vietnamese word is written one syllable at a time.
+  if (language === 'vi') return count(words, /\p{Script=Latin}+/gu) + digits;
+  return latinSyllables(words, language) + 2 * digits;
+}
+/** Seconds a line takes to say, its detected language and whether that rate was measured; null when nothing is spoken. */
+function estimateSpeech(text, language) {
+  // Bracketed acting tags ([whispers], [laughs]) are directions, not spoken text.
+  const words = typeof text === 'string' ? text.replace(/\[[^\]]*\]/g, '') : '';
+  const spoken = speechLanguage(words, language);
+  const units = spoken ? speechUnits(words, spoken) : 0;
+  if (!units) return null;
+  const pauses = count(words, /[.?!…,。、？！，；：;:]+(?=\s*\S)/g);
+  return { seconds: Math.round((units / SPEECH_RATES[spoken] + 0.35 * pauses + 0.4) * 100) / 100, language: spoken, calibrated: spoken === 'ko' };
+}
+const estimateSpeechSeconds = (text, language) => estimateSpeech(text, language)?.seconds ?? null;
 // One performance timeline serves video prompts and audio composition. Drafts retain
 // unknown durations; production must supply measured speech and authored action timing.
 function planScenePerformance(input, measureAudio = () => null) {
@@ -199,4 +240,4 @@ function sceneVideoPrompt(performance, mode, scene = {}) {
   const visualDirection = value => performance.filter(line => line.kind !== 'action' && line.text).reduce((text,line) => text.split(line.text).join('the supplied speech'), String(value));
   return ['A clean cinematic image with an unobstructed scene and text-free surfaces.', route, visualDirection(sceneDirection(scene, performance)), ...beats, VIDEO_TEXT_POLICY].join('\n');
 }
-module.exports={estimateSpeechSeconds,actingErrors,resolvedStyle,directionSupport,speechRevisionPayload,VIDEO_TEXT_POLICY,sceneVideoPrompt,planScenePerformance,sceneDirection,scenePerformancePayload,cameraLock,performanceBeats};
+module.exports={estimateSpeechSeconds,estimateSpeech,speechLanguage,actingErrors,resolvedStyle,directionSupport,speechRevisionPayload,VIDEO_TEXT_POLICY,sceneVideoPrompt,planScenePerformance,sceneDirection,scenePerformancePayload,cameraLock,performanceBeats};

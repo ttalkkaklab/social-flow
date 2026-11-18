@@ -93387,13 +93387,43 @@ var require_scene_acting = __commonJS({
     function speechRevisionPayload(line, voice) {
       return { tts: line.tts, sub: line.sub, speaker: line.speaker, delivery: line.delivery, voice, ...line.acting != null ? { acting: line.acting } : {} };
     }
-    function estimateSpeechSeconds(text4) {
+    var SPEECH_RATES = { ko: 4.5, ja: 4.7, es: 4.7, fr: 4.3, en: 3.7, de: 3.6, zh: 3.1, vi: 3.1, latin: 3.6 };
+    var LATIN_RULES = ["en", "es", "fr", "de", "vi"];
+    var count = (words, pattern) => (words.match(pattern) || []).length;
+    function speechLanguage(text4, hint) {
       const words = typeof text4 === "string" ? text4 : "";
-      const syllables = (words.match(/[가-힣0-9]/g) || []).length;
-      if (!syllables || !/[가-힣]/.test(words)) return null;
-      const pauses = (words.match(/[.?!…,]+(?=\s*\S)/g) || []).length;
-      return Math.round((syllables / 4.5 + 0.35 * pauses + 0.4) * 100) / 100;
+      const tag = typeof hint === "string" ? hint.trim().toLowerCase().split(/[-_]/)[0] : "";
+      if (/[가-힣]/.test(words)) return "ko";
+      if (/[぀-ヿ]/.test(words)) return "ja";
+      if (/\p{Script=Han}/u.test(words)) return tag === "ja" ? "ja" : "zh";
+      if (!/\p{Script=Latin}/u.test(words)) return /[0-9]/.test(words) && SPEECH_RATES[tag] ? tag : null;
+      if (LATIN_RULES.includes(tag)) return tag;
+      return /[ăơưđẠ-ỹ]/i.test(words) ? "vi" : "latin";
     }
+    function latinSyllables(words, language) {
+      return (words.match(/[\p{Script=Latin}'’]+/gu) || []).reduce((total, word) => {
+        const groups = count(word.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase(), /[aeiouyæœø]+/g);
+        const silent = (language === "en" || language === "fr") && groups > 1 && /[^aeiouy]es?$/i.test(word) && !(language === "en" && /[^aeiouy]le$/i.test(word));
+        return total + Math.max(1, groups - (silent ? 1 : 0));
+      }, 0);
+    }
+    function speechUnits(words, language) {
+      const digits = count(words, /[0-9]/g);
+      if (language === "ko") return count(words, /[가-힣0-9]/g);
+      if (language === "ja") return count(words, /[぀-ヿ]/g) - count(words, /[ぁぃぅぇぉゃゅょゎァィゥェォャュョヮ]/g) + 2 * (count(words, /\p{Script=Han}/gu) + digits);
+      if (language === "zh") return count(words, /\p{Script=Han}/gu) + digits;
+      if (language === "vi") return count(words, /\p{Script=Latin}+/gu) + digits;
+      return latinSyllables(words, language) + 2 * digits;
+    }
+    function estimateSpeech(text4, language) {
+      const words = typeof text4 === "string" ? text4.replace(/\[[^\]]*\]/g, "") : "";
+      const spoken = speechLanguage(words, language);
+      const units = spoken ? speechUnits(words, spoken) : 0;
+      if (!units) return null;
+      const pauses = count(words, /[.?!…,。、？！，；：;:]+(?=\s*\S)/g);
+      return { seconds: Math.round((units / SPEECH_RATES[spoken] + 0.35 * pauses + 0.4) * 100) / 100, language: spoken, calibrated: spoken === "ko" };
+    }
+    var estimateSpeechSeconds = (text4, language) => estimateSpeech(text4, language)?.seconds ?? null;
     function planScenePerformance(input, measureAudio = () => null) {
       const scene = Array.isArray(input) ? { narration: input } : input;
       const lines = scene.narration || [], warnings = [];
@@ -93517,7 +93547,7 @@ var require_scene_acting = __commonJS({
       const visualDirection = (value) => performance2.filter((line) => line.kind !== "action" && line.text).reduce((text4, line) => text4.split(line.text).join("the supplied speech"), String(value));
       return ["A clean cinematic image with an unobstructed scene and text-free surfaces.", route, visualDirection(sceneDirection(scene, performance2)), ...beats, VIDEO_TEXT_POLICY].join("\n");
     }
-    module.exports = { estimateSpeechSeconds, actingErrors, resolvedStyle, directionSupport, speechRevisionPayload, VIDEO_TEXT_POLICY, sceneVideoPrompt, planScenePerformance, sceneDirection, scenePerformancePayload, cameraLock, performanceBeats };
+    module.exports = { estimateSpeechSeconds, estimateSpeech, speechLanguage, actingErrors, resolvedStyle, directionSupport, speechRevisionPayload, VIDEO_TEXT_POLICY, sceneVideoPrompt, planScenePerformance, sceneDirection, scenePerformancePayload, cameraLock, performanceBeats };
   }
 });
 
@@ -93766,8 +93796,8 @@ var require_character_voice = __commonJS({
     var GEMINI_MODELS = new Set(TTS_MODELS.filter((m2) => m2.provider === "gemini").map((m2) => m2.model));
     var ELEVENLABS_MODELS2 = new Set(TTS_MODELS.filter((m2) => m2.provider === "elevenlabs").map((m2) => m2.model));
     function normalizeLanguage(value) {
-      const raw = typeof value === "string" ? value.trim().toLowerCase() : "";
-      return { korean: "ko", english: "en", japanese: "ja", chinese: "zh", spanish: "es", french: "fr", portuguese: "pt" }[raw] || raw;
+      const raw = typeof value === "string" ? value.trim().toLowerCase().replace(/^([a-z]{2})[-_][a-z0-9_-]+$/, "$1") : "";
+      return { korean: "ko", english: "en", japanese: "ja", chinese: "zh", spanish: "es", french: "fr", german: "de", vietnamese: "vi", portuguese: "pt" }[raw] || raw;
     }
     function voiceErrors(tts) {
       if (!tts || typeof tts !== "object" || Array.isArray(tts)) return ["tts is required"];
@@ -116105,7 +116135,8 @@ function prepareVideoVoice(tool2, input, context2) {
     if (speakers.length > 1) prompt.push("Speak the following turns in order, with a brief pause between speakers and no overlapping speech.");
     prompt.push(...script);
     if (typeof args.prompt === "string" && msrAudio.length) args.prompt = afterImageBlock(args.prompt, msrAudio.sort());
-    if (lines.some((line) => /[가-힣]/.test(text(line.tts)))) warnings.push("MSR training captions were English; Korean speech and cross-language voice are not established (arXiv 2609.18393).");
+    const spoken = object3(context2.board.STORY).language;
+    if (typeof spoken === "string" ? !/^en\b/i.test(spoken) : lines.some((line) => /[^\P{L}A-Za-z]/u.test(text(line.tts)))) warnings.push("MSR training captions were English; speech in another language and cross-language voice are not established (arXiv 2609.18393).");
     if (speakers.some((speaker) => speaker.audioIndex)) warnings.push("Reference voice is imitation, not preservation of the original WAV or exact speech timing.");
   } else if (reference2) {
     args.referenceAudioPaths = audioPaths;
@@ -116271,11 +116302,15 @@ function shotVideoTiming(context2, tool2, args) {
     note: "Fit of authored source coverage, not measured performance or generated output. Recheck after speech/action timing or generation changes."
   };
 }
-function nativeSpeechFit(shot, requestedSeconds, limits) {
+function nativeSpeechFit(shot, requestedSeconds, limits, language) {
   const acting = load5(fileURLToPath6(new URL("../../skills/_shared/scene-acting.js", import.meta.url)));
-  let estimatedSeconds;
+  let estimatedSeconds, unmeasuredRate = false;
   try {
-    estimatedSeconds = acting.planScenePerformance(shot, (line) => acting.estimateSpeechSeconds(line.tts)).durationSeconds;
+    estimatedSeconds = acting.planScenePerformance(shot, (line) => {
+      const estimate = acting.estimateSpeech(line.tts, language);
+      if (estimate && !estimate.calibrated) unmeasuredRate = true;
+      return estimate?.seconds ?? null;
+    }).durationSeconds;
   } catch {
     return void 0;
   }
@@ -116291,11 +116326,12 @@ function nativeSpeechFit(shot, requestedSeconds, limits) {
   const request = shortest.numFrames !== void 0 ? `numFrames ${shortest.numFrames}` : `durationSeconds ${shortest.durationSeconds}`;
   return {
     estimatedSeconds,
+    ...unmeasuredRate ? { speechRate: "uncalibrated" } : {},
     requestedSeconds: round2(requestedSeconds),
     excessSeconds,
     shortestRequest: { ...shortest.numFrames !== void 0 ? { numFrames: shortest.numFrames } : { durationSeconds: shortest.durationSeconds }, seconds: round2(shortest.requestedSeconds) },
     ...excessSeconds > SPEECH_SLACK_SECONDS && shortest.requestedSeconds < requestedSeconds - 1e-6 ? {
-      warning: `The request runs ${round2(requestedSeconds)}s; the lines and timed actions need about ${estimatedSeconds}s. The model plays the other ${excessSeconds}s as silent acting, usually before the line. ${request} (${round2(shortest.requestedSeconds)}s) covers them. A pause the story needs belongs in the performance as a timed action or the line's leadInSeconds/tailOutSeconds.`
+      warning: `The request runs ${round2(requestedSeconds)}s; the lines and timed actions need about ${estimatedSeconds}s. The model plays the other ${excessSeconds}s as silent acting, usually before the line. ${request} (${round2(shortest.requestedSeconds)}s) covers them. A pause the story needs belongs in the performance as a timed action or the line's leadInSeconds/tailOutSeconds.` + (unmeasuredRate ? " The speaking rate for this language is not measured on made clips: time the line on one clip before shortening the others." : "")
     } : {}
   };
 }
@@ -116516,7 +116552,7 @@ function planVideo(raw) {
   }
   const playFps = durationPlan.limits?.frameRate, playFrames = typeof args.numFrames === "number" ? args.numFrames : typeof args.duration === "number" && playFps ? framesForSeconds(args.duration, playFps) : tool2 === "astra_genai_msr" ? 121 : void 0;
   const playSeconds = playFrames !== void 0 && playFps ? playFrames / playFps : typeof args.durationSeconds === "number" ? args.durationSeconds : void 0;
-  const speechFit = VIDEO_ADAPTERS[tool2].voice === "reference" && playSeconds !== void 0 && durationPlan.limits && lines.some((line) => line.delivery !== "voiceover") ? nativeSpeechFit(shot, playSeconds, durationPlan.limits) : void 0;
+  const speechFit = VIDEO_ADAPTERS[tool2].voice === "reference" && playSeconds !== void 0 && durationPlan.limits && lines.some((line) => line.delivery !== "voiceover") ? nativeSpeechFit(shot, playSeconds, durationPlan.limits, context2.board.STORY?.language) : void 0;
   const foreign = typeof args.prompt === "string" ? nonEnglishOutsideQuotes(args.prompt) : null;
   if (foreign) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks. Write the video prompt in English; only dialogue, inside quotes, uses the video's language.`);
   const output2 = canonical2(path21.resolve(context2.episode, typeof args.outputPath === "string" ? args.outputPath : ".work/video"));
@@ -117584,6 +117620,7 @@ function boundaryReview(win, playback, videoTiming) {
   const ids = source.map((shot) => shot.id);
   const timings = Array.isArray(videoTiming) ? videoTiming : [];
   const acting = loadFromHere2(join12(PLUGIN_ROOT, "skills", "_shared", "scene-acting.js"));
+  const language = win.STORY?.language;
   const shots = playback.map(({ no }, index) => {
     const shot = source[no - 1];
     const visual = record3(shot.visual), plan2 = record3(shot.shot), camera = record3(visual.camera);
@@ -117591,18 +117628,25 @@ function boundaryReview(win, playback, videoTiming) {
     const id = text4(shot.id), uniqueId = id !== null && ids.filter((value) => value === id).length === 1;
     const cast = contract().castOf(shot);
     let performanceTiming;
+    let unmeasuredRate = false;
     try {
       const legacyAction = text4(visual.action) ?? text4(design.action);
       const explicit = Array.isArray(shot.performance) && shot.performance.length > 0;
       const clock = !explicit && (legacyAction || !shot.narration?.length) ? { performance: [
         ...legacyAction ? [{ kind: "action", text: legacyAction, order: "unresolved" }] : [],
         ...(shot.narration ?? []).map((line) => ({ kind: line.delivery === "voiceover" ? "narration" : "dialogue", lineId: line.id, speaker: line.speaker, text: line.tts, delivery: line.delivery, acting: line.acting, order: "unresolved" }))
-      ], durationSeconds: null, warnings: ["No ordered performance: action order and timing remain unresolved."], timing: "unknown" } : acting.planScenePerformance(shot, (line) => typeof line.estimatedSeconds === "number" ? line.estimatedSeconds : acting.estimateSpeechSeconds(line.tts));
+      ], durationSeconds: null, warnings: ["No ordered performance: action order and timing remain unresolved."], timing: "unknown" } : acting.planScenePerformance(shot, (line) => {
+        if (typeof line.estimatedSeconds === "number") return line.estimatedSeconds;
+        const estimate = acting.estimateSpeech(line.tts, language);
+        if (estimate && !estimate.calibrated) unmeasuredRate = true;
+        return estimate?.seconds ?? null;
+      });
       const stored = typeof shot.duration === "number" && clock.durationSeconds !== null ? shot.duration - clock.durationSeconds : null;
       performanceTiming = {
         ...clock,
         basis: "authored_estimates",
         speechBasis: "syllable_rate",
+        ...unmeasuredRate ? { speechRate: "uncalibrated" } : {},
         physicalFeasibility: "not_reviewed",
         timing: clock.durationSeconds === null ? "unknown" : "estimated",
         differsFromStored: stored === null ? null : Math.abs(stored) > 0.05,
@@ -118264,6 +118308,7 @@ function applyStoryboard(args, opts = {}) {
 var outlinePath = external_exports.string().min(1).describe("The storyboard directory (scenes.js is created there when missing) or its scenes.js");
 var storySequenceSchema = external_exports.object({
   path: outlinePath,
+  language: external_exports.string().regex(/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/, 'a BCP-47 tag such as "en", "ja" or "zh-Hans"').optional().describe("The language the story and its lines are written in"),
   sequences: external_exports.array(external_exports.object({
     id: nonEmpty.describe('Stable id, e.g. "q1"'),
     title: nonEmpty.describe("The heading the approval page draws"),
@@ -118301,15 +118346,18 @@ function readOutline(path34) {
   const win = existsSync24(file) ? readBoard(file).win : {};
   return { win, st: win.STRUCTURE ?? emptyStructure() };
 }
-function writeOutline(path34, win, structure, shots) {
+function writeOutline(path34, win, structure, shots, language) {
   const episode = win.STORY ? void 0 : workflowEpisode(dirname6(scenesPath(path34)));
   const handoff = episode ? episodeHandoff(episode) : void 0;
-  const globals = win.STORY ? void 0 : {
-    STORY: { version: "story-v2", authoring: "story-first" },
+  const story = win.STORY;
+  const speech = language ?? handoff?.LANGUAGES?.speech;
+  const written = !!win.SCENES?.length;
+  const globals = story ? language && story.language === void 0 && !written ? { STORY: { ...story, language } } : void 0 : {
+    STORY: { version: "story-v2", authoring: "story-first", ...speech ? { language: speech } : {} },
     ...handoff?.FORMAT && win.FORMAT === void 0 ? { FORMAT: handoff.FORMAT } : {},
     ...handoff?.PRODUCTION && win.PRODUCTION === void 0 ? { PRODUCTION: handoff.PRODUCTION } : {}
   };
-  return applyStoryboard({
+  const result = applyStoryboard({
     path: path34,
     draft: true,
     dryRun: false,
@@ -118317,13 +118365,15 @@ function writeOutline(path34, win, structure, shots) {
     ...shots?.length ? { set: { structure, shots } } : {},
     ...globals ? { globals } : {}
   }, { outline: true });
+  const kept = !language || !story ? void 0 : story.language !== void 0 ? story.language !== language ? `this board is written in "${String(story.language)}"` : void 0 : written ? "this board has shots and no recorded language, so its language is the one they are written in" : void 0;
+  return kept ? { ...result, findings: [...result.findings, { level: "warn", where: "STORY", what: `story_language: ${kept}; "${language}" was not applied \u2014 a board keeps its language` }] } : result;
 }
 function writeStorySequences(args) {
   const { win, st } = readOutline(args.path);
   requireEpisodeCast(args.path, win);
   const sequences = upsertBy(st.sequences, args.sequences.map((q) => ({ ...st.sequences.find((old) => old.id === q.id), ...q, scenes: st.sequences.find((old) => old.id === q.id)?.scenes ?? [] })), "id");
   const notes = sequences.filter((q) => q.payoff !== void 0 && q.scenes.length && !q.scenes.includes(q.payoff)).map((q) => ({ level: "warn", where: `sequence ${q.id}`, what: `payoff names scene ${q.payoff}, which is outside this sequence \u2014 fix it with story_sequence or story_scene` }));
-  const result = writeOutline(args.path, win, { ...st, sequences });
+  const result = writeOutline(args.path, win, { ...st, sequences }, void 0, args.language);
   return { ...result, findings: [...result.findings, ...notes] };
 }
 function writeStoryScenes(args) {
@@ -127843,7 +127893,7 @@ The runtime field identifies the loaded module and its on-disk hash; it does not
 
 Includes boundaryReview (shot-boundaries-v1): every actual playback join with full ordered speech/performance, camera context, incoming join ownership and factual review signals. It is read-only and always not_reviewed; repeated speakers/cast or reasons are not merge commands. For splices incoming is null: inspect the edit plan. Missing evidence stays unknown. Compare the uncut scene before images, and audit line ids/order/acting, performance groups, references and outer joins after edits. If this field is absent on an older connection, update/reconnect rather than guessing a bundle path.
 
-Includes videoTiming for generated shots: selected route, planned source coverage, frame grid, maximum seconds, and fits/split_required/timing_unknown/limits_unknown. This is not measured speech or output duration. boundaryReview.shots[].performanceTiming times a Korean line nobody timed from its syllables and gives storedExcessSeconds: the seconds the stored duration holds beyond its lines and timed actions, which a native-speech clip (MSR) plays as silent acting around the line.
+Includes videoTiming for generated shots: selected route, planned source coverage, frame grid, maximum seconds, and fits/split_required/timing_unknown/limits_unknown. This is not measured speech or output duration. boundaryReview.shots[].performanceTiming times a line nobody timed from its syllables in the board's language (STORY.language; speechRate "uncalibrated" outside Korean, whose rate alone was measured) and gives storedExcessSeconds: the seconds the stored duration holds beyond its lines and timed actions, which a native-speech clip (MSR) plays as silent acting around the line.
 
 Returns: JSON \u2014 { file, mediaBaseDirectory, sha256, version, format, shots, sequences[\u2026scenes[\u2026shots]], unplacedShots, splicedShots (broll \xB7 outro), playback (actual insertion order), unscheduledShots, propSheet?, inspection, runtime, imageFraming, boundaryReview, videoTiming, reviewContext?, selectedShot? }.`,
     inputSchema: {
@@ -127872,6 +127922,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
       additionalProperties: false,
       properties: {
         path: { type: "string", description: "The storyboard directory (data/<channel>/episodes/<topic>/storyboard/) or its scenes.js" },
+        language: { type: "string", description: `The language the story and its lines are written in, as a BCP-47 tag ("en", "ja", "zh-Hans", "es", "fr", "de", "vi", "ko"): the one the user asked for, else the saved languages.speech, else the language the channel already works in (profile, cast voices, earlier episodes), else the language of the user's request. Recorded once as STORY.language; a new episode board without it takes the saved languages.speech, and a board that has one or already has shots keeps its language (a different value warns). Line timing reads it.` },
         sequences: { type: "array", minItems: 1, description: "Sequences in playback order", items: { type: "object", additionalProperties: false, required: ["id", "title", "purpose"], properties: {
           id: { type: "string", description: 'Stable id, e.g. "q1"' },
           title: { type: "string", description: "The heading the review page draws" },
@@ -129322,8 +129373,8 @@ var voiceLockConfigSchema = external_exports.object({
 
 // src/character-tts.ts
 function normalizeCharacterLanguage(value) {
-  const raw = value.trim().toLowerCase();
-  return { korean: "ko", english: "en", japanese: "ja", chinese: "zh", spanish: "es", french: "fr", portuguese: "pt" }[raw] || raw;
+  const raw = value.trim().toLowerCase().replace(/^([a-z]{2})[-_][a-z0-9_-]+$/, "$1");
+  return { korean: "ko", english: "en", japanese: "ja", chinese: "zh", spanish: "es", french: "fr", german: "de", vietnamese: "vi", portuguese: "pt" }[raw] || raw;
 }
 var ttsFields = {
   voiceLock: voiceLockConfigSchema.optional(),

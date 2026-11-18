@@ -38,6 +38,22 @@ synopsis into acted scenes and visible storyboard evidence. Use `story-interest.
 guidance, without new score gates or compulsory twists. Synopsis-only requests stop at prose;
 they do not create episode assets. Existing cast, calendar, narrator and ending rules hold.
 
+## Story language (user directive, 2026-11-18)
+
+Nothing said which language a story is written in, and every default and example was Korean.
+The story language of a new episode is the one the user names for it, else the saved
+`languages.speech`, else the language the channel already works in (its profile, cast voices
+and earlier episodes), else the language of the request; nobody is asked. The first `story_sequence` takes it as `language`
+and the board keeps it as `STORY.language` (a new episode board without the argument takes
+the saved `speech`; a board that has one, or has shots, keeps its language and a different
+value warns). Synopsis,
+scenario, story text, summaries and lines use it, each character's `tts.language` is its
+primary subtag, and prompts stay English. Untimed lines are timed in English, Chinese,
+Japanese, Spanish, French, German, Vietnamese and Korean; only the Korean rate is measured,
+so the others report `speechRate:"uncalibrated"` and run slow. These report; none refuses.
+The review page's own menus are English and Korean. See
+`skills/storyboard/references/review-localization.md`.
+
 ## Episode anticipation (user directive, 2026-11-16)
 
 Every new or substantially revised synopsis and storyboard gets an authoring pass for
@@ -162,7 +178,7 @@ opening face already shows the shot's emotion. See `skills/storyboard/SKILL.md` 
 MSR clips kept opening and closing on a silent character: on 299 measured clips half of each
 clip was silence around its line. A natively voiced clip plays exactly the requested length
 and the model fills what the line does not need with silent acting. So the length follows the
-line: `storyboard_read` times an untimed Korean line from its syllables and reports
+line: `storyboard_read` times an untimed line from its syllables in the board's language and reports
 `performanceTiming.storedExcessSeconds`, and `video_plan` returns `speechFit` with a warning
 and the shortest covering request when a request runs more than half a second over. A pause
 the story needs is written into the performance (a timed action, `leadInSeconds`,

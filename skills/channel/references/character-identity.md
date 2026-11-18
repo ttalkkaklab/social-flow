@@ -123,7 +123,7 @@ for provider mappings and the distinction between sample imitation and exact spe
    do not feed a multi-view composite to an image/video generator.
 3. For a character's voice, cast one voice and generate its sample with
    `character_voice_audition` `create` and a single candidate: it uses the selected
-   engine/model and a natural Korean line from `speech.examples`, then sets the voice
+   engine/model and a natural line in the character's `tts.language` from `speech.examples`, then sets the voice
    at once (identity `tts`, `voiceSelection`, the sheet's `voice.wav` and `sample.txt`).
    Run a three-candidate audition only when the user asks to compare voices; present
    the real audio (the sheet plays the candidates) and `select` their actual choice.

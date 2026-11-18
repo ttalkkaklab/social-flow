@@ -79,12 +79,28 @@ test('a travelling camera retains its authored speed and endpoint without a stat
   assert.doesNotMatch(sceneDirection({}), /Locked camera:/);
 });
 
-test('a native line is timed from its Hangul syllables and pauses; other scripts stay unknown', () => {
-  const {estimateSpeechSeconds, planScenePerformance} = require('../../skills/_shared/scene-acting.js');
+test('a native line is timed from its syllables and pauses in its own language; only Korean is calibrated', () => {
+  const {estimateSpeech, estimateSpeechSeconds, planScenePerformance} = require('../../skills/_shared/scene-acting.js');
   assert.equal(estimateSpeechSeconds('너도 담배냐?'), 1.51);
   assert.ok(estimateSpeechSeconds('자진신고해라. 안 하면 정학이다.') > estimateSpeechSeconds('자진신고해라 안 하면 정학이다'));
-  assert.equal(estimateSpeechSeconds('Hello there'), null);
   assert.equal(estimateSpeechSeconds(undefined), null);
+  assert.equal(estimateSpeechSeconds('...', 'en'), null);
+  assert.equal(estimateSpeechSeconds('[laughs]', 'en'), null);   // an acting tag is a direction, not speech
+  assert.equal(estimateSpeech('너도 담배냐?', 'en').calibrated, true);   // the script wins over the board's language
+  // units / rate + 0.35 per inner pause + 0.4
+  for (const [text, language, detected, units, rate, pauses] of [
+    ['Give me your hand.', 'en', 'en', 4, 3.7, 0],              // "give" drops its silent e
+    ['The table is mine.', 'en', 'en', 5, 3.7, 0],              // "table" keeps -le, "mine" drops its e
+    ['手、貸して。', 'ja', 'ja', 6, 4.7, 1],                      // two kanji at two morae, two kana
+    ['学校', 'ja', 'ja', 4, 4.7, 0],                             // kanji alone reads as Japanese on a Japanese board
+    ['学校', undefined, 'zh', 2, 3.1, 0],                        // and as Chinese without one
+    ['把手给我。', 'zh-Hans', 'zh', 4, 3.1, 0],
+    ['Đưa tay đây.', undefined, 'vi', 3, 3.1, 0],               // one written word is one syllable
+    ['Dame la mano, por favor.', 'es', 'es', 8, 4.7, 1],
+    ['Elle parle encore.', 'fr', 'fr', 4, 4.3, 0],              // el-le drops to one, par-le to one, en-core to two
+    ['Gib mir deine Hand, bitte.', 'de', 'de', 7, 3.6, 1],      // German keeps every final e
+    ['Hello there', undefined, 'latin', 4, 3.6, 0],             // an unnamed Latin-script language: no silent letters, the slowest rate
+  ]) assert.deepEqual(estimateSpeech(text, language), {seconds: Math.round((units / rate + 0.35 * pauses + 0.4) * 100) / 100, language: detected, calibrated: false}, text);
   const shot = {narration: [{id: 'l1', speaker: 'a', tts: '너도 담배냐?', acting: {tailOutSeconds: 0.5}}],
     performance: [{kind: 'dialogue', character: 'a', group: 1}, {kind: 'action', text: 'He waits.', durationSeconds: 0.7}]};
   assert.equal(planScenePerformance(shot, line => estimateSpeechSeconds(line.tts)).durationSeconds, 1.51 + 0.5 + 0.7);

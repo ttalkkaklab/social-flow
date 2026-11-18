@@ -24,9 +24,16 @@ Follow [host evaluation](../_shared/host-review.md) for every requested review.
 
 # Storyboard: make the story understandable, then plan its images
 
-Follow [story language and review translations](references/review-localization.md)
-when saved `languages` or the user requests multilingual review. The floating story
-language selector reads a separate translation file; it never changes spoken source.
+**Story language (user directive, 2026-11-18).** Write the synopsis, scenario, story
+sentences, summaries and lines in one language: the one the user names for this episode,
+else the saved `languages.speech`, else the language the channel already works in
+(`profile.md`, the cast's `tts.language`, earlier episodes), else the language the user
+wrote the request in. Pass it to the first `story_sequence` as `language`; the board keeps
+it as `STORY.language`, and a resumed board stays in the language it is written in. English, Chinese, Japanese, Spanish, French, German,
+Vietnamese and Korean have line timing. Talk to the user in their language even when the
+story's is another. Follow [story language and review translations](references/review-localization.md);
+the floating story language selector reads a separate translation file and never changes
+spoken source.
 
 For synopsis recommendations, read the channel's continuity contract and prior research first.
 For an anthology, choose material before assigning episode roles; do not inherit a prior
@@ -507,8 +514,10 @@ measured 2026-11-16 half of each clip was silence around its line; clips within 
 their line's length opened on the line. So its `duration` is the line plus the pauses the
 story asks for, and each such pause is written down: a standalone timed action
 (`durationSeconds`) or the line's `leadInSeconds`/`tailOutSeconds`. `storyboard_read`
-times an untimed Korean line from its syllables (about 4.5 a second, 0.35 s a pause inside
-the line, 0.4 s of margin) and reports `performanceTiming.storedExcessSeconds`; bring a
+times an untimed line from its syllables in the board's language (Korean about 4.5 a second,
+0.35 s a pause inside the line, 0.4 s of margin; the other languages use slower published
+averages and read `speechRate:"uncalibrated"`, so time one made clip before trusting them)
+and reports `performanceTiming.storedExcessSeconds`; bring a
 positive value down to the performance length before images, or name the action that needs
 it. Do not go under the estimate: a line that starts on the first frame loses its first word.
 
