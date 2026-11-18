@@ -425,12 +425,20 @@ const instagramPublishSchema = z
     caption: z.string().min(1).max(2200, 'INSTAGRAM caption must be ≤2200 chars'),
     imageUrls: z.array(z.string().url()).min(1).max(10).optional(),
     videoUrl: z.string().url().optional(),
+    shareToFeed: z.boolean().optional(),
+    thumbOffsetMs: z.number().int().nonnegative().optional(),
+    coverUrl: z.string().url().optional(),
+    isAiGenerated: z.boolean().optional(),
     channel: channelSlugSchema,
 })
     .superRefine((v, ctx) => {
     const issue = (path, message) => ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
     if (!v.imageUrls && !v.videoUrl)
         issue('imageUrls', 'INSTAGRAM requires imageUrls (1-10) or videoUrl (reel)');
+    for (const key of ['shareToFeed', 'thumbOffsetMs', 'coverUrl', 'isAiGenerated']) {
+        if (v[key] !== undefined && !v.videoUrl)
+            issue(key, `${key} applies to reels (videoUrl) only`);
+    }
     if (v.imageUrls && v.videoUrl)
         issue('videoUrl', 'imageUrls and videoUrl are mutually exclusive');
     if (v.videoUrl && !isVideoUrl(v.videoUrl))
@@ -454,12 +462,18 @@ const facebookPublishSchema = z
         .min(1)
         .optional(),
     linkUrl: z.string().url().optional(),
+    reel: z.boolean().optional(),
+    isAiGenerated: z.boolean().optional(),
     channel: channelSlugSchema,
 })
     .superRefine((v, ctx) => {
     const issue = (path, message) => ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
     if (v.imageUrls && v.videoUrl)
         issue('videoUrl', 'imageUrls and videoUrl are mutually exclusive');
+    if ((v.reel || v.isAiGenerated !== undefined) && !v.videoUrl)
+        issue('reel', 'reel and isAiGenerated need videoUrl');
+    if (v.isAiGenerated !== undefined && !v.reel)
+        issue('isAiGenerated', 'isAiGenerated is sent on Reels (reel: true) only');
     if (v.videoUrl && !isVideoUrl(v.videoUrl))
         issue('videoUrl', 'videoUrl must be a .mp4/.mov URL');
     if (v.linkUrl && (v.imageUrls || v.videoUrl))
@@ -508,6 +522,8 @@ const youtubePublishSchema = z.object({
     // and after publishing the Shorts portrait surface can't be reverted via the API
     // (enforced by user directive, 2026-08-13).
     thumbnailFilePath: z.string().min(1),
+    defaultLanguage: z.string().regex(/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/, 'defaultLanguage is a BCP-47 tag, e.g. vi / ko').optional(),
+    defaultAudioLanguage: z.string().regex(/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/, 'defaultAudioLanguage is a BCP-47 tag, e.g. vi / ko').optional(),
     captionFilePath: z.string().min(1).optional(),
     captionLanguage: z
         .string()
@@ -1300,7 +1316,15 @@ export const ROUTES = {
     instagram_publish: async (args) => {
         const input = parseArgs(instagramPublishSchema, args);
         return fromApi(await sns.publishInstagram(input.videoUrl
-            ? { caption: input.caption, videoUrl: input.videoUrl, channel: input.channel }
+            ? {
+                caption: input.caption,
+                videoUrl: input.videoUrl,
+                shareToFeed: input.shareToFeed,
+                thumbOffsetMs: input.thumbOffsetMs,
+                coverUrl: input.coverUrl,
+                isAiGenerated: input.isAiGenerated,
+                channel: input.channel,
+            }
             : { caption: input.caption, imageUrls: input.imageUrls, channel: input.channel }), SNS_PUBLISHED_NOTE);
     },
     facebook_captions: async (args) => {
@@ -1320,6 +1344,8 @@ export const ROUTES = {
                 captionFilePath: input.captionFilePath,
                 captionLocale: input.captionLocale,
                 captionFiles: input.captionFiles,
+                reel: input.reel,
+                isAiGenerated: input.isAiGenerated,
                 channel: input.channel,
             }
             : { caption: input.caption, imageUrls: input.imageUrls, linkUrl: input.linkUrl, channel: input.channel }), SNS_PUBLISHED_NOTE);
@@ -1342,6 +1368,8 @@ export const ROUTES = {
             categoryId: input.categoryId,
             madeForKids: input.madeForKids,
             containsSyntheticMedia: input.containsSyntheticMedia,
+            defaultLanguage: input.defaultLanguage,
+            defaultAudioLanguage: input.defaultAudioLanguage,
             channel: input.channel,
         }), SNS_PUBLISHED_NOTE);
     },
