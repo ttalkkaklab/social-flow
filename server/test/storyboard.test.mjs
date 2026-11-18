@@ -38,6 +38,8 @@ import {
   writeStoryShots,
   storyMusicSchema,
   writeStoryMusic,
+  storyClicheSchema,
+  writeStoryCliches,
   firstLineReading,
   openingReading,
 } from '../dist/storyboard.js';
@@ -529,6 +531,112 @@ describe('music is decided scene by scene', () => {
     const r = writeStoryMusic({ path: dir, cues: [tension], spots: [{ scenes: [1, 2, 3], decision: 'score', cue: 'tension', reason: 'r' }] });
     assert.deepEqual(r.spotting.direction, [note]);
     assert.ok(r.findings.some((f) => /no music model is saved \(models\.music\)/.test(f.what)));
+  });
+});
+
+describe('clichés are chosen for the story and recorded on the board', () => {
+  const lib = createRequire(import.meta.url)('../../skills/storyboard/references/cliches.js');
+  const entries = lib.catalog().items;
+  const plain = entries.find((item) => item.layer === 'device' && !item.caution && !item.quote && !item.analysis);
+  const coercive = entries.find((item) => item.caution === 'coercion' && !item.analysis);
+  const quoted = entries.find((item) => item.quote && !item.caution);
+  // An episode board of the fixture project (video type drama) with mina in its cast.
+  const episode = (root, topic) => {
+    const dir = join(manageProject({ action: 'episode', workspace: root, topic }).episode, 'storyboard');
+    castFile(dir, ['mina'], { root: join(root, 'data/c') });
+    writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
+    return dir;
+  };
+  const recorded = (dir) => readBoard(dir).win.CLICHES;
+
+  it('a new drama board starts undecided, takes uses with their shift and scenes, and reads none with its reason', () => {
+    const root = tmp();
+    setupProject(root);
+    const dir = episode(root, 'e1');
+    assert.deepEqual(recorded(dir), { version: 1, uses: [] });
+    const open = writeStoryCliches({ path: dir });
+    assert.deepEqual([open.written, open.cliches.mode, open.cliches.decision], [false, 'apply', 'undecided']);
+    assert.ok(open.findings.some((f) => f.where === 'clichés' && /no decision yet/.test(f.what)));
+
+    // Recorded at the synopsis, before any scene exists: the name, layer and need come from the catalogue.
+    const r = writeStoryCliches(storyClicheSchema.parse({ path: dir, uses: [
+      { id: plain.id, shift: '숨기는 쪽이 아버지다' }, { name: '돌려받은 우산', need: 'reunion', character: 'mina' }] }));
+    assert.equal(r.written, true);
+    assert.deepEqual(recorded(dir).uses, [
+      { id: plain.id, name: plain.name, layer: plain.layer, need: plain.needs[0], shift: '숨기는 쪽이 아버지다', basis: 'default' },
+      { name: '돌려받은 우산', need: 'reunion', character: 'mina', basis: 'default' }]);
+    assert.match(r.board.find((line) => line.startsWith('clichés:')), /^clichés: 2 in the story/);
+    // Sent again with its scene, a use keeps its shift.
+    const scene = writeStoryScenes({ path: dir, scenes: [{ sequence: 'q1', no: 1, place: '숲', time: '낮', event: 'e', summary: '씬 1' }] });
+    assert.match(scene.board.find((line) => line.startsWith('clichés:')), /^clichés: 2 in the story/, 'every board write prints the decision');
+    writeStoryCliches({ path: dir, uses: [{ id: plain.id, scenes: [1] }] });
+    assert.deepEqual(recorded(dir).uses[0], { id: plain.id, name: plain.name, layer: plain.layer, need: plain.needs[0], shift: '숨기는 쪽이 아버지다', scenes: [1], basis: 'default' });
+    assert.equal(readStoryboard({ path: dir, level: 'outline' }).cliches.decision, 'use');
+
+    const removed = writeStoryCliches({ path: dir, remove: ['돌려받은 우산', 9999] });
+    assert.equal(recorded(dir).uses.length, 1);
+    assert.ok(removed.findings.some((f) => /nothing is recorded as #9999/.test(f.what)));
+    const none = writeStoryCliches({ path: dir, none: '조용한 대화 한 번이 전부라 장치가 끼어들 자리가 없다' });
+    assert.deepEqual([none.cliches.decision, recorded(dir).uses.length], ['none', 0]);
+    assert.match(none.board.find((line) => line.startsWith('clichés:')), /^clichés: none — 조용한 대화/);
+    assert.equal(storyClicheSchema.safeParse({ path: dir, none: 'r', uses: [{ id: plain.id }] }).success, false);
+  });
+
+  it('on a type that recommends, a cliché enters the story only with the user\'s pick', () => {
+    const dir = tmp();
+    const type = (production) => applyStoryboard({ path: dir, draft: true, globals: { PRODUCTION: production } }, { outline: true });
+    writeStorySequences({ path: dir, language: 'en', sequences: [{ id: 'q1', title: 'Intro', purpose: 'what it is' }] });
+    type({ videoType: { id: 'explainer' } });
+    assert.equal(recorded(dir), undefined, 'no open record on a type that only recommends');
+    assert.throws(() => writeStoryCliches({ path: dir, uses: [{ id: plain.id }] }), /cliche_user_choice: this episode recommends clichés/);
+    assert.equal(recorded(dir), undefined, 'a refused call writes nothing');
+
+    const offered = writeStoryCliches({ path: dir, uses: [{ id: plain.id, offered: true }] });
+    assert.deepEqual([offered.cliches.mode, offered.cliches.decision], ['offer', 'offer']);
+    // An English story takes the catalogue's English name; a recommendation carries no basis.
+    assert.deepEqual(recorded(dir).uses, [{ id: plain.id, name: plain.en, layer: plain.layer, need: plain.needs[0], offered: true }]);
+    assert.match(offered.board.find((line) => line.startsWith('clichés:')), /none applied, 1 offered/);
+
+    // The user picked it. A later revision of that use needs no second pick.
+    writeStoryCliches({ path: dir, uses: [{ id: plain.id }], basis: 'user' });
+    assert.deepEqual([recorded(dir).uses[0].basis, recorded(dir).uses[0].offered], ['user', undefined]);
+    writeStoryCliches({ path: dir, uses: [{ id: plain.id, shift: 'the one who hides it is the father' }] });
+    assert.deepEqual([recorded(dir).uses[0].shift, recorded(dir).uses[0].basis], ['the one who hides it is the father', 'user']);
+
+    // The channel's saved choice overrides the type: off refuses the same way, on applies as the user's standing pick.
+    type({ videoType: { id: 'drama' }, clicheUse: 'off' });
+    assert.throws(() => writeStoryCliches({ path: dir, uses: [{ name: 'a borrowed umbrella' }] }), /cliche_user_choice: the channel's saved choice/);
+    type({ videoType: { id: 'explainer' }, clicheUse: 'on' });
+    writeStoryCliches({ path: dir, uses: [{ name: 'a borrowed umbrella' }] });
+    assert.equal(recorded(dir).uses.find((use) => use.name === 'a borrowed umbrella').basis, 'user');
+  });
+
+  it('warns about caution entries, quoted lines and a repeat on the channel, and refuses only input it cannot use', () => {
+    const root = tmp();
+    setupProject(root);
+    const first = episode(root, 'e1'), second = episode(root, 'e2');
+    writeStoryCliches({ path: first, uses: [{ id: plain.id }] });
+    const r = writeStoryCliches({ path: second, uses: [{ id: plain.id }, { id: coercive.id }, { id: quoted.id, offered: true }] });
+    const warned = (pattern) => r.findings.some((f) => f.level === 'warn' && pattern.test(f.what));
+    assert.equal(r.written, true, 'a warning never stops the write');
+    assert.ok(warned(/episode e1 of this channel already used it/));
+    assert.ok(warned(/without consent staged as romance/));
+    assert.ok(warned(/borrow the pattern of the line, not its words/));
+    assert.deepEqual(recorded(second).uses.map((use) => [use.caution, use.quote]), [[undefined, undefined], ['coercion', undefined], [undefined, true]]);
+
+    assert.throws(() => writeStoryCliches({ path: second, uses: [{ id: 99999 }] }), /cliche_unknown: the catalogue has no entry #99999/);
+    assert.throws(() => writeStoryCliches({ path: second, uses: [{ id: plain.id, scenes: [9] }] }), /story_order: scene 9 does not exist/);
+    assert.throws(() => writeStoryCliches({ path: second, uses: [{ id: plain.id, need: 'fame' }] }), /cliche_need: "fame" is not a need/);
+    assert.throws(() => writeStoryCliches({ path: second, uses: [{ id: plain.id, character: 'nobody' }] }), /cliche_character: nobody is not in storyboard\/cast\.json/);
+    assert.equal(storyClicheSchema.safeParse({ path: second, uses: [{ shift: 'no id and no name' }] }).success, false);
+    assert.equal(recorded(second).uses.length, 3, 'a refused call writes nothing');
+
+    // A scene removed later leaves a reference the report and the digest name.
+    writeStoryScenes({ path: second, scenes: [{ sequence: 'q1', no: 1, place: '숲', time: '낮', event: 'e', summary: '씬 1' }] });
+    writeStoryCliches({ path: second, uses: [{ id: plain.id, scenes: [1] }] });
+    const gone = applyStoryboard({ path: second, draft: true, removeScenes: [1] }, { outline: true });
+    assert.match(gone.board.join('\n'), /names scene 1, which is not on the board/);
+    assert.ok(writeStoryCliches({ path: second }).findings.some((f) => /names scene 1, which is not on the board/.test(f.what)));
   });
 });
 
@@ -1430,7 +1538,7 @@ describe('images and the video prompt follow the icon attributes', () => {
 describe('tool surface', () => {
   it('the four tools exist with handlers and local hints', () => {
     for (const name of ['storyboard_read', 'storyboard_apply', 'storyboard_check', 'scenario_check',
-      'story_sequence', 'story_scene', 'story_shot', 'story_music', 'shot_characters', 'shot_dialogue', 'shot_icons', 'shot_image', 'shot_prompt']) {
+      'story_sequence', 'story_scene', 'story_shot', 'story_music', 'story_cliche', 'shot_characters', 'shot_dialogue', 'shot_icons', 'shot_image', 'shot_prompt']) {
       const tool = TOOLS.find((t) => t.name === name);
       assert.ok(tool, `missing tool ${name}`);
       assert.equal(typeof ROUTES[name], 'function');
@@ -1440,6 +1548,9 @@ describe('tool surface', () => {
       assert.match(tool.description, /Returns:/);
     }
     assert.deepEqual(TOOLS.find((t) => t.name === 'shot_icons').inputSchema.properties.shots.items.properties.backgroundView.enum, ['front', 'back']);
+    // The needs the tool advertises are the ones the skill module picks by.
+    assert.deepEqual(TOOLS.find((t) => t.name === 'story_cliche').inputSchema.properties.uses.items.properties.need.enum,
+      Object.keys(createRequire(import.meta.url)('../../skills/storyboard/references/cliches.js').NEEDS));
     assert.equal(TOOLS.find((t) => t.name === 'storyboard_apply').annotations.readOnlyHint, false);
     assert.equal(TOOLS.find((t) => t.name === 'storyboard_read').annotations.readOnlyHint, true);
     assert.equal(TOOLS.find((t) => t.name === 'scenario_check').annotations.readOnlyHint, true);

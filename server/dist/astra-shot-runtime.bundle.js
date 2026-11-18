@@ -33515,6 +33515,21 @@ var storyMusicSchema = external_exports.object({
     gainDb: external_exports.number().finite().min(-60).max(12).optional()
   }).strict()).optional()
 }).strict();
+var storyClicheSchema = external_exports.object({
+  path: outlinePath,
+  uses: external_exports.array(external_exports.object({
+    id: external_exports.number().int().positive().optional().describe("The catalogue number cliches.js pick printed"),
+    name: nonEmpty.optional().describe("Its name in the story language; required for a clich\xE9 that is not in the catalogue"),
+    need: nonEmpty.optional().describe("The job it does in this story, one of the needs cliches.js lists; the catalogue entry's first need when omitted"),
+    scenes: external_exports.array(external_exports.number().int().positive()).min(1).optional().describe("The scenes it sits on, once they are written"),
+    character: nonEmpty.optional().describe("The cast member a character-type clich\xE9 describes"),
+    shift: nonEmpty.optional().describe("The one thing this episode changes about it; leave it out when it is played as the catalogue describes"),
+    offered: external_exports.boolean().optional().describe("true records a recommendation that is not in the story yet; stated on every write")
+  }).strict().refine((use) => use.id !== void 0 || use.name !== void 0, { message: "give the catalogue id, or a name for a clich\xE9 outside the catalogue" })).min(1).optional(),
+  remove: external_exports.array(external_exports.union([external_exports.number().int().positive(), nonEmpty])).min(1).optional().describe("Recorded uses to drop, by catalogue id or by name"),
+  none: nonEmpty.optional().describe("Records that this episode uses no clich\xE9, and why; it replaces the list"),
+  basis: external_exports.literal("user").optional().describe("The user picked these from a recommendation or asked for them")
+}).strict().refine((args) => args.none === void 0 || !args.uses && !args.remove, { message: "none replaces the whole list \u2014 give it alone" });
 var shotCharactersSchema = external_exports.object({
   path: outlinePath,
   shots: external_exports.array(external_exports.object({

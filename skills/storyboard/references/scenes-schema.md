@@ -82,6 +82,7 @@ report missing mappings; they do not certify the scene's artistic quality.
 - [Format — `window.FORMAT`](#format-windowformat)
 - [Grammar units and production layers](#grammar-units-and-production-layers)
 - [Structure — `window.STRUCTURE` (sequences and scenes)](#structure-windowstructure-sequences-and-scenes)
+- [Clichés — `window.CLICHES`](#clichés-windowcliches)
 - [Playback order — format picks the skeleton](#playback-order-format-picks-the-skeleton)
 - [Production mode — `window.PRODUCTION`](#production-mode-windowproduction)
   - [Episode visual style selection](#episode-visual-style-selection)
@@ -144,6 +145,7 @@ window.COMPREHENSION = { /* the one-question contract — see below (story-v1 gu
 window.STORY = { /* the story plan — story-v2 shape (version, cast, viewerNeed, thesis, basis, endingReason, kind, expression, review): character-scenarios.md#story-v2-story-example; story-v1 boards: story-quality.md */ };
 window.PRODUCTION = { /* mode (one of the six render ratios) + renderRatioVersion, cost quote, approval, attempts, style, videoModel; production-mode.md */ };
 // window.MUSIC = { … };   // named music cues (§music cues) — leave the line out for one bed all the way through
+// window.CLICHES = { … }; // the researched clichés the story uses, recommends or declines (§clichés) — story_cliche writes it
 window.SCENES = [ /* the shot array — one entry = one shot. Keep the identifier names */ ];
 ```
 
@@ -528,6 +530,36 @@ ends on a delivery verb, a question and a statement in one shot, a measured valu
 generated_video shot, a `space.line` that changes inside a scene, a scene with a gaze or two
 peopled picture shots and no `space.line`, and three shots in a row on one `feel`. A board
 with no `STRUCTURE` warns only, so older episodes still build.
+
+## Clichés — `window.CLICHES`
+
+The record `story_cliche` writes (user directive 2026-11-18, [cliché use](cliche-use.md)). The
+review page reads it; no checker, renderer or assembler does.
+
+```js
+window.CLICHES = {
+  version: 1,
+  // none: "one quiet exchange carries the episode; a device would crowd it",   // instead of uses, when the episode uses none
+  uses: [
+    { id: 45,                      // catalogue number (`cliches.js show 45`); absent for a cliché outside the catalogue
+      name: "돈봉투·물 끼얹는 남주 어머니",   // in the story language
+      layer: "scene", need: "obstacle",
+      scenes: [3],                 // STRUCTURE scene numbers it sits on; absent until they are written
+      shift: "봉투를 건네받는 쪽이 어머니다",  // the one thing this episode changes; absent when it is played as it is
+      basis: "default" },          // why it is in the story: "default" (the episode's type) or "user" (the user's pick)
+    { id: 228, name: "츤데레·갭 모에 남주", layer: "character", need: "closeness", character: "jun", basis: "default" },
+    { id: 9, name: "가짜 연애·계약 연애·계약 결혼", layer: "device", need: "bind", offered: true }   // recommended, not in the story yet
+  ]
+};
+```
+
+- `uses: []` with no `none` is an open decision. A new episode board whose type applies clichés
+  starts that way, and every board write reports it as undecided until one is recorded.
+- `offered: true` marks a recommendation that is not in the story. On a type that only
+  recommends, an applied use carries `basis: "user"`.
+- `caution` (`"coercion"` or `"violence"`) and `quote: true` are copied from the catalogue
+  entry so the review page can mark them.
+- A scene number that no longer exists is named by `story_cliche` and by the board digest.
 
 ## Playback order — format picks the skeleton
 

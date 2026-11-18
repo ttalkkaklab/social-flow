@@ -160,6 +160,12 @@ prices. A configured credential does not guarantee a successful generation.
    every shot is too much; score the turns"`. Add a note with `project_manage update` (pass
    the whole `production` block with the new list) in the turn the user gives the feedback.
    `story_music` shows the list at every spotting, so the next episode starts from it.
+   **Cliché use.** `production.clicheUse` keeps the user's standing choice for researched
+   clichés in stories: `"on"` applies them on every type, `"off"` on none. Without it, drama,
+   comedy and romance episodes apply them and other types get a recommendation. Save it with
+   `project_manage update` (pass the whole `production` block) in the turn the user states the
+   choice; never ask for it at setup. A new episode's board carries it as
+   `PRODUCTION.clicheUse` ([cliché use](../storyboard/references/cliche-use.md)).
 
 Complete each model selection and its credential step below before asking for the next category.
 Do not batch video, image and speech choices ahead of credential setup. Reuse

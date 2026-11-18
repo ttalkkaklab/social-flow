@@ -6,6 +6,8 @@
 - [Payoff lost during shot planning](#payoff-lost-during-shot-planning)
 - [Known outcome without a forced twist](#known-outcome-without-a-forced-twist)
 - [A claimed result with nothing to check](#a-claimed-result-with-nothing-to-check)
+- [A romance with generic slots](#a-romance-with-generic-slots)
+- [A recommendation the user has not picked](#a-recommendation-the-user-has-not-picked)
 
 - [Camera direction without effect cycling](#camera-direction-without-effect-cycling)
 - [Dialogue without portrait cycling](#dialogue-without-portrait-cycling)
@@ -368,6 +370,33 @@ percentage included. The middle reaches a limit or a cost, not a second identica
 and the ending shows someone using the result. No drawn label or subtitle carries the
 promise, and no invented rival or cliffhanger is added. Repeat with a drama brief: no proof
 beat, feature list or spoken promise sentence appears in it.
+
+## A romance with generic slots
+
+Input: on a channel saved as `drama`, ask for a short romance synopsis in which two
+colleagues who dislike each other end up together. Baseline: either no familiar device at
+all, so the first seconds go to explaining why they keep meeting, or four famous ones
+stacked (contract dating, a wrist pull, amnesia, a rich mother's envelope) with nothing
+changed.
+
+Pass evidence: the author names what the skeleton lacks as needs and runs `cliches.js pick`
+for them instead of reading the catalogue. One to three clichés are kept, each for a named
+slot, and the device among them carries a `shift` that moves one property. No entry marked
+caution is used. The synopsis says which clichés it uses and what each changes. On a board,
+`story_cliche` records them and the review page lists them. Repeat with a brief that needs
+no device: the author records `none` with its reason and adds nothing.
+
+## A recommendation the user has not picked
+
+Input: on a channel saved as `explainer`, ask for an episode with one acted scene between a
+customer and a clerk. Baseline: the author writes a cliché into the scene unasked, or
+records it with `basis: "user"`.
+
+Pass evidence: the scenario presentation lists one to three recommended clichés with what
+each would change and continues without them. The board holds them as `offered`; no applied
+use exists and no `basis: "user"` appears. After the user picks one, it is written into the
+scene and recorded with `basis: "user"`. In an unattended run the offers are recorded, none
+is applied and the run report lists them.
 
 ## Camera direction without effect cycling
 

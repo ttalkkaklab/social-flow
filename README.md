@@ -56,6 +56,13 @@ window (Reels, 3 s), or on long-form the title and thumbnail first and a first 3
 confirms and widens them. `story_sequence` records it as `STORY.opening`, and every story-first
 board write prints a reading of it without refusing anything
 ([research](docs/research/2026-11-18-opening-hooks/index.html)).
+[Cliché use](skills/storyboard/references/cliche-use.md) makes researched clichés story material.
+A drama, comedy or romance episode names what its story is missing, takes a few candidates for
+that need from `skills/storyboard/references/cliches.js pick`, moves one property of the one it
+keeps and records the choice with `story_cliche`; every other type gets a recommendation and
+applies only what the user picks. The review page shows the record above the shots and on each
+scene, and none of it scores or blocks
+([research](docs/research/2026-11-18-kdrama-cliches/index.html)).
 For an episode that makes a claim (explainer, tutorial, review, advertisement) the same pass
 asks for one result promised in the viewer's words and said aloud, proof the viewer can check
 on screen and an ending where someone uses it. `sequence.question`/`payoff` hold the doubt and
@@ -737,10 +744,10 @@ social-flow/
 ├── mcp.json                     #   its stdio server entry
 ├── manifest.json                # Claude Desktop extension (.mcpb) manifest — .mcpbignore picks the contents
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 156 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 157 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
-│       ├── tools.ts             # tool definitions — 156 tools, including voice auditions and opt-in acting review
+│       ├── tools.ts             # tool definitions — 157 tools, including voice auditions and opt-in acting review
 │       ├── handlers.ts          # zod validation + routing
 │       ├── sns-client.ts        # Threads·IG·FB·YouTube publish/comments
 │       ├── serp-client.ts       # SerpApi (key masking + response slimming)
@@ -813,7 +820,7 @@ visual style, video ratio and format live in the workspace's `.social-flow/model
 each episode snapshots them in `.work/model-settings.json`, and `profile.md` keeps the
 channel's tone, theme and pinned character voice IDs (the speech model itself is the saved `models.speech`).
 
-## MCP tool surface (156 tools)
+## MCP tool surface (157 tools)
 
 `project_manage`: options · status · init · update · episode. Local project setup
 with genre, models, style, ratio, format and SNS records; no generation or publishing.
@@ -878,7 +885,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Existing subtitles | `facebook_captions` | List or add language tracks on an owned Facebook video/Reel without republishing; preserve existing locales and default language. |
 | Publish | `threads_publish` / `instagram_publish` / `facebook_publish` / `facebook_comment` / `youtube_publish` / `youtube_update` | Direct platform API calls — **exposed only for platforms with a credential file**, except `youtube_update`, which is always listed and errors without a token; it edits title/description/tags/visibility of an already-uploaded video and is the only way an upload goes public (`youtube_publish` starts `private`) |
 | Comment inbox | `sns_comment_inbox` / `sns_comment_reply` / `sns_comment_moderate` | Cross-platform normalized inbox · replies · hiding (no deletes). Inbox and replies cover all 4 platforms; hiding excludes YouTube (its API only offers held-for-review, which means something else) |
-| Storyboard | `story_sequence` / `story_scene` / `story_shot` / `story_music` / `shot_characters` / `shot_dialogue` / `shot_icons` / `shot_image` / `shot_prompt` / `storyboard_read` / `storyboard_apply` / `storyboard_check` / `scenario_check` | A new board is written in order: sequences → scenes → one-sentence shot stories, then each shot's characters (two at most, with a third cast member in view as a bystander and unnamed people as extras) → each character's lines, then each scene's music decision (`story_music`: score with a cue or none, each with its reason), then the icon-row attributes, then each shot's start (and first_last end) image composed from its sheet panels, place and props — a place whose sheet names a built set starts from that set rendered in Blender at the shot's size and angle — then its English video prompt (`story_order` refuses a layer before its parent). Inside an episode `story_sequence` starts the board, and `story_scene`/`story_shot` continue a story-first one, only once `storyboard/cast.json` names its characters, each with an existing `assets/characters/<id>/identity.md` and, unless `voiceOnly`, its face, front and back sheet panels (`cast_required` · `cast_source_missing` · `character_panel_missing`). `storyboard_read.boundaryReview` exposes every playback join as unverified editorial evidence; follow [shot boundary decisions](skills/storyboard/references/shot-boundaries.md) before images. It never merges or blocks production. The episode board as sequences → scenes → shots (`window.STRUCTURE` beside the flat `SCENES` produce reads), plus the scenario input contract. `read` returns the tree at four levels; `apply` writes or patches the board and refuses only an unreadable board or a story-order violation; `storyboard_check` runs the structure rules plus the full `check-scenes.js` contract; `scenario_check` runs S1–S12 on `candidates/` or `scenario.md` and returns the checker JSON. Local files only — the board rules live in [structure-contract.js](skills/storyboard/references/structure-contract.js), shared with the checker and approval page |
+| Storyboard | `story_sequence` / `story_scene` / `story_shot` / `story_cliche` / `story_music` / `shot_characters` / `shot_dialogue` / `shot_icons` / `shot_image` / `shot_prompt` / `storyboard_read` / `storyboard_apply` / `storyboard_check` / `scenario_check` | A new board is written in order: sequences → scenes → one-sentence shot stories (`story_cliche` records the researched clichés the story uses, recommends or declines in `window.CLICHES`: applied by default on drama, comedy and romance, on other types only what the user picked), then each shot's characters (two at most, with a third cast member in view as a bystander and unnamed people as extras) → each character's lines, then each scene's music decision (`story_music`: score with a cue or none, each with its reason), then the icon-row attributes, then each shot's start (and first_last end) image composed from its sheet panels, place and props — a place whose sheet names a built set starts from that set rendered in Blender at the shot's size and angle — then its English video prompt (`story_order` refuses a layer before its parent). Inside an episode `story_sequence` starts the board, and `story_scene`/`story_shot` continue a story-first one, only once `storyboard/cast.json` names its characters, each with an existing `assets/characters/<id>/identity.md` and, unless `voiceOnly`, its face, front and back sheet panels (`cast_required` · `cast_source_missing` · `character_panel_missing`). `storyboard_read.boundaryReview` exposes every playback join as unverified editorial evidence; follow [shot boundary decisions](skills/storyboard/references/shot-boundaries.md) before images. It never merges or blocks production. The episode board as sequences → scenes → shots (`window.STRUCTURE` beside the flat `SCENES` produce reads), plus the scenario input contract. `read` returns the tree at four levels; `apply` writes or patches the board and refuses only an unreadable board or a story-order violation; `storyboard_check` runs the structure rules plus the full `check-scenes.js` contract; `scenario_check` runs S1–S12 on `candidates/` or `scenario.md` and returns the checker JSON. Local files only — the board rules live in [structure-contract.js](skills/storyboard/references/structure-contract.js), shared with the checker and approval page |
 | Capability | `capability_status` | What this machine has configured, grouped by capability with an "N of M" count, plus the env var that would unlock each missing provider. Call it before planning anything that spends money — otherwise a missing key only surfaces when the call fails, after the plan was built around it. Reports configuration, not reachability |
 | Check | `sns_account_check` | Batch /me check across tokens (token values never shown) |
 | Growth insights | `threads_insights` / `threads_search` | Threads insights (account/post metrics) + public keyword search — for grow-threads (`threads_manage_insights` · `threads_keyword_search` scopes) |
@@ -1253,7 +1260,7 @@ that the plugin created the project's incorrect code or settings.
 Checks were removed for speed (user directive, 2026-10-31): only the story order and the
 episode cast (2026-11-01) are enforced, and checks come back once the quality is known. An
 episode goes cast (`storyboard/cast.json`: each character's `identity.md` and, unless
-`voiceOnly`, its face, front and back panels) → story (`story_sequence` → `story_scene` → `story_shot`) → each shot's characters and lines
+`voiceOnly`, its face, front and back panels) → story (`story_sequence` → `story_scene` → `story_shot`, the cliché decision with `story_cliche`) → each shot's characters and lines
 (`shot_characters`, with each one's expression → `shot_dialogue`) → each scene's music decision (`story_music`) → icon attributes (`shot_icons`) → props and
 backgrounds → each shot's start image, and the end image a first_last shot needs
 (`shot_image`, generate-cut-images) → video prompt (`shot_prompt`) → each shot's video
