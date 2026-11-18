@@ -8,7 +8,7 @@ description: >
   then plans shots and content-led timing. Saves the local
   review board. Produce builds an approved board; autoproduce runs both unattended.
 argument-hint: "<channel> <topic or topic hint>"
-allowed-tools: ["mcp__social-flow__character_manage", "mcp__social-flow__character_panel", "mcp__plugin_social-flow_social-flow__character_manage", "mcp__plugin_social-flow_social-flow__character_panel", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "mcp__social-flow__host_review", "mcp__plugin_social-flow_social-flow__host_review", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__location_manage", "mcp__plugin_social-flow_social-flow__location_manage", "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "mcp__social-flow__story_sequence", "mcp__plugin_social-flow_social-flow__story_sequence", "mcp__social-flow__story_scene", "mcp__plugin_social-flow_social-flow__story_scene", "mcp__social-flow__story_shot", "mcp__plugin_social-flow_social-flow__story_shot", "mcp__social-flow__story_music", "mcp__plugin_social-flow_social-flow__story_music", "mcp__social-flow__shot_characters", "mcp__plugin_social-flow_social-flow__shot_characters", "mcp__social-flow__shot_dialogue", "mcp__plugin_social-flow_social-flow__shot_dialogue", "mcp__social-flow__shot_icons", "mcp__plugin_social-flow_social-flow__shot_icons", "mcp__social-flow__shot_image", "mcp__plugin_social-flow_social-flow__shot_image", "mcp__social-flow__shot_prompt", "mcp__plugin_social-flow_social-flow__shot_prompt", "mcp__social-flow__storyboard_apply", "mcp__plugin_social-flow_social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__plugin_social-flow_social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__plugin_social-flow_social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__plugin_social-flow_social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__plugin_social-flow_social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__plugin_social-flow_social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__plugin_social-flow_social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__plugin_social-flow_social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__plugin_social-flow_social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__plugin_social-flow_social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__plugin_social-flow_social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__plugin_social-flow_social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__plugin_social-flow_social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics", "mcp__plugin_social-flow_social-flow__suno_generate_lyrics"]
+allowed-tools: ["mcp__social-flow__character_manage", "mcp__social-flow__character_panel", "mcp__plugin_social-flow_social-flow__character_manage", "mcp__plugin_social-flow_social-flow__character_panel", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "mcp__social-flow__host_review", "mcp__plugin_social-flow_social-flow__host_review", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__location_manage", "mcp__plugin_social-flow_social-flow__location_manage", "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "mcp__social-flow__story_sequence", "mcp__plugin_social-flow_social-flow__story_sequence", "mcp__social-flow__story_scene", "mcp__plugin_social-flow_social-flow__story_scene", "mcp__social-flow__story_shot", "mcp__plugin_social-flow_social-flow__story_shot", "mcp__social-flow__story_music", "mcp__plugin_social-flow_social-flow__story_music", "mcp__social-flow__story_cliche", "mcp__plugin_social-flow_social-flow__story_cliche", "mcp__social-flow__shot_characters", "mcp__plugin_social-flow_social-flow__shot_characters", "mcp__social-flow__shot_dialogue", "mcp__plugin_social-flow_social-flow__shot_dialogue", "mcp__social-flow__shot_icons", "mcp__plugin_social-flow_social-flow__shot_icons", "mcp__social-flow__shot_image", "mcp__plugin_social-flow_social-flow__shot_image", "mcp__social-flow__shot_prompt", "mcp__plugin_social-flow_social-flow__shot_prompt", "mcp__social-flow__storyboard_apply", "mcp__plugin_social-flow_social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__plugin_social-flow_social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__plugin_social-flow_social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__plugin_social-flow_social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__plugin_social-flow_social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__plugin_social-flow_social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__plugin_social-flow_social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__plugin_social-flow_social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__plugin_social-flow_social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__plugin_social-flow_social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__plugin_social-flow_social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__plugin_social-flow_social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__plugin_social-flow_social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics", "mcp__plugin_social-flow_social-flow__suno_generate_lyrics"]
 ---
 For motion-graphic shots, follow [motion type selection and design](references/motion-graphics.md): persist `shot.motionGraphic` with a common `THEME.motionGraphicTheme` when the episode needs consistency and contextual `style.theme` (`auto` or an explicit channel theme), choose the type from viewer intent and available evidence, and keep style, choreography and renderer separate. Built-in abstract scenes use the installed `prepare-motion-graphic.js`; asset-dependent types retain their authored or mesh routes.
 
@@ -55,6 +55,22 @@ motives and the channel's text policy; the opening incident need not reveal the 
 When the episode makes a claim instead of resolving a relationship (explainer, tutorial,
 review, advertisement), follow the reference's claim-led section: one result promised in the
 viewer's words and said aloud, proof the viewer can check on screen, then someone using it.
+**Opening by format and platform (user directive, 2026-11-18):** then place that promise with
+[opening by format](references/opening-by-format.md). Read the board `FORMAT` and the enabled
+SNS platforms first. Short-form gets one opening for every platform, built for the earliest
+window (Reels, 3 s): the first frame shows the subject already changed or mid-action and the
+promise is complete by about 3 s. Long-form decides its title and thumbnail first; the first
+7 s confirm them and the next 20 s open a bigger question. Record the plan with
+`story_sequence` `opening`; every board write prints a reading of it and refuses nothing.
+
+**Clichés (user directive, 2026-11-18).** A drama, comedy or romance episode uses researched
+clichés as story material by default. While casting, writing the synopsis and writing scenes,
+name what the story is missing, ask `cliches.js pick` for candidates that do that job, keep
+what earns its place, move one property of it and record it with `story_cliche`, so the
+review page shows it. Every other type gets a recommendation with the scenario, and a cliché
+enters the story only when the user picks it. Follow [cliché use](references/cliche-use.md)
+for the mode, the needs, the half step, what stays out by default and the record. None is a
+valid decision; this is writing guidance, not a score.
 
 **Production order (user directive, 2026-10-31):** Follow [production order](../_shared/production-workflow.md).
 Only the story order is enforced; context, camera, image and video reviews and Blender
@@ -85,7 +101,9 @@ Scenario presentation is a progress update, not an approval request. In an inter
 session, show the premise, characters, causal sequence, ending and selection reason before
 writing the detailed board. For story-led work also state the question the viewer waits on
 to the end and, when the order of telling differs from the order of events, why. For
-claim-led work state the promised result and the scene that proves it. Continue unless the user requested selection/approval first;
+claim-led work state the promised result and the scene that proves it. Name the clichés the story
+uses and what each one changes; on a type that only recommends them, list the ones you recommend,
+which wait for the user's pick ([cliché use](references/cliche-use.md#6-recommend-then-apply-what-the-user-picks)). Continue unless the user requested selection/approval first;
 in that case wait for their answer. For an unattended run, save the same preview in
 `scenario.md` and include it in the run report. Do not invent a user approval.
 
@@ -152,6 +170,8 @@ requests included: `story_sequence` refuses to start the episode board until eve
 identity and, unless `voiceOnly`, its panels (`cast_required`, `cast_source_missing`,
 `character_panel_missing`). Cast only needed people, with specific wants and distinct speech;
 select a narrator only when the expression needs one. Do not invent existing IDs or voices.
+When the episode applies clichés, a character type is chosen here with the cast, not after the
+story is settled ([cliché use](references/cliche-use.md#3-three-places-in-the-writing-order)).
 Before shot design, complete the three sheet categories using
 [asset sheet preparation](references/asset-sheets.md). This includes one-off characters,
 story-relevant props and every background/location, not only recurring assets. Reuse actual
@@ -207,9 +227,20 @@ what each scene ends on. These are choices to make on purpose, not devices to ad
 told in order with no twist is valid, and an explainer needs no manufactured opponent.
 Before presenting the synopsis, trace its opening question, the evidence or attempts that
 change the audience's guess, the actual resolution and the response it enables. State the
-ending in the author-facing synopsis. Repair a middle that only postpones the same answer;
+ending in the author-facing synopsis. Give the opening its own paragraph: format and
+platforms, first frame, the promise and where it is paid, and on long-form the title,
+thumbnail and the bigger question by 30 s ([opening by format](references/opening-by-format.md#7-write-it-down-and-read-it-back)).
+Repair a middle that only postpones the same answer;
 do not hide the missing progression behind a teaser or an emotion label. Use ordinary prose
 or existing expectation/change/setup notes, not an added planning schema.
+On an episode that applies clichés ([cliché use](references/cliche-use.md#1-when-an-episode-uses-them)),
+make the cliché pass now: name the slots the skeleton leaves generic as needs — why these
+two keep meeting, what stands between them, how the hidden thing comes out — and run
+`node "$CLAUDE_PLUGIN_ROOT/skills/storyboard/references/cliches.js" pick --need <needs> --seed <topic>`
+for candidates. Keep what earns its place and move one property of it: who does it, what it
+costs, when it happens or who knows. Say in the synopsis which clichés it uses and what each
+changes; a synopsis-only request stops there. On other types recommend one where it would
+help and apply only what the user picks. A cliché's name never answers `necessity`.
 For a claim-led synopsis the same trace reads: the result promised, the proof and where it
 is shown, the limit or cost the middle reaches, and the use it ends on. List the spoken
 claims and drop each one the board cannot show and research cannot support
@@ -232,6 +263,15 @@ a continuous exchange with several lines. Name the visible cause, discovery or c
 behavior in these summaries before choosing the cast; do not reduce every unit to
 "A says / B answers". Revisit boundaries after the lines are written. No
 image, speech, prompt, camera or dialogue work happens in this step.
+
+Record the cliché decision on the board (user directive 2026-11-18). After the first
+`story_sequence`, call `story_cliche`: read the report's mode, then record the clichés the
+scenario settled, each with its catalogue id and its `shift`, or `none` with the reason. On a
+type that recommends, record candidates with `offered: true`, and the picked ones with
+`basis: "user"` once the user chose. When the scenes are written, send each use again with
+its `scenes`, and add the staged moments, places and line patterns chosen while writing them.
+A new board on a type that applies clichés prints the decision as undecided with every write
+until one is recorded; nothing waits for it.
 
 A scene's lines do not make its shot list (user directive 2026-11-17). Before any line, write the
 pictures that carry none: where this is and who else is there, a character's work while it is

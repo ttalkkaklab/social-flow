@@ -93,6 +93,44 @@ test('music lanes show one anchored span across scenes and label the score-free 
   assert.match(runInNewContext(source + '\nmusicLane([{i:1,s:SCENES[1]}])', context), /No score/);
 });
 
+test('the cliché strip and scene lanes show what is in the story, the user\'s pick and a recommendation', () => {
+  const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
+  const start = template.indexOf('  var CLICHES = window.CLICHES');
+  const source = template.slice(start, template.indexOf('  // Character count', start));
+  // The page's own strings, English first and Korean second in the template.
+  const strings = [...template.matchAll(/^      cliche: \{[^]*?^      \},$/gm)].map(m => runInNewContext('({' + m[0].slice(0, -1) + '})').cliche);
+  assert.equal(strings.length, 2);
+  const esc = v => String(v ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
+  const page = (CLICHES, expression, T = strings[0], STRUCTURE) => runInNewContext(source + '\n' + expression, {
+    window: { CLICHES, STRUCTURE }, T: { cliche: T }, esc, copy: esc, CONTENT: { text: s => s }, castName: id => id === 'jun' ? 'Jun' : id });
+  const record = { version: 1, uses: [
+    { id: 45, name: 'Cash envelope', layer: 'scene', need: 'obstacle', scenes: [3], shift: 'the mother is handed it', basis: 'default' },
+    { name: '<img src=x onerror=alert(1)>', need: 'status', character: 'jun', basis: 'user' },
+    { id: 9, name: 'Contract romance', need: 'bind', scenes: [3, 4], offered: true, caution: 'coercion', quote: true },
+    null, 'x', { shift: 'no id and no name' }] };
+  const lane = page(record, 'clicheLane(3)');
+  assert.match(lane, /<b>#45 Cash envelope<\/b> <small>obstacle · by default<\/small> <span class="cliche-shift">changed — the mother is handed it<\/span>/);
+  assert.match(lane, /class="cliche-chip offered caution"><b>#9 Contract romance<\/b> <small>kept together · recommended · not applied · caution · a quoted line<\/small>/);
+  assert.equal(page(record, 'clicheLane(2)'), '');
+  const strip = page(record, 'clicheStrip()');
+  assert.match(strip, /Clichés <small>2 in the story · 1 recommended, waiting for your pick<\/small>/);
+  assert.match(strip, /<b>&lt;img src=x onerror=alert\(1\)&gt;<\/b> <small>status · your pick<\/small><\/span><span>Jun<\/span>/);
+  assert.match(strip, /<span>S#3, S#4<\/span>/);
+  // A scene the board no longer has is marked, and a use with no recorded basis is not given one.
+  const edited = page({ uses: [{ id: 5, name: 'Hand edit', scenes: [9, 3, 3, null, 'x', 1e21] }] }, 'clicheStrip()', strings[0], { scenes: [{ no: 3 }] });
+  assert.match(edited, /<small>basis not recorded<\/small>/);
+  assert.match(edited, /<span>S#3, S#9 <em class="cliche-missing">not on the board<\/em><\/span>/);
+  assert.doesNotMatch(strip, /<img/);
+  assert.equal((strip.match(/<li>/g) || []).length, 3, 'entries the page cannot read are skipped');
+  // An open record, a declined one, and a board with no record at all.
+  assert.match(page({ version: 1, uses: [] }, 'clicheStrip()'), /undecided — nothing is recorded yet/);
+  assert.match(page({ version: 1, none: 'one quiet exchange', uses: [] }, 'clicheStatus()'), /^none used — one quiet exchange$/);
+  assert.equal(page(undefined, 'clicheStrip()'), '');
+  assert.equal(page('yes', 'clicheStrip()'), '');
+  assert.match(page(record, 'clicheLane(4)', strings[1]), /한곳에 묶기 · 추천 · 적용 전 · 주의 · 실제 대사/);
+  assert.match(page({ uses: [] }, 'clicheStatus()', strings[1]), /^미정/);
+});
+
 test('HTML creation and refresh keep one design while preserving episode metadata', () => {
   const dir = mkdtempSync(join(tmpdir(), 'sf-board-html-'));
   try {

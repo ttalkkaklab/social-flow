@@ -47,6 +47,11 @@ in what the viewer understands. These types and advertisement make a claim: prom
 result, show proof the viewer can check and end on its use
 ([claim-led episodes](../storyboard/references/episode-anticipation.md#claim-led-episodes-one-result-promised-proof-the-viewer-can-check)).
 
+Drama and comedy, and a custom type whose detail names a drama, romance or comedy with no
+documentary, apply researched clichés by default. Every other type gets a recommendation with
+the scenario and applies only what the user picks. A saved `production.clicheUse` (`on` | `off`)
+overrides the type ([cliché use](../storyboard/references/cliche-use.md)).
+
 These are directing defaults, not quotas or score gates. In drama, never make the
 whole conversation off-screen merely because lip synchronization is inconvenient.
 A character can explicitly act as narrator, think, or read a message while visible:

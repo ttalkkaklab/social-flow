@@ -22,6 +22,7 @@ import { compileVideoPrompt } from './video-prompt.js';
 import { refreshVideoReview } from './video-review.js';
 
 const speechSpanContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/speech-span.js') as {
+  inspect(file: string): { status: string; peakDb?: number; span: { startSeconds: number; endSeconds: number; clipSeconds: number; leadSilenceSeconds: number; tailSilenceSeconds: number } | null };
   measure(file: string): { startSeconds: number; endSeconds: number; clipSeconds: number; leadSilenceSeconds: number; tailSilenceSeconds: number } | null;
   suggestTrim(span: unknown, scene: unknown): { edit: { in?: number; out?: number }; durationSeconds: number } | null;
 };
@@ -302,6 +303,11 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
       const bytes = readFileSync(videoPath);
       if (!bytes.length) throw new Error('Video file is empty');
       const native = plan.mode === 'native';
+      const nativeAudio = native ? speechSpanContract().inspect(videoPath) : undefined;
+      if (nativeAudio?.status === 'missing')
+        throw new Error('native_speech_missing: the video has no audio stream; regenerate the missing dialogue before attaching this clip');
+      if (nativeAudio?.status === 'silent')
+        throw new Error('native_speech_silent: the decoded soundtrack is below -60 dBFS throughout; regenerate the missing dialogue before attaching this clip');
       const sound = object(scene.sound);
       if (native && sound.audioSource === 'speech') throw new Error('Native video speech lives in the clip soundtrack; sound.audioSource speech would drop it');
       const audio = selected.map(({line}) => {
@@ -355,11 +361,14 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
       if (native) {
         // Where the line sits in the clip: MSR often opens and closes on silent acting. Reported with a trim to listen to, never applied.
         try {
-          const span = speechSpanContract().measure(videoPath);
+          const span = nativeAudio?.span;
           if (span) {
             const trim = speechSpanContract().suggestTrim(span, scene);
             soundtrack = { ...span, method: 'audio_energy', review: 'not_reviewed', ...(trim ? { suggestedEdit: trim.edit, suggestedDurationSeconds: trim.durationSeconds,
               note: 'Silent acting surrounds the line. If the pause is not the story\'s, set these edit.in / edit.out source seconds and the shot duration with storyboard_apply; times inside the shot (sound.effects atSeconds, music starts) then count from the trimmed start. Listen first: loudness can miss a quiet first or last syllable.' } : {}) };
+            if (span.tailSilenceSeconds < 0.1) plan.warnings.push('native_speech_end_at_boundary: audio activity reaches the clip end; inspect the final words for truncation before accepting or trimming. Energy does not verify complete dialogue.');
+          } else {
+            plan.warnings.push('native_speech_audio_unverified: no sustained speech span could be measured; inspect audio presence and dialogue before accepting this clip.');
           }
         } catch { /* advisory measurement; a clip that cannot be decoded is reported elsewhere */ }
         // The clip's soundtrack carries the dialogue, so it is the card's audio.
