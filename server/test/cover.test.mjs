@@ -190,11 +190,20 @@ test('long-form renders the thumbnail and its Test & Compare variants', { skip: 
   await assert.rejects(renderCover(sb), /cover_format_changed/);
 });
 
-test('a missing preview reads stale', { skip: !chromePath() && 'no Chrome' }, async t => {
+test('a failed re-render changes nothing, and a missing preview reads stale', { skip: !chromePath() && 'no Chrome' }, async t => {
   const { dir, sb } = episode(t);
   setCover(sb, decision());
   const { render } = await renderCover(sb);
-  rmSync(join(dir, 'output', 'cover', render.previews[0]));
+  const out = join(dir, 'output', 'cover');
+  const kept = ['cover-9x16.jpg', 'render.json'].map(n => readFileSync(join(out, n)));
+  const fake = join(dir, 'failing-chrome.sh');
+  writeFileSync(fake, '#!/bin/sh\nexit 3\n', { mode: 0o755 });
+  const before = process.env.CHROME;
+  process.env.CHROME = fake;
+  try { await assert.rejects(renderCover(sb), /cover_chrome_failed/); } finally { if (before === undefined) delete process.env.CHROME; else process.env.CHROME = before; }
+  assert.deepEqual(['cover-9x16.jpg', 'render.json'].map(n => readFileSync(join(out, n))), kept, 'a render that fails in Chrome changes nothing');
+  assert.equal(readCover(sb).status, 'fresh');
+  rmSync(join(out, render.previews[0]));
   assert.deepEqual(readCover(sb).changed, ['files']);
 });
 
