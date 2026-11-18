@@ -5,6 +5,7 @@
 - [Mutual affection with an inert middle](#mutual-affection-with-an-inert-middle)
 - [Payoff lost during shot planning](#payoff-lost-during-shot-planning)
 - [Known outcome without a forced twist](#known-outcome-without-a-forced-twist)
+- [A claimed result with nothing to check](#a-claimed-result-with-nothing-to-check)
 
 - [Camera direction without effect cycling](#camera-direction-without-effect-cycling)
 - [Dialogue without portrait cycling](#dialogue-without-portrait-cycling)
@@ -352,6 +353,21 @@ while giving essential information when needed. The author can name what the vie
 next without adding a villain, fabricated fact, deceptive withholding or cliffhanger.
 Quiet relief and necessary acceptance stay; repeated padding does not. No fixed beat count,
 timestamp formula, retention guarantee or automatic reviewer is added.
+
+## A claimed result with nothing to check
+
+Input: ask for a 45-second synopsis introducing a tool that turns one typed line into a
+finished draft. Baseline: the opening promise is followed by a montage of what the tool
+could make, a list of features, a quality percentage with no source and a closing request
+that points to the wrong place.
+
+Pass evidence: the first spoken line names one result in words the viewer would use. One
+case is followed from what is typed to what comes out, and the typed input can be found in
+the output held on screen. Claims with no picture and no source are gone, the unsourced
+percentage included. The middle reaches a limit or a cost, not a second identical success,
+and the ending shows someone using the result. No drawn label or subtitle carries the
+promise, and no invented rival or cliffhanger is added. Repeat with a drama brief: no proof
+beat, feature list or spoken promise sentence appears in it.
 
 ## Camera direction without effect cycling
 

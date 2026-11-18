@@ -127,7 +127,7 @@ export function techniqueContract(): TechniqueContract {
 }
 interface CopiedReason { field: string; text: string; shots: string[] }
 /** The direction plan as counts and the sentences that repeat as a reason (shot-direction.js). */
-function shotDirection(): { facts(board: unknown): Record<string, unknown>; digest(board: unknown): string[]; copiedReasons(scenes: unknown, least?: number): CopiedReason[]; held(scenes: unknown): { sizes: Record<string, number>; wideWithoutReason: string[] } } {
+function shotDirection(): { facts(board: unknown): Record<string, unknown>; digest(board: unknown): string[]; playbackEntries(scenes: unknown[]): Array<{ s: Shot }>; copiedReasons(scenes: unknown, least?: number): CopiedReason[]; held(scenes: unknown): { sizes: Record<string, number>; wideWithoutReason: string[] } } {
   return loadFromHere(join(REFERENCES_DIR, 'shot-direction.js')) as ReturnType<typeof shotDirection>;
 }
 export const techniqueSelectionSchema = z.array(z.object({
@@ -205,8 +205,8 @@ export const sequenceSchema = z
     id: nonEmpty.describe('Stable id, e.g. "q1"'),
     title: z.string().optional().describe('The heading the approval page draws'),
     purpose: z.string().optional().describe('The one purpose that binds these scenes — two purposes are two sequences'),
-    question: nonEmpty.optional().describe('The dramatic question this stretch opens'),
-    payoff: z.number().int().positive().optional().describe('The scene number that answers the question'),
+    question: nonEmpty.optional().describe('The question this stretch opens: a dramatic one, or on a claim-led episode whether the promised result is real'),
+    payoff: z.number().int().positive().optional().describe('The scene number that answers the question or shows the proof'),
     scenes: z.array(z.number().int().positive()).describe('Scene numbers in playback order'),
   })
   .strict();
@@ -703,7 +703,7 @@ export interface ApplyResult {
   sequences: number;
   synced: number;
   findings: Finding[];
-  /** The whole board as a few counted lines (shot-direction.js digest), printed before the findings. */
+  /** The whole board as a few counted lines (shot-direction.js digest) and when its first line starts, printed before the findings. */
   board?: string[];
 }
 
@@ -971,6 +971,32 @@ function editImpact(before: Board, after: Board): Finding[] {
 }
 
 /** storyboard_apply — read, patch, validate, write unless a violation or a dry run. */
+/** When the first spoken line starts, from the stored shot lengths before it and its shot's planned performance.
+ *  Nothing is drawn over video, so a promise reaches the viewer as speech (episode-anticipation.md, claim-led
+ *  episodes). A reading of the plan: empty when no line is written or a length before it is unknown; throws on a
+ *  performance it cannot order, which the caller reports as no line. */
+export function firstLineReading(win: Board): string[] {
+  const order = shotDirection().playbackEntries(win.SCENES ?? []).map(({ s }) => s);
+  const at = order.findIndex((shot) => shot.narration?.length);
+  if (at < 0) return [];
+  const lengths = order.slice(0, at).map((shot) => shot.duration);
+  if (!lengths.every((n): n is number => typeof n === 'number' && Number.isFinite(n) && n > 0)) return [];
+  const shot = order[at];
+  const acting = loadFromHere(join(PLUGIN_ROOT, 'skills', '_shared', 'scene-acting.js')) as {
+    planScenePerformance(shot: Shot, duration: (line: { estimatedSeconds?: number; tts?: string }) => number | null): {
+      performance: Array<{ kind?: string; speechStartSeconds?: number | null }>; durationSeconds: number | null };
+    estimateSpeechSeconds(text: unknown): number | null;
+  };
+  const plan = acting.planScenePerformance(shot, (line) => typeof line.estimatedSeconds === 'number' ? line.estimatedSeconds : acting.estimateSpeechSeconds(line.tts));
+  const start = plan.performance.find((event) => event.kind !== 'action')?.speechStartSeconds;
+  const round = (n: number) => Math.round(n * 10) / 10;
+  const excess = typeof shot.duration === 'number' && plan.durationSeconds !== null ? round(shot.duration - plan.durationSeconds) : 0;
+  return [`first spoken line: ${shot.id ?? `shot ${at + 1}`}, about ${round(lengths.reduce((sum, n) => sum + n, 0) + (start ?? 0))} s in`
+    + (typeof start === 'number' ? '' : ' or later (an action before it has no length)')
+    // A voiceover line is placed by its composed TTS; only a line the video model voices is pushed back by the spare length.
+    + (excess > 0.5 && shot.narration?.[0]?.delivery !== 'voiceover' ? ` — that shot's length holds ${excess} s beyond its performance; a natively voiced clip plays them as silence, mostly before the line` : '')];
+}
+
 export function applyStoryboard(args: StoryboardApplyArgs, opts: { outline?: boolean } = {}): ApplyResult {
   const file = scenesPath(args.path);
   const exists = existsSync(file);
@@ -1036,11 +1062,12 @@ export function applyStoryboard(args: StoryboardApplyArgs, opts: { outline?: boo
   }
   const bad = findings.some((f) => f.level === 'bad');
   const st = next.STRUCTURE;
+  // Reports only, each on its own: a board one of them cannot read still gets written and still prints the other.
+  const digest = () => shotDirection().digest(next), firstLine = () => firstLineReading(next);
   const result: ApplyResult = {
     file, written: false, created: !exists, approvalDropped: header.some((h) => /^\/\/\s*approved:/.test(h)),
     shots: (next.SCENES ?? []).length, scenes: st ? st.scenes.length : 0, sequences: st ? st.sequences.length : 0,
-    // A report only: a board it cannot read still gets written.
-    synced, findings, board: (() => { try { return shotDirection().digest(next); } catch { return []; } })(),
+    synced, findings, board: [digest, firstLine].flatMap((read) => { try { return read(); } catch { return []; } }),
   };
   if (bad || args.dryRun) return result;
   // Same-directory temp file + rename: a crash mid-write never leaves a truncated scenes.js behind.
@@ -1076,8 +1103,8 @@ export const storySequenceSchema = z.object({
     id: nonEmpty.describe('Stable id, e.g. "q1"'),
     title: nonEmpty.describe('The heading the approval page draws'),
     purpose: nonEmpty.describe('The one purpose that binds its scenes'),
-    question: nonEmpty.optional().describe('The dramatic question this stretch opens'),
-    payoff: z.number().int().positive().optional().describe('The scene number that answers the question'),
+    question: nonEmpty.optional().describe('The question this stretch opens: a dramatic one, or on a claim-led episode whether the promised result is real'),
+    payoff: z.number().int().positive().optional().describe('The scene number that answers the question or shows the proof'),
   }).strict()).min(1),
 }).strict();
 export const storySceneSchema = z.object({

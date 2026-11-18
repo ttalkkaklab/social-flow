@@ -52,6 +52,9 @@ Read the channel's chosen opening format. When it calls for a provocative openin
 rewind, follow the reference's opening procedure: consequential event, recipient reaction,
 clear earlier-time cue, enacted context and one catch-up into new action. Preserve held
 motives and the channel's text policy; the opening incident need not reveal the ending.
+When the episode makes a claim instead of resolving a relationship (explainer, tutorial,
+review, advertisement), follow the reference's claim-led section: one result promised in the
+viewer's words and said aloud, proof the viewer can check on screen, then someone using it.
 
 **Production order (user directive, 2026-10-31):** Follow [production order](../_shared/production-workflow.md).
 Only the story order is enforced; context, camera, image and video reviews and Blender
@@ -81,7 +84,8 @@ for the user's approval (`video_approve`); do not jump from a text plan directly
 Scenario presentation is a progress update, not an approval request. In an interactive
 session, show the premise, characters, causal sequence, ending and selection reason before
 writing the detailed board. For story-led work also state the question the viewer waits on
-to the end and, when the order of telling differs from the order of events, why. Continue unless the user requested selection/approval first;
+to the end and, when the order of telling differs from the order of events, why. For
+claim-led work state the promised result and the scene that proves it. Continue unless the user requested selection/approval first;
 in that case wait for their answer. For an unattended run, save the same preview in
 `scenario.md` and include it in the run report. Do not invent a user approval.
 
@@ -206,6 +210,10 @@ change the audience's guess, the actual resolution and the response it enables. 
 ending in the author-facing synopsis. Repair a middle that only postpones the same answer;
 do not hide the missing progression behind a teaser or an emotion label. Use ordinary prose
 or existing expectation/change/setup notes, not an added planning schema.
+For a claim-led synopsis the same trace reads: the result promised, the proof and where it
+is shown, the limit or cost the middle reaches, and the use it ends on. List the spoken
+claims and drop each one the board cannot show and research cannot support
+([claim-led episodes](references/episode-anticipation.md#claim-led-episodes-one-result-promised-proof-the-viewer-can-check)).
 For a tension-led revision, change a consequential choice, the cost of an available
 alternative or who can use a secret. Carry the same mechanism from synopsis to performed
 scenes to visible shot evidence using that reference's handoff table. Stronger adjectives,
@@ -215,8 +223,8 @@ unmotivated violence and a surprise with no prior cause do not revise the story.
 
 **Story first, one layer at a time (user directive, 2026-10-31).** Once the scenario is
 settled, the first storyboard step writes only the story: `story_sequence` (each sequence's
-title and purpose, and for story-led work the `question` it holds open with the `payoff`
-scene that answers it) → `story_scene` (place, time, event and a one- or two-sentence summary,
+title and purpose, and for story-led and claim-led work the `question` it holds open with the
+`payoff` scene that answers it or shows its proof) → `story_scene` (place, time, event and a one- or two-sentence summary,
 inside its sequence, with optional `turn`, `charge` and `out`) → `story_shot` (each shot as one sentence of story in its scene; a
 revised shot given another scene moves to the end of that scene). These are provisional
 performance units, not one unit per sentence, gesture or speaker turn. One summary may cover
@@ -383,6 +391,9 @@ appearance, not meaning. Use the existing shot info/reason and opening/action fi
 Inspect the complete cut sequence and episode-wide repetition using the linked grounding procedure; a representative image does not cover a multi-cut block.
 Check pictured evidence separately from what the voice explains, including deliberate
 context or reaction shots. A coherent voice track cannot certify the storyboard images.
+On a claim-led board, plan the proof as its own shots: what went in and what came out in
+one readable view or two adjacent ones, held for the time it takes to read. A screen that
+needs pointing at takes the HTML slide route; nothing is drawn over the recording.
 
 Use [scenes schema](references/scenes-schema.md) for data shapes and supported renderer
 fields. For new v2 stories this workflow replaces the schema's historical writing quotas,

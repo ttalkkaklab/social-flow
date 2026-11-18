@@ -78,6 +78,23 @@ The opening incident may precede its causes without revealing a held motive or c
 Honor an explicitly requested time label as a scoped text exception; it does not authorize
 dialogue subtitles. This is writing guidance, not an automatic score or generation gate.
 
+## Promise and proof (user directive, 2026-11-18)
+
+Episode anticipation was written for acted stories; an episode that makes a claim (explainer,
+tutorial, review, advertisement) had one sentence. Such an episode promises one result in the
+viewer's words, says it aloud in the opening because nothing is drawn over video, and pays
+with proof the viewer can check on screen: what went in is visible in what came out, in a
+picture only this subject could give, held long enough to read. A spoken claim with neither
+a picture nor a source comes out, unsourced numbers and absolutes included. The middle moves
+from whether it works to its limit or cost, and the ending shows someone using the result;
+an ask stays optional and names one action and the place the thing really is. Follow the
+claim-led section of `episode-anticipation.md`. `sequence.question`/`payoff` hold the
+viewer's doubt and the proof scene. Once the shots before it have lengths, every board write
+prints when the first spoken line starts, and for a natively voiced line the silence its
+shot's stored length holds. This reports and never refuses. It is writing guidance, not a score, a problem-beat requirement or a deadline for
+the proof: on the one channel studied the earliest proof had the fewest views. Evidence and
+its limits: `docs/research/2026-11-18-promise-and-proof/README.md`.
+
 ## TikTok private upload and cover (user directive, 2026-11-18)
 
 Every new TikTok publication starts private (Only you / SELF_ONLY). Edit and save

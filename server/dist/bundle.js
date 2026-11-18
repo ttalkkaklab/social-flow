@@ -117488,8 +117488,8 @@ var sequenceSchema = external_exports.object({
   id: nonEmpty.describe('Stable id, e.g. "q1"'),
   title: external_exports.string().optional().describe("The heading the approval page draws"),
   purpose: external_exports.string().optional().describe("The one purpose that binds these scenes \u2014 two purposes are two sequences"),
-  question: nonEmpty.optional().describe("The dramatic question this stretch opens"),
-  payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question"),
+  question: nonEmpty.optional().describe("The question this stretch opens: a dramatic one, or on a claim-led episode whether the promised result is real"),
+  payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question or shows the proof"),
   scenes: external_exports.array(external_exports.number().int().positive()).describe("Scene numbers in playback order")
 }).strict();
 var structureSchema = external_exports.object({
@@ -118206,6 +118206,20 @@ function editImpact(before, after) {
   }
   return findings;
 }
+function firstLineReading(win) {
+  const order = shotDirection().playbackEntries(win.SCENES ?? []).map(({ s: s2 }) => s2);
+  const at = order.findIndex((shot2) => shot2.narration?.length);
+  if (at < 0) return [];
+  const lengths = order.slice(0, at).map((shot2) => shot2.duration);
+  if (!lengths.every((n) => typeof n === "number" && Number.isFinite(n) && n > 0)) return [];
+  const shot = order[at];
+  const acting = loadFromHere2(join12(PLUGIN_ROOT, "skills", "_shared", "scene-acting.js"));
+  const plan2 = acting.planScenePerformance(shot, (line) => typeof line.estimatedSeconds === "number" ? line.estimatedSeconds : acting.estimateSpeechSeconds(line.tts));
+  const start = plan2.performance.find((event) => event.kind !== "action")?.speechStartSeconds;
+  const round2 = (n) => Math.round(n * 10) / 10;
+  const excess = typeof shot.duration === "number" && plan2.durationSeconds !== null ? round2(shot.duration - plan2.durationSeconds) : 0;
+  return [`first spoken line: ${shot.id ?? `shot ${at + 1}`}, about ${round2(lengths.reduce((sum, n) => sum + n, 0) + (start ?? 0))} s in` + (typeof start === "number" ? "" : " or later (an action before it has no length)") + (excess > 0.5 && shot.narration?.[0]?.delivery !== "voiceover" ? ` \u2014 that shot's length holds ${excess} s beyond its performance; a natively voiced clip plays them as silence, mostly before the line` : "")];
+}
 function applyStoryboard(args, opts = {}) {
   const file = scenesPath(args.path);
   const exists = existsSync24(file);
@@ -118273,6 +118287,7 @@ function applyStoryboard(args, opts = {}) {
   }
   const bad = findings.some((f3) => f3.level === "bad");
   const st = next.STRUCTURE;
+  const digest5 = () => shotDirection().digest(next), firstLine = () => firstLineReading(next);
   const result = {
     file,
     written: false,
@@ -118281,16 +118296,15 @@ function applyStoryboard(args, opts = {}) {
     shots: (next.SCENES ?? []).length,
     scenes: st ? st.scenes.length : 0,
     sequences: st ? st.sequences.length : 0,
-    // A report only: a board it cannot read still gets written.
     synced,
     findings,
-    board: (() => {
+    board: [digest5, firstLine].flatMap((read4) => {
       try {
-        return shotDirection().digest(next);
+        return read4();
       } catch {
         return [];
       }
-    })()
+    })
   };
   if (bad || args.dryRun) return result;
   const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
@@ -118323,8 +118337,8 @@ var storySequenceSchema = external_exports.object({
     id: nonEmpty.describe('Stable id, e.g. "q1"'),
     title: nonEmpty.describe("The heading the approval page draws"),
     purpose: nonEmpty.describe("The one purpose that binds its scenes"),
-    question: nonEmpty.optional().describe("The dramatic question this stretch opens"),
-    payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question")
+    question: nonEmpty.optional().describe("The question this stretch opens: a dramatic one, or on a claim-led episode whether the promised result is real"),
+    payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question or shows the proof")
   }).strict()).min(1)
 }).strict();
 var storySceneSchema = external_exports.object({
@@ -127955,8 +127969,8 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
           id: { type: "string", description: 'Stable id, e.g. "q1"' },
           title: { type: "string", description: "The heading the review page draws" },
           purpose: { type: "string", description: "The one purpose that binds its scenes; two purposes are two sequences" },
-          question: { type: "string", description: "Story-led work: the one question the viewer holds across these scenes \u2014 specific and answerable (who, why, how, whether)" },
-          payoff: { type: "integer", minimum: 1, description: "The scene number that answers the question \u2014 a later scene of this sequence" }
+          question: { type: "string", description: "The one question the viewer holds across these scenes \u2014 specific and answerable (who, why, how, whether). Claim-led work (explainer, tutorial, review, advertisement): whether the promised result is real" },
+          payoff: { type: "integer", minimum: 1, description: "The scene number that answers the question or shows the proof \u2014 a later scene of this sequence" }
         } } }
       },
       required: ["path", "sequences"]

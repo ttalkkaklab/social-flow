@@ -37,6 +37,7 @@ import {
   writeStoryShots,
   storyMusicSchema,
   writeStoryMusic,
+  firstLineReading,
 } from '../dist/storyboard.js';
 import * as storyboardImages from '../dist/storyboard.js';
 import { TOOLS } from '../dist/tools.js';
@@ -1555,6 +1556,25 @@ describe('storyboard_read inspection', () => {
       assert.equal(orphan.selectedShot.playbackPosition, null);
       assert.equal(orphan.selectedShot.previous, null);
     }, win);
+  });
+});
+
+describe('first spoken line reading', () => {
+  const line = (extra = {}) => ({ id: 'l1', speaker: 'a', delivery: 'on_screen', tts: 'x', estimatedSeconds: 2, ...extra });
+  it('adds the lengths before the first line to its lead-in and names the silence a longer shot holds', () => {
+    const win = { SCENES: [
+      { id: 's0001', duration: 2.5 },
+      { id: 's0002', duration: 6, narration: [line({ acting: { leadInSeconds: 0.5 } })] },
+      { id: 's0003', duration: 2, narration: [line({ id: 'l2' })] }] };
+    assert.deepEqual(firstLineReading(win), ["first spoken line: s0002, about 3 s in — that shot's length holds 3.5 s beyond its performance; "
+      + 'a natively voiced clip plays them as silence, mostly before the line']);
+    // A line that fills its shot reads as its start alone, and so does a narrator's line in a longer shot: composed TTS places it.
+    assert.deepEqual(firstLineReading({ SCENES: [{ id: 's0001', duration: 2, narration: [line()] }] }), ['first spoken line: s0001, about 0 s in']);
+    assert.deepEqual(firstLineReading({ SCENES: [{ id: 's0001', duration: 9, narration: [line({ delivery: 'voiceover' })] }] }), ['first spoken line: s0001, about 0 s in']);
+  });
+  it('prints nothing without a line or with an unknown length before it', () => {
+    assert.deepEqual(firstLineReading({ SCENES: [{ id: 's0001', duration: 3 }] }), []);
+    assert.deepEqual(firstLineReading({ SCENES: [{ id: 's0001' }, { id: 's0002', duration: 2, narration: [line()] }] }), []);
   });
 });
 
