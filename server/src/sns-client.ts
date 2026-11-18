@@ -798,6 +798,8 @@ export interface FacebookPublishInput {
   reel?: boolean;
   /** Reels only: AI-generated content label (`is_ai_generated`) — sent only when given */
   isAiGenerated?: boolean;
+  /** Absolute path of a local cover (.jpg/.png ≤10MB) set after a video post through POST /{video-id}/thumbnails */
+  thumbnailFilePath?: string;
   /** Channel (brand) slug — uses <SNS_TOKEN_DIR>/<slug>/ tokens; default tokens when omitted */
   channel?: string;
 }
@@ -925,6 +927,18 @@ export async function publishFacebook(input: FacebookPublishInput, opts?: PollOp
     captionFiles.push({ bytes: caption.bytes, locale: captionInput.locale });
   }
 
+  // The cover is checked before the post exists, like the captions: a bad file found afterwards cannot stop a public post.
+  let thumb: { bytes: Buffer; mimeType: string } | undefined;
+  if (input.thumbnailFilePath) {
+    if (!input.videoUrl) return fail(400, 'thumbnailFilePath requires videoUrl (a thumbnail belongs to a video)');
+    const mimeType = YT_THUMB_MIME_BY_EXT[extname(input.thumbnailFilePath).toLowerCase()];
+    if (!mimeType) return fail(400, `Unsupported thumbnail extension: ${input.thumbnailFilePath} (.jpg/.jpeg/.png)`);
+    let bytes: Buffer;
+    try { bytes = await readFile(input.thumbnailFilePath); } catch (e) { return fail(400, `Cannot read thumbnail file: ${e instanceof Error ? e.message : String(e)}`); }
+    if (bytes.byteLength > FB_THUMB_MAX_BYTES) return fail(400, `Thumbnail exceeds 10MB: ${input.thumbnailFilePath} (${bytes.byteLength} bytes)`);
+    thumb = { bytes, mimeType };
+  }
+
   const { token, error } = await loadTokenFile('FACEBOOK', input.channel);
   if (!token) return error!;
   // a page token's /me is the page itself
@@ -998,6 +1012,8 @@ export async function publishFacebook(input: FacebookPublishInput, opts?: PollOp
     if (warning) captionWarnings.push(`${file.locale}: ${warning}`);
   }
   const captionWarning = captionWarnings.length > 0 ? captionWarnings.join('; ') : undefined;
+  // Like the captions, a failed cover leaves a valid public post: warn, never republish.
+  const thumbnailWarning = thumb ? await setFacebookThumbnail(token, videoId ?? postId, thumb) : undefined;
 
   const permalink = await graphRequest('get', `${FB_BASE}/${videoId ?? postId}`, {
     fields: 'permalink_url',
@@ -1014,7 +1030,31 @@ export async function publishFacebook(input: FacebookPublishInput, opts?: PollOp
       ? { captionSet: !captionWarning, captionLocales: captionFiles.map((f) => f.locale) }
       : {}),
     ...(captionWarning ? { captionWarning } : {}),
+    ...(thumb ? { thumbnailSet: !thumbnailWarning } : {}),
+    ...(thumbnailWarning ? { thumbnailWarning } : {}),
   });
+}
+
+/** Facebook takes a custom video thumbnail up to 10MB (Graph API Video Thumbnails reference). */
+const FB_THUMB_MAX_BYTES = 10 * 1024 * 1024;
+/**
+ * POST /{video-id}/thumbnails with `source` and `is_preferred=true` (Page videos; whether a Reel
+ * uploaded through /video_reels takes it is unverified). Returns a warning, or undefined on success.
+ */
+async function setFacebookThumbnail(token: string, videoId: string, thumb: { bytes: Buffer; mimeType: string }): Promise<string | undefined> {
+  const form = new FormData();
+  form.set('access_token', token);
+  form.set('is_preferred', 'true');
+  form.set('source', new Blob([new Uint8Array(thumb.bytes.buffer as ArrayBuffer, thumb.bytes.byteOffset, thumb.bytes.byteLength)], { type: thumb.mimeType }),
+    thumb.mimeType === 'image/png' ? 'cover.png' : 'cover.jpg');
+  try {
+    const res = await fetch(`${FB_BASE}/${videoId}/thumbnails`, { method: 'POST', body: form, signal: AbortSignal.timeout(60_000) });
+    const body = await res.text();
+    if (res.ok && !parseJson(body)?.error) return undefined;
+    return `thumbnails ${res.status}: ${body.slice(0, 300)} — the post stands; set the cover in Meta Business Suite instead of publishing again`;
+  } catch (e) {
+    return `thumbnail upload failed: ${e instanceof Error ? e.message : String(e)} — the post stands; set the cover in Meta Business Suite instead of publishing again`;
+  }
 }
 
 export interface FacebookCommentInput {

@@ -95,7 +95,9 @@ the start image rides in the background slot, and the plain place picture stays 
 [compose-blender](../compose-blender/SKILL.md), [review-cut-images](../review-cut-images/SKILL.md)
 and [review-cut-videos](../review-cut-videos/SKILL.md) run only when the user asks for them.
 [generate-cut-images](../generate-cut-images/SKILL.md) is step 6 and
-[generate-cut-videos](../generate-cut-videos/SKILL.md) steps 7–8. Autoproduce coordinates.
+[generate-cut-videos](../generate-cut-videos/SKILL.md) steps 7–8.
+[generate-cover](../generate-cover/SKILL.md) makes the cover once shots have pictures, any time
+before publishing; it is outside the numbered order. Autoproduce coordinates.
 `storyboard_check` runs every storyboard rule when the user asks; `storyboard_apply`
 refuses only an unreadable board and the story order.
 

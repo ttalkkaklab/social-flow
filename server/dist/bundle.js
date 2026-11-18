@@ -312,7 +312,7 @@ var require_p_retry = __commonJS({
       return error2;
     };
     var isNetworkError = (errorMessage) => networkErrorMsgs.includes(errorMessage);
-    var pRetry2 = (input, options) => new Promise((resolve12, reject) => {
+    var pRetry2 = (input, options) => new Promise((resolve13, reject) => {
       options = {
         onFailedAttempt: () => {
         },
@@ -322,7 +322,7 @@ var require_p_retry = __commonJS({
       const operation = retry2.operation(options);
       operation.attempt(async (attemptNumber) => {
         try {
-          resolve12(await input(attemptNumber));
+          resolve13(await input(attemptNumber));
         } catch (error2) {
           if (!(error2 instanceof Error)) {
             reject(new TypeError(`Non-error was thrown: "${error2}". You should only throw errors.`));
@@ -856,8 +856,8 @@ var require_retry3 = __commonJS({
       }
       const delay2 = getNextRetryDelay(config3);
       err4.config.retryConfig.currentRetryAttempt += 1;
-      const backoff = config3.retryBackoff ? config3.retryBackoff(err4, delay2) : new Promise((resolve12) => {
-        setTimeout(resolve12, delay2);
+      const backoff = config3.retryBackoff ? config3.retryBackoff(err4, delay2) : new Promise((resolve13) => {
+        setTimeout(resolve13, delay2);
       });
       if (config3.onRetryAttempt) {
         await config3.onRetryAttempt(err4);
@@ -1223,7 +1223,7 @@ var require_browser = __commonJS({
   "node_modules/debug/src/browser.js"(exports, module) {
     exports.formatArgs = formatArgs;
     exports.save = save3;
-    exports.load = load10;
+    exports.load = load11;
     exports.useColors = useColors;
     exports.storage = localstorage();
     exports.destroy = /* @__PURE__ */ (() => {
@@ -1359,7 +1359,7 @@ var require_browser = __commonJS({
       } catch (error2) {
       }
     }
-    function load10() {
+    function load11() {
       let r2;
       try {
         r2 = exports.storage.getItem("debug") || exports.storage.getItem("DEBUG");
@@ -1397,7 +1397,7 @@ var require_node = __commonJS({
     exports.log = log;
     exports.formatArgs = formatArgs;
     exports.save = save3;
-    exports.load = load10;
+    exports.load = load11;
     exports.useColors = useColors;
     exports.destroy = util2.deprecate(
       () => {
@@ -1539,7 +1539,7 @@ var require_node = __commonJS({
         delete process.env.DEBUG;
       }
     }
-    function load10() {
+    function load11() {
       return process.env.DEBUG;
     }
     function init(debug) {
@@ -1633,8 +1633,8 @@ var require_helpers = __commonJS({
     function req(url, opts = {}) {
       const href = typeof url === "string" ? url : url.href;
       const req2 = (href.startsWith("https:") ? https2 : http4).request(url, opts);
-      const promise = new Promise((resolve12, reject) => {
-        req2.once("response", resolve12).once("error", reject).end();
+      const promise = new Promise((resolve13, reject) => {
+        req2.once("response", resolve13).once("error", reject).end();
       });
       req2.then = promise.then.bind(promise);
       return req2;
@@ -1811,7 +1811,7 @@ var require_parse_proxy_response = __commonJS({
     var debug_1 = __importDefault(require_src());
     var debug = (0, debug_1.default)("https-proxy-agent:parse-proxy-response");
     function parseProxyResponse(socket) {
-      return new Promise((resolve12, reject) => {
+      return new Promise((resolve13, reject) => {
         let buffersLength = 0;
         const buffers = [];
         function read4() {
@@ -1877,7 +1877,7 @@ var require_parse_proxy_response = __commonJS({
           }
           debug("got proxy server response: %o %o", firstLine, headers);
           cleanup();
-          resolve12({
+          resolve13({
             connect: {
               statusCode,
               statusText,
@@ -2119,7 +2119,7 @@ var require_ponyfill_es2018 = __commonJS({
         return new originalPromise(executor);
       }
       function promiseResolvedWith(value) {
-        return newPromise((resolve12) => resolve12(value));
+        return newPromise((resolve13) => resolve13(value));
       }
       function promiseRejectedWith(reason) {
         return originalPromiseReject(reason);
@@ -2289,8 +2289,8 @@ var require_ponyfill_es2018 = __commonJS({
         return new TypeError("Cannot " + name + " a stream using a released reader");
       }
       function defaultReaderClosedPromiseInitialize(reader) {
-        reader._closedPromise = newPromise((resolve12, reject) => {
-          reader._closedPromise_resolve = resolve12;
+        reader._closedPromise = newPromise((resolve13, reject) => {
+          reader._closedPromise_resolve = resolve13;
           reader._closedPromise_reject = reject;
         });
       }
@@ -2464,8 +2464,8 @@ var require_ponyfill_es2018 = __commonJS({
           }
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve12, reject) => {
-            resolvePromise = resolve12;
+          const promise = newPromise((resolve13, reject) => {
+            resolvePromise = resolve13;
             rejectPromise = reject;
           });
           const readRequest = {
@@ -2570,8 +2570,8 @@ var require_ponyfill_es2018 = __commonJS({
           const reader = this._reader;
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve12, reject) => {
-            resolvePromise = resolve12;
+          const promise = newPromise((resolve13, reject) => {
+            resolvePromise = resolve13;
             rejectPromise = reject;
           });
           const readRequest = {
@@ -3590,8 +3590,8 @@ var require_ponyfill_es2018 = __commonJS({
           }
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve12, reject) => {
-            resolvePromise = resolve12;
+          const promise = newPromise((resolve13, reject) => {
+            resolvePromise = resolve13;
             rejectPromise = reject;
           });
           const readIntoRequest = {
@@ -3903,10 +3903,10 @@ var require_ponyfill_es2018 = __commonJS({
           wasAlreadyErroring = true;
           reason = void 0;
         }
-        const promise = newPromise((resolve12, reject) => {
+        const promise = newPromise((resolve13, reject) => {
           stream._pendingAbortRequest = {
             _promise: void 0,
-            _resolve: resolve12,
+            _resolve: resolve13,
             _reject: reject,
             _reason: reason,
             _wasAlreadyErroring: wasAlreadyErroring
@@ -3923,9 +3923,9 @@ var require_ponyfill_es2018 = __commonJS({
         if (state === "closed" || state === "errored") {
           return promiseRejectedWith(new TypeError(`The stream (in ${state} state) is not in the writable state and cannot be closed`));
         }
-        const promise = newPromise((resolve12, reject) => {
+        const promise = newPromise((resolve13, reject) => {
           const closeRequest = {
-            _resolve: resolve12,
+            _resolve: resolve13,
             _reject: reject
           };
           stream._closeRequest = closeRequest;
@@ -3938,9 +3938,9 @@ var require_ponyfill_es2018 = __commonJS({
         return promise;
       }
       function WritableStreamAddWriteRequest(stream) {
-        const promise = newPromise((resolve12, reject) => {
+        const promise = newPromise((resolve13, reject) => {
           const writeRequest = {
-            _resolve: resolve12,
+            _resolve: resolve13,
             _reject: reject
           };
           stream._writeRequests.push(writeRequest);
@@ -4556,8 +4556,8 @@ var require_ponyfill_es2018 = __commonJS({
         return new TypeError("Cannot " + name + " a stream using a released writer");
       }
       function defaultWriterClosedPromiseInitialize(writer) {
-        writer._closedPromise = newPromise((resolve12, reject) => {
-          writer._closedPromise_resolve = resolve12;
+        writer._closedPromise = newPromise((resolve13, reject) => {
+          writer._closedPromise_resolve = resolve13;
           writer._closedPromise_reject = reject;
           writer._closedPromiseState = "pending";
         });
@@ -4593,8 +4593,8 @@ var require_ponyfill_es2018 = __commonJS({
         writer._closedPromiseState = "resolved";
       }
       function defaultWriterReadyPromiseInitialize(writer) {
-        writer._readyPromise = newPromise((resolve12, reject) => {
-          writer._readyPromise_resolve = resolve12;
+        writer._readyPromise = newPromise((resolve13, reject) => {
+          writer._readyPromise_resolve = resolve13;
           writer._readyPromise_reject = reject;
         });
         writer._readyPromiseState = "pending";
@@ -4681,7 +4681,7 @@ var require_ponyfill_es2018 = __commonJS({
         source._disturbed = true;
         let shuttingDown = false;
         let currentWrite = promiseResolvedWith(void 0);
-        return newPromise((resolve12, reject) => {
+        return newPromise((resolve13, reject) => {
           let abortAlgorithm;
           if (signal !== void 0) {
             abortAlgorithm = () => {
@@ -4826,7 +4826,7 @@ var require_ponyfill_es2018 = __commonJS({
             if (isError) {
               reject(error2);
             } else {
-              resolve12(void 0);
+              resolve13(void 0);
             }
             return null;
           }
@@ -5107,8 +5107,8 @@ var require_ponyfill_es2018 = __commonJS({
         let branch1;
         let branch2;
         let resolveCancelPromise;
-        const cancelPromise = newPromise((resolve12) => {
-          resolveCancelPromise = resolve12;
+        const cancelPromise = newPromise((resolve13) => {
+          resolveCancelPromise = resolve13;
         });
         function pullAlgorithm() {
           if (reading) {
@@ -5199,8 +5199,8 @@ var require_ponyfill_es2018 = __commonJS({
         let branch1;
         let branch2;
         let resolveCancelPromise;
-        const cancelPromise = newPromise((resolve12) => {
-          resolveCancelPromise = resolve12;
+        const cancelPromise = newPromise((resolve13) => {
+          resolveCancelPromise = resolve13;
         });
         function forwardReaderError(thisReader) {
           uponRejection(thisReader._closedPromise, (r2) => {
@@ -5980,8 +5980,8 @@ var require_ponyfill_es2018 = __commonJS({
           const writableHighWaterMark = ExtractHighWaterMark(writableStrategy, 1);
           const writableSizeAlgorithm = ExtractSizeAlgorithm(writableStrategy);
           let startPromise_resolve;
-          const startPromise = newPromise((resolve12) => {
-            startPromise_resolve = resolve12;
+          const startPromise = newPromise((resolve13) => {
+            startPromise_resolve = resolve13;
           });
           InitializeTransformStream(this, startPromise, writableHighWaterMark, writableSizeAlgorithm, readableHighWaterMark, readableSizeAlgorithm);
           SetUpTransformStreamDefaultControllerFromTransformer(this, transformer);
@@ -6074,8 +6074,8 @@ var require_ponyfill_es2018 = __commonJS({
         if (stream._backpressureChangePromise !== void 0) {
           stream._backpressureChangePromise_resolve();
         }
-        stream._backpressureChangePromise = newPromise((resolve12) => {
-          stream._backpressureChangePromise_resolve = resolve12;
+        stream._backpressureChangePromise = newPromise((resolve13) => {
+          stream._backpressureChangePromise_resolve = resolve13;
         });
         stream._backpressure = backpressure;
       }
@@ -6243,8 +6243,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const readable = stream._readable;
-        controller._finishPromise = newPromise((resolve12, reject) => {
-          controller._finishPromise_resolve = resolve12;
+        controller._finishPromise = newPromise((resolve13, reject) => {
+          controller._finishPromise_resolve = resolve13;
           controller._finishPromise_reject = reject;
         });
         const cancelPromise = controller._cancelAlgorithm(reason);
@@ -6270,8 +6270,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const readable = stream._readable;
-        controller._finishPromise = newPromise((resolve12, reject) => {
-          controller._finishPromise_resolve = resolve12;
+        controller._finishPromise = newPromise((resolve13, reject) => {
+          controller._finishPromise_resolve = resolve13;
           controller._finishPromise_reject = reject;
         });
         const flushPromise = controller._flushAlgorithm();
@@ -6301,8 +6301,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const writable = stream._writable;
-        controller._finishPromise = newPromise((resolve12, reject) => {
-          controller._finishPromise_resolve = resolve12;
+        controller._finishPromise = newPromise((resolve13, reject) => {
+          controller._finishPromise_resolve = resolve13;
           controller._finishPromise_reject = reject;
         });
         const cancelPromise = controller._cancelAlgorithm(reason);
@@ -8253,7 +8253,7 @@ import zlib from "node:zlib";
 import Stream2, { PassThrough as PassThrough2, pipeline as pump } from "node:stream";
 import { Buffer as Buffer3 } from "node:buffer";
 async function fetch2(url, options_) {
-  return new Promise((resolve12, reject) => {
+  return new Promise((resolve13, reject) => {
     const request = new Request2(url, options_);
     const { parsedURL, options } = getNodeRequestOptions(request);
     if (!supportedSchemas.has(parsedURL.protocol)) {
@@ -8262,7 +8262,7 @@ async function fetch2(url, options_) {
     if (parsedURL.protocol === "data:") {
       const data = dist_default(request.url);
       const response2 = new Response2(data, { headers: { "Content-Type": data.typeFull } });
-      resolve12(response2);
+      resolve13(response2);
       return;
     }
     const send = (parsedURL.protocol === "https:" ? https : http2).request;
@@ -8384,7 +8384,7 @@ async function fetch2(url, options_) {
             if (responseReferrerPolicy) {
               requestOptions2.referrerPolicy = responseReferrerPolicy;
             }
-            resolve12(fetch2(new Request2(locationURL, requestOptions2)));
+            resolve13(fetch2(new Request2(locationURL, requestOptions2)));
             finalize();
             return;
           }
@@ -8417,7 +8417,7 @@ async function fetch2(url, options_) {
       const codings = headers.get("Content-Encoding");
       if (!request.compress || request.method === "HEAD" || codings === null || response_.statusCode === 204 || response_.statusCode === 304) {
         response = new Response2(body, responseOptions);
-        resolve12(response);
+        resolve13(response);
         return;
       }
       const zlibOptions = {
@@ -8431,7 +8431,7 @@ async function fetch2(url, options_) {
           }
         });
         response = new Response2(body, responseOptions);
-        resolve12(response);
+        resolve13(response);
         return;
       }
       if (codings === "deflate" || codings === "x-deflate") {
@@ -8455,12 +8455,12 @@ async function fetch2(url, options_) {
             });
           }
           response = new Response2(body, responseOptions);
-          resolve12(response);
+          resolve13(response);
         });
         raw.once("end", () => {
           if (!response) {
             response = new Response2(body, responseOptions);
-            resolve12(response);
+            resolve13(response);
           }
         });
         return;
@@ -8472,11 +8472,11 @@ async function fetch2(url, options_) {
           }
         });
         response = new Response2(body, responseOptions);
-        resolve12(response);
+        resolve13(response);
         return;
       }
       response = new Response2(body, responseOptions);
-      resolve12(response);
+      resolve13(response);
     });
     writeToStream(request_, request).catch(reject);
   });
@@ -14544,7 +14544,7 @@ var require_jwtaccess = __commonJS({
         }
       }
       fromStreamAsync(inputStream) {
-        return new Promise((resolve12, reject) => {
+        return new Promise((resolve13, reject) => {
           if (!inputStream) {
             reject(new Error("Must pass in a stream containing the service account auth settings."));
           }
@@ -14553,7 +14553,7 @@ var require_jwtaccess = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              resolve12();
+              resolve13();
             } catch (err4) {
               reject(err4);
             }
@@ -14792,7 +14792,7 @@ var require_jwtclient = __commonJS({
         }
       }
       fromStreamAsync(inputStream) {
-        return new Promise((resolve12, reject) => {
+        return new Promise((resolve13, reject) => {
           if (!inputStream) {
             throw new Error("Must pass in a stream containing the service account auth settings.");
           }
@@ -14801,7 +14801,7 @@ var require_jwtclient = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              resolve12();
+              resolve13();
             } catch (e2) {
               reject(e2);
             }
@@ -14934,7 +14934,7 @@ var require_refreshclient = __commonJS({
         }
       }
       async fromStreamAsync(inputStream) {
-        return new Promise((resolve12, reject) => {
+        return new Promise((resolve13, reject) => {
           if (!inputStream) {
             return reject(new Error("Must pass in a stream containing the user refresh token."));
           }
@@ -14943,7 +14943,7 @@ var require_refreshclient = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              return resolve12();
+              return resolve13();
             } catch (err4) {
               return reject(err4);
             }
@@ -16776,7 +16776,7 @@ var require_pluggable_auth_handler = __commonJS({
        * @return A promise that resolves with the executable response.
        */
       retrieveResponseFromExecutable(envMap) {
-        return new Promise((resolve12, reject) => {
+        return new Promise((resolve13, reject) => {
           const child = childProcess.spawn(this.commandComponents[0], this.commandComponents.slice(1), {
             env: { ...process.env, ...Object.fromEntries(envMap) }
           });
@@ -16798,7 +16798,7 @@ var require_pluggable_auth_handler = __commonJS({
               try {
                 const responseJson2 = JSON.parse(output2);
                 const response = new executable_response_1.ExecutableResponse(responseJson2);
-                return resolve12(response);
+                return resolve13(response);
               } catch (error2) {
                 if (error2 instanceof executable_response_1.ExecutableResponseError) {
                   return reject(error2);
@@ -17990,7 +17990,7 @@ var require_googleauth = __commonJS({
         }
       }
       fromStreamAsync(inputStream, options) {
-        return new Promise((resolve12, reject) => {
+        return new Promise((resolve13, reject) => {
           if (!inputStream) {
             throw new Error("Must pass in a stream containing the Google auth settings.");
           }
@@ -18000,7 +18000,7 @@ var require_googleauth = __commonJS({
               try {
                 const data = JSON.parse(chunks.join(""));
                 const r2 = this._cacheClientFromJSON(data, options);
-                return resolve12(r2);
+                return resolve13(r2);
               } catch (err4) {
                 if (!this.keyFilename)
                   throw err4;
@@ -18010,7 +18010,7 @@ var require_googleauth = __commonJS({
                 });
                 this.cachedCredential = client;
                 this.setGapicJWTValues(client);
-                return resolve12(client);
+                return resolve13(client);
               }
             } catch (err4) {
               return reject(err4);
@@ -18046,17 +18046,17 @@ var require_googleauth = __commonJS({
        * Run the Google Cloud SDK command that prints the default project ID
        */
       async getDefaultServiceProjectId() {
-        return new Promise((resolve12) => {
+        return new Promise((resolve13) => {
           (0, child_process_1.exec)("gcloud config config-helper --format json", (err4, stdout) => {
             if (!err4 && stdout) {
               try {
                 const projectId = JSON.parse(stdout).configuration.properties.core.project;
-                resolve12(projectId);
+                resolve13(projectId);
                 return;
               } catch (e2) {
               }
             }
-            resolve12(null);
+            resolve13(null);
           });
         });
       }
@@ -20964,7 +20964,7 @@ var require_websocket = __commonJS({
     var http4 = __require("http");
     var net = __require("net");
     var tls = __require("tls");
-    var { randomBytes: randomBytes3, createHash: createHash26 } = __require("crypto");
+    var { randomBytes: randomBytes3, createHash: createHash27 } = __require("crypto");
     var { Duplex, Readable: Readable2 } = __require("stream");
     var { URL: URL2 } = __require("url");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -21632,7 +21632,7 @@ var require_websocket = __commonJS({
           abortHandshake(websocket, socket, "Invalid Upgrade header");
           return;
         }
-        const digest5 = createHash26("sha1").update(key + GUID).digest("base64");
+        const digest5 = createHash27("sha1").update(key + GUID).digest("base64");
         if (res.headers["sec-websocket-accept"] !== digest5) {
           abortHandshake(websocket, socket, "Invalid Sec-WebSocket-Accept header");
           return;
@@ -22001,7 +22001,7 @@ var require_websocket_server = __commonJS({
     var EventEmitter = __require("events");
     var http4 = __require("http");
     var { Duplex } = __require("stream");
-    var { createHash: createHash26 } = __require("crypto");
+    var { createHash: createHash27 } = __require("crypto");
     var extension2 = require_extension();
     var PerMessageDeflate2 = require_permessage_deflate();
     var subprotocol2 = require_subprotocol();
@@ -22308,7 +22308,7 @@ var require_websocket_server = __commonJS({
           );
         }
         if (this._state > RUNNING) return abortHandshake(socket, 503);
-        const digest5 = createHash26("sha1").update(key + GUID).digest("base64");
+        const digest5 = createHash27("sha1").update(key + GUID).digest("base64");
         const headers = [
           "HTTP/1.1 101 Switching Protocols",
           "Upgrade: websocket",
@@ -26057,14 +26057,14 @@ function __asyncValues(o) {
   }, i2);
   function verb(n) {
     i2[n] = o[n] && function(v) {
-      return new Promise(function(resolve12, reject) {
-        v = o[n](v), settle(resolve12, reject, v.done, v.value);
+      return new Promise(function(resolve13, reject) {
+        v = o[n](v), settle(resolve13, reject, v.done, v.value);
       });
     };
   }
-  function settle(resolve12, reject, d, v) {
+  function settle(resolve13, reject, d, v) {
     Promise.resolve(v).then(function(v2) {
-      resolve12({ value: v2, done: d });
+      resolve13({ value: v2, done: d });
     }, reject);
   }
 }
@@ -32647,7 +32647,7 @@ function isPlainObject$1(value) {
     return false;
   }
 }
-function formEncoder(sep) {
+function formEncoder(sep2) {
   return (key, value, options) => {
     let out = "";
     const pairs = (options === null || options === void 0 ? void 0 : options.explode) ? explode(key, value) : [[key, value]];
@@ -32658,7 +32658,7 @@ function formEncoder(sep) {
       return (options === null || options === void 0 ? void 0 : options.charEncoding) === "percent" ? encodeURIComponent(v) : v;
     };
     const encodeValue = (v) => encodeString(serializeValue(v));
-    const encodedSep = encodeString(sep);
+    const encodedSep = encodeString(sep2);
     pairs.forEach(([pk, pv]) => {
       var _a4, _b;
       let tmp = "";
@@ -32998,7 +32998,7 @@ function retryIntervalFromResponse(res) {
   return 0;
 }
 async function delay(delay2) {
-  return new Promise((resolve12) => setTimeout(resolve12, delay2));
+  return new Promise((resolve13) => setTimeout(resolve13, delay2));
 }
 async function logRequest(logger, req) {
   if (!logger) {
@@ -40441,8 +40441,8 @@ var init_node = __esm({
         const url = `${websocketBaseUrl}/ws/google.ai.generativelanguage.${apiVersion}.GenerativeService.BidiGenerateMusic?key=${apiKey}`;
         let onopenResolve = () => {
         };
-        const onopenPromise = new Promise((resolve12) => {
-          onopenResolve = resolve12;
+        const onopenPromise = new Promise((resolve13) => {
+          onopenResolve = resolve13;
         });
         const callbacks = params.callbacks;
         const onopenAwaitedCallback = function() {
@@ -40648,8 +40648,8 @@ var init_node = __esm({
         }
         let onopenResolve = () => {
         };
-        const onopenPromise = new Promise((resolve12) => {
-          onopenResolve = resolve12;
+        const onopenPromise = new Promise((resolve13) => {
+          onopenResolve = resolve13;
         });
         const callbacks = params.callbacks;
         const onopenAwaitedCallback = function() {
@@ -40662,8 +40662,8 @@ var init_node = __esm({
         const messageQueue = [];
         let setupCompleteResolve = () => {
         };
-        const setupCompletePromise = new Promise((resolve12) => {
-          setupCompleteResolve = resolve12;
+        const setupCompletePromise = new Promise((resolve13) => {
+          setupCompleteResolve = resolve13;
         });
         const websocketCallbacks = {
           onopen: onopenAwaitedCallback,
@@ -47888,7 +47888,7 @@ var require_compile = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve12.call(this, root, ref);
+      let _sch = resolve13.call(this, root, ref);
       if (_sch === void 0) {
         const schema2 = (_a4 = root.localRefs) === null || _a4 === void 0 ? void 0 : _a4[ref];
         const { schemaId } = this.opts;
@@ -47915,7 +47915,7 @@ var require_compile = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve12(root, ref) {
+    function resolve13(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -48546,7 +48546,7 @@ var require_fast_uri = __commonJS({
       }
       return uri;
     }
-    function resolve12(baseURI, relativeURI, options) {
+    function resolve13(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
       const { parsed: baseParsed, malformedAuthorityOrPort: baseMalformed } = parseWithStatus(baseURI, schemelessOptions);
       const { parsed: relativeParsed, malformedAuthorityOrPort: relativeMalformed } = parseWithStatus(relativeURI, schemelessOptions);
@@ -48557,49 +48557,49 @@ var require_fast_uri = __commonJS({
       schemelessOptions.skipEscape = true;
       return serialize(resolved, schemelessOptions);
     }
-    function resolveComponent(base, relative3, options, skipNormalization) {
+    function resolveComponent(base, relative4, options, skipNormalization) {
       const target = {};
       if (!skipNormalization) {
         base = parse4(serialize(base, options), options);
-        relative3 = parse4(serialize(relative3, options), options);
+        relative4 = parse4(serialize(relative4, options), options);
       }
       options = options || {};
-      if (!options.tolerant && relative3.scheme) {
-        target.scheme = relative3.scheme;
-        target.userinfo = relative3.userinfo;
-        target.host = relative3.host;
-        target.port = relative3.port;
-        target.path = removeDotSegments(relative3.path || "");
-        target.query = relative3.query;
+      if (!options.tolerant && relative4.scheme) {
+        target.scheme = relative4.scheme;
+        target.userinfo = relative4.userinfo;
+        target.host = relative4.host;
+        target.port = relative4.port;
+        target.path = removeDotSegments(relative4.path || "");
+        target.query = relative4.query;
       } else {
-        if (relative3.userinfo !== void 0 || relative3.host !== void 0 || relative3.port !== void 0) {
-          target.userinfo = relative3.userinfo;
-          target.host = relative3.host;
-          target.port = relative3.port;
-          target.path = removeDotSegments(relative3.path || "");
-          target.query = relative3.query;
+        if (relative4.userinfo !== void 0 || relative4.host !== void 0 || relative4.port !== void 0) {
+          target.userinfo = relative4.userinfo;
+          target.host = relative4.host;
+          target.port = relative4.port;
+          target.path = removeDotSegments(relative4.path || "");
+          target.query = relative4.query;
         } else {
-          if (!relative3.path) {
+          if (!relative4.path) {
             target.path = base.path;
-            if (relative3.query !== void 0) {
-              target.query = relative3.query;
+            if (relative4.query !== void 0) {
+              target.query = relative4.query;
             } else {
               target.query = base.query;
             }
           } else {
-            if (relative3.path[0] === "/") {
-              target.path = removeDotSegments(relative3.path);
+            if (relative4.path[0] === "/") {
+              target.path = removeDotSegments(relative4.path);
             } else {
               if ((base.userinfo !== void 0 || base.host !== void 0 || base.port !== void 0) && !base.path) {
-                target.path = "/" + relative3.path;
+                target.path = "/" + relative4.path;
               } else if (!base.path) {
-                target.path = relative3.path;
+                target.path = relative4.path;
               } else {
-                target.path = base.path.slice(0, base.path.lastIndexOf("/") + 1) + relative3.path;
+                target.path = base.path.slice(0, base.path.lastIndexOf("/") + 1) + relative4.path;
               }
               target.path = removeDotSegments(target.path);
             }
-            target.query = relative3.query;
+            target.query = relative4.query;
           }
           target.userinfo = base.userinfo;
           target.host = base.host;
@@ -48607,7 +48607,7 @@ var require_fast_uri = __commonJS({
         }
         target.scheme = base.scheme;
       }
-      target.fragment = relative3.fragment;
+      target.fragment = relative4.fragment;
       return target;
     }
     function equal(uriA, uriB, options) {
@@ -48830,7 +48830,7 @@ var require_fast_uri = __commonJS({
     var fastUri = {
       SCHEMES,
       normalize: normalize2,
-      resolve: resolve12,
+      resolve: resolve13,
       resolveComponent,
       equal,
       serialize,
@@ -54522,9 +54522,9 @@ var require_dispatcher_base = __commonJS({
       }
       close(callback) {
         if (callback === void 0) {
-          return new Promise((resolve12, reject) => {
+          return new Promise((resolve13, reject) => {
             this.close((err4, data) => {
-              return err4 ? reject(err4) : resolve12(data);
+              return err4 ? reject(err4) : resolve13(data);
             });
           });
         }
@@ -54562,9 +54562,9 @@ var require_dispatcher_base = __commonJS({
           err4 = null;
         }
         if (callback === void 0) {
-          return new Promise((resolve12, reject) => {
+          return new Promise((resolve13, reject) => {
             this.destroy(err4, (err5, data) => {
-              return err5 ? reject(err5) : resolve12(data);
+              return err5 ? reject(err5) : resolve13(data);
             });
           });
         }
@@ -58061,8 +58061,8 @@ var require_promise = __commonJS({
     function createDeferredPromise() {
       let res;
       let rej;
-      const promise = new Promise((resolve12, reject) => {
-        res = resolve12;
+      const promise = new Promise((resolve13, reject) => {
+        res = resolve13;
         rej = reject;
       });
       return { promise, resolve: res, reject: rej };
@@ -59465,12 +59465,12 @@ upgrade: ${upgrade}\r
           cb();
         }
       }
-      const waitForDrain = () => new Promise((resolve12, reject) => {
+      const waitForDrain = () => new Promise((resolve13, reject) => {
         assert2(callback === null);
         if (socket[kError]) {
           reject(socket[kError]);
         } else {
-          callback = resolve12;
+          callback = resolve13;
         }
       });
       socket.on("close", onDrain).on("drain", onDrain);
@@ -60346,12 +60346,12 @@ var require_client_h2 = __commonJS({
           cb();
         }
       }
-      const waitForDrain = () => new Promise((resolve12, reject) => {
+      const waitForDrain = () => new Promise((resolve13, reject) => {
         assert2(callback === null);
         if (socket[kError]) {
           reject(socket[kError]);
         } else {
-          callback = resolve12;
+          callback = resolve13;
         }
       });
       h2stream.on("close", onDrain).on("drain", onDrain);
@@ -60667,16 +60667,16 @@ var require_client = __commonJS({
         return this[kNeedDrain] < 2;
       }
       [kClose]() {
-        return new Promise((resolve12) => {
+        return new Promise((resolve13) => {
           if (this[kSize]) {
-            this[kClosedResolve] = resolve12;
+            this[kClosedResolve] = resolve13;
           } else {
-            resolve12(null);
+            resolve13(null);
           }
         });
       }
       [kDestroy](err4) {
-        return new Promise((resolve12) => {
+        return new Promise((resolve13) => {
           const requests = this[kQueue].splice(this[kPendingIdx]);
           for (let i2 = 0; i2 < requests.length; i2++) {
             const request = requests[i2];
@@ -60689,7 +60689,7 @@ var require_client = __commonJS({
               this[kClosedResolve]();
               this[kClosedResolve] = null;
             }
-            resolve12(null);
+            resolve13(null);
           };
           if (this[kHTTPContext]) {
             this[kHTTPContext].destroy(err4, callback);
@@ -61096,8 +61096,8 @@ var require_pool_base = __commonJS({
           }
           return Promise.all(closeAll);
         } else {
-          return new Promise((resolve12) => {
-            this[kClosedResolve] = resolve12;
+          return new Promise((resolve13) => {
+            this[kClosedResolve] = resolve13;
           });
         }
       }
@@ -62216,7 +62216,7 @@ var require_socks5_proxy_agent = __commonJS({
         const proxyHost = this[kProxyUrl].hostname;
         const proxyPort = parseInt(this[kProxyUrl].port) || 1080;
         debug("creating SOCKS5 connection to", proxyHost, proxyPort);
-        const socket = await new Promise((resolve12, reject) => {
+        const socket = await new Promise((resolve13, reject) => {
           this[kConnector]({
             hostname: proxyHost,
             host: proxyHost,
@@ -62226,7 +62226,7 @@ var require_socks5_proxy_agent = __commonJS({
             if (err4) {
               reject(err4);
             } else {
-              resolve12(socket2);
+              resolve13(socket2);
             }
           });
         });
@@ -62236,14 +62236,14 @@ var require_socks5_proxy_agent = __commonJS({
           socket.destroy();
         });
         await socks5Client.handshake();
-        await new Promise((resolve12, reject) => {
+        await new Promise((resolve13, reject) => {
           const timeout = setTimeout(() => {
             reject(new Error("SOCKS5 authentication timeout"));
           }, 5e3);
           const onAuthenticated = () => {
             clearTimeout(timeout);
             socks5Client.removeListener("error", onError);
-            resolve12();
+            resolve13();
           };
           const onError = (err4) => {
             clearTimeout(timeout);
@@ -62252,14 +62252,14 @@ var require_socks5_proxy_agent = __commonJS({
           };
           if (socks5Client.state === STATES.AUTHENTICATED) {
             clearTimeout(timeout);
-            resolve12();
+            resolve13();
           } else {
             socks5Client.once("authenticated", onAuthenticated);
             socks5Client.once("error", onError);
           }
         });
         await socks5Client.connect(targetHost, targetPort);
-        await new Promise((resolve12, reject) => {
+        await new Promise((resolve13, reject) => {
           const timeout = setTimeout(() => {
             reject(new Error("SOCKS5 connection timeout"));
           }, 5e3);
@@ -62267,7 +62267,7 @@ var require_socks5_proxy_agent = __commonJS({
             debug("SOCKS5 tunnel established to", targetHost, targetPort, "via", info);
             clearTimeout(timeout);
             socks5Client.removeListener("error", onError);
-            resolve12();
+            resolve13();
           };
           const onError = (err4) => {
             clearTimeout(timeout);
@@ -62310,8 +62310,8 @@ var require_socks5_proxy_agent = __commonJS({
                       socket,
                       servername: this[kRequestTls]?.servername || targetHost
                     });
-                    await new Promise((resolve12, reject) => {
-                      finalSocket.once("secureConnect", resolve12);
+                    await new Promise((resolve13, reject) => {
+                      finalSocket.once("secureConnect", resolve13);
                       finalSocket.once("error", reject);
                     });
                   }
@@ -63393,7 +63393,7 @@ var require_readable = __commonJS({
         if (this._readableState.closeEmitted) {
           return Promise.resolve(null);
         }
-        return new Promise((resolve12, reject) => {
+        return new Promise((resolve13, reject) => {
           if (this[kContentLength] && this[kContentLength] > limit2 || this[kBytesRead] > limit2) {
             this.destroy(new AbortError2());
           }
@@ -63407,11 +63407,11 @@ var require_readable = __commonJS({
               if (signal.aborted) {
                 reject(signal.reason ?? new AbortError2());
               } else {
-                resolve12(null);
+                resolve13(null);
               }
             });
           } else {
-            this.on("close", resolve12);
+            this.on("close", resolve13);
           }
           this.on("error", noop3).on("data", () => {
             if (this[kBytesRead] > limit2) {
@@ -63439,7 +63439,7 @@ var require_readable = __commonJS({
     }
     function consume(stream, type) {
       assert2(!stream[kConsume]);
-      return new Promise((resolve12, reject) => {
+      return new Promise((resolve13, reject) => {
         if (isUnusable(stream)) {
           const rState = stream._readableState;
           if (rState.destroyed && rState.closeEmitted === false) {
@@ -63454,7 +63454,7 @@ var require_readable = __commonJS({
             stream[kConsume] = {
               type,
               stream,
-              resolve: resolve12,
+              resolve: resolve13,
               reject,
               length: 0,
               body: []
@@ -63528,18 +63528,18 @@ var require_readable = __commonJS({
       return buffer;
     }
     function consumeEnd(consume2, encoding) {
-      const { type, body, resolve: resolve12, stream, length } = consume2;
+      const { type, body, resolve: resolve13, stream, length } = consume2;
       try {
         if (type === "text") {
-          resolve12(chunksDecode(body, length, encoding));
+          resolve13(chunksDecode(body, length, encoding));
         } else if (type === "json") {
-          resolve12(JSON.parse(chunksDecode(body, length, encoding)));
+          resolve13(JSON.parse(chunksDecode(body, length, encoding)));
         } else if (type === "arrayBuffer") {
-          resolve12(chunksConcat(body, length).buffer);
+          resolve13(chunksConcat(body, length).buffer);
         } else if (type === "blob") {
-          resolve12(new Blob(body, { type: stream[kContentType] }));
+          resolve13(new Blob(body, { type: stream[kContentType] }));
         } else if (type === "bytes") {
-          resolve12(chunksConcat(body, length));
+          resolve13(chunksConcat(body, length));
         }
         consumeFinish(consume2);
       } catch (err4) {
@@ -63729,9 +63729,9 @@ var require_api_request = __commonJS({
     };
     function request(opts, callback) {
       if (callback === void 0) {
-        return new Promise((resolve12, reject) => {
+        return new Promise((resolve13, reject) => {
           request.call(this, opts, (err4, data) => {
-            return err4 ? reject(err4) : resolve12(data);
+            return err4 ? reject(err4) : resolve13(data);
           });
         });
       }
@@ -63943,9 +63943,9 @@ var require_api_stream = __commonJS({
     };
     function stream(opts, factory, callback) {
       if (callback === void 0) {
-        return new Promise((resolve12, reject) => {
+        return new Promise((resolve13, reject) => {
           stream.call(this, opts, factory, (err4, data) => {
-            return err4 ? reject(err4) : resolve12(data);
+            return err4 ? reject(err4) : resolve13(data);
           });
         });
       }
@@ -64233,9 +64233,9 @@ var require_api_upgrade = __commonJS({
     };
     function upgrade(opts, callback) {
       if (callback === void 0) {
-        return new Promise((resolve12, reject) => {
+        return new Promise((resolve13, reject) => {
           upgrade.call(this, opts, (err4, data) => {
-            return err4 ? reject(err4) : resolve12(data);
+            return err4 ? reject(err4) : resolve13(data);
           });
         });
       }
@@ -64328,9 +64328,9 @@ var require_api_connect = __commonJS({
     };
     function connect(opts, callback) {
       if (callback === void 0) {
-        return new Promise((resolve12, reject) => {
+        return new Promise((resolve13, reject) => {
           connect.call(this, opts, (err4, data) => {
-            return err4 ? reject(err4) : resolve12(data);
+            return err4 ? reject(err4) : resolve13(data);
           });
         });
       }
@@ -65604,7 +65604,7 @@ var require_snapshot_recorder = __commonJS({
   "node_modules/undici/lib/mock/snapshot-recorder.js"(exports, module) {
     "use strict";
     var { writeFile: writeFile4, readFile: readFile3, mkdir: mkdir3 } = __require("node:fs/promises");
-    var { dirname: dirname13, resolve: resolve12 } = __require("node:path");
+    var { dirname: dirname14, resolve: resolve13 } = __require("node:path");
     var { setTimeout: setTimeout2, clearTimeout: clearTimeout2 } = __require("node:timers");
     var { InvalidArgumentError, UndiciError } = require_errors2();
     var { hashId, isUrlExcludedFactory, normalizeHeaders, createHeaderFilters } = require_snapshot_utils();
@@ -65805,7 +65805,7 @@ var require_snapshot_recorder = __commonJS({
           throw new InvalidArgumentError("Snapshot path is required");
         }
         try {
-          const data = await readFile3(resolve12(path35), "utf8");
+          const data = await readFile3(resolve13(path35), "utf8");
           const parsed = JSON.parse(data);
           if (Array.isArray(parsed)) {
             this.#snapshots.clear();
@@ -65834,8 +65834,8 @@ var require_snapshot_recorder = __commonJS({
         if (!path35) {
           throw new InvalidArgumentError("Snapshot path is required");
         }
-        const resolvedPath = resolve12(path35);
-        await mkdir3(dirname13(resolvedPath), { recursive: true });
+        const resolvedPath = resolve13(path35);
+        await mkdir3(dirname14(resolvedPath), { recursive: true });
         const data = Array.from(this.#snapshots.entries()).map(([hash7, snapshot]) => ({
           hash: hash7,
           snapshot
@@ -73260,7 +73260,7 @@ var require_fetch = __commonJS({
         const agent = fetchParams.controller.dispatcher;
         const path35 = url.pathname + url.search;
         const hasTrailingQuestionMark = url.search.length === 0 && url.href[url.href.length - url.hash.length - 1] === "?";
-        return new Promise((resolve12, reject) => agent.dispatch(
+        return new Promise((resolve13, reject) => agent.dispatch(
           {
             path: hasTrailingQuestionMark ? `${path35}?` : path35,
             origin: url.origin,
@@ -73348,7 +73348,7 @@ var require_fetch = __commonJS({
                 }
               }
               const onError = this.onError.bind(this);
-              resolve12({
+              resolve13({
                 status,
                 statusText,
                 headersList,
@@ -73401,7 +73401,7 @@ var require_fetch = __commonJS({
                   headersList.append(headerName, String(value), true);
                 }
               }
-              resolve12({
+              resolve13({
                 status,
                 statusText: STATUS_CODES[status],
                 headersList,
@@ -73425,7 +73425,7 @@ var require_fetch = __commonJS({
                   headersList.append(nameStr, value.toString("latin1"), true);
                 }
               }
-              resolve12({
+              resolve13({
                 status,
                 statusText: STATUS_CODES[status],
                 headersList,
@@ -77940,7 +77940,7 @@ var init_values = __esm({
 var sleep3;
 var init_sleep = __esm({
   "node_modules/openai/internal/utils/sleep.mjs"() {
-    sleep3 = (ms) => new Promise((resolve12) => setTimeout(resolve12, ms));
+    sleep3 = (ms) => new Promise((resolve13) => setTimeout(resolve13, ms));
   }
 });
 
@@ -79133,8 +79133,8 @@ var init_api_promise = __esm({
     init_parse();
     APIPromise2 = class _APIPromise extends Promise {
       constructor(client, responsePromise, parseResponse2 = defaultParseResponse) {
-        super((resolve12) => {
-          resolve12(null);
+        super((resolve13) => {
+          resolve13(null);
         });
         this.responsePromise = responsePromise;
         this.parseResponse = parseResponse2;
@@ -80104,12 +80104,12 @@ var init_EventStream = __esm({
         _EventStream_errored.set(this, false);
         _EventStream_aborted.set(this, false);
         _EventStream_catchingPromiseCreated.set(this, false);
-        __classPrivateFieldSet(this, _EventStream_connectedPromise, new Promise((resolve12, reject) => {
-          __classPrivateFieldSet(this, _EventStream_resolveConnectedPromise, resolve12, "f");
+        __classPrivateFieldSet(this, _EventStream_connectedPromise, new Promise((resolve13, reject) => {
+          __classPrivateFieldSet(this, _EventStream_resolveConnectedPromise, resolve13, "f");
           __classPrivateFieldSet(this, _EventStream_rejectConnectedPromise, reject, "f");
         }), "f");
-        __classPrivateFieldSet(this, _EventStream_endPromise, new Promise((resolve12, reject) => {
-          __classPrivateFieldSet(this, _EventStream_resolveEndPromise, resolve12, "f");
+        __classPrivateFieldSet(this, _EventStream_endPromise, new Promise((resolve13, reject) => {
+          __classPrivateFieldSet(this, _EventStream_resolveEndPromise, resolve13, "f");
           __classPrivateFieldSet(this, _EventStream_rejectEndPromise, reject, "f");
         }), "f");
         __classPrivateFieldGet(this, _EventStream_connectedPromise, "f").catch(() => {
@@ -80209,11 +80209,11 @@ var init_EventStream = __esm({
        *   const message = await stream.emitted('message') // rejects if the stream errors
        */
       emitted(event) {
-        return new Promise((resolve12, reject) => {
+        return new Promise((resolve13, reject) => {
           __classPrivateFieldSet(this, _EventStream_catchingPromiseCreated, true, "f");
           if (event !== "error")
             this.once("error", reject);
-          this.once(event, resolve12);
+          this.once(event, resolve13);
         });
       }
       /**
@@ -80296,8 +80296,8 @@ var init_EventStream = __esm({
             }
             if (ended)
               return Promise.resolve(doneResult());
-            return new Promise((resolve12, reject) => {
-              readQueue.push({ resolve: resolve12, reject });
+            return new Promise((resolve13, reject) => {
+              readQueue.push({ resolve: resolve13, reject });
             });
           },
           return: () => {
@@ -81515,7 +81515,7 @@ var init_ChatCompletionStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve12, reject) => readQueue.push({ resolve: resolve12, reject })).then((chunk4) => chunk4 ? { value: chunk4, done: false } : { value: void 0, done: true });
+              return new Promise((resolve13, reject) => readQueue.push({ resolve: resolve13, reject })).then((chunk4) => chunk4 ? { value: chunk4, done: false } : { value: void 0, done: true });
             }
             const chunk3 = pushQueue.shift();
             return { value: chunk3, done: false };
@@ -81605,7 +81605,7 @@ var init_ChatCompletionStreamingRunner = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve12, reject) => readQueue.push({ resolve: resolve12, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
+              return new Promise((resolve13, reject) => readQueue.push({ resolve: resolve13, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
             }
             const event = pushQueue.shift();
             if (!event) {
@@ -85399,7 +85399,7 @@ var init_AssistantStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve12, reject) => readQueue.push({ resolve: resolve12, reject })).then((chunk4) => chunk4 ? { value: chunk4, done: false } : { value: void 0, done: true });
+              return new Promise((resolve13, reject) => readQueue.push({ resolve: resolve13, reject })).then((chunk4) => chunk4 ? { value: chunk4, done: false } : { value: void 0, done: true });
             }
             const chunk3 = pushQueue.shift();
             return { value: chunk3, done: false };
@@ -88063,7 +88063,7 @@ var init_ResponseStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve12, reject) => readQueue.push({ resolve: resolve12, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
+              return new Promise((resolve13, reject) => readQueue.push({ resolve: resolve13, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
             }
             const event = pushQueue.shift();
             return { value: event, done: false };
@@ -94138,9 +94138,9 @@ var require_character_voice = __commonJS({
 var require_speech_contract = __commonJS({
   "../skills/_shared/speech-contract.js"(exports, module) {
     "use strict";
-    var { createHash: createHash26 } = __require("node:crypto");
+    var { createHash: createHash27 } = __require("node:crypto");
     function speechRevision2(line, character) {
-      return createHash26("sha256").update(JSON.stringify(require_scene_acting().speechRevisionPayload(line, character?.tts))).digest("hex");
+      return createHash27("sha256").update(JSON.stringify(require_scene_acting().speechRevisionPayload(line, character?.tts))).digest("hex");
     }
     function compileActing2(text4, acting, voice) {
       voice = { ...voice };
@@ -94564,7 +94564,7 @@ var require_character_sheet = __commonJS({
     "use strict";
     var fs25 = __require("node:fs");
     var path35 = __require("node:path");
-    var { createHash: createHash26 } = __require("node:crypto");
+    var { createHash: createHash27 } = __require("node:crypto");
     var { isDeepStrictEqual: isDeepStrictEqual2 } = __require("node:util");
     var { identityCharacter, direction, panelPrompt, requiresSpeech, isVoiceOnly } = require_character_identity();
     var { identityVoice, voiceErrors } = require_character_voice();
@@ -94581,7 +94581,7 @@ var require_character_sheet = __commonJS({
       const id = path35.basename(path35.dirname(path35.resolve(file)));
       if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) throw new Error("Character folder needs a kebab-case id");
       const tts = identityVoice(source, { optional: !requireSpeech });
-      return { id, name, character, tts, direction: direction(character, options), identitySha256: createHash26("sha256").update(source).digest("hex"), ...voiceOnly ? { voiceOnly: true } : {}, ...selectedVoiceReference(source, tts) };
+      return { id, name, character, tts, direction: direction(character, options), identitySha256: createHash27("sha256").update(source).digest("hex"), ...voiceOnly ? { voiceOnly: true } : {}, ...selectedVoiceReference(source, tts) };
     }
     function selectedVoiceReference(source, tts) {
       if (!tts) return {};
@@ -94649,10 +94649,10 @@ var require_character_speech = __commonJS({
     "use strict";
     var fs25 = __require("node:fs");
     var path35 = __require("node:path");
-    var { createHash: createHash26 } = __require("node:crypto");
+    var { createHash: createHash27 } = __require("node:crypto");
     var { isDeepStrictEqual: isDeepStrictEqual2 } = __require("node:util");
     var { voiceErrors, generationVoiceErrors, normalizeLanguage } = require_character_voice();
-    var hash7 = (bytes) => createHash26("sha256").update(bytes).digest("hex");
+    var hash7 = (bytes) => createHash27("sha256").update(bytes).digest("hex");
     var normalizeVoice = (voice) => Object.fromEntries(Object.entries(voice || {}).map(([key, value]) => [key, key === "language" ? normalizeLanguage(value) : typeof value === "string" ? value.trim() : value]));
     function explicitVoiceOverride(board, voice, current) {
       const override2 = board?.PRODUCTION?.modelSettings?.overrides?.speech;
@@ -94765,14 +94765,14 @@ var require_compose_speech = __commonJS({
     "use strict";
     var fs25 = __require("node:fs");
     var path35 = __require("node:path");
-    var { execFileSync: execFileSync18 } = __require("node:child_process");
-    var { createHash: createHash26 } = __require("node:crypto");
+    var { execFileSync: execFileSync19 } = __require("node:child_process");
+    var { createHash: createHash27 } = __require("node:crypto");
     var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
     var { actingErrors, speechRevisionPayload, planScenePerformance } = require_scene_acting();
     var { generationVoiceErrors } = require_character_voice();
-    var hash7 = (value) => createHash26("sha256").update(value).digest("hex");
+    var hash7 = (value) => createHash27("sha256").update(value).digest("hex");
     function duration4(file) {
-      const seconds = Number(execFileSync18("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", file], { encoding: "utf8", timeout: 1e4 }).trim());
+      const seconds = Number(execFileSync19("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", file], { encoding: "utf8", timeout: 1e4 }).trim());
       if (!Number.isFinite(seconds) || seconds <= 0) throw new Error("Unusable speech duration: " + file);
       return seconds;
     }
@@ -94828,7 +94828,7 @@ var require_compose_speech = __commonJS({
         const timing = sceneTiming(scene, board, win.SB_DOC?.performanceTimingVersion), intervals = timing.intervals;
         const total = Math.round(timing.durationSeconds * 48e3), mix = new Int32Array(total);
         lines.forEach((line, i2) => {
-          const pcm = execFileSync18("ffmpeg", ["-v", "error", "-i", sources[i2], "-ac", "1", "-ar", "48000", "-f", "s16le", "-"], { timeout: 12e4, maxBuffer: 1 << 30 });
+          const pcm = execFileSync19("ffmpeg", ["-v", "error", "-i", sources[i2], "-ac", "1", "-ar", "48000", "-f", "s16le", "-"], { timeout: 12e4, maxBuffer: 1 << 30 });
           const start = Math.round(intervals.find((item) => item.lineId === line.id).speechStartSeconds * 48e3);
           for (let k = 0; k < pcm.length >> 1 && start + k < total; k++) mix[start + k] += pcm.readInt16LE(k * 2);
         });
@@ -94881,10 +94881,10 @@ var require_check_tts_quality = __commonJS({
     var fs25 = __require("node:fs");
     var path35 = __require("node:path");
     var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
-    var { createHash: createHash26 } = __require("node:crypto");
+    var { createHash: createHash27 } = __require("node:crypto");
     var { speechRevision: speechRevision2 } = require_speech_contract();
     var { authorizeSpeed: authorizeSpeed2 } = require_tts_speed_policy();
-    var hash7 = (value) => createHash26("sha256").update(value).digest("hex");
+    var hash7 = (value) => createHash27("sha256").update(value).digest("hex");
     var normalize2 = (text4) => text4.normalize("NFKC").toLowerCase().replace(/[\p{P}\p{Z}\s]/gu, "");
     function cer(expected, heard) {
       const a = [...normalize2(expected)], b = [...normalize2(heard)];
@@ -95159,14 +95159,14 @@ var require_check_tts_quality = __commonJS({
 var require_final_speech_chapters = __commonJS({
   "../skills/produce/references/final-speech-chapters.js"(exports, module) {
     "use strict";
-    var { createHash: createHash26 } = __require("node:crypto");
+    var { createHash: createHash27 } = __require("node:crypto");
     var { spawnSync: spawnSync4 } = __require("node:child_process");
     var { normalize: normalize2, cer } = require_check_tts_quality();
     var RATE2 = 24e3;
     var BYTES2 = 4;
-    var LIMIT2 = 14 * 1024 * 1024;
+    var LIMIT3 = 14 * 1024 * 1024;
     var POLICY2 = "final-speech-chapters-v1";
-    var hash7 = (x2) => createHash26("sha256").update(x2).digest("hex");
+    var hash7 = (x2) => createHash27("sha256").update(x2).digest("hex");
     var digest5 = (x2) => hash7(JSON.stringify(x2));
     function decode2(media) {
       const encoded = spawnSync4("ffmpeg", ["-v", "error", "-i", media, "-map", "0:a:0", "-map_metadata", "-1", "-ac", "1", "-ar", String(RATE2), "-c:a", "flac", "-f", "flac", "pipe:1"], { maxBuffer: RATE2 * BYTES2 * 1800 + 65536, timeout: 6e4 });
@@ -95225,7 +95225,7 @@ var require_final_speech_chapters = __commonJS({
       for (let i2 = 0; i2 < expected.length; i2++) {
         const e2 = expected[i2], v = p.pieces[i2];
         for (const [k, value] of Object.entries(e2)) if (v[k] !== value) throw new Error("Chapter order or boundary changed: " + k);
-        if (v.pcmSha256 !== hash7(pcm.subarray(e2.startSample * BYTES2, e2.endSample * BYTES2)) || !Number.isInteger(v.payloadBytes) || v.payloadBytes <= 0 || v.payloadBytes > LIMIT2 || !/^[a-f0-9]{64}$/.test(v.audioSha256 || "")) throw new Error("Chapter audio hash or payload changed");
+        if (v.pcmSha256 !== hash7(pcm.subarray(e2.startSample * BYTES2, e2.endSample * BYTES2)) || !Number.isInteger(v.payloadBytes) || v.payloadBytes <= 0 || v.payloadBytes > LIMIT3 || !/^[a-f0-9]{64}$/.test(v.audioSha256 || "")) throw new Error("Chapter audio hash or payload changed");
         if (v.model !== p.model || digest5(v.transcriptCheck ?? null) !== digest5(p.transcriptCheck ?? null)) throw new Error("Chapter reviewer/request differs from manifest");
         const f3 = listeningFailures2(v);
         if (!["pass", "fail"].includes(v.status) || !Array.isArray(v.failures) || digest5(v.failures) !== digest5(f3) || v.status !== (f3.length ? "fail" : "pass")) throw new Error("Chapter verdict does not match its review");
@@ -95235,7 +95235,7 @@ var require_final_speech_chapters = __commonJS({
       if (requirePass && failures.length) throw new Error(failures.join("; "));
       return failures;
     }
-    module.exports = { RATE: RATE2, BYTES: BYTES2, LIMIT: LIMIT2, POLICY: POLICY2, hash: hash7, digest: digest5, decode: decode2, plan: plan2, manifest: manifest2, listeningFailures: listeningFailures2, validate: validate2 };
+    module.exports = { RATE: RATE2, BYTES: BYTES2, LIMIT: LIMIT3, POLICY: POLICY2, hash: hash7, digest: digest5, decode: decode2, plan: plan2, manifest: manifest2, listeningFailures: listeningFailures2, validate: validate2 };
   }
 });
 
@@ -99320,8 +99320,8 @@ function canonicalPath(file) {
   return path.join(canonicalPath(parent), path.basename(file));
 }
 function withinDirectory(root, file) {
-  const relative3 = path.relative(root, file);
-  return relative3 === "" || !relative3.startsWith(".." + path.sep) && relative3 !== ".." && !path.isAbsolute(relative3);
+  const relative4 = path.relative(root, file);
+  return relative4 === "" || !relative4.startsWith(".." + path.sep) && relative4 !== ".." && !path.isAbsolute(relative4);
 }
 
 // src/production-workflow.ts
@@ -99414,10 +99414,10 @@ function manageWorkflow(raw) {
 function requireStoryOutline(episode) {
   const file = path2.join(episode, "storyboard/scenes.js");
   if (!fs2.existsSync(file)) return;
-  const load10 = nodeModule.createRequire(import.meta.url);
-  const board = load10(fileURLToPath(new URL("../../skills/_shared/scenes-vm.js", import.meta.url))).evaluateWindowScript(fs2.readFileSync(file, "utf8"), { filename: file });
+  const load11 = nodeModule.createRequire(import.meta.url);
+  const board = load11(fileURLToPath(new URL("../../skills/_shared/scenes-vm.js", import.meta.url))).evaluateWindowScript(fs2.readFileSync(file, "utf8"), { filename: file });
   if (board.STORY?.version !== "story-v2") return;
-  const contract2 = load10(fileURLToPath(new URL("../../skills/storyboard/references/structure-contract.js", import.meta.url)));
+  const contract2 = load11(fileURLToPath(new URL("../../skills/storyboard/references/structure-contract.js", import.meta.url)));
   const gaps = [...contract2.outlineGaps(board), ...contract2.castGaps(board)];
   if (gaps.length) throw new Error("story_outline_required: " + gaps.join("; "));
 }
@@ -100066,7 +100066,7 @@ async function generateAdvanced(request) {
     const timeoutMs = targetDuration * 1e3 + REALTIME_TIMEOUT_MARGIN_MS;
     while (!state.done && state.received < targetBytes && Date.now() - startTime < timeoutMs) {
       if (state.error) throw state.error;
-      await new Promise((resolve12) => setTimeout(resolve12, REALTIME_POLL_INTERVAL_MS));
+      await new Promise((resolve13) => setTimeout(resolve13, REALTIME_POLL_INTERVAL_MS));
     }
     state.done = true;
     if (state.error) throw state.error;
@@ -100197,7 +100197,7 @@ var sunoLyricsSchema = external_exports.object({
   prompt: external_exports.string().min(1).max(200)
 });
 function sleep2(ms) {
-  return new Promise((resolve12) => setTimeout(resolve12, ms));
+  return new Promise((resolve13) => setTimeout(resolve13, ms));
 }
 function describeSunoError(code, msg, httpStatus) {
   const text4 = (msg || "").trim() || "(no message)";
@@ -100996,7 +100996,7 @@ async function loadModel(id) {
     if (!listed.ok) return listed;
     const found = listed.models?.find((m2) => m2.id === id);
     if (found?.state === "ready") return { ok: true };
-    await new Promise((resolve12) => setTimeout(resolve12, 2e3));
+    await new Promise((resolve13) => setTimeout(resolve13, 2e3));
   }
   return { ok: false, error: `Timed out waiting for model "${id}" to become ready.` };
 }
@@ -101121,7 +101121,7 @@ async function muxRgbToMp4(opts) {
     );
     if (opts.audio) args.push("-c:a", "aac");
     args.push(opts.outFile);
-    await new Promise((resolve12, reject) => {
+    await new Promise((resolve13, reject) => {
       execFile("ffmpeg", args, { timeout: 12e4, maxBuffer: 2 * 1024 * 1024 }, (error2, _out, errOut) => {
         if (error2) {
           const code = error2.code;
@@ -101133,7 +101133,7 @@ async function muxRgbToMp4(opts) {
 ${String(errOut).slice(-500)}` : ""}`));
           return;
         }
-        resolve12();
+        resolve13();
       });
     });
     if (!existsSync4(opts.outFile)) return { ok: false, error: "ffmpeg exited 0 but the mp4 was not written" };
@@ -108711,7 +108711,7 @@ var Protocol = class {
           return;
         }
         const pollInterval = task2.pollInterval ?? this._options?.defaultTaskPollInterval ?? 1e3;
-        await new Promise((resolve12) => setTimeout(resolve12, pollInterval));
+        await new Promise((resolve13) => setTimeout(resolve13, pollInterval));
         options?.signal?.throwIfAborted();
       }
     } catch (error2) {
@@ -108728,7 +108728,7 @@ var Protocol = class {
    */
   request(request, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken, task, relatedTask } = options ?? {};
-    return new Promise((resolve12, reject) => {
+    return new Promise((resolve13, reject) => {
       const earlyReject = (error2) => {
         reject(error2);
       };
@@ -108806,7 +108806,7 @@ var Protocol = class {
           if (!parseResult.success) {
             reject(parseResult.error);
           } else {
-            resolve12(parseResult.data);
+            resolve13(parseResult.data);
           }
         } catch (error2) {
           reject(error2);
@@ -109067,12 +109067,12 @@ var Protocol = class {
       }
     } catch {
     }
-    return new Promise((resolve12, reject) => {
+    return new Promise((resolve13, reject) => {
       if (signal.aborted) {
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
         return;
       }
-      const timeoutId = setTimeout(resolve12, interval);
+      const timeoutId = setTimeout(resolve13, interval);
       signal.addEventListener("abort", () => {
         clearTimeout(timeoutId);
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
@@ -109948,12 +109948,12 @@ var StdioServerTransport = class {
     this.onclose?.();
   }
   send(message) {
-    return new Promise((resolve12) => {
+    return new Promise((resolve13) => {
       const json3 = serializeMessage(message);
       if (this._stdout.write(json3)) {
-        resolve12();
+        resolve13();
       } else {
-        this._stdout.once("drain", resolve12);
+        this._stdout.once("drain", resolve13);
       }
     });
   }
@@ -110379,9 +110379,9 @@ async function tiktokAuth(raw) {
       server2.close();
     }
   });
-  await new Promise((resolve12, reject) => {
+  await new Promise((resolve13, reject) => {
     server2.once("error", () => reject(new Error("TikTok OAuth callback port is unavailable.")));
-    server2.listen(Number(redirect.port), "127.0.0.1", resolve12);
+    server2.listen(Number(redirect.port), "127.0.0.1", resolve13);
   });
   const timer = setTimeout(() => {
     if (session.status === "pending") {
@@ -111009,7 +111009,7 @@ async function pollGenaiJob(check2, pending2) {
       if (error2.httpStatus < 500 || retried2) throw new Error(error2.message);
       retried2 = true;
     }
-    await new Promise((resolve12) => setTimeout(resolve12, 5e3));
+    await new Promise((resolve13) => setTimeout(resolve13, 5e3));
   } while (Date.now() < deadline);
   throw new Error(pending2);
 }
@@ -111317,13 +111317,13 @@ async function desktopVideoStatus(receiptPath2, download = false) {
   const temp = receipt.videoPath + `.${process.pid}.download.mp4`;
   try {
     fs8.writeFileSync(temp, bytes, { flag: "wx", mode: 384 });
-    const probe4 = JSON.parse(execFileSync4("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height:format=duration", "-of", "json", temp], { encoding: "utf8", timeout: 3e4 }));
-    if (!(probe4.streams?.[0]?.width > 0) || !(Number(probe4.format?.duration) > 0)) throw new Error("Invalid video result");
-    const sha2562 = createHash7("sha256").update(bytes).digest("hex");
+    const probe5 = JSON.parse(execFileSync4("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height:format=duration", "-of", "json", temp], { encoding: "utf8", timeout: 3e4 }));
+    if (!(probe5.streams?.[0]?.width > 0) || !(Number(probe5.format?.duration) > 0)) throw new Error("Invalid video result");
+    const sha2563 = createHash7("sha256").update(bytes).digest("hex");
     if (fs8.existsSync(receipt.videoPath)) {
-      if (createHash7("sha256").update(fs8.readFileSync(receipt.videoPath)).digest("hex") !== sha2562) throw new Error("Video output conflicts");
+      if (createHash7("sha256").update(fs8.readFileSync(receipt.videoPath)).digest("hex") !== sha2563) throw new Error("Video output conflicts");
     } else fs8.linkSync(temp, receipt.videoPath);
-    atomicJson(receiptPath2, { ...receipt, status: "completed", sha256: sha2562 });
+    atomicJson(receiptPath2, { ...receipt, status: "completed", sha256: sha2563 });
   } finally {
     fs8.rmSync(temp, { force: true });
   }
@@ -111866,7 +111866,7 @@ async function retried(step, final = []) {
     } catch (error2) {
       const transient = !(error2 instanceof GenaiRequestError) || !final.includes(error2.httpStatus) && (error2.httpStatus >= 500 || [408, 425, 429].includes(error2.httpStatus));
       if (!transient || attempt >= genaiUploadSettings.attempts) throw error2;
-      await new Promise((resolve12) => setTimeout(resolve12, genaiUploadSettings.retryDelayMs * attempt));
+      await new Promise((resolve13) => setTimeout(resolve13, genaiUploadSettings.retryDelayMs * attempt));
     }
   }
 }
@@ -111880,12 +111880,12 @@ function genaiUploadable(bytes, contentType) {
 var FALL_BACK = [404, 405, 429, 507];
 async function uploadGenaiFile(bytes, contentType) {
   if (!genaiUploadable(bytes, contentType)) return void 0;
-  const sha2562 = createHash9("sha256").update(bytes).digest("hex");
-  const cacheKey = `${astraGenaiBaseUrl()} ${sha2562}`, cached2 = uploaded.get(cacheKey);
+  const sha2563 = createHash9("sha256").update(bytes).digest("hex");
+  const cacheKey = `${astraGenaiBaseUrl()} ${sha2563}`, cached2 = uploaded.get(cacheKey);
   if (cached2 && cached2.expiresAt > Date.now() + 60 * 6e4) return cached2.uri;
   for (let attempt = 1; ; attempt++) {
     try {
-      return await uploadOnce(bytes, contentType, sha2562, cacheKey);
+      return await uploadOnce(bytes, contentType, sha2563, cacheKey);
     } catch (error2) {
       if (error2 instanceof Restart && attempt < 2) continue;
       throw error2 instanceof Restart ? error2.original : error2;
@@ -111899,10 +111899,10 @@ var Restart = class extends Error {
   }
   original;
 };
-async function uploadOnce(bytes, contentType, sha2562, cacheKey) {
+async function uploadOnce(bytes, contentType, sha2563, cacheKey) {
   let session;
   try {
-    session = sessionSchema.parse(await retried(() => call("POST", "/v1/uploads", { size: bytes.length, sha256: sha2562, content_type: contentType }), FALL_BACK));
+    session = sessionSchema.parse(await retried(() => call("POST", "/v1/uploads", { size: bytes.length, sha256: sha2563, content_type: contentType }), FALL_BACK));
   } catch (error2) {
     if (error2 instanceof GenaiRequestError && FALL_BACK.includes(error2.httpStatus)) return void 0;
     throw error2;
@@ -112256,8 +112256,8 @@ async function getGenaiVideoStatus(input) {
   const temp = `${receipt.videoPath}.${process.pid}.download.mp4`;
   try {
     fs11.writeFileSync(temp, bytes, { flag: "wx", mode: 384 });
-    const probe4 = JSON.parse(execFileSync7("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height:format=duration", "-of", "json", temp], { encoding: "utf8", timeout: 3e4 }));
-    if (!(probe4.streams?.[0]?.width > 0) || !(Number(probe4.format?.duration) > 0)) throw new Error("GenAI result has no usable video stream");
+    const probe5 = JSON.parse(execFileSync7("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height:format=duration", "-of", "json", temp], { encoding: "utf8", timeout: 3e4 }));
+    if (!(probe5.streams?.[0]?.width > 0) || !(Number(probe5.format?.duration) > 0)) throw new Error("GenAI result has no usable video stream");
     if (fs11.existsSync(receipt.videoPath)) {
       if (createHash10("sha256").update(fs11.readFileSync(receipt.videoPath)).digest("hex") !== createHash10("sha256").update(bytes).digest("hex"))
         throw new Error("GenAI video output conflicts with download");
@@ -112999,7 +112999,7 @@ async function generateLocalImage(request) {
   );
   const startedAt = Date.now();
   try {
-    await new Promise((resolve12, reject) => {
+    await new Promise((resolve13, reject) => {
       execFile3(
         bin,
         cliArgs,
@@ -113021,7 +113021,7 @@ async function generateLocalImage(request) {
 ${tail}` : ""}`));
             return;
           }
-          resolve12();
+          resolve13();
         }
       );
     });
@@ -113185,7 +113185,7 @@ async function assertReachable(url, attempts, waitMs) {
     } catch (error2) {
       last = error2 instanceof Error ? error2.message : String(error2);
     }
-    if (i2 < attempts - 1) await new Promise((resolve12) => setTimeout(resolve12, waitMs));
+    if (i2 < attempts - 1) await new Promise((resolve13) => setTimeout(resolve13, waitMs));
   }
   throw new Error(`public URL not reachable: ${url} (${last})`);
 }
@@ -113254,19 +113254,19 @@ function serveLocally(filePaths) {
     }
     fs13.createReadStream(file, { start, end }).on("error", () => res.destroy()).pipe(res);
   });
-  return new Promise((resolve12, reject) => {
+  return new Promise((resolve13, reject) => {
     server2.once("error", reject);
     server2.listen(0, "127.0.0.1", () => {
       const address = server2.address();
       const port = typeof address === "object" && address ? address.port : 0;
-      resolve12({ server: server2, port, routes });
+      resolve13({ server: server2, port, routes });
     });
   });
 }
 function closeServer(server2) {
-  return new Promise((resolve12) => {
+  return new Promise((resolve13) => {
     server2.closeAllConnections?.();
-    server2.close(() => resolve12());
+    server2.close(() => resolve13());
   });
 }
 var liveTunnels = /* @__PURE__ */ new Set();
@@ -113299,7 +113299,7 @@ async function publishViaTunnel(filePaths, cloudflared = "cloudflared") {
   };
   killTunnelsOnExit();
   try {
-    const origin = await new Promise((resolve12, reject) => {
+    const origin = await new Promise((resolve13, reject) => {
       child = spawn2(cloudflared, ["tunnel", "--url", `http://127.0.0.1:${port}`, "--no-autoupdate"], {
         stdio: ["ignore", "pipe", "pipe"]
       });
@@ -113312,7 +113312,7 @@ ${log.slice(-600)}`)), 6e4);
         const m2 = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/.exec(log);
         if (m2) {
           clearTimeout(timer);
-          resolve12(m2[0]);
+          resolve13(m2[0]);
         }
       };
       child.stdout?.on("data", onLine);
@@ -113328,7 +113328,7 @@ ${log.slice(-600)}`));
       });
     });
     const urls = routes.map((r2) => origin + r2);
-    await new Promise((resolve12) => setTimeout(resolve12, 5e3));
+    await new Promise((resolve13) => setTimeout(resolve13, 5e3));
     for (const url of urls) await assertReachable(url, 30, 3e3);
     console.error(`[media-publish] quick tunnel ${origin} serving ${filePaths.length} file(s)`);
     return { urls, how: "tunnel", close };
@@ -113575,7 +113575,7 @@ var seedanceReferenceSchema = external_exports.object({
   }
 }).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
 function sleep4(ms) {
-  return new Promise((resolve12) => setTimeout(resolve12, ms));
+  return new Promise((resolve13) => setTimeout(resolve13, ms));
 }
 function describeHttpError(status, body) {
   try {
@@ -113689,23 +113689,23 @@ function loadReferenceAudio(filePaths) {
   });
 }
 function probeVideo(filePath) {
-  return new Promise((resolve12) => {
+  return new Promise((resolve13) => {
     execFile4(
       "ffprobe",
       ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height,r_frame_rate:format=duration", "-of", "json", filePath],
       { timeout: 15e3 },
       (error2, out) => {
-        if (error2) return resolve12(null);
+        if (error2) return resolve13(null);
         try {
           const parsed = JSON.parse(String(out));
           const stream = parsed.streams?.[0];
           const [num5, den] = String(stream?.r_frame_rate || "").split("/").map(Number);
           const fps = num5 && den ? num5 / den : NaN;
           const seconds = Number.parseFloat(String(parsed.format?.duration ?? ""));
-          if (!stream?.width || !stream?.height || !Number.isFinite(fps) || !Number.isFinite(seconds) || seconds <= 0) return resolve12(null);
-          resolve12({ seconds, fps, width: stream.width, height: stream.height });
+          if (!stream?.width || !stream?.height || !Number.isFinite(fps) || !Number.isFinite(seconds) || seconds <= 0) return resolve13(null);
+          resolve13({ seconds, fps, width: stream.width, height: stream.height });
         } catch {
-          resolve12(null);
+          resolve13(null);
         }
       }
     );
@@ -113747,14 +113747,14 @@ async function checkReferenceVideos(filePaths, spec, model2) {
   return total;
 }
 function probeAudioSeconds(filePath) {
-  return new Promise((resolve12) => {
+  return new Promise((resolve13) => {
     execFile4(
       "ffprobe",
       ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", filePath],
       { timeout: 15e3 },
       (error2, out) => {
         const seconds = Number.parseFloat(String(out ?? "").trim());
-        resolve12(!error2 && Number.isFinite(seconds) && seconds > 0 ? seconds : null);
+        resolve13(!error2 && Number.isFinite(seconds) && seconds > 0 ? seconds : null);
       }
     );
   });
@@ -114714,7 +114714,7 @@ function upscaleGeometry(width, height, frames) {
 }
 async function upscaleVideo(args) {
   const source = path14.resolve(args.sourceVideoPath);
-  const probe4 = JSON.parse(execFileSync8("ffprobe", [
+  const probe5 = JSON.parse(execFileSync8("ffprobe", [
     "-v",
     "error",
     "-count_frames",
@@ -114724,10 +114724,10 @@ async function upscaleVideo(args) {
     "json",
     source
   ], { encoding: "utf8", timeout: 12e4 }));
-  const video2 = probe4.streams?.find((s2) => s2.codec_type === "video");
+  const video2 = probe5.streams?.find((s2) => s2.codec_type === "video");
   if (!video2) throw new Error(`No video stream in ${source}`);
   const [num5, den] = String(video2.r_frame_rate).split("/").map(Number);
-  const frames = Number(video2.nb_read_frames), hasAudio = probe4.streams.some((s2) => s2.codec_type === "audio");
+  const frames = Number(video2.nb_read_frames), hasAudio = probe5.streams.some((s2) => s2.codec_type === "audio");
   const geometry = upscaleGeometry(video2.width, video2.height, frames);
   const result = await generateIcLora(astraIcLoraSchema.parse({
     prompt: args.prompt,
@@ -114891,7 +114891,7 @@ function buildJobBody(mode, args) {
   return body;
 }
 function sleep5(ms) {
-  return new Promise((resolve12) => setTimeout(resolve12, ms));
+  return new Promise((resolve13) => setTimeout(resolve13, ms));
 }
 var submitTimestamps = [];
 async function waitForSubmitSlot() {
@@ -115258,7 +115258,7 @@ function dataUri(file, allowed, maxBytes) {
   if (size > maxBytes) throw new Error(`${path15.basename(file)} is ${(size / 1048576).toFixed(1)} MB; this vendor takes at most ${(maxBytes / 1048576).toFixed(0)} MB inline`);
   return `data:${type};base64,${fs16.readFileSync(file).toString("base64")}`;
 }
-var sleep6 = (ms) => new Promise((resolve12) => setTimeout(resolve12, ms));
+var sleep6 = (ms) => new Promise((resolve13) => setTimeout(resolve13, ms));
 async function runVendorJob(job) {
   let target;
   try {
@@ -116447,9 +116447,9 @@ function prepareVideoImages(tool2, input, shot, episode) {
   const assigned = /* @__PURE__ */ new Set();
   const bindings = [];
   const boardDir = path20.join(episode, "storyboard");
-  const resolve12 = (file) => realpathSync4(path20.resolve(boardDir, file));
+  const resolve13 = (file) => realpathSync4(path20.resolve(boardDir, file));
   const bind = (id, file, role, use, purpose, submitted) => {
-    const absolute = resolve12(file);
+    const absolute = resolve13(file);
     const metadata = verifyImageFile(absolute);
     const ref = references.find((item) => item.id === id);
     bindings.push({
@@ -116655,11 +116655,11 @@ function voiceReference(character, context2, warnings) {
     }
   }
   if (!file) return void 0;
-  const absolute = realpathSync5(file), sha2562 = fileHash(absolute);
-  if (declared.sha256 && declared.sha256 !== sha2562) throw new Error(`voice_reference_stale: ${character.id} sample bytes changed`);
+  const absolute = realpathSync5(file), sha2563 = fileHash(absolute);
+  if (declared.sha256 && declared.sha256 !== sha2563) throw new Error(`voice_reference_stale: ${character.id} sample bytes changed`);
   const provenance = declared.tts && declared.sha256 ? "pinned_settings_and_bytes" : "legacy_sample_unverified";
   if (provenance === "legacy_sample_unverified") warnings.push(`${character.id}: sample identity is unverified; a file name or hash is not a listening review.`);
-  return { path: absolute, sha256: sha2562, provenance };
+  return { path: absolute, sha256: sha2563, provenance };
 }
 function msrSubject(character, refs, context2) {
   const owned = object3(character.voiceReference).imagePaths;
@@ -117079,8 +117079,8 @@ var videoPlanSchema = external_exports.object({
 }).strict();
 var videoExecuteSchema = external_exports.object({ episode: external_exports.string().min(1), planId: external_exports.string().regex(/^[a-f0-9]{64}$/) }).strict();
 function within(root, file) {
-  const relative3 = path22.relative(root, file);
-  return relative3 === "" || !relative3.startsWith(".." + path22.sep) && relative3 !== ".." && !path22.isAbsolute(relative3);
+  const relative4 = path22.relative(root, file);
+  return relative4 === "" || !relative4.startsWith(".." + path22.sep) && relative4 !== ".." && !path22.isAbsolute(relative4);
 }
 function canonical2(file) {
   if (fs18.existsSync(file)) return fs18.realpathSync(file);
@@ -117287,8 +117287,8 @@ function planVideo(raw) {
   if (tool2 === "heygen_img2video") checkHeygenInputs(heygenImg2VideoSchema.parse(args));
   if (tool2 === "heygen_reference") checkHeygenInputs(heygenReferenceSchema.parse(args));
   if (tool2 === "astra_video_retake" && selection.resolution) {
-    const probe4 = JSON.parse(execFileSync13("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "json", String(args.sourceVideoPath)], { encoding: "utf8", timeout: 15e3 }));
-    const stream = probe4.streams?.[0];
+    const probe5 = JSON.parse(execFileSync13("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "json", String(args.sourceVideoPath)], { encoding: "utf8", timeout: 15e3 }));
+    const stream = probe5.streams?.[0];
     if (!stream || `${stream.width}x${stream.height}` !== selection.resolution)
       throw new Error("model_selection_mismatch: retake inherits source dimensions; select the source resolution");
   }
@@ -117748,15 +117748,15 @@ function environment(tool2) {
 }
 function inputFiles2(args, directory2) {
   const inputs = {};
-  const resolve12 = (file) => {
+  const resolve13 = (file) => {
     const resolved = fs20.realpathSync(path24.resolve(directory2, file));
     if (!fs20.statSync(resolved).isFile()) throw new Error("image_input_not_file");
     inputs[resolved] = readImageMetadata(resolved).sha256;
     return resolved;
   };
-  if (typeof args.imagePath === "string") args.imagePath = resolve12(args.imagePath);
-  if (typeof args.maskPath === "string") args.maskPath = resolve12(args.maskPath);
-  if (Array.isArray(args.refImagePaths)) args.refImagePaths = args.refImagePaths.map((v) => resolve12(String(v)));
+  if (typeof args.imagePath === "string") args.imagePath = resolve13(args.imagePath);
+  if (typeof args.maskPath === "string") args.maskPath = resolve13(args.maskPath);
+  if (Array.isArray(args.refImagePaths)) args.refImagePaths = args.refImagePaths.map((v) => resolve13(String(v)));
   return inputs;
 }
 function bindSelection2(tool2, input, selection) {
@@ -118464,12 +118464,12 @@ function boundaryReview(win, playback, videoTiming) {
   };
 }
 function readStoryboard(args) {
-  const { win, file, sha256: sha2562 } = readBoard(args.path);
-  if (args.level === "direction") return { file, sha256: sha2562, format: String(win.FORMAT ?? "shorts-9x16"), direction: shotDirection().facts(win) };
+  const { win, file, sha256: sha2563 } = readBoard(args.path);
+  if (args.level === "direction") return { file, sha256: sha2563, format: String(win.FORMAT ?? "shorts-9x16"), direction: shotDirection().facts(win) };
   const result = contract().outline(win, args.level);
   result.file = file;
   result.mediaBaseDirectory = dirname6(file);
-  result.sha256 = sha2562;
+  result.sha256 = sha2563;
   result.runtime = {
     contract: "storyboard-integrity-v1",
     modulePath: runtimeFile,
@@ -118978,18 +118978,18 @@ function openingReading(win, platforms = []) {
     const missing = [!plan2.title && "title", !plan2.thumbnail && "thumbnail", !plan2.widen && "bigger question"].filter(Boolean);
     if (missing.length) lines.push(`opening: no ${missing.join(", ")} \u2014 the first 30 s confirms the title and thumbnail, then opens a bigger question`);
   }
-  const inside = [];
+  const inside2 = [];
   let t2 = 0;
   for (const { s: s2 } of shotDirection().playbackEntries(win.SCENES ?? [])) {
     if (t2 >= span) break;
     if (typeof s2.duration !== "number" || !Number.isFinite(s2.duration) || !(s2.duration > 0)) {
-      inside.length = 0;
+      inside2.length = 0;
       break;
     }
-    inside.push(`${s2.id ?? `shot ${inside.length + 1}`} ${round1(t2)}\u2013${round1(t2 + s2.duration)} s`);
+    inside2.push(`${s2.id ?? `shot ${inside2.length + 1}`} ${round1(t2)}\u2013${round1(t2 + s2.duration)} s`);
     t2 += s2.duration;
   }
-  if (inside.length && t2 >= span) lines.push(`opening window 0\u2013${span} s: ${inside.slice(0, 8).join(", ")}${inside.length > 8 ? `, +${inside.length - 8} more` : ""}`);
+  if (inside2.length && t2 >= span) lines.push(`opening window 0\u2013${span} s: ${inside2.slice(0, 8).join(", ")}${inside2.length > 8 ? `, +${inside2.length - 8} more` : ""}`);
   let first = null;
   try {
     first = firstLineStart(win);
@@ -119446,10 +119446,10 @@ function requireEpisodeCast(path35, win) {
 function castRegistry(path35, win) {
   const dir = dirname6(scenesPath(path35));
   const cast = readCast(dir);
-  const storyFirst = win.STORY?.authoring === "story-first";
-  if (storyFirst) checkCast(dir, cast);
+  const storyFirst2 = win.STORY?.authoring === "story-first";
+  if (storyFirst2) checkCast(dir, cast);
   const ids = new Set(cast.map((entry2) => entry2.id));
-  if (!storyFirst) {
+  if (!storyFirst2) {
     const list = win.SB_DOC?.characters;
     const entries = Array.isArray(list) ? list : Object.entries(list ?? {}).map(([id, value]) => ({ ...value, id }));
     for (const entry2 of entries) if (typeof entry2?.id === "string") ids.add(entry2.id);
@@ -121160,7 +121160,7 @@ function isRetryable(httpStatus) {
   return httpStatus === 429 || httpStatus >= 500;
 }
 function sleep7(ms) {
-  return new Promise((resolve12) => setTimeout(resolve12, ms));
+  return new Promise((resolve13) => setTimeout(resolve13, ms));
 }
 function timeoutFor(textLength) {
   return Math.min(5 * 6e4, 6e4 + textLength * 40);
@@ -122189,7 +122189,7 @@ var qwen3AsrTranscribeSchema = external_exports.object({
   filename: bareFilenameSchema("json").optional()
 });
 function probeDurationSeconds(audioPath) {
-  return new Promise((resolve12) => {
+  return new Promise((resolve13) => {
     execFile6(
       "ffprobe",
       ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", audioPath],
@@ -122197,10 +122197,10 @@ function probeDurationSeconds(audioPath) {
       (error2, out) => {
         const seconds = Number.parseFloat((out || "").trim());
         if (error2 || !Number.isFinite(seconds) || seconds <= 0) {
-          resolve12(60);
+          resolve13(60);
           return;
         }
-        resolve12(seconds);
+        resolve13(seconds);
       }
     );
   });
@@ -122257,7 +122257,7 @@ async function transcribeLocal(request) {
   );
   const startedAt = Date.now();
   try {
-    await new Promise((resolve12, reject) => {
+    await new Promise((resolve13, reject) => {
       execFile6(
         bin,
         cliArgs,
@@ -122277,7 +122277,7 @@ async function transcribeLocal(request) {
 ${tail}` : ""}`));
             return;
           }
-          resolve12();
+          resolve13();
         }
       );
     });
@@ -124499,7 +124499,9 @@ var FACEBOOK_PUBLISH_OUTPUT = {
     captionWarning: {
       type: "string",
       description: 'Reason when only the caption upload failed, prefixed per locale ("en_US: \u2026"). The post itself succeeded, so do not re-publish \u2014 the video may still have been processing, so retry just the failed locales shortly'
-    }
+    },
+    thumbnailSet: { type: "boolean", description: "Only when thumbnailFilePath was given \u2014 whether the cover was set" },
+    thumbnailWarning: { type: "string", description: "Reason when only the cover step failed. The post succeeded, so do not re-publish \u2014 set the cover in Meta Business Suite" }
   },
   required: ["platform", "postId"]
 };
@@ -128218,6 +128220,7 @@ Returns: integer credit balance.`,
         linkUrl: { type: "string", format: "uri", description: "(Exception only) link attachment \u2014 text posts (no media) only. The default rule is to put the link in the first comment via facebook_comment" },
         reel: { type: "boolean", description: "With videoUrl: publish as a Facebook Page Reel instead of a regular Page video. Use for 9:16 shorts of 3\u201390 seconds only \u2014 Meta refuses a longer Reel (1363128), so a longer master goes without reel. The video URL must be public and fetchable by facebookexternalhit. If the result carries processingWarning the Reel was accepted \u2014 check the Page, never call again" },
         isAiGenerated: { type: "boolean", description: "Reels only (reel: true) \u2014 Meta AI-usage self-disclosure (is_ai_generated). Generated Mochi & B\u01A1 episodes pass true" },
+        thumbnailFilePath: { type: "string", description: "With videoUrl: **local** absolute path of the cover (.jpg/.png \u226410MB, same aspect ratio as the video \u2014 episode_cover read gives it). Checked before posting and set right after through POST /{video-id}/thumbnails with is_preferred. If only this step fails the post stands and thumbnailWarning says so \u2014 set the cover in Meta Business Suite, never publish again. Whether a Reel (reel: true) takes it is unverified" },
         channel: SNS_CHANNEL_PROPERTY
       },
       required: ["caption"]
@@ -128831,6 +128834,67 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     }
   },
   {
+    name: "episode_cover",
+    title: "Choose and render the episode cover and thumbnail",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Use it once the episode has pictures (shot start images or clips) and before publishing, to make the cover and thumbnail every platform shows in grids, search and channel pages. set records the moment the cover shows, its copy and the reason in storyboard/cover.json: the source is a frame of an accepted clip or the finished video (kind "frame", the default once video exists), a shot's start image (kind "shot"), or an image this episode generated with image_execute (kind "image", by requestId). render makes the files locally at $0 \u2014 output/cover/cover-9x16.jpg (Shorts, Reels, TikTok Studio) or thumbnail-16x9.jpg (long-form, plus up to two variants for YouTube Test & Compare) \u2014 with the copy drawn by code in the episode language, crop previews for each platform surface, and render.json with measurements. On a story-first board it also copies the main file to output/video/cover.jpg (and thumbnail.jpg on long-form). read reports missing, unrendered, fresh or stale (naming what changed) and the file each platform's publish call takes.
+
+Do NOT ask an image model to draw the copy, and do NOT promise a moment the episode does not show: pick a shot that is in the cut. Do NOT treat warnings as refusals \u2014 they report crops, size and contrast for the author to weigh. A paid background goes through image_plan \u2192 image_execute first and is then named here by requestId.
+
+Returns: set \u2014 the saved decision and warnings; render \u2014 files, previews, measurements and warnings; read \u2014 status, changed, files, publish map (stale flagged), platform values still unverified, and the opening plan's title and thumbnail when the board has one. Refuses an unknown shot, a shot without a start image, a frame outside its video, a path outside the episode, an image without a completed receipt, copy no bundled font can draw (cover_font_missing), variants on a vertical format, a missing Chrome, and a file over a platform limit.`,
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        path: { type: "string", description: "The storyboard directory or its scenes.js" },
+        action: { type: "string", enum: ["set", "render", "read"], description: "set writes the decision, render makes the files, read reports the state" },
+        decision: {
+          type: "object",
+          additionalProperties: false,
+          required: ["reason", "source"],
+          description: "For set: the cover decision",
+          properties: {
+            reason: { type: "string", description: "Why this moment: what the episode shows there and where (scene), in one sentence" },
+            source: {
+              type: "object",
+              description: 'The picture: {kind:"frame", video, seconds, shotId?} | {kind:"shot", shotId} | {kind:"image", requestId}. Paths are relative to the episode directory',
+              properties: {
+                kind: { type: "string", enum: ["frame", "shot", "image"] },
+                video: { type: "string", description: "frame: an accepted clip or the finished video inside the episode" },
+                seconds: { type: "number", minimum: 0, description: "frame: the time of the frame" },
+                shotId: { type: "string", pattern: "^s\\d{4,}$", description: "shot: the shot whose start image is used; frame: the shot the frame belongs to" },
+                requestId: { type: "string", description: "image: the image_execute request" }
+              },
+              required: ["kind"]
+            },
+            focus: {
+              type: "object",
+              additionalProperties: false,
+              required: ["x", "y"],
+              description: "The subject point in the source, 0\u20131 from the left and top; crops keep it and the copy goes to the other side. Default the centre",
+              properties: { x: { type: "number", minimum: 0, maximum: 1 }, y: { type: "number", minimum: 0, maximum: 1 } }
+            },
+            copy: {
+              type: ["object", "null"],
+              additionalProperties: false,
+              required: ["text"],
+              description: "The cover copy, or null for none. Long-form 2\u20134 words, short-form 1\u20133 (Japanese and Chinese count characters: 12 and 8); it adds to the title instead of repeating it",
+              properties: { text: { type: "string" }, emphasis: { type: "string", description: "One part of text drawn in the accent colour" } }
+            },
+            language: { type: "string", description: "The copy language; defaults to the episode language (STORY.language)" },
+            variants: {
+              type: "array",
+              maxItems: 2,
+              description: "Long-form only: up to two more thumbnails for YouTube Test & Compare, each overriding source, focus or copy",
+              items: { type: "object", additionalProperties: false, properties: { source: { type: "object" }, focus: { type: "object" }, copy: { type: ["object", "null"] } } }
+            }
+          }
+        }
+      },
+      required: ["path", "action"]
+    }
+  },
+  {
     name: "story_music",
     title: "Decide each scene's music (music spotting)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
@@ -129409,7 +129473,7 @@ TOOLS.push(...UPSCALE_TOOLS);
 TOOLS.push(...TIKTOK_TOOLS);
 
 // src/handlers.ts
-import { existsSync as existsSync39 } from "node:fs";
+import { existsSync as existsSync40 } from "node:fs";
 
 // src/music-routing.ts
 import * as fs24 from "node:fs";
@@ -129596,13 +129660,13 @@ function environment2(tool2) {
 }
 function inputFiles3(args, directory2) {
   const inputs = {};
-  const resolve12 = (file) => {
+  const resolve13 = (file) => {
     const resolved = fs24.realpathSync(path29.resolve(directory2, file));
     if (!fs24.statSync(resolved).isFile()) throw new Error("music_input_not_file");
     inputs[resolved] = readMusicMetadata(resolved).sha256;
     return resolved;
   };
-  if (typeof args.refAudioPath === "string") args.refAudioPath = resolve12(args.refAudioPath);
+  if (typeof args.refAudioPath === "string") args.refAudioPath = resolve13(args.refAudioPath);
   return inputs;
 }
 function bindSelection3(tool2, input, selection) {
@@ -129927,8 +129991,8 @@ async function hostReview(input) {
   if (!statSync17(file).isFile() || !statSync17(file).size) throw new Error("Provide a nonempty local media file");
   const mediaSha256 = await digest3(file);
   const { stdout } = await exec2("ffprobe", ["-v", "error", "-show_format", "-show_streams", "-of", "json", file], { maxBuffer: 4 * 1024 * 1024 });
-  const probe4 = JSON.parse(stdout), duration4 = Number(probe4.format.duration);
-  const streams = probe4.streams;
+  const probe5 = JSON.parse(stdout), duration4 = Number(probe5.format.duration);
+  const streams = probe5.streams;
   const video2 = streams.some((s2) => s2.codec_type === "video"), audio = streams.some((s2) => s2.codec_type === "audio");
   if (!Number.isFinite(duration4) || duration4 <= 0) throw new Error("Media must have a finite positive duration");
   if (r2.mode !== "audio" && !video2 || r2.mode !== "video" && !audio) throw new Error("Requested modality is absent from media");
@@ -129963,7 +130027,7 @@ async function hostReview(input) {
         "csv=p=0",
         file
       ], { maxBuffer: 32 * 1024 * 1024, timeout: 12e4 });
-      const origin = Number(probe4.format.start_time) || 0;
+      const origin = Number(probe5.format.start_time) || 0;
       const timestamps = timing.stdout.split(/\r?\n/).filter((line) => line.trim()).map((line) => Number(line.split(",")[0]) - origin).filter((n) => Number.isFinite(n) && n >= 0).sort((a, b) => a - b);
       if (!timestamps.length) throw new Error("Video has no readable presentation timestamps");
       for (let i2 = 0; i2 < 8; i2++) {
@@ -130587,12 +130651,554 @@ async function manageLocation(args) {
   return contract2.run(input);
 }
 
+// src/cover.ts
+import { createHash as createHash22 } from "node:crypto";
+import { execFileSync as execFileSync17, spawn as spawn3 } from "node:child_process";
+import { copyFileSync as copyFileSync2, existsSync as existsSync32, mkdirSync as mkdirSync19, mkdtempSync as mkdtempSync7, readFileSync as readFileSync34, realpathSync as realpathSync10, renameSync as renameSync8, rmSync as rmSync16, statSync as statSync18, writeFileSync as writeFileSync25, openSync as openSync7, readSync, closeSync as closeSync7 } from "node:fs";
+import { tmpdir as tmpdir7 } from "node:os";
+import { dirname as dirname9, isAbsolute as isAbsolute2, join as join17, relative as relative2, resolve as resolve9, sep } from "node:path";
+import { createRequire as createRequire19 } from "node:module";
+import { pathToFileURL } from "node:url";
+var load8 = createRequire19(import.meta.url);
+var COVER_REFS = join17(PLUGIN_ROOT, "skills", "generate-cover", "references");
+var TEMPLATE_FILE = join17(COVER_REFS, "cover-template.html");
+var MOTION_FONT_DIR = join17(PLUGIN_ROOT, "skills", "storyboard", "references", "motion-fonts");
+var REVIEW_FONT_DIR = join17(PLUGIN_ROOT, "skills", "channel", "references", "review-assets", "fonts");
+var RENDER_VERSION = 1;
+var LIMIT = { vertical: 8 * 1024 * 1024, landscape: 10 * 1024 * 1024 };
+var TILE_WIDTH = { vertical: 120, landscape: 160 };
+var MIN_TILE_FONT_PX = 10;
+var FILL = { text: [255, 255, 255], emphasis: [255, 212, 0] };
+var focusSchema = external_exports.object({ x: external_exports.number().min(0).max(1), y: external_exports.number().min(0).max(1) }).strict();
+var copySchema = external_exports.object({
+  text: external_exports.string().trim().min(1).max(80).describe("The cover copy in the episode language, drawn by code (never by an image model)"),
+  emphasis: external_exports.string().min(1).optional().describe("One part of text drawn in the accent colour")
+}).strict();
+var sourceSchema = external_exports.discriminatedUnion("kind", [
+  external_exports.object({ kind: external_exports.literal("shot"), shotId: shotIdSchema }).strict(),
+  external_exports.object({ kind: external_exports.literal("frame"), video: external_exports.string().min(1), seconds: external_exports.number().min(0), shotId: shotIdSchema.optional() }).strict(),
+  external_exports.object({ kind: external_exports.literal("image"), requestId: external_exports.string().min(1) }).strict()
+]);
+var variantSchema = external_exports.object({ source: sourceSchema.optional(), focus: focusSchema.optional(), copy: copySchema.nullable().optional() }).strict();
+var coverDecisionSchema = external_exports.object({
+  reason: external_exports.string().trim().min(1),
+  source: sourceSchema,
+  focus: focusSchema.optional(),
+  copy: copySchema.nullable().default(null),
+  language: external_exports.string().regex(/^[a-z]{2,3}(-[A-Za-z0-9]+)*$/).optional(),
+  variants: external_exports.array(variantSchema).max(2).default([])
+}).strict();
+var episodeCoverSchema = external_exports.object({
+  path: external_exports.string().min(1),
+  action: external_exports.enum(["set", "render", "read"]),
+  decision: coverDecisionSchema.optional()
+}).strict();
+function episodeOf(path35) {
+  const board = readBoard(path35);
+  const storyboard = realpathSync10(dirname9(scenesPath(path35)));
+  const format = String(board.win.FORMAT ?? "shorts-9x16");
+  const formats = load8(join17(PLUGIN_ROOT, "skills", "platform-guide", "references", "formats.js")).FORMATS;
+  const spec = formats[format]?.cover;
+  if (!spec) throw new Error(`cover_format_unknown: ${format} has no cover block in formats.js`);
+  return { board, storyboard, episode: dirname9(storyboard), format, spec };
+}
+var landscape = (spec) => spec.canvases[0].w > spec.canvases[0].h;
+function inside(episode, file, what) {
+  const abs = isAbsolute2(file) ? file : resolve9(episode, file);
+  if (!existsSync32(abs) || !statSync18(abs).isFile()) throw new Error(`cover_source_missing: ${what} ${file} is not a file`);
+  const real = realpathSync10(abs), root = realpathSync10(episode);
+  if (real !== root && !real.startsWith(root + sep)) throw new Error(`cover_source_outside: ${what} ${file} is outside the episode ${episode}`);
+  return real;
+}
+function sha256File(file) {
+  const hash7 = createHash22("sha256"), fd = openSync7(file, "r"), buf = Buffer.alloc(1 << 20);
+  try {
+    for (let n; (n = readSync(fd, buf, 0, buf.length, null)) > 0; ) hash7.update(buf.subarray(0, n));
+  } finally {
+    closeSync7(fd);
+  }
+  return hash7.digest("hex");
+}
+var sha2562 = (value) => createHash22("sha256").update(value).digest("hex");
+function probe4(file) {
+  try {
+    const out = JSON.parse(execFileSync17("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height:format=duration", "-of", "json", file], { encoding: "utf8", timeout: 3e4 }));
+    const s2 = out.streams?.[0];
+    if (!s2?.width || !s2?.height) throw new Error("no picture stream");
+    const duration4 = Number(out.format?.duration);
+    return { width: s2.width, height: s2.height, ...Number.isFinite(duration4) ? { duration: duration4 } : {} };
+  } catch (e2) {
+    throw new Error(`cover_source_unreadable: ${file}: ${e2.message.split("\n")[0]}`);
+  }
+}
+function episodeLanguage(ep) {
+  const story = ep.board.win.STORY;
+  if (typeof story?.language === "string") return story.language;
+  try {
+    const handoff = episodeHandoff(workflowEpisode(ep.storyboard) ?? "");
+    if (handoff?.LANGUAGES?.speech) return handoff.LANGUAGES.speech;
+  } catch {
+  }
+  return "ko";
+}
+function resolveSource(ep, input, warnings) {
+  const shots = ep.board.win.SCENES ?? [];
+  const shotOf = (id) => {
+    const shot = shots.find((s2) => s2.id === id);
+    if (!shot) throw new Error(`cover_shot_unknown: ${id} is not a shot on ${ep.board.file}`);
+    return shot;
+  };
+  if (input.kind === "shot") {
+    const shot = shotOf(input.shotId);
+    const start = shot.visual?.frames?.start;
+    if (!start) throw new Error(`cover_shot_no_image: ${input.shotId} has no start image yet (shot_image); use a frame of its clip or make the image first`);
+    if (shot.visual?.frames?.mode === "reference")
+      warnings.push({ code: "cover_source_reference_frame", message: `${input.shotId} is an MSR shot: its start image is a background reference and the finished clip can be framed differently. Use a frame of the clip once it exists.` });
+    const file2 = inside(ep.episode, join17(ep.storyboard, start), `start image of ${input.shotId}`);
+    probe4(file2);
+    return { ...input, path: relative2(ep.episode, file2), sha256: sha256File(file2) };
+  }
+  if (input.kind === "frame") {
+    if (input.shotId) shotOf(input.shotId);
+    const file2 = inside(ep.episode, input.video, "video");
+    const { duration: duration4 } = probe4(file2);
+    if (duration4 === void 0 || input.seconds >= duration4) throw new Error(`cover_frame_outside: ${input.seconds}s is not inside ${input.video} (${duration4 ?? "?"}s)`);
+    return { ...input, video: relative2(ep.episode, file2), path: relative2(ep.episode, file2), sha256: sha256File(file2) };
+  }
+  const job = Object.values(readImageState(ep.episode)?.jobs ?? {}).find((j) => j.requestId === input.requestId);
+  if (!job || job.status !== "completed") throw new Error(`cover_image_receipt_missing: no completed image_execute receipt for ${input.requestId} in ${ep.episode}`);
+  const file = inside(ep.episode, job.outputFile, `image ${input.requestId}`);
+  probe4(file);
+  return { ...input, path: relative2(ep.episode, file), sha256: sha256File(file) };
+}
+var CJK_COUNT = /* @__PURE__ */ new Set(["ja", "zh"]);
+var copyLength = (text4, language) => CJK_COUNT.has(language.split("-")[0]) ? { n: Array.from(text4.replace(/[\s\p{P}\p{S}]/gu, "")).length, unit: "chars" } : { n: text4.trim().split(/\s+/).length, unit: "words" };
+function youtubeTitle(ep) {
+  const file = join17(ep.episode, "output", "youtube", "meta.md");
+  if (!existsSync32(file)) return void 0;
+  const lines = readFileSync34(file, "utf8").split("\n");
+  const at = lines.findIndex((l) => /^#{1,6}\s+title\b/i.test(l));
+  if (at < 0) return void 0;
+  return lines.slice(at + 1).find((l) => l.trim() && !/^#/.test(l))?.trim();
+}
+function copyWarnings(ep, copy, language, label) {
+  if (!copy) return [];
+  const { n, unit } = copyLength(copy.text, language);
+  const max = unit === "chars" ? ep.spec.copyMax.chars : ep.spec.copyMax.words;
+  return n > max ? [{ code: "cover_copy_long", message: `${label}copy runs ${n} ${unit}; this format reads best at ${max} or fewer` }] : [];
+}
+function titleWarnings(ep, decision) {
+  const title = youtubeTitle(ep);
+  if (!title) return [];
+  const norm = (s2) => s2.normalize("NFC").toLowerCase().replace(/[\s\p{P}]/gu, "");
+  return [decision, ...decision.variants].flatMap((look, i2) => look.copy && norm(look.copy.text) && norm(title).includes(norm(look.copy.text)) ? [{ code: "cover_copy_repeats_title", message: `${i2 ? `variant ${VARIANT_LABELS[i2]}: ` : ""}copy "${look.copy.text}" repeats the title "${title}"; the cover adds what the title does not say` }] : []);
+}
+function lookOf(ep, base, warnings, label) {
+  if (base.copy?.emphasis && !base.copy.text.includes(base.copy.emphasis)) throw new Error(`cover_emphasis_missing: ${label}emphasis "${base.copy.emphasis}" is not part of "${base.copy.text}"`);
+  const source = resolveSource(ep, base.source, warnings);
+  return { source, focus: base.focus ?? { x: 0.5, y: 0.5 }, copy: base.copy };
+}
+function setCover(path35, input) {
+  const ep = episodeOf(path35);
+  if (input.variants.length && !landscape(ep.spec)) throw new Error("cover_variants_longform_only: variants are for YouTube Test & Compare, which long-form videos have and Shorts do not");
+  const warnings = [];
+  const language = input.language ?? episodeLanguage(ep);
+  if (input.language && input.language !== episodeLanguage(ep))
+    warnings.push({ code: "cover_language_mismatch", message: `copy language ${input.language} differs from the episode language ${episodeLanguage(ep)}` });
+  const main2 = lookOf(ep, input, warnings, "");
+  const variants = input.variants.map((v, i2) => lookOf(ep, {
+    source: v.source ?? input.source,
+    focus: v.focus ?? main2.focus,
+    copy: v.copy === void 0 ? main2.copy : v.copy
+  }, warnings, `variant ${VARIANT_LABELS[i2 + 1]}: `));
+  for (const [i2, look] of [main2, ...variants].entries()) {
+    if (look.copy) pickFont(look.copy.text, language);
+    warnings.push(...copyWarnings(ep, look.copy, language, i2 ? `variant ${VARIANT_LABELS[i2]}: ` : ""));
+    warnings.push(...sizeWarnings(ep, look, i2 ? `variant ${VARIANT_LABELS[i2]}: ` : ""));
+  }
+  const decision = { version: 1, language, reason: input.reason, format: ep.format, ...main2, variants };
+  warnings.push(...titleWarnings(ep, decision));
+  const file = join17(ep.storyboard, "cover.json");
+  atomicWrite(file, JSON.stringify(decision, null, 2) + "\n");
+  return { file, decision, warnings };
+}
+var VARIANT_LABELS = ["a", "b", "c"];
+function atomicWrite(file, data) {
+  mkdirSync19(dirname9(file), { recursive: true });
+  const tmp = `${file}.${process.pid}.tmp`;
+  writeFileSync25(tmp, data);
+  renameSync8(tmp, file);
+}
+function readDecision(ep) {
+  const file = join17(ep.storyboard, "cover.json");
+  if (!existsSync32(file)) return void 0;
+  let decision;
+  try {
+    decision = JSON.parse(readFileSync34(file, "utf8"));
+  } catch (e2) {
+    throw new Error(`cover_decision_unreadable: ${file}: ${e2.message}`);
+  }
+  if (decision?.version !== 1 || !decision.source?.path) throw new Error(`cover_decision_unreadable: ${file} is not a version 1 cover decision; write it again with episode_cover set`);
+  return decision;
+}
+var even = (n) => Math.max(2, Math.round(n / 2) * 2);
+function cropFor(src, focus, canvas) {
+  const ar = canvas.w / canvas.h;
+  let w = src.width, h2 = src.height;
+  if (w / h2 > ar) w = Math.round(h2 * ar);
+  else h2 = Math.round(w / ar);
+  const clamp3 = (v, max) => Math.max(0, Math.min(max, Math.round(v)));
+  const x2 = clamp3(focus.x * src.width - w / 2, src.width - w), y = clamp3(focus.y * src.height - h2 / 2, src.height - h2);
+  let outW = Math.min(canvas.w, w);
+  const small = outW < canvas.min[0];
+  if (small) outW = canvas.min[0];
+  outW = even(outW);
+  return { x: x2, y, w, h: h2, outW, outH: even(outW * canvas.h / canvas.w), small };
+}
+function sizeWarnings(ep, look, label) {
+  const src = probeSource(ep, look.source);
+  return ep.spec.canvases.filter((c) => cropFor(src, look.focus, c).small).map((c) => ({
+    code: "cover_source_small",
+    message: `${label}the source gives less than ${c.min[0]}\xD7${c.min[1]} for the ${c.id} canvas and is enlarged to it; a larger source looks sharper`
+  }));
+}
+function probeSource(ep, source) {
+  const file = join17(ep.episode, source.path);
+  const p = probe4(file);
+  return p;
+}
+function regionFor(spec, focus) {
+  if (landscape(spec)) {
+    const x3 = spec.x ?? { x0: 0.04, x1: 0.96 }, y1 = Math.min(spec.badge?.y0 ?? 0.85, spec.bottom ?? 0.95) - 0.05;
+    return focus.x >= 0.5 ? { x0: x3.x0, x1: 0.48, y0: 0.08, y1, align: "left" } : { x0: 0.52, x1: x3.x1, y0: 0.08, y1, align: "right" };
+  }
+  const core = spec.bands.core, x2 = spec.bands.x;
+  return focus.y <= 0.5 ? { x0: x2.x0, x1: x2.x1, y0: 0.5, y1: core.y1, align: "center" } : { x0: x2.x0, x1: x2.x1, y0: core.y0, y1: 0.5, align: "center" };
+}
+function pickFont(text4, language) {
+  const motion = load8(join17(PLUGIN_ROOT, "skills", "storyboard", "references", "motion-font-data.js"));
+  const cjk = load8(join17(COVER_REFS, "cover-font-data.js"));
+  const all = { ...motion, ...cjk };
+  const lang = language.split("-")[0];
+  const order = lang === "ja" ? ["notosansjp", "pretendard"] : lang === "zh" ? ["notosanssc", "notosanstc"] : /[\u1100-\u11ff\u3130-\u318f\uac00-\ud7a3]/.test(text4) ? ["paperlogy", "pretendard"] : ["pretendard", "paperlogy"];
+  const covers = (f4) => Array.from(text4.normalize("NFC")).every((ch) => /\s/.test(ch) || f4.coverage.some(([a, b]) => ch.codePointAt(0) >= a && ch.codePointAt(0) <= b));
+  const id = order.find((k) => all[k] && covers(all[k]));
+  if (!id) {
+    const drawn = (ch) => order.some((k) => all[k]?.coverage.some(([a, b]) => ch.codePointAt(0) >= a && ch.codePointAt(0) <= b));
+    const missing = [...new Set(Array.from(text4.normalize("NFC")).filter((ch) => !/\s/.test(ch) && !drawn(ch)))];
+    throw new Error(`cover_font_missing: no bundled font draws all of "${text4}" in ${language}${missing.length ? ` (missing: ${missing.join(" ")})` : ""}; set the cover without copy, or add a font`);
+  }
+  const f3 = all[id];
+  const dir = f3.file.endsWith(".ttf") ? MOTION_FONT_DIR : REVIEW_FONT_DIR;
+  const weight = f3.axes.wght ? Math.min(f3.axes.wght[2], 800) : f3.weight;
+  return { id, file: join17(dir, f3.file), weight };
+}
+var CHROME_CANDIDATES = [
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary",
+  "/opt/google/chrome/chrome",
+  "/usr/bin/google-chrome",
+  "/usr/bin/google-chrome-stable",
+  "/usr/bin/chromium",
+  "/usr/bin/chromium-browser",
+  "/snap/bin/chromium"
+];
+function chromePath() {
+  const env2 = process.env.CHROME;
+  if (env2 && existsSync32(env2) && statSync18(env2).isFile()) return env2;
+  return CHROME_CANDIDATES.find((p) => existsSync32(p));
+}
+function chrome(args, until) {
+  const bin = chromePath();
+  if (!bin) return Promise.reject(new Error("cover_chrome_missing: Google Chrome was not found; set CHROME to the binary"));
+  const profile = mkdtempSync7(join17(tmpdir7(), "sf-cover-chrome-"));
+  return new Promise((resolveRun, reject) => {
+    const child = spawn3(
+      bin,
+      [
+        "--headless=new",
+        "--use-mock-keychain",
+        "--disable-gpu",
+        "--hide-scrollbars",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--allow-file-access-from-files",
+        "--virtual-time-budget=15000",
+        `--user-data-dir=${profile}`,
+        ...args
+      ],
+      { stdio: ["ignore", "pipe", "pipe"] }
+    );
+    let out = "", done = false;
+    const finish = (error2) => {
+      if (done) return;
+      done = true;
+      clearInterval(poll);
+      clearTimeout(timer);
+      if (child.exitCode === null) child.kill("SIGKILL");
+      rmSync16(profile, { recursive: true, force: true });
+      if (error2) reject(error2);
+      else resolveRun(out);
+    };
+    let last = -1;
+    const poll = setInterval(() => {
+      if (!until || !existsSync32(until)) return;
+      const size = statSync18(until).size;
+      if (size > 0 && size === last) finish();
+      else last = size;
+    }, 150);
+    const timer = setTimeout(() => finish(new Error("cover_chrome_failed: Chrome did not finish within 90 s")), 9e4);
+    child.stdout.on("data", (d) => {
+      out += d;
+    });
+    child.on("error", (e2) => finish(new Error(`cover_chrome_failed: ${e2.message}`)));
+    child.on("close", (code) => {
+      if (until && existsSync32(until)) finish();
+      else if (!until && code === 0) finish();
+      else finish(new Error(`cover_chrome_failed: Chrome exited ${code}${until ? " without writing the screenshot" : ""}`));
+    });
+  });
+}
+function ffmpeg3(args) {
+  try {
+    execFileSync17("ffmpeg", ["-v", "error", "-y", ...args], { timeout: 12e4, stdio: ["ignore", "ignore", "pipe"] });
+  } catch (e2) {
+    throw new Error(`cover_ffmpeg_failed: ${(e2.stderr?.toString() || e2.message).trim().split("\n").slice(-2).join(" ")}`);
+  }
+}
+function encodeJpeg(png, out, limit2) {
+  for (let q = 2; q <= 12; q += 2) {
+    ffmpeg3(["-i", png, "-map_metadata", "-1", "-frames:v", "1", "-q:v", String(q), out]);
+    const bytes = statSync18(out).size;
+    if (bytes <= limit2) return { bytes, quality: q };
+  }
+  rmSync16(out, { force: true });
+  throw new Error(`cover_file_too_large: ${out} stays over ${limit2} bytes at every JPEG quality`);
+}
+function luminance([r2, g, b]) {
+  const c = (v) => {
+    const s2 = v / 255;
+    return s2 <= 0.03928 ? s2 / 12.92 : ((s2 + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * c(r2) + 0.7152 * c(g) + 0.0722 * c(b);
+}
+function contrastBehind(bg, box, width, height, fills) {
+  const x2 = Math.max(0, Math.floor(box.x0 * width)), y = Math.max(0, Math.floor(box.y0 * height));
+  const w = Math.max(2, Math.min(width - x2, Math.ceil((box.x1 - box.x0) * width))), h2 = Math.max(2, Math.min(height - y, Math.ceil((box.y1 - box.y0) * height)));
+  const raw = execFileSync17("ffmpeg", ["-v", "error", "-i", bg, "-vf", `crop=${w}:${h2}:${x2}:${y},scale=64:-2:flags=area`, "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], { timeout: 3e4, maxBuffer: 1 << 24 });
+  const lum = [];
+  for (let i2 = 0; i2 + 2 < raw.length; i2 += 3) lum.push(luminance([raw[i2], raw[i2 + 1], raw[i2 + 2]]));
+  lum.sort((a, b) => a - b);
+  const bright = lum[Math.floor(lum.length * 0.9)] ?? 0;
+  return Math.min(...fills.map((f3) => (Math.max(luminance(f3), bright) + 0.05) / (Math.min(luminance(f3), bright) + 0.05)));
+}
+var templateSha = () => sha2562(readFileSync34(TEMPLATE_FILE));
+var decisionSha = (d) => sha2562(JSON.stringify(d));
+var storyFirst = (win) => win.STORY?.authoring === "story-first";
+async function renderCover(path35) {
+  const ep = episodeOf(path35);
+  const decision = readDecision(ep);
+  if (!decision) throw new Error("cover_decision_missing: write the decision with episode_cover set first");
+  const dir = join17(ep.episode, "output", "cover"), work = join17(dir, ".work");
+  rmSync16(work, { recursive: true, force: true });
+  mkdirSync19(join17(dir, "previews"), { recursive: true });
+  mkdirSync19(work, { recursive: true });
+  const template = readFileSync34(TEMPLATE_FILE, "utf8");
+  const kind = landscape(ep.spec) ? "landscape" : "vertical";
+  const files3 = [], previews = [], warnings = [], measurements = {};
+  const sources = {};
+  const looks2 = [decision, ...decision.variants];
+  for (const [i2, look] of looks2.entries()) {
+    const label = VARIANT_LABELS[i2], suffix = i2 ? `-${label}` : "", say = i2 ? `variant ${label}: ` : "";
+    const srcFile = inside(ep.episode, look.source.path, "source");
+    const now = sha256File(srcFile);
+    if (now !== look.source.sha256) throw new Error(`cover_source_changed: ${look.source.path} changed after episode_cover set; set the decision again so it names what it shows`);
+    sources[label] = now;
+    let still = srcFile;
+    if (look.source.kind === "frame") {
+      still = join17(work, `frame${suffix}.png`);
+      ffmpeg3(["-ss", String(look.source.seconds), "-i", srcFile, "-frames:v", "1", still]);
+    }
+    const src = probe4(still);
+    for (const canvas of ep.spec.canvases) {
+      const crop = cropFor(src, look.focus, canvas);
+      if (crop.small) warnings.push({ code: "cover_source_small", message: `${say}the source gives less than ${canvas.min[0]}\xD7${canvas.min[1]} and is enlarged to it` });
+      const bg = join17(work, `bg-${canvas.id}${suffix}.png`);
+      ffmpeg3(["-i", still, "-vf", `crop=${crop.w}:${crop.h}:${crop.x}:${crop.y},scale=${crop.outW}:${crop.outH}:flags=lanczos`, "-frames:v", "1", bg]);
+      const focus = { x: (look.focus.x * src.width - crop.x) / crop.w, y: (look.focus.y * src.height - crop.y) / crop.h };
+      const region = regionFor(ep.spec, focus);
+      const font = look.copy ? pickFont(look.copy.text, decision.language) : void 0;
+      const config3 = {
+        width: crop.outW,
+        height: crop.outH,
+        background: pathToFileURL(bg).href,
+        text: look.copy?.text ?? null,
+        emphasis: look.copy?.emphasis ?? null,
+        align: region.align,
+        region,
+        font: font ? { url: pathToFileURL(font.file).href, weight: font.weight } : null,
+        maxFont: Math.round(kind === "landscape" ? 0.2 * crop.outH : 0.14 * crop.outW),
+        minFont: Math.round(MIN_TILE_FONT_PX * crop.outW / TILE_WIDTH[kind])
+      };
+      const page = join17(work, `page-${canvas.id}${suffix}.html`);
+      writeFileSync25(page, template.replace("/*COVER_CONFIG*/null", JSON.stringify(config3).replace(/</g, "\\u003c")));
+      const url = pathToFileURL(page).href, size = `--window-size=${crop.outW},${crop.outH}`;
+      const dom = await chrome([size, "--dump-dom", url]);
+      const measured = /<script type="application\/json" id="measure">([\s\S]*?)<\/script>/.exec(dom)?.[1];
+      let m2;
+      try {
+        m2 = JSON.parse(measured ?? "");
+      } catch {
+        throw new Error("cover_chrome_failed: the cover page did not report its layout");
+      }
+      if (m2.error) throw new Error(`cover_chrome_failed: ${m2.error}`);
+      const shot = join17(work, `shot-${canvas.id}${suffix}.png`);
+      await chrome([size, `--screenshot=${shot}`, url], shot);
+      const got = probe4(shot);
+      if (got.width !== crop.outW || got.height !== crop.outH) throw new Error(`cover_chrome_failed: the capture is ${got.width}\xD7${got.height}, not ${crop.outW}\xD7${crop.outH}`);
+      const name = `${kind === "landscape" ? "thumbnail" : "cover"}-${canvas.id}${suffix}.jpg`;
+      const out = join17(dir, name);
+      const enc = encodeJpeg(shot, out, LIMIT[kind]);
+      files3.push({ name, width: crop.outW, height: crop.outH, bytes: enc.bytes, quality: enc.quality, sha256: sha256File(out), role: i2 ? `variant ${label}` : "main" });
+      if (!i2 && kind === "vertical" && ep.spec.unverified.tiktokSavedRatio === "3:4") {
+        const tt = join17(dir, "cover-3x4.jpg"), png = join17(work, "tiktok-3x4.png");
+        ffmpeg3(["-i", shot, "-vf", `crop=iw:ih*0.75:0:ih*0.125,scale=1080:1440:flags=lanczos`, "-frames:v", "1", png]);
+        const e2 = encodeJpeg(png, tt, LIMIT.vertical);
+        files3.push({ name: "cover-3x4.jpg", width: 1080, height: 1440, bytes: e2.bytes, quality: e2.quality, sha256: sha256File(tt), role: "tiktok" });
+      }
+      previews.push(...cutPreviews(shot, join17(dir, "previews"), `${canvas.id}${suffix}`, kind, ep.spec));
+      const measure = { canvas: canvas.id, source: look.source.path, crop, focus };
+      if (kind === "vertical" && (focus.y < ep.spec.bands.core.y0 || focus.y > ep.spec.bands.core.y1))
+        warnings.push({ code: "cover_focus_outside_core", message: `${say}the subject (focus y ${focus.y.toFixed(2)}) sits outside the centre band ${ep.spec.bands.core.y0}\u2013${ep.spec.bands.core.y1} that every crop keeps` });
+      if (look.copy && m2.copy) {
+        const box = m2.copy.box;
+        const tilePx = m2.copy.fontPx * TILE_WIDTH[kind] / crop.outW;
+        const contrast = contrastBehind(bg, box, crop.outW, crop.outH, look.copy.emphasis ? [FILL.text, FILL.emphasis] : [FILL.text]);
+        Object.assign(measure, { font: font.id, fontPx: m2.copy.fontPx, lines: m2.copy.lines, box, tileFontPx: +tilePx.toFixed(1), tileWidth: TILE_WIDTH[kind], contrast: +contrast.toFixed(2) });
+        if (!m2.copy.fits) warnings.push({ code: "cover_copy_overflow", message: `${say}the copy does not fit its area in two lines even at the smallest legible size; shorten it` });
+        if (tilePx < MIN_TILE_FONT_PX) warnings.push({ code: "cover_copy_small", message: `${say}the copy is ${tilePx.toFixed(1)} px tall on a ${TILE_WIDTH[kind]} px tile; ${MIN_TILE_FONT_PX} px or more reads` });
+        if (contrast < 3) warnings.push({ code: "cover_copy_low_contrast", message: `${say}the copy stands ${contrast.toFixed(2)}:1 off the brightest part behind it; 3:1 or more reads at tile size` });
+        if (kind === "vertical") {
+          const core = ep.spec.bands.core, xb = ep.spec.bands.x;
+          if (box.y0 < core.y0 - 2e-3 || box.y1 > core.y1 + 2e-3 || box.x0 < xb.x0 - 2e-3 || box.x1 > xb.x1 + 2e-3)
+            warnings.push({ code: "cover_copy_outside_core", message: `${say}the copy leaves the centre band every crop keeps` });
+        } else {
+          const badge = ep.spec.badge ?? { x0: 0.8, y0: 0.85 };
+          if (box.x1 > badge.x0 && box.y1 > badge.y0 || box.y1 > (ep.spec.bottom ?? 0.95))
+            warnings.push({ code: "cover_copy_badge", message: `${say}the copy reaches the duration badge corner or the progress bar strip` });
+        }
+      }
+      measurements[`${canvas.id}${suffix}`] = measure;
+    }
+  }
+  warnings.push(...titleWarnings(ep, decision));
+  const copied = [];
+  if (storyFirst(ep.board.win)) {
+    const main2 = files3.find((f3) => f3.role === "main");
+    const video2 = join17(ep.episode, "output", "video");
+    mkdirSync19(video2, { recursive: true });
+    copyFileSync2(join17(dir, main2.name), join17(video2, "cover.jpg"));
+    copied.push("output/video/cover.jpg");
+    if (kind === "landscape") {
+      copyFileSync2(join17(dir, main2.name), join17(video2, "thumbnail.jpg"));
+      copied.push("output/video/thumbnail.jpg");
+    }
+  }
+  const render = {
+    version: 1,
+    renderVersion: RENDER_VERSION,
+    decisionSha256: decisionSha(decision),
+    templateSha256: templateSha(),
+    sources,
+    format: ep.format,
+    files: files3,
+    previews,
+    measurements,
+    warnings,
+    copied
+  };
+  atomicWrite(join17(dir, "render.json"), JSON.stringify(render, null, 2) + "\n");
+  rmSync16(work, { recursive: true, force: true });
+  return { dir, render };
+}
+function cutPreviews(shot, dir, stem, kind, spec) {
+  const out = [];
+  const cut = (name, vf) => {
+    const file = join17(dir, `${stem}-${name}.png`);
+    ffmpeg3(["-i", shot, "-vf", vf, "-frames:v", "1", file]);
+    out.push(relative2(dirname9(dir), file));
+  };
+  if (kind === "landscape") {
+    cut("tile-160x90", "scale=160:90:flags=area");
+    cut("sheet", "split=2[a][b];[a]scale=640:360:flags=area,pad=820:360:0:0:black[p];[b]scale=160:90:flags=area[t];[p][t]overlay=650:135");
+    return out;
+  }
+  const b = spec.bands;
+  const band = (y) => `crop=iw:ih*${(y.y1 - y.y0).toFixed(4)}:0:ih*${y.y0.toFixed(4)}`;
+  cut("grid-3x4", `${band(b.outer)},scale=120:160:flags=area`);
+  cut("feed-1x1", `${band(b.support)},scale=240:240:flags=area`);
+  cut("landscape-16x9", `${band(b.core)},scale=320:180:flags=area`);
+  cut("sheet", `split=4[f][g][s][c];[f]scale=270:480:flags=area[f2];[g]${band(b.outer)},scale=360:480:flags=area[g2];[s]${band(b.support)},scale=480:480:flags=area[s2];[c]${band(b.core)},scale=852:480:flags=area[c2];[f2][g2][s2][c2]hstack=4`);
+  return out;
+}
+function readCover(path35) {
+  const ep = episodeOf(path35);
+  const story = ep.board.win.STORY;
+  const plan2 = story?.opening?.thumbnail || story?.opening?.title ? { title: story?.opening?.title, thumbnail: story?.opening?.thumbnail } : void 0;
+  const base = { format: ep.format, unverified: ep.spec.unverified, ...plan2 ? { plan: plan2 } : {} };
+  const decision = readDecision(ep);
+  if (!decision) return { status: "missing", ...base, next: "episode_cover set: choose the moment, the copy and why" };
+  const dir = join17(ep.episode, "output", "cover"), renderFile = join17(dir, "render.json");
+  if (!existsSync32(renderFile)) return { status: "unrendered", decision, ...base, next: "episode_cover render" };
+  const render = JSON.parse(readFileSync34(renderFile, "utf8"));
+  const changed = [];
+  if (render.decisionSha256 !== decisionSha(decision)) changed.push("decision");
+  if (render.templateSha256 !== templateSha() || render.renderVersion !== RENDER_VERSION) changed.push("template");
+  for (const [i2, look] of [decision, ...decision.variants].entries()) {
+    const file = join17(ep.episode, look.source.path);
+    const label = VARIANT_LABELS[i2];
+    if (!existsSync32(file) || sha256File(file) !== look.source.sha256 || render.sources[label] !== look.source.sha256) changed.push(i2 ? `source ${label}` : "source");
+  }
+  for (const f3 of render.files) if (!existsSync32(join17(dir, f3.name)) || sha256File(join17(dir, f3.name)) !== f3.sha256) {
+    changed.push("files");
+    break;
+  }
+  const stale = changed.length > 0;
+  const kind = landscape(ep.spec) ? "landscape" : "vertical";
+  const at = (name) => render.files.some((f3) => f3.name === name) ? join17(dir, name) : null;
+  const main2 = render.files.find((f3) => f3.role === "main");
+  const mainFile = main2 ? join17(dir, main2.name) : null;
+  const publish = kind === "landscape" ? { youtube: mainFile, facebook: mainFile, variants: render.files.filter((f3) => f3.role.startsWith("variant")).map((f3) => join17(dir, f3.name)) } : {
+    youtube: mainFile,
+    instagram: mainFile,
+    instagramNeedsHosting: true,
+    facebook: mainFile,
+    tiktok: ep.spec.unverified.tiktokSavedRatio === "3:4" ? at("cover-3x4.jpg") : mainFile,
+    threads: null
+  };
+  const warnings = [...render.warnings.filter((w) => w.code !== "cover_copy_repeats_title"), ...titleWarnings(ep, decision)];
+  return {
+    status: stale ? "stale" : "fresh",
+    changed,
+    decision,
+    dir,
+    files: render.files,
+    previews: render.previews.map((p) => join17(dir, p)),
+    measurements: render.measurements,
+    warnings,
+    publish: { ...publish, stale },
+    copied: render.copied,
+    ...base,
+    ...stale ? { next: "episode_cover render (it is local and free); set again first when the source changed" } : {}
+  };
+}
+
 // src/speech.ts
-import { createHash as createHash22, randomUUID as randomUUID9 } from "node:crypto";
-import { readFileSync as readFileSync34, writeFileSync as writeFileSync25, renameSync as renameSync8, mkdirSync as mkdirSync19, existsSync as existsSync32 } from "node:fs";
-import { dirname as dirname9, resolve as resolve9, join as join17, relative as relative2 } from "node:path";
+import { createHash as createHash23, randomUUID as randomUUID9 } from "node:crypto";
+import { readFileSync as readFileSync35, writeFileSync as writeFileSync26, renameSync as renameSync9, mkdirSync as mkdirSync20, existsSync as existsSync33 } from "node:fs";
+import { dirname as dirname10, resolve as resolve10, join as join18, relative as relative3 } from "node:path";
 import * as nodeModule7 from "node:module";
-import { execFileSync as execFileSync17 } from "node:child_process";
+import { execFileSync as execFileSync18 } from "node:child_process";
 var voiceContract = () => nodeModule7.createRequire(import.meta.url)("../../skills/_shared/character-voice.js");
 var characterSpeechContract = () => nodeModule7.createRequire(import.meta.url)("../../skills/_shared/character-speech.js");
 var speechSpanContract = () => nodeModule7.createRequire(import.meta.url)("../../skills/_shared/speech-span.js");
@@ -130615,10 +131221,10 @@ var speechManageSchema = external_exports.object({
   generation: external_exports.object({ generator: external_exports.string().min(1), voiceSettings: external_exports.record(external_exports.unknown()), text: external_exports.string().min(1), language: external_exports.string().min(1).optional(), receiptPath: external_exports.string().min(1).optional() }).strict().optional(),
   capabilities: external_exports.object({ provider: external_exports.string().min(1), model: external_exports.string().min(1), audioConditioning: external_exports.boolean(), lipSync: external_exports.boolean(), postLipSync: external_exports.boolean(), nativeSpeech: external_exports.boolean().optional(), evidence: external_exports.string().min(1) }).strict().optional()
 }).strict();
-var hash4 = (s2) => createHash22("sha256").update(s2).digest("hex");
+var hash4 = (s2) => createHash23("sha256").update(s2).digest("hex");
 var object5 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
 function syncProductionClip(scene, boardDir, videoPath, oldClip, warnings) {
-  const duration4 = (file) => Number(execFileSync17(
+  const duration4 = (file) => Number(execFileSync18(
     "ffprobe",
     ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=duration", "-of", "default=nw=1:nk=1", file],
     { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }
@@ -130626,12 +131232,12 @@ function syncProductionClip(scene, boardDir, videoPath, oldClip, warnings) {
   const production = object5(scene.productionPlan), cuts = production.cuts;
   if (Array.isArray(cuts) && cuts.length) {
     const cut = object5(cuts[0]);
-    if (cuts.length !== 1 || cut.kind !== "generated_video" || Number(cut.start ?? 0) !== 0 || typeof oldClip !== "string" || typeof cut.path !== "string" || resolve9(boardDir, cut.path) !== resolve9(boardDir, oldClip)) {
+    if (cuts.length !== 1 || cut.kind !== "generated_video" || Number(cut.start ?? 0) !== 0 || typeof oldClip !== "string" || typeof cut.path !== "string" || resolve10(boardDir, cut.path) !== resolve10(boardDir, oldClip)) {
       warnings.push("The bound video changed; the authored production cuts were preserved and need an explicit edit before playback uses this clip.");
       return;
     }
     try {
-      if (Math.abs(Number(cut.seconds) - duration4(resolve9(boardDir, oldClip))) > 0.05) {
+      if (Math.abs(Number(cut.seconds) - duration4(resolve10(boardDir, oldClip))) > 0.05) {
         warnings.push("The existing production cut has an authored duration; it was preserved for an explicit edit.");
         return;
       }
@@ -130643,7 +131249,7 @@ function syncProductionClip(scene, boardDir, videoPath, oldClip, warnings) {
   try {
     const seconds = duration4(videoPath);
     if (!Number.isFinite(seconds) || seconds <= 0) throw new Error("Missing video duration");
-    scene.productionPlan = { ...production, cuts: [{ kind: "generated_video", path: relative2(boardDir, videoPath), start: 0, seconds }] };
+    scene.productionPlan = { ...production, cuts: [{ kind: "generated_video", path: relative3(boardDir, videoPath), start: 0, seconds }] };
   } catch {
     warnings.push("Could not measure the bound video stream; production cuts were not changed.");
   }
@@ -130654,7 +131260,7 @@ function speechRevision(line, character) {
 function currentAudio(line, character) {
   try {
     if (line.audio) characterSpeechContract().verifiedSpeechGeneration(line.audio.path, line.audio.generation, character?.tts, line);
-    return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync32(line.audio.path) && hash4(readFileSync34(line.audio.path)) === line.audio.sha256;
+    return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync33(line.audio.path) && hash4(readFileSync35(line.audio.path)) === line.audio.sha256;
   } catch {
     return false;
   }
@@ -130686,15 +131292,15 @@ function audioProvenanceStatus(line, character) {
   const voice = character?.tts;
   const historical = ["supertonic", "mlx"].includes(String(voice?.engine)) || voice?.engine === "elevenlabs" && ["eleven_v3", "eleven_v3_conversational", "eleven_multilingual_v2", "eleven_flash_v2_5", "eleven_turbo_v2_5"].includes(String(voice?.model));
   try {
-    if (historical && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && hash4(readFileSync34(line.audio.path)) === line.audio.sha256) return "preserved_historical_recording_unverified";
+    if (historical && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && hash4(readFileSync35(line.audio.path)) === line.audio.sha256) return "preserved_historical_recording_unverified";
   } catch {
   }
   return "stale_or_missing";
 }
 function measuredDuration(line) {
-  if (!line.audio || !existsSync32(line.audio.path)) return null;
+  if (!line.audio || !existsSync33(line.audio.path)) return null;
   try {
-    const value = Number(execFileSync17("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
+    const value = Number(execFileSync18("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
     return Number.isFinite(value) && value > 0 ? value : null;
   } catch {
     return null;
@@ -130731,16 +131337,16 @@ function speechVideoPlan(input, capabilities) {
 function manageSpeech(args) {
   args = speechManageSchema.parse(args);
   const { file, win, header } = readBoard(args.path);
-  const before = readFileSync34(file, "utf8");
+  const before = readFileSync35(file, "utf8");
   const revision = hash4(before);
   const mutates = ["prepare", "update", "attach_audio", "attach_video", "retime"].includes(args.action);
   if (mutates && args.expectedRevision !== revision) throw new Error("Read speech first and supply its current expectedRevision; the storyboard may have changed");
   const doc = object5(win.SB_DOC);
   const rawCharacters = doc.characters;
   const voiceWarnings = [];
-  const characters = (Array.isArray(rawCharacters) ? rawCharacters : Object.entries(object5(rawCharacters)).map(([id, c]) => ({ ...object5(c), id }))).map((c) => resolveCharacterVoice(object5(c), { episode: dirname9(dirname9(file)), board: win, shot: {} }, voiceWarnings));
+  const characters = (Array.isArray(rawCharacters) ? rawCharacters : Object.entries(object5(rawCharacters)).map(([id, c]) => ({ ...object5(c), id }))).map((c) => resolveCharacterVoice(object5(c), { episode: dirname10(dirname10(file)), board: win, shot: {} }, voiceWarnings));
   const character = (id) => characters.find((c) => c.id === id);
-  const audioCharacter = (id) => characterSpeechContract().characterSpeech(character(id), { boardDir: dirname9(file), board: win });
+  const audioCharacter = (id) => characterSpeechContract().characterSpeech(character(id), { boardDir: dirname10(file), board: win });
   const scenes = win.SCENES;
   let changed = false;
   let timing;
@@ -130800,12 +131406,12 @@ function manageSpeech(args) {
       }
     } else {
       if (!args.audioPath) throw new Error("audioPath is required");
-      const audioPath = resolve9(dirname9(file), args.audioPath);
+      const audioPath = resolve10(dirname10(file), args.audioPath);
       if (!args.generation || args.generation.text !== line.tts) throw new Error("Attach the actual generation arguments and exact line text");
       const voice = audioCharacter(line.speaker)?.tts;
       const voiceErrors = voiceContract().generationVoiceErrors(voice, args.generation, line);
       if (voiceErrors.length) throw new Error("Generation arguments do not match the pinned character voice: " + voiceErrors.join("; "));
-      const bytes = readFileSync34(audioPath);
+      const bytes = readFileSync35(audioPath);
       if (!bytes.length) throw new Error("Audio file is empty");
       const generation2 = characterSpeechContract().verifiedSpeechGeneration(
         audioPath,
@@ -130867,8 +131473,8 @@ function manageSpeech(args) {
     if (selected.some(({ line }) => !line.id || !line.speaker || !line.delivery)) throw new Error("Prepare explicit speech before planning video");
     if (args.lineId || args.speaker || args.query) throw new Error("Video planning uses all lines in the shot; remove line filters");
     for (const { line } of selected) actingSchema.nullable().optional().parse(line.acting);
-    const episode = dirname9(dirname9(file));
-    if (existsSync32(join17(episode, ".work/model-settings.json"))) {
+    const episode = dirname10(dirname10(file));
+    if (existsSync33(join18(episode, ".work/model-settings.json"))) {
       const { selection } = routingContext(episode, args.shotId);
       const adapter2 = args.tool ? VIDEO_ADAPTERS[args.tool] : void 0;
       if (args.tool && adapter2?.engine !== selection.engine) throw new Error("model_selection_mismatch: tool does not match selected engine");
@@ -130879,11 +131485,11 @@ function manageSpeech(args) {
     }
     plan2 = speechVideoPlan({ ...scene, narration: selected.map(({ line }) => ({ ...line, audio: currentAudio(line, character(line.speaker)) ? line.audio : void 0 })) }, args.capabilities);
     const continuityContract = nodeModule7.createRequire(import.meta.url)("../../skills/storyboard/references/shot-continuity.js");
-    plan2 = { ...plan2, continuity: continuityContract.plan(win, scenes.indexOf(scene), dirname9(file)) };
+    plan2 = { ...plan2, continuity: continuityContract.plan(win, scenes.indexOf(scene), dirname10(file)) };
     if (args.action === "attach_video") {
       if (!args.videoPath) throw new Error("videoPath is required");
-      const videoPath = resolve9(dirname9(file), args.videoPath);
-      const bytes = readFileSync34(videoPath);
+      const videoPath = resolve10(dirname10(file), args.videoPath);
+      const bytes = readFileSync35(videoPath);
       if (!bytes.length) throw new Error("Video file is empty");
       const native = plan2.mode === "native";
       const nativeAudio = native ? speechSpanContract().inspect(videoPath) : void 0;
@@ -130895,7 +131501,7 @@ function manageSpeech(args) {
       if (native && sound.audioSource === "speech") throw new Error("Native video speech lives in the clip soundtrack; sound.audioSource speech would drop it");
       const audio = selected.map(({ line }) => {
         if (native) return { lineId: line.id, revision: speechRevision(line, character(line.speaker)) };
-        if (!line.audio || line.audio.revision !== speechRevision(line, character(line.speaker)) || hash4(readFileSync34(line.audio.path)) !== line.audio.sha256) throw new Error("Generate and attach current speech before binding video");
+        if (!line.audio || line.audio.revision !== speechRevision(line, character(line.speaker)) || hash4(readFileSync35(line.audio.path)) !== line.audio.sha256) throw new Error("Generate and attach current speech before binding video");
         const errors = voiceContract().generationVoiceErrors(character(line.speaker)?.tts, line.audio.generation, line);
         if (line.audio.generation.text !== line.tts || errors.length) throw new Error("Speech generation evidence changed: " + errors.join("; "));
         return { lineId: line.id, sha256: line.audio.sha256, revision: line.audio.revision };
@@ -130912,7 +131518,7 @@ function manageSpeech(args) {
       if (args.reuse && !tailTrim) throw new Error("Tail trim requires identical bound audio, unchanged speech/action starts and semantics, and a shorter end. Regenerate changed speech or staging.");
       let quality = { review: "not_reviewed", camera: "not_reviewed", lipSync: "not_reviewed" };
       try {
-        const receipt = JSON.parse(readFileSync34(videoPath + ".astra-job.json", "utf8"));
+        const receipt = JSON.parse(readFileSync35(videoPath + ".astra-job.json", "utf8"));
         if (receipt.sha256 === videoSha256) quality = { ...quality, speechSync: receipt.speechSync || null, selection: receipt.selection || null };
         else if (!receipt.sha256 && receipt.videoPath === videoPath)
           quality = { ...quality, unverifiedSpeechSync: receipt.speechSync || null, receiptBinding: "unverified" };
@@ -130923,7 +131529,7 @@ function manageSpeech(args) {
         video2.speechStatus = "stale";
         invalidated = { video: video2, edit: true };
       } else {
-        if (!tailTrim) syncProductionClip(scene, dirname9(file), videoPath, video2.clip, plan2.warnings);
+        if (!tailTrim) syncProductionClip(scene, dirname10(file), videoPath, video2.clip, plan2.warnings);
         const trim = object5(scene.edit);
         if (native && priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256 && (trim.in !== void 0 || trim.out !== void 0)) {
           const { in: sourceIn, out: sourceOut, ...kept } = trim;
@@ -130973,7 +131579,7 @@ function manageSpeech(args) {
         scene.sound = { ...sound, audioSource: "speech" };
       } else if (!selected.length && sound.audioSource === "video") {
         try {
-          const streams = execFileSync17(
+          const streams = execFileSync18(
             "ffprobe",
             ["-v", "error", "-select_streams", "a", "-show_entries", "stream=index", "-of", "csv=p=0", videoPath],
             { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }
@@ -131001,31 +131607,31 @@ function manageSpeech(args) {
       ids.add(line.id);
       if (!character(line.speaker)?.tts) throw new Error(`Missing pinned voice for ${line.speaker}`);
     }
-    const work = resolve9(dirname9(file), "../.work/speech-history");
-    mkdirSync19(work, { recursive: true });
-    const backup = join17(work, revision + ".js");
-    if (!existsSync32(backup)) writeFileSync25(backup, before);
+    const work = resolve10(dirname10(file), "../.work/speech-history");
+    mkdirSync20(work, { recursive: true });
+    const backup = join18(work, revision + ".js");
+    if (!existsSync33(backup)) writeFileSync26(backup, before);
     const nextSource = serializeBoard(win, header);
-    if (hash4(readFileSync34(file)) !== revision) throw new Error("Storyboard changed during speech edit");
+    if (hash4(readFileSync35(file)) !== revision) throw new Error("Storyboard changed during speech edit");
     const tmp = file + "." + randomUUID9() + ".tmp";
-    writeFileSync25(tmp, nextSource);
-    renameSync8(tmp, file);
-    refreshVideoReview(dirname9(dirname9(file)));
+    writeFileSync26(tmp, nextSource);
+    renameSync9(tmp, file);
+    refreshVideoReview(dirname10(dirname10(file)));
   }
   const audioPlans = args.action === "plan_audio" ? selected.map(({ scene, line }) => {
-    const result = speechAudioPlan(line, character(line.speaker), { boardDir: dirname9(file), board: win });
+    const result = speechAudioPlan(line, character(line.speaker), { boardDir: dirname10(file), board: win });
     const generation2 = { ...result.generation, ...result.generator === "tts_astra_genai" ? {
       speechContext: { path: file, lineId: line.id, expectedRevision: revision }
     } : {} };
     return { shotId: scene.id, lineId: line.id, ...result, generation: generation2, arguments: generation2 };
   }) : void 0;
-  return { revision: hash4(readFileSync34(file)), changed, invalidated, plan: plan2, timing, ...soundtrack ? { soundtrack } : {}, ...clearedTrim ? { clearedTrim } : {}, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname9(file), board: win }), audioProvenanceStatus: object5(object5(object5(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
+  return { revision: hash4(readFileSync35(file)), changed, invalidated, plan: plan2, timing, ...soundtrack ? { soundtrack } : {}, ...clearedTrim ? { clearedTrim } : {}, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname10(file), board: win }), audioProvenanceStatus: object5(object5(object5(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
 }
 
 // src/acting-review.ts
 import { execFile as execFile9 } from "node:child_process";
-import { createHash as createHash23, randomUUID as randomUUID10 } from "node:crypto";
-import { existsSync as existsSync33, mkdirSync as mkdirSync20, readFileSync as readFileSync35, realpathSync as realpathSync10, renameSync as renameSync9, rmSync as rmSync16, statSync as statSync18, writeFileSync as writeFileSync26 } from "node:fs";
+import { createHash as createHash24, randomUUID as randomUUID10 } from "node:crypto";
+import { existsSync as existsSync34, mkdirSync as mkdirSync21, readFileSync as readFileSync36, realpathSync as realpathSync11, renameSync as renameSync10, rmSync as rmSync17, statSync as statSync19, writeFileSync as writeFileSync27 } from "node:fs";
 import path31 from "node:path";
 import { homedir as homedir5 } from "node:os";
 import { promisify as promisify5 } from "node:util";
@@ -131090,11 +131696,11 @@ var actingObservationSchema = external_exports.object({
     correction: external_exports.string().trim().min(1).max(2e3)
   }).strict()).max(80)
 }).strict();
-var hash5 = (data) => createHash23("sha256").update(data).digest("hex");
+var hash5 = (data) => createHash24("sha256").update(data).digest("hex");
 var currentHash = (file) => {
   try {
-    const stat5 = statSync18(file);
-    return stat5.isFile() && stat5.size <= MAX_BYTES ? hash5(readFileSync35(file)) : null;
+    const stat5 = statSync19(file);
+    return stat5.isFile() && stat5.size <= MAX_BYTES ? hash5(readFileSync36(file)) : null;
   } catch {
     return null;
   }
@@ -131136,8 +131742,8 @@ var cachedReceiptSchema = external_exports.object({
 function unverified(failures) {
   return { success: false, status: "unverified", score: null, failures, evaluatedAxes: [] };
 }
-function actingReviewOutcome(review2, probe4, request) {
-  if (request.focus === "cinematography") return cinematographyOutcome(review2, probe4);
+function actingReviewOutcome(review2, probe5, request) {
+  if (request.focus === "cinematography") return cinematographyOutcome(review2, probe5);
   if (review2.cinematography || review2.findings.some((f3) => !AXES.includes(f3.axis)))
     return unverified(["Cinematography evidence cannot substitute for performance review"]);
   const failures = [];
@@ -131176,11 +131782,11 @@ function actingReviewOutcome(review2, probe4, request) {
       verified = false;
       failures.push(`${track} observation claimed outside requested mode`);
     }
-    if (needed && (!seen.observed || !seen.complete || seen.start === null || seen.end === null || seen.start > 0.1 || Math.abs(seen.end - probe4.duration) > 0.25)) {
+    if (needed && (!seen.observed || !seen.complete || seen.start === null || seen.end === null || seen.start > 0.1 || Math.abs(seen.end - probe5.duration) > 0.25)) {
       verified = false;
       failures.push(`${track} coverage incomplete`);
     }
-    if (seen.observed && (!probe4[track] || seen.start === null || seen.end === null || seen.end < seen.start || seen.end > probe4.duration + 0.25)) {
+    if (seen.observed && (!probe5[track] || seen.start === null || seen.end === null || seen.end < seen.start || seen.end > probe5.duration + 0.25)) {
       verified = false;
       failures.push(`Invalid ${track} coverage`);
     }
@@ -131205,7 +131811,7 @@ function actingReviewOutcome(review2, probe4, request) {
       }
     }
   }
-  if (review2.findings.some((f3) => f3.end < f3.start || f3.end > probe4.duration + 0.25)) {
+  if (review2.findings.some((f3) => f3.end < f3.start || f3.end > probe5.duration + 0.25)) {
     verified = false;
     failures.push("Invalid finding timestamps");
   }
@@ -131215,7 +131821,7 @@ function actingReviewOutcome(review2, probe4, request) {
   const status = !verified ? "unverified" : failures.length ? "fail" : "pass";
   return { success: status === "pass", status, score: overall, failures, evaluatedAxes: required2 };
 }
-function cinematographyOutcome(review2, probe4) {
+function cinematographyOutcome(review2, probe5) {
   const cinema = review2.cinematography;
   if (!cinema) return unverified(["Cinematography observation is missing"]);
   const failures = [];
@@ -131227,11 +131833,11 @@ function cinematographyOutcome(review2, probe4) {
     verified = false;
     failures.push("Cinematography review cannot certify audio or emotional performance");
   }
-  if (!probe4.video) {
+  if (!probe5.video) {
     verified = false;
     failures.push("No video track");
   }
-  const validCoverage = (seen) => seen.observed && seen.complete && seen.evidence.trim().length >= 10 && seen.start !== null && seen.end !== null && seen.start >= 0 && seen.start <= 0.1 && seen.end >= seen.start && seen.end <= probe4.duration + 0.25 && Math.abs(seen.end - probe4.duration) <= 0.25;
+  const validCoverage = (seen) => seen.observed && seen.complete && seen.evidence.trim().length >= 10 && seen.start !== null && seen.end !== null && seen.start >= 0 && seen.start <= 0.1 && seen.end >= seen.start && seen.end <= probe5.duration + 0.25 && Math.abs(seen.end - probe5.duration) <= 0.25;
   if (!validCoverage(review2.video)) {
     verified = false;
     failures.push("video coverage incomplete or unsupported");
@@ -131267,7 +131873,7 @@ function cinematographyOutcome(review2, probe4) {
       }
     }
   }
-  if (review2.findings.some((f3) => !CAMERA_AXES.includes(f3.axis) || f3.end < f3.start || f3.end > probe4.duration + 0.25)) {
+  if (review2.findings.some((f3) => !CAMERA_AXES.includes(f3.axis) || f3.end < f3.start || f3.end > probe5.duration + 0.25)) {
     verified = false;
     failures.push("Invalid cinematography finding axis or timestamps");
   }
@@ -131355,30 +131961,30 @@ async function reviewActing2(input, deps) {
   if (!deps) return hostReview({ mediaPath: request.mediaPath, mode: request.mode, brief: JSON.stringify(request) });
   actingReviewTimeout(request.focus);
   const policy = request.focus === "cinematography" ? CINEMATOGRAPHY_POLICY : request.mode === "audio" ? AUDIO_POLICY : VISUAL_POLICY;
-  const mediaPath = realpathSync10(request.mediaPath);
-  const stat5 = statSync18(mediaPath);
+  const mediaPath = realpathSync11(request.mediaPath);
+  const stat5 = statSync19(mediaPath);
   if (!stat5.isFile() || stat5.size === 0 || stat5.size > MAX_BYTES) throw new Error("Review requires a nonempty media file no larger than 12 MiB");
-  const bytes = readFileSync35(mediaPath);
-  const probe4 = await deps.probe(mediaPath);
-  if (!Number.isFinite(probe4.duration) || probe4.duration <= 0 || probe4.duration > 120) throw new Error("Review requires media duration within (0, 120] seconds");
-  if (request.mode !== "video" && !probe4.audio) throw new Error("Requested audio review requires an audio track");
-  if (request.mode !== "audio" && !probe4.video) throw new Error("Requested visual review requires a video track");
+  const bytes = readFileSync36(mediaPath);
+  const probe5 = await deps.probe(mediaPath);
+  if (!Number.isFinite(probe5.duration) || probe5.duration <= 0 || probe5.duration > 120) throw new Error("Review requires media duration within (0, 120] seconds");
+  if (request.mode !== "video" && !probe5.audio) throw new Error("Requested audio review requires an audio track");
+  if (request.mode !== "audio" && !probe5.video) throw new Error("Requested visual review requires a video track");
   const mediaSha256 = hash5(bytes);
   if (currentHash(mediaPath) !== mediaSha256) throw new Error("Source media changed during probe; review was not sent");
   const directionSha256 = hash5(JSON.stringify({ direction: request.direction, expectedText: request.expectedText, mode: request.mode }));
   let requestSha256 = hash5(JSON.stringify({ mediaSha256, directionSha256, model: ACTING_REVIEW_MODEL, policy }));
   const directory2 = path31.resolve(deps.cacheDirectory || process.env.SOCIAL_FLOW_ACTING_REVIEW_CACHE_DIR?.trim() || path31.join(homedir5(), ".cache", "social-flow", "acting-reviews"));
   let receiptPath2 = path31.join(directory2, `${requestSha256}.json`);
-  mkdirSync20(directory2, { recursive: true, mode: 448 });
+  mkdirSync21(directory2, { recursive: true, mode: 448 });
   const readMatchingReceipt = (file, expectedHash, retryOf2) => {
-    const cached2 = cachedReceiptSchema.parse(JSON.parse(readFileSync35(file, "utf8")));
+    const cached2 = cachedReceiptSchema.parse(JSON.parse(readFileSync36(file, "utf8")));
     const cachedDirection = hash5(JSON.stringify({ direction: cached2.request.direction, expectedText: cached2.request.expectedText, mode: cached2.request.mode }));
-    if (cached2.request.focus !== request.focus || cached2.policy !== policy || cached2.model !== ACTING_REVIEW_MODEL || cached2.mediaSha256 !== mediaSha256 || cached2.directionSha256 !== directionSha256 || cached2.requestSha256 !== expectedHash || cachedDirection !== directionSha256 || cached2.retryOf !== retryOf2 || cached2.request.retryTransportFailure !== Boolean(retryOf2) || JSON.stringify(cached2.media) !== JSON.stringify(probe4)) throw new Error("Cached receipt identity does not match this review");
+    if (cached2.request.focus !== request.focus || cached2.policy !== policy || cached2.model !== ACTING_REVIEW_MODEL || cached2.mediaSha256 !== mediaSha256 || cached2.directionSha256 !== directionSha256 || cached2.requestSha256 !== expectedHash || cachedDirection !== directionSha256 || cached2.retryOf !== retryOf2 || cached2.request.retryTransportFailure !== Boolean(retryOf2) || JSON.stringify(cached2.media) !== JSON.stringify(probe5)) throw new Error("Cached receipt identity does not match this review");
     return cached2;
   };
   let retryOf;
   if (request.retryTransportFailure) {
-    if (!existsSync33(receiptPath2)) throw new Error("Transport retry requires an existing matching original receipt; no new review was sent");
+    if (!existsSync34(receiptPath2)) throw new Error("Transport retry requires an existing matching original receipt; no new review was sent");
     const parent = readMatchingReceipt(receiptPath2, requestSha256);
     if (!isTransportFailure(parent) || currentHash(mediaPath) !== mediaSha256 || parent.currentMediaSha256 !== void 0 && parent.currentMediaSha256 !== mediaSha256)
       throw new Error("Transport retry requires an unchanged original timeout/abort receipt with no observation; reviewed or rejected observations cannot be rerolled");
@@ -131386,12 +131992,12 @@ async function reviewActing2(input, deps) {
     requestSha256 = hash5(JSON.stringify({ retryOf, attempt: 1, policy: "transport-retry-v1" }));
     receiptPath2 = path31.join(directory2, `${requestSha256}.json`);
   }
-  if (existsSync33(receiptPath2)) {
+  if (existsSync34(receiptPath2)) {
     try {
       const cached2 = readMatchingReceipt(receiptPath2, requestSha256, retryOf);
       const currentMediaSha2562 = currentHash(mediaPath);
       const sourceChanged2 = cached2.sourceChanged || currentMediaSha2562 !== mediaSha256;
-      const outcome = sourceChanged2 ? unverified(["Source media changed during or after review"]) : cached2.review ? actingReviewOutcome(cached2.review, probe4, request) : unverified(cached2.failures);
+      const outcome = sourceChanged2 ? unverified(["Source media changed during or after review"]) : cached2.review ? actingReviewOutcome(cached2.review, probe5, request) : unverified(cached2.failures);
       return { ...cached2, ...outcome, ...ACTING_REVIEW_ADVISORY, sourceChanged: sourceChanged2, currentMediaSha256: currentMediaSha2562, currentMediaPath: mediaPath, receiptPath: receiptPath2, reused: true };
     } catch (error2) {
       return { ...ACTING_REVIEW_ADVISORY, ...unverified([`Invalid cached receipt: ${error2 instanceof Error ? error2.message : String(error2)}`]), receiptPath: receiptPath2, reused: true };
@@ -131399,7 +132005,7 @@ async function reviewActing2(input, deps) {
   }
   const lock2 = `${receiptPath2}.lock`;
   try {
-    writeFileSync26(lock2, JSON.stringify({ pid: process.pid, startedAt: (/* @__PURE__ */ new Date()).toISOString() }), { flag: "wx" });
+    writeFileSync27(lock2, JSON.stringify({ pid: process.pid, startedAt: (/* @__PURE__ */ new Date()).toISOString() }), { flag: "wx" });
   } catch {
     throw new Error("An identical review is running or was interrupted; inspect its lock instead of issuing another paid review");
   }
@@ -131409,12 +132015,12 @@ async function reviewActing2(input, deps) {
   let rejectedObservation = null;
   let result = unverified([]);
   try {
-    const response = await deps.evaluate(bytes, probe4, request);
+    const response = await deps.evaluate(bytes, probe5, request);
     rejectedObservation = preserveRejectedObservation(response.observation);
     usage = usageSchema.parse(response.usage);
     review2 = actingObservationSchema.parse(response.observation);
     rejectedObservation = null;
-    result = actingReviewOutcome(review2, probe4, request);
+    result = actingReviewOutcome(review2, probe5, request);
   } catch (error2) {
     if (error2 && typeof error2 === "object" && "usage" in error2) usage = error2.usage;
     if (error2 && typeof error2 === "object" && "rejectedObservation" in error2) rejectedObservation = preserveRejectedObservation(error2.rejectedObservation);
@@ -131447,7 +132053,7 @@ async function reviewActing2(input, deps) {
     directionSha256,
     requestSha256,
     request: { ...request, mediaPath },
-    media: probe4,
+    media: probe5,
     review: review2,
     rejectedObservation,
     usage,
@@ -131458,18 +132064,18 @@ async function reviewActing2(input, deps) {
   };
   const temporary = `${receiptPath2}.${randomUUID10()}.tmp`;
   try {
-    writeFileSync26(lock2, JSON.stringify({ phase: "evaluated", receipt }), { flag: "w" });
-    writeFileSync26(temporary, JSON.stringify(receipt, null, 2) + "\n", { flag: "wx" });
-    renameSync9(temporary, receiptPath2);
+    writeFileSync27(lock2, JSON.stringify({ phase: "evaluated", receipt }), { flag: "w" });
+    writeFileSync27(temporary, JSON.stringify(receipt, null, 2) + "\n", { flag: "wx" });
+    renameSync10(temporary, receiptPath2);
   } catch (error2) {
     try {
-      rmSync16(temporary, { force: true });
+      rmSync17(temporary, { force: true });
     } catch {
     }
     throw new Error(`Could not persist paid acting review; preserved lock at ${lock2}: ${error2 instanceof Error ? error2.message : String(error2)}`);
   }
   try {
-    rmSync16(lock2, { force: true });
+    rmSync17(lock2, { force: true });
   } catch {
     console.error(`[acting_review] Receipt saved; stale lock can be removed: ${lock2}`);
   }
@@ -131477,9 +132083,9 @@ async function reviewActing2(input, deps) {
 }
 
 // src/threads-gate.ts
-import { createHash as createHash24, randomUUID as randomUUID11 } from "node:crypto";
-import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync21, readFileSync as readFileSync36, realpathSync as realpathSync11, renameSync as renameSync10, statSync as statSync19, writeFileSync as writeFileSync27 } from "node:fs";
-import { dirname as dirname10, join as join18, resolve as resolve10 } from "node:path";
+import { createHash as createHash25, randomUUID as randomUUID11 } from "node:crypto";
+import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync22, readFileSync as readFileSync37, realpathSync as realpathSync12, renameSync as renameSync11, statSync as statSync20, writeFileSync as writeFileSync28 } from "node:fs";
+import { dirname as dirname11, join as join19, resolve as resolve11 } from "node:path";
 import { fileURLToPath as fileURLToPath11 } from "node:url";
 import { spawnSync as spawnSync3 } from "node:child_process";
 var nonempty = external_exports.string().trim().min(1);
@@ -131514,30 +132120,30 @@ var reviewSchema2 = external_exports.object({
 });
 var normalize = (s2) => s2.normalize("NFC").replace(/\r\n?/g, "\n").trim();
 function threadsBodyHash(body, selfReply = "") {
-  return createHash24("sha256").update(JSON.stringify([normalize(body), normalize(selfReply)])).digest("hex");
+  return createHash25("sha256").update(JSON.stringify([normalize(body), normalize(selfReply)])).digest("hex");
 }
 function directory(channel) {
-  return join18(process.cwd(), "data", channelSchema2.parse(channel), "growth", "threads");
+  return join19(process.cwd(), "data", channelSchema2.parse(channel), "growth", "threads");
 }
 function draftLocation(id) {
   const match2 = /^([a-z0-9][a-z0-9-]*)\.([a-f0-9-]{36})$/.exec(id);
   if (!match2 || !external_exports.string().uuid().safeParse(match2[2]).success) throw new Error("Invalid draftId");
-  return { channel: match2[1], file: join18(directory(match2[1]), "drafts", `${match2[2]}.json`) };
+  return { channel: match2[1], file: join19(directory(match2[1]), "drafts", `${match2[2]}.json`) };
 }
 function audit(channel, tool2, result, details = {}) {
   const dir = directory(channel);
-  mkdirSync21(dir, { recursive: true });
-  appendFileSync4(join18(dir, "gate-log.jsonl"), JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), tool: tool2, result, ...details }) + "\n", { mode: 384 });
+  mkdirSync22(dir, { recursive: true });
+  appendFileSync4(join19(dir, "gate-log.jsonl"), JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), tool: tool2, result, ...details }) + "\n", { mode: 384 });
 }
 function save2(draft) {
   const { file } = draftLocation(draft.draftId);
-  mkdirSync21(dirname10(file), { recursive: true });
+  mkdirSync22(dirname11(file), { recursive: true });
   const temp = `${file}.${randomUUID11()}.tmp`;
-  writeFileSync27(temp, JSON.stringify(draft), { mode: 384 });
-  renameSync10(temp, file);
+  writeFileSync28(temp, JSON.stringify(draft), { mode: 384 });
+  renameSync11(temp, file);
 }
-function load8(id) {
-  const value = JSON.parse(readFileSync36(draftLocation(id).file, "utf8"));
+function load9(id) {
+  const value = JSON.parse(readFileSync37(draftLocation(id).file, "utf8"));
   draftSchema.parse(value);
   if (value.draftId !== id || value.channel !== draftLocation(id).channel || threadsBodyHash(value.body, value.selfReply) !== value.bodyHash) {
     throw new Error("Draft body hash mismatch; create a new draft");
@@ -131577,7 +132183,7 @@ function createThreadsDraft(args) {
 function submitThreadsReview(args) {
   return gateCall("threads_review_submit", args, () => {
     const input = reviewSchema2.strict().parse(args);
-    const draft = load8(input.draftId);
+    const draft = load9(input.draftId);
     if (input.bodyHash !== draft.bodyHash) throw new Error("Review body hash mismatch");
     if (draft.surface === "reply" && input.axis !== "voice") throw new Error("Reply drafts use voice review only");
     const surfaces = (input.axis !== "voice" ? [draft.body] : [draft.body, draft.selfReply ?? ""]).map(whitespace);
@@ -131598,12 +132204,12 @@ function submitThreadsReview(args) {
 function checkThreadsGate(input) {
   return gateCall("threads_publish", input, () => {
     if (!input.draftId) throw new Error("Growth publishing requires draftId");
-    const draft = load8(input.draftId);
+    const draft = load9(input.draftId);
     if (input.channel !== draft.channel) throw new Error("Draft channel mismatch");
     if (input.replyToId !== draft.replyToId) throw new Error("Draft reply target mismatch");
     const bodyHash = threadsBodyHash(input.caption, input.selfReply);
     if (bodyHash !== draft.bodyHash) throw new Error("Publish body hash mismatch");
-    const checker = resolve10(dirname10(fileURLToPath11(import.meta.url)), "../../skills/platform-guide/references/check-style.py");
+    const checker = resolve11(dirname11(fileURLToPath11(import.meta.url)), "../../skills/platform-guide/references/check-style.py");
     const styleWarnings = [];
     for (const [body, surface] of [[input.caption, input.replyToId ? "reply" : "threads"], [input.selfReply, "reply"]]) {
       if (!body) continue;
@@ -131620,14 +132226,14 @@ function checkThreadsEpisode(input) {
   gateCall("threads_publish", input, () => {
     const channel = channelSchema2.parse(input.channel);
     const topic = channelSchema2.parse(input.episodeRef);
-    const root = realpathSync11(join18(process.cwd(), "data", channel, "episodes"));
-    const episode = realpathSync11(join18(root, topic));
-    if (dirname10(episode) !== root || !statSync19(episode).isDirectory()) throw new Error("Invalid episode directory");
-    const board = realpathSync11(join18(episode, "storyboard", "scenes.js"));
-    if (!board.startsWith(episode + "/") || !statSync19(board).isFile()) throw new Error("Missing episode storyboard");
-    const approvalPath = realpathSync11(join18(episode, "threads-publish-approval.json"));
-    if (dirname10(approvalPath) !== episode) throw new Error("Invalid episode approval path");
-    const approval = JSON.parse(readFileSync36(approvalPath, "utf8"));
+    const root = realpathSync12(join19(process.cwd(), "data", channel, "episodes"));
+    const episode = realpathSync12(join19(root, topic));
+    if (dirname11(episode) !== root || !statSync20(episode).isDirectory()) throw new Error("Invalid episode directory");
+    const board = realpathSync12(join19(episode, "storyboard", "scenes.js"));
+    if (!board.startsWith(episode + "/") || !statSync20(board).isFile()) throw new Error("Missing episode storyboard");
+    const approvalPath = realpathSync12(join19(episode, "threads-publish-approval.json"));
+    if (dirname11(approvalPath) !== episode) throw new Error("Invalid episode approval path");
+    const approval = JSON.parse(readFileSync37(approvalPath, "utf8"));
     if (approval.approved !== true) throw new Error("Episode publishing approval required");
     for (const key of ["caption", "selfReply", "imageUrl", "videoUrl", "linkUrl", "replyToId"]) {
       if ((approval[key] ?? "") !== (input[key] ?? "")) throw new Error(`Episode approval mismatch: ${key}`);
@@ -131637,9 +132243,9 @@ function checkThreadsEpisode(input) {
 
 // src/datago-client.ts
 import { mkdir as mkdir2, writeFile as writeFile3 } from "node:fs/promises";
-import { existsSync as existsSync34 } from "node:fs";
-import { tmpdir as tmpdir7 } from "node:os";
-import { join as join19 } from "node:path";
+import { existsSync as existsSync35 } from "node:fs";
+import { tmpdir as tmpdir8 } from "node:os";
+import { join as join20 } from "node:path";
 var PORTAL_BASE = "https://www.data.go.kr";
 var ODCLOUD_BASE = "https://api.odcloud.kr/api";
 var OPENAPI_BASE = "https://apis.data.go.kr";
@@ -131878,14 +132484,14 @@ async function downloadFile2(input) {
   const cd = fileRes.headers.get("content-disposition") ?? "";
   const rawName = cd.match(/filename\*?=(?:UTF-8''|")?([^";]+)/i)?.[1] ?? `datago-${input.publicDataPk}.bin`;
   const filename = sanitizeFilename(fixHeaderEncoding(rawName.replace(/"/g, "")));
-  const saveDir = input.saveDir ?? join19(tmpdir7(), "social-flow-datago");
+  const saveDir = input.saveDir ?? join20(tmpdir8(), "social-flow-datago");
   await mkdir2(saveDir, { recursive: true });
-  let savedPath = join19(saveDir, filename);
-  for (let i2 = 1; existsSync34(savedPath); i2++) {
+  let savedPath = join20(saveDir, filename);
+  for (let i2 = 1; existsSync35(savedPath); i2++) {
     if (i2 >= 100) {
       return err(`there are already 100+ files with the same name in ${saveDir} \u2014 clean up saveDir or point at a different directory.`);
     }
-    savedPath = join19(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i2}$1`));
+    savedPath = join20(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i2}$1`));
   }
   await writeFile3(savedPath, buf);
   const preview2 = decodePreview(buf.subarray(0, 4096));
@@ -132945,25 +133551,25 @@ async function stockSearch(input) {
 
 // src/sns-client.ts
 import { execFile as execFile10 } from "node:child_process";
-import { createHash as createHash25, randomUUID as randomUUID12 } from "node:crypto";
+import { createHash as createHash26, randomUUID as randomUUID12 } from "node:crypto";
 import { promisify as promisify6 } from "node:util";
 import {
-  existsSync as existsSync35,
+  existsSync as existsSync36,
   mkdirSync as nodeMkdirSync,
   readFileSync as nodeReadFileSync,
   rmSync as nodeRmSync,
   writeFileSync as nodeWriteFileSync
 } from "node:fs";
 import { open as nodeOpen, readFile as readFile2, stat as stat4 } from "node:fs/promises";
-import { basename as basename11, dirname as dirname11, extname as extname12, join as join20 } from "node:path";
+import { basename as basename11, dirname as dirname12, extname as extname12, join as join21 } from "node:path";
 function enabledPlatforms() {
   const channelDirs = listChannelDirs();
   return SNS_PLATFORMS.filter(
-    (platform) => existsSync35(snsCredentialFile(platform)) || channelDirs.some((dir) => dir.platforms.includes(platform))
+    (platform) => existsSync36(snsCredentialFile(platform)) || channelDirs.some((dir) => dir.platforms.includes(platform))
   );
 }
 function availablePlatformsFor(channel) {
-  return SNS_PLATFORMS.filter((platform) => existsSync35(snsCredentialFile(platform, channel)));
+  return SNS_PLATFORMS.filter((platform) => existsSync36(snsCredentialFile(platform, channel)));
 }
 var GRAPH_VERSION = "v23.0";
 var THREADS_BASE = "https://graph.threads.net/v1.0";
@@ -132972,7 +133578,7 @@ var FB_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 var DEFAULT_POLL_INTERVAL_MS = 2e3;
 var DEFAULT_POLL_MAX_TRIES = 60;
 var REELS_POLL = { pollIntervalMs: 1e4, pollMaxTries: 30 };
-var sleep8 = (ms) => new Promise((resolve12) => setTimeout(resolve12, ms));
+var sleep8 = (ms) => new Promise((resolve13) => setTimeout(resolve13, ms));
 function fail2(status, message) {
   return { ok: false, status, body: message };
 }
@@ -133515,6 +134121,20 @@ async function publishFacebook(input, opts) {
     if (!caption.bytes) return caption.error;
     captionFiles.push({ bytes: caption.bytes, locale: captionInput.locale });
   }
+  let thumb;
+  if (input.thumbnailFilePath) {
+    if (!input.videoUrl) return fail2(400, "thumbnailFilePath requires videoUrl (a thumbnail belongs to a video)");
+    const mimeType = YT_THUMB_MIME_BY_EXT[extname12(input.thumbnailFilePath).toLowerCase()];
+    if (!mimeType) return fail2(400, `Unsupported thumbnail extension: ${input.thumbnailFilePath} (.jpg/.jpeg/.png)`);
+    let bytes;
+    try {
+      bytes = await readFile2(input.thumbnailFilePath);
+    } catch (e2) {
+      return fail2(400, `Cannot read thumbnail file: ${e2 instanceof Error ? e2.message : String(e2)}`);
+    }
+    if (bytes.byteLength > FB_THUMB_MAX_BYTES) return fail2(400, `Thumbnail exceeds 10MB: ${input.thumbnailFilePath} (${bytes.byteLength} bytes)`);
+    thumb = { bytes, mimeType };
+  }
   const { token, error: error2 } = await loadTokenFile("FACEBOOK", input.channel);
   if (!token) return error2;
   const me = await fetchMe(FB_BASE, token, "id,name");
@@ -133581,6 +134201,7 @@ async function publishFacebook(input, opts) {
     if (warning) captionWarnings.push(`${file.locale}: ${warning}`);
   }
   const captionWarning = captionWarnings.length > 0 ? captionWarnings.join("; ") : void 0;
+  const thumbnailWarning = thumb ? await setFacebookThumbnail(token, videoId ?? postId, thumb) : void 0;
   const permalink = await graphRequest("get", `${FB_BASE}/${videoId ?? postId}`, {
     fields: "permalink_url",
     access_token: token
@@ -133593,8 +134214,29 @@ async function publishFacebook(input, opts) {
     ...processing ? { processingWarning: processing } : {},
     permalink: permalink.ok ? parseJson(permalink.body)?.permalink_url ?? null : null,
     ...captionFiles.length > 0 ? { captionSet: !captionWarning, captionLocales: captionFiles.map((f3) => f3.locale) } : {},
-    ...captionWarning ? { captionWarning } : {}
+    ...captionWarning ? { captionWarning } : {},
+    ...thumb ? { thumbnailSet: !thumbnailWarning } : {},
+    ...thumbnailWarning ? { thumbnailWarning } : {}
   });
+}
+var FB_THUMB_MAX_BYTES = 10 * 1024 * 1024;
+async function setFacebookThumbnail(token, videoId, thumb) {
+  const form = new FormData();
+  form.set("access_token", token);
+  form.set("is_preferred", "true");
+  form.set(
+    "source",
+    new Blob([new Uint8Array(thumb.bytes.buffer, thumb.bytes.byteOffset, thumb.bytes.byteLength)], { type: thumb.mimeType }),
+    thumb.mimeType === "image/png" ? "cover.png" : "cover.jpg"
+  );
+  try {
+    const res = await fetch(`${FB_BASE}/${videoId}/thumbnails`, { method: "POST", body: form, signal: AbortSignal.timeout(6e4) });
+    const body = await res.text();
+    if (res.ok && !parseJson(body)?.error) return void 0;
+    return `thumbnails ${res.status}: ${body.slice(0, 300)} \u2014 the post stands; set the cover in Meta Business Suite instead of publishing again`;
+  } catch (e2) {
+    return `thumbnail upload failed: ${e2 instanceof Error ? e2.message : String(e2)} \u2014 the post stands; set the cover in Meta Business Suite instead of publishing again`;
+  }
 }
 async function commentFacebook(input) {
   const { token, error: error2 } = await loadTokenFile("FACEBOOK", input.channel);
@@ -133761,7 +134403,7 @@ async function facebookCaptions(input) {
     if (!read4.bytes) return read4.error;
     if (!/^\d+\r?\n\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3}\r?\n/m.test(read4.bytes.toString("utf8")))
       return fail2(400, `Invalid SRT cues: ${track.locale}`);
-    files3.push({ bytes: read4.bytes, locale: track.locale, sha256: createHash25("sha256").update(read4.bytes).digest("hex") });
+    files3.push({ bytes: read4.bytes, locale: track.locale, sha256: createHash26("sha256").update(read4.bytes).digest("hex") });
   }
   const { token, error: error2 } = await loadTokenFile("FACEBOOK", input.channel);
   if (error2 || !token) return error2 || fail2(400, "Missing Facebook token");
@@ -133834,9 +134476,9 @@ async function looksLikeShort(filePath) {
       ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height:format=duration", "-of", "json", filePath],
       { timeout: 3e4 }
     );
-    const probe4 = JSON.parse(stdout);
-    const { width = 0, height = 0 } = probe4.streams?.[0] ?? {};
-    const duration4 = Number(probe4.format?.duration);
+    const probe5 = JSON.parse(stdout);
+    const { width = 0, height = 0 } = probe5.streams?.[0] ?? {};
+    const duration4 = Number(probe5.format?.duration);
     if (!width || !height || !Number.isFinite(duration4)) return true;
     return height >= width && duration4 <= 180;
   } catch {
@@ -133869,8 +134511,8 @@ function parseResumeOffset(range) {
   return m2 ? Number(m2[1]) + 1 : 0;
 }
 function sessionStateFile(filePath) {
-  const key = createHash25("sha256").update(filePath).digest("hex").slice(0, 16);
-  return join20(snsTokenDir, ".yt-upload", `${key}.json`);
+  const key = createHash26("sha256").update(filePath).digest("hex").slice(0, 16);
+  return join21(snsTokenDir, ".yt-upload", `${key}.json`);
 }
 function readState(filePath) {
   try {
@@ -133889,7 +134531,7 @@ function writeState(filePath, s2) {
       nodeRmSync(p, { force: true });
       return;
     }
-    nodeMkdirSync(dirname11(p), { recursive: true });
+    nodeMkdirSync(dirname12(p), { recursive: true });
     nodeWriteFileSync(p, JSON.stringify(s2), "utf8");
   } catch {
   }
@@ -135020,8 +135662,8 @@ async function checkAccounts(channel) {
 
 // src/tts-final-quality.ts
 import { execFile as execFile11 } from "node:child_process";
-import { existsSync as existsSync36, mkdtempSync as mkdtempSync7, readFileSync as readFileSync37, rmSync as rmSync17, writeFileSync as writeFileSync28, renameSync as renameSync11, openSync as openSync7, closeSync as closeSync7 } from "node:fs";
-import { tmpdir as tmpdir8 } from "node:os";
+import { existsSync as existsSync37, mkdtempSync as mkdtempSync8, readFileSync as readFileSync38, rmSync as rmSync18, writeFileSync as writeFileSync29, renameSync as renameSync12, openSync as openSync8, closeSync as closeSync8 } from "node:fs";
+import { tmpdir as tmpdir9 } from "node:os";
 import path32 from "node:path";
 import { promisify as promisify7 } from "node:util";
 var chapters = __toESM(require_final_speech_chapters(), 1);
@@ -135045,33 +135687,33 @@ async function reviewFinalSpeech(input, deps) {
   const proofPath = media + ".speech-quality.json", lockPath = proofPath + ".lock";
   let lock2;
   try {
-    lock2 = openSync7(lockPath, "wx");
+    lock2 = openSync8(lockPath, "wx");
   } catch {
     return { success: false, status: "unverified", error: "Final speech review is already locked" };
   }
-  const temp = mkdtempSync7(path32.join(tmpdir8(), "speech-final-"));
+  const temp = mkdtempSync8(path32.join(tmpdir9(), "speech-final-"));
   let base = { version: 1, policy: "final-speech-v1", model: REVIEW_MODEL, ...identity, mediaPath: media };
   let singleReviewStarted = false;
   function save3(status, extra) {
     const result = { ...base, status, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
     const staging = path32.join(temp, "proof.json");
-    writeFileSync28(staging, JSON.stringify(result, null, 2) + "\n");
-    writeFileSync28(proofPath + ".tmp", readFileSync37(staging));
-    renameSync11(proofPath + ".tmp", proofPath);
+    writeFileSync29(staging, JSON.stringify(result, null, 2) + "\n");
+    writeFileSync29(proofPath + ".tmp", readFileSync38(staging));
+    renameSync12(proofPath + ".tmp", proofPath);
     return { success: status === "pass", status, proofPath, ...extra };
   }
   try {
-    base = { ...base, mediaSha256: sha256(readFileSync37(media)), textSha256: sha256(normalizeSpeech(request.expectedText)) };
+    base = { ...base, mediaSha256: sha256(readFileSync38(media)), textSha256: sha256(normalizeSpeech(request.expectedText)) };
     const wav = path32.join(temp, "final.flac");
     await exec4("ffmpeg", ["-y", "-v", "error", "-i", media, "-map", "0:a:0", "-map_metadata", "-1", "-ac", "1", "-ar", "24000", "-c:a", "flac", wav], { timeout: 6e4 });
-    base.audioSha256 = sha256(readFileSync37(wav));
-    if (sha256(readFileSync37(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
-    if (readFileSync37(wav).length > chapters.LIMIT) {
+    base.audioSha256 = sha256(readFileSync38(wav));
+    if (sha256(readFileSync38(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
+    if (readFileSync38(wav).length > chapters.LIMIT) {
       return await reviewChapters(request, media, wav, temp, base, proofPath, save3, deps);
     }
-    if (sha256(readFileSync37(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
-    if (existsSync36(proofPath)) {
-      const old = JSON.parse(readFileSync37(proofPath, "utf8"));
+    if (sha256(readFileSync38(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
+    if (existsSync37(proofPath)) {
+      const old = JSON.parse(readFileSync38(proofPath, "utf8"));
       const same = Object.entries(base).every(([k, v]) => ["mediaSha256", "expectedText"].includes(k) || old[k] === v);
       if (old.audioSha256 === base.audioSha256 && old.textSha256 === base.textSha256 && old.status === "fail") return save3("fail", { reused: true, signal: old.signal, transcript: old.transcript, transcriptCheck: transcriptCheck ?? old.transcriptCheck ?? null, failures: old.failures, review: old.review, error: "This exact final audio already failed; fix the audio before another listening review" });
       if (same && old.status === "pass" && (!transcriptCheck || typeof old.transcript === "string")) {
@@ -135100,15 +135742,15 @@ async function reviewFinalSpeech(input, deps) {
     const result = await deps.listen(wav, reviewRequest, true);
     failures.push(...reviewFailures(request.expectedText, result.transcript, result.review, signal.duration));
     if ((result.review.continuity ?? 0) < 95 || !result.review.continuityEvidence) failures.push("Episode continuity below 95 or missing listening evidence");
-    if (sha256(readFileSync37(media)) !== base.mediaSha256) throw new Error("Final media changed during listening");
+    if (sha256(readFileSync38(media)) !== base.mediaSha256) throw new Error("Final media changed during listening");
     return save3(failures.length ? "fail" : "pass", { signal, ...result, transcriptCheck: transcriptCheck ?? null, failures });
   } catch (error2) {
     const failure2 = { error: error2 instanceof Error ? error2.message : String(error2) };
     return singleReviewStarted ? save3("unverified", failure2) : { success: false, status: "unverified", proofPath, ...failure2 };
   } finally {
-    rmSync17(temp, { recursive: true, force: true });
-    closeSync7(lock2);
-    rmSync17(lockPath, { force: true });
+    rmSync18(temp, { recursive: true, force: true });
+    closeSync8(lock2);
+    rmSync18(lockPath, { force: true });
   }
 }
 async function reviewChapters(request, media, wav, temp, base, proofPath, save3, deps) {
@@ -135116,7 +135758,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
   const pcm = chapters.decode(wav), totalSamples = pcm.length / chapters.BYTES;
   const planned = chapters.plan(request.segments, totalSamples, request.expectedText);
   const identity = { policy: chapters.POLICY, sampleRate: chapters.RATE, totalSamples, pcmSha256: chapters.hash(pcm), segments: request.segments, transcriptCheck: request.transcriptCheck ?? null };
-  const old = existsSync36(proofPath) ? JSON.parse(readFileSync37(proofPath, "utf8")) : null;
+  const old = existsSync37(proofPath) ? JSON.parse(readFileSync38(proofPath, "utf8")) : null;
   const pieces = [];
   const commit = (status, extra = {}) => save3(status, { ...identity, pieces, manifestSha256: chapters.manifest({ ...identity, pieces }), ...extra });
   if (old?.pcmSha256 === identity.pcmSha256 && old.textSha256 === base.textSha256 && old.status === "fail") {
@@ -135132,9 +135774,9 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
     for (const piece of planned) {
       const samples = pcm.subarray(piece.startSample * chapters.BYTES, piece.endSample * chapters.BYTES);
       const raw = path32.join(temp, "piece.pcm"), file = path32.join(temp, "piece.flac");
-      writeFileSync28(raw, samples);
+      writeFileSync29(raw, samples);
       await exec4("ffmpeg", ["-y", "-v", "error", "-f", "s32le", "-ar", String(chapters.RATE), "-ac", "1", "-i", raw, "-map_metadata", "-1", "-c:a", "flac", file], { timeout: 6e4 });
-      const payload = readFileSync37(file);
+      const payload = readFileSync38(file);
       if (payload.length > chapters.LIMIT || !chapters.decode(file).equals(samples)) throw new Error("Chapter encoding exceeded the limit or changed PCM samples");
       const binding = { ...piece, pcmSha256: chapters.hash(samples), audioSha256: chapters.hash(payload), payloadBytes: payload.length, model: REVIEW_MODEL, transcriptCheck: request.transcriptCheck ?? null };
       const reusable = old?.pcmSha256 === identity.pcmSha256 && old.textSha256 === base.textSha256 && old.language === request.language && old.delivery === request.delivery && old.manifestSha256 === chapters.manifest(old);
@@ -135162,7 +135804,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
         evidence = { ...evidence, status: failures2.length ? "fail" : "pass", failures: failures2 };
       }
       pieces.push(evidence);
-      if (sha256(readFileSync37(media)) !== base.mediaSha256) throw new Error("Final media changed during chapter listening");
+      if (sha256(readFileSync38(media)) !== base.mediaSha256) throw new Error("Final media changed during chapter listening");
       commit("unverified");
     }
     const failures = pieces.flatMap((p) => p.failures.map((f3) => `${p.kind} ${p.index}: ${f3}`));
@@ -135176,8 +135818,8 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
 import { randomUUID as randomUUID13 } from "node:crypto";
 
 // src/content-feedback.ts
-import { mkdirSync as mkdirSync22, writeFileSync as writeFileSync29 } from "node:fs";
-import { dirname as dirname12, isAbsolute as isAbsolute2, join as join21, resolve as resolve11 } from "node:path";
+import { mkdirSync as mkdirSync23, writeFileSync as writeFileSync30 } from "node:fs";
+import { dirname as dirname13, isAbsolute as isAbsolute3, join as join22, resolve as resolve12 } from "node:path";
 
 // src/content-feedback-html.ts
 function escapeHtml(value) {
@@ -135762,14 +136404,14 @@ function analyzeInstagramMedia(media, limit2) {
   return { items, cohort, notes };
 }
 function defaultHtmlPath(channel) {
-  return join21(process.cwd(), "data", channel, "growth", "review-recent.html");
+  return join22(process.cwd(), "data", channel, "growth", "review-recent.html");
 }
 function resolveHtmlPath(channel, outputPath) {
   if (outputPath) {
     if (outputPath.includes("..")) {
       throw new Error(`Path traversal detected: ${outputPath}`);
     }
-    const resolved = isAbsolute2(outputPath) ? outputPath : resolve11(process.cwd(), outputPath);
+    const resolved = isAbsolute3(outputPath) ? outputPath : resolve12(process.cwd(), outputPath);
     if (!resolved.toLowerCase().endsWith(".html")) {
       throw new Error(`outputPath must end in .html: ${outputPath}`);
     }
@@ -135808,8 +136450,8 @@ async function contentFeedback(input) {
     instagram
   };
   if (htmlPath) {
-    mkdirSync22(dirname12(htmlPath), { recursive: true });
-    writeFileSync29(htmlPath, renderFeedbackHtml(report), "utf8");
+    mkdirSync23(dirname13(htmlPath), { recursive: true });
+    writeFileSync30(htmlPath, renderFeedbackHtml(report), "utf8");
   }
   return { ok: true, status: 200, body: JSON.stringify(report) };
 }
@@ -136851,14 +137493,14 @@ ${errors.join("\n")}`);
 }
 
 // src/capability-status.ts
-import { existsSync as existsSync37 } from "node:fs";
+import { existsSync as existsSync38 } from "node:fs";
 import path33 from "node:path";
 import os6 from "node:os";
 var has2 = (v) => Boolean(v && v.length > 0);
 var binOk = (p) => {
   try {
-    if (p.includes(path33.sep)) return existsSync37(p);
-    return (process.env.PATH || "").split(path33.delimiter).some((dir) => dir && existsSync37(path33.join(dir, p)));
+    if (p.includes(path33.sep)) return existsSync38(p);
+    return (process.env.PATH || "").split(path33.delimiter).some((dir) => dir && existsSync38(path33.join(dir, p)));
   } catch {
     return false;
   }
@@ -137115,11 +137757,11 @@ function renderCapabilityStatus() {
 }
 
 // src/character-panel.ts
-import { existsSync as existsSync38, readFileSync as readFileSync38, writeFileSync as writeFileSync30 } from "node:fs";
-import { createRequire as createRequire20 } from "node:module";
+import { existsSync as existsSync39, readFileSync as readFileSync39, writeFileSync as writeFileSync31 } from "node:fs";
+import { createRequire as createRequire21 } from "node:module";
 import path34 from "node:path";
-var load9 = createRequire20(import.meta.url);
-var shared4 = (file) => load9(`../../skills/${file}`);
+var load10 = createRequire21(import.meta.url);
+var shared4 = (file) => load10(`../../skills/${file}`);
 var characterPanelSchema = external_exports.object({
   identityPath: external_exports.string().min(1).describe("<channel>/assets/characters/<id>/identity.md"),
   view: external_exports.enum(["face", "front", "back"]),
@@ -137145,16 +137787,16 @@ function characterPanelRequest(raw) {
   if (path34.basename(identityPath) !== "identity.md" || path34.basename(path34.dirname(folder)) !== "characters" || path34.basename(path34.dirname(path34.dirname(folder))) !== "assets")
     throw new Error("character_path_invalid: identityPath must be <channel>/assets/characters/<id>/identity.md");
   const { identityCharacter, panelPrompt } = shared4("_shared/character-identity.js");
-  const character = identityCharacter(readFileSync38(identityPath, "utf8"), { ready: false });
+  const character = identityCharacter(readFileSync39(identityPath, "utf8"), { ready: false });
   const panelsFile = path34.join(folder, "panels.json");
-  const panels = (existsSync38(panelsFile) ? JSON.parse(readFileSync38(panelsFile, "utf8")).panels : void 0) ?? {};
+  const panels = (existsSync39(panelsFile) ? JSON.parse(readFileSync39(panelsFile, "utf8")).panels : void 0) ?? {};
   const panelFile = (view) => {
     const file = panels[view]?.file;
-    if (!file || !existsSync38(path34.join(folder, file))) throw new Error(`character_panel_missing: make ${id}'s ${view} panel first, or pass references`);
+    if (!file || !existsSync39(path34.join(folder, file))) throw new Error(`character_panel_missing: make ${id}'s ${view} panel first, or pass references`);
     return path34.join(folder, file);
   };
   const references = (args.references ?? (args.view === "face" ? [] : args.view === "front" ? ["face"] : ["front"]).map(panelFile)).map((file) => path34.resolve(folder, file));
-  for (const file of references) if (!existsSync38(file)) throw new Error(`image_input_missing: ${file}`);
+  for (const file of references) if (!existsSync39(file)) throw new Error(`image_input_missing: ${file}`);
   const { findImageWorkspace, readImageContext } = shared4("_shared/image-selection.js");
   const workspace = findImageWorkspace(folder);
   if (!workspace) throw new Error("image_setup_required: no .social-flow/models.json above this character");
@@ -137183,9 +137825,9 @@ function characterPanelRequest(raw) {
   return { workspace, folder, id, view: args.view, panelsFile, prompt, negativePrompt: call2.negativeSent ? negativePrompt : void 0, warnings, ...call2 };
 }
 function recordCharacterPanel(request) {
-  const doc = existsSync38(request.panelsFile) ? JSON.parse(readFileSync38(request.panelsFile, "utf8")) : { schemaVersion: 1, panels: {} };
+  const doc = existsSync39(request.panelsFile) ? JSON.parse(readFileSync39(request.panelsFile, "utf8")) : { schemaVersion: 1, panels: {} };
   doc.panels = { ...doc.panels, [request.view]: { file: path34.basename(request.file), purpose: "character_reference", view: request.view, framing: { status: "not_reviewed" } } };
-  writeFileSync30(request.panelsFile, JSON.stringify(doc, null, 2) + "\n");
+  writeFileSync31(request.panelsFile, JSON.stringify(doc, null, 2) + "\n");
   try {
     shared4("channel/references/review-library.js").exportChannel(path34.resolve(request.folder, "../../.."));
   } catch (error2) {
@@ -137490,6 +138132,7 @@ var facebookPublishSchema = external_exports.object({
   linkUrl: external_exports.string().url().optional(),
   reel: external_exports.boolean().optional(),
   isAiGenerated: external_exports.boolean().optional(),
+  thumbnailFilePath: external_exports.string().min(1).optional(),
   channel: channelSlugSchema
 }).superRefine((v, ctx) => {
   const issue2 = (path35, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path35], message });
@@ -137719,7 +138362,7 @@ var ROUTES = {
   // ── image generation (OpenAI GPT Image) — returns base64 image block + summary text ──
   gpt_image_text2img: async (args) => {
     const request = parseArgs(text2ImageSchema, args);
-    if (request.savePath && existsSync39(request.savePath)) return { ...text3(`Output already exists; choose a new savePath: ${request.savePath}`, true), terminal: true };
+    if (request.savePath && existsSync40(request.savePath)) return { ...text3(`Output already exists; choose a new savePath: ${request.savePath}`, true), terminal: true };
     const result = await generateFromText(request);
     if (!result.success || !result.base64) {
       return { ...text3(`Image generation failed: ${result.error}`, true), terminal: result.terminal === true };
@@ -137747,7 +138390,7 @@ File save failed: ${formatError(saveError)}`;
   },
   gpt_image_img2img: async (args) => {
     const request = parseArgs(img2ImgSchema, args);
-    if (request.savePath && existsSync39(request.savePath)) return { ...text3(`Output already exists; choose a new savePath: ${request.savePath}`, true), terminal: true };
+    if (request.savePath && existsSync40(request.savePath)) return { ...text3(`Output already exists; choose a new savePath: ${request.savePath}`, true), terminal: true };
     const result = await generateFromImage(request);
     if (!result.success || !result.base64) {
       return { ...text3(`Image editing failed: ${result.error}`, true), terminal: result.terminal === true };
@@ -138549,8 +139192,9 @@ ${styleWarnings.join("\n")}` : head;
           captionFiles: input.captionFiles,
           reel: input.reel,
           isAiGenerated: input.isAiGenerated,
+          thumbnailFilePath: input.thumbnailFilePath,
           channel: input.channel
-        } : { caption: input.caption, imageUrls: input.imageUrls, linkUrl: input.linkUrl, channel: input.channel }
+        } : { caption: input.caption, imageUrls: input.imageUrls, linkUrl: input.linkUrl, channel: input.channel, thumbnailFilePath: input.thumbnailFilePath }
       ),
       SNS_PUBLISHED_NOTE
     );
@@ -138650,6 +139294,15 @@ ${styleWarnings.join("\n")}` : head;
   },
   production_workflow: async (args) => text3(JSON.stringify(manageWorkflow(args), null, 2)),
   // ── Storyboard ──
+  episode_cover: async (args) => {
+    const { path: path35, action, decision } = parseArgs(episodeCoverSchema, args);
+    if (action === "set") {
+      if (!decision) return text3("episode_cover set needs a decision: reason, source and optional focus, copy, language, variants", true);
+      return text3(JSON.stringify(setCover(path35, decision), null, 2));
+    }
+    if (action === "render") return text3(JSON.stringify(await renderCover(path35), null, 2));
+    return text3(JSON.stringify(readCover(path35), null, 2));
+  },
   location_manage: async (args) => {
     try {
       return text3(JSON.stringify(await manageLocation(args), null, 2));

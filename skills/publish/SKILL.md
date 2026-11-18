@@ -307,7 +307,9 @@ permalink, say).
 1. **YouTube**: `youtube_publish` — title/description from `output/youtube/meta.md`,
    `videoFilePath`=output/video/**video.mp4** (the clean copy),
    **`thumbnailFilePath`=cover.jpg required** (leave it out and a random frame becomes
-   the thumbnail). **Only for requested separate YouTube subtitles**, pass
+   the thumbnail). When the episode has a rendered cover, take the file from
+   `episode_cover read` → `publish.youtube` instead ([generate-cover](../generate-cover/SKILL.md));
+   a `stale` cover is rendered again first (local, $0). **Only for requested separate YouTube subtitles**, pass
    `captionFilePath`=output/video/subs.srt; for requested multiple languages pass
    **`captionTracks`** instead, listing the requested
    `subs.<lang>.srt` with its BCP-47 code (`[{filePath: …/subs.srt, language: "ko"},
@@ -355,6 +357,15 @@ permalink, say).
    `build-report.txt`; around 6 seconds in this pipeline). At the frame picker's first
    slot (t=0) the hero stat isn't up yet.
 
+   **With a rendered cover** (`episode_cover`): its copy is drawn on a still that is not in
+   the video, so "Select from video" cannot pick it. Look at the portrait image in the
+   Studio thumbnail box while private first: if it already shows the rendered cover, the
+   API set it (2026-11-03) — keep it and confirm on the shorts tab after going public. If it
+   shows a video frame, pick the cover's own moment: when the decision's source is
+   `kind:"frame"` of the finished video, that `seconds`; otherwise the nearest frame of the
+   cover's shot. Report that the portrait tile carries the moment without the copy. `Change`
+   (file upload) swapped only the landscape surface when measured on 2026-08-19.
+
    **The verdict is not `oardefault.jpg`** — it stays 404 after the frame is set, and
    `oar2.jpg` serves a cached older frame with a 200. Read the tile's `img` src from the
    channel shorts tab DOM (`youtube.com/@<handle>/shorts`), download it, and confirm by
@@ -366,8 +377,12 @@ permalink, say).
    record it as open, along with the videoId.
 2. **Instagram**: `instagram_publish` — `videoUrl` is the public URL of the
    **clean subtitle-free master (video.mp4)** + platform caption text. No subtitles
-   are baked into the picture. Pass `thumbOffsetMs` at the cover time (or `coverUrl`
-   for the hosted `cover.jpg`) so the grid doesn't show the first frame, and
+   are baked into the picture. Pass `coverUrl` for the hosted rendered cover
+   (`episode_cover read` → `publish.instagram`, hosted with the video; ≤8MB JPEG) — the API
+   cannot change it after posting and Instagram has no private stage, so look at its
+   `grid-3x4` and `feed-1x1` previews before the call. Without a rendered cover pass
+   `thumbOffsetMs` at the cover time (or `coverUrl` for the hosted `cover.jpg`) so the grid
+   doesn't show the first frame, and
    `isAiGenerated: true` for generated episodes. The tool waits up to 5 minutes for the
    container (Meta's documented window); a timeout publishes nothing, so a new call
    is safe. An Instagram-Login token can't upload a local file, so the URL must stay
@@ -406,7 +421,10 @@ permalink, say).
    100–215 s, so measure the master with ffprobe first and publish anything over 90 s
    without `reel` — it lands as a regular Page video, which no Meta document calls a
    Reel. A Reel is public as soon as it finishes; a `processingWarning` means it was
-   accepted, so check the Page and never call again. Omit subtitle parameters by default. Only if separate Facebook
+   accepted, so check the Page and never call again. Pass the rendered cover as
+   `thumbnailFilePath` (`episode_cover read` → `publish.facebook`, local, ≤10MB); a
+   `thumbnailWarning` means the post stands — set the cover in Meta Business Suite, never
+   publish again. Omit subtitle parameters by default. Only if separate Facebook
    subtitles were also requested, use `captionFilePath`=output/video/subs.srt or
    `captionFiles` for requested languages, **default locale first**: `[{filePath:
    …/subs.srt, locale: "ko_KR"}, {filePath: …/subs.en.srt, locale: "en_US"}, …]`;
