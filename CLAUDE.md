@@ -73,9 +73,9 @@ a picture nor a source comes out, unsourced numbers and absolutes included. The 
 from whether it works to its limit or cost, and the ending shows someone using the result;
 an ask stays optional and names one action and the place the thing really is. Follow the
 claim-led section of `episode-anticipation.md`. `sequence.question`/`payoff` hold the
-viewer's doubt and the proof scene, and every board write prints when the first spoken line
-starts, with the silence its shot's stored length holds around it. This reports and never
-refuses. It is writing guidance, not a score, a problem-beat requirement or a deadline for
+viewer's doubt and the proof scene. Once the shots before it have lengths, every board write
+prints when the first spoken line starts, and for a natively voiced line the silence its
+shot's stored length holds. This reports and never refuses. It is writing guidance, not a score, a problem-beat requirement or a deadline for
 the proof: on the one channel studied the earliest proof had the fewest views. Evidence and
 its limits: `docs/research/2026-11-18-promise-and-proof/README.md`.
 

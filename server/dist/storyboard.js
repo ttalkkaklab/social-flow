@@ -909,7 +909,8 @@ function editImpact(before, after) {
 /** storyboard_apply — read, patch, validate, write unless a violation or a dry run. */
 /** When the first spoken line starts, from the stored shot lengths before it and its shot's planned performance.
  *  Nothing is drawn over video, so a promise reaches the viewer as speech (episode-anticipation.md, claim-led
- *  episodes). A reading of the plan: empty when no line is written or a length before it is unknown. */
+ *  episodes). A reading of the plan: empty when no line is written or a length before it is unknown; throws on a
+ *  performance it cannot order, which the caller reports as no line. */
 export function firstLineReading(win) {
     const order = shotDirection().playbackEntries(win.SCENES ?? []).map(({ s }) => s);
     const at = order.findIndex((shot) => shot.narration?.length);
@@ -926,7 +927,8 @@ export function firstLineReading(win) {
     const excess = typeof shot.duration === 'number' && plan.durationSeconds !== null ? round(shot.duration - plan.durationSeconds) : 0;
     return [`first spoken line: ${shot.id ?? `shot ${at + 1}`}, about ${round(lengths.reduce((sum, n) => sum + n, 0) + (start ?? 0))} s in`
             + (typeof start === 'number' ? '' : ' or later (an action before it has no length)')
-            + (excess > 0.5 ? ` — that shot's length holds ${excess} s beyond its performance; a natively voiced clip plays them as silence, mostly before the line` : '')];
+            // A voiceover line is placed by its composed TTS; only a line the video model voices is pushed back by the spare length.
+            + (excess > 0.5 && shot.narration?.[0]?.delivery !== 'voiceover' ? ` — that shot's length holds ${excess} s beyond its performance; a natively voiced clip plays them as silence, mostly before the line` : '')];
 }
 export function applyStoryboard(args, opts = {}) {
     const file = scenesPath(args.path);
@@ -1006,16 +1008,17 @@ export function applyStoryboard(args, opts = {}) {
     }
     const bad = findings.some((f) => f.level === 'bad');
     const st = next.STRUCTURE;
+    // Reports only, each on its own: a board one of them cannot read still gets written and still prints the other.
+    const digest = () => shotDirection().digest(next), firstLine = () => firstLineReading(next);
     const result = {
         file, written: false, created: !exists, approvalDropped: header.some((h) => /^\/\/\s*approved:/.test(h)),
         shots: (next.SCENES ?? []).length, scenes: st ? st.scenes.length : 0, sequences: st ? st.sequences.length : 0,
-        // A report only: a board it cannot read still gets written.
-        synced, findings, board: (() => { try {
-            return [...shotDirection().digest(next), ...firstLineReading(next)];
+        synced, findings, board: [digest, firstLine].flatMap((read) => { try {
+            return read();
         }
         catch {
             return [];
-        } })(),
+        } }),
     };
     if (bad || args.dryRun)
         return result;

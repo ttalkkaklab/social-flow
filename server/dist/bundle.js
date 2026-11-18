@@ -118174,7 +118174,7 @@ function firstLineReading(win) {
   const start = plan2.performance.find((event) => event.kind !== "action")?.speechStartSeconds;
   const round2 = (n) => Math.round(n * 10) / 10;
   const excess = typeof shot.duration === "number" && plan2.durationSeconds !== null ? round2(shot.duration - plan2.durationSeconds) : 0;
-  return [`first spoken line: ${shot.id ?? `shot ${at + 1}`}, about ${round2(lengths.reduce((sum, n) => sum + n, 0) + (start ?? 0))} s in` + (typeof start === "number" ? "" : " or later (an action before it has no length)") + (excess > 0.5 ? ` \u2014 that shot's length holds ${excess} s beyond its performance; a natively voiced clip plays them as silence, mostly before the line` : "")];
+  return [`first spoken line: ${shot.id ?? `shot ${at + 1}`}, about ${round2(lengths.reduce((sum, n) => sum + n, 0) + (start ?? 0))} s in` + (typeof start === "number" ? "" : " or later (an action before it has no length)") + (excess > 0.5 && shot.narration?.[0]?.delivery !== "voiceover" ? ` \u2014 that shot's length holds ${excess} s beyond its performance; a natively voiced clip plays them as silence, mostly before the line` : "")];
 }
 function applyStoryboard(args, opts = {}) {
   const file = scenesPath(args.path);
@@ -118243,6 +118243,7 @@ function applyStoryboard(args, opts = {}) {
   }
   const bad = findings.some((f3) => f3.level === "bad");
   const st = next.STRUCTURE;
+  const digest5 = () => shotDirection().digest(next), firstLine = () => firstLineReading(next);
   const result = {
     file,
     written: false,
@@ -118251,16 +118252,15 @@ function applyStoryboard(args, opts = {}) {
     shots: (next.SCENES ?? []).length,
     scenes: st ? st.scenes.length : 0,
     sequences: st ? st.sequences.length : 0,
-    // A report only: a board it cannot read still gets written.
     synced,
     findings,
-    board: (() => {
+    board: [digest5, firstLine].flatMap((read4) => {
       try {
-        return [...shotDirection().digest(next), ...firstLineReading(next)];
+        return read4();
       } catch {
         return [];
       }
-    })()
+    })
   };
   if (bad || args.dryRun) return result;
   const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;

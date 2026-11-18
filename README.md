@@ -53,7 +53,8 @@ one catch-up. It preserves held motives, user-scoped time labels and the eventua
 For an episode that makes a claim (explainer, tutorial, review, advertisement) the same pass
 asks for one result promised in the viewer's words and said aloud, proof the viewer can check
 on screen and an ending where someone uses it. `sequence.question`/`payoff` hold the doubt and
-the proof scene, and every board write prints when the first spoken line starts
+the proof scene, and once the shots before it have lengths every board write prints when the
+first spoken line starts
 ([study and limits](docs/research/2026-11-18-promise-and-proof/README.md)).
 
 [Material research](skills/storyboard/references/story-material-research.md) now precedes

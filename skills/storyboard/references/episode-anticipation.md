@@ -132,7 +132,8 @@ stay with [narration and visual grounding](narration-visual-grounding.md) and
   particular to wait for; pick the case that shows the claim and follow it through.
 - **Say it.** Nothing is drawn over video here, so the first spoken line carries the promise;
   a title card or a caption cannot. Write that line before the shots and keep silent setup in
-  front of it short. Every board write prints when the first spoken line starts (below).
+  front of it short. Once the shots before it have lengths, every board write prints when the
+  first spoken line starts (below).
 - **The viewer's trouble can come first.** When the subject removes an annoyance the viewer
   already has, showing that annoyance happen is a readable situation and the promise is its
   removal. This is an option for subjects that have one, not a required problem beat.
@@ -161,10 +162,11 @@ stay with [narration and visual grounding](narration-visual-grounding.md) and
   speech, and the publishing copy says the same place.
 
 On the board, `sequence.question` holds the viewer's doubt ("does one line really give a
-usable draft?") and `sequence.payoff` names the scene that shows the proof. After every
-write the board prints `first spoken line: <shot>, about N s in`, with the seconds that
-shot's stored length holds beyond its performance when there are any; on a natively voiced
-clip those play as silence, mostly before the line. It is a reading of the plan, not a
+usable draft?") and `sequence.payoff` names the scene that shows the proof. Once every shot
+before the first line has a length, each write prints `first spoken line: <shot>, about N s
+in`. For a line the video model voices it adds the seconds that shot's stored length holds
+beyond its performance, which play as silence, mostly before the line; a narrator's line is
+placed by its composed TTS and gets no such note. It is a reading of the plan, not a
 target: an opening carried by a visible event needs no early line.
 
 ## 4. Preserve the progression in every artifact
