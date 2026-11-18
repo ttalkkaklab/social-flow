@@ -23,7 +23,7 @@ function setup(t){
 }
 test('binding a generated clip creates player cuts, replaces its source, and preserves authored multi-cut edits',t=>{
  const {dir,target,r}=setup(t),file=join(target,'scenes.js'),video=join(dir,'generated.mp4');
- require('node:child_process').execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=s=16x16:r=24','-t','0.25','-c:v','libx264','-pix_fmt','yuv420p',video]);
+ require('node:child_process').execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=s=16x16:r=24','-f','lavfi','-i','sine=frequency=440:sample_rate=48000','-t','0.25','-c:v','libx264','-pix_fmt','yuv420p','-c:a','aac',video]);
  const native={...caps,audioConditioning:false,lipSync:false,nativeSpeech:true};
  const attach=()=>manageSpeech({path:target,action:'attach_video',shotId:r.lines[0].shotId,
   expectedRevision:manageSpeech({path:target,action:'list'}).revision,videoPath:video,capabilities:native});
@@ -116,6 +116,15 @@ test('a native-speech clip binds line revisions and assembles from its soundtrac
  const other=path.join(dir,'msr-4.mp4');
  require('node:child_process').execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=s=16x16:r=24:d=1','-f','lavfi','-i','sine=frequency=440:sample_rate=48000:duration=1','-c:v','libx264','-pix_fmt','yuv420p','-c:a','aac','-shortest',other]);
  assert.deepEqual({in:attach(other).clearedTrim.in,kept:shot().edit.in,out:shot().edit.out},{in:1.7,kept:undefined,out:undefined});
+ // EP07: an AAC stream with only near-zero samples is not generated dialogue.
+ const silent=path.join(dir,'msr-silent.mp4');
+ require('node:child_process').execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=s=16x16:r=24:d=1','-f','lavfi','-i','anullsrc=r=48000:cl=stereo','-t','1','-c:v','libx264','-c:a','aac',silent]);
+ const before=readFileSync(file,'utf8');
+ assert.throws(()=>attach(silent),/native_speech_silent/);
+ const noAudio=path.join(dir,'msr-no-audio.mp4');
+ require('node:child_process').execFileSync('ffmpeg',['-v','error','-i',silent,'-an','-c:v','copy',noAudio]);
+ assert.throws(()=>attach(noAudio),/native_speech_missing/);
+ assert.equal(readFileSync(file,'utf8'),before);
 });
 test('id-only story-first speakers use their character voice when listing and binding native video',t=>{
  const {dir,target,r}=setup(t),file=join(target,'scenes.js'),win={};

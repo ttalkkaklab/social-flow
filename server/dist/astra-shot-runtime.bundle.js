@@ -30692,7 +30692,7 @@ import * as path2 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.122.0",
+  version: "0.122.1",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -33402,7 +33402,7 @@ var storyboardApplySchema = external_exports.object({
   removeShotIds: external_exports.array(shotIdSchema).min(1).optional().describe("Shot ids to drop, resolved before the insert"),
   removeScenes: external_exports.array(external_exports.number().int().positive()).optional(),
   removeSequences: external_exports.array(external_exports.string()).optional(),
-  globals: globalsSchema.optional().describe("Set other window.* blocks \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY"),
+  globals: globalsSchema.optional().describe("Set other window.* blocks \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. CLICHES belongs to story_cliche"),
   expectedSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional().describe("Required for propSheet file edits; use the hash from storyboard_read"),
   propSheet: external_exports.object({
     props: external_exports.array(external_exports.record(external_exports.unknown())),
@@ -33460,7 +33460,14 @@ var storySequenceSchema = external_exports.object({
     purpose: nonEmpty.describe("The one purpose that binds its scenes"),
     question: nonEmpty.optional().describe("The question this stretch opens: a dramatic one, or on a claim-led episode whether the promised result is real"),
     payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question or shows the proof")
-  }).strict()).min(1)
+  }).strict()).min(1),
+  opening: external_exports.object({
+    promise: nonEmpty.describe("What the opening commits to, in the viewer's words: the event, doubt or result the episode then pays"),
+    firstFrame: nonEmpty.describe("What the first picture shows at 0 s: the subject already in its changed state or mid-action"),
+    title: nonEmpty.optional().describe("Long-form: the title the first 30 s confirms"),
+    thumbnail: nonEmpty.optional().describe("Long-form: the thumbnail picture the first 30 s confirms"),
+    widen: nonEmpty.optional().describe("Long-form: the question bigger than the packaging, opened before 30 s")
+  }).strict().optional().describe("The opening plan, recorded as STORY.opening; a new value replaces the old one")
 }).strict();
 var storySceneSchema = external_exports.object({
   path: outlinePath,
@@ -33508,6 +33515,23 @@ var storyMusicSchema = external_exports.object({
     gainDb: external_exports.number().finite().min(-60).max(12).optional()
   }).strict()).optional()
 }).strict();
+var INVISIBLE = /[\p{Cc}\p{Cs}\p{Zl}\p{Zp}\u115f\u1160\u3164\uffa0\u2800]|(?![\u200c\u200d])\p{Cf}/u;
+var clicheText = (max) => nonEmpty.max(max).refine((text3) => !INVISIBLE.test(text3) && /[\p{L}\p{N}\p{P}\p{S}]/u.test(text3), { message: "plain text that shows: no control or invisible characters" });
+var storyClicheSchema = external_exports.object({
+  path: outlinePath,
+  uses: external_exports.array(external_exports.object({
+    id: external_exports.number().int().positive().optional().describe("The catalogue number cliches.js pick printed"),
+    name: clicheText(120).refine((name) => !/^#\s*\p{Nd}+$/u.test(name.normalize("NFKC")), { message: "a catalogue number goes in id, not in name" }).optional().describe("Its name in the story language; required for a clich\xE9 that is not in the catalogue"),
+    need: nonEmpty.optional().describe("The job it does in this story, one of the needs cliches.js lists; the catalogue entry's first need when omitted"),
+    scenes: external_exports.array(external_exports.number().int().positive()).min(1).optional().describe("The scenes it sits on, once they are written"),
+    character: nonEmpty.optional().describe("The cast member a character-type clich\xE9 describes"),
+    shift: clicheText(300).optional().describe("The one thing this episode changes about it; leave it out when it is played as the catalogue describes"),
+    offered: external_exports.boolean().optional().describe("true records a recommendation that is not in the story yet; stated on every write")
+  }).strict().refine((use) => use.id !== void 0 || use.name !== void 0, { message: "give the catalogue id, or a name for a clich\xE9 outside the catalogue" })).min(1).optional(),
+  remove: external_exports.array(external_exports.union([external_exports.number().int().positive(), nonEmpty])).min(1).optional().describe("Recorded uses to drop, by catalogue id or by name"),
+  none: clicheText(300).optional().describe("Records that this episode uses no clich\xE9, and why; it replaces the list"),
+  basis: external_exports.literal("user").optional().describe("The user picked these from a recommendation or asked for them")
+}).strict().refine((args) => args.none === void 0 || !args.uses && !args.remove, { message: "none replaces the whole list \u2014 give it alone" });
 var shotCharactersSchema = external_exports.object({
   path: outlinePath,
   shots: external_exports.array(external_exports.object({
@@ -33916,6 +33940,11 @@ function manageSpeech(args) {
       const bytes = readFileSync8(videoPath);
       if (!bytes.length) throw new Error("Video file is empty");
       const native = plan.mode === "native";
+      const nativeAudio = native ? speechSpanContract().inspect(videoPath) : void 0;
+      if (nativeAudio?.status === "missing")
+        throw new Error("native_speech_missing: the video has no audio stream; regenerate the missing dialogue before attaching this clip");
+      if (nativeAudio?.status === "silent")
+        throw new Error("native_speech_silent: the decoded soundtrack is below -60 dBFS throughout; regenerate the missing dialogue before attaching this clip");
       const sound = object3(scene.sound);
       if (native && sound.audioSource === "speech") throw new Error("Native video speech lives in the clip soundtrack; sound.audioSource speech would drop it");
       const audio = selected.map(({ line }) => {
@@ -33978,7 +34007,7 @@ function manageSpeech(args) {
       }
       if (native) {
         try {
-          const span = speechSpanContract().measure(videoPath);
+          const span = nativeAudio?.span;
           if (span) {
             const trim = speechSpanContract().suggestTrim(span, scene);
             soundtrack = { ...span, method: "audio_energy", review: "not_reviewed", ...trim ? {
@@ -33986,6 +34015,9 @@ function manageSpeech(args) {
               suggestedDurationSeconds: trim.durationSeconds,
               note: "Silent acting surrounds the line. If the pause is not the story's, set these edit.in / edit.out source seconds and the shot duration with storyboard_apply; times inside the shot (sound.effects atSeconds, music starts) then count from the trimmed start. Listen first: loudness can miss a quiet first or last syllable."
             } : {} };
+            if (span.tailSilenceSeconds < 0.1) plan.warnings.push("native_speech_end_at_boundary: audio activity reaches the clip end; inspect the final words for truncation before accepting or trimming. Energy does not verify complete dialogue.");
+          } else {
+            plan.warnings.push("native_speech_audio_unverified: no sustained speech span could be measured; inspect audio presence and dialogue before accepting this clip.");
           }
         } catch {
         }

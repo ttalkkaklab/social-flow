@@ -18,6 +18,7 @@ import { reviewActing as reviewTtsActing, actingReviewSchema as ttsActingReviewS
 
 import { manageVoiceAudition, voiceAuditionSchema } from './voice-audition.js';
 import { manageLocation } from './location.js';
+import { episodeCoverSchema, setCover, renderCover, readCover } from './cover.js';
 import { manageProject } from './project.js';
 import { manageSpeech, speechManageSchema } from './speech.js';
 import { reviewActing, actingReviewSchema } from './acting-review.js';
@@ -547,6 +548,7 @@ const facebookPublishSchema = z
     linkUrl: z.string().url().optional(),
     reel: z.boolean().optional(),
     isAiGenerated: z.boolean().optional(),
+    thumbnailFilePath: z.string().min(1).optional(),
     channel: channelSlugSchema,
   })
   .superRefine((v, ctx) => {
@@ -1496,9 +1498,10 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
               captionFiles: input.captionFiles,
               reel: input.reel,
               isAiGenerated: input.isAiGenerated,
+              thumbnailFilePath: input.thumbnailFilePath,
               channel: input.channel,
             }
-          : { caption: input.caption, imageUrls: input.imageUrls, linkUrl: input.linkUrl, channel: input.channel },
+          : { caption: input.caption, imageUrls: input.imageUrls, linkUrl: input.linkUrl, channel: input.channel, thumbnailFilePath: input.thumbnailFilePath },
       ),
       SNS_PUBLISHED_NOTE,
     );
@@ -1599,6 +1602,15 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   },
   production_workflow: async args => text(JSON.stringify(manageWorkflow(args), null, 2)),
   // ── Storyboard ──
+  episode_cover: async (args) => {
+    const { path, action, decision } = parseArgs(episodeCoverSchema, args);
+    if (action === 'set') {
+      if (!decision) return text('episode_cover set needs a decision: reason, source and optional focus, copy, language, variants', true);
+      return text(JSON.stringify(setCover(path, decision), null, 2));
+    }
+    if (action === 'render') return text(JSON.stringify(await renderCover(path), null, 2));
+    return text(JSON.stringify(readCover(path), null, 2));
+  },
   location_manage: async (args) => {
     try { return text(JSON.stringify(await manageLocation(args), null, 2)); }
     catch (error) { return text(error instanceof Error ? error.message : String(error), true); }
@@ -1641,6 +1653,11 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     storyboard.contract();
     const r = storyboard.writeStoryMusic(parseArgs(storyboard.storyMusicSchema, args));
     return text(storyboard.renderApply(r) + '\n\nMusic spotting:\n' + JSON.stringify(r.spotting, null, 2), r.findings.some((f) => f.level === 'bad'));
+  },
+  story_cliche: async (args) => {
+    storyboard.contract();
+    const r = storyboard.writeStoryCliches(parseArgs(storyboard.storyClicheSchema, args));
+    return text(storyboard.renderApply(r) + '\n\nClichés:\n' + JSON.stringify(r.cliches, null, 2), r.findings.some((f) => f.level === 'bad'));
   },
   shot_characters: async (args) => {
     storyboard.contract();

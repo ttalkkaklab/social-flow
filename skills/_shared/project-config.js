@@ -37,7 +37,7 @@ function validateProjectFields(config) {
     if (Object.values(config.style).some(value => !text(value))) throw new Error('Style values must be nonempty text');
   }
   if (config.production !== undefined) {
-    keys(config.production, ['mode', 'renderRatioVersion', 'format', 'previzRenderer', 'episodeBudgetUsd', 'musicDirection'], 'production');
+    keys(config.production, ['mode', 'renderRatioVersion', 'format', 'previzRenderer', 'episodeBudgetUsd', 'musicDirection', 'clicheUse'], 'production');
     const p = config.production;
     if (!CHOICES.includes(p.mode) || p.renderRatioVersion !== 1) throw new Error('Choose one of the six production modes and renderRatioVersion:1');
     if (!Object.hasOwn(FORMATS, p.format || '')) throw new Error('Choose a supported production.format');
@@ -46,6 +46,8 @@ function validateProjectFields(config) {
     if (p.musicDirection !== undefined && (!Array.isArray(p.musicDirection) || p.musicDirection.length > 20 ||
         p.musicDirection.some(note => typeof note !== 'string' || !note.trim() || note.length > 300)))
       throw new Error('production.musicDirection is up to 20 notes of at most 300 characters each');
+    // The user's standing choice for researched clichés (cliche-use.md): on applies them on every type, off on none.
+    if (p.clicheUse !== undefined && !['on', 'off'].includes(p.clicheUse)) throw new Error('production.clicheUse is "on" or "off"');
     if (p.episodeBudgetUsd !== undefined && (typeof p.episodeBudgetUsd !== 'number' || !Number.isFinite(p.episodeBudgetUsd) || p.episodeBudgetUsd < 0)) throw new Error('episodeBudgetUsd must be a finite nonnegative number');
   }
   if (config.sns !== undefined) {

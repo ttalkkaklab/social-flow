@@ -93,6 +93,11 @@ Only the story order is enforced; checks come back once the quality is known.
 1. Storyboard: the story (`story_sequence` → `story_scene` → `story_shot`), each shot's
    characters and lines (`shot_characters` → `shot_dialogue`), each scene's music decision
    (`story_music`), then its icon attributes (`shot_icons`). Prepare props and backgrounds with their images.
+   Record the cliché decision with `story_cliche` after the first `story_sequence`. On a
+   drama, comedy or romance episode make the pass yourself and record the uses or `none`.
+   On any other type an unattended run has no user to pick: record the candidates with
+   `offered: true`, apply none and list them in the run report
+   ([cliché use](../storyboard/references/cliche-use.md#6-recommend-then-apply-what-the-user-picks)).
 2. Invoke [generate-cut-images](../generate-cut-images/SKILL.md): each shot's start image,
    and the end image a `first_last` shot needs, with `shot_image`.
 3. Invoke [generate-cut-videos](../generate-cut-videos/SKILL.md): each video prompt with

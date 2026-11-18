@@ -1,0 +1,68 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>cover</title>
+<!--
+  The episode cover page episode_cover renders (server/src/cover.ts). It is opened twice by
+  headless Chrome at the canvas size: once with --dump-dom to read the measured copy box out of
+  #measure, once with --screenshot. Both runs lay the copy out with the same steps below, so the
+  measurement describes the captured picture. Do not edit an episode copy of this file; the
+  server injects the configuration at the marker and keeps the rest as it is here.
+-->
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #000; }
+  #stage { position: relative; overflow: hidden; }
+  #bg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #copy {
+    position: absolute; margin: 0; color: #fff; line-height: 1.12; letter-spacing: -0.01em;
+    word-break: keep-all; overflow-wrap: anywhere; white-space: normal;
+    /* The outline is drawn first and the fill over it, so the stroke sits outside the glyph and
+       never fills a Hangul counter. Its width is twice the visible outline for that reason. */
+    paint-order: stroke fill; -webkit-text-stroke-color: #000; -webkit-text-stroke-width: 0.16em;
+  }
+  #copy .em { color: #ffd400; }
+</style></head>
+<body>
+<div id="stage"><img id="bg" alt=""><p id="copy"></p></div>
+<script type="application/json" id="measure">{}</script>
+<script>
+const CONFIG = /*COVER_CONFIG*/null;
+(async () => {
+  const stage = document.getElementById('stage'), bg = document.getElementById('bg'), copy = document.getElementById('copy');
+  stage.style.width = CONFIG.width + 'px'; stage.style.height = CONFIG.height + 'px';
+  // onload, not decode(): headless Chrome's --dump-dom under a virtual time budget never settles decode().
+  await new Promise((ok, fail) => { bg.onload = ok; bg.onerror = () => fail(new Error('the background did not load: ' + CONFIG.background)); bg.src = CONFIG.background; });
+  const result = { width: CONFIG.width, height: CONFIG.height, copy: null };
+  if (CONFIG.text) {
+    const face = new FontFace('CoverFace', `url("${CONFIG.font.url}")`, { weight: String(CONFIG.font.weight) });
+    document.fonts.add(await face.load());
+    copy.style.fontFamily = 'CoverFace'; copy.style.fontWeight = String(CONFIG.font.weight);
+    copy.style.textAlign = CONFIG.align;
+    const at = CONFIG.emphasis ? CONFIG.text.indexOf(CONFIG.emphasis) : -1;
+    const span = (text, cls) => { const s = document.createElement('span'); if (cls) s.className = cls; s.textContent = text; return s; };
+    if (at >= 0) copy.append(span(CONFIG.text.slice(0, at)), span(CONFIG.emphasis, 'em'), span(CONFIG.text.slice(at + CONFIG.emphasis.length)));
+    else copy.append(span(CONFIG.text));
+    const r = CONFIG.region, W = CONFIG.width, H = CONFIG.height;
+    const box = { left: r.x0 * W, top: r.y0 * H, width: (r.x1 - r.x0) * W, height: (r.y1 - r.y0) * H };
+    copy.style.left = box.left + 'px'; copy.style.width = box.width + 'px';
+    // Largest size whose copy fits the region in at most two lines; the floor is kept and reported.
+    let size = CONFIG.maxFont, fits = false, lines = 0, rect;
+    for (; size >= CONFIG.minFont; size = Math.floor(size * 0.94)) {
+      copy.style.fontSize = size + 'px';
+      copy.style.top = '0px';
+      rect = copy.getBoundingClientRect();
+      lines = Math.round(rect.height / (size * 1.12));
+      if (rect.height <= box.height && lines <= 2 && copy.scrollWidth <= box.width + 1) { fits = true; break; }
+    }
+    if (!fits) { size = CONFIG.minFont; copy.style.fontSize = size + 'px'; rect = copy.getBoundingClientRect(); lines = Math.round(rect.height / (size * 1.12)); }
+    copy.style.top = (box.top + Math.max(0, (box.height - rect.height) / 2)) + 'px';
+    // The ink box: the widest line inside the paragraph, so a centred short line is not reported as the full width.
+    const range = document.createRange(); range.selectNodeContents(copy);
+    const ink = Array.from(range.getClientRects());
+    const x0 = Math.min(...ink.map(q => q.left)), x1 = Math.max(...ink.map(q => q.right));
+    const outer = copy.getBoundingClientRect();
+    result.copy = { fontPx: size, lines, fits, box: { x0: x0 / W, y0: outer.top / H, x1: x1 / W, y1: outer.bottom / H } };
+  }
+  document.getElementById('measure').textContent = JSON.stringify(result);
+  document.title = 'ready';
+})().catch(e => { document.getElementById('measure').textContent = JSON.stringify({ error: String(e && e.message || e) }); document.title = 'failed'; });
+</script>
+</body></html>

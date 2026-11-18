@@ -631,6 +631,8 @@ const FACEBOOK_PUBLISH_OUTPUT: OutputSchema = {
       description:
         'Reason when only the caption upload failed, prefixed per locale ("en_US: …"). The post itself succeeded, so do not re-publish — the video may still have been processing, so retry just the failed locales shortly',
     },
+    thumbnailSet: { type: 'boolean', description: 'Only when thumbnailFilePath was given — whether the cover was set' },
+    thumbnailWarning: { type: 'string', description: 'Reason when only the cover step failed. The post succeeded, so do not re-publish — set the cover in Meta Business Suite' },
   },
   required: ['platform', 'postId'],
 };
@@ -1066,7 +1068,7 @@ Start: \`capability_status\` shows which providers are configured on this machin
 
 Episode video: \`video_catalog\` → \`video_plan\` → \`video_approve\` (the user's yes to that shot, or to every shot) → \`video_execute\`, and \`video_status\` after an interruption. The provider tools (seedance_*, astra_*, ltx_video_generate, fasth3_omni_reference, ltx_api_*, minimax_*, heygen_*) are the adapters that route calls; call one directly only when the user names it.
 
-Storyboard: write the story first with \`story_sequence\` → \`story_scene\` → \`story_shot\`, then each shot's characters and lines with \`shot_characters\` → \`shot_dialogue\`, each scene's music decision with \`story_music\`, its icon attributes with \`shot_icons\`, its start (and first_last end) image with \`shot_image\`, its video prompt with \`shot_prompt\`; then \`storyboard_read\`, \`storyboard_apply\`, \`storyboard_check\`. Speech: \`speech_manage\` owns dialogue lines and audio bindings; \`tts_route\` and the tts_* tools generate. Review: \`host_review\` prepares media evidence and records the host's own observations; it never scores.
+Storyboard: write the story first with \`story_sequence\` → \`story_scene\` → \`story_shot\` (the clichés it uses with \`story_cliche\`), then each shot's characters and lines with \`shot_characters\` → \`shot_dialogue\`, each scene's music decision with \`story_music\`, its icon attributes with \`shot_icons\`, its start (and first_last end) image with \`shot_image\`, its video prompt with \`shot_prompt\`; then \`storyboard_read\`, \`storyboard_apply\`, \`storyboard_check\`. Speech: \`speech_manage\` owns dialogue lines and audio bindings; \`tts_route\` and the tts_* tools generate. Review: \`host_review\` prepares media evidence and records the host's own observations; it never scores.
 
 Images: \`image_catalog\` → \`image_plan\` → \`image_execute\`, then \`image_status\` after interruption. Preserve the saved model choice; legacy image adapters require imageContext for configured production. Host selections remain external handoffs. Music: music_*, suno_*. Sound effects: \`sfx_elevenlabs_generate\`. Free stock footage: \`stock_search\`. Research: serp_*, \`naver_search\`, datago_*, \`youtube_topic_scout\`.
 
@@ -3862,6 +3864,7 @@ Returns JSON: status, missing fields, canonical paths, config and revision; epis
               format: { type: 'string', enum: ['shorts-9x16', 'youtube-long-16x9'], description: 'Output format, e.g. shorts-9x16.' },
               previzRenderer: { type: 'string', enum: ['blender', 'threejs'], description: 'Optional saved previz choice; e.g. blender. Ask only when needed and missing.' },
               episodeBudgetUsd: { type: 'number', minimum: 0, description: 'Optional per-episode USD ceiling, e.g. 5. Does not replace an actual quote and spending authorization.' },
+              clicheUse: { type: 'string', enum: ['on', 'off'], description: 'Optional standing choice for researched clichés in stories, saved when the user states it: on applies them on every type, off on none. Omitted, drama, comedy and romance apply them and other types get a recommendation.' },
             }, required: ['mode', 'renderRatioVersion', 'format'] },
             sns: { type: 'object', additionalProperties: false, description: 'Four legacy platform records plus optional TikTok, including disabled ones. Replacement updates must preserve unchanged platforms. Never pass credentials.', properties: Object.fromEntries(['threads', 'instagram', 'facebook', 'youtube', 'tiktok'].map(platform => [platform, {
               type: 'object', additionalProperties: false, description: `${platform} publishing preference and historical account check.`,
@@ -4258,6 +4261,7 @@ Returns: integer credit balance.`,
         linkUrl: { type: 'string', format: 'uri', description: '(Exception only) link attachment — text posts (no media) only. The default rule is to put the link in the first comment via facebook_comment' },
         reel: { type: 'boolean', description: 'With videoUrl: publish as a Facebook Page Reel instead of a regular Page video. Use for 9:16 shorts of 3–90 seconds only — Meta refuses a longer Reel (1363128), so a longer master goes without reel. The video URL must be public and fetchable by facebookexternalhit. If the result carries processingWarning the Reel was accepted — check the Page, never call again' },
         isAiGenerated: { type: 'boolean', description: 'Reels only (reel: true) — Meta AI-usage self-disclosure (is_ai_generated). Generated Mochi & Bơ episodes pass true' },
+        thumbnailFilePath: { type: 'string', description: 'With videoUrl: **local** absolute path of the cover (.jpg/.png ≤10MB, same aspect ratio as the video — episode_cover read gives it). Checked before posting and set right after through POST /{video-id}/thumbnails with is_preferred. If only this step fails the post stands and thumbnailWarning says so — set the cover in Meta Business Suite, never publish again. Whether a Reel (reel: true) takes it is unverified' },
         channel: SNS_CHANNEL_PROPERTY,
       },
       required: ['caption'],
@@ -4708,7 +4712,7 @@ Returns: integer credit balance.`,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     description: `Update shot dialogue, line acting and local audio/video bindings.
 
-Use for dialogue edits, expression or intonation corrections, stable speaker routing and generation planning. list finds lines; prepare assigns stable ids; update replaces requested line fields; attach_audio returns measured timing; retime updates the complete shot clock from current speech and explicit action edits. attach_video binds generated files; reuse:tail_trim accepts only unchanged audio and performance starts with a shorter tail. plan_audio resolves the pinned voice and each line's scene direction into raw generator arguments, refusing unregistered selected samples and stale shared voices; gateway arguments include a revision-bound speechContext and attach_audio requires its completed receiptPath; plan_video resolves the selected adapter's capabilities (tool names the shot's video tool when it differs from the saved default operation) and carries the same acting/timing context. A native-speech shot (MSR) needs no line audio: the clip speaks its prompt's lines, attach_video binds their revisions and sets sound.audioSource video, and a line edit marks the clip stale. For such a clip attach_video also returns soundtrack: where the line starts and ends in the clip (loudness, not_reviewed), the silent seconds around it, and suggestedEdit {in, out} with suggestedDurationSeconds when silent acting the performance did not ask for surrounds the line. Nothing is trimmed here; apply it with storyboard_apply after listening. Attaching different footage to a trimmed native shot removes that trim and returns it as clearedTrim. Scene direction overrides baseline style without changing voice identity. Local files only: plans do not generate, listen, score or approve. Read first and pass expectedRevision for writes; unknown speakers, ambiguous targets, stale revisions and unsupported lip-sync routes fail. Keeps source backups.
+Use for dialogue edits, expression or intonation corrections, stable speaker routing and generation planning. list finds lines; prepare assigns stable ids; update replaces requested line fields; attach_audio returns measured timing; retime updates the complete shot clock from current speech and explicit action edits. attach_video binds generated files; reuse:tail_trim accepts only unchanged audio and performance starts with a shorter tail. plan_audio resolves the pinned voice and each line's scene direction into raw generator arguments, refusing unregistered selected samples and stale shared voices; gateway arguments include a revision-bound speechContext and attach_audio requires its completed receiptPath; plan_video resolves the selected adapter's capabilities (tool names the shot's video tool when it differs from the saved default operation) and carries the same acting/timing context. A native-speech shot (MSR) needs no line audio: the clip speaks its prompt's lines, attach_video binds their revisions and sets sound.audioSource video, and a line edit marks the clip stale. For such a clip attach_video refuses a missing audio stream (native_speech_missing) or a decoded silent soundtrack (native_speech_silent). Audio at the clip end warns of possible truncation; signal does not verify dialogue or voice identity. It also returns soundtrack: where the line starts and ends in the clip (loudness, not_reviewed), the silent seconds around it, and suggestedEdit {in, out} with suggestedDurationSeconds when silent acting the performance did not ask for surrounds the line. Nothing is trimmed here; apply it with storyboard_apply after listening. Attaching different footage to a trimmed native shot removes that trim and returns it as clearedTrim. Scene direction overrides baseline style without changing voice identity. Local files only: plans do not generate, listen, score or approve. Read first and pass expectedRevision for writes; unknown speakers, ambiguous targets, stale revisions and unsupported lip-sync routes fail. Keeps source backups.
 
 Do NOT use to generate media: call the planned raw TTS tool or selected video adapter, then attach the result. Do NOT use for read-only whole-story inspection: use storyboard_read instead. Never group different emotional beats or nonconsecutive shots by shared image and slice them into unrelated reactions.
 
@@ -4798,7 +4802,7 @@ Returns: JSON — { file, mediaBaseDirectory, sha256, version, format, shots, se
     name: 'story_sequence',
     title: 'Write storyboard sequences (story step 1 of 3)',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    description: `The first storyboard step after the scenario is settled writes only the story, in three layers: story_sequence → story_scene → story_shot. Use it first: it upserts sequences by id (title · purpose · question · payoff — a payoff outside the sequence's scenes warns) and creates scenes.js as a story-v2 board when it is missing, inside an episode on the FORMAT and PRODUCTION its saved snapshot hands off. A sequence's scene list is filled by story_scene. Local file only; no image, speech or prompt. Inside an episode the board starts only after the cast is ready, and story_scene and story_shot repeat this check on a story-first board: refused (cast_required) until storyboard/cast.json names at least one character, (cast_source_missing) for an entry whose source is not an existing assets/characters/<id>/identity.md, and (character_panel_missing) for an entry without "voiceOnly": true that lacks its face, front or back sheet panel — make those with character_manage and character_panel first.
+    description: `The first storyboard step after the scenario is settled writes only the story, in three layers: story_sequence → story_scene → story_shot. Use it first: it upserts sequences by id (title · purpose · question · payoff — a payoff outside the sequence's scenes warns), records the episode's opening plan as STORY.opening (skills/storyboard/references/opening-by-format.md) and creates scenes.js as a story-v2 board when it is missing, inside an episode on the FORMAT and PRODUCTION its saved snapshot hands off. A sequence's scene list is filled by story_scene. Local file only; no image, speech or prompt. Inside an episode the board starts only after the cast is ready, and story_scene and story_shot repeat this check on a story-first board: refused (cast_required) until storyboard/cast.json names at least one character, (cast_source_missing) for an entry whose source is not an existing assets/characters/<id>/identity.md, and (character_panel_missing) for an entry without "voiceOnly": true that lacks its face, front or back sheet panel — make those with character_manage and character_panel first.
 
 Do NOT write scenes, shots, dialogue or pictures here. Characters and lines come after the shot stories (shot_characters → shot_dialogue); camera and image plans after that, through storyboard_apply.
 
@@ -4815,6 +4819,13 @@ Returns: the file written or not, counts, and findings (! violation · warning).
           question: { type: 'string', description: 'The one question the viewer holds across these scenes — specific and answerable (who, why, how, whether). Claim-led work (explainer, tutorial, review, advertisement): whether the promised result is real' },
           payoff: { type: 'integer', minimum: 1, description: 'The scene number that answers the question or shows the proof — a later scene of this sequence' },
         } } },
+        opening: { type: 'object', additionalProperties: false, required: ['promise', 'firstFrame'], description: 'The opening plan for the board FORMAT and the enabled platforms, recorded as STORY.opening (a new value replaces it). Short-form: one opening for every platform, built for the earliest window (Reels 3 s). Long-form: packaging first, then 0–30 s confirms it and opens a bigger question. Every board write prints a reading of it; nothing is refused.', properties: {
+          promise: { type: 'string', minLength: 1, description: "What the opening commits to, in the viewer's words: the event, doubt or result the episode then pays" },
+          firstFrame: { type: 'string', minLength: 1, description: 'What the first picture shows at 0 s: the subject already in its changed state or mid-action' },
+          title: { type: 'string', minLength: 1, description: 'Long-form: the title the first 30 s confirms' },
+          thumbnail: { type: 'string', minLength: 1, description: 'Long-form: the thumbnail picture the first 30 s confirms' },
+          widen: { type: 'string', minLength: 1, description: 'Long-form: the question bigger than the packaging, opened before 30 s' },
+        } },
       },
       required: ['path', 'sequences'],
     },
@@ -4873,6 +4884,49 @@ Returns: the file written or not, counts, and findings (! violation · warning).
     },
   },
   {
+    name: 'episode_cover',
+    title: 'Choose and render the episode cover and thumbnail',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Use it once the episode has pictures (shot start images or clips) and before publishing, to make the cover and thumbnail every platform shows in grids, search and channel pages. set records the moment the cover shows, its copy and the reason in storyboard/cover.json: the source is a frame of an accepted clip or the finished video (kind "frame", the default once video exists), a shot's start image (kind "shot"), or an image this episode generated with image_execute (kind "image", by requestId). render makes the files locally at $0 — output/cover/cover-9x16.jpg (Shorts, Reels, TikTok Studio) or thumbnail-16x9.jpg (long-form, plus up to two variants for YouTube Test & Compare) — with the copy drawn by code in the episode language, crop previews for each platform surface, and render.json with measurements. On a story-first board it also copies the main file to output/video/cover.jpg (and thumbnail.jpg on long-form). read reports missing, unreadable (a hand-edited cover.json, with the reason), unrendered, fresh or stale (naming what changed: decision, format, template, font, source, files) and the file each platform's publish call takes.
+
+Do NOT ask an image model to draw the copy, and do NOT promise a moment the episode does not show: pick a shot that is in the cut. Do NOT treat warnings as refusals — they report crops, size and contrast for the author to weigh. A paid background goes through image_plan → image_execute first and is then named here by requestId.
+
+Returns: set — the saved decision, its decisionSha256 and warnings; render — files, previews, measurements and warnings; read — status, changed, files, publish map (stale flagged), platform values still unverified, and the opening plan's title and thumbnail when the board has one. Refuses an unknown shot, a shot without a start image, a frame outside its video, a path outside the episode, an image without a completed receipt, copy no bundled font can draw (cover_font_missing) and variants on a vertical format at set; at render also a source that changed since set, a missing Chrome, a page that did not finish its layout, and a file over a platform limit.`,
+    inputSchema: {
+      type: 'object', additionalProperties: false,
+      properties: {
+        path: { type: 'string', description: 'The storyboard directory or its scenes.js' },
+        action: { type: 'string', enum: ['set', 'render', 'read'], description: 'set writes the decision, render makes the files, read reports the state' },
+        decision: {
+          type: 'object', additionalProperties: false, required: ['reason', 'source'],
+          description: 'For set: the cover decision',
+          properties: {
+            reason: { type: 'string', description: 'Why this moment: what the episode shows there and where (scene), in one sentence' },
+            source: {
+              type: 'object', description: 'The picture: {kind:"frame", video, seconds, shotId?} | {kind:"shot", shotId} | {kind:"image", requestId}. Paths are relative to the episode directory',
+              properties: {
+                kind: { type: 'string', enum: ['frame', 'shot', 'image'] },
+                video: { type: 'string', description: 'frame: an accepted clip or the finished video inside the episode' },
+                seconds: { type: 'number', minimum: 0, description: 'frame: the time of the frame' },
+                shotId: { type: 'string', pattern: '^s\\d{4,}$', description: 'shot: the shot whose start image is used; frame: the shot the frame belongs to' },
+                requestId: { type: 'string', description: 'image: the image_execute request' },
+              },
+              required: ['kind'],
+            },
+            focus: { type: 'object', additionalProperties: false, required: ['x', 'y'], description: 'The subject point in the source, 0–1 from the left and top; crops keep it and the copy goes to the other side. Default the centre',
+              properties: { x: { type: 'number', minimum: 0, maximum: 1 }, y: { type: 'number', minimum: 0, maximum: 1 } } },
+            copy: { type: ['object', 'null'], additionalProperties: false, required: ['text'], description: 'The cover copy, or null for none. Long-form 2–4 words, short-form 1–3 (Japanese and Chinese count characters: 12 and 8); it adds to the title instead of repeating it',
+              properties: { text: { type: 'string' }, emphasis: { type: 'string', description: 'One part of text drawn in the accent colour' } } },
+            language: { type: 'string', description: 'The copy language; defaults to the episode language (STORY.language)' },
+            variants: { type: 'array', maxItems: 2, description: 'Long-form only: up to two more thumbnails for YouTube Test & Compare, each overriding source, focus or copy',
+              items: { type: 'object', additionalProperties: false, properties: { source: { type: 'object' }, focus: { type: 'object' }, copy: { type: ['object', 'null'] } } } },
+          },
+        },
+      },
+      required: ['path', 'action'],
+    },
+  },
+  {
     name: 'story_music',
     title: 'Decide each scene\'s music (music spotting)',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
@@ -4905,6 +4959,35 @@ Returns: the file written or not, counts, findings (! violation · warning), and
           fadeOutSeconds: { type: 'number', minimum: 0, description: 'Default 1' },
           gainDb: { type: 'number', minimum: -60, maximum: 12, description: 'Level against the measured bed; omit for 0 dB. The build reports a span that ends up too quiet' },
         } } },
+      },
+      required: ['path'],
+    },
+  },
+  {
+    name: 'story_cliche',
+    title: 'Record the clichés an episode uses',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Use it once the board exists (after story_sequence) to record which researched clichés the episode's story uses, and again once scenes are written to attach them to scenes. Read the report's mode first. apply (drama, comedy, romance, or a channel that saved production.clicheUse "on"): while casting, writing the synopsis and writing scenes, choose clichés for what the story needs — candidates come from \`node skills/storyboard/references/cliches.js pick --need …\`, never from reading the whole catalogue — and record each with its catalogue id, the scenes or character it sits on and shift, the one thing this episode changes about it. offer (every other type): record candidates with offered:true, present them with the scenario and apply only what the user picks, recording those with basis "user". Record none with its reason when the story is better without one. Called with path alone it reports and writes nothing.
+
+Do NOT pass basis "user" for a choice the user did not make; on an offer or off episode an applied cliché without it is refused (cliche_user_choice). Do NOT write window.CLICHES through storyboard_apply — this tool owns the record (cliche_record). Do NOT copy the words of a quoted line, and do NOT keep a caution entry (coercive or graphic staging) unless the story treats the act as wrong or the user asked — the report warns. A use sent again keeps the fields you omit, except offered, which is stated on every write.
+
+Returns: the file written or not, counts, findings (! violation · warning), and the cliché report — mode and why, the decision (undecided · use · none · offer), the applied and offered uses, entries an earlier episode of the channel already used, scene references that no longer exist, and uses that sit in the story without the user's pick on an episode that only recommends.`,
+    inputSchema: {
+      type: 'object', additionalProperties: false,
+      properties: {
+        path: { type: 'string', description: 'The storyboard directory or its scenes.js' },
+        uses: { type: 'array', minItems: 1, description: 'Clichés to add or revise, keyed by catalogue id (or by name outside the catalogue)', items: { type: 'object', additionalProperties: false, properties: {
+          id: { type: 'integer', minimum: 1, description: 'The catalogue number cliches.js pick printed, e.g. 45. Omit for a cliché outside the catalogue and give name' },
+          name: { type: 'string', maxLength: 120, description: 'Its name in the story language; the catalogue name when omitted. Required without id' },
+          need: { type: 'string', enum: ['meet', 'bind', 'obstacle', 'secret', 'reveal', 'parting', 'reunion', 'closeness', 'outburst', 'status', 'payback', 'danger', 'rule', 'setting', 'closing', 'relief'], description: "The job it does in this story; the catalogue entry's first need when omitted" },
+          scenes: { type: 'array', minItems: 1, items: { type: 'integer', minimum: 1 }, description: 'Scene numbers it sits on, once story_scene wrote them' },
+          character: { type: 'string', description: 'The cast id a character-type cliché describes, e.g. "mina"' },
+          shift: { type: 'string', maxLength: 300, description: 'The one thing this episode changes about it — who does it, what it costs, when, or who knows — in one sentence. Omit when it is played as the catalogue describes' },
+          offered: { type: 'boolean', description: 'true records a recommendation that is not in the story yet. Stated on every write: omitted means applied' },
+        } } },
+        remove: { type: 'array', minItems: 1, items: { anyOf: [{ type: 'integer', minimum: 1 }, { type: 'string' }] }, description: 'Recorded uses to drop, by catalogue id or by name' },
+        none: { type: 'string', maxLength: 300, description: 'Records that this episode uses no cliché, and why, in one sentence. Replaces the whole list; give it alone' },
+        basis: { type: 'string', enum: ['user'], description: 'The user picked these from a recommendation or asked for clichés in this episode. Required to apply one on an offer or off episode' },
       },
       required: ['path'],
     },
@@ -5161,7 +5244,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
         removeShotIds: { type: 'array', items: { type: 'string', pattern: '^s\\d{4,}$', description: 'A stable shot id' }, description: 'Shot ids to drop (resolved before inserts). Not with the position fields in the same patch' },
         removeScenes: { type: 'array', items: { type: 'number', description: 'Scene number' }, description: 'Scene numbers to drop from STRUCTURE.scenes and from every sequence' },
         removeSequences: { type: 'array', items: { type: 'string', description: 'Sequence id' }, description: 'Sequence ids to drop' },
-        globals: { type: 'object', description: 'Other window.* blocks to set — FORMAT, THEME (motionGraphicTheme: {id: auto or theme id, context?, reason?} sets the common motion theme; explicit shot ids or contexts override it), COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. MUSIC.$mix is optional sound-design metadata; SFX keeps logical asset ids only. PRODUCTION.mode: full_video, video_80, video_50, video_30, video_lt10, no_video (hook_only/stills_only/hybrid are legacy). New selections write renderRatioVersion:1.' },
+        globals: { type: 'object', description: 'Other window.* blocks to set — FORMAT, THEME (motionGraphicTheme: {id: auto or theme id, context?, reason?} sets the common motion theme; explicit shot ids or contexts override it), COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. CLICHES belongs to story_cliche and cannot be changed here (cliche_record); PRODUCTION.clicheUse keeps the value the board has (cliche_choice_kept), and a PRODUCTION patch that changes whether clichés apply by default is reported (cliche_mode_changed). MUSIC.$mix is optional sound-design metadata; SFX keeps logical asset ids only. PRODUCTION.mode: full_video, video_80, video_50, video_30, video_lt10, no_video (hook_only/stills_only/hybrid are legacy). New selections write renderRatioVersion:1.' },
         expectedSha256: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'Current scenes.js hash from storyboard_read; required when editing propSheet on an existing board.' },
         propSheet: { type: 'object', additionalProperties: false, required: ['props'], description: 'Replace the complete prop sheet atomically. Keep other editorial metadata. Changes validate story-time custody and invalidate approval; original file is backed up.', properties: {
           props: { type: 'array', description: 'Complete prop registry for this board', items: { type: 'object', additionalProperties: true, required: ['id'], properties: {

@@ -44,7 +44,11 @@ the platform title and first line carry that strategy through — if the cover
 opened on fear but the YouTube title explains a method, the thumbnail/title
 expectation and the first 30 seconds fall out of step. Continuity applies to
 the stimulus, not to the outcome — playbook §2 governs the title and
-description whatever the cover's hookType is. Fear speaks in
+description whatever the cover's hookType is. A story-first board records its opening
+plan as `STORY.opening` ([opening by format](../../storyboard/references/opening-by-format.md#5-platforms)):
+every title, caption, cover and first line carries its `promise` in the platform's own
+words, a long-form title and thumbnail are the ones recorded there, and none promises
+more than the episode pays. Fear speaks in
 tell-them-what-they-lose terms, and the threat is either grounded in evidence or
 cushioned with possibility phrasing ("~일 수도", "might be").
 ③ platform fit — IG must answer "who saves this" (checklists · figures · chart

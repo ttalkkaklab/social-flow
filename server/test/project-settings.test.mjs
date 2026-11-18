@@ -191,6 +191,16 @@ test('the channel music direction is saved with the production settings and bad 
     settings: { production: { ...defaults().production, musicDirection: [''] } } }), /musicDirection/);
 });
 
+test('the standing cliché choice is saved as on or off and handed to new episode boards', t => {
+  const root = workspace(t), ready = init(root);
+  assert.equal(call(root, 'episode', { topic: 'before' }).handoff.PRODUCTION.clicheUse, undefined);
+  const saved = call(root, 'update', { expectedRevision: ready.revision, request: 'Never use clichés on this channel',
+    settings: { production: { ...defaults().production, clicheUse: 'off' } } });
+  assert.equal(call(root, 'episode', { topic: 'after' }).handoff.PRODUCTION.clicheUse, 'off');
+  assert.throws(() => call(root, 'update', { expectedRevision: saved.revision, request: 'Sometimes',
+    settings: { production: { ...defaults().production, clicheUse: 'sometimes' } } }), /clicheUse is "on" or "off"/);
+});
+
 test('TikTok can be added to a legacy four-platform project without changing other connections', t => {
   const root = workspace(t);
   const initial = init(root);

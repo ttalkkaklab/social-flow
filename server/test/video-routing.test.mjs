@@ -475,6 +475,17 @@ test('MSR plans cover the whole shot, reject short exact requests and recheck ch
   assert.match(padded.speechFit.warning, /numFrames 41/);
   f.board.SCENES[0].duration = 1.6; f.save();
   assert.equal(plan({}).speechFit.warning, undefined);
+  // EP07: a two-second board clock must not truncate an unmeasured Vietnamese line.
+  f.board.STORY = { language: 'vi' };
+  f.board.SCENES[0].duration = 2;
+  f.board.SCENES[0].narration[0].tts = 'Cuối tuần này em có rảnh không?'; f.save();
+  const spoken = plan({ requiredSeconds: 2 });
+  assert.ok(spoken.args.numFrames / 24 >= spoken.speechFit.estimatedSeconds);
+  assert.ok(spoken.args.numFrames > 49);
+  assert.equal(spoken.durationPlan.speech.speechRate, 'uncalibrated');
+  assert.throws(() => plan({ numFrames: 49 }), /video_duration_short/);
+  f.board.SCENES[0].narration[0].tts = 'Khoan đã. Khi nào tôi khỏe, mình đi ăn một bữa nhé.'; f.save();
+  assert.ok(plan({}).args.numFrames > 81);
   f.board.SCENES[0].duration = 21; f.save();
   await assert.rejects(f.execute(p, async () => assert.fail('Over-limit revision must not submit')), /video_duration_exceeded|stale/);
 });
@@ -552,7 +563,7 @@ test('a hosted reference lane takes the spoken shot from the board: panels, the 
  assert.deepEqual(p.args.referenceAudioPaths.map(file=>path.basename(file)),['hero.wav']);
  assert.match(p.args.prompt,/reference image 2 \(start/);
  assert.match(p.args.prompt,/reference image 1, uses reference audio 1/);
- assert.equal(p.quote.reserveUsd,0.4);
+ assert.equal(p.quote.reserveUsd,0.32);
  assert.match(p.args.prompt,/reference image 1 \(Hero\) speaks using reference audio 1.*"Hello there"/);
  assert.throws(()=>planVideo({episode:f.episode,shotId:'s2',requestId:'forced',operation:'reference'}),/reference_speech_route/);
  const silent=planVideo({episode:f.episode,shotId:'s2',requestId:'silent'});

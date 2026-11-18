@@ -625,6 +625,26 @@
   .scene-band-title { font-size: var(--t-scene); font-weight: 700; letter-spacing: -.01em; line-height: 1.4; color: var(--text); word-break: keep-all; }
   .scene-band-head .scene-turn { font-size: var(--t-cap); color: var(--muted); word-break: keep-all; }
   .music-lane { font-size: var(--t-cap); font-weight: 600; color: var(--accent-ink); word-break: keep-all; }
+  /* Clichés — what story_cliche recorded (window.CLICHES): one strip above the shots and a lane on
+     each scene. A recommendation that is not in the story yet is dashed. */
+  .cliche-strip { margin: var(--s4) 0 0; padding: 14px 18px; border: 1px solid var(--line); border-radius: var(--ds-radius-lg); background: var(--card); box-shadow: var(--ds-shadow-band); }
+  .cliche-strip-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; font-size: var(--t-aux); font-weight: 700; color: var(--text); }
+  .cliche-strip-head small { font-weight: 500; color: var(--muted); }
+  .cliche-strip ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+  .cliche-strip li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: var(--t-cap); color: var(--muted); }
+  .cliche-lane { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin-top: 2px; font-size: var(--t-cap); color: var(--muted); }
+  .cliche-lane-k { font-size: var(--t-micro); font-weight: 700; letter-spacing: .06em; color: var(--faint); }
+  .cliche-chip {
+    display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 4px 6px; padding: 2px 8px; border-radius: 6px;
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line)); background: color-mix(in srgb, var(--accent) 5%, var(--card));
+    color: var(--text); word-break: keep-all;
+  }
+  .cliche-chip b { font-weight: 650; }
+  .cliche-chip small { font-size: var(--t-micro); color: var(--muted); }
+  .cliche-chip.offered { border-style: dashed; background: transparent; }
+  .cliche-chip.caution { border-color: color-mix(in srgb, var(--warn) 55%, transparent); }
+  .cliche-shift { color: var(--muted); }
+  .cliche-missing { font-style: normal; color: var(--warn); }
   .scene-band-synopsis { max-width: 68ch; margin: 4px 0 0; font-size: var(--t-aux); line-height: 1.65; color: var(--muted); word-break: keep-all; }
   .scene-band-out { max-width: 68ch; margin: 2px 0 0; font-size: var(--t-aux); color: var(--faint); word-break: keep-all; }
   .scene-band-stats {
@@ -1768,6 +1788,17 @@ window.STORYBOARD_READY = (async function () {
       musicBed: "channel bed", musicDrop: "music out", musicSilence: "music gap",
       musicCue: function (name) { return "music → " + name; },
       musicLane: function (names, gaps) { return "♪ " + names.join(" → ") + (gaps ? " · " + gaps + (gaps === 1 ? " gap" : " gaps") : ""); },
+      /* Clichés — what story_cliche recorded (window.CLICHES; references/cliche-use.md) */
+      cliche: {
+        head: "Clichés", lane: "CLICHÉ", undecided: "undecided — nothing is recorded yet", none: "none used",
+        count: function (applied, offered) {
+          return (applied ? applied + " in the story" : "none applied") + (offered ? " · " + offered + " recommended, waiting for your pick" : ""); },
+        offered: "recommended · not applied", user: "your pick", byDefault: "by default", noBasis: "basis not recorded",
+        shift: "changed", caution: "caution", quote: "a quoted line", scene: "S#", missing: "not on the board",
+        need: { meet: "meeting", bind: "kept together", obstacle: "obstacle", secret: "secret", reveal: "reveal", parting: "parting",
+                reunion: "reunion", closeness: "closeness", outburst: "outburst", status: "status", payback: "payback",
+                danger: "danger", rule: "world rule", setting: "setting", closing: "opening or ending", relief: "relief" }
+      },
       promiseBadge: function (n, plants, unpaid) {
         return "promises " + n + (plants ? " · plants " + plants : "") +
                (unpaid ? " · unpaid " + unpaid : " · all paid"); },
@@ -2115,6 +2146,16 @@ window.STORYBOARD_READY = (async function () {
       musicBed: "채널 기본 곡", musicDrop: "음악 빠짐", musicSilence: "음악 비움",
       musicCue: function (name) { return "음악 → " + name; },
       musicLane: function (names, gaps) { return "♪ " + names.join(" → ") + (gaps ? " · 비움 " + gaps + "곳" : ""); },
+      cliche: {
+        head: "클리셰", lane: "클리셰", undecided: "미정 — 아직 기록이 없다", none: "쓰지 않음",
+        count: function (applied, offered) {
+          return (applied ? "이야기에 " + applied + "개" : "적용 없음") + (offered ? " · 추천 " + offered + "개, 선택 대기" : ""); },
+        offered: "추천 · 적용 전", user: "사용자 선택", byDefault: "기본 적용", noBasis: "근거 미기록",
+        shift: "옮긴 점", caution: "주의", quote: "실제 대사", scene: "S#", missing: "보드에 없음",
+        need: { meet: "만남 계기", bind: "한곳에 묶기", obstacle: "장애물", secret: "비밀·오해", reveal: "폭로·반전", parting: "이별·상실",
+                reunion: "재회·회복", closeness: "가까워짐", outburst: "감정 폭발", status: "위계 표시", payback: "응징",
+                danger: "위기", rule: "세계 규칙", setting: "장소·분위기", closing: "시작과 끝", relief: "웃음·완화" }
+      },
       promiseBadge: function (n, plants, unpaid) {
         return "약속 " + n + (plants ? " · 떡밥 " + plants : "") +
                (unpaid ? " · 안 갚음 " + unpaid : " · 다 갚음"); },
@@ -2386,6 +2427,54 @@ window.STORYBOARD_READY = (async function () {
   function mark(s) { return copy(s).replace(/\*\*(.+?)\*\*/g, '<span class="mark">$1</span>'); }
   /** **emphasis** inside a frame — the gradient, the way it actually renders */
   function femph(s) { return copy(s).replace(/\*\*(.+?)\*\*/g, '<span class="f-em">$1</span>'); }
+  /* Clichés — the record story_cliche wrote (window.CLICHES, references/cliche-use.md): which
+     researched clichés the story uses, the job each does, what this episode changed about it, and
+     whether it is in the story or only recommended. Display only; an entry the page cannot read
+     is skipped rather than stopping the board. */
+  var CLICHES = window.CLICHES && typeof window.CLICHES === "object" && !Array.isArray(window.CLICHES) ? window.CLICHES : null;
+  function clicheId(u) { return typeof u.id === "number" && isFinite(u.id) && u.id > 0 ? "#" + u.id + " " : ""; }
+  // The scenes the board has, so a use that names another one is marked; a board with no scene list marks none.
+  var clicheScenes = (function () {
+    var list = window.STRUCTURE && Array.isArray(window.STRUCTURE.scenes) ? window.STRUCTURE.scenes : [], known = {};
+    list.forEach(function (x) { if (x && typeof x === "object") known[x.no] = true; });
+    return list.length ? known : null;
+  })();
+  var clicheUses = CLICHES && Array.isArray(CLICHES.uses) ? CLICHES.uses.filter(function (u) {
+    return u && typeof u === "object" && (clicheId(u) || (typeof u.name === "string" && u.name.trim())); }) : [];
+  function clicheChip(u) {
+    var C = T.cliche, tags = [];
+    if (typeof u.need === "string" && Object.prototype.hasOwnProperty.call(C.need, u.need)) tags.push(C.need[u.need]);
+    // The basis is shown as recorded; the page does not supply one a hand-edited use lacks.
+    tags.push(u.offered ? C.offered : u.basis === "user" ? C.user : u.basis === "default" ? C.byDefault : C.noBasis);
+    if (u.caution) tags.push(C.caution);
+    if (u.quote) tags.push(C.quote);
+    return '<span class="cliche-chip' + (u.offered ? " offered" : "") + (u.caution ? " caution" : "") + '"><b>' +
+      esc(clicheId(u)) + copy(typeof u.name === "string" ? u.name : "") + "</b> <small>" +
+      esc(tags.join(" · ")) + "</small>" +
+      (typeof u.shift === "string" && u.shift.trim() ? ' <span class="cliche-shift">' + esc(C.shift) + " — " + copy(u.shift) + "</span>" : "") + "</span>";
+  }
+  function clicheLane(sceneNo) {
+    var mine = clicheUses.filter(function (u) { return Array.isArray(u.scenes) && u.scenes.indexOf(sceneNo) >= 0; });
+    return mine.length ? '<span class="cliche-lane"><span class="cliche-lane-k">' + esc(T.cliche.lane) + "</span>" + mine.map(clicheChip).join("") + "</span>" : "";
+  }
+  function clicheStatus() {
+    var applied = clicheUses.filter(function (u) { return !u.offered; }).length, offered = clicheUses.length - applied;
+    var none = CLICHES && typeof CLICHES.none === "string" ? CLICHES.none.trim() : "";
+    return applied || offered ? T.cliche.count(applied, offered) : none ? T.cliche.none + " — " + CONTENT.text(none) : T.cliche.undecided;
+  }
+  function clicheStrip() {
+    if (!CLICHES) return "";
+    return '<section class="cliche-strip" id="cliches"><div class="cliche-strip-head">' + esc(T.cliche.head) + " <small>" + esc(clicheStatus()) + "</small></div>" +
+      (clicheUses.length ? "<ul>" + clicheUses.map(function (u) {
+        var at = (Array.isArray(u.scenes) ? u.scenes : []).filter(function (no, i, all) {
+          return typeof no === "number" && isFinite(no) && no > 0 && no < 1e6 && Math.floor(no) === no && all.indexOf(no) === i;
+        }).sort(function (a, b) { return a - b; }).map(function (no) {
+          return esc(T.cliche.scene + no) + (clicheScenes && !clicheScenes[no] ? ' <em class="cliche-missing">' + esc(T.cliche.missing) + "</em>" : "");
+        }).join(", ");
+        var who = typeof u.character === "string" && u.character ? esc(castName(u.character)) : "";
+        return "<li>" + clicheChip(u) + (at || who ? "<span>" + [at, who].filter(Boolean).join(" · ") + "</span>" : "") + "</li>";
+      }).join("") + "</ul>" : "") + "</section>";
+  }
   // Character count: displayed = full length after ** is stripped / net = whitespace and punctuation excluded
   function dispLen(s) { return strip(s).length; }
   function netLen(s) { return strip(s).replace(/[\s.,·:;!?…"'“”‘’()\[\]〔〕\-–—~%]/g, "").length; }
@@ -4921,6 +5010,7 @@ window.STORYBOARD_READY = (async function () {
        '<div class="view-setup-body"><div class="view-setup-grid">' + styleBlock() +
        "</div>" +
        sizeKey() + "</div></details>";
+  h += clicheStrip();
 
   var shotGroups = [];
   SCENES.forEach(function (s, i) {
@@ -5019,7 +5109,7 @@ window.STORYBOARD_READY = (async function () {
            '<span class="scene-band-main">' +
            (scPlace || (sc && sc.place) ? '<span class="scene-band-kicker"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>' + copy(scPlace && scPlace.name || sc.place) + "</span>" : "") +
            '<span class="scene-band-title">' + copy(scTitle) + "</span>" +
-           (scTurn ? '<span class="scene-turn">' + copy(scTurn) + "</span>" : "") + musicLane(grp.items, sc) +
+           (scTurn ? '<span class="scene-turn">' + copy(scTurn) + "</span>" : "") + musicLane(grp.items, sc) + clicheLane(grp.scene) +
            (scSummary ? '<p class="scene-band-synopsis">' + copy(scSummary) + "</p>" : "") +
            sceneOutHtml(sc) + "</span>" +
            '<span class="scene-band-stats">' + esc(T.shotsN(grp.items.length)) + (scLen !== null ? " · " + esc(durTxt(scLen)) : "") + "</span>" +
@@ -5462,6 +5552,7 @@ window.STORYBOARD_READY = (async function () {
   var cueKeys = MUSIC ? Object.keys(MUSIC).filter(function (k) { return k !== "$mix" && k !== "$timeline"; }) : [];
   h += "<tr><th>" + esc(T.cMusic) + "</th><td>" + esc(T.musicBadge(MUSIC ? cueKeys.length : null, dropCount)) +
      cueKeys.map(function (k) { return MUSIC[k] && MUSIC[k].reason ? "<br><code>" + esc(k) + "</code> " + esc(MUSIC[k].reason) : ""; }).join("") + "</td></tr>";
+  if (CLICHES) h += "<tr><th>" + esc(T.cliche.head) + "</th><td>" + esc(clicheStatus()) + "</td></tr>";
   h += "<tr><th>" + esc(T.cTheme) + "</th><td>" + ["accent", "accent2", "ink"].map(function (k) {
     return '<span class="swatch" style="background:' + esc(THEME[k]) + '"></span><code>' + esc(THEME[k]) + "</code>"; }).join(" &nbsp; ") +
     " &nbsp; " + esc(T.cChannel) + "<code>" + esc(THEME.brand) + "</code></td></tr>";
