@@ -119,6 +119,7 @@ function handoff(snapshot) {
     ...(c.style ? { style: { ...c.style, selection } } : {}),
     ...(c.production ? { mode: c.production.mode, renderRatioVersion: c.production.renderRatioVersion, selection } : {}),
     ...(c.production?.previzRenderer ? { previz: { renderer: c.production.previzRenderer, selection } } : {}),
+    ...(c.production?.clicheUse ? { clicheUse: c.production.clicheUse } : {}),
     projectSettings: { source: snapshot.source, revision: snapshot.revision, snapshot: snapshot.file },
   };
   return { FORMAT: c.production?.format, PRODUCTION: production, sns: c.sns,

@@ -33402,7 +33402,7 @@ var storyboardApplySchema = external_exports.object({
   removeShotIds: external_exports.array(shotIdSchema).min(1).optional().describe("Shot ids to drop, resolved before the insert"),
   removeScenes: external_exports.array(external_exports.number().int().positive()).optional(),
   removeSequences: external_exports.array(external_exports.string()).optional(),
-  globals: globalsSchema.optional().describe("Set other window.* blocks \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY"),
+  globals: globalsSchema.optional().describe("Set other window.* blocks \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. CLICHES belongs to story_cliche"),
   expectedSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional().describe("Required for propSheet file edits; use the hash from storyboard_read"),
   propSheet: external_exports.object({
     props: external_exports.array(external_exports.record(external_exports.unknown())),
@@ -33515,6 +33515,23 @@ var storyMusicSchema = external_exports.object({
     gainDb: external_exports.number().finite().min(-60).max(12).optional()
   }).strict()).optional()
 }).strict();
+var INVISIBLE = /[\p{Cc}\p{Cs}\p{Zl}\p{Zp}\u115f\u1160\u3164\uffa0\u2800]|(?![\u200c\u200d])\p{Cf}/u;
+var clicheText = (max) => nonEmpty.max(max).refine((text3) => !INVISIBLE.test(text3) && /[\p{L}\p{N}\p{P}\p{S}]/u.test(text3), { message: "plain text that shows: no control or invisible characters" });
+var storyClicheSchema = external_exports.object({
+  path: outlinePath,
+  uses: external_exports.array(external_exports.object({
+    id: external_exports.number().int().positive().optional().describe("The catalogue number cliches.js pick printed"),
+    name: clicheText(120).refine((name) => !/^#\s*\p{Nd}+$/u.test(name.normalize("NFKC")), { message: "a catalogue number goes in id, not in name" }).optional().describe("Its name in the story language; required for a clich\xE9 that is not in the catalogue"),
+    need: nonEmpty.optional().describe("The job it does in this story, one of the needs cliches.js lists; the catalogue entry's first need when omitted"),
+    scenes: external_exports.array(external_exports.number().int().positive()).min(1).optional().describe("The scenes it sits on, once they are written"),
+    character: nonEmpty.optional().describe("The cast member a character-type clich\xE9 describes"),
+    shift: clicheText(300).optional().describe("The one thing this episode changes about it; leave it out when it is played as the catalogue describes"),
+    offered: external_exports.boolean().optional().describe("true records a recommendation that is not in the story yet; stated on every write")
+  }).strict().refine((use) => use.id !== void 0 || use.name !== void 0, { message: "give the catalogue id, or a name for a clich\xE9 outside the catalogue" })).min(1).optional(),
+  remove: external_exports.array(external_exports.union([external_exports.number().int().positive(), nonEmpty])).min(1).optional().describe("Recorded uses to drop, by catalogue id or by name"),
+  none: clicheText(300).optional().describe("Records that this episode uses no clich\xE9, and why; it replaces the list"),
+  basis: external_exports.literal("user").optional().describe("The user picked these from a recommendation or asked for them")
+}).strict().refine((args) => args.none === void 0 || !args.uses && !args.remove, { message: "none replaces the whole list \u2014 give it alone" });
 var shotCharactersSchema = external_exports.object({
   path: outlinePath,
   shots: external_exports.array(external_exports.object({

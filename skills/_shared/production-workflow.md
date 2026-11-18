@@ -16,7 +16,12 @@ generation authorization and adapter input validation stay. Work in this order:
    then the episode cast in `storyboard/cast.json`:
    `{"characters":[{"id":"mina","source":"../../../assets/characters/mina/identity.md"}]}`.
    A narrator who is never seen takes `"voiceOnly": true` and needs no panels.
-2. Story, one layer at a time: `story_sequence` → `story_scene` → `story_shot`.
+2. Story, one layer at a time: `story_sequence` → `story_scene` → `story_shot`. After the
+   first `story_sequence`, record the cliché decision with `story_cliche` (user directive
+   2026-11-18): the researched clichés the story uses, or `none` with its reason, on drama,
+   comedy and romance; on other types the candidates as `offered`, applied only when the
+   user picked them. Send each use again with its `scenes` once they are written. Nothing
+   waits for it ([cliché use](../storyboard/references/cliche-use.md)).
 3. Each shot's characters (`shot_characters`, at most two) with each one's `expression` — the
    visible state the scene's situation puts on their face — then their lines (`shot_dialogue`).
    Then each scene's music decision (`story_music`, user directive 2026-11-14): `score` with a
