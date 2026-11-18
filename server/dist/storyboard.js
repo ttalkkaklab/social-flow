@@ -423,6 +423,15 @@ export function readStoryboard(args) {
     if (win.STORY?.authoring === 'story-first') {
         const { undecided, mismatch } = musicTimeline().spottingReport(win);
         result.musicSpotting = { undecided, mismatch, note: 'Scenes with no music decision, and scenes whose decision the timeline contradicts. story_music records each decision; nothing waits for it.' };
+        const platforms = episodePlatforms(dirname(file));
+        result.opening = { plan: win.STORY.opening ?? null, format: String(win.FORMAT ?? 'shorts-9x16'), platforms,
+            reading: (() => { try {
+                return openingReading(win, platforms);
+            }
+            catch {
+                return [];
+            } })(),
+            note: 'A reading of STORY.opening against the format and enabled platforms (references/opening-by-format.md); it never refuses.' };
     }
     result.videoTiming = (win.SCENES || []).filter(shot => shot.shot?.render?.mode === 'generated_video').map(shot => {
         if (shot.visual?.reuse)
@@ -917,28 +926,101 @@ function editImpact(before, after) {
     return findings;
 }
 /** storyboard_apply — read, patch, validate, write unless a violation or a dry run. */
+/** Where the first spoken line starts: the playback index of its shot, the seconds before it and the spare
+ *  length its shot holds beyond its performance. Null when no line is written or a length before it is unknown;
+ *  throws on a performance it cannot order. */
+function firstLineStart(win) {
+    const order = shotDirection().playbackEntries(win.SCENES ?? []).map(({ s }) => s);
+    const at = order.findIndex((shot) => shot.narration?.length);
+    if (at < 0)
+        return null;
+    const lengths = order.slice(0, at).map((shot) => shot.duration);
+    if (!lengths.every((n) => typeof n === 'number' && Number.isFinite(n) && n > 0))
+        return null;
+    const shot = order[at];
+    const acting = loadFromHere(join(PLUGIN_ROOT, 'skills', '_shared', 'scene-acting.js'));
+    const plan = acting.planScenePerformance(shot, (line) => typeof line.estimatedSeconds === 'number' ? line.estimatedSeconds : acting.estimateSpeechSeconds(line.tts));
+    const start = plan.performance.find((event) => event.kind !== 'action')?.speechStartSeconds;
+    const excess = typeof shot.duration === 'number' && plan.durationSeconds !== null ? round1(shot.duration - plan.durationSeconds) : 0;
+    return { shot, at, seconds: round1(lengths.reduce((sum, n) => sum + n, 0) + (start ?? 0)), exact: typeof start === 'number', excess };
+}
+const round1 = (n) => Math.round(n * 10) / 10;
 /** When the first spoken line starts, from the stored shot lengths before it and its shot's planned performance.
  *  Nothing is drawn over video, so a promise reaches the viewer as speech (episode-anticipation.md, claim-led
  *  episodes). A reading of the plan: empty when no line is written or a length before it is unknown; throws on a
  *  performance it cannot order, which the caller reports as no line. */
 export function firstLineReading(win) {
-    const order = shotDirection().playbackEntries(win.SCENES ?? []).map(({ s }) => s);
-    const at = order.findIndex((shot) => shot.narration?.length);
-    if (at < 0)
+    const first = firstLineStart(win);
+    if (!first)
         return [];
-    const lengths = order.slice(0, at).map((shot) => shot.duration);
-    if (!lengths.every((n) => typeof n === 'number' && Number.isFinite(n) && n > 0))
-        return [];
-    const shot = order[at];
-    const acting = loadFromHere(join(PLUGIN_ROOT, 'skills', '_shared', 'scene-acting.js'));
-    const plan = acting.planScenePerformance(shot, (line) => typeof line.estimatedSeconds === 'number' ? line.estimatedSeconds : acting.estimateSpeechSeconds(line.tts));
-    const start = plan.performance.find((event) => event.kind !== 'action')?.speechStartSeconds;
-    const round = (n) => Math.round(n * 10) / 10;
-    const excess = typeof shot.duration === 'number' && plan.durationSeconds !== null ? round(shot.duration - plan.durationSeconds) : 0;
-    return [`first spoken line: ${shot.id ?? `shot ${at + 1}`}, about ${round(lengths.reduce((sum, n) => sum + n, 0) + (start ?? 0))} s in`
-            + (typeof start === 'number' ? '' : ' or later (an action before it has no length)')
+    const { shot, at, seconds, exact, excess } = first;
+    return [`first spoken line: ${shot.id ?? `shot ${at + 1}`}, about ${seconds} s in`
+            + (exact ? '' : ' or later (an action before it has no length)')
             // A voiceover line is placed by its composed TTS; only a line the video model voices is pushed back by the spare length.
             + (excess > 0.5 && shot.narration?.[0]?.delivery !== 'voiceover' ? ` — that shot's length holds ${excess} s beyond its performance; a natively voiced clip plays them as silence, mostly before the line` : '')];
+}
+/** Each platform's published opening window (docs/research/2026-11-18-opening-hooks; opening-by-format.md §4).
+ *  Short-form posts one opening everywhere, so the earliest window, Instagram's 3 s, sets the opening's span. */
+const OPENING_WINDOWS = {
+    short: {
+        instagram: 'Reels: skip rate counts the first 3 s',
+        tiktok: 'TikTok: the offer in 3 s, the hook in 6 s (ad guidance)',
+        youtube: 'Shorts: "initial seconds", length unpublished',
+        facebook: 'Facebook Reels: skip rate counts the first 3 s',
+    },
+    long: {
+        youtube: 'YouTube: Intro = still watching at 30 s, 50% or more is above typical',
+        facebook: 'Facebook: one-minute views',
+    },
+};
+/** The opening plan read against the board's format and the episode's enabled platforms (opening-by-format.md).
+ *  A reading, never a gate: it names a missing plan or packaging, the shots inside the window and a first line
+ *  that starts after it. Story-first boards only; throws like firstLineReading. */
+export function openingReading(win, platforms = []) {
+    if (win.STORY?.authoring !== 'story-first')
+        return [];
+    const long = /16x9/.test(String(win.FORMAT ?? ''));
+    const span = long ? 30 : 3;
+    const windows = platforms.map((p) => OPENING_WINDOWS[long ? 'long' : 'short'][p]).filter(Boolean);
+    const head = `opening (${long ? 'long-form' : 'short-form'}${windows.length ? ` · ${windows.join(' · ')}` : ''})`;
+    const plan = win.STORY.opening;
+    const lines = [!plan?.promise
+            ? `${head}: no plan — story_sequence opening records the promise and the first frame${long ? ', the title and thumbnail it confirms and the bigger question' : ''} (references/opening-by-format.md)`
+            : `${head}: promise "${plan.promise}" · first frame: ${plan.firstFrame ?? 'not written'}`];
+    if (long && plan?.promise) {
+        const missing = [!plan.title && 'title', !plan.thumbnail && 'thumbnail', !plan.widen && 'bigger question'].filter(Boolean);
+        if (missing.length)
+            lines.push(`opening: no ${missing.join(', ')} — the first 30 s confirms the title and thumbnail, then opens a bigger question`);
+    }
+    // The shots that play inside the window, once every length up to its end is known.
+    const inside = [];
+    let t = 0;
+    for (const { s } of shotDirection().playbackEntries(win.SCENES ?? [])) {
+        if (t >= span)
+            break;
+        if (typeof s.duration !== 'number' || !(s.duration > 0)) {
+            inside.length = 0;
+            break;
+        }
+        inside.push(`${s.id} ${round1(t)}–${round1(t + s.duration)} s`);
+        t += s.duration;
+    }
+    if (inside.length && t >= span)
+        lines.push(`opening window 0–${span} s: ${inside.slice(0, 8).join(', ')}${inside.length > 8 ? `, +${inside.length - 8} more` : ''}`);
+    let first = null;
+    try {
+        first = firstLineStart(win);
+    }
+    catch { /* a performance it cannot order: the line is reported by firstLineReading's caller */ }
+    if (first && first.seconds > span)
+        lines.push(`opening: the first spoken line starts about ${first.seconds} s in, after the ${span} s window — until then the pictures carry the promise alone`);
+    return lines;
+}
+/** The episode's enabled SNS platforms from its saved snapshot; empty outside an episode. */
+function episodePlatforms(dir) {
+    const episode = workflowEpisode(dir);
+    const sns = episode ? episodeHandoff(episode)?.sns : undefined;
+    return Object.entries(sns ?? {}).filter(([, account]) => account?.enabled).map(([platform]) => platform);
 }
 export function applyStoryboard(args, opts = {}) {
     const file = scenesPath(args.path);
@@ -1020,10 +1102,11 @@ export function applyStoryboard(args, opts = {}) {
     const st = next.STRUCTURE;
     // Reports only, each on its own: a board one of them cannot read still gets written and still prints the other.
     const digest = () => shotDirection().digest(next), firstLine = () => firstLineReading(next);
+    const opening = () => openingReading(next, episodePlatforms(dirname(file)));
     const result = {
         file, written: false, created: !exists, approvalDropped: header.some((h) => /^\/\/\s*approved:/.test(h)),
         shots: (next.SCENES ?? []).length, scenes: st ? st.scenes.length : 0, sequences: st ? st.sequences.length : 0,
-        synced, findings, board: [digest, firstLine].flatMap((read) => { try {
+        synced, findings, board: [digest, firstLine, opening].flatMap((read) => { try {
             return read();
         }
         catch {
@@ -1073,6 +1156,13 @@ export const storySequenceSchema = z.object({
         question: nonEmpty.optional().describe('The question this stretch opens: a dramatic one, or on a claim-led episode whether the promised result is real'),
         payoff: z.number().int().positive().optional().describe('The scene number that answers the question or shows the proof'),
     }).strict()).min(1),
+    opening: z.object({
+        promise: nonEmpty.describe("What the opening commits to, in the viewer's words: the event, doubt or result the episode then pays"),
+        firstFrame: nonEmpty.describe('What the first picture shows at 0 s: the subject already in its changed state or mid-action'),
+        title: nonEmpty.optional().describe('Long-form: the title the first 30 s confirms'),
+        thumbnail: nonEmpty.optional().describe('Long-form: the thumbnail picture the first 30 s confirms'),
+        widen: nonEmpty.optional().describe('Long-form: the question bigger than the packaging, opened before 30 s'),
+    }).strict().optional().describe('The opening plan, recorded as STORY.opening; a new value replaces the old one'),
 }).strict();
 export const storySceneSchema = z.object({
     path: outlinePath,
@@ -1101,7 +1191,7 @@ function readOutline(path) {
     const win = existsSync(file) ? readBoard(file).win : {};
     return { win, st: win.STRUCTURE ?? emptyStructure() };
 }
-function writeOutline(path, win, structure, shots, language) {
+function writeOutline(path, win, structure, shots, language, opening) {
     // A board the story tools start is story-first: every writer keeps its layer order (structure-contract.js).
     // Inside an episode it also starts on the episode's saved canvas and production choice, the handoff
     // project_manage gives a new board; without it the board reads as the 9:16 default.
@@ -1112,8 +1202,9 @@ function writeOutline(path, win, structure, shots, language) {
     const story = win.STORY;
     const speech = language ?? handoff?.LANGUAGES?.speech;
     const written = !!win.SCENES?.length;
-    const globals = story ? (language && story.language === undefined && !written ? { STORY: { ...story, language } } : undefined) : {
-        STORY: { version: 'story-v2', authoring: 'story-first', ...(speech ? { language: speech } : {}) },
+    const takesLanguage = !!language && story?.language === undefined && !written;
+    const globals = story ? (takesLanguage || opening ? { STORY: { ...story, ...(takesLanguage ? { language } : {}), ...(opening ? { opening } : {}) } } : undefined) : {
+        STORY: { version: 'story-v2', authoring: 'story-first', ...(speech ? { language: speech } : {}), ...(opening ? { opening } : {}) },
         ...(handoff?.FORMAT && win.FORMAT === undefined ? { FORMAT: handoff.FORMAT } : {}),
         ...(handoff?.PRODUCTION && win.PRODUCTION === undefined ? { PRODUCTION: handoff.PRODUCTION } : {}),
     };
@@ -1136,7 +1227,7 @@ export function writeStorySequences(args) {
     // The payoff is one of the sequence's own scenes (storyboard_check); before its scenes exist there is nothing to compare.
     const notes = sequences.filter((q) => q.payoff !== undefined && q.scenes.length && !q.scenes.includes(q.payoff))
         .map((q) => ({ level: 'warn', where: `sequence ${q.id}`, what: `payoff names scene ${q.payoff}, which is outside this sequence — fix it with story_sequence or story_scene` }));
-    const result = writeOutline(args.path, win, { ...st, sequences }, undefined, args.language);
+    const result = writeOutline(args.path, win, { ...st, sequences }, undefined, args.language, args.opening);
     return { ...result, findings: [...result.findings, ...notes] };
 }
 export function writeStoryScenes(args) {

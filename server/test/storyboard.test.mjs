@@ -7,7 +7,7 @@
 import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, relative } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { after, describe, it } from 'node:test';
 
 import {
@@ -34,10 +34,12 @@ import {
   storySceneSchema,
   writeStoryScenes,
   writeStorySequences,
+  storySequenceSchema,
   writeStoryShots,
   storyMusicSchema,
   writeStoryMusic,
   firstLineReading,
+  openingReading,
 } from '../dist/storyboard.js';
 import * as storyboardImages from '../dist/storyboard.js';
 import { TOOLS } from '../dist/tools.js';
@@ -369,6 +371,20 @@ describe('story first, then characters and lines', () => {
     assert.ok(resumed.findings.some((f) => f.level === 'warn' && /^story_language/.test(f.what)));
   });
 
+  it('story_sequence records the opening plan, a new plan replaces it, and the read returns its reading', () => {
+    const dir = tmp(), sequences = [{ id: 'q1', title: '발단', purpose: '만남' }];
+    const plan = { promise: '그가 사직서를 냈다', firstFrame: 'a resignation letter lands on the desk' };
+    const first = writeStorySequences(storySequenceSchema.parse({ path: dir, sequences, opening: plan }));
+    assert.deepEqual(readBoard(dir).win.STORY.opening, plan);
+    assert.ok(first.board.includes('opening (short-form): promise "그가 사직서를 냈다" · first frame: a resignation letter lands on the desk'));
+    writeStorySequences({ path: dir, sequences, opening: { promise: 'p2', firstFrame: 'f2' } });
+    writeStorySequences({ path: dir, sequences });   // a write without a plan keeps the recorded one
+    assert.deepEqual(readBoard(dir).win.STORY.opening, { promise: 'p2', firstFrame: 'f2' });
+    const read = readStoryboard(storyboardReadSchema.parse({ path: dir }));
+    assert.deepEqual([read.opening.plan, read.opening.format, read.opening.platforms], [{ promise: 'p2', firstFrame: 'f2' }, 'shorts-9x16', []]);
+    assert.throws(() => storySequenceSchema.parse({ path: dir, sequences, opening: { promise: 'p' } }));
+  });
+
   it('each layer needs the one before it, and a new shot plays at the end of its scene', () => {
     const dir = tmp();
     assert.throws(() => writeStoryScenes({ path: dir, scenes: [{ sequence: 'q1', no: 1, place: '숲', time: '낮', event: 'e', summary: '씬' }] }), /story_order/);
@@ -691,7 +707,12 @@ describe('icon attributes come after every shot\'s characters', () => {
     setupProject(root);
     const dir = join(manageProject({ action: 'episode', workspace: root, topic: 'e1' }).episode, 'storyboard');
     castFile(dir, ['mina'], { root: join(root, 'data/c') });
-    writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
+    // The opening reading names the windows of the platforms the snapshot enables, and only those.
+    const snapshot = join(dirname(dir), '.work/model-settings.json'), saved = JSON.parse(readFileSync(snapshot, 'utf8'));
+    saved.config.sns.instagram.enabled = true;
+    writeFileSync(snapshot, JSON.stringify(saved));
+    const started = writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
+    assert.match(started.board.find((l) => l.startsWith('opening (')), /^opening \(short-form · Reels: skip rate counts the first 3 s\): no plan/);
     const { win } = readBoard(dir);
     assert.deepEqual([win.FORMAT, win.PRODUCTION?.mode, win.STORY.authoring], ['shorts-9x16', 'video_50', 'story-first']);
     // The saved languages.speech becomes the next board's story language.
@@ -1575,6 +1596,31 @@ describe('first spoken line reading', () => {
   it('prints nothing without a line or with an unknown length before it', () => {
     assert.deepEqual(firstLineReading({ SCENES: [{ id: 's0001', duration: 3 }] }), []);
     assert.deepEqual(firstLineReading({ SCENES: [{ id: 's0001' }, { id: 's0002', duration: 2, narration: [line()] }] }), []);
+  });
+});
+
+describe('opening reading', () => {
+  const story = { version: 'story-v2', authoring: 'story-first' };
+  const line = { id: 'l1', speaker: 'a', delivery: 'on_screen', tts: 'x', estimatedSeconds: 2 };
+  it('short-form names a missing plan, the shots inside 0–3 s and a first line after the window', () => {
+    const win = { STORY: story, SCENES: [{ id: 's0001', duration: 2 }, { id: 's0002', duration: 2.5, narration: [line] }, { id: 's0003', duration: 1 }] };
+    const reading = openingReading(win, ['instagram', 'tiktok', 'threads']);
+    assert.match(reading[0], /^opening \(short-form · Reels: skip rate counts the first 3 s · TikTok: the offer in 3 s, the hook in 6 s \(ad guidance\)\): no plan/);
+    assert.ok(reading.includes('opening window 0–3 s: s0001 0–2 s, s0002 2–4.5 s'));
+    assert.ok(!reading.some((l) => /after the 3 s window/.test(l)));   // the line starts at 2 s, inside the window
+    win.SCENES[0].duration = 4;
+    assert.ok(openingReading(win).includes('opening: the first spoken line starts about 4 s in, after the 3 s window — until then the pictures carry the promise alone'));
+  });
+  it('long-form names the missing packaging and reads a 30 s window; boards that are not story-first print nothing', () => {
+    const win = { FORMAT: 'youtube-long-16x9', STORY: { ...story, opening: { promise: 'p', firstFrame: 'f', title: 't' } },
+      SCENES: [{ id: 's0001', duration: 20 }, { id: 's0002', duration: 20 }] };
+    const reading = openingReading(win, ['youtube', 'facebook']);
+    assert.equal(reading[0], 'opening (long-form · YouTube: Intro = still watching at 30 s, 50% or more is above typical · Facebook: one-minute views): promise "p" · first frame: f');
+    assert.ok(reading.includes('opening: no thumbnail, bigger question — the first 30 s confirms the title and thumbnail, then opens a bigger question'));
+    assert.ok(reading.includes('opening window 0–30 s: s0001 0–20 s, s0002 20–40 s'));
+    win.SCENES[0].duration = undefined;   // a length unknown inside the window: no shot list
+    assert.ok(!openingReading(win).some((l) => l.startsWith('opening window')));
+    assert.deepEqual(openingReading({ SCENES: [{ id: 's0001', duration: 2 }] }), []);
   });
 });
 

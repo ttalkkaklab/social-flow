@@ -118485,6 +118485,20 @@ function readStoryboard(args) {
   if (win.STORY?.authoring === "story-first") {
     const { undecided, mismatch } = musicTimeline().spottingReport(win);
     result.musicSpotting = { undecided, mismatch, note: "Scenes with no music decision, and scenes whose decision the timeline contradicts. story_music records each decision; nothing waits for it." };
+    const platforms = episodePlatforms(dirname6(file));
+    result.opening = {
+      plan: win.STORY.opening ?? null,
+      format: String(win.FORMAT ?? "shorts-9x16"),
+      platforms,
+      reading: (() => {
+        try {
+          return openingReading(win, platforms);
+        } catch {
+          return [];
+        }
+      })(),
+      note: "A reading of STORY.opening against the format and enabled platforms (references/opening-by-format.md); it never refuses."
+    };
   }
   result.videoTiming = (win.SCENES || []).filter((shot) => shot.shot?.render?.mode === "generated_video").map((shot) => {
     if (shot.visual?.reuse) return { shotId: shot.id, status: "reused", note: "Inspect the existing clip; no new generation limit applies." };
@@ -118918,19 +118932,74 @@ function editImpact(before, after) {
   }
   return findings;
 }
-function firstLineReading(win) {
+function firstLineStart(win) {
   const order = shotDirection().playbackEntries(win.SCENES ?? []).map(({ s: s2 }) => s2);
   const at = order.findIndex((shot2) => shot2.narration?.length);
-  if (at < 0) return [];
+  if (at < 0) return null;
   const lengths = order.slice(0, at).map((shot2) => shot2.duration);
-  if (!lengths.every((n) => typeof n === "number" && Number.isFinite(n) && n > 0)) return [];
+  if (!lengths.every((n) => typeof n === "number" && Number.isFinite(n) && n > 0)) return null;
   const shot = order[at];
   const acting = loadFromHere2(join12(PLUGIN_ROOT, "skills", "_shared", "scene-acting.js"));
   const plan2 = acting.planScenePerformance(shot, (line) => typeof line.estimatedSeconds === "number" ? line.estimatedSeconds : acting.estimateSpeechSeconds(line.tts));
   const start = plan2.performance.find((event) => event.kind !== "action")?.speechStartSeconds;
-  const round2 = (n) => Math.round(n * 10) / 10;
-  const excess = typeof shot.duration === "number" && plan2.durationSeconds !== null ? round2(shot.duration - plan2.durationSeconds) : 0;
-  return [`first spoken line: ${shot.id ?? `shot ${at + 1}`}, about ${round2(lengths.reduce((sum, n) => sum + n, 0) + (start ?? 0))} s in` + (typeof start === "number" ? "" : " or later (an action before it has no length)") + (excess > 0.5 && shot.narration?.[0]?.delivery !== "voiceover" ? ` \u2014 that shot's length holds ${excess} s beyond its performance; a natively voiced clip plays them as silence, mostly before the line` : "")];
+  const excess = typeof shot.duration === "number" && plan2.durationSeconds !== null ? round1(shot.duration - plan2.durationSeconds) : 0;
+  return { shot, at, seconds: round1(lengths.reduce((sum, n) => sum + n, 0) + (start ?? 0)), exact: typeof start === "number", excess };
+}
+var round1 = (n) => Math.round(n * 10) / 10;
+function firstLineReading(win) {
+  const first = firstLineStart(win);
+  if (!first) return [];
+  const { shot, at, seconds, exact, excess } = first;
+  return [`first spoken line: ${shot.id ?? `shot ${at + 1}`}, about ${seconds} s in` + (exact ? "" : " or later (an action before it has no length)") + (excess > 0.5 && shot.narration?.[0]?.delivery !== "voiceover" ? ` \u2014 that shot's length holds ${excess} s beyond its performance; a natively voiced clip plays them as silence, mostly before the line` : "")];
+}
+var OPENING_WINDOWS = {
+  short: {
+    instagram: "Reels: skip rate counts the first 3 s",
+    tiktok: "TikTok: the offer in 3 s, the hook in 6 s (ad guidance)",
+    youtube: 'Shorts: "initial seconds", length unpublished',
+    facebook: "Facebook Reels: skip rate counts the first 3 s"
+  },
+  long: {
+    youtube: "YouTube: Intro = still watching at 30 s, 50% or more is above typical",
+    facebook: "Facebook: one-minute views"
+  }
+};
+function openingReading(win, platforms = []) {
+  if (win.STORY?.authoring !== "story-first") return [];
+  const long = /16x9/.test(String(win.FORMAT ?? ""));
+  const span = long ? 30 : 3;
+  const windows = platforms.map((p) => OPENING_WINDOWS[long ? "long" : "short"][p]).filter(Boolean);
+  const head = `opening (${long ? "long-form" : "short-form"}${windows.length ? ` \xB7 ${windows.join(" \xB7 ")}` : ""})`;
+  const plan2 = win.STORY.opening;
+  const lines = [!plan2?.promise ? `${head}: no plan \u2014 story_sequence opening records the promise and the first frame${long ? ", the title and thumbnail it confirms and the bigger question" : ""} (references/opening-by-format.md)` : `${head}: promise "${plan2.promise}" \xB7 first frame: ${plan2.firstFrame ?? "not written"}`];
+  if (long && plan2?.promise) {
+    const missing = [!plan2.title && "title", !plan2.thumbnail && "thumbnail", !plan2.widen && "bigger question"].filter(Boolean);
+    if (missing.length) lines.push(`opening: no ${missing.join(", ")} \u2014 the first 30 s confirms the title and thumbnail, then opens a bigger question`);
+  }
+  const inside = [];
+  let t2 = 0;
+  for (const { s: s2 } of shotDirection().playbackEntries(win.SCENES ?? [])) {
+    if (t2 >= span) break;
+    if (typeof s2.duration !== "number" || !(s2.duration > 0)) {
+      inside.length = 0;
+      break;
+    }
+    inside.push(`${s2.id} ${round1(t2)}\u2013${round1(t2 + s2.duration)} s`);
+    t2 += s2.duration;
+  }
+  if (inside.length && t2 >= span) lines.push(`opening window 0\u2013${span} s: ${inside.slice(0, 8).join(", ")}${inside.length > 8 ? `, +${inside.length - 8} more` : ""}`);
+  let first = null;
+  try {
+    first = firstLineStart(win);
+  } catch {
+  }
+  if (first && first.seconds > span) lines.push(`opening: the first spoken line starts about ${first.seconds} s in, after the ${span} s window \u2014 until then the pictures carry the promise alone`);
+  return lines;
+}
+function episodePlatforms(dir) {
+  const episode = workflowEpisode(dir);
+  const sns = episode ? episodeHandoff(episode)?.sns : void 0;
+  return Object.entries(sns ?? {}).filter(([, account]) => account?.enabled).map(([platform]) => platform);
 }
 function applyStoryboard(args, opts = {}) {
   const file = scenesPath(args.path);
@@ -119000,6 +119069,7 @@ function applyStoryboard(args, opts = {}) {
   const bad = findings.some((f3) => f3.level === "bad");
   const st = next.STRUCTURE;
   const digest5 = () => shotDirection().digest(next), firstLine = () => firstLineReading(next);
+  const opening = () => openingReading(next, episodePlatforms(dirname6(file)));
   const result = {
     file,
     written: false,
@@ -119010,7 +119080,7 @@ function applyStoryboard(args, opts = {}) {
     sequences: st ? st.sequences.length : 0,
     synced,
     findings,
-    board: [digest5, firstLine].flatMap((read4) => {
+    board: [digest5, firstLine, opening].flatMap((read4) => {
       try {
         return read4();
       } catch {
@@ -119051,7 +119121,14 @@ var storySequenceSchema = external_exports.object({
     purpose: nonEmpty.describe("The one purpose that binds its scenes"),
     question: nonEmpty.optional().describe("The question this stretch opens: a dramatic one, or on a claim-led episode whether the promised result is real"),
     payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question or shows the proof")
-  }).strict()).min(1)
+  }).strict()).min(1),
+  opening: external_exports.object({
+    promise: nonEmpty.describe("What the opening commits to, in the viewer's words: the event, doubt or result the episode then pays"),
+    firstFrame: nonEmpty.describe("What the first picture shows at 0 s: the subject already in its changed state or mid-action"),
+    title: nonEmpty.optional().describe("Long-form: the title the first 30 s confirms"),
+    thumbnail: nonEmpty.optional().describe("Long-form: the thumbnail picture the first 30 s confirms"),
+    widen: nonEmpty.optional().describe("Long-form: the question bigger than the packaging, opened before 30 s")
+  }).strict().optional().describe("The opening plan, recorded as STORY.opening; a new value replaces the old one")
 }).strict();
 var storySceneSchema = external_exports.object({
   path: outlinePath,
@@ -119082,14 +119159,15 @@ function readOutline(path35) {
   const win = existsSync24(file) ? readBoard(file).win : {};
   return { win, st: win.STRUCTURE ?? emptyStructure() };
 }
-function writeOutline(path35, win, structure, shots, language) {
+function writeOutline(path35, win, structure, shots, language, opening) {
   const episode = win.STORY ? void 0 : workflowEpisode(dirname6(scenesPath(path35)));
   const handoff = episode ? episodeHandoff(episode) : void 0;
   const story = win.STORY;
   const speech = language ?? handoff?.LANGUAGES?.speech;
   const written = !!win.SCENES?.length;
-  const globals = story ? language && story.language === void 0 && !written ? { STORY: { ...story, language } } : void 0 : {
-    STORY: { version: "story-v2", authoring: "story-first", ...speech ? { language: speech } : {} },
+  const takesLanguage = !!language && story?.language === void 0 && !written;
+  const globals = story ? takesLanguage || opening ? { STORY: { ...story, ...takesLanguage ? { language } : {}, ...opening ? { opening } : {} } } : void 0 : {
+    STORY: { version: "story-v2", authoring: "story-first", ...speech ? { language: speech } : {}, ...opening ? { opening } : {} },
     ...handoff?.FORMAT && win.FORMAT === void 0 ? { FORMAT: handoff.FORMAT } : {},
     ...handoff?.PRODUCTION && win.PRODUCTION === void 0 ? { PRODUCTION: handoff.PRODUCTION } : {}
   };
@@ -119109,7 +119187,7 @@ function writeStorySequences(args) {
   requireEpisodeCast(args.path, win);
   const sequences = upsertBy(st.sequences, args.sequences.map((q) => ({ ...st.sequences.find((old) => old.id === q.id), ...q, scenes: st.sequences.find((old) => old.id === q.id)?.scenes ?? [] })), "id");
   const notes = sequences.filter((q) => q.payoff !== void 0 && q.scenes.length && !q.scenes.includes(q.payoff)).map((q) => ({ level: "warn", where: `sequence ${q.id}`, what: `payoff names scene ${q.payoff}, which is outside this sequence \u2014 fix it with story_sequence or story_scene` }));
-  const result = writeOutline(args.path, win, { ...st, sequences }, void 0, args.language);
+  const result = writeOutline(args.path, win, { ...st, sequences }, void 0, args.language, args.opening);
   return { ...result, findings: [...result.findings, ...notes] };
 }
 function writeStoryScenes(args) {
@@ -128666,7 +128744,7 @@ Returns: JSON \u2014 { file, mediaBaseDirectory, sha256, version, format, shots,
     name: "story_sequence",
     title: "Write storyboard sequences (story step 1 of 3)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    description: `The first storyboard step after the scenario is settled writes only the story, in three layers: story_sequence \u2192 story_scene \u2192 story_shot. Use it first: it upserts sequences by id (title \xB7 purpose \xB7 question \xB7 payoff \u2014 a payoff outside the sequence's scenes warns) and creates scenes.js as a story-v2 board when it is missing, inside an episode on the FORMAT and PRODUCTION its saved snapshot hands off. A sequence's scene list is filled by story_scene. Local file only; no image, speech or prompt. Inside an episode the board starts only after the cast is ready, and story_scene and story_shot repeat this check on a story-first board: refused (cast_required) until storyboard/cast.json names at least one character, (cast_source_missing) for an entry whose source is not an existing assets/characters/<id>/identity.md, and (character_panel_missing) for an entry without "voiceOnly": true that lacks its face, front or back sheet panel \u2014 make those with character_manage and character_panel first.
+    description: `The first storyboard step after the scenario is settled writes only the story, in three layers: story_sequence \u2192 story_scene \u2192 story_shot. Use it first: it upserts sequences by id (title \xB7 purpose \xB7 question \xB7 payoff \u2014 a payoff outside the sequence's scenes warns), records the episode's opening plan as STORY.opening (skills/storyboard/references/opening-by-format.md) and creates scenes.js as a story-v2 board when it is missing, inside an episode on the FORMAT and PRODUCTION its saved snapshot hands off. A sequence's scene list is filled by story_scene. Local file only; no image, speech or prompt. Inside an episode the board starts only after the cast is ready, and story_scene and story_shot repeat this check on a story-first board: refused (cast_required) until storyboard/cast.json names at least one character, (cast_source_missing) for an entry whose source is not an existing assets/characters/<id>/identity.md, and (character_panel_missing) for an entry without "voiceOnly": true that lacks its face, front or back sheet panel \u2014 make those with character_manage and character_panel first.
 
 Do NOT write scenes, shots, dialogue or pictures here. Characters and lines come after the shot stories (shot_characters \u2192 shot_dialogue); camera and image plans after that, through storyboard_apply.
 
@@ -128683,7 +128761,14 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
           purpose: { type: "string", description: "The one purpose that binds its scenes; two purposes are two sequences" },
           question: { type: "string", description: "The one question the viewer holds across these scenes \u2014 specific and answerable (who, why, how, whether). Claim-led work (explainer, tutorial, review, advertisement): whether the promised result is real" },
           payoff: { type: "integer", minimum: 1, description: "The scene number that answers the question or shows the proof \u2014 a later scene of this sequence" }
-        } } }
+        } } },
+        opening: { type: "object", additionalProperties: false, required: ["promise", "firstFrame"], description: "The opening plan for the board FORMAT and the enabled platforms, recorded as STORY.opening (a new value replaces it). Short-form: one opening for every platform, built for the earliest window (Reels 3 s). Long-form: packaging first, then 0\u201330 s confirms it and opens a bigger question. Every board write prints a reading of it; nothing is refused.", properties: {
+          promise: { type: "string", minLength: 1, description: "What the opening commits to, in the viewer's words: the event, doubt or result the episode then pays" },
+          firstFrame: { type: "string", minLength: 1, description: "What the first picture shows at 0 s: the subject already in its changed state or mid-action" },
+          title: { type: "string", minLength: 1, description: "Long-form: the title the first 30 s confirms" },
+          thumbnail: { type: "string", minLength: 1, description: "Long-form: the thumbnail picture the first 30 s confirms" },
+          widen: { type: "string", minLength: 1, description: "Long-form: the question bigger than the packaging, opened before 30 s" }
+        } }
       },
       required: ["path", "sequences"]
     }
@@ -135909,7 +135994,7 @@ function scoreKeywords(outliers, limit2) {
     cur.count += 1;
     if (video2.multiplier > cur.best) cur.best = video2.multiplier;
     if (cur.evidence.length < 3 && !cur.evidence.some((e2) => e2.videoId === video2.videoId)) {
-      cur.evidence.push({ videoId: video2.videoId, title: video2.title, multiplier: round1(video2.multiplier) });
+      cur.evidence.push({ videoId: video2.videoId, title: video2.title, multiplier: round12(video2.multiplier) });
     }
     byPhrase.set(phrase, cur);
   };
@@ -135926,9 +136011,9 @@ function scoreKeywords(outliers, limit2) {
   }
   const ranked = [...byPhrase.entries()].map(([phrase, value]) => ({
     phrase,
-    score: round1(value.score),
+    score: round12(value.score),
     outlierCount: value.count,
-    bestMultiplier: round1(value.best),
+    bestMultiplier: round12(value.best),
     evidence: value.evidence
   })).filter((row) => row.phrase.split(" ").length >= 2 || row.outlierCount >= 2).sort(
     (a, b) => b.score - a.score || b.phrase.split(" ").length - a.phrase.split(" ").length || b.outlierCount - a.outlierCount
@@ -135941,7 +136026,7 @@ function scoreKeywords(outliers, limit2) {
   }
   return kept;
 }
-function round1(n) {
+function round12(n) {
   return Math.round(n * 10) / 10;
 }
 function publishedAfterIso(days) {
@@ -136254,7 +136339,7 @@ async function youtubeTopicScout(input) {
         channelTitle: video2.channelTitle,
         views: video2.views,
         baseline: Math.round(baseline),
-        multiplier: round1(multiplier),
+        multiplier: round12(multiplier),
         publishedAt: video2.publishedAt,
         durationSeconds: video2.durationSeconds,
         commentCount: video2.commentCount,
