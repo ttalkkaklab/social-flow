@@ -1102,8 +1102,8 @@ narration: [
 ]
 ```
 
-- `tts` — Korean phonetic spelling (numbers and loanwords as they sound: "4,700만"→"사천칠백만",
-  "eTax"→"이택스")
+- `tts` — the line as it is said, in the story's language (`STORY.language`). Korean spells
+  numbers and loanwords as they sound: "4,700만"→"사천칠백만", "eTax"→"이택스"
 - `sub` — the sentence's written notation (numbers and proper nouns kept as written); the
   delivered video carries no subtitles, and a sidecar is made from it only on request
 - `speaker` — `SB_DOC.characters[].id`; required on a `speechPlanVersion:1` board (the narrator

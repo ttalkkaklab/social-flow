@@ -24,6 +24,11 @@ const run = (c, research) => checkScenarioV2(meta, body(c), research, { pool }).
 test('fiction works without research, a factual wow, a narrator or a second engine', () => {
   assert.deepEqual(run(candidate()), []);
 });
+test('a scenario in another language names the suggested beats in English', () => {
+  const c = candidate();
+  ['Hook', 'development #1', 'development #2', 'development #3', 'ending'].forEach((item, i) => { c.beats[i].item = item; });
+  assert.deepEqual(run(c), []);
+});
 test('factual and adapted claims cannot bypass evidence; inventions stay explicitly marked', () => {
   const c = candidate(); c.kind = 'evidence';
   assert.match(JSON.stringify(run(c)), /invented events/);

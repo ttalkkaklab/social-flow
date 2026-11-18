@@ -135,5 +135,8 @@ on a hook being available.
 
 Optional `settings.languages` stores BCP-47 `speech`, `subtitles` and `review` defaults
 when the user specifies them, for example `{speech:"vi",subtitles:["ko","en","zh-Hans","ja"],review:["vi","ko","en","zh-Hans","ja"]}`.
-Episode handoffs include `LANGUAGES`; older projects remain valid without it. Follow
-[review translations](../storyboard/references/review-localization.md) for authoring.
+Episode handoffs include `LANGUAGES`, and a new episode board records `speech` as
+`STORY.language`; older projects remain valid without it. Setup does not ask for a
+language: without a saved `speech`, each new story is written in the channel's own
+language, and for a channel that has none yet in the language of the user's request. Follow [story language](../storyboard/references/review-localization.md)
+for authoring.

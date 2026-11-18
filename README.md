@@ -1314,7 +1314,10 @@ are intermediate states. See [the workflow](skills/publish/references/tiktok-pri
 `/social-flow:setup-tiktok mochi-bo` connects the intended channel without publishing.
 See [the setup skill](skills/setup-tiktok/SKILL.md) and [official API mapping](skills/setup-tiktok/references/api.md).
 
-Storyboard language defaults use optional project `languages.speech`, `subtitles`
-and `review`. The shared review template reads `review-localization.json` and shows
+A story is written in the language the user names for the episode, else the saved
+project `languages.speech`, else the channel's own language, else the language of the
+request, and the board records it as `STORY.language`. Untimed lines are timed in English, Chinese, Japanese, Spanish,
+French, German, Vietnamese and Korean (only the Korean rate is measured). Optional
+`languages.subtitles` and `review` name the other languages. The shared review template reads `review-localization.json` and shows
 a floating story/dialogue language selector while production keeps its source text.
 See [review translations](skills/storyboard/references/review-localization.md).

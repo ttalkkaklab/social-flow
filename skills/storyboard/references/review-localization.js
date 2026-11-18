@@ -3,7 +3,7 @@
 // Exact source text is the revision key. Changed copy falls back to the new source;
 // translations never replace scenes.js or feed a production compiler.
 (function (root) {
-  const labels = { vi: 'Tiếng Việt', ko: '한국어', en: 'English', 'zh-Hans': '简体中文', ja: '日本語' };
+  const labels = { vi: 'Tiếng Việt', ko: '한국어', en: 'English', zh: '中文', 'zh-Hans': '简体中文', 'zh-Hant': '繁體中文', ja: '日本語', es: 'Español', fr: 'Français', de: 'Deutsch' };
   function validate(bundle) {
     if (!bundle || bundle.version !== 1 || !Array.isArray(bundle.languages) || !Array.isArray(bundle.entries) ||
         typeof bundle.sourceLanguage !== 'string' || !bundle.languages.includes(bundle.sourceLanguage) ||

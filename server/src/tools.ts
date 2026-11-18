@@ -4775,7 +4775,7 @@ The runtime field identifies the loaded module and its on-disk hash; it does not
 
 Includes boundaryReview (shot-boundaries-v1): every actual playback join with full ordered speech/performance, camera context, incoming join ownership and factual review signals. It is read-only and always not_reviewed; repeated speakers/cast or reasons are not merge commands. For splices incoming is null: inspect the edit plan. Missing evidence stays unknown. Compare the uncut scene before images, and audit line ids/order/acting, performance groups, references and outer joins after edits. If this field is absent on an older connection, update/reconnect rather than guessing a bundle path.
 
-Includes videoTiming for generated shots: selected route, planned source coverage, frame grid, maximum seconds, and fits/split_required/timing_unknown/limits_unknown. This is not measured speech or output duration. boundaryReview.shots[].performanceTiming times a Korean line nobody timed from its syllables and gives storedExcessSeconds: the seconds the stored duration holds beyond its lines and timed actions, which a native-speech clip (MSR) plays as silent acting around the line.
+Includes videoTiming for generated shots: selected route, planned source coverage, frame grid, maximum seconds, and fits/split_required/timing_unknown/limits_unknown. This is not measured speech or output duration. boundaryReview.shots[].performanceTiming times a line nobody timed from its syllables in the board's language (STORY.language; speechRate "uncalibrated" outside Korean, whose rate alone was measured) and gives storedExcessSeconds: the seconds the stored duration holds beyond its lines and timed actions, which a native-speech clip (MSR) plays as silent acting around the line.
 
 Returns: JSON — { file, mediaBaseDirectory, sha256, version, format, shots, sequences[…scenes[…shots]], unplacedShots, splicedShots (broll · outro), playback (actual insertion order), unscheduledShots, propSheet?, inspection, runtime, imageFraming, boundaryReview, videoTiming, reviewContext?, selectedShot? }.`,
     inputSchema: {
@@ -4803,6 +4803,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
       type: 'object', additionalProperties: false,
       properties: {
         path: { type: 'string', description: 'The storyboard directory (data/<channel>/episodes/<topic>/storyboard/) or its scenes.js' },
+        language: { type: 'string', description: 'The language the story and its lines are written in, as a BCP-47 tag ("en", "ja", "zh-Hans", "es", "fr", "de", "vi", "ko"): the one the user asked for, else the saved languages.speech, else the language the channel already works in (profile, cast voices, earlier episodes), else the language of the user\'s request. Recorded once as STORY.language; a new episode board without it takes the saved languages.speech, and a board that has one or already has shots keeps its language (a different value warns). Line timing reads it.' },
         sequences: { type: 'array', minItems: 1, description: 'Sequences in playback order', items: { type: 'object', additionalProperties: false, required: ['id', 'title', 'purpose'], properties: {
           id: { type: 'string', description: 'Stable id, e.g. "q1"' },
           title: { type: 'string', description: 'The heading the review page draws' },

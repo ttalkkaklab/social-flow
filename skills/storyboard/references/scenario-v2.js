@@ -4,6 +4,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { section, rows } = require('./check-research.js');
 const ITEMS = ['주제', '훅', '전개 #1', '전개 #2', '전개 #3', '마무리', 'CTA'];
+// The same suggested beats, named in a scenario that is not written in Korean.
+const ITEM_ALIASES = { hook: '훅', 'development #1': '전개 #1', 'development #2': '전개 #2', 'development #3': '전개 #3', ending: '마무리' };
+const itemOf = beat => ITEM_ALIASES[String(beat?.item ?? '').trim().toLowerCase()] || beat?.item;
 const ENGINES = ['curiosity', 'fear', 'intrigue', 'comedy', 'empathy', 'awe', 'discovery'];
 const text = x => typeof x === 'string' && !!x.trim();
 const object = x => x !== null && typeof x === 'object' && !Array.isArray(x);
@@ -21,7 +24,7 @@ function readContract(body) {
 function observableOpeningSignature(data) {
   if (!Array.isArray(data?.beats) || data.beats.length < 4) return null;
   const opening = data.beats.slice(0, 4);
-  if (opening.some((beat, i) => beat?.item !== ITEMS[i + 1] || !Array.isArray(beat.events) || !beat.events.length ||
+  if (opening.some((beat, i) => itemOf(beat) !== ITEMS[i + 1] || !Array.isArray(beat.events) || !beat.events.length ||
     beat.events.some(event => !object(event) || !text(event.text) || !text(event.character) || !['action', 'dialogue', 'narration'].includes(event.kind)))) return null;
   return JSON.stringify(opening.map(beat => beat.events.map(event => [event.kind, event.character,
     event.to || null, event.text.trim().replace(/\s+/g, ' ')])));
@@ -69,7 +72,7 @@ function checkScenarioV2(meta, body, research, opts = {}) {
   if (!Array.isArray(data.beats)) bad('beats must be an array');
   const beats = Array.isArray(data.beats) ? data.beats : [];
   const narrativeBeats = beats.filter(b => b?.item !== 'CTA');
-  if (narrativeBeats.length !== 5 || narrativeBeats.some((b, i) => b?.item !== ITEMS[i + 1])) warn('Suggested structure: hook, three developments and ending in order; another readable narrative structure is allowed');
+  if (narrativeBeats.length !== 5 || narrativeBeats.some((b, i) => itemOf(b) !== ITEMS[i + 1])) warn('Suggested structure: hook, three developments and ending in order; another readable narrative structure is allowed');
   const used = new Set(), factual = [];
   beats.forEach((b, i) => {
     if (!object(b)) { bad('beat must be an object'); return; }
