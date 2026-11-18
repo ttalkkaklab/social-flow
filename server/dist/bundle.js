@@ -116995,15 +116995,17 @@ function shotVideoTiming(context2, tool2, args) {
   }
   if (args.requiredSeconds !== void 0 && (typeof args.requiredSeconds !== "number" || !Number.isFinite(args.requiredSeconds) || args.requiredSeconds <= 0))
     throw new Error("requiredSeconds must be finite positive seconds");
-  const required2 = coverage2 || args.requiredSeconds !== void 0 ? Math.max(coverage2?.requiredSeconds ?? 0, args.requiredSeconds ?? 0) : void 0;
+  const speech = VIDEO_ADAPTERS[tool2]?.voice === "reference" && shot.narration?.some((line) => line.delivery !== "voiceover") ? nativeSpeechTiming(shot, context2.board.STORY?.language) : void 0;
+  const required2 = coverage2 || args.requiredSeconds !== void 0 || speech ? Math.max(coverage2?.requiredSeconds ?? 0, args.requiredSeconds ?? 0, speech?.estimatedSeconds ?? 0) : void 0;
   return {
     ...assessVideoDuration(tool2, args, required2),
     basis: "planned",
     coverage: coverage2,
+    ...speech ? { speech } : {},
     note: "Fit of authored source coverage, not measured performance or generated output. Recheck after speech/action timing or generation changes."
   };
 }
-function nativeSpeechFit(shot, requestedSeconds, limits, language) {
+function nativeSpeechTiming(shot, language) {
   const acting = load5(fileURLToPath6(new URL("../../skills/_shared/scene-acting.js", import.meta.url)));
   let estimatedSeconds, unmeasuredRate = false;
   try {
@@ -117016,6 +117018,13 @@ function nativeSpeechFit(shot, requestedSeconds, limits, language) {
     return void 0;
   }
   if (estimatedSeconds === null || !(estimatedSeconds > 0)) return void 0;
+  return { estimatedSeconds, ...unmeasuredRate ? { speechRate: "uncalibrated" } : {} };
+}
+function nativeSpeechFit(shot, requestedSeconds, limits, language) {
+  const timing = nativeSpeechTiming(shot, language);
+  if (!timing) return void 0;
+  const { estimatedSeconds, speechRate } = timing;
+  const unmeasuredRate = speechRate === "uncalibrated";
   let shortest;
   try {
     shortest = load5(fileURLToPath6(new URL("../../skills/_shared/video-duration.js", import.meta.url))).minimumDuration(estimatedSeconds, limits);
@@ -128553,7 +128562,7 @@ Returns: integer credit balance.`,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     description: `Update shot dialogue, line acting and local audio/video bindings.
 
-Use for dialogue edits, expression or intonation corrections, stable speaker routing and generation planning. list finds lines; prepare assigns stable ids; update replaces requested line fields; attach_audio returns measured timing; retime updates the complete shot clock from current speech and explicit action edits. attach_video binds generated files; reuse:tail_trim accepts only unchanged audio and performance starts with a shorter tail. plan_audio resolves the pinned voice and each line's scene direction into raw generator arguments, refusing unregistered selected samples and stale shared voices; gateway arguments include a revision-bound speechContext and attach_audio requires its completed receiptPath; plan_video resolves the selected adapter's capabilities (tool names the shot's video tool when it differs from the saved default operation) and carries the same acting/timing context. A native-speech shot (MSR) needs no line audio: the clip speaks its prompt's lines, attach_video binds their revisions and sets sound.audioSource video, and a line edit marks the clip stale. For such a clip attach_video also returns soundtrack: where the line starts and ends in the clip (loudness, not_reviewed), the silent seconds around it, and suggestedEdit {in, out} with suggestedDurationSeconds when silent acting the performance did not ask for surrounds the line. Nothing is trimmed here; apply it with storyboard_apply after listening. Attaching different footage to a trimmed native shot removes that trim and returns it as clearedTrim. Scene direction overrides baseline style without changing voice identity. Local files only: plans do not generate, listen, score or approve. Read first and pass expectedRevision for writes; unknown speakers, ambiguous targets, stale revisions and unsupported lip-sync routes fail. Keeps source backups.
+Use for dialogue edits, expression or intonation corrections, stable speaker routing and generation planning. list finds lines; prepare assigns stable ids; update replaces requested line fields; attach_audio returns measured timing; retime updates the complete shot clock from current speech and explicit action edits. attach_video binds generated files; reuse:tail_trim accepts only unchanged audio and performance starts with a shorter tail. plan_audio resolves the pinned voice and each line's scene direction into raw generator arguments, refusing unregistered selected samples and stale shared voices; gateway arguments include a revision-bound speechContext and attach_audio requires its completed receiptPath; plan_video resolves the selected adapter's capabilities (tool names the shot's video tool when it differs from the saved default operation) and carries the same acting/timing context. A native-speech shot (MSR) needs no line audio: the clip speaks its prompt's lines, attach_video binds their revisions and sets sound.audioSource video, and a line edit marks the clip stale. For such a clip attach_video refuses a missing audio stream (native_speech_missing) or a decoded silent soundtrack (native_speech_silent). Audio at the clip end warns of possible truncation; signal does not verify dialogue or voice identity. It also returns soundtrack: where the line starts and ends in the clip (loudness, not_reviewed), the silent seconds around it, and suggestedEdit {in, out} with suggestedDurationSeconds when silent acting the performance did not ask for surrounds the line. Nothing is trimmed here; apply it with storyboard_apply after listening. Attaching different footage to a trimmed native shot removes that trim and returns it as clearedTrim. Scene direction overrides baseline style without changing voice identity. Local files only: plans do not generate, listen, score or approve. Read first and pass expectedRevision for writes; unknown speakers, ambiguous targets, stale revisions and unsupported lip-sync routes fail. Keeps source backups.
 
 Do NOT use to generate media: call the planned raw TTS tool or selected video adapter, then attach the result. Do NOT use for read-only whole-story inspection: use storyboard_read instead. Never group different emotional beats or nonconsecutive shots by shared image and slice them into unrelated reactions.
 
@@ -130790,6 +130799,11 @@ function manageSpeech(args) {
       const bytes = readFileSync34(videoPath);
       if (!bytes.length) throw new Error("Video file is empty");
       const native = plan2.mode === "native";
+      const nativeAudio = native ? speechSpanContract().inspect(videoPath) : void 0;
+      if (nativeAudio?.status === "missing")
+        throw new Error("native_speech_missing: the video has no audio stream; regenerate the missing dialogue before attaching this clip");
+      if (nativeAudio?.status === "silent")
+        throw new Error("native_speech_silent: the decoded soundtrack is below -60 dBFS throughout; regenerate the missing dialogue before attaching this clip");
       const sound = object5(scene.sound);
       if (native && sound.audioSource === "speech") throw new Error("Native video speech lives in the clip soundtrack; sound.audioSource speech would drop it");
       const audio = selected.map(({ line }) => {
@@ -130852,7 +130866,7 @@ function manageSpeech(args) {
       }
       if (native) {
         try {
-          const span = speechSpanContract().measure(videoPath);
+          const span = nativeAudio?.span;
           if (span) {
             const trim = speechSpanContract().suggestTrim(span, scene);
             soundtrack = { ...span, method: "audio_energy", review: "not_reviewed", ...trim ? {
@@ -130860,6 +130874,9 @@ function manageSpeech(args) {
               suggestedDurationSeconds: trim.durationSeconds,
               note: "Silent acting surrounds the line. If the pause is not the story's, set these edit.in / edit.out source seconds and the shot duration with storyboard_apply; times inside the shot (sound.effects atSeconds, music starts) then count from the trimmed start. Listen first: loudness can miss a quiet first or last syllable."
             } : {} };
+            if (span.tailSilenceSeconds < 0.1) plan2.warnings.push("native_speech_end_at_boundary: audio activity reaches the clip end; inspect the final words for truncation before accepting or trimming. Energy does not verify complete dialogue.");
+          } else {
+            plan2.warnings.push("native_speech_audio_unverified: no sustained speech span could be measured; inspect audio presence and dialogue before accepting this clip.");
           }
         } catch {
         }

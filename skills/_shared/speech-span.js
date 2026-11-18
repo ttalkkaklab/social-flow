@@ -37,10 +37,18 @@ function spanOf(levels) {
 }
 
 /** Decode the speech band of a media file's first audio stream and measure its span. */
-function measure(file) {
+function inspect(file) {
   const run = spawnSync('ffmpeg', ['-v', 'error', '-nostdin', '-i', file, '-vn', '-ac', '1', '-ar', String(RATE),
     '-af', 'highpass=f=150,lowpass=f=3800', '-f', 's16le', '-'], { maxBuffer: 256 * 1024 * 1024 });
-  if (run.error || run.status !== 0 || run.stdout.length < 2) return null;
+  if (run.error || run.status !== 0 || run.stdout.length < 2) {
+    const probe = spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=codec_type', '-of', 'json', file], { encoding: 'utf8' });
+    try {
+      const streams = JSON.parse(probe.stdout).streams;
+      if (probe.status === 0 && streams?.some(s => s.codec_type === 'video') && !streams.some(s => s.codec_type === 'audio'))
+        return { status: 'missing', span: null };
+    } catch { /* A failed probe is unknown, not proof of missing audio. */ }
+    return { status: 'unverified', span: null };
+  }
   const samples = new Int16Array(run.stdout.buffer, run.stdout.byteOffset, Math.floor(run.stdout.length / 2));
   const hop = RATE * STEP, levels = [];
   for (let i = 0; i + hop <= samples.length; i += hop) {
@@ -50,9 +58,13 @@ function measure(file) {
   }
   const span = spanOf(levels);
   const clipSeconds = Math.round(samples.length / RATE * 100) / 100;
-  return span && { ...span, clipSeconds,
-    leadSilenceSeconds: span.startSeconds, tailSilenceSeconds: Math.round((clipSeconds - span.endSeconds) * 100) / 100 };
+  const peakDb = levels.length ? Math.max(...levels) : null;
+  return { status: peakDb !== null && peakDb < -60 ? 'silent' : 'unverified', peakDb, clipSeconds,
+    span: span && { ...span, clipSeconds,
+      leadSilenceSeconds: span.startSeconds, tailSilenceSeconds: Math.round((clipSeconds - span.endSeconds) * 100) / 100 } };
 }
+
+function measure(file) { return inspect(file).span; }
 
 /**
  * Seconds the performance itself places before its first line and after its last: timed
@@ -94,4 +106,4 @@ function suggestTrim(span, scene, frameRate = 24) {
   return { edit, durationSeconds: Math.round(((edit.out ?? span.clipSeconds) - (edit.in ?? 0)) * 1000) / 1000 };
 }
 
-module.exports = { spanOf, measure, authoredMargins, suggestTrim };
+module.exports = { spanOf, measure, inspect, authoredMargins, suggestTrim };
