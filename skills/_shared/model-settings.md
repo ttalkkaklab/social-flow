@@ -112,6 +112,15 @@ prices. A configured credential does not guarantee a successful generation.
    MSR with the dialogue in the prompt and each speaker's pinned voice sample when one
    exists ([GenAI MSR](astra-genai.md#msr-and-v2-video)); a speaker without a sample is
    voiced from the prompt.
+   **Hosted vendor APIs (2026-11-18).** Three more choices go through the common vendor
+   layer: MiniMax H3 `{engine:"minimax", model:"MiniMax-H3", resolution:"768P",
+   operation:"reference"}` (`MINIMAX_API_KEY`), HeyGen Video 1 `{engine:"heygen",
+   model:"heygen-video-1", resolution:"768p", operation:"reference"}` (`HEYGEN_API_KEY`)
+   and the official LTX API `{engine:"ltx-api", model:"ltx-2-5-pro", resolution:"1920x1080",
+   operation:"audio"}` (`LTX_API_KEY`; `1080x1920` for 9:16). MiniMax and HeyGen take a
+   speaker's voice sample but cannot pin the start image as the first frame in the same
+   call; LTX takes no voice sample, so its spoken cuts use the pinned TTS track. Prices and
+   field contracts: [API schemas](../../docs/research/2026-11-18-video-model-api-schemas/README.md).
 2. **Image model.** Recommend **ASTRA GenAI** first for images without readable
    text: save `engine:"astra-genai", model:"z-image-turbo"` after the user's choice.
    This is the GenAI gateway, not local mflux (`engine:"zimage"`). Check
@@ -146,6 +155,11 @@ prices. A configured credential does not guarantee a successful generation.
    valid; new music generation reports `music_setup_required` until a choice exists.
    Reusing a channel bed requires no music model choice. A configured model is not
    spending authorization. See [music routing](music-routing.md).
+   **Music direction.** `production.musicDirection` keeps what the user has said about music
+   on this channel: up to 20 dated one-sentence notes, e.g. `"2026-11-08 user: music under
+   every shot is too much; score the turns"`. Add a note with `project_manage update` (pass
+   the whole `production` block with the new list) in the turn the user gives the feedback.
+   `story_music` shows the list at every spotting, so the next episode starts from it.
 
 Complete each model selection and its credential step below before asking for the next category.
 Do not batch video, image and speech choices ahead of credential setup. Reuse

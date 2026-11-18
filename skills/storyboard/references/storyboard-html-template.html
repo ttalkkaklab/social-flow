@@ -298,6 +298,32 @@
   .sec .aside { float: right; font-weight: 500; letter-spacing: 0; color: var(--faint); }
 
   /* ── Section menu ─────────────────────────────────────── */
+  .shot-nav {
+    position: sticky; top: 8px; z-index: 30;
+    display: flex; align-items: flex-start; gap: var(--s3);
+    margin-bottom: var(--s4); padding: var(--s3);
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; box-shadow: var(--shadow);
+  }
+  .shot-nav-label { flex: none; padding-block: 12px; font-size: var(--t-cap); font-weight: 700; }
+  .shot-nav-links {
+    display: flex; flex-wrap: wrap; gap: 4px; min-width: 0;
+    max-height: min(24vh, 188px); overflow-y: auto; overscroll-behavior: contain;
+  }
+  .shot-nav a {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 44px; min-height: 44px; padding: 4px 8px;
+    border: 1px solid var(--hair); border-radius: 8px;
+    background: var(--sunk); color: var(--text); text-decoration: none;
+    font-size: var(--t-cap); font-weight: 700; font-variant-numeric: tabular-nums;
+  }
+  .shot-nav a:hover, .shot-nav a[aria-current="location"] {
+    color: var(--accent-ink); border-color: var(--accent); background: var(--card);
+  }
+  .shot-nav a[aria-current="location"] { box-shadow: inset 0 0 0 1px var(--accent); }
+  .shot-nav a:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+  .review-board .scene, .review-board .sec { scroll-margin-top: var(--shot-nav-offset, 24px); }
+  @media print { .shot-nav { display: none; } }
   .docnav {
     position: sticky; top: 0; z-index: 20;
     display: flex; flex-wrap: wrap; gap: var(--s1);
@@ -749,6 +775,13 @@
   .shot-setting { margin: var(--s2) 0 0; font-size: var(--t-aux); color: var(--muted); }
   .shot-frame-plan { margin: var(--s2) 0 0; font-size: var(--t-aux); color: var(--muted); }
   .shot-frame-plan b { color: var(--text); font-weight: 600; }
+  .production-review { margin-top: var(--s3); padding: var(--s3); border: 1px solid var(--line); border-radius: 10px; }
+  .production-takes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: var(--s3); }
+  .production-take { min-width: 0; padding: var(--s3); background: var(--sunk); }
+  .production-take video { width: 100%; max-height: 320px; }
+  .production-take dl { display: grid; grid-template-columns: minmax(80px, 1fr) 2fr; gap: 6px; font-size: var(--t-cap); }
+  .production-take dd { margin: 0; overflow-wrap: anywhere; }
+  .production-take pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 360px; overflow: auto; font-size: 12px; }
   .shot-prompt + .shot-prompt { margin-top: var(--s3); }
   .shot-prompt b { display: block; margin-bottom: 6px; font-size: var(--t-cap); color: var(--faint); }
   .shot-prompt pre { margin: 0; max-height: 320px; overflow: auto; padding: 10px 12px; border-radius: 10px; background: var(--sunk); font: 12px/1.55 ui-monospace, Menlo, monospace; white-space: pre-wrap; word-break: break-word; }
@@ -848,6 +881,8 @@
   .size-ico.c-follow { background: linear-gradient(150deg, #6fd88a, #23995a); }
   .size-ico.c-rise { background: linear-gradient(150deg, #ffd25e, #e0901a); }
   .size-ico.c-body { background: linear-gradient(150deg, #ff8a8a, #d63c5a); }
+  /* Beat accents ride on a move, so a shot can show one beside its move chip */
+  .size-ico.c-accent { background: linear-gradient(150deg, #f29be0, #b0379a); }
   /* Transition families — a hard change, a blend through or over the old picture, a moving wipe */
   .size-ico.t-cut { background: linear-gradient(150deg, #9aa6b8, #4b5566); }
   .size-ico.t-blend { background: linear-gradient(150deg, #f29ad8, #a83fa0); }
@@ -878,6 +913,9 @@
   .shot-cast .shot-cast-face { flex: none; width: 36px; height: 36px; cursor: default; box-shadow: 0 0 0 2px var(--card); }
   .shot-cast .shot-cast-face + .shot-cast-face { margin-left: 6px; }
   .shot-cast .shot-cast-face:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  /* A bystander (visual.bystanders) and the extras mark (visual.extras): seen, without a line or a video reference */
+  .shot-cast .shot-cast-bystander { opacity: .55; }
+  .shot-cast .shot-cast-extras { font-size: 15px; }
   .cam-group { display: flex; flex-wrap: wrap; gap: var(--s3) var(--s1); padding: var(--s2) var(--s3); border: 1px solid var(--hair); border-radius: 10px; background: var(--card); }
   .cam-group .kt { flex-basis: 100%; }
   .cam-group .k { width: 62px; }
@@ -1351,6 +1389,10 @@
     .fr, .badge, .tl-seg { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
 .motion-plan{flex-basis:100%;padding:12px 0;font-size:13px;line-height:1.5}.motion-plan p{margin:4px 0}.motion-plan small{opacity:.7}
+.story-language{position:fixed;z-index:100;top:12px;right:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:calc(100vw - 32px);padding:8px 12px;background:var(--paper,#fff);color:var(--ink,#222);border:1px solid #aaa6;border-radius:16px;box-shadow:0 4px 20px #0002;font-size:13px}
+.story-language select{min-height:44px;background:transparent;color:inherit;border:0;font:inherit;max-width:140px}.story-language small{flex-basis:100%;font-size:10px;opacity:.7}
+@media(max-width:1023px){body.review-board:has(.story-language){padding-top:100px}.story-language{top:8px;right:8px;max-width:calc(100vw - 16px)}}
+@media print{.story-language{display:none}}
 </style>
 <link rel="stylesheet" href="./review.css">
 </head>
@@ -1359,6 +1401,9 @@
 
 <script src="./review-typography.js"></script>
 <script src="./review-files.js"></script>
+<script src="./review-localization.js"></script>
+<script src="./video-production.js"></script>
+<script src="./video-production-data.js"></script>
 <script src="./location-review-data.js"></script>
 <!-- video_approve writes it once the user approves a shot's video; absent until then -->
 <script src="./video-approvals.js"></script>
@@ -1618,7 +1663,7 @@ window.STORYBOARD_READY = (async function () {
       angleKey: "camera angle",
       depthKey: "depth of field",
       camMoveKey: "camera move · one per shot", camFocusKey: "focus · adds to a move",
-      camGroup: { fix: "Locked", travel: "Travel", lens: "Lens", turn: "Rotate", follow: "Follow", rise: "Orbit · height", body: "Body-mounted" },
+      camGroup: { fix: "Locked", travel: "Travel", lens: "Lens", turn: "Rotate", follow: "Follow", rise: "Orbit · height", body: "Body-mounted", accent: "Beat accent" },
       depth: { shallow: "shallow depth", deep: "deep focus", none: "no depth choice", unset: "depth not planned" },
       depthHint: {
         shallow: "One plane stays sharp and the rest falls soft. Name the sharp target: whose eye, which object. A blurred background is never the default.",
@@ -1990,7 +2035,7 @@ window.STORYBOARD_READY = (async function () {
       angleKey: "카메라 앵글",
       depthKey: "심도",
       camMoveKey: "카메라 이동 · 샷당 하나", camFocusKey: "초점 · 이동에 더함",
-      camGroup: { fix: "고정", travel: "앞뒤 이동", lens: "렌즈", turn: "회전", follow: "따라가기", rise: "궤도·높이", body: "몸에 붙은 카메라" },
+      camGroup: { fix: "고정", travel: "앞뒤 이동", lens: "렌즈", turn: "회전", follow: "따라가기", rise: "궤도·높이", body: "몸에 붙은 카메라", accent: "순간 강조" },
       depth: { shallow: "얕은 심도", deep: "딥포커스", none: "심도 선택 없음", unset: "심도 미설정" },
       depthHint: { unset: "이 샷에는 심도 계획이 기록되지 않았습니다." },
       depthRule: "출발점: 읽을 정보 1개 → 얕은 심도, 2개 이상 → 딥포커스, 또는 랙 포커스로 초점을 넘깁니다. 다르게 고르면 이유를 적습니다.",
@@ -2297,6 +2342,9 @@ window.STORYBOARD_READY = (async function () {
     return "en";
   }
   var LANG = pickLang();
+  var contentRequested = new URLSearchParams(location.search).get('storyLang');
+  if (!contentRequested) try { contentRequested = localStorage.getItem('social-flow.storyLang'); } catch (e) { /* offline storage may be disabled */ }
+  var CONTENT = window.ReviewLocalization.reader(window.REVIEW_LOCALIZATION, contentRequested);
   // English backs every key, so an untranslated entry shows an English word, not an undefined.
   var T = Object.assign({}, STRINGS.en, STRINGS[LANG] || {});
   /* The tables merge one level deeper. A language that translates most of a table but not all
@@ -2307,7 +2355,7 @@ window.STORYBOARD_READY = (async function () {
     T[k] = Object.assign({}, STRINGS.en[k], (STRINGS[LANG] || {})[k]);
   });
   document.documentElement.lang = LANG;
-  var fontFailures = await window.ReviewTypography.prepare(DOC, SCENES);
+  var fontFailures = await window.ReviewTypography.prepare(DOC, SCENES, [CONTENT.language]);
 
   /* ── Author-language heuristics ──
      These read scenes.js, which is written in the channel's language — not the reviewer's — so
@@ -2316,7 +2364,7 @@ window.STORYBOARD_READY = (async function () {
   /* AUTHOR-LANGUAGE BLOCK START — the language check cuts everything between the markers */
   var SEQ_RE = { result: /^결과/, body: /^(기획|방법|내용)/,
                  drip: /^(풀기|호기심|단계)/, hooking: /^(문제|후킹)/, turn: /^(전환|반전)/ };
-  var LETTERS_RE = /[^가-힣A-Za-z0-9]/g;   // caption ↔ line comparison: keep letters and digits
+  var LETTERS_RE = /[^\p{L}\p{N}]/gu;   // caption ↔ line comparison: keep letters and digits, in any script
   /* AUTHOR-LANGUAGE BLOCK END */
 
   /* Long-form produces hard-to-read numbers like 900s — anything past 2 minutes is written in minutes. */
@@ -2332,11 +2380,12 @@ window.STORYBOARD_READY = (async function () {
 
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
     return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function copy(s) { return esc(CONTENT.text(s)); }
   function strip(s) { return String(s == null ? "" : s).replace(/\*\*/g, ""); }
   /** **emphasis** in the document body — restrained color emphasis */
-  function mark(s) { return esc(s).replace(/\*\*(.+?)\*\*/g, '<span class="mark">$1</span>'); }
+  function mark(s) { return copy(s).replace(/\*\*(.+?)\*\*/g, '<span class="mark">$1</span>'); }
   /** **emphasis** inside a frame — the gradient, the way it actually renders */
-  function femph(s) { return esc(s).replace(/\*\*(.+?)\*\*/g, '<span class="f-em">$1</span>'); }
+  function femph(s) { return copy(s).replace(/\*\*(.+?)\*\*/g, '<span class="f-em">$1</span>'); }
   // Character count: displayed = full length after ** is stripped / net = whitespace and punctuation excluded
   function dispLen(s) { return strip(s).length; }
   function netLen(s) { return strip(s).replace(/[\s.,·:;!?…"'“”‘’()\[\]〔〕\-–—~%]/g, "").length; }
@@ -2533,7 +2582,7 @@ window.STORYBOARD_READY = (async function () {
       (slots ? '<div class="ref-slots">' + slots + "</div>"
              : '<p class="shot-refs-none">' + (ko ? "이 방식은 시작·종료 이미지만 받습니다. 참조 이미지는 보내지 않습니다." : "This lane takes only the start and end images; no reference images are sent.") + "</p>") + "</div>";
     // Right: story (the shot's one-line summary), lines, prompt — CSS radio tabs
-    var story = s.summary ? '<p class="shot-story">' + esc(s.summary) + "</p>" : "";
+    var story = s.summary ? '<p class="shot-story">' + copy(s.summary) + "</p>" : "";
     // The place and props shot_image composed into the start image (SB_DOC.locations · SB_DOC.props)
     var docName = function (list, id) { var e = (Array.isArray(list) ? list : []).filter(function (x) { return x && x.id === id; })[0]; return (e && e.name) || id; };
     var setting = [(s.visual || {}).locationId ? (ko ? "장소 " : "Place ") + docName(DOC.locations, s.visual.locationId) : "",
@@ -2617,23 +2666,29 @@ window.STORYBOARD_READY = (async function () {
       (n.id ? ' data-line-id="' + esc(n.id) + '"' : '') + '>' + avatar + '<div class="speech-content">' +
       '<div class="speech-meta"><b>' + esc(name) + '</b>' + (narrator ? '<span>' + esc(T.speechNarrator) + '</span>' : '') +
       '<span class="speech-delivery">' + esc(T.speechDelivery[delivery] || delivery) + '</span></div>' +
-      '<div class="speech-bubble"><p class="speech-text">' + esc(n.tts || n.sub || '') + '</p>' +
-      (n.sub && strip(n.tts) !== strip(n.sub) ? '<div class="sub-diff"><b>' + esc(T.subtitleLabel) + '</b> ' + '<span class="speech-subtitle">' + esc(n.sub) + '</span></div>' : '') + '</div>' +
-      (n.deliveryReason ? '<p class="speech-reason">' + esc(n.deliveryReason) + '</p>' : '') +
+      '<div class="speech-bubble"><p class="speech-text">' + copy(n.tts || n.sub || '') + '</p>' +
+      (n.sub && strip(n.tts) !== strip(n.sub) ? '<div class="sub-diff"><b>' + esc(T.subtitleLabel) + '</b> ' + '<span class="speech-subtitle">' + copy(n.sub) + '</span></div>' : '') + '</div>' +
+      (n.deliveryReason ? '<p class="speech-reason">' + copy(n.deliveryReason) + '</p>' : '') +
       '<div class="speech-reference">' + (index + 1) + (n.id ? ' · ' + esc(n.id) : '') + ' · ' + esc(T.chars(netLen(n.tts || n.sub))) + '</div>' +
       '</div></div>';
   }
   /* The two principal characters MSR references (visual.character — an id or an { id, scope }
      entry), else a legacy visual.characters list: face panels at the far end of the icon row,
-     the name in the tooltip. */
+     the name in the tooltip. A bystander (visual.bystanders) follows dimmed, and unnamed
+     extras (visual.extras) as one mark with their description in the tooltip. */
   function castFacesHtml(s) {
     var vis = s.visual || {}, ids = charsOf(s);
     if (!ids.length && Array.isArray(vis.characters)) ids = vis.characters.map(function (c) { return c && typeof c === "object" ? c.id : c; });
-    return ids.filter(function (id) { return typeof id === "string" && id; }).slice(0, 2).map(function (id) {
-      var name = castName(id), pic = portraitOf(id);
-      return '<span class="speech-avatar shot-cast-face" tabindex="0" role="img" aria-label="' + esc(name) + '" data-tip="' + esc(name) + '"><span>' +
+    var face = function (id, extra, tip) {
+      var name = castName(id), pic = portraitOf(id), label = name + (tip ? " · " + tip : "");
+      return '<span class="speech-avatar shot-cast-face' + extra + '" tabindex="0" role="img" aria-label="' + esc(label) + '" data-tip="' + esc(label) + '"><span>' +
         esc(Array.from(name)[0]) + "</span>" + (pic ? '<img src="' + esc(pic) + '" alt="" loading="lazy" onerror="this.hidden=true">' : "") + "</span>";
-    }).join("");
+    };
+    var named = function (id) { return typeof id === "string" && id; };
+    return ids.filter(named).slice(0, 2).map(function (id) { return face(id, "", ""); }).join("") +
+      (Array.isArray(vis.bystanders) ? vis.bystanders : []).filter(named).map(function (id) { return face(id, " shot-cast-bystander", LANG === "ko" ? "대사 없이 화면에 있음" : "in frame, no line"); }).join("") +
+      (typeof vis.extras === "string" && vis.extras.trim() ? '<span class="speech-avatar shot-cast-face shot-cast-extras" tabindex="0" role="img" aria-label="' + esc(vis.extras.trim()) +
+        '" data-tip="' + esc((LANG === "ko" ? "엑스트라: " : "Extras: ") + vis.extras.trim()) + '"><span>+</span></span>' : "");
   }
   // The render chip's tooltip: the route, then the purpose and reason shot_icons took with it (shot.render)
   function renderTip(mode, render) {
@@ -2787,12 +2842,13 @@ window.STORYBOARD_READY = (async function () {
      the angle tiles, and the arrow is its path; a lens move redraws the frame instead. */
   var CAM_GROUPS = [
     ["fix", ["camera.static"]],
-    ["travel", ["camera.dolly-in", "camera.dolly-out", "camera.push-past", "camera.drone-pullback"]],
-    ["lens", ["camera.slow-zoom-in", "camera.dolly-zoom"]],
+    ["travel", ["camera.dolly-in", "camera.dolly-out", "camera.push-past", "camera.drone-pullback", "camera.blast-pushback", "camera.drone-dive"]],
+    ["lens", ["camera.slow-zoom-in", "camera.dolly-zoom", "camera.crash-zoom"]],
     ["turn", ["camera.pan-left", "camera.pan-right", "camera.tilt-up", "camera.tilt-down", "camera.whip-pan"]],
-    ["follow", ["camera.follow", "camera.reverse-tracking", "camera.side-tracking"]],
+    ["follow", ["camera.follow", "camera.reverse-tracking", "camera.side-tracking", "camera.pass-through"]],
     ["rise", ["camera.arc", "camera.crane-up"]],
-    ["body", ["camera.handheld", "camera.snorricam"]]
+    ["body", ["camera.handheld", "camera.snorricam", "camera.weapon-cam", "camera.relay"]],
+    ["accent", ["camera.speed-ramp", "camera.impact-shake"]]
   ];
   var CAM_FAMILY = { "camera.rack-focus": "d-depth" };
   CAM_GROUPS.forEach(function (g) { g[1].forEach(function (id) { CAM_FAMILY[id] = "c-" + g[0]; }); });
@@ -2813,6 +2869,11 @@ window.STORYBOARD_READY = (async function () {
       var x1 = cx + r * Math.cos(a1 * R), y1 = cy + r * Math.sin(a1 * R);
       return '<path d="M' + f(cx + r * Math.cos(a0 * R)) + " " + f(cy + r * Math.sin(a0 * R)) + "A" + r + " " + r + " 0 0 " + (s > 0 ? 1 : 0) + " " + f(x1) + " " + f(y1) +
         tip(x1, y1, -s * Math.sin(a1 * R), s * Math.cos(a1 * R)) + '"/>';
+    }
+    // A fast move: the arrow carries a second head behind the first
+    function fast(x1, y1, x2, y2) {
+      var l = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1)), ux = (x2 - x1) / l, uy = (y2 - y1) / l;
+      return line(x1, y1, x2, y2) + '<path d="' + tip(x2 - ux * 3.2, y2 - uy * 3.2, ux, uy) + '"/>';
     }
     var rails = '<path d="M3 27.5h17" class="ico-dim"/>', pan = O(16, 24, 2.6);
     return {
@@ -2840,7 +2901,24 @@ window.STORYBOARD_READY = (async function () {
         '<path d="M5 27q2.75-3 5.5 0t5.5 0 5.5 0 5.5 0"/>',
       "camera.snorricam": '<circle cx="12" cy="11" r="4.5"/><path d="M4 29q0-9.5 8-9.5t8 9.5"/><path d="M17 23.5h9.5V12.5"/>' +
         O(26.5, 9, 2.6) + '<path d="M23.5 9.5h-5" class="ico-dim"/>',
-      "camera.rack-focus": '<g style="opacity:.32">' + DEPTH_NEAR + "</g>" + DEPTH_FAR + line(9.5, 8.5, 18.5, 5.5)
+      "camera.rack-focus": '<g style="opacity:.32">' + DEPTH_NEAR + "</g>" + DEPTH_FAR + line(9.5, 8.5, 18.5, 5.5),
+      // Action moves: the lens snaps in from every corner, the blast throws the camera back, the camera rides a projectile,
+      // flies through two openings, levels then dives, or hops between fighters inside one take.
+      "camera.crash-zoom": '<rect x="4" y="6" width="24" height="20" rx="3" class="ico-dim"/><rect x="13.5" y="13" width="5" height="6" rx="1.2"/>' +
+        line(5.5, 7.5, 11, 11) + line(26.5, 24.5, 21, 21) + line(26.5, 7.5, 21, 11) + line(5.5, 24.5, 11, 21),
+      "camera.blast-pushback": O(12.5, 16) + fast(9.5, 16, 2.5, 16) + '<path d="M19.5 11.5a6.5 6.5 0 0 0 0 9M16.5 8.5a11 11 0 0 0 0 15" class="ico-dim"/>' +
+        '<path d="M26 11.5v9M22.2 13.8l7.6 4.4M22.2 18.2l7.6-4.4"/>',
+      "camera.weapon-cam": '<path d="M3.5 20.5l2.5 5M1.5 23l5 .5" class="ico-dim"/>' + line(4, 23, 21, 12.6) + O(10.5, 19, 2.6) +
+        '<circle cx="26.5" cy="9" r="3.8"/><circle cx="26.5" cy="9" r="1" class="ico-fill"/>',
+      "camera.pass-through": '<path d="M11.5 4v8.5M11.5 19.5V28M20.5 4v8.5M20.5 19.5V28"/>' + O(3.6, 16, 2.2) + fast(6.8, 16, 29, 16),
+      "camera.drone-dive": '<path d="M3 5h4.5M9.5 5H14M5.5 5v2.5M11.5 5v2.5M5 7.5h7"/>' + O(8.5, 9.9, 1.6) +
+        '<path d="M3 16.5h14.5V28" class="ico-dim"/><path d="M13.5 11.5h6.5q5 0 5 5"/>' + line(25, 16, 25, 28),
+      "camera.relay": '<circle cx="6" cy="6.5" r="2.8"/><circle cx="16" cy="6.5" r="2.8"/><circle cx="26" cy="6.5" r="2.8"/>' +
+        turn(10.5, 13, 4.2, 180, 0) + turn(20.5, 13, 4.2, 180, 0) + '<path d="M4 25h8M20 25h8" class="ico-dim"/>' + O(16, 25, 2.6),
+      // Beat accents: speed dips to a near stop at one moment; the frame jolts once and settles
+      "camera.speed-ramp": '<path d="M3 27.5h26" class="ico-dim"/><path d="M3 8h6.5l4.5 15h4l4.5-15H29"/>',
+      "camera.impact-shake": '<rect x="6" y="4.5" width="20" height="13" rx="2.5"/><path d="M3 6v4.5M29 11.5V16" class="ico-dim"/>' +
+        '<path d="M3 25h8.5l2-4.5 3 8.5 2-6 1.5 2H29"/>'
     };
   })();
   function camIcon(id) {
@@ -3322,29 +3400,29 @@ window.STORYBOARD_READY = (async function () {
     // overlay none is the picture alone — even an empty text slot lays a film over the preview.
 
     if (overlayOf(s) === "none") {
-      if (seg && seg.sub) h += '<div class="f-sub">' + esc(seg.sub) + "</div>";
+      if (seg && seg.sub) h += '<div class="f-sub">' + copy(seg.sub) + "</div>";
       h += '<div class="fsafe"></div></div>';
       return h;
     }
 
     if (recTall(s)) {
       h += '<div class="f-band">' + esc(T.recordedScreen) + '</div><div class="f-top">';
-      if (s.kicker) h += '<div class="f-kicker">' + esc(s.kicker) + "</div>";
+      if (s.kicker) h += '<div class="f-kicker">' + copy(s.kicker) + "</div>";
       h += '<div class="f-title">' + femph(s.title || "") + "</div>";
       if (s.type === "cover" && s.stat)
         h += '<div class="f-statrow"><div class="f-stat f-em">' + esc(s.stat) + "</div>" +
-             (s.statLabel ? '<div class="f-statlabel">' + esc(s.statLabel) + "</div>" : "") + "</div>";
+             (s.statLabel ? '<div class="f-statlabel">' + copy(s.statLabel) + "</div>" : "") + "</div>";
       h += "</div>";
     } else if (s.type === "cover") {
       // In illustration (light) mode the cover anchors to the top — the body.light branch in video-template.html
       h += '<div class="fzone' + (light ? " top" : "") + '">';
-      if (s.kicker) h += '<div class="f-kicker">' + esc(s.kicker) + "</div>";
+      if (s.kicker) h += '<div class="f-kicker">' + copy(s.kicker) + "</div>";
       h += '<div class="f-title">' + femph(s.title || "") + "</div>";
       if (s.stat)
         h += '<div class="f-statwrap' + (idx < 1 ? " fhide" : "") + '"><div class="f-stat f-em"' +
              (statScale ? ' style="--stat-fs:' + statScale.toFixed(5) + '"' : "") +
              ">" + esc(s.stat) + "</div>" +
-             (s.statLabel ? '<div class="f-statlabel">' + esc(s.statLabel) + "</div>" : "") + "</div>";
+             (s.statLabel ? '<div class="f-statlabel">' + copy(s.statLabel) + "</div>" : "") + "</div>";
       h += "</div>";
     } else if (s.type === "points") {
       // A landscape shooting scene uses the lower third (bottom left of the zone) — the same spot as .zone.l3 in video-template.
@@ -3356,7 +3434,7 @@ window.STORYBOARD_READY = (async function () {
           return '<div class="f-cap' + (k === st.cap ? "" : " fhide") + '"><div class="t">' + femph(b.t) + "</div>" +
                  (b.d ? '<div class="d">' + esc(b.d) + "</div>" : "") + "</div>"; }).join("") + "</div>";
       }
-      if (s.footnote) h += '<div class="f-foot">' + esc(s.footnote) + "</div>";
+      if (s.footnote) h += '<div class="f-foot">' + copy(s.footnote) + "</div>";
       h += "</div>";
     } else if (s.type === "quote") {
       // When a speech clip is planned, produce captures with alpha — only the signature goes
@@ -3372,10 +3450,10 @@ window.STORYBOARD_READY = (async function () {
     } else if (s.type === "outro") {
       h += '<div class="fzone center"><div class="f-obrand f-em">' + esc(THEME.brand || "") + "</div>" +
            '<div class="f-otitle">' + femph(s.title || "") + "</div>" +
-           (s.sub ? '<div class="f-osub">' + esc(s.sub) + "</div>" : "") + "</div>";
+           (s.sub ? '<div class="f-osub">' + copy(s.sub) + "</div>" : "") + "</div>";
     }
 
-    if (seg && seg.sub) h += '<div class="f-sub">' + esc(seg.sub) + "</div>";
+    if (seg && seg.sub) h += '<div class="f-sub">' + copy(seg.sub) + "</div>";
     h += '<div class="fsafe"></div></div>';
     return h;
   }
@@ -3609,7 +3687,7 @@ window.STORYBOARD_READY = (async function () {
       // 2026-08-14). Caption k appears together with segment k+1 — if that line contains the
       // caption wording verbatim, the same words arrive twice, by eye and by ear. The subtitle
       // is already writing that sentence out.
-      // To see past differences in particles and endings, only Hangul and alphanumerics are kept
+      // To see past differences in particles and endings, only letters and digits are kept
       // for the comparison, and short fragments (under 4 characters) are not counted.
       // Burn-in formats only — long-form (burn:false) doesn't burn subtitles, so for a viewer who
       // never turns them on the caption is the only place that value lands. Over-detection
@@ -3654,7 +3732,7 @@ window.STORYBOARD_READY = (async function () {
   var channelName = DOC.channelName || DOC.channel || THEME.brand;
   h += '<div class="doc-kicker">' + esc(channelName) +
        (DOC.series && DOC.series !== channelName ? " · " + esc(DOC.series) : "") + "</div>";
-  h += '<h1 class="doc-title">' + esc(DOC.displayTitle || DOC.topic || "") + "</h1>";
+  h += '<h1 class="doc-title">' + copy(DOC.displayTitle || DOC.topic || "") + "</h1>";
   if (THEME.motionGraphicTheme) {
     var commonMotion = THEME.motionGraphicTheme;
     var commonMotionInfo = window.MOTION_GRAPHICS && MOTION_GRAPHICS.THEMES[commonMotion.id];
@@ -4590,8 +4668,8 @@ window.STORYBOARD_READY = (async function () {
     var out = '<h2 class="sec" id="scenario">' + esc(T.scenarioHead) +
               '<span class="aside">' + esc(T.scenarioAside) + "</span></h2>";
     out += '<div class="scenario-summary">' +
-      '<div class="scenario-card"><span class="k">' + esc(T.scenarioDirection) + '</span><div class="v"><b>' + esc(SCENARIO.direction || "—") + '</b></div></div>' +
-      '<div class="scenario-card"><span class="k">' + esc(T.scenarioMessage) + '</span><div class="v"><b>' + esc(SCENARIO.message || "—") + '</b></div></div>' +
+      '<div class="scenario-card"><span class="k">' + esc(T.scenarioDirection) + '</span><div class="v"><b>' + copy(SCENARIO.direction || "—") + '</b></div></div>' +
+      '<div class="scenario-card"><span class="k">' + esc(T.scenarioMessage) + '</span><div class="v"><b>' + copy(SCENARIO.message || "—") + '</b></div></div>' +
       '<div class="scenario-card wide"><span class="k">' + esc(T.scenarioWow) + '</span><div class="v"><small>' + esc(T.scenarioBelief) + '</small> ' +
         mark(SCENARIO.wow_belief || "—") + '<span class="scenario-arrow">→</span><small>' + esc(T.scenarioTruth) + '</small> ' + mark(SCENARIO.wow_truth || "—") +
         '<br><span class="badge">' + esc(T.scenarioType) + ' · ' + esc(SCENARIO.wow_type || "—") + '</span> ' +
@@ -4810,6 +4888,14 @@ window.STORYBOARD_READY = (async function () {
          return '<option value="' + code + '"' + (code === LANG ? " selected" : "") + ">" +
                 esc(LANG_LABELS[code] || code) + "</option>"; }).join("") +
        "</select></nav>";
+  if (CONTENT.languages.length) {
+    h += '<aside class="story-language" aria-label="Story language"><label for="story-language">🌐 <span>' +
+      (LANG === 'ko' ? '이야기·대사' : 'Story & dialogue') + '</span></label>' +
+      '<select id="story-language" aria-label="Story and dialogue language">' + CONTENT.languages.map(function (code) {
+        return '<option value="' + code + '"' + (code === CONTENT.language ? ' selected' : '') + '>' + esc(CONTENT.labels[code] || code) + '</option>';
+      }).join('') + '</select><small>' + CONTENT.translated + '/' + CONTENT.total +
+      (LANG === 'ko' ? ' 번역 · 미번역은 원문' : ' translated · missing text uses source') + '</small></aside>';
+  }
 
   /* ══ Scenario handoff ══ — absent on older boards, so they draw exactly as before */
   if (SCENARIO) h += scenarioSection();
@@ -4861,7 +4947,13 @@ window.STORYBOARD_READY = (async function () {
   var cueAt = [], cueNow = MUSIC && MUSIC.base ? "base" : "";
   var musicAuthored = SCENES.some(function (s) { var d = s.sound; return d && (d.cue || d.drop || (Array.isArray(d.silence) && d.silence.length)); });
   SCENES.forEach(function (s, i) { if (s.sound && s.sound.cue) cueNow = s.sound.cue; cueAt[i] = cueNow; });
-  var musicLane = function (items) {
+  /* A scene header passes its STRUCTURE scene: the lane then carries the decision story_music
+     recorded (scene.music) and its reason, and a story-first scene nobody decided reads
+     "undecided", so silence on the page is a choice somebody made. */
+  var storyFirst = !!(window.STORY && window.STORY.authoring === "story-first");
+  var musicLane = function (items, scene) {
+    var decided = scene && scene.music && (scene.music.decision === "score" || scene.music.decision === "none") ? scene.music : null;
+    var undecided = scene && storyFirst && !decided;
     if (MUSIC && Array.isArray(MUSIC.$timeline)) {
       var anchorText = function (a) { return a.shotId + (a.atSeconds === "end" ? (LANG === "ko" ? " 끝" : " end") : " +" + a.atSeconds + "s"); };
       var spans = MUSIC.$timeline.filter(function (span) {
@@ -4875,9 +4967,12 @@ window.STORYBOARD_READY = (async function () {
       });
       var text = spans.length ? spans.map(function (span) {
         return span.cue + " (" + anchorText(span.start) + " → " + anchorText(span.end) + ")";
-      }).join(" · ") : (LANG === "ko" ? "음악 없음" : "No score");
-      return '<span class="music-lane">' + esc(text) + '</span>';
+      }).join(" · ") : undecided ? (LANG === "ko" ? "음악 미정" : "Music undecided") : (LANG === "ko" ? "음악 없음" : "No score");
+      if (spans.length && undecided) text += LANG === "ko" ? " · 결정 미기록" : " · decision not recorded";
+      if (decided && decided.reason) text += " — " + decided.reason;
+      return '<span class="music-lane">' + esc("♪ " + text) + '</span>';
     }
+    if (undecided && !musicAuthored) return '<span class="music-lane">' + esc(LANG === "ko" ? "♪ 음악 미정" : "♪ Music undecided") + '</span>';
     if (!musicAuthored) return "";
     var names = [], gaps = 0;
     items.forEach(function (it) {
@@ -4888,6 +4983,7 @@ window.STORYBOARD_READY = (async function () {
     var tip = names.map(function (n) { return MUSIC && MUSIC[n] && MUSIC[n].reason ? n + " — " + MUSIC[n].reason : ""; }).filter(Boolean).join("\n");
     return '<span class="music-lane"' + (tip ? ' title="' + esc(tip) + '"' : "") + ">" + esc(T.musicLane(names, gaps)) + "</span>";
   };
+  if (window.VIDEO_PRODUCTION_REVIEW) h += window.VIDEO_PRODUCTION_REVIEW.renderSummary(window.VIDEO_PRODUCTION, LANG);
   var seqNo = 0, seqOpen = false;
   var seqHead = function (title, q, groups) {
     var shotsIn = groups.reduce(function (n, g) { return n + g.items.length; }, 0);
@@ -4895,9 +4991,9 @@ window.STORYBOARD_READY = (async function () {
     return '<details class="seq" open><summary class="seq-head">' +
       '<span class="seq-no">' + (seqNo < 10 ? "0" : "") + seqNo + "</span>" +
       '<span class="seq-main"><span class="seq-kicker">' + esc(T.seqKicker) + "</span>" +
-      '<span class="seq-title">' + esc(title) + "</span>" +
-      (q && q.purpose ? '<span class="seq-purpose">' + esc(q.purpose) + "</span>" : "") +
-      (q && q.question ? '<span class="seq-question">' + esc(q.question) + (q.payoff ? ' <b>→ S#' + esc(String(q.payoff)) + "</b>" : "") + "</span>" : "") +
+      '<span class="seq-title">' + copy(title) + "</span>" +
+      (q && q.purpose ? '<span class="seq-purpose">' + copy(q.purpose) + "</span>" : "") +
+      (q && q.question ? '<span class="seq-question">' + copy(q.question) + (q.payoff ? ' <b>→ S#' + esc(String(q.payoff)) + "</b>" : "") + "</span>" : "") +
       musicLane(groups.reduce(function (a, g) { return a.concat(g.items); }, [])) +
       "</span>" + '<span class="seq-stats">' + esc(T.seqStats(groups.length, shotsIn)) + "</span>" +
       '</summary><div class="seq-body">';
@@ -4921,10 +5017,10 @@ window.STORYBOARD_READY = (async function () {
       var scPlace = sc && sc.place ? ((window.SB_DOC && window.SB_DOC.locations) || []).filter(function (l) { return l && l.id === sc.place; })[0] : null;
       h += '<details class="scene-band" open><summary class="scene-band-head"><span class="sn"><small>' + esc(T.sceneKicker) + "</small><b>" + esc(String(grp.scene)) + "</b></span>" +
            '<span class="scene-band-main">' +
-           (scPlace || (sc && sc.place) ? '<span class="scene-band-kicker"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>' + esc(scPlace && scPlace.name || sc.place) + "</span>" : "") +
-           '<span class="scene-band-title">' + esc(scTitle) + "</span>" +
-           (scTurn ? '<span class="scene-turn">' + esc(scTurn) + "</span>" : "") + musicLane(grp.items) +
-           (scSummary ? '<p class="scene-band-synopsis">' + esc(scSummary) + "</p>" : "") +
+           (scPlace || (sc && sc.place) ? '<span class="scene-band-kicker"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>' + copy(scPlace && scPlace.name || sc.place) + "</span>" : "") +
+           '<span class="scene-band-title">' + copy(scTitle) + "</span>" +
+           (scTurn ? '<span class="scene-turn">' + copy(scTurn) + "</span>" : "") + musicLane(grp.items, sc) +
+           (scSummary ? '<p class="scene-band-synopsis">' + copy(scSummary) + "</p>" : "") +
            sceneOutHtml(sc) + "</span>" +
            '<span class="scene-band-stats">' + esc(T.shotsN(grp.items.length)) + (scLen !== null ? " · " + esc(durTxt(scLen)) : "") + "</span>" +
            '</summary><div class="scene-band-body">';
@@ -5062,6 +5158,10 @@ window.STORYBOARD_READY = (async function () {
     }
     if (focusSel) chips += chip(camIcon(focusSel.id), focusSel.entry.label[LANG], camTitle(focusSel.id) +
       (focusSel.from && focusSel.to ? "\n" + focusSel.from + " → " + focusSel.to : "") + (focusSel.reason ? "\n\n" + focusSel.reason : ""));
+    // Beat accents (speed ramp, impact shake) sit beside the move they ride on, each with the moment it fires on.
+    camSel.filter(function (t) { return t.entry.fields.accent; }).forEach(function (t) {
+      chips += chip(camIcon(t.id), t.entry.label[LANG], camTitle(t.id) + (t.on ? "\n" + t.on : "") + (t.reason ? "\n\n" + t.reason : ""));
+    });
     chips += chip(depthIcon(dmode), dlabel || T.depth.unset, dtip || T.depth.unset);
     if (msrLane(s, rmode))
       chips += chip('<svg class="size-ico r-msr" viewBox="0 0 32 32" aria-hidden="true"><text x="16" y="19.5" text-anchor="middle" font-size="10" font-weight="800" letter-spacing="-.3" class="ico-fill">MSR</text></svg>',
@@ -5102,6 +5202,7 @@ window.STORYBOARD_READY = (async function () {
       var states = revealsOf(s);
 
       h += shotBodyHtml(s, narr);
+      if (window.VIDEO_PRODUCTION_REVIEW) h += window.VIDEO_PRODUCTION_REVIEW.render(window.VIDEO_PRODUCTION, s.id, LANG);
 
       h += '<div id="image-references-' + esc(s.id || '') + '"></div>';
       var producedCuts = productionCutsHtml(s);
@@ -5454,6 +5555,13 @@ window.STORYBOARD_READY = (async function () {
       : '<div class="clean">' + esc(T.auditCleanNote) + "</div>");
 
   var langSel = document.getElementById("lang");
+  var storyLangSel = document.getElementById('story-language');
+  if (storyLangSel) storyLangSel.addEventListener('change', function () {
+    try { localStorage.setItem('social-flow.storyLang', storyLangSel.value); } catch (e) { /* storage blocked */ }
+    var u = new URL(location.href);
+    u.searchParams.set('storyLang', storyLangSel.value);
+    location.href = u.toString();
+  });
   if (langSel) langSel.addEventListener("change", function () {
     try { localStorage.setItem("social-flow.lang", langSel.value); } catch (e) { /* storage blocked */ }
     var u = new URL(location.href);
@@ -5463,6 +5571,9 @@ window.STORYBOARD_READY = (async function () {
 
 
   window.ReviewTypography.apply(DOC, SCENES);
+  if (CONTENT.language) app.querySelectorAll('.speech-text, .speech-subtitle, .shot-story, .scene-band-synopsis, .seq-title, .seq-purpose, .seq-question, .doc-title').forEach(function (node) {
+    node.setAttribute('lang', CONTENT.language);
+  });
   if (fontFailures.length) {
     var notice = document.createElement('p');
     notice.className = 'review-font-warning'; notice.setAttribute('role', 'status');
@@ -5470,7 +5581,7 @@ window.STORYBOARD_READY = (async function () {
     app.prepend(notice);
   }
   var who = DOC.channelName || DOC.channel || THEME.brand || "";
-  document.title = (DOC.displayTitle || DOC.topic || "Storyboard") + (who ? " — Storyboard · " + who : " — Storyboard");
+  document.title = CONTENT.text(DOC.displayTitle || DOC.topic || "Storyboard") + (who ? " — Storyboard · " + who : " — Storyboard");
 })();
 </script>
 <link rel="stylesheet" href="./location-review.css">
@@ -5496,6 +5607,59 @@ window.STORYBOARD_READY = window.STORYBOARD_READY.then(async function () {
       }; script.onerror = reject;
       document.body.appendChild(script);
     });
+  }
+  // Build from the rendered cards so numbering also matches boards with grouped scenes.
+  const cards = Array.from(document.querySelectorAll('.review-shots article.scene[id^="shot-"]'));
+  if (cards.length) {
+    const ko = document.documentElement.lang === 'ko';
+    const nav = document.createElement('nav');
+    nav.className = 'shot-nav'; nav.setAttribute('aria-label', ko ? '샷 바로가기' : 'Jump to shot');
+    const label = document.createElement('span');
+    label.className = 'shot-nav-label'; label.textContent = ko ? '샷' : 'Shot';
+    const list = document.createElement('div'); list.className = 'shot-nav-links';
+    const links = cards.map(function (card) {
+      const number = card.id.slice(5);
+      const link = document.createElement('a');
+      link.href = '#' + card.id; link.textContent = number.padStart(2, '0');
+      link.setAttribute('aria-label', ko ? '샷 ' + number + '번으로 이동' : 'Go to shot ' + number);
+      list.appendChild(link); return link;
+    });
+    nav.append(label, list); document.getElementById('app').prepend(nav);
+    let current = -1, pending = false;
+    function updateCurrent() {
+      pending = false;
+      const edge = nav.getBoundingClientRect().bottom + 24;
+      let next = -1;
+      for (let i = 0; i < cards.length; i++) {
+        if (cards[i].closest('details:not([open])')) continue;
+        if (cards[i].getBoundingClientRect().top > edge) break;
+        next = i;
+      }
+      if (next === current) return;
+      if (current >= 0) links[current].removeAttribute('aria-current');
+      current = next;
+      if (current >= 0) {
+        const link = links[current]; link.setAttribute('aria-current', 'location');
+        // Scroll only the number list; never move the document while tracking a shot.
+        const item = link.getBoundingClientRect(), bounds = list.getBoundingClientRect();
+        if (item.top < bounds.top) list.scrollTop += item.top - bounds.top;
+        else if (item.bottom > bounds.bottom) list.scrollTop += item.bottom - bounds.bottom;
+      }
+    }
+    function scheduleCurrent() {
+      if (!pending) { pending = true; requestAnimationFrame(updateCurrent); }
+    }
+    function measureNav() {
+      document.documentElement.style.setProperty('--shot-nav-offset', (nav.offsetHeight + 24) + 'px');
+      scheduleCurrent();
+    }
+    measureNav();
+    new ResizeObserver(measureNav).observe(nav);
+    window.addEventListener('scroll', scheduleCurrent, { passive: true });
+    window.addEventListener('resize', measureNav);
+    document.addEventListener('toggle', scheduleCurrent, true);
+    // review-layout.js handles these fragments locally, including the library's base URL.
+    nav.addEventListener('click', scheduleCurrent);
   }
   document.documentElement.dataset.reviewReady = 'true';
   if (/^#shot-\d+$/.test(location.hash)) {

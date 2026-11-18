@@ -8,7 +8,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 
 const require = createRequire(import.meta.url);
 const refs = path.resolve(import.meta.dirname, '../../skills/produce/references');
-const { timelineFindings, compileTimeline, resolveTimeline, renderTimeline } = require(path.join(refs, 'music-timeline.js'));
+const { timelineFindings, spottingReport, compileTimeline, resolveTimeline, renderTimeline } = require(path.join(refs, 'music-timeline.js'));
 const shots = [0, 1, 2].map(i => ({ id: `s000${i + 1}`, type: 'points', duration: 99 }));
 const rows = shots.map((_, i) => [String(i), String(i * 48), '48']);
 const span = { id: 'reaction', cue: 'piano', start: { shotId: 's0001', atSeconds: 1.25 }, end: { shotId: 's0003', atSeconds: 1 } };
@@ -120,6 +120,8 @@ test('full builder adds timeline music after editing without requiring a default
     const rendered = JSON.parse(readFileSync(path.join(work, 'work/music-timeline-resolved.json'), 'utf8'));
     assert.equal(rendered.spans[0].startSeconds, 1.25);
     assert.equal(rendered.spans[0].endSeconds, 5);
+    assert.ok(Number.isFinite(rendered.spans[0].separationLu), 'each span records its measured distance under the speech');
+    assert.match(readFileSync(path.join(work, 'build-report.txt'), 'utf8'), /⚠ music cue "piano": .*no generation receipt in this episode/);
     const bed = pcm(path.join(work, 'work/bed.wav'));
     assert.equal(rms(bed, 0, 1.25), 0); assert.ok(rms(bed, 2, 4) > 0.001); assert.equal(rms(bed, 5, 6), 0);
     const ducked = pcm(path.join(work, 'work/bed-ducked.wav'));
@@ -129,4 +131,55 @@ test('full builder adds timeline music after editing without requiring a default
     assert.equal(rms(pcm(path.join(work, 'work/bed.wav')), 0, 6), 0);
     assert.ok(rms(pcm(path.join(work, 'reel.mp4')), 0.2, 0.8) > 0.01, 'no score does not turn the film silent');
   } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('a span starts its cue at sourceStartSeconds, and a cue too short from there is reported as a loop', () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'music-offset-'));
+  try {
+    // 4 s at 300 Hz, then 4 s at 900 Hz: the pitch heard says which part of the cue the span plays.
+    const source = path.join(dir, 'cue.wav'), output = path.join(dir, 'bed.wav');
+    ff(['-f', 'lavfi', '-i', 'sine=frequency=300:duration=4:sample_rate=48000', '-f', 'lavfi', '-i', 'sine=frequency=900:duration=4:sample_rate=48000',
+      '-filter_complex', '[0:a][1:a]concat=n=2:v=0:a=1', '-ac', '2', source]);
+    const crossings = bytes => { let n = 0; for (let i = 2 * 48000 + 1; i < 3 * 48000; i++) if (bytes.readFloatLE(i * 4) >= 0 !== bytes.readFloatLE((i - 1) * 4) >= 0) n++; return n; };
+    const render = extra => renderTimeline(compileTimeline(music(extra), shots, () => source), rows, 24, 6, -30, output);
+    assert.deepEqual(render({}).warnings, []);
+    assert.ok(crossings(pcm(output)) < 700, 'without an offset the span plays the 300 Hz opening');
+    assert.deepEqual(render({ sourceStartSeconds: 4 }).warnings, []);
+    assert.ok(crossings(pcm(output)) > 1700, 'the offset moves the span to the 900 Hz section');
+    assert.match(render({ sourceStartSeconds: 6 }).warnings[0], /2\.0s from its start point for a 3\.8s span, so it loops/);
+    for (const late of [7.9, 8, 9]) assert.throws(() => render({ sourceStartSeconds: late }), /sourceStartSeconds leaves 0\.\d\ds of cue piano \(8\.000s long\) — start it earlier/, String(late));
+    assert.ok(timelineFindings(music({ sourceStartSeconds: -1 }), shots).length);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('a span resting further under the speech than the review line is reported with its measured distance', () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'music-quiet-'));
+  try {
+    const source = path.join(dir, 'cue.wav'), output = path.join(dir, 'bed.wav');
+    ff(['-f', 'lavfi', '-i', 'sine=frequency=437.3:duration=8:sample_rate=48000', '-ac', '2', source]);
+    // The bed target is 14 LU under a -16 LUFS voice; the authored gain decides the rest.
+    const render = gainDb => renderTimeline(compileTimeline(music({ gain: [{ atSeconds: 0, gainDb }] }), shots, () => source), rows, 24, 6, -30, output,
+      { speechLufs: -16, maximumSeparationLu: 20 });
+    const resting = render(0);
+    assert.deepEqual(resting.warnings, []);
+    assert.ok(Math.abs(resting.spans[0].separationLu - 14) < 1.5, String(resting.spans[0].separationLu));
+    const quiet = render(-12);
+    assert.ok(quiet.spans[0].separationLu > 24, String(quiet.spans[0].separationLu));
+    assert.match(quiet.warnings[0], /reaction: cue piano sits [\d.]+ LU under the speech before ducking \(review line 20 LU\)/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('a scene nobody decided reads undecided, and a decision the timeline contradicts is a mismatch', () => {
+  const report = spottingReport({
+    STRUCTURE: { sequences: [{ id: 'q1', payoff: 2, scenes: [1, 2, 3] }], scenes: [
+      { no: 1, music: { decision: 'none', reason: 'only the line' } }, { no: 2, turn: 'the letter is read', music: { decision: 'score', reason: 'regret', span: 'scene-2' } }, { no: 3 }] },
+    SCENES: [{ id: 's0001', scene: 1 }, { id: 's0002', scene: 2 }, { id: 's0003', scene: 3 }],
+    MUSIC: { piano: {}, $timeline: [{ id: 'early', cue: 'piano', start: { shotId: 's0001', atSeconds: 0 }, end: { shotId: 's0002', atSeconds: 0 } }] },
+  });
+  assert.deepEqual(report.undecided, [3]);
+  assert.deepEqual(report.mismatch, [1, 2]);
+  assert.deepEqual(report.scenes[1], { scene: 2, sequence: 'q1', payoff: true, turn: true, decision: 'score', reason: 'regret', cues: [], mismatch: 'decided score, but no span plays here' });
+  // It runs inside storyboard_read, shot_prompt and the sound compiler: a hand-broken board must not stop them.
+  for (const broken of [null, { STRUCTURE: 'x' }, { STRUCTURE: { sequences: {}, scenes: [null] } }, { STRUCTURE: { sequences: [null, { id: 'q', scenes: 'x' }, { id: 'r', scenes: [1] }], scenes: 'x' }, SCENES: 'x', MUSIC: { $timeline: [null, {}] } }])
+    assert.deepEqual(spottingReport(broken).undecided, broken?.STRUCTURE?.sequences?.[2] ? [1] : []);
 });

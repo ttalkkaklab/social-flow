@@ -24,6 +24,11 @@ const run = (c, research) => checkScenarioV2(meta, body(c), research, { pool }).
 test('fiction works without research, a factual wow, a narrator or a second engine', () => {
   assert.deepEqual(run(candidate()), []);
 });
+test('a scenario in another language names the suggested beats in English', () => {
+  const c = candidate();
+  ['Hook', 'development #1', 'development #2', 'development #3', 'ending'].forEach((item, i) => { c.beats[i].item = item; });
+  assert.deepEqual(run(c), []);
+});
 test('factual and adapted claims cannot bypass evidence; inventions stay explicitly marked', () => {
   const c = candidate(); c.kind = 'evidence';
   assert.match(JSON.stringify(run(c)), /invented events/);
@@ -40,6 +45,13 @@ test('unknown cast, missing events and unearned held reveals fail', () => {
   assert.match(JSON.stringify(run(c)), /not cast/);
   c.beats[0].events = []; assert.match(JSON.stringify(run(c)), /observable/);
   c.reveal = 'held'; assert.match(JSON.stringify(run(c)), /planted/);
+});
+test('an unidentified listener does not require inventing a cast member or addressing the viewer', () => {
+  const c = candidate();
+  c.beats[0].events = [{kind:'dialogue',character:'father',to:'unidentified',text:'Anybody there?',basis:'invented'}];
+  assert.deepEqual(run(c), []);
+  c.beats[0].events[0].to = 'fathre';
+  assert.match(JSON.stringify(run(c)), /unknown dialogue addressee/);
 });
 test('malformed events and speech in a visual candidate fail without throwing', () => {
   for (const expression of ['dialogue', 'narration']) {

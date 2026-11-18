@@ -50,6 +50,10 @@
   skip.textContent = words('샷으로 건너뛰기', 'Skip to shots');
   document.body.insertBefore(skip, sidebar);
   var header = app.querySelector('header');
+  // Keep the floating content selector outside collapsed planning notes and
+  // transformed layout containers; its change listener stays on the same node.
+  var storyLanguage = app.querySelector('.story-language');
+  if (storyLanguage) document.body.appendChild(storyLanguage);
   var audit = document.getElementById('audit');
   var status = audit && audit.querySelector('.count');
   var checks = disclosure(words('검사와 제작 비용', 'Checks and production costs') + (status ? ' — ' + status.textContent : ''));

@@ -17,7 +17,9 @@ const candidate = z.object({ label: z.string().trim().min(1).max(100), reason: z
 });
 const sampleTurn = z.object({ text: z.string().trim().min(1).max(300), acting: actingSchema.optional() }).strict();
 export const voiceAuditionSchema = z.object({
-    action: z.enum(['plan', 'create', 'read', 'select']), identityPath: z.string().min(1).optional(),
+    action: z.enum(['plan', 'create', 'read', 'select', 'bind_registered']), identityPath: z.string().min(1).optional(),
+    registeredVoiceId: z.string().trim().min(1).max(200).refine(value => value.toLowerCase() !== 'default', 'Use the operator-returned registered ID, not default').optional(),
+    expectedIdentitySha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
     auditionPath: z.string().min(1).optional(), sampleText: z.string().trim().min(5).max(300).optional(),
     candidates: z.array(candidate).min(1).max(3).optional(), acting: actingSchema.optional(),
     sampleTurns: z.array(sampleTurn).min(2).max(10).optional(),
@@ -32,6 +34,10 @@ export const voiceAuditionSchema = z.object({
         ctx.addIssue({ code: 'custom', message: 'auditionPath is required' });
     if (args.action === 'select' && (!args.candidateId || !args.userSelection))
         ctx.addIssue({ code: 'custom', message: 'select requires candidateId and the actual user selection; never auto-select' });
+    if (args.action === 'bind_registered' && (!args.identityPath || !args.registeredVoiceId || !args.expectedIdentitySha256 || !args.userSelection))
+        ctx.addIssue({ code: 'custom', message: 'bind_registered requires identityPath, expectedIdentitySha256, the operator-returned registeredVoiceId and actual registration confirmation in userSelection' });
+    if (args.action !== 'bind_registered' && (args.registeredVoiceId || args.expectedIdentitySha256))
+        ctx.addIssue({ code: 'custom', message: 'Registration fields are only used by bind_registered' });
     if (args.candidates) {
         if (args.candidates.length === 2)
             ctx.addIssue({ code: 'custom', message: 'Pass one candidate for a sample or three for an audition' });
@@ -90,6 +96,9 @@ function preview(audition) {
 }
 /** Create paid previews, or apply only the candidate explicitly selected by the user. */
 export async function manageVoiceAudition(args) {
+    args = voiceAuditionSchema.parse(args);
+    if (args.action === 'bind_registered')
+        return bindRegisteredVoice(args);
     if (args.action === 'create' || args.action === 'plan') {
         const identityPath = resolve(args.identityPath);
         const source = readFileSync(identityPath, 'utf8');
@@ -182,6 +191,41 @@ export async function manageVoiceAudition(args) {
     if (audition.candidates.length !== 3)
         throw new Error('Select only from a complete, unselected three-voice audition');
     return selectCandidate(auditionPath, args.candidateId, args.userSelection);
+}
+/** Record an operator-confirmed mapping; this does not upload, register or synthesize a voice. */
+function bindRegisteredVoice(args) {
+    const identityPath = resolve(args.identityPath), source = readFileSync(identityPath, 'utf8');
+    if (hash(source) !== args.expectedIdentitySha256)
+        throw new Error('voice_registration_stale: re-read the character identity before binding');
+    const blocks = [...source.matchAll(/```json\s*\n([\s\S]*?)```/g)];
+    const documents = blocks.map(block => ({ block, value: JSON.parse(block[1]) })).filter(entry => entry.value.character);
+    if (documents.length !== 1)
+        throw new Error('Registration needs one structured character JSON block');
+    const { block, value } = documents[0];
+    const selection = value.voiceSelection;
+    if (!selection?.auditionPath)
+        throw new Error('voice_registration_sample_required: select a recorded audition sample first');
+    const audition = JSON.parse(readFileSync(selection.auditionPath, 'utf8'));
+    const chosen = audition.candidates.find(candidate => candidate.id === selection.candidateId);
+    if (!chosen || audition.status !== 'selected' || chosen.tts.engine !== 'astra-genai' ||
+        chosen.audioSha256 !== selection.audioSha256 || hash(readFileSync(chosen.audioPath)) !== chosen.audioSha256)
+        throw new Error('voice_registration_sample_stale: the selected gateway sample or its bytes changed');
+    const handoff = createRequire(import.meta.url)('../../skills/channel/references/character-sheet.js').selectedVoiceReference(source, ttsSchema.parse(value.tts));
+    if (handoff.voiceReference?.sha256 !== chosen.audioSha256)
+        throw new Error('voice_registration_sample_stale: restore the selected sample settings before binding');
+    const tts = ttsSchema.parse({ ...chosen.tts, voiceId: args.registeredVoiceId });
+    const registration = { engine: tts.engine, model: tts.model, voiceId: tts.voiceId, audioSha256: chosen.audioSha256,
+        request: args.userSelection, at: new Date().toISOString() };
+    const next = source.replace(block[0], '```json\n' + JSON.stringify({ ...value, tts, voiceSelection: { ...selection, registration } }, null, 2) + '\n```');
+    const backup = join(dirname(selection.auditionPath), 'identity-before-registration-' + randomUUID() + '.md');
+    writeFileSync(backup, source, { flag: 'wx' });
+    if (hash(readFileSync(identityPath)) !== args.expectedIdentitySha256)
+        throw new Error('voice_registration_stale: identity changed during registration binding');
+    const temporary = identityPath + '.' + randomUUID() + '.tmp';
+    writeFileSync(temporary, next);
+    renameSync(temporary, identityPath);
+    return { identityPath, identitySha256: hash(next), tts, registration, voicePath: chosen.audioPath, sheet: refreshSheet(identityPath),
+        instruction: 'Registered ID binding recorded without generation or changing the audition. Explicitly refresh requested episode tts and voiceReference from the character handoff before plan_audio. This records operator confirmation; it does not verify remote registration or listening quality.' };
 }
 /** Pin one generated candidate: identity tts and voiceSelection, the sheet's voice.wav and sample.txt. */
 function selectCandidate(auditionPath, candidateId, userSelection) {

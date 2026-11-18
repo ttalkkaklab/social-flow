@@ -40,14 +40,26 @@ const normalize = value => typeof value === 'string' ? value.trim().toLowerCase(
   : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort()
     .filter(key => !['reason', 'movement'].includes(key)).map(key => [key, normalize(value[key])])) : value;
 
+// "1–3, 7": shot numbers as ranges, for a finding that sits on many shots.
+function ranges(numbers) {
+  const out = [];
+  for (let i = 0; i < numbers.length; i++) {
+    let j = i;
+    while (j + 1 < numbers.length && numbers[j + 1] === numbers[j] + 1) j++;
+    out.push(j > i ? numbers[i] + '–' + numbers[j] : String(numbers[i]));
+    i = j;
+  }
+  return out.join(', ');
+}
+
 function check(win, storyboard) {
-  const images = new Map(), setups = new Map(), sources = new Map(), findings = [];
+  const images = new Map(), setups = new Map(), sources = new Map(), findings = [], unassigned = [];
   const add = (groups, key, row) => { const rows = groups.get(key) || []; rows.push(row); groups.set(key, rows); };
   const report = (code, rows, what, extra = {}) => findings.push({
     level: 'warn', where: 'shot image review', code,
     shots: rows.map(row => row.shot), shotIds: rows.map(row => row.shotId),
     references: rows.map(row => ({ ...row })), ...extra,
-    what: 'shots ' + rows.map(row => row.shotId ? `${row.shot} (${row.shotId})` : row.shot).join(', ') + ': ' + what,
+    what: 'shots ' + (rows.length > 8 ? ranges(rows.map(row => row.shot)) : rows.map(row => row.shotId ? `${row.shot} (${row.shotId})` : row.shot).join(', ')) + ': ' + what,
   });
   for (const [index, scene] of (win.SCENES || []).entries()) {
     const v = scene.visual || {}, shot = scene.shot || {}, mode = shot.render?.mode;
@@ -64,7 +76,7 @@ function check(win, storyboard) {
       row.resolvedImage = file; row.pixelStatus = source.status;
       source.rows.push(row);
       add(images, source.hash ? 'sha256:' + source.hash : file, row);
-    } else report('unverified_source_image', [row], 'no opening source image is assigned; pixels unverified.');
+    } else unassigned.push(row);
     const framing = normalize(v.camera?.framing);
     const actor = Array.isArray(v.character) ? v.character.slice().sort() : v.character;
     if (actor && framing && shot.size && shot.angle) {
@@ -118,6 +130,8 @@ function check(win, storyboard) {
       { comparison: { method: '32x32 RGB mean distance and 56 coarse luminance edges',
         matchingPairs: counts[group], examples: examples[group], examplesTruncated: counts[group] > examples[group].length } });
   }
+  // Before the image stage no shot has a picture: one fact about the board, not one finding per shot.
+  if (unassigned.length) report('unverified_source_image', unassigned, 'no opening source image is assigned; pixels unverified.');
   for (const source of sources.values()) if (source.status === 'unverified') {
     report('unverified_source_image', source.rows, source.reason + '; pixels unverified. Inspect or supply the actual local image before claiming visual review.');
   }

@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
+import {createHash} from 'node:crypto';
+import {createRequire} from 'node:module';
+const require=createRequire(import.meta.url);
 
 process.env.ELEVENLABS_API_KEY = 'test-key-never-sent';
 const { voiceAuditionSchema, manageVoiceAudition } = await import('../dist/voice-audition.js');
@@ -39,6 +42,44 @@ test('one candidate is the character sample: generated and set at once', async (
   assert.equal(readFileSync(path.join(path.dirname(identityPath), 'sample.txt'), 'utf8').trim(), '괜찮아. 내가 옆에 있어.');
   await assert.rejects(call({ action: 'select', auditionPath: sample.auditionPath, candidateId: '1', userSelection: '1' }), /three-voice/);
 }));
+
+test('an operator-registered default audition retains its sample lineage through an episode retake and attachment', async t=>{
+ const {config}=await import('../dist/config.js');const {manageSpeech}=await import('../dist/speech.js');
+ const {routeSpeech}=await import('../dist/tts-routing.js');
+ const root=mkdtempSync(path.join(tmpdir(),'voice-registration-')),folder=path.join(root,'assets/characters/hero');mkdirSync(folder,{recursive:true});
+ t.after(()=>rmSync(root,{recursive:true,force:true}));writeFileSync(path.join(root,'profile.md'),'# Channel');
+ const hash=bytes=>createHash('sha256').update(bytes).digest('hex'),identityPath=path.join(folder,'identity.md');
+ const example=readFileSync(new URL('../../skills/channel/references/character-identity-example.md',import.meta.url),'utf8');
+ const doc=JSON.parse(example.match(/```json\s*\n([\s\S]*?)```/)[1]);delete doc.tts;
+ writeFileSync(identityPath,'# Hero\n```json\n'+JSON.stringify(doc)+'\n```');
+ const oldFetch=globalThis.fetch,key=config.astraGenaiApiKey;config.astraGenaiApiKey='fixture';let calls=0;
+ t.after(()=>{globalThis.fetch=oldFetch;config.astraGenaiApiKey=key;});
+ globalThis.fetch=async()=>{calls++;return new Response(pcmToWav(Buffer.alloc(1600),8000,1));};
+ const originalVoice={engine:'astra-genai',model:'voxcpm2',voiceId:'default',speed:1,language:'ko',voiceDirection:'Warm clear Korean voice.'};
+ const sample=await call({action:'create',identityPath,sampleText:'Hello there',candidates:[{label:'Hero',reason:'Chosen sample',tts:originalVoice}]});
+ const binding={action:'bind_registered',identityPath,expectedIdentitySha256:hash(readFileSync(identityPath)),registeredVoiceId:'operator-hero',userSelection:'Operator registered this selected WAV as operator-hero'};
+ await assert.rejects(call({...binding,expectedIdentitySha256:'0'.repeat(64)}),/voice_registration_stale/);
+ assert.equal(voiceAuditionSchema.safeParse({...binding,registeredVoiceId:'default'}).success,false);
+ const registered=await call(binding);assert.equal(calls,1);assert.equal(registered.tts.voiceId,'operator-hero');
+ const audition=JSON.parse(readFileSync(sample.auditionPath,'utf8'));assert.equal(audition.candidates[0].tts.voiceId,'default');
+ const handoff=require('../../skills/channel/references/character-sheet.js').handoff(identityPath);
+ assert.equal(handoff.voiceReference.sha256,sample.sample.audioSha256);assert.equal(handoff.voiceReference.tts.voiceId,'operator-hero');
+ const target=path.join(root,'episodes/one/storyboard');mkdirSync(target,{recursive:true});
+ const board={SB_DOC:{speechPlanVersion:1,characters:[handoff]},SCENES:[{id:'s1',narration:[{id:'l1',speaker:'hero',delivery:'voiceover',tts:'Hello'}]}]};
+ writeFileSync(path.join(target,'scenes.js'),Object.entries(board).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+ const plan=manageSpeech({path:target,action:'plan_audio',lineId:'l1'}).audioPlans[0];
+ assert.equal(plan.generation.voice,'operator-hero');
+ const generation={...plan.generation,outputPath:path.join(root,'episodes/one/speech'),filename:'take.wav'};
+ const result=await routeSpeech({action:'execute',generator:plan.generator,generation,requestId:'registered-take'});assert.equal(result.success,true);
+ const attached=manageSpeech({path:target,action:'attach_audio',lineId:'l1',expectedRevision:manageSpeech({path:target,action:'list'}).revision,audioPath:result.audioPath,
+  generation:{generator:plan.generator,voiceSettings:generation,text:'Hello',language:'ko',receiptPath:result.receiptPath}});
+ assert.equal(attached.lines[0].audioCurrent,true);assert.equal(calls,2);
+ const identity=JSON.parse(readFileSync(identityPath,'utf8').match(/```json\s*\n([\s\S]*?)```/)[1]);
+ identity.voiceSelection.registration.audioSha256='0'.repeat(64);
+ writeFileSync(identityPath,'# Hero\n```json\n'+JSON.stringify(identity)+'\n```');
+ assert.match(require('../../skills/channel/references/character-sheet.js').handoff(identityPath).voiceReferenceWarning,/no longer matches/);
+ assert.throws(()=>manageSpeech({path:target,action:'plan_audio',lineId:'l1'}),/character_voice_sample_invalid/);
+});
 
 test('a failed audition continues from its finished candidates with the same voices', async () => fixture(async ({ identityPath, calls }) => {
   const failing = globalThis.fetch;

@@ -31,9 +31,13 @@ import {
   writeShotPrompt,
   shotImageRequest,
   recordShotImage,
+  storySceneSchema,
   writeStoryScenes,
   writeStorySequences,
   writeStoryShots,
+  storyMusicSchema,
+  writeStoryMusic,
+  firstLineReading,
 } from '../dist/storyboard.js';
 import * as storyboardImages from '../dist/storyboard.js';
 import { TOOLS } from '../dist/tools.js';
@@ -42,6 +46,7 @@ import { buildNativeImageBody } from '../dist/astra-genai-native-image.js';
 import { readImageMetadata } from '../dist/image-media.js';
 import editPlan from '../../skills/produce/references/edit-plan.js';
 import { setupProject, png } from './workflow-fixture.mjs';
+import { manageProject } from '../dist/project.js';
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
 const settings = createRequire(import.meta.url)('../../skills/_shared/model-settings.js');
@@ -345,6 +350,25 @@ describe('checkStoryboard', () => {
 });
 
 describe('story first, then characters and lines', () => {
+  it('a board records its story language once and keeps it', () => {
+    const dir = tmp(), sequences = [{ id: 'q1', title: 'Opening', purpose: 'They meet' }];
+    writeStorySequences({ path: dir, sequences });
+    assert.equal(readBoard(dir).win.STORY.language, undefined);   // a board nobody named a language for reads as before
+    writeStorySequences({ path: dir, language: 'ja', sequences });
+    assert.deepEqual(readBoard(dir).win.STORY, { version: 'story-v2', authoring: 'story-first', language: 'ja' });
+    const other = writeStorySequences({ path: dir, language: 'en', sequences });
+    assert.equal(readBoard(dir).win.STORY.language, 'ja');
+    assert.ok(other.findings.some((f) => f.level === 'warn' && /^story_language/.test(f.what)));
+    // A board written before the record existed is in the language of its shots, not of today's request.
+    const old = tmp();
+    writeStorySequences({ path: old, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
+    writeStoryScenes({ path: old, scenes: [{ sequence: 'q1', no: 1, place: '숲', time: '낮', event: 'e', summary: '씬' }] });
+    writeStoryShots({ path: old, shots: [{ scene: 1, summary: '샷' }] });
+    const resumed = writeStorySequences({ path: old, language: 'en', sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
+    assert.equal(readBoard(old).win.STORY.language, undefined);
+    assert.ok(resumed.findings.some((f) => f.level === 'warn' && /^story_language/.test(f.what)));
+  });
+
   it('each layer needs the one before it, and a new shot plays at the end of its scene', () => {
     const dir = tmp();
     assert.throws(() => writeStoryScenes({ path: dir, scenes: [{ sequence: 'q1', no: 1, place: '숲', time: '낮', event: 'e', summary: '씬' }] }), /story_order/);
@@ -369,6 +393,15 @@ describe('story first, then characters and lines', () => {
     assert.equal(moved.find((s) => s.id === 's0001').shot.eyeline.matchShot, moved.findIndex((s) => s.id === 's0003') + 1);
     assert.deepEqual(readStoryboard(storyboardReadSchema.parse({ path: dir })).playback.map((row) => row.summary), ['a2', 'a3', 'b', 'a1 moved']);
   });
+  it('story_scene writes the scene charge and refuses a sign the contract does not read', () => {
+    const dir = tmp();
+    writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
+    const scene = { sequence: 'q1', no: 1, place: '숲', time: '낮', event: 'e', summary: '씬', turn: '믿음이 깨진다' };
+    writeStoryScenes(storySceneSchema.parse({ path: dir, scenes: [{ ...scene, charge: { open: '-', close: '--' } }] }));
+    assert.deepEqual(readBoard(dir).win.STRUCTURE.scenes[0].charge, { open: '-', close: '--' });
+    assert.equal(storySceneSchema.safeParse({ path: dir, scenes: [{ ...scene, charge: { open: '+', close: '+++' } }] }).success, false);
+    assert.deepEqual(TOOLS.find((t) => t.name === 'story_scene').inputSchema.properties.scenes.items.properties.charge.properties.close.enum, ['+', '-', '++', '--']);
+  });
   it('characters wait for a complete story; lines wait for the shot\'s characters', () => {
     const dir = tmp();
     writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
@@ -392,19 +425,94 @@ describe('story first, then characters and lines', () => {
     writeFileSync(join(dir, 'cast.json'), JSON.stringify({ characters: keyed }));
     writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }, { id: 's0002', characters: [] }] });
     assert.throws(() => writeShotDialogue({ path: dir, shots: [{ id: 's0001', lines: [{ speaker: 'joon', tts: '야', delivery: 'on_screen' }] }] }), /story_order/);
-    writeShotDialogue({ path: dir, shots: [{ id: 's0001', lines: [{ speaker: 'mina', tts: '안녕' }, { speaker: 'narrator', tts: '그날 밤.' }] }] });
+    assert.throws(() => writeShotDialogue({ path: dir, shots: [{ id: 's0001', lines: [{ speaker: 'mina', tts: '안녕' }, { speaker: 'narrator', tts: '그날 밤.' }] }] }), /shot_speaker_limit/);
+    writeShotDialogue({ path: dir, shots: [{ id: 's0001', lines: [{ speaker: 'mina', tts: '안녕' }, { speaker: 'mina', tts: '괜찮아?' }] }, { id: 's0002', lines: [{ speaker: 'narrator', tts: '그날 밤.' }] }] });
     const shot = readBoard(dir).win.SCENES[0];
     assert.deepEqual(shot.visual.character, ['mina']);
-    assert.deepEqual(shot.narration.map((l) => [l.id, l.speaker, l.delivery]), [['s0001-l1', 'mina', 'on_screen'], ['s0001-l2', 'narrator', 'voiceover']]);
+    assert.deepEqual(shot.narration.map((l) => [l.id, l.speaker, l.delivery]), [['s0001-l1', 'mina', 'on_screen'], ['s0001-l2', 'mina', 'on_screen']]);
     const recast = writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['joon'] }] });
     assert.equal(recast.written, true);
     assert.deepEqual(recast.findings.filter((f) => f.where === 's0001' && !f.code).map((f) => f.level), ['warn']);
-    assert.deepEqual(readBoard(dir).win.SCENES[0].narration.map((l) => [l.speaker, l.delivery]), [['mina', 'off_screen'], ['narrator', 'voiceover']]);
+    assert.deepEqual(readBoard(dir).win.SCENES[0].narration.map((l) => [l.speaker, l.delivery]), [['mina', 'off_screen'], ['mina', 'off_screen']]);
     const back = writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }] });
     assert.ok(back.findings.some((f) => f.where === 's0001' && /off_screen lines/.test(f.what)));
     const bad = (patch) => applyStoryboard({ path: dir, draft: true, dryRun: true, ...patch }).findings.filter((f) => f.level === 'bad').map((f) => f.what);
     assert.match(bad({ shotsById: [{ id: 's0001', shot: { ...shot, visual: {} } }] }).join(), /story_order: lines before characters/);
     assert.match(bad({ insertShots: [{ after: 0, shots: [{ type: 'points', title: 'no story' }] }] }).join(), /story_order: no summary/);
+  });
+});
+
+describe('music is decided scene by scene', () => {
+  // Three scenes in one sequence whose question scene 2 answers; shots s0001 · s0002 s0003 · s0004.
+  const outline = (dir = tmp()) => {
+    writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남', question: '편지는 누가 썼나', payoff: 2 }] });
+    writeStoryScenes({ path: dir, scenes: [1, 2, 3].map((no) => ({ sequence: 'q1', no, place: '숲', time: '낮', event: 'e', summary: '씬 ' + no })) });
+    writeStoryShots({ path: dir, shots: [{ scene: 1, summary: 'a' }, { scene: 2, summary: 'b' }, { scene: 2, summary: 'c' }, { scene: 3, summary: 'd' }] });
+    return dir;
+  };
+  const tension = { name: 'tension', prompt: 'low strings, 76 BPM, leaves room for speech', reason: '오해가 깊어진다' };
+
+  it('records score or none with its reason, writes the span, and lists what is still open', () => {
+    const dir = outline();
+    const open = writeStoryMusic({ path: dir });
+    assert.equal(open.written, false);
+    assert.deepEqual(open.spotting.undecided, [1, 2, 3]);
+    assert.match(open.findings.find((f) => f.where === 'music').what, /3 scene\(s\) have no music decision — 1, 2 \(payoff\), 3/);
+    assert.deepEqual(readStoryboard({ path: dir, level: 'outline' }).musicSpotting.undecided, [1, 2, 3]);
+
+    const r = writeStoryMusic(storyMusicSchema.parse({ path: dir, cues: [tension], spots: [
+      { scenes: [1], decision: 'none', reason: '대사만 듣게 한다' },
+      { scenes: [2, 3], decision: 'score', cue: 'tension', reason: '오해가 풀릴 때까지', sourceStartSeconds: 4, gainDb: -2 }] }));
+    assert.equal(r.written, true);
+    const { win } = readBoard(dir);
+    assert.deepEqual(win.MUSIC.$timeline, [{ id: 'scene-2-3', cue: 'tension', start: { shotId: 's0002', atSeconds: 0 }, end: { shotId: 's0004', atSeconds: 'end' },
+      sourceStartSeconds: 4, fadeInSeconds: 0.5, fadeOutSeconds: 1, gain: [{ atSeconds: 0, gainDb: -2 }] }]);
+    assert.deepEqual(win.STRUCTURE.scenes.map((s) => s.music), [{ decision: 'none', reason: '대사만 듣게 한다' },
+      { decision: 'score', reason: '오해가 풀릴 때까지', span: 'scene-2-3' }, { decision: 'score', reason: '오해가 풀릴 때까지', span: 'scene-2-3' }]);
+    assert.deepEqual(r.spotting.undecided, []);
+    assert.deepEqual(r.spotting.cues, [{ name: 'tension', source: 'generated', reason: '오해가 깊어진다' }]);
+
+    // Spotting one scene of a shared span again takes the span away and reopens the other scene.
+    const again = writeStoryMusic({ path: dir, spots: [{ scenes: [2], decision: 'none', reason: '침묵이 답이다' }] });
+    assert.deepEqual(readBoard(dir).win.MUSIC.$timeline, []);
+    assert.deepEqual(again.spotting.undecided, [3]);
+    assert.ok(again.findings.some((f) => f.where === 'cue tension' && /no span plays this cue/.test(f.what)));
+  });
+
+  it('refuses a cue nobody defined, scenes that do not follow each other and an anchor outside the scene', () => {
+    const dir = outline();
+    const spot = { scenes: [2], decision: 'score', cue: 'tension', reason: 'r' };
+    assert.throws(() => writeStoryMusic({ path: dir, spots: [spot] }), /a scored spot names a cue defined in cues/);
+    assert.throws(() => writeStoryMusic({ path: dir, cues: [tension], spots: [{ ...spot, scenes: [1, 3] }] }), /follow each other/);
+    assert.throws(() => writeStoryMusic({ path: dir, cues: [tension], spots: [{ ...spot, start: { shotId: 's0001', atSeconds: 0 } }] }), /s0001 is not a shot of scenes 2/);
+    assert.throws(() => writeStoryMusic({ path: dir, spots: [{ scenes: [9], decision: 'none', reason: 'r' }] }), /story_order: scene 9/);
+    assert.equal(storyMusicSchema.safeParse({ path: dir, cues: [{ ...tension, asset: 'default' }] }).success, false);
+    assert.equal(readBoard(dir).win.MUSIC, undefined, 'a refused call writes nothing');
+    // A hand-broken STRUCTURE: the report still answers, and a write says what is wrong instead of a TypeError.
+    writeFileSync(join(dir, 'scenes.js'), 'window.STRUCTURE={version:"structure-v1",sequences:{},scenes:[null]};window.SCENES=[{id:"s0001",type:"points",scene:1}];');
+    assert.deepEqual(writeStoryMusic({ path: dir }).spotting.undecided, []);
+    assert.throws(() => writeStoryMusic({ path: dir, spots: [{ scenes: [1], decision: 'none', reason: 'r' }] }), /story_music: STRUCTURE\.sequences and STRUCTURE\.scenes are arrays of objects/);
+  });
+
+  it('a scene replaced through storyboard_apply keeps the music decision story_music recorded', () => {
+    const dir = outline();
+    writeStoryMusic(storyMusicSchema.parse({ path: dir, spots: [{ scenes: [1], decision: 'none', reason: '대사만 듣게 한다' }] }));
+    applyStoryboard({ path: dir, draft: true, scenes: [{ no: 1, place: '숲', time: '밤', event: 'e', summary: '씬 1', out: '문이 닫힌다' }] });
+    const first = readBoard(dir).win.STRUCTURE.scenes.find((s) => s.no === 1);
+    assert.deepEqual([first.time, first.music], ['밤', { decision: 'none', reason: '대사만 듣게 한다' }]);
+  });
+
+  it('shows the channel\'s saved music direction and says when no music model is saved', () => {
+    const root = tmp(), dir = join(root, 'drafts/storyboard');
+    const ready = setupProject(root);
+    const note = '2026-11-08 user: music under every shot is too much; score the turns';
+    manageProject({ action: 'update', workspace: root, expectedRevision: ready.revision, request: 'Record the music feedback',
+      settings: { production: { ...ready.config.production, musicDirection: [note] } } });
+    mkdirSync(dir, { recursive: true });
+    outline(dir);
+    const r = writeStoryMusic({ path: dir, cues: [tension], spots: [{ scenes: [1, 2, 3], decision: 'score', cue: 'tension', reason: 'r' }] });
+    assert.deepEqual(r.spotting.direction, [note]);
+    assert.ok(r.findings.some((f) => /no music model is saved \(models\.music\)/.test(f.what)));
   });
 });
 
@@ -493,6 +601,26 @@ describe('icon attributes come after every shot\'s characters', () => {
     assert.deepEqual([wide.written, notes(wide)], [true, []]);
     assert.ok(wide.findings.some((f) => f.level === 'warn' && f.where === 's0001' && /camera.rack-focus names no subjects/.test(f.what)));
   });
+  it('beat accents ride on the move: set, replaced and removed without touching it, refused on a still cut', () => {
+    const dir = storyBoard();
+    writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }, { id: 's0002', characters: [] }] });
+    const set = writeShotIcons({ path: dir, shots: [
+      { id: 's0001', render: { mode: 'generated_video', reason: 'r' }, move: { id: 'camera.static', reason: 'the frame she falls into' },
+        accents: [{ id: 'camera.impact-shake', reason: 'the landing has weight', on: 'the landing' }, { id: 'camera.speed-ramp', reason: 'r' }] },
+      { id: 's0002', render: { mode: 'still_camera', reason: 'r' } },
+    ] });
+    assert.deepEqual(readBoard(dir).win.SCENES[0].shot.techniques, [{ id: 'camera.static', reason: 'the frame she falls into' },
+      { id: 'camera.impact-shake', reason: 'the landing has weight', on: 'the landing' }, { id: 'camera.speed-ramp', reason: 'r' }]);
+    // an accent without its moment is reported, not refused
+    assert.deepEqual(set.findings.filter((f) => /names no moment/.test(f.what)).map((f) => [f.level, f.where]), [['warn', 's0001']]);
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', move: { id: 'camera.crash-zoom', reason: 'the lens lights up', target: 'the drone lens' }, accents: [] }] });
+    const snapped = readBoard(dir).win.SCENES[0];
+    assert.deepEqual(snapped.shot.techniques.map((t) => t.id), ['camera.crash-zoom']);
+    assert.deepEqual(snapped.visual.camera, { movement: 'zoom in crash', speed: 'fast', target: 'the drone lens' });
+    assert.throws(() => writeShotIcons({ path: dir, shots: [{ id: 's0001', accents: [{ id: 'camera.dolly-in', reason: 'r' }] }] }), /not a beat accent/);
+    assert.throws(() => writeShotIcons({ path: dir, shots: [{ id: 's0001', accents: [{ id: 'camera.speed-ramp', reason: 'r', on: '발차기' }] }] }), /video_prompt_language: shot_icons s0001 accents.on/);
+    assert.throws(() => writeShotIcons({ path: dir, shots: [{ id: 's0002', accents: [{ id: 'camera.speed-ramp', reason: 'r' }] }] }), /still_camera cut takes no beat accent/);
+  });
   it('next writes the join into the following shot, where the builder reads it', () => {
     const dir = storyBoard();
     writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }, { id: 's0002', characters: [] }] });
@@ -558,6 +686,22 @@ describe('icon attributes come after every shot\'s characters', () => {
     rmSync(join(root, 'data/c/assets/characters/mina/face.png'));
     assert.throws(() => writeStoryScenes({ path: dir, scenes: [{ sequence: 'q1', no: 1, place: '숲', time: '낮', event: 'e', summary: '씬' }] }), /character_panel_missing: mina has no face/);
   });
+  it('a story-first board inside an episode starts on the canvas and production its snapshot hands off', () => {
+    const root = tmp();
+    setupProject(root);
+    const dir = join(manageProject({ action: 'episode', workspace: root, topic: 'e1' }).episode, 'storyboard');
+    castFile(dir, ['mina'], { root: join(root, 'data/c') });
+    writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
+    const { win } = readBoard(dir);
+    assert.deepEqual([win.FORMAT, win.PRODUCTION?.mode, win.STORY.authoring], ['shorts-9x16', 'video_50', 'story-first']);
+    // The saved languages.speech becomes the next board's story language.
+    const { revision } = manageProject({ action: 'status', workspace: root });
+    manageProject({ action: 'update', workspace: root, expectedRevision: revision, request: 'Vietnamese stories', settings: { languages: { speech: 'vi', subtitles: [], review: [] } } });
+    const next = join(manageProject({ action: 'episode', workspace: root, topic: 'e2' }).episode, 'storyboard');
+    castFile(next, ['mina'], { root: join(root, 'data/c') });
+    writeStorySequences({ path: next, sequences: [{ id: 'q1', title: 'Mở đầu', purpose: 'Gặp nhau' }] });
+    assert.equal(readBoard(next).win.STORY.language, 'vi');
+  });
 });
 
 describe('images and the video prompt follow the icon attributes', () => {
@@ -608,6 +752,50 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.match(request.prompt, /do not equalize head levels or compare seated and standing head heights/);
     assert.match(request.prompt, /ignore clothing in this panel/);
     assert.match(request.prompt, /including collar, tie and sleeve state/);
+  });
+  it('draws a bystander and extras into the start image, keeps them out of the video references and prints the board first', () => {
+    const { root, dir } = pictureBoard();
+    const sheet = join(root, 'data/c/assets/characters');
+    mkdirSync(join(sheet, 'ally'));
+    for (const name of ['face', 'body', 'back']) writeFileSync(join(sheet, 'ally', name + '.png'), png);
+    writeFileSync(join(sheet, 'ally/panels.json'), readFileSync(join(sheet, 'mina/panels.json')));
+    writeFileSync(join(sheet, 'ally/identity.md'), '# ally\n');
+    writeFileSync(join(dir, 'cast.json'), JSON.stringify({ characters: ['mina', 'ally'].map(id => ({ id, source: '../../../assets/characters/' + id + '/identity.md' })) }));
+    const set = (shot) => writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'], ...shot }] });
+    assert.throws(() => set({ bystanders: ['mina'] }), /shot_bystander_listed/);
+    assert.throws(() => set({ characters: ['mina', 'ally'], bystanders: ['x', 'y'] }), /character_limit/);
+    assert.throws(() => set({ extras: '아이들 넷' }), /image_prompt_language/);
+    assert.throws(() => writeShotCharacters({ path: dir, shots: [{ id: 's0002', characters: ['ally'], bystanders: ['mina'] }] }), /shot_bystander_speaks/);
+    set({ bystanders: ['ally'], extras: 'four children in orange bibs chase a ball', expression: { ally: 'arms folded, watching' } });
+    set({});   // a later call keeps both
+    const printed = storyboardImages.renderApply(icons(dir));
+    assert.match(printed, /Board as written[^\n]*\n  2 shots — on screen: one 1 · two 1 · with extras 1[\s\S]*sizes ms 1 · mcu 1[\s\S]*Findings:/);
+    const request = shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits by the window while Ally watches from the door.' });
+    assert.deepEqual(request.refs.filter(ref => ref.role === 'bystander').map(ref => [ref.id, ref.use]), [['s0001-ally-face', 'image'], ['s0001-ally-front', 'image']]);
+    assert.match(request.prompt, /Also in this frame, without a line: ally, drawn from the reference images/);
+    assert.match(request.prompt, /Unnamed people in the frame, drawn without a reference: four children in orange bibs chase a ball\./);
+    assert.match(request.prompt, /ally: arms folded, watching/);
+    assert.deepEqual(readBoard(dir).win.SCENES[0].visual.character, ['mina'], 'the video call still references the one character');
+    set({ bystanders: [], extras: '' });
+    assert.deepEqual([readBoard(dir).win.SCENES[0].visual.bystanders, readBoard(dir).win.SCENES[0].visual.extras], [undefined, undefined]);
+    // The same note on several shots prints once.
+    assert.equal(storyboardImages.renderFindings([{ level: 'warn', where: 's0001', what: 'x' }, { level: 'warn', where: 's0002', what: 'x' }]), '  · s0001, s0002 x');
+  });
+  it('puts each character\'s shot expression into the image prompt and reports a face without one', () => {
+    const { dir } = pictureBoard(); icons(dir);
+    const set = (shot) => writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'], ...shot }] });
+    assert.throws(() => set({ expression: { ghost: 'brows drawn together' } }), /shot_expression_unknown/);
+    assert.throws(() => set({ expression: { mina: '찡그린 눈썹' } }), /image_prompt_language/);
+    const args = { path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits by the window.' };
+    assert.ok(shotImageRequest(args).warnings.some(w => w.code === 'expression_missing'));
+    set({ expression: { mina: 'brows drawn together, lips pressed shut' } });
+    set({});   // a later call without expression keeps it
+    const request = shotImageRequest(args);
+    assert.match(request.prompt, /Expressions in this frame: mina: brows drawn together, lips pressed shut\./);
+    assert.doesNotMatch(request.prompt, /smile/);
+    assert.equal(request.warnings.some(w => w.code === 'expression_missing'), false);
+    writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: [] }] });
+    assert.equal(readBoard(dir).win.SCENES[0].visual.expression, undefined, 'a character who leaves takes the state along');
   });
   it('tracks physical opening, performance and prompt changes without certifying inherited images', () => {
     const { dir } = pictureBoard(); icons(dir); make(dir, 's0001');
@@ -807,6 +995,62 @@ describe('images and the video prompt follow the icon attributes', () => {
     shot = readBoard(dir).win.SCENES[0];
     assert.match(shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'The fingers tighten.' }).prompt, /right profile.*facing camera-right/);
     assert.throws(() => shotIconsSchema.parse({ path: dir, shots: [{ id: 's0001', view: { ...view, mode: 'pov' } }] }), /viewerId/);
+  });
+  it('a shot_icons call with both why and view keeps both reasons', () => {
+    const { dir } = pictureBoard();
+    icons(dir);
+    const view = { subject: 'Mina’s clenched hand', reason: 'From the side the fingers show their grip', crop: 'Only the hand and key fill the frame', mode: 'profile-left', subjectId: 'mina' };
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', size: 'insert', why: 'The hand is the whole beat', view }] });
+    assert.equal(readBoard(dir).win.SCENES[0].shot.why, 'The hand is the whole beat');
+    // Without a why the size keeps none: the view reason is not copied in, and the result names the shot.
+    const bare = writeShotIcons({ path: dir, shots: [{ id: 's0001', size: 'cu', view }] });
+    assert.equal(readBoard(dir).win.SCENES[0].shot.why, undefined);
+    assert.ok(bare.findings.some((f) => f.level === 'warn' && f.where === 'shot_icons' && /no why on s0001/.test(f.what)));
+  });
+  it('a reason is asked of a choice: a hold and a plain cut go without, a move and another join do not, and a copied sentence is named', () => {
+    const { dir } = pictureBoard();
+    const parse = (shot) => shotIconsSchema.safeParse({ path: dir, shots: [{ id: 's0001', ...shot }] }).success;
+    assert.deepEqual([parse({ move: { id: 'camera.static' } }), parse({ move: { id: 'camera.dolly-in' } }),
+      parse({ next: { transition: 'cut' } }), parse({ next: { transition: 'dissolve' } })], [true, false, true, false]);
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', render: { mode: 'generated_video' }, size: 'ms', why: 'w', move: { id: 'camera.static' }, next: { transition: 'dissolve', reason: 'time passes' } }] });
+    let board = readBoard(dir).win.SCENES;
+    assert.deepEqual([board[0].shot.techniques, board[1].edit.reason], [[{ id: 'camera.static' }], 'time passes']);
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', next: { transition: 'cut' } }] });
+    assert.equal(readBoard(dir).win.SCENES[1].edit.reason, undefined, 'a cut does not keep the dissolve\'s reason');
+    // A wide shot held with no reason is written and named in the result; with its reason, or closer, it is not.
+    const heldWide = (shot) => writeShotIcons({ path: dir, shots: [{ id: 's0001', why: 'w', ...shot }] }).findings.filter((f) => f.level === 'warn' && /wide shots held with no reason: s0001/.test(f.what)).length;
+    assert.deepEqual([heldWide({ size: 'ls', move: { id: 'camera.static' } }), heldWide({ size: 'ls', move: { id: 'camera.static', reason: 'the doorway he leaves through' } }),
+      heldWide({ size: 'cu', move: { id: 'camera.static' } })], [1, 0, 0]);
+    assert.equal(readBoard(dir).win.SCENES[0].shot.size, 'cu');
+    // The same sentence as one kind of reason on three shots is reported with its shots, not refused.
+    writeStoryShots({ path: dir, shots: [{ scene: 1, summary: 'c' }] });
+    writeShotCharacters({ path: dir, shots: [{ id: 's0003', characters: [] }] });
+    const same = { size: 'cu', why: 'Her face carries the beat' };
+    const copied = writeShotIcons({ path: dir, shots: ['s0001', 's0002', 's0003'].map((id) => ({ id, ...same })) });
+    assert.ok(copied.written && copied.findings.some((f) => f.level === 'warn' && /shot\.why stands on 3 shots \(s0001, s0002, s0003\)/.test(f.what)));
+  });
+  it('a finding repeated across shots prints once with its shots, and the direction read returns the plan alone', () => {
+    const { dir } = pictureBoard(); icons(dir);
+    const text = storyboardImages.renderFindings([{ level: 'warn', where: 'shot 1', what: 'w' }, { level: 'warn', where: 'shot 2', what: 'w' },
+      { level: 'warn', where: 'shot 4', what: 'w' }, { level: 'bad', where: 'shot 2', what: 'w' }, { level: 'warn', where: 'scene 1', what: 'w' }]);
+    assert.deepEqual(text.split('\n').map((line) => line.trim().replace(/\s+/g, ' ')), ['· shots 1–2, 4 w', '! shot 2 w', '· scene 1 w']);
+    const read = readStoryboard({ path: dir, level: 'direction' });
+    assert.deepEqual(Object.keys(read), ['file', 'sha256', 'format', 'direction']);
+    assert.deepEqual([read.direction.shots, read.direction.sizes], [2, { ms: 1, mcu: 1 }]);
+  });
+  it('a route and a frame plan are accepted without reasons, and a new mode does not inherit the old reason', () => {
+    const { dir } = pictureBoard();
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', render: { mode: 'generated_video' }, frames: { mode: 'first_last', reason: 'the arrival must be pinned', endState: 'She stands at the door.' } }] });
+    let shot = readBoard(dir).win.SCENES[0];
+    assert.deepEqual([shot.shot.render.reason, shot.visual.frames.reason], [undefined, 'the arrival must be pinned']);
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', frames: { mode: 'first_last' } }] });
+    assert.equal(readBoard(dir).win.SCENES[0].visual.frames.reason, 'the arrival must be pinned', 'the same mode keeps its reason');
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', frames: { mode: 'first' } }] });
+    assert.equal(readBoard(dir).win.SCENES[0].visual.frames.reason, undefined);
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', render: { mode: 'still_camera', reason: 'a quiet place' }, move: { id: 'push', reason: 'settle in' } }] });
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', render: { mode: 'generated_video' } }] });
+    shot = readBoard(dir).win.SCENES[0];
+    assert.deepEqual([shot.shot.render.mode, shot.shot.render.reason], ['generated_video', undefined]);
   });
   it('MSR cast and frame changes synchronize sheet panels without waiting for shot_image', () => {
     const { root, dir } = pictureBoard();
@@ -1086,8 +1330,12 @@ describe('images and the video prompt follow the icon attributes', () => {
     const ended = make(dir, 's0002', 'end', { props: ['key'] });
     assert.match(ended.inputs[0], /images\/s0002-start-v1\.png$/);
     assert.deepEqual([ended.inputs.length, readBoard(dir).win.SCENES[1].visual.frames.endProps], [5, ['key']]);
-    const msr = writeShotPrompt({ path: dir, id: 's0001', action: 'Mina turns to the door.' }).prompt;
-    assert.equal(msr, 'Medium shot, waist up, at eye level. The camera pushes in toward the subject, with a short pause on the opening and closing pictures. Mina turns to the door. Audio: no music.');
+    const prompted = writeShotPrompt({ path: dir, id: 's0001', action: 'Mina turns to the door.' }), msr = prompted.prompt;
+    // The clip is about to be made, so an open music decision on its scene is said here (warning only).
+    assert.ok(prompted.written && prompted.findings.some((f) => f.level === 'warn' && /scene 1 has no music decision/.test(f.what)));
+    assert.match(msr, /^Medium shot, waist up, at eye level\. The camera pushes in toward the subject/);
+    assert.match(msr, /Mina turns to the door\. Audio: no music\./);
+    assert.match(msr, /Keep the entire video image text-free/);
     writeShotPrompt({ path: join(dir, 'scenes.js'), id: 's0001', action: 'Mina turns to the door.', speakerBindings: [
       { speaker: 'mina', screenPosition: 'left', description: 'the woman in blue' }
     ] });
@@ -1096,14 +1344,16 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.equal(bound.speakerBindings[0].screenPosition, 'left');
     assert.match(bound.speakerBindingImageSha256, /^[a-f0-9]{64}$/);
     const framed = writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', end: 'she smiles' }).prompt;
-    assert.equal(framed, 'Start from the given first frame. Mina looks up. Mina says: "안녕". End on the given last frame: she smiles. Audio: no music.');
-    assert.match(writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', sound: 'rain on the window' }).prompt, /Audio: rain on the window, no music\.$/);
-    assert.match(writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', sound: 'a radio plays a song' }).prompt, /Audio: a radio plays a song\.$/);
+    assert.match(framed, /^Start from the given first frame\. Mina looks up\./);
+    assert.match(framed, /speaker: mina; delivery: on_screen.*physically saying "안녕"/);
+    assert.match(framed, /End on the given last frame: she smiles\. Audio: no music\./);
+    assert.match(writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', sound: 'rain on the window' }).prompt, /Audio: rain on the window, no music\./);
+    assert.match(writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', sound: 'a radio plays a song' }).prompt, /Audio: a radio plays a song\./);
     writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', end: 'she smiles' });
     assert.equal(readBoard(dir).win.SCENES[1].visual.video.prompt, framed);
     const relined = writeShotDialogue({ path: dir, shots: [{ id: 's0002', lines: [{ speaker: 'mina', tts: '잠깐!' }] }] });
     assert.ok(relined.findings.some((f) => f.where === 's0002' && /video prompt predates a change of on-screen lines/.test(f.what)));
-    assert.match(writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.' }).prompt, /Mina says: "잠깐!" End on/);
+    assert.match(writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.' }).prompt, /physically saying "잠깐!"/);
     assert.deepEqual(contract().promptDrift(readBoard(dir).win.SCENES[1], () => false), []);
     assert.throws(() => writeShotPrompt({ path: dir, id: 's0002', action: '미나가 웃는다' }), /video_prompt_language/);
     // A new start image takes the end image edited from the old one off the shot.
@@ -1159,7 +1409,7 @@ describe('images and the video prompt follow the icon attributes', () => {
 describe('tool surface', () => {
   it('the four tools exist with handlers and local hints', () => {
     for (const name of ['storyboard_read', 'storyboard_apply', 'storyboard_check', 'scenario_check',
-      'story_sequence', 'story_scene', 'story_shot', 'shot_characters', 'shot_dialogue', 'shot_icons', 'shot_image', 'shot_prompt']) {
+      'story_sequence', 'story_scene', 'story_shot', 'story_music', 'shot_characters', 'shot_dialogue', 'shot_icons', 'shot_image', 'shot_prompt']) {
       const tool = TOOLS.find((t) => t.name === name);
       assert.ok(tool, `missing tool ${name}`);
       assert.equal(typeof ROUTES[name], 'function');
@@ -1309,6 +1559,25 @@ describe('storyboard_read inspection', () => {
   });
 });
 
+describe('first spoken line reading', () => {
+  const line = (extra = {}) => ({ id: 'l1', speaker: 'a', delivery: 'on_screen', tts: 'x', estimatedSeconds: 2, ...extra });
+  it('adds the lengths before the first line to its lead-in and names the silence a longer shot holds', () => {
+    const win = { SCENES: [
+      { id: 's0001', duration: 2.5 },
+      { id: 's0002', duration: 6, narration: [line({ acting: { leadInSeconds: 0.5 } })] },
+      { id: 's0003', duration: 2, narration: [line({ id: 'l2' })] }] };
+    assert.deepEqual(firstLineReading(win), ["first spoken line: s0002, about 3 s in — that shot's length holds 3.5 s beyond its performance; "
+      + 'a natively voiced clip plays them as silence, mostly before the line']);
+    // A line that fills its shot reads as its start alone, and so does a narrator's line in a longer shot: composed TTS places it.
+    assert.deepEqual(firstLineReading({ SCENES: [{ id: 's0001', duration: 2, narration: [line()] }] }), ['first spoken line: s0001, about 0 s in']);
+    assert.deepEqual(firstLineReading({ SCENES: [{ id: 's0001', duration: 9, narration: [line({ delivery: 'voiceover' })] }] }), ['first spoken line: s0001, about 0 s in']);
+  });
+  it('prints nothing without a line or with an unknown length before it', () => {
+    assert.deepEqual(firstLineReading({ SCENES: [{ id: 's0001', duration: 3 }] }), []);
+    assert.deepEqual(firstLineReading({ SCENES: [{ id: 's0001' }, { id: 's0002', duration: 2, narration: [line()] }] }), []);
+  });
+});
+
 describe('scenario_check runner', () => {
   it('returns the checker JSON on exit 1 and turns exit 3 stderr into an input error', () => {
     const dir = tmp();
@@ -1430,6 +1699,13 @@ describe('edit impact and uninterrupted scene evidence', () => {
     assert.equal(speech.kind, 'narration');
     assert.equal(speech.delivery, 'voiceover');
     assert.deepEqual(speech.acting, { vocal: 'quietly' });
-
+    // A line nobody timed is estimated from its syllables; the stored duration reads against it.
+    win.SCENES[0].narration = [{ id: 'k1', tts: '너도 담배냐?', speaker: 'a', delivery: 'on_screen' }];
+    win.SCENES[0].performance = [{ kind: 'dialogue', character: 'a', group: 1 }];
+    win.SCENES[0].duration = 4;
+    writeFileSync(join(dir, 'scenes.js'), serializeBoard(win));
+    const timed = readStoryboard(storyboardReadSchema.parse({ path: dir, includeTechniques: false })).boundaryReview.shots[0].performanceTiming;
+    assert.equal(timed.durationSeconds, 1.51);
+    assert.equal(timed.storedExcessSeconds, 2.49);
   });
 });

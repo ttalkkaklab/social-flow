@@ -36,6 +36,14 @@ selected resolution without adding unsupported width/height fields.
 Remote URL contents cannot be pinned; use immutable provider assets or local files.
 Re-plan after changes. No network submission occurs during planning.
 
+GenAI I2V on `ltx-2.5-22b-distilled` can combine a first image, optional last
+image and four subject references plus one background. `video_plan` keeps the
+temporal frames distinct from `references` and hashes every submitted local
+image. Execution checks the gateway's `image_conditioning` MSR capability
+before upload/submission; an unsupported combination never drops references or
+switches the saved model. Dev and the direct Desktop adapter take start/end
+only. See [GenAI image conditioning](astra-genai.md).
+
 Character speech also uses the [voice continuity contract](../produce/references/voice-continuity.md).
 The planner adds stable acoustic descriptions and, on audible Seedance reference
 requests, pinned character samples with explicit speaker/image/audio mappings.
@@ -125,3 +133,72 @@ historical spend before the first managed call. Add a new provider by implementi
 its adapter/schema and registering its deployment; update pricing and behavioral
 tests, regenerate the catalog/bundle, then expose it in settings. Research alone
 never enables an unimplemented API.
+
+## Single-speaker shots and MSR routing
+
+Split every speaker change before final camera icons and images. Each shot has at most
+one speaking character, while a silent listener may share the picture. For a saved
+GenAI MSR (`operation:"reference"`) project, silent and voiceover-only shots resolve to
+`operation:"image"` with the same engine/model/resolution. This is the standing
+2026-11-09 operation rule, not a provider fallback. Explicit MSR requests for those
+shots fail before generation (`msr_speech_route`); multiple speakers report
+`shot_speaker_limit`. The hosted reference lanes (`minimax_reference`,
+`heygen_reference`) follow the same rule (`reference_speech_route`): they get the cast's
+panels, the start image as the last picture (not a pinned first frame) and the speaker's
+sample, and silent shots plan `operation:"image"`. A saved `ltx-api` selection plans
+spoken shots with `operation:"audio"` and the composed pinned-voice track as `args.audioPath`. Split physical speech and inner thoughts into their own shots.
+
+Use the composed opening image, `generateAudio:false` and closed-mouth action for
+thoughts. `speech_manage` plans external TTS voiceover and binds assembly to
+`sound.audioSource:"speech"`. Generate/attach the character's pinned TTS, compose real
+measured intervals with action and lead-in/tail-out, and plan the full video coverage.
+Missing speech setup must be reported; it does not authorize a new voice or native MSR.
+
+## Plans, candidate takes and local review
+
+`video_plan` compiles the storyboard's `performance` events and the current camera
+settings through the same compiler as `speech_manage plan_video`. It preserves action
+order, concurrent speech/action groups and lead-in/tail-out. Attached, hash-matching
+speech can supply measured intervals; native speech stays `model_timed` until measured.
+Do not invent timestamps for unresolved speech. MSR dialogue is still added once, with
+its actual image/audio bindings. Passing `args.prompt` bypasses this compilation and
+returns a warning; prefer updating the board and omitting that argument.
+
+Optional `visual.references[].preserve` and `.avoid` are arrays of English instructions.
+They say what to retain and what not to copy from that reference. Image authoring keeps
+these fields when refreshing the same reference, and video mapping carries them to the
+actual input slot. A reference used only for the opening image is not claimed as a
+separately submitted video input.
+
+Use `purpose: "draft" | "final" | "revision"`, `basedOnRequestId` and `changeNote` on
+`video_plan` to compare takes. These fields do not change models or resolution. An
+optional cheaper draft uses a supported, explicitly selected setting; never switch the
+saved model silently or force every shot through two generations. A new high-resolution
+take can drift from the draft. Every attempt keeps its own output filename, plan and
+receipt; execution refuses to overwrite another candidate. These are all real attempts
+under the existing budget and concurrency limits, not extra free retries.
+
+`video_status {episode}` reads the episode's candidate list without provider calls.
+`storyboard_read.videoProduction` returns the same view. The shared board shows the
+saved authored prompt, final adapter prompt, reference/voice mappings, changed inputs,
+candidate lineage, attached file, costs and recorded runtime endpoint. Completed-shot
+counts deduplicate attempts and require a local output; review counts remain separate.
+Only a matching bound file with explicit review evidence counts as reviewed. A missing
+background hash check leaves claimed review passes unverified (`reviewedShots: null`),
+not zero; an explicit read or HTML export verifies the attached bytes. A missing
+runtime observation or unmeasured duration is unknown, never a fabricated healthy state
+or ETA. API cost zero excludes hardware and elapsed time.
+
+The board loads `video-production-data.js`, a local snapshot refreshed by planning,
+state changes, storyboard/speech edits or `storyboard-html.js`. Reload the page after
+changes. Background exports do not rehash all media; an explicit read/export checks
+input bytes. The snapshot is advisory and cannot execute, approve, attach or retry a
+request. Use `speech_manage attach_video` for a chosen take so existing speech and
+performance binding checks still apply. Provider credentials, full result payloads,
+signed URLs and arbitrary request fields are not included in the snapshot.
+
+When repairing a reviewed defect, start with the smallest applicable change: trim an
+ending, adjust volume, upscale resolution, revise speech, or fix the source image or
+staging before regeneration. Keep the original file. Dubbing native dialogue can break
+lip sync; do not apply it automatically. Unknown submissions retain their original
+request ID and reservation; the review view supplies the same-request status command.

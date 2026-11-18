@@ -41,7 +41,8 @@
   const bad=s=>errors.push('visual.frames: '+s);
   if(f){
    if(!['first','first_last','reference'].includes(f.mode))bad('mode must be first, first_last or reference');
-   if(!text(f.reason))advice.push('visual.frames: record why this shot needs one or two frames');
+   // first follows from a silent shot and reference from an on-screen line; only a pinned end frame is a choice to explain.
+   if(f.mode==='first_last'&&!text(f.reason))advice.push('visual.frames: record why this shot pins its end frame');
    if(f.mode==='first_last'&&!text(f.endState))advice.push('visual.frames: describe the visible final state');
   }
   const starts=[v.frames?.start,v.bg,v.imagePair?.start].filter(Boolean);
@@ -56,7 +57,7 @@
   return errors.concat(checkImageReferences(scene,{draft}));
  }
  // References describe conditioning assets, never implicit temporal frames.
- const IMAGE_ROLES=['character','prop','background','style','composition','continuity'];
+ const IMAGE_ROLES=['character','bystander','prop','background','style','composition','continuity'];
  const IMAGE_USES=['image','video','both'];
  function hasStructuredImages(scene){return scene.visual?.frames?.start!==undefined||scene.visual?.references!==undefined;}
  function imageReferences(scene){
@@ -64,6 +65,10 @@
   if(Array.isArray(v.references))return v.references;
   const settings=v.video||(typeof v.clip==='object'?v.clip:v);
   return (Array.isArray(settings.referenceImagePaths)?settings.referenceImagePaths:[]).map((p,i)=>({id:'legacy-'+(i+1),path:p,role:'continuity',use:'video',purpose:'Legacy reference; role not authored',legacy:true}));
+ }
+ function referenceConstraints(ref) {
+  return ['preserve','avoid'].map(key => Array.isArray(ref[key]) && ref[key].length
+   ? (key === 'preserve' ? 'Preserve: ' : 'Do not take from this reference: ') + ref[key].join('; ') + '.' : '').filter(Boolean).join(' ');
  }
  function checkImageReferences(scene,{draft=false}={}){
   const v=scene.visual||{},errors=[],bad=s=>errors.push('visual.references: '+s);
@@ -78,6 +83,7 @@
    if(!IMAGE_ROLES.includes(ref.role))bad('entry '+i+' needs a supported role');
    if(!IMAGE_USES.includes(ref.use))bad('entry '+i+' needs use image, video or both');
    if(!text(ref.purpose))bad('entry '+i+' needs a concrete purpose');
+   for(const key of ['preserve','avoid'])if(ref[key]!==undefined&&(!Array.isArray(ref[key])||ref[key].some(item=>!text(item))))bad('entry '+i+' '+key+' needs non-empty text entries');
    if(!draft&&!text(ref.path))bad('entry '+i+' needs an image path before generation');
    if(ref.path!==undefined&&(typeof ref.path!=='string'||/^[a-z][a-z0-9+.-]*:|^[/\\]{2}|[\x00-\x1f]/i.test(ref.path)))bad('entry '+i+' must use a local image path');
   });
@@ -174,7 +180,8 @@
   if(!LABELS[r.mode])bad('unknown mode; use '+Object.keys(LABELS).join(', '));
   else if(fullVideo&&r.mode!=='stock_video'){if(r.mode!=='generated_video')warn(r.purpose+' requires generated_video, not '+r.mode)}
   else if(options.length&&!options.includes(r.mode)&&!(drone&&r.purpose==='place'&&r.mode==='generated_video'))warn(r.purpose+' requires '+options.join(' or ')+', not '+r.mode);
-  if(!text(r.reason))warn('reason must explain why this treatment conveys the cut');
+  // In a full_video episode video is the episode's choice, so a generated cut needs no sentence for its route.
+  if(!text(r.reason)&&!(fullVideo&&r.mode==='generated_video'))warn('reason must explain why this treatment conveys the cut');
   if(scene.shot?.motionGraphic){
    const mg=typeof module==='object'&&module.exports?require('./motion-graphics.js'):root.MOTION_GRAPHICS;
    if(mg){const result=mg.inspect(scene);result.errors.forEach(bad);result.advice.forEach(warn);}
@@ -255,7 +262,7 @@ if(r.mode==='data_graph'||(fullVideo&&CHARTS[r.purpose])){
     if(['character_html','object_html'].includes(r.mode)&&(slide?.subject?.kind!=='object'||slide?.object?.renderer!=='mesh'))bad('physical explanation needs a real mesh object subject');
    }
    if(r.mode==='generated_video'&&(!generated||slide))bad('generated video needs a video handoff without a slide');
-   if(r.mode==='generated_video'&&!text(v.why))warn('visual.why can describe why video conveys the cut');
+   if(r.mode==='generated_video'&&!fullVideo&&!text(v.why))warn('visual.why can describe why video conveys the cut');
    if(r.mode==='generated_video'&&v.video&&v.reuse===undefined&&v.video.previz===undefined)warn('A Blender or three.js previz can guide camera and blocking; record visual.video.previz when supplying that reference to the model');
    if(r.mode==='editorial_html'&&(generated||!slide||slide.kind!=='diagram'||slide.motion!==true||slide.treatment!=='editorial'||slide.subject?.kind!=='type'||slide.object))bad('editorial quote/verdict needs a text subject on an editorial motion diagram');
    if(r.mode==='data_graph'&&slide?.chartRenderer!=='svg-v1')bad('data graphs require chartRenderer svg-v1 and the shared chart template');
@@ -391,7 +398,7 @@ if(r.mode==='data_graph'||(fullVideo&&CHARTS[r.purpose])){
   if((!long&&textCount>2)||(long&&total>0&&textSeconds/total>0.2))errors.push('text-led slides dominate: at most 2 per short, or 20% of generated duration in long-form; use source images, acted processes or actual charts where the content calls for them');
   advice.push(...errors); return [];
  }
- const api={PURPOSES,ALTERNATIVES,LABELS,STILL_CAMERA_EFFECTS,CHARTS,PREVIZ_RENDERERS,PREVIZ_HANDOFFS,IMAGE_ROLES,IMAGE_USES,hasStructuredImages,imageReferences,checkImageReferences,recommend,modesFor,checkLicense,exempt,framePlan,checkFrames,checkPreviz,previzHandoff,checkScene,checkData,checkMap,checkEpisode};
+ const api={PURPOSES,ALTERNATIVES,LABELS,STILL_CAMERA_EFFECTS,CHARTS,PREVIZ_RENDERERS,PREVIZ_HANDOFFS,IMAGE_ROLES,IMAGE_USES,referenceConstraints,hasStructuredImages,imageReferences,checkImageReferences,recommend,modesFor,checkLicense,exempt,framePlan,checkFrames,checkPreviz,previzHandoff,checkScene,checkData,checkMap,checkEpisode};
 
  if(typeof module==='object'&&module.exports)module.exports=api;else root.RENDER_ROUTING=api;
 })(typeof window==='object'?window:globalThis);

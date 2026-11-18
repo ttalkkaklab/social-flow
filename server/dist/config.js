@@ -78,6 +78,10 @@ export const config = {
     openaiApiKey: process.env.OPENAI_API_KEY || '',
     /** BytePlus ModelArk API key (required by the seedance_* video generation tools) — https://ai.byteplus.com/ark/region:ap-southeast-1/apikey */
     arkApiKey: process.env.ARK_API_KEY || '',
+    /** Hosted video vendors (vendor-video.ts): the official LTX API, MiniMax H3 and HeyGen Video 1. */
+    ltxApiKey: process.env.LTX_API_KEY || '',
+    minimaxApiKey: process.env.MINIMAX_API_KEY || '',
+    heygenApiKey: process.env.HEYGEN_API_KEY || '',
     /**
      * Suno API key (required by the suno_* music tools) — https://sunoapi.org/api-key
      *
@@ -236,13 +240,14 @@ export function mlxServeConfigured() {
  * doesn't exist.
  */
 export const snsTokenDir = process.env.SNS_TOKEN_DIR || join(homedir(), '.config', 'social-flow');
-export const SNS_PLATFORMS = ['THREADS', 'INSTAGRAM', 'FACEBOOK', 'YOUTUBE'];
+export const SNS_PLATFORMS = ['THREADS', 'INSTAGRAM', 'FACEBOOK', 'YOUTUBE', 'TIKTOK'];
 /** Conventional filename per platform — the same names are used inside channel directories. */
 const SNS_CREDENTIAL_FILENAMES = {
     THREADS: 'threads_token',
     INSTAGRAM: 'instagram_token',
     FACEBOOK: 'facebook_page_token',
     YOUTUBE: 'youtube-oauth-client.json',
+    TIKTOK: 'tiktok-oauth.json',
 };
 /** Default (no-channel) credentials — flat files. The *_TOKEN_FILE envs apply to these paths only. */
 const defaultSnsCredentialFiles = {
@@ -250,6 +255,7 @@ const defaultSnsCredentialFiles = {
     INSTAGRAM: process.env.INSTAGRAM_TOKEN_FILE || join(snsTokenDir, 'instagram_token'),
     FACEBOOK: process.env.FACEBOOK_PAGE_TOKEN_FILE || join(snsTokenDir, 'facebook_page_token'),
     YOUTUBE: process.env.YOUTUBE_OAUTH_FILE || join(snsTokenDir, 'youtube-oauth-client.json'),
+    TIKTOK: process.env.TIKTOK_OAUTH_FILE || join(snsTokenDir, 'tiktok-oauth.json'),
 };
 /** Channel slug convention — the same kebab-case as data/<slug>. Used in path assembly, so traversal is blocked at the source. */
 export const CHANNEL_SLUG_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;

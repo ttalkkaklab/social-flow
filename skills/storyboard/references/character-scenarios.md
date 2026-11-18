@@ -37,8 +37,10 @@ Use the user's established intent; ask only when the distinction is genuinely un
   Keep numbered Verified rows in research.md, with actual sources, dates and uncertainty.
   Two independent sources for time-sensitive claims (one official origin may suffice under
   the channel policy). Judge sufficiency by the story's claims, not a search-count quota.
-- **Fiction:** invent events, dialogue and worlds. No research.md, minimum searches, Verified
-  count, popular misconception or factual wow is required. Check motivation, causal continuity,
+- **Fiction:** invent events, dialogue and worlds. Read existing material before choosing a
+  new premise and follow storyboard's material-research guidance for inspiration and gaps.
+  Explicit research requests still require actual research. No research.md schema, minimum
+  searches, Verified count, popular misconception or factual wow is required. Check motivation, causal continuity,
   world rules and earned resolution. Any assertion presented as real-world fact still cites
   Verified rows; putting it in a character's mouth does not exempt it.
 - **Adapted:** research the real basis and state `adaptationBoundary`: what is documented,
@@ -101,8 +103,9 @@ particular audience experience; the points below are craft options, not a univer
    early. Do not postpone every answer or manufacture danger to fill the middle.
 5. For a **twist**, plant an honest detail that supports an initial interpretation and a later
    reinterpretation. Record the setup/payoff; do not introduce a new world rule at the reveal.
-   A result stated upfront can sustain interest through its cause, cost or limit. No twist is
-   also valid (`reveal: none`).
+   A result stated upfront can sustain interest through its cause, cost or limit: show part
+   of it, keep at least one of who, why or how back, and record the shown piece and the beat
+   that returns the rest in `setups` (`reveal: upfront`). No twist is also valid (`reveal: none`).
 6. For **comedy**, establish an expectation, let a character's specific pursuit complicate it,
    then break or reconnect the pattern. Test audience context and whether the violation feels
    safe enough to laugh at. Do not append an explanation of the punchline or a compulsory moral.
@@ -111,6 +114,11 @@ particular audience experience; the points below are craft options, not a univer
    ending. Do not force grief, a positive ending or a downward-then-upward numeric curve.
 8. Remove repeated explanation. Preserve subtext: what the character wants is author metadata;
    what the viewer sees/hears is the evidence. Theme may be inferred rather than spoken aloud.
+
+For story-led work, read [story interest](story-interest.md) after these steps. It covers the
+question each stretch holds open, the order of telling, who knows more, pressure that changes
+from scene to scene, and scene and episode endings, each with its evidence grade. They are
+options chosen for this story, not a formula; steps 1–8 above stay the base.
 
 Store the subject in `premise` and group the story into ordered `beats`. Existing hook,
 development and ending labels remain compatible, but the actual events decide how many
@@ -162,6 +170,9 @@ scene reads coherently. The first speaker's line, second speaker's answer and li
 response can share a shot. Set dialogue `to` to the actual addressee; `audience` means a real
 address to the viewer, not a placeholder for unknown blocking. A narrator-only explanation
 and a silent visual story are valid expressions.
+Use `to: unidentified` only for an in-world listener whose identity is unknown, such as a
+call for help into an empty forest. It does not mean somebody heard the line or learned
+the information. Keep a known off-screen listener's character ID; visibility is not identity.
 
 Test important transitions with concrete questions: what caused this next choice; how did
 this character learn the information; what can they see/hear from their position; who holds
@@ -214,10 +225,11 @@ order are warnings too. The rest below is recommended:
   `endingReason`, `difference`; optional `cta` can describe a desired ask.
 - `cast: [{id, role, want, voice, reason}]` from cast.json.
 - `beats: [{item, expectation, change, necessity, events}]`, with suggested items
-  `훅`, `전개 #1`, `전개 #2`, `전개 #3`, `마무리`. A CTA row is optional and may be empty
+  `훅`, `전개 #1`, `전개 #2`, `전개 #3`, `마무리` (`hook`, `development #1`–`#3`, `ending` in a
+  scenario that is not Korean). A CTA row is optional and may be empty
   or appear where it serves the story; no CTA reason or prescribed position is required.
 - `events: [{kind, character, text, basis, to?, claims?}]`: kind is action, dialogue or
-  narration; character is a cast ID; dialogue `to` is another ID, self or audience. `text`
+  narration; character is a cast ID; dialogue `to` is another ID, self, audience or unidentified. `text`
   describes observable action or actual spoken words. `basis` is fact, interpretation or
   invented; fact/interpretation requires `claims: [N]` pointing to Verified rows.
 - `setups: [{open, pay, detail, reinterpretation}]`, 1-based beat indices, open before pay
@@ -288,7 +300,8 @@ performance: [
 ```
 
 Speech events reference 1-based narration groups, exactly once in their playback order;
-action events carry text and no speech-reference `group`. Optional `durationSeconds` gives
+action events carry text and no speech-reference `group`; an event nobody performs (a door
+slams in the wind, the power goes out) omits `character`. Optional `durationSeconds` gives
 an authored action estimate. Optional `withGroup: 1` starts it with that 1-based speech
 group; without its own duration it spans that group, and a longer duration extends the
 interval by the maximum, not by adding two simultaneous events. An independent action
@@ -397,6 +410,10 @@ and action continuity 25; rhythm/economy 15. Cite performed events and the relev
 handoff, and subtract concrete defects rather than awarding metadata. No secondary-engine
 bonus and no compulsory fear/twist/moral. If only an early scenario is available, describe
 staging as provisional instead of pretending a full production plan was reviewed.
+
+An explicitly requested interest review is a separate read with the reviewer's own interest
+rubric and viewing log; it scores whether a viewer wants the next scene and is never a
+prerequisite for authoring or production.
 
 Ordinary authoring has no numerical pass threshold. A user-requested improvement loop keeps
 their exact criterion; “over 95” is strictly >95 for each requested story with zero P0.

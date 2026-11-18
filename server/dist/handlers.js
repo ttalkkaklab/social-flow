@@ -1,3 +1,5 @@
+import * as tiktok from './tiktok-client.js';
+import { upscaleCatalog, startUpscale, controlUpscale } from './video-upscale.js';
 import { existsSync } from 'node:fs';
 import { generateLocalVideo } from './local-video-models.js';
 import { manageWorkflow } from './production-workflow.js';
@@ -28,6 +30,9 @@ import * as qwen3asr from './qwen3-asr-client.js';
 import * as suno from './suno-client.js';
 import * as naver from './naver-client.js';
 import * as seedance from './seedance-client.js';
+import { generateLtxApiVideo, ltxApiImg2VideoSchema, ltxApiAudio2VideoSchema } from './ltx-api-video.js';
+import { generateMinimaxVideo, minimaxImg2VideoSchema, minimaxReferenceSchema } from './minimax-video.js';
+import { generateHeygenVideo, heygenImg2VideoSchema, heygenReferenceSchema } from './heygen-video.js';
 import * as serp from './serp-client.js';
 import * as stock from './stock-client.js';
 import * as sns from './sns-client.js';
@@ -92,6 +97,10 @@ function elevenlabsMeta(result) {
             ? `Alignment: ${result.alignmentPath} (${result.alignedCharacters ?? '?'} characters` +
                 `${result.speechEndSeconds !== undefined ? `, speech ends at ${result.speechEndSeconds}s` : ''})\n`
             : ''));
+}
+/** A vendor result as a tool result; terminal tells video_execute that no job is left running. */
+function vendorReport(result) {
+    return result.success ? text(JSON.stringify(result)) : { ...text(result.error, true), terminal: result.terminal };
 }
 function seedanceMeta(result) {
     const tokens = result.completionTokens === undefined
@@ -423,12 +432,20 @@ const instagramPublishSchema = z
     caption: z.string().min(1).max(2200, 'INSTAGRAM caption must be ≤2200 chars'),
     imageUrls: z.array(z.string().url()).min(1).max(10).optional(),
     videoUrl: z.string().url().optional(),
+    shareToFeed: z.boolean().optional(),
+    thumbOffsetMs: z.number().int().nonnegative().optional(),
+    coverUrl: z.string().url().optional(),
+    isAiGenerated: z.boolean().optional(),
     channel: channelSlugSchema,
 })
     .superRefine((v, ctx) => {
     const issue = (path, message) => ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
     if (!v.imageUrls && !v.videoUrl)
         issue('imageUrls', 'INSTAGRAM requires imageUrls (1-10) or videoUrl (reel)');
+    for (const key of ['shareToFeed', 'thumbOffsetMs', 'coverUrl', 'isAiGenerated']) {
+        if (v[key] !== undefined && !v.videoUrl)
+            issue(key, `${key} applies to reels (videoUrl) only`);
+    }
     if (v.imageUrls && v.videoUrl)
         issue('videoUrl', 'imageUrls and videoUrl are mutually exclusive');
     if (v.videoUrl && !isVideoUrl(v.videoUrl))
@@ -452,12 +469,18 @@ const facebookPublishSchema = z
         .min(1)
         .optional(),
     linkUrl: z.string().url().optional(),
+    reel: z.boolean().optional(),
+    isAiGenerated: z.boolean().optional(),
     channel: channelSlugSchema,
 })
     .superRefine((v, ctx) => {
     const issue = (path, message) => ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
     if (v.imageUrls && v.videoUrl)
         issue('videoUrl', 'imageUrls and videoUrl are mutually exclusive');
+    if ((v.reel || v.isAiGenerated !== undefined) && !v.videoUrl)
+        issue('reel', 'reel and isAiGenerated need videoUrl');
+    if (v.isAiGenerated !== undefined && !v.reel)
+        issue('isAiGenerated', 'isAiGenerated is sent on Reels (reel: true) only');
     if (v.videoUrl && !isVideoUrl(v.videoUrl))
         issue('videoUrl', 'videoUrl must be a .mp4/.mov URL');
     if (v.linkUrl && (v.imageUrls || v.videoUrl))
@@ -506,6 +529,8 @@ const youtubePublishSchema = z.object({
     // and after publishing the Shorts portrait surface can't be reverted via the API
     // (enforced by user directive, 2026-08-13).
     thumbnailFilePath: z.string().min(1),
+    defaultLanguage: z.string().regex(/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/, 'defaultLanguage is a BCP-47 tag, e.g. vi / ko').optional(),
+    defaultAudioLanguage: z.string().regex(/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/, 'defaultAudioLanguage is a BCP-47 tag, e.g. vi / ko').optional(),
     captionFilePath: z.string().min(1).optional(),
     captionLanguage: z
         .string()
@@ -922,6 +947,9 @@ export const ROUTES = {
             `\nAdapter: ${parsed.adapter}\nReference: ${parsed.referencePath}` +
             (parsed.conditioningMaskPath ? `\nConditioning mask: ${parsed.conditioningMaskPath}` : ''));
     },
+    video_upscale_catalog: async (args) => text(JSON.stringify(upscaleCatalog(args), null, 2)),
+    video_upscale_start: async (args) => text(JSON.stringify(startUpscale(args), null, 2)),
+    video_upscale_job: async (args) => text(JSON.stringify(controlUpscale(args), null, 2)),
     astra_video_upscale: async (args) => {
         const result = await astraVideo.upscaleVideo(parseArgs(astraVideo.astraVideoUpscaleSchema, args));
         return text(`${astraVideoReport('Clip upscaled 2x through pixel-upscaler-x2 on the ASTRA video API', result)}` +
@@ -939,6 +967,13 @@ export const ROUTES = {
     // The billed tokens (completionTokens) come back too — this value is the vendor's
     // billing basis, not a rate-sheet estimate, so per-episode cost tallies should
     // record this number.
+    // Hosted vendors through the common layer (vendor-video.ts).
+    ltx_api_img2video: async (args) => vendorReport(await generateLtxApiVideo(parseArgs(ltxApiImg2VideoSchema, args))),
+    ltx_api_audio2video: async (args) => vendorReport(await generateLtxApiVideo(parseArgs(ltxApiAudio2VideoSchema, args))),
+    minimax_img2video: async (args) => vendorReport(await generateMinimaxVideo(parseArgs(minimaxImg2VideoSchema, args))),
+    minimax_reference: async (args) => vendorReport(await generateMinimaxVideo(parseArgs(minimaxReferenceSchema, args))),
+    heygen_img2video: async (args) => vendorReport(await generateHeygenVideo(parseArgs(heygenImg2VideoSchema, args))),
+    heygen_reference: async (args) => vendorReport(await generateHeygenVideo(parseArgs(heygenReferenceSchema, args))),
     seedance_text2video: async (args) => {
         const result = await seedance.generateFromText(parseArgs(seedance.seedanceText2VideoSchema, args));
         if (!result.success)
@@ -1295,8 +1330,24 @@ export const ROUTES = {
     instagram_publish: async (args) => {
         const input = parseArgs(instagramPublishSchema, args);
         return fromApi(await sns.publishInstagram(input.videoUrl
-            ? { caption: input.caption, videoUrl: input.videoUrl, channel: input.channel }
+            ? {
+                caption: input.caption,
+                videoUrl: input.videoUrl,
+                shareToFeed: input.shareToFeed,
+                thumbOffsetMs: input.thumbOffsetMs,
+                coverUrl: input.coverUrl,
+                isAiGenerated: input.isAiGenerated,
+                channel: input.channel,
+            }
             : { caption: input.caption, imageUrls: input.imageUrls, channel: input.channel }), SNS_PUBLISHED_NOTE);
+    },
+    facebook_captions: async (args) => {
+        const input = parseArgs(z.object({
+            action: z.enum(['list', 'add']), channel: channelSlugSchema.unwrap(),
+            videoId: z.string().regex(/^\d+$/), expectedPageId: z.string().regex(/^\d+$/),
+            tracks: z.array(z.object({ filePath: z.string().min(1), locale: z.string().regex(/^[a-z]{2}_[A-Z]{2}$/) })).min(1).optional(),
+        }), args);
+        return fromApi(await sns.facebookCaptions(input));
     },
     facebook_publish: async (args) => {
         const input = parseArgs(facebookPublishSchema, args);
@@ -1307,6 +1358,8 @@ export const ROUTES = {
                 captionFilePath: input.captionFilePath,
                 captionLocale: input.captionLocale,
                 captionFiles: input.captionFiles,
+                reel: input.reel,
+                isAiGenerated: input.isAiGenerated,
                 channel: input.channel,
             }
             : { caption: input.caption, imageUrls: input.imageUrls, linkUrl: input.linkUrl, channel: input.channel }), SNS_PUBLISHED_NOTE);
@@ -1329,6 +1382,8 @@ export const ROUTES = {
             categoryId: input.categoryId,
             madeForKids: input.madeForKids,
             containsSyntheticMedia: input.containsSyntheticMedia,
+            defaultLanguage: input.defaultLanguage,
+            defaultAudioLanguage: input.defaultAudioLanguage,
             channel: input.channel,
         }), SNS_PUBLISHED_NOTE);
     },
@@ -1358,6 +1413,12 @@ export const ROUTES = {
         const input = parseArgs(snsIssueScoutSchema, args);
         return fromApi(await snsScout.snsIssueScout(input));
     },
+    tiktok_auth: async (args) => text(JSON.stringify(await tiktok.tiktokAuth(args))),
+    tiktok_creator_info: async (args) => text(JSON.stringify(await tiktok.tiktokCreatorInfo(args))),
+    tiktok_upload: async (args) => text(JSON.stringify(await tiktok.tiktokPublish(args, 'upload'))),
+    tiktok_publish: async (args) => text(JSON.stringify(await tiktok.tiktokPublish(args, 'direct'))),
+    tiktok_status: async (args) => text(JSON.stringify(await tiktok.tiktokStatus(args))),
+    tiktok_videos: async (args) => text(JSON.stringify(await tiktok.tiktokVideos(args))),
     sns_account_check: async (args) => {
         const input = parseArgs(accountCheckSchema, args);
         return fromApi(await sns.checkAccounts(input.channel));
@@ -1438,6 +1499,11 @@ export const ROUTES = {
         storyboard.contract();
         const r = storyboard.writeStoryShots(parseArgs(storyboard.storyShotSchema, args));
         return text(storyboard.renderApply(r), r.findings.some((f) => f.level === 'bad'));
+    },
+    story_music: async (args) => {
+        storyboard.contract();
+        const r = storyboard.writeStoryMusic(parseArgs(storyboard.storyMusicSchema, args));
+        return text(storyboard.renderApply(r) + '\n\nMusic spotting:\n' + JSON.stringify(r.spotting, null, 2), r.findings.some((f) => f.level === 'bad'));
     },
     shot_characters: async (args) => {
         storyboard.contract();

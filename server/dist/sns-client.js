@@ -1,4 +1,7 @@
+import { checkTikTokAccount } from './tiktok-client.js';
+import { execFile } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
+import { promisify } from 'node:util';
 import { existsSync, mkdirSync as nodeMkdirSync, readFileSync as nodeReadFileSync, rmSync as nodeRmSync, writeFileSync as nodeWriteFileSync, } from 'node:fs';
 import { open as nodeOpen, readFile, stat } from 'node:fs/promises';
 import { basename, dirname, extname, join } from 'node:path';
@@ -52,7 +55,13 @@ const THREADS_BASE = 'https://graph.threads.net/v1.0'; // Threads has its own ve
 const IG_BASE = `https://graph.instagram.com/${GRAPH_VERSION}`;
 const FB_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 const DEFAULT_POLL_INTERVAL_MS = 2_000;
-const DEFAULT_POLL_MAX_TRIES = 60; // headroom for reels video processing (2s × 60 = 2 min)
+const DEFAULT_POLL_MAX_TRIES = 60; // 2s × 60 = 2 min — images and Threads containers
+/**
+ * Reels processing: Meta asks for one status query a minute for up to five minutes
+ * (IG container reference). We look a little more often, still well under the
+ * container-status rate, and give the same five minutes before reporting a timeout.
+ */
+const REELS_POLL = { pollIntervalMs: 10_000, pollMaxTries: 30 };
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 function fail(status, message) {
     return { ok: false, status, body: message };
@@ -133,17 +142,22 @@ async function pollContainer(baseUrl, containerId, accessToken, statusField, opt
     const interval = opts?.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
     const maxTries = opts?.pollMaxTries ?? DEFAULT_POLL_MAX_TRIES;
     for (let attempt = 0; attempt < maxTries; attempt++) {
+        // The second field carries the reason: IG puts the error subcode in `status`,
+        // Threads its text in `error_message`. Without it an ERROR container says nothing.
+        const detailField = statusField === 'status_code' ? 'status' : 'error_message';
         const res = await graphRequest('get', `${baseUrl}/${containerId}`, {
-            fields: statusField,
+            fields: `${statusField},${detailField}`,
             access_token: accessToken,
         });
         if (!res.ok)
             return res;
-        const status = String(parseJson(res.body)?.[statusField] ?? '');
+        const body = parseJson(res.body);
+        const status = String(body?.[statusField] ?? '');
         if (status === 'FINISHED' || status === 'PUBLISHED')
             return null;
         if (status === 'ERROR' || status === 'EXPIRED') {
-            return fail(502, `Media container ${containerId} failed: ${status}`);
+            const detail = body?.[detailField] ? ` — ${String(body[detailField])}` : '';
+            return fail(502, `Media container ${containerId} failed: ${status}${detail}`);
         }
         await sleep(interval);
     }
@@ -397,22 +411,62 @@ export async function threadsKeywordSearch(input) {
         results,
     });
 }
+const flag = (value) => (value === undefined ? undefined : String(value));
+/**
+ * The Instagram token file holds one of two kinds:
+ * - an Instagram-Login user token (`IG…`) for graph.instagram.com, where /me is the IG account;
+ * - a Facebook Page token (`EAA…`, Facebook Login for Business) for graph.facebook.com, where
+ *   the IG professional account is the Page's `instagram_business_account`. New Meta apps no
+ *   longer offer Instagram Login ("최신 앱에서는 Instagram 로그인이 포함된 API 설정을 사용할 수
+ *   없습니다"), so this is the only route they have.
+ * Every Instagram call takes its host from here; the endpoints and fields are shared.
+ */
+function instagramBase(token) {
+    return token.startsWith('EAA') ? FB_BASE : IG_BASE;
+}
+async function instagramAccount(token, fields) {
+    const base = instagramBase(token);
+    if (base === IG_BASE) {
+        const me = await fetchMe(IG_BASE, token, fields);
+        if (!me.ok)
+            return { error: me };
+        return { base, account: parseJson(me.body) ?? {} };
+    }
+    // account_type exists only on graph.instagram.com; a Page-linked account is professional by definition.
+    const igFields = fields.split(',').filter((f) => f !== 'account_type').join(',');
+    const me = await fetchMe(FB_BASE, token, `id,name,instagram_business_account{${igFields}}`);
+    if (!me.ok)
+        return { error: me };
+    const page = parseJson(me.body) ?? {};
+    const account = page.instagram_business_account;
+    if (!account?.id) {
+        return {
+            error: fail(400, `Facebook token for Page ${String(page.name ?? page.id ?? '?')} shows no linked Instagram professional account — link the account to the Page and grant instagram_basic`),
+        };
+    }
+    return { base, account: { ...account, account_type: 'BUSINESS', pageId: page.id } };
+}
 export async function publishInstagram(input, opts) {
     const { token, error } = await loadTokenFile('INSTAGRAM', input.channel);
     if (!token)
         return error;
-    const me = await fetchMe(IG_BASE, token, 'id,username');
-    if (!me.ok)
-        return me;
-    const uid = String(parseJson(me.body)?.id ?? '');
+    const resolved = await instagramAccount(token, 'id,username');
+    if ('error' in resolved)
+        return resolved.error;
+    const IG = resolved.base;
+    const uid = String(resolved.account.id ?? '');
     if (!uid)
-        return fail(502, `Instagram /me returned no id: ${me.body}`);
+        return fail(502, 'Instagram account lookup returned no id');
     let creationId;
     if (input.videoUrl) {
-        const create = await graphRequest('post', `${IG_BASE}/${uid}/media`, {
+        const create = await graphRequest('post', `${IG}/${uid}/media`, {
             media_type: 'REELS',
             video_url: input.videoUrl,
             caption: input.caption,
+            share_to_feed: flag(input.shareToFeed),
+            thumb_offset: input.thumbOffsetMs === undefined ? undefined : String(input.thumbOffsetMs),
+            cover_url: input.coverUrl,
+            is_ai_generated: flag(input.isAiGenerated),
             access_token: token,
         });
         if (!create.ok)
@@ -420,7 +474,7 @@ export async function publishInstagram(input, opts) {
         creationId = String(parseJson(create.body)?.id ?? '');
     }
     else if ((input.imageUrls?.length ?? 0) === 1) {
-        const create = await graphRequest('post', `${IG_BASE}/${uid}/media`, {
+        const create = await graphRequest('post', `${IG}/${uid}/media`, {
             image_url: input.imageUrls[0],
             caption: input.caption,
             access_token: token,
@@ -433,7 +487,7 @@ export async function publishInstagram(input, opts) {
         // carousel — create child containers, then bundle once all are FINISHED
         const children = [];
         for (const imageUrl of input.imageUrls ?? []) {
-            const child = await graphRequest('post', `${IG_BASE}/${uid}/media`, {
+            const child = await graphRequest('post', `${IG}/${uid}/media`, {
                 image_url: imageUrl,
                 is_carousel_item: 'true',
                 access_token: token,
@@ -446,11 +500,11 @@ export async function publishInstagram(input, opts) {
             children.push(childId);
         }
         for (const childId of children) {
-            const pollFailure = await pollContainer(IG_BASE, childId, token, 'status_code', opts);
+            const pollFailure = await pollContainer(IG, childId, token, 'status_code', opts);
             if (pollFailure)
                 return pollFailure;
         }
-        const create = await graphRequest('post', `${IG_BASE}/${uid}/media`, {
+        const create = await graphRequest('post', `${IG}/${uid}/media`, {
             media_type: 'CAROUSEL',
             children: children.join(','),
             caption: input.caption,
@@ -462,17 +516,17 @@ export async function publishInstagram(input, opts) {
     }
     if (!creationId)
         return fail(502, 'Instagram media container returned no id');
-    const pollFailure = await pollContainer(IG_BASE, creationId, token, 'status_code', opts);
+    const pollFailure = await pollContainer(IG, creationId, token, 'status_code', opts ?? (input.videoUrl ? REELS_POLL : undefined));
     if (pollFailure)
         return pollFailure;
-    const publish = await graphRequest('post', `${IG_BASE}/${uid}/media_publish`, {
+    const publish = await graphRequest('post', `${IG}/${uid}/media_publish`, {
         creation_id: creationId,
         access_token: token,
     });
     if (!publish.ok)
         return publish;
     const mediaId = String(parseJson(publish.body)?.id ?? '');
-    const permalink = await graphRequest('get', `${IG_BASE}/${mediaId}`, {
+    const permalink = await graphRequest('get', `${IG}/${mediaId}`, {
         fields: 'permalink',
         access_token: token,
     });
@@ -519,17 +573,18 @@ export async function instagramInsights(input) {
     const { token, error } = await loadTokenFile('INSTAGRAM', input.channel);
     if (!token)
         return error;
-    const me = await fetchMe(IG_BASE, token, 'id,username,account_type,media_count,followers_count,follows_count');
-    if (!me.ok)
-        return me;
-    const profile = parseJson(me.body) ?? {};
+    const resolved = await instagramAccount(token, 'id,username,account_type,media_count,followers_count,follows_count');
+    if ('error' in resolved)
+        return resolved.error;
+    const IG = resolved.base;
+    const profile = resolved.account;
     const uid = str(profile.id);
     if (!uid)
-        return fail(502, `Instagram /me returned no id: ${me.body}`);
+        return fail(502, 'Instagram account lookup returned no id');
     const days = input.days ?? 7;
     const nowSec = Math.floor(Date.now() / 1000);
     const since = nowSec - days * 86_400;
-    const ranged = await graphRequest('get', `${IG_BASE}/${uid}/insights`, {
+    const ranged = await graphRequest('get', `${IG}/${uid}/insights`, {
         metric: IG_USER_METRICS,
         period: 'day',
         metric_type: 'total_value',
@@ -550,7 +605,7 @@ export async function instagramInsights(input) {
     const mediaLimit = input.mediaLimit ?? 10;
     let media = [];
     if (mediaLimit > 0) {
-        const list = await graphRequest('get', `${IG_BASE}/${uid}/media`, {
+        const list = await graphRequest('get', `${IG}/${uid}/media`, {
             fields: 'id,media_type,media_product_type,caption,permalink,timestamp,like_count,comments_count',
             limit: String(mediaLimit),
             access_token: token,
@@ -564,7 +619,7 @@ export async function instagramInsights(input) {
             // side 400s the whole response, so attach only the two known surfaces
             // and request just the common set for anything else (STORY etc.).
             const surfaceMetrics = productType === 'REELS' ? IG_REELS_METRICS : productType === 'FEED' ? IG_FEED_METRICS : '';
-            const ins = await graphRequest('get', `${IG_BASE}/${mediaId}/insights`, {
+            const ins = await graphRequest('get', `${IG}/${mediaId}/insights`, {
                 metric: surfaceMetrics ? `${IG_MEDIA_METRICS},${surfaceMetrics}` : IG_MEDIA_METRICS,
                 access_token: token,
             });
@@ -602,7 +657,85 @@ export async function instagramInsights(input) {
         media,
     });
 }
-export async function publishFacebook(input) {
+/**
+ * Page Reels publishing (video-api/guides/reels-publishing): start → hosted upload
+ * through rupload with the `file_url` header → finish with video_state=PUBLISHED.
+ *
+ * `/{page}/videos` makes a regular Page video; no Meta document says a vertical
+ * clip sent there becomes a Reel, so a Reel goes through this path only.
+ *
+ * Once finish answers, the Reel exists. A status that is still processing when the
+ * poll gives up comes back as `processing`, not as a failure — calling again would
+ * post a second Reel.
+ */
+async function publishFacebookReel(pageId, token, input, opts) {
+    const start = await graphRequest('post', `${FB_BASE}/${pageId}/video_reels`, {
+        upload_phase: 'start',
+        access_token: token,
+    });
+    if (!start.ok)
+        return { error: start };
+    const videoId = String(parseJson(start.body)?.video_id ?? '');
+    if (!videoId)
+        return { error: fail(502, `Facebook Reel start returned no video_id: ${start.body}`) };
+    // Hosted upload: Meta fetches file_url itself (it must be public and reachable by facebookexternalhit).
+    let upload;
+    try {
+        const res = await fetch(`https://rupload.facebook.com/video-upload/${GRAPH_VERSION}/${videoId}`, {
+            method: 'POST',
+            headers: { Authorization: `OAuth ${token}`, file_url: input.videoUrl },
+            signal: AbortSignal.timeout(300_000),
+        });
+        upload = { ok: res.ok, status: res.status, body: await res.text() };
+    }
+    catch (error) {
+        return { error: fail(502, `Facebook Reel upload failed before finish (nothing published, video ${videoId}): ${error instanceof Error ? error.message : String(error)}`) };
+    }
+    if (!upload.ok || parseJson(upload.body)?.success !== true) {
+        return { error: { ok: false, status: upload.ok ? 502 : upload.status, body: `Facebook Reel upload rejected (nothing published, video ${videoId}): ${upload.body}` } };
+    }
+    const finish = await graphRequest('post', `${FB_BASE}/${pageId}/video_reels`, {
+        upload_phase: 'finish',
+        video_id: videoId,
+        video_state: 'PUBLISHED',
+        description: input.caption,
+        is_ai_generated: flag(input.isAiGenerated),
+        access_token: token,
+    }, 120_000);
+    if (!finish.ok) {
+        // A timeout here is uncertain: the Reel may be live. Point at the video, never at a retry.
+        return { error: { ...finish, body: `${finish.body} — check video ${videoId} on the Page before any retry; a second call posts a second Reel` } };
+    }
+    const finishBody = parseJson(finish.body);
+    if (finishBody?.success === false)
+        return { error: fail(502, `Facebook Reel finish refused (video ${videoId}): ${finish.body}`) };
+    const postId = typeof finishBody?.post_id === 'string' ? finishBody.post_id : undefined;
+    // Processing and publishing run after finish. Wait for them so a rejected clip
+    // (ratio, length, frame rate) is reported instead of a silent missing Reel.
+    let last = 'unknown';
+    for (let attempt = 0; attempt < opts.pollMaxTries; attempt++) {
+        const res = await graphRequest('get', `${FB_BASE}/${videoId}`, { fields: 'status', access_token: token });
+        if (res.ok) {
+            const status = (parseJson(res.body)?.status ?? {});
+            const phase = (name) => (status[name] ?? {});
+            const videoStatus = String(status.video_status ?? '');
+            const failed = [phase('uploading_phase'), phase('processing_phase'), phase('publishing_phase')].find((p) => p.status === 'error' || p.error);
+            if (['error', 'upload_failed', 'expired'].includes(videoStatus) || failed) {
+                const reason = JSON.stringify(failed?.error ?? videoStatus);
+                return { error: fail(502, `Facebook Reel ${videoId} failed after finish: ${reason}`) };
+            }
+            const publishing = phase('publishing_phase');
+            // The reference lists `completed`; its example says `complete`. Accept both.
+            if (publishing.publish_status === 'published' || ['complete', 'completed'].includes(String(publishing.status))) {
+                return { videoId, postId };
+            }
+            last = `video_status=${videoStatus || '?'}, publishing=${String(publishing.status ?? '?')}`;
+        }
+        await sleep(opts.pollIntervalMs);
+    }
+    return { videoId, postId, processing: `Reel accepted but still processing (${last}); check the Page before doing anything — do not publish again` };
+}
+export async function publishFacebook(input, opts) {
     // Normalize captions to one list — the legacy single pair becomes a one-entry list
     if (input.captionFiles?.length && input.captionFilePath) {
         return fail(400, 'Pass captionFiles or captionFilePath, not both (ambiguous which one wins)');
@@ -644,11 +777,22 @@ export async function publishFacebook(input) {
     if (!pageId)
         return fail(502, `Facebook /me returned no id: ${me.body}`);
     let postId;
-    if (input.videoUrl) {
+    let videoId;
+    let processing;
+    if (input.videoUrl && input.reel) {
+        const reel = await publishFacebookReel(pageId, token, { videoUrl: input.videoUrl, caption: input.caption, isAiGenerated: input.isAiGenerated }, { ...REELS_POLL, ...opts });
+        if ('error' in reel)
+            return reel.error;
+        videoId = reel.videoId;
+        postId = reel.postId ?? reel.videoId;
+        processing = reel.processing;
+    }
+    else if (input.videoUrl) {
         const video = await graphRequest('post', `${FB_BASE}/${pageId}/videos`, { file_url: input.videoUrl, description: input.caption, access_token: token }, 120_000);
         if (!video.ok)
             return video;
         postId = String(parseJson(video.body)?.id ?? '');
+        videoId = postId;
     }
     else if ((input.imageUrls?.length ?? 0) > 0) {
         const mediaFbids = [];
@@ -692,18 +836,21 @@ export async function publishFacebook(input) {
     // upload one per locale; only the first (default) sends default_locale.
     const captionWarnings = [];
     for (const [index, file] of captionFiles.entries()) {
-        const warning = await uploadFacebookCaption(token, postId, { ...file, isDefault: index === 0 });
+        const warning = await uploadFacebookCaption(token, videoId ?? postId, { ...file, isDefault: index === 0 });
         if (warning)
             captionWarnings.push(`${file.locale}: ${warning}`);
     }
     const captionWarning = captionWarnings.length > 0 ? captionWarnings.join('; ') : undefined;
-    const permalink = await graphRequest('get', `${FB_BASE}/${postId}`, {
+    const permalink = await graphRequest('get', `${FB_BASE}/${videoId ?? postId}`, {
         fields: 'permalink_url',
         access_token: token,
     });
     return okJson({
         platform: 'FACEBOOK',
         postId,
+        ...(videoId ? { videoId } : {}),
+        ...(input.reel && input.videoUrl ? { reel: true } : {}),
+        ...(processing ? { processingWarning: processing } : {}),
         permalink: permalink.ok ? (parseJson(permalink.body)?.permalink_url ?? null) : null,
         ...(captionFiles.length > 0
             ? { captionSet: !captionWarning, captionLocales: captionFiles.map((f) => f.locale) }
@@ -786,7 +933,8 @@ const YT_THUMB_MIME_BY_EXT = {
     '.jpeg': 'image/jpeg',
     '.png': 'image/png',
 };
-const YT_THUMB_MAX_BYTES = 2 * 1024 * 1024;
+/** thumbnails.set takes up to 50MB since 2026-09-14 (was 2MB). */
+const YT_THUMB_MAX_BYTES = 50 * 1024 * 1024;
 /**
  * Caption file caps — YouTube documents 100MB on captions.insert, Facebook
  * 200K on the captions edge. Short-form SRTs are a few KB so this isn't a
@@ -889,13 +1037,86 @@ async function uploadFacebookCaption(token, videoId, caption) {
             body: form,
             signal: AbortSignal.timeout(60_000),
         });
-        if (res.ok)
+        const body = await res.text();
+        if (res.ok && JSON.parse(body)?.success === true)
             return null;
-        return `captions ${res.status}: ${(await res.text()).slice(0, 300)}`;
+        return `captions ${res.status}: ${body.slice(0, 300)}`;
     }
     catch (error) {
         return `caption upload failed: ${error instanceof Error ? error.message : String(error)}`;
     }
+}
+/** Add tracks to an existing owned video without republishing or replacing a locale. */
+export async function facebookCaptions(input) {
+    if (!/^[0-9]+$/.test(input.videoId) || !/^[0-9]+$/.test(input.expectedPageId) ||
+        !/^[a-z0-9][a-z0-9-]{0,63}$/.test(input.channel) || !['list', 'add'].includes(input.action))
+        return fail(400, 'Use a channel slug, numeric videoId/expectedPageId and action list or add');
+    const tracks = input.tracks || [];
+    if ((input.action === 'add' && !tracks.length) || (input.action === 'list' && tracks.length) ||
+        tracks.some(t => !/^[a-z]{2}_[A-Z]{2}$/.test(t.locale)) || new Set(tracks.map(t => t.locale)).size !== tracks.length)
+        return fail(400, 'add requires unique locale tracks; list takes no tracks');
+    const files = [];
+    for (const track of tracks) {
+        const read = await readCaptionFile(track.filePath, CAPTION_MAX_BYTES_FB);
+        if (!read.bytes)
+            return read.error;
+        if (!/^\d+\r?\n\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3}\r?\n/m.test(read.bytes.toString('utf8')))
+            return fail(400, `Invalid SRT cues: ${track.locale}`);
+        files.push({ bytes: read.bytes, locale: track.locale, sha256: createHash('sha256').update(read.bytes).digest('hex') });
+    }
+    const { token, error } = await loadTokenFile('FACEBOOK', input.channel);
+    if (error || !token)
+        return error || fail(400, 'Missing Facebook token');
+    const me = await fetchMe(FB_BASE, token, 'id,name');
+    if (!me.ok)
+        return me;
+    if (JSON.parse(me.body).id !== input.expectedPageId)
+        return fail(409, 'Facebook Page differs from expectedPageId');
+    const owner = await graphRequest('get', `${FB_BASE}/${input.videoId}`, { fields: 'id,from', access_token: token });
+    if (!owner.ok)
+        return owner;
+    if (JSON.parse(owner.body).from?.id !== input.expectedPageId)
+        return fail(409, 'Video ownership could not be verified for this Page');
+    const list = () => graphRequest('get', `${FB_BASE}/${input.videoId}/captions`, { fields: 'id,locale,is_default', limit: '100', access_token: token });
+    const before = await list();
+    if (!before.ok)
+        return before;
+    const initial = JSON.parse(before.body);
+    if (!Array.isArray(initial.data) || initial.paging?.next)
+        return fail(502, 'Caption list incomplete; no tracks were added');
+    if (input.action === 'list')
+        return okJson({ videoId: input.videoId, pageId: input.expectedPageId, tracks: initial.data });
+    const results = [];
+    for (const track of files) {
+        if (initial.data.some((item) => item.locale === track.locale)) {
+            results.push({ locale: track.locale, status: 'already_exists', note: 'Existing content was not compared or replaced' });
+            continue;
+        }
+        const warning = await uploadFacebookCaption(token, input.videoId, { ...track, isDefault: false });
+        results.push({ locale: track.locale, sha256: track.sha256, status: warning ? 'unconfirmed' : 'accepted', ...(warning ? { warning } : {}) });
+        if (warning)
+            break;
+    }
+    const after = await list();
+    let current = null;
+    let verificationError = after.ok ? '' : after.body;
+    if (after.ok) {
+        try {
+            const parsed = JSON.parse(after.body);
+            if (!Array.isArray(parsed.data) || parsed.paging?.next)
+                verificationError = 'Caption verification list incomplete';
+            else
+                current = parsed.data;
+        }
+        catch {
+            verificationError = 'Caption verification returned invalid JSON';
+        }
+    }
+    for (const result of results)
+        if (result.status === 'accepted' && Array.isArray(current) && current.some((item) => item.locale === result.locale))
+            result.status = 'verified';
+    return okJson({ videoId: input.videoId, pageId: input.expectedPageId, results, tracks: current,
+        ...(verificationError ? { verificationError } : {}), note: 'No default locale changed. Presence verifies the locale, not its text; never retry an uncertain write without listing first.' });
 }
 async function setYoutubeThumbnail(token, videoId, thumb) {
     try {
@@ -913,6 +1134,46 @@ async function setYoutubeThumbnail(token, videoId, thumb) {
     catch (error) {
         return `thumbnails.set failed: ${error instanceof Error ? error.message : String(error)}`;
     }
+}
+/**
+ * Shorts are square or vertical and at most three minutes. Only those need the processing
+ * wait; long-form takes its cover at once. An unreadable file waits, the safe side.
+ */
+async function looksLikeShort(filePath) {
+    try {
+        const { stdout } = await promisify(execFile)('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height:format=duration', '-of', 'json', filePath], { timeout: 30_000 });
+        const probe = JSON.parse(stdout);
+        const { width = 0, height = 0 } = probe.streams?.[0] ?? {};
+        const duration = Number(probe.format?.duration);
+        if (!width || !height || !Number.isFinite(duration))
+            return true;
+        return height >= width && duration <= 180;
+    }
+    catch {
+        return true;
+    }
+}
+/**
+ * thumbnails.set on a Short "might not be applied" before processing finishes, so the
+ * documented order is: wait for processingDetails.processingStatus = succeeded, then set.
+ * videos.list needs a read scope the upload-only token may lack; then we set without
+ * waiting and say so. Returns a note for the receipt, or null when processing finished.
+ */
+async function waitForYoutubeProcessing(token, videoId, opts) {
+    for (let attempt = 0; attempt < opts.pollMaxTries; attempt++) {
+        const res = await youtubeRequest('get', `${YT_DATA_BASE}/videos`, { part: 'processingDetails', id: videoId }, token);
+        if (!res.ok)
+            return `processing status unreadable (HTTP ${res.status}, needs youtube.force-ssl or youtube.readonly) — thumbnail set without waiting; on a Short it may not apply`;
+        const items = parseJson(res.body)?.items;
+        const details = (Array.isArray(items) ? items[0]?.processingDetails : undefined);
+        const status = String(details?.processingStatus ?? '');
+        if (status === 'succeeded')
+            return null;
+        if (status === 'failed' || status === 'terminated')
+            return `YouTube processing ${status} — check the video in Studio`;
+        await sleep(opts.pollIntervalMs);
+    }
+    return `processing not finished after ${Math.round((opts.pollMaxTries * opts.pollIntervalMs) / 1000)}s — thumbnail set anyway; on a Short it may not apply, so set it again in Studio if the cover is wrong`;
 }
 /* ────────────────────────────────────────────────────────────────────────────
  * YouTube resumable upload — chunked PUT + resume
@@ -1090,7 +1351,7 @@ async function queryResumeOffset(sessionUrl, total, mimeType) {
         return { offset: null, done: false, body: '' };
     }
 }
-export async function publishYoutube(input) {
+export async function publishYoutube(input, opts) {
     // Every upload starts private; the flip to public is youtube_update after the watch page is checked.
     if (input.privacyStatus === 'public') {
         throw new Error('YouTube uploads start private (owner directive 2026-08-19/2026-10-18): upload with privacyStatus "private" or "unlisted", then flip to public with youtube_update after checking the watch page');
@@ -1132,7 +1393,7 @@ export async function publishYoutube(input) {
             return fail(400, `Cannot read thumbnail file: ${error instanceof Error ? error.message : String(error)}`);
         }
         if (thumbBytes.byteLength > YT_THUMB_MAX_BYTES) {
-            return fail(400, `Thumbnail exceeds 2MB: ${input.thumbnailFilePath} (${thumbBytes.byteLength} bytes)`);
+            return fail(400, `Thumbnail exceeds 50MB: ${input.thumbnailFilePath} (${thumbBytes.byteLength} bytes)`);
         }
         thumb = { bytes: thumbBytes, mimeType: thumbMime };
     }
@@ -1198,6 +1459,8 @@ export async function publishYoutube(input) {
                         // so uploading a general-content channel's video as 25 (News & Politics) surfaces it
                         // to the wrong interest group.
                         categoryId: input.categoryId ?? '22',
+                        ...(input.defaultLanguage ? { defaultLanguage: input.defaultLanguage } : {}),
+                        ...(input.defaultAudioLanguage ? { defaultAudioLanguage: input.defaultAudioLanguage } : {}),
                     },
                     status: {
                         privacyStatus: input.privacyStatus ?? 'private',
@@ -1269,6 +1532,9 @@ export async function publishYoutube(input) {
         // the same file answer "already up" with the old videoId.
         writeState(input.videoFilePath, null);
         // A thumbnail failure is a warning only — the upload already succeeded, and re-publishing is non-idempotent and burns quota, so don't fail the whole call
+        const processingNote = thumb && (await looksLikeShort(input.videoFilePath))
+            ? await waitForYoutubeProcessing(token, videoId, { ...REELS_POLL, ...opts })
+            : null;
         const thumbnailWarning = thumb ? await setYoutubeThumbnail(token, videoId, thumb) : undefined;
         // Same rule for captions — a failure still leaves the publish successful (report a warning and re-upload just the captions).
         // One captions.insert per language track; a failed language doesn't stop the rest
@@ -1286,6 +1552,7 @@ export async function publishYoutube(input) {
             fileName: basename(input.videoFilePath),
             ...(thumb ? { thumbnailSet: !thumbnailWarning } : {}),
             ...(thumbnailWarning ? { thumbnailWarning } : {}),
+            ...(processingNote ? { processingNote } : {}),
             ...(captionTracks.length > 0
                 ? { captionSet: !captionWarning, captionLanguages: captionTracks.map((t) => t.language) }
                 : {}),
@@ -1425,7 +1692,8 @@ export async function youtubeUpdate(input) {
         privacyStatus: updated?.status?.privacyStatus ?? nextStatus.privacyStatus,
         title: updated?.snippet?.title ?? nextSnippet.title,
         changed: {
-            privacyStatus: status.privacyStatus !== nextStatus.privacyStatus,
+            // From the response: the API can keep a value other than the one requested.
+            privacyStatus: status.privacyStatus !== (updated?.status?.privacyStatus ?? nextStatus.privacyStatus),
             title: snippet.title !== nextSnippet.title,
             description: snippet.description !== nextSnippet.description,
         },
@@ -1713,15 +1981,16 @@ async function inboxInstagram(input, now, channel) {
     const { token, error } = await loadTokenFile('INSTAGRAM', channel);
     if (!token)
         return { error };
-    const me = await fetchMe(IG_BASE, token, 'id,username');
-    if (!me.ok)
-        return { error: me };
-    const account = parseJson(me.body) ?? {};
+    const resolved = await instagramAccount(token, 'id,username');
+    if ('error' in resolved)
+        return { error: resolved.error };
+    const IG = resolved.base;
+    const account = resolved.account;
     const uid = str(account.id);
     const ourName = str(account.username);
     if (!uid)
-        return { error: fail(502, `Instagram /me returned no id: ${me.body}`) };
-    const list = await graphRequest('get', `${IG_BASE}/${uid}/media`, {
+        return { error: fail(502, 'Instagram account lookup returned no id') };
+    const list = await graphRequest('get', `${IG}/${uid}/media`, {
         fields: 'id,permalink,caption,timestamp,comments_count',
         limit: String(input.postLimit),
         access_token: token,
@@ -1745,7 +2014,7 @@ async function inboxInstagram(input, now, channel) {
             posts.push(post);
             continue;
         }
-        const comments = await graphRequest('get', `${IG_BASE}/${postId}/comments`, {
+        const comments = await graphRequest('get', `${IG}/${postId}/comments`, {
             fields: 'id,text,username,timestamp,like_count,hidden,replies{id,text,username,timestamp,like_count,hidden}',
             limit: String(input.commentLimit),
             access_token: token,
@@ -2138,7 +2407,7 @@ export async function replyToComment(input) {
     const { token, error } = await loadTokenFile('INSTAGRAM', input.channel);
     if (!token)
         return error;
-    const create = await graphRequest('post', `${IG_BASE}/${input.commentId}/replies`, {
+    const create = await graphRequest('post', `${instagramBase(token)}/${input.commentId}/replies`, {
         message: input.message,
         access_token: token,
     });
@@ -2222,7 +2491,7 @@ export async function moderateComment(input) {
         const { token, error } = await loadTokenFile('INSTAGRAM', channel);
         if (!token)
             return error;
-        const res = await graphRequest('post', `${IG_BASE}/${commentId}`, {
+        const res = await graphRequest('post', `${instagramBase(token)}/${commentId}`, {
             hide: String(hide),
             access_token: token,
         });
@@ -2251,9 +2520,9 @@ export async function moderateComment(input) {
 }
 // ── Account checks ───────────────────────────────────────────────
 /**
- * Checks all four platforms for one credential set (a single channel or the default tokens)
+ * Checks configured platforms for one credential set (a single channel or the default tokens)
  * — token values are never included. The platform checks are independent, so they run in
- * parallel (4 serial round trips → the latency of one).
+ * parallel.
  */
 async function checkPlatformSet(channel) {
     const metaChecks = [
@@ -2264,6 +2533,15 @@ async function checkPlatformSet(channel) {
         const { token, error } = await loadTokenFile(platform, channel);
         if (!token)
             return [key, { ok: false, reason: error.body }];
+        if (platform === 'INSTAGRAM') {
+            const resolved = await instagramAccount(token, fields);
+            return [
+                key,
+                'error' in resolved
+                    ? { ok: false, status: resolved.error.status, reason: resolved.error.body.slice(0, 300) }
+                    : { ok: true, account: resolved.account, route: resolved.base === FB_BASE ? 'facebook_login' : 'instagram_login' },
+            ];
+        }
         const me = await fetchMe(baseUrl, token, fields);
         return [
             key,
@@ -2303,7 +2581,7 @@ async function checkPlatformSet(channel) {
             return ['youtube', { ok: false, reason: error instanceof Error ? error.message : String(error) }];
         }
     })();
-    return Object.fromEntries(await Promise.all([...metaChecks, youtubeCheck]));
+    return Object.fromEntries(await Promise.all([...metaChecks, youtubeCheck, checkTikTokAccount(channel).then(result => ['tiktok', result])]));
 }
 /**
  * Batch check of the SNS publishing credentials — with channel given, only that channel's

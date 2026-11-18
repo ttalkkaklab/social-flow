@@ -95,3 +95,14 @@ test('every compiled minimum and maximum runs through the builder audio filter g
     assert.ok(energy(2.7, 2.9) > 1, 'zero ending fade must keep the bed audible at the tail');
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
+
+test('the quiet review line compiles to BGM_SEP_MAX, and a resting distance past it warns instead of refusing', () => {
+  const dir = fixture();
+  try {
+    assert.equal(compile(dir, { bedSeparationLu: 12, maximumSeparationLu: 18 }).status, 0);
+    assert.match(readFileSync(join(dir, 'work/sound.env'), 'utf8'), /BGM_SEP_MAX:=18/);
+    assert.match(defaults, /BGM_SEP_MAX=\$\{BGM_SEP_MAX:-20\}/);
+    assert.deepEqual(mixFindings({ bedSeparationLu: 16, maximumSeparationLu: 12 }), []);
+    assert.match(build, /BGM_SEP" -v m="\$BGM_SEP_MAX"[^\n]*\n[^\n]*say "⚠ music the bed rests/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});

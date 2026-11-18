@@ -4,6 +4,7 @@ import path from 'node:path';
 import { atomicJson } from './routing-files.js';
 export { atomicJson } from './routing-files.js';
 import { fileURLToPath } from 'node:url';
+import { refreshVideoReview } from './video-review.js';
 
 export interface VideoJob {
   planId: string;
@@ -18,6 +19,10 @@ export interface VideoJob {
   providerIds?: string[];
   result?: unknown;
   evidence?: string;
+  startedAt?: string;
+  finishedAt?: string;
+  observedAt?: string;
+  providerStatus?: string;
   updatedAt: string;
 }
 export interface VideoState { version: 1; openingSpendUsd?: number; jobs: Record<string, VideoJob> }
@@ -36,7 +41,7 @@ function historicalSpend(episode: string): number {
   for (const line of fs.readFileSync(events, 'utf8').split('\n').filter(Boolean)) {
     const event = JSON.parse(line);
     if (['astra_genai_text2img', 'astra_genai_edit', 'astra_genai_image_generate', 'astra_genai_image_edit', 'astra_genai_catalog', 'astra_genai_desktop_status'].includes(event.tool)) continue;
-    if (!/^(veo_|seedance_|omni_|mlx_video|ltx_video|fasth3_omni_|astra_)/.test(event.tool || '')) continue;
+    if (!/^(veo_|seedance_|omni_|mlx_video|ltx_video|ltx_api_|minimax_|heygen_|fasth3_omni_|astra_)/.test(event.tool || '')) continue;
     const price = prices.get(event.key);
     if (typeof event.quantity !== 'number' || !Number.isFinite(event.quantity) || event.quantity < 0 || price === undefined || !Number.isFinite(price))
       throw new Error('Historical video spend is unknown; reconcile before new spending');
@@ -104,6 +109,7 @@ export function videoTransaction<T>(episode: string, update: (state: VideoState)
     }
     const result = update(state);
     atomicJson(file, state);
+    refreshVideoReview(episode);
     return result;
   } finally { fs.closeSync(fd); fs.unlinkSync(lock); }
 }

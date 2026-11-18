@@ -91,3 +91,21 @@ test('background details show both camera panels without a legacy imageUrl', () 
     assert.match(html, /src="[^"\n]*back\.png"/);
   } finally { f.clean(); }
 });
+
+test('a channel-shared background lists before episode sheets with its own panels', () => {
+  const f = fixture();
+  try {
+    f.write('assets/locations/beach/front.png', 'front');
+    f.write('assets/locations/beach/back.png', 'back');
+    f.write('assets/locations/beach/background.json', JSON.stringify({ name: 'Beach', layout: 'Sea north', panels: { front: 'front.png', back: 'back.png' } }));
+    f.write('assets/locations/broken/background.json', '{');
+    const result = exportChannel(f.dir);
+    assert.ok(result.structuralWarnings.some(w => w.includes('broken/background.json')));
+    const index = readFileSync(join(f.dir, 'assets/locations/index.html'), 'utf8');
+    assert.match(index, /src="beach\/front\.png"/);
+    assert.ok(!index.includes('검토 HTML 미등록'));
+    const { detailFilename } = require('../../skills/storyboard/references/location-assets.js');
+    const html = readFileSync(join(f.dir, 'assets/locations/details', detailFilename('', 'beach')), 'utf8');
+    assert.match(html, /src="\.\.\/beach\/back\.png"/);
+  } finally { f.clean(); }
+});

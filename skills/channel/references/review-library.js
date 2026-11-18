@@ -320,6 +320,15 @@ function exportChannel(channelDirectory, { check = false } = {}) {
   }
   render(charIndex, 'Characters', 'characters', heading(t('캐릭터 시트', 'Character sheets'), `${chars.length} ${t('명의 캐릭터', 'characters')}`) + searchBox() + `<div class="review-grid review-catalog review-character-catalog">${cards}</div><div data-no-results${chars.length ? ' hidden' : ''}>${empty(chars.length ? '검색 조건에 맞는 캐릭터가 없습니다.' : '등록된 캐릭터가 없습니다.', chars.length ? 'No characters match your search.' : 'No characters yet.')}</div>`);
   // Episode-owned sheets stay canonical in scenes.js; these are read-only catalogues.
+  // A place every episode shares may instead live at assets/locations/<id>/background.json:
+  // one SB_DOC.locations entry whose paths are relative to that folder. It lists first.
+  const sharedRoot = path.join(dir, 'assets', 'locations');
+  const shared = (fs.existsSync(sharedRoot) ? fs.readdirSync(sharedRoot).sort() : []).flatMap(id => {
+    const folder = path.join(sharedRoot, id), source = path.join(folder, 'background.json');
+    if (!regular(dir, source)) return [];
+    try { return [{ board: { topic: '', title: '채널 공용', shared: true }, folder, entries: [{ ...JSON.parse(fs.readFileSync(source, 'utf8')), id }] }]; }
+    catch (error) { const message = 'assets/locations/' + id + '/background.json: ' + error.message; warnings.push(message); structuralWarnings.push(message); return []; }
+  });
   const sheetCounts = {};
   for (const [kind, ko, en, anchor] of [
     ['props', '소품 시트', 'Prop sheets', 'props'],
@@ -327,10 +336,9 @@ function exportChannel(channelDirectory, { check = false } = {}) {
   ]) {
     const file = path.join(dir, 'assets', kind, 'index.html');
     let items = '', count = 0;
-    for (const board of boards) {
-      const doc = boardWindows.get(board.topic)?.SB_DOC || {};
-      const entries = Array.isArray(doc[kind]) ? doc[kind] : [];
-      const folder = path.join(dir, 'episodes', board.topic, 'storyboard');
+    const groups = boards.map(board => ({ board, folder: path.join(dir, 'episodes', board.topic, 'storyboard'), entries: boardWindows.get(board.topic)?.SB_DOC?.[kind] }));
+    for (const { board, folder, entries: listed } of kind === 'locations' ? [...shared, ...groups] : groups) {
+      const entries = Array.isArray(listed) ? listed : [];
       for (const entry of entries) {
         if (!entry || typeof entry !== 'object') continue;
         count++;
@@ -341,7 +349,7 @@ function exportChannel(channelDirectory, { check = false } = {}) {
         const fields = kind === 'locations' ? [['layout', '배치·동선', 'Layout / movement'], ['lighting', '시간·조명', 'Time / lighting'], ['invariants', '고정 요소', 'Invariants']] : [['tracking', '추적 방식', 'Tracking']];
         const details = fields.map(([key, labelKo, labelEn]) => field(t(labelKo, labelEn), Array.isArray(entry[key]) ? entry[key].join(' · ') : entry[key])).join('');
         const source = path.join(folder, 'storyboard.html');
-        const link = regular(dir, source) ? `<a href="${rel(file, source)}#${anchor}">${t('스토리보드에서 보기', 'View in storyboard')}</a>` : t('검토 HTML 미등록', 'Review HTML not supplied');
+        const link = board.shared ? '' : regular(dir, source) ? `<a href="${rel(file, source)}#${anchor}">${t('스토리보드에서 보기', 'View in storyboard')}</a>` : t('검토 HTML 미등록', 'Review HTML not supplied');
         let detailLink = '', detailHref = '';
         if (kind === 'locations') {
           const detailFile = path.join(dir, 'assets', 'locations', 'details', locations.detailFilename(board.topic, entry.id));
@@ -386,7 +394,7 @@ function exportChannel(channelDirectory, { check = false } = {}) {
           detailHref = rel(file, detailFile);
           detailLink = `<a class="review-primary-link" href="${rel(file, detailFile)}">${t('소품 상세', 'Prop detail')}</a>`;
         }
-        items += `<article class="review-card ds-card" data-card data-search="${esc((name + ' ' + (entry.id || '') + ' ' + board.title).toLocaleLowerCase())}">${detailHref ? `<a class="review-card-art" href="${detailHref}" aria-label="${esc(name)}">${preview}</a>` : preview}<div class="review-card-body"><h2>${detailHref ? `<a href="${detailHref}">${esc(name)}</a>` : esc(name)}</h2><p>${esc(board.title)} · ${esc(entry.id)}</p><p>${esc(entry.description || '')}</p><dl>${details}</dl>${detailLink}${link}</div></article>`;
+        items += `<article class="review-card ds-card" data-card data-search="${esc((name + ' ' + (entry.id || '') + ' ' + board.title).toLocaleLowerCase())}">${detailHref ? `<a class="review-card-art" href="${detailHref}" aria-label="${esc(name)}">${preview}</a>` : preview}<div class="review-card-body"><h2>${detailHref ? `<a href="${detailHref}">${esc(name)}</a>` : esc(name)}</h2><p>${board.shared ? t('채널 공용', 'Shared by the channel') : esc(board.title)} · ${esc(entry.id)}</p><p>${esc(entry.description || '')}</p><dl>${details}</dl>${detailLink}${link}</div></article>`;
       }
     }
     sheetCounts[kind] = count;

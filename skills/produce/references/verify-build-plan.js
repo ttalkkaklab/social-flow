@@ -67,7 +67,11 @@ function verify(work, board) {
   if (!fs.existsSync(file)) throw new Error('source storyboard/scenes.js is required; pass the storyboard directory as build-reel.sh argument 2');
   const win = evaluateWindowScript(fs.readFileSync(file, 'utf8'), {filename:file});
   const voiceErrors = require('../../_shared/character-voice.js').boardVoiceErrors(win);
-  if (voiceErrors.length) throw new Error(voiceErrors.join('; '));
+  const sourceAudioOnly = Array.isArray(win.SCENES) && win.SCENES.length > 0 &&
+    win.SCENES.every(s => s.sound?.audioSource === 'video' || !(s.narration || []).some(n => (n.tts || '').trim()));
+  if (voiceErrors.length && !sourceAudioOnly) throw new Error(voiceErrors.join('; '));
+  if (voiceErrors.length) console.warn('Existing soundtrack metadata warnings: ' + voiceErrors.join('; '));
+  fs.writeFileSync(path.join(work, 'source-voice-warnings.json'), JSON.stringify({sourceAudioOnly, warnings: voiceErrors}, null, 2) + '\n');
   // Invalid subtitle inputs are not quality warnings and cannot be approved away.
   const subtitleMedia=require('./explicit-subtitles.js').media(work,win.SCENES);
   const videoGate = require('./assembly-video-gate.js').check(work, board);

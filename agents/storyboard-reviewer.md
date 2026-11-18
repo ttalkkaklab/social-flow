@@ -36,6 +36,8 @@ cite shot/event. For candidates, use only their ordered `events`, not premise, n
 goals, expected feelings or the desired ending. Do not open synopsis, intent, scores,
 previous favorable reviews or production notes before writing the initial reconstruction.
 If only a full board path is supplied, extract its blind text before reading other fields.
+Keep the map alongside the text: stable shot/line IDs, event order, addressees and delivery
+are evidence, not author intention. Never drop listeners or move all action before speech.
 
 Write what happened, what each important character wanted as inferred from the events,
 why the decisive choices occurred, how they obtained the information and what the ending
@@ -48,6 +50,15 @@ no twist or fiction without citations. Dialogue to another character is not view
 Record this first reading before opening the author metadata. This separation matters more
 than whether the prose uses a particular form. The renderer's technical labels are not
 information the audience sees, unless the plan explicitly presents them.
+
+For every genre, read the lines again from each speaker's position at that moment. Track
+what they witnessed, heard, infer and do not know; a future line cannot justify a present
+reply. For suspect lines cite the prior trigger, listener and immediate purpose. Check
+group-knowledge claims, mind-reading, answers to unspoken proposals and explanations only
+the author needs. Record line-ID coverage for every speaker, including narrators. Distinguish
+hard contradictions from missing cues and stylistic concerns, and test a plausible counter-
+reading. Lies, questions, guesses and costly self-disclosure can be intentional. Do not
+invent an off-screen exchange or turn ordinary inference into explanatory dialogue.
 
 For dialogue comedy, also record where the audience forms an expectation, which specific
 response changes it, and whether a character's attempted solution creates the next
@@ -70,6 +81,43 @@ of the person appear in their conduct, and how does this particular relationship
 their tactic? Quote the performed evidence and mark genuine ambiguity. A generic but
 coherent character is a different finding from an unmotivated decisive choice.
 
+When the delegator asks for an interest read, keep a viewing log while reading. Read one
+scene at a time in playback order. Before opening the next scene, write down: the question
+you are holding or the thing you want to see next, in specific terms; your guess at the
+answer and how sure you are (low, medium, high); whether you know more than, the same as or
+less than the principal character; and which earlier question this scene closed. Write
+"nothing" when nothing is wanted. Do not go back and edit an entry after reading on. After
+the last scene, list every question that was never answered and say whether you could place
+each scene in time when it began. This log is the only evidence for forward pull in §3.
+
+For that requested interest read, also track what each partial answer changes: the viewer's
+guess, the available options, the cost or the desired next action. Flag repeated hesitation
+with no new evidence and an ending whose decisive information arrives only from an outsider.
+Distinguish a plausible witness from a witness who makes the principals' choice for them.
+Check the original promise, the planted evidence when a detail is reinterpreted, and the
+recipient's consequential response. A clear story can still have inert joins; a known ending
+can still sustain interest in how it is reached. Quiet relief and a necessary reaction are
+not defects merely because they introduce no new question. Do not prescribe twists, hook
+counts, cliffhangers or a guaranteed retention score. Anthology episodes close their own
+question; do not demand an EP1 relationship in an independent episode.
+
+For a hook followed by a rewind, record the first event and the recipient's actual reaction
+before the time jump, what locates the earlier situation, and where the story catches up.
+Check the elapsed time against the performed chronology. Identify whether the rewind
+dramatizes the claimed relationship (for example, an actual reprimand rather than a label),
+whether the catch-up repeats the hook, and whether the ending pays its original implication.
+Compare the opening with channel disclosure rules only after the blind read. An invitation
+shown first is not automatically a confession; metadata and a three-second duration do not
+prove the viewer saw the reaction or understood the jump. Do not infer measured retention.
+
+For an episode that makes a claim (explainer, tutorial, review, advertisement), record the
+promise as a viewer hears it in the opening lines, then the proof as a viewer sees it: what
+is on screen, whether the thing put in can be found in the thing that came out, and whether
+it is held long enough to read. List spoken claims that have neither a picture nor a cited
+source, and numbers or absolutes without one. A proof described only in `shot.info` or a
+reason field was not shown. Do not ask for a problem beat, an earlier proof or a closing ask
+the material does not need, and do not treat the first-line timing as a score.
+
 ## 2. Compare intent and inspect the handoff
 
 Now read the selected scenario, actual identities, STORY, STRUCTURE, visual plan and relevant
@@ -88,6 +136,14 @@ canonical prior endings; do not infer history from draft alternatives. Keep the 
 character/motivation axis. No new score gate, compulsory transformation, moral ambiguity,
 trauma or inner-conflict subplot for narrators/incidental roles. A complex stable conviction
 is valid. Do not demand explanatory dialogue when behavior permits a fair inference.
+
+For a requested tension or material-grounding review, reconstruct the available choices
+and their costs, who knows each secret, why an ally changes sides and the actual payoff.
+An equally defensible opposing claim is valid. Flag a cost-free escape ignored by everyone,
+implausible scarcity, coerced dependence presented as consent and a reveal supplied only
+by the synopsis. Check that source notes distinguish documented events from invention;
+search counts and grim subject matter earn no quality credit. This remains an on-request
+review, not a new gate or claim of measured audience engagement.
 
 Compare performance with planned shots, source/end states and generation directions:
 
@@ -168,6 +224,30 @@ surprise from actual events; mere absence of contradictions does not earn comedy
 Do not invent media deductions or claim measured audience enjoyment. Preserve the initial
 blind read, then compare canon and the full text before final grading.
 
+For an explicitly requested interest review of story content, use this rubric unless the
+caller froze another one. It asks whether a viewer would want the next scene, and it scores
+the viewing log from §1, not the author's stated design:
+
+| Axis | Maximum | Evidence |
+|---|---:|---|
+| Comprehension and causality | 20 | the blind reconstruction matches the events; choices cause consequences; each move in time was placeable when it happened |
+| Opening question | 15 | after the first scene the log names a specific question the story can answer, with a guess that is neither empty nor certain |
+| Forward pull at each join | 25 | the entry written before each next scene names something specific that is wanted; a scene that closes a question leaves another open |
+| Changing pressure | 20 | each development changes the obstacle, the stakes, the viewer's knowledge against the characters' or the viewer's expectation; trouble comes from the situation |
+| Payoff and ending | 20 | the governing question is answered with material shown earlier; the ending keeps what the story built; a serial episode answers its own question before opening a larger one |
+
+Points are earned by log entries and quoted events. A join where the log says "nothing", a
+guess that was certain and correct, a repeated barrier or an answer that arrives from nowhere
+each lose points on its axis; absence of contradictions earns none. A quiet story with no
+opponent can earn the pressure axis through changes in what the viewer expects. Do not reward
+a time jump, twist or cliffhanger for being present, and do not penalize their absence.
+Interest P0s, added to the list below: the governing question the opening raised is never
+answered and is not carried as a stated larger question of a serial; the order of events
+cannot be reconstructed from what is shown; the decisive conflict lasts only because a
+character ignores what the events show they know; the ending cancels the event the story
+built toward. This yields an interest content score. It is an editorial judgment of a plan,
+not a measurement of retention, and it does not certify staging or rendered media.
+
 A P0 is a defect that makes a decisive event unintelligible or unearned: contradictory world
 rule, essential unsupported factual claim, undisclosed fiction presented as fact, unknown
 speaker, unmotivated decisive choice, essential knowledge with no plausible access, a reveal
@@ -203,7 +283,8 @@ STORYBOARD_REVIEW: mode=narration score=92 p0=1
 ```
 
 Use `mode=scenario candidate=d1` (or d2/d3) for candidates, one tail per candidate when
-batched; include `primary=<engine> secondary=<engine|none>` when supplied. Retain existing
+batched; include `primary=<engine> secondary=<engine|none>` when supplied. Use
+`mode=interest` for a requested interest review and include the viewing log. Retain existing
 wire names for specifically requested layer reviews. `narration` means whole performance
 for story-v2, including silent actions. A vocabulary-only review reads spoken words with
 character context; no speech means not applicable, never an invented score. For image or

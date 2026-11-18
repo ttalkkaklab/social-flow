@@ -6,6 +6,7 @@ const MIX_FIELDS = [
   ['truePeakDbtp', 'FINAL_TP', -6, 0, -1],
   ['bedSeparationLu', 'BGM_SEP', 0, 30, 10],
   ['minimumSeparationLu', 'BGM_SEP_MIN', 0, 30, 4],
+  ['maximumSeparationLu', 'BGM_SEP_MAX', 0, 60, 20],
   ['ambienceSeparationLu', 'AMB_SEP', 0, 30, 15],
   ['cueCrossfadeSeconds', 'BGM_CUE_XF', 0, 10, 2],
   ['endingFadeSeconds', 'BGM_FADE_OUT', 0, 10, 2.2],

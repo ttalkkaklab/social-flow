@@ -5,6 +5,21 @@ const load = createRequire(import.meta.url);
 const object = (value: unknown): Record<string, unknown> => value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
 const text = (value: unknown) => typeof value === 'string' ? value.trim() : '';
 export interface VideoPromptSource { action: string; end?: string; sound?: string }
+export interface PerformancePlan {
+  performance: Record<string, unknown>[]; durationSeconds: number | null; timing: string; warnings: string[];
+}
+export interface PromptOptions {
+  mode?: string;
+  measureAudio?: (line: Record<string, unknown>) => number | null;
+  validateLanguage?: boolean;
+}
+export function planVideoPerformance(shot: Record<string, unknown>, options: PromptOptions = {}): PerformancePlan {
+  const acting = load('../../skills/_shared/scene-acting.js') as {
+    planScenePerformance(shot: unknown, measure?: PromptOptions['measureAudio']): PerformancePlan;
+  };
+  const timeline = acting.planScenePerformance(shot, options.measureAudio);
+  return { ...timeline, timing: options.mode === 'native' && timeline.timing === 'needs_audio_duration' ? 'model_timed' : timeline.timing };
+}
 export interface DirectionBinding {
   attribute: string; value: unknown; via: 'prompt' | 'image' | 'adapter' | 'assembly' | 'guidance' | 'unmapped'; instruction?: string;
 }
@@ -13,8 +28,14 @@ const sentence = (value: string) => {
   return !s ? '' : /[.!?]["'”’)]+$/.test(capped) ? capped : capped.replace(/[.!?]*$/, '') + '.';
 };
 
+/** Each on-screen character's visible state (shot_characters expression): "id: cue; id: cue", or '' when none is set. */
+export function expressionWords(shot: Record<string, unknown>, names: Record<string, string> = {}): string {
+  return Object.entries(object(object(shot.visual).expression)).filter(([, cue]) => text(cue))
+    .map(([id, cue]) => `${names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id}: ${text(cue).replace(/[.\s]+$/, '')}`).join('; ');
+}
+
 /** Compile the current storyboard values at authoring and request time. Never writes the board. */
-export function compileVideoPrompt(shot: Record<string, unknown>, source: VideoPromptSource, names: Record<string, string> = {}) {
+export function compileVideoPrompt(shot: Record<string, unknown>, source: VideoPromptSource, names: Record<string, string> = {}, options: PromptOptions = {}) {
   const plan = object(shot.shot), visual = object(shot.visual), frames = object(visual.frames), camera = object(visual.camera);
   const msr = frames.mode === 'reference';
   const words = load('../../skills/storyboard/references/assemble-bg-prompt.js') as { SIZE_WORDS: Record<string, string>; SIZE_WORDS_OBJECT: Record<string, string>; ANGLE_WORDS: Record<string, string> };
@@ -25,7 +46,7 @@ export function compileVideoPrompt(shot: Record<string, unknown>, source: VideoP
   const contract = load('../../skills/storyboard/references/structure-contract.js') as { depthText(value: unknown): string };
   const travels = (load('../../skills/storyboard/references/production-mode.js') as { travels(value: unknown): boolean }).travels;
   const picked = (Array.isArray(plan.techniques) ? plan.techniques : []).map(object).map(t => ({
-    id: text(t.id), from: text(t.from), to: text(t.to), entry: catalogue.byId[text(t.id)],
+    id: text(t.id), from: text(t.from), to: text(t.to), on: text(t.on), entry: catalogue.byId[text(t.id)],
   }));
   const movement = text(camera.movement), speed = text(camera.speed), target = text(camera.target), settle = text(camera.end);
   const move = picked.find(t => t.entry?.fields.movement && movement.toLowerCase().startsWith(t.entry.fields.movement))?.entry;
@@ -43,23 +64,40 @@ export function compileVideoPrompt(shot: Record<string, unknown>, source: VideoP
   const other = picked.filter(t => t.entry && ['camera', 'framing'].includes(t.entry.category) &&
     !t.entry.fields.movement && !t.entry.fields.focus && !t.entry.fields.size && !t.entry.fields.angle && !(viewWords && t.entry.fields.viewpoint));
   const lines = (Array.isArray(shot.narration) ? shot.narration : []).map(object);
+  const mode = options.mode ?? (lines.some(line => line.delivery === 'on_screen' || line.delivery === 'off_screen') ? 'native' : 'voiceover');
+  const design = object(plan.videoDesign);
+  const motion = object(design.motion);
+  const states = [...new Set((Array.isArray(motion.beats) ? motion.beats : []).map(beat => text(object(beat).state)).filter(Boolean))];
+  const performance = planVideoPerformance(shot, { ...options, mode });
+  const acting = load('../../skills/_shared/scene-acting.js') as { performanceBeats(plan: unknown[], mode: string, dialogue: boolean): string[]; VIDEO_TEXT_POLICY: string };
+  const beats = acting.performanceBeats(performance.performance, mode, !msr);
+  const worn = expressionWords(shot, names);
+  // Cast seen without a line and unnamed extras (shot_characters): the opening picture carries them, the prompt keeps them.
+  const called = (id: string) => names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id;
+  const seen = (Array.isArray(visual.bystanders) ? visual.bystanders : []).map(text).filter(Boolean), extras = text(visual.extras);
   const prompt = [
     msr ? framing : 'Start from the given first frame.',
     msr ? depthWords : '', moveWords, settle ? sentence(`Closing frame: ${settle}`) : '', focusWords,
-    ...other.map(t => sentence(t.entry.instruction)),
+    // A beat accent (speed ramp, impact shake) names the moment it fires on.
+    ...other.map(t => sentence(t.entry.fields.accent && t.entry.prompt ? t.entry.prompt.replace('{cue}', t.on || t.entry.fields.cue) : t.entry.instruction)),
     viewWords || (text(camera.framing) ? sentence(`Opening composition: ${text(camera.framing)}`) : ''),
     !viewWords && camera.rear && !other.some(t => t.entry.fields.viewpoint === 'rear') ? 'View the subject from behind.' : '',
     !viewWords && camera.pov && !other.some(t => t.entry.fields.viewpoint === 'pov') ? sentence(`Point of view: ${text(camera.pov) || 'the named character'}`) : '',
     sentence(source.action),
-    ...(msr ? [] : lines.filter(line => line.delivery === 'on_screen' && text(line.tts)).map(line => {
-      const id = text(line.speaker), name = names[id];
-      return sentence(`${name && !nonEnglishOutsideQuotes(name) ? name : id} says: "${text(line.tts)}"`);
-    })),
+    seen.length ? sentence(`The opening picture also shows ${seen.map(called).join(' and ')}, who ${seen.length > 1 ? 'stay' : 'stays'} in the frame and never speaks`) : '',
+    extras ? sentence(`Unnamed people in the frame: ${extras}`) : '',
+    ...['before', 'after', 'continuity'].map(key => text(design[key]) ? sentence(`${key}: ${text(design[key])}`) : ''),
+    ...states.filter(state => ![source.action, design.before, design.after, design.continuity].includes(state)).map(state => sentence(`Visible state: ${state}`)),
+    !lines.length && beats.length ? 'This is a silent scene. Perform the planned action without invented speech or voiceover.' : '',
+    ...beats,
+    // The model's default face is pleasant; the authored state has to be named and held (LTX guide: physical cues, state after the action).
+    worn ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : '',
     frames.mode === 'first_last' ? sentence(`End on the given last frame${source.end ? ': ' + source.end : ''}`) : source.end ? sentence(`End on ${source.end}`) : '',
     sentence(`Audio: ${source.sound ? source.sound + (/\b(music|soundtrack|score|bgm|melody|orchestral|song)\b/i.test(source.sound) ? '' : ', no music') : 'no music'}`),
+    acting.VIDEO_TEXT_POLICY,
   ].filter(Boolean).join(' ');
   const foreign = nonEnglishOutsideQuotes(prompt);
-  if (foreign) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks; write action and direction in English`);
+  if (foreign && options.validateLanguage !== false) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks; write action and direction in English`);
   const bindings: DirectionBinding[] = [
     { attribute: 'render', value: object(plan.render).mode, via: 'adapter' },
     { attribute: 'size', value: plan.size, via: !sizeWords ? 'unmapped' : msr ? 'prompt' : 'image', instruction: sizeWords },
@@ -74,8 +112,10 @@ export function compileVideoPrompt(shot: Record<string, unknown>, source: VideoP
         t.entry.category === 'framing' || t.entry.fields.angle ? (msr ? 'prompt' : 'image') : 'prompt',
       instruction: t.entry?.instruction })),
     { attribute: 'transition', value: shot.transition, via: 'assembly' },
+    ...(beats.length ? [{ attribute: 'performance', value: performance, via: 'prompt' as const, instruction: beats.join('\n') }] : []),
   ];
-  return { prompt, directionBindings: bindings.filter(b => b.value !== undefined), warnings: [
+  return { prompt, performance, directionBindings: bindings.filter(b => b.value !== undefined), warnings: [
+    ...performance.warnings,
     ...bindings.filter(b => b.value !== undefined && b.via === 'unmapped').map(b => `No prompt mapping for ${b.attribute}: ${JSON.stringify(b.value)}`),
     ...(rack && !(rack.from && rack.to) ? ['the rack focus names no subjects — give focus.from and focus.to in shot_icons'] : []),
   ] };

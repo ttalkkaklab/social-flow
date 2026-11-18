@@ -28,13 +28,25 @@ allowed-tools: ["mcp__social-flow__character_manage", "mcp__social-flow__charact
 Read [automation guidance](../_shared/automation-guidance.md). This skill coordinates
 [storyboard](../storyboard/SKILL.md) and [produce](../produce/SKILL.md); it does not contain
 another writing recipe. Use their current contracts. For new episodes follow storyboard's
+[material research](../storyboard/references/story-material-research.md) before selecting
+new story material: reuse the case collection, verify missing decisions and consequences,
+compare candidate conflicts and distinguish evidence from invention. In unattended work,
+save the selected sources, adaptation limits and choice reason with the scenario; research
+failures stay visible and never become fabricated evidence. Then use the
 single `scenario-v2` → `story-v2` flow: causal alternatives, complete acted scenes, blind
 comprehension, shot planning, then content-derived timing. Read
 [character-led scenarios](../storyboard/references/character-scenarios.md).
 For dramatic characters, read [character depth](../storyboard/references/character-depth.md)
 before scenario selection. Carry the chosen conflict through performed choices, relationship
 responses and shot framing; metadata alone does not deliver it. Narrators and incidental
-roles need no compulsory inner-conflict subplot.
+roles need no compulsory inner-conflict subplot. For story-led episodes also read
+[story interest](../storyboard/references/story-interest.md) once the causal skeleton holds:
+the question each stretch keeps open, the order of telling, who knows more and how each scene
+ends are chosen on purpose. An unattended run records those choices in `scenario.md`.
+Apply [episode anticipation](../storyboard/references/episode-anticipation.md) during synopsis
+and storyboard authoring on every run: a concrete promise, evolving expectations, an earned
+payoff and a performed response. Repair inert joins in the scenes, not just the notes.
+This author pass adds no automatic review or score gate and does not force a serial ending.
 
 Use [legacy unattended notes](references/legacy-unattended.md) only to understand a resumed
 unversioned or story-v1 episode's old files. Never load them as instructions for a new story.
@@ -79,8 +91,8 @@ Read [the production order](../_shared/production-workflow.md) (user directive 2
 Only the story order is enforced; checks come back once the quality is known.
 
 1. Storyboard: the story (`story_sequence` → `story_scene` → `story_shot`), each shot's
-   characters and lines (`shot_characters` → `shot_dialogue`), then its icon attributes
-   (`shot_icons`). Prepare props and backgrounds with their images.
+   characters and lines (`shot_characters` → `shot_dialogue`), each scene's music decision
+   (`story_music`), then its icon attributes (`shot_icons`). Prepare props and backgrounds with their images.
 2. Invoke [generate-cut-images](../generate-cut-images/SKILL.md): each shot's start image,
    and the end image a `first_last` shot needs, with `shot_image`.
 3. Invoke [generate-cut-videos](../generate-cut-videos/SKILL.md): each video prompt with

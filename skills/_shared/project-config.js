@@ -2,9 +2,9 @@
 
 const { STYLES, CHOICES, MODES, BANDS, PREVIZ_RENDERERS } = require('../storyboard/references/production-mode.js');
 const { FORMATS } = require('../platform-guide/references/formats.js');
-const PLATFORMS = ['threads', 'instagram', 'facebook', 'youtube'];
-const TOKEN_FILES = { threads: 'threads_token', instagram: 'instagram_token', facebook: 'facebook_page_token', youtube: 'youtube-oauth-client.json' };
-const PROJECT_FIELDS = ['project', 'style', 'production', 'sns'];
+const PLATFORMS = ['threads', 'instagram', 'facebook', 'youtube', 'tiktok'];
+const TOKEN_FILES = { threads: 'threads_token', instagram: 'instagram_token', facebook: 'facebook_page_token', youtube: 'youtube-oauth-client.json', tiktok: 'tiktok-oauth.json' };
+const PROJECT_FIELDS = ['project', 'style', 'production', 'sns', 'languages'];
 const SLUG = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const text = value => typeof value === 'string' && !!value.trim();
@@ -18,6 +18,15 @@ function credentialRef(channel, platform) {
 }
 
 function validateProjectFields(config) {
+  if (config.languages !== undefined) {
+    keys(config.languages, ['speech', 'subtitles', 'review'], 'languages');
+    const valid = value => typeof value === 'string' && /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/.test(value);
+    const l = config.languages;
+    if (!valid(l.speech) || !Array.isArray(l.subtitles) || !Array.isArray(l.review) ||
+        [...l.subtitles, ...l.review].some(value => !valid(value)) ||
+        new Set(l.subtitles).size !== l.subtitles.length || new Set(l.review).size !== l.review.length)
+      throw new Error('languages requires speech and unique subtitles/review arrays of BCP-47 tags');
+  }
   if (config.project !== undefined) {
     keys(config.project, ['name', 'channel'], 'project');
     if (!text(config.project.name) || !SLUG.test(config.project.channel || '')) throw new Error('project requires name and a channel slug (1–64 lowercase letters, digits or hyphens)');
@@ -28,17 +37,23 @@ function validateProjectFields(config) {
     if (Object.values(config.style).some(value => !text(value))) throw new Error('Style values must be nonempty text');
   }
   if (config.production !== undefined) {
-    keys(config.production, ['mode', 'renderRatioVersion', 'format', 'previzRenderer', 'episodeBudgetUsd'], 'production');
+    keys(config.production, ['mode', 'renderRatioVersion', 'format', 'previzRenderer', 'episodeBudgetUsd', 'musicDirection'], 'production');
     const p = config.production;
     if (!CHOICES.includes(p.mode) || p.renderRatioVersion !== 1) throw new Error('Choose one of the six production modes and renderRatioVersion:1');
     if (!Object.hasOwn(FORMATS, p.format || '')) throw new Error('Choose a supported production.format');
     if (p.previzRenderer !== undefined && !Object.hasOwn(PREVIZ_RENDERERS, p.previzRenderer)) throw new Error('Invalid production.previzRenderer');
+    // What the user has said about music on this channel, one dated sentence each; story_music shows it at every spotting.
+    if (p.musicDirection !== undefined && (!Array.isArray(p.musicDirection) || p.musicDirection.length > 20 ||
+        p.musicDirection.some(note => typeof note !== 'string' || !note.trim() || note.length > 300)))
+      throw new Error('production.musicDirection is up to 20 notes of at most 300 characters each');
     if (p.episodeBudgetUsd !== undefined && (typeof p.episodeBudgetUsd !== 'number' || !Number.isFinite(p.episodeBudgetUsd) || p.episodeBudgetUsd < 0)) throw new Error('episodeBudgetUsd must be a finite nonnegative number');
   }
   if (config.sns !== undefined) {
     keys(config.sns, PLATFORMS, 'sns');
     for (const platform of PLATFORMS) {
       const account = config.sns[platform];
+      // Existing four-platform projects remain valid until TikTok is configured.
+      if (platform === 'tiktok' && account === undefined) continue;
       keys(account, ['enabled', 'status', 'accountId', 'handle', 'checkedAt', 'credentialRef'], `sns.${platform}`);
       if (typeof account.enabled !== 'boolean' || !['pending', 'connected', 'disabled'].includes(account.status)) throw new Error(`Invalid sns.${platform} enabled/status`);
       if ((account.status === 'disabled') !== !account.enabled) throw new Error(`sns.${platform} disabled status must match enabled:false`);
@@ -54,7 +69,7 @@ function validateProjectFields(config) {
 }
 
 function missingProjectFields(config) {
-  return ['videoType', 'models', ...PROJECT_FIELDS].filter(key => config?.[key] === undefined);
+  return ['videoType', 'models', ...PROJECT_FIELDS.filter(key => key !== 'languages')].filter(key => config?.[key] === undefined);
 }
 
 function options() {

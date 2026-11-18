@@ -16,6 +16,11 @@ the real clips, reviewed images and direction plan. Review all clips and their i
 sequence for cause/effect, action timing, physical contact, camera path, focus, prop state,
 identity and continuity. Name defects by time and consequence, with the smallest repair.
 
+Review the sequence's [attention and visible changes](../storyboard/references/shot-view.md#plan-attention-across-the-scene),
+not only individual faces. Check whether promised detail/POV/space views survived generation,
+whether an addressee was incorrectly pulled into an insert, and whether an unearned smile
+releases tension before its cause. A varied shot-size count does not prove varied evidence.
+
 Use actual playback. Sampled frames establish composition only. If playback or
 independent review is unavailable, report the limitation; never convert not_reviewed into pass. Speech/audio judgments require
 actual listening when requested, and no automated STT or speech-scoring loop is introduced.
@@ -24,3 +29,10 @@ The author returns to the earliest defective layer and preserves failed clips an
 Retry generation only within authorized attempt/spending limits and the user's approval of
 each new plan. Recheck corrected clips and affected joins independently, and name the
 actual video files the report covers. This stage does not publish.
+
+Use the candidate comparison on the shared board to match the footage to its actual
+adapter prompt, references and plan version. Record the smallest useful repair: trim,
+audio mix, upscale, speech revision or source-plan correction. Dubbing native speech is
+a choice with lip-sync consequences, not an automatic fallback. Preserve each candidate;
+a regeneration gets its own request ID, output and change note only after the prior
+request is terminal. Report generated shots, attached takes and reviewed shots separately.

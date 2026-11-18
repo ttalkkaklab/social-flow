@@ -5,6 +5,7 @@ import * as gemini from './tts-client.js';
 import * as eleven from './elevenlabs-client.js';
 import { resolveTtsModel } from './tts-models.js';
 import type { SpeechResult } from './tts-execution.js';
+import { createRequire } from 'node:module';
 
 export const SPEECH_GENERATORS = ['tts_astra_genai', 'tts_generate', 'tts_multi_speaker', 'tts_gemini_38', 'tts_elevenlabs_generate', 'tts_elevenlabs_dialogue'] as const;
 export type SpeechGenerator = typeof SPEECH_GENERATORS[number];
@@ -45,6 +46,9 @@ const adapters = {
 export function prepareSpeech(generator: string, generation: unknown): PreparedSpeech {
   const selected = z.enum(SPEECH_GENERATORS).parse(generator);
   const prepared = adapters[selected](generation);
+  (createRequire(import.meta.url)('../../skills/_shared/character-speech.js') as {
+    validateSpeechContext(generator: string, args: unknown): void;
+  }).validateSpeechContext(selected, prepared.args);
   const contract = resolveTtsModel(selected === 'tts_astra_genai' ? 'astra-genai' : selected.startsWith('tts_elevenlabs_') ? 'elevenlabs' : 'gemini', prepared.args.model);
   if (![contract.single, contract.dialogue].includes(selected)) throw new Error('TTS adapter/model mismatch');
   return { ...prepared, generator: selected };

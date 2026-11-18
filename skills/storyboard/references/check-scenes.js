@@ -442,7 +442,7 @@ function motionKind(scene) {
 
 /** The planned route (scenes-schema §clip prompt) — `engine` overrides the default, seedance
     (Veo left on 2026-10-31: no voice reference). The same routing as the check strip's engineOf. */
-const ENGINES = ['seedance', 'host', 'astra', 'astra-genai'];
+const ENGINES = ['seedance', 'host', 'astra', 'astra-genai', 'astra-genai-desktop', 'mlx', 'ltx-api', 'minimax', 'heygen'];
 function engineOf(scene, win, snapshotVideo) {
   const v = (scene && scene.visual) || {};
   const named = (v.video && v.video.engine) || (v.clip && v.clip.engine) || v.engine;
@@ -527,7 +527,11 @@ function perShotLookFindings(win, { bad, machine, warn }) {
   scenes.forEach((scene, index) => {
     const ids = castIds(scene.visual?.character);
     if (ids.length > 2)
-      bad(`shot ${index + 1}`, `[character-limit] visual.character lists ${ids.length} principal characters (${ids.join(', ')}); keep two per shot and split the beat into shots, describing anyone else as an unreferenced extra in the action`);
+      bad(`shot ${index + 1}`, `[character-limit] visual.character lists ${ids.length} principal characters (${ids.join(', ')}); keep two as characters, a third of the cast as a bystander (shot_characters bystanders) and anyone else in extras`);
+    // A bystander is a cast member seen without a line or a video reference (user directive 2026-11-17): three of the cast at most.
+    const seen = Array.isArray(scene.visual?.bystanders) ? scene.visual.bystanders : [];
+    if (seen.some((id) => ids.includes(id)) || ids.length <= 2 && ids.length + seen.length > 3)
+      bad(`shot ${index + 1}`, `[character-limit] visual.bystanders (${seen.join(', ')}) with ${ids.length} character(s): list each person once, three of the cast at most`);
   });
 
   if (optIn) {
@@ -550,7 +554,9 @@ function perShotLookFindings(win, { bad, machine, warn }) {
       if (generated && cutType === undefined)
         machine(where, '[cutType-missing] generated cuts with visual.bg need shot.cutType');
 
-      refs.filter((id) => !own(cast, id)).forEach((id) =>
+      // Without an episode cast in PRODUCTION every id is a channel cast reference (storyboard/cast.json on a
+      // story-first board): there is nothing for it to be missing from.
+      if (production.cast !== undefined) refs.filter((id) => !own(cast, id)).forEach((id) =>
         warn(where, `[character-unresolved] visual.character "${id}" is not in PRODUCTION.cast; treating it as a channel cast reference`));
 
       const episodeRefs = refs.filter((id) => own(cast, id));
@@ -1346,7 +1352,9 @@ function check(win, fmt, opts) {
     // A still never sits frozen under the voice (owner directive 2026-09-03). The builder's
     // Ken Burns is the floor on every still card — build-reel.sh refuses zoom=none and a bare
     // hold there — so a storyboard that asks a still to stand still is caught here first.
-    if (motionKind(s) === null && s.type !== 'outro' && v.camera &&
+    // A cut routed generated_video is a moving picture whose camera may hold on purpose: before
+    // its clip exists it has no video record yet, and it is still not a still.
+    if (motionKind(s) === null && s.type !== 'outro' && v.camera && s.shot?.render?.mode !== 'generated_video' &&
         /^\s*(static|still|hold|none|no move(?:ment)?|fixed|lock(?:ed)?|lock-off|고정|정지)\s*$/i.test(String(v.camera.movement || '')))
       machine(where, `a still with camera.movement "${v.camera.movement}" — a still never sits frozen under the voice; ` +
                      'write dolly in / dolly out / truck / handheld, or leave camera empty for the default drift');
@@ -2875,6 +2883,10 @@ function selftest() {
        goodShot, ctaShot])), /never sits frozen/));
   ok('the frozen-still check waits for the camera pass (--draft)',
      !has(bads(run([cover, frozenStill, goodShot, ctaShot], null, { draft: true })), /never sits frozen/));
+  ok('a cut planned as generated video may hold its camera before its clip exists',
+     !has(run([cover, Object.assign({}, frozenStill, {
+       shot: Object.assign({}, goodShot.shot, { render: { mode: 'generated_video', purpose: 'live_action', reason: 'r', action: 'a' } }) }),
+       goodShot, ctaShot]), /never sits frozen/));
 
   // ── the move is a vendor word with what it needs (L13–L15, production-mode.js) ──
   const moveShot = (camera, over) => Object.assign({}, goodShot, {
@@ -2962,6 +2974,11 @@ function selftest() {
       lookHas(perShot(unsafe), 'bad', /\[cast-sheet\].*Korean text/) &&
       !perShot(perShotFixture()).some(f => /\[cast-sheet\]/.test(f.what));
   })());
+  ok('a character id is unresolved only against an episode cast the board declares', (() => {
+    const declared = perShotFixture(); declared.SCENES[0].visual.character = ['stranger'];
+    const channel = perShotFixture(); channel.SCENES[0].visual.character = ['stranger']; delete channel.PRODUCTION.cast;
+    return lookHas(perShot(declared), 'warn', /\[character-unresolved\]/) && !lookHas(perShot(channel), 'warn', /\[character-unresolved\]/);
+  })());
   ok('cutType-missing rejects a generated image cut and accepts a declared type', (() => {
     const missing = perShotFixture(); delete missing.SCENES[0].shot.cutType;
     return lookHas(perShot(missing), 'machine', /\[cutType-missing\]/) &&
@@ -3042,8 +3059,11 @@ function selftest() {
   ok('character-limit rejects three principal characters in one shot and accepts two', (() => {
     const three = perShotFixture(); three.SCENES[0].visual.character = ['yi', 'won', { id: 'kim', scope: 'background only' }];
     const two = perShotFixture(); two.SCENES[0].visual.character = ['yi', 'won'];
+    const seen = perShotFixture(); seen.SCENES[0].visual.character = ['yi', 'won']; seen.SCENES[0].visual.bystanders = ['kim'];
+    const crowd = perShotFixture(); crowd.SCENES[0].visual.character = ['yi', 'won']; crowd.SCENES[0].visual.bystanders = ['kim', 'park'];
     return lookHas(perShot(three), 'bad', /\[character-limit\].*3 principal/) &&
-      !lookHas(perShot(two), 'bad', /\[character-limit\]/);
+      !lookHas(perShot(two), 'bad', /\[character-limit\]/) && !lookHas(perShot(seen), 'bad', /\[character-limit\]/) &&
+      lookHas(perShot(crowd), 'bad', /\[character-limit\].*bystanders/);
   })());
   ok('character-on-empty-cut warns on a document cast and accepts an empty document', (() => {
     const carried = perShotFixture(); carried.SCENES[0].shot.cutType = 'document';

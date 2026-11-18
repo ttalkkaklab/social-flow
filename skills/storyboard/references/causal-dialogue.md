@@ -19,6 +19,27 @@ and what does the speaker try to do with it: stall, warn, bargain, conceal, invi
 refuse? A spontaneous emotional reaction is also a reason. If only the writer needs the
 line to introduce a person or deliver a twist, repair the event before polishing wording.
 
+Draft the exchange in order from each speaker's position, not from its eventual outcome.
+Before each reply, consider only events available up to that moment. Keep apart what the
+speaker witnessed, was told, merely suspects and still does not know. A character's own
+experience and ordinary knowledge need not be explained on screen; a private discovery
+does not become shared knowledge without a plausible transfer. Do not invent an off-screen
+conversation to rescue a consequential claim about what everybody knows.
+
+For each line, identify its actual listener and the response the speaker wants now. Is it
+answering words already spoken, or anticipating the next scripted proposal? Does the
+listener need this explanation, or only the writer? Distinguish an unsupported claim from
+a question, bluff, lie, mistaken inference or deliberate self-justification. A perceptive
+character can probe a secret without already knowing its contents, and the probe may fail.
+Self-disclosure can be costly and deliberate; give it a present reason rather than using
+it to recap an earlier episode. Do not make characters announce their intended growth or
+answer a reviewer's objection that nobody in the scene raised. Prefer a concrete request,
+refusal, question or consequential action when those carry the same meaning.
+
+Use a short note with earlier event references for disputed lines, not a mandatory ledger
+for every utterance. After rewriting, reread the scene through the ending: a clearer line
+must not create a new unexplained inference or replace subtext with a lecture.
+
 Separate recognition from inference. Knowing someone's face or job does not grant
 knowledge of their secret, current role or intent. A newcomer needs only enough business,
 relationship or visible evidence to make the consequential inference legible. Show the

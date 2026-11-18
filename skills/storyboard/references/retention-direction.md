@@ -145,7 +145,7 @@ In the table, map every intended event to a supported control:
   Follow [acting prompts](../../produce/references/acting-prompts.md). Keep spoken
   wording and subtitles separate from generated tags; do not change identity voice for an effect.
 
-Autoproduce may reuse multiple existing cues and alternate arrangements. Generate additional
+Autoproduce may use several channel beds (`asset` cues) and alternate arrangements; a cue made for another episode is not reused. Generate additional
 cues only within the saved model choice and authorized music allocation. One bed is an
 economical option, not a mandatory format. Design contrast with gain curves, cue changes,
 supported drops, resolved SFX and scene rhythm. Missing sound assets require

@@ -10,6 +10,7 @@ import { resolveToolGate } from './tool-gate.js';
 import { resolveTtsModel } from './tts-models.js';
 import { validateFilePath } from './media-utils.js';
 import { validateSpeechAudio } from './tts-audio.js';
+import { createRequire } from 'node:module';
 const executionId = new AsyncLocalStorage();
 export function withSpeechRequestId(id, run) {
     if (!/^[A-Za-z0-9_-]{1,100}$/.test(id))
@@ -72,6 +73,7 @@ function staleSlot(slot) {
     }
 }
 export async function executeSpeech(generator, args, run) {
+    createRequire(import.meta.url)('../../skills/_shared/character-speech.js').validateSpeechContext(generator, args);
     const provider = generator === 'tts_astra_genai' ? 'astra-genai' : generator.startsWith('tts_elevenlabs_') ? 'elevenlabs' : 'gemini';
     const contract = resolveTtsModel(provider, String(args.model));
     if (![contract.single, contract.dialogue].includes(generator))

@@ -35,19 +35,36 @@ observable scenes and before source-image prompts. Explicit content-only work de
 2. Choose shot size, angle, camera distance and depth/focus together. Compare a held
    frame with a motivated move: approach a withheld reaction, follow a travelling subject,
    pull back to reveal a relationship, or shift focus from evidence to its observer.
+   A move earns its place when something enters the frame, the subject travels, the
+   frame says something new about the space by its end, or the beat turns while the shot
+   runs. A face or a body that changes while the viewer watches leaves the hold and the
+   approach both open, and this beat chooses between them: an approach needs its trigger
+   inside the shot — a realization landing, a reaction held back until it breaks — and
+   where the beat has none the size already gives the closeness. What wears out is the same
+   slow approach on one close-up after another, not the approach. Where the space itself is
+   the change — a reveal of scale, destruction, many people at once, a chase (the purpose
+   table below) — compare a move that travels with the change and a wider size against the
+   hold before choosing.
 3. Set the choice with `shot_icons` — `view` (subject, reason, crop, mode and any set target),
    size, angle, camera move or still effect, focus,
-   depth, render route and frame plan, each with a scene-specific reason; it writes
+   depth, render route and frame plan. Size, view and a camera move each take this beat's own
+   reason. A hold, a plain cut, the episode's own route and a first or reference frame plan
+   need none; the route and the frame plan take one where they are this shot's choice (a card
+   in a full-video episode, a pinned end frame). It writes
    `shot.techniques` and keeps `visual.camera.movement` consistent. Then write the actual
    motion pace/path and ending picture in `visual.camera` through
    `storyboard_apply`; the starting picture is already in `visual.camera.view`. For rack focus name both subjects
    and the focus order in `framing`/`end`, including the action cue or focus timing.
    `shot.techniques[].reason` and `camera.purpose` are review context; their prose is
    not copied into provider prompts. A static camera can still direct attention through focus/blocking.
-4. For static, explain what the fixed frame preserves: simultaneous reactions, a tiny
-   hand action, a deliberate wait or a readable spatial relationship. “Keep action legible”
-   copied across unrelated beats, or action text copied into purpose, is not a decision.
-   Do not supply static as a placeholder when the choice has not been made.
+4. A hold on acting stands without a sentence. Where a hold is chosen against a move
+   (step 2), its reason is what the move would have cost in that beat; text copied across
+   held shots, or action text copied into purpose, is not a decision.
+   Do not supply static as a placeholder when the choice has not been made, and do not
+   supply a slow approach on each close-up as a placeholder for direction. `shot_icons`
+   names the wide shots (els, ls, ws, fs) it left held with no reason, and
+   `storyboard_read {level:"direction"}` counts the held shots by size; both report what
+   was written and refuse nothing.
 5. Read consecutive shots in scene order. Reconsider repeated framing, copied reasons
    and unchanging focus where the subject, discovery or pressure changes. Keep intentional
    stillness. Never alternate moves by index, enforce a moving-shot percentage or add
@@ -75,13 +92,28 @@ neither judge the art nor block tool execution. Do not invent image or motion re
 | Purpose | Possible camera direction | What must be specified |
 | --- | --- | --- |
 | Show isolation or the surrounding space | crane / pedestal up | starting subject, revealed space, ending composition |
-| Sudden discovery | fast zoom in — a crash zoom reads comic, so a straight dramatic beat takes a fast dolly in | the discovered detail and readable reaction |
+| Sudden discovery | crash zoom in action, thriller and comedy; a quiet dramatic realization takes a fast dolly in, where a snap zoom reads comic | the one landing target, the cue and the readable reaction |
 | Build pressure | dolly in | approach direction, subject action, stopping frame |
 | Stay with a chase | tracking / handheld | direction of travel and landmarks |
 | Reveal height around a climber | rising arc | subject, height change and path; a name alone does not define a helix |
 | Shift attention between depth planes | rack focus | near/far subjects and focus order; camera may remain static |
 | Reveal a hidden situation | dolly out | what the wider ending frame reveals |
 | Connect two targets quickly | whip pan | both endpoints, landing frame and motivated sound |
+| A hero drops into the fight | static, ground angle, impact shake on the landing | the fixed low frame the body falls into and the landing pose; the camera never follows the fall |
+| One decisive hit | speed ramp over the shot's move | the single moment that slows; everything before and after runs at normal speed |
+| A giant's steps, a crash | impact shake over a held frame | the event behind each jolt and the stillness between jolts |
+| A blast or shockwave | blast pushback | the trigger action, the source and the wider ending frame with the aftermath |
+| Something thrown or fired | weapon cam | the projectile, what of it stays in frame, where it stops |
+| A chase through tight space | pass-through shot, or drone dive where the route drops | each opening in order and what the runner does instead; for a dive, the one point where level flight turns down |
+| Several fighters in one space | relay one-take | the handoff order and the action that motivates each handoff |
+| The stand-off before the clash | arc shot, a full turn | direction, what changes during the turn (weapons drawn, the ring closing) |
+
+The action rows name what a planner asks for, not what a model guarantees. A `first_last` frame
+plan pins the landing of a crash zoom, a blast pushback, a drone dive or a hero landing with its
+end image. A previz steers a path only on an adapter that takes a reference clip. Speed ramp and
+impact shake reach the model as prompt sentences alone, so inspect the clip. When a relay one-take
+does not come back in one piece, split it into shots and join them with a `whip:` transition,
+which is an edit operation and not the camera's whip pan.
 
 Store generated camera directions only in `visual.camera`: opening `view`, `movement`,
 `speed`, and `end` (`framing` is legacy opening prose). Follow the opening-view procedure
@@ -100,13 +132,21 @@ evidence that the returned footage followed it. No separate icon fields are stor
 
 ## Cut on a meaningful change
 
-Choose length from readable action, dialogue and reaction. A 1–1.5 second cut can
-serve a brief impact or insert; it is not a default for every shot. Hold a difficult
-action or emotional reaction long enough to understand it. Changing size, angle and
-movement together is optional, not a quota or a quality score.
+Choose length from readable action, dialogue and reaction. Before writing a duration, say
+what sets it: a spoken line sets the length of the shot that carries it (the words and the
+pause the scene needs); every other shot is set by the one visible thing it shows and the
+time that thing takes to read. An insert, a glance, a reaction or an impact shows a single
+small action and ends when it has been read; a 1–1.5 second cut can serve it, and that is
+not a default for every shot. An insert held as long as the close-up beside it reads as one
+more close-up. Hold a difficult action, a wait or an emotional change for as long as the
+change takes. When neighbouring shots of different kinds come out at the same round length,
+the lengths were assigned, not derived: reread each one against its action. A cut shorter than
+the selected model's minimum is trimmed from a longer take in the edit (`edit.in`/`edit.out`);
+the minimum is a transport limit and never a reason to lengthen the cut. Changing size, angle
+and movement together is optional, not a quota or a quality score.
 
-Use `transition` for the join entering a shot. Use `edit.reason` for its purpose and
-`edit.continuity` for what crosses the boundary: action, screen direction, gaze,
+Use `transition` for the join entering a shot. Use `edit.reason` for the purpose of a join
+other than a plain cut and `edit.continuity` for what crosses the boundary: action, screen direction, gaze,
 prop state or sound. Camera `whip pan` and edit `whip:left` are different operations.
 Use the shot-continuity workflow for concrete start/end poses, observed endpoint capture
 and reference-image handoff. A generic "before action" opening or a still showing the
@@ -142,3 +182,6 @@ fan loyalty or monetization. Keep the existing review-recent workflow for real d
 Source inspiration: https://www.youtube.com/watch?v=Xozqqt4seAw (2026-10-08).
 The video's camera examples inform this guide; its fixed cut lengths and commercial
 claims are not plugin defaults.
+The action rows come from https://www.youtube.com/watch?v=muYZFUNhnsI (2026-11-16), a sponsored
+tutorial that shows one Seedance 2.5 result per move; its claim that a move's name alone steers
+the camera is not adopted, and no other model was tested.

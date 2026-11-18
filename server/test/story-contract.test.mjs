@@ -72,6 +72,22 @@ test('readers retain original indices through invalid slots and never invent unr
   assert.ok([0,2,3,4].every(i=>rows[i].unresolved === true && rows[i].quote === ''));
   assert.deepEqual(storySpeech(win).map(r=>[r.shot,r.group]), [[2,2],[4,1]]);
 });
+test('blind evidence retains listeners, stable references and interleaved events without author intent', () => {
+  const w = board();
+  w.SCENES[1].id = 's0042';
+  Object.assign(w.SCENES[1].narration[0], { id: 's0042-l1', delivery: 'on_screen',
+    acting: { context: 'Hidden future outcome', intent: 'Author explanation' } });
+  const before = storyPerformance(w).filter(r => r.shotId === 's0042');
+  assert.deepEqual(before.map(r => [r.kind, r.lineId, r.character, r.to, r.delivery]), [
+    ['dialogue', 's0042-l1', 'father', 'child', 'on_screen'],
+    ['action', undefined, 'child', undefined, undefined],
+  ]);
+  assert.doesNotMatch(JSON.stringify(before), /Hidden future|Author explanation|acting/);
+  w.SCENES.unshift({ id: 's0099', performance: [{ kind: 'action', character: 'child', text: 'A knock.' }] });
+  const after = storyPerformance(w).filter(r => r.shotId === 's0042');
+  assert.equal(after[0].shot, before[0].shot + 1);
+  assert.deepEqual(after.map(({ shot, ...row }) => row), before.map(({ shot, ...row }) => row));
+});
 test('unknown speakers, duplicate/missing speech, fabricated action quotes and malformed action text fail', () => {
   let w = board(); w.SCENES[0].narration[0].speaker = 'other';
   assert.match(checkStory(w).join(), /speaker/);
@@ -81,6 +97,19 @@ test('unknown speakers, duplicate/missing speech, fabricated action quotes and m
   assert.match(checkStory(w).join(), /exact observable/);
   w = board(); w.SCENES[2].performance[0].text = 12;
   assert.match(checkStory(w).join(), /action requires|exact observable/);
+});
+test('an action nobody performs is a world event, while a mistyped actor still fails', () => {
+  const w = board(); w.SCENES[1].performance.push({ kind: 'action', text: 'The lid of the empty pot rattles.' });
+  assert.deepEqual(checkStory(w, { requireReview: false }), []);
+  w.SCENES[1].performance[2].character = 'chlid';
+  assert.match(checkStory(w, { requireReview: false }).join(), /not cast: chlid/);
+});
+test('a call to an unidentified in-world listener is distinct from viewer address and mistyped cast', () => {
+  const w = board(); w.SCENES[0].performance[0].to = 'unidentified';
+  assert.deepEqual(checkStory(w, { requireReview: false }), []);
+  assert.equal(storyPerformance(w)[0].to, 'unidentified');
+  w.SCENES[0].performance[0].to = 'fathre';
+  assert.match(checkStory(w, { requireReview: false }).join(), /addressee/);
 });
 test('reused shot transcripts cannot cite speech beyond the clip duration', () => {
   const w = board();

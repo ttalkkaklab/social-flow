@@ -24,7 +24,7 @@ function record(work,speed){
     }
     provenance={kind:'screencast',editSha256:hash(edit),scenesSha256:fs.existsSync(board)?hash(board):null};
   }
-  const board=path.resolve(work,'../storyboard/scenes.js');
+  const board=require('./check-final-tts.js').sourceBoard(work);
   let finalSpeech;
   if(fs.existsSync(board)){
     const gate=require('./check-final-tts.js'),n=gate.narration(board);

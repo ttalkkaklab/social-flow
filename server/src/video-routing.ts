@@ -12,7 +12,10 @@ import { config, disabledToolPatterns, disabledToolsFile, mlxServeConfigured } f
 import { resolveToolGate } from './tool-gate.js';
 import { framesForSeconds } from './astra-video-client.js';
 import { assessVideoDuration, DURATION_TOOLS, resolveVideoDuration } from './video-duration.js';
-import { VIDEO_ADAPTERS, parseVideoArgs } from './video-registry.js';
+import { VIDEO_ADAPTERS, VENDOR_REFERENCE_TOOLS, parseVideoArgs } from './video-registry.js';
+import { buildLtxApiBody, ltxApiImg2VideoSchema, ltxApiAudio2VideoSchema } from './ltx-api-video.js';
+import { buildMinimaxBody, minimaxImg2VideoSchema, minimaxReferenceSchema } from './minimax-video.js';
+import { checkHeygenInputs, heygenImg2VideoSchema, heygenReferenceSchema } from './heygen-video.js';
 import { SEEDANCE_MODEL_SPECS } from './seedance-client.js';
 import { quoteVideo, type VideoQuote } from './video-pricing.js';
 import { atomicJson, videoTransaction } from './video-state.js';
@@ -25,6 +28,7 @@ import { prepareVideoVoice, type VoiceContinuity } from './video-voice.js';
 import type { ToolResult } from './handlers.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { compileVideoPrompt, type DirectionBinding, type VideoPromptSource } from './video-prompt.js';
+import { readVideoProduction, refreshVideoReview } from './video-review.js';
 
 const load = createRequire(import.meta.url);
 const shared = fileURLToPath(new URL('../../skills/_shared/video-selection.js', import.meta.url));
@@ -52,7 +56,10 @@ function shotVideoTiming(context: Context, tool: string, args: Record<string, un
     const edit = load(fileURLToPath(new URL('../../skills/produce/references/edit-plan.js', import.meta.url))).preview(context.board.SCENES, { videoWarningsApproved: true });
     const index = (context.board.SCENES as unknown[]).indexOf(shot);
     const timing = load(fileURLToPath(new URL('../../skills/_shared/video-duration.js', import.meta.url)));
-    coverage = timing.shotTiming(shot, { edit: edit.find((entry: { card: number }) => entry.card === index) });
+    const planned = edit.find((entry: { card: number }) => entry.card === index);
+    // edit.in on a card that plays its clip soundtrack trims the clip it has; a new clip owes no extra head.
+    const ownVoice = (shot.sound as { audioSource?: string } | undefined)?.audioSource === 'video';
+    coverage = timing.shotTiming(shot, { edit: ownVoice && planned ? { ...planned, in: 0 } : planned });
   }
   if (args.requiredSeconds !== undefined && (typeof args.requiredSeconds !== 'number' || !Number.isFinite(args.requiredSeconds) || args.requiredSeconds <= 0))
     throw new Error('requiredSeconds must be finite positive seconds');
@@ -61,6 +68,43 @@ function shotVideoTiming(context: Context, tool: string, args: Record<string, un
   return { ...assessVideoDuration(tool, args, required), basis: 'planned' as const, coverage,
     note: 'Fit of authored source coverage, not measured performance or generated output. Recheck after speech/action timing or generation changes.' };
 }
+
+/**
+ * A natively voiced clip plays exactly the requested length, and the model spends whatever the
+ * lines and timed actions do not fill on silent acting, mostly before the line (299 MSR clips
+ * measured 2026-11-16: half of each clip was silence around its line). A report, never a refusal.
+ */
+function nativeSpeechFit(shot: Record<string, unknown>, requestedSeconds: number, limits: NonNullable<ReturnType<typeof assessVideoDuration>['limits']>, language?: unknown) {
+  const acting = load(fileURLToPath(new URL('../../skills/_shared/scene-acting.js', import.meta.url))) as {
+    planScenePerformance(shot: unknown, duration: (line: { tts?: string }) => number | null): { durationSeconds: number | null };
+    estimateSpeech(text: unknown, language?: unknown): { seconds: number; calibrated: boolean } | null;
+  };
+  let estimatedSeconds: number | null, unmeasuredRate = false;
+  try {
+    estimatedSeconds = acting.planScenePerformance(shot, line => {
+      const estimate = acting.estimateSpeech(line.tts, language);
+      if (estimate && !estimate.calibrated) unmeasuredRate = true;
+      return estimate?.seconds ?? null;
+    }).durationSeconds;
+  } catch { return undefined; }
+  // An untimed standalone action or a line with nothing to say leaves the clock open: nothing to compare.
+  if (estimatedSeconds === null || !(estimatedSeconds > 0)) return undefined;
+  let shortest: { requestedSeconds: number; numFrames?: number; durationSeconds?: number };
+  try { shortest = load(fileURLToPath(new URL('../../skills/_shared/video-duration.js', import.meta.url))).minimumDuration(estimatedSeconds, limits); }
+  catch { return undefined; }
+  const round = (n: number) => Math.round(n * 100) / 100;
+  const excessSeconds = round(requestedSeconds - estimatedSeconds);
+  const request = shortest.numFrames !== undefined ? `numFrames ${shortest.numFrames}` : `durationSeconds ${shortest.durationSeconds}`;
+  // Only the Korean rate was fitted on measured clips: another language's shortest request is a guess to check against a made clip.
+  return { estimatedSeconds, ...(unmeasuredRate ? { speechRate: 'uncalibrated' as const } : {}), requestedSeconds: round(requestedSeconds), excessSeconds,
+    shortestRequest: { ...(shortest.numFrames !== undefined ? { numFrames: shortest.numFrames } : { durationSeconds: shortest.durationSeconds }), seconds: round(shortest.requestedSeconds) },
+    ...(excessSeconds > SPEECH_SLACK_SECONDS && shortest.requestedSeconds < requestedSeconds - 1e-6 ? {
+      warning: `The request runs ${round(requestedSeconds)}s; the lines and timed actions need about ${estimatedSeconds}s. The model plays the other ${excessSeconds}s as silent acting, usually before the line. ` +
+        `${request} (${round(shortest.requestedSeconds)}s) covers them. A pause the story needs belongs in the performance as a timed action or the line's leadInSeconds/tailOutSeconds.` +
+        (unmeasuredRate ? ' The speaking rate for this language is not measured on made clips: time the line on one clip before shortening the others.' : '') } : {}) };
+}
+/** Slack a line keeps: under this the measured clips opened on the line; from 2 s they opened on 1.4 s of silence. */
+const SPEECH_SLACK_SECONDS = 0.5;
 
 /** No generation, image preparation, prompt or credentials needed to inspect shot limits. */
 export function readShotVideoTiming(episode: string, shotId: string) {
@@ -81,16 +125,21 @@ function stable(value: unknown): unknown {
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(stable(value))).digest('hex');
 const idSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 export const videoPlanSchema = z.object({ episode: z.string().min(1), shotId: z.string().min(1), requestId: idSchema,
+  purpose: z.enum(['draft', 'final', 'revision']).optional(),
+  basedOnRequestId: idSchema.optional(), changeNote: z.string().min(1).max(1000).optional(),
   operation: z.string().optional(), tool: z.string().optional(), args: z.record(z.unknown()).default({}) }).strict();
 export const videoExecuteSchema = z.object({ episode: z.string().min(1), planId: z.string().regex(/^[a-f0-9]{64}$/) }).strict();
 export interface VideoPlan {
+  purpose?: 'draft' | 'final' | 'revision'; basedOnRequestId?: string; changeNote?: string;
   imageBindings?: ImageBinding[];
   version: 1; id: string; episode: string; shotId: string; requestId: string; tool: string;
   args: Record<string, unknown>; selection: Selection; source: string; contextRevision: string;
   inputs: Record<string, string>; quote: VideoQuote; execution: 'server' | 'host_handoff';
   sourceArgs?: Record<string, unknown>; voiceContinuity?: VoiceContinuity;
+  sourcePrompt?: string;
   directionBindings?: DirectionBinding[]; directionWarnings?: string[];
   durationPlan?: ReturnType<typeof shotVideoTiming>;
+  speechFit?: NonNullable<ReturnType<typeof nativeSpeechFit>>;
 }
 function within(root: string, file: string): boolean {
   const relative = path.relative(root, file);
@@ -169,37 +218,82 @@ export function checkVideoEnvironment(tool: string): void {
   if (!gate.enabled) throw new Error('video_tool_disabled: ' + gate.reason);
   const engine = VIDEO_ADAPTERS[tool]?.engine;
   const ready = engine === 'seedance' ? Boolean(config.arkApiKey) : engine === 'astra' ? Boolean(config.astraVideoApiKey) :
-    ['astra-genai', 'astra-genai-desktop'].includes(engine) ? Boolean(config.astraGenaiApiKey) : engine === 'mlx' && mlxServeConfigured();
+    ['astra-genai', 'astra-genai-desktop'].includes(engine) ? Boolean(config.astraGenaiApiKey) : engine === 'ltx-api' ? Boolean(config.ltxApiKey) :
+    engine === 'minimax' ? Boolean(config.minimaxApiKey) : engine === 'heygen' ? Boolean(config.heygenApiKey) : engine === 'mlx' && mlxServeConfigured();
   if (!ready) throw new Error('video_provider_unconfigured: ' + engine);
 }
 export function planVideo(raw: unknown): VideoPlan {
   const input = videoPlanSchema.parse(raw);
   const context = routingContext(input.episode, input.shotId);
+  const take = { ...(input.purpose ? { purpose: input.purpose } : {}), ...(input.basedOnRequestId ? { basedOnRequestId: input.basedOnRequestId } : {}), ...(input.changeNote ? { changeNote: input.changeNote } : {}) };
+  if (input.basedOnRequestId) {
+    const directory = path.join(context.episode, '.work/video-routing/plans');
+    const parent = input.basedOnRequestId !== input.requestId && fs.existsSync(directory) && fs.readdirSync(directory)
+      .filter(file => /^[a-f0-9]{64}\.json$/.test(file)).some(file => {
+        const plan = JSON.parse(fs.readFileSync(path.join(directory, file), 'utf8')) as VideoPlan;
+        return plan.requestId === input.basedOnRequestId && plan.shotId === input.shotId && plan.episode === context.episode;
+      });
+    if (!parent) throw new Error('video_parent_missing: name a different existing request for this shot');
+  }
   const { selection } = context;
   requireSupportedSelection(selection);
-  // New shot_prompt records retain action separately so icon edits cannot leave the submitted direction stale.
-  const video = (context.shot.visual as { video?: { prompt?: unknown; promptSource?: VideoPromptSource } } | undefined)?.video;
-  const rawCast = (context.board.SB_DOC as { characters?: unknown } | undefined)?.characters;
-  const names = Object.fromEntries((Array.isArray(rawCast) ? rawCast : []).map(c => [c.id, String(c.name ?? '')]));
-  const compiled = input.args.prompt === undefined && video?.promptSource
-    ? compileVideoPrompt(context.shot, video.promptSource, names) : undefined;
-  const authored = compiled?.prompt ?? video?.prompt;
-  const callArgs = input.args.prompt === undefined && typeof authored === 'string' ? { ...input.args, prompt: authored } : input.args;
-  const direction = compiled ? { directionBindings: compiled.directionBindings, directionWarnings: compiled.warnings } :
-    { directionWarnings: [input.args.prompt !== undefined ? 'Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons.' :
-      'Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.'] };
-  // A saved default operation (an LTX project saves 'reference', i.e. MSR) applies when the call names neither.
+  const lines = (context.shot.narration as Array<{ speaker?: string; delivery?: string; tts?: string }> | undefined ?? [])
+    .filter(line => line.tts?.trim());
+  if (new Set(lines.map(line => line.speaker)).size > 1)
+    throw new Error('shot_speaker_limit: split speaker changes into separate shots, then set each shot\'s framing and camera angle');
+  const msrRequested = input.tool === 'astra_genai_msr' || selection.engine === 'astra-genai' &&
+    (input.operation ?? (input.tool ? undefined : selection.operation)) === 'reference';
+  if (msrRequested && (!lines.length || lines.some(line => line.delivery === 'voiceover')))
+    throw new Error('msr_speech_route: silent and voiceover/inner-thought shots use image2video with external timed TTS for voiceover; split mixed deliveries first');
   const operation = input.operation ?? (input.tool ? undefined : selection.operation);
   const tool = input.tool || selectedVideoTool(selection, operation);
   if (input.tool && input.operation && VIDEO_ADAPTERS[input.tool]?.operation !== input.operation) throw new Error('Tool and operation disagree');
+  // The hosted reference lanes take spoken shots only, as MSR does; silent and voiceover shots use the image lane.
+  if (tool && VENDOR_REFERENCE_TOOLS.includes(tool) && (!lines.length || lines.some(line => line.delivery === 'voiceover')))
+    throw new Error(`reference_speech_route: ${tool} renders a shot whose character speaks; plan silent and voiceover/inner-thought shots with operation:"image" and external timed TTS for voiceover; split mixed deliveries first`);
+  const visual = context.shot.visual as { frames?: { mode?: string; start?: string }; references?: Array<Record<string, unknown>>; video?: { prompt?: unknown; promptSource?: VideoPromptSource } } | undefined;
+  const silentPicture = !lines.some(line => line.delivery === 'on_screen' || line.delivery === 'off_screen');
+  // Apply the standing MSR-to-I2V rule to old reference-frame boards without rewriting their media.
+  const shot = tool === 'astra_genai_img2video' && silentPicture && visual?.frames?.mode === 'reference'
+    ? { ...context.shot, visual: { ...visual, frames: { mode: 'first', start: visual.frames.start },
+      references: visual.references ?? [] } } : context.shot;
+  const video = visual?.video;
+  const rawCast = (context.board.SB_DOC as { characters?: unknown } | undefined)?.characters;
+  const names = Object.fromEntries((Array.isArray(rawCast) ? rawCast : []).map(c => [c.id, String(c.name ?? '')]));
+  const performanceInputs: Record<string, string> = {};
+  const mode = silentPicture ? 'voiceover' : tool && VIDEO_ADAPTERS[tool]?.voice === 'supplied' ? 'audio_conditioned' : 'native';
+  const measureAudio = (line: Record<string, unknown>): number | null => {
+    const audio = line.audio as { path?: string; sha256?: string } | undefined;
+    if (mode === 'native' || !audio?.path || !audio.sha256) return null;
+    const file = path.resolve(context.episode, 'storyboard', audio.path);
+    if (!fs.existsSync(file) || createHash('sha256').update(fs.readFileSync(file)).digest('hex') !== audio.sha256) return null;
+    const seconds = Number(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'default=nw=1:nk=1', file], { encoding: 'utf8', timeout: 10000 }));
+    if (!Number.isFinite(seconds) || seconds <= 0) return null;
+    performanceInputs[file] = audio.sha256;
+    return seconds;
+  };
+  const compiled = input.args.prompt === undefined && video?.promptSource
+    ? compileVideoPrompt(shot, video.promptSource, names, { mode, measureAudio }) : undefined;
+  const authored = compiled?.prompt ?? video?.prompt;
+  let callArgs = input.args.prompt === undefined && typeof authored === 'string' ? { ...input.args, prompt: authored } : input.args;
+  // MiniMax and HeyGen always render a soundtrack, so only the prompt keeps their silent cuts silent.
+  if (['astra_genai_img2video', 'ltx_api_img2video', 'minimax_img2video', 'heygen_img2video'].includes(tool ?? '') && silentPicture)
+    callArgs = { ...callArgs, ...(['astra_genai_img2video', 'ltx_api_img2video'].includes(tool!) ? { generateAudio: false } : {}),
+      prompt: [callArgs.prompt, 'No speech or vocalization. All visible mouths stay closed; perform the planned silent action.'].filter(Boolean).join(' ') };
+  const sourcePrompt = typeof video?.prompt === 'string' ? video.prompt : '';
+  const direction = compiled ? { sourcePrompt, directionBindings: compiled.directionBindings, directionWarnings: compiled.warnings, performance: compiled.performance } :
+    { sourcePrompt, directionWarnings: [input.args.prompt !== undefined ? 'Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons.' :
+      'Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.'] };
   if (selection.engine === 'host') {
     if (input.tool) throw new Error('model_selection_mismatch: host has no server adapter');
     const images = prepareVideoImages('host_external', callArgs, context.shot, context.episode);
-    const body = { version: 1 as const, episode: context.episode, shotId: input.shotId, requestId: input.requestId,
+    const body = { ...take, version: 1 as const, episode: context.episode, shotId: input.shotId, requestId: input.requestId,
       tool: 'host_external', args: callArgs, ...direction, ...(images.imageBindings ? { imageBindings: images.imageBindings, imageHandoff: images.imageHandoff } : {}), selection, source: context.source, contextRevision: context.revision,
-      inputs: Object.fromEntries((images.imageBindings ?? []).map(binding => [binding.path, binding.sha256])), quote: { reserveUsd: 0, estimatedUsd: 0, revision: 'host-allowance-v1', basis: 'External host allowance; limits and actual tool schema must be checked by host; not API enforcement' }, execution: 'host_handoff' as const };
+      inputs: { ...Object.fromEntries((images.imageBindings ?? []).map(binding => [binding.path, binding.sha256])), ...performanceInputs }, quote: { reserveUsd: 0, estimatedUsd: 0, revision: 'host-allowance-v1', basis: 'External host allowance; limits and actual tool schema must be checked by host; not API enforcement' }, execution: 'host_handoff' as const };
     const plan = { ...body, id: hash(body) };
-    atomicJson(path.join(context.episode, '.work/video-routing/plans', plan.id + '.json'), plan);
+    const planFile = path.join(context.episode, '.work/video-routing/plans', plan.id + '.json');
+    if (!fs.existsSync(planFile)) atomicJson(planFile, plan);
+    refreshVideoReview(context.episode);
     return plan;
   }
   if (!tool) throw new Error('Selected deployment has no adapter for this operation');
@@ -207,13 +301,24 @@ export function planVideo(raw: unknown): VideoPlan {
   const durationPlan = shotVideoTiming(context, tool, bound);
   if (durationPlan.status === 'split_required')
     throw new Error(`video_duration_exceeded: ${input.shotId} needs ${durationPlan.requiredSeconds}s; ${tool} allows ${durationPlan.maxSeconds}s. Split at a meaningful performance boundary; never truncate or switch models.`);
+  // GenAI I2V's live backend owns the maximum; its integer duration must still cover the shot.
+  if (tool === 'astra_genai_img2video' && durationPlan.requiredSeconds !== undefined) {
+    if (bound.requiredSeconds !== undefined) {
+      if (['duration', 'durationSeconds', 'numFrames', 'frames', 'autoDuration', 'audioMaxDuration'].some(key => bound[key] !== undefined))
+        throw new Error('requiredSeconds is mutually exclusive with exact duration arguments; supply the shot need or an exact request, not both');
+      delete bound.requiredSeconds;
+    }
+    if (typeof bound.duration === 'number' && bound.duration < durationPlan.requiredSeconds)
+      throw new Error(`video_duration_short: ${input.shotId} needs ${durationPlan.requiredSeconds}s but the request covers ${bound.duration}s`);
+    bound.duration ??= Math.ceil(durationPlan.requiredSeconds);
+  }
   // Legacy boards without a duration keep their exact request. Timed new shots cannot fall back to a short adapter default.
   if (durationPlan.status === 'fits' && VIDEO_ADAPTERS[tool].voice !== 'supplied' && (DURATION_TOOLS as readonly string[]).includes(tool)) {
     const exact = ['duration', 'durationSeconds', 'numFrames', 'frames', 'autoDuration', 'audioMaxDuration'].some(key => bound[key] !== undefined);
     if (!exact) bound = resolveVideoDuration(tool, { ...bound, requiredSeconds: durationPlan.requiredSeconds }).args;
   }
-  const images = prepareVideoImages(tool, bound, context.shot, context.episode);
-  const voice = prepareVideoVoice(tool, images.args, { ...context, msrVoice: genaiMsrVoiceReferences() });
+  const images = prepareVideoImages(tool, bound, shot, context.episode);
+  const voice = prepareVideoVoice(tool, images.args, { ...context, shot, msrVoice: genaiMsrVoiceReferences() });
   const args = parseVideoArgs(tool, voice.args);
   if (durationPlan.status === 'fits') {
     const fps = durationPlan.limits?.frameRate ?? 1;
@@ -223,17 +328,30 @@ export function planVideo(raw: unknown): VideoPlan {
     if (typeof requested === 'number' && requested < durationPlan.requiredSeconds!)
       throw new Error(`video_duration_short: ${input.shotId} needs ${durationPlan.requiredSeconds}s but the request covers ${requested}s. Use requiredSeconds or revise the shot timing.`);
   }
+  // Seconds this request plays: an exact frame count, a duration, or the adapter's own default.
+  const playFps = durationPlan.limits?.frameRate, playFrames = typeof args.numFrames === 'number' ? args.numFrames
+    : typeof args.duration === 'number' && playFps ? framesForSeconds(args.duration, playFps) : tool === 'astra_genai_msr' ? 121 : undefined;
+  const playSeconds = playFrames !== undefined && playFps ? playFrames / playFps : typeof args.durationSeconds === 'number' ? args.durationSeconds : undefined;
+  const speechFit = VIDEO_ADAPTERS[tool].voice === 'reference' && playSeconds !== undefined && durationPlan.limits && lines.some(line => line.delivery !== 'voiceover')
+    ? nativeSpeechFit(shot, playSeconds, durationPlan.limits, (context.board.STORY as { language?: unknown } | undefined)?.language) : undefined;
   const foreign = typeof args.prompt === 'string' ? nonEnglishOutsideQuotes(args.prompt) : null;
   if (foreign) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks. Write the video prompt in English; only dialogue, inside quotes, uses the video's language.`);
   const output = canonical(path.resolve(context.episode, typeof args.outputPath === 'string' ? args.outputPath : '.work/video'));
   if (!within(context.episode, output)) throw new Error('Video output must stay inside the selected episode');
   args.outputPath = output;
   args.filename ??= `video-${input.requestId}.mp4`;
-  const inputs = inputFiles(args, context.episode);
+  const inputs = { ...inputFiles(args, context.episode), ...performanceInputs };
   for (const binding of images.imageBindings ?? []) inputs[binding.path] = binding.sha256;
   if (tool === 'fasth3_omni_reference') buildFasth3Body(fasth3OmniSchema.parse(args));
   if (tool === 'astra_genai_msr') buildGenaiMsrBody(genaiMsrSchema.parse(args));
   if (tool === 'astra_genai_audio2video') buildGenaiAudioBody(genaiAudioToVideoSchema.parse(args));
+  // Vendor bodies are built once here so file types, sizes and sample lengths fail before money is reserved.
+  if (tool === 'ltx_api_img2video') buildLtxApiBody(ltxApiImg2VideoSchema.parse(args));
+  if (tool === 'ltx_api_audio2video') buildLtxApiBody(ltxApiAudio2VideoSchema.parse(args));
+  if (tool === 'minimax_img2video') buildMinimaxBody(minimaxImg2VideoSchema.parse(args));
+  if (tool === 'minimax_reference') buildMinimaxBody(minimaxReferenceSchema.parse(args));
+  if (tool === 'heygen_img2video') checkHeygenInputs(heygenImg2VideoSchema.parse(args));
+  if (tool === 'heygen_reference') checkHeygenInputs(heygenReferenceSchema.parse(args));
   if (tool === 'astra_video_retake' && selection.resolution) {
     const probe = JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'json', String(args.sourceVideoPath)], { encoding: 'utf8', timeout: 15_000 }));
     const stream = probe.streams?.[0];
@@ -241,12 +359,14 @@ export function planVideo(raw: unknown): VideoPlan {
       throw new Error('model_selection_mismatch: retake inherits source dimensions; select the source resolution');
   }
   const quote = quoteVideo(tool, args);
-  const body = { version: 1 as const, episode: context.episode, shotId: input.shotId, requestId: input.requestId, tool, args,
+  const body = { ...take, version: 1 as const, episode: context.episode, shotId: input.shotId, requestId: input.requestId, tool, args,
     ...(images.imageBindings ? { imageBindings: images.imageBindings } : {}),
-    sourceArgs: input.args, durationPlan, ...direction, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
+    sourceArgs: input.args, durationPlan, ...(speechFit ? { speechFit } : {}), ...direction, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
     selection, source: context.source, contextRevision: context.revision, inputs, quote, execution: 'server' as const };
   const plan = { ...body, id: hash(body) };
-  atomicJson(path.join(context.episode, '.work/video-routing/plans', plan.id + '.json'), plan);
+  const planFile = path.join(context.episode, '.work/video-routing/plans', plan.id + '.json');
+  if (!fs.existsSync(planFile)) atomicJson(planFile, plan);
+  refreshVideoReview(context.episode);
   return plan;
 }
 interface Authorization { maxUsd: number; maxConcurrent: number; maxAttempts: number; openingSpendUsd?: number }
@@ -328,7 +448,7 @@ export async function executeVideo(raw: unknown, dispatch: VideoDispatch): Promi
   const context = routingContext(episode, plan.shotId);
   if (context.revision !== plan.contextRevision) throw new Error('video_plan_stale: the shot\'s frames, prompt, lines, selection or authorization changed');
   if (plan.tool === 'astra_genai_msr') await refreshGenaiMsrVoice();
-  const refreshed = planVideo({ episode, shotId: plan.shotId, requestId: plan.requestId, tool: plan.tool, args: plan.sourceArgs ?? plan.args });
+  const refreshed = planVideo({ episode, shotId: plan.shotId, requestId: plan.requestId, tool: plan.tool, args: plan.sourceArgs ?? plan.args, purpose: plan.purpose, basedOnRequestId: plan.basedOnRequestId, changeNote: plan.changeNote });
   if (refreshed.id !== id) throw new Error('video_plan_stale: inputs, price or adapter contract changed');
   checkVideoEnvironment(plan.tool);
   const auth = authorization(context);
@@ -341,13 +461,18 @@ export async function executeVideo(raw: unknown, dispatch: VideoDispatch): Promi
       throw new Error(`video_request_pending: ${existing.status}; provider ID ${existing.providerId || 'unknown'}; do not resubmit`);
     }
     const jobs = Object.values(state.jobs);
+    const target = path.resolve(String(plan.args.outputPath), String(plan.args.filename));
+    if (fs.existsSync(target) || jobs.some(job => {
+      const previous: VideoPlan = JSON.parse(fs.readFileSync(path.join(episode, '.work/video-routing/plans', job.planId + '.json'), 'utf8'));
+      return path.resolve(String(previous.args.outputPath), String(previous.args.filename)) === target;
+    })) throw new Error('video_output_conflict: use a unique filename for each candidate; preserve existing takes');
     const occupied = jobs.filter(job => !['completed', 'failed'].includes(job.status));
     if (occupied.length >= auth.maxConcurrent) throw new Error('video_concurrency_limit: pending jobs include ambiguous submissions');
     const used = jobs.reduce((sum, job) => sum + (job.settledUsd ?? job.reserveUsd), state.openingSpendUsd ?? 0);
     if (used + plan.quote.reserveUsd > auth.maxUsd + 1e-9) throw new Error('video_budget_exceeded');
     if (jobs.filter(job => job.shotId === plan.shotId).length >= auth.maxAttempts) throw new Error('video_attempt_limit');
     state.jobs[plan.requestId] = { planId: id, requestId: plan.requestId, shotId: plan.shotId, tool: plan.tool,
-      status: 'submitting', reserveUsd: plan.quote.reserveUsd, updatedAt: new Date().toISOString() };
+      status: 'submitting', reserveUsd: plan.quote.reserveUsd, startedAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     return undefined;
   }, auth.openingSpendUsd);
   if (cached) return cached;
@@ -359,7 +484,7 @@ export async function executeVideo(raw: unknown, dispatch: VideoDispatch): Promi
   // submission_unknown until video_status reconciles it.
   const settle = (terminal: boolean, evidence: string, result?: ToolResult) => videoTransaction(episode, state => {
     const job = state.jobs[plan.requestId];
-    Object.assign(job, { status: terminal ? 'failed' : 'submission_unknown', evidence, updatedAt: new Date().toISOString() }, result ? { result } : {});
+    Object.assign(job, { status: terminal ? 'failed' : 'submission_unknown', ...(terminal ? { finishedAt: new Date().toISOString() } : {}), evidence, updatedAt: new Date().toISOString() }, result ? { result } : {});
     if (terminal && !job.providerId) job.settledUsd = 0;
   });
   const startedAt = Date.now();
@@ -380,7 +505,7 @@ export async function executeVideo(raw: unknown, dispatch: VideoDispatch): Promi
     videoTransaction(episode, state => {
       const job = state.jobs[plan.requestId];
       if ((job.providerIds?.length ?? 0) > 1) throw new Error('Unexpected multiple provider submissions; reconcile all receipts before completion');
-      job.status = 'completed'; job.result = result; job.updatedAt = new Date().toISOString();
+      job.status = 'completed'; job.result = result; job.updatedAt = new Date().toISOString(); job.finishedAt = job.updatedAt;
       if (job.tokens !== undefined && plan.quote.tokenRate !== undefined) job.settledUsd = job.tokens * plan.quote.tokenRate / 1e6;
       // Unmetered success retains its reservation, explicitly an estimate, never fabricated usage.
     });
@@ -457,16 +582,21 @@ export async function routeLegacyVideo(tool: string, raw: unknown, dispatch: Vid
 
 /** Read persisted receipts; refresh polls an existing GenAI job; reconcile settles an unknown request from billing evidence. */
 export async function videoStatus(raw: unknown) {
-  const input = z.object({ episode: z.string().min(1), requestId: idSchema, action: z.enum(['read', 'refresh', 'reconcile']).default('read'),
+  const input = z.object({ episode: z.string().min(1), requestId: idSchema.optional(), action: z.enum(['read', 'refresh', 'reconcile']).default('read'),
     executorStopped: z.boolean().optional(), evidence: z.string().min(1).optional(), spentUsd: z.number().finite().nonnegative().optional() }).strict().parse(raw);
   const episode = fs.realpathSync(input.episode);
+  if (!input.requestId) {
+    if (input.action !== 'read') throw new Error('requestId is required to refresh or reconcile');
+    return readVideoProduction(episode);
+  }
+  const requestId = input.requestId;
   const file = path.join(episode, '.work/video-routing/state.json');
   if (!fs.existsSync(file)) return { requestId: input.requestId, status: 'not_started' };
   if (input.action === 'reconcile') {
     // Same contract as image_status: the caller brings the provider's terminal status and the actual charge.
     if (!input.evidence || input.spentUsd === undefined) throw new Error('video_reconciliation_requires_billing_evidence');
     videoTransaction(episode, current => {
-      const job = Object.hasOwn(current.jobs, input.requestId) ? current.jobs[input.requestId] : undefined;
+      const job = Object.hasOwn(current.jobs, requestId) ? current.jobs[requestId] : undefined;
       if (!job || job.status === 'completed') throw new Error('video_reconciliation_requires_unknown_terminal_request');
       if (['reserved', 'submitting', 'submitted'].includes(job.status) && input.executorStopped !== true)
         throw new Error('video_reconciliation_requires_executor_stopped: confirm the executing process has exited and the provider job is terminal');
@@ -485,9 +615,10 @@ export async function videoStatus(raw: unknown) {
     const receiptPath = path.join(String(plan.args.outputPath), String(plan.args.filename)) + '.astra-genai.json';
     const result = job.tool.startsWith('astra_genai_desktop_') ? await desktopVideoStatus(receiptPath, true) : await getGenaiVideoStatus({ receiptPath, download: true });
     if (job.providerId && result.jobId !== job.providerId) throw new Error('GenAI recovery job ID mismatch');
+    videoTransaction(episode, current => Object.assign(current.jobs[requestId], { providerStatus: result.status, observedAt: new Date().toISOString() }));
     if (result.downloaded) {
       const response: ToolResult = { content: [{ type: 'text', text: JSON.stringify({ ...result, receiptPath }) }] };
-      videoTransaction(episode, current => Object.assign(current.jobs[input.requestId], { status: 'completed', providerId: result.jobId, result: response, updatedAt: new Date().toISOString() }));
+      videoTransaction(episode, current => Object.assign(current.jobs[requestId], { status: 'completed', providerId: result.jobId, result: response, updatedAt: new Date().toISOString(), finishedAt: new Date().toISOString() }));
       return videoStatus({ episode, requestId: input.requestId });
     }
     return { ...job, providerStatus: result.status, recovery: 'Poll this same request with action:refresh; do not resubmit.' };
