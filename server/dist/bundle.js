@@ -94356,7 +94356,7 @@ var require_story_contract = __commonJS({
     var crypto2 = __require("node:crypto");
     var object6 = (x2) => x2 !== null && typeof x2 === "object" && !Array.isArray(x2);
     var text4 = (x2) => typeof x2 === "string" && x2.trim().length > 0;
-    var canonical3 = (x2) => Array.isArray(x2) ? x2.map(canonical3) : object6(x2) ? Object.fromEntries(Object.keys(x2).sort().map((k) => [k, canonical3(x2[k])])) : x2;
+    var canonical4 = (x2) => Array.isArray(x2) ? x2.map(canonical4) : object6(x2) ? Object.fromEntries(Object.keys(x2).sort().map((k) => [k, canonical4(x2[k])])) : x2;
     var PAST_FINAL = /(았|었|였|했|왔|갔|봤|됐|냈|셨|잤|샀|썼|줬|놨|뒀|했었|았었|었었)(?:다|어요|어|습니다|죠|네요|거든요|대요|답니다|지요|잖아요|던\s*것이다|던\s*거다|던\s*겁니다|던\s*거예요)\s*$/;
     var MORAL_FINAL = /(?:하자|합시다|말자|맙시다|세요|십시오|해야\s*(?:한다|해요|합니다|해|돼요|됩니다|된다)|[아어해마]라)\s*$/;
     function storySpeech(win) {
@@ -94403,7 +94403,7 @@ var require_story_contract = __commonJS({
         ...s2.visual?.reuse !== void 0 ? { reuse: s2.visual.reuse } : {},
         recording: s2.visual?.source === "recording" ? s2.visual.clip : void 0
       });
-      return crypto2.createHash("sha256").update(JSON.stringify(canonical3({
+      return crypto2.createHash("sha256").update(JSON.stringify(canonical4({
         ...win.STORY?.version === "story-v2" ? { cast: win.SB_DOC?.characters, narrator: win.SB_DOC?.narratorCharacterId } : {},
         comprehension: win.COMPREHENSION,
         story,
@@ -128837,7 +128837,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     name: "episode_cover",
     title: "Choose and render the episode cover and thumbnail",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    description: `Use it once the episode has pictures (shot start images or clips) and before publishing, to make the cover and thumbnail every platform shows in grids, search and channel pages. set records the moment the cover shows, its copy and the reason in storyboard/cover.json: the source is a frame of an accepted clip or the finished video (kind "frame", the default once video exists), a shot's start image (kind "shot"), or an image this episode generated with image_execute (kind "image", by requestId). render makes the files locally at $0 \u2014 output/cover/cover-9x16.jpg (Shorts, Reels, TikTok Studio) or thumbnail-16x9.jpg (long-form, plus up to two variants for YouTube Test & Compare) \u2014 with the copy drawn by code in the episode language, crop previews for each platform surface, and render.json with measurements. On a story-first board it also copies the main file to output/video/cover.jpg (and thumbnail.jpg on long-form). read reports missing, unreadable (a hand-edited cover.json, with the reason), unrendered, fresh or stale (naming what changed: decision, template, font, source, files) and the file each platform's publish call takes.
+    description: `Use it once the episode has pictures (shot start images or clips) and before publishing, to make the cover and thumbnail every platform shows in grids, search and channel pages. set records the moment the cover shows, its copy and the reason in storyboard/cover.json: the source is a frame of an accepted clip or the finished video (kind "frame", the default once video exists), a shot's start image (kind "shot"), or an image this episode generated with image_execute (kind "image", by requestId). render makes the files locally at $0 \u2014 output/cover/cover-9x16.jpg (Shorts, Reels, TikTok Studio) or thumbnail-16x9.jpg (long-form, plus up to two variants for YouTube Test & Compare) \u2014 with the copy drawn by code in the episode language, crop previews for each platform surface, and render.json with measurements. On a story-first board it also copies the main file to output/video/cover.jpg (and thumbnail.jpg on long-form). read reports missing, unreadable (a hand-edited cover.json, with the reason), unrendered, fresh or stale (naming what changed: decision, format, template, font, source, files) and the file each platform's publish call takes.
 
 Do NOT ask an image model to draw the copy, and do NOT promise a moment the episode does not show: pick a shot that is in the cut. Do NOT treat warnings as refusals \u2014 they report crops, size and contrast for the author to weigh. A paid background goes through image_plan \u2192 image_execute first and is then named here by requestId.
 
@@ -130654,7 +130654,7 @@ async function manageLocation(args) {
 // src/cover.ts
 import { createHash as createHash22 } from "node:crypto";
 import { execFileSync as execFileSync17, spawn as spawn3 } from "node:child_process";
-import { copyFileSync as copyFileSync2, existsSync as existsSync32, mkdirSync as mkdirSync19, mkdtempSync as mkdtempSync7, readFileSync as readFileSync34, realpathSync as realpathSync10, renameSync as renameSync8, rmSync as rmSync16, statSync as statSync18, writeFileSync as writeFileSync25, openSync as openSync7, readSync, closeSync as closeSync7 } from "node:fs";
+import { copyFileSync as copyFileSync2, existsSync as existsSync32, mkdirSync as mkdirSync19, mkdtempSync as mkdtempSync7, readdirSync as readdirSync4, readFileSync as readFileSync34, realpathSync as realpathSync10, renameSync as renameSync8, rmSync as rmSync16, statSync as statSync18, writeFileSync as writeFileSync25, openSync as openSync7, readSync, closeSync as closeSync7 } from "node:fs";
 import { tmpdir as tmpdir7 } from "node:os";
 import { dirname as dirname9, isAbsolute as isAbsolute2, join as join17, relative as relative2, resolve as resolve9, sep } from "node:path";
 import { createRequire as createRequire19 } from "node:module";
@@ -130719,6 +130719,7 @@ function sha256File(file) {
   }
   return hash7.digest("hex");
 }
+var readdirIf = (dir) => existsSync32(dir) ? readdirSync4(dir) : [];
 var sha2562 = (value) => createHash22("sha256").update(value).digest("hex");
 function probe4(file) {
   try {
@@ -131012,12 +131013,14 @@ function injectConfig(template, config3) {
   const literal2 = JSON.stringify(config3).replace(/[<>\u2028\u2029]/g, (ch) => "\\u" + ch.charCodeAt(0).toString(16).padStart(4, "0"));
   return template.replace("/*COVER_CONFIG*/null", () => literal2);
 }
-var decisionSha = (d) => sha2562(JSON.stringify(d));
+var canonical3 = (v) => Array.isArray(v) ? `[${v.map(canonical3).join(",")}]` : v && typeof v === "object" ? `{${Object.keys(v).sort().map((k) => `${JSON.stringify(k)}:${canonical3(v[k])}`).join(",")}}` : JSON.stringify(v) ?? "null";
+var decisionSha = (d) => sha2562(canonical3(d));
 var storyFirst = (win) => win.STORY?.authoring === "story-first";
 async function renderCover(path35) {
   const ep = episodeOf(path35);
   const decision = readDecision(ep);
   if (!decision) throw new Error("cover_decision_missing: write the decision with episode_cover set first");
+  if (decision.format !== ep.format) throw new Error(`cover_format_changed: the decision was made for ${decision.format} and the board is now ${ep.format}; set it again`);
   const dir = join17(ep.episode, "output", "cover"), work = join17(dir, ".work");
   rmSync16(work, { recursive: true, force: true });
   mkdirSync19(join17(dir, "previews"), { recursive: true });
@@ -131138,6 +131141,10 @@ async function renderCover(path35) {
       copied.push("output/video/thumbnail.jpg");
     }
   }
+  const made = new Set(files3.map((f3) => f3.name));
+  for (const name of readdirIf(dir)) if (/^(cover|thumbnail)-[0-9x]+(-[bc])?\.jpg$/.test(name) && !made.has(name)) rmSync16(join17(dir, name), { force: true });
+  const kept = new Set(previews.map((p) => p.split("/").pop()));
+  for (const name of readdirIf(join17(dir, "previews"))) if (name.endsWith(".png") && !kept.has(name)) rmSync16(join17(dir, "previews", name), { force: true });
   const render = {
     version: 1,
     renderVersion: RENDER_VERSION,
@@ -131204,6 +131211,7 @@ function readCover(path35) {
   }
   const changed = [];
   if (render.decisionSha256 !== decisionSha(decision)) changed.push("decision");
+  if (decision.format !== ep.format || render.format !== ep.format) changed.push("format");
   if (render.templateSha256 !== templateSha() || render.renderVersion !== RENDER_VERSION) changed.push("template");
   for (const [file, sha] of Object.entries(render.fonts ?? {})) {
     const abs = join17(PLUGIN_ROOT, file);
@@ -131229,6 +131237,7 @@ function readCover(path35) {
       break;
     }
   }
+  if (!changed.includes("files") && render.previews.some((p) => !existsSync32(join17(dir, String(p))))) changed.push("files");
   const stale = changed.length > 0;
   const kind = landscape(ep.spec) ? "landscape" : "vertical";
   const at = (name) => render.files.some((f3) => f3.name === name) ? join17(dir, name) : null;
@@ -137422,12 +137431,12 @@ function collectQueries2(input) {
   return out;
 }
 function hitToPost(platform, hit, query) {
-  const canonical3 = canonicalPost(platform, hit.link);
-  if (!canonical3) return null;
+  const canonical4 = canonicalPost(platform, hit.link);
+  if (!canonical4) return null;
   return {
     platform,
-    url: canonical3.url,
-    author: canonical3.author ?? authorFromSource(hit.source),
+    url: canonical4.url,
+    author: canonical4.author ?? authorFromSource(hit.source),
     title: hit.title.replace(/\s+/g, " ").trim(),
     snippet: hit.snippet.replace(/\s+/g, " ").trim().slice(0, SNIPPET_CAP),
     date: hit.date,

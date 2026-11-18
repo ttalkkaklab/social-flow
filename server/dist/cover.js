@@ -13,7 +13,7 @@
 import { z } from 'zod';
 import { createHash } from 'node:crypto';
 import { execFileSync, spawn } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync, openSync, readSync, closeSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync, openSync, readSync, closeSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { createRequire } from 'node:module';
@@ -92,6 +92,7 @@ function sha256File(file) {
     }
     return hash.digest('hex');
 }
+const readdirIf = (dir) => existsSync(dir) ? readdirSync(dir) : [];
 const sha256 = (value) => createHash('sha256').update(value).digest('hex');
 function probe(file) {
     try {
@@ -410,13 +411,19 @@ export function injectConfig(template, config) {
     const literal = JSON.stringify(config).replace(/[<>\u2028\u2029]/g, ch => '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0'));
     return template.replace('/*COVER_CONFIG*/null', () => literal);
 }
-const decisionSha = (d) => sha256(JSON.stringify(d));
+/** Key order differs between the object set builds and the one zod parses back, so the hash is taken over sorted keys. */
+const canonical = (v) => Array.isArray(v) ? `[${v.map(canonical).join(',')}]`
+    : v && typeof v === 'object' ? `{${Object.keys(v).sort().map(k => `${JSON.stringify(k)}:${canonical(v[k])}`).join(',')}}`
+        : JSON.stringify(v) ?? 'null';
+const decisionSha = (d) => sha256(canonical(d));
 const storyFirst = (win) => win.STORY?.authoring === 'story-first';
 export async function renderCover(path) {
     const ep = episodeOf(path);
     const decision = readDecision(ep);
     if (!decision)
         throw new Error('cover_decision_missing: write the decision with episode_cover set first');
+    if (decision.format !== ep.format)
+        throw new Error(`cover_format_changed: the decision was made for ${decision.format} and the board is now ${ep.format}; set it again`);
     const dir = join(ep.episode, 'output', 'cover'), work = join(dir, '.work');
     rmSync(work, { recursive: true, force: true });
     mkdirSync(join(dir, 'previews'), { recursive: true });
@@ -537,13 +544,23 @@ export async function renderCover(path) {
             copied.push('output/video/thumbnail.jpg');
         }
     }
+    // Only after a whole render succeeds: drop outputs of an earlier one this render did not make again
+    // (a removed variant, the preview of a crop no longer cut). Only names this tool writes are touched.
+    const made = new Set(files.map(f => f.name));
+    for (const name of readdirIf(dir))
+        if (/^(cover|thumbnail)-[0-9x]+(-[bc])?\.jpg$/.test(name) && !made.has(name))
+            rmSync(join(dir, name), { force: true });
+    const kept = new Set(previews.map(p => p.split('/').pop()));
+    for (const name of readdirIf(join(dir, 'previews')))
+        if (name.endsWith('.png') && !kept.has(name))
+            rmSync(join(dir, 'previews', name), { force: true });
     const render = { version: 1, renderVersion: RENDER_VERSION, decisionSha256: decisionSha(decision), templateSha256: templateSha(), sources, fonts,
         format: ep.format, files, previews, measurements, warnings, copied };
     atomicWrite(join(dir, 'render.json'), JSON.stringify(render, null, 2) + '\n');
     rmSync(work, { recursive: true, force: true });
     return { dir, render };
 }
-function cutPreviews(shot, dir, stem, kind, spec) {
+export function cutPreviews(shot, dir, stem, kind, spec) {
     const out = [];
     const cut = (name, vf) => { const file = join(dir, `${stem}-${name}.png`); ffmpeg(['-i', shot, '-vf', vf, '-frames:v', '1', file]); out.push(relative(dirname(dir), file)); };
     if (kind === 'landscape') {
@@ -595,6 +612,8 @@ export function readCover(path) {
     const changed = [];
     if (render.decisionSha256 !== decisionSha(decision))
         changed.push('decision');
+    if (decision.format !== ep.format || render.format !== ep.format)
+        changed.push('format');
     if (render.templateSha256 !== templateSha() || render.renderVersion !== RENDER_VERSION)
         changed.push('template');
     for (const [file, sha] of Object.entries(render.fonts ?? {})) {
@@ -623,6 +642,8 @@ export function readCover(path) {
             break;
         }
     }
+    if (!changed.includes('files') && render.previews.some(p => !existsSync(join(dir, String(p)))))
+        changed.push('files');
     const stale = changed.length > 0;
     const kind = landscape(ep.spec) ? 'landscape' : 'vertical';
     const at = (name) => render.files.some(f => f.name === name) ? join(dir, name) : null;

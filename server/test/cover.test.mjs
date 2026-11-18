@@ -9,7 +9,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync,
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const { setCover, renderCover, readCover, chromePath, encodeJpeg, injectConfig } = await import('../dist/cover.js');
+const { setCover, renderCover, readCover, chromePath, encodeJpeg, injectConfig, cutPreviews } = await import('../dist/cover.js');
 
 function episode(t, { storyFirst = true, format = 'shorts-9x16', size = '1080x1920', shots } = {}) {
   const dir = realpathSync(mkdtempSync(join(tmpdir(), 'sf-cover-')));
@@ -147,8 +147,8 @@ test('a hand-edited decision is reported unreadable, and a page that never finis
 test('long-form renders the thumbnail and its Test & Compare variants', { skip: !chromePath() && 'no Chrome' }, async t => {
   const { dir, sb } = episode(t, { format: 'youtube-long-16x9', size: '1920x1080' });
   const r = setCover(sb, decision({ copy: { text: '사장님 이거 진짜예요?', emphasis: '진짜' }, focus: { x: 0.7, y: 0.5 }, variants: [{ copy: { text: '찢은 날' } }] }));
-  assert.match(r.decisionSha256, /^[a-f0-9]{64}$/);
   const { render } = await renderCover(sb);
+  assert.equal(r.decisionSha256, render.decisionSha256);
   assert.deepEqual(render.files.map(f => [f.name, f.width, f.height, f.role]), [['thumbnail-16x9.jpg', 1920, 1080, 'main'], ['thumbnail-16x9-b.jpg', 1920, 1080, 'variant b']]);
   assert.deepEqual(render.copied, ['output/video/cover.jpg', 'output/video/thumbnail.jpg']);
   const box = render.measurements['16x9'].box;
@@ -157,4 +157,24 @@ test('long-form renders the thumbnail and its Test & Compare variants', { skip: 
   const read = readCover(sb);
   assert.equal(read.status, 'fresh');
   assert.deepEqual(read.publish.variants, [join(dir, 'output', 'cover', 'thumbnail-16x9-b.jpg')]);
+  const renderFile = join(dir, 'output', 'cover', 'render.json');
+  const recorded = JSON.parse(readFileSync(renderFile, 'utf8'));
+  writeFileSync(renderFile, JSON.stringify({ ...recorded, fonts: Object.fromEntries(Object.keys(recorded.fonts).map(k => [k, '0'.repeat(64)])) }));
+  assert.deepEqual(readCover(sb).changed, ['font']);
+  setCover(sb, decision({ copy: { text: '사장님 이거 진짜예요?' }, focus: { x: 0.7, y: 0.5 } }));
+  await renderCover(sb);
+  assert.equal(existsSync(join(dir, 'output', 'cover', 'thumbnail-16x9-b.jpg')), false, 'a removed variant leaves with the next render');
+});
+
+test('once Shorts landscape surfaces keep 9:16, no landscape crop is previewed', t => {
+  const dir = realpathSync(mkdtempSync(join(tmpdir(), 'sf-cover-prev-')));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const shot = join(dir, 'shot.png');
+  execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=gray:s=540x960', '-frames:v', '1', shot]);
+  mkdirSync(join(dir, 'previews'));
+  const spec = (crop) => ({ canvases: [{ id: '9x16', w: 2160, h: 3840, min: [1080, 1920] }], copyMax: { words: 3, chars: 8 },
+    bands: { core: { y0: 0.342, y1: 0.658 }, support: { y0: 0.219, y1: 0.781 }, outer: { y0: 0.125, y1: 0.875 }, x: { x0: 0.06, x1: 0.94 } },
+    unverified: { shortsLandscapeCrop: crop } });
+  assert.deepEqual(cutPreviews(shot, join(dir, 'previews'), 'a', 'vertical', spec('3:2')).map(p => p.split('-').slice(1).join('-')), ['grid-3x4.png', 'feed-1x1.png', 'landscape-16x9.png', 'sheet.png']);
+  assert.deepEqual(cutPreviews(shot, join(dir, 'previews'), 'b', 'vertical', spec('9:16')).map(p => p.split('-').slice(1).join('-')), ['grid-3x4.png', 'feed-1x1.png', 'sheet.png']);
 });
