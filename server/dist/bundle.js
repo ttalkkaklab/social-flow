@@ -118743,6 +118743,21 @@ function applyPatch(win, patch, opts = {}) {
       throw new Error("cliche_record: window.CLICHES is written by story_cliche, which checks the episode type and the user's pick \u2014 storyboard_apply globals cannot change it");
     next[k] = v;
   }
+  let clicheChoiceKept;
+  if (patch.globals && Object.hasOwn(patch.globals, "PRODUCTION") && !opts.cliches && Object.keys(win).length) {
+    const before2 = win.PRODUCTION?.clicheUse;
+    const production = next.PRODUCTION;
+    if (production && typeof production === "object" && !Array.isArray(production) && production.clicheUse !== before2) {
+      const { clicheUse: _dropped, ...rest } = production;
+      next.PRODUCTION = before2 === void 0 ? rest : { ...rest, clicheUse: before2 };
+      clicheChoiceKept = {
+        level: "warn",
+        code: "cliche_choice_kept",
+        where: "PRODUCTION",
+        what: `cliche_choice_kept: PRODUCTION.clicheUse stays ${before2 === void 0 ? "unset" : JSON.stringify(before2)} \u2014 it is the channel's saved choice as this board's episode took it; when the user states a new one, save it with project_manage update (production.clicheUse)`
+      };
+    }
+  }
   const boardMotionTheme = next.THEME?.motionGraphicTheme;
   if (boardMotionTheme) motionThemeContract().resolveTheme({ type: "process", style: { theme: boardMotionTheme } });
   if (patch.propSheet) next.SB_DOC = {
@@ -118878,7 +118893,7 @@ function applyPatch(win, patch, opts = {}) {
       return { ...shot, visual: { ...shot.visual, video: rest } };
     });
   }
-  const findings = [...joinNotes, ...editImpact(win, next)];
+  const findings = [...joinNotes, ...editImpact(win, next), ...clicheChoiceKept ? [clicheChoiceKept] : []];
   if (!shots.length && !opts.outline) findings.push({ level: "bad", where: "board", what: "the board has no shots" });
   if (win.STORY?.authoring === "story-first" && next.STORY?.authoring !== "story-first")
     findings.push({ level: "bad", where: "STORY", what: 'story_order: STORY.authoring "story-first" stays on a board started with story_sequence' });
@@ -119400,7 +119415,7 @@ var storyClicheSchema = external_exports.object({
   path: outlinePath,
   uses: external_exports.array(external_exports.object({
     id: external_exports.number().int().positive().optional().describe("The catalogue number cliches.js pick printed"),
-    name: nonEmpty.refine((name) => !/^#\s*\d+$/.test(name), { message: "a catalogue number goes in id, not in name" }).optional().describe("Its name in the story language; required for a clich\xE9 that is not in the catalogue"),
+    name: nonEmpty.refine((name) => !/^#\s*\d+$/.test(name.normalize("NFKC")), { message: "a catalogue number goes in id, not in name" }).refine((name) => !/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/.test(name), { message: "a name is plain text, without control characters" }).optional().describe("Its name in the story language; required for a clich\xE9 that is not in the catalogue"),
     need: nonEmpty.optional().describe("The job it does in this story, one of the needs cliches.js lists; the catalogue entry's first need when omitted"),
     scenes: external_exports.array(external_exports.number().int().positive()).min(1).optional().describe("The scenes it sits on, once they are written"),
     character: nonEmpty.optional().describe("The cast member a character-type clich\xE9 describes"),
@@ -129300,7 +129315,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
         removeShotIds: { type: "array", items: { type: "string", pattern: "^s\\d{4,}$", description: "A stable shot id" }, description: "Shot ids to drop (resolved before inserts). Not with the position fields in the same patch" },
         removeScenes: { type: "array", items: { type: "number", description: "Scene number" }, description: "Scene numbers to drop from STRUCTURE.scenes and from every sequence" },
         removeSequences: { type: "array", items: { type: "string", description: "Sequence id" }, description: "Sequence ids to drop" },
-        globals: { type: "object", description: "Other window.* blocks to set \u2014 FORMAT, THEME (motionGraphicTheme: {id: auto or theme id, context?, reason?} sets the common motion theme; explicit shot ids or contexts override it), COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. CLICHES belongs to story_cliche and cannot be changed here (cliche_record). MUSIC.$mix is optional sound-design metadata; SFX keeps logical asset ids only. PRODUCTION.mode: full_video, video_80, video_50, video_30, video_lt10, no_video (hook_only/stills_only/hybrid are legacy). New selections write renderRatioVersion:1." },
+        globals: { type: "object", description: "Other window.* blocks to set \u2014 FORMAT, THEME (motionGraphicTheme: {id: auto or theme id, context?, reason?} sets the common motion theme; explicit shot ids or contexts override it), COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. CLICHES belongs to story_cliche and cannot be changed here (cliche_record), and PRODUCTION.clicheUse keeps the value the board has (cliche_choice_kept). MUSIC.$mix is optional sound-design metadata; SFX keeps logical asset ids only. PRODUCTION.mode: full_video, video_80, video_50, video_30, video_lt10, no_video (hook_only/stills_only/hybrid are legacy). New selections write renderRatioVersion:1." },
         expectedSha256: { type: "string", pattern: "^[a-f0-9]{64}$", description: "Current scenes.js hash from storyboard_read; required when editing propSheet on an existing board." },
         propSheet: { type: "object", additionalProperties: false, required: ["props"], description: "Replace the complete prop sheet atomically. Keep other editorial metadata. Changes validate story-time custody and invalidate approval; original file is backed up.", properties: {
           props: { type: "array", description: "Complete prop registry for this board", items: { type: "object", additionalProperties: true, required: ["id"], properties: {

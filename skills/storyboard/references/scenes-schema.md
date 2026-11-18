@@ -562,6 +562,9 @@ window.CLICHES = {
   entry so the review page can mark them.
 - A scene number that no longer exists is named by `story_cliche` and by the board digest, and
   marked on the review page.
+- `PRODUCTION.clicheUse` (`"on"` or `"off"`) is the channel's saved choice as the board's
+  episode snapshot took it. A `storyboard_apply` patch of `PRODUCTION` keeps it
+  (`cliche_choice_kept`).
 - An applied use without `basis: "user"` on a type that only recommends is reported as
   `cliche_unpicked`. The tool never writes one, so it comes from a hand edit or from a type
   changed after recording.

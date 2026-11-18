@@ -584,7 +584,8 @@ describe('clichés are chosen for the story and recorded on the board', () => {
 
   it('on a type that recommends, a cliché enters the story only with the user\'s pick', () => {
     const dir = tmp();
-    const type = (production) => applyStoryboard({ path: dir, draft: true, globals: { PRODUCTION: production } }, { outline: true });
+    // The board's PRODUCTION as the episode snapshot hands it over: the type and the channel's saved choice.
+    const type = (production) => { const { win, header } = readBoard(dir); writeFileSync(join(dir, 'scenes.js'), serializeBoard({ ...win, PRODUCTION: production }, header)); };
     writeStorySequences({ path: dir, language: 'en', sequences: [{ id: 'q1', title: 'Intro', purpose: 'what it is' }] });
     type({ videoType: { id: 'explainer' } });
     assert.equal(recorded(dir), undefined, 'no open record on a type that only recommends');
@@ -610,8 +611,13 @@ describe('clichés are chosen for the story and recorded on the board', () => {
     writeStoryCliches({ path: dir, uses: [{ name: 'a borrowed umbrella' }] });
     assert.equal(recorded(dir).uses.find((use) => use.name === 'a borrowed umbrella').basis, 'user');
 
-    // storyboard_apply cannot put an applied use on the board: story_cliche owns the record. The block carried unchanged passes.
+    // Nor can the saved choice be turned on from the board: a PRODUCTION patch keeps the value the snapshot gave.
     type({ videoType: { id: 'explainer' } });
+    const forged = applyStoryboard({ path: dir, draft: true, globals: { PRODUCTION: { videoType: { id: 'explainer' }, clicheUse: 'on' } } }, { outline: true });
+    assert.deepEqual([forged.findings.some((f) => f.code === 'cliche_choice_kept'), readBoard(dir).win.PRODUCTION.clicheUse], [true, undefined]);
+    assert.throws(() => writeStoryCliches({ path: dir, uses: [{ name: 'another' }] }), /cliche_user_choice/);
+
+    // storyboard_apply cannot put an applied use on the board: story_cliche owns the record. The block carried unchanged passes.
     const before = recorded(dir);
     assert.throws(() => applyStoryboard({ path: dir, draft: true, globals: { CLICHES: { version: 1, uses: [{ id: plain.id, name: 'unpicked' }] } } }, { outline: true }), /cliche_record/);
     assert.equal(applyStoryboard({ path: dir, draft: true, globals: { CLICHES: { uses: before.uses, version: before.version } } }, { outline: true }).written, true);
@@ -640,7 +646,8 @@ describe('clichés are chosen for the story and recorded on the board', () => {
     assert.throws(() => writeStoryCliches({ path: second, uses: [{ id: plain.id, character: 'nobody' }] }), /cliche_character: nobody is not in storyboard\/cast\.json/);
     assert.equal(storyClicheSchema.safeParse({ path: second, uses: [{ shift: 'no id and no name' }] }).success, false);
     // A catalogue number given as a name would sit beside the same entry by id; blank text is no name. A direct call is parsed too.
-    assert.equal(storyClicheSchema.safeParse({ path: second, uses: [{ name: `#${plain.id}` }] }).success, false);
+    for (const name of [`#${plain.id}`, `＃${plain.id}`, 'bell\u0007', 'flip\u202e'])
+      assert.equal(storyClicheSchema.safeParse({ path: second, uses: [{ name }] }).success, false, JSON.stringify(name));
     assert.throws(() => writeStoryCliches({ path: second, uses: [{ name: '   ' }] }));
     assert.equal(recorded(second).uses.length, 3, 'a refused call writes nothing');
 

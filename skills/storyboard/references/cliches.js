@@ -261,7 +261,8 @@ function main(argv) {
   if (command === 'needs') {
     return ['needs — the job a cliché does for the story:', ...Object.entries(NEEDS).map(([id, what]) => `  ${id} — ${what}`),
       'layers — what it is, and the step that chooses it:', ...Object.entries(LAYERS).map(([id, layer]) => `  ${id} — ${layer.what} (${layer.stage})`),
-      `genres: ${GENRES.join(', ')}`].join('\n');
+      `genres — where a cliché usually appears: ${GENRES.join(', ')}`,
+      '  comedy is not a genre here: a comedy picks from any genre and breaks the pattern at the end; relief is the need for a laugh'].join('\n');
   }
   if (command === 'mode') {
     if (!args._[0]) throw new Error(USAGE);
@@ -269,6 +270,8 @@ function main(argv) {
     return `${m.mode} — ${m.why}`;
   }
   if (command === 'pick') {
+    // A mistyped path would switch repeat detection off without a word.
+    if (args.episodes && !(fs.existsSync(args.episodes) && fs.statSync(args.episodes).isDirectory())) throw new Error(`--episodes: no directory at ${args.episodes}`);
     const used = args.episodes ? earlierUses(args.episodes, args.except) : [];
     const exclude = [...String(args.exclude || '').split(',').map(Number).filter(Number.isInteger), ...used.map(use => use.id)];
     const limit = args.limit === undefined ? undefined : Number(args.limit);

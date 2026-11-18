@@ -697,6 +697,20 @@ export function applyPatch(win, patch, opts = {}) {
                 throw new Error('cliche_record: window.CLICHES is written by story_cliche, which checks the episode type and the user\'s pick — storyboard_apply globals cannot change it');
             next[k] = v;
         }
+    // PRODUCTION.clicheUse is the channel's saved choice as the board's episode snapshot took it. It decides whether
+    // story_cliche applies without a pick, so a PRODUCTION patch keeps the value the board has and says so.
+    let clicheChoiceKept;
+    // A board being created takes the handoff it is given; there is no earlier value to keep.
+    if (patch.globals && Object.hasOwn(patch.globals, 'PRODUCTION') && !opts.cliches && Object.keys(win).length) {
+        const before = win.PRODUCTION?.clicheUse;
+        const production = next.PRODUCTION;
+        if (production && typeof production === 'object' && !Array.isArray(production) && production.clicheUse !== before) {
+            const { clicheUse: _dropped, ...rest } = production;
+            next.PRODUCTION = before === undefined ? rest : { ...rest, clicheUse: before };
+            clicheChoiceKept = { level: 'warn', code: 'cliche_choice_kept', where: 'PRODUCTION',
+                what: `cliche_choice_kept: PRODUCTION.clicheUse stays ${before === undefined ? 'unset' : JSON.stringify(before)} — it is the channel's saved choice as this board's episode took it; when the user states a new one, save it with project_manage update (production.clicheUse)` };
+        }
+    }
     const boardMotionTheme = next.THEME?.motionGraphicTheme;
     if (boardMotionTheme)
         motionThemeContract().resolveTheme({ type: 'process', style: { theme: boardMotionTheme } });
@@ -863,7 +877,7 @@ export function applyPatch(win, patch, opts = {}) {
             return { ...shot, visual: { ...shot.visual, video: rest } };
         });
     }
-    const findings = [...joinNotes, ...editImpact(win, next)];
+    const findings = [...joinNotes, ...editImpact(win, next), ...(clicheChoiceKept ? [clicheChoiceKept] : [])];
     if (!shots.length && !opts.outline)
         findings.push({ level: 'bad', where: 'board', what: 'the board has no shots' });
     if (win.STORY?.authoring === 'story-first' && next.STORY?.authoring !== 'story-first')
@@ -1446,7 +1460,8 @@ export const storyClicheSchema = z.object({
     path: outlinePath,
     uses: z.array(z.object({
         id: z.number().int().positive().optional().describe('The catalogue number cliches.js pick printed'),
-        name: nonEmpty.refine((name) => !/^#\s*\d+$/.test(name), { message: 'a catalogue number goes in id, not in name' }).optional()
+        name: nonEmpty.refine((name) => !/^#\s*\d+$/.test(name.normalize('NFKC')), { message: 'a catalogue number goes in id, not in name' })
+            .refine((name) => !/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/.test(name), { message: 'a name is plain text, without control characters' }).optional()
             .describe('Its name in the story language; required for a cliché that is not in the catalogue'),
         need: nonEmpty.optional().describe('The job it does in this story, one of the needs cliches.js lists; the catalogue entry\'s first need when omitted'),
         scenes: z.array(z.number().int().positive()).min(1).optional().describe('The scenes it sits on, once they are written'),

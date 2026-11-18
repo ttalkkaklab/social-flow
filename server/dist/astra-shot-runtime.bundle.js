@@ -33519,7 +33519,7 @@ var storyClicheSchema = external_exports.object({
   path: outlinePath,
   uses: external_exports.array(external_exports.object({
     id: external_exports.number().int().positive().optional().describe("The catalogue number cliches.js pick printed"),
-    name: nonEmpty.refine((name) => !/^#\s*\d+$/.test(name), { message: "a catalogue number goes in id, not in name" }).optional().describe("Its name in the story language; required for a clich\xE9 that is not in the catalogue"),
+    name: nonEmpty.refine((name) => !/^#\s*\d+$/.test(name.normalize("NFKC")), { message: "a catalogue number goes in id, not in name" }).refine((name) => !/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/.test(name), { message: "a name is plain text, without control characters" }).optional().describe("Its name in the story language; required for a clich\xE9 that is not in the catalogue"),
     need: nonEmpty.optional().describe("The job it does in this story, one of the needs cliches.js lists; the catalogue entry's first need when omitted"),
     scenes: external_exports.array(external_exports.number().int().positive()).min(1).optional().describe("The scenes it sits on, once they are written"),
     character: nonEmpty.optional().describe("The cast member a character-type clich\xE9 describes"),

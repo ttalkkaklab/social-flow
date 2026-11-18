@@ -76,9 +76,13 @@ node "$C" pick --need obstacle,reveal --genre romance --seed <topic> \
 node "$C" show 45                                    # one entry in full: example works, evidence
 ```
 
-`pick` needs at least one `--need`. `--genre` and `--layer` narrow it; `--seed` (the episode's
+`pick` needs at least one `--need`. `--genre` and `--layer` narrow it. A genre says where a
+cliché usually appears (romance, family, sageuk, crime, legal, medical, office, revenge,
+school, fantasy, horror); comedy is not one of them, because a comedy takes a cliché from
+any of these and breaks it, and `relief` is the need for a laugh. `--seed` (the episode's
 topic) varies which candidates come up, so two episodes do not start from the same list;
-`--episodes` leaves out what the channel's earlier episodes already applied. It prints
+`--episodes` leaves out what the channel's earlier episodes already applied, and a path
+that is not a directory is an error. It prints
 twelve candidates by default (`--limit` changes that), grouped by need, each with its number, layer, the step that chooses
 it and a one-line description. Entries marked caution and production-practice entries are
 left out (§5), and the first line says how many.
@@ -185,8 +189,10 @@ In `offer` mode a cliché enters the story only by the user's choice.
    on — always, or never — save it in the same turn with `project_manage update` as
    `production.clicheUse` (`"on"` or `"off"`), resending the other `production` fields
    ([model settings](../../_shared/model-settings.md)). A new episode's board carries it in
-   `PRODUCTION.clicheUse`. In `apply` mode the user can still decline one episode: record
-   `none` with that reason.
+   `PRODUCTION.clicheUse`, and `storyboard_apply` keeps that value when it patches
+   `PRODUCTION` (`cliche_choice_kept`): the choice changes in the project settings, not on
+   a board. In `apply` mode the user can still decline one episode: record `none` with that
+   reason.
 
 ## 7. Record and display
 

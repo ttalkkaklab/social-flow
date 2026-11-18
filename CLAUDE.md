@@ -132,8 +132,10 @@ pattern, not its words; production-practice entries are never candidates; a repe
 channel's episodes is reported. Each of these reports. A call is refused only for input the
 tool cannot use and for a cliché applied on a recommending type without `basis:"user"`
 (`cliche_user_choice`), which the session never passes for a choice the user did not make.
-`story_cliche` is the record's only writer (`storyboard_apply` leaves it alone, `cliche_record`),
-and a use a hand edit put in the story without the user's pick is reported as `cliche_unpicked`.
+`story_cliche` is the record's only writer: `storyboard_apply` leaves the record alone
+(`cliche_record`) and keeps `PRODUCTION.clicheUse` as the episode snapshot gave it
+(`cliche_choice_kept`). A use a hand edit put in the story without the user's pick is reported
+as `cliche_unpicked`.
 This is writing guidance, not a score, a quota or an approval pause, and a cliché's name never
 answers `necessity`. Follow `skills/storyboard/references/cliche-use.md`. Evidence and its
 limits: `docs/research/2026-11-18-kdrama-cliches/`.

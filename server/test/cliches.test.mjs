@@ -122,6 +122,8 @@ test("earlier episodes' applied clichés are found, and the picker CLI leaves th
   const episodes = join(root, 'episodes');
   assert.deepEqual(C.earlierUses(episodes, current), [{ id: used, name: 'A', episode: 'e1' }]);
   assert.deepEqual(C.earlierUses(join(root, 'missing')), []);
+  // On the command line a path that is not a directory would turn repeat detection off unnoticed.
+  assert.throws(() => C.main(['pick', '--need', 'obstacle', '--episodes', join(root, 'missing')]), /--episodes: no directory at/);
 
   const out = JSON.parse(C.main(['pick', '--need', 'obstacle', '--limit', '40', '--episodes', episodes, '--except', current, '--json']));
   assert.ok(!out.candidates.some(item => item.id === used));
