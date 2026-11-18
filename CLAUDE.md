@@ -101,7 +101,8 @@ Every new or substantially revised synopsis and storyboard plans its opening for
 format and the enabled SNS platforms, and the author chooses the best practice without asking.
 Short-form posts one opening to every platform, built for the earliest published window (the
 Reels skip rate, 3 s): the first frame shows the subject already changed or mid-action, a
-spoken promise, when a line carries it, starts inside the first second and is complete by about 3 s, and the line names
+spoken promise, when a line carries it, starts at once (inside the first second is the research's
+inference; 3 s is the measured window) and is complete by about 3 s, and the line names
 what the frame shows, since nothing is drawn over video. Per-platform first cuts are not made;
 platforms differ in title, caption and cover, which carry the same promise. Long-form decides
 the title and thumbnail first; the first 7 s confirm them and the next 20 s open a bigger

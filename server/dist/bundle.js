@@ -118966,12 +118966,14 @@ var OPENING_WINDOWS = {
 };
 function openingReading(win, platforms = []) {
   if (win.STORY?.authoring !== "story-first") return [];
-  const long = /16x9/.test(String(win.FORMAT ?? ""));
+  const long = /^youtube-long/.test(String(win.FORMAT ?? ""));
   const span = long ? 30 : 3;
-  const windows = platforms.map((p) => OPENING_WINDOWS[long ? "long" : "short"][p]).filter(Boolean);
+  const table = OPENING_WINDOWS[long ? "long" : "short"];
+  const windows = platforms.filter((p) => typeof p === "string" && Object.hasOwn(table, p)).map((p) => table[p]);
+  const flat = (text4) => String(text4).replace(/\s+/g, " ").trim();
   const head = `opening (${long ? "long-form" : "short-form"}${windows.length ? ` \xB7 ${windows.join(" \xB7 ")}` : ""})`;
   const plan2 = win.STORY.opening;
-  const lines = [!plan2?.promise ? `${head}: no plan \u2014 story_sequence opening records the promise and the first frame${long ? ", the title and thumbnail it confirms and the bigger question" : ""} (references/opening-by-format.md)` : `${head}: promise "${plan2.promise}" \xB7 first frame: ${plan2.firstFrame ?? "not written"}`];
+  const lines = [!plan2?.promise ? `${head}: no plan \u2014 story_sequence opening records the promise and the first frame${long ? ", the title and thumbnail it confirms and the bigger question" : ""} (references/opening-by-format.md)` : `${head}: promise "${flat(plan2.promise)}" \xB7 first frame: ${plan2.firstFrame ? flat(plan2.firstFrame) : "not written"}`];
   if (long && plan2?.promise) {
     const missing = [!plan2.title && "title", !plan2.thumbnail && "thumbnail", !plan2.widen && "bigger question"].filter(Boolean);
     if (missing.length) lines.push(`opening: no ${missing.join(", ")} \u2014 the first 30 s confirms the title and thumbnail, then opens a bigger question`);

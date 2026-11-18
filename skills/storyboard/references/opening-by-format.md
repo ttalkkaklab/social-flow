@@ -11,8 +11,9 @@ Evidence: [research page](../../../docs/research/2026-11-18-opening-hooks/index.
 two reports (short-form, long-form) in the same folder. Grades used below: **measured**
 (platform data, an experiment or a large correlational study), **official** (a platform's
 own definition or guidance), **practice** (creators' and tool vendors' rules of thumb),
-**inference** (this plugin's synthesis). Most opening patterns in the research are practice:
-of the 233 catalogued patterns, 7 have a measured effect and 129 rest on practitioners' opinion.
+**inference** (this plugin's synthesis). Most opening patterns in the research are practice;
+the measured evidence is a handful of studies: Emplifi's correlations on brand Facebook Reels,
+one story-order experiment, two swipe-timing studies and the platforms' own definitions.
 
 ## Contents
 
@@ -77,14 +78,15 @@ The shared opening, second by second (inference from the measured and official r
 | Time | What happens | Why |
 |---|---|---|
 | 0 s | The first frame shows the subject of the promise already changed or mid-action: the result, the problem state, the before/after, the odd object, the incident under way. No logo, title card, greeting, black frame or establishing landscape. | Muted viewers get only this picture; a slow or scene-setting start gives them a reason to leave (practice). |
-| 0–1 s | The first sound. When a line carries the promise, its first word starts inside the first second. | Brand Facebook Reels whose speech started within 3 s held 24.7% more viewers at 10 s than music-only ones (Emplifi, 10,110 Reels, correlational; the same group had 3.3% lower reach and 11.9% fewer rewatches). |
+| 0–1 s | The first sound. When a line carries the promise, its first word starts inside the first second. | Measured only for 3 s: brand Facebook Reels whose speech started within 3 s held 24.7% more viewers at 10 s than music-only ones (Emplifi, 10,110 Reels, correlational; the same group had 3.3% lower reach and 11.9% fewer rewatches). The first second is inference: the short-form report's design for openings without on-screen text. |
 | by ~3 s | The promise is complete: one spoken sentence, or a visible event the viewer can read without sound. | The earliest window ends here (official, Reels). |
 | 3–6 s | The first step toward payment: a first clue, a first attempt, the first piece of the result. | TikTok's ad guidance puts the hook inside 6 s (official, ads only). |
 | end | The promise is paid on screen. A piece under about 7 s can loop seamlessly into its first frame. | Seamless loops of 7 s or less had 18.7% more rewatches (Emplifi, correlational). |
 
 - **See and say.** The first line names what the first frame shows. Picture and line point
   at the same thing; a line about one subject over a picture of another makes the viewer
-  decode instead of watch (Kallaway; Google's "see & say", practice). Nothing is drawn over
+  decode instead of watch (Kallaway; Google's "see & say" in its Shorts ABCDs; practice, both
+  cited in the short-form report's section on openings without text). Nothing is drawn over
   video, so this pair replaces every text hook: on speech-led Reels, text overlays went with
   6% lower 10-second retention (Emplifi, correlational).
 - **Speak or show, not both late.** A visible event can carry the promise without a line;

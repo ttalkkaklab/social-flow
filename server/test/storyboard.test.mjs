@@ -1604,7 +1604,7 @@ describe('opening reading', () => {
   const line = { id: 'l1', speaker: 'a', delivery: 'on_screen', tts: 'x', estimatedSeconds: 2 };
   it('short-form names a missing plan, the shots inside 0–3 s and a first line after the window', () => {
     const win = { STORY: story, SCENES: [{ id: 's0001', duration: 2 }, { id: 's0002', duration: 2.5, narration: [line] }, { id: 's0003', duration: 1 }] };
-    const reading = openingReading(win, ['instagram', 'tiktok', 'threads']);
+    const reading = openingReading(win, ['instagram', 'tiktok', 'threads', 'constructor', 'toString']);   // inherited names are not platforms
     assert.match(reading[0], /^opening \(short-form · Reels: skip rate counts the first 3 s · TikTok: the offer in 3 s, the hook in 6 s \(ad guidance\)\): no plan/);
     assert.ok(reading.includes('opening window 0–3 s: s0001 0–2 s, s0002 2–4.5 s'));
     assert.ok(!reading.some((l) => /after the 3 s window/.test(l)));   // the line starts at 2 s, inside the window
