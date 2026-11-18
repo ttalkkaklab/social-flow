@@ -23,7 +23,8 @@ the following shot's `transition`. To patch effects without replacing shots, cal
 moving-join duration. Dip uses up to 0.30 seconds on each side, not
 `edit.transitionSeconds`. The approval page displays the effect below each shot.
 
-For every new boundary, write `transition` and `edit.reason`. In `edit.continuity`, name
+For every new boundary, write `transition`; a join other than a plain cut also carries
+`edit.reason`. In `edit.continuity`, name
 what carries across the join: subject position, gaze, motion direction, framing, light,
 colour or a sound. Explain an intentional discontinuity. Match neighbouring source images
 before generating video; an effect cannot repair a different face or inconsistent geography.
@@ -55,6 +56,21 @@ added narration margins (0..2 seconds). Default pre is zero, post is 0.12 second
 0.30 seconds of pre. Source-recorded breaths still count, so listen before adding a pause.
 Sync footage retains its original timing and has no added margins. There is no default
 four-second minimum. Short inserts can stay short.
+
+A card that plays its clip's own soundtrack (`sound.audioSource:"video"`, every MSR shot)
+trims as one body: `edit.in` and `edit.out` are source seconds, the card plays that range,
+and picture and sound move together. `pre` and `post` stay zero there. Use it for the silent
+acting MSR leaves around a line: `speech_manage attach_video` returns the measured line span
+and a suggested range, and assembly prints a `⚠` for a card with a second or more of silence
+before its line. Set the shot `duration` to the trimmed length; times inside the shot
+(`sound.effects[].atSeconds`, music starts) count from the trimmed start. `edit.out` is
+refused on any other card, and user-filmed sync footage keeps `in=0`.
+
+When every spoken card retains its source video soundtrack, incomplete character identity
+or generation voice settings are recorded in `source-voice-warnings.json` rather than
+blocking assembly. This does not approve the speech or repair stale bindings. Source media,
+soundtrack extraction hashes, dialogue provenance and timing are still checked. A card that
+needs separate generated speech keeps the character and voice validation.
 
 Moving joins accept `transitionSeconds` from 0.08 to 0.8 seconds and must fit within one
 third of the incoming card. Defaults: J-cut/whip 0.24, dissolve/iris/blur 0.40, push/zoom

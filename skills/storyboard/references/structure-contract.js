@@ -59,6 +59,10 @@
   const posInt = v => Number.isInteger(v) && v > 0;
   const compact = v => String(v == null ? '' : v).replace(/\s+/g, '');
   const bare = v => compact(v).replace(/[\p{P}\p{S}]/gu, '');
+  // Words match only inside one script: a Korean scene sentence and English performance text share none,
+  // so a rule that compares them by wording has nothing to compare.
+  const hangul = v => /[\uac00-\ud7a3]/.test(String(v || ''));
+  const comparable = (a, b) => hangul(a) === hangul(b);
   const slugOf = sc => sc.place.trim() + ' / ' + sc.time.trim();
   /* A wide sets the place, a close pays the moment — coverage is one of each (directing-grammar §6.1–2).
      Coverage takes fs as a scene's wide (a whole body in its room still frames the place); the
@@ -254,6 +258,8 @@
   function compositionNeeded(s) {
     const sh = s && s.shot || {}, e = sh.eyeline;
     if (!s || ['motion_html', 'data_graph', 'editorial_html'].includes(sh.render && sh.render.mode)) return false;
+    // A structured opening view (shot-view.md) records the subject, crop and viewpoint: the framing intent is written.
+    if (s.visual && s.visual.camera && s.visual.camera.view) return false;
     return !!(e && !['none', 'pov'].includes(e.mode) || sh.space && text(sh.space.facing) || ['mcu', 'cu', 'choker', 'ots', 'reaction', 'two', 'three'].includes(sh.size));
   }
   function checkCompositions(shots, draft) {
@@ -735,7 +741,8 @@
         const sz = x.s.shot && x.s.shot.size, lay = x.s.shot && x.s.shot.space && String(x.s.shot.space.layout || '');
         if (['cu', 'mcu', 'choker'].indexOf(sz) !== -1 && lay && /손(?!글씨|님)|화면|라벨|딱지|바코드|스캐너/.test(lay) && !/얼굴|표정|인물|사람|점주|손님|화자|눈|입|고개|상반신|어깨|머리|로봇|딸깍맨|캐릭터|세종|최만리|백성|연구원|아이|남자|여자/.test(lay))
           warn('shot ' + x.no, `size "${sz}" but the layout shows no face ("${lay.trim().slice(0, 30)}…") — a close-up is a face; a hand, a label or a screen filling the frame is an insert (directing-grammar §6)`);
-        if (['ms', 'mcu'].indexOf(sz) !== -1 && lay && !PERSON_RE.test(lay.replace(NO_PERSON_RE, '')) && !/로봇|딸깍맨|캐릭터|세종|최만리|연구원|점원|화자|점주|손님|사람|인물/.test(lay))
+        // A shot that lists its characters has a person on screen, whatever language the layout is written in.
+        if (['ms', 'mcu'].indexOf(sz) !== -1 && lay && !(castOf(x.s) || []).length && !PERSON_RE.test(lay.replace(NO_PERSON_RE, '')) && !/로봇|딸깍맨|캐릭터|세종|최만리|연구원|점원|화자|점주|손님|사람|인물/.test(lay))
           warn('shot ' + x.no, `size "${sz}" but the layout has no person ("${lay.trim().slice(0, 30)}…") — the size scale is a body (ms is the waist); a frame of objects is a wide of the place or an insert (directing-grammar §6)`);
         if (['els', 'ls', 'ws'].indexOf(sz) !== -1 && lay && TIGHT_LAYOUT_RE.test(lay) && !/전신|전경|멀리|배경|풍경|넓|방\s?전체|가게\s?전체|서 있|앉아 있/.test(lay))
           warn('shot ' + x.no, `size "${sz}" but the layout is a close view ("${lay.trim().slice(0, 30)}…") — the size is what the frame shows; a wide labelled on a close-up does not set the place (rule 9)`);
@@ -830,7 +837,7 @@
       const last = xs[xs.length - 1];
       const segs = performanceStory ? performedEvents(last.s) : (last.s.narration || []).map(seg => seg && (seg.tts || seg.sub) || '').filter(text);
       const said = bare(segs.join(' '));
-      if (sc && text(sc.out) && said) {
+      if (sc && text(sc.out) && said && comparable(sc.out, said)) {
         const o = bare(sc.out);
         if (said.indexOf(o) === -1)
           warn(where, performanceStory ? `out "${sc.out.trim()}" is absent from the last shot's ordered performance (shot ${last.no}) — reference its final action or speech event, not author intent`
@@ -961,10 +968,11 @@
         warn(where, `time "${sc.time.trim()}" is one moment but the lines speak of a span (내내·동안·마다) — a repeated action is one scene and time is the span it covers (rule 3)`);
       const layoutsAll = xs.map(x => x.s.shot && x.s.shot.space ? [x.s.shot.space.layout, x.s.shot.space.frame].filter(text).join(' ') : '').join(' ');
       const visualActions = performanceStory ? xs.map(x => x.s.visual && x.s.visual.action || '').filter(text).join(' ') : '';
-      if (sc && text(sc.event) && pictured.length && overlap(sc.event, layoutsAll + ' ' + deliveredAll + ' ' + visualActions) < 0.3)
+      if (sc && text(sc.event) && !comparable(sc.event, layoutsAll + ' ' + deliveredAll + ' ' + visualActions)) { /* another script: nothing to match by words */ }
+      else if (sc && text(sc.event) && pictured.length && overlap(sc.event, layoutsAll + ' ' + deliveredAll + ' ' + visualActions) < 0.3)
         warn(where, performanceStory ? `event "${sc.event.trim()}" has no matching layout, visual action or ordered performance — check the event against the actual shot plans (rule 5)`
           : `event "${sc.event.trim()}" is drawn by no shot — no layout or line of this scene shows it; the event is the one thing that happens on screen, so a shot shows it or the event is what a shot shows (rule 5)`);
-      else if (sc && text(sc.event) && pictured.length >= 2 && overlap(sc.event, layoutsAll + ' ' + visualActions) < 0.2)
+      else if (sc && text(sc.event) && pictured.length >= 2 && comparable(sc.event, layoutsAll + ' ' + visualActions) && overlap(sc.event, layoutsAll + ' ' + visualActions) < 0.2)
         warn(where, `event "${sc.event.trim()}" is spoken but no picture layout of the scene draws it — the event happens on screen; a layout shows the action, or the event is the action a layout shows (rule 5)`);
       xs.filter(isScreen).forEach(x => {
         const k = x.s.shot.info;
@@ -1267,8 +1275,10 @@
       // shot_prompt also writes the closing composition and the rack focus subjects; each joins only when set,
       // so a basis recorded before they existed still matches.
       camera: [cam.movement, cam.speed, cam.target].concat(cam.end ? [cam.end] : []).concat(cam.view ? [JSON.stringify(cam.view)] : []).map(x => x == null ? '' : String(x)).join(' | '),
-      focus: (Array.isArray(p.techniques) ? p.techniques : []).filter(t => t && t.id && isFocus(t.id)).map(t => t.from && t.to ? t.id + ': ' + t.from + ' → ' + t.to : t.id),
+      focus: (Array.isArray(p.techniques) ? p.techniques : []).filter(t => t && t.id && isFocus(t.id)).map(t => t.from && t.to ? t.id + ': ' + t.from + ' → ' + t.to : t.on ? t.id + ' @ ' + t.on : t.id),
       framing: msr ? [p.size || '', p.angle || '', p.depth ? JSON.stringify(p.depth) : ''] : [],
+      // Bystanders and extras (shot_characters) join only when set, so a basis recorded before they existed still matches.
+      ...(Array.isArray(v.bystanders) && v.bystanders.length || text(v.extras) ? { people: [].concat(v.bystanders || [], text(v.extras) ? [v.extras.trim()] : []) } : {}),
     };
   }
   /** The lines a video call voices or shows — every line but voiceover — as [speaker, delivery, text]. */

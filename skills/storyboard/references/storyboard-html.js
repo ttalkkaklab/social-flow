@@ -5,10 +5,11 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const HELPERS = ['source-context.js', 'render-routing.js', 'motion-graphics.js', 'production-mode.js', 'structure-contract.js', 'style-samples.js', 'film-techniques.js', 'shot-direction.js', 'review-layout.js', 'prop-continuity.js', 'prop-sheet.js', 'location-contract.js', 'location-review-runtime.js', 'location-review.css'];
+const HELPERS = ['video-production.js', 'source-context.js', 'render-routing.js', 'motion-graphics.js', 'production-mode.js', 'structure-contract.js', 'style-samples.js', 'film-techniques.js', 'shot-direction.js', 'review-layout.js', 'prop-continuity.js', 'prop-sheet.js', 'location-contract.js', 'location-review-runtime.js', 'location-review.css'];
 const REVIEW_ASSETS = path.join(__dirname, '..', '..', 'channel', 'references', 'review-assets');
 const { FONT_ASSETS } = require('../../channel/references/review-fonts.js');
 const ASSETS = ['design-system.css', 'review.css', ...FONT_ASSETS];
+HELPERS.push('review-localization.js');
 const TITLE = /<title>[^]*?<\/title>/g;
 const METADATA = /\/\* ✎ SB_DOC BEGIN[^]*?\/\* ✎ SB_DOC END \*\//g;
 
@@ -70,14 +71,19 @@ function storyboardHtml(directory, check = false) {
   let videoSnapshot = null;
   try { videoSnapshot = JSON.parse(fs.readFileSync(path.join(dir, '..', '.work', 'model-settings.json'), 'utf8')).config.models.video || null; } catch { /* none */ }
   const panelFindings = win ? require('../../channel/references/character-panels.js').boardPanelFindings(win, dir, path.resolve(dir, '../../..')) : [];
-  const reviewData = 'window.LOCATION_DETAIL_LINKS = '+JSON.stringify(locationLinks).replace(/</g,'\\u003c')+';\n' +
+  const translationFile = path.join(dir, 'review-localization.json');
+  const translations = fs.existsSync(translationFile)
+    ? require('./review-localization.js').validate(JSON.parse(fs.readFileSync(translationFile, 'utf8'))) : null;
+  const reviewData = 'window.REVIEW_LOCALIZATION = ' + JSON.stringify(translations).replace(/</g, '\\u003c') + ';\n' +
+    'window.LOCATION_DETAIL_LINKS = '+JSON.stringify(locationLinks).replace(/</g,'\\u003c')+';\n' +
     'window.REVIEW_PANEL_FINDINGS = ' + JSON.stringify(panelFindings).replace(/</g, '\\u003c') + ';\n' +
     'window.REVIEW_FILES = ' + JSON.stringify(available) + ';\n' +
     'window.REVIEW_VIDEO_SNAPSHOT = ' + JSON.stringify(videoSnapshot).replace(/</g, '\\u003c') + ';\n' +
     'window.REVIEW_CHARACTER_PORTRAITS = ' + JSON.stringify(portraits).replace(/</g, '\\u003c') + ';\n' +
     'window.REVIEW_VIDEO_TYPES = ' + JSON.stringify(typeLabels).replace(/</g, '\\u003c') + ';\n';
   const catalogue = require('./film-techniques.js');
-  const files = [['film-techniques.json', JSON.stringify({version:catalogue.VERSION, entries:catalogue.entries}, null, 2) + '\n'], ['location-review-data.js', 'window.LOCATION_REVIEW = ' + JSON.stringify(locationData).replace(/</g, '\\u003c') + ';\nwindow.LOCATION_GLB = ' + JSON.stringify(glbs) + ';\n'], ['storyboard.html', html], ['review-files.js', reviewData], ...HELPERS.map(name => [name, fs.readFileSync(path.join(__dirname, name))]),
+  const production = require('./video-production.js').read(dir, win || {});
+  const files = [['video-production-data.js', 'window.VIDEO_PRODUCTION = ' + JSON.stringify(production).replace(/</g, '\\u003c') + ';\n'], ['film-techniques.json', JSON.stringify({version:catalogue.VERSION, entries:catalogue.entries}, null, 2) + '\n'], ['location-review-data.js', 'window.LOCATION_REVIEW = ' + JSON.stringify(locationData).replace(/</g, '\\u003c') + ';\nwindow.LOCATION_GLB = ' + JSON.stringify(glbs) + ';\n'], ['storyboard.html', html], ['review-files.js', reviewData], ...HELPERS.map(name => [name, fs.readFileSync(path.join(__dirname, name))]),
     ...ASSETS.map(name => [name, fs.readFileSync(path.join(REVIEW_ASSETS, name))])];
   const changed = files.filter(([name, content]) => {
     const file = path.join(dir, name);

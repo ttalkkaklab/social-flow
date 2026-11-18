@@ -18,6 +18,15 @@ const defaults = () => ({
   sns: Object.fromEntries(['threads', 'instagram', 'facebook', 'youtube'].map(p => [p, { enabled: p === 'youtube', status: p === 'youtube' ? 'pending' : 'disabled' }])),
 });
 const profileMarkdown = '---\nname: History\nslug: history\n---\n# History\n\nAn existing authored channel profile.\n';
+test('optional spoken/subtitle/review languages survive a new episode snapshot', t => {
+  const root = workspace(t);
+  const languages = { speech: 'vi', subtitles: ['ko', 'en', 'zh-Hans', 'ja'], review: ['vi', 'ko', 'en', 'zh-Hans', 'ja'] };
+  assert.equal(init(root, { ...defaults(), languages }).status, 'ready');
+  const episode = call(root, 'episode', { topic: 'one' });
+  assert.deepEqual(episode.handoff.LANGUAGES, languages);
+  assert.throws(() => call(root, 'update', { expectedRevision: call(root, 'status').revision, request: 'Use invalid language', settings: { languages: { ...languages, speech: 'vi_VN' } } }), /languages requires/);
+  assert.deepEqual(call(root, 'status').config.languages, languages);
+});
 function workspace(t) {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'social flow project ')));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -170,4 +179,26 @@ test('resuming an existing episode still requires complete project setup', t => 
   call(root, 'episode', { topic: 'resume' });
   fs.rmSync(path.join(root, 'data/history/profile.md'));
   assert.throws(() => call(root, 'episode', { topic: 'resume' }), /project_setup_required/);
+});
+
+test('the channel music direction is saved with the production settings and bad notes are refused', t => {
+  const root = workspace(t), ready = init(root);
+  const note = '2026-11-08 user: music under every shot is too much; score the turns';
+  const saved = call(root, 'update', { expectedRevision: ready.revision, request: 'Record the music feedback',
+    settings: { production: { ...defaults().production, musicDirection: [note] } } });
+  assert.deepEqual(call(root, 'status').config.production.musicDirection, [note]);
+  assert.throws(() => call(root, 'update', { expectedRevision: saved.revision, request: 'Empty note',
+    settings: { production: { ...defaults().production, musicDirection: [''] } } }), /musicDirection/);
+});
+
+test('TikTok can be added to a legacy four-platform project without changing other connections', t => {
+  const root = workspace(t);
+  const initial = init(root);
+  const updated = call(root, 'update', { expectedRevision: initial.revision, request: 'Connect TikTok', settings: {
+    sns: { ...initial.config.sns, tiktok: { enabled: true, status: 'pending', handle: 'mochiandbovn' } },
+  } });
+  assert.deepEqual(updated.config.sns.youtube, initial.config.sns.youtube);
+  assert.equal(updated.config.sns.tiktok.credentialRef, '${SNS_TOKEN_DIR}/history/tiktok-oauth.json');
+  assert.ok(updated.pendingConnections.includes('tiktok'));
+  assert.ok(call(root, 'episode', { topic: 'with-tiktok' }).snapshot.config.sns.tiktok.enabled);
 });

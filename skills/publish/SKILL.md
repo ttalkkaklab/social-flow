@@ -1,23 +1,30 @@
 ---
 name: publish
 description: >
-  Posts finished episode files to Threads, Instagram, Facebook and YouTube. Use when the
-  user asks to "게시해", "올려줘", "SNS 게시", "publish to social", "스레드/인스타/페북/유튜브에 올려", or once
+  Publishes finished episodes and their first comments to SNS. Use when the
+  user asks to "게시해", "올려줘", "SNS 게시", "첫 댓글 달아줘", "publish to social", "스레드/인스타/페북/유튜브/틱톡에 올려", or once
   production is done. Takes the per-platform content under
   data/[channel]/episodes/[topic]/output/ through account checks and public media hosting,
   stops for the user's publishing authorization, publishes through the social-flow platform
   tools (Threads, Instagram and Facebook post at once; YouTube uploads private and flips
-  public with youtube_update), and records the permalinks in publish-log.md.
+  public with youtube_update; TikTok uploads private, verifies its cover in ego lite,
+  then makes the same post public), posts authorized character-and-hook first comments,
+  and records post and comment outcomes in publish-log.md.
 argument-hint: "<channel> <topic> [platformCSV|auto]"
 # *_publish/facebook_comment are deliberately left un-pre-approved — the native
 # permission prompt on every irreversible publish call has to act as a second line of
 # defense, separate from the HITL approval gate.
-allowed-tools: ["mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check", "mcp__plugin_social-flow_social-flow__sns_account_check", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status"]
+allowed-tools: ["mcp__social-flow__facebook_captions", "mcp__plugin_social-flow_social-flow__facebook_captions", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check", "mcp__plugin_social-flow_social-flow__sns_account_check", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status"]
 ---
 **Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
 
 
 Use local episode files under `data/<channel>/episodes/<topic>/`.
+
+For a first-comment-only request on existing posts, read their publication receipts
+and verify the target accounts/permalinks. Follow
+[episode first comments](../_shared/first-comment.md) directly, then record the comment
+outcomes in §5. Skip media hosting and video upload; do not republish an existing post.
 
 
 **HITL records:** Record the user's platform approval separately from actual publication outcomes. Preserve actual provenance in local files and reuse existing authorization. Publishing needs the user's authorization; quality reviews add no gate.
@@ -28,7 +35,8 @@ Use local episode files under `data/<channel>/episodes/<topic>/`.
 
 Publishes the finished artifacts in `output/` with the per-platform publish tools.
 **Threads, Instagram and Facebook post the moment the tool is called; YouTube uploads
-private (rule 9).** The user's approval (§1) and the native permission prompt that fires on
+private (rule 9). TikTok starts private and becomes public only after the browser cover
+step below.** The user's approval (§1) and the native permission prompt that fires on
 every publish call (never pre-approved) are the two lines of defense. Don't nudge the user
 into promoting that prompt to "always allow".
 
@@ -63,7 +71,10 @@ from profile languages or an SRT already on disk. This overrides older subtitle 
    No link in the body either — the first two link-in-body posts got 9 and 21 views, a
    tenth of the link-free posts from the same day (measured 2026-08-15).
    FB: no link in the body → `facebook_comment` first comment, and
-   **the FB publish is complete only once that comment is up too.**
+   **the FB publish is complete only once that comment is up too.** For story episodes,
+   combine the link with the character-and-hook copy. Apply
+   [episode first comments](../_shared/first-comment.md) to every requested platform;
+   prepare, authorize, post and verify each separately.
 7. **Every publish and comment tool call takes `channel: <channel-slug>`** — use this
    skill's first argument (data/<channel-slug>) as is. With a channel given, only that
    channel's token is used, with no fallback to the default token (prevents publishing
@@ -235,11 +246,13 @@ missing, python returns 2, so the existence check line above tells them apart.
 
 Present the final version for each platform with AskUserQuestion — the full body/caption,
 the media **local paths** (every platform gets `video.mp4`; YouTube gets a separate
-SRT only when requested), the hashtags, the FB first-comment copy, all of it; the account it
+SRT only when requested), the hashtags, each platform's first-comment copy, all of it; the account it
 will publish to (from the account check); and the style-check results (per-surface exit
 and score, number of quote exemptions). Options: [publish everything / some platforms
 only / revise and re-present / stop]. **Passing this gate is the approval to actually
-publish.** If they ask for changes, apply them and gate again.
+publish.** Reuse an existing instruction that authorizes these posts and comments or
+delegates their wording; do not ask again for already authorized work. If they ask for
+changes, apply them within that scope.
 
 Threads carries the video on the post (§2 table), so there is no link placeholder.
 Only a fallback episode that can't carry a video uses a reply link, and there the link
@@ -323,6 +336,11 @@ permalink, say).
    landscape surface (search results, share previews, embeds); the portrait frame used
    by the shorts feed and the channel shorts tab is separate. Leave it unset and a
    random mid-video frame becomes the shorts first frame.
+   Since 2026-11-03 YouTube documents `thumbnails.set` for Shorts after processing
+   finishes, and `youtube_publish` now waits for that before setting the cover
+   (`processingNote` says when it couldn't). This channel hasn't measured whether the
+   API cover reaches the shorts tab yet, so keep the Studio step below until a public
+   shorts-tab check shows the API cover there.
 
    **Set it in a browser while the video is still private** —
    `studio.youtube.com/video/<id>/edit` → the `⋮` over the portrait image in the
@@ -348,7 +366,12 @@ permalink, say).
    record it as open, along with the videoId.
 2. **Instagram**: `instagram_publish` — `videoUrl` is the public URL of the
    **clean subtitle-free master (video.mp4)** + platform caption text. No subtitles
-   are baked into the picture.
+   are baked into the picture. Pass `thumbOffsetMs` at the cover time (or `coverUrl`
+   for the hosted `cover.jpg`) so the grid doesn't show the first frame, and
+   `isAiGenerated: true` for generated episodes. The tool waits up to 5 minutes for the
+   container (Meta's documented window); a timeout publishes nothing, so a new call
+   is safe. An Instagram-Login token can't upload a local file, so the URL must stay
+   up until the call returns.
 3. **Threads**: before calling, record the actual §1 human approval in
    `data/<channel>/episodes/<topic>/threads-publish-approval.json`. Use JSON with
    `approved: true`, the exact approved `caption`, and every supplied `imageUrl`,
@@ -360,8 +383,9 @@ permalink, say).
 
    Call `threads_publish(channel, episodeRef: <topic>, ...)` — the approved body
    (no link) as `caption` and the
-   public URL of the clean subtitle-free master (`video.mp4`) as `videoUrl`. **One call finishes
-   it** — no reply. The video container transcodes, so the tool waits up to 2 minutes
+   public URL of the clean subtitle-free master (`video.mp4`) as `videoUrl`. This posts
+   the video root; any authorized opening self-reply follows the shared first-comment guide.
+   The video container transcodes, so the tool waits up to 2 minutes
    for FINISHED.
 
    No link in the body, same as before — the first two link-in-body posts got 9 and 21
@@ -376,16 +400,30 @@ permalink, say).
    root ID and a warning: record the partial result and do not republish the root.
    Threads is complete only when both posts succeed.
 4. **Facebook**: `facebook_publish` — `videoUrl` is the public URL of the **clean copy
-   (video.mp4)**. Omit subtitle parameters by default. Only if separate Facebook
+   (video.mp4)**. For a 9:16 short of **3–90 seconds** pass `reel: true` (and
+   `isAiGenerated: true` for a generated episode): the post goes through the Page Reels
+   endpoint. Meta refuses a longer Reel (error 1363128), and most mochi-bo episodes run
+   100–215 s, so measure the master with ffprobe first and publish anything over 90 s
+   without `reel` — it lands as a regular Page video, which no Meta document calls a
+   Reel. A Reel is public as soon as it finishes; a `processingWarning` means it was
+   accepted, so check the Page and never call again. Omit subtitle parameters by default. Only if separate Facebook
    subtitles were also requested, use `captionFilePath`=output/video/subs.srt or
    `captionFiles` for requested languages, **default locale first**: `[{filePath:
    …/subs.srt, locale: "ko_KR"}, {filePath: …/subs.en.srt, locale: "en_US"}, …]`;
    FB locales are the underscore form, not BCP-47. Include the
-   body → then **publish the first comment (source/related link) immediately** with
+   body → then **publish the first comment (character/hook and approved source/related link) immediately** with
    `facebook_comment` using the postId from the response. A `captionWarning` doesn't
    invalidate the publish — FB processes video asynchronously, so it may have caught
    it mid-processing. **Don't republish**; upload just the subtitles again a moment
    later (the postId in the response is the video_id).
+
+After each platform's public post is confirmed, publish its authorized
+`output/<platform>/first-comment.md` following
+[episode first comments](../_shared/first-comment.md). This includes browser-published
+posts and TikTok only after the browser cover and public-visibility checks finish;
+inbox drafts and completed private Direct Posts wait for their actual public post. Record `output/first-comments.json` before sending and verify
+the author and text afterward. Reuse the Facebook comment above and any approved Threads
+self-reply rather than creating duplicate opening comments.
 
 #### 3-2. Long-form (`youtube-long-16x9`) — upload private, check, then go public
 
@@ -437,10 +475,11 @@ two paths along with the multi-language subtitle tracks that did go up.
 
 Handling failures: report the error as it came and **don't blindly retry the same call**
 (the publish APIs aren't idempotent — after a timeout, check for a duplicate first via
-the permalink or a recent-media query). If only the FB first comment failed, retry just
-the comment call; if it keeps failing, write down the postId and the reason and explain
-the manual fix. Threads is a single call, so it has no partial failure — if it failed,
-nothing was published, so check the permalink before calling again.
+the permalink or a recent-media query). A failed comment never calls for republishing
+the video. For an uncertain comment submission, inspect the same post and receipt before
+retrying; a definitive rejection may be retried after its cause is fixed. Record the
+post ID and error if unresolved. Threads can return a published root with a failed
+self-reply; preserve that partial result and retry only the missing reply after checking.
 
 ### 4. Completion checklist (don't say "published" until every box is ticked)
 
@@ -465,7 +504,10 @@ the most frequent failure in this skill.
       on the watch page.
 - [ ] **Threads — the video is on the post** (rule 6). Open the permalink and confirm it
       plays. A body-only post is incomplete.
-- [ ] **Facebook — the first comment is up** (rule 6).
+- [ ] **Every requested first comment is up.** Match the channel author, text and target
+      post; record comment ID/permalink when available in `output/first-comments.json`.
+      Facebook's link and story hook share one comment. Report unavailable or unverified
+      comments separately from the published videos.
 - [ ] **Instagram — a permalink came back.** A 200 on the container is not a publish.
 - [ ] **Any temporary tunnel is torn down** — `pgrep -fl "cloudflared|http.server"`
       prints nothing.
@@ -528,3 +570,72 @@ Credentials stay in the external channel token directory; `credentialRef` never
 contains a token. After verification, refresh the workspace SNS record through
 `project_manage update` if it targets this channel, preserving other platforms and
 all existing episode snapshots. Pending connection state does not authorize upload.
+
+
+## TikTok video delivery
+
+**Owner directive (2026-11-18): upload private → edit and verify the cover in
+browser → make the same post public.** This order applies to every channel and
+both browser and API-assisted uploads. A private upload is not a completed public
+publication. Read [TikTok private upload and cover](references/tiktok-private-cover.md)
+for the browser steps, saved evidence and recovery. Do not upload publicly first
+and plan to fix the cover afterwards.
+
+Use the channel's clean final video and approved caption; for Mochi & Bơ use the
+Vietnamese caption. Match the live account to the channel before uploading. Reuse
+the user's authorization for this exact episode and account through the private,
+cover and public steps; do not ask again solely because the visibility changes.
+Setup alone does not authorize an upload.
+
+- Browser route: use the logged-in TikTok Studio in **ego lite**. API credentials
+  are not required for browser upload. Verify the account, select **Only you**
+  (`SELF_ONLY`), upload, then edit and save the cover while still private. No browser
+  fallback when ego lite is unavailable.
+- API route: run `sns_account_check(channel)` and match the live handle/open_id.
+  Missing OAuth/scopes routes to [setup-tiktok](../setup-tiktok/SKILL.md) only when
+  an API route is needed. `tiktok_upload` delivers an inbox draft, not a private
+  post; finish it as **Only you** before continuing with the browser cover step.
+- Direct Post: call `tiktok_creator_info` first. Show nickname/avatar, media preview,
+  editable caption, current limits and interactions. Use the authorized initial
+  privacy `SELF_ONLY` only if the fresh creator options allow it; the schema has no
+  implicit privacy default. Comments/duet/stitch start unchecked. Preserve truthful
+  commercial/AI disclosures and mark generated videos with `isAigc:true`. Obtain
+  [Music Usage Confirmation](https://www.tiktok.com/legal/page/global/music-usage-confirmation/en)
+  acceptance and, when applicable,
+  [Branded Content Policy](https://www.tiktok.com/legal/page/global/bc-policy/en)
+  acceptance. Branded content cannot use SELF_ONLY through Direct Post; do not
+  suppress its disclosure or switch to public to bypass this. Use the browser
+  route if it supports the required private/disclosure combination; otherwise
+  report the conflict without uploading. Unaudited clients have additional private
+  account restrictions; do not change account privacy or claim an audit to proceed.
+- Save requestId, publishId and receipt path in publish-log.md, then call
+  `tiktok_status`. Never resubmit after a timeout. SEND_TO_USER_INBOX confirms draft
+  delivery; PUBLISH_COMPLETE confirms processing of the submitted post, which is
+  still private for this workflow. Record the private post's stable ID/link from
+  Studio; absence from `tiktok_videos` is expected because that tool lists public
+  posts. Never treat that absence as upload failure or create a replacement.
+- After the browser confirms the saved cover, change the **same post** to Everyone
+  and verify its public visibility and static cover. These tools do not expose a
+  cover-image update or a visibility-update API; do not call `tiktok_publish` again
+  to promote the private post. Only after public verification send authorized first
+  comments and report publication complete.
+- `tiktok_videos` can report public view/like/comment/share counts later. It does not
+  supply audience geography, watch time or comment moderation.
+
+## Existing video subtitles
+
+When the user requests translated captions on an already published video, preserve
+the video ID and clean master. Use `facebook_captions action:list` with the checked
+channel, video ID and expected Page ID, then `action:add` with authorized SRT tracks.
+The tool preserves the default and skips existing locales; a presence check does not
+compare their text. Save the per-language result and re-list uncertain writes before
+retrying. Never republish a video to recover a caption error.
+
+YouTube accepts multiple caption tracks on existing videos in Studio or via
+`captions.insert` with `youtube.force-ssl`. When the channel has no such OAuth token,
+use the logged-in Studio with ego lite. Instagram and TikTok publishing APIs do not
+accept an uploaded SRT as a video subtitle track; their post `caption` fields are
+post copy. Check their current in-app caption/translation controls separately.
+
+See [review translations](../storyboard/references/review-localization.md) for the
+separate storyboard language picker. No picker changes a viewer's platform settings.

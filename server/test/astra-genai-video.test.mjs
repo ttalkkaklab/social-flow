@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { config } from '../dist/config.js';
+import { astraGenaiBaseUrl } from '../dist/astra-genai-client.js';
 import { genaiTextToVideoSchema, genaiImageToVideoSchema, buildGenaiVideoBody, generateGenaiVideo, getGenaiVideoStatus } from '../dist/astra-genai-video.js';
 import { parseVideoArgs, speechVideoCapabilities } from '../dist/video-registry.js';
 const base = { prompt: 'Clouds cross the sky.', model: 'ltx-2.5-22b-distilled', duration: 5, resolution: '1280x704', reserveUsd: 0 };
@@ -16,7 +17,7 @@ function setup(t) {
 }
 test('provider body follows the published gateway fields and preserves required null duration', () => {
   const api = JSON.parse(fs.readFileSync(new URL('./fixtures/astra-genai-openapi-20261020.json', import.meta.url)));
-  const args = genaiImageToVideoSchema.parse({ ...base, duration: null, imageUri: 'https://example.com/start.png', lastFrameUri: null, cameraMotion: 'static' });
+  const args = genaiImageToVideoSchema.parse({ ...base, duration: null, imageUri: 'https://example.com/start.png', lastFrameUri: null });
   const body = buildGenaiVideoBody(args), schema = api.components.schemas.ImageVideo;
   assert.ok(schema.required.every(key => Object.hasOwn(body, key)));
   assert.ok(Object.keys(body).every(key => Object.hasOwn(schema.properties, key)));
@@ -46,6 +47,76 @@ test('submission is persisted before status failure and the same receipt resumes
   assert.equal(posts, 1);
   await assert.rejects(generateGenaiVideo('text-to-video', { ...args, prompt: 'changed' }), /conflicts/);
 });
+test('I2V references retain their v2 route and frame fields, and unsupported backends never submit', async t => {
+  const dir=setup(t), args={...base,imageUri:'https://example.com/start.png',lastFrameUri:'https://example.com/end.png',
+    references:[{imageUri:'https://example.com/hero.png'},{imageUri:'https://example.com/room.png',background:true}],
+    generateAudio:false,outputPath:dir,filename:'combined.mp4'};
+  assert.equal(genaiImageToVideoSchema.safeParse({...args,model:'ltx-2.5-22b-dev'}).success,false);
+  assert.equal(genaiImageToVideoSchema.safeParse({...args,duration:null}).success,false);
+  assert.equal(genaiImageToVideoSchema.safeParse({...args,references:[{imageUri:args.imageUri,background:true}]}).success,false);
+  let supported=false,posts=0;
+  globalThis.fetch=async(url,options)=>{
+    if(String(url).endsWith('/msr/capabilities'))return Response.json({image_conditioning:supported});
+    if(options.method==='POST'){
+      posts++;assert.ok(String(url).endsWith('/v1/ltx/v2/image-to-video'));
+      const body=JSON.parse(options.body);
+      assert.equal(body.image_uri,args.imageUri);assert.equal(body.last_frame_uri,args.lastFrameUri);
+      assert.equal(body.model,args.model);assert.equal(body.generate_audio,false);
+      assert.deepEqual(body.references,[{image_uri:args.references[0].imageUri,background:false},{image_uri:args.references[1].imageUri,background:true}]);
+      return Response.json({id:'combined-job'}, {status:202});
+    }
+    return Response.json({id:'combined-job',status:'failed',error:'fixture'});
+  };
+  await assert.rejects(generateGenaiVideo('image-to-video',args),/image_references_unsupported/);
+  assert.equal(posts,0);assert.equal(fs.existsSync(path.join(dir,'combined.mp4.astra-genai.json')),false);
+  supported=true;
+  await assert.rejects(generateGenaiVideo('image-to-video',args),error=>error.terminal===true);
+  assert.equal(posts,1);
+  await assert.rejects(generateGenaiVideo('image-to-video',args),error=>error.terminal===true);
+  assert.equal(posts,1);
+});
+test('v2 negatives travel only when set and only where the gateway has a negative pass', async t => {
+  const { genaiAudioToVideoSchema, buildGenaiAudioBody } = await import('../dist/astra-genai-video.js');
+  const negativePrompt = 'has_subtitles, captions, text overlays', imageUri = 'https://example.com/start.png';
+  const dev = { ...base, model: 'ltx-2.5-22b-dev', negativePrompt };
+  const audio = { prompt: 'A presenter speaks to camera.', model: 'ltx-2.5-22b-dev', resolution: '1280x720', reserveUsd: 0, audioUri: 'https://example.com/line.wav' };
+  // The guided dev pipelines take it as is; leaving it out keeps the engine's own default negative.
+  assert.equal(buildGenaiVideoBody(genaiTextToVideoSchema.parse(dev)).negative_prompt, negativePrompt);
+  assert.equal(buildGenaiVideoBody(genaiImageToVideoSchema.parse({ ...dev, imageUri })).negative_prompt, negativePrompt);
+  assert.equal(buildGenaiAudioBody(genaiAudioToVideoSchema.parse({ ...audio, negativePrompt })).negative_prompt, negativePrompt);
+  assert.equal('negative_prompt' in buildGenaiVideoBody(genaiTextToVideoSchema.parse(base)), false);
+  assert.equal('negative_prompt' in buildGenaiAudioBody(genaiAudioToVideoSchema.parse(audio)), false);
+  // Distilled has no negative pass without references; the dev backend caps the text at 2000 characters.
+  for (const bad of [{ ...base, negativePrompt }, { ...dev, negativePrompt: ' ' }, { ...dev, negativePrompt: 'x'.repeat(2001) }])
+    assert.equal(genaiTextToVideoSchema.safeParse(bad).success, false, JSON.stringify(bad).slice(0, 120));
+  for (const bad of [{ negativePrompt: ' ' }, { negativePrompt: 'x'.repeat(2001) }])
+    assert.equal(genaiAudioToVideoSchema.safeParse({ ...audio, ...bad }).success, false);
+  // The MSR guidance knobs exist only on the reference path, under the MSR pairing rule.
+  const refs = { ...base, imageUri, references: [{ imageUri: 'https://example.com/hero.png' }], negativePrompt };
+  for (const bad of [{ ...dev, imageUri, guidanceScale: 2 }, { ...dev, imageUri, nagScale: 11 }, { ...base, imageUri, negativePrompt }, refs,
+    { ...refs, guidanceScale: 1 }, { ...refs, negativePrompt: undefined, nagScale: 11 }, { ...refs, nagScale: 11, negativePrompt: 'x'.repeat(5001) }])
+    assert.equal(genaiImageToVideoSchema.safeParse(bad).success, false, JSON.stringify(bad).slice(0, 160));
+  const guided = buildGenaiVideoBody(genaiImageToVideoSchema.parse({ ...refs, guidanceScale: 2 }));
+  assert.deepEqual([guided.negative_prompt, guided.guidance_scale, 'nag_scale' in guided], [negativePrompt, 2, false]);
+  const dir = setup(t), args = { ...refs, nagScale: 11, nagTau: 3, outputPath: dir, filename: 'negative.mp4' };
+  let nag = false, posts = 0;
+  globalThis.fetch = async (url, options) => {
+    if (String(url).endsWith('/msr/capabilities')) return Response.json({ image_conditioning: true, negative_prompt: true, nag });
+    if (options.method === 'POST') {
+      posts++;
+      const body = JSON.parse(options.body);
+      assert.deepEqual([body.negative_prompt, body.nag_scale, body.nag_tau], [negativePrompt, 11, 3]);
+      assert.equal('nag_alpha' in body, false); assert.equal('guidance_scale' in body, false);
+      return Response.json({ id: 'negative-job' }, { status: 202 });
+    }
+    return Response.json({ id: 'negative-job', status: 'failed', error: 'fixture' });
+  };
+  await assert.rejects(generateGenaiVideo('image-to-video', args), /msr_nag_unsupported/);
+  assert.equal(posts, 0); assert.equal(fs.existsSync(path.join(dir, 'negative.mp4.astra-genai.json')), false);
+  nag = true;
+  await assert.rejects(generateGenaiVideo('image-to-video', args), error => error.terminal === true);
+  assert.equal(posts, 1);
+});
 test('a rejected submission frees its output name; one status 5xx is polled through and a failed job is terminal', async t => {
   const dir = setup(t), args = { ...base, outputPath: dir, filename: 'clip.mp4' };
   const realSetTimeout = globalThis.setTimeout;
@@ -63,14 +134,18 @@ test('a rejected submission frees its output name; one status 5xx is polled thro
 test('completed LTX result downloads verified video and cached recovery needs no network', async t => {
   const dir = setup(t), source = path.join(dir, 'source.mp4');
   execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=s=64x64:d=0.1', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', source]);
-  const bytes = fs.readFileSync(source); let posts = 0;
+  const bytes = fs.readFileSync(source); let posts = 0, privateResult = false;
   globalThis.fetch = async (url, options) => {
     if (options.method === 'POST') { posts++; return Response.json({ id: 'job-2' }); }
-    if (String(url).includes('/image-to-video/job-2')) return Response.json({ id: 'job-2', status: 'completed', result: { video_url: 'https://results.example/out.mp4' } });
-    assert.equal(options.headers, undefined); return new Response(bytes);
+    if (String(url).includes('/image-to-video/job-2')) return Response.json({ id: 'job-2', status: 'completed', result: { video_url: privateResult ? new URL('/v1/ltx/desktop/assets/video-id/bytes', astraGenaiBaseUrl()).href : 'https://results.example/out.mp4', ...(privateResult ? { authentication: 'same GatewayToken required' } : {}) } });
+    if (privateResult) assert.equal(options.headers.Authorization, 'Bearer fixture');
+    else assert.equal(options.headers, undefined);
+    return new Response(bytes);
   };
   const result = await generateGenaiVideo('image-to-video', { ...base, imageUri: 'https://example.com/start.png', outputPath: dir, filename: 'clip.mp4' });
   assert.equal(result.downloaded, true); assert.equal(posts, 1);
+  privateResult = true;
+  assert.equal((await generateGenaiVideo('image-to-video', { ...base, imageUri: 'https://example.com/start.png', outputPath: dir, filename: 'private.mp4' })).downloaded, true);
   globalThis.fetch = async () => assert.fail('cached result must not make a request');
   assert.equal((await getGenaiVideoStatus({ receiptPath: result.receiptPath, download: true })).videoPath, result.videoPath);
   fs.writeFileSync(result.videoPath, 'changed');
@@ -327,4 +402,49 @@ test('MSR voice samples are optional, ride on subjects 1-2, and the capability c
   // Without voice support MSR is refused before anything is submitted.
   await assert.rejects(generateGenaiVideo('msr', { ...msr([{ ...ref, audioPath: wav }]), outputPath: dir, filename: 'novoice.mp4' }), /msr_voice_unsupported/);
   assert.equal(fs.existsSync(path.join(dir, 'novoice.mp4.astra-genai.json')), false);
+});
+
+
+test('local I2V rejects incompatible geometry, timing and camera controls before uploads', () => {
+  const image = { ...base, imageUri: 'https://example.com/start.png' };
+  for (const change of [
+    { resolution: '65x64' }, { resolution: '64x65' }, { resolution: '1x1' },
+    { resolution: '1920x1080' }, { resolution: '720p' }, { duration: 0 },
+    { duration: 16 }, { duration: 8, fps: 48 }, { prompt: 'x'.repeat(2001) },
+    { cameraMotion: 'static' }, { cameraMotion: null },
+    { duration: null, lastFrameUri: 'https://example.com/end.png' },
+    { duration: null, lastFramePath: '/tmp/end.png' },
+  ]) assert.equal(genaiImageToVideoSchema.safeParse({ ...image, ...change }).success, false, JSON.stringify(change));
+  for (const change of [{ resolution: '66x66' }, { resolution: '1080x1080' }, { duration: 15 },
+    { duration: 7, fps: 50 }, { duration: null }, { duration: null, lastFrameUri: null }])
+    assert.equal(genaiImageToVideoSchema.safeParse({ ...image, ...change }).success, true, JSON.stringify(change));
+});
+
+test('cancelled legacy jobs are terminal and reuse their receipt without resubmission', async t => {
+  const dir = setup(t); let posts = 0;
+  globalThis.fetch = async (_url, options) => {
+    if (options.method === 'POST') { posts++; return Response.json({ id: 'cancelled-job' }); }
+    return Response.json({ id: 'cancelled-job', status: 'cancelled', completed_at: '2026-11-10T00:00:00Z', result: { outputs: [{ media_kind: 'image', url: '/v1/ltx/desktop/assets/preview/bytes' }] } });
+  };
+  const args = { ...base, outputPath: dir, filename: 'cancelled.mp4' };
+  for (let i = 0; i < 2; i++) await assert.rejects(generateGenaiVideo('text-to-video', args), e => e.terminal === true && /cancelled/.test(e.message));
+  assert.equal(posts, 1);
+});
+
+
+test('private compatibility results cannot send the gateway token to foreign URLs', async t => {
+  const dir = setup(t);
+  for (const [i, video_url] of ['https://other.example/v1/ltx/desktop/assets/id/bytes',
+    new URL('/v1/ltx/desktop/generations/id', astraGenaiBaseUrl()).href,
+    new URL('/v1/ltx/desktop/assets/id/bytes?redirect=other', astraGenaiBaseUrl()).href].entries()) {
+    let requests = 0;
+    globalThis.fetch = async (_url, options) => {
+      requests++;
+      if (options.method === 'POST') return Response.json({ id: 'private-job' });
+      if (requests > 2) assert.fail('Invalid private result was fetched');
+      return Response.json({ id: 'private-job', status: 'completed', result: { video_url, authentication: 'same GatewayToken required' } });
+    };
+    await assert.rejects(generateGenaiVideo('text-to-video', { ...base, outputPath: dir, filename: `unsafe-${i}.mp4` }), /Invalid private/);
+    assert.equal(requests, 2);
+  }
 });

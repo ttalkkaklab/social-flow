@@ -1,21 +1,29 @@
 import { NATIVE_GENAI_TOOLS } from './astra-genai-native-tools.js';
 /** Public tool descriptions for the unified gateway, kept separate from legacy ASTRA controls. */
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { GENAI_CAMERA_MOTIONS, GENAI_VIDEO_MODELS } from './astra-genai-video.js';
+import { GENAI_VIDEO_MODELS } from './astra-genai-video.js';
 
 const output = {
   outputPath: { type: 'string', description: 'Local output directory; configured production keeps outputs inside its episode/workspace.' },
   filename: { type: 'string', description: 'Bare output filename (.mp4 for video, .png for image). Reuse its receipt after interruption; never overwrite existing media.' },
 };
+/** MSR's guidance knobs, shared by astra_genai_msr and the reference path of astra_genai_img2video. */
+const msrGuidance = {
+  guidanceScale: { type: 'number', minimum: 1, maximum: 10, description: 'Classifier-free guidance; omitted keeps gateway default 1. Values above 1 require backend negative conditioning support and change distilled sampling.' },
+  nagScale: { type: 'number', minimum: 0, maximum: 100, description: 'Video-only normalized attention guidance. Omitted or 0 disables NAG; a positive value requires negativePrompt and live backend nag support. Example 11 is experimental, not a subtitle-free guarantee; works at CFG 1.' },
+  nagAlpha: { type: 'number', minimum: 0, maximum: 1, description: 'NAG mixing coefficient; gateway default 0.25. Sent only when nagScale > 0.' },
+  nagTau: { type: 'number', minimum: 0, maximum: 10, description: 'NAG clipping threshold; gateway default 2.5. Sent only when nagScale > 0.' },
+};
+const devNegative = 'Negative conditioning, e.g. has_subtitles, captions, text overlays. Omit it to keep the engine default negative, which starts with has_subtitles, has_blurbox and continues with quality terms (ltx_pipelines 1.6.0); a supplied value replaces that default, so repeat the terms still wanted. At most 2000 characters on ltx-2.5-22b-dev. Not a subtitle-free guarantee; inspect the clip.';
 const video = {
-  prompt: { type: 'string', minLength: 1, maxLength: 5000, description: 'Scene and action prompt, at most 5000 characters.' },
+  prompt: { type: 'string', minLength: 1, maxLength: 2000, description: 'Scene and action prompt, at most 2000 characters, e.g. A leaf sways as the camera moves closer. Describe camera motion here.' },
+  negativePrompt: { type: 'string', minLength: 1, maxLength: 5000, description: devNegative + ' Requires ltx-2.5-22b-dev: distilled sampling has no negative pass, except image-to-video references with guidanceScale > 1 or nagScale > 0.' },
   model: { type: 'string', enum: [...GENAI_VIDEO_MODELS], description: 'Local gateway model. Cloud ltx-2-5-fast/pro models are not supported.' },
-  duration: { type: ['integer', 'null'], description: 'Explicit provider duration in seconds, or null for provider handling. Deployment limits and null semantics are server-validated; no legacy frame rounding.' },
-  resolution: { type: 'string', description: 'Explicit provider resolution string. Server validates supported dimensions; no legacy 64-pixel grid is imposed here.' },
+  duration: { type: ['integer', 'null'], minimum: 1, description: 'Whole seconds, e.g. 5, or null for automatic duration without an end frame. Rounded-up 8k+1 frames must fit 361 at the selected fps.' },
+  resolution: { type: 'string', description: 'WIDTHxHEIGHT with even sides of at least 64. Round each side up to 64 for backend limits: at most 1920 per side and 2,064,384 pixels. 1280x720 is supported; 1920x1080 exceeds the padded pixel cap.' },
   fps: { type: 'integer', enum: [24, 25, 48, 50], default: 24, description: 'Requested output frame rate.' },
   generateAudio: { type: 'boolean', default: true, description: 'Request generated audio. External speech conditioning is not supported by this gateway.' },
-  cameraMotion: { type: ['string', 'null'], enum: [...GENAI_CAMERA_MOTIONS, null], description: 'Optional provider camera motion; not a local camera preset or free-form phrase.' },
-  reserveUsd: { type: 'number', minimum: 0, description: 'Explicit total budget reservation; gateway prices are unverified. Use zero only when the deployment has no per-call bill. This is not a provider invoice cap.' },
+  reserveUsd: { type: 'number', minimum: 0, description: 'Explicit total budget reservation; gateway prices are unverified. Use zero only when the deployment has no per-call bill, e.g. 0. This is not a provider invoice cap.' },
   ...output,
 };
 const generation = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true };
@@ -25,17 +33,27 @@ export const GENAI_TOOLS: Tool[] = [
     description: 'Generate and save an MP4 through the unified ASTRA GenAI LTX v2 gateway. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY, a separate gk_ token from ASTRA_VIDEO. Persists job identity before polling; recover the same receipt after timeout. Supports text only; for a supplied audio track use astra_genai_audio2video. No LoRA, retake or keyframes. Legacy astra_text2video remains a separate server adapter.',
     inputSchema: { type: 'object', properties: video, required: ['prompt', 'model', 'duration', 'resolution', 'reserveUsd'], additionalProperties: false }, annotations: generation },
   { name: 'astra_genai_img2video', title: 'Generate GenAI LTX video from an image URI',
-    description: 'Animate a start image through ASTRA GenAI LTX v2 and save an MP4. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Give exactly one imageUri (public HTTPS or PNG/JPEG data URI) or imagePath (local PNG/JPEG sent as a data URI); never a legacy upload ID. Supports an optional last frame, not intermediate keyframes or supplied speech. Unsupported provider options return errors without fallback.',
+    description: 'Generate an MP4 from a start image, optional end and subject references.\nUse for image-to-video, first/last-frame animation and character or object reference guidance. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Give exactly one imageUri or imagePath. Optional references are separate from the start/end frames: 1..4 subject images and at most one background, supported on ltx-2.5-22b-distilled with explicit duration and a backend advertising combined MSR image conditioning. The selected distilled weights run with the MSR IC-LoRA; generateAudio:false removes the generated soundtrack. Dev supports start/end without additional references. No intermediate keyframes. Do NOT use for supplied speech or recovery — use astra_genai_audio2video or astra_genai_video_status. Returns: jobId, status, videoPath, downloaded, review and receiptPath; resume that receipt without resubmitting.',
     inputSchema: { type: 'object', properties: { ...video,
       imageUri: { type: 'string', description: 'Public HTTPS PNG/JPEG URL or PNG/JPEG data URI. Mutually exclusive with imagePath.' },
       imagePath: { type: 'string', description: 'Local PNG/JPEG start image (at most 32 MiB, 4096 px per side), sent as a data URI.' },
-      lastFrameUri: { type: ['string', 'null'], description: 'Optional final-frame HTTPS URL or data URI; gateway validates model support.' },
-      lastFramePath: { type: 'string', description: 'Optional local PNG/JPEG final frame, sent as a data URI.' },
+      lastFrameUri: { type: ['string', 'null'], description: 'Optional final-frame HTTPS URL or data URI, e.g. https://example.com/end.png; requires an explicit duration.' },
+      lastFramePath: { type: 'string', description: 'Optional local PNG/JPEG final frame, e.g. /tmp/end.png; sent as a data URI and requires an explicit duration.' },
+      references: { type: 'array', minItems: 1, maxItems: 5, description: 'Additional subject references, separate from start/end. Up to 4 subjects + 1 background; e.g. [{imagePath:"/tmp/hero.png"}]. Requires distilled and explicit duration.', items: {
+        type: 'object', properties: {
+          imageUri: { type: 'string', description: 'HTTPS/data PNG/JPEG reference, e.g. https://example.com/hero.png; exclusive with imagePath.' },
+          imagePath: { type: 'string', description: 'Local PNG/JPEG reference, e.g. /tmp/hero.png; exclusive with imageUri.' },
+          background: { type: 'boolean', default: false, description: 'True for the single background reference, e.g. true; false for subjects.' },
+        }, oneOf: [{ required: ['imageUri'] }, { required: ['imagePath'] }], additionalProperties: false,
+      } },
+      // Only with references: they run on the MSR backend, which needs one of these to evaluate negativePrompt.
+      ...msrGuidance,
     }, required: ['prompt', 'model', 'duration', 'resolution', 'reserveUsd'], additionalProperties: false }, annotations: generation },
   { name: 'astra_genai_audio2video', title: 'Generate GenAI LTX video driven by an audio track',
     description: 'Render a clip whose length and motion follow a supplied speech or sound track through ASTRA GenAI LTX v2 audio-to-video, then save an MP4. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. The output length equals the audio length (local maximum 361 frames: 15.04 s at 24 fps, 14.44 s at 25, 7.52 s at 48, 7.22 s at 50; longer audio returns 422). Mono or stereo only; three or more channels return 422 instead of a downmix. The sample rate is kept, so only AAC standard rates 7350-96000 Hz (e.g. 48000, 44100) are accepted; others such as 192000 return 422. The gateway copies the backend soundtrack without a second encode, but the backend encodes it once, so the result is not bit-identical to the input. Only ltx-2.5-22b-dev runs this pipeline; no duration, generateAudio, cameraMotion, seed or frame controls. Lip-sync quality is unmeasured; inspect mouths before acceptance. Persists job identity before polling; recover with astra_genai_video_status.',
     inputSchema: { type: 'object', properties: {
       prompt: { ...video.prompt, description: 'Speaker, setting and action. Required even with an image; the local backend accepts at most 2000 characters (longer returns 422).' },
+      negativePrompt: { type: 'string', minLength: 1, maxLength: 2000, description: devNegative },
       model: { type: 'string', enum: ['ltx-2.5-22b-dev'], description: 'Only the two-stage dev pipeline runs audio-to-video; distilled returns 422.' },
       resolution: video.resolution, fps: video.fps,
       audioPath: { type: 'string', description: 'Local .wav/.mp3/.m4a/.ogg/.opus sent as a data URI; at most about 11.25 MB (15,000,000 base64 characters); sample rate 7350-96000 Hz standard values. Mutually exclusive with audioUri.' },
@@ -79,10 +97,7 @@ export const GENAI_TOOLS: Tool[] = [
     inputSchema: { type: 'object', properties: {
       prompt: { type: 'string', minLength: 1, maxLength: 2000, description: 'Positive action and reference roles, up to 2000 characters. No automatic subtitle instructions are appended. Put unwanted text terms in negativePrompt when negative conditioning is enabled.' },
       negativePrompt: { type: 'string', minLength: 1, maxLength: 5000, description: 'Separate negative conditioning, e.g. subtitles, captions, text overlays. Requires guidanceScale > 1 or nagScale > 0, plus live backend negative_prompt support; otherwise refused before submission.' },
-      guidanceScale: { type: 'number', minimum: 1, maximum: 10, description: 'Classifier-free guidance; omitted keeps gateway default 1. Values above 1 require backend negative conditioning support and change distilled sampling.' },
-      nagScale: { type: 'number', minimum: 0, maximum: 100, description: 'Video-only normalized attention guidance. Omitted or 0 disables NAG; a positive value requires negativePrompt and live backend nag support. Example 11 is experimental, not a subtitle-free guarantee; works at CFG 1.' },
-      nagAlpha: { type: 'number', minimum: 0, maximum: 1, description: 'NAG mixing coefficient; gateway default 0.25. Sent only when nagScale > 0.' },
-      nagTau: { type: 'number', minimum: 0, maximum: 10, description: 'NAG clipping threshold; gateway default 2.5. Sent only when nagScale > 0.' },
+      ...msrGuidance,
       references: { type: 'array', minItems: 1, maxItems: 5, description: 'At most four subjects and one background. Exactly one URI or path per reference.', items: {
         type: 'object', properties: {
           imageUri: { type: 'string', description: 'Public HTTPS PNG/JPEG or data URI.' },

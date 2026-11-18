@@ -13,7 +13,7 @@ of packaging, signs and lettered clothing; apply the scoped image-model override
 | Change an existing image's style or overall appearance | image `edit` / `astra_genai_edit`, `mode:"img2img"` | Reuse one inspected source. Start near strength 0.6 and specify what to preserve. |
 | Correct one region while keeping the surrounding image | image `edit` / `astra_genai_edit`, `mode:"inpaint"` | Source plus same-size mask: white (grayscale ≥128) changes, black stays. |
 | Preserve a character, outfit, prop and setting in a moving shot | video `reference` / `astra_genai_msr` | Reuse inspected character, clothing, prop and location sheets; up to four subject images plus one background. |
-| Animate a particular first frame or reach a final frame | video `image` / `astra_genai_img2video` | Source image (path or URI) and optional last frame. MSR references do not pin temporal frames. |
+| Animate a particular first frame or reach a final frame | video `image` / `astra_genai_img2video` | Start image and optional last frame; distilled can also carry separate subject/background references with combined MSR conditioning. |
 | Motion without identity references | video `text` / `astra_genai_text2video` | Explicit action, timing and camera intent. |
 | A clip that follows a recorded speech or sound track | video `audio` / `astra_genai_audio2video` | One mono/stereo audio file; optional first/last image. The clip length equals the audio. |
 
@@ -22,6 +22,24 @@ edit when the existing asset already fits most of the shot. Prefer MSR when cont
 requires separate identity/outfit/prop/background sheets. A single reference also
 works; do not invent extra references to fill slots. Z-Image cannot fuse multiple
 source images into one still. Never hide that limit by dropping references.
+
+`astra_genai_img2video` accepts `imagePath`/`imageUri`, optional
+`lastFramePath`/`lastFrameUri`, and an independent `references` array. Each
+reference has exactly one `imagePath` or `imageUri` plus optional `background`.
+The limit is four subjects and one background in addition to the two temporal
+frames. With references, select `ltx-2.5-22b-distilled` and an explicit duration;
+the gateway must advertise `image_conditioning:true` at
+`/v1/ltx/msr/capabilities`. This runs the distilled MSR IC-LoRA path; dev and
+direct Desktop I2V take start/end only. Unsupported inputs are rejected, never
+dropped. `generateAudio:false` strips the generated soundtrack. The image
+adapter keeps its `none` voice lane: physical dialogue still uses a voice-capable
+adapter, and thoughts/voiceover retain timed external TTS.
+
+For a structured `first`/`first_last` shot, `video_plan` binds every reference
+whose `use` is `video` or `both`, orders the background last and records its
+hash. `use:image` stays an input to the source image only. Legacy silent
+reference-frame shots use their opening image as the first frame and preserve
+their authored video references.
 
 Write each reference's role and prompt index in the shot's generation plan. Put
 non-background references first and the background last: the gateway moves the
@@ -174,7 +192,9 @@ speakers sit on subjects 1 and 2, where a voice sample can ride. At most two cha
 references (user directive, 2026-10-31): describe anyone else on screen in the action and let
 the model draw them; `video_plan` refuses references for a third character
 (`msr_character_limit`), and the storyboard keeps two principal characters per shot
-(`[character-limit]`). The shot's start image goes last, in the background slot. A test on 2026-10-31
+(`[character-limit]`). A third cast member seen without a line (`visual.bystanders`) and unnamed
+extras (`visual.extras`) reach the clip through the start image and the prompt, never as a
+reference (user directive 2026-11-17); how well a clip holds a bystander's look is not measured yet. The shot's start image goes last, in the background slot. A test on 2026-10-31
 (Kardum, same prompt and seed) kept one complete orc with the sheet's outfit front and back
 with all three panels; the face alone invented a different armour. The panels-only render
 dropped the topknot, which the face-panel hair instruction addresses.
@@ -220,8 +240,10 @@ audio.
 **LTX project default (2026-10-30, user directive).** Choosing LTX at project setup
 saves `{engine:"astra-genai", model:"ltx-2.5-22b-distilled", operation:"reference",
 resolution:"1792x1024"}` (16:9; `1024x1792` for 9:16). `video_plan` uses the saved
-`operation` when a call names none, so episode cuts plan MSR. A direct "LTX로 만들어줘"
-request means `astra_genai_msr` with the character image, the dialogue in the prompt
+`operation` for physical dialogue when a call names none. Silent/voiceover-only
+shots resolve to image-to-video; thoughts use timed character TTS. Each shot has one
+speaking character; split replies and set their own camera size/angle. A direct "LTX로 만들어줘"
+physical-dialogue request means `astra_genai_msr` with the character image, the dialogue in the prompt
 and the character's voice sample when one is pinned. The v2 operations preserve the saved
 resolution. Do not convert it to historical 720-pixel presets: the live gateway can reject
 those dimensions (observed 2026-11-08). Its current catalog advertises dimensions in multiples
@@ -243,7 +265,8 @@ The v2 tools retain explicit `duration` (integer or null) and `resolution`, opti
 `fps` 24/25/48/50, `generateAudio` and provider `cameraMotion`. Image-to-video adds
 exactly one `imagePath` or `imageUri` (HTTPS or PNG/JPEG data URI; a local file travels
 as a data URI) and an optional `lastFramePath` or `lastFrameUri`. The gateway
-validates deployment limits. Do not send MSR fields to v2 or reuse legacy upload IDs.
+validates deployment limits. Do not send MSR fields to v2, apart from the negative
+controls below, or reuse legacy upload IDs.
 
 Audio-to-video takes exactly one `audioPath` (local `.wav`/`.mp3`/`.m4a`/`.ogg`/`.opus`,
 sent as a data URI) or `audioUri` (HTTPS, or an `audio/wav`, `audio/mpeg`, `audio/mp4`
@@ -258,6 +281,31 @@ changed: only AAC standard rates 7350–96000 Hz (e.g. 48000, 44100) pass; other
 as 192000 are 422. The
 soundtrack is the supplied audio after one backend encode, not a bit-identical copy.
 Lip-sync quality is not yet measured on this gateway; inspect mouths before acceptance.
+
+### Negative prompt on the v2 tools
+
+LTX has no subtitle switch; negative conditioning is the only control. Pass
+`negativePrompt` in `video_plan.args` (it maps to `negative_prompt`). Nothing adds it
+automatically, and it is sent only when set.
+
+| Tool and model | What happens |
+|---|---|
+| `astra_genai_audio2video` (dev only) | Forwarded. The pipeline already runs guided, so it costs no extra GPU time. |
+| `astra_genai_text2video` / `astra_genai_img2video` on `ltx-2.5-22b-dev` | Forwarded, same as above. |
+| `astra_genai_img2video` on distilled with `references` | Forwarded on the MSR path. Needs `guidanceScale > 1` or `nagScale > 0` (optional `nagAlpha`, `nagTau`), and the adapter checks `negative_prompt`/`nag` at `/v1/ltx/msr/capabilities` before uploading. |
+| distilled without `references` | Refused before submission: distilled sampling has no negative pass. Switch the cut to dev, or add a reference. |
+
+On the dev pipelines an omitted `negativePrompt` keeps the engine default, which
+(in `ltx_pipelines` 1.6.0) begins `has_subtitles, has_blurbox` and continues with quality terms. A
+supplied value replaces that default, it is not appended. So leave it out unless the
+default failed on this cut, and when you do write one, start from the default terms
+you still want, e.g. `has_subtitles, has_blurbox, captions, text overlays, blurry,
+distorted proportions`. The dev backend takes at most 2000 characters.
+`guidanceScale` and the NAG fields without `references` are refused.
+
+A gateway older than this contract answers 400 for the unknown field and creates no
+job; drop the argument or upgrade the gateway. Negative conditioning steers the model
+and does not guarantee text-free frames: keep the OCR check on the clip.
 
 ## Recovery and evidence
 
@@ -366,3 +414,24 @@ Each person takes one subject slot and retains that person's pinned voice sample
 The start image still takes the background slot. The default panel layout is unchanged.
 Review derived images against the original sheets before selecting this layout;
 fewer references alone do not establish better model adherence.
+
+### Local image-to-video input limits
+
+The `astra-genai` adapter uses local LTX weights, not the Lightricks cloud API.
+For text/image-to-video, prompts have at most 2,000 characters. Put camera movement
+in the prompt; `cameraMotion` is unsupported. Request `WIDTHxHEIGHT` with even sides
+of at least 64. The gateway rounds each side up to 64 for generation, within 1920
+per side and 2,064,384 pixels, then crops to the requested size. For example,
+1280x720 works; 1920x1080 exceeds the padded pixel cap. It verifies the output size.
+
+Duration is a positive whole number of seconds or null for automatic duration.
+The rounded-up 8k+1 frame count must fit 361: at 24 fps, 15 seconds works and 16 does
+not. An end frame requires an explicit duration. Additional subject references
+still require distilled and an advertised MSR image-conditioning backend.
+
+Desktop has its own `astra-genai-desktop` schemas and installed capability matrix.
+Its common gateway facade takes duration in seconds, not `num_frames`, and cannot
+suppress generated audio. Do not copy local-weight limits onto that native adapter.
+Cancelled jobs are terminal; recover their receipts without another submission.
+Private Desktop results require the same token, restricted to the same gateway's
+asset-bytes route; signed external results are downloaded without credentials.

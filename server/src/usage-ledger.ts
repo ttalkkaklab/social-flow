@@ -38,6 +38,7 @@ import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { DEFAULT_MLX_MUSIC_SECONDS, MLX_VIDEO_FPS } from './mlx-serve-client.js';
 import { resolveVideoDuration } from './video-duration.js';
+import { ltxApiTier, ltxApiAudioSeconds } from './ltx-api-video.js';
 
 /** One recorded call. `key`/`quantity` are the cost-ledger coordinates when they are knowable. */
 export interface UsageEvent {
@@ -218,6 +219,19 @@ export function priceOf(
     const seconds = image ? null : typeof args.duration === 'number' ? args.duration : tool === 'astra_genai_msr' ? num(args.numFrames, 121) / num(args.frameRate, 24) : null;
     return { key: image ? 'image.astra-genai' : 'video.astra-genai', quantity: seconds, note: 'Gateway pricing unverified; managed reservation is authoritative, not a measured bill' };
   }
+  // Hosted vendors (vendor-video.ts): one per-second row per model and resolution.
+  if (tool.startsWith('ltx_api_')) {
+    const model = str(args.model, 'ltx-2-5-pro'), tier = ltxApiTier(str(args.resolution, '1920x1080'));
+    if (!tier) return { key: null, quantity: null, note: 'unlisted LTX API resolution' };
+    if (tool !== 'ltx_api_audio2video') return { key: `ltx-api.${model}.${tier}`, quantity: num(args.durationSeconds, 6) };
+    try { return { key: `ltx-api.${model}.${tier}`, quantity: ltxApiAudioSeconds(str(args.audioPath, '')), note: 'billed on input audio seconds' }; }
+    catch { return { key: `ltx-api.${model}.${tier}`, quantity: null, note: 'audio length unreadable' }; }
+  }
+  if (tool.startsWith('minimax_'))
+    return { key: `minimax.${str(args.model, 'MiniMax-H3').toLowerCase()}.${str(args.resolution, '768P').toLowerCase()}`, quantity: num(args.durationSeconds, 5),
+      note: 'output seconds; input images past the free allowance are reserved separately' };
+  if (tool.startsWith('heygen_'))
+    return { key: `heygen.${tool === 'heygen_reference' ? 'reference' : 'image'}.${str(args.resolution, '768p')}`, quantity: num(args.durationSeconds, 5) };
   if (tool.startsWith('seedance_')) {
     const model = str(args.model, 'dreamina-seedance-2-0-260128');
     const resolution = str(args.resolution, '720p');
@@ -376,6 +390,7 @@ export function isBillableTool(tool: string): boolean {
   return (
     (tool.startsWith('astra_genai_') && !['astra_genai_video_status','astra_genai_catalog','astra_genai_desktop_status'].includes(tool)) ||
     tool.startsWith('seedance_') ||
+    /^(ltx_api|minimax|heygen)_/.test(tool) ||
     tool.startsWith('gpt_image_') ||
     tool.startsWith('tts_') ||
     tool.startsWith('sfx_') ||

@@ -9,6 +9,38 @@ const require = createRequire(import.meta.url);
 const { FONT_ASSETS } = require('../../skills/channel/references/review-fonts.js');
 const { storyboardHtml } = require('../../skills/storyboard/references/storyboard-html.js');
 
+test('localized copy is escaped while media attributes and source stay unchanged', () => {
+  const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
+  const source = template.slice(template.indexOf('  function esc(s)'), template.indexOf('  function strip(s)'));
+  const CONTENT = require('../../skills/storyboard/references/review-localization.js').reader({ version: 1, sourceLanguage: 'vi', languages: ['vi', 'ja'], entries: [
+    { source: 'Xin chào', translations: { ja: '<img src=x onerror=alert(1)>' } },
+    { source: '../speech.wav', translations: { ja: 'wrong-path' } },
+  ] }, 'ja');
+  const result = runInNewContext(source + '\n[copy("Xin chào"), esc("../speech.wav")]', { CONTENT });
+  assert.equal(result[0], '&lt;img src=x onerror=alert(1)&gt;');
+  assert.equal(result[1], '../speech.wav');
+});
+
+test('review language survives source typography and prepares the selected font', async () => {
+  const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
+  const start = template.indexOf('  window.ReviewTypography.apply(DOC, SCENES);');
+  const source = template.slice(start, template.indexOf('  if (fontFailures.length)', start));
+  const node = { lang: '', setAttribute(key, value) { this[key] = value; } };
+  runInNewContext(source, {
+    DOC: { contentLanguage: 'vi' }, SCENES: [], CONTENT: { language: 'ja' },
+    app: { querySelectorAll: () => [node] },
+    window: { ReviewTypography: { apply: () => { node.lang = 'vi'; } } },
+  });
+  assert.equal(node.lang, 'ja');
+  const loaded = [];
+  const context = { document: { documentElement: { lang: 'en' }, fonts: { load: async font => { loaded.push(font); return [{}]; } } } };
+  context.window = context;
+  runInNewContext(readFileSync(new URL('../../skills/channel/references/review-assets/review-typography.js', import.meta.url), 'utf8'), context);
+  await context.ReviewTypography.prepare({ contentLanguage: 'vi' }, [], ['ja', 'zh-Hans']);
+  assert.ok(loaded.some(font => font.includes('Noto Sans JP')));
+  assert.ok(loaded.some(font => font.includes('Noto Sans SC')));
+});
+
 test('bound video displays before assembly, while explicit edit cuts retain their ranges', () => {
   const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
   const start = template.indexOf('  function productionCutsHtml(s)');
@@ -50,8 +82,12 @@ test('music lanes show one anchored span across scenes and label the score-free 
   const source = template.slice(start, template.indexOf('  var seqNo =', start));
   const SCENES = [1, 2, 3].map(i => ({ id: 's000' + i }));
   const context = { SCENES, MUSIC: { $timeline: [{ cue: 'piano', start: { shotId: 's0002', atSeconds: 0.8 }, end: { shotId: 's0003', atSeconds: 'end' } }] },
-    LANG: 'en', esc: value => String(value), T: {} };
+    LANG: 'en', esc: value => String(value), T: {}, window: { STORY: { authoring: 'story-first' } } };
   assert.match(runInNewContext(source + '\nmusicLane([{i:0,s:SCENES[0]}])', context), /No score/);
+  // A scene header passes its scene: silence nobody decided reads undecided, a decision shows its reason.
+  assert.match(runInNewContext(source + '\nmusicLane([{i:0,s:SCENES[0]}], {no:1})', context), /Music undecided/);
+  assert.match(runInNewContext(source + '\nmusicLane([{i:0,s:SCENES[0]}], {no:1,music:{decision:"none",reason:"only the line"}})', context), /No score — only the line/);
+  assert.match(runInNewContext(source + '\nmusicLane([{i:1,s:SCENES[1]}], {no:2,music:{decision:"score",reason:"regret"}})', context), /piano \(s0002 \+0.8s → s0003 end\) — regret/);
   for (const index of [1, 2]) assert.match(runInNewContext(source + `\nmusicLane([{i:${index},s:SCENES[${index}]}])`, context), /piano \(s0002 \+0.8s → s0003 end\)/);
   context.MUSIC.$timeline[0].start.atSeconds = 'end';
   assert.match(runInNewContext(source + '\nmusicLane([{i:1,s:SCENES[1]}])', context), /No score/);
@@ -61,7 +97,7 @@ test('HTML creation and refresh keep one design while preserving episode metadat
   const dir = mkdtempSync(join(tmpdir(), 'sf-board-html-'));
   try {
     // No scenes, credentials, or network are required to create the review shell.
-    assert.equal(storyboardHtml(dir).length, 20 + FONT_ASSETS.length);
+    assert.equal(storyboardHtml(dir).length, 23 + FONT_ASSETS.length);
     const file = join(dir, 'storyboard.html');
     const original = readFileSync(file, 'utf8');
     const title = '<title>Episode $& — 로컬 검토</title>';
@@ -89,7 +125,7 @@ test('check is read-only and malformed existing metadata is preserved for repair
   const root = mkdtempSync(join(tmpdir(), 'sf-board-html-check-'));
   try {
     const dir = join(root, 'storyboard');
-    assert.equal(storyboardHtml(dir, true).length, 20 + FONT_ASSETS.length);
+    assert.equal(storyboardHtml(dir, true).length, 23 + FONT_ASSETS.length);
     assert.equal(existsSync(dir), false);
     storyboardHtml(dir);
     const file = join(dir, 'storyboard.html');

@@ -44,7 +44,7 @@ test('local character settings obey the generation engine contracts', async () =
   for(const setting of valid) { assert.deepEqual(voiceErrors(setting),[],JSON.stringify(setting));assert.equal(ttsSchema.safeParse(setting).success,true,JSON.stringify(setting)); }
   const invalid=[{...tts,language:'klingon'},{...tts,model:'ignored'},{...tts,engine:'elevenlabs',stylePrompt:'ignored'}, { ...tts,engine:'gemini',voiceId:'Kore',speed:0.8,model:'no-such-model'},{...tts,engine:'mlx',voiceId:'local',speed:0.8},{...tts,engine:'elevenlabs',voiceId:'a/b'},{...tts,engine:'elevenlabs',voiceId:'valid',model:'no-such-model'}];
   for(const setting of invalid) { assert.ok(voiceErrors(setting).length,JSON.stringify(setting));assert.equal(ttsSchema.safeParse(setting).success,false,JSON.stringify(setting)); }
-  for(const language of ['Korean',' KO ','English','Japanese','Spanish','French','Portuguese']) {
+  for(const language of ['Korean',' KO ','English','Japanese','Spanish','French','Portuguese','German','Vietnamese','zh-Hans','es-MX']) {
     assert.equal(normalizeLanguage(language),normalizeCharacterLanguage(language));
     assert.equal(ttsSchema.parse({...tts,language}).language,normalizeLanguage(language));
     assert.equal(identityVoice(identity({...tts,language})).language,normalizeLanguage(language));

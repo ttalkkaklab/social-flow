@@ -2,10 +2,17 @@
 
 ## Contents
 
+- [Mutual affection with an inert middle](#mutual-affection-with-an-inert-middle)
+- [Payoff lost during shot planning](#payoff-lost-during-shot-planning)
+- [Known outcome without a forced twist](#known-outcome-without-a-forced-twist)
+- [A claimed result with nothing to check](#a-claimed-result-with-nothing-to-check)
+
 - [Camera direction without effect cycling](#camera-direction-without-effect-cycling)
+- [Dialogue without portrait cycling](#dialogue-without-portrait-cycling)
 
 - [Delegated storyboard delivery](#delegated-storyboard-delivery)
 - [Causal dialogue](#causal-dialogue)
+- [Speaker position and intact review evidence](#speaker-position-and-intact-review-evidence)
 - [Silent physical comedy](#silent-physical-comedy)
 - [Fair mystery](#fair-mystery)
 - [Duration pressure](#duration-pressure)
@@ -22,10 +29,42 @@
 - [A stable conviction and distinct relationships](#a-stable-conviction-and-distinct-relationships)
 - [Character evidence lost in shots](#character-evidence-lost-in-shots)
 - [Serialized consequence and narrator boundary](#serialized-consequence-and-narrator-boundary)
+- [Outcome shown first](#outcome-shown-first)
+- [Rising conflict that repeats](#rising-conflict-that-repeats)
+- [Serial episode ending](#serial-episode-ending)
+- [Research before a synopsis](#research-before-a-synopsis)
+- [A known secret across three artifacts](#a-known-secret-across-three-artifacts)
+- [Plausible pressure and a fixed ending](#plausible-pressure-and-a-fixed-ending)
 
 Use a fresh author with the installed skill and raw brief. A separate reviewer first
 receives only ordered actions and speech; do not supply intended interpretation or an
 answer key. Keep artifacts local under data/. No paid generation is implied.
+
+## Dialogue without portrait cycling
+
+Input: a nervous employee accepts an intimidating manager's invitation, follows them
+home, discovers a playful collection and first relaxes when the manager is embarrassed.
+Keep the established words and one speaker per generated unit. Supply a draft that
+alternates speaker portraits and friendly two-shots before the discovery. Ask for a
+revision without media generation.
+
+Pass evidence: the author maps fear, discovery and release to visible behavior in order;
+compares the talking faces with relevant details, POVs and spatial relationships; and
+replaces redundant views where those alternatives carry information. No fixed insert
+count, obligatory camera motion, invented props or added lines. The invitation does not
+automatically earn a relaxed smile. A justified facial performance remains intact.
+
+For each revised unit preserve stable shot/line IDs, words, speaker, addressee and order.
+Set delivery from the authored crop: a hand-only physical line is off_screen, not an
+inner thought. Keep that hand's owner in the cast. The composed prompt must retain the
+detail without adding the speaking face or forcing the addressee into the frame. Preserve
+the selected voice identity; correct speaker labels do not certify the generated voice.
+Reconcile expressions, blocking, camera, action and stale source images before video.
+
+Controls: a silent confession reaction whose only evidence is the face may stay close;
+an unrelated vase insert and cosmetic OTS alternation fail despite varied size counts.
+Repeat with an existing old image showing a relaxed pose: metadata edits alone cannot
+be reported as a corrected picture. Mark uninspected motion and sound unverified.
 
 ## Delegated storyboard delivery
 
@@ -46,6 +85,24 @@ Input: write a fictional family conflict in which a replacement must deceive a v
 Pass evidence: the visitor's knowledge, the reason to continue, the replacement's motive
 and means of deception are available in actual events. The decisive reaction has a planned
 visible or audible delivery. No one-line-per-shot default or generic audience addressees.
+
+## Speaker position and intact review evidence
+
+Input: a non-comic drama in which A rebukes B for volunteering before B offers; a witness
+claims everyone knows a date only she supplied; a stranger's private offer draws an instant
+correct diagnosis of their hidden plan. Include a valid lie and a tentative guess as controls.
+Ask for a revision with no new media. Give the reviewer the bundled text and map, not intent.
+Pass evidence: the author repairs the response order and scopes the shared claim, gives the
+probe a visible cue or a chance to be wrong, and preserves legitimate deception/inference.
+The review cites earlier evidence and actual listeners, covers every speaker's line IDs and
+does not invent unseen conversations. It distinguishes defects from optional phrasing.
+
+Repeat after inserting a shot: stable shot/line IDs, addressees, delivery and action/speech
+order survive export. A call to an unidentified in-world listener is not viewer address and
+does not establish that anyone heard it. A mistyped known character still gets a finding. Hidden motives and acting notes do not appear. Then supply a repair
+that explains a character's entire growth to an unprompting listener: the author removes
+or motivates that speech rather than treating more explanation as automatic improvement.
+No numeric gate or deterministic claim to detect mind-reading is introduced.
 
 ## Silent physical comedy
 
@@ -180,6 +237,137 @@ source episode and relevant resulting state are recorded in storyboard.md when u
 The explainer adds no invented personal conflict or therapeutic arc. Missing history is
 reported as uncertain, not filled in as fact; no new required schema or approval gate.
 
+## Outcome shown first
+
+Input: write a short fiction that opens on a piece of its ending and then tells how it came about.
+Pass evidence: the opening withholds at least one of who, why or how, and the scenario records
+the shown piece and its return in `setups`. Each timeline keeps one visible code such as prop
+state, light or place; no time card is drawn. The return scene supplies the withheld piece
+from a detail shown earlier. A reviewer reading scene by scene can place every scene in time.
+Repeat with a brief whose events hold interest in order: the author tells it in order and
+adds no jump.
+
+## Rising conflict that repeats
+
+Input: a drama draft in which the principal is refused three times by the same person for
+the same reason.
+Pass evidence: the revision changes the opponent, the stakes or the ability demanded between
+attempts, and each attempt ends on a new problem or a worse position. The principal is
+blocked by the situation, not by missing what the viewer plainly sees. The review quotes the
+changed events instead of labels such as "escalates". Repeat with a narrator-only explainer:
+no antagonist is added; its beats change what the viewer expects.
+
+## Serial episode ending
+
+Input: write two consecutive episodes of a short serial.
+Pass evidence: the first episode answers the question it opened before its last scene opens
+a larger one. The second answers the previous ending in its opening, then opens its own
+question. The carried question is recorded in storyboard.md. An ending that only freezes a
+danger with nothing answered is reported as a finding. No cliffhanger is mandatory, and a
+self-contained episode is valid.
+
+
+## Research before a synopsis
+
+Input: ask for a more gripping fictional survival synopsis and more real-event research.
+Provide an existing collection with many cases, a shell search key and a stale MCP server
+that reports the key missing. Include a popular mutiny anecdote contradicted by an
+institutional history. Baseline: the author skips research because the work is fiction or
+returns more search snippets without reading them.
+
+Pass evidence: the author inventories the collection, repairs an authorized connection
+using variable names only and verifies an actual fresh search. It targets missing decisions,
+opens useful sources, records the correction and separates invented story uses from facts.
+The shortlist has genuinely different conflicts and a cooperation example or relevant
+counterexample. Timeouts and unread sources stay visible. No fixed search quota, secret
+logging, unrelated episode creation or unsolicited media generation. A supplied settled
+premise without a research request only needs relevant gap checks.
+
+## A known secret across three artifacts
+
+Input: a keeper hides shared supplies to preserve an emergency reserve. Another person is
+suspected. Ask first for a synopsis, then a scenario and finally a board. Both the keeper
+and the accuser have plausible aims. Baseline: the first draft says tension rises, conceals
+the culprit until a final unplanted twist and turns the accuser into an irrational villain.
+
+Pass evidence: the revised synopsis specifies the choice, the cost of confession and silence,
+the actual resolution and its consequence. If the viewer knows the secret first, the scene
+shows its origin and each character's information access. A witness can refuse or negotiate
+for an independent reason. The board preserves the hiding, trigger and response in the
+correct order and gives each speaking character separate coverage. No new required fields,
+quota of twists or automatic review. A synopsis-only request stops at prose.
+
+## Plausible pressure and a fixed ending
+
+Input: a five-person serial covers one week. Two newcomers arrive on Sunday after a closing
+narrator finishes. A draft introduces starvation after one missed meal, a convenient new
+reserve, a Monday arrival and an unexplained attack at the cut. Ask for more excitement.
+
+Pass evidence: the author checks supply origin and access, gives the pressure a believable
+timescale, and derives the harder choice from prior actions. Cooperation or relief makes
+the threatened bond legible. The episode resolves its central choice, then the established
+arrival tests the resulting rule. Losses and promises carry forward. No extra arrivals,
+post-arrival narration, forced romance or unsupported survival procedure. A quiet factual
+explainer keeps its supplied facts and gains no invented villain or withholding gimmick.
+
+Variant: add one modern object per Sunday at a different location from the two newcomers,
+with both locations changing under a hidden rule the protagonist discovers first. Expect
+separate author truth, arrival/discovery records, character observations and a tested
+prediction. No extra object, unexplained foreknowledge, instant knowledge of object type or
+object insert after the fixed final newcomers shot. Keep the world's rule in project notes.
+
+## Mutual affection with an inert middle
+
+Input: ask for an anthology romance synopsis. Both characters' confession letters are shown
+at the start; the rest repeats almost-confessions until they exchange letters. A previous
+episode had different jobs and personalities. Baseline: the draft labels the pauses tender
+and claims increasing anticipation without changing a choice or the audience's expectation.
+
+Pass evidence: material determines fresh episode roles under the anthology contract. The
+synopsis names the actual ending and changes a meaningful attempt, interpretation or cost
+between beats. Mutual affection can stay known; the route to expressing it becomes worth
+following. The final response pays this episode's promise. No forced rival, contrived
+deadline, new mandatory twist, EP1 relationship, cliffhanger, media or episode creation
+for a synopsis-only request. This is an author pass, not an independent passing score.
+
+## Payoff lost during shot planning
+
+Input: a scenario plants a small practical favor, reveals its meaning and lets the recipient
+answer with the same action. The board gives away the meaning in its first image, crops
+out the relevant prop and ends before the recipient acts. Ask to improve the storyboard.
+
+Pass evidence: clue, discovery and response have identifiable presentation units in their
+intended order. The final response is restored as part of the payoff, without adding a new
+unrelated threat. Each meaningful join has a specific anticipated development or necessary
+reaction, not a new hook per speaker cut. Changes reach action, dialogue and framing, not
+only expectation metadata. Existing media and generation pauses remain protected.
+
+## Known outcome without a forced twist
+
+Input: a gentle reunion whose happy outcome is already supplied, then a factual demonstration
+with a known answer. Request engaging episode plans without suspense or invented secrets.
+
+Pass evidence: the reunion progresses through attempts and responses toward a specific
+desired encounter. The demonstration develops a useful prediction, evidence and application
+while giving essential information when needed. The author can name what the viewer wants
+next without adding a villain, fabricated fact, deceptive withholding or cliffhanger.
+Quiet relief and necessary acceptance stay; repeated padding does not. No fixed beat count,
+timestamp formula, retention guarantee or automatic reviewer is added.
+
+## A claimed result with nothing to check
+
+Input: ask for a 45-second synopsis introducing a tool that turns one typed line into a
+finished draft. Baseline: the opening promise is followed by a montage of what the tool
+could make, a list of features, a quality percentage with no source and a closing request
+that points to the wrong place.
+
+Pass evidence: the first spoken line names one result in words the viewer would use. One
+case is followed from what is typed to what comes out, and the typed input can be found in
+the output held on screen. Claims with no picture and no source are gone, the unsourced
+percentage included. The middle reaches a limit or a cost, not a second identical success,
+and the ending shows someone using the result. No drawn label or subtitle carries the
+promise, and no invented rival or cliffhanger is added. Repeat with a drama brief: no proof
+beat, feature list or spoken promise sentence appears in it.
 
 ## Camera direction without effect cycling
 

@@ -76,3 +76,10 @@ test('piped checker output and storyboard adapter preserve diagnostics larger th
   assert.equal(unknown.length, 12);
   assert.equal(unknown[11].references[0].image, scenes[11].visual.bg);
 }));
+
+test('a board with no pictures yet reports that once, with its shots', () => fixture(dir => {
+  const findings = review.check({ SCENES: [shot('s0001', 'host'), shot('s0002', 'guest'), shot('s0003', 'host')] }, dir);
+  const unassigned = findings.filter(f => f.code === 'unverified_source_image');
+  assert.equal(unassigned.length, 1);
+  assert.deepEqual(unassigned[0].shotIds, ['s0001', 's0002', 's0003']);
+}));

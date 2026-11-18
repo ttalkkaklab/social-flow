@@ -1,6 +1,6 @@
 # Technique selection
 
-`film-techniques.js` is the shared source for the HTML, tool catalogue, canonical crop words and camera prompt instructions. It contains 4 character reference choices, 27 camera choices (the 20 techniques plus baseline/directional variants), 9 frame sizes and 5 timing purposes. Do not maintain a second icon, crop or gloss dictionary: the review tooltips read the same cards through `FILM_TECHNIQUES.guide`.
+`film-techniques.js` is the shared source for the HTML, tool catalogue, canonical crop words and camera prompt instructions. It contains 4 character reference choices, 35 camera choices (the 20 techniques plus baseline/directional variants, six action moves and two beat accents), 9 frame sizes and 5 timing purposes. Do not maintain a second icon, crop or gloss dictionary: the review tooltips read the same cards through `FILM_TECHNIQUES.guide`.
 
 Read `storyboard_read` with `includeTechniques:true` (default). Choose from `techniqueCatalog.entries` after defining the shot's information and visible action. Every entry exposes `id`, bilingual `label`, `use`, `instruction`, `glyph` and the corresponding legacy `fields`, and is a decision card:
 
@@ -9,6 +9,13 @@ Read `storyboard_read` with `includeTechniques:true` (default). Choose from `tec
 - `pair` — where one applies, what the neighbouring shots should be (establish → cut in → reestablish; look → POV → reaction; matched sizes in shot/reverse shot);
 - `specify` — what the start image and video prompt must name: crop line, endpoints, focus target, speed;
 - `vertical` — where a 9:16 frame changes it, how.
+
+The six action moves are crash zoom, blast pushback, weapon cam, pass-through shot, drone dive and
+relay one-take. A beat accent — `camera.speed-ramp`, `camera.impact-shake` — is no move: it rides on
+whatever move the shot has, takes the moment it fires on (`on`, English) and reaches the video prompt
+as one sentence ("… slows almost to a stop at the moment the kick lands …"). Set accents with
+`shot_icons accents`. A hero landing needs no entry of its own: `camera.static`, angle `ground` and an
+impact shake on the landing. A 360° stand-off is `camera.arc` with what changes during the turn.
 
 A camera entry with a movement also carries `prompt`, the verb phrase `shot_prompt` writes after
 "The camera" in the video model's documented camera words — pushes in, pulls back, pans, tilts

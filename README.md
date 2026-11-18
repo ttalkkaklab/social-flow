@@ -25,11 +25,46 @@ and unchanged request inputs before adoption; it does not generate again. Input 
 file availability and visual review are separate evidence. Location references preserve
 directional geography while the authored crop decides which landmarks fit in the frame.
 
+[Episode first comments](skills/_shared/first-comment.md) introduce the characters and
+their relationship, then tease the opening incident without its payoff. Produce prepares
+platform-specific copy; publish sends authorized comments from the channel account,
+verifies the posted author/text and records receipts so an interrupted run does not
+duplicate them. Existing posts can receive the same treatment without uploading again.
+
 [Character depth](skills/storyboard/references/character-depth.md) connects shared identities
 to episode choices, personal costs and relationship-specific behavior. Channel, storyboard
 and autoproduce use the same guidance; blind review checks the performed evidence before
 reading author intentions. Existing schemas remain unchanged, and narrators or incidental
 roles do not acquire compulsory subplots or character arcs.
+
+[Story interest](skills/storyboard/references/story-interest.md) is the guidance for whether a
+viewer wants the next scene: the question each stretch holds open, the order of telling, who
+knows more, pressure that changes and how scenes and serial episodes end. It reuses
+`sequence.question`/`payoff` and `scene.turn`/`charge`/`out`, adds no gate, and grades each
+claim by its evidence ([survey](docs/research/2026-11-11-story-engagement-craft/index.html)).
+The reviewer's interest rubric is an on-request read. The
+[episode anticipation pass](skills/storyboard/references/episode-anticipation.md) runs during
+every new or substantially revised synopsis and storyboard: concrete promise, evolving
+expectations, earned payoff and performed response. It changes the writing process without
+adding a score gate or forcing a twist. Standalone stories resolve within their episode.
+For channels choosing a provocative opening followed by a rewind, that pass carries the
+opening event and recipient reaction into enacted earlier context, a clear time jump and
+one catch-up. It preserves held motives, user-scoped time labels and the eventual payoff.
+For an episode that makes a claim (explainer, tutorial, review, advertisement) the same pass
+asks for one result promised in the viewer's words and said aloud, proof the viewer can check
+on screen and an ending where someone uses it. `sequence.question`/`payoff` hold the doubt and
+the proof scene, and once the shots before it have lengths every board write prints when the
+first spoken line starts
+([study and limits](docs/research/2026-11-18-promise-and-proof/README.md)).
+
+[Material research](skills/storyboard/references/story-material-research.md) now precedes
+new story selection: read existing case collections, verify consequential decisions and
+counterexamples, then choose material under the channel's continuity contract. Anthologies
+assign fresh roles after choosing material; serials preserve their established cast and world.
+Storyboard handles synopsis-only
+requests as prose and carries costly choices, secrets and their consequences into scenarios
+and shots. Research inspiration stays distinct from documented history; search volume is
+not a quality score. SerpApi setup verifies the MCP process with an actual fresh search.
 
 The [filmmaking guide](docs/guides/ai-film-four-elements/index.html) explains character references, camera direction, framing and shot timing. `storyboard_read` exposes the shared 45-entry technique catalogue; `shot.techniques` stores stable IDs with shot-specific reasons. The offline storyboard exports the same catalogue, with a distinct pictogram and explanation for every entry. Camera instructions reach the generic, speech-planning and ASTRA prompt paths. See [technique selection](skills/storyboard/references/film-techniques.md).
 
@@ -40,8 +75,15 @@ unreviewed identity/dialogue/speaker/lip-sync findings. Saved plans become stale
 speech, voice settings or reference bytes change. Selected audition samples travel
 with the character handoff; no automatic listening gate or paid generation is added.
 
-MSR supports two-speaker turns with start-image `speakerBindings`: viewer-relative
-position and appearance are repeated with each line's image and voice mapping.
+Each shot has one speaking character; speaker changes get separate generation units.
+[Scene attention](skills/storyboard/references/shot-view.md#plan-attention-across-the-scene)
+chooses the visible evidence independently of the voice: faces, consequential details,
+discovery POVs or spatial relationships. Addressing someone does not pull that listener
+into the crop; off-screen speech can accompany a hand insert without adding a portrait.
+Two characters may share the picture while
+the listener stays silent. Silent shots and inner thoughts use image2video instead of
+MSR; thoughts use pinned character TTS composed to the measured speech/action clock.
+See [dialogue coverage](skills/storyboard/references/dialogue-coverage.md).
 `shot_prompt` stores action separately; `video_plan` recompiles current icons and
 reports `directionBindings` for prompt, image, adapter and assembly inputs.
 
@@ -539,11 +581,19 @@ Story and production share a [direction guide](skills/storyboard/references/rete
 Each development pays part of the opening promise with evidence or a changed expectation.
 The board maps those beats to visible changes, sound events and the final payoff. Production
 checks that map against the finished video at delivery speed, including a listen to the mix.
-Autoproduce can reuse multiple music cues or generate them within its authorized allocation.
+Autoproduce names channel beds as `asset` cues or generates the episode's own cues within its authorized allocation.
 New timeline-scored boards use `MUSIC.$timeline`: music enters at a stable shot-ID/offset,
 continues across cuts without restarting, and follows one span-relative gain curve until
 its authored exit. Assembly resolves actual rendered frame boundaries before mixing.
-`$timeline:[]` needs no BGM file and retains dialogue/ambience. Legacy cue boards keep their
+`$timeline:[]` needs no BGM file and retains dialogue/ambience. `story_music` decides each
+scene (`score` with a cue or `none`, with its reason) against the channel's saved
+`production.musicDirection`, so silence is a recorded choice; a span may start later in its cue
+(`sourceStartSeconds`), and the build reports an undecided scene, a cue file with no generation
+receipt in the episode and a span resting more than 20 LU under the speech. `story_music` takes
+`cues` (`name`, a `prompt` or an `asset`, `reason`) and `spots` (`scenes`, `decision`, `reason`, and
+for `score` a `cue` with optional `start`, `end`, `sourceStartSeconds`, `fadeInSeconds`,
+`fadeOutSeconds` and `gainDb`); a `none` spot takes only its reason, and `path` alone reports
+without writing. The channel's notes live in `production.musicDirection` (up to 20, `project_manage update`). Legacy cue boards keep their
 existing defaults. See [timeline scoring](skills/storyboard/references/scenes-schema.md#music-cues-windowmusic-sound).
 Shot-relative music gain curves and configurable ducking shape dialogue and reveals; low
 speech-to-music separation is a review warning, not an assembly gate.
@@ -681,10 +731,10 @@ social-flow/
 ├── mcp.json                     #   its stdio server entry
 ├── manifest.json                # Claude Desktop extension (.mcpb) manifest — .mcpbignore picks the contents
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 139 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 156 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
-│       ├── tools.ts             # tool definitions — 139 tools, including voice auditions and opt-in acting review
+│       ├── tools.ts             # tool definitions — 156 tools, including voice auditions and opt-in acting review
 │       ├── handlers.ts          # zod validation + routing
 │       ├── sns-client.ts        # Threads·IG·FB·YouTube publish/comments
 │       ├── serp-client.ts       # SerpApi (key masking + response slimming)
@@ -709,6 +759,8 @@ social-flow/
 │   │   └── references/          #   setup-playbook.md (CDP recipes · token exchange · 60-day renewal)
 │   ├── setup-instagram/         # /social-flow:setup-instagram — Instagram account setup + API hookup (browser HITL — professional conversion · Instagram Login OAuth · 60-day token)
 │   │   └── references/          #   setup-playbook.md (UID reserved-variable trap · tester invite path)
+│   ├── setup-tiktok/            # Desktop OAuth, inbox drafts, Direct Post limits and channel-scoped credentials
+│   │   └── references/          #   api.md (official endpoints, review limits and recovery)
 │   ├── setup-youtube/           # /social-flow:setup-youtube — YouTube brand channel setup + API hookup (browser HITL — advanced-features verification → channel creation → refresh_token, multi-day resume)
 │   │   └── references/          #   setup-playbook.md (loopback listener · production-stage 7-day expiry trap)
 │   ├── datago/                  # /social-flow:datago — open-data research → collection → seed records
@@ -718,7 +770,7 @@ social-flow/
 │   ├── produce/                 # /social-flow:produce — stills (§1.5) → clips → slides (§3.6) → video build + per-platform text
 │   │   └── references/          #   build-reel.sh (subtitle-free master; `SUB_MODE` is a legacy burn-in switch the builder ignores) · speedup.sh (required final pace pass, 1.0 default, ≤6.2 chars/s) · bgm-bed.sh · bgm-scoring.md · video-template.html · render-motion-slide.mjs (motion slide → one clip per reveal group, no npm dependency) · QA harness
 │   ├── edit-speech/             # /social-flow:edit-speech — targeted speech corrections for one shot or character (speech_manage · raw TTS · not_reviewed)
-│   ├── upscale-video/           # /social-flow:upscale-video — opt-in 2x LTX upscale of an existing clip (astra_video_upscale · inspect against the source · not_reviewed)
+│   ├── upscale-video/           # /social-flow:upscale-video — local Real-ESRGAN/Lanczos adapters, resumable batches; opt-in LTX re-render
 │   ├── autoproduce/             # storyboard workflow → authorized production; scenario presentation does not add an approval pause
 │   │   └── references/          #   cost-tiers.md (legacy model ladder; the saved model governs) · prices.tsv (price SoT) · cost-report.sh
 │   │                            #   cost-tally.md (per-episode cost ledger convention — shared by storyboard/produce)
@@ -755,7 +807,7 @@ visual style, video ratio and format live in the workspace's `.social-flow/model
 each episode snapshots them in `.work/model-settings.json`, and `profile.md` keeps the
 channel's tone, theme and pinned character voice IDs (the speech model itself is the saved `models.speech`).
 
-## MCP tool surface (139 tools)
+## MCP tool surface (156 tools)
 
 `project_manage`: options · status · init · update · episode. Local project setup
 with genre, models, style, ratio, format and SNS records; no generation or publishing.
@@ -786,9 +838,11 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Image generation | `image_local_generate` | Z-Image Turbo on-device via mflux (**no API key, no network, no billing — a $0 choice for the saved image model**; initial image setup recommends ASTRA GenAI; local mflux is an explicit alternative. Needs Apple Silicon + `uv tool install --python 3.12 mflux`; first call downloads 31GB of weights. No text inside images — Korean jamo break up) |
 | Image generation | `mlx_image_generate` / `mlx_image_edit` | MLX Core / mlx-serve on loopback (**no vendor bill**. Optional local lane — initial image setup recommends ASTRA GenAI. Inspect actual Hangul. Model-specific edit/variation/alpha contracts apply. Fail closed if :11234 is down; this plugin never launches the app. `brew install --cask mlx-core`) |
 | Image generation | `gpt_image_text2img` / `gpt_image_img2img` | OpenAI GPT Image (OPENAI_API_KEY — **saved selection takes precedence**: model-dependent sizes, up to 16 references, mask inpainting, usage receipts; GPT Image 2 transparent output is preview) |
-| Video routing | `video_catalog` / `video_plan` / `video_approve` / `video_execute` / `video_status` | Saved model selection, adapter validation, atomic episode budget reservations and durable request receipts. Each shot's plan runs only after the user's yes (`video_approve`), or their approval of every shot (`auto:true`). [Routing contract](skills/_shared/video-routing.md). A spoken cut needs a voice lane — `reference` (`astra_genai_msr`, `seedance_reference`, `fasth3_omni_reference` take a per-character voice sample) or `supplied` (the audio2video tools animate a pinned TTS track); on any other adapter `video_plan` refuses it with `voice_lane_required`, while narration over a non-speaking picture runs anywhere. Veo, Gemini Omni and Seedance 1.x left the plugin on 2026-10-31 because none takes a voice reference: a saved choice of one reports `migration_required`, and their existing clips stay reusable. |
+| Video routing | `video_catalog` / `video_plan` / `video_approve` / `video_execute` / `video_status` | Saved model selection, adapter validation, atomic episode budget reservations and durable request receipts. Each shot's plan runs only after the user's yes (`video_approve`), or their approval of every shot (`auto:true`). [Routing contract](skills/_shared/video-routing.md). A spoken cut needs a voice lane — `reference` (`astra_genai_msr`, `seedance_reference`, `fasth3_omni_reference`, `minimax_reference`, `heygen_reference` take a per-character voice sample) or `supplied` (the audio2video tools, `ltx_api_audio2video` included, animate a pinned TTS track); on any other adapter `video_plan` refuses it with `voice_lane_required`, while narration over a non-speaking picture runs anywhere. Veo, Gemini Omni and Seedance 1.x left the plugin on 2026-10-31 because none takes a voice reference: a saved choice of one reports `migration_required`, and their existing clips stay reusable. |
+| Local video upscale | `video_upscale_catalog` / `video_upscale_start` / `video_upscale_job` | Adapter-based local Real-ESRGAN restoration or Lanczos resize, including 4K batches. Detached jobs expose progress/cancel/resume, preserve source frames and encoded audio, verify hashes and write per-clip receipts. No character settings, API calls or automatic downloads. Does not change storyboards or assemble the master; continue with produce when requested. [Setup and workflow](skills/upscale-video/SKILL.md). |
 | Video generation | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Dreamina Seedance 2.x (ARK_API_KEY, BytePlus ModelArk — 480p–4k, **2–30s in 1-second steps** billed for what you request, 7 aspect ratios, up to 30 reference images plus reference audio — a character's fixed voice (`referenceAudioPaths`) — plus reference video (`referenceVideoPaths`): an optional 3D previz as `Video 1`, the vendor's clay-model reference — a generated cut may pre-render in Blender or three.js first (user directive 2026-09-11, optional since 2026-10-18), so the camera path and timing land as planned; a local clip is served through `MEDIA_UPLOAD_URL` or a cloudflared quick tunnel for the life of the task. Audio can be turned off. Seedance 2.x rejects real human faces, so photoreal real-person sources go to an LTX lane. Every generated cut uses the saved video model and resolution (`PRODUCTION.videoModel`, from `.social-flow/models.json`); a per-cut change is an explicit user exception in `PRODUCTION.modelSettings.overrides`. The storyboard forecasts that model's cost. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
 | Video references | `fasth3_omni_reference` | FastH3 Omni via MLX-Serve: image/video/audio references, eight steps, video with sound. [Setup and adapter contract](docs/fasth3-omni.md) |
+| Hosted video vendors | `ltx_api_img2video` / `ltx_api_audio2video` / `minimax_img2video` / `minimax_reference` / `heygen_img2video` / `heygen_reference` | One common layer (`vendor-video.ts`: one paid submit, a durable job ID, polling, download) with an adapter per vendor. Save `{engine:"ltx-api"\|"minimax"\|"heygen", model, resolution, operation}` and episodes plan with `video_plan` as usual: silent shots take the image lane, spoken shots the `reference` lane (MiniMax H3, HeyGen Video 1: the cast's panels, the start image as the last picture and the speaker's voice sample) or LTX audio-to-video (the pinned TTS track). Neither MiniMax nor HeyGen can pin a first frame beside voice samples. Keys: `LTX_API_KEY`, `MINIMAX_API_KEY`, `HEYGEN_API_KEY`. [API schemas](docs/research/2026-11-18-video-model-api-schemas/README.md) |
 | Video generation | `ltx_video_generate` | MLX Core / mlx-serve (24fps rgb8 muxed to mp4 with ffmpeg. Default 768×1280, RAM-capped at 800MB decoded RGB. Not the default path and not on the Seedance face-policy table. Pack install, request grid and measured render times: [LTX 2.5 runbook](docs/mlx-ltx-2.5.md)) |
 | Video generation | `astra_text2video` / `astra_img2video` / `astra_keyframe_video` / `astra_audio2video` / `astra_ic_lora` / `astra_video_upscale` / `astra_video_retake` | ASTRA video API (`ASTRA_VIDEO`, self-hosted LTX-2.5 — **our own box, so no per-call bill and no vendor policy**, but it renders ONE job at a time: 66–184s each plus queue, which makes it the batch lane rather than the interactive one. Seven tools over the server modes; `tier` picks generate·guided·guided_fast·guided_hq, and `astra_ic_lora` runs one reference still or clip through an IC-LoRA adapter (adapters, `guidance`, `conditioning_mask`, `skip_stage_2`, `{name, strength}` lora entries and `generateAudio` are live since the 2026-10-17 server change). The only lane with `lora` adapters (`cinemagraph` · `slow-motion`, generate only), with a keyframe mode that passes through 2–8 supplied stills at chosen frame indices, and with a retake mode that re-rolls one time span of an existing clip. `astra_video_upscale` doubles a clip through the `pixel-upscaler-x2` adapter, sizing the request from the clip and copying its soundtrack back; it is a generative re-render for sources up to about 512×896 ([upscale-video](skills/upscale-video/SKILL.md)). Length is frames (8k+1, 25–361 on every mode, the server's published ceiling); `duration` in seconds is converted to the nearest 8k+1 by the tool. `astra_video_capabilities` reads the live server's own limits; sizes sit on a 64-pixel grid with a 2,064,384-pixel ceiling, so 9:16 is **1024×1920** — 1088×1920 exceeds the area ceiling at every frame count, and 1080×1920 is off-grid. Clips carry 48kHz stereo AAC; `audio2video` carries the supplied sound re-encoded, rather than a newly generated track. Stereo (2-channel) input is required: mono is refused at upload because it fails in the engine audio encoder. With no duration, numFrames or audioMaxDuration, the client explicitly sends 121 frames (~5.04s) for compatibility because server omission metadata conflicts; `audioMaxDuration: 8` selects 185 frames (~7.71s) at 24fps. `generateAudio: false` strips the sound after generation (same GPU time). `expectLipSync: true` (on-screen speech only) measures with ffmpeg whether the picture moves with the supplied speech and re-renders with a new seed when it does not, up to `maxAttempts` (default 2); it never fails the call and leaves phoneme-level sync, the speaking person and voice identity `not_reviewed`. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
 | Unified ASTRA GenAI | `astra_genai_text2video` / `astra_genai_img2video` / `astra_genai_text2img` / `astra_genai_edit` / `astra_genai_msr` / `astra_genai_audio2video` / `astra_genai_video_status` | Separate `astra-genai` engine and `ASTRA_GENAI_API_KEY` gateway token. LTX v2 text/image video, MSR with up to four subjects plus a background (speech and effects rendered natively; subjects 1–2 take the speaker's pinned voice sample by default when the gateway supports it), and Z-Image text/img2img/inpaint with optional prompt expansion. `astra_genai_audio2video` animates supplied speech: the clip is as long as the audio (up to 361 frames), mono or stereo input at a 7350–96000 Hz AAC standard rate, sent as a data URI of at most 15,000,000 base64 characters or an HTTPS URL. Local edit/MSR references are supported; no LoRA or retake. Managed plans require an explicit cost reservation. [Configuration and recovery](skills/_shared/astra-genai.md). |
@@ -814,9 +868,11 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | 3D | `mlx_3d_generate` | MLX Core / mlx-serve (GLB from an image, consumed by the offline HTML mesh slide lane) |
 | 3D previz | `blender_scene_read` / `blender_scene_build` / `blender_camera_set` / `blender_object_animate` / `blender_pose_key` / `blender_motion_import` / `blender_render_previz` | **Optional before a generated video cut** (user directive 2026-09-11, optional since 2026-10-18) — the same plan renders in three.js through `previz-template.html` + `previz-runtime.js` when Blender is not installed. The local Blender, headless (**no API key, no network, no add-on, no GUI** — needs Blender 4.2+). Reads a .blend; builds a set of grey proxies — a person is a jointed mannequin on a 19-bone rig — plus dog·car·box·cylinder·sphere and GLB imports at the cut's frame range and resolution; places and keys the camera by location, look-at target and lens in metres, degrees and mm; keys objects and people's roots through space; poses a person by channel (raise, elbow, knee, bow …) or retargets a BVH/FBX motion-capture clip onto it, scaled, faced and floored; renders a clean H.264 previz plus stamped stills in Workbench or Eevee. Camera, blocking and body timing as numbers, iterated for free before any paid generation, then handed through `video_plan` → `video_execute` as the reference video of a Seedance 2.x cut — the hand-off (previz → camera and timing, still → first frame, sheets → look, prompt → acting) is in [blender-previz.md](skills/storyboard/references/blender-previz.md) §6 |
 | Growth review | `threads_draft_create` / `threads_review_submit` | Persist drafts and quote-grounded voice/purpose/flow reviews; no model API calls |
+| TikTok | `tiktok_auth` / `tiktok_creator_info` / `tiktok_upload` / `tiktok_publish` / `tiktok_status` / `tiktok_videos` | Channel-scoped Desktop OAuth, inbox draft upload, conditional Direct Post, durable upload receipts and public video metrics. [Setup and review limits](skills/setup-tiktok/SKILL.md). App approval and creator consent are required; browser login is insufficient. |
+| Existing subtitles | `facebook_captions` | List or add language tracks on an owned Facebook video/Reel without republishing; preserve existing locales and default language. |
 | Publish | `threads_publish` / `instagram_publish` / `facebook_publish` / `facebook_comment` / `youtube_publish` / `youtube_update` | Direct platform API calls — **exposed only for platforms with a credential file**, except `youtube_update`, which is always listed and errors without a token; it edits title/description/tags/visibility of an already-uploaded video and is the only way an upload goes public (`youtube_publish` starts `private`) |
 | Comment inbox | `sns_comment_inbox` / `sns_comment_reply` / `sns_comment_moderate` | Cross-platform normalized inbox · replies · hiding (no deletes). Inbox and replies cover all 4 platforms; hiding excludes YouTube (its API only offers held-for-review, which means something else) |
-| Storyboard | `story_sequence` / `story_scene` / `story_shot` / `shot_characters` / `shot_dialogue` / `shot_icons` / `shot_image` / `shot_prompt` / `storyboard_read` / `storyboard_apply` / `storyboard_check` / `scenario_check` | A new board is written in order: sequences → scenes → one-sentence shot stories, then each shot's characters → each character's lines, then the icon-row attributes, then each shot's start (and first_last end) image composed from its sheet panels, place and props — a place whose sheet names a built set starts from that set rendered in Blender at the shot's size and angle — then its English video prompt (`story_order` refuses a layer before its parent). Inside an episode `story_sequence` starts the board, and `story_scene`/`story_shot` continue a story-first one, only once `storyboard/cast.json` names its characters, each with an existing `assets/characters/<id>/identity.md` and, unless `voiceOnly`, its face, front and back sheet panels (`cast_required` · `cast_source_missing` · `character_panel_missing`). `storyboard_read.boundaryReview` exposes every playback join as unverified editorial evidence; follow [shot boundary decisions](skills/storyboard/references/shot-boundaries.md) before images. It never merges or blocks production. The episode board as sequences → scenes → shots (`window.STRUCTURE` beside the flat `SCENES` produce reads), plus the scenario input contract. `read` returns the tree at four levels; `apply` writes or patches the board and refuses only an unreadable board or a story-order violation; `storyboard_check` runs the structure rules plus the full `check-scenes.js` contract; `scenario_check` runs S1–S12 on `candidates/` or `scenario.md` and returns the checker JSON. Local files only — the board rules live in [structure-contract.js](skills/storyboard/references/structure-contract.js), shared with the checker and approval page |
+| Storyboard | `story_sequence` / `story_scene` / `story_shot` / `story_music` / `shot_characters` / `shot_dialogue` / `shot_icons` / `shot_image` / `shot_prompt` / `storyboard_read` / `storyboard_apply` / `storyboard_check` / `scenario_check` | A new board is written in order: sequences → scenes → one-sentence shot stories, then each shot's characters (two at most, with a third cast member in view as a bystander and unnamed people as extras) → each character's lines, then each scene's music decision (`story_music`: score with a cue or none, each with its reason), then the icon-row attributes, then each shot's start (and first_last end) image composed from its sheet panels, place and props — a place whose sheet names a built set starts from that set rendered in Blender at the shot's size and angle — then its English video prompt (`story_order` refuses a layer before its parent). Inside an episode `story_sequence` starts the board, and `story_scene`/`story_shot` continue a story-first one, only once `storyboard/cast.json` names its characters, each with an existing `assets/characters/<id>/identity.md` and, unless `voiceOnly`, its face, front and back sheet panels (`cast_required` · `cast_source_missing` · `character_panel_missing`). `storyboard_read.boundaryReview` exposes every playback join as unverified editorial evidence; follow [shot boundary decisions](skills/storyboard/references/shot-boundaries.md) before images. It never merges or blocks production. The episode board as sequences → scenes → shots (`window.STRUCTURE` beside the flat `SCENES` produce reads), plus the scenario input contract. `read` returns the tree at four levels; `apply` writes or patches the board and refuses only an unreadable board or a story-order violation; `storyboard_check` runs the structure rules plus the full `check-scenes.js` contract; `scenario_check` runs S1–S12 on `candidates/` or `scenario.md` and returns the checker JSON. Local files only — the board rules live in [structure-contract.js](skills/storyboard/references/structure-contract.js), shared with the checker and approval page |
 | Capability | `capability_status` | What this machine has configured, grouped by capability with an "N of M" count, plus the env var that would unlock each missing provider. Call it before planning anything that spends money — otherwise a missing key only surfaces when the call fails, after the plan was built around it. Reports configuration, not reachability |
 | Check | `sns_account_check` | Batch /me check across tokens (token values never shown) |
 | Growth insights | `threads_insights` / `threads_search` | Threads insights (account/post metrics) + public keyword search — for grow-threads (`threads_manage_insights` · `threads_keyword_search` scopes) |
@@ -961,6 +1017,8 @@ Latest image model research: **[Image APIs, local models and production tips](do
 
 Latest video API research: **[Video model API pricing](docs/research/2026-10-18-video-model-api-pricing/README.md)** — official endpoints, model capabilities, per-second/token rates and reference-input charges, checked 2026-10-18 (Korean).
 
+API schema comparison of LTX-2.5 Pro, MiniMax H3 and HeyGen Video 1: **[Video model API schemas](docs/research/2026-11-18-video-model-api-schemas/README.md)** — endpoints, every request field, reference/voice inputs, pricing and fit with the voice lanes, checked 2026-11-18 (Korean).
+
 Manuals are bilingual — Korean pages with English siblings (`*.en.html`).
 Full index: **[docs/index.html](docs/index.html)** (Korean) ·
 **[docs/index.en.html](docs/index.en.html)** (English).
@@ -1076,7 +1134,8 @@ home, `assets/characters/index.html`, `assets/characters/<id>/index.html`,
 `assets/props/index.html`, `assets/props/details/<hash>.html`, `assets/locations/index.html`, `storyboards/index.html`
 and `storyboards/<episode>/index.html`. The sidebar links to storyboards, character
 sheets, prop sheets and background sheets. Prop and background catalogues read each
-episode’s canonical `SB_DOC` in `scenes.js` and link back to its storyboard. All open directly
+episode’s canonical `SB_DOC` in `scenes.js` and link back to its storyboard; backgrounds
+shared by the whole channel come first, from `assets/locations/<id>/background.json`. All open directly
 with file://, with bundled Wanted Sans and no network request. Character sheets
 show front/back/face, additional images, identity and voice. Prop detail pages use the
 same layout: reference images with their condition variants, identifying facts, continuity
@@ -1189,7 +1248,7 @@ Checks were removed for speed (user directive, 2026-10-31): only the story order
 episode cast (2026-11-01) are enforced, and checks come back once the quality is known. An
 episode goes cast (`storyboard/cast.json`: each character's `identity.md` and, unless
 `voiceOnly`, its face, front and back panels) → story (`story_sequence` → `story_scene` → `story_shot`) → each shot's characters and lines
-(`shot_characters` → `shot_dialogue`) → icon attributes (`shot_icons`) → props and
+(`shot_characters`, with each one's expression → `shot_dialogue`) → each scene's music decision (`story_music`) → icon attributes (`shot_icons`) → props and
 backgrounds → each shot's start image, and the end image a first_last shot needs
 (`shot_image`, generate-cut-images) → video prompt (`shot_prompt`) → each shot's video
 after the user's yes (`video_plan` → `video_approve` → `video_execute`, generate-cut-videos).
@@ -1225,3 +1284,49 @@ adapter's duration grid and maximum. It follows episode settings and scoped over
 limits remain explicit. `video_plan` rechecks the actual request, rejects over-limit or shorter
 coverage and resolves unspecified lengths upward, including MSR via `requiredSeconds`.
 These are planned timings; native speech and generated playback still need measurement.
+
+`storyboard_read {level:"direction"}` returns the direction plan alone, as counts: each scene's
+shots in order (size, angle, move, length), the longest runs of one size and of held shots,
+held shots by size, lengths by size, the longest shots with their action counts, and sentences
+standing as the same reason on several shots. Nothing in it is a target. A reason belongs to a
+choice (2026-11-17): size, viewpoint and a camera move carry one; a hold, a plain cut, the
+episode's own render route and a first or reference frame plan need none. `shot_icons` and
+the direction read name the wide shots (els, ls, ws, fs) held without a reason and refuse none.
+
+## Video plans and candidate review
+
+The shared storyboard shows each saved video request beside its candidate footage:
+authored and adapter prompts, temporal performance, image/voice mappings, changed inputs,
+draft/final/revision lineage, recorded runtime endpoint, elapsed time and estimated or
+settled cost. `video_status {episode}` reads that local overview; a request ID still
+selects one receipt and its existing recovery path. `storyboard_read.videoProduction`
+returns the same data. No status read starts generation.
+
+`shot_prompt` and `speech_manage plan_video` share the camera/performance compiler.
+Native speech remains model-timed; attached speech supplies measured intervals.
+References can declare English `preserve`/`avoid` arrays. Candidate labels and repair
+suggestions do not change saved models, add approval gates or certify footage. Each
+attempt uses a unique filename and the existing authorization; choose a take with the
+existing attachment tool. See [video routing](skills/_shared/video-routing.md#plans-candidate-takes-and-local-review).
+
+
+### TikTok publishing
+
+TikTok publication follows **private upload → browser cover edit and verification
+→ public visibility** on the same post. Use ego lite to save the cover, reopen it
+and inspect the profile crop before making the post public. If that step is blocked,
+keep the post private and report it. Inbox delivery and private Direct Post completion
+are intermediate states. See [the workflow](skills/publish/references/tiktok-private-cover.md).
+
+### TikTok setup
+
+`/social-flow:setup-tiktok mochi-bo` connects the intended channel without publishing.
+See [the setup skill](skills/setup-tiktok/SKILL.md) and [official API mapping](skills/setup-tiktok/references/api.md).
+
+A story is written in the language the user names for the episode, else the saved
+project `languages.speech`, else the channel's own language, else the language of the
+request, and the board records it as `STORY.language`. Untimed lines are timed in English, Chinese, Japanese, Spanish,
+French, German, Vietnamese and Korean (only the Korean rate is measured). Optional
+`languages.subtitles` and `review` name the other languages. The shared review template reads `review-localization.json` and shows
+a floating story/dialogue language selector while production keeps its source text.
+See [review translations](skills/storyboard/references/review-localization.md).

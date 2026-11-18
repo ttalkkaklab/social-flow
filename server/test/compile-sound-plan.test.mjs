@@ -3,6 +3,7 @@ import { existsSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync,
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { afterEach, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -23,6 +24,28 @@ function run(paths) {
 }
 
 describe('compile-sound-plan', () => {
+  it('reports a scene with no music decision and a cue file this episode never generated, and still compiles', () => {
+    const p = room();
+    writeFileSync(join(p.work, 'bgm-tense.wav'), 'copied from another episode');
+    writeFileSync(join(p.board, 'scenes.js'), `window.STORY={authoring:"story-first"};
+window.STRUCTURE={sequences:[{id:"q1",scenes:[1,2]}],scenes:[{no:1,music:{decision:"score",reason:"r",span:"a"}},{no:2}]};
+window.MUSIC={tense:{prompt:"low strings"},$timeline:[{id:"a",cue:"tense",start:{shotId:"s0001",atSeconds:0},end:{shotId:"s0001",atSeconds:"end"}}]};
+window.SCENES=[{id:"s0001",type:"points",scene:1},{id:"s0002",type:"points",scene:2}];\n`);
+    let result = run(p);
+    assert.equal(result.status, 0, result.stderr);
+    let { warnings } = JSON.parse(result.stdout);
+    assert.equal(warnings.length, 2, JSON.stringify(warnings));
+    assert.match(warnings[0], /1 scene\(s\) have no music decision \(scenes 2\)/);
+    assert.match(warnings[1], /music cue "tense".*no generation receipt in this episode/);
+    // The same bytes with a music_execute receipt in this episode are this episode's cue.
+    mkdirSync(join(p.work, 'music-routing'));
+    writeFileSync(join(p.work, 'music-routing/state.json'), JSON.stringify({ jobs: { a: { output: {
+      sha256: createHash('sha256').update('copied from another episode').digest('hex') } } } }));
+    result = run(p); ({ warnings } = JSON.parse(result.stdout));
+    assert.equal(warnings.length, 1, JSON.stringify(warnings));
+    assert.match(warnings[0], /no music decision/);
+  });
+
   it('keeps markerless legacy manifests byte-identical', () => {
     const p = room();
     writeFileSync(join(p.board, 'scenes.js'), 'window.SCENES=[{type:"cover"}];\n');

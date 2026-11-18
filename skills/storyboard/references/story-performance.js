@@ -20,7 +20,10 @@ function storyPerformance(win) {
     const transcript = validGroup && Array.isArray(transcriptGroups) ? transcriptGroups[e.group - 1] : undefined;
     const quote = e?.kind === 'action' ? (text(e.text) ? e.text : '')
       : ['dialogue', 'narration'].includes(e?.kind) ? [n?.sub, n?.tts, transcript?.text].find(text) || '' : '';
-    return { shot: i + 1, event: j + 1, kind: e?.kind, character: e?.character,
+    return { shot: i + 1, ...(text(s.id) ? { shotId: s.id } : {}), event: j + 1,
+      ...(['dialogue', 'narration'].includes(e?.kind) && text(n?.id) ? { lineId: n.id } : {}),
+      ...(['dialogue', 'narration'].includes(e?.kind) && text(n?.delivery) ? { delivery: n.delivery } : {}),
+      kind: e?.kind, character: e?.character,
       to: e?.to, group: e?.group, quote, ...(!quote ? {unresolved: true} : {}) };
   }));
 }
@@ -64,8 +67,10 @@ function checkPerformanceStory(win, { requireReview = false, hash } = {}) {
     let lastGroup = 0;
     events.forEach(e => {
       if (!object(e) || !['action', 'dialogue', 'narration'].includes(e.kind)) { fail('invalid performance event'); return; }
-      if (!ids.has(e.character)) fail('performance character is not cast: ' + e.character);
-      used.add(e.character);
+      // An action nobody performs is an event in the world: a door slams in the wind, the power goes out.
+      const worldEvent = e.kind === 'action' && e.character === undefined;
+      if (!worldEvent && !ids.has(e.character)) fail('performance character is not cast: ' + e.character);
+      if (!worldEvent) used.add(e.character);
       if (e.kind === 'action') {
         if (!text(e.text) || e.group !== undefined) fail('action requires visible text and no speech group');
       } else {
@@ -75,7 +80,7 @@ function checkPerformanceStory(win, { requireReview = false, hash } = {}) {
         if (!text(n?.tts) && !text(n?.sub) && !text(n?.text)) fail('speech group is empty');
         if (n?.speaker !== e.character) fail('speech speaker must equal performance character');
         if (e.text !== undefined) fail('speech event must reference a group, not duplicate text');
-        if (e.kind === 'dialogue' && !ids.has(e.to) && !['self', 'audience'].includes(e.to)) fail('dialogue requires a known addressee');
+        if (e.kind === 'dialogue' && !ids.has(e.to) && !['self', 'audience', 'unidentified'].includes(e.to)) fail('dialogue requires a known addressee or unidentified in-world listener');
       }
     });
     if (seen.size !== spoken.length) fail('performance must include every speech group exactly once');

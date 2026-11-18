@@ -102,6 +102,10 @@ for provider mappings and the distinction between sample imitation and exact spe
    (`view` face, front, back). It builds the prompt from the sheet — the face takes
    `appearance`; the headless front and back take height, weight, relative scale,
    build, proportions and outfit — and adds the project style and the panel framing.
+   Describe structure in `appearance` — bone shape, eyes, skin, hair — and leave expressions
+   out: a smile written there reaches every shot through the face panel, so the tool drops
+   smile, grin and laugh clauses from the face prompt and reports them. Habitual expressions
+   belong in personality or acting, and each shot sets its own with `shot_characters`.
    Do not write panel prompts by hand; `character-sheet.js <identity.md> --panel <view>`
    prints the same words for inspection. Image prompts are
    English, so write those physical text fields in English; a field in another script
@@ -119,7 +123,7 @@ for provider mappings and the distinction between sample imitation and exact spe
    do not feed a multi-view composite to an image/video generator.
 3. For a character's voice, cast one voice and generate its sample with
    `character_voice_audition` `create` and a single candidate: it uses the selected
-   engine/model and a natural Korean line from `speech.examples`, then sets the voice
+   engine/model and a natural line in the character's `tts.language` from `speech.examples`, then sets the voice
    at once (identity `tts`, `voiceSelection`, the sheet's `voice.wav` and `sample.txt`).
    Run a three-candidate audition only when the user asks to compare voices; present
    the real audio (the sheet plays the candidates) and `select` their actual choice.

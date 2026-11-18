@@ -169,7 +169,7 @@ channel, and consent to issue a fresh `refresh_token`. Treat
   | Scope | What it opens | When |
   |---|---|---|
   | `youtube.upload` | video upload | publish (required) |
-  | `youtube.force-ssl` | `youtube_update` (the private → public flip) + comment reads/replies + requested caption tracks | publish (required) · growth |
+  | `youtube.force-ssl` | `youtube_update` (the private → public flip) + the processing wait before a Shorts cover + comment reads/replies + requested caption tracks | publish (required) · growth |
   | `youtube.readonly` | channel/video reads | growth |
   | `yt-analytics.readonly` | period metrics (views, watch time, subscriber change) | growth |
   | `yt-analytics-monetary.readonly` | revenue metrics | optional |

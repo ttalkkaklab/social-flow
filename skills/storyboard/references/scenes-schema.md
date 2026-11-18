@@ -49,7 +49,9 @@ timing; this compatibility path does not certify that actions fit the old video.
 
 `performance` is the ordered source for `speech_manage plan_video` and audio
 composition. Speech events reference the existing 1-based `narration` group and
-retain their `character` and `to`. An action uses `{kind:"action", character, text}`.
+retain their `character` and `to`. An action uses `{kind:"action", character, text}`; an
+event nobody performs — a door slams in the wind, the power goes out, rain starts — omits `character`
+rather than borrowing a cast member who does not do it.
 Optionally add `durationSeconds` (finite and positive) after staging it. An action
 with `withGroup:1` starts with speech group 1: its duration defaults to that speech
 interval, or its own authored duration may extend it. Concurrent action and speech
@@ -560,7 +562,10 @@ completion is the first distribution signal under 60 s, and a curiosity loop —
 the answer delayed and paid in stages — is the strongest hold short-form has (user-relayed,
 2026-08-23 — field-practice grade; own-channel retention, n=4, 2026-08-26 — the body that paid
 in installments held flat, the body that explained something already accepted slid from the
-third second). Zeigarnik is the name for the mechanism, not a measurement of it.
+third second). The first-seconds figure is relayed field practice whose source could not be
+traced (2026-11-11 survey). Do not cite Zeigarnik as the reason: a 2025 meta-analysis did not
+confirm better memory for unfinished tasks, though it did confirm the urge to resume an
+interrupted one. See [story interest](story-interest.md) §9 for the grades.
 
 The channel brief that asked for a first-second layer (owner, 2026-09-07) reports viewers
 leaving inside the first second — field-practice grade, and unmeasured on our channel. Our own
@@ -935,7 +940,7 @@ wants the handoff):
 |---|---|---|
 | `mode` | ✅ | one of the eight routes above |
 | `purpose` | ✅ | `motion_explanation` · `portrait` · `atmosphere` · `place` · `detail` · `human_process` · `mechanism` · `physical_state` · `comparison` · `trend` · `share` · `distribution` · `geographic` · `timeline` · `live_action` · `evidence_quote` · `verdict` · `archive` — each has a default route (render-routing.md §Routes; the list is `render-routing.js` `PURPOSES`) |
-| `reason` | ✅ | why this treatment conveys the cut; one generic reason repeated across the episode fails visual-direction |
+| `reason` | ✅ where the route is this cut's choice | why this treatment conveys the cut; one generic reason repeated across the episode fails visual-direction. Optional on `generated_video` in a `full_video` episode, where the episode chose the route |
 | `camera` | ✅ on `still_camera` | `{effect, target, reason}` — `effect` one of `focus-in` · `rack-focus` · `approach` · `pull` · `pan` · `tilt` · `push` · `reveal` · `parallax`; `focusTo` (and `focusFrom` for rack-focus) as normalized `[x, y, rx, ry]` from the actual image; `pan` and `tilt` travel from `focusFrom` to `focusTo` (both required, and different — a pan is a sentence from A to B, L13; `tilt` is the vertical pan, the scale-by-time move); `layersPlan` and, before production, `layers` for reveal/parallax |
 | `action` | ✅ on `character_html` · `object_html` · `generated_video` · `stock_video` | the visible subject change, before and after |
 | `actors` | ✅ on `character_html`, forbidden on `object_html` | who performs the action |
@@ -1066,7 +1071,8 @@ Choose delivery from the story: an explainer can be all narrator `voiceover`; dr
 `on_screen` for visible characters physically speaking to each other. Reserve `off_screen`
 for a motivated listener reaction, insert or speaker outside the frame. Visible narrators,
 inner thoughts and text messages may use `voiceover`; physical presentation to camera uses
-`on_screen`. Optional `deliveryReason` explains an exception on the review card. Do not
+`on_screen`. Optional `deliveryReason` explains an exception on the review card, naming that
+line's own situation; the same note on every line of one delivery is not an exception. Do not
 replace an entire dramatic exchange with closed-mouth action to avoid lip synchronization.
 The review renders lines in order with the speaker's profile image, name and delivery label
 beside a speech bubble. A shot without lines displays “No dialogue”; it does not acquire a
@@ -1096,8 +1102,8 @@ narration: [
 ]
 ```
 
-- `tts` — Korean phonetic spelling (numbers and loanwords as they sound: "4,700만"→"사천칠백만",
-  "eTax"→"이택스")
+- `tts` — the line as it is said, in the story's language (`STORY.language`). Korean spells
+  numbers and loanwords as they sound: "4,700만"→"사천칠백만", "eTax"→"이택스"
 - `sub` — the sentence's written notation (numbers and proper nouns kept as written); the
   delivered video carries no subtitles, and a sidecar is made from it only on request
 - `speaker` — `SB_DOC.characters[].id`; required on a `speechPlanVersion:1` board (the narrator
@@ -1288,7 +1294,8 @@ policy; a profile may raise, lower, or switch each off with `off`:
 - **`hook_video` (false)** — no mandatory generated-video opening. Every cut, including the
   cover, uses `shot.render` from [render-routing.md](render-routing.md). An explicitly enabled
   channel policy still requires a moving opening; design essential continuous action for it.
-  Video caps and budget are ceilings, not quotas. Every generated cut writes `visual.why`.
+  Video caps and budget are ceilings, not quotas. Every generated cut writes `visual.why`,
+  except in a `full_video` episode, where the episode chose video for every cut.
 - **`max_static_ground_seconds` (8)** — guidance, not a gate (owner decision 2026-10-18):
   one still comfortably holds one cut. The clock resets only
   when the picture itself changes: a generated clip (a motion background, a b-roll, a quote
@@ -1797,9 +1804,11 @@ different from the last join — the same join five times in a row is right when
 thing happened five times.
 
 **Every moving join uses live outgoing frames.** Follow
-[cinematic-edit.md](../../produce/references/cinematic-edit.md) for `edit.in`, `edit.pre`,
+[cinematic-edit.md](../../produce/references/cinematic-edit.md) for `edit.in`, `edit.out`
+(only on a card that plays its clip soundtrack), `edit.pre`,
 `edit.post`, `edit.transitionSeconds`, `edit.reason` and `edit.continuity`. New boundaries
-record the intended action/visual connection and why this join fits. Reserve source duration
+record the intended action/visual connection; a join other than a plain cut records why it
+fits. Reserve source duration
 for the outgoing handle before generation and quoting. The builder compiles joins from this
 source plan, uses unseen moving frames after the outgoing card boundary and preserves the
 audio/subtitle timeline. It does not freeze the last frame. Default pre-roll is zero and
@@ -1918,10 +1927,9 @@ The rules that applied to the old one-string camera line now apply per slot:
   `zoom in`, travel → `truck`, presence → `handheld`, closing → `pedestal up` …). The measured
   part is narrow — a move on its own didn't change what viewers felt (p=.84, camera research
   §07); what it raised was immersion, on cuts whose character wasn't set yet. So size, angle,
-  the picture and the sound carry the feel, the move makes the audience move with it, and on a
-  partial-ratio board most body shots can honestly say `movement: "static"` — in `full_video`,
-  where every scene is a clip, the §Camera dynamics ration above (static on at most one shot in
-  three, never twice in a row) applies instead. The finding is a move that
+  the picture and the sound carry the feel, the move makes the audience move with it, and a
+  shot whose performance is the content can honestly say `movement: "static"` on any board,
+  `full_video` included: no share of held or moving shots applies. The finding is a move that
   **contradicts** the declared feel, or a feel left to ride on the move alone.
 
 `shot.size` and `shot.angle` are different axes and stay where they are — `size` is where the
@@ -2016,8 +2024,10 @@ composition: {
 | `leadRoom` | required except none; `left`, `right`, `balanced`, `none` |
 | `reason` | required for intentional and none; none carries only mode and reason |
 
-**New authoring:** record composition for visible faces, oriented subjects and directional
-action. Mark unrelated cuts `none` with a reason or omit the property. Body and object cuts
+**New authoring:** a shot with a structured opening view (`visual.camera.view`) has its
+framing intent written and needs no composition record; add one when headroom, look room or
+lead room must be fixed. On a board without views, record composition for visible faces,
+oriented subjects and directional action. Mark unrelated cuts `none` with a reason or omit the property. Body and object cuts
 do not require eye height. A POV normally has no visible face. An ECU of eyes can use
 `headroom:"cropped"`; an object insert uses `subjectKind:"object"`.
 
@@ -2177,10 +2187,17 @@ character: [                         // an entry may carry its jurisdiction inst
 
 **Two principal characters per shot (user directive, 2026-10-31).** `visual.character` lists at
 most two ids; `check-scenes.js` rejects a third (`[character-limit]`) in draft and full checks.
-When a beat needs three principal characters, split it into shots — the two who act, then the
-reaction or reverse angle — instead of crowding one frame. Extras and unnamed figures stay out
-of `visual.character`; describe them by appearance in `videoDesign.action` and the model draws
-them without a reference.
+A third cast member in view and unnamed figures stay out of `visual.character`.
+
+**People in the frame (user directive, 2026-11-17).** `shot_characters` also writes
+`visual.bystanders` — up to two cast ids seen without an on-screen line, three of the cast in a
+shot at most — and `visual.extras`, one English description of unnamed people ("six children in
+orange bibs chasing a ball"). `shot_image` adds each bystander's face and front panels as
+`role:"bystander", use:"image"` references and writes the extras into the image prompt; when the
+saved image model has no room, the bystander panels give way before the place or the two
+characters. The video call references neither: the start image carries them and the compiled
+video prompt says they stay in the frame without speaking. A bystander who has an on-screen line
+is refused (`shot_bystander_speaks`); the speaker belongs in `visual.character`.
 
 **`scope` is the reference's jurisdiction** — one clause saying what that reference governs, and
 where it may appear. It exists because a reference leaks: hand over a character sheet and the
@@ -2335,6 +2352,18 @@ are not added. Ducking, optional EQ and music-only drop/silence windows still ap
 Overlapping spans mix together, allowing explicitly authored crossfades. Fade lengths must
 fit without overlapping within one span. Match each fade/curve to the selected take.
 
+**`sourceStartSeconds`** (optional, whole milliseconds) starts the cue that far into its file
+instead of at zero. Use it to skip a quiet opening on a short span, or to play a later section
+of one motif in a later scene. A point that leaves less than half a second of the file is an error; a cue with less
+audio after that point than the span needs loops, and the build report says so.
+
+**Each scene's decision lives on the scene.** `story_music` writes
+`STRUCTURE.scenes[].music = { decision: "score" | "none", reason, span? }` together with the
+span it describes, where `span` is the `$timeline` id. A scene on a story-first board without
+it is `undecided`: the review page, `storyboard_read.musicSpotting`, `shot_prompt` and the
+build report name those scenes, and a scene whose decision the timeline contradicts is a
+`mismatch`. These are reports; the build goes on.
+
 `compile-sound-plan.js` writes `music-timeline.json` with resolved cue files. After picture
 assembly, `music-timeline.js` resolves anchors against `work/edit-timeline.tsv` at the actual
 FPS, renders `work/bed.wav`, and records `work/music-timeline-resolved.json` with spans and
@@ -2355,6 +2384,7 @@ window.MUSIC = {
   $mix: {                               // optional; omit the whole block for today's builder defaults
     targetLufs: -14, truePeakDbtp: -1, // project delivery values, not a published YouTube upload spec
     bedSeparationLu: 10, minimumSeparationLu: 4,
+    maximumSeparationLu: 20,           // a timeline span resting further under the speech is reported as too quiet
     ambienceSeparationLu: 15,          // room tone under the speech (amb.tsv)
     cueCrossfadeSeconds: 2,
     hook: { attenuationLu: 6, releaseSeconds: 2 },
@@ -2431,6 +2461,9 @@ the builder's existing defaults, and omitting `$mix` entirely leaves a legacy bo
 manifest and mix path. `targetLufs` and `truePeakDbtp` are this project's delivery values; YouTube's
 public help describes Stable volume but does not publish a numeric upload target. `bedSeparationLu`
 sets the music below measured narration; `minimumSeparationLu` is a speech-time review warning, never an execution gate.
+`maximumSeparationLu` (`BGM_SEP_MAX`, 20 by default) is the review line on the other side: after the
+timeline bed is rendered, each span is measured before ducking, and one resting further under the
+speech than this is reported with its distance. It is our practice, not a published figure.
 `ambienceSeparationLu` does the same for the room-tone bed (`AMB_SEP`, 15 by default), which is laid
 once and never ducked.
 
@@ -2510,6 +2543,8 @@ cue starts and stops, and the shot is where an accent lands. The sources are pra
 and glossaries ([research](../../../docs/research/2026-10-31-bgm-cue-units/index.html)), so read
 these as working practice, as in bgm-scoring §3. On a story-v2 board:
 
+- **On a board the story tools started, `story_music` records the decision.** Every scene gets
+  `score` or `none` with a reason (storyboard §3 Music spotting); the points below say where.
 - **One cue per `story_sequence` by default.** Write the `sound.cue` on the sequence's first
   shot. A chase, montage or climax that runs across scenes stays on that one cue.
 - **Change or drop where the sequence's `question` turns.** That is the scene whose `turn` flips

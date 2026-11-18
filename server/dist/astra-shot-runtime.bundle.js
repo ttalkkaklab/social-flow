@@ -1083,16 +1083,16 @@ var require_util = __commonJS({
     function isStream(obj) {
       return obj && typeof obj === "object" && typeof obj.pipe === "function" && typeof obj.on === "function";
     }
-    function isBlobLike(object3) {
-      if (object3 === null) {
+    function isBlobLike(object4) {
+      if (object4 === null) {
         return false;
-      } else if (object3 instanceof Blob) {
+      } else if (object4 instanceof Blob) {
         return true;
-      } else if (typeof object3 !== "object") {
+      } else if (typeof object4 !== "object") {
         return false;
       } else {
-        const sTag = object3[Symbol.toStringTag];
-        return (sTag === "Blob" || sTag === "File") && ("stream" in object3 && typeof object3.stream === "function" || "arrayBuffer" in object3 && typeof object3.arrayBuffer === "function");
+        const sTag = object4[Symbol.toStringTag];
+        return (sTag === "Blob" || sTag === "File") && ("stream" in object4 && typeof object4.stream === "function" || "arrayBuffer" in object4 && typeof object4.arrayBuffer === "function");
       }
     }
     function pathHasQueryOrFragment(url) {
@@ -1382,8 +1382,8 @@ var require_util = __commonJS({
         }
       );
     }
-    function isFormDataLike(object3) {
-      return object3 && typeof object3 === "object" && typeof object3.append === "function" && typeof object3.delete === "function" && typeof object3.get === "function" && typeof object3.getAll === "function" && typeof object3.has === "function" && typeof object3.set === "function" && object3[Symbol.toStringTag] === "FormData";
+    function isFormDataLike(object4) {
+      return object4 && typeof object4 === "object" && typeof object4.append === "function" && typeof object4.delete === "function" && typeof object4.get === "function" && typeof object4.getAll === "function" && typeof object4.has === "function" && typeof object4.set === "function" && object4[Symbol.toStringTag] === "FormData";
     }
     function addAbortListener(signal, listener) {
       if ("addEventListener" in signal) {
@@ -5074,8 +5074,8 @@ var require_util2 = __commonJS({
       }
       return "allowed";
     }
-    function isErrorLike(object3) {
-      return object3 instanceof Error || (object3?.constructor?.name === "Error" || object3?.constructor?.name === "DOMException");
+    function isErrorLike(object4) {
+      return object4 instanceof Error || (object4?.constructor?.name === "Error" || object4?.constructor?.name === "DOMException");
     }
     function isValidReasonPhrase(statusText) {
       for (let i = 0; i < statusText.length; ++i) {
@@ -5418,7 +5418,7 @@ var require_util2 = __commonJS({
         return new FastIterableIterator(target, kind);
       };
     }
-    function iteratorMixin(name, object3, kInternalIterator, keyIndex = 0, valueIndex = 1) {
+    function iteratorMixin(name, object4, kInternalIterator, keyIndex = 0, valueIndex = 1) {
       const makeIterator = createIterator(name, kInternalIterator, keyIndex, valueIndex);
       const properties = {
         keys: {
@@ -5426,7 +5426,7 @@ var require_util2 = __commonJS({
           enumerable: true,
           configurable: true,
           value: function keys() {
-            webidl.brandCheck(this, object3);
+            webidl.brandCheck(this, object4);
             return makeIterator(this, "key");
           }
         },
@@ -5435,7 +5435,7 @@ var require_util2 = __commonJS({
           enumerable: true,
           configurable: true,
           value: function values() {
-            webidl.brandCheck(this, object3);
+            webidl.brandCheck(this, object4);
             return makeIterator(this, "value");
           }
         },
@@ -5444,7 +5444,7 @@ var require_util2 = __commonJS({
           enumerable: true,
           configurable: true,
           value: function entries() {
-            webidl.brandCheck(this, object3);
+            webidl.brandCheck(this, object4);
             return makeIterator(this, "key+value");
           }
         },
@@ -5453,7 +5453,7 @@ var require_util2 = __commonJS({
           enumerable: true,
           configurable: true,
           value: function forEach(callbackfn, thisArg = globalThis) {
-            webidl.brandCheck(this, object3);
+            webidl.brandCheck(this, object4);
             webidl.argumentLengthCheck(arguments, 1, `${name}.forEach`);
             if (typeof callbackfn !== "function") {
               throw new TypeError(
@@ -5466,7 +5466,7 @@ var require_util2 = __commonJS({
           }
         }
       };
-      return Object.defineProperties(object3.prototype, {
+      return Object.defineProperties(object4.prototype, {
         ...properties,
         [Symbol.iterator]: {
           writable: true,
@@ -6325,13 +6325,13 @@ var require_body = __commonJS({
         stream.cancel("Response object has been garbage collected").catch(noop);
       }
     });
-    function extractBody(object3, keepalive = false) {
+    function extractBody(object4, keepalive = false) {
       let stream = null;
       let controller = null;
-      if (webidl.is.ReadableStream(object3)) {
-        stream = object3;
-      } else if (webidl.is.Blob(object3)) {
-        stream = object3.stream();
+      if (webidl.is.ReadableStream(object4)) {
+        stream = object4;
+      } else if (webidl.is.Blob(object4)) {
+        stream = object4.stream();
       } else {
         stream = new ReadableStream({
           pull() {
@@ -6349,15 +6349,15 @@ var require_body = __commonJS({
       let source = null;
       let length = null;
       let type = null;
-      if (typeof object3 === "string") {
-        source = object3;
+      if (typeof object4 === "string") {
+        source = object4;
         type = "text/plain;charset=UTF-8";
-      } else if (webidl.is.URLSearchParams(object3)) {
-        source = object3.toString();
+      } else if (webidl.is.URLSearchParams(object4)) {
+        source = object4.toString();
         type = "application/x-www-form-urlencoded;charset=UTF-8";
-      } else if (webidl.is.BufferSource(object3)) {
-        source = webidl.util.getCopyOfBytesHeldByBufferSource(object3);
-      } else if (webidl.is.FormData(object3)) {
+      } else if (webidl.is.BufferSource(object4)) {
+        source = webidl.util.getCopyOfBytesHeldByBufferSource(object4);
+      } else if (webidl.is.FormData(object4)) {
         const boundary = `----formdata-undici-0${`${random(1e11)}`.padStart(11, "0")}`;
         const prefix = `--${boundary}\r
 Content-Disposition: form-data`;
@@ -6367,7 +6367,7 @@ Content-Disposition: form-data`;
         const rn = new Uint8Array([13, 10]);
         length = 0;
         let hasUnknownSizeValue = false;
-        for (const [name, value] of object3) {
+        for (const [name, value] of object4) {
           if (typeof value === "string") {
             const chunk2 = textEncoder.encode(prefix + `; name="${formdataEscape(normalizeLinefeeds(name))}"\r
 \r
@@ -6395,7 +6395,7 @@ Content-Type: ${value.type || "application/octet-stream"}\r
         if (hasUnknownSizeValue) {
           length = null;
         }
-        source = object3;
+        source = object4;
         action = async function* () {
           for (const part of blobParts) {
             if (part.stream) {
@@ -6406,22 +6406,22 @@ Content-Type: ${value.type || "application/octet-stream"}\r
           }
         };
         type = `multipart/form-data; boundary=${boundary}`;
-      } else if (webidl.is.Blob(object3)) {
-        source = object3;
-        length = object3.size;
-        if (object3.type) {
-          type = object3.type;
+      } else if (webidl.is.Blob(object4)) {
+        source = object4;
+        length = object4.size;
+        if (object4.type) {
+          type = object4.type;
         }
-      } else if (typeof object3[Symbol.asyncIterator] === "function") {
+      } else if (typeof object4[Symbol.asyncIterator] === "function") {
         if (keepalive) {
           throw new TypeError("keepalive");
         }
-        if (util2.isDisturbed(object3) || object3.locked) {
+        if (util2.isDisturbed(object4) || object4.locked) {
           throw new TypeError(
             "Response body object should not be disturbed or locked"
           );
         }
-        stream = webidl.is.ReadableStream(object3) ? object3 : ReadableStreamFrom(object3);
+        stream = webidl.is.ReadableStream(object4) ? object4 : ReadableStreamFrom(object4);
       }
       if (typeof source === "string" || isUint8Array(source)) {
         action = () => {
@@ -6450,12 +6450,12 @@ Content-Type: ${value.type || "application/octet-stream"}\r
       const body = { stream, source, length };
       return [body, type];
     }
-    function safelyExtractBody(object3, keepalive = false) {
-      if (webidl.is.ReadableStream(object3)) {
-        assert(!util2.isDisturbed(object3), "The body has already been consumed.");
-        assert(!object3.locked, "The stream is locked.");
+    function safelyExtractBody(object4, keepalive = false) {
+      if (webidl.is.ReadableStream(object4)) {
+        assert(!util2.isDisturbed(object4), "The body has already been consumed.");
+        assert(!object4.locked, "The stream is locked.");
       }
-      return extractBody(object3, keepalive);
+      return extractBody(object4, keepalive);
     }
     function cloneBody(body) {
       const { 0: out1, 1: out2 } = body.stream.tee();
@@ -6527,14 +6527,14 @@ Content-Type: ${value.type || "application/octet-stream"}\r
     function mixinBody(prototype, getInternalState) {
       Object.assign(prototype.prototype, bodyMixinMethods(prototype, getInternalState));
     }
-    function consumeBody(object3, convertBytesToJSValue, instance, getInternalState) {
+    function consumeBody(object4, convertBytesToJSValue, instance, getInternalState) {
       try {
-        webidl.brandCheck(object3, instance);
+        webidl.brandCheck(object4, instance);
       } catch (e) {
         return Promise.reject(e);
       }
-      object3 = getInternalState(object3);
-      if (bodyUnusable(object3)) {
+      object4 = getInternalState(object4);
+      if (bodyUnusable(object4)) {
         return Promise.reject(new TypeError("Body is unusable: Body has already been read"));
       }
       const promise = createDeferredPromise();
@@ -6546,15 +6546,15 @@ Content-Type: ${value.type || "application/octet-stream"}\r
           errorSteps(e);
         }
       };
-      if (object3.body == null) {
+      if (object4.body == null) {
         successSteps(Buffer.allocUnsafe(0));
         return promise.promise;
       }
-      fullyReadBody(object3.body, successSteps, errorSteps);
+      fullyReadBody(object4.body, successSteps, errorSteps);
       return promise.promise;
     }
-    function bodyUnusable(object3) {
-      const body = object3.body;
+    function bodyUnusable(object4) {
+      const body = object4.body;
       return body != null && (body.stream.locked || util2.isDisturbed(body.stream));
     }
     function bodyMimeType(requestOrResponse) {
@@ -18768,10 +18768,10 @@ var require_headers = __commonJS({
       while (j > i && isHTTPWhiteSpaceCharCode(potentialValue.charCodeAt(i))) ++i;
       return i === 0 && j === potentialValue.length ? potentialValue : potentialValue.substring(i, j);
     }
-    function fill(headers, object3) {
-      if (Array.isArray(object3)) {
-        for (let i = 0; i < object3.length; ++i) {
-          const header = object3[i];
+    function fill(headers, object4) {
+      if (Array.isArray(object4)) {
+        for (let i = 0; i < object4.length; ++i) {
+          const header = object4[i];
           if (header.length !== 2) {
             throw webidl.errors.exception({
               header: "Headers constructor",
@@ -18780,10 +18780,10 @@ var require_headers = __commonJS({
           }
           appendHeader(headers, header[0], header[1]);
         }
-      } else if (typeof object3 === "object" && object3 !== null) {
-        const keys = Object.keys(object3);
+      } else if (typeof object4 === "object" && object4 !== null) {
+        const keys = Object.keys(object4);
         for (let i = 0; i < keys.length; ++i) {
-          appendHeader(headers, keys[i], object3[keys[i]]);
+          appendHeader(headers, keys[i], object4[keys[i]]);
         }
       } else {
         throw webidl.errors.conversionFailed({
@@ -23557,15 +23557,15 @@ var require_connection = __commonJS({
       });
       return controller;
     }
-    function closeWebSocketConnection(object3, code, reason, validate = false) {
+    function closeWebSocketConnection(object4, code, reason, validate = false) {
       code ??= null;
       reason ??= "";
       if (validate) validateCloseCodeAndReason(code, reason);
-      if (isClosed(object3.readyState) || isClosing(object3.readyState)) {
-      } else if (!isEstablished(object3.readyState)) {
-        failWebsocketConnection(object3);
-        object3.readyState = states.CLOSING;
-      } else if (!object3.closeState.has(sentCloseFrameState.SENT) && !object3.closeState.has(sentCloseFrameState.RECEIVED)) {
+      if (isClosed(object4.readyState) || isClosing(object4.readyState)) {
+      } else if (!isEstablished(object4.readyState)) {
+        failWebsocketConnection(object4);
+        object4.readyState = states.CLOSING;
+      } else if (!object4.closeState.has(sentCloseFrameState.SENT) && !object4.closeState.has(sentCloseFrameState.RECEIVED)) {
         const frame = new WebsocketFrameSend();
         if (reason.length !== 0 && code === null) {
           code = 1e3;
@@ -23583,11 +23583,11 @@ var require_connection = __commonJS({
         } else {
           frame.frameData = emptyBuffer;
         }
-        object3.socket.write(frame.createFrame(opcodes.CLOSE));
-        object3.closeState.add(sentCloseFrameState.SENT);
-        object3.readyState = states.CLOSING;
+        object4.socket.write(frame.createFrame(opcodes.CLOSE));
+        object4.closeState.add(sentCloseFrameState.SENT);
+        object4.readyState = states.CLOSING;
       } else {
-        object3.readyState = states.CLOSING;
+        object4.readyState = states.CLOSING;
       }
     }
     function failWebsocketConnection(handler, code, reason, cause) {
@@ -26105,10 +26105,10 @@ var util;
       return obj[e];
     });
   };
-  util2.objectKeys = typeof Object.keys === "function" ? (obj) => Object.keys(obj) : (object3) => {
+  util2.objectKeys = typeof Object.keys === "function" ? (obj) => Object.keys(obj) : (object4) => {
     const keys = [];
-    for (const key in object3) {
-      if (Object.prototype.hasOwnProperty.call(object3, key)) {
+    for (const key in object4) {
+      if (Object.prototype.hasOwnProperty.call(object4, key)) {
         keys.push(key);
       }
     }
@@ -30247,14 +30247,14 @@ function loadEnvFile(file = join3(process.env.SNS_TOKEN_DIR || join3(homedir(), 
   for (const [key, value] of Object.entries(process.env)) {
     if (value && /^\$\{[A-Za-z_][A-Za-z0-9_]*(:-[^}]*)?\}$/.test(value)) delete process.env[key];
   }
-  let text2;
+  let text3;
   try {
-    text2 = readFileSync3(file, "utf8");
+    text3 = readFileSync3(file, "utf8");
   } catch {
     return [];
   }
   const filled = [];
-  for (const raw of text2.split("\n")) {
+  for (const raw of text3.split("\n")) {
     const line = raw.trim();
     if (!line || line.startsWith("#")) continue;
     const eq = line.indexOf("=");
@@ -30289,6 +30289,10 @@ var config = {
   openaiApiKey: process.env.OPENAI_API_KEY || "",
   /** BytePlus ModelArk API key (required by the seedance_* video generation tools) — https://ai.byteplus.com/ark/region:ap-southeast-1/apikey */
   arkApiKey: process.env.ARK_API_KEY || "",
+  /** Hosted video vendors (vendor-video.ts): the official LTX API, MiniMax H3 and HeyGen Video 1. */
+  ltxApiKey: process.env.LTX_API_KEY || "",
+  minimaxApiKey: process.env.MINIMAX_API_KEY || "",
+  heygenApiKey: process.env.HEYGEN_API_KEY || "",
   /**
    * Suno API key (required by the suno_* music tools) — https://sunoapi.org/api-key
    *
@@ -30328,7 +30332,8 @@ var defaultSnsCredentialFiles = {
   THREADS: process.env.THREADS_TOKEN_FILE || join3(snsTokenDir, "threads_token"),
   INSTAGRAM: process.env.INSTAGRAM_TOKEN_FILE || join3(snsTokenDir, "instagram_token"),
   FACEBOOK: process.env.FACEBOOK_PAGE_TOKEN_FILE || join3(snsTokenDir, "facebook_page_token"),
-  YOUTUBE: process.env.YOUTUBE_OAUTH_FILE || join3(snsTokenDir, "youtube-oauth-client.json")
+  YOUTUBE: process.env.YOUTUBE_OAUTH_FILE || join3(snsTokenDir, "youtube-oauth-client.json"),
+  TIKTOK: process.env.TIKTOK_OAUTH_FILE || join3(snsTokenDir, "tiktok-oauth.json")
 };
 var disabledToolsFile = join3(snsTokenDir, "disabled-tools.json");
 function astraVideoBaseUrl() {
@@ -30356,8 +30361,8 @@ async function requestRaw(method, url, headers, body, timeoutMs) {
       body: body !== void 0 ? JSON.stringify(body) : void 0,
       signal: AbortSignal.timeout(effectiveTimeoutMs)
     });
-    const text2 = await res.text();
-    return { ok: res.ok, status: res.status, body: text2 };
+    const text3 = await res.text();
+    return { ok: res.ok, status: res.status, body: text3 };
   } catch (error) {
     if (error instanceof Error && error.name === "TimeoutError") {
       return { ok: false, status: 504, body: `Request timed out after ${effectiveTimeoutMs}ms: ${url}` };
@@ -30676,7 +30681,7 @@ var receiptSchema = external_exports.object({
 }).strict();
 
 // src/video-routing.ts
-import { createRequire as createRequire4 } from "node:module";
+import { createRequire as createRequire5 } from "node:module";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 
 // src/astra-video-client.ts
@@ -30687,7 +30692,7 @@ import * as path2 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.121.1",
+  version: "0.122.0",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -30696,7 +30701,7 @@ var package_default = {
     node: ">=20"
   },
   scripts: {
-    build: "tsc && node build-video-catalog.mjs && node build-image-catalog.mjs && node build-music-catalog.mjs && npm run bundle && npm run bundle:shot && npm run bundle:mesh",
+    build: "tsc && node build-upscale.mjs && node build-video-catalog.mjs && node build-image-catalog.mjs && node build-music-catalog.mjs && npm run bundle && npm run bundle:shot && npm run bundle:mesh",
     start: "node dist/index.js",
     test: "node --import ./test/isolate.mjs --test test/*.test.mjs",
     check: "npm run build && npm test",
@@ -31797,32 +31802,86 @@ var statusSchema = external_exports.object({ missing: external_exports.array(ext
 
 // src/astra-genai-video.ts
 var GENAI_VIDEO_MODELS = ["ltx-2.5-22b-distilled", "ltx-2.5-22b-dev"];
-var GENAI_CAMERA_MOTIONS = ["dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"];
-var genaiTextToVideoSchema = external_exports.object({
-  prompt: external_exports.string().min(1).max(5e3),
+var localResolution = external_exports.string().regex(/^[1-9]\d*x[1-9]\d*$/).refine((value) => {
+  const [w, h] = value.split("x").map(Number), width = Math.ceil(w / 64) * 64, height = Math.ceil(h / 64) * 64;
+  return Number.isSafeInteger(w) && Number.isSafeInteger(h) && Math.min(w, h) >= 64 && w % 2 === 0 && h % 2 === 0 && Math.max(width, height) <= 1920 && width * height <= 2064384;
+}, "Use even WIDTHxHEIGHT sides of at least 64; rounded-up /64 sides must fit 1920 and 2,064,384 pixels");
+var msrGuidanceFields = {
+  guidanceScale: external_exports.number().finite().min(1).max(10).optional(),
+  nagScale: external_exports.number().finite().min(0).max(100).optional(),
+  nagAlpha: external_exports.number().finite().min(0).max(1).optional(),
+  nagTau: external_exports.number().finite().min(0).max(10).optional()
+};
+function msrNegativeRule(args, issue) {
+  if ((args.nagScale ?? 0) > 0 && args.negativePrompt === void 0)
+    issue("MSR nagScale > 0 requires negativePrompt");
+  if (args.negativePrompt !== void 0 && (args.guidanceScale ?? 1) <= 1 && (args.nagScale ?? 0) === 0)
+    issue("MSR negativePrompt requires guidanceScale > 1 or nagScale > 0");
+}
+function devNegativeRule(args, ctx) {
+  if (args.negativePrompt === void 0) return;
+  const issue = (message) => ctx.addIssue({ code: "custom", path: ["negativePrompt"], message });
+  if (args.model !== "ltx-2.5-22b-dev") issue("negativePrompt requires ltx-2.5-22b-dev, or image-to-video references with guidanceScale > 1 or nagScale > 0");
+  if (args.negativePrompt.length > 2e3) issue("The dev backend accepts a negativePrompt of at most 2000 characters");
+}
+var textVideoFields = external_exports.object({
+  prompt: external_exports.string().min(1).max(2e3),
+  negativePrompt: external_exports.string().trim().min(1).max(5e3).optional(),
   model: external_exports.enum(GENAI_VIDEO_MODELS),
-  duration: external_exports.number().int().nullable(),
-  resolution: external_exports.string().min(1),
+  duration: external_exports.number().int().min(1).nullable(),
+  resolution: localResolution,
   fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
   generateAudio: external_exports.boolean().default(true),
-  cameraMotion: external_exports.enum(GENAI_CAMERA_MOTIONS).nullable().optional(),
   reserveUsd: external_exports.number().finite().nonnegative(),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
 }).strict();
-var genaiImageToVideoSchema = genaiTextToVideoSchema.extend({
+function localVideoTiming(args, ctx) {
+  if (args.duration !== null && 8 * Math.ceil((args.duration * args.fps - 1) / 8) + 1 > 361)
+    ctx.addIssue({ code: "custom", path: ["duration"], message: "Duration and fps exceed the local 361-frame limit" });
+}
+var genaiTextToVideoSchema = textVideoFields.superRefine((args, ctx) => {
+  localVideoTiming(args, ctx);
+  devNegativeRule(args, ctx);
+});
+var genaiImageToVideoSchema = textVideoFields.extend({
   imageUri: genaiImageUriSchema.optional(),
   imagePath: external_exports.string().min(1).optional(),
   lastFrameUri: genaiImageUriSchema.nullable().optional(),
-  lastFramePath: external_exports.string().min(1).optional()
+  lastFramePath: external_exports.string().min(1).optional(),
+  references: external_exports.array(external_exports.object({
+    imageUri: genaiImageUriSchema.optional(),
+    imagePath: external_exports.string().min(1).optional(),
+    background: external_exports.boolean().default(false)
+  }).strict().refine(
+    (ref) => Number(ref.imageUri !== void 0) + Number(ref.imagePath !== void 0) === 1,
+    "Supply exactly one imageUri or imagePath per reference"
+  )).min(1).max(5).optional(),
+  ...msrGuidanceFields
 }).strict().superRefine((args, ctx) => {
   const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  localVideoTiming(args, ctx);
+  if (args.duration === null && (args.lastFrameUri != null || args.lastFramePath !== void 0))
+    issue("A last frame requires an explicit duration");
   if (Number(args.imageUri !== void 0) + Number(args.imagePath !== void 0) !== 1) issue("Supply exactly one imageUri or imagePath");
   if (args.lastFrameUri != null && args.lastFramePath !== void 0) issue("Supply at most one lastFrameUri or lastFramePath");
+  if (!args.references) {
+    if (Object.keys(msrGuidanceFields).some((key) => args[key] !== void 0))
+      issue("guidanceScale and NAG require references (MSR conditioning); ltx-2.5-22b-dev already runs guided");
+    devNegativeRule(args, ctx);
+  } else {
+    msrNegativeRule(args, issue);
+    if (args.model !== "ltx-2.5-22b-distilled") issue("Additional references require ltx-2.5-22b-distilled (MSR conditioning)");
+    if (args.duration === null) issue("Additional references require an explicit duration");
+    const backgrounds = args.references.filter((ref) => ref.background).length;
+    if (backgrounds > 1 || args.references.length - backgrounds > 4 || backgrounds === args.references.length)
+      issue("References require 1..4 subjects and at most one background");
+  }
 });
 var oneOf = (a, b) => Number(a !== void 0) + Number(b !== void 0);
 var genaiAudioToVideoSchema = external_exports.object({
   prompt: external_exports.string().trim().min(1).max(5e3),
+  negativePrompt: external_exports.string().trim().min(1).max(2e3).optional(),
   model: external_exports.literal("ltx-2.5-22b-dev"),
   resolution: external_exports.string().min(1),
   fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
@@ -31846,10 +31905,7 @@ var GENAI_MSR_FRAMES = { min: 25, max: 361, step: 8, frameRate: 24 };
 var genaiMsrSchema = external_exports.object({
   prompt: external_exports.string().trim().min(1).max(2e3),
   negativePrompt: external_exports.string().trim().min(1).max(5e3).optional(),
-  guidanceScale: external_exports.number().finite().min(1).max(10).optional(),
-  nagScale: external_exports.number().finite().min(0).max(100).optional(),
-  nagAlpha: external_exports.number().finite().min(0).max(1).optional(),
-  nagTau: external_exports.number().finite().min(0).max(10).optional(),
+  ...msrGuidanceFields,
   references: external_exports.array(external_exports.object({
     imageUri: genaiImageUriSchema.optional(),
     imagePath: external_exports.string().min(1).optional(),
@@ -31874,10 +31930,7 @@ var genaiMsrSchema = external_exports.object({
   filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use a .mp4 filename").optional()
 }).strict().superRefine((args, ctx) => {
   const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-  if ((args.nagScale ?? 0) > 0 && args.negativePrompt === void 0)
-    issue("MSR nagScale > 0 requires negativePrompt");
-  if (args.negativePrompt !== void 0 && (args.guidanceScale ?? 1) <= 1 && (args.nagScale ?? 0) === 0)
-    issue("MSR negativePrompt requires guidanceScale > 1 or nagScale > 0");
+  msrNegativeRule(args, issue);
   const backgrounds = args.references.filter((ref) => ref.background).length;
   if (backgrounds > 1 || args.references.length - backgrounds > 4) issue("MSR supports at most four subjects and one background");
   let subject = 0;
@@ -31907,8 +31960,8 @@ var receiptSchema2 = external_exports.object({
 }).strict();
 var statusSchema2 = external_exports.object({
   id: external_exports.string().min(1),
-  status: external_exports.enum(["pending", "processing", "completed", "failed"]),
-  result: external_exports.object({ video_url: external_exports.string().min(1) }).passthrough().nullish(),
+  status: external_exports.enum(["pending", "processing", "completed", "failed", "cancelled"]),
+  result: external_exports.object({ video_url: external_exports.string().min(1).optional() }).passthrough().nullish(),
   error: external_exports.unknown().optional()
 }).passthrough();
 var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
@@ -32144,6 +32197,115 @@ var seedanceReferenceSchema = external_exports.object({
   }
 }).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
 
+// src/ltx-api-video.ts
+import { execFileSync as execFileSync2 } from "node:child_process";
+var LTX_API_MODELS = ["ltx-2-5-pro", "ltx-2-5-fast"];
+var TIERS = {
+  "720p": ["1280x720", "720x1280", "720x720", "1080x720", "720x1080"],
+  "1080p": ["1920x1080", "1080x1920", "1080x1080", "1620x1080", "1080x1620"],
+  "1440p": ["2560x1440", "1440x2560", "1440x1440", "2160x1440", "1440x2160"],
+  "4k": ["3840x2160", "2160x3840", "2160x2160", "3240x2160", "2160x3240"]
+};
+var ltxApiTier = (resolution2) => Object.entries(TIERS).find(([, sizes]) => sizes.includes(resolution2))?.[0];
+function ltxApiSeconds(model2, resolution2, fps = 24) {
+  const long = model2 === "ltx-2-5-fast" && ["720p", "1080p"].includes(ltxApiTier(resolution2) ?? "") && fps <= 25;
+  return long ? [6, 8, 10, 12, 14, 16, 18, 20] : [6, 8, 10];
+}
+var common2 = {
+  prompt: external_exports.string().max(5e3).describe("English action, camera and sound."),
+  model: external_exports.enum(LTX_API_MODELS).default("ltx-2-5-pro").describe("LTX API model id."),
+  resolution: external_exports.string().refine((value) => Boolean(ltxApiTier(value)), "Use a WIDTHxHEIGHT the LTX API lists, e.g. 1920x1080").default("1920x1080").describe("Output size, e.g. 1920x1080 or 1080x1920."),
+  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24).describe("Frame rate."),
+  cameraMotion: external_exports.enum(["dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"]).optional().describe("Optional preset camera move."),
+  sourceImagePath: external_exports.string().min(1).describe("First frame image (PNG/JPEG/WEBP, 7 MB inline)."),
+  lastImagePath: external_exports.string().min(1).optional().describe("Optional last frame image."),
+  outputPath: external_exports.string().optional().describe("Output directory."),
+  filename: bareFilenameSchema("video").optional().describe("MP4 filename.")
+};
+var ltxApiImg2VideoSchema = external_exports.object({
+  ...common2,
+  prompt: common2.prompt.min(1),
+  durationSeconds: external_exports.number().int().default(6).describe("6, 8 or 10 seconds (Fast at 720p/1080p, 24/25 fps: up to 20)."),
+  generateAudio: external_exports.boolean().default(false).describe("Generate a soundtrack; false for cuts whose sound comes from assembly.")
+}).strict().superRefine((v, ctx) => {
+  if (!ltxApiSeconds(v.model, v.resolution, v.fps).includes(v.durationSeconds))
+    ctx.addIssue({ code: "custom", path: ["durationSeconds"], message: `${v.model} at ${v.resolution}/${v.fps} fps takes ${ltxApiSeconds(v.model, v.resolution, v.fps).join(", ")} seconds` });
+});
+var ltxApiAudio2VideoSchema = external_exports.object({
+  ...common2,
+  audioPath: external_exports.string().min(1).describe("The composed pinned-voice track; its length sets the clip length (2\u201310 s, Fast at 720p/1080p up to 20 s).")
+}).strict();
+function ltxApiAudioSeconds(file) {
+  const seconds = Number(execFileSync2("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], { encoding: "utf8", timeout: 15e3 }));
+  if (!Number.isFinite(seconds) || seconds <= 0) throw new Error("Cannot read the length of " + file);
+  return seconds;
+}
+
+// src/minimax-video.ts
+var MINIMAX_MODELS = {
+  "MiniMax-H3": { resolutions: ["768P", "2K"], minSeconds: 4, freeImages: 5 },
+  "MiniMax-H3-Highspeed": { resolutions: ["480P", "768P"], minSeconds: 4, freeImages: 5 },
+  "MiniMax-H3-Lite": { resolutions: ["480P", "768P"], minSeconds: 4, freeImages: 5 },
+  "MiniMax-H3-Max": { resolutions: ["480P", "768P"], minSeconds: 5, freeImages: 2 }
+};
+var MINIMAX_MAX_SECONDS = 15;
+var MINIMAX_RATIOS = ["adaptive", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"];
+var common3 = {
+  prompt: external_exports.string().min(1).max(7e3).describe("English scene, action and sound; quoted dialogue in the video's language."),
+  model: external_exports.enum(Object.keys(MINIMAX_MODELS)).default("MiniMax-H3").describe("MiniMax H3 model id, e.g. MiniMax-H3."),
+  resolution: external_exports.enum(["480P", "768P", "2K"]).default("768P").describe("Output resolution; 2K only on MiniMax-H3."),
+  durationSeconds: external_exports.number().int().min(4).max(MINIMAX_MAX_SECONDS).default(5).describe("Whole seconds, 4\u201315 (MiniMax-H3-Max 5\u201315)."),
+  outputPath: external_exports.string().optional().describe("Output directory."),
+  filename: bareFilenameSchema("video").optional().describe("MP4 filename.")
+};
+function checkModel(v, ctx) {
+  const spec = MINIMAX_MODELS[v.model];
+  if (!spec.resolutions.includes(v.resolution)) ctx.addIssue({ code: "custom", path: ["resolution"], message: `${v.model} renders ${spec.resolutions.join(" or ")}` });
+  if (v.durationSeconds < spec.minSeconds) ctx.addIssue({ code: "custom", path: ["durationSeconds"], message: `${v.model} needs at least ${spec.minSeconds} seconds` });
+}
+var minimaxImg2VideoSchema = external_exports.object({
+  ...common3,
+  sourceImagePath: external_exports.string().min(1).describe("First frame image (PNG/JPEG/WEBP)."),
+  lastImagePath: external_exports.string().min(1).optional().describe("Optional last frame image.")
+}).strict().superRefine(checkModel);
+var minimaxReferenceSchema = external_exports.object({
+  ...common3,
+  ratio: external_exports.enum(MINIMAX_RATIOS).default("adaptive").describe("Output ratio; MiniMax-H3-Lite needs a concrete ratio."),
+  referenceImagePaths: external_exports.array(external_exports.string().min(1)).min(1).max(9).describe('Reference pictures, numbered "reference image N" in the prompt.'),
+  referenceAudioPaths: external_exports.array(external_exports.string().min(1)).max(3).default([]).describe('Voice samples (WAV/MP3, 2\u201315 s each, 15 s total), "reference audio N" in the prompt.')
+}).strict().superRefine((v, ctx) => {
+  checkModel(v, ctx);
+  if (v.model === "MiniMax-H3-Lite" && v.ratio === "adaptive") ctx.addIssue({ code: "custom", path: ["ratio"], message: "MiniMax-H3-Lite needs a concrete ratio" });
+});
+
+// src/heygen-video.ts
+var HEYGEN_MODEL = "heygen-video-1";
+var HEYGEN_SECONDS = { min: 5, max: 15 };
+var HEYGEN_RATIOS = ["adaptive", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"];
+var common4 = {
+  prompt: external_exports.string().min(1).max(16e3).describe("English scene, action and sound; quoted dialogue in the video's language. References are <Picture N> and <Audio N>."),
+  model: external_exports.literal(HEYGEN_MODEL).default(HEYGEN_MODEL).describe("HeyGen model id."),
+  // 1080p and 2k have no published standard price after the launch promotion, so they stay out.
+  resolution: external_exports.enum(["480p", "768p"]).default("768p").describe("Output resolution."),
+  durationSeconds: external_exports.number().int().min(HEYGEN_SECONDS.min).max(HEYGEN_SECONDS.max).default(5).describe("Whole seconds, 5\u201315."),
+  seed: external_exports.number().int().min(0).max(4294967295).optional().describe("Reproducible seed."),
+  outputPath: external_exports.string().optional().describe("Output directory."),
+  filename: bareFilenameSchema("video").optional().describe("MP4 filename.")
+};
+var heygenImg2VideoSchema = external_exports.object({
+  ...common4,
+  sourceImagePath: external_exports.string().min(1).describe("First frame image; the clip opens on it exactly."),
+  lastImagePath: external_exports.string().min(1).optional().describe("Optional end image the clip moves toward.")
+}).strict();
+var heygenReferenceSchema = external_exports.object({
+  ...common4,
+  ratio: external_exports.enum(HEYGEN_RATIOS).default("adaptive").describe("Output ratio; adaptive follows the first picture."),
+  referenceImagePaths: external_exports.array(external_exports.string().min(1)).min(1).max(9).describe("Reference pictures, <Picture N> in the prompt."),
+  referenceAudioPaths: external_exports.array(external_exports.string().min(1)).max(3).default([]).describe("Voice samples, <Audio N> in the prompt.")
+}).strict().superRefine((v, ctx) => {
+  if (v.referenceImagePaths.length + v.referenceAudioPaths.length > 12) ctx.addIssue({ code: "custom", message: "At most 12 references" });
+});
+
 // src/video-duration.ts
 var DURATION_TOOLS = [
   "seedance_text2video",
@@ -32156,7 +32318,12 @@ var DURATION_TOOLS = [
   "astra_genai_msr",
   "mlx_video_generate",
   "ltx_video_generate",
-  "fasth3_omni_reference"
+  "fasth3_omni_reference",
+  "ltx_api_img2video",
+  "minimax_img2video",
+  "minimax_reference",
+  "heygen_img2video",
+  "heygen_reference"
 ];
 function videoDurationLimits(tool, input = {}) {
   let limits;
@@ -32165,6 +32332,14 @@ function videoDurationLimits(tool, input = {}) {
     const spec = SEEDANCE_MODEL_SPECS[model2];
     if (!spec) throw new Error("Unknown Seedance model: " + String(model2));
     limits = { min: spec.duration[0], max: spec.duration[1] };
+  } else if (tool === "ltx_api_img2video") {
+    limits = { seconds: ltxApiSeconds(String(input.model ?? "ltx-2-5-pro"), String(input.resolution ?? "1920x1080"), Number(input.fps ?? 24)) };
+  } else if (tool.startsWith("minimax_")) {
+    const spec = MINIMAX_MODELS[input.model ?? "MiniMax-H3"];
+    if (!spec) throw new Error("Unknown MiniMax model: " + String(input.model));
+    limits = { min: spec.minSeconds, max: MINIMAX_MAX_SECONDS };
+  } else if (tool.startsWith("heygen_")) {
+    limits = { ...HEYGEN_SECONDS };
   } else if (tool === "astra_genai_msr") {
     limits = { ...GENAI_MSR_FRAMES, frameRate: input.frameRate ?? GENAI_MSR_FRAMES.frameRate };
   } else if (DURATION_TOOLS.includes(tool) && tool.startsWith("astra_")) {
@@ -32227,17 +32402,28 @@ var VIDEO_ADAPTERS = Object.freeze({
     tool,
     model2.operation === "reference" ? reference("mlx", "local-mlx", model2.schema) : entry("mlx", "local-mlx", model2.operation, model2.schema)
   ])),
-  mlx_video_generate: entry("mlx", "local-mlx", "text", mlxVideoGenerateSchema)
+  mlx_video_generate: entry("mlx", "local-mlx", "text", mlxVideoGenerateSchema),
+  // Hosted vendors through the common layer (vendor-video.ts). Image lanes render silent cuts;
+  // spoken cuts use the reference lanes (MiniMax, HeyGen) or LTX audio-to-video.
+  ltx_api_img2video: entry("ltx-api", "ltx-api-v2", "image", ltxApiImg2VideoSchema),
+  ltx_api_audio2video: entry("ltx-api", "ltx-api-v2", "audio", ltxApiAudio2VideoSchema),
+  minimax_img2video: entry("minimax", "minimax-open-platform-v2", "image", minimaxImg2VideoSchema),
+  minimax_reference: reference("minimax", "minimax-open-platform-v2", minimaxReferenceSchema),
+  heygen_img2video: entry("heygen", "heygen-v3", "image", heygenImg2VideoSchema),
+  heygen_reference: reference("heygen", "heygen-v3", heygenReferenceSchema)
 });
+var VENDOR_REFERENCE_TOOLS = ["minimax_reference", "heygen_reference"];
 function speechVideoCapabilities(provider, model2, operation) {
   if (["veo", "omni"].includes(provider) || provider === "seedance" && !Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
     throw new Error(`video_engine_unsupported: ${provider} ${model2} cannot keep a character's voice; choose a video model again with project_manage`);
+  if (["minimax", "heygen"].includes(provider) && operation === "reference") return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "Native speech from the prompt dialogue with an optional voice sample; voice identity is imitation, not preserved audio" };
+  if (provider === "ltx-api" && operation === "audio") return { provider, model: model2, audioConditioning: true, lipSync: false, postLipSync: false, evidence: "LTX API audio-to-video conditions on the supplied track; preservation and mouth sync unverified" };
   if (provider === "astra-genai" && operation === "reference") return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio" };
   if (provider === "astra-genai-desktop") return { provider, model: model2, audioConditioning: true, lipSync: false, postLipSync: false, evidence: "Gateway A2V reencodes supplied audio; timing/voice identity not guaranteed; installed model capabilities must be checked" };
   if (provider === "astra") return { provider, model: model2, audioConditioning: true, lipSync: true, postLipSync: false, evidence: "astra_audio2video adapter contract" };
   if (provider === "seedance" && Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
     return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "Reference audio does not promise exact recorded-speech timing; no post-lipsync adapter installed" };
-  if (["host", "mlx", "astra-genai"].includes(provider))
+  if (["host", "mlx", "astra-genai", "ltx-api", "minimax", "heygen"].includes(provider))
     return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "No verified external-speech synchronization adapter; voiceover remains available" };
   throw new Error("No verified speech synchronization contract for selected deployment/model");
 }
@@ -32246,7 +32432,7 @@ function speechVideoCapabilities(provider, model2, operation) {
 import { fileURLToPath } from "node:url";
 
 // src/usage-ledger.ts
-import { execFileSync as execFileSync2 } from "node:child_process";
+import { execFileSync as execFileSync3 } from "node:child_process";
 import path4 from "node:path";
 var EPISODE_MARKER = path4.join("storyboard", "scenes.js");
 var SEEDANCE_FAMILY = {
@@ -32273,7 +32459,7 @@ var ELEVENLABS_KEY = { eleven_v4: "tts.elevenlabs" };
 var GEMINI_UNPRICED = "unit price unconfirmed (? in prices.tsv) \u2014 cost-report.sh flags the line instead of counting it as $0";
 function probeSeconds(file) {
   try {
-    const out = execFileSync2("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], {
+    const out = execFileSync3("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], {
       encoding: "utf8",
       timeout: 15e3,
       stdio: ["ignore", "pipe", "ignore"]
@@ -32301,6 +32487,24 @@ function priceOf(tool, args = {}) {
     const seconds = image ? null : typeof args.duration === "number" ? args.duration : tool === "astra_genai_msr" ? num(args.numFrames, 121) / num(args.frameRate, 24) : null;
     return { key: image ? "image.astra-genai" : "video.astra-genai", quantity: seconds, note: "Gateway pricing unverified; managed reservation is authoritative, not a measured bill" };
   }
+  if (tool.startsWith("ltx_api_")) {
+    const model2 = str(args.model, "ltx-2-5-pro"), tier = ltxApiTier(str(args.resolution, "1920x1080"));
+    if (!tier) return { key: null, quantity: null, note: "unlisted LTX API resolution" };
+    if (tool !== "ltx_api_audio2video") return { key: `ltx-api.${model2}.${tier}`, quantity: num(args.durationSeconds, 6) };
+    try {
+      return { key: `ltx-api.${model2}.${tier}`, quantity: ltxApiAudioSeconds(str(args.audioPath, "")), note: "billed on input audio seconds" };
+    } catch {
+      return { key: `ltx-api.${model2}.${tier}`, quantity: null, note: "audio length unreadable" };
+    }
+  }
+  if (tool.startsWith("minimax_"))
+    return {
+      key: `minimax.${str(args.model, "MiniMax-H3").toLowerCase()}.${str(args.resolution, "768P").toLowerCase()}`,
+      quantity: num(args.durationSeconds, 5),
+      note: "output seconds; input images past the free allowance are reserved separately"
+    };
+  if (tool.startsWith("heygen_"))
+    return { key: `heygen.${tool === "heygen_reference" ? "reference" : "image"}.${str(args.resolution, "768p")}`, quantity: num(args.durationSeconds, 5) };
   if (tool.startsWith("seedance_")) {
     const model2 = str(args.model, "dreamina-seedance-2-0-260128");
     const resolution2 = str(args.resolution, "720p");
@@ -32418,20 +32622,31 @@ function charUnits(args) {
 // src/video-pricing.ts
 var PRICE_FILE = fileURLToPath(new URL("../../skills/autoproduce/references/prices.tsv", import.meta.url));
 
-// src/video-image-inputs.ts
+// src/video-review.ts
 import { createRequire } from "node:module";
-var load = createRequire(import.meta.url);
+var review = () => createRequire(import.meta.url)("../../skills/storyboard/references/video-production.js");
+function refreshVideoReview(episode) {
+  try {
+    review().write(episode);
+  } catch {
+    process.stderr.write("Video review export needs a refresh; request receipts remain authoritative.\n");
+  }
+}
+
+// src/video-image-inputs.ts
+import { createRequire as createRequire2 } from "node:module";
+var load = createRequire2(import.meta.url);
 
 // src/video-voice.ts
 import { existsSync as existsSync4, readFileSync as readFileSync6, realpathSync } from "node:fs";
 import path5 from "node:path";
-import { createRequire as createRequire2 } from "node:module";
+import { createRequire as createRequire3 } from "node:module";
 var speakerBindingSchema = external_exports.object({
   speaker: external_exports.string().trim().min(1),
   screenPosition: external_exports.enum(["left", "center", "right"]),
   description: external_exports.string().trim().min(1)
 }).strict();
-var load2 = createRequire2(import.meta.url);
+var load2 = createRequire3(import.meta.url);
 var object = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
 var text = (value) => typeof value === "string" ? value.trim() : "";
 function resolveCharacterVoice(character, context, warnings) {
@@ -32462,11 +32677,114 @@ function resolveCharacterVoice(character, context, warnings) {
 }
 
 // src/video-prompt.ts
-import { createRequire as createRequire3 } from "node:module";
-var load3 = createRequire3(import.meta.url);
+import { createRequire as createRequire4 } from "node:module";
+var load3 = createRequire4(import.meta.url);
+var object2 = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
+var text2 = (value) => typeof value === "string" ? value.trim() : "";
+function planVideoPerformance(shot, options = {}) {
+  const acting = load3("../../skills/_shared/scene-acting.js");
+  const timeline = acting.planScenePerformance(shot, options.measureAudio);
+  return { ...timeline, timing: options.mode === "native" && timeline.timing === "needs_audio_duration" ? "model_timed" : timeline.timing };
+}
+var sentence = (value) => {
+  const s = value.trim(), capped2 = s.charAt(0).toUpperCase() + s.slice(1);
+  return !s ? "" : /[.!?]["'”’)]+$/.test(capped2) ? capped2 : capped2.replace(/[.!?]*$/, "") + ".";
+};
+function expressionWords(shot, names = {}) {
+  return Object.entries(object2(object2(shot.visual).expression)).filter(([, cue]) => text2(cue)).map(([id, cue]) => `${names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id}: ${text2(cue).replace(/[.\s]+$/, "")}`).join("; ");
+}
+function compileVideoPrompt(shot, source, names = {}, options = {}) {
+  const plan = object2(shot.shot), visual = object2(shot.visual), frames = object2(visual.frames), camera = object2(visual.camera);
+  const msr = frames.mode === "reference";
+  const words = load3("../../skills/storyboard/references/assemble-bg-prompt.js");
+  const views = load3("../../skills/storyboard/references/shot-view.js");
+  const viewWords = camera.view === void 0 ? "" : views.instructions(camera.view);
+  const sizes = viewWords ? words.SIZE_WORDS_OBJECT : words.SIZE_WORDS;
+  const catalogue = load3("../../skills/storyboard/references/film-techniques.js");
+  const contract2 = load3("../../skills/storyboard/references/structure-contract.js");
+  const travels = load3("../../skills/storyboard/references/production-mode.js").travels;
+  const picked = (Array.isArray(plan.techniques) ? plan.techniques : []).map(object2).map((t) => ({
+    id: text2(t.id),
+    from: text2(t.from),
+    to: text2(t.to),
+    on: text2(t.on),
+    entry: catalogue.byId[text2(t.id)]
+  }));
+  const movement = text2(camera.movement), speed = text2(camera.speed), target = text2(camera.target), settle = text2(camera.end);
+  const move = picked.find((t) => t.entry?.fields.movement && movement.toLowerCase().startsWith(t.entry.fields.movement))?.entry;
+  const rack = picked.find((t) => t.entry?.fields.focus);
+  const pace = { slow: "slowly", steady: "steadily", fast: "quickly" }[speed];
+  const ends = travels(camera) ? ", with a short pause on the opening and closing pictures" : "";
+  const moveWords = !movement ? "" : /^(static|fixed|locked)/i.test(movement) ? "The camera holds a static frame." : move?.prompt ? sentence(`The camera ${pace ? pace + " " : ""}${move.prompt.replace("{target}", target || "the subject")}${speed && !pace ? ` at a ${speed} pace` : ""}${ends}`) : sentence(`Camera: ${[speed, movement].filter(Boolean).join(" ")}` + (target ? ` toward ${target}` : "") + ends);
+  const focusWords = !rack ? "" : sentence(rack.from && rack.to ? `Rack focus from ${rack.from} to ${rack.to}` : `${rack.entry.label.en} from the near subject to the far subject`);
+  const sizeWords = sentence(sizes[text2(plan.size)] || ""), angleWords = sentence(words.ANGLE_WORDS[text2(plan.angle)] || "");
+  const framing = sentence([sizes[text2(plan.size)], words.ANGLE_WORDS[text2(plan.angle)]].filter(Boolean).join(", "));
+  const depthWords = plan.depth ? sentence(contract2.depthText(plan.depth)) : "";
+  const other = picked.filter((t) => t.entry && ["camera", "framing"].includes(t.entry.category) && !t.entry.fields.movement && !t.entry.fields.focus && !t.entry.fields.size && !t.entry.fields.angle && !(viewWords && t.entry.fields.viewpoint));
+  const lines = (Array.isArray(shot.narration) ? shot.narration : []).map(object2);
+  const mode = options.mode ?? (lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen") ? "native" : "voiceover");
+  const design = object2(plan.videoDesign);
+  const motion = object2(design.motion);
+  const states = [...new Set((Array.isArray(motion.beats) ? motion.beats : []).map((beat) => text2(object2(beat).state)).filter(Boolean))];
+  const performance2 = planVideoPerformance(shot, { ...options, mode });
+  const acting = load3("../../skills/_shared/scene-acting.js");
+  const beats = acting.performanceBeats(performance2.performance, mode, !msr);
+  const worn = expressionWords(shot, names);
+  const called = (id) => names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id;
+  const seen = (Array.isArray(visual.bystanders) ? visual.bystanders : []).map(text2).filter(Boolean), extras = text2(visual.extras);
+  const prompt = [
+    msr ? framing : "Start from the given first frame.",
+    msr ? depthWords : "",
+    moveWords,
+    settle ? sentence(`Closing frame: ${settle}`) : "",
+    focusWords,
+    // A beat accent (speed ramp, impact shake) names the moment it fires on.
+    ...other.map((t) => sentence(t.entry.fields.accent && t.entry.prompt ? t.entry.prompt.replace("{cue}", t.on || t.entry.fields.cue) : t.entry.instruction)),
+    viewWords || (text2(camera.framing) ? sentence(`Opening composition: ${text2(camera.framing)}`) : ""),
+    !viewWords && camera.rear && !other.some((t) => t.entry.fields.viewpoint === "rear") ? "View the subject from behind." : "",
+    !viewWords && camera.pov && !other.some((t) => t.entry.fields.viewpoint === "pov") ? sentence(`Point of view: ${text2(camera.pov) || "the named character"}`) : "",
+    sentence(source.action),
+    seen.length ? sentence(`The opening picture also shows ${seen.map(called).join(" and ")}, who ${seen.length > 1 ? "stay" : "stays"} in the frame and never speaks`) : "",
+    extras ? sentence(`Unnamed people in the frame: ${extras}`) : "",
+    ...["before", "after", "continuity"].map((key) => text2(design[key]) ? sentence(`${key}: ${text2(design[key])}`) : ""),
+    ...states.filter((state) => ![source.action, design.before, design.after, design.continuity].includes(state)).map((state) => sentence(`Visible state: ${state}`)),
+    !lines.length && beats.length ? "This is a silent scene. Perform the planned action without invented speech or voiceover." : "",
+    ...beats,
+    // The model's default face is pleasant; the authored state has to be named and held (LTX guide: physical cues, state after the action).
+    worn ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : "",
+    frames.mode === "first_last" ? sentence(`End on the given last frame${source.end ? ": " + source.end : ""}`) : source.end ? sentence(`End on ${source.end}`) : "",
+    sentence(`Audio: ${source.sound ? source.sound + (/\b(music|soundtrack|score|bgm|melody|orchestral|song)\b/i.test(source.sound) ? "" : ", no music") : "no music"}`),
+    acting.VIDEO_TEXT_POLICY
+  ].filter(Boolean).join(" ");
+  const foreign = nonEnglishOutsideQuotes(prompt);
+  if (foreign && options.validateLanguage !== false) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks; write action and direction in English`);
+  const bindings = [
+    { attribute: "render", value: object2(plan.render).mode, via: "adapter" },
+    { attribute: "size", value: plan.size, via: !sizeWords ? "unmapped" : msr ? "prompt" : "image", instruction: sizeWords },
+    { attribute: "angle", value: plan.angle, via: !angleWords ? "unmapped" : msr ? "prompt" : "image", instruction: angleWords },
+    { attribute: "view", value: camera.view, via: "prompt", instruction: viewWords },
+    { attribute: "move", value: camera, via: movement ? "prompt" : "unmapped", instruction: moveWords },
+    { attribute: "focus", value: rack ? { id: rack.id, from: rack.from, to: rack.to } : void 0, via: "prompt", instruction: focusWords },
+    { attribute: "depth", value: plan.depth, via: msr ? "prompt" : "image", instruction: depthWords },
+    { attribute: "framePlan", value: frames.mode, via: "adapter" },
+    ...picked.map((t) => ({
+      attribute: "technique",
+      value: t.id,
+      via: !t.entry ? "unmapped" : t.entry.category === "character" ? "image" : t.entry.category === "timing" ? "guidance" : t.entry.category === "framing" || t.entry.fields.angle ? msr ? "prompt" : "image" : "prompt",
+      instruction: t.entry?.instruction
+    })),
+    { attribute: "transition", value: shot.transition, via: "assembly" },
+    ...beats.length ? [{ attribute: "performance", value: performance2, via: "prompt", instruction: beats.join("\n") }] : []
+  ];
+  return { prompt, performance: performance2, directionBindings: bindings.filter((b) => b.value !== void 0), warnings: [
+    ...performance2.warnings,
+    ...bindings.filter((b) => b.value !== void 0 && b.via === "unmapped").map((b) => `No prompt mapping for ${b.attribute}: ${JSON.stringify(b.value)}`),
+    ...rack && !(rack.from && rack.to) ? ["the rack focus names no subjects \u2014 give focus.from and focus.to in shot_icons"] : []
+  ] };
+}
 
 // src/video-routing.ts
-var load4 = createRequire4(import.meta.url);
+var load4 = createRequire5(import.meta.url);
 var shared = fileURLToPath2(new URL("../../skills/_shared/video-selection.js", import.meta.url));
 var modelSettings = fileURLToPath2(new URL("../../skills/_shared/model-settings.js", import.meta.url));
 var routingContext = (episode, shotId) => load4(shared).readVideoContext(episode, shotId);
@@ -32475,6 +32793,9 @@ var videoPlanSchema = external_exports.object({
   episode: external_exports.string().min(1),
   shotId: external_exports.string().min(1),
   requestId: idSchema,
+  purpose: external_exports.enum(["draft", "final", "revision"]).optional(),
+  basedOnRequestId: idSchema.optional(),
+  changeNote: external_exports.string().min(1).max(1e3).optional(),
   operation: external_exports.string().optional(),
   tool: external_exports.string().optional(),
   args: external_exports.record(external_exports.unknown()).default({})
@@ -32489,7 +32810,7 @@ var videoApproveSchema = external_exports.object({
 
 // src/project.ts
 import * as nodeModule from "node:module";
-import { dirname as dirname3, resolve as resolve3 } from "node:path";
+import { dirname as dirname3, join as join4, resolve as resolve3 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 var loadFromHere = nodeModule.createRequire(import.meta.url);
 var helper = resolve3(dirname3(fileURLToPath3(import.meta.url)), "../../skills/_shared/project-settings.js");
@@ -32498,6 +32819,7 @@ var helper = resolve3(dirname3(fileURLToPath3(import.meta.url)), "../../skills/_
 var STAGES = [
   "characters",
   "text_storyboard",
+  "music_spotting",
   "context_review",
   "props",
   "backgrounds",
@@ -32544,7 +32866,7 @@ var nativeImageEditSchema = nativeImageSchema.extend({
 var imageResponse = external_exports.object({ data: external_exports.array(external_exports.object({ b64_json: external_exports.string().min(1) })).length(1) }).passthrough();
 
 // src/image-routing.ts
-import { createRequire as createRequire6 } from "node:module";
+import { createRequire as createRequire7 } from "node:module";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
 
 // src/astra-genai-image.ts
@@ -32750,7 +33072,7 @@ var imageJobSchema = external_exports.object({
 var stateSchema2 = external_exports.object({ version: external_exports.literal(1), openingSpendUsd: money, jobs: external_exports.record(imageJobSchema) }).strict();
 
 // src/image-routing.ts
-var load5 = createRequire6(import.meta.url);
+var load5 = createRequire7(import.meta.url);
 var selectionHelper = fileURLToPath4(new URL("../../skills/_shared/image-selection.js", import.meta.url));
 var idSchema2 = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var imagePlanSchema = external_exports.object({
@@ -32826,13 +33148,13 @@ function evaluateWindowScript(source, options = {}) {
 // src/storyboard.ts
 import { existsSync as existsSync5, mkdirSync as mkdirSync2, readFileSync as readFileSync7, renameSync as renameSync2, statSync as statSync4, unlinkSync, writeFileSync as writeFileSync4 } from "node:fs";
 import * as nodeModule2 from "node:module";
-import { basename as basename3, dirname as dirname4, join as join4, relative, resolve as resolve4 } from "node:path";
+import { basename as basename3, dirname as dirname4, join as join5, relative, resolve as resolve4 } from "node:path";
 import { fileURLToPath as fileURLToPath5 } from "node:url";
 var PLUGIN_ROOT = resolve4(dirname4(fileURLToPath5(import.meta.url)), "..", "..");
-var REFERENCES_DIR = join4(PLUGIN_ROOT, "skills", "storyboard", "references");
-var CONTRACT_FILE = join4(REFERENCES_DIR, "structure-contract.js");
-var CHECK_SCENES_FILE = join4(REFERENCES_DIR, "check-scenes.js");
-var CHECK_SCENARIO_FILE = join4(REFERENCES_DIR, "check-scenario.js");
+var REFERENCES_DIR = join5(PLUGIN_ROOT, "skills", "storyboard", "references");
+var CONTRACT_FILE = join5(REFERENCES_DIR, "structure-contract.js");
+var CHECK_SCENES_FILE = join5(REFERENCES_DIR, "check-scenes.js");
+var CHECK_SCENARIO_FILE = join5(REFERENCES_DIR, "check-scenario.js");
 var runtimeFile = fileURLToPath5(import.meta.url);
 var runtimeModuleSha256 = createHash3("sha256").update(readFileSync7(runtimeFile)).digest("hex");
 var runtimeLoadedAt = (/* @__PURE__ */ new Date()).toISOString();
@@ -32843,16 +33165,17 @@ function contract() {
   return contractCache;
 }
 function cameraContract() {
-  return loadFromHere2(join4(REFERENCES_DIR, "production-mode.js"));
+  return loadFromHere2(join5(REFERENCES_DIR, "production-mode.js"));
 }
 function techniqueContract() {
-  return loadFromHere2(join4(REFERENCES_DIR, "film-techniques.js"));
+  return loadFromHere2(join5(REFERENCES_DIR, "film-techniques.js"));
 }
 var techniqueSelectionSchema = external_exports.array(external_exports.object({
   id: nonEmptyTechniqueId(),
-  reason: external_exports.string().trim().min(1).describe("Why this technique serves this shot\u2019s information or action"),
+  reason: external_exports.string().trim().min(1).optional().describe("Why this technique serves this shot\u2019s information or action; camera.static may go without one"),
   from: external_exports.string().trim().min(1).optional().describe("Rack focus: the subject sharp first, in English"),
-  to: external_exports.string().trim().min(1).optional().describe("Rack focus: the subject sharp last, in English")
+  to: external_exports.string().trim().min(1).optional().describe("Rack focus: the subject sharp last, in English"),
+  on: external_exports.string().trim().min(1).optional().describe("Beat accent: the moment it fires on, in English")
 }).strict()).superRefine((value, ctx) => {
   for (const message of techniqueContract().validate(value))
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
@@ -32861,14 +33184,14 @@ function nonEmptyTechniqueId() {
   return external_exports.string().trim().min(1).describe("Stable id from storyboard_read techniqueCatalog");
 }
 function motionThemeContract() {
-  return loadFromHere2(join4(REFERENCES_DIR, "motion-graphics.js"));
+  return loadFromHere2(join5(REFERENCES_DIR, "motion-graphics.js"));
 }
 function motionGraphicTypes() {
-  const registry = loadFromHere2(join4(REFERENCES_DIR, "motion-graphics.js"));
+  const registry = loadFromHere2(join5(REFERENCES_DIR, "motion-graphics.js"));
   return Object.keys(registry.TYPES);
 }
 function renderPurposes() {
-  const routing = loadFromHere2(join4(REFERENCES_DIR, "render-routing.js"));
+  const routing = loadFromHere2(join5(REFERENCES_DIR, "render-routing.js"));
   return Object.keys(routing.PURPOSES);
 }
 var tuple = (list) => external_exports.enum(list);
@@ -32912,14 +33235,15 @@ var sceneSchema = external_exports.object({
   charge: external_exports.record(external_exports.unknown()).optional(),
   turn: external_exports.string().optional().describe("What flipped between the open and the close"),
   summary: external_exports.string().optional().describe("The scene's story in one sentence; the storyboard scene header shows it"),
-  out: nonEmpty.optional().describe("The sentence the scene goes out on \u2014 the one that forces a \uADF8\uB7F0\uB370 or \uADF8\uB798\uC11C into the next scene")
+  out: nonEmpty.optional().describe("The sentence the scene goes out on \u2014 the one that forces a \uADF8\uB7F0\uB370 or \uADF8\uB798\uC11C into the next scene"),
+  music: external_exports.object({ decision: external_exports.enum(["score", "none"]), reason: nonEmpty, span: nonEmpty.optional() }).strict().optional().describe("The music decision story_music records: score (with its $timeline span id) or none, and why")
 }).strict();
 var sequenceSchema = external_exports.object({
   id: nonEmpty.describe('Stable id, e.g. "q1"'),
   title: external_exports.string().optional().describe("The heading the approval page draws"),
   purpose: external_exports.string().optional().describe("The one purpose that binds these scenes \u2014 two purposes are two sequences"),
-  question: nonEmpty.optional().describe("The dramatic question this stretch opens"),
-  payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question"),
+  question: nonEmpty.optional().describe("The question this stretch opens: a dramatic one, or on a claim-led episode whether the promised result is real"),
+  payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question or shows the proof"),
   scenes: external_exports.array(external_exports.number().int().positive()).describe("Scene numbers in playback order")
 }).strict();
 var structureSchema = external_exports.object({
@@ -33004,10 +33328,10 @@ var shotSchema = external_exports.object({
   }).passthrough().optional(),
   sound: external_exports.record(external_exports.unknown()).optional()
 }).passthrough();
-var readLevelSchema = external_exports.enum(["outline", "scenes", "shots", "full"]);
+var readLevelSchema = external_exports.enum(["outline", "scenes", "shots", "full", "direction"]);
 var storyboardReadSchema = external_exports.object({
   path: external_exports.string().min(1).describe("The storyboard directory, or its scenes.js"),
-  level: readLevelSchema.default("shots").describe("outline = sequences with scene numbers \xB7 scenes = scene cards with shot numbers \xB7 shots = every shot summarised under its scene \xB7 full = the raw shot objects too"),
+  level: readLevelSchema.default("shots").describe("outline = sequences with scene numbers \xB7 scenes = scene cards with shot numbers \xB7 shots = every shot summarised under its scene \xB7 full = the raw shot objects too \xB7 direction = only the direction plan as counts"),
   shotId: external_exports.string().min(1).optional().describe("Stable shot ID to inspect, with its raw plan and neighboring shot IDs"),
   includeTechniques: external_exports.boolean().default(true).describe("Return canonical technique ids, purposes, icons and provider instructions"),
   includeContext: external_exports.boolean().default(true).describe("Include STORY, PRODUCTION and SB_DOC as unverified review context")
@@ -33045,9 +33369,10 @@ var transitionFields = {
     "whip:d2u"
   ]),
   transitionSeconds: external_exports.number().finite().min(0.08).max(0.8).optional(),
-  reason: nonEmpty,
+  reason: nonEmpty.optional(),
   continuity: nonEmpty.optional()
 };
+var reasonOnChosenJoins = [(v) => v.transition === "cut" || !!v.reason, "a join other than a plain cut carries its reason"];
 var STILL_JOINS = ["cut", "dip", "dip:white"];
 var secondsOnMovingJoins = [
   (v) => !STILL_JOINS.includes(v.transition) || v.transitionSeconds === void 0,
@@ -33056,8 +33381,8 @@ var secondsOnMovingJoins = [
 var transitionPatchSchema = external_exports.object({
   no: external_exports.number().int().positive().describe("Incoming shot number, 1-based, after removals and inserts"),
   ...transitionFields
-}).strict().refine(...secondsOnMovingJoins);
-var nextTransitionSchema = external_exports.object(transitionFields).strict().refine(...secondsOnMovingJoins);
+}).strict().refine(...secondsOnMovingJoins).refine(...reasonOnChosenJoins);
+var nextTransitionSchema = external_exports.object(transitionFields).strict().refine(...secondsOnMovingJoins).refine(...reasonOnChosenJoins);
 var storyboardApplySchema = external_exports.object({
   path: external_exports.string().min(1).describe("The storyboard directory (scenes.js is created there when missing), or its scenes.js"),
   draft: external_exports.boolean().default(false).describe("The story pass (storyboard \xA74a) \u2014 camera-continuity records (lineCrossing, coverage) are deferred, not violations"),
@@ -33088,7 +33413,7 @@ var storyboardApplySchema = external_exports.object({
 function scenesPath(target) {
   const abs = resolve4(target);
   if (basename3(abs) === "scenes.js") return abs;
-  return join4(abs, "scenes.js");
+  return join5(abs, "scenes.js");
 }
 function readBoard(target) {
   const file = scenesPath(target);
@@ -33128,12 +33453,13 @@ function serializeBoard(win, header = []) {
 var outlinePath = external_exports.string().min(1).describe("The storyboard directory (scenes.js is created there when missing) or its scenes.js");
 var storySequenceSchema = external_exports.object({
   path: outlinePath,
+  language: external_exports.string().regex(/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/, 'a BCP-47 tag such as "en", "ja" or "zh-Hans"').optional().describe("The language the story and its lines are written in"),
   sequences: external_exports.array(external_exports.object({
     id: nonEmpty.describe('Stable id, e.g. "q1"'),
     title: nonEmpty.describe("The heading the approval page draws"),
     purpose: nonEmpty.describe("The one purpose that binds its scenes"),
-    question: nonEmpty.optional().describe("The dramatic question this stretch opens"),
-    payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question")
+    question: nonEmpty.optional().describe("The question this stretch opens: a dramatic one, or on a claim-led episode whether the promised result is real"),
+    payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question or shows the proof")
   }).strict()).min(1)
 }).strict();
 var storySceneSchema = external_exports.object({
@@ -33146,7 +33472,9 @@ var storySceneSchema = external_exports.object({
     event: nonEmpty.describe("The one thing that happens in this scene"),
     summary: nonEmpty.describe("The scene's story in one sentence"),
     turn: nonEmpty.optional(),
-    out: nonEmpty.optional()
+    out: nonEmpty.optional(),
+    // The same signs structure-contract.js reads: the value at the open and at the close.
+    charge: external_exports.object({ open: external_exports.enum(["+", "-"]), close: external_exports.enum(["+", "-", "++", "--"]) }).strict().optional()
   }).strict()).min(1)
 }).strict();
 var storyShotSchema = external_exports.object({
@@ -33157,11 +33485,37 @@ var storyShotSchema = external_exports.object({
     summary: nonEmpty.describe("The story this shot tells, in one sentence")
   }).strict()).min(1)
 }).strict();
+var musicSeconds = external_exports.number().finite().nonnegative();
+var musicAnchorSchema = external_exports.object({ shotId: shotIdSchema, atSeconds: external_exports.union([musicSeconds, external_exports.literal("end")]) }).strict();
+var storyMusicSchema = external_exports.object({
+  path: outlinePath,
+  cues: external_exports.array(external_exports.object({
+    name: external_exports.string().regex(/^[a-zA-Z][a-zA-Z0-9_-]*$/, "a cue name starts with a letter and uses letters, digits, _ and -"),
+    prompt: nonEmpty.optional().describe("What to generate for this episode, in English"),
+    asset: nonEmpty.optional().describe("A channel bed id (assets/audio/bgm/<id>.wav) used as it is"),
+    reason: nonEmpty.describe("What this cue does for the story, in one sentence")
+  }).strict().refine((cue) => cue.prompt === void 0 !== (cue.asset === void 0), { message: "give a prompt (generated for this episode) or an asset (a channel bed), not both" })).optional(),
+  spots: external_exports.array(external_exports.object({
+    scenes: external_exports.array(external_exports.number().int().positive()).min(1).describe("One scene, or scenes that follow each other and share one unbroken span"),
+    decision: external_exports.enum(["score", "none"]),
+    reason: nonEmpty.describe("Why music plays here, or why this scene stays without it"),
+    cue: nonEmpty.optional(),
+    start: musicAnchorSchema.optional(),
+    end: musicAnchorSchema.optional(),
+    sourceStartSeconds: musicSeconds.optional(),
+    fadeInSeconds: musicSeconds.optional(),
+    fadeOutSeconds: musicSeconds.optional(),
+    gainDb: external_exports.number().finite().min(-60).max(12).optional()
+  }).strict()).optional()
+}).strict();
 var shotCharactersSchema = external_exports.object({
   path: outlinePath,
   shots: external_exports.array(external_exports.object({
     id: shotIdSchema,
-    characters: external_exports.array(nonEmpty).max(2).refine((ids) => new Set(ids).size === ids.length, "a character is listed once").describe("Principal characters on screen, subject first; [] when nobody from the cast is on screen")
+    characters: external_exports.array(nonEmpty).max(2).refine((ids) => new Set(ids).size === ids.length, "a character is listed once").describe("Principal characters on screen, subject first; [] when nobody from the cast is on screen"),
+    expression: external_exports.record(nonEmpty, nonEmpty).optional().describe("Each listed character's visible state as the shot opens, in English physical cues read from the scene's situation: brows, eyes, mouth, posture. Silent listeners and bystanders too. An earlier call's entry stays when omitted."),
+    bystanders: external_exports.array(nonEmpty).max(2).refine((ids) => new Set(ids).size === ids.length, "a character is listed once").optional().describe("Cast members also seen in this shot who have no on-screen line and take no video reference: the start image draws them from their sheet panels and the clip keeps them from that picture. With characters, at most three of the cast on screen. An earlier call's list stays when omitted; [] clears it."),
+    extras: external_exports.string().optional().describe(`Unnamed people in the frame, in English: how many, what they look like and what they are doing ("six children in orange bibs chasing a ball across the pitch"). The image and video prompts draw them from these words, without a reference. An earlier call's text stays when omitted; "" clears it.`)
   }).strict()).min(1)
 }).strict();
 var shotDialogueSchema = external_exports.object({
@@ -33178,7 +33532,7 @@ var shotDialogueSchema = external_exports.object({
   }).strict()).min(1)
 }).strict();
 var choice = external_exports.object({ id: nonEmpty, reason: nonEmpty }).strict();
-var shotViewContract = () => loadFromHere2(join4(REFERENCES_DIR, "shot-view.js"));
+var shotViewContract = () => loadFromHere2(join5(REFERENCES_DIR, "shot-view.js"));
 var shotViewSchema = external_exports.custom().superRefine((view, ctx) => {
   for (const message of shotViewContract().validate(view)) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
 });
@@ -33186,16 +33540,17 @@ var shotIconsSchema = external_exports.object({
   path: outlinePath,
   shots: external_exports.array(external_exports.object({
     id: shotIdSchema,
-    render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: nonEmpty.refine((v) => renderPurposes().includes(v), (v) => ({ message: `${v} is not a render purpose (render-routing.js PURPOSES)` })).optional(), reason: nonEmpty }).strict().optional().describe("Render route: shot.render"),
+    render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: nonEmpty.refine((v) => renderPurposes().includes(v), (v) => ({ message: `${v} is not a render purpose (render-routing.js PURPOSES)` })).optional(), reason: nonEmpty.optional() }).strict().optional().describe("Render route: shot.render"),
     size: tuple(V.SIZES).optional(),
-    why: nonEmpty.optional().describe("Why this size"),
+    why: nonEmpty.optional().describe("Why this size for this shot"),
     angle: tuple(V.ANGLES).optional(),
     backgroundView: external_exports.enum(["front", "back"]).optional().describe("Opening camera direction relative to the location sheet: front is its establishing view; back is the opposite view, 180 degrees around the same space. Saved as visual.camera.backgroundView; omitted keeps the choice, initially front."),
     view: shotViewSchema.optional().describe("Content-led opening subject, crop and viewpoint; saved as visual.camera.view"),
-    move: choice.extend({ target: nonEmpty.optional(), speed: external_exports.enum(["very slow", "slow", "steady", "fast", "very fast"]).optional() }).strict().optional().describe("A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold \u2026)"),
+    move: external_exports.object({ id: nonEmpty, reason: nonEmpty.optional(), target: nonEmpty.optional(), speed: external_exports.enum(["very slow", "slow", "steady", "fast", "very fast"]).optional() }).strict().refine((v) => v.id === "camera.static" || !!v.reason, "a camera move carries its reason; only camera.static may go without one").optional().describe("A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold \u2026)"),
     focus: choice.extend({ from: nonEmpty.optional(), to: nonEmpty.optional() }).strict().nullable().optional().describe("A camera technique with a focus field (camera.rack-focus) and the subjects it hands focus between; null removes it"),
+    accents: external_exports.array(choice.extend({ on: nonEmpty.optional() }).strict()).optional().describe("Beat accents laid over the move (camera.speed-ramp, camera.impact-shake), each with the moment it fires on in English; [] removes them"),
     depth: depthSchema.optional(),
-    frames: external_exports.object({ mode: external_exports.enum(["first", "first_last", "reference"]), reason: nonEmpty, endState: nonEmpty.optional() }).strict().optional().describe("Frame plan: reference is MSR (subject images + start image)"),
+    frames: external_exports.object({ mode: external_exports.enum(["first", "first_last", "reference"]), reason: nonEmpty.optional(), endState: nonEmpty.optional() }).strict().optional().describe("Frame plan: reference is MSR (subject images + start image)"),
     next: nextTransitionSchema.optional().describe("The join from this shot into the next one, written on the next shot's transition")
   }).strict()).min(1)
 }).strict();
@@ -33237,9 +33592,9 @@ var scenarioCheckResultSchema = external_exports.object({
 // src/speech.ts
 import { createHash as createHash4, randomUUID as randomUUID2 } from "node:crypto";
 import { readFileSync as readFileSync8, writeFileSync as writeFileSync5, renameSync as renameSync3, mkdirSync as mkdirSync3, existsSync as existsSync6 } from "node:fs";
-import { dirname as dirname5, resolve as resolve5, join as join5, relative as relative2 } from "node:path";
+import { dirname as dirname5, resolve as resolve5, join as join6, relative as relative2 } from "node:path";
 import * as nodeModule4 from "node:module";
-import { execFileSync as execFileSync3 } from "node:child_process";
+import { execFileSync as execFileSync4 } from "node:child_process";
 
 // src/speech-acting.ts
 import * as nodeModule3 from "node:module";
@@ -33255,20 +33610,22 @@ var actingSchema = external_exports.object({
   direction: external_exports.string().trim().min(1).max(500).regex(/^[^<>\[\]|\r\n]+$/, "Use plain delivery direction, without tag markup").optional(),
   tags: external_exports.array(external_exports.string().trim().min(1).max(60).regex(/^[A-Za-z][A-Za-z ,'-]*$/, "Use bare English vocal tag names")).max(6).optional()
 }).strict();
-function compileActing(text2, acting, voice) {
+function compileActing(text3, acting, voice) {
   const shared3 = nodeModule3.createRequire(import.meta.url)("../../skills/_shared/speech-contract.js");
-  return shared3.compileActing(text2, actingSchema.parse(acting || {}), voice);
+  return shared3.compileActing(text3, actingSchema.parse(acting || {}), voice);
 }
 
 // src/tts-models.ts
-import { createRequire as createRequire9 } from "node:module";
-var shared2 = () => createRequire9(import.meta.url)("../../skills/_shared/tts-models.js");
+import { createRequire as createRequire10 } from "node:module";
+var shared2 = () => createRequire10(import.meta.url)("../../skills/_shared/tts-models.js");
 function resolveTtsModel(provider, model2) {
   return shared2().resolveTtsModel(provider, model2);
 }
 
 // src/speech.ts
 var voiceContract = () => nodeModule4.createRequire(import.meta.url)("../../skills/_shared/character-voice.js");
+var characterSpeechContract = () => nodeModule4.createRequire(import.meta.url)("../../skills/_shared/character-speech.js");
+var speechSpanContract = () => nodeModule4.createRequire(import.meta.url)("../../skills/_shared/speech-span.js");
 var actingContract = () => nodeModule4.createRequire(import.meta.url)("../../skills/_shared/scene-acting.js");
 var delivery = external_exports.enum(["voiceover", "on_screen", "off_screen"]);
 var speechManageSchema = external_exports.object({
@@ -33285,20 +33642,20 @@ var speechManageSchema = external_exports.object({
   tool: external_exports.string().optional(),
   reuse: external_exports.literal("tail_trim").optional(),
   timingPatch: external_exports.object({ speechBoundActions: external_exports.boolean().optional(), actions: external_exports.array(external_exports.tuple([external_exports.number().int().nonnegative(), external_exports.number().finite().positive()])).optional() }).strict().optional(),
-  generation: external_exports.object({ generator: external_exports.string().min(1), voiceSettings: external_exports.record(external_exports.unknown()), text: external_exports.string().min(1), language: external_exports.string().min(1).optional() }).strict().optional(),
+  generation: external_exports.object({ generator: external_exports.string().min(1), voiceSettings: external_exports.record(external_exports.unknown()), text: external_exports.string().min(1), language: external_exports.string().min(1).optional(), receiptPath: external_exports.string().min(1).optional() }).strict().optional(),
   capabilities: external_exports.object({ provider: external_exports.string().min(1), model: external_exports.string().min(1), audioConditioning: external_exports.boolean(), lipSync: external_exports.boolean(), postLipSync: external_exports.boolean(), nativeSpeech: external_exports.boolean().optional(), evidence: external_exports.string().min(1) }).strict().optional()
 }).strict();
 var hash = (s) => createHash4("sha256").update(s).digest("hex");
-var object2 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
+var object3 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
 function syncProductionClip(scene, boardDir, videoPath, oldClip, warnings) {
-  const duration2 = (file) => Number(execFileSync3(
+  const duration2 = (file) => Number(execFileSync4(
     "ffprobe",
     ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=duration", "-of", "default=nw=1:nk=1", file],
     { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }
   ).trim());
-  const production = object2(scene.productionPlan), cuts = production.cuts;
+  const production = object3(scene.productionPlan), cuts = production.cuts;
   if (Array.isArray(cuts) && cuts.length) {
-    const cut = object2(cuts[0]);
+    const cut = object3(cuts[0]);
     if (cuts.length !== 1 || cut.kind !== "generated_video" || Number(cut.start ?? 0) !== 0 || typeof oldClip !== "string" || typeof cut.path !== "string" || resolve5(boardDir, cut.path) !== resolve5(boardDir, oldClip)) {
       warnings.push("The bound video changed; the authored production cuts were preserved and need an explicit edit before playback uses this clip.");
       return;
@@ -33326,12 +33683,14 @@ function speechRevision(line, character) {
 }
 function currentAudio(line, character) {
   try {
+    if (line.audio) characterSpeechContract().verifiedSpeechGeneration(line.audio.path, line.audio.generation, character?.tts, line);
     return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync6(line.audio.path) && hash(readFileSync8(line.audio.path)) === line.audio.sha256;
   } catch {
     return false;
   }
 }
-function speechAudioPlan(line, character) {
+function speechAudioPlan(line, character, context) {
+  if (character) character = characterSpeechContract().characterSpeech(character, context);
   const voice = character?.tts;
   if (!voice) throw new Error("Missing pinned character voice");
   const validator = nodeModule4.createRequire(import.meta.url)("../../skills/_shared/character-voice.js");
@@ -33343,10 +33702,10 @@ function speechAudioPlan(line, character) {
   const modelContract = resolveTtsModel(String(voice.engine), typeof voice.model === "string" ? voice.model.trim() : void 0);
   return { ...compiled, capabilities: modelContract, arguments: compiled.generation, expectedText: line.tts, speechRevision: speechRevision(line, character), language, direction, review: "not_reviewed" };
 }
-function inspectionAudioPlan(line, character) {
+function inspectionAudioPlan(line, character, context) {
   if (!character?.tts) return { available: false, warnings: ["Missing pinned character voice"], review: "not_reviewed" };
   try {
-    return { available: true, ...speechAudioPlan(line, character) };
+    return { available: true, ...speechAudioPlan(line, character, context) };
   } catch (error) {
     return { available: false, warnings: [error instanceof Error ? error.message : String(error)], review: "not_reviewed" };
   }
@@ -33365,7 +33724,7 @@ function audioProvenanceStatus(line, character) {
 function measuredDuration(line) {
   if (!line.audio || !existsSync6(line.audio.path)) return null;
   try {
-    const value = Number(execFileSync3("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
+    const value = Number(execFileSync4("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
     return Number.isFinite(value) && value > 0 ? value : null;
   } catch {
     return null;
@@ -33376,18 +33735,28 @@ function speechVideoPlan(input, capabilities) {
   const scene = Array.isArray(input) ? { narration: input } : input;
   const lines = scene.narration || [];
   const onScreen = lines.some((line) => line.delivery === "on_screen");
-  const mode = capabilities.nativeSpeech ? "native" : !onScreen ? "voiceover" : capabilities.audioConditioning && capabilities.lipSync ? "audio_conditioned" : capabilities.postLipSync ? "post_lipsync" : null;
+  const physicalSpeech = lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen");
+  if (capabilities.nativeSpeech && physicalSpeech && lines.some((line) => line.delivery === "voiceover"))
+    throw new Error("msr_speech_route: split physical dialogue and inner thoughts into separate shots; thoughts use image2video with timed TTS");
+  const mode = capabilities.nativeSpeech && physicalSpeech ? "native" : !onScreen ? "voiceover" : capabilities.audioConditioning && capabilities.lipSync ? "audio_conditioned" : capabilities.postLipSync ? "post_lipsync" : null;
   if (!mode) throw new Error("Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting");
-  const timeline = actingContract().planScenePerformance(scene, measuredDuration);
-  const videoPrompt = actingContract().sceneVideoPrompt(timeline.performance, mode, scene);
+  const saved = object3(object3(object3(scene.visual).video).promptSource);
+  const design = object3(object3(scene.shot).videoDesign);
+  const compiled = compileVideoPrompt(scene, {
+    action: typeof saved.action === "string" ? saved.action : typeof design.action === "string" ? design.action : "",
+    ...typeof saved.end === "string" ? { end: saved.end } : {},
+    ...typeof saved.sound === "string" ? { sound: saved.sound } : {}
+  }, {}, { mode, measureAudio: (line) => mode === "native" ? null : measuredDuration(line), validateLanguage: false });
+  const timeline = compiled.performance;
+  const videoPrompt = compiled.prompt;
   const promptLength = capabilities.provider.trim().toLowerCase() === "astra" ? { characters: videoPrompt.length, maxCharacters: ASTRA_VIDEO_MAX_PROMPT_CHARS, exceeded: videoPrompt.length > ASTRA_VIDEO_MAX_PROMPT_CHARS } : void 0;
-  const warnings = [...timeline.warnings];
+  const warnings = [...compiled.warnings];
   const foreign = nonEnglishOutsideQuotes(videoPrompt);
   if (foreign) warnings.push(`videoPrompt carries authored text in another language ("${foreign}"); write the video prompt in English before video_plan, which refuses it. Only quoted dialogue keeps the video's language.`);
   if (promptLength?.exceeded) warnings.push(`ASTRA video prompt has ${promptLength.characters} characters; the adapter limit is ${promptLength.maxCharacters}. Shorten repeated descriptions or split at a natural action boundary while preserving necessary actions. The plan is unchanged.`);
   const performancePayload = actingContract().scenePerformancePayload(scene);
   const { performance: _performance, narration: _narration, ...reuseContext } = performancePayload;
-  return { ...timeline, ...mode === "native" && timeline.timing === "needs_audio_duration" ? { timing: "model_timed" } : {}, warnings, promptLength, reuseContextRevision: hash(JSON.stringify(reuseContext)), performanceRevision: hash(JSON.stringify(performancePayload)), videoPrompt, textPolicy: "no_visible_text", boundary: "one_shot_per_generation", instructions: "Generate only this shot. Preserve the ordered actions, addressees and reactions, including silent events. Concurrent actions share their speech interval. Match the source frame to the opening state; do not concatenate other shots sharing a reference image. " + actingContract().VIDEO_TEXT_POLICY, mode, provider: capabilities.provider, model: capabilities.model, capabilities, audioFirst: onScreen && mode !== "native", lineIds: lines.map((line) => line.id), review: "not_reviewed" };
+  return { ...timeline, ...mode === "native" && timeline.timing === "needs_audio_duration" ? { timing: "model_timed" } : {}, warnings, promptLength, reuseContextRevision: hash(JSON.stringify(reuseContext)), performanceRevision: hash(JSON.stringify(performancePayload)), videoPrompt, textPolicy: "no_visible_text", boundary: "one_shot_per_generation", instructions: "Generate only this shot. Preserve the ordered actions, addressees and reactions, including silent events. Concurrent actions share their speech interval. Match the source frame to the opening state; do not concatenate other shots sharing a reference image. " + actingContract().VIDEO_TEXT_POLICY, mode, provider: capabilities.provider, model: capabilities.model, capabilities, audioFirst: lines.length > 0 && mode !== "native", lineIds: lines.map((line) => line.id), review: "not_reviewed" };
 }
 function manageSpeech(args) {
   args = speechManageSchema.parse(args);
@@ -33396,18 +33765,21 @@ function manageSpeech(args) {
   const revision = hash(before);
   const mutates = ["prepare", "update", "attach_audio", "attach_video", "retime"].includes(args.action);
   if (mutates && args.expectedRevision !== revision) throw new Error("Read speech first and supply its current expectedRevision; the storyboard may have changed");
-  const doc = object2(win.SB_DOC);
+  const doc = object3(win.SB_DOC);
   const rawCharacters = doc.characters;
   const voiceWarnings = [];
-  const characters = (Array.isArray(rawCharacters) ? rawCharacters : Object.entries(object2(rawCharacters)).map(([id, c]) => ({ ...object2(c), id }))).map((c) => resolveCharacterVoice(object2(c), { episode: dirname5(dirname5(file)), board: win, shot: {} }, voiceWarnings));
+  const characters = (Array.isArray(rawCharacters) ? rawCharacters : Object.entries(object3(rawCharacters)).map(([id, c]) => ({ ...object3(c), id }))).map((c) => resolveCharacterVoice(object3(c), { episode: dirname5(dirname5(file)), board: win, shot: {} }, voiceWarnings));
   const character = (id) => characters.find((c) => c.id === id);
+  const audioCharacter = (id) => characterSpeechContract().characterSpeech(character(id), { boardDir: dirname5(file), board: win });
   const scenes = win.SCENES;
   let changed = false;
   let timing;
+  let soundtrack;
+  let clearedTrim;
   if (args.timingPatch && args.action !== "retime") throw new Error("timingPatch is only used by retime");
   if (args.reuse && args.action !== "attach_video") throw new Error("reuse is only used by attach_video");
   if (args.action === "prepare") {
-    const needsNarrator = object2(win.STORY).version !== "story-v2" || scenes.some((scene) => (scene.narration || []).some((line) => !line.speaker));
+    const needsNarrator = object3(win.STORY).version !== "story-v2" || scenes.some((scene) => (scene.narration || []).some((line) => !line.speaker));
     if ((needsNarrator || doc.narratorCharacterId !== void 0) && (typeof doc.narratorCharacterId !== "string" || !character(doc.narratorCharacterId)))
       throw new Error("Set SB_DOC.characters and narratorCharacterId before preparing speech without explicit speakers; no voice is invented");
     let next = Math.max(0, ...scenes.map((s) => Number(String(s.id || "").replace(/^s/, "")) || 0));
@@ -33439,17 +33811,17 @@ function manageSpeech(args) {
       const oldDelivery = line.delivery;
       Object.assign(line, args.patch);
       if (args.patch.acting === null) delete line.acting;
-      if (args.patch.speaker && object2(win.STORY).version === "story-v2") {
+      if (args.patch.speaker && object3(win.STORY).version === "story-v2") {
         const group = (scene.narration || []).indexOf(line) + 1;
         for (const event of Array.isArray(scene.performance) ? scene.performance : []) {
-          const performance2 = object2(event);
+          const performance2 = object3(event);
           if (performance2.group === group && ["dialogue", "narration"].includes(String(performance2.kind)))
             performance2.character = line.speaker;
         }
       }
       if (speechRevision(line, character(line.speaker)) !== prior) {
-        const video = object2(object2(scene.visual).video);
-        const binding = object2(video.speechBinding);
+        const video = object3(object3(scene.visual).video);
+        const binding = object3(video.speechBinding);
         invalidated = { audio: oldAudio || null, video: Object.keys(video).length && (line.delivery === "on_screen" || oldDelivery === "on_screen" || Object.hasOwn(args.patch, "acting")) || ["audio_conditioned", "post_lipsync"].includes(String(binding.mode)) ? video : null, edit: true };
         delete line.audio;
         if (binding.mode !== "native") line.mediaStatus = "needs_audio";
@@ -33460,21 +33832,28 @@ function manageSpeech(args) {
       if (!args.audioPath) throw new Error("audioPath is required");
       const audioPath = resolve5(dirname5(file), args.audioPath);
       if (!args.generation || args.generation.text !== line.tts) throw new Error("Attach the actual generation arguments and exact line text");
-      const voice = character(line.speaker)?.tts;
+      const voice = audioCharacter(line.speaker)?.tts;
       const voiceErrors = voiceContract().generationVoiceErrors(voice, args.generation, line);
       if (voiceErrors.length) throw new Error("Generation arguments do not match the pinned character voice: " + voiceErrors.join("; "));
       const bytes = readFileSync8(audioPath);
       if (!bytes.length) throw new Error("Audio file is empty");
+      const generation = characterSpeechContract().verifiedSpeechGeneration(
+        audioPath,
+        args.generation,
+        voice,
+        line,
+        { required: voice?.engine === "astra-genai" }
+      );
       const priorAudio = line.audio;
       const audioHash = hash(bytes), lineRevision = speechRevision(line, character(line.speaker));
-      const video = object2(object2(scene.visual).video), binding = object2(video.speechBinding);
-      const boundAudio = Array.isArray(binding.audio) ? binding.audio.map(object2).find((a) => a.lineId === line.id) : void 0;
+      const video = object3(object3(scene.visual).video), binding = object3(video.speechBinding);
+      const boundAudio = Array.isArray(binding.audio) ? binding.audio.map(object3).find((a) => a.lineId === line.id) : void 0;
       if (priorAudio?.sha256 !== audioHash || priorAudio?.revision !== lineRevision || boundAudio && (boundAudio.sha256 !== audioHash || boundAudio.revision !== lineRevision)) {
         const dependsOnSpeech = binding.mode !== "native" && (line.delivery === "on_screen" || ["audio_conditioned", "post_lipsync"].includes(String(binding.mode)));
         invalidated = { audio: priorAudio || null, video: dependsOnSpeech && Object.keys(video).length ? video : null, edit: true };
         if (invalidated.video) video.speechStatus = "stale";
       }
-      line.audio = { path: audioPath, sha256: audioHash, revision: lineRevision, status: "not_reviewed", generation: args.generation };
+      line.audio = { path: audioPath, sha256: audioHash, revision: lineRevision, status: "not_reviewed", generation };
       line.mediaStatus = "audio_ready";
     }
     const clock = actingContract().planScenePerformance(scene, measuredDuration);
@@ -33498,7 +33877,7 @@ function manageSpeech(args) {
     const result = contract2.retime(scene, args.timingPatch || {}, measuredDuration);
     scene.performance = result.scene.performance;
     scene.duration = result.scene.duration;
-    const video = object2(object2(scene.visual).video);
+    const video = object3(object3(scene.visual).video);
     if (Object.keys(video).length) video.speechStatus = "stale";
     timing = {
       shotId: scene.id,
@@ -33519,7 +33898,7 @@ function manageSpeech(args) {
     if (args.lineId || args.speaker || args.query) throw new Error("Video planning uses all lines in the shot; remove line filters");
     for (const { line } of selected) actingSchema.nullable().optional().parse(line.acting);
     const episode = dirname5(dirname5(file));
-    if (existsSync6(join5(episode, ".work/model-settings.json"))) {
+    if (existsSync6(join6(episode, ".work/model-settings.json"))) {
       const { selection } = routingContext(episode, args.shotId);
       const adapter = args.tool ? VIDEO_ADAPTERS[args.tool] : void 0;
       if (args.tool && adapter?.engine !== selection.engine) throw new Error("model_selection_mismatch: tool does not match selected engine");
@@ -33537,7 +33916,7 @@ function manageSpeech(args) {
       const bytes = readFileSync8(videoPath);
       if (!bytes.length) throw new Error("Video file is empty");
       const native = plan.mode === "native";
-      const sound = object2(scene.sound);
+      const sound = object3(scene.sound);
       if (native && sound.audioSource === "speech") throw new Error("Native video speech lives in the clip soundtrack; sound.audioSource speech would drop it");
       const audio = selected.map(({ line }) => {
         if (native) return { lineId: line.id, revision: speechRevision(line, character(line.speaker)) };
@@ -33546,10 +33925,10 @@ function manageSpeech(args) {
         if (line.audio.generation.text !== line.tts || errors.length) throw new Error("Speech generation evidence changed: " + errors.join("; "));
         return { lineId: line.id, sha256: line.audio.sha256, revision: line.audio.revision };
       });
-      const visual = object2(scene.visual);
-      const video = object2(visual.video);
+      const visual = object3(scene.visual);
+      const video = object3(visual.video);
       if (video.engine && video.engine !== plan.provider || video.model && video.model !== plan.model) throw new Error("Adapter does not match the selected shot model");
-      const priorBinding = object2(video.speechBinding);
+      const priorBinding = object3(video.speechBinding);
       const videoSha256 = hash(bytes);
       const performanceChanged = priorBinding.performanceRevision && priorBinding.performanceRevision !== plan.performanceRevision;
       const audioChanged = Array.isArray(priorBinding.audio) && JSON.stringify(priorBinding.audio) !== JSON.stringify(audio);
@@ -33570,6 +33949,16 @@ function manageSpeech(args) {
         invalidated = { video, edit: true };
       } else {
         if (!tailTrim) syncProductionClip(scene, dirname5(file), videoPath, video.clip, plan.warnings);
+        const trim = object3(scene.edit);
+        if (native && priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256 && (trim.in !== void 0 || trim.out !== void 0)) {
+          const { in: sourceIn, out: sourceOut, ...kept } = trim;
+          scene.edit = kept;
+          clearedTrim = {
+            ...sourceIn !== void 0 ? { in: sourceIn } : {},
+            ...sourceOut !== void 0 ? { out: sourceOut } : {},
+            note: "The previous clip's trim was removed: it was measured on other footage. Set the shot duration and a new trim from soundtrack."
+          };
+        }
         video.clip = args.videoPath;
         video.speechBinding = {
           ...plan,
@@ -33588,11 +33977,25 @@ function manageSpeech(args) {
         video.speechStatus = "current";
       }
       if (native) {
+        try {
+          const span = speechSpanContract().measure(videoPath);
+          if (span) {
+            const trim = speechSpanContract().suggestTrim(span, scene);
+            soundtrack = { ...span, method: "audio_energy", review: "not_reviewed", ...trim ? {
+              suggestedEdit: trim.edit,
+              suggestedDurationSeconds: trim.durationSeconds,
+              note: "Silent acting surrounds the line. If the pause is not the story's, set these edit.in / edit.out source seconds and the shot duration with storyboard_apply; times inside the shot (sound.effects atSeconds, music starts) then count from the trimmed start. Listen first: loudness can miss a quiet first or last syllable."
+            } : {} };
+          }
+        } catch {
+        }
         scene.sound = { ...sound, audioSource: "video" };
         for (const { line } of selected) if (line.mediaStatus === "needs_audio") delete line.mediaStatus;
+      } else if (selected.length && plan.mode === "voiceover") {
+        scene.sound = { ...sound, audioSource: "speech" };
       } else if (!selected.length && sound.audioSource === "video") {
         try {
-          const streams = execFileSync3(
+          const streams = execFileSync4(
             "ffprobe",
             ["-v", "error", "-select_streams", "a", "-show_entries", "stream=index", "-of", "csv=p=0", videoPath],
             { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }
@@ -33622,15 +34025,23 @@ function manageSpeech(args) {
     }
     const work = resolve5(dirname5(file), "../.work/speech-history");
     mkdirSync3(work, { recursive: true });
-    const backup = join5(work, revision + ".js");
+    const backup = join6(work, revision + ".js");
     if (!existsSync6(backup)) writeFileSync5(backup, before);
     const nextSource = serializeBoard(win, header);
     if (hash(readFileSync8(file)) !== revision) throw new Error("Storyboard changed during speech edit");
     const tmp = file + "." + randomUUID2() + ".tmp";
     writeFileSync5(tmp, nextSource);
     renameSync3(tmp, file);
+    refreshVideoReview(dirname5(dirname5(file)));
   }
-  return { revision: hash(readFileSync8(file)), changed, invalidated, plan, timing, ...voiceWarnings.length ? { voiceWarnings } : {}, ...args.action === "plan_audio" ? { audioPlans: selected.map(({ scene, line }) => ({ shotId: scene.id, lineId: line.id, ...speechAudioPlan(line, character(line.speaker)) })) } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker)), audioProvenanceStatus: object2(object2(object2(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
+  const audioPlans = args.action === "plan_audio" ? selected.map(({ scene, line }) => {
+    const result = speechAudioPlan(line, character(line.speaker), { boardDir: dirname5(file), board: win });
+    const generation = { ...result.generation, ...result.generator === "tts_astra_genai" ? {
+      speechContext: { path: file, lineId: line.id, expectedRevision: revision }
+    } : {} };
+    return { shotId: scene.id, lineId: line.id, ...result, generation, arguments: generation };
+  }) : void 0;
+  return { revision: hash(readFileSync8(file)), changed, invalidated, plan, timing, ...soundtrack ? { soundtrack } : {}, ...clearedTrim ? { clearedTrim } : {}, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname5(file), board: win }), audioProvenanceStatus: object3(object3(object3(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
 }
 
 // src/video-sound.ts
@@ -33657,7 +34068,13 @@ var schemas = {
   astra_text2video: astraText2VideoSchema,
   astra_img2video: astraImg2VideoSchema,
   astra_audio2video: astraAudio2VideoSchema,
-  astra_keyframe_video: astraKeyframeVideoSchema
+  astra_keyframe_video: astraKeyframeVideoSchema,
+  ltx_api_img2video: ltxApiImg2VideoSchema,
+  ltx_api_audio2video: ltxApiAudio2VideoSchema,
+  minimax_img2video: minimaxImg2VideoSchema,
+  minimax_reference: minimaxReferenceSchema,
+  heygen_img2video: heygenImg2VideoSchema,
+  heygen_reference: heygenReferenceSchema
 };
 function prepareVideoSound(tool, input, sound = {}) {
   const schema = schemas[tool];
@@ -33668,8 +34085,8 @@ function prepareVideoSound(tool, input, sound = {}) {
   if (new Set(ids).size !== ids.length) throw new Error("Effect ids must be unique within the shot");
   if (sound.audioSource !== void 0 && !["video", "speech"].includes(String(sound.audioSource)))
     throw new Error("sound.audioSource must be video or speech");
-  const fixedInput = ["astra_audio2video", "astra_genai_audio2video", "astra_genai_desktop_audio2video"].includes(tool);
-  if (tool === "astra_genai_msr" && sound.audioSource === "speech") throw new Error("MSR keeps its own soundtrack; sound.audioSource speech is not allowed");
+  const fixedInput = ["astra_audio2video", "astra_genai_audio2video", "astra_genai_desktop_audio2video", "ltx_api_audio2video"].includes(tool);
+  if (["astra_genai_msr", "minimax_reference", "heygen_reference"].includes(tool) && sound.audioSource === "speech") throw new Error(`${tool} keeps its own spoken soundtrack; sound.audioSource speech is not allowed`);
   let nativeAudio = !fixedInput && (tool !== "astra_genai_desktop_keyframes" || input.audio === true);
   if (tool.startsWith("seedance_")) {
     const model2 = input.model ?? DEFAULT_SEEDANCE_MODEL;
@@ -33699,7 +34116,7 @@ function prepareVideoSound(tool, input, sound = {}) {
   if (sound.sfx && resolved.some((effect) => effect.delivery !== "post" && effect.sfx === sound.sfx))
     throw new Error("The same effect cannot belong to the native/input soundtrack and the legacy post cue");
   const args = { ...input };
-  if ((native.length || conditioned.length || sound.audioSource === "video") && (tool.startsWith("seedance_") || tool.startsWith("astra_")) && !["astra_genai_audio2video", "astra_genai_msr"].includes(tool)) {
+  if ((native.length || conditioned.length || sound.audioSource === "video") && (tool.startsWith("seedance_") || tool.startsWith("astra_") || tool === "ltx_api_img2video") && !["astra_genai_audio2video", "astra_genai_msr"].includes(tool)) {
     if (input.generateAudio === false) throw new Error("Cannot discard the requested input soundtrack");
     if (!tool.startsWith("astra_genai_desktop_")) args.generateAudio = true;
   }
@@ -33723,13 +34140,14 @@ ${inputPrompt}`;
     tool,
     arguments: parsed,
     sound: { ...sound, ...audioSource ? { audioSource } : {}, effects: resolved },
-    capabilities: { nativeAudio, inputAudio: fixedInput ? tool === "astra_genai_desktop_audio2video" ? "conditioned_reencoded" : "preserved" : ["seedance_reference", "fasth3_omni_reference", "astra_genai_msr"].includes(tool) ? "reference" : "none" },
+    capabilities: { nativeAudio, inputAudio: fixedInput ? ["astra_genai_desktop_audio2video", "ltx_api_audio2video"].includes(tool) ? "conditioned_reencoded" : "preserved" : ["seedance_reference", "fasth3_omni_reference", "astra_genai_msr", "minimax_reference", "heygen_reference"].includes(tool) ? "reference" : "none" },
     warnings,
     review: "not_reviewed",
     generated: false
   };
 }
 export {
+  VENDOR_REFERENCE_TOOLS,
   VIDEO_ADAPTERS,
   astraAudio2VideoSchema,
   astraImg2VideoSchema,

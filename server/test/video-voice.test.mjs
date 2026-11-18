@@ -225,13 +225,29 @@ test('MSR keeps a phone caller off screen without borrowing the visible listener
   const result = prepareVideoVoice('astra_genai_msr', { prompt: 'Hero listens to the phone.',
     references: [{ imagePath: hero.voiceReference.imagePaths[0] }] }, { ...ctx, msrVoice: true });
   assert.equal(result.args.references[0].audioPath, hero.voiceReference.path);
-  assert.match(result.args.prompt, /friend speaks off screen\. Do not show this speaker or animate any visible mouth during this line\. friend: "Hello friend"/);
+  assert.match(result.args.prompt, /friend speaks off screen\. Keep the speaking face outside the authored crop/);
+  assert.match(result.args.prompt, /Do not add a portrait or animate any visible mouth during this line\. friend: "Hello friend"/);
   assert.equal(result.voiceContinuity.speakers.find(s => s.speaker === friend.id).reference, undefined);
   assert.match(result.voiceContinuity.warnings.join(), /friend: no MSR subject image matches/);
   ctx.shot.narration = [ctx.shot.narration[1]];
   const only = prepareVideoVoice('astra_genai_msr', { prompt: 'Hero listens.', references: [] }, { ...ctx, msrVoice: true });
   assert.equal(only.voiceContinuity.strategy, 'reference_voice');
   assert.match(only.args.prompt, /friend speaks off screen/);
+});
+
+test('MSR hand inserts retain the speaker voice without demanding the speaker face', t => {
+  const ctx = fixture(t), [hero] = ctx.board.SB_DOC.characters;
+  ctx.shot.narration = [{...ctx.shot.narration[0], delivery: 'off_screen'}];
+  ctx.shot.visual = {character: ['hero'], video: {}};
+  const result = prepareVideoVoice('astra_genai_msr', {
+    prompt: 'Only the hands grip the bag strap; the face is outside the frame.',
+    references: [{imagePath: hero.voiceReference.imagePaths[0]}]
+  }, {...ctx, msrVoice: true});
+  assert.equal(result.args.references[0].audioPath, hero.voiceReference.path);
+  assert.match(result.args.prompt, /Only the hands grip the bag strap/);
+  assert.match(result.args.prompt, /hero speaks off screen.*using Audio 1/);
+  assert.match(result.args.prompt, /retain any planned hands or body detail/);
+  assert.doesNotMatch(result.args.prompt, /Do not show this speaker|Only this speaker's mouth moves/);
 });
 
 test('declared MSR cast maps pinned voices to canonical faces instead of stale transport aliases',t=>{

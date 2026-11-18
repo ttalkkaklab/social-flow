@@ -40,6 +40,13 @@ Read `PRODUCTION.videoType` from the episode, otherwise its snapshot's
 | music_video | Plan around the source music/performance. Singing faces require synchronized vocals; instrumental passages can remain speechless. |
 | custom | Follow the user's saved detail, including hybrids. Clarify the intended speech approach when the description leaves it ambiguous. |
 
+For drama, comedy and other story-led types, also read
+[story interest](../storyboard/references/story-interest.md) while shaping the scenario.
+Explainer, tutorial and review need no manufactured opponent; their progression is the change
+in what the viewer understands. These types and advertisement make a claim: promise one
+result, show proof the viewer can check and end on its use
+([claim-led episodes](../storyboard/references/episode-anticipation.md#claim-led-episodes-one-result-promised-proof-the-viewer-can-check)).
+
 These are directing defaults, not quotas or score gates. In drama, never make the
 whole conversation off-screen merely because lip synchronization is inconvenient.
 A character can explicitly act as narrator, think, or read a message while visible:

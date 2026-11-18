@@ -6,8 +6,9 @@ import { z } from 'zod';
 export const TTS_DEFAULTS = { engine: 'elevenlabs', voiceId: 'L4az9Gb378GIycFl2nAB', model: 'eleven_v4', speed: 1, language: 'ko' } as const;
 
 export function normalizeCharacterLanguage(value: string): string {
-  const raw=value.trim().toLowerCase();
-  return ({korean:'ko',english:'en',japanese:'ja',chinese:'zh',spanish:'es',french:'fr',portuguese:'pt'} as Record<string,string>)[raw] || raw;
+  // A BCP-47 story language (zh-Hans, es-MX) pins as its primary subtag.
+  const raw=value.trim().toLowerCase().replace(/^([a-z]{2})[-_][a-z0-9_-]+$/,'$1');
+  return ({korean:'ko',english:'en',japanese:'ja',chinese:'zh',spanish:'es',french:'fr',german:'de',vietnamese:'vi',portuguese:'pt'} as Record<string,string>)[raw] || raw;
 }
 const ttsFields = {
   voiceLock: voiceLockConfigSchema.optional(),

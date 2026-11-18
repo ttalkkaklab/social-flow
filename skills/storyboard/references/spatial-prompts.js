@@ -197,7 +197,7 @@ function assemble(win, index, dir) {
   // event in English when the selected model cannot accept its original language.
   const performanceDirection = (scene.performance || []).map((event, index) => {
     if (event.videoDirection !== undefined && !text(event.videoDirection)) throw new Error('performance.videoDirection must be non-empty text');
-    if (event.kind === 'action') return `Event ${index + 1}: ${event.character}: ${event.videoDirection || event.text}` +
+    if (event.kind === 'action') return `Event ${index + 1}: ${event.character ? event.character + ': ' : ''}${event.videoDirection || event.text}` +
       (event.withGroup ? ` (concurrent with speech group ${event.withGroup})` : '');
     const line = scene.narration?.[event.group - 1];
     const direction = event.videoDirection || line?.acting?.visual;

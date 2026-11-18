@@ -695,10 +695,12 @@
       const warn = message => advice.push('shot ' + (i + 1) + ': ' + message);
       // full_video aims every shot at video, but fewer video shots than the target is advice, never an
       // error (production-mode.md, owner decision 2026-10-18): a shot routed elsewhere is reported and skipped.
-      if (s.shot?.render?.mode !== 'generated_video' || !v.video) {
+      if (s.shot?.render?.mode !== 'generated_video') {
         warn('full_video aims at video here, but the shot is routed ' + (s.shot?.render?.mode || 'nowhere yet') + ' — reported, not padded');
         return;
       }
+      // Routed to video and waiting for its video plan: the text stage, not a shot routed elsewhere.
+      if (!v.video) return;
       if (v.slide || (v.source && v.source !== 'stock') || v.clip)
         bad('full_video needs a narrated visual.video handoff; no slide/still substitution or b-roll splice');
       if (['broll', 'quote'].includes(s.type)) bad('full_video generated cuts use ordinary narrated cards');
@@ -748,7 +750,12 @@
     const run = [];
     (win.SCENES || []).forEach((s, i) => {
       if (!eligible(s)) return;
-      const camera = s.visual?.camera || {}, key = normalize(camera.framing) + '|' + normalize(camera.movement);
+      // The opening picture is the framing prose on an older board and the authored view on a
+      // story-first one, where shot_icons replaces that prose: size, angle and view stand in for it,
+      // so three holds at different sizes are not read as three identical set-ups.
+      const camera = s.visual?.camera || {}, view = camera.view || {};
+      const picture = text(camera.framing) ? camera.framing : [s.shot?.size, s.shot?.angle, view.mode, view.subject].filter(text).join(' ');
+      const key = normalize(picture) + '|' + normalize(camera.movement);
       if (run.length && run[run.length - 1].key !== key) run.length = 0;
       run.push({ key, shot: i + 1 });
       if (run.length === 3) advice.push('shots ' + run.map(r => r.shot).join(', ') + ': the same framing and camera move three times in a row; change size, angle or move for a reason');

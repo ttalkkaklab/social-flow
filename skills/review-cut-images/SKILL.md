@@ -16,8 +16,8 @@ and [visual grounding](../storyboard/references/narration-visual-grounding.md).
 
 An independent reviewer opens every actual image in cut order, compares with the camera
 plan (and Blender compositions when the user asked for them), then tests audience comprehension against the text. Check
-visible evidence, opening state, prop hands/ownership, actor placement, identity, readable
-text and style. Seeing an expressive face is not evidence of the narrated event. Future
+visible evidence, opening state, each face against the scene's situation, prop hands/ownership,
+actor placement, identity, readable text and style. Seeing an expressive face is not evidence of the narrated event. Future
 motion cannot excuse an incorrect first frame. Cover every cut ID in the review JSON.
 
 The author repairs the earliest affected layer: story with the story tools, camera with

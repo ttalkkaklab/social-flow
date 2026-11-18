@@ -83,6 +83,13 @@ model explicitly to the raw tool so its own default cannot drift between episode
 Resolve speaker to character.tts. Call `speech_manage action:plan_audio` to compile
 line acting into the selected provider’s arguments; use its generator/generation
 output (`arguments` is an alias of `generation`). Do not overwrite the planned
+gateway `speechContext`: it binds the request to the current board and line. A selected
+sample with `voiceId:"default"` is not a cloned character voice; use the sample's
+operator-registered voice ID. A stale shared voice requires an explicit episode pin
+update or recorded voice exception before a new take. For gateway attachment include
+the completed generator's `receiptPath` inside `generation`; caller-written settings
+cannot replace that receipt. Keep it available for composition and assembly.
+Do not overwrite the planned
 scene direction with the character baseline stylePrompt. Attach with clean expectedText as `generation.text` and the actual tagged
 request in `generation.voiceSettings`. Generate with the corresponding raw engine tool, not
 `tts_generate_checked`. Save a generation receipt beside each scene WAV as `.generation.json`
@@ -310,20 +317,26 @@ For the selected provider/model, resolve and record capabilities with evidence:
 
 | Speech | Route | When speech changes |
 |---|---|---|
-| any delivery + nativeSpeech (MSR) | native | Regenerate the clip from the edited prompt; no line audio exists |
+| one physical speaker + nativeSpeech (MSR) | native | Regenerate the clip from the edited prompt; no line audio exists |
 | voiceover/off_screen | voiceover | Replace audio, retime subtitles/edit; keep suitable action footage |
 | on_screen + audioConditioning and lipSync | audio_conditioned | Regenerate affected animation from the final voice WAV |
 | on_screen + separate postLipSync | post_lipsync | Rerun the selected lip-sync adapter on affected footage |
 | on_screen + neither capability | unsupported | Select a suitable adapter; do not mute the character |
 
-A native-speech shot preserves each line's delivery: on-screen speech moves its speaker's
-mouth, off-screen dialogue keeps its speaker unseen, and voiceover leaves visible mouths
-closed. Its binding records each line's revision instead of an audio hash.
+A native-speech shot has one physical speaker: on-screen speech moves that speaker's
+mouth and off-screen dialogue keeps the speaker unseen. Silent/inner-thought shots use
+image2video instead. Thoughts are character `voiceover` with external pinned TTS; compose
+measured speech with lead-in/tail-out and action timing before planning video coverage.
+Keep visible mouths closed and `sound.audioSource:"speech"` for assembly. Never write
+thoughts as MSR native dialogue. Missing TTS setup is reported before generation. Its binding records each line's revision instead of an audio hash.
 `attach_video` sets `sound.audioSource:"video"` so the clip's soundtrack is the card audio,
-and a line edit marks the clip stale rather than asking for a take.
+and a line edit marks the clip stale rather than asking for a take. It also measures where
+the line sits in the clip and returns `soundtrack` with a suggested `edit.in`/`edit.out`
+when silence the performance did not ask for surrounds the line
+([cinematic edit](cinematic-edit.md)); the measurement is loudness, `not_reviewed`.
 
-`video_plan` keeps the text-free instruction after the compiled native dialogue, including
-silent MSR shots. This is prompt guidance; inspect the generated frames for unwanted captions.
+`video_plan` keeps the text-free instruction after the compiled native dialogue, on
+single-speaker MSR shots. This is prompt guidance; inspect the generated frames for unwanted captions.
 
 Store the route in `visual.video.speechBinding` with line ids and audio hashes. Mark stale
 bindings after edits and clear `speechStatus:stale` only after the new media is generated and

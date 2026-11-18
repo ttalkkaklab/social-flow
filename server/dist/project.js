@@ -1,5 +1,6 @@
+import { existsSync, readFileSync } from 'node:fs';
 import * as nodeModule from 'node:module';
-import { dirname, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const loadFromHere = nodeModule.createRequire(import.meta.url);
 const helper = resolve(dirname(fileURLToPath(import.meta.url)), '../../skills/_shared/project-settings.js');
@@ -7,4 +8,17 @@ const helper = resolve(dirname(fileURLToPath(import.meta.url)), '../../skills/_s
 export function manageProject(args) {
     const project = loadFromHere(helper);
     return project.manageProject(args);
+}
+/** The new-board handoff (FORMAT, PRODUCTION, LANGUAGES) from an episode's saved snapshot, or undefined when it has none. */
+export function episodeHandoff(episode) {
+    const file = join(episode, '.work/model-settings.json');
+    if (!existsSync(file))
+        return undefined;
+    const project = loadFromHere(helper);
+    try {
+        return project.handoff({ ...JSON.parse(readFileSync(file, 'utf8')), file });
+    }
+    catch {
+        return undefined;
+    }
 }

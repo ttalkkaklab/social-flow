@@ -7,6 +7,7 @@ import { executeSpeech, withSpeechRequestId } from './tts-execution.js';
 import { bareFilenameSchema } from './media-utils.js';
 import { validateSpeechAudio } from './tts-audio.js';
 export const genaiSpeechSchema = z.object({
+    speechContext: z.object({ path: z.string().min(1), lineId: z.string().min(1), expectedRevision: z.string().regex(/^[a-f0-9]{64}$/) }).strict().optional(),
     requestId: z.string().regex(/^[A-Za-z0-9_-]{1,100}$/).optional(),
     model: z.string().trim().min(1).max(200), text: z.string().trim().min(1).max(16000),
     voice: z.string().trim().min(1).max(200).optional(),

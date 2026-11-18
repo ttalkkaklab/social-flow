@@ -6,6 +6,14 @@ const {createHash}=require('node:crypto');
 const {normalize,cer}=require('./check-tts-quality.js');
 const chapters=require('./final-speech-chapters.js');
 const hash=file=>createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+function sourceBoard(work){
+  const plan=path.join(work,'build-plan-check.json');
+  if(fs.existsSync(plan)){
+    const source=JSON.parse(fs.readFileSync(plan,'utf8')).storyboard;
+    if(typeof source==='string')return path.resolve(work,source,'scenes.js');
+  }
+  return path.resolve(work,'../storyboard/scenes.js');
+}
 function narration(board){
   const w=evaluateWindowScript(fs.readFileSync(board,'utf8'),{filename:board});
   if(!Array.isArray(w.SCENES))throw new Error('Missing SCENES for final listening');
@@ -134,7 +142,7 @@ function sentenceSegments(work,board){
   return segments;
 }
 function review(work){
-  const board=path.resolve(work,'../storyboard/scenes.js');
+  const board=sourceBoard(work);
   if(!fs.existsSync(board))return;
   const {generated,text}=narration(board);if(!generated)return;
   const media=path.resolve(work,'reel-fast.mp4');
@@ -142,7 +150,7 @@ function review(work){
   fs.writeFileSync(path.join(work,'final-tts-warnings.json'),JSON.stringify({...record,warnings:[],approved:false},null,2)+'\n');
 }
 
-module.exports={narration,sentenceSegments,chapterIntegrity,verify,verifyReport,verifyEvidence,evidence,legacyEvidence,gate,approve,review};
+module.exports={sourceBoard,narration,sentenceSegments,chapterIntegrity,verify,verifyReport,verifyEvidence,evidence,legacyEvidence,gate,approve,review};
 if(require.main===module){
   try{
     const [command,work,arg]=process.argv.slice(2);

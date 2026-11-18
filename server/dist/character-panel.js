@@ -73,7 +73,8 @@ export function characterPanelRequest(raw) {
     const [width, height] = FRAMING[args.view].size;
     const negativePrompt = [NEGATIVE[args.view], args.negativePrompt].filter(Boolean).join(', ');
     const call = imageCall({ directory: workspace, assetId: `${id}-${args.view}`, inputs: references, prompt, negativePrompt, width, height, outDir: folder, stem: `${id}-${args.view}`, what: 'this panel' });
-    const warnings = [...(call.negativeSent ? [] : ['no tested negative-prompt setting for this model; exclusions must be expressed in the main prompt']), ...words.skipped.map((field) => `${field} is not English and stays out of the prompt — write it in English on the sheet`)];
+    const warnings = [...(call.negativeSent ? [] : ['no tested negative-prompt setting for this model; exclusions must be expressed in the main prompt']), ...words.skipped.map((field) => `${field} is not English and stays out of the prompt — write it in English on the sheet`),
+        ...(words.expression.length ? [`the sheet's appearance names an expression (${words.expression.join(' ')}) — it stays out of this neutral face panel; set expressions per shot with shot_characters`] : [])];
     return { workspace, folder, id, view: args.view, panelsFile, prompt, negativePrompt: call.negativeSent ? negativePrompt : undefined, warnings, ...call };
 }
 /** Record a generated panel in panels.json; the other slots stay. */

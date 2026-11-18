@@ -4,7 +4,7 @@ import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { VIDEO_ADAPTERS } from './video-registry.js';
+import { VIDEO_ADAPTERS, VENDOR_REFERENCE_TOOLS, referenceLabel } from './video-registry.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { z } from 'zod';
 /** Authored screen coordinates describe the opening image, never reference-array order. */
@@ -167,6 +167,8 @@ export function prepareVideoVoice(tool, input, context) {
     const args = { ...input };
     const lines = (Array.isArray(context.shot.narration) ? context.shot.narration : []).map(object).filter(line => text(line.tts));
     const msr = tool === 'astra_genai_msr';
+    // The hosted reference lanes speak the shot's dialogue from the prompt as MSR does (reference-frame prompts carry no lines).
+    const vendor = VENDOR_REFERENCE_TOOLS.includes(tool);
     // MSR renders authored dialogue and voiceover into its own soundtrack; a pinned sample, when the
     // gateway takes one, sets the timbre (user directive 2026-10-31). A cut without dialogue is fine.
     if (msr) {
@@ -179,22 +181,23 @@ export function prepareVideoVoice(tool, input, context) {
     const characters = Array.isArray(raw) ? raw.map(object) : Object.entries(object(raw)).map(([id, value]) => ({ ...object(value), id }));
     const visual = object(context.shot.visual);
     const nativeSlot = Boolean(visual.clip) || context.shot.type === 'broll';
-    const audible = msr || ((tool !== 'astra_genai_desktop_keyframes' || args.audio === true) && (tool === 'fasth3_omni_reference' ||
+    // FastH3 and the hosted MiniMax/HeyGen lanes always render a soundtrack.
+    const audible = msr || ((tool !== 'astra_genai_desktop_keyframes' || args.audio === true) && (tool === 'fasth3_omni_reference' || tool.startsWith('minimax_') || tool.startsWith('heygen_') ||
         (tool.startsWith('astra_') ? args.generateAudio !== false : args.generateAudio === true)));
     const lane = VIDEO_ADAPTERS[tool]?.voice ?? 'none';
     const supplied = lane === 'supplied';
     const onScreen = lines.some(line => line.delivery === 'on_screen');
-    const native = !supplied && audible && (msr || nativeSlot || onScreen);
+    const native = !supplied && audible && (msr || vendor || nativeSlot || onScreen);
     // Voice gate (owner directive 2026-10-31): a character the viewer hears or sees speak needs a voice
     // lane. An adapter without one renders only cuts whose lines are external TTS over a non-speaking picture.
     if (lane === 'none' && (native || onScreen))
         throw new Error(`voice_lane_required: ${tool} cannot keep a character's voice. Render this spoken cut with a reference adapter ` +
-            `(astra_genai_msr, seedance_reference, fasth3_omni_reference) or an audio2video adapter${onScreen ? '' : ', or set generateAudio:false and keep the lines as TTS voiceover'}.`);
+            `(astra_genai_msr, seedance_reference, fasth3_omni_reference, minimax_reference, heygen_reference) or an audio2video adapter${onScreen ? '' : ', or set generateAudio:false and keep the lines as TTS voiceover'}.`);
     const reference = native && lane === 'reference';
     const strategy = supplied ? 'supplied_audio' : reference ? 'reference_voice' : 'external_tts';
     const warnings = [];
     const speakers = [];
-    const nativeLines = msr || nativeSlot ? lines : lines.filter(line => line.delivery === 'on_screen');
+    const nativeLines = msr || vendor || nativeSlot ? lines : lines.filter(line => line.delivery === 'on_screen');
     const ids = [...new Set((native ? nativeLines : lines).map(line => text(line.speaker) || text(doc.narratorCharacterId)))];
     const prompt = [];
     const audioOffset = tool === 'fasth3_omni_reference' && Array.isArray(args.referenceVideoPaths)
@@ -277,9 +280,8 @@ export function prepareVideoVoice(tool, input, context) {
                 speaker.imageIndices = imagePaths.flatMap((file, i) => ownedPaths.includes(file) ? [i + 1] : []);
                 if (imagePaths.length && !speaker.imageIndices.length)
                     warnings.push(`${id}: no explicit image ownership matched the request; add voiceReference.imagePaths to bind this speaker to the correct Image N.`);
-                const marker = String(args.model).includes('2-5') ? '@' : '';
-                const images = speaker.imageIndices.map(i => tool === 'fasth3_omni_reference' ? `<Picture ${i}>` : `${marker}Image ${i}`).join(', ');
-                const audioLabel = tool === 'fasth3_omni_reference' ? `<Audio ${speaker.audioIndex}>` : `${marker}Audio ${speaker.audioIndex}`;
+                const images = speaker.imageIndices.map(i => referenceLabel(tool, 'image', i, args.model)).join(', ');
+                const audioLabel = referenceLabel(tool, 'audio', speaker.audioIndex, args.model);
                 prompt.push(`${label} (speaker ${id})${images ? `, shown in ${images},` : ''} uses ${audioLabel} for voice timbre and accent only. Speak the authored shot dialogue, not the sample's words.`);
             }
             else
@@ -295,8 +297,9 @@ export function prepareVideoVoice(tool, input, context) {
         if (native && !text(object(character.tts).voiceDirection) && !text(object(character.tts).stylePrompt) && !text(object(object(object(character.character).speech).timbre).value))
             warnings.push(`${id}: no authored acoustic description; the TTS voice ID is not a video-model voice selector.`);
     }
-    if (reference && msr) {
-        args.references = msrRefs;
+    /** Every turn with its speaker's picture and sample, in order; the prompt holds the only copy of each line. */
+    const turnScript = () => {
+        const img = (n) => referenceLabel(tool, 'image', n, args.model), aud = (n) => referenceLabel(tool, 'audio', n, args.model);
         // Narration is the only script authority. A substring cannot establish speaker ownership or turn order.
         const quoted = [...String(args.prompt).matchAll(/"([^"]*)"|“([^”]*)”|「([^」]*)」/g)].map(match => match[1] ?? match[2] ?? match[3]);
         if (lines.some(line => quoted.some(words => words.includes(text(line.tts)))))
@@ -305,34 +308,41 @@ export function prepareVideoVoice(tool, input, context) {
         const script = lines.map((line, turn) => {
             const id = text(line.speaker) || text(doc.narratorCharacterId), speaker = bySpeaker.get(id);
             const image = speaker?.imageIndices?.[0], audio = speaker?.audioIndex, direction = text(object(line.acting).direction);
-            const who = image ? `Image ${image}` : speaker?.name ?? id;
+            const who = image ? img(image) : speaker?.name ?? id;
             if (line.delivery !== 'on_screen') {
                 const label = nonEnglishOutsideQuotes(speaker?.name ?? '') ? id : speaker?.name ?? id;
                 const delivery = line.delivery === 'off_screen' ? 'off screen' : 'in voiceover';
-                return `${label} speaks ${delivery}${direction ? ` (${direction})` : ''}${audio ? ` using Audio ${audio}` : ''}. ` +
-                    `Do not show this speaker or animate any visible mouth during this line. ${audio ? `Audio ${audio} (${label})` : label}: "${text(line.tts)}"`;
+                return `${label} speaks ${delivery}${direction ? ` (${direction})` : ''}${audio ? ` using ${aud(audio)}` : ''}. ` +
+                    `Keep the speaking face outside the authored crop; retain any planned hands or body detail. Do not add a portrait or animate any visible mouth during this line. ${audio ? `${aud(audio)} (${label})` : label}: "${text(line.tts)}"`;
             }
             const binding = speaker?.screenBinding;
             const label = nonEnglishOutsideQuotes(speaker?.name ?? '') ? id : speaker?.name ?? id;
             const identity = binding ? `${who}, ${label} at SCREEN ${binding.screenPosition.toUpperCase()} (${binding.description})` : `${who} (${label})`;
-            return `Turn ${turn + 1}: ${identity} speaks${direction ? ` (${direction})` : ''}${audio ? ` using Audio ${audio}` : ''}` +
+            return `Turn ${turn + 1}: ${identity} speaks${direction ? ` (${direction})` : ''}${audio ? ` using ${aud(audio)}` : ''}` +
                 `. Only this speaker's mouth moves; other visible mouths stay closed. ` +
-                `${audio ? `Audio ${audio} (${who})` : who}: "${text(line.tts)}"`;
+                `${audio ? `${aud(audio)} (${who})` : who}: "${text(line.tts)}"`;
         });
         if (screenBindings.length)
             prompt.push('Screen positions use the viewer\'s left and right in the opening image. Preserve these positions and each character\'s appearance.');
         if (speakers.length > 1)
             prompt.push('Speak the following turns in order, with a brief pause between speakers and no overlapping speech.');
         prompt.push(...script);
+    };
+    if (reference && msr) {
+        args.references = msrRefs;
+        turnScript();
         if (typeof args.prompt === 'string' && msrAudio.length)
             args.prompt = afterImageBlock(args.prompt, msrAudio.sort());
-        if (lines.some(line => /[가-힣]/.test(text(line.tts))))
-            warnings.push('MSR training captions were English; Korean speech and cross-language voice are not established (arXiv 2609.18393).');
+        const spoken = object(context.board.STORY).language;
+        if (typeof spoken === 'string' ? !/^en\b/i.test(spoken) : lines.some(line => /[^\P{L}A-Za-z]/u.test(text(line.tts))))
+            warnings.push('MSR training captions were English; speech in another language and cross-language voice are not established (arXiv 2609.18393).');
         if (speakers.some(speaker => speaker.audioIndex))
             warnings.push('Reference voice is imitation, not preservation of the original WAV or exact speech timing.');
     }
     else if (reference) {
         args.referenceAudioPaths = audioPaths;
+        if (vendor)
+            turnScript();
         const mapped = new Set(speakers.map(speaker => speaker.audioIndex));
         if (audioPaths.some((_, i) => !mapped.has(i + 1 + audioOffset)))
             warnings.push('Some supplied audio references have no character mapping; retain their existing role (for example music) explicitly in the prompt.');
@@ -346,8 +356,8 @@ export function prepareVideoVoice(tool, input, context) {
             prompt.push('Keep these speaker identities unchanged. Apply each line\'s authored emotion separately from stable timbre and accent. Keep non-speaking listeners silent; do not invent dialogue or voiceover.');
         if (speakers.length > 1)
             warnings.push('Multiple speakers: check assignment and turn-taking separately from timbre; short turns reduce ambiguity but are not a guarantee.');
-        if (msr)
-            warnings.push('MSR renders speech and effects into its own soundtrack; assembly uses it as the cut\'s audio.');
+        if (msr || vendor)
+            warnings.push(`${msr ? 'MSR' : tool} renders speech and effects into its own soundtrack; assembly uses it as the cut's audio.`);
         else if (!nativeSlot)
             warnings.push('visual.video assembly uses the external TTS track. Native voice guidance does not synchronize that WAV; use audio2video for exact supplied-speech staging or the existing visual.clip native-audio slot.');
     }

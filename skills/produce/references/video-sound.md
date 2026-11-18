@@ -63,8 +63,9 @@ for overlapping dialogue. Most dialogue-led shots should keep the post default.
 
 Native/input effects set `audioSource:'video'`. The builder extracts the clip's soundtrack
 as the card's one audio source and sets sync=1; it does not overlay the separate TTS too.
-This currently supports one continuous source per card, with in/pre/post=0. For a trimmed
-take, make an explicitly trimmed video first and use that file in segs.tsv. The helper
+This supports one continuous source per card with pre/post=0. `edit.in` and `edit.out`
+trim the card as one body, picture and sound together
+([cinematic edit](cinematic-edit.md)), so a take needs no separately cut file. The helper
 checks both streams and writes hash-bound extraction evidence to source-audio.json.
 It never silently falls back to TTS when the source audio is missing.
 

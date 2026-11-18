@@ -10,7 +10,7 @@ const SCHEMA = {type:'object',additionalProperties:false,required:['subject','re
   crop:{type:'string',minLength:1,description:'English: visible boundaries, e.g. only Mina’s clenched right hand and the key fill the frame.'},
   subjectType:{type:'string',enum:['person','object','detail'],description:'What the crop measures. Person keeps anatomical shot-size boundaries; object/detail uses subject-relative framing. Defaults to person with cast, detail for insert/ecu or an explicit target, otherwise object.'},
   mode:{type:'string',enum:MODES,description:'Opening viewpoint. Left/right name the visible side of the subject. Independent of shot.angle (height).'},
-  subjectId:{type:'string',minLength:1,description:'Blocked actor or set object to frame. Defaults to the shot cast for ordinary person shots.'},
+  subjectId:{type:'string',minLength:1,description:'Blocked actor or set object to frame. Defaults to the shot cast for ordinary person shots; ots needs it, and a pov of something no id stands for leaves it out.'},
   viewerId:{type:'string',minLength:1,description:'Blocked observer for pov/ots; required for those modes.'},
   target:{type:'object',additionalProperties:false,required:['point','span'],description:'Exact body/detail crop in a built set. Use the actual opening blocking, never a guessed face-height substitute.',properties:{
     point:{type:'array',minItems:3,maxItems:3,items:{type:'number'},description:'World-space target [x,y,z] in metres, taken from the staged opening pose.'},
@@ -25,7 +25,9 @@ function validate(view) {
   if(view.subjectType!==undefined&&!['person','object','detail'].includes(view.subjectType))errors.push('unknown view subjectType');
   for(const key of ['subjectId','viewerId'])if(view[key]!==undefined&&(typeof view[key]!=='string'||!view[key].trim()))errors.push('invalid view.'+key);
   if(['ots','pov'].includes(view.mode)&&!view.viewerId)errors.push('view.viewerId is required for ots/pov');
-  if(['ots','pov'].includes(view.mode)&&!view.subjectId)errors.push('view.subjectId is required for ots/pov');
+  // OTS frames a staged person past the observer's shoulder. POV shows whatever the observer sees: a staged
+  // actor or set object by id, or something no id stands for, which subject alone describes.
+  if(view.mode==='ots'&&!view.subjectId)errors.push('view.subjectId is required for ots');
   if(view.viewerId&&view.viewerId===view.subjectId)errors.push('the observer and subject must differ');
   if(view.target!==undefined){
     const t=view.target;

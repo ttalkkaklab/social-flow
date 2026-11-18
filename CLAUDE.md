@@ -23,7 +23,91 @@ needed, invoke this plugin's own MCP server with the correct inherited environme
 do not bypass its tools, reservations or receipts. Confirm recovery with a requested
 image and its local receipt. See AGENTS.md's local GenAI connection directive.
 
+## Researched story material and tension (user directive, 2026-11-14)
+
+Before recommending a new story-led synopsis, read the existing real-event collection and
+supplement missing decisions, consequences and counterexamples. Explicit research requests
+include actual searches and opened sources; fiction is not an excuse to skip that request.
+Follow `skills/storyboard/references/story-material-research.md`. Distinguish documented
+events, disputed accounts and invented adaptation; search counts do not certify sufficiency.
+Verify credentials in the MCP process, not only the shell. For Codex STDIO forward the name
+`SERPAPI_API_KEY` in the relevant `mcp_servers.social-flow.env_vars` and test a fresh connection.
+
+Carry costly choices, motivated secrets, competing claims and changing alliances from the
+synopsis into acted scenes and visible storyboard evidence. Use `story-interest.md` as
+guidance, without new score gates or compulsory twists. Synopsis-only requests stop at prose;
+they do not create episode assets. Existing cast, calendar, narrator and ending rules hold.
+
+## Story language (user directive, 2026-11-18)
+
+Nothing said which language a story is written in, and every default and example was Korean.
+The story language of a new episode is the one the user names for it, else the saved
+`languages.speech`, else the language the channel already works in (its profile, cast voices
+and earlier episodes), else the language of the request; nobody is asked. The first `story_sequence` takes it as `language`
+and the board keeps it as `STORY.language` (a new episode board without the argument takes
+the saved `speech`; a board that has one, or has shots, keeps its language and a different
+value warns). Synopsis,
+scenario, story text, summaries and lines use it, each character's `tts.language` is its
+primary subtag, and prompts stay English. Untimed lines are timed in English, Chinese,
+Japanese, Spanish, French, German, Vietnamese and Korean; only the Korean rate is measured,
+so the others report `speechRate:"uncalibrated"` and run slow. These report; none refuses.
+The review page's own menus are English and Korean. See
+`skills/storyboard/references/review-localization.md`.
+
+## Episode anticipation (user directive, 2026-11-16)
+
+Every new or substantially revised synopsis and storyboard gets an authoring pass for
+what makes the viewer want the next development. Apply
+`skills/storyboard/references/episode-anticipation.md`: establish a specific promise,
+change the viewer's expectation through consequential clues or attempts, pay the promise
+inside the episode and show the recipient's response or changed behavior. A known outcome
+can still hold a question about how it happens or what it costs. Quiet and factual work
+uses discovery, application or consequence without invented conflict or withheld essentials.
+Carry this progression from synopsis prose into acted scenes and shot evidence; metadata
+and repeated hesitation do not count. This is the default writing process, not an automatic
+review, score threshold, schema requirement or media approval. Standalone stories close
+their central question; only explicit serials carry a question into another episode.
+
+## Hook and rewind (user directive, 2026-11-17)
+
+Support a channel's chosen series format of a provocative opening, immediate recipient
+reaction, brief rewind with clear time orientation, enacted relationship context and one
+catch-up into the continuing story. Follow `episode-anticipation.md` in the storyboard
+references. Show why the event is surprising rather than merely calling a character strict.
+The opening incident may precede its causes without revealing a held motive or confession.
+Honor an explicitly requested time label as a scoped text exception; it does not authorize
+dialogue subtitles. This is writing guidance, not an automatic score or generation gate.
+
+## Promise and proof (user directive, 2026-11-18)
+
+Episode anticipation was written for acted stories; an episode that makes a claim (explainer,
+tutorial, review, advertisement) had one sentence. Such an episode promises one result in the
+viewer's words, says it aloud in the opening because nothing is drawn over video, and pays
+with proof the viewer can check on screen: what went in is visible in what came out, in a
+picture only this subject could give, held long enough to read. A spoken claim with neither
+a picture nor a source comes out, unsourced numbers and absolutes included. The middle moves
+from whether it works to its limit or cost, and the ending shows someone using the result;
+an ask stays optional and names one action and the place the thing really is. Follow the
+claim-led section of `episode-anticipation.md`. `sequence.question`/`payoff` hold the
+viewer's doubt and the proof scene. Once the shots before it have lengths, every board write
+prints when the first spoken line starts, and for a natively voiced line the silence its
+shot's stored length holds. This reports and never refuses. It is writing guidance, not a score, a problem-beat requirement or a deadline for
+the proof: on the one channel studied the earliest proof had the fewest views. Evidence and
+its limits: `docs/research/2026-11-18-promise-and-proof/README.md`.
+
+## TikTok private upload and cover (user directive, 2026-11-18)
+
+Every new TikTok publication starts private (Only you / SELF_ONLY). Edit and save
+its cover in ego lite while private, reopen it to inspect the saved image and
+profile crop, then switch that same post to Everyone and verify the public cover.
+A successful upload is not public completion. If cover editing or verification is
+blocked, keep the post private and report the blocker; never publish first, remove
+truthful disclosures, or re-upload to work around it. Reuse the episode's existing
+publishing authorization. Follow `skills/publish/references/tiktok-private-cover.md`.
+This is the publishing workflow, not a new backend quality gate.
+
 ## Owner decisions (2026-10-18)
+
 
 - Precedence: the later-dated directive wins, and a superseded sentence is deleted in place, not kept under a banner.
 - Delivered video is subtitle-free, including speech (2026-10-17): no subtitle, caption, label or mark of any kind over a moving picture; a separate SRT only when the user asks.
@@ -94,28 +178,63 @@ provenance so the user can request targeted corrections later through `edit-spee
 voice-lock ASR. Follow `skills/produce/references/shot-speech.md`. Narrator and character
 lines use explicit speakers; video models are replaceable adapters with declared capabilities.
 
-## Dialogue coverage (user directive, 2026-11-07)
+## Shot expressions (user directive, 2026-11-16)
 
-For face-to-face generated dialogue, prefer speaker-facing OTS/reverse coverage when
-expressions matter. In each OTS clip the far, visible face speaks and the foreground
-listener stays silent; put the reply in a separately generated reverse shot. Retain a
-two-speaker two-shot when both faces and mouths are readable and the shared performance
-needs it. Do not ban OTS or two-speaker MSR, split every line, or mistake two visible
-characters for two speakers. Follow `skills/storyboard/references/dialogue-coverage.md`
-for authoring, images, bindings, continuity and explicit creative exceptions. This is
-production guidance, not a new execution gate or a reason to regenerate approved media.
+Characters smiled through scenes of alarm: the shot story names an action, the face panels and
+sheets carried smiles, and nothing told the model what the face shows. `shot_characters` takes
+an `expression` per on-screen character — English visible cues (brows, eyes, mouth, posture)
+read from the scene's situation, silent listeners included — and `shot_image` and `shot_prompt`
+write it into the image and video prompts; the video prompt asks for it to be held to the last
+frame. `shot_image` warns `expression_missing` for a face without one and never refuses. A
+sheet's `appearance` describes structure: `character_panel` leaves smile, grin and laugh clauses
+out of the neutral face panel and reports them. The moment-before rule is about movement; the
+opening face already shows the shot's emotion. See `skills/storyboard/SKILL.md` §3.
+
+## Silence around native lines (user directive, 2026-11-16)
+
+MSR clips kept opening and closing on a silent character: on 299 measured clips half of each
+clip was silence around its line. A natively voiced clip plays exactly the requested length
+and the model fills what the line does not need with silent acting. So the length follows the
+line: `storyboard_read` times an untimed line from its syllables in the board's language and reports
+`performanceTiming.storedExcessSeconds`, and `video_plan` returns `speechFit` with a warning
+and the shortest covering request when a request runs more than half a second over. A pause
+the story needs is written into the performance (a timed action, `leadInSeconds`,
+`tailOutSeconds`). For clips already made, `speech_manage attach_video` returns where the
+line sits (`soundtrack`) with a suggested `edit.in`/`edit.out`, and a card that plays its
+clip soundtrack trims picture and sound together with those fields; assembly prints a warning
+for a second or more of silence before a line. Each of these reports; none refuses, and no
+trim is applied without the author. Attaching other footage removes the old trim. Filmed sync
+footage keeps `in=0`. See `skills/produce/references/cinematic-edit.md`.
+
+## Dialogue coverage (user directive, 2026-11-09)
+
+Each shot contains lines from at most one character. Split at every speaker change,
+including readable two-shots; consecutive lines by that character may share a shot.
+Keep two visible principal characters when the listener belongs in frame, but keep the
+listener silent. The speaker limit divides generation units, not attention subjects.
+Choose the scene's visible evidence before cast/lines: speaker-facing OTS or close-ups
+when the face matters, purposeful off_screen speech over listener reactions, details,
+POVs or spatial views when those carry the change. Addressing a listener never requires
+that listener in the crop. Preserve emotional behavior until a visible event changes it;
+inspect the sequence rather than imposing shot-size quotas. Preserve the axis, eyelines,
+story order, acting and line IDs.
+Follow `skills/storyboard/references/dialogue-coverage.md`.
+
+Silent and inner-thought shots use image2video rather than MSR. Mark thoughts as
+`voiceover` attributed to the thinking character, generate pinned-voice TTS, measure
+and compose it with the shot's action, lead-in and tail-out, then plan the full video
+coverage. Keep mouths closed and use the composed TTS as assembly audio. Split mixed
+physical/inner speech before generation. Missing TTS setup is reported, never replaced
+with native MSR thoughts. Existing usable clips do not require regeneration.
 
 ## MSR voice and LTX default (user directive, 2026-10-30; voice optional 2026-10-31)
 
-Two-speaker MSR dialogue stays supported (user directive, 2026-11-03). Both the
-human and orc left/right trials had correct speaker turns according to the user.
-Bind each visible speaker to the inspected start image's viewer-relative position
-and appearance with `shot_prompt.speakerBindings`; repeat that identity and its
-image/audio mapping on each compiled turn. Do not impose one speaker per shot.
-Keep dialogue in `shot_dialogue` and action in `shot_prompt`; never skip a turn
-because its words appear somewhere in a prompt. Recompile saved action with current
-icons at video planning time and report each setting's delivery route. Experimental
-success is not a guarantee of model adherence, voice identity or subtitle absence.
+MSR dialogue has one speaking character per shot. Bind that speaker to the inspected
+start image's viewer-relative position and appearance with `shot_prompt.speakerBindings`;
+repeat the identity and image/audio mapping on compiled turns. Keep dialogue in
+`shot_dialogue` and action in `shot_prompt`. Recompile saved action with current icons
+at video planning time and report each setting's delivery route. Experimental success
+is not a guarantee of model adherence, voice identity or subtitle absence.
 
 MSR renders a cut from subject and background images; any dialogue is written in the
 prompt, and MSR's own speech-and-effects soundtrack is the cut's audio. A speaker's pinned
@@ -125,7 +244,7 @@ and the plan records a warning. A request that sends a sample to a gateway witho
 support is a hard `msr_voice_unsupported` error. There is no external TTS lane for MSR,
 so its lines get no per-line TTS: `speech_manage` plans and binds an MSR shot as `native`
 (line revisions, no line audio) and an edited line marks the clip stale (2026-10-31).
-A cut without dialogue can use MSR or img2video. A character's default MSR references are
+A cut without physical dialogue uses img2video; inner thoughts use separate timed TTS. A character's default MSR references are
 its sheet panels — face close-up, headless front and headless back (2026-10-31): one
 character uses all three; two use each face, then each front; the shot's start image (its characters,
 place and props composed by `shot_image`) takes the background slot, and the plain place picture stays out.
@@ -202,6 +321,23 @@ place picture stays out. Each shot's video then waits for the user's yes to its 
 `video_execute` refuses otherwise (`video_approval_required`). The session never records an
 approval the user did not give.
 
+## Music spotting (user directive, 2026-11-14)
+
+Three episodes got their music at assembly, from files made for other episodes, and the
+user placed each cue by hand. So every scene on a story-first board gets a music decision
+once its lines are written: `story_music` records `score` with a cue or `none`, each with
+its reason, and writes the `$timeline` span. A scene nobody decided reads `undecided`;
+`$timeline: []` without decisions is not a choice of silence. A `prompt` cue is generated
+for its episode after the user authorizes the spend, never filled with another episode's
+file, and the sound compiler reports a cue file with no `music_execute` receipt in the
+episode. The user's music feedback is saved as dated notes in `production.musicDirection`
+and shown at every spotting. A span can start later in its file (`sourceStartSeconds`), and
+a span resting more than `maximumSeparationLu` (20) under the speech is reported. Each of
+these reports; none refuses a write or a build, except input the tools cannot use: an unknown
+cue, scenes that do not follow each other, or an offset that leaves no cue to play. The
+receipt check reads cues the board names, so a channel bed copied in as the legacy `bgm.wav`
+is outside it. See `skills/storyboard/SKILL.md` §3.
+
 ## English video prompts (user directive, 2026-10-31)
 
 Every video prompt is English on every adapter, Seedance 2.5 included. Only dialogue uses the
@@ -213,14 +349,30 @@ with a non-Latin name by character id and report a non-English voice description
 ## Two principal characters per shot (user directive, 2026-10-31)
 
 From the storyboard on, a shot's `visual.character` lists at most two principal characters;
-`check-scenes.js` rejects a third (`[character-limit]`). When a beat needs three principal
-characters, split it into shots — pairs, reverse angles or a cutaway — instead of crowding one
-frame. Extras and unnamed figures stay out of `visual.character` and are described by
-appearance in the action, without a reference image.
+`check-scenes.js` rejects a third (`[character-limit]`). A third cast member in view and unnamed
+figures stay out of `visual.character`: see People in the frame (2026-11-17).
 Choosing LTX at project setup saves `{engine:"astra-genai", operation:"reference"}`
 with `resolution:"1792x1024"` for 16:9 (`1024x1792` for 9:16), so `video_plan` plans
 MSR when a call names no operation. GenAI submissions wait up to 15 minutes for the
 gateway's acknowledgement. See `skills/_shared/astra-genai.md`.
+
+## People in the frame (user directive, 2026-11-17)
+
+An episode came out as fifty waist-up pictures of whoever was speaking: its shots were cut one
+per line, so none showed the place, the work a character does or the person a line lands on.
+One speaker per shot limits who talks in an LTX clip, not who is seen. `shot_characters` takes
+`bystanders` — cast members seen without an on-screen line — and `extras`, unnamed people
+described in English. `visual.character` still lists the two the video call references; a shot
+shows at most three of the cast. `shot_image` draws a bystander from their face and front
+panels and extras from the words; the video call references neither, since the start image
+carries them, and `shot_prompt` keeps them in the prompt. A bystander with an on-screen line is
+refused (`shot_bystander_speaks`). Whether a clip holds a bystander's look from the start image
+alone is not measured yet.
+
+Every board write prints the board first as counts: people in frame, shots with and without a
+line, sizes, the widest shot of each scene, one person framed where a scene has several, and a
+reason sentence repeated across shots. A note shared by several shots prints once. These are
+counts, never targets or gates. See `skills/storyboard/SKILL.md` §3 and `dialogue-coverage.md`.
 
 ## Style ban — report-style stative verbs (user directive, 2026-08-12)
 

@@ -24,7 +24,7 @@ test('frame mappings use board-relative files, decoded metadata and explicit use
   assert.equal(p.imageBindings.length,3);assert.equal(p.imageBindings[2].submitted,false);
   assert.equal(p.imageBindings[0].width,1);assert.match(p.imageBindings[0].sha256,/^[a-f0-9]{64}$/);
  }
- const genai=prepareVideoImages('astra_genai_img2video',{prompt:'Move',model:'ltx-2.5-22b-dev',resolution:'720p',duration:5,reserveUsd:0},s,root);
+ const genai=prepareVideoImages('astra_genai_img2video',{prompt:'Move',model:'ltx-2.5-22b-dev',resolution:'1280x720',duration:5,reserveUsd:0},s,root);
  assert.match(genai.args.imageUri,/^data:image\/png;base64,/);assert.match(genai.args.lastFrameUri,/^data:image\/png;base64,/);
  assert.doesNotThrow(()=>parseVideoArgs('astra_genai_img2video',genai.args));
  const desktop=prepareVideoImages('astra_genai_desktop_img2video',{prompt:'Move',model:'ltx-2.5-fast',resolution:'720p',duration:3,reserveUsd:0},s,root);
@@ -48,6 +48,23 @@ test('reference-only inputs keep order and roles; installed adapters enforce the
  s.visual.references=Array.from({length:10},(_,i)=>({...ref(),id:'hero'+i}));
  const tooMany=prepareVideoImages('seedance_reference',{prompt:'Walk',model:'dreamina-seedance-2-0-260128'},s,root);
  assert.throws(()=>parseVideoArgs('seedance_reference',tooMany.args),/at most 9/);
+});
+test('GenAI I2V preserves first/end frames alongside independent subject and background references',t=>{
+ const root=fixture(t),s=shot('first_last',[ref('room','both','background'),ref('hero','video')]);
+ const p=prepareVideoImages('astra_genai_img2video',{prompt:'Walk',model:'ltx-2.5-22b-distilled',resolution:'1280x704',duration:5,reserveUsd:0,generateAudio:false},s,root);
+ assert.match(p.args.imageUri,/^data:image\/png;base64,/);assert.match(p.args.lastFrameUri,/^data:image\/png;base64,/);
+ assert.deepEqual(p.args.references.map(r=>[path.basename(r.imagePath),!!r.background]),[['hero.png',false],['room.png',true]]);
+ assert.equal(p.imageBindings.filter(b=>b.submitted).length,4);
+ assert.match(p.args.prompt,/Image 1: character, Preserve hero appearance/);
+ assert.match(p.args.prompt,/Image 2: background, Preserve room appearance/);
+ assert.doesNotThrow(()=>parseVideoArgs('astra_genai_img2video',p.args));
+ assert.throws(()=>parseVideoArgs('astra_genai_img2video',{...p.args,model:'ltx-2.5-22b-dev'}),/distilled/);
+ // A declared cast cannot promote a source-image-only character into video references.
+ fs.writeFileSync(path.join(root,'storyboard/cast.json'),JSON.stringify({characters:[{id:'hero',source:'../assets/characters/hero/identity.md'}]}));
+ s.visual.character=['hero'];s.visual.references=[ref('hero','image'),ref('room','video','prop')];
+ const prop=prepareVideoImages('astra_genai_img2video',{prompt:'Walk',model:'ltx-2.5-22b-distilled',resolution:'1280x704',duration:5,reserveUsd:0},s,root);
+ assert.deepEqual(prop.args.references.map(r=>path.basename(r.imagePath)),['room.png']);
+ assert.equal(prop.imageBindings.find(b=>b.id==='hero').submitted,false);
 });
 test('MSR preserves explicit image references on a legacy board without a declared cast',t=>{
  const root=fixture(t),s=shot('reference',[ref()]);
@@ -128,4 +145,14 @@ test('declared MSR principals rebuild canonical faces and bodies despite stale t
  assert.match(unified.args.prompt,/Image 3: opening composition/);
  fs.unlinkSync(path.join(root,'assets/characters/ally/face.png'));
  assert.throws(()=>prepareVideoImages('astra_genai_msr',{prompt:'Exchange'},s,root),/character_panel_missing: ally.*face/);
+});
+
+test('reference preserve and avoid rules reach the mapped image slot and remain visible in bindings',t=>{
+ const root=fixture(t),s=shot('reference',[{...ref(),preserve:['the blue coat'],avoid:['the seated pose']}]);
+ const p=prepareVideoImages('seedance_reference',{prompt:'Walk',model:'dreamina-seedance-2-0-260128'},s,root);
+ assert.match(p.args.prompt,/Image 1.*Preserve: the blue coat.*Do not take from this reference: the seated pose/);
+ assert.deepEqual(p.imageBindings[0].preserve,['the blue coat']);
+ assert.deepEqual(p.imageBindings[0].avoid,['the seated pose']);
+ s.visual.references[0].avoid='bad';
+ assert.throws(()=>prepareVideoImages('seedance_reference',{prompt:'Walk'},s,root),/image_plan_invalid/);
 });

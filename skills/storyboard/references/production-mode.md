@@ -263,8 +263,8 @@ holds the subject plan only, and `spatial-prompts.js` assembles the motion promp
 The camera slots name a move the viewer can see at `slow`, `steady` or `fast` (no `very
 slow`/`subtle`/`gentle`/`hold composition`) — that is the
 generated-video vocabulary; still-camera cuts use render-routing.md's `very slow`/`slow`/`fast`/
-`very fast`. As advice, `production-mode.js` flags a full-video episode that holds a static camera
-on more than one shot in three or frames more than half its shots wide (full-video.md §Camera
+`very fast`. As advice, `production-mode.js` notes a full-video episode whose every generated
+shot holds the camera; no share of held, moving or wide shots applies (full-video.md §Camera
 dynamics). Do not read the old HTML-only explanation and person-required video clauses as
 overriding this explicit episode choice.
 

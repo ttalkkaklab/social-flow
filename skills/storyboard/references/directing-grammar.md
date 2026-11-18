@@ -52,11 +52,12 @@ and inspect actual source images together before video generation. Different cam
 labels or filenames do not establish different pictures.
 
 Choose boundaries when an action, discovery, relationship or emotional state changes.
-A speaker change, text message or subtitle boundary alone does not require a new shot.
-Several lines can play over one coherent action; preserve their attributed speech events.
-For generated dialogue, follow [dialogue coverage](dialogue-coverage.md): face-to-face
-OTS/reverse coverage is preferred when expressions matter. A fixed OTS with two speakers
-is a production reason to split; a readable two-speaker two-shot remains valid.
+A speaker change requires a new shot; a text message or sentence boundary alone does not.
+Consecutive lines by one character can play over one coherent action. Follow
+[dialogue coverage](dialogue-coverage.md): allocate one speaking character per shot,
+then choose its size and angle. Use speaker-facing OTS/reverse for exchanges and keep
+listeners silent even in a two-shot. Silent/inner-thought pictures use image2video;
+inner thoughts are timed character TTS with closed mouths.
 
 Before choosing movement, describe what the viewer sees now that the previous shot did
 not show. Compare neighboring frames by subject, scale, viewpoint, occupied screen area,
