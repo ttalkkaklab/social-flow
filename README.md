@@ -50,6 +50,11 @@ adding a score gate or forcing a twist. Standalone stories resolve within their 
 For channels choosing a provocative opening followed by a rewind, that pass carries the
 opening event and recipient reaction into enacted earlier context, a clear time jump and
 one catch-up. It preserves held motives, user-scoped time labels and the eventual payoff.
+For an episode that makes a claim (explainer, tutorial, review, advertisement) the same pass
+asks for one result promised in the viewer's words and said aloud, proof the viewer can check
+on screen and an ending where someone uses it. `sequence.question`/`payoff` hold the doubt and
+the proof scene, and every board write prints when the first spoken line starts
+([study and limits](docs/research/2026-11-18-promise-and-proof/README.md)).
 
 [Material research](skills/storyboard/references/story-material-research.md) now precedes
 new story selection: read existing case collections, verify consequential decisions and

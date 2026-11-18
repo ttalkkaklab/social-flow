@@ -33087,8 +33087,8 @@ var sequenceSchema = external_exports.object({
   id: nonEmpty.describe('Stable id, e.g. "q1"'),
   title: external_exports.string().optional().describe("The heading the approval page draws"),
   purpose: external_exports.string().optional().describe("The one purpose that binds these scenes \u2014 two purposes are two sequences"),
-  question: nonEmpty.optional().describe("The dramatic question this stretch opens"),
-  payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question"),
+  question: nonEmpty.optional().describe("The question this stretch opens: a dramatic one, or on a claim-led episode whether the promised result is real"),
+  payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question or shows the proof"),
   scenes: external_exports.array(external_exports.number().int().positive()).describe("Scene numbers in playback order")
 }).strict();
 var structureSchema = external_exports.object({
@@ -33302,8 +33302,8 @@ var storySequenceSchema = external_exports.object({
     id: nonEmpty.describe('Stable id, e.g. "q1"'),
     title: nonEmpty.describe("The heading the approval page draws"),
     purpose: nonEmpty.describe("The one purpose that binds its scenes"),
-    question: nonEmpty.optional().describe("The dramatic question this stretch opens"),
-    payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question")
+    question: nonEmpty.optional().describe("The question this stretch opens: a dramatic one, or on a claim-led episode whether the promised result is real"),
+    payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question or shows the proof")
   }).strict()).min(1)
 }).strict();
 var storySceneSchema = external_exports.object({
