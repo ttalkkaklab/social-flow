@@ -137,6 +137,21 @@ test('lost init response is durable submission_unknown and never resubmitted', a
   assert.equal(submits, 1);
 });
 
+test('a 4xx init refusal is rejected and the same requestId may go again; a 5xx stays unknown', async t => {
+  fixture('refused'); let submits = 0; let answer = 403;
+  mock(t, async url => {
+    if (url.includes('user/info')) return data({ user: { open_id: 'owner' } });
+    submits++;
+    return new Response(JSON.stringify({ error: { code: answer === 403 ? 'spam_risk_too_many_posts' : 'internal_error' } }), { status: answer });
+  });
+  const input = { channel: 'refused', requestId: 'refused-1', videoFilePath: videoFile('refused'), expectedOpenId: 'owner', consent: true };
+  assert.equal((await tiktokPublish(input, 'upload')).status, 'rejected');
+  answer = 500;
+  assert.equal((await tiktokPublish(input, 'upload')).status, 'submission_unknown');
+  assert.equal((await tiktokPublish(input, 'upload')).reused, true);
+  assert.equal(submits, 2);
+});
+
 test('OAuth validates state, uses TikTok hex PKCE and refuses wrong handle without replacing tokens', async t => {
   const { tokenFile, clientFile } = fixture('auth');
   const server = createServer();
