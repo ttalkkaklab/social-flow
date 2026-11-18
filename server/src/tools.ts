@@ -585,6 +585,10 @@ const YOUTUBE_PUBLISH_OUTPUT: OutputSchema = {
       type: 'string',
       description: 'Reason when only the thumbnail step failed. The video upload succeeded, so do not re-upload — set the thumbnail in YouTube Studio instead of calling this tool again',
     },
+    processingNote: {
+      type: 'string',
+      description: 'Why the thumbnail was set without confirmed processing (status unreadable, still processing, or failed). On a Short, check the cover and set it in Studio if needed — do not re-upload',
+    },
     captionSet: { type: 'boolean', description: 'Only when caption input was given — whether every caption track upload succeeded' },
     captionLanguages: {
       type: 'array',
@@ -607,7 +611,13 @@ const FACEBOOK_PUBLISH_OUTPUT: OutputSchema = {
     postId: {
       type: 'string',
       description:
-        'Facebook post id — pass it straight to facebook_comment as postId. For video posts this value is also the video_id',
+        'Facebook post id — pass it straight to facebook_comment as postId. For regular video posts this value is also the video_id; for a Reel it is the post_id when finish returned one, otherwise the video_id',
+    },
+    videoId: { type: 'string', description: 'Video posts only — the video id (captions, facebook_captions and status checks use it)' },
+    reel: { type: 'boolean', description: 'true when published through the Reels endpoint' },
+    processingWarning: {
+      type: 'string',
+      description: 'Reel accepted but processing had not finished when polling stopped — check the Page; do not publish again',
     },
     permalink: PERMALINK_PROPERTY,
     captionSet: { type: 'boolean', description: 'Only when caption input was given — whether every caption file upload succeeded' },
@@ -4164,7 +4174,7 @@ Returns: integer credit balance.`,
     annotations: HINT.publish,
     outputSchema: publishOutput('mediaId', 'Instagram media id'),
     description:
-      `⚠️ Direct Instagram publishing — posts to the IG API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL — never call without the user's approval or an approved standing growth plan). 1-10 images (2+ makes a carousel) **or** one Reels video (mutually exclusive with imageUrls). Images must be **JPEG only** (PNG/MPO/JPS rejected). Images cannot be replaced after publishing (only the caption can be edited). Publish quota: 100 per rolling 24 hours (a carousel counts as 1). ${SNS_HITL_LINE}`,
+      `⚠️ Direct Instagram publishing — posts to the IG API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL — never call without the user's approval or an approved standing growth plan). 1-10 images (2+ makes a carousel) **or** one Reels video (mutually exclusive with imageUrls). Images must be **JPEG only** (PNG/MPO/JPS rejected). Images cannot be replaced after publishing (only the caption can be edited). Publish quota: Meta's pages say 50 or 100 per rolling 24 hours (a carousel counts as 1) — the account's content_publishing_limit quota_total is the real number. ${SNS_HITL_LINE}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -4178,8 +4188,12 @@ Returns: integer credit balance.`,
           type: 'string',
           format: 'uri',
           description:
-            'One public Reels video URL (.mp4/.mov) — cannot be used together with imageUrls. **Provide the clean subtitle-free master**, including speech videos. Do not burn captions into the picture or select a legacy video-sub file; Instagram has no separate subtitle input',
+            'One public Reels video URL (.mp4/.mov) — cannot be used together with imageUrls. **Provide the clean subtitle-free master**, including speech videos. Do not burn captions into the picture or select a legacy video-sub file; Instagram has no separate subtitle input. Instagram-Login tokens have no local-file upload, so the URL must stay public until the call returns (Meta fetches it). Spec: MP4/MOV, H.264/HEVC, AAC, 23–60 fps, 3 s–15 min, ≤300MB, 9:16 recommended',
         },
+        shareToFeed: { type: 'boolean', description: 'Reels only — false keeps the reel in the Reels tab only (off the profile grid/feed). Omit for the platform default' },
+        thumbOffsetMs: { type: 'integer', minimum: 0, description: 'Reels only — cover frame position in ms (default first frame). Ignored when coverUrl is given' },
+        coverUrl: { type: 'string', format: 'uri', description: 'Reels only — public JPEG cover (≤8MB, center 9:16 is used). Overrides thumbOffsetMs' },
+        isAiGenerated: { type: 'boolean', description: 'Reels only — Meta AI-usage self-disclosure (is_ai_generated). Generated Mochi & Bơ episodes pass true. Sent only when given' },
         channel: SNS_CHANNEL_PROPERTY,
       },
       required: ['caption'],
@@ -4207,7 +4221,7 @@ Returns: integer credit balance.`,
     annotations: HINT.publish,
     outputSchema: FACEBOOK_PUBLISH_OUTPUT,
     description:
-      `⚠️ Direct Facebook Page publishing — posts to the Graph API with the local Page token, **immediately public** (the posting Page is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL — never call without the user's approval or an approved standing growth plan). Forms: text / up to 10 images / one video (regular video — not Reels). Video posts may include a separate subtitle file (captionFilePath) only when requested — this pipeline uploads subtitles separately instead of burning them in, so give videoUrl the clean subtitle-free master, not a burned-in copy. The source link goes **without exception** in the first comment via facebook_comment right after a successful publish, not in the body (linkUrl). ${SNS_HITL_LINE}`,
+      `⚠️ Direct Facebook Page publishing — posts to the Graph API with the local Page token, **immediately public** (the posting Page is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL — never call without the user's approval or an approved standing growth plan). Forms: text / up to 10 images / one video — a regular Page video by default, or a **Page Reel with reel: true** (\`/video_reels\` start → hosted upload → finish; 9:16, 3–90 s, 24–60 fps, ≤30 Reels per Page per 24 h). Reels are public on publish; there is no private Reel. Video posts may include a separate subtitle file (captionFilePath) only when requested — this pipeline uploads subtitles separately instead of burning them in, so give videoUrl the clean subtitle-free master, not a burned-in copy. The source link goes **without exception** in the first comment via facebook_comment right after a successful publish, not in the body (linkUrl). ${SNS_HITL_LINE}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -4242,6 +4256,8 @@ Returns: integer credit balance.`,
             'Multi-language subtitles — one caption upload per entry, valid only on videoUrl posts and mutually exclusive with captionFilePath. **Put the default-language track first** — only the first entry declares default_locale (per-call default_locale on every track is undocumented behavior, so this tool declares the default exactly once). A failed locale comes back in captionWarning with the post intact — retry just that locale',
         },
         linkUrl: { type: 'string', format: 'uri', description: '(Exception only) link attachment — text posts (no media) only. The default rule is to put the link in the first comment via facebook_comment' },
+        reel: { type: 'boolean', description: 'With videoUrl: publish as a Facebook Page Reel instead of a regular Page video. Use for 9:16 shorts of 3–90 seconds only — Meta refuses a longer Reel (1363128), so a longer master goes without reel. The video URL must be public and fetchable by facebookexternalhit. If the result carries processingWarning the Reel was accepted — check the Page, never call again' },
+        isAiGenerated: { type: 'boolean', description: 'Reels only (reel: true) — Meta AI-usage self-disclosure (is_ai_generated). Generated Mochi & Bơ episodes pass true' },
         channel: SNS_CHANNEL_PROPERTY,
       },
       required: ['caption'],
@@ -4280,8 +4296,10 @@ Returns: integer credit balance.`,
         thumbnailFilePath: {
           type: 'string',
           description:
-            'Absolute path of the cover still (.jpg/.png ≤2MB) — **required**. Without it YouTube picks an arbitrary frame as the thumbnail, the title cover never shows, and the vertical surface cannot be reverted via the API after publishing. What this changes is the **landscape surfaces** only (search results, share previews, embeds) — the vertical frame (oar*) in the Shorts feed and the channel Shorts tab changes only through frame selection in the native YouTube app (publish skill §3, the vertical-surface step). Channels without phone verification (intermediate features) get the thumbnail rejected — the publish still succeeds and reports via thumbnailWarning',
+            'Absolute path of the cover still (.jpg/.png ≤50MB) — **required**. Without it YouTube picks an arbitrary frame as the thumbnail. Since 2026-11-03 thumbnails.set also covers Shorts (cropped to 9:16) **only after processing finishes**, so the tool waits for processingDetails.processingStatus = succeeded (up to 5 minutes, needs youtube.readonly; an upload-only token sets it without waiting and reports processingNote). Check the Shorts feed cover after publishing; if it is still a video frame, pick the frame in Studio or the app (publish skill §3). Channels without phone verification (intermediate features) get the thumbnail rejected — the publish still succeeds and reports via thumbnailWarning',
         },
+        defaultLanguage: { type: 'string', description: 'BCP-47 language of the title and description (snippet.defaultLanguage), e.g. vi for mochi-bo' },
+        defaultAudioLanguage: { type: 'string', description: 'BCP-47 spoken language of the audio (snippet.defaultAudioLanguage), e.g. vi for mochi-bo' },
         captionFilePath: {
           type: 'string',
           description:
@@ -4761,7 +4779,7 @@ The runtime field identifies the loaded module and its on-disk hash; it does not
 
 Includes boundaryReview (shot-boundaries-v1): every actual playback join with full ordered speech/performance, camera context, incoming join ownership and factual review signals. It is read-only and always not_reviewed; repeated speakers/cast or reasons are not merge commands. For splices incoming is null: inspect the edit plan. Missing evidence stays unknown. Compare the uncut scene before images, and audit line ids/order/acting, performance groups, references and outer joins after edits. If this field is absent on an older connection, update/reconnect rather than guessing a bundle path.
 
-Includes videoTiming for generated shots: selected route, planned source coverage, frame grid, maximum seconds, and fits/split_required/timing_unknown/limits_unknown. This is not measured speech or output duration. boundaryReview.shots[].performanceTiming times a Korean line nobody timed from its syllables and gives storedExcessSeconds: the seconds the stored duration holds beyond its lines and timed actions, which a native-speech clip (MSR) plays as silent acting around the line.
+Includes videoTiming for generated shots: selected route, planned source coverage, frame grid, maximum seconds, and fits/split_required/timing_unknown/limits_unknown. This is not measured speech or output duration. boundaryReview.shots[].performanceTiming times a line nobody timed from its syllables in the board's language (STORY.language; speechRate "uncalibrated" outside Korean, whose rate alone was measured) and gives storedExcessSeconds: the seconds the stored duration holds beyond its lines and timed actions, which a native-speech clip (MSR) plays as silent acting around the line.
 
 Returns: JSON — { file, mediaBaseDirectory, sha256, version, format, shots, sequences[…scenes[…shots]], unplacedShots, splicedShots (broll · outro), playback (actual insertion order), unscheduledShots, propSheet?, inspection, runtime, imageFraming, boundaryReview, videoTiming, reviewContext?, selectedShot? }.`,
     inputSchema: {
@@ -4789,12 +4807,13 @@ Returns: the file written or not, counts, and findings (! violation · warning).
       type: 'object', additionalProperties: false,
       properties: {
         path: { type: 'string', description: 'The storyboard directory (data/<channel>/episodes/<topic>/storyboard/) or its scenes.js' },
+        language: { type: 'string', description: 'The language the story and its lines are written in, as a BCP-47 tag ("en", "ja", "zh-Hans", "es", "fr", "de", "vi", "ko"): the one the user asked for, else the saved languages.speech, else the language the channel already works in (profile, cast voices, earlier episodes), else the language of the user\'s request. Recorded once as STORY.language; a new episode board without it takes the saved languages.speech, and a board that has one or already has shots keeps its language (a different value warns). Line timing reads it.' },
         sequences: { type: 'array', minItems: 1, description: 'Sequences in playback order', items: { type: 'object', additionalProperties: false, required: ['id', 'title', 'purpose'], properties: {
           id: { type: 'string', description: 'Stable id, e.g. "q1"' },
           title: { type: 'string', description: 'The heading the review page draws' },
           purpose: { type: 'string', description: 'The one purpose that binds its scenes; two purposes are two sequences' },
-          question: { type: 'string', description: 'Story-led work: the one question the viewer holds across these scenes — specific and answerable (who, why, how, whether)' },
-          payoff: { type: 'integer', minimum: 1, description: 'The scene number that answers the question — a later scene of this sequence' },
+          question: { type: 'string', description: 'The one question the viewer holds across these scenes — specific and answerable (who, why, how, whether). Claim-led work (explainer, tutorial, review, advertisement): whether the promised result is real' },
+          payoff: { type: 'integer', minimum: 1, description: 'The scene number that answers the question or shows the proof — a later scene of this sequence' },
         } } },
       },
       required: ['path', 'sequences'],

@@ -225,7 +225,8 @@ order are warnings too. The rest below is recommended:
   `endingReason`, `difference`; optional `cta` can describe a desired ask.
 - `cast: [{id, role, want, voice, reason}]` from cast.json.
 - `beats: [{item, expectation, change, necessity, events}]`, with suggested items
-  `훅`, `전개 #1`, `전개 #2`, `전개 #3`, `마무리`. A CTA row is optional and may be empty
+  `훅`, `전개 #1`, `전개 #2`, `전개 #3`, `마무리` (`hook`, `development #1`–`#3`, `ending` in a
+  scenario that is not Korean). A CTA row is optional and may be empty
   or appear where it serves the story; no CTA reason or prescribed position is required.
 - `events: [{kind, character, text, basis, to?, claims?}]`: kind is action, dialogue or
   narration; character is a cast ID; dialogue `to` is another ID, self, audience or unidentified. `text`

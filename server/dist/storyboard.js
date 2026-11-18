@@ -141,8 +141,8 @@ export const sequenceSchema = z
     id: nonEmpty.describe('Stable id, e.g. "q1"'),
     title: z.string().optional().describe('The heading the approval page draws'),
     purpose: z.string().optional().describe('The one purpose that binds these scenes — two purposes are two sequences'),
-    question: nonEmpty.optional().describe('The dramatic question this stretch opens'),
-    payoff: z.number().int().positive().optional().describe('The scene number that answers the question'),
+    question: nonEmpty.optional().describe('The question this stretch opens: a dramatic one, or on a claim-led episode whether the promised result is real'),
+    payoff: z.number().int().positive().optional().describe('The scene number that answers the question or shows the proof'),
     scenes: z.array(z.number().int().positive()).describe('Scene numbers in playback order'),
 })
     .strict();
@@ -291,6 +291,7 @@ function boundaryReview(win, playback, videoTiming) {
     const ids = source.map(shot => shot.id);
     const timings = Array.isArray(videoTiming) ? videoTiming : [];
     const acting = loadFromHere(join(PLUGIN_ROOT, 'skills', '_shared', 'scene-acting.js'));
+    const language = win.STORY?.language;
     const shots = playback.map(({ no }, index) => {
         const shot = source[no - 1];
         const visual = record(shot.visual), plan = record(shot.shot), camera = record(visual.camera);
@@ -298,6 +299,7 @@ function boundaryReview(win, playback, videoTiming) {
         const id = text(shot.id), uniqueId = id !== null && ids.filter(value => value === id).length === 1;
         const cast = contract().castOf(shot);
         let performanceTiming;
+        let unmeasuredRate = false;
         try {
             const legacyAction = text(visual.action) ?? text(design.action);
             const explicit = Array.isArray(shot.performance) && shot.performance.length > 0;
@@ -307,9 +309,17 @@ function boundaryReview(win, playback, videoTiming) {
                         ...(shot.narration ?? []).map(line => ({ kind: line.delivery === 'voiceover' ? 'narration' : 'dialogue', lineId: line.id, speaker: line.speaker, text: line.tts, delivery: line.delivery, acting: line.acting, order: 'unresolved' })),
                     ], durationSeconds: null, warnings: ['No ordered performance: action order and timing remain unresolved.'], timing: 'unknown' }
                 // A line nobody timed is estimated from its syllables, so a stored duration can be read against its lines.
-                : acting.planScenePerformance(shot, line => typeof line.estimatedSeconds === 'number' ? line.estimatedSeconds : acting.estimateSpeechSeconds(line.tts));
+                : acting.planScenePerformance(shot, line => {
+                    if (typeof line.estimatedSeconds === 'number')
+                        return line.estimatedSeconds;
+                    const estimate = acting.estimateSpeech(line.tts, language);
+                    if (estimate && !estimate.calibrated)
+                        unmeasuredRate = true;
+                    return estimate?.seconds ?? null;
+                });
             const stored = typeof shot.duration === 'number' && clock.durationSeconds !== null ? shot.duration - clock.durationSeconds : null;
-            performanceTiming = { ...clock, basis: 'authored_estimates', speechBasis: 'syllable_rate', physicalFeasibility: 'not_reviewed',
+            // Only the Korean rate was fitted on measured clips; every other language's is a slow published average.
+            performanceTiming = { ...clock, basis: 'authored_estimates', speechBasis: 'syllable_rate', ...(unmeasuredRate ? { speechRate: 'uncalibrated' } : {}), physicalFeasibility: 'not_reviewed',
                 timing: clock.durationSeconds === null ? 'unknown' : 'estimated',
                 differsFromStored: stored === null ? null : Math.abs(stored) > 0.05,
                 // Positive: seconds the stored duration holds beyond the lines and timed actions. A native-speech clip plays them as silence.
@@ -907,6 +917,29 @@ function editImpact(before, after) {
     return findings;
 }
 /** storyboard_apply — read, patch, validate, write unless a violation or a dry run. */
+/** When the first spoken line starts, from the stored shot lengths before it and its shot's planned performance.
+ *  Nothing is drawn over video, so a promise reaches the viewer as speech (episode-anticipation.md, claim-led
+ *  episodes). A reading of the plan: empty when no line is written or a length before it is unknown; throws on a
+ *  performance it cannot order, which the caller reports as no line. */
+export function firstLineReading(win) {
+    const order = shotDirection().playbackEntries(win.SCENES ?? []).map(({ s }) => s);
+    const at = order.findIndex((shot) => shot.narration?.length);
+    if (at < 0)
+        return [];
+    const lengths = order.slice(0, at).map((shot) => shot.duration);
+    if (!lengths.every((n) => typeof n === 'number' && Number.isFinite(n) && n > 0))
+        return [];
+    const shot = order[at];
+    const acting = loadFromHere(join(PLUGIN_ROOT, 'skills', '_shared', 'scene-acting.js'));
+    const plan = acting.planScenePerformance(shot, (line) => typeof line.estimatedSeconds === 'number' ? line.estimatedSeconds : acting.estimateSpeechSeconds(line.tts));
+    const start = plan.performance.find((event) => event.kind !== 'action')?.speechStartSeconds;
+    const round = (n) => Math.round(n * 10) / 10;
+    const excess = typeof shot.duration === 'number' && plan.durationSeconds !== null ? round(shot.duration - plan.durationSeconds) : 0;
+    return [`first spoken line: ${shot.id ?? `shot ${at + 1}`}, about ${round(lengths.reduce((sum, n) => sum + n, 0) + (start ?? 0))} s in`
+            + (typeof start === 'number' ? '' : ' or later (an action before it has no length)')
+            // A voiceover line is placed by its composed TTS; only a line the video model voices is pushed back by the spare length.
+            + (excess > 0.5 && shot.narration?.[0]?.delivery !== 'voiceover' ? ` — that shot's length holds ${excess} s beyond its performance; a natively voiced clip plays them as silence, mostly before the line` : '')];
+}
 export function applyStoryboard(args, opts = {}) {
     const file = scenesPath(args.path);
     const exists = existsSync(file);
@@ -985,16 +1018,17 @@ export function applyStoryboard(args, opts = {}) {
     }
     const bad = findings.some((f) => f.level === 'bad');
     const st = next.STRUCTURE;
+    // Reports only, each on its own: a board one of them cannot read still gets written and still prints the other.
+    const digest = () => shotDirection().digest(next), firstLine = () => firstLineReading(next);
     const result = {
         file, written: false, created: !exists, approvalDropped: header.some((h) => /^\/\/\s*approved:/.test(h)),
         shots: (next.SCENES ?? []).length, scenes: st ? st.scenes.length : 0, sequences: st ? st.sequences.length : 0,
-        // A report only: a board it cannot read still gets written.
-        synced, findings, board: (() => { try {
-            return shotDirection().digest(next);
+        synced, findings, board: [digest, firstLine].flatMap((read) => { try {
+            return read();
         }
         catch {
             return [];
-        } })(),
+        } }),
     };
     if (bad || args.dryRun)
         return result;
@@ -1030,12 +1064,14 @@ export function applyStoryboard(args, opts = {}) {
 const outlinePath = z.string().min(1).describe('The storyboard directory (scenes.js is created there when missing) or its scenes.js');
 export const storySequenceSchema = z.object({
     path: outlinePath,
+    language: z.string().regex(/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/, 'a BCP-47 tag such as "en", "ja" or "zh-Hans"').optional()
+        .describe('The language the story and its lines are written in'),
     sequences: z.array(z.object({
         id: nonEmpty.describe('Stable id, e.g. "q1"'),
         title: nonEmpty.describe('The heading the approval page draws'),
         purpose: nonEmpty.describe('The one purpose that binds its scenes'),
-        question: nonEmpty.optional().describe('The dramatic question this stretch opens'),
-        payoff: z.number().int().positive().optional().describe('The scene number that answers the question'),
+        question: nonEmpty.optional().describe('The question this stretch opens: a dramatic one, or on a claim-led episode whether the promised result is real'),
+        payoff: z.number().int().positive().optional().describe('The scene number that answers the question or shows the proof'),
     }).strict()).min(1),
 }).strict();
 export const storySceneSchema = z.object({
@@ -1065,22 +1101,33 @@ function readOutline(path) {
     const win = existsSync(file) ? readBoard(file).win : {};
     return { win, st: win.STRUCTURE ?? emptyStructure() };
 }
-function writeOutline(path, win, structure, shots) {
+function writeOutline(path, win, structure, shots, language) {
     // A board the story tools start is story-first: every writer keeps its layer order (structure-contract.js).
     // Inside an episode it also starts on the episode's saved canvas and production choice, the handoff
     // project_manage gives a new board; without it the board reads as the 9:16 default.
     const episode = win.STORY ? undefined : workflowEpisode(dirname(scenesPath(path)));
     const handoff = episode ? episodeHandoff(episode) : undefined;
-    const globals = win.STORY ? undefined : {
-        STORY: { version: 'story-v2', authoring: 'story-first' },
+    // The story's language is recorded once: the author's, else the saved languages.speech. A board keeps the one it has,
+    // and one written before the record existed is in the language of its shots, not of today's request.
+    const story = win.STORY;
+    const speech = language ?? handoff?.LANGUAGES?.speech;
+    const written = !!win.SCENES?.length;
+    const globals = story ? (language && story.language === undefined && !written ? { STORY: { ...story, language } } : undefined) : {
+        STORY: { version: 'story-v2', authoring: 'story-first', ...(speech ? { language: speech } : {}) },
         ...(handoff?.FORMAT && win.FORMAT === undefined ? { FORMAT: handoff.FORMAT } : {}),
         ...(handoff?.PRODUCTION && win.PRODUCTION === undefined ? { PRODUCTION: handoff.PRODUCTION } : {}),
     };
-    return applyStoryboard({
+    const result = applyStoryboard({
         path, draft: true, dryRun: false, structure,
         ...(shots?.length ? { set: { structure, shots } } : {}),
         ...(globals ? { globals } : {}),
     }, { outline: true });
+    const kept = !language || !story ? undefined
+        : story.language !== undefined ? (story.language !== language ? `this board is written in "${String(story.language)}"` : undefined)
+            : written ? 'this board has shots and no recorded language, so its language is the one they are written in' : undefined;
+    return kept
+        ? { ...result, findings: [...result.findings, { level: 'warn', where: 'STORY', what: `story_language: ${kept}; "${language}" was not applied — a board keeps its language` }] }
+        : result;
 }
 export function writeStorySequences(args) {
     const { win, st } = readOutline(args.path);
@@ -1089,7 +1136,7 @@ export function writeStorySequences(args) {
     // The payoff is one of the sequence's own scenes (storyboard_check); before its scenes exist there is nothing to compare.
     const notes = sequences.filter((q) => q.payoff !== undefined && q.scenes.length && !q.scenes.includes(q.payoff))
         .map((q) => ({ level: 'warn', where: `sequence ${q.id}`, what: `payoff names scene ${q.payoff}, which is outside this sequence — fix it with story_sequence or story_scene` }));
-    const result = writeOutline(args.path, win, { ...st, sequences });
+    const result = writeOutline(args.path, win, { ...st, sequences }, undefined, args.language);
     return { ...result, findings: [...result.findings, ...notes] };
 }
 export function writeStoryScenes(args) {

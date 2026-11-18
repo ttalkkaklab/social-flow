@@ -43,7 +43,9 @@ Read `PRODUCTION.videoType` from the episode, otherwise its snapshot's
 For drama, comedy and other story-led types, also read
 [story interest](../storyboard/references/story-interest.md) while shaping the scenario.
 Explainer, tutorial and review need no manufactured opponent; their progression is the change
-in what the viewer understands.
+in what the viewer understands. These types and advertisement make a claim: promise one
+result, show proof the viewer can check and end on its use
+([claim-led episodes](../storyboard/references/episode-anticipation.md#claim-led-episodes-one-result-promised-proof-the-viewer-can-check)).
 
 These are directing defaults, not quotas or score gates. In drama, never make the
 whole conversation off-screen merely because lip synchronization is inconvenient.

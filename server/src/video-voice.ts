@@ -339,7 +339,8 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
     args.references = msrRefs;
     turnScript();
     if (typeof args.prompt === 'string' && msrAudio.length) args.prompt = afterImageBlock(args.prompt, msrAudio.sort());
-    if (lines.some(line => /[가-힣]/.test(text(line.tts)))) warnings.push('MSR training captions were English; Korean speech and cross-language voice are not established (arXiv 2609.18393).');
+    const spoken = object(context.board.STORY).language;
+    if (typeof spoken === 'string' ? !/^en\b/i.test(spoken) : lines.some(line => /[^\P{L}A-Za-z]/u.test(text(line.tts)))) warnings.push('MSR training captions were English; speech in another language and cross-language voice are not established (arXiv 2609.18393).');
     if (speakers.some(speaker => speaker.audioIndex)) warnings.push('Reference voice is imitation, not preservation of the original WAV or exact speech timing.');
   } else if (reference) {
     args.referenceAudioPaths = audioPaths;

@@ -74,15 +74,20 @@ function shotVideoTiming(context: Context, tool: string, args: Record<string, un
  * lines and timed actions do not fill on silent acting, mostly before the line (299 MSR clips
  * measured 2026-11-16: half of each clip was silence around its line). A report, never a refusal.
  */
-function nativeSpeechFit(shot: Record<string, unknown>, requestedSeconds: number, limits: NonNullable<ReturnType<typeof assessVideoDuration>['limits']>) {
+function nativeSpeechFit(shot: Record<string, unknown>, requestedSeconds: number, limits: NonNullable<ReturnType<typeof assessVideoDuration>['limits']>, language?: unknown) {
   const acting = load(fileURLToPath(new URL('../../skills/_shared/scene-acting.js', import.meta.url))) as {
     planScenePerformance(shot: unknown, duration: (line: { tts?: string }) => number | null): { durationSeconds: number | null };
-    estimateSpeechSeconds(text: unknown): number | null;
+    estimateSpeech(text: unknown, language?: unknown): { seconds: number; calibrated: boolean } | null;
   };
-  let estimatedSeconds: number | null;
-  try { estimatedSeconds = acting.planScenePerformance(shot, line => acting.estimateSpeechSeconds(line.tts)).durationSeconds; }
-  catch { return undefined; }
-  // An untimed standalone action or a line in another script leaves the clock open: nothing to compare.
+  let estimatedSeconds: number | null, unmeasuredRate = false;
+  try {
+    estimatedSeconds = acting.planScenePerformance(shot, line => {
+      const estimate = acting.estimateSpeech(line.tts, language);
+      if (estimate && !estimate.calibrated) unmeasuredRate = true;
+      return estimate?.seconds ?? null;
+    }).durationSeconds;
+  } catch { return undefined; }
+  // An untimed standalone action or a line with nothing to say leaves the clock open: nothing to compare.
   if (estimatedSeconds === null || !(estimatedSeconds > 0)) return undefined;
   let shortest: { requestedSeconds: number; numFrames?: number; durationSeconds?: number };
   try { shortest = load(fileURLToPath(new URL('../../skills/_shared/video-duration.js', import.meta.url))).minimumDuration(estimatedSeconds, limits); }
@@ -90,11 +95,13 @@ function nativeSpeechFit(shot: Record<string, unknown>, requestedSeconds: number
   const round = (n: number) => Math.round(n * 100) / 100;
   const excessSeconds = round(requestedSeconds - estimatedSeconds);
   const request = shortest.numFrames !== undefined ? `numFrames ${shortest.numFrames}` : `durationSeconds ${shortest.durationSeconds}`;
-  return { estimatedSeconds, requestedSeconds: round(requestedSeconds), excessSeconds,
+  // Only the Korean rate was fitted on measured clips: another language's shortest request is a guess to check against a made clip.
+  return { estimatedSeconds, ...(unmeasuredRate ? { speechRate: 'uncalibrated' as const } : {}), requestedSeconds: round(requestedSeconds), excessSeconds,
     shortestRequest: { ...(shortest.numFrames !== undefined ? { numFrames: shortest.numFrames } : { durationSeconds: shortest.durationSeconds }), seconds: round(shortest.requestedSeconds) },
     ...(excessSeconds > SPEECH_SLACK_SECONDS && shortest.requestedSeconds < requestedSeconds - 1e-6 ? {
       warning: `The request runs ${round(requestedSeconds)}s; the lines and timed actions need about ${estimatedSeconds}s. The model plays the other ${excessSeconds}s as silent acting, usually before the line. ` +
-        `${request} (${round(shortest.requestedSeconds)}s) covers them. A pause the story needs belongs in the performance as a timed action or the line's leadInSeconds/tailOutSeconds.` } : {}) };
+        `${request} (${round(shortest.requestedSeconds)}s) covers them. A pause the story needs belongs in the performance as a timed action or the line's leadInSeconds/tailOutSeconds.` +
+        (unmeasuredRate ? ' The speaking rate for this language is not measured on made clips: time the line on one clip before shortening the others.' : '') } : {}) };
 }
 /** Slack a line keeps: under this the measured clips opened on the line; from 2 s they opened on 1.4 s of silence. */
 const SPEECH_SLACK_SECONDS = 0.5;
@@ -326,7 +333,7 @@ export function planVideo(raw: unknown): VideoPlan {
     : typeof args.duration === 'number' && playFps ? framesForSeconds(args.duration, playFps) : tool === 'astra_genai_msr' ? 121 : undefined;
   const playSeconds = playFrames !== undefined && playFps ? playFrames / playFps : typeof args.durationSeconds === 'number' ? args.durationSeconds : undefined;
   const speechFit = VIDEO_ADAPTERS[tool].voice === 'reference' && playSeconds !== undefined && durationPlan.limits && lines.some(line => line.delivery !== 'voiceover')
-    ? nativeSpeechFit(shot, playSeconds, durationPlan.limits) : undefined;
+    ? nativeSpeechFit(shot, playSeconds, durationPlan.limits, (context.board.STORY as { language?: unknown } | undefined)?.language) : undefined;
   const foreign = typeof args.prompt === 'string' ? nonEnglishOutsideQuotes(args.prompt) : null;
   if (foreign) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks. Write the video prompt in English; only dialogue, inside quotes, uses the video's language.`);
   const output = canonical(path.resolve(context.episode, typeof args.outputPath === 'string' ? args.outputPath : '.work/video'));

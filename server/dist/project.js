@@ -9,7 +9,7 @@ export function manageProject(args) {
     const project = loadFromHere(helper);
     return project.manageProject(args);
 }
-/** The new-board handoff (FORMAT, PRODUCTION) from an episode's saved snapshot, or undefined when it has none. */
+/** The new-board handoff (FORMAT, PRODUCTION, LANGUAGES) from an episode's saved snapshot, or undefined when it has none. */
 export function episodeHandoff(episode) {
     const file = join(episode, '.work/model-settings.json');
     if (!existsSync(file))

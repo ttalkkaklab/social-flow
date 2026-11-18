@@ -12,6 +12,7 @@ an explicit serial may then open another question. No compulsory cliffhanger or 
 - [A provocative opening, then the earlier situation](#a-provocative-opening-then-the-earlier-situation)
 - [Change the expectation while giving something back](#2-change-the-expectation-while-giving-something-back)
 - [Make the payoff change the meaning or the situation](#3-make-the-payoff-change-the-meaning-or-the-situation)
+- [Claim-led episodes: one result promised, proof the viewer can check](#claim-led-episodes-one-result-promised-proof-the-viewer-can-check)
 - [Preserve the progression in every artifact](#4-preserve-the-progression-in-every-artifact)
 - [Read forward and repair the inert stretch](#5-read-forward-and-repair-the-inert-stretch)
 - [Evidence](#evidence)
@@ -115,6 +116,59 @@ specific action. Necessary response is part of the payoff, not disposable epilog
 returning gesture can now have a different doer, intention or consequence. Stop when that
 change lands; a generic smile or a summary that they lived happily adds little by itself.
 
+## Claim-led episodes: one result promised, proof the viewer can check
+
+Use this when the episode's promise is a claim about the world: an explainer, a tutorial, a
+review, an advertisement, a documentary that demonstrates something. "This works", "this is
+why", "this is how". Any characters in it still follow the sections above; this one says what
+the promise and the payoff are when there is no relationship to resolve. The picture choices
+stay with [narration and visual grounding](narration-visual-grounding.md) and
+[render routing](render-routing.md).
+
+- **Promise one result, in the viewer's words.** Name what the viewer will be able to do,
+  know or decide by the end, as they would say it to a friend: "a whole screenplay from one
+  line", not the maker's vocabulary of model names, feature counts and versions. One episode
+  carries one promise. A list of eight genres and four features gives the viewer nothing
+  particular to wait for; pick the case that shows the claim and follow it through.
+- **Say it.** Nothing is drawn over video here, so the first spoken line carries the promise;
+  a title card or a caption cannot. Write that line before the shots and keep silent setup in
+  front of it short. Once the shots before it have lengths, every board write prints when the
+  first spoken line starts (below).
+- **The viewer's trouble can come first.** When the subject removes an annoyance the viewer
+  already has, showing that annoyance happen is a readable situation and the promise is its
+  removal. This is an option for subjects that have one, not a required problem beat.
+- **Pay with proof the viewer can check.** A claim about a result is paid by the result on
+  screen, in a form the viewer can compare with the promise themselves:
+  - what went in is visible in what came out: the typed word appears in the generated
+    picture, the measured part is the part that moves;
+  - the picture could only belong to this subject. Apply the grounding test: an image that
+    could sit under any episode's opening line is not proof;
+  - it stays long enough to read or to watch complete. A document scrolled past is a
+    gesture at proof.
+  A screen or document that needs something pointed at is an HTML slide; a result that is
+  itself a moving picture plays as clean footage.
+- **Each spoken claim has its picture or its source.** Go through the lines: a claim the
+  board cannot show and research cannot support comes out. Numbers and absolutes ("95%",
+  "perfect", "completely free") are factual assertions and need their Verified rows
+  ([character-led scenarios](character-scenarios.md#choose-content-and-expression-separately));
+  a round figure invented for emphasis is a fabricated fact.
+- **Give a piece early and change the question.** Show part of the result near the start
+  (`reveal: upfront` and its `setups` row in character-scenarios), then let the middle move
+  the viewer from whether it works to how far, where it stops or what it costs. A limit shown
+  honestly is progress; a second and third example of the same success is repetition.
+- **End on someone using it.** The response that completes a claim is application: a person
+  does the thing the opening promised, or decides differently because of it. An ask is
+  optional. When there is one, it names one action and the place the thing really is, in
+  speech, and the publishing copy says the same place.
+
+On the board, `sequence.question` holds the viewer's doubt ("does one line really give a
+usable draft?") and `sequence.payoff` names the scene that shows the proof. Once every shot
+before the first line has a length, each write prints `first spoken line: <shot>, about N s
+in`. For a line the video model voices it adds the seconds that shot's stored length holds
+beyond its performance, which play as silence, mostly before the line; a narrator's line is
+placed by its composed TTS and gets no such note. It is a reading of the plan, not a
+target: an opening carried by a visible event needs no early line.
+
 ## 4. Preserve the progression in every artifact
 
 - **Synopsis:** the opening promise, consequential developments, actual payoff and response
@@ -143,9 +197,11 @@ can the viewer locate the time jump, see why the earlier behavior makes the open
 and get a new development after catching up? Identify a missing reaction, a mismatched elapsed
 time, a repeated opening or a promise the ending never pays by its actual scene/shot.
 A quiet reaction or relief can advance acceptance without opening a new question; not every
-shot needs a hook. For factual, tutorial or review episodes, progression can be prediction,
-evidence, demonstration and application. Give essential answers when useful; never distort
-facts or delay safety-critical information for suspense. Length follows meaningful content
+shot needs a hook. Factual, tutorial, review and advertising episodes read the same way through
+[their own promise and proof](#claim-led-episodes-one-result-promised-proof-the-viewer-can-check):
+is the promised result named, shown in a form the viewer can check, and put to use? Give
+essential answers when useful; never distort facts or delay safety-critical information for
+suspense. Length follows meaningful content
 and the user's duration constraint, never silence or repeated material used as padding.
 
 This is an editorial assessment of the draft, not proof of retention or an independent
@@ -158,3 +214,17 @@ The [six-video channel analysis](../../../docs/research/2026-11-16-episode-antic
 records observed scenes, approximate timing and limits. It motivates this practical pass;
 it does not establish a universal formula. Borrow causal mechanisms, not a creator's lines,
 distinctive incident sequence, cast, visual template or unverified claim to a true story.
+
+The claim-led section draws on the [2026-11-18 promise-and-proof study](../../../docs/research/2026-11-18-promise-and-proof/README.md).
+
+| Claim | Grade |
+|---|---|
+| State what the viewer gets in the first seconds, and say it aloud | platform guidance for ads (TikTok help, Google ABCDs); not measured on organic Shorts |
+| One focused message | platform guidance for ads |
+| A promise in the viewer's words reaches further than the maker's vocabulary | observation on one channel's Shorts; other differences were not controlled |
+| Proof the viewer can compare with the promise | editorial inference from the same channel and the platform advice to show the product in use |
+| An earlier proof earns more views | not supported: on that channel the earliest proof had the fewest views |
+| Text overlays help | platform guidance; not adopted, because nothing is drawn over video here |
+
+Whether an opening held viewers is the channel's own "stayed to watch" figure; public view
+counts cannot show it. The first-line reading reports the plan and predicts nothing.

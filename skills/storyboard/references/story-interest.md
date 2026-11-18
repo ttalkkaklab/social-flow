@@ -10,7 +10,8 @@ no cliffhanger is complete without them.
 
 Use it for story-led work: drama, comedy, mystery, serial fiction and narrative documentary.
 An explainer, tutorial or review does not need a manufactured opponent; §4 says what its
-progression is instead.
+progression is instead, and episode-anticipation's claim-led section says what it promises
+and how it pays.
 
 ## Contents
 

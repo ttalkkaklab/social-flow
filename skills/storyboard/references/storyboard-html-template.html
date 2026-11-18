@@ -2364,7 +2364,7 @@ window.STORYBOARD_READY = (async function () {
   /* AUTHOR-LANGUAGE BLOCK START — the language check cuts everything between the markers */
   var SEQ_RE = { result: /^결과/, body: /^(기획|방법|내용)/,
                  drip: /^(풀기|호기심|단계)/, hooking: /^(문제|후킹)/, turn: /^(전환|반전)/ };
-  var LETTERS_RE = /[^가-힣A-Za-z0-9]/g;   // caption ↔ line comparison: keep letters and digits
+  var LETTERS_RE = /[^\p{L}\p{N}]/gu;   // caption ↔ line comparison: keep letters and digits, in any script
   /* AUTHOR-LANGUAGE BLOCK END */
 
   /* Long-form produces hard-to-read numbers like 900s — anything past 2 minutes is written in minutes. */
@@ -3687,7 +3687,7 @@ window.STORYBOARD_READY = (async function () {
       // 2026-08-14). Caption k appears together with segment k+1 — if that line contains the
       // caption wording verbatim, the same words arrive twice, by eye and by ear. The subtitle
       // is already writing that sentence out.
-      // To see past differences in particles and endings, only Hangul and alphanumerics are kept
+      // To see past differences in particles and endings, only letters and digits are kept
       // for the comparison, and short fragments (under 4 characters) are not counted.
       // Burn-in formats only — long-form (burn:false) doesn't burn subtitles, so for a viewer who
       // never turns them on the caption is the only place that value lands. Over-detection

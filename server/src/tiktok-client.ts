@@ -89,6 +89,10 @@ function record(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid TikTok response');
   return value as Record<string, unknown>;
 }
+/** TikTok answered with an error: unlike a dropped connection, the outcome is known. */
+class TikTokRefusal extends Error {
+  constructor(message: string, readonly httpStatus: number) { super(message); }
+}
 // Do not echo vendor bodies, fetch errors or upload URLs: any can contain credentials.
 async function responseJson(response: Response, oauth = false): Promise<Record<string, unknown>> {
   let value: Record<string, unknown>;
@@ -96,7 +100,7 @@ async function responseJson(response: Response, oauth = false): Promise<Record<s
   const error = oauth ? value.error : record(value.error ?? {} ).code;
   if (!response.ok || (error && error !== 'ok')) {
     const code = typeof error === 'string' && /^[a-zA-Z0-9_]{1,80}$/.test(error) ? error : 'request_failed';
-    throw new Error(`TikTok ${code} (HTTP ${response.status}); check app approval, granted scopes or rate limits before retrying.`);
+    throw new TikTokRefusal(`TikTok ${code} (HTTP ${response.status}); check app approval, granted scopes or rate limits before retrying.`, response.status);
   }
   return oauth ? value : record(value.data);
 }
@@ -265,6 +269,7 @@ export async function tiktokStatus(raw: unknown) {
   const file = receiptPath(input.channel, input.requestId);
   return locked(file, async () => {
     const receipt = await json(file) as Receipt;
+    if (receipt.status === 'rejected') return { ...receipt, next: 'TikTok refused this request and created no post. Fix the cause in failure, then call the same tool again with the same requestId.' };
     if (!receipt.publishId) return { ...receipt, next: 'No publish ID was acknowledged. Do not resubmit automatically; inspect TikTok and this receipt.' };
     const token = await credential(input.channel);
     if (token.open_id !== receipt.openId) throw new Error('TikTok receipt belongs to a different account.');
@@ -290,7 +295,8 @@ export async function tiktokPublish(raw: unknown, mode: 'upload' | 'direct') {
     if (existsSync(file)) {
       const previous = await json(file) as Receipt;
       if (previous.fingerprint !== fingerprint) throw new Error('TikTok requestId already belongs to different media or metadata.');
-      return { ...previous, reused: true, next: 'Use tiktok_status; the same upload was not submitted again.' };
+      // A refused init created nothing on TikTok, so the same approved request may go again.
+      if (previous.status !== 'rejected') return { ...previous, reused: true, next: 'Use tiktok_status; the same upload was not submitted again.' };
     }
     const duration = await probe(input.videoFilePath);
     const token = await credential(input.channel);
@@ -343,11 +349,15 @@ export async function tiktokPublish(raw: unknown, mode: 'upload' | 'direct') {
       } finally { await fd.close(); }
       receipt.status = 'processing';
     } catch (error) {
-      receipt.status = receipt.publishId ? 'upload_uncertain' : 'submission_unknown';
+      // A 4xx answer to init (spam_risk_*, rate_limit_exceeded, privacy_level_option_mismatch …)
+      // means TikTok made no post. Only a dropped connection or a 5xx leaves the outcome unknown.
+      const refused = !receipt.publishId && error instanceof TikTokRefusal && error.httpStatus >= 400 && error.httpStatus < 500;
+      receipt.status = receipt.publishId ? 'upload_uncertain' : refused ? 'rejected' : 'submission_unknown';
       receipt.failure = error instanceof Error ? error.message : 'TikTok upload interrupted.';
     }
     receipt.updatedAt = new Date().toISOString();
     await atomicJson(file, receipt);
+    if (receipt.status === 'rejected') return { ...receipt, receiptFile: file, next: 'TikTok refused the request and created no post. Fix the cause in failure, then call again with the same requestId.' };
     return { ...receipt, receiptFile: file, next: 'Use tiktok_status with this requestId. Do not resubmit. Inbox uploads must be finalized as Only you in TikTok. Then edit and verify the saved cover in ego lite before making the same post public.' };
   });
 }

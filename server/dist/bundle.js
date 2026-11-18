@@ -64970,7 +64970,7 @@ var require_mock_interceptor = __commonJS({
 var require_mock_client = __commonJS({
   "node_modules/undici/lib/mock/mock-client.js"(exports, module) {
     "use strict";
-    var { promisify: promisify7 } = __require("node:util");
+    var { promisify: promisify8 } = __require("node:util");
     var Client = require_client();
     var { buildMockDispatch } = require_mock_utils();
     var {
@@ -65018,7 +65018,7 @@ var require_mock_client = __commonJS({
         this[kDispatches] = [];
       }
       async [kClose]() {
-        await promisify7(this[kOriginalClose])();
+        await promisify8(this[kOriginalClose])();
         this[kConnected] = 0;
         this[kMockAgent][Symbols.kClients].delete(this[kOrigin]);
       }
@@ -65231,7 +65231,7 @@ var require_mock_call_history = __commonJS({
 var require_mock_pool = __commonJS({
   "node_modules/undici/lib/mock/mock-pool.js"(exports, module) {
     "use strict";
-    var { promisify: promisify7 } = __require("node:util");
+    var { promisify: promisify8 } = __require("node:util");
     var Pool = require_pool();
     var { buildMockDispatch } = require_mock_utils();
     var {
@@ -65279,7 +65279,7 @@ var require_mock_pool = __commonJS({
         this[kDispatches] = [];
       }
       async [kClose]() {
-        await promisify7(this[kOriginalClose])();
+        await promisify8(this[kOriginalClose])();
         this[kConnected] = 0;
         this[kMockAgent][Symbols.kClients].delete(this[kOrigin]);
       }
@@ -93581,13 +93581,43 @@ var require_scene_acting = __commonJS({
     function speechRevisionPayload(line, voice) {
       return { tts: line.tts, sub: line.sub, speaker: line.speaker, delivery: line.delivery, voice, ...line.acting != null ? { acting: line.acting } : {} };
     }
-    function estimateSpeechSeconds(text4) {
+    var SPEECH_RATES = { ko: 4.5, ja: 4.7, es: 4.7, fr: 4.3, en: 3.7, de: 3.6, zh: 3.1, vi: 3.1, latin: 3.6 };
+    var LATIN_RULES = ["en", "es", "fr", "de", "vi"];
+    var count = (words, pattern) => (words.match(pattern) || []).length;
+    function speechLanguage(text4, hint) {
       const words = typeof text4 === "string" ? text4 : "";
-      const syllables = (words.match(/[가-힣0-9]/g) || []).length;
-      if (!syllables || !/[가-힣]/.test(words)) return null;
-      const pauses = (words.match(/[.?!…,]+(?=\s*\S)/g) || []).length;
-      return Math.round((syllables / 4.5 + 0.35 * pauses + 0.4) * 100) / 100;
+      const tag = typeof hint === "string" ? hint.trim().toLowerCase().split(/[-_]/)[0] : "";
+      if (/[가-힣]/.test(words)) return "ko";
+      if (/[぀-ヿ]/.test(words)) return "ja";
+      if (/\p{Script=Han}/u.test(words)) return tag === "ja" ? "ja" : "zh";
+      if (!/\p{Script=Latin}/u.test(words)) return /[0-9]/.test(words) && SPEECH_RATES[tag] ? tag : null;
+      if (LATIN_RULES.includes(tag)) return tag;
+      return /[ăơưđẠ-ỹ]/i.test(words) ? "vi" : "latin";
     }
+    function latinSyllables(words, language) {
+      return (words.match(/[\p{Script=Latin}'’]+/gu) || []).reduce((total, word) => {
+        const groups = count(word.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase(), /[aeiouyæœø]+/g);
+        const silent = (language === "en" || language === "fr") && groups > 1 && /[^aeiouy]es?$/i.test(word) && !(language === "en" && /[^aeiouy]le$/i.test(word));
+        return total + Math.max(1, groups - (silent ? 1 : 0));
+      }, 0);
+    }
+    function speechUnits(words, language) {
+      const digits = count(words, /[0-9]/g);
+      if (language === "ko") return count(words, /[가-힣0-9]/g);
+      if (language === "ja") return count(words, /[぀-ヿ]/g) - count(words, /[ぁぃぅぇぉゃゅょゎァィゥェォャュョヮ]/g) + 2 * (count(words, /\p{Script=Han}/gu) + digits);
+      if (language === "zh") return count(words, /\p{Script=Han}/gu) + digits;
+      if (language === "vi") return count(words, /\p{Script=Latin}+/gu) + digits;
+      return latinSyllables(words, language) + 2 * digits;
+    }
+    function estimateSpeech(text4, language) {
+      const words = typeof text4 === "string" ? text4.replace(/\[[^\]]*\]/g, "") : "";
+      const spoken = speechLanguage(words, language);
+      const units = spoken ? speechUnits(words, spoken) : 0;
+      if (!units) return null;
+      const pauses = count(words, /[.?!…,。、？！，；：;:]+(?=\s*\S)/g);
+      return { seconds: Math.round((units / SPEECH_RATES[spoken] + 0.35 * pauses + 0.4) * 100) / 100, language: spoken, calibrated: spoken === "ko" };
+    }
+    var estimateSpeechSeconds = (text4, language) => estimateSpeech(text4, language)?.seconds ?? null;
     function planScenePerformance(input, measureAudio = () => null) {
       const scene = Array.isArray(input) ? { narration: input } : input;
       const lines = scene.narration || [], warnings = [];
@@ -93711,7 +93741,7 @@ var require_scene_acting = __commonJS({
       const visualDirection = (value) => performance2.filter((line) => line.kind !== "action" && line.text).reduce((text4, line) => text4.split(line.text).join("the supplied speech"), String(value));
       return ["A clean cinematic image with an unobstructed scene and text-free surfaces.", route, visualDirection(sceneDirection(scene, performance2)), ...beats, VIDEO_TEXT_POLICY].join("\n");
     }
-    module.exports = { estimateSpeechSeconds, actingErrors, resolvedStyle, directionSupport, speechRevisionPayload, VIDEO_TEXT_POLICY, sceneVideoPrompt, planScenePerformance, sceneDirection, scenePerformancePayload, cameraLock, performanceBeats };
+    module.exports = { estimateSpeechSeconds, estimateSpeech, speechLanguage, actingErrors, resolvedStyle, directionSupport, speechRevisionPayload, VIDEO_TEXT_POLICY, sceneVideoPrompt, planScenePerformance, sceneDirection, scenePerformancePayload, cameraLock, performanceBeats };
   }
 });
 
@@ -93960,8 +93990,8 @@ var require_character_voice = __commonJS({
     var GEMINI_MODELS = new Set(TTS_MODELS.filter((m2) => m2.provider === "gemini").map((m2) => m2.model));
     var ELEVENLABS_MODELS2 = new Set(TTS_MODELS.filter((m2) => m2.provider === "elevenlabs").map((m2) => m2.model));
     function normalizeLanguage(value) {
-      const raw = typeof value === "string" ? value.trim().toLowerCase() : "";
-      return { korean: "ko", english: "en", japanese: "ja", chinese: "zh", spanish: "es", french: "fr", portuguese: "pt" }[raw] || raw;
+      const raw = typeof value === "string" ? value.trim().toLowerCase().replace(/^([a-z]{2})[-_][a-z0-9_-]+$/, "$1") : "";
+      return { korean: "ko", english: "en", japanese: "ja", chinese: "zh", spanish: "es", french: "fr", german: "de", vietnamese: "vi", portuguese: "pt" }[raw] || raw;
     }
     function voiceErrors(tts) {
       if (!tts || typeof tts !== "object" || Array.isArray(tts)) return ["tts is required"];
@@ -110010,12 +110040,12 @@ function resolveToolGate(name, opts = {}) {
     };
   }
   const flags = parseToolFlags(read2(env2, FLAGS_VAR));
-  const flag = flagFor(name, flags);
-  if (flag) {
-    const enabled = parseFlag(flag.raw, `${FLAGS_VAR}:${flag.pattern}`);
+  const flag2 = flagFor(name, flags);
+  if (flag2) {
+    const enabled = parseFlag(flag2.raw, `${FLAGS_VAR}:${flag2.pattern}`);
     return {
       enabled,
-      reason: `${FLAGS_VAR} ${flag.pattern}=${flag.raw.trim()}`
+      reason: `${FLAGS_VAR} ${flag2.pattern}=${flag2.raw.trim()}`
     };
   }
   const allow = parsePatternList(read2(env2, ALLOW_VAR));
@@ -110184,6 +110214,13 @@ function record2(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid TikTok response");
   return value;
 }
+var TikTokRefusal = class extends Error {
+  constructor(message, httpStatus) {
+    super(message);
+    this.httpStatus = httpStatus;
+  }
+  httpStatus;
+};
 async function responseJson(response, oauth = false) {
   let value;
   try {
@@ -110194,7 +110231,7 @@ async function responseJson(response, oauth = false) {
   const error2 = oauth ? value.error : record2(value.error ?? {}).code;
   if (!response.ok || error2 && error2 !== "ok") {
     const code = typeof error2 === "string" && /^[a-zA-Z0-9_]{1,80}$/.test(error2) ? error2 : "request_failed";
-    throw new Error(`TikTok ${code} (HTTP ${response.status}); check app approval, granted scopes or rate limits before retrying.`);
+    throw new TikTokRefusal(`TikTok ${code} (HTTP ${response.status}); check app approval, granted scopes or rate limits before retrying.`, response.status);
   }
   return oauth ? value : record2(value.data);
 }
@@ -110400,6 +110437,7 @@ async function tiktokStatus(raw) {
   const file = receiptPath(input.channel, input.requestId);
   return locked(file, async () => {
     const receipt = await json2(file);
+    if (receipt.status === "rejected") return { ...receipt, next: "TikTok refused this request and created no post. Fix the cause in failure, then call the same tool again with the same requestId." };
     if (!receipt.publishId) return { ...receipt, next: "No publish ID was acknowledged. Do not resubmit automatically; inspect TikTok and this receipt." };
     const token = await credential(input.channel);
     if (token.open_id !== receipt.openId) throw new Error("TikTok receipt belongs to a different account.");
@@ -110425,7 +110463,7 @@ async function tiktokPublish(raw, mode) {
     if (existsSync5(file)) {
       const previous = await json2(file);
       if (previous.fingerprint !== fingerprint) throw new Error("TikTok requestId already belongs to different media or metadata.");
-      return { ...previous, reused: true, next: "Use tiktok_status; the same upload was not submitted again." };
+      if (previous.status !== "rejected") return { ...previous, reused: true, next: "Use tiktok_status; the same upload was not submitted again." };
     }
     const duration4 = await probe(input.videoFilePath);
     const token = await credential(input.channel);
@@ -110489,11 +110527,13 @@ async function tiktokPublish(raw, mode) {
       }
       receipt.status = "processing";
     } catch (error2) {
-      receipt.status = receipt.publishId ? "upload_uncertain" : "submission_unknown";
+      const refused = !receipt.publishId && error2 instanceof TikTokRefusal && error2.httpStatus >= 400 && error2.httpStatus < 500;
+      receipt.status = receipt.publishId ? "upload_uncertain" : refused ? "rejected" : "submission_unknown";
       receipt.failure = error2 instanceof Error ? error2.message : "TikTok upload interrupted.";
     }
     receipt.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
     await atomicJson2(file, receipt);
+    if (receipt.status === "rejected") return { ...receipt, receiptFile: file, next: "TikTok refused the request and created no post. Fix the cause in failure, then call again with the same requestId." };
     return { ...receipt, receiptFile: file, next: "Use tiktok_status with this requestId. Do not resubmit. Inbox uploads must be finalized as Only you in TikTok. Then edit and verify the saved cover in ego lite before making the same post public." };
   });
 }
@@ -110519,7 +110559,7 @@ var definitions = [
     title: "Upload a TikTok inbox draft",
     schema: tiktokUploadSchema,
     readOnly: false,
-    description: "Send a local video to the authorized TikTok account inbox with video.upload. Requires explicit approval for this media and expectedOpenId from sns_account_check. Validates media with ffprobe and uploads sequential FILE_UPLOAD chunks. Returns a durable requestId/publishId and processing or uncertain state; use tiktok_status. The user must open the TikTok inbox notification and finish as Only you, preserving caption and disclosures. Then use ego lite to edit and verify the saved cover before making that same post public. If cover editing is blocked, keep it private. This inbox delivery is NOT a published post. Reusing requestId returns its receipt without resubmission; changed arguments are rejected. Do not create another requestId after a timeout or lost response. No public URL hosting needed."
+    description: "Send a local video to the authorized TikTok account inbox with video.upload. Requires explicit approval for this media and expectedOpenId from sns_account_check. Validates media with ffprobe and uploads sequential FILE_UPLOAD chunks. Returns a durable requestId/publishId and processing or uncertain state; use tiktok_status. The user must open the TikTok inbox notification and finish as Only you, preserving caption and disclosures. Then use ego lite to edit and verify the saved cover before making that same post public. If cover editing is blocked, keep it private. This inbox delivery is NOT a published post. Reusing requestId returns its receipt without resubmission; changed arguments are rejected. A receipt with status rejected (TikTok answered init with a 4xx such as spam_risk_too_many_posts) created nothing, so the same requestId may be sent again after the cause is fixed. Do not create another requestId after a timeout or lost response. No public URL hosting needed."
   },
   {
     name: "tiktok_publish",
@@ -116795,7 +116835,8 @@ function prepareVideoVoice(tool2, input, context2) {
     args.references = msrRefs;
     turnScript();
     if (typeof args.prompt === "string" && msrAudio.length) args.prompt = afterImageBlock(args.prompt, msrAudio.sort());
-    if (lines.some((line) => /[가-힣]/.test(text(line.tts)))) warnings.push("MSR training captions were English; Korean speech and cross-language voice are not established (arXiv 2609.18393).");
+    const spoken = object3(context2.board.STORY).language;
+    if (typeof spoken === "string" ? !/^en\b/i.test(spoken) : lines.some((line) => /[^\P{L}A-Za-z]/u.test(text(line.tts)))) warnings.push("MSR training captions were English; speech in another language and cross-language voice are not established (arXiv 2609.18393).");
     if (speakers.some((speaker) => speaker.audioIndex)) warnings.push("Reference voice is imitation, not preservation of the original WAV or exact speech timing.");
   } else if (reference2) {
     args.referenceAudioPaths = audioPaths;
@@ -116962,11 +117003,15 @@ function shotVideoTiming(context2, tool2, args) {
     note: "Fit of authored source coverage, not measured performance or generated output. Recheck after speech/action timing or generation changes."
   };
 }
-function nativeSpeechFit(shot, requestedSeconds, limits) {
+function nativeSpeechFit(shot, requestedSeconds, limits, language) {
   const acting = load5(fileURLToPath6(new URL("../../skills/_shared/scene-acting.js", import.meta.url)));
-  let estimatedSeconds;
+  let estimatedSeconds, unmeasuredRate = false;
   try {
-    estimatedSeconds = acting.planScenePerformance(shot, (line) => acting.estimateSpeechSeconds(line.tts)).durationSeconds;
+    estimatedSeconds = acting.planScenePerformance(shot, (line) => {
+      const estimate = acting.estimateSpeech(line.tts, language);
+      if (estimate && !estimate.calibrated) unmeasuredRate = true;
+      return estimate?.seconds ?? null;
+    }).durationSeconds;
   } catch {
     return void 0;
   }
@@ -116982,11 +117027,12 @@ function nativeSpeechFit(shot, requestedSeconds, limits) {
   const request = shortest.numFrames !== void 0 ? `numFrames ${shortest.numFrames}` : `durationSeconds ${shortest.durationSeconds}`;
   return {
     estimatedSeconds,
+    ...unmeasuredRate ? { speechRate: "uncalibrated" } : {},
     requestedSeconds: round2(requestedSeconds),
     excessSeconds,
     shortestRequest: { ...shortest.numFrames !== void 0 ? { numFrames: shortest.numFrames } : { durationSeconds: shortest.durationSeconds }, seconds: round2(shortest.requestedSeconds) },
     ...excessSeconds > SPEECH_SLACK_SECONDS && shortest.requestedSeconds < requestedSeconds - 1e-6 ? {
-      warning: `The request runs ${round2(requestedSeconds)}s; the lines and timed actions need about ${estimatedSeconds}s. The model plays the other ${excessSeconds}s as silent acting, usually before the line. ${request} (${round2(shortest.requestedSeconds)}s) covers them. A pause the story needs belongs in the performance as a timed action or the line's leadInSeconds/tailOutSeconds.`
+      warning: `The request runs ${round2(requestedSeconds)}s; the lines and timed actions need about ${estimatedSeconds}s. The model plays the other ${excessSeconds}s as silent acting, usually before the line. ${request} (${round2(shortest.requestedSeconds)}s) covers them. A pause the story needs belongs in the performance as a timed action or the line's leadInSeconds/tailOutSeconds.` + (unmeasuredRate ? " The speaking rate for this language is not measured on made clips: time the line on one clip before shortening the others." : "")
     } : {}
   };
 }
@@ -117213,7 +117259,7 @@ function planVideo(raw) {
   }
   const playFps = durationPlan.limits?.frameRate, playFrames = typeof args.numFrames === "number" ? args.numFrames : typeof args.duration === "number" && playFps ? framesForSeconds(args.duration, playFps) : tool2 === "astra_genai_msr" ? 121 : void 0;
   const playSeconds = playFrames !== void 0 && playFps ? playFrames / playFps : typeof args.durationSeconds === "number" ? args.durationSeconds : void 0;
-  const speechFit = VIDEO_ADAPTERS[tool2].voice === "reference" && playSeconds !== void 0 && durationPlan.limits && lines.some((line) => line.delivery !== "voiceover") ? nativeSpeechFit(shot, playSeconds, durationPlan.limits) : void 0;
+  const speechFit = VIDEO_ADAPTERS[tool2].voice === "reference" && playSeconds !== void 0 && durationPlan.limits && lines.some((line) => line.delivery !== "voiceover") ? nativeSpeechFit(shot, playSeconds, durationPlan.limits, context2.board.STORY?.language) : void 0;
   const foreign = typeof args.prompt === "string" ? nonEnglishOutsideQuotes(args.prompt) : null;
   if (foreign) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks. Write the video prompt in English; only dialogue, inside quotes, uses the video's language.`);
   const output2 = canonical2(path22.resolve(context2.episode, typeof args.outputPath === "string" ? args.outputPath : ".work/video"));
@@ -118145,8 +118191,8 @@ var sequenceSchema = external_exports.object({
   id: nonEmpty.describe('Stable id, e.g. "q1"'),
   title: external_exports.string().optional().describe("The heading the approval page draws"),
   purpose: external_exports.string().optional().describe("The one purpose that binds these scenes \u2014 two purposes are two sequences"),
-  question: nonEmpty.optional().describe("The dramatic question this stretch opens"),
-  payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question"),
+  question: nonEmpty.optional().describe("The question this stretch opens: a dramatic one, or on a claim-led episode whether the promised result is real"),
+  payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question or shows the proof"),
   scenes: external_exports.array(external_exports.number().int().positive()).describe("Scene numbers in playback order")
 }).strict();
 var structureSchema = external_exports.object({
@@ -118287,6 +118333,7 @@ function boundaryReview(win, playback, videoTiming) {
   const ids = source.map((shot) => shot.id);
   const timings = Array.isArray(videoTiming) ? videoTiming : [];
   const acting = loadFromHere2(join12(PLUGIN_ROOT, "skills", "_shared", "scene-acting.js"));
+  const language = win.STORY?.language;
   const shots = playback.map(({ no }, index) => {
     const shot = source[no - 1];
     const visual = record3(shot.visual), plan2 = record3(shot.shot), camera = record3(visual.camera);
@@ -118294,18 +118341,25 @@ function boundaryReview(win, playback, videoTiming) {
     const id = text4(shot.id), uniqueId = id !== null && ids.filter((value) => value === id).length === 1;
     const cast = contract().castOf(shot);
     let performanceTiming;
+    let unmeasuredRate = false;
     try {
       const legacyAction = text4(visual.action) ?? text4(design.action);
       const explicit = Array.isArray(shot.performance) && shot.performance.length > 0;
       const clock = !explicit && (legacyAction || !shot.narration?.length) ? { performance: [
         ...legacyAction ? [{ kind: "action", text: legacyAction, order: "unresolved" }] : [],
         ...(shot.narration ?? []).map((line) => ({ kind: line.delivery === "voiceover" ? "narration" : "dialogue", lineId: line.id, speaker: line.speaker, text: line.tts, delivery: line.delivery, acting: line.acting, order: "unresolved" }))
-      ], durationSeconds: null, warnings: ["No ordered performance: action order and timing remain unresolved."], timing: "unknown" } : acting.planScenePerformance(shot, (line) => typeof line.estimatedSeconds === "number" ? line.estimatedSeconds : acting.estimateSpeechSeconds(line.tts));
+      ], durationSeconds: null, warnings: ["No ordered performance: action order and timing remain unresolved."], timing: "unknown" } : acting.planScenePerformance(shot, (line) => {
+        if (typeof line.estimatedSeconds === "number") return line.estimatedSeconds;
+        const estimate = acting.estimateSpeech(line.tts, language);
+        if (estimate && !estimate.calibrated) unmeasuredRate = true;
+        return estimate?.seconds ?? null;
+      });
       const stored = typeof shot.duration === "number" && clock.durationSeconds !== null ? shot.duration - clock.durationSeconds : null;
       performanceTiming = {
         ...clock,
         basis: "authored_estimates",
         speechBasis: "syllable_rate",
+        ...unmeasuredRate ? { speechRate: "uncalibrated" } : {},
         physicalFeasibility: "not_reviewed",
         timing: clock.durationSeconds === null ? "unknown" : "estimated",
         differsFromStored: stored === null ? null : Math.abs(stored) > 0.05,
@@ -118855,6 +118909,20 @@ function editImpact(before, after) {
   }
   return findings;
 }
+function firstLineReading(win) {
+  const order = shotDirection().playbackEntries(win.SCENES ?? []).map(({ s: s2 }) => s2);
+  const at = order.findIndex((shot2) => shot2.narration?.length);
+  if (at < 0) return [];
+  const lengths = order.slice(0, at).map((shot2) => shot2.duration);
+  if (!lengths.every((n) => typeof n === "number" && Number.isFinite(n) && n > 0)) return [];
+  const shot = order[at];
+  const acting = loadFromHere2(join12(PLUGIN_ROOT, "skills", "_shared", "scene-acting.js"));
+  const plan2 = acting.planScenePerformance(shot, (line) => typeof line.estimatedSeconds === "number" ? line.estimatedSeconds : acting.estimateSpeechSeconds(line.tts));
+  const start = plan2.performance.find((event) => event.kind !== "action")?.speechStartSeconds;
+  const round2 = (n) => Math.round(n * 10) / 10;
+  const excess = typeof shot.duration === "number" && plan2.durationSeconds !== null ? round2(shot.duration - plan2.durationSeconds) : 0;
+  return [`first spoken line: ${shot.id ?? `shot ${at + 1}`}, about ${round2(lengths.reduce((sum, n) => sum + n, 0) + (start ?? 0))} s in` + (typeof start === "number" ? "" : " or later (an action before it has no length)") + (excess > 0.5 && shot.narration?.[0]?.delivery !== "voiceover" ? ` \u2014 that shot's length holds ${excess} s beyond its performance; a natively voiced clip plays them as silence, mostly before the line` : "")];
+}
 function applyStoryboard(args, opts = {}) {
   const file = scenesPath(args.path);
   const exists = existsSync24(file);
@@ -118922,6 +118990,7 @@ function applyStoryboard(args, opts = {}) {
   }
   const bad = findings.some((f3) => f3.level === "bad");
   const st = next.STRUCTURE;
+  const digest5 = () => shotDirection().digest(next), firstLine = () => firstLineReading(next);
   const result = {
     file,
     written: false,
@@ -118930,16 +118999,15 @@ function applyStoryboard(args, opts = {}) {
     shots: (next.SCENES ?? []).length,
     scenes: st ? st.scenes.length : 0,
     sequences: st ? st.sequences.length : 0,
-    // A report only: a board it cannot read still gets written.
     synced,
     findings,
-    board: (() => {
+    board: [digest5, firstLine].flatMap((read4) => {
       try {
-        return shotDirection().digest(next);
+        return read4();
       } catch {
         return [];
       }
-    })()
+    })
   };
   if (bad || args.dryRun) return result;
   const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
@@ -118967,12 +119035,13 @@ function applyStoryboard(args, opts = {}) {
 var outlinePath = external_exports.string().min(1).describe("The storyboard directory (scenes.js is created there when missing) or its scenes.js");
 var storySequenceSchema = external_exports.object({
   path: outlinePath,
+  language: external_exports.string().regex(/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/, 'a BCP-47 tag such as "en", "ja" or "zh-Hans"').optional().describe("The language the story and its lines are written in"),
   sequences: external_exports.array(external_exports.object({
     id: nonEmpty.describe('Stable id, e.g. "q1"'),
     title: nonEmpty.describe("The heading the approval page draws"),
     purpose: nonEmpty.describe("The one purpose that binds its scenes"),
-    question: nonEmpty.optional().describe("The dramatic question this stretch opens"),
-    payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question")
+    question: nonEmpty.optional().describe("The question this stretch opens: a dramatic one, or on a claim-led episode whether the promised result is real"),
+    payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question or shows the proof")
   }).strict()).min(1)
 }).strict();
 var storySceneSchema = external_exports.object({
@@ -119004,15 +119073,18 @@ function readOutline(path35) {
   const win = existsSync24(file) ? readBoard(file).win : {};
   return { win, st: win.STRUCTURE ?? emptyStructure() };
 }
-function writeOutline(path35, win, structure, shots) {
+function writeOutline(path35, win, structure, shots, language) {
   const episode = win.STORY ? void 0 : workflowEpisode(dirname6(scenesPath(path35)));
   const handoff = episode ? episodeHandoff(episode) : void 0;
-  const globals = win.STORY ? void 0 : {
-    STORY: { version: "story-v2", authoring: "story-first" },
+  const story = win.STORY;
+  const speech = language ?? handoff?.LANGUAGES?.speech;
+  const written = !!win.SCENES?.length;
+  const globals = story ? language && story.language === void 0 && !written ? { STORY: { ...story, language } } : void 0 : {
+    STORY: { version: "story-v2", authoring: "story-first", ...speech ? { language: speech } : {} },
     ...handoff?.FORMAT && win.FORMAT === void 0 ? { FORMAT: handoff.FORMAT } : {},
     ...handoff?.PRODUCTION && win.PRODUCTION === void 0 ? { PRODUCTION: handoff.PRODUCTION } : {}
   };
-  return applyStoryboard({
+  const result = applyStoryboard({
     path: path35,
     draft: true,
     dryRun: false,
@@ -119020,13 +119092,15 @@ function writeOutline(path35, win, structure, shots) {
     ...shots?.length ? { set: { structure, shots } } : {},
     ...globals ? { globals } : {}
   }, { outline: true });
+  const kept = !language || !story ? void 0 : story.language !== void 0 ? story.language !== language ? `this board is written in "${String(story.language)}"` : void 0 : written ? "this board has shots and no recorded language, so its language is the one they are written in" : void 0;
+  return kept ? { ...result, findings: [...result.findings, { level: "warn", where: "STORY", what: `story_language: ${kept}; "${language}" was not applied \u2014 a board keeps its language` }] } : result;
 }
 function writeStorySequences(args) {
   const { win, st } = readOutline(args.path);
   requireEpisodeCast(args.path, win);
   const sequences = upsertBy(st.sequences, args.sequences.map((q) => ({ ...st.sequences.find((old) => old.id === q.id), ...q, scenes: st.sequences.find((old) => old.id === q.id)?.scenes ?? [] })), "id");
   const notes = sequences.filter((q) => q.payoff !== void 0 && q.scenes.length && !q.scenes.includes(q.payoff)).map((q) => ({ level: "warn", where: `sequence ${q.id}`, what: `payoff names scene ${q.payoff}, which is outside this sequence \u2014 fix it with story_sequence or story_scene` }));
-  const result = writeOutline(args.path, win, { ...st, sequences });
+  const result = writeOutline(args.path, win, { ...st, sequences }, void 0, args.language);
   return { ...result, findings: [...result.findings, ...notes] };
 }
 function writeStoryScenes(args) {
@@ -124295,6 +124369,10 @@ var YOUTUBE_PUBLISH_OUTPUT = {
       type: "string",
       description: "Reason when only the thumbnail step failed. The video upload succeeded, so do not re-upload \u2014 set the thumbnail in YouTube Studio instead of calling this tool again"
     },
+    processingNote: {
+      type: "string",
+      description: "Why the thumbnail was set without confirmed processing (status unreadable, still processing, or failed). On a Short, check the cover and set it in Studio if needed \u2014 do not re-upload"
+    },
     captionSet: { type: "boolean", description: "Only when caption input was given \u2014 whether every caption track upload succeeded" },
     captionLanguages: {
       type: "array",
@@ -124314,7 +124392,13 @@ var FACEBOOK_PUBLISH_OUTPUT = {
     platform: PLATFORM_PROPERTY,
     postId: {
       type: "string",
-      description: "Facebook post id \u2014 pass it straight to facebook_comment as postId. For video posts this value is also the video_id"
+      description: "Facebook post id \u2014 pass it straight to facebook_comment as postId. For regular video posts this value is also the video_id; for a Reel it is the post_id when finish returned one, otherwise the video_id"
+    },
+    videoId: { type: "string", description: "Video posts only \u2014 the video id (captions, facebook_captions and status checks use it)" },
+    reel: { type: "boolean", description: "true when published through the Reels endpoint" },
+    processingWarning: {
+      type: "string",
+      description: "Reel accepted but processing had not finished when polling stopped \u2014 check the Page; do not publish again"
     },
     permalink: PERMALINK_PROPERTY,
     captionSet: { type: "boolean", description: "Only when caption input was given \u2014 whether every caption file upload succeeded" },
@@ -127966,7 +128050,7 @@ Returns: integer credit balance.`,
     title: "\u26A0\uFE0F Instagram publish (immediately public)",
     annotations: HINT.publish,
     outputSchema: publishOutput("mediaId", "Instagram media id"),
-    description: `\u26A0\uFE0F Direct Instagram publishing \u2014 posts to the IG API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL \u2014 never call without the user's approval or an approved standing growth plan). 1-10 images (2+ makes a carousel) **or** one Reels video (mutually exclusive with imageUrls). Images must be **JPEG only** (PNG/MPO/JPS rejected). Images cannot be replaced after publishing (only the caption can be edited). Publish quota: 100 per rolling 24 hours (a carousel counts as 1). ${SNS_HITL_LINE}`,
+    description: `\u26A0\uFE0F Direct Instagram publishing \u2014 posts to the IG API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL \u2014 never call without the user's approval or an approved standing growth plan). 1-10 images (2+ makes a carousel) **or** one Reels video (mutually exclusive with imageUrls). Images must be **JPEG only** (PNG/MPO/JPS rejected). Images cannot be replaced after publishing (only the caption can be edited). Publish quota: Meta's pages say 50 or 100 per rolling 24 hours (a carousel counts as 1) \u2014 the account's content_publishing_limit quota_total is the real number. ${SNS_HITL_LINE}`,
     inputSchema: {
       type: "object",
       properties: {
@@ -127979,8 +128063,12 @@ Returns: integer credit balance.`,
         videoUrl: {
           type: "string",
           format: "uri",
-          description: "One public Reels video URL (.mp4/.mov) \u2014 cannot be used together with imageUrls. **Provide the clean subtitle-free master**, including speech videos. Do not burn captions into the picture or select a legacy video-sub file; Instagram has no separate subtitle input"
+          description: "One public Reels video URL (.mp4/.mov) \u2014 cannot be used together with imageUrls. **Provide the clean subtitle-free master**, including speech videos. Do not burn captions into the picture or select a legacy video-sub file; Instagram has no separate subtitle input. Instagram-Login tokens have no local-file upload, so the URL must stay public until the call returns (Meta fetches it). Spec: MP4/MOV, H.264/HEVC, AAC, 23\u201360 fps, 3 s\u201315 min, \u2264300MB, 9:16 recommended"
         },
+        shareToFeed: { type: "boolean", description: "Reels only \u2014 false keeps the reel in the Reels tab only (off the profile grid/feed). Omit for the platform default" },
+        thumbOffsetMs: { type: "integer", minimum: 0, description: "Reels only \u2014 cover frame position in ms (default first frame). Ignored when coverUrl is given" },
+        coverUrl: { type: "string", format: "uri", description: "Reels only \u2014 public JPEG cover (\u22648MB, center 9:16 is used). Overrides thumbOffsetMs" },
+        isAiGenerated: { type: "boolean", description: "Reels only \u2014 Meta AI-usage self-disclosure (is_ai_generated). Generated Mochi & B\u01A1 episodes pass true. Sent only when given" },
         channel: SNS_CHANNEL_PROPERTY
       },
       required: ["caption"]
@@ -128007,7 +128095,7 @@ Returns: integer credit balance.`,
     title: "\u26A0\uFE0F Facebook Page publish (immediately public)",
     annotations: HINT.publish,
     outputSchema: FACEBOOK_PUBLISH_OUTPUT,
-    description: `\u26A0\uFE0F Direct Facebook Page publishing \u2014 posts to the Graph API with the local Page token, **immediately public** (the posting Page is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL \u2014 never call without the user's approval or an approved standing growth plan). Forms: text / up to 10 images / one video (regular video \u2014 not Reels). Video posts may include a separate subtitle file (captionFilePath) only when requested \u2014 this pipeline uploads subtitles separately instead of burning them in, so give videoUrl the clean subtitle-free master, not a burned-in copy. The source link goes **without exception** in the first comment via facebook_comment right after a successful publish, not in the body (linkUrl). ${SNS_HITL_LINE}`,
+    description: `\u26A0\uFE0F Direct Facebook Page publishing \u2014 posts to the Graph API with the local Page token, **immediately public** (the posting Page is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL \u2014 never call without the user's approval or an approved standing growth plan). Forms: text / up to 10 images / one video \u2014 a regular Page video by default, or a **Page Reel with reel: true** (\`/video_reels\` start \u2192 hosted upload \u2192 finish; 9:16, 3\u201390 s, 24\u201360 fps, \u226430 Reels per Page per 24 h). Reels are public on publish; there is no private Reel. Video posts may include a separate subtitle file (captionFilePath) only when requested \u2014 this pipeline uploads subtitles separately instead of burning them in, so give videoUrl the clean subtitle-free master, not a burned-in copy. The source link goes **without exception** in the first comment via facebook_comment right after a successful publish, not in the body (linkUrl). ${SNS_HITL_LINE}`,
     inputSchema: {
       type: "object",
       properties: {
@@ -128039,6 +128127,8 @@ Returns: integer credit balance.`,
           description: "Multi-language subtitles \u2014 one caption upload per entry, valid only on videoUrl posts and mutually exclusive with captionFilePath. **Put the default-language track first** \u2014 only the first entry declares default_locale (per-call default_locale on every track is undocumented behavior, so this tool declares the default exactly once). A failed locale comes back in captionWarning with the post intact \u2014 retry just that locale"
         },
         linkUrl: { type: "string", format: "uri", description: "(Exception only) link attachment \u2014 text posts (no media) only. The default rule is to put the link in the first comment via facebook_comment" },
+        reel: { type: "boolean", description: "With videoUrl: publish as a Facebook Page Reel instead of a regular Page video. Use for 9:16 shorts of 3\u201390 seconds only \u2014 Meta refuses a longer Reel (1363128), so a longer master goes without reel. The video URL must be public and fetchable by facebookexternalhit. If the result carries processingWarning the Reel was accepted \u2014 check the Page, never call again" },
+        isAiGenerated: { type: "boolean", description: "Reels only (reel: true) \u2014 Meta AI-usage self-disclosure (is_ai_generated). Generated Mochi & B\u01A1 episodes pass true" },
         channel: SNS_CHANNEL_PROPERTY
       },
       required: ["caption"]
@@ -128074,8 +128164,10 @@ Returns: integer credit balance.`,
         caption: { type: "string", description: "Final video description, **\u22645,000 bytes** (not characters \u2014 Korean runs 3 bytes per character, about 1,666 chars) \u2014 first-line summary plus key points. **Hashtags differ per format** \u2014 for 9:16 Shorts attach 3-5 including #Shorts; 16:9 long-form gets no #Shorts (it would be misclassified onto the Shorts surface). Long-form carries **chapter timestamps** instead of hashtags \u2014 the documented requirements are a first line at 00:00, 3 or more chapters, each 10+ seconds. **What happens when you break them is not in the official docs** \u2014 we confirmed the 10 seconds is not actually enforced (21 two-second chapters rendered fine); the only certainties are that auto-chapters default on for new uploads and a manual list in the description overrides them. Break the requirements and your list may be ignored in favor of auto-chapters." },
         thumbnailFilePath: {
           type: "string",
-          description: "Absolute path of the cover still (.jpg/.png \u22642MB) \u2014 **required**. Without it YouTube picks an arbitrary frame as the thumbnail, the title cover never shows, and the vertical surface cannot be reverted via the API after publishing. What this changes is the **landscape surfaces** only (search results, share previews, embeds) \u2014 the vertical frame (oar*) in the Shorts feed and the channel Shorts tab changes only through frame selection in the native YouTube app (publish skill \xA73, the vertical-surface step). Channels without phone verification (intermediate features) get the thumbnail rejected \u2014 the publish still succeeds and reports via thumbnailWarning"
+          description: "Absolute path of the cover still (.jpg/.png \u226450MB) \u2014 **required**. Without it YouTube picks an arbitrary frame as the thumbnail. Since 2026-11-03 thumbnails.set also covers Shorts (cropped to 9:16) **only after processing finishes**, so the tool waits for processingDetails.processingStatus = succeeded (up to 5 minutes, needs youtube.readonly; an upload-only token sets it without waiting and reports processingNote). Check the Shorts feed cover after publishing; if it is still a video frame, pick the frame in Studio or the app (publish skill \xA73). Channels without phone verification (intermediate features) get the thumbnail rejected \u2014 the publish still succeeds and reports via thumbnailWarning"
         },
+        defaultLanguage: { type: "string", description: "BCP-47 language of the title and description (snippet.defaultLanguage), e.g. vi for mochi-bo" },
+        defaultAudioLanguage: { type: "string", description: "BCP-47 spoken language of the audio (snippet.defaultAudioLanguage), e.g. vi for mochi-bo" },
         captionFilePath: {
           type: "string",
           description: "Absolute path of an optional separate subtitle file (.srt) \u2014 **pass only when the user requests YouTube subtitles; otherwise omit it**. Uploading subtitles separately instead of burning them in means they can be swapped after publishing, viewers can toggle them, and they seed YouTube auto-translation. Give videoFilePath the clean subtitle-free master, not a burned-in copy. The upload needs the **youtube.force-ssl scope** (rejected on the publish-only youtube.upload) and costs a **quota of 400 units** per track \u2014 heavy next to the 1-unit video upload, so once per language per episode. If only the subtitles fail, captionWarning is returned and the publish stands (do not re-upload). Single-track shorthand \u2014 for two or more languages use captionTracks instead (mutually exclusive)"
@@ -128546,7 +128638,7 @@ The runtime field identifies the loaded module and its on-disk hash; it does not
 
 Includes boundaryReview (shot-boundaries-v1): every actual playback join with full ordered speech/performance, camera context, incoming join ownership and factual review signals. It is read-only and always not_reviewed; repeated speakers/cast or reasons are not merge commands. For splices incoming is null: inspect the edit plan. Missing evidence stays unknown. Compare the uncut scene before images, and audit line ids/order/acting, performance groups, references and outer joins after edits. If this field is absent on an older connection, update/reconnect rather than guessing a bundle path.
 
-Includes videoTiming for generated shots: selected route, planned source coverage, frame grid, maximum seconds, and fits/split_required/timing_unknown/limits_unknown. This is not measured speech or output duration. boundaryReview.shots[].performanceTiming times a Korean line nobody timed from its syllables and gives storedExcessSeconds: the seconds the stored duration holds beyond its lines and timed actions, which a native-speech clip (MSR) plays as silent acting around the line.
+Includes videoTiming for generated shots: selected route, planned source coverage, frame grid, maximum seconds, and fits/split_required/timing_unknown/limits_unknown. This is not measured speech or output duration. boundaryReview.shots[].performanceTiming times a line nobody timed from its syllables in the board's language (STORY.language; speechRate "uncalibrated" outside Korean, whose rate alone was measured) and gives storedExcessSeconds: the seconds the stored duration holds beyond its lines and timed actions, which a native-speech clip (MSR) plays as silent acting around the line.
 
 Returns: JSON \u2014 { file, mediaBaseDirectory, sha256, version, format, shots, sequences[\u2026scenes[\u2026shots]], unplacedShots, splicedShots (broll \xB7 outro), playback (actual insertion order), unscheduledShots, propSheet?, inspection, runtime, imageFraming, boundaryReview, videoTiming, reviewContext?, selectedShot? }.`,
     inputSchema: {
@@ -128575,12 +128667,13 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
       additionalProperties: false,
       properties: {
         path: { type: "string", description: "The storyboard directory (data/<channel>/episodes/<topic>/storyboard/) or its scenes.js" },
+        language: { type: "string", description: `The language the story and its lines are written in, as a BCP-47 tag ("en", "ja", "zh-Hans", "es", "fr", "de", "vi", "ko"): the one the user asked for, else the saved languages.speech, else the language the channel already works in (profile, cast voices, earlier episodes), else the language of the user's request. Recorded once as STORY.language; a new episode board without it takes the saved languages.speech, and a board that has one or already has shots keeps its language (a different value warns). Line timing reads it.` },
         sequences: { type: "array", minItems: 1, description: "Sequences in playback order", items: { type: "object", additionalProperties: false, required: ["id", "title", "purpose"], properties: {
           id: { type: "string", description: 'Stable id, e.g. "q1"' },
           title: { type: "string", description: "The heading the review page draws" },
           purpose: { type: "string", description: "The one purpose that binds its scenes; two purposes are two sequences" },
-          question: { type: "string", description: "Story-led work: the one question the viewer holds across these scenes \u2014 specific and answerable (who, why, how, whether)" },
-          payoff: { type: "integer", minimum: 1, description: "The scene number that answers the question \u2014 a later scene of this sequence" }
+          question: { type: "string", description: "The one question the viewer holds across these scenes \u2014 specific and answerable (who, why, how, whether). Claim-led work (explainer, tutorial, review, advertisement): whether the promised result is real" },
+          payoff: { type: "integer", minimum: 1, description: "The scene number that answers the question or shows the proof \u2014 a later scene of this sequence" }
         } } }
       },
       required: ["path", "sequences"]
@@ -130040,8 +130133,8 @@ var voiceLockConfigSchema = external_exports.object({
 
 // src/character-tts.ts
 function normalizeCharacterLanguage(value) {
-  const raw = value.trim().toLowerCase();
-  return { korean: "ko", english: "en", japanese: "ja", chinese: "zh", spanish: "es", french: "fr", portuguese: "pt" }[raw] || raw;
+  const raw = value.trim().toLowerCase().replace(/^([a-z]{2})[-_][a-z0-9_-]+$/, "$1");
+  return { korean: "ko", english: "en", japanese: "ja", chinese: "zh", spanish: "es", french: "fr", german: "de", vietnamese: "vi", portuguese: "pt" }[raw] || raw;
 }
 var ttsFields = {
   voiceLock: voiceLockConfigSchema.optional(),
@@ -132747,7 +132840,9 @@ async function stockSearch(input) {
 }
 
 // src/sns-client.ts
+import { execFile as execFile10 } from "node:child_process";
 import { createHash as createHash25, randomUUID as randomUUID12 } from "node:crypto";
+import { promisify as promisify6 } from "node:util";
 import {
   existsSync as existsSync35,
   mkdirSync as nodeMkdirSync,
@@ -132772,6 +132867,7 @@ var IG_BASE = `https://graph.instagram.com/${GRAPH_VERSION}`;
 var FB_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 var DEFAULT_POLL_INTERVAL_MS = 2e3;
 var DEFAULT_POLL_MAX_TRIES = 60;
+var REELS_POLL = { pollIntervalMs: 1e4, pollMaxTries: 30 };
 var sleep8 = (ms) => new Promise((resolve12) => setTimeout(resolve12, ms));
 function fail2(status, message) {
   return { ok: false, status, body: message };
@@ -132828,15 +132924,18 @@ async function pollContainer(baseUrl, containerId, accessToken, statusField, opt
   const interval = opts?.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
   const maxTries = opts?.pollMaxTries ?? DEFAULT_POLL_MAX_TRIES;
   for (let attempt = 0; attempt < maxTries; attempt++) {
+    const detailField = statusField === "status_code" ? "status" : "error_message";
     const res = await graphRequest("get", `${baseUrl}/${containerId}`, {
-      fields: statusField,
+      fields: `${statusField},${detailField}`,
       access_token: accessToken
     });
     if (!res.ok) return res;
-    const status = String(parseJson(res.body)?.[statusField] ?? "");
+    const body = parseJson(res.body);
+    const status = String(body?.[statusField] ?? "");
     if (status === "FINISHED" || status === "PUBLISHED") return null;
     if (status === "ERROR" || status === "EXPIRED") {
-      return fail2(502, `Media container ${containerId} failed: ${status}`);
+      const detail = body?.[detailField] ? ` \u2014 ${String(body[detailField])}` : "";
+      return fail2(502, `Media container ${containerId} failed: ${status}${detail}`);
     }
     await sleep8(interval);
   }
@@ -133033,25 +133132,56 @@ async function threadsKeywordSearch(input) {
     results
   });
 }
+var flag = (value) => value === void 0 ? void 0 : String(value);
+function instagramBase(token) {
+  return token.startsWith("EAA") ? FB_BASE : IG_BASE;
+}
+async function instagramAccount(token, fields2) {
+  const base = instagramBase(token);
+  if (base === IG_BASE) {
+    const me2 = await fetchMe(IG_BASE, token, fields2);
+    if (!me2.ok) return { error: me2 };
+    return { base, account: parseJson(me2.body) ?? {} };
+  }
+  const igFields = fields2.split(",").filter((f3) => f3 !== "account_type").join(",");
+  const me = await fetchMe(FB_BASE, token, `id,name,instagram_business_account{${igFields}}`);
+  if (!me.ok) return { error: me };
+  const page = parseJson(me.body) ?? {};
+  const account = page.instagram_business_account;
+  if (!account?.id) {
+    return {
+      error: fail2(
+        400,
+        `Facebook token for Page ${String(page.name ?? page.id ?? "?")} shows no linked Instagram professional account \u2014 link the account to the Page and grant instagram_basic`
+      )
+    };
+  }
+  return { base, account: { ...account, account_type: "BUSINESS", pageId: page.id } };
+}
 async function publishInstagram(input, opts) {
   const { token, error: error2 } = await loadTokenFile("INSTAGRAM", input.channel);
   if (!token) return error2;
-  const me = await fetchMe(IG_BASE, token, "id,username");
-  if (!me.ok) return me;
-  const uid = String(parseJson(me.body)?.id ?? "");
-  if (!uid) return fail2(502, `Instagram /me returned no id: ${me.body}`);
+  const resolved = await instagramAccount(token, "id,username");
+  if ("error" in resolved) return resolved.error;
+  const IG = resolved.base;
+  const uid = String(resolved.account.id ?? "");
+  if (!uid) return fail2(502, "Instagram account lookup returned no id");
   let creationId;
   if (input.videoUrl) {
-    const create = await graphRequest("post", `${IG_BASE}/${uid}/media`, {
+    const create = await graphRequest("post", `${IG}/${uid}/media`, {
       media_type: "REELS",
       video_url: input.videoUrl,
       caption: input.caption,
+      share_to_feed: flag(input.shareToFeed),
+      thumb_offset: input.thumbOffsetMs === void 0 ? void 0 : String(input.thumbOffsetMs),
+      cover_url: input.coverUrl,
+      is_ai_generated: flag(input.isAiGenerated),
       access_token: token
     });
     if (!create.ok) return create;
     creationId = String(parseJson(create.body)?.id ?? "");
   } else if ((input.imageUrls?.length ?? 0) === 1) {
-    const create = await graphRequest("post", `${IG_BASE}/${uid}/media`, {
+    const create = await graphRequest("post", `${IG}/${uid}/media`, {
       image_url: input.imageUrls[0],
       caption: input.caption,
       access_token: token
@@ -133061,7 +133191,7 @@ async function publishInstagram(input, opts) {
   } else {
     const children = [];
     for (const imageUrl of input.imageUrls ?? []) {
-      const child = await graphRequest("post", `${IG_BASE}/${uid}/media`, {
+      const child = await graphRequest("post", `${IG}/${uid}/media`, {
         image_url: imageUrl,
         is_carousel_item: "true",
         access_token: token
@@ -133072,10 +133202,10 @@ async function publishInstagram(input, opts) {
       children.push(childId);
     }
     for (const childId of children) {
-      const pollFailure2 = await pollContainer(IG_BASE, childId, token, "status_code", opts);
+      const pollFailure2 = await pollContainer(IG, childId, token, "status_code", opts);
       if (pollFailure2) return pollFailure2;
     }
-    const create = await graphRequest("post", `${IG_BASE}/${uid}/media`, {
+    const create = await graphRequest("post", `${IG}/${uid}/media`, {
       media_type: "CAROUSEL",
       children: children.join(","),
       caption: input.caption,
@@ -133085,15 +133215,21 @@ async function publishInstagram(input, opts) {
     creationId = String(parseJson(create.body)?.id ?? "");
   }
   if (!creationId) return fail2(502, "Instagram media container returned no id");
-  const pollFailure = await pollContainer(IG_BASE, creationId, token, "status_code", opts);
+  const pollFailure = await pollContainer(
+    IG,
+    creationId,
+    token,
+    "status_code",
+    opts ?? (input.videoUrl ? REELS_POLL : void 0)
+  );
   if (pollFailure) return pollFailure;
-  const publish = await graphRequest("post", `${IG_BASE}/${uid}/media_publish`, {
+  const publish = await graphRequest("post", `${IG}/${uid}/media_publish`, {
     creation_id: creationId,
     access_token: token
   });
   if (!publish.ok) return publish;
   const mediaId = String(parseJson(publish.body)?.id ?? "");
-  const permalink = await graphRequest("get", `${IG_BASE}/${mediaId}`, {
+  const permalink = await graphRequest("get", `${IG}/${mediaId}`, {
     fields: "permalink",
     access_token: token
   });
@@ -133110,19 +133246,16 @@ var IG_FEED_METRICS = "follows,profile_visits";
 async function instagramInsights(input) {
   const { token, error: error2 } = await loadTokenFile("INSTAGRAM", input.channel);
   if (!token) return error2;
-  const me = await fetchMe(
-    IG_BASE,
-    token,
-    "id,username,account_type,media_count,followers_count,follows_count"
-  );
-  if (!me.ok) return me;
-  const profile = parseJson(me.body) ?? {};
+  const resolved = await instagramAccount(token, "id,username,account_type,media_count,followers_count,follows_count");
+  if ("error" in resolved) return resolved.error;
+  const IG = resolved.base;
+  const profile = resolved.account;
   const uid = str6(profile.id);
-  if (!uid) return fail2(502, `Instagram /me returned no id: ${me.body}`);
+  if (!uid) return fail2(502, "Instagram account lookup returned no id");
   const days = input.days ?? 7;
   const nowSec = Math.floor(Date.now() / 1e3);
   const since = nowSec - days * 86400;
-  const ranged = await graphRequest("get", `${IG_BASE}/${uid}/insights`, {
+  const ranged = await graphRequest("get", `${IG}/${uid}/insights`, {
     metric: IG_USER_METRICS,
     period: "day",
     metric_type: "total_value",
@@ -133140,7 +133273,7 @@ async function instagramInsights(input) {
   const mediaLimit = input.mediaLimit ?? 10;
   let media = [];
   if (mediaLimit > 0) {
-    const list = await graphRequest("get", `${IG_BASE}/${uid}/media`, {
+    const list = await graphRequest("get", `${IG}/${uid}/media`, {
       fields: "id,media_type,media_product_type,caption,permalink,timestamp,like_count,comments_count",
       limit: String(mediaLimit),
       access_token: token
@@ -133151,7 +133284,7 @@ async function instagramInsights(input) {
         const mediaId = str6(item.id);
         const productType = str6(item.media_product_type) || null;
         const surfaceMetrics = productType === "REELS" ? IG_REELS_METRICS : productType === "FEED" ? IG_FEED_METRICS : "";
-        const ins = await graphRequest("get", `${IG_BASE}/${mediaId}/insights`, {
+        const ins = await graphRequest("get", `${IG}/${mediaId}/insights`, {
           metric: surfaceMetrics ? `${IG_MEDIA_METRICS},${surfaceMetrics}` : IG_MEDIA_METRICS,
           access_token: token
         });
@@ -133190,7 +133323,72 @@ async function instagramInsights(input) {
     media
   });
 }
-async function publishFacebook(input) {
+async function publishFacebookReel(pageId, token, input, opts) {
+  const start = await graphRequest("post", `${FB_BASE}/${pageId}/video_reels`, {
+    upload_phase: "start",
+    access_token: token
+  });
+  if (!start.ok) return { error: start };
+  const videoId = String(parseJson(start.body)?.video_id ?? "");
+  if (!videoId) return { error: fail2(502, `Facebook Reel start returned no video_id: ${start.body}`) };
+  let upload;
+  try {
+    const res = await fetch(`https://rupload.facebook.com/video-upload/${GRAPH_VERSION}/${videoId}`, {
+      method: "POST",
+      headers: { Authorization: `OAuth ${token}`, file_url: input.videoUrl },
+      signal: AbortSignal.timeout(3e5)
+    });
+    upload = { ok: res.ok, status: res.status, body: await res.text() };
+  } catch (error2) {
+    return { error: fail2(502, `Facebook Reel upload failed before finish (nothing published, video ${videoId}): ${error2 instanceof Error ? error2.message : String(error2)}`) };
+  }
+  if (!upload.ok || parseJson(upload.body)?.success !== true) {
+    return { error: { ok: false, status: upload.ok ? 502 : upload.status, body: `Facebook Reel upload rejected (nothing published, video ${videoId}): ${upload.body}` } };
+  }
+  const finish = await graphRequest(
+    "post",
+    `${FB_BASE}/${pageId}/video_reels`,
+    {
+      upload_phase: "finish",
+      video_id: videoId,
+      video_state: "PUBLISHED",
+      description: input.caption,
+      is_ai_generated: flag(input.isAiGenerated),
+      access_token: token
+    },
+    12e4
+  );
+  if (!finish.ok) {
+    return { error: { ...finish, body: `${finish.body} \u2014 check video ${videoId} on the Page before any retry; a second call posts a second Reel` } };
+  }
+  const finishBody = parseJson(finish.body);
+  if (finishBody?.success === false) return { error: fail2(502, `Facebook Reel finish refused (video ${videoId}): ${finish.body}`) };
+  const postId = typeof finishBody?.post_id === "string" ? finishBody.post_id : void 0;
+  let last = "unknown";
+  for (let attempt = 0; attempt < opts.pollMaxTries; attempt++) {
+    const res = await graphRequest("get", `${FB_BASE}/${videoId}`, { fields: "status", access_token: token });
+    if (res.ok) {
+      const status = parseJson(res.body)?.status ?? {};
+      const phase = (name) => status[name] ?? {};
+      const videoStatus2 = String(status.video_status ?? "");
+      const failed = [phase("uploading_phase"), phase("processing_phase"), phase("publishing_phase")].find(
+        (p) => p.status === "error" || p.error
+      );
+      if (["error", "upload_failed", "expired"].includes(videoStatus2) || failed) {
+        const reason = JSON.stringify(failed?.error ?? videoStatus2);
+        return { error: fail2(502, `Facebook Reel ${videoId} failed after finish: ${reason}`) };
+      }
+      const publishing = phase("publishing_phase");
+      if (publishing.publish_status === "published" || ["complete", "completed"].includes(String(publishing.status))) {
+        return { videoId, postId };
+      }
+      last = `video_status=${videoStatus2 || "?"}, publishing=${String(publishing.status ?? "?")}`;
+    }
+    await sleep8(opts.pollIntervalMs);
+  }
+  return { videoId, postId, processing: `Reel accepted but still processing (${last}); check the Page before doing anything \u2014 do not publish again` };
+}
+async function publishFacebook(input, opts) {
   if (input.captionFiles?.length && input.captionFilePath) {
     return fail2(400, "Pass captionFiles or captionFilePath, not both (ambiguous which one wins)");
   }
@@ -133220,7 +133418,20 @@ async function publishFacebook(input) {
   const pageId = String(parseJson(me.body)?.id ?? "");
   if (!pageId) return fail2(502, `Facebook /me returned no id: ${me.body}`);
   let postId;
-  if (input.videoUrl) {
+  let videoId;
+  let processing;
+  if (input.videoUrl && input.reel) {
+    const reel = await publishFacebookReel(
+      pageId,
+      token,
+      { videoUrl: input.videoUrl, caption: input.caption, isAiGenerated: input.isAiGenerated },
+      { ...REELS_POLL, ...opts }
+    );
+    if ("error" in reel) return reel.error;
+    videoId = reel.videoId;
+    postId = reel.postId ?? reel.videoId;
+    processing = reel.processing;
+  } else if (input.videoUrl) {
     const video2 = await graphRequest(
       "post",
       `${FB_BASE}/${pageId}/videos`,
@@ -133229,6 +133440,7 @@ async function publishFacebook(input) {
     );
     if (!video2.ok) return video2;
     postId = String(parseJson(video2.body)?.id ?? "");
+    videoId = postId;
   } else if ((input.imageUrls?.length ?? 0) > 0) {
     const mediaFbids = [];
     for (const imageUrl of input.imageUrls ?? []) {
@@ -133261,17 +133473,20 @@ async function publishFacebook(input) {
   if (!postId) return fail2(502, "Facebook publish returned no id");
   const captionWarnings = [];
   for (const [index, file] of captionFiles.entries()) {
-    const warning = await uploadFacebookCaption(token, postId, { ...file, isDefault: index === 0 });
+    const warning = await uploadFacebookCaption(token, videoId ?? postId, { ...file, isDefault: index === 0 });
     if (warning) captionWarnings.push(`${file.locale}: ${warning}`);
   }
   const captionWarning = captionWarnings.length > 0 ? captionWarnings.join("; ") : void 0;
-  const permalink = await graphRequest("get", `${FB_BASE}/${postId}`, {
+  const permalink = await graphRequest("get", `${FB_BASE}/${videoId ?? postId}`, {
     fields: "permalink_url",
     access_token: token
   });
   return okJson({
     platform: "FACEBOOK",
     postId,
+    ...videoId ? { videoId } : {},
+    ...input.reel && input.videoUrl ? { reel: true } : {},
+    ...processing ? { processingWarning: processing } : {},
     permalink: permalink.ok ? parseJson(permalink.body)?.permalink_url ?? null : null,
     ...captionFiles.length > 0 ? { captionSet: !captionWarning, captionLocales: captionFiles.map((f3) => f3.locale) } : {},
     ...captionWarning ? { captionWarning } : {}
@@ -133344,7 +133559,7 @@ var YT_THUMB_MIME_BY_EXT = {
   ".jpeg": "image/jpeg",
   ".png": "image/png"
 };
-var YT_THUMB_MAX_BYTES = 2 * 1024 * 1024;
+var YT_THUMB_MAX_BYTES = 50 * 1024 * 1024;
 var CAPTION_MAX_BYTES_YT = 100 * 1024 * 1024;
 var CAPTION_MAX_BYTES_FB = 200 * 1024;
 async function readCaptionFile(path35, maxBytes) {
@@ -133508,6 +133723,35 @@ async function setYoutubeThumbnail(token, videoId, thumb) {
     return `thumbnails.set failed: ${error2 instanceof Error ? error2.message : String(error2)}`;
   }
 }
+async function looksLikeShort(filePath) {
+  try {
+    const { stdout } = await promisify6(execFile10)(
+      "ffprobe",
+      ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height:format=duration", "-of", "json", filePath],
+      { timeout: 3e4 }
+    );
+    const probe4 = JSON.parse(stdout);
+    const { width = 0, height = 0 } = probe4.streams?.[0] ?? {};
+    const duration4 = Number(probe4.format?.duration);
+    if (!width || !height || !Number.isFinite(duration4)) return true;
+    return height >= width && duration4 <= 180;
+  } catch {
+    return true;
+  }
+}
+async function waitForYoutubeProcessing(token, videoId, opts) {
+  for (let attempt = 0; attempt < opts.pollMaxTries; attempt++) {
+    const res = await youtubeRequest("get", `${YT_DATA_BASE}/videos`, { part: "processingDetails", id: videoId }, token);
+    if (!res.ok) return `processing status unreadable (HTTP ${res.status}, needs youtube.force-ssl or youtube.readonly) \u2014 thumbnail set without waiting; on a Short it may not apply`;
+    const items = parseJson(res.body)?.items;
+    const details = Array.isArray(items) ? items[0]?.processingDetails : void 0;
+    const status = String(details?.processingStatus ?? "");
+    if (status === "succeeded") return null;
+    if (status === "failed" || status === "terminated") return `YouTube processing ${status} \u2014 check the video in Studio`;
+    await sleep8(opts.pollIntervalMs);
+  }
+  return `processing not finished after ${Math.round(opts.pollMaxTries * opts.pollIntervalMs / 1e3)}s \u2014 thumbnail set anyway; on a Short it may not apply, so set it again in Studio if the cover is wrong`;
+}
 var YT_CHUNK_MIN = 256 * 1024;
 var YT_SESSION_TTL_MS = 24 * 60 * 60 * 1e3;
 function ytChunkSize() {
@@ -133621,7 +133865,7 @@ async function queryResumeOffset(sessionUrl, total, mimeType) {
     return { offset: null, done: false, body: "" };
   }
 }
-async function publishYoutube(input) {
+async function publishYoutube(input, opts) {
   if (input.privacyStatus === "public") {
     throw new Error('YouTube uploads start private (owner directive 2026-08-19/2026-10-18): upload with privacyStatus "private" or "unlisted", then flip to public with youtube_update after checking the watch page');
   }
@@ -133651,7 +133895,7 @@ async function publishYoutube(input) {
       return fail2(400, `Cannot read thumbnail file: ${error2 instanceof Error ? error2.message : String(error2)}`);
     }
     if (thumbBytes.byteLength > YT_THUMB_MAX_BYTES) {
-      return fail2(400, `Thumbnail exceeds 2MB: ${input.thumbnailFilePath} (${thumbBytes.byteLength} bytes)`);
+      return fail2(400, `Thumbnail exceeds 50MB: ${input.thumbnailFilePath} (${thumbBytes.byteLength} bytes)`);
     }
     thumb = { bytes: thumbBytes, mimeType: thumbMime };
   }
@@ -133701,7 +133945,9 @@ async function publishYoutube(input) {
             // 22 = People & Blogs. The category feeds recommendation and browse classification,
             // so uploading a general-content channel's video as 25 (News & Politics) surfaces it
             // to the wrong interest group.
-            categoryId: input.categoryId ?? "22"
+            categoryId: input.categoryId ?? "22",
+            ...input.defaultLanguage ? { defaultLanguage: input.defaultLanguage } : {},
+            ...input.defaultAudioLanguage ? { defaultAudioLanguage: input.defaultAudioLanguage } : {}
           },
           status: {
             privacyStatus: input.privacyStatus ?? "private",
@@ -133762,6 +134008,7 @@ async function publishYoutube(input) {
     const videoId = String(parseJson(text4)?.id ?? "");
     if (!videoId) return fail2(502, `YouTube upload returned no video id: ${text4}`);
     writeState(input.videoFilePath, null);
+    const processingNote = thumb && await looksLikeShort(input.videoFilePath) ? await waitForYoutubeProcessing(token, videoId, { ...REELS_POLL, ...opts }) : null;
     const thumbnailWarning = thumb ? await setYoutubeThumbnail(token, videoId, thumb) : void 0;
     const captionWarnings = [];
     for (const track of captionTracks) {
@@ -133776,6 +134023,7 @@ async function publishYoutube(input) {
       fileName: basename11(input.videoFilePath),
       ...thumb ? { thumbnailSet: !thumbnailWarning } : {},
       ...thumbnailWarning ? { thumbnailWarning } : {},
+      ...processingNote ? { processingNote } : {},
       ...captionTracks.length > 0 ? { captionSet: !captionWarning, captionLanguages: captionTracks.map((t2) => t2.language) } : {},
       ...captionWarning ? { captionWarning } : {}
     });
@@ -133883,7 +134131,8 @@ async function youtubeUpdate(input) {
     privacyStatus: updated?.status?.privacyStatus ?? nextStatus.privacyStatus,
     title: updated?.snippet?.title ?? nextSnippet.title,
     changed: {
-      privacyStatus: status.privacyStatus !== nextStatus.privacyStatus,
+      // From the response: the API can keep a value other than the one requested.
+      privacyStatus: status.privacyStatus !== (updated?.status?.privacyStatus ?? nextStatus.privacyStatus),
       title: snippet.title !== nextSnippet.title,
       description: snippet.description !== nextSnippet.description
     }
@@ -134138,13 +134387,14 @@ async function inboxThreads(input, now, channel) {
 async function inboxInstagram(input, now, channel) {
   const { token, error: error2 } = await loadTokenFile("INSTAGRAM", channel);
   if (!token) return { error: error2 };
-  const me = await fetchMe(IG_BASE, token, "id,username");
-  if (!me.ok) return { error: me };
-  const account = parseJson(me.body) ?? {};
+  const resolved = await instagramAccount(token, "id,username");
+  if ("error" in resolved) return { error: resolved.error };
+  const IG = resolved.base;
+  const account = resolved.account;
   const uid = str6(account.id);
   const ourName = str6(account.username);
-  if (!uid) return { error: fail2(502, `Instagram /me returned no id: ${me.body}`) };
-  const list = await graphRequest("get", `${IG_BASE}/${uid}/media`, {
+  if (!uid) return { error: fail2(502, "Instagram account lookup returned no id") };
+  const list = await graphRequest("get", `${IG}/${uid}/media`, {
     fields: "id,permalink,caption,timestamp,comments_count",
     limit: String(input.postLimit),
     access_token: token
@@ -134166,7 +134416,7 @@ async function inboxInstagram(input, now, channel) {
       posts.push(post);
       continue;
     }
-    const comments = await graphRequest("get", `${IG_BASE}/${postId}/comments`, {
+    const comments = await graphRequest("get", `${IG}/${postId}/comments`, {
       fields: "id,text,username,timestamp,like_count,hidden,replies{id,text,username,timestamp,like_count,hidden}",
       limit: String(input.commentLimit),
       access_token: token
@@ -134506,7 +134756,7 @@ async function replyToComment(input) {
   if (input.platform === "YOUTUBE") return replyYoutubeComment(input);
   const { token, error: error2 } = await loadTokenFile("INSTAGRAM", input.channel);
   if (!token) return error2;
-  const create = await graphRequest("post", `${IG_BASE}/${input.commentId}/replies`, {
+  const create = await graphRequest("post", `${instagramBase(token)}/${input.commentId}/replies`, {
     message: input.message,
     access_token: token
   });
@@ -134576,7 +134826,7 @@ async function moderateComment(input) {
   if (platform === "INSTAGRAM") {
     const { token: token2, error: error3 } = await loadTokenFile("INSTAGRAM", channel);
     if (!token2) return error3;
-    const res2 = await graphRequest("post", `${IG_BASE}/${commentId}`, {
+    const res2 = await graphRequest("post", `${instagramBase(token2)}/${commentId}`, {
       hide: String(hide),
       access_token: token2
     });
@@ -134606,6 +134856,13 @@ async function checkPlatformSet(channel) {
   ].map(async ([key, platform, baseUrl, fields2]) => {
     const { token, error: error2 } = await loadTokenFile(platform, channel);
     if (!token) return [key, { ok: false, reason: error2.body }];
+    if (platform === "INSTAGRAM") {
+      const resolved = await instagramAccount(token, fields2);
+      return [
+        key,
+        "error" in resolved ? { ok: false, status: resolved.error.status, reason: resolved.error.body.slice(0, 300) } : { ok: true, account: resolved.account, route: resolved.base === FB_BASE ? "facebook_login" : "instagram_login" }
+      ];
+    }
     const me = await fetchMe(baseUrl, token, fields2);
     return [
       key,
@@ -134658,13 +134915,13 @@ async function checkAccounts(channel) {
 }
 
 // src/tts-final-quality.ts
-import { execFile as execFile10 } from "node:child_process";
+import { execFile as execFile11 } from "node:child_process";
 import { existsSync as existsSync36, mkdtempSync as mkdtempSync7, readFileSync as readFileSync37, rmSync as rmSync17, writeFileSync as writeFileSync28, renameSync as renameSync11, openSync as openSync7, closeSync as closeSync7 } from "node:fs";
 import { tmpdir as tmpdir8 } from "node:os";
 import path32 from "node:path";
-import { promisify as promisify6 } from "node:util";
+import { promisify as promisify7 } from "node:util";
 var chapters = __toESM(require_final_speech_chapters(), 1);
-var exec4 = promisify6(execFile10);
+var exec4 = promisify7(execFile11);
 var finalSpeechSchema = external_exports.object({
   mediaPath: external_exports.string().min(1),
   expectedText: external_exports.string().trim().min(1).max(12e3),
@@ -137100,10 +137357,17 @@ var instagramPublishSchema = external_exports.object({
   caption: external_exports.string().min(1).max(2200, "INSTAGRAM caption must be \u22642200 chars"),
   imageUrls: external_exports.array(external_exports.string().url()).min(1).max(10).optional(),
   videoUrl: external_exports.string().url().optional(),
+  shareToFeed: external_exports.boolean().optional(),
+  thumbOffsetMs: external_exports.number().int().nonnegative().optional(),
+  coverUrl: external_exports.string().url().optional(),
+  isAiGenerated: external_exports.boolean().optional(),
   channel: channelSlugSchema
 }).superRefine((v, ctx) => {
   const issue2 = (path35, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path35], message });
   if (!v.imageUrls && !v.videoUrl) issue2("imageUrls", "INSTAGRAM requires imageUrls (1-10) or videoUrl (reel)");
+  for (const key of ["shareToFeed", "thumbOffsetMs", "coverUrl", "isAiGenerated"]) {
+    if (v[key] !== void 0 && !v.videoUrl) issue2(key, `${key} applies to reels (videoUrl) only`);
+  }
   if (v.imageUrls && v.videoUrl) issue2("videoUrl", "imageUrls and videoUrl are mutually exclusive");
   if (v.videoUrl && !isVideoUrl(v.videoUrl)) issue2("videoUrl", "videoUrl must be a .mp4/.mov URL");
 });
@@ -137120,10 +137384,14 @@ var facebookPublishSchema = external_exports.object({
     })
   ).min(1).optional(),
   linkUrl: external_exports.string().url().optional(),
+  reel: external_exports.boolean().optional(),
+  isAiGenerated: external_exports.boolean().optional(),
   channel: channelSlugSchema
 }).superRefine((v, ctx) => {
   const issue2 = (path35, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path35], message });
   if (v.imageUrls && v.videoUrl) issue2("videoUrl", "imageUrls and videoUrl are mutually exclusive");
+  if ((v.reel || v.isAiGenerated !== void 0) && !v.videoUrl) issue2("reel", "reel and isAiGenerated need videoUrl");
+  if (v.isAiGenerated !== void 0 && !v.reel) issue2("isAiGenerated", "isAiGenerated is sent on Reels (reel: true) only");
   if (v.videoUrl && !isVideoUrl(v.videoUrl)) issue2("videoUrl", "videoUrl must be a .mp4/.mov URL");
   if (v.linkUrl && (v.imageUrls || v.videoUrl)) issue2("linkUrl", "linkUrl is for text-only posts (no media)");
   if (v.captionFilePath && !v.videoUrl) issue2("captionFilePath", "captionFilePath requires videoUrl");
@@ -137157,6 +137425,8 @@ var youtubePublishSchema = external_exports.object({
   // and after publishing the Shorts portrait surface can't be reverted via the API
   // (enforced by user directive, 2026-08-13).
   thumbnailFilePath: external_exports.string().min(1),
+  defaultLanguage: external_exports.string().regex(/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/, "defaultLanguage is a BCP-47 tag, e.g. vi / ko").optional(),
+  defaultAudioLanguage: external_exports.string().regex(/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/, "defaultAudioLanguage is a BCP-47 tag, e.g. vi / ko").optional(),
   captionFilePath: external_exports.string().min(1).optional(),
   captionLanguage: external_exports.string().regex(/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/, "captionLanguage is a BCP-47 tag, e.g. ko / en / vi / zh-Hant").optional(),
   captionTracks: external_exports.array(
@@ -138140,7 +138410,15 @@ ${styleWarnings.join("\n")}` : head;
     const input = parseArgs(instagramPublishSchema, args);
     return fromApi(
       await publishInstagram(
-        input.videoUrl ? { caption: input.caption, videoUrl: input.videoUrl, channel: input.channel } : { caption: input.caption, imageUrls: input.imageUrls, channel: input.channel }
+        input.videoUrl ? {
+          caption: input.caption,
+          videoUrl: input.videoUrl,
+          shareToFeed: input.shareToFeed,
+          thumbOffsetMs: input.thumbOffsetMs,
+          coverUrl: input.coverUrl,
+          isAiGenerated: input.isAiGenerated,
+          channel: input.channel
+        } : { caption: input.caption, imageUrls: input.imageUrls, channel: input.channel }
       ),
       SNS_PUBLISHED_NOTE
     );
@@ -138165,6 +138443,8 @@ ${styleWarnings.join("\n")}` : head;
           captionFilePath: input.captionFilePath,
           captionLocale: input.captionLocale,
           captionFiles: input.captionFiles,
+          reel: input.reel,
+          isAiGenerated: input.isAiGenerated,
           channel: input.channel
         } : { caption: input.caption, imageUrls: input.imageUrls, linkUrl: input.linkUrl, channel: input.channel }
       ),
@@ -138190,6 +138470,8 @@ ${styleWarnings.join("\n")}` : head;
         categoryId: input.categoryId,
         madeForKids: input.madeForKids,
         containsSyntheticMedia: input.containsSyntheticMedia,
+        defaultLanguage: input.defaultLanguage,
+        defaultAudioLanguage: input.defaultAudioLanguage,
         channel: input.channel
       }),
       SNS_PUBLISHED_NOTE

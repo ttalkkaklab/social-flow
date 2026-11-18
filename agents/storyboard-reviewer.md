@@ -110,6 +110,14 @@ Compare the opening with channel disclosure rules only after the blind read. An 
 shown first is not automatically a confession; metadata and a three-second duration do not
 prove the viewer saw the reaction or understood the jump. Do not infer measured retention.
 
+For an episode that makes a claim (explainer, tutorial, review, advertisement), record the
+promise as a viewer hears it in the opening lines, then the proof as a viewer sees it: what
+is on screen, whether the thing put in can be found in the thing that came out, and whether
+it is held long enough to read. List spoken claims that have neither a picture nor a cited
+source, and numbers or absolutes without one. A proof described only in `shot.info` or a
+reason field was not shown. Do not ask for a problem beat, an earlier proof or a closing ask
+the material does not need, and do not treat the first-line timing as a score.
+
 ## 2. Compare intent and inspect the handoff
 
 Now read the selected scenario, actual identities, STORY, STRUCTURE, visual plan and relevant

@@ -37,6 +37,7 @@ import {
   writeStoryShots,
   storyMusicSchema,
   writeStoryMusic,
+  firstLineReading,
 } from '../dist/storyboard.js';
 import * as storyboardImages from '../dist/storyboard.js';
 import { TOOLS } from '../dist/tools.js';
@@ -349,6 +350,25 @@ describe('checkStoryboard', () => {
 });
 
 describe('story first, then characters and lines', () => {
+  it('a board records its story language once and keeps it', () => {
+    const dir = tmp(), sequences = [{ id: 'q1', title: 'Opening', purpose: 'They meet' }];
+    writeStorySequences({ path: dir, sequences });
+    assert.equal(readBoard(dir).win.STORY.language, undefined);   // a board nobody named a language for reads as before
+    writeStorySequences({ path: dir, language: 'ja', sequences });
+    assert.deepEqual(readBoard(dir).win.STORY, { version: 'story-v2', authoring: 'story-first', language: 'ja' });
+    const other = writeStorySequences({ path: dir, language: 'en', sequences });
+    assert.equal(readBoard(dir).win.STORY.language, 'ja');
+    assert.ok(other.findings.some((f) => f.level === 'warn' && /^story_language/.test(f.what)));
+    // A board written before the record existed is in the language of its shots, not of today's request.
+    const old = tmp();
+    writeStorySequences({ path: old, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
+    writeStoryScenes({ path: old, scenes: [{ sequence: 'q1', no: 1, place: '숲', time: '낮', event: 'e', summary: '씬' }] });
+    writeStoryShots({ path: old, shots: [{ scene: 1, summary: '샷' }] });
+    const resumed = writeStorySequences({ path: old, language: 'en', sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
+    assert.equal(readBoard(old).win.STORY.language, undefined);
+    assert.ok(resumed.findings.some((f) => f.level === 'warn' && /^story_language/.test(f.what)));
+  });
+
   it('each layer needs the one before it, and a new shot plays at the end of its scene', () => {
     const dir = tmp();
     assert.throws(() => writeStoryScenes({ path: dir, scenes: [{ sequence: 'q1', no: 1, place: '숲', time: '낮', event: 'e', summary: '씬' }] }), /story_order/);
@@ -674,6 +694,13 @@ describe('icon attributes come after every shot\'s characters', () => {
     writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
     const { win } = readBoard(dir);
     assert.deepEqual([win.FORMAT, win.PRODUCTION?.mode, win.STORY.authoring], ['shorts-9x16', 'video_50', 'story-first']);
+    // The saved languages.speech becomes the next board's story language.
+    const { revision } = manageProject({ action: 'status', workspace: root });
+    manageProject({ action: 'update', workspace: root, expectedRevision: revision, request: 'Vietnamese stories', settings: { languages: { speech: 'vi', subtitles: [], review: [] } } });
+    const next = join(manageProject({ action: 'episode', workspace: root, topic: 'e2' }).episode, 'storyboard');
+    castFile(next, ['mina'], { root: join(root, 'data/c') });
+    writeStorySequences({ path: next, sequences: [{ id: 'q1', title: 'Mở đầu', purpose: 'Gặp nhau' }] });
+    assert.equal(readBoard(next).win.STORY.language, 'vi');
   });
 });
 
@@ -1529,6 +1556,25 @@ describe('storyboard_read inspection', () => {
       assert.equal(orphan.selectedShot.playbackPosition, null);
       assert.equal(orphan.selectedShot.previous, null);
     }, win);
+  });
+});
+
+describe('first spoken line reading', () => {
+  const line = (extra = {}) => ({ id: 'l1', speaker: 'a', delivery: 'on_screen', tts: 'x', estimatedSeconds: 2, ...extra });
+  it('adds the lengths before the first line to its lead-in and names the silence a longer shot holds', () => {
+    const win = { SCENES: [
+      { id: 's0001', duration: 2.5 },
+      { id: 's0002', duration: 6, narration: [line({ acting: { leadInSeconds: 0.5 } })] },
+      { id: 's0003', duration: 2, narration: [line({ id: 'l2' })] }] };
+    assert.deepEqual(firstLineReading(win), ["first spoken line: s0002, about 3 s in — that shot's length holds 3.5 s beyond its performance; "
+      + 'a natively voiced clip plays them as silence, mostly before the line']);
+    // A line that fills its shot reads as its start alone, and so does a narrator's line in a longer shot: composed TTS places it.
+    assert.deepEqual(firstLineReading({ SCENES: [{ id: 's0001', duration: 2, narration: [line()] }] }), ['first spoken line: s0001, about 0 s in']);
+    assert.deepEqual(firstLineReading({ SCENES: [{ id: 's0001', duration: 9, narration: [line({ delivery: 'voiceover' })] }] }), ['first spoken line: s0001, about 0 s in']);
+  });
+  it('prints nothing without a line or with an unknown length before it', () => {
+    assert.deepEqual(firstLineReading({ SCENES: [{ id: 's0001', duration: 3 }] }), []);
+    assert.deepEqual(firstLineReading({ SCENES: [{ id: 's0001' }, { id: 's0002', duration: 2, narration: [line()] }] }), []);
   });
 });
 
