@@ -128841,7 +128841,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
 
 Do NOT ask an image model to draw the copy, and do NOT promise a moment the episode does not show: pick a shot that is in the cut. Do NOT treat warnings as refusals \u2014 they report crops, size and contrast for the author to weigh. A paid background goes through image_plan \u2192 image_execute first and is then named here by requestId.
 
-Returns: set \u2014 the saved decision and warnings; render \u2014 files, previews, measurements and warnings; read \u2014 status, changed, files, publish map (stale flagged), platform values still unverified, and the opening plan's title and thumbnail when the board has one. Refuses an unknown shot, a shot without a start image, a frame outside its video, a path outside the episode, an image without a completed receipt, copy no bundled font can draw (cover_font_missing), variants on a vertical format, a missing Chrome, and a file over a platform limit.`,
+Returns: set \u2014 the saved decision and warnings; render \u2014 files, previews, measurements and warnings; read \u2014 status, changed, files, publish map (stale flagged), platform values still unverified, and the opening plan's title and thumbnail when the board has one. Refuses an unknown shot, a shot without a start image, a frame outside its video, a path outside the episode, an image without a completed receipt, copy no bundled font can draw (cover_font_missing) and variants on a vertical format at set; at render also a source that changed since set, a missing Chrome, a page that did not finish its layout, and a file over a platform limit.`,
     inputSchema: {
       type: "object",
       additionalProperties: false,
@@ -130832,15 +130832,29 @@ function atomicWrite(file, data) {
 function readDecision(ep) {
   const file = join17(ep.storyboard, "cover.json");
   if (!existsSync32(file)) return void 0;
-  let decision;
+  let raw;
   try {
-    decision = JSON.parse(readFileSync34(file, "utf8"));
+    raw = JSON.parse(readFileSync34(file, "utf8"));
   } catch (e2) {
     throw new Error(`cover_decision_unreadable: ${file}: ${e2.message}`);
   }
-  if (decision?.version !== 1 || !decision.source?.path) throw new Error(`cover_decision_unreadable: ${file} is not a version 1 cover decision; write it again with episode_cover set`);
-  return decision;
+  const parsed = storedDecisionSchema.safeParse(raw);
+  if (!parsed.success) throw new Error(`cover_decision_unreadable: ${file} is not a version 1 cover decision (${parsed.error.issues[0]?.path.join(".")}: ${parsed.error.issues[0]?.message}); write it again with episode_cover set`);
+  return parsed.data;
 }
+var storedSourceSchema = external_exports.union([
+  external_exports.object({ kind: external_exports.literal("shot"), shotId: shotIdSchema }).strict(),
+  external_exports.object({ kind: external_exports.literal("frame"), video: external_exports.string().min(1), seconds: external_exports.number().min(0), shotId: shotIdSchema.optional() }).strict(),
+  external_exports.object({ kind: external_exports.literal("image"), requestId: external_exports.string().min(1) }).strict()
+].map((s2) => s2.extend({ path: external_exports.string().min(1), sha256: external_exports.string().regex(/^[a-f0-9]{64}$/) })));
+var storedLookSchema = external_exports.object({ source: storedSourceSchema, focus: focusSchema, copy: copySchema.nullable() }).strict();
+var storedDecisionSchema = storedLookSchema.extend({
+  version: external_exports.literal(1),
+  language: external_exports.string().min(1),
+  reason: external_exports.string().min(1),
+  format: external_exports.string().min(1),
+  variants: external_exports.array(storedLookSchema).max(2)
+}).strict();
 var even = (n) => Math.max(2, Math.round(n / 2) * 2);
 function cropFor(src, focus, canvas) {
   const ar = canvas.w / canvas.h;
@@ -130863,16 +130877,15 @@ function sizeWarnings(ep, look, label) {
   }));
 }
 function probeSource(ep, source) {
-  const file = join17(ep.episode, source.path);
-  const p = probe4(file);
-  return p;
+  return probe4(inside(ep.episode, source.path, "source"));
 }
+var coreBand = (spec) => spec.unverified.shortsLandscapeCrop === "9:16" ? spec.bands.support : spec.bands.core;
 function regionFor(spec, focus) {
   if (landscape(spec)) {
     const x3 = spec.x ?? { x0: 0.04, x1: 0.96 }, y1 = Math.min(spec.badge?.y0 ?? 0.85, spec.bottom ?? 0.95) - 0.05;
     return focus.x >= 0.5 ? { x0: x3.x0, x1: 0.48, y0: 0.08, y1, align: "left" } : { x0: 0.52, x1: x3.x1, y0: 0.08, y1, align: "right" };
   }
-  const core = spec.bands.core, x2 = spec.bands.x;
+  const core = coreBand(spec), x2 = spec.bands.x;
   return focus.y <= 0.5 ? { x0: x2.x0, x1: x2.x1, y0: 0.5, y1: core.y1, align: "center" } : { x0: x2.x0, x1: x2.x1, y0: core.y0, y1: 0.5, align: "center" };
 }
 function pickFont(text4, language) {
@@ -130925,6 +130938,8 @@ function chrome(args, until) {
         "--allow-file-access-from-files",
         "--virtual-time-budget=15000",
         `--user-data-dir=${profile}`,
+        // The page only reads local files; no host resolves, so nothing it holds can reach the network.
+        "--host-resolver-rules=MAP * ~NOTFOUND",
         ...args
       ],
       { stdio: ["ignore", "pipe", "pipe"] }
@@ -130993,6 +131008,10 @@ function contrastBehind(bg, box, width, height, fills) {
   return Math.min(...fills.map((f3) => (Math.max(luminance(f3), bright) + 0.05) / (Math.min(luminance(f3), bright) + 0.05)));
 }
 var templateSha = () => sha2562(readFileSync34(TEMPLATE_FILE));
+function injectConfig(template, config3) {
+  const literal2 = JSON.stringify(config3).replace(/[<>\u2028\u2029]/g, (ch) => "\\u" + ch.charCodeAt(0).toString(16).padStart(4, "0"));
+  return template.replace("/*COVER_CONFIG*/null", () => literal2);
+}
 var decisionSha = (d) => sha2562(JSON.stringify(d));
 var storyFirst = (win) => win.STORY?.authoring === "story-first";
 async function renderCover(path35) {
@@ -131016,6 +131035,8 @@ async function renderCover(path35) {
     sources[label] = now;
     let still = srcFile;
     if (look.source.kind === "frame") {
+      const { duration: duration4 } = probe4(srcFile);
+      if (duration4 === void 0 || look.source.seconds >= duration4) throw new Error(`cover_frame_outside: ${look.source.seconds}s is not inside ${look.source.path} (${duration4 ?? "?"}s)`);
       still = join17(work, `frame${suffix}.png`);
       ffmpeg3(["-ss", String(look.source.seconds), "-i", srcFile, "-frames:v", "1", still]);
     }
@@ -131041,7 +131062,7 @@ async function renderCover(path35) {
         minFont: Math.round(MIN_TILE_FONT_PX * crop.outW / TILE_WIDTH[kind])
       };
       const page = join17(work, `page-${canvas.id}${suffix}.html`);
-      writeFileSync25(page, template.replace("/*COVER_CONFIG*/null", JSON.stringify(config3).replace(/</g, "\\u003c")));
+      writeFileSync25(page, injectConfig(template, config3));
       const url = pathToFileURL(page).href, size = `--window-size=${crop.outW},${crop.outH}`;
       const dom = await chrome([size, "--dump-dom", url]);
       const measured = /<script type="application\/json" id="measure">([\s\S]*?)<\/script>/.exec(dom)?.[1];
@@ -131052,6 +131073,7 @@ async function renderCover(path35) {
         throw new Error("cover_chrome_failed: the cover page did not report its layout");
       }
       if (m2.error) throw new Error(`cover_chrome_failed: ${m2.error}`);
+      if (m2.width !== crop.outW || look.copy && !m2.copy) throw new Error("cover_chrome_failed: the cover page did not finish its layout");
       const shot = join17(work, `shot-${canvas.id}${suffix}.png`);
       await chrome([size, `--screenshot=${shot}`, url], shot);
       const got = probe4(shot);
@@ -131068,18 +131090,29 @@ async function renderCover(path35) {
       }
       previews.push(...cutPreviews(shot, join17(dir, "previews"), `${canvas.id}${suffix}`, kind, ep.spec));
       const measure = { canvas: canvas.id, source: look.source.path, crop, focus };
-      if (kind === "vertical" && (focus.y < ep.spec.bands.core.y0 || focus.y > ep.spec.bands.core.y1))
-        warnings.push({ code: "cover_focus_outside_core", message: `${say}the subject (focus y ${focus.y.toFixed(2)}) sits outside the centre band ${ep.spec.bands.core.y0}\u2013${ep.spec.bands.core.y1} that every crop keeps` });
+      const core = kind === "vertical" ? coreBand(ep.spec) : void 0;
+      if (core && (focus.y < core.y0 || focus.y > core.y1))
+        warnings.push({ code: "cover_focus_outside_core", message: `${say}the subject (focus y ${focus.y.toFixed(2)}) sits outside the centre band ${core.y0}\u2013${core.y1} that every crop keeps` });
       if (look.copy && m2.copy) {
         const box = m2.copy.box;
         const tilePx = m2.copy.fontPx * TILE_WIDTH[kind] / crop.outW;
         const contrast = contrastBehind(bg, box, crop.outW, crop.outH, look.copy.emphasis ? [FILL.text, FILL.emphasis] : [FILL.text]);
-        Object.assign(measure, { font: font.id, fontPx: m2.copy.fontPx, lines: m2.copy.lines, box, tileFontPx: +tilePx.toFixed(1), tileWidth: TILE_WIDTH[kind], contrast: +contrast.toFixed(2) });
+        Object.assign(measure, {
+          font: font.id,
+          fontPx: m2.copy.fontPx,
+          lines: m2.copy.lines,
+          box,
+          tileFontPx: +tilePx.toFixed(1),
+          tileWidth: TILE_WIDTH[kind],
+          minTileFontPx: MIN_TILE_FONT_PX,
+          contrast: +contrast.toFixed(2),
+          minContrast: 3
+        });
         if (!m2.copy.fits) warnings.push({ code: "cover_copy_overflow", message: `${say}the copy does not fit its area in two lines even at the smallest legible size; shorten it` });
         if (tilePx < MIN_TILE_FONT_PX) warnings.push({ code: "cover_copy_small", message: `${say}the copy is ${tilePx.toFixed(1)} px tall on a ${TILE_WIDTH[kind]} px tile; ${MIN_TILE_FONT_PX} px or more reads` });
         if (contrast < 3) warnings.push({ code: "cover_copy_low_contrast", message: `${say}the copy stands ${contrast.toFixed(2)}:1 off the brightest part behind it; 3:1 or more reads at tile size` });
         if (kind === "vertical") {
-          const core = ep.spec.bands.core, xb = ep.spec.bands.x;
+          const xb = ep.spec.bands.x;
           if (box.y0 < core.y0 - 2e-3 || box.y1 > core.y1 + 2e-3 || box.x0 < xb.x0 - 2e-3 || box.x1 > xb.x1 + 2e-3)
             warnings.push({ code: "cover_copy_outside_core", message: `${say}the copy leaves the centre band every crop keeps` });
         } else {
@@ -131150,18 +131183,32 @@ function readCover(path35) {
   if (!decision) return { status: "missing", ...base, next: "episode_cover set: choose the moment, the copy and why" };
   const dir = join17(ep.episode, "output", "cover"), renderFile = join17(dir, "render.json");
   if (!existsSync32(renderFile)) return { status: "unrendered", decision, ...base, next: "episode_cover render" };
-  const render = JSON.parse(readFileSync34(renderFile, "utf8"));
+  let render;
+  try {
+    render = JSON.parse(readFileSync34(renderFile, "utf8"));
+    if (!Array.isArray(render.files)) throw new Error("no files");
+  } catch {
+    return { status: "unrendered", decision, ...base, next: "episode_cover render (output/cover/render.json is unreadable)" };
+  }
   const changed = [];
   if (render.decisionSha256 !== decisionSha(decision)) changed.push("decision");
   if (render.templateSha256 !== templateSha() || render.renderVersion !== RENDER_VERSION) changed.push("template");
   for (const [i2, look] of [decision, ...decision.variants].entries()) {
-    const file = join17(ep.episode, look.source.path);
     const label = VARIANT_LABELS[i2];
-    if (!existsSync32(file) || sha256File(file) !== look.source.sha256 || render.sources[label] !== look.source.sha256) changed.push(i2 ? `source ${label}` : "source");
+    let now;
+    try {
+      now = sha256File(inside(ep.episode, look.source.path, "source"));
+    } catch {
+      now = void 0;
+    }
+    if (now !== look.source.sha256 || render.sources[label] !== look.source.sha256) changed.push(i2 ? `source ${label}` : "source");
   }
-  for (const f3 of render.files) if (!existsSync32(join17(dir, f3.name)) || sha256File(join17(dir, f3.name)) !== f3.sha256) {
-    changed.push("files");
-    break;
+  for (const f3 of render.files) {
+    const file = join17(dir, String(f3.name));
+    if (dirname9(file) !== dir || !existsSync32(file) || sha256File(file) !== f3.sha256) {
+      changed.push("files");
+      break;
+    }
   }
   const stale = changed.length > 0;
   const kind = landscape(ep.spec) ? "landscape" : "vertical";

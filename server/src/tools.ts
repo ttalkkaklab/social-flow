@@ -4890,7 +4890,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
 
 Do NOT ask an image model to draw the copy, and do NOT promise a moment the episode does not show: pick a shot that is in the cut. Do NOT treat warnings as refusals — they report crops, size and contrast for the author to weigh. A paid background goes through image_plan → image_execute first and is then named here by requestId.
 
-Returns: set — the saved decision and warnings; render — files, previews, measurements and warnings; read — status, changed, files, publish map (stale flagged), platform values still unverified, and the opening plan's title and thumbnail when the board has one. Refuses an unknown shot, a shot without a start image, a frame outside its video, a path outside the episode, an image without a completed receipt, copy no bundled font can draw (cover_font_missing), variants on a vertical format, a missing Chrome, and a file over a platform limit.`,
+Returns: set — the saved decision and warnings; render — files, previews, measurements and warnings; read — status, changed, files, publish map (stale flagged), platform values still unverified, and the opening plan's title and thumbnail when the board has one. Refuses an unknown shot, a shot without a start image, a frame outside its video, a path outside the episode, an image without a completed receipt, copy no bundled font can draw (cover_font_missing) and variants on a vertical format at set; at render also a source that changed since set, a missing Chrome, a page that did not finish its layout, and a file over a platform limit.`,
     inputSchema: {
       type: 'object', additionalProperties: false,
       properties: {

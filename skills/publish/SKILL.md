@@ -125,6 +125,13 @@ from profile languages or an SRT already on disk. This overrides older subtitle 
    Procedure in §3-2. **Don't add `#Shorts`** — on landscape long-form it gets
    misfiled onto the shorts surface. Rule 9 (portrait first frame) doesn't apply to
    long-form.
+   **Thumbnail variants** (`episode_cover read` → `publish.variants`, [generate-cover](../generate-cover/SKILL.md)):
+   YouTube Test & Compare has no API and skips private videos, so start it right after the
+   public flip, as part of this publish: Studio (desktop) → the video's edit page →
+   Thumbnail → **Test & compare** → the main thumbnail plus each variant file (all 1280×720
+   or larger, or every test image drops to 480p) → start. It picks by watch time, runs days
+   to two weeks, and stops if the title or thumbnail is edited meanwhile, so leave both
+   alone until it reports (rule 11). Record the variants and the result in the publish log.
 11. **Don't touch a video while it is spreading** — the metadata freezes the moment the
     §4 checklist passes. From there: no re-upload, no delete, and no title, description or
     thumbnail change without a reason you can write into the log. Re-editing a video while

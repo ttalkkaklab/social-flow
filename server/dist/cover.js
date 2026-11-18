@@ -225,17 +225,28 @@ function readDecision(ep) {
     const file = join(ep.storyboard, 'cover.json');
     if (!existsSync(file))
         return undefined;
-    let decision;
+    let raw;
     try {
-        decision = JSON.parse(readFileSync(file, 'utf8'));
+        raw = JSON.parse(readFileSync(file, 'utf8'));
     }
     catch (e) {
         throw new Error(`cover_decision_unreadable: ${file}: ${e.message}`);
     }
-    if (decision?.version !== 1 || !decision.source?.path)
-        throw new Error(`cover_decision_unreadable: ${file} is not a version 1 cover decision; write it again with episode_cover set`);
-    return decision;
+    // A hand-edited file is held to the shape set writes; its paths are checked against the episode where they are used.
+    const parsed = storedDecisionSchema.safeParse(raw);
+    if (!parsed.success)
+        throw new Error(`cover_decision_unreadable: ${file} is not a version 1 cover decision (${parsed.error.issues[0]?.path.join('.')}: ${parsed.error.issues[0]?.message}); write it again with episode_cover set`);
+    return parsed.data;
 }
+const storedSourceSchema = z.union([
+    z.object({ kind: z.literal('shot'), shotId: shotIdSchema }).strict(),
+    z.object({ kind: z.literal('frame'), video: z.string().min(1), seconds: z.number().min(0), shotId: shotIdSchema.optional() }).strict(),
+    z.object({ kind: z.literal('image'), requestId: z.string().min(1) }).strict(),
+].map(s => s.extend({ path: z.string().min(1), sha256: z.string().regex(/^[a-f0-9]{64}$/) })));
+const storedLookSchema = z.object({ source: storedSourceSchema, focus: focusSchema, copy: copySchema.nullable() }).strict();
+const storedDecisionSchema = storedLookSchema.extend({
+    version: z.literal(1), language: z.string().min(1), reason: z.string().min(1), format: z.string().min(1), variants: z.array(storedLookSchema).max(2),
+}).strict();
 const even = (n) => Math.max(2, Math.round(n / 2) * 2);
 function cropFor(src, focus, canvas) {
     const ar = canvas.w / canvas.h;
@@ -260,17 +271,17 @@ function sizeWarnings(ep, look, label) {
         message: `${label}the source gives less than ${c.min[0]}×${c.min[1]} for the ${c.id} canvas and is enlarged to it; a larger source looks sharper` }));
 }
 function probeSource(ep, source) {
-    const file = join(ep.episode, source.path);
-    const p = probe(file);
-    return p;
+    return probe(inside(ep.episode, source.path, 'source'));
 }
+/** The band every vertical crop keeps: the centre 16:9 slice, or the 1:1 band once Shorts' landscape surfaces are known to keep 9:16. */
+const coreBand = (spec) => spec.unverified.shortsLandscapeCrop === '9:16' ? spec.bands.support : spec.bands.core;
 /** Where the copy may sit: the half of the safe area away from the subject. */
 function regionFor(spec, focus) {
     if (landscape(spec)) {
         const x = spec.x ?? { x0: 0.04, x1: 0.96 }, y1 = Math.min(spec.badge?.y0 ?? 0.85, spec.bottom ?? 0.95) - 0.05;
         return focus.x >= 0.5 ? { x0: x.x0, x1: 0.48, y0: 0.08, y1, align: 'left' } : { x0: 0.52, x1: x.x1, y0: 0.08, y1, align: 'right' };
     }
-    const core = spec.bands.core, x = spec.bands.x;
+    const core = coreBand(spec), x = spec.bands.x;
     return focus.y <= 0.5 ? { x0: x.x0, x1: x.x1, y0: 0.5, y1: core.y1, align: 'center' } : { x0: x.x0, x1: x.x1, y0: core.y0, y1: 0.5, align: 'center' };
 }
 function pickFont(text, language) {
@@ -314,7 +325,9 @@ function chrome(args, until) {
     const profile = mkdtempSync(join(tmpdir(), 'sf-cover-chrome-'));
     return new Promise((resolveRun, reject) => {
         const child = spawn(bin, ['--headless=new', '--use-mock-keychain', '--disable-gpu', '--hide-scrollbars', '--no-first-run',
-            '--no-default-browser-check', '--allow-file-access-from-files', '--virtual-time-budget=15000', `--user-data-dir=${profile}`, ...args], { stdio: ['ignore', 'pipe', 'pipe'] });
+            '--no-default-browser-check', '--allow-file-access-from-files', '--virtual-time-budget=15000', `--user-data-dir=${profile}`,
+            // The page only reads local files; no host resolves, so nothing it holds can reach the network.
+            '--host-resolver-rules=MAP * ~NOTFOUND', ...args], { stdio: ['ignore', 'pipe', 'pipe'] });
         let out = '', done = false;
         const finish = (error) => {
             if (done)
@@ -362,7 +375,7 @@ function ffmpeg(args) {
     }
 }
 /** JPEG under the byte limit: the best quality that fits, else a refusal. */
-function encodeJpeg(png, out, limit) {
+export function encodeJpeg(png, out, limit) {
     for (let q = 2; q <= 12; q += 2) {
         ffmpeg(['-i', png, '-map_metadata', '-1', '-frames:v', '1', '-q:v', String(q), out]);
         const bytes = statSync(out).size;
@@ -391,6 +404,12 @@ function contrastBehind(bg, box, width, height, fills) {
     return Math.min(...fills.map(f => (Math.max(luminance(f), bright) + 0.05) / (Math.min(luminance(f), bright) + 0.05)));
 }
 const templateSha = () => sha256(readFileSync(TEMPLATE_FILE));
+/** The configuration as a script literal: a replacer function (so "$&" or "$'" in the copy stay text) and every
+ *  character that could close the script or break a JS line escaped. */
+export function injectConfig(template, config) {
+    const literal = JSON.stringify(config).replace(/[<>\u2028\u2029]/g, ch => '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0'));
+    return template.replace('/*COVER_CONFIG*/null', () => literal);
+}
 const decisionSha = (d) => sha256(JSON.stringify(d));
 const storyFirst = (win) => win.STORY?.authoring === 'story-first';
 export async function renderCover(path) {
@@ -417,6 +436,9 @@ export async function renderCover(path) {
         sources[label] = now;
         let still = srcFile;
         if (look.source.kind === 'frame') {
+            const { duration } = probe(srcFile);
+            if (duration === undefined || look.source.seconds >= duration)
+                throw new Error(`cover_frame_outside: ${look.source.seconds}s is not inside ${look.source.path} (${duration ?? '?'}s)`);
             still = join(work, `frame${suffix}.png`);
             ffmpeg(['-ss', String(look.source.seconds), '-i', srcFile, '-frames:v', '1', still]);
         }
@@ -438,7 +460,7 @@ export async function renderCover(path) {
                 minFont: Math.round((MIN_TILE_FONT_PX * crop.outW) / TILE_WIDTH[kind]),
             };
             const page = join(work, `page-${canvas.id}${suffix}.html`);
-            writeFileSync(page, template.replace('/*COVER_CONFIG*/null', JSON.stringify(config).replace(/</g, '\\u003c')));
+            writeFileSync(page, injectConfig(template, config));
             const url = pathToFileURL(page).href, size = `--window-size=${crop.outW},${crop.outH}`;
             const dom = await chrome([size, '--dump-dom', url]);
             const measured = /<script type="application\/json" id="measure">([\s\S]*?)<\/script>/.exec(dom)?.[1];
@@ -451,6 +473,9 @@ export async function renderCover(path) {
             }
             if (m.error)
                 throw new Error(`cover_chrome_failed: ${m.error}`);
+            // The page writes its result last; an untouched {} means its script never finished, so nothing it drew is trusted.
+            if (m.width !== crop.outW || (look.copy && !m.copy))
+                throw new Error('cover_chrome_failed: the cover page did not finish its layout');
             const shot = join(work, `shot-${canvas.id}${suffix}.png`);
             await chrome([size, `--screenshot=${shot}`, url], shot);
             const got = probe(shot);
@@ -468,13 +493,15 @@ export async function renderCover(path) {
             }
             previews.push(...cutPreviews(shot, join(dir, 'previews'), `${canvas.id}${suffix}`, kind, ep.spec));
             const measure = { canvas: canvas.id, source: look.source.path, crop, focus };
-            if (kind === 'vertical' && (focus.y < ep.spec.bands.core.y0 || focus.y > ep.spec.bands.core.y1))
-                warnings.push({ code: 'cover_focus_outside_core', message: `${say}the subject (focus y ${focus.y.toFixed(2)}) sits outside the centre band ${ep.spec.bands.core.y0}–${ep.spec.bands.core.y1} that every crop keeps` });
+            const core = kind === 'vertical' ? coreBand(ep.spec) : undefined;
+            if (core && (focus.y < core.y0 || focus.y > core.y1))
+                warnings.push({ code: 'cover_focus_outside_core', message: `${say}the subject (focus y ${focus.y.toFixed(2)}) sits outside the centre band ${core.y0}–${core.y1} that every crop keeps` });
             if (look.copy && m.copy) {
                 const box = m.copy.box;
                 const tilePx = (m.copy.fontPx * TILE_WIDTH[kind]) / crop.outW;
                 const contrast = contrastBehind(bg, box, crop.outW, crop.outH, look.copy.emphasis ? [FILL.text, FILL.emphasis] : [FILL.text]);
-                Object.assign(measure, { font: font.id, fontPx: m.copy.fontPx, lines: m.copy.lines, box, tileFontPx: +tilePx.toFixed(1), tileWidth: TILE_WIDTH[kind], contrast: +contrast.toFixed(2) });
+                Object.assign(measure, { font: font.id, fontPx: m.copy.fontPx, lines: m.copy.lines, box, tileFontPx: +tilePx.toFixed(1), tileWidth: TILE_WIDTH[kind],
+                    minTileFontPx: MIN_TILE_FONT_PX, contrast: +contrast.toFixed(2), minContrast: 3 });
                 if (!m.copy.fits)
                     warnings.push({ code: 'cover_copy_overflow', message: `${say}the copy does not fit its area in two lines even at the smallest legible size; shorten it` });
                 if (tilePx < MIN_TILE_FONT_PX)
@@ -482,7 +509,7 @@ export async function renderCover(path) {
                 if (contrast < 3)
                     warnings.push({ code: 'cover_copy_low_contrast', message: `${say}the copy stands ${contrast.toFixed(2)}:1 off the brightest part behind it; 3:1 or more reads at tile size` });
                 if (kind === 'vertical') {
-                    const core = ep.spec.bands.core, xb = ep.spec.bands.x;
+                    const xb = ep.spec.bands.x;
                     if (box.y0 < core.y0 - 0.002 || box.y1 > core.y1 + 0.002 || box.x0 < xb.x0 - 0.002 || box.x1 > xb.x1 + 0.002)
                         warnings.push({ code: 'cover_copy_outside_core', message: `${say}the copy leaves the centre band every crop keeps` });
                 }
@@ -542,23 +569,39 @@ export function readCover(path) {
     const dir = join(ep.episode, 'output', 'cover'), renderFile = join(dir, 'render.json');
     if (!existsSync(renderFile))
         return { status: 'unrendered', decision, ...base, next: 'episode_cover render' };
-    const render = JSON.parse(readFileSync(renderFile, 'utf8'));
+    let render;
+    try {
+        render = JSON.parse(readFileSync(renderFile, 'utf8'));
+        if (!Array.isArray(render.files))
+            throw new Error('no files');
+    }
+    catch {
+        return { status: 'unrendered', decision, ...base, next: 'episode_cover render (output/cover/render.json is unreadable)' };
+    }
     const changed = [];
     if (render.decisionSha256 !== decisionSha(decision))
         changed.push('decision');
     if (render.templateSha256 !== templateSha() || render.renderVersion !== RENDER_VERSION)
         changed.push('template');
     for (const [i, look] of [decision, ...decision.variants].entries()) {
-        const file = join(ep.episode, look.source.path);
         const label = VARIANT_LABELS[i];
-        if (!existsSync(file) || sha256File(file) !== look.source.sha256 || render.sources[label] !== look.source.sha256)
+        let now;
+        try {
+            now = sha256File(inside(ep.episode, look.source.path, 'source'));
+        }
+        catch {
+            now = undefined;
+        }
+        if (now !== look.source.sha256 || render.sources[label] !== look.source.sha256)
             changed.push(i ? `source ${label}` : 'source');
     }
-    for (const f of render.files)
-        if (!existsSync(join(dir, f.name)) || sha256File(join(dir, f.name)) !== f.sha256) {
+    for (const f of render.files) {
+        const file = join(dir, String(f.name));
+        if (dirname(file) !== dir || !existsSync(file) || sha256File(file) !== f.sha256) {
             changed.push('files');
             break;
         }
+    }
     const stale = changed.length > 0;
     const kind = landscape(ep.spec) ? 'landscape' : 'vertical';
     const at = (name) => render.files.some(f => f.name === name) ? join(dir, name) : null;

@@ -9,7 +9,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync,
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const { setCover, renderCover, readCover, chromePath } = await import('../dist/cover.js');
+const { setCover, renderCover, readCover, chromePath, encodeJpeg, injectConfig } = await import('../dist/cover.js');
 
 function episode(t, { storyFirst = true, format = 'shorts-9x16', size = '1080x1920', shots } = {}) {
   const dir = realpathSync(mkdtempSync(join(tmpdir(), 'sf-cover-')));
@@ -89,4 +89,41 @@ test('render makes the platform files, read tracks the source, a legacy board ke
   assert.deepEqual(r.render.copied, []);
   assert.equal(existsSync(join(legacy.dir, 'output', 'video', 'cover.jpg')), false);
   assert.ok(JSON.parse(readFileSync(join(legacy.dir, 'output', 'cover', 'render.json'), 'utf8')).files.length >= 1);
+});
+
+test('the configuration stays a literal whatever the copy holds', () => {
+  const page = injectConfig('<script>const CONFIG = /*COVER_CONFIG*/null;</script>', { text: "$& $' $` </script> \u2028" });
+  assert.equal(page.includes('/*COVER_CONFIG*/'), false);
+  assert.equal(page.match(/<\/script>/g).length, 1);
+  const literal = page.slice(page.indexOf('= ') + 2, page.lastIndexOf(';</script>'));
+  assert.equal(JSON.parse(literal).text, "$& $' $` </script> \u2028");
+});
+
+test('a JPEG is fitted under its byte limit, or refused and removed', t => {
+  const dir = mkdtempSync(join(tmpdir(), 'sf-cover-jpeg-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const png = join(dir, 'noise.png'), out = join(dir, 'out.jpg');
+  execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'nullsrc=s=640x640,geq=random(1)*255:128:128', '-frames:v', '1', png]);
+  const best = encodeJpeg(png, out, 1 << 30);
+  assert.equal(best.quality, 2);
+  const fitted = encodeJpeg(png, out, best.bytes - 1);
+  assert.ok(fitted.quality > 2 && fitted.bytes < best.bytes);
+  assert.throws(() => encodeJpeg(png, out, 100), /cover_file_too_large/);
+  assert.equal(existsSync(out), false);
+});
+
+test('render draws copy with $ patterns from a frame source; read never follows a path out of the episode', { skip: !chromePath() && 'no Chrome' }, async t => {
+  const { dir, sb } = episode(t);
+  mkdirSync(join(dir, 'output', 'video'), { recursive: true });
+  execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'testsrc=s=1080x1920:d=1:r=10', '-pix_fmt', 'yuv420p', join(dir, 'output', 'video', 'video.mp4')]);
+  setCover(sb, decision({ source: { kind: 'frame', video: 'output/video/video.mp4', seconds: 0.5 }, copy: { text: "$& $' 끝", emphasis: '끝' } }));
+  const { render } = await renderCover(sb);
+  assert.ok(render.measurements['9x16'].fontPx > 0);
+  assert.equal(render.measurements['9x16'].minTileFontPx, 10);
+  const file = join(sb, 'cover.json');
+  const edited = JSON.parse(readFileSync(file, 'utf8'));
+  edited.source.path = '../../../../../../etc/hosts';
+  writeFileSync(file, JSON.stringify(edited));
+  assert.ok(readCover(sb).changed.includes('source'));
+  await assert.rejects(renderCover(sb), /cover_source_(outside|missing)/);
 });
