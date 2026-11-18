@@ -127,3 +127,34 @@ test('render draws copy with $ patterns from a frame source; read never follows 
   assert.ok(readCover(sb).changed.includes('source'));
   await assert.rejects(renderCover(sb), /cover_source_(outside|missing)/);
 });
+
+test('a hand-edited decision is reported unreadable, and a page that never finished is refused', async t => {
+  const { sb } = episode(t);
+  setCover(sb, decision());
+  const file = join(sb, 'cover.json');
+  writeFileSync(file, JSON.stringify({ ...JSON.parse(readFileSync(file, 'utf8')), extra: 1 }));
+  assert.equal(readCover(sb).status, 'unreadable');
+  await assert.rejects(renderCover(sb), /cover_decision_unreadable/);
+  setCover(sb, decision({ copy: { text: '찢을까' } }));
+  const fake = join(sb, '..', 'fake-chrome.sh');
+  writeFileSync(fake, '#!/bin/sh\necho \'<script type="application/json" id="measure">{}</script>\'\n', { mode: 0o755 });
+  const before = process.env.CHROME;
+  process.env.CHROME = fake;
+  t.after(() => { if (before === undefined) delete process.env.CHROME; else process.env.CHROME = before; });
+  await assert.rejects(renderCover(sb), /cover_chrome_failed: the cover page did not finish/);
+});
+
+test('long-form renders the thumbnail and its Test & Compare variants', { skip: !chromePath() && 'no Chrome' }, async t => {
+  const { dir, sb } = episode(t, { format: 'youtube-long-16x9', size: '1920x1080' });
+  const r = setCover(sb, decision({ copy: { text: '사장님 이거 진짜예요?', emphasis: '진짜' }, focus: { x: 0.7, y: 0.5 }, variants: [{ copy: { text: '찢은 날' } }] }));
+  assert.match(r.decisionSha256, /^[a-f0-9]{64}$/);
+  const { render } = await renderCover(sb);
+  assert.deepEqual(render.files.map(f => [f.name, f.width, f.height, f.role]), [['thumbnail-16x9.jpg', 1920, 1080, 'main'], ['thumbnail-16x9-b.jpg', 1920, 1080, 'variant b']]);
+  assert.deepEqual(render.copied, ['output/video/cover.jpg', 'output/video/thumbnail.jpg']);
+  const box = render.measurements['16x9'].box;
+  assert.ok(box.x1 <= 0.5, 'the copy sits on the side away from the subject');
+  assert.equal(render.warnings.some(w => w.code === 'cover_copy_badge'), false);
+  const read = readCover(sb);
+  assert.equal(read.status, 'fresh');
+  assert.deepEqual(read.publish.variants, [join(dir, 'output', 'cover', 'thumbnail-16x9-b.jpg')]);
+});

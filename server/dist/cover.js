@@ -212,7 +212,7 @@ export function setCover(path, input) {
     warnings.push(...titleWarnings(ep, decision));
     const file = join(ep.storyboard, 'cover.json');
     atomicWrite(file, JSON.stringify(decision, null, 2) + '\n');
-    return { file, decision, warnings };
+    return { file, decision, decisionSha256: decisionSha(decision), warnings };
 }
 const VARIANT_LABELS = ['a', 'b', 'c'];
 function atomicWrite(file, data) {
@@ -424,7 +424,7 @@ export async function renderCover(path) {
     const template = readFileSync(TEMPLATE_FILE, 'utf8');
     const kind = landscape(ep.spec) ? 'landscape' : 'vertical';
     const files = [], previews = [], warnings = [], measurements = {};
-    const sources = {};
+    const sources = {}, fonts = {};
     const looks = [decision, ...decision.variants];
     for (const [i, look] of looks.entries()) {
         const label = VARIANT_LABELS[i], suffix = i ? `-${label}` : '', say = i ? `variant ${label}: ` : '';
@@ -452,6 +452,8 @@ export async function renderCover(path) {
             const focus = { x: (look.focus.x * src.width - crop.x) / crop.w, y: (look.focus.y * src.height - crop.y) / crop.h };
             const region = regionFor(ep.spec, focus);
             const font = look.copy ? pickFont(look.copy.text, decision.language) : undefined;
+            if (font)
+                fonts[relative(PLUGIN_ROOT, font.file)] = sha256File(font.file);
             const config = {
                 width: crop.outW, height: crop.outH, background: pathToFileURL(bg).href,
                 text: look.copy?.text ?? null, emphasis: look.copy?.emphasis ?? null, align: region.align, region,
@@ -535,7 +537,7 @@ export async function renderCover(path) {
             copied.push('output/video/thumbnail.jpg');
         }
     }
-    const render = { version: 1, renderVersion: RENDER_VERSION, decisionSha256: decisionSha(decision), templateSha256: templateSha(), sources,
+    const render = { version: 1, renderVersion: RENDER_VERSION, decisionSha256: decisionSha(decision), templateSha256: templateSha(), sources, fonts,
         format: ep.format, files, previews, measurements, warnings, copied };
     atomicWrite(join(dir, 'render.json'), JSON.stringify(render, null, 2) + '\n');
     rmSync(work, { recursive: true, force: true });
@@ -553,8 +555,14 @@ function cutPreviews(shot, dir, stem, kind, spec) {
     const band = (y) => `crop=iw:ih*${(y.y1 - y.y0).toFixed(4)}:0:ih*${y.y0.toFixed(4)}`;
     cut('grid-3x4', `${band(b.outer)},scale=120:160:flags=area`);
     cut('feed-1x1', `${band(b.support)},scale=240:240:flags=area`);
+    const sheet = `[f]scale=270:480:flags=area[f2];[g]${band(b.outer)},scale=360:480:flags=area[g2];[s]${band(b.support)},scale=480:480:flags=area[s2]`;
+    // Once Shorts' landscape surfaces are known to show the whole 9:16 cover there is no landscape crop to preview.
+    if (spec.unverified.shortsLandscapeCrop === '9:16') {
+        cut('sheet', `split=3[f][g][s];${sheet};[f2][g2][s2]hstack=3`);
+        return out;
+    }
     cut('landscape-16x9', `${band(b.core)},scale=320:180:flags=area`);
-    cut('sheet', `split=4[f][g][s][c];[f]scale=270:480:flags=area[f2];[g]${band(b.outer)},scale=360:480:flags=area[g2];[s]${band(b.support)},scale=480:480:flags=area[s2];[c]${band(b.core)},scale=852:480:flags=area[c2];[f2][g2][s2][c2]hstack=4`);
+    cut('sheet', `split=4[f][g][s][c];${sheet};[c]${band(b.core)},scale=852:480:flags=area[c2];[f2][g2][s2][c2]hstack=4`);
     return out;
 }
 // ── read ─────────────────────────────────────────────────────────────────
@@ -563,7 +571,13 @@ export function readCover(path) {
     const story = ep.board.win.STORY;
     const plan = story?.opening?.thumbnail || story?.opening?.title ? { title: story?.opening?.title, thumbnail: story?.opening?.thumbnail } : undefined;
     const base = { format: ep.format, unverified: ep.spec.unverified, ...(plan ? { plan } : {}) };
-    const decision = readDecision(ep);
+    let decision;
+    try {
+        decision = readDecision(ep);
+    }
+    catch (e) {
+        return { status: 'unreadable', reason: e.message, ...base, next: 'episode_cover set again' };
+    }
     if (!decision)
         return { status: 'missing', ...base, next: 'episode_cover set: choose the moment, the copy and why' };
     const dir = join(ep.episode, 'output', 'cover'), renderFile = join(dir, 'render.json');
@@ -572,8 +586,8 @@ export function readCover(path) {
     let render;
     try {
         render = JSON.parse(readFileSync(renderFile, 'utf8'));
-        if (!Array.isArray(render.files))
-            throw new Error('no files');
+        if (!Array.isArray(render.files) || !Array.isArray(render.warnings) || !Array.isArray(render.previews) || typeof render.sources !== 'object' || !render.sources)
+            throw new Error('shape');
     }
     catch {
         return { status: 'unrendered', decision, ...base, next: 'episode_cover render (output/cover/render.json is unreadable)' };
@@ -583,6 +597,13 @@ export function readCover(path) {
         changed.push('decision');
     if (render.templateSha256 !== templateSha() || render.renderVersion !== RENDER_VERSION)
         changed.push('template');
+    for (const [file, sha] of Object.entries(render.fonts ?? {})) {
+        const abs = join(PLUGIN_ROOT, file);
+        if (!existsSync(abs) || sha256File(abs) !== sha) {
+            changed.push('font');
+            break;
+        }
+    }
     for (const [i, look] of [decision, ...decision.variants].entries()) {
         const label = VARIANT_LABELS[i];
         let now;

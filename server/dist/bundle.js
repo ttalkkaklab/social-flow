@@ -128837,11 +128837,11 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     name: "episode_cover",
     title: "Choose and render the episode cover and thumbnail",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    description: `Use it once the episode has pictures (shot start images or clips) and before publishing, to make the cover and thumbnail every platform shows in grids, search and channel pages. set records the moment the cover shows, its copy and the reason in storyboard/cover.json: the source is a frame of an accepted clip or the finished video (kind "frame", the default once video exists), a shot's start image (kind "shot"), or an image this episode generated with image_execute (kind "image", by requestId). render makes the files locally at $0 \u2014 output/cover/cover-9x16.jpg (Shorts, Reels, TikTok Studio) or thumbnail-16x9.jpg (long-form, plus up to two variants for YouTube Test & Compare) \u2014 with the copy drawn by code in the episode language, crop previews for each platform surface, and render.json with measurements. On a story-first board it also copies the main file to output/video/cover.jpg (and thumbnail.jpg on long-form). read reports missing, unrendered, fresh or stale (naming what changed) and the file each platform's publish call takes.
+    description: `Use it once the episode has pictures (shot start images or clips) and before publishing, to make the cover and thumbnail every platform shows in grids, search and channel pages. set records the moment the cover shows, its copy and the reason in storyboard/cover.json: the source is a frame of an accepted clip or the finished video (kind "frame", the default once video exists), a shot's start image (kind "shot"), or an image this episode generated with image_execute (kind "image", by requestId). render makes the files locally at $0 \u2014 output/cover/cover-9x16.jpg (Shorts, Reels, TikTok Studio) or thumbnail-16x9.jpg (long-form, plus up to two variants for YouTube Test & Compare) \u2014 with the copy drawn by code in the episode language, crop previews for each platform surface, and render.json with measurements. On a story-first board it also copies the main file to output/video/cover.jpg (and thumbnail.jpg on long-form). read reports missing, unreadable (a hand-edited cover.json, with the reason), unrendered, fresh or stale (naming what changed: decision, template, font, source, files) and the file each platform's publish call takes.
 
 Do NOT ask an image model to draw the copy, and do NOT promise a moment the episode does not show: pick a shot that is in the cut. Do NOT treat warnings as refusals \u2014 they report crops, size and contrast for the author to weigh. A paid background goes through image_plan \u2192 image_execute first and is then named here by requestId.
 
-Returns: set \u2014 the saved decision and warnings; render \u2014 files, previews, measurements and warnings; read \u2014 status, changed, files, publish map (stale flagged), platform values still unverified, and the opening plan's title and thumbnail when the board has one. Refuses an unknown shot, a shot without a start image, a frame outside its video, a path outside the episode, an image without a completed receipt, copy no bundled font can draw (cover_font_missing) and variants on a vertical format at set; at render also a source that changed since set, a missing Chrome, a page that did not finish its layout, and a file over a platform limit.`,
+Returns: set \u2014 the saved decision, its decisionSha256 and warnings; render \u2014 files, previews, measurements and warnings; read \u2014 status, changed, files, publish map (stale flagged), platform values still unverified, and the opening plan's title and thumbnail when the board has one. Refuses an unknown shot, a shot without a start image, a frame outside its video, a path outside the episode, an image without a completed receipt, copy no bundled font can draw (cover_font_missing) and variants on a vertical format at set; at render also a source that changed since set, a missing Chrome, a page that did not finish its layout, and a file over a platform limit.`,
     inputSchema: {
       type: "object",
       additionalProperties: false,
@@ -130820,7 +130820,7 @@ function setCover(path35, input) {
   warnings.push(...titleWarnings(ep, decision));
   const file = join17(ep.storyboard, "cover.json");
   atomicWrite(file, JSON.stringify(decision, null, 2) + "\n");
-  return { file, decision, warnings };
+  return { file, decision, decisionSha256: decisionSha(decision), warnings };
 }
 var VARIANT_LABELS = ["a", "b", "c"];
 function atomicWrite(file, data) {
@@ -131025,7 +131025,7 @@ async function renderCover(path35) {
   const template = readFileSync34(TEMPLATE_FILE, "utf8");
   const kind = landscape(ep.spec) ? "landscape" : "vertical";
   const files3 = [], previews = [], warnings = [], measurements = {};
-  const sources = {};
+  const sources = {}, fonts = {};
   const looks2 = [decision, ...decision.variants];
   for (const [i2, look] of looks2.entries()) {
     const label = VARIANT_LABELS[i2], suffix = i2 ? `-${label}` : "", say = i2 ? `variant ${label}: ` : "";
@@ -131049,6 +131049,7 @@ async function renderCover(path35) {
       const focus = { x: (look.focus.x * src.width - crop.x) / crop.w, y: (look.focus.y * src.height - crop.y) / crop.h };
       const region = regionFor(ep.spec, focus);
       const font = look.copy ? pickFont(look.copy.text, decision.language) : void 0;
+      if (font) fonts[relative2(PLUGIN_ROOT, font.file)] = sha256File(font.file);
       const config3 = {
         width: crop.outW,
         height: crop.outH,
@@ -131143,6 +131144,7 @@ async function renderCover(path35) {
     decisionSha256: decisionSha(decision),
     templateSha256: templateSha(),
     sources,
+    fonts,
     format: ep.format,
     files: files3,
     previews,
@@ -131170,8 +131172,13 @@ function cutPreviews(shot, dir, stem, kind, spec) {
   const band = (y) => `crop=iw:ih*${(y.y1 - y.y0).toFixed(4)}:0:ih*${y.y0.toFixed(4)}`;
   cut("grid-3x4", `${band(b.outer)},scale=120:160:flags=area`);
   cut("feed-1x1", `${band(b.support)},scale=240:240:flags=area`);
+  const sheet = `[f]scale=270:480:flags=area[f2];[g]${band(b.outer)},scale=360:480:flags=area[g2];[s]${band(b.support)},scale=480:480:flags=area[s2]`;
+  if (spec.unverified.shortsLandscapeCrop === "9:16") {
+    cut("sheet", `split=3[f][g][s];${sheet};[f2][g2][s2]hstack=3`);
+    return out;
+  }
   cut("landscape-16x9", `${band(b.core)},scale=320:180:flags=area`);
-  cut("sheet", `split=4[f][g][s][c];[f]scale=270:480:flags=area[f2];[g]${band(b.outer)},scale=360:480:flags=area[g2];[s]${band(b.support)},scale=480:480:flags=area[s2];[c]${band(b.core)},scale=852:480:flags=area[c2];[f2][g2][s2][c2]hstack=4`);
+  cut("sheet", `split=4[f][g][s][c];${sheet};[c]${band(b.core)},scale=852:480:flags=area[c2];[f2][g2][s2][c2]hstack=4`);
   return out;
 }
 function readCover(path35) {
@@ -131179,20 +131186,32 @@ function readCover(path35) {
   const story = ep.board.win.STORY;
   const plan2 = story?.opening?.thumbnail || story?.opening?.title ? { title: story?.opening?.title, thumbnail: story?.opening?.thumbnail } : void 0;
   const base = { format: ep.format, unverified: ep.spec.unverified, ...plan2 ? { plan: plan2 } : {} };
-  const decision = readDecision(ep);
+  let decision;
+  try {
+    decision = readDecision(ep);
+  } catch (e2) {
+    return { status: "unreadable", reason: e2.message, ...base, next: "episode_cover set again" };
+  }
   if (!decision) return { status: "missing", ...base, next: "episode_cover set: choose the moment, the copy and why" };
   const dir = join17(ep.episode, "output", "cover"), renderFile = join17(dir, "render.json");
   if (!existsSync32(renderFile)) return { status: "unrendered", decision, ...base, next: "episode_cover render" };
   let render;
   try {
     render = JSON.parse(readFileSync34(renderFile, "utf8"));
-    if (!Array.isArray(render.files)) throw new Error("no files");
+    if (!Array.isArray(render.files) || !Array.isArray(render.warnings) || !Array.isArray(render.previews) || typeof render.sources !== "object" || !render.sources) throw new Error("shape");
   } catch {
     return { status: "unrendered", decision, ...base, next: "episode_cover render (output/cover/render.json is unreadable)" };
   }
   const changed = [];
   if (render.decisionSha256 !== decisionSha(decision)) changed.push("decision");
   if (render.templateSha256 !== templateSha() || render.renderVersion !== RENDER_VERSION) changed.push("template");
+  for (const [file, sha] of Object.entries(render.fonts ?? {})) {
+    const abs = join17(PLUGIN_ROOT, file);
+    if (!existsSync32(abs) || sha256File(abs) !== sha) {
+      changed.push("font");
+      break;
+    }
+  }
   for (const [i2, look] of [decision, ...decision.variants].entries()) {
     const label = VARIANT_LABELS[i2];
     let now;
