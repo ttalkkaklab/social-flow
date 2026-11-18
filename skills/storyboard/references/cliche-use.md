@@ -211,17 +211,30 @@ again when scenes are written.
 - `remove` drops uses by id or name. `none` with a reason records that the episode uses no
   cliché and replaces the list.
 - Called with `path` alone it reports and writes nothing.
+- `story_cliche` is the record's only writer. `storyboard_apply` refuses a `globals` patch
+  that changes `CLICHES` (`cliche_record`); a board written back whole with the block
+  unchanged passes.
+- Warnings carry codes: `cliche_undecided`, `cliche_unpicked`, `cliche_caution`,
+  `cliche_quote`, `cliche_practice`, `cliche_repeat`, `cliche_scene_missing` and
+  `cliche_not_recorded`. `cliche_unpicked` names a use that sits in the story without the
+  user's pick on an episode that only recommends: a hand-edited file, or a type changed
+  after the use was recorded. Record it again as `offered`, or with `basis: "user"` once the
+  user picked.
 
 The record is `window.CLICHES` in `scenes.js` ([scenes schema](scenes-schema.md)). The review
 page shows it in two places: a strip above the shots that lists every use with the job it
 does, the scenes or character it sits on, the shift, and whether it is in the story by
 default, by the user's pick or only recommended; and a lane on each scene that carries a use.
-An open record reads undecided, and `none` shows its reason. Names and shifts are story text,
+An open record reads undecided, and `none` shows its reason. The page shows what is
+recorded: a use with no recorded basis reads "basis not recorded", and a scene the board no
+longer has is marked. Names and shifts are story text,
 so a review translation covers them like any other line
 ([review localization](review-localization.md)).
 
 Every board write prints one cliché line in its digest: undecided on a new `apply` board,
-then the applied and offered counts, or none with its reason. These are counts, not targets.
+then the applied and offered counts, or none with its reason. A scene reference that no
+longer exists and a use without the user's pick each add a line. These are counts, not
+targets.
 
 ## 8. Other languages and cultures
 

@@ -534,7 +534,8 @@ with no `STRUCTURE` warns only, so older episodes still build.
 ## Clichés — `window.CLICHES`
 
 The record `story_cliche` writes (user directive 2026-11-18, [cliché use](cliche-use.md)). The
-review page reads it; no checker, renderer or assembler does.
+review page reads it; no checker, renderer or assembler does. `story_cliche` is its only
+writer: a `storyboard_apply` `globals` patch that changes it is refused (`cliche_record`).
 
 ```js
 window.CLICHES = {
@@ -559,7 +560,11 @@ window.CLICHES = {
   recommends, an applied use carries `basis: "user"`.
 - `caution` (`"coercion"` or `"violence"`) and `quote: true` are copied from the catalogue
   entry so the review page can mark them.
-- A scene number that no longer exists is named by `story_cliche` and by the board digest.
+- A scene number that no longer exists is named by `story_cliche` and by the board digest, and
+  marked on the review page.
+- An applied use without `basis: "user"` on a type that only recommends is reported as
+  `cliche_unpicked`. The tool never writes one, so it comes from a hand edit or from a type
+  changed after recording.
 
 ## Playback order — format picks the skeleton
 

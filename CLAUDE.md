@@ -124,14 +124,16 @@ story is missing (a reason to meet, an obstacle, a reveal). Character types are 
 casting, devices at the synopsis, staged moments, places and line patterns with the scenes. The
 pick is moved half a step (who does it, what it costs, when, who knows) or played as it is.
 `story_cliche` records each use, each recommendation (`offered`) or `none` with its reason in
-`window.CLICHES`. A new board on an applying type reads undecided at every board write until a
-decision is recorded, and the review page shows the record above the shots and on each scene.
+`window.CLICHES`. A new episode board on an applying type reads undecided at every board write
+until a decision is recorded, and the review page shows the record above the shots and on each scene.
 Entries the research found criticised (contact without consent staged as romance, graphic
 violence) are left out of candidates and warned about when recorded; a quoted line gives its
 pattern, not its words; production-practice entries are never candidates; a repeat across the
 channel's episodes is reported. Each of these reports. A call is refused only for input the
 tool cannot use and for a cliché applied on a recommending type without `basis:"user"`
 (`cliche_user_choice`), which the session never passes for a choice the user did not make.
+`story_cliche` is the record's only writer (`storyboard_apply` leaves it alone, `cliche_record`),
+and a use a hand edit put in the story without the user's pick is reported as `cliche_unpicked`.
 This is writing guidance, not a score, a quota or an approval pause, and a cliché's name never
 answers `necessity`. Follow `skills/storyboard/references/cliche-use.md`. Evidence and its
 limits: `docs/research/2026-11-18-kdrama-cliches/`.

@@ -33402,7 +33402,7 @@ var storyboardApplySchema = external_exports.object({
   removeShotIds: external_exports.array(shotIdSchema).min(1).optional().describe("Shot ids to drop, resolved before the insert"),
   removeScenes: external_exports.array(external_exports.number().int().positive()).optional(),
   removeSequences: external_exports.array(external_exports.string()).optional(),
-  globals: globalsSchema.optional().describe("Set other window.* blocks \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY"),
+  globals: globalsSchema.optional().describe("Set other window.* blocks \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. CLICHES belongs to story_cliche"),
   expectedSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional().describe("Required for propSheet file edits; use the hash from storyboard_read"),
   propSheet: external_exports.object({
     props: external_exports.array(external_exports.record(external_exports.unknown())),
@@ -33519,7 +33519,7 @@ var storyClicheSchema = external_exports.object({
   path: outlinePath,
   uses: external_exports.array(external_exports.object({
     id: external_exports.number().int().positive().optional().describe("The catalogue number cliches.js pick printed"),
-    name: nonEmpty.optional().describe("Its name in the story language; required for a clich\xE9 that is not in the catalogue"),
+    name: nonEmpty.refine((name) => !/^#\s*\d+$/.test(name), { message: "a catalogue number goes in id, not in name" }).optional().describe("Its name in the story language; required for a clich\xE9 that is not in the catalogue"),
     need: nonEmpty.optional().describe("The job it does in this story, one of the needs cliches.js lists; the catalogue entry's first need when omitted"),
     scenes: external_exports.array(external_exports.number().int().positive()).min(1).optional().describe("The scenes it sits on, once they are written"),
     character: nonEmpty.optional().describe("The cast member a character-type clich\xE9 describes"),

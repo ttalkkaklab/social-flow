@@ -579,7 +579,7 @@ export const storyboardApplySchema = z.object({
     removeShotIds: z.array(shotIdSchema).min(1).optional().describe('Shot ids to drop, resolved before the insert'),
     removeScenes: z.array(z.number().int().positive()).optional(),
     removeSequences: z.array(z.string()).optional(),
-    globals: globalsSchema.optional().describe('Set other window.* blocks — FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY'),
+    globals: globalsSchema.optional().describe('Set other window.* blocks — FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. CLICHES belongs to story_cliche'),
     expectedSha256: z.string().regex(/^[a-f0-9]{64}$/).optional().describe('Required for propSheet file edits; use the hash from storyboard_read'),
     propSheet: z.object({
         props: z.array(z.record(z.unknown())),
@@ -682,6 +682,8 @@ export function validateStructure(structure) {
         return [];
     return parsed.error.issues.map((issue) => ({ level: 'bad', where: 'structure', what: `${issue.path.join('.') || '(root)'}: ${issue.message}` }));
 }
+/** A value as JSON with its object keys sorted, so two copies of one block compare equal whatever order they were written in. */
+const sameShape = (value) => JSON.stringify(value, (_key, v) => v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : v);
 /** Apply a patch in memory — the pure half of storyboard_apply, so a test or an API handler can run it without a file. */
 export function applyPatch(win, patch, opts = {}) {
     const next = { ...win };
@@ -689,6 +691,10 @@ export function applyPatch(win, patch, opts = {}) {
         for (const [k, v] of Object.entries(patch.globals)) {
             if (k === 'SCENES' || k === 'STRUCTURE')
                 throw new Error(`set ${k} through the dedicated fields, not globals`);
+            // story_cliche owns the cliché record: it checks the episode's type and the user's pick before an applied
+            // use is written. A patch that carries the block unchanged (a board written back whole) passes.
+            if (k === 'CLICHES' && !opts.cliches && sameShape(v) !== sameShape(win.CLICHES))
+                throw new Error('cliche_record: window.CLICHES is written by story_cliche, which checks the episode type and the user\'s pick — storyboard_apply globals cannot change it');
             next[k] = v;
         }
     const boardMotionTheme = next.THEME?.motionGraphicTheme;
@@ -1222,7 +1228,7 @@ function writeOutline(path, win, structure, shots, language, opening) {
         path, draft: true, dryRun: false, structure,
         ...(shots?.length ? { set: { structure, shots } } : {}),
         ...(globals ? { globals } : {}),
-    }, { outline: true });
+    }, { outline: true, cliches: true });
     const kept = !language || !story ? undefined
         : story.language !== undefined ? (story.language !== language ? `this board is written in "${String(story.language)}"` : undefined)
             : written ? 'this board has shots and no recorded language, so its language is the one they are written in' : undefined;
@@ -1440,7 +1446,8 @@ export const storyClicheSchema = z.object({
     path: outlinePath,
     uses: z.array(z.object({
         id: z.number().int().positive().optional().describe('The catalogue number cliches.js pick printed'),
-        name: nonEmpty.optional().describe('Its name in the story language; required for a cliché that is not in the catalogue'),
+        name: nonEmpty.refine((name) => !/^#\s*\d+$/.test(name), { message: 'a catalogue number goes in id, not in name' }).optional()
+            .describe('Its name in the story language; required for a cliché that is not in the catalogue'),
         need: nonEmpty.optional().describe('The job it does in this story, one of the needs cliches.js lists; the catalogue entry\'s first need when omitted'),
         scenes: z.array(z.number().int().positive()).min(1).optional().describe('The scenes it sits on, once they are written'),
         character: nonEmpty.optional().describe('The cast member a character-type cliché describes'),
@@ -1451,7 +1458,9 @@ export const storyClicheSchema = z.object({
     none: nonEmpty.optional().describe('Records that this episode uses no cliché, and why; it replaces the list'),
     basis: z.literal('user').optional().describe('The user picked these from a recommendation or asked for them'),
 }).strict().refine((args) => args.none === undefined || (!args.uses && !args.remove), { message: 'none replaces the whole list — give it alone' });
-export function writeStoryCliches(args) {
+export function writeStoryCliches(input) {
+    // Parsed here as well, so a direct caller gets the trimming and refusals the tool gives.
+    const args = storyClicheSchema.parse(input);
     const { file, win } = readBoard(args.path);
     const lib = cliches(), dir = dirname(file);
     const st = win.STRUCTURE, shots = win.SCENES ?? [];
@@ -1462,6 +1471,7 @@ export function writeStoryCliches(args) {
     let result = { file, written: false, created: false, approvalDropped: false, shots: shots.length,
         scenes: sceneList.length, sequences: Array.isArray(st?.sequences) ? st.sequences.length : 0, synced: 0, findings: [] };
     const notes = [];
+    const warn = (code, where, what) => notes.push({ level: 'warn', code, where, what: `${code}: ${what}` });
     if (writing) {
         const known = new Set(sceneList.map((scene) => scene.no));
         // The cast is checked when the episode has one; a draft outside an episode has none to check against.
@@ -1512,31 +1522,34 @@ export function writeStoryCliches(args) {
         for (const target of args.remove ?? []) {
             const key = typeof target === 'number' ? `#${target}` : `name:${target.trim()}`;
             if (!uses.some((entry) => keyOf(entry) === key))
-                notes.push({ level: 'warn', where: 'clichés', what: `nothing is recorded as ${typeof target === 'number' ? `#${target}` : `"${target}"`} — nothing was removed` });
+                warn('cliche_not_recorded', 'clichés', `nothing is recorded as ${typeof target === 'number' ? `#${target}` : `"${target}"`} — nothing was removed`);
             uses = uses.filter((entry) => keyOf(entry) !== key);
         }
         const none = args.none !== undefined ? args.none : args.uses?.length ? undefined : before.none;
         result = applyStoryboard({ path: args.path, draft: true, dryRun: false,
-            globals: { CLICHES: { version: 1, ...(none !== undefined ? { none } : {}), uses: args.none !== undefined ? [] : uses } } }, { outline: true });
+            globals: { CLICHES: { version: 1, ...(none !== undefined ? { none } : {}), uses: args.none !== undefined ? [] : uses } } }, { outline: true, cliches: true });
     }
     const board = result.written ? readBoard(args.path).win : win;
     const report = clicheReading(board, dir);
     const label = (use) => use.id !== undefined ? `#${use.id} ${use.name}` : `"${use.name}"`;
     if (report.decision === 'undecided' && report.mode === 'apply')
-        notes.push({ level: 'warn', where: 'clichés', what: `no decision yet — this episode applies clichés by default (${report.why}): record what the story uses, or none with its reason` });
+        warn('cliche_undecided', 'clichés', `no decision yet — this episode applies clichés by default (${report.why}): record what the story uses, or none with its reason`);
+    // story_cliche never writes one of these: a hand edit, or the episode's type changed after the use was recorded.
+    for (const use of report.unpicked)
+        warn('cliche_unpicked', use, `in the story without the user's pick, and this episode only recommends (${report.why}) — record it as offered, or with basis "user" once the user picked`);
     for (const use of report.applied) {
         if (use.caution)
-            notes.push({ level: 'warn', where: label(use), what: `${use.caution === 'violence' ? 'graphic violence the broadcast regulator sanctioned' : 'contact or pursuit without consent staged as romance, which critics and the regulator objected to'} — keep it only when the story treats the act as wrong or the user asked for it` });
+            warn('cliche_caution', label(use), `${use.caution === 'violence' ? 'graphic violence the broadcast regulator sanctioned' : 'contact or pursuit without consent staged as romance, which critics and the regulator objected to'} — keep it only when the story treats the act as wrong or the user asked for it`);
         if (use.id !== undefined && lib.find(use.id)?.analysis)
-            notes.push({ level: 'warn', where: label(use), what: 'this entry describes a production practice, not something a story can use' });
+            warn('cliche_practice', label(use), 'this entry describes a production practice, not something a story can use');
     }
     for (const use of [...report.applied, ...report.offered])
         if (use.quote)
-            notes.push({ level: 'warn', where: label(use), what: 'a line from a specific drama — borrow the pattern of the line, not its words' });
+            warn('cliche_quote', label(use), 'a line from a specific drama — borrow the pattern of the line, not its words');
     for (const repeat of report.repeats)
-        notes.push({ level: 'warn', where: `#${repeat.id}${repeat.name ? ` ${repeat.name}` : ''}`, what: `episode ${repeat.episode} of this channel already used it — a device repeated across episodes reads as the channel's formula; keep it when the series runs on it` });
+        warn('cliche_repeat', `#${repeat.id}${repeat.name ? ` ${repeat.name}` : ''}`, `episode ${repeat.episode} of this channel already used it — a device repeated across episodes reads as the channel's formula; keep it when the series runs on it`);
     for (const { use, scene } of report.dangling)
-        notes.push({ level: 'warn', where: use, what: `names scene ${scene}, which is not on the board — record the use again with its current scenes` });
+        warn('cliche_scene_missing', use, `names scene ${scene}, which is not on the board — record the use again with its current scenes`);
     const note = report.mode === 'apply' ? 'This episode applies clichés by default. Choose for what the story needs; none with its reason is a valid decision. Nothing waits for it.'
         : report.mode === 'off' ? "The channel's saved choice is off. Apply a cliché only when the user asks for it in this episode, recorded with basis \"user\"."
             : 'This episode recommends clichés and applies only what the user picks. Record candidates with offered:true, present them with the scenario, and record the picked ones with basis "user". An unattended run applies none.';

@@ -556,7 +556,7 @@ describe('clichés are chosen for the story and recorded on the board', () => {
     assert.deepEqual(recorded(dir), { version: 1, uses: [] });
     const open = writeStoryCliches({ path: dir });
     assert.deepEqual([open.written, open.cliches.mode, open.cliches.decision], [false, 'apply', 'undecided']);
-    assert.ok(open.findings.some((f) => f.where === 'clichés' && /no decision yet/.test(f.what)));
+    assert.ok(open.findings.some((f) => f.code === 'cliche_undecided'));
 
     // Recorded at the synopsis, before any scene exists: the name, layer and need come from the catalogue.
     const r = writeStoryCliches(storyClicheSchema.parse({ path: dir, uses: [
@@ -575,7 +575,7 @@ describe('clichés are chosen for the story and recorded on the board', () => {
 
     const removed = writeStoryCliches({ path: dir, remove: ['돌려받은 우산', 9999] });
     assert.equal(recorded(dir).uses.length, 1);
-    assert.ok(removed.findings.some((f) => /nothing is recorded as #9999/.test(f.what)));
+    assert.deepEqual(removed.findings.filter((f) => f.code === 'cliche_not_recorded').map((f) => /#9999/.test(f.what)), [true]);
     const none = writeStoryCliches({ path: dir, none: '조용한 대화 한 번이 전부라 장치가 끼어들 자리가 없다' });
     assert.deepEqual([none.cliches.decision, recorded(dir).uses.length], ['none', 0]);
     assert.match(none.board.find((line) => line.startsWith('clichés:')), /^clichés: none — 조용한 대화/);
@@ -609,6 +609,18 @@ describe('clichés are chosen for the story and recorded on the board', () => {
     type({ videoType: { id: 'explainer' }, clicheUse: 'on' });
     writeStoryCliches({ path: dir, uses: [{ name: 'a borrowed umbrella' }] });
     assert.equal(recorded(dir).uses.find((use) => use.name === 'a borrowed umbrella').basis, 'user');
+
+    // storyboard_apply cannot put an applied use on the board: story_cliche owns the record. The block carried unchanged passes.
+    type({ videoType: { id: 'explainer' } });
+    const before = recorded(dir);
+    assert.throws(() => applyStoryboard({ path: dir, draft: true, globals: { CLICHES: { version: 1, uses: [{ id: plain.id, name: 'unpicked' }] } } }, { outline: true }), /cliche_record/);
+    assert.equal(applyStoryboard({ path: dir, draft: true, globals: { CLICHES: { uses: before.uses, version: before.version } } }, { outline: true }).written, true);
+    assert.deepEqual(recorded(dir), before);
+    // A hand-edited file is not refused, so it is reported: the use with no pick is named by the tool and by every board write.
+    const file = join(dir, 'scenes.js');
+    writeFileSync(file, readFileSync(file, 'utf8') + `window.CLICHES = ${JSON.stringify({ version: 1, uses: [{ id: plain.id, name: 'hand edit' }] })};\n`);
+    assert.deepEqual(writeStoryCliches({ path: dir }).findings.filter((f) => f.code === 'cliche_unpicked').map((f) => f.where), [`#${plain.id} hand edit`]);
+    assert.match(applyStoryboard({ path: dir, draft: true, globals: { THEME: { accent: '#123456' } } }, { outline: true }).board.join('\n'), /is in the story without the user's pick/);
   });
 
   it('warns about caution entries, quoted lines and a repeat on the channel, and refuses only input it cannot use', () => {
@@ -617,11 +629,9 @@ describe('clichés are chosen for the story and recorded on the board', () => {
     const first = episode(root, 'e1'), second = episode(root, 'e2');
     writeStoryCliches({ path: first, uses: [{ id: plain.id }] });
     const r = writeStoryCliches({ path: second, uses: [{ id: plain.id }, { id: coercive.id }, { id: quoted.id, offered: true }] });
-    const warned = (pattern) => r.findings.some((f) => f.level === 'warn' && pattern.test(f.what));
+    const codes = (result) => result.findings.filter((f) => f.level === 'warn' && f.code?.startsWith('cliche_')).map((f) => `${f.code} ${f.where}`);
     assert.equal(r.written, true, 'a warning never stops the write');
-    assert.ok(warned(/episode e1 of this channel already used it/));
-    assert.ok(warned(/without consent staged as romance/));
-    assert.ok(warned(/borrow the pattern of the line, not its words/));
+    assert.deepEqual(codes(r), [`cliche_caution #${coercive.id} ${coercive.name}`, `cliche_quote #${quoted.id} ${quoted.name}`, `cliche_repeat #${plain.id} ${plain.name}`]);
     assert.deepEqual(recorded(second).uses.map((use) => [use.caution, use.quote]), [[undefined, undefined], ['coercion', undefined], [undefined, true]]);
 
     assert.throws(() => writeStoryCliches({ path: second, uses: [{ id: 99999 }] }), /cliche_unknown: the catalogue has no entry #99999/);
@@ -629,6 +639,9 @@ describe('clichés are chosen for the story and recorded on the board', () => {
     assert.throws(() => writeStoryCliches({ path: second, uses: [{ id: plain.id, need: 'fame' }] }), /cliche_need: "fame" is not a need/);
     assert.throws(() => writeStoryCliches({ path: second, uses: [{ id: plain.id, character: 'nobody' }] }), /cliche_character: nobody is not in storyboard\/cast\.json/);
     assert.equal(storyClicheSchema.safeParse({ path: second, uses: [{ shift: 'no id and no name' }] }).success, false);
+    // A catalogue number given as a name would sit beside the same entry by id; blank text is no name. A direct call is parsed too.
+    assert.equal(storyClicheSchema.safeParse({ path: second, uses: [{ name: `#${plain.id}` }] }).success, false);
+    assert.throws(() => writeStoryCliches({ path: second, uses: [{ name: '   ' }] }));
     assert.equal(recorded(second).uses.length, 3, 'a refused call writes nothing');
 
     // A scene removed later leaves a reference the report and the digest name.
@@ -636,7 +649,7 @@ describe('clichés are chosen for the story and recorded on the board', () => {
     writeStoryCliches({ path: second, uses: [{ id: plain.id, scenes: [1] }] });
     const gone = applyStoryboard({ path: second, draft: true, removeScenes: [1] }, { outline: true });
     assert.match(gone.board.join('\n'), /names scene 1, which is not on the board/);
-    assert.ok(writeStoryCliches({ path: second }).findings.some((f) => /names scene 1, which is not on the board/.test(f.what)));
+    assert.ok(writeStoryCliches({ path: second }).findings.some((f) => f.code === 'cliche_scene_missing' && /scene 1/.test(f.what)));
   });
 });
 

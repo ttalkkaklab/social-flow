@@ -644,6 +644,7 @@
   .cliche-chip.offered { border-style: dashed; background: transparent; }
   .cliche-chip.caution { border-color: color-mix(in srgb, var(--warn) 55%, transparent); }
   .cliche-shift { color: var(--muted); }
+  .cliche-missing { font-style: normal; color: var(--warn); }
   .scene-band-synopsis { max-width: 68ch; margin: 4px 0 0; font-size: var(--t-aux); line-height: 1.65; color: var(--muted); word-break: keep-all; }
   .scene-band-out { max-width: 68ch; margin: 2px 0 0; font-size: var(--t-aux); color: var(--faint); word-break: keep-all; }
   .scene-band-stats {
@@ -1792,8 +1793,8 @@ window.STORYBOARD_READY = (async function () {
         head: "Clichés", lane: "CLICHÉ", undecided: "undecided — nothing is recorded yet", none: "none used",
         count: function (applied, offered) {
           return (applied ? applied + " in the story" : "none applied") + (offered ? " · " + offered + " recommended, waiting for your pick" : ""); },
-        offered: "recommended · not applied", user: "your pick", byDefault: "by default",
-        shift: "changed", caution: "caution", quote: "a quoted line", scene: "S#",
+        offered: "recommended · not applied", user: "your pick", byDefault: "by default", noBasis: "basis not recorded",
+        shift: "changed", caution: "caution", quote: "a quoted line", scene: "S#", missing: "not on the board",
         need: { meet: "meeting", bind: "kept together", obstacle: "obstacle", secret: "secret", reveal: "reveal", parting: "parting",
                 reunion: "reunion", closeness: "closeness", outburst: "outburst", status: "status", payback: "payback",
                 danger: "danger", rule: "world rule", setting: "setting", closing: "opening or ending", relief: "relief" }
@@ -2149,8 +2150,8 @@ window.STORYBOARD_READY = (async function () {
         head: "클리셰", lane: "클리셰", undecided: "미정 — 아직 기록이 없다", none: "쓰지 않음",
         count: function (applied, offered) {
           return (applied ? "이야기에 " + applied + "개" : "적용 없음") + (offered ? " · 추천 " + offered + "개, 선택 대기" : ""); },
-        offered: "추천 · 적용 전", user: "사용자 선택", byDefault: "기본 적용",
-        shift: "옮긴 점", caution: "주의", quote: "실제 대사", scene: "S#",
+        offered: "추천 · 적용 전", user: "사용자 선택", byDefault: "기본 적용", noBasis: "근거 미기록",
+        shift: "옮긴 점", caution: "주의", quote: "실제 대사", scene: "S#", missing: "보드에 없음",
         need: { meet: "만남 계기", bind: "한곳에 묶기", obstacle: "장애물", secret: "비밀·오해", reveal: "폭로·반전", parting: "이별·상실",
                 reunion: "재회·회복", closeness: "가까워짐", outburst: "감정 폭발", status: "위계 표시", payback: "응징",
                 danger: "위기", rule: "세계 규칙", setting: "장소·분위기", closing: "시작과 끝", relief: "웃음·완화" }
@@ -2432,12 +2433,19 @@ window.STORYBOARD_READY = (async function () {
      is skipped rather than stopping the board. */
   var CLICHES = window.CLICHES && typeof window.CLICHES === "object" && !Array.isArray(window.CLICHES) ? window.CLICHES : null;
   function clicheId(u) { return typeof u.id === "number" && isFinite(u.id) && u.id > 0 ? "#" + u.id + " " : ""; }
+  // The scenes the board has, so a use that names another one is marked; a board with no scene list marks none.
+  var clicheScenes = (function () {
+    var list = window.STRUCTURE && Array.isArray(window.STRUCTURE.scenes) ? window.STRUCTURE.scenes : [], known = {};
+    list.forEach(function (x) { if (x && typeof x === "object") known[x.no] = true; });
+    return list.length ? known : null;
+  })();
   var clicheUses = CLICHES && Array.isArray(CLICHES.uses) ? CLICHES.uses.filter(function (u) {
     return u && typeof u === "object" && (clicheId(u) || (typeof u.name === "string" && u.name.trim())); }) : [];
   function clicheChip(u) {
     var C = T.cliche, tags = [];
     if (typeof u.need === "string" && Object.prototype.hasOwnProperty.call(C.need, u.need)) tags.push(C.need[u.need]);
-    tags.push(u.offered ? C.offered : u.basis === "user" ? C.user : C.byDefault);
+    // The basis is shown as recorded; the page does not supply one a hand-edited use lacks.
+    tags.push(u.offered ? C.offered : u.basis === "user" ? C.user : u.basis === "default" ? C.byDefault : C.noBasis);
     if (u.caution) tags.push(C.caution);
     if (u.quote) tags.push(C.quote);
     return '<span class="cliche-chip' + (u.offered ? " offered" : "") + (u.caution ? " caution" : "") + '"><b>' +
@@ -2458,9 +2466,11 @@ window.STORYBOARD_READY = (async function () {
     if (!CLICHES) return "";
     return '<section class="cliche-strip" id="cliches"><div class="cliche-strip-head">' + esc(T.cliche.head) + " <small>" + esc(clicheStatus()) + "</small></div>" +
       (clicheUses.length ? "<ul>" + clicheUses.map(function (u) {
-        var at = Array.isArray(u.scenes) && u.scenes.length ? T.cliche.scene + u.scenes.join(", ") : "";
-        var who = typeof u.character === "string" && u.character ? castName(u.character) : "";
-        return "<li>" + clicheChip(u) + (at || who ? "<span>" + esc([at, who].filter(Boolean).join(" · ")) + "</span>" : "") + "</li>";
+        var at = (Array.isArray(u.scenes) ? u.scenes : []).map(function (no) {
+          return esc(T.cliche.scene + no) + (clicheScenes && !clicheScenes[no] ? ' <em class="cliche-missing">' + esc(T.cliche.missing) + "</em>" : "");
+        }).join(", ");
+        var who = typeof u.character === "string" && u.character ? esc(castName(u.character)) : "";
+        return "<li>" + clicheChip(u) + (at || who ? "<span>" + [at, who].filter(Boolean).join(" · ") + "</span>" : "") + "</li>";
       }).join("") + "</ul>" : "") + "</section>";
   }
   // Character count: displayed = full length after ** is stripped / net = whitespace and punctuation excluded

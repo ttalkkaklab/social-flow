@@ -161,7 +161,9 @@ function record(board) {
 
 /**
  * The record read against the episode's type: which mode applies, what was decided, which scene
- * references no longer exist and which catalogue entries an earlier episode of the channel used.
+ * references no longer exist, which catalogue entries an earlier episode of the channel used,
+ * and which uses sit in the story without the user's pick on a type that only recommends —
+ * story_cliche never writes one, so that is a hand edit or a type changed after recording.
  * `earlier` is `[{ id, name, episode }]` from earlierUses().
  */
 function reading(board, { earlier = [] } = {}) {
@@ -173,10 +175,12 @@ function reading(board, { earlier = [] } = {}) {
     .map(no => ({ use: useName(use), scene: no })));
   const repeats = applied.filter(use => Number.isInteger(use.id))
     .flatMap(use => earlier.filter(old => old.id === use.id).map(old => ({ id: use.id, name: use.name, episode: old.episode })));
+  const m = mode(board && board.PRODUCTION);
+  const unpicked = m.mode === 'apply' ? [] : applied.filter(use => use.basis !== 'user').map(useName);
   return {
-    ...mode(board && board.PRODUCTION), tracked,
+    ...m, tracked,
     decision: applied.length ? 'use' : none ? 'none' : offered.length ? 'offer' : 'undecided',
-    ...(none && !applied.length ? { none } : {}), applied, offered, dangling, repeats,
+    ...(none && !applied.length ? { none } : {}), applied, offered, dangling, repeats, unpicked,
   };
 }
 
@@ -196,6 +200,7 @@ function digest(board) {
     lines.push(`clichés: ${head}${r.offered.length ? `, ${r.offered.length} offered — they go in when the user picks them` : ''}`);
   }
   if (r.dangling.length) lines.push(`clichés: ${r.dangling.map(d => `${d.use} names scene ${d.scene}`).join(', ')}, which is not on the board — record the use again with story_cliche`);
+  if (r.unpicked.length) lines.push(`clichés: ${r.unpicked.join(', ')} ${r.unpicked.length > 1 ? 'are' : 'is'} in the story without the user's pick, and this episode only recommends (${r.why}) — record ${r.unpicked.length > 1 ? 'them' : 'it'} as offered, or with basis "user" once the user picked`);
   return lines;
 }
 

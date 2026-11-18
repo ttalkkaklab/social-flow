@@ -118656,7 +118656,7 @@ var storyboardApplySchema = external_exports.object({
   removeShotIds: external_exports.array(shotIdSchema).min(1).optional().describe("Shot ids to drop, resolved before the insert"),
   removeScenes: external_exports.array(external_exports.number().int().positive()).optional(),
   removeSequences: external_exports.array(external_exports.string()).optional(),
-  globals: globalsSchema.optional().describe("Set other window.* blocks \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY"),
+  globals: globalsSchema.optional().describe("Set other window.* blocks \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. CLICHES belongs to story_cliche"),
   expectedSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional().describe("Required for propSheet file edits; use the hash from storyboard_read"),
   propSheet: external_exports.object({
     props: external_exports.array(external_exports.record(external_exports.unknown())),
@@ -118734,10 +118734,13 @@ function validateStructure(structure) {
   if (parsed.success) return [];
   return parsed.error.issues.map((issue2) => ({ level: "bad", where: "structure", what: `${issue2.path.join(".") || "(root)"}: ${issue2.message}` }));
 }
+var sameShape = (value) => JSON.stringify(value, (_key, v) => v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)) : v);
 function applyPatch(win, patch, opts = {}) {
   const next = { ...win };
   if (patch.globals) for (const [k, v] of Object.entries(patch.globals)) {
     if (k === "SCENES" || k === "STRUCTURE") throw new Error(`set ${k} through the dedicated fields, not globals`);
+    if (k === "CLICHES" && !opts.cliches && sameShape(v) !== sameShape(win.CLICHES))
+      throw new Error("cliche_record: window.CLICHES is written by story_cliche, which checks the episode type and the user's pick \u2014 storyboard_apply globals cannot change it");
     next[k] = v;
   }
   const boardMotionTheme = next.THEME?.motionGraphicTheme;
@@ -119190,7 +119193,7 @@ function writeOutline(path35, win, structure, shots, language, opening) {
     structure,
     ...shots?.length ? { set: { structure, shots } } : {},
     ...globals ? { globals } : {}
-  }, { outline: true });
+  }, { outline: true, cliches: true });
   const kept = !language || !story ? void 0 : story.language !== void 0 ? story.language !== language ? `this board is written in "${String(story.language)}"` : void 0 : written ? "this board has shots and no recorded language, so its language is the one they are written in" : void 0;
   return kept ? { ...result, findings: [...result.findings, { level: "warn", where: "STORY", what: `story_language: ${kept}; "${language}" was not applied \u2014 a board keeps its language` }] } : result;
 }
@@ -119397,7 +119400,7 @@ var storyClicheSchema = external_exports.object({
   path: outlinePath,
   uses: external_exports.array(external_exports.object({
     id: external_exports.number().int().positive().optional().describe("The catalogue number cliches.js pick printed"),
-    name: nonEmpty.optional().describe("Its name in the story language; required for a clich\xE9 that is not in the catalogue"),
+    name: nonEmpty.refine((name) => !/^#\s*\d+$/.test(name), { message: "a catalogue number goes in id, not in name" }).optional().describe("Its name in the story language; required for a clich\xE9 that is not in the catalogue"),
     need: nonEmpty.optional().describe("The job it does in this story, one of the needs cliches.js lists; the catalogue entry's first need when omitted"),
     scenes: external_exports.array(external_exports.number().int().positive()).min(1).optional().describe("The scenes it sits on, once they are written"),
     character: nonEmpty.optional().describe("The cast member a character-type clich\xE9 describes"),
@@ -119408,7 +119411,8 @@ var storyClicheSchema = external_exports.object({
   none: nonEmpty.optional().describe("Records that this episode uses no clich\xE9, and why; it replaces the list"),
   basis: external_exports.literal("user").optional().describe("The user picked these from a recommendation or asked for them")
 }).strict().refine((args) => args.none === void 0 || !args.uses && !args.remove, { message: "none replaces the whole list \u2014 give it alone" });
-function writeStoryCliches(args) {
+function writeStoryCliches(input) {
+  const args = storyClicheSchema.parse(input);
   const { file, win } = readBoard(args.path);
   const lib = cliches(), dir = dirname6(file);
   const st = win.STRUCTURE, shots = win.SCENES ?? [];
@@ -119427,6 +119431,7 @@ function writeStoryCliches(args) {
     findings: []
   };
   const notes = [];
+  const warn = (code, where, what) => notes.push({ level: "warn", code, where, what: `${code}: ${what}` });
   if (writing) {
     const known = new Set(sceneList2.map((scene) => scene.no));
     let cast;
@@ -119468,7 +119473,7 @@ function writeStoryCliches(args) {
     }
     for (const target of args.remove ?? []) {
       const key = typeof target === "number" ? `#${target}` : `name:${target.trim()}`;
-      if (!uses.some((entry2) => keyOf(entry2) === key)) notes.push({ level: "warn", where: "clich\xE9s", what: `nothing is recorded as ${typeof target === "number" ? `#${target}` : `"${target}"`} \u2014 nothing was removed` });
+      if (!uses.some((entry2) => keyOf(entry2) === key)) warn("cliche_not_recorded", "clich\xE9s", `nothing is recorded as ${typeof target === "number" ? `#${target}` : `"${target}"`} \u2014 nothing was removed`);
       uses = uses.filter((entry2) => keyOf(entry2) !== key);
     }
     const none = args.none !== void 0 ? args.none : args.uses?.length ? void 0 : before.none;
@@ -119477,23 +119482,25 @@ function writeStoryCliches(args) {
       draft: true,
       dryRun: false,
       globals: { CLICHES: { version: 1, ...none !== void 0 ? { none } : {}, uses: args.none !== void 0 ? [] : uses } }
-    }, { outline: true });
+    }, { outline: true, cliches: true });
   }
   const board = result.written ? readBoard(args.path).win : win;
   const report = clicheReading(board, dir);
   const label = (use) => use.id !== void 0 ? `#${use.id} ${use.name}` : `"${use.name}"`;
   if (report.decision === "undecided" && report.mode === "apply")
-    notes.push({ level: "warn", where: "clich\xE9s", what: `no decision yet \u2014 this episode applies clich\xE9s by default (${report.why}): record what the story uses, or none with its reason` });
+    warn("cliche_undecided", "clich\xE9s", `no decision yet \u2014 this episode applies clich\xE9s by default (${report.why}): record what the story uses, or none with its reason`);
+  for (const use of report.unpicked)
+    warn("cliche_unpicked", use, `in the story without the user's pick, and this episode only recommends (${report.why}) \u2014 record it as offered, or with basis "user" once the user picked`);
   for (const use of report.applied) {
-    if (use.caution) notes.push({ level: "warn", where: label(use), what: `${use.caution === "violence" ? "graphic violence the broadcast regulator sanctioned" : "contact or pursuit without consent staged as romance, which critics and the regulator objected to"} \u2014 keep it only when the story treats the act as wrong or the user asked for it` });
-    if (use.id !== void 0 && lib.find(use.id)?.analysis) notes.push({ level: "warn", where: label(use), what: "this entry describes a production practice, not something a story can use" });
+    if (use.caution) warn("cliche_caution", label(use), `${use.caution === "violence" ? "graphic violence the broadcast regulator sanctioned" : "contact or pursuit without consent staged as romance, which critics and the regulator objected to"} \u2014 keep it only when the story treats the act as wrong or the user asked for it`);
+    if (use.id !== void 0 && lib.find(use.id)?.analysis) warn("cliche_practice", label(use), "this entry describes a production practice, not something a story can use");
   }
   for (const use of [...report.applied, ...report.offered])
-    if (use.quote) notes.push({ level: "warn", where: label(use), what: "a line from a specific drama \u2014 borrow the pattern of the line, not its words" });
+    if (use.quote) warn("cliche_quote", label(use), "a line from a specific drama \u2014 borrow the pattern of the line, not its words");
   for (const repeat of report.repeats)
-    notes.push({ level: "warn", where: `#${repeat.id}${repeat.name ? ` ${repeat.name}` : ""}`, what: `episode ${repeat.episode} of this channel already used it \u2014 a device repeated across episodes reads as the channel's formula; keep it when the series runs on it` });
+    warn("cliche_repeat", `#${repeat.id}${repeat.name ? ` ${repeat.name}` : ""}`, `episode ${repeat.episode} of this channel already used it \u2014 a device repeated across episodes reads as the channel's formula; keep it when the series runs on it`);
   for (const { use, scene } of report.dangling)
-    notes.push({ level: "warn", where: use, what: `names scene ${scene}, which is not on the board \u2014 record the use again with its current scenes` });
+    warn("cliche_scene_missing", use, `names scene ${scene}, which is not on the board \u2014 record the use again with its current scenes`);
   const note = report.mode === "apply" ? "This episode applies clich\xE9s by default. Choose for what the story needs; none with its reason is a valid decision. Nothing waits for it." : report.mode === "off" ? `The channel's saved choice is off. Apply a clich\xE9 only when the user asks for it in this episode, recorded with basis "user".` : 'This episode recommends clich\xE9s and applies only what the user picks. Record candidates with offered:true, present them with the scenario, and record the picked ones with basis "user". An unattended run applies none.';
   return { ...result, findings: [...result.findings, ...notes], cliches: { ...report, note } };
 }
@@ -129005,9 +129012,9 @@ Returns: the file written or not, counts, findings (! violation \xB7 warning), a
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     description: `Use it once the board exists (after story_sequence) to record which researched clich\xE9s the episode's story uses, and again once scenes are written to attach them to scenes. Read the report's mode first. apply (drama, comedy, romance, or a channel that saved production.clicheUse "on"): while casting, writing the synopsis and writing scenes, choose clich\xE9s for what the story needs \u2014 candidates come from \`node skills/storyboard/references/cliches.js pick --need \u2026\`, never from reading the whole catalogue \u2014 and record each with its catalogue id, the scenes or character it sits on and shift, the one thing this episode changes about it. offer (every other type): record candidates with offered:true, present them with the scenario and apply only what the user picks, recording those with basis "user". Record none with its reason when the story is better without one. Called with path alone it reports and writes nothing.
 
-Do NOT pass basis "user" for a choice the user did not make; on an offer or off episode an applied clich\xE9 without it is refused (cliche_user_choice). Do NOT copy the words of a quoted line, and do NOT keep a caution entry (coercive or graphic staging) unless the story treats the act as wrong or the user asked \u2014 the report warns. A use sent again keeps the fields you omit, except offered, which is stated on every write.
+Do NOT pass basis "user" for a choice the user did not make; on an offer or off episode an applied clich\xE9 without it is refused (cliche_user_choice). Do NOT write window.CLICHES through storyboard_apply \u2014 this tool owns the record (cliche_record). Do NOT copy the words of a quoted line, and do NOT keep a caution entry (coercive or graphic staging) unless the story treats the act as wrong or the user asked \u2014 the report warns. A use sent again keeps the fields you omit, except offered, which is stated on every write.
 
-Returns: the file written or not, counts, findings (! violation \xB7 warning), and the clich\xE9 report \u2014 mode and why, the decision (undecided \xB7 use \xB7 none \xB7 offer), the applied and offered uses, entries an earlier episode of the channel already used, and scene references that no longer exist.`,
+Returns: the file written or not, counts, findings (! violation \xB7 warning), and the clich\xE9 report \u2014 mode and why, the decision (undecided \xB7 use \xB7 none \xB7 offer), the applied and offered uses, entries an earlier episode of the channel already used, scene references that no longer exist, and uses that sit in the story without the user's pick on an episode that only recommends.`,
     inputSchema: {
       type: "object",
       additionalProperties: false,
@@ -129293,7 +129300,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
         removeShotIds: { type: "array", items: { type: "string", pattern: "^s\\d{4,}$", description: "A stable shot id" }, description: "Shot ids to drop (resolved before inserts). Not with the position fields in the same patch" },
         removeScenes: { type: "array", items: { type: "number", description: "Scene number" }, description: "Scene numbers to drop from STRUCTURE.scenes and from every sequence" },
         removeSequences: { type: "array", items: { type: "string", description: "Sequence id" }, description: "Sequence ids to drop" },
-        globals: { type: "object", description: "Other window.* blocks to set \u2014 FORMAT, THEME (motionGraphicTheme: {id: auto or theme id, context?, reason?} sets the common motion theme; explicit shot ids or contexts override it), COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. MUSIC.$mix is optional sound-design metadata; SFX keeps logical asset ids only. PRODUCTION.mode: full_video, video_80, video_50, video_30, video_lt10, no_video (hook_only/stills_only/hybrid are legacy). New selections write renderRatioVersion:1." },
+        globals: { type: "object", description: "Other window.* blocks to set \u2014 FORMAT, THEME (motionGraphicTheme: {id: auto or theme id, context?, reason?} sets the common motion theme; explicit shot ids or contexts override it), COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. CLICHES belongs to story_cliche and cannot be changed here (cliche_record). MUSIC.$mix is optional sound-design metadata; SFX keeps logical asset ids only. PRODUCTION.mode: full_video, video_80, video_50, video_30, video_lt10, no_video (hook_only/stills_only/hybrid are legacy). New selections write renderRatioVersion:1." },
         expectedSha256: { type: "string", pattern: "^[a-f0-9]{64}$", description: "Current scenes.js hash from storyboard_read; required when editing propSheet on an existing board." },
         propSheet: { type: "object", additionalProperties: false, required: ["props"], description: "Replace the complete prop sheet atomically. Keep other editorial metadata. Changes validate story-time custody and invalidate approval; original file is backed up.", properties: {
           props: { type: "array", description: "Complete prop registry for this board", items: { type: "object", additionalProperties: true, required: ["id"], properties: {

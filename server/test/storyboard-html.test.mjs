@@ -101,8 +101,8 @@ test('the cliché strip and scene lanes show what is in the story, the user\'s p
   const strings = [...template.matchAll(/^      cliche: \{[^]*?^      \},$/gm)].map(m => runInNewContext('({' + m[0].slice(0, -1) + '})').cliche);
   assert.equal(strings.length, 2);
   const esc = v => String(v ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
-  const page = (CLICHES, expression, T = strings[0]) => runInNewContext(source + '\n' + expression, {
-    window: { CLICHES }, T: { cliche: T }, esc, copy: esc, CONTENT: { text: s => s }, castName: id => id === 'jun' ? 'Jun' : id });
+  const page = (CLICHES, expression, T = strings[0], STRUCTURE) => runInNewContext(source + '\n' + expression, {
+    window: { CLICHES, STRUCTURE }, T: { cliche: T }, esc, copy: esc, CONTENT: { text: s => s }, castName: id => id === 'jun' ? 'Jun' : id });
   const record = { version: 1, uses: [
     { id: 45, name: 'Cash envelope', layer: 'scene', need: 'obstacle', scenes: [3], shift: 'the mother is handed it', basis: 'default' },
     { name: '<img src=x onerror=alert(1)>', need: 'status', character: 'jun', basis: 'user' },
@@ -115,7 +115,11 @@ test('the cliché strip and scene lanes show what is in the story, the user\'s p
   const strip = page(record, 'clicheStrip()');
   assert.match(strip, /Clichés <small>2 in the story · 1 recommended, waiting for your pick<\/small>/);
   assert.match(strip, /<b>&lt;img src=x onerror=alert\(1\)&gt;<\/b> <small>status · your pick<\/small><\/span><span>Jun<\/span>/);
-  assert.match(strip, /<span>S#3, 4<\/span>/);
+  assert.match(strip, /<span>S#3, S#4<\/span>/);
+  // A scene the board no longer has is marked, and a use with no recorded basis is not given one.
+  const edited = page({ uses: [{ id: 5, name: 'Hand edit', scenes: [3, 9] }] }, 'clicheStrip()', strings[0], { scenes: [{ no: 3 }] });
+  assert.match(edited, /<small>basis not recorded<\/small>/);
+  assert.match(edited, /<span>S#3, S#9 <em class="cliche-missing">not on the board<\/em><\/span>/);
   assert.doesNotMatch(strip, /<img/);
   assert.equal((strip.match(/<li>/g) || []).length, 3, 'entries the page cannot read are skipped');
   // An open record, a declined one, and a board with no record at all.

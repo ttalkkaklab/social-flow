@@ -95,6 +95,11 @@ test('a board record reads as undecided, used, offered or none, and the digest p
   assert.deepEqual([r.decision, r.applied.length, r.offered.length], ['use', 2, 1]);
   assert.deepEqual(r.repeats, [{ id: 45, name: 'A', episode: 'e0' }]);          // an offered entry is not a repeat
   assert.deepEqual(r.dangling, [{ use: '#9 B', scene: 7 }]);
+  assert.deepEqual(r.unpicked, []);
+  // The same record on a type that only recommends: the use with no user's pick is named, the picked one is not.
+  const moved = { ...board, PRODUCTION: { videoType: { id: 'documentary' } } };
+  assert.deepEqual(C.reading(moved).unpicked, ['#45 A']);
+  assert.match(C.digest(moved).at(-1), /^clichés: #45 A is in the story without the user's pick, and this episode only recommends \(video type documentary\)/);
   assert.deepEqual(C.digest(board), ['clichés: 2 in the story (#45 A scene 2 · "custom" jun), 1 offered — they go in when the user picks them',
     'clichés: #9 B names scene 7, which is not on the board — record the use again with story_cliche']);
   assert.deepEqual(C.digest({ CLICHES: { uses: [{ id: 9, name: 'B', offered: true }] } }), ['clichés: none applied, 1 offered — they go in when the user picks them']);
@@ -102,7 +107,7 @@ test('a board record reads as undecided, used, offered or none, and the digest p
   // A hand-edited block reads as what can be read instead of throwing.
   assert.equal(C.reading({ CLICHES: 'yes' }).tracked, false);
   assert.equal(C.reading({ CLICHES: { uses: 'all' }, STRUCTURE: { scenes: 'x' } }).decision, 'undecided');
-  assert.deepEqual(C.digest({ CLICHES: { uses: [{ id: 2, name: 7, scenes: 'x' }] } }), ['clichés: 1 in the story (#2)']);
+  assert.deepEqual(C.digest({ PRODUCTION: drama, CLICHES: { uses: [{ id: 2, name: 7, scenes: 'x' }] } }), ['clichés: 1 in the story (#2)']);
 });
 
 test("earlier episodes' applied clichés are found, and the picker CLI leaves them out", (t) => {
