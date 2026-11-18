@@ -336,6 +336,11 @@ permalink, say).
    landscape surface (search results, share previews, embeds); the portrait frame used
    by the shorts feed and the channel shorts tab is separate. Leave it unset and a
    random mid-video frame becomes the shorts first frame.
+   Since 2026-11-03 YouTube documents `thumbnails.set` for Shorts after processing
+   finishes, and `youtube_publish` now waits for that before setting the cover
+   (`processingNote` says when it couldn't). This channel hasn't measured whether the
+   API cover reaches the shorts tab yet, so keep the Studio step below until a public
+   shorts-tab check shows the API cover there.
 
    **Set it in a browser while the video is still private** —
    `studio.youtube.com/video/<id>/edit` → the `⋮` over the portrait image in the
@@ -361,7 +366,12 @@ permalink, say).
    record it as open, along with the videoId.
 2. **Instagram**: `instagram_publish` — `videoUrl` is the public URL of the
    **clean subtitle-free master (video.mp4)** + platform caption text. No subtitles
-   are baked into the picture.
+   are baked into the picture. Pass `thumbOffsetMs` at the cover time (or `coverUrl`
+   for the hosted `cover.jpg`) so the grid doesn't show the first frame, and
+   `isAiGenerated: true` for generated episodes. The tool waits up to 5 minutes for the
+   container (Meta's documented window); a timeout publishes nothing, so a new call
+   is safe. An Instagram-Login token can't upload a local file, so the URL must stay
+   up until the call returns.
 3. **Threads**: before calling, record the actual §1 human approval in
    `data/<channel>/episodes/<topic>/threads-publish-approval.json`. Use JSON with
    `approved: true`, the exact approved `caption`, and every supplied `imageUrl`,
@@ -390,7 +400,13 @@ permalink, say).
    root ID and a warning: record the partial result and do not republish the root.
    Threads is complete only when both posts succeed.
 4. **Facebook**: `facebook_publish` — `videoUrl` is the public URL of the **clean copy
-   (video.mp4)**. Omit subtitle parameters by default. Only if separate Facebook
+   (video.mp4)**. For a 9:16 short of **3–90 seconds** pass `reel: true` (and
+   `isAiGenerated: true` for a generated episode): the post goes through the Page Reels
+   endpoint. Meta refuses a longer Reel (error 1363128), and most mochi-bo episodes run
+   100–215 s, so measure the master with ffprobe first and publish anything over 90 s
+   without `reel` — it lands as a regular Page video, which no Meta document calls a
+   Reel. A Reel is public as soon as it finishes; a `processingWarning` means it was
+   accepted, so check the Page and never call again. Omit subtitle parameters by default. Only if separate Facebook
    subtitles were also requested, use `captionFilePath`=output/video/subs.srt or
    `captionFiles` for requested languages, **default locale first**: `[{filePath:
    …/subs.srt, locale: "ko_KR"}, {filePath: …/subs.en.srt, locale: "en_US"}, …]`;

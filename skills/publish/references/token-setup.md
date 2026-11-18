@@ -94,6 +94,10 @@ chmod 600 ~/.config/social-flow/<channel-slug>/*
    `instagram_business_manage_insights` (setup-instagram §scopes).
 3. Issuing and refreshing the long-lived (60-day) token follows the same pattern as
    Threads (`graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&…`).
+4. **New Meta apps can't use Instagram Login.** Save a non-expiring Facebook Page token
+   (`EAA…`) with `instagram_basic` + `instagram_content_publish` in `instagram_token`
+   instead; the server then uses graph.facebook.com and the Page's linked IG account
+   (setup-instagram §Step 3). Such a token has no 60-day refresh.
 
 ### Facebook page
 
@@ -113,17 +117,18 @@ chmod 600 ~/.config/social-flow/<channel-slug>/*
    | Scope | What it opens | When it's needed |
    |---|---|---|
    | `youtube.upload` | `youtube_publish` upload | publishing (required) |
-   | `youtube.force-ssl` | subtitle upload (`captionFilePath`, only when the user requests tracks) + reading comments and replying | requested subtitle tracks · growth loop |
+   | `youtube.force-ssl` | `youtube_update` (the private → public flip — `videos.update` rejects `youtube.upload`) + the processing wait before the Shorts cover + subtitle upload (`captionFilePath`, only when the user requests tracks) + reading comments and replying | publishing (required) · requested subtitle tracks · growth loop |
    | `youtube.readonly` | the channel and video queries in `youtube_insights` | growth loop |
    | `yt-analytics.readonly` | period metrics (views, watch time, subscriber change) | growth loop |
    | `yt-analytics-monetary.readonly` | revenue metrics (`includeRevenue: true`) | optional |
 
-   **`force-ssl` is needed only when the user requests subtitle tracks** — the delivered
-   video is subtitle-free, and a requested track goes up separately with
-   `captions.insert`, which the upload-only `youtube.upload` rejects. Publish with an
-   upload-only token and **the video goes up (private, publish rule 9) while the
-   requested track fails** (`captionWarning`). Don't republish — reissue the token with
-   the procedure below and attach the track from Studio before flipping public, or later.
+   **`force-ssl` is required for publishing** — every upload starts private and only
+   `videos.update` flips it public, which the upload-only `youtube.upload` can't call
+   (setup-youtube §scopes). The same scope reads the processing status `youtube_publish`
+   waits on before setting a Shorts cover, and uploads requested caption tracks with
+   `captions.insert`. With an upload-only token **the video goes up private and stays
+   there**, the cover is set without the wait (`processingNote`) and a requested track
+   fails (`captionWarning`). Don't republish — reissue the token with the procedure below.
 
    **A token already issued for publishing doesn't have the four above** — a scope
    error on the first call to a subtitle or growth tool is normal, and the error
@@ -135,11 +140,11 @@ chmod 600 ~/.config/social-flow/<channel-slug>/*
    The Related video setting that links a short to a long-form video also needs at
    least phone verification (and the setting itself only exists in Studio — no API
    support).
-5. **The shorts portrait surface (feed, shorts tab) thumbnail can't be changed through
-   the API** — `thumbnailFilePath` applies to the landscape surface (share previews,
-   search) only. The portrait surface frame is set in web Studio ("Select from video",
-   publish §Shorts frame) or the YouTube native app, so for a video where the first
-   frame matters, set the cover frame there after publishing.
+5. **Shorts cover:** since 2026-11-03 `thumbnails.set` documents Shorts too (cropped to
+   9:16) once processing has finished, and `youtube_publish` waits for that. This channel
+   hasn't measured whether the API cover reaches the shorts feed and tab, so keep the
+   Studio "Select from video" step (publish §Shorts frame) until a public shorts-tab
+   check shows the API cover.
 
 ## On expiry or failure
 

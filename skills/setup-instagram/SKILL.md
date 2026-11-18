@@ -133,6 +133,27 @@ appear. Details in `references/setup-playbook.md` §1.
 
 ## Step 3 · App tester + OAuth token (token)
 
+**New Meta apps (measured 2026-11-18):** the Instagram use case page says
+"최신 앱에서는 Instagram 로그인이 포함된 API 설정을 사용할 수 없습니다" — no
+Instagram-Login token for them. Use the Facebook-login route instead:
+
+1. Link the IG professional account to the brand's Facebook Page.
+2. In the app's Instagram use case, make sure `instagram_basic`,
+   `instagram_content_publish`, `instagram_manage_comments` and
+   `instagram_manage_insights` are added.
+3. Graph API Explorer (`developers.facebook.com/tools/explorer/?app_id=<id>`) →
+   user token with those four plus the Page scopes → in the consent flow pick
+   **only** this brand's Page, business and IG account.
+4. Access Token Debugger → "액세스 토큰 확장" (needs the user's password —
+   hand off) → `GET /me/accounts?fields=access_token,instagram_business_account`
+   with the extended token → save the Page's non-expiring token (`EAA…`) as
+   `instagram_token`.
+
+The server sends an `EAA…` token to graph.facebook.com and resolves the IG account
+from the Page; `sns_account_check` reports `route: facebook_login`. The steps below
+are for older apps that still have Instagram Login.
+
+
 **The IG publishing token is issued via "Instagram API with Instagram Login"** —
 even though the "IG 테스터" (IG tester) radio's description under app roles says
 "Instagram Basic Display API" (deprecated 2024-12-04), don't take that bait.
