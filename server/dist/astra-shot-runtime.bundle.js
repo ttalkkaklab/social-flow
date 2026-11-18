@@ -30289,6 +30289,10 @@ var config = {
   openaiApiKey: process.env.OPENAI_API_KEY || "",
   /** BytePlus ModelArk API key (required by the seedance_* video generation tools) — https://ai.byteplus.com/ark/region:ap-southeast-1/apikey */
   arkApiKey: process.env.ARK_API_KEY || "",
+  /** Hosted video vendors (vendor-video.ts): the official LTX API, MiniMax H3 and HeyGen Video 1. */
+  ltxApiKey: process.env.LTX_API_KEY || "",
+  minimaxApiKey: process.env.MINIMAX_API_KEY || "",
+  heygenApiKey: process.env.HEYGEN_API_KEY || "",
   /**
    * Suno API key (required by the suno_* music tools) — https://sunoapi.org/api-key
    *
@@ -32193,6 +32197,115 @@ var seedanceReferenceSchema = external_exports.object({
   }
 }).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
 
+// src/ltx-api-video.ts
+import { execFileSync as execFileSync2 } from "node:child_process";
+var LTX_API_MODELS = ["ltx-2-5-pro", "ltx-2-5-fast"];
+var TIERS = {
+  "720p": ["1280x720", "720x1280", "720x720", "1080x720", "720x1080"],
+  "1080p": ["1920x1080", "1080x1920", "1080x1080", "1620x1080", "1080x1620"],
+  "1440p": ["2560x1440", "1440x2560", "1440x1440", "2160x1440", "1440x2160"],
+  "4k": ["3840x2160", "2160x3840", "2160x2160", "3240x2160", "2160x3240"]
+};
+var ltxApiTier = (resolution2) => Object.entries(TIERS).find(([, sizes]) => sizes.includes(resolution2))?.[0];
+function ltxApiSeconds(model2, resolution2, fps = 24) {
+  const long = model2 === "ltx-2-5-fast" && ["720p", "1080p"].includes(ltxApiTier(resolution2) ?? "") && fps <= 25;
+  return long ? [6, 8, 10, 12, 14, 16, 18, 20] : [6, 8, 10];
+}
+var common2 = {
+  prompt: external_exports.string().max(5e3).describe("English action, camera and sound."),
+  model: external_exports.enum(LTX_API_MODELS).default("ltx-2-5-pro").describe("LTX API model id."),
+  resolution: external_exports.string().refine((value) => Boolean(ltxApiTier(value)), "Use a WIDTHxHEIGHT the LTX API lists, e.g. 1920x1080").default("1920x1080").describe("Output size, e.g. 1920x1080 or 1080x1920."),
+  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24).describe("Frame rate."),
+  cameraMotion: external_exports.enum(["dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"]).optional().describe("Optional preset camera move."),
+  sourceImagePath: external_exports.string().min(1).describe("First frame image (PNG/JPEG/WEBP, 7 MB inline)."),
+  lastImagePath: external_exports.string().min(1).optional().describe("Optional last frame image."),
+  outputPath: external_exports.string().optional().describe("Output directory."),
+  filename: bareFilenameSchema("video").optional().describe("MP4 filename.")
+};
+var ltxApiImg2VideoSchema = external_exports.object({
+  ...common2,
+  prompt: common2.prompt.min(1),
+  durationSeconds: external_exports.number().int().default(6).describe("6, 8 or 10 seconds (Fast at 720p/1080p, 24/25 fps: up to 20)."),
+  generateAudio: external_exports.boolean().default(false).describe("Generate a soundtrack; false for cuts whose sound comes from assembly.")
+}).strict().superRefine((v, ctx) => {
+  if (!ltxApiSeconds(v.model, v.resolution, v.fps).includes(v.durationSeconds))
+    ctx.addIssue({ code: "custom", path: ["durationSeconds"], message: `${v.model} at ${v.resolution}/${v.fps} fps takes ${ltxApiSeconds(v.model, v.resolution, v.fps).join(", ")} seconds` });
+});
+var ltxApiAudio2VideoSchema = external_exports.object({
+  ...common2,
+  audioPath: external_exports.string().min(1).describe("The composed pinned-voice track; its length sets the clip length (2\u201310 s, Fast at 720p/1080p up to 20 s).")
+}).strict();
+function ltxApiAudioSeconds(file) {
+  const seconds = Number(execFileSync2("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], { encoding: "utf8", timeout: 15e3 }));
+  if (!Number.isFinite(seconds) || seconds <= 0) throw new Error("Cannot read the length of " + file);
+  return seconds;
+}
+
+// src/minimax-video.ts
+var MINIMAX_MODELS = {
+  "MiniMax-H3": { resolutions: ["768P", "2K"], minSeconds: 4, freeImages: 5 },
+  "MiniMax-H3-Highspeed": { resolutions: ["480P", "768P"], minSeconds: 4, freeImages: 5 },
+  "MiniMax-H3-Lite": { resolutions: ["480P", "768P"], minSeconds: 4, freeImages: 5 },
+  "MiniMax-H3-Max": { resolutions: ["480P", "768P"], minSeconds: 5, freeImages: 2 }
+};
+var MINIMAX_MAX_SECONDS = 15;
+var MINIMAX_RATIOS = ["adaptive", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"];
+var common3 = {
+  prompt: external_exports.string().min(1).max(7e3).describe("English scene, action and sound; quoted dialogue in the video's language."),
+  model: external_exports.enum(Object.keys(MINIMAX_MODELS)).default("MiniMax-H3").describe("MiniMax H3 model id, e.g. MiniMax-H3."),
+  resolution: external_exports.enum(["480P", "768P", "2K"]).default("768P").describe("Output resolution; 2K only on MiniMax-H3."),
+  durationSeconds: external_exports.number().int().min(4).max(MINIMAX_MAX_SECONDS).default(5).describe("Whole seconds, 4\u201315 (MiniMax-H3-Max 5\u201315)."),
+  outputPath: external_exports.string().optional().describe("Output directory."),
+  filename: bareFilenameSchema("video").optional().describe("MP4 filename.")
+};
+function checkModel(v, ctx) {
+  const spec = MINIMAX_MODELS[v.model];
+  if (!spec.resolutions.includes(v.resolution)) ctx.addIssue({ code: "custom", path: ["resolution"], message: `${v.model} renders ${spec.resolutions.join(" or ")}` });
+  if (v.durationSeconds < spec.minSeconds) ctx.addIssue({ code: "custom", path: ["durationSeconds"], message: `${v.model} needs at least ${spec.minSeconds} seconds` });
+}
+var minimaxImg2VideoSchema = external_exports.object({
+  ...common3,
+  sourceImagePath: external_exports.string().min(1).describe("First frame image (PNG/JPEG/WEBP)."),
+  lastImagePath: external_exports.string().min(1).optional().describe("Optional last frame image.")
+}).strict().superRefine(checkModel);
+var minimaxReferenceSchema = external_exports.object({
+  ...common3,
+  ratio: external_exports.enum(MINIMAX_RATIOS).default("adaptive").describe("Output ratio; MiniMax-H3-Lite needs a concrete ratio."),
+  referenceImagePaths: external_exports.array(external_exports.string().min(1)).min(1).max(9).describe('Reference pictures, numbered "reference image N" in the prompt.'),
+  referenceAudioPaths: external_exports.array(external_exports.string().min(1)).max(3).default([]).describe('Voice samples (WAV/MP3, 2\u201315 s each, 15 s total), "reference audio N" in the prompt.')
+}).strict().superRefine((v, ctx) => {
+  checkModel(v, ctx);
+  if (v.model === "MiniMax-H3-Lite" && v.ratio === "adaptive") ctx.addIssue({ code: "custom", path: ["ratio"], message: "MiniMax-H3-Lite needs a concrete ratio" });
+});
+
+// src/heygen-video.ts
+var HEYGEN_MODEL = "heygen-video-1";
+var HEYGEN_SECONDS = { min: 5, max: 15 };
+var HEYGEN_RATIOS = ["adaptive", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"];
+var common4 = {
+  prompt: external_exports.string().min(1).max(16e3).describe("English scene, action and sound; quoted dialogue in the video's language. References are <Picture N> and <Audio N>."),
+  model: external_exports.literal(HEYGEN_MODEL).default(HEYGEN_MODEL).describe("HeyGen model id."),
+  // 1080p and 2k have no published standard price after the launch promotion, so they stay out.
+  resolution: external_exports.enum(["480p", "768p"]).default("768p").describe("Output resolution."),
+  durationSeconds: external_exports.number().int().min(HEYGEN_SECONDS.min).max(HEYGEN_SECONDS.max).default(5).describe("Whole seconds, 5\u201315."),
+  seed: external_exports.number().int().min(0).max(4294967295).optional().describe("Reproducible seed."),
+  outputPath: external_exports.string().optional().describe("Output directory."),
+  filename: bareFilenameSchema("video").optional().describe("MP4 filename.")
+};
+var heygenImg2VideoSchema = external_exports.object({
+  ...common4,
+  sourceImagePath: external_exports.string().min(1).describe("First frame image; the clip opens on it exactly."),
+  lastImagePath: external_exports.string().min(1).optional().describe("Optional end image the clip moves toward.")
+}).strict();
+var heygenReferenceSchema = external_exports.object({
+  ...common4,
+  ratio: external_exports.enum(HEYGEN_RATIOS).default("adaptive").describe("Output ratio; adaptive follows the first picture."),
+  referenceImagePaths: external_exports.array(external_exports.string().min(1)).min(1).max(9).describe("Reference pictures, <Picture N> in the prompt."),
+  referenceAudioPaths: external_exports.array(external_exports.string().min(1)).max(3).default([]).describe("Voice samples, <Audio N> in the prompt.")
+}).strict().superRefine((v, ctx) => {
+  if (v.referenceImagePaths.length + v.referenceAudioPaths.length > 12) ctx.addIssue({ code: "custom", message: "At most 12 references" });
+});
+
 // src/video-duration.ts
 var DURATION_TOOLS = [
   "seedance_text2video",
@@ -32205,7 +32318,12 @@ var DURATION_TOOLS = [
   "astra_genai_msr",
   "mlx_video_generate",
   "ltx_video_generate",
-  "fasth3_omni_reference"
+  "fasth3_omni_reference",
+  "ltx_api_img2video",
+  "minimax_img2video",
+  "minimax_reference",
+  "heygen_img2video",
+  "heygen_reference"
 ];
 function videoDurationLimits(tool, input = {}) {
   let limits;
@@ -32214,6 +32332,14 @@ function videoDurationLimits(tool, input = {}) {
     const spec = SEEDANCE_MODEL_SPECS[model2];
     if (!spec) throw new Error("Unknown Seedance model: " + String(model2));
     limits = { min: spec.duration[0], max: spec.duration[1] };
+  } else if (tool === "ltx_api_img2video") {
+    limits = { seconds: ltxApiSeconds(String(input.model ?? "ltx-2-5-pro"), String(input.resolution ?? "1920x1080"), Number(input.fps ?? 24)) };
+  } else if (tool.startsWith("minimax_")) {
+    const spec = MINIMAX_MODELS[input.model ?? "MiniMax-H3"];
+    if (!spec) throw new Error("Unknown MiniMax model: " + String(input.model));
+    limits = { min: spec.minSeconds, max: MINIMAX_MAX_SECONDS };
+  } else if (tool.startsWith("heygen_")) {
+    limits = { ...HEYGEN_SECONDS };
   } else if (tool === "astra_genai_msr") {
     limits = { ...GENAI_MSR_FRAMES, frameRate: input.frameRate ?? GENAI_MSR_FRAMES.frameRate };
   } else if (DURATION_TOOLS.includes(tool) && tool.startsWith("astra_")) {
@@ -32276,17 +32402,28 @@ var VIDEO_ADAPTERS = Object.freeze({
     tool,
     model2.operation === "reference" ? reference("mlx", "local-mlx", model2.schema) : entry("mlx", "local-mlx", model2.operation, model2.schema)
   ])),
-  mlx_video_generate: entry("mlx", "local-mlx", "text", mlxVideoGenerateSchema)
+  mlx_video_generate: entry("mlx", "local-mlx", "text", mlxVideoGenerateSchema),
+  // Hosted vendors through the common layer (vendor-video.ts). Image lanes render silent cuts;
+  // spoken cuts use the reference lanes (MiniMax, HeyGen) or LTX audio-to-video.
+  ltx_api_img2video: entry("ltx-api", "ltx-api-v2", "image", ltxApiImg2VideoSchema),
+  ltx_api_audio2video: entry("ltx-api", "ltx-api-v2", "audio", ltxApiAudio2VideoSchema),
+  minimax_img2video: entry("minimax", "minimax-open-platform-v2", "image", minimaxImg2VideoSchema),
+  minimax_reference: reference("minimax", "minimax-open-platform-v2", minimaxReferenceSchema),
+  heygen_img2video: entry("heygen", "heygen-v3", "image", heygenImg2VideoSchema),
+  heygen_reference: reference("heygen", "heygen-v3", heygenReferenceSchema)
 });
+var VENDOR_REFERENCE_TOOLS = ["minimax_reference", "heygen_reference"];
 function speechVideoCapabilities(provider, model2, operation) {
   if (["veo", "omni"].includes(provider) || provider === "seedance" && !Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
     throw new Error(`video_engine_unsupported: ${provider} ${model2} cannot keep a character's voice; choose a video model again with project_manage`);
+  if (["minimax", "heygen"].includes(provider) && operation === "reference") return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "Native speech from the prompt dialogue with an optional voice sample; voice identity is imitation, not preserved audio" };
+  if (provider === "ltx-api" && operation === "audio") return { provider, model: model2, audioConditioning: true, lipSync: false, postLipSync: false, evidence: "LTX API audio-to-video conditions on the supplied track; preservation and mouth sync unverified" };
   if (provider === "astra-genai" && operation === "reference") return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio" };
   if (provider === "astra-genai-desktop") return { provider, model: model2, audioConditioning: true, lipSync: false, postLipSync: false, evidence: "Gateway A2V reencodes supplied audio; timing/voice identity not guaranteed; installed model capabilities must be checked" };
   if (provider === "astra") return { provider, model: model2, audioConditioning: true, lipSync: true, postLipSync: false, evidence: "astra_audio2video adapter contract" };
   if (provider === "seedance" && Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
     return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "Reference audio does not promise exact recorded-speech timing; no post-lipsync adapter installed" };
-  if (["host", "mlx", "astra-genai"].includes(provider))
+  if (["host", "mlx", "astra-genai", "ltx-api", "minimax", "heygen"].includes(provider))
     return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "No verified external-speech synchronization adapter; voiceover remains available" };
   throw new Error("No verified speech synchronization contract for selected deployment/model");
 }
@@ -32295,7 +32432,7 @@ function speechVideoCapabilities(provider, model2, operation) {
 import { fileURLToPath } from "node:url";
 
 // src/usage-ledger.ts
-import { execFileSync as execFileSync2 } from "node:child_process";
+import { execFileSync as execFileSync3 } from "node:child_process";
 import path4 from "node:path";
 var EPISODE_MARKER = path4.join("storyboard", "scenes.js");
 var SEEDANCE_FAMILY = {
@@ -32322,7 +32459,7 @@ var ELEVENLABS_KEY = { eleven_v4: "tts.elevenlabs" };
 var GEMINI_UNPRICED = "unit price unconfirmed (? in prices.tsv) \u2014 cost-report.sh flags the line instead of counting it as $0";
 function probeSeconds(file) {
   try {
-    const out = execFileSync2("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], {
+    const out = execFileSync3("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], {
       encoding: "utf8",
       timeout: 15e3,
       stdio: ["ignore", "pipe", "ignore"]
@@ -32350,6 +32487,24 @@ function priceOf(tool, args = {}) {
     const seconds = image ? null : typeof args.duration === "number" ? args.duration : tool === "astra_genai_msr" ? num(args.numFrames, 121) / num(args.frameRate, 24) : null;
     return { key: image ? "image.astra-genai" : "video.astra-genai", quantity: seconds, note: "Gateway pricing unverified; managed reservation is authoritative, not a measured bill" };
   }
+  if (tool.startsWith("ltx_api_")) {
+    const model2 = str(args.model, "ltx-2-5-pro"), tier = ltxApiTier(str(args.resolution, "1920x1080"));
+    if (!tier) return { key: null, quantity: null, note: "unlisted LTX API resolution" };
+    if (tool !== "ltx_api_audio2video") return { key: `ltx-api.${model2}.${tier}`, quantity: num(args.durationSeconds, 6) };
+    try {
+      return { key: `ltx-api.${model2}.${tier}`, quantity: ltxApiAudioSeconds(str(args.audioPath, "")), note: "billed on input audio seconds" };
+    } catch {
+      return { key: `ltx-api.${model2}.${tier}`, quantity: null, note: "audio length unreadable" };
+    }
+  }
+  if (tool.startsWith("minimax_"))
+    return {
+      key: `minimax.${str(args.model, "MiniMax-H3").toLowerCase()}.${str(args.resolution, "768P").toLowerCase()}`,
+      quantity: num(args.durationSeconds, 5),
+      note: "output seconds; input images past the free allowance are reserved separately"
+    };
+  if (tool.startsWith("heygen_"))
+    return { key: `heygen.${tool === "heygen_reference" ? "reference" : "image"}.${str(args.resolution, "768p")}`, quantity: num(args.durationSeconds, 5) };
   if (tool.startsWith("seedance_")) {
     const model2 = str(args.model, "dreamina-seedance-2-0-260128");
     const resolution2 = str(args.resolution, "720p");
@@ -33438,7 +33593,7 @@ import { createHash as createHash4, randomUUID as randomUUID2 } from "node:crypt
 import { readFileSync as readFileSync8, writeFileSync as writeFileSync5, renameSync as renameSync3, mkdirSync as mkdirSync3, existsSync as existsSync6 } from "node:fs";
 import { dirname as dirname5, resolve as resolve5, join as join6, relative as relative2 } from "node:path";
 import * as nodeModule4 from "node:module";
-import { execFileSync as execFileSync3 } from "node:child_process";
+import { execFileSync as execFileSync4 } from "node:child_process";
 
 // src/speech-acting.ts
 import * as nodeModule3 from "node:module";
@@ -33492,7 +33647,7 @@ var speechManageSchema = external_exports.object({
 var hash = (s) => createHash4("sha256").update(s).digest("hex");
 var object3 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
 function syncProductionClip(scene, boardDir, videoPath, oldClip, warnings) {
-  const duration2 = (file) => Number(execFileSync3(
+  const duration2 = (file) => Number(execFileSync4(
     "ffprobe",
     ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=duration", "-of", "default=nw=1:nk=1", file],
     { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }
@@ -33568,7 +33723,7 @@ function audioProvenanceStatus(line, character) {
 function measuredDuration(line) {
   if (!line.audio || !existsSync6(line.audio.path)) return null;
   try {
-    const value = Number(execFileSync3("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
+    const value = Number(execFileSync4("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
     return Number.isFinite(value) && value > 0 ? value : null;
   } catch {
     return null;
@@ -33839,7 +33994,7 @@ function manageSpeech(args) {
         scene.sound = { ...sound, audioSource: "speech" };
       } else if (!selected.length && sound.audioSource === "video") {
         try {
-          const streams = execFileSync3(
+          const streams = execFileSync4(
             "ffprobe",
             ["-v", "error", "-select_streams", "a", "-show_entries", "stream=index", "-of", "csv=p=0", videoPath],
             { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }
@@ -33912,7 +34067,13 @@ var schemas = {
   astra_text2video: astraText2VideoSchema,
   astra_img2video: astraImg2VideoSchema,
   astra_audio2video: astraAudio2VideoSchema,
-  astra_keyframe_video: astraKeyframeVideoSchema
+  astra_keyframe_video: astraKeyframeVideoSchema,
+  ltx_api_img2video: ltxApiImg2VideoSchema,
+  ltx_api_audio2video: ltxApiAudio2VideoSchema,
+  minimax_img2video: minimaxImg2VideoSchema,
+  minimax_reference: minimaxReferenceSchema,
+  heygen_img2video: heygenImg2VideoSchema,
+  heygen_reference: heygenReferenceSchema
 };
 function prepareVideoSound(tool, input, sound = {}) {
   const schema = schemas[tool];
@@ -33923,8 +34084,8 @@ function prepareVideoSound(tool, input, sound = {}) {
   if (new Set(ids).size !== ids.length) throw new Error("Effect ids must be unique within the shot");
   if (sound.audioSource !== void 0 && !["video", "speech"].includes(String(sound.audioSource)))
     throw new Error("sound.audioSource must be video or speech");
-  const fixedInput = ["astra_audio2video", "astra_genai_audio2video", "astra_genai_desktop_audio2video"].includes(tool);
-  if (tool === "astra_genai_msr" && sound.audioSource === "speech") throw new Error("MSR keeps its own soundtrack; sound.audioSource speech is not allowed");
+  const fixedInput = ["astra_audio2video", "astra_genai_audio2video", "astra_genai_desktop_audio2video", "ltx_api_audio2video"].includes(tool);
+  if (["astra_genai_msr", "minimax_reference", "heygen_reference"].includes(tool) && sound.audioSource === "speech") throw new Error(`${tool} keeps its own spoken soundtrack; sound.audioSource speech is not allowed`);
   let nativeAudio = !fixedInput && (tool !== "astra_genai_desktop_keyframes" || input.audio === true);
   if (tool.startsWith("seedance_")) {
     const model2 = input.model ?? DEFAULT_SEEDANCE_MODEL;
@@ -33954,7 +34115,7 @@ function prepareVideoSound(tool, input, sound = {}) {
   if (sound.sfx && resolved.some((effect) => effect.delivery !== "post" && effect.sfx === sound.sfx))
     throw new Error("The same effect cannot belong to the native/input soundtrack and the legacy post cue");
   const args = { ...input };
-  if ((native.length || conditioned.length || sound.audioSource === "video") && (tool.startsWith("seedance_") || tool.startsWith("astra_")) && !["astra_genai_audio2video", "astra_genai_msr"].includes(tool)) {
+  if ((native.length || conditioned.length || sound.audioSource === "video") && (tool.startsWith("seedance_") || tool.startsWith("astra_") || tool === "ltx_api_img2video") && !["astra_genai_audio2video", "astra_genai_msr"].includes(tool)) {
     if (input.generateAudio === false) throw new Error("Cannot discard the requested input soundtrack");
     if (!tool.startsWith("astra_genai_desktop_")) args.generateAudio = true;
   }
@@ -33978,13 +34139,14 @@ ${inputPrompt}`;
     tool,
     arguments: parsed,
     sound: { ...sound, ...audioSource ? { audioSource } : {}, effects: resolved },
-    capabilities: { nativeAudio, inputAudio: fixedInput ? tool === "astra_genai_desktop_audio2video" ? "conditioned_reencoded" : "preserved" : ["seedance_reference", "fasth3_omni_reference", "astra_genai_msr"].includes(tool) ? "reference" : "none" },
+    capabilities: { nativeAudio, inputAudio: fixedInput ? ["astra_genai_desktop_audio2video", "ltx_api_audio2video"].includes(tool) ? "conditioned_reencoded" : "preserved" : ["seedance_reference", "fasth3_omni_reference", "astra_genai_msr", "minimax_reference", "heygen_reference"].includes(tool) ? "reference" : "none" },
     warnings,
     review: "not_reviewed",
     generated: false
   };
 }
 export {
+  VENDOR_REFERENCE_TOOLS,
   VIDEO_ADAPTERS,
   astraAudio2VideoSchema,
   astraImg2VideoSchema,

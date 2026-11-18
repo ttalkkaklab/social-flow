@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { priceOf } from './usage-ledger.js';
 import { SEEDANCE_MODEL_SPECS } from './seedance-client.js';
+import { MINIMAX_MODELS } from './minimax-video.js';
 const PRICE_FILE = fileURLToPath(new URL('../../skills/autoproduce/references/prices.tsv', import.meta.url));
 const TOKEN_RATES = {
     'dreamina-seedance-2-5-260628': [10.7, 6.4, 11.7, 7],
@@ -41,9 +42,27 @@ export function quoteVideo(tool, args) {
             basis: 'BytePlus token rates checked 2026-10-18; padded pixel estimate and maximum reference duration; settle completion_tokens' };
     }
     const price = priceOf(tool, args);
-    const row = prices.split('\n').find(line => line.startsWith(price.key + '\t'))?.split('\t');
-    if (!row || !['official', 'derived', 'measured'].includes(row[3]) || price.quantity === null || !Number.isFinite(Number(row[2])))
+    const rate = (key) => {
+        const row = prices.split('\n').find(line => line.startsWith(key + '\t'))?.split('\t');
+        if (!row || !['official', 'derived', 'measured'].includes(row[3]) || !Number.isFinite(Number(row[2])))
+            throw new Error('Price unverified; no automatic zero-cost fallback');
+        return { usd: Number(row[2]), grade: row[3], note: row[4] };
+    };
+    if (price.quantity === null)
         throw new Error('Price unverified; no automatic zero-cost fallback');
-    const estimatedUsd = roundUp(Number(row[2]) * price.quantity);
-    return { estimatedUsd, reserveUsd: estimatedUsd, revision, basis: `${price.key}; ${row[3]}; ${price.note || row[4]}` };
+    const row = rate(price.key);
+    let estimatedUsd = row.usd * price.quantity, extra = '';
+    // MiniMax bills input pictures past its free allowance (first/last frames and references alike).
+    if (tool.startsWith('minimax_')) {
+        const model = String(args.model ?? 'MiniMax-H3');
+        const images = [args.sourceImagePath, args.lastImagePath].filter(Boolean).length + (Array.isArray(args.referenceImagePaths) ? args.referenceImagePaths.length : 0);
+        const paid = Math.max(0, images - (MINIMAX_MODELS[model]?.freeImages ?? 0));
+        if (paid) {
+            estimatedUsd += paid * rate(`minimax.${model.toLowerCase()}.image`).usd;
+            extra = `; ${paid} paid input image(s)`;
+        }
+    }
+    // Float sums (5 × 0.08 + 2 × 0.04) land a hair above the cent; trim that before rounding up.
+    estimatedUsd = roundUp(Math.round(estimatedUsd * 1e9) / 1e9);
+    return { estimatedUsd, reserveUsd: estimatedUsd, revision, basis: `${price.key}; ${row.grade}; ${price.note || row.note}${extra}` };
 }

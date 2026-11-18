@@ -12,7 +12,10 @@ import { config, disabledToolPatterns, disabledToolsFile, mlxServeConfigured } f
 import { resolveToolGate } from './tool-gate.js';
 import { framesForSeconds } from './astra-video-client.js';
 import { assessVideoDuration, DURATION_TOOLS, resolveVideoDuration } from './video-duration.js';
-import { VIDEO_ADAPTERS, parseVideoArgs } from './video-registry.js';
+import { VIDEO_ADAPTERS, VENDOR_REFERENCE_TOOLS, parseVideoArgs } from './video-registry.js';
+import { buildLtxApiBody, ltxApiImg2VideoSchema, ltxApiAudio2VideoSchema } from './ltx-api-video.js';
+import { buildMinimaxBody, minimaxImg2VideoSchema, minimaxReferenceSchema } from './minimax-video.js';
+import { checkHeygenInputs, heygenImg2VideoSchema, heygenReferenceSchema } from './heygen-video.js';
 import { SEEDANCE_MODEL_SPECS } from './seedance-client.js';
 import { quoteVideo, type VideoQuote } from './video-pricing.js';
 import { atomicJson, videoTransaction } from './video-state.js';
@@ -208,7 +211,8 @@ export function checkVideoEnvironment(tool: string): void {
   if (!gate.enabled) throw new Error('video_tool_disabled: ' + gate.reason);
   const engine = VIDEO_ADAPTERS[tool]?.engine;
   const ready = engine === 'seedance' ? Boolean(config.arkApiKey) : engine === 'astra' ? Boolean(config.astraVideoApiKey) :
-    ['astra-genai', 'astra-genai-desktop'].includes(engine) ? Boolean(config.astraGenaiApiKey) : engine === 'mlx' && mlxServeConfigured();
+    ['astra-genai', 'astra-genai-desktop'].includes(engine) ? Boolean(config.astraGenaiApiKey) : engine === 'ltx-api' ? Boolean(config.ltxApiKey) :
+    engine === 'minimax' ? Boolean(config.minimaxApiKey) : engine === 'heygen' ? Boolean(config.heygenApiKey) : engine === 'mlx' && mlxServeConfigured();
   if (!ready) throw new Error('video_provider_unconfigured: ' + engine);
 }
 export function planVideo(raw: unknown): VideoPlan {
@@ -237,6 +241,9 @@ export function planVideo(raw: unknown): VideoPlan {
   const operation = input.operation ?? (input.tool ? undefined : selection.operation);
   const tool = input.tool || selectedVideoTool(selection, operation);
   if (input.tool && input.operation && VIDEO_ADAPTERS[input.tool]?.operation !== input.operation) throw new Error('Tool and operation disagree');
+  // The hosted reference lanes take spoken shots only, as MSR does; silent and voiceover shots use the image lane.
+  if (tool && VENDOR_REFERENCE_TOOLS.includes(tool) && (!lines.length || lines.some(line => line.delivery === 'voiceover')))
+    throw new Error(`reference_speech_route: ${tool} renders a shot whose character speaks; plan silent and voiceover/inner-thought shots with operation:"image" and external timed TTS for voiceover; split mixed deliveries first`);
   const visual = context.shot.visual as { frames?: { mode?: string; start?: string }; references?: Array<Record<string, unknown>>; video?: { prompt?: unknown; promptSource?: VideoPromptSource } } | undefined;
   const silentPicture = !lines.some(line => line.delivery === 'on_screen' || line.delivery === 'off_screen');
   // Apply the standing MSR-to-I2V rule to old reference-frame boards without rewriting their media.
@@ -262,8 +269,10 @@ export function planVideo(raw: unknown): VideoPlan {
     ? compileVideoPrompt(shot, video.promptSource, names, { mode, measureAudio }) : undefined;
   const authored = compiled?.prompt ?? video?.prompt;
   let callArgs = input.args.prompt === undefined && typeof authored === 'string' ? { ...input.args, prompt: authored } : input.args;
-  if (tool === 'astra_genai_img2video' && silentPicture)
-    callArgs = { ...callArgs, generateAudio: false, prompt: [callArgs.prompt, 'No speech or vocalization. All visible mouths stay closed; perform the planned silent action.'].filter(Boolean).join(' ') };
+  // MiniMax and HeyGen always render a soundtrack, so only the prompt keeps their silent cuts silent.
+  if (['astra_genai_img2video', 'ltx_api_img2video', 'minimax_img2video', 'heygen_img2video'].includes(tool ?? '') && silentPicture)
+    callArgs = { ...callArgs, ...(['astra_genai_img2video', 'ltx_api_img2video'].includes(tool!) ? { generateAudio: false } : {}),
+      prompt: [callArgs.prompt, 'No speech or vocalization. All visible mouths stay closed; perform the planned silent action.'].filter(Boolean).join(' ') };
   const sourcePrompt = typeof video?.prompt === 'string' ? video.prompt : '';
   const direction = compiled ? { sourcePrompt, directionBindings: compiled.directionBindings, directionWarnings: compiled.warnings, performance: compiled.performance } :
     { sourcePrompt, directionWarnings: [input.args.prompt !== undefined ? 'Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons.' :
@@ -329,6 +338,13 @@ export function planVideo(raw: unknown): VideoPlan {
   if (tool === 'fasth3_omni_reference') buildFasth3Body(fasth3OmniSchema.parse(args));
   if (tool === 'astra_genai_msr') buildGenaiMsrBody(genaiMsrSchema.parse(args));
   if (tool === 'astra_genai_audio2video') buildGenaiAudioBody(genaiAudioToVideoSchema.parse(args));
+  // Vendor bodies are built once here so file types, sizes and sample lengths fail before money is reserved.
+  if (tool === 'ltx_api_img2video') buildLtxApiBody(ltxApiImg2VideoSchema.parse(args));
+  if (tool === 'ltx_api_audio2video') buildLtxApiBody(ltxApiAudio2VideoSchema.parse(args));
+  if (tool === 'minimax_img2video') buildMinimaxBody(minimaxImg2VideoSchema.parse(args));
+  if (tool === 'minimax_reference') buildMinimaxBody(minimaxReferenceSchema.parse(args));
+  if (tool === 'heygen_img2video') checkHeygenInputs(heygenImg2VideoSchema.parse(args));
+  if (tool === 'heygen_reference') checkHeygenInputs(heygenReferenceSchema.parse(args));
   if (tool === 'astra_video_retake' && selection.resolution) {
     const probe = JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'json', String(args.sourceVideoPath)], { encoding: 'utf8', timeout: 15_000 }));
     const stream = probe.streams?.[0];

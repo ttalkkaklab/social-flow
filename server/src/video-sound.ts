@@ -4,6 +4,9 @@ import { DESKTOP_SCHEMAS } from './astra-genai-desktop.js';
 import { z } from 'zod';
 import * as seedance from './seedance-client.js';
 import * as astra from './astra-video-client.js';
+import { ltxApiImg2VideoSchema, ltxApiAudio2VideoSchema } from './ltx-api-video.js';
+import { minimaxImg2VideoSchema, minimaxReferenceSchema } from './minimax-video.js';
+import { heygenImg2VideoSchema, heygenReferenceSchema } from './heygen-video.js';
 import { genaiTextToVideoSchema, genaiImageToVideoSchema, genaiAudioToVideoSchema, genaiMsrSchema } from './astra-genai-video.js';
 
 const effectSchema = z.object({
@@ -25,6 +28,9 @@ const schemas: Record<string, z.ZodTypeAny> = {
   astra_genai_audio2video: genaiAudioToVideoSchema, astra_genai_msr: genaiMsrSchema,
   astra_text2video: astra.astraText2VideoSchema, astra_img2video: astra.astraImg2VideoSchema,
   astra_audio2video: astra.astraAudio2VideoSchema, astra_keyframe_video: astra.astraKeyframeVideoSchema,
+  ltx_api_img2video: ltxApiImg2VideoSchema, ltx_api_audio2video: ltxApiAudio2VideoSchema,
+  minimax_img2video: minimaxImg2VideoSchema, minimax_reference: minimaxReferenceSchema,
+  heygen_img2video: heygenImg2VideoSchema, heygen_reference: heygenReferenceSchema,
 };
 
 export function prepareVideoSound(tool: string, input: Record<string, unknown>, sound: Record<string, unknown> = {}) {
@@ -36,9 +42,9 @@ export function prepareVideoSound(tool: string, input: Record<string, unknown>, 
   if (new Set(ids).size !== ids.length) throw new Error('Effect ids must be unique within the shot');
   if (sound.audioSource !== undefined && !['video', 'speech'].includes(String(sound.audioSource)))
     throw new Error('sound.audioSource must be video or speech');
-  const fixedInput = ['astra_audio2video', 'astra_genai_audio2video', 'astra_genai_desktop_audio2video'].includes(tool);
+  const fixedInput = ['astra_audio2video', 'astra_genai_audio2video', 'astra_genai_desktop_audio2video', 'ltx_api_audio2video'].includes(tool);
   // MSR dialogue lives only in MSR's own soundtrack; a TTS speech lane would replace it.
-  if (tool === 'astra_genai_msr' && sound.audioSource === 'speech') throw new Error('MSR keeps its own soundtrack; sound.audioSource speech is not allowed');
+  if (['astra_genai_msr', 'minimax_reference', 'heygen_reference'].includes(tool) && sound.audioSource === 'speech') throw new Error(`${tool} keeps its own spoken soundtrack; sound.audioSource speech is not allowed`);
   let nativeAudio = !fixedInput && (tool !== 'astra_genai_desktop_keyframes' || input.audio === true);
   if (tool.startsWith('seedance_')) {
     const model = input.model ?? seedance.DEFAULT_SEEDANCE_MODEL;
@@ -72,7 +78,7 @@ export function prepareVideoSound(tool: string, input: Record<string, unknown>, 
     throw new Error('The same effect cannot belong to the native/input soundtrack and the legacy post cue');
   const args = { ...input };
   // The genai audio-to-video soundtrack is always the supplied audio; it has no generateAudio switch.
-  if ((native.length || conditioned.length || sound.audioSource === 'video') && (tool.startsWith('seedance_') || tool.startsWith('astra_')) && !['astra_genai_audio2video', 'astra_genai_msr'].includes(tool)) {
+  if ((native.length || conditioned.length || sound.audioSource === 'video') && (tool.startsWith('seedance_') || tool.startsWith('astra_') || tool === 'ltx_api_img2video') && !['astra_genai_audio2video', 'astra_genai_msr'].includes(tool)) {
     if (input.generateAudio === false) throw new Error('Cannot discard the requested input soundtrack');
     if (!tool.startsWith('astra_genai_desktop_')) args.generateAudio = true;
   }
@@ -92,6 +98,6 @@ export function prepareVideoSound(tool: string, input: Record<string, unknown>, 
     warnings.push('Post effects need an asset and an observed shot-relative atSeconds before assembly.');
   if (native.length) warnings.push('Native audio is a mixed soundtrack. Do not overlay a second dialogue track; inspect missing or unwanted effects before acceptance.');
   return { tool, arguments: parsed, sound: { ...sound, ...(audioSource ? { audioSource } : {}), effects: resolved },
-    capabilities: { nativeAudio, inputAudio: fixedInput ? (tool === 'astra_genai_desktop_audio2video' ? 'conditioned_reencoded' : 'preserved') : ['seedance_reference', 'fasth3_omni_reference', 'astra_genai_msr'].includes(tool) ? 'reference' : 'none' },
+    capabilities: { nativeAudio, inputAudio: fixedInput ? (['astra_genai_desktop_audio2video', 'ltx_api_audio2video'].includes(tool) ? 'conditioned_reencoded' : 'preserved') : ['seedance_reference', 'fasth3_omni_reference', 'astra_genai_msr', 'minimax_reference', 'heygen_reference'].includes(tool) ? 'reference' : 'none' },
     warnings, review: 'not_reviewed', generated: false };
 }

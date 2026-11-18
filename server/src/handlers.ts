@@ -31,6 +31,10 @@ import * as qwen3asr from './qwen3-asr-client.js';
 import * as suno from './suno-client.js';
 import * as naver from './naver-client.js';
 import * as seedance from './seedance-client.js';
+import type { VendorResult } from './vendor-video.js';
+import { generateLtxApiVideo, ltxApiImg2VideoSchema, ltxApiAudio2VideoSchema } from './ltx-api-video.js';
+import { generateMinimaxVideo, minimaxImg2VideoSchema, minimaxReferenceSchema } from './minimax-video.js';
+import { generateHeygenVideo, heygenImg2VideoSchema, heygenReferenceSchema } from './heygen-video.js';
 import * as serp from './serp-client.js';
 import * as stock from './stock-client.js';
 import * as sns from './sns-client.js';
@@ -126,6 +130,10 @@ function elevenlabsMeta(result: {
   );
 }
 
+/** A vendor result as a tool result; terminal tells video_execute that no job is left running. */
+function vendorReport(result: VendorResult): ToolResult {
+  return result.success ? text(JSON.stringify(result)) : { ...text(result.error, true), terminal: result.terminal };
+}
 function seedanceMeta(result: {
   model?: string;
   ratio?: string;
@@ -1038,6 +1046,13 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   // The billed tokens (completionTokens) come back too — this value is the vendor's
   // billing basis, not a rate-sheet estimate, so per-episode cost tallies should
   // record this number.
+  // Hosted vendors through the common layer (vendor-video.ts).
+  ltx_api_img2video: async (args) => vendorReport(await generateLtxApiVideo(parseArgs(ltxApiImg2VideoSchema, args))),
+  ltx_api_audio2video: async (args) => vendorReport(await generateLtxApiVideo(parseArgs(ltxApiAudio2VideoSchema, args))),
+  minimax_img2video: async (args) => vendorReport(await generateMinimaxVideo(parseArgs(minimaxImg2VideoSchema, args))),
+  minimax_reference: async (args) => vendorReport(await generateMinimaxVideo(parseArgs(minimaxReferenceSchema, args))),
+  heygen_img2video: async (args) => vendorReport(await generateHeygenVideo(parseArgs(heygenImg2VideoSchema, args))),
+  heygen_reference: async (args) => vendorReport(await generateHeygenVideo(parseArgs(heygenReferenceSchema, args))),
   seedance_text2video: async (args) => {
     const result = await seedance.generateFromText(parseArgs(seedance.seedanceText2VideoSchema, args));
     if (!result.success) return { ...text(`Seedance video generation failed: ${result.error}`, true), terminal: result.terminal === true };

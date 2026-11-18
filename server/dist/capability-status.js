@@ -52,6 +52,12 @@ export function capabilityStatus() {
             providers: [
                 { provider: 'seedance (BytePlus ModelArk)', configured: has(config.arkApiKey), needs: 'ARK_API_KEY',
                     note: 'seedance_text2video · seedance_img2video · seedance_reference (Seedance 2.x; spoken cuts need seedance_reference with voice samples)' },
+                { provider: 'ltx-api (official LTX API)', configured: has(config.ltxApiKey), needs: 'LTX_API_KEY',
+                    note: 'ltx_api_img2video (silent cuts) · ltx_api_audio2video (pinned TTS track drives the clip); no voice sample input' },
+                { provider: 'minimax (MiniMax H3)', configured: has(config.minimaxApiKey), needs: 'MINIMAX_API_KEY',
+                    note: 'minimax_img2video (silent cuts) · minimax_reference (character panels, start image and voice sample; first frame not pinned)' },
+                { provider: 'heygen (HeyGen Video 1)', configured: has(config.heygenApiKey), needs: 'HEYGEN_API_KEY',
+                    note: 'heygen_img2video (silent cuts, first frame pinned) · heygen_reference (panels, start image, voice sample; first frame not pinned)' },
                 { provider: 'mlx-serve (local, MLX Core)', configured: mlx, needs: 'MLX Core.app or mlx-serve on PATH',
                     note: 'ltx_video_generate · fasth3_omni_reference — 24fps rgb8 muxed to mp4, RAM-capped; not the default path' },
                 { provider: 'astra-genai-desktop', configured: has(config.astraGenaiApiKey), needs: 'ASTRA_GENAI_API_KEY', note: 'Gateway text/image/audio video, extend/retake/keyframes; discover installed models and LoRA refs with astra_genai_catalog.' },

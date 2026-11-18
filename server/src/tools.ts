@@ -1,6 +1,7 @@
 import { TIKTOK_TOOLS } from './tiktok-tools.js';
 import { UPSCALE_TOOLS } from './video-upscale.js';
 import { zodToJsonSchema } from 'zod-to-json-schema';
+import type { z } from 'zod';
 import { fasth3OmniSchema } from './fasth3-omni.js';
 import { MUSIC_ADAPTERS } from './music-registry.js';
 import { MUSIC_TOOLS } from './music-tools.js';
@@ -43,6 +44,9 @@ import {
   VALID_SEEDANCE_RATIOS,
   VALID_SEEDANCE_RESOLUTIONS,
 } from './seedance-client.js';
+import { ltxApiImg2VideoSchema, ltxApiAudio2VideoSchema } from './ltx-api-video.js';
+import { minimaxImg2VideoSchema, minimaxReferenceSchema } from './minimax-video.js';
+import { heygenImg2VideoSchema, heygenReferenceSchema } from './heygen-video.js';
 import {
   DEFAULT_GEMINI_38_TTS_MODEL,
   DEFAULT_TTS_MODEL,
@@ -1050,7 +1054,7 @@ export const SERVER_INSTRUCTIONS = `social-flow plans, produces and publishes sh
 
 Start: \`capability_status\` shows which providers are configured on this machine; \`project_manage\` holds the saved project settings (models, visual style, ratio, SNS targets). Reuse saved choices instead of asking again.
 
-Episode video: \`video_catalog\` → \`video_plan\` → \`video_approve\` (the user's yes to that shot, or to every shot) → \`video_execute\`, and \`video_status\` after an interruption. The provider tools (seedance_*, astra_*, ltx_video_generate, fasth3_omni_reference) are the adapters that route calls; call one directly only when the user names it.
+Episode video: \`video_catalog\` → \`video_plan\` → \`video_approve\` (the user's yes to that shot, or to every shot) → \`video_execute\`, and \`video_status\` after an interruption. The provider tools (seedance_*, astra_*, ltx_video_generate, fasth3_omni_reference, ltx_api_*, minimax_*, heygen_*) are the adapters that route calls; call one directly only when the user names it.
 
 Storyboard: write the story first with \`story_sequence\` → \`story_scene\` → \`story_shot\`, then each shot's characters and lines with \`shot_characters\` → \`shot_dialogue\`, each scene's music decision with \`story_music\`, its icon attributes with \`shot_icons\`, its start (and first_last end) image with \`shot_image\`, its video prompt with \`shot_prompt\`; then \`storyboard_read\`, \`storyboard_apply\`, \`storyboard_check\`. Speech: \`speech_manage\` owns dialogue lines and audio bindings; \`tts_route\` and the tts_* tools generate. Review: \`host_review\` prepares media evidence and records the host's own observations; it never scores.
 
@@ -3830,7 +3834,7 @@ Returns JSON: status, missing fields, canonical paths, config and revision; epis
             models: { type: 'object', additionalProperties: false, description: 'Select video and check credentials, then image and check credentials, then decide whether TTS is needed. Use speech:{engine:"none"} to skip TTS; otherwise select speech and check credentials. Music is optional. Use capability_status and host schemas for availability.', properties: Object.fromEntries(['video', 'speech', 'image', 'music'].map(kind => [kind, {
               type: 'object', additionalProperties: false, description: `${kind} selection; fixed engines omit model, host uses host-managed.`,
               properties: {
-                engine: { type: 'string', enum: kind === 'video' ? ['host', 'seedance', 'astra', 'astra-genai', 'astra-genai-desktop', 'mlx'] : kind === 'speech' ? ['none', 'gemini', 'elevenlabs', 'astra-genai'] : kind === 'music' ? ['lyria', 'suno-api', 'elevenlabs', 'mlx'] : ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai', 'astra-genai-native'], description: 'Selected engine, e.g. host for an exposed host media tool.' },
+                engine: { type: 'string', enum: kind === 'video' ? ['host', 'seedance', 'astra', 'astra-genai', 'astra-genai-desktop', 'mlx', 'ltx-api', 'minimax', 'heygen'] : kind === 'speech' ? ['none', 'gemini', 'elevenlabs', 'astra-genai'] : kind === 'music' ? ['lyria', 'suno-api', 'elevenlabs', 'mlx'] : ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai', 'astra-genai-native'], description: 'Selected engine, e.g. host for an exposed host media tool.' },
                 model: { type: 'string', description: 'Supported model ID, e.g. host-managed. Omit for astra, zimage and speech engine none.' },
                 ...(!['speech', 'music'].includes(kind) ? { host: { type: 'string', description: 'Host CLI when engine is host, e.g. codex.' } } : {}),
                 ...(kind === 'video' ? { resolution: { type: 'string', description: 'Supported source resolution, e.g. 720p; MSR takes WIDTHxHEIGHT, e.g. 1792x1024.' },
@@ -5213,6 +5217,19 @@ TOOLS.push({ name: 'fasth3_omni_reference', title: 'Generate FastH3 Omni video f
   description: 'Create a FastH3 Omni video with sound from local references.\nUse for reference-to-video, character photos, motion clips and voice samples on Apple Silicon. Runs the installed MLX-Serve pack with eight steps; writes MP4 via ffmpeg. Inputs: up to nine PNG/JPEG images, three videos and three audio files, twelve total, with at least one image or video. Videos are decoded at 24 fps; unsupported tail lengths require explicit trimReferenceVideos:true. Video soundtracks precede standalone audio in <Audio N> numbering. Voice samples guide timbre; exact words, lip-sync and original audio preservation are not guaranteed. No cloud request, download or app launch.\nDo NOT use to inspect availability — use video_catalog; for LTX generation use ltx_video_generate. Returns success, local path, model, width/height, frames, fps, durationSeconds, hasAudio and elapsedSeconds; failures include error. Production output still needs playback review.',
   inputSchema: zodToJsonSchema(fasth3OmniSchema, { $refStrategy: 'none' }) as Tool['inputSchema'],
   annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false } });
+// Hosted vendors through the common layer (vendor-video.ts); episode calls go through video_plan.
+const vendorTool = (name: string, title: string, description: string, schema: z.ZodTypeAny): Tool => ({ name, title,
+  description: description + ' Billed by the vendor per output second (audio-to-video: per input audio second). Returns the local MP4 path, the vendor job ID and reported duration; failures say whether a job may still be running. Do NOT resubmit a request whose job may still be running; inspect video_status first. Production output still needs playback review.',
+  inputSchema: zodToJsonSchema(schema, { $refStrategy: 'none' }) as Tool['inputSchema'],
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true } });
+TOOLS.push(
+  vendorTool('ltx_api_img2video', 'Generate an LTX API video from a start frame', 'Create a clip with the official hosted LTX API (LTX_API_KEY) from a first frame and an optional last frame. For cuts no character speaks in; 6, 8 or 10 seconds (Fast at 720p/1080p: up to 20). Do NOT use for spoken cuts — use ltx_api_audio2video with the pinned voice track.', ltxApiImg2VideoSchema),
+  vendorTool('ltx_api_audio2video', 'Generate an LTX API video from a voice track', 'Create a clip with the official hosted LTX API whose length and speech follow a supplied audio track (2–10 s; Fast at 720p/1080p up to 20 s) from a first frame. The supplied voice lane: pass the composed pinned-voice WAV. Do NOT use for silent cuts — use ltx_api_img2video.', ltxApiAudio2VideoSchema),
+  vendorTool('minimax_img2video', 'Generate a MiniMax H3 video from frames', 'Create a MiniMax H3 clip (MINIMAX_API_KEY) from a first frame and an optional last frame, 4–15 s, native audio always on. For cuts no character speaks in. Do NOT use for spoken cuts — use minimax_reference with the speaker\'s voice sample.', minimaxImg2VideoSchema),
+  vendorTool('minimax_reference', 'Generate a MiniMax H3 video from references', 'Create a MiniMax H3 clip from reference pictures (character panels, the start image last) and voice samples; the prompt names them "reference image N" and "reference audio N". The first frame is not pinned. Do NOT use for silent cuts — use minimax_img2video.', minimaxReferenceSchema),
+  vendorTool('heygen_img2video', 'Generate a HeyGen Video 1 clip from frames', 'Create a HeyGen Video 1 clip (HEYGEN_API_KEY) that opens exactly on the first frame, with an optional end image, 5–15 s, native audio always on. Files upload to HeyGen assets first. For cuts no character speaks in. Do NOT use for spoken cuts — use heygen_reference.', heygenImg2VideoSchema),
+  vendorTool('heygen_reference', 'Generate a HeyGen Video 1 clip from references', 'Create a HeyGen Video 1 clip from reference pictures (<Picture N>, the start image last) and voice samples (<Audio N>). The first frame is not pinned, and the voice-sample behaviour is documented only by secondary sources. Do NOT use for silent cuts — use heygen_img2video.', heygenReferenceSchema),
+);
 
 
 // New generations can state the coverage needed; exact legacy requests keep their schema.
