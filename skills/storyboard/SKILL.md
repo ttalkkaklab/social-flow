@@ -55,6 +55,13 @@ motives and the channel's text policy; the opening incident need not reveal the 
 When the episode makes a claim instead of resolving a relationship (explainer, tutorial,
 review, advertisement), follow the reference's claim-led section: one result promised in the
 viewer's words and said aloud, proof the viewer can check on screen, then someone using it.
+**Opening by format and platform (user directive, 2026-11-18):** then place that promise with
+[opening by format](references/opening-by-format.md). Read the board `FORMAT` and the enabled
+SNS platforms first. Short-form gets one opening for every platform, built for the earliest
+window (Reels, 3 s): the first frame shows the subject already changed or mid-action and the
+promise is complete by about 3 s. Long-form decides its title and thumbnail first; the first
+7 s confirm them and the next 20 s open a bigger question. Record the plan with
+`story_sequence` `opening`; every board write prints a reading of it and refuses nothing.
 
 **Production order (user directive, 2026-10-31):** Follow [production order](../_shared/production-workflow.md).
 Only the story order is enforced; context, camera, image and video reviews and Blender
@@ -207,7 +214,10 @@ what each scene ends on. These are choices to make on purpose, not devices to ad
 told in order with no twist is valid, and an explainer needs no manufactured opponent.
 Before presenting the synopsis, trace its opening question, the evidence or attempts that
 change the audience's guess, the actual resolution and the response it enables. State the
-ending in the author-facing synopsis. Repair a middle that only postpones the same answer;
+ending in the author-facing synopsis. Give the opening its own paragraph: format and
+platforms, first frame, the promise and where it is paid, and on long-form the title,
+thumbnail and the bigger question by 30 s ([opening by format](references/opening-by-format.md#7-write-it-down-and-read-it-back)).
+Repair a middle that only postpones the same answer;
 do not hide the missing progression behind a teaser or an emotion label. Use ordinary prose
 or existing expectation/change/setup notes, not an added planning schema.
 For a claim-led synopsis the same trace reads: the result promised, the proof and where it

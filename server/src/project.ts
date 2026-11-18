@@ -12,7 +12,7 @@ export function manageProject(args: unknown): Record<string, unknown> {
   return project.manageProject(args);
 }
 
-type Handoff = { FORMAT?: string; PRODUCTION?: Record<string, unknown>; LANGUAGES?: { speech?: string } };
+type Handoff = { FORMAT?: string; PRODUCTION?: Record<string, unknown>; LANGUAGES?: { speech?: string }; sns?: Record<string, { enabled?: boolean }> };
 /** The new-board handoff (FORMAT, PRODUCTION, LANGUAGES) from an episode's saved snapshot, or undefined when it has none. */
 export function episodeHandoff(episode: string): Handoff | undefined {
   const file = join(episode, '.work/model-settings.json');

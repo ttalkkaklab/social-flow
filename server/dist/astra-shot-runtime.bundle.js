@@ -33460,7 +33460,14 @@ var storySequenceSchema = external_exports.object({
     purpose: nonEmpty.describe("The one purpose that binds its scenes"),
     question: nonEmpty.optional().describe("The question this stretch opens: a dramatic one, or on a claim-led episode whether the promised result is real"),
     payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question or shows the proof")
-  }).strict()).min(1)
+  }).strict()).min(1),
+  opening: external_exports.object({
+    promise: nonEmpty.describe("What the opening commits to, in the viewer's words: the event, doubt or result the episode then pays"),
+    firstFrame: nonEmpty.describe("What the first picture shows at 0 s: the subject already in its changed state or mid-action"),
+    title: nonEmpty.optional().describe("Long-form: the title the first 30 s confirms"),
+    thumbnail: nonEmpty.optional().describe("Long-form: the thumbnail picture the first 30 s confirms"),
+    widen: nonEmpty.optional().describe("Long-form: the question bigger than the packaging, opened before 30 s")
+  }).strict().optional().describe("The opening plan, recorded as STORY.opening; a new value replaces the old one")
 }).strict();
 var storySceneSchema = external_exports.object({
   path: outlinePath,

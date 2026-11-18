@@ -95,6 +95,23 @@ shot's stored length holds. This reports and never refuses. It is writing guidan
 the proof: on the one channel studied the earliest proof had the fewest views. Evidence and
 its limits: `docs/research/2026-11-18-promise-and-proof/README.md`.
 
+## Opening by format and platform (user directive, 2026-11-18)
+
+Every new or substantially revised synopsis and storyboard plans its opening for the board's
+format and the enabled SNS platforms, and the author chooses the best practice without asking.
+Short-form posts one opening to every platform, built for the earliest published window (the
+Reels skip rate, 3 s): the first frame shows the subject already changed or mid-action, a
+spoken promise, when a line carries it, starts at once (inside the first second is the research's
+inference; 3 s is the measured window) and is complete by about 3 s, and the line names
+what the frame shows, since nothing is drawn over video. Per-platform first cuts are not made;
+platforms differ in title, caption and cover, which carry the same promise. Long-form decides
+the title and thumbnail first; the first 7 s confirm them and the next 20 s open a bigger
+question (YouTube's Intro reads who is still watching at 30 s). The synopsis gives the opening
+its own paragraph, `story_sequence` records it as `STORY.opening`, and every story-first board
+write prints a reading of it against the format and platforms. This reports and never refuses;
+it is writing guidance, not a score. Follow `skills/storyboard/references/opening-by-format.md`.
+Evidence and its limits: `docs/research/2026-11-18-opening-hooks/`.
+
 ## TikTok private upload and cover (user directive, 2026-11-18)
 
 Every new TikTok publication starts private (Only you / SELF_ONLY). Edit and save

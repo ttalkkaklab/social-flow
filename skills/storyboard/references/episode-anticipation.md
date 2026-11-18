@@ -38,7 +38,8 @@ telling; do not impose it on every channel or factual format. Read channel guide
 choosing the opening and distinguish the incident from the explanation of its motive.
 
 - **Open on the event.** Put the surprising invitation, accusation, refusal or discovery
-  in the first roughly three seconds when it can be performed naturally. Let the listener's
+  in the first roughly three seconds when it can be performed naturally; on long-form, inside
+  the first seven seconds that confirm the title and thumbnail ([opening by format](opening-by-format.md#6-story-led-and-claim-led-openings)). Let the listener's
   visible shock, hesitation or return question finish the opening before the time jump.
   Do not rush two speakers into three seconds or replace the reaction with an author note.
 - **Orient the rewind.** Work out the real chronology first. An “eight hours earlier”
@@ -131,7 +132,10 @@ stay with [narration and visual grounding](narration-visual-grounding.md) and
   carries one promise. A list of eight genres and four features gives the viewer nothing
   particular to wait for; pick the case that shows the claim and follow it through.
 - **Say it.** Nothing is drawn over video here, so the first spoken line carries the promise;
-  a title card or a caption cannot. Write that line before the shots and keep silent setup in
+  a title card or a caption cannot. When the line carries the promise, short-form starts it
+  inside the first second and finishes it by about 3 s; long-form says it inside the 0–7 s
+  that confirm the title
+  ([opening by format](opening-by-format.md#6-story-led-and-claim-led-openings)). Write that line before the shots and keep silent setup in
   front of it short. Once the shots before it have lengths, every board write prints when the
   first spoken line starts (below).
 - **The viewer's trouble can come first.** When the subject removes an annoyance the viewer

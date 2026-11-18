@@ -50,6 +50,12 @@ adding a score gate or forcing a twist. Standalone stories resolve within their 
 For channels choosing a provocative opening followed by a rewind, that pass carries the
 opening event and recipient reaction into enacted earlier context, a clear time jump and
 one catch-up. It preserves held motives, user-scoped time labels and the eventual payoff.
+[Opening by format](skills/storyboard/references/opening-by-format.md) then places the promise
+for the board's format and enabled platforms: one short-form opening built for the earliest
+window (Reels, 3 s), or on long-form the title and thumbnail first and a first 30 s that
+confirms and widens them. `story_sequence` records it as `STORY.opening`, and every story-first
+board write prints a reading of it without refusing anything
+([research](docs/research/2026-11-18-opening-hooks/index.html)).
 For an episode that makes a claim (explainer, tutorial, review, advertisement) the same pass
 asks for one result promised in the viewer's words and said aloud, proof the viewer can check
 on screen and an ending where someone uses it. `sequence.question`/`payoff` hold the doubt and
