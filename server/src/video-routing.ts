@@ -63,18 +63,21 @@ function shotVideoTiming(context: Context, tool: string, args: Record<string, un
   }
   if (args.requiredSeconds !== undefined && (typeof args.requiredSeconds !== 'number' || !Number.isFinite(args.requiredSeconds) || args.requiredSeconds <= 0))
     throw new Error('requiredSeconds must be finite positive seconds');
-  const required = coverage || args.requiredSeconds !== undefined
-    ? Math.max(coverage?.requiredSeconds ?? 0, args.requiredSeconds as number ?? 0) : undefined;
+  const speech = VIDEO_ADAPTERS[tool]?.voice === 'reference' &&
+    (shot.narration as Array<{ delivery?: string }> | undefined)?.some(line => line.delivery !== 'voiceover')
+    ? nativeSpeechTiming(shot, (context.board.STORY as { language?: unknown } | undefined)?.language) : undefined;
+  const required = coverage || args.requiredSeconds !== undefined || speech
+    ? Math.max(coverage?.requiredSeconds ?? 0, args.requiredSeconds as number ?? 0, speech?.estimatedSeconds ?? 0) : undefined;
   return { ...assessVideoDuration(tool, args, required), basis: 'planned' as const, coverage,
+    ...(speech ? { speech } : {}),
     note: 'Fit of authored source coverage, not measured performance or generated output. Recheck after speech/action timing or generation changes.' };
 }
 
 /**
- * A natively voiced clip plays exactly the requested length, and the model spends whatever the
- * lines and timed actions do not fill on silent acting, mostly before the line (299 MSR clips
- * measured 2026-11-16: half of each clip was silence around its line). A report, never a refusal.
+ * Estimate the complete performance before selecting a native-speech duration.
+ * Uncalibrated language rates remain estimates; generated dialogue still needs review.
  */
-function nativeSpeechFit(shot: Record<string, unknown>, requestedSeconds: number, limits: NonNullable<ReturnType<typeof assessVideoDuration>['limits']>, language?: unknown) {
+function nativeSpeechTiming(shot: Record<string, unknown>, language?: unknown) {
   const acting = load(fileURLToPath(new URL('../../skills/_shared/scene-acting.js', import.meta.url))) as {
     planScenePerformance(shot: unknown, duration: (line: { tts?: string }) => number | null): { durationSeconds: number | null };
     estimateSpeech(text: unknown, language?: unknown): { seconds: number; calibrated: boolean } | null;
@@ -89,6 +92,14 @@ function nativeSpeechFit(shot: Record<string, unknown>, requestedSeconds: number
   } catch { return undefined; }
   // An untimed standalone action or a line with nothing to say leaves the clock open: nothing to compare.
   if (estimatedSeconds === null || !(estimatedSeconds > 0)) return undefined;
+  return { estimatedSeconds, ...(unmeasuredRate ? { speechRate: 'uncalibrated' as const } : {}) };
+}
+
+function nativeSpeechFit(shot: Record<string, unknown>, requestedSeconds: number, limits: NonNullable<ReturnType<typeof assessVideoDuration>['limits']>, language?: unknown) {
+  const timing = nativeSpeechTiming(shot, language);
+  if (!timing) return undefined;
+  const { estimatedSeconds, speechRate } = timing;
+  const unmeasuredRate = speechRate === 'uncalibrated';
   let shortest: { requestedSeconds: number; numFrames?: number; durationSeconds?: number };
   try { shortest = load(fileURLToPath(new URL('../../skills/_shared/video-duration.js', import.meta.url))).minimumDuration(estimatedSeconds, limits); }
   catch { return undefined; }
