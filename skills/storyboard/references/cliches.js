@@ -145,7 +145,8 @@ function pick(options = {}) {
   };
 }
 
-const useName = use => Number.isInteger(use.id) ? `#${use.id}${use.name ? ` ${use.name}` : ''}` : `"${use.name}"`;
+// A hand-edited entry can carry anything as its name; only text is printed.
+const useName = use => { const name = typeof use.name === 'string' ? use.name.trim() : ''; return Number.isInteger(use.id) ? `#${use.id}${name ? ` ${name}` : ''}` : `"${name}"`; };
 
 /** A board's cliché record, read safely: a hand-edited block yields what can be read. */
 function record(board) {
@@ -215,7 +216,8 @@ function earlierUses(episodesDir, except) {
     if (path.resolve(dir) === skip || !fs.existsSync(file)) continue;
     try {
       const win = evaluateWindowScript(fs.readFileSync(file, 'utf8'), { filename: file });
-      for (const use of record(win).uses) if (!use.offered && Number.isInteger(use.id)) out.push({ id: use.id, name: use.name, episode: entry.name });
+      for (const use of record(win).uses)
+        if (!use.offered && Number.isInteger(use.id)) out.push({ id: use.id, ...(typeof use.name === 'string' ? { name: use.name } : {}), episode: entry.name });
     } catch { /* skipped */ }
   }
   return out;

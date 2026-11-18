@@ -2431,8 +2431,9 @@ window.STORYBOARD_READY = (async function () {
      whether it is in the story or only recommended. Display only; an entry the page cannot read
      is skipped rather than stopping the board. */
   var CLICHES = window.CLICHES && typeof window.CLICHES === "object" && !Array.isArray(window.CLICHES) ? window.CLICHES : null;
+  function clicheId(u) { return typeof u.id === "number" && isFinite(u.id) && u.id > 0 ? "#" + u.id + " " : ""; }
   var clicheUses = CLICHES && Array.isArray(CLICHES.uses) ? CLICHES.uses.filter(function (u) {
-    return u && typeof u === "object" && (typeof u.id === "number" || (typeof u.name === "string" && u.name.trim())); }) : [];
+    return u && typeof u === "object" && (clicheId(u) || (typeof u.name === "string" && u.name.trim())); }) : [];
   function clicheChip(u) {
     var C = T.cliche, tags = [];
     if (typeof u.need === "string" && Object.prototype.hasOwnProperty.call(C.need, u.need)) tags.push(C.need[u.need]);
@@ -2440,7 +2441,7 @@ window.STORYBOARD_READY = (async function () {
     if (u.caution) tags.push(C.caution);
     if (u.quote) tags.push(C.quote);
     return '<span class="cliche-chip' + (u.offered ? " offered" : "") + (u.caution ? " caution" : "") + '"><b>' +
-      (typeof u.id === "number" ? esc("#" + u.id + " ") : "") + copy(typeof u.name === "string" ? u.name : "") + "</b> <small>" +
+      esc(clicheId(u)) + copy(typeof u.name === "string" ? u.name : "") + "</b> <small>" +
       esc(tags.join(" · ")) + "</small>" +
       (typeof u.shift === "string" && u.shift.trim() ? ' <span class="cliche-shift">' + esc(C.shift) + " — " + copy(u.shift) + "</span>" : "") + "</span>";
   }

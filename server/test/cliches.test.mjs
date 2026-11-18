@@ -102,6 +102,7 @@ test('a board record reads as undecided, used, offered or none, and the digest p
   // A hand-edited block reads as what can be read instead of throwing.
   assert.equal(C.reading({ CLICHES: 'yes' }).tracked, false);
   assert.equal(C.reading({ CLICHES: { uses: 'all' }, STRUCTURE: { scenes: 'x' } }).decision, 'undecided');
+  assert.deepEqual(C.digest({ CLICHES: { uses: [{ id: 2, name: 7, scenes: 'x' }] } }), ['clichés: 1 in the story (#2)']);
 });
 
 test("earlier episodes' applied clichés are found, and the picker CLI leaves them out", (t) => {
