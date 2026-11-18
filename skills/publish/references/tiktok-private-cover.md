@@ -12,6 +12,12 @@ do not delete or re-upload an existing post to apply this workflow retroactively
 2. Inspect the clean final video, caption and intended cover. Keep faces and text
    within the profile preview crop, including a centered 3:4 crop when shown.
    Do not confuse a 9:16 source image with its cropped profile presentation.
+   The intended cover is `episode_cover read` → `publish.tiktok` when the episode has a
+   rendered one ([generate-cover](../../generate-cover/SKILL.md)); its `grid-3x4` preview
+   shows the profile crop. TikTok's API takes only a frame time (`coverTimestampMs`), so the
+   image goes up here, in the cover editor. Once a saved cover is checked, compare its size
+   with `tiktokSavedRatio` in `formats.js` (`cover.unverified`) and correct that value if
+   Studio stores 3:4.
 3. In Studio select **Only you** before submitting the upload. Keep required AI
    and commercial disclosures truthful. If the interface cannot combine the
    required disclosure with private visibility, stop before submission and report

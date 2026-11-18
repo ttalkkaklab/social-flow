@@ -150,6 +150,18 @@ const FORMATS = {
     introAsset: 'intro-master.mp4',
     stingerAsset: 'intro-stinger.mp4',
 
+    // The episode cover episode_cover renders (docs/research/2026-11-18-thumbnail-best-practices).
+    // Bands are fractions of the canvas: core = the centre 16:9 slice (Shorts landscape surfaces),
+    // support = the centre 1:1 (Instagram feed share), outer = the centre 3:4 (profile grids).
+    // unverified holds platform facts nobody has measured on a live account yet; change the value
+    // once one is, and episode_cover read shows the current value every time.
+    cover: {
+      canvases: [{ id: '9x16', w: 2160, h: 3840, min: [1080, 1920] }],
+      bands: { core: { y0: 0.342, y1: 0.658 }, support: { y0: 0.219, y1: 0.781 }, outer: { y0: 0.125, y1: 0.875 }, x: { x0: 0.06, x1: 0.94 } },
+      copyMax: { words: 3, chars: 8 },
+      unverified: { shortsLandscapeCrop: '3:2', tiktokSavedRatio: '9:16' },
+    },
+
     outputs: ['reel.mp4', 'cover.jpg'],
     optionalOutputs: ['subs.srt', 'subs.ass'],
     platforms: ['youtube', 'instagram', 'threads', 'facebook'],
@@ -299,6 +311,18 @@ const FORMATS = {
     outroAsset: 'outro-16x9.mp4',
     introAsset: 'intro-master-16x9.mp4',
     stingerAsset: 'intro-stinger-16x9.mp4',
+
+    // The long-form thumbnail episode_cover renders. badge is the duration badge's corner
+    // (from x0, y0 to the right and bottom edges; vendor estimates, YouTube publishes none),
+    // bottom the progress-bar strip below it.
+    cover: {
+      canvases: [{ id: '16x9', w: 3840, h: 2160, min: [1920, 1080] }],
+      badge: { x0: 0.8, y0: 0.85 },
+      bottom: 0.95,
+      x: { x0: 0.04, x1: 0.96 },
+      copyMax: { words: 4, chars: 12 },
+      unverified: {},
+    },
 
     outputs: ['reel.mp4', 'cover.jpg', 'thumbnail.jpg'],
     optionalOutputs: ['subs.srt', 'subs.ass'],

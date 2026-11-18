@@ -86,6 +86,38 @@ test('Facebook reel: a processing error after finish fails; a slow one is accept
   assert.match(JSON.parse(slow.body).processingWarning, /do not publish again/);
 });
 
+test('Facebook video cover: checked before posting, and a failed cover step keeps the post', async t => {
+  snsToken(t, 'FACEBOOK', 'fb-thumb');
+  const dir = mkdtempSync(join(tmpdir(), 'fb-thumb-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const cover = join(dir, 'cover.jpg');
+  writeFileSync(cover, Buffer.from([0xff, 0xd8, 0xff, 0xd9]));
+  const calls = [];
+  t.mock.method(globalThis, 'fetch', async (url, options = {}) => {
+    const u = new URL(url);
+    calls.push(u.pathname);
+    if (u.pathname.endsWith('/me')) return Response.json({ id: '12' });
+    if (u.pathname.endsWith('/videos')) return Response.json({ id: '345' });
+    if (u.pathname.endsWith('/thumbnails')) {
+      assert.equal(options.body.get('is_preferred'), 'true');
+      assert.equal(options.body.get('source').type, 'image/jpeg');
+      return Response.json({ error: { message: 'Invalid image' } }, { status: 400 });
+    }
+    return Response.json({ permalink_url: 'https://facebook.com/345' });
+  });
+  const tooBig = join(dir, 'big.png');
+  writeFileSync(tooBig, Buffer.alloc(10 * 1024 * 1024 + 1));
+  const refused = await publishFacebook({ caption: 'x', videoUrl: 'https://cdn.example/ep.mp4', thumbnailFilePath: tooBig, channel: 'fb-thumb' });
+  assert.equal(refused.ok, false);
+  assert.equal(calls.length, 0);
+  const res = await publishFacebook({ caption: 'x', videoUrl: 'https://cdn.example/ep.mp4', thumbnailFilePath: cover, channel: 'fb-thumb' });
+  const body = JSON.parse(res.body);
+  assert.equal(res.ok, true);
+  assert.deepEqual([body.postId, body.thumbnailSet], ['345', false]);
+  assert.match(body.thumbnailWarning, /Invalid image/);
+  assert.ok(calls.some(p => p.endsWith('/345/thumbnails')));
+});
+
 test('Instagram reel sends cover and feed options and reports the ERROR container reason', async t => {
   snsToken(t, 'INSTAGRAM', 'ig-test');
   let created;

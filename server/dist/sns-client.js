@@ -766,6 +766,25 @@ export async function publishFacebook(input, opts) {
             return caption.error;
         captionFiles.push({ bytes: caption.bytes, locale: captionInput.locale });
     }
+    // The cover is checked before the post exists, like the captions: a bad file found afterwards cannot stop a public post.
+    let thumb;
+    if (input.thumbnailFilePath) {
+        if (!input.videoUrl)
+            return fail(400, 'thumbnailFilePath requires videoUrl (a thumbnail belongs to a video)');
+        const mimeType = YT_THUMB_MIME_BY_EXT[extname(input.thumbnailFilePath).toLowerCase()];
+        if (!mimeType)
+            return fail(400, `Unsupported thumbnail extension: ${input.thumbnailFilePath} (.jpg/.jpeg/.png)`);
+        let bytes;
+        try {
+            bytes = await readFile(input.thumbnailFilePath);
+        }
+        catch (e) {
+            return fail(400, `Cannot read thumbnail file: ${e instanceof Error ? e.message : String(e)}`);
+        }
+        if (bytes.byteLength > FB_THUMB_MAX_BYTES)
+            return fail(400, `Thumbnail exceeds 10MB: ${input.thumbnailFilePath} (${bytes.byteLength} bytes)`);
+        thumb = { bytes, mimeType };
+    }
     const { token, error } = await loadTokenFile('FACEBOOK', input.channel);
     if (!token)
         return error;
@@ -841,6 +860,8 @@ export async function publishFacebook(input, opts) {
             captionWarnings.push(`${file.locale}: ${warning}`);
     }
     const captionWarning = captionWarnings.length > 0 ? captionWarnings.join('; ') : undefined;
+    // Like the captions, a failed cover leaves a valid public post: warn, never republish.
+    const thumbnailWarning = thumb ? await setFacebookThumbnail(token, videoId ?? postId, thumb) : undefined;
     const permalink = await graphRequest('get', `${FB_BASE}/${videoId ?? postId}`, {
         fields: 'permalink_url',
         access_token: token,
@@ -856,7 +877,31 @@ export async function publishFacebook(input, opts) {
             ? { captionSet: !captionWarning, captionLocales: captionFiles.map((f) => f.locale) }
             : {}),
         ...(captionWarning ? { captionWarning } : {}),
+        ...(thumb ? { thumbnailSet: !thumbnailWarning } : {}),
+        ...(thumbnailWarning ? { thumbnailWarning } : {}),
     });
+}
+/** Facebook takes a custom video thumbnail up to 10MB (Graph API Video Thumbnails reference). */
+const FB_THUMB_MAX_BYTES = 10 * 1024 * 1024;
+/**
+ * POST /{video-id}/thumbnails with `source` and `is_preferred=true` (Page videos; whether a Reel
+ * uploaded through /video_reels takes it is unverified). Returns a warning, or undefined on success.
+ */
+async function setFacebookThumbnail(token, videoId, thumb) {
+    const form = new FormData();
+    form.set('access_token', token);
+    form.set('is_preferred', 'true');
+    form.set('source', new Blob([new Uint8Array(thumb.bytes.buffer, thumb.bytes.byteOffset, thumb.bytes.byteLength)], { type: thumb.mimeType }), thumb.mimeType === 'image/png' ? 'cover.png' : 'cover.jpg');
+    try {
+        const res = await fetch(`${FB_BASE}/${videoId}/thumbnails`, { method: 'POST', body: form, signal: AbortSignal.timeout(60_000) });
+        const body = await res.text();
+        if (res.ok && !parseJson(body)?.error)
+            return undefined;
+        return `thumbnails ${res.status}: ${body.slice(0, 300)} — the post stands; set the cover in Meta Business Suite instead of publishing again`;
+    }
+    catch (e) {
+        return `thumbnail upload failed: ${e instanceof Error ? e.message : String(e)} — the post stands; set the cover in Meta Business Suite instead of publishing again`;
+    }
 }
 /** Comment on our own post as the page — for the "source link goes in the first comment" platform rule (scope: pages_manage_engagement). */
 export async function commentFacebook(input) {

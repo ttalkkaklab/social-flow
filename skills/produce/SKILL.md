@@ -1208,7 +1208,7 @@ and the link URL only. The link slot is the IG reels permalink, whose value isn'
 publish time — leave a placeholder like `<IG_REELS_URL>` in `post.md` and let publish fill in
 the real URL. Save each under `output/<platform>/`, and finalize the video and cover with
 `cp .work/reel-fast.mp4 output/video/video.mp4` ·
-`cp .work/cover.jpg output/video/cover.jpg` ·
+`cp .work/cover.jpg output/video/cover.jpg` (not when `output/cover/render.json` exists — [generate-cover](../generate-cover/SKILL.md) owns it) ·
 `cp .work/build-report.txt output/video/` ·
 `cp .work/delivery-proof.json output/video/` (publish checks the final files against these
 hashes; an ad hoc export or stale copy cannot substitute for the checked assembly).

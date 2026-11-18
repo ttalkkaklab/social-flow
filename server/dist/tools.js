@@ -450,6 +450,8 @@ const FACEBOOK_PUBLISH_OUTPUT = {
             type: 'string',
             description: 'Reason when only the caption upload failed, prefixed per locale ("en_US: …"). The post itself succeeded, so do not re-publish — the video may still have been processing, so retry just the failed locales shortly',
         },
+        thumbnailSet: { type: 'boolean', description: 'Only when thumbnailFilePath was given — whether the cover was set' },
+        thumbnailWarning: { type: 'string', description: 'Reason when only the cover step failed. The post succeeded, so do not re-publish — set the cover in Meta Business Suite' },
     },
     required: ['platform', 'postId'],
 };
@@ -4057,6 +4059,7 @@ Returns: integer credit balance.`,
                 linkUrl: { type: 'string', format: 'uri', description: '(Exception only) link attachment — text posts (no media) only. The default rule is to put the link in the first comment via facebook_comment' },
                 reel: { type: 'boolean', description: 'With videoUrl: publish as a Facebook Page Reel instead of a regular Page video. Use for 9:16 shorts of 3–90 seconds only — Meta refuses a longer Reel (1363128), so a longer master goes without reel. The video URL must be public and fetchable by facebookexternalhit. If the result carries processingWarning the Reel was accepted — check the Page, never call again' },
                 isAiGenerated: { type: 'boolean', description: 'Reels only (reel: true) — Meta AI-usage self-disclosure (is_ai_generated). Generated Mochi & Bơ episodes pass true' },
+                thumbnailFilePath: { type: 'string', description: 'With videoUrl: **local** absolute path of the cover (.jpg/.png ≤10MB, same aspect ratio as the video — episode_cover read gives it). Checked before posting and set right after through POST /{video-id}/thumbnails with is_preferred. If only this step fails the post stands and thumbnailWarning says so — set the cover in Meta Business Suite, never publish again. Whether a Reel (reel: true) takes it is unverified' },
                 channel: SNS_CHANNEL_PROPERTY,
             },
             required: ['caption'],
@@ -4650,6 +4653,49 @@ Returns: the file written or not, counts, and findings (! violation · warning).
                         } } },
             },
             required: ['path', 'shots'],
+        },
+    },
+    {
+        name: 'episode_cover',
+        title: 'Choose and render the episode cover and thumbnail',
+        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+        description: `Use it once the episode has pictures (shot start images or clips) and before publishing, to make the cover and thumbnail every platform shows in grids, search and channel pages. set records the moment the cover shows, its copy and the reason in storyboard/cover.json: the source is a frame of an accepted clip or the finished video (kind "frame", the default once video exists), a shot's start image (kind "shot"), or an image this episode generated with image_execute (kind "image", by requestId). render makes the files locally at $0 — output/cover/cover-9x16.jpg (Shorts, Reels, TikTok Studio) or thumbnail-16x9.jpg (long-form, plus up to two variants for YouTube Test & Compare) — with the copy drawn by code in the episode language, crop previews for each platform surface, and render.json with measurements. On a story-first board it also copies the main file to output/video/cover.jpg (and thumbnail.jpg on long-form). read reports missing, unreadable (a hand-edited cover.json, with the reason), unrendered, fresh or stale (naming what changed: decision, format, template, font, source, files) and the file each platform's publish call takes.
+
+Do NOT ask an image model to draw the copy, and do NOT promise a moment the episode does not show: pick a shot that is in the cut. Do NOT treat warnings as refusals — they report crops, size and contrast for the author to weigh. A paid background goes through image_plan → image_execute first and is then named here by requestId.
+
+Returns: set — the saved decision, its decisionSha256 and warnings; render — files, previews, measurements and warnings; read — status, changed, files, publish map (stale flagged), platform values still unverified, and the opening plan's title and thumbnail when the board has one. Refuses an unknown shot, a shot without a start image, a frame outside its video, a path outside the episode, an image without a completed receipt, copy no bundled font can draw (cover_font_missing) and variants on a vertical format at set; at render also a source that changed since set, a missing Chrome, a page that did not finish its layout, and a file over a platform limit.`,
+        inputSchema: {
+            type: 'object', additionalProperties: false,
+            properties: {
+                path: { type: 'string', description: 'The storyboard directory or its scenes.js' },
+                action: { type: 'string', enum: ['set', 'render', 'read'], description: 'set writes the decision, render makes the files, read reports the state' },
+                decision: {
+                    type: 'object', additionalProperties: false, required: ['reason', 'source'],
+                    description: 'For set: the cover decision',
+                    properties: {
+                        reason: { type: 'string', description: 'Why this moment: what the episode shows there and where (scene), in one sentence' },
+                        source: {
+                            type: 'object', description: 'The picture: {kind:"frame", video, seconds, shotId?} | {kind:"shot", shotId} | {kind:"image", requestId}. Paths are relative to the episode directory',
+                            properties: {
+                                kind: { type: 'string', enum: ['frame', 'shot', 'image'] },
+                                video: { type: 'string', description: 'frame: an accepted clip or the finished video inside the episode' },
+                                seconds: { type: 'number', minimum: 0, description: 'frame: the time of the frame' },
+                                shotId: { type: 'string', pattern: '^s\\d{4,}$', description: 'shot: the shot whose start image is used; frame: the shot the frame belongs to' },
+                                requestId: { type: 'string', description: 'image: the image_execute request' },
+                            },
+                            required: ['kind'],
+                        },
+                        focus: { type: 'object', additionalProperties: false, required: ['x', 'y'], description: 'The subject point in the source, 0–1 from the left and top; crops keep it and the copy goes to the other side. Default the centre',
+                            properties: { x: { type: 'number', minimum: 0, maximum: 1 }, y: { type: 'number', minimum: 0, maximum: 1 } } },
+                        copy: { type: ['object', 'null'], additionalProperties: false, required: ['text'], description: 'The cover copy, or null for none. Long-form 2–4 words, short-form 1–3 (Japanese and Chinese count characters: 12 and 8); it adds to the title instead of repeating it',
+                            properties: { text: { type: 'string' }, emphasis: { type: 'string', description: 'One part of text drawn in the accent colour' } } },
+                        language: { type: 'string', description: 'The copy language; defaults to the episode language (STORY.language)' },
+                        variants: { type: 'array', maxItems: 2, description: 'Long-form only: up to two more thumbnails for YouTube Test & Compare, each overriding source, focus or copy',
+                            items: { type: 'object', additionalProperties: false, properties: { source: { type: 'object' }, focus: { type: 'object' }, copy: { type: ['object', 'null'] } } } },
+                    },
+                },
+            },
+            required: ['path', 'action'],
         },
     },
     {
