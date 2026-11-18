@@ -1618,8 +1618,12 @@ describe('opening reading', () => {
     assert.equal(reading[0], 'opening (long-form · YouTube: Intro = still watching at 30 s, 50% or more is above typical · Facebook: one-minute views): promise "p" · first frame: f');
     assert.ok(reading.includes('opening: no thumbnail, bigger question — the first 30 s confirms the title and thumbnail, then opens a bigger question'));
     assert.ok(reading.includes('opening window 0–30 s: s0001 0–20 s, s0002 20–40 s'));
-    win.SCENES[0].duration = undefined;   // a length unknown inside the window: no shot list
-    assert.ok(!openingReading(win).some((l) => l.startsWith('opening window')));
+    for (const duration of [undefined, Infinity]) {   // a length unknown or unusable inside the window: no shot list
+      win.SCENES[0].duration = duration;
+      assert.ok(!openingReading(win).some((l) => l.startsWith('opening window')));
+    }
+    win.STORY.opening.promise = '\t\n ';   // a hand-edited blank promise reads as no plan
+    assert.match(openingReading(win)[0], /: no plan/);
     assert.deepEqual(openingReading({ SCENES: [{ id: 's0001', duration: 2 }] }), []);
   });
 });

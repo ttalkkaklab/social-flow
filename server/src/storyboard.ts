@@ -1039,10 +1039,10 @@ export function openingReading(win: Board, platforms: string[] = []): string[] {
   const flat = (text: unknown) => String(text).replace(/\s+/g, ' ').trim();
   const head = `opening (${long ? 'long-form' : 'short-form'}${windows.length ? ` · ${windows.join(' · ')}` : ''})`;
   const plan = (win.STORY as { opening?: OpeningPlan }).opening;
-  const lines = [!plan?.promise
+  const lines = [!plan?.promise || !flat(plan.promise)
     ? `${head}: no plan — story_sequence opening records the promise and the first frame${long ? ', the title and thumbnail it confirms and the bigger question' : ''} (references/opening-by-format.md)`
     : `${head}: promise "${flat(plan.promise)}" · first frame: ${plan.firstFrame ? flat(plan.firstFrame) : 'not written'}`];
-  if (long && plan?.promise) {
+  if (long && plan?.promise && flat(plan.promise)) {
     const missing = [!plan.title && 'title', !plan.thumbnail && 'thumbnail', !plan.widen && 'bigger question'].filter(Boolean);
     if (missing.length) lines.push(`opening: no ${missing.join(', ')} — the first 30 s confirms the title and thumbnail, then opens a bigger question`);
   }
@@ -1051,8 +1051,8 @@ export function openingReading(win: Board, platforms: string[] = []): string[] {
   let t = 0;
   for (const { s } of shotDirection().playbackEntries(win.SCENES ?? [])) {
     if (t >= span) break;
-    if (typeof s.duration !== 'number' || !(s.duration > 0)) { inside.length = 0; break; }
-    inside.push(`${s.id} ${round1(t)}–${round1(t + s.duration)} s`);
+    if (typeof s.duration !== 'number' || !Number.isFinite(s.duration) || !(s.duration > 0)) { inside.length = 0; break; }
+    inside.push(`${s.id ?? `shot ${inside.length + 1}`} ${round1(t)}–${round1(t + s.duration)} s`);
     t += s.duration;
   }
   if (inside.length && t >= span) lines.push(`opening window 0–${span} s: ${inside.slice(0, 8).join(', ')}${inside.length > 8 ? `, +${inside.length - 8} more` : ''}`);

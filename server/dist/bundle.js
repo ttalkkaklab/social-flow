@@ -118973,8 +118973,8 @@ function openingReading(win, platforms = []) {
   const flat = (text4) => String(text4).replace(/\s+/g, " ").trim();
   const head = `opening (${long ? "long-form" : "short-form"}${windows.length ? ` \xB7 ${windows.join(" \xB7 ")}` : ""})`;
   const plan2 = win.STORY.opening;
-  const lines = [!plan2?.promise ? `${head}: no plan \u2014 story_sequence opening records the promise and the first frame${long ? ", the title and thumbnail it confirms and the bigger question" : ""} (references/opening-by-format.md)` : `${head}: promise "${flat(plan2.promise)}" \xB7 first frame: ${plan2.firstFrame ? flat(plan2.firstFrame) : "not written"}`];
-  if (long && plan2?.promise) {
+  const lines = [!plan2?.promise || !flat(plan2.promise) ? `${head}: no plan \u2014 story_sequence opening records the promise and the first frame${long ? ", the title and thumbnail it confirms and the bigger question" : ""} (references/opening-by-format.md)` : `${head}: promise "${flat(plan2.promise)}" \xB7 first frame: ${plan2.firstFrame ? flat(plan2.firstFrame) : "not written"}`];
+  if (long && plan2?.promise && flat(plan2.promise)) {
     const missing = [!plan2.title && "title", !plan2.thumbnail && "thumbnail", !plan2.widen && "bigger question"].filter(Boolean);
     if (missing.length) lines.push(`opening: no ${missing.join(", ")} \u2014 the first 30 s confirms the title and thumbnail, then opens a bigger question`);
   }
@@ -118982,11 +118982,11 @@ function openingReading(win, platforms = []) {
   let t2 = 0;
   for (const { s: s2 } of shotDirection().playbackEntries(win.SCENES ?? [])) {
     if (t2 >= span) break;
-    if (typeof s2.duration !== "number" || !(s2.duration > 0)) {
+    if (typeof s2.duration !== "number" || !Number.isFinite(s2.duration) || !(s2.duration > 0)) {
       inside.length = 0;
       break;
     }
-    inside.push(`${s2.id} ${round1(t2)}\u2013${round1(t2 + s2.duration)} s`);
+    inside.push(`${s2.id ?? `shot ${inside.length + 1}`} ${round1(t2)}\u2013${round1(t2 + s2.duration)} s`);
     t2 += s2.duration;
   }
   if (inside.length && t2 >= span) lines.push(`opening window 0\u2013${span} s: ${inside.slice(0, 8).join(", ")}${inside.length > 8 ? `, +${inside.length - 8} more` : ""}`);
