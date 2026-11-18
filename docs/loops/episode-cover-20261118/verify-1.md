@@ -19,6 +19,6 @@
 
 ## P1/P2
 - P1: 문구가 있는데 측정값이 없으면 `cover_chrome_failed` 로 거부해야 한다.
-- P2: 손으로 고친 프레임 시각이 길이를 넘으면 오류 문구가 헷갈린다. 깨진 render.json 이 원시 JSON 오류를 낸다. 도구 설명이 Chrome 없음을 set 거부로 적었다.
+- P2: 손으로 고친 프레임 시각이 길이를 넘으면 오류 문구가 원인을 가리키지 못한다. 깨진 render.json 이 원시 JSON 오류를 낸다. 도구 설명이 Chrome 없음을 set 거부로 적었다.
 
 ASTRA_LOOP_RESULT: score=71 verdict=FAIL p0=2 iter=1
