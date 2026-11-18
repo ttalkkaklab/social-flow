@@ -119425,7 +119425,8 @@ function clicheReading(win, boardDir) {
   const episodes = dirname6(dirname6(boardDir));
   return cliches().reading(win, { earlier: basename7(episodes) === "episodes" ? cliches().earlierUses(episodes, boardDir) : [] });
 }
-var clicheText = (max) => nonEmpty.max(max).refine((text4) => !/[\u0000-\u001f\u007f-\u009f\u200b\u200e\u200f\u202a-\u202e\u2060-\u2069\ufeff]/.test(text4), { message: "plain text, without control or invisible characters" });
+var INVISIBLE = /[\p{Cc}\p{Cs}\p{Zl}\p{Zp}\u115f\u1160\u3164\uffa0\u2800]|(?![\u200c\u200d])\p{Cf}/u;
+var clicheText = (max) => nonEmpty.max(max).refine((text4) => !INVISIBLE.test(text4) && /[\p{L}\p{N}\p{P}\p{S}]/u.test(text4), { message: "plain text that shows: no control or invisible characters" });
 var storyClicheSchema = external_exports.object({
   path: outlinePath,
   uses: external_exports.array(external_exports.object({
@@ -119473,7 +119474,10 @@ function writeStoryCliches(input) {
     const korean = /^ko\b/i.test(String(win.STORY?.language ?? "ko"));
     const keyOf = (use) => use.id !== void 0 ? `#${use.id}` : `name:${String(use.name).trim()}`;
     let uses = before.uses.slice();
-    for (const use of args.uses ?? []) {
+    for (const given of args.uses ?? []) {
+      const named = given.id === void 0 && given.name !== void 0 ? lib.findByName(given.name) : void 0;
+      const use = named ? { ...given, id: named.id } : given;
+      if (named) warn("cliche_matched", `"${given.name}"`, `this is catalogue entry #${named.id} \u2014 recorded by its id, so its cautions and repeats are read`);
       const item = use.id === void 0 ? void 0 : lib.find(use.id);
       if (use.id !== void 0 && !item) throw new Error(`cliche_unknown: the catalogue has no entry #${use.id} \u2014 pick one with cliches.js, or record a clich\xE9 outside the catalogue by name without an id`);
       if (use.need !== void 0 && !Object.hasOwn(lib.NEEDS, use.need)) throw new Error(`cliche_need: "${use.need}" is not a need \u2014 one of ${Object.keys(lib.NEEDS).join(", ")}`);
@@ -119506,6 +119510,7 @@ function writeStoryCliches(input) {
       if (!uses.some((entry2) => keyOf(entry2) === key)) warn("cliche_not_recorded", "clich\xE9s", `nothing is recorded as ${typeof target === "number" ? `#${target}` : `"${target}"`} \u2014 nothing was removed`);
       uses = uses.filter((entry2) => keyOf(entry2) !== key);
     }
+    if (before.skipped) warn("cliche_unreadable", "clich\xE9s", `${before.skipped} entr${before.skipped === 1 ? "y" : "ies"} in window.CLICHES.uses could not be read (a hand edit) and ${before.skipped === 1 ? "was" : "were"} not kept by this write`);
     const none = args.none !== void 0 ? args.none : args.uses?.length ? void 0 : before.none;
     result = applyStoryboard({
       path: args.path,
@@ -119517,6 +119522,8 @@ function writeStoryCliches(input) {
   const board = result.written ? readBoard(args.path).win : win;
   const report = clicheReading(board, dir);
   const label = (use) => use.id !== void 0 ? `#${use.id} ${use.name}` : `"${use.name}"`;
+  if (!writing && report.skipped)
+    warn("cliche_unreadable", "clich\xE9s", `${report.skipped} entr${report.skipped === 1 ? "y" : "ies"} in window.CLICHES.uses cannot be read (a hand edit) and will not be kept by the next story_cliche write \u2014 record ${report.skipped === 1 ? "it" : "them"} again by id or name`);
   if (report.decision === "undecided" && report.mode === "apply")
     warn("cliche_undecided", "clich\xE9s", `no decision yet \u2014 this episode applies clich\xE9s by default (${report.why}): record what the story uses, or none with its reason`);
   for (const use of report.unpicked)
@@ -129330,7 +129337,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
         removeShotIds: { type: "array", items: { type: "string", pattern: "^s\\d{4,}$", description: "A stable shot id" }, description: "Shot ids to drop (resolved before inserts). Not with the position fields in the same patch" },
         removeScenes: { type: "array", items: { type: "number", description: "Scene number" }, description: "Scene numbers to drop from STRUCTURE.scenes and from every sequence" },
         removeSequences: { type: "array", items: { type: "string", description: "Sequence id" }, description: "Sequence ids to drop" },
-        globals: { type: "object", description: "Other window.* blocks to set \u2014 FORMAT, THEME (motionGraphicTheme: {id: auto or theme id, context?, reason?} sets the common motion theme; explicit shot ids or contexts override it), COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. CLICHES belongs to story_cliche and cannot be changed here (cliche_record), and PRODUCTION.clicheUse keeps the value the board has (cliche_choice_kept). MUSIC.$mix is optional sound-design metadata; SFX keeps logical asset ids only. PRODUCTION.mode: full_video, video_80, video_50, video_30, video_lt10, no_video (hook_only/stills_only/hybrid are legacy). New selections write renderRatioVersion:1." },
+        globals: { type: "object", description: "Other window.* blocks to set \u2014 FORMAT, THEME (motionGraphicTheme: {id: auto or theme id, context?, reason?} sets the common motion theme; explicit shot ids or contexts override it), COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. CLICHES belongs to story_cliche and cannot be changed here (cliche_record); PRODUCTION.clicheUse keeps the value the board has (cliche_choice_kept), and a PRODUCTION patch that changes whether clich\xE9s apply by default is reported (cliche_mode_changed). MUSIC.$mix is optional sound-design metadata; SFX keeps logical asset ids only. PRODUCTION.mode: full_video, video_80, video_50, video_30, video_lt10, no_video (hook_only/stills_only/hybrid are legacy). New selections write renderRatioVersion:1." },
         expectedSha256: { type: "string", pattern: "^[a-f0-9]{64}$", description: "Current scenes.js hash from storyboard_read; required when editing propSheet on an existing board." },
         propSheet: { type: "object", additionalProperties: false, required: ["props"], description: "Replace the complete prop sheet atomically. Keep other editorial metadata. Changes validate story-time custody and invalidate approval; original file is backed up.", properties: {
           props: { type: "array", description: "Complete prop registry for this board", items: { type: "object", additionalProperties: true, required: ["id"], properties: {

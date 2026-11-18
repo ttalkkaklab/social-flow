@@ -1469,10 +1469,13 @@ function clicheReading(win, boardDir) {
     const episodes = dirname(dirname(boardDir));
     return cliches().reading(win, { earlier: basename(episodes) === 'episodes' ? cliches().earlierUses(episodes, boardDir) : [] });
 }
-// What the review page prints for a use: short plain text. Control and invisible characters (direction
-// overrides, zero-width space) would change how the line reads without showing.
+// What the review page prints for a use: short plain text. Characters that do not show would change how the
+// line reads: controls, lone surrogates, line and paragraph separators, format characters (direction marks,
+// zero-width space, soft hyphen, tag characters) and the fillers that render blank. The two joiners stay,
+// since emoji sequences and some scripts need them.
+const INVISIBLE = /[\p{Cc}\p{Cs}\p{Zl}\p{Zp}\u115f\u1160\u3164\uffa0\u2800]|(?![\u200c\u200d])\p{Cf}/u;
 const clicheText = (max) => nonEmpty.max(max)
-    .refine((text) => !/[\u0000-\u001f\u007f-\u009f\u200b\u200e\u200f\u202a-\u202e\u2060-\u2069\ufeff]/.test(text), { message: 'plain text, without control or invisible characters' });
+    .refine((text) => !INVISIBLE.test(text) && /[\p{L}\p{N}\p{P}\p{S}]/u.test(text), { message: 'plain text that shows: no control or invisible characters' });
 export const storyClicheSchema = z.object({
     path: outlinePath,
     uses: z.array(z.object({
@@ -1516,7 +1519,12 @@ export function writeStoryCliches(input) {
         const korean = /^ko\b/i.test(String(win.STORY?.language ?? 'ko'));
         const keyOf = (use) => use.id !== undefined ? `#${use.id}` : `name:${String(use.name).trim()}`;
         let uses = before.uses.slice();
-        for (const use of args.uses ?? []) {
+        for (const given of args.uses ?? []) {
+            // A name that spells a catalogue entry is that entry: recorded by name alone it would slip past its marks and the repeat check.
+            const named = given.id === undefined && given.name !== undefined ? lib.findByName(given.name) : undefined;
+            const use = named ? { ...given, id: named.id } : given;
+            if (named)
+                warn('cliche_matched', `"${given.name}"`, `this is catalogue entry #${named.id} — recorded by its id, so its cautions and repeats are read`);
             const item = use.id === undefined ? undefined : lib.find(use.id);
             if (use.id !== undefined && !item)
                 throw new Error(`cliche_unknown: the catalogue has no entry #${use.id} — pick one with cliches.js, or record a cliché outside the catalogue by name without an id`);
@@ -1556,6 +1564,8 @@ export function writeStoryCliches(input) {
                 warn('cliche_not_recorded', 'clichés', `nothing is recorded as ${typeof target === 'number' ? `#${target}` : `"${target}"`} — nothing was removed`);
             uses = uses.filter((entry) => keyOf(entry) !== key);
         }
+        if (before.skipped)
+            warn('cliche_unreadable', 'clichés', `${before.skipped} entr${before.skipped === 1 ? 'y' : 'ies'} in window.CLICHES.uses could not be read (a hand edit) and ${before.skipped === 1 ? 'was' : 'were'} not kept by this write`);
         const none = args.none !== undefined ? args.none : args.uses?.length ? undefined : before.none;
         result = applyStoryboard({ path: args.path, draft: true, dryRun: false,
             globals: { CLICHES: { version: 1, ...(none !== undefined ? { none } : {}), uses: args.none !== undefined ? [] : uses } } }, { outline: true, cliches: true });
@@ -1563,6 +1573,8 @@ export function writeStoryCliches(input) {
     const board = result.written ? readBoard(args.path).win : win;
     const report = clicheReading(board, dir);
     const label = (use) => use.id !== undefined ? `#${use.id} ${use.name}` : `"${use.name}"`;
+    if (!writing && report.skipped)
+        warn('cliche_unreadable', 'clichés', `${report.skipped} entr${report.skipped === 1 ? 'y' : 'ies'} in window.CLICHES.uses cannot be read (a hand edit) and will not be kept by the next story_cliche write — record ${report.skipped === 1 ? 'it' : 'them'} again by id or name`);
     if (report.decision === 'undecided' && report.mode === 'apply')
         warn('cliche_undecided', 'clichés', `no decision yet — this episode applies clichés by default (${report.why}): record what the story uses, or none with its reason`);
     // story_cliche never writes one of these: a hand edit, or the episode's type changed after the use was recorded.

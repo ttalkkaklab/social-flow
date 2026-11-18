@@ -134,8 +134,9 @@ tool cannot use and for a cliché applied on a recommending type without `basis:
 (`cliche_user_choice`), which the session never passes for a choice the user did not make.
 `story_cliche` is the record's only writer: `storyboard_apply` leaves the record alone
 (`cliche_record`) and keeps `PRODUCTION.clicheUse` as the episode snapshot gave it
-(`cliche_choice_kept`). A use a hand edit put in the story without the user's pick is reported
-as `cliche_unpicked`.
+(`cliche_choice_kept`). A type change for one episode, which the user may ask for, changes the
+mode and is reported (`cliche_mode_changed`). A use a hand edit put in the story without the
+user's pick is reported as `cliche_unpicked`.
 This is writing guidance, not a score, a quota or an approval pause, and a cliché's name never
 answers `necessity`. Follow `skills/storyboard/references/cliche-use.md`. Evidence and its
 limits: `docs/research/2026-11-18-kdrama-cliches/`.

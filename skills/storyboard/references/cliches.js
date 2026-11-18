@@ -60,6 +60,11 @@ function catalog() {
 function find(id) {
   return catalog().items.find(item => item.id === id);
 }
+/** The catalogue entry a name spells exactly (Korean or English name), so a use recorded by name is read with its marks. */
+function findByName(name) {
+  const text = String(name == null ? '' : name).trim().toLowerCase();
+  return text ? catalog().items.find(item => item.name.toLowerCase() === text || item.en.toLowerCase() === text) : undefined;
+}
 
 // A custom type is described in the user's words, so its detail decides. Documentary hybrids
 // reconstruct recorded events and stay on the recommending side.
@@ -96,7 +101,7 @@ function hash(text) {
 
 function list(value, label, allowed) {
   const items = (Array.isArray(value) ? value : value === undefined || value === null ? [] : [value])
-    .flatMap(item => String(item).split(',')).map(item => item.trim()).filter(Boolean);
+    .flatMap(item => String(item).split(',')).map(item => item.trim().toLowerCase()).filter(Boolean);
   const unknown = items.filter(item => !allowed.includes(item));
   if (unknown.length) throw new Error(`unknown ${label} "${unknown.join(', ')}" — one of: ${allowed.join(', ')}`);
   return [...new Set(items)];
@@ -158,7 +163,9 @@ function record(board) {
     ? raw.uses.filter(use => use && typeof use === 'object' && (Number.isInteger(use.id) || (typeof use.name === 'string' && use.name.trim())))
     : [];
   const none = tracked && typeof raw.none === 'string' && raw.none.trim() ? raw.none.trim() : undefined;
-  return { tracked, uses, none };
+  // Entries a hand edit left unreadable are counted, so the next write does not drop them without a word.
+  const skipped = tracked ? (Array.isArray(raw.uses) ? raw.uses.length - uses.length : raw.uses === undefined ? 0 : 1) : 0;
+  return { tracked, uses, none, skipped };
 }
 
 /**
@@ -169,7 +176,7 @@ function record(board) {
  * `earlier` is `[{ id, name, episode }]` from earlierUses().
  */
 function reading(board, { earlier = [] } = {}) {
-  const { tracked, uses, none } = record(board);
+  const { tracked, uses, none, skipped } = record(board);
   const applied = uses.filter(use => !use.offered), offered = uses.filter(use => use.offered);
   const scenes = board && board.STRUCTURE && Array.isArray(board.STRUCTURE.scenes) ? board.STRUCTURE.scenes : [];
   const known = new Set(scenes.filter(scene => scene && typeof scene === 'object').map(scene => scene.no));
@@ -182,7 +189,7 @@ function reading(board, { earlier = [] } = {}) {
   return {
     ...m, tracked,
     decision: applied.length ? 'use' : none ? 'none' : offered.length ? 'offer' : 'undecided',
-    ...(none && !applied.length ? { none } : {}), applied, offered, dangling, repeats, unpicked,
+    ...(none && !applied.length ? { none } : {}), applied, offered, dangling, repeats, unpicked, skipped,
   };
 }
 
@@ -319,4 +326,4 @@ if (require.main === module) {
   catch (error) { process.stderr.write(`cliches: ${error.message}\n`); process.exitCode = 2; }
 }
 
-module.exports = { NEEDS, LAYERS, GENRES, CAUTIONS, catalog, find, mode, pick, record, reading, digest, earlierUses, main };
+module.exports = { NEEDS, LAYERS, GENRES, CAUTIONS, catalog, find, findByName, mode, pick, record, reading, digest, earlierUses, main };

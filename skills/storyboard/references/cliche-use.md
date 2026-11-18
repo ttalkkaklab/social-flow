@@ -34,7 +34,10 @@ reconstruction of recorded events is not the place for an invented device.
 Order of precedence: what the user says about this episode, then the channel's saved choice,
 then the type. A type change for one episode, which the user asks for and which is recorded
 under `PRODUCTION.modelSettings.overrides` ([model settings](../../_shared/model-settings.md)),
-changes the mode with it, and `storyboard_apply` says so (`cliche_mode_changed`). Read the mode from the report of `story_cliche {path}`. Before a board exists
+changes the mode with it, and `storyboard_apply` says so (`cliche_mode_changed`). The two
+fields differ on purpose: the type is an override the user may ask for one episode, so a
+board can change it; the saved choice is the channel's, so a board keeps the value its
+snapshot took (`cliche_choice_kept`). Read the mode from the report of `story_cliche {path}`. Before a board exists
 (a synopsis-only request), read the saved type and choice with `project_manage status` and run
 
 ```bash
@@ -225,11 +228,18 @@ again when scenes are written.
   that changes `CLICHES` (`cliche_record`); a board written back whole with the block
   unchanged passes.
 - Warnings carry codes: `cliche_undecided`, `cliche_unpicked`, `cliche_caution`,
-  `cliche_quote`, `cliche_practice`, `cliche_repeat`, `cliche_scene_missing` and
-  `cliche_not_recorded`. `cliche_unpicked` names a use that sits in the story without the
-  user's pick on an episode that only recommends: a hand-edited file, or a type changed
-  after the use was recorded. Record it again as `offered`, or with `basis: "user"` once the
-  user picked.
+  `cliche_quote`, `cliche_practice`, `cliche_repeat`, `cliche_scene_missing`,
+  `cliche_not_recorded`, `cliche_matched` and `cliche_unreadable`. `cliche_unpicked` names a
+  use that sits in the story without the user's pick on an episode that only recommends: a
+  hand-edited file, or a type changed after the use was recorded. Record it again as
+  `offered`, or with `basis: "user"` once the user picked. `cliche_matched` says a name
+  spelled a catalogue entry, which is then recorded by its id so its marks and repeats are
+  read. `cliche_unreadable` counts entries a hand edit left unreadable; a write does not
+  keep them.
+- Refusals are `cliche_user_choice`, `cliche_unknown` (no such catalogue number),
+  `cliche_need`, `cliche_character` (not in `cast.json`), `story_order` (a scene that does
+  not exist) and, on `storyboard_apply`, `cliche_record`. `storyboard_apply` also warns with
+  `cliche_choice_kept` and `cliche_mode_changed` (§1, §6).
 
 The record is `window.CLICHES` in `scenes.js` ([scenes schema](scenes-schema.md)). The review
 page shows it in two places: a strip above the shots that lists every use with the job it

@@ -619,6 +619,9 @@ describe('clichés are chosen for the story and recorded on the board', () => {
     // A type change for one episode stays possible, since the user may ask for it; the write says what it does to clichés.
     const retyped = applyStoryboard({ path: dir, draft: true, globals: { PRODUCTION: { videoType: { id: 'drama' } } } }, { outline: true });
     assert.deepEqual([retyped.findings.some((f) => f.code === 'cliche_mode_changed'), writeStoryCliches({ path: dir }).cliches.mode], [true, 'apply']);
+    // A change that leaves the mode alone says nothing.
+    const same = applyStoryboard({ path: dir, draft: true, globals: { PRODUCTION: { videoType: { id: 'comedy' } } } }, { outline: true });
+    assert.equal(same.findings.some((f) => f.code === 'cliche_mode_changed'), false);
     type({ videoType: { id: 'explainer' } });
 
     // storyboard_apply cannot put an applied use on the board: story_cliche owns the record. The block carried unchanged passes.
@@ -650,13 +653,23 @@ describe('clichés are chosen for the story and recorded on the board', () => {
     assert.throws(() => writeStoryCliches({ path: second, uses: [{ id: plain.id, character: 'nobody' }] }), /cliche_character: nobody is not in storyboard\/cast\.json/);
     assert.equal(storyClicheSchema.safeParse({ path: second, uses: [{ shift: 'no id and no name' }] }).success, false);
     // A catalogue number given as a name would sit beside the same entry by id; blank text is no name. A direct call is parsed too.
-    for (const name of [`#${plain.id}`, `＃${plain.id}`, '#٥', 'bell\u0007', 'flip\u202e', 'next\u0085line', 'x'.repeat(121)])
+    for (const name of [`#${plain.id}`, `＃${plain.id}`, '#٥', 'bell\u0007', 'flip\u202e', 'next\u0085line', 'x'.repeat(121), '\u3164', '\u2800\u2800', 'soft\u00adhyphen', 'two\u2028lines'])
       assert.equal(storyClicheSchema.safeParse({ path: second, uses: [{ name }] }).success, false, JSON.stringify(name));
-    for (const name of ['傘を返す', 'Chiếc ô trả lại', '#5번 약속', '"우산" — 돌려받은 것'])
+    for (const name of ['傘を返す', 'Chiếc ô trả lại', '#5번 약속', '"우산" — 돌려받은 것', '👨‍👩‍👧 가족 식사'])
       assert.equal(storyClicheSchema.safeParse({ path: second, uses: [{ name }] }).success, true, name);
     assert.equal(storyClicheSchema.safeParse({ path: second, uses: [{ id: plain.id, shift: 'x'.repeat(301) }] }).success, false);
     assert.throws(() => writeStoryCliches({ path: second, uses: [{ name: '   ' }] }));
     assert.equal(recorded(second).uses.length, 3, 'a refused call writes nothing');
+
+    // A name that spells a catalogue entry is recorded as that entry, so its caution is still read.
+    const byName = writeStoryCliches({ path: second, uses: [{ name: coercive.en.toUpperCase(), offered: true }] });
+    assert.deepEqual(codes(byName).filter((code) => code.startsWith('cliche_matched')).length, 1);
+    assert.equal(recorded(second).uses.filter((use) => use.id === coercive.id).length, 1, 'the same entry, not a second one');
+    // Entries a hand edit left unreadable are counted before a write drops them.
+    const file = join(second, 'scenes.js'), text = readFileSync(file, 'utf8');
+    writeFileSync(file, text + `window.CLICHES = ${JSON.stringify({ version: 1, uses: [{ id: plain.id, name: plain.name, basis: 'default' }, null, 'loose text'] })};\n`);
+    assert.deepEqual(codes(writeStoryCliches({ path: second })).filter((code) => code.startsWith('cliche_unreadable')), ['cliche_unreadable clichés']);
+    writeFileSync(file, text);
 
     // A scene removed later leaves a reference the report and the digest name.
     writeStoryScenes({ path: second, scenes: [{ sequence: 'q1', no: 1, place: '숲', time: '낮', event: 'e', summary: '씬 1' }] });

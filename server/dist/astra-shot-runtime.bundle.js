@@ -33515,7 +33515,8 @@ var storyMusicSchema = external_exports.object({
     gainDb: external_exports.number().finite().min(-60).max(12).optional()
   }).strict()).optional()
 }).strict();
-var clicheText = (max) => nonEmpty.max(max).refine((text3) => !/[\u0000-\u001f\u007f-\u009f\u200b\u200e\u200f\u202a-\u202e\u2060-\u2069\ufeff]/.test(text3), { message: "plain text, without control or invisible characters" });
+var INVISIBLE = /[\p{Cc}\p{Cs}\p{Zl}\p{Zp}\u115f\u1160\u3164\uffa0\u2800]|(?![\u200c\u200d])\p{Cf}/u;
+var clicheText = (max) => nonEmpty.max(max).refine((text3) => !INVISIBLE.test(text3) && /[\p{L}\p{N}\p{P}\p{S}]/u.test(text3), { message: "plain text that shows: no control or invisible characters" });
 var storyClicheSchema = external_exports.object({
   path: outlinePath,
   uses: external_exports.array(external_exports.object({
