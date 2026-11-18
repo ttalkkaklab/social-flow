@@ -117,7 +117,7 @@ test('the cliché strip and scene lanes show what is in the story, the user\'s p
   assert.match(strip, /<b>&lt;img src=x onerror=alert\(1\)&gt;<\/b> <small>status · your pick<\/small><\/span><span>Jun<\/span>/);
   assert.match(strip, /<span>S#3, S#4<\/span>/);
   // A scene the board no longer has is marked, and a use with no recorded basis is not given one.
-  const edited = page({ uses: [{ id: 5, name: 'Hand edit', scenes: [3, 9] }] }, 'clicheStrip()', strings[0], { scenes: [{ no: 3 }] });
+  const edited = page({ uses: [{ id: 5, name: 'Hand edit', scenes: [3, 3, null, 'x', 9] }] }, 'clicheStrip()', strings[0], { scenes: [{ no: 3 }] });
   assert.match(edited, /<small>basis not recorded<\/small>/);
   assert.match(edited, /<span>S#3, S#9 <em class="cliche-missing">not on the board<\/em><\/span>/);
   assert.doesNotMatch(strip, /<img/);

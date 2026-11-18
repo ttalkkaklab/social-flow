@@ -118758,6 +118758,20 @@ function applyPatch(win, patch, opts = {}) {
       };
     }
   }
+  let clicheModeChanged;
+  if (patch.globals && Object.hasOwn(patch.globals, "PRODUCTION") && !opts.cliches && Object.keys(win).length) {
+    try {
+      const was = cliches().mode(win.PRODUCTION), now = cliches().mode(next.PRODUCTION);
+      const does = { apply: "applies clich\xE9s by default", offer: "only recommends clich\xE9s", off: "applies no clich\xE9 unless the user asks" };
+      if (was.mode !== now.mode) clicheModeChanged = {
+        level: "warn",
+        code: "cliche_mode_changed",
+        where: "PRODUCTION",
+        what: `cliche_mode_changed: this episode now ${does[now.mode]} (${now.why}; before: ${was.why}) \u2014 a type change for one episode follows the user's request and is recorded under PRODUCTION.modelSettings.overrides`
+      };
+    } catch {
+    }
+  }
   const boardMotionTheme = next.THEME?.motionGraphicTheme;
   if (boardMotionTheme) motionThemeContract().resolveTheme({ type: "process", style: { theme: boardMotionTheme } });
   if (patch.propSheet) next.SB_DOC = {
@@ -118893,7 +118907,7 @@ function applyPatch(win, patch, opts = {}) {
       return { ...shot, visual: { ...shot.visual, video: rest } };
     });
   }
-  const findings = [...joinNotes, ...editImpact(win, next), ...clicheChoiceKept ? [clicheChoiceKept] : []];
+  const findings = [...joinNotes, ...editImpact(win, next), ...clicheChoiceKept ? [clicheChoiceKept] : [], ...clicheModeChanged ? [clicheModeChanged] : []];
   if (!shots.length && !opts.outline) findings.push({ level: "bad", where: "board", what: "the board has no shots" });
   if (win.STORY?.authoring === "story-first" && next.STORY?.authoring !== "story-first")
     findings.push({ level: "bad", where: "STORY", what: 'story_order: STORY.authoring "story-first" stays on a board started with story_sequence' });
@@ -119411,19 +119425,20 @@ function clicheReading(win, boardDir) {
   const episodes = dirname6(dirname6(boardDir));
   return cliches().reading(win, { earlier: basename7(episodes) === "episodes" ? cliches().earlierUses(episodes, boardDir) : [] });
 }
+var clicheText = (max) => nonEmpty.max(max).refine((text4) => !/[\u0000-\u001f\u007f-\u009f\u200b\u200e\u200f\u202a-\u202e\u2060-\u2069\ufeff]/.test(text4), { message: "plain text, without control or invisible characters" });
 var storyClicheSchema = external_exports.object({
   path: outlinePath,
   uses: external_exports.array(external_exports.object({
     id: external_exports.number().int().positive().optional().describe("The catalogue number cliches.js pick printed"),
-    name: nonEmpty.refine((name) => !/^#\s*\d+$/.test(name.normalize("NFKC")), { message: "a catalogue number goes in id, not in name" }).refine((name) => !/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/.test(name), { message: "a name is plain text, without control characters" }).optional().describe("Its name in the story language; required for a clich\xE9 that is not in the catalogue"),
+    name: clicheText(120).refine((name) => !/^#\s*\p{Nd}+$/u.test(name.normalize("NFKC")), { message: "a catalogue number goes in id, not in name" }).optional().describe("Its name in the story language; required for a clich\xE9 that is not in the catalogue"),
     need: nonEmpty.optional().describe("The job it does in this story, one of the needs cliches.js lists; the catalogue entry's first need when omitted"),
     scenes: external_exports.array(external_exports.number().int().positive()).min(1).optional().describe("The scenes it sits on, once they are written"),
     character: nonEmpty.optional().describe("The cast member a character-type clich\xE9 describes"),
-    shift: nonEmpty.optional().describe("The one thing this episode changes about it; leave it out when it is played as the catalogue describes"),
+    shift: clicheText(300).optional().describe("The one thing this episode changes about it; leave it out when it is played as the catalogue describes"),
     offered: external_exports.boolean().optional().describe("true records a recommendation that is not in the story yet; stated on every write")
   }).strict().refine((use) => use.id !== void 0 || use.name !== void 0, { message: "give the catalogue id, or a name for a clich\xE9 outside the catalogue" })).min(1).optional(),
   remove: external_exports.array(external_exports.union([external_exports.number().int().positive(), nonEmpty])).min(1).optional().describe("Recorded uses to drop, by catalogue id or by name"),
-  none: nonEmpty.optional().describe("Records that this episode uses no clich\xE9, and why; it replaces the list"),
+  none: clicheText(300).optional().describe("Records that this episode uses no clich\xE9, and why; it replaces the list"),
   basis: external_exports.literal("user").optional().describe("The user picked these from a recommendation or asked for them")
 }).strict().refine((args) => args.none === void 0 || !args.uses && !args.remove, { message: "none replaces the whole list \u2014 give it alone" });
 function writeStoryCliches(input) {
@@ -129037,15 +129052,15 @@ Returns: the file written or not, counts, findings (! violation \xB7 warning), a
         path: { type: "string", description: "The storyboard directory or its scenes.js" },
         uses: { type: "array", minItems: 1, description: "Clich\xE9s to add or revise, keyed by catalogue id (or by name outside the catalogue)", items: { type: "object", additionalProperties: false, properties: {
           id: { type: "integer", minimum: 1, description: "The catalogue number cliches.js pick printed, e.g. 45. Omit for a clich\xE9 outside the catalogue and give name" },
-          name: { type: "string", description: "Its name in the story language; the catalogue name when omitted. Required without id" },
+          name: { type: "string", maxLength: 120, description: "Its name in the story language; the catalogue name when omitted. Required without id" },
           need: { type: "string", enum: ["meet", "bind", "obstacle", "secret", "reveal", "parting", "reunion", "closeness", "outburst", "status", "payback", "danger", "rule", "setting", "closing", "relief"], description: "The job it does in this story; the catalogue entry's first need when omitted" },
           scenes: { type: "array", minItems: 1, items: { type: "integer", minimum: 1 }, description: "Scene numbers it sits on, once story_scene wrote them" },
           character: { type: "string", description: 'The cast id a character-type clich\xE9 describes, e.g. "mina"' },
-          shift: { type: "string", description: "The one thing this episode changes about it \u2014 who does it, what it costs, when, or who knows. Omit when it is played as the catalogue describes" },
+          shift: { type: "string", maxLength: 300, description: "The one thing this episode changes about it \u2014 who does it, what it costs, when, or who knows \u2014 in one sentence. Omit when it is played as the catalogue describes" },
           offered: { type: "boolean", description: "true records a recommendation that is not in the story yet. Stated on every write: omitted means applied" }
         } } },
         remove: { type: "array", minItems: 1, items: { anyOf: [{ type: "integer", minimum: 1 }, { type: "string" }] }, description: "Recorded uses to drop, by catalogue id or by name" },
-        none: { type: "string", description: "Records that this episode uses no clich\xE9, and why. Replaces the whole list; give it alone" },
+        none: { type: "string", maxLength: 300, description: "Records that this episode uses no clich\xE9, and why, in one sentence. Replaces the whole list; give it alone" },
         basis: { type: "string", enum: ["user"], description: "The user picked these from a recommendation or asked for clich\xE9s in this episode. Required to apply one on an offer or off episode" }
       },
       required: ["path"]

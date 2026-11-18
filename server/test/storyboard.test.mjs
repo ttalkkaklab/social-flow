@@ -616,6 +616,10 @@ describe('clichés are chosen for the story and recorded on the board', () => {
     const forged = applyStoryboard({ path: dir, draft: true, globals: { PRODUCTION: { videoType: { id: 'explainer' }, clicheUse: 'on' } } }, { outline: true });
     assert.deepEqual([forged.findings.some((f) => f.code === 'cliche_choice_kept'), readBoard(dir).win.PRODUCTION.clicheUse], [true, undefined]);
     assert.throws(() => writeStoryCliches({ path: dir, uses: [{ name: 'another' }] }), /cliche_user_choice/);
+    // A type change for one episode stays possible, since the user may ask for it; the write says what it does to clichés.
+    const retyped = applyStoryboard({ path: dir, draft: true, globals: { PRODUCTION: { videoType: { id: 'drama' } } } }, { outline: true });
+    assert.deepEqual([retyped.findings.some((f) => f.code === 'cliche_mode_changed'), writeStoryCliches({ path: dir }).cliches.mode], [true, 'apply']);
+    type({ videoType: { id: 'explainer' } });
 
     // storyboard_apply cannot put an applied use on the board: story_cliche owns the record. The block carried unchanged passes.
     const before = recorded(dir);
@@ -646,8 +650,11 @@ describe('clichés are chosen for the story and recorded on the board', () => {
     assert.throws(() => writeStoryCliches({ path: second, uses: [{ id: plain.id, character: 'nobody' }] }), /cliche_character: nobody is not in storyboard\/cast\.json/);
     assert.equal(storyClicheSchema.safeParse({ path: second, uses: [{ shift: 'no id and no name' }] }).success, false);
     // A catalogue number given as a name would sit beside the same entry by id; blank text is no name. A direct call is parsed too.
-    for (const name of [`#${plain.id}`, `＃${plain.id}`, 'bell\u0007', 'flip\u202e'])
+    for (const name of [`#${plain.id}`, `＃${plain.id}`, '#٥', 'bell\u0007', 'flip\u202e', 'next\u0085line', 'x'.repeat(121)])
       assert.equal(storyClicheSchema.safeParse({ path: second, uses: [{ name }] }).success, false, JSON.stringify(name));
+    for (const name of ['傘を返す', 'Chiếc ô trả lại', '#5번 약속', '"우산" — 돌려받은 것'])
+      assert.equal(storyClicheSchema.safeParse({ path: second, uses: [{ name }] }).success, true, name);
+    assert.equal(storyClicheSchema.safeParse({ path: second, uses: [{ id: plain.id, shift: 'x'.repeat(301) }] }).success, false);
     assert.throws(() => writeStoryCliches({ path: second, uses: [{ name: '   ' }] }));
     assert.equal(recorded(second).uses.length, 3, 'a refused call writes nothing');
 

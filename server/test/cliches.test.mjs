@@ -76,6 +76,9 @@ test('pick returns a few candidates for the named need and leaves caution and pr
   assert.throws(() => C.pick({}), /name at least one need/);
   assert.throws(() => C.pick({ needs: ['fame'] }), /unknown need "fame"/);
   assert.throws(() => C.pick({ needs: ['meet'], genres: ['western'] }), /unknown genre "western"/);
+  // Comedy is not a genre in the catalogue: the word is accepted and narrows nothing.
+  const laugh = C.pick({ needs: ['relief'], genres: ['comedy'], limit: 40 });
+  assert.deepEqual([laugh.comedy, laugh.pool], [true, C.pick({ needs: ['relief'], limit: 40 }).pool]);
 });
 
 test('a board record reads as undecided, used, offered or none, and the digest prints it as counts', () => {

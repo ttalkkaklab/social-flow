@@ -2466,7 +2466,9 @@ window.STORYBOARD_READY = (async function () {
     if (!CLICHES) return "";
     return '<section class="cliche-strip" id="cliches"><div class="cliche-strip-head">' + esc(T.cliche.head) + " <small>" + esc(clicheStatus()) + "</small></div>" +
       (clicheUses.length ? "<ul>" + clicheUses.map(function (u) {
-        var at = (Array.isArray(u.scenes) ? u.scenes : []).map(function (no) {
+        var at = (Array.isArray(u.scenes) ? u.scenes : []).filter(function (no, i, all) {
+          return typeof no === "number" && isFinite(no) && no > 0 && Math.floor(no) === no && all.indexOf(no) === i;
+        }).map(function (no) {
           return esc(T.cliche.scene + no) + (clicheScenes && !clicheScenes[no] ? ' <em class="cliche-missing">' + esc(T.cliche.missing) + "</em>" : "");
         }).join(", ");
         var who = typeof u.character === "string" && u.character ? esc(castName(u.character)) : "";

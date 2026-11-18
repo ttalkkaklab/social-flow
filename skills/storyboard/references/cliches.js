@@ -110,7 +110,9 @@ function list(value, label, allowed) {
 function pick(options = {}) {
   const needs = list(options.needs, 'need', Object.keys(NEEDS));
   if (!needs.length) throw new Error(`name at least one need — one of: ${Object.keys(NEEDS).join(', ')}`);
-  const genres = list(options.genres, 'genre', GENRES);
+  // Comedy is not a genre in the catalogue: a comedy takes a cliché from any genre and breaks it, so the word narrows nothing.
+  const asked = list(options.genres, 'genre', [...GENRES, 'comedy']);
+  const comedy = asked.includes('comedy'), genres = asked.filter(genre => genre !== 'comedy');
   const layers = list(options.layers, 'layer', Object.keys(LAYERS));
   const exclude = new Set((Array.isArray(options.exclude) ? options.exclude : []).map(Number).filter(Number.isInteger));
   const limit = Number.isInteger(options.limit) && options.limit > 0 ? Math.min(options.limit, 40) : 12;
@@ -139,7 +141,7 @@ function pick(options = {}) {
     if (!added) break;
   }
   return {
-    needs, pool: pool.length, left,
+    needs, pool: pool.length, left, ...(comedy ? { comedy: true } : {}),
     candidates: chosen.map(item => ({ ...item, stage: LAYERS[item.layer].stage,
       for: needs.filter(need => item.needs.includes(need)) })),
   };
@@ -280,6 +282,7 @@ function main(argv) {
     if (args.json) return JSON.stringify({ ...result, earlier: used }, null, 2);
     const out = [`${result.candidates.length} of ${result.pool} matching${result.left.caution ? ` · ${result.left.caution} caution entr${result.left.caution === 1 ? 'y' : 'ies'} left out (--include-caution only when the story treats the act as wrong or the user asked)` : ''}`
       + `${result.left.used ? ` · ${result.left.used} left out as excluded or used in an earlier episode` : ''}`];
+    if (result.comedy) out.push('comedy is not a genre here, so it narrows nothing: a comedy takes a cliché from any genre and breaks it at the end; relief is the need for a laugh');
     for (const need of result.needs) {
       const mine = result.candidates.filter(item => item.for[0] === need);
       if (mine.length) out.push(`${need} — ${NEEDS[need]}`, ...mine.map(line));

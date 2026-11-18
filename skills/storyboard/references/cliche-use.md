@@ -32,7 +32,9 @@ type that says so is in `apply`. A documentary hybrid stays in `offer`, because 
 reconstruction of recorded events is not the place for an invented device.
 
 Order of precedence: what the user says about this episode, then the channel's saved choice,
-then the type. Read the mode from the report of `story_cliche {path}`. Before a board exists
+then the type. A type change for one episode, which the user asks for and which is recorded
+under `PRODUCTION.modelSettings.overrides` ([model settings](../../_shared/model-settings.md)),
+changes the mode with it, and `storyboard_apply` says so (`cliche_mode_changed`). Read the mode from the report of `story_cliche {path}`. Before a board exists
 (a synopsis-only request), read the saved type and choice with `project_manage status` and run
 
 ```bash
@@ -79,7 +81,8 @@ node "$C" show 45                                    # one entry in full: exampl
 `pick` needs at least one `--need`. `--genre` and `--layer` narrow it. A genre says where a
 cliché usually appears (romance, family, sageuk, crime, legal, medical, office, revenge,
 school, fantasy, horror); comedy is not one of them, because a comedy takes a cliché from
-any of these and breaks it, and `relief` is the need for a laugh. `--seed` (the episode's
+any of these and breaks it, and `relief` is the need for a laugh. `--genre comedy` is
+accepted and narrows nothing. `--seed` (the episode's
 topic) varies which candidates come up, so two episodes do not start from the same list;
 `--episodes` leaves out what the channel's earlier episodes already applied, and a path
 that is not a directory is an error. It prints
@@ -209,7 +212,8 @@ again when scenes are written.
 ```
 
 - `id` is the catalogue number; `name` is filled from the catalogue in the story's language
-  and is required for an entry outside it. `need` defaults to the entry's first need.
+  and is required for an entry outside it. `need` defaults to the entry's first need. `name`
+  (120 characters), `shift` and `none` (300 each) are short plain text.
 - `scenes` attaches a use to scenes and `character` to a cast member. A use recorded at the
   synopsis has neither yet; send it again with `scenes` once they exist.
 - A use sent again keeps the fields you omit, except `offered`, which is stated on every

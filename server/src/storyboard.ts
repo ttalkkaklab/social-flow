@@ -779,6 +779,17 @@ export function applyPatch(win: Board, patch: StoryboardApplyArgs, opts: { outli
         what: `cliche_choice_kept: PRODUCTION.clicheUse stays ${before === undefined ? 'unset' : JSON.stringify(before)} — it is the channel's saved choice as this board's episode took it; when the user states a new one, save it with project_manage update (production.clicheUse)` };
     }
   }
+  // A type change for one episode is the user's to ask for and stays possible (model-settings.md). When it changes
+  // whether clichés apply without a pick, the write says so.
+  let clicheModeChanged: Finding | undefined;
+  if (patch.globals && Object.hasOwn(patch.globals, 'PRODUCTION') && !opts.cliches && Object.keys(win).length) {
+    try {
+      const was = cliches().mode(win.PRODUCTION), now = cliches().mode(next.PRODUCTION);
+      const does = { apply: 'applies clichés by default', offer: 'only recommends clichés', off: 'applies no cliché unless the user asks' };
+      if (was.mode !== now.mode) clicheModeChanged = { level: 'warn', code: 'cliche_mode_changed', where: 'PRODUCTION',
+        what: `cliche_mode_changed: this episode now ${does[now.mode]} (${now.why}; before: ${was.why}) — a type change for one episode follows the user's request and is recorded under PRODUCTION.modelSettings.overrides` };
+    } catch { /* a cliché module that cannot load leaves the patch without this note */ }
+  }
   const boardMotionTheme = (next.THEME as Record<string, unknown> | undefined)?.motionGraphicTheme;
   if (boardMotionTheme) motionThemeContract().resolveTheme({ type: 'process', style: { theme: boardMotionTheme } });
   if (patch.propSheet) next.SB_DOC = { ...(next.SB_DOC as Record<string, unknown> ?? {}),
@@ -928,7 +939,7 @@ export function applyPatch(win: Board, patch: StoryboardApplyArgs, opts: { outli
       return { ...shot, visual: { ...shot.visual, video: rest } } as Shot;
     });
   }
-  const findings: Finding[] = [...joinNotes, ...editImpact(win, next), ...(clicheChoiceKept ? [clicheChoiceKept] : [])];
+  const findings: Finding[] = [...joinNotes, ...editImpact(win, next), ...(clicheChoiceKept ? [clicheChoiceKept] : []), ...(clicheModeChanged ? [clicheModeChanged] : [])];
   if (!shots.length && !opts.outline) findings.push({ level: 'bad', where: 'board', what: 'the board has no shots' });
   if ((win.STORY as { authoring?: unknown } | undefined)?.authoring === 'story-first' && (next.STORY as { authoring?: unknown } | undefined)?.authoring !== 'story-first')
     findings.push({ level: 'bad', where: 'STORY', what: 'story_order: STORY.authoring "story-first" stays on a board started with story_sequence' });
@@ -1494,21 +1505,24 @@ function clicheReading(win: Board, boardDir: string): ClicheReading {
   return cliches().reading(win, { earlier: basename(episodes) === 'episodes' ? cliches().earlierUses(episodes, boardDir) : [] });
 }
 
+// What the review page prints for a use: short plain text. Control and invisible characters (direction
+// overrides, zero-width space) would change how the line reads without showing.
+const clicheText = (max: number) => nonEmpty.max(max)
+  .refine((text) => !/[\u0000-\u001f\u007f-\u009f\u200b\u200e\u200f\u202a-\u202e\u2060-\u2069\ufeff]/.test(text), { message: 'plain text, without control or invisible characters' });
 export const storyClicheSchema = z.object({
   path: outlinePath,
   uses: z.array(z.object({
     id: z.number().int().positive().optional().describe('The catalogue number cliches.js pick printed'),
-    name: nonEmpty.refine((name) => !/^#\s*\d+$/.test(name.normalize('NFKC')), { message: 'a catalogue number goes in id, not in name' })
-      .refine((name) => !/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/.test(name), { message: 'a name is plain text, without control characters' }).optional()
+    name: clicheText(120).refine((name) => !/^#\s*\p{Nd}+$/u.test(name.normalize('NFKC')), { message: 'a catalogue number goes in id, not in name' }).optional()
       .describe('Its name in the story language; required for a cliché that is not in the catalogue'),
     need: nonEmpty.optional().describe('The job it does in this story, one of the needs cliches.js lists; the catalogue entry\'s first need when omitted'),
     scenes: z.array(z.number().int().positive()).min(1).optional().describe('The scenes it sits on, once they are written'),
     character: nonEmpty.optional().describe('The cast member a character-type cliché describes'),
-    shift: nonEmpty.optional().describe('The one thing this episode changes about it; leave it out when it is played as the catalogue describes'),
+    shift: clicheText(300).optional().describe('The one thing this episode changes about it; leave it out when it is played as the catalogue describes'),
     offered: z.boolean().optional().describe('true records a recommendation that is not in the story yet; stated on every write'),
   }).strict().refine((use) => use.id !== undefined || use.name !== undefined, { message: 'give the catalogue id, or a name for a cliché outside the catalogue' })).min(1).optional(),
   remove: z.array(z.union([z.number().int().positive(), nonEmpty])).min(1).optional().describe('Recorded uses to drop, by catalogue id or by name'),
-  none: nonEmpty.optional().describe('Records that this episode uses no cliché, and why; it replaces the list'),
+  none: clicheText(300).optional().describe('Records that this episode uses no cliché, and why; it replaces the list'),
   basis: z.literal('user').optional().describe('The user picked these from a recommendation or asked for them'),
 }).strict().refine((args) => args.none === undefined || (!args.uses && !args.remove), { message: 'none replaces the whole list — give it alone' });
 
