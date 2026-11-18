@@ -43,3 +43,21 @@
 합계 100. TEST_CMD: `bash docs/loops/025-cliche-use/gate.sh`
 
 범위(기준 5): `skills/storyboard/**`, `skills/_shared/**`, `skills/autoproduce/SKILL.md`, `skills/produce/SKILL.md`, `skills/project-init/**`, `server/src/**`, `server/dist/**`, `server/test/**`, `CLAUDE.md`, `README.md`, `AGENTS.md`, `docs/research/2026-11-18-kdrama-cliches/**`, `docs/loops/025-cliche-use/**`.
+
+## Result
+
+✅ 달성 — 2회차에서 통과 기준(95점 이상, P0 0, 객관 게이트 통과)을 넘었다. 통과 뒤에 고친 내용은 3~5회차에서 다시 평가했다.
+
+| 회차 | 점수 | P0 | 객관 게이트 | 판정 |
+|---|---|---|---|---|
+| 1 | 93 | 1 | 통과(1,889) | FAIL — `storyboard_apply`로 적용 기록을 직접 쓸 수 있었다 |
+| 2 | 98 | 0 | 통과(1,889) | PASS |
+| 3 | 97 | 0 | 통과(1,889) | PASS — 통과 뒤 수정 확인 |
+| 4 | 99 | 0 | 통과(1,889) | PASS |
+| 5 | 98 | 0 | 통과(1,889) | PASS — 최대 횟수 |
+
+5회차가 찾은 P2 두 건은 그 뒤에 고쳤다. 목록 항목을 이름으로 기록한 뒤 같은 이름으로 지우지 못하던 것과, 이름만 있는 옛 기록이 번호 기록과 따로 쌓이던 것이다. 평가 횟수를 다 써서 이 마지막 수정은 테스트와 객관 게이트로만 확인했다.
+
+고치지 않고 둔 것은 둘이다. `scenes: []`로 장면만 떼는 호출은 받지 않으므로 지우고 다시 기록한다. 한 에피소드의 유형 변경이 실제 사용자 요청에서 나왔는지는 도구가 확인하지 못하고, 변경은 `cliche_mode_changed` 경고로 드러난다.
+
+기록: `verify-1.md`~`verify-5.md`, `iter-1-summary.md`~`iter-4-summary.md`, 태깅 기준 `tagging-spec.md`.

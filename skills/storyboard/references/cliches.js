@@ -62,8 +62,10 @@ function find(id) {
 }
 /** The catalogue entry a name spells exactly (Korean or English name), so a use recorded by name is read with its marks. */
 function findByName(name) {
-  const text = String(name == null ? '' : name).trim().toLowerCase();
-  return text ? catalog().items.find(item => item.name.toLowerCase() === text || item.en.toLowerCase() === text) : undefined;
+  // Compared as composed characters with single spaces, so a decomposed or double-spaced spelling is still the entry.
+  const plain = value => String(value == null ? '' : value).normalize('NFC').replace(/\s+/g, ' ').trim().toLowerCase();
+  const text = plain(name);
+  return text ? catalog().items.find(item => plain(item.name) === text || plain(item.en) === text) : undefined;
 }
 
 // A custom type is described in the user's words, so its detail decides. Documentary hybrids

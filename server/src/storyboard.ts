@@ -1564,7 +1564,12 @@ export function writeStoryCliches(input: z.input<typeof storyClicheSchema>): App
       if (missing !== undefined) throw new Error(`story_order: scene ${missing} does not exist — write it with story_scene, or record the cliché without scenes for now`);
       if (use.character !== undefined && cast && !cast.has(use.character)) throw new Error(`cliche_character: ${use.character} is not in storyboard/cast.json`);
       const applied = use.offered !== true;
-      const old = uses.find((entry) => keyOf(entry) === keyOf(use));
+      const byKey = uses.find((entry) => keyOf(entry) === keyOf(use));
+      // A use recorded by name alone, before that name was read as a catalogue entry, is the same use: its
+      // fields are carried into the entry under the id and the name-only copy goes.
+      const byName = use.id === undefined ? undefined
+        : uses.find((entry) => entry !== byKey && entry.id === undefined && lib.findByName(entry.name)?.id === use.id);
+      const old = byKey ?? byName;
       // A use the user already picked stays picked when its scenes or shift are revised.
       const picked = args.basis === 'user' || (old !== undefined && !old.offered && old.basis === 'user');
       if (applied && now.mode !== 'apply' && !picked)
@@ -1572,7 +1577,7 @@ export function writeStoryCliches(input: z.input<typeof storyClicheSchema>): App
           ? `cliche_user_choice: ${now.why} — apply a cliché here only when the user asks for it in this episode, then record it with basis "user"`
           : `cliche_user_choice: this episode recommends clichés and applies only what the user picks (${now.why}) — record candidates with offered:true and present them; once the user picked, record those with basis "user"`);
       // offered is stated on every write; the other fields keep their earlier value when omitted.
-      const { offered: _offered, basis: _basis, ...kept } = old ?? ({} as ClicheUse);
+      const { offered: _offered, basis: _basis, ...kept } = { ...(byName ?? {}), ...(byKey ?? {}) } as ClicheUse;
       const entry: ClicheUse = {
         ...kept, ...(use.id !== undefined ? { id: use.id } : {}),
         name: use.name ?? old?.name ?? (korean ? item!.name : item!.en),
@@ -1584,10 +1589,15 @@ export function writeStoryCliches(input: z.input<typeof storyClicheSchema>): App
         ...(applied ? { basis: args.basis ?? (old && !old.offered ? old.basis : undefined) ?? now.basis ?? 'default' } : { offered: true }),
         ...(item?.caution ? { caution: item.caution } : {}), ...(item?.quote ? { quote: true } : {}),
       };
-      uses = old ? uses.map((existing) => existing === old ? entry : existing) : [...uses, entry];
+      uses = (old ? uses.map((existing) => existing === old ? entry : existing) : [...uses, entry]).filter((existing) => existing !== byName);
     }
     for (const target of args.remove ?? []) {
-      const key = typeof target === 'number' ? `#${target}` : `name:${target.trim()}`;
+      let key = typeof target === 'number' ? `#${target}` : `name:${target.trim()}`;
+      // A name that spells a catalogue entry removes that entry when nothing is recorded under the name itself.
+      if (typeof target === 'string' && !uses.some((entry) => keyOf(entry) === key)) {
+        const match = lib.findByName(target);
+        if (match) key = `#${match.id}`;
+      }
       if (!uses.some((entry) => keyOf(entry) === key)) warn('cliche_not_recorded', 'clichés', `nothing is recorded as ${typeof target === 'number' ? `#${target}` : `"${target}"`} — nothing was removed`);
       uses = uses.filter((entry) => keyOf(entry) !== key);
     }

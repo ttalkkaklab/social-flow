@@ -75,7 +75,8 @@ test('pick returns a few candidates for the named need and leaves caution and pr
   assert.equal(C.pick({ needs: ['setting'], limit: 3 }).candidates.length, 3);
   assert.throws(() => C.pick({}), /name at least one need/);
   assert.equal(C.pick({ needs: ['Setting'], limit: 3 }).needs[0], 'setting');
-  assert.equal(C.findByName(` ${flagged.en.toUpperCase()} `).id, flagged.id);
+  assert.equal(C.findByName(` ${flagged.en.toUpperCase().replace(' ', '  ')} `).id, flagged.id);
+  assert.equal(C.findByName(flagged.name.normalize('NFD')).id, flagged.id);
   assert.equal(C.findByName('no such cliché'), undefined);
   assert.throws(() => C.pick({ needs: ['fame'] }), /unknown need "fame"/);
   assert.throws(() => C.pick({ needs: ['meet'], genres: ['western'] }), /unknown genre "western"/);

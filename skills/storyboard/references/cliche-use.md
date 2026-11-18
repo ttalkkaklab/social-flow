@@ -221,8 +221,9 @@ again when scenes are written.
   synopsis has neither yet; send it again with `scenes` once they exist.
 - A use sent again keeps the fields you omit, except `offered`, which is stated on every
   write: leaving it out records the use as applied.
-- `remove` drops uses by id or name. `none` with a reason records that the episode uses no
-  cliché and replaces the list.
+- `remove` drops uses by id or name; a catalogue entry's name removes that entry. To take a
+  use off its scenes, remove it and record it again. `none` with a reason records that the
+  episode uses no cliché and replaces the list.
 - Called with `path` alone it reports and writes nothing.
 - `story_cliche` is the record's only writer. `storyboard_apply` refuses a `globals` patch
   that changes `CLICHES` (`cliche_record`); a board written back whole with the block

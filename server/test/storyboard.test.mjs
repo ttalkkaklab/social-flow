@@ -669,6 +669,12 @@ describe('clichés are chosen for the story and recorded on the board', () => {
     const file = join(second, 'scenes.js'), text = readFileSync(file, 'utf8');
     writeFileSync(file, text + `window.CLICHES = ${JSON.stringify({ version: 1, uses: [{ id: plain.id, name: plain.name, basis: 'default' }, null, 'loose text'] })};\n`);
     assert.deepEqual(codes(writeStoryCliches({ path: second })).filter((code) => code.startsWith('cliche_unreadable')), ['cliche_unreadable clichés']);
+    // A use a hand edit recorded by a catalogue name alone is carried into the id entry, and that name removes it.
+    writeFileSync(file, text + `window.CLICHES = ${JSON.stringify({ version: 1, uses: [{ name: quoted.name, shift: 'keep me', offered: true }] })};\n`);
+    writeStoryCliches({ path: second, uses: [{ name: quoted.name, offered: true }] });
+    assert.deepEqual(recorded(second).uses.map((use) => [use.id, use.shift]), [[quoted.id, 'keep me']]);
+    assert.deepEqual(codes(writeStoryCliches({ path: second, remove: [quoted.en] })).filter((code) => code.startsWith('cliche_not_recorded')), []);
+    assert.equal(recorded(second).uses.length, 0);
     writeFileSync(file, text);
 
     // A scene removed later leaves a reference the report and the digest name.

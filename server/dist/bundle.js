@@ -119485,11 +119485,13 @@ function writeStoryCliches(input) {
       if (missing !== void 0) throw new Error(`story_order: scene ${missing} does not exist \u2014 write it with story_scene, or record the clich\xE9 without scenes for now`);
       if (use.character !== void 0 && cast && !cast.has(use.character)) throw new Error(`cliche_character: ${use.character} is not in storyboard/cast.json`);
       const applied = use.offered !== true;
-      const old = uses.find((entry3) => keyOf(entry3) === keyOf(use));
+      const byKey = uses.find((entry3) => keyOf(entry3) === keyOf(use));
+      const byName = use.id === void 0 ? void 0 : uses.find((entry3) => entry3 !== byKey && entry3.id === void 0 && lib.findByName(entry3.name)?.id === use.id);
+      const old = byKey ?? byName;
       const picked = args.basis === "user" || old !== void 0 && !old.offered && old.basis === "user";
       if (applied && now.mode !== "apply" && !picked)
         throw new Error(now.mode === "off" ? `cliche_user_choice: ${now.why} \u2014 apply a clich\xE9 here only when the user asks for it in this episode, then record it with basis "user"` : `cliche_user_choice: this episode recommends clich\xE9s and applies only what the user picks (${now.why}) \u2014 record candidates with offered:true and present them; once the user picked, record those with basis "user"`);
-      const { offered: _offered, basis: _basis, ...kept } = old ?? {};
+      const { offered: _offered, basis: _basis, ...kept } = { ...byName ?? {}, ...byKey ?? {} };
       const entry2 = {
         ...kept,
         ...use.id !== void 0 ? { id: use.id } : {},
@@ -119503,10 +119505,14 @@ function writeStoryCliches(input) {
         ...item?.caution ? { caution: item.caution } : {},
         ...item?.quote ? { quote: true } : {}
       };
-      uses = old ? uses.map((existing) => existing === old ? entry2 : existing) : [...uses, entry2];
+      uses = (old ? uses.map((existing) => existing === old ? entry2 : existing) : [...uses, entry2]).filter((existing) => existing !== byName);
     }
     for (const target of args.remove ?? []) {
-      const key = typeof target === "number" ? `#${target}` : `name:${target.trim()}`;
+      let key = typeof target === "number" ? `#${target}` : `name:${target.trim()}`;
+      if (typeof target === "string" && !uses.some((entry2) => keyOf(entry2) === key)) {
+        const match2 = lib.findByName(target);
+        if (match2) key = `#${match2.id}`;
+      }
       if (!uses.some((entry2) => keyOf(entry2) === key)) warn("cliche_not_recorded", "clich\xE9s", `nothing is recorded as ${typeof target === "number" ? `#${target}` : `"${target}"`} \u2014 nothing was removed`);
       uses = uses.filter((entry2) => keyOf(entry2) !== key);
     }
