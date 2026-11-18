@@ -130654,7 +130654,7 @@ async function manageLocation(args) {
 // src/cover.ts
 import { createHash as createHash22 } from "node:crypto";
 import { execFileSync as execFileSync17, spawn as spawn3 } from "node:child_process";
-import { copyFileSync as copyFileSync2, existsSync as existsSync32, mkdirSync as mkdirSync19, mkdtempSync as mkdtempSync7, readdirSync as readdirSync4, readFileSync as readFileSync34, realpathSync as realpathSync10, renameSync as renameSync8, rmSync as rmSync16, statSync as statSync18, writeFileSync as writeFileSync25, openSync as openSync7, readSync, closeSync as closeSync7 } from "node:fs";
+import { copyFileSync as copyFileSync2, existsSync as existsSync32, mkdirSync as mkdirSync19, mkdtempSync as mkdtempSync7, readFileSync as readFileSync34, realpathSync as realpathSync10, renameSync as renameSync8, rmSync as rmSync16, statSync as statSync18, writeFileSync as writeFileSync25, openSync as openSync7, readSync, closeSync as closeSync7 } from "node:fs";
 import { tmpdir as tmpdir7 } from "node:os";
 import { dirname as dirname9, isAbsolute as isAbsolute2, join as join17, relative as relative2, resolve as resolve9, sep } from "node:path";
 import { createRequire as createRequire19 } from "node:module";
@@ -130719,7 +130719,6 @@ function sha256File(file) {
   }
   return hash7.digest("hex");
 }
-var readdirIf = (dir) => existsSync32(dir) ? readdirSync4(dir) : [];
 var sha2562 = (value) => createHash22("sha256").update(value).digest("hex");
 function probe4(file) {
   try {
@@ -130764,6 +130763,16 @@ function resolveSource(ep, input, warnings) {
     const file2 = inside(ep.episode, input.video, "video");
     const { duration: duration4 } = probe4(file2);
     if (duration4 === void 0 || input.seconds >= duration4) throw new Error(`cover_frame_outside: ${input.seconds}s is not inside ${input.video} (${duration4 ?? "?"}s)`);
+    const probeDir = mkdtempSync7(join17(tmpdir7(), "sf-cover-frame-")), still = join17(probeDir, "frame.png");
+    try {
+      try {
+        ffmpeg3(["-ss", String(input.seconds), "-i", file2, "-frames:v", "1", still]);
+      } catch {
+      }
+      if (!existsSync32(still)) throw new Error(`cover_frame_outside: no frame at ${input.seconds}s in ${input.video}`);
+    } finally {
+      rmSync16(probeDir, { recursive: true, force: true });
+    }
     return { ...input, video: relative2(ep.episode, file2), path: relative2(ep.episode, file2), sha256: sha256File(file2) };
   }
   const job = Object.values(readImageState(ep.episode)?.jobs ?? {}).find((j) => j.requestId === input.requestId);
@@ -131021,147 +131030,160 @@ async function renderCover(path35) {
   const decision = readDecision(ep);
   if (!decision) throw new Error("cover_decision_missing: write the decision with episode_cover set first");
   if (decision.format !== ep.format) throw new Error(`cover_format_changed: the decision was made for ${decision.format} and the board is now ${ep.format}; set it again`);
-  const dir = join17(ep.episode, "output", "cover"), work = join17(dir, ".work");
-  rmSync16(work, { recursive: true, force: true });
+  const dir = join17(ep.episode, "output", "cover");
   mkdirSync19(join17(dir, "previews"), { recursive: true });
-  mkdirSync19(work, { recursive: true });
-  const template = readFileSync34(TEMPLATE_FILE, "utf8");
-  const kind = landscape(ep.spec) ? "landscape" : "vertical";
-  const files3 = [], previews = [], warnings = [], measurements = {};
-  const sources = {}, fonts = {};
-  const looks2 = [decision, ...decision.variants];
-  for (const [i2, look] of looks2.entries()) {
-    const label = VARIANT_LABELS[i2], suffix = i2 ? `-${label}` : "", say = i2 ? `variant ${label}: ` : "";
-    const srcFile = inside(ep.episode, look.source.path, "source");
-    const now = sha256File(srcFile);
-    if (now !== look.source.sha256) throw new Error(`cover_source_changed: ${look.source.path} changed after episode_cover set; set the decision again so it names what it shows`);
-    sources[label] = now;
-    let still = srcFile;
-    if (look.source.kind === "frame") {
-      const { duration: duration4 } = probe4(srcFile);
-      if (duration4 === void 0 || look.source.seconds >= duration4) throw new Error(`cover_frame_outside: ${look.source.seconds}s is not inside ${look.source.path} (${duration4 ?? "?"}s)`);
-      still = join17(work, `frame${suffix}.png`);
-      ffmpeg3(["-ss", String(look.source.seconds), "-i", srcFile, "-frames:v", "1", still]);
-    }
-    const src = probe4(still);
-    for (const canvas of ep.spec.canvases) {
-      const crop = cropFor(src, look.focus, canvas);
-      if (crop.small) warnings.push({ code: "cover_source_small", message: `${say}the source gives less than ${canvas.min[0]}\xD7${canvas.min[1]} and is enlarged to it` });
-      const bg = join17(work, `bg-${canvas.id}${suffix}.png`);
-      ffmpeg3(["-i", still, "-vf", `crop=${crop.w}:${crop.h}:${crop.x}:${crop.y},scale=${crop.outW}:${crop.outH}:flags=lanczos`, "-frames:v", "1", bg]);
-      const focus = { x: (look.focus.x * src.width - crop.x) / crop.w, y: (look.focus.y * src.height - crop.y) / crop.h };
-      const region = regionFor(ep.spec, focus);
-      const font = look.copy ? pickFont(look.copy.text, decision.language) : void 0;
-      if (font) fonts[relative2(PLUGIN_ROOT, font.file)] = sha256File(font.file);
-      const config3 = {
-        width: crop.outW,
-        height: crop.outH,
-        background: pathToFileURL(bg).href,
-        text: look.copy?.text ?? null,
-        emphasis: look.copy?.emphasis ?? null,
-        align: region.align,
-        region,
-        font: font ? { url: pathToFileURL(font.file).href, weight: font.weight } : null,
-        maxFont: Math.round(kind === "landscape" ? 0.2 * crop.outH : 0.14 * crop.outW),
-        minFont: Math.round(MIN_TILE_FONT_PX * crop.outW / TILE_WIDTH[kind])
-      };
-      const page = join17(work, `page-${canvas.id}${suffix}.html`);
-      writeFileSync25(page, injectConfig(template, config3));
-      const url = pathToFileURL(page).href, size = `--window-size=${crop.outW},${crop.outH}`;
-      const dom = await chrome([size, "--dump-dom", url]);
-      const measured = /<script type="application\/json" id="measure">([\s\S]*?)<\/script>/.exec(dom)?.[1];
-      let m2;
-      try {
-        m2 = JSON.parse(measured ?? "");
-      } catch {
-        throw new Error("cover_chrome_failed: the cover page did not report its layout");
+  const work = mkdtempSync7(join17(dir, ".work-")), stage = join17(work, "out");
+  mkdirSync19(join17(stage, "previews"), { recursive: true });
+  const previous = previousOutputs(dir);
+  try {
+    const template = readFileSync34(TEMPLATE_FILE, "utf8");
+    const kind = landscape(ep.spec) ? "landscape" : "vertical";
+    const files3 = [], previews = [], warnings = [], measurements = {};
+    const sources = {}, fonts = {};
+    const looks2 = [decision, ...decision.variants];
+    for (const [i2, look] of looks2.entries()) {
+      const label = VARIANT_LABELS[i2], suffix = i2 ? `-${label}` : "", say = i2 ? `variant ${label}: ` : "";
+      const srcFile = inside(ep.episode, look.source.path, "source");
+      const now = sha256File(srcFile);
+      if (now !== look.source.sha256) throw new Error(`cover_source_changed: ${look.source.path} changed after episode_cover set; set the decision again so it names what it shows`);
+      sources[label] = now;
+      let still = srcFile;
+      if (look.source.kind === "frame") {
+        const { duration: duration4 } = probe4(srcFile);
+        if (duration4 === void 0 || look.source.seconds >= duration4) throw new Error(`cover_frame_outside: ${look.source.seconds}s is not inside ${look.source.path} (${duration4 ?? "?"}s)`);
+        still = join17(work, `frame${suffix}.png`);
+        ffmpeg3(["-ss", String(look.source.seconds), "-i", srcFile, "-frames:v", "1", still]);
+        if (!existsSync32(still)) throw new Error(`cover_frame_outside: no frame at ${look.source.seconds}s in ${look.source.path}`);
       }
-      if (m2.error) throw new Error(`cover_chrome_failed: ${m2.error}`);
-      if (m2.width !== crop.outW || look.copy && !m2.copy) throw new Error("cover_chrome_failed: the cover page did not finish its layout");
-      const shot = join17(work, `shot-${canvas.id}${suffix}.png`);
-      await chrome([size, `--screenshot=${shot}`, url], shot);
-      const got = probe4(shot);
-      if (got.width !== crop.outW || got.height !== crop.outH) throw new Error(`cover_chrome_failed: the capture is ${got.width}\xD7${got.height}, not ${crop.outW}\xD7${crop.outH}`);
-      const name = `${kind === "landscape" ? "thumbnail" : "cover"}-${canvas.id}${suffix}.jpg`;
-      const out = join17(dir, name);
-      const enc = encodeJpeg(shot, out, LIMIT[kind]);
-      files3.push({ name, width: crop.outW, height: crop.outH, bytes: enc.bytes, quality: enc.quality, sha256: sha256File(out), role: i2 ? `variant ${label}` : "main" });
-      if (!i2 && kind === "vertical" && ep.spec.unverified.tiktokSavedRatio === "3:4") {
-        const tt = join17(dir, "cover-3x4.jpg"), png = join17(work, "tiktok-3x4.png");
-        ffmpeg3(["-i", shot, "-vf", `crop=iw:ih*0.75:0:ih*0.125,scale=1080:1440:flags=lanczos`, "-frames:v", "1", png]);
-        const e2 = encodeJpeg(png, tt, LIMIT.vertical);
-        files3.push({ name: "cover-3x4.jpg", width: 1080, height: 1440, bytes: e2.bytes, quality: e2.quality, sha256: sha256File(tt), role: "tiktok" });
-      }
-      previews.push(...cutPreviews(shot, join17(dir, "previews"), `${canvas.id}${suffix}`, kind, ep.spec));
-      const measure = { canvas: canvas.id, source: look.source.path, crop, focus };
-      const core = kind === "vertical" ? coreBand(ep.spec) : void 0;
-      if (core && (focus.y < core.y0 || focus.y > core.y1))
-        warnings.push({ code: "cover_focus_outside_core", message: `${say}the subject (focus y ${focus.y.toFixed(2)}) sits outside the centre band ${core.y0}\u2013${core.y1} that every crop keeps` });
-      if (look.copy && m2.copy) {
-        const box = m2.copy.box;
-        const tilePx = m2.copy.fontPx * TILE_WIDTH[kind] / crop.outW;
-        const contrast = contrastBehind(bg, box, crop.outW, crop.outH, look.copy.emphasis ? [FILL.text, FILL.emphasis] : [FILL.text]);
-        Object.assign(measure, {
-          font: font.id,
-          fontPx: m2.copy.fontPx,
-          lines: m2.copy.lines,
-          box,
-          tileFontPx: +tilePx.toFixed(1),
-          tileWidth: TILE_WIDTH[kind],
-          minTileFontPx: MIN_TILE_FONT_PX,
-          contrast: +contrast.toFixed(2),
-          minContrast: 3
-        });
-        if (!m2.copy.fits) warnings.push({ code: "cover_copy_overflow", message: `${say}the copy does not fit its area in two lines even at the smallest legible size; shorten it` });
-        if (tilePx < MIN_TILE_FONT_PX) warnings.push({ code: "cover_copy_small", message: `${say}the copy is ${tilePx.toFixed(1)} px tall on a ${TILE_WIDTH[kind]} px tile; ${MIN_TILE_FONT_PX} px or more reads` });
-        if (contrast < 3) warnings.push({ code: "cover_copy_low_contrast", message: `${say}the copy stands ${contrast.toFixed(2)}:1 off the brightest part behind it; 3:1 or more reads at tile size` });
-        if (kind === "vertical") {
-          const xb = ep.spec.bands.x;
-          if (box.y0 < core.y0 - 2e-3 || box.y1 > core.y1 + 2e-3 || box.x0 < xb.x0 - 2e-3 || box.x1 > xb.x1 + 2e-3)
-            warnings.push({ code: "cover_copy_outside_core", message: `${say}the copy leaves the centre band every crop keeps` });
-        } else {
-          const badge = ep.spec.badge ?? { x0: 0.8, y0: 0.85 };
-          if (box.x1 > badge.x0 && box.y1 > badge.y0 || box.y1 > (ep.spec.bottom ?? 0.95))
-            warnings.push({ code: "cover_copy_badge", message: `${say}the copy reaches the duration badge corner or the progress bar strip` });
+      const src = probe4(still);
+      for (const canvas of ep.spec.canvases) {
+        const crop = cropFor(src, look.focus, canvas);
+        if (crop.small) warnings.push({ code: "cover_source_small", message: `${say}the source gives less than ${canvas.min[0]}\xD7${canvas.min[1]} and is enlarged to it` });
+        const bg = join17(work, `bg-${canvas.id}${suffix}.png`);
+        ffmpeg3(["-i", still, "-vf", `crop=${crop.w}:${crop.h}:${crop.x}:${crop.y},scale=${crop.outW}:${crop.outH}:flags=lanczos`, "-frames:v", "1", bg]);
+        const focus = { x: (look.focus.x * src.width - crop.x) / crop.w, y: (look.focus.y * src.height - crop.y) / crop.h };
+        const region = regionFor(ep.spec, focus);
+        const font = look.copy ? pickFont(look.copy.text, decision.language) : void 0;
+        if (font) fonts[relative2(PLUGIN_ROOT, font.file)] = sha256File(font.file);
+        const config3 = {
+          width: crop.outW,
+          height: crop.outH,
+          background: pathToFileURL(bg).href,
+          text: look.copy?.text ?? null,
+          emphasis: look.copy?.emphasis ?? null,
+          align: region.align,
+          region,
+          font: font ? { url: pathToFileURL(font.file).href, weight: font.weight } : null,
+          maxFont: Math.round(kind === "landscape" ? 0.2 * crop.outH : 0.14 * crop.outW),
+          minFont: Math.round(MIN_TILE_FONT_PX * crop.outW / TILE_WIDTH[kind])
+        };
+        const page = join17(work, `page-${canvas.id}${suffix}.html`);
+        writeFileSync25(page, injectConfig(template, config3));
+        const url = pathToFileURL(page).href, size = `--window-size=${crop.outW},${crop.outH}`;
+        const dom = await chrome([size, "--dump-dom", url]);
+        const measured = /<script type="application\/json" id="measure">([\s\S]*?)<\/script>/.exec(dom)?.[1];
+        let m2;
+        try {
+          m2 = JSON.parse(measured ?? "");
+        } catch {
+          throw new Error("cover_chrome_failed: the cover page did not report its layout");
         }
+        if (m2.error) throw new Error(`cover_chrome_failed: ${m2.error}`);
+        if (m2.width !== crop.outW || look.copy && !m2.copy) throw new Error("cover_chrome_failed: the cover page did not finish its layout");
+        const shot = join17(work, `shot-${canvas.id}${suffix}.png`);
+        await chrome([size, `--screenshot=${shot}`, url], shot);
+        const got = probe4(shot);
+        if (got.width !== crop.outW || got.height !== crop.outH) throw new Error(`cover_chrome_failed: the capture is ${got.width}\xD7${got.height}, not ${crop.outW}\xD7${crop.outH}`);
+        const name = `${kind === "landscape" ? "thumbnail" : "cover"}-${canvas.id}${suffix}.jpg`;
+        const out = join17(stage, name);
+        const enc = encodeJpeg(shot, out, LIMIT[kind]);
+        files3.push({ name, width: crop.outW, height: crop.outH, bytes: enc.bytes, quality: enc.quality, sha256: sha256File(out), role: i2 ? `variant ${label}` : "main" });
+        if (!i2 && kind === "vertical" && ep.spec.unverified.tiktokSavedRatio === "3:4") {
+          const tt = join17(stage, "cover-3x4.jpg"), png = join17(work, "tiktok-3x4.png");
+          ffmpeg3(["-i", shot, "-vf", `crop=iw:ih*0.75:0:ih*0.125,scale=1080:1440:flags=lanczos`, "-frames:v", "1", png]);
+          const e2 = encodeJpeg(png, tt, LIMIT.vertical);
+          files3.push({ name: "cover-3x4.jpg", width: 1080, height: 1440, bytes: e2.bytes, quality: e2.quality, sha256: sha256File(tt), role: "tiktok" });
+        }
+        previews.push(...cutPreviews(shot, join17(stage, "previews"), `${canvas.id}${suffix}`, kind, ep.spec));
+        const measure = { canvas: canvas.id, source: look.source.path, crop, focus };
+        const core = kind === "vertical" ? coreBand(ep.spec) : void 0;
+        if (core && (focus.y < core.y0 || focus.y > core.y1))
+          warnings.push({ code: "cover_focus_outside_core", message: `${say}the subject (focus y ${focus.y.toFixed(2)}) sits outside the centre band ${core.y0}\u2013${core.y1} that every crop keeps` });
+        if (look.copy && m2.copy) {
+          const box = m2.copy.box;
+          const tilePx = m2.copy.fontPx * TILE_WIDTH[kind] / crop.outW;
+          const contrast = contrastBehind(bg, box, crop.outW, crop.outH, look.copy.emphasis ? [FILL.text, FILL.emphasis] : [FILL.text]);
+          Object.assign(measure, {
+            font: font.id,
+            fontPx: m2.copy.fontPx,
+            lines: m2.copy.lines,
+            box,
+            tileFontPx: +tilePx.toFixed(1),
+            tileWidth: TILE_WIDTH[kind],
+            minTileFontPx: MIN_TILE_FONT_PX,
+            contrast: +contrast.toFixed(2),
+            minContrast: 3
+          });
+          if (!m2.copy.fits) warnings.push({ code: "cover_copy_overflow", message: `${say}the copy does not fit its area in two lines even at the smallest legible size; shorten it` });
+          if (tilePx < MIN_TILE_FONT_PX) warnings.push({ code: "cover_copy_small", message: `${say}the copy is ${tilePx.toFixed(1)} px tall on a ${TILE_WIDTH[kind]} px tile; ${MIN_TILE_FONT_PX} px or more reads` });
+          if (contrast < 3) warnings.push({ code: "cover_copy_low_contrast", message: `${say}the copy stands ${contrast.toFixed(2)}:1 off the brightest part behind it; 3:1 or more reads at tile size` });
+          if (kind === "vertical") {
+            const xb = ep.spec.bands.x;
+            if (box.y0 < core.y0 - 2e-3 || box.y1 > core.y1 + 2e-3 || box.x0 < xb.x0 - 2e-3 || box.x1 > xb.x1 + 2e-3)
+              warnings.push({ code: "cover_copy_outside_core", message: `${say}the copy leaves the centre band every crop keeps` });
+          } else {
+            const badge = ep.spec.badge ?? { x0: 0.8, y0: 0.85 };
+            if (box.x1 > badge.x0 && box.y1 > badge.y0 || box.y1 > (ep.spec.bottom ?? 0.95))
+              warnings.push({ code: "cover_copy_badge", message: `${say}the copy reaches the duration badge corner or the progress bar strip` });
+          }
+        }
+        measurements[`${canvas.id}${suffix}`] = measure;
       }
-      measurements[`${canvas.id}${suffix}`] = measure;
     }
-  }
-  warnings.push(...titleWarnings(ep, decision));
-  const copied = [];
-  if (storyFirst(ep.board.win)) {
-    const main2 = files3.find((f3) => f3.role === "main");
-    const video2 = join17(ep.episode, "output", "video");
-    mkdirSync19(video2, { recursive: true });
-    copyFileSync2(join17(dir, main2.name), join17(video2, "cover.jpg"));
-    copied.push("output/video/cover.jpg");
-    if (kind === "landscape") {
-      copyFileSync2(join17(dir, main2.name), join17(video2, "thumbnail.jpg"));
-      copied.push("output/video/thumbnail.jpg");
+    warnings.push(...titleWarnings(ep, decision));
+    for (const name of [...files3.map((f3) => f3.name), ...previews]) renameSync8(join17(stage, name), join17(dir, name));
+    const copied = [];
+    if (storyFirst(ep.board.win)) {
+      const main2 = files3.find((f3) => f3.role === "main");
+      const video2 = join17(ep.episode, "output", "video");
+      mkdirSync19(video2, { recursive: true });
+      copyFileSync2(join17(dir, main2.name), join17(video2, "cover.jpg"));
+      copied.push("output/video/cover.jpg");
+      if (kind === "landscape") {
+        copyFileSync2(join17(dir, main2.name), join17(video2, "thumbnail.jpg"));
+        copied.push("output/video/thumbnail.jpg");
+      }
     }
+    const made = /* @__PURE__ */ new Set([...files3.map((f3) => f3.name), ...previews]);
+    for (const name of previous) if (!made.has(name)) rmSync16(join17(dir, name), { force: true });
+    const render = {
+      version: 1,
+      renderVersion: RENDER_VERSION,
+      decisionSha256: decisionSha(decision),
+      templateSha256: templateSha(),
+      sources,
+      fonts,
+      format: ep.format,
+      files: files3,
+      previews,
+      measurements,
+      warnings,
+      copied
+    };
+    atomicWrite(join17(dir, "render.json"), JSON.stringify(render, null, 2) + "\n");
+    return { dir, render };
+  } finally {
+    rmSync16(work, { recursive: true, force: true });
   }
-  const made = new Set(files3.map((f3) => f3.name));
-  for (const name of readdirIf(dir)) if (/^(cover|thumbnail)-[0-9x]+(-[bc])?\.jpg$/.test(name) && !made.has(name)) rmSync16(join17(dir, name), { force: true });
-  const kept = new Set(previews.map((p) => p.split("/").pop()));
-  for (const name of readdirIf(join17(dir, "previews"))) if (name.endsWith(".png") && !kept.has(name)) rmSync16(join17(dir, "previews", name), { force: true });
-  const render = {
-    version: 1,
-    renderVersion: RENDER_VERSION,
-    decisionSha256: decisionSha(decision),
-    templateSha256: templateSha(),
-    sources,
-    fonts,
-    format: ep.format,
-    files: files3,
-    previews,
-    measurements,
-    warnings,
-    copied
-  };
-  atomicWrite(join17(dir, "render.json"), JSON.stringify(render, null, 2) + "\n");
-  rmSync16(work, { recursive: true, force: true });
-  return { dir, render };
+}
+function previousOutputs(dir) {
+  try {
+    const old = JSON.parse(readFileSync34(join17(dir, "render.json"), "utf8"));
+    const names = [...(old.files ?? []).map((f3) => String(f3?.name)), ...(old.previews ?? []).map(String)];
+    return names.filter((n) => /^(previews\/)?[\w.-]+\.(jpg|png)$/.test(n));
+  } catch {
+    return [];
+  }
 }
 function cutPreviews(shot, dir, stem, kind, spec) {
   const out = [];

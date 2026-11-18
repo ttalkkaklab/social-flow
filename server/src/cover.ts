@@ -13,7 +13,7 @@
 import { z } from 'zod';
 import { createHash } from 'node:crypto';
 import { execFileSync, spawn } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync, openSync, readSync, closeSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync, openSync, readSync, closeSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { createRequire } from 'node:module';
@@ -107,7 +107,6 @@ function sha256File(file: string): string {
   try { for (let n; (n = readSync(fd, buf, 0, buf.length, null)) > 0;) hash.update(buf.subarray(0, n)); } finally { closeSync(fd); }
   return hash.digest('hex');
 }
-const readdirIf = (dir: string) => existsSync(dir) ? readdirSync(dir) : [];
 const sha256 = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
 function probe(file: string): { width: number; height: number; duration?: number } {
   try {
@@ -151,6 +150,12 @@ function resolveSource(ep: Episode, input: SourceInput, warnings: Warning[]): So
     const file = inside(ep.episode, input.video, 'video');
     const { duration } = probe(file);
     if (duration === undefined || input.seconds >= duration) throw new Error(`cover_frame_outside: ${input.seconds}s is not inside ${input.video} (${duration ?? '?'}s)`);
+    // The container's duration can run past the last decodable frame, so the frame is pulled once here as render will.
+    const probeDir = mkdtempSync(join(tmpdir(), 'sf-cover-frame-')), still = join(probeDir, 'frame.png');
+    try {
+      try { ffmpeg(['-ss', String(input.seconds), '-i', file, '-frames:v', '1', still]); } catch { /* reported below */ }
+      if (!existsSync(still)) throw new Error(`cover_frame_outside: no frame at ${input.seconds}s in ${input.video}`);
+    } finally { rmSync(probeDir, { recursive: true, force: true }); }
     return { ...input, video: relative(ep.episode, file), path: relative(ep.episode, file), sha256: sha256File(file) };
   }
   const job = Object.values(readImageState(ep.episode)?.jobs ?? {}).find(j => j.requestId === input.requestId);
@@ -406,10 +411,14 @@ export async function renderCover(path: string): Promise<{ dir: string; render: 
   const decision = readDecision(ep);
   if (!decision) throw new Error('cover_decision_missing: write the decision with episode_cover set first');
   if (decision.format !== ep.format) throw new Error(`cover_format_changed: the decision was made for ${decision.format} and the board is now ${ep.format}; set it again`);
-  const dir = join(ep.episode, 'output', 'cover'), work = join(dir, '.work');
-  rmSync(work, { recursive: true, force: true });
+  const dir = join(ep.episode, 'output', 'cover');
   mkdirSync(join(dir, 'previews'), { recursive: true });
-  mkdirSync(work, { recursive: true });
+  // Everything is made in a private staging folder and moved into place only once the whole render
+  // succeeded, so a failed render leaves the previous files, render.json and output/video copies as they were.
+  const work = mkdtempSync(join(dir, '.work-')), stage = join(work, 'out');
+  mkdirSync(join(stage, 'previews'), { recursive: true });
+  const previous = previousOutputs(dir);
+  try {
   const template = readFileSync(TEMPLATE_FILE, 'utf8');
   const kind = landscape(ep.spec) ? 'landscape' : 'vertical';
   const files: FileRecord[] = [], previews: string[] = [], warnings: Warning[] = [], measurements: Record<string, unknown> = {};
@@ -428,6 +437,7 @@ export async function renderCover(path: string): Promise<{ dir: string; render: 
       if (duration === undefined || look.source.seconds >= duration) throw new Error(`cover_frame_outside: ${look.source.seconds}s is not inside ${look.source.path} (${duration ?? '?'}s)`);
       still = join(work, `frame${suffix}.png`);
       ffmpeg(['-ss', String(look.source.seconds), '-i', srcFile, '-frames:v', '1', still]);
+      if (!existsSync(still)) throw new Error(`cover_frame_outside: no frame at ${look.source.seconds}s in ${look.source.path}`);
     }
     const src = probe(still);
     for (const canvas of ep.spec.canvases) {
@@ -461,16 +471,16 @@ export async function renderCover(path: string): Promise<{ dir: string; render: 
       const got = probe(shot);
       if (got.width !== crop.outW || got.height !== crop.outH) throw new Error(`cover_chrome_failed: the capture is ${got.width}×${got.height}, not ${crop.outW}×${crop.outH}`);
       const name = `${kind === 'landscape' ? 'thumbnail' : 'cover'}-${canvas.id}${suffix}.jpg`;
-      const out = join(dir, name);
+      const out = join(stage, name);
       const enc = encodeJpeg(shot, out, LIMIT[kind]);
       files.push({ name, width: crop.outW, height: crop.outH, bytes: enc.bytes, quality: enc.quality, sha256: sha256File(out), role: i ? `variant ${label}` : 'main' });
       if (!i && kind === 'vertical' && ep.spec.unverified.tiktokSavedRatio === '3:4') {
-        const tt = join(dir, 'cover-3x4.jpg'), png = join(work, 'tiktok-3x4.png');
+        const tt = join(stage, 'cover-3x4.jpg'), png = join(work, 'tiktok-3x4.png');
         ffmpeg(['-i', shot, '-vf', `crop=iw:ih*0.75:0:ih*0.125,scale=1080:1440:flags=lanczos`, '-frames:v', '1', png]);
         const e = encodeJpeg(png, tt, LIMIT.vertical);
         files.push({ name: 'cover-3x4.jpg', width: 1080, height: 1440, bytes: e.bytes, quality: e.quality, sha256: sha256File(tt), role: 'tiktok' });
       }
-      previews.push(...cutPreviews(shot, join(dir, 'previews'), `${canvas.id}${suffix}`, kind, ep.spec));
+      previews.push(...cutPreviews(shot, join(stage, 'previews'), `${canvas.id}${suffix}`, kind, ep.spec));
       const measure: Record<string, unknown> = { canvas: canvas.id, source: look.source.path, crop, focus };
       const core = kind === 'vertical' ? coreBand(ep.spec) : undefined;
       if (core && (focus.y < core.y0 || focus.y > core.y1))
@@ -498,6 +508,7 @@ export async function renderCover(path: string): Promise<{ dir: string; render: 
     }
   }
   warnings.push(...titleWarnings(ep, decision));
+  for (const name of [...files.map(f => f.name), ...previews]) renameSync(join(stage, name), join(dir, name));
   const copied: string[] = [];
   if (storyFirst(ep.board.win)) {
     const main = files.find(f => f.role === 'main')!;
@@ -506,17 +517,25 @@ export async function renderCover(path: string): Promise<{ dir: string; render: 
     copyFileSync(join(dir, main.name), join(video, 'cover.jpg')); copied.push('output/video/cover.jpg');
     if (kind === 'landscape') { copyFileSync(join(dir, main.name), join(video, 'thumbnail.jpg')); copied.push('output/video/thumbnail.jpg'); }
   }
-  // Only after a whole render succeeds: drop outputs of an earlier one this render did not make again
-  // (a removed variant, the preview of a crop no longer cut). Only names this tool writes are touched.
-  const made = new Set(files.map(f => f.name));
-  for (const name of readdirIf(dir)) if (/^(cover|thumbnail)-[0-9x]+(-[bc])?\.jpg$/.test(name) && !made.has(name)) rmSync(join(dir, name), { force: true });
-  const kept = new Set(previews.map(p => p.split('/').pop()));
-  for (const name of readdirIf(join(dir, 'previews'))) if (name.endsWith('.png') && !kept.has(name)) rmSync(join(dir, 'previews', name), { force: true });
+  // Drop what the previous render.json listed and this render did not make again (a removed variant,
+  // the preview of a crop no longer cut). Files nobody recorded are never touched.
+  const made = new Set([...files.map(f => f.name), ...previews]);
+  for (const name of previous) if (!made.has(name)) rmSync(join(dir, name), { force: true });
   const render: Render = { version: 1, renderVersion: RENDER_VERSION, decisionSha256: decisionSha(decision), templateSha256: templateSha(), sources, fonts,
     format: ep.format, files, previews, measurements, warnings, copied };
   atomicWrite(join(dir, 'render.json'), JSON.stringify(render, null, 2) + '\n');
-  rmSync(work, { recursive: true, force: true });
   return { dir, render };
+  } finally {
+    rmSync(work, { recursive: true, force: true });
+  }
+}
+/** The output names an earlier render recorded, kept to plain names inside output/cover and output/cover/previews. */
+function previousOutputs(dir: string): string[] {
+  try {
+    const old = JSON.parse(readFileSync(join(dir, 'render.json'), 'utf8')) as Partial<Render>;
+    const names = [...(old.files ?? []).map(f => String(f?.name)), ...(old.previews ?? []).map(String)];
+    return names.filter(n => /^(previews\/)?[\w.-]+\.(jpg|png)$/.test(n));
+  } catch { return []; }
 }
 
 export function cutPreviews(shot: string, dir: string, stem: string, kind: 'vertical' | 'landscape', spec: CoverFormat): string[] {

@@ -59,6 +59,7 @@ test('a frame source must lie inside its video', t => {
   mkdirSync(join(dir, 'output', 'video'), { recursive: true });
   execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'testsrc=s=1080x1920:d=1:r=10', '-pix_fmt', 'yuv420p', join(dir, 'output', 'video', 'video.mp4')]);
   assert.throws(() => setCover(sb, decision({ source: { kind: 'frame', video: 'output/video/video.mp4', seconds: 5 } })), /cover_frame_outside/);
+  assert.throws(() => setCover(sb, decision({ source: { kind: 'frame', video: 'output/video/video.mp4', seconds: 0.999 } })), /cover_frame_outside/);
   const r = setCover(sb, decision({ source: { kind: 'frame', video: 'output/video/video.mp4', seconds: 0.5, shotId: 's0001' } }));
   assert.equal(r.decision.source.path, 'output/video/video.mp4');
 });
@@ -145,7 +146,8 @@ test('a hand-edited decision is reported unreadable, and a page that never finis
 });
 
 test('long-form renders the thumbnail and its Test & Compare variants', { skip: !chromePath() && 'no Chrome' }, async t => {
-  const { dir, sb } = episode(t, { format: 'youtube-long-16x9', size: '1920x1080' });
+  const { dir, sb } = episode(t, { format: 'youtube-long-16x9', size: '1920x1080', shots: [
+    { id: 's0001', visual: { frames: { start: 'images/s0001.png' } } }, { id: 's0002', visual: { frames: { start: 'images/s0002.png' } } }] });
   const r = setCover(sb, decision({ copy: { text: '사장님 이거 진짜예요?', emphasis: '진짜' }, focus: { x: 0.7, y: 0.5 }, variants: [{ copy: { text: '찢은 날' } }] }));
   const { render } = await renderCover(sb);
   assert.equal(r.decisionSha256, render.decisionSha256);
@@ -161,9 +163,39 @@ test('long-form renders the thumbnail and its Test & Compare variants', { skip: 
   const recorded = JSON.parse(readFileSync(renderFile, 'utf8'));
   writeFileSync(renderFile, JSON.stringify({ ...recorded, fonts: Object.fromEntries(Object.keys(recorded.fonts).map(k => [k, '0'.repeat(64)])) }));
   assert.deepEqual(readCover(sb).changed, ['font']);
+  const out = join(dir, 'output', 'cover');
+  writeFileSync(join(out, 'thumbnail-16x9-c.jpg'), 'mine');
+  writeFileSync(join(out, 'previews', 'notes.png'), 'mine');
   setCover(sb, decision({ copy: { text: '사장님 이거 진짜예요?' }, focus: { x: 0.7, y: 0.5 } }));
   await renderCover(sb);
-  assert.equal(existsSync(join(dir, 'output', 'cover', 'thumbnail-16x9-b.jpg')), false, 'a removed variant leaves with the next render');
+  assert.equal(existsSync(join(out, 'thumbnail-16x9-b.jpg')), false, 'a removed variant leaves with the next render');
+  assert.equal(existsSync(join(out, 'previews', '16x9-b-sheet.png')), false);
+  assert.deepEqual([readFileSync(join(out, 'thumbnail-16x9-c.jpg'), 'utf8'), readFileSync(join(out, 'previews', 'notes.png'), 'utf8')], ['mine', 'mine'], 'files the tool never recorded stay');
+
+  // A render that fails part-way leaves the previous files, render.json and output/video copy as they were.
+  execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=green:s=1920x1080', '-frames:v', '1', join(sb, 'images', 's0002.png')]);
+  setCover(sb, decision({ copy: null, variants: [{ source: { kind: 'shot', shotId: 's0002' } }] }));
+  await renderCover(sb);
+  const before = ['thumbnail-16x9.jpg', 'render.json'].map(n => readFileSync(join(out, n), 'utf8'));
+  const copyBefore = readFileSync(join(dir, 'output', 'video', 'thumbnail.jpg'));
+  setCover(sb, decision({ copy: { text: '바뀐 문구' }, variants: [{ source: { kind: 'shot', shotId: 's0002' } }] }));
+  writeFileSync(join(sb, 'images', 's0002.png'), readFileSync(join(sb, 'images', 's0001.png')));
+  await assert.rejects(renderCover(sb), /cover_source_changed/);
+  assert.deepEqual(['thumbnail-16x9.jpg', 'render.json'].map(n => readFileSync(join(out, n), 'utf8')), before);
+  assert.deepEqual(readFileSync(join(dir, 'output', 'video', 'thumbnail.jpg')), copyBefore);
+
+  // The board's format changed under the decision.
+  writeFileSync(join(sb, 'scenes.js'), readFileSync(join(sb, 'scenes.js'), 'utf8').replace('youtube-long-16x9', 'shorts-9x16'));
+  assert.ok(readCover(sb).changed.includes('format'));
+  await assert.rejects(renderCover(sb), /cover_format_changed/);
+});
+
+test('a missing preview reads stale', { skip: !chromePath() && 'no Chrome' }, async t => {
+  const { dir, sb } = episode(t);
+  setCover(sb, decision());
+  const { render } = await renderCover(sb);
+  rmSync(join(dir, 'output', 'cover', render.previews[0]));
+  assert.deepEqual(readCover(sb).changed, ['files']);
 });
 
 test('once Shorts landscape surfaces keep 9:16, no landscape crop is previewed', t => {
