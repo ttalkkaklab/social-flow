@@ -3,12 +3,16 @@ import { FASTH3_MAX_RGB_BYTES } from './fasth3-omni.js';
 import { localVideoStrategy } from './local-video-models.js';
 import { minimumDuration, type DurationLimits } from '../../skills/_shared/video-duration.js';
 import { SEEDANCE_MODEL_SPECS, DEFAULT_SEEDANCE_MODEL, type SeedanceModel } from './seedance-client.js';
+import { ltxApiSeconds } from './ltx-api-video.js';
+import { MINIMAX_MODELS, MINIMAX_MAX_SECONDS, type MinimaxModel } from './minimax-video.js';
+import { HEYGEN_SECONDS } from './heygen-video.js';
 import { ASTRA_VIDEO_FRAME_LIMITS, ASTRA_VIDEO_FRAME_STEP, ASTRA_VIDEO_MIN_FRAMES } from './astra-video-client.js';
 
 export const DURATION_TOOLS = [
   'seedance_text2video', 'seedance_img2video', 'seedance_reference',
   'astra_text2video', 'astra_img2video', 'astra_keyframe_video', 'astra_audio2video',
   'astra_genai_msr', 'mlx_video_generate', 'ltx_video_generate', 'fasth3_omni_reference',
+  'ltx_api_img2video', 'minimax_img2video', 'minimax_reference', 'heygen_img2video', 'heygen_reference',
 ] as const;
 
 /** Adapter-owned duration constraints; unknown deployments need discovery, never a guessed cap. */
@@ -19,6 +23,14 @@ export function videoDurationLimits(tool: string, input: Record<string, unknown>
     const spec = SEEDANCE_MODEL_SPECS[model as SeedanceModel];
     if (!spec) throw new Error('Unknown Seedance model: ' + String(model));
     limits = { min: spec.duration[0], max: spec.duration[1] };
+  } else if (tool === 'ltx_api_img2video') {
+    limits = { seconds: ltxApiSeconds(String(input.model ?? 'ltx-2-5-pro'), String(input.resolution ?? '1920x1080'), Number(input.fps ?? 24)) };
+  } else if (tool.startsWith('minimax_')) {
+    const spec = MINIMAX_MODELS[(input.model ?? 'MiniMax-H3') as MinimaxModel];
+    if (!spec) throw new Error('Unknown MiniMax model: ' + String(input.model));
+    limits = { min: spec.minSeconds, max: MINIMAX_MAX_SECONDS };
+  } else if (tool.startsWith('heygen_')) {
+    limits = { ...HEYGEN_SECONDS };
   } else if (tool === 'astra_genai_msr') {
     limits = { ...GENAI_MSR_FRAMES, frameRate: input.frameRate as number ?? GENAI_MSR_FRAMES.frameRate };
   } else if ((DURATION_TOOLS as readonly string[]).includes(tool) && tool.startsWith('astra_')) {

@@ -143,5 +143,32 @@ video.host	second	0.000	derived	Host-provided video generation (Grok image_to_vi
 video.astra	second	0.000	derived	Our own LTX-2.5 box (astra_* · ASTRA_VIDEO) runs on hardware we already pay for; no per-second API charge. The real cost is wall clock — 66-184s a job, one at a time, queue of 20 — which this table does not price. 64-pixel grid, 2,064,384-pixel area ceiling
 video.astra-genai	second	?	unconfirmed	astra_genai_* video (LTX v2 · MSR) through the ASTRA GenAI gateway — no published per-second price; the managed reservation (reserveUsd) is the only budget figure (checked 2026-10-31)
 
+# Hosted video vendors through vendor-video.ts — official list prices checked 2026-11-18
+# (docs/research/2026-11-18-video-model-api-schemas). LTX audio-to-video bills input audio seconds.
+ltx-api.ltx-2-5-pro.720p	second	0.12	official	LTX API ltx-2-5-pro 720p — T2V/I2V/A2V same rate
+ltx-api.ltx-2-5-pro.1080p	second	0.17	official	LTX API ltx-2-5-pro 1080p
+ltx-api.ltx-2-5-pro.1440p	second	0.25	official	LTX API ltx-2-5-pro 1440p
+ltx-api.ltx-2-5-pro.4k	second	0.39	official	LTX API ltx-2-5-pro 4K
+ltx-api.ltx-2-5-fast.720p	second	0.09	official	LTX API ltx-2-5-fast 720p
+ltx-api.ltx-2-5-fast.1080p	second	0.13	official	LTX API ltx-2-5-fast 1080p
+ltx-api.ltx-2-5-fast.1440p	second	0.19	official	LTX API ltx-2-5-fast 1440p
+ltx-api.ltx-2-5-fast.4k	second	0.30	official	LTX API ltx-2-5-fast 4K
+minimax.minimax-h3.768p	second	0.08	official	MiniMax-H3 768P pay-as-you-go; all modes; reference audio free
+minimax.minimax-h3.2k	second	0.13	official	MiniMax-H3 2K
+minimax.minimax-h3-highspeed.768p	second	0.06	official	MiniMax-H3-Highspeed 768P
+minimax.minimax-h3-highspeed.480p	second	0.04	official	MiniMax-H3-Highspeed 480P
+minimax.minimax-h3-lite.768p	second	0.04	official	MiniMax-H3-Lite 768P
+minimax.minimax-h3-lite.480p	second	0.025	official	MiniMax-H3-Lite 480P
+minimax.minimax-h3-max.768p	second	0.08	official	MiniMax-H3-Max 768P
+minimax.minimax-h3-max.480p	second	0.05	official	MiniMax-H3-Max 480P
+minimax.minimax-h3.image	image	0.04	official	MiniMax-H3 input image past the first 5 free
+minimax.minimax-h3-highspeed.image	image	0.03	official	MiniMax-H3-Highspeed input image past the first 5 free
+minimax.minimax-h3-lite.image	image	0.02	official	MiniMax-H3-Lite input image past the first 5 free
+minimax.minimax-h3-max.image	image	0.074	official	MiniMax-H3-Max input image past the first 2 free
+heygen.image.480p	second	0.02	official	heygen-video-1 T2V/I2V 480p standard from 2026-12-01 (launch promo $0.01 until 2026-11-30); reserve at the standard rate
+heygen.image.768p	second	0.03	official	heygen-video-1 T2V/I2V 768p standard from 2026-12-01 (promo $0.018)
+heygen.reference.480p	second	0.04	official	heygen-video-1 reference_to_video 480p standard (promo $0.035); image/audio references free
+heygen.reference.768p	second	0.06	official	heygen-video-1 reference_to_video 768p standard (promo $0.05)
+
 # Seedance escalation — conservative list price; no expiring promotions (verified 2026-09-05).
 seedance.2-5.1080p	second	0.569	derived	dreamina-seedance-2-5-260628 — reference/voice escalation; list price

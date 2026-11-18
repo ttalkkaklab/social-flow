@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { verifyImageFile, type ImageMetadata } from './image-media.js';
 import { framesForSeconds } from './astra-video-client.js';
 import { resolveVideoDuration } from './video-duration.js';
-import { VIDEO_ADAPTERS } from './video-registry.js';
+import { VIDEO_ADAPTERS, VENDOR_REFERENCE_TOOLS, referenceLabel } from './video-registry.js';
 
 const load = createRequire(import.meta.url);
 const imageRouting = () => load(fileURLToPath(new URL('../../skills/storyboard/references/render-routing.js', import.meta.url))) as {
@@ -33,7 +33,15 @@ const FRAME_FIELDS: Record<string, [string, string?]> = {
   astra_audio2video: ['imagePath'], astra_genai_img2video: ['imageUri', 'lastFrameUri'],
   astra_genai_desktop_img2video: ['imagePath', 'lastFramePath'], astra_genai_desktop_audio2video: ['imagePath'],
   astra_genai_audio2video: ['imagePath', 'lastFramePath'], mlx_video_generate: ['firstFrameImagePath', 'lastFrameImagePath'], ltx_video_generate: ['firstFrameImagePath', 'lastFrameImagePath'],
+  ltx_api_img2video: ['sourceImagePath', 'lastImagePath'], ltx_api_audio2video: ['sourceImagePath', 'lastImagePath'],
+  minimax_img2video: ['sourceImagePath', 'lastImagePath'], heygen_img2video: ['sourceImagePath', 'lastImagePath'],
 };
+/** The listed ratio closest to an image's, for vendors whose adaptive ratio would follow a face panel. */
+function nearestRatio(width: number, height: number): string {
+  const ratios = ['21:9', '16:9', '4:3', '1:1', '3:4', '9:16'];
+  const value = (ratio: string) => { const [w, h] = ratio.split(':').map(Number); return Math.abs(Math.log((w / h) / (width / height))); };
+  return ratios.reduce((best, ratio) => value(ratio) < value(best) ? ratio : best);
+}
 // No framing words here: "face close-up" in this sentence opened every 2026-10-31 test render on a close-up.
 const PANEL_VIEWS: Record<string, string> = { face: 'face', front: 'headless front body', back: 'headless back body' };
 /**
@@ -139,22 +147,33 @@ export function prepareVideoImages(tool: string, input: Record<string, unknown>,
     if (VIDEO_ADAPTERS[tool]?.operation !== 'reference') throw new Error('image_plan_unsupported: reference mode needs a reference adapter');
     // MSR's background slot carries the shot's start image — its characters, place and props composed by the
     // image tool (user directive 2026-10-31); a plain background reference only conditioned that image.
-    const msr = tool === 'astra_genai_msr', sent = msr ? videoRefs.filter(ref => ref.role !== 'background') : videoRefs;
+    // The hosted reference lanes take a spoken shot as MSR does, but with no background slot and no pinned first
+    // frame: the start image goes last among the pictures and the place picture stays out (the start image has it).
+    const msr = tool === 'astra_genai_msr', vendor = VENDOR_REFERENCE_TOOLS.includes(tool);
+    const sent = msr || vendor ? videoRefs.filter(ref => ref.role !== 'background') : videoRefs;
     const paths = sent.map(ref => bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, true));
-    const start = msr && frames.start ? bind('start', frames.start, 'start', 'video', 'Opening picture', true) : undefined;
+    const start = (msr || vendor) && frames.start ? bind('start', frames.start, 'start', 'video', 'Opening picture', true) : undefined;
     if (msr) put('references', [...paths.map(imagePath => ({ imagePath })), ...(start ? [{ imagePath: start, background: true }] : [])]);
-    else put('referenceImagePaths', paths);
-    if (msr) {
+    else put('referenceImagePaths', [...paths, ...(start ? [start] : [])]);
+    if (vendor && start && args.ratio === undefined) {
+      const opening = bindings[bindings.length - 1];
+      args.ratio = nearestRatio(opening.width, opening.height);
+    }
+    if (msr || vendor) {
       // Two principal characters take references (user directive 2026-10-31); the model draws anyone else.
       const characters = new Set(sent.flatMap((ref, i) => ref.role === 'character' ? [characterKey(paths[i])] : []));
       if (characters.size > 2) throw new Error(`msr_character_limit: references show ${characters.size} characters; reference two principal characters and describe anyone else in the action`);
+    }
+    if (msr) {
       // The model card describes each reference first ("Image 1: ..."), then the action.
       const binding = msrPanelBinding(paths, sent, canonicalMsr);
       args.prompt = [...sent.map((ref, i) => `Image ${i + 1}: ${canonicalMsr && ref.role === 'character' ? '' : ref.role + ', '}${ref.purpose}${routing.referenceConstraints(ref) ? " " + routing.referenceConstraints(ref) : ""}`),
         ...(start ? [`Image ${sent.length + 1}: ${canonicalMsr ? 'opening composition (people, place, props)' : 'the opening picture, the characters, place and props as the shot begins'}`] : []),
         ...(binding ? [binding] : []), '', String(args.prompt ?? '')].join('\n');
     } else {
-      const guidance = videoRefs.map((ref, i) => `${tool === 'fasth3_omni_reference' ? '<Picture ' + (i + 1) + '>' : 'Image ' + (i + 1)} (${ref.id}, ${ref.role}): ${ref.purpose}${routing.referenceConstraints(ref) ? " " + routing.referenceConstraints(ref) : ""}`).join('\n');
+      const label = (i: number) => vendor || tool === 'fasth3_omni_reference' ? referenceLabel(tool, 'image', i) : 'Image ' + i;
+      const guidance = [...sent.map((ref, i) => `${label(i + 1)} (${ref.id}, ${ref.role}): ${ref.purpose}${routing.referenceConstraints(ref) ? " " + routing.referenceConstraints(ref) : ""}`),
+        ...(start ? [`${label(sent.length + 1)} (start, opening picture): the characters, place and props as the shot begins; open on this composition.`] : [])].join('\n');
       args.prompt = String(args.prompt ?? '') + '\nImage reference roles:\n' + guidance;
     }
   } else if (keyframes) {

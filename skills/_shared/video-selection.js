@@ -30,9 +30,12 @@ function readVideoContext(episode, shotId) {
   // A retired engine loads here so video_plan can refuse it as video_engine_unsupported.
   for (const change of overrides) if (change.video) settings.validateModels({ video: change.video }, true, true);
   if (snapshot || source.endsWith('_override')) settings.validateModels({ video: selection }, true, true);
-  // Silent pictures and inner thoughts use I2V in an MSR project (2026-11-09).
+  // Silent pictures and inner thoughts use I2V in an MSR project (2026-11-09), and likewise on the hosted
+  // reference lanes (MiniMax, HeyGen) and the LTX API's audio lane, which only spoken shots take.
   const spoken = (shot.narration || []).filter(line => typeof line.tts === 'string' && line.tts.trim());
-  if (selection.engine === 'astra-genai' && selection.operation === 'reference' &&
+  const speechOnly = ['astra-genai', 'minimax', 'heygen'].includes(selection.engine) && selection.operation === 'reference' ||
+    selection.engine === 'ltx-api' && selection.operation === 'audio';
+  if (speechOnly &&
       !spoken.some(line => line.delivery === 'on_screen' || line.delivery === 'off_screen'))
     selection = { ...selection, operation: 'image' };
   return { episode: root, shotId, selection, source, snapshotRevision: snapshot?.revision || null,

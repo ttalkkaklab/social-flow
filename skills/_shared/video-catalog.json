@@ -1197,14 +1197,208 @@
         },
         "note": "LTX 8k+1 frames; MLX-Serve backend."
       }
+    },
+    {
+      "tool": "ltx_api_img2video",
+      "engine": "ltx-api",
+      "deployment": "ltx-api-v2",
+      "operation": "image",
+      "voice": {
+        "lane": "none",
+        "dialogue": "refused",
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "prompt",
+        "model",
+        "resolution",
+        "fps",
+        "cameraMotion",
+        "sourceImagePath",
+        "lastImagePath",
+        "outputPath",
+        "filename",
+        "durationSeconds",
+        "generateAudio"
+      ],
+      "modelConstraints": {
+        "models": [
+          "ltx-2-5-pro",
+          "ltx-2-5-fast"
+        ],
+        "note": "Official LTX API. I2V: 6/8/10 s (Fast at 720p/1080p, 24/25 fps: 6-20 s), first and optional last frame, 7 MB inline images. A2V: the supplied track sets the length (2-10 s; Fast at 720p/1080p up to 20 s), billed on audio seconds. No voice reference, seed or negative prompt."
+      }
+    },
+    {
+      "tool": "ltx_api_audio2video",
+      "engine": "ltx-api",
+      "deployment": "ltx-api-v2",
+      "operation": "audio",
+      "voice": {
+        "lane": "supplied",
+        "dialogue": "allowed",
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "audio_conditioned_reencoded",
+        "exactAudioPreservation": false,
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "prompt",
+        "model",
+        "resolution",
+        "fps",
+        "cameraMotion",
+        "sourceImagePath",
+        "lastImagePath",
+        "outputPath",
+        "filename",
+        "audioPath"
+      ],
+      "modelConstraints": {
+        "models": [
+          "ltx-2-5-pro",
+          "ltx-2-5-fast"
+        ],
+        "note": "Official LTX API. I2V: 6/8/10 s (Fast at 720p/1080p, 24/25 fps: 6-20 s), first and optional last frame, 7 MB inline images. A2V: the supplied track sets the length (2-10 s; Fast at 720p/1080p up to 20 s), billed on audio seconds. No voice reference, seed or negative prompt."
+      }
+    },
+    {
+      "tool": "minimax_img2video",
+      "engine": "minimax",
+      "deployment": "minimax-open-platform-v2",
+      "operation": "image",
+      "voice": {
+        "lane": "none",
+        "dialogue": "refused",
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "prompt",
+        "model",
+        "resolution",
+        "durationSeconds",
+        "outputPath",
+        "filename",
+        "sourceImagePath",
+        "lastImagePath"
+      ],
+      "modelConstraints": {
+        "models": [
+          "MiniMax-H3",
+          "MiniMax-H3-Highspeed",
+          "MiniMax-H3-Lite",
+          "MiniMax-H3-Max"
+        ],
+        "note": "MiniMax H3 open platform. 4-15 s (Max 5-15), 24 fps, native stereo audio always on. First/last frames and references never share a request: the reference lane sends the start image as its last picture, unpinned. Up to 9 pictures and 3 voice samples (2-15 s each, 15 s total); 5 pictures free (Max 2). No seed."
+      }
+    },
+    {
+      "tool": "minimax_reference",
+      "engine": "minimax",
+      "deployment": "minimax-open-platform-v2",
+      "operation": "reference",
+      "voice": {
+        "lane": "reference",
+        "dialogue": "allowed",
+        "voiceReference": "supported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "prompt",
+        "model",
+        "resolution",
+        "durationSeconds",
+        "outputPath",
+        "filename",
+        "ratio",
+        "referenceImagePaths",
+        "referenceAudioPaths"
+      ],
+      "modelConstraints": {
+        "models": [
+          "MiniMax-H3",
+          "MiniMax-H3-Highspeed",
+          "MiniMax-H3-Lite",
+          "MiniMax-H3-Max"
+        ],
+        "note": "MiniMax H3 open platform. 4-15 s (Max 5-15), 24 fps, native stereo audio always on. First/last frames and references never share a request: the reference lane sends the start image as its last picture, unpinned. Up to 9 pictures and 3 voice samples (2-15 s each, 15 s total); 5 pictures free (Max 2). No seed."
+      }
+    },
+    {
+      "tool": "heygen_img2video",
+      "engine": "heygen",
+      "deployment": "heygen-v3",
+      "operation": "image",
+      "voice": {
+        "lane": "none",
+        "dialogue": "refused",
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "prompt",
+        "model",
+        "resolution",
+        "durationSeconds",
+        "seed",
+        "outputPath",
+        "filename",
+        "sourceImagePath",
+        "lastImagePath"
+      ],
+      "modelConstraints": {
+        "models": [
+          "heygen-video-1"
+        ],
+        "note": "HeyGen Video 1, a MiniMax H3 post-train. 480p/768p, 5-15 s with prompt enhancement disabled, native audio always on. Files upload to /v3/assets first. Reference voice behaviour comes from secondary sources only; the start image rides as the last picture, unpinned."
+      }
+    },
+    {
+      "tool": "heygen_reference",
+      "engine": "heygen",
+      "deployment": "heygen-v3",
+      "operation": "reference",
+      "voice": {
+        "lane": "reference",
+        "dialogue": "allowed",
+        "voiceReference": "backend_dependent",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "prompt",
+        "model",
+        "resolution",
+        "durationSeconds",
+        "seed",
+        "outputPath",
+        "filename",
+        "ratio",
+        "referenceImagePaths",
+        "referenceAudioPaths"
+      ],
+      "modelConstraints": {
+        "models": [
+          "heygen-video-1"
+        ],
+        "note": "HeyGen Video 1, a MiniMax H3 post-train. 480p/768p, 5-15 s with prompt enhancement disabled, native audio always on. Files upload to /v3/assets first. Reference voice behaviour comes from secondary sources only; the start image rides as the last picture, unpinned."
+      }
     }
   ],
   "host": {
     "execution": "external",
     "note": "Host tools are outside MCP enforcement; never claim an API gate protects their calls."
   },
-  "unimplemented": [
-    "minimax-h3-api",
-    "ltx-official-api"
-  ]
+  "unimplemented": []
 }

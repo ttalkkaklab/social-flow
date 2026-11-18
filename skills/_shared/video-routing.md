@@ -142,7 +142,11 @@ GenAI MSR (`operation:"reference"`) project, silent and voiceover-only shots res
 `operation:"image"` with the same engine/model/resolution. This is the standing
 2026-11-09 operation rule, not a provider fallback. Explicit MSR requests for those
 shots fail before generation (`msr_speech_route`); multiple speakers report
-`shot_speaker_limit`. Split physical speech and inner thoughts into their own shots.
+`shot_speaker_limit`. The hosted reference lanes (`minimax_reference`,
+`heygen_reference`) follow the same rule (`reference_speech_route`): they get the cast's
+panels, the start image as the last picture (not a pinned first frame) and the speaker's
+sample, and silent shots plan `operation:"image"`. A saved `ltx-api` selection plans
+spoken shots with `operation:"audio"` and the composed pinned-voice track as `args.audioPath`. Split physical speech and inner thoughts into their own shots.
 
 Use the composed opening image, `generateAudio:false` and closed-mouth action for
 thoughts. `speech_manage` plans external TTS voiceover and binds assembly to

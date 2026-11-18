@@ -225,7 +225,6 @@ test('public MCP legacy handler validates context before reaching a real provide
  await assert.rejects(ROUTES.astra_genai_text2video({prompt:'x',videoContext:{episode:f.episode,shotId:'s1',requestId:'a'}}),/mismatch/);
  for(const name of Object.keys(VIDEO_ADAPTERS)) assert.ok(TOOLS.find(t=>t.name===name)?.inputSchema.properties.videoContext,name);
  for(const name of ['video_catalog','video_plan','video_execute']) assert.ok(ROUTES[name]);
- assert.ok(videoCatalog().unimplemented.includes('ltx-official-api'));
 });
 test('host remains an explicit external handoff; no API switch',async t=>{
  const f=fixture(t,{engine:'host',model:'host-managed',host:'grok'});const p=f.plan();
@@ -536,4 +535,28 @@ test('candidate lineage survives revalidation; overview is local and output file
  await assert.rejects(f.execute(conflict,async()=>{assert.fail('must not dispatch');}),/video_output_conflict/);
  await assert.rejects(videoStatus({episode:f.episode,action:'refresh'}),/requestId is required/);
  assert.ok(fs.readFileSync(path.join(f.episode,'storyboard/video-production-data.js'),'utf8').startsWith('window.VIDEO_PRODUCTION = '));
+});
+test('a hosted reference lane takes the spoken shot from the board: panels, the start image last, the voice sample and the price', t => {
+ const f=fixture(t,{engine:'minimax',model:'MiniMax-H3',resolution:'768P',operation:'reference'});
+ const png=(name,size)=>{const file=path.join(f.episode,name);execFileSync('ffmpeg',['-v','error','-f','lavfi','-i',`color=c=gray:s=${size}`,'-frames:v','1',file]);return file;};
+ png('face.png','32x32');png('place.png','64x36');png('start.png','64x36');
+ execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=d=3',path.join(f.episode,'hero.wav')]);
+ f.board.SB_DOC={characters:[{id:'hero',name:'Hero',tts:{engine:'gemini',voiceId:'Kore',language:'en'},voiceReference:{path:'../hero.wav',imagePaths:['../face.png']}}]};
+ f.board.SCENES[0]={id:'s1',narration:[{id:'l1',speaker:'hero',delivery:'on_screen',tts:'Hello there'}],visual:{frames:{mode:'reference',start:'../start.png'},
+  references:[{id:'hero-face',path:'../face.png',role:'character',use:'both',purpose:'Hero face'},{id:'street',path:'../place.png',role:'background',use:'both',purpose:'the street'}],video:{prompt:'Hero greets the viewer.'}}};
+ f.board.SCENES[1]={id:'s2',visual:{frames:{mode:'first',start:'../start.png'},references:[],video:{prompt:'Hero walks on.'}}};f.save();
+ const p=planVideo({episode:f.episode,shotId:'s1',requestId:'ref'});
+ assert.equal(p.tool,'minimax_reference');
+ assert.deepEqual(p.args.referenceImagePaths.map(file=>path.basename(file)),['face.png','start.png']);
+ assert.equal(p.args.ratio,'16:9');
+ assert.deepEqual(p.args.referenceAudioPaths.map(file=>path.basename(file)),['hero.wav']);
+ assert.match(p.args.prompt,/reference image 2 \(start/);
+ assert.match(p.args.prompt,/reference image 1, uses reference audio 1/);
+ assert.equal(p.quote.reserveUsd,0.4);
+ assert.match(p.args.prompt,/reference image 1 \(Hero\) speaks using reference audio 1.*"Hello there"/);
+ assert.throws(()=>planVideo({episode:f.episode,shotId:'s2',requestId:'forced',operation:'reference'}),/reference_speech_route/);
+ const silent=planVideo({episode:f.episode,shotId:'s2',requestId:'silent'});
+ assert.equal(silent.tool,'minimax_img2video');
+ assert.match(silent.args.prompt,/No speech/);
+ assert.equal(path.basename(silent.args.sourceImagePath),'start.png');
 });

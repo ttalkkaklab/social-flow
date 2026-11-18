@@ -9,7 +9,7 @@ const SETTINGS_FILE = '.social-flow/models.json';
 const SNAPSHOT_FILE = '.work/model-settings.json';
 const VIDEO_TYPES = require('./video-types.json').types;
 const ENGINES = {
-  video: ['host', 'seedance', 'astra', 'astra-genai', 'astra-genai-desktop', 'mlx'],
+  video: ['host', 'seedance', 'astra', 'astra-genai', 'astra-genai-desktop', 'mlx', 'ltx-api', 'minimax', 'heygen'],
   speech: ['none', 'gemini', 'elevenlabs', 'astra-genai'],
   image: ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai', 'astra-genai-native'],
   music: ['lyria', 'suno-api', 'elevenlabs', 'mlx'],
