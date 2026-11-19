@@ -16,6 +16,7 @@ import { CHANNEL_SLUG_RE } from './config.js';
 import { techniqueContract, cameraContract, motionThemeContract, motionGraphicTypes, renderPurposes, stillCameraEffectList, shotViewContract, contract as storyboardContract } from './storyboard.js';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
+import { storyCatharsisSchema, storyIntensitySchema } from './story-devices.js';
 
 /** Advertise only models that have not reached their shutdown date; the schema still rejects retired ones by name. */
 const AVAILABLE_GPT_IMAGE_MODELS = GPT_IMAGE_MODELS.filter(model => { try { assertImageModelAvailable(model); return true; } catch { return false; } });
@@ -1067,6 +1068,8 @@ export const SERVER_INSTRUCTIONS = `social-flow plans, produces and publishes sh
 Start: \`capability_status\` shows which providers are configured on this machine; \`project_manage\` holds the saved project settings (models, visual style, ratio, SNS targets). Reuse saved choices instead of asking again.
 
 Episode video: \`video_catalog\` → \`video_plan\` → \`video_approve\` (the user's yes to that shot, or to every shot) → \`video_execute\`, and \`video_status\` after an interruption. The provider tools (seedance_*, astra_*, ltx_video_generate, fasth3_omni_reference, ltx_api_*, minimax_*, heygen_*) are the adapters that route calls; call one directly only when the user names it.
+
+Story planning: use \`story_intensity_plan\` to develop story pressure and \`story_catharsis_plan\` to choose its payoff. Both return authoring guidance for the synopsis and board.
 
 Storyboard: write the story first with \`story_sequence\` → \`story_scene\` → \`story_shot\` (the clichés it uses with \`story_cliche\`), then each shot's characters and lines with \`shot_characters\` → \`shot_dialogue\`, each scene's music decision with \`story_music\`, its icon attributes with \`shot_icons\`, its start (and first_last end) image with \`shot_image\`, its video prompt with \`shot_prompt\`; then \`storyboard_read\`, \`storyboard_apply\`, \`storyboard_check\`. Speech: \`speech_manage\` owns dialogue lines and audio bindings; \`tts_route\` and the tts_* tools generate. Review: \`host_review\` prepares media evidence and records the host's own observations; it never scores.
 
@@ -4797,6 +4800,28 @@ Returns: JSON — { file, mediaBaseDirectory, sha256, version, format, shots, se
       },
       required: ['path'],
     },
+  },
+  {
+    name: 'story_intensity_plan',
+    title: 'Plan dramatic tension and escalation',
+    annotations: { readOnlyHint: true, openWorldHint: false },
+    description: `Plan how a story's existing conflict escalates and changes a choice.
+
+Use while drafting or revising a synopsis or storyboard, including requests for "자극적인 전개", "긴장감", or higher stakes. Pick the principal pressure and the level the premise can carry. Use story_catharsis_plan to choose how the pressure pays off and story_sequence to write a settled sequence.
+
+Returns JSON with the audience question, setup, escalation, choice, visible consequence, pacing and fit guidance. The author adapts the beats to the supplied situation.`,
+    inputSchema: zodToJsonSchema(storyIntensitySchema, { $refStrategy: 'none' }) as Tool['inputSchema'],
+  },
+  {
+    name: 'story_catharsis_plan',
+    title: 'Plan a cathartic story payoff',
+    annotations: { readOnlyHint: true, openWorldHint: false },
+    description: `Plan a payoff for the specific frustration the story creates.
+
+Use while drafting or revising a synopsis or storyboard, including "사이다 전개", "통쾌한 결말", "참교육", or catharsis. Filter by the desired change or choose a specific pattern. Use story_intensity_plan for escalating pressure and story_sequence to write a settled sequence.
+
+Returns JSON with matching patterns in catalog order (all 15 if no filter), each with an ID, goal tags, setup, turn, visible payoff and pitfall, plus pacing and fit guidance. The author adapts the selected pattern to the supplied situation.`,
+    inputSchema: zodToJsonSchema(storyCatharsisSchema, { $refStrategy: 'none' }) as Tool['inputSchema'],
   },
   {
     name: 'story_sequence',

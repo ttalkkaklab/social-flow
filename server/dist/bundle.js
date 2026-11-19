@@ -120603,6 +120603,293 @@ function renderCheck(r2) {
   return lines.join("\n");
 }
 
+// src/story-devices.ts
+var storyBrief = {
+  situation: external_exports.string().trim().min(1).max(2e3).describe(
+    'Summarize the actual conflict and known constraints. Example: "A manager takes credit for a junior employee\u2019s work before a promotion meeting."'
+  ),
+  format: external_exports.enum(["short", "long"]).optional().describe(
+    'Use short for one compact sequence or long for a multi-scene arc. Default: short. Example: "short".'
+  )
+};
+var pressures = [
+  "power",
+  "secret",
+  "betrayal",
+  "deadline",
+  "dilemma",
+  "rivalry",
+  "threat",
+  "exposure",
+  "misreading",
+  "allegiance"
+];
+var levels = ["restrained", "heightened"];
+var goals = ["truth", "accountability", "restoration", "agency", "protection", "reversal"];
+var storyIntensitySchema = external_exports.object({
+  ...storyBrief,
+  pressure: external_exports.enum(pressures).describe(
+    'Choose the principal pressure already in the story. Example: "power" for unequal authority, "misreading" for a credible wrong belief, or "allegiance" for support that shifts.'
+  ),
+  level: external_exports.enum(levels).optional().describe(
+    'Use restrained for a private or modest consequence, heightened for a larger consequence the premise can support. Default: restrained. Example: "heightened".'
+  )
+});
+var tension = {
+  power: {
+    nameKo: "\uAD8C\uB825 \uCC28\uC774\uC640 \uC555\uBC15",
+    question: "Can the person refuse while the other side still controls something they need?",
+    setup: "Show an ordinary request and the actual leverage that makes refusal expensive.",
+    restrained: "Make the stronger party ask for one concrete concession in private.",
+    heightened: "Have a decision-maker adopt the stronger party\u2019s version, putting something already valuable at risk."
+  },
+  secret: {
+    nameKo: "\uBE44\uBC00\uACFC \uC815\uBCF4 \uACA9\uCC28",
+    question: "Who will act on the missing fact before it is understood?",
+    setup: "Show one clue that serves the current scene and can later be read another way.",
+    restrained: "Let one person notice a contradiction and make a small but consequential choice.",
+    heightened: "Let a believable partial truth trigger a decision that becomes hard to undo."
+  },
+  betrayal: {
+    nameKo: "\uBC30\uC2E0\uACFC \uC2E0\uB8B0 \uBD95\uAD34",
+    question: "What does the person risk by trusting the ally again?",
+    setup: "Show a promise in action and the trust or access it earns.",
+    restrained: "Reveal a choice that breaks the promise and changes what the injured person is willing to share.",
+    heightened: "Make the ally choose between loyalty and an incompatible interest while both options are still open."
+  },
+  deadline: {
+    nameKo: "\uB9C8\uAC10\uACFC \uC120\uD0DD\uC9C0 \uC18C\uBA78",
+    question: "What closes when the remaining time runs out?",
+    setup: "Establish an immovable deadline or a last remaining chance and show what closes when it is gone.",
+    restrained: "Take away the easiest remaining option as the deadline approaches.",
+    heightened: "Make the last feasible attempt close a second door the character wanted to keep open."
+  },
+  dilemma: {
+    nameKo: "\uC591\uB9BD\uD560 \uC218 \uC5C6\uB294 \uC120\uD0DD",
+    question: "Which of two things the person values will they sacrifice?",
+    setup: "Show why each option matters through a different relationship or obligation.",
+    restrained: "Ask for a choice that costs comfort, face, time, or trust.",
+    heightened: "Force a choice whose cost another person will feel. Let that person respond."
+  },
+  rivalry: {
+    nameKo: "\uACBD\uC7C1\uACFC \uD3C9\uAC00",
+    question: "Can the underestimated person win under a standard both sides recognize?",
+    setup: "Make the shared metric or deciding audience visible and show why the rival seems favored.",
+    restrained: "Use one small contest or task to make the old ranking uncertain.",
+    heightened: "Raise the stakes of a fair test by attaching an outcome the participants already care about."
+  },
+  threat: {
+    nameKo: "\uAD6C\uCCB4\uC801\uC778 \uC704\uD5D8\uACFC \uC0C1\uC2E4",
+    question: "Can they protect the person, livelihood or place before the loss becomes permanent?",
+    setup: "Show what ordinary life depends on and a concrete sign that it could be lost.",
+    restrained: "Make one practical safeguard fail and show the smaller fallback the principal can still use.",
+    heightened: "Let the threat cause an observable loss or force a choice between two existing priorities."
+  },
+  exposure: {
+    nameKo: "\uACF5\uAC1C \uC555\uBC15\uACFC \uD3C9\uD310 \uC704\uAE30",
+    question: "What will the people watching do with the version they hear first?",
+    setup: "Establish whose judgment matters and why a private dispute matters to them.",
+    restrained: "Let the issue reach one trusted witness whose behavior changes.",
+    heightened: "Let a partial account reach a wider group with the power to change an established relationship or decision."
+  },
+  misreading: {
+    nameKo: "\uC624\uD574\uC640 \uB204\uBA85",
+    question: "What will someone do because the wrong explanation looks convincing?",
+    setup: "Give the affected person a fair reason to believe the wrong account and leave an observable clue that could change it.",
+    restrained: "Let someone withdraw an invitation, withhold help or make another small choice on the wrong premise.",
+    heightened: "Let a person with authority act on the mistake, so disproving it has a cost beyond speaking up."
+  },
+  allegiance: {
+    nameKo: "\uB3D9\uB9F9 \uC774\uB3D9\uACFC \uACE0\uB9BD",
+    question: "Whose support can the principal still count on when the interests diverge?",
+    setup: "Show who is counted on and the obligation or shared interest sustaining that support.",
+    restrained: "Have one expected supporter stay silent or act independently for a reason the audience can see.",
+    heightened: "Let a change of side close an existing option and force the principal to commit to a different one."
+  }
+};
+var catharsisPatterns = [
+  {
+    id: "official-correction",
+    nameKo: "\uACF5\uC2DD \uC2DC\uC815",
+    goals: ["accountability", "protection"],
+    setup: "Establish who can reverse the decision and the rule that gives them that authority.",
+    turn: "Bring the disputed fact or testimony to that decision-maker.",
+    payoff: "Show the ruling, reversal or formal protection taking effect.",
+    avoid: "A finding without an actual change in the decision."
+  },
+  {
+    id: "exit",
+    nameKo: "\uAD00\uACC4 \uC774\uD0C8",
+    goals: ["agency", "protection"],
+    setup: "Show the recurring demand and what leaving would cost.",
+    turn: "The person chooses to end their participation and takes a concrete step.",
+    payoff: "Show what their next day or encounter looks like outside the relationship.",
+    avoid: "Threatening to leave without a choice that changes their situation."
+  },
+  {
+    id: "ally-intervention",
+    nameKo: "\uB3D9\uB9F9 \uAC1C\uC785",
+    goals: ["protection", "reversal"],
+    setup: "Establish why the ally cares and which resource or influence they control.",
+    turn: "The ally commits that resource at a moment when the principal cannot reach it alone.",
+    payoff: "Show the exact option the intervention opens and what the principal does with it.",
+    avoid: "An unprepared rescuer who removes the principal\u2019s choice."
+  },
+  {
+    id: "restoration",
+    nameKo: "\uD53C\uD574 \uD68C\uBCF5",
+    goals: ["restoration", "protection"],
+    setup: "Make the lost money, access, safety or opportunity specific.",
+    turn: "The principal or an ally secures a way to get the missing thing back.",
+    payoff: "Show the return in use, receipt or an observable change in daily life.",
+    avoid: "Treating an apology as restitution when the loss remains."
+  },
+  {
+    id: "boundary",
+    nameKo: "\uACBD\uACC4 \uC124\uC815",
+    goals: ["agency", "protection"],
+    setup: "Show a recurring obligation the other party regards as automatic.",
+    turn: "The principal declines the specific demand and acts consistently with that decision.",
+    payoff: "Show who handles the next instance and what the principal is free to do.",
+    avoid: "A sharp comeback followed by the same unpaid burden."
+  },
+  {
+    id: "record-reveal",
+    nameKo: "\uAE30\uB85D \uACF5\uAC1C",
+    goals: ["truth", "accountability"],
+    setup: "Plant a credible record before the dispute and establish who can read it.",
+    turn: "Put that record in front of the person whose judgment changes the outcome.",
+    payoff: "Show that person revise a claim, decision or allocation of responsibility.",
+    avoid: "A record that appears for the first time with no plausible origin."
+  },
+  {
+    id: "speaking-out",
+    nameKo: "\uACF5\uAC1C \uBC1C\uC5B8",
+    goals: ["truth", "agency"],
+    setup: "Establish whose account dominates and why the person with contrary knowledge stays quiet.",
+    turn: "That person speaks to the people who have been acting on the wrong account.",
+    payoff: "Show a listener act on the changed understanding.",
+    avoid: "A speech followed only by generic applause."
+  },
+  {
+    id: "demonstrated-skill",
+    nameKo: "\uC2E4\uB825 \uC785\uC99D",
+    goals: ["reversal", "restoration"],
+    setup: "Show the existing judgment and establish the test the doubters accept.",
+    turn: "Let the underestimated person pass that test through an ability the story has shown.",
+    payoff: "Show the measurable result and the opportunity or recognition it opens.",
+    avoid: "Praise in place of the actual test or result."
+  },
+  {
+    id: "rule-backfire",
+    nameKo: "\uC790\uAE30\uBAA8\uC21C",
+    goals: ["reversal", "accountability"],
+    setup: "Let the person in charge state the exact rule and show who normally absorbs its cost.",
+    turn: "Apply the rule as stated in a situation the rule-maker depends on.",
+    payoff: "Show the consequence reach the rule-maker and a decision they can no longer avoid.",
+    avoid: "A consequence unrelated to the rule that was established."
+  },
+  {
+    id: "acknowledgment",
+    nameKo: "\uCC45\uC784 \uC778\uC815",
+    goals: ["accountability", "restoration"],
+    setup: "Specify the harm or overlooked contribution and who keeps denying it.",
+    turn: "That person publicly or privately acknowledges the specific act or contribution.",
+    payoff: "Show what the acknowledgment changes for the affected person, including their right to decline reconciliation.",
+    avoid: "A vague apology that grants automatic forgiveness."
+  },
+  {
+    id: "identity-reveal",
+    nameKo: "\uC815\uCCB4 \uACF5\uAC1C",
+    goals: ["truth", "reversal"],
+    setup: "Show a plausible mistaken assumption and plant a clue to the actual role or identity.",
+    turn: "Reveal the identity where the old assumption was guiding a consequential decision.",
+    payoff: "Show the decision or behavior change because of the reveal.",
+    avoid: "Using wealth or rank by itself as proof the person deserved respect."
+  },
+  {
+    id: "trap-reversal",
+    nameKo: "\uD568\uC815 \uC5ED\uC804",
+    goals: ["reversal", "accountability"],
+    setup: "Show the opponent\u2019s calculation and a believable weakness in its assumptions.",
+    turn: "The principal changes the conditions the opponent relied on.",
+    payoff: "The opponent makes a motivated choice and ends up bearing the cost they expected to shift.",
+    avoid: "An omniscient principal who predicts choices the story never motivated."
+  },
+  {
+    id: "direct-intervention",
+    nameKo: "\uC9C1\uC811 \uC751\uC9D5\xB7\uC800\uC9C0",
+    goals: ["protection", "accountability"],
+    setup: "Show an ongoing harmful act and why the principal can intervene now.",
+    turn: "The principal directly interrupts the act or removes the source of leverage.",
+    payoff: "Show that the targeted harm stops and what the affected person can do next.",
+    avoid: "Escalating the spectacle past the conflict or carrying a fictional tactic into real life."
+  },
+  {
+    id: "mirrored-consequence",
+    nameKo: "\uB418\uB3CC\uB824\uC8FC\uAE30",
+    goals: ["reversal", "accountability"],
+    setup: "Show exactly who bears the recurring inconvenience and who dismisses it.",
+    turn: "The person who dismissed the cost experiences an equivalent consequence.",
+    payoff: "Show their reaction or the change in who is expected to absorb the cost.",
+    avoid: "An unrelated or disproportionate punishment."
+  },
+  {
+    id: "preemption",
+    nameKo: "\uC120\uC218 \uCE58\uAE30",
+    goals: ["protection", "reversal"],
+    setup: "Establish what the character can reasonably know before the adverse decision.",
+    turn: "They use that knowledge to change a concrete condition while the option is open.",
+    payoff: "Show what they secured or what predicted loss they prevented.",
+    avoid: "Foresight without a prior source or a meaningful choice."
+  }
+];
+var [firstPattern, ...otherPatterns] = catharsisPatterns;
+var patternIds = [firstPattern.id, ...otherPatterns.map(({ id }) => id)];
+var storyCatharsisSchema = external_exports.object({
+  ...storyBrief,
+  goal: external_exports.enum(goals).optional().describe(
+    'Filter by the outcome the audience is owed: a revealed truth, accountability, restoration, agency, protection, or reversal. Example: "agency". Omit to compare all 15.'
+  ),
+  pattern: external_exports.enum(patternIds).optional().describe(
+    'Choose a specific mechanism, overriding the goal filter. Example: "record-reveal".'
+  )
+});
+function planStoryIntensity(input) {
+  const { situation, pressure, format = "short", level = "restrained" } = input;
+  const device = tension[pressure];
+  return {
+    situation,
+    pressure,
+    nameKo: device.nameKo,
+    format,
+    level,
+    audienceQuestion: device.question,
+    beats: {
+      setup: device.setup,
+      escalation: device[level],
+      choice: "Give the principal an observable choice between two plausible options with different costs.",
+      consequence: "Show which option closes and who must respond. Let the response change the next action."
+    },
+    pacing: format === "short" ? "Use one pressure change between the opening and the consequential choice." : "Use successive changes in options, knowledge or alliances. Resolve intermediate questions before escalating again.",
+    fitCheck: "Keep the pressure only if it changes a later choice the story already needs. Scale it to the requested tone and established facts."
+  };
+}
+function planStoryCatharsis(input) {
+  const { situation, format = "short", goal, pattern } = input;
+  const candidates = catharsisPatterns.filter((candidate2) => {
+    if (pattern) return candidate2.id === pattern;
+    return !goal || candidate2.goals.some((tag) => tag === goal);
+  });
+  return {
+    situation,
+    format,
+    candidates,
+    pacing: format === "short" ? "Set up one decisive change and make room for the affected person\u2019s immediate response." : "Resolve smaller obstacles as the arc progresses, then show what the central decision changes beyond the reveal.",
+    fitCheck: "Choose what directly resolves the audience\u2019s question with the people, evidence and authority already available."
+  };
+}
+
 // src/tts-client.ts
 import { writeFileSync as writeFileSync18 } from "node:fs";
 var TTS_VOICES = {
@@ -125168,6 +125455,8 @@ Start: \`capability_status\` shows which providers are configured on this machin
 
 Episode video: \`video_catalog\` \u2192 \`video_plan\` \u2192 \`video_approve\` (the user's yes to that shot, or to every shot) \u2192 \`video_execute\`, and \`video_status\` after an interruption. The provider tools (seedance_*, astra_*, ltx_video_generate, fasth3_omni_reference, ltx_api_*, minimax_*, heygen_*) are the adapters that route calls; call one directly only when the user names it.
 
+Story planning: use \`story_intensity_plan\` to develop story pressure and \`story_catharsis_plan\` to choose its payoff. Both return authoring guidance for the synopsis and board.
+
 Storyboard: write the story first with \`story_sequence\` \u2192 \`story_scene\` \u2192 \`story_shot\` (the clich\xE9s it uses with \`story_cliche\`), then each shot's characters and lines with \`shot_characters\` \u2192 \`shot_dialogue\`, each scene's music decision with \`story_music\`, its icon attributes with \`shot_icons\`, its start (and first_last end) image with \`shot_image\`, its video prompt with \`shot_prompt\`; then \`storyboard_read\`, \`storyboard_apply\`, \`storyboard_check\`. Speech: \`speech_manage\` owns dialogue lines and audio bindings; \`tts_route\` and the tts_* tools generate. Review: \`host_review\` prepares media evidence and records the host's own observations; it never scores.
 
 Images: \`image_catalog\` \u2192 \`image_plan\` \u2192 \`image_execute\`, then \`image_status\` after interruption. Preserve the saved model choice; legacy image adapters require imageContext for configured production. Host selections remain external handoffs. Music: music_*, suno_*. Sound effects: \`sfx_elevenlabs_generate\`. Free stock footage: \`stock_search\`. Research: serp_*, \`naver_search\`, datago_*, \`youtube_topic_scout\`.
@@ -128929,6 +129218,28 @@ Returns: JSON \u2014 { file, mediaBaseDirectory, sha256, version, format, shots,
       },
       required: ["path"]
     }
+  },
+  {
+    name: "story_intensity_plan",
+    title: "Plan dramatic tension and escalation",
+    annotations: { readOnlyHint: true, openWorldHint: false },
+    description: `Plan how a story's existing conflict escalates and changes a choice.
+
+Use while drafting or revising a synopsis or storyboard, including requests for "\uC790\uADF9\uC801\uC778 \uC804\uAC1C", "\uAE34\uC7A5\uAC10", or higher stakes. Pick the principal pressure and the level the premise can carry. Use story_catharsis_plan to choose how the pressure pays off and story_sequence to write a settled sequence.
+
+Returns JSON with the audience question, setup, escalation, choice, visible consequence, pacing and fit guidance. The author adapts the beats to the supplied situation.`,
+    inputSchema: zodToJsonSchema(storyIntensitySchema, { $refStrategy: "none" })
+  },
+  {
+    name: "story_catharsis_plan",
+    title: "Plan a cathartic story payoff",
+    annotations: { readOnlyHint: true, openWorldHint: false },
+    description: `Plan a payoff for the specific frustration the story creates.
+
+Use while drafting or revising a synopsis or storyboard, including "\uC0AC\uC774\uB2E4 \uC804\uAC1C", "\uD1B5\uCF8C\uD55C \uACB0\uB9D0", "\uCC38\uAD50\uC721", or catharsis. Filter by the desired change or choose a specific pattern. Use story_intensity_plan for escalating pressure and story_sequence to write a settled sequence.
+
+Returns JSON with matching patterns in catalog order (all 15 if no filter), each with an ID, goal tags, setup, turn, visible payoff and pitfall, plus pacing and fit guidance. The author adapts the selected pattern to the supplied situation.`,
+    inputSchema: zodToJsonSchema(storyCatharsisSchema, { $refStrategy: "none" })
   },
   {
     name: "story_sequence",
@@ -139678,6 +139989,16 @@ ${styleWarnings.join("\n")}` : head;
     const r2 = applyStoryboard(parseArgs(storyboardApplySchema, args));
     return text3(renderApply(r2), r2.findings.some((f3) => f3.level === "bad"));
   },
+  story_intensity_plan: async (args) => text3(JSON.stringify(
+    planStoryIntensity(parseArgs(storyIntensitySchema, args)),
+    null,
+    2
+  )),
+  story_catharsis_plan: async (args) => text3(JSON.stringify(
+    planStoryCatharsis(parseArgs(storyCatharsisSchema, args)),
+    null,
+    2
+  )),
   story_sequence: async (args) => {
     contract();
     const r2 = writeStorySequences(parseArgs(storySequenceSchema, args));

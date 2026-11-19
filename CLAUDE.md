@@ -112,6 +112,19 @@ write prints a reading of it against the format and platforms. This reports and 
 it is writing guidance, not a score. Follow `skills/storyboard/references/opening-by-format.md`.
 Evidence and its limits: `docs/research/2026-11-18-opening-hooks/`.
 
+## Dramatic pressure and payoff (user directive, 2026-11-20)
+
+For a new or substantially revised story-led synopsis or board, use
+[story-intensity](skills/story-intensity/SKILL.md) and
+[story-catharsis](skills/story-catharsis/SKILL.md) during authoring. Choose pressure tied to
+a concrete choice and use a payoff that answers the frustration the story actually raises.
+Apply the devices in the synopsis and in observable setup, choices and outcomes in scenes
+and shots. Respect the requested tone, established canon and factual evidence. Claim-led
+and quiet work can use the uncertainty, proof or discovery already present. This pass uses
+the existing story fields and does not add a write gate. Research:
+[pressure cases](docs/research/2026-11-20-story-intensity/README.md) and
+[payoff cases](docs/research/2026-11-20-story-catharsis/README.md).
+
 ## Clichés as story material (user directive, 2026-11-18)
 
 Drama, comedy and romance episodes use researched clichés by default; every other type gets a

@@ -20,6 +20,7 @@ import { manageVoiceAudition, voiceAuditionSchema } from './voice-audition.js';
 import { manageLocation } from './location.js';
 import { episodeCoverSchema, setCover, renderCover, readCover } from './cover.js';
 import { manageProject } from './project.js';
+import { planStoryCatharsis, planStoryIntensity, storyCatharsisSchema, storyIntensitySchema } from './story-devices.js';
 import { manageSpeech, speechManageSchema } from './speech.js';
 import { reviewActing, actingReviewSchema } from './acting-review.js';
 import { createThreadsDraft, submitThreadsReview, checkThreadsGate, checkThreadsEpisode, gateCall } from './threads-gate.js';
@@ -1634,6 +1635,12 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     const r = storyboard.applyStoryboard(parseArgs(storyboard.storyboardApplySchema, args));
     return text(storyboard.renderApply(r), r.findings.some((f) => f.level === 'bad'));
   },
+  story_intensity_plan: async (args) => text(JSON.stringify(
+    planStoryIntensity(parseArgs(storyIntensitySchema, args)), null, 2,
+  )),
+  story_catharsis_plan: async (args) => text(JSON.stringify(
+    planStoryCatharsis(parseArgs(storyCatharsisSchema, args)), null, 2,
+  )),
   story_sequence: async (args) => {
     storyboard.contract();
     const r = storyboard.writeStorySequences(parseArgs(storyboard.storySequenceSchema, args));
