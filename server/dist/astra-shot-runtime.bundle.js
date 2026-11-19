@@ -32748,7 +32748,7 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
     extras ? sentence(`Unnamed people in the frame: ${extras}`) : "",
     ...["before", "after", "continuity"].map((key) => text2(design[key]) ? sentence(`${key}: ${text2(design[key])}`) : ""),
     ...states.filter((state) => ![source.action, design.before, design.after, design.continuity].includes(state)).map((state) => sentence(`Visible state: ${state}`)),
-    !lines.length && beats.length ? "This is a silent scene. Perform the planned action without invented speech or voiceover." : "",
+    !lines.length && beats.length && !options.includeEffects ? "This is a silent scene. Perform the planned action without invented speech or voiceover." : "",
     ...beats,
     // The model's default face is pleasant; the authored state has to be named and held (LTX guide: physical cues, state after the action).
     worn ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : "",

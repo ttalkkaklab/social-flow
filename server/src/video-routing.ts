@@ -264,6 +264,9 @@ export function planVideo(raw: unknown): VideoPlan {
     throw new Error(`reference_speech_route: ${tool} renders a shot whose character speaks; plan silent and voiceover/inner-thought shots with operation:"image" and external timed TTS for voiceover; split mixed deliveries first`);
   const visual = context.shot.visual as { frames?: { mode?: string; start?: string }; references?: Array<Record<string, unknown>>; video?: { prompt?: unknown; promptSource?: VideoPromptSource } } | undefined;
   const silentPicture = !lines.some(line => line.delivery === 'on_screen' || line.delivery === 'off_screen');
+  const supportsAudioToggle = tool === 'astra_genai_img2video' || tool === 'ltx_api_img2video';
+  // Voiceover pictures use their own timed speech track.
+  const includeEffects = supportsAudioToggle && lines.length === 0 && input.args.generateAudio === true;
   // Apply the standing MSR-to-I2V rule to old reference-frame boards without rewriting their media.
   const shot = tool === 'astra_genai_img2video' && silentPicture && visual?.frames?.mode === 'reference'
     ? { ...context.shot, visual: { ...visual, frames: { mode: 'first', start: visual.frames.start },
@@ -284,13 +287,19 @@ export function planVideo(raw: unknown): VideoPlan {
     return seconds;
   };
   const compiled = input.args.prompt === undefined && video?.promptSource
-    ? compileVideoPrompt(shot, video.promptSource, names, { mode, measureAudio }) : undefined;
+    ? compileVideoPrompt(shot, video.promptSource, names, { mode, measureAudio, includeEffects }) : undefined;
   const authored = compiled?.prompt ?? video?.prompt;
   let callArgs = input.args.prompt === undefined && typeof authored === 'string' ? { ...input.args, prompt: authored } : input.args;
-  // MiniMax and HeyGen always render a soundtrack, so only the prompt keeps their silent cuts silent.
-  if (['astra_genai_img2video', 'ltx_api_img2video', 'minimax_img2video', 'heygen_img2video'].includes(tool ?? '') && silentPicture)
-    callArgs = { ...callArgs, ...(['astra_genai_img2video', 'ltx_api_img2video'].includes(tool!) ? { generateAudio: false } : {}),
-      prompt: [callArgs.prompt, 'No speech or vocalization. All visible mouths stay closed; perform the planned silent action.'].filter(Boolean).join(' ') };
+  if (silentPicture && (supportsAudioToggle || tool === 'minimax_img2video' || tool === 'heygen_img2video')) {
+    const soundDirection = includeEffects
+      ? 'include the specified ambient sound and effects.'
+      : 'perform the planned silent action.';
+    callArgs = {
+      ...callArgs,
+      ...(supportsAudioToggle ? { generateAudio: includeEffects } : {}),
+      prompt: [callArgs.prompt, `No speech or vocalization. All visible mouths stay closed; ${soundDirection}`].filter(Boolean).join(' '),
+    };
+  }
   const sourcePrompt = typeof video?.prompt === 'string' ? video.prompt : '';
   const direction = compiled ? { sourcePrompt, directionBindings: compiled.directionBindings, directionWarnings: compiled.warnings, performance: compiled.performance } :
     { sourcePrompt, directionWarnings: [input.args.prompt !== undefined ? 'Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons.' :
