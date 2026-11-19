@@ -12,6 +12,7 @@ export interface PromptOptions {
   mode?: string;
   measureAudio?: (line: Record<string, unknown>) => number | null;
   validateLanguage?: boolean;
+  includeEffects?: boolean;
 }
 export function planVideoPerformance(shot: Record<string, unknown>, options: PromptOptions = {}): PerformancePlan {
   const acting = load('../../skills/_shared/scene-acting.js') as {
@@ -88,7 +89,8 @@ export function compileVideoPrompt(shot: Record<string, unknown>, source: VideoP
     extras ? sentence(`Unnamed people in the frame: ${extras}`) : '',
     ...['before', 'after', 'continuity'].map(key => text(design[key]) ? sentence(`${key}: ${text(design[key])}`) : ''),
     ...states.filter(state => ![source.action, design.before, design.after, design.continuity].includes(state)).map(state => sentence(`Visible state: ${state}`)),
-    !lines.length && beats.length ? 'This is a silent scene. Perform the planned action without invented speech or voiceover.' : '',
+    !lines.length && beats.length && !options.includeEffects
+      ? 'This is a silent scene. Perform the planned action without invented speech or voiceover.' : '',
     ...beats,
     // The model's default face is pleasant; the authored state has to be named and held (LTX guide: physical cues, state after the action).
     worn ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : '',

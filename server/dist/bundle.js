@@ -116938,7 +116938,7 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
     extras ? sentence(`Unnamed people in the frame: ${extras}`) : "",
     ...["before", "after", "continuity"].map((key) => text2(design[key]) ? sentence(`${key}: ${text2(design[key])}`) : ""),
     ...states.filter((state) => ![source.action, design.before, design.after, design.continuity].includes(state)).map((state) => sentence(`Visible state: ${state}`)),
-    !lines.length && beats.length ? "This is a silent scene. Perform the planned action without invented speech or voiceover." : "",
+    !lines.length && beats.length && !options.includeEffects ? "This is a silent scene. Perform the planned action without invented speech or voiceover." : "",
     ...beats,
     // The model's default face is pleasant; the authored state has to be named and held (LTX guide: physical cues, state after the action).
     worn ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : "",
@@ -117180,6 +117180,8 @@ function planVideo(raw) {
     throw new Error(`reference_speech_route: ${tool2} renders a shot whose character speaks; plan silent and voiceover/inner-thought shots with operation:"image" and external timed TTS for voiceover; split mixed deliveries first`);
   const visual = context2.shot.visual;
   const silentPicture = !lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen");
+  const supportsAudioToggle = tool2 === "astra_genai_img2video" || tool2 === "ltx_api_img2video";
+  const includeEffects = supportsAudioToggle && lines.length === 0 && input.args.generateAudio === true;
   const shot = tool2 === "astra_genai_img2video" && silentPicture && visual?.frames?.mode === "reference" ? { ...context2.shot, visual: {
     ...visual,
     frames: { mode: "first", start: visual.frames.start },
@@ -117200,15 +117202,17 @@ function planVideo(raw) {
     performanceInputs[file] = audio.sha256;
     return seconds;
   };
-  const compiled = input.args.prompt === void 0 && video2?.promptSource ? compileVideoPrompt(shot, video2.promptSource, names, { mode, measureAudio }) : void 0;
+  const compiled = input.args.prompt === void 0 && video2?.promptSource ? compileVideoPrompt(shot, video2.promptSource, names, { mode, measureAudio, includeEffects }) : void 0;
   const authored = compiled?.prompt ?? video2?.prompt;
   let callArgs = input.args.prompt === void 0 && typeof authored === "string" ? { ...input.args, prompt: authored } : input.args;
-  if (["astra_genai_img2video", "ltx_api_img2video", "minimax_img2video", "heygen_img2video"].includes(tool2 ?? "") && silentPicture)
+  if (silentPicture && (supportsAudioToggle || tool2 === "minimax_img2video" || tool2 === "heygen_img2video")) {
+    const soundDirection = includeEffects ? "include the specified ambient sound and effects." : "perform the planned silent action.";
     callArgs = {
       ...callArgs,
-      ...["astra_genai_img2video", "ltx_api_img2video"].includes(tool2) ? { generateAudio: false } : {},
-      prompt: [callArgs.prompt, "No speech or vocalization. All visible mouths stay closed; perform the planned silent action."].filter(Boolean).join(" ")
+      ...supportsAudioToggle ? { generateAudio: includeEffects } : {},
+      prompt: [callArgs.prompt, `No speech or vocalization. All visible mouths stay closed; ${soundDirection}`].filter(Boolean).join(" ")
     };
+  }
   const sourcePrompt = typeof video2?.prompt === "string" ? video2.prompt : "";
   const direction = compiled ? { sourcePrompt, directionBindings: compiled.directionBindings, directionWarnings: compiled.warnings, performance: compiled.performance } : { sourcePrompt, directionWarnings: [input.args.prompt !== void 0 ? "Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons." : "Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time."] };
   if (selection.engine === "host") {

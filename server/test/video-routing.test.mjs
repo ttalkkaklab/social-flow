@@ -500,13 +500,21 @@ test('MSR projects route silent and thought shots to I2V and split speaker chang
  shot.visual.frames={mode:'reference',start:'../opening.png'};
  shot.visual.video.promptSource={action:'The character notices the open door.'};
  f.board.SB_DOC={characters:[{id:'hero',tts:{engine:'gemini',voiceId:'Kore',language:'ko',speed:1}}]};
- const plan=()=>planVideo({episode:f.episode,shotId:'s1',requestId:'thought',args:{duration:5,reserveUsd:0.25}});
+ const plan=(generateAudio)=>planVideo({episode:f.episode,shotId:'s1',requestId:'thought',args:{duration:5,reserveUsd:0.25,generateAudio}});
  for(const narration of [[],[{id:'l1',speaker:'hero',delivery:'voiceover',tts:'A secret thought.'}]]) {
-  shot.narration=narration;f.save();
+  shot.narration=narration;
+  shot.performance=narration.length ? undefined : [{kind:'action',character:'hero',text:'Glances toward the open door.',durationSeconds:1}];
+  f.save();
   const p=plan();
   assert.equal(p.tool,'astra_genai_img2video');assert.equal(p.selection.operation,'image');
   assert.equal(p.selection.model,'ltx-2.5-22b-distilled');assert.equal(p.args.resolution,'1792x1024');
   assert.equal(p.args.generateAudio,false);assert.equal(p.args.imageUri,'data:image/png;base64,'+fs.readFileSync(img).toString('base64'));
+  const withEffects = plan(true);
+  assert.equal(withEffects.args.generateAudio,narration.length===0);
+  assert.equal(withEffects.args.prompt.includes('specified ambient sound and effects'),narration.length===0);
+  assert.equal(withEffects.args.prompt.includes('planned silent action'),narration.length!==0);
+  assert.equal(p.args.prompt.includes('This is a silent scene.'),narration.length===0);
+  assert.doesNotMatch(withEffects.args.prompt,/silent scene/);
   assert.equal(p.imageBindings.find(b=>b.id==='start').path,img);
   assert.match(p.args.prompt,/Start from the given first frame/);assert.match(p.args.prompt,/mouths stay closed/);
   assert.doesNotMatch(p.args.prompt,/A secret thought/);
