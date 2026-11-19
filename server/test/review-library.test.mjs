@@ -76,6 +76,44 @@ test('preflight refuses unowned HTML and symlinked outputs before writing anythi
 });
 
 
+test('episode cards normalize titles and use only the main rendered thumbnail', () => {
+  const f = fixture();
+  try {
+    rmSync(join(f.dir, 'episodes/one'), { recursive: true });
+    const short = 'episodes/ep02-opening';
+    const long = 'episodes/ep03-in-depth';
+    f.write(short + '/storyboard/storyboard.md', '# EP2 샷 계획');
+    f.write(short + '/storyboard/scenario.md', '# Earlier title');
+    f.write(short + '/storyboard/scenes.js', [
+      "window.FORMAT = 'shorts-9x16';",
+      "window.SB_DOC = { title: 'EP2 · Anh ấy nói gì?' };",
+      "window.SCENES = [{ visual: { bg: 'images/start.png' } }];",
+    ].join('\n'));
+    f.write(short + '/storyboard/images/start.png', 'shot');
+    f.write(short + '/output/video/cover.jpg', 'extracted video frame');
+    f.write(short + '/output/cover/thumbnail-16x9.jpg', 'old format');
+    f.write(long + '/storyboard/scenario.md', '# Earlier title');
+    f.write(long + '/storyboard/storyboard.md', '---\ntitle: Final title\n---\n# Draft');
+    f.write(long + '/storyboard/scenes.js', "window.FORMAT = 'youtube-long-16x9'; window.SCENES = [];");
+    storyboardHtml(join(f.dir, short, 'storyboard'));
+    storyboardHtml(join(f.dir, long, 'storyboard'));
+    f.write(long + '/output/cover/thumbnail-16x9.png', 'imported cover');
+    f.write(long + '/output/cover/thumbnail-16x9-b.jpg', 'variant');
+    const index = () => readFileSync(join(f.dir, 'storyboards/index.html'), 'utf8');
+    exportChannel(f.dir);
+    const shortCard = index().match(/<article[^>]+ep02-opening.*?<\/article>/)?.[0];
+    assert.match(shortCard, /<h2>EP02 · Anh ấy nói gì\?<\/h2>/);
+    assert.match(shortCard, /No thumbnail/);
+    assert.doesNotMatch(shortCard, /<img/);
+    assert.match(index(), /<h2>EP03 · Final title<\/h2>/);
+    assert.match(index(), /src="\.\.\/episodes\/ep03-in-depth\/output\/cover\/thumbnail-16x9\.png"/);
+    f.write(long + '/output/cover/thumbnail-16x9.jpg', 'main cover');
+    exportChannel(f.dir);
+    assert.match(index(), /src="\.\.\/episodes\/ep03-in-depth\/output\/cover\/thumbnail-16x9\.jpg"/);
+    assert.match(readFileSync(join(f.dir, 'index.html'), 'utf8'), /src="episodes\/ep03-in-depth\/output\/cover\/thumbnail-16x9\.jpg"/);
+  } finally { f.clean(); }
+});
+
 test('background details show both camera panels without a legacy imageUrl', () => {
   const f = fixture();
   try {

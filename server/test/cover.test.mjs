@@ -11,9 +11,11 @@ import { join } from 'node:path';
 
 const { setCover, renderCover, readCover, chromePath, encodeJpeg, injectConfig, cutPreviews } = await import('../dist/cover.js');
 
-function episode(t, { storyFirst = true, format = 'shorts-9x16', size = '1080x1920', shots } = {}) {
-  const dir = realpathSync(mkdtempSync(join(tmpdir(), 'sf-cover-')));
-  t.after(() => rmSync(dir, { recursive: true, force: true }));
+function episode(t, { storyFirst = true, format = 'shorts-9x16', size = '1080x1920', shots, inChannel = false } = {}) {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'sf-cover-')));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const channel = join(root, 'test-channel');
+  const dir = inChannel ? join(channel, 'episodes', 'ep01-test') : root;
   const sb = join(dir, 'storyboard');
   mkdirSync(join(sb, 'images'), { recursive: true });
   execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', `color=c=0x2a4a6a:s=${size}`, '-frames:v', '1', join(sb, 'images', 's0001.png')]);
@@ -27,7 +29,7 @@ function episode(t, { storyFirst = true, format = 'shorts-9x16', size = '1080x19
     `window.STORY = ${JSON.stringify(storyFirst ? { version: 'story-v2', authoring: 'story-first', language: 'ko' } : { language: 'ko' })};`,
     `window.SCENES = ${JSON.stringify(scenes)};`,
   ].join('\n'));
-  return { dir, sb };
+  return { dir, sb, channel };
 }
 const decision = (over = {}) => ({ reason: 'the decision in scene 3', source: { kind: 'shot', shotId: 's0001' }, copy: null, variants: [], ...over });
 
@@ -65,9 +67,14 @@ test('a frame source must lie inside its video', t => {
 });
 
 test('render makes the platform files, read tracks the source, a legacy board keeps its cover.jpg', { skip: !chromePath() && 'no Chrome' }, async t => {
-  const { dir, sb } = episode(t);
+  const { dir, sb, channel } = episode(t, { inChannel: true });
+  writeFileSync(join(sb, 'storyboard.html'), '<html><head></head><body></body></html>');
+  writeFileSync(join(sb, 'storyboard.md'), '# EP1 · Example');
   setCover(sb, decision({ copy: { text: '찢을까 말까', emphasis: '찢을까' }, focus: { x: 0.5, y: 0.4 } }));
-  const { render } = await renderCover(sb);
+  const { render, libraryWarning } = await renderCover(sb);
+  assert.equal(libraryWarning, undefined);
+  const index = readFileSync(join(channel, 'storyboards', 'index.html'), 'utf8');
+  assert.match(index, /src="\.\.\/episodes\/ep01-test\/output\/cover\/cover-9x16\.jpg"/);
   const main = render.files.find(f => f.role === 'main');
   assert.deepEqual([main.name, main.width, main.height], ['cover-9x16.jpg', 1080, 1920]);
   assert.ok(main.bytes <= 8 * 1024 * 1024);

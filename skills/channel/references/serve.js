@@ -21,8 +21,8 @@
  * ## What it reads (and never writes)
  *
  *   data/<slug>/profile.md                          channel name·status (frontmatter)
- *   data/<slug>/episodes/<topic>/storyboard/        title (storyboard.md H1), status·created
- *                                                   (frontmatter), format (scenes.js), images/
+ *   data/<slug>/episodes/<topic>/storyboard/        episode title, status, format and image count
+ *   data/<slug>/episodes/<topic>/output/cover/      rendered episode cover
  *   ../../autoproduce/references/episode-state.js   stage · next · blocked, per channel
  *   data/<slug>/assets/characters/<id>/             identity.md, every image, voice.wav
  *   data/<slug>/assets/catalog.md                   the character row's note
@@ -198,6 +198,7 @@ function listChannels(root) {
 }
 
 const TITLE_SUFFIX_RE = /\s*[—–-]?\s*(storyboard|스토리보드)\s*$/i;
+const EPISODE_PREFIX_RE = /^ep(?:isode)?\.?\s*0*(\d+)(?=$|[\s.·:—–-])\s*[.·:—–-]?\s*/i;
 // `series: 소셜 페이지 만들기 (1/3)` → the playlist name and the episode's place in it
 const SERIES_PART_RE = /^(.*?)\s*[(（]\s*(\d+\s*\/\s*\d+)\s*[)）]\s*$/;
 
@@ -210,26 +211,31 @@ function seriesOf(fm) {
   return m ? { series: m[1].trim() || raw, seriesPart: m[2].replace(/\s+/g, '') } : { series: raw, seriesPart: null };
 }
 
-/** The card's cover: the first scene's own image as scenes.js names it (real episodes call
- *  it scene-1.png, scene-1-1.png or s1-wakeup.png), else the first file under images/.
- *  Returned relative to the storyboard directory, only when the file is there. */
-function coverImage(sb, scenesSrc) {
-  const okPath = (p) => typeof p === 'string' && p && !p.split('/').some((s) => !s || s.startsWith('.')) &&
-    isFile(path.join(sb, p)) && IMAGE_RE.test(p);
-  if (scenesSrc) {
-    try {
-      const win = evaluateWindowScript(scenesSrc, { timeoutMs: 2000 });
-      const scenes = Array.isArray(win.SCENES) ? win.SCENES : [];
-      for (const s of scenes) {
-        const v = (s && s.visual) || {};
-        const first = (s && s.narration || []).map((n) => n && n.img).find(okPath);
-        const pick = [v.bg, v.src, first].find(okPath);
-        if (pick) return pick;
-      }
-    } catch (e) { /* a broken scenes.js falls through to the directory listing */ }
+function episodeTitle(topic, candidates) {
+  const episode = topic.match(/^ep0*(\d+)(?=-|$)/i);
+  for (const value of candidates) {
+    if (typeof value !== 'string') continue;
+    const title = value.trim().replace(TITLE_SUFFIX_RE, '').trim();
+    if (!title || title === topic) continue;
+    if (!episode) return title;
+    const prefix = title.match(EPISODE_PREFIX_RE);
+    const name = prefix?.[1] === episode[1] ? title.slice(prefix[0].length) : title;
+    if (name) return `EP${episode[1].padStart(2, '0')} · ${name}`;
   }
-  const first = listFiles(path.join(sb, 'images')).find((f) => IMAGE_RE.test(f));
-  return first ? 'images/' + first : null;
+  return episode ? `EP${episode[1].padStart(2, '0')}` : topic;
+}
+
+function coverImage(dir, episode, format) {
+  const portrait = 'cover-9x16', landscape = 'thumbnail-16x9';
+  const stems = format ? [/16x9|landscape/i.test(format) ? landscape : portrait] : [portrait, landscape];
+  for (const stem of stems) {
+    for (const ext of ['jpg', 'png']) {
+      const relative = `output/cover/${stem}.${ext}`;
+      const file = path.join(episode, relative);
+      if (isFile(file) && insideReal(dir, file) && insideReal(episode, file)) return relative;
+    }
+  }
+  return null;
 }
 
 function listStoryboards(root, slug) {
@@ -241,25 +247,29 @@ function listStoryboards(root, slug) {
                     && insideReal(dir, path.join(epRoot, topic, 'storyboard')))
     .sort().reverse()
     .map((topic) => {
-      const sb = path.join(epRoot, topic, 'storyboard');
+      const episode = path.join(epRoot, topic), sb = path.join(episode, 'storyboard');
       const md = readInside(dir, path.join(sb, 'storyboard.md'));
       const fm = frontmatter(md);
       const scenes = readInside(dir, path.join(sb, 'scenes.js'));
-      const fmt = scenes ? (scenes.match(/window\.FORMAT\s*=\s*["']([^"']+)["']/) || [])[1] : null;
-      const heading = firstHeading(md);
+      let win;
+      try { if (scenes) win = evaluateWindowScript(scenes, { timeoutMs: 2000 }); }
+      catch { /* Markdown and literal format remain available if the board cannot run. */ }
+      const fmt = typeof win?.FORMAT === 'string' ? win.FORMAT : scenes?.match(/window\.FORMAT\s*=\s*["']([^"']+)["']/)?.[1];
+      const scenario = readInside(dir, path.join(sb, 'scenario.md'));
+      const title = episodeTitle(topic, [fm.title, win?.SB_DOC?.title, firstHeading(scenario), firstHeading(md)]);
       const st = states.get(topic) || {};
-      const base = '/files/' + slug + '/episodes/' + encodeURIComponent(topic) + '/storyboard/';
-      const cover = coverImage(sb, scenes);
+      const base = '/files/' + slug + '/episodes/' + encodeURIComponent(topic) + '/';
+      const cover = coverImage(dir, episode, fmt);
       const { series, seriesPart } = seriesOf(fm);
       return {
         topic,
-        title: heading ? heading.replace(TITLE_SUFFIX_RE, '').trim() || topic : topic,
+        title,
         status: fm.status || null,
         created: fm.created || null,
         series,
         seriesPart,
         format: fmt || null,
-        cover: cover ? base + cover.split('/').map(encodeURIComponent).join('/') : null,
+        cover: cover ? base + cover : null,
         images: listFiles(path.join(sb, 'images')).filter((f) => IMAGE_RE.test(f)).length,
         has: {
           html: isFile(path.join(sb, 'storyboard.html')),
@@ -270,7 +280,7 @@ function listStoryboards(root, slug) {
         stage: st.stage || null,
         next: st.next || null,
         blocked: st.blocked || [],
-        href: base + 'storyboard.html',
+        href: base + 'storyboard/storyboard.html',
       };
     });
 }
@@ -943,6 +953,7 @@ function selftest() {
   w('alpha/episodes/20260101-one/storyboard/storyboard.html', '<script src="./scenes.js"></script>');
   w('alpha/episodes/20260101-one/storyboard/images/scene-1.png', 'x');
   w('alpha/episodes/20260101-one/storyboard/images/.v1-discarded/scene-1.png', 'x');
+  w('alpha/episodes/20260101-one/output/cover/cover-9x16.jpg', 'x');
   w('alpha/episodes/20260102-two/storyboard/storyboard.md', '---\nstatus: draft\nseries: 시리즈 A (2/3)\n---\n# 둘째\n');
   w('alpha/episodes/no-storyboard/.work/x', 'x');
   w('beta/assets/characters/rob/identity.md', '# 롭\n\n그림 없는 캐릭터.\n');
@@ -976,8 +987,8 @@ function selftest() {
       ok('title strips the " — Storyboard" suffix', one.title === '첫 회차 — 제목');
       ok('status drops the trailing comment', one.status === 'produced');
       ok('format from scenes.js, image count skips dot directories', one.format === 'shorts-9x16' && one.images === 1);
-      ok('cover is the first scene\'s image as scenes.js names it', one.cover === '/files/alpha/episodes/20260101-one/storyboard/images/scene-1.png');
-      ok('no scenes.js and no images → no cover', sb.body[0].cover === null);
+      ok('cover comes from the episode render', one.cover === '/files/alpha/episodes/20260101-one/output/cover/cover-9x16.jpg');
+      ok('no rendered thumbnail → no cover', sb.body[0].cover === null);
       ok('series from frontmatter, with the (n/m) part split off', sb.body[0].series === '시리즈 A' && sb.body[0].seriesPart === '2/3');
       ok('no series line → null (the 재생목록없음 tab)', one.series === null && one.seriesPart === null);
       ok('stage from episode-state', one.stage === 'produced' && Array.isArray(one.blocked));

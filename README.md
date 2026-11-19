@@ -1157,6 +1157,10 @@ show front/back/face, additional images, identity and voice. Prop detail pages u
 same layout: reference images with their condition variants, identifying facts, continuity
 notes and the custody history from `propContinuity`. Episode pages use the
 same canonical review renderer; production inputs remain in `episodes/`.
+The storyboard list and the channel home use the authored episode title and display
+numbered episode names as `EP01 · Title`. Cards show the full rendered cover from
+`output/cover/` or a missing-thumbnail placeholder. Rendering a cover with
+`episode_cover` refreshes the offline library.
 `--check` detects stale/missing exports without writing. Character and storyboard
 skills refresh these views before delivery. The optional channel HTTP browser now
 opens this library; its previous API browser is at `/legacy`.

@@ -130863,7 +130863,7 @@ import { createHash as createHash22 } from "node:crypto";
 import { execFileSync as execFileSync17, spawn as spawn3 } from "node:child_process";
 import { copyFileSync as copyFileSync2, existsSync as existsSync32, mkdirSync as mkdirSync19, mkdtempSync as mkdtempSync7, readFileSync as readFileSync34, realpathSync as realpathSync10, renameSync as renameSync8, rmSync as rmSync16, statSync as statSync18, writeFileSync as writeFileSync25, openSync as openSync7, readSync, closeSync as closeSync7 } from "node:fs";
 import { tmpdir as tmpdir7 } from "node:os";
-import { dirname as dirname9, isAbsolute as isAbsolute2, join as join17, relative as relative2, resolve as resolve9, sep } from "node:path";
+import { basename as basename11, dirname as dirname9, isAbsolute as isAbsolute2, join as join17, relative as relative2, resolve as resolve9, sep } from "node:path";
 import { createRequire as createRequire19 } from "node:module";
 import { pathToFileURL } from "node:url";
 var load8 = createRequire19(import.meta.url);
@@ -131378,6 +131378,16 @@ async function renderCover(path35) {
       copied
     };
     atomicWrite(join17(dir, "render.json"), JSON.stringify(render, null, 2) + "\n");
+    const episodesDir = dirname9(ep.episode);
+    if (basename11(ep.storyboard) === "storyboard" && basename11(episodesDir) === "episodes") {
+      try {
+        const library = load8(join17(PLUGIN_ROOT, "skills", "channel", "references", "review-library.js"));
+        library.exportChannel(dirname9(episodesDir));
+      } catch (error2) {
+        const message = error2 instanceof Error ? error2.message : String(error2);
+        return { dir, render, libraryWarning: { code: "cover_library_refresh_failed", message } };
+      }
+    }
     return { dir, render };
   } finally {
     rmSync16(work, { recursive: true, force: true });
@@ -133865,7 +133875,7 @@ import {
   writeFileSync as nodeWriteFileSync
 } from "node:fs";
 import { open as nodeOpen, readFile as readFile2, stat as stat4 } from "node:fs/promises";
-import { basename as basename11, dirname as dirname12, extname as extname12, join as join21 } from "node:path";
+import { basename as basename12, dirname as dirname12, extname as extname12, join as join21 } from "node:path";
 function enabledPlatforms() {
   const channelDirs = listChannelDirs();
   return SNS_PLATFORMS.filter(
@@ -135037,7 +135047,7 @@ async function publishYoutube(input, opts) {
             platform: "YOUTUBE",
             videoId: doneId,
             permalink: `https://www.youtube.com/watch?v=${doneId}`,
-            fileName: basename11(input.videoFilePath),
+            fileName: basename12(input.videoFilePath),
             resumed: true,
             note: `This file is already up from the upload started at ${new Date(sessionStartedAt).toISOString()}. It was not re-uploaded.`
           });
@@ -135070,7 +135080,7 @@ async function publishYoutube(input, opts) {
       platform: "YOUTUBE",
       videoId,
       permalink: `https://www.youtube.com/watch?v=${videoId}`,
-      fileName: basename11(input.videoFilePath),
+      fileName: basename12(input.videoFilePath),
       ...thumb ? { thumbnailSet: !thumbnailWarning } : {},
       ...thumbnailWarning ? { thumbnailWarning } : {},
       ...processingNote ? { processingNote } : {},
