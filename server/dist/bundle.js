@@ -131587,7 +131587,7 @@ function bindGeneratedSoundtrack(scene, next, clipSeconds) {
   const start = Number(edit2.in ?? 0);
   const end = edit2.out ?? (typeof scene.duration === "number" ? start + scene.duration : clipSeconds);
   if (typeof end !== "number" || !Number.isFinite(end) || end <= start || end > clipSeconds + 1e-3) return false;
-  if (edit2.out === void 0 && clipSeconds - end > 1e-3) scene.edit = { ...edit2, out: end };
+  if (edit2.out === void 0 && typeof scene.duration === "number") scene.edit = { ...edit2, out: end };
   scene.sound = { ...object5(scene.sound), audioSource: "video" };
   return true;
 }

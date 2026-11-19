@@ -80,6 +80,14 @@ test('a speechless replacement binds audible effects and reports missing or sile
  ff('ffmpeg',['-v','error','-i',withAudio,'-t','0.125',shorter]);
  assert.throws(()=>attach(shorter),/cannot cover edit.out/);
  assert.equal(read().SCENES[0].visual.video.clip,withAudio);
+ const exactFit=read();
+ exactFit.SCENES[0].duration=0.25;
+ delete exactFit.SCENES[0].edit;
+ delete exactFit.SCENES[0].sound.audioSource;
+ save(exactFit);
+ attach(noAudio);attach(withAudio);
+ assert.equal(read().SCENES[0].edit.out,0.25);
+ assert.throws(()=>attach(shorter),/cannot cover edit.out/);
 });
 test('video adapters select by capabilities, never a provider name',()=>{
  const lines=[{id:'a',speaker:'hero',delivery:'on_screen',tts:'Hello'}];

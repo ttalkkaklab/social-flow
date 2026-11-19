@@ -84,7 +84,7 @@ function bindGeneratedSoundtrack(scene, next, clipSeconds) {
     const end = edit.out ?? (typeof scene.duration === 'number' ? start + scene.duration : clipSeconds);
     if (typeof end !== 'number' || !Number.isFinite(end) || end <= start || end > clipSeconds + 0.001)
         return false;
-    if (edit.out === undefined && clipSeconds - end > 0.001)
+    if (edit.out === undefined && typeof scene.duration === 'number')
         scene.edit = { ...edit, out: end };
     scene.sound = { ...object(scene.sound), audioSource: 'video' };
     return true;
