@@ -16,25 +16,25 @@
 | D02 | 내 남편과 결혼해줘 · 정수민 체포 | 수민이 다시 지원을 위협 | 지원은 피하지 않고 수민과 대면한다 | 수민이 체포된다 | 공식 시정 | [공식 자료](https://tvn.cjenm.com/ko/Marrymyhusband/video/) |
 | D03 | 내 남편과 결혼해줘 · 오유라와 증거 | 유라가 차량 사고 뒤 책임을 숨기려 함 | 지혁이 유라 앞에 증거를 내놓는다 | 유라가 맞닥뜨린 반격을 공식 클립이 증거 장면으로 제시한다 | 기록 공개 | [공식 자료](https://tvn.cjenm.com/ko/Marrymyhusband/video/) |
 | D04 | 빈센조 · 오경자 재심 | 오경자가 누명을 쓴 과거 사건 | 홍차영이 재심을 맡는다 | 재심에서 이겨 누명을 벗긴다 | 공식 시정 | [공식 자료](https://tvn.cjenm.com/ko/tvnvincenzo/video/) |
-| D05 | 빈센조 · 철거를 막은 파티 | 금가프라자가 철거 위기에 처함 | 빈센조가 상가에 사람들이 모이는 파티를 연다 | 철거를 모면하고 상인들의 지지를 얻는다 | 동맹 개입 | [공식 자료](https://tvn.cjenm.com/ko/tvnvincenzo/episodes/#previewPopup/12612-5207/2032/[3회]) |
-| D06 | 빈센조 · 산재 소송 수임 | 피해자들의 바벨화학 산재 소송에 나설 통로가 필요함 | 차영과 빈센조가 상대 변호사에게서 사건을 가져온다 | 둘이 산재 소송을 맡아 바벨과 싸울 자리를 확보한다 | 공식 시정 | [공식 자료](https://tvn.cjenm.com/ko/tvnvincenzo/episodes/#previewPopup/12615-5207/2032/[6회]) |
-| D07 | 빈센조 · 투자 발표 반격 | 바벨이 대규모 투자 협약으로 힘을 키우려 함 | 빈센조가 방해하고 차영이 대결을 선포한다 | 협약 뒤 바벨이 원한 만큼 투자 성과를 내지 못한다 | 직접 응징·저지 | [공식 자료](https://tvn.cjenm.com/ko/tvnvincenzo/episodes/#previewPopup/12618-5207/2032/[9회]) |
-| D08 | 빈센조 · 바벨 회장 체포 | 바벨이 노조 와해 의혹을 맞닥뜨림 | 정검사가 장준우를 긴급 체포한다 | 회장이 공개적으로 모욕을 받고 수사 대상이 된다 | 공식 시정 | [공식 자료](https://tvn.cjenm.com/ko/tvnvincenzo/episodes/#previewPopup/12623-5207/2032/[14회]) |
-| D09 | 빈센조 · 예상 밖 구원 | 빈센조가 죽을 위기에 처함 | 예상 밖의 도움을 받는다 | 그 자리에서 위기를 벗어난다 | 동맹 개입 | [공식 자료](https://tvn.cjenm.com/ko/tvnvincenzo/episodes/#previewPopup/12624-5207/2032/[15화]) |
-| D10 | 빈센조 · 바벨 일당 최후 | 바벨 일당이 차영까지 공격함 | 빈센조가 마지막 보복에 나선다 | 마지막 회가 바벨 일당의 응징으로 닫힌다 | 직접 응징·저지 | [공식 자료](https://tvn.cjenm.com/ko/tvnvincenzo/episodes/#previewPopup/12629-5207/2032/[20회]) |
-| D11 | 눈물의 여왕 · 사냥터 | 해인에게 멧돼지가 달려듦 | 현우가 막아선다 | 해인이 위기를 벗어나고 현우는 끊긴 철조망을 발견한다 | 동맹 개입 | [공식 자료](https://tvn.cjenm.com/ko/queenoftears/episodes/#previewPopup/15570-17018/3873/3화 미리보기) |
-| D12 | 눈물의 여왕 · 기자회견 | 은성이 행사하는 압박 속에 해인의 병이 비밀로 남아 있음 | 해인이 공개석상에서 자신의 병을 밝힌다 | 가족들까지 알게 되고 비밀을 쥔 쪽이 독점하던 정보가 풀린다 | 공개 발언 | [공식 자료](https://tvn.cjenm.com/ko/queenoftears/episodes/#previewPopup/15620-17018/3873/11화 미리보기) |
-| D13 | 나의 아저씨 · 쓰레기통 상품권 | 동훈이 뇌물 수수 의심을 받을 처지에 놓임 | 지안이 청소부의 도움으로 뇌물을 회사 쓰레기통에 버린다 | 버려진 상품권 때문에 회사는 동훈을 청렴하다고 평가한다 | 기록 공개 | [공식 자료](https://tvn.cjenm.com/ko/mymister/episodes/#previewPopup/8834-7857/1854/tvN [나의 아저씨] 2화) |
-| D14 | 나의 아저씨 · 박상무 해임 | 동훈을 둘러싼 사내 권력 다툼 | 지안과 기범이 박상무를 겨냥해 움직인다 | 박상무가 해임되고 사내 힘의 균형이 바뀐다 | 함정 역전 | [공식 자료](https://tvn.cjenm.com/ko/mymister/episodes/#previewPopup/8837-7857/1854/tvN [나의 아저씨] 5화) |
+| D05 | 빈센조 · 철거를 막은 파티 | 금가프라자가 철거 위기에 처함 | 빈센조가 상가에 사람들이 모이는 파티를 연다 | 철거를 모면하고 상인들의 지지를 얻는다 | 동맹 개입 | [공식 자료](https://tvn.cjenm.com/ko/tvnvincenzo/episodes/#previewPopup/12612-5207/2032/%5B3회%5D) |
+| D06 | 빈센조 · 산재 소송 수임 | 피해자들의 바벨화학 산재 소송에 나설 통로가 필요함 | 차영과 빈센조가 상대 변호사에게서 사건을 가져온다 | 둘이 산재 소송을 맡아 바벨과 싸울 자리를 확보한다 | 공식 시정 | [공식 자료](https://tvn.cjenm.com/ko/tvnvincenzo/episodes/#previewPopup/12615-5207/2032/%5B6회%5D) |
+| D07 | 빈센조 · 투자 발표 반격 | 바벨이 대규모 투자 협약으로 힘을 키우려 함 | 빈센조가 방해하고 차영이 대결을 선포한다 | 협약 뒤 바벨이 원한 만큼 투자 성과를 내지 못한다 | 직접 응징·저지 | [공식 자료](https://tvn.cjenm.com/ko/tvnvincenzo/episodes/#previewPopup/12618-5207/2032/%5B9회%5D) |
+| D08 | 빈센조 · 바벨 회장 체포 | 바벨이 노조 와해 의혹을 맞닥뜨림 | 정검사가 장준우를 긴급 체포한다 | 회장이 공개적으로 모욕을 받고 수사 대상이 된다 | 공식 시정 | [공식 자료](https://tvn.cjenm.com/ko/tvnvincenzo/episodes/#previewPopup/12623-5207/2032/%5B14회%5D) |
+| D09 | 빈센조 · 예상 밖 구원 | 빈센조가 죽을 위기에 처함 | 예상 밖의 도움을 받는다 | 그 자리에서 위기를 벗어난다 | 동맹 개입 | [공식 자료](https://tvn.cjenm.com/ko/tvnvincenzo/episodes/#previewPopup/12624-5207/2032/%5B15화%5D) |
+| D10 | 빈센조 · 바벨 일당 최후 | 바벨 일당이 차영까지 공격함 | 빈센조가 마지막 보복에 나선다 | 마지막 회가 바벨 일당의 응징으로 닫힌다 | 직접 응징·저지 | [공식 자료](https://tvn.cjenm.com/ko/tvnvincenzo/episodes/#previewPopup/12629-5207/2032/%5B20회%5D) |
+| D11 | 눈물의 여왕 · 사냥터 | 해인에게 멧돼지가 달려듦 | 현우가 막아선다 | 해인이 위기를 벗어나고 현우는 끊긴 철조망을 발견한다 | 동맹 개입 | [공식 자료](https://tvn.cjenm.com/ko/queenoftears/episodes/#previewPopup/15570-17018/3873/3화%20미리보기) |
+| D12 | 눈물의 여왕 · 기자회견 | 은성이 행사하는 압박 속에 해인의 병이 비밀로 남아 있음 | 해인이 공개석상에서 자신의 병을 밝힌다 | 가족들까지 알게 되고 비밀을 쥔 쪽이 독점하던 정보가 풀린다 | 공개 발언 | [공식 자료](https://tvn.cjenm.com/ko/queenoftears/episodes/#previewPopup/15620-17018/3873/11화%20미리보기) |
+| D13 | 나의 아저씨 · 쓰레기통 상품권 | 동훈이 뇌물 수수 의심을 받을 처지에 놓임 | 지안이 청소부의 도움으로 뇌물을 회사 쓰레기통에 버린다 | 버려진 상품권 때문에 회사는 동훈을 청렴하다고 평가한다 | 기록 공개 | [공식 자료](https://tvn.cjenm.com/ko/mymister/episodes/#previewPopup/8834-7857/1854/tvN%20%5B나의%20아저씨%5D%202화) |
+| D14 | 나의 아저씨 · 박상무 해임 | 동훈을 둘러싼 사내 권력 다툼 | 지안과 기범이 박상무를 겨냥해 움직인다 | 박상무가 해임되고 사내 힘의 균형이 바뀐다 | 함정 역전 | [공식 자료](https://tvn.cjenm.com/ko/mymister/episodes/#previewPopup/8837-7857/1854/tvN%20%5B나의%20아저씨%5D%205화) |
 | D15 | 나의 아저씨 · 사내 진실 | 직원들이 사건의 전말을 모르고 있음 | 사건의 전말이 직원들 앞에 드러난다 | 사건의 내막을 당사자 밖의 사람들이 알게 된다 | 공개 발언 | [공식 자료](https://tvn.cjenm.com/ko/mymister/video/) |
-| D16 | 검색어를 입력하세요 WWW · 점유율 역전 | 바로가 오래 2위에 머묾 | 타미와 팀이 점유율 역전 계획을 밀어붙인다 | 점유율이 뒤집히고 팀이 함께 축하한다 | 실력 입증 | [공식 자료](https://tvn.cjenm.com/ko/searchwww/episodes/#previewPopup/10784-6649/1930/tvN [검색어를 입력하세요 WWW] 15화) |
+| D16 | 검색어를 입력하세요 WWW · 점유율 역전 | 바로가 오래 2위에 머묾 | 타미와 팀이 점유율 역전 계획을 밀어붙인다 | 점유율이 뒤집히고 팀이 함께 축하한다 | 실력 입증 | [공식 자료](https://tvn.cjenm.com/ko/searchwww/episodes/#previewPopup/10784-6649/1930/tvN%20%5B검색어를%20입력하세요%20WWW%5D%2015화) |
 | D17 | 검색어를 입력하세요 WWW · 공동성명 | 정부가 포털에 압박을 가함 | 바로가 고발하고 두 포털이 공동으로 목소리를 낸다 | 경쟁사들이 공동성명을 낸다 | 동맹 개입 | [공식 자료](https://tvn.cjenm.com/ko/searchwww/video/) |
-| D18 | 일타 스캔들 · 해이의 고백 | 행선이 기혼자로 오해받고 비난받음 | 해이가 두 사람의 실제 가족관계를 공개한다 | 행선과 치열을 비난하던 여론의 해석이 바뀐다 | 공개 발언 | [공식 자료](https://tvn.cjenm.com/ko/crashcourseinromance/episodes/#previewPopup/14651-13689/2599/11화 <우리 사랑의 관계함수>) |
-| D19 | 일타 스캔들 · 해이의 수학 성적 | 해이가 수학 때문에 어려움을 겪음 | 치열의 강의를 듣고 시험을 치른다 | 수학 1등급을 받고 목표 반 시험에도 합격한다 | 실력 입증 | [공식 자료](https://tvn.cjenm.com/ko/crashcourseinromance/episodes/#previewPopup/14405-13689/2599/4화 <등차수열의 반란>) |
+| D18 | 일타 스캔들 · 해이의 고백 | 행선이 기혼자로 오해받고 비난받음 | 해이가 두 사람의 실제 가족관계를 공개한다 | 행선과 치열을 비난하던 여론의 해석이 바뀐다 | 공개 발언 | [공식 자료](https://tvn.cjenm.com/ko/crashcourseinromance/episodes/#previewPopup/14651-13689/2599/11화%20%3C우리%20사랑의%20관계함수%3E) |
+| D19 | 일타 스캔들 · 해이의 수학 성적 | 해이가 수학 때문에 어려움을 겪음 | 치열의 강의를 듣고 시험을 치른다 | 수학 1등급을 받고 목표 반 시험에도 합격한다 | 실력 입증 | [공식 자료](https://tvn.cjenm.com/ko/crashcourseinromance/episodes/#previewPopup/14405-13689/2599/4화%20%3C등차수열의%20반란%3E) |
 | D20 | 일타 스캔들 · 해이와 친모 | 친모의 등장으로 가족 문제의 결정권이 흔들림 | 해이가 친모에게 문제를 둘이 해결하겠다고 통보한다 | 자기 관계는 자기가 정하겠다는 입장을 전한다 | 경계 설정 | [공식 자료](https://tvn.cjenm.com/ko/crashcourseinromance/video/) |
-| D21 | 반짝이는 워터멜론 · 사고 예방 | 이찬에게 청력을 잃을 사고가 닥칠 수 있음 | 은결이 사고를 막으려 움직인다 | 회차 소개가 해당 사고를 막았다고 밝힌다 | 동맹 개입 | [공식 자료](https://tvn.cjenm.com/ko/twinklingwatermelon/episodes/#previewPopup/15343-16305/3564/[12화] 축제에 오지 마. 올 거면 날 선택해줘.) |
-| D22 | 스물다섯 스물하나 · 국가대표 선발 | 희도가 훈련 기회와 평가전을 두고 고전함 | 선발에 도전한다 | 국가대표가 되어 돌아온다 | 실력 입증 | [공식 자료](https://tvn.cjenm.com/ko/twentyfivetwentyone/episodes/#previewPopup/13216-4629/2070/5화 미리보기) |
-| D23 | 우리들의 블루스 · 옥동의 속내 | 동석과 옥동이 오랫동안 묻어둔 갈등 | 두 사람이 같이 다니다 제사에서 냉대를 받는다 | 옥동이 평생 눌러온 속내를 말한다 | 공개 발언 | [공식 자료](https://tvn.cjenm.com/ko/ourblues/episodes/#previewPopup/13410-4419/2081/19화 <옥동과 동석 2>) |
+| D21 | 반짝이는 워터멜론 · 사고 예방 | 이찬에게 청력을 잃을 사고가 닥칠 수 있음 | 은결이 사고를 막으려 움직인다 | 회차 소개가 해당 사고를 막았다고 밝힌다 | 동맹 개입 | [공식 자료](https://tvn.cjenm.com/ko/twinklingwatermelon/episodes/#previewPopup/15343-16305/3564/%5B12화%5D%20축제에%20오지%20마.%20올%20거면%20날%20선택해줘.) |
+| D22 | 스물다섯 스물하나 · 국가대표 선발 | 희도가 훈련 기회와 평가전을 두고 고전함 | 선발에 도전한다 | 국가대표가 되어 돌아온다 | 실력 입증 | [공식 자료](https://tvn.cjenm.com/ko/twentyfivetwentyone/episodes/#previewPopup/13216-4629/2070/5화%20미리보기) |
+| D23 | 우리들의 블루스 · 옥동의 속내 | 동석과 옥동이 오랫동안 묻어둔 갈등 | 두 사람이 같이 다니다 제사에서 냉대를 받는다 | 옥동이 평생 눌러온 속내를 말한다 | 공개 발언 | [공식 자료](https://tvn.cjenm.com/ko/ourblues/episodes/#previewPopup/13410-4419/2081/19화%20%3C옥동과%20동석%202%3E) |
 | D24 | 작은 아씨들 · 상아의 위협에서 구조 | 화영과 인주가 상아에게 위협받음 | 인주가 위험에 놓인 화영을 구한다 | 화영이 눈앞의 위협에서 벗어난다 | 동맹 개입 | [공식 자료](https://tvn.cjenm.com/ko/littlewomen/video/) |
 | D25 | 더 글로리 · 박연진 실형 | 학폭과 사망 사건이 오래 가려져 있음 | 동은이 수사에 증거를 연결하고 소희의 어머니도 피해 사실을 알린다 | 연진이 직장을 떠나고 극 중 징역형을 받는다 | 공식 시정 | [공식 자료](https://www.netflix.com/tudum/articles/the-glory-season-1-part-2-ending-explained) |
 | D26 | 더 글로리 · 이사라의 교회 장면 | 사라의 행동이 교회 공동체에 알려지지 않음 | 동은이 숨겨진 행동이 드러날 상황을 만든다 | 교회 사람들이 목격하고 이후 수사와 체포가 이어진다 | 공개 발언 | [공식 자료](https://www.netflix.com/tudum/articles/the-glory-season-1-part-2-ending-explained) |
