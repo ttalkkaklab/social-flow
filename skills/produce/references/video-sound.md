@@ -69,6 +69,12 @@ trim the card as one body, picture and sound together
 checks both streams and writes hash-bound extraction evidence to source-audio.json.
 It never silently falls back to TTS when the source audio is missing.
 
+The encoded feature must have a soundtrack with measurable signal. A generated shot
+card whose entire rendered interval is below −60 dBFS needs a repaired soundtrack or
+a post effect or ambience cue before delivery. This check uses the feature's shot
+timeline before separately spliced inserts. Deliberate silent-film builds use the
+existing `SILENT=1` mode. Signal measurements do not identify the intended sounds.
+
 Exact pinned speech and an independently editable native Foley stem are different
 requirements. If exact external speech must be retained, use `audioSource:'speech'` and
 post effects. Do not assume a mixed native soundtrack can be separated losslessly.

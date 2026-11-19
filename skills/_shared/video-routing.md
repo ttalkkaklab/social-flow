@@ -154,6 +154,10 @@ thoughts. `speech_manage` plans external TTS voiceover and binds assembly to
 measured intervals with action and lead-in/tail-out, and plan the full video coverage.
 Missing speech setup must be reported; it does not authorize a new voice or native MSR.
 
+GenAI and LTX API image-to-video plans without dialogue default to a scene soundtrack.
+Describe the room tone and the sounds made by visible actions. Set `generateAudio:false`
+when effects and ambience will be supplied in the edit.
+
 ## Plans, candidate takes and local review
 
 `video_plan` compiles the storyboard's `performance` events and the current camera

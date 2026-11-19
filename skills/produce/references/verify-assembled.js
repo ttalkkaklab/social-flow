@@ -6,14 +6,39 @@ const {execFileSync}=require('node:child_process'),{createHash}=require('node:cr
 const hash=f=>createHash('sha256').update(fs.readFileSync(f)).digest('hex');
 const motion=require('./measure-motion.js');
 const expectation=require('./motion-expectation.js');
-// Measure every card, retaining proxy motion findings as quality warnings.
-// Read/decode/timing errors still fail; a low difference score is not proof of a freeze.
-function cardMotion(work,scenes,policy){
-  const master=path.join(work,'reel.mp4');
+const audioSignal=require('../../_shared/audio-signal.js');
+
+function renderedTimeline(work,master){
   const rate=execFileSync('ffprobe',['-v','error','-select_streams','v:0','-show_entries','stream=avg_frame_rate','-of','csv=p=0',master],{encoding:'utf8'}).trim();
   const [num,den]=rate.split('/').map(Number),fps=num/den;
   if(!Number.isFinite(fps)||fps<=0)throw new Error('cannot read the master frame rate');
   const rows=fs.readFileSync(path.join(work,'work/edit-timeline.tsv'),'utf8').trim().split('\n').map(l=>l.split('\t'));
+  return {rows,fps};
+}
+
+function checkSound(master,scenes,{rows,fps}){
+  const {status,spans}=audioSignal.inspect(master);
+  const last=rows.at(-1);
+  const featureSeconds=(Number(last[1])+Number(last[2]))/fps;
+  if(status==='missing'||status==='silent'||audioSignal.covers(spans,0,featureSeconds,1/fps))
+    throw new Error('the assembled feature has no audible soundtrack; add effects, ambience or the intended speech before delivery');
+  const silent=[];
+  for(const [id,start,frames] of rows){
+    const shot=scenes[+id];
+    if(!shot)throw new Error('timeline references an unknown card: '+id);
+    const generated=shot.shot?.render?.mode==='generated_video'||shot.visual?.video?.clip||
+      shot.productionPlan?.cuts?.some(cut=>cut.kind==='generated_video');
+    if(!generated)continue;
+    const seconds=+frames/fps;
+    if(audioSignal.covers(spans,+start/fps,seconds,Math.min(1/fps,seconds/10)))
+      silent.push(`shot ${Number(id)+1}${shot.id?` (${shot.id})`:''} at ${(+start/fps).toFixed(2)}s`);
+  }
+  if(silent.length)throw new Error(`assembled generated shots below ${audioSignal.SILENCE_DB} dBFS throughout: ${silent.join(', ')}. Add effects or ambience to the mix or bind the intended soundtrack.`);
+}
+
+// Measure every card, retaining proxy motion findings as quality warnings.
+// Read/decode/timing errors still fail; a low difference score is not proof of a freeze.
+function cardMotion(master,scenes,policy,{rows,fps}){
   const stillLimit=motion.plateStillLimit(policy),cards=[],problems=[];
   for(const [id,start,frames] of rows){
     const s=scenes[+id];
@@ -82,7 +107,9 @@ function check(work,delivery,burned,subtitles){
   if(!Number.isFinite(planned)||Math.abs(actual-planned)>.5)throw new Error(`opening is ${actual}s but the plan says ${planned}s; reconcile measured narration and trim before assembly`);
   if(fs.existsSync(path.join(work,'reel-sub.mp4'))&&Math.abs(duration(path.join(work,'reel-sub.mp4'))-duration(master))>.07)throw new Error('clean master and the legacy reel-sub.mp4 differ in duration');
   require('./check-edit-timeline.js').check(work);
-  const measured=cardMotion(work,scenes,policy);
+  const timeline=renderedTimeline(work,master);
+  if(process.env.SILENT!=='1')checkSound(master,scenes,timeline);
+  const measured=cardMotion(master,scenes,policy,timeline);
   // Guidance, not a gate (owner 2026-10-16): a text-led card past 8 seconds is recorded for review and the build continues.
   for(const i of proof.cards)if(scenes[i].shot?.render?.mode==='editorial_html'&&duration(path.join(work,'work',`v${i}.mp4`))>8.07){
     const w='card '+i+': text-led card runs past 8 seconds after encoding; split it or shorten the line when the read drags';
@@ -118,4 +145,4 @@ if(require.main===module){try{
  if(mode==='--splice-start')splice(dir,args);else if(mode==='--splice-finish')splice(dir,[],true);else check(dir,mode,...args);
  console.log('Assembled timeline verified.');
 }catch(e){console.error('assembly: '+e.message);process.exitCode=1}}
-module.exports={check,splice,cardMotion};
+module.exports={check,splice,checkSound};

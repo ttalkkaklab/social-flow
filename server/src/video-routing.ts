@@ -266,7 +266,11 @@ export function planVideo(raw: unknown): VideoPlan {
   const silentPicture = !lines.some(line => line.delivery === 'on_screen' || line.delivery === 'off_screen');
   const supportsAudioToggle = tool === 'astra_genai_img2video' || tool === 'ltx_api_img2video';
   // Voiceover pictures use their own timed speech track.
-  const includeEffects = supportsAudioToggle && lines.length === 0 && input.args.generateAudio === true;
+  const sound = context.shot.sound as { audioSource?: string } | undefined;
+  const writtenAudio = input.args.prompt ?? visual?.video?.promptSource?.sound ?? visual?.video?.prompt;
+  const requestsSilence = /(?:^|\bAudio:\s*)silent\b/i.test(String(writtenAudio ?? '').trim());
+  const generateAudio = input.args.generateAudio ?? (sound?.audioSource !== 'speech' && !requestsSilence);
+  const includeEffects = supportsAudioToggle && lines.length === 0 && generateAudio === true;
   // Apply the standing MSR-to-I2V rule to old reference-frame boards without rewriting their media.
   const shot = tool === 'astra_genai_img2video' && silentPicture && visual?.frames?.mode === 'reference'
     ? { ...context.shot, visual: { ...visual, frames: { mode: 'first', start: visual.frames.start },
@@ -287,12 +291,12 @@ export function planVideo(raw: unknown): VideoPlan {
     return seconds;
   };
   const compiled = input.args.prompt === undefined && video?.promptSource
-    ? compileVideoPrompt(shot, video.promptSource, names, { mode, measureAudio, includeEffects }) : undefined;
+    ? compileVideoPrompt(shot, video.promptSource, names, { mode, measureAudio }) : undefined;
   const authored = compiled?.prompt ?? video?.prompt;
   let callArgs = input.args.prompt === undefined && typeof authored === 'string' ? { ...input.args, prompt: authored } : input.args;
   if (silentPicture && (supportsAudioToggle || tool === 'minimax_img2video' || tool === 'heygen_img2video')) {
     const soundDirection = includeEffects
-      ? 'include the specified ambient sound and effects.'
+      ? 'include natural ambience for the location and sound effects from the visible actions.'
       : 'perform the planned silent action.';
     callArgs = {
       ...callArgs,

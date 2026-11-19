@@ -228,7 +228,7 @@ function performanceBeats(performance, mode, includeDialogue = true) {
 }
 function sceneVideoPrompt(performance, mode, scene = {}) {
   const route = !performance.some(event => event.kind !== 'action')
-    ? 'This is a silent scene. Perform the ordered visible actions without invented speech or voiceover.'
+    ? 'Perform the ordered visible actions without invented speech or voiceover.'
     : mode === 'native'
     ? 'Speak each authored line in its speaker\'s voice from the quoted words; no audio is supplied. Only on_screen lines move a visible mouth. Keep off_screen speaking faces outside the authored crop and voiceover separate from physical speech. Do not transcribe speech into the image.'
     : mode === 'audio_conditioned'

@@ -22,8 +22,10 @@ reaction or spatial view. Keep its voice ownership without adding a speaking fac
 screen-position bindings describe on_screen speakers only.
 If coverage is wrong, return to the earlier authoring/image stages rather than patching
 the prompt alone. Preserve the single MSR speaker's binding and selected voice.
-Silent/inner-thought clips use image2video with `frames.mode:"first"` and
-`generateAudio:false`. Thoughts use character `voiceover`: generate and attach pinned
+Dialogue-free cuts use image2video with `frames.mode:"first"`. On LTX, request natural
+ambience and action-timed effects. Use `generateAudio:false` when the edit supplies the
+sound separately, and carry those cues into assembly. Thoughts use image2video with
+`generateAudio:false` and character `voiceover`: generate and attach pinned
 TTS, compose measured speech/action intervals and lead-in/tail-out, then plan the full
 video duration. Keep mouths closed and assembly on `sound.audioSource:"speech"`.
 If speech is disabled, report missing TTS setup rather than sending thoughts to MSR.
@@ -84,6 +86,10 @@ does not establish a valid walking path.
 After generation, inspect whether those particular corrections appear in the actual clip.
 A successful receipt or an attached player does not establish correct blocking. Preserve
 failed versions and distinguish generated, connected and visually verified results.
+Bind dialogue-free clips with generated effects through `speech_manage attach_video`.
+It selects the clip's sound on continuous sync edits and preserves the authored shot
+length. On moving joins or layered edits, carry the effects into the separate mix.
+Check for missing effects or unwanted voices in playback.
 Bind a clip with on-screen dialogue through `speech_manage attach_video`; an MSR clip binds
 as `native`, with no line audio (shot-speech.md adapter layer). Its result's `soundtrack`
 says where the line sits in the clip; when it suggests a trim, listen to the clip and set
