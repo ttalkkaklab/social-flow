@@ -93,7 +93,7 @@ test('episode cards normalize titles and use only the main rendered thumbnail', 
     f.write(short + '/output/video/cover.jpg', 'extracted video frame');
     f.write(short + '/output/cover/thumbnail-16x9.jpg', 'old format');
     f.write(long + '/storyboard/scenario.md', '# Earlier title');
-    f.write(long + '/storyboard/storyboard.md', '---\ntitle: Final title\n---\n# Draft');
+    f.write(long + '/storyboard/storyboard.md', '---\ntitle: How to Storyboard\n---\n# Draft');
     f.write(long + '/storyboard/scenes.js', "window.FORMAT = 'youtube-long-16x9'; window.SCENES = [];");
     storyboardHtml(join(f.dir, short, 'storyboard'));
     storyboardHtml(join(f.dir, long, 'storyboard'));
@@ -105,7 +105,7 @@ test('episode cards normalize titles and use only the main rendered thumbnail', 
     assert.match(shortCard, /<h2>EP02 · Anh ấy nói gì\?<\/h2>/);
     assert.match(shortCard, /No thumbnail/);
     assert.doesNotMatch(shortCard, /<img/);
-    assert.match(index(), /<h2>EP03 · Final title<\/h2>/);
+    assert.match(index(), /<h2>EP03 · How to Storyboard<\/h2>/);
     assert.match(index(), /src="\.\.\/episodes\/ep03-in-depth\/output\/cover\/thumbnail-16x9\.png"/);
     f.write(long + '/output/cover/thumbnail-16x9.jpg', 'main cover');
     exportChannel(f.dir);

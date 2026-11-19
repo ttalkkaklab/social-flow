@@ -215,7 +215,7 @@ function episodeTitle(topic, candidates) {
   const episode = topic.match(/^ep0*(\d+)(?=-|$)/i);
   for (const value of candidates) {
     if (typeof value !== 'string') continue;
-    const title = value.trim().replace(TITLE_SUFFIX_RE, '').trim();
+    const title = value.trim();
     if (!title || title === topic) continue;
     if (!episode) return title;
     const prefix = title.match(EPISODE_PREFIX_RE);
@@ -256,7 +256,8 @@ function listStoryboards(root, slug) {
       catch { /* Markdown and literal format remain available if the board cannot run. */ }
       const fmt = typeof win?.FORMAT === 'string' ? win.FORMAT : scenes?.match(/window\.FORMAT\s*=\s*["']([^"']+)["']/)?.[1];
       const scenario = readInside(dir, path.join(sb, 'scenario.md'));
-      const title = episodeTitle(topic, [fm.title, win?.SB_DOC?.title, firstHeading(scenario), firstHeading(md)]);
+      const heading = firstHeading(md)?.replace(TITLE_SUFFIX_RE, '');
+      const title = episodeTitle(topic, [fm.title, win?.SB_DOC?.title, firstHeading(scenario), heading]);
       const st = states.get(topic) || {};
       const base = '/files/' + slug + '/episodes/' + encodeURIComponent(topic) + '/';
       const cover = coverImage(dir, episode, fmt);
