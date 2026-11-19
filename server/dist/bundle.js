@@ -93736,7 +93736,7 @@ var require_scene_acting = __commonJS({
       });
     }
     function sceneVideoPrompt(performance2, mode, scene = {}) {
-      const route = !performance2.some((event) => event.kind !== "action") ? "This is a silent scene. Perform the ordered visible actions without invented speech or voiceover." : mode === "native" ? "Speak each authored line in its speaker's voice from the quoted words; no audio is supplied. Only on_screen lines move a visible mouth. Keep off_screen speaking faces outside the authored crop and voiceover separate from physical speech. Do not transcribe speech into the image." : mode === "audio_conditioned" ? "Use the supplied audio as the sole source of spoken words. Synchronize visible mouths only during each on_screen speech interval; follow the delivery instruction for every beat. Do not transcribe speech into the image." : mode === "post_lipsync" ? "Animate the planned action; the selected post lip-sync adapter supplies mouth synchronization from the original audio." : "Perform the planned action while the separately supplied voiceover plays; do not turn narration into visible writing.";
+      const route = !performance2.some((event) => event.kind !== "action") ? "Perform the ordered visible actions without invented speech or voiceover." : mode === "native" ? "Speak each authored line in its speaker's voice from the quoted words; no audio is supplied. Only on_screen lines move a visible mouth. Keep off_screen speaking faces outside the authored crop and voiceover separate from physical speech. Do not transcribe speech into the image." : mode === "audio_conditioned" ? "Use the supplied audio as the sole source of spoken words. Synchronize visible mouths only during each on_screen speech interval; follow the delivery instruction for every beat. Do not transcribe speech into the image." : mode === "post_lipsync" ? "Animate the planned action; the selected post lip-sync adapter supplies mouth synchronization from the original audio." : "Perform the planned action while the separately supplied voiceover plays; do not turn narration into visible writing.";
       const beats = performanceBeats(performance2, mode);
       const visualDirection = (value) => performance2.filter((line) => line.kind !== "action" && line.text).reduce((text4, line) => text4.split(line.text).join("the supplied speech"), String(value));
       return ["A clean cinematic image with an unobstructed scene and text-free surfaces.", route, visualDirection(sceneDirection(scene, performance2)), ...beats, VIDEO_TEXT_POLICY].join("\n");
@@ -110798,11 +110798,11 @@ function buildFasth3Body(raw) {
       if (!["image/png", "image/jpeg"].includes(meta.mimeType)) throw new Error("FastH3 reference images must be PNG or JPEG");
       return encode2(file);
     });
-    let videoSeconds = 0;
+    let videoSeconds2 = 0;
     const videos = r2.referenceVideoPaths.map((file, i2) => {
       const meta = probe2(file);
-      videoSeconds += meta.duration;
-      if (videoSeconds > 15) throw new Error("Reference videos exceed fifteen seconds total");
+      videoSeconds2 += meta.duration;
+      if (videoSeconds2 > 15) throw new Error("Reference videos exceed fifteen seconds total");
       const prefix = `video-${i2}-`;
       ffmpeg(["-i", file, "-an", "-vf", "fps=24,scale=768:768:force_original_aspect_ratio=decrease", "-frames:v", "362", join6(temp, prefix + "%04d.jpg")]);
       const files3 = readdirSync2(temp).filter((f3) => f3.startsWith(prefix)).sort();
@@ -114751,13 +114751,13 @@ async function upscaleVideo(args) {
 }
 var ASTRA_VIDEO_SHORT_AUDIO_SLACK = 0.08;
 function checkAudioCoversVideo(usable, numFrames, frameRate, afterStart = false) {
-  const videoSeconds = numFrames / frameRate;
-  if (usable + ASTRA_VIDEO_SHORT_AUDIO_SLACK >= videoSeconds) return null;
+  const videoSeconds2 = numFrames / frameRate;
+  if (usable + ASTRA_VIDEO_SHORT_AUDIO_SLACK >= videoSeconds2) return null;
   const fit = 8 * Math.floor((usable * frameRate - 1) / 8 + 1e-4) + 1;
-  const fixes = [`re-upload audio of at least ${(Math.ceil(videoSeconds * 1e4) / 1e4).toFixed(4)}s`];
+  const fixes = [`re-upload audio of at least ${(Math.ceil(videoSeconds2 * 1e4) / 1e4).toFixed(4)}s`];
   if (fit >= ASTRA_VIDEO_MIN_FRAMES) fixes.push(`set numFrames to ${fit} or less (duration ${(fit / frameRate).toFixed(4)}s or less)`);
   fixes.push("use audioMaxDuration instead of numFrames/duration to follow the audio length");
-  return `the audio is shorter than the video \u2014 usable audio ${usable.toFixed(3)}s${afterStart ? " (after audioStartTime)" : ""} vs ${numFrames} frames = ${videoSeconds.toFixed(4)}s at ${frameRate}fps; generation would fail on a latent shape mismatch. Fix: ${fixes.map((f3, i2) => `(${i2 + 1}) ${f3}`).join(" \xB7 ")}`;
+  return `the audio is shorter than the video \u2014 usable audio ${usable.toFixed(3)}s${afterStart ? " (after audioStartTime)" : ""} vs ${numFrames} frames = ${videoSeconds2.toFixed(4)}s at ${frameRate}fps; generation would fail on a latent shape mismatch. Fix: ${fixes.map((f3, i2) => `(${i2 + 1}) ${f3}`).join(" \xB7 ")}`;
 }
 function checkAudioSource(upload, args) {
   if (upload.kind !== "audio") return `audioPath uploaded as ${upload.kind}, not audio`;
@@ -116938,7 +116938,7 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
     extras ? sentence(`Unnamed people in the frame: ${extras}`) : "",
     ...["before", "after", "continuity"].map((key) => text2(design[key]) ? sentence(`${key}: ${text2(design[key])}`) : ""),
     ...states.filter((state) => ![source.action, design.before, design.after, design.continuity].includes(state)).map((state) => sentence(`Visible state: ${state}`)),
-    !lines.length && beats.length && !options.includeEffects ? "This is a silent scene. Perform the planned action without invented speech or voiceover." : "",
+    !lines.length && beats.length ? "Perform the planned action without invented speech or voiceover." : "",
     ...beats,
     // The model's default face is pleasant; the authored state has to be named and held (LTX guide: physical cues, state after the action).
     worn ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : "",
@@ -117181,7 +117181,11 @@ function planVideo(raw) {
   const visual = context2.shot.visual;
   const silentPicture = !lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen");
   const supportsAudioToggle = tool2 === "astra_genai_img2video" || tool2 === "ltx_api_img2video";
-  const includeEffects = supportsAudioToggle && lines.length === 0 && input.args.generateAudio === true;
+  const sound = context2.shot.sound;
+  const writtenAudio = input.args.prompt ?? visual?.video?.promptSource?.sound ?? visual?.video?.prompt;
+  const requestsSilence = /(?:^|\bAudio:\s*)silent\b/i.test(String(writtenAudio ?? "").trim());
+  const generateAudio = input.args.generateAudio ?? (sound?.audioSource !== "speech" && !requestsSilence);
+  const includeEffects = supportsAudioToggle && lines.length === 0 && generateAudio === true;
   const shot = tool2 === "astra_genai_img2video" && silentPicture && visual?.frames?.mode === "reference" ? { ...context2.shot, visual: {
     ...visual,
     frames: { mode: "first", start: visual.frames.start },
@@ -117202,11 +117206,11 @@ function planVideo(raw) {
     performanceInputs[file] = audio.sha256;
     return seconds;
   };
-  const compiled = input.args.prompt === void 0 && video2?.promptSource ? compileVideoPrompt(shot, video2.promptSource, names, { mode, measureAudio, includeEffects }) : void 0;
+  const compiled = input.args.prompt === void 0 && video2?.promptSource ? compileVideoPrompt(shot, video2.promptSource, names, { mode, measureAudio }) : void 0;
   const authored = compiled?.prompt ?? video2?.prompt;
   let callArgs = input.args.prompt === void 0 && typeof authored === "string" ? { ...input.args, prompt: authored } : input.args;
   if (silentPicture && (supportsAudioToggle || tool2 === "minimax_img2video" || tool2 === "heygen_img2video")) {
-    const soundDirection = includeEffects ? "include the specified ambient sound and effects." : "perform the planned silent action.";
+    const soundDirection = includeEffects ? "include natural ambience for the location and sound effects from the visible actions." : "perform the planned silent action.";
     callArgs = {
       ...callArgs,
       ...supportsAudioToggle ? { generateAudio: includeEffects } : {},
@@ -131520,6 +131524,7 @@ import { execFileSync as execFileSync18 } from "node:child_process";
 var voiceContract = () => nodeModule7.createRequire(import.meta.url)("../../skills/_shared/character-voice.js");
 var characterSpeechContract = () => nodeModule7.createRequire(import.meta.url)("../../skills/_shared/character-speech.js");
 var speechSpanContract = () => nodeModule7.createRequire(import.meta.url)("../../skills/_shared/speech-span.js");
+var audioSignalContract = () => nodeModule7.createRequire(import.meta.url)("../../skills/_shared/audio-signal.js");
 var actingContract = () => nodeModule7.createRequire(import.meta.url)("../../skills/_shared/scene-acting.js");
 var delivery = external_exports.enum(["voiceover", "on_screen", "off_screen"]);
 var speechManageSchema = external_exports.object({
@@ -131541,12 +131546,12 @@ var speechManageSchema = external_exports.object({
 }).strict();
 var hash4 = (s2) => createHash23("sha256").update(s2).digest("hex");
 var object5 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
+var videoSeconds = (file) => Number(execFileSync18(
+  "ffprobe",
+  ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=duration", "-of", "default=nw=1:nk=1", file],
+  { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }
+).trim());
 function syncProductionClip(scene, boardDir, videoPath, oldClip, warnings) {
-  const duration4 = (file) => Number(execFileSync18(
-    "ffprobe",
-    ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=duration", "-of", "default=nw=1:nk=1", file],
-    { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }
-  ).trim());
   const production = object5(scene.productionPlan), cuts = production.cuts;
   if (Array.isArray(cuts) && cuts.length) {
     const cut = object5(cuts[0]);
@@ -131555,7 +131560,7 @@ function syncProductionClip(scene, boardDir, videoPath, oldClip, warnings) {
       return;
     }
     try {
-      if (Math.abs(Number(cut.seconds) - duration4(resolve10(boardDir, oldClip))) > 0.05) {
+      if (Math.abs(Number(cut.seconds) - videoSeconds(resolve10(boardDir, oldClip))) > 0.05) {
         warnings.push("The existing production cut has an authored duration; it was preserved for an explicit edit.");
         return;
       }
@@ -131565,12 +131570,26 @@ function syncProductionClip(scene, boardDir, videoPath, oldClip, warnings) {
     }
   }
   try {
-    const seconds = duration4(videoPath);
+    const seconds = videoSeconds(videoPath);
     if (!Number.isFinite(seconds) || seconds <= 0) throw new Error("Missing video duration");
     scene.productionPlan = { ...production, cuts: [{ kind: "generated_video", path: relative3(boardDir, videoPath), start: 0, seconds }] };
+    return seconds;
   } catch {
     warnings.push("Could not measure the bound video stream; production cuts were not changed.");
   }
+}
+function bindGeneratedSoundtrack(scene, next, clipSeconds) {
+  const { carry } = nodeModule7.createRequire(import.meta.url)("../../skills/produce/references/edit-plan.js");
+  const edit2 = object5(scene.edit);
+  const visual = object5(scene.visual);
+  const transition = String(scene.transition ?? "cut");
+  if (!clipSeconds || edit2.pre || edit2.post || visual.slide || visual.reuse !== void 0 || object5(visual.video).groupPlan || scene.type === "broll" || scene.type === "outro" || carry.test(transition) || carry.test(String(next?.transition)) || transition.startsWith("dip") && edit2.pre !== 0) return false;
+  const start = Number(edit2.in ?? 0);
+  const end = edit2.out ?? (typeof scene.duration === "number" ? start + scene.duration : clipSeconds);
+  if (typeof end !== "number" || !Number.isFinite(end) || end <= start || end > clipSeconds + 1e-3) return false;
+  if (edit2.out === void 0 && typeof scene.duration === "number") scene.edit = { ...edit2, out: end };
+  scene.sound = { ...object5(scene.sound), audioSource: "video" };
+  return true;
 }
 function speechRevision(line, character) {
   return hash4(JSON.stringify(actingContract().speechRevisionPayload(line, character?.tts)));
@@ -131842,12 +131861,13 @@ function manageSpeech(args) {
           quality = { ...quality, unverifiedSpeechSync: receipt.speechSync || null, receiptBinding: "unverified" };
       } catch {
       }
+      let boundSeconds;
       if (priorBinding.videoSha256 === videoSha256 && (performanceChanged || audioChanged) && !tailTrim) {
         plan2.warnings.push("Unchanged video bytes retain their original performance and audio binding; the revised performance or speech has not been generated in this footage.");
         video2.speechStatus = "stale";
         invalidated = { video: video2, edit: true };
       } else {
-        if (!tailTrim) syncProductionClip(scene, dirname10(file), videoPath, video2.clip, plan2.warnings);
+        if (!tailTrim) boundSeconds = syncProductionClip(scene, dirname10(file), videoPath, video2.clip, plan2.warnings);
         const trim = object5(scene.edit);
         if (native && priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256 && (trim.in !== void 0 || trim.out !== void 0)) {
           const { in: sourceIn, out: sourceOut, ...kept } = trim;
@@ -131895,21 +131915,29 @@ function manageSpeech(args) {
         for (const { line } of selected) if (line.mediaStatus === "needs_audio") delete line.mediaStatus;
       } else if (selected.length && plan2.mode === "voiceover") {
         scene.sound = { ...sound, audioSource: "speech" };
-      } else if (!selected.length && sound.audioSource === "video") {
+      } else if (!selected.length && sound.audioSource !== "speech") {
+        let status;
         try {
-          const streams = execFileSync18(
-            "ffprobe",
-            ["-v", "error", "-select_streams", "a", "-show_entries", "stream=index", "-of", "csv=p=0", videoPath],
-            { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }
-          ).trim();
-          if (!streams) {
-            const silentSound = { ...sound };
-            delete silentSound.audioSource;
-            scene.sound = silentSound;
-            plan2.warnings.push("The bound speechless clip has no audio stream; the previous video soundtrack source was removed. Supply the silent card clock separately.");
-          }
+          status = audioSignalContract().inspect(videoPath).status;
         } catch {
-          plan2.warnings.push("Could not inspect the bound clip audio streams; the existing sound source was preserved for inspection before assembly.");
+          plan2.warnings.push("Could not decode the bound clip audio; inspect its sound source before assembly.");
+        }
+        if (status === "signal" && sound.audioSource === "video") {
+          const end = object5(scene.edit).out;
+          if (typeof end === "number" && !(end <= (boundSeconds ?? videoSeconds(videoPath)) + 1e-3))
+            throw new Error("The replacement cannot cover edit.out; keep the current source or revise the authored trim before attaching it.");
+        } else if (status === "signal") {
+          const next = scenes.slice(scenes.indexOf(scene) + 1).find((shot) => shot.type !== "broll" && shot.type !== "outro");
+          if (!bindGeneratedSoundtrack(scene, next, boundSeconds))
+            plan2.warnings.push("This edit does not use the clip as sync footage. Carry its sound into the separate assembly audio or add post effects and ambience.");
+        } else if (status === "silent" || status === "missing") {
+          const reason = status === "missing" ? "has no audio stream" : "has a silent audio stream";
+          if (sound.audioSource === "video" && (object5(scene.edit).out !== void 0 || Array.isArray(sound.effects) && sound.effects.some((effect) => ["native", "input"].includes(String(object5(effect).delivery)))))
+            throw new Error(`The replacement ${reason}; keep the current source or revise the authored soundtrack and trim before attaching it.`);
+          const silentSound = { ...sound };
+          delete silentSound.audioSource;
+          scene.sound = silentSound;
+          plan2.warnings.push(`The bound speechless clip ${reason}. Add post effects or ambience before completing the mix.`);
         }
       }
       visual.video = video2;

@@ -26,6 +26,10 @@ const speechSpanContract = () => nodeModule.createRequire(import.meta.url)('../.
   measure(file: string): { startSeconds: number; endSeconds: number; clipSeconds: number; leadSilenceSeconds: number; tailSilenceSeconds: number } | null;
   suggestTrim(span: unknown, scene: unknown): { edit: { in?: number; out?: number }; durationSeconds: number } | null;
 };
+type AudioSignalStatus = 'missing' | 'silent' | 'signal';
+const audioSignalContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/audio-signal.js') as {
+  inspect(file: string): { status: AudioSignalStatus };
+};
 const actingContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/scene-acting.js') as { resolvedStyle(voice: unknown, acting: unknown): string | undefined; directionSupport(voice: unknown, acting: unknown): { stylePrompt?: string; supported: boolean; warnings: string[] }; speechRevisionPayload(line: unknown, voice: unknown): unknown; scenePerformancePayload(scene: unknown): unknown; VIDEO_TEXT_POLICY: string; sceneVideoPrompt(performance: unknown[], mode: string, scene?: unknown): string; planScenePerformance(scene: unknown, measureAudio: (line: Line) => number | null): {performance: Record<string, unknown>[]; durationSeconds: number | null; timing: string; warnings: string[]} };
 export { actingSchema } from './speech-acting.js';
 const delivery = z.enum(['voiceover', 'on_screen', 'off_screen']);
@@ -45,10 +49,10 @@ type Line = { id?: string; speaker?: string; tts: string; sub?: string; delivery
 type Character = { id: string; name?: string; tts?: Record<string, unknown> };
 const hash = (s: string | Buffer) => createHash('sha256').update(s).digest('hex');
 const object = (v: unknown): Record<string, unknown> => v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {};
+const videoSeconds = (file: string) => Number(execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=duration', '-of', 'default=nw=1:nk=1', file],
+  { encoding: 'utf8', timeout: 10000, stdio: ['ignore', 'pipe', 'ignore'] }).trim());
 /** Keep the storyboard player on the bound clip without replacing authored multi-cut edits. */
 function syncProductionClip(scene: Record<string, unknown>, boardDir: string, videoPath: string, oldClip: unknown, warnings: string[]) {
-  const duration = (file: string) => Number(execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=duration', '-of', 'default=nw=1:nk=1', file],
-    { encoding: 'utf8', timeout: 10000, stdio: ['ignore', 'pipe', 'ignore'] }).trim());
   const production = object(scene.productionPlan), cuts = production.cuts;
   if (Array.isArray(cuts) && cuts.length) {
     const cut = object(cuts[0]);
@@ -58,7 +62,7 @@ function syncProductionClip(scene: Record<string, unknown>, boardDir: string, vi
       return;
     }
     try {
-      if (Math.abs(Number(cut.seconds) - duration(resolve(boardDir, oldClip))) > 0.05) {
+      if (Math.abs(Number(cut.seconds) - videoSeconds(resolve(boardDir, oldClip))) > 0.05) {
         warnings.push('The existing production cut has an authored duration; it was preserved for an explicit edit.');
         return;
       }
@@ -68,12 +72,31 @@ function syncProductionClip(scene: Record<string, unknown>, boardDir: string, vi
     }
   }
   try {
-    const seconds = duration(videoPath);
+    const seconds = videoSeconds(videoPath);
     if (!Number.isFinite(seconds) || seconds <= 0) throw new Error('Missing video duration');
     scene.productionPlan = { ...production, cuts: [{ kind: 'generated_video', path: relative(boardDir, videoPath), start: 0, seconds }] };
+    return seconds;
   } catch {
     warnings.push('Could not measure the bound video stream; production cuts were not changed.');
   }
+}
+
+// A source soundtrack uses the existing sync edit lane. Keep authored moving
+// joins, layered cuts and audio margins on their separate assembly audio.
+function bindGeneratedSoundtrack(scene: Record<string, unknown>, next: Record<string, unknown> | undefined, clipSeconds: number | undefined) {
+  const { carry } = nodeModule.createRequire(import.meta.url)('../../skills/produce/references/edit-plan.js') as { carry: RegExp };
+  const edit = object(scene.edit);
+  const visual = object(scene.visual);
+  const transition = String(scene.transition ?? 'cut');
+  if (!clipSeconds || edit.pre || edit.post || visual.slide || visual.reuse !== undefined || object(visual.video).groupPlan ||
+      scene.type === 'broll' || scene.type === 'outro' || carry.test(transition) || carry.test(String(next?.transition)) ||
+      (transition.startsWith('dip') && edit.pre !== 0)) return false;
+  const start = Number(edit.in ?? 0);
+  const end = edit.out ?? (typeof scene.duration === 'number' ? start + scene.duration : clipSeconds);
+  if (typeof end !== 'number' || !Number.isFinite(end) || end <= start || end > clipSeconds + 0.001) return false;
+  if (edit.out === undefined && typeof scene.duration === 'number') scene.edit = { ...edit, out: end };
+  scene.sound = { ...object(scene.sound), audioSource: 'video' };
+  return true;
 }
 export function speechRevision(line: Line, character: Character | undefined): string {
   return hash(JSON.stringify(actingContract().speechRevisionPayload(line, character?.tts)));
@@ -337,12 +360,13 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
         else if (!receipt.sha256 && receipt.videoPath === videoPath)
           quality = { ...quality, unverifiedSpeechSync: receipt.speechSync || null, receiptBinding: 'unverified' };
       } catch { /* Missing review evidence stays explicit, without blocking usable footage. */ }
+      let boundSeconds: number | undefined;
       if (priorBinding.videoSha256 === videoSha256 && (performanceChanged || audioChanged) && !tailTrim) {
         plan.warnings.push('Unchanged video bytes retain their original performance and audio binding; the revised performance or speech has not been generated in this footage.');
         video.speechStatus = 'stale';
         invalidated = {video, edit:true};
       } else {
-        if (!tailTrim) syncProductionClip(scene, dirname(file), videoPath, video.clip, plan.warnings);
+        if (!tailTrim) boundSeconds = syncProductionClip(scene, dirname(file), videoPath, video.clip, plan.warnings);
         // edit.in / edit.out were measured on the clip they trimmed; on other bytes they would cut somewhere else, perhaps into the line.
         const trim = object(scene.edit);
         if (native && priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256 && (trim.in !== undefined || trim.out !== undefined)) {
@@ -376,18 +400,30 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
         for (const {line} of selected) if (line.mediaStatus === 'needs_audio') delete line.mediaStatus;
       } else if (selected.length && plan.mode === 'voiceover') {
         scene.sound = { ...sound, audioSource: 'speech' };
-      } else if (!selected.length && sound.audioSource === 'video') {
+      } else if (!selected.length && sound.audioSource !== 'speech') {
+        let status: AudioSignalStatus | undefined;
         try {
-          const streams = execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'a', '-show_entries', 'stream=index', '-of', 'csv=p=0', videoPath],
-            { encoding: 'utf8', timeout: 10000, stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-          if (!streams) {
-            const silentSound = {...sound};
-            delete silentSound.audioSource;
-            scene.sound = silentSound;
-            plan.warnings.push('The bound speechless clip has no audio stream; the previous video soundtrack source was removed. Supply the silent card clock separately.');
-          }
+          status = audioSignalContract().inspect(videoPath).status;
         } catch {
-          plan.warnings.push('Could not inspect the bound clip audio streams; the existing sound source was preserved for inspection before assembly.');
+          plan.warnings.push('Could not decode the bound clip audio; inspect its sound source before assembly.');
+        }
+        if (status === 'signal' && sound.audioSource === 'video') {
+          const end = object(scene.edit).out;
+          if (typeof end === 'number' && !(end <= (boundSeconds ?? videoSeconds(videoPath)) + 0.001))
+            throw new Error('The replacement cannot cover edit.out; keep the current source or revise the authored trim before attaching it.');
+        } else if (status === 'signal') {
+          const next = scenes.slice(scenes.indexOf(scene) + 1).find(shot => shot.type !== 'broll' && shot.type !== 'outro');
+          if (!bindGeneratedSoundtrack(scene, next, boundSeconds))
+            plan.warnings.push('This edit does not use the clip as sync footage. Carry its sound into the separate assembly audio or add post effects and ambience.');
+        } else if (status === 'silent' || status === 'missing') {
+          const reason = status === 'missing' ? 'has no audio stream' : 'has a silent audio stream';
+          if (sound.audioSource === 'video' && (object(scene.edit).out !== undefined ||
+              (Array.isArray(sound.effects) && sound.effects.some(effect => ['native', 'input'].includes(String(object(effect).delivery))))))
+            throw new Error(`The replacement ${reason}; keep the current source or revise the authored soundtrack and trim before attaching it.`);
+          const silentSound = {...sound};
+          delete silentSound.audioSource;
+          scene.sound = silentSound;
+          plan.warnings.push(`The bound speechless clip ${reason}. Add post effects or ambience before completing the mix.`);
         }
       }
       visual.video=video; scene.visual=visual;
