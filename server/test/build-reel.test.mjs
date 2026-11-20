@@ -328,5 +328,15 @@ test('audience preview and final mix preserve the source and place only selected
       assert.ok(band(buf,2.54,1900)>.008 && band(buf,1,200)>.01,'ordinary effect and original soundtrack survive');
     }
     assert.ok(band(off,2.54,1900)>.008 && band(off,2.54,1400)<.001);
+    // Simulated authorization in a disposable test episode exercises the normal speed pass.
+    writeFileSync(path.join(work,'speed-authorization.json'),JSON.stringify({version:1,requests:[{
+      scope:'final',factor:1.25,source:'explicit-user-request',request:'Test fixture requests 1.25x playback',requestedAt:'2026-11-20T00:00:00Z'}]}));
+    const fast=spawnSync('bash',[path.join(ref,'speedup.sh'),work,'1.25'],{encoding:'utf8',timeout:30000,env:{...process.env,OUTRO:'0',FPS:'25'}});
+    assert.equal(fast.status,0,fast.stdout+fast.stderr);
+    const delivery=JSON.parse(readFileSync(path.join(work,'delivery-proof.json'))).audienceEffects;
+    assert.ok(Math.abs(delivery[0].deliveryStartSeconds-1.12)<1e-9);
+    const shipped=samples('reel-fast.mp4');
+    assert.ok(band(shipped,1.06,900,.02)<.002 && band(shipped,1.15,900,.02)>.008,'onset in shipped audio within one frame');
+    assert.ok(band(shipped,2.04,900,.02)<.002 && band(shipped,2.04,1400,.02)>.008,'shipped fade leaves the other cue audible');
   } finally {rmSync(dir,{recursive:true,force:true});}
 });

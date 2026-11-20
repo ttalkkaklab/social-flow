@@ -1940,6 +1940,11 @@ it('plans, retimes and removes only the audience event; take bytes and end shots
   apply({audienceEffects:[placement]});
   assert.equal(read().audienceEffects[0].status,'placed');
   assert.equal(apply({audienceEffects:[placement]}).written,false);
+  const placed=readBoard(dir).win;
+  const timing=createRequire(import.meta.url)('../../skills/storyboard/references/audience-effects.js');
+  // The mixer derives the outgoing handle from the next incoming transition length.
+  placed.SCENES[1].edit={transitionSeconds:.48};
+  assert.equal(timing.read(placed,dir)[0].status,'stale');
   writeFileSync(join(dir,'selected.mp4'),'take 2');
   assert.equal(read().audienceEffects[0].status,'stale');
   assert.throws(() => apply({audienceEffects:[placement]}),/audience_timing_stale/);

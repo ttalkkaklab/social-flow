@@ -47,3 +47,14 @@ test('nested assembly directories record unreviewed speech from the explicit sou
   assert.equal(JSON.parse(require('node:fs').readFileSync(path.join(work,'final-tts-warnings.json'),'utf8')).status,'not_reviewed');
  }finally{assembled.check=original;rmSync(dir,{recursive:true,force:true});}
 });
+
+test('audience cues follow measured insert pieces and final speed on either side of a seam', () => {
+ const event=(a,b)=>({shotId:'s0007',id:'bend',bodyStartSeconds:a,bodyEndSeconds:b});
+ const segments=[{bodyStart:0,splicedStart:0},{bodyStart:15,splicedStart:17.04}];
+ const [left,right]=delivery.audienceDelivery([event(13.4,15),event(15,17)],segments,1.25);
+ assert.equal(left.deliveryStartSeconds,10.72);
+ assert.equal(left.deliveryEndSeconds,12);
+ assert.ok(Math.abs(right.deliveryStartSeconds-17.04/1.25)<1e-8);
+ assert.ok(Math.abs(right.deliveryEndSeconds-19.04/1.25)<1e-8);
+ assert.equal(delivery.audienceDelivery([event(13.4,15)],undefined,1.25)[0].deliveryStartSeconds,undefined);
+});

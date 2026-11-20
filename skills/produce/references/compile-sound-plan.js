@@ -142,7 +142,7 @@ const timelinePlan = hasTimeline ? compileTimeline(music, scenes, cueFile) : nul
 const bgm = [], effects = [], ambience = [], silence = [], musicGain = [];
 const audienceSpans = [];
 const audience = require('../../storyboard/references/audience-effects.js');
-const audienceClock = audience.boardClock(win, path.dirname(source));
+const audienceClock = audience.boardClock(win, path.dirname(source), channel);
 const shots = scenes.map((s, card) => ({ id: s.id, card }));
 const intensitySeparation = { subtle: 10, normal: 6, strong: 3 };
 scenes.forEach((shot, idx) => {
@@ -161,11 +161,12 @@ scenes.forEach((shot, idx) => {
   if (sound.sfx) effects.push([idx, 0, sfxFile(String(sound.sfx)), 'on', '', '']);
   if (Array.isArray(sound.effects)) { sound.effects.forEach((effect, ei) => {
     const item = record(effect);
+    if (item !== effect) die(`shot ${shot.id || idx + 1} sound.effects[${ei}] must be an effect object`);
     if (item.audience) {
       audience.checkDelivery(shot.id, item);
       if (!item.id || !item.sfx || !item.trigger || !item.description || !item.audience.intent ||
-          sound.effects.filter(e => e.id === item.id).length !== 1 || sound.sfx === item.sfx ||
-          sound.effects.some(e => ['input','native'].includes(e.delivery) && e.sfx === item.sfx))
+          sound.effects.filter(e => e?.id === item.id).length !== 1 || sound.sfx === item.sfx ||
+          sound.effects.some(e => ['input','native'].includes(e?.delivery) && e.sfx === item.sfx))
         die(`audience_id_conflict: ${shot.id}/${item.id} needs a unique post event and asset owner`);
       if (item.atSeconds == null) die(`${shot.id}/${item.id}: planned effect needs observed atSeconds`);
       audienceClock.bounds(shot.id, item);
@@ -221,12 +222,12 @@ if (audienceSpans.length) {
         die('audience_id_conflict: reconcile the unmanaged or edited sfx.tsv before changing its effect rows (file preserved)');
     }
   }
-  const boundaries = require('../../storyboard/references/shot-direction.js').playbackEntries(scenes);
+  const boundaries = scenes;
   // Natural tails may cross adjacent cards, but stop where a separately spliced insert begins.
   for (const span of audienceSpans) {
-    const start = boundaries.findIndex(({ s }) => s.id === span.shotId);
-    const boundary = boundaries.findIndex(({ s }, i) => i > start && ['broll','outro'].includes(s.type));
-    if (boundary > start) span.limit = { shotId: boundaries[boundary - 1].s.id, atSeconds: 'end' };
+    const start = boundaries.findIndex(s => s.id === span.shotId);
+    const boundary = boundaries.findIndex((s, i) => i > start && ['broll','outro'].includes(s.type));
+    if (boundary > start) span.limit = { shotId: boundaries[boundary - 1].id, atSeconds: 'end' };
   }
   writeOwned('sfx-spans.json', JSON.stringify({ version: 1, shots, spans: audienceSpans }, null, 2) + '\n');
 }

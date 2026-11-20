@@ -126,3 +126,7 @@ with the usual build settings. Play `audience-off.mov` and `audience-on.mov` in 
 They share the same body cut, base gain and dialogue before the delivery speed pass.
 Record which files you heard, whether the cue gives away the reveal, and whether it masks a word.
 `work/audience-resolved.json` reports body times and natural expiry. A render alone is unreviewed.
+
+After the speed pass, `delivery-proof.json.audienceEffects` gives body and delivery start/end times.
+The delivery clock uses the actual speed and measured splice pieces. A historical splice proof without its piece clock reports body times only.
+The comparison files share one preview gain. The delivery master has its usual final loudness processing.

@@ -4,7 +4,6 @@ const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 const { renderedClock } = require('./music-timeline.js');
 const { evaluateWindowScript } = require('../../_shared/scenes-vm.js');
-const { playbackEntries } = require('../../storyboard/references/shot-direction.js');
 function main([mode, rate, seconds, boardFile, from, to]) {
   const fps = Number(rate), length = Number(seconds);
   const rows = fs.readFileSync('work/edit-timeline.tsv','utf8').trim().split('\n').map(line => line.split('\t'));
@@ -15,11 +14,12 @@ function main([mode, rate, seconds, boardFile, from, to]) {
       const start = anchorTime(span.start);
       if (start >= anchorTime({ ...span.start, atSeconds: 'end' })) throw new Error('audience_span_invalid: start at or beyond the rendered cut end: ' + span.id);
       const stop = span.end ? anchorTime(span.end) : span.limit ? anchorTime(span.limit) : length;
-      const fade = span.fadeOutSeconds ?? 0;
+      let fade = span.fadeOutSeconds ?? 0;
       if (!(stop > start && fade >= 0 && fade <= stop - start + 1e-8)) throw new Error('audience_span_invalid: ' + span.id);
       const duration = Number(execFileSync('ffprobe', ['-v','error','-show_entries','format=duration','-of','csv=p=0',span.assetPath], {encoding:'utf8'}).trim());
       if (!(duration > 0)) throw new Error('Unreadable audience asset: ' + span.assetPath);
       const played = Math.min(duration, stop - start);
+      if (!span.end && span.limit && duration > played) fade = Math.min(0.02, played);
       // Fade starts relative to the authored endpoint. A shorter asset may already be silent.
       const fadeStart = Math.max(0, stop - start - fade);
       console.log([start, span.assetPath, span.separationLu, stop - start, fade].join('\t'));
@@ -30,8 +30,8 @@ function main([mode, rate, seconds, boardFile, from, to]) {
   }
   if (mode !== 'compare') throw new Error('expected resolve or compare');
   const board = evaluateWindowScript(fs.readFileSync(boardFile, 'utf8'));
-  const ordered = playbackEntries(board.SCENES), a = ordered.findIndex(x => x.s.id === from), b = ordered.findIndex(x => x.s.id === to);
-  if (a < 0 || b < a || ordered.slice(a,b+1).some(x => ['broll','outro'].includes(x.s.type))) throw new Error('Choose continuous body shots in playback order');
+  const ordered = board.SCENES, a = ordered.findIndex(s => s.id === from), b = ordered.findIndex(s => s.id === to);
+  if (a < 0 || b < a || ordered.slice(a,b+1).some(s => ['broll','outro'].includes(s.type))) throw new Error('Choose continuous body shots in playback order');
   const shots = board.SCENES.map((s,card) => ({id:s.id,card}));
   const clock = renderedClock({version:1,spans:[],shots},rows,fps,length);
   const start = clock.anchorTime({shotId:from,atSeconds:0}), end = clock.anchorTime({shotId:to,atSeconds:'end'});

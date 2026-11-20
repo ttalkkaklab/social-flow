@@ -2,7 +2,8 @@
 // Shared by board reads, targeted writes and the final sound compiler.
 const fs = require('node:fs');
 const { createHash } = require('node:crypto');
-const { playbackEntries } = require('./shot-direction.js');
+const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 const { assetPath } = require('../../produce/references/check-production.js');
 
 function canonical(value) {
@@ -14,9 +15,13 @@ function checkDelivery(shot, effect) {
   if (effect.audience && ![undefined, 'auto', 'post'].includes(effect.delivery))
     fail('audience_delivery_conflict', shot, effect.id, 'audience effects play in post');
 }
-function boardClock(board, dir) {
+function boardClock(board, dir, channel) {
+  const episode = path.dirname(dir), parent = path.dirname(episode);
+  channel ??= path.basename(parent) === 'episodes' ? path.dirname(parent) : episode;
+  const soundAssets = new Map();
   const files = new Map(), cuts = new Map();
-  const order = playbackEntries(board.SCENES || []).map(({ s }) => s);
+  // verify-assembled and splice-clip insert b-roll at its position in SCENES.
+  const order = board.SCENES || [];
   function media(name) {
     if (!name || typeof name !== 'string') return null;
     const file = assetPath(dir, name);
@@ -39,7 +44,10 @@ function boardClock(board, dir) {
     const v = s.visual || {}, group = v.video?.groupPlan;
     const selected = v.reuse?.clip || v.video?.clip || v.renderedFile || v.clip || v.slide?.file || v.frames?.start || v.bg;
     const edit = s.edit || {};
-    const inputs = [s.id, s.type, s.duration, s.transition, [edit.in,edit.out,edit.pre,edit.post,edit.transitionSeconds], s.sound?.audioSource, v.sync, v.reuse?.sourceRange,
+    // edit-plan derives this card's outgoing live handle and dip from the following card.
+    const following = order.slice(order.indexOf(s) + 1).find(n => !['broll','outro'].includes(n.type));
+    const exit = following?.transition || 'cut';
+    const inputs = [s.id, s.type, s.duration, s.transition, exit, following?.edit?.transitionSeconds, [edit.in,edit.out,edit.pre,edit.post,edit.transitionSeconds], s.sound?.audioSource, v.sync, v.reuse?.sourceRange,
       board.SB_DOC?.performanceTimingVersion, board.SB_DOC?.speechPlanVersion,
       media(selected), group, group?.groups?.map(g => media(g.clip)), s.performance,
       (s.narration || []).map(n => [n.id, n.tts, n.speaker, n.acting, n.audio?.revision, media(n.audio?.path), n.revealGroups])];
@@ -47,7 +55,13 @@ function boardClock(board, dir) {
     return inputs;
   }
   function basis(shotId, effect, endId) {
-    return createHash('sha256').update(canonical([cut(shotId), effect.trigger, effect.audience.release,
+    const asset = board.SFX?.[effect.sfx]?.asset || effect.sfx;
+    if (!soundAssets.has(asset)) {
+      const resolver = path.resolve(__dirname, '../../channel/references/resolve-asset.py');
+      const found = spawnSync('python3', [resolver,channel,'sfx',asset], {encoding:'utf8'});
+      soundAssets.set(asset, found.status === 0 ? media(found.stdout.trim())?.[1] : null);
+    }
+    return createHash('sha256').update(canonical([cut(shotId), effect.trigger, effect.audience.release, asset, soundAssets.get(asset),
       endId ? [endId, cut(endId)] : null])).digest('hex');
   }
   function bounds(shotId, effect) {
