@@ -384,8 +384,9 @@ approval the user did not give.
 
 Almost no mochi_bo clip moved its camera. The boards held 337 of 390 video shots and left 29
 unchosen, mostly through one `shot_icons` value mapped over every shot; and 23 of the 24 shots
-that did move went out with a hand-written prompt that dropped or locked the move, while 71%
-of compiled prompts ran past the 2,000 characters the GenAI image and MSR lanes take. So
+that did move went out with a hand-written prompt that dropped or locked the move. On the GenAI
+image and MSR lanes, which take 2,000 characters, 97 of 185 board prompts ran past it (the
+audio-to-video lane takes 5,000, and its prompts were rewritten by hand all the same). So
 `video_plan` compiles the board prompt to the adapter's limit, leaving out design notes, the
 beats' acting fields and then expressions before the camera, action or lines; beats say an
 action once and drop voice direction a model does not voice. A hand-written prompt that drops or

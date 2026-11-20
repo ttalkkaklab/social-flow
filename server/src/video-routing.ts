@@ -310,8 +310,12 @@ export function planVideo(raw: unknown): VideoPlan {
   // A prompt the caller writes is checked against the board's move: missing or contradicted moves are named, never refused.
   const boardCamera = (context.shot.visual as { camera?: { movement?: unknown } } | undefined)?.camera;
   const drift = input.args.prompt !== undefined ? cameraDrift(String(input.args.prompt), String(boardCamera?.movement ?? '')) : null;
+  // A report never refuses: when the board's own prompt cannot compile, the warning goes without the sentence.
+  const moveSentence = () => { try { return video?.promptSource ? compileVideoPrompt(shot, video.promptSource, names, { mode, validateLanguage: false })
+    .directionBindings.find(b => b.attribute === 'move')?.instruction ?? '' : ''; } catch { return ''; } };
+  const carried = drift ? moveSentence() : '';
   const driftWarning = drift ? [`camera_move_${drift}: the board moves this shot (${String(boardCamera?.movement)}) but args.prompt ${drift === 'missing' ? 'names no camera move' : 'holds the camera still'}; omit args.prompt to send the board prompt, which video_plan fits to the adapter limit${
-    video?.promptSource ? `, or write its camera sentence: "${compileVideoPrompt(shot, video.promptSource, names, { mode, validateLanguage: false }).directionBindings.find(b => b.attribute === 'move')?.instruction ?? ''}"` : ''}`] : [];
+    carried ? `, or write its camera sentence: "${carried}"` : ''}`] : [];
   const directionOf = (c: typeof compiled) => c ? { sourcePrompt, directionBindings: c.directionBindings, directionWarnings: c.warnings, performance: c.performance } :
     { sourcePrompt, directionWarnings: [input.args.prompt !== undefined ? 'Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons.' :
       'Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.', ...driftWarning] };

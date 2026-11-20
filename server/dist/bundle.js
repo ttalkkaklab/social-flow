@@ -117266,7 +117266,15 @@ function planVideo(raw) {
   const sourcePrompt = typeof video2?.prompt === "string" ? video2.prompt : "";
   const boardCamera = context2.shot.visual?.camera;
   const drift = input.args.prompt !== void 0 ? cameraDrift(String(input.args.prompt), String(boardCamera?.movement ?? "")) : null;
-  const driftWarning = drift ? [`camera_move_${drift}: the board moves this shot (${String(boardCamera?.movement)}) but args.prompt ${drift === "missing" ? "names no camera move" : "holds the camera still"}; omit args.prompt to send the board prompt, which video_plan fits to the adapter limit${video2?.promptSource ? `, or write its camera sentence: "${compileVideoPrompt(shot, video2.promptSource, names, { mode, validateLanguage: false }).directionBindings.find((b) => b.attribute === "move")?.instruction ?? ""}"` : ""}`] : [];
+  const moveSentence = () => {
+    try {
+      return video2?.promptSource ? compileVideoPrompt(shot, video2.promptSource, names, { mode, validateLanguage: false }).directionBindings.find((b) => b.attribute === "move")?.instruction ?? "" : "";
+    } catch {
+      return "";
+    }
+  };
+  const carried = drift ? moveSentence() : "";
+  const driftWarning = drift ? [`camera_move_${drift}: the board moves this shot (${String(boardCamera?.movement)}) but args.prompt ${drift === "missing" ? "names no camera move" : "holds the camera still"}; omit args.prompt to send the board prompt, which video_plan fits to the adapter limit${carried ? `, or write its camera sentence: "${carried}"` : ""}`] : [];
   const directionOf = (c) => c ? { sourcePrompt, directionBindings: c.directionBindings, directionWarnings: c.warnings, performance: c.performance } : { sourcePrompt, directionWarnings: [input.args.prompt !== void 0 ? "Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons." : "Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.", ...driftWarning] };
   let direction = directionOf(compiled);
   if (selection.engine === "host") {
@@ -132151,14 +132159,20 @@ function speechVideoPlan(input, capabilities) {
   if (!mode) throw new Error("Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting");
   const saved = object5(object5(object5(scene.visual).video).promptSource);
   const design = object5(object5(scene.shot).videoDesign);
+  const astra = capabilities.provider.trim().toLowerCase() === "astra";
   const compiled = compileVideoPrompt(scene, {
     action: typeof saved.action === "string" ? saved.action : typeof design.action === "string" ? design.action : "",
     ...typeof saved.end === "string" ? { end: saved.end } : {},
     ...typeof saved.sound === "string" ? { sound: saved.sound } : {}
-  }, {}, { mode, measureAudio: (line) => mode === "native" ? null : measuredDuration(line), validateLanguage: false });
+  }, {}, {
+    mode,
+    measureAudio: (line) => mode === "native" ? null : measuredDuration(line),
+    validateLanguage: false,
+    ...astra ? { maxCharacters: ASTRA_VIDEO_MAX_PROMPT_CHARS } : {}
+  });
   const timeline = compiled.performance;
   const videoPrompt = compiled.prompt;
-  const promptLength = capabilities.provider.trim().toLowerCase() === "astra" ? { characters: videoPrompt.length, maxCharacters: ASTRA_VIDEO_MAX_PROMPT_CHARS, exceeded: videoPrompt.length > ASTRA_VIDEO_MAX_PROMPT_CHARS } : void 0;
+  const promptLength = astra ? { characters: videoPrompt.length, maxCharacters: ASTRA_VIDEO_MAX_PROMPT_CHARS, exceeded: videoPrompt.length > ASTRA_VIDEO_MAX_PROMPT_CHARS } : void 0;
   const warnings = [...compiled.warnings];
   const foreign = nonEnglishOutsideQuotes(videoPrompt);
   if (foreign) warnings.push(`videoPrompt carries authored text in another language ("${foreign}"); write the video prompt in English before video_plan, which refuses it. Only quoted dialogue keeps the video's language.`);
