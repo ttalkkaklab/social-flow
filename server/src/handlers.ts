@@ -1166,9 +1166,10 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   sfx_elevenlabs_generate: async (args) => {
     const request = parseArgs(elevenlabs.elevenLabsSfxSchema, args);
     const result = await elevenlabs.generateElevenLabsSoundEffect(request);
-    if (!result.success) return text(`ElevenLabs sound effect generation failed: ${result.error}`, true);
-    return { metered: { durationSeconds: result.durationSeconds }, ...text(
-      `Sound effect generated successfully!\n\nFile: ${result.audioPath}\nProvenance: ${result.sidecarPath}\n` +
+    if (!result.success) return { ...(result.submitted === false ? { metered: { durationSeconds: 0 } } : {}),
+      ...text(`ElevenLabs sound effect generation failed: ${result.error}`, true) };
+    return { metered: { durationSeconds: result.reused ? 0 : result.durationSeconds }, ...text(
+      `Sound effect ${result.reused ? 'reused from catalog' : 'generated successfully'}!\n\nFile: ${result.audioPath}\nProvenance: ${result.sidecarPath}\n` +
         `Engine: ElevenLabs ${result.model}\nFormat: ${result.outputFormat}${elevenlabsFormatNote(result.outputFormat)}\n` +
         (result.durationSeconds !== undefined ? `Duration: ${result.durationSeconds}s (measured — the ledger quantity for sfx.elevenlabs)\n` : '') +
         (result.estimatedUsd !== undefined ? `Estimated cost: $${result.estimatedUsd} at $${elevenlabs.ELEVENLABS_SFX_USD_PER_MINUTE.toFixed(2)} per minute of generated audio\n` : '') +
@@ -1633,7 +1634,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   storyboard_apply: async (args) => {
     storyboard.contract();
     const r = storyboard.applyStoryboard(parseArgs(storyboard.storyboardApplySchema, args));
-    return text(storyboard.renderApply(r), r.findings.some((f) => f.level === 'bad'));
+    return text(r.changed ? JSON.stringify(r, null, 2) : storyboard.renderApply(r), r.findings.some((f) => f.level === 'bad'));
   },
   story_intensity_plan: async (args) => text(JSON.stringify(
     planStoryIntensity(parseArgs(storyIntensitySchema, args)), null, 2,

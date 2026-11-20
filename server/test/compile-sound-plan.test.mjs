@@ -134,3 +134,21 @@ window.SCENES=[{type:"cover",duration:5,narration:[{tts:"a"}],sound:{
     assert.deepEqual(JSON.parse(second.stdout).warnings, ['sfx.tsv changed after compile; keeping the human-edited file']);
   });
 });
+
+it('compiles audience events exactly once, rejects stale media and cleans the owned plan', async () => {
+  const {boardClock} = (await import('../../skills/storyboard/references/audience-effects.js')).default;
+  const p = room(), asset = join(p.channel,'assets/audio/sfx/bend.wav');
+  writeFileSync(asset,'tone');
+  const cue = {id:'smile',sfx:'bend',audience:{intent:'relief'},trigger:'shoulder drops',description:'pulse slows',
+    atSeconds:1.4,end:{shotId:'s0002',atSeconds:0.4},fadeOutSeconds:0.1,delivery:'auto'};
+  const shots = [{id:'s0001',type:'cover',duration:3,edit:{in:0.8},sound:{effects:[cue]}},{id:'s0002',type:'points',duration:2}];
+  const save = () => writeFileSync(join(p.board,'scenes.js'),'window.SCENES='+JSON.stringify(shots));
+  cue.audience.timingBasis=boardClock({SCENES:shots},p.board).basis('s0001',cue,'s0002');save();
+  const compiled = run(p); assert.equal(compiled.status,0,compiled.stderr);
+  const filename = join(p.work,'sfx-spans.json'), plan=JSON.parse(readFileSync(filename));
+  assert.equal(plan.spans.length,1); assert.equal(plan.spans[0].start.atSeconds,1.4);
+  assert.equal(existsSync(join(p.work,'sfx.tsv')),false);
+  cue.delivery='input'; save(); assert.match(run(p).stderr,/audience_delivery_conflict/);
+  cue.delivery='post'; shots[1].duration=3;save();assert.match(run(p).stderr,/audience_timing_stale/);
+  shots[0].sound.effects=[];save();assert.equal(run(p).status,0);assert.equal(existsSync(filename),false);
+});

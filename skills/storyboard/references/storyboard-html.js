@@ -74,7 +74,9 @@ function storyboardHtml(directory, check = false) {
   const translationFile = path.join(dir, 'review-localization.json');
   const translations = fs.existsSync(translationFile)
     ? require('./review-localization.js').validate(JSON.parse(fs.readFileSync(translationFile, 'utf8'))) : null;
-  const reviewData = 'window.REVIEW_LOCALIZATION = ' + JSON.stringify(translations).replace(/</g, '\\u003c') + ';\n' +
+  const audience = win ? require('./audience-effects.js').read(win, dir) : [];
+  const reviewData = 'window.AUDIENCE_CUES = ' + JSON.stringify(audience).replace(/</g, '\\u003c') + ';\n' +
+    'window.REVIEW_LOCALIZATION = ' + JSON.stringify(translations).replace(/</g, '\\u003c') + ';\n' +
     'window.LOCATION_DETAIL_LINKS = '+JSON.stringify(locationLinks).replace(/</g,'\\u003c')+';\n' +
     'window.REVIEW_PANEL_FINDINGS = ' + JSON.stringify(panelFindings).replace(/</g, '\\u003c') + ';\n' +
     'window.REVIEW_FILES = ' + JSON.stringify(available) + ';\n' +

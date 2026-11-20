@@ -1916,3 +1916,55 @@ describe('edit impact and uninterrupted scene evidence', () => {
     assert.equal(timed.storedExcessSeconds, 2.49);
   });
 });
+
+it('plans, retimes and removes only the audience event; take bytes and end shots bind the placement', () => {
+  const dir = tmp(), shots = board();
+  shots[0].visual = {video:{clip:'selected.mp4'}};
+  shots[0].sound = {audioSource:'video',drop:true,effects:[{id:'door',sfx:'door'}]};
+  writeFileSync(join(dir,'selected.mp4'),'take 1');
+  applyStoryboard(storyboardApplySchema.parse({path:dir,set:{structure:structure([scene(1),scene(2)]),shots}}));
+  const read = (extra = {}) => readStoryboard(storyboardReadSchema.parse({path:dir,includeTechniques:false,...extra}));
+  const apply = (extra) => applyStoryboard(storyboardApplySchema.parse({path:dir,expectedSha256:readBoard(dir).sha256,...extra}));
+  const key = {shotId:'s0001',id:'late'}, plan = {...key,op:'plan',sfx:'bend',intent:'embarrassment',trigger:'smile falls',description:'dry descending pluck',caseId:'063'};
+  const data = {sfxEntries:{bend:{asset:'bend'}},audienceEffects:[plan]};
+  const initial = readBoard(dir).sha256;
+  assert.equal(apply({...data,dryRun:true}).written,false);
+  assert.equal(readBoard(dir).sha256,initial);
+  assert.equal(apply(data).written,true);
+  assert.deepEqual(apply(data).changed,[]);
+  assert.equal(apply(data).written,false);
+  assert.throws(() => apply({...data,expectedSha256:initial}),/head_moved/);
+  assert.equal(read().audienceEffects[0].status,'planned');
+  const row=read({audienceEndFor:{...key,endShotId:'s0002'}}).audienceEffects[0];
+  const placement = {...key,op:'place',atSeconds:1.4,timingBasis:row.proposedTimingBasis,end:{shotId:'s0002',atSeconds:1},fadeOutSeconds:0.2};
+  apply({audienceEffects:[placement]});
+  assert.equal(read().audienceEffects[0].status,'placed');
+  assert.equal(apply({audienceEffects:[placement]}).written,false);
+  writeFileSync(join(dir,'selected.mp4'),'take 2');
+  assert.equal(read().audienceEffects[0].status,'stale');
+  assert.throws(() => apply({audienceEffects:[placement]}),/audience_timing_stale/);
+  const fresh = read({audienceEndFor:{...key,endShotId:null}}).audienceEffects[0];
+  apply({audienceEffects:[{...placement,atSeconds:1.6,end:null,fadeOutSeconds:null,timingBasis:fresh.proposedTimingBasis}]});
+  assert.equal(read().audienceEffects[0].atSeconds,1.6);
+  const before = readBoard(dir).sha256;
+  assert.throws(() => apply({audienceEffects:[{...key,op:'remove'},{...key,id:'door',op:'remove'}]}),/audience_id_conflict/);
+  assert.equal(readBoard(dir).sha256,before);
+  assert.throws(() => apply({sfxEntries:{bend:{asset:'other'}}}),/audience_id_conflict/);
+  apply({audienceEffects:[{...key,op:'remove'}]});
+  assert.equal(apply({audienceEffects:[{...key,op:'remove'}]}).written,false);
+  assert.deepEqual(readBoard(dir).win.SCENES[0].sound,shots[0].sound);
+});
+
+it('ships 120 distinct audience situations, ten per linked category, with source definitions', () => {
+  const dir = new URL('../../skills/storyboard/references/audience-sound/',import.meta.url);
+  const index=readFileSync(new URL('index.md',dir),'utf8');
+  const files=[...index.matchAll(/\]\(([a-z]+\.md)\)/g)].map(m=>m[1]);
+  assert.equal(new Set(files).size,12);
+  const all=files.flatMap(name=>{
+    const text=readFileSync(new URL(name,dir),'utf8');
+    for(const [,source] of text.matchAll(/\]\[([a-z]+)\]/g)) assert.ok(text.includes('['+source+']: https://'));
+    const ids=[...text.matchAll(/^\| (\d{3}) \|/gm)].map(m=>Number(m[1]));
+    assert.equal(ids.length,10);return ids;
+  });
+  assert.deepEqual(all.sort((a,b)=>a-b),Array.from({length:120},(_,i)=>i+1));
+});

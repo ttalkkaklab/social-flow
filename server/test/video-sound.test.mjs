@@ -142,3 +142,17 @@ test('MSR renders effects natively and its own soundtrack carries the dialogue',
     await assert.rejects(prepareSound(dir, 's1', 'astra_genai_msr', msrArgs), /differs from the authored video engine/);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
+
+test('audience cues stay out of native and conditioned audio alongside scene sounds', () => {
+  const cue = {id:'turn',sfx:'bend',delivery:'auto',trigger:'her smile fades',description:'dry synth bend',audience:{intent:'embarrassment'}};
+  const args = {prompt:'She looks up.'};
+  const p = prepareVideoSound('astra_text2video',args,{effects:[...intent.effects,cue]});
+  assert.deepEqual(p.sound.effects.map(e=>e.delivery),['native','post']);
+  assert.match(p.arguments.prompt,/Bakelite/);
+  assert.doesNotMatch(p.arguments.prompt,/synth|smile/);
+  for (const delivery of ['input','native']) assert.throws(() => prepareVideoSound('astra_text2video',args,{effects:[{...cue,delivery}]}),/audience_delivery_conflict/);
+  assert.throws(() => prepareVideoSound('astra_text2video',{prompt:'Audio: dry synth bend'},{effects:[cue]}),/audience_delivery_conflict/);
+  const input = prepareVideoSound('astra_audio2video',{...args,audioPath:'/x.wav'},{effects:[cue]});
+  assert.equal(input.arguments.audioPath,'/x.wav');
+  assert.equal(input.arguments.prompt,args.prompt);
+});

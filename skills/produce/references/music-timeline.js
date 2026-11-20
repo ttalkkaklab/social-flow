@@ -86,7 +86,7 @@ function compileTimeline(music, shots, cueFile) {
     }) };
 }
 
-function resolveTimeline(plan, rows, fps, length) {
+function renderedClock(plan, rows, fps, length) {
   if (plan.version !== 1 || !Array.isArray(plan.spans) || !Array.isArray(plan.shots) || !Number.isFinite(fps) || fps <= 0 || !Number.isFinite(length) || length <= 0)
     throw new Error('Invalid music timeline or rendered clock');
   const byCard = new Map();
@@ -108,6 +108,11 @@ function resolveTimeline(plan, rows, fps, length) {
     if (offset > clock.duration + 1e-9) throw new Error(`Music anchor ${anchor.shotId} exceeds its actual rendered duration`);
     return Math.round((clock.start + offset) * 48000) / 48000;
   }
+  return { byCard, anchorTime };
+}
+
+function resolveTimeline(plan, rows, fps, length) {
+  const { anchorTime } = renderedClock(plan, rows, fps, length);
   return plan.spans.map(span => {
     const start = anchorTime(span.start), end = anchorTime(span.end), duration = end - start;
     const fadeIn = span.fadeInSeconds ?? 0, fadeOut = span.fadeOutSeconds ?? 0;
@@ -185,7 +190,7 @@ function renderTimeline(plan, rows, fps, length, target, output, mix = {}) {
   } finally { fs.rmSync(directory, { recursive: true, force: true }); }
 }
 
-module.exports = { timelineFindings, spottingReport, compileTimeline, resolveTimeline, renderTimeline };
+module.exports = { timelineFindings, spottingReport, compileTimeline, renderedClock, resolveTimeline, renderTimeline };
 if (require.main === module) {
   try {
     const [planFile, clockFile, fps, length, target, output, speechLufs, maximumSeparationLu] = process.argv.slice(2);

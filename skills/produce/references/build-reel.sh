@@ -113,6 +113,12 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"   # grab before cd (path to
 WORKDIR="${1:?usage: build-reel.sh <workdir>}"
 # Resolve the supplied board before changing directories.
 STORYBOARD=$(node -e 'console.log(require("path").resolve(process.argv[1]))' "${2:-$WORKDIR/../storyboard}")
+AUDIENCE_COMPARE=0
+if [ "$#" -gt 2 ]; then
+  [ "$#" -eq 8 ] && [ "$3" = --audience-sfx ] && [ "$4" = compare ] && [ "$5" = --from-shot ] && [ "$7" = --to-shot ] || {
+    echo "usage: build-reel.sh WORK BOARD [--audience-sfx compare --from-shot ID --to-shot ID]" >&2; exit 1; }
+  AUDIENCE_COMPARE=1; FROM_SHOT="$6"; TO_SHOT="$8"
+fi
 [ -f "$STORYBOARD/scenes.js" ] || { echo "source storyboard/scenes.js is required; pass the storyboard directory as build-reel.sh argument 2" >&2; exit 1; }
 [ "${SILENT:-0}" != "1" ] || node "$HERE/silent-plan.js" "$STORYBOARD/scenes.js"
 node "$HERE/compose-speech.js" "$WORKDIR" "$STORYBOARD" >/dev/null
@@ -127,6 +133,7 @@ node "$HERE/compile-sound-plan.js" "$STORYBOARD/scenes.js" "$WORKDIR" "$CHANNEL_
 cd "$WORKDIR"
 # The compiler's current ownership marker selects the mode, never an orphaned/edited file.
 MUSIC_TIMELINE=$(node -e 'const fs=require("fs");const p="sound-plan.json";console.log(fs.existsSync(p)&&Object.hasOwn(JSON.parse(fs.readFileSync(p,"utf8")).files||{},"music-timeline.json")?1:0)')
+AUDIENCE_PLAN=$(node -e 'const fs=require("fs"),p="sound-plan.json"; console.log(fs.existsSync(p) && Object.hasOwn(JSON.parse(fs.readFileSync(p)).files, "sfx-spans.json") ? 1 : 0)')
 VIDEO_WARNINGS_APPROVED=$(node -e 'console.log(require(process.argv[1]).videoGate.continueWithWarnings ? 1 : 0)' "$PWD/build-plan-check.json")
 # verify-build-plan.js writes production-preflight.json after the video warning/HITL check.
 REUSED_VIDEO_SHOTS=$(node -e 'const p=require(process.argv[1]); console.log((p.reusedShots || []).join(" "))' "$PWD/production-preflight.json")
@@ -1350,6 +1357,11 @@ sfx_measure() {
            END{ if (m>-200) printf "%.1f %.1f\n", m, p }'
 }
 
+# Resolve post-only cues on the rendered frame clock. Other sound never enters this stem.
+if [ "$AUDIENCE_PLAN" = 1 ]; then
+  node "$HERE/audience-mix.js" resolve "$FPS" "$NT" > work/audience.list
+fi
+
 # 10a) SFX track — silence the length of the main part, with each effect delayed to its start time.
 #      Why it's built separately instead of mixed into the narration: the ducking key (vo_key) must be
 #      voice only. Put sfx in the key and the keyboard sound pushes the BGM down, making the music hiccup.
@@ -1357,10 +1369,10 @@ sfx_measure() {
 #      EBU R128) lands SFX_SEP LU under the speech, pulled back further when its own true peak
 #      would pass the bed's ceiling. Two effects from two prompts used to land 8 LU apart at the
 #      same knob (bgm-scoring.md §effects); now the distance is the decision, the file is not.
-SFXIN=""
-if [ -s work/sfx.list ]; then
+render_sfx() {
+  local list="$1" output="$2"
   SI=(-f lavfi -t "$NT" -i "anullsrc=r=48000:cl=mono"); SFC=""; SMIX="[0:a]"; SN2=1
-  while IFS=$'\t' read -r ST SP SSEP; do
+  while IFS=$'\t' read -r ST SP SSEP LENGTH FADE; do
     SSEP=${SSEP:-$SFX_SEP}
     SFX_T=$(awk -v s="$MIX_REFERENCE_I" -v d="$SSEP" 'BEGIN{printf "%.2f", s-d}')
     read -r SM SPK <<< "$(sfx_measure "$SP")"
@@ -1370,15 +1382,30 @@ if [ -s work/sfx.list ]; then
           'BEGIN{g=t-m; h=c-pk; if(g>h)g=h; printf "%.2f", g}')
     say "· sfx $(basename "$SP") @${ST}s: max momentary ${SM} LUFS / ${SPK} dBTP → ${SG} dB (${SSEP} LU under voice)"
     SI+=(-i "$SP")
-    SFC+="[$SN2:a]aresample=48000,aformat=channel_layouts=mono,volume=${SG}dB,adelay=$(awk -v s="$ST" 'BEGIN{printf "%d", s*1000}'):all=1,atrim=0:$NT[x$SN2];"
+    SHAPE=""
+    if [ -n "${LENGTH:-}" ]; then
+      SHAPE="atrim=duration=$LENGTH,"
+      if [ "${FADE:-0}" != 0 ]; then
+        SHAPE+="afade=t=out:st=$(awk -v l="$LENGTH" -v f="$FADE" 'BEGIN{printf "%.9f",l-f}'):d=$FADE,"
+      fi
+    fi
+    SFC+="[$SN2:a]aresample=48000,aformat=channel_layouts=mono,${SHAPE}volume=${SG}dB,adelay=$(awk -v s="$ST" 'BEGIN{printf "%d", s*1000}'):all=1,atrim=0:$NT[x$SN2];"
     SMIX+="[x$SN2]"; SN2=$((SN2+1))
-  done < work/sfx.list
+  done < "$list"
   ffmpeg -y -v error "${SI[@]}" -filter_complex \
     "${SFC}${SMIX}amix=inputs=$SN2:duration=first:normalize=0,apad,atrim=0:$NT[sx]" \
-    -map "[sx]" -ac 1 -ar 48000 work/sfx.wav
+    -map "[sx]" -ac 1 -ar 48000 -c:a "${3:-pcm_s16le}" "$output"
+}
+SFXIN=""
+if [ -s work/sfx.list ]; then
+  render_sfx work/sfx.list work/sfx.wav
   SFXIN="-i work/sfx.wav"
   read -r SXM _ <<< "$(sfx_measure work/sfx.wav)"
   say "── sfx: $((SN2-1)) effect(s), loudest moment ${SXM} LUFS = $(awk -v s="$SPEECH_I" -v m="$SXM" 'BEGIN{printf "%.1f", s-m}') LU under speech"
+fi
+
+if [ "$AUDIENCE_PLAN" = 1 ]; then
+  render_sfx work/audience.list work/audience.wav pcm_f32le
 fi
 
 # 10a') Ambience — room tone under the voice, rendered by bgm-bed.sh like the music bed (measured,
@@ -1471,6 +1498,11 @@ fi
 #      The bed arrives already gained and already the right length, so this stage only shapes it:
 #      head and tail fades, the gate windows, then ducking. bed-ducked.wav is tapped off for the
 #      separation check below — measuring it after the amix would be measuring the voice too.
+MASTER="loudnorm=I=$FINAL_LUFS:TP=$FINAL_TP:LRA=$FINAL_LRA,aresample=48000"
+MIX_PATH=work/mix.wav; MIX_CODEC=pcm_s16le
+if [ "$AUDIENCE_PLAN" = 1 ] || [ "$AUDIENCE_COMPARE" = 1 ]; then
+  MASTER=anull; MIX_PATH=work/audience-base.wav; MIX_CODEC=pcm_f32le
+fi
 ffmpeg -y -v error -i work/narration.wav -i work/bed.wav $SFXIN $AMBIN -filter_complex "
   [0:a]aformat=channel_layouts=stereo,asplit=2[vo_detect][vo_raw];
   [vo_detect]${DUCKKEY}anull[vo_key];
@@ -1482,9 +1514,22 @@ ffmpeg -y -v error -i work/narration.wav -i work/bed.wav $SFXIN $AMBIN -filter_c
   [bgv][vo_key]sidechaincompress=threshold=$DUCK_THRESHOLD:mix=$DUCK_MIX:ratio=$DUCK_RATIO:attack=$DUCK_ATTACK:release=$DUCK_RELEASE:makeup=1,
        asplit=2[duck][duckqa];
   ${FINALMIX},
-       loudnorm=I=$FINAL_LUFS:TP=$FINAL_TP:LRA=$FINAL_LRA,aresample=48000[out]
-" -map "[out]" -ac 2 -ar 48000 work/mix.wav \
+       ${MASTER}[out]
+" -map "[out]" -ac 2 -ar 48000 -c:a "$MIX_CODEC" "$MIX_PATH" \
   -map "[duckqa]" -ac 2 -ar 48000 work/bed-ducked.wav
+
+if [ "$MIX_PATH" = work/audience-base.wav ]; then
+  # The final amix averages voice and music, plus ambience when present.
+  DIVISOR=2; [ -z "$AMBIN" ] || DIVISOR=3
+  if [ "$AUDIENCE_PLAN" = 1 ]; then
+    ffmpeg -v error -y -i "$MIX_PATH" -i work/audience.wav -filter_complex \
+      "[1:a]aformat=channel_layouts=stereo,volume=1/$DIVISOR[a];[0:a][a]amix=inputs=2:duration=first:normalize=0" \
+      -c:a pcm_f32le work/audience-on.wav
+  else
+    cp "$MIX_PATH" work/audience-on.wav
+  fi
+  ffmpeg -v error -y -i work/audience-on.wav -af "loudnorm=I=$FINAL_LUFS:TP=$FINAL_TP:LRA=$FINAL_LRA,aresample=48000" work/mix.wav
+fi
 
 # 10c) Voice-to-bed separation — the one number that says whether the music is sitting under the
 #      voice or next to it. Listening tests put the preferred commentary-over-music distance at
@@ -1534,6 +1579,13 @@ elif awk -v v="$SEP_S" -v d="$BGM_SEP" 'BEGIN{exit !(v < d + 1)}'; then
 fi
 fi
 
+fi
+
+if [ "$AUDIENCE_COMPARE" = 1 ]; then
+  if [ "${SILENT:-0}" = 1 ]; then
+    cp work/mix.wav work/audience-base.wav; cp work/mix.wav work/audience-on.wav
+  fi
+  node "$HERE/audience-mix.js" compare "$FPS" "$NT" "$STORYBOARD/scenes.js" "$FROM_SHOT" "$TO_SHOT"
 fi
 
 # ── 11) ASS subtitle file — band y≈1380~1560 (a contract with the template's bottom safe zone,

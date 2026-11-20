@@ -8,12 +8,13 @@
  */
 
 import * as fs from 'node:fs';
+import { createHash } from 'node:crypto';
 import * as path from 'node:path';
 import { z } from 'zod';
 import { executeSpeech, type SpeechResult } from './tts-execution.js';
 import { decodeSpeechBase64, validateSpeechAudio, validateSpeechAlignment, validateSpeechSegments } from './tts-audio.js';
 import { elevenLabsBaseUrl, requireElevenLabsKey } from './config.js';
-import { bareFilenameSchema, pcmToWav, saveAudioFile } from './media-utils.js';
+import { bareFilenameSchema, pcmToWav, saveAudioFile, resolveOutputFile } from './media-utils.js';
 
 // ── Constants (source of truth for the tool schemas) ─────────────
 
@@ -326,6 +327,8 @@ export function soundEffectRequestBody(request: ElevenLabsSfxRequest): Record<st
 }
 
 export interface ElevenLabsSfxResponse {
+  reused?: boolean;
+  submitted?: boolean;
   success: boolean;
   error?: string;
   audioPath?: string;
@@ -523,7 +526,7 @@ async function elevenFetch(pathAndQuery: string, init: RequestInit, timeoutMs: n
     const response = await fetch(url, { ...init, headers, signal: AbortSignal.timeout(timeoutMs) });
     if (response.ok) return response;
     const bodyText = await response.text();
-    lastError = new Error(describeElevenLabsError(response.status, bodyText));
+    lastError = Object.assign(new Error(describeElevenLabsError(response.status, bodyText)), { httpStatus: response.status });
     if (!isRetryable(response.status) || attempt === attempts - 1) break;
     await sleep(RETRY_BASE_DELAY_MS * (attempt + 1));
   }
@@ -813,14 +816,40 @@ export async function generateElevenLabsSoundEffect(request: ElevenLabsSfxReques
   const outputDir = request.outputPath || process.cwd();
   const ext = sfxExtensionForFormat(request.outputFormat);
   const filename = request.filename || `elevenlabs_sfx_${Date.now()}${ext}`;
+  // Channel catalog IDs are shared across episodes and processes. A crashed or
+  // uncertain submission keeps its receipt so another producer cannot charge it again.
+  const catalog = !!request.filename && path.resolve(outputDir).endsWith(path.join(path.sep, 'assets','audio','sfx'));
+  const body = soundEffectRequestBody(request);
+  const signature = createHash('sha256').update(JSON.stringify([body,request.outputFormat])).digest('hex');
+  let reservation: string | undefined, submitted = false;
 
   try {
+    if (catalog) {
+      const file = resolveOutputFile(outputDir, filename, 'audio');
+      const receipt = file.replace(/\.(wav|mp3)$/i, '') + '.json';
+      if (fs.existsSync(file) || fs.existsSync(receipt)) {
+        if (!fs.existsSync(file) || !fs.existsSync(receipt)) throw new Error('Incomplete catalog asset: reconcile its receipt before ordering');
+        const saved = JSON.parse(fs.readFileSync(receipt, 'utf8'));
+        if (saved.signature !== signature || saved.sha256 !== createHash('sha256').update(fs.readFileSync(file)).digest('hex'))
+          throw new Error('Existing catalog asset: resolve it for reuse or choose a new variant id');
+        return { success: true, reused: true, submitted: false, audioPath: file, sidecarPath: receipt, model: saved.model,
+          outputFormat: request.outputFormat, durationSeconds: saved.measuredSeconds ?? undefined, estimatedUsd: 0, requestId: saved.requestId };
+      }
+      requireElevenLabsKey();
+      const marker = receipt + '.submission';
+      try { fs.writeFileSync(marker, JSON.stringify({ signature, createdAt: new Date().toISOString(), filename }), { flag: 'wx' }); }
+      catch (err) { if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err;
+        throw new Error('Existing or uncertain SFX submission: reconcile ' + marker); }
+      reservation = marker;
+      // Another worker may have finished after our first read and released its reservation.
+      if (fs.existsSync(file) || fs.existsSync(receipt)) { fs.unlinkSync(marker); reservation = undefined; throw new Error('Catalog asset appeared; resolve the existing file'); }
+    }
+    submitted = true;
     console.error(
       `[ElevenLabs] Sound effect... (${request.text.length} chars, ` +
         `${request.durationSeconds !== undefined ? `${request.durationSeconds}s` : 'auto length'}` +
         `${request.loop ? ', loop' : ''}, ${request.outputFormat})`,
     );
-    const body = soundEffectRequestBody(request);
     const response = await elevenFetch(
       `/v1/sound-generation?output_format=${request.outputFormat}`,
       { method: 'POST', body: JSON.stringify(body) },
@@ -841,6 +870,7 @@ export async function generateElevenLabsSoundEffect(request: ElevenLabsSfxReques
     // Where this file came from, next to the file — the catalog row's note points here.
     const sidecar = {
       tool: 'sfx_elevenlabs_generate',
+      signature, sha256: createHash('sha256').update(audio).digest('hex'),
       engine: 'elevenlabs',
       model: ELEVENLABS_SFX_MODEL,
       text: request.text,
@@ -855,6 +885,7 @@ export async function generateElevenLabsSoundEffect(request: ElevenLabsSfxReques
     };
     const sidecarPath = audioPath.replace(/\.(wav|mp3)$/i, '') + '.json';
     fs.writeFileSync(sidecarPath, JSON.stringify(sidecar, null, 2) + '\n', 'utf8');
+    if (reservation) fs.unlinkSync(reservation);
     console.error(`[ElevenLabs] Sound effect saved to: ${audioPath} (+ ${path.basename(sidecarPath)})`);
 
     return {
@@ -871,9 +902,11 @@ export async function generateElevenLabsSoundEffect(request: ElevenLabsSfxReques
       latencyMs: meta.latencyMs,
     };
   } catch (error) {
+    const http = (error as { httpStatus?: number }).httpStatus;
+    if (reservation && http && [400,401,402,403,404,422,429].includes(http)) fs.rmSync(reservation,{force:true});
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[ElevenLabs] Error: ${message.split('\n')[0]}`);
-    return { success: false, error: message };
+    return { success: false, error: message, submitted };
   }
 }
 

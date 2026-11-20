@@ -235,8 +235,29 @@ export const shotSchema = z
 })
     .passthrough();
 export const readLevelSchema = z.enum(['outline', 'scenes', 'shots', 'full', 'direction']);
+const audienceId = z.string().trim().min(1);
+const cueId = audienceId.regex(/^[a-z0-9][a-z0-9-]*$/);
+export const audienceEndForSchema = z.object({ shotId: shotIdSchema, id: audienceId, endShotId: shotIdSchema.nullable() }).strict();
+const audienceKey = { shotId: shotIdSchema, id: audienceId };
+const seconds = z.number().finite().nonnegative();
+export const audienceEffectsSchema = z.array(z.discriminatedUnion('op', [
+    z.object({ ...audienceKey, op: z.literal('plan'), sfx: cueId.optional(), intent: audienceId.optional(),
+        trigger: audienceId.optional(), description: audienceId.optional(), release: audienceId.nullish(),
+        caseId: z.string().regex(/^(00[1-9]|0[1-9]\d|1[01]\d|120)$/).nullish(),
+        intensity: z.enum(['subtle', 'normal', 'strong']).nullish(), separationLu: seconds.max(30).nullish() }).strict(),
+    z.object({ ...audienceKey, op: z.literal('place'), atSeconds: seconds, timingBasis: z.string().regex(/^[a-f0-9]{64}$/),
+        end: z.object({ shotId: shotIdSchema, atSeconds: z.union([seconds, z.literal('end')]) }).strict().nullish(),
+        fadeOutSeconds: seconds.nullish() }).strict(),
+    z.object({ ...audienceKey, op: z.literal('remove') }).strict(),
+])).min(1);
+export const sfxEntriesSchema = z.record(cueId, z.object({ asset: cueId.optional(), prompt: audienceId.optional(),
+    seconds: z.number().min(0.5).max(30).optional(), loop: z.boolean().optional() })
+    .passthrough().refine(v => !!v.asset !== !!v.prompt, 'name either a channel asset or a generation prompt')
+    .refine(v => !v.loop || v.seconds === undefined || v.seconds >= 5, 'a loop needs at least five seconds'));
+function audienceSound() { return loadFromHere(join(REFERENCES_DIR, 'audience-effects.js')); }
 export const storyboardReadSchema = z.object({
     path: z.string().min(1).describe('The storyboard directory, or its scenes.js'),
+    audienceEndFor: audienceEndForSchema.optional(),
     level: readLevelSchema.default('shots').describe('outline = sequences with scene numbers · scenes = scene cards with shot numbers · shots = every shot summarised under its scene · full = the raw shot objects too · direction = only the direction plan as counts'),
     shotId: z.string().min(1).optional().describe('Stable shot ID to inspect, with its raw plan and neighboring shot IDs'),
     includeTechniques: z.boolean().default(true).describe('Return canonical technique ids, purposes, icons and provider instructions'),
@@ -407,6 +428,8 @@ export function readStoryboard(args) {
     if (args.level === 'direction')
         return { file, sha256, format: String(win.FORMAT ?? 'shorts-9x16'), direction: shotDirection().facts(win) };
     const result = contract().outline(win, args.level);
+    if (args.level === 'shots' || args.level === 'full' || args.audienceEndFor)
+        result.audienceEffects = audienceSound().read(win, dirname(file), args.audienceEndFor, args.shotId);
     result.file = file;
     result.mediaBaseDirectory = dirname(file);
     result.sha256 = sha256;
@@ -581,6 +604,8 @@ export const storyboardApplySchema = z.object({
     removeSequences: z.array(z.string()).optional(),
     globals: globalsSchema.optional().describe('Set other window.* blocks — FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. CLICHES belongs to story_cliche'),
     expectedSha256: z.string().regex(/^[a-f0-9]{64}$/).optional().describe('Required for propSheet file edits; use the hash from storyboard_read'),
+    audienceEffects: audienceEffectsSchema.optional(),
+    sfxEntries: sfxEntriesSchema.optional(),
     propSheet: z.object({
         props: z.array(z.record(z.unknown())),
         continuity: z.record(z.unknown()).optional(),
@@ -595,13 +620,13 @@ export function scenesPath(target) {
     return join(abs, 'scenes.js');
 }
 /** Evaluate scenes.js in a sandbox and return its window.* globals plus the leading `//` lines. */
-export function readBoard(target) {
+export function readBoard(target, source) {
     const file = scenesPath(target);
     if (!existsSync(file))
         throw new Error(`no scenes.js at ${file}`);
     if (!statSync(file).isFile())
         throw new Error(`${file} is not a file`);
-    const src = readFileSync(file, 'utf8');
+    const src = source ?? readFileSync(file, 'utf8');
     const header = [];
     for (const line of src.split('\n')) {
         if (/^\s*\/\//.test(line))
@@ -1067,16 +1092,19 @@ export function applyStoryboard(args, opts = {}) {
     const exists = existsSync(file);
     let header = [];
     let win = {};
+    const original = exists ? readFileSync(file, 'utf8') : '';
     if (exists)
-        ({ header, win } = readBoard(file));
+        ({ header, win } = readBoard(file, original));
     else if (!args.set && !opts.outline)
         throw new Error(`no scenes.js at ${file} — a new board is written with \`set\` (structure + shots)`);
     else if (!opts.outline && workflowEpisode(dirname(file)))
         throw new Error('story_order: a new episode board starts with story_sequence → story_scene → story_shot');
     else if (!existsSync(dirname(file)))
         throw new Error(`directory does not exist: ${dirname(file)}`);
-    const original = exists ? readFileSync(file, 'utf8') : '';
+    const audienceEdit = !!(args.audienceEffects || args.sfxEntries);
     const originalHash = createHash('sha256').update(original).digest('hex');
+    if (audienceEdit && args.expectedSha256 !== originalHash)
+        throw new Error('head_moved: audience edits require the current expectedSha256');
     const previousDoc = win.SB_DOC;
     const incomingDoc = args.globals?.SB_DOC;
     const changesProps = !!args.propSheet || (!!args.globals && Object.prototype.hasOwnProperty.call(args.globals, 'SB_DOC')
@@ -1084,6 +1112,7 @@ export function applyStoryboard(args, opts = {}) {
     if (changesProps && exists && args.expectedSha256 !== originalHash)
         throw new Error('head_moved: propSheet requires the current expectedSha256 from storyboard_read');
     const { win: next, findings, synced } = applyPatch(win, args, opts);
+    const audienceResult = audienceEdit ? audienceSound().patch(next, dirname(file), args) : undefined;
     // Keep the review's panel links and the executable MSR references on the same shared sheets.
     const panelIds = [...new Set((next.SCENES ?? []).flatMap(shot => [...(contract().castOf(shot) ?? []), ...bystandersOf(shot)]))];
     if (panelIds.length && existsSync(join(dirname(file), 'cast.json'))) {
@@ -1146,29 +1175,41 @@ export function applyStoryboard(args, opts = {}) {
     const result = {
         file, written: false, created: !exists, approvalDropped: header.some((h) => /^\/\/\s*approved:/.test(h)),
         shots: (next.SCENES ?? []).length, scenes: st ? st.scenes.length : 0, sequences: st ? st.sequences.length : 0,
-        synced, findings, board: [digest, firstLine, opening, () => cliches().digest(next)].flatMap((read) => { try {
+        ...audienceResult, synced, findings, board: [digest, firstLine, opening, () => cliches().digest(next)].flatMap((read) => { try {
             return read();
         }
         catch {
             return [];
         } }),
     };
-    if (bad || args.dryRun)
+    const audienceOnly = audienceEdit && Object.keys(args).every(k => ['path', 'expectedSha256', 'draft', 'dryRun', 'audienceEffects', 'sfxEntries'].includes(k));
+    if (bad || args.dryRun || (audienceOnly && !audienceResult.changed.length))
         return result;
     // Same-directory temp file + rename: a crash mid-write never leaves a truncated scenes.js behind.
     const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
     try {
-        if (changesProps && exists) {
+        if ((changesProps || audienceEdit) && exists) {
             if (createHash('sha256').update(readFileSync(file)).digest('hex') !== originalHash)
                 throw new Error('head_moved');
-            const history = join(dirname(file), '.prop-history');
+            const history = join(dirname(file), changesProps ? '.prop-history' : '.audience-history');
             mkdirSync(history, { recursive: true });
             const backup = join(history, originalHash + '.js');
             if (!existsSync(backup))
                 writeFileSync(backup, original, { flag: 'wx' });
         }
         writeFileSync(tmp, serializeBoard(next, header), 'utf8');
-        renameSync(tmp, file);
+        // Serialize the final compare + rename across CLI processes. flock on the persistent
+        // directory is released by the OS even when a writer is interrupted.
+        execFileSync('python3', ['-c', [
+                'import fcntl, hashlib, os, sys',
+                'from pathlib import Path',
+                'target, tmp, before = sys.argv[1:]',
+                'lock = os.open(os.path.dirname(target), os.O_RDONLY)',
+                'fcntl.flock(lock, fcntl.LOCK_EX)',
+                'data = Path(target).read_bytes() if os.path.isfile(target) else b""',
+                'if hashlib.sha256(data).hexdigest() != before: sys.exit("head_moved: reread storyboard")',
+                'os.replace(tmp, target)',
+            ].join('\n'), file, tmp, originalHash], { stdio: ['ignore', 'pipe', 'pipe'] });
     }
     catch (err) {
         try {
@@ -2625,6 +2666,10 @@ export function writeShotPrompt(args) {
     }
     if (msr && [args.action, args.end, args.sound].some(value => value && (shot.narration ?? []).some(line => line.tts && value.includes(line.tts))))
         throw new Error('video_dialogue_embedded: write only action and sound here; shot_dialogue owns the spoken words');
+    const cues = shot.sound?.effects;
+    if (Array.isArray(cues) && args.sound && cues.some(e => e?.audience && e.description &&
+        args.sound.toLowerCase().includes(String(e.description).toLowerCase())))
+        throw new Error('audience_delivery_conflict: write this cue in post and keep shot_prompt.sound diegetic');
     const source = { action: args.action, ...(args.end ? { end: args.end } : {}), ...(args.sound ? { sound: args.sound } : {}) };
     const rawCast = win.SB_DOC?.characters;
     const names = Object.fromEntries((Array.isArray(rawCast) ? rawCast : []).map(c => [c.id, String(c.name ?? '')]));

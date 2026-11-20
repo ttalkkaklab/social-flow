@@ -326,7 +326,10 @@ const RULES = [
         // A reference file naming itself in its own header is not a link.
         const self = path.basename(abs);
         if (RULE_SOURCES.has(rel)) continue;
-        for (const m of read(abs).matchAll(REF_MENTION)) {
+        const content = read(abs);
+        for (const m of content.matchAll(REF_MENTION)) {
+          const nested = /^\/([A-Za-z0-9._-]+\.(?:md|js|json))\b/.exec(content.slice(m.index + m[0].length));
+          if (nested && skillNames().some(skill => fs.existsSync(path.join(SKILLS_DIR, skill, 'references', m[1], nested[1])))) continue;
           const name = refName(m[1]);
           if (name === self) continue;
           if (!byBase.has(name)) bad.push(`${rel}: references/${name} does not exist`);

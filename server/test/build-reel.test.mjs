@@ -282,3 +282,51 @@ ${stage}`;
  const rgb=execFileSync('ffmpeg',['-v','error','-ss','0.5','-i',path.join(dir,'reel.mp4'),'-frames:v','1','-f','rawvideo','-pix_fmt','rgb24','pipe:1']);
  for(let i=3;i<rgb.length;i++)assert.equal(rgb[i],rgb[i%3],'caption pixels appeared on the flat blue source');
 });
+
+test('audience preview and final mix preserve the source and place only selected tones across trimmed cards', {timeout:90000}, () => {
+  const dir = mkdtempSync(path.join(tmpdir(),'audience-render-'));
+  try {
+    const board = path.join(dir,'storyboard'), work = path.join(dir,'work'), library = path.join(dir,'assets/audio/sfx');
+    mkdirSync(board); mkdirSync(work); mkdirSync(library,{recursive:true});
+    const source = path.join(work,'source.mp4');
+    ff(['-f','lavfi','-i','testsrc2=size=128x224:rate=25:duration=3','-f','lavfi','-i','sine=frequency=200:duration=3:sample_rate=48000',
+      '-c:v','libx264','-c:a','aac','-shortest',source]);
+    for (const [name,pitch,duration] of [['drone',900,3],['chirp',1400,.2],['foley',1900,.4]])
+      ff(['-f','lavfi','-i',`sine=frequency=${pitch}:duration=${duration}:sample_rate=48000`,path.join(library,name+'.wav')]);
+    const shots = ['s0001','s0002'].map(id => ({id,type:'points',duration:2,narration:[],visual:{clip:source},
+      edit:{in:.8,out:2.8},sound:{audioSource:'video',effects:[]}}));
+    const make = (id,sfx,atSeconds) => ({id,sfx,atSeconds,delivery:'post',description:'synth',trigger:'shoulders lower',audience:{intent:'relief'}});
+    const span = {...make('release','drone',1.4),end:{shotId:'s0002',atSeconds:.5},fadeOutSeconds:.15};
+    const point = make('answer','chirp',.45);
+    shots[0].sound.effects=[span]; shots[1].sound.effects=[point,{id:'foley',sfx:'foley',atSeconds:.45,delivery:'post'}];
+    const win={SCENES:shots,MUSIC:{$timeline:[]}}, clock=require('../../skills/storyboard/references/audience-effects.js').boardClock(win,board);
+    for (const [i,e] of [[0,span],[1,point]]) e.audience.timingBasis=clock.basis(shots[i].id,e,e.end?.shotId);
+    writeFileSync(path.join(board,'scenes.js'),Object.entries(win).map(([k,v])=>'window.'+k+'='+JSON.stringify(v)+';').join('\n'));
+    writeFileSync(path.join(work,'cards.tsv'),shots.map((_,i)=>i+'\tsource.mp4\t1\tnone').join('\n')+'\n');
+    writeFileSync(path.join(work,'segs.tsv'),shots.map((_,i)=>i+'\t0\t'+source+'\t\t').join('\n')+'\n');
+    const result=spawnSync('bash',[path.join(ref,'build-reel.sh'),work,board,'--audience-sfx','compare','--from-shot','s0001','--to-shot','s0002'],{
+      encoding:'utf8',timeout:60000,maxBuffer:8*1024*1024,env:{...process.env,W:'128',H:'224',FPS:'25',OUTRO:'0',COVER_TS:'1'}});
+    assert.equal(result.status,0,result.stdout+result.stderr);
+    const resolved=JSON.parse(readFileSync(path.join(work,'work/audience-resolved.json')));
+    assert.deepEqual(resolved.map(e=>e.bodyStartSeconds),[1.4,2.45]);
+    assert.ok(Math.abs(resolved[0].bodyEndSeconds-2.5)<1e-6);
+    const samples=file=>ff(['-i',path.join(work,file),'-map','0:a:0','-af','pan=mono|c0=c0','-ar','48000','-f','f32le','-']);
+    const off=samples('audience-off.mov'),on=samples('audience-on.mov'),final=samples('reel.mp4');
+    assert.equal(off.length,on.length);
+    assert.deepEqual(frameHashes(path.join(work,'audience-off.mov')),frameHashes(path.join(work,'audience-on.mov')));
+    const range=(buf,a,b)=>buf.subarray(Math.round(a*48000)*4,Math.round(b*48000)*4);
+    assert.deepEqual(range(off,0,1.399),range(on,0,1.399));
+    assert.deepEqual(range(off,2.651,3.9),range(on,2.651,3.9));
+    function band(buf,start,hz,sec=.04) {
+      const n=Math.round(sec*48000); let x=0,y=0;
+      for(let j=0;j<n;j++){const v=buf.readFloatLE(4*(Math.round(start*48000)+j)),a=2*Math.PI*hz*j/48000;x+=v*Math.cos(a);y+=v*Math.sin(a);}
+      return 2*Math.hypot(x,y)/n;
+    }
+    for(const buf of [on,final]) {
+      assert.ok(band(buf,1.46,900)>.008 && band(buf,1.32,900)<.001,'drone starts at trimmed time');
+      assert.ok(band(buf,2.54,900)<.001 && band(buf,2.54,1400)>.008,'only the drone ends');
+      assert.ok(band(buf,2.54,1900)>.008 && band(buf,1,200)>.01,'ordinary effect and original soundtrack survive');
+    }
+    assert.ok(band(off,2.54,1900)>.008 && band(off,2.54,1400)<.001);
+  } finally {rmSync(dir,{recursive:true,force:true});}
+});
