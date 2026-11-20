@@ -380,6 +380,21 @@ place picture stays out. Each shot's video then waits for the user's yes to its 
 `video_execute` refuses otherwise (`video_approval_required`). The session never records an
 approval the user did not give.
 
+## Camera moves reach the video (user directive, 2026-11-21)
+
+Almost no mochi_bo clip moved its camera. The boards held 337 of 390 video shots and left 29
+unchosen, mostly through one `shot_icons` value mapped over every shot; and 23 of the 24 shots
+that did move went out with a hand-written prompt that dropped or locked the move, while 71%
+of compiled prompts ran past the 2,000 characters the GenAI image and MSR lanes take. So
+`video_plan` compiles the board prompt to the adapter's limit, leaving out design notes, the
+beats' acting fields and then expressions before the camera, action or lines; beats say an
+action once and drop voice direction a model does not voice. A hand-written prompt that drops or
+locks the board's move is named (`camera_move_missing`, `camera_move_contradicted`); `shot_icons`
+names video shots left with no move (`camera_move_unset`) and a call that holds every video shot
+it sets; board writes count unchosen moves. Each of these reports; none refuses, and no share of
+moving shots is asked for. Whether LTX follows a move sentence is not measured. See
+`skills/storyboard/references/action-direction.md` and `skills/generate-cut-videos/SKILL.md`.
+
 ## Music spotting (user directive, 2026-11-14)
 
 Three episodes got their music at assembly, from files made for other episodes, and the

@@ -2132,6 +2132,15 @@ export function writeShotIcons(args) {
     const heldWide = shotDirection().held(shots).wideWithoutReason.filter((id) => touched.has(id));
     if (heldWide.length)
         notes.push({ level: 'warn', where: 'shot_icons', what: `wide shots held with no reason: ${heldWide.join(', ')} — the board does not show whether a move was compared there (action-direction.md step 2)` });
+    // mochi_bo (2026-11-20): 337 of 390 video shots held and 29 never chose, mostly set by one call over every shot.
+    // Both are named here; nothing is refused and no share of moving shots is asked for.
+    const cameraOf = (s) => String(s.visual?.camera?.movement ?? '').trim();
+    const videoSet = shots.filter((s) => touched.has(String(s.id)) && s.shot?.render?.mode === 'generated_video');
+    const unchosen = videoSet.filter((s) => !cameraOf(s)).map((s) => s.id);
+    if (unchosen.length)
+        notes.push({ level: 'warn', where: 'shot_icons', what: `camera_move_unset on ${unchosen.join(', ')} — no move is chosen, so the video model decides the camera; set move (camera.static for a deliberate hold)` });
+    if (videoSet.length >= 4 && videoSet.every((s) => /^(static|fixed|locked)/i.test(cameraOf(s))))
+        notes.push({ level: 'warn', where: 'shot_icons', what: `all ${videoSet.length} video shots this call set are held — the board does not show a move compared on any; a move earns its place where the subject travels, something enters, or the beat turns while the shot runs (action-direction.md step 2)` });
     // A sentence this call left standing as the same reason on several shots is reported with its shots.
     for (const copy of shotDirection().copiedReasons(shots))
         if (copy.shots.some((id) => touched.has(id)))
@@ -2694,7 +2703,9 @@ export function writeShotPrompt(args) {
     // The clip is about to be made: say so while the scene's music can still shape its sound.
     const open = win.STORY?.authoring === 'story-first' && musicTimeline().spottingReport(win).undecided.includes(shot.scene)
         ? [{ level: 'warn', where: args.id, what: `scene ${shot.scene} has no music decision — record score or none with story_music` }] : [];
-    return { ...result, findings: [...result.findings, ...compiled.warnings.map(what => ({ level: 'warn', where: args.id, what })), ...open], prompt };
+    // A long board prompt is not a reason to write one by hand: video_plan compiles it to the adapter's limit, camera first.
+    const long = prompt.length > 2000 ? [{ level: 'warn', where: args.id, what: `the prompt runs ${prompt.length} characters; video_plan fits it to the adapter's limit (2,000 on the GenAI image and MSR lanes) keeping the camera, action and lines — call video_plan without args.prompt` }] : [];
+    return { ...result, findings: [...result.findings, ...compiled.warnings.map(what => ({ level: 'warn', where: args.id, what })), ...open, ...long], prompt };
 }
 const scenarioCheckResultSchema = z.object({
     files: z.array(z.string()),

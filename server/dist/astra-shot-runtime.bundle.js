@@ -32711,7 +32711,7 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
     entry: catalogue.byId[text2(t.id)]
   }));
   const movement = text2(camera.movement), speed = text2(camera.speed), target = text2(camera.target), settle = text2(camera.end);
-  const move = picked.find((t) => t.entry?.fields.movement && movement.toLowerCase().startsWith(t.entry.fields.movement))?.entry;
+  const move = picked.find((t) => t.entry?.fields.movement && movement.toLowerCase().startsWith(t.entry.fields.movement))?.entry ?? Object.values(catalogue.byId).filter((e) => e.prompt && e.fields.movement && movement.toLowerCase().startsWith(e.fields.movement)).sort((a, b) => b.fields.movement.length - a.fields.movement.length)[0];
   const rack = picked.find((t) => t.entry?.fields.focus);
   const pace = { slow: "slowly", steady: "steadily", fast: "quickly" }[speed];
   const ends = travels(camera) ? ", with a short pause on the opening and closing pictures" : "";
@@ -32732,7 +32732,9 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
   const worn = expressionWords(shot, names);
   const called = (id) => names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id;
   const seen = (Array.isArray(visual.bystanders) ? visual.bystanders : []).map(text2).filter(Boolean), extras = text2(visual.extras);
-  const prompt = [
+  const plain = (value) => text2(value).replace(/[.\s]+$/, "").toLowerCase();
+  const actionInBeat = performance2.performance.some((event) => event.kind === "action" && plain(event.videoDirection || event.text) === plain(source.action));
+  const parts = (step2) => [
     msr ? framing : "Start from the given first frame.",
     msr ? depthWords : "",
     moveWords,
@@ -32743,19 +32745,23 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
     viewWords || (text2(camera.framing) ? sentence(`Opening composition: ${text2(camera.framing)}`) : ""),
     !viewWords && camera.rear && !other.some((t) => t.entry.fields.viewpoint === "rear") ? "View the subject from behind." : "",
     !viewWords && camera.pov && !other.some((t) => t.entry.fields.viewpoint === "pov") ? sentence(`Point of view: ${text2(camera.pov) || "the named character"}`) : "",
-    sentence(source.action),
+    actionInBeat ? "" : sentence(source.action),
     seen.length ? sentence(`The opening picture also shows ${seen.map(called).join(" and ")}, who ${seen.length > 1 ? "stay" : "stays"} in the frame and never speaks`) : "",
     extras ? sentence(`Unnamed people in the frame: ${extras}`) : "",
-    ...["before", "after", "continuity"].map((key) => text2(design[key]) ? sentence(`${key}: ${text2(design[key])}`) : ""),
-    ...states.filter((state) => ![source.action, design.before, design.after, design.continuity].includes(state)).map((state) => sentence(`Visible state: ${state}`)),
+    ...step2 >= 1 ? [] : ["before", "after", "continuity"].map((key) => text2(design[key]) ? sentence(`${key}: ${text2(design[key])}`) : ""),
+    ...step2 >= 1 ? [] : states.filter((state) => ![source.action, design.before, design.after, design.continuity].includes(state)).map((state) => sentence(`Visible state: ${state}`)),
     !lines.length && beats.length ? "Perform the planned action without invented speech or voiceover." : "",
-    ...beats,
+    ...step2 >= 2 ? acting.performanceBeats(performance2.performance, mode, !msr, { brief: true }) : beats,
     // The model's default face is pleasant; the authored state has to be named and held (LTX guide: physical cues, state after the action).
-    worn ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : "",
+    worn && step2 < 3 ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : "",
     frames.mode === "first_last" ? sentence(`End on the given last frame${source.end ? ": " + source.end : ""}`) : source.end ? sentence(`End on ${source.end}`) : "",
     sentence(`Audio: ${source.sound ? source.sound + (/\b(music|soundtrack|score|bgm|melody|orchestral|song)\b/i.test(source.sound) ? "" : ", no music") : "no music"}`),
     acting.VIDEO_TEXT_POLICY
-  ].filter(Boolean).join(" ");
+  ].filter(Boolean);
+  const limit = options.maxCharacters, dropped = ["design notes and visible states", "acting fields of the beats", "expressions"];
+  let step = 0, prompt = parts(0).join(" ");
+  while (limit && prompt.length > limit && step < dropped.length) prompt = parts(++step).join(" ");
+  const fitWarnings = !limit || !step ? [] : [prompt.length > limit ? `prompt_over_limit: ${prompt.length} characters after leaving out the ${dropped.slice(0, step).join(", ")}; the adapter takes ${limit}. Shorten the action, end or sound in shot_prompt` : `prompt_fitted: left out the ${dropped.slice(0, step).join(", ")} to fit the adapter's ${limit} characters; the camera, action and lines are whole`];
   const foreign = nonEnglishOutsideQuotes(prompt);
   if (foreign && options.validateLanguage !== false) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks; write action and direction in English`);
   const bindings = [
@@ -32778,7 +32784,10 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
   ];
   return { prompt, performance: performance2, directionBindings: bindings.filter((b) => b.value !== void 0), warnings: [
     ...performance2.warnings,
-    ...bindings.filter((b) => b.value !== void 0 && b.via === "unmapped").map((b) => `No prompt mapping for ${b.attribute}: ${JSON.stringify(b.value)}`),
+    ...fitWarnings,
+    // An unchosen move leaves the camera to the model; on mochi_bo 29 of 33 shots of one episode went out so.
+    ...movement ? [] : ["camera_move_unset: no camera move is chosen, so the video model decides the camera \u2014 set shot_icons move (camera.static for a deliberate hold)"],
+    ...bindings.filter((b) => b.value !== void 0 && b.via === "unmapped" && b.attribute !== "move").map((b) => `No prompt mapping for ${b.attribute}: ${JSON.stringify(b.value)}`),
     ...rack && !(rack.from && rack.to) ? ["the rack focus names no subjects \u2014 give focus.from and focus.to in shot_icons"] : []
   ] };
 }

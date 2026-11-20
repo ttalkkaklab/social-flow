@@ -66,6 +66,10 @@ test('planning recompiles saved action from current icons and reports explicit p
  f.save();
  const before=planVideo({episode:f.episode,shotId:'s1',requestId:'direction-a',operation:'text',args:{generateAudio:false}});
  assert.match(before.args.prompt,/slowly pushes in toward the boat/);
+ // A hand-written prompt that drops or locks the board's move is named with the sentence to carry, never refused.
+ assert.match(f.plan('no-move').directionWarnings.join(),/camera_move_missing.*slowly pushes in toward the boat/);
+ assert.match(f.plan('locked',{prompt:'A boat crosses a lake. Camera stays locked.'}).directionWarnings.join(),/camera_move_contradicted/);
+ assert.doesNotMatch(f.plan('carried',{prompt:'A boat crosses a lake. The camera pushes in.'}).directionWarnings.join(),/camera_move_/);
  f.board.SCENES[0].visual.camera={movement:'static'}; f.save();
  const after=planVideo({episode:f.episode,shotId:'s1',requestId:'direction-b',operation:'text',args:{generateAudio:false}});
  assert.match(after.args.prompt,/holds a static frame/);
@@ -142,6 +146,21 @@ test('ambiguous failure retains budget and ID across process-like reentry',async
  await assert.rejects(f.execute(p,async()=>{calls++;recordVideoSubmission('accepted-1');throw new Error('connection lost');}),/connection/);
  assert.equal(f.state().jobs.a.status,'submission_unknown');assert.equal(f.state().jobs.a.providerId,'accepted-1');
  await assert.rejects(f.execute(p,async()=>{calls++;return result;}),/pending/);assert.equal(calls,1);
+});
+test('a board prompt longer than the GenAI image lane takes is fitted with its camera move whole', t=>{
+ const f=fixture(t,{engine:'astra-genai',model:'ltx-2.5-22b-distilled',resolution:'1280x704',operation:'image'});
+ fs.writeFileSync(path.join(f.episode,'image.png'),Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=','base64'));
+ const long=word=>(word+' ').repeat(80).trim()+'.';
+ f.board.SCENES[0].shot={techniques:[{id:'camera.dolly-in',reason:'The realization lands while the shot runs.'}],videoDesign:{before:long('lamp'),after:long('door'),continuity:long('rain')}};
+ f.board.SCENES[0].visual={frames:{mode:'first',start:'../image.png'},camera:{movement:'dolly in',speed:'slow',target:'the letter'},
+  expression:{hero:long('still')},video:{prompt:'stale',promptSource:{action:'The hero reads the letter.'}}};
+ f.save();
+ const p=planVideo({episode:f.episode,shotId:'s1',requestId:'fit',operation:'image',args:{duration:5,reserveUsd:0}});
+ assert.equal(p.tool,'astra_genai_img2video');
+ assert.ok(p.args.prompt.length<=2000,String(p.args.prompt.length));
+ assert.match(p.args.prompt,/The camera slowly pushes in toward the letter/);
+ assert.match(p.args.prompt,/The hero reads the letter\..*No speech or vocalization/);
+ assert.match(p.directionWarnings.join(),/prompt_fitted/);
 });
 test('I2V reference capability refusals release managed budget and concurrency before any submission',async t=>{
  const {generateGenaiVideo}=await import('../dist/astra-genai-video.js');

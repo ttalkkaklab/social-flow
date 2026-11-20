@@ -63,6 +63,16 @@ function keys(schema) {
         return Object.keys(schema.shape);
     return [];
 }
+/** The adapter's prompt length limit from its schema, or undefined when it states none. */
+export function videoPromptLimit(tool) {
+    let schema = VIDEO_ADAPTERS[tool]?.schema;
+    while (schema instanceof z.ZodEffects)
+        schema = schema.innerType();
+    let prompt = schema instanceof z.ZodObject ? schema.shape.prompt : undefined;
+    while (prompt instanceof z.ZodOptional || prompt instanceof z.ZodDefault || prompt instanceof z.ZodEffects)
+        prompt = prompt instanceof z.ZodEffects ? prompt.innerType() : prompt._def.innerType;
+    return prompt instanceof z.ZodString ? prompt.maxLength ?? undefined : undefined;
+}
 export function parseVideoArgs(tool, input) {
     const adapter = VIDEO_ADAPTERS[tool];
     if (!adapter)

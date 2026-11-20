@@ -61,10 +61,17 @@ observable scenes and before source-image prompts. Explicit content-only work de
    (step 2), its reason is what the move would have cost in that beat; text copied across
    held shots, or action text copied into purpose, is not a decision.
    Do not supply static as a placeholder when the choice has not been made, and do not
-   supply a slow approach on each close-up as a placeholder for direction. `shot_icons`
-   names the wide shots (els, ls, ws, fs) it left held with no reason, and
-   `storyboard_read {level:"direction"}` counts the held shots by size; both report what
-   was written and refuse nothing.
+   supply a slow approach on each close-up as a placeholder for direction. Choose per beat,
+   not with one value mapped over every shot of the call. `shot_icons` names the wide shots
+   (els, ls, ws, fs) it left held with no reason, the video shots it left with no move at all
+   (`camera_move_unset`: the model then picks the camera) and a call that holds every video
+   shot it sets; every board write counts moves, unchosen ones included, and
+   `storyboard_read {level:"direction"}` counts the held shots by size. All of these report
+   what was written and refuse nothing. On mochi_bo (2026-11-20) 337 of 390 video shots were
+   held and 29 never chose, most of them set by one call over the whole board.
+   On a moving shot, keep "preserve the layout", "keep the crop" and "locked" out of
+   `shot_prompt.action`: the camera sentence states the opening picture and where the move
+   ends, and a layout-preserving action fights it.
 5. Read consecutive shots in scene order. Reconsider repeated framing, copied reasons
    and unchanging focus where the subject, discovery or pressure changes. Keep intentional
    stillness. Never alternate moves by index, enforce a moving-shot percentage or add

@@ -85,3 +85,39 @@ test('a bystander and extras stay in the video prompt as people the opening pict
   assert.match(prompt, /Unnamed people in the frame: four children in orange bibs chase a ball\./);
   assert.doesNotMatch(compileVideoPrompt({ ...shot, visual: { frames: { mode: 'reference' }, character: ['coach'] } }, { action: 'x' }).prompt, /opening picture also|Unnamed people/);
 });
+
+test('a movement written without its technique takes the catalogue sentence; an unchosen move is named', () => {
+  const shot = { shot: {}, visual: { frames: { mode: 'first' }, camera: { movement: 'dolly in', speed: 'slow', target: 'the gate' } } };
+  const { prompt, warnings } = compileVideoPrompt(shot, { action: 'She stops.' });
+  assert.match(prompt, /The camera slowly pushes in toward the gate/);
+  assert.doesNotMatch(prompt, /Camera: /);
+  assert.ok(!warnings.some(w => w.startsWith('camera_move_unset')));
+  assert.ok(compileVideoPrompt({ shot: {}, visual: { frames: { mode: 'first' } } }, { action: 'x' }).warnings.some(w => w.startsWith('camera_move_unset')));
+});
+
+test('a prompt over the limit lets design notes, acting fields and expressions go before the camera, action or lines', () => {
+  const long = word => (word + ' ').repeat(60).trim();
+  const shot = { shot: { techniques: [{ id: 'camera.dolly-in' }], videoDesign: { before: long('lamp'), continuity: long('rain') } },
+    visual: { frames: { mode: 'first' }, camera: { movement: 'dolly in', speed: 'slow', target: 'Bo' }, expression: { bo: long('calm') } },
+    performance: [{ kind: 'action', character: 'bo', text: 'Bo turns.', withGroup: 1 }, { kind: 'dialogue', character: 'bo', group: 1 }],
+    narration: [{ id: 'l1', speaker: 'bo', delivery: 'on_screen', tts: 'Wait.', acting: { context: long('cafe'), intent: 'Stop her.' } }] };
+  const full = compileVideoPrompt(shot, { action: 'Bo turns.' }, {}, { mode: 'native' });
+  const fitted = compileVideoPrompt(shot, { action: 'Bo turns.' }, {}, { mode: 'native', maxCharacters: 700 });
+  assert.ok(full.prompt.length > 700 && fitted.prompt.length <= 700, `${full.prompt.length} → ${fitted.prompt.length}`);
+  assert.match(fitted.prompt, /The camera slowly pushes in toward Bo/);
+  assert.match(fitted.prompt, /Bo turns\..*"Wait\."/);
+  assert.doesNotMatch(fitted.prompt, /lamp|rain|cafe/);
+  assert.ok(fitted.warnings.some(w => w.startsWith('prompt_fitted')));
+  // The action an action beat already carries is said once.
+  assert.equal((full.prompt.match(/Bo turns/g) || []).length, 1);
+});
+
+test('cameraDrift names a hand-written prompt that drops or locks the board move', async () => {
+  const { cameraDrift } = await import('../dist/video-prompt.js');
+  assert.equal(cameraDrift('Camera: dolly in. Bo points.', 'dolly in'), null);
+  assert.equal(cameraDrift('The camera slowly zooms in on the subject from a fixed position.', 'zoom in'), null);
+  assert.equal(cameraDrift('Camera stays locked so their movements are unmistakable.', 'dolly in'), 'contradicted');
+  assert.equal(cameraDrift('Keep close camera and clean image.', 'zoom in'), 'missing');
+  assert.equal(cameraDrift('The camera does not move. Then the camera approaches the card.', 'dolly in'), null);
+  assert.equal(cameraDrift('Static camera.', 'static'), null);
+});
