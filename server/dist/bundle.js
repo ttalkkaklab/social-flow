@@ -93713,26 +93713,41 @@ var require_scene_acting = __commonJS({
       ].join("\n");
     }
     var VIDEO_TEXT_POLICY = "Keep the entire video image text-free: no subtitles, captions, dialogue text, typography, letters, logos or watermarks, including during speech.";
-    function performanceBeats(performance2, mode, includeDialogue = true) {
+    function performanceBeats(performance2, mode, includeDialogue = true, { brief = false } = {}) {
       const dialogue = performance2.filter((line) => line.kind !== "action").map((line) => line.text).filter((text4) => typeof text4 === "string" && text4.length);
       const visualDirection = (value) => {
         let text4 = String(value);
         for (const words of dialogue) text4 = text4.split(words).join("the supplied speech");
         return text4;
       };
+      const said = new Set(performance2.filter((line) => line.kind === "action").map((line) => String(line.videoDirection || line.text || "").trim()));
       return performance2.map((line, index) => {
         if (line.kind === "action") {
           const relation = line.withGroup === void 0 ? "in this event order" : `concurrently with speech group ${line.withGroup}; do not add a separate pause`;
-          const timing2 = line.startSeconds === null || line.endSeconds === null ? "Timing unresolved; preserve this action when timing is planned." : `Action interval ${line.startSeconds}\u2013${line.endSeconds} seconds.`;
-          return `Beat ${index + 1} (action by ${visualDirection(line.character || "unspecified")}): ${visualDirection(line.videoDirection || line.text)}; ${relation}. ${timing2}`;
+          const timing2 = line.startSeconds === null || line.endSeconds === null ? "" : ` Action interval ${line.startSeconds}\u2013${line.endSeconds} seconds.`;
+          return `Beat ${index + 1} (action by ${visualDirection(line.character || "unspecified")}): ${visualDirection(line.videoDirection || line.text)}; ${relation}.${timing2}`;
         }
         const acting = { ...line.acting, ...line.videoDirection ? { visual: line.videoDirection } : {} };
         const delivery2 = line.delivery || "voiceover";
         const mouth = delivery2 === "on_screen" && mode === "native" && includeDialogue ? `Show this speaker physically saying "${line.text}"; every other visible mouth stays closed.` : delivery2 === "on_screen" && mode === "native" ? "Only this speaker speaks the separately mapped authored line; other visible mouths stay closed." : delivery2 === "on_screen" ? "Show this speaker physically speaking; synchronize only this speaker's mouth to their supplied audio during this interval using the selected synchronization route." : delivery2 === "off_screen" ? "Keep the speaking face outside the authored crop; retain any planned hands or body detail. All visible mouths stay closed during this interval; show the planned reaction, detail or action without adding a portrait." : "This is voiceover or narration, not visible physical speech. All visible mouths stay closed during this interval; show the planned action.";
-        const fields2 = ["direction", "context", "intent", "emotion", "vocal", "visual"].filter((key) => acting[key]).map((key) => `${key}: ${visualDirection(acting[key])}`);
-        if (acting.tags?.length) fields2.push(`vocal events: ${acting.tags.map(visualDirection).join(", ")}`);
-        const timing = line.speechStartSeconds == null || line.speechEndSeconds == null ? mode === "native" ? "The model paces this line within the shot." : "Use the measured speech interval once audio is attached." : `Speech interval ${line.speechStartSeconds}\u2013${line.speechEndSeconds} seconds.`;
-        return `Beat ${index + 1} (speaker: ${visualDirection(line.speaker || "unspecified")}; delivery: ${delivery2}): ${mouth} ${includeDialogue && mode === "native" && delivery2 !== "on_screen" ? 'Speak "' + line.text + '". ' : ""}${line.to ? "Addressed to " + visualDirection(line.to) + ". Preserve the authored crop and any planned eyeline; the addressee need not appear in frame." : ""} ${fields2.join(" ")} ${timing} Anticipation ${line.leadInSeconds || 0} seconds; reaction ${line.tailOutSeconds || 0} seconds.`;
+        const seen = new Set(said);
+        const fields2 = brief ? [] : ["direction", "context", "intent", "emotion", "vocal", "visual"].filter((key) => acting[key] && !(key === "vocal" && mode !== "native")).filter((key) => {
+          const value = String(acting[key]).trim();
+          if (seen.has(value)) return false;
+          seen.add(value);
+          return true;
+        }).map((key) => `${key}: ${visualDirection(acting[key])}`);
+        if (!brief && acting.tags?.length) fields2.push(`vocal events: ${acting.tags.map(visualDirection).join(", ")}`);
+        const timing = line.speechStartSeconds == null || line.speechEndSeconds == null ? mode === "native" ? "The model paces this line within the shot." : "" : `Speech interval ${line.speechStartSeconds}\u2013${line.speechEndSeconds} seconds.`;
+        const pauses = line.leadInSeconds || line.tailOutSeconds ? `Anticipation ${line.leadInSeconds || 0} seconds; reaction ${line.tailOutSeconds || 0} seconds.` : "";
+        return [
+          `Beat ${index + 1} (speaker: ${visualDirection(line.speaker || "unspecified")}; delivery: ${delivery2}): ${mouth}`,
+          includeDialogue && mode === "native" && delivery2 !== "on_screen" ? 'Speak "' + line.text + '".' : "",
+          line.to ? "Addressed to " + visualDirection(line.to) + "; keep the planned eyeline, and the addressee need not appear in frame." : "",
+          ...fields2,
+          timing,
+          pauses
+        ].filter(Boolean).join(" ");
       });
     }
     function sceneVideoPrompt(performance2, mode, scene = {}) {
@@ -115737,6 +115752,14 @@ function keys(schema2) {
   if (schema2 instanceof external_exports.ZodObject) return Object.keys(schema2.shape);
   return [];
 }
+function videoPromptLimit(tool2) {
+  let schema2 = VIDEO_ADAPTERS[tool2]?.schema;
+  while (schema2 instanceof external_exports.ZodEffects) schema2 = schema2.innerType();
+  let prompt = schema2 instanceof external_exports.ZodObject ? schema2.shape.prompt : void 0;
+  while (prompt instanceof external_exports.ZodOptional || prompt instanceof external_exports.ZodDefault || prompt instanceof external_exports.ZodEffects)
+    prompt = prompt instanceof external_exports.ZodEffects ? prompt.innerType() : prompt._def.innerType;
+  return prompt instanceof external_exports.ZodString ? prompt.maxLength ?? void 0 : void 0;
+}
 function parseVideoArgs(tool2, input) {
   const adapter2 = VIDEO_ADAPTERS[tool2];
   if (!adapter2) throw new Error("Unsupported video tool: " + tool2);
@@ -116883,6 +116906,14 @@ var sentence = (value) => {
 function expressionWords(shot, names = {}) {
   return Object.entries(object4(object4(shot.visual).expression)).filter(([, cue]) => text2(cue)).map(([id, cue]) => `${names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id}: ${text2(cue).replace(/[.\s]+$/, "")}`).join("; ");
 }
+function cameraDrift(prompt, movement) {
+  if (!movement.trim() || /^(static|fixed|locked)/i.test(movement.trim())) return null;
+  const said = prompt.split(/(?<=[.!?])\s+/).filter((s2) => /\bcamera\b/i.test(s2));
+  const holds = (s2) => !/\bzoom/i.test(s2) && /\b(static|locked|lock(?:ed)?[- ]off|stays? (?:steady|still|fixed|locked|put)|does ?n[o']t move|remains? (?:still|fixed|steady)|holds? (?:a |the )?(?:static|still|fixed|steady))\b/i.test(s2);
+  const moves = /\b(push(?:es|ing)?|pull(?:s|ing)?|dolly|dollies|truck(?:s|ing)?|track(?:s|ing)?|follow(?:s|ing)?|pan(?:s|ning)?|tilt(?:s|ing)?|zoom(?:s|ing)?|crane(?:s)?|pedestal|orbit(?:s|ing)?|arc(?:s)?|circles?|approach(?:es)?|glides?|rises?|lowers?|handheld|whip|moves?|travels?|sweeps?|drifts?)\b/i;
+  if (said.some((s2) => moves.test(s2) && !holds(s2))) return null;
+  return said.some(holds) ? "contradicted" : "missing";
+}
 function compileVideoPrompt(shot, source, names = {}, options = {}) {
   const plan2 = object4(shot.shot), visual = object4(shot.visual), frames = object4(visual.frames), camera = object4(visual.camera);
   const msr = frames.mode === "reference";
@@ -116901,7 +116932,7 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
     entry: catalogue.byId[text2(t2.id)]
   }));
   const movement = text2(camera.movement), speed = text2(camera.speed), target = text2(camera.target), settle = text2(camera.end);
-  const move = picked.find((t2) => t2.entry?.fields.movement && movement.toLowerCase().startsWith(t2.entry.fields.movement))?.entry;
+  const move = picked.find((t2) => t2.entry?.fields.movement && movement.toLowerCase().startsWith(t2.entry.fields.movement))?.entry ?? Object.values(catalogue.byId).filter((e2) => e2.prompt && e2.fields.movement && movement.toLowerCase().startsWith(e2.fields.movement)).sort((a, b) => b.fields.movement.length - a.fields.movement.length)[0];
   const rack = picked.find((t2) => t2.entry?.fields.focus);
   const pace = { slow: "slowly", steady: "steadily", fast: "quickly" }[speed];
   const ends = travels(camera) ? ", with a short pause on the opening and closing pictures" : "";
@@ -116922,7 +116953,9 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
   const worn = expressionWords(shot, names);
   const called = (id) => names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id;
   const seen = (Array.isArray(visual.bystanders) ? visual.bystanders : []).map(text2).filter(Boolean), extras = text2(visual.extras);
-  const prompt = [
+  const plain = (value) => text2(value).replace(/[.\s]+$/, "").toLowerCase();
+  const actionInBeat = performance2.performance.some((event) => event.kind === "action" && plain(event.videoDirection || event.text) === plain(source.action));
+  const parts = (step2) => [
     msr ? framing : "Start from the given first frame.",
     msr ? depthWords : "",
     moveWords,
@@ -116933,19 +116966,23 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
     viewWords || (text2(camera.framing) ? sentence(`Opening composition: ${text2(camera.framing)}`) : ""),
     !viewWords && camera.rear && !other.some((t2) => t2.entry.fields.viewpoint === "rear") ? "View the subject from behind." : "",
     !viewWords && camera.pov && !other.some((t2) => t2.entry.fields.viewpoint === "pov") ? sentence(`Point of view: ${text2(camera.pov) || "the named character"}`) : "",
-    sentence(source.action),
+    actionInBeat ? "" : sentence(source.action),
     seen.length ? sentence(`The opening picture also shows ${seen.map(called).join(" and ")}, who ${seen.length > 1 ? "stay" : "stays"} in the frame and never speaks`) : "",
     extras ? sentence(`Unnamed people in the frame: ${extras}`) : "",
-    ...["before", "after", "continuity"].map((key) => text2(design[key]) ? sentence(`${key}: ${text2(design[key])}`) : ""),
-    ...states.filter((state) => ![source.action, design.before, design.after, design.continuity].includes(state)).map((state) => sentence(`Visible state: ${state}`)),
+    ...step2 >= 1 ? [] : ["before", "after", "continuity"].map((key) => text2(design[key]) ? sentence(`${key}: ${text2(design[key])}`) : ""),
+    ...step2 >= 1 ? [] : states.filter((state) => ![source.action, design.before, design.after, design.continuity].includes(state)).map((state) => sentence(`Visible state: ${state}`)),
     !lines.length && beats.length ? "Perform the planned action without invented speech or voiceover." : "",
-    ...beats,
+    ...step2 >= 2 ? acting.performanceBeats(performance2.performance, mode, !msr, { brief: true }) : beats,
     // The model's default face is pleasant; the authored state has to be named and held (LTX guide: physical cues, state after the action).
-    worn ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : "",
+    worn && step2 < 3 ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : "",
     frames.mode === "first_last" ? sentence(`End on the given last frame${source.end ? ": " + source.end : ""}`) : source.end ? sentence(`End on ${source.end}`) : "",
     sentence(`Audio: ${source.sound ? source.sound + (/\b(music|soundtrack|score|bgm|melody|orchestral|song)\b/i.test(source.sound) ? "" : ", no music") : "no music"}`),
     acting.VIDEO_TEXT_POLICY
-  ].filter(Boolean).join(" ");
+  ].filter(Boolean);
+  const limit2 = options.maxCharacters, dropped = ["design notes and visible states", "acting fields of the beats", "expressions"];
+  let step = 0, prompt = parts(0).join(" ");
+  while (limit2 && prompt.length > limit2 && step < dropped.length) prompt = parts(++step).join(" ");
+  const fitWarnings = !limit2 || !step ? [] : [prompt.length > limit2 ? `prompt_over_limit: ${prompt.length} characters after leaving out the ${dropped.slice(0, step).join(", ")}; the adapter takes ${limit2}. Shorten the action, end or sound in shot_prompt` : `prompt_fitted: left out the ${dropped.slice(0, step).join(", ")} to fit the adapter's ${limit2} characters; the camera, action and lines are whole`];
   const foreign = nonEnglishOutsideQuotes(prompt);
   if (foreign && options.validateLanguage !== false) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks; write action and direction in English`);
   const bindings = [
@@ -116968,7 +117005,10 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
   ];
   return { prompt, performance: performance2, directionBindings: bindings.filter((b) => b.value !== void 0), warnings: [
     ...performance2.warnings,
-    ...bindings.filter((b) => b.value !== void 0 && b.via === "unmapped").map((b) => `No prompt mapping for ${b.attribute}: ${JSON.stringify(b.value)}`),
+    ...fitWarnings,
+    // An unchosen move leaves the camera to the model; on mochi_bo 29 of 33 shots of one episode went out so.
+    ...movement ? [] : ["camera_move_unset: no camera move is chosen, so the video model decides the camera \u2014 set shot_icons move (camera.static for a deliberate hold)"],
+    ...bindings.filter((b) => b.value !== void 0 && b.via === "unmapped" && b.attribute !== "move").map((b) => `No prompt mapping for ${b.attribute}: ${JSON.stringify(b.value)}`),
     ...rack && !(rack.from && rack.to) ? ["the rack focus names no subjects \u2014 give focus.from and focus.to in shot_icons"] : []
   ] };
 }
@@ -117206,19 +117246,37 @@ function planVideo(raw) {
     performanceInputs[file] = audio.sha256;
     return seconds2;
   };
-  const compiled = input.args.prompt === void 0 && video2?.promptSource ? compileVideoPrompt(shot, video2.promptSource, names, { mode, measureAudio }) : void 0;
-  const authored = compiled?.prompt ?? video2?.prompt;
-  let callArgs = input.args.prompt === void 0 && typeof authored === "string" ? { ...input.args, prompt: authored } : input.args;
-  if (silentPicture && (supportsAudioToggle || tool2 === "minimax_img2video" || tool2 === "heygen_img2video")) {
-    const soundDirection = includeEffects ? "include natural ambience for the location and sound effects from the visible actions." : "perform the planned silent action.";
-    callArgs = {
-      ...callArgs,
+  const silentSuffix = silentPicture && (supportsAudioToggle || tool2 === "minimax_img2video" || tool2 === "heygen_img2video") ? `No speech or vocalization. All visible mouths stay closed; ${includeEffects ? "include natural ambience for the location and sound effects from the visible actions." : "perform the planned silent action."}` : "";
+  const promptLimit = tool2 ? videoPromptLimit(tool2) : void 0;
+  const compileFor = (budget) => compileVideoPrompt(shot, video2.promptSource, names, {
+    mode,
+    measureAudio,
+    ...budget ? { maxCharacters: budget - (silentSuffix ? silentSuffix.length + 1 : 0) } : {}
+  });
+  let compiled = input.args.prompt === void 0 && video2?.promptSource ? compileFor(promptLimit) : void 0;
+  const withPrompt = (prompt) => {
+    const args2 = input.args.prompt === void 0 && typeof prompt === "string" ? { ...input.args, prompt } : input.args;
+    return silentSuffix ? {
+      ...args2,
       ...supportsAudioToggle ? { generateAudio: includeEffects } : {},
-      prompt: [callArgs.prompt, `No speech or vocalization. All visible mouths stay closed; ${soundDirection}`].filter(Boolean).join(" ")
-    };
-  }
+      prompt: [args2.prompt, silentSuffix].filter(Boolean).join(" ")
+    } : args2;
+  };
+  let callArgs = withPrompt(compiled?.prompt ?? video2?.prompt);
   const sourcePrompt = typeof video2?.prompt === "string" ? video2.prompt : "";
-  const direction = compiled ? { sourcePrompt, directionBindings: compiled.directionBindings, directionWarnings: compiled.warnings, performance: compiled.performance } : { sourcePrompt, directionWarnings: [input.args.prompt !== void 0 ? "Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons." : "Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time."] };
+  const boardCamera = context2.shot.visual?.camera;
+  const drift = input.args.prompt !== void 0 ? cameraDrift(String(input.args.prompt), String(boardCamera?.movement ?? "")) : null;
+  const moveSentence = () => {
+    try {
+      return video2?.promptSource ? compileVideoPrompt(shot, video2.promptSource, names, { mode, validateLanguage: false }).directionBindings.find((b) => b.attribute === "move")?.instruction ?? "" : "";
+    } catch {
+      return "";
+    }
+  };
+  const carried = drift ? moveSentence() : "";
+  const driftWarning = drift ? [`camera_move_${drift}: the board moves this shot (${String(boardCamera?.movement)}) but args.prompt ${drift === "missing" ? "names no camera move" : "holds the camera still"}; omit args.prompt to send the board prompt, which video_plan fits to the adapter limit${carried ? `, or write its camera sentence: "${carried}"` : ""}`] : [];
+  const directionOf = (c) => c ? { sourcePrompt, directionBindings: c.directionBindings, directionWarnings: c.warnings, performance: c.performance } : { sourcePrompt, directionWarnings: [input.args.prompt !== void 0 ? "Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons." : "Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.", ...driftWarning] };
+  let direction = directionOf(compiled);
   if (selection.engine === "host") {
     if (input.tool) throw new Error("model_selection_mismatch: host has no server adapter");
     const images2 = prepareVideoImages("host_external", callArgs, context2.shot, context2.episode);
@@ -117264,8 +117322,15 @@ function planVideo(raw) {
     const exact = ["duration", "durationSeconds", "numFrames", "frames", "autoDuration", "audioMaxDuration"].some((key) => bound[key] !== void 0);
     if (!exact) bound = resolveVideoDuration(tool2, { ...bound, requiredSeconds: durationPlan.requiredSeconds }).args;
   }
-  const images = prepareVideoImages(tool2, bound, shot, context2.episode);
-  const voice = prepareVideoVoice(tool2, images.args, { ...context2, shot, msrVoice: genaiMsrVoiceReferences() });
+  let images = prepareVideoImages(tool2, bound, shot, context2.episode);
+  let voice = prepareVideoVoice(tool2, images.args, { ...context2, shot, msrVoice: genaiMsrVoiceReferences() });
+  if (compiled && promptLimit && typeof voice.args.prompt === "string" && typeof bound.prompt === "string" && voice.args.prompt.length > promptLimit) {
+    compiled = compileFor(promptLimit - (voice.args.prompt.length - bound.prompt.length));
+    bound = { ...bound, prompt: withPrompt(compiled.prompt).prompt };
+    direction = directionOf(compiled);
+    images = prepareVideoImages(tool2, bound, shot, context2.episode);
+    voice = prepareVideoVoice(tool2, images.args, { ...context2, shot, msrVoice: genaiMsrVoiceReferences() });
+  }
   const args = parseVideoArgs(tool2, voice.args);
   if (durationPlan.status === "fits") {
     const fps = durationPlan.limits?.frameRate ?? 1;
@@ -119998,6 +120063,12 @@ function writeShotIcons(args) {
   const touched = new Set(args.shots.map((shot) => shot.id));
   const heldWide = shotDirection().held(shots).wideWithoutReason.filter((id) => touched.has(id));
   if (heldWide.length) notes.push({ level: "warn", where: "shot_icons", what: `wide shots held with no reason: ${heldWide.join(", ")} \u2014 the board does not show whether a move was compared there (action-direction.md step 2)` });
+  const cameraOf = (s2) => String(s2.visual?.camera?.movement ?? "").trim();
+  const videoSet = shots.filter((s2) => touched.has(String(s2.id)) && s2.shot?.render?.mode === "generated_video");
+  const unchosen = videoSet.filter((s2) => !cameraOf(s2)).map((s2) => s2.id);
+  if (unchosen.length) notes.push({ level: "warn", where: "shot_icons", what: `camera_move_unset on ${unchosen.join(", ")} \u2014 no move is chosen, so the video model decides the camera; set move (camera.static for a deliberate hold)` });
+  if (videoSet.length >= 4 && videoSet.every((s2) => /^(static|fixed|locked)/i.test(cameraOf(s2))))
+    notes.push({ level: "warn", where: "shot_icons", what: `all ${videoSet.length} video shots this call set are held \u2014 the board does not show a move compared on any; a move earns its place where the subject travels, something enters, or the beat turns while the shot runs (action-direction.md step 2)` });
   for (const copy of shotDirection().copiedReasons(shots)) if (copy.shots.some((id) => touched.has(id)))
     notes.push({ level: "warn", where: "shot_icons", what: `the same ${copy.field} stands on ${copy.shots.length} shots (${copy.shots.join(", ")}): "${copy.text.slice(0, 80)}"` });
   const result = writeOutline(args.path, win, st, shots);
@@ -120548,7 +120619,8 @@ function writeShotPrompt(args) {
   } } };
   const result = writeOutline(args.path, win, st, shots);
   const open3 = win.STORY?.authoring === "story-first" && musicTimeline().spottingReport(win).undecided.includes(shot.scene) ? [{ level: "warn", where: args.id, what: `scene ${shot.scene} has no music decision \u2014 record score or none with story_music` }] : [];
-  return { ...result, findings: [...result.findings, ...compiled.warnings.map((what) => ({ level: "warn", where: args.id, what })), ...open3], prompt };
+  const long = prompt.length > 2e3 ? [{ level: "warn", where: args.id, what: `the prompt runs ${prompt.length} characters; video_plan fits it to the adapter's limit (2,000 on the GenAI image and MSR lanes) keeping the camera, action and lines \u2014 call video_plan without args.prompt` }] : [];
+  return { ...result, findings: [...result.findings, ...compiled.warnings.map((what) => ({ level: "warn", where: args.id, what })), ...open3, ...long], prompt };
 }
 var scenarioCheckResultSchema = external_exports.object({
   files: external_exports.array(external_exports.string()),
@@ -129682,7 +129754,7 @@ Refused: missing story/characters (story_order), invalid attributes, incompatibl
           angle: enumInput(storyboardVocabulary?.ANGLES, "Camera angle icon: the camera height and tilt; ground and over have cards in techniqueCatalog guides.angle"),
           view: shotViewInput,
           backgroundView: { type: "string", enum: ["front", "back"], description: "Opening direction relative to the location sheet: front is the establishing view, back is the opposite side. Saves visual.camera.backgroundView; omitted keeps the choice, initially front. Independent of the subject view." },
-          move: { type: "object", additionalProperties: false, required: ["id"], description: "Camera move icon", properties: {
+          move: { type: "object", additionalProperties: false, required: ["id"], description: "Camera move icon. A video shot left without one is named in the result (camera_move_unset: the video model then decides the camera), as is a call that holds every video shot it sets; neither is refused", properties: {
             id: { type: "string", enum: [...cameraMoves, ...stillCameraEffects], description: "A camera.* technique with a movement, or on a still_camera cut a still effect" },
             reason: { type: "string", description: "Why the camera moves this way in this shot. Required for every move and still effect; camera.static may go without one" },
             target: { type: "string", description: 'What the move is aimed at, in English on a video cut: what it pushes toward or pans and tilts to, or the person it follows, circles or rises above \u2014 the prompt reads "pushes in toward <target>", "follows behind <target>". A blast pushback names the source of the blast, a weapon cam what the projectile flies toward, a relay one-take the fighter it starts with' },
@@ -129999,7 +130071,7 @@ TOOLS.push(
   {
     name: "video_plan",
     title: "Plan a video with saved model settings",
-    description: "Prepare an episode video request from saved model selection and explicit overrides. Compiles storyboard frames and role-labelled references into adapter inputs; returns imageBindings with dimensions, hashes and planned inclusion (host mapping stays unverified). On MSR the shot's start image takes the background slot. A call without args.prompt sends the shot's visual.video.prompt (shot_prompt). Refuses unsupported combinations. On a natively voiced shot it returns speechFit: the seconds the lines and timed actions need, the seconds requested, and when the request runs over, a warning with the shortest covering request, because the model fills the rest with silent acting. Compiles pinned character voice descriptions and Seedance voice-reference mappings, reports voiceContinuity limits without claiming a listening review, validates the final adapter payload, and pins prices and local input hashes. No media generation. Returns a plan ID, provenance and cost estimate; use video_execute under existing spending authorization. Re-plan after speech, voice or reference edits. Exact supplied-speech synchronization is separate from native voice imitation.",
+    description: "Prepare an episode video request from saved model selection and explicit overrides. Compiles storyboard frames and role-labelled references into adapter inputs; returns imageBindings with dimensions, hashes and planned inclusion (host mapping stays unverified). On MSR the shot's start image takes the background slot. A call without args.prompt compiles the shot's prompt (shot_prompt) to the adapter's own length limit, keeping the camera move, action and lines whole (prompt_fitted, prompt_over_limit); omit args.prompt. A hand-written args.prompt that drops or locks the board's camera move is named (camera_move_missing, camera_move_contradicted) with the sentence to carry, never refused. Refuses unsupported combinations. On a natively voiced shot it returns speechFit: the seconds the lines and timed actions need, the seconds requested, and when the request runs over, a warning with the shortest covering request, because the model fills the rest with silent acting. Compiles pinned character voice descriptions and Seedance voice-reference mappings, reports voiceContinuity limits without claiming a listening review, validates the final adapter payload, and pins prices and local input hashes. No media generation. Returns a plan ID, provenance and cost estimate; use video_execute under existing spending authorization. Re-plan after speech, voice or reference edits. Exact supplied-speech synchronization is separate from native voice imitation.",
     inputSchema: { ...videoContextSchema, properties: {
       ...videoContextSchema.properties,
       purpose: { type: "string", enum: ["draft", "final", "revision"], description: "Candidate purpose; does not change model, resolution or authorization." },
@@ -132087,14 +132159,20 @@ function speechVideoPlan(input, capabilities) {
   if (!mode) throw new Error("Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting");
   const saved = object5(object5(object5(scene.visual).video).promptSource);
   const design = object5(object5(scene.shot).videoDesign);
+  const astra = capabilities.provider.trim().toLowerCase() === "astra";
   const compiled = compileVideoPrompt(scene, {
     action: typeof saved.action === "string" ? saved.action : typeof design.action === "string" ? design.action : "",
     ...typeof saved.end === "string" ? { end: saved.end } : {},
     ...typeof saved.sound === "string" ? { sound: saved.sound } : {}
-  }, {}, { mode, measureAudio: (line) => mode === "native" ? null : measuredDuration(line), validateLanguage: false });
+  }, {}, {
+    mode,
+    measureAudio: (line) => mode === "native" ? null : measuredDuration(line),
+    validateLanguage: false,
+    ...astra ? { maxCharacters: ASTRA_VIDEO_MAX_PROMPT_CHARS } : {}
+  });
   const timeline = compiled.performance;
   const videoPrompt = compiled.prompt;
-  const promptLength = capabilities.provider.trim().toLowerCase() === "astra" ? { characters: videoPrompt.length, maxCharacters: ASTRA_VIDEO_MAX_PROMPT_CHARS, exceeded: videoPrompt.length > ASTRA_VIDEO_MAX_PROMPT_CHARS } : void 0;
+  const promptLength = astra ? { characters: videoPrompt.length, maxCharacters: ASTRA_VIDEO_MAX_PROMPT_CHARS, exceeded: videoPrompt.length > ASTRA_VIDEO_MAX_PROMPT_CHARS } : void 0;
   const warnings = [...compiled.warnings];
   const foreign = nonEnglishOutsideQuotes(videoPrompt);
   if (foreign) warnings.push(`videoPrompt carries authored text in another language ("${foreign}"); write the video prompt in English before video_plan, which refuses it. Only quoted dialogue keeps the video's language.`);

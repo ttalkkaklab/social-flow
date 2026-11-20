@@ -414,7 +414,9 @@ describe('scene direction', () => {
   const shotId=state.lines[0].shotId,plan=manageSpeech({path:board,action:'plan_video',shotId,capabilities:caps}).plan;
   assert.deepEqual(plan.performance.map(event=>event.kind),['dialogue','action','dialogue']);
   assert.equal(plan.durationSeconds,3);assert.equal(plan.performance[2].speechStartSeconds,2);
-  assert.match(plan.videoPrompt,/listens to the caller/);assert.match(plan.videoPrompt,/falling|downward/);
+  assert.match(plan.videoPrompt,/listens to the caller/);
+  // The supplied track carries the voice; its vocal direction stays in the TTS style, not the video prompt.
+  assert.doesNotMatch(plan.videoPrompt,/falling|downward/);
   writeFileSync(path.join(work,'cards.tsv'),'0\tphone-0.wav\t1\n');
   const {compose,duration}=require('../../skills/produce/references/compose-speech.js');
   const output=compose(work,board)[0];assert.equal(duration(output.audioPath),3);

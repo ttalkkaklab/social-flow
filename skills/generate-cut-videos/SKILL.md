@@ -106,8 +106,18 @@ just to expose a source clip. Look at each clip before
 assembly. Stop before assembly; review-cut-videos runs only when the user asks.
 
 For the shot's actual request and prior takes, read `video_status {episode}` or
-`storyboard_read.videoProduction`. Prefer omitting `args.prompt`: `shot_prompt` and
-`speech_manage plan_video` share the camera/performance compiler. Keep unresolved native
+`storyboard_read.videoProduction`. Omit `args.prompt`: `shot_prompt` and
+`speech_manage plan_video` share the camera/performance compiler, and `video_plan` compiles
+the board prompt to the adapter's own limit (2,000 characters on the GenAI image and MSR
+lanes), leaving out design notes, the beats' acting fields and then the expressions before it
+touches the camera, the action or the lines (`prompt_fitted`, or `prompt_over_limit` when the
+authored action, view or sound alone is too long — shorten those in `shot_prompt`). On
+mochi_bo (2026-11-20) 23 of the 24 shots whose board moved the camera went out with a
+hand-written prompt, and none carried the compiled move sentence; the camera stood still.
+A correction such as "no text on the picture" goes into `shot_prompt` or the negative prompt,
+not into a replacement prompt. When a prompt is written by hand anyway, `video_plan` names
+one that drops the board's move (`camera_move_missing`) or holds the camera
+(`camera_move_contradicted`) and gives the sentence to carry; it refuses neither. Keep unresolved native
 speech timing explicit. Reference `preserve`/`avoid` instructions remain attached to their
 image slots. A new take may carry `purpose`, `basedOnRequestId` and `changeNote`; use a
 unique filename. Draft/final labels do not authorize a resolution or model switch.

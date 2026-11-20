@@ -12,6 +12,8 @@ export interface PromptOptions {
   mode?: string;
   measureAudio?: (line: Record<string, unknown>) => number | null;
   validateLanguage?: boolean;
+  /** The adapter's prompt limit. Past it the prompt drops its least needed sentences first; the camera, action, lines and text policy stay. */
+  maxCharacters?: number;
 }
 export function planVideoPerformance(shot: Record<string, unknown>, options: PromptOptions = {}): PerformancePlan {
   const acting = load('../../skills/_shared/scene-acting.js') as {
@@ -34,6 +36,18 @@ export function expressionWords(shot: Record<string, unknown>, names: Record<str
     .map(([id, cue]) => `${names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id}: ${text(cue).replace(/[.\s]+$/, '')}`).join('; ');
 }
 
+/** How a hand-written prompt treats the board's camera move: 'missing' (no camera move named), 'contradicted'
+    (the camera told to hold) or null (named, or the board holds/leaves it unset). Reports only. */
+export function cameraDrift(prompt: string, movement: string): 'missing' | 'contradicted' | null {
+  if (!movement.trim() || /^(static|fixed|locked)/i.test(movement.trim())) return null;
+  const said = prompt.split(/(?<=[.!?])\s+/).filter(s => /\bcamera\b/i.test(s));
+  // A zoom "from a fixed position" still moves; "movements" of the actors is not a camera move.
+  const holds = (s: string) => !/\bzoom/i.test(s) && /\b(static|locked|lock(?:ed)?[- ]off|stays? (?:steady|still|fixed|locked|put)|does ?n[o']t move|remains? (?:still|fixed|steady)|holds? (?:a |the )?(?:static|still|fixed|steady))\b/i.test(s);
+  const moves = /\b(push(?:es|ing)?|pull(?:s|ing)?|dolly|dollies|truck(?:s|ing)?|track(?:s|ing)?|follow(?:s|ing)?|pan(?:s|ning)?|tilt(?:s|ing)?|zoom(?:s|ing)?|crane(?:s)?|pedestal|orbit(?:s|ing)?|arc(?:s)?|circles?|approach(?:es)?|glides?|rises?|lowers?|handheld|whip|moves?|travels?|sweeps?|drifts?)\b/i;
+  if (said.some(s => moves.test(s) && !holds(s))) return null;
+  return said.some(holds) ? 'contradicted' : 'missing';
+}
+
 /** Compile the current storyboard values at authoring and request time. Never writes the board. */
 export function compileVideoPrompt(shot: Record<string, unknown>, source: VideoPromptSource, names: Record<string, string> = {}, options: PromptOptions = {}) {
   const plan = object(shot.shot), visual = object(shot.visual), frames = object(visual.frames), camera = object(visual.camera);
@@ -49,7 +63,11 @@ export function compileVideoPrompt(shot: Record<string, unknown>, source: VideoP
     id: text(t.id), from: text(t.from), to: text(t.to), on: text(t.on), entry: catalogue.byId[text(t.id)],
   }));
   const movement = text(camera.movement), speed = text(camera.speed), target = text(camera.target), settle = text(camera.end);
-  const move = picked.find(t => t.entry?.fields.movement && movement.toLowerCase().startsWith(t.entry.fields.movement))?.entry;
+  // A movement written without its technique (storyboard_apply, older boards) still takes the catalogue's sentence,
+  // not the bare "Camera: dolly in." label: the longest catalogue movement the authored text opens with.
+  const move = picked.find(t => t.entry?.fields.movement && movement.toLowerCase().startsWith(t.entry.fields.movement))?.entry
+    ?? Object.values(catalogue.byId).filter(e => e.prompt && e.fields.movement && movement.toLowerCase().startsWith(e.fields.movement))
+      .sort((a, b) => b.fields.movement.length - a.fields.movement.length)[0];
   const rack = picked.find(t => t.entry?.fields.focus);
   const pace = ({ slow: 'slowly', steady: 'steadily', fast: 'quickly' } as Record<string, string>)[speed];
   const ends = travels(camera) ? ', with a short pause on the opening and closing pictures' : '';
@@ -69,13 +87,19 @@ export function compileVideoPrompt(shot: Record<string, unknown>, source: VideoP
   const motion = object(design.motion);
   const states = [...new Set((Array.isArray(motion.beats) ? motion.beats : []).map(beat => text(object(beat).state)).filter(Boolean))];
   const performance = planVideoPerformance(shot, { ...options, mode });
-  const acting = load('../../skills/_shared/scene-acting.js') as { performanceBeats(plan: unknown[], mode: string, dialogue: boolean): string[]; VIDEO_TEXT_POLICY: string };
+  const acting = load('../../skills/_shared/scene-acting.js') as { performanceBeats(plan: unknown[], mode: string, dialogue: boolean, options?: { brief?: boolean }): string[]; VIDEO_TEXT_POLICY: string };
   const beats = acting.performanceBeats(performance.performance, mode, !msr);
   const worn = expressionWords(shot, names);
   // Cast seen without a line and unnamed extras (shot_characters): the opening picture carries them, the prompt keeps them.
   const called = (id: string) => names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id;
   const seen = (Array.isArray(visual.bystanders) ? visual.bystanders : []).map(text).filter(Boolean), extras = text(visual.extras);
-  const prompt = [
+  // The action is said once: when an action beat carries the same words with its timing, the beat says it.
+  const plain = (value: unknown) => text(value).replace(/[.\s]+$/, '').toLowerCase();
+  const actionInBeat = performance.performance.some(event => event.kind === 'action' && plain(event.videoDirection || event.text) === plain(source.action));
+  // Each sentence carries the step at which a prompt over the adapter's limit lets it go: 1 the design notes and
+  // visible states, 2 the beats' acting fields (brief beats), 3 the expressions. 0 never goes — the camera move
+  // and its closing frame stay, since a prompt rewritten by hand to fit lost exactly those (mochi_bo, 2026-11-20).
+  const parts = (step: number): string[] => [
     msr ? framing : 'Start from the given first frame.',
     msr ? depthWords : '', moveWords, settle ? sentence(`Closing frame: ${settle}`) : '', focusWords,
     // A beat accent (speed ramp, impact shake) names the moment it fires on.
@@ -83,19 +107,25 @@ export function compileVideoPrompt(shot: Record<string, unknown>, source: VideoP
     viewWords || (text(camera.framing) ? sentence(`Opening composition: ${text(camera.framing)}`) : ''),
     !viewWords && camera.rear && !other.some(t => t.entry.fields.viewpoint === 'rear') ? 'View the subject from behind.' : '',
     !viewWords && camera.pov && !other.some(t => t.entry.fields.viewpoint === 'pov') ? sentence(`Point of view: ${text(camera.pov) || 'the named character'}`) : '',
-    sentence(source.action),
+    actionInBeat ? '' : sentence(source.action),
     seen.length ? sentence(`The opening picture also shows ${seen.map(called).join(' and ')}, who ${seen.length > 1 ? 'stay' : 'stays'} in the frame and never speaks`) : '',
     extras ? sentence(`Unnamed people in the frame: ${extras}`) : '',
-    ...['before', 'after', 'continuity'].map(key => text(design[key]) ? sentence(`${key}: ${text(design[key])}`) : ''),
-    ...states.filter(state => ![source.action, design.before, design.after, design.continuity].includes(state)).map(state => sentence(`Visible state: ${state}`)),
+    ...(step >= 1 ? [] : ['before', 'after', 'continuity'].map(key => text(design[key]) ? sentence(`${key}: ${text(design[key])}`) : '')),
+    ...(step >= 1 ? [] : states.filter(state => ![source.action, design.before, design.after, design.continuity].includes(state)).map(state => sentence(`Visible state: ${state}`))),
     !lines.length && beats.length ? 'Perform the planned action without invented speech or voiceover.' : '',
-    ...beats,
+    ...(step >= 2 ? acting.performanceBeats(performance.performance, mode, !msr, { brief: true }) : beats),
     // The model's default face is pleasant; the authored state has to be named and held (LTX guide: physical cues, state after the action).
-    worn ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : '',
+    worn && step < 3 ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : '',
     frames.mode === 'first_last' ? sentence(`End on the given last frame${source.end ? ': ' + source.end : ''}`) : source.end ? sentence(`End on ${source.end}`) : '',
     sentence(`Audio: ${source.sound ? source.sound + (/\b(music|soundtrack|score|bgm|melody|orchestral|song)\b/i.test(source.sound) ? '' : ', no music') : 'no music'}`),
     acting.VIDEO_TEXT_POLICY,
-  ].filter(Boolean).join(' ');
+  ].filter(Boolean);
+  const limit = options.maxCharacters, dropped = ['design notes and visible states', 'acting fields of the beats', 'expressions'];
+  let step = 0, prompt = parts(0).join(' ');
+  while (limit && prompt.length > limit && step < dropped.length) prompt = parts(++step).join(' ');
+  const fitWarnings = !limit || !step ? [] : [prompt.length > limit
+    ? `prompt_over_limit: ${prompt.length} characters after leaving out the ${dropped.slice(0, step).join(', ')}; the adapter takes ${limit}. Shorten the action, end or sound in shot_prompt`
+    : `prompt_fitted: left out the ${dropped.slice(0, step).join(', ')} to fit the adapter's ${limit} characters; the camera, action and lines are whole`];
   const foreign = nonEnglishOutsideQuotes(prompt);
   if (foreign && options.validateLanguage !== false) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks; write action and direction in English`);
   const bindings: DirectionBinding[] = [
@@ -115,8 +145,10 @@ export function compileVideoPrompt(shot: Record<string, unknown>, source: VideoP
     ...(beats.length ? [{ attribute: 'performance', value: performance, via: 'prompt' as const, instruction: beats.join('\n') }] : []),
   ];
   return { prompt, performance, directionBindings: bindings.filter(b => b.value !== undefined), warnings: [
-    ...performance.warnings,
-    ...bindings.filter(b => b.value !== undefined && b.via === 'unmapped').map(b => `No prompt mapping for ${b.attribute}: ${JSON.stringify(b.value)}`),
+    ...performance.warnings, ...fitWarnings,
+    // An unchosen move leaves the camera to the model; on mochi_bo 29 of 33 shots of one episode went out so.
+    ...(movement ? [] : ['camera_move_unset: no camera move is chosen, so the video model decides the camera — set shot_icons move (camera.static for a deliberate hold)']),
+    ...bindings.filter(b => b.value !== undefined && b.via === 'unmapped' && b.attribute !== 'move').map(b => `No prompt mapping for ${b.attribute}: ${JSON.stringify(b.value)}`),
     ...(rack && !(rack.from && rack.to) ? ['the rack focus names no subjects — give focus.from and focus.to in shot_icons'] : []),
   ] };
 }

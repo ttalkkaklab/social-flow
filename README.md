@@ -105,7 +105,12 @@ the listener stays silent. Silent shots and inner thoughts use image2video inste
 MSR; thoughts use pinned character TTS composed to the measured speech/action clock.
 See [dialogue coverage](skills/storyboard/references/dialogue-coverage.md).
 `shot_prompt` stores action separately; `video_plan` recompiles current icons and
-reports `directionBindings` for prompt, image, adapter and assembly inputs.
+reports `directionBindings` for prompt, image, adapter and assembly inputs. It compiles to
+the adapter's own prompt limit (2,000 characters on the GenAI image and MSR lanes), dropping
+design notes, the beats' acting fields and then expressions before the camera move, action or
+lines, and names a hand-written `args.prompt` that drops or locks the board's move
+(`camera_move_missing`, `camera_move_contradicted`). Board writes count unchosen moves, and
+`shot_icons` names video shots it leaves without one (`camera_move_unset`).
 
 Motion-graphic shots now persist `shot.motionGraphic`: a semantic type, viewer intent,
 selection reason, evidence, visual direction and timing intent. The shared

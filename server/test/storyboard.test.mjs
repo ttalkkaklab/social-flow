@@ -1171,6 +1171,13 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.match(shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'The fingers tighten.' }).prompt, /right profile.*facing camera-right/);
     assert.throws(() => shotIconsSchema.parse({ path: dir, shots: [{ id: 's0001', view: { ...view, mode: 'pov' } }] }), /viewerId/);
   });
+  it('shot_icons names video shots it leaves without a camera move, and never refuses them', () => {
+    const { dir } = pictureBoard();
+    const unset = icons(dir).findings.filter((f) => /camera_move_unset/.test(f.what));
+    assert.deepEqual(unset.map((f) => f.what.split(' — ')[0]), ['camera_move_unset on s0002']);
+    writeShotIcons({ path: dir, shots: [{ id: 's0002', move: { id: 'camera.static' } }] });
+    assert.equal(readBoard(dir).win.SCENES[1].visual.camera.movement, 'static');
+  });
   it('a shot_icons call with both why and view keeps both reasons', () => {
     const { dir } = pictureBoard();
     icons(dir);
