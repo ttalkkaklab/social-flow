@@ -82,7 +82,7 @@ function boardClock(board, dir, channel) {
     let status = effect.atSeconds == null ? 'planned' : effect.audience.timingBasis === currentTimingBasis ? 'placed' : 'stale';
     if (status === 'placed') { try { bounds(shotId, effect); } catch { status = 'stale'; } }
     return { shotId, id: effect.id, intent: effect.audience.intent, trigger: effect.trigger, sfx: effect.sfx,
-      atSeconds: effect.atSeconds, end: effect.end, caseId: effect.audience.caseId, status, currentTimingBasis, listening: 'not_reviewed' };
+      atSeconds: effect.atSeconds, end: effect.end, caseId: effect.audience.caseId, status, currentTimingBasis, placedTimingBasis: effect.audience.timingBasis, listening: 'not_reviewed' };
   }
   return { basis, bounds, row };
 }

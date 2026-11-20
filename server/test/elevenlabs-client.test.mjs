@@ -1,7 +1,7 @@
 /** ElevenLabs v4 schema, payload and mocked provider contracts. No paid network calls. */
 
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
@@ -465,5 +465,9 @@ it('shares a paid channel asset once and preserves uncertain submissions across 
     assert.equal((await generateElevenLabsSoundEffect(lost)).submitted,true);
     assert.equal((await generateElevenLabsSoundEffect(lost)).submitted,false);
     assert.equal(calls,2);
+    writeFileSync(path.join(request.outputPath,'incomplete.wav'),'unverified bytes');
+    const incomplete=await generateElevenLabsSoundEffect({...request,filename:'incomplete.wav'});
+    assert.match(incomplete.error,/Incomplete catalog asset/);
+    assert.equal(incomplete.submitted,false);assert.equal(calls,2);
   } finally {globalThis.fetch=savedFetch;config.elevenLabsApiKey=savedKey;rmSync(dir,{recursive:true,force:true});}
 });

@@ -296,7 +296,7 @@ test('audience preview and final mix preserve the source and place only selected
     const shots = ['s0001','s0002'].map(id => ({id,type:'points',duration:2,narration:[],visual:{clip:source},
       edit:{in:.8,out:2.8},sound:{audioSource:'video',effects:[]}}));
     const make = (id,sfx,atSeconds) => ({id,sfx,atSeconds,delivery:'post',description:'synth',trigger:'shoulders lower',audience:{intent:'relief'}});
-    const span = {...make('release','drone',1.4),end:{shotId:'s0002',atSeconds:.5},fadeOutSeconds:.15};
+    const span = {...make('release','drone',2.2-.8),end:{shotId:'s0002',atSeconds:.5},fadeOutSeconds:.15};
     const point = make('answer','chirp',.45);
     shots[0].sound.effects=[span]; shots[1].sound.effects=[point,{id:'foley',sfx:'foley',atSeconds:.45,delivery:'post'}];
     const win={SCENES:shots,MUSIC:{$timeline:[]}}, clock=require('../../skills/storyboard/references/audience-effects.js').boardClock(win,board);
@@ -338,5 +338,32 @@ test('audience preview and final mix preserve the source and place only selected
     const shipped=samples('reel-fast.mp4');
     assert.ok(band(shipped,1.06,900,.02)<.002 && band(shipped,1.15,900,.02)>.008,'onset in shipped audio within one frame');
     assert.ok(band(shipped,2.04,900,.02)<.002 && band(shipped,2.04,1400,.02)>.008,'shipped fade leaves the other cue audible');
+
+    // Re-edit the same board: a one-second insert interrupts a natural tail.
+    const insert=path.join(work,'insert.mp4');
+    ff(['-f','lavfi','-i','color=blue:size=128x224:rate=25:duration=1','-f','lavfi','-i','sine=frequency=420:duration=1:sample_rate=48000',
+      '-c:v','libx264','-c:a','aac','-shortest',insert]);
+    shots.splice(1,0,{id:'s0003',type:'broll',after:0,duration:1,visual:{clip:insert}});
+    delete span.end;delete span.fadeOutSeconds;
+    point.atSeconds=.45678;
+    const updated=require('../../skills/storyboard/references/audience-effects.js').boardClock(win,board);
+    span.audience.timingBasis=updated.basis('s0001',span);
+    point.audience.timingBasis=updated.basis('s0002',point);
+    writeFileSync(path.join(board,'scenes.js'),Object.entries(win).map(([k,v])=>'window.'+k+'='+JSON.stringify(v)+';').join('\n'));
+    writeFileSync(path.join(work,'cards.tsv'),[0,2].map(i=>i+'\tsource.mp4\t1\tnone').join('\n')+'\n');
+    writeFileSync(path.join(work,'segs.tsv'),[0,2].map(i=>i+'\t0\t'+source+'\t\t').join('\n')+'\n');
+    const runPass=(name,args)=>{
+      const pass=spawnSync('bash',[path.join(ref,name),work,...args],{encoding:'utf8',timeout:40000,maxBuffer:8*1024*1024,
+        env:{...process.env,W:'128',H:'224',OUTRO:'0',FPS:'25',COVER_TS:'1'}});
+      assert.equal(pass.status,0,pass.stdout+pass.stderr);
+    };
+    runPass('build-reel.sh',[board]);runPass('splice-clip.sh',[insert,'2']);runPass('speedup.sh',['1.25']);
+    const withInsert=JSON.parse(readFileSync(path.join(work,'delivery-proof.json'))).audienceEffects;
+    assert.equal(withInsert[0].bodyEndSeconds,2);assert.ok(Math.abs(withInsert[0].deliveryEndSeconds-1.6)<1e-8);
+    assert.ok(Math.abs(withInsert[1].deliveryStartSeconds-(3+.45678)/1.25)<.04);
+    const spliced=samples('reel-fast.mp4');
+    assert.ok(band(spliced,1.7,420)>.01 && band(spliced,1.7,900)<.002,'insert keeps its own sound and releases the drone');
+    assert.ok(band(spliced,withInsert[1].deliveryStartSeconds+.04,1400)>.008,'next reaction uses the measured insert clock');
+
   } finally {rmSync(dir,{recursive:true,force:true});}
 });

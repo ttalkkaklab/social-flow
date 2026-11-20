@@ -9,7 +9,8 @@ function main([mode, rate, seconds, boardFile, from, to]) {
   const rows = fs.readFileSync('work/edit-timeline.tsv','utf8').trim().split('\n').map(line => line.split('\t'));
   if (mode === 'resolve') {
     const plan = JSON.parse(fs.readFileSync('sfx-spans.json', 'utf8'));
-    const { anchorTime } = renderedClock(plan, rows, fps, length);
+    // The sound editor can return a sub-millisecond trim. anchorTime snaps it to a PCM sample.
+    const { anchorTime } = renderedClock(plan, rows, fps, length, t => Number.isFinite(t) && t >= 0);
     const resolved = plan.spans.map(span => {
       const start = anchorTime(span.start);
       if (start >= anchorTime({ ...span.start, atSeconds: 'end' })) throw new Error('audience_span_invalid: start at or beyond the rendered cut end: ' + span.id);

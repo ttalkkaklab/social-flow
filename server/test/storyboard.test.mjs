@@ -1925,7 +1925,13 @@ it('plans, retimes and removes only the audience event; take bytes and end shots
   applyStoryboard(storyboardApplySchema.parse({path:dir,set:{structure:structure([scene(1),scene(2)]),shots}}));
   const read = (extra = {}) => readStoryboard(storyboardReadSchema.parse({path:dir,includeTechniques:false,...extra}));
   const apply = (extra) => applyStoryboard(storyboardApplySchema.parse({path:dir,expectedSha256:readBoard(dir).sha256,...extra}));
+  const source=readFileSync(new URL('../../skills/storyboard/references/audience-sound/comedy.md',import.meta.url),'utf8');
+  const example=source.split('\n').find(line=>line.startsWith('| 063 |'));
+  assert.match(example,/실수/);
   const key = {shotId:'s0001',id:'late'}, plan = {...key,op:'plan',sfx:'bend',intent:'embarrassment',trigger:'smile falls',description:'dry descending pluck',caseId:'063'};
+  const raw = {...shots[0],sound:{effects:[{id:'late',audience:{intent:plan.intent},delivery:'auto'}]}};
+  assert.equal(shotSchema.parse(raw).sound.effects[0].delivery,'post');
+  raw.sound.effects[0].delivery='input';assert.throws(()=>shotSchema.parse(raw),/audience_delivery_conflict/);
   const data = {sfxEntries:{bend:{asset:'bend'}},audienceEffects:[plan]};
   const initial = readBoard(dir).sha256;
   assert.equal(apply({...data,dryRun:true}).written,false);

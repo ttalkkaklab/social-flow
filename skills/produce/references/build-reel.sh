@@ -1382,14 +1382,16 @@ render_sfx() {
           'BEGIN{g=t-m; h=c-pk; if(g>h)g=h; printf "%.2f", g}')
     say "· sfx $(basename "$SP") @${ST}s: max momentary ${SM} LUFS / ${SPK} dBTP → ${SG} dB (${SSEP} LU under voice)"
     SI+=(-i "$SP")
+    DELAY=$(awk -v s="$ST" 'BEGIN{printf "%d", s*1000}')
     SHAPE=""
     if [ -n "${LENGTH:-}" ]; then
+      DELAY=$(awk -v s="$ST" 'BEGIN{printf "%.0fS", s*48000}')
       SHAPE="atrim=duration=$LENGTH,"
       if [ "${FADE:-0}" != 0 ]; then
         SHAPE+="afade=t=out:st=$(awk -v l="$LENGTH" -v f="$FADE" 'BEGIN{printf "%.9f",l-f}'):d=$FADE,"
       fi
     fi
-    SFC+="[$SN2:a]aresample=48000,aformat=channel_layouts=mono,${SHAPE}volume=${SG}dB,adelay=$(awk -v s="$ST" 'BEGIN{printf "%d", s*1000}'):all=1,atrim=0:$NT[x$SN2];"
+    SFC+="[$SN2:a]aresample=48000,aformat=channel_layouts=mono,${SHAPE}volume=${SG}dB,adelay=${DELAY}:all=1,atrim=0:$NT[x$SN2];"
     SMIX+="[x$SN2]"; SN2=$((SN2+1))
   done < "$list"
   ffmpeg -y -v error "${SI[@]}" -filter_complex \

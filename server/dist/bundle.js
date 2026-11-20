@@ -118292,7 +118292,20 @@ var shotSchema = external_exports.object({
     }).passthrough().optional(),
     render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: external_exports.string().optional(), reason: external_exports.string().optional() }).passthrough().optional()
   }).passthrough().optional(),
-  sound: external_exports.record(external_exports.unknown()).optional()
+  sound: external_exports.record(external_exports.unknown()).transform((sound, ctx) => {
+    if (!Array.isArray(sound.effects) || !sound.effects.some((e2) => e2?.audience)) return sound;
+    return { ...sound, effects: sound.effects.map((e2, i2) => {
+      if (!e2?.audience) return e2;
+      if (e2.delivery !== void 0 && !["auto", "post"].includes(e2.delivery)) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["effects", i2, "delivery"],
+          message: "audience_delivery_conflict: " + e2.id + " belongs in post"
+        });
+      }
+      return { ...e2, delivery: "post" };
+    }) };
+  }).optional()
 }).passthrough();
 var readLevelSchema = external_exports.enum(["outline", "scenes", "shots", "full", "direction"]);
 var audienceId = external_exports.string().trim().min(1);

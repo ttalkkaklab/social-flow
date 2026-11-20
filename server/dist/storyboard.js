@@ -231,7 +231,19 @@ export const shotSchema = z
     })
         .passthrough()
         .optional(),
-    sound: z.record(z.unknown()).optional(),
+    sound: z.record(z.unknown()).transform((sound, ctx) => {
+        if (!Array.isArray(sound.effects) || !sound.effects.some(e => e?.audience))
+            return sound;
+        return { ...sound, effects: sound.effects.map((e, i) => {
+                if (!e?.audience)
+                    return e;
+                if (e.delivery !== undefined && !['auto', 'post'].includes(e.delivery)) {
+                    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['effects', i, 'delivery'],
+                        message: 'audience_delivery_conflict: ' + e.id + ' belongs in post' });
+                }
+                return { ...e, delivery: 'post' };
+            }) };
+    }).optional(),
 })
     .passthrough();
 export const readLevelSchema = z.enum(['outline', 'scenes', 'shots', 'full', 'direction']);

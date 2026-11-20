@@ -86,7 +86,7 @@ function compileTimeline(music, shots, cueFile) {
     }) };
 }
 
-function renderedClock(plan, rows, fps, length) {
+function renderedClock(plan, rows, fps, length, validOffset = seconds) {
   if (plan.version !== 1 || !Array.isArray(plan.spans) || !Array.isArray(plan.shots) || !Number.isFinite(fps) || fps <= 0 || !Number.isFinite(length) || length <= 0)
     throw new Error('Invalid music timeline or rendered clock');
   const byCard = new Map();
@@ -104,7 +104,7 @@ function renderedClock(plan, rows, fps, length) {
     const clock = shot && byCard.get(shot.card);
     if (!clock) throw new Error(`Music anchor ${anchor.shotId} is missing from the rendered edit`);
     const offset = anchor.atSeconds === 'end' ? clock.duration : anchor.atSeconds;
-    if (!seconds(offset) && anchor.atSeconds !== 'end') throw new Error('Invalid music anchor offset');
+    if (!validOffset(offset) && anchor.atSeconds !== 'end') throw new Error('Invalid timeline anchor offset');
     if (offset > clock.duration + 1e-9) throw new Error(`Music anchor ${anchor.shotId} exceeds its actual rendered duration`);
     return Math.round((clock.start + offset) * 48000) / 48000;
   }
