@@ -4035,3 +4035,11 @@ in framing. Editing a selection does not certify or regenerate existing media.
 ## Motion graphic plan (version 1)
 
 Optional `shot.motionGraphic` records the semantic type independently of `render.mode`. New motion-graphic shots follow [motion-graphics.md](motion-graphics.md). The shared catalog and MCP storyboard input expose type, intent, reason, evidence, style, beats and content. `motion_html` executes seekable abstract motion scenes; it does not replace physical mesh or recorded-evidence routes. Existing boards without this field retain their previous behavior.
+
+### Audience-only effects
+
+`sound.effects[].audience` stores `intent`, optional `caseId` (001–120), `release`, and the
+observed `timingBasis`. The event has a stable `id`, `sfx`, `trigger` and `description`, with
+`delivery:"post"`. Optional `end:{shotId,atSeconds}` accepts a number or `"end"`;
+`fadeOutSeconds` fades that event at its end. Plan, place and remove through `storyboard_apply`.
+See [situations](audience-sound/index.md) and [production timing](../../produce/references/video-sound.md#audience-effects).

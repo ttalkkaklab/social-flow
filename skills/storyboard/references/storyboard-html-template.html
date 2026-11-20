@@ -5213,6 +5213,15 @@ window.STORYBOARD_READY = (async function () {
     });
     // Music tag — this shot changes, drops or empties the bed (scenes-schema §music cues)
     var mus = s.sound || {};
+    (Array.isArray(mus.effects) ? mus.effects : []).filter(function (e) { return e && e.audience; }).forEach(function (e) {
+      var snapshot = (window.AUDIENCE_CUES || []).find(function (r) { return r.shotId === s.id && r.id === e.id; });
+      var states = LANG === "ko" ? { planned: "시점 미정", placed: "배치됨", stale: "재배치 필요", unknown: "편집 기준 미확인" } :
+        { planned: "planned", placed: "placed", stale: "retime", unknown: "refresh to check" };
+      var timing = typeof e.atSeconds === "number" ? e.atSeconds + "s" : "";
+      var status = snapshot && snapshot.atSeconds === e.atSeconds && snapshot.trigger === e.trigger && snapshot.placedTimingBasis === e.audience.timingBasis && JSON.stringify(snapshot.end) === JSON.stringify(e.end) ? snapshot.status : (timing ? "unknown" : "planned");
+      h += '<span class="scene-beat beat-music">' + esc([LANG === "ko" ? "관객용 효과음" : "Audience cue", e.sfx,
+        e.audience.intent, e.trigger, timing, (LANG === "ko" ? "페이지 갱신 시점 · " : "At export · ") + states[status]].filter(Boolean).join(" · ")) + "</span>";
+    });
     if (mus.cue) h += '<span class="scene-beat beat-music">' + esc(T.musicCue(mus.cue)) + "</span>";
     if (mus.drop) h += '<span class="scene-beat beat-music">' + esc(T.musicDrop) + "</span>";
     else if (Array.isArray(mus.silence) && mus.silence.length) h += '<span class="scene-beat beat-music">' + esc(T.musicSilence) + "</span>";

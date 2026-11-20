@@ -16,6 +16,10 @@ const effectSchema = z.object({
     sfx: z.string().min(1).optional(),
     atSeconds: z.number().finite().nonnegative().optional(),
     separationLu: z.number().finite().min(0).max(30).optional(),
+    audience: z.object({ intent: z.string().trim().min(1), caseId: z.string().optional(), release: z.string().optional(),
+        timingBasis: z.string().optional() }).strict().optional(),
+    end: z.object({ shotId: z.string().min(1), atSeconds: z.union([z.number().finite().nonnegative(), z.literal('end')]) }).strict().optional(),
+    fadeOutSeconds: z.number().finite().nonnegative().optional(),
     intensity: z.enum(['subtle', 'normal', 'strong']).optional(),
 }).strict();
 const schemas = {
@@ -37,6 +41,10 @@ export function prepareVideoSound(tool, input, sound = {}) {
         throw new Error('Unsupported sound adapter: ' + tool);
     z.string().min(1).parse(input.prompt);
     const effects = z.array(effectSchema).parse(sound.effects ?? []);
+    for (const effect of effects)
+        if (effect.audience && effect.description &&
+            String(input.prompt).toLowerCase().includes(effect.description.toLowerCase()))
+            throw new Error('audience_delivery_conflict: remove the post cue description from the video prompt');
     const ids = effects.flatMap(effect => effect.id ? [effect.id] : []);
     if (new Set(ids).size !== ids.length)
         throw new Error('Effect ids must be unique within the shot');
@@ -56,7 +64,9 @@ export function prepareVideoSound(tool, input, sound = {}) {
     }
     const resolved = effects.map(effect => {
         // An existing asset cue is a legacy post effect. Only new described intent opts into auto.
-        const requested = effect.delivery ?? (effect.sfx ? 'post' : 'auto');
+        if (effect.audience && (effect.delivery === 'input' || effect.delivery === 'native'))
+            throw new Error('audience_delivery_conflict: ' + effect.id + ' belongs in post');
+        const requested = effect.audience ? 'post' : effect.delivery ?? (effect.sfx ? 'post' : 'auto');
         const delivery = requested === 'auto'
             ? nativeAudio && input.generateAudio !== false && sound.audioSource !== 'speech' ? 'native' : 'post'
             : requested;

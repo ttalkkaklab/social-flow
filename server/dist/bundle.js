@@ -312,7 +312,7 @@ var require_p_retry = __commonJS({
       return error2;
     };
     var isNetworkError = (errorMessage) => networkErrorMsgs.includes(errorMessage);
-    var pRetry2 = (input, options) => new Promise((resolve13, reject) => {
+    var pRetry2 = (input, options) => new Promise((resolve14, reject) => {
       options = {
         onFailedAttempt: () => {
         },
@@ -322,7 +322,7 @@ var require_p_retry = __commonJS({
       const operation = retry2.operation(options);
       operation.attempt(async (attemptNumber) => {
         try {
-          resolve13(await input(attemptNumber));
+          resolve14(await input(attemptNumber));
         } catch (error2) {
           if (!(error2 instanceof Error)) {
             reject(new TypeError(`Non-error was thrown: "${error2}". You should only throw errors.`));
@@ -856,8 +856,8 @@ var require_retry3 = __commonJS({
       }
       const delay2 = getNextRetryDelay(config3);
       err4.config.retryConfig.currentRetryAttempt += 1;
-      const backoff = config3.retryBackoff ? config3.retryBackoff(err4, delay2) : new Promise((resolve13) => {
-        setTimeout(resolve13, delay2);
+      const backoff = config3.retryBackoff ? config3.retryBackoff(err4, delay2) : new Promise((resolve14) => {
+        setTimeout(resolve14, delay2);
       });
       if (config3.onRetryAttempt) {
         await config3.onRetryAttempt(err4);
@@ -1633,8 +1633,8 @@ var require_helpers = __commonJS({
     function req(url, opts = {}) {
       const href = typeof url === "string" ? url : url.href;
       const req2 = (href.startsWith("https:") ? https2 : http4).request(url, opts);
-      const promise = new Promise((resolve13, reject) => {
-        req2.once("response", resolve13).once("error", reject).end();
+      const promise = new Promise((resolve14, reject) => {
+        req2.once("response", resolve14).once("error", reject).end();
       });
       req2.then = promise.then.bind(promise);
       return req2;
@@ -1811,7 +1811,7 @@ var require_parse_proxy_response = __commonJS({
     var debug_1 = __importDefault(require_src());
     var debug = (0, debug_1.default)("https-proxy-agent:parse-proxy-response");
     function parseProxyResponse(socket) {
-      return new Promise((resolve13, reject) => {
+      return new Promise((resolve14, reject) => {
         let buffersLength = 0;
         const buffers = [];
         function read4() {
@@ -1877,7 +1877,7 @@ var require_parse_proxy_response = __commonJS({
           }
           debug("got proxy server response: %o %o", firstLine, headers);
           cleanup();
-          resolve13({
+          resolve14({
             connect: {
               statusCode,
               statusText,
@@ -2119,7 +2119,7 @@ var require_ponyfill_es2018 = __commonJS({
         return new originalPromise(executor);
       }
       function promiseResolvedWith(value) {
-        return newPromise((resolve13) => resolve13(value));
+        return newPromise((resolve14) => resolve14(value));
       }
       function promiseRejectedWith(reason) {
         return originalPromiseReject(reason);
@@ -2289,8 +2289,8 @@ var require_ponyfill_es2018 = __commonJS({
         return new TypeError("Cannot " + name + " a stream using a released reader");
       }
       function defaultReaderClosedPromiseInitialize(reader) {
-        reader._closedPromise = newPromise((resolve13, reject) => {
-          reader._closedPromise_resolve = resolve13;
+        reader._closedPromise = newPromise((resolve14, reject) => {
+          reader._closedPromise_resolve = resolve14;
           reader._closedPromise_reject = reject;
         });
       }
@@ -2464,8 +2464,8 @@ var require_ponyfill_es2018 = __commonJS({
           }
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve13, reject) => {
-            resolvePromise = resolve13;
+          const promise = newPromise((resolve14, reject) => {
+            resolvePromise = resolve14;
             rejectPromise = reject;
           });
           const readRequest = {
@@ -2570,8 +2570,8 @@ var require_ponyfill_es2018 = __commonJS({
           const reader = this._reader;
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve13, reject) => {
-            resolvePromise = resolve13;
+          const promise = newPromise((resolve14, reject) => {
+            resolvePromise = resolve14;
             rejectPromise = reject;
           });
           const readRequest = {
@@ -3590,8 +3590,8 @@ var require_ponyfill_es2018 = __commonJS({
           }
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve13, reject) => {
-            resolvePromise = resolve13;
+          const promise = newPromise((resolve14, reject) => {
+            resolvePromise = resolve14;
             rejectPromise = reject;
           });
           const readIntoRequest = {
@@ -3903,10 +3903,10 @@ var require_ponyfill_es2018 = __commonJS({
           wasAlreadyErroring = true;
           reason = void 0;
         }
-        const promise = newPromise((resolve13, reject) => {
+        const promise = newPromise((resolve14, reject) => {
           stream._pendingAbortRequest = {
             _promise: void 0,
-            _resolve: resolve13,
+            _resolve: resolve14,
             _reject: reject,
             _reason: reason,
             _wasAlreadyErroring: wasAlreadyErroring
@@ -3923,9 +3923,9 @@ var require_ponyfill_es2018 = __commonJS({
         if (state === "closed" || state === "errored") {
           return promiseRejectedWith(new TypeError(`The stream (in ${state} state) is not in the writable state and cannot be closed`));
         }
-        const promise = newPromise((resolve13, reject) => {
+        const promise = newPromise((resolve14, reject) => {
           const closeRequest = {
-            _resolve: resolve13,
+            _resolve: resolve14,
             _reject: reject
           };
           stream._closeRequest = closeRequest;
@@ -3938,9 +3938,9 @@ var require_ponyfill_es2018 = __commonJS({
         return promise;
       }
       function WritableStreamAddWriteRequest(stream) {
-        const promise = newPromise((resolve13, reject) => {
+        const promise = newPromise((resolve14, reject) => {
           const writeRequest = {
-            _resolve: resolve13,
+            _resolve: resolve14,
             _reject: reject
           };
           stream._writeRequests.push(writeRequest);
@@ -4556,8 +4556,8 @@ var require_ponyfill_es2018 = __commonJS({
         return new TypeError("Cannot " + name + " a stream using a released writer");
       }
       function defaultWriterClosedPromiseInitialize(writer) {
-        writer._closedPromise = newPromise((resolve13, reject) => {
-          writer._closedPromise_resolve = resolve13;
+        writer._closedPromise = newPromise((resolve14, reject) => {
+          writer._closedPromise_resolve = resolve14;
           writer._closedPromise_reject = reject;
           writer._closedPromiseState = "pending";
         });
@@ -4593,8 +4593,8 @@ var require_ponyfill_es2018 = __commonJS({
         writer._closedPromiseState = "resolved";
       }
       function defaultWriterReadyPromiseInitialize(writer) {
-        writer._readyPromise = newPromise((resolve13, reject) => {
-          writer._readyPromise_resolve = resolve13;
+        writer._readyPromise = newPromise((resolve14, reject) => {
+          writer._readyPromise_resolve = resolve14;
           writer._readyPromise_reject = reject;
         });
         writer._readyPromiseState = "pending";
@@ -4681,7 +4681,7 @@ var require_ponyfill_es2018 = __commonJS({
         source._disturbed = true;
         let shuttingDown = false;
         let currentWrite = promiseResolvedWith(void 0);
-        return newPromise((resolve13, reject) => {
+        return newPromise((resolve14, reject) => {
           let abortAlgorithm;
           if (signal !== void 0) {
             abortAlgorithm = () => {
@@ -4826,7 +4826,7 @@ var require_ponyfill_es2018 = __commonJS({
             if (isError) {
               reject(error2);
             } else {
-              resolve13(void 0);
+              resolve14(void 0);
             }
             return null;
           }
@@ -5107,8 +5107,8 @@ var require_ponyfill_es2018 = __commonJS({
         let branch1;
         let branch2;
         let resolveCancelPromise;
-        const cancelPromise = newPromise((resolve13) => {
-          resolveCancelPromise = resolve13;
+        const cancelPromise = newPromise((resolve14) => {
+          resolveCancelPromise = resolve14;
         });
         function pullAlgorithm() {
           if (reading) {
@@ -5199,8 +5199,8 @@ var require_ponyfill_es2018 = __commonJS({
         let branch1;
         let branch2;
         let resolveCancelPromise;
-        const cancelPromise = newPromise((resolve13) => {
-          resolveCancelPromise = resolve13;
+        const cancelPromise = newPromise((resolve14) => {
+          resolveCancelPromise = resolve14;
         });
         function forwardReaderError(thisReader) {
           uponRejection(thisReader._closedPromise, (r2) => {
@@ -5980,8 +5980,8 @@ var require_ponyfill_es2018 = __commonJS({
           const writableHighWaterMark = ExtractHighWaterMark(writableStrategy, 1);
           const writableSizeAlgorithm = ExtractSizeAlgorithm(writableStrategy);
           let startPromise_resolve;
-          const startPromise = newPromise((resolve13) => {
-            startPromise_resolve = resolve13;
+          const startPromise = newPromise((resolve14) => {
+            startPromise_resolve = resolve14;
           });
           InitializeTransformStream(this, startPromise, writableHighWaterMark, writableSizeAlgorithm, readableHighWaterMark, readableSizeAlgorithm);
           SetUpTransformStreamDefaultControllerFromTransformer(this, transformer);
@@ -6074,8 +6074,8 @@ var require_ponyfill_es2018 = __commonJS({
         if (stream._backpressureChangePromise !== void 0) {
           stream._backpressureChangePromise_resolve();
         }
-        stream._backpressureChangePromise = newPromise((resolve13) => {
-          stream._backpressureChangePromise_resolve = resolve13;
+        stream._backpressureChangePromise = newPromise((resolve14) => {
+          stream._backpressureChangePromise_resolve = resolve14;
         });
         stream._backpressure = backpressure;
       }
@@ -6243,8 +6243,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const readable = stream._readable;
-        controller._finishPromise = newPromise((resolve13, reject) => {
-          controller._finishPromise_resolve = resolve13;
+        controller._finishPromise = newPromise((resolve14, reject) => {
+          controller._finishPromise_resolve = resolve14;
           controller._finishPromise_reject = reject;
         });
         const cancelPromise = controller._cancelAlgorithm(reason);
@@ -6270,8 +6270,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const readable = stream._readable;
-        controller._finishPromise = newPromise((resolve13, reject) => {
-          controller._finishPromise_resolve = resolve13;
+        controller._finishPromise = newPromise((resolve14, reject) => {
+          controller._finishPromise_resolve = resolve14;
           controller._finishPromise_reject = reject;
         });
         const flushPromise = controller._flushAlgorithm();
@@ -6301,8 +6301,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const writable = stream._writable;
-        controller._finishPromise = newPromise((resolve13, reject) => {
-          controller._finishPromise_resolve = resolve13;
+        controller._finishPromise = newPromise((resolve14, reject) => {
+          controller._finishPromise_resolve = resolve14;
           controller._finishPromise_reject = reject;
         });
         const cancelPromise = controller._cancelAlgorithm(reason);
@@ -8253,7 +8253,7 @@ import zlib from "node:zlib";
 import Stream2, { PassThrough as PassThrough2, pipeline as pump } from "node:stream";
 import { Buffer as Buffer3 } from "node:buffer";
 async function fetch2(url, options_) {
-  return new Promise((resolve13, reject) => {
+  return new Promise((resolve14, reject) => {
     const request = new Request2(url, options_);
     const { parsedURL, options } = getNodeRequestOptions(request);
     if (!supportedSchemas.has(parsedURL.protocol)) {
@@ -8262,7 +8262,7 @@ async function fetch2(url, options_) {
     if (parsedURL.protocol === "data:") {
       const data = dist_default(request.url);
       const response2 = new Response2(data, { headers: { "Content-Type": data.typeFull } });
-      resolve13(response2);
+      resolve14(response2);
       return;
     }
     const send = (parsedURL.protocol === "https:" ? https : http2).request;
@@ -8384,7 +8384,7 @@ async function fetch2(url, options_) {
             if (responseReferrerPolicy) {
               requestOptions2.referrerPolicy = responseReferrerPolicy;
             }
-            resolve13(fetch2(new Request2(locationURL, requestOptions2)));
+            resolve14(fetch2(new Request2(locationURL, requestOptions2)));
             finalize();
             return;
           }
@@ -8417,7 +8417,7 @@ async function fetch2(url, options_) {
       const codings = headers.get("Content-Encoding");
       if (!request.compress || request.method === "HEAD" || codings === null || response_.statusCode === 204 || response_.statusCode === 304) {
         response = new Response2(body, responseOptions);
-        resolve13(response);
+        resolve14(response);
         return;
       }
       const zlibOptions = {
@@ -8431,7 +8431,7 @@ async function fetch2(url, options_) {
           }
         });
         response = new Response2(body, responseOptions);
-        resolve13(response);
+        resolve14(response);
         return;
       }
       if (codings === "deflate" || codings === "x-deflate") {
@@ -8455,12 +8455,12 @@ async function fetch2(url, options_) {
             });
           }
           response = new Response2(body, responseOptions);
-          resolve13(response);
+          resolve14(response);
         });
         raw.once("end", () => {
           if (!response) {
             response = new Response2(body, responseOptions);
-            resolve13(response);
+            resolve14(response);
           }
         });
         return;
@@ -8472,11 +8472,11 @@ async function fetch2(url, options_) {
           }
         });
         response = new Response2(body, responseOptions);
-        resolve13(response);
+        resolve14(response);
         return;
       }
       response = new Response2(body, responseOptions);
-      resolve13(response);
+      resolve14(response);
     });
     writeToStream(request_, request).catch(reject);
   });
@@ -14544,7 +14544,7 @@ var require_jwtaccess = __commonJS({
         }
       }
       fromStreamAsync(inputStream) {
-        return new Promise((resolve13, reject) => {
+        return new Promise((resolve14, reject) => {
           if (!inputStream) {
             reject(new Error("Must pass in a stream containing the service account auth settings."));
           }
@@ -14553,7 +14553,7 @@ var require_jwtaccess = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              resolve13();
+              resolve14();
             } catch (err4) {
               reject(err4);
             }
@@ -14792,7 +14792,7 @@ var require_jwtclient = __commonJS({
         }
       }
       fromStreamAsync(inputStream) {
-        return new Promise((resolve13, reject) => {
+        return new Promise((resolve14, reject) => {
           if (!inputStream) {
             throw new Error("Must pass in a stream containing the service account auth settings.");
           }
@@ -14801,7 +14801,7 @@ var require_jwtclient = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              resolve13();
+              resolve14();
             } catch (e2) {
               reject(e2);
             }
@@ -14934,7 +14934,7 @@ var require_refreshclient = __commonJS({
         }
       }
       async fromStreamAsync(inputStream) {
-        return new Promise((resolve13, reject) => {
+        return new Promise((resolve14, reject) => {
           if (!inputStream) {
             return reject(new Error("Must pass in a stream containing the user refresh token."));
           }
@@ -14943,7 +14943,7 @@ var require_refreshclient = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              return resolve13();
+              return resolve14();
             } catch (err4) {
               return reject(err4);
             }
@@ -16776,7 +16776,7 @@ var require_pluggable_auth_handler = __commonJS({
        * @return A promise that resolves with the executable response.
        */
       retrieveResponseFromExecutable(envMap) {
-        return new Promise((resolve13, reject) => {
+        return new Promise((resolve14, reject) => {
           const child = childProcess.spawn(this.commandComponents[0], this.commandComponents.slice(1), {
             env: { ...process.env, ...Object.fromEntries(envMap) }
           });
@@ -16798,7 +16798,7 @@ var require_pluggable_auth_handler = __commonJS({
               try {
                 const responseJson2 = JSON.parse(output2);
                 const response = new executable_response_1.ExecutableResponse(responseJson2);
-                return resolve13(response);
+                return resolve14(response);
               } catch (error2) {
                 if (error2 instanceof executable_response_1.ExecutableResponseError) {
                   return reject(error2);
@@ -17990,7 +17990,7 @@ var require_googleauth = __commonJS({
         }
       }
       fromStreamAsync(inputStream, options) {
-        return new Promise((resolve13, reject) => {
+        return new Promise((resolve14, reject) => {
           if (!inputStream) {
             throw new Error("Must pass in a stream containing the Google auth settings.");
           }
@@ -18000,7 +18000,7 @@ var require_googleauth = __commonJS({
               try {
                 const data = JSON.parse(chunks.join(""));
                 const r2 = this._cacheClientFromJSON(data, options);
-                return resolve13(r2);
+                return resolve14(r2);
               } catch (err4) {
                 if (!this.keyFilename)
                   throw err4;
@@ -18010,7 +18010,7 @@ var require_googleauth = __commonJS({
                 });
                 this.cachedCredential = client;
                 this.setGapicJWTValues(client);
-                return resolve13(client);
+                return resolve14(client);
               }
             } catch (err4) {
               return reject(err4);
@@ -18046,17 +18046,17 @@ var require_googleauth = __commonJS({
        * Run the Google Cloud SDK command that prints the default project ID
        */
       async getDefaultServiceProjectId() {
-        return new Promise((resolve13) => {
+        return new Promise((resolve14) => {
           (0, child_process_1.exec)("gcloud config config-helper --format json", (err4, stdout) => {
             if (!err4 && stdout) {
               try {
                 const projectId = JSON.parse(stdout).configuration.properties.core.project;
-                resolve13(projectId);
+                resolve14(projectId);
                 return;
               } catch (e2) {
               }
             }
-            resolve13(null);
+            resolve14(null);
           });
         });
       }
@@ -20964,7 +20964,7 @@ var require_websocket = __commonJS({
     var http4 = __require("http");
     var net = __require("net");
     var tls = __require("tls");
-    var { randomBytes: randomBytes3, createHash: createHash27 } = __require("crypto");
+    var { randomBytes: randomBytes3, createHash: createHash28 } = __require("crypto");
     var { Duplex, Readable: Readable2 } = __require("stream");
     var { URL: URL2 } = __require("url");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -21632,7 +21632,7 @@ var require_websocket = __commonJS({
           abortHandshake(websocket, socket, "Invalid Upgrade header");
           return;
         }
-        const digest5 = createHash27("sha1").update(key + GUID).digest("base64");
+        const digest5 = createHash28("sha1").update(key + GUID).digest("base64");
         if (res.headers["sec-websocket-accept"] !== digest5) {
           abortHandshake(websocket, socket, "Invalid Sec-WebSocket-Accept header");
           return;
@@ -22001,7 +22001,7 @@ var require_websocket_server = __commonJS({
     var EventEmitter = __require("events");
     var http4 = __require("http");
     var { Duplex } = __require("stream");
-    var { createHash: createHash27 } = __require("crypto");
+    var { createHash: createHash28 } = __require("crypto");
     var extension2 = require_extension();
     var PerMessageDeflate2 = require_permessage_deflate();
     var subprotocol2 = require_subprotocol();
@@ -22308,7 +22308,7 @@ var require_websocket_server = __commonJS({
           );
         }
         if (this._state > RUNNING) return abortHandshake(socket, 503);
-        const digest5 = createHash27("sha1").update(key + GUID).digest("base64");
+        const digest5 = createHash28("sha1").update(key + GUID).digest("base64");
         const headers = [
           "HTTP/1.1 101 Switching Protocols",
           "Upgrade: websocket",
@@ -26057,14 +26057,14 @@ function __asyncValues(o) {
   }, i2);
   function verb(n) {
     i2[n] = o[n] && function(v) {
-      return new Promise(function(resolve13, reject) {
-        v = o[n](v), settle(resolve13, reject, v.done, v.value);
+      return new Promise(function(resolve14, reject) {
+        v = o[n](v), settle(resolve14, reject, v.done, v.value);
       });
     };
   }
-  function settle(resolve13, reject, d, v) {
+  function settle(resolve14, reject, d, v) {
     Promise.resolve(v).then(function(v2) {
-      resolve13({ value: v2, done: d });
+      resolve14({ value: v2, done: d });
     }, reject);
   }
 }
@@ -32647,7 +32647,7 @@ function isPlainObject$1(value) {
     return false;
   }
 }
-function formEncoder(sep2) {
+function formEncoder(sep3) {
   return (key, value, options) => {
     let out = "";
     const pairs = (options === null || options === void 0 ? void 0 : options.explode) ? explode(key, value) : [[key, value]];
@@ -32658,7 +32658,7 @@ function formEncoder(sep2) {
       return (options === null || options === void 0 ? void 0 : options.charEncoding) === "percent" ? encodeURIComponent(v) : v;
     };
     const encodeValue = (v) => encodeString(serializeValue(v));
-    const encodedSep = encodeString(sep2);
+    const encodedSep = encodeString(sep3);
     pairs.forEach(([pk, pv]) => {
       var _a4, _b;
       let tmp = "";
@@ -32998,7 +32998,7 @@ function retryIntervalFromResponse(res) {
   return 0;
 }
 async function delay(delay2) {
-  return new Promise((resolve13) => setTimeout(resolve13, delay2));
+  return new Promise((resolve14) => setTimeout(resolve14, delay2));
 }
 async function logRequest(logger, req) {
   if (!logger) {
@@ -40441,8 +40441,8 @@ var init_node = __esm({
         const url = `${websocketBaseUrl}/ws/google.ai.generativelanguage.${apiVersion}.GenerativeService.BidiGenerateMusic?key=${apiKey}`;
         let onopenResolve = () => {
         };
-        const onopenPromise = new Promise((resolve13) => {
-          onopenResolve = resolve13;
+        const onopenPromise = new Promise((resolve14) => {
+          onopenResolve = resolve14;
         });
         const callbacks = params.callbacks;
         const onopenAwaitedCallback = function() {
@@ -40648,8 +40648,8 @@ var init_node = __esm({
         }
         let onopenResolve = () => {
         };
-        const onopenPromise = new Promise((resolve13) => {
-          onopenResolve = resolve13;
+        const onopenPromise = new Promise((resolve14) => {
+          onopenResolve = resolve14;
         });
         const callbacks = params.callbacks;
         const onopenAwaitedCallback = function() {
@@ -40662,8 +40662,8 @@ var init_node = __esm({
         const messageQueue = [];
         let setupCompleteResolve = () => {
         };
-        const setupCompletePromise = new Promise((resolve13) => {
-          setupCompleteResolve = resolve13;
+        const setupCompletePromise = new Promise((resolve14) => {
+          setupCompleteResolve = resolve14;
         });
         const websocketCallbacks = {
           onopen: onopenAwaitedCallback,
@@ -47888,7 +47888,7 @@ var require_compile = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve13.call(this, root, ref);
+      let _sch = resolve14.call(this, root, ref);
       if (_sch === void 0) {
         const schema2 = (_a4 = root.localRefs) === null || _a4 === void 0 ? void 0 : _a4[ref];
         const { schemaId } = this.opts;
@@ -47915,7 +47915,7 @@ var require_compile = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve13(root, ref) {
+    function resolve14(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -48546,7 +48546,7 @@ var require_fast_uri = __commonJS({
       }
       return uri;
     }
-    function resolve13(baseURI, relativeURI, options) {
+    function resolve14(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
       const { parsed: baseParsed, malformedAuthorityOrPort: baseMalformed } = parseWithStatus(baseURI, schemelessOptions);
       const { parsed: relativeParsed, malformedAuthorityOrPort: relativeMalformed } = parseWithStatus(relativeURI, schemelessOptions);
@@ -48830,7 +48830,7 @@ var require_fast_uri = __commonJS({
     var fastUri = {
       SCHEMES,
       normalize: normalize2,
-      resolve: resolve13,
+      resolve: resolve14,
       resolveComponent,
       equal,
       serialize,
@@ -54522,9 +54522,9 @@ var require_dispatcher_base = __commonJS({
       }
       close(callback) {
         if (callback === void 0) {
-          return new Promise((resolve13, reject) => {
+          return new Promise((resolve14, reject) => {
             this.close((err4, data) => {
-              return err4 ? reject(err4) : resolve13(data);
+              return err4 ? reject(err4) : resolve14(data);
             });
           });
         }
@@ -54562,9 +54562,9 @@ var require_dispatcher_base = __commonJS({
           err4 = null;
         }
         if (callback === void 0) {
-          return new Promise((resolve13, reject) => {
+          return new Promise((resolve14, reject) => {
             this.destroy(err4, (err5, data) => {
-              return err5 ? reject(err5) : resolve13(data);
+              return err5 ? reject(err5) : resolve14(data);
             });
           });
         }
@@ -58061,8 +58061,8 @@ var require_promise = __commonJS({
     function createDeferredPromise() {
       let res;
       let rej;
-      const promise = new Promise((resolve13, reject) => {
-        res = resolve13;
+      const promise = new Promise((resolve14, reject) => {
+        res = resolve14;
         rej = reject;
       });
       return { promise, resolve: res, reject: rej };
@@ -59465,12 +59465,12 @@ upgrade: ${upgrade}\r
           cb();
         }
       }
-      const waitForDrain = () => new Promise((resolve13, reject) => {
+      const waitForDrain = () => new Promise((resolve14, reject) => {
         assert2(callback === null);
         if (socket[kError]) {
           reject(socket[kError]);
         } else {
-          callback = resolve13;
+          callback = resolve14;
         }
       });
       socket.on("close", onDrain).on("drain", onDrain);
@@ -60346,12 +60346,12 @@ var require_client_h2 = __commonJS({
           cb();
         }
       }
-      const waitForDrain = () => new Promise((resolve13, reject) => {
+      const waitForDrain = () => new Promise((resolve14, reject) => {
         assert2(callback === null);
         if (socket[kError]) {
           reject(socket[kError]);
         } else {
-          callback = resolve13;
+          callback = resolve14;
         }
       });
       h2stream.on("close", onDrain).on("drain", onDrain);
@@ -60667,16 +60667,16 @@ var require_client = __commonJS({
         return this[kNeedDrain] < 2;
       }
       [kClose]() {
-        return new Promise((resolve13) => {
+        return new Promise((resolve14) => {
           if (this[kSize]) {
-            this[kClosedResolve] = resolve13;
+            this[kClosedResolve] = resolve14;
           } else {
-            resolve13(null);
+            resolve14(null);
           }
         });
       }
       [kDestroy](err4) {
-        return new Promise((resolve13) => {
+        return new Promise((resolve14) => {
           const requests = this[kQueue].splice(this[kPendingIdx]);
           for (let i2 = 0; i2 < requests.length; i2++) {
             const request = requests[i2];
@@ -60689,7 +60689,7 @@ var require_client = __commonJS({
               this[kClosedResolve]();
               this[kClosedResolve] = null;
             }
-            resolve13(null);
+            resolve14(null);
           };
           if (this[kHTTPContext]) {
             this[kHTTPContext].destroy(err4, callback);
@@ -61096,8 +61096,8 @@ var require_pool_base = __commonJS({
           }
           return Promise.all(closeAll);
         } else {
-          return new Promise((resolve13) => {
-            this[kClosedResolve] = resolve13;
+          return new Promise((resolve14) => {
+            this[kClosedResolve] = resolve14;
           });
         }
       }
@@ -62216,7 +62216,7 @@ var require_socks5_proxy_agent = __commonJS({
         const proxyHost = this[kProxyUrl].hostname;
         const proxyPort = parseInt(this[kProxyUrl].port) || 1080;
         debug("creating SOCKS5 connection to", proxyHost, proxyPort);
-        const socket = await new Promise((resolve13, reject) => {
+        const socket = await new Promise((resolve14, reject) => {
           this[kConnector]({
             hostname: proxyHost,
             host: proxyHost,
@@ -62226,7 +62226,7 @@ var require_socks5_proxy_agent = __commonJS({
             if (err4) {
               reject(err4);
             } else {
-              resolve13(socket2);
+              resolve14(socket2);
             }
           });
         });
@@ -62236,14 +62236,14 @@ var require_socks5_proxy_agent = __commonJS({
           socket.destroy();
         });
         await socks5Client.handshake();
-        await new Promise((resolve13, reject) => {
+        await new Promise((resolve14, reject) => {
           const timeout = setTimeout(() => {
             reject(new Error("SOCKS5 authentication timeout"));
           }, 5e3);
           const onAuthenticated = () => {
             clearTimeout(timeout);
             socks5Client.removeListener("error", onError);
-            resolve13();
+            resolve14();
           };
           const onError = (err4) => {
             clearTimeout(timeout);
@@ -62252,14 +62252,14 @@ var require_socks5_proxy_agent = __commonJS({
           };
           if (socks5Client.state === STATES.AUTHENTICATED) {
             clearTimeout(timeout);
-            resolve13();
+            resolve14();
           } else {
             socks5Client.once("authenticated", onAuthenticated);
             socks5Client.once("error", onError);
           }
         });
         await socks5Client.connect(targetHost, targetPort);
-        await new Promise((resolve13, reject) => {
+        await new Promise((resolve14, reject) => {
           const timeout = setTimeout(() => {
             reject(new Error("SOCKS5 connection timeout"));
           }, 5e3);
@@ -62267,7 +62267,7 @@ var require_socks5_proxy_agent = __commonJS({
             debug("SOCKS5 tunnel established to", targetHost, targetPort, "via", info);
             clearTimeout(timeout);
             socks5Client.removeListener("error", onError);
-            resolve13();
+            resolve14();
           };
           const onError = (err4) => {
             clearTimeout(timeout);
@@ -62310,8 +62310,8 @@ var require_socks5_proxy_agent = __commonJS({
                       socket,
                       servername: this[kRequestTls]?.servername || targetHost
                     });
-                    await new Promise((resolve13, reject) => {
-                      finalSocket.once("secureConnect", resolve13);
+                    await new Promise((resolve14, reject) => {
+                      finalSocket.once("secureConnect", resolve14);
                       finalSocket.once("error", reject);
                     });
                   }
@@ -63393,7 +63393,7 @@ var require_readable = __commonJS({
         if (this._readableState.closeEmitted) {
           return Promise.resolve(null);
         }
-        return new Promise((resolve13, reject) => {
+        return new Promise((resolve14, reject) => {
           if (this[kContentLength] && this[kContentLength] > limit2 || this[kBytesRead] > limit2) {
             this.destroy(new AbortError2());
           }
@@ -63407,11 +63407,11 @@ var require_readable = __commonJS({
               if (signal.aborted) {
                 reject(signal.reason ?? new AbortError2());
               } else {
-                resolve13(null);
+                resolve14(null);
               }
             });
           } else {
-            this.on("close", resolve13);
+            this.on("close", resolve14);
           }
           this.on("error", noop3).on("data", () => {
             if (this[kBytesRead] > limit2) {
@@ -63439,7 +63439,7 @@ var require_readable = __commonJS({
     }
     function consume(stream, type) {
       assert2(!stream[kConsume]);
-      return new Promise((resolve13, reject) => {
+      return new Promise((resolve14, reject) => {
         if (isUnusable(stream)) {
           const rState = stream._readableState;
           if (rState.destroyed && rState.closeEmitted === false) {
@@ -63454,7 +63454,7 @@ var require_readable = __commonJS({
             stream[kConsume] = {
               type,
               stream,
-              resolve: resolve13,
+              resolve: resolve14,
               reject,
               length: 0,
               body: []
@@ -63528,18 +63528,18 @@ var require_readable = __commonJS({
       return buffer;
     }
     function consumeEnd(consume2, encoding) {
-      const { type, body, resolve: resolve13, stream, length } = consume2;
+      const { type, body, resolve: resolve14, stream, length } = consume2;
       try {
         if (type === "text") {
-          resolve13(chunksDecode(body, length, encoding));
+          resolve14(chunksDecode(body, length, encoding));
         } else if (type === "json") {
-          resolve13(JSON.parse(chunksDecode(body, length, encoding)));
+          resolve14(JSON.parse(chunksDecode(body, length, encoding)));
         } else if (type === "arrayBuffer") {
-          resolve13(chunksConcat(body, length).buffer);
+          resolve14(chunksConcat(body, length).buffer);
         } else if (type === "blob") {
-          resolve13(new Blob(body, { type: stream[kContentType] }));
+          resolve14(new Blob(body, { type: stream[kContentType] }));
         } else if (type === "bytes") {
-          resolve13(chunksConcat(body, length));
+          resolve14(chunksConcat(body, length));
         }
         consumeFinish(consume2);
       } catch (err4) {
@@ -63729,9 +63729,9 @@ var require_api_request = __commonJS({
     };
     function request(opts, callback) {
       if (callback === void 0) {
-        return new Promise((resolve13, reject) => {
+        return new Promise((resolve14, reject) => {
           request.call(this, opts, (err4, data) => {
-            return err4 ? reject(err4) : resolve13(data);
+            return err4 ? reject(err4) : resolve14(data);
           });
         });
       }
@@ -63943,9 +63943,9 @@ var require_api_stream = __commonJS({
     };
     function stream(opts, factory, callback) {
       if (callback === void 0) {
-        return new Promise((resolve13, reject) => {
+        return new Promise((resolve14, reject) => {
           stream.call(this, opts, factory, (err4, data) => {
-            return err4 ? reject(err4) : resolve13(data);
+            return err4 ? reject(err4) : resolve14(data);
           });
         });
       }
@@ -64233,9 +64233,9 @@ var require_api_upgrade = __commonJS({
     };
     function upgrade(opts, callback) {
       if (callback === void 0) {
-        return new Promise((resolve13, reject) => {
+        return new Promise((resolve14, reject) => {
           upgrade.call(this, opts, (err4, data) => {
-            return err4 ? reject(err4) : resolve13(data);
+            return err4 ? reject(err4) : resolve14(data);
           });
         });
       }
@@ -64328,9 +64328,9 @@ var require_api_connect = __commonJS({
     };
     function connect(opts, callback) {
       if (callback === void 0) {
-        return new Promise((resolve13, reject) => {
+        return new Promise((resolve14, reject) => {
           connect.call(this, opts, (err4, data) => {
-            return err4 ? reject(err4) : resolve13(data);
+            return err4 ? reject(err4) : resolve14(data);
           });
         });
       }
@@ -65604,7 +65604,7 @@ var require_snapshot_recorder = __commonJS({
   "node_modules/undici/lib/mock/snapshot-recorder.js"(exports, module) {
     "use strict";
     var { writeFile: writeFile4, readFile: readFile3, mkdir: mkdir3 } = __require("node:fs/promises");
-    var { dirname: dirname14, resolve: resolve13 } = __require("node:path");
+    var { dirname: dirname14, resolve: resolve14 } = __require("node:path");
     var { setTimeout: setTimeout2, clearTimeout: clearTimeout2 } = __require("node:timers");
     var { InvalidArgumentError, UndiciError } = require_errors2();
     var { hashId, isUrlExcludedFactory, normalizeHeaders, createHeaderFilters } = require_snapshot_utils();
@@ -65805,7 +65805,7 @@ var require_snapshot_recorder = __commonJS({
           throw new InvalidArgumentError("Snapshot path is required");
         }
         try {
-          const data = await readFile3(resolve13(path35), "utf8");
+          const data = await readFile3(resolve14(path35), "utf8");
           const parsed = JSON.parse(data);
           if (Array.isArray(parsed)) {
             this.#snapshots.clear();
@@ -65834,7 +65834,7 @@ var require_snapshot_recorder = __commonJS({
         if (!path35) {
           throw new InvalidArgumentError("Snapshot path is required");
         }
-        const resolvedPath = resolve13(path35);
+        const resolvedPath = resolve14(path35);
         await mkdir3(dirname14(resolvedPath), { recursive: true });
         const data = Array.from(this.#snapshots.entries()).map(([hash7, snapshot]) => ({
           hash: hash7,
@@ -73260,7 +73260,7 @@ var require_fetch = __commonJS({
         const agent = fetchParams.controller.dispatcher;
         const path35 = url.pathname + url.search;
         const hasTrailingQuestionMark = url.search.length === 0 && url.href[url.href.length - url.hash.length - 1] === "?";
-        return new Promise((resolve13, reject) => agent.dispatch(
+        return new Promise((resolve14, reject) => agent.dispatch(
           {
             path: hasTrailingQuestionMark ? `${path35}?` : path35,
             origin: url.origin,
@@ -73348,7 +73348,7 @@ var require_fetch = __commonJS({
                 }
               }
               const onError = this.onError.bind(this);
-              resolve13({
+              resolve14({
                 status,
                 statusText,
                 headersList,
@@ -73401,7 +73401,7 @@ var require_fetch = __commonJS({
                   headersList.append(headerName, String(value), true);
                 }
               }
-              resolve13({
+              resolve14({
                 status,
                 statusText: STATUS_CODES[status],
                 headersList,
@@ -73425,7 +73425,7 @@ var require_fetch = __commonJS({
                   headersList.append(nameStr, value.toString("latin1"), true);
                 }
               }
-              resolve13({
+              resolve14({
                 status,
                 statusText: STATUS_CODES[status],
                 headersList,
@@ -77940,7 +77940,7 @@ var init_values = __esm({
 var sleep3;
 var init_sleep = __esm({
   "node_modules/openai/internal/utils/sleep.mjs"() {
-    sleep3 = (ms) => new Promise((resolve13) => setTimeout(resolve13, ms));
+    sleep3 = (ms) => new Promise((resolve14) => setTimeout(resolve14, ms));
   }
 });
 
@@ -79133,8 +79133,8 @@ var init_api_promise = __esm({
     init_parse();
     APIPromise2 = class _APIPromise extends Promise {
       constructor(client, responsePromise, parseResponse2 = defaultParseResponse) {
-        super((resolve13) => {
-          resolve13(null);
+        super((resolve14) => {
+          resolve14(null);
         });
         this.responsePromise = responsePromise;
         this.parseResponse = parseResponse2;
@@ -80104,12 +80104,12 @@ var init_EventStream = __esm({
         _EventStream_errored.set(this, false);
         _EventStream_aborted.set(this, false);
         _EventStream_catchingPromiseCreated.set(this, false);
-        __classPrivateFieldSet(this, _EventStream_connectedPromise, new Promise((resolve13, reject) => {
-          __classPrivateFieldSet(this, _EventStream_resolveConnectedPromise, resolve13, "f");
+        __classPrivateFieldSet(this, _EventStream_connectedPromise, new Promise((resolve14, reject) => {
+          __classPrivateFieldSet(this, _EventStream_resolveConnectedPromise, resolve14, "f");
           __classPrivateFieldSet(this, _EventStream_rejectConnectedPromise, reject, "f");
         }), "f");
-        __classPrivateFieldSet(this, _EventStream_endPromise, new Promise((resolve13, reject) => {
-          __classPrivateFieldSet(this, _EventStream_resolveEndPromise, resolve13, "f");
+        __classPrivateFieldSet(this, _EventStream_endPromise, new Promise((resolve14, reject) => {
+          __classPrivateFieldSet(this, _EventStream_resolveEndPromise, resolve14, "f");
           __classPrivateFieldSet(this, _EventStream_rejectEndPromise, reject, "f");
         }), "f");
         __classPrivateFieldGet(this, _EventStream_connectedPromise, "f").catch(() => {
@@ -80209,11 +80209,11 @@ var init_EventStream = __esm({
        *   const message = await stream.emitted('message') // rejects if the stream errors
        */
       emitted(event) {
-        return new Promise((resolve13, reject) => {
+        return new Promise((resolve14, reject) => {
           __classPrivateFieldSet(this, _EventStream_catchingPromiseCreated, true, "f");
           if (event !== "error")
             this.once("error", reject);
-          this.once(event, resolve13);
+          this.once(event, resolve14);
         });
       }
       /**
@@ -80296,8 +80296,8 @@ var init_EventStream = __esm({
             }
             if (ended)
               return Promise.resolve(doneResult());
-            return new Promise((resolve13, reject) => {
-              readQueue.push({ resolve: resolve13, reject });
+            return new Promise((resolve14, reject) => {
+              readQueue.push({ resolve: resolve14, reject });
             });
           },
           return: () => {
@@ -81515,7 +81515,7 @@ var init_ChatCompletionStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve13, reject) => readQueue.push({ resolve: resolve13, reject })).then((chunk4) => chunk4 ? { value: chunk4, done: false } : { value: void 0, done: true });
+              return new Promise((resolve14, reject) => readQueue.push({ resolve: resolve14, reject })).then((chunk4) => chunk4 ? { value: chunk4, done: false } : { value: void 0, done: true });
             }
             const chunk3 = pushQueue.shift();
             return { value: chunk3, done: false };
@@ -81605,7 +81605,7 @@ var init_ChatCompletionStreamingRunner = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve13, reject) => readQueue.push({ resolve: resolve13, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
+              return new Promise((resolve14, reject) => readQueue.push({ resolve: resolve14, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
             }
             const event = pushQueue.shift();
             if (!event) {
@@ -85399,7 +85399,7 @@ var init_AssistantStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve13, reject) => readQueue.push({ resolve: resolve13, reject })).then((chunk4) => chunk4 ? { value: chunk4, done: false } : { value: void 0, done: true });
+              return new Promise((resolve14, reject) => readQueue.push({ resolve: resolve14, reject })).then((chunk4) => chunk4 ? { value: chunk4, done: false } : { value: void 0, done: true });
             }
             const chunk3 = pushQueue.shift();
             return { value: chunk3, done: false };
@@ -88063,7 +88063,7 @@ var init_ResponseStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve13, reject) => readQueue.push({ resolve: resolve13, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
+              return new Promise((resolve14, reject) => readQueue.push({ resolve: resolve14, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
             }
             const event = pushQueue.shift();
             return { value: event, done: false };
@@ -90133,7 +90133,7 @@ var require_video_duration = __commonJS({
       positive(requiredSeconds, "requiredSeconds");
       let durationSeconds, numFrames;
       if (limits.seconds) {
-        durationSeconds = limits.seconds.find((seconds) => seconds >= requiredSeconds);
+        durationSeconds = limits.seconds.find((seconds2) => seconds2 >= requiredSeconds);
       } else if (limits.frameRate !== void 0) {
         const fps = positive(limits.frameRate, "frameRate");
         const offset = limits.frameOffset ?? 1;
@@ -94138,9 +94138,9 @@ var require_character_voice = __commonJS({
 var require_speech_contract = __commonJS({
   "../skills/_shared/speech-contract.js"(exports, module) {
     "use strict";
-    var { createHash: createHash27 } = __require("node:crypto");
+    var { createHash: createHash28 } = __require("node:crypto");
     function speechRevision2(line, character) {
-      return createHash27("sha256").update(JSON.stringify(require_scene_acting().speechRevisionPayload(line, character?.tts))).digest("hex");
+      return createHash28("sha256").update(JSON.stringify(require_scene_acting().speechRevisionPayload(line, character?.tts))).digest("hex");
     }
     function compileActing2(text4, acting, voice) {
       voice = { ...voice };
@@ -94564,7 +94564,7 @@ var require_character_sheet = __commonJS({
     "use strict";
     var fs25 = __require("node:fs");
     var path35 = __require("node:path");
-    var { createHash: createHash27 } = __require("node:crypto");
+    var { createHash: createHash28 } = __require("node:crypto");
     var { isDeepStrictEqual: isDeepStrictEqual2 } = __require("node:util");
     var { identityCharacter, direction, panelPrompt, requiresSpeech, isVoiceOnly } = require_character_identity();
     var { identityVoice, voiceErrors } = require_character_voice();
@@ -94581,7 +94581,7 @@ var require_character_sheet = __commonJS({
       const id = path35.basename(path35.dirname(path35.resolve(file)));
       if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) throw new Error("Character folder needs a kebab-case id");
       const tts = identityVoice(source, { optional: !requireSpeech });
-      return { id, name, character, tts, direction: direction(character, options), identitySha256: createHash27("sha256").update(source).digest("hex"), ...voiceOnly ? { voiceOnly: true } : {}, ...selectedVoiceReference(source, tts) };
+      return { id, name, character, tts, direction: direction(character, options), identitySha256: createHash28("sha256").update(source).digest("hex"), ...voiceOnly ? { voiceOnly: true } : {}, ...selectedVoiceReference(source, tts) };
     }
     function selectedVoiceReference(source, tts) {
       if (!tts) return {};
@@ -94649,10 +94649,10 @@ var require_character_speech = __commonJS({
     "use strict";
     var fs25 = __require("node:fs");
     var path35 = __require("node:path");
-    var { createHash: createHash27 } = __require("node:crypto");
+    var { createHash: createHash28 } = __require("node:crypto");
     var { isDeepStrictEqual: isDeepStrictEqual2 } = __require("node:util");
     var { voiceErrors, generationVoiceErrors, normalizeLanguage } = require_character_voice();
-    var hash7 = (bytes) => createHash27("sha256").update(bytes).digest("hex");
+    var hash7 = (bytes) => createHash28("sha256").update(bytes).digest("hex");
     var normalizeVoice = (voice) => Object.fromEntries(Object.entries(voice || {}).map(([key, value]) => [key, key === "language" ? normalizeLanguage(value) : typeof value === "string" ? value.trim() : value]));
     function explicitVoiceOverride(board, voice, current) {
       const override2 = board?.PRODUCTION?.modelSettings?.overrides?.speech;
@@ -94766,15 +94766,15 @@ var require_compose_speech = __commonJS({
     var fs25 = __require("node:fs");
     var path35 = __require("node:path");
     var { execFileSync: execFileSync19 } = __require("node:child_process");
-    var { createHash: createHash27 } = __require("node:crypto");
+    var { createHash: createHash28 } = __require("node:crypto");
     var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
     var { actingErrors, speechRevisionPayload, planScenePerformance } = require_scene_acting();
     var { generationVoiceErrors } = require_character_voice();
-    var hash7 = (value) => createHash27("sha256").update(value).digest("hex");
+    var hash7 = (value) => createHash28("sha256").update(value).digest("hex");
     function duration4(file) {
-      const seconds = Number(execFileSync19("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", file], { encoding: "utf8", timeout: 1e4 }).trim());
-      if (!Number.isFinite(seconds) || seconds <= 0) throw new Error("Unusable speech duration: " + file);
-      return seconds;
+      const seconds2 = Number(execFileSync19("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", file], { encoding: "utf8", timeout: 1e4 }).trim());
+      if (!Number.isFinite(seconds2) || seconds2 <= 0) throw new Error("Unusable speech duration: " + file);
+      return seconds2;
     }
     function lineSources(lines) {
       return lines.map((n) => ({ lineId: n.id, sha256: n.audio?.sha256, revision: n.audio?.revision, leadInSeconds: n.acting?.leadInSeconds ?? 0, tailOutSeconds: n.acting?.tailOutSeconds ?? 0 }));
@@ -94881,10 +94881,10 @@ var require_check_tts_quality = __commonJS({
     var fs25 = __require("node:fs");
     var path35 = __require("node:path");
     var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
-    var { createHash: createHash27 } = __require("node:crypto");
+    var { createHash: createHash28 } = __require("node:crypto");
     var { speechRevision: speechRevision2 } = require_speech_contract();
     var { authorizeSpeed: authorizeSpeed2 } = require_tts_speed_policy();
-    var hash7 = (value) => createHash27("sha256").update(value).digest("hex");
+    var hash7 = (value) => createHash28("sha256").update(value).digest("hex");
     var normalize2 = (text4) => text4.normalize("NFKC").toLowerCase().replace(/[\p{P}\p{Z}\s]/gu, "");
     function cer(expected, heard) {
       const a = [...normalize2(expected)], b = [...normalize2(heard)];
@@ -95159,14 +95159,14 @@ var require_check_tts_quality = __commonJS({
 var require_final_speech_chapters = __commonJS({
   "../skills/produce/references/final-speech-chapters.js"(exports, module) {
     "use strict";
-    var { createHash: createHash27 } = __require("node:crypto");
+    var { createHash: createHash28 } = __require("node:crypto");
     var { spawnSync: spawnSync4 } = __require("node:child_process");
     var { normalize: normalize2, cer } = require_check_tts_quality();
     var RATE2 = 24e3;
     var BYTES2 = 4;
     var LIMIT3 = 14 * 1024 * 1024;
     var POLICY2 = "final-speech-chapters-v1";
-    var hash7 = (x2) => createHash27("sha256").update(x2).digest("hex");
+    var hash7 = (x2) => createHash28("sha256").update(x2).digest("hex");
     var digest5 = (x2) => hash7(JSON.stringify(x2));
     function decode2(media) {
       const encoded = spawnSync4("ffmpeg", ["-v", "error", "-i", media, "-map", "0:a:0", "-map_metadata", "-1", "-ac", "1", "-ar", String(RATE2), "-c:a", "flac", "-f", "flac", "pipe:1"], { maxBuffer: RATE2 * BYTES2 * 1800 + 65536, timeout: 6e4 });
@@ -100066,7 +100066,7 @@ async function generateAdvanced(request) {
     const timeoutMs = targetDuration * 1e3 + REALTIME_TIMEOUT_MARGIN_MS;
     while (!state.done && state.received < targetBytes && Date.now() - startTime < timeoutMs) {
       if (state.error) throw state.error;
-      await new Promise((resolve13) => setTimeout(resolve13, REALTIME_POLL_INTERVAL_MS));
+      await new Promise((resolve14) => setTimeout(resolve14, REALTIME_POLL_INTERVAL_MS));
     }
     state.done = true;
     if (state.error) throw state.error;
@@ -100197,7 +100197,7 @@ var sunoLyricsSchema = external_exports.object({
   prompt: external_exports.string().min(1).max(200)
 });
 function sleep2(ms) {
-  return new Promise((resolve13) => setTimeout(resolve13, ms));
+  return new Promise((resolve14) => setTimeout(resolve14, ms));
 }
 function describeSunoError(code, msg, httpStatus) {
   const text4 = (msg || "").trim() || "(no message)";
@@ -100996,7 +100996,7 @@ async function loadModel(id) {
     if (!listed.ok) return listed;
     const found = listed.models?.find((m2) => m2.id === id);
     if (found?.state === "ready") return { ok: true };
-    await new Promise((resolve13) => setTimeout(resolve13, 2e3));
+    await new Promise((resolve14) => setTimeout(resolve14, 2e3));
   }
   return { ok: false, error: `Timed out waiting for model "${id}" to become ready.` };
 }
@@ -101121,7 +101121,7 @@ async function muxRgbToMp4(opts) {
     );
     if (opts.audio) args.push("-c:a", "aac");
     args.push(opts.outFile);
-    await new Promise((resolve13, reject) => {
+    await new Promise((resolve14, reject) => {
       execFile("ffmpeg", args, { timeout: 12e4, maxBuffer: 2 * 1024 * 1024 }, (error2, _out, errOut) => {
         if (error2) {
           const code = error2.code;
@@ -101133,7 +101133,7 @@ async function muxRgbToMp4(opts) {
 ${String(errOut).slice(-500)}` : ""}`));
           return;
         }
-        resolve13();
+        resolve14();
       });
     });
     if (!existsSync4(opts.outFile)) return { ok: false, error: "ffmpeg exited 0 but the mp4 was not written" };
@@ -108711,7 +108711,7 @@ var Protocol = class {
           return;
         }
         const pollInterval = task2.pollInterval ?? this._options?.defaultTaskPollInterval ?? 1e3;
-        await new Promise((resolve13) => setTimeout(resolve13, pollInterval));
+        await new Promise((resolve14) => setTimeout(resolve14, pollInterval));
         options?.signal?.throwIfAborted();
       }
     } catch (error2) {
@@ -108728,7 +108728,7 @@ var Protocol = class {
    */
   request(request, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken, task, relatedTask } = options ?? {};
-    return new Promise((resolve13, reject) => {
+    return new Promise((resolve14, reject) => {
       const earlyReject = (error2) => {
         reject(error2);
       };
@@ -108806,7 +108806,7 @@ var Protocol = class {
           if (!parseResult.success) {
             reject(parseResult.error);
           } else {
-            resolve13(parseResult.data);
+            resolve14(parseResult.data);
           }
         } catch (error2) {
           reject(error2);
@@ -109067,12 +109067,12 @@ var Protocol = class {
       }
     } catch {
     }
-    return new Promise((resolve13, reject) => {
+    return new Promise((resolve14, reject) => {
       if (signal.aborted) {
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
         return;
       }
-      const timeoutId = setTimeout(resolve13, interval);
+      const timeoutId = setTimeout(resolve14, interval);
       signal.addEventListener("abort", () => {
         clearTimeout(timeoutId);
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
@@ -109948,12 +109948,12 @@ var StdioServerTransport = class {
     this.onclose?.();
   }
   send(message) {
-    return new Promise((resolve13) => {
+    return new Promise((resolve14) => {
       const json3 = serializeMessage(message);
       if (this._stdout.write(json3)) {
-        resolve13();
+        resolve14();
       } else {
-        this._stdout.once("drain", resolve13);
+        this._stdout.once("drain", resolve14);
       }
     });
   }
@@ -110379,9 +110379,9 @@ async function tiktokAuth(raw) {
       server2.close();
     }
   });
-  await new Promise((resolve13, reject) => {
+  await new Promise((resolve14, reject) => {
     server2.once("error", () => reject(new Error("TikTok OAuth callback port is unavailable.")));
-    server2.listen(Number(redirect.port), "127.0.0.1", resolve13);
+    server2.listen(Number(redirect.port), "127.0.0.1", resolve14);
   });
   const timer = setTimeout(() => {
     if (session.status === "pending") {
@@ -110786,9 +110786,9 @@ function buildFasth3Body(raw) {
     if (encodedBytes > MAX_REQUEST_BYTES - 64e3) throw new Error("Reference payload exceeds the 60 MiB upload limit");
     return readFileSync5(file).toString("base64");
   };
-  const audio = (file, name, seconds) => {
+  const audio = (file, name, seconds2) => {
     const target = join6(temp, name + ".wav");
-    ffmpeg(["-i", file, "-vn", "-ar", "32000", "-ac", "2", "-c:a", "pcm_s16le", ...seconds === void 0 ? [] : ["-t", String(seconds)], target]);
+    ffmpeg(["-i", file, "-vn", "-ar", "32000", "-ac", "2", "-c:a", "pcm_s16le", ...seconds2 === void 0 ? [] : ["-t", String(seconds2)], target]);
     return encode2(target);
   };
   try {
@@ -111009,7 +111009,7 @@ async function pollGenaiJob(check2, pending2) {
       if (error2.httpStatus < 500 || retried2) throw new Error(error2.message);
       retried2 = true;
     }
-    await new Promise((resolve13) => setTimeout(resolve13, 5e3));
+    await new Promise((resolve14) => setTimeout(resolve14, 5e3));
   } while (Date.now() < deadline);
   throw new Error(pending2);
 }
@@ -111866,7 +111866,7 @@ async function retried(step, final = []) {
     } catch (error2) {
       const transient = !(error2 instanceof GenaiRequestError) || !final.includes(error2.httpStatus) && (error2.httpStatus >= 500 || [408, 425, 429].includes(error2.httpStatus));
       if (!transient || attempt >= genaiUploadSettings.attempts) throw error2;
-      await new Promise((resolve13) => setTimeout(resolve13, genaiUploadSettings.retryDelayMs * attempt));
+      await new Promise((resolve14) => setTimeout(resolve14, genaiUploadSettings.retryDelayMs * attempt));
     }
   }
 }
@@ -112999,7 +112999,7 @@ async function generateLocalImage(request) {
   );
   const startedAt = Date.now();
   try {
-    await new Promise((resolve13, reject) => {
+    await new Promise((resolve14, reject) => {
       execFile3(
         bin,
         cliArgs,
@@ -113021,7 +113021,7 @@ async function generateLocalImage(request) {
 ${tail}` : ""}`));
             return;
           }
-          resolve13();
+          resolve14();
         }
       );
     });
@@ -113167,8 +113167,8 @@ function uploadConfig() {
   const endpoint = process.env.MEDIA_UPLOAD_URL || process.env.MELEON_MEDIA_URL || "";
   const key = process.env.MEDIA_UPLOAD_API_KEY || process.env.MELEON_MEDIA_API_KEY || "";
   if (!endpoint || !key) return null;
-  const seconds = Number(process.env.MEDIA_UPLOAD_TIMEOUT || process.env.MELEON_UPLOAD_TIMEOUT || 300);
-  return { endpoint, key, timeoutMs: (Number.isFinite(seconds) && seconds > 0 ? seconds : 300) * 1e3 };
+  const seconds2 = Number(process.env.MEDIA_UPLOAD_TIMEOUT || process.env.MELEON_UPLOAD_TIMEOUT || 300);
+  return { endpoint, key, timeoutMs: (Number.isFinite(seconds2) && seconds2 > 0 ? seconds2 : 300) * 1e3 };
 }
 async function assertReachable(url, attempts, waitMs) {
   let last = "";
@@ -113185,7 +113185,7 @@ async function assertReachable(url, attempts, waitMs) {
     } catch (error2) {
       last = error2 instanceof Error ? error2.message : String(error2);
     }
-    if (i2 < attempts - 1) await new Promise((resolve13) => setTimeout(resolve13, waitMs));
+    if (i2 < attempts - 1) await new Promise((resolve14) => setTimeout(resolve14, waitMs));
   }
   throw new Error(`public URL not reachable: ${url} (${last})`);
 }
@@ -113254,19 +113254,19 @@ function serveLocally(filePaths) {
     }
     fs13.createReadStream(file, { start, end }).on("error", () => res.destroy()).pipe(res);
   });
-  return new Promise((resolve13, reject) => {
+  return new Promise((resolve14, reject) => {
     server2.once("error", reject);
     server2.listen(0, "127.0.0.1", () => {
       const address = server2.address();
       const port = typeof address === "object" && address ? address.port : 0;
-      resolve13({ server: server2, port, routes });
+      resolve14({ server: server2, port, routes });
     });
   });
 }
 function closeServer(server2) {
-  return new Promise((resolve13) => {
+  return new Promise((resolve14) => {
     server2.closeAllConnections?.();
-    server2.close(() => resolve13());
+    server2.close(() => resolve14());
   });
 }
 var liveTunnels = /* @__PURE__ */ new Set();
@@ -113299,7 +113299,7 @@ async function publishViaTunnel(filePaths, cloudflared = "cloudflared") {
   };
   killTunnelsOnExit();
   try {
-    const origin = await new Promise((resolve13, reject) => {
+    const origin = await new Promise((resolve14, reject) => {
       child = spawn2(cloudflared, ["tunnel", "--url", `http://127.0.0.1:${port}`, "--no-autoupdate"], {
         stdio: ["ignore", "pipe", "pipe"]
       });
@@ -113312,7 +113312,7 @@ ${log.slice(-600)}`)), 6e4);
         const m2 = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/.exec(log);
         if (m2) {
           clearTimeout(timer);
-          resolve13(m2[0]);
+          resolve14(m2[0]);
         }
       };
       child.stdout?.on("data", onLine);
@@ -113328,7 +113328,7 @@ ${log.slice(-600)}`));
       });
     });
     const urls = routes.map((r2) => origin + r2);
-    await new Promise((resolve13) => setTimeout(resolve13, 5e3));
+    await new Promise((resolve14) => setTimeout(resolve14, 5e3));
     for (const url of urls) await assertReachable(url, 30, 3e3);
     console.error(`[media-publish] quick tunnel ${origin} serving ${filePaths.length} file(s)`);
     return { urls, how: "tunnel", close };
@@ -113575,7 +113575,7 @@ var seedanceReferenceSchema = external_exports.object({
   }
 }).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
 function sleep4(ms) {
-  return new Promise((resolve13) => setTimeout(resolve13, ms));
+  return new Promise((resolve14) => setTimeout(resolve14, ms));
 }
 function describeHttpError(status, body) {
   try {
@@ -113689,23 +113689,23 @@ function loadReferenceAudio(filePaths) {
   });
 }
 function probeVideo(filePath) {
-  return new Promise((resolve13) => {
+  return new Promise((resolve14) => {
     execFile4(
       "ffprobe",
       ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height,r_frame_rate:format=duration", "-of", "json", filePath],
       { timeout: 15e3 },
       (error2, out) => {
-        if (error2) return resolve13(null);
+        if (error2) return resolve14(null);
         try {
           const parsed = JSON.parse(String(out));
           const stream = parsed.streams?.[0];
           const [num5, den] = String(stream?.r_frame_rate || "").split("/").map(Number);
           const fps = num5 && den ? num5 / den : NaN;
-          const seconds = Number.parseFloat(String(parsed.format?.duration ?? ""));
-          if (!stream?.width || !stream?.height || !Number.isFinite(fps) || !Number.isFinite(seconds) || seconds <= 0) return resolve13(null);
-          resolve13({ seconds, fps, width: stream.width, height: stream.height });
+          const seconds2 = Number.parseFloat(String(parsed.format?.duration ?? ""));
+          if (!stream?.width || !stream?.height || !Number.isFinite(fps) || !Number.isFinite(seconds2) || seconds2 <= 0) return resolve14(null);
+          resolve14({ seconds: seconds2, fps, width: stream.width, height: stream.height });
         } catch {
-          resolve13(null);
+          resolve14(null);
         }
       }
     );
@@ -113747,14 +113747,14 @@ async function checkReferenceVideos(filePaths, spec, model2) {
   return total;
 }
 function probeAudioSeconds(filePath) {
-  return new Promise((resolve13) => {
+  return new Promise((resolve14) => {
     execFile4(
       "ffprobe",
       ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", filePath],
       { timeout: 15e3 },
       (error2, out) => {
-        const seconds = Number.parseFloat(String(out ?? "").trim());
-        resolve13(!error2 && Number.isFinite(seconds) && seconds > 0 ? seconds : null);
+        const seconds2 = Number.parseFloat(String(out ?? "").trim());
+        resolve14(!error2 && Number.isFinite(seconds2) && seconds2 > 0 ? seconds2 : null);
       }
     );
   });
@@ -113763,19 +113763,19 @@ async function checkReferenceAudioDurations(filePaths, spec, model2) {
   const [minSeconds, maxSeconds] = spec.clipSeconds;
   let total = 0;
   for (const filePath of filePaths) {
-    const seconds = await probeAudioSeconds(filePath);
-    if (seconds === null) {
+    const seconds2 = await probeAudioSeconds(filePath);
+    if (seconds2 === null) {
       console.error(
         `[Seedance] ffprobe unavailable \u2014 skipping the duration check for ${path13.basename(filePath)} (${model2}: ${minSeconds}~${maxSeconds}s per clip, ${spec.totalSeconds}s total)`
       );
       continue;
     }
-    if (seconds < minSeconds || seconds > maxSeconds) {
+    if (seconds2 < minSeconds || seconds2 > maxSeconds) {
       throw new Error(
-        `Reference audio ${path13.basename(filePath)} is ${seconds.toFixed(1)}s \u2014 ${model2} accepts ${minSeconds}~${maxSeconds}s per clip.`
+        `Reference audio ${path13.basename(filePath)} is ${seconds2.toFixed(1)}s \u2014 ${model2} accepts ${minSeconds}~${maxSeconds}s per clip.`
       );
     }
-    total += seconds;
+    total += seconds2;
   }
   if (total > spec.totalSeconds) {
     throw new Error(
@@ -113941,7 +113941,7 @@ import * as path14 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.122.1",
+  version: "0.123.0",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -114032,8 +114032,8 @@ function blockMotion(video2, width, height) {
   }
   return series;
 }
-function envelope(audio, start, seconds, streamFromVideo = false) {
-  const window2 = [...start ? ["-ss", String(start)] : [], ...seconds !== null ? ["-t", String(seconds)] : []];
+function envelope(audio, start, seconds2, streamFromVideo = false) {
+  const window2 = [...start ? ["-ss", String(start)] : [], ...seconds2 !== null ? ["-t", String(seconds2)] : []];
   const pcm = ffmpeg2([...window2, "-i", audio, ...streamFromVideo ? ["-map", "0:a:0"] : [], "-vn", "-ac", "1", "-ar", "16000", "-f", "s16le", "-"]);
   const samples = Math.floor(pcm.length / 2);
   const out = [];
@@ -114334,8 +114334,8 @@ var promptSchema = external_exports.string().min(1, "prompt is required").max(AS
 var numFramesSchema = (mode) => external_exports.number().int().min(ASTRA_VIDEO_MIN_FRAMES).max(ASTRA_VIDEO_FRAME_LIMITS[mode]).refine((n) => (n - 1) % ASTRA_VIDEO_FRAME_STEP === 0, {
   message: `numFrames must be 8k+1 (25, 33, 41 \u2026 ${ASTRA_VIDEO_FRAME_LIMITS[mode]})`
 }).optional();
-function framesForSeconds(seconds, frameRate = 24) {
-  const frames = seconds * frameRate;
+function framesForSeconds(seconds2, frameRate = 24) {
+  const frames = seconds2 * frameRate;
   return 1 + ASTRA_VIDEO_FRAME_STEP * Math.ceil((frames - 1) / ASTRA_VIDEO_FRAME_STEP - 0.5 - 1e-9);
 }
 var durationSchema2 = external_exports.number().positive().finite().optional();
@@ -114891,7 +114891,7 @@ function buildJobBody(mode, args) {
   return body;
 }
 function sleep5(ms) {
-  return new Promise((resolve13) => setTimeout(resolve13, ms));
+  return new Promise((resolve14) => setTimeout(resolve14, ms));
 }
 var submitTimestamps = [];
 async function waitForSubmitSlot() {
@@ -115258,7 +115258,7 @@ function dataUri(file, allowed, maxBytes) {
   if (size > maxBytes) throw new Error(`${path15.basename(file)} is ${(size / 1048576).toFixed(1)} MB; this vendor takes at most ${(maxBytes / 1048576).toFixed(0)} MB inline`);
   return `data:${type};base64,${fs16.readFileSync(file).toString("base64")}`;
 }
-var sleep6 = (ms) => new Promise((resolve13) => setTimeout(resolve13, ms));
+var sleep6 = (ms) => new Promise((resolve14) => setTimeout(resolve14, ms));
 async function runVendorJob(job) {
   let target;
   try {
@@ -115342,9 +115342,9 @@ var ltxApiAudio2VideoSchema = external_exports.object({
   audioPath: external_exports.string().min(1).describe("The composed pinned-voice track; its length sets the clip length (2\u201310 s, Fast at 720p/1080p up to 20 s).")
 }).strict();
 function ltxApiAudioSeconds(file) {
-  const seconds = Number(execFileSync9("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], { encoding: "utf8", timeout: 15e3 }));
-  if (!Number.isFinite(seconds) || seconds <= 0) throw new Error("Cannot read the length of " + file);
-  return seconds;
+  const seconds2 = Number(execFileSync9("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], { encoding: "utf8", timeout: 15e3 }));
+  if (!Number.isFinite(seconds2) || seconds2 <= 0) throw new Error("Cannot read the length of " + file);
+  return seconds2;
 }
 function buildLtxApiBody(request) {
   const image = (file) => dataUri(file, IMAGE_EXT, 7 * 1048576);
@@ -115358,8 +115358,8 @@ function buildLtxApiBody(request) {
     ...request.cameraMotion ? { camera_motion: request.cameraMotion } : {}
   };
   if ("audioPath" in request) {
-    const seconds = ltxApiAudioSeconds(request.audioPath), max = ltxApiAudioMax(request.model, request.resolution);
-    if (seconds < 2 || seconds > max) throw new Error(`${request.model} at ${request.resolution} takes 2\u2013${max} s of audio; ${request.audioPath} runs ${seconds.toFixed(2)} s`);
+    const seconds2 = ltxApiAudioSeconds(request.audioPath), max = ltxApiAudioMax(request.model, request.resolution);
+    if (seconds2 < 2 || seconds2 > max) throw new Error(`${request.model} at ${request.resolution} takes 2\u2013${max} s of audio; ${request.audioPath} runs ${seconds2.toFixed(2)} s`);
     body.audio_uri = dataUri(request.audioPath, AUDIO_EXT, 15 * 1048576);
   } else Object.assign(body, { duration: request.durationSeconds, generate_audio: request.generateAudio });
   if (JSON.stringify(body).length > 32 * 1048576) throw new Error("LTX request body exceeds 32 MB; use smaller frames or audio");
@@ -115436,9 +115436,9 @@ var minimaxReferenceSchema = external_exports.object({
   if (v.model === "MiniMax-H3-Lite" && v.ratio === "adaptive") ctx.addIssue({ code: "custom", path: ["ratio"], message: "MiniMax-H3-Lite needs a concrete ratio" });
 });
 function audioSeconds(file) {
-  const seconds = Number(execFileSync10("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], { encoding: "utf8", timeout: 15e3 }));
-  if (!Number.isFinite(seconds)) throw new Error("Cannot read the length of " + file);
-  return seconds;
+  const seconds2 = Number(execFileSync10("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], { encoding: "utf8", timeout: 15e3 }));
+  if (!Number.isFinite(seconds2)) throw new Error("Cannot read the length of " + file);
+  return seconds2;
 }
 function buildMinimaxBody(request) {
   const image = (file, role) => ({ type: "image_url", image_url: { url: dataUri(file, IMAGE_EXT2, 30 * 1048576) }, role });
@@ -115448,9 +115448,9 @@ function buildMinimaxBody(request) {
   } else {
     let total = 0;
     for (const file of request.referenceAudioPaths) {
-      const seconds = audioSeconds(file);
-      total += seconds;
-      if (seconds < 2 || seconds > 15) throw new Error(`MiniMax voice samples run 2\u201315 s; ${file} runs ${seconds.toFixed(1)} s`);
+      const seconds2 = audioSeconds(file);
+      total += seconds2;
+      if (seconds2 < 2 || seconds2 > 15) throw new Error(`MiniMax voice samples run 2\u201315 s; ${file} runs ${seconds2.toFixed(1)} s`);
     }
     if (total > 15) throw new Error(`MiniMax voice samples total at most 15 s; these run ${total.toFixed(1)} s`);
     content = [
@@ -116015,8 +116015,8 @@ function probeSeconds(file) {
       timeout: 15e3,
       stdio: ["ignore", "pipe", "ignore"]
     });
-    const seconds = Number.parseFloat(out.trim());
-    return Number.isFinite(seconds) && seconds > 0 ? Math.round(seconds * 1e3) / 1e3 : null;
+    const seconds2 = Number.parseFloat(out.trim());
+    return Number.isFinite(seconds2) && seconds2 > 0 ? Math.round(seconds2 * 1e3) / 1e3 : null;
   } catch {
     return null;
   }
@@ -116035,8 +116035,8 @@ function priceOf(tool2, args = {}) {
   if (tool2 === "astra_genai_catalog" || tool2 === "astra_genai_desktop_status") return { key: null, quantity: null };
   if (tool2.startsWith("astra_genai_")) {
     const image = ["astra_genai_text2img", "astra_genai_edit", "astra_genai_image_generate", "astra_genai_image_edit"].includes(tool2);
-    const seconds = image ? null : typeof args.duration === "number" ? args.duration : tool2 === "astra_genai_msr" ? num2(args.numFrames, 121) / num2(args.frameRate, 24) : null;
-    return { key: image ? "image.astra-genai" : "video.astra-genai", quantity: seconds, note: "Gateway pricing unverified; managed reservation is authoritative, not a measured bill" };
+    const seconds2 = image ? null : typeof args.duration === "number" ? args.duration : tool2 === "astra_genai_msr" ? num2(args.numFrames, 121) / num2(args.frameRate, 24) : null;
+    return { key: image ? "image.astra-genai" : "video.astra-genai", quantity: seconds2, note: "Gateway pricing unverified; managed reservation is authoritative, not a measured bill" };
   }
   if (tool2.startsWith("ltx_api_")) {
     const model2 = str3(args.model, "ltx-2-5-pro"), tier = ltxApiTier(str3(args.resolution, "1920x1080"));
@@ -116059,28 +116059,28 @@ function priceOf(tool2, args = {}) {
   if (tool2.startsWith("seedance_")) {
     const model2 = str3(args.model, "dreamina-seedance-2-0-260128");
     const resolution2 = str3(args.resolution, "720p");
-    const seconds = num2(args.durationSeconds, 5);
+    const seconds2 = num2(args.durationSeconds, 5);
     const base = SEEDANCE_FAMILY[model2];
-    if (!base) return { key: null, quantity: seconds, note: `unmapped seedance model: ${model2}` };
+    if (!base) return { key: null, quantity: seconds2, note: `unmapped seedance model: ${model2}` };
     const videos = [
       ...Array.isArray(args.referenceVideoPaths) ? args.referenceVideoPaths : [],
       ...Array.isArray(args.referenceVideoUrls) ? args.referenceVideoUrls : []
     ].filter((v) => typeof v === "string");
     const family = videos.length ? `${base}-video` : base;
     const key = `seedance.${family}.${resolution2}`;
-    if (!PRICED_VIDEO_KEYS.has(key)) return { key: null, quantity: seconds, note: `no price row for ${key}` };
-    if (!videos.length) return { key, quantity: seconds };
+    if (!PRICED_VIDEO_KEYS.has(key)) return { key: null, quantity: seconds2, note: `no price row for ${key}` };
+    if (!videos.length) return { key, quantity: seconds2 };
     let input = 0;
     const unread = [];
     for (const video2 of videos) {
       const probed = /^[a-z][a-z0-9+.-]*:/i.test(video2) ? null : probeSeconds(video2);
       if (probed === null) unread.push(video2);
-      input += probed ?? seconds;
+      input += probed ?? seconds2;
     }
     return {
       key,
-      quantity: seconds + input,
-      note: `output ${seconds}s + reference video ${input}s${unread.length ? ` (${unread.length} clip(s) assumed ${seconds}s \u2014 not probed)` : ""}`
+      quantity: seconds2 + input,
+      note: `output ${seconds2}s + reference video ${input}s${unread.length ? ` (${unread.length} clip(s) assumed ${seconds2}s \u2014 not probed)` : ""}`
     };
   }
   if (tool2.startsWith("gpt_image_")) {
@@ -116116,11 +116116,11 @@ function priceOf(tool2, args = {}) {
     };
   }
   if (tool2 === "sfx_elevenlabs_generate") {
-    const seconds = args.durationSeconds;
+    const seconds2 = args.durationSeconds;
     return {
       key: "sfx.elevenlabs",
-      quantity: typeof seconds === "number" && Number.isFinite(seconds) ? seconds : null,
-      note: typeof seconds === "number" ? void 0 : "billed per second of generated audio and no durationSeconds was requested \u2014 read the measured duration off the response"
+      quantity: typeof seconds2 === "number" && Number.isFinite(seconds2) ? seconds2 : null,
+      note: typeof seconds2 === "number" ? void 0 : "billed per second of generated audio and no durationSeconds was requested \u2014 read the measured duration off the response"
     };
   }
   if (tool2 === "music_generate_song" && args.model === "lyria-3-clip-preview") return { key: "music.lyria-clip", quantity: 1 };
@@ -116203,9 +116203,9 @@ function quoteVideo(tool2, args) {
     const tokenRate = rates?.[index + (hasVideo ? 1 : 0)];
     if (!spec || !Number.isFinite(tokenRate)) throw new Error("Price unavailable for selected Seedance deployment");
     const pixels = { "480p": 864 * 512, "720p": 1344 * 768, "1080p": 1984 * 1152, "4k": 3904 * 2240 }[resolution2];
-    const seconds = Number(args.durationSeconds);
+    const seconds2 = Number(args.durationSeconds);
     const inputSeconds = hasVideo ? spec.referenceVideos.totalSeconds : 0;
-    const estimatedUsd2 = roundUp((seconds + inputSeconds) * pixels * 24 / 1024 * tokenRate / 1e6);
+    const estimatedUsd2 = roundUp((seconds2 + inputSeconds) * pixels * 24 / 1024 * tokenRate / 1e6);
     return {
       estimatedUsd: estimatedUsd2,
       reserveUsd: estimatedUsd2,
@@ -116447,9 +116447,9 @@ function prepareVideoImages(tool2, input, shot, episode) {
   const assigned = /* @__PURE__ */ new Set();
   const bindings = [];
   const boardDir = path20.join(episode, "storyboard");
-  const resolve13 = (file) => realpathSync4(path20.resolve(boardDir, file));
+  const resolve14 = (file) => realpathSync4(path20.resolve(boardDir, file));
   const bind = (id, file, role, use, purpose, submitted) => {
-    const absolute = resolve13(file);
+    const absolute = resolve14(file);
     const metadata = verifyImageFile(absolute);
     const ref = references.find((item) => item.id === id);
     bindings.push({
@@ -116687,8 +116687,8 @@ function msrSubject(character, refs, context2) {
 }
 function sampleSeconds(file) {
   try {
-    const seconds = Number(execFileSync12("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], { encoding: "utf8", timeout: 15e3 }));
-    return Number.isFinite(seconds) ? seconds : void 0;
+    const seconds2 = Number(execFileSync12("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], { encoding: "utf8", timeout: 15e3 }));
+    return Number.isFinite(seconds2) ? seconds2 : void 0;
   } catch {
     return void 0;
   }
@@ -116778,8 +116778,8 @@ function prepareVideoVoice(tool2, input, context2) {
         msrRefs[index].audioPath = speaker.reference.path;
         speaker.audioIndex = slot;
         msrAudio.push(`Audio ${slot}: ${label}'s voice, belongs only to Image ${index + 1}.`);
-        const seconds = sampleSeconds(speaker.reference.path);
-        if (seconds !== void 0 && seconds > 5) warnings.push(`${id}: the voice sample runs ${seconds.toFixed(1)} s; MSR conditions on the first 5 seconds and cuts the rest.`);
+        const seconds2 = sampleSeconds(speaker.reference.path);
+        if (seconds2 !== void 0 && seconds2 > 5) warnings.push(`${id}: the voice sample runs ${seconds2.toFixed(1)} s; MSR conditions on the first 5 seconds and cuts the rest.`);
       }
     } else if (reference2) {
       speaker.reference = voiceReference(character, context2, warnings);
@@ -117201,10 +117201,10 @@ function planVideo(raw) {
     if (mode === "native" || !audio?.path || !audio.sha256) return null;
     const file = path22.resolve(context2.episode, "storyboard", audio.path);
     if (!fs18.existsSync(file) || createHash15("sha256").update(fs18.readFileSync(file)).digest("hex") !== audio.sha256) return null;
-    const seconds = Number(execFileSync13("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", file], { encoding: "utf8", timeout: 1e4 }));
-    if (!Number.isFinite(seconds) || seconds <= 0) return null;
+    const seconds2 = Number(execFileSync13("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", file], { encoding: "utf8", timeout: 1e4 }));
+    if (!Number.isFinite(seconds2) || seconds2 <= 0) return null;
     performanceInputs[file] = audio.sha256;
-    return seconds;
+    return seconds2;
   };
   const compiled = input.args.prompt === void 0 && video2?.promptSource ? compileVideoPrompt(shot, video2.promptSource, names, { mode, measureAudio }) : void 0;
   const authored = compiled?.prompt ?? video2?.prompt;
@@ -117756,15 +117756,15 @@ function environment(tool2) {
 }
 function inputFiles2(args, directory2) {
   const inputs = {};
-  const resolve13 = (file) => {
+  const resolve14 = (file) => {
     const resolved = fs20.realpathSync(path24.resolve(directory2, file));
     if (!fs20.statSync(resolved).isFile()) throw new Error("image_input_not_file");
     inputs[resolved] = readImageMetadata(resolved).sha256;
     return resolved;
   };
-  if (typeof args.imagePath === "string") args.imagePath = resolve13(args.imagePath);
-  if (typeof args.maskPath === "string") args.maskPath = resolve13(args.maskPath);
-  if (Array.isArray(args.refImagePaths)) args.refImagePaths = args.refImagePaths.map((v) => resolve13(String(v)));
+  if (typeof args.imagePath === "string") args.imagePath = resolve14(args.imagePath);
+  if (typeof args.maskPath === "string") args.maskPath = resolve14(args.maskPath);
+  if (Array.isArray(args.refImagePaths)) args.refImagePaths = args.refImagePaths.map((v) => resolve14(String(v)));
   return inputs;
 }
 function bindSelection2(tool2, input, selection) {
@@ -118292,11 +118292,62 @@ var shotSchema = external_exports.object({
     }).passthrough().optional(),
     render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: external_exports.string().optional(), reason: external_exports.string().optional() }).passthrough().optional()
   }).passthrough().optional(),
-  sound: external_exports.record(external_exports.unknown()).optional()
+  sound: external_exports.record(external_exports.unknown()).transform((sound, ctx) => {
+    if (!Array.isArray(sound.effects) || !sound.effects.some((e2) => e2?.audience)) return sound;
+    return { ...sound, effects: sound.effects.map((e2, i2) => {
+      if (!e2?.audience) return e2;
+      if (e2.delivery !== void 0 && !["auto", "post"].includes(e2.delivery)) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["effects", i2, "delivery"],
+          message: "audience_delivery_conflict: " + e2.id + " belongs in post"
+        });
+      }
+      return { ...e2, delivery: "post" };
+    }) };
+  }).optional()
 }).passthrough();
 var readLevelSchema = external_exports.enum(["outline", "scenes", "shots", "full", "direction"]);
+var audienceId = external_exports.string().trim().min(1);
+var cueId = audienceId.regex(/^[a-z0-9][a-z0-9-]*$/);
+var audienceEndForSchema = external_exports.object({ shotId: shotIdSchema, id: audienceId, endShotId: shotIdSchema.nullable() }).strict();
+var audienceKey = { shotId: shotIdSchema, id: audienceId };
+var seconds = external_exports.number().finite().nonnegative();
+var audienceEffectsSchema = external_exports.array(external_exports.discriminatedUnion("op", [
+  external_exports.object({
+    ...audienceKey,
+    op: external_exports.literal("plan"),
+    sfx: cueId.optional(),
+    intent: audienceId.optional(),
+    trigger: audienceId.optional(),
+    description: audienceId.optional(),
+    release: audienceId.nullish(),
+    caseId: external_exports.string().regex(/^(00[1-9]|0[1-9]\d|1[01]\d|120)$/).nullish(),
+    intensity: external_exports.enum(["subtle", "normal", "strong"]).nullish(),
+    separationLu: seconds.max(30).nullish()
+  }).strict(),
+  external_exports.object({
+    ...audienceKey,
+    op: external_exports.literal("place"),
+    atSeconds: seconds,
+    timingBasis: external_exports.string().regex(/^[a-f0-9]{64}$/),
+    end: external_exports.object({ shotId: shotIdSchema, atSeconds: external_exports.union([seconds, external_exports.literal("end")]) }).strict().nullish(),
+    fadeOutSeconds: seconds.nullish()
+  }).strict(),
+  external_exports.object({ ...audienceKey, op: external_exports.literal("remove") }).strict()
+])).min(1);
+var sfxEntriesSchema = external_exports.record(cueId, external_exports.object({
+  asset: cueId.optional(),
+  prompt: audienceId.optional(),
+  seconds: external_exports.number().min(0.5).max(30).optional(),
+  loop: external_exports.boolean().optional()
+}).passthrough().refine((v) => !!v.asset !== !!v.prompt, "name either a channel asset or a generation prompt").refine((v) => !v.loop || v.seconds === void 0 || v.seconds >= 5, "a loop needs at least five seconds"));
+function audienceSound() {
+  return loadFromHere2(join12(REFERENCES_DIR, "audience-effects.js"));
+}
 var storyboardReadSchema = external_exports.object({
   path: external_exports.string().min(1).describe("The storyboard directory, or its scenes.js"),
+  audienceEndFor: audienceEndForSchema.optional(),
   level: readLevelSchema.default("shots").describe("outline = sequences with scene numbers \xB7 scenes = scene cards with shot numbers \xB7 shots = every shot summarised under its scene \xB7 full = the raw shot objects too \xB7 direction = only the direction plan as counts"),
   shotId: external_exports.string().min(1).optional().describe("Stable shot ID to inspect, with its raw plan and neighboring shot IDs"),
   includeTechniques: external_exports.boolean().default(true).describe("Return canonical technique ids, purposes, icons and provider instructions"),
@@ -118475,6 +118526,8 @@ function readStoryboard(args) {
   const { win, file, sha256: sha2563 } = readBoard(args.path);
   if (args.level === "direction") return { file, sha256: sha2563, format: String(win.FORMAT ?? "shorts-9x16"), direction: shotDirection().facts(win) };
   const result = contract().outline(win, args.level);
+  if (args.level === "shots" || args.level === "full" || args.audienceEndFor)
+    result.audienceEffects = audienceSound().read(win, dirname6(file), args.audienceEndFor, args.shotId);
   result.file = file;
   result.mediaBaseDirectory = dirname6(file);
   result.sha256 = sha2563;
@@ -118666,6 +118719,8 @@ var storyboardApplySchema = external_exports.object({
   removeSequences: external_exports.array(external_exports.string()).optional(),
   globals: globalsSchema.optional().describe("Set other window.* blocks \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. CLICHES belongs to story_cliche"),
   expectedSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional().describe("Required for propSheet file edits; use the hash from storyboard_read"),
+  audienceEffects: audienceEffectsSchema.optional(),
+  sfxEntries: sfxEntriesSchema.optional(),
   propSheet: external_exports.object({
     props: external_exports.array(external_exports.record(external_exports.unknown())),
     continuity: external_exports.record(external_exports.unknown()).optional()
@@ -118677,11 +118732,11 @@ function scenesPath(target) {
   if (basename7(abs) === "scenes.js") return abs;
   return join12(abs, "scenes.js");
 }
-function readBoard(target) {
+function readBoard(target, source) {
   const file = scenesPath(target);
   if (!existsSync24(file)) throw new Error(`no scenes.js at ${file}`);
   if (!statSync14(file).isFile()) throw new Error(`${file} is not a file`);
-  const src = readFileSync26(file, "utf8");
+  const src = source ?? readFileSync26(file, "utf8");
   const header = [];
   for (const line of src.split("\n")) {
     if (/^\s*\/\//.test(line)) header.push(line.trim());
@@ -118996,8 +119051,8 @@ var round1 = (n) => Math.round(n * 10) / 10;
 function firstLineReading(win) {
   const first = firstLineStart(win);
   if (!first) return [];
-  const { shot, at, seconds, exact, excess } = first;
-  return [`first spoken line: ${shot.id ?? `shot ${at + 1}`}, about ${seconds} s in` + (exact ? "" : " or later (an action before it has no length)") + (excess > 0.5 && shot.narration?.[0]?.delivery !== "voiceover" ? ` \u2014 that shot's length holds ${excess} s beyond its performance; a natively voiced clip plays them as silence, mostly before the line` : "")];
+  const { shot, at, seconds: seconds2, exact, excess } = first;
+  return [`first spoken line: ${shot.id ?? `shot ${at + 1}`}, about ${seconds2} s in` + (exact ? "" : " or later (an action before it has no length)") + (excess > 0.5 && shot.narration?.[0]?.delivery !== "voiceover" ? ` \u2014 that shot's length holds ${excess} s beyond its performance; a natively voiced clip plays them as silence, mostly before the line` : "")];
 }
 var OPENING_WINDOWS = {
   short: {
@@ -119055,18 +119110,21 @@ function applyStoryboard(args, opts = {}) {
   const exists = existsSync24(file);
   let header = [];
   let win = {};
-  if (exists) ({ header, win } = readBoard(file));
+  const original = exists ? readFileSync26(file, "utf8") : "";
+  if (exists) ({ header, win } = readBoard(file, original));
   else if (!args.set && !opts.outline) throw new Error(`no scenes.js at ${file} \u2014 a new board is written with \`set\` (structure + shots)`);
   else if (!opts.outline && workflowEpisode(dirname6(file))) throw new Error("story_order: a new episode board starts with story_sequence \u2192 story_scene \u2192 story_shot");
   else if (!existsSync24(dirname6(file))) throw new Error(`directory does not exist: ${dirname6(file)}`);
-  const original = exists ? readFileSync26(file, "utf8") : "";
+  const audienceEdit = !!(args.audienceEffects || args.sfxEntries);
   const originalHash = createHash16("sha256").update(original).digest("hex");
+  if (audienceEdit && args.expectedSha256 !== originalHash) throw new Error("head_moved: audience edits require the current expectedSha256");
   const previousDoc = win.SB_DOC;
   const incomingDoc = args.globals?.SB_DOC;
   const changesProps = !!args.propSheet || !!args.globals && Object.prototype.hasOwnProperty.call(args.globals, "SB_DOC") && ["props", "propContinuity"].some((key) => JSON.stringify(previousDoc?.[key]) !== JSON.stringify(incomingDoc?.[key]));
   if (changesProps && exists && args.expectedSha256 !== originalHash)
     throw new Error("head_moved: propSheet requires the current expectedSha256 from storyboard_read");
   const { win: next, findings, synced } = applyPatch(win, args, opts);
+  const audienceResult = audienceEdit ? audienceSound().patch(next, dirname6(file), args) : void 0;
   const panelIds = [...new Set((next.SCENES ?? []).flatMap((shot) => [...contract().castOf(shot) ?? [], ...bystandersOf(shot)]))];
   if (panelIds.length && existsSync24(join12(dirname6(file), "cast.json"))) {
     const sheets = /* @__PURE__ */ new Map();
@@ -119127,6 +119185,7 @@ function applyStoryboard(args, opts = {}) {
     shots: (next.SCENES ?? []).length,
     scenes: st ? st.scenes.length : 0,
     sequences: st ? st.sequences.length : 0,
+    ...audienceResult,
     synced,
     findings,
     board: [digest5, firstLine, opening, () => cliches().digest(next)].flatMap((read4) => {
@@ -119137,18 +119196,28 @@ function applyStoryboard(args, opts = {}) {
       }
     })
   };
-  if (bad || args.dryRun) return result;
+  const audienceOnly = audienceEdit && Object.keys(args).every((k) => ["path", "expectedSha256", "draft", "dryRun", "audienceEffects", "sfxEntries"].includes(k));
+  if (bad || args.dryRun || audienceOnly && !audienceResult.changed.length) return result;
   const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
   try {
-    if (changesProps && exists) {
+    if ((changesProps || audienceEdit) && exists) {
       if (createHash16("sha256").update(readFileSync26(file)).digest("hex") !== originalHash) throw new Error("head_moved");
-      const history = join12(dirname6(file), ".prop-history");
+      const history = join12(dirname6(file), changesProps ? ".prop-history" : ".audience-history");
       mkdirSync11(history, { recursive: true });
       const backup = join12(history, originalHash + ".js");
       if (!existsSync24(backup)) writeFileSync17(backup, original, { flag: "wx" });
     }
     writeFileSync17(tmp, serializeBoard(next, header), "utf8");
-    renameSync4(tmp, file);
+    execFileSync14("python3", ["-c", [
+      "import fcntl, hashlib, os, sys",
+      "from pathlib import Path",
+      "target, tmp, before = sys.argv[1:]",
+      "lock = os.open(os.path.dirname(target), os.O_RDONLY)",
+      "fcntl.flock(lock, fcntl.LOCK_EX)",
+      'data = Path(target).read_bytes() if os.path.isfile(target) else b""',
+      'if hashlib.sha256(data).hexdigest() != before: sys.exit("head_moved: reread storyboard")',
+      "os.replace(tmp, target)"
+    ].join("\n"), file, tmp, originalHash], { stdio: ["ignore", "pipe", "pipe"] });
   } catch (err4) {
     try {
       unlinkSync5(tmp);
@@ -120461,6 +120530,9 @@ function writeShotPrompt(args) {
   }
   if (msr && [args.action, args.end, args.sound].some((value) => value && (shot.narration ?? []).some((line) => line.tts && value.includes(line.tts))))
     throw new Error("video_dialogue_embedded: write only action and sound here; shot_dialogue owns the spoken words");
+  const cues = shot.sound?.effects;
+  if (Array.isArray(cues) && args.sound && cues.some((e2) => e2?.audience && e2.description && args.sound.toLowerCase().includes(String(e2.description).toLowerCase())))
+    throw new Error("audience_delivery_conflict: write this cue in post and keep shot_prompt.sound diegetic");
   const source = { action: args.action, ...args.end ? { end: args.end } : {}, ...args.sound ? { sound: args.sound } : {} };
   const rawCast = win.SB_DOC?.characters;
   const names = Object.fromEntries((Array.isArray(rawCast) ? rawCast : []).map((c) => [c.id, String(c.name ?? "")]));
@@ -121372,13 +121444,14 @@ async function generateGemini38Speech(request) {
 // src/tts-quality.ts
 var import_tts_speed_policy = __toESM(require_tts_speed_policy(), 1);
 import { execFile as execFile5 } from "node:child_process";
-import { createHash as createHash17, randomUUID as randomUUID5 } from "node:crypto";
-import { closeSync as closeSync5, existsSync as existsSync25, mkdirSync as mkdirSync12, openSync as openSync5, readFileSync as readFileSync27, renameSync as renameSync5, rmSync as rmSync11, writeFileSync as writeFileSync20 } from "node:fs";
+import { createHash as createHash18, randomUUID as randomUUID5 } from "node:crypto";
+import { closeSync as closeSync5, existsSync as existsSync26, mkdirSync as mkdirSync12, openSync as openSync5, readFileSync as readFileSync28, renameSync as renameSync5, rmSync as rmSync12, writeFileSync as writeFileSync20 } from "node:fs";
 import path26 from "node:path";
 import { promisify as promisify3 } from "node:util";
 
 // src/elevenlabs-client.ts
 import * as fs21 from "node:fs";
+import { createHash as createHash17 } from "node:crypto";
 import * as path25 from "node:path";
 var ELEVENLABS_MODELS = ["eleven_v4"];
 var DEFAULT_ELEVENLABS_MODEL = "eleven_v4";
@@ -121631,7 +121704,7 @@ function isRetryable(httpStatus) {
   return httpStatus === 429 || httpStatus >= 500;
 }
 function sleep7(ms) {
-  return new Promise((resolve13) => setTimeout(resolve13, ms));
+  return new Promise((resolve14) => setTimeout(resolve14, ms));
 }
 function timeoutFor(textLength) {
   return Math.min(5 * 6e4, 6e4 + textLength * 40);
@@ -121648,7 +121721,7 @@ async function elevenFetch(pathAndQuery, init, timeoutMs, attempts = MAX_ATTEMPT
     const response = await fetch(url, { ...init, headers, signal: AbortSignal.timeout(timeoutMs) });
     if (response.ok) return response;
     const bodyText = await response.text();
-    lastError = new Error(describeElevenLabsError(response.status, bodyText));
+    lastError = Object.assign(new Error(describeElevenLabsError(response.status, bodyText)), { httpStatus: response.status });
     if (!isRetryable(response.status) || attempt === attempts - 1) break;
     await sleep7(RETRY_BASE_DELAY_MS * (attempt + 1));
   }
@@ -121861,11 +121934,51 @@ async function generateElevenLabsSoundEffect(request) {
   const outputDir = request.outputPath || process.cwd();
   const ext = sfxExtensionForFormat(request.outputFormat);
   const filename = request.filename || `elevenlabs_sfx_${Date.now()}${ext}`;
+  const catalog2 = !!request.filename && path25.resolve(outputDir).endsWith(path25.join(path25.sep, "assets", "audio", "sfx"));
+  const body = soundEffectRequestBody(request);
+  const signature = createHash17("sha256").update(JSON.stringify([body, request.outputFormat])).digest("hex");
+  let reservation, submitted = false;
   try {
+    if (catalog2) {
+      const file = resolveOutputFile(outputDir, filename, "audio");
+      const receipt = file.replace(/\.(wav|mp3)$/i, "") + ".json";
+      if (fs21.existsSync(file) || fs21.existsSync(receipt)) {
+        if (!fs21.existsSync(file) || !fs21.existsSync(receipt)) throw new Error("Incomplete catalog asset: reconcile its receipt before ordering");
+        const saved = JSON.parse(fs21.readFileSync(receipt, "utf8"));
+        if (saved.signature !== signature || saved.sha256 !== createHash17("sha256").update(fs21.readFileSync(file)).digest("hex"))
+          throw new Error("Existing catalog asset: resolve it for reuse or choose a new variant id");
+        return {
+          success: true,
+          reused: true,
+          submitted: false,
+          audioPath: file,
+          sidecarPath: receipt,
+          model: saved.model,
+          outputFormat: request.outputFormat,
+          durationSeconds: saved.measuredSeconds ?? void 0,
+          estimatedUsd: 0,
+          requestId: saved.requestId
+        };
+      }
+      requireElevenLabsKey();
+      const marker = receipt + ".submission";
+      try {
+        fs21.writeFileSync(marker, JSON.stringify({ signature, createdAt: (/* @__PURE__ */ new Date()).toISOString(), filename }), { flag: "wx" });
+      } catch (err4) {
+        if (err4.code !== "EEXIST") throw err4;
+        throw new Error("Existing or uncertain SFX submission: reconcile " + marker);
+      }
+      reservation = marker;
+      if (fs21.existsSync(file) || fs21.existsSync(receipt)) {
+        fs21.unlinkSync(marker);
+        reservation = void 0;
+        throw new Error("Catalog asset appeared; resolve the existing file");
+      }
+    }
+    submitted = true;
     console.error(
       `[ElevenLabs] Sound effect... (${request.text.length} chars, ${request.durationSeconds !== void 0 ? `${request.durationSeconds}s` : "auto length"}${request.loop ? ", loop" : ""}, ${request.outputFormat})`
     );
-    const body = soundEffectRequestBody(request);
     const response = await elevenFetch(
       `/v1/sound-generation?output_format=${request.outputFormat}`,
       { method: "POST", body: JSON.stringify(body) },
@@ -121883,6 +121996,8 @@ async function generateElevenLabsSoundEffect(request) {
     const durationSeconds = ext === ".wav" ? wavDurationSeconds(audio) : void 0;
     const sidecar = {
       tool: "sfx_elevenlabs_generate",
+      signature,
+      sha256: createHash17("sha256").update(audio).digest("hex"),
       engine: "elevenlabs",
       model: ELEVENLABS_SFX_MODEL,
       text: request.text,
@@ -121897,6 +122012,7 @@ async function generateElevenLabsSoundEffect(request) {
     };
     const sidecarPath = audioPath.replace(/\.(wav|mp3)$/i, "") + ".json";
     fs21.writeFileSync(sidecarPath, JSON.stringify(sidecar, null, 2) + "\n", "utf8");
+    if (reservation) fs21.unlinkSync(reservation);
     console.error(`[ElevenLabs] Sound effect saved to: ${audioPath} (+ ${path25.basename(sidecarPath)})`);
     return {
       success: true,
@@ -121910,9 +122026,11 @@ async function generateElevenLabsSoundEffect(request) {
       latencyMs: meta.latencyMs
     };
   } catch (error2) {
+    const http4 = error2.httpStatus;
+    if (reservation && http4 && [400, 401, 402, 403, 404, 422, 429].includes(http4)) fs21.rmSync(reservation, { force: true });
     const message = error2 instanceof Error ? error2.message : String(error2);
     console.error(`[ElevenLabs] Error: ${message.split("\n")[0]}`);
-    return { success: false, error: message };
+    return { success: false, error: message, submitted };
   }
 }
 var elevenLabsDictionarySchema = external_exports.object({
@@ -122094,7 +122212,7 @@ function planGaps(segments, options) {
 function respace(wavBuffer, alignment, segments, options) {
   const { sampleRate, pcm } = parseWav(wavBuffer);
   const total = pcm.length / 2;
-  const toSample = (seconds) => Math.min(total, Math.max(0, Math.round(seconds * sampleRate)));
+  const toSample = (seconds2) => Math.min(total, Math.max(0, Math.round(seconds2 * sampleRate)));
   const located = locateSegments(alignment, segments);
   const gaps = planGaps(located, options);
   const lead = SPACING_DEFAULTS.lead, tail = SPACING_DEFAULTS.tail, head = SPACING_DEFAULTS.head;
@@ -122112,7 +122230,7 @@ function respace(wavBuffer, alignment, segments, options) {
     }
     return out;
   };
-  const silence = (seconds) => Buffer.alloc(Math.round(seconds * sampleRate) * 2);
+  const silence = (seconds2) => Buffer.alloc(Math.round(seconds2 * sampleRate) * 2);
   const s0 = Math.max(0, located[0].start - head);
   pieces.push(silence(lead));
   let cursor = toSample(s0);
@@ -122224,7 +122342,7 @@ var reviewSchema = external_exports.object({
   }).strict()).max(100)
 }).strict();
 var normalizeSpeech = (s2) => s2.normalize("NFKC").toLowerCase().replace(/[\p{P}\p{Z}\s]/gu, "");
-var sha256 = (s2) => createHash17("sha256").update(s2).digest("hex");
+var sha256 = (s2) => createHash18("sha256").update(s2).digest("hex");
 function characterErrorRate(expected, heard) {
   const a = [...normalizeSpeech(expected)], b = [...normalizeSpeech(heard)];
   if (!a.length || b.length > 12e3) return 1;
@@ -122317,26 +122435,26 @@ var sentencesPathFor = (wav) => wav + ".sentences.json";
 async function applySentenceSpacing(output2, request, align) {
   (0, import_tts_speed_policy.authorizeSpeed)(request.outputPath, "final", request.playbackSpeed);
   const alignmentPath = output2.replace(/\.wav$/i, "") + ".alignment.json";
-  rmSync11(sentencesPathFor(output2), { force: true });
+  rmSync12(sentencesPathFor(output2), { force: true });
   try {
-    if (existsSync25(alignmentPath)) {
+    if (existsSync26(alignmentPath)) {
       try {
-        if (JSON.parse(readFileSync27(alignmentPath, "utf8")).engine === "asr-aligner") rmSync11(alignmentPath, { force: true });
+        if (JSON.parse(readFileSync28(alignmentPath, "utf8")).engine === "asr-aligner") rmSync12(alignmentPath, { force: true });
       } catch {
-        rmSync11(alignmentPath, { force: true });
+        rmSync12(alignmentPath, { force: true });
       }
     }
-    if (!existsSync25(alignmentPath)) {
+    if (!existsSync26(alignmentPath)) {
       if (!align) return { skipped: "no alignment sidecar beside the take and no aligner" };
       const aligned = await align(output2, request.expectedText, request.language);
       if (aligned.matched < aligned.letters * 0.8) throw new Error(`aligner matched ${aligned.matched}/${aligned.letters} script letters; transcript "${aligned.transcript.slice(0, 60)}"`);
       writeFileSync20(alignmentPath, JSON.stringify({ engine: "asr-aligner", generator: request.generator, text: request.expectedText, transcript: aligned.transcript, matched: aligned.matched, letters: aligned.letters, alignment: aligned.alignment }, null, 2));
     }
-    const sidecar = JSON.parse(readFileSync27(alignmentPath, "utf8"));
+    const sidecar = JSON.parse(readFileSync28(alignmentPath, "utf8"));
     const alignment = sidecar.alignment;
     if (!alignment?.characters?.length) return { skipped: "alignment sidecar carries no characters" };
     const segments = request.segments ?? splitSentences(alignment.characters.join(""));
-    const result = respace(readFileSync27(output2), alignment, segments, { pause: request.sentencePause, playbackSpeed: request.playbackSpeed });
+    const result = respace(readFileSync28(output2), alignment, segments, { pause: request.sentencePause, playbackSpeed: request.playbackSpeed });
     writeFileSync20(output2, result.wav);
     const meta = { policy: SPACING_POLICY, source: sidecar.engine === "asr-aligner" ? "asr-aligner" : "vendor", pause: request.sentencePause, playbackSpeed: request.playbackSpeed, lead: result.lead, gaps: result.gaps, inserted: result.inserted, boundaries: result.boundaries, duration: result.duration, segmentsFrom: request.segments ? "request" : "sentence-final punctuation" };
     writeFileSync20(alignmentPath, JSON.stringify({ ...sidecar, alignment: result.alignment, vendor_alignment: sidecar.vendor_alignment ?? sidecar.alignment, respaced: meta }, null, 2));
@@ -122411,8 +122529,8 @@ async function generateCheckedSpeech(input, dependencies) {
     return { success: status === "pass", status, audioPath: output2, proofPath: proofFile, attempts: attempts.length, ...extra };
   }
   try {
-    if (existsSync25(proofFile)) {
-      const old = JSON.parse(readFileSync27(proofFile, "utf8"));
+    if (existsSync26(proofFile)) {
+      const old = JSON.parse(readFileSync28(proofFile, "utf8"));
       if (Object.entries(base).every(([key, value]) => key === "model" || key === "voiceSettings" && old[key] === void 0 || JSON.stringify(old[key]) === JSON.stringify(value))) {
         if (!Array.isArray(old.attempts) || old.attempts.length > 3) throw new Error("Invalid attempt history");
         attempts.push(...old.attempts.map((take) => ({ ...take, model: take.model ?? old.model })));
@@ -122422,12 +122540,12 @@ async function generateCheckedSpeech(input, dependencies) {
         const transcriptSatisfied = transcriptRecorded && (!request.transcriptCheck || storedTranscript !== null);
         if (last?.duplicateOf) return save3("fail", { error: "Identical rejected audio already stopped this request; correct the episode pronunciation or delivery plan" });
         if (request.rejectTake) {
-          if (!last || last.audioSha256 !== request.rejectTake.audioSha256 || !existsSync25(output2) || sha256(readFileSync27(output2)) !== request.rejectTake.audioSha256) throw new Error("The rejected take is not the current audio; inspect the current file before requesting another retake");
+          if (!last || last.audioSha256 !== request.rejectTake.audioSha256 || !existsSync26(output2) || sha256(readFileSync28(output2)) !== request.rejectTake.audioSha256) throw new Error("The rejected take is not the current audio; inspect the current file before requesting another retake");
           last.authorRejection = request.rejectTake.reason;
           last.pending = false;
           last.failures = [...Array.isArray(last.failures) ? last.failures : [], "Rejected during final listening: " + request.rejectTake.reason];
         }
-        if (!request.rejectTake && old.model === REVIEW_MODEL && old.status === "pass" && last?.pending === false && Array.isArray(last.failures) && !last.failures.length && transcriptSatisfied && existsSync25(output2) && old.audioSha256 === sha256(readFileSync27(output2)) && last.audioSha256 === old.audioSha256 && !signalFailures(last.signal, request.expectedText).length && !reviewFailures(request.expectedText, storedTranscript, reviewSchema.parse(last.review), last.signal.duration).length) {
+        if (!request.rejectTake && old.model === REVIEW_MODEL && old.status === "pass" && last?.pending === false && Array.isArray(last.failures) && !last.failures.length && transcriptSatisfied && existsSync26(output2) && old.audioSha256 === sha256(readFileSync28(output2)) && last.audioSha256 === old.audioSha256 && !signalFailures(last.signal, request.expectedText).length && !reviewFailures(request.expectedText, storedTranscript, reviewSchema.parse(last.review), last.signal.duration).length) {
           if (old.voiceSettings === void 0) save3("pass", { audioSha256: old.audioSha256 });
           const lastSpacing = last.spacing;
           return {
@@ -122440,7 +122558,7 @@ async function generateCheckedSpeech(input, dependencies) {
             spacing: !prepared.spacing ? "not applicable" : lastSpacing?.skipped ? "skipped: " + String(lastSpacing.skipped) : "applied"
           };
         }
-        if (!request.rejectTake && (old.model !== REVIEW_MODEL || !transcriptSatisfied) && old.status === "pass" && last && existsSync25(output2) && last.audioSha256 === sha256(readFileSync27(output2))) {
+        if (!request.rejectTake && (old.model !== REVIEW_MODEL || !transcriptSatisfied) && old.status === "pass" && last && existsSync26(output2) && last.audioSha256 === sha256(readFileSync28(output2))) {
           last.previousReviews = [
             ...Array.isArray(last.previousReviews) ? last.previousReviews : [],
             { model: last.model, transcript: last.transcript, review: last.review, failures: last.failures, signal: last.signal, cer: last.cer, transcriptCheck: last.transcriptCheck ?? null }
@@ -122455,7 +122573,7 @@ async function generateCheckedSpeech(input, dependencies) {
     await deps.preflight();
     while (true) {
       let take = attempts.at(-1);
-      const resumeReview = take?.pending === true && typeof take.audioSha256 === "string" && existsSync25(output2) && take.audioSha256 === sha256(readFileSync27(output2));
+      const resumeReview = take?.pending === true && typeof take.audioSha256 === "string" && existsSync26(output2) && take.audioSha256 === sha256(readFileSync28(output2));
       if (!resumeReview) {
         if (attempts.length >= request.maxAttempts) break;
         const attempt = attempts.length + 1;
@@ -122485,10 +122603,10 @@ async function generateCheckedSpeech(input, dependencies) {
         if (!generated.success || path26.resolve(generated.audioPath || generated.path || "") !== output2) throw new Error(generated.error || "Generator did not return the requested audio path");
         if (prepared.spacing) take.spacing = await applySentenceSpacing(output2, request, deps.align);
         else {
-          rmSync11(sentencesPathFor(output2), { force: true });
+          rmSync12(sentencesPathFor(output2), { force: true });
           take.spacing = { skipped: "engine has no alignment" };
         }
-        take.audioSha256 = sha256(readFileSync27(output2));
+        take.audioSha256 = sha256(readFileSync28(output2));
         save3("unverified");
         const duplicate = attempts.slice(0, -1).find((a) => a.audioSha256 === take.audioSha256 && a.pending === false && Array.isArray(a.failures) && a.failures.length);
         if (duplicate) {
@@ -122505,7 +122623,7 @@ async function generateCheckedSpeech(input, dependencies) {
         listened.review = reviewSchema.parse(listened.review);
         failures = reviewFailures(request.expectedText, listened.transcript, listened.review, signal.duration);
       }
-      if (audioSha256 !== sha256(readFileSync27(output2))) throw new Error("Audio changed during review");
+      if (audioSha256 !== sha256(readFileSync28(output2))) throw new Error("Audio changed during review");
       Object.assign(take, {
         pending: false,
         audioSha256,
@@ -122525,15 +122643,15 @@ async function generateCheckedSpeech(input, dependencies) {
     return save3("unverified", { error: error2 instanceof Error ? error2.message : String(error2) });
   } finally {
     closeSync5(lock2);
-    rmSync11(lockFile, { force: true });
+    rmSync12(lockFile, { force: true });
   }
 }
 
 // src/qwen3-asr-client.ts
 import { execFile as execFile6 } from "node:child_process";
-import { existsSync as existsSync26, mkdirSync as mkdirSync13, mkdtempSync as mkdtempSync5, readFileSync as readFileSync28, renameSync as renameSync6, rmSync as rmSync12 } from "node:fs";
+import { existsSync as existsSync27, mkdirSync as mkdirSync13, mkdtempSync as mkdtempSync5, readFileSync as readFileSync29, renameSync as renameSync6, rmSync as rmSync13 } from "node:fs";
 import { homedir as homedir3 } from "node:os";
-import { basename as basename9, extname as extname10, join as join13 } from "node:path";
+import { basename as basename9, extname as extname10, join as join14 } from "node:path";
 var QWEN3_ASR_MODELS = ["Qwen/Qwen3-ASR-1.7B", "Qwen/Qwen3-ASR-0.6B"];
 var DEFAULT_QWEN3_ASR_MODEL = "Qwen/Qwen3-ASR-1.7B";
 var QWEN3_ASR_LANGUAGES = [
@@ -122632,13 +122750,13 @@ function qwen3AsrTimeoutMs(audioSeconds2) {
 }
 var WEIGHT_DOWNLOAD_ALLOWANCE_MS2 = 60 * 6e4;
 function weightCacheDir2(model2) {
-  const hfHome = process.env.HF_HOME || join13(homedir3(), ".cache", "huggingface");
+  const hfHome = process.env.HF_HOME || join14(homedir3(), ".cache", "huggingface");
   const slug = model2.replaceAll("/", "--");
-  return join13(hfHome, "hub", `models--${slug}`);
+  return join14(hfHome, "hub", `models--${slug}`);
 }
 function alignerCacheDir() {
-  const hfHome = process.env.HF_HOME || join13(homedir3(), ".cache", "huggingface");
-  return join13(hfHome, "hub", "models--Qwen--Qwen3-ForcedAligner-0.6B");
+  const hfHome = process.env.HF_HOME || join14(homedir3(), ".cache", "huggingface");
+  return join14(hfHome, "hub", "models--Qwen--Qwen3-ForcedAligner-0.6B");
 }
 function installHint2(detail) {
   return `${detail}
@@ -122660,18 +122778,18 @@ var qwen3AsrTranscribeSchema = external_exports.object({
   filename: bareFilenameSchema("json").optional()
 });
 function probeDurationSeconds(audioPath) {
-  return new Promise((resolve13) => {
+  return new Promise((resolve14) => {
     execFile6(
       "ffprobe",
       ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", audioPath],
       { timeout: 15e3 },
       (error2, out) => {
-        const seconds = Number.parseFloat((out || "").trim());
-        if (error2 || !Number.isFinite(seconds) || seconds <= 0) {
-          resolve13(60);
+        const seconds2 = Number.parseFloat((out || "").trim());
+        if (error2 || !Number.isFinite(seconds2) || seconds2 <= 0) {
+          resolve14(60);
           return;
         }
-        resolve13(seconds);
+        resolve14(seconds2);
       }
     );
   });
@@ -122688,10 +122806,10 @@ function normalizeSegments(data) {
 }
 async function transcribeLocal(request) {
   const bin = qwen3AsrBin();
-  if (!existsSync26(bin)) {
+  if (!existsSync27(bin)) {
     return { success: false, error: installHint2(`mlx-qwen3-asr binary not found: "${bin}"`) };
   }
-  if (!existsSync26(request.audioPath)) {
+  if (!existsSync27(request.audioPath)) {
     return { success: false, error: `Audio file not found: ${request.audioPath}` };
   }
   const outFile = resolveOutputFile(
@@ -122701,8 +122819,8 @@ async function transcribeLocal(request) {
   );
   const outDir = request.outputPath || process.cwd();
   mkdirSync13(outDir, { recursive: true });
-  const scratchDir = mkdtempSync5(join13(outDir, ".qwen3-asr-"));
-  const firstCall = !existsSync26(weightCacheDir2(request.model)) || request.timestamps && !existsSync26(alignerCacheDir());
+  const scratchDir = mkdtempSync5(join14(outDir, ".qwen3-asr-"));
+  const firstCall = !existsSync27(weightCacheDir2(request.model)) || request.timestamps && !existsSync27(alignerCacheDir());
   if (firstCall) {
     console.error(
       "[Qwen3-ASR] First call \u2014 downloading ~3.4GB of weights (plus ForcedAligner if timestamps) to the huggingface cache. This can take a while."
@@ -122728,7 +122846,7 @@ async function transcribeLocal(request) {
   );
   const startedAt = Date.now();
   try {
-    await new Promise((resolve13, reject) => {
+    await new Promise((resolve14, reject) => {
       execFile6(
         bin,
         cliArgs,
@@ -122748,31 +122866,31 @@ async function transcribeLocal(request) {
 ${tail}` : ""}`));
             return;
           }
-          resolve13();
+          resolve14();
         }
       );
     });
   } catch (error2) {
-    rmSync12(scratchDir, { recursive: true, force: true });
+    rmSync13(scratchDir, { recursive: true, force: true });
     const message = error2 instanceof Error ? error2.message : String(error2);
     console.error(`[Qwen3-ASR] Error: ${message.split("\n")[0]}`);
     return { success: false, error: message };
   }
-  const cliJsonPath = join13(scratchDir, `${basename9(request.audioPath, extname10(request.audioPath))}.json`);
-  if (!existsSync26(cliJsonPath)) {
-    rmSync12(scratchDir, { recursive: true, force: true });
+  const cliJsonPath = join14(scratchDir, `${basename9(request.audioPath, extname10(request.audioPath))}.json`);
+  if (!existsSync27(cliJsonPath)) {
+    rmSync13(scratchDir, { recursive: true, force: true });
     return { success: false, error: `mlx-qwen3-asr exited without producing JSON (looked for ${cliJsonPath})` };
   }
   let parsed;
   try {
-    parsed = parseCliJson(readFileSync28(cliJsonPath, "utf8"));
+    parsed = parseCliJson(readFileSync29(cliJsonPath, "utf8"));
   } catch (error2) {
-    rmSync12(scratchDir, { recursive: true, force: true });
+    rmSync13(scratchDir, { recursive: true, force: true });
     const message = error2 instanceof Error ? error2.message : String(error2);
     return { success: false, error: `Failed to parse CLI JSON: ${message}` };
   }
   renameSync6(cliJsonPath, outFile);
-  rmSync12(scratchDir, { recursive: true, force: true });
+  rmSync13(scratchDir, { recursive: true, force: true });
   const segments = normalizeSegments(parsed);
   const text4 = (parsed.text ?? segments.map((s2) => s2.text).join("")).trim();
   const elapsed = Math.round((Date.now() - startedAt) / 100) / 10;
@@ -122790,9 +122908,9 @@ ${tail}` : ""}`));
 
 // src/blender-bridge.ts
 import { execFile as execFile7 } from "node:child_process";
-import { existsSync as existsSync27, mkdtempSync as mkdtempSync6, readFileSync as readFileSync29, rmSync as rmSync13, writeFileSync as writeFileSync21 } from "node:fs";
+import { existsSync as existsSync28, mkdtempSync as mkdtempSync6, readFileSync as readFileSync30, rmSync as rmSync14, writeFileSync as writeFileSync21 } from "node:fs";
 import { tmpdir as tmpdir6 } from "node:os";
-import { dirname as dirname7, extname as extname11, join as join14, resolve as resolve6 } from "node:path";
+import { dirname as dirname7, extname as extname11, join as join15, resolve as resolve7 } from "node:path";
 var BLENDER_PROXY_KINDS = ["person", "dog", "car", "box", "cylinder", "sphere"];
 var BLENDER_INTERPOLATIONS = ["LINEAR", "BEZIER", "CONSTANT"];
 var BLENDER_PREVIZ_ENGINES = ["workbench", "eevee"];
@@ -122834,7 +122952,7 @@ var frameNumber = external_exports.number().int().min(0).max(1e6);
 var blenderName = external_exports.string().min(1).refine((n) => Buffer.byteLength(n, "utf8") <= MAX_BLENDER_NAME, { message: `a Blender object name is at most ${MAX_BLENDER_NAME} bytes of UTF-8` }).refine((n) => !n.includes("/") && !n.includes("\\"), { message: "a Blender object name cannot contain path separators" });
 var evenPixels = (min) => external_exports.number().int().min(min).max(4096).multipleOf(2, "must be an even number of pixels (H.264)");
 var hexColor = external_exports.string().regex(/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "color must be a hex triplet such as #4a90d9");
-var blendPath = external_exports.string().min(1, "blendPath is required").refine((p) => !p.includes(".."), { message: 'blendPath must not contain ".."' }).refine((p) => extname11(p).toLowerCase() === ".blend", { message: "blendPath must end in .blend" }).transform((p) => resolve6(p));
+var blendPath = external_exports.string().min(1, "blendPath is required").refine((p) => !p.includes(".."), { message: 'blendPath must not contain ".."' }).refine((p) => extname11(p).toLowerCase() === ".blend", { message: "blendPath must end in .blend" }).transform((p) => resolve7(p));
 var blenderSceneReadSchema = external_exports.object({ blendPath });
 var proxySchema = external_exports.object({
   name: blenderName,
@@ -122847,7 +122965,7 @@ var proxySchema = external_exports.object({
   color: hexColor.optional()
 });
 var importSchema = external_exports.object({
-  glbPath: external_exports.string().min(1).refine((p) => !p.includes(".."), { message: 'glbPath must not contain ".."' }).refine((p) => [".glb", ".gltf"].includes(extname11(p).toLowerCase()), { message: "glbPath must end in .glb or .gltf" }).transform((p) => resolve6(p)),
+  glbPath: external_exports.string().min(1).refine((p) => !p.includes(".."), { message: 'glbPath must not contain ".."' }).refine((p) => [".glb", ".gltf"].includes(extname11(p).toLowerCase()), { message: "glbPath must end in .glb or .gltf" }).transform((p) => resolve7(p)),
   name: blenderName,
   location: vec3.optional().default([0, 0, 0]),
   rotationDeg: vec3.optional().default([0, 0, 0]),
@@ -122976,7 +123094,7 @@ var blenderPoseKeySchema = external_exports.object({
     frames.add(k.frame);
   }
 });
-var motionPath = external_exports.string().min(1, "motionPath is required").refine((p) => !p.includes(".."), { message: 'motionPath must not contain ".."' }).refine((p) => BLENDER_MOTION_FORMATS.includes(extname11(p).toLowerCase()), { message: `motionPath must end in ${BLENDER_MOTION_FORMATS.join(" or ")}` }).transform((p) => resolve6(p));
+var motionPath = external_exports.string().min(1, "motionPath is required").refine((p) => !p.includes(".."), { message: 'motionPath must not contain ".."' }).refine((p) => BLENDER_MOTION_FORMATS.includes(extname11(p).toLowerCase()), { message: `motionPath must end in ${BLENDER_MOTION_FORMATS.join(" or ")}` }).transform((p) => resolve7(p));
 var blenderMotionImportSchema = external_exports.object({
   blendPath,
   object: blenderName,
@@ -123092,10 +123210,10 @@ function runBridge(job, timeoutMs) {
 async function runBridgeUnlocked(job, timeoutMs) {
   const blender = blenderBin();
   if (!blender) return { success: false, error: installHint3("Blender was not found on this machine.") };
-  const dir = mkdtempSync6(join14(tmpdir6(), "blender-bridge-"));
-  const script = join14(dir, "bridge.py");
-  const jobPath = join14(dir, "job.json");
-  const resultPath = join14(dir, "result.json");
+  const dir = mkdtempSync6(join15(tmpdir6(), "blender-bridge-"));
+  const script = join15(dir, "bridge.py");
+  const jobPath = join15(dir, "job.json");
+  const resultPath = join15(dir, "result.json");
   writeFileSync21(script, BRIDGE_PY, "utf-8");
   writeFileSync21(jobPath, JSON.stringify({ ...job, resultPath }), "utf-8");
   try {
@@ -123116,8 +123234,8 @@ ${stderr}`.split("\n").filter((l) => l.trim().length > 0);
         }
       );
     });
-    if (existsSync27(resultPath)) {
-      const raw = JSON.parse(readFileSync29(resultPath, "utf-8"));
+    if (existsSync28(resultPath)) {
+      const raw = JSON.parse(readFileSync30(resultPath, "utf-8"));
       if (raw.ok) return { success: true, result: raw.result };
       return { success: false, error: `${raw.error ?? "Blender reported an error"}${raw.trace ? `
 ${raw.trace}` : ""}` };
@@ -123128,11 +123246,11 @@ ${raw.trace}` : ""}` };
     return { success: false, error: `Blender exited with code ${run.code ?? "unknown"} before writing a result:
 ${run.tail}` };
   } finally {
-    rmSync13(dir, { recursive: true, force: true });
+    rmSync14(dir, { recursive: true, force: true });
   }
 }
 async function readScene(request) {
-  if (!existsSync27(request.blendPath)) {
+  if (!existsSync28(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
   const r2 = await runBridge({ op: "read", blendPath: request.blendPath }, EDIT_TIMEOUT_MS);
@@ -123140,48 +123258,48 @@ async function readScene(request) {
 }
 async function buildScene(request) {
   for (const imp of request.imports) {
-    if (!existsSync27(imp.glbPath)) return { success: false, error: `GLB not found: ${imp.glbPath}` };
+    if (!existsSync28(imp.glbPath)) return { success: false, error: `GLB not found: ${imp.glbPath}` };
   }
-  if (!request.reset && !existsSync27(request.blendPath)) {
+  if (!request.reset && !existsSync28(request.blendPath)) {
     return { success: false, error: `reset is false but ${request.blendPath} does not exist yet \u2014 set reset to true to create it.` };
   }
   const r2 = await runBridge({ op: "build", ...request }, EDIT_TIMEOUT_MS);
   return r2.success ? { success: true, scene: r2.result } : r2;
 }
 async function setCamera(request) {
-  if (!existsSync27(request.blendPath)) {
+  if (!existsSync28(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
   const r2 = await runBridge({ op: "camera", ...request }, EDIT_TIMEOUT_MS);
   return r2.success ? { success: true, scene: r2.result } : r2;
 }
 async function animateObject(request) {
-  if (!existsSync27(request.blendPath)) {
+  if (!existsSync28(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
   const r2 = await runBridge({ op: "animate", ...request }, EDIT_TIMEOUT_MS);
   return r2.success ? { success: true, scene: r2.result } : r2;
 }
 async function poseKey(request) {
-  if (!existsSync27(request.blendPath)) {
+  if (!existsSync28(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
   const r2 = await runBridge({ op: "pose", ...request }, EDIT_TIMEOUT_MS);
   return r2.success ? { success: true, scene: r2.result } : r2;
 }
 async function importMotion(request) {
-  if (!existsSync27(request.blendPath)) {
+  if (!existsSync28(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
-  if (!existsSync27(request.motionPath)) return { success: false, error: `motion file not found: ${request.motionPath}` };
+  if (!existsSync28(request.motionPath)) return { success: false, error: `motion file not found: ${request.motionPath}` };
   const r2 = await runBridge({ op: "motion", ...request, maxFrames: MAX_PREVIZ_FRAMES }, MOTION_TIMEOUT_MS);
   return r2.success ? { success: true, scene: r2.result } : r2;
 }
 async function renderPreviz(request) {
-  if (!existsSync27(request.blendPath)) {
+  if (!existsSync28(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
-  const outputDir = request.outputPath ? resolve6(request.outputPath) : join14(dirname7(request.blendPath), "previz");
+  const outputDir = request.outputPath ? resolve7(request.outputPath) : join15(dirname7(request.blendPath), "previz");
   const videoPath = resolveOutputFile(outputDir, request.filename, "video");
   const framesForTimeout = request.frameStart !== void 0 && request.frameEnd !== void 0 ? request.frameEnd - request.frameStart + 1 : MAX_PREVIZ_FRAMES;
   const timeoutMs = request.timeoutSeconds ? request.timeoutSeconds * 1e3 : previzTimeoutMs(framesForTimeout, request.engine);
@@ -129213,6 +129331,7 @@ Returns: JSON \u2014 { file, mediaBaseDirectory, sha256, version, format, shots,
         path: { type: "string", description: "The storyboard directory (data/<channel>/episodes/<topic>/storyboard/) or its scenes.js" },
         level: { type: "string", enum: ["outline", "scenes", "shots", "full", "direction"], description: "outline = sequences with scene numbers \xB7 scenes = scene cards with shot numbers \xB7 shots (default) = every shot summarised under its scene \xB7 full = raw shot objects too \xB7 direction = only the direction plan as counts" },
         shotId: { type: "string", description: "Stable shot ID; adds raw selectedShot with scene and neighboring IDs without removing the overall flow. Unknown or duplicate IDs fail." },
+        audienceEndFor: zodToJsonSchema(audienceEndForSchema, { $refStrategy: "none" }),
         includeTechniques: { type: "boolean", description: "Default true: return canonical techniqueCatalog with ids, purposes, unique icons, provider instructions, decision notes (avoid, pair, specify, vertical), guides for the shot_icons values without an entry, current selections and conflicting-plan advice." },
         includeContext: { type: "boolean", description: "Default true: return STORY, PRODUCTION and SB_DOC for character, background, prop and scenario inspection. Recorded evidence is not verified by this read." }
       },
@@ -129683,7 +129802,7 @@ Returns: the file written and the prompt. Stores promptSource so video_plan reco
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     description: `Write a storyboard's scenes.js from a sequence \u2192 scene \u2192 shot model, or patch part of it, in one call. Every shot is checked against the shot schema (type and render.mode vocabularies, transition join, stable id format and uniqueness, camera input, line-crossing and motion-graphic records), the structure against its schema (version, typed scenes and sequences) and the story order, and the derived shot labels (sceneSlug \xB7 sequence) are written from the structure. Nothing is written when a violation is found \u2014 the findings come back instead. No creative or production rule runs on a write; storyboard_check runs them on request.
 
-A new episode board starts with its story (story_sequence \u2192 story_scene \u2192 story_shot), then each shot's characters and lines (shot_characters \u2192 shot_dialogue), then its icon attributes (shot_icons), its images (shot_image) and its video prompt (shot_prompt); storyboard_apply refuses to create a board inside an episode. Use it after those steps to add camera endpoints, blocking and visual plans (storyboard \xA74), and to change one thing later (scenes / sequences by key, shots by id \u2014 shotsById \xB7 insertShots.afterId \xB7 removeShotIds \u2014 or by position, globals for FORMAT \xB7 THEME \xB7 COMPREHENSION \xB7 STORY \xB7 PRODUCTION \xB7 MUSIC \xB7 SFX). Address shots by id once the board has them (every board written by this tool does): a review note names s0007, and positions shift with every insert; a patch mixes id and position addressing at its own peril \u2014 it is refused. Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. One call carries the whole change \u2014 do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
+A new episode board starts with its story (story_sequence \u2192 story_scene \u2192 story_shot), then each shot's characters and lines (shot_characters \u2192 shot_dialogue), then its icon attributes (shot_icons), its images (shot_image) and its video prompt (shot_prompt); storyboard_apply refuses to create a board inside an episode. Use it after those steps to add camera endpoints, blocking and visual plans (storyboard \xA74), and to change one thing later (scenes / sequences by key, shots by id \u2014 shotsById \xB7 insertShots.afterId \xB7 removeShotIds \u2014 or by position, globals for FORMAT \xB7 THEME \xB7 COMPREHENSION \xB7 STORY \xB7 PRODUCTION \xB7 MUSIC \xB7 SFX). Address shots by id once the board has them (every board written by this tool does): a review note names s0007, and positions shift with every insert; a patch mixes id and position addressing at its own peril \u2014 it is refused. Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. Use audienceEffects to plan, place or remove one audience-only post cue and sfxEntries to register reusable assets. Both require expectedSha256. Read level shots for currentTimingBasis, or audienceEndFor for a proposed end shot. One call carries the whole change \u2014 do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
 storyboard_apply assigns stable shot ids (s0001\u2026) and advances STRUCTURE.nextShotId; preserve those ids and do not edit them by hand.
 Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign, visual.camera and the three plan records shot.eyeline \xB7 shot.composition \xB7 shot.depth in the input schema. shot.depth (L11): count what the viewer must read in the frame at once \u2014 one thing \u2192 shallow with focus (a person's eyes), two or more \u2192 deep with the planes listed front to back; a departure needs a reason, and a still_camera focus-in/rack-focus cut cannot be deep. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
 Do NOT pass a shot's visual plan through a summary \u2014 pass the object scenes-schema.md defines (visual \xB7 shot.space \xB7 visual.camera \xB7 visual.video \u2026); unknown keys on a shot pass through untouched. Nonblocking edit_* findings expose performed-speech changes, removed actions, inherited images and dangling prop-event shot ids. They require an editorial comparison, not regeneration or approval. Editing a board drops its stale \`// approved:\` line; existing task authorization is unchanged.
@@ -129708,6 +129827,8 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
         sequences: { type: "array", items: { type: "object", description: "{ id, title, purpose, question?, payoff?, scenes }" }, description: "Upsert sequences by id" },
         scenes: { type: "array", items: { type: "object", description: "{ no, place, time, event, summary, charge, turn, out? }" }, description: "Upsert scenes by no: the given fields replace the scene, and its story_music decision is kept" },
         shots: { type: "array", items: { type: "object", description: "One positional upsert", properties: { no: { type: "number", description: "1-based position" }, shot: storyboardShotInput }, required: ["no", "shot"] }, description: "Upsert shots by 1-based position; no = length + 1 appends. Not with the id fields in the same patch" },
+        audienceEffects: zodToJsonSchema(audienceEffectsSchema, { $refStrategy: "none" }),
+        sfxEntries: zodToJsonSchema(sfxEntriesSchema, { $refStrategy: "none" }),
         shotsById: { type: "array", items: { type: "object", description: "One upsert by id", properties: { id: { type: "string", pattern: "^s\\d{4,}$", description: "The stable shot id (s0007) to replace" }, shot: storyboardShotInput }, required: ["id", "shot"] }, description: "Replace shots by their stable id \u2014 the shot keeps that id, an unknown id writes nothing. Preferred over shots once the board has ids: positions shift with every insert, ids do not" },
         insertShots: { type: "array", items: { type: "object", description: "One insert", properties: { after: { type: "number", description: "1-based position to insert after; 0 = at the start" }, afterId: { type: "string", pattern: "^s\\d{4,}$", description: "The shot id to insert after \u2014 instead of after" }, shots: { type: "array", items: storyboardShotInput, description: "Shots to insert, in order" } }, required: ["shots"] }, description: "Insert shots after a 1-based position (0 = at the start) or after the shot with afterId \u2014 exactly one of the two per entry" },
         transitions: {
@@ -129999,7 +130120,7 @@ TOOLS.push(...UPSCALE_TOOLS);
 TOOLS.push(...TIKTOK_TOOLS);
 
 // src/handlers.ts
-import { existsSync as existsSync40 } from "node:fs";
+import { existsSync as existsSync41 } from "node:fs";
 
 // src/music-routing.ts
 import * as fs24 from "node:fs";
@@ -130086,7 +130207,7 @@ function musicTransaction(directory2, openingSpendUsd, update) {
 // src/music-media.ts
 import * as fs23 from "node:fs";
 import path28 from "node:path";
-import { createHash as createHash18, randomUUID as randomUUID6 } from "node:crypto";
+import { createHash as createHash19, randomUUID as randomUUID6 } from "node:crypto";
 import { execFileSync as execFileSync15 } from "node:child_process";
 function readMusicMetadata(file) {
   const result = JSON.parse(execFileSync15(
@@ -130110,7 +130231,7 @@ function readMusicMetadata(file) {
     durationSeconds,
     sampleRate: Number(audio.sample_rate),
     channels: Number(audio.channels),
-    sha256: createHash18("sha256").update(fs23.readFileSync(file)).digest("hex")
+    sha256: createHash19("sha256").update(fs23.readFileSync(file)).digest("hex")
   };
 }
 function normalizeMusicFile(source, target) {
@@ -130186,13 +130307,13 @@ function environment2(tool2) {
 }
 function inputFiles3(args, directory2) {
   const inputs = {};
-  const resolve13 = (file) => {
+  const resolve14 = (file) => {
     const resolved = fs24.realpathSync(path29.resolve(directory2, file));
     if (!fs24.statSync(resolved).isFile()) throw new Error("music_input_not_file");
     inputs[resolved] = readMusicMetadata(resolved).sha256;
     return resolved;
   };
-  if (typeof args.refAudioPath === "string") args.refAudioPath = resolve13(args.refAudioPath);
+  if (typeof args.refAudioPath === "string") args.refAudioPath = resolve14(args.refAudioPath);
   return inputs;
 }
 function bindSelection3(tool2, input, selection) {
@@ -130482,7 +130603,7 @@ async function routeSpeech(input) {
 // src/host-review.ts
 import { execFile as execFile8 } from "node:child_process";
 import { promisify as promisify4 } from "node:util";
-import { createHash as createHash19, randomUUID as randomUUID7 } from "node:crypto";
+import { createHash as createHash20, randomUUID as randomUUID7 } from "node:crypto";
 import { createReadStream as createReadStream4, mkdirSync as mkdirSync16, realpathSync as realpathSync9, statSync as statSync17, writeFileSync as writeFileSync22 } from "node:fs";
 import { homedir as homedir4 } from "node:os";
 import path30 from "node:path";
@@ -130508,7 +130629,7 @@ var hostReviewSchema = external_exports.object({
   }).strict()).max(100).default([])
 }).strict();
 async function digest3(file) {
-  const hash7 = createHash19("sha256");
+  const hash7 = createHash20("sha256");
   for await (const chunk3 of createReadStream4(file)) hash7.update(chunk3);
   return hash7.digest("hex");
 }
@@ -130557,13 +130678,13 @@ async function hostReview(input) {
       const timestamps = timing.stdout.split(/\r?\n/).filter((line) => line.trim()).map((line) => Number(line.split(",")[0]) - origin).filter((n) => Number.isFinite(n) && n >= 0).sort((a, b) => a - b);
       if (!timestamps.length) throw new Error("Video has no readable presentation timestamps");
       for (let i2 = 0; i2 < 8; i2++) {
-        const seconds = timestamps[Math.floor((timestamps.length - 1) * i2 / 7)];
+        const seconds2 = timestamps[Math.floor((timestamps.length - 1) * i2 / 7)];
         const output2 = path30.join(directory3, `frame-${i2}.jpg`);
         await exec2("ffmpeg", [
           "-v",
           "error",
           "-ss",
-          String(Math.max(0, seconds - 1e-5)),
+          String(Math.max(0, seconds2 - 1e-5)),
           "-i",
           file,
           "-frames:v",
@@ -130575,7 +130696,7 @@ async function hostReview(input) {
           output2
         ], { timeout: 3e4 });
         if (!statSync17(output2).size) throw new Error("Frame extraction produced an empty image");
-        frames.push({ seconds, path: output2 });
+        frames.push({ seconds: seconds2, path: output2 });
       }
     }
     if (await digest3(file) !== mediaSha256) throw new Error("Media changed while preparing evidence");
@@ -130624,9 +130745,9 @@ async function hostReview(input) {
 }
 
 // src/voice-design.ts
-import { existsSync as existsSync30, mkdirSync as mkdirSync17, writeFileSync as writeFileSync23 } from "node:fs";
-import { resolve as resolve7 } from "node:path";
-import { createHash as createHash20 } from "node:crypto";
+import { existsSync as existsSync31, mkdirSync as mkdirSync17, writeFileSync as writeFileSync23 } from "node:fs";
+import { resolve as resolve8 } from "node:path";
+import { createHash as createHash21 } from "node:crypto";
 var voiceDesignSchema = external_exports.object({
   model: external_exports.enum(GEMINI_38_TTS_MODELS),
   displayName: external_exports.string().trim().min(1).max(100),
@@ -130648,13 +130769,13 @@ function buildVoiceDesignBody(args) {
 }
 async function designGeminiVoice(input) {
   const args = voiceDesignSchema.parse(input);
-  const output2 = resolve7(args.outputPath);
-  const receiptPath2 = resolve7(output2, "voice-design.json");
-  const samplePath = resolve7(output2, "voice-preview.wav");
+  const output2 = resolve8(args.outputPath);
+  const receiptPath2 = resolve8(output2, "voice-design.json");
+  const samplePath = resolve8(output2, "voice-preview.wav");
   const body = buildVoiceDesignBody(args);
   const apiKey = requireGeminiKey();
   mkdirSync17(output2, { recursive: true });
-  if (existsSync30(samplePath)) throw new Error("Preview already exists; use a new outputPath.");
+  if (existsSync31(samplePath)) throw new Error("Preview already exists; use a new outputPath.");
   writeFileSync23(receiptPath2, JSON.stringify({ status: "submitted", request: body, submittedAt: (/* @__PURE__ */ new Date()).toISOString() }, null, 2), { flag: "wx" });
   const response = await requestRaw(
     "post",
@@ -130684,7 +130805,7 @@ async function designGeminiVoice(input) {
     return { success: false, voiceId: voice.id, receiptPath: receiptPath2, error: "Voice response or WAV preview invalid; the remote voice may exist. Inspect the receipt before another paid creation." };
   }
   writeFileSync23(samplePath, bytes, { flag: "wx" });
-  const audioSha256 = createHash20("sha256").update(bytes).digest("hex");
+  const audioSha256 = createHash21("sha256").update(bytes).digest("hex");
   writeFileSync23(receiptPath2, JSON.stringify({ ...record3, samplePath, audioSha256 }, null, 2));
   return {
     success: true,
@@ -130792,9 +130913,9 @@ async function reviewActing(input) {
 }
 
 // src/voice-audition.ts
-import { createHash as createHash21, randomUUID as randomUUID8 } from "node:crypto";
-import { appendFileSync as appendFileSync3, copyFileSync, existsSync as existsSync31, mkdirSync as mkdirSync18, readFileSync as readFileSync33, writeFileSync as writeFileSync24, renameSync as renameSync7 } from "node:fs";
-import { basename as basename10, dirname as dirname8, join as join15, resolve as resolve8 } from "node:path";
+import { createHash as createHash22, randomUUID as randomUUID8 } from "node:crypto";
+import { appendFileSync as appendFileSync3, copyFileSync, existsSync as existsSync32, mkdirSync as mkdirSync18, readFileSync as readFileSync34, writeFileSync as writeFileSync24, renameSync as renameSync7 } from "node:fs";
+import { basename as basename10, dirname as dirname8, join as join16, resolve as resolve9 } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { createRequire as createRequire17 } from "node:module";
 
@@ -130912,7 +131033,7 @@ var voiceAuditionSchema = external_exports.object({
       ctx.addIssue({ code: "custom", path: ["sampleTurns"], message: "Per-turn sample acting requires Gemini 3.8 TTS" });
   }
 });
-var hash3 = (value) => createHash21("sha256").update(value).digest("hex");
+var hash3 = (value) => createHash22("sha256").update(value).digest("hex");
 var escape2 = (s2) => s2.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 function compileSample(text4, acting, voice, turns) {
   if (!turns) return compileActing(text4, acting, voice);
@@ -130929,8 +131050,8 @@ function refreshSheet(identityPath) {
   const folder = dirname8(identityPath);
   if (basename10(dirname8(folder)) !== "characters" || basename10(dirname8(dirname8(folder))) !== "assets") return void 0;
   try {
-    createRequire17(import.meta.url)("../../skills/channel/references/review-library.js").exportChannel(resolve8(folder, "../../.."));
-    return join15(folder, "index.html");
+    createRequire17(import.meta.url)("../../skills/channel/references/review-library.js").exportChannel(resolve9(folder, "../../.."));
+    return join16(folder, "index.html");
   } catch (error2) {
     return `sheet refresh failed: ${error2 instanceof Error ? error2.message : String(error2)}`;
   }
@@ -130947,8 +131068,8 @@ async function manageVoiceAudition(args) {
   args = voiceAuditionSchema.parse(args);
   if (args.action === "bind_registered") return bindRegisteredVoice(args);
   if (args.action === "create" || args.action === "plan") {
-    const identityPath = resolve8(args.identityPath);
-    const source = readFileSync33(identityPath, "utf8");
+    const identityPath = resolve9(args.identityPath);
+    const source = readFileSync34(identityPath, "utf8");
     const blocks = [...source.matchAll(/```json\s*\n([\s\S]*?)```/g)].map((m2) => JSON.parse(m2[1]));
     if (blocks.filter((b) => b.character !== void 0).length !== 1) throw new Error("Create the character identity JSON before auditioning; tts may be absent until selection");
     const target = characterVoiceTarget(source, args.voiceProfile);
@@ -130965,13 +131086,13 @@ async function manageVoiceAudition(args) {
       return { ...choice2, tts, match: compareVoiceMetadata(target, choice2.metadata), ...compiled ? { compiled } : {} };
     });
     if (args.action === "plan") return { identityPath, identitySha256: hash3(source), target, candidates: planned, review: "not_reviewed", instruction: "Use provider metadata to choose candidates; unknown attributes require auditioning. No audio generated and identity is unchanged." };
-    const resumed = args.auditionPath ? JSON.parse(readFileSync33(resolve8(args.auditionPath), "utf8")) : void 0;
-    if (resumed && !(resumed.status === "failed" && resumed.identityPath === identityPath && resumed.identitySha256 === hash3(source) && resumed.sampleText === args.sampleText && isDeepStrictEqual(resumed.acting, args.acting) && isDeepStrictEqual(resumed.sampleTurns, args.sampleTurns) && resumed.candidates.every((c, i2) => isDeepStrictEqual(c.tts, planned[i2]?.tts) && existsSync31(c.audioPath) && hash3(readFileSync33(c.audioPath)) === c.audioSha256)))
+    const resumed = args.auditionPath ? JSON.parse(readFileSync34(resolve9(args.auditionPath), "utf8")) : void 0;
+    if (resumed && !(resumed.status === "failed" && resumed.identityPath === identityPath && resumed.identitySha256 === hash3(source) && resumed.sampleText === args.sampleText && isDeepStrictEqual(resumed.acting, args.acting) && isDeepStrictEqual(resumed.sampleTurns, args.sampleTurns) && resumed.candidates.every((c, i2) => isDeepStrictEqual(c.tts, planned[i2]?.tts) && existsSync32(c.audioPath) && hash3(readFileSync34(c.audioPath)) === c.audioSha256)))
       throw new Error("audition_resume_mismatch: continue only a failed audition with the same identity, sample, acting and candidate voices; create a new audition otherwise");
-    const outputPath = resumed ? dirname8(resolve8(args.auditionPath)) : join15(dirname8(identityPath), "voice-auditions", randomUUID8());
+    const outputPath = resumed ? dirname8(resolve9(args.auditionPath)) : join16(dirname8(identityPath), "voice-auditions", randomUUID8());
     mkdirSync18(outputPath, { recursive: true });
-    const auditionPath2 = join15(outputPath, "audition.json");
-    const audition2 = resumed ? { ...resumed, status: "generating" } : { version: 1, status: "generating", identityPath, identitySha256: hash3(source), sampleText: args.sampleText, candidates: [], target, ...args.acting ? { acting: args.acting } : {}, ...args.sampleTurns ? { sampleTurns: args.sampleTurns } : {}, previewPath: join15(outputPath, "index.html") };
+    const auditionPath2 = join16(outputPath, "audition.json");
+    const audition2 = resumed ? { ...resumed, status: "generating" } : { version: 1, status: "generating", identityPath, identitySha256: hash3(source), sampleText: args.sampleText, candidates: [], target, ...args.acting ? { acting: args.acting } : {}, ...args.sampleTurns ? { sampleTurns: args.sampleTurns } : {}, previewPath: join16(outputPath, "index.html") };
     save(auditionPath2, audition2);
     try {
       for (const [index, choice2] of planned.entries()) {
@@ -130997,11 +131118,11 @@ async function manageVoiceAudition(args) {
             note: "Character audition candidate " + id,
             detail: { model: choice2.tts.model || "", voiceId: choice2.tts.voiceId, ...result?.requestId ? { requestId: result.requestId } : {} }
           };
-          appendFileSync3(join15(outputPath, "events.jsonl"), JSON.stringify(event) + "\n");
+          appendFileSync3(join16(outputPath, "events.jsonl"), JSON.stringify(event) + "\n");
           recordUsage(outputPath, event);
         }
         if (!result.success || !result.audioPath) throw new Error(result.error || "Candidate generation returned no audio");
-        const bytes = readFileSync33(result.audioPath);
+        const bytes = readFileSync34(result.audioPath);
         if (bytes.subarray(0, 4).toString() !== "RIFF" || bytes.length <= 44) throw new Error("Candidate must be a nonempty WAV");
         const { compiled: _compiled, ...record3 } = choice2;
         audition2.candidates.push({ ...record3, id, audioPath: result.audioPath, audioSha256: hash3(bytes), generation: { generator: compiled.generator, arguments: generation2, result } });
@@ -131018,15 +131139,15 @@ async function manageVoiceAudition(args) {
       throw new Error(`Audition incomplete; existing candidates are preserved at ${auditionPath2} \u2014 call create again with this auditionPath to generate only the missing ones. ${error2 instanceof Error ? error2.message : String(error2)}`);
     }
   }
-  const auditionPath = resolve8(args.auditionPath);
-  const audition = JSON.parse(readFileSync33(auditionPath, "utf8"));
+  const auditionPath = resolve9(args.auditionPath);
+  const audition = JSON.parse(readFileSync34(auditionPath, "utf8"));
   if (audition.version !== 1) throw new Error("Unsupported audition manifest");
   if (args.action === "read") return { auditionPath, ...audition };
   if (audition.candidates.length !== 3) throw new Error("Select only from a complete, unselected three-voice audition");
   return selectCandidate(auditionPath, args.candidateId, args.userSelection);
 }
 function bindRegisteredVoice(args) {
-  const identityPath = resolve8(args.identityPath), source = readFileSync33(identityPath, "utf8");
+  const identityPath = resolve9(args.identityPath), source = readFileSync34(identityPath, "utf8");
   if (hash3(source) !== args.expectedIdentitySha256) throw new Error("voice_registration_stale: re-read the character identity before binding");
   const blocks = [...source.matchAll(/```json\s*\n([\s\S]*?)```/g)];
   const documents = blocks.map((block2) => ({ block: block2, value: JSON.parse(block2[1]) })).filter((entry2) => entry2.value.character);
@@ -131034,9 +131155,9 @@ function bindRegisteredVoice(args) {
   const { block, value } = documents[0];
   const selection = value.voiceSelection;
   if (!selection?.auditionPath) throw new Error("voice_registration_sample_required: select a recorded audition sample first");
-  const audition = JSON.parse(readFileSync33(selection.auditionPath, "utf8"));
+  const audition = JSON.parse(readFileSync34(selection.auditionPath, "utf8"));
   const chosen = audition.candidates.find((candidate2) => candidate2.id === selection.candidateId);
-  if (!chosen || audition.status !== "selected" || chosen.tts.engine !== "astra-genai" || chosen.audioSha256 !== selection.audioSha256 || hash3(readFileSync33(chosen.audioPath)) !== chosen.audioSha256)
+  if (!chosen || audition.status !== "selected" || chosen.tts.engine !== "astra-genai" || chosen.audioSha256 !== selection.audioSha256 || hash3(readFileSync34(chosen.audioPath)) !== chosen.audioSha256)
     throw new Error("voice_registration_sample_stale: the selected gateway sample or its bytes changed");
   const handoff = createRequire17(import.meta.url)("../../skills/channel/references/character-sheet.js").selectedVoiceReference(source, ttsSchema.parse(value.tts));
   if (handoff.voiceReference?.sha256 !== chosen.audioSha256) throw new Error("voice_registration_sample_stale: restore the selected sample settings before binding");
@@ -131050,9 +131171,9 @@ function bindRegisteredVoice(args) {
     at: (/* @__PURE__ */ new Date()).toISOString()
   };
   const next = source.replace(block[0], "```json\n" + JSON.stringify({ ...value, tts, voiceSelection: { ...selection, registration } }, null, 2) + "\n```");
-  const backup = join15(dirname8(selection.auditionPath), "identity-before-registration-" + randomUUID8() + ".md");
+  const backup = join16(dirname8(selection.auditionPath), "identity-before-registration-" + randomUUID8() + ".md");
   writeFileSync24(backup, source, { flag: "wx" });
-  if (hash3(readFileSync33(identityPath)) !== args.expectedIdentitySha256) throw new Error("voice_registration_stale: identity changed during registration binding");
+  if (hash3(readFileSync34(identityPath)) !== args.expectedIdentitySha256) throw new Error("voice_registration_stale: identity changed during registration binding");
   const temporary = identityPath + "." + randomUUID8() + ".tmp";
   writeFileSync24(temporary, next);
   renameSync7(temporary, identityPath);
@@ -131067,7 +131188,7 @@ function bindRegisteredVoice(args) {
   };
 }
 function selectCandidate(auditionPath, candidateId, userSelection) {
-  const audition = JSON.parse(readFileSync33(auditionPath, "utf8"));
+  const audition = JSON.parse(readFileSync34(auditionPath, "utf8"));
   if (audition.status !== "ready" || ![1, 3].includes(audition.candidates.length)) throw new Error("Select only from a complete, unselected audition or sample");
   const chosen = audition.candidates.find((c) => c.id === candidateId);
   if (!chosen) throw new Error("Unknown candidate");
@@ -131082,8 +131203,8 @@ function selectCandidate(auditionPath, candidateId, userSelection) {
   }
   if ((actual.voiceId || actual.voice || actual.voiceName) !== config3.voiceId || actual.model !== config3.model || config3.engine === "elevenlabs" && (recorded.generator !== "tts_elevenlabs_generate" || actual.languageCode !== config3.language || actual.stability !== config3.stability || actual.similarity !== config3.similarity) || config3.engine === "gemini" && !["tts_generate", "tts_gemini_38"].includes(recorded.generator || ""))
     throw new Error("Candidate voice settings differ from the recorded generation; create a new audition");
-  for (const c of audition.candidates) if (!existsSync31(c.audioPath) || hash3(readFileSync33(c.audioPath)) !== c.audioSha256) throw new Error("Audition audio changed; regenerate or restore original audio before selection");
-  const source = readFileSync33(audition.identityPath, "utf8");
+  for (const c of audition.candidates) if (!existsSync32(c.audioPath) || hash3(readFileSync34(c.audioPath)) !== c.audioSha256) throw new Error("Audition audio changed; regenerate or restore original audio before selection");
+  const source = readFileSync34(audition.identityPath, "utf8");
   if (hash3(source) !== audition.identitySha256) throw new Error("Character identity changed after audition; create a new audition for the current character");
   const selection = { candidateId: chosen.id, userSelection, at: (/* @__PURE__ */ new Date()).toISOString(), auditionPath, audioSha256: chosen.audioSha256 };
   let replaced = false;
@@ -131095,7 +131216,7 @@ function selectCandidate(auditionPath, candidateId, userSelection) {
     return "```json\n" + JSON.stringify({ ...value, tts: ttsSchema.parse(chosen.tts), voiceSelection: selection }, null, 2) + "\n```";
   });
   if (!replaced) throw new Error("Missing identity JSON");
-  writeFileSync24(join15(dirname8(auditionPath), "identity-before-selection.md"), source, { flag: "wx" });
+  writeFileSync24(join16(dirname8(auditionPath), "identity-before-selection.md"), source, { flag: "wx" });
   const temporary = audition.identityPath + "." + randomUUID8() + ".tmp";
   writeFileSync24(temporary, next);
   renameSync7(temporary, audition.identityPath);
@@ -131104,15 +131225,15 @@ function selectCandidate(auditionPath, candidateId, userSelection) {
   save(auditionPath, audition);
   const folder = dirname8(audition.identityPath);
   for (const [name, saved] of [["voice.wav", "voice-before-selection.wav"], ["sample.txt", "sample-before-selection.txt"]])
-    if (existsSync31(join15(folder, name))) copyFileSync(join15(folder, name), join15(dirname8(auditionPath), saved));
-  copyFileSync(chosen.audioPath, join15(folder, "voice.wav"));
-  writeFileSync24(join15(folder, "sample.txt"), audition.sampleText + "\n");
+    if (existsSync32(join16(folder, name))) copyFileSync(join16(folder, name), join16(dirname8(auditionPath), saved));
+  copyFileSync(chosen.audioPath, join16(folder, "voice.wav"));
+  writeFileSync24(join16(folder, "sample.txt"), audition.sampleText + "\n");
   return {
     auditionPath,
     identityPath: audition.identityPath,
     tts: chosen.tts,
     selection,
-    voicePath: join15(folder, "voice.wav"),
+    voicePath: join16(folder, "voice.wav"),
     sheet: refreshSheet(audition.identityPath),
     instruction: "The sheet now plays the chosen voice; update the episode SB_DOC.characters tts snapshot where the board should use it."
   };
@@ -131120,7 +131241,7 @@ function selectCandidate(auditionPath, candidateId, userSelection) {
 
 // src/location.ts
 import * as nodeModule6 from "node:module";
-import { join as join16 } from "node:path";
+import { join as join17 } from "node:path";
 var loader = nodeModule6.createRequire(import.meta.url);
 var actorPoseSchema = external_exports.object({
   position: external_exports.tuple([external_exports.number().finite(), external_exports.number().finite(), external_exports.number().finite()]),
@@ -131173,23 +131294,23 @@ var locationSchema = external_exports.object({
 }).strict();
 async function manageLocation(args) {
   const input = locationSchema.parse(args);
-  const contract2 = loader(join16(REFERENCES_DIR, "location-assets.js"));
+  const contract2 = loader(join17(REFERENCES_DIR, "location-assets.js"));
   return contract2.run(input);
 }
 
 // src/cover.ts
-import { createHash as createHash22 } from "node:crypto";
+import { createHash as createHash23 } from "node:crypto";
 import { execFileSync as execFileSync17, spawn as spawn3 } from "node:child_process";
-import { copyFileSync as copyFileSync2, existsSync as existsSync32, mkdirSync as mkdirSync19, mkdtempSync as mkdtempSync7, readFileSync as readFileSync34, realpathSync as realpathSync10, renameSync as renameSync8, rmSync as rmSync16, statSync as statSync18, writeFileSync as writeFileSync25, openSync as openSync7, readSync, closeSync as closeSync7 } from "node:fs";
+import { copyFileSync as copyFileSync2, existsSync as existsSync33, mkdirSync as mkdirSync19, mkdtempSync as mkdtempSync7, readFileSync as readFileSync35, realpathSync as realpathSync10, renameSync as renameSync8, rmSync as rmSync17, statSync as statSync18, writeFileSync as writeFileSync25, openSync as openSync7, readSync, closeSync as closeSync7 } from "node:fs";
 import { tmpdir as tmpdir7 } from "node:os";
-import { basename as basename11, dirname as dirname9, isAbsolute as isAbsolute2, join as join17, relative as relative2, resolve as resolve9, sep } from "node:path";
+import { basename as basename11, dirname as dirname9, isAbsolute as isAbsolute2, join as join18, relative as relative2, resolve as resolve10, sep as sep2 } from "node:path";
 import { createRequire as createRequire19 } from "node:module";
 import { pathToFileURL } from "node:url";
 var load8 = createRequire19(import.meta.url);
-var COVER_REFS = join17(PLUGIN_ROOT, "skills", "generate-cover", "references");
-var TEMPLATE_FILE = join17(COVER_REFS, "cover-template.html");
-var MOTION_FONT_DIR = join17(PLUGIN_ROOT, "skills", "storyboard", "references", "motion-fonts");
-var REVIEW_FONT_DIR = join17(PLUGIN_ROOT, "skills", "channel", "references", "review-assets", "fonts");
+var COVER_REFS = join18(PLUGIN_ROOT, "skills", "generate-cover", "references");
+var TEMPLATE_FILE = join18(COVER_REFS, "cover-template.html");
+var MOTION_FONT_DIR = join18(PLUGIN_ROOT, "skills", "storyboard", "references", "motion-fonts");
+var REVIEW_FONT_DIR = join18(PLUGIN_ROOT, "skills", "channel", "references", "review-assets", "fonts");
 var RENDER_VERSION = 1;
 var LIMIT = { vertical: 8 * 1024 * 1024, landscape: 10 * 1024 * 1024 };
 var TILE_WIDTH = { vertical: 120, landscape: 160 };
@@ -131223,21 +131344,21 @@ function episodeOf(path35) {
   const board = readBoard(path35);
   const storyboard = realpathSync10(dirname9(scenesPath(path35)));
   const format = String(board.win.FORMAT ?? "shorts-9x16");
-  const formats = load8(join17(PLUGIN_ROOT, "skills", "platform-guide", "references", "formats.js")).FORMATS;
+  const formats = load8(join18(PLUGIN_ROOT, "skills", "platform-guide", "references", "formats.js")).FORMATS;
   const spec = formats[format]?.cover;
   if (!spec) throw new Error(`cover_format_unknown: ${format} has no cover block in formats.js`);
   return { board, storyboard, episode: dirname9(storyboard), format, spec };
 }
 var landscape = (spec) => spec.canvases[0].w > spec.canvases[0].h;
 function inside(episode, file, what) {
-  const abs = isAbsolute2(file) ? file : resolve9(episode, file);
-  if (!existsSync32(abs) || !statSync18(abs).isFile()) throw new Error(`cover_source_missing: ${what} ${file} is not a file`);
+  const abs = isAbsolute2(file) ? file : resolve10(episode, file);
+  if (!existsSync33(abs) || !statSync18(abs).isFile()) throw new Error(`cover_source_missing: ${what} ${file} is not a file`);
   const real = realpathSync10(abs), root = realpathSync10(episode);
-  if (real !== root && !real.startsWith(root + sep)) throw new Error(`cover_source_outside: ${what} ${file} is outside the episode ${episode}`);
+  if (real !== root && !real.startsWith(root + sep2)) throw new Error(`cover_source_outside: ${what} ${file} is outside the episode ${episode}`);
   return real;
 }
 function sha256File(file) {
-  const hash7 = createHash22("sha256"), fd = openSync7(file, "r"), buf = Buffer.alloc(1 << 20);
+  const hash7 = createHash23("sha256"), fd = openSync7(file, "r"), buf = Buffer.alloc(1 << 20);
   try {
     for (let n; (n = readSync(fd, buf, 0, buf.length, null)) > 0; ) hash7.update(buf.subarray(0, n));
   } finally {
@@ -131245,7 +131366,7 @@ function sha256File(file) {
   }
   return hash7.digest("hex");
 }
-var sha2562 = (value) => createHash22("sha256").update(value).digest("hex");
+var sha2562 = (value) => createHash23("sha256").update(value).digest("hex");
 function probe4(file) {
   try {
     const out = JSON.parse(execFileSync17("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height:format=duration", "-of", "json", file], { encoding: "utf8", timeout: 3e4 }));
@@ -131280,7 +131401,7 @@ function resolveSource(ep, input, warnings) {
     if (!start) throw new Error(`cover_shot_no_image: ${input.shotId} has no start image yet (shot_image); use a frame of its clip or make the image first`);
     if (shot.visual?.frames?.mode === "reference")
       warnings.push({ code: "cover_source_reference_frame", message: `${input.shotId} is an MSR shot: its start image is a background reference and the finished clip can be framed differently. Use a frame of the clip once it exists.` });
-    const file2 = inside(ep.episode, join17(ep.storyboard, start), `start image of ${input.shotId}`);
+    const file2 = inside(ep.episode, join18(ep.storyboard, start), `start image of ${input.shotId}`);
     probe4(file2);
     return { ...input, path: relative2(ep.episode, file2), sha256: sha256File(file2) };
   }
@@ -131289,15 +131410,15 @@ function resolveSource(ep, input, warnings) {
     const file2 = inside(ep.episode, input.video, "video");
     const { duration: duration4 } = probe4(file2);
     if (duration4 === void 0 || input.seconds >= duration4) throw new Error(`cover_frame_outside: ${input.seconds}s is not inside ${input.video} (${duration4 ?? "?"}s)`);
-    const probeDir = mkdtempSync7(join17(tmpdir7(), "sf-cover-frame-")), still = join17(probeDir, "frame.png");
+    const probeDir = mkdtempSync7(join18(tmpdir7(), "sf-cover-frame-")), still = join18(probeDir, "frame.png");
     try {
       try {
         ffmpeg3(["-ss", String(input.seconds), "-i", file2, "-frames:v", "1", still]);
       } catch {
       }
-      if (!existsSync32(still)) throw new Error(`cover_frame_outside: no frame at ${input.seconds}s in ${input.video}`);
+      if (!existsSync33(still)) throw new Error(`cover_frame_outside: no frame at ${input.seconds}s in ${input.video}`);
     } finally {
-      rmSync16(probeDir, { recursive: true, force: true });
+      rmSync17(probeDir, { recursive: true, force: true });
     }
     return { ...input, video: relative2(ep.episode, file2), path: relative2(ep.episode, file2), sha256: sha256File(file2) };
   }
@@ -131310,9 +131431,9 @@ function resolveSource(ep, input, warnings) {
 var CJK_COUNT = /* @__PURE__ */ new Set(["ja", "zh"]);
 var copyLength = (text4, language) => CJK_COUNT.has(language.split("-")[0]) ? { n: Array.from(text4.replace(/[\s\p{P}\p{S}]/gu, "")).length, unit: "chars" } : { n: text4.trim().split(/\s+/).length, unit: "words" };
 function youtubeTitle(ep) {
-  const file = join17(ep.episode, "output", "youtube", "meta.md");
-  if (!existsSync32(file)) return void 0;
-  const lines = readFileSync34(file, "utf8").split("\n");
+  const file = join18(ep.episode, "output", "youtube", "meta.md");
+  if (!existsSync33(file)) return void 0;
+  const lines = readFileSync35(file, "utf8").split("\n");
   const at = lines.findIndex((l) => /^#{1,6}\s+title\b/i.test(l));
   if (at < 0) return void 0;
   return lines.slice(at + 1).find((l) => l.trim() && !/^#/.test(l))?.trim();
@@ -131354,7 +131475,7 @@ function setCover(path35, input) {
   }
   const decision = { version: 1, language, reason: input.reason, format: ep.format, ...main2, variants };
   warnings.push(...titleWarnings(ep, decision));
-  const file = join17(ep.storyboard, "cover.json");
+  const file = join18(ep.storyboard, "cover.json");
   atomicWrite(file, JSON.stringify(decision, null, 2) + "\n");
   return { file, decision, decisionSha256: decisionSha(decision), warnings };
 }
@@ -131366,11 +131487,11 @@ function atomicWrite(file, data) {
   renameSync8(tmp, file);
 }
 function readDecision(ep) {
-  const file = join17(ep.storyboard, "cover.json");
-  if (!existsSync32(file)) return void 0;
+  const file = join18(ep.storyboard, "cover.json");
+  if (!existsSync33(file)) return void 0;
   let raw;
   try {
-    raw = JSON.parse(readFileSync34(file, "utf8"));
+    raw = JSON.parse(readFileSync35(file, "utf8"));
   } catch (e2) {
     throw new Error(`cover_decision_unreadable: ${file}: ${e2.message}`);
   }
@@ -131425,8 +131546,8 @@ function regionFor(spec, focus) {
   return focus.y <= 0.5 ? { x0: x2.x0, x1: x2.x1, y0: 0.5, y1: core.y1, align: "center" } : { x0: x2.x0, x1: x2.x1, y0: core.y0, y1: 0.5, align: "center" };
 }
 function pickFont(text4, language) {
-  const motion = load8(join17(PLUGIN_ROOT, "skills", "storyboard", "references", "motion-font-data.js"));
-  const cjk = load8(join17(COVER_REFS, "cover-font-data.js"));
+  const motion = load8(join18(PLUGIN_ROOT, "skills", "storyboard", "references", "motion-font-data.js"));
+  const cjk = load8(join18(COVER_REFS, "cover-font-data.js"));
   const all = { ...motion, ...cjk };
   const lang = language.split("-")[0];
   const order = lang === "ja" ? ["notosansjp", "pretendard"] : lang === "zh" ? ["notosanssc", "notosanstc"] : /[\u1100-\u11ff\u3130-\u318f\uac00-\ud7a3]/.test(text4) ? ["paperlogy", "pretendard"] : ["pretendard", "paperlogy"];
@@ -131440,7 +131561,7 @@ function pickFont(text4, language) {
   const f3 = all[id];
   const dir = f3.file.endsWith(".ttf") ? MOTION_FONT_DIR : REVIEW_FONT_DIR;
   const weight = f3.axes.wght ? Math.min(f3.axes.wght[2], 800) : f3.weight;
-  return { id, file: join17(dir, f3.file), weight };
+  return { id, file: join18(dir, f3.file), weight };
 }
 var CHROME_CANDIDATES = [
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
@@ -131454,13 +131575,13 @@ var CHROME_CANDIDATES = [
 ];
 function chromePath() {
   const env2 = process.env.CHROME;
-  if (env2 && existsSync32(env2) && statSync18(env2).isFile()) return env2;
-  return CHROME_CANDIDATES.find((p) => existsSync32(p));
+  if (env2 && existsSync33(env2) && statSync18(env2).isFile()) return env2;
+  return CHROME_CANDIDATES.find((p) => existsSync33(p));
 }
 function chrome(args, until) {
   const bin = chromePath();
   if (!bin) return Promise.reject(new Error("cover_chrome_missing: Google Chrome was not found; set CHROME to the binary"));
-  const profile = mkdtempSync7(join17(tmpdir7(), "sf-cover-chrome-"));
+  const profile = mkdtempSync7(join18(tmpdir7(), "sf-cover-chrome-"));
   return new Promise((resolveRun, reject) => {
     const child = spawn3(
       bin,
@@ -131487,13 +131608,13 @@ function chrome(args, until) {
       clearInterval(poll);
       clearTimeout(timer);
       if (child.exitCode === null) child.kill("SIGKILL");
-      rmSync16(profile, { recursive: true, force: true });
+      rmSync17(profile, { recursive: true, force: true });
       if (error2) reject(error2);
       else resolveRun(out);
     };
     let last = -1;
     const poll = setInterval(() => {
-      if (!until || !existsSync32(until)) return;
+      if (!until || !existsSync33(until)) return;
       const size = statSync18(until).size;
       if (size > 0 && size === last) finish();
       else last = size;
@@ -131504,7 +131625,7 @@ function chrome(args, until) {
     });
     child.on("error", (e2) => finish(new Error(`cover_chrome_failed: ${e2.message}`)));
     child.on("close", (code) => {
-      if (until && existsSync32(until)) finish();
+      if (until && existsSync33(until)) finish();
       else if (!until && code === 0) finish();
       else finish(new Error(`cover_chrome_failed: Chrome exited ${code}${until ? " without writing the screenshot" : ""}`));
     });
@@ -131523,7 +131644,7 @@ function encodeJpeg(png, out, limit2) {
     const bytes = statSync18(out).size;
     if (bytes <= limit2) return { bytes, quality: q };
   }
-  rmSync16(out, { force: true });
+  rmSync17(out, { force: true });
   throw new Error(`cover_file_too_large: ${out} stays over ${limit2} bytes at every JPEG quality`);
 }
 function luminance([r2, g, b]) {
@@ -131543,7 +131664,7 @@ function contrastBehind(bg, box, width, height, fills) {
   const bright = lum[Math.floor(lum.length * 0.9)] ?? 0;
   return Math.min(...fills.map((f3) => (Math.max(luminance(f3), bright) + 0.05) / (Math.min(luminance(f3), bright) + 0.05)));
 }
-var templateSha = () => sha2562(readFileSync34(TEMPLATE_FILE));
+var templateSha = () => sha2562(readFileSync35(TEMPLATE_FILE));
 function injectConfig(template, config3) {
   const literal2 = JSON.stringify(config3).replace(/[<>\u2028\u2029]/g, (ch) => "\\u" + ch.charCodeAt(0).toString(16).padStart(4, "0"));
   return template.replace("/*COVER_CONFIG*/null", () => literal2);
@@ -131556,13 +131677,13 @@ async function renderCover(path35) {
   const decision = readDecision(ep);
   if (!decision) throw new Error("cover_decision_missing: write the decision with episode_cover set first");
   if (decision.format !== ep.format) throw new Error(`cover_format_changed: the decision was made for ${decision.format} and the board is now ${ep.format}; set it again`);
-  const dir = join17(ep.episode, "output", "cover");
-  mkdirSync19(join17(dir, "previews"), { recursive: true });
-  const work = mkdtempSync7(join17(dir, ".work-")), stage = join17(work, "out");
-  mkdirSync19(join17(stage, "previews"), { recursive: true });
+  const dir = join18(ep.episode, "output", "cover");
+  mkdirSync19(join18(dir, "previews"), { recursive: true });
+  const work = mkdtempSync7(join18(dir, ".work-")), stage = join18(work, "out");
+  mkdirSync19(join18(stage, "previews"), { recursive: true });
   const previous = previousOutputs(dir);
   try {
-    const template = readFileSync34(TEMPLATE_FILE, "utf8");
+    const template = readFileSync35(TEMPLATE_FILE, "utf8");
     const kind = landscape(ep.spec) ? "landscape" : "vertical";
     const files3 = [], previews = [], warnings = [], measurements = {};
     const sources = {}, fonts = {};
@@ -131577,15 +131698,15 @@ async function renderCover(path35) {
       if (look.source.kind === "frame") {
         const { duration: duration4 } = probe4(srcFile);
         if (duration4 === void 0 || look.source.seconds >= duration4) throw new Error(`cover_frame_outside: ${look.source.seconds}s is not inside ${look.source.path} (${duration4 ?? "?"}s)`);
-        still = join17(work, `frame${suffix}.png`);
+        still = join18(work, `frame${suffix}.png`);
         ffmpeg3(["-ss", String(look.source.seconds), "-i", srcFile, "-frames:v", "1", still]);
-        if (!existsSync32(still)) throw new Error(`cover_frame_outside: no frame at ${look.source.seconds}s in ${look.source.path}`);
+        if (!existsSync33(still)) throw new Error(`cover_frame_outside: no frame at ${look.source.seconds}s in ${look.source.path}`);
       }
       const src = probe4(still);
       for (const canvas of ep.spec.canvases) {
         const crop = cropFor(src, look.focus, canvas);
         if (crop.small) warnings.push({ code: "cover_source_small", message: `${say}the source gives less than ${canvas.min[0]}\xD7${canvas.min[1]} and is enlarged to it` });
-        const bg = join17(work, `bg-${canvas.id}${suffix}.png`);
+        const bg = join18(work, `bg-${canvas.id}${suffix}.png`);
         ffmpeg3(["-i", still, "-vf", `crop=${crop.w}:${crop.h}:${crop.x}:${crop.y},scale=${crop.outW}:${crop.outH}:flags=lanczos`, "-frames:v", "1", bg]);
         const focus = { x: (look.focus.x * src.width - crop.x) / crop.w, y: (look.focus.y * src.height - crop.y) / crop.h };
         const region = regionFor(ep.spec, focus);
@@ -131603,7 +131724,7 @@ async function renderCover(path35) {
           maxFont: Math.round(kind === "landscape" ? 0.2 * crop.outH : 0.14 * crop.outW),
           minFont: Math.round(MIN_TILE_FONT_PX * crop.outW / TILE_WIDTH[kind])
         };
-        const page = join17(work, `page-${canvas.id}${suffix}.html`);
+        const page = join18(work, `page-${canvas.id}${suffix}.html`);
         writeFileSync25(page, injectConfig(template, config3));
         const url = pathToFileURL(page).href, size = `--window-size=${crop.outW},${crop.outH}`;
         const dom = await chrome([size, "--dump-dom", url]);
@@ -131616,21 +131737,21 @@ async function renderCover(path35) {
         }
         if (m2.error) throw new Error(`cover_chrome_failed: ${m2.error}`);
         if (m2.width !== crop.outW || look.copy && !m2.copy) throw new Error("cover_chrome_failed: the cover page did not finish its layout");
-        const shot = join17(work, `shot-${canvas.id}${suffix}.png`);
+        const shot = join18(work, `shot-${canvas.id}${suffix}.png`);
         await chrome([size, `--screenshot=${shot}`, url], shot);
         const got = probe4(shot);
         if (got.width !== crop.outW || got.height !== crop.outH) throw new Error(`cover_chrome_failed: the capture is ${got.width}\xD7${got.height}, not ${crop.outW}\xD7${crop.outH}`);
         const name = `${kind === "landscape" ? "thumbnail" : "cover"}-${canvas.id}${suffix}.jpg`;
-        const out = join17(stage, name);
+        const out = join18(stage, name);
         const enc = encodeJpeg(shot, out, LIMIT[kind]);
         files3.push({ name, width: crop.outW, height: crop.outH, bytes: enc.bytes, quality: enc.quality, sha256: sha256File(out), role: i2 ? `variant ${label}` : "main" });
         if (!i2 && kind === "vertical" && ep.spec.unverified.tiktokSavedRatio === "3:4") {
-          const tt = join17(stage, "cover-3x4.jpg"), png = join17(work, "tiktok-3x4.png");
+          const tt = join18(stage, "cover-3x4.jpg"), png = join18(work, "tiktok-3x4.png");
           ffmpeg3(["-i", shot, "-vf", `crop=iw:ih*0.75:0:ih*0.125,scale=1080:1440:flags=lanczos`, "-frames:v", "1", png]);
           const e2 = encodeJpeg(png, tt, LIMIT.vertical);
           files3.push({ name: "cover-3x4.jpg", width: 1080, height: 1440, bytes: e2.bytes, quality: e2.quality, sha256: sha256File(tt), role: "tiktok" });
         }
-        previews.push(...cutPreviews(shot, join17(stage, "previews"), `${canvas.id}${suffix}`, kind, ep.spec));
+        previews.push(...cutPreviews(shot, join18(stage, "previews"), `${canvas.id}${suffix}`, kind, ep.spec));
         const measure = { canvas: canvas.id, source: look.source.path, crop, focus };
         const core = kind === "vertical" ? coreBand(ep.spec) : void 0;
         if (core && (focus.y < core.y0 || focus.y > core.y1))
@@ -131667,21 +131788,21 @@ async function renderCover(path35) {
       }
     }
     warnings.push(...titleWarnings(ep, decision));
-    for (const name of [...files3.map((f3) => f3.name), ...previews]) renameSync8(join17(stage, name), join17(dir, name));
+    for (const name of [...files3.map((f3) => f3.name), ...previews]) renameSync8(join18(stage, name), join18(dir, name));
     const copied = [];
     if (storyFirst(ep.board.win)) {
       const main2 = files3.find((f3) => f3.role === "main");
-      const video2 = join17(ep.episode, "output", "video");
+      const video2 = join18(ep.episode, "output", "video");
       mkdirSync19(video2, { recursive: true });
-      copyFileSync2(join17(dir, main2.name), join17(video2, "cover.jpg"));
+      copyFileSync2(join18(dir, main2.name), join18(video2, "cover.jpg"));
       copied.push("output/video/cover.jpg");
       if (kind === "landscape") {
-        copyFileSync2(join17(dir, main2.name), join17(video2, "thumbnail.jpg"));
+        copyFileSync2(join18(dir, main2.name), join18(video2, "thumbnail.jpg"));
         copied.push("output/video/thumbnail.jpg");
       }
     }
     const made = /* @__PURE__ */ new Set([...files3.map((f3) => f3.name), ...previews]);
-    for (const name of previous) if (!made.has(name)) rmSync16(join17(dir, name), { force: true });
+    for (const name of previous) if (!made.has(name)) rmSync17(join18(dir, name), { force: true });
     const render = {
       version: 1,
       renderVersion: RENDER_VERSION,
@@ -131696,11 +131817,11 @@ async function renderCover(path35) {
       warnings,
       copied
     };
-    atomicWrite(join17(dir, "render.json"), JSON.stringify(render, null, 2) + "\n");
+    atomicWrite(join18(dir, "render.json"), JSON.stringify(render, null, 2) + "\n");
     const episodesDir = dirname9(ep.episode);
     if (basename11(ep.storyboard) === "storyboard" && basename11(episodesDir) === "episodes") {
       try {
-        const library = load8(join17(PLUGIN_ROOT, "skills", "channel", "references", "review-library.js"));
+        const library = load8(join18(PLUGIN_ROOT, "skills", "channel", "references", "review-library.js"));
         library.exportChannel(dirname9(episodesDir));
       } catch (error2) {
         const message = error2 instanceof Error ? error2.message : String(error2);
@@ -131709,12 +131830,12 @@ async function renderCover(path35) {
     }
     return { dir, render };
   } finally {
-    rmSync16(work, { recursive: true, force: true });
+    rmSync17(work, { recursive: true, force: true });
   }
 }
 function previousOutputs(dir) {
   try {
-    const old = JSON.parse(readFileSync34(join17(dir, "render.json"), "utf8"));
+    const old = JSON.parse(readFileSync35(join18(dir, "render.json"), "utf8"));
     const names = [...(old.files ?? []).map((f3) => String(f3?.name)), ...(old.previews ?? []).map(String)];
     return names.filter((n) => /^(previews\/)?[\w.-]+\.(jpg|png)$/.test(n));
   } catch {
@@ -131724,7 +131845,7 @@ function previousOutputs(dir) {
 function cutPreviews(shot, dir, stem, kind, spec) {
   const out = [];
   const cut = (name, vf) => {
-    const file = join17(dir, `${stem}-${name}.png`);
+    const file = join18(dir, `${stem}-${name}.png`);
     ffmpeg3(["-i", shot, "-vf", vf, "-frames:v", "1", file]);
     out.push(relative2(dirname9(dir), file));
   };
@@ -131758,11 +131879,11 @@ function readCover(path35) {
     return { status: "unreadable", reason: e2.message, ...base, next: "episode_cover set again" };
   }
   if (!decision) return { status: "missing", ...base, next: "episode_cover set: choose the moment, the copy and why" };
-  const dir = join17(ep.episode, "output", "cover"), renderFile = join17(dir, "render.json");
-  if (!existsSync32(renderFile)) return { status: "unrendered", decision, ...base, next: "episode_cover render" };
+  const dir = join18(ep.episode, "output", "cover"), renderFile = join18(dir, "render.json");
+  if (!existsSync33(renderFile)) return { status: "unrendered", decision, ...base, next: "episode_cover render" };
   let render;
   try {
-    render = JSON.parse(readFileSync34(renderFile, "utf8"));
+    render = JSON.parse(readFileSync35(renderFile, "utf8"));
     if (!Array.isArray(render.files) || !Array.isArray(render.warnings) || !Array.isArray(render.previews) || typeof render.sources !== "object" || !render.sources) throw new Error("shape");
   } catch {
     return { status: "unrendered", decision, ...base, next: "episode_cover render (output/cover/render.json is unreadable)" };
@@ -131772,8 +131893,8 @@ function readCover(path35) {
   if (decision.format !== ep.format || render.format !== ep.format) changed.push("format");
   if (render.templateSha256 !== templateSha() || render.renderVersion !== RENDER_VERSION) changed.push("template");
   for (const [file, sha] of Object.entries(render.fonts ?? {})) {
-    const abs = join17(PLUGIN_ROOT, file);
-    if (!existsSync32(abs) || sha256File(abs) !== sha) {
+    const abs = join18(PLUGIN_ROOT, file);
+    if (!existsSync33(abs) || sha256File(abs) !== sha) {
       changed.push("font");
       break;
     }
@@ -131789,19 +131910,19 @@ function readCover(path35) {
     if (now !== look.source.sha256 || render.sources[label] !== look.source.sha256) changed.push(i2 ? `source ${label}` : "source");
   }
   for (const f3 of render.files) {
-    const file = join17(dir, String(f3.name));
-    if (dirname9(file) !== dir || !existsSync32(file) || sha256File(file) !== f3.sha256) {
+    const file = join18(dir, String(f3.name));
+    if (dirname9(file) !== dir || !existsSync33(file) || sha256File(file) !== f3.sha256) {
       changed.push("files");
       break;
     }
   }
-  if (!changed.includes("files") && render.previews.some((p) => !existsSync32(join17(dir, String(p))))) changed.push("files");
+  if (!changed.includes("files") && render.previews.some((p) => !existsSync33(join18(dir, String(p))))) changed.push("files");
   const stale = changed.length > 0;
   const kind = landscape(ep.spec) ? "landscape" : "vertical";
-  const at = (name) => render.files.some((f3) => f3.name === name) ? join17(dir, name) : null;
+  const at = (name) => render.files.some((f3) => f3.name === name) ? join18(dir, name) : null;
   const main2 = render.files.find((f3) => f3.role === "main");
-  const mainFile = main2 ? join17(dir, main2.name) : null;
-  const publish = kind === "landscape" ? { youtube: mainFile, facebook: mainFile, variants: render.files.filter((f3) => f3.role.startsWith("variant")).map((f3) => join17(dir, f3.name)) } : {
+  const mainFile = main2 ? join18(dir, main2.name) : null;
+  const publish = kind === "landscape" ? { youtube: mainFile, facebook: mainFile, variants: render.files.filter((f3) => f3.role.startsWith("variant")).map((f3) => join18(dir, f3.name)) } : {
     youtube: mainFile,
     instagram: mainFile,
     instagramNeedsHosting: true,
@@ -131816,7 +131937,7 @@ function readCover(path35) {
     decision,
     dir,
     files: render.files,
-    previews: render.previews.map((p) => join17(dir, p)),
+    previews: render.previews.map((p) => join18(dir, p)),
     measurements: render.measurements,
     warnings,
     publish: { ...publish, stale },
@@ -131827,9 +131948,9 @@ function readCover(path35) {
 }
 
 // src/speech.ts
-import { createHash as createHash23, randomUUID as randomUUID9 } from "node:crypto";
-import { readFileSync as readFileSync35, writeFileSync as writeFileSync26, renameSync as renameSync9, mkdirSync as mkdirSync20, existsSync as existsSync33 } from "node:fs";
-import { dirname as dirname10, resolve as resolve10, join as join18, relative as relative3 } from "node:path";
+import { createHash as createHash24, randomUUID as randomUUID9 } from "node:crypto";
+import { readFileSync as readFileSync36, writeFileSync as writeFileSync26, renameSync as renameSync9, mkdirSync as mkdirSync20, existsSync as existsSync34 } from "node:fs";
+import { dirname as dirname10, resolve as resolve11, join as join19, relative as relative3 } from "node:path";
 import * as nodeModule7 from "node:module";
 import { execFileSync as execFileSync18 } from "node:child_process";
 var voiceContract = () => nodeModule7.createRequire(import.meta.url)("../../skills/_shared/character-voice.js");
@@ -131855,7 +131976,7 @@ var speechManageSchema = external_exports.object({
   generation: external_exports.object({ generator: external_exports.string().min(1), voiceSettings: external_exports.record(external_exports.unknown()), text: external_exports.string().min(1), language: external_exports.string().min(1).optional(), receiptPath: external_exports.string().min(1).optional() }).strict().optional(),
   capabilities: external_exports.object({ provider: external_exports.string().min(1), model: external_exports.string().min(1), audioConditioning: external_exports.boolean(), lipSync: external_exports.boolean(), postLipSync: external_exports.boolean(), nativeSpeech: external_exports.boolean().optional(), evidence: external_exports.string().min(1) }).strict().optional()
 }).strict();
-var hash4 = (s2) => createHash23("sha256").update(s2).digest("hex");
+var hash4 = (s2) => createHash24("sha256").update(s2).digest("hex");
 var object5 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
 var videoSeconds = (file) => Number(execFileSync18(
   "ffprobe",
@@ -131866,12 +131987,12 @@ function syncProductionClip(scene, boardDir, videoPath, oldClip, warnings) {
   const production = object5(scene.productionPlan), cuts = production.cuts;
   if (Array.isArray(cuts) && cuts.length) {
     const cut = object5(cuts[0]);
-    if (cuts.length !== 1 || cut.kind !== "generated_video" || Number(cut.start ?? 0) !== 0 || typeof oldClip !== "string" || typeof cut.path !== "string" || resolve10(boardDir, cut.path) !== resolve10(boardDir, oldClip)) {
+    if (cuts.length !== 1 || cut.kind !== "generated_video" || Number(cut.start ?? 0) !== 0 || typeof oldClip !== "string" || typeof cut.path !== "string" || resolve11(boardDir, cut.path) !== resolve11(boardDir, oldClip)) {
       warnings.push("The bound video changed; the authored production cuts were preserved and need an explicit edit before playback uses this clip.");
       return;
     }
     try {
-      if (Math.abs(Number(cut.seconds) - videoSeconds(resolve10(boardDir, oldClip))) > 0.05) {
+      if (Math.abs(Number(cut.seconds) - videoSeconds(resolve11(boardDir, oldClip))) > 0.05) {
         warnings.push("The existing production cut has an authored duration; it was preserved for an explicit edit.");
         return;
       }
@@ -131881,10 +132002,10 @@ function syncProductionClip(scene, boardDir, videoPath, oldClip, warnings) {
     }
   }
   try {
-    const seconds = videoSeconds(videoPath);
-    if (!Number.isFinite(seconds) || seconds <= 0) throw new Error("Missing video duration");
-    scene.productionPlan = { ...production, cuts: [{ kind: "generated_video", path: relative3(boardDir, videoPath), start: 0, seconds }] };
-    return seconds;
+    const seconds2 = videoSeconds(videoPath);
+    if (!Number.isFinite(seconds2) || seconds2 <= 0) throw new Error("Missing video duration");
+    scene.productionPlan = { ...production, cuts: [{ kind: "generated_video", path: relative3(boardDir, videoPath), start: 0, seconds: seconds2 }] };
+    return seconds2;
   } catch {
     warnings.push("Could not measure the bound video stream; production cuts were not changed.");
   }
@@ -131908,7 +132029,7 @@ function speechRevision(line, character) {
 function currentAudio(line, character) {
   try {
     if (line.audio) characterSpeechContract().verifiedSpeechGeneration(line.audio.path, line.audio.generation, character?.tts, line);
-    return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync33(line.audio.path) && hash4(readFileSync35(line.audio.path)) === line.audio.sha256;
+    return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync34(line.audio.path) && hash4(readFileSync36(line.audio.path)) === line.audio.sha256;
   } catch {
     return false;
   }
@@ -131940,13 +132061,13 @@ function audioProvenanceStatus(line, character) {
   const voice = character?.tts;
   const historical = ["supertonic", "mlx"].includes(String(voice?.engine)) || voice?.engine === "elevenlabs" && ["eleven_v3", "eleven_v3_conversational", "eleven_multilingual_v2", "eleven_flash_v2_5", "eleven_turbo_v2_5"].includes(String(voice?.model));
   try {
-    if (historical && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && hash4(readFileSync35(line.audio.path)) === line.audio.sha256) return "preserved_historical_recording_unverified";
+    if (historical && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && hash4(readFileSync36(line.audio.path)) === line.audio.sha256) return "preserved_historical_recording_unverified";
   } catch {
   }
   return "stale_or_missing";
 }
 function measuredDuration(line) {
-  if (!line.audio || !existsSync33(line.audio.path)) return null;
+  if (!line.audio || !existsSync34(line.audio.path)) return null;
   try {
     const value = Number(execFileSync18("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
     return Number.isFinite(value) && value > 0 ? value : null;
@@ -131985,7 +132106,7 @@ function speechVideoPlan(input, capabilities) {
 function manageSpeech(args) {
   args = speechManageSchema.parse(args);
   const { file, win, header } = readBoard(args.path);
-  const before = readFileSync35(file, "utf8");
+  const before = readFileSync36(file, "utf8");
   const revision = hash4(before);
   const mutates = ["prepare", "update", "attach_audio", "attach_video", "retime"].includes(args.action);
   if (mutates && args.expectedRevision !== revision) throw new Error("Read speech first and supply its current expectedRevision; the storyboard may have changed");
@@ -132054,12 +132175,12 @@ function manageSpeech(args) {
       }
     } else {
       if (!args.audioPath) throw new Error("audioPath is required");
-      const audioPath = resolve10(dirname10(file), args.audioPath);
+      const audioPath = resolve11(dirname10(file), args.audioPath);
       if (!args.generation || args.generation.text !== line.tts) throw new Error("Attach the actual generation arguments and exact line text");
       const voice = audioCharacter(line.speaker)?.tts;
       const voiceErrors = voiceContract().generationVoiceErrors(voice, args.generation, line);
       if (voiceErrors.length) throw new Error("Generation arguments do not match the pinned character voice: " + voiceErrors.join("; "));
-      const bytes = readFileSync35(audioPath);
+      const bytes = readFileSync36(audioPath);
       if (!bytes.length) throw new Error("Audio file is empty");
       const generation2 = characterSpeechContract().verifiedSpeechGeneration(
         audioPath,
@@ -132122,7 +132243,7 @@ function manageSpeech(args) {
     if (args.lineId || args.speaker || args.query) throw new Error("Video planning uses all lines in the shot; remove line filters");
     for (const { line } of selected) actingSchema.nullable().optional().parse(line.acting);
     const episode = dirname10(dirname10(file));
-    if (existsSync33(join18(episode, ".work/model-settings.json"))) {
+    if (existsSync34(join19(episode, ".work/model-settings.json"))) {
       const { selection } = routingContext(episode, args.shotId);
       const adapter2 = args.tool ? VIDEO_ADAPTERS[args.tool] : void 0;
       if (args.tool && adapter2?.engine !== selection.engine) throw new Error("model_selection_mismatch: tool does not match selected engine");
@@ -132136,8 +132257,8 @@ function manageSpeech(args) {
     plan2 = { ...plan2, continuity: continuityContract.plan(win, scenes.indexOf(scene), dirname10(file)) };
     if (args.action === "attach_video") {
       if (!args.videoPath) throw new Error("videoPath is required");
-      const videoPath = resolve10(dirname10(file), args.videoPath);
-      const bytes = readFileSync35(videoPath);
+      const videoPath = resolve11(dirname10(file), args.videoPath);
+      const bytes = readFileSync36(videoPath);
       if (!bytes.length) throw new Error("Video file is empty");
       const native = plan2.mode === "native";
       const nativeAudio = native ? speechSpanContract().inspect(videoPath) : void 0;
@@ -132149,7 +132270,7 @@ function manageSpeech(args) {
       if (native && sound.audioSource === "speech") throw new Error("Native video speech lives in the clip soundtrack; sound.audioSource speech would drop it");
       const audio = selected.map(({ line }) => {
         if (native) return { lineId: line.id, revision: speechRevision(line, character(line.speaker)) };
-        if (!line.audio || line.audio.revision !== speechRevision(line, character(line.speaker)) || hash4(readFileSync35(line.audio.path)) !== line.audio.sha256) throw new Error("Generate and attach current speech before binding video");
+        if (!line.audio || line.audio.revision !== speechRevision(line, character(line.speaker)) || hash4(readFileSync36(line.audio.path)) !== line.audio.sha256) throw new Error("Generate and attach current speech before binding video");
         const errors = voiceContract().generationVoiceErrors(character(line.speaker)?.tts, line.audio.generation, line);
         if (line.audio.generation.text !== line.tts || errors.length) throw new Error("Speech generation evidence changed: " + errors.join("; "));
         return { lineId: line.id, sha256: line.audio.sha256, revision: line.audio.revision };
@@ -132166,7 +132287,7 @@ function manageSpeech(args) {
       if (args.reuse && !tailTrim) throw new Error("Tail trim requires identical bound audio, unchanged speech/action starts and semantics, and a shorter end. Regenerate changed speech or staging.");
       let quality = { review: "not_reviewed", camera: "not_reviewed", lipSync: "not_reviewed" };
       try {
-        const receipt = JSON.parse(readFileSync35(videoPath + ".astra-job.json", "utf8"));
+        const receipt = JSON.parse(readFileSync36(videoPath + ".astra-job.json", "utf8"));
         if (receipt.sha256 === videoSha256) quality = { ...quality, speechSync: receipt.speechSync || null, selection: receipt.selection || null };
         else if (!receipt.sha256 && receipt.videoPath === videoPath)
           quality = { ...quality, unverifiedSpeechSync: receipt.speechSync || null, receiptBinding: "unverified" };
@@ -132264,12 +132385,12 @@ function manageSpeech(args) {
       ids.add(line.id);
       if (!character(line.speaker)?.tts) throw new Error(`Missing pinned voice for ${line.speaker}`);
     }
-    const work = resolve10(dirname10(file), "../.work/speech-history");
+    const work = resolve11(dirname10(file), "../.work/speech-history");
     mkdirSync20(work, { recursive: true });
-    const backup = join18(work, revision + ".js");
-    if (!existsSync33(backup)) writeFileSync26(backup, before);
+    const backup = join19(work, revision + ".js");
+    if (!existsSync34(backup)) writeFileSync26(backup, before);
     const nextSource = serializeBoard(win, header);
-    if (hash4(readFileSync35(file)) !== revision) throw new Error("Storyboard changed during speech edit");
+    if (hash4(readFileSync36(file)) !== revision) throw new Error("Storyboard changed during speech edit");
     const tmp = file + "." + randomUUID9() + ".tmp";
     writeFileSync26(tmp, nextSource);
     renameSync9(tmp, file);
@@ -132282,13 +132403,13 @@ function manageSpeech(args) {
     } : {} };
     return { shotId: scene.id, lineId: line.id, ...result, generation: generation2, arguments: generation2 };
   }) : void 0;
-  return { revision: hash4(readFileSync35(file)), changed, invalidated, plan: plan2, timing, ...soundtrack ? { soundtrack } : {}, ...clearedTrim ? { clearedTrim } : {}, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname10(file), board: win }), audioProvenanceStatus: object5(object5(object5(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
+  return { revision: hash4(readFileSync36(file)), changed, invalidated, plan: plan2, timing, ...soundtrack ? { soundtrack } : {}, ...clearedTrim ? { clearedTrim } : {}, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname10(file), board: win }), audioProvenanceStatus: object5(object5(object5(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
 }
 
 // src/acting-review.ts
 import { execFile as execFile9 } from "node:child_process";
-import { createHash as createHash24, randomUUID as randomUUID10 } from "node:crypto";
-import { existsSync as existsSync34, mkdirSync as mkdirSync21, readFileSync as readFileSync36, realpathSync as realpathSync11, renameSync as renameSync10, rmSync as rmSync17, statSync as statSync19, writeFileSync as writeFileSync27 } from "node:fs";
+import { createHash as createHash25, randomUUID as randomUUID10 } from "node:crypto";
+import { existsSync as existsSync35, mkdirSync as mkdirSync21, readFileSync as readFileSync37, realpathSync as realpathSync11, renameSync as renameSync10, rmSync as rmSync18, statSync as statSync19, writeFileSync as writeFileSync27 } from "node:fs";
 import path31 from "node:path";
 import { homedir as homedir5 } from "node:os";
 import { promisify as promisify5 } from "node:util";
@@ -132353,11 +132474,11 @@ var actingObservationSchema = external_exports.object({
     correction: external_exports.string().trim().min(1).max(2e3)
   }).strict()).max(80)
 }).strict();
-var hash5 = (data) => createHash24("sha256").update(data).digest("hex");
+var hash5 = (data) => createHash25("sha256").update(data).digest("hex");
 var currentHash = (file) => {
   try {
     const stat5 = statSync19(file);
-    return stat5.isFile() && stat5.size <= MAX_BYTES ? hash5(readFileSync36(file)) : null;
+    return stat5.isFile() && stat5.size <= MAX_BYTES ? hash5(readFileSync37(file)) : null;
   } catch {
     return null;
   }
@@ -132621,7 +132742,7 @@ async function reviewActing2(input, deps) {
   const mediaPath = realpathSync11(request.mediaPath);
   const stat5 = statSync19(mediaPath);
   if (!stat5.isFile() || stat5.size === 0 || stat5.size > MAX_BYTES) throw new Error("Review requires a nonempty media file no larger than 12 MiB");
-  const bytes = readFileSync36(mediaPath);
+  const bytes = readFileSync37(mediaPath);
   const probe5 = await deps.probe(mediaPath);
   if (!Number.isFinite(probe5.duration) || probe5.duration <= 0 || probe5.duration > 120) throw new Error("Review requires media duration within (0, 120] seconds");
   if (request.mode !== "video" && !probe5.audio) throw new Error("Requested audio review requires an audio track");
@@ -132634,14 +132755,14 @@ async function reviewActing2(input, deps) {
   let receiptPath2 = path31.join(directory2, `${requestSha256}.json`);
   mkdirSync21(directory2, { recursive: true, mode: 448 });
   const readMatchingReceipt = (file, expectedHash, retryOf2) => {
-    const cached2 = cachedReceiptSchema.parse(JSON.parse(readFileSync36(file, "utf8")));
+    const cached2 = cachedReceiptSchema.parse(JSON.parse(readFileSync37(file, "utf8")));
     const cachedDirection = hash5(JSON.stringify({ direction: cached2.request.direction, expectedText: cached2.request.expectedText, mode: cached2.request.mode }));
     if (cached2.request.focus !== request.focus || cached2.policy !== policy || cached2.model !== ACTING_REVIEW_MODEL || cached2.mediaSha256 !== mediaSha256 || cached2.directionSha256 !== directionSha256 || cached2.requestSha256 !== expectedHash || cachedDirection !== directionSha256 || cached2.retryOf !== retryOf2 || cached2.request.retryTransportFailure !== Boolean(retryOf2) || JSON.stringify(cached2.media) !== JSON.stringify(probe5)) throw new Error("Cached receipt identity does not match this review");
     return cached2;
   };
   let retryOf;
   if (request.retryTransportFailure) {
-    if (!existsSync34(receiptPath2)) throw new Error("Transport retry requires an existing matching original receipt; no new review was sent");
+    if (!existsSync35(receiptPath2)) throw new Error("Transport retry requires an existing matching original receipt; no new review was sent");
     const parent = readMatchingReceipt(receiptPath2, requestSha256);
     if (!isTransportFailure(parent) || currentHash(mediaPath) !== mediaSha256 || parent.currentMediaSha256 !== void 0 && parent.currentMediaSha256 !== mediaSha256)
       throw new Error("Transport retry requires an unchanged original timeout/abort receipt with no observation; reviewed or rejected observations cannot be rerolled");
@@ -132649,7 +132770,7 @@ async function reviewActing2(input, deps) {
     requestSha256 = hash5(JSON.stringify({ retryOf, attempt: 1, policy: "transport-retry-v1" }));
     receiptPath2 = path31.join(directory2, `${requestSha256}.json`);
   }
-  if (existsSync34(receiptPath2)) {
+  if (existsSync35(receiptPath2)) {
     try {
       const cached2 = readMatchingReceipt(receiptPath2, requestSha256, retryOf);
       const currentMediaSha2562 = currentHash(mediaPath);
@@ -132726,13 +132847,13 @@ async function reviewActing2(input, deps) {
     renameSync10(temporary, receiptPath2);
   } catch (error2) {
     try {
-      rmSync17(temporary, { force: true });
+      rmSync18(temporary, { force: true });
     } catch {
     }
     throw new Error(`Could not persist paid acting review; preserved lock at ${lock2}: ${error2 instanceof Error ? error2.message : String(error2)}`);
   }
   try {
-    rmSync17(lock2, { force: true });
+    rmSync18(lock2, { force: true });
   } catch {
     console.error(`[acting_review] Receipt saved; stale lock can be removed: ${lock2}`);
   }
@@ -132740,9 +132861,9 @@ async function reviewActing2(input, deps) {
 }
 
 // src/threads-gate.ts
-import { createHash as createHash25, randomUUID as randomUUID11 } from "node:crypto";
-import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync22, readFileSync as readFileSync37, realpathSync as realpathSync12, renameSync as renameSync11, statSync as statSync20, writeFileSync as writeFileSync28 } from "node:fs";
-import { dirname as dirname11, join as join19, resolve as resolve11 } from "node:path";
+import { createHash as createHash26, randomUUID as randomUUID11 } from "node:crypto";
+import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync22, readFileSync as readFileSync38, realpathSync as realpathSync12, renameSync as renameSync11, statSync as statSync20, writeFileSync as writeFileSync28 } from "node:fs";
+import { dirname as dirname11, join as join20, resolve as resolve12 } from "node:path";
 import { fileURLToPath as fileURLToPath11 } from "node:url";
 import { spawnSync as spawnSync3 } from "node:child_process";
 var nonempty = external_exports.string().trim().min(1);
@@ -132777,20 +132898,20 @@ var reviewSchema2 = external_exports.object({
 });
 var normalize = (s2) => s2.normalize("NFC").replace(/\r\n?/g, "\n").trim();
 function threadsBodyHash(body, selfReply = "") {
-  return createHash25("sha256").update(JSON.stringify([normalize(body), normalize(selfReply)])).digest("hex");
+  return createHash26("sha256").update(JSON.stringify([normalize(body), normalize(selfReply)])).digest("hex");
 }
 function directory(channel) {
-  return join19(process.cwd(), "data", channelSchema2.parse(channel), "growth", "threads");
+  return join20(process.cwd(), "data", channelSchema2.parse(channel), "growth", "threads");
 }
 function draftLocation(id) {
   const match2 = /^([a-z0-9][a-z0-9-]*)\.([a-f0-9-]{36})$/.exec(id);
   if (!match2 || !external_exports.string().uuid().safeParse(match2[2]).success) throw new Error("Invalid draftId");
-  return { channel: match2[1], file: join19(directory(match2[1]), "drafts", `${match2[2]}.json`) };
+  return { channel: match2[1], file: join20(directory(match2[1]), "drafts", `${match2[2]}.json`) };
 }
 function audit(channel, tool2, result, details = {}) {
   const dir = directory(channel);
   mkdirSync22(dir, { recursive: true });
-  appendFileSync4(join19(dir, "gate-log.jsonl"), JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), tool: tool2, result, ...details }) + "\n", { mode: 384 });
+  appendFileSync4(join20(dir, "gate-log.jsonl"), JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), tool: tool2, result, ...details }) + "\n", { mode: 384 });
 }
 function save2(draft) {
   const { file } = draftLocation(draft.draftId);
@@ -132800,7 +132921,7 @@ function save2(draft) {
   renameSync11(temp, file);
 }
 function load9(id) {
-  const value = JSON.parse(readFileSync37(draftLocation(id).file, "utf8"));
+  const value = JSON.parse(readFileSync38(draftLocation(id).file, "utf8"));
   draftSchema.parse(value);
   if (value.draftId !== id || value.channel !== draftLocation(id).channel || threadsBodyHash(value.body, value.selfReply) !== value.bodyHash) {
     throw new Error("Draft body hash mismatch; create a new draft");
@@ -132866,7 +132987,7 @@ function checkThreadsGate(input) {
     if (input.replyToId !== draft.replyToId) throw new Error("Draft reply target mismatch");
     const bodyHash = threadsBodyHash(input.caption, input.selfReply);
     if (bodyHash !== draft.bodyHash) throw new Error("Publish body hash mismatch");
-    const checker = resolve11(dirname11(fileURLToPath11(import.meta.url)), "../../skills/platform-guide/references/check-style.py");
+    const checker = resolve12(dirname11(fileURLToPath11(import.meta.url)), "../../skills/platform-guide/references/check-style.py");
     const styleWarnings = [];
     for (const [body, surface] of [[input.caption, input.replyToId ? "reply" : "threads"], [input.selfReply, "reply"]]) {
       if (!body) continue;
@@ -132883,14 +133004,14 @@ function checkThreadsEpisode(input) {
   gateCall("threads_publish", input, () => {
     const channel = channelSchema2.parse(input.channel);
     const topic = channelSchema2.parse(input.episodeRef);
-    const root = realpathSync12(join19(process.cwd(), "data", channel, "episodes"));
-    const episode = realpathSync12(join19(root, topic));
+    const root = realpathSync12(join20(process.cwd(), "data", channel, "episodes"));
+    const episode = realpathSync12(join20(root, topic));
     if (dirname11(episode) !== root || !statSync20(episode).isDirectory()) throw new Error("Invalid episode directory");
-    const board = realpathSync12(join19(episode, "storyboard", "scenes.js"));
+    const board = realpathSync12(join20(episode, "storyboard", "scenes.js"));
     if (!board.startsWith(episode + "/") || !statSync20(board).isFile()) throw new Error("Missing episode storyboard");
-    const approvalPath = realpathSync12(join19(episode, "threads-publish-approval.json"));
+    const approvalPath = realpathSync12(join20(episode, "threads-publish-approval.json"));
     if (dirname11(approvalPath) !== episode) throw new Error("Invalid episode approval path");
-    const approval = JSON.parse(readFileSync37(approvalPath, "utf8"));
+    const approval = JSON.parse(readFileSync38(approvalPath, "utf8"));
     if (approval.approved !== true) throw new Error("Episode publishing approval required");
     for (const key of ["caption", "selfReply", "imageUrl", "videoUrl", "linkUrl", "replyToId"]) {
       if ((approval[key] ?? "") !== (input[key] ?? "")) throw new Error(`Episode approval mismatch: ${key}`);
@@ -132900,9 +133021,9 @@ function checkThreadsEpisode(input) {
 
 // src/datago-client.ts
 import { mkdir as mkdir2, writeFile as writeFile3 } from "node:fs/promises";
-import { existsSync as existsSync35 } from "node:fs";
+import { existsSync as existsSync36 } from "node:fs";
 import { tmpdir as tmpdir8 } from "node:os";
-import { join as join20 } from "node:path";
+import { join as join21 } from "node:path";
 var PORTAL_BASE = "https://www.data.go.kr";
 var ODCLOUD_BASE = "https://api.odcloud.kr/api";
 var OPENAPI_BASE = "https://apis.data.go.kr";
@@ -133141,14 +133262,14 @@ async function downloadFile2(input) {
   const cd = fileRes.headers.get("content-disposition") ?? "";
   const rawName = cd.match(/filename\*?=(?:UTF-8''|")?([^";]+)/i)?.[1] ?? `datago-${input.publicDataPk}.bin`;
   const filename = sanitizeFilename(fixHeaderEncoding(rawName.replace(/"/g, "")));
-  const saveDir = input.saveDir ?? join20(tmpdir8(), "social-flow-datago");
+  const saveDir = input.saveDir ?? join21(tmpdir8(), "social-flow-datago");
   await mkdir2(saveDir, { recursive: true });
-  let savedPath = join20(saveDir, filename);
-  for (let i2 = 1; existsSync35(savedPath); i2++) {
+  let savedPath = join21(saveDir, filename);
+  for (let i2 = 1; existsSync36(savedPath); i2++) {
     if (i2 >= 100) {
       return err(`there are already 100+ files with the same name in ${saveDir} \u2014 clean up saveDir or point at a different directory.`);
     }
-    savedPath = join20(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i2}$1`));
+    savedPath = join21(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i2}$1`));
   }
   await writeFile3(savedPath, buf);
   const preview2 = decodePreview(buf.subarray(0, 4096));
@@ -134208,25 +134329,25 @@ async function stockSearch(input) {
 
 // src/sns-client.ts
 import { execFile as execFile10 } from "node:child_process";
-import { createHash as createHash26, randomUUID as randomUUID12 } from "node:crypto";
+import { createHash as createHash27, randomUUID as randomUUID12 } from "node:crypto";
 import { promisify as promisify6 } from "node:util";
 import {
-  existsSync as existsSync36,
+  existsSync as existsSync37,
   mkdirSync as nodeMkdirSync,
   readFileSync as nodeReadFileSync,
   rmSync as nodeRmSync,
   writeFileSync as nodeWriteFileSync
 } from "node:fs";
 import { open as nodeOpen, readFile as readFile2, stat as stat4 } from "node:fs/promises";
-import { basename as basename12, dirname as dirname12, extname as extname12, join as join21 } from "node:path";
+import { basename as basename12, dirname as dirname12, extname as extname12, join as join22 } from "node:path";
 function enabledPlatforms() {
   const channelDirs = listChannelDirs();
   return SNS_PLATFORMS.filter(
-    (platform) => existsSync36(snsCredentialFile(platform)) || channelDirs.some((dir) => dir.platforms.includes(platform))
+    (platform) => existsSync37(snsCredentialFile(platform)) || channelDirs.some((dir) => dir.platforms.includes(platform))
   );
 }
 function availablePlatformsFor(channel) {
-  return SNS_PLATFORMS.filter((platform) => existsSync36(snsCredentialFile(platform, channel)));
+  return SNS_PLATFORMS.filter((platform) => existsSync37(snsCredentialFile(platform, channel)));
 }
 var GRAPH_VERSION = "v23.0";
 var THREADS_BASE = "https://graph.threads.net/v1.0";
@@ -134235,7 +134356,7 @@ var FB_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 var DEFAULT_POLL_INTERVAL_MS = 2e3;
 var DEFAULT_POLL_MAX_TRIES = 60;
 var REELS_POLL = { pollIntervalMs: 1e4, pollMaxTries: 30 };
-var sleep8 = (ms) => new Promise((resolve13) => setTimeout(resolve13, ms));
+var sleep8 = (ms) => new Promise((resolve14) => setTimeout(resolve14, ms));
 function fail2(status, message) {
   return { ok: false, status, body: message };
 }
@@ -135060,7 +135181,7 @@ async function facebookCaptions(input) {
     if (!read4.bytes) return read4.error;
     if (!/^\d+\r?\n\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3}\r?\n/m.test(read4.bytes.toString("utf8")))
       return fail2(400, `Invalid SRT cues: ${track.locale}`);
-    files3.push({ bytes: read4.bytes, locale: track.locale, sha256: createHash26("sha256").update(read4.bytes).digest("hex") });
+    files3.push({ bytes: read4.bytes, locale: track.locale, sha256: createHash27("sha256").update(read4.bytes).digest("hex") });
   }
   const { token, error: error2 } = await loadTokenFile("FACEBOOK", input.channel);
   if (error2 || !token) return error2 || fail2(400, "Missing Facebook token");
@@ -135168,8 +135289,8 @@ function parseResumeOffset(range) {
   return m2 ? Number(m2[1]) + 1 : 0;
 }
 function sessionStateFile(filePath) {
-  const key = createHash26("sha256").update(filePath).digest("hex").slice(0, 16);
-  return join21(snsTokenDir, ".yt-upload", `${key}.json`);
+  const key = createHash27("sha256").update(filePath).digest("hex").slice(0, 16);
+  return join22(snsTokenDir, ".yt-upload", `${key}.json`);
 }
 function readState(filePath) {
   try {
@@ -136319,7 +136440,7 @@ async function checkAccounts(channel) {
 
 // src/tts-final-quality.ts
 import { execFile as execFile11 } from "node:child_process";
-import { existsSync as existsSync37, mkdtempSync as mkdtempSync8, readFileSync as readFileSync38, rmSync as rmSync18, writeFileSync as writeFileSync29, renameSync as renameSync12, openSync as openSync8, closeSync as closeSync8 } from "node:fs";
+import { existsSync as existsSync38, mkdtempSync as mkdtempSync8, readFileSync as readFileSync39, rmSync as rmSync19, writeFileSync as writeFileSync29, renameSync as renameSync12, openSync as openSync8, closeSync as closeSync8 } from "node:fs";
 import { tmpdir as tmpdir9 } from "node:os";
 import path32 from "node:path";
 import { promisify as promisify7 } from "node:util";
@@ -136355,22 +136476,22 @@ async function reviewFinalSpeech(input, deps) {
     const result = { ...base, status, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
     const staging = path32.join(temp, "proof.json");
     writeFileSync29(staging, JSON.stringify(result, null, 2) + "\n");
-    writeFileSync29(proofPath + ".tmp", readFileSync38(staging));
+    writeFileSync29(proofPath + ".tmp", readFileSync39(staging));
     renameSync12(proofPath + ".tmp", proofPath);
     return { success: status === "pass", status, proofPath, ...extra };
   }
   try {
-    base = { ...base, mediaSha256: sha256(readFileSync38(media)), textSha256: sha256(normalizeSpeech(request.expectedText)) };
+    base = { ...base, mediaSha256: sha256(readFileSync39(media)), textSha256: sha256(normalizeSpeech(request.expectedText)) };
     const wav = path32.join(temp, "final.flac");
     await exec4("ffmpeg", ["-y", "-v", "error", "-i", media, "-map", "0:a:0", "-map_metadata", "-1", "-ac", "1", "-ar", "24000", "-c:a", "flac", wav], { timeout: 6e4 });
-    base.audioSha256 = sha256(readFileSync38(wav));
-    if (sha256(readFileSync38(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
-    if (readFileSync38(wav).length > chapters.LIMIT) {
+    base.audioSha256 = sha256(readFileSync39(wav));
+    if (sha256(readFileSync39(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
+    if (readFileSync39(wav).length > chapters.LIMIT) {
       return await reviewChapters(request, media, wav, temp, base, proofPath, save3, deps);
     }
-    if (sha256(readFileSync38(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
-    if (existsSync37(proofPath)) {
-      const old = JSON.parse(readFileSync38(proofPath, "utf8"));
+    if (sha256(readFileSync39(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
+    if (existsSync38(proofPath)) {
+      const old = JSON.parse(readFileSync39(proofPath, "utf8"));
       const same = Object.entries(base).every(([k, v]) => ["mediaSha256", "expectedText"].includes(k) || old[k] === v);
       if (old.audioSha256 === base.audioSha256 && old.textSha256 === base.textSha256 && old.status === "fail") return save3("fail", { reused: true, signal: old.signal, transcript: old.transcript, transcriptCheck: transcriptCheck ?? old.transcriptCheck ?? null, failures: old.failures, review: old.review, error: "This exact final audio already failed; fix the audio before another listening review" });
       if (same && old.status === "pass" && (!transcriptCheck || typeof old.transcript === "string")) {
@@ -136399,15 +136520,15 @@ async function reviewFinalSpeech(input, deps) {
     const result = await deps.listen(wav, reviewRequest, true);
     failures.push(...reviewFailures(request.expectedText, result.transcript, result.review, signal.duration));
     if ((result.review.continuity ?? 0) < 95 || !result.review.continuityEvidence) failures.push("Episode continuity below 95 or missing listening evidence");
-    if (sha256(readFileSync38(media)) !== base.mediaSha256) throw new Error("Final media changed during listening");
+    if (sha256(readFileSync39(media)) !== base.mediaSha256) throw new Error("Final media changed during listening");
     return save3(failures.length ? "fail" : "pass", { signal, ...result, transcriptCheck: transcriptCheck ?? null, failures });
   } catch (error2) {
     const failure2 = { error: error2 instanceof Error ? error2.message : String(error2) };
     return singleReviewStarted ? save3("unverified", failure2) : { success: false, status: "unverified", proofPath, ...failure2 };
   } finally {
-    rmSync18(temp, { recursive: true, force: true });
+    rmSync19(temp, { recursive: true, force: true });
     closeSync8(lock2);
-    rmSync18(lockPath, { force: true });
+    rmSync19(lockPath, { force: true });
   }
 }
 async function reviewChapters(request, media, wav, temp, base, proofPath, save3, deps) {
@@ -136415,7 +136536,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
   const pcm = chapters.decode(wav), totalSamples = pcm.length / chapters.BYTES;
   const planned = chapters.plan(request.segments, totalSamples, request.expectedText);
   const identity = { policy: chapters.POLICY, sampleRate: chapters.RATE, totalSamples, pcmSha256: chapters.hash(pcm), segments: request.segments, transcriptCheck: request.transcriptCheck ?? null };
-  const old = existsSync37(proofPath) ? JSON.parse(readFileSync38(proofPath, "utf8")) : null;
+  const old = existsSync38(proofPath) ? JSON.parse(readFileSync39(proofPath, "utf8")) : null;
   const pieces = [];
   const commit = (status, extra = {}) => save3(status, { ...identity, pieces, manifestSha256: chapters.manifest({ ...identity, pieces }), ...extra });
   if (old?.pcmSha256 === identity.pcmSha256 && old.textSha256 === base.textSha256 && old.status === "fail") {
@@ -136433,7 +136554,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
       const raw = path32.join(temp, "piece.pcm"), file = path32.join(temp, "piece.flac");
       writeFileSync29(raw, samples);
       await exec4("ffmpeg", ["-y", "-v", "error", "-f", "s32le", "-ar", String(chapters.RATE), "-ac", "1", "-i", raw, "-map_metadata", "-1", "-c:a", "flac", file], { timeout: 6e4 });
-      const payload = readFileSync38(file);
+      const payload = readFileSync39(file);
       if (payload.length > chapters.LIMIT || !chapters.decode(file).equals(samples)) throw new Error("Chapter encoding exceeded the limit or changed PCM samples");
       const binding = { ...piece, pcmSha256: chapters.hash(samples), audioSha256: chapters.hash(payload), payloadBytes: payload.length, model: REVIEW_MODEL, transcriptCheck: request.transcriptCheck ?? null };
       const reusable = old?.pcmSha256 === identity.pcmSha256 && old.textSha256 === base.textSha256 && old.language === request.language && old.delivery === request.delivery && old.manifestSha256 === chapters.manifest(old);
@@ -136461,7 +136582,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
         evidence = { ...evidence, status: failures2.length ? "fail" : "pass", failures: failures2 };
       }
       pieces.push(evidence);
-      if (sha256(readFileSync38(media)) !== base.mediaSha256) throw new Error("Final media changed during chapter listening");
+      if (sha256(readFileSync39(media)) !== base.mediaSha256) throw new Error("Final media changed during chapter listening");
       commit("unverified");
     }
     const failures = pieces.flatMap((p) => p.failures.map((f3) => `${p.kind} ${p.index}: ${f3}`));
@@ -136476,7 +136597,7 @@ import { randomUUID as randomUUID13 } from "node:crypto";
 
 // src/content-feedback.ts
 import { mkdirSync as mkdirSync23, writeFileSync as writeFileSync30 } from "node:fs";
-import { dirname as dirname13, isAbsolute as isAbsolute3, join as join22, resolve as resolve12 } from "node:path";
+import { dirname as dirname13, isAbsolute as isAbsolute3, join as join23, resolve as resolve13 } from "node:path";
 
 // src/content-feedback-html.ts
 function escapeHtml(value) {
@@ -137061,14 +137182,14 @@ function analyzeInstagramMedia(media, limit2) {
   return { items, cohort, notes };
 }
 function defaultHtmlPath(channel) {
-  return join22(process.cwd(), "data", channel, "growth", "review-recent.html");
+  return join23(process.cwd(), "data", channel, "growth", "review-recent.html");
 }
 function resolveHtmlPath(channel, outputPath) {
   if (outputPath) {
     if (outputPath.includes("..")) {
       throw new Error(`Path traversal detected: ${outputPath}`);
     }
-    const resolved = isAbsolute3(outputPath) ? outputPath : resolve12(process.cwd(), outputPath);
+    const resolved = isAbsolute3(outputPath) ? outputPath : resolve13(process.cwd(), outputPath);
     if (!resolved.toLowerCase().endsWith(".html")) {
       throw new Error(`outputPath must end in .html: ${outputPath}`);
     }
@@ -137213,8 +137334,8 @@ function parseIsoDurationSeconds(iso) {
   const days = Number(match2[1] || 0);
   const hours = Number(match2[2] || 0);
   const minutes = Number(match2[3] || 0);
-  const seconds = Number(match2[4] || 0);
-  const total = days * 86400 + hours * 3600 + minutes * 60 + seconds;
+  const seconds2 = Number(match2[4] || 0);
+  const total = days * 86400 + hours * 3600 + minutes * 60 + seconds2;
   return total > 0 ? total : null;
 }
 var STOP = /* @__PURE__ */ new Set([
@@ -137333,10 +137454,10 @@ function round12(n) {
 function publishedAfterIso(days) {
   return new Date(Date.now() - days * 864e5).toISOString();
 }
-function isShortEnough(seconds, duration4) {
+function isShortEnough(seconds2, duration4) {
   if (duration4 === "any") return true;
-  if (seconds == null) return true;
-  return seconds <= 180;
+  if (seconds2 == null) return true;
+  return seconds2 <= 180;
 }
 async function youtubeGet(path35, params, auth) {
   const query = auth.kind === "key" ? { ...params, key: auth.key } : params;
@@ -138150,14 +138271,14 @@ ${errors.join("\n")}`);
 }
 
 // src/capability-status.ts
-import { existsSync as existsSync38 } from "node:fs";
+import { existsSync as existsSync39 } from "node:fs";
 import path33 from "node:path";
 import os6 from "node:os";
 var has2 = (v) => Boolean(v && v.length > 0);
 var binOk = (p) => {
   try {
-    if (p.includes(path33.sep)) return existsSync38(p);
-    return (process.env.PATH || "").split(path33.delimiter).some((dir) => dir && existsSync38(path33.join(dir, p)));
+    if (p.includes(path33.sep)) return existsSync39(p);
+    return (process.env.PATH || "").split(path33.delimiter).some((dir) => dir && existsSync39(path33.join(dir, p)));
   } catch {
     return false;
   }
@@ -138414,7 +138535,7 @@ function renderCapabilityStatus() {
 }
 
 // src/character-panel.ts
-import { existsSync as existsSync39, readFileSync as readFileSync39, writeFileSync as writeFileSync31 } from "node:fs";
+import { existsSync as existsSync40, readFileSync as readFileSync40, writeFileSync as writeFileSync31 } from "node:fs";
 import { createRequire as createRequire21 } from "node:module";
 import path34 from "node:path";
 var load10 = createRequire21(import.meta.url);
@@ -138444,16 +138565,16 @@ function characterPanelRequest(raw) {
   if (path34.basename(identityPath) !== "identity.md" || path34.basename(path34.dirname(folder)) !== "characters" || path34.basename(path34.dirname(path34.dirname(folder))) !== "assets")
     throw new Error("character_path_invalid: identityPath must be <channel>/assets/characters/<id>/identity.md");
   const { identityCharacter, panelPrompt } = shared4("_shared/character-identity.js");
-  const character = identityCharacter(readFileSync39(identityPath, "utf8"), { ready: false });
+  const character = identityCharacter(readFileSync40(identityPath, "utf8"), { ready: false });
   const panelsFile = path34.join(folder, "panels.json");
-  const panels = (existsSync39(panelsFile) ? JSON.parse(readFileSync39(panelsFile, "utf8")).panels : void 0) ?? {};
+  const panels = (existsSync40(panelsFile) ? JSON.parse(readFileSync40(panelsFile, "utf8")).panels : void 0) ?? {};
   const panelFile = (view) => {
     const file = panels[view]?.file;
-    if (!file || !existsSync39(path34.join(folder, file))) throw new Error(`character_panel_missing: make ${id}'s ${view} panel first, or pass references`);
+    if (!file || !existsSync40(path34.join(folder, file))) throw new Error(`character_panel_missing: make ${id}'s ${view} panel first, or pass references`);
     return path34.join(folder, file);
   };
   const references = (args.references ?? (args.view === "face" ? [] : args.view === "front" ? ["face"] : ["front"]).map(panelFile)).map((file) => path34.resolve(folder, file));
-  for (const file of references) if (!existsSync39(file)) throw new Error(`image_input_missing: ${file}`);
+  for (const file of references) if (!existsSync40(file)) throw new Error(`image_input_missing: ${file}`);
   const { findImageWorkspace, readImageContext } = shared4("_shared/image-selection.js");
   const workspace = findImageWorkspace(folder);
   if (!workspace) throw new Error("image_setup_required: no .social-flow/models.json above this character");
@@ -138482,7 +138603,7 @@ function characterPanelRequest(raw) {
   return { workspace, folder, id, view: args.view, panelsFile, prompt, negativePrompt: call2.negativeSent ? negativePrompt : void 0, warnings, ...call2 };
 }
 function recordCharacterPanel(request) {
-  const doc = existsSync39(request.panelsFile) ? JSON.parse(readFileSync39(request.panelsFile, "utf8")) : { schemaVersion: 1, panels: {} };
+  const doc = existsSync40(request.panelsFile) ? JSON.parse(readFileSync40(request.panelsFile, "utf8")) : { schemaVersion: 1, panels: {} };
   doc.panels = { ...doc.panels, [request.view]: { file: path34.basename(request.file), purpose: "character_reference", view: request.view, framing: { status: "not_reviewed" } } };
   writeFileSync31(request.panelsFile, JSON.stringify(doc, null, 2) + "\n");
   try {
@@ -139019,7 +139140,7 @@ var ROUTES = {
   // ── image generation (OpenAI GPT Image) — returns base64 image block + summary text ──
   gpt_image_text2img: async (args) => {
     const request = parseArgs(text2ImageSchema, args);
-    if (request.savePath && existsSync40(request.savePath)) return { ...text3(`Output already exists; choose a new savePath: ${request.savePath}`, true), terminal: true };
+    if (request.savePath && existsSync41(request.savePath)) return { ...text3(`Output already exists; choose a new savePath: ${request.savePath}`, true), terminal: true };
     const result = await generateFromText(request);
     if (!result.success || !result.base64) {
       return { ...text3(`Image generation failed: ${result.error}`, true), terminal: result.terminal === true };
@@ -139047,7 +139168,7 @@ File save failed: ${formatError(saveError)}`;
   },
   gpt_image_img2img: async (args) => {
     const request = parseArgs(img2ImgSchema, args);
-    if (request.savePath && existsSync40(request.savePath)) return { ...text3(`Output already exists; choose a new savePath: ${request.savePath}`, true), terminal: true };
+    if (request.savePath && existsSync41(request.savePath)) return { ...text3(`Output already exists; choose a new savePath: ${request.savePath}`, true), terminal: true };
     const result = await generateFromImage(request);
     if (!result.success || !result.base64) {
       return { ...text3(`Image editing failed: ${result.error}`, true), terminal: result.terminal === true };
@@ -139452,9 +139573,12 @@ Script length: ${request.script.length} chars`
   sfx_elevenlabs_generate: async (args) => {
     const request = parseArgs(elevenLabsSfxSchema, args);
     const result = await generateElevenLabsSoundEffect(request);
-    if (!result.success) return text3(`ElevenLabs sound effect generation failed: ${result.error}`, true);
-    return { metered: { durationSeconds: result.durationSeconds }, ...text3(
-      `Sound effect generated successfully!
+    if (!result.success) return {
+      ...result.submitted === false ? { metered: { durationSeconds: 0 } } : {},
+      ...text3(`ElevenLabs sound effect generation failed: ${result.error}`, true)
+    };
+    return { metered: { durationSeconds: result.reused ? 0 : result.durationSeconds }, ...text3(
+      `Sound effect ${result.reused ? "reused from catalog" : "generated successfully"}!
 
 File: ${result.audioPath}
 Provenance: ${result.sidecarPath}
@@ -139987,7 +140111,7 @@ ${styleWarnings.join("\n")}` : head;
   storyboard_apply: async (args) => {
     contract();
     const r2 = applyStoryboard(parseArgs(storyboardApplySchema, args));
-    return text3(renderApply(r2), r2.findings.some((f3) => f3.level === "bad"));
+    return text3(r2.changed ? JSON.stringify(r2, null, 2) : renderApply(r2), r2.findings.some((f3) => f3.level === "bad"));
   },
   story_intensity_plan: async (args) => text3(JSON.stringify(
     planStoryIntensity(parseArgs(storyIntensitySchema, args)),
@@ -140163,7 +140287,7 @@ ROUTES.music_status = async (args) => args?.action === "resume" ? resumeMusic2(a
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.122.1" },
+  { name: "social-flow", version: "0.123.0" },
   { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

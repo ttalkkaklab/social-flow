@@ -41,7 +41,7 @@ if (timelineErrors.length) die(timelineErrors.join('; '));
 const hasTimeline = Object.prototype.hasOwnProperty.call(music, '$timeline');
 fs.mkdirSync(work, { recursive: true });
 const markerFile = path.join(work, 'sound-plan.json');
-const ownedNames = new Set(['bgm.tsv', 'sfx.tsv', 'amb.tsv', 'silence.tsv', 'music-gain.tsv', 'sound.env', 'music-timeline.json']);
+const ownedNames = new Set(['bgm.tsv', 'sfx.tsv', 'amb.tsv', 'silence.tsv', 'music-gain.tsv', 'sound.env', 'music-timeline.json', 'sfx-spans.json']);
 let previous = {};
 if (fs.existsSync(markerFile)) {
   try { previous = record(JSON.parse(fs.readFileSync(markerFile, 'utf8')).files); }
@@ -140,6 +140,10 @@ function cueFile(name) {
 
 const timelinePlan = hasTimeline ? compileTimeline(music, scenes, cueFile) : null;
 const bgm = [], effects = [], ambience = [], silence = [], musicGain = [];
+const audienceSpans = [];
+const audience = require('../../storyboard/references/audience-effects.js');
+const audienceClock = audience.boardClock(win, path.dirname(source), channel);
+const shots = scenes.map((s, card) => ({ id: s.id, card }));
 const intensitySeparation = { subtle: 10, normal: 6, strong: 3 };
 scenes.forEach((shot, idx) => {
   const sound = record(shot && shot.sound);
@@ -157,6 +161,22 @@ scenes.forEach((shot, idx) => {
   if (sound.sfx) effects.push([idx, 0, sfxFile(String(sound.sfx)), 'on', '', '']);
   if (Array.isArray(sound.effects)) { sound.effects.forEach((effect, ei) => {
     const item = record(effect);
+    if (item !== effect) die(`shot ${shot.id || idx + 1} sound.effects[${ei}] must be an effect object`);
+    if (item.audience) {
+      audience.checkDelivery(shot.id, item);
+      if (!item.id || !item.sfx || !item.trigger || !item.description || !item.audience.intent ||
+          sound.effects.filter(e => e?.id === item.id).length !== 1 || sound.sfx === item.sfx ||
+          sound.effects.some(e => ['input','native'].includes(e?.delivery) && e.sfx === item.sfx))
+        die(`audience_id_conflict: ${shot.id}/${item.id} needs a unique post event and asset owner`);
+      if (item.atSeconds == null) die(`${shot.id}/${item.id}: planned effect needs observed atSeconds`);
+      audienceClock.bounds(shot.id, item);
+      if (audienceClock.row(shot.id, item).status !== 'placed') die(`audience_timing_stale: ${shot.id}/${item.id}`);
+      const separationLu = item.separationLu ?? intensitySeparation[item.intensity || 'normal'];
+      if (!Number.isFinite(separationLu) || separationLu < 0 || separationLu > 30) die('invalid audience separationLu');
+      audienceSpans.push({ shotId: shot.id, id: item.id, assetPath: sfxFile(item.sfx), separationLu,
+        start: { shotId: shot.id, atSeconds: item.atSeconds }, end: item.end, fadeOutSeconds: item.fadeOutSeconds });
+      return;
+    }
     if (['native', 'input'].includes(item.delivery)) {
       if (sound.audioSource !== 'video') die(`shot ${idx + 1}: ${item.delivery} effects require audioSource=video`);
       if (item.sfx && sound.sfx === item.sfx) die(`shot ${idx + 1}: native/input effect also appears in legacy sound.sfx`);
@@ -192,6 +212,25 @@ scenes.forEach((shot, idx) => {
   }); }
 });
 
+if (audienceSpans.length) {
+  if (fs.existsSync(oldEffectsFile)) {
+    const bytes = fs.readFileSync(oldEffectsFile);
+    if (previous['sfx.tsv'] !== digest(bytes)) {
+      const manual = bytes.toString('utf8').split(/\r?\n/).filter(l => l.trim() && !l.startsWith('#')).map(l => l.split('\t'));
+      if (manual.length && (effects.length || manual.some(([card,,name]) => name && audienceSpans.some(span =>
+        scenes[Number(card)]?.id === span.shotId && path.resolve(work, name) === path.resolve(span.assetPath)))))
+        die('audience_id_conflict: reconcile the unmanaged or edited sfx.tsv before changing its effect rows (file preserved)');
+    }
+  }
+  const boundaries = scenes;
+  // Natural tails may cross adjacent cards, but stop where a separately spliced insert begins.
+  for (const span of audienceSpans) {
+    const start = boundaries.findIndex(s => s.id === span.shotId);
+    const boundary = boundaries.findIndex((s, i) => i > start && ['broll','outro'].includes(s.type));
+    if (boundary > start) span.limit = { shotId: boundaries[boundary - 1].id, atSeconds: 'end' };
+  }
+  writeOwned('sfx-spans.json', JSON.stringify({ version: 1, shots, spans: audienceSpans }, null, 2) + '\n');
+}
 writeRows('bgm.tsv', bgm);
 writeRows('sfx.tsv', effects);
 writeRows('amb.tsv', ambience);
@@ -211,7 +250,7 @@ fs.writeFileSync(markerFile, JSON.stringify({
 
 process.stdout.write(JSON.stringify({
   changed: true,
-  bgm: bgm.length, effects: effects.filter((row) => row[2]).length,
+  bgm: bgm.length, effects: effects.filter((row) => row[2]).length + audienceSpans.length,
   drops: effects.filter((row) => row[3] === 'off').length, ambience: ambience.length,
   silence: silence.length, env: env.length, removed, warnings,
 }) + '\n');

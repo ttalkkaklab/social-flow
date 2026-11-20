@@ -101,3 +101,32 @@ loudness pass can change absolute gain. Check the resulting contact sound in con
 If native/input ownership meets an unmanaged or edited `sfx.tsv`, reconcile those
 rows explicitly before rebuilding. The compiler preserves the conflicting file and
 reports it rather than silently replaying an old effect over the retained soundtrack.
+
+## Audience effects
+
+Choose the observable reaction from the [situation index](../../storyboard/references/audience-sound/index.md).
+Plan its trigger, sound description and the emotional change with `storyboard_apply.audienceEffects`.
+Use `expectedSha256` from the latest board read. After viewing the accepted cut, read the cue's
+`currentTimingBasis` and place it at seconds from the first trimmed frame. With a new end shot,
+request `audienceEndFor:{shotId,id,endShotId}` and use `proposedTimingBasis`. To clear an end
+and fade, pass both as null and request the start-only basis with `endShotId:null`.
+A changed take, trim or trigger reads stale. Rewatch, then place again. Remove just the event
+when the actor or score already carries the moment. The sound, gestures and lines captured
+in the original clip retain their owner. Leave the audience cue out of video prompts and input WAVs.
+
+Resolve each used asset from the channel catalog first. For a missing prompt-backed variant,
+use the approved generation allocation with a stable `assets/audio/sfx/<id>.wav` filename.
+Check the audio and its provenance sidecar before registering the asset. An unresolved submission
+needs its original receipt checked before a second order. Use a new ID for a changed timbre.
+A mono mix can express two viewpoints with two timbres. Audition on a phone before relying on bass.
+
+Open the accepted footage, place the actual reaction, and leave the original voice lane assigned.
+To compare, run `build-reel.sh WORK BOARD --audience-sfx compare --from-shot s0007 --to-shot s0008`
+with the usual build settings. Play `audience-off.mov` and `audience-on.mov` in WORK.
+They share the same body cut, base gain and dialogue before the delivery speed pass.
+Record which files you heard, whether the cue gives away the reveal, and whether it masks a word.
+`work/audience-resolved.json` reports body times and natural expiry. A render alone is unreviewed.
+
+After the speed pass, `delivery-proof.json.audienceEffects` gives body and delivery start/end times.
+The delivery clock uses the actual speed and measured splice pieces. A historical splice proof without its piece clock reports body times only.
+The comparison files share one preview gain. The delivery master has its usual final loudness processing.

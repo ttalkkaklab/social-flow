@@ -83,6 +83,7 @@ function masters(work){
   match(work,verified.outputs);
   if(!verified.editCheckSha256)throw new Error('rebuild: missing rendered edit verification');
   match(work,{'edit-check.json':verified.editCheckSha256});
+  if(verified.audienceSha256)match(work,{'work/audience-resolved.json':verified.audienceSha256});
   if(verified.groupCheckSha256)match(work,{'group-check.json':verified.groupCheckSha256});
   return verified;
 }
@@ -115,7 +116,9 @@ function check(work,delivery,burned,subtitles){
     const w='card '+i+': text-led card runs past 8 seconds after encoding; split it or shorten the line when the read drags';
     measured.warnings.push(w);measured.status='needs-review';console.error('Assembled warning: '+w);
   }
-  fs.writeFileSync(path.join(work,'assembled-check.json'),JSON.stringify({editCheckSha256:hash(path.join(work,'edit-check.json')),groupCheckSha256:scenes.some(s=>s.visual?.video?.groupPlan!==undefined)?hash(path.join(work,'group-check.json')):null,outputs:hashes(work,BASE),duration:duration(master),opening:actual,plannedOpening:planned,motion:measured},null,2)+'\n');
+  fs.writeFileSync(path.join(work,'assembled-check.json'),JSON.stringify({...(
+    fs.existsSync(path.join(work,'work/audience-resolved.json')) ? {audienceSha256:hash(path.join(work,'work/audience-resolved.json'))} : {}),
+    editCheckSha256:hash(path.join(work,'edit-check.json')),groupCheckSha256:scenes.some(s=>s.visual?.video?.groupPlan!==undefined)?hash(path.join(work,'group-check.json')):null,outputs:hashes(work,BASE),duration:duration(master),opening:actual,plannedOpening:planned,motion:measured},null,2)+'\n');
 }
 function splice(work,args,finish=false){
   const {proof,scenes}=load(work);masters(work);
@@ -123,6 +126,16 @@ function splice(work,args,finish=false){
   if(finish){
     const saved=JSON.parse(fs.readFileSync(record,'utf8'));
     if(saved.assembledSha256!==hash(path.join(work,'assembled-check.json')))throw new Error('master changed during splice');
+    if (saved.bodyCuts) {
+      let offset = 0;
+      const seconds = file => Number(execFileSync('ffprobe',['-v','error','-show_entries','format=duration','-of','csv=p=0',path.join(work,'splice',file)],{encoding:'utf8'}));
+      saved.deliverySegments = [{bodyStart:0,splicedStart:0}];
+      saved.bodyCuts.forEach((bodyStart,i) => {
+        offset += seconds('reel-s'+i+'.mp4') + seconds('clip'+i+'.mp4');
+        if (!Number.isFinite(offset)) throw new Error('Unmeasurable splice segment');
+        saved.deliverySegments.push({bodyStart,splicedStart:offset});
+      });
+    }
     match(work,saved.inputs);saved.outputs=hashes(work,SPLICED);fs.writeFileSync(record,JSON.stringify(saved,null,2)+'\n');return;
   }
   const inserts=scenes.map((s,i)=>({s,i})).filter(({s})=>s.type==='broll');
@@ -138,7 +151,7 @@ function splice(work,args,finish=false){
     if(Math.abs(duration(file)-s.duration)>.1)throw new Error('splice clip duration differs from SCENES');
     inputs[file]=hash(file);
   });
-  fs.writeFileSync(record,JSON.stringify({assembledSha256:hash(path.join(work,'assembled-check.json')),inputs},null,2)+'\n');
+  fs.writeFileSync(record,JSON.stringify({assembledSha256:hash(path.join(work,'assembled-check.json')),bodyCuts:inserts.map((_,i)=>Number(args[i*2+1])),inputs},null,2)+'\n');
 }
 if(require.main===module){try{
  const [work,mode,...args]=process.argv.slice(2),dir=path.resolve(work);

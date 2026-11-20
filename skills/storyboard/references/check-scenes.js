@@ -1452,7 +1452,11 @@ function check(win, fmt, opts) {
         const at = `${where} sound.effects[${ei}]`;
         if (!effect || typeof effect !== 'object' || Array.isArray(effect)) { bad(at, 'an effect is { sfx, atSeconds?, intensity?, separationLu? }'); return; }
         if (effect.delivery !== undefined && !['auto', 'native', 'input', 'post'].includes(effect.delivery)) bad(at, 'delivery is auto | native | input | post');
-        if (['auto', 'native', 'input'].includes(effect.delivery)) {
+        if (effect.audience) {
+          if (!effect.id || !effect.audience.intent || !effect.trigger || !effect.description) bad(at, 'audience effect needs id, intent, trigger and description');
+          if (['native','input'].includes(effect.delivery)) bad(at, 'audience_delivery_conflict: audience effects belong in post');
+        }
+        if (!effect.audience && ['auto', 'native', 'input'].includes(effect.delivery)) {
           if (!effect.description || !effect.trigger) bad(at, 'described effects need description and trigger');
           if (effect.delivery !== 'auto' && s.sound.audioSource !== 'video') bad(at, 'native/input effects need sound.audioSource=video');
           return;

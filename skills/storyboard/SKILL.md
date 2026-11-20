@@ -349,6 +349,14 @@ before your own taste. Then give every scene one decision with its reason:
 - `none`, where the lines or the room should be heard alone. The reason says why, e.g. "the
   refusal lands harder dry". Silence nobody decided reads `undecided` on the review page.
 
+After dialogue and music are spotted, choose where the audience's understanding changes.
+Open the relevant ten cases in the [audience sound index](references/audience-sound/index.md).
+If performance and music already carry the turn, leave the beat clear. Otherwise use
+`storyboard_apply.audienceEffects` with `op:"plan"`, the shot and event IDs, `sfx`, `intent`,
+`description` and the visible or spoken `trigger`. A late reaction can land after a joke;
+an absent second note works once the audience has heard the pair. View the selected cut before
+placing the cue. [Placement and comparison](../produce/references/video-sound.md#audience-effects).
+
 Define each cue for this episode with a `prompt` (instruments, tempo, mood, how it starts and
 ends, room for speech) and a `reason`, or name a channel bed as an `asset`. A cue made for
 another episode is not a cue for this one. A cue whose opening is quiet starts later with

@@ -25910,7 +25910,7 @@ var require_video_duration = __commonJS({
       positive(requiredSeconds, "requiredSeconds");
       let durationSeconds, numFrames;
       if (limits.seconds) {
-        durationSeconds = limits.seconds.find((seconds) => seconds >= requiredSeconds);
+        durationSeconds = limits.seconds.find((seconds2) => seconds2 >= requiredSeconds);
       } else if (limits.frameRate !== void 0) {
         const fps = positive(limits.frameRate, "frameRate");
         const offset = limits.frameOffset ?? 1;
@@ -30143,9 +30143,9 @@ function buildFasth3Body(raw) {
     if (encodedBytes > MAX_REQUEST_BYTES - 64e3) throw new Error("Reference payload exceeds the 60 MiB upload limit");
     return readFileSync2(file).toString("base64");
   };
-  const audio = (file, name, seconds) => {
+  const audio = (file, name, seconds2) => {
     const target = join2(temp, name + ".wav");
-    ffmpeg(["-i", file, "-vn", "-ar", "32000", "-ac", "2", "-c:a", "pcm_s16le", ...seconds === void 0 ? [] : ["-t", String(seconds)], target]);
+    ffmpeg(["-i", file, "-vn", "-ar", "32000", "-ac", "2", "-c:a", "pcm_s16le", ...seconds2 === void 0 ? [] : ["-t", String(seconds2)], target]);
     return encode(target);
   };
   try {
@@ -30692,7 +30692,7 @@ import * as path2 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.122.1",
+  version: "0.123.0",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -30783,8 +30783,8 @@ function blockMotion(video, width, height) {
   }
   return series;
 }
-function envelope(audio, start, seconds, streamFromVideo = false) {
-  const window = [...start ? ["-ss", String(start)] : [], ...seconds !== null ? ["-t", String(seconds)] : []];
+function envelope(audio, start, seconds2, streamFromVideo = false) {
+  const window = [...start ? ["-ss", String(start)] : [], ...seconds2 !== null ? ["-t", String(seconds2)] : []];
   const pcm = ffmpeg2([...window, "-i", audio, ...streamFromVideo ? ["-map", "0:a:0"] : [], "-vn", "-ac", "1", "-ar", "16000", "-f", "s16le", "-"]);
   const samples = Math.floor(pcm.length / 2);
   const out = [];
@@ -31040,8 +31040,8 @@ var promptSchema = external_exports.string().min(1, "prompt is required").max(AS
 var numFramesSchema = (mode) => external_exports.number().int().min(ASTRA_VIDEO_MIN_FRAMES).max(ASTRA_VIDEO_FRAME_LIMITS[mode]).refine((n) => (n - 1) % ASTRA_VIDEO_FRAME_STEP === 0, {
   message: `numFrames must be 8k+1 (25, 33, 41 \u2026 ${ASTRA_VIDEO_FRAME_LIMITS[mode]})`
 }).optional();
-function framesForSeconds(seconds, frameRate = 24) {
-  const frames = seconds * frameRate;
+function framesForSeconds(seconds2, frameRate = 24) {
+  const frames = seconds2 * frameRate;
   return 1 + ASTRA_VIDEO_FRAME_STEP * Math.ceil((frames - 1) / ASTRA_VIDEO_FRAME_STEP - 0.5 - 1e-9);
 }
 var durationSchema = external_exports.number().positive().finite().optional();
@@ -32236,9 +32236,9 @@ var ltxApiAudio2VideoSchema = external_exports.object({
   audioPath: external_exports.string().min(1).describe("The composed pinned-voice track; its length sets the clip length (2\u201310 s, Fast at 720p/1080p up to 20 s).")
 }).strict();
 function ltxApiAudioSeconds(file) {
-  const seconds = Number(execFileSync2("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], { encoding: "utf8", timeout: 15e3 }));
-  if (!Number.isFinite(seconds) || seconds <= 0) throw new Error("Cannot read the length of " + file);
-  return seconds;
+  const seconds2 = Number(execFileSync2("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], { encoding: "utf8", timeout: 15e3 }));
+  if (!Number.isFinite(seconds2) || seconds2 <= 0) throw new Error("Cannot read the length of " + file);
+  return seconds2;
 }
 
 // src/minimax-video.ts
@@ -32464,8 +32464,8 @@ function probeSeconds(file) {
       timeout: 15e3,
       stdio: ["ignore", "pipe", "ignore"]
     });
-    const seconds = Number.parseFloat(out.trim());
-    return Number.isFinite(seconds) && seconds > 0 ? Math.round(seconds * 1e3) / 1e3 : null;
+    const seconds2 = Number.parseFloat(out.trim());
+    return Number.isFinite(seconds2) && seconds2 > 0 ? Math.round(seconds2 * 1e3) / 1e3 : null;
   } catch {
     return null;
   }
@@ -32484,8 +32484,8 @@ function priceOf(tool, args = {}) {
   if (tool === "astra_genai_catalog" || tool === "astra_genai_desktop_status") return { key: null, quantity: null };
   if (tool.startsWith("astra_genai_")) {
     const image = ["astra_genai_text2img", "astra_genai_edit", "astra_genai_image_generate", "astra_genai_image_edit"].includes(tool);
-    const seconds = image ? null : typeof args.duration === "number" ? args.duration : tool === "astra_genai_msr" ? num(args.numFrames, 121) / num(args.frameRate, 24) : null;
-    return { key: image ? "image.astra-genai" : "video.astra-genai", quantity: seconds, note: "Gateway pricing unverified; managed reservation is authoritative, not a measured bill" };
+    const seconds2 = image ? null : typeof args.duration === "number" ? args.duration : tool === "astra_genai_msr" ? num(args.numFrames, 121) / num(args.frameRate, 24) : null;
+    return { key: image ? "image.astra-genai" : "video.astra-genai", quantity: seconds2, note: "Gateway pricing unverified; managed reservation is authoritative, not a measured bill" };
   }
   if (tool.startsWith("ltx_api_")) {
     const model2 = str(args.model, "ltx-2-5-pro"), tier = ltxApiTier(str(args.resolution, "1920x1080"));
@@ -32508,28 +32508,28 @@ function priceOf(tool, args = {}) {
   if (tool.startsWith("seedance_")) {
     const model2 = str(args.model, "dreamina-seedance-2-0-260128");
     const resolution2 = str(args.resolution, "720p");
-    const seconds = num(args.durationSeconds, 5);
+    const seconds2 = num(args.durationSeconds, 5);
     const base = SEEDANCE_FAMILY[model2];
-    if (!base) return { key: null, quantity: seconds, note: `unmapped seedance model: ${model2}` };
+    if (!base) return { key: null, quantity: seconds2, note: `unmapped seedance model: ${model2}` };
     const videos = [
       ...Array.isArray(args.referenceVideoPaths) ? args.referenceVideoPaths : [],
       ...Array.isArray(args.referenceVideoUrls) ? args.referenceVideoUrls : []
     ].filter((v) => typeof v === "string");
     const family = videos.length ? `${base}-video` : base;
     const key = `seedance.${family}.${resolution2}`;
-    if (!PRICED_VIDEO_KEYS.has(key)) return { key: null, quantity: seconds, note: `no price row for ${key}` };
-    if (!videos.length) return { key, quantity: seconds };
+    if (!PRICED_VIDEO_KEYS.has(key)) return { key: null, quantity: seconds2, note: `no price row for ${key}` };
+    if (!videos.length) return { key, quantity: seconds2 };
     let input = 0;
     const unread = [];
     for (const video of videos) {
       const probed = /^[a-z][a-z0-9+.-]*:/i.test(video) ? null : probeSeconds(video);
       if (probed === null) unread.push(video);
-      input += probed ?? seconds;
+      input += probed ?? seconds2;
     }
     return {
       key,
-      quantity: seconds + input,
-      note: `output ${seconds}s + reference video ${input}s${unread.length ? ` (${unread.length} clip(s) assumed ${seconds}s \u2014 not probed)` : ""}`
+      quantity: seconds2 + input,
+      note: `output ${seconds2}s + reference video ${input}s${unread.length ? ` (${unread.length} clip(s) assumed ${seconds2}s \u2014 not probed)` : ""}`
     };
   }
   if (tool.startsWith("gpt_image_")) {
@@ -32565,11 +32565,11 @@ function priceOf(tool, args = {}) {
     };
   }
   if (tool === "sfx_elevenlabs_generate") {
-    const seconds = args.durationSeconds;
+    const seconds2 = args.durationSeconds;
     return {
       key: "sfx.elevenlabs",
-      quantity: typeof seconds === "number" && Number.isFinite(seconds) ? seconds : null,
-      note: typeof seconds === "number" ? void 0 : "billed per second of generated audio and no durationSeconds was requested \u2014 read the measured duration off the response"
+      quantity: typeof seconds2 === "number" && Number.isFinite(seconds2) ? seconds2 : null,
+      note: typeof seconds2 === "number" ? void 0 : "billed per second of generated audio and no durationSeconds was requested \u2014 read the measured duration off the response"
     };
   }
   if (tool === "music_generate_song" && args.model === "lyria-3-clip-preview") return { key: "music.lyria-clip", quantity: 1 };
@@ -33326,11 +33326,59 @@ var shotSchema = external_exports.object({
     }).passthrough().optional(),
     render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: external_exports.string().optional(), reason: external_exports.string().optional() }).passthrough().optional()
   }).passthrough().optional(),
-  sound: external_exports.record(external_exports.unknown()).optional()
+  sound: external_exports.record(external_exports.unknown()).transform((sound, ctx) => {
+    if (!Array.isArray(sound.effects) || !sound.effects.some((e) => e?.audience)) return sound;
+    return { ...sound, effects: sound.effects.map((e, i) => {
+      if (!e?.audience) return e;
+      if (e.delivery !== void 0 && !["auto", "post"].includes(e.delivery)) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["effects", i, "delivery"],
+          message: "audience_delivery_conflict: " + e.id + " belongs in post"
+        });
+      }
+      return { ...e, delivery: "post" };
+    }) };
+  }).optional()
 }).passthrough();
 var readLevelSchema = external_exports.enum(["outline", "scenes", "shots", "full", "direction"]);
+var audienceId = external_exports.string().trim().min(1);
+var cueId = audienceId.regex(/^[a-z0-9][a-z0-9-]*$/);
+var audienceEndForSchema = external_exports.object({ shotId: shotIdSchema, id: audienceId, endShotId: shotIdSchema.nullable() }).strict();
+var audienceKey = { shotId: shotIdSchema, id: audienceId };
+var seconds = external_exports.number().finite().nonnegative();
+var audienceEffectsSchema = external_exports.array(external_exports.discriminatedUnion("op", [
+  external_exports.object({
+    ...audienceKey,
+    op: external_exports.literal("plan"),
+    sfx: cueId.optional(),
+    intent: audienceId.optional(),
+    trigger: audienceId.optional(),
+    description: audienceId.optional(),
+    release: audienceId.nullish(),
+    caseId: external_exports.string().regex(/^(00[1-9]|0[1-9]\d|1[01]\d|120)$/).nullish(),
+    intensity: external_exports.enum(["subtle", "normal", "strong"]).nullish(),
+    separationLu: seconds.max(30).nullish()
+  }).strict(),
+  external_exports.object({
+    ...audienceKey,
+    op: external_exports.literal("place"),
+    atSeconds: seconds,
+    timingBasis: external_exports.string().regex(/^[a-f0-9]{64}$/),
+    end: external_exports.object({ shotId: shotIdSchema, atSeconds: external_exports.union([seconds, external_exports.literal("end")]) }).strict().nullish(),
+    fadeOutSeconds: seconds.nullish()
+  }).strict(),
+  external_exports.object({ ...audienceKey, op: external_exports.literal("remove") }).strict()
+])).min(1);
+var sfxEntriesSchema = external_exports.record(cueId, external_exports.object({
+  asset: cueId.optional(),
+  prompt: audienceId.optional(),
+  seconds: external_exports.number().min(0.5).max(30).optional(),
+  loop: external_exports.boolean().optional()
+}).passthrough().refine((v) => !!v.asset !== !!v.prompt, "name either a channel asset or a generation prompt").refine((v) => !v.loop || v.seconds === void 0 || v.seconds >= 5, "a loop needs at least five seconds"));
 var storyboardReadSchema = external_exports.object({
   path: external_exports.string().min(1).describe("The storyboard directory, or its scenes.js"),
+  audienceEndFor: audienceEndForSchema.optional(),
   level: readLevelSchema.default("shots").describe("outline = sequences with scene numbers \xB7 scenes = scene cards with shot numbers \xB7 shots = every shot summarised under its scene \xB7 full = the raw shot objects too \xB7 direction = only the direction plan as counts"),
   shotId: external_exports.string().min(1).optional().describe("Stable shot ID to inspect, with its raw plan and neighboring shot IDs"),
   includeTechniques: external_exports.boolean().default(true).describe("Return canonical technique ids, purposes, icons and provider instructions"),
@@ -33404,6 +33452,8 @@ var storyboardApplySchema = external_exports.object({
   removeSequences: external_exports.array(external_exports.string()).optional(),
   globals: globalsSchema.optional().describe("Set other window.* blocks \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. CLICHES belongs to story_cliche"),
   expectedSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional().describe("Required for propSheet file edits; use the hash from storyboard_read"),
+  audienceEffects: audienceEffectsSchema.optional(),
+  sfxEntries: sfxEntriesSchema.optional(),
   propSheet: external_exports.object({
     props: external_exports.array(external_exports.record(external_exports.unknown())),
     continuity: external_exports.record(external_exports.unknown()).optional()
@@ -33415,11 +33465,11 @@ function scenesPath(target) {
   if (basename3(abs) === "scenes.js") return abs;
   return join5(abs, "scenes.js");
 }
-function readBoard(target) {
+function readBoard(target, source) {
   const file = scenesPath(target);
   if (!existsSync5(file)) throw new Error(`no scenes.js at ${file}`);
   if (!statSync4(file).isFile()) throw new Error(`${file} is not a file`);
-  const src = readFileSync7(file, "utf8");
+  const src = source ?? readFileSync7(file, "utf8");
   const header = [];
   for (const line of src.split("\n")) {
     if (/^\s*\/\//.test(line)) header.push(line.trim());
@@ -33696,10 +33746,10 @@ function syncProductionClip(scene, boardDir, videoPath, oldClip, warnings) {
     }
   }
   try {
-    const seconds = videoSeconds(videoPath);
-    if (!Number.isFinite(seconds) || seconds <= 0) throw new Error("Missing video duration");
-    scene.productionPlan = { ...production, cuts: [{ kind: "generated_video", path: relative2(boardDir, videoPath), start: 0, seconds }] };
-    return seconds;
+    const seconds2 = videoSeconds(videoPath);
+    if (!Number.isFinite(seconds2) || seconds2 <= 0) throw new Error("Missing video duration");
+    scene.productionPlan = { ...production, cuts: [{ kind: "generated_video", path: relative2(boardDir, videoPath), start: 0, seconds: seconds2 }] };
+    return seconds2;
   } catch {
     warnings.push("Could not measure the bound video stream; production cuts were not changed.");
   }
@@ -34109,6 +34159,14 @@ var effectSchema = external_exports.object({
   sfx: external_exports.string().min(1).optional(),
   atSeconds: external_exports.number().finite().nonnegative().optional(),
   separationLu: external_exports.number().finite().min(0).max(30).optional(),
+  audience: external_exports.object({
+    intent: external_exports.string().trim().min(1),
+    caseId: external_exports.string().optional(),
+    release: external_exports.string().optional(),
+    timingBasis: external_exports.string().optional()
+  }).strict().optional(),
+  end: external_exports.object({ shotId: external_exports.string().min(1), atSeconds: external_exports.union([external_exports.number().finite().nonnegative(), external_exports.literal("end")]) }).strict().optional(),
+  fadeOutSeconds: external_exports.number().finite().nonnegative().optional(),
   intensity: external_exports.enum(["subtle", "normal", "strong"]).optional()
 }).strict();
 var schemas = {
@@ -34137,6 +34195,8 @@ function prepareVideoSound(tool, input, sound = {}) {
   if (!schema) throw new Error("Unsupported sound adapter: " + tool);
   external_exports.string().min(1).parse(input.prompt);
   const effects = external_exports.array(effectSchema).parse(sound.effects ?? []);
+  for (const effect of effects) if (effect.audience && effect.description && String(input.prompt).toLowerCase().includes(effect.description.toLowerCase()))
+    throw new Error("audience_delivery_conflict: remove the post cue description from the video prompt");
   const ids = effects.flatMap((effect) => effect.id ? [effect.id] : []);
   if (new Set(ids).size !== ids.length) throw new Error("Effect ids must be unique within the shot");
   if (sound.audioSource !== void 0 && !["video", "speech"].includes(String(sound.audioSource)))
@@ -34151,7 +34211,9 @@ function prepareVideoSound(tool, input, sound = {}) {
     nativeAudio = spec.audio;
   }
   const resolved = effects.map((effect) => {
-    const requested = effect.delivery ?? (effect.sfx ? "post" : "auto");
+    if (effect.audience && (effect.delivery === "input" || effect.delivery === "native"))
+      throw new Error("audience_delivery_conflict: " + effect.id + " belongs in post");
+    const requested = effect.audience ? "post" : effect.delivery ?? (effect.sfx ? "post" : "auto");
     const delivery2 = requested === "auto" ? nativeAudio && input.generateAudio !== false && sound.audioSource !== "speech" ? "native" : "post" : requested;
     if (delivery2 === "native" && (!nativeAudio || input.generateAudio === false))
       throw new Error("Native SFX unavailable in this mode or explicitly disabled; use post");
