@@ -186,7 +186,13 @@ export const STRUCTURE_VERSION = (() => { try { return contract().VERSION; } cat
 
 export const audienceDecisionSchema = z.discriminatedUnion('decision', [
   z.object({ decision: z.literal('undecided') }).strict(),
-  z.object({ decision: z.literal('use'), reason: nonEmpty }).strict(),
+  z.object({
+    decision: z.literal('use'),
+    reason: nonEmpty,
+    perspective: nonEmpty.optional().describe('Whose experience guides what the audience hears'),
+    shift: nonEmpty.optional().describe("Which line or action reveals a change in the character's feeling or expectation, and how the cue follows it"),
+    exit: nonEmpty.optional().describe('The line, action or cut where the sound ends or ordinary listening returns'),
+  }).strict(),
   z.object({ decision: z.literal('none'), reason: nonEmpty }).strict(),
 ]).describe('Whether the scene uses an audience-only sound: use or none with the dramatic reason, or undecided.');
 

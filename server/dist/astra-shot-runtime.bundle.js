@@ -30692,7 +30692,7 @@ import * as path2 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.124.2",
+  version: "0.124.3",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -33238,7 +33238,13 @@ var STRUCTURE_VERSION = (() => {
 })();
 var audienceDecisionSchema = external_exports.discriminatedUnion("decision", [
   external_exports.object({ decision: external_exports.literal("undecided") }).strict(),
-  external_exports.object({ decision: external_exports.literal("use"), reason: nonEmpty }).strict(),
+  external_exports.object({
+    decision: external_exports.literal("use"),
+    reason: nonEmpty,
+    perspective: nonEmpty.optional().describe("Whose experience guides what the audience hears"),
+    shift: nonEmpty.optional().describe("Which line or action reveals a change in the character's feeling or expectation, and how the cue follows it"),
+    exit: nonEmpty.optional().describe("The line, action or cut where the sound ends or ordinary listening returns")
+  }).strict(),
   external_exports.object({ decision: external_exports.literal("none"), reason: nonEmpty }).strict()
 ]).describe("Whether the scene uses an audience-only sound: use or none with the dramatic reason, or undecided.");
 var sceneSchema = external_exports.object({

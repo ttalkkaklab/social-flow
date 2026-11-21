@@ -23,7 +23,9 @@ generation authorization and adapter input validation stay. Work in this order:
    user picked them. Send each use again with its `scenes` once they are written. Nothing
    waits for it ([cliché use](../storyboard/references/cliche-use.md)). With `story_scene`,
    record each scene's `audienceSound` decision (`use` or `none`) and why a viewer should
-   hear a cue there or why the action or dialogue already carries the moment.
+   hear a cue there or why the action or dialogue already carries the moment. For a cue,
+   follow the character or viewer whose expectation changes. Record the visible turn
+   and the word, action or cut that should take over when the cue ends.
 3. Each shot's characters (`shot_characters`, at most two) with each one's `expression` — the
    visible state the scene's situation puts on their face — then their lines (`shot_dialogue`).
    Then each scene's music decision (`story_music`, user directive 2026-11-14): `score` with a

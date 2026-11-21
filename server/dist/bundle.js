@@ -113957,7 +113957,7 @@ import * as path14 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.124.2",
+  version: "0.124.3",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -118269,7 +118269,13 @@ var STRUCTURE_VERSION = (() => {
 })();
 var audienceDecisionSchema = external_exports.discriminatedUnion("decision", [
   external_exports.object({ decision: external_exports.literal("undecided") }).strict(),
-  external_exports.object({ decision: external_exports.literal("use"), reason: nonEmpty }).strict(),
+  external_exports.object({
+    decision: external_exports.literal("use"),
+    reason: nonEmpty,
+    perspective: nonEmpty.optional().describe("Whose experience guides what the audience hears"),
+    shift: nonEmpty.optional().describe("Which line or action reveals a change in the character's feeling or expectation, and how the cue follows it"),
+    exit: nonEmpty.optional().describe("The line, action or cut where the sound ends or ordinary listening returns")
+  }).strict(),
   external_exports.object({ decision: external_exports.literal("none"), reason: nonEmpty }).strict()
 ]).describe("Whether the scene uses an audience-only sound: use or none with the dramatic reason, or undecided.");
 var sceneSchema = external_exports.object({
@@ -129418,7 +129424,7 @@ Returns revision, ordered matching lines with generationPlan and voice/audio has
 The default techniqueCatalog provides the four filmmaking elements and per-technique selection guidance. Store intentional choices as shot.techniques:[{id,reason}] and keep existing camera/size/angle fields consistent.
 
 Use it before editing an existing board, and after storyboard_apply to see the board the way the approval page groups it. level=outline is enough to plan a change; level=full carries every raw shot object (large \u2014 one shot is ~40 fields).
-audienceSpotting lists scene decisions and missing or conflicting cues. Read level shots for timing and the audience cue\u2019s music or catalog source. Legacy decisions can be unrecorded.
+audienceSpotting lists scene decisions, their reasons and any missing or conflicting cues. A use decision can include perspective, shift and exit. Read level shots for timing and the audience cue\u2019s music or catalog source. Legacy decisions can be unrecorded.
 level=direction returns only { file, sha256, format, direction }: each scene's shots in order (size, angle, move, length), the longest runs of one size and of held shots, held shots counted by size with the wide ones (els, ls, ws, fs) held without a reason, lengths by size and the most common lengths, the longest shots with their action and line counts, and reasons \u2014 sentences standing as the same reason on several shots, sizes without a why. Counts of the plan as written, not targets; read it once the icons and lengths are written.
 Do NOT use it to validate \u2014 storyboard_check runs the contract. A board with no window.STRUCTURE comes back with every shot under unplacedShots; write the structure with story_sequence and story_scene.
 
@@ -129505,7 +129511,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     description: `Use it after story_sequence to upsert scenes by number into a sequence: place, time, the one event, and a one- or two-sentence summary of the scene's story. On story-led work also give turn, charge and out, so the scenes can be read in a row for pressure that changes and ends that hand over the next question (skills/storyboard/references/story-interest.md). A scene moved to another sequence leaves its old one. Refused (story_order) before any sequence exists or for an unknown sequence id, and on a story-first episode board by story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
 
-A new scene starts with audienceSound.decision undecided. Set use or none with the reason the viewer should hear the sound or the beat should stay clear. To plan and time each chosen effect, use storyboard_apply.audienceEffects on its shot.
+A new scene starts with audienceSound.decision undecided. Set use or none with the dramatic reason. For use, perspective identifies whose experience we hear. The shift names the line or action that reveals a change of feeling or expectation and how the cue follows it. The exit names the beat where it ends. All three notes are optional. Plan and time each chosen effect on its shot with storyboard_apply.audienceEffects.
 
 Do NOT write shots or dialogue here \u2014 story_shot comes next.
 
@@ -129934,7 +129940,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
         },
         structure: { type: "object", description: "Replace window.STRUCTURE only" },
         sequences: { type: "array", items: { type: "object", description: "{ id, title, purpose, question?, payoff?, scenes }" }, description: "Upsert sequences by id" },
-        scenes: { type: "array", items: zodToJsonSchema(sceneSchema, { $refStrategy: "none" }), description: "Upsert scenes by no. Omit music or audienceSound to keep its existing decision." },
+        scenes: { type: "array", items: zodToJsonSchema(sceneSchema, { $refStrategy: "none" }), description: "Upsert scenes by no. Omit music or audienceSound to keep its existing decision. Supplying audienceSound replaces the whole plan, including its optional perspective, shift and exit." },
         shots: { type: "array", items: { type: "object", description: "One positional upsert", properties: { no: { type: "number", description: "1-based position" }, shot: storyboardShotInput }, required: ["no", "shot"] }, description: "Upsert shots by 1-based position; no = length + 1 appends. Not with the id fields in the same patch" },
         audienceEffects: zodToJsonSchema(audienceEffectsSchema, { $refStrategy: "none" }),
         sfxEntries: zodToJsonSchema(sfxEntriesSchema, { $refStrategy: "none" }),
@@ -140408,7 +140414,7 @@ ROUTES.music_status = async (args) => args?.action === "resume" ? resumeMusic2(a
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.124.2" },
+  { name: "social-flow", version: "0.124.3" },
   { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

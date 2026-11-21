@@ -21,10 +21,17 @@
   function spotting(board, rows = []) {
     const marked = board.STORY?.audienceSoundVersion === 1;
     const structure = board.STRUCTURE?.scenes;
-    const scenes = (Array.isArray(structure) ? structure : []).filter(scene => scene && typeof scene === 'object').map(scene => ({
-      no: scene.no, decision: scene.audienceSound?.decision ?? (marked ? 'undecided' : 'unrecorded'),
-      ...(scene.audienceSound?.reason ? { reason: scene.audienceSound.reason } : {}), cues: [], needsCue: false,
-    }));
+    const scenes = (Array.isArray(structure) ? structure : []).filter(scene => scene && typeof scene === 'object').map(scene => {
+      const plan = scene.audienceSound;
+      const row = { no: scene.no, decision: plan?.decision ?? (marked ? 'undecided' : 'unrecorded'),
+        ...(plan?.reason ? { reason: plan.reason } : {}), cues: [], needsCue: false };
+      if (plan?.decision === 'use') {
+        for (const field of ['perspective', 'shift', 'exit']) {
+          if (typeof plan[field] === 'string' && plan[field].trim()) row[field] = plan[field].trim();
+        }
+      }
+      return row;
+    });
     const byScene = new Map(scenes.map(scene => [scene.no, scene]));
     const shots = Array.isArray(board.SCENES) ? board.SCENES : [];
     const positions = new Map(shots.map((shot, i) => [shot?.id, i]));
