@@ -226,7 +226,7 @@
     <tbody>
       <tr><td>stdio MCP server <code>initialize</code> → <code>tools/list</code> → <code>tools/call</code></td><td>29 exposed (2 hidden for want of an FB token), 0 missing <code>title</code>/<code>annotations</code>, <code>outputSchema</code> on 7</td></tr>
       <tr><td>Lyria RealTime, 7 seconds</td><td>1,344,044 bytes = 44 + 7×48000×2×2, <strong>an exact match</strong></td></tr>
-      <tr><td>Lyria RealTime <code>apiVersion</code></td><td><code>v1alpha</code> works / <code>v1beta</code> (the documented value) hangs forever → <a href="gemini-lyria.en.html#realtime-apiversion">keep v1alpha</a></td></tr>
+      <tr><td>Lyria RealTime <code>apiVersion</code></td><td><code>v1alpha</code> works / <code>v1beta</code> (the documented value) hung in 2026-08 and connects since 2026-11-21, stream unmeasured → <a href="gemini-lyria.en.html#realtime-apiversion">keep v1alpha</a></td></tr>
       <tr><td><code>serp_naver_search</code> web·news</td><td>Both return results (web returned 0 before the fix)</td></tr>
       <tr><td><code>tts_generate</code></td><td>No regression</td></tr>
       <tr><td><code>sns_account_check</code></td><td>Returns <code>structuredContent</code>, conforms to <code>outputSchema</code></td></tr>

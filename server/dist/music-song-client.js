@@ -14,7 +14,7 @@ export const lyriaSongSchema = z.object({
 });
 const chunk = z.object({
     text: z.string().max(6132), durationMs: z.number().int().min(3000).max(120000),
-    positiveStyles: z.array(z.string().min(1)).max(50), negativeStyles: z.array(z.string().min(1)).max(50),
+    positiveStyles: z.array(z.string().min(1)).max(50), negativeStyles: z.array(z.string().min(1)).max(50).optional(),
     contextAdherence: z.enum(['low', 'medium', 'high']).optional(),
 }).strict().superRefine((v, ctx) => {
     const lines = v.text.split('\n');

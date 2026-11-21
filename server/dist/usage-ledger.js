@@ -301,7 +301,7 @@ export function priceOf(tool, args = {}) {
     if (tool === 'music_generate_song' && args.model === 'lyria-3-clip-preview')
         return { key: 'music.lyria-clip', quantity: 1 };
     if (tool === 'music_generate_song')
-        return { key: 'music.' + String(args.model || 'lyria-3.5'), quantity: 1, note: 'Price unconfirmed; reconcile provider billing' };
+        return { key: 'music.' + String(args.model || 'lyria-3.5'), quantity: 1 };
     if (tool === 'music_elevenlabs_generate')
         return { key: 'music.elevenlabs.' + String(args.modelId || 'music_v2_5'), quantity: 1, note: 'Price unconfirmed; reconcile provider billing' };
     if (tool === 'music_generate_clip')
