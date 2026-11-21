@@ -47,6 +47,15 @@ a state, not extra time.
 The tool records what the prompt came from; when the shot's characters, on-screen lines,
 frame plan, camera, focus or MSR framing change later, the stage tools warn and the review
 page marks the prompt stale. Rewrite it with `shot_prompt` before planning that shot.
+For MSR and distilled image-to-video with references, pass `openingPositions` to
+`shot_prompt`. Inspect the opening image. For every named character, including a
+silent listener, give the cast ID, subject image numbers and where the viewer sees
+them. Group face and outfit panels under one person. For example,
+`{character:"miran",images:[2,4],position:"left foreground, back to camera, standing at the witness rail"}`.
+Use `images:[]` for a character visible only in the opening image. The tool puts
+these descriptions at the start of the submitted prompt. After changing the
+opening image, inspect it again and update the positions.
+
 MSR submits the composed opening image as a background reference; it does not pin that
 image to frame zero. Do not promise exact framing from that input alone. If the actual
 result repeatedly changes a required locked setup or duplicates a referenced person,

@@ -1,4 +1,6 @@
+import { openingPositionsSchema } from './msr-opening.js';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { existsSync, realpathSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
@@ -69,12 +71,39 @@ export function hasSubjectInput(references) {
 export function hasVideoSubjectReferences(shot) {
     return imageRouting().imageReferences(shot).some(ref => ref.role !== 'background' && ['video', 'both'].includes(ref.use));
 }
+function msrReference(imagePath, role) {
+    if (role === 'background')
+        return { imagePath, background: true };
+    if (role === 'prop' || role === 'style')
+        return { imagePath, nonCharacter: true };
+    return { imagePath };
+}
+function bindOpeningPositions(input, visual, episode) {
+    const stored = visual.video?.openingPositions;
+    const positions = openingPositionsSchema.parse(stored ?? input.openingPositions);
+    if (stored !== undefined && input.openingPositions !== undefined &&
+        JSON.stringify(positions) !== JSON.stringify(openingPositionsSchema.parse(input.openingPositions)))
+        throw new Error('image_plan_mismatch: openingPositions disagree with shot_prompt');
+    const cast = [visual.character ?? []].flat().map(entry => typeof entry === 'string' ? entry : entry.id);
+    for (const id of [...cast, ...(visual.bystanders ?? [])]) {
+        if (!positions.some(row => row.character === id))
+            throw new Error('openingPositions: missing opening position for ' + id);
+    }
+    if (visual.video?.openingImageSha256) {
+        const start = visual.frames?.start;
+        if (!start || createHash('sha256').update(readFileSync(path.resolve(episode, 'storyboard', start))).digest('hex') !== visual.video.openingImageSha256)
+            throw new Error('openingPositions stale: inspect the changed start image and update shot_prompt');
+    }
+    return positions;
+}
 /** Compile authored image roles into adapter arguments; never downgrade a temporal constraint to a reference. */
 export function prepareVideoImages(tool, input, shot, episode) {
     const visual = (shot.visual ?? {});
     // Legacy boards keep their adapter contract; new authoring declares references, including an empty array.
-    if (!hasStructuredImages(shot))
-        return { args: input, imageBindings: undefined };
+    if (!hasStructuredImages(shot)) {
+        const msr = tool === 'astra_genai_msr' || (tool === 'astra_genai_img2video' && Array.isArray(input.references));
+        return { args: msr ? { ...input, openingPositions: bindOpeningPositions(input, visual, episode) } : input, imageBindings: undefined };
+    }
     const routing = imageRouting();
     const errors = routing.checkFrames(shot);
     if (errors.length)
@@ -166,7 +195,7 @@ export function prepareVideoImages(tool, input, shot, episode) {
         const paths = sent.map(ref => bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, true));
         const start = (msr || vendor) && frames.start ? bind('start', frames.start, 'start', 'video', 'Opening picture', true) : undefined;
         if (msr)
-            put('references', [...paths.map(imagePath => ({ imagePath })), ...(start ? [{ imagePath: start, background: true }] : [])]);
+            put('references', [...paths.map((file, i) => msrReference(file, sent[i].role)), ...(start ? [{ imagePath: start, background: true }] : [])]);
         else
             put('referenceImagePaths', [...paths, ...(start ? [start] : [])]);
         if (vendor && start && args.ratio === undefined) {
@@ -233,10 +262,28 @@ export function prepareVideoImages(tool, input, shot, episode) {
             const characters = new Set(ordered.flatMap((ref, i) => ref.role === 'character' ? [characterKey(paths[i])] : []));
             if (characters.size > 2)
                 throw new Error('msr_character_limit: reference at most two principal characters');
-            put('references', paths.map((imagePath, i) => ({ imagePath, ...(ordered[i].role === 'background' ? { background: true } : {}) })));
+            put('references', paths.map((file, i) => msrReference(file, ordered[i].role)));
             args.prompt = [...ordered.map((ref, i) => `Image ${i + 1}: ${ref.role}, ${ref.purpose}${routing.referenceConstraints(ref) ? " " + routing.referenceConstraints(ref) : ""}`),
                 msrPanelBinding(paths, ordered), '', String(args.prompt ?? '')].filter(Boolean).join('\n');
         }
+    }
+    if (tool === 'astra_genai_msr' || (tool === 'astra_genai_img2video' && videoRefs.length)) {
+        // Prop-only boards have enough role information to declare an empty cast.
+        const propsOnly = ![visual.character ?? []].flat().length && !visual.bystanders?.length &&
+            videoRefs.every(ref => ['background', 'prop', 'style'].includes(ref.role));
+        const positions = bindOpeningPositions(propsOnly && !visual.video?.openingPositions && input.openingPositions === undefined
+            ? { ...input, openingPositions: [] } : input, visual, episode);
+        if (canonicalMsr) {
+            const subjects = videoRefs.filter(ref => ref.role !== 'background');
+            for (const [index, ref] of subjects.entries()) {
+                if (ref.role !== 'character')
+                    continue;
+                const owner = positions.find(row => row.images.includes(index + 1));
+                if (!owner || !['face', 'front', 'back', 'msr'].some(panel => ref.id === `${shot.id ?? 'shot'}-${owner.character}-${panel}`))
+                    throw new Error('openingPositions: match Image ' + (index + 1) + ' to the cast member who owns this panel');
+            }
+        }
+        args.openingPositions = positions;
     }
     for (const key of ['sourceImagePath', 'lastImagePath', 'firstFramePath', 'lastFramePath', 'imagePath', 'imageUri', 'lastFrameUri', 'firstFrameImagePath', 'lastFrameImagePath', 'referenceImagePaths', 'references', 'images']) {
         if (input[key] !== undefined && !assigned.has(key))

@@ -1,3 +1,4 @@
+import { openingPrompt } from './msr-opening.js';
 import { buildFasth3Body, fasth3OmniSchema } from './fasth3-omni.js';
 import { localVideoStrategy } from './local-video-models.js';
 import { desktopVideoStatus } from './astra-genai-desktop.js';
@@ -356,6 +357,8 @@ export function planVideo(raw) {
     const images = prepareVideoImages(tool, bound, shot, context.episode);
     const voice = prepareVideoVoice(tool, images.args, { ...context, shot, msrVoice: genaiMsrVoiceReferences() });
     const args = parseVideoArgs(tool, voice.args);
+    if (Array.isArray(args.openingPositions))
+        args.prompt = openingPrompt(String(args.prompt), args.openingPositions);
     if (durationPlan.status === 'fits') {
         const fps = durationPlan.limits?.frameRate ?? 1;
         const frames = typeof args.numFrames === 'number' ? args.numFrames : typeof args.duration === 'number' && durationPlan.limits?.frameRate

@@ -122,7 +122,7 @@ test('complete builder keeps post SFX audible when the retained source is silent
 });
 
 test('MSR renders effects natively and its own soundtrack carries the dialogue', async () => {
-  const msrArgs = { prompt: 'Man hangs up.', references: [{ imageUri: 'https://example.com/p.png', audioUri: 'https://example.com/v.wav' }], reserveUsd: 0 };
+  const msrArgs = { prompt: 'Man hangs up.', openingPositions: [{character:'hero',images:[1],position:'on the right by the phone'}], references: [{ imageUri: 'https://example.com/p.png', audioUri: 'https://example.com/v.wav' }], reserveUsd: 0 };
   const msr = prepareVideoSound('astra_genai_msr', msrArgs, intent);
   assert.equal(msr.sound.effects[0].delivery, 'native');
   assert.equal(msr.arguments.generateAudio, undefined);

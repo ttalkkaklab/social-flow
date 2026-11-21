@@ -5,7 +5,7 @@ import type { z } from 'zod';
 import { fasth3OmniSchema } from './fasth3-omni.js';
 import { MUSIC_ADAPTERS } from './music-registry.js';
 import { MUSIC_TOOLS } from './music-tools.js';
-import { GENAI_TOOLS } from './astra-genai-tools.js';
+import { GENAI_TOOLS, openingPositionsProperty } from './astra-genai-tools.js';
 import { GPT_IMAGE_MODELS, assertImageModelAvailable } from './image-models.js';
 
 import { IMAGE_ADAPTERS } from './image-registry.js';
@@ -5211,6 +5211,7 @@ Returns: the file written and the prompt. Stores promptSource so video_plan reco
         action: { type: 'string', description: "What happens in the shot, in English: the subjects' movement from the opening picture" },
         end: { type: 'string', description: 'The closing picture, in English' },
         sound: { type: 'string', description: "Ambient sound and effects, in English; the shot's lines come from shot_dialogue. \"no music\" is added unless it names music — the episode bed is laid in assembly" },
+        openingPositions: openingPositionsProperty,
         speakerBindings: { type: 'array', maxItems: 2, description: 'Visible speakers matched to the start image, e.g. hero at viewer-left in black armor. Required for two MSR on-screen speakers.', items: {
           type: 'object', additionalProperties: false, required: ['speaker', 'screenPosition', 'description'], properties: {
             speaker: { type: 'string', minLength: 1, description: 'Visible cast id, e.g. hero.' },

@@ -1,4 +1,5 @@
 /** LTX v2 provider request contract published by the unified GenAI gateway. */
+import { openingPositionsSchema, openingPrompt, validateOpening } from './msr-opening.js';
 import { z } from 'zod';
 import { createHash } from 'node:crypto';
 import * as fs from 'node:fs';
@@ -71,7 +72,7 @@ function localVideoTiming(args, ctx) {
 export const genaiTextToVideoSchema = textVideoFields.superRefine((args, ctx) => { localVideoTiming(args, ctx); devNegativeRule(args, ctx); });
 const msrReferences = z.array(z.object({
     imageUri: genaiImageUriSchema.optional(), imagePath: z.string().min(1).optional(),
-    background: z.boolean().default(false),
+    background: z.boolean().default(false), nonCharacter: z.boolean().optional(),
     // Voice sample for this subject; the gateway pairs it with the same picture slot.
     audioUri: z.string().min(1).optional(), audioPath: z.string().min(1).optional(),
 }).strict().refine(ref => Number(!!ref.imageUri) + Number(!!ref.imagePath) === 1, 'Supply exactly one imageUri or imagePath')
@@ -91,7 +92,7 @@ function validateVoiceSlots(references, issue) {
 export const genaiImageToVideoSchema = textVideoFields.extend({
     imageUri: genaiImageUriSchema.optional(), imagePath: z.string().min(1).optional(),
     lastFrameUri: genaiImageUriSchema.nullable().optional(), lastFramePath: z.string().min(1).optional(),
-    references: msrReferences.optional(),
+    references: msrReferences.optional(), openingPositions: openingPositionsSchema.optional(),
     ...msrGuidanceFields,
 }).strict().superRefine((args, ctx) => {
     const issue = (message) => ctx.addIssue({ code: z.ZodIssueCode.custom, message });
@@ -103,11 +104,14 @@ export const genaiImageToVideoSchema = textVideoFields.extend({
     if (args.lastFrameUri != null && args.lastFramePath !== undefined)
         issue('Supply at most one lastFrameUri or lastFramePath');
     if (!args.references) {
+        if (args.openingPositions !== undefined)
+            issue('openingPositions requires MSR references');
         if (Object.keys(msrGuidanceFields).some(key => args[key] !== undefined))
             issue('guidanceScale and NAG require references (MSR conditioning); ltx-2.5-22b-dev already runs guided');
         devNegativeRule(args, ctx);
     }
     else {
+        validateOpening(args.prompt, args.openingPositions, args.references, issue);
         validateVoiceSlots(args.references, issue);
         msrNegativeRule(args, issue);
         if (args.model !== 'ltx-2.5-22b-distilled')
@@ -182,7 +186,7 @@ export const genaiMsrSchema = z.object({
     prompt: z.string().trim().min(1).max(2000),
     negativePrompt: z.string().trim().min(1).max(5000).optional(),
     ...msrGuidanceFields,
-    references: msrReferences,
+    references: msrReferences, openingPositions: openingPositionsSchema,
     referenceStrength: z.number().finite().min(0).max(1).default(1),
     referenceFrames: z.union([z.literal(25), z.literal(33)]).default(33),
     width: z.number().int().min(64).max(1920).multipleOf(64).default(1536),
@@ -196,6 +200,7 @@ export const genaiMsrSchema = z.object({
     filename: bareFilenameSchema('video').refine(name => name.endsWith('.mp4'), 'Use a .mp4 filename').optional(),
 }).strict().superRefine((args, ctx) => {
     const issue = (message) => ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+    validateOpening(args.prompt, args.openingPositions, args.references, issue);
     msrNegativeRule(args, issue);
     const backgrounds = args.references.filter(ref => ref.background).length;
     if (backgrounds > 1 || args.references.length - backgrounds > 4)
@@ -219,7 +224,7 @@ function referenceBody(ref) {
     };
 }
 export function buildGenaiMsrBody(args) {
-    return { prompt: args.prompt, ...negativeBody(args),
+    return { prompt: openingPrompt(args.prompt, args.openingPositions), ...negativeBody(args),
         references: args.references.map(referenceBody),
         reference_strength: args.referenceStrength, reference_frames: args.referenceFrames,
         width: args.width, height: args.height, frame_rate: args.frameRate, seed: args.seed,
@@ -249,7 +254,7 @@ export function genaiMsrVoiceReferences() { return msrVoiceCache?.value ?? false
 /** Only provider fields cross the wire; local output/budget controls never do. */
 export function buildGenaiVideoBody(args) {
     return {
-        prompt: args.prompt, model: args.model, duration: args.duration, resolution: args.resolution,
+        prompt: openingPrompt(args.prompt, args.openingPositions), model: args.model, duration: args.duration, resolution: args.resolution,
         fps: args.fps, generate_audio: args.generateAudio,
         // Local frames travel as checked data URIs, like MSR and audio-to-video.
         ...(args.imageUri === undefined && args.imagePath === undefined ? {} : { image_uri: genaiSourceUri(args.imageUri, args.imagePath) }),

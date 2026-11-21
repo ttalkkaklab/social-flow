@@ -149,7 +149,7 @@ test('I2V reference capability refusals release managed budget and concurrency b
  const oldFetch=globalThis.fetch,oldKey=config.astraGenaiApiKey;config.astraGenaiApiKey='fixture';
  t.after(()=>{globalThis.fetch=oldFetch;config.astraGenaiApiKey=oldKey;});
  fs.writeFileSync(path.join(f.episode,'image.png'),Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=','base64'));
- f.board.SCENES[0].visual={frames:{mode:'first',start:'../image.png'},references:[{id:'hero',path:'../image.png',role:'character',use:'video',purpose:'Preserve appearance'}]};
+ f.board.SCENES[0].visual={frames:{mode:'first',start:'../image.png'},video:{openingPositions:[{character:'hero',images:[1],position:'seated on the right'}]},references:[{id:'hero',path:'../image.png',role:'character',use:'video',purpose:'Preserve appearance'}]};
  f.save();let calls=0;
  for(const failure of ['unsupported','network','schema']){
   globalThis.fetch=async(url,options)=>{
@@ -385,15 +385,15 @@ test('a saved reference operation plans MSR with the speaker sample, dimensions 
   globalThis.fetch = async () => Response.json({ msr: true, voice_references: true });
   await refreshGenaiMsrVoice(true);
   fs.writeFileSync(path.join(f.episode, 'invalid.png'), 'not an image');
-  assert.throws(() => planVideo({ episode: f.episode, shotId: 's1', requestId: 'invalid', args: { prompt: 'Walk.', references: [{ imagePath: 'person.png' }, { imagePath: 'invalid.png', background: true }], reserveUsd: 0.25 } }), /image_invalid/);
+  assert.throws(() => planVideo({ episode: f.episode, shotId: 's1', requestId: 'invalid', args: { prompt: 'Walk.', openingPositions: [{ character:'hero', images:[1], position:'on the left beside the desk' }], references: [{ imagePath: 'person.png' }, { imagePath: 'invalid.png', background: true }], reserveUsd: 0.25 } }), /image_invalid/);
   assert.equal(fs.existsSync(path.join(f.episode, '.work/video-routing/state.json')), false);
   const p = planVideo({ episode: f.episode, shotId: 's1', requestId: 'msr', args: {
-    prompt: 'Person in image 1 says hello.', references: [{ imagePath: 'person.png' }], duration: 5, reserveUsd: 0.25,
+    prompt: 'Person in image 1 says hello.', openingPositions: [{ character:'hero', images:[1], position:'on the left beside the desk' }], references: [{ imagePath: 'person.png' }], duration: 5, reserveUsd: 0.25,
     negativePrompt: 'subtitles', guidanceScale: 1, nagScale: 11, nagAlpha: 0.25, nagTau: 2.5,
   } });
   assert.equal(p.tool, 'astra_genai_msr'); assert.equal(p.args.model, undefined); assert.equal(p.args.resolution, undefined);
   assert.equal(p.args.width, 1792); assert.equal(p.args.height, 1024); assert.equal(p.args.references[0].imagePath, ref);
-  assert.equal(p.args.references[0].audioPath, voice); assert.equal(p.quote.reserveUsd, 0.25);
+  assert.match(p.args.prompt, /hero \(Image 1\): on the left beside the desk/); assert.equal(p.args.references[0].audioPath, voice); assert.equal(p.quote.reserveUsd, 0.25);
   const stored = JSON.parse(fs.readFileSync(path.join(f.episode, '.work/video-routing/plans', p.id + '.json')));
   assert.deepEqual([stored.args.nagScale, stored.args.nagAlpha, stored.args.nagTau], [11, 0.25, 2.5]);
   const replanned = planVideo({ episode: f.episode, shotId: p.shotId, requestId: p.requestId, tool: p.tool, args: stored.sourceArgs });
@@ -456,7 +456,7 @@ test('MSR plans cover the whole shot, reject short exact requests and recheck ch
   fs.writeFileSync(ref, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=', 'base64'));
   f.board.SCENES[0].narration = [{ id: 'l1', speaker: 'hero', delivery: 'on_screen', tts: 'Hello' }];
   f.board.SCENES[0].duration = 5.1; f.save();
-  const args = { prompt: 'A person listens.', references: [{ imagePath: ref }], reserveUsd: .25 };
+  const args = { prompt: 'A person listens.', openingPositions: [{character:'hero',images:[1],position:'seated on the left'}], references: [{ imagePath: ref }], reserveUsd: .25 };
   const plan = extra => planVideo({ episode: f.episode, shotId: 's1', requestId: 'timed', args: { ...args, ...extra } });
   const p = plan({});
   assert.equal(p.args.numFrames, 129);

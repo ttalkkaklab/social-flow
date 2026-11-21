@@ -25955,12 +25955,6 @@ var require_video_duration = __commonJS({
   }
 });
 
-// src/fasth3-omni.ts
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync as readFileSync2, readdirSync, rmSync, statSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join as join2 } from "node:path";
-
 // node_modules/zod/v3/external.js
 var external_exports = {};
 __export(external_exports, {
@@ -30002,6 +29996,60 @@ var coerce = {
 };
 var NEVER = INVALID;
 
+// src/prompt-language.ts
+var QUOTED_SEGMENT = /"[^"]*"|“[^”]*”|「[^」]*」/g;
+var NON_LATIN_RUN = /[^\P{L}\p{Script=Latin}]+(?:[ \t]+[^\P{L}\p{Script=Latin}]+)*/u;
+function nonEnglishOutsideQuotes(prompt) {
+  const match = prompt.replace(QUOTED_SEGMENT, " ").match(NON_LATIN_RUN);
+  return match ? match[0] : null;
+}
+
+// src/msr-opening.ts
+var openingPositionsSchema = external_exports.array(external_exports.object({
+  character: external_exports.string().trim().min(1).describe("Cast ID, or an English character name for a standalone render."),
+  images: external_exports.array(external_exports.number().int().min(1).max(4)).describe("1-based subject image numbers for this person, including clothing panels. Use [] for a bystander without a reference."),
+  position: external_exports.string().trim().min(1).refine((value) => !nonEnglishOutsideQuotes(value), "Describe the opening position in English").describe("Where the viewer sees this person at the start: side, depth, posture or orientation, and a visible landmark. Describe an off-screen start explicitly.")
+}).strict(), { required_error: "openingPositions required: inspect the opening image and describe each character and its reference images" }).describe("Required with MSR references. Identify every character in the opening scene, including silent listeners. Use [] only for a character-free scene.");
+function openingPrompt(prompt, positions = []) {
+  if (!positions.length) return prompt;
+  const header = positions.map(({ character, images, position }) => {
+    const refs = images.map((index) => "Image " + index).join(", ");
+    return character + (refs ? " (" + refs + ")" : "") + ": " + position;
+  });
+  const prefix = "Opening frame, from the viewer\u2019s perspective:\n" + header.join("\n") + "\n\n";
+  return prompt.startsWith(prefix) ? prompt : prefix + prompt;
+}
+function validateOpening(prompt, positions, references, issue) {
+  if (!positions) {
+    issue("openingPositions required: match each character to the opening frame and their subject images");
+    return;
+  }
+  const subjects = references.filter((ref) => !ref.background);
+  const mapped = /* @__PURE__ */ new Set();
+  const names = /* @__PURE__ */ new Set();
+  for (const { character, images } of positions) {
+    if (names.has(character)) issue("openingPositions: list each character once");
+    names.add(character);
+    for (const index of images) {
+      if (!subjects[index - 1] || subjects[index - 1].nonCharacter || mapped.has(index))
+        issue("openingPositions: invalid, non-character or repeated subject Image " + index);
+      mapped.add(index);
+    }
+  }
+  subjects.forEach((ref, i) => {
+    if (!mapped.has(i + 1) && (!ref.nonCharacter || ref.audioPath || ref.audioUri))
+      issue("openingPositions: identify the character in Image " + (i + 1) + " or mark an object reference nonCharacter:true");
+  });
+  if (openingPrompt(prompt, positions).length > 2e3)
+    issue("The prompt including openingPositions exceeds 2000 characters; shorten the action or placement descriptions");
+}
+
+// src/fasth3-omni.ts
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync as readFileSync2, readdirSync, rmSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join as join2 } from "node:path";
+
 // src/media-utils.ts
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -31848,6 +31896,7 @@ var msrReferences = external_exports.array(external_exports.object({
   imageUri: genaiImageUriSchema.optional(),
   imagePath: external_exports.string().min(1).optional(),
   background: external_exports.boolean().default(false),
+  nonCharacter: external_exports.boolean().optional(),
   // Voice sample for this subject; the gateway pairs it with the same picture slot.
   audioUri: external_exports.string().min(1).optional(),
   audioPath: external_exports.string().min(1).optional()
@@ -31870,6 +31919,7 @@ var genaiImageToVideoSchema = textVideoFields.extend({
   lastFrameUri: genaiImageUriSchema.nullable().optional(),
   lastFramePath: external_exports.string().min(1).optional(),
   references: msrReferences.optional(),
+  openingPositions: openingPositionsSchema.optional(),
   ...msrGuidanceFields
 }).strict().superRefine((args, ctx) => {
   const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
@@ -31879,10 +31929,12 @@ var genaiImageToVideoSchema = textVideoFields.extend({
   if (Number(args.imageUri !== void 0) + Number(args.imagePath !== void 0) !== 1) issue("Supply exactly one imageUri or imagePath");
   if (args.lastFrameUri != null && args.lastFramePath !== void 0) issue("Supply at most one lastFrameUri or lastFramePath");
   if (!args.references) {
+    if (args.openingPositions !== void 0) issue("openingPositions requires MSR references");
     if (Object.keys(msrGuidanceFields).some((key) => args[key] !== void 0))
       issue("guidanceScale and NAG require references (MSR conditioning); ltx-2.5-22b-dev already runs guided");
     devNegativeRule(args, ctx);
   } else {
+    validateOpening(args.prompt, args.openingPositions, args.references, issue);
     validateVoiceSlots(args.references, issue);
     msrNegativeRule(args, issue);
     if (args.model !== "ltx-2.5-22b-distilled") issue("Additional references require ltx-2.5-22b-distilled (MSR conditioning)");
@@ -31921,6 +31973,7 @@ var genaiMsrSchema = external_exports.object({
   negativePrompt: external_exports.string().trim().min(1).max(5e3).optional(),
   ...msrGuidanceFields,
   references: msrReferences,
+  openingPositions: openingPositionsSchema,
   referenceStrength: external_exports.number().finite().min(0).max(1).default(1),
   referenceFrames: external_exports.union([external_exports.literal(25), external_exports.literal(33)]).default(33),
   width: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1536),
@@ -31934,6 +31987,7 @@ var genaiMsrSchema = external_exports.object({
   filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use a .mp4 filename").optional()
 }).strict().superRefine((args, ctx) => {
   const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  validateOpening(args.prompt, args.openingPositions, args.references, issue);
   msrNegativeRule(args, issue);
   const backgrounds = args.references.filter((ref) => ref.background).length;
   if (backgrounds > 1 || args.references.length - backgrounds > 4) issue("MSR supports at most four subjects and one background");
@@ -31971,16 +32025,6 @@ var import_video_duration = __toESM(require_video_duration(), 1);
 
 // src/seedance-client.ts
 import * as path3 from "node:path";
-
-// src/prompt-language.ts
-var QUOTED_SEGMENT = /"[^"]*"|“[^”]*”|「[^」]*」/g;
-var NON_LATIN_RUN = /[^\P{L}\p{Script=Latin}]+(?:[ \t]+[^\P{L}\p{Script=Latin}]+)*/u;
-function nonEnglishOutsideQuotes(prompt) {
-  const match = prompt.replace(QUOTED_SEGMENT, " ").match(NON_LATIN_RUN);
-  return match ? match[0] : null;
-}
-
-// src/seedance-client.ts
 var VALID_SEEDANCE_RESOLUTIONS = ["480p", "720p", "1080p", "4k"];
 var VALID_SEEDANCE_RATIOS = ["16:9", "9:16", "4:3", "3:4", "1:1", "21:9", "adaptive"];
 var SEEDANCE_MODEL_SPECS = {
@@ -33653,6 +33697,7 @@ var shotPromptSchema = external_exports.object({
   action: nonEmpty.describe("What happens in the shot, in English: the subjects' movement from the opening picture"),
   end: nonEmpty.optional().describe("The closing picture, in English"),
   sound: nonEmpty.optional().describe(`Ambient sound and effects, in English; the shot's lines come from shot_dialogue. "no music" is added unless it names music`),
+  openingPositions: openingPositionsSchema.optional(),
   speakerBindings: external_exports.array(speakerBindingSchema).max(2).optional().describe('MSR speakers as seen in the start image, e.g. [{speaker:"hero",screenPosition:"left",description:"the man in black armor"}]; viewer coordinates, never reference order')
 }).strict();
 var scenarioCheckResultSchema = external_exports.object({

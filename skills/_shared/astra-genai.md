@@ -37,6 +37,15 @@ the prompt. Each sample conditions the voice for its own subject. The opening
 image stays in the top-level `imagePath` or `imageUri`. Thoughts and voiceover
 use timed external TTS. `generateAudio:false` strips the generated soundtrack.
 
+Both MSR routes require `openingPositions` with references. Number the subject
+images starting at 1, with the background last. For each person supply their
+`character`, all their `images` and a viewer-relative `position` showing their
+depth, posture or landmark. The adapter prepends these positions to the prompt
+and enforces the gateway's 2,000-character limit on the assembled text. A prop
+reference takes `nonCharacter:true`; a scene with only props takes
+`openingPositions:[]`. For existing shots, author positions with `shot_prompt`
+before the next generation. Existing jobs can still be retrieved by receipt.
+
 For a structured `first`/`first_last` shot, `video_plan` binds every reference
 whose `use` is `video` or `both`, orders the background last and records its
 hash. `use:image` stays an input to the source image only. Legacy silent
