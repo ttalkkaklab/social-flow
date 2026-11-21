@@ -93966,7 +93966,7 @@ var require_character_identity = __commonJS({
     }
     var HEADS = String.raw`(?<![\d.])(?<!\d\s*(?:[-–~]|to)\s*)(\d+(?:\.\d+)?)(?:\s+(\d)\/(\d))?[\s-]*`;
     var HEIGHT_COUNT = new RegExp(HEADS + String.raw`(?:heads?[\s-]+(?:tall|high)\b|head[\s-]heights?\b|등신|頭身)`, "gi");
-    var BARE_COUNT = new RegExp(HEADS + String.raw`(?:heads\b(?![\s-]*(?:wide|long|broad|across|deep|thick))|(?<=-)head\b(?![-\w]))`, "gi");
+    var BARE_COUNT = new RegExp(HEADS + String.raw`(?:heads\b(?![\s-]*(?:wide|long|broad|across|deep|thick|taller|shorter|higher|lower|above|below|more|less))|(?<=-)head\b(?![-\w]))`, "gi");
     var NUMBER_WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"];
     var inDigits = (text5) => text5.replace(new RegExp(String.raw`\b(?:${NUMBER_WORDS.join("|")})\b`, "gi"), (word) => NUMBER_WORDS.indexOf(word.toLowerCase())).replace(/(\d+)[\s-]+and[\s-]+a[\s-]+half\b/gi, "$1.5");
     function headsTall(character) {
@@ -93978,14 +93978,28 @@ var require_character_identity = __commonJS({
       const count = counts.length === 1 ? counts[0] : NaN;
       return count >= 1.5 && count <= 12 ? count : null;
     }
+    var HEAD_SHAPES = [
+      [1.75, "a huge head taller than the whole body below it, little or no neck, a tiny body with plump simplified hands and feet"],
+      [2.25, "a huge head about as tall as the whole body below it, little or no neck, a small rounded torso, short limbs"],
+      [2.75, "a very large head, a very short neck, a small rounded torso and short limbs"],
+      [3.5, "a very large head about a third of the height, a short slim neck, a small torso and short legs"],
+      [4.5, "a large head about a quarter of the height, a short torso and short legs"],
+      [5.5, "a large head on a compact body, the legs clearly shorter than half the height"],
+      [6.5, "a slightly large head, the legs a little under half the height"],
+      [7.25, "a small head, the legs just under half the height"],
+      [7.75, "a small head, the legs half the standing height"],
+      [8.25, "a small head, a torso three heads long and legs four heads long"],
+      [8.75, "a small head on a tall body, the legs a little over half the height"],
+      [Infinity, "a very small head on a tall body, the legs well over half the height"]
+    ];
     function headRatio(character, name) {
       const count = headsTall(character);
       if (!count) return { headsTall: null, text: "" };
-      const shape2 = count < 3.5 ? "a very large head on a short body with short limbs" : count < 5.5 ? "a large head on a compact body" : count < 7 ? "a slightly large head" : "a small head on a long body";
+      const shape2 = HEAD_SHAPES.find(([below]) => count < below)[1];
       const height = character.physical.heightCm, cm = height?.status === "confirmed" ? height.value : null;
       const num5 = (value) => String(Number(value.toFixed(1)));
       const head = cm ? `about ${num5(cm / count)} cm of the ${cm} cm standing height` : `one part in ${num5(count)} of the standing height`;
-      return { headsTall: count, text: `${name} is ${num5(count)} heads tall: ${shape2}, the head (crown to chin) ${head}, the body below the chin ${num5(count - 1)} heads.` };
+      return { headsTall: count, text: `${name} is ${num5(count)} heads tall: ${shape2}; the head (crown to chin) is ${head}.` };
     }
     function requiresSpeech(win, id) {
       if (win?.STORY?.version !== "story-v2" || !Array.isArray(win.SCENES)) return true;
@@ -113988,7 +114002,7 @@ import * as path14 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.124.4",
+  version: "0.124.5",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -140471,7 +140485,7 @@ ROUTES.music_status = async (args) => args?.action === "resume" ? resumeMusic2(a
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.124.4" },
+  { name: "social-flow", version: "0.124.5" },
   { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {
