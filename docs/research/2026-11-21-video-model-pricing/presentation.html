@@ -1,0 +1,1801 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>영상 생성 단가 · 공급처 × 해상도</title>
+<script>if (new URLSearchParams(location.search).has('still')) document.documentElement.dataset.still = '';</script>
+<style>
+:root{
+  color-scheme:light;--shell:#e4e8e3;--paper:#fafaf4;--ink:#152b2c;--muted:#536767;
+  --rule:#cad4cd;--accent:#096653;--soft:#e1ebe1;--midnight:#0c2e2c;--light:#eaffea;
+  --lime:#caef80;--blue:#25587c;--teal:#216c60;--gold:#a95a28;--upr:#744d96;
+  --font:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--shell);color:var(--ink);font:17px/1.55 var(--font);word-break:keep-all}
+a{color:inherit;text-underline-offset:.2em;text-decoration-thickness:1px}
+button,select,input{font:inherit}
+button{color:inherit;cursor:pointer}
+button:disabled{cursor:default;opacity:.38}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:3px solid #9e550c;outline-offset:3px}
+[hidden]{display:none!important}
+.app{width:min(1400px,100%);margin-inline:auto;padding:0 clamp(8px,2.35vw,36px) 16px}
+.toolbar{min-height:61px;display:flex;align-items:center;justify-content:space-between;gap:10px 18px;flex-wrap:wrap;margin:0 0 3px;padding:7px 0}
+.toolbar a{text-decoration:none;font-size:14px;font-weight:750}
+.toolbar a:hover{text-decoration:underline}
+.navkeys{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.toolbar button,.switches button{background:transparent;border:1px solid var(--rule);min-height:36px;padding:6px 11px;font-size:13px;font-weight:720;border-radius:4px}
+.toolbar button:hover:not(:disabled),.switches button:hover{background:#d4e1d4}
+.toolbar button[aria-pressed=true],.switches button[aria-pressed=true]{background:var(--midnight);color:white;border-color:var(--midnight)}
+.navkeys output{min-width:60px;text-align:center;font-size:14px;font-variant-numeric:tabular-nums}
+.navkeys .arrow{font-size:19px;line-height:1;min-width:38px}
+.progress{height:3px;background:rgba(9,36,26,.12);margin:0}
+.progress i{display:block;height:100%;width:12.5%;background:var(--accent);transition:width .24s ease}
+.stage{background:var(--paper);border:1px solid #becdc1}
+.slide{min-height:min(705px,calc(100svh - 113px));padding:clamp(21px,3.15vw,50px) clamp(19px,4vw,63px) clamp(16px,2.55vw,38px);display:flex;flex-direction:column;gap:clamp(11px,1.5vw,22px)}
+.slide h1,.slide h2,.slide p{margin:0}
+.slide h1,.slide h2{letter-spacing:-.055em;line-height:1.12;text-wrap:balance}
+.slide h1{font-size:clamp(45px,7.1vw,105px);font-weight:820}
+.slide h2{font-size:clamp(29px,4.1vw,58px);font-weight:800}
+.slide h3{font-size:19px;line-height:1.3;margin:0 0 8px}
+.deck-desc{margin-top:7px!important;color:var(--muted);font-size:clamp(14px,1.6vw,20px);line-height:1.45}
+.dark{background:var(--midnight);color:var(--light)}
+.dark .deck-desc,.dark .faint{color:#b9d3c4}
+.dark a{color:#def6e5}
+.dark :focus-visible{outline-color:var(--lime)}
+.faint{color:var(--muted);font-size:clamp(12px,1.15vw,15px);line-height:1.5}
+.small{font-size:clamp(12px,1.2vw,16px);line-height:1.52}
+.number{font-variant-numeric:tabular-nums;letter-spacing:-.04em;white-space:nowrap}
+mark{background:transparent;color:var(--accent);font-weight:800}
+.dark mark{color:var(--lime)}
+.hero-layout,.split{display:grid;grid-template-columns:1fr 1fr;gap:clamp(16px,4.5vw,75px);align-items:center}
+.hero-layout{margin:auto 0}
+.hero-copy{display:grid;gap:16px}
+.hero-copy .faint{margin-top:10px}
+.hero-axis{border-top:1px solid #527566;padding-top:15px}
+.hero-axis h3{font-size:clamp(15px,1.7vw,23px)}
+.cover-bars{list-style:none;margin:24px 0 9px;padding:0;display:grid;gap:clamp(9px,1.4vw,18px)}
+.cover-bars li{display:grid;grid-template-columns:minmax(53px,14%) minmax(50px,1fr) minmax(53px,17%);gap:10px;align-items:center}
+.cover-bars .track{display:block;height:clamp(8px,1.1vw,15px);background:#28514b}
+.cover-bars .bar{background:var(--lime)}
+.bar{display:block;height:100%;transform-origin:left;width:var(--w)}
+.scope{display:flex;gap:14px 34px;flex-wrap:wrap;padding-top:14px;border-top:1px solid #527566}
+.scope b{font-size:clamp(18px,2.2vw,31px);color:var(--lime);margin-right:5px}
+.slide-end{display:flex;gap:7px 21px;justify-content:space-between;align-items:baseline;flex-wrap:wrap;margin-top:auto;border-top:1px solid var(--rule);padding-top:9px}
+.dark .slide-end{border-color:#527566}
+.insight{background:var(--soft);border-left:3px solid var(--accent);padding:8px 13px;font-size:clamp(13px,1.45vw,17px)}
+.switches{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.switches label{margin-right:5px;font-size:14px;font-weight:730}
+.table-scroll{overflow-x:auto;overscroll-behavior-inline:contain}
+table{width:100%;border-collapse:collapse;text-align:left;min-width:560px;font-variant-numeric:tabular-nums;border-top:1px solid var(--rule)}
+th,td{border-bottom:1px solid var(--rule);padding:clamp(3px,.48vw,7px) clamp(5px,1vw,15px);white-space:nowrap}
+thead th{font-size:clamp(12px,1.2vw,16px);font-weight:750;color:#405956}
+tbody th{font-weight:690}
+tbody th,tbody td{font-size:clamp(13px,1.3vw,18px)}
+td.money-col,th.money-col{text-align:right;min-width:73px}
+td.focused,th.focused{background:#e4eee0;color:#154f42}
+td.focused{font-weight:770}
+td.null{color:#677b76}
+td.money-col a{text-decoration:none}
+td.money-col a:hover{text-decoration:underline}
+table button{display:block;margin-left:auto;padding:0 1px;border:none;background:transparent;font-size:inherit;font-weight:inherit;color:inherit;text-align:right}
+table button:hover{text-decoration:underline}
+.table-focus{min-height:2.15em;padding-top:7px;line-height:1.35;font-size:clamp(13px,1.4vw,17px);color:var(--muted)}
+.table-focus strong{color:var(--accent)}
+.table-legend{font-size:clamp(11px,1.14vw,14px);color:var(--muted);margin-top:3px}
+.values-large tbody th,.values-large tbody td{padding-block:clamp(8px,1vw,16px);font-size:clamp(15px,1.8vw,24px)}
+.data-bars{list-style:none;padding:0;margin:0;display:grid;gap:12px}
+.data-bars li{display:grid;grid-template-columns:minmax(110px,23%) 1fr minmax(65px,12%);gap:14px;align-items:center;font-size:clamp(13px,1.4vw,19px)}
+.data-bars .track{height:clamp(10px,1.45vw,20px);background:#dce5dc}
+.data-bars .bar{background:var(--teal)}
+.data-bars .direct{background:var(--blue)}
+.data-bars .upgrade{background:var(--upr)}
+.data-bars strong{text-align:right}
+.data-bars .bar-small{display:block;color:var(--muted);font-size:11px;margin-top:1px}
+.usage-layout{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(180px,1fr);gap:clamp(13px,3.1vw,44px);align-items:center}
+.plot-box{overflow:auto}
+.plot{width:100%;height:auto;display:block;min-width:390px;overflow:visible}
+.plot text{font:13px var(--font);fill:#45635b}
+.plot .tick,.plot .axis{stroke:#afc1b6;stroke-width:1;fill:none}
+.plot .curve{fill:none;stroke-width:3;stroke-linecap:round}
+.plot .cursor{stroke:#296040;stroke-width:1.5;stroke-dasharray:4 4}
+.plot .threshold{fill:#e3eece}
+.legend{display:flex;flex-wrap:wrap;gap:4px 16px;margin:3px 0 0;padding:0;list-style:none;font-size:clamp(11px,1.15vw,14px);color:#405b55}
+.legend i{display:inline-block;height:4px;width:14px;background:var(--c);margin-right:4px;vertical-align:middle}
+.slider{display:grid;gap:4px;font-size:14px;font-weight:730}
+.slider input{width:100%;accent-color:var(--accent)}
+.slider output{font-variant-numeric:tabular-nums}
+.spent{margin:13px 0;display:grid;gap:4px}
+.spent div{display:flex;align-items:baseline;justify-content:space-between;gap:10px;border-bottom:1px solid var(--rule);padding:3px 0}
+.spent dt{font-size:clamp(12px,1.3vw,17px)}
+.spent dd{margin:0;font-size:clamp(19px,2.5vw,33px);font-weight:810;white-space:nowrap}
+.split.start{align-items:start}
+.split.sources-layout{grid-template-columns:minmax(0,1fr) minmax(0,1.35fr)}
+.requirements{margin:0;display:grid;gap:8px}
+.requirements div{display:flex;justify-content:space-between;gap:9px;border-bottom:1px solid var(--rule);padding:7px 0}
+.requirements dt{color:var(--muted);font-size:14px}
+.requirements dd{margin:0;font-weight:800;white-space:nowrap}
+.budget-count{color:var(--accent);font-size:clamp(21px,2.7vw,39px);font-weight:800}
+.source-list{column-count:2;column-gap:clamp(20px,5vw,70px);padding:0;list-style:none;margin:6px 0}
+.source-list li{break-inside:avoid;border-bottom:1px solid #527566;padding:9px 0}
+.source-list a{font-weight:750}
+.source-list small{display:block;color:#b9d3c4}
+.close-links{display:flex;gap:15px 22px;flex-wrap:wrap}
+.mobile-scroll{display:none}
+.help{margin:8px 0 0;color:#415d57;font-size:12px}
+.motion{animation:none}
+.is-current .motion{animation:rise .45s cubic-bezier(.2,.7,.25,1) both;animation-delay:var(--delay,0ms)}
+.is-current .bar{animation:grow .7s cubic-bezier(.19,.75,.26,1) both;animation-delay:var(--delay,90ms)}
+.is-current .curve{stroke-dasharray:1;stroke-dashoffset:0;animation:trace .8s ease-out both;animation-delay:var(--delay,100ms)}
+.is-current .motion-col{animation:ink .43s ease-out both;animation-delay:var(--delay,0ms)}
+@keyframes grow{from{transform:scaleX(.015)}to{transform:scaleX(1)}}
+@keyframes rise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+@keyframes trace{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+@keyframes ink{from{opacity:.22}to{opacity:1}}
+:fullscreen{background:var(--shell);overflow:auto}
+:fullscreen .slide{min-height:calc(100svh - 107px)}
+@media(max-width:900px){
+ .slide{padding:24px 24px 18px}.hero-layout{gap:22px}.hero-copy{gap:10px}
+ .usage-layout{gap:16px}
+}
+@media(min-width:651px) and (max-height:800px){
+ .slide{padding-block:23px 18px;gap:12px}
+ .slide h2{font-size:clamp(34px,3.7vw,50px)}
+ .slide:has(#seed-api) th,.slide:has(#seed-api) td{padding-block:4px;line-height:1.33}
+ .slide:has(#seed-web) th,.slide:has(#seed-web) td{padding-block:5px;line-height:1.36}
+ .table-focus{padding-top:5px}.values-large tbody th,.values-large tbody td{padding-block:11px}
+}
+@media(max-width:650px){
+ .toolbar{padding-block:5px;gap:5px}.toolbar a{font-size:12px}.toolbar button{padding:4px 7px;min-height:34px;font-size:12px}.navkeys{gap:4px}
+ .slide{min-height:0;padding:21px 14px 15px;gap:13px}.hero-layout,.split,.split.sources-layout,.usage-layout{grid-template-columns:1fr;gap:15px}
+ .hero-layout{margin:0}.cover-bars{margin-top:12px}.scope{gap:8px 14px}
+ .table-scroll{border-right:1px dashed var(--rule)}
+ .table-scroll tr>:first-child{position:sticky;left:0;background:var(--paper);box-shadow:1px 0 var(--rule);z-index:1}
+ .mobile-scroll{display:block;font-size:11px;color:var(--muted);margin-top:4px!important}
+ .plot{min-width:0}.plot text{font-size:17px}.slide-end .faint{width:100%}
+ .source-list{column-count:1}.data-bars li{grid-template-columns:minmax(83px,30%) 1fr minmax(48px,17%);gap:8px}
+}
+html[data-still] *,html[data-still] *::before,html[data-still] *::after{animation:none!important;transition:none!important}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+@media print{
+ @page{size:landscape;margin:9mm}
+ body,.app,.stage{margin:0;padding:0;background:white;border:0}
+ .toolbar,.help,.progress{display:none!important}
+ .slide,.slide[hidden]{display:flex!important;break-after:page;min-height:0;gap:9px;padding:18px}
+ .slide:last-child{break-after:auto}
+ .motion,.curve,.bar,.motion-col{animation:none!important;opacity:1!important;stroke-dashoffset:0!important;transform:none!important}
+ .dark,.insight,.focused,.bar{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .slide h1{font-size:54px}.slide h2{font-size:32px}.table-scroll{overflow:visible}
+ th,td{padding:4px 7px}.plot{min-width:0}
+}
+</style>
+</head>
+<body>
+<div class="app" id="presentation">
+  <header class="toolbar" aria-label="발표 조작">
+    <a href="index.html">원본 조사 보고서</a>
+    <div class="navkeys">
+      <button id="previous" class="arrow" type="button" aria-label="이전 장">‹</button>
+      <output id="page-number" aria-live="polite">1 / 8</output>
+      <button id="next" class="arrow" type="button" aria-label="다음 장">›</button>
+      <button id="play" type="button" aria-pressed="false">자동 재생</button>
+      <button id="replay" type="button">모션 다시 보기</button>
+      <button id="fullscreen" type="button">전체 화면</button>
+    </div>
+  </header>
+  <div class="progress" aria-hidden="true"><i id="progress-line"></i></div>
+  <main class="stage">
+
+    <section class="slide dark is-current" data-slide-name="공급처 × 해상도" aria-labelledby="slide-title-1">
+      <div class="hero-layout">
+        <header class="hero-copy">
+          <p class="faint">2026년 11월 21일 공개 요금</p>
+          <h1 id="slide-title-1" class="motion">영상 생성 단가</h1>
+          <p class="deck-desc motion" style="--delay:80ms">공급처 × 해상도</p>
+          <p class="faint motion" style="--delay:160ms">제조사 API, 통합 API, 웹 구독</p>
+        </header>
+        <div class="hero-axis motion" style="--delay:120ms">
+          <h3>BytePlus Seedance 2.5</h3>
+          <p class="faint">16:9 · 5초 · 영상 참조 없이</p>
+          <ul id="cover-bars" class="cover-bars" aria-label="BytePlus의 해상도별 예상 5초 가격"></ul>
+          <p class="faint"><a id="cover-source">공식 계산 예시</a></p>
+        </div>
+      </div>
+      <div id="scope" class="scope motion" style="--delay:340ms" aria-label="조사 범위"></div>
+    </section>
+
+    <section class="slide" data-slide-name="Seedance 2.5 API 단가" aria-labelledby="slide-title-2" hidden>
+      <header class="motion">
+        <h2 id="slide-title-2">Seedance 2.5 API 단가</h2>
+        <p class="deck-desc">공급처별 480p–4K · 5초 1회 · 영상 참조 없이</p>
+      </header>
+      <div id="seed-api" class="motion" style="--delay:60ms"></div>
+      <div class="slide-end">
+        <p class="faint">fal은 미국 모델 카드, WaveSpeedAI는 텍스트 입력 카드 기준이다.</p>
+        <p class="faint">해상도 선택으로 열 강조 · 가격 선택으로 출처 열기</p>
+      </div>
+    </section>
+
+    <section class="slide" data-slide-name="Seedance 2.5 웹 구독" aria-labelledby="slide-title-3" hidden>
+      <header class="motion">
+        <h2 id="slide-title-3">Seedance 2.5 웹 구독 환산</h2>
+        <p class="deck-desc">5초 1회 · 표시한 플랜의 포함 크레딧을 모두 쓰는 조건</p>
+      </header>
+      <div id="seed-web" class="motion" style="--delay:60ms"></div>
+      <div class="slide-end">
+        <p class="faint">Higgsfield 연간 표시는 $33 × 12 = $396. 포함 크레딧은 월 1,200이다.</p>
+        <p class="faint">첫 달·한시 할인 제외</p>
+      </div>
+    </section>
+
+    <section class="slide" data-slide-name="Kling · Veo · Wan · LTX" aria-labelledby="slide-title-4" hidden>
+      <header class="motion">
+        <h2 id="slide-title-4">Kling · Veo · Wan · LTX API 단가</h2>
+        <p class="deck-desc">모델을 바꾸면 공급처와 해상도별 가격표가 바뀐다.</p>
+      </header>
+      <div id="model-picker" class="switches" role="group" aria-label="비교할 모델"></div>
+      <div id="other-model" class="motion" style="--delay:65ms"></div>
+      <div class="slide-end">
+        <p id="model-note" class="faint"></p>
+      </div>
+    </section>
+
+    <section class="slide" data-slide-name="4K 출력 가격" aria-labelledby="slide-title-5" hidden>
+      <header class="motion">
+        <h2 id="slide-title-5">4K 출력 가격과 생성 방식</h2>
+        <p class="deck-desc">Seedance 2.5 · 4K · 5초 1회</p>
+      </header>
+      <div class="split">
+        <ul id="fourk-bars" class="data-bars" aria-label="4K 출력 5초 비용"></ul>
+        <div class="motion" style="--delay:320ms">
+          <h3>Segmind Upscaled는 생성 후 확대</h3>
+          <p class="small">Segmind는 낮은 해상도로 생성한 뒤 4K로 확대하는 경로를 공개한다. 다른 막대는 공급처가 표시한 4K 출력 가격이며 생성 방식은 개별 카드에서 확인한다.</p>
+        </div>
+      </div>
+      <div class="slide-end">
+        <p class="faint">4K 표기는 출력 크기다. 공급처 간 영상 품질은 미검증이다.</p>
+        <p class="faint">정가와 공개 계산 예시 기준</p>
+      </div>
+    </section>
+
+    <section class="slide" data-slide-name="월간 사용량과 구독료" aria-labelledby="slide-title-6" hidden>
+      <header class="motion">
+        <h2 id="slide-title-6">720p 월간 사용량과 구독료</h2>
+        <p class="deck-desc">Seedance 2.5 · 5초 · Higgsfield Plus 배정량 안에서 비교</p>
+      </header>
+      <div class="usage-layout">
+        <div class="plot-box" tabindex="0" aria-label="월 생성 횟수와 예산 그래프">
+          <svg id="usage-plot" class="plot" viewBox="0 0 640 260" role="img" aria-labelledby="plot-title"></svg>
+          <ul class="legend" id="usage-legend"></ul>
+        </div>
+        <div class="motion" style="--delay:230ms">
+          <label class="slider" for="usage-count">월 생성 횟수 <output id="usage-result">10회</output>
+            <input id="usage-count" type="range" min="1" max="34" value="10" step="1">
+          </label>
+          <dl class="spent" id="usage-spent" aria-live="polite"></dl>
+          <p id="breakpoint" class="small"></p>
+        </div>
+      </div>
+      <div class="slide-end">
+        <p class="faint">월 1,200크레딧 ÷ 35 = 최대 34회. 연간 요금은 월 환산액이며 $396은 12개월 환산 총액이다.</p>
+        <p class="faint"><a id="usage-source">Higgsfield 한국어 요금표</a></p>
+      </div>
+    </section>
+
+    <section class="slide" data-slide-name="해상도별 월 제작비" aria-labelledby="slide-title-7" hidden>
+      <header class="motion">
+        <h2 id="slide-title-7">해상도별 월 제작비</h2>
+        <p class="deck-desc">Seedance 2.5 · 채택 40컷 · 클립 5초 · 채택 컷당 평균 생성 횟수 조정</p>
+      </header>
+      <div class="split start">
+        <div class="motion" style="--delay:60ms">
+          <label class="slider" for="budget-multiplier">컷당 유료 생성 <output id="budget-ratio">2.5회</output>
+            <input id="budget-multiplier" type="range" min="1" max="4" value="2.5" step="0.5">
+          </label>
+          <p id="budget-count" class="budget-count number">월 100회</p>
+        </div>
+        <div class="motion" style="--delay:200ms">
+          <h3>Higgsfield Plus 월 배정량 1,200크레딧</h3>
+          <dl class="requirements" id="budget-credits"></dl>
+        </div>
+      </div>
+      <div id="budget-table" class="motion" style="--delay:110ms"></div>
+      <div class="slide-end">
+        <p class="faint">토큰형 가격은 공급처 공개 예시로 추정했다. 편집·TTS·저장·초과 충전 비용은 별도다.</p>
+      </div>
+    </section>
+
+    <section class="slide dark" data-slide-name="비교 기준과 출처" aria-labelledby="slide-title-8" hidden>
+      <header class="motion">
+        <h2 id="slide-title-8">비교 기준과 출처</h2>
+        <p class="deck-desc">화면의 숫자는 2026년 11월 21일 조사 기록에서 가져왔다.</p>
+      </header>
+      <div class="split start sources-layout">
+        <div class="motion" style="--delay:90ms">
+          <h3>단가를 바꾸는 조건</h3>
+          <p class="small">영상 참조는 입력 길이까지 과금할 수 있다. Kie의 720p 5초 예시에서 출력만 생성하면 $1.575, 5초 영상을 참조하면 $1.90이다. <a id="reference-source">Kie 모델 요금</a></p>
+          <p class="small" style="margin-top:12px">구독은 크레딧 환산액과 실제 월 지출을 따로 계산했다. 세금과 결제 화면의 최종 청구액은 미확인이다.</p>
+        </div>
+        <ul id="source-list" class="source-list small motion" style="--delay:145ms"></ul>
+      </div>
+      <div class="slide-end close-links">
+        <a href="index.html">전체 단가표·CSV·예산 계산기</a>
+        <a href="#1" id="return-cover">첫 장으로</a>
+      </div>
+    </section>
+
+  </main>
+  <p class="help">키보드 ← → 장 이동 · R 모션 다시 보기 · F 전체 화면</p>
+</div>
+<noscript><p>이 발표는 JavaScript로 차트와 표를 표시합니다. <a href="index.html">원본 조사 보고서</a></p></noscript>
+<script id="deck-data" type="application/json">{
+  "resolution": [
+    "480p",
+    "720p",
+    "1080p",
+    "1440p",
+    "4K"
+  ],
+  "counts": {
+    "providers": 39,
+    "models": 81,
+    "rates": 679
+  },
+  "api": [
+    {
+      "label": "BytePlus ModelArk",
+      "prices": {
+        "480p": {
+          "cost": 0.514,
+          "source": "https://ai.byteplus.com/ark/region:ap-southeast-1/docs/model-pricing",
+          "credits": null,
+          "estimated": true,
+          "mode": "텍스트·이미지",
+          "note": "16:9 공식 예시. 실제 completion_tokens로 청구."
+        },
+        "720p": {
+          "cost": 1.156,
+          "source": "https://ai.byteplus.com/ark/region:ap-southeast-1/docs/model-pricing",
+          "credits": null,
+          "estimated": true,
+          "mode": "텍스트·이미지",
+          "note": "16:9 공식 예시. 실제 completion_tokens로 청구."
+        },
+        "1080p": {
+          "cost": 2.843,
+          "source": "https://ai.byteplus.com/ark/region:ap-southeast-1/docs/model-pricing",
+          "credits": null,
+          "estimated": true,
+          "mode": "텍스트·이미지",
+          "note": "16:9 공식 예시. 실제 completion_tokens로 청구."
+        },
+        "4K": {
+          "cost": 4.568,
+          "source": "https://ai.byteplus.com/ark/region:ap-southeast-1/docs/model-pricing",
+          "credits": null,
+          "estimated": true,
+          "mode": "텍스트·이미지",
+          "note": "16:9 공식 예시. 실제 completion_tokens로 청구."
+        }
+      },
+      "plan": null
+    },
+    {
+      "label": "Runware",
+      "prices": {
+        "480p": {
+          "cost": 0.5125,
+          "source": "https://runware.ai/seedance-2-5",
+          "credits": null,
+          "estimated": true,
+          "mode": "텍스트·이미지",
+          "note": "판매사 모델 페이지의 토큰 환산."
+        },
+        "720p": {
+          "cost": 1.152,
+          "source": "https://runware.ai/seedance-2-5",
+          "credits": null,
+          "estimated": true,
+          "mode": "텍스트·이미지",
+          "note": "판매사 모델 페이지의 토큰 환산."
+        },
+        "1080p": {
+          "cost": 3.0677,
+          "source": "https://runware.ai/seedance-2-5",
+          "credits": null,
+          "estimated": true,
+          "mode": "텍스트·이미지",
+          "note": "판매사 모델 페이지의 토큰 환산."
+        }
+      },
+      "plan": null
+    },
+    {
+      "label": "OpenRouter",
+      "prices": {
+        "480p": {
+          "cost": 0.514,
+          "source": "https://openrouter.ai/blog/insights/seedance-2-5-review/",
+          "credits": null,
+          "estimated": true,
+          "mode": "텍스트·이미지",
+          "note": "16:9·24fps 기준 판매사 공식 환산."
+        },
+        "720p": {
+          "cost": 1.1556,
+          "source": "https://openrouter.ai/blog/insights/seedance-2-5-review/",
+          "credits": null,
+          "estimated": true,
+          "mode": "텍스트·이미지",
+          "note": "16:9·24fps 기준 판매사 공식 환산."
+        }
+      },
+      "plan": null
+    },
+    {
+      "label": "Replicate",
+      "prices": {
+        "480p": {
+          "cost": 0.514,
+          "source": "https://replicate.com/bytedance/seedance-2.5",
+          "credits": null,
+          "estimated": true,
+          "mode": "텍스트·이미지",
+          "note": "모델별 가격표의 출력 초. 입력 영상은 별도 요율."
+        },
+        "720p": {
+          "cost": 1.156,
+          "source": "https://replicate.com/bytedance/seedance-2.5",
+          "credits": null,
+          "estimated": true,
+          "mode": "텍스트·이미지",
+          "note": "모델별 가격표의 출력 초. 입력 영상은 별도 요율."
+        }
+      },
+      "plan": null
+    },
+    {
+      "label": "Segmind",
+      "prices": {
+        "480p": {
+          "cost": 0.55,
+          "source": "https://www.segmind.com/models/seedance-2.5/pricing",
+          "credits": null,
+          "estimated": true,
+          "mode": "텍스트·이미지",
+          "note": "16:9 공식 견적 예시. 과금에 프레임 한 장이 추가됨."
+        },
+        "720p": {
+          "cost": 1.23,
+          "source": "https://www.segmind.com/models/seedance-2.5/pricing",
+          "credits": null,
+          "estimated": true,
+          "mode": "텍스트·이미지",
+          "note": "16:9 공식 견적 예시. 과금에 프레임 한 장이 추가됨."
+        },
+        "1080p": {
+          "cost": 3.02,
+          "source": "https://www.segmind.com/models/seedance-2.5/pricing",
+          "credits": null,
+          "estimated": true,
+          "mode": "텍스트·이미지",
+          "note": "16:9 공식 견적 예시. 과금에 프레임 한 장이 추가됨."
+        }
+      },
+      "plan": null
+    },
+    {
+      "label": "Higgsfield API",
+      "prices": {
+        "480p": {
+          "cost": 0.5885,
+          "source": "https://console.higgsfield.ai/models/bytedance/seedance-2.5/text-to-video",
+          "credits": null,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": ""
+        },
+        "720p": {
+          "cost": 1.3235,
+          "source": "https://console.higgsfield.ai/models/bytedance/seedance-2.5/text-to-video",
+          "credits": null,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": ""
+        },
+        "1080p": {
+          "cost": 3.259,
+          "source": "https://console.higgsfield.ai/models/bytedance/seedance-2.5/text-to-video",
+          "credits": null,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": ""
+        }
+      },
+      "plan": null
+    },
+    {
+      "label": "Runway Dev",
+      "prices": {
+        "480p": {
+          "cost": 1.0,
+          "source": "https://dev.runway.com/pricing",
+          "credits": null,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": ""
+        },
+        "720p": {
+          "cost": 1.5,
+          "source": "https://dev.runway.com/pricing",
+          "credits": null,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": ""
+        },
+        "1080p": {
+          "cost": 3.4,
+          "source": "https://dev.runway.com/pricing",
+          "credits": null,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": ""
+        },
+        "4K": {
+          "cost": 5.5,
+          "source": "https://dev.runway.com/pricing",
+          "credits": null,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": "판매처 4K 생성 방식 미확인. ModelArk는 11월 19일 갱신 가격표에 4K를 명시."
+        }
+      },
+      "plan": null
+    },
+    {
+      "label": "Kie.ai",
+      "prices": {
+        "480p": {
+          "cost": 0.7,
+          "source": "https://kie.ai/seedance-2-5?model=bytedance%2Fseedance-2-5",
+          "credits": null,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": ""
+        },
+        "720p": {
+          "cost": 1.575,
+          "source": "https://kie.ai/seedance-2-5?model=bytedance%2Fseedance-2-5",
+          "credits": null,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": ""
+        },
+        "1080p": {
+          "cost": 3.95,
+          "source": "https://kie.ai/seedance-2-5?model=bytedance%2Fseedance-2-5",
+          "credits": null,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": ""
+        }
+      },
+      "plan": null
+    },
+    {
+      "label": "PiAPI",
+      "prices": {
+        "480p": {
+          "cost": 0.75,
+          "source": "https://piapi.ai/docs/seedance-api/seedance-25",
+          "credits": null,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": ""
+        },
+        "720p": {
+          "cost": 1.75,
+          "source": "https://piapi.ai/docs/seedance-api/seedance-25",
+          "credits": null,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": ""
+        },
+        "1080p": {
+          "cost": 4.0,
+          "source": "https://piapi.ai/docs/seedance-api/seedance-25",
+          "credits": null,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": ""
+        }
+      },
+      "plan": null
+    },
+    {
+      "label": "WaveSpeedAI",
+      "prices": {
+        "480p": {
+          "cost": 0.9,
+          "source": "https://wavespeed.ai/models/bytedance/seedance-2.5/text-to-video",
+          "credits": null,
+          "estimated": false,
+          "mode": "텍스트→영상",
+          "note": "해당 T2V 공식 카드 정가. 4K의 네이티브 여부 미확인."
+        },
+        "720p": {
+          "cost": 1.8,
+          "source": "https://wavespeed.ai/models/bytedance/seedance-2.5/text-to-video",
+          "credits": null,
+          "estimated": false,
+          "mode": "텍스트→영상",
+          "note": "해당 T2V 공식 카드 정가. 4K의 네이티브 여부 미확인."
+        },
+        "1080p": {
+          "cost": 4.5,
+          "source": "https://wavespeed.ai/models/bytedance/seedance-2.5/text-to-video",
+          "credits": null,
+          "estimated": false,
+          "mode": "텍스트→영상",
+          "note": "해당 T2V 공식 카드 정가. 4K의 네이티브 여부 미확인."
+        },
+        "4K": {
+          "cost": 9.0,
+          "source": "https://wavespeed.ai/models/bytedance/seedance-2.5/text-to-video",
+          "credits": null,
+          "estimated": false,
+          "mode": "텍스트→영상",
+          "note": "해당 T2V 공식 카드 정가. 4K의 네이티브 여부 미확인."
+        }
+      },
+      "plan": null
+    },
+    {
+      "label": "fal US",
+      "prices": {
+        "480p": {
+          "cost": 1.1025,
+          "source": "https://fal.ai/models/bytedance/seedance-2.5/us/image-to-video",
+          "credits": null,
+          "estimated": true,
+          "mode": "텍스트·이미지",
+          "note": "fal US 모델 카드의 토큰 환산 예시. 실제 규격별 픽셀·토큰으로 청구."
+        },
+        "720p": {
+          "cost": 2.365,
+          "source": "https://fal.ai/models/bytedance/seedance-2.5/us/image-to-video",
+          "credits": null,
+          "estimated": true,
+          "mode": "텍스트·이미지",
+          "note": "fal US 모델 카드의 토큰 환산 예시. 실제 규격별 픽셀·토큰으로 청구."
+        },
+        "1080p": {
+          "cost": 5.82,
+          "source": "https://fal.ai/models/bytedance/seedance-2.5/us/image-to-video",
+          "credits": null,
+          "estimated": true,
+          "mode": "텍스트·이미지",
+          "note": "fal US 모델 카드의 토큰 환산 예시. 실제 규격별 픽셀·토큰으로 청구."
+        },
+        "4K": {
+          "cost": 9.2,
+          "source": "https://fal.ai/models/bytedance/seedance-2.5/us/image-to-video",
+          "credits": null,
+          "estimated": true,
+          "mode": "텍스트·이미지",
+          "note": "fal US 모델 카드의 토큰 환산 예시. 실제 규격별 픽셀·토큰으로 청구."
+        }
+      },
+      "plan": null
+    }
+  ],
+  "web": [
+    {
+      "label": "Higgsfield Plus 월간",
+      "prices": {
+        "720p": {
+          "cost": 1.720833,
+          "source": "https://higgsfield.ai/ko/pricing?rp=%2Fpricing",
+          "credits": 35,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": ""
+        },
+        "1080p": {
+          "cost": 3.933333,
+          "source": "https://higgsfield.ai/ko/pricing?rp=%2Fpricing",
+          "credits": 80,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": ""
+        }
+      },
+      "plan": {
+        "provider": "Higgsfield 웹",
+        "name": "Plus · 한국어 월간 표시",
+        "price": 59,
+        "credits": 1200,
+        "months": 1,
+        "source": "higgs-ko",
+        "currency": "USD",
+        "notes": "한국어 페이지 월간 표시. 결제 건별 세금과 계정 혜택 미확인.",
+        "display": "",
+        "commitment": null,
+        "url": "https://higgsfield.ai/ko/pricing?rp=%2Fpricing"
+      }
+    },
+    {
+      "label": "Higgsfield Plus 연간",
+      "prices": {
+        "720p": {
+          "cost": 0.9625,
+          "source": "https://higgsfield.ai/ko/pricing?rp=%2Fpricing",
+          "credits": 35,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": ""
+        },
+        "1080p": {
+          "cost": 2.2,
+          "source": "https://higgsfield.ai/ko/pricing?rp=%2Fpricing",
+          "credits": 80,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": ""
+        }
+      },
+      "plan": {
+        "provider": "Higgsfield 웹",
+        "name": "Plus · 한국어 연간 표시",
+        "price": 33,
+        "credits": 1200,
+        "months": 1,
+        "source": "higgs-ko",
+        "currency": "USD",
+        "notes": "연간 청구 단계의 최종 금액 미확인. 페이지의 월 환산액.",
+        "display": "",
+        "commitment": 396,
+        "url": "https://higgsfield.ai/ko/pricing?rp=%2Fpricing"
+      }
+    },
+    {
+      "label": "Luma Plus",
+      "prices": {
+        "480p": {
+          "cost": 0.54,
+          "source": "https://lumalabs.ai/pricing",
+          "credits": 180,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": ""
+        },
+        "720p": {
+          "cost": 1.17,
+          "source": "https://lumalabs.ai/pricing",
+          "credits": 390,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": ""
+        },
+        "1080p": {
+          "cost": 2.865,
+          "source": "https://lumalabs.ai/pricing",
+          "credits": 955,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": ""
+        }
+      },
+      "plan": {
+        "provider": "Luma 웹",
+        "name": "Plus",
+        "price": 30,
+        "credits": 10000,
+        "months": 1,
+        "source": "luma-app",
+        "currency": "USD",
+        "notes": "웹 월 배정. Ray 3.2는 SDR 기준.",
+        "display": "",
+        "commitment": null,
+        "url": "https://lumalabs.ai/pricing"
+      }
+    },
+    {
+      "label": "Krea Pro",
+      "prices": {
+        "480p": {
+          "cost": 0.665,
+          "source": "https://www.krea.ai/blog/seedance-2-5-pricing-cost-per-video",
+          "credits": 380,
+          "estimated": true,
+          "mode": "텍스트·이미지",
+          "note": "정규 사용량. 한시 모델 할인이 적용되면 감소."
+        },
+        "720p": {
+          "cost": 1.498,
+          "source": "https://www.krea.ai/blog/seedance-2-5-pricing-cost-per-video",
+          "credits": 856,
+          "estimated": true,
+          "mode": "텍스트·이미지",
+          "note": "정규 사용량. 한시 모델 할인이 적용되면 감소."
+        },
+        "1080p": {
+          "cost": 3.6855,
+          "source": "https://www.krea.ai/blog/seedance-2-5-pricing-cost-per-video",
+          "credits": 2106,
+          "estimated": true,
+          "mode": "텍스트·이미지",
+          "note": "정규 사용량. 한시 모델 할인이 적용되면 감소."
+        }
+      },
+      "plan": {
+        "provider": "Krea 웹",
+        "name": "Pro",
+        "price": 35,
+        "credits": 20000,
+        "months": 1,
+        "source": "krea-plans",
+        "currency": "USD",
+        "notes": "ego lite 월간 요금 확인. 모델별 한시 할인은 별도이며 가격표의 비교 탭 사용량 기준.",
+        "display": "",
+        "commitment": null,
+        "url": "https://www.krea.ai/pricing"
+      }
+    },
+    {
+      "label": "OpenArt Pro",
+      "prices": {
+        "720p": {
+          "cost": 1.516667,
+          "source": "https://openart.ai/blog/best-higgsfield-alternatives/",
+          "credits": 650,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": ""
+        }
+      },
+      "plan": {
+        "provider": "OpenArt",
+        "name": "Pro",
+        "price": 56,
+        "credits": 24000,
+        "months": 1,
+        "source": "oa-plans",
+        "currency": "USD",
+        "notes": "월 정상가. 공식 가격 페이지의 첫 결제 할인 제외. 모델별 플랜 할인은 행에 명시된 경우에만 반영.",
+        "display": "",
+        "commitment": null,
+        "url": "https://openart.ai/pricing"
+      }
+    },
+    {
+      "label": "Adobe Firefly Standard",
+      "prices": {
+        "480p": {
+          "cost": 1.123875,
+          "source": "https://helpx.adobe.com/creative-cloud/apps/generative-ai/non-adobe-models-in-adobe-products.html",
+          "credits": 225,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": ""
+        },
+        "720p": {
+          "cost": 2.372625,
+          "source": "https://helpx.adobe.com/creative-cloud/apps/generative-ai/non-adobe-models-in-adobe-products.html",
+          "credits": 475,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": ""
+        },
+        "1080p": {
+          "cost": 5.74425,
+          "source": "https://helpx.adobe.com/creative-cloud/apps/generative-ai/non-adobe-models-in-adobe-products.html",
+          "credits": 1150,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": ""
+        }
+      },
+      "plan": {
+        "provider": "Adobe Firefly",
+        "name": "Standard",
+        "price": 9.99,
+        "credits": 2000,
+        "months": 1,
+        "source": "adobe-plans",
+        "currency": "USD",
+        "notes": "미국 공개 정가. 플랜별 약정과 프로모션 조건은 판매 페이지 참조.",
+        "display": "",
+        "commitment": null,
+        "url": "https://www.adobe.com/products/firefly/plans.html"
+      }
+    },
+    {
+      "label": "Pika Starter",
+      "prices": {
+        "480p": {
+          "cost": 0.9,
+          "source": "https://pika.art/pricing",
+          "credits": 54,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": "공식 비교표의 일반 크레딧 사용량."
+        },
+        "720p": {
+          "cost": 2.033333,
+          "source": "https://pika.art/pricing",
+          "credits": 122,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": "공식 비교표의 일반 크레딧 사용량."
+        },
+        "1080p": {
+          "cost": 4.983333,
+          "source": "https://pika.art/pricing",
+          "credits": 299,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": "공식 비교표의 일반 크레딧 사용량."
+        }
+      },
+      "plan": {
+        "provider": "Pika 웹",
+        "name": "Starter",
+        "price": 10,
+        "credits": 600,
+        "months": 1,
+        "source": "pika",
+        "currency": "USD",
+        "notes": "공식 비교표·FAQ 일치값. 구독 크레딧 월 리셋. 충전은 365일.",
+        "display": "",
+        "commitment": null,
+        "url": "https://pika.art/pricing"
+      }
+    },
+    {
+      "label": "Magnific Premium",
+      "prices": {
+        "480p": {
+          "cost": 1.0,
+          "source": "https://www.magnific.com/ai/docs/ai-video-generator-credits",
+          "credits": 1000,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": "도움말 일반 단가. 플랜 페이지의 일부 생성 예시가 더 낮아 별도 행으로 표기."
+        },
+        "720p": {
+          "cost": 2.2,
+          "source": "https://www.magnific.com/ai/docs/ai-video-generator-credits",
+          "credits": 2200,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": "도움말 일반 단가. 플랜 페이지의 일부 생성 예시가 더 낮아 별도 행으로 표기."
+        },
+        "1080p": {
+          "cost": 5.5,
+          "source": "https://www.magnific.com/ai/docs/ai-video-generator-credits",
+          "credits": 5500,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": "도움말 일반 단가. 플랜 페이지의 일부 생성 예시가 더 낮아 별도 행으로 표기."
+        }
+      },
+      "plan": {
+        "provider": "Magnific",
+        "name": "Premium",
+        "price": 20,
+        "credits": 20000,
+        "months": 1,
+        "source": "mag-plans",
+        "currency": "USD",
+        "notes": "월간 포함량과 금액. 표준 크레딧 기준.",
+        "display": "",
+        "commitment": null,
+        "url": "https://www.magnific.com/pricing"
+      }
+    },
+    {
+      "label": "Runway Pro",
+      "prices": {
+        "480p": {
+          "cost": 1.555556,
+          "source": "https://help.runwayml.com/hc/en-us/articles/53542207042323-Creating-with-Seedance-2-5",
+          "credits": 100,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": "4K 웹 단가는 개발자 API와 다름."
+        },
+        "720p": {
+          "cost": 2.333333,
+          "source": "https://help.runwayml.com/hc/en-us/articles/53542207042323-Creating-with-Seedance-2-5",
+          "credits": 150,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": "4K 웹 단가는 개발자 API와 다름."
+        },
+        "1080p": {
+          "cost": 5.288889,
+          "source": "https://help.runwayml.com/hc/en-us/articles/53542207042323-Creating-with-Seedance-2-5",
+          "credits": 340,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": "4K 웹 단가는 개발자 API와 다름."
+        },
+        "4K": {
+          "cost": 7.777778,
+          "source": "https://help.runwayml.com/hc/en-us/articles/53542207042323-Creating-with-Seedance-2-5",
+          "credits": 500,
+          "estimated": false,
+          "mode": "텍스트·이미지",
+          "note": "4K 웹 단가는 개발자 API와 다름."
+        }
+      },
+      "plan": {
+        "provider": "Runway 웹",
+        "name": "Pro",
+        "price": 35,
+        "credits": 2250,
+        "months": 1,
+        "source": "runway-app",
+        "currency": "USD",
+        "notes": "개발자 크레딧은 별도.",
+        "display": "",
+        "commitment": null,
+        "url": "https://runwayml.com/pricing"
+      }
+    }
+  ],
+  "other": {
+    "Kling 4.0": {
+      "seconds": 5,
+      "note": "개발사 API는 Unit으로 안내한다. USD 환산을 확인한 판매처만 표시했다. 한시 할인은 제외했다.",
+      "rows": [
+        {
+          "label": "fal",
+          "prices": {
+            "720p": {
+              "cost": 0.785,
+              "source": "https://fal.ai/learn/devs/kling-4-0-vs-kling-3-0",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": ""
+            },
+            "1080p": {
+              "cost": 1.175,
+              "source": "https://fal.ai/learn/devs/kling-4-0-vs-kling-3-0",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": ""
+            }
+          },
+          "plan": null
+        },
+        {
+          "label": "Cloudflare Workers AI",
+          "prices": {
+            "720p": {
+              "cost": 0.785,
+              "source": "https://developers.cloudflare.com/ai/models/klingai/kling-v4/",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": ""
+            },
+            "1080p": {
+              "cost": 1.175,
+              "source": "https://developers.cloudflare.com/ai/models/klingai/kling-v4/",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": ""
+            }
+          },
+          "plan": null
+        },
+        {
+          "label": "PiAPI",
+          "prices": {
+            "720p": {
+              "cost": 0.8335,
+              "source": "https://piapi.ai/docs/kling-api/create-task",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": ""
+            },
+            "1080p": {
+              "cost": 1.25,
+              "source": "https://piapi.ai/docs/kling-api/create-task",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": ""
+            }
+          },
+          "plan": null
+        },
+        {
+          "label": "Runway Dev",
+          "prices": {
+            "720p": {
+              "cost": 0.785,
+              "source": "https://dev.runway.com/pricing",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": ""
+            },
+            "1080p": {
+              "cost": 1.175,
+              "source": "https://dev.runway.com/pricing",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": ""
+            },
+            "4K": {
+              "cost": 2.745,
+              "source": "https://dev.runway.com/pricing",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": ""
+            }
+          },
+          "plan": null
+        },
+        {
+          "label": "Runware",
+          "prices": {
+            "720p": {
+              "cost": 0.785,
+              "source": "https://runware.ai/pricing?category=video",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": "공개 카탈로그의 표기 조건. 모델별 API 제약 확인."
+            },
+            "1080p": {
+              "cost": 1.175,
+              "source": "https://runware.ai/pricing?category=video",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": "공개 카탈로그의 표기 조건. 모델별 API 제약 확인."
+            }
+          },
+          "plan": null
+        }
+      ]
+    },
+    "Veo 3.1 Fast": {
+      "seconds": 8,
+      "note": "오디오 포함. Gemini API의 1080p·4K를 포함할 수 있게 8초로 맞췄다.",
+      "rows": [
+        {
+          "label": "Google Gemini API",
+          "prices": {
+            "720p": {
+              "cost": 0.8,
+              "source": "https://ai.google.dev/gemini-api/docs/pricing",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": ""
+            },
+            "1080p": {
+              "cost": 0.96,
+              "source": "https://ai.google.dev/gemini-api/docs/pricing",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": ""
+            },
+            "4K": {
+              "cost": 2.4,
+              "source": "https://ai.google.dev/gemini-api/docs/pricing",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": ""
+            }
+          },
+          "plan": null
+        },
+        {
+          "label": "Google Cloud",
+          "prices": {
+            "720p": {
+              "cost": 0.8,
+              "source": "https://cloud.google.com/gemini-enterprise-agent-platform/generative-ai/pricing",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": ""
+            },
+            "1080p": {
+              "cost": 0.96,
+              "source": "https://cloud.google.com/gemini-enterprise-agent-platform/generative-ai/pricing",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": ""
+            },
+            "4K": {
+              "cost": 2.4,
+              "source": "https://cloud.google.com/gemini-enterprise-agent-platform/generative-ai/pricing",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": ""
+            }
+          },
+          "plan": null
+        },
+        {
+          "label": "fal",
+          "prices": {
+            "720p": {
+              "cost": 1.2,
+              "source": "https://fal.ai/models/fal-ai/veo3.1",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": "길이와 해상도 조합은 엔드포인트 스키마 확인."
+            },
+            "1080p": {
+              "cost": 1.2,
+              "source": "https://fal.ai/models/fal-ai/veo3.1",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": "길이와 해상도 조합은 엔드포인트 스키마 확인."
+            },
+            "4K": {
+              "cost": 2.8,
+              "source": "https://fal.ai/models/fal-ai/veo3.1",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": "길이와 해상도 조합은 엔드포인트 스키마 확인."
+            }
+          },
+          "plan": null
+        },
+        {
+          "label": "Runway Dev",
+          "prices": {
+            "720p": {
+              "cost": 1.2,
+              "source": "https://dev.runway.com/pricing",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": ""
+            },
+            "1080p": {
+              "cost": 1.2,
+              "source": "https://dev.runway.com/pricing",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": ""
+            }
+          },
+          "plan": null
+        }
+      ]
+    },
+    "Wan 3.0": {
+      "seconds": 5,
+      "note": "오디오 포함. Alibaba는 싱가포르 정가다. 공개 표에 별도 한시 할인도 있다.",
+      "rows": [
+        {
+          "label": "Alibaba Model Studio",
+          "prices": {
+            "480p": {
+              "cost": 0.25,
+              "source": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": "싱가포르 국제 배포 정가."
+            },
+            "720p": {
+              "cost": 0.5,
+              "source": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": "싱가포르 국제 배포 정가."
+            },
+            "1080p": {
+              "cost": 1.0,
+              "source": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": "싱가포르 국제 배포 정가."
+            }
+          },
+          "plan": null
+        },
+        {
+          "label": "Runway Dev",
+          "prices": {
+            "480p": {
+              "cost": 0.25,
+              "source": "https://dev.runway.com/pricing",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": ""
+            },
+            "720p": {
+              "cost": 0.5,
+              "source": "https://dev.runway.com/pricing",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": ""
+            },
+            "1080p": {
+              "cost": 1.0,
+              "source": "https://dev.runway.com/pricing",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": ""
+            }
+          },
+          "plan": null
+        }
+      ]
+    },
+    "LTX 2.5 Fast": {
+      "seconds": 8,
+      "note": "텍스트·이미지 생성. 제공 오디오로 영상을 만드는 A2V는 입력 오디오 초로 따로 과금한다.",
+      "rows": [
+        {
+          "label": "Lightricks LTX",
+          "prices": {
+            "720p": {
+              "cost": 0.72,
+              "source": "https://docs.ltx.io/pricing/",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": "Fast 장시간은 지원 해상도와 낮은 fps 조건."
+            },
+            "1080p": {
+              "cost": 1.04,
+              "source": "https://docs.ltx.io/pricing/",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": "Fast 장시간은 지원 해상도와 낮은 fps 조건."
+            },
+            "1440p": {
+              "cost": 1.52,
+              "source": "https://docs.ltx.io/pricing/",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": "Fast 장시간은 지원 해상도와 낮은 fps 조건."
+            },
+            "4K": {
+              "cost": 2.4,
+              "source": "https://docs.ltx.io/pricing/",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": "Fast 장시간은 지원 해상도와 낮은 fps 조건."
+            }
+          },
+          "plan": null
+        },
+        {
+          "label": "fal",
+          "prices": {
+            "720p": {
+              "cost": 0.72,
+              "source": "https://fal.ai/ltx-2.5",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": ""
+            },
+            "1080p": {
+              "cost": 1.04,
+              "source": "https://fal.ai/ltx-2.5",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": ""
+            },
+            "1440p": {
+              "cost": 1.52,
+              "source": "https://fal.ai/ltx-2.5",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": ""
+            },
+            "4K": {
+              "cost": 2.4,
+              "source": "https://fal.ai/ltx-2.5",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": ""
+            }
+          },
+          "plan": null
+        },
+        {
+          "label": "Kie.ai",
+          "prices": {
+            "720p": {
+              "cost": 0.432,
+              "source": "https://kie.ai/pricing",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": "판매사 공개 USD 환산. 충전 보너스는 별도."
+            },
+            "1080p": {
+              "cost": 0.624,
+              "source": "https://kie.ai/pricing",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": "판매사 공개 USD 환산. 충전 보너스는 별도."
+            },
+            "1440p": {
+              "cost": 0.912,
+              "source": "https://kie.ai/pricing",
+              "credits": null,
+              "estimated": false,
+              "mode": "텍스트·이미지",
+              "note": "판매사 공개 USD 환산. 충전 보너스는 별도."
+            }
+          },
+          "plan": null
+        }
+      ]
+    }
+  },
+  "upscaled": {
+    "label": "Segmind Upscaled",
+    "prices": {
+      "720p": {
+        "cost": 0.7,
+        "source": "https://www.segmind.com/models/seedance-2.5-upscaled/pricing",
+        "credits": null,
+        "estimated": true,
+        "mode": "텍스트·이미지",
+        "note": "16:9 표의 영상 입력 없는 5초 예시."
+      },
+      "1080p": {
+        "cost": 1.56,
+        "source": "https://www.segmind.com/models/seedance-2.5-upscaled/pricing",
+        "credits": null,
+        "estimated": true,
+        "mode": "텍스트·이미지",
+        "note": "16:9 표의 영상 입력 없는 5초 예시."
+      },
+      "4K": {
+        "cost": 3.98,
+        "source": "https://www.segmind.com/models/seedance-2.5-upscaled/pricing",
+        "credits": null,
+        "estimated": true,
+        "mode": "텍스트·이미지",
+        "note": "16:9 표의 영상 입력 없는 5초 예시."
+      }
+    },
+    "plan": null
+  },
+  "sources": {
+    "byte": "https://ai.byteplus.com/ark/region:ap-southeast-1/docs/model-pricing",
+    "higgs-ko": "https://higgsfield.ai/ko/pricing?rp=%2Fpricing",
+    "higgs-api-seed": "https://console.higgsfield.ai/models/bytedance/seedance-2.5/text-to-video",
+    "segmind-up": "https://www.segmind.com/models/seedance-2.5-upscaled/pricing",
+    "fal-seed1080": "https://fal.ai/models/bytedance/seedance-2.5/us/image-to-video",
+    "runway": "https://dev.runway.com/pricing",
+    "ltx": "https://docs.ltx.io/pricing/",
+    "google": "https://ai.google.dev/gemini-api/docs/pricing",
+    "aliyun-prices": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+    "kie": "https://kie.ai/pricing",
+    "kie-seed": "https://kie.ai/seedance-2-5?model=bytedance%2Fseedance-2-5"
+  }
+}</script>
+<script>
+'use strict';
+const evidence = JSON.parse(document.getElementById('deck-data').textContent);
+const byId = id => document.getElementById(id);
+const escaped = value => String(value ?? '').replace(/[&<>"']/g, c => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+})[c]);
+const usd = value => new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD'}).format(value);
+const amount = value => new Intl.NumberFormat('ko-KR', {maximumFractionDigits: 1}).format(value);
+const mkLink = (url, label, title = '') =>
+  '<a href="' + escaped(url) + '" target="_blank" rel="noopener noreferrer"' +
+  (title ? ' title="' + escaped(title) + '"' : '') + '>' + escaped(label) + '</a>';
+const given = (group, name) => evidence[group].find(row => row.label === name);
+const byteplus = given('api', 'BytePlus ModelArk');
+const higgsApi = given('api', 'Higgsfield API');
+const higgsMonthly = given('web', 'Higgsfield Plus 월간');
+const higgsAnnual = given('web', 'Higgsfield Plus 연간');
+const emphasis = {api: '720p', web: '720p', other: '1080p'};
+const dimension = ['480p', '720p', '1080p', '4K'];
+const valueLabel = cell => cell.estimated ? '약 ' + usd(cell.cost) : usd(cell.cost);
+
+function renderBars(id, prices, maximum) {
+  byId(id).innerHTML = prices.map(({label, cost, source, qualifier, color}, index) =>
+    '<li style="--delay:' + (110 + index * 100) + 'ms">' +
+    '<span>' + (source ? mkLink(source, label) : escaped(label)) +
+    (qualifier ? '<small class="bar-small">' + escaped(qualifier) + '</small>' : '') +
+    '</span><span class="track" aria-hidden="true"><i class="bar ' + escaped(color || '') +
+    '" style="--w:' + (cost / maximum * 100) + '%"></i></span>' +
+    '<strong class="number">' + usd(cost) + '</strong></li>'
+  ).join('');
+}
+renderBars('cover-bars', dimension.map(size => ({label: size, cost: byteplus.prices[size].cost})),
+  byteplus.prices['4K'].cost);
+byId('cover-source').href = evidence.sources.byte;
+byId('reference-source').href = evidence.sources['kie-seed'];
+byId('scope').innerHTML = [
+  [evidence.counts.providers, '판매 경로'], [evidence.counts.models, '모델·버전'], [evidence.counts.rates, '가격 항목']
+].map(([value, label]) => '<span><b>' + amount(value) + '</b> ' + label + '</span>').join('');
+
+function renderMatrix(target, rows, cols, seconds, key, web = false) {
+  const active = emphasis[key];
+  const head = cols.map(size => '<th class="money-col' + (active === size ? ' focused' : '') +
+    '" scope="col"><button type="button" data-size="' + size + '" aria-pressed="' +
+    (active === size) + '" aria-label="' + size + ' 열 강조">' + size + '</button></th>').join('');
+  const body = rows.map(row => '<tr><th scope="row">' + escaped(row.label) + '</th>' +
+    (web ? '<td>' + mkLink(row.plan.url, usd(row.plan.price) + ' / 월', row.plan.notes) + '</td>' : '') +
+    cols.map((size, ci) => {
+      const cell = row.prices[size];
+      const style = ' style="--delay:' + (ci * 70 + 55) + 'ms"';
+      if (!cell) return '<td class="money-col null' + (active === size ? ' focused' : '') + '" aria-label="가격 미확인">—</td>';
+      const quote = valueLabel(cell);
+      const title = cell.mode + (cell.credits === null ? '' : ' · ' + amount(cell.credits) + '크레딧·CU') +
+        (cell.note ? ' · ' + cell.note : '');
+      return '<td class="money-col motion-col' + (active === size ? ' focused' : '') + '"' + style +
+        '>' + mkLink(cell.source, quote, title) + '</td>';
+    }).join('') + '</tr>').join('');
+  byId(target).innerHTML =
+    '<div class="table-scroll" tabindex="0" aria-label="해상도별 ' + seconds + '초 1회 가격">' +
+    '<table' + (key === 'other' ? ' class="values-large"' : '') + '><thead><tr><th scope="col">공급처</th>' +
+    (web ? '<th scope="col">플랜 표시가</th>' : '') + head + '</tr></thead><tbody>' + body + '</tbody></table></div>' +
+    '<p class="mobile-scroll">표를 좌우로 밀어 다른 해상도 보기</p>' +
+    '<p class="table-focus" aria-live="polite"></p>' +
+    '<p class="table-legend">USD / ' + seconds + '초 1회 · 약 = 공급처 추정 · — = 이 조건의 가격 미확인</p>';
+  const showSelection = size => {
+    const cells = rows.map(row => row.prices[size]).filter(Boolean);
+    const costs = cells.map(cell => cell.cost);
+    const low = Math.min(...costs);
+    const high = Math.max(...costs);
+    const range = costs.length && (usd(low) === usd(high) ? usd(low) : usd(low) + '–' + usd(high));
+    byId(target).querySelector('.table-focus').innerHTML = cells.length
+      ? '<strong>' + size + ' ' + range + '</strong> · ' + cells.length + '개 비교 항목'
+      : '<strong>' + size + '</strong> · 공개 가격 미확인';
+  };
+  showSelection(active);
+  const table = byId(target).querySelector('table');
+  table.addEventListener('click', event => {
+    const button = event.target.closest('[data-size]');
+    if (!button) return;
+    emphasis[key] = button.dataset.size;
+    const start = web ? 2 : 1;
+    const index = cols.indexOf(emphasis[key]) + start;
+    for (const row of table.rows) {
+      for (let ci = start; ci < row.cells.length; ci++) row.cells[ci].classList.toggle('focused', ci === index);
+    }
+    for (const header of table.querySelectorAll('[data-size]')) header.setAttribute('aria-pressed', header === button);
+    showSelection(emphasis[key]);
+  });
+}
+renderMatrix('seed-api', evidence.api, dimension, 5, 'api');
+renderMatrix('seed-web', evidence.web, dimension, 5, 'web', true);
+const picker = byId('model-picker');
+let activeModel = 'Kling 4.0';
+for (const name of Object.keys(evidence.other)) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.textContent = name;
+  button.dataset.model = name;
+  picker.append(button);
+}
+function showModel() {
+  const model = evidence.other[activeModel];
+  const cols = evidence.resolution.filter(size => model.rows.some(row => row.prices[size]));
+  if (!cols.includes(emphasis.other)) emphasis.other = cols[0];
+  byId('model-note').textContent = model.note;
+  for (const button of picker.querySelectorAll('button')) button.setAttribute('aria-pressed', button.dataset.model === activeModel);
+  renderMatrix('other-model', model.rows, cols, model.seconds, 'other');
+}
+picker.addEventListener('click', event => {
+  const button = event.target.closest('[data-model]');
+  if (!button) return;
+  activeModel = button.dataset.model;
+  showModel();
+});
+showModel();
+
+const fourk = [
+  evidence.upscaled, byteplus, given('api', 'Runway Dev'), given('api', 'WaveSpeedAI'), given('api', 'fal US')
+].map((row, i) => {
+  const cell = row.prices['4K'];
+  return {label: i === 0 ? 'Segmind' : i === 1 ? 'BytePlus' : row.label, cost: cell.cost, source: cell.source,
+    qualifier: i === 0 ? 'Upscaled 상품' : i === 1 ? '공식 계산 예시' : '',
+    color: i === 0 ? 'upgrade' : i === 1 ? 'direct' : ''};
+});
+renderBars('fourk-bars', fourk, Math.max(...fourk.map(row => row.cost)));
+
+const usage = [
+  {label:'BytePlus', color:'#25587c', value:n => n * byteplus.prices['720p'].cost},
+  {label:'Higgsfield API', color:'#216c60', value:n => n * higgsApi.prices['720p'].cost},
+  {label:'Plus 월간', color:'#a95a28', value:() => higgsMonthly.plan.price},
+  {label:'Plus 연간 월 환산', color:'#744d96', value:() => higgsAnnual.plan.price}
+];
+const x = n => 57 + (n - 1) * (552 / 33);
+const y = v => 222 - v * (203 / 65);
+const threshold = Math.ceil(higgsAnnual.plan.price / byteplus.prices['720p'].cost);
+const chart = byId('usage-plot');
+chart.innerHTML = '<title id="plot-title">5초 클립 월별 생성 횟수에 따른 총액</title>' +
+  '<rect class="threshold" x="' + x(threshold) + '" y="19" width="' + (x(34) - x(threshold)) + '" height="203"/>' +
+  [0,20,40,60].map(v => '<path class="tick" d="M57 ' + y(v) + 'H609"/><text x="49" y="' +
+    (y(v) + 4) + '" text-anchor="end">$' + v + '</text>').join('') +
+  '<path class="axis" d="M57 19V222H609"/>' +
+  [1,10,20,29,34].map(n => '<text x="' + x(n) + '" y="244" text-anchor="middle">' + n + '회</text>').join('') +
+  usage.map((series, i) => '<path class="curve" pathLength="1" stroke="' + series.color +
+    '" style="--delay:' + (i * 80) + 'ms" d="M' + x(1) + ' ' + y(series.value(1)) + 'L' + x(34) + ' ' + y(series.value(34)) + '"/>').join('') +
+  '<g id="cursor"></g>';
+byId('usage-legend').innerHTML = usage.map(series =>
+  '<li><i style="--c:' + series.color + '"></i>' + escaped(series.label) + '</li>').join('');
+byId('usage-source').href = evidence.sources['higgs-ko'];
+byId('breakpoint').innerHTML = '<strong>' + threshold + '–34회</strong> 구간에서 Plus 연간 월 환산액이 BytePlus 예상 총액보다 낮다.';
+function renderUsage() {
+  const n = byId('usage-count').valueAsNumber;
+  byId('usage-result').value = n + '회';
+  byId('usage-spent').innerHTML = usage.map(series =>
+    '<div><dt>' + escaped(series.label) + '</dt><dd class="number" style="color:' + series.color + '">' +
+    usd(series.value(n)) + '</dd></div>').join('');
+  byId('cursor').innerHTML = '<path class="cursor" d="M' + x(n) + ' 19V222"/>' +
+    usage.map(series => '<circle cx="' + x(n) + '" cy="' + y(series.value(n)) +
+      '" r="4" fill="' + series.color + '" stroke="white"/>').join('');
+}
+byId('usage-count').addEventListener('input', renderUsage);
+renderUsage();
+
+const budgetRows = [byteplus, higgsApi, given('api', 'Runway Dev')];
+function renderBudget() {
+  const factor = byId('budget-multiplier').valueAsNumber;
+  const units = Math.ceil(40 * factor);
+  byId('budget-ratio').value = amount(factor) + '회';
+  byId('budget-count').textContent = '월 ' + units + '회';
+  const capacity = higgsMonthly.plan.credits;
+  byId('budget-credits').innerHTML = ['720p','1080p'].map(size => {
+    const total = units * higgsMonthly.prices[size].credits;
+    return '<div><dt>' + size + ' · ' + amount(total) + ' 필요</dt><dd>' +
+      (total > capacity ? amount(total - capacity) + ' 부족' : amount(capacity - total) + ' 여유') + '</dd></div>';
+  }).join('');
+  byId('budget-table').innerHTML = '<div class="table-scroll" tabindex="0" aria-label="공급처·해상도별 월 API 비용">' +
+    '<table><thead><tr><th scope="col">공급처</th>' + dimension.map(size =>
+      '<th class="money-col" scope="col">' + size + '</th>').join('') + '</tr></thead><tbody>' +
+    budgetRows.map(row => '<tr><th scope="row">' + escaped(row.label) + '</th>' + dimension.map(size => {
+      const cell = row.prices[size];
+      return '<td class="money-col' + (size === '720p' ? ' focused' : '') + '">' +
+        (cell ? mkLink(cell.source, (cell.estimated ? '약 ' : '') + usd(cell.cost * units)) : '—') + '</td>';
+    }).join('') + '</tr>').join('') + '</tbody></table></div>';
+}
+byId('budget-multiplier').addEventListener('input', renderBudget);
+renderBudget();
+const sources = [
+  ['byte','BytePlus ModelArk','Seedance 공식 예시와 토큰 과금'],
+  ['higgs-api-seed','Higgsfield API','해상도별 USD 단가'],
+  ['higgs-ko','Higgsfield 웹','플랜별 가격과 크레딧'],
+  ['fal-seed1080','fal US','Seedance 2.5 4K 모델 카드'],
+  ['segmind-up','Segmind Upscaled','업스케일 기준과 가격'],
+  ['kie','Kie.ai','LTX 및 기타 API 단가'],
+  ['google','Google Gemini API','Veo 해상도별 오디오 포함 가격'],
+  ['ltx','Lightricks','출력 초와 입력 오디오 초 과금']
+];
+byId('source-list').innerHTML = sources.map(([key, name, detail]) =>
+  '<li>' + mkLink(evidence.sources[key], name) + '<small>' + escaped(detail) + '</small></li>').join('');
+
+const slides = [...document.querySelectorAll('.slide')];
+let current = 0;
+let playing = false;
+let timer;
+const playbackLength = 11000;
+const previous = byId('previous');
+const next = byId('next');
+const play = byId('play');
+function stop() {
+  clearTimeout(timer);
+  playing = false;
+  play.setAttribute('aria-pressed', 'false');
+  play.textContent = '자동 재생';
+}
+function planAdvance() {
+  clearTimeout(timer);
+  if (!playing) return;
+  if (current >= slides.length - 1) { stop(); return; }
+  timer = setTimeout(() => showSlide(current + 1), playbackLength);
+}
+function showSlide(index) {
+  current = Math.max(0, Math.min(slides.length - 1, index));
+  slides.forEach((slide, i) => {
+    slide.hidden = i !== current;
+    slide.classList.toggle('is-current', i === current);
+  });
+  byId('page-number').value = (current + 1) + ' / ' + slides.length;
+  byId('page-number').setAttribute('aria-label', slides[current].dataset.slideName);
+  byId('progress-line').style.width = ((current + 1) * 100 / slides.length) + '%';
+  previous.disabled = current === 0;
+  next.disabled = current === slides.length - 1;
+  if (location.hash !== '#' + (current + 1)) history.replaceState(null, '', '#' + (current + 1));
+  if (window.scrollY > 70) window.scrollTo(0, 0);
+  planAdvance();
+}
+function replay() {
+  const slide = slides[current];
+  slide.classList.remove('is-current');
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (slide === slides[current]) slide.classList.add('is-current');
+  }));
+  planAdvance();
+}
+async function fullscreen() {
+  if (!document.fullscreenEnabled) return;
+  if (document.fullscreenElement) await document.exitFullscreen();
+  else await byId('presentation').requestFullscreen();
+}
+function updateFullscreen() {
+  byId('fullscreen').disabled = !document.fullscreenEnabled;
+  byId('fullscreen').textContent = document.fullscreenElement ? '전체 화면 닫기' : '전체 화면';
+}
+previous.addEventListener('click', () => showSlide(current - 1));
+next.addEventListener('click', () => showSlide(current + 1));
+byId('replay').addEventListener('click', replay);
+byId('fullscreen').addEventListener('click', () => fullscreen().catch(updateFullscreen));
+document.addEventListener('fullscreenchange', updateFullscreen);
+updateFullscreen();
+play.addEventListener('click', () => {
+  if (playing) { stop(); return; }
+  playing = true;
+  play.textContent = '자동 재생 멈춤';
+  play.setAttribute('aria-pressed', 'true');
+  if (current === slides.length - 1) showSlide(0);
+  else planAdvance();
+});
+byId('return-cover').addEventListener('click', event => {
+  event.preventDefault();
+  showSlide(0);
+});
+function fromHash() {
+  const idx = /^#([1-8])$/.exec(location.hash);
+  showSlide(idx ? Number(idx[1]) - 1 : 0);
+}
+window.addEventListener('hashchange', fromHash);
+document.addEventListener('keydown', event => {
+  if (event.metaKey || event.ctrlKey || event.altKey || event.target.closest('input,textarea,select,[contenteditable]')) return;
+  const key = event.key.toLowerCase();
+  if (['arrowleft','arrowright','home','end','r','f'].includes(key)) event.preventDefault();
+  if (key === 'arrowleft') showSlide(current - 1);
+  if (key === 'arrowright') showSlide(current + 1);
+  if (key === 'home') showSlide(0);
+  if (key === 'end') showSlide(slides.length - 1);
+  if (key === 'r') replay();
+  if (key === 'f') fullscreen().catch(updateFullscreen);
+});
+fromHash();
+</script>
+</body>
+</html>
