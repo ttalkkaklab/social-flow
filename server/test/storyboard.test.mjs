@@ -5,7 +5,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import { after, describe, it } from 'node:test';
@@ -868,6 +868,13 @@ describe('icon attributes come after every shot\'s characters', () => {
     mkdirSync(board, { recursive: true });
     castFile(board, ['guide'], { root: join(root, 'data/c'), voiceOnly: ['guide'] });
     assert.throws(write, /project_setup_required/);
+    const source = join(parent, 'scenes.js');
+    writeFileSync(source, 'window.SCENES = [];\n');
+    const link = join(board, 'scenes.js');
+    symlinkSync(source, link);
+    assert.throws(write, /project_setup_required/);
+    assert.throws(() => applyStoryboard({ path: link, draft: true, globals: { FORMAT: 'shorts-9x16' } }), /project_setup_required/);
+    rmSync(link);
     manageProject({ action: 'select', workspace: root, request: 'Use another project' });
     assert.throws(write, /models\.image/);
     assert.throws(() => readFileSync(join(board, 'scenes.js')), { code: 'ENOENT' });

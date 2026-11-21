@@ -180,22 +180,16 @@ Do not bill for samples during setup unless requested. Do not treat silence as a
 selection. This first setup is a user-requested preference step and is not waived
 by the general automation advice to choose unspecified creative preferences.
 
-Save the type and selected media models together. Example only — these are **not defaults**:
+After selecting the directory, save the type and four media choices with the other
+project preferences. Use `project_manage init` with the user's choices in `settings`,
+or pass the [complete setup input](../project-init/references/settings.md) to the CLI:
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/skills/_shared/model-settings.js" init "$WORKSPACE" <<'JSON'
-{
-  "videoType": {"id":"drama"},
-  "models": {
-    "video": {"engine":"seedance","model":"dreamina-seedance-2-0-fast-260128","resolution":"720p"},
-    "music": {"engine":"none"},
-    "image": {"engine":"host","model":"host-managed","host":"codex"},
-    "speech": {"engine":"gemini","model":"gemini-2.5-flash-preview-tts"}
-  },
-  "request": "Record the actual user's selections here, not this example."
-}
-JSON
+node "${CLAUDE_PLUGIN_ROOT}/skills/_shared/project-settings.js" init "$WORKSPACE" < setup-input.json
+node "${CLAUDE_PLUGIN_ROOT}/skills/_shared/project-settings.js" status "$WORKSPACE"
 ```
+
+Continue when status returns `ready` for that directory.
 
 The file is `.social-flow/models.json`, schema version 1. Store no credentials.
 `engine` is required in each category; `model` is required for selectable engines.

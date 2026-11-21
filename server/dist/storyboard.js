@@ -1134,7 +1134,7 @@ function episodePlatforms(dir) {
 export function applyStoryboard(args, opts = {}) {
     const file = scenesPath(args.path);
     if (!args.dryRun)
-        requireReadyProject(file);
+        requireReadyProject(dirname(file));
     const exists = existsSync(file);
     let header = [];
     let win = {};
@@ -1319,7 +1319,7 @@ export const storyShotSchema = z.object({
 const emptyStructure = () => ({ version: STRUCTURE_VERSION, sequences: [], scenes: [] });
 function readOutline(path) {
     const file = scenesPath(path);
-    requireReadyProject(file);
+    requireReadyProject(dirname(file));
     const win = existsSync(file) ? readBoard(file).win : {};
     return { win, st: win.STRUCTURE ?? emptyStructure() };
 }

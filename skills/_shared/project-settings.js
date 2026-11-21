@@ -112,6 +112,17 @@ function writeNew(file, contents) {
   catch (error) { if (error.code !== 'EEXIST') throw error; }
 }
 
+function ignoreLocalPaths(ignore, paths) {
+  const original = fs.existsSync(ignore) ? fs.readFileSync(ignore, 'utf8') : '';
+  const lines = original.split(/\r?\n/);
+  const additions = paths.filter(line => !lines.includes(line));
+  if (!additions.length) return;
+  const heading = '# social-flow local settings and content';
+  const prefix = original && !original.endsWith('\n') ? '\n' : '';
+  if (!lines.includes(heading)) additions.unshift('', heading);
+  fs.appendFileSync(ignore, prefix + additions.join('\n') + '\n');
+}
+
 function ensureLayout(root, channel, profile) {
   const paths = layout(root, channel);
   const ignore = managed(root, '.gitignore', 'file');
@@ -126,10 +137,7 @@ function ensureLayout(root, channel, profile) {
   writeNew(paths.profile, profile);
   writeNew(paths.catalog, fs.readFileSync(path.join(__dirname, '../channel/references/assets-catalog-template.md'), 'utf8'));
   fs.mkdirSync(paths.episodes, { recursive: true });
-  const original = fs.existsSync(ignore) ? fs.readFileSync(ignore, 'utf8') : '';
-  const lines = original.split(/\r?\n/);
-  const additions = ['/.social-flow/', '/data/'].filter(line => !lines.includes(line));
-  if (additions.length) fs.appendFileSync(ignore, (original && !original.endsWith('\n') ? '\n' : '') + '\n# social-flow local settings and content\n' + additions.join('\n') + '\n');
+  ignoreLocalPaths(ignore, ['/.social-flow/', '/data/']);
 }
 
 function save(root, current, next, request) {
@@ -208,6 +216,7 @@ function manageProject(args) {
     if (args.action === 'episode') return createEpisode(root, args.topic);
     const current = read(root);
     if (args.action === 'select') {
+      ignoreLocalPaths(managed(root, '.gitignore', 'file'), ['/.social-flow/']);
       if (current.config?.workspace !== root) models.saveSettings(root, undefined, {
         request: args.request, selectedWorkspace: root, expectedRevision: current.revision,
       });

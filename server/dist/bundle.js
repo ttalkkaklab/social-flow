@@ -119520,7 +119520,7 @@ function episodePlatforms(dir) {
 }
 function applyStoryboard(args, opts = {}) {
   const file = scenesPath(args.path);
-  if (!args.dryRun) requireReadyProject(file);
+  if (!args.dryRun) requireReadyProject(dirname6(file));
   const exists = existsSync24(file);
   let header = [];
   let win = {};
@@ -119691,7 +119691,7 @@ var storyShotSchema = external_exports.object({
 var emptyStructure = () => ({ version: STRUCTURE_VERSION, sequences: [], scenes: [] });
 function readOutline(path35) {
   const file = scenesPath(path35);
-  requireReadyProject(file);
+  requireReadyProject(dirname6(file));
   const win = existsSync24(file) ? readBoard(file).win : {};
   return { win, st: win.STRUCTURE ?? emptyStructure() };
 }

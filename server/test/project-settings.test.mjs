@@ -63,6 +63,7 @@ test('the selected directory persists before setup and copied settings need thei
   assert.ok(!fs.existsSync(root));
   const selected = call(root, 'select', { request: 'Work in the new project directory' });
   assert.equal(selected.config.workspace, root);
+  assert.match(fs.readFileSync(path.join(root, '.gitignore'), 'utf8'), /^\/\.social-flow\/\s*$/m);
   assert.equal(selected.status, 'project_setup_required');
   const choices = defaults();
   for (const kind of Object.keys(choices.models)) {
