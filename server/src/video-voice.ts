@@ -215,7 +215,8 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
   const lane = msr ? 'reference' : VIDEO_ADAPTERS[tool]?.voice ?? 'none';
   const supplied = lane === 'supplied';
   const onScreen = lines.some(line => line.delivery === 'on_screen');
-  const native = !supplied && audible && (msr || vendor || nativeSlot || onScreen);
+  const sceneDialogue = context.sceneDirection && lines.some(line => line.delivery === 'on_screen' || line.delivery === 'off_screen');
+  const native = !supplied && audible && (msr || vendor || nativeSlot || onScreen || Boolean(sceneDialogue));
   // Voice gate (owner directive 2026-10-31): a character the viewer hears or sees speak needs a voice
   // lane. An adapter without one renders only cuts whose lines are external TTS over a non-speaking picture.
   if (lane === 'none' && (native || onScreen))
@@ -225,7 +226,7 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
   const strategy = supplied ? 'supplied_audio' : reference ? 'reference_voice' : 'external_tts';
   const warnings: string[] = [];
   const speakers: SpeakerVoice[] = [];
-  const nativeLines = msr || vendor || nativeSlot ? lines : lines.filter(line => line.delivery === 'on_screen');
+  const nativeLines = msr || vendor || nativeSlot || sceneDialogue ? lines : lines.filter(line => line.delivery === 'on_screen');
   const ids = [...new Set((native ? nativeLines : lines).map(line => text(line.speaker) || text(doc.narratorCharacterId)))];
   const prompt: string[] = [];
   const audioOffset = tool === 'fasth3_omni_reference' && Array.isArray(args.referenceVideoPaths)

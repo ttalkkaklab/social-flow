@@ -116875,14 +116875,15 @@ function prepareVideoVoice(tool2, input, context2) {
   const lane = msr ? "reference" : VIDEO_ADAPTERS[tool2]?.voice ?? "none";
   const supplied = lane === "supplied";
   const onScreen = lines.some((line) => line.delivery === "on_screen");
-  const native = !supplied && audible && (msr || vendor || nativeSlot || onScreen);
+  const sceneDialogue = context2.sceneDirection && lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen");
+  const native = !supplied && audible && (msr || vendor || nativeSlot || onScreen || Boolean(sceneDialogue));
   if (lane === "none" && (native || onScreen))
     throw new Error(`voice_lane_required: ${tool2} cannot keep a character's voice. Render this spoken cut with a reference adapter (astra_genai_msr, seedance_reference, fasth3_omni_reference, minimax_reference, heygen_reference) or an audio2video adapter${onScreen ? "" : ", or set generateAudio:false and keep the lines as TTS voiceover"}.`);
   const reference2 = native && lane === "reference";
   const strategy = supplied ? "supplied_audio" : reference2 ? "reference_voice" : "external_tts";
   const warnings = [];
   const speakers = [];
-  const nativeLines = msr || vendor || nativeSlot ? lines : lines.filter((line) => line.delivery === "on_screen");
+  const nativeLines = msr || vendor || nativeSlot || sceneDialogue ? lines : lines.filter((line) => line.delivery === "on_screen");
   const ids = [...new Set((native ? nativeLines : lines).map((line) => text(line.speaker) || text(doc.narratorCharacterId)))];
   const prompt = [];
   const audioOffset = tool2 === "fasth3_omni_reference" && Array.isArray(args.referenceVideoPaths) ? fasth3VideoAudioCount(args.referenceVideoPaths.map((file) => path21.resolve(context2.episode, String(file)))) : 0;
@@ -117425,6 +117426,10 @@ function planVideo(raw) {
       ...!boundTurns ? lines.filter((l) => l.delivery !== "voiceover").map((l) => l.speaker + " (" + l.delivery + '): "' + l.tts + '"') : []
     ].filter(Boolean).join("\n");
     callArgs = withPrompt(tool2 === "astra_genai_msr" || tool2 === "astra_genai_img2video" && hasVideoSubjectReferences(shot) ? sceneText2 : openingPrompt(sceneText2, scene.openingPositions));
+    if (tool2 === "seedance_reference" && !silentPicture) {
+      if (input.args.generateAudio === false) throw new Error("scene_dialogue_audio_required: this scene has native spoken dialogue");
+      callArgs = { ...callArgs, generateAudio: true };
+    }
   }
   const sourcePrompt = scene ? String(callArgs.prompt) : typeof video2?.prompt === "string" ? video2.prompt : "";
   const boardCamera = context2.shot.visual?.camera;
@@ -117653,15 +117658,20 @@ async function executeVideo(raw, dispatch) {
     }
     const jobs = Object.values(state.jobs);
     const target = path22.resolve(String(plan2.args.outputPath), String(plan2.args.filename));
-    if (fs18.existsSync(target) || jobs.some((job) => {
-      const previous = JSON.parse(fs18.readFileSync(path22.join(episode, ".work/video-routing/plans", job.planId + ".json"), "utf8"));
-      return path22.resolve(String(previous.args.outputPath), String(previous.args.filename)) === target;
-    })) throw new Error("video_output_conflict: use a unique filename for each candidate; preserve existing takes");
+    const priorPlans = jobs.map((job) => JSON.parse(fs18.readFileSync(
+      path22.join(episode, ".work/video-routing/plans", job.planId + ".json"),
+      "utf8"
+    )));
+    if (fs18.existsSync(target) || priorPlans.some((previous) => path22.resolve(String(previous.args.outputPath), String(previous.args.filename)) === target))
+      throw new Error("video_output_conflict: use a unique filename for each candidate; preserve existing takes");
     const occupied = jobs.filter((job) => !["completed", "failed"].includes(job.status));
     if (occupied.length >= auth.maxConcurrent) throw new Error("video_concurrency_limit: pending jobs include ambiguous submissions");
     const used = jobs.reduce((sum, job) => sum + (job.settledUsd ?? job.reserveUsd), state.openingSpendUsd ?? 0);
     if (used + plan2.quote.reserveUsd > auth.maxUsd + 1e-9) throw new Error("video_budget_exceeded");
-    if (jobs.filter((job) => job.shotId === plan2.shotId).length >= auth.maxAttempts) throw new Error("video_attempt_limit");
+    for (const shotId of plan2.shotIds ?? [plan2.shotId]) {
+      const attempts = priorPlans.filter((previous) => (previous.shotIds ?? [previous.shotId]).includes(shotId)).length;
+      if (attempts >= auth.maxAttempts) throw new Error("video_attempt_limit: " + shotId);
+    }
     state.jobs[plan2.requestId] = {
       planId: id,
       requestId: plan2.requestId,

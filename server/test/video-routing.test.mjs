@@ -1,4 +1,4 @@
-import { setupProject } from './workflow-fixture.mjs';
+import { setupProject, png } from './workflow-fixture.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -133,6 +133,41 @@ test('budget and attempts gate before dispatch and include prior successful rese
  await assert.rejects(f.execute(f.plan('b'),async()=>{calls++;return result;}),/budget/);assert.equal(calls,1);
  f.board.PRODUCTION.videoAuthorization.maxUsd=10;f.board.PRODUCTION.videoAuthorization.maxAttempts=1;f.save();
  await assert.rejects(f.execute(f.plan('c'),async()=>result),/attempt/);
+});
+test('spoken Seedance reference scene requests native audio and the off-screen speaker sample', t => {
+ const f=fixture(t,{...selection,operation:'reference'});
+ const dir=path.join(f.episode,'storyboard');
+ for (const image of ['room.png','hero.png']) fs.writeFileSync(path.join(dir,image),png);
+ fs.writeFileSync(path.join(dir,'voice.wav'),'fixture');
+ f.board.STRUCTURE={scenes:[{no:1,videoDirection:{openingPositions:[{character:'hero',images:[1],position:'outside the frame beyond the side door'}],emotion:'His voice trembles.'}}]};
+ f.board.SB_DOC={characters:[{id:'hero',tts:{language:'en',voiceId:'Kore'},voiceReference:{path:'voice.wav',imagePaths:['hero.png']}}]};
+ const shot=f.board.SCENES[0];
+ Object.assign(shot,{scene:1,duration:5,narration:[{speaker:'hero',delivery:'off_screen',tts:'Wait for me.'}]});
+ Object.assign(shot.visual,{frames:{mode:'reference',start:'room.png'},references:[{id:'hero',role:'character',use:'video',path:'hero.png',purpose:'The speaker.'}]});
+ f.save();
+ const input={episode:f.episode,sceneNo:1,requestId:'seedance-dialogue'};
+ const p=planVideo(input);
+ assert.equal(p.args.generateAudio,true);
+ assert.deepEqual(p.args.referenceAudioPaths,[path.join(dir,'voice.wav')]);
+ assert.match(p.args.prompt,/Wait for me/);
+ assert.throws(()=>planVideo({...input,args:{generateAudio:false}}),/scene_dialogue_audio_required/);
+});
+test('overlapping scene and shot requests share the attempt limit for every member', async t => {
+ for (const sceneFirst of [false,true]) {
+  const f=fixture(t,selection,{maxAttempts:1});
+  f.board.STRUCTURE={scenes:[{no:1,videoDirection:{openingPositions:[],emotion:'The lake is calm.'}}]};
+  fs.writeFileSync(path.join(f.episode,'storyboard','lake.png'),png);
+  for (const shot of f.board.SCENES) {
+   shot.scene=1; shot.duration=4;
+   shot.visual.frames={mode:'first',start:'lake.png'};
+   shot.visual.video.prompt='The lake is calm.';
+  }
+  f.save();
+  const make = target => planVideo({episode:f.episode,operation:'image',args:{generateAudio:false},...target});
+  const scene=make({sceneNo:1,requestId:'lake-scene'}), shot=make({shotId:'s2',requestId:'second-shot'});
+  await f.execute(sceneFirst ? scene : shot,async()=>result);
+  await assert.rejects(f.execute(sceneFirst ? shot : scene,async()=>assert.fail('limit bypassed')),/video_attempt_limit: s2/);
+ }
 });
 test('concurrent execution reserves once; duplicate in-flight call never dispatches',async t=>{
  const f=fixture(t,selection,{maxConcurrent:1});let release;const wait=new Promise(r=>release=r);let calls=0;const p=f.plan();

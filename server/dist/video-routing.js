@@ -330,6 +330,11 @@ export function planVideo(raw) {
             .filter(Boolean).join('\n');
         callArgs = withPrompt(tool === 'astra_genai_msr' || tool === 'astra_genai_img2video' && hasVideoSubjectReferences(shot)
             ? sceneText : openingPrompt(sceneText, scene.openingPositions));
+        if (tool === 'seedance_reference' && !silentPicture) {
+            if (input.args.generateAudio === false)
+                throw new Error('scene_dialogue_audio_required: this scene has native spoken dialogue');
+            callArgs = { ...callArgs, generateAudio: true };
+        }
     }
     const sourcePrompt = scene ? String(callArgs.prompt) : typeof video?.prompt === 'string' ? video.prompt : '';
     // A prompt the caller writes is checked against the board's move: missing or contradicted moves are named, never refused.
@@ -575,10 +580,8 @@ export async function executeVideo(raw, dispatch) {
         }
         const jobs = Object.values(state.jobs);
         const target = path.resolve(String(plan.args.outputPath), String(plan.args.filename));
-        if (fs.existsSync(target) || jobs.some(job => {
-            const previous = JSON.parse(fs.readFileSync(path.join(episode, '.work/video-routing/plans', job.planId + '.json'), 'utf8'));
-            return path.resolve(String(previous.args.outputPath), String(previous.args.filename)) === target;
-        }))
+        const priorPlans = jobs.map(job => JSON.parse(fs.readFileSync(path.join(episode, '.work/video-routing/plans', job.planId + '.json'), 'utf8')));
+        if (fs.existsSync(target) || priorPlans.some(previous => path.resolve(String(previous.args.outputPath), String(previous.args.filename)) === target))
             throw new Error('video_output_conflict: use a unique filename for each candidate; preserve existing takes');
         const occupied = jobs.filter(job => !['completed', 'failed'].includes(job.status));
         if (occupied.length >= auth.maxConcurrent)
@@ -586,8 +589,11 @@ export async function executeVideo(raw, dispatch) {
         const used = jobs.reduce((sum, job) => sum + (job.settledUsd ?? job.reserveUsd), state.openingSpendUsd ?? 0);
         if (used + plan.quote.reserveUsd > auth.maxUsd + 1e-9)
             throw new Error('video_budget_exceeded');
-        if (jobs.filter(job => job.shotId === plan.shotId).length >= auth.maxAttempts)
-            throw new Error('video_attempt_limit');
+        for (const shotId of plan.shotIds ?? [plan.shotId]) {
+            const attempts = priorPlans.filter(previous => (previous.shotIds ?? [previous.shotId]).includes(shotId)).length;
+            if (attempts >= auth.maxAttempts)
+                throw new Error('video_attempt_limit: ' + shotId);
+        }
         state.jobs[plan.requestId] = { planId: id, requestId: plan.requestId, shotId: plan.shotId, tool: plan.tool,
             status: 'submitting', reserveUsd: plan.quote.reserveUsd, startedAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
         return undefined;
