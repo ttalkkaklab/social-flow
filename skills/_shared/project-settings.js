@@ -170,7 +170,8 @@ function handoff(snapshot) {
 function createEpisode(root, topic) {
   if (!config.SLUG.test(topic || '')) throw new Error('Invalid episode topic slug');
   const state = status(root);
-  if (state.status !== 'ready') throw new Error(`project_setup_required: ${state.missing.join(', ')}`);
+  if (state.status !== 'ready' && !(state.status === 'migration_required' && state.missing.every(field => field === 'models.video')))
+    throw new Error(`project_setup_required: ${state.missing.join(', ')}`);
   const saved = read(root);
   if (!saved.config?.project) throw new Error('project_setup_required: choose the project channel first');
   const base = `data/${saved.config.project.channel}/episodes/${topic}`;
@@ -182,6 +183,7 @@ function createEpisode(root, topic) {
     return { status: 'resumed', episode: dir, snapshot, handoff: handoff(snapshot) };
   }
   if (fs.existsSync(board)) return { status: 'legacy_episode', episode: dir, note: 'Resume the existing board and its explicit choices; no snapshot or files were rewritten.' };
+  if (state.status !== 'ready') throw new Error('migration_required: select a current video model before creating a new episode');
   for (const sub of ['storyboard', '.work', 'output']) managed(root, `${base}/${sub}`, 'directory');
   for (const sub of ['storyboard', '.work', 'output']) fs.mkdirSync(path.join(dir, sub), { recursive: true });
   const snapshot = models.snapshotSettings(root, dir);
@@ -192,6 +194,7 @@ function manageProject(args) {
   if (!object(args) || Object.keys(args).some(key => !['action', 'workspace', 'settings', 'request', 'expectedRevision', 'profileMarkdown', 'topic'].includes(key))) throw new Error('Invalid project arguments');
   if (!['options', 'status', 'select', 'init', 'update', 'episode'].includes(args.action)) throw new Error('Unknown project action');
   if (args.action === 'options') return { videoTypes: models.VIDEO_TYPES, modelSetupOrder: ['video', 'music', 'image', 'speech'],
+    videoAdapters: require('./video-catalog.json').adapters.map(({ engine, operation, tool }) => ({ engine, operation, tool })),
     musicCatalog: require('./music-catalog.json'), ...config.options() };
   if (typeof args.workspace !== 'string' || !path.isAbsolute(args.workspace)) throw new Error('project_setup_required: workspace must be an explicit absolute project directory selected by the user');
   if (args.action === 'select') {

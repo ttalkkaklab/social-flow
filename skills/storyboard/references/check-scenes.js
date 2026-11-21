@@ -436,8 +436,8 @@ function motionKind(scene) {
 }
 
 /** The planned route (scenes-schema §clip prompt) — `engine` overrides the default, seedance
-    (Veo left on 2026-10-31: no voice reference). The same routing as the check strip's engineOf. */
-const ENGINES = ['seedance', 'host', 'astra', 'astra-genai', 'astra-genai-desktop', 'mlx', 'ltx-api', 'minimax', 'heygen'];
+    for legacy boards. The same routing as the check strip's engineOf. */
+const { VIDEO_ENGINES: ENGINES } = require('../../_shared/model-settings.js');
 function engineOf(scene, win, snapshotVideo) {
   const v = (scene && scene.visual) || {};
   const named = (v.video && v.video.engine) || (v.clip && v.clip.engine) || v.engine;

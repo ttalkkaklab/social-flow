@@ -60,6 +60,8 @@ episode work, continue to that skill after setup without asking for the same cho
    Complete each credential step before the next model question; follow the shared
    credential procedure, including server reconnect and configuration recheck.
    An explicit no-TTS choice saves `models.speech:{engine:"none"}`. Reuse explicit prior answers and existing settings.
+   For hosted video, show the LTX API and Google Cloud Veo choices from `video_catalog`. LTX can animate a pinned voice track. Veo can generate scene sound and accept external narration in assembly. List only the operations and resolutions the chosen model accepts. [Setup and model IDs](../_shared/video-routing.md#ltx-and-google-cloud-veo).
+
 4. Ask for the missing **visual style**, **video ratio**, and **output format** — asked
    once here, then reused (the owner's exception to assistant-decided preferences).
    Show the rendering descriptions in [visual style](../storyboard/references/visual-style.md).

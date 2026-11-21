@@ -1236,6 +1236,156 @@
           "ltx-2-5-pro",
           "ltx-2-5-fast"
         ],
+        "resolutions": {
+          "720p": [
+            "1280x720",
+            "720x1280",
+            "720x720",
+            "1080x720",
+            "720x1080"
+          ],
+          "1080p": [
+            "1920x1080",
+            "1080x1920",
+            "1080x1080",
+            "1620x1080",
+            "1080x1620"
+          ],
+          "1440p": [
+            "2560x1440",
+            "1440x2560",
+            "1440x1440",
+            "2160x1440",
+            "1440x2160"
+          ],
+          "4k": [
+            "3840x2160",
+            "2160x3840",
+            "2160x2160",
+            "3240x2160",
+            "2160x3240"
+          ]
+        },
+        "limits": {
+          "ltx-2-5-pro": {
+            "720p": {
+              "imageSeconds": [
+                6,
+                8,
+                10
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 10
+            },
+            "1080p": {
+              "imageSeconds": [
+                6,
+                8,
+                10
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 10
+            },
+            "1440p": {
+              "imageSeconds": [
+                6,
+                8,
+                10
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 10
+            },
+            "4k": {
+              "imageSeconds": [
+                6,
+                8,
+                10
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 10
+            }
+          },
+          "ltx-2-5-fast": {
+            "720p": {
+              "imageSeconds": [
+                6,
+                8,
+                10,
+                12,
+                14,
+                16,
+                18,
+                20
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 20
+            },
+            "1080p": {
+              "imageSeconds": [
+                6,
+                8,
+                10,
+                12,
+                14,
+                16,
+                18,
+                20
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 20
+            },
+            "1440p": {
+              "imageSeconds": [
+                6,
+                8,
+                10
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 10
+            },
+            "4k": {
+              "imageSeconds": [
+                6,
+                8,
+                10
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 10
+            }
+          }
+        },
         "note": "Official LTX API. I2V: 6/8/10 s (Fast at 720p/1080p, 24/25 fps: 6-20 s), first and optional last frame, 7 MB inline images. A2V: the supplied track sets the length (2-10 s; Fast at 720p/1080p up to 20 s), billed on audio seconds. No voice reference, seed or negative prompt."
       }
     },
@@ -1269,7 +1419,608 @@
           "ltx-2-5-pro",
           "ltx-2-5-fast"
         ],
+        "resolutions": {
+          "720p": [
+            "1280x720",
+            "720x1280",
+            "720x720",
+            "1080x720",
+            "720x1080"
+          ],
+          "1080p": [
+            "1920x1080",
+            "1080x1920",
+            "1080x1080",
+            "1620x1080",
+            "1080x1620"
+          ],
+          "1440p": [
+            "2560x1440",
+            "1440x2560",
+            "1440x1440",
+            "2160x1440",
+            "1440x2160"
+          ],
+          "4k": [
+            "3840x2160",
+            "2160x3840",
+            "2160x2160",
+            "3240x2160",
+            "2160x3240"
+          ]
+        },
+        "limits": {
+          "ltx-2-5-pro": {
+            "720p": {
+              "imageSeconds": [
+                6,
+                8,
+                10
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 10
+            },
+            "1080p": {
+              "imageSeconds": [
+                6,
+                8,
+                10
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 10
+            },
+            "1440p": {
+              "imageSeconds": [
+                6,
+                8,
+                10
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 10
+            },
+            "4k": {
+              "imageSeconds": [
+                6,
+                8,
+                10
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 10
+            }
+          },
+          "ltx-2-5-fast": {
+            "720p": {
+              "imageSeconds": [
+                6,
+                8,
+                10,
+                12,
+                14,
+                16,
+                18,
+                20
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 20
+            },
+            "1080p": {
+              "imageSeconds": [
+                6,
+                8,
+                10,
+                12,
+                14,
+                16,
+                18,
+                20
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 20
+            },
+            "1440p": {
+              "imageSeconds": [
+                6,
+                8,
+                10
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 10
+            },
+            "4k": {
+              "imageSeconds": [
+                6,
+                8,
+                10
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 10
+            }
+          }
+        },
         "note": "Official LTX API. I2V: 6/8/10 s (Fast at 720p/1080p, 24/25 fps: 6-20 s), first and optional last frame, 7 MB inline images. A2V: the supplied track sets the length (2-10 s; Fast at 720p/1080p up to 20 s), billed on audio seconds. No voice reference, seed or negative prompt."
+      }
+    },
+    {
+      "tool": "veo_text2video",
+      "engine": "veo",
+      "deployment": "google-cloud-us-central1",
+      "operation": "text",
+      "voice": {
+        "lane": "none",
+        "dialogue": "refused",
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "model",
+        "prompt",
+        "resolution",
+        "aspectRatio",
+        "generateAudio",
+        "negativePrompt",
+        "seed",
+        "outputPath",
+        "filename",
+        "durationSeconds"
+      ],
+      "modelConstraints": {
+        "veo-3.1-generate-001": {
+          "priceFamily": "standard",
+          "resolutions": [
+            "720p",
+            "1080p",
+            "4k"
+          ],
+          "operations": [
+            "text",
+            "image",
+            "reference",
+            "extend"
+          ],
+          "durationSeconds": [
+            4,
+            6,
+            8
+          ],
+          "referenceSeconds": 8,
+          "extensionSeconds": 7,
+          "aspectRatios": [
+            "16:9",
+            "9:16"
+          ],
+          "maxAssetImages": 3,
+          "lastFrame": true,
+          "generateAudio": true,
+          "voiceReference": false
+        },
+        "veo-3.1-fast-generate-001": {
+          "priceFamily": "fast",
+          "resolutions": [
+            "720p",
+            "1080p"
+          ],
+          "operations": [
+            "text",
+            "image",
+            "reference",
+            "extend"
+          ],
+          "durationSeconds": [
+            4,
+            6,
+            8
+          ],
+          "referenceSeconds": 8,
+          "extensionSeconds": 7,
+          "aspectRatios": [
+            "16:9",
+            "9:16"
+          ],
+          "maxAssetImages": 3,
+          "lastFrame": true,
+          "generateAudio": true,
+          "voiceReference": false
+        },
+        "veo-3.1-lite-generate-001": {
+          "priceFamily": "lite",
+          "resolutions": [
+            "720p",
+            "1080p"
+          ],
+          "operations": [
+            "text",
+            "image",
+            "extend"
+          ],
+          "durationSeconds": [
+            4,
+            6,
+            8
+          ],
+          "referenceSeconds": 8,
+          "extensionSeconds": 7,
+          "aspectRatios": [
+            "16:9",
+            "9:16"
+          ],
+          "maxAssetImages": 0,
+          "lastFrame": true,
+          "generateAudio": true,
+          "voiceReference": false
+        }
+      }
+    },
+    {
+      "tool": "veo_img2video",
+      "engine": "veo",
+      "deployment": "google-cloud-us-central1",
+      "operation": "image",
+      "voice": {
+        "lane": "none",
+        "dialogue": "refused",
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "model",
+        "prompt",
+        "resolution",
+        "aspectRatio",
+        "generateAudio",
+        "negativePrompt",
+        "seed",
+        "outputPath",
+        "filename",
+        "durationSeconds",
+        "sourceImagePath",
+        "lastImagePath"
+      ],
+      "modelConstraints": {
+        "veo-3.1-generate-001": {
+          "priceFamily": "standard",
+          "resolutions": [
+            "720p",
+            "1080p",
+            "4k"
+          ],
+          "operations": [
+            "text",
+            "image",
+            "reference",
+            "extend"
+          ],
+          "durationSeconds": [
+            4,
+            6,
+            8
+          ],
+          "referenceSeconds": 8,
+          "extensionSeconds": 7,
+          "aspectRatios": [
+            "16:9",
+            "9:16"
+          ],
+          "maxAssetImages": 3,
+          "lastFrame": true,
+          "generateAudio": true,
+          "voiceReference": false
+        },
+        "veo-3.1-fast-generate-001": {
+          "priceFamily": "fast",
+          "resolutions": [
+            "720p",
+            "1080p"
+          ],
+          "operations": [
+            "text",
+            "image",
+            "reference",
+            "extend"
+          ],
+          "durationSeconds": [
+            4,
+            6,
+            8
+          ],
+          "referenceSeconds": 8,
+          "extensionSeconds": 7,
+          "aspectRatios": [
+            "16:9",
+            "9:16"
+          ],
+          "maxAssetImages": 3,
+          "lastFrame": true,
+          "generateAudio": true,
+          "voiceReference": false
+        },
+        "veo-3.1-lite-generate-001": {
+          "priceFamily": "lite",
+          "resolutions": [
+            "720p",
+            "1080p"
+          ],
+          "operations": [
+            "text",
+            "image",
+            "extend"
+          ],
+          "durationSeconds": [
+            4,
+            6,
+            8
+          ],
+          "referenceSeconds": 8,
+          "extensionSeconds": 7,
+          "aspectRatios": [
+            "16:9",
+            "9:16"
+          ],
+          "maxAssetImages": 0,
+          "lastFrame": true,
+          "generateAudio": true,
+          "voiceReference": false
+        }
+      }
+    },
+    {
+      "tool": "veo_reference",
+      "engine": "veo",
+      "deployment": "google-cloud-us-central1",
+      "operation": "reference",
+      "voice": {
+        "lane": "none",
+        "dialogue": "refused",
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "model",
+        "prompt",
+        "resolution",
+        "aspectRatio",
+        "generateAudio",
+        "negativePrompt",
+        "seed",
+        "outputPath",
+        "filename",
+        "durationSeconds",
+        "referenceImagePaths"
+      ],
+      "modelConstraints": {
+        "veo-3.1-generate-001": {
+          "priceFamily": "standard",
+          "resolutions": [
+            "720p",
+            "1080p",
+            "4k"
+          ],
+          "operations": [
+            "text",
+            "image",
+            "reference",
+            "extend"
+          ],
+          "durationSeconds": [
+            4,
+            6,
+            8
+          ],
+          "referenceSeconds": 8,
+          "extensionSeconds": 7,
+          "aspectRatios": [
+            "16:9",
+            "9:16"
+          ],
+          "maxAssetImages": 3,
+          "lastFrame": true,
+          "generateAudio": true,
+          "voiceReference": false
+        },
+        "veo-3.1-fast-generate-001": {
+          "priceFamily": "fast",
+          "resolutions": [
+            "720p",
+            "1080p"
+          ],
+          "operations": [
+            "text",
+            "image",
+            "reference",
+            "extend"
+          ],
+          "durationSeconds": [
+            4,
+            6,
+            8
+          ],
+          "referenceSeconds": 8,
+          "extensionSeconds": 7,
+          "aspectRatios": [
+            "16:9",
+            "9:16"
+          ],
+          "maxAssetImages": 3,
+          "lastFrame": true,
+          "generateAudio": true,
+          "voiceReference": false
+        },
+        "veo-3.1-lite-generate-001": {
+          "priceFamily": "lite",
+          "resolutions": [
+            "720p",
+            "1080p"
+          ],
+          "operations": [
+            "text",
+            "image",
+            "extend"
+          ],
+          "durationSeconds": [
+            4,
+            6,
+            8
+          ],
+          "referenceSeconds": 8,
+          "extensionSeconds": 7,
+          "aspectRatios": [
+            "16:9",
+            "9:16"
+          ],
+          "maxAssetImages": 0,
+          "lastFrame": true,
+          "generateAudio": true,
+          "voiceReference": false
+        }
+      }
+    },
+    {
+      "tool": "veo_extend",
+      "engine": "veo",
+      "deployment": "google-cloud-us-central1",
+      "operation": "extend",
+      "voice": {
+        "lane": "none",
+        "dialogue": "refused",
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "model",
+        "prompt",
+        "resolution",
+        "aspectRatio",
+        "generateAudio",
+        "negativePrompt",
+        "seed",
+        "outputPath",
+        "filename",
+        "sourceVideoPath"
+      ],
+      "modelConstraints": {
+        "veo-3.1-generate-001": {
+          "priceFamily": "standard",
+          "resolutions": [
+            "720p",
+            "1080p",
+            "4k"
+          ],
+          "operations": [
+            "text",
+            "image",
+            "reference",
+            "extend"
+          ],
+          "durationSeconds": [
+            4,
+            6,
+            8
+          ],
+          "referenceSeconds": 8,
+          "extensionSeconds": 7,
+          "aspectRatios": [
+            "16:9",
+            "9:16"
+          ],
+          "maxAssetImages": 3,
+          "lastFrame": true,
+          "generateAudio": true,
+          "voiceReference": false
+        },
+        "veo-3.1-fast-generate-001": {
+          "priceFamily": "fast",
+          "resolutions": [
+            "720p",
+            "1080p"
+          ],
+          "operations": [
+            "text",
+            "image",
+            "reference",
+            "extend"
+          ],
+          "durationSeconds": [
+            4,
+            6,
+            8
+          ],
+          "referenceSeconds": 8,
+          "extensionSeconds": 7,
+          "aspectRatios": [
+            "16:9",
+            "9:16"
+          ],
+          "maxAssetImages": 3,
+          "lastFrame": true,
+          "generateAudio": true,
+          "voiceReference": false
+        },
+        "veo-3.1-lite-generate-001": {
+          "priceFamily": "lite",
+          "resolutions": [
+            "720p",
+            "1080p"
+          ],
+          "operations": [
+            "text",
+            "image",
+            "extend"
+          ],
+          "durationSeconds": [
+            4,
+            6,
+            8
+          ],
+          "referenceSeconds": 8,
+          "extensionSeconds": 7,
+          "aspectRatios": [
+            "16:9",
+            "9:16"
+          ],
+          "maxAssetImages": 0,
+          "lastFrame": true,
+          "generateAudio": true,
+          "voiceReference": false
+        }
       }
     },
     {

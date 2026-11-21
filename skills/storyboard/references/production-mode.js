@@ -10,10 +10,11 @@
     if (!selection) {
       const v = shot.visual?.video;
       const model = v?.model || production.videoModel?.model;
-      const engine = ['host', 'astra'].includes(production.videoProvider) ? production.videoProvider : v?.engine || (
-        typeof model === 'string' && model.includes('seedance') ? 'seedance' : typeof model === 'string' && model.startsWith('veo-') ? 'veo' : undefined);
+      const engine = ['host', 'astra'].includes(production.videoProvider) ? production.videoProvider : v?.engine || production.videoModel?.engine || (
+        typeof model === 'string' && model.includes('seedance') ? 'seedance' : typeof model === 'string' && model.startsWith('veo-') ? 'veo' : /^ltx-2-5-(pro|fast)$/.test(model) ? 'ltx-api' : undefined);
       if (!engine) throw new Error('Legacy board has no explicit video selection; do not inherit current workspace defaults');
       selection = { engine, ...(!['astra', 'host'].includes(engine) && model ? { model } : {}),
+        ...(v?.operation || production.videoModel?.operation ? { operation: v?.operation || production.videoModel.operation } : {}),
         ...(v?.resolution || production.videoModel?.resolution ? { resolution: v?.resolution || production.videoModel?.resolution } : {}) };
     }
     // Preserve pre-existing per-cut and episode choices before applying scoped changes.
@@ -22,7 +23,7 @@
         if (!choice || choice.model === 'mixed') continue;
         if (!choice.engine && !choice.model && !choice.resolution) continue;
         const engine = choice.engine || (choice.model?.includes('seedance') ? 'seedance' : choice.model?.startsWith('veo-') ? 'veo' : selection.engine);
-        const next = { ...(engine === selection.engine ? selection : {}), engine, ...Object.fromEntries(['engine','model','resolution','host'].filter(k => choice[k] !== undefined).map(k => [k, choice[k]])) };
+        const next = { ...(engine === selection.engine ? selection : {}), engine, ...Object.fromEntries(['engine','model','resolution','host','operation'].filter(k => choice[k] !== undefined).map(k => [k, choice[k]])) };
 
         if (next.engine === 'astra' && next.model === 'astra') delete next.model;
         if (next.engine === 'host' && next.model === 'host') next.model = 'host-managed';
@@ -92,10 +93,10 @@
   // a previz is optional, and the board records which renderer drew one when it exists.
   const PREVIZ_RENDERERS = { blender: '블렌더 브릿지 — 관절 마네킹, 모션 캡처', threejs: 'three.js 페이지 — 헤드리스 크롬, 관절 없음' };
   // Suggested models and priced resolutions; each cut may choose its own model and resolution.
-  // Node planners consume the build projection of installed adapters. Browser checks do
-  // not present model choices and need no copy of this catalogue.
+  // The offline board receives the engine and operation projection from storyboard-html.js.
   const catalogue = typeof module === 'object' && module.exports
-    ? require('../../_shared/video-catalog.json') : { adapters: [] };
+    ? require('../../_shared/video-catalog.json') : { adapters: root.REVIEW_VIDEO_ADAPTERS || [] };
+  const engines = new Set(['host', ...catalogue.adapters.map(adapter => adapter.engine)]);
   const seedanceContract = catalogue.adapters.find(adapter => adapter.tool === 'seedance_img2video');
   const priced = typeof module === 'object' && module.exports ? require('../../produce/references/seedance-route.js').PRICED : new Set();
   const VIDEO_MODELS = Object.fromEntries(Object.entries(seedanceContract?.modelConstraints || {})
@@ -725,7 +726,7 @@
         bad(hostVideo ? 'the host video tool tops out at 720p; write resolution:"720p" and generateAudio:false with separate narration'
           : astraVideo ? 'ASTRA renders on a 64-pixel grid; write resolution:"' + astra.source + '" (the edit scales it to ' + astra.edit + ') and generateAudio:false with separate narration'
                       : 'write the chosen model\'s resolution (' + wantRes + ') and generateAudio:false with separate narration');
-      if (!['host','astra','astra-genai','seedance','mlx'].includes(selectedEngine) || (!managedChoice && v.video?.engine !== selectedEngine))
+      if (!engines.has(selectedEngine) || (!managedChoice && v.video?.engine !== selectedEngine))
         bad(hostVideo ? 'videoProvider:host routes every full_video cut to engine:"host" (the CLI\'s own image_to_video)'
           : astraVideo ? 'videoProvider:astra routes every full_video cut to engine:"astra" (our own LTX-2.5 box)'
                       : 'full_video must use its selected deployed video engine');

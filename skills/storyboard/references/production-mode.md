@@ -176,7 +176,7 @@ Persist `PRODUCTION.videoModel = { model, resolution, selection }` as an episode
 or use `model: 'mixed'` to describe a per-cut choice. Each cut's `visual.video.model` and
 `resolution` control its route and cost; they may differ across the episode. For example,
 the first three cuts may use Seedance 2.5 and the rest Seedance 2.0 Fast. `modelReason` is
-optional. Veo, Gemini Omni and Seedance 1.x left the plugin on 2026-10-31 because none takes a
+optional. Gemini Developer API Veo previews, Gemini Omni and Seedance 1.x left the plugin on 2026-10-31 because none takes a
 voice reference; a cut naming one fails as `video_engine_unsupported`. A 2.x previz may go as
 `reference_video`. Actual model capabilities and price rows still apply.
 Under `videoProvider:'host'`, the record is `{ model: 'host' }` or absent.

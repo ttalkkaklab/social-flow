@@ -1,9 +1,7 @@
 # Video routing contract
 
 Use `video_catalog` → `video_plan` → `video_approve` (the user's yes to that scene or a standing `auto:true`) → `video_execute` for episode video. The registry
-contains installed adapter contracts, not a vendor availability claim. MiniMax H3
-and the official LTX API remain unimplemented; ASTRA is a separate self-hosted
-LTX deployment. Do not substitute one for another.
+contains installed adapter contracts, not a vendor availability claim. The hosted LTX API and Google Cloud Veo register their operations in `server/src/hosted-video-routes.ts`. ASTRA deployments and local MLX use their existing adapter contracts.
 
 ## Layers and selection
 
@@ -16,7 +14,7 @@ the last explicit change wins. Workspace edits affect future snapshots only.
 `skills/_shared/video-catalog.json` is its committed build projection for CommonJS planners.
 `node skills/_shared/model-settings.js catalog` reads the same projection.
 
-An override replaces the whole video selection; one naming Veo, Gemini Omni or Seedance 1.x
+An override replaces the whole video selection; one naming Gemini Developer API Veo previews, Gemini Omni or Seedance 1.x
 fails with `video_engine_unsupported`. Record the user's actual instruction:
 
 ```js
@@ -208,3 +206,23 @@ ending, adjust volume, upscale resolution, revise speech, or fix the source imag
 staging before regeneration. Keep the original file. Dubbing native dialogue can break
 lip sync; do not apply it automatically. Unknown submissions retain their original
 request ID and reservation; the review view supplies the same-request status command.
+
+## LTX and Google Cloud Veo
+
+Select an engine, model, resolution and operation in the project's video settings. Existing LTX snapshots keep their selected deployment. The hosted LTX API uses `LTX_API_KEY`. Local LTX and gateway deployments retain their own settings.
+
+For Google Cloud, enable the Vertex AI API in your billing project, grant the caller prediction access and configure Application Default Credentials (for local development, `gcloud auth application-default login`). Set `GOOGLE_CLOUD_PROJECT` in the MCP server's environment. For workload credentials, ADC also supports `GOOGLE_APPLICATION_CREDENTIALS`. Restart the MCP server after changing its environment. The adapter calls `us-central1-aiplatform.googleapis.com`. [Google Cloud authentication](https://cloud.google.com/docs/authentication/provide-credentials-adc) · [Veo model specifications](https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/veo/3-1-generate)
+
+| Example saved video choice | Production use |
+|---|---|
+| `{"engine":"ltx-api","model":"ltx-2-5-pro","resolution":"1920x1080","operation":"audio"}` | Drive a clip with the supplied character track. Non-speaking shots use the existing image route. |
+| `{"engine":"veo","model":"veo-3.1-fast-generate-001","resolution":"720p","operation":"image"}` | Animate a JPEG or PNG opening and optionally pin the ending. Set scene sound or use external narration. |
+| `{"engine":"veo","model":"veo-3.1-generate-001","resolution":"720p","operation":"reference"}` | Generate eight seconds from one to three subject pictures. Keep temporal frames out of this request. |
+
+Veo also accepts text-only requests and extension of a 1–30 second 24 fps MP4 by seven seconds. A scene with a pinned opening uses the image route. Text or extension requests use an unpinned shot or a standalone asset. Each call produces one local MP4. Lite (`veo-3.1-lite-generate-001`) supports text, frames and extension. Lite is a Google Cloud preview with fixed-quota or provisioned-throughput access. Check the project quota before selecting it. Standard supports 4K. Fast and Lite expose 720p/1080p. A saved Gemini Developer API preview ID requires an explicit model change. Rates in the episode estimate distinguish Google Cloud audio and silent seconds from the historical Gemini rate keys.
+
+Use `video_status` with the original request ID and `action:"refresh"` after an interrupted hosted LTX or Veo request. The provider job ID is recorded before polling. A submission with no known provider ID requires reconciliation. Repeated status reads never submit a generation.
+
+### Adding a hosted provider
+
+Implement wire requests and status decoding in a provider module. Register each operation in `server/src/hosted-video-routes.ts` with its input schema, model constraints, frame and sound capabilities, duration grid, configuration check, preflight, generator and status reader. The MCP tool definitions, dispatch, catalogue, duration planning and status recovery consume these registrations. Providers own authentication, data transfer and unit prices. Add the billing mapping to `usage-ledger.ts` and the rates to `prices.tsv`. Register model selection and any new image binding in the shared planner. A visual reference operation can declare voice support independently of its image inputs. Verify the existing LTX contracts and the new provider's mocked submit, poll, output and failure cases before building the distribution.

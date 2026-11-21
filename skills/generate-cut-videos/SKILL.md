@@ -14,6 +14,10 @@ and [duration planning](../produce/references/video-duration.md).
 
 Use the project directory the user named or already selected for this episode. When it is unclear, ask for it and wait. Run `project_manage status` there. Complete [project setup](../project-init/SKILL.md) for the missing fields before starting the scene.
 
+On a saved Google Cloud Veo selection, plan non-speaking scenes with the image route for a pinned opening and optional ending.
+Use its separate reference route for up to three pictures of one subject (Standard/Fast). Lite accepts a pinned opening and optional ending.
+A speaking character needs a voice-capable route such as LTX supplied audio or reference. Use the existing selection change workflow.
+
 ## Generate one scene
 
 1. Read the scene and its shot cards in playback order with `storyboard_read`. Use the first card's actual opening image. Keep later cards as dialogue and editorial beats within the same generation.

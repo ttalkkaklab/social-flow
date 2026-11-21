@@ -75,10 +75,15 @@ function storyboardHtml(directory, check = false) {
   const translations = fs.existsSync(translationFile)
     ? require('./review-localization.js').validate(JSON.parse(fs.readFileSync(translationFile, 'utf8'))) : null;
   const previews = require('./audience-review-data.js').exportData(win || {}, dir, check);
+  const videoAdapters = require('../../_shared/video-catalog.json').adapters.map(({engine, tool, operation, modelConstraints}) => ({
+    engine, tool, operation,
+    ...(tool === 'veo_reference' ? { assetLimits: Object.fromEntries(Object.entries(modelConstraints).map(([model, spec]) => [model, spec.maxAssetImages])) } : {}),
+  }));
   const reviewData = 'window.REVIEW_LOCALIZATION = ' + JSON.stringify(translations).replace(/</g, '\\u003c') + ';\n' +
     'window.LOCATION_DETAIL_LINKS = '+JSON.stringify(locationLinks).replace(/</g,'\\u003c')+';\n' +
     'window.REVIEW_PANEL_FINDINGS = ' + JSON.stringify(panelFindings).replace(/</g, '\\u003c') + ';\n' +
     'window.REVIEW_FILES = ' + JSON.stringify(available) + ';\n' +
+    'window.REVIEW_VIDEO_ADAPTERS = ' + JSON.stringify(videoAdapters) + ';\n' +
     'window.REVIEW_VIDEO_SNAPSHOT = ' + JSON.stringify(videoSnapshot).replace(/</g, '\\u003c') + ';\n' +
     'window.REVIEW_CHARACTER_PORTRAITS = ' + JSON.stringify(portraits).replace(/</g, '\\u003c') + ';\n' +
     'window.REVIEW_VIDEO_TYPES = ' + JSON.stringify(typeLabels).replace(/</g, '\\u003c') + ';\n';
