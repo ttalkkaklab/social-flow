@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { compileVideoPrompt } from '../dist/video-prompt.js';
+import { compileVideoPrompt, sceneCameraDirection } from '../dist/video-prompt.js';
 
 test('MSR and frame video prompts keep the authored detail view instead of old portrait instructions', () => {
   const view = { subject: 'Mina’s fingers', crop: 'Only the fingers and the key fill the frame', reason: 'The grip reveals her fear', mode: 'profile-right' };
@@ -90,6 +90,12 @@ test('a movement written without its technique takes the catalogue sentence; an 
   const shot = { shot: {}, visual: { frames: { mode: 'first' }, camera: { movement: 'dolly in', speed: 'slow', target: 'the gate' } } };
   const { prompt, warnings } = compileVideoPrompt(shot, { action: 'She stops.' });
   assert.match(prompt, /The camera slowly pushes in toward the gate/);
+  shot.visual.camera.movement = 'dolly in along the left rail after the latch opens';
+  const detailed = compileVideoPrompt(shot, { action: 'She stops.' }).prompt;
+  assert.match(detailed, /along the left rail after the latch opens/);
+  assert.match(detailed, /the gate/);
+  const locked = compileVideoPrompt(shot, { action: 'Preserve the opening image composition. She stops.' });
+  assert.ok(locked.warnings.some(w => w.startsWith('camera_move_contradicted')));
   assert.doesNotMatch(prompt, /Camera: /);
   assert.ok(!warnings.some(w => w.startsWith('camera_move_unset')));
   assert.ok(compileVideoPrompt({ shot: {}, visual: { frames: { mode: 'first' } } }, { action: 'x' }).warnings.some(w => w.startsWith('camera_move_unset')));
@@ -120,4 +126,32 @@ test('cameraDrift names a hand-written prompt that drops or locks the board move
   assert.equal(cameraDrift('Keep close camera and clean image.', 'zoom in'), 'missing');
   assert.equal(cameraDrift('The camera does not move. Then the camera approaches the card.', 'dolly in'), null);
   assert.equal(cameraDrift('Static camera.', 'static'), null);
+  assert.equal(cameraDrift('The camera pans left.', 'pan right'), 'contradicted');
+  assert.equal(cameraDrift('Pan right to the cafe counter.', 'pan right'), null);
+  assert.equal(cameraDrift('She says "the camera pans right." She walks toward the camera.', 'pan right'), 'missing');
+  assert.equal(cameraDrift('Preserve the opening image composition and screen sides.', 'tracking from behind'), 'contradicted');
+  assert.equal(cameraDrift('The subject approaches the camera.', 'dolly in'), 'missing');
+  assert.equal(cameraDrift('The camera pushes in on the locked door.', 'dolly in'), null);
+  assert.equal(cameraDrift('The camera zooms in.', 'pan right'), 'contradicted');
+  assert.equal(cameraDrift('The camera never pans right.', 'pan right'), 'contradicted');
+  assert.equal(cameraDrift('Push in on her face as she turns toward the camera.', 'dolly in'), null);
+  assert.equal(cameraDrift('The camera stays with the hand as she pushes the button.', 'dolly in'), 'missing');
+  assert.equal(cameraDrift('The camera pushes in.', 'static'), 'contradicted');
+  assert.equal(cameraDrift('Continuous forward walking, camera tracks backward.', 'truck parallel to the subject'), 'contradicted');
+  assert.equal(cameraDrift('A steady shot tracking the pupils at a walk.', 'truck parallel to the subject'), null);
+});
+
+test('scene camera preserves shared direction, a single deliberate hold and unspecified coverage', () => {
+  const card = (id, camera) => ({ id, duration: 3, visual: { camera } });
+  const tracking = { movement: 'tracking from behind', target: 'Follow Mochi through the doorway; settle beside the bed.' };
+  const move = sceneCameraDirection([card('a', tracking), card('b', tracking)]);
+  assert.deepEqual(move.bindings[0].value.shotIds, ['a', 'b']);
+  assert.equal(move.instruction.match(/Follow Mochi/g).length, 1);
+  assert.doesNotMatch(move.instruction, /behind Follow|From 0/);
+  assert.match(sceneCameraDirection([card('a', {movement:'static'})]).instruction, /static frame/);
+  assert.equal(sceneCameraDirection([card('a', {movement:'static'}), card('b', {})]).instruction, '');
+  assert.equal(sceneCameraDirection([card('a', {})]).instruction, '');
+  const foreign = sceneCameraDirection([card('a', { movement:'pan left', end:'창문' })]);
+  assert.equal(foreign.instruction, '');
+  assert.match(foreign.warnings[0], /scene_camera_unresolved.*a \(pan left\)/);
 });

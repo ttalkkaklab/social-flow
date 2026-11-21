@@ -16,10 +16,12 @@ and [duration planning](../produce/references/video-duration.md).
 
 1. Read the scene and its shot cards in playback order with `storyboard_read`. Use the first card's actual opening image. Keep later cards as dialogue and editorial beats within the same generation.
 2. Save `videoDirection` on the scene with `story_scene` (retain its sequence, number, place, time, event and summary). Identify each person from the viewer's perspective by side, depth, posture and a landmark. Link their face and outfit panels to the same cast ID. Describe an off-screen start when appropriate. Use clothing to disambiguate people who share a desk or row. Coordinates and phrases such as “third man” make poor identifiers.
-3. Write the emotional change in English. Keep the dialogue on the shot cards in the original language. Usually the opening positions, emotion and lines are enough. Include one essential action when the story depends on it, anchored to the same landmark. For example, “He rises behind that same far-right desk and points across the room at Miran.” Add a camera move or cut only when the director requests it. Keep audience-only shock effects on the post-production cue track.
+3. Write the emotional change in English. Keep the dialogue on the shot cards in the original language. Include one essential action when the story depends on it, anchored to the same landmark. For example, “He rises behind that same far-right desk and points across the room at Miran.” Read the cards' camera choices before writing `videoDirection.camera`. When a reveal or reaction needs a move, name the cue, direction and landing in one sentence. For example, “When Miran unfolds the letter, the camera tilts down from her face and settles on the torn corner in her hand.” Specify a fixed view when the scene depends on seeing both performances together. Leave coverage open when the cards give the scene no reason to move. Keep audience-only shock effects on the post-production cue track.
 4. Call `video_plan {episode, sceneNo, requestId}` once per scene. Omit `args.prompt`. Check the actual compiled prompt, input images, speaker and voice assignments, total seconds, resolution and price. Distilled GenAI LTX uses the opening image as the temporal first frame with compatible subject references. For mixed-media scenes, keep editorial inserts on their existing route and plan continuous generated material as its own scene. A larger room or crowd in frame still needs visual review. If a provider cannot fit the scene, report the limit and divide at a story beat before planning again.
-5. Use the existing approval or record the user's approval with `video_approve`, then run `video_execute` once. For a host handoff use the returned frame, prompt and scene duration with the selected host. Resume with `video_status` and the original request ID. The scene header shows the candidate and its actual prompt. Watch the opening second, distance, posture, speaking mouth and reaction through the last line. Report any missing or swapped person, unexpected cut or incomplete dialogue.
+5. Use the existing approval or record the user's approval with `video_approve`, then run `video_execute` once. For a host handoff use the returned frame, prompt and scene duration with the selected host. Resume with `video_status` and the original request ID. The scene header shows the candidate and its actual prompt. Watch the opening second, distance, posture, speaking mouth and reaction through the last line. For a planned move, follow a fixed feature such as a door jamb through the cue and check where the frame lands. Walking actors can cross a locked frame. Report any missed move, missing or swapped person, unexpected cut or incomplete dialogue.
 6. Hand the accepted take to assembly once. When editing by shot card, use the observed source intervals from that take. Attaching the whole take separately to every card would repeat the scene.
+
+The scene camera sentence takes precedence. Without one, the planner carries a single card's direction, a lone move during its card's planned interval, or the same move and landing across all cards. Static setups on several editorial cards leave the scene's coverage open. When `scene_camera_unresolved` appears, read the named cards and put the intended order and landing in `videoDirection.camera`. Compare the resulting provider prompt with that choice before approval.
 
 ## When the user requests one shot
 
@@ -134,12 +136,14 @@ the board prompt to the adapter's own limit (2,000 characters on the GenAI image
 lanes), leaving out design notes, the beats' acting fields and then the expressions before it
 touches the camera, the action or the lines (`prompt_fitted`, or `prompt_over_limit` when the
 authored action, view or sound alone is too long — shorten those in `shot_prompt`). On
-mochi_bo (2026-11-20) 23 of the 24 shots whose board moved the camera went out with a
-hand-written prompt, and none carried the compiled move sentence; the camera stood still.
+Mochi & Bơ EP05 shot s0015, the submitted prompt asked to preserve the opening composition.
+The ceiling fan and shelf stayed in place while Mochi moved the pillow. EP01 shot s0104
+used a hand-written “Camera: pan right.” The cafe door shifted left as Bo walked to the
+counter. Compare the actual direction and the background in the take.
 A correction such as "no text on the picture" goes into `shot_prompt` or the negative prompt,
 not into a replacement prompt. When a prompt is written by hand anyway, `video_plan` names
-one that drops the board's move (`camera_move_missing`) or holds the camera
-(`camera_move_contradicted`) and gives the sentence to carry; it refuses neither. Keep unresolved native
+one that drops the board's move (`camera_move_missing`) or gives a conflicting hold or direction
+(`camera_move_contradicted`). Older saved prompts receive the same check. Keep unresolved native
 speech timing explicit. Reference `preserve`/`avoid` instructions remain attached to their
 image slots. A new take may carry `purpose`, `basedOnRequestId` and `changeNote`; use a
 unique filename. Draft/final labels do not authorize a resolution or model switch.

@@ -110,7 +110,7 @@ First complete project setup and follow [production order](../_shared/production
 Prepare characters with text (`character_manage`) and images (`character_panel`) → present the scenario → write the story
 (sequences → scenes → shot stories) → set each shot's characters and each character's lines →
 set each shot's icon attributes → prepare prop and background text/images → make each
-shot's start image, and the end image a first_last shot needs (`shot_image`) → save the opening positions and emotion in each scene's `videoDirection` → export the bundled review template. Each scene's video waits
+shot's start image, and the end image a first_last shot needs (`shot_image`) → save the opening positions and emotion in each scene's `videoDirection`. When shot-card moves differ, write the cue and landing the continuous take needs in `videoDirection.camera`. Export the bundled review template. Each scene's video waits
 for the user's approval (`video_approve`); do not jump from a text plan directly to video.
 Scenario presentation is a progress update, not an approval request. In an interactive
 session, show the premise, characters, causal sequence, ending and selection reason before

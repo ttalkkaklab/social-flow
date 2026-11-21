@@ -113,7 +113,7 @@ See [dialogue coverage](skills/storyboard/references/dialogue-coverage.md).
 reports `directionBindings` for prompt, image, adapter and assembly inputs. It compiles to
 the adapter's own prompt limit (2,000 characters on the GenAI image and MSR lanes), dropping
 design notes, the beats' acting fields and then expressions before the camera move, action or
-lines, and names a hand-written `args.prompt` that drops or locks the board's move
+lines, and reports a hand-written or legacy prompt that drops, locks or reverses the board's move
 (`camera_move_missing`, `camera_move_contradicted`). Board writes count unchosen moves, and
 `shot_icons` names video shots it leaves without one (`camera_move_unset`).
 
@@ -382,6 +382,8 @@ subject viewpoint before rendering. See [asset sheets](skills/storyboard/referen
 ## Scene video generation
 
 Each generated scene has one prompt, approval and video request. Save the cast's positions in the actual opening image and the emotional change with `story_scene.videoDirection`. The planner reads the dialogue from all shot cards in order. Use `video_plan` with `sceneNo`, then the existing approval and execution tools. The storyboard scene header holds the direction, generated takes and their submitted prompts. [Scene generation workflow](skills/generate-cut-videos/SKILL.md)
+
+A scene's `videoDirection.camera` controls the take. Without it, a lone shot-card move uses that card's planned interval. Different moves that need a scene-level decision appear in `directionWarnings` with their shot IDs.
 
 ## Persistent 3D locations
 
