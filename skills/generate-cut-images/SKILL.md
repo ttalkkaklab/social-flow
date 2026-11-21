@@ -156,6 +156,9 @@ storyboard metadata first if the revision changes them. A start revision still m
 its old end image stale. A plain edit does not reassemble the scene; `reframe:true`
 explicitly reapplies the saved opening composition and is only for a start image.
 
+Use fitting panels for the character's build and proportions. Dress the character in
+the scene's wardrobe or the usual `physical.outfit`. For example, a chef drawn in
+a fitted T-shirt and shorts on the sheet can wear a chef's coat in the kitchen.
 Keep confirmed identity attributes in their original language when no faithful English
 translation is available. Do not delete clothing because its description mentions a
 head, hood or other body part. Describe the intended crop separately. Known Qwen edit

@@ -30,10 +30,11 @@ const PANEL_VIEWS = { face: 'face', front: 'headless front body', back: 'headles
 /**
  * An MSR slot is an input source, not a declared subject, so name the character-sheet panels
  * (panels.json) that show one character: the face close-up carries the head, the headless panels
- * the body and outfit.
+ * the physique. Fitting panels leave scene clothing to the opening image.
  */
 function msrPanelBinding(paths, refs, compact = false) {
     const groups = new Map();
+    const fitting = new Set();
     paths.forEach((file, i) => {
         if (refs[i].role === 'background')
             return;
@@ -45,12 +46,16 @@ function msrPanelBinding(paths, refs, compact = false) {
             return;
         }
         const view = Object.entries(panels).find(([, panel]) => panel.file === path.basename(file))?.[0];
-        if (view && PANEL_VIEWS[view])
-            groups.set(path.dirname(file), [...(groups.get(path.dirname(file)) ?? []), `Image ${i + 1} (${PANEL_VIEWS[view]})`]);
+        if (!view || !PANEL_VIEWS[view])
+            return;
+        const folder = path.dirname(file);
+        groups.set(folder, [...(groups.get(folder) ?? []), `Image ${i + 1} (${PANEL_VIEWS[view]})`]);
+        if (panels[view].wardrobe === 'fitting')
+            fitting.add(folder);
     });
     return [...groups].filter(([, items]) => items.length > 1).map(([folder, items]) => compact
-        ? `Images ${items.map(item => item.replace(/Image (\d+) \(([^)]+)\)/, '$1($2)')).join(', ')}: ONE ${path.basename(folder)}; head/hair only from face; physique/clothes only from body; ignore face-panel clothing.`
-        : `${items.join(', ')} show one character, ${path.basename(folder)}: render one complete character with the head and hair from the face and the body and outfit from the headless panels. Ignore clothing visible in the face panel; never duplicate a person for separate panels.`).join('\n');
+        ? `Images ${items.map(item => item.replace(/Image (\d+) \(([^)]+)\)/, '$1($2)')).join(', ')}: ONE ${path.basename(folder)}; head/hair only from face; ${fitting.has(folder) ? 'physique from body, wardrobe from the scene' : 'physique/clothes only from body'}; ignore face-panel clothing.`
+        : `${items.join(', ')} show one character, ${path.basename(folder)}: render one complete character with the head and hair from the face and ${fitting.has(folder) ? 'physique from the body panels, dressed for the scene' : 'the body and outfit from the headless panels'}. Ignore clothing visible in the face panel; never duplicate a person for separate panels.`).join('\n');
 }
 /** A character-sheet panel counts once per sheet folder; any other character image counts alone. */
 function characterKey(file) {

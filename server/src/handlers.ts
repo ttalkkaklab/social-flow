@@ -1752,7 +1752,7 @@ ROUTES.character_panel = async args => {
   }
   const lines = [`${request.view} panel: ${request.file}`, 'Inputs, in order:', ...request.inputs.map((file, i) => `  Image ${i + 1}: ${file}`),
     '', 'Prompt:', request.prompt, ...(request.negativePrompt ? ['', 'Negative prompt:', request.negativePrompt] : []), ...(request.warnings.length ? ['', 'Warnings:', ...request.warnings.map((w) => '  ' + w)] : [])];
-  if (plan.execution === 'host_handoff') lines.push('', 'host_handoff: generate this picture with the selected host image tool from the inputs above, in order, save it to the panel path, then record it in panels.json.');
+  if (plan.execution === 'host_handoff') lines.push('', `host_handoff: generate this picture with the selected host image tool from the inputs above, in order, save it to the panel path, then set panels.${request.view} in panels.json to ${JSON.stringify(request.panel)}.`);
   return text(lines.join('\n'));
 };
 

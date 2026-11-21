@@ -93956,11 +93956,11 @@ var require_character_identity = __commonJS({
     }
     var BODY_FIELDS = ["heightCm", "weightKg", "build", "proportions", "outfit"];
     var EXPRESSION = /\b(?:smil|grin|laugh)\w*/i;
-    function panelPrompt(character, view) {
+    function panelPrompt(character, view, { includeOutfit = true } = {}) {
       const physical = character?.physical || {}, skipped = [], expression = [];
       const words = (view === "face" ? ["appearance"] : BODY_FIELDS).flatMap((key) => {
         const field2 = physical[key];
-        if (field2?.status !== "confirmed") return [];
+        if (field2?.status !== "confirmed" || key === "outfit" && !includeOutfit) return [];
         if (key === "heightCm") return [`${field2.value} cm tall`];
         if (key === "weightKg") return [`about ${field2.value} kg`];
         const value = (Array.isArray(field2.value) ? field2.value.join(", ") : String(field2.value)).trim();
@@ -93970,6 +93970,19 @@ var require_character_identity = __commonJS({
         return text5 ? [text5] : [];
       });
       return { text: words.join("; "), skipped, expression };
+    }
+    function sheetPanelPrompt(character, view, wardrobe = "fitting") {
+      if (view === "face") return panelPrompt(character, view);
+      const unclothed = character.physical?.outfit?.status === "not_applicable";
+      const fitting = wardrobe === "fitting" && !unclothed;
+      const words = panelPrompt(character, view, { includeOutfit: !fitting });
+      const species = character.identity?.species;
+      const clothing = fitting ? "Use a plain opaque fitted T-shirt and short mid-thigh shorts where the anatomy allows. Keep the natural silhouette and limb proportions." : unclothed ? "Keep the natural body surface and markings unclothed." : "";
+      return {
+        ...words,
+        text: [species?.status === "confirmed" && species.value, words.text, clothing].filter(Boolean).join("; "),
+        wardrobe: fitting ? "fitting" : "character"
+      };
     }
     var HEADS = String.raw`(?<![\d.])(?<!\d\s*(?:[-–~]|to)\s*)(\d+(?:\.\d+)?)(?:\s+(\d)\/(\d))?[\s-]*`;
     var HEIGHT_COUNT = new RegExp(HEADS + String.raw`(?:heads?[\s-]+(?:tall|high)\b|head[\s-]heights?\b|등신|頭身)`, "gi");
@@ -94036,7 +94049,7 @@ var require_character_identity = __commonJS({
         return (Array.isArray(cast) ? cast : cast ? [cast] : []).some((c) => (typeof c === "string" ? c : c?.id) === id);
       });
     }
-    module.exports = { GROUPS, REQUIRED, identityErrors, identityCharacter, direction, panelPrompt, headsTall, headRatio, boardIdentityErrors, requiresSpeech, isVoiceOnly };
+    module.exports = { GROUPS, REQUIRED, identityErrors, identityCharacter, direction, panelPrompt, sheetPanelPrompt, headsTall, headRatio, boardIdentityErrors, requiresSpeech, isVoiceOnly };
   }
 });
 
@@ -94625,7 +94638,7 @@ var require_character_sheet = __commonJS({
     var path35 = __require("node:path");
     var { createHash: createHash29 } = __require("node:crypto");
     var { isDeepStrictEqual: isDeepStrictEqual2 } = __require("node:util");
-    var { identityCharacter, direction, panelPrompt, requiresSpeech, isVoiceOnly } = require_character_identity();
+    var { identityCharacter, direction, sheetPanelPrompt, requiresSpeech, isVoiceOnly } = require_character_identity();
     var { identityVoice, voiceErrors } = require_character_voice();
     function episodeVoiceOverride(win, tts) {
       const override2 = win?.PRODUCTION?.modelSettings?.overrides?.speech;
@@ -94665,7 +94678,7 @@ var require_character_sheet = __commonJS({
         const view = args[1] === "--panel" && ["face", "front", "back"].includes(args[2]) ? args[2] : void 0;
         if (args.length !== 1 && !view) throw new Error("Usage: character-sheet.js <identity.md> [--panel face|front|back]");
         if (view) {
-          const { text: text4, skipped } = panelPrompt(identityCharacter(fs25.readFileSync(args[0], "utf8")), view);
+          const { text: text4, skipped } = sheetPanelPrompt(identityCharacter(fs25.readFileSync(args[0], "utf8")), view);
           if (skipped.length) console.error(`Not English, left out: ${skipped.join(", ")}`);
           console.log(text4);
         } else console.log(JSON.stringify(handoff(args[0]), null, 2));
@@ -116529,6 +116542,7 @@ function nearestRatio(width, height) {
 var PANEL_VIEWS = { face: "face", front: "headless front body", back: "headless back body" };
 function msrPanelBinding(paths3, refs, compact5 = false) {
   const groups = /* @__PURE__ */ new Map();
+  const fitting = /* @__PURE__ */ new Set();
   paths3.forEach((file, i2) => {
     if (refs[i2].role === "background") return;
     let panels;
@@ -116538,9 +116552,12 @@ function msrPanelBinding(paths3, refs, compact5 = false) {
       return;
     }
     const view = Object.entries(panels).find(([, panel]) => panel.file === path20.basename(file))?.[0];
-    if (view && PANEL_VIEWS[view]) groups.set(path20.dirname(file), [...groups.get(path20.dirname(file)) ?? [], `Image ${i2 + 1} (${PANEL_VIEWS[view]})`]);
+    if (!view || !PANEL_VIEWS[view]) return;
+    const folder = path20.dirname(file);
+    groups.set(folder, [...groups.get(folder) ?? [], `Image ${i2 + 1} (${PANEL_VIEWS[view]})`]);
+    if (panels[view].wardrobe === "fitting") fitting.add(folder);
   });
-  return [...groups].filter(([, items]) => items.length > 1).map(([folder, items]) => compact5 ? `Images ${items.map((item) => item.replace(/Image (\d+) \(([^)]+)\)/, "$1($2)")).join(", ")}: ONE ${path20.basename(folder)}; head/hair only from face; physique/clothes only from body; ignore face-panel clothing.` : `${items.join(", ")} show one character, ${path20.basename(folder)}: render one complete character with the head and hair from the face and the body and outfit from the headless panels. Ignore clothing visible in the face panel; never duplicate a person for separate panels.`).join("\n");
+  return [...groups].filter(([, items]) => items.length > 1).map(([folder, items]) => compact5 ? `Images ${items.map((item) => item.replace(/Image (\d+) \(([^)]+)\)/, "$1($2)")).join(", ")}: ONE ${path20.basename(folder)}; head/hair only from face; ${fitting.has(folder) ? "physique from body, wardrobe from the scene" : "physique/clothes only from body"}; ignore face-panel clothing.` : `${items.join(", ")} show one character, ${path20.basename(folder)}: render one complete character with the head and hair from the face and ${fitting.has(folder) ? "physique from the body panels, dressed for the scene" : "the body and outfit from the headless panels"}. Ignore clothing visible in the face panel; never duplicate a person for separate panels.`).join("\n");
 }
 function characterKey(file) {
   try {
@@ -120422,7 +120439,7 @@ function characterRefs(boardDir, win, shotId, ids, use, warnings, concise = fals
     const view = ref.id.split("-").at(-1);
     const id = ids.find((id2) => ref.id === `${shotId}-${id2}-${view}`);
     if (concise) return ref;
-    const { text: detail, skipped } = identityCatalog().panelPrompt(castEntry(win, id)?.character, view);
+    const { text: detail, skipped } = identityCatalog().panelPrompt(castEntry(win, id)?.character, view, { includeOutfit: ref.wardrobe !== "fitting" });
     for (const field2 of skipped) warnings.push({ level: "warn", where: shotId, what: `${id}'s ${field2} is not English and stays out of the image prompt \u2014 write it in English on the character sheet` });
     return { ...ref, purpose: ref.purpose + (detail ? `: ${detail}` : "") };
   });
@@ -120493,7 +120510,12 @@ function shotImageSourceBasis(path35, id, request) {
     } : void 0
   };
   const style = loadFromHere2(join12(REFERENCES_DIR, "production-mode.js")).shotStyle(win, (win.SCENES ?? []).indexOf(shot));
-  const panels = request.canonicalPanels ? characterPanels().canonicalReferences(dirname6(scenesPath(path35)), id, contract().castOf(shot) ?? [], "image").map((ref) => ({ id: ref.id, path: resolve5(dirname6(scenesPath(path35)), ref.path) })) : void 0;
+  const boardDir = dirname6(scenesPath(path35));
+  const refsFor = (cast) => characterPanels().canonicalReferences(boardDir, id, cast, "image");
+  const panels = request.canonicalPanels ? [
+    ...refsFor(contract().castOf(shot) ?? []),
+    ...bystandersOf(shot).flatMap((actor) => refsFor([actor]).filter((ref) => ref.wardrobe === "fitting" && ref.id.endsWith("-front")))
+  ].map((ref) => ({ id: ref.id, path: resolve5(boardDir, ref.path), wardrobe: ref.wardrobe, defaultOutfit: ref.defaultOutfit })) : void 0;
   return createHash17("sha256").update(JSON.stringify({ shot, format: win.FORMAT, assets, style, panels })).digest("hex");
 }
 function shotImageRequest(args) {
@@ -120685,7 +120707,7 @@ function buildShotImageRequest(args) {
   }).prompt;
   const roles = ordered.map((ref, i2) => {
     const character = refs.find((r2) => r2.path === ref.path && (r2.role === "character" || r2.role === "bystander"));
-    const role = !character ? "" : character.id.endsWith("-face") ? " Use only the head and hair above the collar; ignore clothing in this panel." : /-(front|back)$/.test(character.id) ? " Use this panel for physique and all clothing, including collar, tie and sleeve state." : "";
+    const role = !character || character.wardrobe === "fitting" ? "" : character.id.endsWith("-face") ? " Use only the head and hair above the collar; ignore clothing in this panel." : /-(front|back)$/.test(character.id) ? " Match the build and costume details, including collar, tie and sleeve state, unless the scene changes the outfit." : "";
     const constraints = loadFromHere2(join12(REFERENCES_DIR, "render-routing.js")).referenceConstraints(ref);
     return `Image ${i2 + 1} shows ${ref.purpose}.${role} ${constraints}`;
   }).join(" ");
@@ -120701,6 +120723,15 @@ function buildShotImageRequest(args) {
   });
   const figures = [...cast, ...seen], bodied = figures.length > 0 && !["object", "detail"].includes(view?.subjectType ?? "") && !HEAD_ONLY_SIZES.includes(String(plan2.size ?? ""));
   const heads = bodied ? headRatioSentence(win, figures) : { text: "", missing: [] };
+  const fittingPanels = new Map(refs.filter((ref) => ref.wardrobe === "fitting").map((ref) => [ref.id, ref]));
+  const outfits = figures.flatMap((id) => {
+    const panel = fittingPanels.get(`${args.id}-${id}-front`) ?? fittingPanels.get(`${args.id}-${id}-back`);
+    if (!panel) return [];
+    const character = castEntry(win, id)?.character;
+    const outfit = character?.physical?.outfit;
+    const clothing = outfit ? outfit.status === "confirmed" ? outfit.value : void 0 : panel.defaultOutfit;
+    return clothing ? [`${id} normally wears ${clothing}. Follow any wardrobe change specified for this scene.`] : [];
+  });
   if (heads.missing.length) warnings.push({
     level: "warn",
     code: "head_count_missing",
@@ -120714,6 +120745,7 @@ function buildShotImageRequest(args) {
     lock2,
     heightSentence(win, figures),
     heads.text,
+    ...outfits,
     seen.length ? `Also in this frame, without a line: ${seen.join(" and ")}, ${ordered.some((ref) => ref.role === "bystander") ? "drawn from the reference images that name them" : "drawn as described below"} and placed as the description below says.` : "",
     extras ? `Unnamed people in the frame, drawn without a reference: ${extras.replace(/[.\s]+$/, "")}.` : "",
     view ? "Character panels identify the subject; include only the body regions named by the crop. A face reference does not require a face in the output." : "",
@@ -126149,12 +126181,13 @@ Do NOT use for voices, images or episode cast handoffs (character-sheet.js compi
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     description: `Make one panel of a shared character's sheet \u2014 the face close-up, the headless front or the headless back \u2014 from its identity.md, with no hand-written prompt.
 
-Use for a new character's panels, or a requested redo after its identity changed. The prompt is built from the sheet: the face takes physical.appearance; the front and back take height, weight, build, proportions and outfit with every clause naming the head left out, so every channel and storyboard draws the same body. The project style preset and the character-panels framing (1:1 face; 2:3 body at 85 % height, neutral grey, even light) are added. By default the face is drawn from text, the front is edited from the face panel and the back from the front panel alone, turned 180 degrees with front-only details ruled out; pass references to edit from other pictures (e.g. an approved full-body design). Runs image_plan \u2192 image_execute with the saved image model and the existing spending authorization, saves <id>-<view>-vN.png next to identity.md, records the slot in panels.json (framing not_reviewed) and refreshes the sheets. On the GenAI gateway's 800-character cap it drops the style sentence.
-Returns the file, the inputs in order, the prompt and warnings (a non-English physical field is left out and named; head_count_missing when physical.proportions holds no head count such as "7.5 heads tall", the one value that sizes the face panel's head against the headless body in a shot); a host selection returns the handoff instead of generating.
+Use for a new character's panels or a requested redo. The face uses physical.appearance. The body views use the sheet's height, weight, build and proportions. Use a fitted T-shirt and short shorts for those views when practical. Pass wardrobe:"character" for a design with integral clothing or a user-requested costume. physical.outfit supplies the usual scene wardrobe. The project style and studio framing are added (1:1 face, 2:3 body at 85 % height). The front uses the face panel as its reference. The back turns the front panel around 180 degrees and matches its clothing. Pass references to edit from other pictures. Runs image_plan \u2192 image_execute with the saved image model and spending authorization, saves <id>-<view>-vN.png next to identity.md, records the slot in panels.json and refreshes the sheets. The GenAI gateway reports a prompt above its 800-character cap before submission.
+Returns the file, ordered inputs, prompt and warnings, including head_count_missing when physical.proportions holds no head count such as "7.5 heads tall". A host selection returns the generation and registration instructions.
 Do NOT use it for scene images (shot_image) or text-bearing art. Refused (character_panel_missing) when a default reference panel does not exist yet, and (image_references_unsupported) when the saved model cannot take that many pictures \u2014 ask the user before changing models. A story-first board picks the new files up on its next story or shot write, which syncs SB_DOC.characters panels from the character's panels.json; an older board updates its SB_DOC.characters panels by hand.`,
     inputSchema: { type: "object", additionalProperties: false, required: ["identityPath", "view"], properties: {
       identityPath: { type: "string", description: "Absolute <channel>/assets/characters/<id>/identity.md" },
       view: { type: "string", enum: ["face", "front", "back"], description: "face: 1:1 head close-up \xB7 front / back: 2:3 headless body" },
+      wardrobe: { type: "string", enum: ["fitting", "character"], description: "Body views. fitting uses a fitted T-shirt and short shorts where practical. character uses the established design. A rear edit of the registered front inherits its choice." },
       references: { type: "array", maxItems: 4, items: { type: "string" }, description: "Pictures to edit from, in order (absolute or relative to the character folder); [] draws from text. Default: none for face, the face panel for front, the front panel for back" },
       negativePrompt: { type: "string", minLength: 1, maxLength: 1e3, description: "Extra things to keep out, added to the default (front/back: head, face, hair, ears, tusks, helmet; every view: text, watermark, collage), e.g. beard. Sent only to models that take one (astra-genai-native)." },
       reserveUsd: { type: "number", minimum: 0, description: "API reservation estimate, as in image_plan" }
@@ -138927,14 +138960,15 @@ var shared4 = (file) => load10(`../../skills/${file}`);
 var characterPanelSchema = external_exports.object({
   identityPath: external_exports.string().min(1).describe("<channel>/assets/characters/<id>/identity.md"),
   view: external_exports.enum(["face", "front", "back"]),
+  wardrobe: external_exports.enum(["fitting", "character"]).optional().describe("Body panels only. Use character for an integral or explicitly requested costume. The back matches its registered front by default."),
   references: external_exports.array(external_exports.string().min(1)).max(4).optional().describe("Pictures to edit from, in order; default: none for face, the face panel for front, the front panel for back"),
   negativePrompt: external_exports.string().trim().min(1).max(1e3).optional().describe("Extra things to keep out, added to the view's default negative prompt, e.g. beard"),
   reserveUsd: external_exports.number().finite().nonnegative().optional()
 }).strict();
 var FRAMING = {
-  face: { size: [1024, 1024], text: "Head-only identity portrait, front facing, neutral expression, complete hair, ears and chin visible, head filling 70 percent of image height with plain background around it. No shoulders, torso or clothing: outfit comes from the body panels." },
-  front: { size: [1024, 1536], text: "Headless front costume mannequin of this character: nothing above the neck, from the neck and shoulders down to the shoes, neutral stance, arms relaxed, the subject filling 85 percent of the image height." },
-  back: { size: [1024, 1536], text: "Turn this headless costume mannequin around 180 degrees so its back faces the camera, keeping the same costume. Show it from directly behind, from the neck down to the heels: the back of the garments, straps and belt and the heels of the footwear; anything worn on one side now sits on the other side of the image. Nothing above the neck. The subject fills 85 percent of the image height." }
+  face: { size: [1024, 1024], text: "Head-only identity portrait, front facing, neutral expression, complete hair, ears and chin visible, head filling 70 percent of image height with plain background around it. No shoulders, torso or clothing." },
+  front: { size: [1024, 1536], text: "Headless front mannequin, neck to feet, square to camera. Neutral stance, arms slightly clear of the waist. Subject fills 85 percent of frame height." },
+  back: { size: [1024, 1536], text: "Turn this headless mannequin around 180 degrees. Direct rear view from neck to heels, same build, clothing, stance and scale as the front. Asymmetric details switch sides in the image. Subject fills 85 percent of frame height." }
 };
 var BODY = "head, face, hair, ears, tusks, helmet, text, watermark, collage, multiple views, border";
 var NEGATIVE = {
@@ -138948,7 +138982,7 @@ function characterPanelRequest(raw) {
   const identityPath = path34.resolve(args.identityPath), folder = path34.dirname(identityPath), id = path34.basename(folder);
   if (path34.basename(identityPath) !== "identity.md" || path34.basename(path34.dirname(folder)) !== "characters" || path34.basename(path34.dirname(path34.dirname(folder))) !== "assets")
     throw new Error("character_path_invalid: identityPath must be <channel>/assets/characters/<id>/identity.md");
-  const { identityCharacter, panelPrompt, headsTall } = shared4("_shared/character-identity.js");
+  const { identityCharacter, sheetPanelPrompt, headsTall } = shared4("_shared/character-identity.js");
   const character = identityCharacter(readFileSync40(identityPath, "utf8"), { ready: false });
   const panelsFile = path34.join(folder, "panels.json");
   const panels = (existsSync40(panelsFile) ? JSON.parse(readFileSync40(panelsFile, "utf8")).panels : void 0) ?? {};
@@ -138965,11 +138999,12 @@ function characterPanelRequest(raw) {
   const preset = shared4("_shared/model-settings.js").readSettings(workspace).config?.style?.preset;
   const { STYLES } = shared4("storyboard/references/production-mode.js");
   const style = preset && STYLES[preset] ? STYLES[preset].prompt : "";
-  const words = panelPrompt(character, args.view);
+  const defaultWardrobe = args.view === "back" && panels.front?.file ? panels.front.wardrobe ?? "character" : "fitting";
+  const words = sheetPanelPrompt(character, args.view, args.wardrobe ?? defaultWardrobe);
   const compose = () => [
     references.length && args.view !== "back" ? "Keep this exact character from the reference images." : "",
     FRAMING[args.view].text,
-    `Character: ${words.text}.`,
+    `Character: ${words.text.replace(/[.]$/, "")}.`,
     style,
     "Soft even studio lighting, plain neutral grey background. One view only. No text, watermark, collage or border."
   ].filter(Boolean).join(" ");
@@ -138986,11 +139021,12 @@ function characterPanelRequest(raw) {
     ...headsTall(character) ? [] : [`head_count_missing: the sheet has no head count, so nothing sizes this character's head against its body when a shot joins the face panel to the headless panels \u2014 write it in physical.proportions with character_manage, e.g. "7.5 heads tall"`],
     ...words.expression.length ? [`the sheet's appearance names an expression (${words.expression.join(" ")}) \u2014 it stays out of this neutral face panel; set expressions per shot with shot_characters`] : []
   ];
-  return { workspace, folder, id, view: args.view, panelsFile, prompt, negativePrompt: call2.negativeSent ? negativePrompt : void 0, warnings, ...call2 };
+  const panel = { file: path34.basename(call2.file), purpose: "character_reference", view: args.view, ...words.wardrobe ? { wardrobe: words.wardrobe } : {}, framing: { status: "not_reviewed" } };
+  return { workspace, folder, id, view: args.view, panel, panelsFile, prompt, negativePrompt: call2.negativeSent ? negativePrompt : void 0, warnings, ...call2 };
 }
 function recordCharacterPanel(request) {
   const doc = existsSync40(request.panelsFile) ? JSON.parse(readFileSync40(request.panelsFile, "utf8")) : { schemaVersion: 1, panels: {} };
-  doc.panels = { ...doc.panels, [request.view]: { file: path34.basename(request.file), purpose: "character_reference", view: request.view, framing: { status: "not_reviewed" } } };
+  doc.panels = { ...doc.panels, [request.view]: request.panel };
   writeFileSync31(request.panelsFile, JSON.stringify(doc, null, 2) + "\n");
   try {
     shared4("channel/references/review-library.js").exportChannel(path34.resolve(request.folder, "../../.."));
@@ -140622,7 +140658,7 @@ ROUTES.character_panel = async (args) => {
     ...request.negativePrompt ? ["", "Negative prompt:", request.negativePrompt] : [],
     ...request.warnings.length ? ["", "Warnings:", ...request.warnings.map((w) => "  " + w)] : []
   ];
-  if (plan2.execution === "host_handoff") lines.push("", "host_handoff: generate this picture with the selected host image tool from the inputs above, in order, save it to the panel path, then record it in panels.json.");
+  if (plan2.execution === "host_handoff") lines.push("", `host_handoff: generate this picture with the selected host image tool from the inputs above, in order, save it to the panel path, then set panels.${request.view} in panels.json to ${JSON.stringify(request.panel)}.`);
   return text3(lines.join("\n"));
 };
 ROUTES.shot_image = async (args) => {

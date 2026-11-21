@@ -12,10 +12,14 @@ merely to make a diagnostic disappear.
 | back | Same 2:3 canvas as front | Headless rear mannequin, neck/shoulders to shoes; same outfit and scale; visible subject height 80–90% |
 | face | 1:1 square, e.g. 1024×1024 | Neutral forward face; complete head including hair; head height 60–75% |
 
-The baseline has one visible face, in `face.png` only. Front/back show the outfit
-and body proportions without a head or facial features. Use a headless mannequin
-for body landmarks; an outfit-only ghost mannequin may hide the body entirely while
-preserving the worn silhouette. Do not add a mannequin head or a blurred second face.
+The baseline shows the face in `face.png`. For the front and back, prefer a plain
+opaque fitted T-shirt and short mid-thigh shorts. Leave a little space between the
+arms and waist so the shoulders, waist, hips and leg lengths are easy to compare.
+Use the same clothing, build and scale from behind. Use `wardrobe:"character"` on
+the front if the design requires its costume or the user requests one for the sheet.
+The back inherits the registered front's choice. A character whose `physical.outfit`
+is `not_applicable` keeps its natural surface and markings. In a scene, use
+`physical.outfit` or the wardrobe specified for that scene.
 For unclothed stylized characters, preserve the headless torso, limbs, markings and
 tail; the face panel supplies the head design. These are reference assets, not scene
 anatomy: generated scenes must restore the complete character from the face reference.
@@ -56,11 +60,16 @@ Example for one available slot (add the others when available):
       "file": "body.png",
       "purpose": "character_reference",
       "view": "front",
+      "wardrobe": "fitting",
       "framing": { "status": "not_reviewed" }
     }
   }
 }
 ```
+
+The `wardrobe` entry describes a body panel. A registered `fitting` panel supplies
+the physique. A `character` panel or an older panel without this entry also
+supplies the costume. For host generation, copy the registration in the tool's handoff.
 
 Use `purpose: "episode_scene"` for a known scene image; the shared renderer reports
 the mismatch and does not assign it to the slot. Never relabel a scene merely to

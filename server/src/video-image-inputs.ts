@@ -17,7 +17,7 @@ const imageRouting = () => load(fileURLToPath(new URL('../../skills/storyboard/r
   imageReferences(scene: unknown): ImageReference[];
   referenceConstraints(ref: ImageReference): string;
 };
-interface ImageReference { id: string; path: string; role: string; use: string; purpose: string; preserve?: string[]; avoid?: string[] }
+interface ImageReference { id: string; path: string; role: string; use: string; purpose: string; wardrobe?: 'fitting'; defaultOutfit?: string; preserve?: string[]; avoid?: string[] }
 export const characterPanels = () => load(fileURLToPath(new URL('../../skills/channel/references/character-panels.js', import.meta.url))) as {
   canonicalReferences(boardDir: string, shotId: string, ids: string[], use: string, options?: { combined?: boolean }): ImageReference[];
   sheetPanels(boardDir: string, ids: string[]): Map<string, Record<string, string>>;
@@ -51,20 +51,24 @@ const PANEL_VIEWS: Record<string, string> = { face: 'face', front: 'headless fro
 /**
  * An MSR slot is an input source, not a declared subject, so name the character-sheet panels
  * (panels.json) that show one character: the face close-up carries the head, the headless panels
- * the body and outfit.
+ * the physique. Fitting panels leave scene clothing to the opening image.
  */
 function msrPanelBinding(paths: string[], refs: ImageReference[], compact = false): string {
   const groups = new Map<string, string[]>();
+  const fitting = new Set<string>();
   paths.forEach((file, i) => {
     if (refs[i].role === 'background') return;
-    let panels: Record<string, { file?: string }>;
+    let panels: Record<string, { file?: string; wardrobe?: string }>;
     try { panels = JSON.parse(readFileSync(path.join(path.dirname(file), 'panels.json'), 'utf8')).panels ?? {}; } catch { return; }
     const view = Object.entries(panels).find(([, panel]) => panel.file === path.basename(file))?.[0];
-    if (view && PANEL_VIEWS[view]) groups.set(path.dirname(file), [...(groups.get(path.dirname(file)) ?? []), `Image ${i + 1} (${PANEL_VIEWS[view]})`]);
+    if (!view || !PANEL_VIEWS[view]) return;
+    const folder = path.dirname(file);
+    groups.set(folder, [...(groups.get(folder) ?? []), `Image ${i + 1} (${PANEL_VIEWS[view]})`]);
+    if (panels[view].wardrobe === 'fitting') fitting.add(folder);
   });
   return [...groups].filter(([, items]) => items.length > 1).map(([folder, items]) => compact
-    ? `Images ${items.map(item => item.replace(/Image (\d+) \(([^)]+)\)/, '$1($2)')).join(', ')}: ONE ${path.basename(folder)}; head/hair only from face; physique/clothes only from body; ignore face-panel clothing.`
-    : `${items.join(', ')} show one character, ${path.basename(folder)}: render one complete character with the head and hair from the face and the body and outfit from the headless panels. Ignore clothing visible in the face panel; never duplicate a person for separate panels.`).join('\n');
+    ? `Images ${items.map(item => item.replace(/Image (\d+) \(([^)]+)\)/, '$1($2)')).join(', ')}: ONE ${path.basename(folder)}; head/hair only from face; ${fitting.has(folder) ? 'physique from body, wardrobe from the scene' : 'physique/clothes only from body'}; ignore face-panel clothing.`
+    : `${items.join(', ')} show one character, ${path.basename(folder)}: render one complete character with the head and hair from the face and ${fitting.has(folder) ? 'physique from the body panels, dressed for the scene' : 'the body and outfit from the headless panels'}. Ignore clothing visible in the face panel; never duplicate a person for separate panels.`).join('\n');
 }
 /** A character-sheet panel counts once per sheet folder; any other character image counts alone. */
 function characterKey(file: string): string {

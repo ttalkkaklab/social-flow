@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { isDeepStrictEqual } = require('node:util');
-const { identityCharacter, direction, panelPrompt, requiresSpeech, isVoiceOnly } = require('../../_shared/character-identity.js');
+const { identityCharacter, direction, sheetPanelPrompt, requiresSpeech, isVoiceOnly } = require('../../_shared/character-identity.js');
 const { identityVoice, voiceErrors } = require('../../_shared/character-voice.js');
 
 function episodeVoiceOverride(win, tts) {
@@ -60,7 +60,7 @@ if (require.main === module) {
     const view = args[1] === '--panel' && ['face', 'front', 'back'].includes(args[2]) ? args[2] : undefined;
     if (args.length !== 1 && !view) throw new Error('Usage: character-sheet.js <identity.md> [--panel face|front|back]');
     if (view) {
-      const { text, skipped } = panelPrompt(identityCharacter(fs.readFileSync(args[0], 'utf8')), view);
+      const { text, skipped } = sheetPanelPrompt(identityCharacter(fs.readFileSync(args[0], 'utf8')), view);
       if (skipped.length) console.error(`Not English, left out: ${skipped.join(', ')}`);
       console.log(text);
     } else console.log(JSON.stringify(handoff(args[0]), null, 2));

@@ -249,6 +249,14 @@ sheet's `appearance` describes structure: `character_panel` leaves smile, grin a
 out of the neutral face panel and reports them. The moment-before rule is about movement; the
 opening face already shows the shot's emotion. See `skills/storyboard/SKILL.md` §3.
 
+## Character sheet clothing (user directive, 2026-11-21)
+
+For new headless front and rear panels, prefer a fitted T-shirt and short mid-thigh
+shorts so the shoulders, waist and leg proportions read in both views. Match the
+front when drawing the back. Keep the character's own design when clothing is integral,
+inapplicable or explicitly requested for the sheet. Fitting clothes belong to the
+sheet. In a shot, use the character's established outfit or the scene's wardrobe change.
+
 ## Props from the real thing (user directive, 2026-11-21)
 
 Documents were drawn from imagination: a handwritten Korean will went onto its prop sheet as

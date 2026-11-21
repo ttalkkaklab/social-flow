@@ -2279,7 +2279,7 @@ function characterRefs(boardDir, win, shotId, ids, use, warnings, concise = fals
         const id = ids.find(id => ref.id === `${shotId}-${id}-${view}`);
         if (concise)
             return ref;
-        const { text: detail, skipped } = identityCatalog().panelPrompt(castEntry(win, id)?.character, view);
+        const { text: detail, skipped } = identityCatalog().panelPrompt(castEntry(win, id)?.character, view, { includeOutfit: ref.wardrobe !== 'fitting' });
         for (const field of skipped)
             warnings.push({ level: 'warn', where: shotId, what: `${id}'s ${field} is not English and stays out of the image prompt — write it in English on the character sheet` });
         return { ...ref, purpose: ref.purpose + (detail ? `: ${detail}` : '') };
@@ -2361,8 +2361,11 @@ function shotImageSourceBasis(path, id, request) {
             initial: rows(ledger.initial).filter(entry => request.props.includes(String(entry.propId))),
             events: rows(ledger.events).filter(entry => request.props.includes(String(entry.propId))) } : undefined };
     const style = loadFromHere(join(REFERENCES_DIR, 'production-mode.js')).shotStyle(win, (win.SCENES ?? []).indexOf(shot));
-    const panels = request.canonicalPanels ? characterPanels().canonicalReferences(dirname(scenesPath(path)), id, contract().castOf(shot) ?? [], 'image')
-        .map(ref => ({ id: ref.id, path: resolve(dirname(scenesPath(path)), ref.path) })) : undefined;
+    const boardDir = dirname(scenesPath(path));
+    const refsFor = (cast) => characterPanels().canonicalReferences(boardDir, id, cast, 'image');
+    const panels = request.canonicalPanels ? [...refsFor(contract().castOf(shot) ?? []),
+        ...bystandersOf(shot).flatMap(actor => refsFor([actor]).filter(ref => ref.wardrobe === 'fitting' && ref.id.endsWith('-front')))]
+        .map(ref => ({ id: ref.id, path: resolve(boardDir, ref.path), wardrobe: ref.wardrobe, defaultOutfit: ref.defaultOutfit })) : undefined;
     return createHash('sha256').update(JSON.stringify({ shot, format: win.FORMAT, assets, style, panels })).digest('hex');
 }
 export function shotImageRequest(args) {
@@ -2547,9 +2550,9 @@ function buildShotImageRequest(args) {
         ...(set ? { location: { prompt: args.frame === 'end' ? set.endPrompt : set.prompt, paths: [] } } : {}) }).prompt;
     const roles = ordered.map((ref, i) => {
         const character = refs.find(r => r.path === ref.path && (r.role === 'character' || r.role === 'bystander'));
-        const role = !character ? '' : character.id.endsWith('-face')
+        const role = !character || character.wardrobe === 'fitting' ? '' : character.id.endsWith('-face')
             ? ' Use only the head and hair above the collar; ignore clothing in this panel.'
-            : /-(front|back)$/.test(character.id) ? ' Use this panel for physique and all clothing, including collar, tie and sleeve state.' : '';
+            : /-(front|back)$/.test(character.id) ? ' Match the build and costume details, including collar, tie and sleeve state, unless the scene changes the outfit.' : '';
         const constraints = loadFromHere(join(REFERENCES_DIR, 'render-routing.js')).referenceConstraints(ref);
         return `Image ${i + 1} shows ${ref.purpose}.${role} ${constraints}`;
     }).join(' ');
@@ -2564,6 +2567,16 @@ function buildShotImageRequest(args) {
     // Head against body, wherever the crop shows a figure below the head (the Qwen path drops every other sheet word).
     const figures = [...cast, ...seen], bodied = figures.length > 0 && !['object', 'detail'].includes(view?.subjectType ?? '') && !HEAD_ONLY_SIZES.includes(String(plan.size ?? ''));
     const heads = bodied ? headRatioSentence(win, figures) : { text: '', missing: [] };
+    const fittingPanels = new Map(refs.filter(ref => ref.wardrobe === 'fitting').map(ref => [ref.id, ref]));
+    const outfits = figures.flatMap(id => {
+        const panel = fittingPanels.get(`${args.id}-${id}-front`) ?? fittingPanels.get(`${args.id}-${id}-back`);
+        if (!panel)
+            return [];
+        const character = castEntry(win, id)?.character;
+        const outfit = character?.physical?.outfit;
+        const clothing = outfit ? (outfit.status === 'confirmed' ? outfit.value : undefined) : panel.defaultOutfit;
+        return clothing ? [`${id} normally wears ${clothing}. Follow any wardrobe change specified for this scene.`] : [];
+    });
     if (heads.missing.length)
         warnings.push({ level: 'warn', code: 'head_count_missing', where: args.id,
             what: `head_count_missing: ${heads.missing.join(', ')} ${heads.missing.length > 1 ? 'have' : 'has'} no head count on the sheet, so nothing sizes the face panel's head against the headless body — write it in physical.proportions with character_manage, e.g. "7.5 heads tall"` });
@@ -2575,7 +2588,7 @@ function buildShotImageRequest(args) {
         : `Keep Image 1's camera position, ${lens}${dutch ? '' : ', horizon'} and world layout, and keep every object${set.blocked ? ' and figure' : ''} at its world position in Image 1.${set.blocked ? ' Its coloured figures mark position, facing and height only; their head size and build are placeholders.' : ''} The authored composition below controls the final crop, headroom and subject screen placement. Paint its plain unpainted surfaces as the real place, and continue the place into any flat dark area past the set's edge.`
             + (dutch ? ' Image 1 is level; tilt the whole picture to the dutch angle described below.' : '')
             + (look.some((ref) => ordered.includes(ref)) ? ` Take only materials, colours and light from Image ${at(look[0])}.` : '');
-    const prompt = [args.frame === 'start' && view ? `Create one opening image with this required crop: ${view.crop}.` : ordered.length ? 'Compose one picture from these images.' : '', roles, lock, heightSentence(win, figures), heads.text,
+    const prompt = [args.frame === 'start' && view ? `Create one opening image with this required crop: ${view.crop}.` : ordered.length ? 'Compose one picture from these images.' : '', roles, lock, heightSentence(win, figures), heads.text, ...outfits,
         seen.length ? `Also in this frame, without a line: ${seen.join(' and ')}, ${ordered.some((ref) => ref.role === 'bystander') ? 'drawn from the reference images that name them' : 'drawn as described below'} and placed as the description below says.` : '',
         extras ? `Unnamed people in the frame, drawn without a reference: ${extras.replace(/[.\s]+$/, '')}.` : '',
         view ? 'Character panels identify the subject; include only the body regions named by the crop. A face reference does not require a face in the output.' : '',

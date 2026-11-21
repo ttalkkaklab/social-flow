@@ -493,7 +493,7 @@ hand over the two or three the shot actually needs:
 data/<channel>/assets/characters/<id>/
   identity.md   # the canonical description — look, marks, expression, voice
   face.png      # face close-up — neutral, minimal shoulders, plain background. The headshot the vendor asks for
-  body.png      # the headless front panel (panels.json slot "front"): build, clothes and shoes
+  body.png      # the headless front panel (panels.json slot "front") shows the build
   costume.png   # optional wardrobe variant; baseline front/back already omit the head
   back.png      # matching headless rear mannequin (slot "back") — required for every new reference set
   panels.json   # registers the face, front and back slots and their files (character-panels.md)
@@ -503,8 +503,8 @@ data/<channel>/assets/characters/<id>/
 **Reference set: the registered face, front and back panels, in that order.** One character
 sends all three; two characters send each face, then each front (`character-panels.js`
 `canonicalReferences`, the same set on the image and video lanes). The face supplies the complete
-head; the headless front and back supply wardrobe and build, and the scene depicts a complete
-character. A missing panel is reported (`character_panel_missing`), never replaced by a body-only
+head. The headless panels supply the build. Match the wardrobe in the opening
+picture, especially when the sheet uses fitting clothes. A missing panel is reported (`character_panel_missing`), never replaced by a body-only
 picture.
 Keep body, back and face reference images locally. All three must be stored before
 a new character reference set is complete; optional extra images serve specific poses/details. Never build a combined sheet out of the panels — the moment two

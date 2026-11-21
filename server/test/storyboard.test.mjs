@@ -1258,7 +1258,11 @@ describe('images and the video prompt follow the icon attributes', () => {
     const { root, dir } = pictureBoard();
     icons(dir);
     const board = readBoard(dir).win;
-    board.SB_DOC.characters[0].character = { physical: { appearance: { status: 'confirmed', value: 'distinctive amber eyes' } } };
+    board.SB_DOC.characters[0].character = { physical: { appearance: { status: 'confirmed', value: 'distinctive amber eyes' }, outfit: { status: 'confirmed', value: 'a long wool coat' } } };
+    const panels = join(root, 'data/c/assets/characters/mina/panels.json');
+    const manifest = JSON.parse(readFileSync(panels));
+    for (const view of ['front', 'back']) manifest.panels[view].wardrobe = 'fitting';
+    writeFileSync(panels, JSON.stringify(manifest));
     writeFileSync(join(dir, 'scenes.js'), serializeBoard(board));
     const normal = shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits.' });
     assert.match(normal.prompt, /distinctive amber eyes/);
@@ -1270,9 +1274,22 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.match(qwen.prompt, /mina's face and hair/);
     assert.ok(qwen.warnings.some(w => w.code === 'head_count_missing'), 'a sheet without a head count is reported, never refused');
     assert.deepEqual(qwen.inputs, normal.inputs);
+    for (const request of [normal, qwen]) {
+      assert.match(request.prompt, /mina normally wears a long wool coat/);
+      assert.match(request.prompt, /Ignore the fitting clothes/);
+      assert.doesNotMatch(request.prompt, /including collar, tie and sleeve state/);
+    }
     const wire = buildNativeImageBody({ ...qwen.args, model: 'qwen-image-fast' }, true);
     assert.equal(wire.prompt, qwen.prompt);
     assert.equal(wire.size, '864x1536');
+    // A sheet can be newer than the board's cast snapshot.
+    writeFileSync(join(root, 'data/c/assets/characters/mina/identity.md'), readFileSync(new URL('../../skills/channel/references/character-identity-example.md', import.meta.url)));
+    delete board.SB_DOC.characters[0].character;
+    writeFileSync(join(dir, 'scenes.js'), serializeBoard(board));
+    const olderBoard = shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits.' });
+    const sheetOutfit = olderBoard.refs.find(r => r.wardrobe === 'fitting').defaultOutfit;
+    assert.ok(sheetOutfit);
+    assert.ok(olderBoard.prompt.includes('mina normally wears ' + sheetOutfit));
   });
   it('sizes the head against the body from the sheet head count, on the Qwen route too, wherever the crop shows a body', () => {
     const { root, dir } = pictureBoard();
