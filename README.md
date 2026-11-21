@@ -86,6 +86,11 @@ requests as prose and carries costly choices, secrets and their consequences int
 and shots. Research inspiration stays distinct from documented history; search volume is
 not a quality score. SerpApi setup verifies the MCP process with an actual fresh search.
 
+[Prop research](skills/storyboard/references/prop-research.md) precedes every prop's
+description and picture: the author looks up the real document or object, saves and views
+pictures of actual examples, records `research` on the prop sheet and draws the prop from
+them. Board writes, `shot_image` and the review page report a prop drawn from imagination.
+
 The [filmmaking guide](docs/guides/ai-film-four-elements/index.html) explains character references, camera direction, framing and shot timing. `storyboard_read` exposes the shared 45-entry technique catalogue; `shot.techniques` stores stable IDs with shot-specific reasons. The offline storyboard exports the same catalogue, with a distinct pictogram and explanation for every entry. Camera instructions reach the generic, speech-planning and ASTRA prompt paths. See [technique selection](skills/storyboard/references/film-techniques.md).
 
 Character video requests now compile [voice continuity](skills/produce/references/voice-continuity.md)

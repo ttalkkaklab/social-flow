@@ -249,6 +249,24 @@ sheet's `appearance` describes structure: `character_panel` leaves smile, grin a
 out of the neutral face panel and reports them. The moment-before rule is about movement; the
 opening face already shows the shot's emotion. See `skills/storyboard/SKILL.md` §3.
 
+## Props from the real thing (user directive, 2026-11-21)
+
+Documents were drawn from imagination: a handwritten Korean will went onto its prop sheet as
+"one off-white signed sheet, keep writing unreadable" and an exam result as a generic
+certificate, and the user asked for research prop by prop, twice in three days. Nothing on the
+prop path asked for it. So before a prop is described or drawn, the author looks up the real
+thing: the rule or issuer's form that makes it genuine, and pictures of actual examples, saved
+under `storyboard/images/research/<prop id>/` and viewed. `SB_DOC.props[].research` records
+`{sources:[{url,title,image}], observed}` or `"none"` for a prop with nothing real to look up;
+the description is written from `observed`, with the words the prop displays inside quotation
+marks, and the prop's own picture is made from the saved real picture with the story's
+particulars. Real logos, official seals and personal data stay out unless the user asks for that
+real one. Every board write prints the props with no decision and those looked up without a
+saved picture, `shot_image` warns `prop_research_missing`, and the review page shows the observed
+facts, sources and real pictures on each prop card. Each of these reports; none refuses, and
+existing prop pictures are not regenerated for this alone. Places and wardrobe deserve the same
+look-up and have no report yet. Follow `skills/storyboard/references/prop-research.md`.
+
 ## Head against body (user directive, 2026-11-21)
 
 Nothing on a character sheet sized the head against the body: the face panel is an enlarged

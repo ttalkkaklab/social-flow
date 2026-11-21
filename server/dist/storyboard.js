@@ -1216,7 +1216,7 @@ export function applyStoryboard(args, opts = {}) {
     const result = {
         file, written: false, created: !exists, approvalDropped: header.some((h) => /^\/\/\s*approved:/.test(h)),
         shots: (next.SCENES ?? []).length, scenes: st ? st.scenes.length : 0, sequences: st ? st.sequences.length : 0,
-        ...audienceResult, synced, findings, board: [digest, firstLine, opening, () => cliches().digest(next), () => audienceSound().spottingDigest(next)]
+        ...audienceResult, synced, findings, board: [digest, firstLine, opening, () => cliches().digest(next), () => audienceSound().spottingDigest(next), () => propContinuity().researchDigest(next)]
             .flatMap((read) => { try {
             return read();
         }
@@ -2317,7 +2317,7 @@ function propRefs(win, index, shotId, ids, frame, warnings) {
         const place = english('location', state?.location), cond = english('condition', state?.condition), pos = english('position', snap.position);
         const detail = [english('description', snap.description), holder, place && `at ${place}`, cond && `condition ${cond}`, pos && `screen position ${pos}`].filter(Boolean).join('; ');
         if (skipped.length)
-            warn(`the ${id} prop's ${skipped.join(', ')} is not English and stays out of the image prompt — write it in English on the prop sheet`);
+            warn(`the ${id} prop's ${skipped.join(', ')} is not English and stays out of the image prompt — write it in English on the prop sheet, with the words the prop displays inside quotation marks`);
         const purpose = `the ${id} prop` + (detail ? `: ${detail}` : '');
         if (file)
             refs.push({ id: `${shotId}-prop-${id}`, path: file, role: 'prop', use: 'image', purpose });
@@ -2326,6 +2326,10 @@ function propRefs(win, index, shotId, ids, frame, warnings) {
             unseen.push(`Also show ${purpose}.`);
         }
     }
+    // A prop drawn from imagination: nobody recorded what the real thing looks like (prop-research.md). Reported, never refused.
+    const unresearched = propContinuity().research(win).undecided.filter((id) => ids.includes(id));
+    if (unresearched.length)
+        warn(`prop_research_missing: ${unresearched.join(', ')} ${unresearched.length > 1 ? 'go' : 'goes'} into this frame with no look-up of the real thing recorded — research it and record research {sources, observed} on the prop sheet, or research:"none" (prop-research.md)`);
     return { refs, unseen };
 }
 function docEntry(win, kind, id) {
