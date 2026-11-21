@@ -1,7 +1,8 @@
+import { desktopGatewayKey } from './astra-genai-client.js';
 import { openingPrompt, sceneVideoDirectionSchema } from './msr-opening.js';
 import { buildFasth3Body, fasth3OmniSchema } from './fasth3-omni.js';
 import { localVideoStrategy } from './local-video-models.js';
-import { desktopVideoStatus } from './astra-genai-desktop.js';
+import { desktopAudioWindow, desktopVideoStatus } from './astra-genai-desktop.js';
 import * as fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
@@ -14,7 +15,7 @@ import { resolveToolGate } from './tool-gate.js';
 import { framesForSeconds } from './astra-video-client.js';
 import { assessVideoDuration, DURATION_TOOLS, resolveVideoDuration } from './video-duration.js';
 import { VIDEO_ADAPTERS, VENDOR_REFERENCE_TOOLS, parseVideoArgs, videoPromptLimit } from './video-registry.js';
-import { buildLtxApiBody, ltxApiImg2VideoSchema, ltxApiAudio2VideoSchema } from './ltx-api-video.js';
+import { ltxApiAudioSeconds, buildLtxApiBody, ltxApiImg2VideoSchema, ltxApiAudio2VideoSchema } from './ltx-api-video.js';
 import { buildMinimaxBody, minimaxImg2VideoSchema, minimaxReferenceSchema } from './minimax-video.js';
 import { checkHeygenInputs, heygenImg2VideoSchema, heygenReferenceSchema } from './heygen-video.js';
 import { SEEDANCE_MODEL_SPECS } from './seedance-client.js';
@@ -234,8 +235,9 @@ export function checkVideoEnvironment(tool) {
         throw new Error('video_tool_disabled: ' + gate.reason);
     const engine = VIDEO_ADAPTERS[tool]?.engine;
     const ready = engine === 'seedance' ? Boolean(config.arkApiKey) : engine === 'astra' ? Boolean(config.astraVideoApiKey) :
-        ['astra-genai', 'astra-genai-desktop'].includes(engine) ? Boolean(config.astraGenaiApiKey) : engine === 'ltx-api' ? Boolean(config.ltxApiKey) :
-            engine === 'minimax' ? Boolean(config.minimaxApiKey) : engine === 'heygen' ? Boolean(config.heygenApiKey) : engine === 'mlx' && mlxServeConfigured();
+        engine === 'astra-genai-desktop' ? Boolean(desktopGatewayKey()) :
+            engine === 'astra-genai' ? Boolean(config.astraGenaiApiKey) : engine === 'ltx-api' ? Boolean(config.ltxApiKey) :
+                engine === 'minimax' ? Boolean(config.minimaxApiKey) : engine === 'heygen' ? Boolean(config.heygenApiKey) : engine === 'mlx' && mlxServeConfigured();
     if (!ready)
         throw new Error('video_provider_unconfigured: ' + engine);
 }
@@ -401,6 +403,20 @@ export function planVideo(raw) {
     const args = parseVideoArgs(tool, voice.args);
     if (Array.isArray(args.openingPositions))
         args.prompt = openingPrompt(String(args.prompt), args.openingPositions);
+    if (VIDEO_ADAPTERS[tool].voice === 'supplied' && typeof args.audioPath === 'string' && durationPlan.requiredSeconds !== undefined) {
+        const sourceSeconds = ltxApiAudioSeconds(path.resolve(context.episode, args.audioPath));
+        const fps = Number(args.fps ?? args.frameRate ?? 24);
+        let playable = sourceSeconds;
+        if (tool === 'astra_audio2video') {
+            const window = Math.min(sourceSeconds - Number(args.audioStartTime ?? 0), Number(args.audioMaxDuration ?? Infinity));
+            playable = Math.min(window, args.numFrames === undefined ? (8 * Math.floor((window * fps - 1) / 8) + 1) / fps : Number(args.numFrames) / fps);
+        }
+        else if (tool === 'astra_genai_desktop_audio2video') {
+            playable = desktopAudioWindow(args, sourceSeconds).playbackSeconds;
+        }
+        if (playable + 0.001 < durationPlan.requiredSeconds)
+            throw new Error(`video_duration_short: ${context.shotId} needs ${durationPlan.requiredSeconds}s but its supplied audio covers ${playable.toFixed(3)}s of video`);
+    }
     if (durationPlan.status === 'fits') {
         const fps = durationPlan.limits?.frameRate ?? 1;
         const frames = typeof args.numFrames === 'number' ? args.numFrames : typeof args.duration === 'number' && durationPlan.limits?.frameRate

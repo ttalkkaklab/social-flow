@@ -48,8 +48,13 @@ export const ltxApiImg2VideoSchema = z.object({ ...common,
     ctx.addIssue({ code: 'custom', path: ['durationSeconds'], message: `${v.model} at ${v.resolution}/${v.fps} fps takes ${ltxApiSeconds(v.model, v.resolution, v.fps).join(', ')} seconds` });
 });
 export const ltxApiAudio2VideoSchema = z.object({ ...common,
+  sourceImagePath: common.sourceImagePath.optional(),
+  prompt: common.prompt.default(''),
   audioPath: z.string().min(1).describe('The composed pinned-voice track; its length sets the clip length (2–10 s, Fast at 720p/1080p up to 20 s).'),
-}).strict();
+}).strict().superRefine((args, ctx) => {
+  if (!args.sourceImagePath && (!args.prompt.trim() || args.lastImagePath))
+    ctx.addIssue({ code: 'custom', path: ['sourceImagePath'], message: 'A first image is required with a last image or an empty prompt' });
+});
 export type LtxApiImg2VideoRequest = z.infer<typeof ltxApiImg2VideoSchema>;
 export type LtxApiAudio2VideoRequest = z.infer<typeof ltxApiAudio2VideoSchema>;
 
@@ -63,7 +68,7 @@ export function ltxApiAudioSeconds(file: string): number {
 export function buildLtxApiBody(request: LtxApiImg2VideoRequest | LtxApiAudio2VideoRequest): { endpoint: string; body: Record<string, unknown> } {
   const image = (file: string) => dataUri(file, IMAGE_EXT, 7 * 1048576);
   const body: Record<string, unknown> = { model: request.model, resolution: request.resolution, fps: request.fps,
-    prompt: request.prompt, image_uri: image(request.sourceImagePath),
+    prompt: request.prompt, ...(request.sourceImagePath ? { image_uri: image(request.sourceImagePath) } : {}),
     ...(request.lastImagePath ? { last_frame_uri: image(request.lastImagePath) } : {}),
     ...(request.cameraMotion ? { camera_motion: request.cameraMotion } : {}) };
   if ('audioPath' in request) {

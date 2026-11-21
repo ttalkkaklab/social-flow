@@ -30052,53 +30052,8 @@ function validateOpening(prompt, positions, references, issue) {
     issue("The prompt including openingPositions exceeds 2000 characters; shorten the action or placement descriptions");
 }
 
-// src/fasth3-omni.ts
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync as readFileSync2, readdirSync, rmSync, statSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join as join2 } from "node:path";
-
-// src/media-utils.ts
-import * as fs from "node:fs";
-import * as path from "node:path";
-var ALLOWED_EXTENSIONS = {
-  image: [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"],
-  video: [".mp4", ".webm", ".mov", ".avi"],
-  audio: [".wav", ".mp3", ".ogg", ".webm", ".aac", ".flac"],
-  json: [".json"],
-  mesh: [".glb"]
-};
-function validateFilePath(filePath, options) {
-  const resolved = path.resolve(filePath);
-  if (filePath.includes("..")) {
-    throw new Error(`Path traversal detected: ${filePath}`);
-  }
-  if (options?.allowedExtensions) {
-    const ext = path.extname(resolved).toLowerCase();
-    if (!options.allowedExtensions.includes(ext)) {
-      throw new Error(
-        `File extension "${ext}" is not allowed. Allowed: ${options.allowedExtensions.join(", ")}`
-      );
-    }
-  }
-}
-function resolveOutputFile(outputDir, filename, kind) {
-  if (/[/\\]/.test(filename) || filename.includes("..")) {
-    throw new Error(`filename must be a bare file name without path separators: "${filename}"`);
-  }
-  validateFilePath(filename, { allowedExtensions: ALLOWED_EXTENSIONS[kind] });
-  const dir = path.resolve(outputDir);
-  fs.mkdirSync(dir, { recursive: true });
-  return path.join(dir, filename);
-}
-function bareFilenameSchema(kind) {
-  const allowed = ALLOWED_EXTENSIONS[kind];
-  return external_exports.string().min(1).refine((name) => !/[/\\]/.test(name) && !name.includes(".."), {
-    message: "filename must be a bare file name without path separators (use outputPath for the directory)"
-  }).refine((name) => allowed.includes(path.extname(name).toLowerCase()), {
-    message: `filename extension must be one of: ${allowed.join(", ")}`
-  });
-}
+// src/astra-genai-client.ts
+var import_undici = __toESM(require_undici(), 1);
 
 // src/image-media.ts
 import { createHash } from "node:crypto";
@@ -30152,160 +30107,17 @@ function readImageMetadata(file) {
   return imageMetadata(readFileSync(file));
 }
 
-// src/fasth3-omni.ts
-var FASTH3_OMNI_MODEL = "ddalcu/FastH3-Omni-MLX-Serve-8bit";
-var FASTH3_FRAME_LIMITS = { min: 124, max: 362, step: 17, frameRate: 24, frameOffset: 5 };
-var FASTH3_MAX_RGB_BYTES = 256 * 1024 * 1024;
-var MAX_REQUEST_BYTES = 60 * 1024 * 1024;
-var dimension = external_exports.number().int().min(256).max(1536).refine((n) => n % 32 === 0, "Dimensions must be multiples of 32");
-var paths = (max) => external_exports.array(external_exports.string().min(1)).max(max).default([]);
-var fasth3OmniSchema = external_exports.object({
-  prompt: external_exports.string().min(1).max(32e3).describe("Scene and sound, e.g. The person in <Picture 1> waves; birds chirp. References are numbered per type."),
-  model: external_exports.literal(FASTH3_OMNI_MODEL).default(FASTH3_OMNI_MODEL).describe("Installed FastH3 Omni MLX-Serve pack."),
-  width: dimension.default(768).describe("Output width in pixels, e.g. 768."),
-  height: dimension.default(448).describe("Output height in pixels, e.g. 448."),
-  numFrames: external_exports.number().int().min(124).max(362).default(124).describe("Exact 17k+5 frame count at 24 fps, e.g. 124, 243, 362; RGB output must fit 256 MiB."),
-  steps: external_exports.literal(8).default(8).describe("The trained eight-step schedule."),
-  seed: external_exports.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional().describe("Reproducible seed, e.g. 2026."),
-  referenceImagePaths: paths(9).describe('Ordered PNG/JPEG paths, e.g. ["/tmp/character.png"]; <Picture 1> etc.'),
-  referenceVideoPaths: paths(3).describe('Ordered local video paths, e.g. ["/tmp/motion.mp4"]; 2\u201315 seconds each, 15 seconds total. Video sound is included.'),
-  referenceAudioPaths: paths(3).describe('Ordered voice/music paths, e.g. ["/tmp/voice.wav"]; 2\u201315 seconds each. Voice imitation does not preserve exact speech timing.'),
-  trimReferenceVideos: external_exports.boolean().default(false).describe("Allow trimming reference video tails to output length and the 17k+5 ladder; false refuses any trim."),
-  referenceSize: external_exports.enum(["match", "max"]).default("match").describe("match caps references to output area; max preserves more detail at higher memory/time cost."),
-  outputPath: external_exports.string().optional().describe("Output directory, e.g. /tmp/video-test."),
-  filename: bareFilenameSchema("video").optional().describe("MP4 filename, e.g. fasth3.mp4.")
-}).strict().superRefine((v, ctx) => {
-  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-  if (!(v.referenceImagePaths.length + v.referenceVideoPaths.length)) issue("FastH3 Omni needs at least one image or video reference");
-  if (v.referenceImagePaths.length + v.referenceVideoPaths.length + v.referenceAudioPaths.length > 12) issue("At most twelve reference files are supported");
-  if ((v.numFrames - 5) % 17) issue("FastH3 frame counts must be 17k+5");
-  if (v.width * v.height * v.numFrames * 3 > FASTH3_MAX_RGB_BYTES) issue("Decoded RGB exceeds the adapter 256 MiB compatibility limit; reduce dimensions or frames");
-});
-function probe(file) {
-  const data = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration:stream=codec_type", "-of", "json", file], { encoding: "utf8", timeout: 15e3 }));
-  const duration2 = Number(data.format?.duration);
-  if (!Number.isFinite(duration2) || duration2 < 2 || duration2 > 15) throw new Error("Reference media must be 2\u201315 seconds: " + file);
-  return { duration: duration2, hasAudio: data.streams?.some((s) => s.codec_type === "audio") === true };
-}
-function ffmpeg(args) {
-  execFileSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-nostdin", "-y", ...args], { timeout: 12e4, maxBuffer: 1024 * 1024 });
-}
-function buildFasth3Body(raw) {
-  const r = fasth3OmniSchema.parse(raw);
-  const temp = mkdtempSync(join2(tmpdir(), "fasth3-refs-"));
-  let encodedBytes = 0;
-  const encode = (file) => {
-    encodedBytes += 4 * Math.ceil(statSync(file).size / 3);
-    if (encodedBytes > MAX_REQUEST_BYTES - 64e3) throw new Error("Reference payload exceeds the 60 MiB upload limit");
-    return readFileSync2(file).toString("base64");
-  };
-  const audio = (file, name, seconds2) => {
-    const target = join2(temp, name + ".wav");
-    ffmpeg(["-i", file, "-vn", "-ar", "32000", "-ac", "2", "-c:a", "pcm_s16le", ...seconds2 === void 0 ? [] : ["-t", String(seconds2)], target]);
-    return encode(target);
-  };
-  try {
-    const images = r.referenceImagePaths.map((file) => {
-      if (statSync(file).size * 4 / 3 > MAX_REQUEST_BYTES - 64e3) throw new Error("Reference image exceeds upload limit");
-      const meta = readImageMetadata(file);
-      if (!["image/png", "image/jpeg"].includes(meta.mimeType)) throw new Error("FastH3 reference images must be PNG or JPEG");
-      return encode(file);
-    });
-    let videoSeconds2 = 0;
-    const videos = r.referenceVideoPaths.map((file, i) => {
-      const meta = probe(file);
-      videoSeconds2 += meta.duration;
-      if (videoSeconds2 > 15) throw new Error("Reference videos exceed fifteen seconds total");
-      const prefix = `video-${i}-`;
-      ffmpeg(["-i", file, "-an", "-vf", "fps=24,scale=768:768:force_original_aspect_ratio=decrease", "-frames:v", "362", join2(temp, prefix + "%04d.jpg")]);
-      const files = readdirSync(temp).filter((f) => f.startsWith(prefix)).sort();
-      const count = Math.min(files.length, r.numFrames);
-      const accepted = count - (count - 5) % 17;
-      if (accepted < 5) throw new Error("Reference video has too few decoded frames");
-      if (accepted < files.length && !r.trimReferenceVideos) throw new Error("Reference video must fit the requested output frame count and 17k+5 ladder; trim it explicitly before submitting");
-      return { frames: files.slice(0, accepted).map((f) => encode(join2(temp, f))), ...meta.hasAudio ? { audio: audio(file, `video-audio-${i}`, accepted / 24) } : {} };
-    });
-    const audios = r.referenceAudioPaths.map((file, i) => {
-      probe(file);
-      return audio(file, `audio-${i}`);
-    });
-    return {
-      stream: true,
-      model: r.model,
-      prompt: r.prompt,
-      width: r.width,
-      height: r.height,
-      num_frames: r.numFrames,
-      steps: r.steps,
-      ...r.seed === void 0 ? {} : { seed: r.seed },
-      ref_image_size: r.referenceSize,
-      ref_images: images,
-      ref_videos: videos,
-      ref_audios: audios
-    };
-  } finally {
-    rmSync(temp, { recursive: true, force: true });
-  }
-}
-
-// src/mlx-serve-client.ts
-import { existsSync as existsSync2, mkdtempSync as mkdtempSync2, readFileSync as readFileSync4, rmSync as rmSync2, writeFileSync as writeFileSync2 } from "node:fs";
-
-// src/image-models.ts
-var GPT_IMAGE_MODELS = [
-  "gpt-image-2",
-  "gpt-image-1.5",
-  "gpt-image-1",
-  "gpt-image-1-mini",
-  "gpt-image-2-2026-04-21",
-  "gpt-image-1.5-2025-12-16"
-];
-function gptImageFamily(model2) {
-  if (model2 === "gpt-image-2-2026-04-21") return "gpt-image-2";
-  if (model2 === "gpt-image-1.5-2025-12-16") return "gpt-image-1.5";
-  return model2;
-}
-var GPT_IMAGE_CONTRACTS = {
-  "gpt-image-2": { shutdown: null, flexibleSize: true, transparency: "preview", fidelity: [], rates: { text: 5, image: 8, output: 30 } },
-  "gpt-image-1.5": { shutdown: "2026-12-01", flexibleSize: false, transparency: "supported", fidelity: ["low", "high"], rates: { text: 5, image: 8, output: 32 } },
-  "gpt-image-1": { shutdown: "2026-10-23", flexibleSize: false, transparency: "supported", fidelity: ["low", "high"], rates: { text: 5, image: 10, output: 40 } },
-  "gpt-image-1-mini": { shutdown: "2026-12-01", flexibleSize: false, transparency: "supported", fidelity: ["low"], rates: { text: 2, image: 2.5, output: 8 } }
-};
-function gptImageContract(model2) {
-  return GPT_IMAGE_CONTRACTS[gptImageFamily(model2)];
-}
-function mlxImageFamily(model2 = "") {
-  if (/qwen.*image.*2[.-]1/i.test(model2)) return "qwen-2.1";
-  if (/mage[-_]?flow/i.test(model2)) return /edit/i.test(model2) ? "mage-edit" : "mage";
-  if (/krea[-_]?2/i.test(model2)) return "krea";
-  if (/flux[.-]?2[-_]?klein/i.test(model2)) return "flux-klein";
-  return "unknown";
-}
-function validateMlxImageOperation(model2, operation, args) {
-  const family = mlxImageFamily(model2);
-  if (operation === "edit" && !["flux-klein", "mage-edit", "qwen-2.1"].includes(family))
-    throw new Error("image_operation_unsupported: select an identified editing pack");
-  if (operation === "variation" && !["flux-klein", "krea"].includes(family))
-    throw new Error("image_operation_unsupported: this pack has no verified strength-based variation");
-  if (args.transparent === true && family !== "qwen-2.1")
-    throw new Error("image_transparency_unsupported: transparent requires Qwen-Image-2.1");
-  const refs = Array.isArray(args.refImagePaths) ? args.refImagePaths.length : 0;
-  if (refs > (family === "qwen-2.1" ? 9 : 3)) throw new Error("image_reference_limit");
-  if (family === "qwen-2.1" && /turbo/i.test(model2 || "") && args.steps !== void 0 && args.steps !== 8)
-    throw new Error("image_schedule_fixed: Qwen Turbo uses its saved 8-step schedule");
-}
-
 // src/config.ts
-import { accessSync, constants, existsSync, readFileSync as readFileSync3, readdirSync as readdirSync2, statSync as statSync2 } from "node:fs";
+import { accessSync, constants, existsSync, readFileSync as readFileSync2, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { delimiter, join as join3 } from "node:path";
-function loadEnvFile(file = join3(process.env.SNS_TOKEN_DIR || join3(homedir(), ".config", "social-flow"), ".env")) {
+import { delimiter, join } from "node:path";
+function loadEnvFile(file = join(process.env.SNS_TOKEN_DIR || join(homedir(), ".config", "social-flow"), ".env")) {
   for (const [key, value] of Object.entries(process.env)) {
     if (value && /^\$\{[A-Za-z_][A-Za-z0-9_]*(:-[^}]*)?\}$/.test(value)) delete process.env[key];
   }
   let text3;
   try {
-    text3 = readFileSync3(file, "utf8");
+    text3 = readFileSync2(file, "utf8");
   } catch {
     return [];
   }
@@ -30383,15 +30195,15 @@ var config = {
   youtubeApiKey: process.env.YOUTUBE_API_KEY || "",
   requestTimeoutMs: 15e3
 };
-var snsTokenDir = process.env.SNS_TOKEN_DIR || join3(homedir(), ".config", "social-flow");
+var snsTokenDir = process.env.SNS_TOKEN_DIR || join(homedir(), ".config", "social-flow");
 var defaultSnsCredentialFiles = {
-  THREADS: process.env.THREADS_TOKEN_FILE || join3(snsTokenDir, "threads_token"),
-  INSTAGRAM: process.env.INSTAGRAM_TOKEN_FILE || join3(snsTokenDir, "instagram_token"),
-  FACEBOOK: process.env.FACEBOOK_PAGE_TOKEN_FILE || join3(snsTokenDir, "facebook_page_token"),
-  YOUTUBE: process.env.YOUTUBE_OAUTH_FILE || join3(snsTokenDir, "youtube-oauth-client.json"),
-  TIKTOK: process.env.TIKTOK_OAUTH_FILE || join3(snsTokenDir, "tiktok-oauth.json")
+  THREADS: process.env.THREADS_TOKEN_FILE || join(snsTokenDir, "threads_token"),
+  INSTAGRAM: process.env.INSTAGRAM_TOKEN_FILE || join(snsTokenDir, "instagram_token"),
+  FACEBOOK: process.env.FACEBOOK_PAGE_TOKEN_FILE || join(snsTokenDir, "facebook_page_token"),
+  YOUTUBE: process.env.YOUTUBE_OAUTH_FILE || join(snsTokenDir, "youtube-oauth-client.json"),
+  TIKTOK: process.env.TIKTOK_OAUTH_FILE || join(snsTokenDir, "tiktok-oauth.json")
 };
-var disabledToolsFile = join3(snsTokenDir, "disabled-tools.json");
+var disabledToolsFile = join(snsTokenDir, "disabled-tools.json");
 function astraVideoBaseUrl() {
   return (process.env.ASTRA_VIDEO_URL || "https://video.astravision.co.kr").replace(/\/+$/, "");
 }
@@ -30402,6 +30214,208 @@ function requireAstraVideoKey() {
     );
   }
   return config.astraVideoApiKey;
+}
+
+// src/astra-genai-client.ts
+var genaiImageUriSchema = external_exports.string().min(1).refine((value) => {
+  if (/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/]+=*$/.test(value)) return true;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}, "Use a public HTTPS PNG/JPEG URL or PNG/JPEG data URI");
+
+// src/fasth3-omni.ts
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync as readFileSync3, readdirSync as readdirSync2, rmSync, statSync as statSync2 } from "node:fs";
+import { tmpdir } from "node:os";
+import { join as join3 } from "node:path";
+
+// src/media-utils.ts
+import * as fs from "node:fs";
+import * as path from "node:path";
+var ALLOWED_EXTENSIONS = {
+  image: [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"],
+  video: [".mp4", ".webm", ".mov", ".avi"],
+  audio: [".wav", ".mp3", ".ogg", ".webm", ".aac", ".flac"],
+  json: [".json"],
+  mesh: [".glb"]
+};
+function validateFilePath(filePath, options) {
+  const resolved = path.resolve(filePath);
+  if (filePath.includes("..")) {
+    throw new Error(`Path traversal detected: ${filePath}`);
+  }
+  if (options?.allowedExtensions) {
+    const ext = path.extname(resolved).toLowerCase();
+    if (!options.allowedExtensions.includes(ext)) {
+      throw new Error(
+        `File extension "${ext}" is not allowed. Allowed: ${options.allowedExtensions.join(", ")}`
+      );
+    }
+  }
+}
+function resolveOutputFile(outputDir, filename, kind) {
+  if (/[/\\]/.test(filename) || filename.includes("..")) {
+    throw new Error(`filename must be a bare file name without path separators: "${filename}"`);
+  }
+  validateFilePath(filename, { allowedExtensions: ALLOWED_EXTENSIONS[kind] });
+  const dir = path.resolve(outputDir);
+  fs.mkdirSync(dir, { recursive: true });
+  return path.join(dir, filename);
+}
+function bareFilenameSchema(kind) {
+  const allowed = ALLOWED_EXTENSIONS[kind];
+  return external_exports.string().min(1).refine((name) => !/[/\\]/.test(name) && !name.includes(".."), {
+    message: "filename must be a bare file name without path separators (use outputPath for the directory)"
+  }).refine((name) => allowed.includes(path.extname(name).toLowerCase()), {
+    message: `filename extension must be one of: ${allowed.join(", ")}`
+  });
+}
+
+// src/fasth3-omni.ts
+var FASTH3_OMNI_MODEL = "ddalcu/FastH3-Omni-MLX-Serve-8bit";
+var FASTH3_FRAME_LIMITS = { min: 124, max: 362, step: 17, frameRate: 24, frameOffset: 5 };
+var FASTH3_MAX_RGB_BYTES = 256 * 1024 * 1024;
+var MAX_REQUEST_BYTES = 60 * 1024 * 1024;
+var dimension = external_exports.number().int().min(256).max(1536).refine((n) => n % 32 === 0, "Dimensions must be multiples of 32");
+var paths = (max) => external_exports.array(external_exports.string().min(1)).max(max).default([]);
+var fasth3OmniSchema = external_exports.object({
+  prompt: external_exports.string().min(1).max(32e3).describe("Scene and sound, e.g. The person in <Picture 1> waves; birds chirp. References are numbered per type."),
+  model: external_exports.literal(FASTH3_OMNI_MODEL).default(FASTH3_OMNI_MODEL).describe("Installed FastH3 Omni MLX-Serve pack."),
+  width: dimension.default(768).describe("Output width in pixels, e.g. 768."),
+  height: dimension.default(448).describe("Output height in pixels, e.g. 448."),
+  numFrames: external_exports.number().int().min(124).max(362).default(124).describe("Exact 17k+5 frame count at 24 fps, e.g. 124, 243, 362; RGB output must fit 256 MiB."),
+  steps: external_exports.literal(8).default(8).describe("The trained eight-step schedule."),
+  seed: external_exports.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional().describe("Reproducible seed, e.g. 2026."),
+  referenceImagePaths: paths(9).describe('Ordered PNG/JPEG paths, e.g. ["/tmp/character.png"]; <Picture 1> etc.'),
+  referenceVideoPaths: paths(3).describe('Ordered local video paths, e.g. ["/tmp/motion.mp4"]; 2\u201315 seconds each, 15 seconds total. Video sound is included.'),
+  referenceAudioPaths: paths(3).describe('Ordered voice/music paths, e.g. ["/tmp/voice.wav"]; 2\u201315 seconds each. Voice imitation does not preserve exact speech timing.'),
+  trimReferenceVideos: external_exports.boolean().default(false).describe("Allow trimming reference video tails to output length and the 17k+5 ladder; false refuses any trim."),
+  referenceSize: external_exports.enum(["match", "max"]).default("match").describe("match caps references to output area; max preserves more detail at higher memory/time cost."),
+  outputPath: external_exports.string().optional().describe("Output directory, e.g. /tmp/video-test."),
+  filename: bareFilenameSchema("video").optional().describe("MP4 filename, e.g. fasth3.mp4.")
+}).strict().superRefine((v, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  if (!(v.referenceImagePaths.length + v.referenceVideoPaths.length)) issue("FastH3 Omni needs at least one image or video reference");
+  if (v.referenceImagePaths.length + v.referenceVideoPaths.length + v.referenceAudioPaths.length > 12) issue("At most twelve reference files are supported");
+  if ((v.numFrames - 5) % 17) issue("FastH3 frame counts must be 17k+5");
+  if (v.width * v.height * v.numFrames * 3 > FASTH3_MAX_RGB_BYTES) issue("Decoded RGB exceeds the adapter 256 MiB compatibility limit; reduce dimensions or frames");
+});
+function probe(file) {
+  const data = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration:stream=codec_type", "-of", "json", file], { encoding: "utf8", timeout: 15e3 }));
+  const duration2 = Number(data.format?.duration);
+  if (!Number.isFinite(duration2) || duration2 < 2 || duration2 > 15) throw new Error("Reference media must be 2\u201315 seconds: " + file);
+  return { duration: duration2, hasAudio: data.streams?.some((s) => s.codec_type === "audio") === true };
+}
+function ffmpeg(args) {
+  execFileSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-nostdin", "-y", ...args], { timeout: 12e4, maxBuffer: 1024 * 1024 });
+}
+function buildFasth3Body(raw) {
+  const r = fasth3OmniSchema.parse(raw);
+  const temp = mkdtempSync(join3(tmpdir(), "fasth3-refs-"));
+  let encodedBytes = 0;
+  const encode = (file) => {
+    encodedBytes += 4 * Math.ceil(statSync2(file).size / 3);
+    if (encodedBytes > MAX_REQUEST_BYTES - 64e3) throw new Error("Reference payload exceeds the 60 MiB upload limit");
+    return readFileSync3(file).toString("base64");
+  };
+  const audio = (file, name, seconds2) => {
+    const target = join3(temp, name + ".wav");
+    ffmpeg(["-i", file, "-vn", "-ar", "32000", "-ac", "2", "-c:a", "pcm_s16le", ...seconds2 === void 0 ? [] : ["-t", String(seconds2)], target]);
+    return encode(target);
+  };
+  try {
+    const images = r.referenceImagePaths.map((file) => {
+      if (statSync2(file).size * 4 / 3 > MAX_REQUEST_BYTES - 64e3) throw new Error("Reference image exceeds upload limit");
+      const meta = readImageMetadata(file);
+      if (!["image/png", "image/jpeg"].includes(meta.mimeType)) throw new Error("FastH3 reference images must be PNG or JPEG");
+      return encode(file);
+    });
+    let videoSeconds2 = 0;
+    const videos = r.referenceVideoPaths.map((file, i) => {
+      const meta = probe(file);
+      videoSeconds2 += meta.duration;
+      if (videoSeconds2 > 15) throw new Error("Reference videos exceed fifteen seconds total");
+      const prefix = `video-${i}-`;
+      ffmpeg(["-i", file, "-an", "-vf", "fps=24,scale=768:768:force_original_aspect_ratio=decrease", "-frames:v", "362", join3(temp, prefix + "%04d.jpg")]);
+      const files = readdirSync2(temp).filter((f) => f.startsWith(prefix)).sort();
+      const count = Math.min(files.length, r.numFrames);
+      const accepted = count - (count - 5) % 17;
+      if (accepted < 5) throw new Error("Reference video has too few decoded frames");
+      if (accepted < files.length && !r.trimReferenceVideos) throw new Error("Reference video must fit the requested output frame count and 17k+5 ladder; trim it explicitly before submitting");
+      return { frames: files.slice(0, accepted).map((f) => encode(join3(temp, f))), ...meta.hasAudio ? { audio: audio(file, `video-audio-${i}`, accepted / 24) } : {} };
+    });
+    const audios = r.referenceAudioPaths.map((file, i) => {
+      probe(file);
+      return audio(file, `audio-${i}`);
+    });
+    return {
+      stream: true,
+      model: r.model,
+      prompt: r.prompt,
+      width: r.width,
+      height: r.height,
+      num_frames: r.numFrames,
+      steps: r.steps,
+      ...r.seed === void 0 ? {} : { seed: r.seed },
+      ref_image_size: r.referenceSize,
+      ref_images: images,
+      ref_videos: videos,
+      ref_audios: audios
+    };
+  } finally {
+    rmSync(temp, { recursive: true, force: true });
+  }
+}
+
+// src/mlx-serve-client.ts
+import { existsSync as existsSync2, mkdtempSync as mkdtempSync2, readFileSync as readFileSync4, rmSync as rmSync2, writeFileSync as writeFileSync2 } from "node:fs";
+
+// src/image-models.ts
+var GPT_IMAGE_MODELS = [
+  "gpt-image-2",
+  "gpt-image-1.5",
+  "gpt-image-1",
+  "gpt-image-1-mini",
+  "gpt-image-2-2026-04-21",
+  "gpt-image-1.5-2025-12-16"
+];
+function gptImageFamily(model2) {
+  if (model2 === "gpt-image-2-2026-04-21") return "gpt-image-2";
+  if (model2 === "gpt-image-1.5-2025-12-16") return "gpt-image-1.5";
+  return model2;
+}
+var GPT_IMAGE_CONTRACTS = {
+  "gpt-image-2": { shutdown: null, flexibleSize: true, transparency: "preview", fidelity: [], rates: { text: 5, image: 8, output: 30 } },
+  "gpt-image-1.5": { shutdown: "2026-12-01", flexibleSize: false, transparency: "supported", fidelity: ["low", "high"], rates: { text: 5, image: 8, output: 32 } },
+  "gpt-image-1": { shutdown: "2026-10-23", flexibleSize: false, transparency: "supported", fidelity: ["low", "high"], rates: { text: 5, image: 10, output: 40 } },
+  "gpt-image-1-mini": { shutdown: "2026-12-01", flexibleSize: false, transparency: "supported", fidelity: ["low"], rates: { text: 2, image: 2.5, output: 8 } }
+};
+function gptImageContract(model2) {
+  return GPT_IMAGE_CONTRACTS[gptImageFamily(model2)];
+}
+function mlxImageFamily(model2 = "") {
+  if (/qwen.*image.*2[.-]1/i.test(model2)) return "qwen-2.1";
+  if (/mage[-_]?flow/i.test(model2)) return /edit/i.test(model2) ? "mage-edit" : "mage";
+  if (/krea[-_]?2/i.test(model2)) return "krea";
+  if (/flux[.-]?2[-_]?klein/i.test(model2)) return "flux-klein";
+  return "unknown";
+}
+function validateMlxImageOperation(model2, operation, args) {
+  const family = mlxImageFamily(model2);
+  if (operation === "edit" && !["flux-klein", "mage-edit", "qwen-2.1"].includes(family))
+    throw new Error("image_operation_unsupported: select an identified editing pack");
+  if (operation === "variation" && !["flux-klein", "krea"].includes(family))
+    throw new Error("image_operation_unsupported: this pack has no verified strength-based variation");
+  if (args.transparent === true && family !== "qwen-2.1")
+    throw new Error("image_transparency_unsupported: transparent requires Qwen-Image-2.1");
+  const refs = Array.isArray(args.refImagePaths) ? args.refImagePaths.length : 0;
+  if (refs > (family === "qwen-2.1" ? 9 : 3)) throw new Error("image_reference_limit");
+  if (family === "qwen-2.1" && /turbo/i.test(model2 || "") && args.steps !== void 0 && args.steps !== 8)
+    throw new Error("image_schedule_fixed: Qwen Turbo uses its saved 8-step schedule");
 }
 
 // src/http.ts
@@ -30638,23 +30652,62 @@ function localVideoStrategy(tool) {
   return Object.hasOwn(LOCAL_VIDEO_MODELS, name) ? LOCAL_VIDEO_MODELS[name] : void 0;
 }
 
-// src/astra-genai-client.ts
-var import_undici = __toESM(require_undici(), 1);
-var genaiImageUriSchema = external_exports.string().min(1).refine((value) => {
-  if (/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/]+=*$/.test(value)) return true;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" && !url.username && !url.password;
-  } catch {
-    return false;
-  }
-}, "Use a public HTTPS PNG/JPEG URL or PNG/JPEG data URI");
+// src/ltx-api-video.ts
+import { execFileSync as execFileSync2 } from "node:child_process";
 
 // src/video-events.ts
 import { AsyncLocalStorage } from "node:async_hooks";
 var videoEvents = new AsyncLocalStorage();
 function recordVideoSubmission(id) {
   if (id) videoEvents.getStore()?.submitted(id);
+}
+
+// src/ltx-api-video.ts
+var LTX_API_MODELS = ["ltx-2-5-pro", "ltx-2-5-fast"];
+var TIERS = {
+  "720p": ["1280x720", "720x1280", "720x720", "1080x720", "720x1080"],
+  "1080p": ["1920x1080", "1080x1920", "1080x1080", "1620x1080", "1080x1620"],
+  "1440p": ["2560x1440", "1440x2560", "1440x1440", "2160x1440", "1440x2160"],
+  "4k": ["3840x2160", "2160x3840", "2160x2160", "3240x2160", "2160x3240"]
+};
+var ltxApiTier = (resolution2) => Object.entries(TIERS).find(([, sizes]) => sizes.includes(resolution2))?.[0];
+function ltxApiSeconds(model2, resolution2, fps = 24) {
+  const long = model2 === "ltx-2-5-fast" && ["720p", "1080p"].includes(ltxApiTier(resolution2) ?? "") && fps <= 25;
+  return long ? [6, 8, 10, 12, 14, 16, 18, 20] : [6, 8, 10];
+}
+var common = {
+  prompt: external_exports.string().max(5e3).describe("English action, camera and sound."),
+  model: external_exports.enum(LTX_API_MODELS).default("ltx-2-5-pro").describe("LTX API model id."),
+  resolution: external_exports.string().refine((value) => Boolean(ltxApiTier(value)), "Use a WIDTHxHEIGHT the LTX API lists, e.g. 1920x1080").default("1920x1080").describe("Output size, e.g. 1920x1080 or 1080x1920."),
+  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24).describe("Frame rate."),
+  cameraMotion: external_exports.enum(["dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"]).optional().describe("Optional preset camera move."),
+  sourceImagePath: external_exports.string().min(1).describe("First frame image (PNG/JPEG/WEBP, 7 MB inline)."),
+  lastImagePath: external_exports.string().min(1).optional().describe("Optional last frame image."),
+  outputPath: external_exports.string().optional().describe("Output directory."),
+  filename: bareFilenameSchema("video").optional().describe("MP4 filename.")
+};
+var ltxApiImg2VideoSchema = external_exports.object({
+  ...common,
+  prompt: common.prompt.min(1),
+  durationSeconds: external_exports.number().int().default(6).describe("6, 8 or 10 seconds (Fast at 720p/1080p, 24/25 fps: up to 20)."),
+  generateAudio: external_exports.boolean().default(false).describe("Generate a soundtrack; false for cuts whose sound comes from assembly.")
+}).strict().superRefine((v, ctx) => {
+  if (!ltxApiSeconds(v.model, v.resolution, v.fps).includes(v.durationSeconds))
+    ctx.addIssue({ code: "custom", path: ["durationSeconds"], message: `${v.model} at ${v.resolution}/${v.fps} fps takes ${ltxApiSeconds(v.model, v.resolution, v.fps).join(", ")} seconds` });
+});
+var ltxApiAudio2VideoSchema = external_exports.object({
+  ...common,
+  sourceImagePath: common.sourceImagePath.optional(),
+  prompt: common.prompt.default(""),
+  audioPath: external_exports.string().min(1).describe("The composed pinned-voice track; its length sets the clip length (2\u201310 s, Fast at 720p/1080p up to 20 s).")
+}).strict().superRefine((args, ctx) => {
+  if (!args.sourceImagePath && (!args.prompt.trim() || args.lastImagePath))
+    ctx.addIssue({ code: "custom", path: ["sourceImagePath"], message: "A first image is required with a last image or an empty prompt" });
+});
+function ltxApiAudioSeconds(file) {
+  const seconds2 = Number(execFileSync2("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], { encoding: "utf8", timeout: 15e3 }));
+  if (!Number.isFinite(seconds2) || seconds2 <= 0) throw new Error("Cannot read the length of " + file);
+  return seconds2;
 }
 
 // src/astra-genai-desktop.ts
@@ -30668,7 +30721,7 @@ var local = {
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("video").refine((n) => n.endsWith(".mp4")).optional()
 };
-var common = external_exports.object({
+var common2 = external_exports.object({
   model,
   prompt: external_exports.string().trim().min(1),
   resolution,
@@ -30678,19 +30731,32 @@ var common = external_exports.object({
   cameraMotion: external_exports.enum(["none", "dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"]).optional(),
   ...local
 }).strict();
-var desktopTextSchema = common.extend({ duration, aspectRatio: aspect.default("16:9"), loras: loras.optional() }).strict();
-var desktopImageSchema = common.extend({
+var desktopTextSchema = common2.extend({ duration, aspectRatio: aspect.default("16:9"), loras: loras.optional() }).strict();
+var desktopImageSchema = common2.extend({
   duration,
   aspectRatio: external_exports.union([aspect, external_exports.literal("auto")]).default("auto"),
   imagePath: external_exports.string().min(1),
   lastFramePath: external_exports.string().min(1).optional()
 }).strict();
-var desktopAudioSchema = common.extend({
+var desktopAudioSchema = common2.extend({
+  prompt: external_exports.string().trim().default(""),
+  seed: external_exports.number().int().safe().nullish(),
+  negativePrompt: external_exports.string().max(2e3).optional(),
+  nagScale: external_exports.number().finite().min(0).max(100).nullish(),
+  nagAlpha: external_exports.number().finite().min(0).max(1).nullish(),
+  nagTau: external_exports.number().finite().min(0).max(10).nullish(),
+  passShape: external_exports.enum(["auto", "one_pass", "parts"]).optional(),
+  audioStartTime: external_exports.number().finite().nonnegative().optional(),
+  audioMaxDuration: external_exports.number().finite().positive().optional(),
+  numFrames: external_exports.number().int().min(9).refine((n) => (n - 1) % 8 === 0, "Use 8k+1 frames").optional(),
   audioPath: external_exports.string().min(1),
   imagePath: external_exports.string().min(1).optional(),
   aspectRatio: external_exports.union([aspect, external_exports.literal("auto")]).default("16:9"),
   allowAudioTruncation: external_exports.boolean().default(false)
-}).strict();
+}).strict().refine(
+  (args) => Boolean(args.prompt || args.imagePath),
+  "A2V needs a prompt or a start image"
+).refine((args) => args.numFrames === void 0 || args.audioMaxDuration === void 0, "Choose numFrames or audioMaxDuration");
 var edit = external_exports.object({
   model,
   prompt: external_exports.string().default(""),
@@ -30725,6 +30791,16 @@ var DESKTOP_SCHEMAS = {
   retake: desktopRetakeSchema,
   keyframes: desktopKeyframesSchema
 };
+var resolvedParamsSchema = external_exports.object({
+  numFrames: external_exports.number().int().positive(),
+  seed: external_exports.number().nullish(),
+  negativePrompt: external_exports.string().optional(),
+  nagScale: external_exports.number().nullish(),
+  nagAlpha: external_exports.number().nullish(),
+  nagTau: external_exports.number().nullish(),
+  passShape: external_exports.string().optional(),
+  promptProvenance: external_exports.string().optional()
+}).partial();
 var receiptSchema = external_exports.object({
   protocol: external_exports.literal("gateway-desktop-v1"),
   baseUrl: external_exports.string(),
@@ -30733,7 +30809,9 @@ var receiptSchema = external_exports.object({
   videoPath: external_exports.string(),
   status: external_exports.enum(["submitting", "submitted", "completed"]),
   jobId: external_exports.string().optional(),
-  sha256: external_exports.string().optional()
+  sha256: external_exports.string().optional(),
+  expectedFrames: external_exports.number().int().positive().optional(),
+  resolvedParams: resolvedParamsSchema.optional()
 }).strict();
 
 // src/video-routing.ts
@@ -31954,10 +32032,10 @@ var genaiImageToVideoSchema = textVideoFields.extend({
 });
 var oneOf = (a, b) => Number(a !== void 0) + Number(b !== void 0);
 var genaiAudioToVideoSchema = external_exports.object({
-  prompt: external_exports.string().trim().min(1).max(5e3),
+  prompt: external_exports.string().trim().min(1).max(2e3),
   negativePrompt: external_exports.string().trim().min(1).max(2e3).optional(),
   model: external_exports.literal("ltx-2.5-22b-dev"),
-  resolution: external_exports.string().min(1),
+  resolution: localResolution,
   fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
   audioPath: external_exports.string().min(1).optional(),
   audioUri: external_exports.string().min(1).optional(),
@@ -32247,50 +32325,6 @@ var seedanceReferenceSchema = external_exports.object({
   }
 }).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
 
-// src/ltx-api-video.ts
-import { execFileSync as execFileSync2 } from "node:child_process";
-var LTX_API_MODELS = ["ltx-2-5-pro", "ltx-2-5-fast"];
-var TIERS = {
-  "720p": ["1280x720", "720x1280", "720x720", "1080x720", "720x1080"],
-  "1080p": ["1920x1080", "1080x1920", "1080x1080", "1620x1080", "1080x1620"],
-  "1440p": ["2560x1440", "1440x2560", "1440x1440", "2160x1440", "1440x2160"],
-  "4k": ["3840x2160", "2160x3840", "2160x2160", "3240x2160", "2160x3240"]
-};
-var ltxApiTier = (resolution2) => Object.entries(TIERS).find(([, sizes]) => sizes.includes(resolution2))?.[0];
-function ltxApiSeconds(model2, resolution2, fps = 24) {
-  const long = model2 === "ltx-2-5-fast" && ["720p", "1080p"].includes(ltxApiTier(resolution2) ?? "") && fps <= 25;
-  return long ? [6, 8, 10, 12, 14, 16, 18, 20] : [6, 8, 10];
-}
-var common2 = {
-  prompt: external_exports.string().max(5e3).describe("English action, camera and sound."),
-  model: external_exports.enum(LTX_API_MODELS).default("ltx-2-5-pro").describe("LTX API model id."),
-  resolution: external_exports.string().refine((value) => Boolean(ltxApiTier(value)), "Use a WIDTHxHEIGHT the LTX API lists, e.g. 1920x1080").default("1920x1080").describe("Output size, e.g. 1920x1080 or 1080x1920."),
-  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24).describe("Frame rate."),
-  cameraMotion: external_exports.enum(["dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"]).optional().describe("Optional preset camera move."),
-  sourceImagePath: external_exports.string().min(1).describe("First frame image (PNG/JPEG/WEBP, 7 MB inline)."),
-  lastImagePath: external_exports.string().min(1).optional().describe("Optional last frame image."),
-  outputPath: external_exports.string().optional().describe("Output directory."),
-  filename: bareFilenameSchema("video").optional().describe("MP4 filename.")
-};
-var ltxApiImg2VideoSchema = external_exports.object({
-  ...common2,
-  prompt: common2.prompt.min(1),
-  durationSeconds: external_exports.number().int().default(6).describe("6, 8 or 10 seconds (Fast at 720p/1080p, 24/25 fps: up to 20)."),
-  generateAudio: external_exports.boolean().default(false).describe("Generate a soundtrack; false for cuts whose sound comes from assembly.")
-}).strict().superRefine((v, ctx) => {
-  if (!ltxApiSeconds(v.model, v.resolution, v.fps).includes(v.durationSeconds))
-    ctx.addIssue({ code: "custom", path: ["durationSeconds"], message: `${v.model} at ${v.resolution}/${v.fps} fps takes ${ltxApiSeconds(v.model, v.resolution, v.fps).join(", ")} seconds` });
-});
-var ltxApiAudio2VideoSchema = external_exports.object({
-  ...common2,
-  audioPath: external_exports.string().min(1).describe("The composed pinned-voice track; its length sets the clip length (2\u201310 s, Fast at 720p/1080p up to 20 s).")
-}).strict();
-function ltxApiAudioSeconds(file) {
-  const seconds2 = Number(execFileSync2("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], { encoding: "utf8", timeout: 15e3 }));
-  if (!Number.isFinite(seconds2) || seconds2 <= 0) throw new Error("Cannot read the length of " + file);
-  return seconds2;
-}
-
 // src/minimax-video.ts
 var MINIMAX_MODELS = {
   "MiniMax-H3": { resolutions: ["768P", "2K"], minSeconds: 4, freeImages: 5 },
@@ -32467,13 +32501,12 @@ function speechVideoCapabilities(provider, model2, operation, subjectReferences 
   if (["veo", "omni"].includes(provider) || provider === "seedance" && !Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
     throw new Error(`video_engine_unsupported: ${provider} ${model2} cannot keep a character's voice; choose a video model again with project_manage`);
   if (["minimax", "heygen"].includes(provider) && operation === "reference") return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "Native speech from the prompt dialogue with an optional voice sample; voice identity is imitation, not preserved audio" };
-  if (provider === "ltx-api" && operation === "audio") return { provider, model: model2, audioConditioning: true, lipSync: false, postLipSync: false, evidence: "LTX API audio-to-video conditions on the supplied track; preservation and mouth sync unverified" };
   if (provider === "astra-genai" && (operation === "reference" || operation === "image" && model2 === "ltx-2.5-22b-distilled" && subjectReferences)) return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio" };
-  if (provider === "astra-genai-desktop") return { provider, model: model2, audioConditioning: true, lipSync: false, postLipSync: false, evidence: "Gateway A2V reencodes supplied audio; timing/voice identity not guaranteed; installed model capabilities must be checked" };
-  if (provider === "astra") return { provider, model: model2, audioConditioning: true, lipSync: true, postLipSync: false, evidence: "astra_audio2video adapter contract" };
+  if (operation === "audio" && (provider === "astra" || provider === "astra-genai-desktop" || provider === "ltx-api" || provider === "astra-genai" && model2 === "ltx-2.5-22b-dev"))
+    return { provider, model: model2, audioConditioning: true, lipSync: false, postLipSync: false, evidence: "The supplied track conditions video generation. Mouth movement and phoneme alignment require output review." };
   if (provider === "seedance" && Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
     return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "Reference audio does not promise exact recorded-speech timing; no post-lipsync adapter installed" };
-  if (["host", "mlx", "astra-genai", "ltx-api", "minimax", "heygen"].includes(provider))
+  if (["host", "mlx", "astra", "astra-genai", "astra-genai-desktop", "ltx-api", "minimax", "heygen"].includes(provider))
     return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "No verified external-speech synchronization adapter; voiceover remains available" };
   throw new Error("No verified speech synchronization contract for selected deployment/model");
 }
@@ -33960,7 +33993,7 @@ function speechVideoPlan(input, capabilities) {
   const physicalSpeech = lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen");
   if (capabilities.nativeSpeech && physicalSpeech && lines.some((line) => line.delivery === "voiceover"))
     throw new Error("msr_speech_route: split physical dialogue and inner thoughts into separate shots; thoughts use image2video with timed TTS");
-  const mode = capabilities.nativeSpeech && physicalSpeech ? "native" : !onScreen ? "voiceover" : capabilities.audioConditioning && capabilities.lipSync ? "audio_conditioned" : capabilities.postLipSync ? "post_lipsync" : null;
+  const mode = capabilities.nativeSpeech && physicalSpeech ? "native" : !onScreen ? "voiceover" : capabilities.audioConditioning ? "audio_conditioned" : capabilities.postLipSync ? "post_lipsync" : null;
   if (!mode) throw new Error("Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting");
   const saved = object3(object3(object3(scene.visual).video).promptSource);
   const design = object3(object3(scene.shot).videoDesign);
@@ -34402,7 +34435,7 @@ ${inputPrompt}`;
     tool,
     arguments: parsed,
     sound: { ...sound, ...audioSource ? { audioSource } : {}, effects: resolved },
-    capabilities: { nativeAudio, inputAudio: fixedInput ? ["astra_genai_desktop_audio2video", "ltx_api_audio2video"].includes(tool) ? "conditioned_reencoded" : "preserved" : ["seedance_reference", "fasth3_omni_reference", "astra_genai_msr", "minimax_reference", "heygen_reference"].includes(tool) ? "reference" : "none" },
+    capabilities: { nativeAudio, inputAudio: fixedInput ? "conditioned_reencoded" : ["seedance_reference", "fasth3_omni_reference", "astra_genai_msr", "minimax_reference", "heygen_reference"].includes(tool) ? "reference" : "none" },
     warnings,
     review: "not_reviewed",
     generated: false

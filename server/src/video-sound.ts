@@ -108,6 +108,6 @@ export function prepareVideoSound(tool: string, input: Record<string, unknown>, 
     warnings.push('Audience effects need an asset and an observed shot-relative atSeconds before assembly.');
   if (native.length) warnings.push('Native audio is a mixed soundtrack. Do not overlay a second dialogue track; inspect missing or unwanted effects before acceptance.');
   return { tool, arguments: parsed, sound: { ...sound, ...(audioSource ? { audioSource } : {}), effects: resolved },
-    capabilities: { nativeAudio, inputAudio: fixedInput ? (['astra_genai_desktop_audio2video', 'ltx_api_audio2video'].includes(tool) ? 'conditioned_reencoded' : 'preserved') : ['seedance_reference', 'fasth3_omni_reference', 'astra_genai_msr', 'minimax_reference', 'heygen_reference'].includes(tool) ? 'reference' : 'none' },
+    capabilities: { nativeAudio, inputAudio: fixedInput ? 'conditioned_reencoded' : ['seedance_reference', 'fasth3_omni_reference', 'astra_genai_msr', 'minimax_reference', 'heygen_reference'].includes(tool) ? 'reference' : 'none' },
     warnings, review: 'not_reviewed', generated: false };
 }

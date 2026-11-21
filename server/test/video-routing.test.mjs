@@ -375,6 +375,26 @@ test('managed speech plans an MSR shot as native speech; a named tool keeps its 
  const allFalse={provider:'astra-genai',model:'ltx-2.5-22b-distilled',audioConditioning:false,lipSync:false,postLipSync:false,evidence:'old caller'};
  assert.throws(()=>manageSpeech({path:path.join(f.episode,'storyboard'),action:'plan_video',shotId:'s1',capabilities:allFalse}),/disagree/);
 });
+test('A2V plans physical dialogue without certifying lips and checks the supplied clip covers the shot', async t => {
+ const {manageSpeech}=await import('../dist/speech.js');
+ for (const video of [
+   {engine:'astra-genai',model:'ltx-2.5-22b-dev',resolution:'640x384'},
+   {engine:'astra-genai-desktop',model:'ltx-2.5-fast',resolution:'270p'},
+   {engine:'ltx-api',model:'ltx-2-5-pro',resolution:'1280x720'},
+ ]) {
+   const f=fixture(t,{...video,operation:'audio'}),shot=f.board.SCENES[0];
+   shot.duration=8;
+   shot.narration=[{id:'line',speaker:'hero',delivery:'on_screen',tts:'Hello'}];
+   f.board.SB_DOC={characters:[{id:'hero',name:'Hero',tts:{engine:'gemini',voiceId:'Kore',language:'en',speed:1}}]};f.save();
+   const speech=manageSpeech({path:path.join(f.episode,'storyboard'),action:'plan_video',shotId:'s1'});
+   assert.equal(speech.plan.mode,'audio_conditioned');
+   assert.equal(speech.plan.capabilities.lipSync,false);
+   const audioPath=path.join(f.episode,'short.wav');
+   execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=d=3',audioPath]);
+   assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'short-track',
+     args:{prompt:'Hero speaks.',audioPath,...(video.engine==='astra-genai-desktop'?{allowAudioTruncation:true}:{}),...(video.engine==='ltx-api'?{}:{reserveUsd:0})}}),/video_duration_short/);
+ }
+});
 test('historical tally cannot hide costs absent from the event stream',async t=>{
  const f=fixture(t);fs.writeFileSync(path.join(f.episode,'.work/events.jsonl'),'');
  fs.writeFileSync(path.join(f.episode,'.work/cost-tally.tsv'),'veo.fast.720p\t80\timported generation\n');
