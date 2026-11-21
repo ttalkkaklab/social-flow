@@ -12,7 +12,7 @@ export const sceneVideoDirectionSchema = z.object({
     emotion: sceneText.describe('The emotional change, naming each participant. For a factual scene give its visible subject and purpose.'),
     action: sceneText.optional().describe('Only story-essential movement, tied to the same visible landmark as the opening position.'),
     sound: sceneText.optional().describe('Room tone or sound from an essential action.'),
-    camera: sceneText.optional().describe('An intentional camera change, when needed.'),
+    camera: sceneText.optional().describe('Camera direction for the whole take. Name the action cue, path and landing, or an intentional hold. Use it to reconcile different shot-card moves.'),
 }).strict();
 export function openingPrompt(prompt, positions = []) {
     if (!positions.length)
