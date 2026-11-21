@@ -291,7 +291,10 @@ test('the float audience stem preserves long delays, excerpt entrances and a sec
   const firstSample = 1249600, secondSample = 1344000;
   const list = [[firstSample / 48000,wav,10,.68,0,4800,9600],[secondSample / 48000,wav,10,.20,0,4800,48]];
   writeFileSync(path.join(dir,'events.tsv'), list.map(row => row.join('\t')).join('\n') + '\n');
-  const stage = builder.slice(builder.indexOf('sfx_measure() {'), builder.indexOf('\nSFXIN=""'));
+  const start = builder.indexOf('sfx_measure() {');
+  const end = builder.indexOf('\nif [ "$AUDIENCE_PLAN" = 1 ]; then\n  render_sfx', start);
+  assert.ok(start >= 0 && end > start);
+  const stage = builder.slice(start, end);
   const script = `set -eu
 AUDIENCE_PLAN=0; NT=30; MIX_REFERENCE_I=-18; SFX_SEP=10
 say(){ :; }
@@ -307,6 +310,30 @@ render_sfx events.tsv audience.wav pcm_f32le`;
   assert.ok(silence(firstSample + .68 * 48000, secondSample));
   assert.ok(amplitude(secondSample + 1) > 0 && amplitude(secondSample + 50) > .001);
   assert.ok(silence(secondSample + .2 * 48000, 30 * 48000));
+});
+
+test('legacy room tone plays on still-camera renders and stops at the source clip', t => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'room-tone-'));
+  t.after(() => rmSync(dir, {recursive: true, force: true}));
+  mkdirSync(path.join(dir, 'work'));
+  writeFileSync(path.join(dir, 'scenes.js'), `window.SCENES = [
+    {shot:{render:{mode:'still_camera'}},visual:{slide:{kind:'camera'}}},
+    {shot:{render:{mode:'generated_video'}}},
+    {shot:{render:{mode:'still_camera'}}}
+  ];`);
+  writeFileSync(path.join(dir, 'stillcards.txt'), '');
+  writeFileSync(path.join(dir, 'work/cardstart.tsv'), '0\t0.0000\n1\t2.0000\n2\t4.0000\n');
+  writeFileSync(path.join(dir, 'amb.tsv'), '0\troom.wav\n1\tunavailable.wav\n');
+  ff(['-f','lavfi','-i','sine=frequency=270:duration=3',path.join(dir,'room.wav')]);
+  const start = builder.indexOf('AMBIN=""\nif [ -n "$AMBTSV" ]; then');
+  const end = builder.indexOf('\n# 10b)', start);
+  assert.ok(start >= 0 && end > start);
+  const result = spawnSync('bash', ['-c', `set -eu
+HERE=$1; STORYBOARD=$PWD; AMBTSV=amb.tsv; NT=6; MIX_REFERENCE_I=-16; BGM_CUE_XF=2; AMB_SEP=15
+say(){ :; }
+${builder.slice(start, end)}`, 'ambience', ref], {cwd:dir, encoding:'utf8'});
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.equal(readFileSync(path.join(dir,'work/ambcue.list'),'utf8'), '0.0000\troom.wav\n2.0000\t-\n');
 });
 
 test('audience preview and final mix preserve the source and place only selected tones across trimmed cards', {timeout:90000}, () => {
@@ -333,9 +360,11 @@ test('audience preview and final mix preserve the source and place only selected
     writeFileSync(path.join(board,'scenes.js'),Object.entries(win).map(([k,v])=>'window.'+k+'='+JSON.stringify(v)+';').join('\n'));
     writeFileSync(path.join(work,'cards.tsv'),shots.map((_,i)=>i+'\tsource.mp4\t1\tnone').join('\n')+'\n');
     writeFileSync(path.join(work,'segs.tsv'),shots.map((_,i)=>i+'\t0\t'+source+'\t\t').join('\n')+'\n');
+    writeFileSync(path.join(work,'amb.tsv'), '0\tunused-room-tone.wav\n');
     const result=spawnSync('bash',[path.join(ref,'build-reel.sh'),work,board,'--audience-sfx','compare','--from-shot','s0001','--to-shot','s0002'],{
       encoding:'utf8',timeout:60000,maxBuffer:8*1024*1024,env:{...process.env,W:'128',H:'224',FPS:'25',OUTRO:'0',COVER_TS:'1'}});
     assert.equal(result.status,0,result.stdout+result.stderr);
+    assert.equal(readFileSync(path.join(work,'work/ambcue.list'),'utf8'), '');
     const resolved=JSON.parse(readFileSync(path.join(work,'work/audience-resolved.json')));
     assert.deepEqual(resolved.map(e=>e.bodyStartSeconds),[1.4,2.45]);
     assert.ok(Math.abs(resolved[0].bodyEndSeconds-2.5)<1e-6);
@@ -356,9 +385,9 @@ test('audience preview and final mix preserve the source and place only selected
     for(const buf of [on,final]) {
       assert.ok(band(buf,1.46,900)>.008 && band(buf,1.32,900)<.001,'drone starts at trimmed time');
       assert.ok(band(buf,2.54,900)<.001 && band(buf,2.54,1400)>.008,'only the drone ends');
-      assert.ok(band(buf,2.54,1900)>.008 && band(buf,1,200)>.01,'ordinary effect and original soundtrack survive');
+      assert.ok(band(buf,2.54,1900)<.001 && band(buf,1,200)>.01,'old scene effect stays out and the original soundtrack survives');
     }
-    assert.ok(band(off,2.54,1900)>.008 && band(off,2.54,1400)<.001);
+    assert.ok(band(off,2.54,1900)<.001 && band(off,2.54,1400)<.001);
     // Simulated authorization in a disposable test episode exercises the normal speed pass.
     writeFileSync(path.join(work,'speed-authorization.json'),JSON.stringify({version:1,requests:[{
       scope:'final',factor:1.25,source:'explicit-user-request',request:'Test fixture requests 1.25x playback',requestedAt:'2026-11-20T00:00:00Z'}]}));

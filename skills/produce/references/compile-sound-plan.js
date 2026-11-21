@@ -15,7 +15,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { spawnSync } = require('child_process');
 const { evaluateWindowScript } = require('../../_shared/scenes-vm.js');
-const { mixFindings, mixEnvironment, musicEnvelopeFindings } = require('./sound-mix-contract.js');
+const { mixFindings, mixEnvironment, musicEnvelopeFindings, hasClipSound } = require('./sound-mix-contract.js');
 const { timelineFindings, compileTimeline, spottingReport } = require('./music-timeline.js');
 const audience = require('../../storyboard/references/audience-effects.js');
 const { preparer } = require('./audience-derivation.js');
@@ -43,7 +43,7 @@ if (timelineErrors.length) die(timelineErrors.join('; '));
 const hasTimeline = Object.prototype.hasOwnProperty.call(music, '$timeline');
 fs.mkdirSync(work, { recursive: true });
 const markerFile = path.join(work, 'sound-plan.json');
-const ownedNames = new Set(['bgm.tsv', 'sfx.tsv', 'amb.tsv', 'silence.tsv', 'music-gain.tsv', 'sound.env', 'music-timeline.json', 'sfx-spans.json']);
+const ownedNames = new Set(['bgm.tsv', 'sfx.tsv', 'bgm-drops.tsv', 'amb.tsv', 'silence.tsv', 'music-gain.tsv', 'sound.env', 'music-timeline.json', 'sfx-spans.json']);
 let previous = {};
 if (fs.existsSync(markerFile)) {
   try { previous = record(JSON.parse(fs.readFileSync(markerFile, 'utf8')).files); }
@@ -100,7 +100,8 @@ function cleanPrevious() {
 
 const extended = hasTimeline || Object.keys(mix).length > 0 || scenes.some((shot) => {
   const sound = record(shot && shot.sound);
-  return Array.isArray(sound.effects) || Array.isArray(sound.silence) || sound.musicGain !== undefined;
+  return Array.isArray(sound.effects) || Array.isArray(sound.silence) || sound.musicGain !== undefined ||
+    sound.sfx !== undefined || sound.ambience !== undefined || sound.drop === true;
 });
 if (!extended) {
   cleanPrevious();
@@ -109,18 +110,6 @@ if (!extended) {
     changed: removed.length > 0, reason: 'no extended sound fields', removed, warnings,
   }) + '\n');
   process.exit(0);
-}
-
-// An explicit new owner must not inherit an untracked (or human-edited) effect row.
-// Keep the user's file intact and require reconciliation instead of silently doubling sound.
-const explicitSourceEffects = scenes.some(shot => Array.isArray(shot?.sound?.effects) &&
-  shot.sound.effects.some(effect => ['native', 'input'].includes(effect?.delivery)));
-const oldEffectsFile = path.join(work, 'sfx.tsv');
-if (explicitSourceEffects && fs.existsSync(oldEffectsFile)) {
-  const bytes = fs.readFileSync(oldEffectsFile);
-  const hasEffects = bytes.toString('utf8').split(/\r?\n/).some(row => row.trim() && !row.startsWith('#') && row.split('\t')[2]?.trim());
-  if (hasEffects && previous['sfx.tsv'] !== digest(bytes))
-    die('native/input ownership conflicts with unmanaged or edited sfx.tsv; reconcile its effect rows explicitly (file preserved)');
 }
 
 function catalog(kind, id) {
@@ -148,7 +137,7 @@ function cueFile(name) {
 }
 
 const timelinePlan = hasTimeline ? compileTimeline(music, scenes, cueFile) : null;
-const bgm = [], effects = [], ambience = [], silence = [], musicGain = [];
+const bgm = [], drops = [], ambience = [], silence = [], musicGain = [];
 const audienceSpans = [];
 const audienceClock = audience.boardClock(win, path.dirname(source), channel);
 const checkedAudienceMusic = new Set();
@@ -173,6 +162,8 @@ function audienceFile(source) {
 }
 const shots = scenes.map((s, card) => ({ id: s.id, card }));
 const intensitySeparation = { subtle: 10, normal: 6, strong: 3 };
+let ignoredSceneEffects = 0;
+let ambienceActive = false;
 scenes.forEach((shot, idx) => {
   const sound = record(shot && shot.sound);
   if (sound.musicGain) musicGain.push([idx, JSON.stringify(sound.musicGain)]);
@@ -184,16 +175,16 @@ scenes.forEach((shot, idx) => {
   const narrationCount = Array.isArray(shot && shot.narration) ? shot.narration.length : 0;
   if (sound.drop === true) {
     const count = Math.max(1, narrationCount);
-    for (let seg = 0; seg < count; seg++) effects.push([idx, seg, '', 'off', '', '']);
+    for (let seg = 0; seg < count; seg++) drops.push([idx, seg]);
   }
-  if (sound.sfx) effects.push([idx, 0, sfxFile(String(sound.sfx)), 'on', '', '']);
+  if (sound.sfx) ignoredSceneEffects++;
   if (Array.isArray(sound.effects)) { sound.effects.forEach((effect, ei) => {
     const item = record(effect);
     if (item !== effect) die(`shot ${shot.id || idx + 1} sound.effects[${ei}] must be an effect object`);
     if (item.audience) {
       audience.checkDelivery(shot.id, item);
       if (!item.id || !item.sfx || !item.trigger || !item.description || !item.audience.intent ||
-          sound.effects.filter(e => e?.id === item.id).length !== 1 || sound.sfx === item.sfx ||
+          sound.effects.filter(e => e?.id === item.id).length !== 1 ||
           sound.effects.some(e => ['input','native'].includes(e?.delivery) && e.sfx === item.sfx))
         die(`audience_id_conflict: ${shot.id}/${item.id} needs a unique post event and asset owner`);
       if (item.atSeconds == null) die(`${shot.id}/${item.id}: planned effect needs observed atSeconds`);
@@ -212,27 +203,19 @@ scenes.forEach((shot, idx) => {
     }
     if (['native', 'input'].includes(item.delivery)) {
       if (sound.audioSource !== 'video') die(`shot ${idx + 1}: ${item.delivery} effects require audioSource=video`);
-      if (item.sfx && sound.sfx === item.sfx) die(`shot ${idx + 1}: native/input effect also appears in legacy sound.sfx`);
       return; // Already in the card soundtrack; never place the same effect twice.
     }
-    if (item.delivery !== undefined && item.delivery !== 'post') die(`shot ${idx + 1}: resolve effect delivery with prepare-video-sound.js before assembly`);
-    if (item.delivery === 'post' && (typeof item.atSeconds !== 'number' || !Number.isFinite(item.atSeconds)))
-      die(`shot ${idx + 1}: post effect needs observed atSeconds`);
-    if (typeof item.sfx !== 'string' || !item.sfx.trim()) die(`shot ${idx + 1}: post effect needs an sfx asset`);
-    const id = safeCell(item.sfx, `shot ${idx + 1} sound.effects[${ei}].sfx`);
-    const offset = finite(item.atSeconds, 0);
-    const separation = item.separationLu === undefined
-      ? intensitySeparation[item.intensity || 'normal']
-      : finite(item.separationLu, NaN);
-    if (offset < 0) die(`shot ${idx + 1} effect ${ei + 1} has a negative atSeconds`);
-    if (Number.isFinite(Number(shot.duration)) && offset >= Number(shot.duration))
-      die(`shot ${idx + 1} effect ${ei + 1} is outside the ${shot.duration}s shot`);
-    if (!Number.isFinite(separation) || separation < 0 || separation > 30) die(`shot ${idx + 1} effect ${ei + 1} has invalid separationLu`);
-    effects.push([idx, 0, sfxFile(id), 'on', offset, separation]);
+    ignoredSceneEffects++;
   }); }
-  if (sound.ambience !== undefined) {
-    const stop = sound.ambience === null || sound.ambience === '-' || sound.ambience === 'none';
-    ambience.push([idx, stop ? '-' : sfxFile(String(sound.ambience))]);
+  if (!['broll', 'outro'].includes(shot.type)) {
+    if (hasClipSound(shot)) {
+      if (ambienceActive || sound.ambience !== undefined) ambience.push([idx, '-']);
+      ambienceActive = false;
+    } else if (sound.ambience !== undefined) {
+      const stop = sound.ambience === null || sound.ambience === '-' || sound.ambience === 'none';
+      ambience.push([idx, stop ? '-' : sfxFile(String(sound.ambience))]);
+      ambienceActive = !stop;
+    }
   }
   if (Array.isArray(sound.silence)) { sound.silence.forEach((window, wi) => {
     const item = record(window), start = finite(item.startSeconds, NaN), end = finite(item.endSeconds, NaN);
@@ -244,17 +227,9 @@ scenes.forEach((shot, idx) => {
     silence.push([idx, start, end, 'music']);
   }); }
 });
+if (ignoredSceneEffects) warn(`omitted ${ignoredSceneEffects} untagged scene effect(s); only audience cues play in post`);
 
 if (audienceSpans.length) {
-  if (fs.existsSync(oldEffectsFile)) {
-    const bytes = fs.readFileSync(oldEffectsFile);
-    if (previous['sfx.tsv'] !== digest(bytes)) {
-      const manual = bytes.toString('utf8').split(/\r?\n/).filter(l => l.trim() && !l.startsWith('#')).map(l => l.split('\t'));
-      if (manual.length && (effects.length || manual.some(([card,,name]) => name && audienceSpans.some(span =>
-        scenes[Number(card)]?.id === span.shotId && path.resolve(work, name) === path.resolve(span.assetPath)))))
-        die('audience_id_conflict: reconcile the unmanaged or edited sfx.tsv before changing its effect rows (file preserved)');
-    }
-  }
   const boundaries = scenes;
   // Natural tails may cross adjacent cards, but stop where a separately spliced insert begins.
   for (const span of audienceSpans) {
@@ -265,7 +240,7 @@ if (audienceSpans.length) {
   writeOwned('sfx-spans.json', JSON.stringify({ version: 1, shots, spans: audienceSpans }, null, 2) + '\n');
 }
 writeRows('bgm.tsv', bgm);
-writeRows('sfx.tsv', effects);
+writeRows('bgm-drops.tsv', drops);
 writeRows('amb.tsv', ambience);
 writeRows('silence.tsv', silence);
 writeRows('music-gain.tsv', musicGain);
@@ -283,7 +258,7 @@ fs.writeFileSync(markerFile, JSON.stringify({
 
 process.stdout.write(JSON.stringify({
   changed: true,
-  bgm: bgm.length, effects: effects.filter((row) => row[2]).length + audienceSpans.length,
-  drops: effects.filter((row) => row[3] === 'off').length, ambience: ambience.length,
+  bgm: bgm.length, effects: audienceSpans.length,
+  drops: drops.length, ambience: ambience.length,
   silence: silence.length, env: env.length, removed, warnings,
 }) + '\n');

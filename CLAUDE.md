@@ -154,6 +154,17 @@ This is writing guidance, not a score, a quota or an approval pause, and a clich
 answers `necessity`. Follow `skills/storyboard/references/cliche-use.md`. Evidence and its
 limits: `docs/research/2026-11-18-kdrama-cliches/`.
 
+## Scene sound and audience effects (user directive, 2026-11-21)
+
+Use the video model’s soundtrack for sounds made in the scene, including room
+tone and actions such as steps or water hitting a surface. Describe the source
+and timing in the video sound direction. If that render mode cannot make the
+sound, leave the effect out of post. Preserve the selected speech and music lanes.
+Generate and mix separate effects only for a planned audience cue
+(`sound.effects[].audience`), such as a restrained surprise hit or a tension rise.
+The builder skips untagged scene effects and uses only the music-off flags from
+legacy `sfx.tsv`. See [Model-aware effects](skills/produce/references/video-sound.md).
+
 ## TikTok private upload and cover (user directive, 2026-11-18)
 
 Every new TikTok publication starts private (Only you / SELF_ONLY). Edit and save

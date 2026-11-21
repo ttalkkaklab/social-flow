@@ -77,7 +77,7 @@ result repeatedly changes a required locked setup or duplicates a referenced per
 explain the limitation and prepare a scoped first-frame-conditioned alternative. Preserve
 the saved model and resolution unless the user authorizes a change, and keep attempt limits.
 
-Let the video model supply the room and sounds made by the visible action. Keep its usable soundtrack in the edit. A footstep or splash already heard in the take needs no second asset. Keep audience-only drones, risers and stingers in `sound.effects[].audience` for post; the saved music model can score them independently of the scene's BGM. Write scene sounds in `shot_prompt.sound` and keep the input voice track free of audience cues.
+Describe the room and sounds made by the visible action in `shot_prompt.sound`. Keep the accepted video's soundtrack. Omit a scene effect when the selected route cannot render it. Keep the input voice track free of audience cues. Put cues such as a surprise hit or tension rise in `sound.effects[].audience` for post. The saved music model can score them independently of the scene's BGM.
 
 **Approval.** Plan each shot with `video_plan` (it sends the stored prompt when args name
 none, and on MSR the start image rides in the background slot). Before `video_execute`,
