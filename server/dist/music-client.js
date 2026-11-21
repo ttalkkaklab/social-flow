@@ -230,7 +230,8 @@ export async function generateAdvanced(request) {
     const weightedPrompts = request.prompts.map((p) => ({ text: p.text, weight: p.weight ?? 1.0 }));
     try {
         const { GoogleGenAI } = await import('@google/genai');
-        // RealTime (live.music) is exposed only under v1alpha.
+        // The guide says v1beta. Its connect() hung in 2026-08 and answered setupComplete on 2026-11-21, but only
+        // v1alpha has streamed audio in a measurement here, so the switch waits for a v1beta stream.
         const genai = new GoogleGenAI({ apiKey: requireGeminiKey(), apiVersion: 'v1alpha' });
         console.error(`[Lyria] Streaming ${targetDuration}s... (model: ${LYRIA_REALTIME_MODEL})`);
         console.error(`[Lyria] Prompts: ${weightedPrompts.map((p) => `"${p.text}"(${p.weight})`).join(', ')}`);

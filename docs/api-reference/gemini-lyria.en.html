@@ -116,12 +116,12 @@ await session.play();</code></pre>
       <thead><tr><th>apiVersion</th><th>Result</th></tr></thead>
       <tbody>
         <tr><td><code>v1alpha</code></td><td>Works — 384,000 bytes received for a 4-second request (exactly 48,000 × 2ch × 2 bytes × 4s)</td></tr>
-        <tr><td><code>v1beta</code></td><td><code>connect()</code> never returns and hangs</td></tr>
+        <tr><td><code>v1beta</code></td><td><code>connect()</code> never returned in 2026-08. On 2026-11-21 it returned and answered <code>setupComplete</code>; no audio was streamed under it</td></tr>
         <tr><td>(unspecified)</td><td>—</td></tr>
       </tbody>
     </table>
     </div>
-    So this server stays on <code>v1alpha</code>. Switch to <code>v1beta</code> on the strength of the docs and the tool stops silently.
+    So this server stays on <code>v1alpha</code>, which also still answers <code>setupComplete</code> (2026-11-21). Move to <code>v1beta</code> after a stream under it returns the requested bytes, not on the strength of the docs.
   </div>
 
   <h3>Stream end condition</h3>

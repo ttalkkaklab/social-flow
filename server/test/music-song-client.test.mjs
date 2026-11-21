@@ -12,6 +12,8 @@ test('native song schemas distinguish prompt convenience from plan-only controls
   assert.throws(() => elevenMusicSchema.parse({ prompt: 'p', seed: 42 }));
   const compositionPlan = { chunks: [{ text: '[Verse]\n안녕', durationMs: 3000, positiveStyles: ['piano'], negativeStyles: [] }] };
   assert.equal(elevenMusicSchema.parse({ compositionPlan, seed: 42 }).seed, 42);
+  const { negativeStyles, ...withoutNegative } = compositionPlan.chunks[0];
+  assert.equal(elevenMusicSchema.parse({ compositionPlan: { chunks: [withoutNegative] } }).compositionPlan.chunks[0].negativeStyles, undefined);
   for (const extra of [{ prompt: 'p' }, { forceInstrumental: true }, { musicLengthMs: 5000 }]) assert.throws(() => elevenMusicSchema.parse({ compositionPlan, ...extra }));
   assert.throws(() => elevenMusicSchema.parse({ compositionPlan: { chunks: [{ ...compositionPlan.chunks[0], text: 'a'.repeat(201) }] } }));
 });

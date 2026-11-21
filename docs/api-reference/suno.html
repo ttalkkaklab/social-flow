@@ -43,7 +43,7 @@
     <tbody>
       <tr><td>나레이션 밑 침대 (기본)</td><td><code>music_generate_clip</code> 30초, 빌더가 루프</td><td><code>GEMINI_API_KEY</code></td></tr>
       <tr><td>길이를 초 단위로, 또는 seed 재현</td><td><code>music_generate</code> / <code>music_generate_advanced</code></td><td><code>GEMINI_API_KEY</code></td></tr>
-      <tr><td>나레이션 밑 침대 (Suno)</td><td><code>suno_generate_sound</code> 루프+BPM</td><td><code>SUNO_API_KEY</code></td></tr>
+      <tr><td>나레이션 밑 침대 (Suno)</td><td><code>suno_generate</code> + <code>instrumental</code></td><td><code>SUNO_API_KEY</code></td></tr>
       <tr><td>노래가 콘텐츠</td><td><code>suno_generate</code></td><td><code>SUNO_API_KEY</code></td></tr>
     </tbody>
   </table>
@@ -55,18 +55,18 @@
 
 <section id="generate">
   <h2>2. suno_generate</h2>
-  <p>호출당 정확히 두 곡. 원격 URL 은 15일 뒤 사라지므로 폴링이 끝나는 즉시 로컬에 저장한다. 웹훅 서버가 없는 MCP stdio 환경이라 <code>callBackUrl</code> 은 더미(<code>https://httpbin.org/post</code>)를 보내고 폴링으로 끝낸다. 콜백만 실패하고 오디오 URL 이 있으면 성공으로 읽는다.</p>
+  <p>호출당 정확히 두 곡. 원격 URL 은 14일 뒤 사라지므로 폴링이 끝나는 즉시 로컬에 저장한다. 웹훅 서버가 없는 MCP stdio 환경이라 <code>callBackUrl</code> 은 더미(<code>https://httpbin.org/post</code>)를 보내고 폴링으로 끝낸다. 콜백만 실패하고 오디오 URL 이 있으면 성공으로 읽는다.</p>
   <ul>
-    <li><code>customMode=false</code> — prompt 만으로 가사·스타일을 모델이 정한다.</li>
-    <li><code>customMode=true</code> + 보컬 — prompt 가 가사 그대로 불린다. style·title 필수.</li>
-    <li><code>customMode=true</code> + <code>instrumental=true</code> — 보컬 없음. style·title 필수.</li>
+    <li><code>customMode=false</code> — <code>style</code> 이나 <code>lyrics</code> 가 있어야 한다. prompt 만 보내면 거절한다. <code>prompt</code> 는 3,000자까지.</li>
+    <li><code>customMode=true</code> — <code>style</code>·<code>lyrics</code>·<code>negativeTags</code> 중 하나가 있어야 한다. <code>lyrics</code>(5,000자)는 적힌 그대로 불리고 <code>prompt</code> 보다 먼저다. <code>style</code> 과 <code>negativeTags</code> 는 1,000자씩, <code>title</code> 은 80자까지.</li>
+    <li>커스텀 모드에서만 받는 값: <code>duration</code>(10–360초), <code>vocalGender</code>, 페르소나, <code>styleWeight</code>·<code>weirdnessConstraint</code>·<code>audioWeight</code>(0–1), <code>variety</code>(0–4).</li>
   </ul>
-  <p>기본 모델 V5 (최대 8분). <code>duration</code>(10–360초)는 V5_5 + customMode 만 받는다. 생성은 약 12 크레딧/호출(≈ $0.06, $5/1000 팩).</p>
+  <p>기본 모델은 V6 이고 V6_MINI 와 V6_WILD 를 고를 수 있다. 제공처는 V4·V5 계열을 기존 연동용으로만 두고 있고 이 서버는 그 모델을 거절한다. 제공처 문서에 V6 호출의 크레딧 값이 없으니(2026-11-21 확인) 호출 앞뒤로 <code>suno_credits</code> 를 읽는다.</p>
 </section>
 
 <section id="sound">
   <h2>3. suno_generate_sound</h2>
-  <p>V5 전용 Sounds 태스크. 인트로·아웃트로 없는 루프, BPM·조성을 지정할 수 있다. 빌더가 <code>-stream_loop -1</code> 로 늘린다. <code>filename</code> 을 <code>.wav</code> 로 두면 48kHz 스테레오 PCM 으로 바꿔 <code>.work/bgm.wav</code> 에 맞춘다.</p>
+  <p>아무것도 제출하지 않고 거절한다. Sounds 엔드포인트는 V6 계열을 받지만(2026-11-21 확인) 끝난 사운드 태스크를 가져오는 방법이 제공처 문서에 없다. 상태 조회 엔드포인트는 Generate 와 Extend Music 만 말하고 Sounds 페이지에는 콜백 본문 예시가 없다. 생성 호출은 과금되므로 실제 사운드 태스크 하나를 받아 본 뒤에 연다. 나레이션 밑 침대는 <code>suno_generate</code> 에 <code>instrumental</code> 을 켜서 만든다.</p>
 </section>
 
 <section id="impl">
