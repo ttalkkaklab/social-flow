@@ -15,7 +15,7 @@ const digest = file => require('node:crypto').createHash('sha256').update(fs.rea
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const t = (ko, en) => `<span data-ko="${esc(ko)}" data-en="${esc(en)}">${esc(ko)}</span>`;
 const rel = (from, to) => path.relative(path.dirname(from), to).split(path.sep).map(part => encodeURIComponent(part)).join('/') || './';
-const { GROUPS, identityCharacter, identityErrors } = require('../../_shared/character-identity.js');
+const { GROUPS, identityCharacter, identityErrors, headsTall } = require('../../_shared/character-identity.js');
 const { inspectPanels, boardPanelFindings } = require('./character-panels.js');
 const label = { front: ['머리 없는 앞면', 'Headless front'], back: ['머리 없는 뒷면', 'Headless back'], face: ['얼굴 클로즈업', 'Face close-up'] };
 const short = { front: ['앞면', 'Front'], back: ['후면', 'Back'], face: ['얼굴', 'Face'] };
@@ -250,6 +250,8 @@ function exportChannel(channelDirectory, { check = false } = {}) {
     let characterIdentity = null, identityError = '';
     try { characterIdentity = identityCharacter(source, { ready: false }); identityError = identityErrors(characterIdentity).join("; "); if (identityError) contentWarning(character.id, 'identity', identityError); }
     catch (error) { identityError = error.message; contentWarning(character.id, 'identity', identityError); }
+    // No panel shows the head on the body; the head count in proportions is what sizes one against the other.
+    if (characterIdentity && !headsTall(characterIdentity)) contentWarning(character.id, 'head-count', 'no head count in physical.proportions (e.g. "7.5 heads tall", "3등신"), so nothing sizes the head against the body in a shot');
     if (characterIdentity) { role = characterIdentity.identity.role.value || role; appearance = characterIdentity.physical.appearance?.value || appearance; }
     let body = `<article class="character-sheet"><a class="review-crumb" href="../index.html">${t('캐릭터 시트 목록', 'Character sheets')}</a>`;
     // Photos on the left; the identity group ("기본 설정") reads on the right.

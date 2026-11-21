@@ -26,6 +26,28 @@ test('character handoff exports the chosen audition sample with pinned voice set
  rmSync(manifest);const missing=handoff(file);assert.equal(missing.voiceReference,undefined);assert.ok(missing.voiceReferenceWarning);
 });
 
+test('the head count is read from the proportions words and never guessed', () => {
+  const { headsTall, headRatio } = require('../../skills/_shared/character-identity.js');
+  const sheet = (value, status = 'confirmed') => ({ physical: { heightCm: { status: 'confirmed', value: 225 }, proportions: { status, value } } });
+  for (const [words, count] of [['about 7.5 heads tall, head not oversized', 7.5], ['7 1/2 heads', 7.5], ['a 2.5-head-tall mascot', 2.5],
+    ['귀를 제외한 전체 키가 머리 높이의 3배인 3등신', 3], ['natural adult proportions, about seven and a half heads tall', 7.5], ['Same compact two-head silhouette, one broad stylized head', 2],
+    ['Natural realistic adult male body proportions.', null], ['long legs, 1:7 head-to-body look', null], ['70 heads tall', null],
+    // Another measure in head units is not the height, and a range or two counts is no count.
+    ['shoulders 2 heads wide, about 7.5 heads tall', 7.5], ['legs 4 heads long', null], ['6-7 heads tall', null], ['6 to 7 heads tall', null], ['2 heads, 7 heads', null], ['stocky, 5 heads', 5], ['two heads taller than Bo', null]])
+    assert.equal(headsTall(sheet(words)), count, words);
+  assert.equal(headsTall(sheet(null, 'pending')), null);
+  assert.equal(headsTall(doc().character), 3, 'the worked example carries a count');
+  assert.deepEqual(headRatio(sheet('long legs'), 'kardum'), { headsTall: null, text: '' });
+  const said = headRatio(sheet('7.5 heads tall'), 'kardum');
+  assert.equal(said.headsTall, 7.5);
+  assert.match(said.text, /^kardum is 7\.5 heads tall: .*30 cm of the 225 cm standing height/);
+  assert.match(headRatio({ physical: { proportions: { status: 'confirmed', value: '3등신' } } }, 'mori').text, /^mori is 3 heads tall: .*one part in 3 of the standing height/);
+  // Every readable count gets shape words, and counts that look different get different ones.
+  const shape = count => headRatio(sheet(count + ' heads tall'), 'x').text.split('; the head (crown')[0];
+  for (let count = 1.5; count <= 12; count += 0.25) assert.match(shape(count), /^x is [\d.]+ heads tall: \S/);
+  assert.equal(new Set([1.5, 2, 2.5, 3, 4, 5, 6, 7, 7.5, 8, 8.5, 9].map(count => shape(count).split(': ')[1])).size, 12);
+});
+
 test('the basics are required; every other field and group is optional, typed, status-aware and placeholder-resistant', () => {
   assert.deepEqual(identityErrors(doc().character), []);
   for (const [group,,,fields] of GROUPS) for (const [key] of fields) {

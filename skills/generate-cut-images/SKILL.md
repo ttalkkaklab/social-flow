@@ -71,7 +71,12 @@ GPT model or a differently proportioned explicit `size` reports `image_aspect_mi
 inspect the actual delivery crop before using that image as a video input.
 
 One character's inputs are its face, headless front and headless back panels; two
-characters take each face, then each front. The place goes first as the picture to edit.
+characters take each face, then each front. No panel shows the head on the body, so the
+tool adds each character's head count from the sheet (`physical.proportions`, e.g. "7.5
+heads tall") as a sentence wherever the crop shows the body, and warns `head_count_missing`
+when the sheet has none: write it with `character_manage` rather than in `prompt`. After
+generation, look at the head against the shoulders and body; correct an oversized head
+with `editExisting` and a prompt that changes only the head size. The place goes first as the picture to edit.
 A model that takes fewer pictures than the frame composes refuses
 (`image_references_unsupported`): report it and ask which model to use — gpt-image takes up
 to 16, astra-genai-native and an MLX Qwen-Image-2.1 pack up to 10, MLX FLUX.2 klein and

@@ -93964,6 +93964,29 @@ var require_character_identity = __commonJS({
       });
       return { text: words.join("; "), skipped, expression };
     }
+    var HEADS = String.raw`(?<![\d.])(?<!\d\s*(?:[-–~]|to)\s*)(\d+(?:\.\d+)?)(?:\s+(\d)\/(\d))?[\s-]*`;
+    var HEIGHT_COUNT = new RegExp(HEADS + String.raw`(?:heads?[\s-]+(?:tall|high)\b|head[\s-]heights?\b|등신|頭身)`, "gi");
+    var BARE_COUNT = new RegExp(HEADS + String.raw`(?:heads\b(?![\s-]*(?:wide|long|broad|across|deep|thick))|(?<=-)head\b(?![-\w]))`, "gi");
+    var NUMBER_WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"];
+    var inDigits = (text5) => text5.replace(new RegExp(String.raw`\b(?:${NUMBER_WORDS.join("|")})\b`, "gi"), (word) => NUMBER_WORDS.indexOf(word.toLowerCase())).replace(/(\d+)[\s-]+and[\s-]+a[\s-]+half\b/gi, "$1.5");
+    function headsTall(character) {
+      const field2 = character?.physical?.proportions;
+      if (field2?.status !== "confirmed") return null;
+      const words = inDigits(String(field2.value));
+      const read4 = (pattern) => [...new Set([...words.matchAll(pattern)].map((found) => Number(found[1]) + (found[2] ? found[2] / found[3] : 0)))];
+      const tall = read4(HEIGHT_COUNT), counts = tall.length ? tall : read4(BARE_COUNT);
+      const count = counts.length === 1 ? counts[0] : NaN;
+      return count >= 1.5 && count <= 12 ? count : null;
+    }
+    function headRatio(character, name) {
+      const count = headsTall(character);
+      if (!count) return { headsTall: null, text: "" };
+      const shape2 = count < 3.5 ? "a very large head on a short body with short limbs" : count < 5.5 ? "a large head on a compact body" : count < 7 ? "a slightly large head" : "a small head on a long body";
+      const height = character.physical.heightCm, cm = height?.status === "confirmed" ? height.value : null;
+      const num5 = (value) => String(Number(value.toFixed(1)));
+      const head = cm ? `about ${num5(cm / count)} cm of the ${cm} cm standing height` : `one part in ${num5(count)} of the standing height`;
+      return { headsTall: count, text: `${name} is ${num5(count)} heads tall: ${shape2}, the head (crown to chin) ${head}, the body below the chin ${num5(count - 1)} heads.` };
+    }
     function requiresSpeech(win, id) {
       if (win?.STORY?.version !== "story-v2" || !Array.isArray(win.SCENES)) return true;
       return win.SCENES.some((s2) => Array.isArray(s2?.narration) && s2.narration.some((n) => typeof n?.tts === "string" && n.tts.trim() && (!n.speaker || n.speaker === id)));
@@ -93992,7 +94015,7 @@ var require_character_identity = __commonJS({
         return (Array.isArray(cast) ? cast : cast ? [cast] : []).some((c) => (typeof c === "string" ? c : c?.id) === id);
       });
     }
-    module.exports = { GROUPS, REQUIRED, identityErrors, identityCharacter, direction, panelPrompt, boardIdentityErrors, requiresSpeech, isVoiceOnly };
+    module.exports = { GROUPS, REQUIRED, identityErrors, identityCharacter, direction, panelPrompt, headsTall, headRatio, boardIdentityErrors, requiresSpeech, isVoiceOnly };
   }
 });
 
@@ -115851,7 +115874,7 @@ function manageCharacter(raw) {
   if (path16.basename(file) !== "identity.md" || path16.basename(path16.dirname(folder)) !== "characters" || path16.basename(path16.dirname(path16.dirname(folder))) !== "assets")
     throw new Error("character_path_invalid: identityPath must be <channel>/assets/characters/<id>/identity.md");
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) throw new Error("character_path_invalid: the character folder needs a kebab-case id");
-  const { GROUPS, REQUIRED, identityErrors } = catalog();
+  const { GROUPS, REQUIRED, identityErrors, headsTall } = catalog();
   const created = !existsSync15(file);
   let source = created ? `# ${args.name}
 
@@ -115914,7 +115937,7 @@ ${source}`;
   } catch (error2) {
     sheet = { error: error2.message };
   }
-  return { identityPath: file, id, name: args.name, created, version: character.version, missing: { basics, images, voice }, sheet };
+  return { identityPath: file, id, name: args.name, created, version: character.version, missing: { basics, images, voice, headCount: !headsTall(character) }, sheet };
 }
 function characterFieldsProperty() {
   const description = "Optional fields by group; omitted fields stay as they are. A value confirms the field, {status,reason} marks it pending or not_applicable, null removes it.";
@@ -120182,6 +120205,15 @@ var IMAGE_INPUTS = {
 var MLX_INPUTS = { "qwen-2.1": 10, "flux-klein": 4, "mage-edit": 4 };
 var latin = (value) => typeof value === "string" && value.trim() && !nonEnglishOutsideQuotes(value) ? value.trim() : "";
 var identityCatalog = () => loadFromHere2(join12(PLUGIN_ROOT, "skills", "_shared", "character-identity.js"));
+var HEAD_ONLY_SIZES = ["cu", "choker", "ecu", "reaction", "insert"];
+function headRatioSentence(win, ids) {
+  const ratios = ids.map((id) => ({ id, ...identityCatalog().headRatio(castEntry(win, id)?.character, id) }));
+  const said = ratios.filter((ratio) => ratio.text);
+  return {
+    missing: ratios.filter((ratio) => !ratio.text).map((ratio) => ratio.id),
+    text: said.length ? `${said.map((ratio) => ratio.text).join(" ")} A face panel is an enlarged close-up and sets no head size: draw ${said.length > 1 ? "each head" : "the head"} at this size on its body; the crop still decides how much of the figure shows.` : ""
+  };
+}
 function heightSentence(win, ids) {
   const heights = ids.map((id) => [id, castEntry(win, id)?.character?.physical?.heightCm]).filter(([, field2]) => field2?.status === "confirmed" && typeof field2.value === "number" && Number.isFinite(field2.value) && field2.value > 0).map(([id, field2]) => ({ id, cm: field2.value }));
   if (heights.length < 2) return "";
@@ -120472,12 +120504,21 @@ function buildShotImageRequest(args) {
     where: args.id,
     what: `expression_missing: ${blank.join(", ")} ${blank.length > 1 ? "have" : "has"} no expression for this shot, so the model draws its default pleasant face \u2014 set it with shot_characters expression from the scene's situation, or describe brows, eyes and mouth in prompt`
   });
-  const lock2 = !set ? selected && args.frame === "start" ? `Preserve the selected background's ${backgroundView} directional geography and the spatial relationships of visible landmarks. The authored crop, camera height and subject viewpoint control the output; do not copy the background sheet's wide framing. Landmarks outside that crop stay outside the frame. The character sheets supply appearance and identity only; their panel poses do not constrain this shot.` : view ? `The location and character sheets supply appearance and identity only. Recompose them to the authored ${args.frame === "end" ? "closing" : "opening"} crop and viewpoint; the sheet pose and camera do not constrain this shot.` : "" : args.frame === "end" ? composition.length ? `Use Image ${at(composition[0])}'s closing camera, lens, framing and final object and figure positions. Image 1 supplies the look and every identity; its opening camera does not constrain this closing view.` : `Image 1 supplies the opening appearance and identities. Follow the closing camera direction below while preserving the set's world layout.` : `Keep Image 1's camera position, ${lens}${dutch ? "" : ", horizon"} and world layout, and keep every object${set.blocked ? " and figure" : ""} at its world position in Image 1. The authored composition below controls the final crop, headroom and subject screen placement. Paint its plain unpainted surfaces as the real place, and continue the place into any flat dark area past the set's edge.` + (dutch ? " Image 1 is level; tilt the whole picture to the dutch angle described below." : "") + (look.some((ref) => ordered.includes(ref)) ? ` Take only materials, colours and light from Image ${at(look[0])}.` : "");
+  const figures = [...cast, ...seen], bodied = figures.length > 0 && !["object", "detail"].includes(view?.subjectType ?? "") && !HEAD_ONLY_SIZES.includes(String(plan2.size ?? ""));
+  const heads = bodied ? headRatioSentence(win, figures) : { text: "", missing: [] };
+  if (heads.missing.length) warnings.push({
+    level: "warn",
+    code: "head_count_missing",
+    where: args.id,
+    what: `head_count_missing: ${heads.missing.join(", ")} ${heads.missing.length > 1 ? "have" : "has"} no head count on the sheet, so nothing sizes the face panel's head against the headless body \u2014 write it in physical.proportions with character_manage, e.g. "7.5 heads tall"`
+  });
+  const lock2 = !set ? selected && args.frame === "start" ? `Preserve the selected background's ${backgroundView} directional geography and the spatial relationships of visible landmarks. The authored crop, camera height and subject viewpoint control the output; do not copy the background sheet's wide framing. Landmarks outside that crop stay outside the frame. The character sheets supply appearance and identity only; their panel poses do not constrain this shot.` : view ? `The location and character sheets supply appearance and identity only. Recompose them to the authored ${args.frame === "end" ? "closing" : "opening"} crop and viewpoint; the sheet pose and camera do not constrain this shot.` : "" : args.frame === "end" ? composition.length ? `Use Image ${at(composition[0])}'s closing camera, lens, framing and final object and figure positions. Image 1 supplies the look and every identity; its opening camera does not constrain this closing view.` : `Image 1 supplies the opening appearance and identities. Follow the closing camera direction below while preserving the set's world layout.` : `Keep Image 1's camera position, ${lens}${dutch ? "" : ", horizon"} and world layout, and keep every object${set.blocked ? " and figure" : ""} at its world position in Image 1.${set.blocked ? " Its coloured figures mark position, facing and height only; their head size and build are placeholders." : ""} The authored composition below controls the final crop, headroom and subject screen placement. Paint its plain unpainted surfaces as the real place, and continue the place into any flat dark area past the set's edge.` + (dutch ? " Image 1 is level; tilt the whole picture to the dutch angle described below." : "") + (look.some((ref) => ordered.includes(ref)) ? ` Take only materials, colours and light from Image ${at(look[0])}.` : "");
   const prompt = [
     args.frame === "start" && view ? `Create one opening image with this required crop: ${view.crop}.` : ordered.length ? "Compose one picture from these images." : "",
     roles,
     lock2,
-    heightSentence(win, [...cast, ...seen]),
+    heightSentence(win, figures),
+    heads.text,
     seen.length ? `Also in this frame, without a line: ${seen.join(" and ")}, ${ordered.some((ref) => ref.role === "bystander") ? "drawn from the reference images that name them" : "drawn as described below"} and placed as the description below says.` : "",
     extras ? `Unnamed people in the frame, drawn without a reference: ${extras.replace(/[.\s]+$/, "")}.` : "",
     view ? "Character panels identify the subject; include only the body regions named by the crop. A face reference does not require a face in the output." : "",
@@ -125875,7 +125916,8 @@ var TOOLS = [
     description: `Write a shared character's identity.md and refresh the channel's character sheets.
 
 Use for a new character or a requested character edit. The sheet's basics are required on every call: name, gender, species, age, role, summary and heightCm; pass {status:"pending",reason} for a basic the user has not decided, never an invented value. Read the existing identity.md first and pass its current basics when only optional fields change. Every other catalog field (personality, speech, acting, story, continuity, other body fields) is optional: omit it to keep it, pass a value to confirm it, {status,reason} for pending or not_applicable, or null to remove it. The tts block, voice selection, voice profile and prose stay untouched; voices come from character_voice_audition, images from image_plan/image_execute.
-Returns {identityPath,id,version,created,missing:{basics,images,voice},sheet}: missing lists pending basics, absent face/front/back panels and an unselected voice, the production requirements still open. No paid calls.
+Write physical.proportions with one head count for the standing height ("7.5 heads tall", "3\uB4F1\uC2E0"): the face panel is a close-up and the body panels are headless, so shot_image sizes the head against the body from that count alone.
+Returns {identityPath,id,version,created,missing:{basics,images,voice,headCount},sheet}: missing lists pending basics, absent face/front/back panels and an unselected voice, the production requirements still open; headCount is true while proportions holds no head count. No paid calls.
 Do NOT use for voices, images or episode cast handoffs (character-sheet.js compiles those). Refuses a legacy identity.md without a structured JSON block.`,
     inputSchema: { type: "object", additionalProperties: false, required: ["identityPath", "name", "gender", "species", "age", "role", "summary", "heightCm"], properties: {
       identityPath: { type: "string", description: "Absolute <channel>/assets/characters/<kebab-id>/identity.md; created when missing." },
@@ -125901,7 +125943,7 @@ Do NOT use for voices, images or episode cast handoffs (character-sheet.js compi
     description: `Make one panel of a shared character's sheet \u2014 the face close-up, the headless front or the headless back \u2014 from its identity.md, with no hand-written prompt.
 
 Use for a new character's panels, or a requested redo after its identity changed. The prompt is built from the sheet: the face takes physical.appearance; the front and back take height, weight, build, proportions and outfit with every clause naming the head left out, so every channel and storyboard draws the same body. The project style preset and the character-panels framing (1:1 face; 2:3 body at 85 % height, neutral grey, even light) are added. By default the face is drawn from text, the front is edited from the face panel and the back from the front panel alone, turned 180 degrees with front-only details ruled out; pass references to edit from other pictures (e.g. an approved full-body design). Runs image_plan \u2192 image_execute with the saved image model and the existing spending authorization, saves <id>-<view>-vN.png next to identity.md, records the slot in panels.json (framing not_reviewed) and refreshes the sheets. On the GenAI gateway's 800-character cap it drops the style sentence.
-Returns the file, the inputs in order, the prompt and warnings (a non-English physical field is left out and named); a host selection returns the handoff instead of generating.
+Returns the file, the inputs in order, the prompt and warnings (a non-English physical field is left out and named; head_count_missing when physical.proportions holds no head count such as "7.5 heads tall", the one value that sizes the face panel's head against the headless body in a shot); a host selection returns the handoff instead of generating.
 Do NOT use it for scene images (shot_image) or text-bearing art. Refused (character_panel_missing) when a default reference panel does not exist yet, and (image_references_unsupported) when the saved model cannot take that many pictures \u2014 ask the user before changing models. A story-first board picks the new files up on its next story or shot write, which syncs SB_DOC.characters panels from the character's panels.json; an older board updates its SB_DOC.characters panels by hand.`,
     inputSchema: { type: "object", additionalProperties: false, required: ["identityPath", "view"], properties: {
       identityPath: { type: "string", description: "Absolute <channel>/assets/characters/<id>/identity.md" },
@@ -138691,7 +138733,7 @@ function characterPanelRequest(raw) {
   const identityPath = path34.resolve(args.identityPath), folder = path34.dirname(identityPath), id = path34.basename(folder);
   if (path34.basename(identityPath) !== "identity.md" || path34.basename(path34.dirname(folder)) !== "characters" || path34.basename(path34.dirname(path34.dirname(folder))) !== "assets")
     throw new Error("character_path_invalid: identityPath must be <channel>/assets/characters/<id>/identity.md");
-  const { identityCharacter, panelPrompt } = shared4("_shared/character-identity.js");
+  const { identityCharacter, panelPrompt, headsTall } = shared4("_shared/character-identity.js");
   const character = identityCharacter(readFileSync40(identityPath, "utf8"), { ready: false });
   const panelsFile = path34.join(folder, "panels.json");
   const panels = (existsSync40(panelsFile) ? JSON.parse(readFileSync40(panelsFile, "utf8")).panels : void 0) ?? {};
@@ -138725,6 +138767,8 @@ function characterPanelRequest(raw) {
   const warnings = [
     ...call2.negativeSent ? [] : ["no tested negative-prompt setting for this model; exclusions must be expressed in the main prompt"],
     ...words.skipped.map((field2) => `${field2} is not English and stays out of the prompt \u2014 write it in English on the sheet`),
+    // The head stays out of the body panels, so its size against the body reaches a shot only as the sheet's head count.
+    ...headsTall(character) ? [] : [`head_count_missing: the sheet has no head count, so nothing sizes this character's head against its body when a shot joins the face panel to the headless panels \u2014 write it in physical.proportions with character_manage, e.g. "7.5 heads tall"`],
     ...words.expression.length ? [`the sheet's appearance names an expression (${words.expression.join(" ")}) \u2014 it stays out of this neutral face panel; set expressions per shot with shot_characters`] : []
   ];
   return { workspace, folder, id, view: args.view, panelsFile, prompt, negativePrompt: call2.negativeSent ? negativePrompt : void 0, warnings, ...call2 };

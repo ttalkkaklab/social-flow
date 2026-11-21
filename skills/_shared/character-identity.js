@@ -131,6 +131,61 @@ function panelPrompt(character, view) {
   return { text: words.join('; '), skipped, expression };
 }
 
+// 등신 (head count): how many of its own head heights the standing figure is tall. The face panel is an
+// enlarged close-up and the body panels have no head, so this count is the only thing on the sheet that sizes
+// one against the other. It is read from the proportions words ("7.5 heads tall", "seven and a half heads", "3등신");
+// nothing is inferred from age, species or style. A wrong count is worse than none, so a number tied to height
+// wins, a bare "N heads" counts only when no width or length follows it, and a range or two different counts
+// read as no count (reported, never guessed).
+const HEADS = String.raw`(?<![\d.])(?<!\d\s*(?:[-–~]|to)\s*)(\d+(?:\.\d+)?)(?:\s+(\d)\/(\d))?[\s-]*`;
+const HEIGHT_COUNT = new RegExp(HEADS + String.raw`(?:heads?[\s-]+(?:tall|high)\b|head[\s-]heights?\b|등신|頭身)`, 'gi');
+const BARE_COUNT = new RegExp(HEADS + String.raw`(?:heads\b(?![\s-]*(?:wide|long|broad|across|deep|thick|taller|shorter|higher|lower|above|below|more|less))|(?<=-)head\b(?![-\w]))`, 'gi');
+// Real sheets spell the count out ("about seven and a half heads tall", "two-head silhouette").
+const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
+const inDigits = text => text.replace(new RegExp(String.raw`\b(?:${NUMBER_WORDS.join('|')})\b`, 'gi'), word => NUMBER_WORDS.indexOf(word.toLowerCase()))
+  .replace(/(\d+)[\s-]+and[\s-]+a[\s-]+half\b/gi, '$1.5');
+function headsTall(character) {
+  const field = character?.physical?.proportions;
+  if (field?.status !== 'confirmed') return null;
+  const words = inDigits(String(field.value));
+  const read = pattern => [...new Set([...words.matchAll(pattern)].map(found => Number(found[1]) + (found[2] ? found[2] / found[3] : 0)))];
+  const tall = read(HEIGHT_COUNT), counts = tall.length ? tall : read(BARE_COUNT);
+  const count = counts.length === 1 ? counts[0] : NaN;
+  // ponytail: 1.5–12 is our sanity range for a typo, not a researched limit; widen it when a real sheet needs to.
+  return count >= 1.5 && count <= 12 ? count : null;
+}
+// Shape words by head count: [counts below this, words]. Geometry only — the head against the body first, then a
+// neck, torso or leg cue where a source ties one to that count — and no age or style label (chibi, child, heroic),
+// which would change the character's apparent age or fight the style preset. The rows at 1.5–2, 3, 7.5 and 8 heads
+// follow the pages read in docs/research/2026-11-21-head-body-proportion; 8.5 and 9 take their count from those
+// pages and their leg words from us; 2.5 and 4–7 are our interpolation. None is measured on our models.
+// ponytail: one row per count, picked by count alone; pick by the sheet's build too if rows start contradicting sheets.
+const HEAD_SHAPES = [
+  [1.75, 'a huge head taller than the whole body below it, little or no neck, a tiny body with plump simplified hands and feet'],
+  [2.25, 'a huge head about as tall as the whole body below it, little or no neck, a small rounded torso, short limbs'],
+  [2.75, 'a very large head, a very short neck, a small rounded torso and short limbs'],
+  [3.5, 'a very large head about a third of the height, a short slim neck, a small torso and short legs'],
+  [4.5, 'a large head about a quarter of the height, a short torso and short legs'],
+  [5.5, 'a large head on a compact body, the legs clearly shorter than half the height'],
+  [6.5, 'a slightly large head, the legs a little under half the height'],
+  [7.25, 'a small head, the legs just under half the height'],
+  [7.75, 'a small head, the legs half the standing height'],
+  [8.25, 'a small head, a torso three heads long and legs four heads long'],
+  [8.75, 'a small head on a tall body, the legs a little over half the height'],
+  [Infinity, 'a very small head on a tall body, the legs well over half the height'],
+];
+// The sentence a picture that joins the face panel to the headless body needs. A bare head count moved nothing in
+// the one published test, so the count comes with plain shape words and the head as a length.
+function headRatio(character, name) {
+  const count = headsTall(character);
+  if (!count) return { headsTall: null, text: '' };
+  const shape = HEAD_SHAPES.find(([below]) => count < below)[1];
+  const height = character.physical.heightCm, cm = height?.status === 'confirmed' ? height.value : null;
+  const num = value => String(Number(value.toFixed(1)));
+  const head = cm ? `about ${num(cm / count)} cm of the ${cm} cm standing height` : `one part in ${num(count)} of the standing height`;
+  return { headsTall: count, text: `${name} is ${num(count)} heads tall: ${shape}; the head (crown to chin) is ${head}.` };
+}
+
 function requiresSpeech(win, id) {
   if (win?.STORY?.version !== 'story-v2' || !Array.isArray(win.SCENES)) return true;
   return win.SCENES.some(s => Array.isArray(s?.narration) && s.narration.some(n =>
@@ -163,4 +218,4 @@ function isVoiceOnly(win, id) {
   });
 }
 
-module.exports = { GROUPS, REQUIRED, identityErrors, identityCharacter, direction, panelPrompt, boardIdentityErrors, requiresSpeech, isVoiceOnly };
+module.exports = { GROUPS, REQUIRED, identityErrors, identityCharacter, direction, panelPrompt, headsTall, headRatio, boardIdentityErrors, requiresSpeech, isVoiceOnly };

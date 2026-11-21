@@ -59,6 +59,19 @@ A pending basic is an honest draft, never generation-ready; pending optional fie
 do not block generation. Do not invent measurements to
 clear validation. Height uses cm, weight uses kg; stylized subjects may leave weight
 not_applicable. Relative scale specifies what counts toward height (ears, hair, tail).
+Write `proportions` with one head count for the standing height — "7.5 heads tall",
+"about two heads tall", "3등신" — plus any build words. The face panel is an enlarged
+close-up and the body panels have no head, so no picture on the sheet shows how large the
+head sits on the body; `shot_image` says it from this count, as shape words chosen by the
+count (twelve rows from 1.5 to 9 heads and over) and a head length in cm, in every shot that
+shows the body. The count is a design choice the sheet's
+author makes with the build and height, not a question for the user. The tools read it and
+never infer it: a range ("6-7 heads"), two different counts or words without a number
+("natural adult proportions") read as no count, and `character_manage`
+(`missing.headCount`), `character_panel` and `shot_image` report `head_count_missing`.
+Adding it to an existing sheet raises the identity version, so add it between image batches;
+it is no reason to regenerate panels or shots already made.
+Evidence and limits: [head and body proportion](../../../docs/research/2026-11-21-head-body-proportion/README.md).
 Traits name the tendency alone; the behavior it drives goes into flaw, examples and acting.
 Goal says what the character pursues; motivation says why, or stays not_applicable. Dialogue examples demonstrate the
 register and vocabulary; acting describes emotional reactions and movement.

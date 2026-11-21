@@ -1264,10 +1264,27 @@ describe('images and the video prompt follow the icon attributes', () => {
     const qwen = shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits.' });
     assert.doesNotMatch(qwen.prompt, /distinctive amber eyes/);
     assert.match(qwen.prompt, /mina's face and hair/);
+    assert.ok(qwen.warnings.some(w => w.code === 'head_count_missing'), 'a sheet without a head count is reported, never refused');
     assert.deepEqual(qwen.inputs, normal.inputs);
     const wire = buildNativeImageBody({ ...qwen.args, model: 'qwen-image-fast' }, true);
     assert.equal(wire.prompt, qwen.prompt);
     assert.equal(wire.size, '864x1536');
+  });
+  it('sizes the head against the body from the sheet head count, on the Qwen route too, wherever the crop shows a body', () => {
+    const { root, dir } = pictureBoard();
+    icons(dir);
+    const board = readBoard(dir).win;
+    board.SB_DOC.characters[0].character = { physical: { heightCm: { status: 'confirmed', value: 165 }, proportions: { status: 'confirmed', value: 'about 7.5 heads tall' } } };
+    writeFileSync(join(dir, 'scenes.js'), serializeBoard(board));
+    const current = settings.readSettings(root);
+    settings.saveSettings(root, { ...current.config.models, image: { engine: 'astra-genai-native', model: 'qwen-image-fast' } },
+      { expectedRevision: current.revision, request: 'Fixture: Qwen references' });
+    const waist = shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits.' });
+    assert.match(waist.prompt, /mina is 7\.5 heads tall: .*22 cm of the 165 cm standing height/);
+    assert.equal(waist.warnings.some(w => w.code === 'head_count_missing'), false);
+    // A close-up shows no body to size the head against.
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', size: 'cu' }] });
+    assert.doesNotMatch(shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits.' }).prompt, /heads tall/);
   });
   it('sends canonical framing at delivery aspect and retains stale evidence across targeted edits', () => {
     const { root, dir } = pictureBoard();
