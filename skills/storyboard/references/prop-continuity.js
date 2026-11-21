@@ -171,18 +171,19 @@
   }
   // What each prop's look is based on (prop-research.md): research {sources:[{url,title?,image?}], observed}, or "none"
   // for a prop with nothing real to look up. A legacy `source` URL counts as a page that was read.
-  function research(win) {
+  // saved(path) tells whether a source's picture is on disk; a reader without a file system takes the sheet's word.
+  function research(win, saved = () => true) {
     const undecided = [], unseen = [];
     for (const p of data(win).props) {
       if (!object(p) || !text(p.id) || p.research === 'none') continue;
       const sources = object(p.research) && Array.isArray(p.research.sources) ? p.research.sources.filter(s => object(s) && text(s.url)) : [];
       if (!(sources.length && text(p.research.observed)) && !text(p.source)) undecided.push(p.id);
-      else if (!sources.some(s => text(s.image))) unseen.push(p.id);
+      else if (!sources.some(s => text(s.image) && saved(s.image))) unseen.push(p.id);
     }
     return { undecided, unseen };
   }
-  function researchDigest(win) {
-    const { undecided, unseen } = research(win), notes = [];
+  function researchDigest(win, saved) {
+    const { undecided, unseen } = research(win, saved), notes = [];
     if (undecided.length) notes.push('no look-up of the real thing recorded for ' + undecided.join(', '));
     if (unseen.length) notes.push('looked up without a saved picture of the real thing: ' + unseen.join(', '));
     return notes.length ? ['Props: ' + notes.join(' / ') + '. Record research {sources, observed} or "none" on the prop sheet (prop-research.md).'] : [];

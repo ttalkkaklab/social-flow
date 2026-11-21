@@ -45,23 +45,28 @@ a snippet or a thumbnail is a lead, not a look.
    (who signs, what is dated, what is sealed) and which cannot be (a printed form where the
    law wants handwriting). `serp_web_search`, or `naver_search` for Korean material.
 2. **What it looks like.** Pictures of actual examples: `serp_image_search`
-   (`gl`/`hl` for the story's country) or `naver_search type:"image"`. Open several, save
-   the useful ones under `storyboard/images/research/<prop id>/` and view the files. Read
+   (`gl`/`hl` for the story's country) or `naver_search type:"image"`. The search returns
+   addresses, not files: download the useful ones (the host's fetch, or `curl -L -o`) into
+   `storyboard/images/research/<prop id>/` and open each saved file to view it. Read
    off the paper size, colour and orientation; where the title, body, date, signature and
    seal sit; handwriting or print; letterhead, numbering, stamps and their colour; how the
    thing is folded, bound, enveloped or worn with use. An official PDF form is a picture
-   too: render its page and save that.
+   too: render its page to a PNG (`pdftoppm -png`, or a browser screenshot) and save that.
 3. **Whether the story's version exists.** Research can show the assumed prop is not what
    people receive: the result is announced on a list, the will is a notarised deed, the
-   notice comes by registered post. Change the prop and tell the user what changed; do not
-   keep the imagined one.
+   notice comes by registered post. Change the prop, revise the shot stories and lines that
+   named the old one with the story tools, and tell the user what changed; do not keep the
+   imagined one.
 
 When no search tool reaches the server, host WebSearch is the fallback, as in the linked
 section. When nothing can be searched or opened, say so and record nothing as researched.
 
 ## 3. Record it on the sheet
 
-`SB_DOC.props[].research` ([contract](prop-continuity.md#contract-version-1)):
+`SB_DOC.props[].research` ([contract](prop-continuity.md#contract-version-1)). The values
+below are the will case; yours come from the pages and pictures you opened. Write the entry
+with `research` and `description` first and add `imageUrl` and `references` after §4; each
+`propSheet` write sends the whole sheet with the current hash.
 
 ```json
 {
@@ -80,8 +85,9 @@ section. When nothing can be searched or opened, say so and record nothing as re
 ```
 
 - `sources`: each page actually opened, with `url` and `title`; `image` is the saved
-  picture of the real thing that was viewed, relative to the storyboard folder. A picture
-  the user supplied is a source too (`url` may be its path).
+  picture of the real thing that was viewed, relative to the storyboard folder. An `image`
+  whose file is not there counts as no picture. A picture the user supplied is a source too
+  (`url` may be its path).
 - `observed`: in English, what the real thing shows that the picture has to keep.
 - `research: "none"`: nothing real to look up.
 
@@ -96,16 +102,18 @@ Make the prop's own picture before any shot shows it: one flat, square-on view, 
 per condition the story reaches (intact, torn, folded) as `references`.
 
 - Give the image model the saved real picture as a reference and ask for the same layout,
-  proportions and materials with the description's content (`image_plan` with
-  `operation:"edit"` and the saved file, then `image_execute`, under the existing spending
-  authorization and the saved model). Without a usable picture, draw from `observed`.
-- A prop that shows readable words follows the
-  [GPT Image 2 rule](../../_shared/image-routing.md#images-containing-text-gpt-image-2-required),
-  or is typeset in code and saved as a picture.
-- The real structure stays; the particulars are the story's. Leave out a real
-  institution's logo and official seal, a real person's name, signature, face or numbers,
-  and working account, serial or registration numbers, unless the user asks for that real
-  one. For banknotes and IDs read the issuer's reproduction rules before a flat full view.
+  proportions and materials with the description's content: `image_plan` with
+  `operation:"edit"`, the prop's id as `assetId` and the saved file, then `image_execute`,
+  under the existing spending authorization. Without a usable picture, draw from `observed`.
+- The model is the saved image model, except that a prop showing readable words follows the
+  [GPT Image 2 rule](../../_shared/image-routing.md#images-containing-text-gpt-image-2-required)
+  (its override's `shotId` is the prop's id), or is typeset in code and saved as a picture.
+- The real structure stays; the particulars are the story's. A real institution's logo and
+  official seal, a real person's name, signature, face or numbers, and working account,
+  serial or registration numbers give way to invented ones of the same kind, in the same
+  place, size and colour, unless the user asks for that real one. A certificate without
+  any crest or seal is as wrong as one with the real crest. For banknotes and IDs read the
+  issuer's reproduction rules before a flat full view.
 - A found picture is for looking and for conditioning the prop's own picture. It becomes
   `imageUrl` or a `references` entry, which ride into every shot, only when its terms allow
   reuse; record them in the source's `license`.
@@ -124,7 +132,7 @@ and fold without legible words.
 ## 6. Reports
 
 - Every board write prints the props with no research decision, and those researched
-  without a saved picture of the real thing.
+  without a saved picture of the real thing on disk.
 - `shot_image` warns when a prop in the frame has no decision.
 - The review page shows each prop's observed facts and source links, or that it is undecided.
 

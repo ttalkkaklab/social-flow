@@ -22,6 +22,7 @@ test('props with no look-up of the real thing are reported once, never as an err
     { id: 'cert', research: { sources } });
   assert.deepEqual(api.research(win), { undecided: ['watch', 'cert'], unseen: ['notice', 'old'] });
   assert.deepEqual(api.check(win).filter(f => f.where === 'props').map(f => f.level), ['warn']);
+  assert.deepEqual(api.research(win, () => false).unseen, ['will', 'notice', 'old']);   // a picture that is not on disk was not saved
   for (const p of win.SB_DOC.props) if (!p.research) p.research = 'none';
   win.SB_DOC.props.find(p => p.id === 'cert').research = 'none'; win.SB_DOC.props.find(p => p.id === 'notice').research.sources = sources;
   assert.deepEqual(api.researchDigest(win), []);

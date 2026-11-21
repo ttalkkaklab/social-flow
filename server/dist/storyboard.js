@@ -1216,7 +1216,7 @@ export function applyStoryboard(args, opts = {}) {
     const result = {
         file, written: false, created: !exists, approvalDropped: header.some((h) => /^\/\/\s*approved:/.test(h)),
         shots: (next.SCENES ?? []).length, scenes: st ? st.scenes.length : 0, sequences: st ? st.sequences.length : 0,
-        ...audienceResult, synced, findings, board: [digest, firstLine, opening, () => cliches().digest(next), () => audienceSound().spottingDigest(next), () => propContinuity().researchDigest(next)]
+        ...audienceResult, synced, findings, board: [digest, firstLine, opening, () => cliches().digest(next), () => audienceSound().spottingDigest(next), () => propContinuity().researchDigest(next, (path) => existsSync(resolve(dirname(file), path)))]
             .flatMap((read) => { try {
             return read();
         }

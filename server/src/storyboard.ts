@@ -1247,7 +1247,7 @@ export function applyStoryboard(args: StoryboardApplyArgs, opts: { outline?: boo
   const result: ApplyResult = {
     file, written: false, created: !exists, approvalDropped: header.some((h) => /^\/\/\s*approved:/.test(h)),
     shots: (next.SCENES ?? []).length, scenes: st ? st.scenes.length : 0, sequences: st ? st.sequences.length : 0,
-    ...audienceResult, synced, findings, board: [digest, firstLine, opening, () => cliches().digest(next), () => audienceSound().spottingDigest(next), () => propContinuity().researchDigest(next)]
+    ...audienceResult, synced, findings, board: [digest, firstLine, opening, () => cliches().digest(next), () => audienceSound().spottingDigest(next), () => propContinuity().researchDigest(next, (path) => existsSync(resolve(dirname(file), path)))]
       .flatMap((read) => { try { return read(); } catch { return []; } }),
   };
   const audienceOnly = audienceEdit && Object.keys(args).every(k =>
@@ -2248,7 +2248,7 @@ type PropSnap = { propId: string; description: string; references: Array<{ path?
 const propContinuity = () => loadFromHere(join(REFERENCES_DIR, 'prop-continuity.js')) as {
   snapshot(win: Board, index: number, ids: string[], opts: { lenient: true }): PropSnap[];
   research(win: Board): { undecided: string[]; unseen: string[] };
-  researchDigest(win: Board): string[];
+  researchDigest(win: Board, saved?: (path: string) => boolean): string[];
 };
 /**
  * The props a frame shows, through the shared prop ledger: each visible prop's reference drawn in its condition at the
