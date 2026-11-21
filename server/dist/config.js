@@ -79,6 +79,7 @@ export const config = {
     /** BytePlus ModelArk API key (required by the seedance_* video generation tools) — https://ai.byteplus.com/ark/region:ap-southeast-1/apikey */
     arkApiKey: process.env.ARK_API_KEY || '',
     /** Hosted video vendors (vendor-video.ts): the official LTX API, MiniMax H3 and HeyGen Video 1. */
+    googleCloudProject: process.env.GOOGLE_CLOUD_PROJECT || '',
     ltxApiKey: process.env.LTX_API_KEY || '',
     minimaxApiKey: process.env.MINIMAX_API_KEY || '',
     heygenApiKey: process.env.HEYGEN_API_KEY || '',

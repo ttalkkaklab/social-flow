@@ -4,7 +4,7 @@ import { DESKTOP_SCHEMAS } from './astra-genai-desktop.js';
 import { z } from 'zod';
 import * as seedance from './seedance-client.js';
 import * as astra from './astra-video-client.js';
-import { ltxApiImg2VideoSchema, ltxApiAudio2VideoSchema } from './ltx-api-video.js';
+import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
 import { minimaxImg2VideoSchema, minimaxReferenceSchema } from './minimax-video.js';
 import { heygenImg2VideoSchema, heygenReferenceSchema } from './heygen-video.js';
 import { genaiTextToVideoSchema, genaiImageToVideoSchema, genaiAudioToVideoSchema, genaiMsrSchema } from './astra-genai-video.js';
@@ -32,7 +32,7 @@ const schemas = {
     astra_genai_audio2video: genaiAudioToVideoSchema, astra_genai_msr: genaiMsrSchema,
     astra_text2video: astra.astraText2VideoSchema, astra_img2video: astra.astraImg2VideoSchema,
     astra_audio2video: astra.astraAudio2VideoSchema, astra_keyframe_video: astra.astraKeyframeVideoSchema,
-    ltx_api_img2video: ltxApiImg2VideoSchema, ltx_api_audio2video: ltxApiAudio2VideoSchema,
+    ...Object.fromEntries(Object.entries(HOSTED_VIDEO_ROUTES).map(([name, route]) => [name, route.schema])),
     minimax_img2video: minimaxImg2VideoSchema, minimax_reference: minimaxReferenceSchema,
     heygen_img2video: heygenImg2VideoSchema, heygen_reference: heygenReferenceSchema,
 };
@@ -92,7 +92,7 @@ export function prepareVideoSound(tool, input, sound = {}) {
         throw new Error('Native SFX conflict with Audio: silent in the prompt; revise the authored sound direction');
     const args = { ...input };
     // The genai audio-to-video soundtrack is always the supplied audio; it has no generateAudio switch.
-    if ((native.length || conditioned.length || sound.audioSource === 'video') && (tool.startsWith('seedance_') || tool.startsWith('astra_') || tool === 'ltx_api_img2video') && !['astra_genai_audio2video', 'astra_genai_msr'].includes(tool)) {
+    if ((native.length || conditioned.length || sound.audioSource === 'video') && (tool.startsWith('seedance_') || tool.startsWith('astra_') || HOSTED_VIDEO_ROUTES[tool]?.soundtrack) && !['astra_genai_audio2video', 'astra_genai_msr'].includes(tool)) {
         if (input.generateAudio === false)
             throw new Error('Cannot discard the requested input soundtrack');
         if (!tool.startsWith('astra_genai_desktop_'))

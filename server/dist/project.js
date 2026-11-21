@@ -10,9 +10,9 @@ export function manageProject(args) {
     return project.manageProject(args);
 }
 /** Resolve the work's own directory before writing a storyboard or starting production. */
-export function requireReadyProject(target) {
+export function requireReadyProject(target, options) {
     const project = loadFromHere(helper);
-    return project.requireReadyProject(resolve(target));
+    return project.requireReadyProject(resolve(target), undefined, options);
 }
 /** The new-board handoff (FORMAT, PRODUCTION, LANGUAGES) from an episode's saved snapshot, or undefined when it has none. */
 export function episodeHandoff(episode) {

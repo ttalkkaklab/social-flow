@@ -273,3 +273,19 @@ test('TikTok can be added to a legacy four-platform project without changing oth
   assert.ok(updated.pendingConnections.includes('tiktok'));
   assert.ok(call(root, 'episode', { topic: 'with-tiktok' }).snapshot.config.sns.tiktok.enabled);
 });
+
+test('Veo previews in workspace defaults preserve a running LTX episode and require migration for new episodes', t => {
+  const root = workspace(t), choices = defaults();
+  choices.models.video = { engine: 'ltx-api', model: 'ltx-2-5-pro', operation: 'image', resolution: '1920x1080' };
+  const ready = init(root, choices);
+  const first = call(root, 'episode', { topic: 'running' });
+  const config = JSON.parse(fs.readFileSync(ready.file));
+  config.models.video = { engine: 'veo', model: 'veo-3.1-fast-generate-preview' };
+  fs.writeFileSync(ready.file, JSON.stringify(config));
+  assert.equal(call(root, 'status').status, 'migration_required');
+  assert.deepEqual(call(root, 'episode', { topic: 'running' }).snapshot.config.models.video, first.snapshot.config.models.video);
+  assert.throws(() => call(root, 'episode', { topic: 'new' }), /migration_required/);
+  const menu = call(root, 'options').videoAdapters;
+  assert.equal(menu.filter(a => a.engine === 'veo').length, 4);
+  assert.equal(menu.filter(a => a.engine === 'ltx-api').length, 2);
+});

@@ -6,6 +6,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { recordVideoSubmission } from './video-events.js';
 import { resolveOutputFile } from './media-utils.js';
 export class VendorHttpError extends Error {
@@ -90,12 +91,33 @@ export async function runVendorJob(job) {
             continue;
         if (status.state === 'failed')
             return { success: false, error: `${job.vendor} job ${id} failed: ${status.error}`, terminal: true, providerId: id };
-        // The result URL is pre-signed; our key stays off the storage domain.
-        const download = await fetch(status.url, { signal: AbortSignal.timeout(10 * 60_000) });
-        if (!download.ok)
-            return { success: false, error: `${job.vendor} job ${id} finished but the download returned HTTP ${download.status}; fetch the clip from the vendor console, then settle the request with video_status action:reconcile — do not resubmit`, terminal: false, providerId: id };
-        fs.writeFileSync(target, Buffer.from(await download.arrayBuffer()));
-        return { success: true, videoPath: target, providerId: id, meta: status.meta ?? {} };
+        return saveVendorOutput(status, target, id);
     }
     return { success: false, error: `${job.vendor} job ${id} still running after ${(maxPolls * interval) / 60_000} minutes; check it at the vendor and settle the request with video_status action:reconcile — do not resubmit`, terminal: false, providerId: id };
+}
+/** Downloads and recovery publish a complete file atomically, even if the process is interrupted. */
+export async function saveVendorOutput(status, target, id) {
+    const temporary = target + '.' + randomUUID() + '.tmp';
+    try {
+        let bytes;
+        if ('bytes' in status)
+            bytes = status.bytes;
+        else {
+            const download = await fetch(status.url, { signal: AbortSignal.timeout(10 * 60_000) });
+            if (!download.ok)
+                throw new Error('HTTP ' + download.status);
+            bytes = Buffer.from(await download.arrayBuffer());
+        }
+        if (!bytes.length)
+            throw new Error('empty video');
+        fs.writeFileSync(temporary, bytes, { flag: 'wx' });
+        fs.renameSync(temporary, target);
+        return { success: true, videoPath: target, providerId: id, meta: status.meta ?? {} };
+    }
+    catch (error) {
+        return { success: false, terminal: false, providerId: id, error: 'Output download or save failed: ' + String(error) + '; recover the existing job, do not resubmit' };
+    }
+    finally {
+        fs.rmSync(temporary, { force: true });
+    }
 }

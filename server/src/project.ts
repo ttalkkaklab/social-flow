@@ -15,9 +15,9 @@ export function manageProject(args: unknown): Record<string, unknown> {
 type ReadyProject = { workspace: string; paths: { episodes: string } };
 
 /** Resolve the work's own directory before writing a storyboard or starting production. */
-export function requireReadyProject(target: string): ReadyProject {
-  const project = loadFromHere(helper) as { requireReadyProject(path: string): ReadyProject };
-  return project.requireReadyProject(resolve(target));
+export function requireReadyProject(target: string, options?: { allowVideoSnapshot: boolean }): ReadyProject {
+  const project = loadFromHere(helper) as { requireReadyProject(path: string, output?: string, options?: { allowVideoSnapshot: boolean }): ReadyProject };
+  return project.requireReadyProject(resolve(target), undefined, options);
 }
 
 type Handoff = { FORMAT?: string; PRODUCTION?: Record<string, unknown>; LANGUAGES?: { speech?: string }; sns?: Record<string, { enabled?: boolean }> };

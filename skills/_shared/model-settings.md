@@ -65,7 +65,7 @@ selection. Existing choices may be offered as candidates.
 | `video_type_required` | `model-settings.js show` | Legacy model choices saved, type missing; also check project status. |
 | `configured` | `model-settings.js show` | Type, video/image models and speech model or explicit none saved (model-only view). |
 | `migration_required` | both | Retired speech or video model; `retired[]` names `models.speech` / `models.video`. Update that choice explicitly before new generation. |
-| `video_engine_unsupported` | `video_plan` | A selection or override names Veo, Gemini Omni or Seedance 1.x; choose a supported video model again (saving one is refused). Existing clips stay reusable. |
+| `video_engine_unsupported` | `video_plan` | A selection or override names Gemini Developer API Veo previews, Gemini Omni or Seedance 1.x; choose a supported video model again (saving one is refused). Existing clips stay reusable. |
 | `voice_lane_required` | `video_plan` | A spoken cut (`on_screen` line, or native audio on `visual.clip` / b-roll) on an adapter with voice lane `none`; use a `reference` or `supplied` lane, or keep narration as TTS with `generateAudio:false`. |
 | `project_setup_required` | `project_manage status` / `episode` | Project, style, production, SNS or channel layout missing; `missing[]` names them. An unattended caller reports it and defers authoring. |
 | `ready` | `project_manage status` | Complete settings; authoring starts without a preference question. |
@@ -101,7 +101,9 @@ known pricing, labelled with its date. Do not invent credentials, exact latency 
 prices. A configured credential does not guarantee a successful generation.
 
 1. **Video model** (first-setup menu; a saved choice is never re-offered). Offer host video when exposed, Seedance 2.x API models and
-   ASTRA or MLX when available. Veo, Gemini Omni and Seedance 1.x left the plugin on
+   Google Cloud Veo 3.1, ASTRA or MLX when available. For Veo save e.g.
+   `{"engine":"veo","model":"veo-3.1-fast-generate-001","resolution":"720p","operation":"image"}`.
+   Use the model-specific reference and resolution limits from `video_catalog`. Gemini Developer API Veo previews, Gemini Omni and Seedance 1.x left the plugin on
    2026-10-31 because none takes a voice reference. Include resolution and reference/audio support.
    Use the installed video-model selection reference and cost tables. Explain the
    change each option makes. The host is the recommended initial choice when it

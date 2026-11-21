@@ -255,7 +255,7 @@ Do not convert a continuity failure into a passing review because both stills lo
 ## Per-cut model choices (2026-09-13)
 
 The episode model and resolution are defaults, not equality constraints on cuts.
-Seedance 2.x can send the previz as `reference_video`. A cut naming Veo, Gemini Omni or
+Seedance 2.x can send the previz as `reference_video`. A cut naming Gemini Developer API Veo previews, Gemini Omni or
 Seedance 1.x fails as `video_engine_unsupported`. Keep previz asset and camera checks.
 
 ## Drone spatial reveal
