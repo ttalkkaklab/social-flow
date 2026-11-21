@@ -4085,3 +4085,20 @@ channel catalog. Omit `source` on a later edit to keep the choice or pass `null`
 restore the board's default. A scene's `audienceSound` records the editorial decision
 independently. Both edits work on older boards with no `STORY.audienceSoundVersion`.
 See [situations](audience-sound/index.md) and [production timing](../../produce/references/video-sound.md#audience-effects).
+
+## Scene video direction
+
+Save `videoDirection` in `STRUCTURE.scenes[]` with `story_scene`. Its fields use English. Keep the original spoken text on the ordered shot cards.
+
+```js
+videoDirection: {
+  openingPositions: [
+    {character:"miran", images:[1,3], position:"near left, already standing with her back to us at the witness rail"},
+    {character:"nephew", images:[2,4], position:"far right, seated behind the counsel table across the aisle"}
+  ],
+  emotion:"The nephew’s disbelief turns to anger. Miran feels the weight of his accusation.",
+  action:"He rises behind that same far-right table and points across the aisle at Miran."
+}
+```
+
+The planner requires `openingPositions` and `emotion`. Use an empty array for a scene without people. An unreferenced person can have `images:[]`. Optional `action`, `camera` and `sound` describe what must happen in this scene. Omit transition instructions to let the model choose coverage. `video_plan {episode,sceneNo,requestId}` uses the first card's opening frame and sums the ordered card durations. Existing boards can add direction when first planning a scene.

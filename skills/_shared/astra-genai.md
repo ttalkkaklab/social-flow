@@ -31,9 +31,20 @@ frames. With references, select `ltx-2.5-22b-distilled` and an explicit duration
 the gateway must advertise `image_conditioning:true` at
 `/v1/ltx/msr/capabilities`. This runs the distilled MSR IC-LoRA path; dev and
 direct Desktop I2V take start/end only. Unsupported inputs are rejected, never
-dropped. `generateAudio:false` strips the generated soundtrack. The image
-adapter keeps its `none` voice lane: physical dialogue still uses a voice-capable
-adapter, and thoughts/voiceover retain timed external TTS.
+dropped. When the gateway also reports `voice_references:true`, subject 1 and
+subject 2 can each carry an `audioPath` or `audioUri`. Put the spoken words in
+the prompt. Each sample conditions the voice for its own subject. The opening
+image stays in the top-level `imagePath` or `imageUri`. Thoughts and voiceover
+use timed external TTS. `generateAudio:false` strips the generated soundtrack.
+
+Both MSR routes require `openingPositions` with references. Number the subject
+images starting at 1, with the background last. For each person supply their
+`character`, all their `images` and a viewer-relative `position` showing their
+depth, posture or landmark. The adapter prepends these positions to the prompt
+and enforces the gateway's 2,000-character limit on the assembled text. A prop
+reference takes `nonCharacter:true`; a scene with only props takes
+`openingPositions:[]`. For existing shots, author positions with `shot_prompt`
+before the next generation. Existing jobs can still be retrieved by receipt.
 
 For a structured `first`/`first_last` shot, `video_plan` binds every reference
 whose `use` is `video` or `both`, orders the background last and records its

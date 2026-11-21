@@ -1,7 +1,17 @@
+import { zodToJsonSchema } from 'zod-to-json-schema';
+import { openingPositionsSchema } from './msr-opening.js';
 import { NATIVE_GENAI_TOOLS } from './astra-genai-native-tools.js';
 /** Public tool descriptions for the unified gateway, kept separate from legacy ASTRA controls. */
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { GENAI_VIDEO_MODELS } from './astra-genai-video.js';
+
+export const openingPositionsProperty = zodToJsonSchema(openingPositionsSchema, { target: 'openApi3' });
+
+const subjectVoice = {
+  nonCharacter: { type: 'boolean', description: 'Set true for an object or prop reference with no character. Character panels belong in openingPositions.' },
+  audioPath: { type: 'string', description: 'Local voice sample (wav, mp3, m4a, ogg) for this subject; subjects 1 and 2 only. Voice only, no background sound.' },
+  audioUri: { type: 'string', description: 'HTTPS or audio data URI voice sample, instead of audioPath.' },
+};
 
 const output = {
   outputPath: { type: 'string', description: 'Local output directory; configured production keeps outputs inside its episode/workspace.' },
@@ -33,22 +43,24 @@ export const GENAI_TOOLS: Tool[] = [
     description: 'Generate and save an MP4 through the unified ASTRA GenAI LTX v2 gateway. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY, a separate gk_ token from ASTRA_VIDEO. Persists job identity before polling; recover the same receipt after timeout. Supports text only; for a supplied audio track use astra_genai_audio2video. No LoRA, retake or keyframes. Legacy astra_text2video remains a separate server adapter.',
     inputSchema: { type: 'object', properties: video, required: ['prompt', 'model', 'duration', 'resolution', 'reserveUsd'], additionalProperties: false }, annotations: generation },
   { name: 'astra_genai_img2video', title: 'Generate GenAI LTX video from an image URI',
-    description: 'Generate an MP4 from a start image, optional end and subject references.\nUse for image-to-video, first/last-frame animation and character or object reference guidance. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Give exactly one imageUri or imagePath. Optional references are separate from the start/end frames: 1..4 subject images and at most one background, supported on ltx-2.5-22b-distilled with explicit duration and a backend advertising combined MSR image conditioning. The selected distilled weights run with the MSR IC-LoRA; generateAudio:false removes the generated soundtrack. Dev supports start/end without additional references. No intermediate keyframes. Do NOT use for supplied speech or recovery — use astra_genai_audio2video or astra_genai_video_status. Returns: jobId, status, videoPath, downloaded, review and receiptPath; resume that receipt without resubmitting.',
+    description: 'Generate an MP4 from a start image, optional end and subject references.\nUse for image-to-video, first/last-frame animation and character or object reference guidance. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Give exactly one imageUri or imagePath. Optional references are separate from the start/end frames: 1..4 subject images and at most one background, supported on ltx-2.5-22b-distilled with explicit duration and a backend advertising combined MSR image conditioning. Subjects 1 and 2 can each carry a voice sample (audioPath or audioUri) for native dialogue while imagePath pins the first frame. The selected distilled weights run with the MSR IC-LoRA; generateAudio:false removes the generated soundtrack. Dev supports start/end without additional references. No intermediate keyframes. Do NOT use for supplied speech or recovery — use astra_genai_audio2video or astra_genai_video_status. Returns: jobId, status, videoPath, downloaded, review and receiptPath; resume that receipt without resubmitting.',
     inputSchema: { type: 'object', properties: { ...video,
       imageUri: { type: 'string', description: 'Public HTTPS PNG/JPEG URL or PNG/JPEG data URI. Mutually exclusive with imagePath.' },
       imagePath: { type: 'string', description: 'Local PNG/JPEG start image (at most 32 MiB, 4096 px per side), sent as a data URI.' },
       lastFrameUri: { type: ['string', 'null'], description: 'Optional final-frame HTTPS URL or data URI, e.g. https://example.com/end.png; requires an explicit duration.' },
       lastFramePath: { type: 'string', description: 'Optional local PNG/JPEG final frame, e.g. /tmp/end.png; sent as a data URI and requires an explicit duration.' },
-      references: { type: 'array', minItems: 1, maxItems: 5, description: 'Additional subject references, separate from start/end. Up to 4 subjects + 1 background; e.g. [{imagePath:"/tmp/hero.png"}]. Requires distilled and explicit duration.', items: {
+      openingPositions: openingPositionsProperty,
+      references: { type: 'array', minItems: 1, maxItems: 5, description: 'Additional references. Supply openingPositions with these references. Up to four subject images followed by one optional background. Requires distilled and explicit duration.', items: {
         type: 'object', properties: {
           imageUri: { type: 'string', description: 'HTTPS/data PNG/JPEG reference, e.g. https://example.com/hero.png; exclusive with imagePath.' },
           imagePath: { type: 'string', description: 'Local PNG/JPEG reference, e.g. /tmp/hero.png; exclusive with imageUri.' },
           background: { type: 'boolean', default: false, description: 'True for the single background reference, e.g. true; false for subjects.' },
+          ...subjectVoice,
         }, oneOf: [{ required: ['imageUri'] }, { required: ['imagePath'] }], additionalProperties: false,
       } },
       // Only with references: they run on the MSR backend, which needs one of these to evaluate negativePrompt.
       ...msrGuidance,
-    }, required: ['prompt', 'model', 'duration', 'resolution', 'reserveUsd'], additionalProperties: false }, annotations: generation },
+    }, dependencies: { references: ['openingPositions'] }, required: ['prompt', 'model', 'duration', 'resolution', 'reserveUsd'], additionalProperties: false }, annotations: generation },
   { name: 'astra_genai_audio2video', title: 'Generate GenAI LTX video driven by an audio track',
     description: 'Render a clip whose length and motion follow a supplied speech or sound track through ASTRA GenAI LTX v2 audio-to-video, then save an MP4. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. The output length equals the audio length (local maximum 361 frames: 15.04 s at 24 fps, 14.44 s at 25, 7.52 s at 48, 7.22 s at 50; longer audio returns 422). Mono or stereo only; three or more channels return 422 instead of a downmix. The sample rate is kept, so only AAC standard rates 7350-96000 Hz (e.g. 48000, 44100) are accepted; others such as 192000 return 422. The gateway copies the backend soundtrack without a second encode, but the backend encodes it once, so the result is not bit-identical to the input. Only ltx-2.5-22b-dev runs this pipeline; no duration, generateAudio, cameraMotion, seed or frame controls. Lip-sync quality is unmeasured; inspect mouths before acceptance. Persists job identity before polling; recover with astra_genai_video_status.',
     inputSchema: { type: 'object', properties: {
@@ -98,13 +110,13 @@ export const GENAI_TOOLS: Tool[] = [
       prompt: { type: 'string', minLength: 1, maxLength: 2000, description: 'Positive action and reference roles, up to 2000 characters. No automatic subtitle instructions are appended. Put unwanted text terms in negativePrompt when negative conditioning is enabled.' },
       negativePrompt: { type: 'string', minLength: 1, maxLength: 5000, description: 'Separate negative conditioning, e.g. subtitles, captions, text overlays. Requires guidanceScale > 1 or nagScale > 0, plus live backend negative_prompt support; otherwise refused before submission.' },
       ...msrGuidance,
+      openingPositions: openingPositionsProperty,
       references: { type: 'array', minItems: 1, maxItems: 5, description: 'At most four subjects and one background. Exactly one URI or path per reference.', items: {
         type: 'object', properties: {
           imageUri: { type: 'string', description: 'Public HTTPS PNG/JPEG or data URI.' },
           imagePath: { type: 'string', description: 'Local PNG/JPEG path, instead of imageUri.' },
           background: { type: 'boolean', default: false, description: 'Marks the single background reference; put it last.' },
-          audioPath: { type: 'string', description: 'Local voice sample (wav, mp3, m4a, ogg) for this subject; subjects 1 and 2 only. Voice only, no background sound.' },
-          audioUri: { type: 'string', description: 'HTTPS or audio data URI voice sample, instead of audioPath.' },
+          ...subjectVoice,
         }, additionalProperties: false,
       } },
       referenceStrength: { type: 'number', minimum: 0, maximum: 1, default: 1, description: 'Reference adherence strength.' },
@@ -117,7 +129,7 @@ export const GENAI_TOOLS: Tool[] = [
       seed: { type: 'integer', minimum: 0, maximum: 2147483647, default: 42, description: 'Reproducibility seed.' },
       reserveUsd: video.reserveUsd,
       ...output,
-    }, required: ['prompt', 'references', 'reserveUsd'], additionalProperties: false }, annotations: generation },
+    }, required: ['prompt', 'references', 'openingPositions', 'reserveUsd'], additionalProperties: false }, annotations: generation },
   { name: 'astra_genai_video_status', title: 'Recover an existing GenAI video job',
     description: 'Read a local GenAI receipt and query its original LTX endpoint without submitting a new job. Optionally download a completed MP4. Requires the same configured gateway and token. For managed requests prefer video_status action:refresh, which also updates the managed reservation receipt. Does not recover legacy ASTRA jobs.',
     inputSchema: { type: 'object', properties: {

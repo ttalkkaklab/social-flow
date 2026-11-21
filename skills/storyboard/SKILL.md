@@ -110,8 +110,7 @@ First complete project setup and follow [production order](../_shared/production
 Prepare characters with text (`character_manage`) and images (`character_panel`) → present the scenario → write the story
 (sequences → scenes → shot stories) → set each shot's characters and each character's lines →
 set each shot's icon attributes → prepare prop and background text/images → make each
-shot's start image, and the end image a first_last shot needs (`shot_image`) → write each
-video prompt (`shot_prompt`) → export the bundled review template. Each shot's video waits
+shot's start image, and the end image a first_last shot needs (`shot_image`) → save the opening positions and emotion in each scene's `videoDirection` → export the bundled review template. Each scene's video waits
 for the user's approval (`video_approve`); do not jump from a text plan directly to video.
 Scenario presentation is a progress update, not an approval request. In an interactive
 session, show the premise, characters, causal sequence, ending and selection reason before
@@ -335,10 +334,7 @@ once every shot has its icon attributes and the props and backgrounds exist, mak
 picture shot's start image with `shot_image` from its characters' sheet panels, place and
 props — and its end image only for a `first_last` shot. A place whose sheet names a built set
 starts from that set rendered at the shot's size and angle, so block the cast with
-`location_manage bind` first when their places matter. The fifth writes each
-`generated_video` shot's English video prompt with `shot_prompt` from its icon attributes,
-lines and action. Each shot's video then waits for the user's yes (`video_approve`), or
-their approval of every shot.
+`location_manage bind` first when their places matter. The fifth saves one English video direction per generated scene with `story_scene`. Inspect its opening image, describe each character's posture at a visible landmark and their emotional change, then plan by `sceneNo`. Lines come from the shot cards in order. Add only essential movement. See [scene generation](../generate-cut-videos/SKILL.md).
 Inside an episode a new board starts with `story_sequence`; `storyboard_apply` does not create
 one. The story tools mark it `STORY.authoring:"story-first"`, and every writer then keeps each
 shot's order: story, characters, then lines and icons. `production_workflow` completes

@@ -805,3 +805,7 @@ Before committing or merging, check `git status` and recently modified files
 ## 워크트리 경로
 
 워크트리는 기본 체크아웃 루트의 `.worktree/<이름>/`에 만든다. 연결된 워크트리에서도 기본 루트를 기준으로 삼는다. `AGENTS.md`의 2026-10-10 사용자 지침을 적용하며 ASTRA나 도구의 기본 경로보다 우선한다.
+
+## Scene video generation — owner directive, 2026-11-21
+
+Generate one take per storyboard scene by default. Keep shot cards for editorial beats and dialogue order. Inspect the first frame and describe each character by side, depth, posture and landmark. Use emotion and the actual lines as the baseline. Specify essential movement at that same landmark and a camera change only when the scene calls for it. Use the saved first-frame and reference-capable route on distilled LTX. See [scene generation](skills/generate-cut-videos/SKILL.md).
