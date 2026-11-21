@@ -12,7 +12,7 @@ const ENGINES = {
   video: ['host', 'seedance', 'astra', 'astra-genai', 'astra-genai-desktop', 'mlx', 'ltx-api', 'minimax', 'heygen'],
   speech: ['none', 'gemini', 'elevenlabs', 'astra-genai'],
   image: ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai', 'astra-genai-native'],
-  music: ['lyria', 'suno-api', 'elevenlabs', 'mlx'],
+  music: ['lyria', 'suno-api', 'elevenlabs', 'mlx', 'none'],
 };
 const RETIRED_ELEVENLABS_MODELS = ['eleven_multilingual_v2', 'eleven_v3', 'eleven_v3_conversational', 'eleven_flash_v2_5', 'eleven_turbo_v2_5'];
 function retiredSpeech(choice) {
@@ -81,8 +81,8 @@ function validateModels(models, partial = false, allowRetired = false) {
     for (const [key, value] of Object.entries(choice)) {
       if (!FIELDS[kind].includes(key) || !nonempty(value)) throw new Error(`Invalid ${kind}.${key}`);
     }
-    if (kind === 'speech' && choice.engine === 'none') {
-      if (Object.keys(choice).length !== 1) throw new Error('speech.none accepts only engine; omit model');
+    if (choice.engine === 'none') {
+      if (Object.keys(choice).length !== 1) throw new Error(`${kind}.none accepts only engine; omit model`);
       continue;
     }
     const fixed = ['zimage', 'astra'].includes(choice.engine) || (retired && choice.engine === 'supertonic');

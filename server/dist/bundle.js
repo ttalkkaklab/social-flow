@@ -93720,26 +93720,41 @@ var require_scene_acting = __commonJS({
       ].join("\n");
     }
     var VIDEO_TEXT_POLICY = "Keep the entire video image text-free: no subtitles, captions, dialogue text, typography, letters, logos or watermarks, including during speech.";
-    function performanceBeats(performance2, mode, includeDialogue = true) {
+    function performanceBeats(performance2, mode, includeDialogue = true, { brief = false } = {}) {
       const dialogue = performance2.filter((line) => line.kind !== "action").map((line) => line.text).filter((text4) => typeof text4 === "string" && text4.length);
       const visualDirection = (value) => {
         let text4 = String(value);
         for (const words of dialogue) text4 = text4.split(words).join("the supplied speech");
         return text4;
       };
+      const said = new Set(performance2.filter((line) => line.kind === "action").map((line) => String(line.videoDirection || line.text || "").trim()));
       return performance2.map((line, index) => {
         if (line.kind === "action") {
           const relation = line.withGroup === void 0 ? "in this event order" : `concurrently with speech group ${line.withGroup}; do not add a separate pause`;
-          const timing2 = line.startSeconds === null || line.endSeconds === null ? "Timing unresolved; preserve this action when timing is planned." : `Action interval ${line.startSeconds}\u2013${line.endSeconds} seconds.`;
-          return `Beat ${index + 1} (action by ${visualDirection(line.character || "unspecified")}): ${visualDirection(line.videoDirection || line.text)}; ${relation}. ${timing2}`;
+          const timing2 = line.startSeconds === null || line.endSeconds === null ? "" : ` Action interval ${line.startSeconds}\u2013${line.endSeconds} seconds.`;
+          return `Beat ${index + 1} (action by ${visualDirection(line.character || "unspecified")}): ${visualDirection(line.videoDirection || line.text)}; ${relation}.${timing2}`;
         }
         const acting = { ...line.acting, ...line.videoDirection ? { visual: line.videoDirection } : {} };
         const delivery2 = line.delivery || "voiceover";
         const mouth = delivery2 === "on_screen" && mode === "native" && includeDialogue ? `Show this speaker physically saying "${line.text}"; every other visible mouth stays closed.` : delivery2 === "on_screen" && mode === "native" ? "Only this speaker speaks the separately mapped authored line; other visible mouths stay closed." : delivery2 === "on_screen" ? "Show this speaker physically speaking; synchronize only this speaker's mouth to their supplied audio during this interval using the selected synchronization route." : delivery2 === "off_screen" ? "Keep the speaking face outside the authored crop; retain any planned hands or body detail. All visible mouths stay closed during this interval; show the planned reaction, detail or action without adding a portrait." : "This is voiceover or narration, not visible physical speech. All visible mouths stay closed during this interval; show the planned action.";
-        const fields2 = ["direction", "context", "intent", "emotion", "vocal", "visual"].filter((key) => acting[key]).map((key) => `${key}: ${visualDirection(acting[key])}`);
-        if (acting.tags?.length) fields2.push(`vocal events: ${acting.tags.map(visualDirection).join(", ")}`);
-        const timing = line.speechStartSeconds == null || line.speechEndSeconds == null ? mode === "native" ? "The model paces this line within the shot." : "Use the measured speech interval once audio is attached." : `Speech interval ${line.speechStartSeconds}\u2013${line.speechEndSeconds} seconds.`;
-        return `Beat ${index + 1} (speaker: ${visualDirection(line.speaker || "unspecified")}; delivery: ${delivery2}): ${mouth} ${includeDialogue && mode === "native" && delivery2 !== "on_screen" ? 'Speak "' + line.text + '". ' : ""}${line.to ? "Addressed to " + visualDirection(line.to) + ". Preserve the authored crop and any planned eyeline; the addressee need not appear in frame." : ""} ${fields2.join(" ")} ${timing} Anticipation ${line.leadInSeconds || 0} seconds; reaction ${line.tailOutSeconds || 0} seconds.`;
+        const seen = new Set(said);
+        const fields2 = brief ? [] : ["direction", "context", "intent", "emotion", "vocal", "visual"].filter((key) => acting[key] && !(key === "vocal" && mode !== "native")).filter((key) => {
+          const value = String(acting[key]).trim();
+          if (seen.has(value)) return false;
+          seen.add(value);
+          return true;
+        }).map((key) => `${key}: ${visualDirection(acting[key])}`);
+        if (!brief && acting.tags?.length) fields2.push(`vocal events: ${acting.tags.map(visualDirection).join(", ")}`);
+        const timing = line.speechStartSeconds == null || line.speechEndSeconds == null ? mode === "native" ? "The model paces this line within the shot." : "" : `Speech interval ${line.speechStartSeconds}\u2013${line.speechEndSeconds} seconds.`;
+        const pauses = line.leadInSeconds || line.tailOutSeconds ? `Anticipation ${line.leadInSeconds || 0} seconds; reaction ${line.tailOutSeconds || 0} seconds.` : "";
+        return [
+          `Beat ${index + 1} (speaker: ${visualDirection(line.speaker || "unspecified")}; delivery: ${delivery2}): ${mouth}`,
+          includeDialogue && mode === "native" && delivery2 !== "on_screen" ? 'Speak "' + line.text + '".' : "",
+          line.to ? "Addressed to " + visualDirection(line.to) + "; keep the planned eyeline, and the addressee need not appear in frame." : "",
+          ...fields2,
+          timing,
+          pauses
+        ].filter(Boolean).join(" ");
       });
     }
     function sceneVideoPrompt(performance2, mode, scene = {}) {
@@ -101579,6 +101594,7 @@ function musicCatalog() {
     version: 1,
     revision: "2026-10-18",
     models: MUSIC_MODELS,
+    noGeneration: { engine: "none" },
     adapters: Object.entries(MUSIC_ADAPTERS).map(([tool2, a]) => ({ tool: tool2, engine: a.engine, fixedModel: a.fixedModel, fields: Object.keys(shape(a.schema)) })),
     local: { engine: "mlx", tool: "mlx_music_generate", model: "Exact installed MLX Core music pack ID; no automatic pack selection" },
     unimplemented: [
@@ -110857,7 +110873,7 @@ var MUSIC_TOOLS = [
   {
     name: "music_catalog",
     title: "Inspect music models",
-    description: "Read music/BGM/song adapters, exact saved model IDs, duration controls and official versus third-party provenance. No API call. Returns models, adapter fields, sources and unimplemented providers. Do NOT use to generate audio \u2014 use music_plan then music_execute.",
+    description: "Read music/BGM/song adapters, exact model IDs, duration controls and provider provenance. At first setup offer a supported model or noGeneration (save engine:none for reuse or no score). Returns models, adapter fields, sources and unimplemented providers without an API call.",
     inputSchema: { type: "object", additionalProperties: false, properties: {} },
     annotations: { readOnlyHint: true, openWorldHint: false }
   },
@@ -114002,7 +114018,7 @@ import * as path14 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.123.0",
+  version: "0.124.4",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -115798,6 +115814,14 @@ function keys(schema2) {
   if (schema2 instanceof external_exports.ZodObject) return Object.keys(schema2.shape);
   return [];
 }
+function videoPromptLimit(tool2) {
+  let schema2 = VIDEO_ADAPTERS[tool2]?.schema;
+  while (schema2 instanceof external_exports.ZodEffects) schema2 = schema2.innerType();
+  let prompt = schema2 instanceof external_exports.ZodObject ? schema2.shape.prompt : void 0;
+  while (prompt instanceof external_exports.ZodOptional || prompt instanceof external_exports.ZodDefault || prompt instanceof external_exports.ZodEffects)
+    prompt = prompt instanceof external_exports.ZodEffects ? prompt.innerType() : prompt._def.innerType;
+  return prompt instanceof external_exports.ZodString ? prompt.maxLength ?? void 0 : void 0;
+}
 function parseVideoArgs(tool2, input) {
   const adapter2 = VIDEO_ADAPTERS[tool2];
   if (!adapter2) throw new Error("Unsupported video tool: " + tool2);
@@ -116316,6 +116340,14 @@ function refreshVideoReview(episode) {
     review().write(episode);
   } catch {
     process.stderr.write("Video review export needs a refresh; request receipts remain authoritative.\n");
+  }
+}
+function refreshAudienceReview(boardDirectory) {
+  try {
+    const data = createRequire5(import.meta.url)("../../skills/storyboard/references/audience-review-data.js");
+    data.refresh(boardDirectory);
+  } catch {
+    process.stderr.write("Audience audio preview needs a refresh.\n");
   }
 }
 
@@ -116992,6 +117024,14 @@ var sentence = (value) => {
 function expressionWords(shot, names = {}) {
   return Object.entries(object4(object4(shot.visual).expression)).filter(([, cue]) => text2(cue)).map(([id, cue]) => `${names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id}: ${text2(cue).replace(/[.\s]+$/, "")}`).join("; ");
 }
+function cameraDrift(prompt, movement) {
+  if (!movement.trim() || /^(static|fixed|locked)/i.test(movement.trim())) return null;
+  const said = prompt.split(/(?<=[.!?])\s+/).filter((s2) => /\bcamera\b/i.test(s2));
+  const holds = (s2) => !/\bzoom/i.test(s2) && /\b(static|locked|lock(?:ed)?[- ]off|stays? (?:steady|still|fixed|locked|put)|does ?n[o']t move|remains? (?:still|fixed|steady)|holds? (?:a |the )?(?:static|still|fixed|steady))\b/i.test(s2);
+  const moves = /\b(push(?:es|ing)?|pull(?:s|ing)?|dolly|dollies|truck(?:s|ing)?|track(?:s|ing)?|follow(?:s|ing)?|pan(?:s|ning)?|tilt(?:s|ing)?|zoom(?:s|ing)?|crane(?:s)?|pedestal|orbit(?:s|ing)?|arc(?:s)?|circles?|approach(?:es)?|glides?|rises?|lowers?|handheld|whip|moves?|travels?|sweeps?|drifts?)\b/i;
+  if (said.some((s2) => moves.test(s2) && !holds(s2))) return null;
+  return said.some(holds) ? "contradicted" : "missing";
+}
 function compileVideoPrompt(shot, source, names = {}, options = {}) {
   const plan2 = object4(shot.shot), visual = object4(shot.visual), frames = object4(visual.frames), camera = object4(visual.camera);
   const msr = frames.mode === "reference";
@@ -117010,7 +117050,7 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
     entry: catalogue.byId[text2(t2.id)]
   }));
   const movement = text2(camera.movement), speed = text2(camera.speed), target = text2(camera.target), settle = text2(camera.end);
-  const move = picked.find((t2) => t2.entry?.fields.movement && movement.toLowerCase().startsWith(t2.entry.fields.movement))?.entry;
+  const move = picked.find((t2) => t2.entry?.fields.movement && movement.toLowerCase().startsWith(t2.entry.fields.movement))?.entry ?? Object.values(catalogue.byId).filter((e2) => e2.prompt && e2.fields.movement && movement.toLowerCase().startsWith(e2.fields.movement)).sort((a, b) => b.fields.movement.length - a.fields.movement.length)[0];
   const rack = picked.find((t2) => t2.entry?.fields.focus);
   const pace = { slow: "slowly", steady: "steadily", fast: "quickly" }[speed];
   const ends = travels(camera) ? ", with a short pause on the opening and closing pictures" : "";
@@ -117031,7 +117071,9 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
   const worn = expressionWords(shot, names);
   const called = (id) => names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id;
   const seen = (Array.isArray(visual.bystanders) ? visual.bystanders : []).map(text2).filter(Boolean), extras = text2(visual.extras);
-  const prompt = [
+  const plain = (value) => text2(value).replace(/[.\s]+$/, "").toLowerCase();
+  const actionInBeat = performance2.performance.some((event) => event.kind === "action" && plain(event.videoDirection || event.text) === plain(source.action));
+  const parts = (step2) => [
     msr ? framing : "Start from the given first frame.",
     msr ? depthWords : "",
     moveWords,
@@ -117042,19 +117084,23 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
     viewWords || (text2(camera.framing) ? sentence(`Opening composition: ${text2(camera.framing)}`) : ""),
     !viewWords && camera.rear && !other.some((t2) => t2.entry.fields.viewpoint === "rear") ? "View the subject from behind." : "",
     !viewWords && camera.pov && !other.some((t2) => t2.entry.fields.viewpoint === "pov") ? sentence(`Point of view: ${text2(camera.pov) || "the named character"}`) : "",
-    sentence(source.action),
+    actionInBeat ? "" : sentence(source.action),
     seen.length ? sentence(`The opening picture also shows ${seen.map(called).join(" and ")}, who ${seen.length > 1 ? "stay" : "stays"} in the frame and never speaks`) : "",
     extras ? sentence(`Unnamed people in the frame: ${extras}`) : "",
-    ...["before", "after", "continuity"].map((key) => text2(design[key]) ? sentence(`${key}: ${text2(design[key])}`) : ""),
-    ...states.filter((state) => ![source.action, design.before, design.after, design.continuity].includes(state)).map((state) => sentence(`Visible state: ${state}`)),
+    ...step2 >= 1 ? [] : ["before", "after", "continuity"].map((key) => text2(design[key]) ? sentence(`${key}: ${text2(design[key])}`) : ""),
+    ...step2 >= 1 ? [] : states.filter((state) => ![source.action, design.before, design.after, design.continuity].includes(state)).map((state) => sentence(`Visible state: ${state}`)),
     !lines.length && beats.length ? "Perform the planned action without invented speech or voiceover." : "",
-    ...beats,
+    ...step2 >= 2 ? acting.performanceBeats(performance2.performance, mode, !msr && !options.bindDialogueSeparately, { brief: true }) : beats,
     // The model's default face is pleasant; the authored state has to be named and held (LTX guide: physical cues, state after the action).
-    worn ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : "",
+    worn && step2 < 3 ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : "",
     frames.mode === "first_last" ? sentence(`End on the given last frame${source.end ? ": " + source.end : ""}`) : source.end ? sentence(`End on ${source.end}`) : "",
     sentence(`Audio: ${source.sound ? source.sound + (/\b(music|soundtrack|score|bgm|melody|orchestral|song)\b/i.test(source.sound) ? "" : ", no music") : "no music"}`),
     acting.VIDEO_TEXT_POLICY
-  ].filter(Boolean).join(" ");
+  ].filter(Boolean);
+  const limit2 = options.maxCharacters, dropped = ["design notes and visible states", "acting fields of the beats", "expressions"];
+  let step = 0, prompt = parts(0).join(" ");
+  while (limit2 && prompt.length > limit2 && step < dropped.length) prompt = parts(++step).join(" ");
+  const fitWarnings = !limit2 || !step ? [] : [prompt.length > limit2 ? `prompt_over_limit: ${prompt.length} characters after leaving out the ${dropped.slice(0, step).join(", ")}; the adapter takes ${limit2}. Shorten the action, end or sound in shot_prompt` : `prompt_fitted: left out the ${dropped.slice(0, step).join(", ")} to fit the adapter's ${limit2} characters; the camera, action and lines are whole`];
   const foreign = nonEnglishOutsideQuotes(prompt);
   if (foreign && options.validateLanguage !== false) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks; write action and direction in English`);
   const bindings = [
@@ -117077,7 +117123,10 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
   ];
   return { prompt, performance: performance2, directionBindings: bindings.filter((b) => b.value !== void 0), warnings: [
     ...performance2.warnings,
-    ...bindings.filter((b) => b.value !== void 0 && b.via === "unmapped").map((b) => `No prompt mapping for ${b.attribute}: ${JSON.stringify(b.value)}`),
+    ...fitWarnings,
+    // An unchosen move leaves the camera to the model; on mochi_bo 29 of 33 shots of one episode went out so.
+    ...movement ? [] : ["camera_move_unset: no camera move is chosen, so the video model decides the camera \u2014 set shot_icons move (camera.static for a deliberate hold)"],
+    ...bindings.filter((b) => b.value !== void 0 && b.via === "unmapped" && b.attribute !== "move").map((b) => `No prompt mapping for ${b.attribute}: ${JSON.stringify(b.value)}`),
     ...rack && !(rack.from && rack.to) ? ["the rack focus names no subjects \u2014 give focus.from and focus.to in shot_icons"] : []
   ] };
 }
@@ -117316,19 +117365,38 @@ function planVideo(raw) {
     return seconds2;
   };
   const bindDialogueSeparately = tool2 === "astra_genai_img2video" && !silentPicture && input.args.generateAudio !== false && (hasVideoSubjectReferences(shot) || hasSubjectInput(input.args.references));
-  const compiled = input.args.prompt === void 0 && video2?.promptSource ? compileVideoPrompt(shot, video2.promptSource, names, { mode, measureAudio, bindDialogueSeparately }) : void 0;
-  const authored = compiled?.prompt ?? video2?.prompt;
-  let callArgs = input.args.prompt === void 0 && typeof authored === "string" ? { ...input.args, prompt: authored } : input.args;
-  if (silentPicture && (supportsAudioToggle || tool2 === "minimax_img2video" || tool2 === "heygen_img2video")) {
-    const soundDirection = includeEffects ? "include natural ambience for the location and sound effects from the visible actions." : "perform the planned silent action.";
-    callArgs = {
-      ...callArgs,
+  const silentSuffix = silentPicture && (supportsAudioToggle || tool2 === "minimax_img2video" || tool2 === "heygen_img2video") ? `No speech or vocalization. All visible mouths stay closed; ${includeEffects ? "include natural ambience for the location and sound effects from the visible actions." : "perform the planned silent action."}` : "";
+  const promptLimit = tool2 ? videoPromptLimit(tool2) : void 0;
+  const compileFor = (budget) => compileVideoPrompt(shot, video2.promptSource, names, {
+    mode,
+    measureAudio,
+    bindDialogueSeparately,
+    ...budget ? { maxCharacters: budget - (silentSuffix ? silentSuffix.length + 1 : 0) } : {}
+  });
+  let compiled = input.args.prompt === void 0 && video2?.promptSource ? compileFor(promptLimit) : void 0;
+  const withPrompt = (prompt) => {
+    const args2 = input.args.prompt === void 0 && typeof prompt === "string" ? { ...input.args, prompt } : input.args;
+    return silentSuffix ? {
+      ...args2,
       ...supportsAudioToggle ? { generateAudio: includeEffects } : {},
-      prompt: [callArgs.prompt, `No speech or vocalization. All visible mouths stay closed; ${soundDirection}`].filter(Boolean).join(" ")
-    };
-  }
+      prompt: [args2.prompt, silentSuffix].filter(Boolean).join(" ")
+    } : args2;
+  };
+  let callArgs = withPrompt(compiled?.prompt ?? video2?.prompt);
   const sourcePrompt = typeof video2?.prompt === "string" ? video2.prompt : "";
-  const direction = compiled ? { sourcePrompt, directionBindings: compiled.directionBindings, directionWarnings: compiled.warnings, performance: compiled.performance } : { sourcePrompt, directionWarnings: [input.args.prompt !== void 0 ? "Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons." : "Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time."] };
+  const boardCamera = context2.shot.visual?.camera;
+  const drift = input.args.prompt !== void 0 ? cameraDrift(String(input.args.prompt), String(boardCamera?.movement ?? "")) : null;
+  const moveSentence = () => {
+    try {
+      return video2?.promptSource ? compileVideoPrompt(shot, video2.promptSource, names, { mode, validateLanguage: false }).directionBindings.find((b) => b.attribute === "move")?.instruction ?? "" : "";
+    } catch {
+      return "";
+    }
+  };
+  const carried = drift ? moveSentence() : "";
+  const driftWarning = drift ? [`camera_move_${drift}: the board moves this shot (${String(boardCamera?.movement)}) but args.prompt ${drift === "missing" ? "names no camera move" : "holds the camera still"}; omit args.prompt to send the board prompt, which video_plan fits to the adapter limit${carried ? `, or write its camera sentence: "${carried}"` : ""}`] : [];
+  const directionOf = (c) => c ? { sourcePrompt, directionBindings: c.directionBindings, directionWarnings: c.warnings, performance: c.performance } : { sourcePrompt, directionWarnings: [input.args.prompt !== void 0 ? "Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons." : "Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.", ...driftWarning] };
+  let direction = directionOf(compiled);
   if (selection.engine === "host") {
     if (input.tool) throw new Error("model_selection_mismatch: host has no server adapter");
     const images2 = prepareVideoImages("host_external", callArgs, context2.shot, context2.episode);
@@ -117374,8 +117442,16 @@ function planVideo(raw) {
     const exact = ["duration", "durationSeconds", "numFrames", "frames", "autoDuration", "audioMaxDuration"].some((key) => bound[key] !== void 0);
     if (!exact) bound = resolveVideoDuration(tool2, { ...bound, requiredSeconds: durationPlan.requiredSeconds }).args;
   }
-  const images = prepareVideoImages(tool2, bound, shot, context2.episode);
-  const voice = prepareVideoVoice(tool2, images.args, { ...context2, shot, msrVoice: genaiMsrVoiceReferences() });
+  let images = prepareVideoImages(tool2, bound, shot, context2.episode);
+  let voice = prepareVideoVoice(tool2, images.args, { ...context2, shot, msrVoice: genaiMsrVoiceReferences() });
+  const submittedLength = typeof voice.args.prompt === "string" ? openingPrompt(voice.args.prompt, voice.args.openingPositions).length : 0;
+  if (compiled && promptLimit && typeof bound.prompt === "string" && submittedLength > promptLimit) {
+    compiled = compileFor(promptLimit - (submittedLength - bound.prompt.length));
+    bound = { ...bound, prompt: withPrompt(compiled.prompt).prompt };
+    direction = directionOf(compiled);
+    images = prepareVideoImages(tool2, bound, shot, context2.episode);
+    voice = prepareVideoVoice(tool2, images.args, { ...context2, shot, msrVoice: genaiMsrVoiceReferences() });
+  }
   const args = parseVideoArgs(tool2, voice.args);
   if (Array.isArray(args.openingPositions)) args.prompt = openingPrompt(String(args.prompt), args.openingPositions);
   if (durationPlan.status === "fits") {
@@ -118304,6 +118380,11 @@ var STRUCTURE_VERSION = (() => {
     return "structure-v1";
   }
 })();
+var audienceDecisionSchema = external_exports.discriminatedUnion("decision", [
+  external_exports.object({ decision: external_exports.literal("undecided") }).strict(),
+  external_exports.object({ decision: external_exports.literal("use"), reason: nonEmpty }).strict(),
+  external_exports.object({ decision: external_exports.literal("none"), reason: nonEmpty }).strict()
+]).describe("Whether the scene uses an audience-only sound: use or none with the dramatic reason, or undecided.");
 var sceneSchema = external_exports.object({
   no: external_exports.number().int().positive().describe("Scene number \u2014 the value shots point at with `scene`"),
   place: external_exports.string().optional().describe("One place \u2014 the slugline location"),
@@ -118313,7 +118394,8 @@ var sceneSchema = external_exports.object({
   turn: external_exports.string().optional().describe("What flipped between the open and the close"),
   summary: external_exports.string().optional().describe("The scene's story in one sentence; the storyboard scene header shows it"),
   out: nonEmpty.optional().describe("The sentence the scene goes out on \u2014 the one that forces a \uADF8\uB7F0\uB370 or \uADF8\uB798\uC11C into the next scene"),
-  music: external_exports.object({ decision: external_exports.enum(["score", "none"]), reason: nonEmpty, span: nonEmpty.optional() }).strict().optional().describe("The music decision story_music records: score (with its $timeline span id) or none, and why")
+  music: external_exports.object({ decision: external_exports.enum(["score", "none"]), reason: nonEmpty, span: nonEmpty.optional() }).strict().optional().describe("The music decision story_music records: score (with its $timeline span id) or none, and why"),
+  audienceSound: audienceDecisionSchema.optional()
 }).strict();
 var sequenceSchema = external_exports.object({
   id: nonEmpty.describe('Stable id, e.g. "q1"'),
@@ -118433,6 +118515,7 @@ var audienceEffectsSchema = external_exports.array(external_exports.discriminate
     trigger: audienceId.optional(),
     description: audienceId.optional(),
     release: audienceId.nullish(),
+    source: external_exports.literal("music").nullish().describe("Use the saved music model for this event, including on a legacy board. Omit to keep its choice or set null to restore the board default."),
     caseId: external_exports.string().regex(/^(00[1-9]|0[1-9]\d|1[01]\d|120)$/).nullish(),
     intensity: external_exports.enum(["subtle", "normal", "strong"]).nullish(),
     separationLu: seconds.max(30).nullish()
@@ -118442,7 +118525,9 @@ var audienceEffectsSchema = external_exports.array(external_exports.discriminate
     op: external_exports.literal("place"),
     atSeconds: seconds,
     timingBasis: external_exports.string().regex(/^[a-f0-9]{64}$/),
+    sourceStartSeconds: seconds.nullish().describe("Start within the full source audio, in seconds. Omit to keep the current in-point or use null to play from zero."),
     end: external_exports.object({ shotId: shotIdSchema, atSeconds: external_exports.union([seconds, external_exports.literal("end")]) }).strict().nullish(),
+    fadeInSeconds: seconds.nullish().describe("Fade up over this many seconds of the playable excerpt. Omit to keep it or use null to clear it."),
     fadeOutSeconds: seconds.nullish()
   }).strict(),
   external_exports.object({ ...audienceKey, op: external_exports.literal("remove") }).strict()
@@ -118639,6 +118724,7 @@ function readStoryboard(args) {
   const result = contract().outline(win, args.level);
   if (args.level === "shots" || args.level === "full" || args.audienceEndFor)
     result.audienceEffects = audienceSound().read(win, dirname6(file), args.audienceEndFor, args.shotId);
+  result.audienceSpotting = audienceSound().spotting(win, result.audienceEffects);
   result.file = file;
   result.mediaBaseDirectory = dirname6(file);
   result.sha256 = sha2563;
@@ -118917,6 +119003,9 @@ function applyPatch(win, patch, opts = {}) {
       throw new Error("cliche_record: window.CLICHES is written by story_cliche, which checks the episode type and the user's pick \u2014 storyboard_apply globals cannot change it");
     next[k] = v;
   }
+  const previousStory = win.STORY;
+  if ((opts.creating ?? Object.keys(win).length === 0) || previousStory?.audienceSoundVersion === 1)
+    next.STORY = { ...next.STORY, audienceSoundVersion: 1 };
   let clicheChoiceKept;
   if (patch.globals && Object.hasOwn(patch.globals, "PRODUCTION") && !opts.cliches && Object.keys(win).length) {
     const before2 = win.PRODUCTION?.clicheUse;
@@ -118968,6 +119057,14 @@ function applyPatch(win, patch, opts = {}) {
     const kept = scenes.find((old) => old.no === scene.no)?.music;
     return kept && !("music" in scene) ? { ...scene, music: kept } : scene;
   }), "no");
+  const tracked = next.STORY?.audienceSoundVersion === 1;
+  const oldScenes = Array.isArray(win.STRUCTURE?.scenes) ? win.STRUCTURE.scenes : [];
+  const priorDecisions = new Map(oldScenes.filter((scene) => scene?.audienceSound).map((scene) => [scene.no, scene.audienceSound]));
+  scenes = scenes.map((scene) => {
+    if (scene.audienceSound) return scene;
+    const audienceSound2 = priorDecisions.get(scene.no) ?? (tracked ? { decision: "undecided" } : void 0);
+    return audienceSound2 ? { ...scene, audienceSound: audienceSound2 } : scene;
+  });
   if (patch.removeScenes) {
     const drop = new Set(patch.removeScenes);
     scenes = scenes.filter((sc) => !drop.has(sc.no));
@@ -119234,7 +119331,7 @@ function applyStoryboard(args, opts = {}) {
   const changesProps = !!args.propSheet || !!args.globals && Object.prototype.hasOwnProperty.call(args.globals, "SB_DOC") && ["props", "propContinuity"].some((key) => JSON.stringify(previousDoc?.[key]) !== JSON.stringify(incomingDoc?.[key]));
   if (changesProps && exists && args.expectedSha256 !== originalHash)
     throw new Error("head_moved: propSheet requires the current expectedSha256 from storyboard_read");
-  const { win: next, findings, synced } = applyPatch(win, args, opts);
+  const { win: next, findings, synced } = applyPatch(win, args, { ...opts, creating: !exists });
   const audienceResult = audienceEdit ? audienceSound().patch(next, dirname6(file), args) : void 0;
   const panelIds = [...new Set((next.SCENES ?? []).flatMap((shot) => [...contract().castOf(shot) ?? [], ...bystandersOf(shot)]))];
   if (panelIds.length && existsSync24(join12(dirname6(file), "cast.json"))) {
@@ -119299,7 +119396,7 @@ function applyStoryboard(args, opts = {}) {
     ...audienceResult,
     synced,
     findings,
-    board: [digest5, firstLine, opening, () => cliches().digest(next)].flatMap((read4) => {
+    board: [digest5, firstLine, opening, () => cliches().digest(next), () => audienceSound().spottingDigest(next)].flatMap((read4) => {
       try {
         return read4();
       } catch {
@@ -119337,6 +119434,7 @@ function applyStoryboard(args, opts = {}) {
     throw err4;
   }
   refreshVideoReview(dirname6(dirname6(file)));
+  refreshAudienceReview(dirname6(file));
   result.written = true;
   return result;
 }
@@ -119370,6 +119468,7 @@ var storySceneSchema = external_exports.object({
     summary: nonEmpty.describe("The scene's story in one sentence"),
     turn: nonEmpty.optional(),
     out: nonEmpty.optional(),
+    audienceSound: audienceDecisionSchema.optional(),
     // The same signs structure-contract.js reads: the value at the open and at the close.
     charge: external_exports.object({ open: external_exports.enum(["+", "-"]), close: external_exports.enum(["+", "-", "++", "--"]) }).strict().optional()
   }).strict()).min(1)
@@ -119389,9 +119488,10 @@ function readOutline(path35) {
   return { win, st: win.STRUCTURE ?? emptyStructure() };
 }
 function writeOutline(path35, win, structure, shots, language, opening) {
-  const episode = win.STORY ? void 0 : workflowEpisode(dirname6(scenesPath(path35)));
+  const savedStory = win.STORY;
+  const story = savedStory?.audienceSoundVersion === 1 && Object.keys(savedStory).length === 1 ? void 0 : savedStory;
+  const episode = story ? void 0 : workflowEpisode(dirname6(scenesPath(path35)));
   const handoff = episode ? episodeHandoff(episode) : void 0;
-  const story = win.STORY;
   const speech = language ?? handoff?.LANGUAGES?.speech;
   const written = !!win.SCENES?.length;
   const takesLanguage = !!language && story?.language === void 0 && !written;
@@ -120109,6 +120209,12 @@ function writeShotIcons(args) {
   const touched = new Set(args.shots.map((shot) => shot.id));
   const heldWide = shotDirection().held(shots).wideWithoutReason.filter((id) => touched.has(id));
   if (heldWide.length) notes.push({ level: "warn", where: "shot_icons", what: `wide shots held with no reason: ${heldWide.join(", ")} \u2014 the board does not show whether a move was compared there (action-direction.md step 2)` });
+  const cameraOf = (s2) => String(s2.visual?.camera?.movement ?? "").trim();
+  const videoSet = shots.filter((s2) => touched.has(String(s2.id)) && s2.shot?.render?.mode === "generated_video");
+  const unchosen = videoSet.filter((s2) => !cameraOf(s2)).map((s2) => s2.id);
+  if (unchosen.length) notes.push({ level: "warn", where: "shot_icons", what: `camera_move_unset on ${unchosen.join(", ")} \u2014 no move is chosen, so the video model decides the camera; set move (camera.static for a deliberate hold)` });
+  if (videoSet.length >= 4 && videoSet.every((s2) => /^(static|fixed|locked)/i.test(cameraOf(s2))))
+    notes.push({ level: "warn", where: "shot_icons", what: `all ${videoSet.length} video shots this call set are held \u2014 the board does not show a move compared on any; a move earns its place where the subject travels, something enters, or the beat turns while the shot runs (action-direction.md step 2)` });
   for (const copy of shotDirection().copiedReasons(shots)) if (copy.shots.some((id) => touched.has(id)))
     notes.push({ level: "warn", where: "shot_icons", what: `the same ${copy.field} stands on ${copy.shots.length} shots (${copy.shots.join(", ")}): "${copy.text.slice(0, 80)}"` });
   const result = writeOutline(args.path, win, st, shots);
@@ -120671,7 +120777,8 @@ function writeShotPrompt(args) {
   } } };
   const result = writeOutline(args.path, win, st, shots);
   const open3 = win.STORY?.authoring === "story-first" && musicTimeline().spottingReport(win).undecided.includes(shot.scene) ? [{ level: "warn", where: args.id, what: `scene ${shot.scene} has no music decision \u2014 record score or none with story_music` }] : [];
-  return { ...result, findings: [...result.findings, ...compiled.warnings.map((what) => ({ level: "warn", where: args.id, what })), ...open3], prompt };
+  const long = prompt.length > 2e3 ? [{ level: "warn", where: args.id, what: `the prompt runs ${prompt.length} characters; video_plan fits it to the adapter's limit (2,000 on the GenAI image and MSR lanes) keeping the camera, action and lines \u2014 call video_plan without args.prompt` }] : [];
+  return { ...result, findings: [...result.findings, ...compiled.warnings.map((what) => ({ level: "warn", where: args.id, what })), ...open3, ...long], prompt };
 }
 var scenarioCheckResultSchema = external_exports.object({
   files: external_exports.array(external_exports.string()),
@@ -128101,7 +128208,7 @@ Returns: a text block with the saved .wav file path, speaker/voice assignments, 
     annotations: HINT.generate,
     description: `Generate one sound effect from a text description with ElevenLabs (${ELEVENLABS_SFX_MODEL}) \u2014 the lane that fills a channel's sfx catalog so a shot's \`sound.sfx\` has a file behind it.
 
-Use for the cut effects a storyboard names in window.SFX (scenes-schema \xA7sound effects): a whoosh on a whip transition, a low hit on the line before a drop, a tick or pop when a figure lands on a slide, a riser under a build, a 30-second room-tone loop for a bed. Write the prompt as a description in the vendor's own vocabulary (whoosh \xB7 impact \xB7 braam \xB7 riser \xB7 click \xB7 texture \xB7 ambience), one sound per call, with its shape spelled out ("short soft whoosh, fabric through air, no tail"); set durationSeconds for one-shots (a whoosh 0.6\u20131.0 s, a hit 1\u20132 s, a riser 2\u20134 s) and loop: true with 10\u201330 s for a bed. promptInfluence above the ${DEFAULT_ELEVENLABS_SFX_PROMPT_INFLUENCE} default reads the prompt more literally; below it, more freely. Save straight into the channel catalog \u2014 outputPath data/<channel>/assets/audio/sfx, filename <id>.wav \u2014 then register the row with resolve-asset.py --ensure and point its note at the .json sidecar this tool writes next to the file (tool, model, prompt, seconds, request id, date, rights). Generated once, an effect is a channel asset reused at $0 in every later episode.
+Use for an explicitly separate edit effect or a missing physical sound, such as a transition whoosh, a graphic tick or a room-tone loop. Keep action sounds already in the video. New audience-only drones, risers and musical stingers use the saved music model via music_plan and music_execute. Write the prompt as a description in the vendor's own vocabulary (whoosh \xB7 impact \xB7 braam \xB7 riser \xB7 click \xB7 texture \xB7 ambience), one sound per call, with its shape spelled out ("short soft whoosh, fabric through air, no tail"); set durationSeconds for one-shots (a whoosh 0.6\u20131.0 s, a hit 1\u20132 s, a riser 2\u20134 s) and loop: true with 10\u201330 s for a bed. promptInfluence above the ${DEFAULT_ELEVENLABS_SFX_PROMPT_INFLUENCE} default reads the prompt more literally; below it, more freely. Save straight into the channel catalog \u2014 outputPath data/<channel>/assets/audio/sfx, filename <id>.wav \u2014 then register the row with resolve-asset.py --ensure and point its note at the .json sidecar this tool writes next to the file (tool, model, prompt, seconds, request id, date, rights). Generated once, an effect is a channel asset reused at $0 in every later episode.
 Do NOT use for music or a melodic bed \u2014 that is music_plan \u2192 music_execute with the saved music model. Do NOT use for a clip's own soundtrack \u2014 that is the model's native audio through visual.audio. Do NOT request a loop under 5 s (it seams audibly under narration). Prefer the provider's WAV format, which preserves its channel metadata. Legacy PCM sound effects are wrapped as stereo WAV, separately from mono speech. A 403 output_format_not_allowed means the plan lacks that rate; pcm_24000 is the supported lower-rate alternative. API pricing is per minute of generated audio, $${ELEVENLABS_SFX_USD_PER_MINUTE.toFixed(2)} on every plan (pricing/api, read 2026-09-16), so a one-second effect is about $0.002; the ledger key is sfx.elevenlabs with the measured seconds as the quantity. Free-tier output is non-commercial and needs attribution \u2014 check the plan before publishing.
 
 Returns: a text block with the saved WAV path, the provenance sidecar path, the model, format, the measured duration, the USD estimate at the per-minute rate, and the request id.`,
@@ -128489,7 +128596,7 @@ Returns: a text block with the saved .wav path, model, duration, and generation 
 
 Use for initial setup (\uD504\uB85C\uC81D\uD2B8 \uCD08\uAE30 \uC124\uC815), saved genre/style/video ratio, SNS connection records, or a new episode inheriting project defaults. options and status are read-only. init creates missing channel folders, profile, catalog and local .gitignore entries; it preserves existing files and rejects changed preferences. update requires the revision from status and an explicit user request. episode creates a snapshot and directories, returning a new-board handoff; an existing snapshot or legacy board is preserved. All mutations are local, locked and make no network calls.
 Do NOT use to verify credentials \u2014 use sns_account_check. Do NOT use to discover live media engines \u2014 use capability_status. Never pass token values, generate media, or publish as part of setup. Record connected only after an actual account check; enabled platforms may stay pending.
-Returns JSON: status, missing fields, canonical paths, config and revision; episode returns snapshot and handoff (FORMAT/PRODUCTION/SNS). options returns the supported type, style, ratio and format catalog. Errors report invalid choices, path conflicts or stale revisions without changing existing settings. Settings live in WORKSPACE/.social-flow/models.json; snapshots in EPISODE/.work/model-settings.json.`,
+Returns JSON: status, missing fields, canonical paths, config and revision; episode returns snapshot and handoff (FORMAT/PRODUCTION/SNS). options returns the model setup order, music catalog and supported type, style, ratio and format choices. Errors report invalid choices, path conflicts or stale revisions without changing existing settings. Settings live in WORKSPACE/.social-flow/models.json; snapshots in EPISODE/.work/model-settings.json.`,
     inputSchema: {
       type: "object",
       additionalProperties: false,
@@ -128518,13 +128625,13 @@ Returns JSON: status, missing fields, canonical paths, config and revision; epis
               id: { type: "string", description: "Type ID from options, e.g. drama or documentary." },
               detail: { type: "string", description: "Required for custom, e.g. Documentary with acted historical scenes." }
             }, required: ["id"] },
-            models: { type: "object", additionalProperties: false, description: 'Select video and check credentials, then image and check credentials, then decide whether TTS is needed. Use speech:{engine:"none"} to skip TTS; otherwise select speech and check credentials. Music is optional. Use capability_status and host schemas for availability.', properties: Object.fromEntries(["video", "speech", "image", "music"].map((kind) => [kind, {
+            models: { type: "object", additionalProperties: false, description: 'On first setup choose video and check credentials, then ask for the BGM and audience tonal-cue model from music_catalog or save music:{engine:"none"} for reuse or no score. Check the selected provider, then choose image and optional TTS (speech:{engine:"none"} to skip). Reuse saved choices.', properties: Object.fromEntries(["video", "music", "image", "speech"].map((kind) => [kind, {
               type: "object",
               additionalProperties: false,
               description: `${kind} selection; fixed engines omit model, host uses host-managed.`,
               properties: {
-                engine: { type: "string", enum: kind === "video" ? ["host", "seedance", "astra", "astra-genai", "astra-genai-desktop", "mlx", "ltx-api", "minimax", "heygen"] : kind === "speech" ? ["none", "gemini", "elevenlabs", "astra-genai"] : kind === "music" ? ["lyria", "suno-api", "elevenlabs", "mlx"] : ["host", "gpt-image", "zimage", "mlx", "astra-genai", "astra-genai-native"], description: "Selected engine, e.g. host for an exposed host media tool." },
-                model: { type: "string", description: "Supported model ID, e.g. host-managed. Omit for astra, zimage and speech engine none." },
+                engine: { type: "string", enum: kind === "video" ? ["host", "seedance", "astra", "astra-genai", "astra-genai-desktop", "mlx", "ltx-api", "minimax", "heygen"] : kind === "speech" ? ["none", "gemini", "elevenlabs", "astra-genai"] : kind === "music" ? ["lyria", "suno-api", "elevenlabs", "mlx", "none"] : ["host", "gpt-image", "zimage", "mlx", "astra-genai", "astra-genai-native"], description: "Selected engine, e.g. host for an exposed host media tool." },
+                model: { type: "string", description: "Supported model ID, e.g. host-managed. Omit for astra, zimage and engine none (speech or music)." },
                 ...!["speech", "music"].includes(kind) ? { host: { type: "string", description: "Host CLI when engine is host, e.g. codex." } } : {},
                 ...kind === "video" ? {
                   resolution: { type: "string", description: "Supported source resolution, e.g. 720p; MSR takes WIDTHxHEIGHT, e.g. 1792x1024." },
@@ -129436,6 +129543,7 @@ Returns revision, ordered matching lines with generationPlan and voice/audio has
 The default techniqueCatalog provides the four filmmaking elements and per-technique selection guidance. Store intentional choices as shot.techniques:[{id,reason}] and keep existing camera/size/angle fields consistent.
 
 Use it before editing an existing board, and after storyboard_apply to see the board the way the approval page groups it. level=outline is enough to plan a change; level=full carries every raw shot object (large \u2014 one shot is ~40 fields).
+audienceSpotting lists scene decisions and missing or conflicting cues. Read level shots for timing and the audience cue\u2019s music or catalog source. Legacy decisions can be unrecorded.
 level=direction returns only { file, sha256, format, direction }: each scene's shots in order (size, angle, move, length), the longest runs of one size and of held shots, held shots counted by size with the wide ones (els, ls, ws, fs) held without a reason, lengths by size and the most common lengths, the longest shots with their action and line counts, and reasons \u2014 sentences standing as the same reason on several shots, sizes without a why. Counts of the plan as written, not targets; read it once the icons and lengths are written.
 Do NOT use it to validate \u2014 storyboard_check runs the contract. A board with no window.STRUCTURE comes back with every shot under unplacedShots; write the structure with story_sequence and story_scene.
 
@@ -129522,6 +129630,8 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     description: `Use it after story_sequence to upsert scenes by number into a sequence: place, time, the one event, and a one- or two-sentence summary of the scene's story. On story-led work also give turn, charge and out, so the scenes can be read in a row for pressure that changes and ends that hand over the next question (skills/storyboard/references/story-interest.md). A scene moved to another sequence leaves its old one. Refused (story_order) before any sequence exists or for an unknown sequence id, and on a story-first episode board by story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
 
+A new scene starts with audienceSound.decision undecided. Set use or none with the reason the viewer should hear the sound or the beat should stay clear. To plan and time each chosen effect, use storyboard_apply.audienceEffects on its shot.
+
 Do NOT write shots or dialogue here \u2014 story_shot comes next.
 
 Returns: the file written or not, counts, and findings (! violation \xB7 warning).`,
@@ -129538,6 +129648,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
           event: { type: "string", description: "The one thing that happens in this scene" },
           summary: { type: "string", description: "The scene's story in one sentence" },
           turn: { type: "string", description: "What flipped between the open and the close" },
+          audienceSound: zodToJsonSchema(audienceDecisionSchema, { $refStrategy: "none" }),
           out: { type: "string", description: "The line or visible action the scene goes out on \u2014 it leaves the next thing wanted" },
           charge: { type: "object", additionalProperties: false, required: ["open", "close"], description: "The value at the open and at the close; ++ or -- deepens the direction the scene opened in", properties: {
             open: { type: "string", enum: ["+", "-"] },
@@ -129805,7 +129916,7 @@ Refused: missing story/characters (story_order), invalid attributes, incompatibl
           angle: enumInput(storyboardVocabulary?.ANGLES, "Camera angle icon: the camera height and tilt; ground and over have cards in techniqueCatalog guides.angle"),
           view: shotViewInput,
           backgroundView: { type: "string", enum: ["front", "back"], description: "Opening direction relative to the location sheet: front is the establishing view, back is the opposite side. Saves visual.camera.backgroundView; omitted keeps the choice, initially front. Independent of the subject view." },
-          move: { type: "object", additionalProperties: false, required: ["id"], description: "Camera move icon", properties: {
+          move: { type: "object", additionalProperties: false, required: ["id"], description: "Camera move icon. A video shot left without one is named in the result (camera_move_unset: the video model then decides the camera), as is a call that holds every video shot it sets; neither is refused", properties: {
             id: { type: "string", enum: [...cameraMoves, ...stillCameraEffects], description: "A camera.* technique with a movement, or on a still_camera cut a still effect" },
             reason: { type: "string", description: "Why the camera moves this way in this shot. Required for every move and still effect; camera.static may go without one" },
             target: { type: "string", description: 'What the move is aimed at, in English on a video cut: what it pushes toward or pans and tilts to, or the person it follows, circles or rises above \u2014 the prompt reads "pushes in toward <target>", "follows behind <target>". A blast pushback names the source of the blast, a weapon cam what the projectile flies toward, a relay one-take the fighter it starts with' },
@@ -129926,7 +130037,7 @@ Returns: the file written and the prompt. Stores promptSource so video_plan reco
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     description: `Write a storyboard's scenes.js from a sequence \u2192 scene \u2192 shot model, or patch part of it, in one call. Every shot is checked against the shot schema (type and render.mode vocabularies, transition join, stable id format and uniqueness, camera input, line-crossing and motion-graphic records), the structure against its schema (version, typed scenes and sequences) and the story order, and the derived shot labels (sceneSlug \xB7 sequence) are written from the structure. Nothing is written when a violation is found \u2014 the findings come back instead. No creative or production rule runs on a write; storyboard_check runs them on request.
 
-A new episode board starts with its story (story_sequence \u2192 story_scene \u2192 story_shot), then each shot's characters and lines (shot_characters \u2192 shot_dialogue), then its icon attributes (shot_icons), its images (shot_image) and its video prompt (shot_prompt); storyboard_apply refuses to create a board inside an episode. Use it after those steps to add camera endpoints, blocking and visual plans (storyboard \xA74), and to change one thing later (scenes / sequences by key, shots by id \u2014 shotsById \xB7 insertShots.afterId \xB7 removeShotIds \u2014 or by position, globals for FORMAT \xB7 THEME \xB7 COMPREHENSION \xB7 STORY \xB7 PRODUCTION \xB7 MUSIC \xB7 SFX). Address shots by id once the board has them (every board written by this tool does): a review note names s0007, and positions shift with every insert; a patch mixes id and position addressing at its own peril \u2014 it is refused. Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. Use audienceEffects to plan, place or remove one audience-only post cue and sfxEntries to register reusable assets. Both require expectedSha256. Read level shots for currentTimingBasis, or audienceEndFor for a proposed end shot. One call carries the whole change \u2014 do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
+A new episode board starts with its story (story_sequence \u2192 story_scene \u2192 story_shot), then each shot's characters and lines (shot_characters \u2192 shot_dialogue), then its icon attributes (shot_icons), its images (shot_image) and its video prompt (shot_prompt); storyboard_apply refuses to create a board inside an episode. Use it after those steps to add camera endpoints, blocking and visual plans (storyboard \xA74), and to change one thing later (scenes / sequences by key, shots by id \u2014 shotsById \xB7 insertShots.afterId \xB7 removeShotIds \u2014 or by position, globals for FORMAT \xB7 THEME \xB7 COMPREHENSION \xB7 STORY \xB7 PRODUCTION \xB7 MUSIC \xB7 SFX). Address shots by id once the board has them (every board written by this tool does): a review note names s0007, and positions shift with every insert; a patch mixes id and position addressing at its own peril \u2014 it is refused. Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. Use audienceEffects to plan, place or remove one audience-only post cue and sfxEntries to register its material. To generate one new cue with the saved music model on an older board, pass source:"music" in that cue\u2019s plan. Both edits require expectedSha256. Read level shots for currentTimingBasis, or audienceEndFor for a proposed end shot. One call carries the whole change \u2014 do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
 storyboard_apply assigns stable shot ids (s0001\u2026) and advances STRUCTURE.nextShotId; preserve those ids and do not edit them by hand.
 Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign, visual.camera and the three plan records shot.eyeline \xB7 shot.composition \xB7 shot.depth in the input schema. shot.depth (L11): count what the viewer must read in the frame at once \u2014 one thing \u2192 shallow with focus (a person's eyes), two or more \u2192 deep with the planes listed front to back; a departure needs a reason, and a still_camera focus-in/rack-focus cut cannot be deep. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
 Do NOT pass a shot's visual plan through a summary \u2014 pass the object scenes-schema.md defines (visual \xB7 shot.space \xB7 visual.camera \xB7 visual.video \u2026); unknown keys on a shot pass through untouched. Nonblocking edit_* findings expose performed-speech changes, removed actions, inherited images and dangling prop-event shot ids. They require an editorial comparison, not regeneration or approval. Editing a board drops its stale \`// approved:\` line; existing task authorization is unchanged.
@@ -129949,7 +130060,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
         },
         structure: { type: "object", description: "Replace window.STRUCTURE only" },
         sequences: { type: "array", items: { type: "object", description: "{ id, title, purpose, question?, payoff?, scenes }" }, description: "Upsert sequences by id" },
-        scenes: { type: "array", items: { type: "object", description: "{ no, place, time, event, summary, charge, turn, out? }" }, description: "Upsert scenes by no: the given fields replace the scene, and its story_music decision is kept" },
+        scenes: { type: "array", items: zodToJsonSchema(sceneSchema, { $refStrategy: "none" }), description: "Upsert scenes by no. Omit music or audienceSound to keep its existing decision." },
         shots: { type: "array", items: { type: "object", description: "One positional upsert", properties: { no: { type: "number", description: "1-based position" }, shot: storyboardShotInput }, required: ["no", "shot"] }, description: "Upsert shots by 1-based position; no = length + 1 appends. Not with the id fields in the same patch" },
         audienceEffects: zodToJsonSchema(audienceEffectsSchema, { $refStrategy: "none" }),
         sfxEntries: zodToJsonSchema(sfxEntriesSchema, { $refStrategy: "none" }),
@@ -130123,7 +130234,7 @@ TOOLS.push(
   {
     name: "video_plan",
     title: "Plan a video with saved model settings",
-    description: "Prepare an episode video request from saved model selection and explicit overrides. Compiles storyboard frames and role-labelled references into adapter inputs; returns imageBindings with dimensions, hashes and planned inclusion (host mapping stays unverified). On MSR the shot's start image takes the background slot. A call without args.prompt sends the shot's visual.video.prompt (shot_prompt). Refuses unsupported combinations. On a natively voiced shot it returns speechFit: the seconds the lines and timed actions need, the seconds requested, and when the request runs over, a warning with the shortest covering request, because the model fills the rest with silent acting. Compiles pinned character voice descriptions and Seedance voice-reference mappings, reports voiceContinuity limits without claiming a listening review, validates the final adapter payload, and pins prices and local input hashes. No media generation. Returns a plan ID, provenance and cost estimate; use video_execute under existing spending authorization. Re-plan after speech, voice or reference edits. Exact supplied-speech synchronization is separate from native voice imitation.",
+    description: "Prepare an episode video request from saved model selection and explicit overrides. Compiles storyboard frames and role-labelled references into adapter inputs; returns imageBindings with dimensions, hashes and planned inclusion (host mapping stays unverified). On MSR the shot's start image takes the background slot. A call without args.prompt compiles the shot's prompt (shot_prompt) to the adapter's own length limit, keeping the camera move, action and lines whole (prompt_fitted, prompt_over_limit); omit args.prompt. A hand-written args.prompt that drops or locks the board's camera move is named (camera_move_missing, camera_move_contradicted) with the sentence to carry, never refused. Refuses unsupported combinations. On a natively voiced shot it returns speechFit: the seconds the lines and timed actions need, the seconds requested, and when the request runs over, a warning with the shortest covering request, because the model fills the rest with silent acting. Compiles pinned character voice descriptions and Seedance voice-reference mappings, reports voiceContinuity limits without claiming a listening review, validates the final adapter payload, and pins prices and local input hashes. No media generation. Returns a plan ID, provenance and cost estimate; use video_execute under existing spending authorization. Re-plan after speech, voice or reference edits. Exact supplied-speech synchronization is separate from native voice imitation.",
     inputSchema: { ...videoContextSchema, properties: {
       ...videoContextSchema.properties,
       purpose: { type: "string", enum: ["draft", "final", "revision"], description: "Candidate purpose; does not change model, resolution or authorization." },
@@ -130398,6 +130509,9 @@ function normalizeMusicFile(source, target) {
 // src/music-routing.ts
 var load7 = createRequire14(import.meta.url);
 var selectionHelper2 = fileURLToPath10(new URL("../../skills/_shared/music-selection.js", import.meta.url));
+function refreshAudienceOutput(directory2, file) {
+  if (path29.dirname(file) === path29.join(directory2, ".work/music/audience")) refreshAudienceReview(path29.join(directory2, "storyboard"));
+}
 var musicContext = (directory2, assetId) => load7(selectionHelper2).readMusicContext(directory2, assetId);
 var idSchema3 = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var musicPlanSchema = external_exports.object({
@@ -130456,6 +130570,7 @@ function planMusic(raw) {
   const input = musicPlanSchema.parse(raw);
   const context2 = musicContext(input.directory, input.assetId);
   const { selection } = context2;
+  if (selection.engine === "none") throw new Error("music_generation_disabled: this selection uses existing music or no score");
   const tool2 = input.tool ?? (selection.engine === "mlx" ? "mlx_music_generate" : MUSIC_MODELS.find((m2) => m2.engine === selection.engine && m2.model === selection.model)?.tool);
   if (!tool2) throw new Error("music_model_unsupported");
   gate2(tool2);
@@ -130566,6 +130681,7 @@ async function executeMusic(raw, dispatch) {
       Object.assign(state.jobs[plan2.requestId], { status: "completed", output: output2, result: response, updatedAt: (/* @__PURE__ */ new Date()).toISOString() });
     });
     ok = true;
+    refreshAudienceOutput(directory2, plan2.outputFile);
     return response;
   } catch (error2) {
     musicTransaction(directory2, void 0, (state) => Object.assign(state.jobs[plan2.requestId], {
@@ -130638,6 +130754,7 @@ async function resumeMusic2(raw) {
     if (state.jobs[input.requestId].status !== "submission_unknown") throw new Error("music_resume_conflict: request changed during resume");
     Object.assign(state.jobs[input.requestId], { status: "completed", output: output2, result: response, updatedAt: (/* @__PURE__ */ new Date()).toISOString() });
   });
+  refreshAudienceOutput(directory2, plan2.outputFile);
   return response;
 }
 function musicStatus(raw) {
@@ -132211,14 +132328,20 @@ function speechVideoPlan(input, capabilities) {
   if (!mode) throw new Error("Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting");
   const saved = object5(object5(object5(scene.visual).video).promptSource);
   const design = object5(object5(scene.shot).videoDesign);
+  const astra = capabilities.provider.trim().toLowerCase() === "astra";
   const compiled = compileVideoPrompt(scene, {
     action: typeof saved.action === "string" ? saved.action : typeof design.action === "string" ? design.action : "",
     ...typeof saved.end === "string" ? { end: saved.end } : {},
     ...typeof saved.sound === "string" ? { sound: saved.sound } : {}
-  }, {}, { mode, measureAudio: (line) => mode === "native" ? null : measuredDuration(line), validateLanguage: false });
+  }, {}, {
+    mode,
+    measureAudio: (line) => mode === "native" ? null : measuredDuration(line),
+    validateLanguage: false,
+    ...astra ? { maxCharacters: ASTRA_VIDEO_MAX_PROMPT_CHARS } : {}
+  });
   const timeline = compiled.performance;
   const videoPrompt = compiled.prompt;
-  const promptLength = capabilities.provider.trim().toLowerCase() === "astra" ? { characters: videoPrompt.length, maxCharacters: ASTRA_VIDEO_MAX_PROMPT_CHARS, exceeded: videoPrompt.length > ASTRA_VIDEO_MAX_PROMPT_CHARS } : void 0;
+  const promptLength = astra ? { characters: videoPrompt.length, maxCharacters: ASTRA_VIDEO_MAX_PROMPT_CHARS, exceeded: videoPrompt.length > ASTRA_VIDEO_MAX_PROMPT_CHARS } : void 0;
   const warnings = [...compiled.warnings];
   const foreign = nonEnglishOutsideQuotes(videoPrompt);
   if (foreign) warnings.push(`videoPrompt carries authored text in another language ("${foreign}"); write the video prompt in English before video_plan, which refuses it. Only quoted dialogue keeps the video's language.`);
@@ -140411,7 +140534,7 @@ ROUTES.music_status = async (args) => args?.action === "resume" ? resumeMusic2(a
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.123.0" },
+  { name: "social-flow", version: "0.124.4" },
   { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

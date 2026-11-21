@@ -380,6 +380,22 @@ place picture stays out. Each shot's video then waits for the user's yes to its 
 `video_execute` refuses otherwise (`video_approval_required`). The session never records an
 approval the user did not give.
 
+## Camera moves reach the video (user directive, 2026-11-21)
+
+Almost no mochi_bo clip moved its camera. The boards held 337 of 390 video shots and left 29
+unchosen, mostly through one `shot_icons` value mapped over every shot; and 23 of the 24 shots
+that did move went out with a hand-written prompt that dropped or locked the move. On the GenAI
+image and MSR lanes, which take 2,000 characters, 97 of 185 board prompts ran past it (the
+audio-to-video lane takes 5,000, and its prompts were rewritten by hand all the same). So
+`video_plan` compiles the board prompt to the adapter's limit, leaving out design notes, the
+beats' acting fields and then expressions before the camera, action or lines; beats say an
+action once and drop voice direction a model does not voice. A hand-written prompt that drops or
+locks the board's move is named (`camera_move_missing`, `camera_move_contradicted`); `shot_icons`
+names video shots left with no move (`camera_move_unset`) and a call that holds every video shot
+it sets; board writes count unchosen moves. Each of these reports; none refuses, and no share of
+moving shots is asked for. Whether LTX follows a move sentence is not measured. See
+`skills/storyboard/references/action-direction.md` and `skills/generate-cut-videos/SKILL.md`.
+
 ## Music spotting (user directive, 2026-11-14)
 
 Three episodes got their music at assembly, from files made for other episodes, and the
@@ -626,11 +642,14 @@ and quoting, retain existing spending authorization, and inspect the resulting t
 Do not regenerate existing assets solely to migrate models. Code-rendered typography
 is not a generated-image model call. See [image routing](skills/_shared/image-routing.md).
 
-**Directory model selection (user directive, 2026-10-16) supersedes automatic routing.**
+**Directory model selection (user directive, 2026-11-21) supersedes automatic routing.**
 Once the working directory is known, follow `skills/_shared/model-settings.md`: ask
 for the video type first (drama, comedy, documentary, explainer and the researched
-catalog's other options), then video model and credentials, image model and credentials,
-then whether separate TTS is needed. If yes, select its model and configure credentials;
+catalog's other options), then the video model and its credentials. Ask next for the model
+that makes BGM and audience-only drones, risers and stingers. Use an exact catalog model and
+check its credentials, or save `models.music:{engine:"none"}` for existing music or no score.
+Then ask for the image model and credentials and whether separate TTS is needed.
+If yes, select its model and configure credentials;
 if no, save `models.speech:{engine:"none"}` and skip TTS setup. Save all choices
 in `.social-flow/models.json`, and use
 those settings for subsequent episodes until the user explicitly requests a change.

@@ -10,8 +10,11 @@ Save `models.music: {engine, model}` with `project_manage update` or the model
 settings helper and the user's actual selection. Valid pairs come from
 `music_catalog` / `project_manage options.musicCatalog`. Engines: `lyria`,
 `elevenlabs`, `suno-api` (sunoapi.org third party), `mlx` (exact installed pack ID).
-Old projects without music remain valid; generating new music reports
-`music_setup_required`. Ask only for that missing choice. No key is stored here.
+First setup asks for this choice directly after the video model and its credentials.
+Save `models.music:{engine:"none"}` when the user chooses existing music or no score.
+This also covers audience-only tonal cues. Requesting a new generation plan with that
+choice reports `music_generation_disabled`. Old projects without music remain valid;
+requesting new music there reports `music_setup_required`. No key is stored here.
 
 1. **Selection:** episode `.work/model-settings.json` wins over workspace settings;
    existing `PRODUCTION.modelSettings.models.music` is the legacy board source.

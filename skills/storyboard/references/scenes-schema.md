@@ -2605,6 +2605,8 @@ that change, drop or empty the bed.
 
 ### Sound effects (`window.SFX` · `sound.sfx`)
 
+The channel SFX instructions below apply to separate edit effects and room tone. Preserve useful scene sounds already in the video. For a viewer-only musical cue on a new board use [audience-only effects](#audience-only-effects) and the saved music model.
+
 An effect is heard at the shot's first frame, so it belongs to **the cut** — to what changed
 between the previous shot and this one — not to the shot's content. The clip's own soundtrack
 is `visual.audio` (what the model records); an effect is what the edit lays on top.
@@ -4038,8 +4040,32 @@ Optional `shot.motionGraphic` records the semantic type independently of `render
 
 ### Audience-only effects
 
+`story_sequence` marks a new story-first board with `STORY.audienceSoundVersion:1`.
+On these boards each `STRUCTURE.scenes[]` entry starts with `audienceSound:{decision:"undecided"}`
+unless the author supplies a decision. With `story_scene`, set `audienceSound` to
+`{decision:"use",reason:"Her hand stills before anyone else notices the signature."}`
+or `{decision:"none",reason:"The witness's pause lets the denial land."}`. Read
+`storyboard_read.audienceSpotting` for the scenes awaiting a decision, a `use` without a cue
+or a `none` with a cue. An explicitly placed span can cover several scenes. A `none` here
+leaves room tone (`sound.ambience`) and music (`scene.music`) under their own controls.
+
 `sound.effects[].audience` stores `intent`, optional `caseId` (001–120), `release`, and the
 observed `timingBasis`. The event has a stable `id`, `sfx`, `trigger` and `description`, with
 `delivery:"post"`. Optional `end:{shotId,atSeconds}` accepts a number or `"end"`;
-`fadeOutSeconds` fades that event at its end. Plan, place and remove through `storyboard_apply`.
+`fadeOutSeconds` fades that event at its end. On `place`, optional `sourceStartSeconds`
+chooses the in-point within the original WAV. It defaults to zero. Set `fadeInSeconds`
+for a gradual entrance within the playable excerpt. A cut into the source uses at least
+a one-millisecond fade. Omit either field on a later placement to keep it, or pass
+`null` to clear it. Playback stops when the WAV runs out. Choose
+a WAV long enough to reach the release, with any rising pitch, swell or changing texture
+already in the recording. For a new instrumental cue write its music direction in
+`sfxEntries[id].prompt`. The detailed board read returns its source for the saved music
+model. Its WAV plays independently of `MUSIC.$timeline`. A registered channel sound
+can be reused with `sfxEntries[id].asset`. Keep physical sounds already present in the
+selected video on its soundtrack. Plan, place and remove through `storyboard_apply.audienceEffects`.
+On an existing board, `{op:"plan",source:"music",...}` sets `effect.audience.source` on
+that event alone. It uses the saved music model even when the same ID exists in the
+channel catalog. Omit `source` on a later edit to keep the choice or pass `null` to
+restore the board's default. A scene's `audienceSound` records the editorial decision
+independently. Both edits work on older boards with no `STORY.audienceSoundVersion`.
 See [situations](audience-sound/index.md) and [production timing](../../produce/references/video-sound.md#audience-effects).

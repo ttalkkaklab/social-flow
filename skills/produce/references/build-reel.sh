@@ -1342,7 +1342,7 @@ fi
 # ── 10) BGM ducking mix (same as v2) — with sfx.tsv, the sfx track and BGM mute windows go on top
 FOUT=$(awk -v t="$NT" -v f="$BGM_FADE_OUT" 'BEGIN{s=t-f; if(s<0)s=0; printf "%.3f", s}')
 
-# sfx_measure <file> — "<max momentary LUFS> <true peak dBTP>" over the whole file, or "" when
+# sfx_measure <file> [excerpt filters] — "<max momentary LUFS> <true peak dBTP>", or "" when
 #   unreadable. One ebur128 pass; the momentary (400 ms) maximum is the number a one-shot is
 #   heard at, where the integrated figure of a 0.8 s whoosh is mostly its own silence.
 #   A one-shot shorter than the 400 ms window never fills it (a 0.25 s click measures -120.7),
@@ -1350,7 +1350,7 @@ FOUT=$(awk -v t="$NT" -v f="$BGM_FADE_OUT" 'BEGIN{s=t-f; if(s<0)s=0; printf "%.3
 #   momentary figure of a file under 400 ms reads 1–2 LU low because the window is part silence
 #   (0.25 s sine -29.1 vs -27.1 sustained), which lands a short one-shot ~2 LU louder — fine.
 sfx_measure() {
-  ffmpeg -hide_banner -nostats -vn -i "$1" -af "apad=whole_dur=1,ebur128=peak=true" -f null - 2>&1 \
+  ffmpeg -hide_banner -nostats -vn -i "$1" -af "${2:-}apad=whole_dur=1,ebur128=peak=true" -f null - 2>&1 \
     | awk 'BEGIN{m=-200; p=-200}
            { if (match($0, /M: *-?[0-9.]+/)) { v=substr($0, RSTART+2, RLENGTH-2)+0; if (v>m) m=v }
              if (match($0, /^ +Peak: *-?[0-9.]+/)) { sub(/^ +Peak: */, "", $0); p=$1+0 } }
@@ -1372,10 +1372,18 @@ fi
 render_sfx() {
   local list="$1" output="$2"
   SI=(-f lavfi -t "$NT" -i "anullsrc=r=48000:cl=mono"); SFC=""; SMIX="[0:a]"; SN2=1
-  while IFS=$'\t' read -r ST SP SSEP LENGTH FADE; do
+  while IFS=$'\t' read -r ST SP SSEP LENGTH FADE SOURCE_SAMPLE ENTRANCE_SAMPLES; do
     SSEP=${SSEP:-$SFX_SEP}
     SFX_T=$(awk -v s="$MIX_REFERENCE_I" -v d="$SSEP" 'BEGIN{printf "%.2f", s-d}')
-    read -r SM SPK <<< "$(sfx_measure "$SP")"
+    SOURCE_TRIM=""; MEASURE_TRIM=""; IN_FADE=""
+    if [ "${SOURCE_SAMPLE:-0}" != 0 ]; then
+      SOURCE_TRIM="atrim=start_sample=$SOURCE_SAMPLE,asetpts=PTS-STARTPTS,"
+    fi
+    if [ "${ENTRANCE_SAMPLES:-0}" != 0 ]; then IN_FADE="afade=t=in:ns=$ENTRANCE_SAMPLES,"; fi
+    if [ -n "${SOURCE_SAMPLE:-}" ]; then
+      MEASURE_TRIM="aresample=48000,aformat=channel_layouts=mono,${SOURCE_TRIM}atrim=duration=$LENGTH,"
+    fi
+    read -r SM SPK <<< "$(sfx_measure "$SP" "$MEASURE_TRIM")"
     case "$SM" in ''|*[!0-9.+-]*) say "✗ sfx: could not measure $SP"; exit 1;; esac
     awk -v m="$SM" 'BEGIN{exit !(m > -60)}' || { say "✗ sfx: $SP is silent (max momentary ${SM} LUFS)"; exit 1; }
     SG=$(awk -v t="$SFX_T" -v m="$SM" -v pk="$SPK" -v c="${BGM_TP_CEIL:--1.0}" \
@@ -1386,12 +1394,14 @@ render_sfx() {
     SHAPE=""
     if [ -n "${LENGTH:-}" ]; then
       DELAY=$(awk -v s="$ST" 'BEGIN{printf "%.0fS", s*48000}')
-      SHAPE="atrim=duration=$LENGTH,"
+      SHAPE="${SOURCE_TRIM}atrim=duration=$LENGTH,${IN_FADE}"
       if [ "${FADE:-0}" != 0 ]; then
         SHAPE+="afade=t=out:st=$(awk -v l="$LENGTH" -v f="$FADE" 'BEGIN{printf "%.9f",l-f}'):d=$FADE,"
       fi
     fi
-    SFC+="[$SN2:a]aresample=48000,aformat=channel_layouts=mono,${SHAPE}volume=${SG}dB,adelay=${DELAY}:all=1,atrim=0:$NT[x$SN2];"
+    # adelay can emit leading silence without timestamps after a source trim.
+    # Stamp every output sample before atrim so it retains the full delay.
+    SFC+="[$SN2:a]aresample=48000,aformat=channel_layouts=mono,${SHAPE}volume=${SG}dB,adelay=${DELAY}:all=1,asetpts=N/SR/TB,atrim=0:$NT[x$SN2];"
     SMIX+="[x$SN2]"; SN2=$((SN2+1))
   done < "$list"
   ffmpeg -y -v error "${SI[@]}" -filter_complex \

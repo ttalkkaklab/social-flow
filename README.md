@@ -105,7 +105,12 @@ the listener stays silent. Silent shots and inner thoughts use image2video inste
 MSR; thoughts use pinned character TTS composed to the measured speech/action clock.
 See [dialogue coverage](skills/storyboard/references/dialogue-coverage.md).
 `shot_prompt` stores action separately; `video_plan` recompiles current icons and
-reports `directionBindings` for prompt, image, adapter and assembly inputs.
+reports `directionBindings` for prompt, image, adapter and assembly inputs. It compiles to
+the adapter's own prompt limit (2,000 characters on the GenAI image and MSR lanes), dropping
+design notes, the beats' acting fields and then expressions before the camera move, action or
+lines, and names a hand-written `args.prompt` that drops or locks the board's move
+(`camera_move_missing`, `camera_move_contradicted`). Board writes count unchosen moves, and
+`shot_icons` names video shots it leaves without one (`camera_move_unset`).
 
 Motion-graphic shots now persist `shot.motionGraphic`: a semantic type, viewer intent,
 selection reason, evidence, visual direction and timing intent. The shared
@@ -141,7 +146,7 @@ checks duration coverage and records the actual image hash;
 audio2video still conditions on one opening image, not the preceding clip or an entire board.
 
 Start a reusable video project with `/social-flow:project-init <directory>`.
-It saves SNS targets and connection records, video genre, video/speech/image
+It saves SNS targets and connection records, video genre, video/BGM/image/speech
 models, visual style, video ratio and output format together in
 `.social-flow/models.json`. It creates the channel profile, shared asset catalog
 and episode directory, preserves existing content, and asks only missing choices.
@@ -161,8 +166,10 @@ and episode creation over MCP; `skills/_shared/project-settings.js` is its CLI.
 Claude Code's read-only SessionStart hook reports missing settings. Other hosts
 use the skill's explicit preflight; neither path silently chooses preferences.
 
-At first setup in a working directory, choose the video type, then the video model
-and its credentials, then the image model and its credentials. Finally choose whether
+At first setup in a working directory, choose the video type and video model. After checking
+its credentials, choose a BGM model for music and audience-only drones, risers and stingers,
+or save `models.music:{engine:"none"}` to reuse music or leave scenes unscored. After the music
+provider check, choose the image model and its credentials. Finally choose whether
 separate TTS is needed; if yes, select its model and configure credentials, otherwise
 save `models.speech:{engine:"none"}`. Reuse configured keys, including shared provider
 keys. Host/local engines need their tools available, not a separate API key. The [type catalog](skills/_shared/video-types.md) covers
@@ -617,6 +624,14 @@ without writing. The channel's notes live in `production.musicDirection` (up to 
 existing defaults. See [timeline scoring](skills/storyboard/references/scenes-schema.md#music-cues-windowmusic-sound).
 Shot-relative music gain curves and configurable ducking shape dialogue and reveals; low
 speech-to-music separation is a review warning, not an assembly gate.
+
+Every scene on a new story-first board also gets a decision about sound heard only by the
+viewer. `story_scene` records `audienceSound` (`use` or `none` with a reason).
+`storyboard_read.audienceSpotting` shows which decisions or cues still need attention.
+`storyboard_apply.audienceEffects` plans the sound and places it on the accepted cut, so a
+drone can start at a glance, carry over a cut and release before a line. Room tone and the
+music score have their own tracks. New audience drones, risers and stingers use the saved music model and play on the audience track. Physical sounds already heard in the video keep their original soundtrack. See [audience cue placement](skills/produce/references/video-sound.md#audience-effects).
+
 An unverified playback check is recorded as `not_reviewed`; it does not hold the episode from
 the publish queue. These are editorial checks; completion-rate improvements require audience
 measurements.

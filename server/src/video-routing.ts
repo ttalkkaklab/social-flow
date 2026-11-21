@@ -13,7 +13,7 @@ import { config, disabledToolPatterns, disabledToolsFile, mlxServeConfigured } f
 import { resolveToolGate } from './tool-gate.js';
 import { framesForSeconds } from './astra-video-client.js';
 import { assessVideoDuration, DURATION_TOOLS, resolveVideoDuration } from './video-duration.js';
-import { VIDEO_ADAPTERS, VENDOR_REFERENCE_TOOLS, parseVideoArgs } from './video-registry.js';
+import { VIDEO_ADAPTERS, VENDOR_REFERENCE_TOOLS, parseVideoArgs, videoPromptLimit } from './video-registry.js';
 import { buildLtxApiBody, ltxApiImg2VideoSchema, ltxApiAudio2VideoSchema } from './ltx-api-video.js';
 import { buildMinimaxBody, minimaxImg2VideoSchema, minimaxReferenceSchema } from './minimax-video.js';
 import { checkHeygenInputs, heygenImg2VideoSchema, heygenReferenceSchema } from './heygen-video.js';
@@ -28,7 +28,7 @@ import { hasSubjectInput, hasVideoSubjectReferences, prepareVideoImages, type Im
 import { prepareVideoVoice, type VoiceContinuity } from './video-voice.js';
 import type { ToolResult } from './handlers.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
-import { compileVideoPrompt, type DirectionBinding, type VideoPromptSource } from './video-prompt.js';
+import { cameraDrift, compileVideoPrompt, type DirectionBinding, type VideoPromptSource } from './video-prompt.js';
 import { readVideoProduction, refreshVideoReview } from './video-review.js';
 
 const load = createRequire(import.meta.url);
@@ -293,24 +293,36 @@ export function planVideo(raw: unknown): VideoPlan {
   };
   const bindDialogueSeparately = tool === 'astra_genai_img2video' && !silentPicture && input.args.generateAudio !== false &&
     (hasVideoSubjectReferences(shot) || hasSubjectInput(input.args.references));
-  const compiled = input.args.prompt === undefined && video?.promptSource
-    ? compileVideoPrompt(shot, video.promptSource, names, { mode, measureAudio, bindDialogueSeparately }) : undefined;
-  const authored = compiled?.prompt ?? video?.prompt;
-  let callArgs = input.args.prompt === undefined && typeof authored === 'string' ? { ...input.args, prompt: authored } : input.args;
-  if (silentPicture && (supportsAudioToggle || tool === 'minimax_img2video' || tool === 'heygen_img2video')) {
-    const soundDirection = includeEffects
+  const silentSuffix = silentPicture && (supportsAudioToggle || tool === 'minimax_img2video' || tool === 'heygen_img2video')
+    ? `No speech or vocalization. All visible mouths stay closed; ${includeEffects
       ? 'include natural ambience for the location and sound effects from the visible actions.'
-      : 'perform the planned silent action.';
-    callArgs = {
-      ...callArgs,
-      ...(supportsAudioToggle ? { generateAudio: includeEffects } : {}),
-      prompt: [callArgs.prompt, `No speech or vocalization. All visible mouths stay closed; ${soundDirection}`].filter(Boolean).join(' '),
-    };
-  }
+      : 'perform the planned silent action.'}` : '';
+  // The board prompt is compiled to the adapter's own limit, so it can go out as written: hand-shortened
+  // prompts sent instead kept dropping the camera move (mochi_bo 2026-11-20: 23 of 24 moving shots).
+  const promptLimit = tool ? videoPromptLimit(tool) : undefined;
+  const compileFor = (budget: number | undefined) => compileVideoPrompt(shot, video!.promptSource!, names, { mode, measureAudio, bindDialogueSeparately,
+    ...(budget ? { maxCharacters: budget - (silentSuffix ? silentSuffix.length + 1 : 0) } : {}) });
+  let compiled = input.args.prompt === undefined && video?.promptSource ? compileFor(promptLimit) : undefined;
+  const withPrompt = (prompt: unknown) => {
+    const args = input.args.prompt === undefined && typeof prompt === 'string' ? { ...input.args, prompt } : input.args;
+    return silentSuffix ? { ...args, ...(supportsAudioToggle ? { generateAudio: includeEffects } : {}),
+      prompt: [args.prompt, silentSuffix].filter(Boolean).join(' ') } : args;
+  };
+  let callArgs = withPrompt(compiled?.prompt ?? video?.prompt);
   const sourcePrompt = typeof video?.prompt === 'string' ? video.prompt : '';
-  const direction = compiled ? { sourcePrompt, directionBindings: compiled.directionBindings, directionWarnings: compiled.warnings, performance: compiled.performance } :
+  // A prompt the caller writes is checked against the board's move: missing or contradicted moves are named, never refused.
+  const boardCamera = (context.shot.visual as { camera?: { movement?: unknown } } | undefined)?.camera;
+  const drift = input.args.prompt !== undefined ? cameraDrift(String(input.args.prompt), String(boardCamera?.movement ?? '')) : null;
+  // A report never refuses: when the board's own prompt cannot compile, the warning goes without the sentence.
+  const moveSentence = () => { try { return video?.promptSource ? compileVideoPrompt(shot, video.promptSource, names, { mode, validateLanguage: false })
+    .directionBindings.find(b => b.attribute === 'move')?.instruction ?? '' : ''; } catch { return ''; } };
+  const carried = drift ? moveSentence() : '';
+  const driftWarning = drift ? [`camera_move_${drift}: the board moves this shot (${String(boardCamera?.movement)}) but args.prompt ${drift === 'missing' ? 'names no camera move' : 'holds the camera still'}; omit args.prompt to send the board prompt, which video_plan fits to the adapter limit${
+    carried ? `, or write its camera sentence: "${carried}"` : ''}`] : [];
+  const directionOf = (c: typeof compiled) => c ? { sourcePrompt, directionBindings: c.directionBindings, directionWarnings: c.warnings, performance: c.performance } :
     { sourcePrompt, directionWarnings: [input.args.prompt !== undefined ? 'Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons.' :
-      'Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.'] };
+      'Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.', ...driftWarning] };
+  let direction = directionOf(compiled);
   if (selection.engine === 'host') {
     if (input.tool) throw new Error('model_selection_mismatch: host has no server adapter');
     const images = prepareVideoImages('host_external', callArgs, context.shot, context.episode);
@@ -344,8 +356,18 @@ export function planVideo(raw: unknown): VideoPlan {
     const exact = ['duration', 'durationSeconds', 'numFrames', 'frames', 'autoDuration', 'audioMaxDuration'].some(key => bound[key] !== undefined);
     if (!exact) bound = resolveVideoDuration(tool, { ...bound, requiredSeconds: durationPlan.requiredSeconds }).args;
   }
-  const images = prepareVideoImages(tool, bound, shot, context.episode);
-  const voice = prepareVideoVoice(tool, images.args, { ...context, shot, msrVoice: genaiMsrVoiceReferences() });
+  let images = prepareVideoImages(tool, bound, shot, context.episode);
+  let voice = prepareVideoVoice(tool, images.args, { ...context, shot, msrVoice: genaiMsrVoiceReferences() });
+  // Reference descriptions and Audio lines (MSR) come after the compile; when they push the prompt over the limit,
+  // the board prompt is compiled once more into the room they leave.
+  const submittedLength = typeof voice.args.prompt === 'string' ? openingPrompt(voice.args.prompt, voice.args.openingPositions as OpeningPosition[] | undefined).length : 0;
+  if (compiled && promptLimit && typeof bound.prompt === 'string' && submittedLength > promptLimit) {
+    compiled = compileFor(promptLimit - (submittedLength - bound.prompt.length));
+    bound = { ...bound, prompt: withPrompt(compiled.prompt).prompt };
+    direction = directionOf(compiled);
+    images = prepareVideoImages(tool, bound, shot, context.episode);
+    voice = prepareVideoVoice(tool, images.args, { ...context, shot, msrVoice: genaiMsrVoiceReferences() });
+  }
   const args = parseVideoArgs(tool, voice.args);
   if (Array.isArray(args.openingPositions)) args.prompt = openingPrompt(String(args.prompt), args.openingPositions as OpeningPosition[]);
   if (durationPlan.status === 'fits') {

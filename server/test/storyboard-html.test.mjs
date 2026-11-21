@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { mkdtempSync, readFileSync, writeFileSync, rmSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { runInNewContext } from 'node:vm';
 import { tmpdir } from 'node:os';
 const require = createRequire(import.meta.url);
@@ -93,6 +94,60 @@ test('music lanes show one anchored span across scenes and label the score-free 
   assert.match(runInNewContext(source + '\nmusicLane([{i:1,s:SCENES[1]}])', context), /No score/);
 });
 
+test('the scene links its audience cue to the starting shot and distinguishes a silent choice from pending timing', () => {
+  const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
+  const source = template.slice(template.indexOf('  var audienceRows ='), template.indexOf('  /* Music lane'));
+  const words = [...template.matchAll(/^      audienceSound: (\{[^]*?\}),$/gm)].map(m => runInNewContext('(' + m[1] + ')'));
+  const esc = text => String(text).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+  const effect = { id: 'doubt', sfx: 'bowed-glass', trigger: 'her hand stills', atSeconds: 0.3,
+    end: { shotId: 's0002', atSeconds: 'end' }, audience: { intent: 'doubt' } };
+  const SCENES = [{ id: 's0001', scene: 1, sound: { effects: [effect] } }, { id: 's0002', scene: 2 }];
+  const window = { SCENES, AUDIENCE_SPOTTING: require('../../skills/storyboard/references/audience-spotting.js'),
+    STRUCTURE: { scenes: [{ no: 1 }, { no: 2, audienceSound: { decision: 'use', reason: '<hold her gaze>' } },
+      { no: 3, audienceSound: { decision: 'none', reason: 'Keep her breath.' } }, { no: 4 }] } };
+  const page = (i, labels) => runInNewContext(source + '\naudienceLane(audiencePlan.scenes[' + i + '])', {
+    SCENES, window, T: { audienceSound: labels, shotCap: n => 'Shot ' + n }, esc, copy: esc,
+  });
+  assert.equal(page(3, words[0]), '');
+  window.STORY = { audienceSoundVersion: 1 };
+  assert.match(page(3, words[1]), /관객용 심리음<\/strong> · 미정/);
+  assert.match(page(1, words[0]), /use cue — &lt;hold her gaze&gt; · <a href="#shot-1">Shot 1 · doubt · timing unverified<\/a>/);
+  assert.match(page(2, words[0]), /no cue — Keep her breath/);
+});
+
+test('scene audition carries a bounded cue into the next scene and exports playable audio only for placed files', () => {
+  const { previews } = require('../../skills/storyboard/references/audience-preview.js');
+  const folder = mkdtempSync(join(tmpdir(), 'storyboard-preview-'));
+  try {
+    const file = join(folder, 'held.wav');
+    execFileSync('ffmpeg', ['-v','error','-f','lavfi','-i','sine=frequency=220:sample_rate=48000:duration=1',file]);
+    const effect = { id:'hesitation', sfx:'held', audience:{intent:'wait'}, atSeconds:.25,
+      sourceStartSeconds:.1, end:{shotId:'s0002', atSeconds:.25}, fadeInSeconds:.05, fadeOutSeconds:.05 };
+    const board = { SCENES:[
+      { id:'s0001', scene:1, duration:.5, sound:{effects:[effect]} },
+      { id:'s0002', scene:2, duration:.5 },
+      { id:'s0003', scene:3, duration:.5, sound:{effects:[{id:'pending', audience:{intent:'pause'}}]} },
+    ] };
+    const rows = [{ id:effect.id, shotId:'s0001', status:'placed', source:{available:true,path:file,sha256:'fixture'} },
+      { id:'pending', shotId:'s0003', status:'planned', source:{available:false} }];
+    assert.equal(previews(board,folder,rows,true).changed.length,2);
+    assert.equal(existsSync(join(folder,'audience-previews')), false);
+    const { scenes } = previews(board,folder,rows,false);
+    assert.deepEqual(Object.values(scenes).map(scene => scene.entries.map(e => [e.start,e.end])),[[[.25,.5]],[[0,.25]],[[undefined,undefined]]]);
+    assert.equal(scenes[3].file,undefined);
+    const broken = join(folder,'unfinished.wav');writeFileSync(broken,'');
+    const pending = previews(board, folder, [{...rows[1], source:{available:true,path:broken}}], false);
+    assert.equal(pending.scenes[3].entries[0].sourceHref,null);
+    for (const [no, activeHalf] of [[1,1],[2,0]]) {
+      const raw = execFileSync('ffmpeg',['-v','error','-i',join(folder,scenes[no].file),'-f','s16le','-']);
+      assert.equal(raw.length,48000);
+      assert.ok(raw.subarray(activeHalf*24000,activeHalf*24000+24000).some(Boolean));
+      assert.ok(raw.subarray((1-activeHalf)*24000,(1-activeHalf)*24000+24000).every(v=>v===0));
+    }
+    assert.deepEqual(previews(board,folder,rows,true).changed,[]);
+  } finally { rmSync(folder,{recursive:true,force:true}); }
+});
+
 test('the cliché strip and scene lanes show what is in the story, the user\'s pick and a recommendation', () => {
   const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
   const start = template.indexOf('  var CLICHES = window.CLICHES');
@@ -135,7 +190,8 @@ test('HTML creation and refresh keep one design while preserving episode metadat
   const dir = mkdtempSync(join(tmpdir(), 'sf-board-html-'));
   try {
     // No scenes, credentials, or network are required to create the review shell.
-    assert.equal(storyboardHtml(dir).length, 23 + FONT_ASSETS.length);
+    assert.equal(storyboardHtml(dir).length, 25 + FONT_ASSETS.length);
+    assert.ok(existsSync(join(dir,'audience-review-data.js')));
     const file = join(dir, 'storyboard.html');
     const original = readFileSync(file, 'utf8');
     const title = '<title>Episode $& — 로컬 검토</title>';
@@ -163,7 +219,7 @@ test('check is read-only and malformed existing metadata is preserved for repair
   const root = mkdtempSync(join(tmpdir(), 'sf-board-html-check-'));
   try {
     const dir = join(root, 'storyboard');
-    assert.equal(storyboardHtml(dir, true).length, 23 + FONT_ASSETS.length);
+    assert.equal(storyboardHtml(dir, true).length, 25 + FONT_ASSETS.length);
     assert.equal(existsSync(dir), false);
     storyboardHtml(dir);
     const file = join(dir, 'storyboard.html');

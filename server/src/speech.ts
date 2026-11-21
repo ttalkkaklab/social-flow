@@ -160,14 +160,17 @@ export function speechVideoPlan(input: Line[] | {narration?: Line[]; [key: strin
   if (!mode) throw new Error('Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting');
   const saved = object(object(object(scene.visual).video).promptSource);
   const design = object(object(scene.shot).videoDesign);
+  // The preview fits the ASTRA limit as video_plan does, so an over-limit flag means the authored text itself is too long.
+  const astra = capabilities.provider.trim().toLowerCase() === 'astra';
   const compiled = compileVideoPrompt(scene, {
     action: typeof saved.action === 'string' ? saved.action : typeof design.action === 'string' ? design.action : '',
     ...(typeof saved.end === 'string' ? { end: saved.end } : {}),
     ...(typeof saved.sound === 'string' ? { sound: saved.sound } : {}),
-  }, {}, { mode, measureAudio: line => mode === 'native' ? null : measuredDuration(line as Line), validateLanguage: false });
+  }, {}, { mode, measureAudio: line => mode === 'native' ? null : measuredDuration(line as Line), validateLanguage: false,
+    ...(astra ? { maxCharacters: ASTRA_VIDEO_MAX_PROMPT_CHARS } : {}) });
   const timeline = compiled.performance;
   const videoPrompt = compiled.prompt;
-  const promptLength = capabilities.provider.trim().toLowerCase() === 'astra'
+  const promptLength = astra
     ? {characters:videoPrompt.length,maxCharacters:ASTRA_VIDEO_MAX_PROMPT_CHARS,exceeded:videoPrompt.length > ASTRA_VIDEO_MAX_PROMPT_CHARS}
     : undefined;
   const warnings = [...compiled.warnings];

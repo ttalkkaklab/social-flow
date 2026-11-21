@@ -21,12 +21,16 @@ generation authorization and adapter input validation stay. Work in this order:
    2026-11-18): the researched clichés the story uses, or `none` with its reason, on drama,
    comedy and romance; on other types the candidates as `offered`, applied only when the
    user picked them. Send each use again with its `scenes` once they are written. Nothing
-   waits for it ([cliché use](../storyboard/references/cliche-use.md)).
+   waits for it ([cliché use](../storyboard/references/cliche-use.md)). With `story_scene`,
+   record each scene's `audienceSound` decision (`use` or `none`) and why a viewer should
+   hear a cue there or why the action or dialogue already carries the moment.
 3. Each shot's characters (`shot_characters`, at most two) with each one's `expression` — the
    visible state the scene's situation puts on their face — then their lines (`shot_dialogue`).
    Then each scene's music decision (`story_music`, user directive 2026-11-14): `score` with a
    cue or `none`, each with its reason, read against the channel's saved music direction.
-   Nothing waits for it; an undecided scene is reported on the review page and at assembly.
+   An undecided music choice is reported on the review page and at assembly.
+   Check `storyboard_read.audienceSpotting` against the lines and music. Plan each audience cue
+   with `storyboard_apply.audienceEffects`, naming its trigger and release.
 4. Each shot's icon attributes (`shot_icons`): render route, size, angle, camera move,
    focus, depth, frame plan (`reference` is MSR) and the transition into the next shot (`next`).
    After lines and provisional camera staging, compare the uncut scene with every join
@@ -45,7 +49,8 @@ generation authorization and adapter input validation stay. Work in this order:
    lines and an English action. A later change to what it came from warns and marks the
    prompt stale on the review page; rewrite it with `shot_prompt`.
 8. Each shot's video: `video_plan` → the user's approval (`video_approve`) → `video_execute`.
-9. Assembly and delivery (produce).
+9. Assembly and delivery (produce). Place the planned audience cues against the accepted cuts
+   and mix them with the scene's voice, room tone and music. [Audience cue placement](../produce/references/video-sound.md#audience-effects)
 
 The story tools refuse a layer whose parent is missing (`story_order`): `shot_characters`
 waits for a story with no gaps, `shot_icons` for every shot's characters, `shot_image` for

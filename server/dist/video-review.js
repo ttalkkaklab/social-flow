@@ -13,3 +13,12 @@ export function refreshVideoReview(episode) {
         process.stderr.write('Video review export needs a refresh; request receipts remain authoritative.\n');
     }
 }
+export function refreshAudienceReview(boardDirectory) {
+    try {
+        const data = createRequire(import.meta.url)('../../skills/storyboard/references/audience-review-data.js');
+        data.refresh(boardDirectory);
+    }
+    catch {
+        process.stderr.write('Audience audio preview needs a refresh.\n');
+    }
+}

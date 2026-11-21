@@ -104,8 +104,11 @@ reports it rather than silently replaying an old effect over the retained soundt
 
 ## Audience effects
 
-Choose the observable reaction from the [situation index](../../storyboard/references/audience-sound/index.md).
-Plan its trigger, sound description and the emotional change with `storyboard_apply.audienceEffects`.
+Read `storyboard_read.audienceSpotting` for each scene's decision and reason. Trace a `use`
+to the event carrying that moment. If a `none` scene still contains a cue, reread its reason
+and listen for any sound carried from the previous scene. Correct the decision or event to
+match the intended cut. Choose the observable reaction from the [situation index](../../storyboard/references/audience-sound/index.md).
+Plan its trigger, release, sound description and emotional change with `storyboard_apply.audienceEffects`.
 Use `expectedSha256` from the latest board read. After viewing the accepted cut, read the cue's
 `currentTimingBasis` and place it at seconds from the first trimmed frame. With a new end shot,
 request `audienceEndFor:{shotId,id,endShotId}` and use `proposedTimingBasis`. To clear an end
@@ -114,10 +117,47 @@ A changed take, trim or trigger reads stale. Rewatch, then place again. Remove j
 when the actor or score already carries the moment. The sound, gestures and lines captured
 in the original clip retain their owner. Leave the audience cue out of video prompts and input WAVs.
 
-Resolve each used asset from the channel catalog first. For a missing prompt-backed variant,
-use the approved generation allocation with a stable `assets/audio/sfx/<id>.wav` filename.
-Check the audio and its provenance sidecar before registering the asset. An unresolved submission
-needs its original receipt checked before a second order. Use a new ID for a changed timbre.
+For example, a woman recognizes her forged signature. In a four-second shot her finger
+stops under the first signature at 1.20 s. Start a dry low drone there. She turns the page
+at 3.00 s. If the turn should raise tension, bring in a 1.40 s riser whose recorded peak
+coincides with the duplicate signature coming into view at 0.40 s of the next shot. End
+the drone and riser there. If her recognition needs a sharper accent, a short stinger can
+land as her eyes meet the witness's at 0.70 s and decay before his first word at 1.00 s.
+Use the parts the scene earns. In this cut the drone needs 3.20 s of sound; an end marker
+alone cannot extend a shorter recording. Listen for the rise, peak and decay within each
+WAV and use the accepted shots' timings for placement.
+
+Read the planned event in `storyboard_read` at level `shots`. Its `source.kind`
+is `catalog` for a reused sound or `music` for an original instrumental cue.
+When adding a drone to an existing edit, set `source:"music"` on that event's
+`storyboard_apply.audienceEffects` plan. Its music prompt comes from
+`sfxEntries[id].prompt` or the description of the musical cue. Earlier events keep
+their original sources. Leave the board version as written.
+For a music source, follow [music routing](../../_shared/music-routing.md).
+Pass its `directory`, `assetId` and `requestId` to `music_plan`; pass its `outputPath`
+and `filename` inside `args`. Use its `prompt` and requested length in the selected
+adapter's native arguments. Ask for enough vocal-free material through the release.
+Execute within the approved allocation and check `music_status` after an interruption.
+Once the WAV is available, reread the cue's timing basis and place it. If the recording
+opens with silence or a later passage fits the reaction, set `sourceStartSeconds` on
+`op:"place"`. For example, `atSeconds:0.4, sourceStartSeconds:5.75` starts the sound
+0.4 s into the trimmed shot and plays from 5.75 s into the original WAV. To bring in
+a sustained tone gradually, add `fadeInSeconds` within the length of the excerpt.
+Listen to the entrance and release with the dialogue. The original WAV and music receipt
+keep their full length.
+
+When a generated take has the right timbre but its melody distracts from the scene,
+choose a held note and stretch it into a texture with `prepare-audience-texture.py`.
+Give the texture its own cue ID. Keep its WAV and adjacent `<id>.source.json` together
+in the episode's `.work/music/audience/`. The detailed board read matches the original
+music request and the hashes of both WAVs and the recipe. During assembly the compiler
+repeats that recipe and compares its output. The resulting span and delivery proof
+attribute the texture to the original music request.
+
+A scene scored
+with no BGM can still use this audience cue. The post
+mixer places the WAV only on the audience track. When the take already supplies a door,
+footstep or room tone, keep its soundtrack. For a changed timbre, choose a new asset ID.
 A mono mix can express two viewpoints with two timbres. Audition on a phone before relying on bass.
 
 Open the accepted footage, place the actual reaction, and leave the original voice lane assigned.

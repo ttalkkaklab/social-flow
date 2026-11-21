@@ -182,8 +182,8 @@ Pending SNS connections do not block production. Create the episode with the pro
 tool/CLI and use its full snapshot and handoff. Existing resumes retain their board.
 This takes precedence over the older model-only setup and per-run style/ratio defaults below.
 
-Then follow [model settings](../../_shared/model-settings.md) for the selected working
-directory. Interactive first use asks video type → video model → speech model → image model and saves the choices.
+Use the saved preferences for this directory. For interactive first setup, follow
+[model settings](../../_shared/model-settings.md).
 Unattended first use with no settings reports `project_setup_required` before taking
 the production lock; if only the type is missing, report `video_type_required`.
 Do not infer the user's standing type choice. Apply [video types](../../_shared/video-types.md)

@@ -15,11 +15,15 @@ import { resolveToolGate } from './tool-gate.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
 import { resumeMusic as resumeSunoTask } from './suno-client.js';
 import type { ToolResult } from './handlers.js';
+import { refreshAudienceReview } from './video-review.js';
 
 const load = createRequire(import.meta.url);
 interface Selection { engine: string; model?: string;  }
 interface Context { directory: string; assetId: string; selection: Selection; source: string; revision: string; authorization?: unknown }
 const selectionHelper = fileURLToPath(new URL('../../skills/_shared/music-selection.js', import.meta.url));
+function refreshAudienceOutput(directory: string, file: string): void {
+  if (path.dirname(file) === path.join(directory, '.work/music/audience')) refreshAudienceReview(path.join(directory, 'storyboard'));
+}
 export const musicContext = (directory: string, assetId: string): Context =>
   (load(selectionHelper) as { readMusicContext(directory: string, assetId: string): Context }).readMusicContext(directory, assetId);
 const idSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
@@ -76,6 +80,7 @@ export function planMusic(raw: unknown): MusicPlan {
   const input = musicPlanSchema.parse(raw);
   const context = musicContext(input.directory, input.assetId);
   const { selection } = context;
+  if (selection.engine === 'none') throw new Error('music_generation_disabled: this selection uses existing music or no score');
   const tool = input.tool ?? (selection.engine === 'mlx' ? 'mlx_music_generate' :
     MUSIC_MODELS.find(m => m.engine === selection.engine && m.model === selection.model)?.tool);
   if (!tool) throw new Error('music_model_unsupported');
@@ -168,6 +173,7 @@ export async function executeMusic(raw: unknown, dispatch: MusicDispatch): Promi
       Object.assign(state.jobs[plan.requestId], { status: 'completed', output, result: response, updatedAt: new Date().toISOString() });
     });
     ok = true;
+    refreshAudienceOutput(directory, plan.outputFile);
     return response;
   } catch (error) {
     musicTransaction(directory, undefined, state => Object.assign(state.jobs[plan.requestId], {
@@ -230,6 +236,7 @@ export async function resumeMusic(raw: unknown): Promise<ToolResult> {
     if (state.jobs[input.requestId].status !== 'submission_unknown') throw new Error('music_resume_conflict: request changed during resume');
     Object.assign(state.jobs[input.requestId], { status: 'completed', output, result: response, updatedAt: new Date().toISOString() });
   });
+  refreshAudienceOutput(directory, plan.outputFile);
   return response;
 }
 export function musicStatus(raw: unknown) {

@@ -30740,7 +30740,7 @@ import * as path2 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.123.0",
+  version: "0.124.4",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -32758,7 +32758,7 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
     entry: catalogue.byId[text2(t.id)]
   }));
   const movement = text2(camera.movement), speed = text2(camera.speed), target = text2(camera.target), settle = text2(camera.end);
-  const move = picked.find((t) => t.entry?.fields.movement && movement.toLowerCase().startsWith(t.entry.fields.movement))?.entry;
+  const move = picked.find((t) => t.entry?.fields.movement && movement.toLowerCase().startsWith(t.entry.fields.movement))?.entry ?? Object.values(catalogue.byId).filter((e) => e.prompt && e.fields.movement && movement.toLowerCase().startsWith(e.fields.movement)).sort((a, b) => b.fields.movement.length - a.fields.movement.length)[0];
   const rack = picked.find((t) => t.entry?.fields.focus);
   const pace = { slow: "slowly", steady: "steadily", fast: "quickly" }[speed];
   const ends = travels(camera) ? ", with a short pause on the opening and closing pictures" : "";
@@ -32779,7 +32779,9 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
   const worn = expressionWords(shot, names);
   const called = (id) => names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id;
   const seen = (Array.isArray(visual.bystanders) ? visual.bystanders : []).map(text2).filter(Boolean), extras = text2(visual.extras);
-  const prompt = [
+  const plain = (value) => text2(value).replace(/[.\s]+$/, "").toLowerCase();
+  const actionInBeat = performance2.performance.some((event) => event.kind === "action" && plain(event.videoDirection || event.text) === plain(source.action));
+  const parts = (step2) => [
     msr ? framing : "Start from the given first frame.",
     msr ? depthWords : "",
     moveWords,
@@ -32790,19 +32792,23 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
     viewWords || (text2(camera.framing) ? sentence(`Opening composition: ${text2(camera.framing)}`) : ""),
     !viewWords && camera.rear && !other.some((t) => t.entry.fields.viewpoint === "rear") ? "View the subject from behind." : "",
     !viewWords && camera.pov && !other.some((t) => t.entry.fields.viewpoint === "pov") ? sentence(`Point of view: ${text2(camera.pov) || "the named character"}`) : "",
-    sentence(source.action),
+    actionInBeat ? "" : sentence(source.action),
     seen.length ? sentence(`The opening picture also shows ${seen.map(called).join(" and ")}, who ${seen.length > 1 ? "stay" : "stays"} in the frame and never speaks`) : "",
     extras ? sentence(`Unnamed people in the frame: ${extras}`) : "",
-    ...["before", "after", "continuity"].map((key) => text2(design[key]) ? sentence(`${key}: ${text2(design[key])}`) : ""),
-    ...states.filter((state) => ![source.action, design.before, design.after, design.continuity].includes(state)).map((state) => sentence(`Visible state: ${state}`)),
+    ...step2 >= 1 ? [] : ["before", "after", "continuity"].map((key) => text2(design[key]) ? sentence(`${key}: ${text2(design[key])}`) : ""),
+    ...step2 >= 1 ? [] : states.filter((state) => ![source.action, design.before, design.after, design.continuity].includes(state)).map((state) => sentence(`Visible state: ${state}`)),
     !lines.length && beats.length ? "Perform the planned action without invented speech or voiceover." : "",
-    ...beats,
+    ...step2 >= 2 ? acting.performanceBeats(performance2.performance, mode, !msr && !options.bindDialogueSeparately, { brief: true }) : beats,
     // The model's default face is pleasant; the authored state has to be named and held (LTX guide: physical cues, state after the action).
-    worn ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : "",
+    worn && step2 < 3 ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : "",
     frames.mode === "first_last" ? sentence(`End on the given last frame${source.end ? ": " + source.end : ""}`) : source.end ? sentence(`End on ${source.end}`) : "",
     sentence(`Audio: ${source.sound ? source.sound + (/\b(music|soundtrack|score|bgm|melody|orchestral|song)\b/i.test(source.sound) ? "" : ", no music") : "no music"}`),
     acting.VIDEO_TEXT_POLICY
-  ].filter(Boolean).join(" ");
+  ].filter(Boolean);
+  const limit = options.maxCharacters, dropped = ["design notes and visible states", "acting fields of the beats", "expressions"];
+  let step = 0, prompt = parts(0).join(" ");
+  while (limit && prompt.length > limit && step < dropped.length) prompt = parts(++step).join(" ");
+  const fitWarnings = !limit || !step ? [] : [prompt.length > limit ? `prompt_over_limit: ${prompt.length} characters after leaving out the ${dropped.slice(0, step).join(", ")}; the adapter takes ${limit}. Shorten the action, end or sound in shot_prompt` : `prompt_fitted: left out the ${dropped.slice(0, step).join(", ")} to fit the adapter's ${limit} characters; the camera, action and lines are whole`];
   const foreign = nonEnglishOutsideQuotes(prompt);
   if (foreign && options.validateLanguage !== false) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks; write action and direction in English`);
   const bindings = [
@@ -32825,7 +32831,10 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
   ];
   return { prompt, performance: performance2, directionBindings: bindings.filter((b) => b.value !== void 0), warnings: [
     ...performance2.warnings,
-    ...bindings.filter((b) => b.value !== void 0 && b.via === "unmapped").map((b) => `No prompt mapping for ${b.attribute}: ${JSON.stringify(b.value)}`),
+    ...fitWarnings,
+    // An unchosen move leaves the camera to the model; on mochi_bo 29 of 33 shots of one episode went out so.
+    ...movement ? [] : ["camera_move_unset: no camera move is chosen, so the video model decides the camera \u2014 set shot_icons move (camera.static for a deliberate hold)"],
+    ...bindings.filter((b) => b.value !== void 0 && b.via === "unmapped" && b.attribute !== "move").map((b) => `No prompt mapping for ${b.attribute}: ${JSON.stringify(b.value)}`),
     ...rack && !(rack.from && rack.to) ? ["the rack focus names no subjects \u2014 give focus.from and focus.to in shot_icons"] : []
   ] };
 }
@@ -33274,6 +33283,11 @@ var STRUCTURE_VERSION = (() => {
     return "structure-v1";
   }
 })();
+var audienceDecisionSchema = external_exports.discriminatedUnion("decision", [
+  external_exports.object({ decision: external_exports.literal("undecided") }).strict(),
+  external_exports.object({ decision: external_exports.literal("use"), reason: nonEmpty }).strict(),
+  external_exports.object({ decision: external_exports.literal("none"), reason: nonEmpty }).strict()
+]).describe("Whether the scene uses an audience-only sound: use or none with the dramatic reason, or undecided.");
 var sceneSchema = external_exports.object({
   no: external_exports.number().int().positive().describe("Scene number \u2014 the value shots point at with `scene`"),
   place: external_exports.string().optional().describe("One place \u2014 the slugline location"),
@@ -33283,7 +33297,8 @@ var sceneSchema = external_exports.object({
   turn: external_exports.string().optional().describe("What flipped between the open and the close"),
   summary: external_exports.string().optional().describe("The scene's story in one sentence; the storyboard scene header shows it"),
   out: nonEmpty.optional().describe("The sentence the scene goes out on \u2014 the one that forces a \uADF8\uB7F0\uB370 or \uADF8\uB798\uC11C into the next scene"),
-  music: external_exports.object({ decision: external_exports.enum(["score", "none"]), reason: nonEmpty, span: nonEmpty.optional() }).strict().optional().describe("The music decision story_music records: score (with its $timeline span id) or none, and why")
+  music: external_exports.object({ decision: external_exports.enum(["score", "none"]), reason: nonEmpty, span: nonEmpty.optional() }).strict().optional().describe("The music decision story_music records: score (with its $timeline span id) or none, and why"),
+  audienceSound: audienceDecisionSchema.optional()
 }).strict();
 var sequenceSchema = external_exports.object({
   id: nonEmpty.describe('Stable id, e.g. "q1"'),
@@ -33403,6 +33418,7 @@ var audienceEffectsSchema = external_exports.array(external_exports.discriminate
     trigger: audienceId.optional(),
     description: audienceId.optional(),
     release: audienceId.nullish(),
+    source: external_exports.literal("music").nullish().describe("Use the saved music model for this event, including on a legacy board. Omit to keep its choice or set null to restore the board default."),
     caseId: external_exports.string().regex(/^(00[1-9]|0[1-9]\d|1[01]\d|120)$/).nullish(),
     intensity: external_exports.enum(["subtle", "normal", "strong"]).nullish(),
     separationLu: seconds.max(30).nullish()
@@ -33412,7 +33428,9 @@ var audienceEffectsSchema = external_exports.array(external_exports.discriminate
     op: external_exports.literal("place"),
     atSeconds: seconds,
     timingBasis: external_exports.string().regex(/^[a-f0-9]{64}$/),
+    sourceStartSeconds: seconds.nullish().describe("Start within the full source audio, in seconds. Omit to keep the current in-point or use null to play from zero."),
     end: external_exports.object({ shotId: shotIdSchema, atSeconds: external_exports.union([seconds, external_exports.literal("end")]) }).strict().nullish(),
+    fadeInSeconds: seconds.nullish().describe("Fade up over this many seconds of the playable excerpt. Omit to keep it or use null to clear it."),
     fadeOutSeconds: seconds.nullish()
   }).strict(),
   external_exports.object({ ...audienceKey, op: external_exports.literal("remove") }).strict()
@@ -33577,6 +33595,7 @@ var storySceneSchema = external_exports.object({
     summary: nonEmpty.describe("The scene's story in one sentence"),
     turn: nonEmpty.optional(),
     out: nonEmpty.optional(),
+    audienceSound: audienceDecisionSchema.optional(),
     // The same signs structure-contract.js reads: the value at the open and at the close.
     charge: external_exports.object({ open: external_exports.enum(["+", "-"]), close: external_exports.enum(["+", "-", "++", "--"]) }).strict().optional()
   }).strict()).min(1)
@@ -33879,14 +33898,20 @@ function speechVideoPlan(input, capabilities) {
   if (!mode) throw new Error("Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting");
   const saved = object3(object3(object3(scene.visual).video).promptSource);
   const design = object3(object3(scene.shot).videoDesign);
+  const astra = capabilities.provider.trim().toLowerCase() === "astra";
   const compiled = compileVideoPrompt(scene, {
     action: typeof saved.action === "string" ? saved.action : typeof design.action === "string" ? design.action : "",
     ...typeof saved.end === "string" ? { end: saved.end } : {},
     ...typeof saved.sound === "string" ? { sound: saved.sound } : {}
-  }, {}, { mode, measureAudio: (line) => mode === "native" ? null : measuredDuration(line), validateLanguage: false });
+  }, {}, {
+    mode,
+    measureAudio: (line) => mode === "native" ? null : measuredDuration(line),
+    validateLanguage: false,
+    ...astra ? { maxCharacters: ASTRA_VIDEO_MAX_PROMPT_CHARS } : {}
+  });
   const timeline = compiled.performance;
   const videoPrompt = compiled.prompt;
-  const promptLength = capabilities.provider.trim().toLowerCase() === "astra" ? { characters: videoPrompt.length, maxCharacters: ASTRA_VIDEO_MAX_PROMPT_CHARS, exceeded: videoPrompt.length > ASTRA_VIDEO_MAX_PROMPT_CHARS } : void 0;
+  const promptLength = astra ? { characters: videoPrompt.length, maxCharacters: ASTRA_VIDEO_MAX_PROMPT_CHARS, exceeded: videoPrompt.length > ASTRA_VIDEO_MAX_PROMPT_CHARS } : void 0;
   const warnings = [...compiled.warnings];
   const foreign = nonEnglishOutsideQuotes(videoPrompt);
   if (foreign) warnings.push(`videoPrompt carries authored text in another language ("${foreign}"); write the video prompt in English before video_plan, which refuses it. Only quoted dialogue keeps the video's language.`);
@@ -34211,10 +34236,13 @@ var effectSchema = external_exports.object({
     intent: external_exports.string().trim().min(1),
     caseId: external_exports.string().optional(),
     release: external_exports.string().optional(),
+    source: external_exports.literal("music").optional(),
     timingBasis: external_exports.string().optional()
   }).strict().optional(),
   end: external_exports.object({ shotId: external_exports.string().min(1), atSeconds: external_exports.union([external_exports.number().finite().nonnegative(), external_exports.literal("end")]) }).strict().optional(),
+  fadeInSeconds: external_exports.number().finite().nonnegative().optional(),
   fadeOutSeconds: external_exports.number().finite().nonnegative().optional(),
+  sourceStartSeconds: external_exports.number().finite().nonnegative().optional(),
   intensity: external_exports.enum(["subtle", "normal", "strong"]).optional()
 }).strict();
 var schemas = {

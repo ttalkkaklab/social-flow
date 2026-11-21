@@ -280,6 +280,12 @@ behavior in these summaries before choosing the cast; do not reduce every unit t
 "A says / B answers". Revisit boundaries after the lines are written. No
 image, speech, prompt, camera or dialogue work happens in this step.
 
+When writing each scene with `story_scene`, decide what the viewer should hear at its turn.
+Set `audienceSound` to `{decision:"use",reason}` or `{decision:"none",reason}`. Name the reaction
+the sound should bring out, or what already carries it. For example, use a low vibration when
+a woman sees her own signature on a page she never signed. In the next scene, let the witness
+finish speaking before anyone responds; the length of that pause carries the doubt.
+
 Record the cliché decision on the board (user directive 2026-11-18). After the first
 `story_sequence`, call `story_cliche`: read the report's mode, then record the clichés the
 scenario settled, each with its catalogue id and its `shift`, or `none` with the reason. On a
@@ -349,14 +355,6 @@ before your own taste. Then give every scene one decision with its reason:
 - `none`, where the lines or the room should be heard alone. The reason says why, e.g. "the
   refusal lands harder dry". Silence nobody decided reads `undecided` on the review page.
 
-After dialogue and music are spotted, choose where the audience's understanding changes.
-Open the relevant ten cases in the [audience sound index](references/audience-sound/index.md).
-If performance and music already carry the turn, leave the beat clear. Otherwise use
-`storyboard_apply.audienceEffects` with `op:"plan"`, the shot and event IDs, `sfx`, `intent`,
-`description` and the visible or spoken `trigger`. A late reaction can land after a joke;
-an absent second note works once the audience has heard the pair. View the selected cut before
-placing the cue. [Placement and comparison](../produce/references/video-sound.md#audience-effects).
-
 Define each cue for this episode with a `prompt` (instruments, tempo, mood, how it starts and
 ends, room for speech) and a `reason`, or name a channel bed as an `asset`. A cue made for
 another episode is not a cue for this one. A cue whose opening is quiet starts later with
@@ -372,6 +370,23 @@ in the same turn as a dated line in `production.musicDirection` with `project_ma
 waits for this step and no tool refuses a board without it; `storyboard_read.musicSpotting`,
 `shot_prompt`, the review page and the build report say which scenes are still open. Legacy
 boards that play one bed keep `sound.cue` (scenes-schema §Placing cues on a story board).
+
+**Audience-only sound.** Revisit each scene's `audienceSound` once the lines, shots and music
+are known. Read `storyboard_read.audienceSpotting` for undecided scenes, uses still missing a
+cue and cues on scenes marked `none`. A quiet room belongs in `sound.ambience`; a musical
+underscore belongs in `story_music`. A drone that comes in when a listener's face changes
+can play over either. A `none` decision applies only to the audience-only layer.
+
+For each `use`, pick the moment from the [audience sound index](references/audience-sound/index.md)
+and plan its event with `storyboard_apply.audienceEffects` (`op:"plan"`). Name the shot and
+event IDs, `sfx`, `intent`, the sound's shape in `description`, the visible or spoken `trigger`,
+and the moment it should release. For an original drone, riser or stinger give the saved
+music model an instrumental direction in `sfxEntries[id].prompt`. Describe the entrance,
+rise and decay around the reaction. The same model can score the BGM separately.
+On an older board, set `source:"music"` on this event's `plan` operation. Record
+`audienceSound` on its scene as usual. The board's version and the sources of its other cues stay as written.
+Preserve action and room sounds already in the approved video. One cue may carry a change across a cut. Place it on
+the accepted footage with `op:"place"`. [Placement and comparison](../produce/references/video-sound.md#audience-effects)
 
 For dialogue-led work and existing-story rewrites, read [causal dialogue and situational
 comedy](references/causal-dialogue.md). Check what triggers each consequential line, what

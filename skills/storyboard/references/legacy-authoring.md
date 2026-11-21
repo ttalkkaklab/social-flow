@@ -104,8 +104,8 @@ project's `.social-flow/models.json` defaults as an assistant decision
 (automation-guidance.md) rather than a new question.
 
 **Model adapter mapping:** follow [model settings](../../_shared/model-settings.md)
-as soon as the working directory is known. Select video type → video model → speech model → image model once if
-missing; otherwise reuse `.social-flow/models.json` without asking. Snapshot it into
+as soon as the working directory is known. Reuse the saved choices in `.social-flow/models.json`.
+Snapshot it into
 the episode and carry its models into `PRODUCTION.modelSettings` and its type into
 `PRODUCTION.videoType` before quotes and authoring. Follow [video types](../../_shared/video-types.md)
 for the selected type's speech and directing defaults. If only the type is missing,
