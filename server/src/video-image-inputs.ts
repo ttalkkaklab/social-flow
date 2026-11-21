@@ -29,7 +29,7 @@ interface ShotVisual {
   video?: { strength?: number; referenceLayout?: 'panels' | 'combined'; openingPositions?: unknown; openingImageSha256?: string };
   character?: string | { id: string } | Array<string | { id: string }>;
   bystanders?: string[];
-  frames?: { start?: string; keyframes?: { image: string; atSeconds: number; state: string; strength?: number }[] };
+  frames?: { start?: string; end?: string; storyboardKeyframes?: Array<{file: string; startSeconds: number; description?: string; title?: string}>; keyframes?: { image: string; atSeconds: number; state: string; strength?: number }[] };
   references?: ImageReference[];
 }
 /** The listed ratio closest to an image's, for vendors whose adaptive ratio would follow a face panel. */
@@ -97,8 +97,48 @@ function bindOpeningPositions(input: Record<string, unknown>, visual: ShotVisual
   }
   return positions;
 }
+type AuthoredFrames = NonNullable<ShotVisual['frames']>;
+type TimedImage = NonNullable<AuthoredFrames['keyframes']>[number];
+
+function timedImages(frames: AuthoredFrames, duration: unknown, fps: number, genai: boolean): TimedImage[] | undefined {
+  if (frames.keyframes !== undefined || !genai || frames.storyboardKeyframes === undefined) return frames.keyframes;
+  const rows = frames.storyboardKeyframes;
+  if (!Array.isArray(rows) || rows.length < 2 || rows[0]?.file !== frames.start ||
+      rows[0]?.startSeconds !== 0 || rows.at(-1)?.file !== frames.end || typeof duration !== 'number')
+    throw new Error('image_plan_invalid: storyboardKeyframes must span the declared opening and ending images');
+  const last = Math.ceil(duration * fps) - 1;
+  const pins = rows.slice(1).filter((row, i) => i !== rows.length - 2 || Math.round(row.startSeconds * fps) !== last);
+  return pins.length ? pins.map(row => ({ image: row.file, atSeconds: row.startSeconds, state: row.description || row.title || row.file })) : undefined;
+}
+
+function sceneTimedImages(members: Record<string, unknown>[], fps: number, genai: boolean) {
+  const tracks = members.map(member => {
+    const frames = (member.visual as ShotVisual)?.frames ?? {};
+    const duration = Number(member.duration);
+    return { frames, duration, pins: timedImages(frames, duration, fps, genai) };
+  });
+  if (!tracks.some(track => track.pins?.length)) return;
+  const timeline: TimedImage[] = [];
+  let offset = 0;
+  for (const [i, { frames, duration, pins }] of tracks.entries()) {
+    if (i && frames.start) timeline.push({ atSeconds: offset, image: frames.start, state: 'Shot opening' });
+    for (const pin of pins ?? []) {
+      if (!Number.isFinite(pin.atSeconds) || pin.atSeconds <= 0 || pin.atSeconds >= duration)
+        throw new Error('image_plan_invalid: intermediate frame must fall inside its storyboard shot');
+      timeline.push({ ...pin, atSeconds: offset + pin.atSeconds });
+    }
+    offset += duration;
+    if (i < tracks.length - 1 && frames.end) {
+      const atSeconds = (Math.ceil(offset * fps) - 1) / fps;
+      const previous = timeline.at(-1);
+      if (previous?.image !== frames.end || Math.round(previous.atSeconds * fps) !== Math.round(atSeconds * fps))
+        timeline.push({ atSeconds, image: frames.end, state: 'Shot ending' });
+    }
+  }
+  return timeline;
+}
 /** Compile authored image roles into adapter arguments; never downgrade a temporal constraint to a reference. */
-export function prepareVideoImages(tool: string, input: Record<string, unknown>, shot: Record<string, unknown>, episode: string) {
+export function prepareVideoImages(tool: string, input: Record<string, unknown>, shot: Record<string, unknown>, episode: string, members?: Record<string, unknown>[]) {
   const visual = (shot.visual ?? {}) as ShotVisual;
   // Legacy boards keep their adapter contract; new authoring declares references, including an empty array.
   if (!hasStructuredImages(shot)) {
@@ -128,12 +168,15 @@ export function prepareVideoImages(tool: string, input: Record<string, unknown>,
   });
   const videoRefs = references.filter(ref => ['video', 'both'].includes(ref.use));
   const frameMode = frames.mode !== 'reference';
-  const keyframes = visual.frames?.keyframes;
-  if (keyframes !== undefined && (!Array.isArray(keyframes) || !keyframes.length || keyframes.length > 6 || frames.mode !== 'first_last'))
+  const genaiPins = tool === 'astra_genai_img2video' || tool === 'astra_genai_audio2video';
+  const fps = Number(input.fps ?? input.frameRate ?? 24);
+  const keyframes = members && members.length > 1 ? sceneTimedImages(members, fps, genaiPins)
+    : timedImages(visual.frames ?? {}, shot.duration, fps, genaiPins);
+  if (keyframes !== undefined && (!Array.isArray(keyframes) || !keyframes.length || keyframes.length > (frames.end ? 6 : 7) || (frames.mode !== 'first_last' && !(genaiPins && frames.mode === 'first'))))
     throw new Error('image_plan_invalid: intermediate frames require first_last and 1..6 entries');
   const host = tool === 'host_external';
   if (!host && videoRefs.length && frameMode && tool !== 'astra_genai_img2video') throw new Error('image_plan_unsupported: this adapter cannot combine pinned start/end frames with additional video references; retain references with use:image or explicitly replan mode:reference');
-  if (!host && keyframes && tool !== 'astra_keyframe_video') throw new Error('image_plan_unsupported: this adapter cannot accept intermediate frames');
+  if (!host && keyframes && tool !== 'astra_keyframe_video' && !genaiPins) throw new Error('image_plan_unsupported: this adapter cannot accept intermediate frames');
   const args = { ...(host ? input : resolveVideoDuration(tool, input).args) };
   const assigned = new Set<string>();
   const bindings: ImageBinding[] = [];
@@ -201,7 +244,8 @@ export function prepareVideoImages(tool: string, input: Record<string, unknown>,
       const opening = bindings[bindings.length - 1];
       args.ratio = nearestRatio(opening.width, opening.height);
     }
-    if (msr || vendor) {
+    if (msr && sent.length > 4) throw new Error('msr_subject_limit: at most four subject images plus one background');
+    if (vendor) {
       // Two principal characters take references (user directive 2026-10-31); the model draws anyone else.
       const characters = new Set(sent.flatMap((ref, i) => ref.role === 'character' ? [characterKey(paths[i])] : []));
       if (characters.size > 2) throw new Error(`msr_character_limit: references show ${characters.size} characters; reference two principal characters and describe anyone else in the action`);
@@ -218,7 +262,7 @@ export function prepareVideoImages(tool: string, input: Record<string, unknown>,
         ...(start ? [`${label(sent.length + 1)} (start, opening picture): the characters, place and props as the shot begins; open on this composition.`] : [])].join('\n');
       args.prompt = String(args.prompt ?? '') + '\nImage reference roles:\n' + guidance;
     }
-  } else if (keyframes) {
+  } else if (keyframes && !genaiPins) {
     const fps = Number(args.frameRate ?? 24);
     const count = Number(args.numFrames ?? (args.duration === undefined ? NaN : framesForSeconds(Number(args.duration), fps)));
     if (!Number.isFinite(fps) || fps <= 0 || !Number.isInteger(count) || count < 2) throw new Error('image_plan_invalid: keyframes need explicit frame count or duration');
@@ -243,11 +287,24 @@ export function prepareVideoImages(tool: string, input: Record<string, unknown>,
     };
     put(fields[0], value('start', frames.start));
     if (frames.end) put(fields[1]!, value('end', frames.end));
+    if (keyframes) {
+      const fps = Number(args.fps ?? 24);
+      const pins = keyframes.map((frame, i) => {
+        if (!Number.isFinite(frame.atSeconds) || frame.atSeconds <= 0 || (typeof shot.duration === 'number' && frame.atSeconds >= shot.duration) || !frame.state?.trim())
+          throw new Error('image_plan_invalid: intermediate frame needs time and state inside the clip');
+        const strength = frame.strength ?? visual.video?.strength;
+        return { imagePath: bind('keyframe-' + (i + 1), frame.image, 'keyframe', 'video', frame.state, true),
+          frameIdx: Math.round(frame.atSeconds * fps), ...(strength === undefined ? {} : { strength }) };
+      });
+      if (pins.some((pin, i) => pin.frameIdx <= (i ? pins[i - 1].frameIdx : 0)))
+        throw new Error('image_plan_invalid: intermediate frame indices must increase after the opening frame');
+      put('keyframes', pins);
+    }
     if (tool === 'astra_genai_img2video' && videoRefs.length) {
       const ordered = [...videoRefs].sort((a, b) => Number(a.role === 'background') - Number(b.role === 'background'));
       const paths = ordered.map(ref => bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, true));
-      const characters = new Set(ordered.flatMap((ref, i) => ref.role === 'character' ? [characterKey(paths[i])] : []));
-      if (characters.size > 2) throw new Error('msr_character_limit: reference at most two principal characters');
+      if (ordered.filter(ref => ref.role !== 'background').length > 4)
+        throw new Error('msr_subject_limit: at most four subject images plus one background');
       put('references', paths.map((file, i) => msrReference(file, ordered[i].role)));
       args.prompt = [...ordered.map((ref, i) => `Image ${i + 1}: ${ref.role}, ${ref.purpose}${routing.referenceConstraints(ref) ? " " + routing.referenceConstraints(ref) : ""}`),
         msrPanelBinding(paths, ordered), '', String(args.prompt ?? '')].filter(Boolean).join('\n');
@@ -270,7 +327,7 @@ export function prepareVideoImages(tool: string, input: Record<string, unknown>,
     }
     args.openingPositions = positions;
   }
-  for (const key of ['sourceImagePath', 'lastImagePath', 'firstFramePath', 'lastFramePath', 'imagePath', 'imageUri', 'lastFrameUri', 'firstFrameImagePath', 'lastFrameImagePath', 'referenceImagePaths', 'references', 'images']) {
+  for (const key of ['sourceImagePath', 'lastImagePath', 'firstFramePath', 'lastFramePath', 'imagePath', 'imageUri', 'lastFrameUri', 'firstFrameImagePath', 'lastFrameImagePath', 'referenceImagePaths', 'references', 'keyframes', 'images']) {
     if (input[key] !== undefined && !assigned.has(key)) throw new Error('image_plan_mismatch: unplanned ' + key);
   }
   for (const ref of references.filter(item => item.use === 'image')) bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, false);

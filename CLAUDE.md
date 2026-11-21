@@ -359,15 +359,13 @@ A cut without physical dialogue uses img2video; inner thoughts use separate time
 its sheet panels — face close-up, headless front and headless back (2026-10-31): one
 character uses all three; two use each face, then each front; the shot's start image (its characters,
 place and props composed by `shot_image`) takes the background slot, and the plain place picture stays out.
-At most two characters take references; anyone else on screen is described in the action
-and drawn by the model. For a declared MSR cast, storyboard writes and video planning rebuild
+Three or four principals use one face per person. Four subject image slots are shared with clothing and props. Voice samples still use only the first two subjects. For a declared MSR cast, storyboard writes and video planning rebuild
 the character references from the cast's shared panels.json in that same order. Missing
 faces cannot fall back to a body-only picture or an old transport alias; planning reports
 the missing panel. Storyboard writes also synchronize the displayed face/front/back links.
 Pinned samples follow the registered panel owner even when an old voiceReference names
 transport copies. On boards without a declared cast, legacy explicit image ownership stays.
-`video_plan` refuses references for a third character
-(`msr_character_limit`). `video_plan` names the panels that show one character and lays the
+`video_plan` counts MSR subject images separately from the optional background and temporal pins. `video_plan` names the panels that show one character and lays the
 prompt out as the model card does: reference descriptions first, then the action, then
 `Audio N (Image M): "…"` lines.
 
@@ -474,11 +472,9 @@ non-Latin letters outside quotes (`video_prompt_language`). Assembled prompts na
 with a non-Latin name by character id and report a non-English voice description for translation;
 `speech_manage` warns when its scene videoPrompt carries authored text in another language.
 
-## Two principal characters per shot (user directive, 2026-10-31)
+## LTX character references (user directive, 2026-11-21)
 
-From the storyboard on, a shot's `visual.character` lists at most two principal characters;
-`check-scenes.js` rejects a third (`[character-limit]`). A third cast member in view and unnamed
-figures stay out of `visual.character`: see People in the frame (2026-11-17).
+A shot can reference up to four principal characters on MSR and reference-conditioned distilled I2V. Each face or outfit image uses one subject slot. List unreferenced cast members in `visual.bystanders` and unnamed people in `visual.extras`.
 Choosing LTX at project setup saves `{engine:"astra-genai", operation:"reference"}`
 with `resolution:"1792x1024"` for 16:9 (`1024x1792` for 9:16), so `video_plan` plans
 MSR when a call names no operation. GenAI submissions wait up to 15 minutes for the
@@ -490,8 +486,8 @@ An episode came out as fifty waist-up pictures of whoever was speaking: its shot
 per line, so none showed the place, the work a character does or the person a line lands on.
 One speaker per shot limits who talks in an LTX clip, not who is seen. `shot_characters` takes
 `bystanders` — cast members seen without an on-screen line — and `extras`, unnamed people
-described in English. `visual.character` still lists the two the video call references; a shot
-shows at most three of the cast. `shot_image` draws a bystander from their face and front
+described in English. `visual.character` still lists those the video call references. A shot
+shows at most four of the cast. `shot_image` draws a bystander from their face and front
 panels and extras from the words; the video call references neither, since the start image
 carries them, and `shot_prompt` keeps them in the prompt. A bystander with an on-screen line is
 refused (`shot_bystander_speaks`). Whether a clip holds a bystander's look from the start image

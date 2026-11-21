@@ -870,8 +870,8 @@ the required `style.world` is the fallback.
 New generated shots declare `visual.frames` and `visual.references` (an empty array
 means no extra conditioning). Keep the number of images tied to visible requirements,
 not the model's maximum slot count. MSR (`astra_genai_msr`, `frames.mode:"reference"`) is
-the exception: each of at most two characters defaults to its sheet panels — face close-up,
-headless front, headless back for one; both faces, then both fronts for two — with
+the exception: each character defaults to its sheet panels — face close-up,
+headless front, headless back for one; both faces, then both fronts for two, one face per person for three or four — with
 `use:"video"` or `"both"`, and the shot's start image rides in the background slot while
 the plain place picture stays `use:"image"` (user directive 2026-10-31;
 [GenAI MSR](../../_shared/astra-genai.md#msr-and-v2-video)). `shot_image` writes these
@@ -2214,7 +2214,7 @@ them anywhere in the assembled prompt, the `--scene`·`--mood`·`--exclude` text
 
 ```js
 character: "claude"                  // one character on screen
-character: ["mouse", "claude"]       // two — array order is reference weight, so the shot's subject goes first; two is the limit
+character: ["mouse", "claude"]       // two — array order is reference weight, so the shot's subject goes first
 character: null                      // nobody from the channel cast is on screen
 
 character: [                         // an entry may carry its jurisdiction instead of being a bare id
@@ -2225,12 +2225,10 @@ character: [                         // an entry may carry its jurisdiction inst
 
 `shot_characters` writes this field in the storyboard's second step, after every shot story.
 
-**Two principal characters per shot (user directive, 2026-10-31).** `visual.character` lists at
-most two ids; `check-scenes.js` rejects a third (`[character-limit]`) in draft and full checks.
-A third cast member in view and unnamed figures stay out of `visual.character`.
+**Character reference slots.** `visual.character` accepts up to four cast IDs. A trio or quartet uses one face image per ID on LTX. Clothing and prop references count toward the same four subject slots. Only subjects 1 and 2 can carry voice samples.
 
 **People in the frame (user directive, 2026-11-17).** `shot_characters` also writes
-`visual.bystanders` — up to two cast ids seen without an on-screen line, three of the cast in a
+`visual.bystanders` — up to two cast ids seen without an on-screen line, four of the cast in a
 shot at most — and `visual.extras`, one English description of unnamed people ("six children in
 orange bibs chasing a ball"). `shot_image` adds each bystander's face and front panels as
 `role:"bystander", use:"image"` references and writes the extras into the image prompt; when the

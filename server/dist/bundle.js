@@ -77937,10 +77937,10 @@ var init_values = __esm({
 });
 
 // node_modules/openai/internal/utils/sleep.mjs
-var sleep4;
+var sleep5;
 var init_sleep = __esm({
   "node_modules/openai/internal/utils/sleep.mjs"() {
-    sleep4 = (ms) => new Promise((resolve14) => setTimeout(resolve14, ms));
+    sleep5 = (ms) => new Promise((resolve14) => setTimeout(resolve14, ms));
   }
 });
 
@@ -79860,7 +79860,7 @@ var init_resource = __esm({
 function encodeURIPath(str8) {
   return str8.replace(/[^A-Za-z0-9\-._~!$&'()*+,;=:@]+/g, encodeURIComponent);
 }
-var EMPTY, createPathTagFunction, path12;
+var EMPTY, createPathTagFunction, path13;
 var init_path = __esm({
   "node_modules/openai/internal/utils/path.mjs"() {
     init_error();
@@ -79913,7 +79913,7 @@ ${underline}`);
       }
       return path37;
     };
-    path12 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
+    path13 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
   }
 });
 
@@ -79940,7 +79940,7 @@ var init_messages = __esm({
        * ```
        */
       list(completionID, query = {}, options) {
-        return this._client.getAPIList(path12`/chat/completions/${completionID}/messages`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path13`/chat/completions/${completionID}/messages`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -81678,7 +81678,7 @@ var init_completions = __esm({
        * ```
        */
       retrieve(completionID, options) {
-        return this._client.get(path12`/chat/completions/${completionID}`, {
+        return this._client.get(path13`/chat/completions/${completionID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -81697,7 +81697,7 @@ var init_completions = __esm({
        * ```
        */
       update(completionID, body, options) {
-        return this._client.post(path12`/chat/completions/${completionID}`, {
+        return this._client.post(path13`/chat/completions/${completionID}`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -81733,7 +81733,7 @@ var init_completions = __esm({
        * ```
        */
       delete(completionID, options) {
-        return this._client.delete(path12`/chat/completions/${completionID}`, {
+        return this._client.delete(path13`/chat/completions/${completionID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -81843,7 +81843,7 @@ var init_admin_api_keys = __esm({
        * ```
        */
       retrieve(keyID, options) {
-        return this._client.get(path12`/organization/admin_api_keys/${keyID}`, {
+        return this._client.get(path13`/organization/admin_api_keys/${keyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -81878,7 +81878,7 @@ var init_admin_api_keys = __esm({
        * ```
        */
       delete(keyID, options) {
-        return this._client.delete(path12`/organization/admin_api_keys/${keyID}`, {
+        return this._client.delete(path13`/organization/admin_api_keys/${keyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -81959,7 +81959,7 @@ var init_certificates = __esm({
        * ```
        */
       retrieve(certificateID, query = {}, options) {
-        return this._client.get(path12`/organization/certificates/${certificateID}`, {
+        return this._client.get(path13`/organization/certificates/${certificateID}`, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -81977,7 +81977,7 @@ var init_certificates = __esm({
        * ```
        */
       update(certificateID, body, options) {
-        return this._client.post(path12`/organization/certificates/${certificateID}`, {
+        return this._client.post(path13`/organization/certificates/${certificateID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -82011,7 +82011,7 @@ var init_certificates = __esm({
        * ```
        */
       delete(certificateID, options) {
-        return this._client.delete(path12`/organization/certificates/${certificateID}`, {
+        return this._client.delete(path13`/organization/certificates/${certificateID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -82144,7 +82144,7 @@ var init_invites = __esm({
        * ```
        */
       retrieve(inviteID, options) {
-        return this._client.get(path12`/organization/invites/${inviteID}`, {
+        return this._client.get(path13`/organization/invites/${inviteID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -82179,7 +82179,7 @@ var init_invites = __esm({
        * ```
        */
       delete(inviteID, options) {
-        return this._client.delete(path12`/organization/invites/${inviteID}`, {
+        return this._client.delete(path13`/organization/invites/${inviteID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -82225,7 +82225,7 @@ var init_roles = __esm({
        * ```
        */
       retrieve(roleID, options) {
-        return this._client.get(path12`/organization/roles/${roleID}`, {
+        return this._client.get(path13`/organization/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -82241,7 +82241,7 @@ var init_roles = __esm({
        * ```
        */
       update(roleID, body, options) {
-        return this._client.post(path12`/organization/roles/${roleID}`, {
+        return this._client.post(path13`/organization/roles/${roleID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -82276,7 +82276,7 @@ var init_roles = __esm({
        * ```
        */
       delete(roleID, options) {
-        return this._client.delete(path12`/organization/roles/${roleID}`, {
+        return this._client.delete(path13`/organization/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -82329,7 +82329,7 @@ var init_spend_alerts = __esm({
        * ```
        */
       retrieve(alertID, options) {
-        return this._client.get(path12`/organization/spend_alerts/${alertID}`, {
+        return this._client.get(path13`/organization/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -82355,7 +82355,7 @@ var init_spend_alerts = __esm({
        * ```
        */
       update(alertID, body, options) {
-        return this._client.post(path12`/organization/spend_alerts/${alertID}`, {
+        return this._client.post(path13`/organization/spend_alerts/${alertID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -82387,7 +82387,7 @@ var init_spend_alerts = __esm({
        * ```
        */
       delete(alertID, options) {
-        return this._client.delete(path12`/organization/spend_alerts/${alertID}`, {
+        return this._client.delete(path13`/organization/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -82685,7 +82685,7 @@ var init_roles2 = __esm({
        * ```
        */
       create(groupID, body, options) {
-        return this._client.post(path12`/organization/groups/${groupID}/roles`, {
+        return this._client.post(path13`/organization/groups/${groupID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -82705,7 +82705,7 @@ var init_roles2 = __esm({
        */
       retrieve(roleID, params, options) {
         const { group_id } = params;
-        return this._client.get(path12`/organization/groups/${group_id}/roles/${roleID}`, {
+        return this._client.get(path13`/organization/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -82724,7 +82724,7 @@ var init_roles2 = __esm({
        * ```
        */
       list(groupID, query = {}, options) {
-        return this._client.getAPIList(path12`/organization/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path13`/organization/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns an organization role from a group within the organization.
@@ -82740,7 +82740,7 @@ var init_roles2 = __esm({
        */
       delete(roleID, params, options) {
         const { group_id } = params;
-        return this._client.delete(path12`/organization/groups/${group_id}/roles/${roleID}`, {
+        return this._client.delete(path13`/organization/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -82770,7 +82770,7 @@ var init_users = __esm({
        * ```
        */
       create(groupID, body, options) {
-        return this._client.post(path12`/organization/groups/${groupID}/users`, {
+        return this._client.post(path13`/organization/groups/${groupID}/users`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -82790,7 +82790,7 @@ var init_users = __esm({
        */
       retrieve(userID, params, options) {
         const { group_id } = params;
-        return this._client.get(path12`/organization/groups/${group_id}/users/${userID}`, {
+        return this._client.get(path13`/organization/groups/${group_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -82809,7 +82809,7 @@ var init_users = __esm({
        * ```
        */
       list(groupID, query = {}, options) {
-        return this._client.getAPIList(path12`/organization/groups/${groupID}/users`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path13`/organization/groups/${groupID}/users`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Removes a user from a group.
@@ -82825,7 +82825,7 @@ var init_users = __esm({
        */
       delete(userID, params, options) {
         const { group_id } = params;
-        return this._client.delete(path12`/organization/groups/${group_id}/users/${userID}`, {
+        return this._client.delete(path13`/organization/groups/${group_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -82880,7 +82880,7 @@ var init_groups = __esm({
        * ```
        */
       retrieve(groupID, options) {
-        return this._client.get(path12`/organization/groups/${groupID}`, {
+        return this._client.get(path13`/organization/groups/${groupID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -82897,7 +82897,7 @@ var init_groups = __esm({
        * ```
        */
       update(groupID, body, options) {
-        return this._client.post(path12`/organization/groups/${groupID}`, {
+        return this._client.post(path13`/organization/groups/${groupID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -82932,7 +82932,7 @@ var init_groups = __esm({
        * ```
        */
       delete(groupID, options) {
-        return this._client.delete(path12`/organization/groups/${groupID}`, {
+        return this._client.delete(path13`/organization/groups/${groupID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -82965,7 +82965,7 @@ var init_api_keys = __esm({
        */
       retrieve(apiKeyID, params, options) {
         const { project_id } = params;
-        return this._client.get(path12`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
+        return this._client.get(path13`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -82984,7 +82984,7 @@ var init_api_keys = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path12`/organization/projects/${projectID}/api_keys`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path13`/organization/projects/${projectID}/api_keys`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes an API key from the project.
@@ -83003,7 +83003,7 @@ var init_api_keys = __esm({
        */
       delete(apiKeyID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path12`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
+        return this._client.delete(path13`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83034,7 +83034,7 @@ var init_certificates2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path12`/organization/projects/${projectID}/certificates`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path13`/organization/projects/${projectID}/certificates`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Activate certificates at the project level.
@@ -83053,7 +83053,7 @@ var init_certificates2 = __esm({
        * ```
        */
       activate(projectID, body, options) {
-        return this._client.getAPIList(path12`/organization/projects/${projectID}/certificates/activate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path13`/organization/projects/${projectID}/certificates/activate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deactivate certificates at the project level. You can atomically and
@@ -83071,7 +83071,7 @@ var init_certificates2 = __esm({
        * ```
        */
       deactivate(projectID, body, options) {
-        return this._client.getAPIList(path12`/organization/projects/${projectID}/certificates/deactivate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path13`/organization/projects/${projectID}/certificates/deactivate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
   }
@@ -83096,7 +83096,7 @@ var init_data_retention2 = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path12`/organization/projects/${projectID}/data_retention`, {
+        return this._client.get(path13`/organization/projects/${projectID}/data_retention`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83114,7 +83114,7 @@ var init_data_retention2 = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path12`/organization/projects/${projectID}/data_retention`, {
+        return this._client.post(path13`/organization/projects/${projectID}/data_retention`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83143,7 +83143,7 @@ var init_hosted_tool_permissions = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path12`/organization/projects/${projectID}/hosted_tool_permissions`, {
+        return this._client.get(path13`/organization/projects/${projectID}/hosted_tool_permissions`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83160,7 +83160,7 @@ var init_hosted_tool_permissions = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path12`/organization/projects/${projectID}/hosted_tool_permissions`, {
+        return this._client.post(path13`/organization/projects/${projectID}/hosted_tool_permissions`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83189,7 +83189,7 @@ var init_model_permissions = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path12`/organization/projects/${projectID}/model_permissions`, {
+        return this._client.get(path13`/organization/projects/${projectID}/model_permissions`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83207,7 +83207,7 @@ var init_model_permissions = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path12`/organization/projects/${projectID}/model_permissions`, {
+        return this._client.post(path13`/organization/projects/${projectID}/model_permissions`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83225,7 +83225,7 @@ var init_model_permissions = __esm({
        * ```
        */
       delete(projectID, options) {
-        return this._client.delete(path12`/organization/projects/${projectID}/model_permissions`, {
+        return this._client.delete(path13`/organization/projects/${projectID}/model_permissions`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83256,7 +83256,7 @@ var init_rate_limits = __esm({
        * ```
        */
       listRateLimits(projectID, query = {}, options) {
-        return this._client.getAPIList(path12`/organization/projects/${projectID}/rate_limits`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path13`/organization/projects/${projectID}/rate_limits`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Updates a project rate limit.
@@ -83272,7 +83272,7 @@ var init_rate_limits = __esm({
        */
       updateRateLimit(rateLimitID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path12`/organization/projects/${project_id}/rate_limits/${rateLimitID}`, {
+        return this._client.post(path13`/organization/projects/${project_id}/rate_limits/${rateLimitID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83303,7 +83303,7 @@ var init_roles3 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path12`/projects/${projectID}/roles`, {
+        return this._client.post(path13`/projects/${projectID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83323,7 +83323,7 @@ var init_roles3 = __esm({
        */
       retrieve(roleID, params, options) {
         const { project_id } = params;
-        return this._client.get(path12`/projects/${project_id}/roles/${roleID}`, {
+        return this._client.get(path13`/projects/${project_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83342,7 +83342,7 @@ var init_roles3 = __esm({
        */
       update(roleID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path12`/projects/${project_id}/roles/${roleID}`, {
+        return this._client.post(path13`/projects/${project_id}/roles/${roleID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83362,7 +83362,7 @@ var init_roles3 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path12`/projects/${projectID}/roles`, NextCursorPage, {
+        return this._client.getAPIList(path13`/projects/${projectID}/roles`, NextCursorPage, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83382,7 +83382,7 @@ var init_roles3 = __esm({
        */
       delete(roleID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path12`/projects/${project_id}/roles/${roleID}`, {
+        return this._client.delete(path13`/projects/${project_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83420,7 +83420,7 @@ var init_spend_alerts2 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path12`/organization/projects/${projectID}/spend_alerts`, {
+        return this._client.post(path13`/organization/projects/${projectID}/spend_alerts`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83440,7 +83440,7 @@ var init_spend_alerts2 = __esm({
        */
       retrieve(alertID, params, options) {
         const { project_id } = params;
-        return this._client.get(path12`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
+        return this._client.get(path13`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83468,7 +83468,7 @@ var init_spend_alerts2 = __esm({
        */
       update(alertID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path12`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
+        return this._client.post(path13`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83488,7 +83488,7 @@ var init_spend_alerts2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path12`/organization/projects/${projectID}/spend_alerts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path13`/organization/projects/${projectID}/spend_alerts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes a project spend alert.
@@ -83504,7 +83504,7 @@ var init_spend_alerts2 = __esm({
        */
       delete(alertID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path12`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
+        return this._client.delete(path13`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83532,7 +83532,7 @@ var init_spend_limit2 = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path12`/organization/projects/${projectID}/spend_limit`, {
+        return this._client.get(path13`/organization/projects/${projectID}/spend_limit`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83554,7 +83554,7 @@ var init_spend_limit2 = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path12`/organization/projects/${projectID}/spend_limit`, {
+        return this._client.post(path13`/organization/projects/${projectID}/spend_limit`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83572,7 +83572,7 @@ var init_spend_limit2 = __esm({
        * ```
        */
       delete(projectID, options) {
-        return this._client.delete(path12`/organization/projects/${projectID}/spend_limit`, {
+        return this._client.delete(path13`/organization/projects/${projectID}/spend_limit`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83603,7 +83603,7 @@ var init_roles4 = __esm({
        */
       create(groupID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path12`/projects/${project_id}/groups/${groupID}/roles`, {
+        return this._client.post(path13`/projects/${project_id}/groups/${groupID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83623,7 +83623,7 @@ var init_roles4 = __esm({
        */
       retrieve(roleID, params, options) {
         const { project_id, group_id } = params;
-        return this._client.get(path12`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
+        return this._client.get(path13`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83644,7 +83644,7 @@ var init_roles4 = __esm({
        */
       list(groupID, params, options) {
         const { project_id, ...query } = params;
-        return this._client.getAPIList(path12`/projects/${project_id}/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path13`/projects/${project_id}/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns a project role from a group within a project.
@@ -83660,7 +83660,7 @@ var init_roles4 = __esm({
        */
       delete(roleID, params, options) {
         const { project_id, group_id } = params;
-        return this._client.delete(path12`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
+        return this._client.delete(path13`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83696,7 +83696,7 @@ var init_groups2 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path12`/organization/projects/${projectID}/groups`, {
+        return this._client.post(path13`/organization/projects/${projectID}/groups`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83716,7 +83716,7 @@ var init_groups2 = __esm({
        */
       retrieve(groupID, params, options) {
         const { project_id, ...query } = params;
-        return this._client.get(path12`/organization/projects/${project_id}/groups/${groupID}`, {
+        return this._client.get(path13`/organization/projects/${project_id}/groups/${groupID}`, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83736,7 +83736,7 @@ var init_groups2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path12`/organization/projects/${projectID}/groups`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path13`/organization/projects/${projectID}/groups`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Revokes a group's access to a project.
@@ -83752,7 +83752,7 @@ var init_groups2 = __esm({
        */
       delete(groupID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path12`/organization/projects/${project_id}/groups/${groupID}`, {
+        return this._client.delete(path13`/organization/projects/${project_id}/groups/${groupID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83783,7 +83783,7 @@ var init_api_keys2 = __esm({
        */
       create(serviceAccountID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path12`/organization/projects/${project_id}/service_accounts/${serviceAccountID}/api_keys`, { body, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.post(path13`/organization/projects/${project_id}/service_accounts/${serviceAccountID}/api_keys`, { body, ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
   }
@@ -83817,7 +83817,7 @@ var init_service_accounts = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path12`/organization/projects/${projectID}/service_accounts`, {
+        return this._client.post(path13`/organization/projects/${projectID}/service_accounts`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83837,7 +83837,7 @@ var init_service_accounts = __esm({
        */
       retrieve(serviceAccountID, params, options) {
         const { project_id } = params;
-        return this._client.get(path12`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, {
+        return this._client.get(path13`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83856,7 +83856,7 @@ var init_service_accounts = __esm({
        */
       update(serviceAccountID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path12`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { body, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.post(path13`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { body, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Returns a list of service accounts in the project.
@@ -83872,7 +83872,7 @@ var init_service_accounts = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path12`/organization/projects/${projectID}/service_accounts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path13`/organization/projects/${projectID}/service_accounts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes a service account from the project.
@@ -83891,7 +83891,7 @@ var init_service_accounts = __esm({
        */
       delete(serviceAccountID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path12`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.delete(path13`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
     ServiceAccounts.APIKeys = APIKeys2;
@@ -83920,7 +83920,7 @@ var init_roles5 = __esm({
        */
       create(userID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path12`/projects/${project_id}/users/${userID}/roles`, {
+        return this._client.post(path13`/projects/${project_id}/users/${userID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83940,7 +83940,7 @@ var init_roles5 = __esm({
        */
       retrieve(roleID, params, options) {
         const { project_id, user_id } = params;
-        return this._client.get(path12`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
+        return this._client.get(path13`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83961,7 +83961,7 @@ var init_roles5 = __esm({
        */
       list(userID, params, options) {
         const { project_id, ...query } = params;
-        return this._client.getAPIList(path12`/projects/${project_id}/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path13`/projects/${project_id}/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns a project role from a user within a project.
@@ -83977,7 +83977,7 @@ var init_roles5 = __esm({
        */
       delete(roleID, params, options) {
         const { project_id, user_id } = params;
-        return this._client.delete(path12`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
+        return this._client.delete(path13`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -84014,7 +84014,7 @@ var init_users2 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path12`/organization/projects/${projectID}/users`, {
+        return this._client.post(path13`/organization/projects/${projectID}/users`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -84034,7 +84034,7 @@ var init_users2 = __esm({
        */
       retrieve(userID, params, options) {
         const { project_id } = params;
-        return this._client.get(path12`/organization/projects/${project_id}/users/${userID}`, {
+        return this._client.get(path13`/organization/projects/${project_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -84053,7 +84053,7 @@ var init_users2 = __esm({
        */
       update(userID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path12`/organization/projects/${project_id}/users/${userID}`, {
+        return this._client.post(path13`/organization/projects/${project_id}/users/${userID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -84073,7 +84073,7 @@ var init_users2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path12`/organization/projects/${projectID}/users`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path13`/organization/projects/${projectID}/users`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes a user from the project.
@@ -84092,7 +84092,7 @@ var init_users2 = __esm({
        */
       delete(userID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path12`/organization/projects/${project_id}/users/${userID}`, {
+        return this._client.delete(path13`/organization/projects/${project_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -84180,7 +84180,7 @@ var init_projects = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path12`/organization/projects/${projectID}`, {
+        return this._client.get(path13`/organization/projects/${projectID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -84197,7 +84197,7 @@ var init_projects = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path12`/organization/projects/${projectID}`, {
+        return this._client.post(path13`/organization/projects/${projectID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -84234,7 +84234,7 @@ var init_projects = __esm({
        * ```
        */
       archive(projectID, options) {
-        return this._client.post(path12`/organization/projects/${projectID}/archive`, {
+        return this._client.post(path13`/organization/projects/${projectID}/archive`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -84276,7 +84276,7 @@ var init_roles6 = __esm({
        * ```
        */
       create(userID, body, options) {
-        return this._client.post(path12`/organization/users/${userID}/roles`, {
+        return this._client.post(path13`/organization/users/${userID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -84296,7 +84296,7 @@ var init_roles6 = __esm({
        */
       retrieve(roleID, params, options) {
         const { user_id } = params;
-        return this._client.get(path12`/organization/users/${user_id}/roles/${roleID}`, {
+        return this._client.get(path13`/organization/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -84315,7 +84315,7 @@ var init_roles6 = __esm({
        * ```
        */
       list(userID, query = {}, options) {
-        return this._client.getAPIList(path12`/organization/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path13`/organization/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns an organization role from a user within the organization.
@@ -84331,7 +84331,7 @@ var init_roles6 = __esm({
        */
       delete(roleID, params, options) {
         const { user_id } = params;
-        return this._client.delete(path12`/organization/users/${user_id}/roles/${roleID}`, {
+        return this._client.delete(path13`/organization/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -84364,7 +84364,7 @@ var init_users3 = __esm({
        * ```
        */
       retrieve(userID, options) {
-        return this._client.get(path12`/organization/users/${userID}`, {
+        return this._client.get(path13`/organization/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -84379,7 +84379,7 @@ var init_users3 = __esm({
        * ```
        */
       update(userID, body, options) {
-        return this._client.post(path12`/organization/users/${userID}`, {
+        return this._client.post(path13`/organization/users/${userID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -84414,7 +84414,7 @@ var init_users3 = __esm({
        * ```
        */
       delete(userID, options) {
-        return this._client.delete(path12`/organization/users/${userID}`, {
+        return this._client.delete(path13`/organization/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -84616,7 +84616,7 @@ var init_batches = __esm({
        * Retrieves a batch.
        */
       retrieve(batchID, options) {
-        return this._client.get(path12`/batches/${batchID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path13`/batches/${batchID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * List your organization's batches.
@@ -84634,7 +84634,7 @@ var init_batches = __esm({
        * (if any) available in the output file.
        */
       cancel(batchID, options) {
-        return this._client.post(path12`/batches/${batchID}/cancel`, {
+        return this._client.post(path13`/batches/${batchID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -84671,7 +84671,7 @@ var init_assistants = __esm({
        * @deprecated
        */
       retrieve(assistantID, options) {
-        return this._client.get(path12`/assistants/${assistantID}`, {
+        return this._client.get(path13`/assistants/${assistantID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -84683,7 +84683,7 @@ var init_assistants = __esm({
        * @deprecated
        */
       update(assistantID, body, options) {
-        return this._client.post(path12`/assistants/${assistantID}`, {
+        return this._client.post(path13`/assistants/${assistantID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -84709,7 +84709,7 @@ var init_assistants = __esm({
        * @deprecated
        */
       delete(assistantID, options) {
-        return this._client.delete(path12`/assistants/${assistantID}`, {
+        return this._client.delete(path13`/assistants/${assistantID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -84848,7 +84848,7 @@ var init_sessions2 = __esm({
        * ```
        */
       cancel(sessionID, options) {
-        return this._client.post(path12`/chatkit/sessions/${sessionID}/cancel`, {
+        return this._client.post(path13`/chatkit/sessions/${sessionID}/cancel`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -84877,7 +84877,7 @@ var init_threads = __esm({
        * ```
        */
       retrieve(threadID, options) {
-        return this._client.get(path12`/chatkit/threads/${threadID}`, {
+        return this._client.get(path13`/chatkit/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -84913,7 +84913,7 @@ var init_threads = __esm({
        * ```
        */
       delete(threadID, options) {
-        return this._client.delete(path12`/chatkit/threads/${threadID}`, {
+        return this._client.delete(path13`/chatkit/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -84933,7 +84933,7 @@ var init_threads = __esm({
        * ```
        */
       listItems(threadID, query = {}, options) {
-        return this._client.getAPIList(path12`/chatkit/threads/${threadID}/items`, ConversationCursorPage, {
+        return this._client.getAPIList(path13`/chatkit/threads/${threadID}/items`, ConversationCursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
@@ -84989,7 +84989,7 @@ var init_input_items = __esm({
        */
       list(responseID, params = {}, options) {
         const { betas, ...query } = params ?? {};
-        return this._client.getAPIList(path12`/responses/${responseID}/input_items?beta=true`, CursorPage, {
+        return this._client.getAPIList(path13`/responses/${responseID}/input_items?beta=true`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([
@@ -85070,7 +85070,7 @@ var init_responses = __esm({
       }
       retrieve(responseID, params = {}, options) {
         const { betas, ...query } = params ?? {};
-        return this._client.get(path12`/responses/${responseID}?beta=true`, {
+        return this._client.get(path13`/responses/${responseID}?beta=true`, {
           query,
           ...options,
           headers: buildHeaders([
@@ -85093,7 +85093,7 @@ var init_responses = __esm({
        */
       delete(responseID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.delete(path12`/responses/${responseID}?beta=true`, {
+        return this._client.delete(path13`/responses/${responseID}?beta=true`, {
           ...options,
           headers: buildHeaders([
             { Accept: "*/*", ...betas?.toString() != null ? { "openai-beta": betas?.toString() } : void 0 },
@@ -85116,7 +85116,7 @@ var init_responses = __esm({
        */
       cancel(responseID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.post(path12`/responses/${responseID}/cancel?beta=true`, {
+        return this._client.post(path13`/responses/${responseID}/cancel?beta=true`, {
           ...options,
           headers: buildHeaders([
             { ...betas?.toString() != null ? { "openai-beta": betas?.toString() } : void 0 },
@@ -85174,7 +85174,7 @@ var init_messages2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       create(threadID, body, options) {
-        return this._client.post(path12`/threads/${threadID}/messages`, {
+        return this._client.post(path13`/threads/${threadID}/messages`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -85188,7 +85188,7 @@ var init_messages2 = __esm({
        */
       retrieve(messageID, params, options) {
         const { thread_id } = params;
-        return this._client.get(path12`/threads/${thread_id}/messages/${messageID}`, {
+        return this._client.get(path13`/threads/${thread_id}/messages/${messageID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -85201,7 +85201,7 @@ var init_messages2 = __esm({
        */
       update(messageID, params, options) {
         const { thread_id, ...body } = params;
-        return this._client.post(path12`/threads/${thread_id}/messages/${messageID}`, {
+        return this._client.post(path13`/threads/${thread_id}/messages/${messageID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -85214,7 +85214,7 @@ var init_messages2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       list(threadID, query = {}, options) {
-        return this._client.getAPIList(path12`/threads/${threadID}/messages`, CursorPage, {
+        return this._client.getAPIList(path13`/threads/${threadID}/messages`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -85228,7 +85228,7 @@ var init_messages2 = __esm({
        */
       delete(messageID, params, options) {
         const { thread_id } = params;
-        return this._client.delete(path12`/threads/${thread_id}/messages/${messageID}`, {
+        return this._client.delete(path13`/threads/${thread_id}/messages/${messageID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -85254,7 +85254,7 @@ var init_steps = __esm({
        */
       retrieve(stepID, params, options) {
         const { thread_id, run_id, ...query } = params;
-        return this._client.get(path12`/threads/${thread_id}/runs/${run_id}/steps/${stepID}`, {
+        return this._client.get(path13`/threads/${thread_id}/runs/${run_id}/steps/${stepID}`, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -85268,7 +85268,7 @@ var init_steps = __esm({
        */
       list(runID, params, options) {
         const { thread_id, ...query } = params;
-        return this._client.getAPIList(path12`/threads/${thread_id}/runs/${runID}/steps`, CursorPage, {
+        return this._client.getAPIList(path13`/threads/${thread_id}/runs/${runID}/steps`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -85857,7 +85857,7 @@ var init_runs = __esm({
       }
       create(threadID, params, options) {
         const { include, ...body } = params;
-        return this._client.post(path12`/threads/${threadID}/runs`, {
+        return this._client.post(path13`/threads/${threadID}/runs`, {
           query: { include },
           body,
           ...options,
@@ -85874,7 +85874,7 @@ var init_runs = __esm({
        */
       retrieve(runID, params, options) {
         const { thread_id } = params;
-        return this._client.get(path12`/threads/${thread_id}/runs/${runID}`, {
+        return this._client.get(path13`/threads/${thread_id}/runs/${runID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -85887,7 +85887,7 @@ var init_runs = __esm({
        */
       update(runID, params, options) {
         const { thread_id, ...body } = params;
-        return this._client.post(path12`/threads/${thread_id}/runs/${runID}`, {
+        return this._client.post(path13`/threads/${thread_id}/runs/${runID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -85900,7 +85900,7 @@ var init_runs = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       list(threadID, query = {}, options) {
-        return this._client.getAPIList(path12`/threads/${threadID}/runs`, CursorPage, {
+        return this._client.getAPIList(path13`/threads/${threadID}/runs`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -85914,7 +85914,7 @@ var init_runs = __esm({
        */
       cancel(runID, params, options) {
         const { thread_id } = params;
-        return this._client.post(path12`/threads/${thread_id}/runs/${runID}/cancel`, {
+        return this._client.post(path13`/threads/${thread_id}/runs/${runID}/cancel`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -85972,7 +85972,7 @@ var init_runs = __esm({
                   }
                 }
               }
-              await sleep4(sleepInterval);
+              await sleep5(sleepInterval);
               break;
             //We return the run in any terminal state.
             case "requires_action":
@@ -85993,7 +85993,7 @@ var init_runs = __esm({
       }
       submitToolOutputs(runID, params, options) {
         const { thread_id, ...body } = params;
-        return this._client.post(path12`/threads/${thread_id}/runs/${runID}/submit_tool_outputs`, {
+        return this._client.post(path13`/threads/${thread_id}/runs/${runID}/submit_tool_outputs`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -86061,7 +86061,7 @@ var init_threads2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       retrieve(threadID, options) {
-        return this._client.get(path12`/threads/${threadID}`, {
+        return this._client.get(path13`/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -86073,7 +86073,7 @@ var init_threads2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       update(threadID, body, options) {
-        return this._client.post(path12`/threads/${threadID}`, {
+        return this._client.post(path13`/threads/${threadID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -86086,7 +86086,7 @@ var init_threads2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       delete(threadID, options) {
-        return this._client.delete(path12`/threads/${threadID}`, {
+        return this._client.delete(path13`/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -86187,7 +86187,7 @@ var init_content = __esm({
        */
       retrieve(fileID, params, options) {
         const { container_id } = params;
-        return this._client.get(path12`/containers/${container_id}/files/${fileID}/content`, {
+        return this._client.get(path13`/containers/${container_id}/files/${fileID}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -86221,14 +86221,14 @@ var init_files = __esm({
        * a JSON request with a file ID.
        */
       create(containerID, body, options) {
-        return this._client.post(path12`/containers/${containerID}/files`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path13`/containers/${containerID}/files`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
       /**
        * Retrieve Container File
        */
       retrieve(fileID, params, options) {
         const { container_id } = params;
-        return this._client.get(path12`/containers/${container_id}/files/${fileID}`, {
+        return this._client.get(path13`/containers/${container_id}/files/${fileID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -86237,7 +86237,7 @@ var init_files = __esm({
        * List Container files
        */
       list(containerID, query = {}, options) {
-        return this._client.getAPIList(path12`/containers/${containerID}/files`, CursorPage, {
+        return this._client.getAPIList(path13`/containers/${containerID}/files`, CursorPage, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -86248,7 +86248,7 @@ var init_files = __esm({
        */
       delete(fileID, params, options) {
         const { container_id } = params;
-        return this._client.delete(path12`/containers/${container_id}/files/${fileID}`, {
+        return this._client.delete(path13`/containers/${container_id}/files/${fileID}`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -86284,7 +86284,7 @@ var init_containers = __esm({
        * Retrieve Container
        */
       retrieve(containerID, options) {
-        return this._client.get(path12`/containers/${containerID}`, {
+        return this._client.get(path13`/containers/${containerID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -86303,7 +86303,7 @@ var init_containers = __esm({
        * Delete Container
        */
       delete(containerID, options) {
-        return this._client.delete(path12`/containers/${containerID}`, {
+        return this._client.delete(path13`/containers/${containerID}`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -86327,7 +86327,7 @@ var init_items = __esm({
        */
       create(conversationID, params, options) {
         const { include, ...body } = params;
-        return this._client.post(path12`/conversations/${conversationID}/items`, {
+        return this._client.post(path13`/conversations/${conversationID}/items`, {
           query: { include },
           body,
           ...options,
@@ -86339,7 +86339,7 @@ var init_items = __esm({
        */
       retrieve(itemID, params, options) {
         const { conversation_id, ...query } = params;
-        return this._client.get(path12`/conversations/${conversation_id}/items/${itemID}`, {
+        return this._client.get(path13`/conversations/${conversation_id}/items/${itemID}`, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -86349,14 +86349,14 @@ var init_items = __esm({
        * List all items for a conversation with the given ID.
        */
       list(conversationID, query = {}, options) {
-        return this._client.getAPIList(path12`/conversations/${conversationID}/items`, ConversationCursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path13`/conversations/${conversationID}/items`, ConversationCursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
       /**
        * Delete an item from a conversation with the given IDs.
        */
       delete(itemID, params, options) {
         const { conversation_id } = params;
-        return this._client.delete(path12`/conversations/${conversation_id}/items/${itemID}`, {
+        return this._client.delete(path13`/conversations/${conversation_id}/items/${itemID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -86388,7 +86388,7 @@ var init_conversations = __esm({
        * Get a conversation
        */
       retrieve(conversationID, options) {
-        return this._client.get(path12`/conversations/${conversationID}`, {
+        return this._client.get(path13`/conversations/${conversationID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -86397,7 +86397,7 @@ var init_conversations = __esm({
        * Update a conversation
        */
       update(conversationID, body, options) {
-        return this._client.post(path12`/conversations/${conversationID}`, {
+        return this._client.post(path13`/conversations/${conversationID}`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -86407,7 +86407,7 @@ var init_conversations = __esm({
        * Delete a conversation. Items in the conversation will not be deleted.
        */
       delete(conversationID, options) {
-        return this._client.delete(path12`/conversations/${conversationID}`, {
+        return this._client.delete(path13`/conversations/${conversationID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -86481,7 +86481,7 @@ var init_output_items = __esm({
        */
       retrieve(outputItemID, params, options) {
         const { eval_id, run_id } = params;
-        return this._client.get(path12`/evals/${eval_id}/runs/${run_id}/output_items/${outputItemID}`, {
+        return this._client.get(path13`/evals/${eval_id}/runs/${run_id}/output_items/${outputItemID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -86491,7 +86491,7 @@ var init_output_items = __esm({
        */
       list(runID, params, options) {
         const { eval_id, ...query } = params;
-        return this._client.getAPIList(path12`/evals/${eval_id}/runs/${runID}/output_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path13`/evals/${eval_id}/runs/${runID}/output_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -86517,7 +86517,7 @@ var init_runs2 = __esm({
        * schema specified in the config of the evaluation.
        */
       create(evalID, body, options) {
-        return this._client.post(path12`/evals/${evalID}/runs`, {
+        return this._client.post(path13`/evals/${evalID}/runs`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -86528,7 +86528,7 @@ var init_runs2 = __esm({
        */
       retrieve(runID, params, options) {
         const { eval_id } = params;
-        return this._client.get(path12`/evals/${eval_id}/runs/${runID}`, {
+        return this._client.get(path13`/evals/${eval_id}/runs/${runID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -86537,7 +86537,7 @@ var init_runs2 = __esm({
        * Get a list of runs for an evaluation.
        */
       list(evalID, query = {}, options) {
-        return this._client.getAPIList(path12`/evals/${evalID}/runs`, CursorPage, {
+        return this._client.getAPIList(path13`/evals/${evalID}/runs`, CursorPage, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -86548,7 +86548,7 @@ var init_runs2 = __esm({
        */
       delete(runID, params, options) {
         const { eval_id } = params;
-        return this._client.delete(path12`/evals/${eval_id}/runs/${runID}`, {
+        return this._client.delete(path13`/evals/${eval_id}/runs/${runID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -86558,7 +86558,7 @@ var init_runs2 = __esm({
        */
       cancel(runID, params, options) {
         const { eval_id } = params;
-        return this._client.post(path12`/evals/${eval_id}/runs/${runID}`, {
+        return this._client.post(path13`/evals/${eval_id}/runs/${runID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -86597,13 +86597,13 @@ var init_evals = __esm({
        * Get an evaluation by ID.
        */
       retrieve(evalID, options) {
-        return this._client.get(path12`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path13`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Update certain properties of an evaluation.
        */
       update(evalID, body, options) {
-        return this._client.post(path12`/evals/${evalID}`, { body, ...options, __security: { bearerAuth: true } });
+        return this._client.post(path13`/evals/${evalID}`, { body, ...options, __security: { bearerAuth: true } });
       }
       /**
        * List evaluations for a project.
@@ -86619,7 +86619,7 @@ var init_evals = __esm({
        * Delete an evaluation.
        */
       delete(evalID, options) {
-        return this._client.delete(path12`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path13`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
       }
     };
     Evals.Runs = Runs2;
@@ -86674,7 +86674,7 @@ var init_files2 = __esm({
        * Returns information about a specific file.
        */
       retrieve(fileID, options) {
-        return this._client.get(path12`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path13`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Returns a list of files.
@@ -86690,13 +86690,13 @@ var init_files2 = __esm({
        * Delete a file and remove it from all vector stores.
        */
       delete(fileID, options) {
-        return this._client.delete(path12`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path13`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Returns the contents of the specified file.
        */
       content(fileID, options) {
-        return this._client.get(path12`/files/${fileID}/content`, {
+        return this._client.get(path13`/files/${fileID}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -86711,7 +86711,7 @@ var init_files2 = __esm({
         const start = Date.now();
         let file = await this.retrieve(id);
         while (!file.status || !TERMINAL_STATES.has(file.status)) {
-          await sleep4(pollInterval);
+          await sleep5(pollInterval);
           file = await this.retrieve(id);
           if (Date.now() - start > maxWait) {
             throw new APIConnectionTimeoutError2({
@@ -86836,7 +86836,7 @@ var init_permissions = __esm({
        * ```
        */
       create(fineTunedModelCheckpoint, body, options) {
-        return this._client.getAPIList(path12`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path13`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * **NOTE:** This endpoint requires an [admin API key](../admin-api-keys).
@@ -86847,7 +86847,7 @@ var init_permissions = __esm({
        * @deprecated Retrieve is deprecated. Please swap to the paginated list method instead.
        */
       retrieve(fineTunedModelCheckpoint, query = {}, options) {
-        return this._client.get(path12`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, {
+        return this._client.get(path13`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -86870,7 +86870,7 @@ var init_permissions = __esm({
        * ```
        */
       list(fineTunedModelCheckpoint, query = {}, options) {
-        return this._client.getAPIList(path12`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path13`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * **NOTE:** This endpoint requires an [admin API key](../admin-api-keys).
@@ -86892,7 +86892,7 @@ var init_permissions = __esm({
        */
       delete(permissionID, params, options) {
         const { fine_tuned_model_checkpoint } = params;
-        return this._client.delete(path12`/fine_tuning/checkpoints/${fine_tuned_model_checkpoint}/permissions/${permissionID}`, { ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.delete(path13`/fine_tuning/checkpoints/${fine_tuned_model_checkpoint}/permissions/${permissionID}`, { ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
   }
@@ -86937,7 +86937,7 @@ var init_checkpoints2 = __esm({
        * ```
        */
       list(fineTuningJobID, query = {}, options) {
-        return this._client.getAPIList(path12`/fine_tuning/jobs/${fineTuningJobID}/checkpoints`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path13`/fine_tuning/jobs/${fineTuningJobID}/checkpoints`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -86990,7 +86990,7 @@ var init_jobs = __esm({
        * ```
        */
       retrieve(fineTuningJobID, options) {
-        return this._client.get(path12`/fine_tuning/jobs/${fineTuningJobID}`, {
+        return this._client.get(path13`/fine_tuning/jobs/${fineTuningJobID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -87024,7 +87024,7 @@ var init_jobs = __esm({
        * ```
        */
       cancel(fineTuningJobID, options) {
-        return this._client.post(path12`/fine_tuning/jobs/${fineTuningJobID}/cancel`, {
+        return this._client.post(path13`/fine_tuning/jobs/${fineTuningJobID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -87043,7 +87043,7 @@ var init_jobs = __esm({
        * ```
        */
       listEvents(fineTuningJobID, query = {}, options) {
-        return this._client.getAPIList(path12`/fine_tuning/jobs/${fineTuningJobID}/events`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path13`/fine_tuning/jobs/${fineTuningJobID}/events`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
       /**
        * Pause a fine-tune job.
@@ -87056,7 +87056,7 @@ var init_jobs = __esm({
        * ```
        */
       pause(fineTuningJobID, options) {
-        return this._client.post(path12`/fine_tuning/jobs/${fineTuningJobID}/pause`, {
+        return this._client.post(path13`/fine_tuning/jobs/${fineTuningJobID}/pause`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -87072,7 +87072,7 @@ var init_jobs = __esm({
        * ```
        */
       resume(fineTuningJobID, options) {
-        return this._client.post(path12`/fine_tuning/jobs/${fineTuningJobID}/resume`, {
+        return this._client.post(path13`/fine_tuning/jobs/${fineTuningJobID}/resume`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -87186,7 +87186,7 @@ var init_models = __esm({
        * the owner and permissioning.
        */
       retrieve(model2, options) {
-        return this._client.get(path12`/models/${model2}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path13`/models/${model2}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Lists the currently available models, and provides basic information about each
@@ -87200,7 +87200,7 @@ var init_models = __esm({
        * delete a model.
        */
       delete(model2, options) {
-        return this._client.delete(path12`/models/${model2}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path13`/models/${model2}`, { ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -87243,7 +87243,7 @@ var init_calls = __esm({
        * ```
        */
       accept(callID, body, options) {
-        return this._client.post(path12`/realtime/calls/${callID}/accept`, {
+        return this._client.post(path13`/realtime/calls/${callID}/accept`, {
           body,
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
@@ -87259,7 +87259,7 @@ var init_calls = __esm({
        * ```
        */
       hangup(callID, options) {
-        return this._client.post(path12`/realtime/calls/${callID}/hangup`, {
+        return this._client.post(path13`/realtime/calls/${callID}/hangup`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -87276,7 +87276,7 @@ var init_calls = __esm({
        * ```
        */
       refer(callID, body, options) {
-        return this._client.post(path12`/realtime/calls/${callID}/refer`, {
+        return this._client.post(path13`/realtime/calls/${callID}/refer`, {
           body,
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
@@ -87292,7 +87292,7 @@ var init_calls = __esm({
        * ```
        */
       reject(callID, body = {}, options) {
-        return this._client.post(path12`/realtime/calls/${callID}/reject`, {
+        return this._client.post(path13`/realtime/calls/${callID}/reject`, {
           body,
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
@@ -88111,7 +88111,7 @@ var init_input_items2 = __esm({
        * ```
        */
       list(responseID, query = {}, options) {
-        return this._client.getAPIList(path12`/responses/${responseID}/input_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path13`/responses/${responseID}/input_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -88178,7 +88178,7 @@ var init_responses2 = __esm({
         });
       }
       retrieve(responseID, query = {}, options) {
-        return this._client.get(path12`/responses/${responseID}`, {
+        return this._client.get(path13`/responses/${responseID}`, {
           query,
           ...options,
           stream: query?.stream ?? false,
@@ -88201,7 +88201,7 @@ var init_responses2 = __esm({
        * ```
        */
       delete(responseID, options) {
-        return this._client.delete(path12`/responses/${responseID}`, {
+        return this._client.delete(path13`/responses/${responseID}`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -88229,7 +88229,7 @@ var init_responses2 = __esm({
        * ```
        */
       cancel(responseID, options) {
-        return this._client.post(path12`/responses/${responseID}/cancel`, {
+        return this._client.post(path13`/responses/${responseID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -88270,7 +88270,7 @@ var init_content2 = __esm({
        * Download a skill zip bundle by its ID.
        */
       retrieve(skillID, options) {
-        return this._client.get(path12`/skills/${skillID}/content`, {
+        return this._client.get(path13`/skills/${skillID}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -88294,7 +88294,7 @@ var init_content3 = __esm({
        */
       retrieve(version2, params, options) {
         const { skill_id } = params;
-        return this._client.get(path12`/skills/${skill_id}/versions/${version2}/content`, {
+        return this._client.get(path13`/skills/${skill_id}/versions/${version2}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -88324,14 +88324,14 @@ var init_versions = __esm({
        * Create a new immutable skill version.
        */
       create(skillID, body = {}, options) {
-        return this._client.post(path12`/skills/${skillID}/versions`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path13`/skills/${skillID}/versions`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
       /**
        * Get a specific skill version.
        */
       retrieve(version2, params, options) {
         const { skill_id } = params;
-        return this._client.get(path12`/skills/${skill_id}/versions/${version2}`, {
+        return this._client.get(path13`/skills/${skill_id}/versions/${version2}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -88340,7 +88340,7 @@ var init_versions = __esm({
        * List skill versions for a skill.
        */
       list(skillID, query = {}, options) {
-        return this._client.getAPIList(path12`/skills/${skillID}/versions`, CursorPage, {
+        return this._client.getAPIList(path13`/skills/${skillID}/versions`, CursorPage, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -88351,7 +88351,7 @@ var init_versions = __esm({
        */
       delete(version2, params, options) {
         const { skill_id } = params;
-        return this._client.delete(path12`/skills/${skill_id}/versions/${version2}`, {
+        return this._client.delete(path13`/skills/${skill_id}/versions/${version2}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -88389,13 +88389,13 @@ var init_skills = __esm({
        * Get a skill by its ID.
        */
       retrieve(skillID, options) {
-        return this._client.get(path12`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path13`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Update the default version pointer for a skill.
        */
       update(skillID, body, options) {
-        return this._client.post(path12`/skills/${skillID}`, {
+        return this._client.post(path13`/skills/${skillID}`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -88415,7 +88415,7 @@ var init_skills = __esm({
        * Delete a skill by its ID.
        */
       delete(skillID, options) {
-        return this._client.delete(path12`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path13`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
       }
     };
     Skills.Content = Content2;
@@ -88445,7 +88445,7 @@ var init_parts = __esm({
        * [complete the Upload](https://platform.openai.com/docs/api-reference/uploads/complete).
        */
       create(uploadID, body, options) {
-        return this._client.post(path12`/uploads/${uploadID}/parts`, multipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path13`/uploads/${uploadID}/parts`, multipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
     };
   }
@@ -88496,7 +88496,7 @@ var init_uploads3 = __esm({
        * Returns the Upload object with status `cancelled`.
        */
       cancel(uploadID, options) {
-        return this._client.post(path12`/uploads/${uploadID}/cancel`, {
+        return this._client.post(path13`/uploads/${uploadID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -88519,7 +88519,7 @@ var init_uploads3 = __esm({
        * object.
        */
       complete(uploadID, body, options) {
-        return this._client.post(path12`/uploads/${uploadID}/complete`, {
+        return this._client.post(path13`/uploads/${uploadID}/complete`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -88569,7 +88569,7 @@ var init_file_batches = __esm({
        * Create a vector store file batch.
        */
       create(vectorStoreID, body, options) {
-        return this._client.post(path12`/vector_stores/${vectorStoreID}/file_batches`, {
+        return this._client.post(path13`/vector_stores/${vectorStoreID}/file_batches`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -88581,7 +88581,7 @@ var init_file_batches = __esm({
        */
       retrieve(batchID, params, options) {
         const { vector_store_id } = params;
-        return this._client.get(path12`/vector_stores/${vector_store_id}/file_batches/${batchID}`, {
+        return this._client.get(path13`/vector_stores/${vector_store_id}/file_batches/${batchID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -88593,7 +88593,7 @@ var init_file_batches = __esm({
        */
       cancel(batchID, params, options) {
         const { vector_store_id } = params;
-        return this._client.post(path12`/vector_stores/${vector_store_id}/file_batches/${batchID}/cancel`, {
+        return this._client.post(path13`/vector_stores/${vector_store_id}/file_batches/${batchID}/cancel`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -88611,7 +88611,7 @@ var init_file_batches = __esm({
        */
       listFiles(batchID, params, options) {
         const { vector_store_id, ...query } = params;
-        return this._client.getAPIList(path12`/vector_stores/${vector_store_id}/file_batches/${batchID}/files`, CursorPage, {
+        return this._client.getAPIList(path13`/vector_stores/${vector_store_id}/file_batches/${batchID}/files`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -88651,7 +88651,7 @@ var init_file_batches = __esm({
                   }
                 }
               }
-              await sleep4(sleepInterval);
+              await sleep5(sleepInterval);
               break;
             case "failed":
             case "cancelled":
@@ -88706,7 +88706,7 @@ var init_files3 = __esm({
        * [vector store](https://platform.openai.com/docs/api-reference/vector-stores/object).
        */
       create(vectorStoreID, body, options) {
-        return this._client.post(path12`/vector_stores/${vectorStoreID}/files`, {
+        return this._client.post(path13`/vector_stores/${vectorStoreID}/files`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -88718,7 +88718,7 @@ var init_files3 = __esm({
        */
       retrieve(fileID, params, options) {
         const { vector_store_id } = params;
-        return this._client.get(path12`/vector_stores/${vector_store_id}/files/${fileID}`, {
+        return this._client.get(path13`/vector_stores/${vector_store_id}/files/${fileID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -88729,7 +88729,7 @@ var init_files3 = __esm({
        */
       update(fileID, params, options) {
         const { vector_store_id, ...body } = params;
-        return this._client.post(path12`/vector_stores/${vector_store_id}/files/${fileID}`, {
+        return this._client.post(path13`/vector_stores/${vector_store_id}/files/${fileID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -88740,7 +88740,7 @@ var init_files3 = __esm({
        * Returns a list of vector store files.
        */
       list(vectorStoreID, query = {}, options) {
-        return this._client.getAPIList(path12`/vector_stores/${vectorStoreID}/files`, CursorPage, {
+        return this._client.getAPIList(path13`/vector_stores/${vectorStoreID}/files`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -88755,7 +88755,7 @@ var init_files3 = __esm({
        */
       delete(fileID, params, options) {
         const { vector_store_id } = params;
-        return this._client.delete(path12`/vector_stores/${vector_store_id}/files/${fileID}`, {
+        return this._client.delete(path13`/vector_stores/${vector_store_id}/files/${fileID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -88801,7 +88801,7 @@ var init_files3 = __esm({
                   }
                 }
               }
-              await sleep4(sleepInterval);
+              await sleep5(sleepInterval);
               break;
             case "failed":
             case "completed":
@@ -88831,7 +88831,7 @@ var init_files3 = __esm({
        */
       content(fileID, params, options) {
         const { vector_store_id } = params;
-        return this._client.getAPIList(path12`/vector_stores/${vector_store_id}/files/${fileID}/content`, Page, {
+        return this._client.getAPIList(path13`/vector_stores/${vector_store_id}/files/${fileID}/content`, Page, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -88874,7 +88874,7 @@ var init_vector_stores = __esm({
        * Retrieves a vector store.
        */
       retrieve(vectorStoreID, options) {
-        return this._client.get(path12`/vector_stores/${vectorStoreID}`, {
+        return this._client.get(path13`/vector_stores/${vectorStoreID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -88884,7 +88884,7 @@ var init_vector_stores = __esm({
        * Modifies a vector store.
        */
       update(vectorStoreID, body, options) {
-        return this._client.post(path12`/vector_stores/${vectorStoreID}`, {
+        return this._client.post(path13`/vector_stores/${vectorStoreID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -88906,7 +88906,7 @@ var init_vector_stores = __esm({
        * Delete a vector store.
        */
       delete(vectorStoreID, options) {
-        return this._client.delete(path12`/vector_stores/${vectorStoreID}`, {
+        return this._client.delete(path13`/vector_stores/${vectorStoreID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -88917,7 +88917,7 @@ var init_vector_stores = __esm({
        * filter.
        */
       search(vectorStoreID, body, options) {
-        return this._client.getAPIList(path12`/vector_stores/${vectorStoreID}/search`, Page, {
+        return this._client.getAPIList(path13`/vector_stores/${vectorStoreID}/search`, Page, {
           body,
           method: "post",
           ...options,
@@ -88951,7 +88951,7 @@ var init_videos = __esm({
        * Fetch the latest metadata for a generated video.
        */
       retrieve(videoID, options) {
-        return this._client.get(path12`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path13`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * List recently generated videos for the current project.
@@ -88967,7 +88967,7 @@ var init_videos = __esm({
        * Permanently delete a completed or failed video and its stored assets.
        */
       delete(videoID, options) {
-        return this._client.delete(path12`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path13`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Create a character from an uploaded video.
@@ -88981,7 +88981,7 @@ var init_videos = __esm({
        * Streams the rendered video content for the specified video job.
        */
       downloadContent(videoID, query = {}, options) {
-        return this._client.get(path12`/videos/${videoID}/content`, {
+        return this._client.get(path13`/videos/${videoID}/content`, {
           query,
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
@@ -89006,7 +89006,7 @@ var init_videos = __esm({
        * Fetch a character.
        */
       getCharacter(characterID, options) {
-        return this._client.get(path12`/videos/characters/${characterID}`, {
+        return this._client.get(path13`/videos/characters/${characterID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -89015,7 +89015,7 @@ var init_videos = __esm({
        * Create a remix of a completed video using a refreshed prompt.
        */
       remix(videoID, body, options) {
-        return this._client.post(path12`/videos/${videoID}/remix`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path13`/videos/${videoID}/remix`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
     };
   }
@@ -89719,7 +89719,7 @@ var init_client = __esm({
           const maxRetries = options.maxRetries ?? this.maxRetries;
           timeoutMillis = this.calculateDefaultRetryTimeoutMillis(retriesRemaining, maxRetries);
         }
-        await sleep4(timeoutMillis);
+        await sleep5(timeoutMillis);
         return this.makeRequest(options, retriesRemaining - 1, requestLogID);
       }
       calculateDefaultRetryTimeoutMillis(retriesRemaining, maxRetries) {
@@ -91090,10 +91090,16 @@ var require_video_catalog = __commonJS({
             review: "not_reviewed"
           },
           fields: [
+            "seed",
+            "numInferenceSteps",
+            "guidance",
+            "numGeneratedKeyframes",
+            "lora",
             "prompt",
             "negativePrompt",
             "model",
             "duration",
+            "numFrames",
             "resolution",
             "fps",
             "generateAudio",
@@ -91107,7 +91113,7 @@ var require_video_catalog = __commonJS({
               "ltx-2.5-22b-distilled",
               "ltx-2.5-22b-dev"
             ],
-            note: "Text and up to four shot descriptions. No frame-addressed cuts, supplied images, audio or keyframes."
+            note: "Use duration, exact numFrames or automatic duration. Optional shots describe 2\u20134 cuts. Plain distilled generation accepts registered LoRAs on supporting backends."
           }
         },
         {
@@ -91118,7 +91124,7 @@ var require_video_catalog = __commonJS({
           sceneInputs: {
             fpsField: "fps",
             frameAccurateCuts: false,
-            timedImages: false,
+            timedImages: true,
             openingImage: true,
             endingImage: true,
             shotDescriptions: "gateway_prompt_only",
@@ -91133,10 +91139,16 @@ var require_video_catalog = __commonJS({
             review: "not_reviewed"
           },
           fields: [
+            "seed",
+            "numInferenceSteps",
+            "guidance",
+            "numGeneratedKeyframes",
+            "lora",
             "prompt",
             "negativePrompt",
             "model",
             "duration",
+            "numFrames",
             "resolution",
             "fps",
             "generateAudio",
@@ -91148,6 +91160,10 @@ var require_video_catalog = __commonJS({
             "imagePath",
             "lastFrameUri",
             "lastFramePath",
+            "keyframes",
+            "referenceStrength",
+            "referenceFrames",
+            "skipStage2",
             "references",
             "openingPositions",
             "guidanceScale",
@@ -91171,7 +91187,7 @@ var require_video_catalog = __commonJS({
               capability: "/v1/ltx/msr/capabilities:image_conditioning",
               voiceCapability: "voice_references"
             },
-            note: "Start image and optional end frame. Up to four shot descriptions request prompt-guided cuts without frame addresses; additional references use the distilled MSR IC-LoRA with explicit duration. Dev takes start/end only. generateAudio:false removes the soundtrack. No intermediate keyframes or supplied speech."
+            note: "Start image and optional end frame; additional references use the distilled MSR IC-LoRA with duration or numFrames. Dev takes temporal images. generateAudio:false removes the soundtrack. Timed keyframes require gateway support."
           }
         },
         {
@@ -91182,7 +91198,7 @@ var require_video_catalog = __commonJS({
           sceneInputs: {
             fpsField: "fps",
             frameAccurateCuts: false,
-            timedImages: false,
+            timedImages: true,
             openingImage: true,
             endingImage: true,
             shotDescriptions: "prompt",
@@ -91197,10 +91213,14 @@ var require_video_catalog = __commonJS({
             review: "not_reviewed"
           },
           fields: [
+            "seed",
+            "numInferenceSteps",
+            "guidance",
             "prompt",
             "negativePrompt",
             "model",
             "resolution",
+            "keyframes",
             "fps",
             "audioPath",
             "audioUri",
@@ -91214,9 +91234,10 @@ var require_video_catalog = __commonJS({
           ],
           modelConstraints: {
             models: [
-              "ltx-2.5-22b-dev"
+              "ltx-2.5-22b-dev",
+              "ltx-2.5-22b-distilled"
             ],
-            note: "One audio track plus optional start/end. No shots, timed keyframes or subject references. Length equals the audio, at most 361 frames per fps. Mono/stereo wav, mp3, m4a or ogg; 3+ channels 422. Sample rate kept: AAC standard 7350-96000 Hz only, others 422. Data URI at most 15,000,000 base64 characters."
+            note: "Up to eight temporal images including endpoints on gateways with keyframes support. Length equals the audio, at most 361 frames per fps. Mono/stereo wav, mp3, m4a or ogg; 3+ channels 422. Sample rate kept: AAC standard 7350-96000 Hz only, others 422. Data URI at most 15,000,000 base64 characters."
           }
         },
         {
@@ -91248,6 +91269,7 @@ var require_video_catalog = __commonJS({
             "nagScale",
             "nagAlpha",
             "nagTau",
+            "skipStage2",
             "references",
             "openingPositions",
             "referenceStrength",
@@ -111396,7 +111418,7 @@ function openingPrompt(prompt, positions = []) {
   const prefix = "Opening frame, from the viewer\u2019s perspective:\n" + header.join("\n") + "\n\n";
   return prompt.startsWith(prefix) ? prompt : prefix + prompt;
 }
-function validateOpening(prompt, positions, references, issue2) {
+function validateOpening(prompt, positions, references, issue2, maxChars = 2e3) {
   if (!positions) {
     issue2("openingPositions required: match each character to the opening frame and their subject images");
     return;
@@ -111417,8 +111439,8 @@ function validateOpening(prompt, positions, references, issue2) {
     if (!mapped.has(i2 + 1) && (!ref.nonCharacter || ref.audioPath || ref.audioUri))
       issue2("openingPositions: identify the character in Image " + (i2 + 1) + " or mark an object reference nonCharacter:true");
   });
-  if (openingPrompt(prompt, positions).length > 2e3)
-    issue2("The prompt including openingPositions exceeds 2000 characters; shorten the action or placement descriptions");
+  if ([...openingPrompt(prompt, positions)].length > maxChars)
+    issue2("The prompt including openingPositions exceeds " + maxChars + " characters; shorten the action or placement descriptions");
 }
 
 // src/tiktok-client.ts
@@ -112386,6 +112408,7 @@ async function genaiCatalog(kind) {
     image: "/v1/images/models",
     speech: "/v1/audio/models",
     video: "/v1/models",
+    ltx_video: "/v1/ltx/v2/capabilities",
     desktop_video: "/v1/ltx/desktop/models",
     loras: "/v1/ltx/desktop/loras",
     contracts: "/v1/ltx/desktop/contracts"
@@ -112819,7 +112842,7 @@ function buildDesktopBody(operation, input, assets) {
     audioMaxDuration: _duration,
     numFrames: _frames,
     targetResolution,
-    keyframes,
+    keyframes: keyframes2,
     ...params
   } = args;
   const ref = (file) => {
@@ -112829,7 +112852,7 @@ function buildDesktopBody(operation, input, assets) {
   if (targetResolution) params.resolution = targetResolution;
   if (operation === "keyframes") return {
     params: { ...params, model: "fast" },
-    keyframes: keyframes.map(({ imagePath: file, ...frame2 }) => ({ ...ref(file), ...frame2 }))
+    keyframes: keyframes2.map(({ imagePath: file, ...frame2 }) => ({ ...ref(file), ...frame2 }))
   };
   const inputs2 = operation === "image-to-video" ? { startFrame: ref(imagePath), ...lastFramePath ? { endFrame: ref(lastFramePath) } : {} } : operation === "audio-to-video" ? { audio: ref(audioPath), ...imagePath ? { startFrame: ref(imagePath) } : {} } : ["extend", "retake"].includes(operation) ? { video: ref(sourceVideoPath) } : void 0;
   return {
@@ -113436,8 +113459,8 @@ function tool(name, description, schema2, readOnly = false) {
 var NATIVE_GENAI_TOOLS = [
   tool(
     "astra_genai_catalog",
-    "Read configured gateway models and native schemas. Use video for the general /v1/models catalog (including LTX/MSR); desktop_video for Desktop models, which requires a configured Desktop. image/speech read their respective models, loras/contracts are Desktop-only. Desktop can use ASTRA_GENAI_DESKTOP_URL with its gateway credential. Configuration discovery is not an inference health check. Select the returned model alias; never infer a runtime or fall back to a different engine.",
-    external_exports.object({ kind: external_exports.enum(["image", "speech", "video", "desktop_video", "loras", "contracts"]) }).strict(),
+    "Read configured gateway models and native schemas. Use video for the general /v1/models catalog (including LTX/MSR); ltx_video for per-pipeline sampling controls and registered LoRAs on updated gateways; desktop_video for Desktop models, which requires a configured Desktop. image/speech read their respective models, loras/contracts are Desktop-only. Desktop can use ASTRA_GENAI_DESKTOP_URL with its gateway credential. Configuration discovery is not an inference health check. Select the returned model alias; never infer a runtime or fall back to a different engine.",
+    external_exports.object({ kind: external_exports.enum(["image", "speech", "video", "ltx_video", "desktop_video", "loras", "contracts"]) }).strict(),
     true
   ),
   tool("astra_genai_image_generate", "Generate one PNG with the configured gateway model alias. Use image_plan/image_execute with engine astra-genai-native and explicit reserveUsd. Optional registered LoRA IDs/scales; consult image catalog for model constraints. No reference images on text requests. Returns verified local output; retain the receipt after errors. Use GPT Image 2 for readable text.", nativeImageSchema),
@@ -113455,2151 +113478,11 @@ var NATIVE_GENAI_TOOLS = [
   )
 ];
 
-// src/astra-genai-video.ts
-import { createHash as createHash10 } from "node:crypto";
-import * as fs12 from "node:fs";
-import * as path11 from "node:path";
-import { execFileSync as execFileSync8 } from "node:child_process";
-
-// src/astra-genai-upload.ts
-import { createHash as createHash9 } from "node:crypto";
-import { execFileSync as execFileSync7 } from "node:child_process";
-import * as fs11 from "node:fs";
-import * as os2 from "node:os";
-import * as path10 from "node:path";
-var GENAI_FILE_SCHEME = "genai-file://";
-var genaiUploadSettings = { attempts: 4, retryDelayMs: 2e3, chunkTimeoutMs: 12e4 };
-var UPLOAD_TYPES = /* @__PURE__ */ new Set(["image/png", "image/jpeg", "audio/wav", "audio/mpeg", "audio/mp4", "audio/ogg"]);
-var UPLOAD_MAX_BYTES = 32 * 1024 * 1024;
-var GENAI_FILE_GONE = /genai-file not found or expired/;
-var sessionSchema = external_exports.object({
-  upload_id: external_exports.string().min(1),
-  chunk_size: external_exports.number().int().positive().max(5 * 1024 * 1024),
-  chunks: external_exports.number().int().positive()
-}).passthrough();
-var fileSchema = external_exports.object({ file_id: external_exports.string().min(1), uri: external_exports.string().startsWith(GENAI_FILE_SCHEME), expires_at: external_exports.string().optional() }).passthrough();
-var statusSchema = external_exports.object({ missing: external_exports.array(external_exports.number().int().nonnegative()) }).passthrough();
-async function call(method, route, body, headers2 = {}, timeoutMs = 6e4) {
-  const key = requireAstraGenaiKey(route);
-  const raw = Buffer.isBuffer(body);
-  const response = await fetch(astraGenaiBaseUrl(route) + route, {
-    method,
-    redirect: "error",
-    signal: AbortSignal.timeout(timeoutMs),
-    headers: { Authorization: `Bearer ${key}`, ...body === void 0 ? {} : { "Content-Type": raw ? "application/octet-stream" : "application/json" }, ...headers2 },
-    ...body === void 0 ? {} : { body: raw ? new Uint8Array(body) : JSON.stringify(body) }
-  });
-  const text4 = await response.text();
-  if (!response.ok) throw new GenaiRequestError(
-    `ASTRA GenAI HTTP ${response.status}: ${text4.replaceAll(key, "[redacted]").slice(0, 2e3)}`,
-    response.status >= 400 && response.status < 500 && ![408, 409, 425, 429].includes(response.status),
-    response.status
-  );
-  try {
-    return text4 ? JSON.parse(text4) : {};
-  } catch {
-    throw new Error(`ASTRA GenAI ${route} returned a non-JSON response`);
-  }
-}
-async function retried(step, final = []) {
-  for (let attempt = 1; ; attempt++) {
-    try {
-      return await step();
-    } catch (error2) {
-      const transient = !(error2 instanceof GenaiRequestError) || !final.includes(error2.httpStatus) && (error2.httpStatus >= 500 || [408, 425, 429].includes(error2.httpStatus));
-      if (!transient || attempt >= genaiUploadSettings.attempts) throw error2;
-      await new Promise((resolve14) => setTimeout(resolve14, genaiUploadSettings.retryDelayMs * attempt));
-    }
-  }
-}
-var uploaded = /* @__PURE__ */ new Map();
-function forgetGenaiUploads() {
-  uploaded.clear();
-}
-function genaiUploadable(bytes, contentType) {
-  return UPLOAD_TYPES.has(contentType) && bytes.length <= UPLOAD_MAX_BYTES;
-}
-var FALL_BACK = [404, 405, 429, 507];
-async function uploadGenaiFile(bytes, contentType) {
-  if (!genaiUploadable(bytes, contentType)) return void 0;
-  const sha2563 = createHash9("sha256").update(bytes).digest("hex");
-  const cacheKey = `${astraGenaiBaseUrl()} ${sha2563}`, cached2 = uploaded.get(cacheKey);
-  if (cached2 && cached2.expiresAt > Date.now() + 60 * 6e4) return cached2.uri;
-  for (let attempt = 1; ; attempt++) {
-    try {
-      return await uploadOnce(bytes, contentType, sha2563, cacheKey);
-    } catch (error2) {
-      if (error2 instanceof Restart && attempt < 2) continue;
-      throw error2 instanceof Restart ? error2.original : error2;
-    }
-  }
-}
-var Restart = class extends Error {
-  constructor(original) {
-    super("restart upload");
-    this.original = original;
-  }
-  original;
-};
-async function uploadOnce(bytes, contentType, sha2563, cacheKey) {
-  let session;
-  try {
-    session = sessionSchema.parse(await retried(() => call("POST", "/v1/uploads", { size: bytes.length, sha256: sha2563, content_type: contentType }), FALL_BACK));
-  } catch (error2) {
-    if (error2 instanceof GenaiRequestError && FALL_BACK.includes(error2.httpStatus)) return void 0;
-    throw error2;
-  }
-  if (session.chunks !== Math.ceil(bytes.length / session.chunk_size)) throw new Error("GenAI upload session chunk count does not match the file size");
-  const route = `/v1/uploads/${encodeURIComponent(session.upload_id)}`;
-  const put2 = (n) => retried(() => {
-    const chunk3 = bytes.subarray(n * session.chunk_size, (n + 1) * session.chunk_size);
-    return call("PUT", `${route}/chunks/${n}`, chunk3, { "X-Chunk-SHA256": createHash9("sha256").update(chunk3).digest("hex") }, genaiUploadSettings.chunkTimeoutMs);
-  });
-  for (let n = 0; n < session.chunks; n++) await put2(n);
-  const complete = async () => {
-    try {
-      return await retried(() => call("POST", `${route}/complete`));
-    } catch (error2) {
-      throw error2 instanceof GenaiRequestError && error2.httpStatus === 422 ? new Restart(error2) : error2;
-    }
-  };
-  let done;
-  try {
-    done = await complete();
-  } catch (error2) {
-    if (!(error2 instanceof GenaiRequestError) || error2.httpStatus !== 409) throw error2;
-    for (const n of statusSchema.parse(await retried(() => call("GET", route))).missing) await put2(n);
-    done = await complete();
-  }
-  const file = fileSchema.parse(done);
-  const expiresAt = file.expires_at ? Date.parse(file.expires_at) : NaN;
-  if (Number.isFinite(expiresAt)) uploaded.set(cacheKey, { uri: file.uri, expiresAt });
-  return file.uri;
-}
-function shrinkImageToFit(bytes, width, height) {
-  const meta = imageMetadata(bytes);
-  if (meta.width <= width && meta.height <= height) return bytes;
-  const ext = meta.mimeType === "image/png" ? ".png" : meta.mimeType === "image/jpeg" ? ".jpg" : void 0;
-  if (!ext) return bytes;
-  const dir = fs11.mkdtempSync(path10.join(os2.tmpdir(), "genai-shrink-"));
-  try {
-    const input = path10.join(dir, `in${ext}`), output2 = path10.join(dir, `out${ext}`);
-    fs11.writeFileSync(input, bytes);
-    execFileSync7("ffmpeg", [
-      "-v",
-      "error",
-      "-y",
-      "-i",
-      input,
-      "-vf",
-      `scale=${width}:${height}:force_original_aspect_ratio=decrease:flags=lanczos`,
-      "-frames:v",
-      "1",
-      ...ext === ".jpg" ? ["-q:v", "2"] : [],
-      output2
-    ], { timeout: 6e4, stdio: "pipe" });
-    const shrunk = fs11.readFileSync(output2), out = imageMetadata(shrunk);
-    return out.mimeType === meta.mimeType && out.width <= width && out.height <= height ? shrunk : bytes;
-  } catch {
-    return bytes;
-  } finally {
-    fs11.rmSync(dir, { recursive: true, force: true });
-  }
-}
-
-// src/astra-genai-video.ts
-var GENAI_VIDEO_MODELS = ["ltx-2.5-22b-distilled", "ltx-2.5-22b-dev"];
-function genaiV2Resolution(saved) {
-  return saved;
-}
-var localResolution = external_exports.string().regex(/^[1-9]\d*x[1-9]\d*$/).refine((value) => {
-  const [w, h2] = value.split("x").map(Number), width = Math.ceil(w / 64) * 64, height = Math.ceil(h2 / 64) * 64;
-  return Number.isSafeInteger(w) && Number.isSafeInteger(h2) && Math.min(w, h2) >= 64 && w % 2 === 0 && h2 % 2 === 0 && Math.max(width, height) <= 1920 && width * height <= 2064384;
-}, "Use even WIDTHxHEIGHT sides of at least 64; rounded-up /64 sides must fit 1920 and 2,064,384 pixels");
-var msrGuidanceFields = {
-  guidanceScale: external_exports.number().finite().min(1).max(10).optional(),
-  nagScale: external_exports.number().finite().min(0).max(100).optional(),
-  nagAlpha: external_exports.number().finite().min(0).max(1).optional(),
-  nagTau: external_exports.number().finite().min(0).max(10).optional()
-};
-function msrNegativeRule(args, issue2) {
-  if ((args.nagScale ?? 0) > 0 && args.negativePrompt === void 0)
-    issue2("MSR nagScale > 0 requires negativePrompt");
-  if (args.negativePrompt !== void 0 && (args.guidanceScale ?? 1) <= 1 && (args.nagScale ?? 0) === 0)
-    issue2("MSR negativePrompt requires guidanceScale > 1 or nagScale > 0");
-}
-function negativeBody(args) {
-  return {
-    ...args.negativePrompt === void 0 ? {} : { negative_prompt: args.negativePrompt },
-    ...args.guidanceScale === void 0 ? {} : { guidance_scale: args.guidanceScale },
-    ...(args.nagScale ?? 0) > 0 ? {
-      nag_scale: args.nagScale,
-      ...args.nagAlpha === void 0 ? {} : { nag_alpha: args.nagAlpha },
-      ...args.nagTau === void 0 ? {} : { nag_tau: args.nagTau }
-    } : {}
-  };
-}
-function devNegativeRule(args, ctx) {
-  if (args.negativePrompt === void 0) return;
-  const issue2 = (message) => ctx.addIssue({ code: "custom", path: ["negativePrompt"], message });
-  if (args.model !== "ltx-2.5-22b-dev") issue2("negativePrompt requires ltx-2.5-22b-dev, or image-to-video references with guidanceScale > 1 or nagScale > 0");
-  if (args.negativePrompt.length > 2e3) issue2("The dev backend accepts a negativePrompt of at most 2000 characters");
-}
-var genaiShotsSchema = external_exports.array(external_exports.object({
-  description: external_exports.string().trim().min(1).max(2e3),
-  audio: external_exports.string().trim().min(1).max(2e3).optional(),
-  transition: external_exports.literal("hard_cut").optional()
-}).strict()).min(2).max(4).refine((shots) => !shots[0].transition, "Omit transition on the opening shot");
-var textVideoFields = external_exports.object({
-  prompt: external_exports.string().min(1).max(2e3),
-  negativePrompt: external_exports.string().trim().min(1).max(5e3).optional(),
-  model: external_exports.enum(GENAI_VIDEO_MODELS),
-  duration: external_exports.number().int().min(1).nullable(),
-  resolution: localResolution,
-  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
-  generateAudio: external_exports.boolean().default(true),
-  shots: genaiShotsSchema.optional(),
-  reserveUsd: external_exports.number().finite().nonnegative(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
-}).strict();
-function localVideoTiming(args, ctx) {
-  if (args.shots) {
-    const joined = [openingPrompt(args.prompt, args.openingPositions), ...args.shots.flatMap((shot, i2) => [
-      (i2 ? "A hard cut moves to " : "The opening shot shows ") + shot.description,
-      ...shot.audio ? ["Audio: " + shot.audio] : []
-    ])].join("\n\n");
-    if (joined.length > 2e3) ctx.addIssue({ code: "custom", path: ["shots"], message: "Composed gateway prompt exceeds 2000 characters" });
-  }
-  if (args.duration !== null && 8 * Math.ceil((args.duration * args.fps - 1) / 8) + 1 > 361)
-    ctx.addIssue({ code: "custom", path: ["duration"], message: "Duration and fps exceed the local 361-frame limit" });
-}
-var genaiTextToVideoSchema = textVideoFields.superRefine((args, ctx) => {
-  localVideoTiming(args, ctx);
-  devNegativeRule(args, ctx);
-});
-var msrReferences = external_exports.array(external_exports.object({
-  imageUri: genaiImageUriSchema.optional(),
-  imagePath: external_exports.string().min(1).optional(),
-  background: external_exports.boolean().default(false),
-  nonCharacter: external_exports.boolean().optional(),
-  // Voice sample for this subject; the gateway pairs it with the same picture slot.
-  audioUri: external_exports.string().min(1).optional(),
-  audioPath: external_exports.string().min(1).optional()
-}).strict().refine(
-  (ref) => Number(!!ref.imageUri) + Number(!!ref.imagePath) === 1,
-  "Supply exactly one imageUri or imagePath"
-).refine((ref) => oneOf(ref.audioUri, ref.audioPath) <= 1, "Supply at most one audioUri or audioPath")).min(1).max(5);
-function validateVoiceSlots(references, issue2) {
-  let subject = 0;
-  for (const ref of references) {
-    subject += Number(!ref.background);
-    if (!oneOf(ref.audioUri, ref.audioPath)) continue;
-    if (ref.background) issue2("MSR voice samples belong to subjects, not the background");
-    else if (subject > 2) issue2("MSR voice samples fit the first two subjects only");
-  }
-}
-var genaiImageToVideoSchema = textVideoFields.extend({
-  imageUri: genaiImageUriSchema.optional(),
-  imagePath: external_exports.string().min(1).optional(),
-  lastFrameUri: genaiImageUriSchema.nullable().optional(),
-  lastFramePath: external_exports.string().min(1).optional(),
-  references: msrReferences.optional(),
-  openingPositions: openingPositionsSchema.optional(),
-  ...msrGuidanceFields
-}).strict().superRefine((args, ctx) => {
-  const issue2 = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-  localVideoTiming(args, ctx);
-  if (args.duration === null && (args.lastFrameUri != null || args.lastFramePath !== void 0))
-    issue2("A last frame requires an explicit duration");
-  if (Number(args.imageUri !== void 0) + Number(args.imagePath !== void 0) !== 1) issue2("Supply exactly one imageUri or imagePath");
-  if (args.lastFrameUri != null && args.lastFramePath !== void 0) issue2("Supply at most one lastFrameUri or lastFramePath");
-  if (!args.references) {
-    if (args.openingPositions !== void 0) issue2("openingPositions requires MSR references");
-    if (Object.keys(msrGuidanceFields).some((key) => args[key] !== void 0))
-      issue2("guidanceScale and NAG require references (MSR conditioning); ltx-2.5-22b-dev already runs guided");
-    devNegativeRule(args, ctx);
-  } else {
-    validateOpening(args.prompt, args.openingPositions, args.references, issue2);
-    validateVoiceSlots(args.references, issue2);
-    msrNegativeRule(args, issue2);
-    if (args.model !== "ltx-2.5-22b-distilled") issue2("Additional references require ltx-2.5-22b-distilled (MSR conditioning)");
-    if (args.duration === null) issue2("Additional references require an explicit duration");
-    const backgrounds = args.references.filter((ref) => ref.background).length;
-    if (backgrounds > 1 || args.references.length - backgrounds > 4 || backgrounds === args.references.length)
-      issue2("References require 1..4 subjects and at most one background");
-  }
-});
-var GENAI_AUDIO_TYPES = { ".wav": "audio/wav", ".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".ogg": "audio/ogg", ".opus": "audio/ogg" };
-var GENAI_AUDIO_DATA_URI_MAX = 15e6;
-var oneOf = (a, b) => Number(a !== void 0) + Number(b !== void 0);
-var genaiAudioToVideoSchema = external_exports.object({
-  prompt: external_exports.string().trim().min(1).max(2e3),
-  negativePrompt: external_exports.string().trim().min(1).max(2e3).optional(),
-  model: external_exports.literal("ltx-2.5-22b-dev"),
-  resolution: localResolution,
-  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
-  audioPath: external_exports.string().min(1).optional(),
-  audioUri: external_exports.string().min(1).optional(),
-  imagePath: external_exports.string().min(1).optional(),
-  imageUri: genaiImageUriSchema.optional(),
-  lastFramePath: external_exports.string().min(1).optional(),
-  lastFrameUri: genaiImageUriSchema.optional(),
-  reserveUsd: external_exports.number().finite().nonnegative(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
-}).strict().superRefine((args, ctx) => {
-  const issue2 = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-  if (oneOf(args.audioPath, args.audioUri) !== 1) issue2("Supply exactly one audioPath or audioUri");
-  if (oneOf(args.imagePath, args.imageUri) > 1) issue2("Supply at most one imagePath or imageUri");
-  if (oneOf(args.lastFramePath, args.lastFrameUri) > 1) issue2("Supply at most one lastFramePath or lastFrameUri");
-  if (oneOf(args.lastFramePath, args.lastFrameUri) && !oneOf(args.imagePath, args.imageUri)) issue2("A last frame requires a first image");
-});
-function genaiAudioUri(uri, file) {
-  if (uri !== void 0) {
-    if (/^https:/.test(uri)) {
-      const url = new URL(uri);
-      if (url.username || url.password) throw new Error("GenAI audio URL must not carry credentials");
-      return uri;
-    }
-    const match2 = /^data:([^;,]+);base64,([A-Za-z0-9+/]+=*)$/.exec(uri);
-    if (!match2 || !Object.values(GENAI_AUDIO_TYPES).includes(match2[1])) throw new Error("GenAI audio must be HTTPS or an audio/wav, audio/mpeg, audio/mp4 or audio/ogg data URI");
-    if (match2[2].length > GENAI_AUDIO_DATA_URI_MAX) throw new Error("GenAI audio data URI exceeds 15,000,000 base64 characters; use an HTTPS URL");
-    return uri;
-  }
-  const type = GENAI_AUDIO_TYPES[path11.extname(file).toLowerCase()];
-  if (!type) throw new Error("GenAI audioPath must be .wav, .mp3, .m4a, .ogg or .opus");
-  if (4 * Math.ceil(fs12.statSync(file).size / 3) > GENAI_AUDIO_DATA_URI_MAX) throw new Error("GenAI audioPath exceeds the 15,000,000-character data URI limit (about 11.25 MB); use audioUri with HTTPS");
-  return `data:${type};base64,${fs12.readFileSync(file).toString("base64")}`;
-}
-function buildGenaiAudioBody(args) {
-  const image2 = oneOf(args.imagePath, args.imageUri) ? genaiSourceUri(args.imageUri, args.imagePath) : void 0;
-  const last = oneOf(args.lastFramePath, args.lastFrameUri) ? genaiSourceUri(args.lastFrameUri, args.lastFramePath) : void 0;
-  return {
-    audio_uri: genaiAudioUri(args.audioUri, args.audioPath),
-    prompt: args.prompt,
-    model: args.model,
-    resolution: args.resolution,
-    fps: args.fps,
-    ...image2 === void 0 ? {} : { image_uri: image2 },
-    ...last === void 0 ? {} : { last_frame_uri: last },
-    ...negativeBody({ negativePrompt: args.negativePrompt })
-  };
-}
-var GENAI_MSR_FRAMES = { min: 25, max: 361, step: 8, frameRate: 24 };
-var genaiMsrSchema = external_exports.object({
-  prompt: external_exports.string().trim().min(1).max(2e3),
-  negativePrompt: external_exports.string().trim().min(1).max(5e3).optional(),
-  ...msrGuidanceFields,
-  references: msrReferences,
-  openingPositions: openingPositionsSchema,
-  referenceStrength: external_exports.number().finite().min(0).max(1).default(1),
-  referenceFrames: external_exports.union([external_exports.literal(25), external_exports.literal(33)]).default(33),
-  width: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1536),
-  height: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1024),
-  numFrames: external_exports.number().int().min(GENAI_MSR_FRAMES.min).max(GENAI_MSR_FRAMES.max).refine((n) => (n - 1) % GENAI_MSR_FRAMES.step === 0).optional(),
-  duration: external_exports.number().finite().gt(0).max(360).optional(),
-  frameRate: external_exports.number().finite().min(1).max(60).default(24),
-  seed: external_exports.number().int().min(0).max(2147483647).default(42),
-  reserveUsd: external_exports.number().finite().nonnegative(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use a .mp4 filename").optional()
-}).strict().superRefine((args, ctx) => {
-  const issue2 = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-  validateOpening(args.prompt, args.openingPositions, args.references, issue2);
-  msrNegativeRule(args, issue2);
-  const backgrounds = args.references.filter((ref) => ref.background).length;
-  if (backgrounds > 1 || args.references.length - backgrounds > 4) issue2("MSR supports at most four subjects and one background");
-  validateVoiceSlots(args.references, issue2);
-  if (args.width * args.height > 2064384) issue2("MSR maximum is 2,064,384 pixels");
-  if (args.duration !== void 0) {
-    if (args.numFrames !== void 0) issue2("Omit numFrames when using duration");
-    const frames = 1 + 8 * Math.ceil((args.duration * args.frameRate - 1) / 8 - 0.5 - 1e-9);
-    if (frames < GENAI_MSR_FRAMES.min || frames > GENAI_MSR_FRAMES.max) issue2("MSR duration must round to 25..361 frames");
-  }
-});
-function referenceBody(ref) {
-  return {
-    image_uri: genaiSourceUri(ref.imageUri, ref.imagePath),
-    background: ref.background,
-    ...ref.audioUri || ref.audioPath ? { audio_uri: genaiAudioUri(ref.audioUri, ref.audioPath) } : {}
-  };
-}
-function buildGenaiMsrBody(args) {
-  return {
-    prompt: openingPrompt(args.prompt, args.openingPositions),
-    ...negativeBody(args),
-    references: args.references.map(referenceBody),
-    reference_strength: args.referenceStrength,
-    reference_frames: args.referenceFrames,
-    width: args.width,
-    height: args.height,
-    frame_rate: args.frameRate,
-    seed: args.seed,
-    ...args.duration === void 0 ? { num_frames: args.numFrames ?? 121 } : { duration: args.duration }
-  };
-}
-var msrVoiceCache;
-async function refreshGenaiMsrVoice(force = false) {
-  if (!force && msrVoiceCache && Date.now() - msrVoiceCache.at < msrVoiceCache.ttl) return msrVoiceCache.value;
-  let value = false, ttl = 6e4;
-  try {
-    const body = external_exports.object({ voice_references: external_exports.boolean() }).passthrough().parse(await requestGenai("GET", "/v1/ltx/msr/capabilities", void 0, 15e3));
-    value = body.voice_references;
-    ttl = 6e5;
-  } catch {
-  }
-  msrVoiceCache = { value, at: Date.now(), ttl };
-  return value;
-}
-function genaiMsrVoiceReferences() {
-  return msrVoiceCache?.value ?? false;
-}
-function buildGenaiVideoBody(args) {
-  return {
-    prompt: openingPrompt(args.prompt, args.openingPositions),
-    model: args.model,
-    duration: args.duration,
-    resolution: args.resolution,
-    fps: args.fps,
-    generate_audio: args.generateAudio,
-    ...args.shots ? { shots: args.shots } : {},
-    // Local frames travel as checked data URIs, like MSR and audio-to-video.
-    ...args.imageUri === void 0 && args.imagePath === void 0 ? {} : { image_uri: genaiSourceUri(args.imageUri, args.imagePath) },
-    ...args.lastFramePath !== void 0 ? { last_frame_uri: genaiSourceUri(void 0, args.lastFramePath) } : args.lastFrameUri === void 0 ? {} : { last_frame_uri: args.lastFrameUri === null ? null : genaiSourceUri(args.lastFrameUri) },
-    ...args.references === void 0 ? {} : { references: args.references.map(referenceBody) },
-    ...negativeBody(args)
-  };
-}
-var operationSchema = external_exports.enum(["text-to-video", "image-to-video", "audio-to-video", "msr"]);
-var receiptSchema2 = external_exports.object({
-  version: external_exports.literal(1),
-  baseUrl: external_exports.string(),
-  operation: operationSchema,
-  fingerprint: external_exports.string(),
-  videoPath: external_exports.string(),
-  jobId: external_exports.string().min(1).optional(),
-  status: external_exports.enum(["submitting", "submitted", "completed"]),
-  sha256: external_exports.string().optional()
-}).strict();
-var statusSchema2 = external_exports.object({
-  id: external_exports.string().min(1),
-  status: external_exports.enum(["pending", "processing", "completed", "failed", "cancelled"]),
-  result: external_exports.object({ video_url: external_exports.string().min(1).optional() }).passthrough().nullish(),
-  error: external_exports.unknown().optional()
-}).passthrough();
-var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
-async function getGenaiVideoStatus(input) {
-  const receipt = receiptSchema2.parse(JSON.parse(fs12.readFileSync(input.receiptPath, "utf8")));
-  if (receipt.baseUrl !== astraGenaiBaseUrl()) throw new Error("GenAI receipt belongs to a different server; restore ASTRA_GENAI_URL before recovery.");
-  if (!receipt.jobId) throw new Error("GenAI submission identity is unknown; inspect server usage before retrying.");
-  if (receipt.status === "completed") {
-    const bytes2 = fs12.readFileSync(receipt.videoPath);
-    if (createHash10("sha256").update(bytes2).digest("hex") !== receipt.sha256) throw new Error("GenAI cached output changed");
-    return { jobId: receipt.jobId, status: "completed", videoPath: receipt.videoPath, downloaded: true, review: "not_reviewed" };
-  }
-  const route = `${genaiVideoRoute(receipt.operation)}/${encodeURIComponent(receipt.jobId)}`;
-  const job = statusSchema2.parse(await requestGenai("GET", route));
-  if (job.id !== receipt.jobId) throw new Error("GenAI status job ID mismatch");
-  if (job.status === "failed" || job.status === "cancelled") throw new GenaiRequestError(`GenAI video ${receipt.jobId} ${job.status}: ${JSON.stringify(job.error ?? "No details").slice(0, 1e3)}`, true, 200);
-  if (job.status !== "completed" || !input.download)
-    return { jobId: receipt.jobId, status: job.status, downloaded: false, review: "not_reviewed" };
-  if (!job.result?.video_url) throw new Error("GenAI completed without result.video_url; retain the receipt, do not resubmit.");
-  let bytes;
-  if (job.result.authentication === "same GatewayToken required") {
-    const url = new URL(job.result.video_url, astraGenaiBaseUrl() + "/");
-    if (url.origin !== new URL(astraGenaiBaseUrl()).origin || url.username || url.password || url.search || url.hash || !/^\/v1\/ltx\/desktop\/assets\/[A-Za-z0-9_-]+\/bytes$/.test(url.pathname))
-      throw new Error("Invalid private GenAI video URL; retain receipt");
-    bytes = await requestGenaiMedia(url.pathname, void 0, route);
-  } else bytes = await downloadGenaiResult(job.result.video_url);
-  if (bytes.length < 12 || bytes.toString("ascii", 4, 8) !== "ftyp") throw new Error("GenAI result is not MP4");
-  const temp = `${receipt.videoPath}.${process.pid}.download.mp4`;
-  try {
-    fs12.writeFileSync(temp, bytes, { flag: "wx", mode: 384 });
-    const probe5 = JSON.parse(execFileSync8("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height:format=duration", "-of", "json", temp], { encoding: "utf8", timeout: 3e4 }));
-    if (!(probe5.streams?.[0]?.width > 0) || !(Number(probe5.format?.duration) > 0)) throw new Error("GenAI result has no usable video stream");
-    if (fs12.existsSync(receipt.videoPath)) {
-      if (createHash10("sha256").update(fs12.readFileSync(receipt.videoPath)).digest("hex") !== createHash10("sha256").update(bytes).digest("hex"))
-        throw new Error("GenAI video output conflicts with download");
-    } else fs12.linkSync(temp, receipt.videoPath);
-    atomicJson(input.receiptPath, { ...receipt, status: "completed", sha256: createHash10("sha256").update(bytes).digest("hex") });
-  } finally {
-    fs12.rmSync(temp, { force: true });
-  }
-  return { jobId: receipt.jobId, status: "completed", videoPath: receipt.videoPath, downloaded: true, review: "not_reviewed" };
-}
-var GENAI_MSR_INLINE_MAX_BYTES = 8 * 1e3 * 1e3;
-async function prepareGenaiMsrSources(body) {
-  const size = /^(\d+)x(\d+)$/.exec(body.resolution ?? "");
-  const width = body.width ?? Number(size?.[1]), height = body.height ?? Number(size?.[2]);
-  let supported = true;
-  const send = async (uri, shrink) => {
-    const match2 = /^data:([^;,]+);base64,(.*)$/s.exec(uri);
-    if (!match2) return uri;
-    const bytes2 = shrink && width > 0 && height > 0 ? shrinkImageToFit(Buffer.from(match2[2], "base64"), width, height) : Buffer.from(match2[2], "base64");
-    const uploadable = supported && genaiUploadable(bytes2, match2[1]);
-    const id = uploadable ? await uploadGenaiFile(bytes2, match2[1]) : void 0;
-    if (uploadable && id === void 0) supported = false;
-    return id ?? `data:${match2[1]};base64,${bytes2.toString("base64")}`;
-  };
-  const references = [];
-  for (const ref of body.references) references.push({
-    ...ref,
-    image_uri: await send(ref.image_uri, true),
-    ..."audio_uri" in ref && typeof ref.audio_uri === "string" ? { audio_uri: await send(ref.audio_uri, false) } : {}
-  });
-  const prepared = {
-    ...body,
-    references,
-    ...body.image_uri === void 0 ? {} : { image_uri: await send(body.image_uri, false) },
-    ...body.last_frame_uri == null ? {} : { last_frame_uri: await send(body.last_frame_uri, false) }
-  };
-  const bytes = Buffer.byteLength(JSON.stringify(prepared));
-  if (bytes > GENAI_MSR_INLINE_MAX_BYTES)
-    throw new Error(`msr_body_too_large: the gateway did not take the chunked upload and the inline request is ${(bytes / 1e6).toFixed(1)} MB (limit 8 MB); nothing was submitted. Try again later, or use a shorter voice sample.`);
-  return prepared;
-}
-var SUBMIT_TIMEOUT_MS = 15 * 6e4;
-function genaiVideoRoute(operation) {
-  return operation === "msr" ? "/v1/ltx/msr" : `/v1/ltx/v2/${operation}`;
-}
-async function generateGenaiVideo(operation, input) {
-  const args = (operation === "msr" ? genaiMsrSchema : operation === "audio-to-video" ? genaiAudioToVideoSchema : operation === "text-to-video" ? genaiTextToVideoSchema : genaiImageToVideoSchema).parse(input);
-  requireAstraGenaiKey();
-  const body = operation === "msr" ? buildGenaiMsrBody(args) : operation === "audio-to-video" ? buildGenaiAudioBody(args) : buildGenaiVideoBody(args);
-  const usesReferences = "references" in body && Array.isArray(body.references) && body.references.length > 0;
-  const fingerprint = createHash10("sha256").update(JSON.stringify(body)).digest("hex");
-  const videoPath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.mp4`, "video");
-  const receiptPath2 = videoPath + ".astra-genai.json";
-  if (fs12.existsSync(receiptPath2)) {
-    const previous = receiptSchema2.parse(JSON.parse(fs12.readFileSync(receiptPath2, "utf8")));
-    if (previous.baseUrl !== astraGenaiBaseUrl() || previous.operation !== operation || previous.fingerprint !== fingerprint || previous.videoPath !== videoPath)
-      throw new Error("GenAI output receipt conflicts with this request; use a distinct output path.");
-    if (!previous.jobId) throw new Error("GenAI submission identity is unknown; inspect usage before retrying.");
-    recordVideoSubmission(previous.jobId);
-  } else {
-    if (fs12.existsSync(videoPath)) throw new Error("GenAI output already exists");
-    if (operation === "image-to-video" && usesReferences) {
-      let capabilities;
-      try {
-        capabilities = external_exports.object({ image_conditioning: external_exports.boolean().optional(), voice_references: external_exports.boolean().optional() }).passthrough().parse(await requestGenai("GET", "/v1/ltx/msr/capabilities", void 0, 15e3));
-      } catch {
-        throw new GenaiRequestError("image_references_capability_unavailable: cannot verify combined image conditioning before submission; no generation was requested", true, 503);
-      }
-      if (capabilities.image_conditioning !== true)
-        throw new GenaiRequestError("image_references_unsupported: the GenAI backend does not advertise combined start/end frames and subject references; no request was submitted", true, 422);
-      if (body.references.some((ref) => ref.audio_uri) && capabilities.voice_references !== true)
-        throw new GenaiRequestError("msr_voice_unsupported: the GenAI MSR backend does not accept voice samples", true, 422);
-    }
-    const msrArgs = operation === "msr" || usesReferences ? args : void 0;
-    if (msrArgs && (msrArgs.negativePrompt !== void 0 || (msrArgs.guidanceScale ?? 1) > 1)) {
-      const capabilities = external_exports.object({ negative_prompt: external_exports.boolean().optional(), nag: external_exports.boolean().optional() }).passthrough().parse(await requestGenai("GET", "/v1/ltx/msr/capabilities", void 0, 15e3));
-      if ((msrArgs.nagScale ?? 0) > 0 && capabilities.nag !== true)
-        throw new Error("msr_nag_unsupported: the GenAI MSR backend does not advertise NAG; no request was submitted");
-      if (capabilities.negative_prompt !== true)
-        throw new Error("msr_negative_unsupported: the GenAI MSR backend does not advertise negative conditioning; no request was submitted");
-    }
-    if (operation === "msr" && args.references.some((ref) => oneOf(ref.audioUri, ref.audioPath)) && !await refreshGenaiMsrVoice(true))
-      throw new Error("msr_voice_unsupported: the GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities)");
-    const submitted = usesReferences ? await prepareGenaiMsrSources(body) : body;
-    const receipt = { version: 1, baseUrl: astraGenaiBaseUrl(), operation, fingerprint, videoPath, status: "submitting" };
-    fs12.writeFileSync(receiptPath2, JSON.stringify(receipt), { flag: "wx", mode: 384 });
-    let response;
-    try {
-      try {
-        response = await requestGenai("POST", genaiVideoRoute(operation), submitted, SUBMIT_TIMEOUT_MS);
-      } catch (error2) {
-        if (!JSON.stringify(submitted).includes(GENAI_FILE_SCHEME) || !(error2 instanceof GenaiRequestError && error2.httpStatus === 400 && GENAI_FILE_GONE.test(error2.message))) throw error2;
-        forgetGenaiUploads();
-        let again;
-        try {
-          again = await prepareGenaiMsrSources(body);
-        } catch (uploadError) {
-          fs12.rmSync(receiptPath2, { force: true });
-          throw uploadError;
-        }
-        response = await requestGenai("POST", genaiVideoRoute(operation), again, SUBMIT_TIMEOUT_MS);
-      }
-    } catch (error2) {
-      if (error2 instanceof GenaiRequestError && error2.terminal) fs12.rmSync(receiptPath2, { force: true });
-      throw error2;
-    }
-    const accepted = external_exports.object({ id: external_exports.string().min(1) }).passthrough().parse(response);
-    atomicJson(receiptPath2, { ...receipt, jobId: accepted.id, status: "submitted" });
-    recordVideoSubmission(accepted.id);
-  }
-  const result = await pollGenaiJob(
-    () => getGenaiVideoStatus({ receiptPath: receiptPath2, download: true }),
-    `GenAI video is still pending; recover using receiptPath ${receiptPath2}, never resubmit.`
-  );
-  return { ...result, receiptPath: receiptPath2 };
-}
-
-// src/astra-genai-tools.ts
-var openingPositionsProperty = zodToJsonSchema(openingPositionsSchema, { target: "openApi3" });
-var subjectVoice = {
-  nonCharacter: { type: "boolean", description: "Set true for an object or prop reference with no character. Character panels belong in openingPositions." },
-  audioPath: { type: "string", description: "Local voice sample (wav, mp3, m4a, ogg) for this subject; subjects 1 and 2 only. Voice only, no background sound." },
-  audioUri: { type: "string", description: "HTTPS or audio data URI voice sample, instead of audioPath." }
-};
-var output = {
-  outputPath: { type: "string", description: "Local output directory; configured production keeps outputs inside its episode/workspace." },
-  filename: { type: "string", description: "Bare output filename (.mp4 for video, .png for image). Reuse its receipt after interruption; never overwrite existing media." }
-};
-var msrGuidance = {
-  guidanceScale: { type: "number", minimum: 1, maximum: 10, description: "Classifier-free guidance; omitted keeps gateway default 1. Values above 1 require backend negative conditioning support and change distilled sampling." },
-  nagScale: { type: "number", minimum: 0, maximum: 100, description: "Video-only normalized attention guidance. Omitted or 0 disables NAG; a positive value requires negativePrompt and live backend nag support. Example 11 is experimental, not a subtitle-free guarantee; works at CFG 1." },
-  nagAlpha: { type: "number", minimum: 0, maximum: 1, description: "NAG mixing coefficient; gateway default 0.25. Sent only when nagScale > 0." },
-  nagTau: { type: "number", minimum: 0, maximum: 10, description: "NAG clipping threshold; gateway default 2.5. Sent only when nagScale > 0." }
-};
-var devNegative = "Negative conditioning, e.g. has_subtitles, captions, text overlays. Omit it to keep the engine default negative, which starts with has_subtitles, has_blurbox and continues with quality terms (ltx_pipelines 1.6.0); a supplied value replaces that default, so repeat the terms still wanted. At most 2000 characters on ltx-2.5-22b-dev. Not a subtitle-free guarantee; inspect the clip.";
-var video = {
-  shots: { ...zodToJsonSchema(genaiShotsSchema, { $refStrategy: "none" }), description: "2\u20134 ordered shot descriptions. Later hard_cut transitions are prompt instructions; there is no time, frame or image slot per shot." },
-  prompt: { type: "string", minLength: 1, maxLength: 2e3, description: "Scene and action prompt, at most 2000 characters, e.g. A leaf sways as the camera moves closer. Describe camera motion here." },
-  negativePrompt: { type: "string", minLength: 1, maxLength: 5e3, description: devNegative + " Requires ltx-2.5-22b-dev: distilled sampling has no negative pass, except image-to-video references with guidanceScale > 1 or nagScale > 0." },
-  model: { type: "string", enum: [...GENAI_VIDEO_MODELS], description: "Local gateway model. Cloud ltx-2-5-fast/pro models are not supported." },
-  duration: { type: ["integer", "null"], minimum: 1, description: "Whole seconds, e.g. 5, or null for automatic duration without an end frame. Rounded-up 8k+1 frames must fit 361 at the selected fps." },
-  resolution: { type: "string", description: "WIDTHxHEIGHT with even sides of at least 64. Round each side up to 64 for backend limits: at most 1920 per side and 2,064,384 pixels. 1280x720 is supported; 1920x1080 exceeds the padded pixel cap." },
-  fps: { type: "integer", enum: [24, 25, 48, 50], default: 24, description: "Requested output frame rate." },
-  generateAudio: { type: "boolean", default: true, description: "Request generated audio. External speech conditioning is not supported by this gateway." },
-  reserveUsd: { type: "number", minimum: 0, description: "Explicit total budget reservation; gateway prices are unverified. Use zero only when the deployment has no per-call bill, e.g. 0. This is not a provider invoice cap." },
-  ...output
-};
-var generation = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true };
-var GENAI_TOOLS = [
-  ...NATIVE_GENAI_TOOLS,
-  {
-    name: "astra_genai_text2video",
-    title: "Generate GenAI LTX video from text",
-    description: "Generate and save an MP4 through the unified ASTRA GenAI LTX v2 gateway. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY, a separate gk_ token from ASTRA_VIDEO. Persists job identity before polling; recover the same receipt after timeout. Accepts shot descriptions and prompt-guided cuts; for a supplied audio track use astra_genai_audio2video. No LoRA, retake or keyframes. Legacy astra_text2video remains a separate server adapter.",
-    inputSchema: { type: "object", properties: video, required: ["prompt", "model", "duration", "resolution", "reserveUsd"], additionalProperties: false },
-    annotations: generation
-  },
-  {
-    name: "astra_genai_img2video",
-    title: "Generate GenAI LTX video from an image URI",
-    description: "Generate an MP4 from a start image, optional end and subject references.\nUse for image-to-video, first/last-frame animation and character or object reference guidance. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Give exactly one imageUri or imagePath. Optional references are separate from the start/end frames: 1..4 subject images and at most one background, supported on ltx-2.5-22b-distilled with explicit duration and a backend advertising combined MSR image conditioning. Subjects 1 and 2 can each carry a voice sample (audioPath or audioUri) for native dialogue while imagePath pins the first frame. The selected distilled weights run with the MSR IC-LoRA; generateAudio:false removes the generated soundtrack. Dev supports start/end without additional references. No intermediate keyframes. Do NOT use for supplied speech or recovery \u2014 use astra_genai_audio2video or astra_genai_video_status. Returns: jobId, status, videoPath, downloaded, review and receiptPath; resume that receipt without resubmitting.",
-    inputSchema: { type: "object", properties: {
-      ...video,
-      imageUri: { type: "string", description: "Public HTTPS PNG/JPEG URL or PNG/JPEG data URI. Mutually exclusive with imagePath." },
-      imagePath: { type: "string", description: "Local PNG/JPEG start image (at most 32 MiB, 4096 px per side), sent as a data URI." },
-      lastFrameUri: { type: ["string", "null"], description: "Optional final-frame HTTPS URL or data URI, e.g. https://example.com/end.png; requires an explicit duration." },
-      lastFramePath: { type: "string", description: "Optional local PNG/JPEG final frame, e.g. /tmp/end.png; sent as a data URI and requires an explicit duration." },
-      openingPositions: openingPositionsProperty,
-      references: { type: "array", minItems: 1, maxItems: 5, description: "Additional references. Supply openingPositions with these references. Up to four subject images followed by one optional background. Requires distilled and explicit duration.", items: {
-        type: "object",
-        properties: {
-          imageUri: { type: "string", description: "HTTPS/data PNG/JPEG reference, e.g. https://example.com/hero.png; exclusive with imagePath." },
-          imagePath: { type: "string", description: "Local PNG/JPEG reference, e.g. /tmp/hero.png; exclusive with imageUri." },
-          background: { type: "boolean", default: false, description: "True for the single background reference, e.g. true; false for subjects." },
-          ...subjectVoice
-        },
-        oneOf: [{ required: ["imageUri"] }, { required: ["imagePath"] }],
-        additionalProperties: false
-      } },
-      // Only with references: they run on the MSR backend, which needs one of these to evaluate negativePrompt.
-      ...msrGuidance
-    }, dependencies: { references: ["openingPositions"] }, required: ["prompt", "model", "duration", "resolution", "reserveUsd"], additionalProperties: false },
-    annotations: generation
-  },
-  {
-    name: "astra_genai_audio2video",
-    title: "Generate GenAI LTX video driven by an audio track",
-    description: "Render a clip whose length and motion follow a supplied speech or sound track through ASTRA GenAI LTX v2 audio-to-video, then save an MP4. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. The output length equals the audio length (local maximum 361 frames: 15.04 s at 24 fps, 14.44 s at 25, 7.52 s at 48, 7.22 s at 50; longer audio returns 422). Mono or stereo only; three or more channels return 422 instead of a downmix. The sample rate is kept, so only AAC standard rates 7350-96000 Hz (e.g. 48000, 44100) are accepted; others such as 192000 return 422. The gateway copies the backend soundtrack without a second encode, but the backend encodes it once, so the result is not bit-identical to the input. One scene track plus optional first and last images. Midpoints, timed cuts and subject references cannot be sent together with it. Only ltx-2.5-22b-dev runs this pipeline; no duration, generateAudio, cameraMotion, seed or frame controls. Lip-sync quality is unmeasured; inspect mouths before acceptance. Persists job identity before polling; recover with astra_genai_video_status.",
-    inputSchema: { type: "object", properties: {
-      prompt: { ...video.prompt, maxLength: 2e3, description: "Speaker, setting and action. Required even with an image; the local backend accepts at most 2000 characters (longer returns 422)." },
-      negativePrompt: { type: "string", minLength: 1, maxLength: 2e3, description: devNegative },
-      model: { type: "string", enum: ["ltx-2.5-22b-dev"], description: "Only the two-stage dev pipeline runs audio-to-video; distilled returns 422." },
-      resolution: video.resolution,
-      fps: video.fps,
-      audioPath: { type: "string", description: "Local .wav/.mp3/.m4a/.ogg/.opus sent as a data URI; at most about 11.25 MB (15,000,000 base64 characters); sample rate 7350-96000 Hz standard values. Mutually exclusive with audioUri." },
-      audioUri: { type: "string", description: "Public HTTPS audio (gateway fetches up to 32 MiB) or an audio/wav, audio/mpeg, audio/mp4 or audio/ogg data URI with at most 15,000,000 base64 characters." },
-      imagePath: { type: "string", description: "Optional local PNG/JPEG first frame; mutually exclusive with imageUri." },
-      imageUri: { type: "string", description: "Optional public HTTPS PNG/JPEG or data URI first frame." },
-      lastFramePath: { type: "string", description: "Optional local PNG/JPEG final frame; requires a first image." },
-      lastFrameUri: { type: "string", description: "Optional HTTPS/data PNG/JPEG final frame; requires a first image. Placed on the last frame kept after trimming to the audio." },
-      reserveUsd: video.reserveUsd,
-      ...output
-    }, required: ["prompt", "model", "resolution", "reserveUsd"], additionalProperties: false },
-    annotations: generation
-  },
-  {
-    name: "astra_genai_text2img",
-    title: "Generate a GenAI DashScope image",
-    description: "Generate one PNG through the ASTRA GenAI DashScope route. Use image_plan/image_execute with an explicit reserveUsd for configured production. Requires ASTRA_GENAI_API_KEY. Text-only, at most 800 characters. For a source image use astra_genai_edit (img2img or masked inpaint); no multi-image fusion. Images containing readable text require GPT Image 2. Distinct from local image_local_generate. Saves the provider response before download; never retries an ambiguous generation automatically.",
-    inputSchema: { type: "object", properties: {
-      model: { type: "string", description: "Deployed DashScope image model ID; provider names do not prove availability on this gateway." },
-      prompt: { type: "string", minLength: 1, maxLength: 800, description: "Single text prompt, at most 800 characters; never silently truncated." },
-      size: { type: "string", default: "1024*1536", description: "Provider size in WIDTH*HEIGHT notation; deployment validates supported sizes." },
-      seed: { type: ["integer", "null"], minimum: 0, maximum: 2147483647, description: "Optional provider random seed; null delegates to the provider." },
-      promptExtend: { type: "boolean", default: false, description: "Expand a short descriptive prompt with the shared LLM; failure uses the original. Leave false for exact reference instructions. Returns usedPrompt." },
-      steps: { type: "integer", minimum: 1, maximum: 12, description: "Denoising steps (server default 9)." },
-      ...output
-    }, required: ["model", "prompt"], additionalProperties: false },
-    annotations: generation
-  },
-  {
-    name: "astra_genai_edit",
-    title: "Edit a GenAI image or masked region",
-    description: "Transform one source PNG/JPEG with img2img or repaint its mask with inpaint. Use image_plan operation edit and image_execute for configured production. Requires ASTRA_GENAI_API_KEY. Supply exactly one imagePath or imageUri; inpaint also needs exactly one maskPath or maskUri. White mask pixels (grayscale >=128) change, black stays. Local files become data URIs; HTTPS sources are fetched by the gateway. No multi-reference fusion. Use GPT Image 2 when readable text must appear or survive. Recovery downloads the saved response without regenerating.",
-    inputSchema: { type: "object", properties: {
-      model: { type: "string", description: "Deployed image model, normally z-image-turbo." },
-      prompt: { type: "string", minLength: 1, maxLength: 800, description: "Requested changes and features to retain." },
-      mode: { type: "string", enum: ["img2img", "inpaint"], description: "img2img changes the source globally; inpaint changes the masked region." },
-      imagePath: { type: "string", description: "Local source PNG/JPEG; mutually exclusive with imageUri." },
-      imageUri: { type: "string", description: "Public HTTPS PNG/JPEG or data URI; mutually exclusive with imagePath." },
-      maskPath: { type: "string", description: "Inpaint-only local mask with the source dimensions; mutually exclusive with maskUri." },
-      maskUri: { type: "string", description: "Inpaint-only HTTPS/data mask with the source dimensions; mutually exclusive with maskPath." },
-      size: { type: "string", description: "Optional WIDTH*HEIGHT cover/center crop. Omit to retain source dimensions within server limits." },
-      strength: { type: "number", exclusiveMinimum: 0, maximum: 1, description: "Change strength; server defaults img2img 0.6, inpaint 1.0." },
-      steps: { type: "integer", minimum: 1, maximum: 12, description: "Denoising steps; server default 9." },
-      seed: { type: ["integer", "null"], minimum: 0, maximum: 2147483647, description: "Optional reproducibility seed." },
-      promptExtend: { type: "boolean", default: false, description: "Optional rewrite with original-prompt fallback. Keep false for precise edits; usedPrompt reports the actual prompt." },
-      ...output
-    }, required: ["model", "prompt", "mode"], additionalProperties: false },
-    annotations: generation
-  },
-  {
-    name: "astra_genai_msr",
-    title: "Generate an LTX video from subject and background references",
-    description: "Combine character, clothing, object and background references in one MSR video through ASTRA GenAI. Use video_plan operation reference and video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Up to four subject images and one background; place the background last and number prompt images in that order. Local PNG/JPEG files are shrunk to the render size and, with local voice samples, uploaded in chunks as gateway file ids (data URIs where the gateway has no upload API). MSR is a server-selected deployment with no model parameter, independent of saved LTX v2 weights. It cannot pin first/last frames; use img2video for frame control. Speech and effects are rendered natively. Subjects 1 and 2 may carry an optional voice sample of the character (audioPath or audioUri, at most 10 s, about 5 s used); write any dialogue in the prompt. The model imitates the timbre of the sample and does not preserve it; without a sample the voice follows the prompt. A request with a sample is refused before submission when the gateway MSR backend does not accept samples (GET /v1/ltx/msr/capabilities). Saves a job receipt and resumes via video_status without resubmission.",
-    inputSchema: { type: "object", properties: {
-      prompt: { type: "string", minLength: 1, maxLength: 2e3, description: "Positive action and reference roles, up to 2000 characters. No automatic subtitle instructions are appended. Put unwanted text terms in negativePrompt when negative conditioning is enabled." },
-      negativePrompt: { type: "string", minLength: 1, maxLength: 5e3, description: "Separate negative conditioning, e.g. subtitles, captions, text overlays. Requires guidanceScale > 1 or nagScale > 0, plus live backend negative_prompt support; otherwise refused before submission." },
-      ...msrGuidance,
-      openingPositions: openingPositionsProperty,
-      references: { type: "array", minItems: 1, maxItems: 5, description: "At most four subjects and one background. Exactly one URI or path per reference.", items: {
-        type: "object",
-        properties: {
-          imageUri: { type: "string", description: "Public HTTPS PNG/JPEG or data URI." },
-          imagePath: { type: "string", description: "Local PNG/JPEG path, instead of imageUri." },
-          background: { type: "boolean", default: false, description: "Marks the single background reference; put it last." },
-          ...subjectVoice
-        },
-        additionalProperties: false
-      } },
-      referenceStrength: { type: "number", minimum: 0, maximum: 1, default: 1, description: "Reference adherence strength." },
-      referenceFrames: { type: "integer", enum: [25, 33], default: 33, description: "MSR reference frame count." },
-      width: { type: "integer", minimum: 64, maximum: 1920, multipleOf: 64, default: 1536, description: "Output width; width times height must not exceed 2,064,384." },
-      height: { type: "integer", minimum: 64, maximum: 1920, multipleOf: 64, default: 1024, description: "Output height." },
-      numFrames: { type: "integer", minimum: 25, maximum: 361, description: "8k+1 frames, default 121. Omit when duration is supplied." },
-      duration: { type: "number", exclusiveMinimum: 0, maximum: 360, description: "Seconds rounded to the nearest 8k+1 frames (ties shorter), which must fit 25..361. Mutually exclusive with numFrames." },
-      frameRate: { type: "number", minimum: 1, maximum: 60, default: 24, description: "Output frames per second." },
-      seed: { type: "integer", minimum: 0, maximum: 2147483647, default: 42, description: "Reproducibility seed." },
-      reserveUsd: video.reserveUsd,
-      ...output
-    }, required: ["prompt", "references", "openingPositions", "reserveUsd"], additionalProperties: false },
-    annotations: generation
-  },
-  {
-    name: "astra_genai_video_status",
-    title: "Recover an existing GenAI video job",
-    description: "Read a local GenAI receipt and query its original LTX endpoint without submitting a new job. Optionally download a completed MP4. Requires the same configured gateway and token. For managed requests prefer video_status action:refresh, which also updates the managed reservation receipt. Does not recover legacy ASTRA jobs.",
-    inputSchema: { type: "object", properties: {
-      receiptPath: { type: "string", description: "Local .astra-genai.json receipt written beside the video output." },
-      download: { type: "boolean", default: false, description: "Download and verify completed output; never starts generation." }
-    }, required: ["receiptPath"], additionalProperties: false },
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true }
-  }
-];
-
-// src/astra-genai-image.ts
-import * as fs13 from "node:fs";
-import { createHash as createHash11 } from "node:crypto";
-var GENAI_IMAGE_ROUTE = "/v1/dashscope/api/v1/services/aigc/multimodal-generation/generation";
-var genaiImageSchema = external_exports.object({
-  model: external_exports.string().min(1),
-  prompt: external_exports.string().min(1).max(800),
-  size: external_exports.string().min(1).default("1024*1536"),
-  seed: external_exports.number().int().min(0).max(2147483647).nullable().optional(),
-  promptExtend: external_exports.boolean().default(false),
-  steps: external_exports.number().int().min(1).max(12).optional(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("image").refine((name) => name.endsWith(".png"), "Use a .png filename").optional()
-}).strict();
-var genaiImageEditSchema = genaiImageSchema.extend({
-  mode: external_exports.enum(["img2img", "inpaint"]),
-  size: external_exports.string().min(1).optional(),
-  imageUri: genaiImageUriSchema.optional(),
-  imagePath: external_exports.string().min(1).optional(),
-  maskUri: genaiImageUriSchema.optional(),
-  maskPath: external_exports.string().min(1).optional(),
-  strength: external_exports.number().finite().gt(0).max(1).optional()
-}).strict().superRefine((args, ctx) => {
-  const issue2 = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-  if (Number(!!args.imageUri) + Number(!!args.imagePath) !== 1) issue2("Supply exactly one imageUri or imagePath");
-  const masks = Number(!!args.maskUri) + Number(!!args.maskPath);
-  if (args.mode === "inpaint" ? masks !== 1 : masks !== 0) issue2("Only inpaint requires exactly one maskUri or maskPath");
-});
-function buildGenaiImageBody(args) {
-  const edit2 = "mode" in args ? args : void 0;
-  const content = [{ text: args.prompt }];
-  const source = edit2 ? genaiSourceUri(edit2.imageUri, edit2.imagePath) : void 0;
-  const mask = edit2?.mode === "inpaint" ? genaiSourceUri(edit2.maskUri, edit2.maskPath) : void 0;
-  if (source) content.push({ image: source });
-  if (source?.startsWith("data:") && mask?.startsWith("data:")) {
-    const sourceSize = imageMetadata(Buffer.from(source.slice(source.indexOf(",") + 1), "base64"));
-    const maskSize = imageMetadata(Buffer.from(mask.slice(mask.indexOf(",") + 1), "base64"));
-    if (sourceSize.width !== maskSize.width || sourceSize.height !== maskSize.height)
-      throw new Error("GenAI mask dimensions must match the source");
-  }
-  return {
-    model: args.model,
-    input: {
-      messages: [{ role: "user", content }],
-      ...mask ? { mask } : {}
-    },
-    parameters: {
-      ...args.size === void 0 ? {} : { size: args.size },
-      prompt_extend: args.promptExtend,
-      ...args.seed === void 0 ? {} : { seed: args.seed },
-      ...args.steps === void 0 ? {} : { num_inference_steps: args.steps },
-      ...edit2 ? { mode: edit2.mode, ...edit2.strength === void 0 ? {} : { strength: edit2.strength } } : {}
-    }
-  };
-}
-var responseSchema = external_exports.object({
-  request_id: external_exports.string().min(1),
-  usage: external_exports.record(external_exports.unknown()).optional(),
-  output: external_exports.object({ choices: external_exports.array(external_exports.object({
-    message: external_exports.object({ content: external_exports.array(external_exports.object({ image: external_exports.string().optional(), text: external_exports.string().optional() }).passthrough()) }).passthrough()
-  }).passthrough()).length(1) }).passthrough()
-}).passthrough();
-var GenaiImageOutputError = class extends Error {
-  constructor(message, requestId, usage) {
-    super(message);
-    this.requestId = requestId;
-    this.usage = usage;
-  }
-  requestId;
-  usage;
-};
-async function generateGenaiImage(input, operation = "text") {
-  const args = (operation === "edit" ? genaiImageEditSchema : genaiImageSchema).parse(input);
-  requireAstraGenaiKey();
-  const imagePath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.png`, "image");
-  const receiptPath2 = imagePath + ".astra-genai.json";
-  const body = buildGenaiImageBody(args);
-  const fingerprint = createHash11("sha256").update(JSON.stringify(body)).digest("hex");
-  if (fs13.existsSync(receiptPath2) || fs13.existsSync(imagePath))
-    throw new Error("GenAI image output/receipt already exists; inspect the receipt before any new generation.");
-  fs13.writeFileSync(receiptPath2, JSON.stringify({ baseUrl: astraGenaiBaseUrl(), fingerprint, imagePath, status: "submitting" }), { flag: "wx", mode: 384 });
-  let promptExtension;
-  let raw;
-  try {
-    raw = await requestGenai("POST", GENAI_IMAGE_ROUTE, body, 30 * 6e4, (headers2) => {
-      const value = headers2.get("x-prompt-extend");
-      if (value === "applied" || value === "fallback") promptExtension = value;
-    });
-  } catch (error2) {
-    atomicJson(receiptPath2, {
-      baseUrl: astraGenaiBaseUrl(),
-      fingerprint,
-      imagePath,
-      status: error2 instanceof GenaiRequestError && error2.terminal ? "failed" : "submission_unknown",
-      error: error2 instanceof Error ? error2.message : String(error2)
-    });
-    throw error2;
-  }
-  atomicJson(receiptPath2, { baseUrl: astraGenaiBaseUrl(), fingerprint, imagePath, status: "received", response: raw, promptExtension });
-  try {
-    return await recoverGenaiImage(receiptPath2);
-  } catch (error2) {
-    const received = responseSchema.safeParse(raw);
-    if (received.success) throw new GenaiImageOutputError(error2 instanceof Error ? error2.message : String(error2), received.data.request_id, received.data.usage);
-    throw error2;
-  }
-}
-async function recoverGenaiImage(receiptPath2) {
-  const receipt = external_exports.object({
-    baseUrl: external_exports.string(),
-    fingerprint: external_exports.string(),
-    imagePath: external_exports.string(),
-    status: external_exports.enum(["submitting", "submission_unknown", "failed", "received", "completed"]),
-    response: external_exports.unknown().optional(),
-    output: external_exports.object({ sha256: external_exports.string() }).passthrough().optional(),
-    requestId: external_exports.string().optional(),
-    usage: external_exports.unknown().optional(),
-    usedPrompt: external_exports.string().optional(),
-    promptExtension: external_exports.enum(["applied", "fallback"]).optional()
-  }).passthrough().parse(JSON.parse(fs13.readFileSync(receiptPath2, "utf8")));
-  if (receipt.baseUrl !== astraGenaiBaseUrl()) throw new Error("GenAI image receipt belongs to a different server");
-  const { imagePath, fingerprint } = receipt;
-  if (receipt.status === "completed") {
-    const output2 = verifyImageFile(imagePath);
-    if (output2.sha256 !== receipt.output?.sha256) throw new Error("GenAI cached image changed");
-    return { imagePath, requestId: receipt.requestId, usage: receipt.usage, usedPrompt: receipt.usedPrompt, promptExtension: receipt.promptExtension, output: output2, review: "not_reviewed" };
-  }
-  if (receipt.status === "failed") throw new Error("GenAI image request failed; inspect billing before a new request");
-  if (receipt.status !== "received") throw new Error("GenAI image submission is ambiguous; inspect provider usage before retrying");
-  const response = responseSchema.parse(receipt.response);
-  const images = response.output.choices[0].message.content.flatMap((item) => item.image ? [item.image] : []);
-  if (images.length !== 1) throw new Error("GenAI response must contain exactly one image URL; inspect the saved receipt.");
-  const bytes = await downloadGenaiResult(images[0]);
-  const temp = `${imagePath}.${process.pid}.download.png`;
-  try {
-    fs13.writeFileSync(temp, bytes, { flag: "wx", mode: 384 });
-    const output2 = verifyImageFile(temp);
-    if (output2.mimeType !== "image/png") throw new Error("GenAI image response is not PNG");
-    if (fs13.existsSync(imagePath)) {
-      if (verifyImageFile(imagePath).sha256 !== output2.sha256) throw new Error("GenAI image output conflicts with download");
-    } else fs13.linkSync(temp, imagePath);
-    const usedPrompt = response.output.choices[0].message.content.find((item) => item.text !== void 0)?.text;
-    const result = { imagePath, usedPrompt, promptExtension: receipt.promptExtension, requestId: response.request_id, usage: response.usage, output: output2, review: "not_reviewed" };
-    atomicJson(receiptPath2, { baseUrl: astraGenaiBaseUrl(), fingerprint, ...result, status: "completed" });
-    return result;
-  } finally {
-    fs13.rmSync(temp, { force: true });
-  }
-}
-
-// src/image-client.ts
-var VALID_GPT_IMAGE_MODELS = GPT_IMAGE_MODELS;
-var DEFAULT_MODEL = "gpt-image-2";
-var GPT_IMAGE_SIZE_PRESETS = [
-  "auto",
-  "1024x1024",
-  "1536x1024",
-  // landscape
-  "1024x1536"
-  // portrait
-];
-var WH_SIZE_RE = /^(\d+)x(\d+)$/;
-var GPT_IMAGE_MAX_EDGE = 3840;
-var GPT_IMAGE_MIN_TOTAL_PIXELS = 655360;
-var GPT_IMAGE_MAX_TOTAL_PIXELS = 8294400;
-var GPT_IMAGE_MAX_ASPECT = 3;
-var GptImageSizeSchema = external_exports.string().refine(
-  (s2) => GPT_IMAGE_SIZE_PRESETS.includes(s2) || WH_SIZE_RE.test(s2),
-  {
-    message: 'size must be one of auto/1024x1024/1536x1024/1024x1536, or a custom "WIDTHxHEIGHT" string (e.g. "1536x864").'
-  }
-);
-var VALID_GPT_IMAGE_QUALITIES = ["low", "medium", "high", "auto"];
-var VALID_GPT_IMAGE_BACKGROUNDS = ["opaque", "transparent", "auto"];
-var VALID_GPT_IMAGE_FORMATS = ["png", "jpeg", "webp"];
-var VALID_GPT_IMAGE_INPUT_FIDELITY = ["high", "low"];
-var VALID_GPT_IMAGE_INPUT_MIME = ["image/png", "image/jpeg", "image/webp"];
-function validateSizeAgainstModel(model2, size, ctx) {
-  if (GPT_IMAGE_SIZE_PRESETS.includes(size)) return;
-  const match2 = WH_SIZE_RE.exec(size);
-  if (!match2) return;
-  if (!gptImageContract(model2)?.flexibleSize) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["size"],
-      message: `Custom resolutions ("${size}") are only supported on gpt-image-2. On other models use ${GPT_IMAGE_SIZE_PRESETS.join(" / ")} only.`
-    });
-    return;
-  }
-  const width = Number(match2[1]);
-  const height = Number(match2[2]);
-  const violations = [];
-  if (width % 16 !== 0 || height % 16 !== 0) {
-    violations.push("width and height must be multiples of 16");
-  }
-  if (Math.max(width, height) > GPT_IMAGE_MAX_EDGE) {
-    violations.push(`the longest edge must be at most ${GPT_IMAGE_MAX_EDGE}px`);
-  }
-  const shortEdge = Math.min(width, height);
-  if (shortEdge === 0 || Math.max(width, height) / shortEdge > GPT_IMAGE_MAX_ASPECT) {
-    violations.push("the aspect ratio must be within 1:3 ~ 3:1");
-  }
-  const totalPixels = width * height;
-  if (totalPixels < GPT_IMAGE_MIN_TOTAL_PIXELS || totalPixels > GPT_IMAGE_MAX_TOTAL_PIXELS) {
-    violations.push(
-      `the total pixel count must be within ${GPT_IMAGE_MIN_TOTAL_PIXELS.toLocaleString()}~${GPT_IMAGE_MAX_TOTAL_PIXELS.toLocaleString()}`
-    );
-  }
-  if (violations.length > 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["size"],
-      message: `Custom resolution "${size}" violates constraints: ${violations.join(", ")}`
-    });
-  }
-}
-function validateBackground(background, outputFormat, ctx) {
-  if (background !== "transparent") return;
-  if (outputFormat === "jpeg") {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["outputFormat"],
-      message: "Transparent backgrounds are only possible with png or webp output (not jpeg)."
-    });
-  }
-}
-var text2ImageSchema = external_exports.object({
-  prompt: external_exports.string().min(1, "Prompt is required").max(32e3, "Prompt exceeds the 32,000-character limit for GPT Image models"),
-  model: external_exports.enum(VALID_GPT_IMAGE_MODELS).optional().default(DEFAULT_MODEL),
-  size: GptImageSizeSchema.optional().default("auto"),
-  quality: external_exports.enum(VALID_GPT_IMAGE_QUALITIES).optional().default("auto"),
-  background: external_exports.enum(VALID_GPT_IMAGE_BACKGROUNDS).optional().default("opaque"),
-  outputFormat: external_exports.enum(VALID_GPT_IMAGE_FORMATS).optional().default("png"),
-  savePath: external_exports.string().optional()
-}).superRefine((data, ctx) => {
-  validateSizeAgainstModel(data.model, data.size, ctx);
-  validateBackground(data.background, data.outputFormat, ctx);
-});
-var img2ImgSchema = external_exports.object({
-  prompt: external_exports.string().min(1, "Prompt is required").max(32e3, "Prompt exceeds the 32,000-character limit for GPT Image models"),
-  sourceImagesBase64: external_exports.array(external_exports.string().min(1)).min(1, "At least one source image is required").max(16, "At most 16 source images are supported"),
-  sourceMimeType: external_exports.enum(VALID_GPT_IMAGE_INPUT_MIME).optional().default("image/png"),
-  maskBase64: external_exports.string().optional(),
-  model: external_exports.enum(VALID_GPT_IMAGE_MODELS).optional().default(DEFAULT_MODEL),
-  size: GptImageSizeSchema.optional().default("auto"),
-  quality: external_exports.enum(VALID_GPT_IMAGE_QUALITIES).optional().default("auto"),
-  background: external_exports.enum(VALID_GPT_IMAGE_BACKGROUNDS).optional().default("opaque"),
-  outputFormat: external_exports.enum(VALID_GPT_IMAGE_FORMATS).optional().default("png"),
-  inputFidelity: external_exports.enum(VALID_GPT_IMAGE_INPUT_FIDELITY).optional(),
-  savePath: external_exports.string().optional()
-}).superRefine((data, ctx) => {
-  validateSizeAgainstModel(data.model, data.size, ctx);
-  validateBackground(data.background, data.outputFormat, ctx);
-  const allowed = gptImageContract(data.model)?.fidelity ?? [];
-  if (data.inputFidelity && !allowed.includes(data.inputFidelity)) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["inputFidelity"],
-      message: allowed.length ? `${data.model} accepts inputFidelity ${allowed.join("/")} only.` : `${data.model} does not accept inputFidelity (fixed high fidelity). Omit the parameter.`
-    });
-  }
-});
-function failure(error2, mimeType, prompt, model2) {
-  const status = error2?.status;
-  const terminal = typeof status === "number" && status >= 400 && status < 500 && ![408, 409, 425].includes(status);
-  return { success: false, base64: "", mimeType, prompt, model: model2, error: error2 instanceof Error ? error2.message : String(error2), terminal };
-}
-function formatToMime(format) {
-  switch (format) {
-    case "png":
-      return "image/png";
-    case "jpeg":
-      return "image/jpeg";
-    case "webp":
-      return "image/webp";
-  }
-}
-function mimeToExt(mime) {
-  switch (mime) {
-    case "image/png":
-      return "png";
-    case "image/jpeg":
-      return "jpg";
-    case "image/webp":
-      return "webp";
-    default:
-      return "png";
-  }
-}
-async function generateFromText(request) {
-  assertImageModelAvailable(request.model);
-  const apiKey = requireOpenAiKey();
-  const model2 = request.model || DEFAULT_MODEL;
-  const outputFormat = request.outputFormat || "png";
-  const responseMime = formatToMime(outputFormat);
-  try {
-    const { default: OpenAI2 } = await Promise.resolve().then(() => (init_openai(), openai_exports));
-    const client = new OpenAI2({ apiKey, maxRetries: 0 });
-    const response = await client.images.generate({
-      model: model2,
-      prompt: request.prompt,
-      n: 1,
-      size: request.size,
-      quality: request.quality,
-      background: request.background,
-      output_format: outputFormat
-    });
-    return extractImage(response, request.prompt, {
-      model: model2,
-      size: request.size,
-      quality: request.quality,
-      mimeType: responseMime
-    });
-  } catch (error2) {
-    return failure(error2, responseMime, request.prompt, model2);
-  }
-}
-async function generateFromImage(request) {
-  assertImageModelAvailable(request.model);
-  const apiKey = requireOpenAiKey();
-  const model2 = request.model || DEFAULT_MODEL;
-  const sourceMime = request.sourceMimeType || "image/png";
-  const outputFormat = request.outputFormat || "png";
-  const responseMime = formatToMime(outputFormat);
-  try {
-    const { default: OpenAI2, toFile: toFile2 } = await Promise.resolve().then(() => (init_openai(), openai_exports));
-    const client = new OpenAI2({ apiKey, maxRetries: 0 });
-    const sourceExt = mimeToExt(sourceMime);
-    const imageFiles = [];
-    for (let i2 = 0; i2 < request.sourceImagesBase64.length; i2++) {
-      const file = await toFile2(
-        Buffer.from(request.sourceImagesBase64[i2], "base64"),
-        `source-${i2}.${sourceExt}`,
-        { type: sourceMime }
-      );
-      imageFiles.push(file);
-    }
-    const maskFile = request.maskBase64 ? await toFile2(Buffer.from(request.maskBase64, "base64"), "mask.png", { type: "image/png" }) : void 0;
-    const response = await client.images.edit({
-      model: model2,
-      prompt: request.prompt,
-      image: imageFiles.length === 1 ? imageFiles[0] : imageFiles,
-      n: 1,
-      size: request.size,
-      quality: request.quality,
-      background: request.background,
-      output_format: outputFormat,
-      ...request.inputFidelity ? { input_fidelity: request.inputFidelity } : {},
-      ...maskFile ? { mask: maskFile } : {}
-    });
-    return extractImage(response, request.prompt, {
-      model: model2,
-      size: request.size,
-      quality: request.quality,
-      mimeType: responseMime
-    });
-  } catch (error2) {
-    return failure(error2, responseMime, request.prompt, model2);
-  }
-}
-function extractImage(response, prompt, meta) {
-  const fail5 = (error2) => ({
-    success: false,
-    base64: "",
-    mimeType: meta.mimeType,
-    prompt,
-    model: meta.model,
-    error: error2
-  });
-  if (!response || !Array.isArray(response.data) || response.data.length === 0) {
-    return fail5("No image data returned from OpenAI");
-  }
-  const first = response.data[0];
-  const b64 = first?.b64_json;
-  if (!b64 || typeof b64 !== "string") {
-    return fail5("Response did not include b64_json");
-  }
-  return {
-    success: true,
-    base64: b64,
-    mimeType: meta.mimeType,
-    prompt,
-    model: meta.model,
-    size: response.size ?? meta.size,
-    quality: response.quality ?? meta.quality,
-    usage: response.usage,
-    requestId: response._request_id ?? void 0,
-    revisedPrompt: typeof first?.revised_prompt === "string" ? first.revised_prompt : void 0
-  };
-}
-
-// src/zimage-client.ts
-import { execFile as execFile3 } from "node:child_process";
-import { existsSync as existsSync12 } from "node:fs";
-import { homedir as homedir2 } from "node:os";
-import { join as join11 } from "node:path";
-var DEFAULT_ZIMAGE_STEPS = 9;
-var ZIMAGE_QUANTIZE_OPTIONS = [4, 6, 8];
-var DEFAULT_ZIMAGE_QUANTIZE = 8;
-var ZIMAGE_DIMENSION_STEP = 16;
-var MIN_ZIMAGE_DIMENSION = 256;
-var MAX_ZIMAGE_DIMENSION = 2048;
-var dimensionSchema = external_exports.number().int().min(MIN_ZIMAGE_DIMENSION).max(MAX_ZIMAGE_DIMENSION).refine((v) => v % ZIMAGE_DIMENSION_STEP === 0, {
-  message: `width/height must be a multiple of ${ZIMAGE_DIMENSION_STEP} (for 9:16 that's 1088\xD71920, not 1080\xD71920)`
-});
-function zimageTimeoutMs(width, height, steps) {
-  const megapixels = width * height / 1e6;
-  return Math.min(30 * 6e4, 12e4 + Math.ceil(steps * megapixels * 45e3));
-}
-function weightCacheDir() {
-  const hfHome = process.env.HF_HOME || join11(homedir2(), ".cache", "huggingface");
-  return join11(hfHome, "hub", "models--Tongyi-MAI--Z-Image-Turbo");
-}
-var WEIGHT_DOWNLOAD_ALLOWANCE_MS = 60 * 6e4;
-function installHint(detail) {
-  return `${detail}
-
-Local image generation requires mflux (Apple Silicon only, MLX):
-  uv tool install --python 3.12 mflux
-If it's installed elsewhere, point MFLUX_ZIMAGE_BIN at the executable (e.g. MFLUX_ZIMAGE_BIN=~/.venvs/mflux/bin/mflux-generate-z-image-turbo).
-The first call downloads the ~31GB Z-Image Turbo weight repository to ~/.cache/huggingface.`;
-}
-var zimageGenerateSchema = external_exports.object({
-  prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
-  width: dimensionSchema.optional().default(1024),
-  height: dimensionSchema.optional().default(1024),
-  steps: external_exports.number().int().min(1).max(50).optional().default(DEFAULT_ZIMAGE_STEPS),
-  seed: external_exports.number().int().min(0).optional(),
-  quantize: external_exports.union([external_exports.literal(4), external_exports.literal(6), external_exports.literal(8)]).optional().default(DEFAULT_ZIMAGE_QUANTIZE),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("image").optional()
-});
-async function generateLocalImage(request) {
-  const bin = mfluxZImageBin();
-  if (!existsSync12(bin)) {
-    return { success: false, error: installHint(`mflux binary not found: "${bin}"`) };
-  }
-  const outFile = resolveOutputFile(
-    request.outputPath || process.cwd(),
-    request.filename || `zimage_${Date.now()}.png`,
-    "image"
-  );
-  if (existsSync12(outFile)) return { success: false, error: `Output already exists; choose a new filename: ${outFile}` };
-  const cliArgs = [
-    "--prompt",
-    request.prompt,
-    "--width",
-    String(request.width),
-    "--height",
-    String(request.height),
-    "--steps",
-    String(request.steps),
-    "-q",
-    String(request.quantize),
-    "--output",
-    outFile
-  ];
-  if (request.seed !== void 0) cliArgs.push("--seed", String(request.seed));
-  const firstCall = !existsSync12(weightCacheDir());
-  if (firstCall) {
-    console.error("[Z-Image] First call \u2014 downloading ~31GB of weights to the huggingface cache first. This can take a long time.");
-  }
-  console.error(
-    `[Z-Image] Generating locally... (${request.width}x${request.height}, ${request.steps} steps, q${request.quantize})`
-  );
-  const startedAt = Date.now();
-  try {
-    await new Promise((resolve14, reject) => {
-      execFile3(
-        bin,
-        cliArgs,
-        {
-          timeout: zimageTimeoutMs(request.width, request.height, request.steps) + (firstCall ? WEIGHT_DOWNLOAD_ALLOWANCE_MS : 0),
-          // The first call accumulates several MB of tqdm progress output from the
-          // 31GB download — reusing Supertonic's 1MB would die on maxBuffer mid-download.
-          maxBuffer: 16 * 1024 * 1024
-        },
-        (error2, _out, errOut) => {
-          if (error2) {
-            const code = error2.code;
-            if (code === "ENOENT") {
-              reject(new Error(installHint(`mflux binary not found: "${bin}"`)));
-              return;
-            }
-            const tail = errOut.split("\n").filter((line) => line.trim() && !line.includes("it/s]") && !line.includes("%|")).slice(-5).join("\n");
-            reject(new Error(`${error2.message}${tail ? `
-${tail}` : ""}`));
-            return;
-          }
-          resolve14();
-        }
-      );
-    });
-  } catch (error2) {
-    const message = error2 instanceof Error ? error2.message : String(error2);
-    console.error(`[Z-Image] Error: ${message.split("\n")[0]}`);
-    return { success: false, error: message };
-  }
-  if (!existsSync12(outFile)) {
-    return {
-      success: false,
-      error: `mflux exited without producing the output file: ${outFile}`
-    };
-  }
-  const elapsed = Math.round((Date.now() - startedAt) / 100) / 10;
-  console.error(`[Z-Image] Image saved to: ${outFile} (${elapsed}s)`);
-  return {
-    success: true,
-    imagePath: outFile,
-    width: request.width,
-    height: request.height,
-    steps: request.steps,
-    seed: request.seed,
-    quantize: request.quantize,
-    elapsedSeconds: elapsed
-  };
-}
-
-// src/image-registry.ts
-var IMAGE_ADAPTERS = Object.freeze({
-  astra_genai_image_generate: { engine: "astra-genai-native", operation: "text", schema: nativeImageSchema },
-  astra_genai_image_edit: { engine: "astra-genai-native", operation: "edit", schema: nativeImageEditSchema },
-  astra_genai_text2img: { engine: "astra-genai", operation: "text", schema: genaiImageSchema },
-  astra_genai_edit: { engine: "astra-genai", operation: "edit", schema: genaiImageEditSchema },
-  gpt_image_text2img: { engine: "gpt-image", operation: "text", schema: text2ImageSchema },
-  gpt_image_img2img: { engine: "gpt-image", operation: "edit", schema: img2ImgSchema },
-  image_local_generate: { engine: "zimage", operation: "text", schema: zimageGenerateSchema },
-  mlx_image_generate: { engine: "mlx", operation: "text", schema: mlxImageGenerateSchema },
-  mlx_image_edit: { engine: "mlx", operation: "edit", schema: mlxImageEditSchema }
-});
-function fields(schema2) {
-  if (schema2 instanceof external_exports.ZodEffects) return fields(schema2.innerType());
-  return schema2 instanceof external_exports.ZodObject ? Object.keys(schema2.shape) : [];
-}
-function parseImageArgs(tool2, input) {
-  const adapter2 = IMAGE_ADAPTERS[tool2];
-  if (!adapter2) throw new Error("image_adapter_unsupported");
-  for (const key of Object.keys(input)) if (!fields(adapter2.schema).includes(key)) throw new Error("image_argument_unsupported: " + key);
-  const args = adapter2.schema.parse(input);
-  if (adapter2.engine === "gpt-image") {
-    assertImageModelAvailable(String(args.model));
-    const refs = args.sourceImagesBase64 ?? [];
-    for (const ref of refs) validateImageBase64(ref, String(args.sourceMimeType));
-    if (typeof args.maskBase64 === "string") {
-      const mask = validateImageBase64(args.maskBase64, "image/png");
-      const source = validateImageBase64(refs[0]);
-      if (mask.width !== source.width || mask.height !== source.height || mask.bytes >= 4 * 1024 * 1024)
-        throw new Error("image_mask_invalid: dimensions must match first source; use a PNG below 4MB");
-      const bytes = Buffer.from(args.maskBase64, "base64");
-      if (![4, 6].includes(bytes[25]) && !bytes.includes(Buffer.from("tRNS"))) throw new Error("image_mask_requires_alpha");
-    }
-  }
-  if (adapter2.engine === "mlx" && args.model) validateMlxImageOperation(
-    String(args.model),
-    adapter2.operation === "edit" ? "edit" : args.imagePath ? "variation" : "text",
-    args
-  );
-  return args;
-}
-function imageCatalog() {
-  return {
-    version: 1,
-    revision: "2026-10-18",
-    adapters: Object.entries(IMAGE_ADAPTERS).map(([tool2, entry2]) => ({ tool: tool2, engine: entry2.engine, operation: entry2.operation, fields: fields(entry2.schema) })),
-    genai: { edits: ["img2img", "inpaint"], sourceImages: 1, steps: [1, 12], promptExtend: "Optional shared-LLM rewrite; failures use the original prompt. Keep false for precise reference instructions.", note: "Use GPT Image 2 for readable text. No multi-image fusion." },
-    gptModels: GPT_IMAGE_MODELS,
-    gptContracts: GPT_IMAGE_CONTRACTS,
-    mlx: {
-      families: ["flux-klein", "krea", "mage", "mage-edit", "qwen-2.1"],
-      note: "Installed pack and backend determine availability. Unknown packs support basic text only until capabilities are registered; use image_plan."
-    },
-    host: { execution: "host_handoff", model: "host-managed", note: "External tools/allowance are not enforced by MCP. No API fallback." },
-    unimplemented: ["gpt-image-2.5-sunburst", "gpt-image-2.5-flare", "bfl-api", "krea-api", "qwen-model-studio", "xai-images-api"]
-  };
-}
-function isManagedImageCall(tool2, args) {
-  return Object.hasOwn(IMAGE_ADAPTERS, tool2) && !!args && typeof args === "object" && "imageContext" in args;
-}
-
-// src/local-video-models.ts
-var LOCAL_VIDEO_MODELS = {
-  ltx_video_generate: {
-    operation: "text",
-    schema: mlxVideoGenerateSchema,
-    defaultFrames: DEFAULT_MLX_VIDEO_FRAMES,
-    frames: { min: MIN_MLX_VIDEO_FRAMES, max: MAX_MLX_VIDEO_FRAMES, step: MLX_VIDEO_FRAME_STEP, frameRate: MLX_VIDEO_FPS },
-    acceptsModel: (id) => /ltx/i.test(id),
-    prepare: (raw) => buildLtxVideoBody(mlxVideoGenerateSchema.parse(raw))
-  },
-  fasth3_omni_reference: {
-    operation: "reference",
-    schema: fasth3OmniSchema,
-    frames: FASTH3_FRAME_LIMITS,
-    defaultFrames: 124,
-    acceptsModel: (id) => id === FASTH3_OMNI_MODEL,
-    prepare: (raw) => buildFasth3Body(fasth3OmniSchema.parse(raw))
-  }
-};
-function localVideoStrategy(tool2) {
-  const name = tool2 === "mlx_video_generate" ? "ltx_video_generate" : tool2;
-  return Object.hasOwn(LOCAL_VIDEO_MODELS, name) ? LOCAL_VIDEO_MODELS[name] : void 0;
-}
-async function generateLocalVideo(tool2, input) {
-  const strategy = localVideoStrategy(tool2);
-  if (!strategy) throw new Error("Unknown local video adapter: " + tool2);
-  const request = strategy.schema.parse(input);
-  const body = strategy.prepare(request);
-  return executeMlxVideo(request, body, strategy.acceptsModel);
-}
-
-// src/seedance-client.ts
-import { execFile as execFile4 } from "node:child_process";
-import * as fs15 from "node:fs";
-import * as path14 from "node:path";
-
-// src/media-publish.ts
-import { spawn as spawn2 } from "node:child_process";
-import { randomBytes as randomBytes2 } from "node:crypto";
-import * as fs14 from "node:fs";
-import * as http3 from "node:http";
-import * as path13 from "node:path";
-var MIME2 = {
-  ".mp4": "video/mp4",
-  ".mov": "video/quicktime",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".webp": "image/webp",
-  ".wav": "audio/wav",
-  ".mp3": "audio/mpeg"
-};
-function uploadConfig() {
-  const endpoint2 = process.env.MEDIA_UPLOAD_URL || process.env.MELEON_MEDIA_URL || "";
-  const key = process.env.MEDIA_UPLOAD_API_KEY || process.env.MELEON_MEDIA_API_KEY || "";
-  if (!endpoint2 || !key) return null;
-  const seconds2 = Number(process.env.MEDIA_UPLOAD_TIMEOUT || process.env.MELEON_UPLOAD_TIMEOUT || 300);
-  return { endpoint: endpoint2, key, timeoutMs: (Number.isFinite(seconds2) && seconds2 > 0 ? seconds2 : 300) * 1e3 };
-}
-async function assertReachable(url, attempts, waitMs) {
-  let last = "";
-  for (let i2 = 0; i2 < attempts; i2 += 1) {
-    try {
-      const head = await fetch(url, { method: "HEAD", signal: AbortSignal.timeout(15e3) });
-      if (head.ok) return;
-      const get = await fetch(url, { headers: { Range: "bytes=0-0" }, signal: AbortSignal.timeout(15e3) });
-      if (get.ok) {
-        await get.body?.cancel();
-        return;
-      }
-      last = `HTTP ${get.status}`;
-    } catch (error2) {
-      last = error2 instanceof Error ? error2.message : String(error2);
-    }
-    if (i2 < attempts - 1) await new Promise((resolve14) => setTimeout(resolve14, waitMs));
-  }
-  throw new Error(`public URL not reachable: ${url} (${last})`);
-}
-async function publishViaUpload(filePaths, config3) {
-  const urls = [];
-  for (const filePath of filePaths) {
-    const response = await fetch(config3.endpoint, {
-      method: "POST",
-      headers: { "x-api-key": config3.key, "Content-Type": MIME2[path13.extname(filePath).toLowerCase()] || "application/octet-stream" },
-      body: fs14.readFileSync(filePath),
-      signal: AbortSignal.timeout(config3.timeoutMs)
-    });
-    const body = await response.text();
-    if (response.status !== 201) {
-      throw new Error(`media hosting refused ${path13.basename(filePath)}: HTTP ${response.status} \u2014 ${body.slice(0, 300)}`);
-    }
-    let url = "";
-    try {
-      url = String(JSON.parse(body).data?.url || "");
-    } catch {
-    }
-    if (!/^https?:\/\//.test(url)) throw new Error(`media hosting answered 201 without data.url \u2014 ${body.slice(0, 300)}`);
-    await assertReachable(url, 3, 2e3);
-    urls.push(url);
-  }
-  return { urls, how: "upload", close: async () => void 0 };
-}
-function serveLocally(filePaths) {
-  const token = randomBytes2(16).toString("hex");
-  const routes = filePaths.map((p, i2) => `/${token}/${i2}/${encodeURIComponent(path13.basename(p))}`);
-  const byRoute = new Map(routes.map((r2, i2) => [r2, filePaths[i2]]));
-  const server2 = http3.createServer((req, res) => {
-    const file = byRoute.get((req.url || "").split("?")[0]);
-    if (!file || req.method !== "GET" && req.method !== "HEAD") {
-      res.writeHead(404).end();
-      return;
-    }
-    let size = 0;
-    try {
-      size = fs14.statSync(file).size;
-    } catch {
-      res.writeHead(404).end();
-      return;
-    }
-    const type = MIME2[path13.extname(file).toLowerCase()] || "application/octet-stream";
-    const range = /^bytes=(\d+)-(\d*)$/.exec(req.headers.range || "");
-    let start = 0;
-    let end = size - 1;
-    if (range) {
-      start = Number(range[1]);
-      end = range[2] ? Math.min(Number(range[2]), size - 1) : end;
-    }
-    if (start > end || start >= size) {
-      res.writeHead(416, { "Content-Range": `bytes */${size}` }).end();
-      return;
-    }
-    res.writeHead(range ? 206 : 200, {
-      "Content-Type": type,
-      "Content-Length": end - start + 1,
-      "Accept-Ranges": "bytes",
-      ...range ? { "Content-Range": `bytes ${start}-${end}/${size}` } : {}
-    });
-    if (req.method === "HEAD") {
-      res.end();
-      return;
-    }
-    fs14.createReadStream(file, { start, end }).on("error", () => res.destroy()).pipe(res);
-  });
-  return new Promise((resolve14, reject) => {
-    server2.once("error", reject);
-    server2.listen(0, "127.0.0.1", () => {
-      const address = server2.address();
-      const port = typeof address === "object" && address ? address.port : 0;
-      resolve14({ server: server2, port, routes });
-    });
-  });
-}
-function closeServer(server2) {
-  return new Promise((resolve14) => {
-    server2.closeAllConnections?.();
-    server2.close(() => resolve14());
-  });
-}
-var liveTunnels = /* @__PURE__ */ new Set();
-var exitHookInstalled = false;
-function killTunnelsOnExit() {
-  if (exitHookInstalled) return;
-  exitHookInstalled = true;
-  const killAll = () => {
-    for (const child of liveTunnels) if (child.exitCode === null) child.kill("SIGTERM");
-  };
-  process.once("exit", killAll);
-  for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
-    if (process.listenerCount(signal) > 0) continue;
-    process.once(signal, () => {
-      killAll();
-      process.kill(process.pid, signal);
-    });
-  }
-}
-async function publishViaTunnel(filePaths, cloudflared = "cloudflared") {
-  const { server: server2, port, routes } = await serveLocally(filePaths);
-  let child = null;
-  const close = async () => {
-    if (child) {
-      liveTunnels.delete(child);
-      if (child.exitCode === null) child.kill("SIGTERM");
-    }
-    child = null;
-    await closeServer(server2);
-  };
-  killTunnelsOnExit();
-  try {
-    const origin = await new Promise((resolve14, reject) => {
-      child = spawn2(cloudflared, ["tunnel", "--url", `http://127.0.0.1:${port}`, "--no-autoupdate"], {
-        stdio: ["ignore", "pipe", "pipe"]
-      });
-      liveTunnels.add(child);
-      let log = "";
-      const timer = setTimeout(() => reject(new Error(`cloudflared gave no quick-tunnel URL within 60s
-${log.slice(-600)}`)), 6e4);
-      const onLine = (chunk3) => {
-        log += chunk3.toString();
-        const m2 = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/.exec(log);
-        if (m2) {
-          clearTimeout(timer);
-          resolve14(m2[0]);
-        }
-      };
-      child.stdout?.on("data", onLine);
-      child.stderr?.on("data", onLine);
-      child.once("error", (error2) => {
-        clearTimeout(timer);
-        reject(new Error(`could not start cloudflared (${error2.message}) \u2014 install it (brew install cloudflared) or set MEDIA_UPLOAD_URL`));
-      });
-      child.once("exit", (code) => {
-        clearTimeout(timer);
-        reject(new Error(`cloudflared exited with code ${code} before the tunnel came up
-${log.slice(-600)}`));
-      });
-    });
-    const urls = routes.map((r2) => origin + r2);
-    await new Promise((resolve14) => setTimeout(resolve14, 5e3));
-    for (const url of urls) await assertReachable(url, 30, 3e3);
-    console.error(`[media-publish] quick tunnel ${origin} serving ${filePaths.length} file(s)`);
-    return { urls, how: "tunnel", close };
-  } catch (error2) {
-    await close();
-    throw error2;
-  }
-}
-async function publishFiles(filePaths) {
-  if (filePaths.length === 0) return { urls: [], how: "upload", close: async () => void 0 };
-  for (const filePath of filePaths) {
-    if (!fs14.existsSync(filePath)) throw new Error(`file to publish not found: ${filePath}`);
-  }
-  const upload = uploadConfig();
-  if (upload) return publishViaUpload(filePaths, upload);
-  return publishViaTunnel(filePaths);
-}
-
-// src/seedance-client.ts
-var VALID_SEEDANCE_RESOLUTIONS = ["480p", "720p", "1080p", "4k"];
-var VALID_SEEDANCE_RATIOS = ["16:9", "9:16", "4:3", "3:4", "1:1", "21:9", "adaptive"];
-var SEEDANCE_MODEL_SPECS = {
-  // 1080p opened on 2026-08-17 (UTC+8) — 10-bit color, and the only tier the discount
-  // campaign covers (28% off list through 2026-09-17). 2.5 has no 4K; 2.0 does.
-  "dreamina-seedance-2-5-260628": {
-    resolutions: ["480p", "720p", "1080p"],
-    duration: [4, 30],
-    lastFrame: true,
-    referenceImages: [1, 30],
-    referenceAudio: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30, audioOnly: true },
-    referenceVideos: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30 },
-    audio: true,
-    realFaceInput: false,
-    activationGate: true
-  },
-  "dreamina-seedance-2-0-260128": {
-    resolutions: ["480p", "720p", "1080p", "4k"],
-    duration: [4, 15],
-    lastFrame: true,
-    referenceImages: [1, 9],
-    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
-    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
-    audio: true,
-    realFaceInput: false,
-    activationGate: true
-  },
-  "dreamina-seedance-2-0-fast-260128": {
-    resolutions: ["480p", "720p"],
-    duration: [4, 15],
-    lastFrame: true,
-    referenceImages: [1, 9],
-    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
-    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
-    audio: true,
-    realFaceInput: false,
-    activationGate: true
-  },
-  "dreamina-seedance-2-0-mini-260615": {
-    resolutions: ["480p", "720p"],
-    duration: [4, 15],
-    lastFrame: true,
-    referenceImages: [1, 9],
-    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
-    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
-    audio: true,
-    realFaceInput: false,
-    activationGate: true
-  }
-};
-var VALID_SEEDANCE_MODELS = Object.keys(SEEDANCE_MODEL_SPECS);
-var DEFAULT_SEEDANCE_MODEL = "dreamina-seedance-2-0-260128";
-var DEFAULT_SEEDANCE_RESOLUTION = "720p";
-var DEFAULT_SEEDANCE_DURATION = 5;
-var SEEDANCE_FPS = 24;
-var POLL_INTERVAL_MS2 = 1e4;
-var MAX_POLLS2 = 90;
-var MAX_INPUT_IMAGE_BYTES = 30 * 1024 * 1024;
-var MAX_REQUEST_BYTES2 = 64 * 1024 * 1024;
-var MAX_INPUT_AUDIO_BYTES = 15 * 1024 * 1024;
-var MAX_INPUT_VIDEO_BYTES = 200 * 1024 * 1024;
-var SEEDANCE_REFERENCE_VIDEO_FPS = [24, 60];
-var SEEDANCE_REFERENCE_VIDEO_PIXELS = [407696, 8295044];
-var SEEDANCE_REFERENCE_AUDIO_EXTENSIONS = [".wav", ".mp3"];
-var SEEDANCE_REFERENCE_VIDEO_EXTENSIONS = [".mp4", ".mov"];
-var commonFields = {
-  prompt: external_exports.string().min(1, "Prompt is required"),
-  model: external_exports.enum(VALID_SEEDANCE_MODELS).optional().default(DEFAULT_SEEDANCE_MODEL),
-  resolution: external_exports.enum(VALID_SEEDANCE_RESOLUTIONS).optional().default(DEFAULT_SEEDANCE_RESOLUTION),
-  durationSeconds: external_exports.number().int().optional(),
-  generateAudio: external_exports.boolean().optional().default(false),
-  watermark: external_exports.boolean().optional().default(false),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").optional()
-};
-function validateCommon(data, ctx) {
-  const spec = SEEDANCE_MODEL_SPECS[data.model];
-  const foreign = nonEnglishOutsideQuotes(data.prompt);
-  if (foreign) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["prompt"],
-      message: `video_prompt_language: "${foreign}" sits outside quotation marks. Write the video prompt in English; only dialogue, inside quotes, uses the video's language.`
-    });
-  }
-  if (!spec.resolutions.includes(data.resolution)) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["resolution"],
-      message: `${data.model} does not support ${data.resolution} (supported: ${spec.resolutions.join(", ")}).`
-    });
-  }
-  const [minDuration, maxDuration] = spec.duration;
-  if ((data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) < minDuration || (data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) > maxDuration) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["durationSeconds"],
-      message: `${data.model} supports durations of ${minDuration}~${maxDuration}s (requested: ${data.durationSeconds}s).`
-    });
-  }
-  if (data.generateAudio && !spec.audio) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["generateAudio"],
-      message: `${data.model} is silent-only and cannot generate audio.`
-    });
-  }
-}
-var seedanceText2VideoSchema = external_exports.object({
-  ...commonFields,
-  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("16:9")
-}).superRefine(validateCommon).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
-var seedanceImg2VideoSchema = external_exports.object({
-  ...commonFields,
-  sourceImagePath: external_exports.string().min(1, "Source image path is required"),
-  lastImagePath: external_exports.string().optional(),
-  // Following the input image's ratio is the default — specifying a different
-  // ratio makes the server center-crop the source image (the incident where a
-  // 9:16 cover got cropped).
-  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("adaptive")
-}).superRefine((data, ctx) => {
-  validateCommon(data, ctx);
-  if (data.lastImagePath && !SEEDANCE_MODEL_SPECS[data.model].lastFrame) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["lastImagePath"],
-      message: `${data.model} accepts a first frame only.`
-    });
-  }
-}).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
-var seedanceReferenceSchema = external_exports.object({
-  ...commonFields,
-  referenceImagePaths: external_exports.array(external_exports.string()).optional().default([]),
-  referenceAudioPaths: external_exports.array(external_exports.string()).optional().default([]),
-  referenceVideoPaths: external_exports.array(external_exports.string()).optional().default([]),
-  referenceVideoUrls: external_exports.array(external_exports.string().url()).optional().default([]),
-  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("adaptive")
-}).superRefine((data, ctx) => {
-  validateCommon(data, ctx);
-  const spec = SEEDANCE_MODEL_SPECS[data.model];
-  const [, maxImages] = spec.referenceImages;
-  if (data.referenceImagePaths.length > maxImages) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["referenceImagePaths"],
-      message: `${data.model} allows at most ${maxImages} reference images (requested: ${data.referenceImagePaths.length}).`
-    });
-  }
-  const videoCount = data.referenceVideoPaths.length + data.referenceVideoUrls.length;
-  if (data.referenceImagePaths.length === 0 && data.referenceAudioPaths.length === 0 && videoCount === 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["referenceImagePaths"],
-      message: "At least one reference is required \u2014 referenceImagePaths, referenceAudioPaths, referenceVideoPaths/Urls, or a mix."
-    });
-    return;
-  }
-  if (videoCount > 0) {
-    const video2 = spec.referenceVideos;
-    if (videoCount > video2.maxClips) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["referenceVideoPaths"],
-        message: `${data.model} allows at most ${video2.maxClips} reference videos (requested: ${videoCount}).`
-      });
-    }
-    for (const filePath of data.referenceVideoPaths) {
-      const ext = path14.extname(filePath).toLowerCase();
-      if (!SEEDANCE_REFERENCE_VIDEO_EXTENSIONS.includes(ext)) {
-        ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
-          path: ["referenceVideoPaths"],
-          message: `Reference video must be mp4 or mov (got "${ext}" in ${path14.basename(filePath)}).`
-        });
-      }
-    }
-    if (!/\bvideo\s*1\b/i.test(data.prompt)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["prompt"],
-        message: 'A reference video is bound in the prompt by index \u2014 write "Video 1" (2.5: "@Video 1") and say what it supplies (camera movement, blocking, motion timing) and what it must not (its visual content).'
-      });
-    }
-  }
-  if (data.referenceAudioPaths.length === 0) return;
-  const audio = spec.referenceAudio;
-  if (data.referenceAudioPaths.length > audio.maxClips) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["referenceAudioPaths"],
-      message: `${data.model} allows at most ${audio.maxClips} reference audio clips (requested: ${data.referenceAudioPaths.length}).`
-    });
-  }
-  if (!audio.audioOnly && data.referenceImagePaths.length === 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["referenceImagePaths"],
-      message: `${data.model} needs at least one reference image alongside reference audio \u2014 audio-only input is dreamina-seedance-2-5-260628 only.`
-    });
-  }
-  for (const filePath of data.referenceAudioPaths) {
-    const ext = path14.extname(filePath).toLowerCase();
-    if (!SEEDANCE_REFERENCE_AUDIO_EXTENSIONS.includes(ext)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["referenceAudioPaths"],
-        message: `Reference audio must be wav or mp3 (got "${ext}" in ${path14.basename(filePath)}).`
-      });
-    }
-  }
-  if (!data.generateAudio) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["generateAudio"],
-      message: "Reference audio with generateAudio: false produces a silent video, so the voice reference has nothing to shape. Set generateAudio: true."
-    });
-  }
-}).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
-function sleep5(ms) {
-  return new Promise((resolve14) => setTimeout(resolve14, ms));
-}
-function describeHttpError(status, body) {
-  try {
-    const parsed = JSON.parse(body);
-    const code = parsed.error?.code;
-    const message = parsed.error?.message;
-    if (message) return `HTTP ${status} ${code ? `(${code}) ` : ""}${message}`;
-  } catch {
-  }
-  return `HTTP ${status} \u2014 ${body.slice(0, 400)}`;
-}
-async function createTask(apiKey, body) {
-  const response = await fetch(`${arkBaseUrl()}/contents/generations/tasks`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(5 * 6e4)
-  });
-  if (!response.ok) {
-    const terminal = response.status >= 400 && response.status < 500 && ![408, 409, 425].includes(response.status);
-    throw Object.assign(new Error(`Failed to create video task: ${describeHttpError(response.status, await response.text())}`), { terminal });
-  }
-  const json3 = await response.json();
-  if (!json3.id) throw new Error("No task id returned from ModelArk");
-  return json3.id;
-}
-async function getTask(apiKey, taskId) {
-  const response = await fetch(`${arkBaseUrl()}/contents/generations/tasks/${encodeURIComponent(taskId)}`, {
-    headers: { Authorization: `Bearer ${apiKey}` },
-    signal: AbortSignal.timeout(6e4)
-  });
-  if (!response.ok) {
-    throw new Error(`Failed to get task status: ${describeHttpError(response.status, await response.text())}`);
-  }
-  return response.json();
-}
-async function awaitVideoAndSave(apiKey, taskId, outputPath, filename) {
-  let retried2 = false;
-  for (let poll = 1; poll <= MAX_POLLS2; poll += 1) {
-    console.error(`[Seedance] Generation in progress... (polling ${poll}/${MAX_POLLS2})`);
-    await sleep5(POLL_INTERVAL_MS2);
-    let task;
-    try {
-      task = await getTask(apiKey, taskId);
-      retried2 = false;
-    } catch (error2) {
-      if (retried2) throw error2;
-      retried2 = true;
-      continue;
-    }
-    if (task.status === "failed" || task.status === "expired" || task.status === "cancelled") {
-      const reason = task.error?.message || task.status;
-      return { error: `Generation ${task.status}: ${reason}`, terminal: true };
-    }
-    if (task.status !== "succeeded") continue;
-    const videoUrl = task.content?.video_url;
-    if (!videoUrl) return { error: "Task succeeded but no video_url in response" };
-    const fullPath = resolveOutputFile(outputPath, filename, "video");
-    const download = await fetch(videoUrl, { signal: AbortSignal.timeout(10 * 6e4) });
-    if (!download.ok) {
-      return { error: `Failed to download video: HTTP ${download.status} (URL is valid for 24 hours)` };
-    }
-    fs15.writeFileSync(fullPath, Buffer.from(await download.arrayBuffer()));
-    console.error(`[Seedance] Video saved to: ${fullPath}`);
-    return { videoPath: fullPath, task };
-  }
-  return { error: `Video generation timed out (${MAX_POLLS2 * POLL_INTERVAL_MS2 / 6e4} minutes). Task ${taskId} may still be running \u2014 check the ModelArk console.` };
-}
-function readImageDataUri(filePath) {
-  const stats = fs15.statSync(filePath);
-  if (stats.size > MAX_INPUT_IMAGE_BYTES) {
-    throw new Error(
-      `Input image too large: ${path14.basename(filePath)} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 30MB)`
-    );
-  }
-  const buffer = fs15.readFileSync(filePath);
-  return `data:${mimeFromExtension(filePath, "image")};base64,${buffer.toString("base64")}`;
-}
-function loadImages(filePaths) {
-  const uris = [];
-  for (const filePath of filePaths) {
-    validateFilePath(filePath, { allowedExtensions: ALLOWED_EXTENSIONS.image });
-    if (!fs15.existsSync(filePath)) throw new Error(`Image not found: ${filePath}`);
-    uris.push(readImageDataUri(filePath));
-  }
-  assertRequestBudget(uris);
-  return uris;
-}
-function assertRequestBudget(uris) {
-  const total = uris.reduce((sum, uri) => sum + uri.length, 0);
-  if (total > MAX_REQUEST_BYTES2) {
-    throw new Error(
-      `Request body too large: base64 total ${(total / 1024 / 1024).toFixed(1)}MB (limit 64MB). Use fewer reference files or smaller ones.`
-    );
-  }
-}
-function audioMimeFromExtension(filePath) {
-  return path14.extname(filePath).toLowerCase() === ".mp3" ? "audio/mp3" : "audio/wav";
-}
-function loadReferenceAudio(filePaths) {
-  return filePaths.map((filePath) => {
-    validateFilePath(filePath, { allowedExtensions: SEEDANCE_REFERENCE_AUDIO_EXTENSIONS });
-    if (!fs15.existsSync(filePath)) throw new Error(`Reference audio not found: ${filePath}`);
-    const stats = fs15.statSync(filePath);
-    if (stats.size > MAX_INPUT_AUDIO_BYTES) {
-      throw new Error(
-        `Reference audio too large: ${path14.basename(filePath)} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 15MB)`
-      );
-    }
-    return `data:${audioMimeFromExtension(filePath)};base64,${fs15.readFileSync(filePath).toString("base64")}`;
-  });
-}
-function probeVideo(filePath) {
-  return new Promise((resolve14) => {
-    execFile4(
-      "ffprobe",
-      ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height,r_frame_rate:format=duration", "-of", "json", filePath],
-      { timeout: 15e3 },
-      (error2, out) => {
-        if (error2) return resolve14(null);
-        try {
-          const parsed = JSON.parse(String(out));
-          const stream = parsed.streams?.[0];
-          const [num5, den] = String(stream?.r_frame_rate || "").split("/").map(Number);
-          const fps = num5 && den ? num5 / den : NaN;
-          const seconds2 = Number.parseFloat(String(parsed.format?.duration ?? ""));
-          if (!stream?.width || !stream?.height || !Number.isFinite(fps) || !Number.isFinite(seconds2) || seconds2 <= 0) return resolve14(null);
-          resolve14({ seconds: seconds2, fps, width: stream.width, height: stream.height });
-        } catch {
-          resolve14(null);
-        }
-      }
-    );
-  });
-}
-async function checkReferenceVideos(filePaths, spec, model2) {
-  const [minSeconds, maxSeconds] = spec.clipSeconds;
-  const [minFps, maxFps] = SEEDANCE_REFERENCE_VIDEO_FPS;
-  const [minPixels, maxPixels] = SEEDANCE_REFERENCE_VIDEO_PIXELS;
-  let total = 0;
-  for (const filePath of filePaths) {
-    validateFilePath(filePath, { allowedExtensions: SEEDANCE_REFERENCE_VIDEO_EXTENSIONS });
-    if (!fs15.existsSync(filePath)) throw new Error(`Reference video not found: ${filePath}`);
-    const name = path14.basename(filePath);
-    const stats = fs15.statSync(filePath);
-    if (stats.size > MAX_INPUT_VIDEO_BYTES) {
-      throw new Error(`Reference video too large: ${name} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 200MB)`);
-    }
-    const facts = await probeVideo(filePath);
-    if (!facts) {
-      console.error(`[Seedance] ffprobe unavailable \u2014 skipping the frame checks for ${name} (${model2}: ${minSeconds}~${maxSeconds}s per clip, ${minFps}~${maxFps} fps)`);
-      continue;
-    }
-    if (facts.seconds < minSeconds || facts.seconds > maxSeconds) {
-      throw new Error(`Reference video ${name} is ${facts.seconds.toFixed(1)}s \u2014 ${model2} accepts ${minSeconds}~${maxSeconds}s per clip.`);
-    }
-    if (facts.fps < minFps - 0.01 || facts.fps > maxFps + 0.01) {
-      throw new Error(`Reference video ${name} is ${facts.fps.toFixed(3)} fps \u2014 the vendor takes ${minFps}~${maxFps} fps (render the previz at 24 or 30).`);
-    }
-    const pixels = facts.width * facts.height;
-    if (pixels < minPixels || pixels > maxPixels) {
-      throw new Error(`Reference video ${name} is ${facts.width}\xD7${facts.height} (${pixels} px) \u2014 the vendor takes ${minPixels}~${maxPixels} pixels a frame.`);
-    }
-    total += facts.seconds;
-  }
-  if (total > spec.totalSeconds) {
-    throw new Error(`Reference videos total ${total.toFixed(1)}s \u2014 ${model2} allows ${spec.totalSeconds}s across all clips.`);
-  }
-  return total;
-}
-function probeAudioSeconds(filePath) {
-  return new Promise((resolve14) => {
-    execFile4(
-      "ffprobe",
-      ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", filePath],
-      { timeout: 15e3 },
-      (error2, out) => {
-        const seconds2 = Number.parseFloat(String(out ?? "").trim());
-        resolve14(!error2 && Number.isFinite(seconds2) && seconds2 > 0 ? seconds2 : null);
-      }
-    );
-  });
-}
-async function checkReferenceAudioDurations(filePaths, spec, model2) {
-  const [minSeconds, maxSeconds] = spec.clipSeconds;
-  let total = 0;
-  for (const filePath of filePaths) {
-    const seconds2 = await probeAudioSeconds(filePath);
-    if (seconds2 === null) {
-      console.error(
-        `[Seedance] ffprobe unavailable \u2014 skipping the duration check for ${path14.basename(filePath)} (${model2}: ${minSeconds}~${maxSeconds}s per clip, ${spec.totalSeconds}s total)`
-      );
-      continue;
-    }
-    if (seconds2 < minSeconds || seconds2 > maxSeconds) {
-      throw new Error(
-        `Reference audio ${path14.basename(filePath)} is ${seconds2.toFixed(1)}s \u2014 ${model2} accepts ${minSeconds}~${maxSeconds}s per clip.`
-      );
-    }
-    total += seconds2;
-  }
-  if (total > spec.totalSeconds) {
-    throw new Error(
-      `Reference audio totals ${total.toFixed(1)}s \u2014 ${model2} allows ${spec.totalSeconds}s across all clips.`
-    );
-  }
-}
-function buildBody(request, parts) {
-  const spec = SEEDANCE_MODEL_SPECS[request.model];
-  const body = {
-    model: request.model,
-    content: [{ type: "text", text: request.prompt }, ...parts],
-    ratio: request.ratio,
-    resolution: request.resolution,
-    duration: request.durationSeconds,
-    watermark: request.watermark
-  };
-  if (spec.audio) body.generate_audio = request.generateAudio;
-  return body;
-}
-function toResponse(request, videoPath, task, taskId) {
-  recordVideoTokens(task.usage?.completion_tokens);
-  return {
-    success: true,
-    videoPath,
-    prompt: request.prompt,
-    model: request.model,
-    ratio: task.ratio ?? request.ratio,
-    resolution: task.resolution ?? request.resolution,
-    duration: task.duration ?? request.durationSeconds,
-    durationSource: task.duration !== void 0 ? "provider_reported" : "requested_seconds",
-    completionTokens: task.usage?.completion_tokens,
-    taskId
-  };
-}
-function toFailure(error2, posted) {
-  const message = error2 instanceof Error ? error2.message : String(error2);
-  console.error(`[Seedance] Error: ${message}`);
-  return { success: false, error: message, terminal: !posted || error2?.terminal === true };
-}
-async function generateFromText2(request) {
-  const apiKey = requireArkKey();
-  let posted = false;
-  try {
-    console.error(`[Seedance] Starting text-to-video generation... (model: ${request.model})`);
-    posted = true;
-    const taskId = await createTask(apiKey, buildBody(request, []));
-    recordVideoSubmission(taskId);
-    const saved = await awaitVideoAndSave(
-      apiKey,
-      taskId,
-      request.outputPath || process.cwd(),
-      request.filename || `video_${Date.now()}.mp4`
-    );
-    if ("error" in saved) return { success: false, error: saved.error, terminal: saved.terminal === true, taskId };
-    return toResponse(request, saved.videoPath, saved.task, taskId);
-  } catch (error2) {
-    return toFailure(error2, posted);
-  }
-}
-async function generateFromImage2(request) {
-  const apiKey = requireArkKey();
-  let posted = false;
-  try {
-    const paths3 = [request.sourceImagePath, ...request.lastImagePath ? [request.lastImagePath] : []];
-    const uris = loadImages(paths3);
-    const images = uris.map((url, index) => ({
-      type: "image_url",
-      image_url: { url },
-      role: index === 0 ? "first_frame" : "last_frame"
-    }));
-    console.error(`[Seedance] Starting image-to-video generation... (model: ${request.model})`);
-    console.error(`[Seedance] First frame: ${request.sourceImagePath}`);
-    if (request.lastImagePath) console.error(`[Seedance] Last frame: ${request.lastImagePath}`);
-    posted = true;
-    const taskId = await createTask(apiKey, buildBody(request, images));
-    recordVideoSubmission(taskId);
-    const saved = await awaitVideoAndSave(
-      apiKey,
-      taskId,
-      request.outputPath || process.cwd(),
-      request.filename || `video_${Date.now()}.mp4`
-    );
-    if ("error" in saved) return { success: false, error: saved.error, terminal: saved.terminal === true, taskId };
-    return {
-      ...toResponse(request, saved.videoPath, saved.task, taskId),
-      sourceImage: request.sourceImagePath,
-      lastImage: request.lastImagePath
-    };
-  } catch (error2) {
-    return toFailure(error2, posted);
-  }
-}
-async function generateWithReferences(request) {
-  const apiKey = requireArkKey();
-  let posted = false;
-  try {
-    const spec = SEEDANCE_MODEL_SPECS[request.model];
-    const imageUris = loadImages(request.referenceImagePaths);
-    const audioUris = loadReferenceAudio(request.referenceAudioPaths);
-    assertRequestBudget([...imageUris, ...audioUris]);
-    if (audioUris.length > 0) {
-      await checkReferenceAudioDurations(request.referenceAudioPaths, spec.referenceAudio, request.model);
-    }
-    let referenceVideoSeconds = 0;
-    if (request.referenceVideoPaths.length > 0) {
-      referenceVideoSeconds = await checkReferenceVideos(request.referenceVideoPaths, spec.referenceVideos, request.model);
-    }
-    if (request.referenceVideoUrls.length > 0) {
-      const assumed = request.referenceVideoUrls.length * request.durationSeconds;
-      if (referenceVideoSeconds + assumed > spec.referenceVideos.totalSeconds) {
-        throw new Error(
-          `Reference videos total at least ${(referenceVideoSeconds + assumed).toFixed(1)}s (URL clips counted at ${request.durationSeconds}s each) \u2014 ${request.model} allows ${spec.referenceVideos.totalSeconds}s across all clips.`
-        );
-      }
-    }
-    const published = await publishFiles(request.referenceVideoPaths);
-    try {
-      const videoUrls = [...published.urls, ...request.referenceVideoUrls];
-      const parts = [
-        ...imageUris.map((url) => ({ type: "image_url", image_url: { url }, role: "reference_image" })),
-        ...videoUrls.map((url) => ({ type: "video_url", video_url: { url }, role: "reference_video" })),
-        ...audioUris.map((url) => ({ type: "audio_url", audio_url: { url }, role: "reference_audio" }))
-      ];
-      console.error(`[Seedance] Starting reference-to-video generation... (model: ${request.model})`);
-      if (imageUris.length > 0) console.error(`[Seedance] Reference images: ${request.referenceImagePaths.join(", ")}`);
-      if (videoUrls.length > 0) console.error(`[Seedance] Reference videos: ${[...request.referenceVideoPaths, ...request.referenceVideoUrls].join(", ")}`);
-      if (audioUris.length > 0) console.error(`[Seedance] Reference audio: ${request.referenceAudioPaths.join(", ")}`);
-      posted = true;
-      const taskId = await createTask(apiKey, buildBody(request, parts));
-      recordVideoSubmission(taskId);
-      const saved = await awaitVideoAndSave(
-        apiKey,
-        taskId,
-        request.outputPath || process.cwd(),
-        request.filename || `video_ref_${Date.now()}.mp4`
-      );
-      if ("error" in saved) return { success: false, error: saved.error, terminal: saved.terminal === true, taskId };
-      return {
-        ...toResponse(request, saved.videoPath, saved.task, taskId),
-        referenceImages: request.referenceImagePaths,
-        referenceAudios: request.referenceAudioPaths,
-        ...videoUrls.length > 0 ? {
-          referenceVideos: [...request.referenceVideoPaths, ...request.referenceVideoUrls],
-          referenceVideoSeconds,
-          ...published.urls.length > 0 ? { referenceVideoRoute: published.how } : {}
-        } : {}
-      };
-    } finally {
-      await published.close();
-    }
-  } catch (error2) {
-    return toFailure(error2, posted);
-  }
-}
-
 // src/astra-video-client.ts
-import { execFileSync as execFileSync9 } from "node:child_process";
-import { createHash as createHash12, randomInt } from "node:crypto";
-import * as fs16 from "node:fs";
-import * as path15 from "node:path";
+import { execFileSync as execFileSync7 } from "node:child_process";
+import { createHash as createHash9, randomInt } from "node:crypto";
+import * as fs11 from "node:fs";
+import * as path10 from "node:path";
 
 // package.json
 var package_default = {
@@ -115933,8 +113816,8 @@ var ASTRA_VIDEO_UPLOADS_PER_MINUTE = 10;
 var ASTRA_VIDEO_MAX_JOB_BODY_BYTES = 1024 * 1024;
 var ASTRA_VIDEO_USER_AGENT = `social-flow/${package_default.version}`;
 var ASTRA_VIDEO_MAX_WAIT_MS = 18e5;
-var POLL_INTERVAL_MS3 = 5e3;
-var SUBMIT_TIMEOUT_MS2 = 6e4;
+var POLL_INTERVAL_MS2 = 5e3;
+var SUBMIT_TIMEOUT_MS = 6e4;
 var STATUS_TIMEOUT_MS = 3e4;
 var TRANSFER_TIMEOUT_MS = 6e5;
 var astraVideoListUploadsSchema = external_exports.object({}).strict();
@@ -116377,8 +114260,8 @@ function upscaleGeometry(width, height, frames) {
   return { ...out, numFrames };
 }
 async function upscaleVideo(args) {
-  const source = path15.resolve(args.sourceVideoPath);
-  const probe5 = JSON.parse(execFileSync9("ffprobe", [
+  const source = path10.resolve(args.sourceVideoPath);
+  const probe5 = JSON.parse(execFileSync7("ffprobe", [
     "-v",
     "error",
     "-count_frames",
@@ -116402,14 +114285,14 @@ async function upscaleVideo(args) {
     frameRate: num5 / (den || 1),
     seed: args.seed,
     generateAudio: false,
-    outputPath: args.outputPath ?? path15.dirname(source),
-    filename: args.filename ?? `${path15.parse(source).name}-x2.mp4`
+    outputPath: args.outputPath ?? path10.dirname(source),
+    filename: args.filename ?? `${path10.parse(source).name}-x2.mp4`
   }));
   if (hasAudio) {
     const muxed = `${result.videoPath}.${process.pid}.mux.mp4`;
-    execFileSync9("ffmpeg", ["-v", "error", "-i", result.videoPath, "-i", source, "-map", "0:v", "-map", "1:a", "-c", "copy", "-shortest", muxed], { timeout: 12e4 });
-    fs16.renameSync(muxed, result.videoPath);
-    result.bytes = fs16.statSync(result.videoPath).size;
+    execFileSync7("ffmpeg", ["-v", "error", "-i", result.videoPath, "-i", source, "-map", "0:v", "-map", "1:a", "-c", "copy", "-shortest", muxed], { timeout: 12e4 });
+    fs11.renameSync(muxed, result.videoPath);
+    result.bytes = fs11.statSync(result.videoPath).size;
   }
   return { ...result, source: { path: source, width: video2.width, height: video2.height, frames }, droppedFrames: frames - geometry.numFrames, audio: hasAudio ? "source_remuxed" : "none" };
 }
@@ -116554,7 +114437,7 @@ function buildJobBody(mode, args) {
   }
   return body;
 }
-function sleep6(ms) {
+function sleep4(ms) {
   return new Promise((resolve14) => setTimeout(resolve14, ms));
 }
 var submitTimestamps = [];
@@ -116569,7 +114452,7 @@ async function waitForSubmitSlot() {
     }
     const minuteWait = recentMinute.length >= ASTRA_VIDEO_SUBMITS_PER_MINUTE ? 6e4 - (now - recentMinute[0]) : 0;
     const hourWait = submitTimestamps.length >= ASTRA_VIDEO_SUBMITS_PER_HOUR ? 36e5 - (now - submitTimestamps[0]) : 0;
-    await sleep6(Math.max(minuteWait, hourWait) + 250);
+    await sleep4(Math.max(minuteWait, hourWait) + 250);
   }
 }
 var uploadTimestamps = [];
@@ -116581,7 +114464,7 @@ async function waitForUploadSlot() {
       uploadTimestamps.push(now);
       return;
     }
-    await sleep6(6e4 - (now - uploadTimestamps[0]) + 250);
+    await sleep4(6e4 - (now - uploadTimestamps[0]) + 250);
   }
 }
 function redactedFailure(what, status, body) {
@@ -116610,7 +114493,7 @@ async function withBackoff(what, call2, baseDelayMs = 2e3) {
     const result = await call2();
     if (result.ok || result.status !== 429 && result.status !== 503) return result;
     last = result;
-    await sleep6(delay2);
+    await sleep4(delay2);
     delay2 *= 2;
   }
   return last;
@@ -116624,7 +114507,7 @@ var CONTENT_TYPE_BY_EXTENSION = {
   ".mp3": { contentType: "audio/mpeg", kind: "audio" }
 };
 function uploadContentType(filePath) {
-  const ext = path15.extname(filePath).toLowerCase();
+  const ext = path10.extname(filePath).toLowerCase();
   const found = CONTENT_TYPE_BY_EXTENSION[ext];
   if (!found) {
     throw new Error(
@@ -116634,13 +114517,13 @@ function uploadContentType(filePath) {
   return found;
 }
 async function uploadFile(filePath) {
-  const resolved = path15.resolve(filePath);
-  if (!fs16.existsSync(resolved)) throw new Error(`File not found: ${filePath}`);
+  const resolved = path10.resolve(filePath);
+  if (!fs11.existsSync(resolved)) throw new Error(`File not found: ${filePath}`);
   const { contentType, kind } = uploadContentType(resolved);
-  const bytes = fs16.statSync(resolved).size;
+  const bytes = fs11.statSync(resolved).size;
   const limit2 = ASTRA_VIDEO_UPLOAD_LIMITS[kind];
   if (bytes > limit2) {
-    throw new Error(`${path15.basename(resolved)} is ${bytes} bytes; the ${kind} upload ceiling is ${limit2} bytes.`);
+    throw new Error(`${path10.basename(resolved)} is ${bytes} bytes; the ${kind} upload ceiling is ${limit2} bytes.`);
   }
   await waitForUploadSlot();
   const headers2 = authHeaders2();
@@ -116649,7 +114532,7 @@ async function uploadFile(filePath) {
       const response = await fetch(`${astraVideoBaseUrl()}/v1/uploads`, {
         method: "POST",
         headers: { ...headers2, "Content-Type": contentType },
-        body: fs16.readFileSync(resolved),
+        body: fs11.readFileSync(resolved),
         signal: AbortSignal.timeout(TRANSFER_TIMEOUT_MS)
       });
       return { ok: response.ok, status: response.status, body: await response.text() };
@@ -116658,7 +114541,7 @@ async function uploadFile(filePath) {
       return { ok: false, status: 502, body: `Upload unreachable: ${message}` };
     }
   });
-  if (!result.ok) throw redactedFailure(`upload of ${path15.basename(resolved)}`, result.status, result.body);
+  if (!result.ok) throw redactedFailure(`upload of ${path10.basename(resolved)}`, result.status, result.body);
   const parsed = JSON.parse(result.body);
   return {
     uploadId: parsed.upload_id,
@@ -116680,7 +114563,7 @@ async function submitJob(body) {
   await waitForSubmitSlot();
   const result = await withBackoff(
     "submit",
-    () => requestRaw("post", jobsUrl(), authHeaders2(), body, SUBMIT_TIMEOUT_MS2),
+    () => requestRaw("post", jobsUrl(), authHeaders2(), body, SUBMIT_TIMEOUT_MS),
     15e3
   );
   if (!result.ok) throw redactedFailure("job submission", result.status, result.body);
@@ -116702,7 +114585,7 @@ async function awaitResult(jobId) {
     );
     if (!status.ok) {
       if (isTerminalStatus(status.status)) throw redactedFailure(`status of job ${jobId}`, status.status, status.body);
-      await sleep6(POLL_INTERVAL_MS3);
+      await sleep4(POLL_INTERVAL_MS2);
       continue;
     }
     const job = JSON.parse(status.body);
@@ -116727,7 +114610,7 @@ async function awaitResult(jobId) {
         }
       });
       if (download.status === 409) {
-        await sleep6(POLL_INTERVAL_MS3);
+        await sleep4(POLL_INTERVAL_MS2);
         continue;
       }
       if (!download.ok) {
@@ -116739,7 +114622,7 @@ async function awaitResult(jobId) {
         elapsedSeconds: Math.round((Date.now() - startedAt) / 1e3)
       };
     }
-    await sleep6(POLL_INTERVAL_MS3);
+    await sleep4(POLL_INTERVAL_MS2);
   }
 }
 async function runJob(mode, prompt, body, outputPath, filename) {
@@ -116747,25 +114630,25 @@ async function runJob(mode, prompt, body, outputPath, filename) {
   const receiptPath2 = `${videoPath}.astra-job.json`;
   const writeReceipt2 = (value) => {
     const temp = `${receiptPath2}.${process.pid}.tmp`;
-    fs16.writeFileSync(temp, JSON.stringify(value, null, 2) + "\n", { mode: 384 });
-    fs16.renameSync(temp, receiptPath2);
+    fs11.writeFileSync(temp, JSON.stringify(value, null, 2) + "\n", { mode: 384 });
+    fs11.renameSync(temp, receiptPath2);
   };
   const jobId = await submitJob(body);
   recordVideoSubmission(jobId);
   const submitted = { jobId, mode, prompt, videoPath, submittedAt: (/* @__PURE__ */ new Date()).toISOString(), submittedRequest: body };
   writeReceipt2({ ...submitted, status: "submitted" });
   const { bytes, request, elapsedSeconds } = await awaitResult(jobId);
-  fs16.writeFileSync(videoPath, bytes);
+  fs11.writeFileSync(videoPath, bytes);
   const response = { videoPath, jobId, mode, prompt, bytes: bytes.length, elapsedSeconds, ...request ? { request } : {} };
-  writeReceipt2({ ...submitted, ...response, sha256: createHash12("sha256").update(bytes).digest("hex"), status: "completed", completedAt: (/* @__PURE__ */ new Date()).toISOString() });
+  writeReceipt2({ ...submitted, ...response, sha256: createHash9("sha256").update(bytes).digest("hex"), status: "completed", completedAt: (/* @__PURE__ */ new Date()).toISOString() });
   return response;
 }
-async function generateFromText3(args) {
+async function generateFromText(args) {
   const mode = ASTRA_VIDEO_TIERS[args.tier];
   const body = buildJobBody(mode, args);
   return runJob(mode, args.prompt, body, args.outputPath, args.filename);
 }
-async function generateFromImage3(args) {
+async function generateFromImage(args) {
   const first = await uploadFile(args.firstFramePath);
   const images = [{ uploadId: first.uploadId, frameIdx: 0, strength: args.strength ?? 1 }];
   if (args.lastFramePath) {
@@ -116838,8 +114721,8 @@ async function generateFromAudio(args) {
 function annotateReceipt(videoPath, extra) {
   const receiptPath2 = `${videoPath}.astra-job.json`;
   const temp = `${receiptPath2}.${process.pid}.tmp`;
-  fs16.writeFileSync(temp, JSON.stringify({ ...JSON.parse(fs16.readFileSync(receiptPath2, "utf8")), ...extra }, null, 2) + "\n", { mode: 384 });
-  fs16.renameSync(temp, receiptPath2);
+  fs11.writeFileSync(temp, JSON.stringify({ ...JSON.parse(fs11.readFileSync(receiptPath2, "utf8")), ...extra }, null, 2) + "\n", { mode: 384 });
+  fs11.renameSync(temp, receiptPath2);
 }
 async function generateIcLora(args) {
   const reference2 = await uploadFile(args.referencePath);
@@ -116868,6 +114751,2340 @@ async function retakeVideo(args) {
   if (sourceError) throw new Error(`ASTRA video retake source refused: ${sourceError}`);
   const body = buildJobBody("retake", { ...args, videoUploadId: source.uploadId });
   return runJob("retake", args.prompt, body, args.outputPath, args.filename);
+}
+
+// src/astra-genai-video.ts
+import { createHash as createHash11 } from "node:crypto";
+import * as fs13 from "node:fs";
+import * as path12 from "node:path";
+import { execFileSync as execFileSync9 } from "node:child_process";
+
+// src/astra-genai-upload.ts
+import { createHash as createHash10 } from "node:crypto";
+import { execFileSync as execFileSync8 } from "node:child_process";
+import * as fs12 from "node:fs";
+import * as os2 from "node:os";
+import * as path11 from "node:path";
+var GENAI_FILE_SCHEME = "genai-file://";
+var genaiUploadSettings = { attempts: 4, retryDelayMs: 2e3, chunkTimeoutMs: 12e4 };
+var UPLOAD_TYPES = /* @__PURE__ */ new Set(["image/png", "image/jpeg", "audio/wav", "audio/mpeg", "audio/mp4", "audio/ogg"]);
+var UPLOAD_MAX_BYTES = 32 * 1024 * 1024;
+var GENAI_FILE_GONE = /genai-file not found or expired/;
+var sessionSchema = external_exports.object({
+  upload_id: external_exports.string().min(1),
+  chunk_size: external_exports.number().int().positive().max(5 * 1024 * 1024),
+  chunks: external_exports.number().int().positive()
+}).passthrough();
+var fileSchema = external_exports.object({ file_id: external_exports.string().min(1), uri: external_exports.string().startsWith(GENAI_FILE_SCHEME), expires_at: external_exports.string().optional() }).passthrough();
+var statusSchema = external_exports.object({ missing: external_exports.array(external_exports.number().int().nonnegative()) }).passthrough();
+async function call(method, route, body, headers2 = {}, timeoutMs = 6e4) {
+  const key = requireAstraGenaiKey(route);
+  const raw = Buffer.isBuffer(body);
+  const response = await fetch(astraGenaiBaseUrl(route) + route, {
+    method,
+    redirect: "error",
+    signal: AbortSignal.timeout(timeoutMs),
+    headers: { Authorization: `Bearer ${key}`, ...body === void 0 ? {} : { "Content-Type": raw ? "application/octet-stream" : "application/json" }, ...headers2 },
+    ...body === void 0 ? {} : { body: raw ? new Uint8Array(body) : JSON.stringify(body) }
+  });
+  const text4 = await response.text();
+  if (!response.ok) throw new GenaiRequestError(
+    `ASTRA GenAI HTTP ${response.status}: ${text4.replaceAll(key, "[redacted]").slice(0, 2e3)}`,
+    response.status >= 400 && response.status < 500 && ![408, 409, 425, 429].includes(response.status),
+    response.status
+  );
+  try {
+    return text4 ? JSON.parse(text4) : {};
+  } catch {
+    throw new Error(`ASTRA GenAI ${route} returned a non-JSON response`);
+  }
+}
+async function retried(step, final = []) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await step();
+    } catch (error2) {
+      const transient = !(error2 instanceof GenaiRequestError) || !final.includes(error2.httpStatus) && (error2.httpStatus >= 500 || [408, 425, 429].includes(error2.httpStatus));
+      if (!transient || attempt >= genaiUploadSettings.attempts) throw error2;
+      await new Promise((resolve14) => setTimeout(resolve14, genaiUploadSettings.retryDelayMs * attempt));
+    }
+  }
+}
+var uploaded = /* @__PURE__ */ new Map();
+function forgetGenaiUploads() {
+  uploaded.clear();
+}
+function genaiUploadable(bytes, contentType) {
+  return UPLOAD_TYPES.has(contentType) && bytes.length <= UPLOAD_MAX_BYTES;
+}
+var FALL_BACK = [404, 405, 429, 507];
+async function uploadGenaiFile(bytes, contentType) {
+  if (!genaiUploadable(bytes, contentType)) return void 0;
+  const sha2563 = createHash10("sha256").update(bytes).digest("hex");
+  const cacheKey = `${astraGenaiBaseUrl()} ${sha2563}`, cached2 = uploaded.get(cacheKey);
+  if (cached2 && cached2.expiresAt > Date.now() + 60 * 6e4) return cached2.uri;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await uploadOnce(bytes, contentType, sha2563, cacheKey);
+    } catch (error2) {
+      if (error2 instanceof Restart && attempt < 2) continue;
+      throw error2 instanceof Restart ? error2.original : error2;
+    }
+  }
+}
+var Restart = class extends Error {
+  constructor(original) {
+    super("restart upload");
+    this.original = original;
+  }
+  original;
+};
+async function uploadOnce(bytes, contentType, sha2563, cacheKey) {
+  let session;
+  try {
+    session = sessionSchema.parse(await retried(() => call("POST", "/v1/uploads", { size: bytes.length, sha256: sha2563, content_type: contentType }), FALL_BACK));
+  } catch (error2) {
+    if (error2 instanceof GenaiRequestError && FALL_BACK.includes(error2.httpStatus)) return void 0;
+    throw error2;
+  }
+  if (session.chunks !== Math.ceil(bytes.length / session.chunk_size)) throw new Error("GenAI upload session chunk count does not match the file size");
+  const route = `/v1/uploads/${encodeURIComponent(session.upload_id)}`;
+  const put2 = (n) => retried(() => {
+    const chunk3 = bytes.subarray(n * session.chunk_size, (n + 1) * session.chunk_size);
+    return call("PUT", `${route}/chunks/${n}`, chunk3, { "X-Chunk-SHA256": createHash10("sha256").update(chunk3).digest("hex") }, genaiUploadSettings.chunkTimeoutMs);
+  });
+  for (let n = 0; n < session.chunks; n++) await put2(n);
+  const complete = async () => {
+    try {
+      return await retried(() => call("POST", `${route}/complete`));
+    } catch (error2) {
+      throw error2 instanceof GenaiRequestError && error2.httpStatus === 422 ? new Restart(error2) : error2;
+    }
+  };
+  let done;
+  try {
+    done = await complete();
+  } catch (error2) {
+    if (!(error2 instanceof GenaiRequestError) || error2.httpStatus !== 409) throw error2;
+    for (const n of statusSchema.parse(await retried(() => call("GET", route))).missing) await put2(n);
+    done = await complete();
+  }
+  const file = fileSchema.parse(done);
+  const expiresAt = file.expires_at ? Date.parse(file.expires_at) : NaN;
+  if (Number.isFinite(expiresAt)) uploaded.set(cacheKey, { uri: file.uri, expiresAt });
+  return file.uri;
+}
+function shrinkImageToFit(bytes, width, height) {
+  const meta = imageMetadata(bytes);
+  if (meta.width <= width && meta.height <= height) return bytes;
+  const ext = meta.mimeType === "image/png" ? ".png" : meta.mimeType === "image/jpeg" ? ".jpg" : void 0;
+  if (!ext) return bytes;
+  const dir = fs12.mkdtempSync(path11.join(os2.tmpdir(), "genai-shrink-"));
+  try {
+    const input = path11.join(dir, `in${ext}`), output2 = path11.join(dir, `out${ext}`);
+    fs12.writeFileSync(input, bytes);
+    execFileSync8("ffmpeg", [
+      "-v",
+      "error",
+      "-y",
+      "-i",
+      input,
+      "-vf",
+      `scale=${width}:${height}:force_original_aspect_ratio=decrease:flags=lanczos`,
+      "-frames:v",
+      "1",
+      ...ext === ".jpg" ? ["-q:v", "2"] : [],
+      output2
+    ], { timeout: 6e4, stdio: "pipe" });
+    const shrunk = fs12.readFileSync(output2), out = imageMetadata(shrunk);
+    return out.mimeType === meta.mimeType && out.width <= width && out.height <= height ? shrunk : bytes;
+  } catch {
+    return bytes;
+  } finally {
+    fs12.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+// src/astra-genai-video.ts
+var GENAI_VIDEO_MODELS = ["ltx-2.5-22b-distilled", "ltx-2.5-22b-dev"];
+function genaiV2Resolution(saved) {
+  return saved;
+}
+var localResolution = external_exports.string().regex(/^[1-9]\d*x[1-9]\d*$/).refine((value) => {
+  const [w, h2] = value.split("x").map(Number), width = Math.ceil(w / 64) * 64, height = Math.ceil(h2 / 64) * 64;
+  return Number.isSafeInteger(w) && Number.isSafeInteger(h2) && Math.min(w, h2) >= 64 && w % 2 === 0 && h2 % 2 === 0 && Math.max(width, height) <= 1920 && width * height <= 2064384;
+}, "Use even WIDTHxHEIGHT sides of at least 64; rounded-up /64 sides must fit 1920 and 2,064,384 pixels");
+var msrGuidanceFields = {
+  guidanceScale: external_exports.number().finite().min(1).max(10).optional(),
+  nagScale: external_exports.number().finite().min(0).max(100).optional(),
+  nagAlpha: external_exports.number().finite().min(0).max(1).optional(),
+  nagTau: external_exports.number().finite().min(0).max(10).optional()
+};
+function msrNegativeRule(args, issue2) {
+  if ((args.nagAlpha !== void 0 || args.nagTau !== void 0) && args.nagScale === void 0)
+    issue2("MSR nagAlpha and nagTau require an explicit nagScale");
+  if ((args.nagScale ?? 0) > 0 && args.negativePrompt === void 0)
+    issue2("MSR nagScale > 0 requires negativePrompt");
+  if (args.negativePrompt !== void 0 && (args.guidanceScale ?? 1) <= 1 && (args.nagScale ?? 0) === 0)
+    issue2("MSR negativePrompt requires guidanceScale > 1 or nagScale > 0");
+}
+function negativeBody(args) {
+  return {
+    ...args.negativePrompt === void 0 ? {} : { negative_prompt: args.negativePrompt },
+    ...args.guidanceScale === void 0 ? {} : { guidance_scale: args.guidanceScale },
+    ...(args.nagScale ?? 0) > 0 ? {
+      nag_scale: args.nagScale,
+      ...args.nagAlpha === void 0 ? {} : { nag_alpha: args.nagAlpha },
+      ...args.nagTau === void 0 ? {} : { nag_tau: args.nagTau }
+    } : {}
+  };
+}
+function devNegativeRule(args, ctx) {
+  if (args.negativePrompt === void 0) return;
+  const issue2 = (message) => ctx.addIssue({ code: "custom", path: ["negativePrompt"], message });
+  if (args.model !== "ltx-2.5-22b-dev") issue2("negativePrompt requires ltx-2.5-22b-dev, or image-to-video references with guidanceScale > 1 or nagScale > 0");
+  if (args.negativePrompt.length > 2e3) issue2("The dev backend accepts a negativePrompt of at most 2000 characters");
+}
+var exactFrames = external_exports.number().int().min(25).max(361).refine((n) => (n - 1) % 8 === 0, "Use 8k+1 frames");
+var genaiShotsSchema = external_exports.array(external_exports.object({
+  description: external_exports.string().trim().min(1).max(2e3),
+  audio: external_exports.string().trim().min(1).max(2e3).optional(),
+  transition: external_exports.literal("hard_cut").optional()
+}).strict()).min(2).max(4).refine((shots) => !shots[0].transition, "Omit transition on the opening shot");
+var temporalImages = external_exports.array(external_exports.object({
+  imageUri: genaiImageUriSchema.optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  frameIdx: external_exports.number().int().min(0).max(360),
+  strength: external_exports.number().min(0).max(1).optional(),
+  crf: external_exports.number().int().min(0).max(51).optional()
+}).strict().refine((pin) => !!pin.imageUri !== !!pin.imagePath, "Supply exactly one imageUri or imagePath")).min(1).max(8);
+function temporalBody(pins) {
+  if (!pins) return {};
+  return { keyframes: pins.map((pin) => ({
+    image_uri: genaiSourceUri(pin.imageUri, pin.imagePath),
+    frame_idx: pin.frameIdx,
+    ...pin.strength === void 0 ? {} : { strength: pin.strength },
+    ...pin.crf === void 0 ? {} : { crf: pin.crf }
+  })) };
+}
+function validatePins(pins, start, end, length, ctx) {
+  if (!pins) return;
+  const indices = pins.map((pin) => pin.frameIdx);
+  if (indices.length + Number(start) + Number(end) > 8 || new Set(indices).size !== indices.length || indices.some((i2) => start && i2 === 0 || length !== void 0 && i2 >= length - Number(end)))
+    ctx.addIssue({ code: "custom", path: ["keyframes"], message: "Use up to eight distinct frame indices inside the delivered clip, including its pinned endpoints" });
+}
+var genaiSampling = {
+  seed: external_exports.number().int().min(0).max(2147483647).optional(),
+  numInferenceSteps: external_exports.number().int().min(1).max(50).optional(),
+  guidance: guidanceSchema
+};
+var loraName = external_exports.string().trim().min(1).max(128);
+var genaiVisualSampling = {
+  numGeneratedKeyframes: external_exports.number().int().min(0).max(16).optional(),
+  lora: external_exports.array(external_exports.union([loraName, external_exports.object({ name: loraName, strength: external_exports.number().min(0).max(2).optional() }).strict()])).min(1).max(2).optional()
+};
+function samplingBody(args) {
+  return {
+    ...args.seed === void 0 ? {} : { seed: args.seed },
+    ...args.numInferenceSteps === void 0 ? {} : { num_inference_steps: args.numInferenceSteps },
+    ...args.numGeneratedKeyframes === void 0 ? {} : { num_generated_keyframes: args.numGeneratedKeyframes },
+    ...args.guidance === void 0 ? {} : { guidance: Object.fromEntries(Object.entries(args.guidance).map(([k, v]) => [guidanceWireKey(k), v])) },
+    ...args.lora === void 0 ? {} : { lora: args.lora }
+  };
+}
+var textVideoFields = external_exports.object({
+  ...genaiSampling,
+  ...genaiVisualSampling,
+  prompt: external_exports.string().min(1).max(2e3),
+  negativePrompt: external_exports.string().trim().min(1).max(5e3).optional(),
+  model: external_exports.enum(GENAI_VIDEO_MODELS),
+  duration: external_exports.number().int().min(1).nullable().optional(),
+  numFrames: exactFrames.optional(),
+  resolution: localResolution,
+  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
+  generateAudio: external_exports.boolean().default(true),
+  shots: genaiShotsSchema.optional(),
+  reserveUsd: external_exports.number().finite().nonnegative(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
+}).strict();
+function localVideoTiming(args, ctx) {
+  const refs = "references" in args && !!args.references;
+  const promptLimit = refs ? 5e3 : 2e3;
+  if ([...openingPrompt(args.prompt, args.openingPositions)].length > promptLimit)
+    ctx.addIssue({ code: "custom", path: ["prompt"], message: "Prompt exceeds " + promptLimit + " characters" });
+  if (args.model !== "ltx-2.5-22b-dev" && (args.guidance || args.numInferenceSteps !== void 0))
+    ctx.addIssue({ code: "custom", message: "guidance and numInferenceSteps require dev" });
+  if (args.lora && (args.model !== "ltx-2.5-22b-distilled" || refs))
+    ctx.addIssue({ code: "custom", message: "LoRA selection requires plain distilled T2V or I2V" });
+  if (refs && args.numGeneratedKeyframes !== void 0)
+    ctx.addIssue({ code: "custom", message: "MSR does not accept numGeneratedKeyframes" });
+  if (args.duration != null && args.numFrames !== void 0)
+    ctx.addIssue({ code: "custom", path: ["numFrames"], message: "Omit duration when using numFrames" });
+  if (args.duration != null && 8 * Math.ceil((args.duration * args.fps - 1) / 8) + 1 > 361)
+    ctx.addIssue({ code: "custom", path: ["duration"], message: "Duration and fps exceed the local 361-frame limit" });
+  if (args.shots) {
+    if (args.shots[0].transition) ctx.addIssue({ code: "custom", path: ["shots", 0, "transition"], message: "Omit transition on the opening shot" });
+    const parts = [openingPrompt(args.prompt, args.openingPositions)];
+    args.shots.forEach((shot, i2) => {
+      parts.push((i2 === 0 ? "The opening shot shows " : "A hard cut moves to ") + shot.description);
+      if (shot.audio) parts.push("Audio: " + shot.audio);
+    });
+    if ([...parts.join("\n\n")].length > promptLimit) ctx.addIssue({ code: "custom", path: ["shots"], message: "Composed shot prompt exceeds " + promptLimit + " characters" });
+  }
+}
+var genaiTextToVideoSchema = textVideoFields.superRefine((args, ctx) => {
+  localVideoTiming(args, ctx);
+  devNegativeRule(args, ctx);
+});
+var msrReferences = external_exports.array(external_exports.object({
+  imageUri: genaiImageUriSchema.optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  background: external_exports.boolean().default(false),
+  nonCharacter: external_exports.boolean().optional(),
+  // Voice sample for this subject; the gateway pairs it with the same picture slot.
+  audioUri: external_exports.string().min(1).optional(),
+  audioPath: external_exports.string().min(1).optional()
+}).strict().refine(
+  (ref) => Number(!!ref.imageUri) + Number(!!ref.imagePath) === 1,
+  "Supply exactly one imageUri or imagePath"
+).refine((ref) => oneOf(ref.audioUri, ref.audioPath) <= 1, "Supply at most one audioUri or audioPath")).min(1).max(5);
+function validateVoiceSlots(references, issue2) {
+  let subject = 0;
+  for (const ref of references) {
+    subject += Number(!ref.background);
+    if (!oneOf(ref.audioUri, ref.audioPath)) continue;
+    if (ref.background) issue2("MSR voice samples belong to subjects, not the background");
+    else if (subject > 2) issue2("MSR voice samples fit the first two subjects only");
+  }
+}
+var genaiImageToVideoSchema = textVideoFields.extend({
+  prompt: external_exports.string().min(1).max(5e3),
+  imageUri: genaiImageUriSchema.optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  lastFrameUri: genaiImageUriSchema.nullable().optional(),
+  lastFramePath: external_exports.string().min(1).optional(),
+  keyframes: temporalImages.optional(),
+  referenceStrength: external_exports.number().finite().min(0).max(1).optional(),
+  referenceFrames: external_exports.union([external_exports.literal(25), external_exports.literal(33)]).optional(),
+  skipStage2: external_exports.boolean().optional(),
+  references: msrReferences.optional(),
+  openingPositions: openingPositionsSchema.optional(),
+  ...msrGuidanceFields
+}).strict().superRefine((args, ctx) => {
+  const issue2 = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  localVideoTiming(args, ctx);
+  const length = args.numFrames ?? (args.duration == null ? void 0 : args.duration * args.fps);
+  const end = args.lastFrameUri != null || args.lastFramePath !== void 0;
+  if (length === void 0 && (end || args.keyframes)) issue2("Temporal pins require duration or numFrames");
+  validatePins(args.keyframes, true, end, length, ctx);
+  if (Number(args.imageUri !== void 0) + Number(args.imagePath !== void 0) !== 1) issue2("Supply exactly one imageUri or imagePath");
+  if (args.lastFrameUri != null && args.lastFramePath !== void 0) issue2("Supply at most one lastFrameUri or lastFramePath");
+  if (args.skipStage2 && args.resolution.split("x").some((side) => Number(side) % 4))
+    issue2("skipStage2 requires sides divisible by four for an even half-size output");
+  if (!args.references) {
+    if (args.referenceStrength !== void 0 || args.referenceFrames !== void 0 || args.skipStage2 !== void 0)
+      issue2("referenceStrength, referenceFrames and skipStage2 require references");
+    if (args.openingPositions !== void 0) issue2("openingPositions requires MSR references");
+    if (Object.keys(msrGuidanceFields).some((key) => args[key] !== void 0))
+      issue2("guidanceScale and NAG require references (MSR conditioning); ltx-2.5-22b-dev already runs guided");
+    devNegativeRule(args, ctx);
+  } else {
+    validateOpening(args.prompt, args.openingPositions, args.references, issue2, 5e3);
+    validateVoiceSlots(args.references, issue2);
+    msrNegativeRule(args, issue2);
+    if (args.model !== "ltx-2.5-22b-distilled") issue2("Additional references require ltx-2.5-22b-distilled (MSR conditioning)");
+    if (length === void 0) issue2("Additional references require duration or numFrames");
+    const backgrounds = args.references.filter((ref) => ref.background).length;
+    if (backgrounds > 1 || args.references.length - backgrounds > 4 || backgrounds === args.references.length)
+      issue2("References require 1..4 subjects and at most one background");
+  }
+});
+var GENAI_AUDIO_TYPES = { ".wav": "audio/wav", ".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".ogg": "audio/ogg", ".opus": "audio/ogg" };
+var GENAI_AUDIO_DATA_URI_MAX = 15e6;
+var oneOf = (a, b) => Number(a !== void 0) + Number(b !== void 0);
+var genaiAudioToVideoSchema = external_exports.object({
+  ...genaiSampling,
+  prompt: external_exports.string().trim().min(1).max(2e3),
+  negativePrompt: external_exports.string().trim().min(1).max(2e3).optional(),
+  model: external_exports.enum(["ltx-2.5-22b-dev", "ltx-2.5-22b-distilled"]),
+  resolution: localResolution,
+  keyframes: temporalImages.optional(),
+  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
+  audioPath: external_exports.string().min(1).optional(),
+  audioUri: external_exports.string().min(1).optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  imageUri: genaiImageUriSchema.optional(),
+  lastFramePath: external_exports.string().min(1).optional(),
+  lastFrameUri: genaiImageUriSchema.optional(),
+  reserveUsd: external_exports.number().finite().nonnegative(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
+}).strict().superRefine((args, ctx) => {
+  const issue2 = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  validatePins(args.keyframes, !!(args.imagePath || args.imageUri), !!(args.lastFramePath || args.lastFrameUri), void 0, ctx);
+  if (args.model === "ltx-2.5-22b-distilled" && (args.negativePrompt || args.guidance || args.numInferenceSteps !== void 0))
+    issue2("The distilled ComfyUI A2V pipeline uses fixed unguided sampling");
+  if (oneOf(args.audioPath, args.audioUri) !== 1) issue2("Supply exactly one audioPath or audioUri");
+  if (oneOf(args.imagePath, args.imageUri) > 1) issue2("Supply at most one imagePath or imageUri");
+  if (oneOf(args.lastFramePath, args.lastFrameUri) > 1) issue2("Supply at most one lastFramePath or lastFrameUri");
+  if (oneOf(args.lastFramePath, args.lastFrameUri) && !oneOf(args.imagePath, args.imageUri)) issue2("A last frame requires a first image");
+});
+function genaiAudioUri(uri, file) {
+  if (uri !== void 0) {
+    if (/^https:/.test(uri)) {
+      const url = new URL(uri);
+      if (url.username || url.password) throw new Error("GenAI audio URL must not carry credentials");
+      return uri;
+    }
+    const match2 = /^data:([^;,]+);base64,([A-Za-z0-9+/]+=*)$/.exec(uri);
+    if (!match2 || !Object.values(GENAI_AUDIO_TYPES).includes(match2[1])) throw new Error("GenAI audio must be HTTPS or an audio/wav, audio/mpeg, audio/mp4 or audio/ogg data URI");
+    if (match2[2].length > GENAI_AUDIO_DATA_URI_MAX) throw new Error("GenAI audio data URI exceeds 15,000,000 base64 characters; use an HTTPS URL");
+    return uri;
+  }
+  const type = GENAI_AUDIO_TYPES[path12.extname(file).toLowerCase()];
+  if (!type) throw new Error("GenAI audioPath must be .wav, .mp3, .m4a, .ogg or .opus");
+  if (4 * Math.ceil(fs13.statSync(file).size / 3) > GENAI_AUDIO_DATA_URI_MAX) throw new Error("GenAI audioPath exceeds the 15,000,000-character data URI limit (about 11.25 MB); use audioUri with HTTPS");
+  return `data:${type};base64,${fs13.readFileSync(file).toString("base64")}`;
+}
+function buildGenaiAudioBody(args) {
+  const image2 = oneOf(args.imagePath, args.imageUri) ? genaiSourceUri(args.imageUri, args.imagePath) : void 0;
+  const last = oneOf(args.lastFramePath, args.lastFrameUri) ? genaiSourceUri(args.lastFrameUri, args.lastFramePath) : void 0;
+  return {
+    audio_uri: genaiAudioUri(args.audioUri, args.audioPath),
+    prompt: args.prompt,
+    model: args.model,
+    resolution: args.resolution,
+    fps: args.fps,
+    ...image2 === void 0 ? {} : { image_uri: image2 },
+    ...last === void 0 ? {} : { last_frame_uri: last },
+    ...samplingBody(args),
+    ...temporalBody(args.keyframes),
+    ...negativeBody({ negativePrompt: args.negativePrompt })
+  };
+}
+var GENAI_MSR_FRAMES = { min: 25, max: 361, step: 8, frameRate: 24 };
+var genaiMsrSchema = external_exports.object({
+  prompt: external_exports.string().trim().min(1).max(5e3),
+  negativePrompt: external_exports.string().trim().min(1).max(5e3).optional(),
+  ...msrGuidanceFields,
+  skipStage2: external_exports.boolean().optional(),
+  references: msrReferences,
+  openingPositions: openingPositionsSchema,
+  referenceStrength: external_exports.number().finite().min(0).max(1).default(1),
+  referenceFrames: external_exports.union([external_exports.literal(25), external_exports.literal(33)]).default(33),
+  width: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1536),
+  height: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1024),
+  numFrames: external_exports.number().int().min(GENAI_MSR_FRAMES.min).max(GENAI_MSR_FRAMES.max).refine((n) => (n - 1) % GENAI_MSR_FRAMES.step === 0).optional(),
+  duration: external_exports.number().finite().gt(0).max(360).optional(),
+  frameRate: external_exports.number().finite().min(1).max(60).default(24),
+  seed: external_exports.number().int().min(0).max(2147483647).default(42),
+  reserveUsd: external_exports.number().finite().nonnegative(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use a .mp4 filename").optional()
+}).strict().superRefine((args, ctx) => {
+  const issue2 = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  validateOpening(args.prompt, args.openingPositions, args.references, issue2, 5e3);
+  msrNegativeRule(args, issue2);
+  const backgrounds = args.references.filter((ref) => ref.background).length;
+  if (backgrounds === args.references.length || backgrounds > 1 || args.references.length - backgrounds > 4) issue2("MSR requires 1..4 subjects and at most one background");
+  validateVoiceSlots(args.references, issue2);
+  if (args.width * args.height > 2064384) issue2("MSR maximum is 2,064,384 pixels");
+  if (args.duration !== void 0) {
+    if (args.numFrames !== void 0) issue2("Omit numFrames when using duration");
+    const frames = 1 + 8 * Math.ceil((args.duration * args.frameRate - 1) / 8 - 0.5 - 1e-9);
+    if (frames < GENAI_MSR_FRAMES.min || frames > GENAI_MSR_FRAMES.max) issue2("MSR duration must round to 25..361 frames");
+  }
+});
+function referenceBody(ref) {
+  return {
+    image_uri: genaiSourceUri(ref.imageUri, ref.imagePath),
+    background: ref.background,
+    ...ref.audioUri || ref.audioPath ? { audio_uri: genaiAudioUri(ref.audioUri, ref.audioPath) } : {}
+  };
+}
+function buildGenaiMsrBody(args) {
+  return {
+    prompt: openingPrompt(args.prompt, args.openingPositions),
+    ...negativeBody(args),
+    references: args.references.map(referenceBody),
+    ...args.skipStage2 === void 0 ? {} : { skip_stage_2: args.skipStage2 },
+    reference_strength: args.referenceStrength,
+    reference_frames: args.referenceFrames,
+    width: args.width,
+    height: args.height,
+    frame_rate: args.frameRate,
+    seed: args.seed,
+    ...args.duration === void 0 ? { num_frames: args.numFrames ?? 121 } : { duration: args.duration }
+  };
+}
+var msrVoiceCache;
+async function refreshGenaiMsrVoice(force = false) {
+  const origin = astraGenaiBaseUrl();
+  if (!force && msrVoiceCache?.origin === origin && Date.now() - msrVoiceCache.at < msrVoiceCache.ttl) return msrVoiceCache.value;
+  let value = false, ttl = 6e4, promptLimit = 2e3;
+  try {
+    const body = external_exports.object({ voice_references: external_exports.boolean(), prompt_max_chars: external_exports.number().int().positive().optional() }).passthrough().parse(await requestGenai("GET", "/v1/ltx/msr/capabilities", void 0, 15e3));
+    value = body.voice_references;
+    ttl = 6e5;
+    promptLimit = Math.min(5e3, body.prompt_max_chars ?? 2e3);
+  } catch {
+  }
+  msrVoiceCache = { origin, value, promptLimit, at: Date.now(), ttl };
+  return value;
+}
+function genaiMsrVoiceReferences() {
+  return msrVoiceCache?.origin === astraGenaiBaseUrl() && msrVoiceCache.value;
+}
+function genaiMsrPromptLimit() {
+  return msrVoiceCache?.origin === astraGenaiBaseUrl() ? msrVoiceCache.promptLimit : 2e3;
+}
+function buildGenaiVideoBody(args) {
+  return {
+    prompt: openingPrompt(args.prompt, args.openingPositions),
+    model: args.model,
+    ...args.numFrames === void 0 ? { duration: args.duration ?? null } : { num_frames: args.numFrames },
+    resolution: args.resolution,
+    fps: args.fps,
+    generate_audio: args.generateAudio,
+    ...args.shots ? { shots: args.shots } : {},
+    ...samplingBody(args),
+    ...temporalBody(args.keyframes),
+    // Local frames travel as checked data URIs, like MSR and audio-to-video.
+    ...args.imageUri === void 0 && args.imagePath === void 0 ? {} : { image_uri: genaiSourceUri(args.imageUri, args.imagePath) },
+    ...args.lastFramePath !== void 0 ? { last_frame_uri: genaiSourceUri(void 0, args.lastFramePath) } : args.lastFrameUri === void 0 ? {} : { last_frame_uri: args.lastFrameUri === null ? null : genaiSourceUri(args.lastFrameUri) },
+    ...args.references === void 0 ? {} : { references: args.references.map(referenceBody) },
+    ...args.referenceStrength === void 0 ? {} : { reference_strength: args.referenceStrength },
+    ...args.referenceFrames === void 0 ? {} : { reference_frames: args.referenceFrames },
+    ...args.skipStage2 === void 0 ? {} : { skip_stage_2: args.skipStage2 },
+    ...negativeBody(args)
+  };
+}
+var operationSchema = external_exports.enum(["text-to-video", "image-to-video", "audio-to-video", "msr"]);
+var receiptSchema2 = external_exports.object({
+  version: external_exports.literal(1),
+  baseUrl: external_exports.string(),
+  operation: operationSchema,
+  fingerprint: external_exports.string(),
+  videoPath: external_exports.string(),
+  jobId: external_exports.string().min(1).optional(),
+  status: external_exports.enum(["submitting", "submitted", "completed"]),
+  sha256: external_exports.string().optional()
+}).strict();
+var statusSchema2 = external_exports.object({
+  id: external_exports.string().min(1),
+  status: external_exports.enum(["pending", "processing", "completed", "failed", "cancelled"]),
+  result: external_exports.object({ video_url: external_exports.string().min(1).optional() }).passthrough().nullish(),
+  error: external_exports.unknown().optional()
+}).passthrough();
+var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
+async function getGenaiVideoStatus(input) {
+  const receipt = receiptSchema2.parse(JSON.parse(fs13.readFileSync(input.receiptPath, "utf8")));
+  if (receipt.baseUrl !== astraGenaiBaseUrl()) throw new Error("GenAI receipt belongs to a different server; restore ASTRA_GENAI_URL before recovery.");
+  if (!receipt.jobId) throw new Error("GenAI submission identity is unknown; inspect server usage before retrying.");
+  if (receipt.status === "completed") {
+    const bytes2 = fs13.readFileSync(receipt.videoPath);
+    if (createHash11("sha256").update(bytes2).digest("hex") !== receipt.sha256) throw new Error("GenAI cached output changed");
+    return { jobId: receipt.jobId, status: "completed", videoPath: receipt.videoPath, downloaded: true, review: "not_reviewed" };
+  }
+  const route = `${genaiVideoRoute(receipt.operation)}/${encodeURIComponent(receipt.jobId)}`;
+  const job = statusSchema2.parse(await requestGenai("GET", route));
+  if (job.id !== receipt.jobId) throw new Error("GenAI status job ID mismatch");
+  if (job.status === "failed" || job.status === "cancelled") throw new GenaiRequestError(`GenAI video ${receipt.jobId} ${job.status}: ${JSON.stringify(job.error ?? "No details").slice(0, 1e3)}`, true, 200);
+  if (job.status !== "completed" || !input.download)
+    return { jobId: receipt.jobId, status: job.status, downloaded: false, review: "not_reviewed" };
+  if (!job.result?.video_url) throw new Error("GenAI completed without result.video_url; retain the receipt, do not resubmit.");
+  let bytes;
+  if (job.result.authentication === "same GatewayToken required") {
+    const url = new URL(job.result.video_url, astraGenaiBaseUrl() + "/");
+    if (url.origin !== new URL(astraGenaiBaseUrl()).origin || url.username || url.password || url.search || url.hash || !/^\/v1\/ltx\/desktop\/assets\/[A-Za-z0-9_-]+\/bytes$/.test(url.pathname))
+      throw new Error("Invalid private GenAI video URL; retain receipt");
+    bytes = await requestGenaiMedia(url.pathname, void 0, route);
+  } else bytes = await downloadGenaiResult(job.result.video_url);
+  if (bytes.length < 12 || bytes.toString("ascii", 4, 8) !== "ftyp") throw new Error("GenAI result is not MP4");
+  const temp = `${receipt.videoPath}.${process.pid}.download.mp4`;
+  try {
+    fs13.writeFileSync(temp, bytes, { flag: "wx", mode: 384 });
+    const probe5 = JSON.parse(execFileSync9("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height:format=duration", "-of", "json", temp], { encoding: "utf8", timeout: 3e4 }));
+    if (!(probe5.streams?.[0]?.width > 0) || !(Number(probe5.format?.duration) > 0)) throw new Error("GenAI result has no usable video stream");
+    if (fs13.existsSync(receipt.videoPath)) {
+      if (createHash11("sha256").update(fs13.readFileSync(receipt.videoPath)).digest("hex") !== createHash11("sha256").update(bytes).digest("hex"))
+        throw new Error("GenAI video output conflicts with download");
+    } else fs13.linkSync(temp, receipt.videoPath);
+    atomicJson(input.receiptPath, { ...receipt, status: "completed", sha256: createHash11("sha256").update(bytes).digest("hex") });
+  } finally {
+    fs13.rmSync(temp, { force: true });
+  }
+  return { jobId: receipt.jobId, status: "completed", videoPath: receipt.videoPath, downloaded: true, review: "not_reviewed" };
+}
+var GENAI_MSR_INLINE_MAX_BYTES = 8 * 1e3 * 1e3;
+async function prepareGenaiMsrSources(body) {
+  const size = /^(\d+)x(\d+)$/.exec(body.resolution ?? "");
+  const width = body.width ?? Number(size?.[1]), height = body.height ?? Number(size?.[2]);
+  let supported = true;
+  const send = async (uri, shrink) => {
+    const match2 = /^data:([^;,]+);base64,(.*)$/s.exec(uri);
+    if (!match2) return uri;
+    const bytes2 = shrink && width > 0 && height > 0 ? shrinkImageToFit(Buffer.from(match2[2], "base64"), width, height) : Buffer.from(match2[2], "base64");
+    const uploadable = supported && genaiUploadable(bytes2, match2[1]);
+    const id = uploadable ? await uploadGenaiFile(bytes2, match2[1]) : void 0;
+    if (uploadable && id === void 0) supported = false;
+    return id ?? `data:${match2[1]};base64,${bytes2.toString("base64")}`;
+  };
+  const references = [];
+  for (const ref of body.references ?? []) references.push({
+    ...ref,
+    image_uri: await send(ref.image_uri, true),
+    ..."audio_uri" in ref && typeof ref.audio_uri === "string" ? { audio_uri: await send(ref.audio_uri, false) } : {}
+  });
+  const keyframes2 = [];
+  for (const pin of body.keyframes ?? []) keyframes2.push({ ...pin, image_uri: await send(pin.image_uri, false) });
+  const prepared = {
+    ...body,
+    ...body.references ? { references } : {},
+    ...body.keyframes ? { keyframes: keyframes2 } : {},
+    ...body.image_uri === void 0 ? {} : { image_uri: await send(body.image_uri, false) },
+    ...body.last_frame_uri == null ? {} : { last_frame_uri: await send(body.last_frame_uri, false) }
+  };
+  const bytes = Buffer.byteLength(JSON.stringify(prepared));
+  if (bytes - (body.audio_uri?.length ?? 0) > GENAI_MSR_INLINE_MAX_BYTES)
+    throw new Error(`msr_body_too_large: the gateway did not take the chunked upload and the inline request is ${(bytes / 1e6).toFixed(1)} MB (limit 8 MB); nothing was submitted. Try again later, or use a shorter voice sample.`);
+  return prepared;
+}
+var SUBMIT_TIMEOUT_MS2 = 15 * 6e4;
+function genaiVideoRoute(operation) {
+  return operation === "msr" ? "/v1/ltx/msr" : `/v1/ltx/v2/${operation}`;
+}
+var genaiModes = {
+  astra_genai_text2video: "text2video",
+  astra_genai_img2video: "image2video",
+  astra_genai_audio2video: "audio2video",
+  astra_genai_msr: "msr"
+};
+var deployedModel = external_exports.object({
+  id: external_exports.string(),
+  parameters_by_mode: external_exports.record(external_exports.array(external_exports.string())).optional(),
+  limits: external_exports.record(external_exports.unknown()).optional()
+});
+async function checkGenaiVideoOptions(tool2, args) {
+  const mode = genaiModes[tool2];
+  if (!mode) return;
+  if (mode === "msr" || mode === "image2video" && args.references) {
+    const prompt = openingPrompt(String(args.prompt), args.openingPositions);
+    const parts = [prompt];
+    for (const [i2, shot] of (Array.isArray(args.shots) ? args.shots : []).entries()) {
+      parts.push((i2 === 0 ? "The opening shot shows " : "A hard cut moves to ") + shot.description);
+      if (shot.audio) parts.push("Audio: " + shot.audio);
+    }
+    const chars = Math.max([...parts.join("\n\n")].length, [...String(args.negativePrompt ?? "")].length);
+    if (chars > 2e3) {
+      const caps = external_exports.object({ prompt_max_chars: external_exports.number().int().optional() }).parse(
+        await requestGenai("GET", "/v1/ltx/msr/capabilities", void 0, 15e3)
+      );
+      if (chars > (caps.prompt_max_chars ?? 2e3)) throw new GenaiRequestError("msr_prompt_limit: prompt exceeds the deployed backend limit", true, 422);
+    }
+  }
+  const wireFields = {
+    seed: "seed",
+    numInferenceSteps: "num_inference_steps",
+    guidance: "guidance",
+    lora: "lora",
+    numGeneratedKeyframes: "num_generated_keyframes",
+    numFrames: "num_frames",
+    shots: "shots",
+    negativePrompt: "negative_prompt",
+    guidanceScale: "guidance_scale",
+    referenceStrength: "reference_strength",
+    referenceFrames: "reference_frames",
+    nagScale: "nag_scale",
+    nagAlpha: "nag_alpha",
+    nagTau: "nag_tau",
+    skipStage2: "skip_stage_2"
+  };
+  const requested = Object.entries(wireFields).filter(([key]) => args[key] !== void 0 && (mode !== "msr" || key === "skipStage2"));
+  const needsAudioModel = mode === "audio2video" && args.model === "ltx-2.5-22b-distilled";
+  if (!requested.length && !args.keyframes && !needsAudioModel) return;
+  let models;
+  try {
+    const response = await requestGenai("GET", "/v1/models", void 0, 15e3);
+    models = external_exports.object({ data: external_exports.array(deployedModel) }).parse(response).data;
+  } catch {
+    throw new GenaiRequestError("ltx_capabilities_unavailable: cannot verify the requested gateway fields before submission", true, 503);
+  }
+  const model2 = models.find((entry2) => entry2.id === (mode === "msr" ? "ltx-msr" : args.model));
+  const fields2 = model2?.parameters_by_mode?.[mode] ?? [];
+  if (needsAudioModel && !model2?.parameters_by_mode?.audio2video)
+    throw new GenaiRequestError("ltx_fields_unsupported: this gateway does not advertise distilled audio2video", true, 422);
+  const missing = requested.filter(([, wire]) => !fields2.includes(wire)).map(([key]) => key);
+  if (Array.isArray(args.keyframes)) {
+    const limit2 = external_exports.object({ temporal_images_including_endpoints: external_exports.number().int() }).safeParse(model2?.limits?.[mode]);
+    const count = args.keyframes.length + Number(!!(args.imagePath || args.imageUri)) + Number(!!(args.lastFramePath || args.lastFrameUri));
+    if (!limit2.success || count > limit2.data.temporal_images_including_endpoints) missing.push("keyframes");
+  }
+  if (missing.length) throw new GenaiRequestError(`ltx_fields_unsupported: ${mode} on ${model2?.id ?? args.model} does not advertise ${missing.join(", ")}`, true, 422);
+}
+async function generateGenaiVideo(operation, input) {
+  const args = (operation === "msr" ? genaiMsrSchema : operation === "audio-to-video" ? genaiAudioToVideoSchema : operation === "text-to-video" ? genaiTextToVideoSchema : genaiImageToVideoSchema).parse(input);
+  requireAstraGenaiKey();
+  const body = operation === "msr" ? buildGenaiMsrBody(args) : operation === "audio-to-video" ? buildGenaiAudioBody(args) : buildGenaiVideoBody(args);
+  const usesReferences = "references" in body && Array.isArray(body.references) && body.references.length > 0;
+  const fingerprint = createHash11("sha256").update(JSON.stringify(body)).digest("hex");
+  const videoPath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.mp4`, "video");
+  const receiptPath2 = videoPath + ".astra-genai.json";
+  if (fs13.existsSync(receiptPath2)) {
+    const previous = receiptSchema2.parse(JSON.parse(fs13.readFileSync(receiptPath2, "utf8")));
+    if (previous.baseUrl !== astraGenaiBaseUrl() || previous.operation !== operation || previous.fingerprint !== fingerprint || previous.videoPath !== videoPath)
+      throw new Error("GenAI output receipt conflicts with this request; use a distinct output path.");
+    if (!previous.jobId) throw new Error("GenAI submission identity is unknown; inspect usage before retrying.");
+    recordVideoSubmission(previous.jobId);
+  } else {
+    if (fs13.existsSync(videoPath)) throw new Error("GenAI output already exists");
+    const tools = { "text-to-video": "astra_genai_text2video", "image-to-video": "astra_genai_img2video", "audio-to-video": "astra_genai_audio2video", msr: "astra_genai_msr" };
+    await checkGenaiVideoOptions(tools[operation], args);
+    if (operation === "image-to-video" && usesReferences) {
+      let capabilities;
+      try {
+        capabilities = external_exports.object({ image_conditioning: external_exports.boolean().optional(), voice_references: external_exports.boolean().optional() }).passthrough().parse(await requestGenai("GET", "/v1/ltx/msr/capabilities", void 0, 15e3));
+      } catch {
+        throw new GenaiRequestError("image_references_capability_unavailable: cannot verify combined image conditioning before submission; no generation was requested", true, 503);
+      }
+      if (capabilities.image_conditioning !== true)
+        throw new GenaiRequestError("image_references_unsupported: the GenAI backend does not advertise combined start/end frames and subject references; no request was submitted", true, 422);
+      if (body.references?.some((ref) => ref.audio_uri) && capabilities.voice_references !== true)
+        throw new GenaiRequestError("msr_voice_unsupported: the GenAI MSR backend does not accept voice samples", true, 422);
+    }
+    const msrArgs = operation === "msr" || usesReferences ? args : void 0;
+    if (msrArgs && (msrArgs.negativePrompt !== void 0 || (msrArgs.guidanceScale ?? 1) > 1)) {
+      const capabilities = external_exports.object({ negative_prompt: external_exports.boolean().optional(), nag: external_exports.boolean().optional() }).passthrough().parse(await requestGenai("GET", "/v1/ltx/msr/capabilities", void 0, 15e3));
+      if ((msrArgs.nagScale ?? 0) > 0 && capabilities.nag !== true)
+        throw new GenaiRequestError("msr_nag_unsupported: the GenAI MSR backend does not advertise NAG", true, 422);
+      if (capabilities.negative_prompt !== true)
+        throw new GenaiRequestError("msr_negative_unsupported: the GenAI MSR backend does not advertise negative conditioning", true, 422);
+    }
+    if (operation === "msr" && args.references.some((ref) => oneOf(ref.audioUri, ref.audioPath)) && !await refreshGenaiMsrVoice(true))
+      throw new Error("msr_voice_unsupported: the GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities)");
+    const submitted = usesReferences || "keyframes" in body ? await prepareGenaiMsrSources(body) : body;
+    const receipt = { version: 1, baseUrl: astraGenaiBaseUrl(), operation, fingerprint, videoPath, status: "submitting" };
+    fs13.writeFileSync(receiptPath2, JSON.stringify(receipt), { flag: "wx", mode: 384 });
+    let response;
+    try {
+      try {
+        response = await requestGenai("POST", genaiVideoRoute(operation), submitted, SUBMIT_TIMEOUT_MS2);
+      } catch (error2) {
+        if (!JSON.stringify(submitted).includes(GENAI_FILE_SCHEME) || !(error2 instanceof GenaiRequestError && error2.httpStatus === 400 && GENAI_FILE_GONE.test(error2.message))) throw error2;
+        forgetGenaiUploads();
+        let again;
+        try {
+          again = await prepareGenaiMsrSources(body);
+        } catch (uploadError) {
+          fs13.rmSync(receiptPath2, { force: true });
+          throw uploadError;
+        }
+        response = await requestGenai("POST", genaiVideoRoute(operation), again, SUBMIT_TIMEOUT_MS2);
+      }
+    } catch (error2) {
+      if (error2 instanceof GenaiRequestError && error2.terminal) fs13.rmSync(receiptPath2, { force: true });
+      throw error2;
+    }
+    const accepted = external_exports.object({ id: external_exports.string().min(1) }).passthrough().parse(response);
+    atomicJson(receiptPath2, { ...receipt, jobId: accepted.id, status: "submitted" });
+    recordVideoSubmission(accepted.id);
+  }
+  const result = await pollGenaiJob(
+    () => getGenaiVideoStatus({ receiptPath: receiptPath2, download: true }),
+    `GenAI video is still pending; recover using receiptPath ${receiptPath2}, never resubmit.`
+  );
+  return { ...result, receiptPath: receiptPath2 };
+}
+
+// src/astra-genai-tools.ts
+var openingPositionsProperty = zodToJsonSchema(openingPositionsSchema, { target: "openApi3" });
+var subjectVoice = {
+  nonCharacter: { type: "boolean", description: "Set true for an object or prop reference with no character. Character panels belong in openingPositions." },
+  audioPath: { type: "string", description: "Local voice sample (wav, mp3, m4a, ogg) for this subject; subjects 1 and 2 only. Voice only, no background sound." },
+  audioUri: { type: "string", description: "HTTPS or audio data URI voice sample, instead of audioPath." }
+};
+var output = {
+  outputPath: { type: "string", description: "Local output directory; configured production keeps outputs inside its episode/workspace." },
+  filename: { type: "string", description: "Bare output filename (.mp4 for video, .png for image). Reuse its receipt after interruption; never overwrite existing media." }
+};
+var msrGuidance = {
+  guidanceScale: { type: "number", minimum: 1, maximum: 10, description: "Classifier-free guidance; omitted keeps gateway default 1. Values above 1 require backend negative conditioning support and change distilled sampling." },
+  nagScale: { type: "number", minimum: 0, maximum: 100, description: "Video-only normalized attention guidance. Omitted or 0 disables NAG; a positive value requires negativePrompt and live backend nag support. Example 11 is experimental, not a subtitle-free guarantee; works at CFG 1." },
+  nagAlpha: { type: "number", minimum: 0, maximum: 1, description: "NAG mixing coefficient; gateway default 0.25. Sent only when nagScale > 0." },
+  nagTau: { type: "number", minimum: 0, maximum: 10, description: "NAG clipping threshold; gateway default 2.5. Sent only when nagScale > 0." }
+};
+var devNegative = "Negative conditioning, e.g. has_subtitles, captions, text overlays. Omit it to keep the engine default negative, which starts with has_subtitles, has_blurbox and continues with quality terms (ltx_pipelines 1.6.0); a supplied value replaces that default, so repeat the terms still wanted. At most 2000 characters on ltx-2.5-22b-dev. Not a subtitle-free guarantee; inspect the clip.";
+var keyframes = {
+  type: "array",
+  minItems: 1,
+  maxItems: 8,
+  description: "Timed image pins. Count the start and end frames toward the eight-image limit. Requires gateway keyframes support.",
+  items: { type: "object", required: ["frameIdx"], additionalProperties: false, properties: {
+    imagePath: { type: "string", description: "Local PNG/JPEG, exclusive with imageUri." },
+    imageUri: { type: "string", description: "HTTPS or data URI, exclusive with imagePath." },
+    frameIdx: { type: "integer", minimum: 0, maximum: 360, description: "Distinct zero-based index inside the delivered clip." },
+    strength: { type: "number", minimum: 0, maximum: 1, description: "Frame adherence, default 1." },
+    crf: { type: "integer", minimum: 0, maximum: 51, description: "Optional conditioning image compression on supporting backends." }
+  } }
+};
+var sampleOptions = {
+  seed: { type: "integer", minimum: 0, maximum: 2147483647, description: "Reproducibility seed on gateways advertising per-mode seed control." },
+  numInferenceSteps: { type: "integer", minimum: 1, maximum: 50, description: "Guided dev denoising steps." },
+  guidance: { ...zodToJsonSchema(genaiSampling.guidance.unwrap(), { target: "openApi3" }), description: "Per-modality dev guidance scales, blocks and skip steps." }
+};
+var video = {
+  ...sampleOptions,
+  numGeneratedKeyframes: { type: "integer", minimum: 0, maximum: 16, description: "Internally generated keyframes on ordinary text/image pipelines." },
+  lora: { ...zodToJsonSchema(genaiVisualSampling.lora.unwrap(), { target: "openApi3" }), description: "Registered LoRA names or name/strength pairs on plain distilled generation." },
+  shots: { ...zodToJsonSchema(genaiShotsSchema, { $refStrategy: "none" }), description: "2\u20134 ordered shot descriptions. Later hard_cut transitions are prompt instructions; there is no time, frame or image slot per shot." },
+  prompt: { type: "string", minLength: 1, maxLength: 2e3, description: "Scene and action prompt, at most 2000 characters, e.g. A leaf sways as the camera moves closer. Describe camera motion here." },
+  negativePrompt: { type: "string", minLength: 1, maxLength: 5e3, description: devNegative + " Requires ltx-2.5-22b-dev: distilled sampling has no negative pass, except image-to-video references with guidanceScale > 1 or nagScale > 0." },
+  model: { type: "string", enum: [...GENAI_VIDEO_MODELS], description: "Local gateway model. Cloud ltx-2-5-fast/pro models are not supported." },
+  duration: { type: ["integer", "null"], minimum: 1, description: "Whole seconds, e.g. 5, or null for automatic duration without an end frame. Rounded-up 8k+1 frames must fit 361 at the selected fps." },
+  numFrames: { type: "integer", minimum: 25, maximum: 361, description: "Exact 8k+1 frames instead of duration. Accepted for end frames and distilled subject references." },
+  resolution: { type: "string", description: "WIDTHxHEIGHT with even sides of at least 64. Round each side up to 64 for backend limits: at most 1920 per side and 2,064,384 pixels. 1280x720 is supported; 1920x1080 exceeds the padded pixel cap." },
+  fps: { type: "integer", enum: [24, 25, 48, 50], default: 24, description: "Requested output frame rate." },
+  generateAudio: { type: "boolean", default: true, description: "Request generated audio. External speech conditioning is not supported by this gateway." },
+  reserveUsd: { type: "number", minimum: 0, description: "Explicit total budget reservation; gateway prices are unverified. Use zero only when the deployment has no per-call bill, e.g. 0. This is not a provider invoice cap." },
+  ...output
+};
+var generation = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true };
+var GENAI_TOOLS = [
+  ...NATIVE_GENAI_TOOLS,
+  {
+    name: "astra_genai_text2video",
+    title: "Generate GenAI LTX video from text",
+    description: "Generate and save an MP4 through the unified ASTRA GenAI LTX v2 gateway. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY, a separate gk_ token from ASTRA_VIDEO. Persists job identity before polling; recover the same receipt after timeout. Supports text only; for a supplied audio track use astra_genai_audio2video. Plain distilled generation takes registered LoRAs where advertised. Legacy astra_text2video remains a separate server adapter.",
+    inputSchema: { type: "object", properties: video, required: ["prompt", "model", "resolution", "reserveUsd"], additionalProperties: false },
+    annotations: generation
+  },
+  {
+    name: "astra_genai_img2video",
+    title: "Generate GenAI LTX video from an image URI",
+    description: "Generate an MP4 from a start image, optional end and subject references.\nUse for image-to-video, first/last-frame animation and character or object reference guidance. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Give exactly one imageUri or imagePath. Optional references are separate from the start/end frames: 1..4 subject images and at most one background, supported on ltx-2.5-22b-distilled with explicit duration or numFrames and a backend advertising combined MSR image conditioning. Subjects 1 and 2 can each carry a voice sample (audioPath or audioUri) for native dialogue while imagePath pins the first frame. The selected distilled weights run with the MSR IC-LoRA; generateAudio:false removes the generated soundtrack. Dev supports temporal image pins. Intermediate keyframes require an updated gateway. Do NOT use for supplied speech or recovery \u2014 use astra_genai_audio2video or astra_genai_video_status. Returns: jobId, status, videoPath, downloaded, review and receiptPath; resume that receipt without resubmitting.",
+    inputSchema: { type: "object", properties: {
+      ...video,
+      keyframes,
+      prompt: { ...video.prompt, maxLength: 5e3, description: "Up to 2000 characters for plain I2V. With subject references the compiled prompt must fit the deployed MSR prompt limit." },
+      referenceStrength: { type: "number", minimum: 0, maximum: 1, description: "Reference adherence on distilled MSR I2V. The backend sets the supported range." },
+      referenceFrames: { type: "integer", enum: [25, 33], description: "MSR reference frame count." },
+      skipStage2: { type: "boolean", description: "Half-size preview for reference-conditioned I2V where supported." },
+      imageUri: { type: "string", description: "Public HTTPS PNG/JPEG URL or PNG/JPEG data URI. Mutually exclusive with imagePath." },
+      imagePath: { type: "string", description: "Local PNG/JPEG start image (at most 32 MiB, 4096 px per side), sent as a data URI." },
+      lastFrameUri: { type: ["string", "null"], description: "Optional final-frame HTTPS URL or data URI, e.g. https://example.com/end.png; requires duration or numFrames." },
+      lastFramePath: { type: "string", description: "Optional local PNG/JPEG final frame, e.g. /tmp/end.png; sent as a data URI and requires duration or numFrames." },
+      openingPositions: openingPositionsProperty,
+      references: { type: "array", minItems: 1, maxItems: 5, description: "Additional references. Supply openingPositions with these references. Up to four subject images followed by one optional background. Requires distilled and duration or numFrames.", items: {
+        type: "object",
+        properties: {
+          imageUri: { type: "string", description: "HTTPS/data PNG/JPEG reference, e.g. https://example.com/hero.png; exclusive with imagePath." },
+          imagePath: { type: "string", description: "Local PNG/JPEG reference, e.g. /tmp/hero.png; exclusive with imageUri." },
+          background: { type: "boolean", default: false, description: "True for the single background reference, e.g. true; false for subjects." },
+          ...subjectVoice
+        },
+        oneOf: [{ required: ["imageUri"] }, { required: ["imagePath"] }],
+        additionalProperties: false
+      } },
+      // Only with references: they run on the MSR backend, which needs one of these to evaluate negativePrompt.
+      ...msrGuidance
+    }, dependencies: { references: ["openingPositions"] }, required: ["prompt", "model", "resolution", "reserveUsd"], additionalProperties: false },
+    annotations: generation
+  },
+  {
+    name: "astra_genai_audio2video",
+    title: "Generate GenAI LTX video driven by an audio track",
+    description: "Render a clip whose length and motion follow a supplied speech or sound track through ASTRA GenAI LTX v2 audio-to-video, then save an MP4. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. The output length equals the audio length (local maximum 361 frames: 15.04 s at 24 fps, 14.44 s at 25, 7.52 s at 48, 7.22 s at 50; longer audio returns 422). Mono or stereo only; three or more channels return 422 instead of a downmix. The sample rate is kept, so only AAC standard rates 7350-96000 Hz (e.g. 48000, 44100) are accepted; others such as 192000 return 422. The gateway copies the backend soundtrack without a second encode, but the backend encodes it once, so the result is not bit-identical to the input. The native pipeline uses dev. A ComfyUI gateway can advertise distilled A2V. The audio sets the length. Timed image pins require gateway keyframes support. Lip-sync quality is unmeasured; inspect mouths before acceptance. Persists job identity before polling; recover with astra_genai_video_status.",
+    inputSchema: { type: "object", properties: {
+      prompt: { ...video.prompt, maxLength: 2e3, description: "Speaker, setting and action. Required even with an image; the local backend accepts at most 2000 characters (longer returns 422)." },
+      negativePrompt: { type: "string", minLength: 1, maxLength: 2e3, description: devNegative },
+      model: { type: "string", enum: ["ltx-2.5-22b-dev", "ltx-2.5-22b-distilled"], description: "Select the audio2video model advertised by this gateway." },
+      ...sampleOptions,
+      resolution: video.resolution,
+      fps: video.fps,
+      keyframes,
+      audioPath: { type: "string", description: "Local .wav/.mp3/.m4a/.ogg/.opus sent as a data URI; at most about 11.25 MB (15,000,000 base64 characters); sample rate 7350-96000 Hz standard values. Mutually exclusive with audioUri." },
+      audioUri: { type: "string", description: "Public HTTPS audio (gateway fetches up to 32 MiB) or an audio/wav, audio/mpeg, audio/mp4 or audio/ogg data URI with at most 15,000,000 base64 characters." },
+      imagePath: { type: "string", description: "Optional local PNG/JPEG first frame; mutually exclusive with imageUri." },
+      imageUri: { type: "string", description: "Optional public HTTPS PNG/JPEG or data URI first frame." },
+      lastFramePath: { type: "string", description: "Optional local PNG/JPEG final frame; requires a first image." },
+      lastFrameUri: { type: "string", description: "Optional HTTPS/data PNG/JPEG final frame; requires a first image. Placed on the last frame kept after trimming to the audio." },
+      reserveUsd: video.reserveUsd,
+      ...output
+    }, required: ["prompt", "model", "resolution", "reserveUsd"], additionalProperties: false },
+    annotations: generation
+  },
+  {
+    name: "astra_genai_text2img",
+    title: "Generate a GenAI DashScope image",
+    description: "Generate one PNG through the ASTRA GenAI DashScope route. Use image_plan/image_execute with an explicit reserveUsd for configured production. Requires ASTRA_GENAI_API_KEY. Text-only, at most 800 characters. For a source image use astra_genai_edit (img2img or masked inpaint); no multi-image fusion. Images containing readable text require GPT Image 2. Distinct from local image_local_generate. Saves the provider response before download; never retries an ambiguous generation automatically.",
+    inputSchema: { type: "object", properties: {
+      model: { type: "string", description: "Deployed DashScope image model ID; provider names do not prove availability on this gateway." },
+      prompt: { type: "string", minLength: 1, maxLength: 800, description: "Single text prompt, at most 800 characters; never silently truncated." },
+      size: { type: "string", default: "1024*1536", description: "Provider size in WIDTH*HEIGHT notation; deployment validates supported sizes." },
+      seed: { type: ["integer", "null"], minimum: 0, maximum: 2147483647, description: "Optional provider random seed; null delegates to the provider." },
+      promptExtend: { type: "boolean", default: false, description: "Expand a short descriptive prompt with the shared LLM; failure uses the original. Leave false for exact reference instructions. Returns usedPrompt." },
+      steps: { type: "integer", minimum: 1, maximum: 12, description: "Denoising steps (server default 9)." },
+      ...output
+    }, required: ["model", "prompt"], additionalProperties: false },
+    annotations: generation
+  },
+  {
+    name: "astra_genai_edit",
+    title: "Edit a GenAI image or masked region",
+    description: "Transform one source PNG/JPEG with img2img or repaint its mask with inpaint. Use image_plan operation edit and image_execute for configured production. Requires ASTRA_GENAI_API_KEY. Supply exactly one imagePath or imageUri; inpaint also needs exactly one maskPath or maskUri. White mask pixels (grayscale >=128) change, black stays. Local files become data URIs; HTTPS sources are fetched by the gateway. No multi-reference fusion. Use GPT Image 2 when readable text must appear or survive. Recovery downloads the saved response without regenerating.",
+    inputSchema: { type: "object", properties: {
+      model: { type: "string", description: "Deployed image model, normally z-image-turbo." },
+      prompt: { type: "string", minLength: 1, maxLength: 800, description: "Requested changes and features to retain." },
+      mode: { type: "string", enum: ["img2img", "inpaint"], description: "img2img changes the source globally; inpaint changes the masked region." },
+      imagePath: { type: "string", description: "Local source PNG/JPEG; mutually exclusive with imageUri." },
+      imageUri: { type: "string", description: "Public HTTPS PNG/JPEG or data URI; mutually exclusive with imagePath." },
+      maskPath: { type: "string", description: "Inpaint-only local mask with the source dimensions; mutually exclusive with maskUri." },
+      maskUri: { type: "string", description: "Inpaint-only HTTPS/data mask with the source dimensions; mutually exclusive with maskPath." },
+      size: { type: "string", description: "Optional WIDTH*HEIGHT cover/center crop. Omit to retain source dimensions within server limits." },
+      strength: { type: "number", exclusiveMinimum: 0, maximum: 1, description: "Change strength; server defaults img2img 0.6, inpaint 1.0." },
+      steps: { type: "integer", minimum: 1, maximum: 12, description: "Denoising steps; server default 9." },
+      seed: { type: ["integer", "null"], minimum: 0, maximum: 2147483647, description: "Optional reproducibility seed." },
+      promptExtend: { type: "boolean", default: false, description: "Optional rewrite with original-prompt fallback. Keep false for precise edits; usedPrompt reports the actual prompt." },
+      ...output
+    }, required: ["model", "prompt", "mode"], additionalProperties: false },
+    annotations: generation
+  },
+  {
+    name: "astra_genai_msr",
+    title: "Generate an LTX video from subject and background references",
+    description: "Combine character, clothing, object and background references in one MSR video through ASTRA GenAI. Use video_plan operation reference and video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Up to four subject images and one background; place the background last and number prompt images in that order. Local PNG/JPEG files are shrunk to the render size and, with local voice samples, uploaded in chunks as gateway file ids (data URIs where the gateway has no upload API). MSR is a server-selected deployment with no model parameter, independent of saved LTX v2 weights. It cannot pin first/last frames; use img2video for frame control. Speech and effects are rendered natively. Subjects 1 and 2 may carry an optional voice sample of the character (audioPath or audioUri, at most 10 s, about 5 s used); write any dialogue in the prompt. The model imitates the timbre of the sample and does not preserve it; without a sample the voice follows the prompt. A request with a sample is refused before submission when the gateway MSR backend does not accept samples (GET /v1/ltx/msr/capabilities). Saves a job receipt and resumes via video_status without resubmission.",
+    inputSchema: { type: "object", properties: {
+      prompt: { type: "string", minLength: 1, maxLength: 5e3, description: "Positive action and reference roles. The assembled prompt must fit the deployed prompt_max_chars. No automatic subtitle instructions are appended. Put unwanted text terms in negativePrompt when negative conditioning is enabled." },
+      negativePrompt: { type: "string", minLength: 1, maxLength: 5e3, description: "Separate negative conditioning, e.g. subtitles, captions, text overlays. Requires guidanceScale > 1 or nagScale > 0, plus live backend negative_prompt support; otherwise refused before submission." },
+      ...msrGuidance,
+      openingPositions: openingPositionsProperty,
+      references: { type: "array", minItems: 1, maxItems: 5, description: "At most four subjects and one background. Exactly one URI or path per reference.", items: {
+        type: "object",
+        properties: {
+          imageUri: { type: "string", description: "Public HTTPS PNG/JPEG or data URI." },
+          imagePath: { type: "string", description: "Local PNG/JPEG path, instead of imageUri." },
+          background: { type: "boolean", default: false, description: "Marks the single background reference; put it last." },
+          ...subjectVoice
+        },
+        additionalProperties: false
+      } },
+      skipStage2: { type: "boolean", description: "Request a half-resolution first-stage MSR preview on supporting backends." },
+      referenceStrength: { type: "number", minimum: 0, maximum: 1, default: 1, description: "Reference adherence strength." },
+      referenceFrames: { type: "integer", enum: [25, 33], default: 33, description: "MSR reference frame count." },
+      width: { type: "integer", minimum: 64, maximum: 1920, multipleOf: 64, default: 1536, description: "Output width; width times height must not exceed 2,064,384." },
+      height: { type: "integer", minimum: 64, maximum: 1920, multipleOf: 64, default: 1024, description: "Output height." },
+      numFrames: { type: "integer", minimum: 25, maximum: 361, description: "8k+1 frames, default 121. Omit when duration is supplied." },
+      duration: { type: "number", exclusiveMinimum: 0, maximum: 360, description: "Seconds rounded to the nearest 8k+1 frames (ties shorter), which must fit 25..361. Mutually exclusive with numFrames." },
+      frameRate: { type: "number", minimum: 1, maximum: 60, default: 24, description: "Output frames per second." },
+      seed: { type: "integer", minimum: 0, maximum: 2147483647, default: 42, description: "Reproducibility seed." },
+      reserveUsd: video.reserveUsd,
+      ...output
+    }, required: ["prompt", "references", "openingPositions", "reserveUsd"], additionalProperties: false },
+    annotations: generation
+  },
+  {
+    name: "astra_genai_video_status",
+    title: "Recover an existing GenAI video job",
+    description: "Read a local GenAI receipt and query its original LTX endpoint without submitting a new job. Optionally download a completed MP4. Requires the same configured gateway and token. For managed requests prefer video_status action:refresh, which also updates the managed reservation receipt. Does not recover legacy ASTRA jobs.",
+    inputSchema: { type: "object", properties: {
+      receiptPath: { type: "string", description: "Local .astra-genai.json receipt written beside the video output." },
+      download: { type: "boolean", default: false, description: "Download and verify completed output; never starts generation." }
+    }, required: ["receiptPath"], additionalProperties: false },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true }
+  }
+];
+
+// src/astra-genai-image.ts
+import * as fs14 from "node:fs";
+import { createHash as createHash12 } from "node:crypto";
+var GENAI_IMAGE_ROUTE = "/v1/dashscope/api/v1/services/aigc/multimodal-generation/generation";
+var genaiImageSchema = external_exports.object({
+  model: external_exports.string().min(1),
+  prompt: external_exports.string().min(1).max(800),
+  size: external_exports.string().min(1).default("1024*1536"),
+  seed: external_exports.number().int().min(0).max(2147483647).nullable().optional(),
+  promptExtend: external_exports.boolean().default(false),
+  steps: external_exports.number().int().min(1).max(12).optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("image").refine((name) => name.endsWith(".png"), "Use a .png filename").optional()
+}).strict();
+var genaiImageEditSchema = genaiImageSchema.extend({
+  mode: external_exports.enum(["img2img", "inpaint"]),
+  size: external_exports.string().min(1).optional(),
+  imageUri: genaiImageUriSchema.optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  maskUri: genaiImageUriSchema.optional(),
+  maskPath: external_exports.string().min(1).optional(),
+  strength: external_exports.number().finite().gt(0).max(1).optional()
+}).strict().superRefine((args, ctx) => {
+  const issue2 = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  if (Number(!!args.imageUri) + Number(!!args.imagePath) !== 1) issue2("Supply exactly one imageUri or imagePath");
+  const masks = Number(!!args.maskUri) + Number(!!args.maskPath);
+  if (args.mode === "inpaint" ? masks !== 1 : masks !== 0) issue2("Only inpaint requires exactly one maskUri or maskPath");
+});
+function buildGenaiImageBody(args) {
+  const edit2 = "mode" in args ? args : void 0;
+  const content = [{ text: args.prompt }];
+  const source = edit2 ? genaiSourceUri(edit2.imageUri, edit2.imagePath) : void 0;
+  const mask = edit2?.mode === "inpaint" ? genaiSourceUri(edit2.maskUri, edit2.maskPath) : void 0;
+  if (source) content.push({ image: source });
+  if (source?.startsWith("data:") && mask?.startsWith("data:")) {
+    const sourceSize = imageMetadata(Buffer.from(source.slice(source.indexOf(",") + 1), "base64"));
+    const maskSize = imageMetadata(Buffer.from(mask.slice(mask.indexOf(",") + 1), "base64"));
+    if (sourceSize.width !== maskSize.width || sourceSize.height !== maskSize.height)
+      throw new Error("GenAI mask dimensions must match the source");
+  }
+  return {
+    model: args.model,
+    input: {
+      messages: [{ role: "user", content }],
+      ...mask ? { mask } : {}
+    },
+    parameters: {
+      ...args.size === void 0 ? {} : { size: args.size },
+      prompt_extend: args.promptExtend,
+      ...args.seed === void 0 ? {} : { seed: args.seed },
+      ...args.steps === void 0 ? {} : { num_inference_steps: args.steps },
+      ...edit2 ? { mode: edit2.mode, ...edit2.strength === void 0 ? {} : { strength: edit2.strength } } : {}
+    }
+  };
+}
+var responseSchema = external_exports.object({
+  request_id: external_exports.string().min(1),
+  usage: external_exports.record(external_exports.unknown()).optional(),
+  output: external_exports.object({ choices: external_exports.array(external_exports.object({
+    message: external_exports.object({ content: external_exports.array(external_exports.object({ image: external_exports.string().optional(), text: external_exports.string().optional() }).passthrough()) }).passthrough()
+  }).passthrough()).length(1) }).passthrough()
+}).passthrough();
+var GenaiImageOutputError = class extends Error {
+  constructor(message, requestId, usage) {
+    super(message);
+    this.requestId = requestId;
+    this.usage = usage;
+  }
+  requestId;
+  usage;
+};
+async function generateGenaiImage(input, operation = "text") {
+  const args = (operation === "edit" ? genaiImageEditSchema : genaiImageSchema).parse(input);
+  requireAstraGenaiKey();
+  const imagePath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.png`, "image");
+  const receiptPath2 = imagePath + ".astra-genai.json";
+  const body = buildGenaiImageBody(args);
+  const fingerprint = createHash12("sha256").update(JSON.stringify(body)).digest("hex");
+  if (fs14.existsSync(receiptPath2) || fs14.existsSync(imagePath))
+    throw new Error("GenAI image output/receipt already exists; inspect the receipt before any new generation.");
+  fs14.writeFileSync(receiptPath2, JSON.stringify({ baseUrl: astraGenaiBaseUrl(), fingerprint, imagePath, status: "submitting" }), { flag: "wx", mode: 384 });
+  let promptExtension;
+  let raw;
+  try {
+    raw = await requestGenai("POST", GENAI_IMAGE_ROUTE, body, 30 * 6e4, (headers2) => {
+      const value = headers2.get("x-prompt-extend");
+      if (value === "applied" || value === "fallback") promptExtension = value;
+    });
+  } catch (error2) {
+    atomicJson(receiptPath2, {
+      baseUrl: astraGenaiBaseUrl(),
+      fingerprint,
+      imagePath,
+      status: error2 instanceof GenaiRequestError && error2.terminal ? "failed" : "submission_unknown",
+      error: error2 instanceof Error ? error2.message : String(error2)
+    });
+    throw error2;
+  }
+  atomicJson(receiptPath2, { baseUrl: astraGenaiBaseUrl(), fingerprint, imagePath, status: "received", response: raw, promptExtension });
+  try {
+    return await recoverGenaiImage(receiptPath2);
+  } catch (error2) {
+    const received = responseSchema.safeParse(raw);
+    if (received.success) throw new GenaiImageOutputError(error2 instanceof Error ? error2.message : String(error2), received.data.request_id, received.data.usage);
+    throw error2;
+  }
+}
+async function recoverGenaiImage(receiptPath2) {
+  const receipt = external_exports.object({
+    baseUrl: external_exports.string(),
+    fingerprint: external_exports.string(),
+    imagePath: external_exports.string(),
+    status: external_exports.enum(["submitting", "submission_unknown", "failed", "received", "completed"]),
+    response: external_exports.unknown().optional(),
+    output: external_exports.object({ sha256: external_exports.string() }).passthrough().optional(),
+    requestId: external_exports.string().optional(),
+    usage: external_exports.unknown().optional(),
+    usedPrompt: external_exports.string().optional(),
+    promptExtension: external_exports.enum(["applied", "fallback"]).optional()
+  }).passthrough().parse(JSON.parse(fs14.readFileSync(receiptPath2, "utf8")));
+  if (receipt.baseUrl !== astraGenaiBaseUrl()) throw new Error("GenAI image receipt belongs to a different server");
+  const { imagePath, fingerprint } = receipt;
+  if (receipt.status === "completed") {
+    const output2 = verifyImageFile(imagePath);
+    if (output2.sha256 !== receipt.output?.sha256) throw new Error("GenAI cached image changed");
+    return { imagePath, requestId: receipt.requestId, usage: receipt.usage, usedPrompt: receipt.usedPrompt, promptExtension: receipt.promptExtension, output: output2, review: "not_reviewed" };
+  }
+  if (receipt.status === "failed") throw new Error("GenAI image request failed; inspect billing before a new request");
+  if (receipt.status !== "received") throw new Error("GenAI image submission is ambiguous; inspect provider usage before retrying");
+  const response = responseSchema.parse(receipt.response);
+  const images = response.output.choices[0].message.content.flatMap((item) => item.image ? [item.image] : []);
+  if (images.length !== 1) throw new Error("GenAI response must contain exactly one image URL; inspect the saved receipt.");
+  const bytes = await downloadGenaiResult(images[0]);
+  const temp = `${imagePath}.${process.pid}.download.png`;
+  try {
+    fs14.writeFileSync(temp, bytes, { flag: "wx", mode: 384 });
+    const output2 = verifyImageFile(temp);
+    if (output2.mimeType !== "image/png") throw new Error("GenAI image response is not PNG");
+    if (fs14.existsSync(imagePath)) {
+      if (verifyImageFile(imagePath).sha256 !== output2.sha256) throw new Error("GenAI image output conflicts with download");
+    } else fs14.linkSync(temp, imagePath);
+    const usedPrompt = response.output.choices[0].message.content.find((item) => item.text !== void 0)?.text;
+    const result = { imagePath, usedPrompt, promptExtension: receipt.promptExtension, requestId: response.request_id, usage: response.usage, output: output2, review: "not_reviewed" };
+    atomicJson(receiptPath2, { baseUrl: astraGenaiBaseUrl(), fingerprint, ...result, status: "completed" });
+    return result;
+  } finally {
+    fs14.rmSync(temp, { force: true });
+  }
+}
+
+// src/image-client.ts
+var VALID_GPT_IMAGE_MODELS = GPT_IMAGE_MODELS;
+var DEFAULT_MODEL = "gpt-image-2";
+var GPT_IMAGE_SIZE_PRESETS = [
+  "auto",
+  "1024x1024",
+  "1536x1024",
+  // landscape
+  "1024x1536"
+  // portrait
+];
+var WH_SIZE_RE = /^(\d+)x(\d+)$/;
+var GPT_IMAGE_MAX_EDGE = 3840;
+var GPT_IMAGE_MIN_TOTAL_PIXELS = 655360;
+var GPT_IMAGE_MAX_TOTAL_PIXELS = 8294400;
+var GPT_IMAGE_MAX_ASPECT = 3;
+var GptImageSizeSchema = external_exports.string().refine(
+  (s2) => GPT_IMAGE_SIZE_PRESETS.includes(s2) || WH_SIZE_RE.test(s2),
+  {
+    message: 'size must be one of auto/1024x1024/1536x1024/1024x1536, or a custom "WIDTHxHEIGHT" string (e.g. "1536x864").'
+  }
+);
+var VALID_GPT_IMAGE_QUALITIES = ["low", "medium", "high", "auto"];
+var VALID_GPT_IMAGE_BACKGROUNDS = ["opaque", "transparent", "auto"];
+var VALID_GPT_IMAGE_FORMATS = ["png", "jpeg", "webp"];
+var VALID_GPT_IMAGE_INPUT_FIDELITY = ["high", "low"];
+var VALID_GPT_IMAGE_INPUT_MIME = ["image/png", "image/jpeg", "image/webp"];
+function validateSizeAgainstModel(model2, size, ctx) {
+  if (GPT_IMAGE_SIZE_PRESETS.includes(size)) return;
+  const match2 = WH_SIZE_RE.exec(size);
+  if (!match2) return;
+  if (!gptImageContract(model2)?.flexibleSize) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["size"],
+      message: `Custom resolutions ("${size}") are only supported on gpt-image-2. On other models use ${GPT_IMAGE_SIZE_PRESETS.join(" / ")} only.`
+    });
+    return;
+  }
+  const width = Number(match2[1]);
+  const height = Number(match2[2]);
+  const violations = [];
+  if (width % 16 !== 0 || height % 16 !== 0) {
+    violations.push("width and height must be multiples of 16");
+  }
+  if (Math.max(width, height) > GPT_IMAGE_MAX_EDGE) {
+    violations.push(`the longest edge must be at most ${GPT_IMAGE_MAX_EDGE}px`);
+  }
+  const shortEdge = Math.min(width, height);
+  if (shortEdge === 0 || Math.max(width, height) / shortEdge > GPT_IMAGE_MAX_ASPECT) {
+    violations.push("the aspect ratio must be within 1:3 ~ 3:1");
+  }
+  const totalPixels = width * height;
+  if (totalPixels < GPT_IMAGE_MIN_TOTAL_PIXELS || totalPixels > GPT_IMAGE_MAX_TOTAL_PIXELS) {
+    violations.push(
+      `the total pixel count must be within ${GPT_IMAGE_MIN_TOTAL_PIXELS.toLocaleString()}~${GPT_IMAGE_MAX_TOTAL_PIXELS.toLocaleString()}`
+    );
+  }
+  if (violations.length > 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["size"],
+      message: `Custom resolution "${size}" violates constraints: ${violations.join(", ")}`
+    });
+  }
+}
+function validateBackground(background, outputFormat, ctx) {
+  if (background !== "transparent") return;
+  if (outputFormat === "jpeg") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["outputFormat"],
+      message: "Transparent backgrounds are only possible with png or webp output (not jpeg)."
+    });
+  }
+}
+var text2ImageSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required").max(32e3, "Prompt exceeds the 32,000-character limit for GPT Image models"),
+  model: external_exports.enum(VALID_GPT_IMAGE_MODELS).optional().default(DEFAULT_MODEL),
+  size: GptImageSizeSchema.optional().default("auto"),
+  quality: external_exports.enum(VALID_GPT_IMAGE_QUALITIES).optional().default("auto"),
+  background: external_exports.enum(VALID_GPT_IMAGE_BACKGROUNDS).optional().default("opaque"),
+  outputFormat: external_exports.enum(VALID_GPT_IMAGE_FORMATS).optional().default("png"),
+  savePath: external_exports.string().optional()
+}).superRefine((data, ctx) => {
+  validateSizeAgainstModel(data.model, data.size, ctx);
+  validateBackground(data.background, data.outputFormat, ctx);
+});
+var img2ImgSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required").max(32e3, "Prompt exceeds the 32,000-character limit for GPT Image models"),
+  sourceImagesBase64: external_exports.array(external_exports.string().min(1)).min(1, "At least one source image is required").max(16, "At most 16 source images are supported"),
+  sourceMimeType: external_exports.enum(VALID_GPT_IMAGE_INPUT_MIME).optional().default("image/png"),
+  maskBase64: external_exports.string().optional(),
+  model: external_exports.enum(VALID_GPT_IMAGE_MODELS).optional().default(DEFAULT_MODEL),
+  size: GptImageSizeSchema.optional().default("auto"),
+  quality: external_exports.enum(VALID_GPT_IMAGE_QUALITIES).optional().default("auto"),
+  background: external_exports.enum(VALID_GPT_IMAGE_BACKGROUNDS).optional().default("opaque"),
+  outputFormat: external_exports.enum(VALID_GPT_IMAGE_FORMATS).optional().default("png"),
+  inputFidelity: external_exports.enum(VALID_GPT_IMAGE_INPUT_FIDELITY).optional(),
+  savePath: external_exports.string().optional()
+}).superRefine((data, ctx) => {
+  validateSizeAgainstModel(data.model, data.size, ctx);
+  validateBackground(data.background, data.outputFormat, ctx);
+  const allowed = gptImageContract(data.model)?.fidelity ?? [];
+  if (data.inputFidelity && !allowed.includes(data.inputFidelity)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["inputFidelity"],
+      message: allowed.length ? `${data.model} accepts inputFidelity ${allowed.join("/")} only.` : `${data.model} does not accept inputFidelity (fixed high fidelity). Omit the parameter.`
+    });
+  }
+});
+function failure(error2, mimeType, prompt, model2) {
+  const status = error2?.status;
+  const terminal = typeof status === "number" && status >= 400 && status < 500 && ![408, 409, 425].includes(status);
+  return { success: false, base64: "", mimeType, prompt, model: model2, error: error2 instanceof Error ? error2.message : String(error2), terminal };
+}
+function formatToMime(format) {
+  switch (format) {
+    case "png":
+      return "image/png";
+    case "jpeg":
+      return "image/jpeg";
+    case "webp":
+      return "image/webp";
+  }
+}
+function mimeToExt(mime) {
+  switch (mime) {
+    case "image/png":
+      return "png";
+    case "image/jpeg":
+      return "jpg";
+    case "image/webp":
+      return "webp";
+    default:
+      return "png";
+  }
+}
+async function generateFromText2(request) {
+  assertImageModelAvailable(request.model);
+  const apiKey = requireOpenAiKey();
+  const model2 = request.model || DEFAULT_MODEL;
+  const outputFormat = request.outputFormat || "png";
+  const responseMime = formatToMime(outputFormat);
+  try {
+    const { default: OpenAI2 } = await Promise.resolve().then(() => (init_openai(), openai_exports));
+    const client = new OpenAI2({ apiKey, maxRetries: 0 });
+    const response = await client.images.generate({
+      model: model2,
+      prompt: request.prompt,
+      n: 1,
+      size: request.size,
+      quality: request.quality,
+      background: request.background,
+      output_format: outputFormat
+    });
+    return extractImage(response, request.prompt, {
+      model: model2,
+      size: request.size,
+      quality: request.quality,
+      mimeType: responseMime
+    });
+  } catch (error2) {
+    return failure(error2, responseMime, request.prompt, model2);
+  }
+}
+async function generateFromImage2(request) {
+  assertImageModelAvailable(request.model);
+  const apiKey = requireOpenAiKey();
+  const model2 = request.model || DEFAULT_MODEL;
+  const sourceMime = request.sourceMimeType || "image/png";
+  const outputFormat = request.outputFormat || "png";
+  const responseMime = formatToMime(outputFormat);
+  try {
+    const { default: OpenAI2, toFile: toFile2 } = await Promise.resolve().then(() => (init_openai(), openai_exports));
+    const client = new OpenAI2({ apiKey, maxRetries: 0 });
+    const sourceExt = mimeToExt(sourceMime);
+    const imageFiles = [];
+    for (let i2 = 0; i2 < request.sourceImagesBase64.length; i2++) {
+      const file = await toFile2(
+        Buffer.from(request.sourceImagesBase64[i2], "base64"),
+        `source-${i2}.${sourceExt}`,
+        { type: sourceMime }
+      );
+      imageFiles.push(file);
+    }
+    const maskFile = request.maskBase64 ? await toFile2(Buffer.from(request.maskBase64, "base64"), "mask.png", { type: "image/png" }) : void 0;
+    const response = await client.images.edit({
+      model: model2,
+      prompt: request.prompt,
+      image: imageFiles.length === 1 ? imageFiles[0] : imageFiles,
+      n: 1,
+      size: request.size,
+      quality: request.quality,
+      background: request.background,
+      output_format: outputFormat,
+      ...request.inputFidelity ? { input_fidelity: request.inputFidelity } : {},
+      ...maskFile ? { mask: maskFile } : {}
+    });
+    return extractImage(response, request.prompt, {
+      model: model2,
+      size: request.size,
+      quality: request.quality,
+      mimeType: responseMime
+    });
+  } catch (error2) {
+    return failure(error2, responseMime, request.prompt, model2);
+  }
+}
+function extractImage(response, prompt, meta) {
+  const fail5 = (error2) => ({
+    success: false,
+    base64: "",
+    mimeType: meta.mimeType,
+    prompt,
+    model: meta.model,
+    error: error2
+  });
+  if (!response || !Array.isArray(response.data) || response.data.length === 0) {
+    return fail5("No image data returned from OpenAI");
+  }
+  const first = response.data[0];
+  const b64 = first?.b64_json;
+  if (!b64 || typeof b64 !== "string") {
+    return fail5("Response did not include b64_json");
+  }
+  return {
+    success: true,
+    base64: b64,
+    mimeType: meta.mimeType,
+    prompt,
+    model: meta.model,
+    size: response.size ?? meta.size,
+    quality: response.quality ?? meta.quality,
+    usage: response.usage,
+    requestId: response._request_id ?? void 0,
+    revisedPrompt: typeof first?.revised_prompt === "string" ? first.revised_prompt : void 0
+  };
+}
+
+// src/zimage-client.ts
+import { execFile as execFile3 } from "node:child_process";
+import { existsSync as existsSync13 } from "node:fs";
+import { homedir as homedir2 } from "node:os";
+import { join as join11 } from "node:path";
+var DEFAULT_ZIMAGE_STEPS = 9;
+var ZIMAGE_QUANTIZE_OPTIONS = [4, 6, 8];
+var DEFAULT_ZIMAGE_QUANTIZE = 8;
+var ZIMAGE_DIMENSION_STEP = 16;
+var MIN_ZIMAGE_DIMENSION = 256;
+var MAX_ZIMAGE_DIMENSION = 2048;
+var dimensionSchema = external_exports.number().int().min(MIN_ZIMAGE_DIMENSION).max(MAX_ZIMAGE_DIMENSION).refine((v) => v % ZIMAGE_DIMENSION_STEP === 0, {
+  message: `width/height must be a multiple of ${ZIMAGE_DIMENSION_STEP} (for 9:16 that's 1088\xD71920, not 1080\xD71920)`
+});
+function zimageTimeoutMs(width, height, steps) {
+  const megapixels = width * height / 1e6;
+  return Math.min(30 * 6e4, 12e4 + Math.ceil(steps * megapixels * 45e3));
+}
+function weightCacheDir() {
+  const hfHome = process.env.HF_HOME || join11(homedir2(), ".cache", "huggingface");
+  return join11(hfHome, "hub", "models--Tongyi-MAI--Z-Image-Turbo");
+}
+var WEIGHT_DOWNLOAD_ALLOWANCE_MS = 60 * 6e4;
+function installHint(detail) {
+  return `${detail}
+
+Local image generation requires mflux (Apple Silicon only, MLX):
+  uv tool install --python 3.12 mflux
+If it's installed elsewhere, point MFLUX_ZIMAGE_BIN at the executable (e.g. MFLUX_ZIMAGE_BIN=~/.venvs/mflux/bin/mflux-generate-z-image-turbo).
+The first call downloads the ~31GB Z-Image Turbo weight repository to ~/.cache/huggingface.`;
+}
+var zimageGenerateSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
+  width: dimensionSchema.optional().default(1024),
+  height: dimensionSchema.optional().default(1024),
+  steps: external_exports.number().int().min(1).max(50).optional().default(DEFAULT_ZIMAGE_STEPS),
+  seed: external_exports.number().int().min(0).optional(),
+  quantize: external_exports.union([external_exports.literal(4), external_exports.literal(6), external_exports.literal(8)]).optional().default(DEFAULT_ZIMAGE_QUANTIZE),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("image").optional()
+});
+async function generateLocalImage(request) {
+  const bin = mfluxZImageBin();
+  if (!existsSync13(bin)) {
+    return { success: false, error: installHint(`mflux binary not found: "${bin}"`) };
+  }
+  const outFile = resolveOutputFile(
+    request.outputPath || process.cwd(),
+    request.filename || `zimage_${Date.now()}.png`,
+    "image"
+  );
+  if (existsSync13(outFile)) return { success: false, error: `Output already exists; choose a new filename: ${outFile}` };
+  const cliArgs = [
+    "--prompt",
+    request.prompt,
+    "--width",
+    String(request.width),
+    "--height",
+    String(request.height),
+    "--steps",
+    String(request.steps),
+    "-q",
+    String(request.quantize),
+    "--output",
+    outFile
+  ];
+  if (request.seed !== void 0) cliArgs.push("--seed", String(request.seed));
+  const firstCall = !existsSync13(weightCacheDir());
+  if (firstCall) {
+    console.error("[Z-Image] First call \u2014 downloading ~31GB of weights to the huggingface cache first. This can take a long time.");
+  }
+  console.error(
+    `[Z-Image] Generating locally... (${request.width}x${request.height}, ${request.steps} steps, q${request.quantize})`
+  );
+  const startedAt = Date.now();
+  try {
+    await new Promise((resolve14, reject) => {
+      execFile3(
+        bin,
+        cliArgs,
+        {
+          timeout: zimageTimeoutMs(request.width, request.height, request.steps) + (firstCall ? WEIGHT_DOWNLOAD_ALLOWANCE_MS : 0),
+          // The first call accumulates several MB of tqdm progress output from the
+          // 31GB download — reusing Supertonic's 1MB would die on maxBuffer mid-download.
+          maxBuffer: 16 * 1024 * 1024
+        },
+        (error2, _out, errOut) => {
+          if (error2) {
+            const code = error2.code;
+            if (code === "ENOENT") {
+              reject(new Error(installHint(`mflux binary not found: "${bin}"`)));
+              return;
+            }
+            const tail = errOut.split("\n").filter((line) => line.trim() && !line.includes("it/s]") && !line.includes("%|")).slice(-5).join("\n");
+            reject(new Error(`${error2.message}${tail ? `
+${tail}` : ""}`));
+            return;
+          }
+          resolve14();
+        }
+      );
+    });
+  } catch (error2) {
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    console.error(`[Z-Image] Error: ${message.split("\n")[0]}`);
+    return { success: false, error: message };
+  }
+  if (!existsSync13(outFile)) {
+    return {
+      success: false,
+      error: `mflux exited without producing the output file: ${outFile}`
+    };
+  }
+  const elapsed = Math.round((Date.now() - startedAt) / 100) / 10;
+  console.error(`[Z-Image] Image saved to: ${outFile} (${elapsed}s)`);
+  return {
+    success: true,
+    imagePath: outFile,
+    width: request.width,
+    height: request.height,
+    steps: request.steps,
+    seed: request.seed,
+    quantize: request.quantize,
+    elapsedSeconds: elapsed
+  };
+}
+
+// src/image-registry.ts
+var IMAGE_ADAPTERS = Object.freeze({
+  astra_genai_image_generate: { engine: "astra-genai-native", operation: "text", schema: nativeImageSchema },
+  astra_genai_image_edit: { engine: "astra-genai-native", operation: "edit", schema: nativeImageEditSchema },
+  astra_genai_text2img: { engine: "astra-genai", operation: "text", schema: genaiImageSchema },
+  astra_genai_edit: { engine: "astra-genai", operation: "edit", schema: genaiImageEditSchema },
+  gpt_image_text2img: { engine: "gpt-image", operation: "text", schema: text2ImageSchema },
+  gpt_image_img2img: { engine: "gpt-image", operation: "edit", schema: img2ImgSchema },
+  image_local_generate: { engine: "zimage", operation: "text", schema: zimageGenerateSchema },
+  mlx_image_generate: { engine: "mlx", operation: "text", schema: mlxImageGenerateSchema },
+  mlx_image_edit: { engine: "mlx", operation: "edit", schema: mlxImageEditSchema }
+});
+function fields(schema2) {
+  if (schema2 instanceof external_exports.ZodEffects) return fields(schema2.innerType());
+  return schema2 instanceof external_exports.ZodObject ? Object.keys(schema2.shape) : [];
+}
+function parseImageArgs(tool2, input) {
+  const adapter2 = IMAGE_ADAPTERS[tool2];
+  if (!adapter2) throw new Error("image_adapter_unsupported");
+  for (const key of Object.keys(input)) if (!fields(adapter2.schema).includes(key)) throw new Error("image_argument_unsupported: " + key);
+  const args = adapter2.schema.parse(input);
+  if (adapter2.engine === "gpt-image") {
+    assertImageModelAvailable(String(args.model));
+    const refs = args.sourceImagesBase64 ?? [];
+    for (const ref of refs) validateImageBase64(ref, String(args.sourceMimeType));
+    if (typeof args.maskBase64 === "string") {
+      const mask = validateImageBase64(args.maskBase64, "image/png");
+      const source = validateImageBase64(refs[0]);
+      if (mask.width !== source.width || mask.height !== source.height || mask.bytes >= 4 * 1024 * 1024)
+        throw new Error("image_mask_invalid: dimensions must match first source; use a PNG below 4MB");
+      const bytes = Buffer.from(args.maskBase64, "base64");
+      if (![4, 6].includes(bytes[25]) && !bytes.includes(Buffer.from("tRNS"))) throw new Error("image_mask_requires_alpha");
+    }
+  }
+  if (adapter2.engine === "mlx" && args.model) validateMlxImageOperation(
+    String(args.model),
+    adapter2.operation === "edit" ? "edit" : args.imagePath ? "variation" : "text",
+    args
+  );
+  return args;
+}
+function imageCatalog() {
+  return {
+    version: 1,
+    revision: "2026-10-18",
+    adapters: Object.entries(IMAGE_ADAPTERS).map(([tool2, entry2]) => ({ tool: tool2, engine: entry2.engine, operation: entry2.operation, fields: fields(entry2.schema) })),
+    genai: { edits: ["img2img", "inpaint"], sourceImages: 1, steps: [1, 12], promptExtend: "Optional shared-LLM rewrite; failures use the original prompt. Keep false for precise reference instructions.", note: "Use GPT Image 2 for readable text. No multi-image fusion." },
+    gptModels: GPT_IMAGE_MODELS,
+    gptContracts: GPT_IMAGE_CONTRACTS,
+    mlx: {
+      families: ["flux-klein", "krea", "mage", "mage-edit", "qwen-2.1"],
+      note: "Installed pack and backend determine availability. Unknown packs support basic text only until capabilities are registered; use image_plan."
+    },
+    host: { execution: "host_handoff", model: "host-managed", note: "External tools/allowance are not enforced by MCP. No API fallback." },
+    unimplemented: ["gpt-image-2.5-sunburst", "gpt-image-2.5-flare", "bfl-api", "krea-api", "qwen-model-studio", "xai-images-api"]
+  };
+}
+function isManagedImageCall(tool2, args) {
+  return Object.hasOwn(IMAGE_ADAPTERS, tool2) && !!args && typeof args === "object" && "imageContext" in args;
+}
+
+// src/local-video-models.ts
+var LOCAL_VIDEO_MODELS = {
+  ltx_video_generate: {
+    operation: "text",
+    schema: mlxVideoGenerateSchema,
+    defaultFrames: DEFAULT_MLX_VIDEO_FRAMES,
+    frames: { min: MIN_MLX_VIDEO_FRAMES, max: MAX_MLX_VIDEO_FRAMES, step: MLX_VIDEO_FRAME_STEP, frameRate: MLX_VIDEO_FPS },
+    acceptsModel: (id) => /ltx/i.test(id),
+    prepare: (raw) => buildLtxVideoBody(mlxVideoGenerateSchema.parse(raw))
+  },
+  fasth3_omni_reference: {
+    operation: "reference",
+    schema: fasth3OmniSchema,
+    frames: FASTH3_FRAME_LIMITS,
+    defaultFrames: 124,
+    acceptsModel: (id) => id === FASTH3_OMNI_MODEL,
+    prepare: (raw) => buildFasth3Body(fasth3OmniSchema.parse(raw))
+  }
+};
+function localVideoStrategy(tool2) {
+  const name = tool2 === "mlx_video_generate" ? "ltx_video_generate" : tool2;
+  return Object.hasOwn(LOCAL_VIDEO_MODELS, name) ? LOCAL_VIDEO_MODELS[name] : void 0;
+}
+async function generateLocalVideo(tool2, input) {
+  const strategy = localVideoStrategy(tool2);
+  if (!strategy) throw new Error("Unknown local video adapter: " + tool2);
+  const request = strategy.schema.parse(input);
+  const body = strategy.prepare(request);
+  return executeMlxVideo(request, body, strategy.acceptsModel);
+}
+
+// src/seedance-client.ts
+import { execFile as execFile4 } from "node:child_process";
+import * as fs16 from "node:fs";
+import * as path15 from "node:path";
+
+// src/media-publish.ts
+import { spawn as spawn2 } from "node:child_process";
+import { randomBytes as randomBytes2 } from "node:crypto";
+import * as fs15 from "node:fs";
+import * as http3 from "node:http";
+import * as path14 from "node:path";
+var MIME2 = {
+  ".mp4": "video/mp4",
+  ".mov": "video/quicktime",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".wav": "audio/wav",
+  ".mp3": "audio/mpeg"
+};
+function uploadConfig() {
+  const endpoint2 = process.env.MEDIA_UPLOAD_URL || process.env.MELEON_MEDIA_URL || "";
+  const key = process.env.MEDIA_UPLOAD_API_KEY || process.env.MELEON_MEDIA_API_KEY || "";
+  if (!endpoint2 || !key) return null;
+  const seconds2 = Number(process.env.MEDIA_UPLOAD_TIMEOUT || process.env.MELEON_UPLOAD_TIMEOUT || 300);
+  return { endpoint: endpoint2, key, timeoutMs: (Number.isFinite(seconds2) && seconds2 > 0 ? seconds2 : 300) * 1e3 };
+}
+async function assertReachable(url, attempts, waitMs) {
+  let last = "";
+  for (let i2 = 0; i2 < attempts; i2 += 1) {
+    try {
+      const head = await fetch(url, { method: "HEAD", signal: AbortSignal.timeout(15e3) });
+      if (head.ok) return;
+      const get = await fetch(url, { headers: { Range: "bytes=0-0" }, signal: AbortSignal.timeout(15e3) });
+      if (get.ok) {
+        await get.body?.cancel();
+        return;
+      }
+      last = `HTTP ${get.status}`;
+    } catch (error2) {
+      last = error2 instanceof Error ? error2.message : String(error2);
+    }
+    if (i2 < attempts - 1) await new Promise((resolve14) => setTimeout(resolve14, waitMs));
+  }
+  throw new Error(`public URL not reachable: ${url} (${last})`);
+}
+async function publishViaUpload(filePaths, config3) {
+  const urls = [];
+  for (const filePath of filePaths) {
+    const response = await fetch(config3.endpoint, {
+      method: "POST",
+      headers: { "x-api-key": config3.key, "Content-Type": MIME2[path14.extname(filePath).toLowerCase()] || "application/octet-stream" },
+      body: fs15.readFileSync(filePath),
+      signal: AbortSignal.timeout(config3.timeoutMs)
+    });
+    const body = await response.text();
+    if (response.status !== 201) {
+      throw new Error(`media hosting refused ${path14.basename(filePath)}: HTTP ${response.status} \u2014 ${body.slice(0, 300)}`);
+    }
+    let url = "";
+    try {
+      url = String(JSON.parse(body).data?.url || "");
+    } catch {
+    }
+    if (!/^https?:\/\//.test(url)) throw new Error(`media hosting answered 201 without data.url \u2014 ${body.slice(0, 300)}`);
+    await assertReachable(url, 3, 2e3);
+    urls.push(url);
+  }
+  return { urls, how: "upload", close: async () => void 0 };
+}
+function serveLocally(filePaths) {
+  const token = randomBytes2(16).toString("hex");
+  const routes = filePaths.map((p, i2) => `/${token}/${i2}/${encodeURIComponent(path14.basename(p))}`);
+  const byRoute = new Map(routes.map((r2, i2) => [r2, filePaths[i2]]));
+  const server2 = http3.createServer((req, res) => {
+    const file = byRoute.get((req.url || "").split("?")[0]);
+    if (!file || req.method !== "GET" && req.method !== "HEAD") {
+      res.writeHead(404).end();
+      return;
+    }
+    let size = 0;
+    try {
+      size = fs15.statSync(file).size;
+    } catch {
+      res.writeHead(404).end();
+      return;
+    }
+    const type = MIME2[path14.extname(file).toLowerCase()] || "application/octet-stream";
+    const range = /^bytes=(\d+)-(\d*)$/.exec(req.headers.range || "");
+    let start = 0;
+    let end = size - 1;
+    if (range) {
+      start = Number(range[1]);
+      end = range[2] ? Math.min(Number(range[2]), size - 1) : end;
+    }
+    if (start > end || start >= size) {
+      res.writeHead(416, { "Content-Range": `bytes */${size}` }).end();
+      return;
+    }
+    res.writeHead(range ? 206 : 200, {
+      "Content-Type": type,
+      "Content-Length": end - start + 1,
+      "Accept-Ranges": "bytes",
+      ...range ? { "Content-Range": `bytes ${start}-${end}/${size}` } : {}
+    });
+    if (req.method === "HEAD") {
+      res.end();
+      return;
+    }
+    fs15.createReadStream(file, { start, end }).on("error", () => res.destroy()).pipe(res);
+  });
+  return new Promise((resolve14, reject) => {
+    server2.once("error", reject);
+    server2.listen(0, "127.0.0.1", () => {
+      const address = server2.address();
+      const port = typeof address === "object" && address ? address.port : 0;
+      resolve14({ server: server2, port, routes });
+    });
+  });
+}
+function closeServer(server2) {
+  return new Promise((resolve14) => {
+    server2.closeAllConnections?.();
+    server2.close(() => resolve14());
+  });
+}
+var liveTunnels = /* @__PURE__ */ new Set();
+var exitHookInstalled = false;
+function killTunnelsOnExit() {
+  if (exitHookInstalled) return;
+  exitHookInstalled = true;
+  const killAll = () => {
+    for (const child of liveTunnels) if (child.exitCode === null) child.kill("SIGTERM");
+  };
+  process.once("exit", killAll);
+  for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
+    if (process.listenerCount(signal) > 0) continue;
+    process.once(signal, () => {
+      killAll();
+      process.kill(process.pid, signal);
+    });
+  }
+}
+async function publishViaTunnel(filePaths, cloudflared = "cloudflared") {
+  const { server: server2, port, routes } = await serveLocally(filePaths);
+  let child = null;
+  const close = async () => {
+    if (child) {
+      liveTunnels.delete(child);
+      if (child.exitCode === null) child.kill("SIGTERM");
+    }
+    child = null;
+    await closeServer(server2);
+  };
+  killTunnelsOnExit();
+  try {
+    const origin = await new Promise((resolve14, reject) => {
+      child = spawn2(cloudflared, ["tunnel", "--url", `http://127.0.0.1:${port}`, "--no-autoupdate"], {
+        stdio: ["ignore", "pipe", "pipe"]
+      });
+      liveTunnels.add(child);
+      let log = "";
+      const timer = setTimeout(() => reject(new Error(`cloudflared gave no quick-tunnel URL within 60s
+${log.slice(-600)}`)), 6e4);
+      const onLine = (chunk3) => {
+        log += chunk3.toString();
+        const m2 = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/.exec(log);
+        if (m2) {
+          clearTimeout(timer);
+          resolve14(m2[0]);
+        }
+      };
+      child.stdout?.on("data", onLine);
+      child.stderr?.on("data", onLine);
+      child.once("error", (error2) => {
+        clearTimeout(timer);
+        reject(new Error(`could not start cloudflared (${error2.message}) \u2014 install it (brew install cloudflared) or set MEDIA_UPLOAD_URL`));
+      });
+      child.once("exit", (code) => {
+        clearTimeout(timer);
+        reject(new Error(`cloudflared exited with code ${code} before the tunnel came up
+${log.slice(-600)}`));
+      });
+    });
+    const urls = routes.map((r2) => origin + r2);
+    await new Promise((resolve14) => setTimeout(resolve14, 5e3));
+    for (const url of urls) await assertReachable(url, 30, 3e3);
+    console.error(`[media-publish] quick tunnel ${origin} serving ${filePaths.length} file(s)`);
+    return { urls, how: "tunnel", close };
+  } catch (error2) {
+    await close();
+    throw error2;
+  }
+}
+async function publishFiles(filePaths) {
+  if (filePaths.length === 0) return { urls: [], how: "upload", close: async () => void 0 };
+  for (const filePath of filePaths) {
+    if (!fs15.existsSync(filePath)) throw new Error(`file to publish not found: ${filePath}`);
+  }
+  const upload = uploadConfig();
+  if (upload) return publishViaUpload(filePaths, upload);
+  return publishViaTunnel(filePaths);
+}
+
+// src/seedance-client.ts
+var VALID_SEEDANCE_RESOLUTIONS = ["480p", "720p", "1080p", "4k"];
+var VALID_SEEDANCE_RATIOS = ["16:9", "9:16", "4:3", "3:4", "1:1", "21:9", "adaptive"];
+var SEEDANCE_MODEL_SPECS = {
+  // 1080p opened on 2026-08-17 (UTC+8) — 10-bit color, and the only tier the discount
+  // campaign covers (28% off list through 2026-09-17). 2.5 has no 4K; 2.0 does.
+  "dreamina-seedance-2-5-260628": {
+    resolutions: ["480p", "720p", "1080p"],
+    duration: [4, 30],
+    lastFrame: true,
+    referenceImages: [1, 30],
+    referenceAudio: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30, audioOnly: true },
+    referenceVideos: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30 },
+    audio: true,
+    realFaceInput: false,
+    activationGate: true
+  },
+  "dreamina-seedance-2-0-260128": {
+    resolutions: ["480p", "720p", "1080p", "4k"],
+    duration: [4, 15],
+    lastFrame: true,
+    referenceImages: [1, 9],
+    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
+    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
+    audio: true,
+    realFaceInput: false,
+    activationGate: true
+  },
+  "dreamina-seedance-2-0-fast-260128": {
+    resolutions: ["480p", "720p"],
+    duration: [4, 15],
+    lastFrame: true,
+    referenceImages: [1, 9],
+    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
+    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
+    audio: true,
+    realFaceInput: false,
+    activationGate: true
+  },
+  "dreamina-seedance-2-0-mini-260615": {
+    resolutions: ["480p", "720p"],
+    duration: [4, 15],
+    lastFrame: true,
+    referenceImages: [1, 9],
+    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
+    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
+    audio: true,
+    realFaceInput: false,
+    activationGate: true
+  }
+};
+var VALID_SEEDANCE_MODELS = Object.keys(SEEDANCE_MODEL_SPECS);
+var DEFAULT_SEEDANCE_MODEL = "dreamina-seedance-2-0-260128";
+var DEFAULT_SEEDANCE_RESOLUTION = "720p";
+var DEFAULT_SEEDANCE_DURATION = 5;
+var SEEDANCE_FPS = 24;
+var POLL_INTERVAL_MS3 = 1e4;
+var MAX_POLLS2 = 90;
+var MAX_INPUT_IMAGE_BYTES = 30 * 1024 * 1024;
+var MAX_REQUEST_BYTES2 = 64 * 1024 * 1024;
+var MAX_INPUT_AUDIO_BYTES = 15 * 1024 * 1024;
+var MAX_INPUT_VIDEO_BYTES = 200 * 1024 * 1024;
+var SEEDANCE_REFERENCE_VIDEO_FPS = [24, 60];
+var SEEDANCE_REFERENCE_VIDEO_PIXELS = [407696, 8295044];
+var SEEDANCE_REFERENCE_AUDIO_EXTENSIONS = [".wav", ".mp3"];
+var SEEDANCE_REFERENCE_VIDEO_EXTENSIONS = [".mp4", ".mov"];
+var commonFields = {
+  prompt: external_exports.string().min(1, "Prompt is required"),
+  model: external_exports.enum(VALID_SEEDANCE_MODELS).optional().default(DEFAULT_SEEDANCE_MODEL),
+  resolution: external_exports.enum(VALID_SEEDANCE_RESOLUTIONS).optional().default(DEFAULT_SEEDANCE_RESOLUTION),
+  durationSeconds: external_exports.number().int().optional(),
+  generateAudio: external_exports.boolean().optional().default(false),
+  watermark: external_exports.boolean().optional().default(false),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").optional()
+};
+function validateCommon(data, ctx) {
+  const spec = SEEDANCE_MODEL_SPECS[data.model];
+  const foreign = nonEnglishOutsideQuotes(data.prompt);
+  if (foreign) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["prompt"],
+      message: `video_prompt_language: "${foreign}" sits outside quotation marks. Write the video prompt in English; only dialogue, inside quotes, uses the video's language.`
+    });
+  }
+  if (!spec.resolutions.includes(data.resolution)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["resolution"],
+      message: `${data.model} does not support ${data.resolution} (supported: ${spec.resolutions.join(", ")}).`
+    });
+  }
+  const [minDuration, maxDuration] = spec.duration;
+  if ((data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) < minDuration || (data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) > maxDuration) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["durationSeconds"],
+      message: `${data.model} supports durations of ${minDuration}~${maxDuration}s (requested: ${data.durationSeconds}s).`
+    });
+  }
+  if (data.generateAudio && !spec.audio) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["generateAudio"],
+      message: `${data.model} is silent-only and cannot generate audio.`
+    });
+  }
+}
+var seedanceText2VideoSchema = external_exports.object({
+  ...commonFields,
+  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("16:9")
+}).superRefine(validateCommon).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
+var seedanceImg2VideoSchema = external_exports.object({
+  ...commonFields,
+  sourceImagePath: external_exports.string().min(1, "Source image path is required"),
+  lastImagePath: external_exports.string().optional(),
+  // Following the input image's ratio is the default — specifying a different
+  // ratio makes the server center-crop the source image (the incident where a
+  // 9:16 cover got cropped).
+  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("adaptive")
+}).superRefine((data, ctx) => {
+  validateCommon(data, ctx);
+  if (data.lastImagePath && !SEEDANCE_MODEL_SPECS[data.model].lastFrame) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["lastImagePath"],
+      message: `${data.model} accepts a first frame only.`
+    });
+  }
+}).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
+var seedanceReferenceSchema = external_exports.object({
+  ...commonFields,
+  referenceImagePaths: external_exports.array(external_exports.string()).optional().default([]),
+  referenceAudioPaths: external_exports.array(external_exports.string()).optional().default([]),
+  referenceVideoPaths: external_exports.array(external_exports.string()).optional().default([]),
+  referenceVideoUrls: external_exports.array(external_exports.string().url()).optional().default([]),
+  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("adaptive")
+}).superRefine((data, ctx) => {
+  validateCommon(data, ctx);
+  const spec = SEEDANCE_MODEL_SPECS[data.model];
+  const [, maxImages] = spec.referenceImages;
+  if (data.referenceImagePaths.length > maxImages) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["referenceImagePaths"],
+      message: `${data.model} allows at most ${maxImages} reference images (requested: ${data.referenceImagePaths.length}).`
+    });
+  }
+  const videoCount = data.referenceVideoPaths.length + data.referenceVideoUrls.length;
+  if (data.referenceImagePaths.length === 0 && data.referenceAudioPaths.length === 0 && videoCount === 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["referenceImagePaths"],
+      message: "At least one reference is required \u2014 referenceImagePaths, referenceAudioPaths, referenceVideoPaths/Urls, or a mix."
+    });
+    return;
+  }
+  if (videoCount > 0) {
+    const video2 = spec.referenceVideos;
+    if (videoCount > video2.maxClips) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["referenceVideoPaths"],
+        message: `${data.model} allows at most ${video2.maxClips} reference videos (requested: ${videoCount}).`
+      });
+    }
+    for (const filePath of data.referenceVideoPaths) {
+      const ext = path15.extname(filePath).toLowerCase();
+      if (!SEEDANCE_REFERENCE_VIDEO_EXTENSIONS.includes(ext)) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["referenceVideoPaths"],
+          message: `Reference video must be mp4 or mov (got "${ext}" in ${path15.basename(filePath)}).`
+        });
+      }
+    }
+    if (!/\bvideo\s*1\b/i.test(data.prompt)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["prompt"],
+        message: 'A reference video is bound in the prompt by index \u2014 write "Video 1" (2.5: "@Video 1") and say what it supplies (camera movement, blocking, motion timing) and what it must not (its visual content).'
+      });
+    }
+  }
+  if (data.referenceAudioPaths.length === 0) return;
+  const audio = spec.referenceAudio;
+  if (data.referenceAudioPaths.length > audio.maxClips) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["referenceAudioPaths"],
+      message: `${data.model} allows at most ${audio.maxClips} reference audio clips (requested: ${data.referenceAudioPaths.length}).`
+    });
+  }
+  if (!audio.audioOnly && data.referenceImagePaths.length === 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["referenceImagePaths"],
+      message: `${data.model} needs at least one reference image alongside reference audio \u2014 audio-only input is dreamina-seedance-2-5-260628 only.`
+    });
+  }
+  for (const filePath of data.referenceAudioPaths) {
+    const ext = path15.extname(filePath).toLowerCase();
+    if (!SEEDANCE_REFERENCE_AUDIO_EXTENSIONS.includes(ext)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["referenceAudioPaths"],
+        message: `Reference audio must be wav or mp3 (got "${ext}" in ${path15.basename(filePath)}).`
+      });
+    }
+  }
+  if (!data.generateAudio) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["generateAudio"],
+      message: "Reference audio with generateAudio: false produces a silent video, so the voice reference has nothing to shape. Set generateAudio: true."
+    });
+  }
+}).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
+function sleep6(ms) {
+  return new Promise((resolve14) => setTimeout(resolve14, ms));
+}
+function describeHttpError(status, body) {
+  try {
+    const parsed = JSON.parse(body);
+    const code = parsed.error?.code;
+    const message = parsed.error?.message;
+    if (message) return `HTTP ${status} ${code ? `(${code}) ` : ""}${message}`;
+  } catch {
+  }
+  return `HTTP ${status} \u2014 ${body.slice(0, 400)}`;
+}
+async function createTask(apiKey, body) {
+  const response = await fetch(`${arkBaseUrl()}/contents/generations/tasks`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(5 * 6e4)
+  });
+  if (!response.ok) {
+    const terminal = response.status >= 400 && response.status < 500 && ![408, 409, 425].includes(response.status);
+    throw Object.assign(new Error(`Failed to create video task: ${describeHttpError(response.status, await response.text())}`), { terminal });
+  }
+  const json3 = await response.json();
+  if (!json3.id) throw new Error("No task id returned from ModelArk");
+  return json3.id;
+}
+async function getTask(apiKey, taskId) {
+  const response = await fetch(`${arkBaseUrl()}/contents/generations/tasks/${encodeURIComponent(taskId)}`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+    signal: AbortSignal.timeout(6e4)
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to get task status: ${describeHttpError(response.status, await response.text())}`);
+  }
+  return response.json();
+}
+async function awaitVideoAndSave(apiKey, taskId, outputPath, filename) {
+  let retried2 = false;
+  for (let poll = 1; poll <= MAX_POLLS2; poll += 1) {
+    console.error(`[Seedance] Generation in progress... (polling ${poll}/${MAX_POLLS2})`);
+    await sleep6(POLL_INTERVAL_MS3);
+    let task;
+    try {
+      task = await getTask(apiKey, taskId);
+      retried2 = false;
+    } catch (error2) {
+      if (retried2) throw error2;
+      retried2 = true;
+      continue;
+    }
+    if (task.status === "failed" || task.status === "expired" || task.status === "cancelled") {
+      const reason = task.error?.message || task.status;
+      return { error: `Generation ${task.status}: ${reason}`, terminal: true };
+    }
+    if (task.status !== "succeeded") continue;
+    const videoUrl = task.content?.video_url;
+    if (!videoUrl) return { error: "Task succeeded but no video_url in response" };
+    const fullPath = resolveOutputFile(outputPath, filename, "video");
+    const download = await fetch(videoUrl, { signal: AbortSignal.timeout(10 * 6e4) });
+    if (!download.ok) {
+      return { error: `Failed to download video: HTTP ${download.status} (URL is valid for 24 hours)` };
+    }
+    fs16.writeFileSync(fullPath, Buffer.from(await download.arrayBuffer()));
+    console.error(`[Seedance] Video saved to: ${fullPath}`);
+    return { videoPath: fullPath, task };
+  }
+  return { error: `Video generation timed out (${MAX_POLLS2 * POLL_INTERVAL_MS3 / 6e4} minutes). Task ${taskId} may still be running \u2014 check the ModelArk console.` };
+}
+function readImageDataUri(filePath) {
+  const stats = fs16.statSync(filePath);
+  if (stats.size > MAX_INPUT_IMAGE_BYTES) {
+    throw new Error(
+      `Input image too large: ${path15.basename(filePath)} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 30MB)`
+    );
+  }
+  const buffer = fs16.readFileSync(filePath);
+  return `data:${mimeFromExtension(filePath, "image")};base64,${buffer.toString("base64")}`;
+}
+function loadImages(filePaths) {
+  const uris = [];
+  for (const filePath of filePaths) {
+    validateFilePath(filePath, { allowedExtensions: ALLOWED_EXTENSIONS.image });
+    if (!fs16.existsSync(filePath)) throw new Error(`Image not found: ${filePath}`);
+    uris.push(readImageDataUri(filePath));
+  }
+  assertRequestBudget(uris);
+  return uris;
+}
+function assertRequestBudget(uris) {
+  const total = uris.reduce((sum, uri) => sum + uri.length, 0);
+  if (total > MAX_REQUEST_BYTES2) {
+    throw new Error(
+      `Request body too large: base64 total ${(total / 1024 / 1024).toFixed(1)}MB (limit 64MB). Use fewer reference files or smaller ones.`
+    );
+  }
+}
+function audioMimeFromExtension(filePath) {
+  return path15.extname(filePath).toLowerCase() === ".mp3" ? "audio/mp3" : "audio/wav";
+}
+function loadReferenceAudio(filePaths) {
+  return filePaths.map((filePath) => {
+    validateFilePath(filePath, { allowedExtensions: SEEDANCE_REFERENCE_AUDIO_EXTENSIONS });
+    if (!fs16.existsSync(filePath)) throw new Error(`Reference audio not found: ${filePath}`);
+    const stats = fs16.statSync(filePath);
+    if (stats.size > MAX_INPUT_AUDIO_BYTES) {
+      throw new Error(
+        `Reference audio too large: ${path15.basename(filePath)} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 15MB)`
+      );
+    }
+    return `data:${audioMimeFromExtension(filePath)};base64,${fs16.readFileSync(filePath).toString("base64")}`;
+  });
+}
+function probeVideo(filePath) {
+  return new Promise((resolve14) => {
+    execFile4(
+      "ffprobe",
+      ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height,r_frame_rate:format=duration", "-of", "json", filePath],
+      { timeout: 15e3 },
+      (error2, out) => {
+        if (error2) return resolve14(null);
+        try {
+          const parsed = JSON.parse(String(out));
+          const stream = parsed.streams?.[0];
+          const [num5, den] = String(stream?.r_frame_rate || "").split("/").map(Number);
+          const fps = num5 && den ? num5 / den : NaN;
+          const seconds2 = Number.parseFloat(String(parsed.format?.duration ?? ""));
+          if (!stream?.width || !stream?.height || !Number.isFinite(fps) || !Number.isFinite(seconds2) || seconds2 <= 0) return resolve14(null);
+          resolve14({ seconds: seconds2, fps, width: stream.width, height: stream.height });
+        } catch {
+          resolve14(null);
+        }
+      }
+    );
+  });
+}
+async function checkReferenceVideos(filePaths, spec, model2) {
+  const [minSeconds, maxSeconds] = spec.clipSeconds;
+  const [minFps, maxFps] = SEEDANCE_REFERENCE_VIDEO_FPS;
+  const [minPixels, maxPixels] = SEEDANCE_REFERENCE_VIDEO_PIXELS;
+  let total = 0;
+  for (const filePath of filePaths) {
+    validateFilePath(filePath, { allowedExtensions: SEEDANCE_REFERENCE_VIDEO_EXTENSIONS });
+    if (!fs16.existsSync(filePath)) throw new Error(`Reference video not found: ${filePath}`);
+    const name = path15.basename(filePath);
+    const stats = fs16.statSync(filePath);
+    if (stats.size > MAX_INPUT_VIDEO_BYTES) {
+      throw new Error(`Reference video too large: ${name} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 200MB)`);
+    }
+    const facts = await probeVideo(filePath);
+    if (!facts) {
+      console.error(`[Seedance] ffprobe unavailable \u2014 skipping the frame checks for ${name} (${model2}: ${minSeconds}~${maxSeconds}s per clip, ${minFps}~${maxFps} fps)`);
+      continue;
+    }
+    if (facts.seconds < minSeconds || facts.seconds > maxSeconds) {
+      throw new Error(`Reference video ${name} is ${facts.seconds.toFixed(1)}s \u2014 ${model2} accepts ${minSeconds}~${maxSeconds}s per clip.`);
+    }
+    if (facts.fps < minFps - 0.01 || facts.fps > maxFps + 0.01) {
+      throw new Error(`Reference video ${name} is ${facts.fps.toFixed(3)} fps \u2014 the vendor takes ${minFps}~${maxFps} fps (render the previz at 24 or 30).`);
+    }
+    const pixels = facts.width * facts.height;
+    if (pixels < minPixels || pixels > maxPixels) {
+      throw new Error(`Reference video ${name} is ${facts.width}\xD7${facts.height} (${pixels} px) \u2014 the vendor takes ${minPixels}~${maxPixels} pixels a frame.`);
+    }
+    total += facts.seconds;
+  }
+  if (total > spec.totalSeconds) {
+    throw new Error(`Reference videos total ${total.toFixed(1)}s \u2014 ${model2} allows ${spec.totalSeconds}s across all clips.`);
+  }
+  return total;
+}
+function probeAudioSeconds(filePath) {
+  return new Promise((resolve14) => {
+    execFile4(
+      "ffprobe",
+      ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", filePath],
+      { timeout: 15e3 },
+      (error2, out) => {
+        const seconds2 = Number.parseFloat(String(out ?? "").trim());
+        resolve14(!error2 && Number.isFinite(seconds2) && seconds2 > 0 ? seconds2 : null);
+      }
+    );
+  });
+}
+async function checkReferenceAudioDurations(filePaths, spec, model2) {
+  const [minSeconds, maxSeconds] = spec.clipSeconds;
+  let total = 0;
+  for (const filePath of filePaths) {
+    const seconds2 = await probeAudioSeconds(filePath);
+    if (seconds2 === null) {
+      console.error(
+        `[Seedance] ffprobe unavailable \u2014 skipping the duration check for ${path15.basename(filePath)} (${model2}: ${minSeconds}~${maxSeconds}s per clip, ${spec.totalSeconds}s total)`
+      );
+      continue;
+    }
+    if (seconds2 < minSeconds || seconds2 > maxSeconds) {
+      throw new Error(
+        `Reference audio ${path15.basename(filePath)} is ${seconds2.toFixed(1)}s \u2014 ${model2} accepts ${minSeconds}~${maxSeconds}s per clip.`
+      );
+    }
+    total += seconds2;
+  }
+  if (total > spec.totalSeconds) {
+    throw new Error(
+      `Reference audio totals ${total.toFixed(1)}s \u2014 ${model2} allows ${spec.totalSeconds}s across all clips.`
+    );
+  }
+}
+function buildBody(request, parts) {
+  const spec = SEEDANCE_MODEL_SPECS[request.model];
+  const body = {
+    model: request.model,
+    content: [{ type: "text", text: request.prompt }, ...parts],
+    ratio: request.ratio,
+    resolution: request.resolution,
+    duration: request.durationSeconds,
+    watermark: request.watermark
+  };
+  if (spec.audio) body.generate_audio = request.generateAudio;
+  return body;
+}
+function toResponse(request, videoPath, task, taskId) {
+  recordVideoTokens(task.usage?.completion_tokens);
+  return {
+    success: true,
+    videoPath,
+    prompt: request.prompt,
+    model: request.model,
+    ratio: task.ratio ?? request.ratio,
+    resolution: task.resolution ?? request.resolution,
+    duration: task.duration ?? request.durationSeconds,
+    durationSource: task.duration !== void 0 ? "provider_reported" : "requested_seconds",
+    completionTokens: task.usage?.completion_tokens,
+    taskId
+  };
+}
+function toFailure(error2, posted) {
+  const message = error2 instanceof Error ? error2.message : String(error2);
+  console.error(`[Seedance] Error: ${message}`);
+  return { success: false, error: message, terminal: !posted || error2?.terminal === true };
+}
+async function generateFromText3(request) {
+  const apiKey = requireArkKey();
+  let posted = false;
+  try {
+    console.error(`[Seedance] Starting text-to-video generation... (model: ${request.model})`);
+    posted = true;
+    const taskId = await createTask(apiKey, buildBody(request, []));
+    recordVideoSubmission(taskId);
+    const saved = await awaitVideoAndSave(
+      apiKey,
+      taskId,
+      request.outputPath || process.cwd(),
+      request.filename || `video_${Date.now()}.mp4`
+    );
+    if ("error" in saved) return { success: false, error: saved.error, terminal: saved.terminal === true, taskId };
+    return toResponse(request, saved.videoPath, saved.task, taskId);
+  } catch (error2) {
+    return toFailure(error2, posted);
+  }
+}
+async function generateFromImage3(request) {
+  const apiKey = requireArkKey();
+  let posted = false;
+  try {
+    const paths3 = [request.sourceImagePath, ...request.lastImagePath ? [request.lastImagePath] : []];
+    const uris = loadImages(paths3);
+    const images = uris.map((url, index) => ({
+      type: "image_url",
+      image_url: { url },
+      role: index === 0 ? "first_frame" : "last_frame"
+    }));
+    console.error(`[Seedance] Starting image-to-video generation... (model: ${request.model})`);
+    console.error(`[Seedance] First frame: ${request.sourceImagePath}`);
+    if (request.lastImagePath) console.error(`[Seedance] Last frame: ${request.lastImagePath}`);
+    posted = true;
+    const taskId = await createTask(apiKey, buildBody(request, images));
+    recordVideoSubmission(taskId);
+    const saved = await awaitVideoAndSave(
+      apiKey,
+      taskId,
+      request.outputPath || process.cwd(),
+      request.filename || `video_${Date.now()}.mp4`
+    );
+    if ("error" in saved) return { success: false, error: saved.error, terminal: saved.terminal === true, taskId };
+    return {
+      ...toResponse(request, saved.videoPath, saved.task, taskId),
+      sourceImage: request.sourceImagePath,
+      lastImage: request.lastImagePath
+    };
+  } catch (error2) {
+    return toFailure(error2, posted);
+  }
+}
+async function generateWithReferences(request) {
+  const apiKey = requireArkKey();
+  let posted = false;
+  try {
+    const spec = SEEDANCE_MODEL_SPECS[request.model];
+    const imageUris = loadImages(request.referenceImagePaths);
+    const audioUris = loadReferenceAudio(request.referenceAudioPaths);
+    assertRequestBudget([...imageUris, ...audioUris]);
+    if (audioUris.length > 0) {
+      await checkReferenceAudioDurations(request.referenceAudioPaths, spec.referenceAudio, request.model);
+    }
+    let referenceVideoSeconds = 0;
+    if (request.referenceVideoPaths.length > 0) {
+      referenceVideoSeconds = await checkReferenceVideos(request.referenceVideoPaths, spec.referenceVideos, request.model);
+    }
+    if (request.referenceVideoUrls.length > 0) {
+      const assumed = request.referenceVideoUrls.length * request.durationSeconds;
+      if (referenceVideoSeconds + assumed > spec.referenceVideos.totalSeconds) {
+        throw new Error(
+          `Reference videos total at least ${(referenceVideoSeconds + assumed).toFixed(1)}s (URL clips counted at ${request.durationSeconds}s each) \u2014 ${request.model} allows ${spec.referenceVideos.totalSeconds}s across all clips.`
+        );
+      }
+    }
+    const published = await publishFiles(request.referenceVideoPaths);
+    try {
+      const videoUrls = [...published.urls, ...request.referenceVideoUrls];
+      const parts = [
+        ...imageUris.map((url) => ({ type: "image_url", image_url: { url }, role: "reference_image" })),
+        ...videoUrls.map((url) => ({ type: "video_url", video_url: { url }, role: "reference_video" })),
+        ...audioUris.map((url) => ({ type: "audio_url", audio_url: { url }, role: "reference_audio" }))
+      ];
+      console.error(`[Seedance] Starting reference-to-video generation... (model: ${request.model})`);
+      if (imageUris.length > 0) console.error(`[Seedance] Reference images: ${request.referenceImagePaths.join(", ")}`);
+      if (videoUrls.length > 0) console.error(`[Seedance] Reference videos: ${[...request.referenceVideoPaths, ...request.referenceVideoUrls].join(", ")}`);
+      if (audioUris.length > 0) console.error(`[Seedance] Reference audio: ${request.referenceAudioPaths.join(", ")}`);
+      posted = true;
+      const taskId = await createTask(apiKey, buildBody(request, parts));
+      recordVideoSubmission(taskId);
+      const saved = await awaitVideoAndSave(
+        apiKey,
+        taskId,
+        request.outputPath || process.cwd(),
+        request.filename || `video_ref_${Date.now()}.mp4`
+      );
+      if ("error" in saved) return { success: false, error: saved.error, terminal: saved.terminal === true, taskId };
+      return {
+        ...toResponse(request, saved.videoPath, saved.task, taskId),
+        referenceImages: request.referenceImagePaths,
+        referenceAudios: request.referenceAudioPaths,
+        ...videoUrls.length > 0 ? {
+          referenceVideos: [...request.referenceVideoPaths, ...request.referenceVideoUrls],
+          referenceVideoSeconds,
+          ...published.urls.length > 0 ? { referenceVideoRoute: published.how } : {}
+        } : {}
+      };
+    } finally {
+      await published.close();
+    }
+  } catch (error2) {
+    return toFailure(error2, posted);
+  }
 }
 
 // src/video-duration.ts
@@ -117479,7 +117696,7 @@ function sceneInputCapabilities(tool2) {
   return {
     fpsField: schemaFields.includes("frameRate") ? "frameRate" : schemaFields.includes("fps") ? "fps" : null,
     frameAccurateCuts: false,
-    timedImages: ["astra_keyframe_video", "astra_genai_desktop_keyframes"].includes(tool2),
+    timedImages: ["astra_keyframe_video", "astra_genai_desktop_keyframes", "astra_genai_img2video", "astra_genai_audio2video"].includes(tool2),
     openingImage: Boolean(fields2),
     endingImage: Boolean(fields2?.[1]),
     shotDescriptions: ["astra_genai_text2video", "astra_genai_img2video"].includes(tool2) ? "gateway_prompt_only" : "prompt",
@@ -117498,7 +117715,7 @@ function videoCatalog() {
       voice: videoVoiceCapabilities(tool2),
       ...tool2 === "mlx_video_generate" ? { deprecated: true, replacement: "ltx_video_generate" } : {},
       fields: keys(a.schema),
-      modelConstraints: HOSTED_VIDEO_ROUTES[tool2] ? HOSTED_VIDEO_ROUTES[tool2].modelConstraints : localVideoStrategy(tool2) ? { frames: localVideoStrategy(tool2).frames, note: tool2 === "fasth3_omni_reference" ? "8 steps; 9 images, 3 videos, 3 audios, 12 total; visual reference required; 256 MiB RGB cap; no exact speech preservation." : "LTX 8k+1 frames; MLX-Serve backend." } : a.engine === "seedance" ? SEEDANCE_MODEL_SPECS : a.engine === "astra-genai-desktop" ? { discovery: "astra_genai_catalog", note: "Gateway /models and /contracts specify installed matrices. I2V: start/end only; A2V: audio and optional start; keyframes: 1..10. LoRA only on text/keyframes; audio truncation defaults false." } : tool2 === "astra_genai_msr" ? { note: "Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. Speech and effects are rendered natively; an optional character voice sample on subject 1 or 2 sets the timbre of that speaker, and the dialogue goes in the prompt." } : tool2 === "astra_genai_audio2video" ? { models: ["ltx-2.5-22b-dev"], note: "One audio track plus optional start/end. No shots, timed keyframes or subject references. Length equals the audio, at most 361 frames per fps. Mono/stereo wav, mp3, m4a or ogg; 3+ channels 422. Sample rate kept: AAC standard 7350-96000 Hz only, others 422. Data URI at most 15,000,000 base64 characters." } : tool2 === "astra_genai_img2video" ? { models: GENAI_VIDEO_MODELS, references: { subjects: 4, background: 1, model: "ltx-2.5-22b-distilled", voiceSubjects: [1, 2], capability: "/v1/ltx/msr/capabilities:image_conditioning", voiceCapability: "voice_references" }, note: "Start image and optional end frame. Up to four shot descriptions request prompt-guided cuts without frame addresses; additional references use the distilled MSR IC-LoRA with explicit duration. Dev takes start/end only. generateAudio:false removes the soundtrack. No intermediate keyframes or supplied speech." } : a.engine === "astra-genai" ? { models: GENAI_VIDEO_MODELS, note: "Text and up to four shot descriptions. No frame-addressed cuts, supplied images, audio or keyframes." } : a.engine === "minimax" ? { models: Object.keys(MINIMAX_MODELS), note: "MiniMax H3 open platform. 4-15 s (Max 5-15), 24 fps, native stereo audio always on. First/last frames and references never share a request: the reference lane sends the start image as its last picture, unpinned. Up to 9 pictures and 3 voice samples (2-15 s each, 15 s total); 5 pictures free (Max 2). No seed." } : a.engine === "heygen" ? { models: ["heygen-video-1"], note: "HeyGen Video 1, a MiniMax H3 post-train. 480p/768p, 5-15 s with prompt enhancement disabled, native audio always on. Files upload to /v3/assets first. Reference voice behaviour comes from secondary sources only; the start image rides as the last picture, unpinned." } : { note: "Use video_plan; deployment-specific schema is authoritative" }
+      modelConstraints: HOSTED_VIDEO_ROUTES[tool2] ? HOSTED_VIDEO_ROUTES[tool2].modelConstraints : localVideoStrategy(tool2) ? { frames: localVideoStrategy(tool2).frames, note: tool2 === "fasth3_omni_reference" ? "8 steps; 9 images, 3 videos, 3 audios, 12 total; visual reference required; 256 MiB RGB cap; no exact speech preservation." : "LTX 8k+1 frames; MLX-Serve backend." } : a.engine === "seedance" ? SEEDANCE_MODEL_SPECS : a.engine === "astra-genai-desktop" ? { discovery: "astra_genai_catalog", note: "Gateway /models and /contracts specify installed matrices. I2V: start/end only; A2V: audio and optional start; keyframes: 1..10. LoRA only on text/keyframes; audio truncation defaults false." } : tool2 === "astra_genai_msr" ? { note: "Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. Speech and effects are rendered natively; an optional character voice sample on subject 1 or 2 sets the timbre of that speaker, and the dialogue goes in the prompt." } : tool2 === "astra_genai_audio2video" ? { models: ["ltx-2.5-22b-dev", "ltx-2.5-22b-distilled"], note: "Up to eight temporal images including endpoints on gateways with keyframes support. Length equals the audio, at most 361 frames per fps. Mono/stereo wav, mp3, m4a or ogg; 3+ channels 422. Sample rate kept: AAC standard 7350-96000 Hz only, others 422. Data URI at most 15,000,000 base64 characters." } : tool2 === "astra_genai_img2video" ? { models: GENAI_VIDEO_MODELS, references: { subjects: 4, background: 1, model: "ltx-2.5-22b-distilled", voiceSubjects: [1, 2], capability: "/v1/ltx/msr/capabilities:image_conditioning", voiceCapability: "voice_references" }, note: "Start image and optional end frame; additional references use the distilled MSR IC-LoRA with duration or numFrames. Dev takes temporal images. generateAudio:false removes the soundtrack. Timed keyframes require gateway support." } : a.engine === "astra-genai" ? { models: GENAI_VIDEO_MODELS, note: "Use duration, exact numFrames or automatic duration. Optional shots describe 2\u20134 cuts. Plain distilled generation accepts registered LoRAs on supporting backends." } : a.engine === "minimax" ? { models: Object.keys(MINIMAX_MODELS), note: "MiniMax H3 open platform. 4-15 s (Max 5-15), 24 fps, native stereo audio always on. First/last frames and references never share a request: the reference lane sends the start image as its last picture, unpinned. Up to 9 pictures and 3 voice samples (2-15 s each, 15 s total); 5 pictures free (Max 2). No seed." } : a.engine === "heygen" ? { models: ["heygen-video-1"], note: "HeyGen Video 1, a MiniMax H3 post-train. 480p/768p, 5-15 s with prompt enhancement disabled, native audio always on. Files upload to /v3/assets first. Reference voice behaviour comes from secondary sources only; the start image rides as the last picture, unpinned." } : { note: "Use video_plan; deployment-specific schema is authoritative" }
     })),
     host: { execution: "external", note: "Host tools are outside MCP enforcement; never claim an API gate protects their calls." },
     unimplemented: []
@@ -117521,7 +117738,7 @@ function speechVideoCapabilities(provider, model2, operation, subjectReferences 
     throw new Error(`video_engine_unsupported: ${provider} ${model2} cannot keep a character's voice; choose a video model again with project_manage`);
   if (["minimax", "heygen"].includes(provider) && operation === "reference") return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "Native speech from the prompt dialogue with an optional voice sample; voice identity is imitation, not preserved audio" };
   if (provider === "astra-genai" && (operation === "reference" || operation === "image" && model2 === "ltx-2.5-22b-distilled" && subjectReferences)) return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio" };
-  if (operation === "audio" && (provider === "astra" || provider === "astra-genai-desktop" || provider === "ltx-api" || provider === "astra-genai" && model2 === "ltx-2.5-22b-dev"))
+  if (operation === "audio" && (provider === "astra" || provider === "astra-genai-desktop" || provider === "ltx-api" || provider === "astra-genai" && GENAI_VIDEO_MODELS.some((id) => id === model2)))
     return { provider, model: model2, audioConditioning: true, lipSync: false, postLipSync: false, evidence: "The supplied track conditions video generation. Mouth movement and phoneme alignment require output review." };
   if (provider === "seedance" && Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
     return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "Reference audio does not promise exact recorded-speech timing; no post-lipsync adapter installed" };
@@ -117887,23 +118104,26 @@ function compileSceneTimeline(raw, scene, episode) {
     const crop = visual?.camera?.view?.crop;
     const landing = english(visual?.camera?.end);
     const camera = timeline?.framing ?? [member.shot?.size, member.shot?.angle, english(crop)].filter(Boolean).join(" ");
-    const framing = [camera, move, landing && "Closing frame: " + landing].filter(Boolean).join(" ") || (members.length === 1 ? scene.camera || "Hold the opening composition." : "");
+    const shotFraming = [camera, move, landing && "Closing frame: " + landing].filter(Boolean).join(" ");
+    const framing = members.length === 1 && !timeline && scene.camera ? scene.camera : shotFraming || (members.length === 1 ? scene.camera || "Hold the opening composition." : "");
     const existingAction = [visual?.video?.promptSource?.action, visual?.action, member.summary, visual?.video?.prompt].map(english).find(Boolean);
     const action = timeline?.action ?? existingAction ?? (members.length === 1 ? scene.action || scene.emotion : "");
     const pins = [...timeline?.images ?? []];
     const frames = render.framePlan(member);
     const legacy = visual?.frames;
-    for (const pin of legacy?.storyboardKeyframes ?? []) {
-      if (!pin.file || !Number.isInteger(pin.startFrame)) throw new Error("scene_image_timing: malformed storyboardKeyframes on " + shotId);
-      const role = pin.startFrame === startFrame ? "start" : pin.file === frames.end ? "end" : "keyframe";
-      if (!pins.some((p) => p.frame === pin.startFrame && p.path === pin.file)) pins.push({ path: pin.file, frame: pin.startFrame, role });
+    const fallback = legacy?.keyframes === void 0 ? legacy?.storyboardKeyframes : void 0;
+    for (const pin of fallback ?? []) {
+      const frame2 = pin.startFrame !== void 0 && pin.startFrame >= startFrame ? pin.startFrame : pin.startSeconds !== void 0 ? startFrame + Math.round(pin.startSeconds * fps) : pin.startFrame;
+      if (!pin.file || frame2 === void 0 || !Number.isInteger(frame2)) throw new Error("scene_image_timing: malformed storyboardKeyframes on " + shotId);
+      const role = frame2 === startFrame ? "start" : pin.file === frames.end ? "end" : "keyframe";
+      if (!pins.some((p) => p.frame === frame2 && p.path === pin.file)) pins.push({ path: pin.file, frame: frame2, role });
     }
     for (const pin of legacy?.keyframes ?? []) {
       const frame2 = startFrame + Math.round(pin.atSeconds * fps);
       if (!pins.some((p) => p.frame === frame2 && p.path === pin.image)) pins.push({ path: pin.image, frame: frame2, role: "keyframe", cue: english(pin.state), strength: pin.strength });
     }
     if (frames.start && !pins.some((p) => p.role === "start" && p.path === frames.start)) pins.push({ path: frames.start, frame: startFrame, role: "start" });
-    if (frames.end && !pins.some((p) => p.role === "end" && p.path === frames.end)) pins.push({ path: frames.end, frame: endFrame - 1, role: "end" });
+    if (frames.end && !pins.some((p) => p.role === "end" && p.path === frames.end && (!fallback || p.frame === endFrame - 1))) pins.push({ path: frames.end, frame: endFrame - 1, role: "end" });
     const occupied = /* @__PURE__ */ new Set();
     const references = render.imageReferences(member).filter((r2) => ["video", "both"].includes(r2.use));
     const add = (pin) => {
@@ -117931,16 +118151,21 @@ function compileSceneTimeline(raw, scene, episode) {
   if (audio?.cues.some((c) => c.frame >= cursor)) throw new Error("scene_audio_timing: cue outside the scene");
   return { fps, frameCount: cursor, shotIds, shots, images, cuts, ...audio ? { audio } : {} };
 }
-function sceneTimelineWords(t2) {
+function sceneTimelineWords(t2, scene) {
+  const wholeTake = new Set(t2.shots.length === 1 ? [scene.camera, scene.action, scene.emotion] : []);
   return [`Scene at ${t2.fps} fps. Frame numbers start at zero.`, ...t2.shots.map((s2) => {
     const cues = t2.images.filter((p) => p.shotId === s2.shotId && p.cue).map((p) => `Frame ${p.frame}: ${p.cue}`);
-    return [`${s2.shotId} [${s2.startFrame}\u2013${s2.endFrame - 1}] ${s2.transition.replaceAll("_", " ")}. ${s2.framing}`, s2.action, ...cues].filter(Boolean).join(" ");
+    return [
+      `${s2.shotId} [${s2.startFrame}\u2013${s2.endFrame - 1}] ${s2.transition.replaceAll("_", " ")}.`,
+      ...[s2.framing, s2.action].filter((text4) => !wholeTake.has(text4)),
+      ...cues
+    ].filter(Boolean).join(" ");
   }), ...t2.audio ? ["Play one continuous scene track from frame 0.", ...t2.audio.cues.map((c) => `Frame ${c.frame}: ${c.action}`)] : []].join("\n");
 }
 function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options, mapInputs) {
   const timeline = compileSceneTimeline(members, scene, episode);
   const camera = sceneCameraDirection([], scene.camera);
-  const words = sceneTimelineWords(timeline);
+  const words = sceneTimelineWords(timeline, scene);
   const complete = scenePromptText(scene, camera.instruction, words, dialogue, false);
   const suffix = (value) => [value, options.suffix].filter(Boolean).join(" ");
   const prompt = suffix(openingPrompt(complete, scene.openingPositions));
@@ -117987,8 +118212,8 @@ function mapSceneInputs(request, tool2, model2) {
     if (caps.timedImages || endpoint2 && (p.strength === void 0 || p.strength === 1)) continue;
     missing.push({ input: "image", shotId: p.shotId, frame: p.frame, role: p.role, path: p.path, reason: "No temporal image slot at this frame" });
   }
-  if (request.audio && tool2 === "astra_genai_audio2video" && model2 !== "ltx-2.5-22b-dev")
-    missing.push({ input: "audio", frame: 0, path: request.audio.path, reason: "This gateway A2V operation requires ltx-2.5-22b-dev" });
+  if (tool2 === "astra_genai_img2video" && !pins.some((p) => p.frame === 0 && (p.strength ?? 1) === 1))
+    missing.push({ input: "image", frame: 0, reason: "Gateway I2V requires a full-strength opening image" });
   for (const [index, p] of refs.entries()) {
     if (tool2 === "veo_reference" && model2 && index < (VEO_CONSTRAINTS[model2]?.maxAssetImages ?? 0) && p.frame === 0 && ["face", "outfit", "character"].includes(p.role)) continue;
     if (tool2 === "astra_genai_img2video" && model2 === "ltx-2.5-22b-distilled" && p.frame === 0) continue;
@@ -118011,7 +118236,7 @@ function sceneImageBindings(request, tool2, bindings) {
     if ("parameter" in binding || !binding.submitted) return binding;
     const endpoint2 = binding.id === "start" || binding.id === "end";
     const index = endpoint2 ? -1 : refs.findIndex((p) => p.path === binding.path && (!p.reference || p.reference.id === binding.id));
-    const image2 = endpoint2 ? request.images.find((p) => p.role === binding.id && p.path === binding.path) : index >= 0 ? refs.splice(index, 1)[0] : void 0;
+    const image2 = endpoint2 ? request.images.find((p) => p.path === binding.path && p.frame === (binding.id === "start" ? 0 : request.frameCount - 1)) : index >= 0 ? refs.splice(index, 1)[0] : void 0;
     if (!image2) return binding;
     const parameter = endpoint2 ? FRAME_FIELDS[tool2]?.[binding.id === "start" ? 0 : 1] : "references[" + slot++ + "].imagePath";
     return { ...binding, shotId: image2.shotId, frame: image2.frame, role: image2.role, parameter, character: image2.character };
@@ -118065,7 +118290,22 @@ function bindSceneAdapter(request, tool2, model2, shot, input, episode) {
       throw new SceneInputError(tool2, request, [{ input: "audio", path: request.audio.path, frame: 0, reason: "A2V requires mono/stereo, an AAC sample rate and a maximum of 361 frames" }]);
     args.audioPath = request.audio.path;
   }
-  const start = pins.find((p) => p.role === "start"), end = pins.find((p) => p.role === "end");
+  const gateway = tool2 === "astra_genai_img2video" || tool2 === "astra_genai_audio2video";
+  const start = gateway ? pins.find((p) => p.frame === 0 && (p.strength ?? 1) === 1) : pins.find((p) => p.role === "start");
+  const end = gateway ? start && pins.find((p) => p.frame === request.frameCount - 1 && (p.strength ?? 1) === 1) : pins.find((p) => p.role === "end");
+  const intermediate = gateway ? pins.filter((p) => p !== start && p !== end) : [];
+  const gatewayKeyframes = intermediate.length ? {
+    args: { keyframes: intermediate.map((p) => ({ imagePath: p.path, frameIdx: p.frame, strength: p.strength ?? 1 })) },
+    imageBindings: intermediate.map((p, i2) => ({
+      ...verifyImageFile(p.path),
+      ...p,
+      id: p.shotId + "-keyframe-" + i2,
+      parameter: "keyframes[" + i2 + "].imagePath",
+      use: "video",
+      purpose: p.cue ?? p.role,
+      submitted: true
+    }))
+  } : void 0;
   const visual = shot.visual;
   const positions = shot.visual?.video?.openingPositions ?? [];
   const subjects = refs.filter((p) => p.role !== "background");
@@ -118113,9 +118353,11 @@ function bindSceneAdapter(request, tool2, model2, shot, input, episode) {
       "referenceImagePaths",
       "references"
     ];
-    if (fields2.some((k) => k in input)) throw new Error("image_plan_mismatch: declare video images on their storyboard shots");
+    const endpoints = gateway && start ? FRAME_FIELDS[tool2] : void 0;
+    if (fields2.some((k) => k in input && !endpoints?.some((field2) => field2 === k)))
+      throw new Error("image_plan_mismatch: declare video images on their storyboard shots");
   }
-  const timedImages = tool2 === "veo_reference" ? {
+  const timedImages2 = tool2 === "veo_reference" ? {
     args: { referenceImagePaths: refs.map((p) => p.path) },
     imageBindings: refs.map((p, i2) => ({
       ...verifyImageFile(p.path),
@@ -118126,11 +118368,11 @@ function bindSceneAdapter(request, tool2, model2, shot, input, episode) {
       purpose: p.cue ?? p.role,
       submitted: true
     }))
-  } : caps.timedImages ? timedImageArgs(tool2, pins) : void 0;
-  Object.assign(args, timedImages?.args);
-  if (tool2.startsWith("astra_genai_desktop_") && !request.audio || tool2 === "astra_genai_text2video")
+  } : gateway ? !start ? gatewayKeyframes : void 0 : caps.timedImages ? timedImageArgs(tool2, pins) : void 0;
+  Object.assign(args, timedImages2?.args);
+  if (tool2.startsWith("astra_genai_desktop_") && !request.audio)
     args.duration = input.duration ?? request.frameCount / request.fps;
-  return { args, shot: { ...shot, visual: projected }, timedImages };
+  return { args, shot: { ...shot, visual: projected }, timedImages: timedImages2, gatewayKeyframes };
 }
 async function checkSceneDeployment(request, tool2, args) {
   const fail5 = (reason) => {
@@ -118690,7 +118932,42 @@ function bindOpeningPositions(input, visual, episode) {
   }
   return positions;
 }
-function prepareVideoImages(tool2, input, shot, episode) {
+function timedImages(frames, duration5, fps, genai) {
+  if (frames.keyframes !== void 0 || !genai || frames.storyboardKeyframes === void 0) return frames.keyframes;
+  const rows = frames.storyboardKeyframes;
+  if (!Array.isArray(rows) || rows.length < 2 || rows[0]?.file !== frames.start || rows[0]?.startSeconds !== 0 || rows.at(-1)?.file !== frames.end || typeof duration5 !== "number")
+    throw new Error("image_plan_invalid: storyboardKeyframes must span the declared opening and ending images");
+  const last = Math.ceil(duration5 * fps) - 1;
+  const pins = rows.slice(1).filter((row, i2) => i2 !== rows.length - 2 || Math.round(row.startSeconds * fps) !== last);
+  return pins.length ? pins.map((row) => ({ image: row.file, atSeconds: row.startSeconds, state: row.description || row.title || row.file })) : void 0;
+}
+function sceneTimedImages(members, fps, genai) {
+  const tracks = members.map((member) => {
+    const frames = member.visual?.frames ?? {};
+    const duration5 = Number(member.duration);
+    return { frames, duration: duration5, pins: timedImages(frames, duration5, fps, genai) };
+  });
+  if (!tracks.some((track) => track.pins?.length)) return;
+  const timeline = [];
+  let offset = 0;
+  for (const [i2, { frames, duration: duration5, pins }] of tracks.entries()) {
+    if (i2 && frames.start) timeline.push({ atSeconds: offset, image: frames.start, state: "Shot opening" });
+    for (const pin of pins ?? []) {
+      if (!Number.isFinite(pin.atSeconds) || pin.atSeconds <= 0 || pin.atSeconds >= duration5)
+        throw new Error("image_plan_invalid: intermediate frame must fall inside its storyboard shot");
+      timeline.push({ ...pin, atSeconds: offset + pin.atSeconds });
+    }
+    offset += duration5;
+    if (i2 < tracks.length - 1 && frames.end) {
+      const atSeconds = (Math.ceil(offset * fps) - 1) / fps;
+      const previous = timeline.at(-1);
+      if (previous?.image !== frames.end || Math.round(previous.atSeconds * fps) !== Math.round(atSeconds * fps))
+        timeline.push({ atSeconds, image: frames.end, state: "Shot ending" });
+    }
+  }
+  return timeline;
+}
+function prepareVideoImages(tool2, input, shot, episode, members) {
   const visual = shot.visual ?? {};
   if (!hasStructuredImages(shot)) {
     const msr = tool2 === "astra_genai_msr" || tool2 === "astra_genai_img2video" && Array.isArray(input.references);
@@ -118724,12 +119001,14 @@ function prepareVideoImages(tool2, input, shot, episode) {
   });
   const videoRefs = references.filter((ref) => ["video", "both"].includes(ref.use));
   const frameMode = frames.mode !== "reference";
-  const keyframes = visual.frames?.keyframes;
-  if (keyframes !== void 0 && (!Array.isArray(keyframes) || !keyframes.length || keyframes.length > 6 || frames.mode !== "first_last"))
+  const genaiPins = tool2 === "astra_genai_img2video" || tool2 === "astra_genai_audio2video";
+  const fps = Number(input.fps ?? input.frameRate ?? 24);
+  const keyframes2 = members && members.length > 1 ? sceneTimedImages(members, fps, genaiPins) : timedImages(visual.frames ?? {}, shot.duration, fps, genaiPins);
+  if (keyframes2 !== void 0 && (!Array.isArray(keyframes2) || !keyframes2.length || keyframes2.length > (frames.end ? 6 : 7) || frames.mode !== "first_last" && !(genaiPins && frames.mode === "first")))
     throw new Error("image_plan_invalid: intermediate frames require first_last and 1..6 entries");
   const host = tool2 === "host_external";
   if (!host && videoRefs.length && frameMode && tool2 !== "astra_genai_img2video") throw new Error("image_plan_unsupported: this adapter cannot combine pinned start/end frames with additional video references; retain references with use:image or explicitly replan mode:reference");
-  if (!host && keyframes && tool2 !== "astra_keyframe_video") throw new Error("image_plan_unsupported: this adapter cannot accept intermediate frames");
+  if (!host && keyframes2 && tool2 !== "astra_keyframe_video" && !genaiPins) throw new Error("image_plan_unsupported: this adapter cannot accept intermediate frames");
   const args = { ...host ? input : resolveVideoDuration(tool2, input).args };
   const assigned = /* @__PURE__ */ new Set();
   const bindings = [];
@@ -118758,7 +119037,7 @@ function prepareVideoImages(tool2, input, shot, episode) {
       bind("start", frames.start, "start", "video", "Opening state", false);
       if (frames.end) bind("end", frames.end, "end", "video", "Ending state", false);
     }
-    for (const [i2, frame2] of (keyframes ?? []).entries()) bind("keyframe-" + (i2 + 1), frame2.image, "keyframe", "video", frame2.state, false);
+    for (const [i2, frame2] of (keyframes2 ?? []).entries()) bind("keyframe-" + (i2 + 1), frame2.image, "keyframe", "video", frame2.state, false);
     for (const ref of references) if (ref.role !== "composition") bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, false);
     return { args, imageBindings: bindings, imageHandoff: "unverified_host_mapping: bind every video/both input and temporal frame to the actual host schema; do not omit unsupported inputs or claim submission from this plan" };
   }
@@ -118800,7 +119079,8 @@ function prepareVideoImages(tool2, input, shot, episode) {
       const opening = bindings[bindings.length - 1];
       args.ratio = nearestRatio(opening.width, opening.height);
     }
-    if (msr || vendor) {
+    if (msr && sent.length > 4) throw new Error("msr_subject_limit: at most four subject images plus one background");
+    if (vendor) {
       const characters = new Set(sent.flatMap((ref, i2) => ref.role === "character" ? [characterKey(paths3[i2])] : []));
       if (characters.size > 2) throw new Error(`msr_character_limit: references show ${characters.size} characters; reference two principal characters and describe anyone else in the action`);
     }
@@ -118821,16 +119101,16 @@ function prepareVideoImages(tool2, input, shot, episode) {
       ].join("\n");
       args.prompt = String(args.prompt ?? "") + "\nImage reference roles:\n" + guidance;
     }
-  } else if (keyframes) {
-    const fps = Number(args.frameRate ?? 24);
-    const count = Number(args.numFrames ?? (args.duration === void 0 ? NaN : framesForSeconds(Number(args.duration), fps)));
-    if (!Number.isFinite(fps) || fps <= 0 || !Number.isInteger(count) || count < 2) throw new Error("image_plan_invalid: keyframes need explicit frame count or duration");
+  } else if (keyframes2 && !genaiPins) {
+    const fps2 = Number(args.frameRate ?? 24);
+    const count = Number(args.numFrames ?? (args.duration === void 0 ? NaN : framesForSeconds(Number(args.duration), fps2)));
+    if (!Number.isFinite(fps2) || fps2 <= 0 || !Number.isInteger(count) || count < 2) throw new Error("image_plan_invalid: keyframes need explicit frame count or duration");
     const strength = visual.video?.strength ?? 1;
     const images = [
       { imagePath: bind("start", frames.start, "start", "video", "Opening state", true), frameIdx: 0, strength },
-      ...keyframes.map((frame2, i2) => {
+      ...keyframes2.map((frame2, i2) => {
         if (!Number.isFinite(frame2.atSeconds) || frame2.atSeconds <= 0 || typeof shot.duration === "number" && frame2.atSeconds >= shot.duration || !frame2.state?.trim()) throw new Error("image_plan_invalid: intermediate frame needs time and state");
-        return { imagePath: bind("keyframe-" + (i2 + 1), frame2.image, "keyframe", "video", frame2.state, true), frameIdx: Math.round(frame2.atSeconds * fps), strength: frame2.strength ?? strength };
+        return { imagePath: bind("keyframe-" + (i2 + 1), frame2.image, "keyframe", "video", frame2.state, true), frameIdx: Math.round(frame2.atSeconds * fps2), strength: frame2.strength ?? strength };
       }),
       { imagePath: bind("end", frames.end, "end", "video", "Ending state", true), frameIdx: count - 1, strength }
     ];
@@ -118849,11 +119129,27 @@ function prepareVideoImages(tool2, input, shot, episode) {
     };
     put2(fields2[0], value("start", frames.start));
     if (frames.end) put2(fields2[1], value("end", frames.end));
+    if (keyframes2) {
+      const fps2 = Number(args.fps ?? 24);
+      const pins = keyframes2.map((frame2, i2) => {
+        if (!Number.isFinite(frame2.atSeconds) || frame2.atSeconds <= 0 || typeof shot.duration === "number" && frame2.atSeconds >= shot.duration || !frame2.state?.trim())
+          throw new Error("image_plan_invalid: intermediate frame needs time and state inside the clip");
+        const strength = frame2.strength ?? visual.video?.strength;
+        return {
+          imagePath: bind("keyframe-" + (i2 + 1), frame2.image, "keyframe", "video", frame2.state, true),
+          frameIdx: Math.round(frame2.atSeconds * fps2),
+          ...strength === void 0 ? {} : { strength }
+        };
+      });
+      if (pins.some((pin, i2) => pin.frameIdx <= (i2 ? pins[i2 - 1].frameIdx : 0)))
+        throw new Error("image_plan_invalid: intermediate frame indices must increase after the opening frame");
+      put2("keyframes", pins);
+    }
     if (tool2 === "astra_genai_img2video" && videoRefs.length) {
       const ordered = [...videoRefs].sort((a, b) => Number(a.role === "background") - Number(b.role === "background"));
       const paths3 = ordered.map((ref) => bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, true));
-      const characters = new Set(ordered.flatMap((ref, i2) => ref.role === "character" ? [characterKey(paths3[i2])] : []));
-      if (characters.size > 2) throw new Error("msr_character_limit: reference at most two principal characters");
+      if (ordered.filter((ref) => ref.role !== "background").length > 4)
+        throw new Error("msr_subject_limit: at most four subject images plus one background");
       put2("references", paths3.map((file, i2) => msrReference(file, ordered[i2].role)));
       args.prompt = [
         ...ordered.map((ref, i2) => `Image ${i2 + 1}: ${ref.role}, ${ref.purpose}${routing.referenceConstraints(ref) ? " " + routing.referenceConstraints(ref) : ""}`),
@@ -118877,7 +119173,7 @@ function prepareVideoImages(tool2, input, shot, episode) {
     }
     args.openingPositions = positions;
   }
-  for (const key of ["sourceImagePath", "lastImagePath", "firstFramePath", "lastFramePath", "imagePath", "imageUri", "lastFrameUri", "firstFrameImagePath", "lastFrameImagePath", "referenceImagePaths", "references", "images"]) {
+  for (const key of ["sourceImagePath", "lastImagePath", "firstFramePath", "lastFramePath", "imagePath", "imageUri", "lastFrameUri", "firstFrameImagePath", "lastFrameImagePath", "referenceImagePaths", "references", "keyframes", "images"]) {
     if (input[key] !== void 0 && !assigned.has(key)) throw new Error("image_plan_mismatch: unplanned " + key);
   }
   for (const ref of references.filter((item) => item.use === "image")) bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, false);
@@ -119385,6 +119681,7 @@ function saveVideoPlan(plan2) {
 }
 async function planManagedVideo(raw) {
   const plan2 = planVideo(raw, false);
+  await checkGenaiVideoOptions(plan2.tool, plan2.args);
   if (plan2.sceneRequest) await checkSceneDeployment(plan2.sceneRequest, plan2.tool, plan2.args);
   return saveVideoPlan(plan2);
 }
@@ -119460,9 +119757,10 @@ function planVideo(raw, persist = true) {
   };
   const timedSubject = scene && context2.sceneMembers?.some((member) => member.timeline?.images?.some((p) => ["face", "outfit"].includes(p.role)));
   const subjectReferences = Boolean(timedSubject || hasVideoSubjectReferences(shot));
-  const bindDialogueSeparately = tool2 === "astra_genai_img2video" && !silentPicture && input.args.generateAudio !== false && (subjectReferences || hasSubjectInput(input.args.references));
+  const imageWithReferences = tool2 === "astra_genai_img2video" && (subjectReferences || hasSubjectInput(input.args.references));
+  const bindDialogueSeparately = imageWithReferences && !silentPicture && input.args.generateAudio !== false;
   const silentSuffix = silentPicture && (supportsAudioToggle || tool2 === "minimax_img2video" || tool2 === "heygen_img2video") ? `No speech or vocalization. All visible mouths stay closed; ${includeEffects ? "include natural ambience for the location and sound effects from the visible actions." : "perform the planned silent action."}` : "";
-  const promptLimit = tool2 ? videoPromptLimit(tool2) : void 0;
+  const promptLimit = tool2 === "astra_genai_msr" || imageWithReferences ? genaiMsrPromptLimit() : tool2 === "astra_genai_img2video" ? 2e3 : tool2 ? videoPromptLimit(tool2) : void 0;
   const compileFor = (budget) => compileVideoPrompt(shot, video2.promptSource, names, {
     mode,
     measureAudio,
@@ -119495,7 +119793,7 @@ function planVideo(raw, persist = true) {
   ) : void 0;
   const sceneRequest = prepared?.request;
   const sceneCamera = prepared?.camera ?? (scene && sceneCameraDirection(members, scene.camera));
-  const timedImages = prepared?.mapped.timedImages;
+  const timedImages2 = prepared?.mapped.timedImages;
   if (scene) {
     if (prepared) {
       shot = prepared.mapped.shot;
@@ -119522,7 +119820,7 @@ function planVideo(raw, persist = true) {
   } : directionOf(compiled);
   if (selection.engine === "host") {
     if (input.tool) throw new Error("model_selection_mismatch: host has no server adapter");
-    const images2 = prepareVideoImages("host_external", callArgs, context2.shot, context2.episode);
+    const images2 = prepareVideoImages("host_external", callArgs, context2.shot, context2.episode, context2.sceneMembers);
     const body2 = {
       ...take,
       version: 1,
@@ -119550,7 +119848,7 @@ function planVideo(raw, persist = true) {
   const durationPlan = shotVideoTiming(context2, tool2, bound);
   if (durationPlan.status === "split_required")
     throw new Error(`video_duration_exceeded: ${context2.shotId} needs ${durationPlan.requiredSeconds}s; ${tool2} allows ${durationPlan.maxSeconds}s. Split at a meaningful performance boundary; never truncate or switch models.`);
-  if (tool2 === "astra_genai_img2video" && durationPlan.requiredSeconds !== void 0) {
+  if ((tool2 === "astra_genai_img2video" || tool2 === "astra_genai_text2video") && durationPlan.requiredSeconds !== void 0) {
     if (bound.requiredSeconds !== void 0) {
       if (["duration", "durationSeconds", "numFrames", "frames", "autoDuration", "audioMaxDuration"].some((key) => bound[key] !== void 0))
         throw new Error("requiredSeconds is mutually exclusive with exact duration arguments; supply the shot need or an exact request, not both");
@@ -119558,20 +119856,33 @@ function planVideo(raw, persist = true) {
     }
     if (typeof bound.duration === "number" && bound.duration < durationPlan.requiredSeconds)
       throw new Error(`video_duration_short: ${context2.shotId} needs ${durationPlan.requiredSeconds}s but the request covers ${bound.duration}s`);
-    bound.duration ??= Math.ceil(durationPlan.requiredSeconds);
+    if (sceneRequest && bound.duration == null && bound.numFrames === void 0 && !Number.isInteger(sceneRequest.frameCount / sceneRequest.fps))
+      bound.numFrames = sceneRequest.frameCount;
+    if (typeof bound.numFrames === "number") {
+      if (bound.numFrames / Number(bound.fps ?? 24) < durationPlan.requiredSeconds)
+        throw new Error("video_duration_short: numFrames does not cover the shot at the selected fps");
+    } else bound.duration ??= Math.ceil(durationPlan.requiredSeconds);
   }
   if (durationPlan.status === "fits" && VIDEO_ADAPTERS[tool2].voice !== "supplied" && DURATION_TOOLS.includes(tool2)) {
     const exact = ["duration", "durationSeconds", "numFrames", "frames", "autoDuration", "audioMaxDuration"].some((key) => bound[key] !== void 0);
     if (!exact) bound = resolveVideoDuration(tool2, { ...bound, requiredSeconds: durationPlan.requiredSeconds }).args;
   }
-  let images = timedImages ? { args: bound, imageBindings: timedImages.imageBindings } : sceneRequest && !sceneRequest.images.length ? { args: bound, imageBindings: void 0 } : prepareVideoImages(tool2, bound, shot, context2.episode);
+  const bindImages = (args2) => {
+    if (timedImages2) return { args: args2, imageBindings: timedImages2.imageBindings };
+    if (sceneRequest && !sceneRequest.images.length) return { args: args2, imageBindings: void 0 };
+    const images2 = prepareVideoImages(tool2, args2, shot, context2.episode);
+    const extra = prepared?.mapped.gatewayKeyframes;
+    if (!extra) return images2;
+    return { args: { ...images2.args, ...extra.args }, imageBindings: [...images2.imageBindings ?? [], ...extra.imageBindings] };
+  };
+  let images = bindImages(bound);
   let voice = prepareVideoVoice(tool2, images.args, { ...context2, shot, msrVoice: genaiMsrVoiceReferences() });
   const submittedLength = typeof voice.args.prompt === "string" ? openingPrompt(voice.args.prompt, voice.args.openingPositions).length : 0;
   if (compiled && promptLimit && typeof bound.prompt === "string" && submittedLength > promptLimit) {
     compiled = compileFor(promptLimit - (submittedLength - bound.prompt.length));
     bound = { ...bound, prompt: withPrompt(compiled.prompt).prompt };
     direction = directionOf(compiled);
-    images = prepareVideoImages(tool2, bound, shot, context2.episode);
+    images = bindImages(bound);
     voice = prepareVideoVoice(tool2, images.args, { ...context2, shot, msrVoice: genaiMsrVoiceReferences() });
   }
   const args = parseVideoArgs(tool2, voice.args);
@@ -122019,9 +122330,9 @@ var shotCharactersSchema = external_exports.object({
   path: outlinePath,
   shots: external_exports.array(external_exports.object({
     id: shotIdSchema,
-    characters: external_exports.array(nonEmpty).max(2).refine((ids) => new Set(ids).size === ids.length, "a character is listed once").describe("Principal characters on screen, subject first; [] when nobody from the cast is on screen"),
+    characters: external_exports.array(nonEmpty).max(4).refine((ids) => new Set(ids).size === ids.length, "a character is listed once").describe("Principal characters on screen, subject first; [] when nobody from the cast is on screen"),
     expression: external_exports.record(nonEmpty, nonEmpty).optional().describe("Each listed character's visible state as the shot opens, in English physical cues read from the scene's situation: brows, eyes, mouth, posture. Silent listeners and bystanders too. An earlier call's entry stays when omitted."),
-    bystanders: external_exports.array(nonEmpty).max(2).refine((ids) => new Set(ids).size === ids.length, "a character is listed once").optional().describe("Cast members also seen in this shot who have no on-screen line and take no video reference: the start image draws them from their sheet panels and the clip keeps them from that picture. With characters, at most three of the cast on screen. An earlier call's list stays when omitted; [] clears it."),
+    bystanders: external_exports.array(nonEmpty).max(2).refine((ids) => new Set(ids).size === ids.length, "a character is listed once").optional().describe("Cast members also seen in this shot who have no on-screen line and take no video reference: the start image draws them from their sheet panels and the clip keeps them from that picture. With characters, at most four of the cast on screen. An earlier call's list stays when omitted; [] clears it."),
     extras: external_exports.string().optional().describe(`Unnamed people in the frame, in English: how many, what they look like and what they are doing ("six children in orange bibs chasing a ball across the pitch"). The image and video prompts draw them from these words, without a reference. An earlier call's text stays when omitted; "" clears it.`)
   }).strict()).min(1)
 }).strict();
@@ -122122,7 +122433,7 @@ function writeShotCharacters(args) {
     const bystanders = (asked ?? bystandersOf(shots[index])).filter((character) => asked || !characters.includes(character));
     const extras = (askedExtras ?? String(shots[index].visual?.extras ?? "")).trim();
     if (bystanders.some((character) => characters.includes(character))) throw new Error(`shot_bystander_listed: a bystander of ${id} is also among its characters \u2014 list each person once`);
-    if (characters.length + bystanders.length > 3) throw new Error(`character_limit: ${id} shows ${characters.length + bystanders.length} of the cast; at most three, two of them as characters \u2014 describe anyone else in extras`);
+    if (characters.length + bystanders.length > 4) throw new Error(`character_limit: ${id} shows ${characters.length + bystanders.length} of the cast; at most four \u2014 describe anyone else in extras`);
     if (nonEnglishOutsideQuotes(extras)) throw new Error(`image_prompt_language: ${id}'s extras must be English; they go into the image and video prompts`);
     for (const [character, cue] of Object.entries(expression ?? {})) {
       if (!characters.includes(character) && !bystanders.includes(character)) throw new Error(`shot_expression_unknown: ${character} is not among ${id}'s characters`);
@@ -132046,11 +132357,11 @@ Returns: the file written or not, counts, findings (! violation \xB7 warning), a
     name: "shot_characters",
     title: "Set each shot's characters (step 2: characters, then lines)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    description: `Use it once every sequence, scene and shot story is written (story_sequence \u2192 story_scene \u2192 story_shot): set who from the episode cast is on screen in each shot, at most two principal characters with the subject first, or [] when nobody is. It writes visual.character and keeps a kept character's scope. A character who leaves a shot keeps their lines, now off_screen, with a warning, and their sheet panels leave visual.references; a start image made for the old cast is flagged for shot_image. Refused (story_order) while the story has a gap \u2014 a sequence without scenes, a scene without a shot or summary, a shot without its story \u2014 and for an id outside the episode cast (cast_unknown) \u2014 storyboard/cast.json alone on a story-first board, which repeats story_sequence's cast check (cast_source_missing, character_panel_missing), plus SB_DOC.characters on an older board \u2014 or one marked voiceOnly there (cast_voice_only). Local file only; no image, speech or prompt.
+    description: `Use it once every sequence, scene and shot story is written (story_sequence \u2192 story_scene \u2192 story_shot): set who from the episode cast is on screen in each shot, up to four principal characters with the subject first, or [] when nobody is. It writes visual.character and keeps a kept character's scope. A character who leaves a shot keeps their lines, now off_screen, with a warning, and their sheet panels leave visual.references; a start image made for the old cast is flagged for shot_image. Refused (story_order) while the story has a gap \u2014 a sequence without scenes, a scene without a shot or summary, a shot without its story \u2014 and for an id outside the episode cast (cast_unknown) \u2014 storyboard/cast.json alone on a story-first board, which repeats story_sequence's cast check (cast_source_missing, character_panel_missing), plus SB_DOC.characters on an older board \u2014 or one marked voiceOnly there (cast_voice_only). Local file only; no image, speech or prompt.
 
 Give each listed character an expression: what their face and body show in this shot, read from the scene's situation (what just happened and what is at stake), since the one-sentence shot story names an action and not a feeling. Write visible cues \u2014 brows, eyes, mouth, shoulders, hands \u2014 and no emotion label alone: "worried" leaves the face to the model, and a model with no cue draws a pleasant face. The silent listener gets one too. shot_image and shot_prompt put these words into the image and video prompts, and shot_image warns (expression_missing) for a face without one. English only (image_prompt_language); a character outside the shot is refused (shot_expression_unknown).
 
-In conventional dialogue coverage each shot has one speaker. An explicit one-take may include replies. bystanders lists cast members also in view without an on-screen line \u2014 the listener's friend at the table, the child beside the coach: at most three of the cast on screen, the two characters first. extras describes unnamed people in English (how many, what they look like, what they are doing). shot_image draws bystanders from their face and front panels and extras from the words; the video call references neither, and shot_prompt keeps them in the prompt. Refused: a bystander who is also a character (shot_bystander_listed), more than three of the cast (character_limit), a bystander with an on-screen line (shot_bystander_speaks), non-English extras (image_prompt_language).
+In conventional dialogue coverage each shot has one speaker. An explicit one-take may include replies. bystanders lists cast members also in view without an on-screen line \u2014 the listener's friend at the table, the child beside the coach: at most four of the cast on screen, the two characters first. extras describes unnamed people in English (how many, what they look like, what they are doing). shot_image draws bystanders from their face and front panels and extras from the words; the video call references neither, and shot_prompt keeps them in the prompt. Refused: a bystander who is also a character (shot_bystander_listed), more than three of the cast (character_limit), a bystander with an on-screen line (shot_bystander_speaks), non-English extras (image_prompt_language).
 
 Every board write answers with the board first, as counts: people in frame, shots with and without a line, sizes, the widest shot of each scene. They are counts, not targets.
 
@@ -132064,9 +132375,9 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
         path: { type: "string", description: "The storyboard directory or its scenes.js" },
         shots: { type: "array", minItems: 1, description: "Shots to set", items: { type: "object", additionalProperties: false, required: ["id", "characters"], properties: {
           id: { type: "string", pattern: "^s\\d{4,}$", description: "Stable shot id" },
-          characters: { type: "array", maxItems: 2, uniqueItems: true, items: { type: "string", description: "Character id from the episode cast" }, description: "On-screen principal characters, subject first; [] for nobody" },
+          characters: { type: "array", maxItems: 4, uniqueItems: true, items: { type: "string", description: "Character id from the episode cast" }, description: "On-screen principal characters, subject first; [] for nobody" },
           expression: { type: "object", additionalProperties: { type: "string", minLength: 1 }, description: `Visible state of each listed character as the shot opens, by character id, in English physical cues, e.g. {"na-ri":"brows drawn together, eyes wide and searching, lips pressed shut, shoulders raised"}. Read it from the scene's situation, not the one shot sentence; include silent listeners and bystanders. An earlier entry stays when omitted.` },
-          bystanders: { type: "array", maxItems: 2, uniqueItems: true, items: { type: "string", description: "Character id from the episode cast" }, description: "Cast members also in view without an on-screen line; with characters, at most three of the cast. The start image draws them from their sheet panels; the video call does not reference them. An earlier list stays when omitted; [] clears it." },
+          bystanders: { type: "array", maxItems: 2, uniqueItems: true, items: { type: "string", description: "Character id from the episode cast" }, description: "Cast members also in view without an on-screen line; with characters, at most four of the cast. The start image draws them from their sheet panels; the video call does not reference them. An earlier list stays when omitted; [] clears it." },
           extras: { type: "string", description: 'Unnamed people in the frame, in English: how many, what they look like, what they are doing, e.g. "six children in orange bibs chasing a ball across the pitch". An earlier text stays when omitted; "" clears it.' }
         } } }
       },
@@ -141628,7 +141939,7 @@ var ROUTES = {
   gpt_image_text2img: async (args) => {
     const request = parseArgs(text2ImageSchema, args);
     if (request.savePath && existsSync41(request.savePath)) return { ...text3(`Output already exists; choose a new savePath: ${request.savePath}`, true), terminal: true };
-    const result = await generateFromText(request);
+    const result = await generateFromText2(request);
     if (!result.success || !result.base64) {
       return { ...text3(`Image generation failed: ${result.error}`, true), terminal: result.terminal === true };
     }
@@ -141656,7 +141967,7 @@ File save failed: ${formatError(saveError)}`;
   gpt_image_img2img: async (args) => {
     const request = parseArgs(img2ImgSchema, args);
     if (request.savePath && existsSync41(request.savePath)) return { ...text3(`Output already exists; choose a new savePath: ${request.savePath}`, true), terminal: true };
-    const result = await generateFromImage(request);
+    const result = await generateFromImage2(request);
     if (!result.success || !result.base64) {
       return { ...text3(`Image editing failed: ${result.error}`, true), terminal: result.terminal === true };
     }
@@ -141796,7 +142107,7 @@ GLB. Inspect the mesh and materials, then use it in an HTML mesh slide (mesh-obj
   //    Acceptance and result are separate calls, so the client polls; these routes only
   //    parse, call, and report. Failures arrive as thrown errors carrying the server's own
   //    message — never the request headers, which is where the key lives.
-  astra_genai_catalog: async (args) => text3(JSON.stringify(await genaiCatalog(external_exports.enum(["image", "speech", "video", "desktop_video", "loras", "contracts"]).parse(args.kind)))),
+  astra_genai_catalog: async (args) => text3(JSON.stringify(await genaiCatalog(external_exports.enum(["image", "speech", "video", "ltx_video", "desktop_video", "loras", "contracts"]).parse(args.kind)))),
   tts_astra_genai: async (args) => {
     const generation2 = genaiSpeechSchema.parse(args);
     const result = await routeSpeech({
@@ -141839,12 +142150,12 @@ GLB. Inspect the mesh and materials, then use it in an HTML mesh slide (mesh-obj
   },
   astra_genai_video_status: async (args) => text3(JSON.stringify(await getGenaiVideoStatus(genaiVideoStatusSchema.parse(args)))),
   astra_text2video: async (args) => {
-    const result = await generateFromText3(parseArgs(astraText2VideoSchema, args));
+    const result = await generateFromText(parseArgs(astraText2VideoSchema, args));
     return text3(astraVideoReport("Video generated on the ASTRA video API", result));
   },
   astra_img2video: async (args) => {
     const parsed = parseArgs(astraImg2VideoSchema, args);
-    const result = await generateFromImage3(parsed);
+    const result = await generateFromImage(parsed);
     const frames = parsed.lastFramePath ? `
 Frames: ${parsed.firstFramePath} \u2192 ${parsed.lastFramePath}` : `
 First frame: ${parsed.firstFramePath}`;
@@ -141934,7 +142245,7 @@ Size and length are inherited from the source.`
   heygen_img2video: async (args) => vendorReport(await generateHeygenVideo(parseArgs(heygenImg2VideoSchema, args))),
   heygen_reference: async (args) => vendorReport(await generateHeygenVideo(parseArgs(heygenReferenceSchema, args))),
   seedance_text2video: async (args) => {
-    const result = await generateFromText2(parseArgs(seedanceText2VideoSchema, args));
+    const result = await generateFromText3(parseArgs(seedanceText2VideoSchema, args));
     if (!result.success) return { ...text3(`Seedance video generation failed: ${result.error}`, true), terminal: result.terminal === true };
     return text3(`Video generated successfully!
 
@@ -141943,7 +142254,7 @@ ${seedanceMeta(result)}
 Prompt: ${result.prompt}`);
   },
   seedance_img2video: async (args) => {
-    const result = await generateFromImage2(parseArgs(seedanceImg2VideoSchema, args));
+    const result = await generateFromImage3(parseArgs(seedanceImg2VideoSchema, args));
     if (!result.success) return { ...text3(`Seedance video generation from image failed: ${result.error}`, true), terminal: result.terminal === true };
     const lastImageInfo = result.lastImage ? `
 Last Frame Image: ${result.lastImage}` : "";

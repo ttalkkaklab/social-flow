@@ -27,15 +27,33 @@ source images into one still. Never hide that limit by dropping references.
 `lastFramePath`/`lastFrameUri`, and an independent `references` array. Each
 reference has exactly one `imagePath` or `imageUri` plus optional `background`.
 The limit is four subjects and one background in addition to the two temporal
-frames. With references, select `ltx-2.5-22b-distilled` and an explicit duration;
+frames. With references, select `ltx-2.5-22b-distilled` and an explicit duration or `numFrames`;
 the gateway must advertise `image_conditioning:true` at
-`/v1/ltx/msr/capabilities`. This runs the distilled MSR IC-LoRA path; dev and
-direct Desktop I2V take start/end only. Unsupported inputs are rejected, never
+`/v1/ltx/msr/capabilities`. This runs the distilled MSR IC-LoRA path; dev accepts temporal images. Direct Desktop I2V takes start/end only. Unsupported inputs are rejected, never
 dropped. When the gateway also reports `voice_references:true`, subject 1 and
 subject 2 can each carry an `audioPath` or `audioUri`. Put the spoken words in
 the prompt. Each sample conditions the voice for its own subject. The opening
 image stays in the top-level `imagePath` or `imageUri`. Thoughts and voiceover
 use timed external TTS. `generateAudio:false` strips the generated soundtrack.
+
+T2V and I2V accept `numFrames` (25..361, 8k+1) or whole-second `duration`.
+Omit both for automatic length without an end image or subject references.
+`shots` contains two to four descriptions with optional audio instructions.
+Omit the first transition. Later shots use `hard_cut`. The combined prompt fits 2,000 characters.
+Standalone MSR accepts `skipStage2` for a half-size preview where the backend supports it.
+
+I2V and A2V accept timed `keyframes` on gateways advertising
+`limits[mode].temporal_images_including_endpoints`. Send an image path or URI, zero-based
+`frameIdx`, optional strength (0–1) and optional compression `crf` (0–51).
+The two endpoint pins and all timed images share eight slots. On the storyboard use
+`visual.frames.keyframes[].atSeconds`. A saved `storyboardKeyframes` timeline supplies
+its intermediate pictures and the onset of a held ending when explicit keyframes are absent.
+A2V takes the original track and uses its decoded length. Subject portraits are independent
+of timed images and require reference-conditioned I2V or MSR.
+
+`video_plan` and submission check the selected model and mode in `/v1/models` before
+using version-dependent fields. A v2 endpoint on an older gateway can lack
+`negative_prompt` even when the separate MSR endpoint advertises negative conditioning.
 
 Both MSR routes require `openingPositions` with references. Number the subject
 images starting at 1, with the background last. For each person supply their
@@ -199,11 +217,7 @@ headless back. A slot is an input source, not a declared subject, so `video_plan
 sentence naming the panels that show one character and taking the head and hair from the
 face close-up.
 One character uses all three panels; two use each face, then each front, so the two
-speakers sit on subjects 1 and 2, where a voice sample can ride. At most two characters take
-references (user directive, 2026-10-31): describe anyone else on screen in the action and let
-the model draw them; `video_plan` refuses references for a third character
-(`msr_character_limit`), and the storyboard keeps two principal characters per shot
-(`[character-limit]`). A third cast member seen without a line (`visual.bystanders`) and unnamed
+speakers sit on subjects 1 and 2, where a voice sample can ride. Three or four principals use one face each in cast order. Props and clothing share the four subject slots. A cast member without a reference (`visual.bystanders`) and unnamed
 extras (`visual.extras`) reach the clip through the start image and the prompt, never as a
 reference (user directive 2026-11-17); how well a clip holds a bystander's look is not measured yet. The shot's start image goes last, in the background slot. A test on 2026-10-31
 (Kardum, same prompt and seed) kept one complete orc with the sheet's outfit front and back
@@ -272,16 +286,15 @@ Example `video_plan` args for operation `reference` (dimensions inherit selectio
 {"prompt":"The person in image 1 wears the jacket in image 2 and walks along the street in image 3.","references":[{"imagePath":"assets/person.png"},{"imagePath":"assets/jacket.png"},{"imagePath":"assets/street.jpg","background":true}],"duration":5,"referenceStrength":1,"reserveUsd":0}
 ```
 
-The v2 tools retain explicit `duration` (integer or null) and `resolution`, optional
+T2V and I2V accept `numFrames` (25–361, 8k+1) or `duration` (whole seconds or automatic), `resolution`, optional
 `fps` 24/25/48/50, `generateAudio` and provider `cameraMotion`. Image-to-video adds
 exactly one `imagePath` or `imageUri` (HTTPS or PNG/JPEG data URI; a local file travels
 as a data URI) and an optional `lastFramePath` or `lastFrameUri`. The gateway
-validates deployment limits. Do not send MSR fields to v2, apart from the negative
-controls below, or reuse legacy upload IDs.
+validates deployment limits. Distilled I2V can combine these frames with four subject references and a background when the MSR backend advertises image conditioning.
 
 Audio-to-video takes exactly one `audioPath` (local `.wav`/`.mp3`/`.m4a`/`.ogg`/`.opus`,
 sent as a data URI) or `audioUri` (HTTPS, or an `audio/wav`, `audio/mpeg`, `audio/mp4`
-or `audio/ogg` data URI), plus `prompt`, `model` `ltx-2.5-22b-dev` (distilled is 422),
+or `audio/ogg` data URI), plus `prompt`, the model advertised for `audio2video`,
 `resolution` and `fps`. Optional first image `imagePath`/`imageUri` and last frame
 `lastFramePath`/`lastFrameUri` (needs a first image). There is no `duration`,
 `generateAudio` or `cameraMotion`: the output length equals the audio, up to 361
@@ -291,6 +304,7 @@ use HTTPS for larger files. Three or more channels are 422, never downmixed. The
 changed: only AAC standard rates 7350–96000 Hz (e.g. 48000, 44100) pass; others such
 as 192000 are 422. The
 soundtrack is the supplied audio after one backend encode, not a bit-identical copy.
+The native A2V pipeline uses dev weights. A local ComfyUI gateway advertises distilled A2V. Check `astra_genai_catalog kind:ltx_video` for active sampling controls and timeline limits.
 Lip-sync quality is not yet measured on this gateway; inspect mouths before acceptance.
 
 ### Negative prompt on the v2 tools
@@ -314,8 +328,7 @@ you still want, e.g. `has_subtitles, has_blurbox, captions, text overlays, blurr
 distorted proportions`. The dev backend takes at most 2000 characters.
 `guidanceScale` and the NAG fields without `references` are refused.
 
-A gateway older than this contract answers 400 for the unknown field and creates no
-job; drop the argument or upgrade the gateway. Negative conditioning steers the model
+Planning and generation check `/v1/models` before submitting a version-dependent option. Older deployments can omit v2 negative conditioning while offering it on MSR. Negative conditioning steers the model
 and does not guarantee text-free frames: keep the OCR check on the clip.
 
 ## Recovery and evidence
@@ -449,7 +462,7 @@ per side and 2,064,384 pixels, then crops to the requested size. For example,
 
 Duration is a positive whole number of seconds or null for automatic duration.
 The rounded-up 8k+1 frame count must fit 361: at 24 fps, 15 seconds works and 16 does
-not. An end frame requires an explicit duration. Additional subject references
+not. An end frame requires explicit seconds or `numFrames`. Additional subject references
 still require distilled and an advertised MSR image-conditioning backend.
 
 Desktop has its own `astra-genai-desktop` schemas and installed capability matrix.

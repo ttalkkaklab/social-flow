@@ -48435,7 +48435,7 @@ function openingPrompt(prompt, positions = []) {
   const prefix = "Opening frame, from the viewer\u2019s perspective:\n" + header.join("\n") + "\n\n";
   return prompt.startsWith(prefix) ? prompt : prefix + prompt;
 }
-function validateOpening(prompt, positions, references, issue) {
+function validateOpening(prompt, positions, references, issue, maxChars = 2e3) {
   if (!positions) {
     issue("openingPositions required: match each character to the opening frame and their subject images");
     return;
@@ -48456,8 +48456,8 @@ function validateOpening(prompt, positions, references, issue) {
     if (!mapped.has(i2 + 1) && (!ref.nonCharacter || ref.audioPath || ref.audioUri))
       issue("openingPositions: identify the character in Image " + (i2 + 1) + " or mark an object reference nonCharacter:true");
   });
-  if (openingPrompt(prompt, positions).length > 2e3)
-    issue("The prompt including openingPositions exceeds 2000 characters; shorten the action or placement descriptions");
+  if ([...openingPrompt(prompt, positions)].length > maxChars)
+    issue("The prompt including openingPositions exceeds " + maxChars + " characters; shorten the action or placement descriptions");
 }
 
 // src/scene-video.ts
@@ -51046,6 +51046,8 @@ var msrGuidanceFields = {
   nagTau: external_exports.number().finite().min(0).max(10).optional()
 };
 function msrNegativeRule(args, issue) {
+  if ((args.nagAlpha !== void 0 || args.nagTau !== void 0) && args.nagScale === void 0)
+    issue("MSR nagAlpha and nagTau require an explicit nagScale");
   if ((args.nagScale ?? 0) > 0 && args.negativePrompt === void 0)
     issue("MSR nagScale > 0 requires negativePrompt");
   if (args.negativePrompt !== void 0 && (args.guidanceScale ?? 1) <= 1 && (args.nagScale ?? 0) === 0)
@@ -51057,16 +51059,43 @@ function devNegativeRule(args, ctx) {
   if (args.model !== "ltx-2.5-22b-dev") issue("negativePrompt requires ltx-2.5-22b-dev, or image-to-video references with guidanceScale > 1 or nagScale > 0");
   if (args.negativePrompt.length > 2e3) issue("The dev backend accepts a negativePrompt of at most 2000 characters");
 }
+var exactFrames = external_exports.number().int().min(25).max(361).refine((n) => (n - 1) % 8 === 0, "Use 8k+1 frames");
 var genaiShotsSchema = external_exports.array(external_exports.object({
   description: external_exports.string().trim().min(1).max(2e3),
   audio: external_exports.string().trim().min(1).max(2e3).optional(),
   transition: external_exports.literal("hard_cut").optional()
 }).strict()).min(2).max(4).refine((shots) => !shots[0].transition, "Omit transition on the opening shot");
+var temporalImages = external_exports.array(external_exports.object({
+  imageUri: genaiImageUriSchema.optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  frameIdx: external_exports.number().int().min(0).max(360),
+  strength: external_exports.number().min(0).max(1).optional(),
+  crf: external_exports.number().int().min(0).max(51).optional()
+}).strict().refine((pin) => !!pin.imageUri !== !!pin.imagePath, "Supply exactly one imageUri or imagePath")).min(1).max(8);
+function validatePins(pins, start, end, length, ctx) {
+  if (!pins) return;
+  const indices = pins.map((pin) => pin.frameIdx);
+  if (indices.length + Number(start) + Number(end) > 8 || new Set(indices).size !== indices.length || indices.some((i2) => start && i2 === 0 || length !== void 0 && i2 >= length - Number(end)))
+    ctx.addIssue({ code: "custom", path: ["keyframes"], message: "Use up to eight distinct frame indices inside the delivered clip, including its pinned endpoints" });
+}
+var genaiSampling = {
+  seed: external_exports.number().int().min(0).max(2147483647).optional(),
+  numInferenceSteps: external_exports.number().int().min(1).max(50).optional(),
+  guidance: guidanceSchema
+};
+var loraName = external_exports.string().trim().min(1).max(128);
+var genaiVisualSampling = {
+  numGeneratedKeyframes: external_exports.number().int().min(0).max(16).optional(),
+  lora: external_exports.array(external_exports.union([loraName, external_exports.object({ name: loraName, strength: external_exports.number().min(0).max(2).optional() }).strict()])).min(1).max(2).optional()
+};
 var textVideoFields = external_exports.object({
+  ...genaiSampling,
+  ...genaiVisualSampling,
   prompt: external_exports.string().min(1).max(2e3),
   negativePrompt: external_exports.string().trim().min(1).max(5e3).optional(),
   model: external_exports.enum(GENAI_VIDEO_MODELS),
-  duration: external_exports.number().int().min(1).nullable(),
+  duration: external_exports.number().int().min(1).nullable().optional(),
+  numFrames: exactFrames.optional(),
   resolution: localResolution,
   fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
   generateAudio: external_exports.boolean().default(true),
@@ -51076,15 +51105,29 @@ var textVideoFields = external_exports.object({
   filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
 }).strict();
 function localVideoTiming(args, ctx) {
-  if (args.shots) {
-    const joined = [openingPrompt(args.prompt, args.openingPositions), ...args.shots.flatMap((shot, i2) => [
-      (i2 ? "A hard cut moves to " : "The opening shot shows ") + shot.description,
-      ...shot.audio ? ["Audio: " + shot.audio] : []
-    ])].join("\n\n");
-    if (joined.length > 2e3) ctx.addIssue({ code: "custom", path: ["shots"], message: "Composed gateway prompt exceeds 2000 characters" });
-  }
-  if (args.duration !== null && 8 * Math.ceil((args.duration * args.fps - 1) / 8) + 1 > 361)
+  const refs = "references" in args && !!args.references;
+  const promptLimit = refs ? 5e3 : 2e3;
+  if ([...openingPrompt(args.prompt, args.openingPositions)].length > promptLimit)
+    ctx.addIssue({ code: "custom", path: ["prompt"], message: "Prompt exceeds " + promptLimit + " characters" });
+  if (args.model !== "ltx-2.5-22b-dev" && (args.guidance || args.numInferenceSteps !== void 0))
+    ctx.addIssue({ code: "custom", message: "guidance and numInferenceSteps require dev" });
+  if (args.lora && (args.model !== "ltx-2.5-22b-distilled" || refs))
+    ctx.addIssue({ code: "custom", message: "LoRA selection requires plain distilled T2V or I2V" });
+  if (refs && args.numGeneratedKeyframes !== void 0)
+    ctx.addIssue({ code: "custom", message: "MSR does not accept numGeneratedKeyframes" });
+  if (args.duration != null && args.numFrames !== void 0)
+    ctx.addIssue({ code: "custom", path: ["numFrames"], message: "Omit duration when using numFrames" });
+  if (args.duration != null && 8 * Math.ceil((args.duration * args.fps - 1) / 8) + 1 > 361)
     ctx.addIssue({ code: "custom", path: ["duration"], message: "Duration and fps exceed the local 361-frame limit" });
+  if (args.shots) {
+    if (args.shots[0].transition) ctx.addIssue({ code: "custom", path: ["shots", 0, "transition"], message: "Omit transition on the opening shot" });
+    const parts = [openingPrompt(args.prompt, args.openingPositions)];
+    args.shots.forEach((shot, i2) => {
+      parts.push((i2 === 0 ? "The opening shot shows " : "A hard cut moves to ") + shot.description);
+      if (shot.audio) parts.push("Audio: " + shot.audio);
+    });
+    if ([...parts.join("\n\n")].length > promptLimit) ctx.addIssue({ code: "custom", path: ["shots"], message: "Composed shot prompt exceeds " + promptLimit + " characters" });
+  }
 }
 var genaiTextToVideoSchema = textVideoFields.superRefine((args, ctx) => {
   localVideoTiming(args, ctx);
@@ -51112,31 +51155,42 @@ function validateVoiceSlots(references, issue) {
   }
 }
 var genaiImageToVideoSchema = textVideoFields.extend({
+  prompt: external_exports.string().min(1).max(5e3),
   imageUri: genaiImageUriSchema.optional(),
   imagePath: external_exports.string().min(1).optional(),
   lastFrameUri: genaiImageUriSchema.nullable().optional(),
   lastFramePath: external_exports.string().min(1).optional(),
+  keyframes: temporalImages.optional(),
+  referenceStrength: external_exports.number().finite().min(0).max(1).optional(),
+  referenceFrames: external_exports.union([external_exports.literal(25), external_exports.literal(33)]).optional(),
+  skipStage2: external_exports.boolean().optional(),
   references: msrReferences.optional(),
   openingPositions: openingPositionsSchema.optional(),
   ...msrGuidanceFields
 }).strict().superRefine((args, ctx) => {
   const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
   localVideoTiming(args, ctx);
-  if (args.duration === null && (args.lastFrameUri != null || args.lastFramePath !== void 0))
-    issue("A last frame requires an explicit duration");
+  const length = args.numFrames ?? (args.duration == null ? void 0 : args.duration * args.fps);
+  const end = args.lastFrameUri != null || args.lastFramePath !== void 0;
+  if (length === void 0 && (end || args.keyframes)) issue("Temporal pins require duration or numFrames");
+  validatePins(args.keyframes, true, end, length, ctx);
   if (Number(args.imageUri !== void 0) + Number(args.imagePath !== void 0) !== 1) issue("Supply exactly one imageUri or imagePath");
   if (args.lastFrameUri != null && args.lastFramePath !== void 0) issue("Supply at most one lastFrameUri or lastFramePath");
+  if (args.skipStage2 && args.resolution.split("x").some((side) => Number(side) % 4))
+    issue("skipStage2 requires sides divisible by four for an even half-size output");
   if (!args.references) {
+    if (args.referenceStrength !== void 0 || args.referenceFrames !== void 0 || args.skipStage2 !== void 0)
+      issue("referenceStrength, referenceFrames and skipStage2 require references");
     if (args.openingPositions !== void 0) issue("openingPositions requires MSR references");
     if (Object.keys(msrGuidanceFields).some((key) => args[key] !== void 0))
       issue("guidanceScale and NAG require references (MSR conditioning); ltx-2.5-22b-dev already runs guided");
     devNegativeRule(args, ctx);
   } else {
-    validateOpening(args.prompt, args.openingPositions, args.references, issue);
+    validateOpening(args.prompt, args.openingPositions, args.references, issue, 5e3);
     validateVoiceSlots(args.references, issue);
     msrNegativeRule(args, issue);
     if (args.model !== "ltx-2.5-22b-distilled") issue("Additional references require ltx-2.5-22b-distilled (MSR conditioning)");
-    if (args.duration === null) issue("Additional references require an explicit duration");
+    if (length === void 0) issue("Additional references require duration or numFrames");
     const backgrounds = args.references.filter((ref) => ref.background).length;
     if (backgrounds > 1 || args.references.length - backgrounds > 4 || backgrounds === args.references.length)
       issue("References require 1..4 subjects and at most one background");
@@ -51144,10 +51198,12 @@ var genaiImageToVideoSchema = textVideoFields.extend({
 });
 var oneOf = (a, b) => Number(a !== void 0) + Number(b !== void 0);
 var genaiAudioToVideoSchema = external_exports.object({
+  ...genaiSampling,
   prompt: external_exports.string().trim().min(1).max(2e3),
   negativePrompt: external_exports.string().trim().min(1).max(2e3).optional(),
-  model: external_exports.literal("ltx-2.5-22b-dev"),
+  model: external_exports.enum(["ltx-2.5-22b-dev", "ltx-2.5-22b-distilled"]),
   resolution: localResolution,
+  keyframes: temporalImages.optional(),
   fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
   audioPath: external_exports.string().min(1).optional(),
   audioUri: external_exports.string().min(1).optional(),
@@ -51160,6 +51216,9 @@ var genaiAudioToVideoSchema = external_exports.object({
   filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
 }).strict().superRefine((args, ctx) => {
   const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  validatePins(args.keyframes, !!(args.imagePath || args.imageUri), !!(args.lastFramePath || args.lastFrameUri), void 0, ctx);
+  if (args.model === "ltx-2.5-22b-distilled" && (args.negativePrompt || args.guidance || args.numInferenceSteps !== void 0))
+    issue("The distilled ComfyUI A2V pipeline uses fixed unguided sampling");
   if (oneOf(args.audioPath, args.audioUri) !== 1) issue("Supply exactly one audioPath or audioUri");
   if (oneOf(args.imagePath, args.imageUri) > 1) issue("Supply at most one imagePath or imageUri");
   if (oneOf(args.lastFramePath, args.lastFrameUri) > 1) issue("Supply at most one lastFramePath or lastFrameUri");
@@ -51167,9 +51226,10 @@ var genaiAudioToVideoSchema = external_exports.object({
 });
 var GENAI_MSR_FRAMES = { min: 25, max: 361, step: 8, frameRate: 24 };
 var genaiMsrSchema = external_exports.object({
-  prompt: external_exports.string().trim().min(1).max(2e3),
+  prompt: external_exports.string().trim().min(1).max(5e3),
   negativePrompt: external_exports.string().trim().min(1).max(5e3).optional(),
   ...msrGuidanceFields,
+  skipStage2: external_exports.boolean().optional(),
   references: msrReferences,
   openingPositions: openingPositionsSchema,
   referenceStrength: external_exports.number().finite().min(0).max(1).default(1),
@@ -51185,10 +51245,10 @@ var genaiMsrSchema = external_exports.object({
   filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use a .mp4 filename").optional()
 }).strict().superRefine((args, ctx) => {
   const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-  validateOpening(args.prompt, args.openingPositions, args.references, issue);
+  validateOpening(args.prompt, args.openingPositions, args.references, issue, 5e3);
   msrNegativeRule(args, issue);
   const backgrounds = args.references.filter((ref) => ref.background).length;
-  if (backgrounds > 1 || args.references.length - backgrounds > 4) issue("MSR supports at most four subjects and one background");
+  if (backgrounds === args.references.length || backgrounds > 1 || args.references.length - backgrounds > 4) issue("MSR requires 1..4 subjects and at most one background");
   validateVoiceSlots(args.references, issue);
   if (args.width * args.height > 2064384) issue("MSR maximum is 2,064,384 pixels");
   if (args.duration !== void 0) {
@@ -51217,6 +51277,11 @@ var statusSchema2 = external_exports.object({
 var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
 var GENAI_MSR_INLINE_MAX_BYTES = 8 * 1e3 * 1e3;
 var SUBMIT_TIMEOUT_MS2 = 15 * 6e4;
+var deployedModel = external_exports.object({
+  id: external_exports.string(),
+  parameters_by_mode: external_exports.record(external_exports.array(external_exports.string())).optional(),
+  limits: external_exports.record(external_exports.unknown()).optional()
+});
 
 // src/video-duration.ts
 var import_video_duration = __toESM(require_video_duration(), 1);
@@ -51493,7 +51558,7 @@ function speechVideoCapabilities(provider, model2, operation, subjectReferences 
     throw new Error(`video_engine_unsupported: ${provider} ${model2} cannot keep a character's voice; choose a video model again with project_manage`);
   if (["minimax", "heygen"].includes(provider) && operation === "reference") return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "Native speech from the prompt dialogue with an optional voice sample; voice identity is imitation, not preserved audio" };
   if (provider === "astra-genai" && (operation === "reference" || operation === "image" && model2 === "ltx-2.5-22b-distilled" && subjectReferences)) return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio" };
-  if (operation === "audio" && (provider === "astra" || provider === "astra-genai-desktop" || provider === "ltx-api" || provider === "astra-genai" && model2 === "ltx-2.5-22b-dev"))
+  if (operation === "audio" && (provider === "astra" || provider === "astra-genai-desktop" || provider === "ltx-api" || provider === "astra-genai" && GENAI_VIDEO_MODELS.some((id) => id === model2)))
     return { provider, model: model2, audioConditioning: true, lipSync: false, postLipSync: false, evidence: "The supplied track conditions video generation. Mouth movement and phoneme alignment require output review." };
   if (provider === "seedance" && Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
     return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "Reference audio does not promise exact recorded-speech timing; no post-lipsync adapter installed" };
@@ -52591,9 +52656,9 @@ var shotCharactersSchema = external_exports.object({
   path: outlinePath,
   shots: external_exports.array(external_exports.object({
     id: shotIdSchema,
-    characters: external_exports.array(nonEmpty).max(2).refine((ids) => new Set(ids).size === ids.length, "a character is listed once").describe("Principal characters on screen, subject first; [] when nobody from the cast is on screen"),
+    characters: external_exports.array(nonEmpty).max(4).refine((ids) => new Set(ids).size === ids.length, "a character is listed once").describe("Principal characters on screen, subject first; [] when nobody from the cast is on screen"),
     expression: external_exports.record(nonEmpty, nonEmpty).optional().describe("Each listed character's visible state as the shot opens, in English physical cues read from the scene's situation: brows, eyes, mouth, posture. Silent listeners and bystanders too. An earlier call's entry stays when omitted."),
-    bystanders: external_exports.array(nonEmpty).max(2).refine((ids) => new Set(ids).size === ids.length, "a character is listed once").optional().describe("Cast members also seen in this shot who have no on-screen line and take no video reference: the start image draws them from their sheet panels and the clip keeps them from that picture. With characters, at most three of the cast on screen. An earlier call's list stays when omitted; [] clears it."),
+    bystanders: external_exports.array(nonEmpty).max(2).refine((ids) => new Set(ids).size === ids.length, "a character is listed once").optional().describe("Cast members also seen in this shot who have no on-screen line and take no video reference: the start image draws them from their sheet panels and the clip keeps them from that picture. With characters, at most four of the cast on screen. An earlier call's list stays when omitted; [] clears it."),
     extras: external_exports.string().optional().describe(`Unnamed people in the frame, in English: how many, what they look like and what they are doing ("six children in orange bibs chasing a ball across the pitch"). The image and video prompts draw them from these words, without a reference. An earlier call's text stays when omitted; "" clears it.`)
   }).strict()).min(1)
 }).strict();

@@ -1728,7 +1728,7 @@ window.STORYBOARD_READY = (async function () {
       sizeHint: { ws: "same as the long shot (ls); the legacy key",
                   insert: "a thing, a hand, a screen in the same space — one picture instead of three lines",
                   two: "two people in one frame — relationship, distance and both reactions; specify their crop",
-                  three: "three in one frame — the group's hierarchy; a wide three-shot shows the place too. Principal characters stop at two",
+                  three: "three in one frame — the group's hierarchy; a wide three-shot shows the place too. MSR can reference each face",
                   ots: "over a shoulder — the near shoulder soft in front, the other face; match the reverse",
                   pov: "point of view · what that person sees — placed between the look and the reaction",
                   back: "from behind — the face withheld, the character's field of view shared",
@@ -2794,7 +2794,7 @@ window.STORYBOARD_READY = (async function () {
       '<div class="speech-reference">' + (index + 1) + (n.id ? ' · ' + esc(n.id) : '') + ' · ' + esc(T.chars(netLen(n.tts || n.sub))) + '</div>' +
       '</div></div>';
   }
-  /* The two principal characters MSR references (visual.character — an id or an { id, scope }
+  /* The principal characters MSR references (visual.character — an id or an { id, scope }
      entry), else a legacy visual.characters list: face panels at the far end of the icon row,
      the name in the tooltip. A bystander (visual.bystanders) follows dimmed, and unnamed
      extras (visual.extras) as one mark with their description in the tooltip. */
@@ -2807,7 +2807,7 @@ window.STORYBOARD_READY = (async function () {
         esc(Array.from(name)[0]) + "</span>" + (pic ? '<img src="' + esc(pic) + '" alt="" loading="lazy" onerror="this.hidden=true">' : "") + "</span>";
     };
     var named = function (id) { return typeof id === "string" && id; };
-    return ids.filter(named).slice(0, 2).map(function (id) { return face(id, "", ""); }).join("") +
+    return ids.filter(named).map(function (id) { return face(id, "", ""); }).join("") +
       (Array.isArray(vis.bystanders) ? vis.bystanders : []).filter(named).map(function (id) { return face(id, " shot-cast-bystander", LANG === "ko" ? "대사 없이 화면에 있음" : "in frame, no line"); }).join("") +
       (typeof vis.extras === "string" && vis.extras.trim() ? '<span class="speech-avatar shot-cast-face shot-cast-extras" tabindex="0" role="img" aria-label="' + esc(vis.extras.trim()) +
         '" data-tip="' + esc((LANG === "ko" ? "엑스트라: " : "Extras: ") + vis.extras.trim()) + '"><span>+</span></span>' : "");

@@ -65,7 +65,7 @@ test('EP01 delivers one multipart request with three shots, six file parts and o
  assert.equal(report.executable,false); assert.equal(report.planId,undefined);
  assert.deepEqual(report.sceneRequest,request);
  assert.deepEqual(report.missing.map(m=>[m.input,m.frame]),[
-   ['transition',42],['transition',52],['image',42],['image',52],['image',112],['image',191],['image',336],
+   ['transition',42],['transition',52],
  ]);
  assert.ok(!fs.existsSync(path.join(f.episode,'.work/video-routing/plans')));
  f.members[2].visual.camera={movement:'pan right',target:'the dancers',end:'The dancers fill the frame.'};
@@ -134,6 +134,34 @@ test('Desktop keyframes receive each asset index only on an active compatible de
    error=>error.missing.length===1 && error.missing[0].input==='transition');
 });
 
+test('a saved one-take A2V request keeps the original audio, five intermediate cues and both endpoint fields', t => {
+  const f = busking(t), first = f.members[0];
+  const cards = f.members.flatMap(m => m.timeline.images);
+  f.members.splice(1);
+  first.duration = 15;
+  first.timeline.endFrame = 360;
+  delete first.timeline.images;
+  first.visual.frames = {
+    mode:'first_last', start:cards[0].path, end:cards.at(-1).path,
+    storyboardKeyframes:cards.map(p => ({file:p.path, startFrame:p.frame})),
+  };
+  f.scene.oneTake = true;
+  f.save();
+  const args = {...f.input.args, imagePath:path.join(f.dir,cards[0].path),
+    lastFramePath:path.join(f.dir,cards.at(-1).path), audioPath:path.join(f.dir,f.scene.audio.path)};
+  const plan = planVideo({...f.input,args});
+  const body = buildGenaiAudioBody(plan.args);
+  assert.deepEqual(body.keyframes.map(p => p.frame_idx), [42,52,112,191,336]);
+  assert.deepEqual(plan.imageBindings.filter(p => p.submitted).map(p => p.frame).sort((a,b)=>a-b),[0,42,52,112,191,336,359]);
+  assert.equal(body.audio_uri,'data:audio/wav;base64,'+fs.readFileSync(args.audioPath).toString('base64'));
+  assert.throws(()=>planVideo({...f.input,args:{...args,imagePath:args.lastFramePath}}),/image_plan_mismatch/);
+  first.visual.frames.keyframes = [{image:cards[2].path,atSeconds:42/24,state:'The dancer steps forward.',strength:0.4}];
+  f.save();
+  const revised = planVideo({...f.input,args});
+  assert.deepEqual(revised.args.keyframes.map(p=>[path.basename(p.imagePath),p.frameIdx,p.strength]), [['solo.png',42,0.4]]);
+  assert.match(revised.args.prompt,/Frame 42: The dancer steps forward/);
+});
+
 test('a distilled I2V subject panel belongs to an off-screen dancer, separately from the first frame',async t=>{
  const f=busking(t), m=f.members[0];
  delete f.scene.audio; f.members.splice(1);
@@ -155,6 +183,29 @@ test('a distilled I2V subject panel belongs to an off-screen dancer, separately 
  assert.deepEqual(plan.args.references.map(p=>path.basename(p.imagePath)),['duo.png']);
  assert.equal(plan.imageBindings.find(i=>i.id==='start').path,path.join(f.dir,'images/opening.png'));
  assert.match(plan.args.prompt,/mai-an \(Image 1\): Off screen/);
+});
+
+test('a 25-frame scene retains its length for three I2V face references and for T2V', t => {
+  const f = busking(t), shot = f.members[0];
+  delete f.scene.audio;
+  f.scene.oneTake = true;
+  f.members.splice(1);
+  shot.duration = 25/24;
+  shot.timeline.endFrame = 25;
+  shot.visual.video.model = 'ltx-2.5-22b-distilled';
+  for (const [i,owner] of f.scene.openingPositions.entries()) {
+    owner.images = [i+1];
+    shot.timeline.images.push({role:'face',character:owner.character,frame:0,path:'images/'+['solo','duo','trio'][i]+'.png'});
+  }
+  f.save();
+  const image = planVideo({...f.input,operation:'image'});
+  assert.equal(image.args.numFrames,25);
+  assert.equal(image.args.duration,undefined);
+  assert.deepEqual(image.args.references.map(p=>path.basename(p.imagePath)),['solo.png','duo.png','trio.png']);
+  shot.timeline.images = [];
+  for (const owner of f.scene.openingPositions) owner.images = [];
+  f.save();
+  assert.equal(planVideo({...f.input,operation:'text'}).args.numFrames,25);
 });
 
 test('Veo reference-only scenes send owned face and outfit assets without a timed first frame', t => {

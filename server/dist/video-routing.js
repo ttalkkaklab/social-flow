@@ -27,7 +27,7 @@ import { quoteVideo } from './video-pricing.js';
 import { atomicJson, videoTransaction } from './video-state.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
 import { videoEvents } from './video-events.js';
-import { getGenaiVideoStatus, genaiMsrSchema, buildGenaiMsrBody, buildGenaiAudioBody, genaiAudioToVideoSchema, genaiMsrVoiceReferences, refreshGenaiMsrVoice, genaiV2Resolution } from './astra-genai-video.js';
+import { genaiMsrPromptLimit, checkGenaiVideoOptions, getGenaiVideoStatus, genaiMsrSchema, buildGenaiMsrBody, buildGenaiAudioBody, genaiAudioToVideoSchema, genaiMsrVoiceReferences, refreshGenaiMsrVoice, genaiV2Resolution } from './astra-genai-video.js';
 import { GenaiRequestError } from './astra-genai-client.js';
 import { hasSubjectInput, hasVideoSubjectReferences, prepareVideoImages } from './video-image-inputs.js';
 import { prepareVideoVoice } from './video-voice.js';
@@ -257,6 +257,7 @@ function saveVideoPlan(plan) {
 }
 export async function planManagedVideo(raw) {
     const plan = planVideo(raw, false);
+    await checkGenaiVideoOptions(plan.tool, plan.args);
     if (plan.sceneRequest)
         await checkSceneDeployment(plan.sceneRequest, plan.tool, plan.args);
     return saveVideoPlan(plan);
@@ -345,15 +346,16 @@ export function planVideo(raw, persist = true) {
     };
     const timedSubject = scene && context.sceneMembers?.some(member => member.timeline?.images?.some(p => ['face', 'outfit'].includes(p.role)));
     const subjectReferences = Boolean(timedSubject || hasVideoSubjectReferences(shot));
-    const bindDialogueSeparately = tool === 'astra_genai_img2video' && !silentPicture && input.args.generateAudio !== false &&
-        (subjectReferences || hasSubjectInput(input.args.references));
+    const imageWithReferences = tool === 'astra_genai_img2video' && (subjectReferences || hasSubjectInput(input.args.references));
+    const bindDialogueSeparately = imageWithReferences && !silentPicture && input.args.generateAudio !== false;
     const silentSuffix = silentPicture && (supportsAudioToggle || tool === 'minimax_img2video' || tool === 'heygen_img2video')
         ? `No speech or vocalization. All visible mouths stay closed; ${includeEffects
             ? 'include natural ambience for the location and sound effects from the visible actions.'
             : 'perform the planned silent action.'}` : '';
     // The board prompt is compiled to the adapter's own limit, so it can go out as written: hand-shortened
     // prompts can discard a planned move, as in mochi_bo EP05 s0015.
-    const promptLimit = tool ? videoPromptLimit(tool) : undefined;
+    const promptLimit = tool === 'astra_genai_msr' || imageWithReferences ? genaiMsrPromptLimit()
+        : tool === 'astra_genai_img2video' ? 2000 : tool ? videoPromptLimit(tool) : undefined;
     const compileFor = (budget) => compileVideoPrompt(shot, video.promptSource, names, { mode, measureAudio, bindDialogueSeparately,
         ...(budget ? { maxCharacters: budget - (silentSuffix ? silentSuffix.length + 1 : 0) } : {}) });
     let compiled = !scene && input.args.prompt === undefined && video?.promptSource ? compileFor(promptLimit) : undefined;
@@ -400,7 +402,7 @@ export function planVideo(raw, persist = true) {
     if (selection.engine === 'host') {
         if (input.tool)
             throw new Error('model_selection_mismatch: host has no server adapter');
-        const images = prepareVideoImages('host_external', callArgs, context.shot, context.episode);
+        const images = prepareVideoImages('host_external', callArgs, context.shot, context.episode, context.sceneMembers);
         const body = { ...take, version: 1, episode: context.episode, shotId: context.shotId, requestId: input.requestId,
             tool: 'host_external', args: callArgs, ...(sceneRequest ? { sceneRequest } : {}), ...direction, ...(images.imageBindings ? { imageBindings: images.imageBindings, imageHandoff: images.imageHandoff } : {}), selection, source: context.source, contextRevision: context.revision,
             inputs: { ...Object.fromEntries((images.imageBindings ?? []).map(binding => [binding.path, binding.sha256])), ...performanceInputs }, quote: { reserveUsd: 0, estimatedUsd: 0, revision: 'host-allowance-v1', basis: 'External host allowance; limits and actual tool schema must be checked by host; not API enforcement' }, execution: 'host_handoff' };
@@ -416,7 +418,7 @@ export function planVideo(raw, persist = true) {
     if (durationPlan.status === 'split_required')
         throw new Error(`video_duration_exceeded: ${context.shotId} needs ${durationPlan.requiredSeconds}s; ${tool} allows ${durationPlan.maxSeconds}s. Split at a meaningful performance boundary; never truncate or switch models.`);
     // GenAI I2V's live backend owns the maximum; its integer duration must still cover the shot.
-    if (tool === 'astra_genai_img2video' && durationPlan.requiredSeconds !== undefined) {
+    if ((tool === 'astra_genai_img2video' || tool === 'astra_genai_text2video') && durationPlan.requiredSeconds !== undefined) {
         if (bound.requiredSeconds !== undefined) {
             if (['duration', 'durationSeconds', 'numFrames', 'frames', 'autoDuration', 'audioMaxDuration'].some(key => bound[key] !== undefined))
                 throw new Error('requiredSeconds is mutually exclusive with exact duration arguments; supply the shot need or an exact request, not both');
@@ -424,7 +426,15 @@ export function planVideo(raw, persist = true) {
         }
         if (typeof bound.duration === 'number' && bound.duration < durationPlan.requiredSeconds)
             throw new Error(`video_duration_short: ${context.shotId} needs ${durationPlan.requiredSeconds}s but the request covers ${bound.duration}s`);
-        bound.duration ??= Math.ceil(durationPlan.requiredSeconds);
+        if (sceneRequest && bound.duration == null && bound.numFrames === undefined &&
+            !Number.isInteger(sceneRequest.frameCount / sceneRequest.fps))
+            bound.numFrames = sceneRequest.frameCount;
+        if (typeof bound.numFrames === 'number') {
+            if (bound.numFrames / Number(bound.fps ?? 24) < durationPlan.requiredSeconds)
+                throw new Error('video_duration_short: numFrames does not cover the shot at the selected fps');
+        }
+        else
+            bound.duration ??= Math.ceil(durationPlan.requiredSeconds);
     }
     // Legacy boards without a duration keep their exact request. Timed new shots cannot fall back to a short adapter default.
     if (durationPlan.status === 'fits' && VIDEO_ADAPTERS[tool].voice !== 'supplied' && DURATION_TOOLS.includes(tool)) {
@@ -432,8 +442,18 @@ export function planVideo(raw, persist = true) {
         if (!exact)
             bound = resolveVideoDuration(tool, { ...bound, requiredSeconds: durationPlan.requiredSeconds }).args;
     }
-    let images = timedImages ? { args: bound, imageBindings: timedImages.imageBindings } :
-        sceneRequest && !sceneRequest.images.length ? { args: bound, imageBindings: undefined } : prepareVideoImages(tool, bound, shot, context.episode);
+    const bindImages = (args) => {
+        if (timedImages)
+            return { args, imageBindings: timedImages.imageBindings };
+        if (sceneRequest && !sceneRequest.images.length)
+            return { args, imageBindings: undefined };
+        const images = prepareVideoImages(tool, args, shot, context.episode);
+        const extra = prepared?.mapped.gatewayKeyframes;
+        if (!extra)
+            return images;
+        return { args: { ...images.args, ...extra.args }, imageBindings: [...(images.imageBindings ?? []), ...extra.imageBindings] };
+    };
+    let images = bindImages(bound);
     let voice = prepareVideoVoice(tool, images.args, { ...context, shot, msrVoice: genaiMsrVoiceReferences() });
     // Reference descriptions and Audio lines (MSR) come after the compile; when they push the prompt over the limit,
     // the board prompt is compiled once more into the room they leave.
@@ -442,7 +462,7 @@ export function planVideo(raw, persist = true) {
         compiled = compileFor(promptLimit - (submittedLength - bound.prompt.length));
         bound = { ...bound, prompt: withPrompt(compiled.prompt).prompt };
         direction = directionOf(compiled);
-        images = prepareVideoImages(tool, bound, shot, context.episode);
+        images = bindImages(bound);
         voice = prepareVideoVoice(tool, images.args, { ...context, shot, msrVoice: genaiMsrVoiceReferences() });
     }
     const args = parseVideoArgs(tool, voice.args);

@@ -25,7 +25,7 @@ test('provider body follows the published gateway fields and preserves required 
   assert.ok(schema.required.every(key => Object.hasOwn(body, key)));
   assert.ok(Object.keys(body).every(key => Object.hasOwn(schema.properties, key)));
   assert.equal(body.duration, null); assert.equal(body.generate_audio, true); assert.equal(body.last_frame_uri, null);
-  for (const input of [{ ...base, duration: undefined }, { ...base, fps: 30 }, { ...base, seed: 1 }, { ...base, model: 'ltx-2-5-pro' }]) assert.equal(genaiTextToVideoSchema.safeParse(input).success, false);
+  for (const input of [{ ...base, fps: 30 }, { ...base, seed: -1 }, { ...base, model: 'ltx-2-5-pro' }]) assert.equal(genaiTextToVideoSchema.safeParse(input).success, false);
   assert.throws(() => parseVideoArgs('astra_genai_text2video', { ...base, requiredSeconds: 5 }), /not supported/);
   assert.equal(speechVideoCapabilities('astra-genai', base.model).audioConditioning, false);
   // A local start frame travels as a checked data URI; a non-HTTPS URI or two sources are refused.
@@ -129,8 +129,9 @@ test('v2 negatives travel only when set and only where the gateway has a negativ
   const guided = buildGenaiVideoBody(genaiImageToVideoSchema.parse({ ...refs, guidanceScale: 2 }));
   assert.deepEqual([guided.negative_prompt, guided.guidance_scale, 'nag_scale' in guided], [negativePrompt, 2, false]);
   const dir = setup(t), args = { ...refs, nagScale: 11, nagTau: 3, outputPath: dir, filename: 'negative.mp4' };
-  let nag = false, posts = 0;
+  let nag = false, posts = 0, fields = [];
   globalThis.fetch = async (url, options) => {
+    if (String(url).endsWith('/v1/models')) return Response.json({ data: [{ id: base.model, parameters_by_mode: { image2video: fields } }] });
     if (String(url).endsWith('/msr/capabilities')) return Response.json({ image_conditioning: true, negative_prompt: true, nag });
     if (options.method === 'POST') {
       posts++;
@@ -141,6 +142,9 @@ test('v2 negatives travel only when set and only where the gateway has a negativ
     }
     return Response.json({ id: 'negative-job', status: 'failed', error: 'fixture' });
   };
+  await assert.rejects(generateGenaiVideo('image-to-video', args), /ltx_fields_unsupported/);
+  assert.equal(posts, 0);
+  fields = ['negative_prompt', 'nag_scale', 'nag_tau'];
   await assert.rejects(generateGenaiVideo('image-to-video', args), /msr_nag_unsupported/);
   assert.equal(posts, 0); assert.equal(fs.existsSync(path.join(dir, 'negative.mp4.astra-genai.json')), false);
   nag = true;
@@ -210,7 +214,7 @@ test('MSR preserves positive prompts and only sends effective negatives to an ad
   assert.equal(body.negative_prompt, undefined);
   assert.equal(body.guidance_scale, undefined); // Keep distilled CFG=1 unless explicitly changed.
   assert.equal(genaiMsrSchema.safeParse({ ...args, prompt: 'x'.repeat(2000 - (body.prompt.length - args.prompt.length)) }).success, true);
-  assert.equal(genaiMsrSchema.safeParse({ ...args, prompt: 'x'.repeat(2001) }).success, false);
+  assert.equal(genaiMsrSchema.safeParse({ ...args, prompt: 'x'.repeat(5001) }).success, false);
   const negative = { ...args, negativePrompt: 'subtitles, captions', guidanceScale: 2 };
   for (const extra of [{ guidanceScale: undefined }, { guidanceScale: 1 }, { guidanceScale: 11 }, { negativePrompt: ' ' }])
     assert.equal(genaiMsrSchema.safeParse({ ...negative, ...extra }).success, false);
@@ -402,7 +406,7 @@ test('audio-to-video follows the gateway AudioVideo contract and its data URI li
   assert.ok(Object.keys(body).every(key => Object.hasOwn(schema.properties, key)));
   assert.equal(body.audio_uri, `data:audio/wav;base64,${fs.readFileSync(wav).toString('base64')}`);
   assert.equal(body.fps, 24); assert.equal(body.last_frame_uri, 'https://example.com/b.png');
-  for (const extra of [{}, { audioPath: wav, audioUri: 'https://example.com/a.wav' }, { audioPath: wav, model: 'ltx-2.5-22b-distilled' },
+  for (const extra of [{}, { audioPath: wav, audioUri: 'https://example.com/a.wav' }, { audioPath: wav, model: 'ltx-2.5-22b-distilled', negativePrompt: 'subtitle' },
     { audioPath: wav, prompt: '  ' }, { audioPath: wav, duration: 6 }, { audioPath: wav, generateAudio: true }, { audioPath: wav, cameraMotion: 'static' },
     { audioPath: wav, lastFrameUri: 'https://example.com/b.png' }, { audioPath: wav, fps: 30 }])
     assert.equal(genaiAudioToVideoSchema.safeParse({ ...audio, ...extra }).success, false, JSON.stringify(Object.keys(extra)));
@@ -482,6 +486,38 @@ test('private compatibility results cannot send the gateway token to foreign URL
     await assert.rejects(generateGenaiVideo('text-to-video', { ...base, outputPath: dir, filename: `unsafe-${i}.mp4` }), /Invalid private/);
     assert.equal(requests, 2);
   }
+});
+
+test('exact frames and multishot instructions reach v2 with no seconds conversion', () => {
+  const shots = [{ description: 'The dancer enters.' }, { description: 'The group turns.', transition: 'hard_cut', audio: 'Clapping.' }];
+  const args = { ...base, duration: undefined, numFrames: 121, shots };
+  const body = buildGenaiVideoBody(genaiTextToVideoSchema.parse(args));
+  assert.deepEqual(body.shots, shots);
+  assert.equal(body.num_frames, 121);
+  assert.equal(Object.hasOwn(body, 'duration'), false);
+  for (const change of [{ duration: 5 }, { numFrames: 120 }, { shots: [shots[1], shots[0]] },
+    { shots: [{ description: 'a'.repeat(1990) }, shots[1]] }])
+    assert.equal(genaiTextToVideoSchema.safeParse({ ...args, ...change }).success, false);
+});
+
+test('combined image conditioning uses the deployed MSR prompt limit', async t => {
+  setup(t);
+  const { checkGenaiVideoOptions } = await import('../dist/astra-genai-video.js');
+  const members = ['seorin', 'mai-an', 'tu-vi'];
+  const args = genaiImageToVideoSchema.parse({
+    ...base, prompt: 'A'.repeat(2100), imageUri: 'https://example.com/plaza.png',
+    references: members.map(id => ({ imageUri: 'https://example.com/' + id + '.png' })),
+    openingPositions: members.map((character, i) => ({ character, images: [i + 1], position: 'standing beside bench ' + (i + 1) })),
+  });
+  let limit = 5000;
+  globalThis.fetch = async url => {
+    assert.ok(String(url).endsWith('/msr/capabilities'));
+    return Response.json({ prompt_max_chars: limit });
+  };
+  await checkGenaiVideoOptions('astra_genai_img2video', args);
+  limit = 2000;
+  await assert.rejects(checkGenaiVideoOptions('astra_genai_img2video', args), /msr_prompt_limit/);
+  assert.equal(speechVideoCapabilities('astra-genai', base.model, 'audio').audioConditioning, true);
 });
 
 test('v2 text and image bodies preserve untimed shot descriptions, and A2V refuses them', () => {

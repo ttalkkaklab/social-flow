@@ -149,7 +149,7 @@ function sheetPanels(boardDir, ids) {
   return new Map([...readPanelSheets(boardDir, ids)].map(([id, sheet]) => [id, sheet.paths]));
 }
 function canonicalReferences(boardDir, shotId, ids, use, options = {}) {
-  if (ids.length > 2) throw new Error('msr_character_limit: at most two principal characters');
+  if (ids.length > 4) throw new Error('msr_subject_limit: at most four subject images');
   const sheets = readPanelSheets(boardDir, ids);
   if (options.combined) return ids.map(id => {
     const { folder, paths: sources, entries } = sheets.get(id);
@@ -163,7 +163,7 @@ function canonicalReferences(boardDir, shotId, ids, use, options = {}) {
     return { id: `${shotId}-${id}-msr`, path: path.relative(boardDir, file).split(path.sep).join('/'),
       role: 'character', use, purpose: fitting ? `${id}: ONE person, exact face, hair and physique. Match the scene wardrobe` : `${id}: ONE person, exact face, hair, physique and outfit` };
   });
-  const views = ids.length === 1 ? ['face', 'front', 'back'] : ['face', 'front'];
+  const views = ids.length > 2 ? ['face'] : ids.length === 1 ? ['face', 'front', 'back'] : ['face', 'front'];
   // A board may have the panels but no structured cast snapshot yet. Read the usual outfit from its owner.
   const outfits = new Map();
   for (const [id, { folder, entries }] of sheets) {

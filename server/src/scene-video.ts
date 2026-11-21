@@ -22,7 +22,7 @@ interface Member {
   shot?: { size?: string; angle?: string };
   visual?: { action?: string; camera?: Record<string, unknown>; frames?: {
     keyframes?: { image: string; atSeconds: number; state: string; strength?: number }[];
-    storyboardKeyframes?: { file: string; startFrame: number; description?: string }[];
+    storyboardKeyframes?: { file: string; startFrame?: number; startSeconds?: number; description?: string }[];
   }; video?: { prompt?: string; promptSource?: { action?: string } } };
 }
 type SceneImage = Omit<Pin,'role'> & { shotId: string; role: string; reference?: Reference };
@@ -52,23 +52,28 @@ export function compileSceneTimeline(raw: Record<string, unknown>[], scene: Scen
     const crop = (visual?.camera?.view as {crop?: string} | undefined)?.crop;
     const landing = english(visual?.camera?.end as string | undefined);
     const camera = timeline?.framing ?? [member.shot?.size, member.shot?.angle, english(crop)].filter(Boolean).join(' ');
-    const framing = [camera, move, landing && 'Closing frame: ' + landing].filter(Boolean).join(' ') || (members.length === 1 ? scene.camera || 'Hold the opening composition.' : '');
+    const shotFraming = [camera, move, landing && 'Closing frame: ' + landing].filter(Boolean).join(' ');
+    const framing = members.length === 1 && !timeline && scene.camera ? scene.camera
+      : shotFraming || (members.length === 1 ? scene.camera || 'Hold the opening composition.' : '');
     const existingAction = [visual?.video?.promptSource?.action, visual?.action, member.summary, visual?.video?.prompt].map(english).find(Boolean);
     const action = timeline?.action ?? existingAction ?? (members.length === 1 ? scene.action || scene.emotion : '');
     const pins: Pin[] = [...(timeline?.images ?? [])];
     const frames = render.framePlan(member);
     const legacy = visual?.frames;
-    for (const pin of legacy?.storyboardKeyframes ?? []) {
-      if (!pin.file || !Number.isInteger(pin.startFrame)) throw new Error('scene_image_timing: malformed storyboardKeyframes on ' + shotId);
-      const role = pin.startFrame === startFrame ? 'start' : pin.file === frames.end ? 'end' : 'keyframe';
-      if (!pins.some(p => p.frame === pin.startFrame && p.path === pin.file)) pins.push({ path: pin.file, frame: pin.startFrame, role });
+    const fallback = legacy?.keyframes === undefined ? legacy?.storyboardKeyframes : undefined;
+    for (const pin of fallback ?? []) {
+      const frame = pin.startFrame !== undefined && pin.startFrame >= startFrame ? pin.startFrame
+        : pin.startSeconds !== undefined ? startFrame + Math.round(pin.startSeconds * fps) : pin.startFrame;
+      if (!pin.file || frame === undefined || !Number.isInteger(frame)) throw new Error('scene_image_timing: malformed storyboardKeyframes on ' + shotId);
+      const role = frame === startFrame ? 'start' : pin.file === frames.end ? 'end' : 'keyframe';
+      if (!pins.some(p => p.frame === frame && p.path === pin.file)) pins.push({ path: pin.file, frame, role });
     }
     for (const pin of legacy?.keyframes ?? []) {
       const frame = startFrame + Math.round(pin.atSeconds * fps);
       if (!pins.some(p => p.frame === frame && p.path === pin.image)) pins.push({ path: pin.image, frame, role: 'keyframe', cue: english(pin.state), strength: pin.strength });
     }
     if (frames.start && !pins.some(p => p.role === 'start' && p.path === frames.start)) pins.push({ path: frames.start, frame: startFrame, role: 'start' });
-    if (frames.end && !pins.some(p => p.role === 'end' && p.path === frames.end)) pins.push({ path: frames.end, frame: endFrame - 1, role: 'end' });
+    if (frames.end && !pins.some(p => p.role === 'end' && p.path === frames.end && (!fallback || p.frame === endFrame - 1))) pins.push({ path: frames.end, frame: endFrame - 1, role: 'end' });
     const occupied = new Set<number>();
     const references: Reference[] = render.imageReferences(member).filter((r: Reference) => ['video','both'].includes(r.use));
     const add = (pin: Omit<SceneImage,'shotId'>) => {
@@ -98,10 +103,12 @@ export function compileSceneTimeline(raw: Record<string, unknown>[], scene: Scen
 }
 export type SceneTimeline = ReturnType<typeof compileSceneTimeline>;
 export type SceneRequest = SceneTimeline & { sceneNo: number; prompt: string };
-export function sceneTimelineWords(t: SceneTimeline) {
+export function sceneTimelineWords(t: SceneTimeline, scene: SceneVideoDirection) {
+  const wholeTake = new Set(t.shots.length === 1 ? [scene.camera, scene.action, scene.emotion] : []);
   return [`Scene at ${t.fps} fps. Frame numbers start at zero.`, ...t.shots.map(s => {
     const cues = t.images.filter(p => p.shotId === s.shotId && p.cue).map(p => `Frame ${p.frame}: ${p.cue}`);
-    return [`${s.shotId} [${s.startFrame}–${s.endFrame - 1}] ${s.transition.replaceAll('_',' ')}. ${s.framing}`, s.action, ...cues].filter(Boolean).join(' ');
+    return [`${s.shotId} [${s.startFrame}–${s.endFrame - 1}] ${s.transition.replaceAll('_',' ')}.`,
+      ...[s.framing, s.action].filter(text => !wholeTake.has(text)), ...cues].filter(Boolean).join(' ');
   }), ...(t.audio ? ['Play one continuous scene track from frame 0.', ...t.audio.cues.map(c => `Frame ${c.frame}: ${c.action}`)] : [])].join('\n');
 }
 
@@ -114,7 +121,7 @@ export function prepareSceneRequest<T>(
 ) {
   const timeline = compileSceneTimeline(members, scene, episode);
   const camera = sceneCameraDirection([], scene.camera);
-  const words = sceneTimelineWords(timeline);
+  const words = sceneTimelineWords(timeline, scene);
   const complete = scenePromptText(scene, camera.instruction, words, dialogue, false);
   const suffix = (value: string) => [value, options.suffix].filter(Boolean).join(' ');
   const prompt = suffix(openingPrompt(complete, scene.openingPositions));
@@ -155,8 +162,8 @@ export function mapSceneInputs(request: SceneRequest, tool: string, model?: stri
     if (caps.timedImages || endpoint && (p.strength === undefined || p.strength === 1)) continue;
     missing.push({ input:'image', shotId:p.shotId, frame:p.frame, role:p.role, path:p.path, reason:'No temporal image slot at this frame' });
   }
-  if (request.audio && tool === 'astra_genai_audio2video' && model !== 'ltx-2.5-22b-dev')
-    missing.push({input:'audio', frame:0, path:request.audio.path, reason:'This gateway A2V operation requires ltx-2.5-22b-dev'});
+  if (tool === 'astra_genai_img2video' && !pins.some(p => p.frame === 0 && (p.strength ?? 1) === 1))
+    missing.push({input:'image',frame:0,reason:'Gateway I2V requires a full-strength opening image'});
   for (const [index,p] of refs.entries()) {
     if (tool === 'veo_reference' && model && index < (VEO_CONSTRAINTS[model]?.maxAssetImages ?? 0) &&
         p.frame === 0 && ['face','outfit','character'].includes(p.role)) continue;
@@ -182,7 +189,7 @@ export function sceneImageBindings(request: SceneRequest, tool: string, bindings
     if ('parameter' in binding || !binding.submitted) return binding;
     const endpoint = binding.id === 'start' || binding.id === 'end';
     const index = endpoint ? -1 : refs.findIndex(p => p.path === binding.path && (!p.reference || p.reference.id === binding.id));
-    const image = endpoint ? request.images.find(p => p.role === binding.id && p.path === binding.path)
+    const image = endpoint ? request.images.find(p => p.path === binding.path && p.frame === (binding.id === 'start' ? 0 : request.frameCount - 1))
       : index >= 0 ? refs.splice(index, 1)[0] : undefined;
     if (!image) return binding;
     const parameter = endpoint ? FRAME_FIELDS[tool]?.[binding.id === 'start' ? 0 : 1] : 'references[' + slot++ + '].imagePath';
@@ -236,7 +243,15 @@ export function bindSceneAdapter(request: SceneRequest, tool: string, model: str
     args.audioPath = request.audio.path;
   }
 
-  const start = pins.find(p => p.role === 'start'), end = pins.find(p => p.role === 'end');
+  const gateway = tool === 'astra_genai_img2video' || tool === 'astra_genai_audio2video';
+  const start = gateway ? pins.find(p => p.frame === 0 && (p.strength ?? 1) === 1) : pins.find(p => p.role === 'start');
+  const end = gateway ? start && pins.find(p => p.frame === request.frameCount - 1 && (p.strength ?? 1) === 1) : pins.find(p => p.role === 'end');
+  const intermediate = gateway ? pins.filter(p => p !== start && p !== end) : [];
+  const gatewayKeyframes = intermediate.length ? {
+    args: { keyframes: intermediate.map(p => ({ imagePath:p.path, frameIdx:p.frame, strength:p.strength ?? 1 })) },
+    imageBindings: intermediate.map((p,i) => ({ ...verifyImageFile(p.path), ...p, id:p.shotId + '-keyframe-' + i,
+      parameter:'keyframes[' + i + '].imagePath',use:'video',purpose:p.cue ?? p.role,submitted:true })),
+  } : undefined;
   const visual = shot.visual as Record<string,unknown> | undefined;
   const positions = (shot.visual as {video?: {openingPositions?: SceneVideoDirection['openingPositions']}} | undefined)?.video?.openingPositions ?? [];
   const subjects = refs.filter(p => p.role !== 'background');
@@ -257,17 +272,21 @@ export function bindSceneAdapter(request: SceneRequest, tool: string, model: str
   if (caps.timedImages || tool === 'veo_reference' || !request.images.length) {
     const fields = ['images','keyframes','sourceImagePath','lastImagePath','imagePath','imageUri','lastFramePath',
       'firstFramePath','firstFrameImagePath','lastFrameImagePath','lastFrameUri','referenceImagePaths','references'];
-    if (fields.some(k => k in input)) throw new Error('image_plan_mismatch: declare video images on their storyboard shots');
+    // Saved gateway plans can repeat their two endpoint fields. prepareVideoImages checks
+    // them against the storyboard, including the actual bytes for inline I2V images.
+    const endpoints = gateway && start ? FRAME_FIELDS[tool] : undefined;
+    if (fields.some(k => k in input && !endpoints?.some(field => field === k)))
+      throw new Error('image_plan_mismatch: declare video images on their storyboard shots');
   }
   const timedImages = tool === 'veo_reference' ? {
     args: {referenceImagePaths:refs.map(p => p.path)},
     imageBindings: refs.map((p,i) => ({...verifyImageFile(p.path),...p,id:p.reference?.id ?? 'subject-' + i,
       parameter:'referenceImagePaths[' + i + ']',use:'video',purpose:p.cue ?? p.role,submitted:true})),
-  } : caps.timedImages ? timedImageArgs(tool, pins) : undefined;
+  } : gateway ? (!start ? gatewayKeyframes : undefined) : caps.timedImages ? timedImageArgs(tool, pins) : undefined;
   Object.assign(args, timedImages?.args);
-  if ((tool.startsWith('astra_genai_desktop_') && !request.audio) || tool === 'astra_genai_text2video')
+  if (tool.startsWith('astra_genai_desktop_') && !request.audio)
     args.duration = input.duration ?? request.frameCount / request.fps;
-  return { args, shot:{...shot,visual:projected}, timedImages };
+  return { args, shot:{...shot,visual:projected}, timedImages, gatewayKeyframes };
 }
 
 /** The v2 subject extension and Desktop device matrix can vary by deployment.

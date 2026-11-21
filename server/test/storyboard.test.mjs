@@ -982,7 +982,7 @@ describe('images and the video prompt follow the icon attributes', () => {
     writeFileSync(join(dir, 'cast.json'), JSON.stringify({ characters: ['mina', 'ally'].map(id => ({ id, source: '../../../assets/characters/' + id + '/identity.md' })) }));
     const set = (shot) => writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'], ...shot }] });
     assert.throws(() => set({ bystanders: ['mina'] }), /shot_bystander_listed/);
-    assert.throws(() => set({ characters: ['mina', 'ally'], bystanders: ['x', 'y'] }), /character_limit/);
+    assert.throws(() => set({ characters: ['mina', 'ally', 'third'], bystanders: ['x', 'y'] }), /character_limit/);
     assert.throws(() => set({ extras: '아이들 넷' }), /image_prompt_language/);
     assert.throws(() => writeShotCharacters({ path: dir, shots: [{ id: 's0002', characters: ['ally'], bystanders: ['mina'] }] }), /shot_bystander_speaks/);
     set({ bystanders: ['ally'], extras: 'four children in orange bibs chase a ball', expression: { ally: 'arms folded, watching' } });

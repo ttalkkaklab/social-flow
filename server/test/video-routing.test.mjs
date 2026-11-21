@@ -370,7 +370,7 @@ test('managed speech plans an MSR shot as native speech; a named tool keeps its 
  f.board.SB_DOC={characters:[{id:'hero',name:'Hero',tts:{engine:'gemini',voiceId:'Kore',language:'ko',speed:1}}]};f.save();
  const plan=tool=>manageSpeech({path:path.join(f.episode,'storyboard'),action:'plan_video',shotId:'s1',tool}).plan;
  assert.equal(plan().mode,'native');
- assert.throws(()=>plan('astra_genai_audio2video'),/cannot synchronize/);
+ assert.equal(plan('astra_genai_audio2video').mode,'audio_conditioned');
  assert.throws(()=>plan('seedance_text2video'),/model_selection_mismatch/);
  const allFalse={provider:'astra-genai',model:'ltx-2.5-22b-distilled',audioConditioning:false,lipSync:false,postLipSync:false,evidence:'old caller'};
  assert.throws(()=>manageSpeech({path:path.join(f.episode,'storyboard'),action:'plan_video',shotId:'s1',capabilities:allFalse}),/disagree/);
@@ -697,7 +697,7 @@ test('a hosted reference lane takes the spoken shot from the board: panels, the 
  assert.equal(path.basename(silent.args.sourceImagePath),'start.png');
 });
 
-test('sceneNo refuses a second pinned angle on I2V and preserves ordered dialogue on a legacy single-shot board', async t => {
+test('sceneNo refuses a frame-addressed cut on I2V and preserves ordered dialogue on a legacy single-shot board', async t => {
  const f = fixture(t, {engine:'astra-genai',model:'ltx-2.5-22b-distilled',resolution:'576x1024',operation:'reference'});
  const positions = [
   {character:'witness',images:[1],position:'standing at the near witness rail'},
@@ -727,7 +727,8 @@ test('sceneNo refuses a second pinned angle on I2V and preserves ordered dialogu
  }
  f.save();
  const input={episode:f.episode,sceneNo:1,requestId:'whole-scene',args:{reserveUsd:0.1}};
- assert.throws(()=>planVideo(input),error => error.missing.some(m => m.shotId === 's2' && m.input === 'image' && m.frame === 96));
+ assert.throws(()=>planVideo(input),error => error.missing.some(m => m.shotId === 's2' && m.input === 'transition' && m.frame === 96) &&
+   !error.missing.some(m => m.input === 'image'));
  assert.throws(()=>planVideo({...input,sceneNo:undefined,shotId:'s2'}),/scene_video_scope/);
  // The older single-camera board has one shot with both turns and both opening reference panels.
  const [first, second] = f.board.SCENES;
