@@ -519,3 +519,13 @@ test('combined image conditioning uses the deployed MSR prompt limit', async t =
   await assert.rejects(checkGenaiVideoOptions('astra_genai_img2video', args), /msr_prompt_limit/);
   assert.equal(speechVideoCapabilities('astra-genai', base.model, 'audio').audioConditioning, true);
 });
+
+test('v2 text and image bodies preserve untimed shot descriptions, and A2V refuses them', () => {
+  const shots = [{description:'Spectators wait.'},{description:'The hand presses play.',transition:'hard_cut'}];
+  for (const [schema,inputs] of [[genaiTextToVideoSchema,base],[genaiImageToVideoSchema,{...base,imageUri:'https://example.com/open.png'}]]) {
+    assert.deepEqual(buildGenaiVideoBody(schema.parse({...inputs,shots})).shots,shots);
+    assert.equal(schema.safeParse({...inputs,shots:[{...shots[0],transition:'hard_cut'},shots[1]]}).success,false);
+    assert.equal(schema.safeParse({...inputs,shots:[shots[0],{...shots[1],frame:42}]}).success,false);
+  }
+  assert.throws(()=>parseVideoArgs('astra_genai_audio2video',{...base,audioPath:'scene.wav',shots}),/Unsupported/);
+});

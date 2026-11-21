@@ -83,11 +83,30 @@ export function parseVideoArgs(tool, input) {
             throw new Error('Unsupported ' + tool + ' argument: ' + key);
     return adapter.schema.parse(args);
 }
+export const FRAME_FIELDS = {
+    seedance_img2video: ['sourceImagePath', 'lastImagePath'], astra_img2video: ['firstFramePath', 'lastFramePath'],
+    astra_audio2video: ['imagePath'], astra_genai_img2video: ['imageUri', 'lastFrameUri'],
+    astra_genai_desktop_img2video: ['imagePath', 'lastFramePath'], astra_genai_desktop_audio2video: ['imagePath'],
+    astra_genai_audio2video: ['imagePath', 'lastFramePath'], mlx_video_generate: ['firstFrameImagePath', 'lastFrameImagePath'], ltx_video_generate: ['firstFrameImagePath', 'lastFrameImagePath'],
+    ...Object.fromEntries(Object.entries(HOSTED_VIDEO_ROUTES).flatMap(([tool, route]) => route.frames ? [[tool, route.frames]] : [])),
+    minimax_img2video: ['sourceImagePath', 'lastImagePath'], heygen_img2video: ['sourceImagePath', 'lastImagePath'],
+};
+export function sceneInputCapabilities(tool) {
+    const fields = FRAME_FIELDS[tool];
+    const schemaFields = VIDEO_ADAPTERS[tool] ? keys(VIDEO_ADAPTERS[tool].schema) : [];
+    return {
+        fpsField: schemaFields.includes('frameRate') ? 'frameRate' : schemaFields.includes('fps') ? 'fps' : null,
+        frameAccurateCuts: false, timedImages: ['astra_keyframe_video', 'astra_genai_desktop_keyframes', 'astra_genai_img2video', 'astra_genai_audio2video'].includes(tool),
+        openingImage: Boolean(fields), endingImage: Boolean(fields?.[1]),
+        shotDescriptions: ['astra_genai_text2video', 'astra_genai_img2video'].includes(tool) ? 'gateway_prompt_only' : 'prompt',
+        sceneAudio: ['astra_genai_audio2video', 'astra_genai_desktop_audio2video', 'astra_audio2video', 'ltx_api_audio2video'].includes(tool),
+    };
+}
 export function videoCatalog() {
     return {
         version: 1,
         adapters: Object.entries(VIDEO_ADAPTERS).map(([tool, a]) => ({ tool, engine: a.engine, deployment: a.deployment, operation: a.operation,
-            voice: videoVoiceCapabilities(tool), ...(tool === 'mlx_video_generate' ? { deprecated: true, replacement: 'ltx_video_generate' } : {}),
+            sceneInputs: sceneInputCapabilities(tool), voice: videoVoiceCapabilities(tool), ...(tool === 'mlx_video_generate' ? { deprecated: true, replacement: 'ltx_video_generate' } : {}),
             fields: keys(a.schema), modelConstraints: HOSTED_VIDEO_ROUTES[tool] ? HOSTED_VIDEO_ROUTES[tool].modelConstraints : localVideoStrategy(tool) ? { frames: localVideoStrategy(tool).frames, note: tool === 'fasth3_omni_reference' ? '8 steps; 9 images, 3 videos, 3 audios, 12 total; visual reference required; 256 MiB RGB cap; no exact speech preservation.' : 'LTX 8k+1 frames; MLX-Serve backend.' } : a.engine === 'seedance' ? seedance.SEEDANCE_MODEL_SPECS :
                 a.engine === 'astra-genai-desktop' ? { discovery: 'astra_genai_catalog', note: 'Gateway /models and /contracts specify installed matrices. I2V: start/end only; A2V: audio and optional start; keyframes: 1..10. LoRA only on text/keyframes; audio truncation defaults false.' } :
                     tool === 'astra_genai_msr' ? { note: 'Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. Speech and effects are rendered natively; an optional character voice sample on subject 1 or 2 sets the timbre of that speaker, and the dialogue goes in the prompt.' } :

@@ -62,7 +62,7 @@ generation authorization and adapter input validation stay. Work in this order:
 6. Each shot's start image (`shot_image`), composed from its characters' sheet panels,
    its place and props; then the end image (`frame:"end"`) only for a `first_last` shot.
    A place whose sheet names a built set is rendered from the shot's own camera first (below).
-7. Inspect the scene's first frame and save its `videoDirection` with `story_scene`. Keep character positions and emotion on the scene and the lines on their ordered shot cards.
+7. Inspect the scene's first frame and save its `videoDirection` with `story_scene`. Keep opening positions, emotion and the continuous audio track on the scene. Record each shot’s interval, camera setup, action, dialogue, incoming transition and frame-addressed images on its card.
 8. Generate one video for each scene of generated shots with `video_plan {episode,sceneNo,requestId}` → `video_approve` → `video_execute`. A specifically requested single-shot render uses `shot_prompt` and `shotId`.
 9. Assembly and delivery (produce). Place the planned audience cues against the accepted cuts
    and mix them with the scene's voice, room tone and music. [Audience cue placement](../produce/references/video-sound.md#audience-effects)

@@ -3,7 +3,7 @@ import { openingPositionsSchema } from './msr-opening.js';
 import { NATIVE_GENAI_TOOLS } from './astra-genai-native-tools.js';
 /** Public tool descriptions for the unified gateway, kept separate from legacy ASTRA controls. */
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { GENAI_VIDEO_MODELS, genaiSampling, genaiVisualSampling } from './astra-genai-video.js';
+import { GENAI_VIDEO_MODELS, genaiSampling, genaiVisualSampling, genaiShotsSchema } from './astra-genai-video.js';
 
 export const openingPositionsProperty = zodToJsonSchema(openingPositionsSchema, { target: 'openApi3' });
 
@@ -42,16 +42,12 @@ const video = {
   ...sampleOptions,
   numGeneratedKeyframes: { type: 'integer', minimum: 0, maximum: 16, description: 'Internally generated keyframes on ordinary text/image pipelines.' },
   lora: { ...zodToJsonSchema(genaiVisualSampling.lora.unwrap(), {target: 'openApi3'}), description: 'Registered LoRA names or name/strength pairs on plain distilled generation.' },
+  shots: { ...zodToJsonSchema(genaiShotsSchema, { $refStrategy:'none' }), description:'2–4 ordered shot descriptions. Later hard_cut transitions are prompt instructions; there is no time, frame or image slot per shot.' },
   prompt: { type: 'string', minLength: 1, maxLength: 2000, description: 'Scene and action prompt, at most 2000 characters, e.g. A leaf sways as the camera moves closer. Describe camera motion here.' },
   negativePrompt: { type: 'string', minLength: 1, maxLength: 5000, description: devNegative + ' Requires ltx-2.5-22b-dev: distilled sampling has no negative pass, except image-to-video references with guidanceScale > 1 or nagScale > 0.' },
   model: { type: 'string', enum: [...GENAI_VIDEO_MODELS], description: 'Local gateway model. Cloud ltx-2-5-fast/pro models are not supported.' },
   duration: { type: ['integer', 'null'], minimum: 1, description: 'Whole seconds, e.g. 5, or null for automatic duration without an end frame. Rounded-up 8k+1 frames must fit 361 at the selected fps.' },
   numFrames: { type: 'integer', minimum: 25, maximum: 361, description: 'Exact 8k+1 frames instead of duration. Accepted for end frames and distilled subject references.' },
-  shots: { type: 'array', minItems: 2, maxItems: 4, description: 'Native multishot sequence in one generation. The composed prompt must fit 2000 characters.',
-    items: { type: 'object', required: ['description'], additionalProperties: false, properties: {
-      description: { type: 'string', description: 'What happens in this shot.' }, audio: { type: 'string', description: 'Optional shot sound direction.' },
-      transition: { type: 'string', enum: ['hard_cut'], description: 'Omit on the opening shot.' },
-    } } },
   resolution: { type: 'string', description: 'WIDTHxHEIGHT with even sides of at least 64. Round each side up to 64 for backend limits: at most 1920 per side and 2,064,384 pixels. 1280x720 is supported; 1920x1080 exceeds the padded pixel cap.' },
   fps: { type: 'integer', enum: [24, 25, 48, 50], default: 24, description: 'Requested output frame rate.' },
   generateAudio: { type: 'boolean', default: true, description: 'Request generated audio. External speech conditioning is not supported by this gateway.' },

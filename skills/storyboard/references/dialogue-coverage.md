@@ -9,16 +9,16 @@
 
 ## One speaking character per shot
 
-Each shot carries lines from at most one character (user directive, 2026-11-09).
+For an explicit one-take, keep every speaker turn on a single shot. Follow the changing attention with blocking or a continuous camera move. If the selected model cannot bind the voices, report that limitation. The conventional coverage below applies when the user leaves cuts to the director.
+
+In conventional coverage each shot carries lines from at most one character (user directive, 2026-11-09).
 Split at every speaker change, including a reply in an otherwise readable two-shot.
 Consecutive lines by the same speaker can share a shot. A → B → A needs three shots;
 never gather A's nonconsecutive lines and lose the reply's order. Keep line IDs, exact
 words, delivery, acting, pauses and reactions. This reduces MSR speaker-assignment risk;
 it does not guarantee model adherence.
 
-LTX can reference up to four visible principals. A silent cast member can have their own image slot. Use `bystanders` for listeners whose appearance comes from the opening picture and `extras` for unnamed people. The single
-speaker contract divides generation units; it does not make the speaker the picture's
-subject. Before allocating lines, choose the visible evidence for the complete scene
+LTX can reference up to four visible principals. A silent cast member can have their own image slot. Use `bystanders` for listeners whose appearance comes from the opening picture and `extras` for unnamed people. The single-speaker rule assigns lines to shot cards. The scene is generated once. Before allocating lines, choose the visible evidence for the complete scene
 using [shot-view](shot-view.md#plan-attention-across-the-scene). Then set size, angle and
 delivery for each unit. A reply may stay on a meaningful detail or listener reaction;
 it does not automatically need a reverse. Never ask one generated clip to invent cuts.
@@ -40,7 +40,7 @@ resulting shot with `shot_icons`; then create its own opening image.
 
 ## Author before generating
 
-1. Before `shot_dialogue`, split the planned exchange at every speaker change and
+1. For conventional coverage, before `shot_dialogue`, split the planned exchange at every speaker change and
    compare the single speaking identity and delivery with the authored crop. For an existing
    multi-speaker board, repair it before final `shot_icons`. Snapshot the complete affected
    shots and narration records before splitting. Create the next visual beat with `story_shot`, then set its `shot_characters`.
@@ -97,7 +97,7 @@ In an MSR project, use MSR only for a single character's physical dialogue
 `frames.mode:"first"`, not `reference`; use the composed shot image as the first frame.
 Never send inner thoughts as MSR prompt dialogue or a character voice reference.
 Separate a character's physical speech and inner thoughts into shots with their own
-route. `shot_dialogue` and `video_plan` report `shot_speaker_limit` for multiple speakers;
+route. Outside explicit one-take scenes, the single-shot tools report `shot_speaker_limit` for multiple speakers;
 explicit silent/voiceover MSR plans report `msr_speech_route` before generation.
 
 Mark an inner thought `delivery:"voiceover"` with the character's own speaker ID, not
@@ -118,14 +118,13 @@ to MSR instead. See [shot speech](../../produce/references/shot-speech.md).
 
 ## Worked cases
 
-- **A asks, B answers, A reacts aloud:** three independently generated units in that
-  order. Compare the speaking face with the evidence that changes: B's tightened grip
+- **A asks, B answers, A reacts aloud:** three shot cards in playback order for conventional coverage. The scene gets one video request. Compare the speaking face with the evidence that changes: B's tightened grip
   under A's question, the obstacle B indicates while answering, then A's changed face.
   Use that alternative only if those actions belong to the story. OTS/reverse remains
   valid when the faces carry the change; preserve one speaker and the authored delivery.
 - **A continues for three lines:** one sustained view can carry all three; the view may
   show A, the listener or a meaningful action. Do not add cutaways just to vary the sizes.
-- **Both faces readable:** a two-shot still has just one speaker; cut for the reply.
+- **Both faces readable:** in an explicit one-take both speakers may take their turns in frame.
 - **A thinks, then speaks:** thought close-up uses image2video plus A's timed TTS;
   the next shot uses MSR for A's physical speech. The thought never animates a mouth.
 - **Silent action/reaction:** image2video with no invented dialogue or TTS take.

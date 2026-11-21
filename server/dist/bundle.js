@@ -1223,7 +1223,7 @@ var require_browser = __commonJS({
   "node_modules/debug/src/browser.js"(exports, module) {
     exports.formatArgs = formatArgs;
     exports.save = save3;
-    exports.load = load11;
+    exports.load = load12;
     exports.useColors = useColors;
     exports.storage = localstorage();
     exports.destroy = /* @__PURE__ */ (() => {
@@ -1359,7 +1359,7 @@ var require_browser = __commonJS({
       } catch (error2) {
       }
     }
-    function load11() {
+    function load12() {
       let r2;
       try {
         r2 = exports.storage.getItem("debug") || exports.storage.getItem("DEBUG");
@@ -1397,7 +1397,7 @@ var require_node = __commonJS({
     exports.log = log;
     exports.formatArgs = formatArgs;
     exports.save = save3;
-    exports.load = load11;
+    exports.load = load12;
     exports.useColors = useColors;
     exports.destroy = util2.deprecate(
       () => {
@@ -1539,7 +1539,7 @@ var require_node = __commonJS({
         delete process.env.DEBUG;
       }
     }
-    function load11() {
+    function load12() {
       return process.env.DEBUG;
     }
     function init(debug) {
@@ -6849,22 +6849,22 @@ var init_from = __esm({
     init_file();
     init_fetch_blob();
     ({ stat } = fs4);
-    blobFromSync = (path35, type) => fromBlob(statSync2(path35), path35, type);
-    blobFrom = (path35, type) => stat(path35).then((stat5) => fromBlob(stat5, path35, type));
-    fileFrom = (path35, type) => stat(path35).then((stat5) => fromFile(stat5, path35, type));
-    fileFromSync = (path35, type) => fromFile(statSync2(path35), path35, type);
-    fromBlob = (stat5, path35, type = "") => new fetch_blob_default([new BlobDataItem({
-      path: path35,
+    blobFromSync = (path36, type) => fromBlob(statSync2(path36), path36, type);
+    blobFrom = (path36, type) => stat(path36).then((stat5) => fromBlob(stat5, path36, type));
+    fileFrom = (path36, type) => stat(path36).then((stat5) => fromFile(stat5, path36, type));
+    fileFromSync = (path36, type) => fromFile(statSync2(path36), path36, type);
+    fromBlob = (stat5, path36, type = "") => new fetch_blob_default([new BlobDataItem({
+      path: path36,
       size: stat5.size,
       lastModified: stat5.mtimeMs,
       start: 0
     })], { type });
-    fromFile = (stat5, path35, type = "") => new file_default([new BlobDataItem({
-      path: path35,
+    fromFile = (stat5, path36, type = "") => new file_default([new BlobDataItem({
+      path: path36,
       size: stat5.size,
       lastModified: stat5.mtimeMs,
       start: 0
-    })], basename(path35), { type, lastModified: stat5.mtimeMs });
+    })], basename(path36), { type, lastModified: stat5.mtimeMs });
     BlobDataItem = class _BlobDataItem {
       #path;
       #start;
@@ -12045,7 +12045,7 @@ var require_util2 = __commonJS({
     exports.getWellKnownCertificateConfigFileLocation = getWellKnownCertificateConfigFileLocation;
     var fs26 = __require("fs");
     var os7 = __require("os");
-    var path35 = __require("path");
+    var path36 = __require("path");
     var WELL_KNOWN_CERTIFICATE_CONFIG_FILE = "certificate_config.json";
     var CLOUDSDK_CONFIG_DIRECTORY = "gcloud";
     function snakeToCamel(str8) {
@@ -12138,8 +12138,8 @@ var require_util2 = __commonJS({
       }
     }
     function getWellKnownCertificateConfigFileLocation() {
-      const configDir = process.env.CLOUDSDK_CONFIG || (_isWindows() ? path35.join(process.env.APPDATA || "", CLOUDSDK_CONFIG_DIRECTORY) : path35.join(process.env.HOME || "", ".config", CLOUDSDK_CONFIG_DIRECTORY));
-      return path35.join(configDir, WELL_KNOWN_CERTIFICATE_CONFIG_FILE);
+      const configDir = process.env.CLOUDSDK_CONFIG || (_isWindows() ? path36.join(process.env.APPDATA || "", CLOUDSDK_CONFIG_DIRECTORY) : path36.join(process.env.HOME || "", ".config", CLOUDSDK_CONFIG_DIRECTORY));
+      return path36.join(configDir, WELL_KNOWN_CERTIFICATE_CONFIG_FILE);
     }
     function _isWindows() {
       return os7.platform().startsWith("win");
@@ -14085,7 +14085,7 @@ var require_getCredentials = __commonJS({
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getCredentials = getCredentials;
-    var path35 = __require("path");
+    var path36 = __require("path");
     var fs26 = __require("fs");
     var util_1 = __require("util");
     var errorWithCode_1 = require_errorWithCode();
@@ -14157,7 +14157,7 @@ var require_getCredentials = __commonJS({
        * @returns An instance of a class that implements ICredentialsProvider.
        */
       static create(keyFilePath) {
-        const keyFileExtension = path35.extname(keyFilePath);
+        const keyFileExtension = path36.extname(keyFilePath);
         switch (keyFileExtension) {
           case ExtensionFiles.JSON:
             return new JsonCredentialsProvider(keyFilePath);
@@ -17526,7 +17526,7 @@ var require_googleauth = __commonJS({
     var gaxios_1 = require_src2();
     var gcpMetadata = require_src4();
     var os7 = __require("os");
-    var path35 = __require("path");
+    var path36 = __require("path");
     var crypto_1 = require_crypto3();
     var computeclient_1 = require_computeclient();
     var idtokenclient_1 = require_idtokenclient();
@@ -17811,19 +17811,19 @@ var require_googleauth = __commonJS({
         if (!configDir) {
           if (this._isWindows()) {
             if (process.env["APPDATA"]) {
-              configDir = path35.join(process.env["APPDATA"], "gcloud");
+              configDir = path36.join(process.env["APPDATA"], "gcloud");
             }
           } else {
             const home2 = process.env["HOME"];
             if (home2) {
-              configDir = path35.join(home2, ".config", "gcloud");
+              configDir = path36.join(home2, ".config", "gcloud");
             }
           }
         }
         if (!configDir) {
           return null;
         }
-        const location = path35.join(configDir, "application_default_credentials.json");
+        const location = path36.join(configDir, "application_default_credentials.json");
         if (!fs26.existsSync(location)) {
           return null;
         }
@@ -18178,7 +18178,7 @@ var require_googleauth = __commonJS({
         if (this.jsonContent) {
           return this._cacheClientFromJSON(this.jsonContent, this.clientOptions);
         } else if (this.keyFilename) {
-          const filePath = path35.resolve(this.keyFilename);
+          const filePath = path36.resolve(this.keyFilename);
           const stream = fs26.createReadStream(filePath);
           return await this.fromStreamAsync(stream, this.clientOptions);
         } else if (this.apiKey) {
@@ -33433,7 +33433,7 @@ async function $do$q(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path35 = pathToFunc("/{api_version}/agents")(pathParams);
+  const path36 = pathToFunc("/{api_version}/agents")(pathParams);
   const headers2 = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -33464,7 +33464,7 @@ async function $do$q(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path35,
+    path: path36,
     headers: headers2,
     body: body$,
     userAgent: client._options.user_agent,
@@ -33508,7 +33508,7 @@ async function $do$p(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path35 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
+  const path36 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
   const headers2 = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -33538,7 +33538,7 @@ async function $do$p(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path35,
+    path: path36,
     headers: headers2,
     body,
     userAgent: client._options.user_agent,
@@ -33582,7 +33582,7 @@ async function $do$o(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path35 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
+  const path36 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
   const headers2 = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -33612,7 +33612,7 @@ async function $do$o(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path35,
+    path: path36,
     headers: headers2,
     body,
     userAgent: client._options.user_agent,
@@ -33654,7 +33654,7 @@ async function $do$n(client, api_version, page_size, page_token, parent, options
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path35 = pathToFunc("/{api_version}/agents")(pathParams);
+  const path36 = pathToFunc("/{api_version}/agents")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
     "page_token": payload === null || payload === void 0 ? void 0 : payload.page_token,
@@ -33689,7 +33689,7 @@ async function $do$n(client, api_version, page_size, page_token, parent, options
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path35,
+    path: path36,
     headers: headers2,
     query,
     body,
@@ -33730,7 +33730,7 @@ async function $do$m(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path35 = pathToFunc("/{api_version}/environments")(pathParams);
+  const path36 = pathToFunc("/{api_version}/environments")(pathParams);
   const headers2 = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -33761,7 +33761,7 @@ async function $do$m(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path35,
+    path: path36,
     headers: headers2,
     body: body$,
     userAgent: client._options.user_agent,
@@ -33805,7 +33805,7 @@ async function $do$l(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path35 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
+  const path36 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
   const headers2 = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -33835,7 +33835,7 @@ async function $do$l(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path35,
+    path: path36,
     headers: headers2,
     body,
     userAgent: client._options.user_agent,
@@ -33879,7 +33879,7 @@ async function $do$k(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path35 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
+  const path36 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
   const headers2 = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -33909,7 +33909,7 @@ async function $do$k(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path35,
+    path: path36,
     headers: headers2,
     body,
     userAgent: client._options.user_agent,
@@ -33950,7 +33950,7 @@ async function $do$j(client, api_version, page_size, page_token, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path35 = pathToFunc("/{api_version}/environments")(pathParams);
+  const path36 = pathToFunc("/{api_version}/environments")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
     "page_token": payload === null || payload === void 0 ? void 0 : payload.page_token
@@ -33984,7 +33984,7 @@ async function $do$j(client, api_version, page_size, page_token, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path35,
+    path: path36,
     headers: headers2,
     query,
     body,
@@ -34011,14 +34011,14 @@ async function $do$j(client, api_version, page_size, page_token, options) {
   }
   return [result, { status: "complete", request: req, response }];
 }
-function environmentsFilesList(client, environment3, path35, api_version, page_size, page_token, recursive, options) {
-  return new APIPromise($do$i(client, environment3, path35, api_version, page_size, page_token, recursive, options));
+function environmentsFilesList(client, environment3, path36, api_version, page_size, page_token, recursive, options) {
+  return new APIPromise($do$i(client, environment3, path36, api_version, page_size, page_token, recursive, options));
 }
-async function $do$i(client, environment3, path35, api_version, page_size, page_token, recursive, options) {
+async function $do$i(client, environment3, path36, api_version, page_size, page_token, recursive, options) {
   var _a4, _b, _c;
   const input = {
     environment: environment3,
-    path: path35,
+    path: path36,
     api_version,
     page_size,
     page_token,
@@ -34117,7 +34117,7 @@ async function $do$h(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path35 = pathToFunc("/{api_version}/interactions/{id}/cancel")(pathParams);
+  const path36 = pathToFunc("/{api_version}/interactions/{id}/cancel")(pathParams);
   const headers2 = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -34147,7 +34147,7 @@ async function $do$h(client, id, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path35,
+    path: path36,
     headers: headers2,
     body,
     userAgent: client._options.user_agent,
@@ -34190,7 +34190,7 @@ async function $do$g(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path35 = pathToFunc("/{api_version}/interactions")(pathParams);
+  const path36 = pathToFunc("/{api_version}/interactions")(pathParams);
   const headers2 = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: ((_b = input === null || input === void 0 ? void 0 : input.body) === null || _b === void 0 ? void 0 : _b.stream) ? "text/event-stream" : "application/json"
@@ -34221,7 +34221,7 @@ async function $do$g(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path35,
+    path: path36,
     headers: headers2,
     body: body$,
     userAgent: client._options.user_agent,
@@ -34271,7 +34271,7 @@ async function $do$f(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path35 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
+  const path36 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
   const headers2 = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -34301,7 +34301,7 @@ async function $do$f(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path35,
+    path: path36,
     headers: headers2,
     body,
     userAgent: client._options.user_agent,
@@ -34351,7 +34351,7 @@ async function $do$e(client, id, api_version, include_input, last_event_id, stre
       charEncoding: "percent"
     })
   };
-  const path35 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
+  const path36 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
   const query = encodeFormQuery({
     "include_input": payload.include_input,
     "last_event_id": payload.last_event_id,
@@ -34386,7 +34386,7 @@ async function $do$e(client, id, api_version, include_input, last_event_id, stre
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path35,
+    path: path36,
     headers: headers2,
     query,
     body,
@@ -34433,7 +34433,7 @@ async function $do$d(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path35 = pathToFunc("/{api_version}/triggers")(pathParams);
+  const path36 = pathToFunc("/{api_version}/triggers")(pathParams);
   const headers2 = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -34464,7 +34464,7 @@ async function $do$d(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path35,
+    path: path36,
     headers: headers2,
     body: body$,
     userAgent: client._options.user_agent,
@@ -34508,7 +34508,7 @@ async function $do$c(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path35 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
+  const path36 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
   const headers2 = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -34538,7 +34538,7 @@ async function $do$c(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path35,
+    path: path36,
     headers: headers2,
     body,
     userAgent: client._options.user_agent,
@@ -34582,7 +34582,7 @@ async function $do$b(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path35 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
+  const path36 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
   const headers2 = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -34612,7 +34612,7 @@ async function $do$b(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path35,
+    path: path36,
     headers: headers2,
     body,
     userAgent: client._options.user_agent,
@@ -34658,7 +34658,7 @@ async function $do$a(client, trigger_id, api_version, page_size, page_token, opt
       charEncoding: "percent"
     })
   };
-  const path35 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
+  const path36 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload.page_size,
     "page_token": payload.page_token
@@ -34692,7 +34692,7 @@ async function $do$a(client, trigger_id, api_version, page_size, page_token, opt
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path35,
+    path: path36,
     headers: headers2,
     query,
     body,
@@ -34735,7 +34735,7 @@ async function $do$9(client, api_version, filter, page_size, page_token, options
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path35 = pathToFunc("/{api_version}/triggers")(pathParams);
+  const path36 = pathToFunc("/{api_version}/triggers")(pathParams);
   const query = encodeFormQuery({
     "filter": payload === null || payload === void 0 ? void 0 : payload.filter,
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
@@ -34770,7 +34770,7 @@ async function $do$9(client, api_version, filter, page_size, page_token, options
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path35,
+    path: path36,
     headers: headers2,
     query,
     body,
@@ -34815,7 +34815,7 @@ async function $do$8(client, trigger_id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path35 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
+  const path36 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
   const headers2 = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -34845,7 +34845,7 @@ async function $do$8(client, trigger_id, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path35,
+    path: path36,
     headers: headers2,
     body,
     userAgent: client._options.user_agent,
@@ -34890,7 +34890,7 @@ async function $do$7(client, id, body, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path35 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
+  const path36 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
   const headers2 = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -34921,7 +34921,7 @@ async function $do$7(client, id, body, api_version, options) {
     security: requestSecurity,
     method: "PATCH",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path35,
+    path: path36,
     headers: headers2,
     body: body$,
     userAgent: client._options.user_agent,
@@ -34961,7 +34961,7 @@ async function $do$6(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path35 = pathToFunc("/{api_version}/webhooks")(pathParams);
+  const path36 = pathToFunc("/{api_version}/webhooks")(pathParams);
   const headers2 = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -34992,7 +34992,7 @@ async function $do$6(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path35,
+    path: path36,
     headers: headers2,
     body: body$,
     userAgent: client._options.user_agent,
@@ -35036,7 +35036,7 @@ async function $do$5(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path35 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
+  const path36 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
   const headers2 = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -35066,7 +35066,7 @@ async function $do$5(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path35,
+    path: path36,
     headers: headers2,
     body,
     userAgent: client._options.user_agent,
@@ -35110,7 +35110,7 @@ async function $do$4(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path35 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
+  const path36 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
   const headers2 = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -35140,7 +35140,7 @@ async function $do$4(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path35,
+    path: path36,
     headers: headers2,
     body,
     userAgent: client._options.user_agent,
@@ -35181,7 +35181,7 @@ async function $do$3(client, api_version, page_size, page_token, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path35 = pathToFunc("/{api_version}/webhooks")(pathParams);
+  const path36 = pathToFunc("/{api_version}/webhooks")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
     "page_token": payload === null || payload === void 0 ? void 0 : payload.page_token
@@ -35215,7 +35215,7 @@ async function $do$3(client, api_version, page_size, page_token, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path35,
+    path: path36,
     headers: headers2,
     query,
     body,
@@ -35261,7 +35261,7 @@ async function $do$2(client, id, api_version, body, options) {
       charEncoding: "percent"
     })
   };
-  const path35 = pathToFunc("/{api_version}/webhooks/{id}:ping")(pathParams);
+  const path36 = pathToFunc("/{api_version}/webhooks/{id}:ping")(pathParams);
   const headers2 = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -35292,7 +35292,7 @@ async function $do$2(client, id, api_version, body, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path35,
+    path: path36,
     headers: headers2,
     body: body$,
     userAgent: client._options.user_agent,
@@ -35337,7 +35337,7 @@ async function $do$1(client, id, api_version, body, options) {
       charEncoding: "percent"
     })
   };
-  const path35 = pathToFunc("/{api_version}/webhooks/{id}:rotateSigningSecret")(pathParams);
+  const path36 = pathToFunc("/{api_version}/webhooks/{id}:rotateSigningSecret")(pathParams);
   const headers2 = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -35368,7 +35368,7 @@ async function $do$1(client, id, api_version, body, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path35,
+    path: path36,
     headers: headers2,
     body: body$,
     userAgent: client._options.user_agent,
@@ -35414,7 +35414,7 @@ async function $do(client, id, api_version, update_mask, body, options) {
       charEncoding: "percent"
     })
   };
-  const path35 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
+  const path36 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
   const query = encodeFormQuery({
     "update_mask": payload.update_mask
   });
@@ -35448,7 +35448,7 @@ async function $do(client, id, api_version, update_mask, body, options) {
     security: requestSecurity,
     method: "PATCH",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path35,
+    path: path36,
     headers: headers2,
     query,
     body: body$,
@@ -38568,7 +38568,7 @@ var init_node = __esm({
           params
         );
         const urlParams = body["_url"];
-        const path35 = formatMap("{model}:batchGenerateContent", urlParams);
+        const path36 = formatMap("{model}:batchGenerateContent", urlParams);
         const batch = body["batch"];
         const inputConfig = batch["inputConfig"];
         const requestsWrapper = inputConfig["requests"];
@@ -38589,7 +38589,7 @@ var init_node = __esm({
         delete body["config"];
         delete body["_url"];
         delete body["_query"];
-        return { path: path35, body };
+        return { path: path36, body };
       }
       // Helper function to get the first GCS URI
       getGcsUri(src) {
@@ -38645,16 +38645,16 @@ var init_node = __esm({
       async createInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = createBatchJobParametersToVertex(this.apiClient, params);
-          path35 = formatMap("batchPredictionJobs", body["_url"]);
+          path36 = formatMap("batchPredictionJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -38669,12 +38669,12 @@ var init_node = __esm({
           });
         } else {
           const body = createBatchJobParametersToMldev(this.apiClient, params);
-          path35 = formatMap("{model}:batchGenerateContent", body["_url"]);
+          path36 = formatMap("{model}:batchGenerateContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -38699,18 +38699,18 @@ var init_node = __esm({
       async createEmbeddingsInternal(params) {
         var _a4, _b;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createEmbeddingsBatchJobParametersToMldev(this.apiClient, params);
-          path35 = formatMap("{model}:asyncBatchEmbedContent", body["_url"]);
+          path36 = formatMap("{model}:asyncBatchEmbedContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -38739,16 +38739,16 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getBatchJobParametersToVertex(this.apiClient, params);
-          path35 = formatMap("batchPredictionJobs/{name}", body["_url"]);
+          path36 = formatMap("batchPredictionJobs/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -38763,12 +38763,12 @@ var init_node = __esm({
           });
         } else {
           const body = getBatchJobParametersToMldev(this.apiClient, params);
-          path35 = formatMap("batches/{name}", body["_url"]);
+          path36 = formatMap("batches/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -38796,16 +38796,16 @@ var init_node = __esm({
        */
       async cancel(params) {
         var _a4, _b, _c, _d;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = cancelBatchJobParametersToVertex(this.apiClient, params);
-          path35 = formatMap("batchPredictionJobs/{name}:cancel", body["_url"]);
+          path36 = formatMap("batchPredictionJobs/{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -38814,12 +38814,12 @@ var init_node = __esm({
           });
         } else {
           const body = cancelBatchJobParametersToMldev(this.apiClient, params);
-          path35 = formatMap("batches/{name}:cancel", body["_url"]);
+          path36 = formatMap("batches/{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -38831,16 +38831,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listBatchJobsParametersToVertex(params);
-          path35 = formatMap("batchPredictionJobs", body["_url"]);
+          path36 = formatMap("batchPredictionJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -38863,12 +38863,12 @@ var init_node = __esm({
           });
         } else {
           const body = listBatchJobsParametersToMldev(params);
-          path35 = formatMap("batches", body["_url"]);
+          path36 = formatMap("batches", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -38905,16 +38905,16 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = deleteBatchJobParametersToVertex(this.apiClient, params);
-          path35 = formatMap("batchPredictionJobs/{name}", body["_url"]);
+          path36 = formatMap("batchPredictionJobs/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -38935,12 +38935,12 @@ var init_node = __esm({
           });
         } else {
           const body = deleteBatchJobParametersToMldev(this.apiClient, params);
-          path35 = formatMap("batches/{name}", body["_url"]);
+          path36 = formatMap("batches/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -38999,16 +38999,16 @@ var init_node = __esm({
       async create(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = createCachedContentParametersToVertex(this.apiClient, params);
-          path35 = formatMap("cachedContents", body["_url"]);
+          path36 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -39022,12 +39022,12 @@ var init_node = __esm({
           });
         } else {
           const body = createCachedContentParametersToMldev(this.apiClient, params);
-          path35 = formatMap("cachedContents", body["_url"]);
+          path36 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -39055,16 +39055,16 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getCachedContentParametersToVertex(this.apiClient, params);
-          path35 = formatMap("{name}", body["_url"]);
+          path36 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -39078,12 +39078,12 @@ var init_node = __esm({
           });
         } else {
           const body = getCachedContentParametersToMldev(this.apiClient, params);
-          path35 = formatMap("{name}", body["_url"]);
+          path36 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -39111,16 +39111,16 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = deleteCachedContentParametersToVertex(this.apiClient, params);
-          path35 = formatMap("{name}", body["_url"]);
+          path36 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -39143,12 +39143,12 @@ var init_node = __esm({
           });
         } else {
           const body = deleteCachedContentParametersToMldev(this.apiClient, params);
-          path35 = formatMap("{name}", body["_url"]);
+          path36 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -39188,16 +39188,16 @@ var init_node = __esm({
       async update(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = updateCachedContentParametersToVertex(this.apiClient, params);
-          path35 = formatMap("{name}", body["_url"]);
+          path36 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -39211,12 +39211,12 @@ var init_node = __esm({
           });
         } else {
           const body = updateCachedContentParametersToMldev(this.apiClient, params);
-          path35 = formatMap("{name}", body["_url"]);
+          path36 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -39233,16 +39233,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listCachedContentsParametersToVertex(params);
-          path35 = formatMap("cachedContents", body["_url"]);
+          path36 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -39265,12 +39265,12 @@ var init_node = __esm({
           });
         } else {
           const body = listCachedContentsParametersToMldev(params);
-          path35 = formatMap("cachedContents", body["_url"]);
+          path36 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -39601,18 +39601,18 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = listFilesParametersToMldev(params);
-          path35 = formatMap("files", body["_url"]);
+          path36 = formatMap("files", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -39638,18 +39638,18 @@ var init_node = __esm({
       async createInternal(params) {
         var _a4, _b;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createFileParametersToMldev(params);
-          path35 = formatMap("upload/v1beta/files", body["_url"]);
+          path36 = formatMap("upload/v1beta/files", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -39684,18 +39684,18 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = getFileParametersToMldev(params);
-          path35 = formatMap("files/{file}", body["_url"]);
+          path36 = formatMap("files/{file}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -39725,18 +39725,18 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = deleteFileParametersToMldev(params);
-          path35 = formatMap("files/{file}", body["_url"]);
+          path36 = formatMap("files/{file}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -39762,18 +39762,18 @@ var init_node = __esm({
       async registerFilesInternal(params) {
         var _a4, _b;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = internalRegisterFilesParametersToMldev(params);
-          path35 = formatMap("files:register", body["_url"]);
+          path36 = formatMap("files:register", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -39929,13 +39929,13 @@ var init_node = __esm({
           throw new Error("HTTP options are not correctly set.");
         }
       }
-      constructUrl(path35, httpOptions, prependProjectLocation) {
+      constructUrl(path36, httpOptions, prependProjectLocation) {
         const urlElement = [this.getRequestUrlInternal(httpOptions)];
         if (prependProjectLocation) {
           urlElement.push(this.getBaseResourcePath());
         }
-        if (path35 !== "") {
-          urlElement.push(path35);
+        if (path36 !== "") {
+          urlElement.push(path36);
         }
         const url = new URL(`${urlElement.join("/")}`);
         return url;
@@ -40228,8 +40228,8 @@ var init_node = __esm({
           file: fileToUpload
         };
         const fileName = this.getFileName(file);
-        const path35 = formatMap("upload/v1beta/files", body["_url"]);
-        const uploadUrl = await this.fetchUploadUrl(path35, fileToUpload.sizeBytes, fileToUpload.mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
+        const path36 = formatMap("upload/v1beta/files", body["_url"]);
+        const uploadUrl = await this.fetchUploadUrl(path36, fileToUpload.sizeBytes, fileToUpload.mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
         return uploader.upload(file, uploadUrl, this);
       }
       /**
@@ -40253,13 +40253,13 @@ var init_node = __esm({
         if (mimeType === void 0 || mimeType === "") {
           throw new Error("Can not determine mimeType. Please provide mimeType in the config.");
         }
-        const path35 = `upload/v1beta/${fileSearchStoreName}:uploadToFileSearchStore`;
+        const path36 = `upload/v1beta/${fileSearchStoreName}:uploadToFileSearchStore`;
         const fileName = this.getFileName(file);
         const body = {};
         if (config3 != null) {
           uploadToFileSearchStoreConfigToMldev(config3, body);
         }
-        const uploadUrl = await this.fetchUploadUrl(path35, sizeBytes, mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
+        const uploadUrl = await this.fetchUploadUrl(path36, sizeBytes, mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
         return uploader.uploadToFileSearchStore(file, uploadUrl, this);
       }
       /**
@@ -40272,7 +40272,7 @@ var init_node = __esm({
         const downloader = this.clientOptions.downloader;
         await downloader.download(params, this);
       }
-      async fetchUploadUrl(path35, sizeBytes, mimeType, fileName, body, configHttpOptions) {
+      async fetchUploadUrl(path36, sizeBytes, mimeType, fileName, body, configHttpOptions) {
         var _a4;
         let httpOptions = {};
         if (configHttpOptions) {
@@ -40285,7 +40285,7 @@ var init_node = __esm({
           };
         }
         const httpResponse = await this.request({
-          path: path35,
+          path: path36,
           body: JSON.stringify(body),
           httpMethod: "POST",
           httpOptions
@@ -41299,16 +41299,16 @@ var init_node = __esm({
       async generateContentInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateContentParametersToVertex(this.apiClient, params);
-          path35 = formatMap("{model}:generateContent", body["_url"]);
+          path36 = formatMap("{model}:generateContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -41331,12 +41331,12 @@ var init_node = __esm({
           });
         } else {
           const body = generateContentParametersToMldev(this.apiClient, params);
-          path35 = formatMap("{model}:generateContent", body["_url"]);
+          path36 = formatMap("{model}:generateContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -41362,17 +41362,17 @@ var init_node = __esm({
       async generateContentStreamInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateContentParametersToVertex(this.apiClient, params);
-          path35 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
+          path36 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           const apiClient = this.apiClient;
           response = apiClient.requestStream({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -41408,13 +41408,13 @@ var init_node = __esm({
           });
         } else {
           const body = generateContentParametersToMldev(this.apiClient, params);
-          path35 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
+          path36 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           const apiClient = this.apiClient;
           response = apiClient.requestStream({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -41474,17 +41474,17 @@ var init_node = __esm({
       async embedContentInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = embedContentParametersPrivateToVertex(this.apiClient, params, params);
           const endpointUrl = tIsVertexEmbedContentModel(params.model) ? "{model}:embedContent" : "{model}:predict";
-          path35 = formatMap(endpointUrl, body["_url"]);
+          path36 = formatMap(endpointUrl, body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -41507,12 +41507,12 @@ var init_node = __esm({
           });
         } else {
           const body = embedContentParametersPrivateToMldev(this.apiClient, params);
-          path35 = formatMap("{model}:batchEmbedContents", body["_url"]);
+          path36 = formatMap("{model}:batchEmbedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -41541,16 +41541,16 @@ var init_node = __esm({
       async generateImagesInternal(params) {
         var _a4, _b;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateImagesParametersToVertex(this.apiClient, params);
-          path35 = formatMap("{model}:predict", body["_url"]);
+          path36 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -41581,16 +41581,16 @@ var init_node = __esm({
       async editImageInternal(params) {
         var _a4, _b;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = editImageParametersInternalToVertex(this.apiClient, params);
-          path35 = formatMap("{model}:predict", body["_url"]);
+          path36 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -41621,16 +41621,16 @@ var init_node = __esm({
       async upscaleImageInternal(params) {
         var _a4, _b;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = upscaleImageAPIParametersInternalToVertex(this.apiClient, params);
-          path35 = formatMap("{model}:predict", body["_url"]);
+          path36 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -41682,16 +41682,16 @@ var init_node = __esm({
       async recontextImage(params) {
         var _a4, _b;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = recontextImageParametersToVertex(this.apiClient, params);
-          path35 = formatMap("{model}:predict", body["_url"]);
+          path36 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -41733,16 +41733,16 @@ var init_node = __esm({
       async segmentImage(params) {
         var _a4, _b;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = segmentImageParametersToVertex(this.apiClient, params);
-          path35 = formatMap("{model}:predict", body["_url"]);
+          path36 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -41772,16 +41772,16 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getModelParametersToVertex(this.apiClient, params);
-          path35 = formatMap("{name}", body["_url"]);
+          path36 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -41796,12 +41796,12 @@ var init_node = __esm({
           });
         } else {
           const body = getModelParametersToMldev(this.apiClient, params);
-          path35 = formatMap("{name}", body["_url"]);
+          path36 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -41819,16 +41819,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listModelsParametersToVertex(this.apiClient, params);
-          path35 = formatMap("{models_url}", body["_url"]);
+          path36 = formatMap("{models_url}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -41851,12 +41851,12 @@ var init_node = __esm({
           });
         } else {
           const body = listModelsParametersToMldev(this.apiClient, params);
-          path35 = formatMap("{models_url}", body["_url"]);
+          path36 = formatMap("{models_url}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -41899,16 +41899,16 @@ var init_node = __esm({
       async update(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = updateModelParametersToVertex(this.apiClient, params);
-          path35 = formatMap("{model}", body["_url"]);
+          path36 = formatMap("{model}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -41923,12 +41923,12 @@ var init_node = __esm({
           });
         } else {
           const body = updateModelParametersToMldev(this.apiClient, params);
-          path35 = formatMap("{name}", body["_url"]);
+          path36 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -41957,16 +41957,16 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = deleteModelParametersToVertex(this.apiClient, params);
-          path35 = formatMap("{name}", body["_url"]);
+          path36 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -41989,12 +41989,12 @@ var init_node = __esm({
           });
         } else {
           const body = deleteModelParametersToMldev(this.apiClient, params);
-          path35 = formatMap("{name}", body["_url"]);
+          path36 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -42036,16 +42036,16 @@ var init_node = __esm({
       async countTokens(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = countTokensParametersToVertex(this.apiClient, params);
-          path35 = formatMap("{model}:countTokens", body["_url"]);
+          path36 = formatMap("{model}:countTokens", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -42068,12 +42068,12 @@ var init_node = __esm({
           });
         } else {
           const body = countTokensParametersToMldev(this.apiClient, params);
-          path35 = formatMap("{model}:countTokens", body["_url"]);
+          path36 = formatMap("{model}:countTokens", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -42117,16 +42117,16 @@ var init_node = __esm({
       async computeTokens(params) {
         var _a4, _b;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = computeTokensParametersToVertex(this.apiClient, params);
-          path35 = formatMap("{model}:computeTokens", body["_url"]);
+          path36 = formatMap("{model}:computeTokens", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -42157,16 +42157,16 @@ var init_node = __esm({
       async generateVideosInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateVideosParametersToVertex(this.apiClient, params);
-          path35 = formatMap("{model}:predictLongRunning", body["_url"]);
+          path36 = formatMap("{model}:predictLongRunning", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -42183,12 +42183,12 @@ var init_node = __esm({
           });
         } else {
           const body = generateVideosParametersToMldev(this.apiClient, params);
-          path35 = formatMap("{model}:predictLongRunning", body["_url"]);
+          path36 = formatMap("{model}:predictLongRunning", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -42293,16 +42293,16 @@ var init_node = __esm({
       async getVideosOperationInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getOperationParametersToVertex(params);
-          path35 = formatMap("{operationName}", body["_url"]);
+          path36 = formatMap("{operationName}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -42314,12 +42314,12 @@ var init_node = __esm({
           return response;
         } else {
           const body = getOperationParametersToMldev(params);
-          path35 = formatMap("{operationName}", body["_url"]);
+          path36 = formatMap("{operationName}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -42334,16 +42334,16 @@ var init_node = __esm({
       async fetchPredictVideosOperationInternal(params) {
         var _a4, _b;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = fetchPredictOperationParametersToVertex(params);
-          path35 = formatMap("{resourceName}:fetchPredictOperation", body["_url"]);
+          path36 = formatMap("{resourceName}:fetchPredictOperation", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -42449,20 +42449,20 @@ var init_node = __esm({
       async create(params) {
         var _a4, _b;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("The client.tokens.create method is only supported by the Gemini Developer API.");
         } else {
           const body = createAuthTokenParametersToMldev(this.apiClient, params);
-          path35 = formatMap("auth_tokens", body["_url"]);
+          path36 = formatMap("auth_tokens", body["_url"]);
           queryParams = body["_query"];
           delete body["config"];
           delete body["_url"];
           delete body["_query"];
           const transformedBody = convertBidiSetupToTokenSetup(body, params.config);
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(transformedBody),
             httpMethod: "POST",
@@ -42494,18 +42494,18 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = getDocumentParametersToMldev(params);
-          path35 = formatMap("{name}", body["_url"]);
+          path36 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -42526,18 +42526,18 @@ var init_node = __esm({
        */
       async delete(params) {
         var _a4, _b;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = deleteDocumentParametersToMldev(params);
-          path35 = formatMap("{name}", body["_url"]);
+          path36 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -42549,18 +42549,18 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = listDocumentsParametersToMldev(params);
-          path35 = formatMap("{parent}/documents", body["_url"]);
+          path36 = formatMap("{parent}/documents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -42677,18 +42677,18 @@ var init_node = __esm({
       async create(params) {
         var _a4, _b;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createFileSearchStoreParametersToMldev(this.apiClient, params);
-          path35 = formatMap("fileSearchStores", body["_url"]);
+          path36 = formatMap("fileSearchStores", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -42711,18 +42711,18 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = getFileSearchStoreParametersToMldev(params);
-          path35 = formatMap("{name}", body["_url"]);
+          path36 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -42743,18 +42743,18 @@ var init_node = __esm({
        */
       async delete(params) {
         var _a4, _b;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = deleteFileSearchStoreParametersToMldev(params);
-          path35 = formatMap("{name}", body["_url"]);
+          path36 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -42766,18 +42766,18 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = listFileSearchStoresParametersToMldev(params);
-          path35 = formatMap("fileSearchStores", body["_url"]);
+          path36 = formatMap("fileSearchStores", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -42797,18 +42797,18 @@ var init_node = __esm({
       async uploadToFileSearchStoreInternal(params) {
         var _a4, _b;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = uploadToFileSearchStoreParametersToMldev(params);
-          path35 = formatMap("upload/v1beta/{file_search_store_name}:uploadToFileSearchStore", body["_url"]);
+          path36 = formatMap("upload/v1beta/{file_search_store_name}:uploadToFileSearchStore", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -42836,18 +42836,18 @@ var init_node = __esm({
       async importFile(params) {
         var _a4, _b;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = importFileParametersToMldev(params);
-          path35 = formatMap("{file_search_store_name}:importFile", body["_url"]);
+          path36 = formatMap("{file_search_store_name}:importFile", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -43291,16 +43291,16 @@ var init_node = __esm({
       }
       _createRequest(context2, conf, options) {
         var _a4, _b, _c, _d, _e;
-        const { method, path: path35, query, headers: opHeaders, security } = conf;
+        const { method, path: path36, query, headers: opHeaders, security } = conf;
         const base = (_a4 = conf.baseURL) !== null && _a4 !== void 0 ? _a4 : this._baseURL;
         if (!base) {
           return ERR(new InvalidRequestError("No base URL provided for operation"));
         }
         const baseURL = new URL(base);
         let reqURL;
-        if (path35) {
+        if (path36) {
           baseURL.pathname = baseURL.pathname.replace(/\/+$/, "") + "/";
-          reqURL = new URL(path35, baseURL);
+          reqURL = new URL(path36, baseURL);
           if (!reqURL.search && baseURL.search) {
             reqURL.search = baseURL.search;
           }
@@ -43712,8 +43712,8 @@ var init_node = __esm({
       /**
        * Retrieves file metadata or directory contents from an environment's snapshot. To download file contents directly, pass ?alt=media or use the files.download helper.
        */
-      list(environment3, path35, params, options) {
-        return unwrapAsAPIPromise(environmentsFilesList(this, environment3, path35, params === null || params === void 0 ? void 0 : params.api_version, params === null || params === void 0 ? void 0 : params.page_size, params === null || params === void 0 ? void 0 : params.page_token, params === null || params === void 0 ? void 0 : params.recursive, options));
+      list(environment3, path36, params, options) {
+        return unwrapAsAPIPromise(environmentsFilesList(this, environment3, path36, params === null || params === void 0 ? void 0 : params.api_version, params === null || params === void 0 ? void 0 : params.page_size, params === null || params === void 0 ? void 0 : params.page_token, params === null || params === void 0 ? void 0 : params.recursive, options));
       }
     };
     Environments = class extends ClientSDK {
@@ -44121,8 +44121,8 @@ var init_node = __esm({
         this.resolveClient = resolveClient;
       }
       async list(params, options) {
-        const { environment: environment3, path: path35, page_size, page_token, recursive, api_version } = params;
-        return unwrapWithSdkHttpResponse(environmentsFilesList(this.resolveClient(api_version), environment3, path35, api_version, page_size, page_token, recursive, toGoogleGenAIRequestOptions(options)));
+        const { environment: environment3, path: path36, page_size, page_token, recursive, api_version } = params;
+        return unwrapWithSdkHttpResponse(environmentsFilesList(this.resolveClient(api_version), environment3, path36, api_version, page_size, page_token, recursive, toGoogleGenAIRequestOptions(options)));
       }
     };
     GeminiNextGenEnvironments = class {
@@ -44297,16 +44297,16 @@ var init_node = __esm({
       async getInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getTuningJobParametersToVertex(params);
-          path35 = formatMap("{name}", body["_url"]);
+          path36 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -44327,12 +44327,12 @@ var init_node = __esm({
           });
         } else {
           const body = getTuningJobParametersToMldev(params);
-          path35 = formatMap("{name}", body["_url"]);
+          path36 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -44356,16 +44356,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listTuningJobsParametersToVertex(params);
-          path35 = formatMap("tuningJobs", body["_url"]);
+          path36 = formatMap("tuningJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -44404,16 +44404,16 @@ var init_node = __esm({
       async cancel(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = cancelTuningJobParametersToVertex(params);
-          path35 = formatMap("{name}:cancel", body["_url"]);
+          path36 = formatMap("{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -44436,12 +44436,12 @@ var init_node = __esm({
           });
         } else {
           const body = cancelTuningJobParametersToMldev(params);
-          path35 = formatMap("{name}:cancel", body["_url"]);
+          path36 = formatMap("{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -44467,16 +44467,16 @@ var init_node = __esm({
       async tuneInternal(params) {
         var _a4, _b;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = createTuningJobParametersPrivateToVertex(params, params);
-          path35 = formatMap("tuningJobs", body["_url"]);
+          path36 = formatMap("tuningJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -44502,18 +44502,18 @@ var init_node = __esm({
       async tuneMldevInternal(params) {
         var _a4, _b;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createTuningJobParametersPrivateToMldev(params);
-          path35 = formatMap("tunedModels", body["_url"]);
+          path36 = formatMap("tunedModels", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -44537,16 +44537,16 @@ var init_node = __esm({
       async validateReward(params) {
         var _a4, _b;
         let response;
-        let path35 = "";
+        let path36 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = validateRewardParametersToVertex(params);
-          path35 = formatMap("{parent}/tuningJobs:validateReinforcementTuningReward", body["_url"]);
+          path36 = formatMap("{parent}/tuningJobs:validateReinforcementTuningReward", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path35,
+            path: path36,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48133,8 +48133,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path35) {
-      let input = path35;
+    function removeDotSegments(path36) {
+      let input = path36;
       const output2 = [];
       let nextSlash = -1;
       let len = 0;
@@ -48386,8 +48386,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path35, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path35 && path35 !== "/" ? path35 : void 0;
+        const [path36, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path36 && path36 !== "/" ? path36 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -52927,14 +52927,14 @@ var require_util4 = __commonJS({
         }
         const port = url.port != null ? url.port : url.protocol === "https:" ? 443 : 80;
         let origin = url.origin != null ? url.origin : `${url.protocol || ""}//${url.hostname || ""}:${port}`;
-        let path35 = url.path != null ? url.path : `${url.pathname || ""}${url.search || ""}`;
+        let path36 = url.path != null ? url.path : `${url.pathname || ""}${url.search || ""}`;
         if (origin[origin.length - 1] === "/") {
           origin = origin.slice(0, origin.length - 1);
         }
-        if (path35 && path35[0] !== "/") {
-          path35 = `/${path35}`;
+        if (path36 && path36[0] !== "/") {
+          path36 = `/${path36}`;
         }
-        return new URL(`${origin}${path35}`);
+        return new URL(`${origin}${path36}`);
       }
       if (!isHttpOrHttpsPrefixed(url.origin || url.protocol)) {
         throw new InvalidArgumentError("Invalid URL protocol: the URL must start with `http:` or `https:`.");
@@ -53755,9 +53755,9 @@ var require_diagnostics = __commonJS({
         "undici:client:sendHeaders",
         (evt) => {
           const {
-            request: { method, path: path35, origin }
+            request: { method, path: path36, origin }
           } = evt;
-          debugLog("sending request to %s %s%s", method, origin, path35);
+          debugLog("sending request to %s %s%s", method, origin, path36);
         }
       );
     }
@@ -53775,14 +53775,14 @@ var require_diagnostics = __commonJS({
         "undici:request:headers",
         (evt) => {
           const {
-            request: { method, path: path35, origin },
+            request: { method, path: path36, origin },
             response: { statusCode }
           } = evt;
           debugLog(
             "received response to %s %s%s - HTTP %d",
             method,
             origin,
-            path35,
+            path36,
             statusCode
           );
         }
@@ -53791,23 +53791,23 @@ var require_diagnostics = __commonJS({
         "undici:request:trailers",
         (evt) => {
           const {
-            request: { method, path: path35, origin }
+            request: { method, path: path36, origin }
           } = evt;
-          debugLog("trailers received from %s %s%s", method, origin, path35);
+          debugLog("trailers received from %s %s%s", method, origin, path36);
         }
       );
       diagnosticsChannel.subscribe(
         "undici:request:error",
         (evt) => {
           const {
-            request: { method, path: path35, origin },
+            request: { method, path: path36, origin },
             error: error2
           } = evt;
           debugLog(
             "request to %s %s%s errored - %s",
             method,
             origin,
-            path35,
+            path36,
             error2.message
           );
         }
@@ -53922,7 +53922,7 @@ var require_request = __commonJS({
     var kHandler = /* @__PURE__ */ Symbol("handler");
     var Request3 = class {
       constructor(origin, {
-        path: path35,
+        path: path36,
         method,
         body,
         headers: headers2,
@@ -53939,11 +53939,11 @@ var require_request = __commonJS({
         maxRedirections,
         typeOfService
       }, handler) {
-        if (typeof path35 !== "string") {
+        if (typeof path36 !== "string") {
           throw new InvalidArgumentError("path must be a string");
-        } else if (path35[0] !== "/" && !(path35.startsWith("http://") || path35.startsWith("https://")) && method !== "CONNECT") {
+        } else if (path36[0] !== "/" && !(path36.startsWith("http://") || path36.startsWith("https://")) && method !== "CONNECT") {
           throw new InvalidArgumentError("path must be an absolute URL or start with a slash");
-        } else if (invalidPathRegex.test(path35)) {
+        } else if (invalidPathRegex.test(path36)) {
           throw new InvalidArgumentError("invalid request path");
         }
         if (typeof method !== "string") {
@@ -54018,7 +54018,7 @@ var require_request = __commonJS({
         this.completed = false;
         this.aborted = false;
         this.upgrade = upgrade || null;
-        this.path = query ? serializePathWithQuery(path35, query) : path35;
+        this.path = query ? serializePathWithQuery(path36, query) : path36;
         this.origin = origin;
         this.protocol = getProtocolFromUrlString(origin);
         this.idempotent = idempotent == null ? method === "HEAD" || method === "GET" : idempotent;
@@ -59200,7 +59200,7 @@ var require_client_h1 = __commonJS({
       return method !== "GET" && method !== "HEAD" && method !== "OPTIONS" && method !== "TRACE" && method !== "CONNECT";
     }
     function writeH1(client, request) {
-      const { method, path: path35, host, upgrade, blocking, reset } = request;
+      const { method, path: path36, host, upgrade, blocking, reset } = request;
       let { body, headers: headers2, contentLength } = request;
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH" || method === "QUERY" || method === "PROPFIND" || method === "PROPPATCH";
       if (util2.isFormDataLike(body)) {
@@ -59278,7 +59278,7 @@ var require_client_h1 = __commonJS({
       if (socket.setTypeOfService) {
         socket.setTypeOfService(request.typeOfService);
       }
-      let header = `${method} ${path35} HTTP/1.1\r
+      let header = `${method} ${path36} HTTP/1.1\r
 `;
       if (typeof host === "string") {
         header += `host: ${host}\r
@@ -59957,7 +59957,7 @@ var require_client_h2 = __commonJS({
       const headersTimeout = request.headersTimeout ?? client[kHeadersTimeout];
       const bodyTimeout = request.bodyTimeout ?? client[kBodyTimeout];
       const session = client[kHTTP2Session];
-      const { method, path: path35, host, upgrade, expectContinue, signal, protocol, headers: reqHeaders } = request;
+      const { method, path: path36, host, upgrade, expectContinue, signal, protocol, headers: reqHeaders } = request;
       let { body } = request;
       if (upgrade != null && upgrade !== "websocket") {
         util2.errorRequest(client, request, new InvalidArgumentError(`Custom upgrade "${upgrade}" not supported over HTTP/2`));
@@ -60026,7 +60026,7 @@ var require_client_h2 = __commonJS({
           }
           headers2[HTTP2_HEADER_METHOD] = "CONNECT";
           headers2[HTTP2_HEADER_PROTOCOL] = "websocket";
-          headers2[HTTP2_HEADER_PATH] = path35;
+          headers2[HTTP2_HEADER_PATH] = path36;
           if (protocol === "ws:" || protocol === "wss:") {
             headers2[HTTP2_HEADER_SCHEME] = protocol === "ws:" ? "http" : "https";
           } else {
@@ -60068,7 +60068,7 @@ var require_client_h2 = __commonJS({
         stream.setTimeout(headersTimeout);
         return true;
       }
-      headers2[HTTP2_HEADER_PATH] = path35;
+      headers2[HTTP2_HEADER_PATH] = path36;
       headers2[HTTP2_HEADER_SCHEME] = protocol === "http:" ? "http" : "https";
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH";
       if (body && typeof body.read === "function") {
@@ -62420,10 +62420,10 @@ var require_proxy_agent = __commonJS({
         };
         const {
           origin,
-          path: path35 = "/",
+          path: path36 = "/",
           headers: headers2 = {}
         } = opts;
-        opts.path = origin + path35;
+        opts.path = origin + path36;
         if (!("host" in headers2) && !("Host" in headers2)) {
           const { host } = new URL(origin);
           headers2.host = host;
@@ -64532,20 +64532,20 @@ var require_mock_utils = __commonJS({
       }
       return normalizedQp;
     }
-    function safeUrl(path35) {
-      if (typeof path35 !== "string") {
-        return path35;
+    function safeUrl(path36) {
+      if (typeof path36 !== "string") {
+        return path36;
       }
-      const pathSegments = path35.split("?", 3);
+      const pathSegments = path36.split("?", 3);
       if (pathSegments.length !== 2) {
-        return path35;
+        return path36;
       }
       const qp = new URLSearchParams(pathSegments.pop());
       qp.sort();
       return [...pathSegments, qp.toString()].join("?");
     }
-    function matchKey(mockDispatch2, { path: path35, method, body, headers: headers2 }) {
-      const pathMatch = matchValue(mockDispatch2.path, path35);
+    function matchKey(mockDispatch2, { path: path36, method, body, headers: headers2 }) {
+      const pathMatch = matchValue(mockDispatch2.path, path36);
       const methodMatch = matchValue(mockDispatch2.method, method);
       const bodyMatch = typeof mockDispatch2.body !== "undefined" ? matchValue(mockDispatch2.body, body) : true;
       const headersMatch = matchHeaders(mockDispatch2, headers2);
@@ -64570,8 +64570,8 @@ var require_mock_utils = __commonJS({
       const basePath = key.query ? serializePathWithQuery(key.path, key.query) : key.path;
       const resolvedPath = typeof basePath === "string" ? safeUrl(basePath) : basePath;
       const resolvedPathWithoutTrailingSlash = removeTrailingSlash(resolvedPath);
-      let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path: path35, ignoreTrailingSlash }) => {
-        return ignoreTrailingSlash ? matchValue(removeTrailingSlash(safeUrl(path35)), resolvedPathWithoutTrailingSlash) : matchValue(safeUrl(path35), resolvedPath);
+      let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path: path36, ignoreTrailingSlash }) => {
+        return ignoreTrailingSlash ? matchValue(removeTrailingSlash(safeUrl(path36)), resolvedPathWithoutTrailingSlash) : matchValue(safeUrl(path36), resolvedPath);
       });
       if (matchedMockDispatches.length === 0) {
         throw new MockNotMatchedError(`Mock dispatch not matched for path '${resolvedPath}'`);
@@ -64610,19 +64610,19 @@ var require_mock_utils = __commonJS({
         mockDispatches.splice(index, 1);
       }
     }
-    function removeTrailingSlash(path35) {
-      while (path35.endsWith("/")) {
-        path35 = path35.slice(0, -1);
+    function removeTrailingSlash(path36) {
+      while (path36.endsWith("/")) {
+        path36 = path36.slice(0, -1);
       }
-      if (path35.length === 0) {
-        path35 = "/";
+      if (path36.length === 0) {
+        path36 = "/";
       }
-      return path35;
+      return path36;
     }
     function buildKey(opts) {
-      const { path: path35, method, body, headers: headers2, query } = opts;
+      const { path: path36, method, body, headers: headers2, query } = opts;
       return {
-        path: path35,
+        path: path36,
         method,
         body,
         headers: headers2,
@@ -65312,10 +65312,10 @@ var require_pending_interceptors_formatter = __commonJS({
       }
       format(pendingInterceptors) {
         const withPrettyHeaders = pendingInterceptors.map(
-          ({ method, path: path35, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
+          ({ method, path: path36, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
             Method: method,
             Origin: origin,
-            Path: path35,
+            Path: path36,
             "Status code": statusCode,
             Persistent: persist ? PERSISTENT : NOT_PERSISTENT,
             Invocations: timesInvoked,
@@ -65397,9 +65397,9 @@ var require_mock_agent = __commonJS({
         const acceptNonStandardSearchParameters = this[kMockAgentAcceptsNonStandardSearchParameters];
         const dispatchOpts = { ...opts };
         if (acceptNonStandardSearchParameters && dispatchOpts.path) {
-          const [path35, searchParams] = dispatchOpts.path.split("?");
+          const [path36, searchParams] = dispatchOpts.path.split("?");
           const normalizedSearchParams = normalizeSearchParams(searchParams, acceptNonStandardSearchParameters);
-          dispatchOpts.path = `${path35}?${normalizedSearchParams}`;
+          dispatchOpts.path = `${path36}?${normalizedSearchParams}`;
         }
         return this[kAgent].dispatch(dispatchOpts, handler);
       }
@@ -65800,12 +65800,12 @@ var require_snapshot_recorder = __commonJS({
        * @return {Promise<void>} - Resolves when snapshots are loaded
        */
       async loadSnapshots(filePath) {
-        const path35 = filePath || this.#snapshotPath;
-        if (!path35) {
+        const path36 = filePath || this.#snapshotPath;
+        if (!path36) {
           throw new InvalidArgumentError("Snapshot path is required");
         }
         try {
-          const data = await readFile3(resolve14(path35), "utf8");
+          const data = await readFile3(resolve14(path36), "utf8");
           const parsed = JSON.parse(data);
           if (Array.isArray(parsed)) {
             this.#snapshots.clear();
@@ -65819,7 +65819,7 @@ var require_snapshot_recorder = __commonJS({
           if (error2.code === "ENOENT") {
             this.#snapshots.clear();
           } else {
-            throw new UndiciError(`Failed to load snapshots from ${path35}`, { cause: error2 });
+            throw new UndiciError(`Failed to load snapshots from ${path36}`, { cause: error2 });
           }
         }
       }
@@ -65830,11 +65830,11 @@ var require_snapshot_recorder = __commonJS({
        * @returns {Promise<void>} - Resolves when snapshots are saved
        */
       async saveSnapshots(filePath) {
-        const path35 = filePath || this.#snapshotPath;
-        if (!path35) {
+        const path36 = filePath || this.#snapshotPath;
+        if (!path36) {
           throw new InvalidArgumentError("Snapshot path is required");
         }
-        const resolvedPath = resolve14(path35);
+        const resolvedPath = resolve14(path36);
         await mkdir3(dirname14(resolvedPath), { recursive: true });
         const data = Array.from(this.#snapshots.entries()).map(([hash7, snapshot]) => ({
           hash: hash7,
@@ -66466,15 +66466,15 @@ var require_redirect_handler = __commonJS({
           return;
         }
         const { origin, pathname, search } = util2.parseURL(new URL(this.location, this.opts.origin && new URL(this.opts.path, this.opts.origin)));
-        const path35 = search ? `${pathname}${search}` : pathname;
-        const redirectUrlString = `${origin}${path35}`;
+        const path36 = search ? `${pathname}${search}` : pathname;
+        const redirectUrlString = `${origin}${path36}`;
         for (const historyUrl of this.history) {
           if (historyUrl.toString() === redirectUrlString) {
             throw new InvalidArgumentError(`Redirect loop detected. Cannot redirect to ${origin}. This typically happens when using a Client or Pool with cross-origin redirects. Use an Agent for cross-origin redirects.`);
           }
         }
         this.opts.headers = cleanRequestHeaders(this.opts.headers, statusCode === 303, this.opts.origin !== origin);
-        this.opts.path = path35;
+        this.opts.path = path36;
         this.opts.origin = origin;
         this.opts.query = null;
       }
@@ -68234,10 +68234,10 @@ var require_cache_handler = __commonJS({
       }
       return locationUrl.pathname + locationUrl.search;
     }
-    function deleteCachedUri(store, cacheKey, path35) {
+    function deleteCachedUri(store, cacheKey, path36) {
       deleteCachedValue(store, {
         ...cacheKey,
-        path: path35
+        path: path36
       });
       for (let i2 = 0; i2 < util2.safeHTTPMethods.length; i2++) {
         const method = util2.safeHTTPMethods[i2];
@@ -68245,7 +68245,7 @@ var require_cache_handler = __commonJS({
           deleteCachedValue(store, {
             ...cacheKey,
             method,
-            path: path35
+            path: path36
           });
         }
       }
@@ -68256,9 +68256,9 @@ var require_cache_handler = __commonJS({
       }
       const values = Array.isArray(headerValue) ? headerValue : [headerValue];
       for (let i2 = 0; i2 < values.length; i2++) {
-        const path35 = getSameOriginPath(cacheKey, values[i2]);
-        if (path35 !== void 0) {
-          deleteCachedUri(store, cacheKey, path35);
+        const path36 = getSameOriginPath(cacheKey, values[i2]);
+        if (path36 !== void 0) {
+          deleteCachedUri(store, cacheKey, path36);
         }
       }
     }
@@ -73258,11 +73258,11 @@ var require_fetch = __commonJS({
       function dispatch({ body }) {
         const url = requestCurrentURL(request);
         const agent = fetchParams.controller.dispatcher;
-        const path35 = url.pathname + url.search;
+        const path36 = url.pathname + url.search;
         const hasTrailingQuestionMark = url.search.length === 0 && url.href[url.href.length - url.hash.length - 1] === "?";
         return new Promise((resolve14, reject) => agent.dispatch(
           {
-            path: hasTrailingQuestionMark ? `${path35}?` : path35,
+            path: hasTrailingQuestionMark ? `${path36}?` : path36,
             origin: url.origin,
             method: request.method,
             body: agent.isMockActive ? request.body && (request.body.source || request.body.stream) : body,
@@ -74209,9 +74209,9 @@ var require_util7 = __commonJS({
         }
       }
     }
-    function validateCookiePath(path35) {
-      for (let i2 = 0; i2 < path35.length; ++i2) {
-        const code = path35.charCodeAt(i2);
+    function validateCookiePath(path36) {
+      for (let i2 = 0; i2 < path36.length; ++i2) {
+        const code = path36.charCodeAt(i2);
         if (code < 32 || // exclude CTLs (0-31)
         code > 126 || // exclude DEL and non-ascii
         code === 59) {
@@ -75346,24 +75346,24 @@ var require_connection = __commonJS({
         failWebsocketConnection(object6);
         object6.readyState = states.CLOSING;
       } else if (!object6.closeState.has(sentCloseFrameState.SENT) && !object6.closeState.has(sentCloseFrameState.RECEIVED)) {
-        const frame = new WebsocketFrameSend();
+        const frame2 = new WebsocketFrameSend();
         if (reason.length !== 0 && code === null) {
           code = 1e3;
         }
         assert2(code === null || Number.isInteger(code));
         if (code === null && reason.length === 0) {
-          frame.frameData = emptyBuffer;
+          frame2.frameData = emptyBuffer;
         } else if (code !== null && reason === null) {
-          frame.frameData = Buffer.allocUnsafe(2);
-          frame.frameData.writeUInt16BE(code, 0);
+          frame2.frameData = Buffer.allocUnsafe(2);
+          frame2.frameData.writeUInt16BE(code, 0);
         } else if (code !== null && reason !== null) {
-          frame.frameData = Buffer.allocUnsafe(2 + Buffer.byteLength(reason));
-          frame.frameData.writeUInt16BE(code, 0);
-          frame.frameData.write(reason, 2, "utf-8");
+          frame2.frameData = Buffer.allocUnsafe(2 + Buffer.byteLength(reason));
+          frame2.frameData.writeUInt16BE(code, 0);
+          frame2.frameData.write(reason, 2, "utf-8");
         } else {
-          frame.frameData = emptyBuffer;
+          frame2.frameData = emptyBuffer;
         }
-        object6.socket.write(frame.createFrame(opcodes.CLOSE));
+        object6.socket.write(frame2.createFrame(opcodes.CLOSE));
         object6.closeState.add(sentCloseFrameState.SENT);
         object6.readyState = states.CLOSING;
       } else {
@@ -75811,8 +75811,8 @@ var require_receiver2 = __commonJS({
           return false;
         } else if (opcode === opcodes.PING) {
           if (!this.#handler.closeState.has(sentCloseFrameState.RECEIVED)) {
-            const frame = new WebsocketFrameSend(body);
-            this.#handler.socket.write(frame.createFrame(opcodes.PONG));
+            const frame2 = new WebsocketFrameSend(body);
+            this.#handler.socket.write(frame2.createFrame(opcodes.PONG));
             this.#handler.onPing(body);
           }
         } else if (opcode === opcodes.PONG) {
@@ -76317,8 +76317,8 @@ var require_websocket2 = __commonJS({
         }
         const readyState = ws.#handler.readyState;
         if (isEstablished(readyState) && !isClosing(readyState) && !isClosed(readyState)) {
-          const frame = new WebsocketFrameSend(buffer);
-          ws.#handler.socket.write(frame.createFrame(opcodes.PING));
+          const frame2 = new WebsocketFrameSend(buffer);
+          ws.#handler.socket.write(frame2.createFrame(opcodes.PING));
         }
       }
     };
@@ -76647,8 +76647,8 @@ var require_websocketstream = __commonJS({
           opcode = opcodes.TEXT;
         }
         if (!this.#handler.closeState.has(sentCloseFrameState.SENT) && !this.#handler.closeState.has(sentCloseFrameState.RECEIVED)) {
-          const frame = new WebsocketFrameSend(data);
-          this.#handler.socket.write(frame.createFrame(opcode), () => {
+          const frame2 = new WebsocketFrameSend(data);
+          this.#handler.socket.write(frame2.createFrame(opcode), () => {
             promise.resolve(void 0);
           });
         }
@@ -77559,11 +77559,11 @@ var require_undici = __commonJS({
           if (typeof opts.path !== "string") {
             throw new InvalidArgumentError("invalid opts.path");
           }
-          let path35 = opts.path;
+          let path36 = opts.path;
           if (!opts.path.startsWith("/")) {
-            path35 = `/${path35}`;
+            path36 = `/${path36}`;
           }
-          url = new URL(util2.parseOrigin(url).origin + path35);
+          url = new URL(util2.parseOrigin(url).origin + path36);
         } else {
           if (!opts) {
             opts = typeof url === "object" ? url : {};
@@ -79865,12 +79865,12 @@ var init_path = __esm({
   "node_modules/openai/internal/utils/path.mjs"() {
     init_error();
     EMPTY = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.create(null));
-    createPathTagFunction = (pathEncoder = encodeURIPath) => function path35(statics, ...params) {
+    createPathTagFunction = (pathEncoder = encodeURIPath) => function path36(statics, ...params) {
       if (statics.length === 1)
         return statics[0];
       let postPath = false;
       const invalidSegments = [];
-      const path36 = statics.reduce((previousValue, currentValue, index) => {
+      const path37 = statics.reduce((previousValue, currentValue, index) => {
         if (/[?#]/.test(currentValue)) {
           postPath = true;
         }
@@ -79887,7 +79887,7 @@ var init_path = __esm({
         }
         return previousValue + currentValue + (index === params.length ? "" : encoded);
       }, "");
-      const pathOnly = path36.split(/[?#]/, 1)[0];
+      const pathOnly = path37.split(/[?#]/, 1)[0];
       const invalidSegmentPattern = /(?<=^|\/)(?:\.|%2e){1,2}(?=\/|$)/gi;
       let match2;
       while ((match2 = invalidSegmentPattern.exec(pathOnly)) !== null) {
@@ -79908,10 +79908,10 @@ var init_path = __esm({
         }, "");
         throw new OpenAIError(`Path parameters result in path with invalid segments:
 ${invalidSegments.map((e2) => e2.error).join("\n")}
-${path36}
+${path37}
 ${underline}`);
       }
-      return path36;
+      return path37;
     };
     path13 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
   }
@@ -89463,9 +89463,9 @@ var init_client = __esm({
         this.apiKey = token;
         return true;
       }
-      buildURL(path35, query, defaultBaseURL) {
+      buildURL(path36, query, defaultBaseURL) {
         const baseURL = !__classPrivateFieldGet(this, _OpenAI_instances, "m", _OpenAI_baseURLOverridden).call(this) && defaultBaseURL || this.baseURL;
-        const url = isAbsoluteURL(path35) ? new URL(path35) : new URL(baseURL + (baseURL.endsWith("/") && path35.startsWith("/") ? path35.slice(1) : path35));
+        const url = isAbsoluteURL(path36) ? new URL(path36) : new URL(baseURL + (baseURL.endsWith("/") && path36.startsWith("/") ? path36.slice(1) : path36));
         const defaultQuery = this.defaultQuery();
         const pathQuery = Object.fromEntries(url.searchParams);
         if (!isEmptyObj(defaultQuery) || !isEmptyObj(pathQuery)) {
@@ -89495,24 +89495,24 @@ var init_client = __esm({
        */
       async prepareRequest(request, { url, options }) {
       }
-      get(path35, opts) {
-        return this.methodRequest("get", path35, opts);
+      get(path36, opts) {
+        return this.methodRequest("get", path36, opts);
       }
-      post(path35, opts) {
-        return this.methodRequest("post", path35, opts);
+      post(path36, opts) {
+        return this.methodRequest("post", path36, opts);
       }
-      patch(path35, opts) {
-        return this.methodRequest("patch", path35, opts);
+      patch(path36, opts) {
+        return this.methodRequest("patch", path36, opts);
       }
-      put(path35, opts) {
-        return this.methodRequest("put", path35, opts);
+      put(path36, opts) {
+        return this.methodRequest("put", path36, opts);
       }
-      delete(path35, opts) {
-        return this.methodRequest("delete", path35, opts);
+      delete(path36, opts) {
+        return this.methodRequest("delete", path36, opts);
       }
-      methodRequest(method, path35, opts) {
+      methodRequest(method, path36, opts) {
         return this.request(Promise.resolve(opts).then((opts2) => {
-          return { method, path: path35, ...opts2 };
+          return { method, path: path36, ...opts2 };
         }));
       }
       request(options, remainingRetries = null) {
@@ -89637,8 +89637,8 @@ var init_client = __esm({
         }));
         return { response, options, controller, requestLogID, retryOfRequestLogID, startTime };
       }
-      getAPIList(path35, Page2, opts) {
-        return this.requestAPIList(Page2, opts && "then" in opts ? opts.then((opts2) => ({ method: "get", path: path35, ...opts2 })) : { method: "get", path: path35, ...opts });
+      getAPIList(path36, Page2, opts) {
+        return this.requestAPIList(Page2, opts && "then" in opts ? opts.then((opts2) => ({ method: "get", path: path36, ...opts2 })) : { method: "get", path: path36, ...opts });
       }
       requestAPIList(Page2, options) {
         const request = this.makeRequest(options, null, void 0);
@@ -89732,8 +89732,8 @@ var init_client = __esm({
       }
       async buildRequest(inputOptions, { retryCount = 0 } = {}) {
         const options = { ...inputOptions };
-        const { method, path: path35, query, defaultBaseURL } = options;
-        const url = this.buildURL(path35, query, defaultBaseURL);
+        const { method, path: path36, query, defaultBaseURL } = options;
+        const url = this.buildURL(path36, query, defaultBaseURL);
         if ("timeout" in options)
           validatePositiveInteger("timeout", options.timeout);
         options.timeout = options.timeout ?? this.timeout;
@@ -90183,13 +90183,13 @@ var require_tts_speed_policy = __commonJS({
   "../skills/produce/references/tts-speed-policy.js"(exports, module) {
     "use strict";
     var fs26 = __require("node:fs");
-    var path35 = __require("node:path");
+    var path36 = __require("node:path");
     function authorizeSpeed2(work, scope, factor) {
       if (!["generation", "final"].includes(scope) || !Number.isFinite(factor) || factor < 0.5 || factor > 3) {
         throw new Error("Invalid TTS speed scope or factor");
       }
       if (factor === 1) return null;
-      const file = path35.resolve(work, "speed-authorization.json");
+      const file = path36.resolve(work, "speed-authorization.json");
       let record3;
       try {
         record3 = JSON.parse(fs26.readFileSync(file, "utf8"));
@@ -90270,6 +90270,15 @@ var require_video_catalog = __commonJS({
           engine: "seedance",
           deployment: "byteplus",
           operation: "text",
+          sceneInputs: {
+            fpsField: null,
+            frameAccurateCuts: false,
+            timedImages: false,
+            openingImage: false,
+            endingImage: false,
+            shotDescriptions: "prompt",
+            sceneAudio: false
+          },
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -90440,6 +90449,15 @@ var require_video_catalog = __commonJS({
           engine: "seedance",
           deployment: "byteplus",
           operation: "image",
+          sceneInputs: {
+            fpsField: null,
+            frameAccurateCuts: false,
+            timedImages: false,
+            openingImage: true,
+            endingImage: true,
+            shotDescriptions: "prompt",
+            sceneAudio: false
+          },
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -90612,6 +90630,15 @@ var require_video_catalog = __commonJS({
           engine: "seedance",
           deployment: "byteplus",
           operation: "reference",
+          sceneInputs: {
+            fpsField: null,
+            frameAccurateCuts: false,
+            timedImages: false,
+            openingImage: false,
+            endingImage: false,
+            shotDescriptions: "prompt",
+            sceneAudio: false
+          },
           voice: {
             lane: "reference",
             dialogue: "allowed",
@@ -90786,6 +90813,15 @@ var require_video_catalog = __commonJS({
           engine: "astra-genai-desktop",
           deployment: "gateway-desktop-v1",
           operation: "text",
+          sceneInputs: {
+            fpsField: "fps",
+            frameAccurateCuts: false,
+            timedImages: false,
+            openingImage: false,
+            endingImage: false,
+            shotDescriptions: "prompt",
+            sceneAudio: false
+          },
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -90819,6 +90855,15 @@ var require_video_catalog = __commonJS({
           engine: "astra-genai-desktop",
           deployment: "gateway-desktop-v1",
           operation: "image",
+          sceneInputs: {
+            fpsField: "fps",
+            frameAccurateCuts: false,
+            timedImages: false,
+            openingImage: true,
+            endingImage: true,
+            shotDescriptions: "prompt",
+            sceneAudio: false
+          },
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -90853,6 +90898,15 @@ var require_video_catalog = __commonJS({
           engine: "astra-genai-desktop",
           deployment: "gateway-desktop-v1",
           operation: "audio",
+          sceneInputs: {
+            fpsField: "fps",
+            frameAccurateCuts: false,
+            timedImages: false,
+            openingImage: true,
+            endingImage: false,
+            shotDescriptions: "prompt",
+            sceneAudio: true
+          },
           voice: {
             lane: "supplied",
             dialogue: "allowed",
@@ -90895,6 +90949,15 @@ var require_video_catalog = __commonJS({
           engine: "astra-genai-desktop",
           deployment: "gateway-desktop-v1",
           operation: "extend",
+          sceneInputs: {
+            fpsField: null,
+            frameAccurateCuts: false,
+            timedImages: false,
+            openingImage: false,
+            endingImage: false,
+            shotDescriptions: "prompt",
+            sceneAudio: false
+          },
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -90925,6 +90988,15 @@ var require_video_catalog = __commonJS({
           engine: "astra-genai-desktop",
           deployment: "gateway-desktop-v1",
           operation: "retake",
+          sceneInputs: {
+            fpsField: null,
+            frameAccurateCuts: false,
+            timedImages: false,
+            openingImage: false,
+            endingImage: false,
+            shotDescriptions: "prompt",
+            sceneAudio: false
+          },
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -90956,6 +91028,15 @@ var require_video_catalog = __commonJS({
           engine: "astra-genai-desktop",
           deployment: "gateway-desktop-v1",
           operation: "keyframe",
+          sceneInputs: {
+            fpsField: "fps",
+            frameAccurateCuts: false,
+            timedImages: true,
+            openingImage: false,
+            endingImage: false,
+            shotDescriptions: "prompt",
+            sceneAudio: false
+          },
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -90991,6 +91072,15 @@ var require_video_catalog = __commonJS({
           engine: "astra-genai",
           deployment: "genai-ltx-v2",
           operation: "text",
+          sceneInputs: {
+            fpsField: "fps",
+            frameAccurateCuts: false,
+            timedImages: false,
+            openingImage: false,
+            endingImage: false,
+            shotDescriptions: "gateway_prompt_only",
+            sceneAudio: false
+          },
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -91010,10 +91100,10 @@ var require_video_catalog = __commonJS({
             "model",
             "duration",
             "numFrames",
-            "shots",
             "resolution",
             "fps",
             "generateAudio",
+            "shots",
             "reserveUsd",
             "outputPath",
             "filename"
@@ -91031,6 +91121,15 @@ var require_video_catalog = __commonJS({
           engine: "astra-genai",
           deployment: "genai-ltx-v2",
           operation: "image",
+          sceneInputs: {
+            fpsField: "fps",
+            frameAccurateCuts: false,
+            timedImages: true,
+            openingImage: true,
+            endingImage: true,
+            shotDescriptions: "gateway_prompt_only",
+            sceneAudio: false
+          },
           voice: {
             lane: "conditional_reference",
             dialogue: "requires_subject_references",
@@ -91050,10 +91149,10 @@ var require_video_catalog = __commonJS({
             "model",
             "duration",
             "numFrames",
-            "shots",
             "resolution",
             "fps",
             "generateAudio",
+            "shots",
             "reserveUsd",
             "outputPath",
             "filename",
@@ -91096,6 +91195,15 @@ var require_video_catalog = __commonJS({
           engine: "astra-genai",
           deployment: "genai-ltx-v2",
           operation: "audio",
+          sceneInputs: {
+            fpsField: "fps",
+            frameAccurateCuts: false,
+            timedImages: true,
+            openingImage: true,
+            endingImage: true,
+            shotDescriptions: "prompt",
+            sceneAudio: true
+          },
           voice: {
             lane: "supplied",
             dialogue: "allowed",
@@ -91137,6 +91245,15 @@ var require_video_catalog = __commonJS({
           engine: "astra-genai",
           deployment: "genai-ltx-msr",
           operation: "reference",
+          sceneInputs: {
+            fpsField: "frameRate",
+            frameAccurateCuts: false,
+            timedImages: false,
+            openingImage: false,
+            endingImage: false,
+            shotDescriptions: "prompt",
+            sceneAudio: false
+          },
           voice: {
             lane: "reference",
             dialogue: "allowed",
@@ -91176,6 +91293,15 @@ var require_video_catalog = __commonJS({
           engine: "astra",
           deployment: "self-hosted-ltx",
           operation: "text",
+          sceneInputs: {
+            fpsField: "frameRate",
+            frameAccurateCuts: false,
+            timedImages: false,
+            openingImage: false,
+            endingImage: false,
+            shotDescriptions: "prompt",
+            sceneAudio: false
+          },
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -91213,6 +91339,15 @@ var require_video_catalog = __commonJS({
           engine: "astra",
           deployment: "self-hosted-ltx",
           operation: "image",
+          sceneInputs: {
+            fpsField: "frameRate",
+            frameAccurateCuts: false,
+            timedImages: false,
+            openingImage: true,
+            endingImage: true,
+            shotDescriptions: "prompt",
+            sceneAudio: false
+          },
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -91252,6 +91387,15 @@ var require_video_catalog = __commonJS({
           engine: "astra",
           deployment: "self-hosted-ltx",
           operation: "keyframe",
+          sceneInputs: {
+            fpsField: "frameRate",
+            frameAccurateCuts: false,
+            timedImages: true,
+            openingImage: false,
+            endingImage: false,
+            shotDescriptions: "prompt",
+            sceneAudio: false
+          },
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -91285,6 +91429,15 @@ var require_video_catalog = __commonJS({
           engine: "astra",
           deployment: "self-hosted-ltx",
           operation: "audio",
+          sceneInputs: {
+            fpsField: "frameRate",
+            frameAccurateCuts: false,
+            timedImages: false,
+            openingImage: true,
+            endingImage: false,
+            shotDescriptions: "prompt",
+            sceneAudio: true
+          },
           voice: {
             lane: "supplied",
             dialogue: "allowed",
@@ -91326,6 +91479,15 @@ var require_video_catalog = __commonJS({
           engine: "astra",
           deployment: "self-hosted-ltx",
           operation: "control",
+          sceneInputs: {
+            fpsField: "frameRate",
+            frameAccurateCuts: false,
+            timedImages: false,
+            openingImage: false,
+            endingImage: false,
+            shotDescriptions: "prompt",
+            sceneAudio: false
+          },
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -91361,6 +91523,15 @@ var require_video_catalog = __commonJS({
           engine: "astra",
           deployment: "self-hosted-ltx",
           operation: "retake",
+          sceneInputs: {
+            fpsField: null,
+            frameAccurateCuts: false,
+            timedImages: false,
+            openingImage: false,
+            endingImage: false,
+            shotDescriptions: "prompt",
+            sceneAudio: false
+          },
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -91388,6 +91559,15 @@ var require_video_catalog = __commonJS({
           engine: "mlx",
           deployment: "local-mlx",
           operation: "text",
+          sceneInputs: {
+            fpsField: null,
+            frameAccurateCuts: false,
+            timedImages: false,
+            openingImage: true,
+            endingImage: true,
+            shotDescriptions: "prompt",
+            sceneAudio: false
+          },
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -91426,6 +91606,15 @@ var require_video_catalog = __commonJS({
           engine: "mlx",
           deployment: "local-mlx",
           operation: "reference",
+          sceneInputs: {
+            fpsField: null,
+            frameAccurateCuts: false,
+            timedImages: false,
+            openingImage: false,
+            endingImage: false,
+            shotDescriptions: "prompt",
+            sceneAudio: false
+          },
           voice: {
             lane: "reference",
             dialogue: "allowed",
@@ -91466,6 +91655,15 @@ var require_video_catalog = __commonJS({
           engine: "mlx",
           deployment: "local-mlx",
           operation: "text",
+          sceneInputs: {
+            fpsField: null,
+            frameAccurateCuts: false,
+            timedImages: false,
+            openingImage: true,
+            endingImage: true,
+            shotDescriptions: "prompt",
+            sceneAudio: false
+          },
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -91506,6 +91704,15 @@ var require_video_catalog = __commonJS({
           engine: "ltx-api",
           deployment: "ltx-api-v2",
           operation: "image",
+          sceneInputs: {
+            fpsField: "fps",
+            frameAccurateCuts: false,
+            timedImages: false,
+            openingImage: true,
+            endingImage: true,
+            shotDescriptions: "prompt",
+            sceneAudio: false
+          },
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -91690,6 +91897,15 @@ var require_video_catalog = __commonJS({
           engine: "ltx-api",
           deployment: "ltx-api-v2",
           operation: "audio",
+          sceneInputs: {
+            fpsField: "fps",
+            frameAccurateCuts: false,
+            timedImages: false,
+            openingImage: true,
+            endingImage: true,
+            shotDescriptions: "prompt",
+            sceneAudio: true
+          },
           voice: {
             lane: "supplied",
             dialogue: "allowed",
@@ -91873,6 +92089,15 @@ var require_video_catalog = __commonJS({
           engine: "veo",
           deployment: "google-cloud-us-central1",
           operation: "text",
+          sceneInputs: {
+            fpsField: null,
+            frameAccurateCuts: false,
+            timedImages: false,
+            openingImage: false,
+            endingImage: false,
+            shotDescriptions: "prompt",
+            sceneAudio: false
+          },
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -91985,6 +92210,15 @@ var require_video_catalog = __commonJS({
           engine: "veo",
           deployment: "google-cloud-us-central1",
           operation: "image",
+          sceneInputs: {
+            fpsField: null,
+            frameAccurateCuts: false,
+            timedImages: false,
+            openingImage: true,
+            endingImage: true,
+            shotDescriptions: "prompt",
+            sceneAudio: false
+          },
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -92099,6 +92333,15 @@ var require_video_catalog = __commonJS({
           engine: "veo",
           deployment: "google-cloud-us-central1",
           operation: "reference",
+          sceneInputs: {
+            fpsField: null,
+            frameAccurateCuts: false,
+            timedImages: false,
+            openingImage: false,
+            endingImage: false,
+            shotDescriptions: "prompt",
+            sceneAudio: false
+          },
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -92212,6 +92455,15 @@ var require_video_catalog = __commonJS({
           engine: "veo",
           deployment: "google-cloud-us-central1",
           operation: "extend",
+          sceneInputs: {
+            fpsField: null,
+            frameAccurateCuts: false,
+            timedImages: false,
+            openingImage: false,
+            endingImage: false,
+            shotDescriptions: "prompt",
+            sceneAudio: false
+          },
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -92324,6 +92576,15 @@ var require_video_catalog = __commonJS({
           engine: "minimax",
           deployment: "minimax-open-platform-v2",
           operation: "image",
+          sceneInputs: {
+            fpsField: null,
+            frameAccurateCuts: false,
+            timedImages: false,
+            openingImage: true,
+            endingImage: true,
+            shotDescriptions: "prompt",
+            sceneAudio: false
+          },
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -92357,6 +92618,15 @@ var require_video_catalog = __commonJS({
           engine: "minimax",
           deployment: "minimax-open-platform-v2",
           operation: "reference",
+          sceneInputs: {
+            fpsField: null,
+            frameAccurateCuts: false,
+            timedImages: false,
+            openingImage: false,
+            endingImage: false,
+            shotDescriptions: "prompt",
+            sceneAudio: false
+          },
           voice: {
             lane: "reference",
             dialogue: "allowed",
@@ -92391,6 +92661,15 @@ var require_video_catalog = __commonJS({
           engine: "heygen",
           deployment: "heygen-v3",
           operation: "image",
+          sceneInputs: {
+            fpsField: null,
+            frameAccurateCuts: false,
+            timedImages: false,
+            openingImage: true,
+            endingImage: true,
+            shotDescriptions: "prompt",
+            sceneAudio: false
+          },
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -92422,6 +92701,15 @@ var require_video_catalog = __commonJS({
           engine: "heygen",
           deployment: "heygen-v3",
           operation: "reference",
+          sceneInputs: {
+            fpsField: null,
+            frameAccurateCuts: false,
+            timedImages: false,
+            openingImage: false,
+            endingImage: false,
+            shotDescriptions: "prompt",
+            sceneAudio: false
+          },
           voice: {
             lane: "reference",
             dialogue: "allowed",
@@ -93509,12 +93797,12 @@ var require_production_mode = __commonJS({
         if (e2.length) throw new Error(e2.join("; "));
         if (!Number.isInteger(fps) || fps < 24 || fps > 60) throw new Error("drone fps must be 24\u201360");
         const last = camera.trajectory.seconds * fps, stride = Math.ceil(last / 480), frames = [];
-        for (let frame = 1; frame < last; frame += stride) frames.push(frame);
+        for (let frame2 = 1; frame2 < last; frame2 += stride) frames.push(frame2);
         frames.push(last);
-        return { lensMm: camera.trajectory.lensMm, keys: frames.map((frame) => {
-          const s2 = droneSample(camera, (frame - 1) / (last - 1) * camera.trajectory.seconds);
+        return { lensMm: camera.trajectory.lensMm, keys: frames.map((frame2) => {
+          const s2 = droneSample(camera, (frame2 - 1) / (last - 1) * camera.trajectory.seconds);
           if (Math.hypot(s2.position[0] - s2.target[0], s2.position[1] - s2.target[1]) < 0.01) throw new Error("drone spline crosses a vertical or coincident target; adjust waypoints");
-          return { frame, ...s2 };
+          return { frame: frame2, ...s2 };
         }) };
       }
       function droneSceneErrors(scene, { draft = false, advice = [] } = {}) {
@@ -95478,7 +95766,7 @@ var require_character_sheet = __commonJS({
   "../skills/channel/references/character-sheet.js"(exports, module) {
     "use strict";
     var fs26 = __require("node:fs");
-    var path35 = __require("node:path");
+    var path36 = __require("node:path");
     var { createHash: createHash29 } = __require("node:crypto");
     var { isDeepStrictEqual: isDeepStrictEqual2 } = __require("node:util");
     var { identityCharacter, direction, sheetPanelPrompt, requiresSpeech, isVoiceOnly } = require_character_identity();
@@ -95493,7 +95781,7 @@ var require_character_sheet = __commonJS({
       const character = identityCharacter(source, options);
       const name = /^#\s+(.+)$/m.exec(source)?.[1]?.trim();
       if (!name) throw new Error("identity.md needs a # Name heading");
-      const id = path35.basename(path35.dirname(path35.resolve(file)));
+      const id = path36.basename(path36.dirname(path36.resolve(file)));
       if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) throw new Error("Character folder needs a kebab-case id");
       const tts = identityVoice(source, { optional: !requireSpeech });
       return { id, name, character, tts, direction: direction(character, options), identitySha256: createHash29("sha256").update(source).digest("hex"), ...voiceOnly ? { voiceOnly: true } : {}, ...selectedVoiceReference(source, tts) };
@@ -95508,7 +95796,7 @@ var require_character_sheet = __commonJS({
         const chosen = audition.candidates?.find((c) => c.id === selection.candidateId);
         const registration = selection.registration;
         const registered = registration?.engine === "astra-genai" && registration.model === chosen?.tts?.model && chosen?.tts?.engine === "astra-genai" && typeof registration.request === "string" && registration.request.trim() && typeof registration.voiceId === "string" && registration.voiceId.trim().toLowerCase() !== "default" && registration.audioSha256 === chosen?.audioSha256 && isDeepStrictEqual2({ ...chosen.tts, voiceId: registration.voiceId }, tts);
-        if (!chosen || !isDeepStrictEqual2(chosen.tts, tts) && !registered || chosen.audioSha256 !== selection.audioSha256 || !path35.isAbsolute(chosen.audioPath))
+        if (!chosen || !isDeepStrictEqual2(chosen.tts, tts) && !registered || chosen.audioSha256 !== selection.audioSha256 || !path36.isAbsolute(chosen.audioPath))
           throw new Error("Selected voice sample no longer matches the pinned character voice");
         return { voiceSelection: selection, voiceReference: { path: chosen.audioPath, sha256: chosen.audioSha256, tts } };
       } catch (error2) {
@@ -95521,7 +95809,7 @@ var require_character_sheet = __commonJS({
         const view = args[1] === "--panel" && ["face", "front", "back"].includes(args[2]) ? args[2] : void 0;
         if (args.length !== 1 && !view) throw new Error("Usage: character-sheet.js <identity.md> [--panel face|front|back]");
         if (view) {
-          const manifest2 = path35.join(path35.dirname(args[0]), "panels.json");
+          const manifest2 = path36.join(path36.dirname(args[0]), "panels.json");
           const front = view === "back" && fs26.existsSync(manifest2) ? JSON.parse(fs26.readFileSync(manifest2, "utf8")).panels?.front : void 0;
           const { text: text4, skipped } = sheetPanelPrompt(identityCharacter(fs26.readFileSync(args[0], "utf8"), { ready: false }), view, void 0, front);
           if (skipped.length) console.error(`Not English, left out: ${skipped.join(", ")}`);
@@ -95536,15 +95824,15 @@ var require_character_sheet = __commonJS({
       const entries = win?.SB_DOC?.characters;
       const chars = (Array.isArray(entries) ? entries : Object.entries(entries || {}).map(([id, c]) => ({ ...c, id }))).filter((c) => c?.character !== void 0 || win?.SB_DOC?.characterSchemaVersion === 1);
       if (!chars.length) return [];
-      let channel = path35.resolve(boardDir);
-      while (!fs26.existsSync(path35.join(channel, "profile.md")) && path35.dirname(channel) !== channel) channel = path35.dirname(channel);
+      let channel = path36.resolve(boardDir);
+      while (!fs26.existsSync(path36.join(channel, "profile.md")) && path36.dirname(channel) !== channel) channel = path36.dirname(channel);
       const errors = [];
       for (const c of chars) {
         if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(c?.id || "")) {
           errors.push("Invalid character id");
           continue;
         }
-        const file = path35.join(channel, "assets", "characters", c.id, "identity.md");
+        const file = path36.join(channel, "assets", "characters", c.id, "identity.md");
         try {
           const current = handoff(file, { requireSpeech: requiresSpeech(win, c.id), voiceOnly: isVoiceOnly(win, c.id) });
           const voiceChanged = JSON.stringify(current.tts) !== JSON.stringify(c.tts);
@@ -95565,7 +95853,7 @@ var require_character_speech = __commonJS({
   "../skills/_shared/character-speech.js"(exports, module) {
     "use strict";
     var fs26 = __require("node:fs");
-    var path35 = __require("node:path");
+    var path36 = __require("node:path");
     var { createHash: createHash29 } = __require("node:crypto");
     var { isDeepStrictEqual: isDeepStrictEqual2 } = __require("node:util");
     var { voiceErrors, generationVoiceErrors, normalizeLanguage } = require_character_voice();
@@ -95578,9 +95866,9 @@ var require_character_speech = __commonJS({
     function characterSpeech(character, { boardDir, board } = {}) {
       let current;
       if (boardDir && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(character?.id || "")) {
-        let channel = path35.resolve(boardDir);
-        while (!fs26.existsSync(path35.join(channel, "profile.md")) && path35.dirname(channel) !== channel) channel = path35.dirname(channel);
-        const identity = path35.join(channel, "assets/characters", character.id, "identity.md");
+        let channel = path36.resolve(boardDir);
+        while (!fs26.existsSync(path36.join(channel, "profile.md")) && path36.dirname(channel) !== channel) channel = path36.dirname(channel);
+        const identity = path36.join(channel, "assets/characters", character.id, "identity.md");
         if (fs26.existsSync(identity)) current = require_character_sheet().handoff(identity, { voiceOnly: character.voiceOnly === true });
       }
       const resolved = character?.tts ? character : { ...current, ...character, tts: current?.tts };
@@ -95601,7 +95889,7 @@ var require_character_speech = __commonJS({
       if (reference2) {
         if (reference2.tts && !isDeepStrictEqual2(normalizeVoice(reference2.tts), normalizeVoice(voice)))
           throw new Error(`character_voice_sample_stale: ${resolved.id} sample uses different TTS settings`);
-        const file = path35.resolve(boardDir || process.cwd(), reference2.path);
+        const file = path36.resolve(boardDir || process.cwd(), reference2.path);
         if (!reference2.sha256 || hash7(fs26.readFileSync(file)) !== reference2.sha256)
           throw new Error(`character_voice_sample_stale: ${resolved.id} selected sample bytes changed or lack a pinned hash`);
         return { ...resolved, voiceReference: { ...reference2, path: file } };
@@ -95609,21 +95897,21 @@ var require_character_speech = __commonJS({
       return resolved;
     }
     function physicalPath(file) {
-      let current = path35.resolve(file), suffix = [];
-      while (!fs26.existsSync(current) && path35.dirname(current) !== current) {
-        suffix.unshift(path35.basename(current));
-        current = path35.dirname(current);
+      let current = path36.resolve(file), suffix = [];
+      while (!fs26.existsSync(current) && path36.dirname(current) !== current) {
+        suffix.unshift(path36.basename(current));
+        current = path36.dirname(current);
       }
-      return path35.join(fs26.realpathSync(current), ...suffix);
+      return path36.join(fs26.realpathSync(current), ...suffix);
     }
     function episodeBoardForOutput(outputPath) {
       let folder = physicalPath(outputPath || process.cwd());
       while (true) {
-        if (path35.basename(folder) === "assets" && fs26.existsSync(path35.join(path35.dirname(folder), "profile.md"))) return void 0;
-        const board = path35.join(folder, "storyboard/scenes.js");
+        if (path36.basename(folder) === "assets" && fs26.existsSync(path36.join(path36.dirname(folder), "profile.md"))) return void 0;
+        const board = path36.join(folder, "storyboard/scenes.js");
         if (fs26.existsSync(board)) return fs26.realpathSync(board);
-        if (path35.dirname(folder) === folder) return void 0;
-        folder = path35.dirname(folder);
+        if (path36.dirname(folder) === folder) return void 0;
+        folder = path36.dirname(folder);
       }
     }
     function plannedGenerationErrors(voice, proof, line) {
@@ -95655,7 +95943,7 @@ var require_character_speech = __commonJS({
       const characters = Array.isArray(raw) ? raw : Object.entries(raw || {}).map(([id, value]) => ({ ...value, id }));
       const cast = characters.filter((character2) => character2.id === line.speaker);
       if (cast.length !== 1) throw new Error("speech_context_invalid: speaker needs one character entry");
-      const character = characterSpeech(cast[0], { boardDir: path35.dirname(file), board });
+      const character = characterSpeech(cast[0], { boardDir: path36.dirname(file), board });
       const errors = plannedGenerationErrors(character.tts, { generator, voiceSettings: args, text: line.tts, language: character.tts.language }, line);
       if (errors.length) throw new Error("speech_context_mismatch: " + errors.join("; "));
     }
@@ -95681,15 +95969,15 @@ var require_compose_speech = __commonJS({
   "../skills/produce/references/compose-speech.js"(exports, module) {
     "use strict";
     var fs26 = __require("node:fs");
-    var path35 = __require("node:path");
-    var { execFileSync: execFileSync20 } = __require("node:child_process");
+    var path36 = __require("node:path");
+    var { execFileSync: execFileSync21 } = __require("node:child_process");
     var { createHash: createHash29 } = __require("node:crypto");
     var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
     var { actingErrors, speechRevisionPayload, planScenePerformance } = require_scene_acting();
     var { generationVoiceErrors } = require_character_voice();
     var hash7 = (value) => createHash29("sha256").update(value).digest("hex");
     function duration5(file) {
-      const seconds2 = Number(execFileSync20("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", file], { encoding: "utf8", timeout: 1e4 }).trim());
+      const seconds2 = Number(execFileSync21("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", file], { encoding: "utf8", timeout: 1e4 }).trim());
       if (!Number.isFinite(seconds2) || seconds2 <= 0) throw new Error("Unusable speech duration: " + file);
       return seconds2;
     }
@@ -95699,7 +95987,7 @@ var require_compose_speech = __commonJS({
     function sceneTiming(scene, board, performanceTimingVersion) {
       const actions = (scene.performance || []).filter((event) => event.kind === "action");
       const legacy = performanceTimingVersion !== 1 && actions.length > 0 && !actions.some((event) => event.durationSeconds !== void 0 || event.withGroup !== void 0);
-      const plan2 = planScenePerformance(legacy ? scene.narration : scene, (line) => duration5(path35.resolve(board, line.audio.path)));
+      const plan2 = planScenePerformance(legacy ? scene.narration : scene, (line) => duration5(path36.resolve(board, line.audio.path)));
       if (legacy) {
         plan2.timing = "legacy_speech_only";
         plan2.warnings.push("Legacy speech clock preserved; independent action timing is unverified. Stage actions and set durationSeconds/withGroup before adopting scene timing.");
@@ -95717,19 +96005,19 @@ var require_compose_speech = __commonJS({
       if (duration5(audio) + 0.03 < timing.durationSeconds) throw new Error("Silent scene audio is shorter than planned action timing");
     }
     function compose(work, board) {
-      work = path35.resolve(work);
-      board = path35.resolve(board);
-      const file = path35.join(board, "scenes.js"), win = evaluateWindowScript2(fs26.readFileSync(file, "utf8"), { filename: file });
+      work = path36.resolve(work);
+      board = path36.resolve(board);
+      const file = path36.join(board, "scenes.js"), win = evaluateWindowScript2(fs26.readFileSync(file, "utf8"), { filename: file });
       if (win.SB_DOC?.speechPlanVersion !== 1) return [];
       const cast = Array.isArray(win.SB_DOC.characters) ? win.SB_DOC.characters : Object.entries(win.SB_DOC.characters || {}).map(([id, c]) => ({ ...c, id }));
-      const cards = path35.join(work, "cards.tsv"), rows = fs26.readFileSync(cards, "utf8").split(/\r?\n/);
+      const cards = path36.join(work, "cards.tsv"), rows = fs26.readFileSync(cards, "utf8").split(/\r?\n/);
       const outputs = [];
       for (let row = 0; row < rows.length; row++) {
         if (!rows[row].trim() || rows[row].startsWith("#")) continue;
         const fields2 = rows[row].split("	"), scene = win.SCENES[Number(fields2[0])];
         if (scene?.sound?.audioSource === "video") continue;
         const lines = (scene?.narration || []).filter((n) => (n.tts || "").trim());
-        if (scene) checkSilentTiming(scene, board, win.SB_DOC?.performanceTimingVersion, path35.resolve(work, fields2[1]));
+        if (scene) checkSilentTiming(scene, board, win.SB_DOC?.performanceTimingVersion, path36.resolve(work, fields2[1]));
         if (!lines.length || lines.length === 1 && !lines.some((n) => n.acting != null) && !scene.performance?.some((event) => event.kind === "action")) continue;
         const sources = [];
         lines.forEach((line) => {
@@ -95737,7 +96025,7 @@ var require_compose_speech = __commonJS({
           errors.push(...generationVoiceErrors(voice, line.audio?.generation, line));
           if (errors.length) throw new Error(line.id + ": " + errors.join("; "));
           if (!line.audio || line.audio.generation.text !== line.tts || line.audio.revision !== hash7(JSON.stringify(speechRevisionPayload(line, voice)))) throw new Error("Attach current audio for " + line.id);
-          const source = path35.resolve(board, line.audio.path);
+          const source = path36.resolve(board, line.audio.path);
           if (hash7(fs26.readFileSync(source)) !== line.audio.sha256) throw new Error("Audio changed for " + line.id);
           require_character_speech().verifiedSpeechGeneration(source, line.audio.generation, voice, line);
           sources.push(source);
@@ -95745,7 +96033,7 @@ var require_compose_speech = __commonJS({
         const timing = sceneTiming(scene, board, win.SB_DOC?.performanceTimingVersion), intervals = timing.intervals;
         const total = Math.round(timing.durationSeconds * 48e3), mix = new Int32Array(total);
         lines.forEach((line, i2) => {
-          const pcm = execFileSync20("ffmpeg", ["-v", "error", "-i", sources[i2], "-ac", "1", "-ar", "48000", "-f", "s16le", "-"], { timeout: 12e4, maxBuffer: 1 << 30 });
+          const pcm = execFileSync21("ffmpeg", ["-v", "error", "-i", sources[i2], "-ac", "1", "-ar", "48000", "-f", "s16le", "-"], { timeout: 12e4, maxBuffer: 1 << 30 });
           const start = Math.round(intervals.find((item) => item.lineId === line.id).speechStartSeconds * 48e3);
           for (let k = 0; k < pcm.length >> 1 && start + k < total; k++) mix[start + k] += pcm.readInt16LE(k * 2);
         });
@@ -95763,7 +96051,7 @@ var require_compose_speech = __commonJS({
         wav.write("data", 36);
         wav.writeUInt32LE(total * 2, 40);
         mix.forEach((sample, k) => wav.writeInt16LE(Math.max(-32768, Math.min(32767, sample)), 44 + k * 2));
-        const output2 = path35.join(work, `c${fields2[0]}-speech.wav`), tmp = output2 + ".tmp.wav";
+        const output2 = path36.join(work, `c${fields2[0]}-speech.wav`), tmp = output2 + ".tmp.wav";
         try {
           fs26.writeFileSync(tmp, wav);
           fs26.renameSync(tmp, output2);
@@ -95772,7 +96060,7 @@ var require_compose_speech = __commonJS({
         }
         const receipt = { generator: "speech_compose", audioSha256: hash7(fs26.readFileSync(output2)), lineIds: lines.map((n) => n.id), lineSources: lineSources(lines), expectedText: lines.map((n) => n.tts).join(". "), durationSeconds: duration5(output2), intervals, timing: timing.timing, warnings: timing.warnings, status: "not_reviewed" };
         fs26.writeFileSync(output2 + ".generation.json", JSON.stringify(receipt, null, 2) + "\n");
-        fields2[1] = path35.basename(output2);
+        fields2[1] = path36.basename(output2);
         rows[row] = fields2.join("	");
         outputs.push({ shotId: scene.id, audioPath: output2, ...receipt });
       }
@@ -95796,7 +96084,7 @@ var require_check_tts_quality = __commonJS({
   "../skills/produce/references/check-tts-quality.js"(exports, module) {
     "use strict";
     var fs26 = __require("node:fs");
-    var path35 = __require("node:path");
+    var path36 = __require("node:path");
     var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
     var { createHash: createHash29 } = __require("node:crypto");
     var { speechRevision: speechRevision2 } = require_speech_contract();
@@ -95862,30 +96150,30 @@ var require_check_tts_quality = __commonJS({
     }
     function decide(work, warnings, inputs2) {
       const fingerprint = hash7(JSON.stringify({ inputs: inputs2, warnings }));
-      const approval = read4(path35.join(work, APPROVAL));
+      const approval = read4(path36.join(work, APPROVAL));
       const approved = warnings.length > 0 && approval?.kind === "user" && approval.fingerprint === fingerprint && typeof approval.reference === "string" && approval.reference.trim().length > 0 && Number.isFinite(Date.parse(approval.at));
       const report = { fingerprint, warnings, inputs: inputs2, approved: Boolean(approved), approval: approved ? approval : null, status: warnings.length ? approved ? "approved-with-warnings" : "awaiting-user" : "pass" };
-      fs26.writeFileSync(path35.join(work, REPORT), JSON.stringify(report, null, 2) + "\n");
+      fs26.writeFileSync(path36.join(work, REPORT), JSON.stringify(report, null, 2) + "\n");
       for (const warning of warnings) console.error("TTS warning: " + warning);
-      if (warnings.length && !approved) throw new Error("TTS checks need HITL: show " + path35.join(work, REPORT) + " to the user. After explicit approval, record it with check-tts-quality.js approve; then rerun.");
+      if (warnings.length && !approved) throw new Error("TTS checks need HITL: show " + path36.join(work, REPORT) + " to the user. After explicit approval, record it with check-tts-quality.js approve; then rerun.");
       if (approved) console.error("User approved these TTS warnings; continuing.");
       return report;
     }
     function approve(work, reference2) {
-      work = path35.resolve(work);
+      work = path36.resolve(work);
       if (typeof reference2 !== "string" || !reference2.trim()) throw new Error("An explicit user approval reference is required");
-      const report = read4(path35.join(work, REPORT));
+      const report = read4(path36.join(work, REPORT));
       if (!report?.warnings?.length || !report.fingerprint) throw new Error("Run the TTS check and present the warnings before recording approval");
-      fs26.writeFileSync(path35.join(work, APPROVAL), JSON.stringify({ kind: "user", fingerprint: report.fingerprint, reference: reference2, at: (/* @__PURE__ */ new Date()).toISOString() }, null, 2) + "\n");
+      fs26.writeFileSync(path36.join(work, APPROVAL), JSON.stringify({ kind: "user", fingerprint: report.fingerprint, reference: reference2, at: (/* @__PURE__ */ new Date()).toISOString() }, null, 2) + "\n");
     }
-    var lastReport = (work) => read4(path35.join(path35.resolve(work), REPORT));
+    var lastReport = (work) => read4(path36.join(path36.resolve(work), REPORT));
     function checkLegacy(work, board) {
-      work = path35.resolve(work);
-      board = path35.resolve(board);
-      const scenesFile = path35.join(board, "scenes.js");
+      work = path36.resolve(work);
+      board = path36.resolve(board);
+      const scenesFile = path36.join(board, "scenes.js");
       const win = evaluateWindowScript2(fs26.readFileSync(scenesFile, "utf8"), { filename: scenesFile });
       if (!Array.isArray(win.SCENES)) throw new Error("SCENES missing");
-      const rows = fs26.readFileSync(path35.join(work, "cards.tsv"), "utf8").split(/\r?\n/).filter((l) => l.trim() && !l.startsWith("#")).map((l) => l.split("	"));
+      const rows = fs26.readFileSync(path36.join(work, "cards.tsv"), "utf8").split(/\r?\n/).filter((l) => l.trim() && !l.startsWith("#")).map((l) => l.split("	"));
       const expected = win.SCENES.map((s2, i2) => ({ s: s2, i: i2 })).filter(({ s: s2 }) => !["broll", "outro"].includes(s2.type));
       if (JSON.stringify(rows.map((r2) => r2[0])) !== JSON.stringify(expected.map(({ i: i2 }) => String(i2)))) throw new Error("card order differs from SCENES");
       const media = {}, warnings = [], inputs2 = {};
@@ -95894,7 +96182,7 @@ var require_check_tts_quality = __commonJS({
       const texts = spoken.map((s2) => s2.text);
       const episodeSettings = /* @__PURE__ */ new Map();
       for (const [k, { s: s2, i: i2 }] of expected.entries()) {
-        const file = path35.resolve(work, rows[k][1]);
+        const file = path36.resolve(work, rows[k][1]);
         media[file] = hash7(fs26.readFileSync(file));
         const text4 = (s2.narration || []).map((n) => n.tts || "").join(". ");
         const live = win.VOICE === "user" || s2.visual?.source === "recording" && !normalize2(text4) || s2.visual?.source === "screencast" && s2.visual?.sync === true;
@@ -95936,8 +96224,8 @@ var require_check_tts_quality = __commonJS({
       if (repair?.kind !== "preserved_soundtrack") return false;
       if (scene.sound?.audioSource !== "video" || scene.visual.video.speechBinding)
         throw new Error("A retained soundtrack repair needs source video audio and no adapter speech binding");
-      const video2 = path35.resolve(board, scene.visual.video.clip || "");
-      if (typeof repair.videoPath !== "string" || path35.resolve(board, repair.videoPath) !== video2 || hash7(fs26.readFileSync(video2)) !== repair.videoSha256)
+      const video2 = path36.resolve(board, scene.visual.video.clip || "");
+      if (typeof repair.videoPath !== "string" || path36.resolve(board, repair.videoPath) !== video2 || hash7(fs26.readFileSync(video2)) !== repair.videoSha256)
         throw new Error("Retained soundtrack video changed");
       const lines = (scene.narration || []).filter((n) => (n.tts || "").trim());
       const revisions = lines.map((n) => ({ lineId: n.id, revision: speechRevision2(n, { tts: cast.find((c) => c.id === n.speaker)?.tts }) }));
@@ -95946,7 +96234,7 @@ var require_check_tts_quality = __commonJS({
         throw new Error("Retained soundtrack sources must cover the current lines in order");
       for (const source of repair.sources) {
         if (!["native_video", "selected_line_audio"].includes(source.kind) || typeof source.path !== "string") throw new Error("Invalid retained soundtrack source");
-        const file = path35.resolve(board, source.path);
+        const file = path36.resolve(board, source.path);
         if (hash7(fs26.readFileSync(file)) !== source.sha256) throw new Error("Retained soundtrack source changed");
         media[file] = source.sha256;
       }
@@ -95954,17 +96242,17 @@ var require_check_tts_quality = __commonJS({
       return true;
     }
     function check2(work, board) {
-      work = path35.resolve(work);
-      board = path35.resolve(board);
-      const file = path35.join(board, "scenes.js");
+      work = path36.resolve(work);
+      board = path36.resolve(board);
+      const file = path36.join(board, "scenes.js");
       const win = evaluateWindowScript2(fs26.readFileSync(file, "utf8"), { filename: file });
       if (!Array.isArray(win.SCENES)) throw new Error("SCENES missing");
-      const rows = fs26.readFileSync(path35.join(work, "cards.tsv"), "utf8").split(/\r?\n/).filter((l) => l.trim() && !l.startsWith("#")).map((l) => l.split("	"));
+      const rows = fs26.readFileSync(path36.join(work, "cards.tsv"), "utf8").split(/\r?\n/).filter((l) => l.trim() && !l.startsWith("#")).map((l) => l.split("	"));
       const expected = win.SCENES.map((s2, i2) => ({ s: s2, i: i2 })).filter(({ s: s2 }) => !["broll", "outro"].includes(s2.type));
       if (JSON.stringify(rows.map((r2) => r2[0])) !== JSON.stringify(expected.map(({ i: i2 }) => String(i2)))) throw new Error("card order differs from SCENES");
       const media = {}, warnings = [];
       for (const [k, { s: s2, i: i2 }] of expected.entries()) {
-        const audio = path35.resolve(work, rows[k][1]);
+        const audio = path36.resolve(work, rows[k][1]);
         const bytes = fs26.readFileSync(audio);
         if (!bytes.length) throw new Error("Empty audio for card " + i2);
         require_compose_speech().checkSilentTiming(s2, board, win.SB_DOC?.performanceTimingVersion, audio);
@@ -95984,7 +96272,7 @@ var require_check_tts_quality = __commonJS({
             const voice = cast.find((c) => c.id === line.speaker)?.tts;
             const revision = speechRevision2(line, { tts: voice });
             if (line.audio.revision !== revision) throw new Error("Dialogue or voice changed: " + line.id);
-            const source = path35.resolve(board, line.audio.path);
+            const source = path36.resolve(board, line.audio.path);
             if (hash7(fs26.readFileSync(source)) !== line.audio.sha256) throw new Error("Dialogue audio changed: " + line.id);
             media[source] = line.audio.sha256;
             if (!line.audio.generation || line.audio.generation.text !== line.tts) throw new Error("Missing dialogue generation receipt: " + line.id);
@@ -95995,7 +96283,7 @@ var require_check_tts_quality = __commonJS({
         }
         if (binding) {
           if (s2.visual.video.engine && binding.provider !== s2.visual.video.engine || s2.visual.video.model && binding.model !== s2.visual.video.model) throw new Error("Video adapter changed for card " + i2);
-          if (path35.resolve(board, s2.visual.video.clip || "") !== path35.resolve(binding.videoPath) || hash7(fs26.readFileSync(binding.videoPath)) !== binding.videoSha256) throw new Error("Bound video changed for card " + i2);
+          if (path36.resolve(board, s2.visual.video.clip || "") !== path36.resolve(binding.videoPath) || hash7(fs26.readFileSync(binding.videoPath)) !== binding.videoSha256) throw new Error("Bound video changed for card " + i2);
           const audio2 = (s2.narration || []).map((n) => native ? { lineId: n.id, revision: speechRevision2(n, { tts: cast.find((c) => c.id === n.speaker)?.tts }) } : { lineId: n.id, sha256: n.audio?.sha256, revision: n.audio?.revision });
           if (JSON.stringify(binding.audio) !== JSON.stringify(audio2)) throw new Error("Video speech binding is stale for card " + i2);
           const payload = require_scene_acting().scenePerformancePayload(s2);
@@ -96005,12 +96293,12 @@ var require_check_tts_quality = __commonJS({
         }
         const lines = (s2.narration || []).filter((n) => (n.tts || "").trim());
         if (s2.sound?.audioSource === "video") {
-          const extraction = (read4(path35.join(work, "source-audio.json")) || []).find((item) => item.card === String(i2));
+          const extraction = (read4(path36.join(work, "source-audio.json")) || []).find((item) => item.card === String(i2));
           if (!extraction || extraction.audio !== audio || extraction.audioSha256 !== media[audio] || hash7(fs26.readFileSync(extraction.video)) !== extraction.sourceSha256)
             throw new Error("Missing or stale source soundtrack extraction for card " + i2);
-          if (binding && path35.resolve(extraction.video) !== path35.resolve(binding.videoPath))
+          if (binding && path36.resolve(extraction.video) !== path36.resolve(binding.videoPath))
             throw new Error("Source soundtrack differs from bound speech video for card " + i2);
-          if (retained && (path35.resolve(extraction.video) !== path35.resolve(board, s2.visual.video.soundtrackRepair.videoPath) || extraction.sourceSha256 !== s2.visual.video.soundtrackRepair.videoSha256))
+          if (retained && (path36.resolve(extraction.video) !== path36.resolve(board, s2.visual.video.soundtrackRepair.videoPath) || extraction.sourceSha256 !== s2.visual.video.soundtrackRepair.videoSha256))
             throw new Error("Source soundtrack differs from retained repaired video for card " + i2);
           media[extraction.video] = extraction.sourceSha256;
           if (retained) warnings.push("card " + i2 + ": retained soundtrack repair has current source/line provenance; visible lip-sync and audio listening not_reviewed");
@@ -96038,16 +96326,16 @@ var require_check_tts_quality = __commonJS({
           authorizeSpeed2(work, "final", receipt.playbackSpeed ?? 1);
         }
       }
-      fs26.writeFileSync(path35.join(work, REPORT), JSON.stringify({ status: "not_reviewed", policy: "speech-provenance-v1", warnings, inputs: media, approved: false }, null, 2) + "\n");
+      fs26.writeFileSync(path36.join(work, REPORT), JSON.stringify({ status: "not_reviewed", policy: "speech-provenance-v1", warnings, inputs: media, approved: false }, null, 2) + "\n");
       return media;
     }
     function checkTempo(work, speed, min = 1, max = 1) {
       if ([min, max].some((n) => Number(n) !== 1)) throw new Error("Per-card tempo changes are forbidden; assembly is fixed at 1.0");
       authorizeSpeed2(work, "final", Number(speed));
-      const cards = path35.join(work, "cards.tsv");
+      const cards = path36.join(work, "cards.tsv");
       if (!fs26.existsSync(cards)) return;
       const generated = fs26.readFileSync(cards, "utf8").split(/\r?\n/).filter((l) => l.trim() && !l.startsWith("#")).some((l) => {
-        const p = path35.resolve(work, l.split("	")[1]) + ".quality.json";
+        const p = path36.resolve(work, l.split("	")[1]) + ".quality.json";
         return fs26.existsSync(p) && JSON.parse(fs26.readFileSync(p, "utf8")).generator === "tts_elevenlabs_generate";
       });
       if (generated && [speed, min, max].some((n) => Number(n) !== 1)) throw new Error("ElevenLabs narration forbids post-synthesis tempo changes; set SPEED=1 and ATEMPO_MIN=ATEMPO_MAX=1, use generation.speed");
@@ -96058,7 +96346,7 @@ var require_check_tts_quality = __commonJS({
         const [command, work, arg] = process.argv.slice(2);
         if (command === "approve") approve(work, arg);
         else {
-          const dir = command === "check" ? work : command, board = (command === "check" ? arg : work) || path35.resolve(dir, "../storyboard");
+          const dir = command === "check" ? work : command, board = (command === "check" ? arg : work) || path36.resolve(dir, "../storyboard");
           if (!dir) throw new Error("usage: check-tts-quality.js check <workdir> [storyboard] | approve <workdir> <user approval reference>");
           check2(dir, board);
           const report = lastReport(dir);
@@ -96641,8 +96929,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path35, errorMaps, issueData } = params;
-  const fullPath = [...path35, ...issueData.path || []];
+  const { data, path: path36, errorMaps, issueData } = params;
+  const fullPath = [...path36, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -96758,11 +97046,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path35, key) {
+  constructor(parent, value, path36, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path35;
+    this._path = path36;
     this._key = key;
   }
   get path() {
@@ -100363,10 +100651,10 @@ function manageWorkflow(raw) {
 function requireStoryOutline(episode) {
   const file = path2.join(episode, "storyboard/scenes.js");
   if (!fs2.existsSync(file)) return;
-  const load11 = nodeModule2.createRequire(import.meta.url);
-  const board = load11(fileURLToPath2(new URL("../../skills/_shared/scenes-vm.js", import.meta.url))).evaluateWindowScript(fs2.readFileSync(file, "utf8"), { filename: file });
+  const load12 = nodeModule2.createRequire(import.meta.url);
+  const board = load12(fileURLToPath2(new URL("../../skills/_shared/scenes-vm.js", import.meta.url))).evaluateWindowScript(fs2.readFileSync(file, "utf8"), { filename: file });
   if (board.STORY?.version !== "story-v2") return;
-  const contract2 = load11(fileURLToPath2(new URL("../../skills/storyboard/references/structure-contract.js", import.meta.url)));
+  const contract2 = load12(fileURLToPath2(new URL("../../skills/storyboard/references/structure-contract.js", import.meta.url)));
   const gaps = [...contract2.outlineGaps(board), ...contract2.castGaps(board)];
   if (gaps.length) throw new Error("story_outline_required: " + gaps.join("; "));
 }
@@ -102162,8 +102450,8 @@ async function editMlxImage(request) {
   const src = fileToBase64(request.imagePath);
   if (!src.ok) return { success: false, error: src.error };
   const refs = [];
-  for (const path35 of request.refImagePaths ?? []) {
-    const ref = fileToBase64(path35);
+  for (const path36 of request.refImagePaths ?? []) {
+    const ref = fileToBase64(path36);
     if (!ref.ok) return { success: false, error: ref.error };
     refs.push(ref.b64);
   }
@@ -102744,10 +103032,10 @@ function assignProp(target, prop, value) {
     configurable: true
   });
 }
-function getElementAtPath(obj, path35) {
-  if (!path35)
+function getElementAtPath(obj, path36) {
+  if (!path36)
     return obj;
-  return path35.reduce((acc, key) => acc?.[key], obj);
+  return path36.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys2 = Object.keys(promisesObj);
@@ -103067,11 +103355,11 @@ function aborted(x2, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path35, issues) {
+function prefixIssues(path36, issues) {
   return issues.map((iss) => {
     var _a4;
     (_a4 = iss).path ?? (_a4.path = []);
-    iss.path.unshift(path35);
+    iss.path.unshift(path36);
     return iss;
   });
 }
@@ -111084,12 +111372,42 @@ var openingPositionsSchema = external_exports.array(external_exports.object({
   position: external_exports.string().trim().min(1).refine((value) => !nonEnglishOutsideQuotes(value), "Describe the opening position in English").describe("Where the viewer sees this person at the start: side, depth, posture or orientation, and a visible landmark. Describe an off-screen start explicitly.")
 }).strict(), { required_error: "openingPositions required: inspect the opening image and describe each character and its reference images" }).describe("Required with MSR references. Identify every character in the opening scene, including silent listeners. Use [] only for a character-free scene.");
 var sceneText = external_exports.string().trim().min(1).refine((value) => !nonEnglishOutsideQuotes(value), "Write scene direction in English");
+var frame = external_exports.number().int().nonnegative();
+var shotTimelineSchema = external_exports.object({
+  startFrame: frame,
+  endFrame: frame.describe("Exclusive end, in zero-based scene frames."),
+  transition: external_exports.enum(["open", "hard_cut", "dissolve", "fade"]),
+  framing: sceneText,
+  action: sceneText,
+  images: external_exports.array(external_exports.object({
+    path: external_exports.string().trim().min(1),
+    frame,
+    role: external_exports.enum(["start", "keyframe", "end", "face", "outfit"]),
+    character: external_exports.string().trim().min(1).optional(),
+    cue: sceneText.optional(),
+    strength: external_exports.number().min(0).max(1).optional()
+  }).strict()).optional()
+}).strict().superRefine((shot, ctx) => {
+  const issue2 = (message) => ctx.addIssue({ code: "custom", message });
+  if (shot.startFrame >= shot.endFrame) issue2("Shot needs a positive frame interval");
+  for (const image2 of shot.images ?? []) {
+    if (image2.frame < shot.startFrame || image2.frame >= shot.endFrame) issue2("Image frame outside its shot: " + image2.path);
+    if (image2.role === "start" && image2.frame !== shot.startFrame) issue2("Start image must anchor the first frame of its shot");
+    if (["face", "outfit"].includes(image2.role) && !image2.character) issue2("Identify the owner of a face or outfit reference");
+  }
+});
 var sceneVideoDirectionSchema = external_exports.object({
   openingPositions: openingPositionsSchema,
+  fps: external_exports.number().int().positive().optional().describe("Frames per second on the scene timeline; defaults to 24."),
+  oneTake: external_exports.boolean().optional().describe("True only for an explicitly requested uninterrupted shot."),
+  audio: external_exports.object({
+    path: external_exports.string().trim().min(1).describe("Scene-length track from frame zero, including any lead-in silence."),
+    cues: external_exports.array(external_exports.object({ frame, action: sceneText }).strict()).optional()
+  }).strict().optional(),
   emotion: sceneText.describe("The emotional change, naming each participant. For a factual scene give its visible subject and purpose."),
   action: sceneText.optional().describe("Only story-essential movement, tied to the same visible landmark as the opening position."),
   sound: sceneText.optional().describe("Room tone or sound from an essential action."),
-  camera: sceneText.optional().describe("Camera direction for the whole take. Name the action cue, path and landing, or an intentional hold. Use it to reconcile different shot-card moves.")
+  camera: sceneText.optional().describe("Shared camera direction. Each shot keeps its own framing and incoming transition.")
 }).strict();
 function openingPrompt(prompt, positions = []) {
   if (!positions.length) return prompt;
@@ -112534,7 +112852,7 @@ function buildDesktopBody(operation, input, assets) {
   if (targetResolution) params.resolution = targetResolution;
   if (operation === "keyframes") return {
     params: { ...params, model: "fast" },
-    keyframes: keyframes2.map(({ imagePath: file, ...frame }) => ({ ...ref(file), ...frame }))
+    keyframes: keyframes2.map(({ imagePath: file, ...frame2 }) => ({ ...ref(file), ...frame2 }))
   };
   const inputs2 = operation === "image-to-video" ? { startFrame: ref(imagePath), ...lastFramePath ? { endFrame: ref(lastFramePath) } : {} } : operation === "audio-to-video" ? { audio: ref(audioPath), ...imagePath ? { startFrame: ref(imagePath) } : {} } : ["extend", "retake"].includes(operation) ? { video: ref(sourceVideoPath) } : void 0;
   return {
@@ -112601,7 +112919,7 @@ function desktopAudioBytes(file, args) {
 }
 function sourceFiles(args) {
   const files3 = ["imagePath", "lastFramePath", "audioPath", "sourceVideoPath"].flatMap((k) => typeof args[k] === "string" ? [args[k]] : []);
-  if (Array.isArray(args.keyframes)) for (const frame of args.keyframes) files3.push(frame.imagePath);
+  if (Array.isArray(args.keyframes)) for (const frame2 of args.keyframes) files3.push(frame2.imagePath);
   return [...new Set(files3)];
 }
 var resolvedParamsSchema = external_exports.object({
@@ -114628,11 +114946,11 @@ function devNegativeRule(args, ctx) {
   if (args.negativePrompt.length > 2e3) issue2("The dev backend accepts a negativePrompt of at most 2000 characters");
 }
 var exactFrames = external_exports.number().int().min(25).max(361).refine((n) => (n - 1) % 8 === 0, "Use 8k+1 frames");
-var nativeShot = external_exports.object({
+var genaiShotsSchema = external_exports.array(external_exports.object({
   description: external_exports.string().trim().min(1).max(2e3),
   audio: external_exports.string().trim().min(1).max(2e3).optional(),
   transition: external_exports.literal("hard_cut").optional()
-}).strict();
+}).strict()).min(2).max(4).refine((shots) => !shots[0].transition, "Omit transition on the opening shot");
 var temporalImages = external_exports.array(external_exports.object({
   imageUri: genaiImageUriSchema.optional(),
   imagePath: external_exports.string().min(1).optional(),
@@ -114682,10 +115000,10 @@ var textVideoFields = external_exports.object({
   model: external_exports.enum(GENAI_VIDEO_MODELS),
   duration: external_exports.number().int().min(1).nullable().optional(),
   numFrames: exactFrames.optional(),
-  shots: external_exports.array(nativeShot).min(2).max(4).optional(),
   resolution: localResolution,
   fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
   generateAudio: external_exports.boolean().default(true),
+  shots: genaiShotsSchema.optional(),
   reserveUsd: external_exports.number().finite().nonnegative(),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
@@ -115219,22 +115537,12 @@ var video = {
   ...sampleOptions,
   numGeneratedKeyframes: { type: "integer", minimum: 0, maximum: 16, description: "Internally generated keyframes on ordinary text/image pipelines." },
   lora: { ...zodToJsonSchema(genaiVisualSampling.lora.unwrap(), { target: "openApi3" }), description: "Registered LoRA names or name/strength pairs on plain distilled generation." },
+  shots: { ...zodToJsonSchema(genaiShotsSchema, { $refStrategy: "none" }), description: "2\u20134 ordered shot descriptions. Later hard_cut transitions are prompt instructions; there is no time, frame or image slot per shot." },
   prompt: { type: "string", minLength: 1, maxLength: 2e3, description: "Scene and action prompt, at most 2000 characters, e.g. A leaf sways as the camera moves closer. Describe camera motion here." },
   negativePrompt: { type: "string", minLength: 1, maxLength: 5e3, description: devNegative + " Requires ltx-2.5-22b-dev: distilled sampling has no negative pass, except image-to-video references with guidanceScale > 1 or nagScale > 0." },
   model: { type: "string", enum: [...GENAI_VIDEO_MODELS], description: "Local gateway model. Cloud ltx-2-5-fast/pro models are not supported." },
   duration: { type: ["integer", "null"], minimum: 1, description: "Whole seconds, e.g. 5, or null for automatic duration without an end frame. Rounded-up 8k+1 frames must fit 361 at the selected fps." },
   numFrames: { type: "integer", minimum: 25, maximum: 361, description: "Exact 8k+1 frames instead of duration. Accepted for end frames and distilled subject references." },
-  shots: {
-    type: "array",
-    minItems: 2,
-    maxItems: 4,
-    description: "Native multishot sequence in one generation. The composed prompt must fit 2000 characters.",
-    items: { type: "object", required: ["description"], additionalProperties: false, properties: {
-      description: { type: "string", description: "What happens in this shot." },
-      audio: { type: "string", description: "Optional shot sound direction." },
-      transition: { type: "string", enum: ["hard_cut"], description: "Omit on the opening shot." }
-    } }
-  },
   resolution: { type: "string", description: "WIDTHxHEIGHT with even sides of at least 64. Round each side up to 64 for backend limits: at most 1920 per side and 2,064,384 pixels. 1280x720 is supported; 1920x1080 exceeds the padded pixel cap." },
   fps: { type: "integer", enum: [24, 25, 48, 50], default: 24, description: "Requested output frame rate." },
   generateAudio: { type: "boolean", default: true, description: "Request generated audio. External speech conditioning is not supported by this gateway." },
@@ -117368,6 +117676,33 @@ function parseVideoArgs(tool2, input) {
   for (const key of Object.keys(args)) if (!allowed.includes(key)) throw new Error("Unsupported " + tool2 + " argument: " + key);
   return adapter2.schema.parse(args);
 }
+var FRAME_FIELDS = {
+  seedance_img2video: ["sourceImagePath", "lastImagePath"],
+  astra_img2video: ["firstFramePath", "lastFramePath"],
+  astra_audio2video: ["imagePath"],
+  astra_genai_img2video: ["imageUri", "lastFrameUri"],
+  astra_genai_desktop_img2video: ["imagePath", "lastFramePath"],
+  astra_genai_desktop_audio2video: ["imagePath"],
+  astra_genai_audio2video: ["imagePath", "lastFramePath"],
+  mlx_video_generate: ["firstFrameImagePath", "lastFrameImagePath"],
+  ltx_video_generate: ["firstFrameImagePath", "lastFrameImagePath"],
+  ...Object.fromEntries(Object.entries(HOSTED_VIDEO_ROUTES).flatMap(([tool2, route]) => route.frames ? [[tool2, route.frames]] : [])),
+  minimax_img2video: ["sourceImagePath", "lastImagePath"],
+  heygen_img2video: ["sourceImagePath", "lastImagePath"]
+};
+function sceneInputCapabilities(tool2) {
+  const fields2 = FRAME_FIELDS[tool2];
+  const schemaFields = VIDEO_ADAPTERS[tool2] ? keys(VIDEO_ADAPTERS[tool2].schema) : [];
+  return {
+    fpsField: schemaFields.includes("frameRate") ? "frameRate" : schemaFields.includes("fps") ? "fps" : null,
+    frameAccurateCuts: false,
+    timedImages: ["astra_keyframe_video", "astra_genai_desktop_keyframes", "astra_genai_img2video", "astra_genai_audio2video"].includes(tool2),
+    openingImage: Boolean(fields2),
+    endingImage: Boolean(fields2?.[1]),
+    shotDescriptions: ["astra_genai_text2video", "astra_genai_img2video"].includes(tool2) ? "gateway_prompt_only" : "prompt",
+    sceneAudio: ["astra_genai_audio2video", "astra_genai_desktop_audio2video", "astra_audio2video", "ltx_api_audio2video"].includes(tool2)
+  };
+}
 function videoCatalog() {
   return {
     version: 1,
@@ -117376,6 +117711,7 @@ function videoCatalog() {
       engine: a.engine,
       deployment: a.deployment,
       operation: a.operation,
+      sceneInputs: sceneInputCapabilities(tool2),
       voice: videoVoiceCapabilities(tool2),
       ...tool2 === "mlx_video_generate" ? { deprecated: true, replacement: "ltx_video_generate" } : {},
       fields: keys(a.schema),
@@ -117542,11 +117878,550 @@ function characterFieldsProperty() {
   };
 }
 
+// src/scene-video.ts
+import path17 from "node:path";
+import { execFileSync as execFileSync12 } from "node:child_process";
+import { realpathSync as realpathSync4 } from "node:fs";
+import { createRequire as createRequire7 } from "node:module";
+
+// src/video-prompt.ts
+import { createRequire as createRequire6 } from "node:module";
+var load2 = createRequire6(import.meta.url);
+var object3 = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
+var text = (value) => typeof value === "string" ? value.trim() : "";
+function planVideoPerformance(shot, options = {}) {
+  const acting = load2("../../skills/_shared/scene-acting.js");
+  const timeline = acting.planScenePerformance(shot, options.measureAudio);
+  return { ...timeline, timing: options.mode === "native" && timeline.timing === "needs_audio_duration" ? "model_timed" : timeline.timing };
+}
+var sentence = (value) => {
+  const s2 = value.trim(), capped2 = s2.charAt(0).toUpperCase() + s2.slice(1);
+  return !s2 ? "" : /[.!?]["'”’)]+$/.test(capped2) ? capped2 : capped2.replace(/[.!?]*$/, "") + ".";
+};
+function expressionWords(shot, names = {}) {
+  return Object.entries(object3(object3(shot.visual).expression)).filter(([, cue]) => text(cue)).map(([id, cue]) => `${names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id}: ${text(cue).replace(/[.\s]+$/, "")}`).join("; ");
+}
+var heldMove = /^(?:static|fixed|locked(?:[- ]off)?)(?: (?:camera|frame|shot))?[.!]?$/i;
+function cameraMoveWords(camera) {
+  const movement = text(camera.movement), speed = text(camera.speed), target = text(camera.target);
+  if (!movement) return "";
+  if (heldMove.test(movement)) return "The camera holds a static frame.";
+  const catalogue = load2("../../skills/storyboard/references/film-techniques.js");
+  const move = catalogue.entries.find((entry2) => entry2.fields.movement === movement.toLowerCase())?.prompt;
+  const pace = { slow: "slowly", steady: "steadily", fast: "quickly" }[speed];
+  const travels = load2("../../skills/storyboard/references/production-mode.js").travels(camera);
+  const ends = travels ? ", with a short pause on the opening and closing pictures" : "";
+  if (move) {
+    const path36 = /[;.!?]\s|^(?:after|when|once|follow|track|pan|tilt|dolly|orbit|keep|start|end)\b/i.test(target);
+    const words = move.replace("{target}", () => path36 || !target ? "the subject" : target);
+    return [sentence("The camera " + (pace ? pace + " " : "") + words + (speed && !pace ? " at a " + speed + " pace" : "") + ends), path36 && sentence(target)].filter(Boolean).join(" ");
+  }
+  return [sentence("Camera: " + [speed, movement].filter(Boolean).join(" ") + ends), target && sentence("Camera target: " + target)].filter(Boolean).join(" ");
+}
+function sceneCameraDirection(members, explicit) {
+  function mapped(instruction, value) {
+    const binding = { attribute: "move", value, via: "prompt", instruction };
+    return { instruction, warnings: [], bindings: [binding] };
+  }
+  if (explicit) return mapped(explicit, { source: "videoDirection.camera" });
+  let elapsed = 0;
+  const moves = members.flatMap((shot) => {
+    const camera = object3(object3(shot.visual).camera), movement = text(camera.movement);
+    const start = elapsed;
+    elapsed += Number(shot.duration);
+    if (!movement || members.length > 1 && heldMove.test(movement)) return [];
+    return [{ id: text(shot.id), movement, words: cameraMoveWords(camera), landing: text(camera.end), start, end: elapsed }];
+  });
+  if (!moves.length) return { instruction: "", warnings: [], bindings: [] };
+  const first = moves[0];
+  const wholeTake = moves.length === members.length && moves.every((m2) => m2.words === first.words && m2.landing === first.landing);
+  if ((wholeTake || moves.length === 1) && !nonEnglishOutsideQuotes(first.words + " " + first.landing)) {
+    const end = Number(first.end.toFixed(3));
+    const cue = wholeTake ? "" : "From " + Number(first.start.toFixed(3)) + " to " + end + " seconds: ";
+    const landing = first.landing && sentence((wholeTake ? "Closing frame: " : "By " + end + " seconds: ") + first.landing);
+    return mapped([cue + first.words, landing].filter(Boolean).join(" "), { source: "visual.camera", shotIds: moves.map((m2) => m2.id) });
+  }
+  const cards = moves.map((m2) => m2.id + " (" + m2.movement + ")").join(", ");
+  return { instruction: "", bindings: [], warnings: ["scene_camera_unresolved: " + cards + " \u2014 write the intended camera cue and landing for this take in English in story_scene.videoDirection.camera"] };
+}
+var directedMoves = [
+  /\bpan(?:s|ning)? left\b/i,
+  /\bpan(?:s|ning)? right\b/i,
+  /\btilt(?:s|ing)? up(?:wards?)?\b/i,
+  /\btilt(?:s|ing)? down(?:wards?)?\b/i,
+  /\b(?:dolly|dollies|push(?:es|ing)?) in\b/i,
+  /\b(?:dolly|dollies) out\b|\bpull(?:s|ing)? (?:back|out)\b/i,
+  /\bzoom(?:s|ing)? in\b/i,
+  /\bzoom(?:s|ing)? out\b/i,
+  /\b(?:truck|track)(?:s|ing)? (?:parallel|sideways|alongside|laterally)\b/i,
+  /\btrack(?:s|ing)? backward\b/i,
+  /\b(?:track|follow)(?:s|ing)? (?:\w+ )?(?:from )?behind\b/i
+];
+function scenePromptText(scene, camera, timeline, lines, bindTurns) {
+  const dialogue = bindTurns ? [] : lines.filter((l) => l.delivery !== "voiceover").map((l) => l.speaker + " (" + l.delivery + '): "' + l.tts + '"');
+  return [scene.emotion, scene.action, scene.sound, camera, scene.oneTake && "One continuous take. No cuts.", timeline, ...dialogue].filter(Boolean).join("\n");
+}
+function cameraDrift(prompt, movement) {
+  if (!movement.trim()) return null;
+  const prose = prompt.replace(/"[^"]*"|“[^”]*”|「[^」]*」/g, " ");
+  const clauses = prose.split(/[.!?;\n]+/).map((s2) => s2.trim());
+  const said = clauses.map((s2) => {
+    const imperative = /^(?:(?:do not|never|slowly|steadily|quickly) )*(?:pan|dolly|push in|pull back|crane|tilt|zoom|truck|orbit|track|follow|whip pan)\b/i;
+    const camera = /\b(?:(?:static|locked(?:[- ]off)?|fixed) )?camera\b|\bshot (?=tracking|panning|tilting|following|moving|zooming)/i.exec(s2);
+    const predicate = imperative.test(s2) ? s2 : camera ? s2.slice(camera.index) : "";
+    return predicate.split(/\s+(?:while|as|so that)\s+/i)[0];
+  }).filter(Boolean);
+  const holds = (s2) => !/\bzoom/i.test(s2) && /^(?:static|locked(?:[- ]off)?|fixed) camera\b|\bcamera[: ]+(?:(?:is|stays?|remains?) |holds? (?:a |the )?)?(?:steady|still|static|fixed|locked|put)\b|\bcamera (?:does not|doesn't|never) moves?\b/i.test(s2);
+  const moves = /\b(push(?:es|ing)?|pull(?:s|ing)?|dolly|dollies|truck(?:s|ing)?|track(?:s|ing)?|follow(?:s|ing)?|pan(?:s|ning)?|tilt(?:s|ing)?|zoom(?:s|ing)?|crane(?:s)?|pedestal|orbit(?:s|ing)?|arc(?:s)?|circles?|approach(?:es)?|glides?|rises?|lowers?|handheld|body-mounted|whip|moves?|travels?|sweeps?|drifts?|recoils?|rides?|chases?|flies|swings?)\b/i;
+  const negated = /^(?:camera[: ]+)?(?:never|do(?:es)? not|doesn't|don't|must not)\b/i;
+  const moving = said.filter((s2) => moves.test(s2) && !holds(s2) && !negated.test(s2));
+  if (heldMove.test(movement.trim())) return moving.length ? "contradicted" : null;
+  const expected = directedMoves.find((re) => re.test(movement));
+  if (expected && !moving.some((s2) => expected.test(s2)) && (moving.some((s2) => directedMoves.some((re) => re.test(s2))) || said.some((s2) => negated.test(s2) && expected.test(s2)))) return "contradicted";
+  const fixedFrame = /\b(?:preserve|maintain|lock) the (?:opening |original |same )?(?:image )?(?:composition|framing|crop)\b/i;
+  if (clauses.some((s2) => fixedFrame.test(s2) && !/\b(?:at first|initially|until|then|first frame only)\b/i.test(s2))) return "contradicted";
+  if (moving.length) return null;
+  return said.some(holds) ? "contradicted" : "missing";
+}
+function compileVideoPrompt(shot, source, names = {}, options = {}) {
+  const plan2 = object3(shot.shot), visual = object3(shot.visual), frames = object3(visual.frames), camera = object3(visual.camera);
+  const msr = frames.mode === "reference";
+  const words = load2("../../skills/storyboard/references/assemble-bg-prompt.js");
+  const views = load2("../../skills/storyboard/references/shot-view.js");
+  const viewWords = camera.view === void 0 ? "" : views.instructions(camera.view);
+  const sizes = viewWords ? words.SIZE_WORDS_OBJECT : words.SIZE_WORDS;
+  const catalogue = load2("../../skills/storyboard/references/film-techniques.js");
+  const contract2 = load2("../../skills/storyboard/references/structure-contract.js");
+  const picked = (Array.isArray(plan2.techniques) ? plan2.techniques : []).map(object3).map((t2) => ({
+    id: text(t2.id),
+    from: text(t2.from),
+    to: text(t2.to),
+    on: text(t2.on),
+    entry: catalogue.byId[text(t2.id)]
+  }));
+  const movement = text(camera.movement), settle = text(camera.end), moveWords = cameraMoveWords(camera);
+  const rack = picked.find((t2) => t2.entry?.fields.focus);
+  const focusWords = !rack ? "" : sentence(rack.from && rack.to ? `Rack focus from ${rack.from} to ${rack.to}` : `${rack.entry.label.en} from the near subject to the far subject`);
+  const sizeWords = sentence(sizes[text(plan2.size)] || ""), angleWords = sentence(words.ANGLE_WORDS[text(plan2.angle)] || "");
+  const framing = sentence([sizes[text(plan2.size)], words.ANGLE_WORDS[text(plan2.angle)]].filter(Boolean).join(", "));
+  const depthWords = plan2.depth ? sentence(contract2.depthText(plan2.depth)) : "";
+  const other = picked.filter((t2) => t2.entry && ["camera", "framing"].includes(t2.entry.category) && !t2.entry.fields.movement && !t2.entry.fields.focus && !t2.entry.fields.size && !t2.entry.fields.angle && !(viewWords && t2.entry.fields.viewpoint));
+  const lines = (Array.isArray(shot.narration) ? shot.narration : []).map(object3);
+  const mode = options.mode ?? (lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen") ? "native" : "voiceover");
+  const design = object3(plan2.videoDesign);
+  const motion = object3(design.motion);
+  const states = [...new Set((Array.isArray(motion.beats) ? motion.beats : []).map((beat) => text(object3(beat).state)).filter(Boolean))];
+  const performance2 = planVideoPerformance(shot, { ...options, mode });
+  const acting = load2("../../skills/_shared/scene-acting.js");
+  const beats = acting.performanceBeats(performance2.performance, mode, !msr && !options.bindDialogueSeparately);
+  const worn = expressionWords(shot, names);
+  const called = (id) => names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id;
+  const seen = (Array.isArray(visual.bystanders) ? visual.bystanders : []).map(text).filter(Boolean), extras = text(visual.extras);
+  const plain = (value) => text(value).replace(/[.\s]+$/, "").toLowerCase();
+  const actionInBeat = performance2.performance.some((event) => event.kind === "action" && plain(event.videoDirection || event.text) === plain(source.action));
+  const parts = (step2) => [
+    msr ? framing : "Start from the given first frame.",
+    msr ? depthWords : "",
+    moveWords,
+    settle ? sentence(`Closing frame: ${settle}`) : "",
+    focusWords,
+    // A beat accent (speed ramp, impact shake) names the moment it fires on.
+    ...other.map((t2) => sentence(t2.entry.fields.accent && t2.entry.prompt ? t2.entry.prompt.replace("{cue}", t2.on || t2.entry.fields.cue) : t2.entry.instruction)),
+    viewWords || (text(camera.framing) ? sentence(`Opening composition: ${text(camera.framing)}`) : ""),
+    !viewWords && camera.rear && !other.some((t2) => t2.entry.fields.viewpoint === "rear") ? "View the subject from behind." : "",
+    !viewWords && camera.pov && !other.some((t2) => t2.entry.fields.viewpoint === "pov") ? sentence(`Point of view: ${text(camera.pov) || "the named character"}`) : "",
+    actionInBeat ? "" : sentence(source.action),
+    seen.length ? sentence(`The opening picture also shows ${seen.map(called).join(" and ")}, who ${seen.length > 1 ? "stay" : "stays"} in the frame and never speaks`) : "",
+    extras ? sentence(`Unnamed people in the frame: ${extras}`) : "",
+    ...step2 >= 1 ? [] : ["before", "after", "continuity"].map((key) => text(design[key]) ? sentence(`${key}: ${text(design[key])}`) : ""),
+    ...step2 >= 1 ? [] : states.filter((state) => ![source.action, design.before, design.after, design.continuity].includes(state)).map((state) => sentence(`Visible state: ${state}`)),
+    !lines.length && beats.length ? "Perform the planned action without invented speech or voiceover." : "",
+    ...step2 >= 2 ? acting.performanceBeats(performance2.performance, mode, !msr && !options.bindDialogueSeparately, { brief: true }) : beats,
+    // The model's default face is pleasant; the authored state has to be named and held (LTX guide: physical cues, state after the action).
+    worn && step2 < 3 ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : "",
+    frames.mode === "first_last" ? sentence(`End on the given last frame${source.end ? ": " + source.end : ""}`) : source.end ? sentence(`End on ${source.end}`) : "",
+    sentence(`Audio: ${source.sound ? source.sound + (/\b(music|soundtrack|score|bgm|melody|orchestral|song)\b/i.test(source.sound) ? "" : ", no music") : "no music"}`),
+    acting.VIDEO_TEXT_POLICY
+  ].filter(Boolean);
+  const limit2 = options.maxCharacters, dropped = ["design notes and visible states", "acting fields of the beats", "expressions"];
+  let step = 0, prompt = parts(0).join(" ");
+  while (limit2 && prompt.length > limit2 && step < dropped.length) prompt = parts(++step).join(" ");
+  const fitWarnings = !limit2 || !step ? [] : [prompt.length > limit2 ? `prompt_over_limit: ${prompt.length} characters after leaving out the ${dropped.slice(0, step).join(", ")}; the adapter takes ${limit2}. Shorten the action, end or sound in shot_prompt` : `prompt_fitted: left out the ${dropped.slice(0, step).join(", ")} to fit the adapter's ${limit2} characters; the camera, action and lines are whole`];
+  const foreign = nonEnglishOutsideQuotes(prompt);
+  if (foreign && options.validateLanguage !== false) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks; write action and direction in English`);
+  const bindings = [
+    { attribute: "render", value: object3(plan2.render).mode, via: "adapter" },
+    { attribute: "size", value: plan2.size, via: !sizeWords ? "unmapped" : msr ? "prompt" : "image", instruction: sizeWords },
+    { attribute: "angle", value: plan2.angle, via: !angleWords ? "unmapped" : msr ? "prompt" : "image", instruction: angleWords },
+    { attribute: "view", value: camera.view, via: "prompt", instruction: viewWords },
+    { attribute: "move", value: camera, via: movement ? "prompt" : "unmapped", instruction: moveWords },
+    { attribute: "focus", value: rack ? { id: rack.id, from: rack.from, to: rack.to } : void 0, via: "prompt", instruction: focusWords },
+    { attribute: "depth", value: plan2.depth, via: msr ? "prompt" : "image", instruction: depthWords },
+    { attribute: "framePlan", value: frames.mode, via: "adapter" },
+    ...picked.map((t2) => ({
+      attribute: "technique",
+      value: t2.id,
+      via: !t2.entry ? "unmapped" : t2.entry.category === "character" ? "image" : t2.entry.category === "timing" ? "guidance" : t2.entry.category === "framing" || t2.entry.fields.angle ? msr ? "prompt" : "image" : "prompt",
+      instruction: t2.entry?.instruction
+    })),
+    { attribute: "transition", value: shot.transition, via: "assembly" },
+    ...beats.length ? [{ attribute: "performance", value: performance2, via: "prompt", instruction: beats.join("\n") }] : []
+  ];
+  return { prompt, performance: performance2, directionBindings: bindings.filter((b) => b.value !== void 0), warnings: [
+    ...performance2.warnings,
+    ...fitWarnings,
+    ...cameraDrift([source.action, source.end].filter(Boolean).join("\n"), movement) === "contradicted" ? ["camera_move_contradicted: shot_prompt action or end conflicts with the camera direction. Reconcile the action cue and landing with visual.camera."] : [],
+    // An unchosen move leaves the camera to the model; on mochi_bo 29 of 33 shots of one episode went out so.
+    ...movement ? [] : ["camera_move_unset: no camera move is chosen, so the video model decides the camera \u2014 set shot_icons move (camera.static for a deliberate hold)"],
+    ...bindings.filter((b) => b.value !== void 0 && b.via === "unmapped" && b.attribute !== "move").map((b) => `No prompt mapping for ${b.attribute}: ${JSON.stringify(b.value)}`),
+    ...rack && !(rack.from && rack.to) ? ["the rack focus names no subjects \u2014 give focus.from and focus.to in shot_icons"] : []
+  ] };
+}
+
+// src/scene-video.ts
+var load3 = createRequire7(import.meta.url);
+var temporal = (image2) => ["start", "keyframe", "end"].includes(image2.role) && !image2.reference;
+var english = (value) => value && !nonEnglishOutsideQuotes(value) ? value : "";
+function compileSceneTimeline(raw, scene, episode) {
+  const render = load3("../../skills/storyboard/references/render-routing.js");
+  const members = raw;
+  const fps = scene.fps ?? 24;
+  if (scene.oneTake && members.length !== 1) throw new Error("scene_one_take: an uninterrupted camera setup must have one shot");
+  const shotIds = members.map((s2) => s2.id);
+  if (new Set(shotIds).size !== members.length) throw new Error("scene_video_timing: duplicate shot ID");
+  let cursor = 0, seconds2 = 0;
+  const images = [];
+  const shots = members.map((member, index) => {
+    const { id: shotId, visual } = member;
+    const timeline = member.timeline && shotTimelineSchema.parse(member.timeline);
+    seconds2 += member.duration;
+    const startFrame = cursor, endFrame = Math.round(seconds2 * fps);
+    const incoming = member.transition && member.transition !== "cut" ? member.transition : "hard_cut";
+    const transition = timeline?.transition ?? (index === 0 ? "open" : incoming);
+    if (endFrame <= cursor || timeline && (timeline.startFrame !== startFrame || timeline.endFrame !== endFrame) || transition === "open" !== (index === 0)) throw new Error("scene_video_timing: inconsistent frame range or transition on " + shotId);
+    cursor = endFrame;
+    const move = cameraMoveWords(visual?.camera ?? {});
+    const crop = visual?.camera?.view?.crop;
+    const landing = english(visual?.camera?.end);
+    const camera = timeline?.framing ?? [member.shot?.size, member.shot?.angle, english(crop)].filter(Boolean).join(" ");
+    const shotFraming = [camera, move, landing && "Closing frame: " + landing].filter(Boolean).join(" ");
+    const framing = members.length === 1 && !timeline && scene.camera ? scene.camera : shotFraming || (members.length === 1 ? scene.camera || "Hold the opening composition." : "");
+    const existingAction = [visual?.video?.promptSource?.action, visual?.action, member.summary, visual?.video?.prompt].map(english).find(Boolean);
+    const action = timeline?.action ?? existingAction ?? (members.length === 1 ? scene.action || scene.emotion : "");
+    const pins = [...timeline?.images ?? []];
+    const frames = render.framePlan(member);
+    const legacy = visual?.frames;
+    const fallback = legacy?.keyframes === void 0 ? legacy?.storyboardKeyframes : void 0;
+    for (const pin of fallback ?? []) {
+      const frame2 = pin.startFrame !== void 0 && pin.startFrame >= startFrame ? pin.startFrame : pin.startSeconds !== void 0 ? startFrame + Math.round(pin.startSeconds * fps) : pin.startFrame;
+      if (!pin.file || frame2 === void 0 || !Number.isInteger(frame2)) throw new Error("scene_image_timing: malformed storyboardKeyframes on " + shotId);
+      const role = frame2 === startFrame ? "start" : pin.file === frames.end ? "end" : "keyframe";
+      if (!pins.some((p) => p.frame === frame2 && p.path === pin.file)) pins.push({ path: pin.file, frame: frame2, role });
+    }
+    for (const pin of legacy?.keyframes ?? []) {
+      const frame2 = startFrame + Math.round(pin.atSeconds * fps);
+      if (!pins.some((p) => p.frame === frame2 && p.path === pin.image)) pins.push({ path: pin.image, frame: frame2, role: "keyframe", cue: english(pin.state), strength: pin.strength });
+    }
+    if (frames.start && !pins.some((p) => p.role === "start" && p.path === frames.start)) pins.push({ path: frames.start, frame: startFrame, role: "start" });
+    if (frames.end && !pins.some((p) => p.role === "end" && p.path === frames.end && (!fallback || p.frame === endFrame - 1))) pins.push({ path: frames.end, frame: endFrame - 1, role: "end" });
+    const occupied = /* @__PURE__ */ new Set();
+    const references = render.imageReferences(member).filter((r2) => ["video", "both"].includes(r2.use));
+    const add = (pin) => {
+      if (!Number.isSafeInteger(pin.frame) || pin.frame < startFrame || pin.frame >= endFrame)
+        throw new Error("scene_image_timing: " + shotId + " " + pin.path + " at " + pin.frame);
+      const image2 = { ...pin, shotId, path: realpathSync4(path17.resolve(episode, "storyboard", pin.path)) };
+      if (temporal(image2)) {
+        if (occupied.has(pin.frame)) throw new Error("scene_image_conflict: " + shotId + " has two temporal images at frame " + pin.frame);
+        occupied.add(pin.frame);
+      }
+      images.push(image2);
+    };
+    const claimed = /* @__PURE__ */ new Set();
+    for (const pin of pins.sort((a, b) => a.frame - b.frame)) {
+      const ref = ["face", "outfit"].includes(pin.role) ? references.find((r2) => r2.path === pin.path) : void 0;
+      if (ref) claimed.add(ref);
+      add(ref ? { ...pin, reference: ref } : pin);
+    }
+    for (const ref of references) if (!claimed.has(ref))
+      add({ path: ref.path, role: ref.role, frame: startFrame, reference: ref });
+    return { shotId, startFrame, endFrame, transition, framing, action };
+  });
+  const cuts = shots.slice(1).map(({ shotId, startFrame: frame2, transition }, i2) => ({ from: shots[i2].shotId, to: shotId, frame: frame2, transition }));
+  const audio = scene.audio && { path: realpathSync4(path17.resolve(episode, "storyboard", scene.audio.path)), startFrame: 0, endFrame: cursor, cues: scene.audio.cues ?? [] };
+  if (audio?.cues.some((c) => c.frame >= cursor)) throw new Error("scene_audio_timing: cue outside the scene");
+  return { fps, frameCount: cursor, shotIds, shots, images, cuts, ...audio ? { audio } : {} };
+}
+function sceneTimelineWords(t2, scene) {
+  const wholeTake = new Set(t2.shots.length === 1 ? [scene.camera, scene.action, scene.emotion] : []);
+  return [`Scene at ${t2.fps} fps. Frame numbers start at zero.`, ...t2.shots.map((s2) => {
+    const cues = t2.images.filter((p) => p.shotId === s2.shotId && p.cue).map((p) => `Frame ${p.frame}: ${p.cue}`);
+    return [
+      `${s2.shotId} [${s2.startFrame}\u2013${s2.endFrame - 1}] ${s2.transition.replaceAll("_", " ")}.`,
+      ...[s2.framing, s2.action].filter((text4) => !wholeTake.has(text4)),
+      ...cues
+    ].filter(Boolean).join(" ");
+  }), ...t2.audio ? ["Play one continuous scene track from frame 0.", ...t2.audio.cues.map((c) => `Frame ${c.frame}: ${c.action}`)] : []].join("\n");
+}
+function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options, mapInputs) {
+  const timeline = compileSceneTimeline(members, scene, episode);
+  const camera = sceneCameraDirection([], scene.camera);
+  const words = sceneTimelineWords(timeline, scene);
+  const complete = scenePromptText(scene, camera.instruction, words, dialogue, false);
+  const suffix = (value) => [value, options.suffix].filter(Boolean).join(" ");
+  const prompt = suffix(openingPrompt(complete, scene.openingPositions));
+  const text4 = options.bindDialogue ? scenePromptText(scene, camera.instruction, words, dialogue, true) : complete;
+  const providerPrompt = suffix(options.bindOpening ? text4 : openingPrompt(text4, scene.openingPositions));
+  const request = { sceneNo, prompt, ...timeline };
+  return { request, providerPrompt, camera, mapped: mapInputs(request) };
+}
+var SceneInputError = class extends Error {
+  constructor(tool2, sceneRequest, missing) {
+    super("scene_inputs_unsupported: " + tool2 + " " + JSON.stringify(missing));
+    this.tool = tool2;
+    this.sceneRequest = sceneRequest;
+    this.missing = missing;
+  }
+  tool;
+  sceneRequest;
+  missing;
+};
+function mapSceneInputs(request, tool2, model2) {
+  const caps = sceneInputCapabilities(tool2);
+  const missing = caps.frameAccurateCuts ? [] : request.cuts.map((c) => ({ input: "transition", shotId: c.to, frame: c.frame, reason: "No frame-addressed " + c.transition + " boundary" }));
+  for (const shot of request.shots) {
+    if (!shot.framing || !shot.action) missing.push({
+      input: "direction",
+      shotId: shot.shotId,
+      frame: shot.startFrame,
+      reason: "Write the missing English framing/action in story_shot.timeline"
+    });
+  }
+  const pins = request.images.filter(temporal), refs = request.images.filter((p) => !temporal(p));
+  const opening = pins.some((p) => p.role === "start" && p.frame === 0);
+  const timedLimit = tool2 === "astra_genai_desktop_keyframes" ? 10 : 8;
+  for (const [index, p] of pins.entries()) {
+    if (caps.timedImages && index >= timedLimit) {
+      missing.push({ input: "image", shotId: p.shotId, frame: p.frame, path: p.path, role: p.role, reason: "Exceeds the adapter limit of " + timedLimit + " timed images" });
+      continue;
+    }
+    if (!caps.timedImages && p.role === "end" && p.frame === request.frameCount - 1 && caps.endingImage && !opening) {
+      missing.push({ input: "image", shotId: p.shotId, frame: p.frame, path: p.path, role: p.role, reason: "The last-image slot requires an opening image" });
+      continue;
+    }
+    const endpoint2 = p.role === "start" && p.frame === 0 && caps.openingImage || p.role === "end" && p.frame === request.frameCount - 1 && caps.endingImage;
+    if (caps.timedImages || endpoint2 && (p.strength === void 0 || p.strength === 1)) continue;
+    missing.push({ input: "image", shotId: p.shotId, frame: p.frame, role: p.role, path: p.path, reason: "No temporal image slot at this frame" });
+  }
+  if (tool2 === "astra_genai_img2video" && !pins.some((p) => p.frame === 0 && (p.strength ?? 1) === 1))
+    missing.push({ input: "image", frame: 0, reason: "Gateway I2V requires a full-strength opening image" });
+  for (const [index, p] of refs.entries()) {
+    if (tool2 === "veo_reference" && model2 && index < (VEO_CONSTRAINTS[model2]?.maxAssetImages ?? 0) && p.frame === 0 && ["face", "outfit", "character"].includes(p.role)) continue;
+    if (tool2 === "astra_genai_img2video" && model2 === "ltx-2.5-22b-distilled" && p.frame === 0) continue;
+    missing.push({ input: "reference", shotId: p.shotId, frame: p.frame, path: p.path, role: p.role, reason: "No compatible subject/reference slot with this frame scope" });
+  }
+  if (request.audio && !caps.sceneAudio) missing.push({ input: "audio", frame: 0, path: request.audio.path, reason: "No continuous supplied soundtrack with these inputs" });
+  if (missing.length) throw new SceneInputError(tool2, request, missing);
+  return { pins, refs, caps };
+}
+function timedImageArgs(tool2, pins) {
+  const desktop = tool2 === "astra_genai_desktop_keyframes";
+  const key = desktop ? "keyframes" : "images", index = desktop ? "frameIndex" : "frameIdx";
+  const imageBindings = pins.map((p, i2) => ({ ...verifyImageFile(p.path), ...p, id: p.shotId + "-" + i2, parameter: key + "[" + i2 + "]", use: "video", purpose: p.cue ?? p.role, submitted: true }));
+  return { args: { [key]: pins.map((p) => ({ imagePath: p.path, [index]: p.frame, strength: p.strength ?? 1 })) }, imageBindings };
+}
+function sceneImageBindings(request, tool2, bindings) {
+  const refs = request.images.filter((image2) => !temporal(image2));
+  let slot = 0;
+  return bindings.map((binding) => {
+    if ("parameter" in binding || !binding.submitted) return binding;
+    const endpoint2 = binding.id === "start" || binding.id === "end";
+    const index = endpoint2 ? -1 : refs.findIndex((p) => p.path === binding.path && (!p.reference || p.reference.id === binding.id));
+    const image2 = endpoint2 ? request.images.find((p) => p.path === binding.path && p.frame === (binding.id === "start" ? 0 : request.frameCount - 1)) : index >= 0 ? refs.splice(index, 1)[0] : void 0;
+    if (!image2) return binding;
+    const parameter = endpoint2 ? FRAME_FIELDS[tool2]?.[binding.id === "start" ? 0 : 1] : "references[" + slot++ + "].imagePath";
+    return { ...binding, shotId: image2.shotId, frame: image2.frame, role: image2.role, parameter, character: image2.character };
+  });
+}
+function bindSceneAdapter(request, tool2, model2, shot, input, episode) {
+  const { pins, refs, caps } = mapSceneInputs(request, tool2, model2);
+  const args = {};
+  const sceneSeconds = request.frameCount / request.fps;
+  for (const field2 of ["duration", "durationSeconds", "requiredSeconds"]) {
+    if (input[field2] !== void 0 && input[field2] !== sceneSeconds)
+      throw new Error("scene_video_timing: " + field2 + " differs from the authored scene duration");
+  }
+  if (["numFrames", "frames"].some((field2) => input[field2] !== void 0 && input[field2] !== request.frameCount))
+    throw new Error("scene_video_timing: requested frame count differs from the storyboard");
+  const { fpsField } = caps;
+  if (fpsField) {
+    if (input[fpsField] !== void 0 && input[fpsField] !== request.fps)
+      throw new Error("scene_video_timing: adapter fps differs from storyboard");
+    args[fpsField] = request.fps;
+  } else if (request.fps !== 24) {
+    throw new Error("scene_video_timing: adapter fps is unverified");
+  }
+  if (request.audio) {
+    if (input.allowAudioTruncation === true || Number(input.audioStartTime ?? 0) !== 0 || input.audioMaxDuration !== void 0 && input.audioMaxDuration !== sceneSeconds)
+      throw new Error("scene_audio_timing: keep the complete scene track at its authored offset");
+    if (tool2 === "astra_audio2video") {
+      if ((request.frameCount - 1) % 8 !== 0)
+        throw new SceneInputError(tool2, request, [{ input: "audio", frame: 0, path: request.audio.path, reason: "The frame count of the complete track must fit the 8k+1 frame grid" }]);
+      if (input.duration === void 0 && input.audioMaxDuration === void 0) args.numFrames = request.frameCount;
+    }
+    if (input.audioUri || input.audioPath && realpathSync4(path17.resolve(episode, String(input.audioPath))) !== request.audio.path)
+      throw new Error("scene_audio_mismatch: use the storyboard scene track");
+    const probe5 = JSON.parse(execFileSync12("ffprobe", [
+      "-v",
+      "error",
+      "-select_streams",
+      "a:0",
+      "-show_entries",
+      "stream=channels,sample_rate:format=duration",
+      "-of",
+      "json",
+      request.audio.path
+    ], { encoding: "utf8", timeout: 1e4 }));
+    const samples = probe5.streams?.[0], seconds2 = Number(probe5.format?.duration);
+    if (!samples || !Number.isFinite(seconds2) || Math.abs(seconds2 * request.fps - request.frameCount) >= 0.5)
+      throw new Error("scene_audio_timing: supply the scene-length track including lead-in silence");
+    if (tool2 === "astra_genai_audio2video" && Math.ceil(seconds2 * request.fps - 1e-8) !== request.frameCount)
+      throw new Error("scene_audio_timing: the gateway audio duration places its last frame outside the authored interval");
+    if (tool2 === "astra_genai_audio2video" && (request.frameCount > 361 || ![1, 2].includes(samples.channels) || ![7350, 8e3, 11025, 12e3, 16e3, 22050, 24e3, 32e3, 44100, 48e3, 64e3, 88200, 96e3].includes(Number(samples.sample_rate))))
+      throw new SceneInputError(tool2, request, [{ input: "audio", path: request.audio.path, frame: 0, reason: "A2V requires mono/stereo, an AAC sample rate and a maximum of 361 frames" }]);
+    args.audioPath = request.audio.path;
+  }
+  const gateway = tool2 === "astra_genai_img2video" || tool2 === "astra_genai_audio2video";
+  const start = gateway ? pins.find((p) => p.frame === 0 && (p.strength ?? 1) === 1) : pins.find((p) => p.role === "start");
+  const end = gateway ? start && pins.find((p) => p.frame === request.frameCount - 1 && (p.strength ?? 1) === 1) : pins.find((p) => p.role === "end");
+  const intermediate = gateway ? pins.filter((p) => p !== start && p !== end) : [];
+  const gatewayKeyframes = intermediate.length ? {
+    args: { keyframes: intermediate.map((p) => ({ imagePath: p.path, frameIdx: p.frame, strength: p.strength ?? 1 })) },
+    imageBindings: intermediate.map((p, i2) => ({
+      ...verifyImageFile(p.path),
+      ...p,
+      id: p.shotId + "-keyframe-" + i2,
+      parameter: "keyframes[" + i2 + "].imagePath",
+      use: "video",
+      purpose: p.cue ?? p.role,
+      submitted: true
+    }))
+  } : void 0;
+  const visual = shot.visual;
+  const positions = shot.visual?.video?.openingPositions ?? [];
+  const subjects = refs.filter((p) => p.role !== "background");
+  for (const owner of positions) {
+    for (const slot of owner.images) {
+      if (!subjects[slot - 1]) throw new SceneInputError(tool2, request, [{
+        input: "reference",
+        role: "character",
+        reason: owner.character + " names missing subject Image " + slot
+      }]);
+    }
+  }
+  for (const [i2, p] of subjects.entries()) {
+    if (p.character && !positions.some((row) => row.character === p.character && row.images.includes(i2 + 1)))
+      throw new Error("scene_reference_owner: match " + p.shotId + " " + p.role + " reference " + (i2 + 1) + " to " + p.character + " in openingPositions");
+  }
+  const references = refs.map((p, i2) => p.reference ?? {
+    id: "subject-" + i2,
+    role: "character",
+    use: "video",
+    path: p.path,
+    purpose: p.character + " " + p.role + " reference only. Use the shot action for entrance timing."
+  });
+  const projected = {
+    ...visual,
+    frames: { mode: end ? "first_last" : "first", start: start?.path, end: end?.path },
+    references,
+    bg: start?.path,
+    imagePair: void 0,
+    lastImagePath: void 0
+  };
+  if (caps.timedImages || tool2 === "veo_reference" || !request.images.length) {
+    const fields2 = [
+      "images",
+      "keyframes",
+      "sourceImagePath",
+      "lastImagePath",
+      "imagePath",
+      "imageUri",
+      "lastFramePath",
+      "firstFramePath",
+      "firstFrameImagePath",
+      "lastFrameImagePath",
+      "lastFrameUri",
+      "referenceImagePaths",
+      "references"
+    ];
+    const endpoints = gateway && start ? FRAME_FIELDS[tool2] : void 0;
+    if (fields2.some((k) => k in input && !endpoints?.some((field2) => field2 === k)))
+      throw new Error("image_plan_mismatch: declare video images on their storyboard shots");
+  }
+  const timedImages2 = tool2 === "veo_reference" ? {
+    args: { referenceImagePaths: refs.map((p) => p.path) },
+    imageBindings: refs.map((p, i2) => ({
+      ...verifyImageFile(p.path),
+      ...p,
+      id: p.reference?.id ?? "subject-" + i2,
+      parameter: "referenceImagePaths[" + i2 + "]",
+      use: "video",
+      purpose: p.cue ?? p.role,
+      submitted: true
+    }))
+  } : gateway ? !start ? gatewayKeyframes : void 0 : caps.timedImages ? timedImageArgs(tool2, pins) : void 0;
+  Object.assign(args, timedImages2?.args);
+  if (tool2.startsWith("astra_genai_desktop_") && !request.audio)
+    args.duration = input.duration ?? request.frameCount / request.fps;
+  return { args, shot: { ...shot, visual: projected }, timedImages: timedImages2, gatewayKeyframes };
+}
+async function checkSceneDeployment(request, tool2, args) {
+  const fail5 = (reason) => {
+    const pins = request.images.filter((p) => tool2 !== "astra_genai_img2video" || !temporal(p));
+    const missing = [{ input: "deployment", reason }, ...pins.map((p) => ({
+      input: temporal(p) ? "image" : "reference",
+      shotId: p.shotId,
+      frame: p.frame,
+      path: p.path,
+      role: p.role,
+      reason
+    }))];
+    if (request.audio) missing.push({ input: "audio", frame: 0, path: request.audio.path, reason });
+    throw new SceneInputError(tool2, request, missing);
+  };
+  if (tool2 === "astra_genai_img2video" && Array.isArray(args.references)) {
+    const capabilities = await requestGenai("GET", "/v1/ltx/msr/capabilities", void 0, 15e3).catch(() => fail5("Cannot verify combined image and reference support"));
+    if (external_exports.object({ image_conditioning: external_exports.literal(true) }).safeParse(capabilities).success === false)
+      fail5("Gateway does not advertise combined start frame and subject conditioning");
+  }
+  if (!tool2.startsWith("astra_genai_desktop_")) return;
+  const cell = external_exports.object({ fps_to_durations: external_exports.record(external_exports.array(external_exports.number())), aspect_ratios: external_exports.array(external_exports.string()) });
+  const catalog2 = external_exports.object({ active_model: external_exports.string().nullable().optional(), data: external_exports.array(external_exports.object({
+    id: external_exports.string(),
+    features: external_exports.array(external_exports.string()),
+    generation_combinations: external_exports.record(cell),
+    audio_combinations: external_exports.record(cell),
+    excluded_aspect_combinations: external_exports.array(external_exports.record(external_exports.unknown())).optional()
+  })) }).safeParse(await requestGenai("GET", "/v1/ltx/desktop/models", void 0, 15e3).catch(() => fail5("Desktop model catalog unavailable")));
+  if (!catalog2.success) return fail5("Desktop model matrix unavailable");
+  const model2 = catalog2.data.data.find((row) => row.id === args.model);
+  const feature = { text: "text-to-video", image: "image-to-video", audio: "audio-to-video", keyframe: "keyframes" };
+  const operation = feature[VIDEO_ADAPTERS[tool2].operation];
+  if (!model2?.features.includes(operation) || operation === "keyframes" && catalog2.data.active_model !== args.model)
+    return fail5("Selected Desktop model does not offer the requested operation or active keyframe pipeline");
+  const matrix = operation === "audio-to-video" ? model2.audio_combinations : model2.generation_combinations;
+  const entry2 = matrix[String(args.resolution)];
+  const durations = entry2?.fps_to_durations[String(args.fps)];
+  const selection = { ...args, audio: false };
+  const excluded = model2.excluded_aspect_combinations?.some((block) => Object.entries(block).every(([key, value]) => selection[key] === value));
+  if (!durations?.length || args.aspectRatio !== "auto" && !entry2.aspect_ratios.includes(String(args.aspectRatio)) || typeof args.duration === "number" && !durations.includes(args.duration) || excluded)
+    fail5("Selected Desktop model does not offer this resolution, frame rate, duration and aspect ratio");
+}
+
 // src/video-routing.ts
 import * as fs19 from "node:fs";
-import { execFileSync as execFileSync14 } from "node:child_process";
-import path22 from "node:path";
-import { createRequire as createRequire10 } from "node:module";
+import { execFileSync as execFileSync15 } from "node:child_process";
+import path23 from "node:path";
+import { createRequire as createRequire11 } from "node:module";
 import { fileURLToPath as fileURLToPath7 } from "node:url";
 import { createHash as createHash16 } from "node:crypto";
 
@@ -117556,10 +118431,10 @@ import { fileURLToPath as fileURLToPath4 } from "node:url";
 import { createHash as createHash13 } from "node:crypto";
 
 // src/usage-ledger.ts
-import { execFileSync as execFileSync12 } from "node:child_process";
+import { execFileSync as execFileSync13 } from "node:child_process";
 import { appendFileSync, existsSync as existsSync17, mkdirSync as mkdirSync6 } from "node:fs";
-import path17 from "node:path";
-var EPISODE_MARKER = path17.join("storyboard", "scenes.js");
+import path18 from "node:path";
+var EPISODE_MARKER = path18.join("storyboard", "scenes.js");
 var MAX_WALK_UP = 6;
 function episodePathArg(args) {
   for (const name of ["outputPath", "savePath"]) {
@@ -117572,17 +118447,17 @@ function findEpisodeDir(outputPath) {
   if (!outputPath || typeof outputPath !== "string") return null;
   let dir;
   try {
-    dir = path17.resolve(outputPath);
+    dir = path18.resolve(outputPath);
   } catch {
     return null;
   }
   for (let i2 = 0; i2 <= MAX_WALK_UP; i2++) {
     try {
-      if (existsSync17(path17.join(dir, EPISODE_MARKER))) return dir;
+      if (existsSync17(path18.join(dir, EPISODE_MARKER))) return dir;
     } catch {
       return null;
     }
-    const parent = path17.dirname(dir);
+    const parent = path18.dirname(dir);
     if (parent === dir) return null;
     dir = parent;
   }
@@ -117591,8 +118466,8 @@ function findEpisodeDir(outputPath) {
 function recordUsage(outputPath, event) {
   const episodeDir = findEpisodeDir(outputPath);
   if (!episodeDir) return null;
-  const workDir = path17.join(episodeDir, ".work");
-  const file = path17.join(workDir, "events.jsonl");
+  const workDir = path18.join(episodeDir, ".work");
+  const file = path18.join(workDir, "events.jsonl");
   try {
     mkdirSync6(workDir, { recursive: true });
     appendFileSync(file, JSON.stringify(event) + "\n", { encoding: "utf8", flag: "a" });
@@ -117632,7 +118507,7 @@ function meteredPrice(price, metered) {
 }
 function probeSeconds(file) {
   try {
-    const out = execFileSync12("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], {
+    const out = execFileSync13("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], {
       encoding: "utf8",
       timeout: 15e3,
       stdio: ["ignore", "pipe", "ignore"]
@@ -117866,15 +118741,15 @@ function quoteVideo(tool2, args) {
 // src/video-state.ts
 import * as fs18 from "node:fs";
 import os3 from "node:os";
-import path19 from "node:path";
+import path20 from "node:path";
 import { fileURLToPath as fileURLToPath5 } from "node:url";
 
 // src/video-review.ts
-import { createRequire as createRequire6 } from "node:module";
-import path18 from "node:path";
-var review = () => createRequire6(import.meta.url)("../../skills/storyboard/references/video-production.js");
+import { createRequire as createRequire8 } from "node:module";
+import path19 from "node:path";
+var review = () => createRequire8(import.meta.url)("../../skills/storyboard/references/video-production.js");
 function readVideoProduction(episode) {
-  return review().read(path18.join(episode, "storyboard"));
+  return review().read(path19.join(episode, "storyboard"));
 }
 function refreshVideoReview(episode) {
   try {
@@ -117885,7 +118760,7 @@ function refreshVideoReview(episode) {
 }
 function refreshAudienceReview(boardDirectory) {
   try {
-    const data = createRequire6(import.meta.url)("../../skills/storyboard/references/audience-review-data.js");
+    const data = createRequire8(import.meta.url)("../../skills/storyboard/references/audience-review-data.js");
     data.refresh(boardDirectory);
   } catch {
     process.stderr.write("Audience audio preview needs a refresh.\n");
@@ -117894,8 +118769,8 @@ function refreshAudienceReview(boardDirectory) {
 
 // src/video-state.ts
 function historicalSpend(episode) {
-  const events = path19.join(episode, ".work/events.jsonl");
-  const tally = path19.join(episode, ".work/cost-tally.tsv");
+  const events = path20.join(episode, ".work/events.jsonl");
+  const tally = path20.join(episode, ".work/cost-tally.tsv");
   if (!fs18.existsSync(events)) {
     if (fs18.existsSync(tally) && fs18.readFileSync(tally, "utf8").trim()) throw new Error("Historical cost tally needs reconciliation before routing migration");
     return 0;
@@ -117948,9 +118823,9 @@ function staleLock(lock2) {
   }
 }
 function videoTransaction(episode, update, openingSpendUsd) {
-  const directory2 = path19.join(episode, ".work/video-routing");
+  const directory2 = path20.join(episode, ".work/video-routing");
   fs18.mkdirSync(directory2, { recursive: true });
-  const lock2 = path19.join(directory2, "state.lock");
+  const lock2 = path20.join(directory2, "state.lock");
   let fd;
   try {
     fd = fs18.openSync(lock2, "wx", 384);
@@ -117965,7 +118840,7 @@ function videoTransaction(episode, update, openingSpendUsd) {
   }
   fs18.writeSync(fd, `${process.pid}@${os3.hostname()}`);
   try {
-    const file = path19.join(directory2, "state.json");
+    const file = path20.join(directory2, "state.json");
     const state = fs18.existsSync(file) ? JSON.parse(fs18.readFileSync(file, "utf8")) : { version: 1, openingSpendUsd: openingSpendUsd ?? historicalSpend(episode), jobs: {} };
     if (state.version !== 1 || !state.jobs || typeof state.jobs !== "object" || Array.isArray(state.jobs)) throw new Error("Invalid video state; repair explicitly");
     if (!Number.isFinite(state.openingSpendUsd ?? 0) || (state.openingSpendUsd ?? 0) < 0) throw new Error("Invalid opening spend");
@@ -117983,28 +118858,14 @@ function videoTransaction(episode, update, openingSpendUsd) {
 }
 
 // src/video-image-inputs.ts
-import path20 from "node:path";
+import path21 from "node:path";
 import { createHash as createHash14 } from "node:crypto";
-import { existsSync as existsSync19, realpathSync as realpathSync4, readFileSync as readFileSync21 } from "node:fs";
-import { createRequire as createRequire7 } from "node:module";
+import { existsSync as existsSync19, realpathSync as realpathSync5, readFileSync as readFileSync21 } from "node:fs";
+import { createRequire as createRequire9 } from "node:module";
 import { fileURLToPath as fileURLToPath6 } from "node:url";
-var load2 = createRequire7(import.meta.url);
-var imageRouting = () => load2(fileURLToPath6(new URL("../../skills/storyboard/references/render-routing.js", import.meta.url)));
-var characterPanels = () => load2(fileURLToPath6(new URL("../../skills/channel/references/character-panels.js", import.meta.url)));
-var FRAME_FIELDS = {
-  seedance_img2video: ["sourceImagePath", "lastImagePath"],
-  astra_img2video: ["firstFramePath", "lastFramePath"],
-  astra_audio2video: ["imagePath"],
-  astra_genai_img2video: ["imageUri", "lastFrameUri"],
-  astra_genai_desktop_img2video: ["imagePath", "lastFramePath"],
-  astra_genai_desktop_audio2video: ["imagePath"],
-  astra_genai_audio2video: ["imagePath", "lastFramePath"],
-  mlx_video_generate: ["firstFrameImagePath", "lastFrameImagePath"],
-  ltx_video_generate: ["firstFrameImagePath", "lastFrameImagePath"],
-  ...Object.fromEntries(Object.entries(HOSTED_VIDEO_ROUTES).flatMap(([tool2, route]) => route.frames ? [[tool2, route.frames]] : [])),
-  minimax_img2video: ["sourceImagePath", "lastImagePath"],
-  heygen_img2video: ["sourceImagePath", "lastImagePath"]
-};
+var load4 = createRequire9(import.meta.url);
+var imageRouting = () => load4(fileURLToPath6(new URL("../../skills/storyboard/references/render-routing.js", import.meta.url)));
+var characterPanels = () => load4(fileURLToPath6(new URL("../../skills/channel/references/character-panels.js", import.meta.url)));
 function nearestRatio(width, height) {
   const ratios = ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"];
   const value = (ratio) => {
@@ -118021,22 +118882,22 @@ function msrPanelBinding(paths3, refs, compact5 = false) {
     if (refs[i2].role === "background") return;
     let panels;
     try {
-      panels = JSON.parse(readFileSync21(path20.join(path20.dirname(file), "panels.json"), "utf8")).panels ?? {};
+      panels = JSON.parse(readFileSync21(path21.join(path21.dirname(file), "panels.json"), "utf8")).panels ?? {};
     } catch {
       return;
     }
-    const view = Object.entries(panels).find(([, panel]) => panel.file === path20.basename(file))?.[0];
+    const view = Object.entries(panels).find(([, panel]) => panel.file === path21.basename(file))?.[0];
     if (!view || !PANEL_VIEWS[view]) return;
-    const folder = path20.dirname(file);
+    const folder = path21.dirname(file);
     groups.set(folder, [...groups.get(folder) ?? [], `Image ${i2 + 1} (${PANEL_VIEWS[view]})`]);
     if (panels[view].wardrobe === "fitting") fitting.add(folder);
   });
-  return [...groups].filter(([, items]) => items.length > 1).map(([folder, items]) => compact5 ? `Images ${items.map((item) => item.replace(/Image (\d+) \(([^)]+)\)/, "$1($2)")).join(", ")}: ONE ${path20.basename(folder)}; head/hair only from face; ${fitting.has(folder) ? "physique from body, wardrobe from the scene" : "physique/clothes only from body"}; ignore face-panel clothing.` : `${items.join(", ")} show one character, ${path20.basename(folder)}: render one complete character with the head and hair from the face and ${fitting.has(folder) ? "physique from the body panels, dressed for the scene" : "the body and outfit from the headless panels"}. Ignore clothing visible in the face panel; never duplicate a person for separate panels.`).join("\n");
+  return [...groups].filter(([, items]) => items.length > 1).map(([folder, items]) => compact5 ? `Images ${items.map((item) => item.replace(/Image (\d+) \(([^)]+)\)/, "$1($2)")).join(", ")}: ONE ${path21.basename(folder)}; head/hair only from face; ${fitting.has(folder) ? "physique from body, wardrobe from the scene" : "physique/clothes only from body"}; ignore face-panel clothing.` : `${items.join(", ")} show one character, ${path21.basename(folder)}: render one complete character with the head and hair from the face and ${fitting.has(folder) ? "physique from the body panels, dressed for the scene" : "the body and outfit from the headless panels"}. Ignore clothing visible in the face panel; never duplicate a person for separate panels.`).join("\n");
 }
 function characterKey(file) {
   try {
-    readFileSync21(path20.join(path20.dirname(file), "panels.json"));
-    return path20.dirname(file);
+    readFileSync21(path21.join(path21.dirname(file), "panels.json"));
+    return path21.dirname(file);
   } catch {
     return file;
   }
@@ -118066,7 +118927,7 @@ function bindOpeningPositions(input, visual, episode) {
   }
   if (visual.video?.openingImageSha256) {
     const start = visual.frames?.start;
-    if (!start || createHash14("sha256").update(readFileSync21(path20.resolve(episode, "storyboard", start))).digest("hex") !== visual.video.openingImageSha256)
+    if (!start || createHash14("sha256").update(readFileSync21(path21.resolve(episode, "storyboard", start))).digest("hex") !== visual.video.openingImageSha256)
       throw new Error("openingPositions stale: inspect the changed start image and update shot_prompt");
   }
   return positions;
@@ -118118,14 +118979,14 @@ function prepareVideoImages(tool2, input, shot, episode, members) {
   const frames = routing.framePlan(shot);
   let references = routing.imageReferences(shot);
   const rawCast = shot.visual?.character;
-  const canonicalMsr = tool2 === "astra_genai_msr" && frames.mode === "reference" && rawCast !== void 0 && existsSync19(path20.join(episode, "storyboard", "cast.json"));
+  const canonicalMsr = tool2 === "astra_genai_msr" && frames.mode === "reference" && rawCast !== void 0 && existsSync19(path21.join(episode, "storyboard", "cast.json"));
   if (canonicalMsr) {
     const ids = [].concat(rawCast ?? []).map((entry2) => typeof entry2 === "string" ? entry2 : entry2.id);
     if (visual.video?.referenceLayout !== void 0 && !["panels", "combined"].includes(visual.video.referenceLayout))
       throw new Error("image_plan_invalid: unknown MSR referenceLayout");
     references = [
       ...characterPanels().canonicalReferences(
-        path20.join(episode, "storyboard"),
+        path21.join(episode, "storyboard"),
         String(shot.id ?? "shot"),
         ids,
         "both",
@@ -118135,7 +118996,7 @@ function prepareVideoImages(tool2, input, shot, episode, members) {
     ];
   }
   references = references.map((ref) => {
-    const authored = visual.references?.find((item) => item.id === ref.id || path20.resolve(episode, "storyboard", item.path) === path20.resolve(episode, "storyboard", ref.path));
+    const authored = visual.references?.find((item) => item.id === ref.id || path21.resolve(episode, "storyboard", item.path) === path21.resolve(episode, "storyboard", ref.path));
     return { ...ref, ...authored?.preserve ? { preserve: authored.preserve } : {}, ...authored?.avoid ? { avoid: authored.avoid } : {} };
   });
   const videoRefs = references.filter((ref) => ["video", "both"].includes(ref.use));
@@ -118151,8 +119012,8 @@ function prepareVideoImages(tool2, input, shot, episode, members) {
   const args = { ...host ? input : resolveVideoDuration(tool2, input).args };
   const assigned = /* @__PURE__ */ new Set();
   const bindings = [];
-  const boardDir = path20.join(episode, "storyboard");
-  const resolve14 = (file) => realpathSync4(path20.resolve(boardDir, file));
+  const boardDir = path21.join(episode, "storyboard");
+  const resolve14 = (file) => realpathSync5(path21.resolve(boardDir, file));
   const bind = (id, file, role, use, purpose, submitted) => {
     const absolute = resolve14(file);
     const metadata = verifyImageFile(absolute);
@@ -118176,13 +119037,13 @@ function prepareVideoImages(tool2, input, shot, episode, members) {
       bind("start", frames.start, "start", "video", "Opening state", false);
       if (frames.end) bind("end", frames.end, "end", "video", "Ending state", false);
     }
-    for (const [i2, frame] of (keyframes2 ?? []).entries()) bind("keyframe-" + (i2 + 1), frame.image, "keyframe", "video", frame.state, false);
+    for (const [i2, frame2] of (keyframes2 ?? []).entries()) bind("keyframe-" + (i2 + 1), frame2.image, "keyframe", "video", frame2.state, false);
     for (const ref of references) if (ref.role !== "composition") bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, false);
     return { args, imageBindings: bindings, imageHandoff: "unverified_host_mapping: bind every video/both input and temporal frame to the actual host schema; do not omit unsupported inputs or claim submission from this plan" };
   }
   const equal = (a, b) => {
     if (typeof a === "string" && typeof b === "string" && b.startsWith("data:")) return a === b;
-    if (typeof a === "string" && typeof b === "string") return realpathSync4(path20.resolve(episode, a)) === b;
+    if (typeof a === "string" && typeof b === "string") return realpathSync5(path21.resolve(episode, a)) === b;
     if (Array.isArray(a) && Array.isArray(b)) return a.length === b.length && a.every((v, i2) => equal(v, b[i2]));
     if (a && b && typeof a === "object" && typeof b === "object") {
       const left = a, right = b;
@@ -118206,8 +119067,8 @@ function prepareVideoImages(tool2, input, shot, episode, members) {
       const roles = new Set(sent.map((ref) => ref.role));
       const cast = new Set(paths3.flatMap((file, i2) => {
         if (sent[i2].role !== "character") return [];
-        const folder = path20.dirname(file);
-        return path20.basename(path20.dirname(folder)) === "characters" || characterKey(file) === folder ? [folder] : [];
+        const folder = path21.dirname(file);
+        return path21.basename(path21.dirname(folder)) === "characters" || characterKey(file) === folder ? [folder] : [];
       }));
       if (roles.size > 1 || cast.size > 1) throw new Error("image_plan_unsupported: Veo asset references must show the same subject");
     }
@@ -118247,9 +119108,9 @@ function prepareVideoImages(tool2, input, shot, episode, members) {
     const strength = visual.video?.strength ?? 1;
     const images = [
       { imagePath: bind("start", frames.start, "start", "video", "Opening state", true), frameIdx: 0, strength },
-      ...keyframes2.map((frame, i2) => {
-        if (!Number.isFinite(frame.atSeconds) || frame.atSeconds <= 0 || typeof shot.duration === "number" && frame.atSeconds >= shot.duration || !frame.state?.trim()) throw new Error("image_plan_invalid: intermediate frame needs time and state");
-        return { imagePath: bind("keyframe-" + (i2 + 1), frame.image, "keyframe", "video", frame.state, true), frameIdx: Math.round(frame.atSeconds * fps2), strength: frame.strength ?? strength };
+      ...keyframes2.map((frame2, i2) => {
+        if (!Number.isFinite(frame2.atSeconds) || frame2.atSeconds <= 0 || typeof shot.duration === "number" && frame2.atSeconds >= shot.duration || !frame2.state?.trim()) throw new Error("image_plan_invalid: intermediate frame needs time and state");
+        return { imagePath: bind("keyframe-" + (i2 + 1), frame2.image, "keyframe", "video", frame2.state, true), frameIdx: Math.round(frame2.atSeconds * fps2), strength: frame2.strength ?? strength };
       }),
       { imagePath: bind("end", frames.end, "end", "video", "Ending state", true), frameIdx: count - 1, strength }
     ];
@@ -118270,13 +119131,13 @@ function prepareVideoImages(tool2, input, shot, episode, members) {
     if (frames.end) put2(fields2[1], value("end", frames.end));
     if (keyframes2) {
       const fps2 = Number(args.fps ?? 24);
-      const pins = keyframes2.map((frame, i2) => {
-        if (!Number.isFinite(frame.atSeconds) || frame.atSeconds <= 0 || typeof shot.duration === "number" && frame.atSeconds >= shot.duration || !frame.state?.trim())
+      const pins = keyframes2.map((frame2, i2) => {
+        if (!Number.isFinite(frame2.atSeconds) || frame2.atSeconds <= 0 || typeof shot.duration === "number" && frame2.atSeconds >= shot.duration || !frame2.state?.trim())
           throw new Error("image_plan_invalid: intermediate frame needs time and state inside the clip");
-        const strength = frame.strength ?? visual.video?.strength;
+        const strength = frame2.strength ?? visual.video?.strength;
         return {
-          imagePath: bind("keyframe-" + (i2 + 1), frame.image, "keyframe", "video", frame.state, true),
-          frameIdx: Math.round(frame.atSeconds * fps2),
+          imagePath: bind("keyframe-" + (i2 + 1), frame2.image, "keyframe", "video", frame2.state, true),
+          frameIdx: Math.round(frame2.atSeconds * fps2),
           ...strength === void 0 ? {} : { strength }
         };
       });
@@ -118321,45 +119182,45 @@ function prepareVideoImages(tool2, input, shot, episode, members) {
 
 // src/video-voice.ts
 import { createHash as createHash15 } from "node:crypto";
-import { existsSync as existsSync20, readFileSync as readFileSync22, realpathSync as realpathSync5 } from "node:fs";
-import { execFileSync as execFileSync13 } from "node:child_process";
-import path21 from "node:path";
-import { createRequire as createRequire8 } from "node:module";
+import { existsSync as existsSync20, readFileSync as readFileSync22, realpathSync as realpathSync6 } from "node:fs";
+import { execFileSync as execFileSync14 } from "node:child_process";
+import path22 from "node:path";
+import { createRequire as createRequire10 } from "node:module";
 var speakerBindingSchema = external_exports.object({
   speaker: external_exports.string().trim().min(1),
   screenPosition: external_exports.enum(["left", "center", "right"]),
   description: external_exports.string().trim().min(1)
 }).strict();
-var load3 = createRequire8(import.meta.url);
-var object3 = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
-var text = (value) => typeof value === "string" ? value.trim() : "";
+var load5 = createRequire10(import.meta.url);
+var object4 = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
+var text2 = (value) => typeof value === "string" ? value.trim() : "";
 var stable2 = (value) => Array.isArray(value) ? value.map(stable2) : value && typeof value === "object" ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, v]) => [key, stable2(v)])) : value;
 var hash = (value) => createHash15("sha256").update(JSON.stringify(stable2(value))).digest("hex");
 var fileHash = (file) => createHash15("sha256").update(readFileSync22(file)).digest("hex");
 function voiceDescription(character) {
-  const tts = object3(character.tts), speech = object3(object3(character.character).speech);
+  const tts = object4(character.tts), speech = object4(object4(character.character).speech);
   const confirmed = (key) => {
-    const field2 = object3(speech[key]);
-    return field2.status === "confirmed" ? text(field2.value) : "";
+    const field2 = object4(speech[key]);
+    return field2.status === "confirmed" ? text2(field2.value) : "";
   };
   return [
-    text(tts.language) && `Language: ${text(tts.language)}`,
+    text2(tts.language) && `Language: ${text2(tts.language)}`,
     confirmed("timbre") && `Timbre: ${confirmed("timbre")}`,
     confirmed("pace") && `Baseline pace: ${confirmed("pace")}`,
     confirmed("accent") && `Accent: ${confirmed("accent")}`,
-    text(tts.voiceDirection) || text(tts.stylePrompt)
+    text2(tts.voiceDirection) || text2(tts.stylePrompt)
   ].filter(Boolean).join(". ");
 }
 function resolveCharacterVoice(character, context2, warnings) {
-  const id = text(character.id);
+  const id = text2(character.id);
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) return character;
   let channel = context2.episode;
-  while (!existsSync20(path21.join(channel, "profile.md")) && path21.dirname(channel) !== channel) channel = path21.dirname(channel);
-  const folder = path21.join(channel, "assets/characters", id), identity = path21.join(folder, "identity.md");
+  while (!existsSync20(path22.join(channel, "profile.md")) && path22.dirname(channel) !== channel) channel = path22.dirname(channel);
+  const folder = path22.join(channel, "assets/characters", id), identity = path22.join(folder, "identity.md");
   let resolved = character;
-  if (!Object.keys(object3(character.tts)).length && existsSync20(identity)) {
+  if (!Object.keys(object4(character.tts)).length && existsSync20(identity)) {
     try {
-      const { handoff } = load3("../../skills/channel/references/character-sheet.js");
+      const { handoff } = load5("../../skills/channel/references/character-sheet.js");
       const current = handoff(identity, { voiceOnly: character.voiceOnly === true });
       resolved = { ...current, ...character, tts: current.tts };
     } catch (error2) {
@@ -118367,33 +119228,33 @@ function resolveCharacterVoice(character, context2, warnings) {
       return character;
     }
   }
-  const reference2 = object3(resolved.voiceReference);
+  const reference2 = object4(resolved.voiceReference);
   if (!Array.isArray(reference2.imagePaths) && existsSync20(folder)) {
-    const root = realpathSync5(folder) + path21.sep;
-    const refs = object3(context2.shot.visual).references;
-    const imagePaths = (Array.isArray(refs) ? refs.map(object3) : []).filter((ref) => ref.role === "character" && ["both", "video"].includes(text(ref.use))).map((ref) => text(ref.path)).filter(Boolean).map((file) => path21.resolve(context2.episode, "storyboard", file)).filter((file) => existsSync20(file) && realpathSync5(file).startsWith(root));
+    const root = realpathSync6(folder) + path22.sep;
+    const refs = object4(context2.shot.visual).references;
+    const imagePaths = (Array.isArray(refs) ? refs.map(object4) : []).filter((ref) => ref.role === "character" && ["both", "video"].includes(text2(ref.use))).map((ref) => text2(ref.path)).filter(Boolean).map((file) => path22.resolve(context2.episode, "storyboard", file)).filter((file) => existsSync20(file) && realpathSync6(file).startsWith(root));
     if (imagePaths.length) resolved = { ...resolved, voiceReference: { ...reference2, imagePaths } };
   }
   return resolved;
 }
 function voiceReference(character, context2, warnings) {
-  const declared = object3(character.voiceReference);
+  const declared = object4(character.voiceReference);
   if (character.voiceReferenceWarning && !declared.path) {
     warnings.push(`${character.id}: ${character.voiceReferenceWarning}; restore the selected sample instead of substituting an old voice.wav.`);
     return void 0;
   }
-  let file = text(declared.path);
+  let file = text2(declared.path);
   if (file) {
-    file = path21.resolve(context2.episode, "storyboard", file);
+    file = path22.resolve(context2.episode, "storyboard", file);
     if (declared.tts && hash(declared.tts) !== hash(character.tts))
       throw new Error(`voice_reference_stale: ${character.id} sample uses different pinned TTS settings`);
-  } else if (/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(text(character.id))) {
+  } else if (/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(text2(character.id))) {
     let channel = context2.episode;
-    while (!existsSync20(path21.join(channel, "profile.md")) && path21.dirname(channel) !== channel) channel = path21.dirname(channel);
-    const identity = path21.join(channel, "assets/characters", text(character.id), "identity.md");
-    const candidate2 = path21.join(path21.dirname(identity), "voice.wav");
+    while (!existsSync20(path22.join(channel, "profile.md")) && path22.dirname(channel) !== channel) channel = path22.dirname(channel);
+    const identity = path22.join(channel, "assets/characters", text2(character.id), "identity.md");
+    const candidate2 = path22.join(path22.dirname(identity), "voice.wav");
     if (existsSync20(identity) && existsSync20(candidate2)) {
-      const { identityVoice } = load3("../../skills/_shared/character-voice.js");
+      const { identityVoice } = load5("../../skills/_shared/character-voice.js");
       if (hash(identityVoice(readFileSync22(identity, "utf8"))) !== hash(character.tts)) {
         warnings.push(`${character.id}: shared voice.wav belongs to different current TTS settings; attach a sample for this episode's pinned voice.`);
         return void 0;
@@ -118402,30 +119263,30 @@ function voiceReference(character, context2, warnings) {
     }
   }
   if (!file) return void 0;
-  const absolute = realpathSync5(file), sha2563 = fileHash(absolute);
+  const absolute = realpathSync6(file), sha2563 = fileHash(absolute);
   if (declared.sha256 && declared.sha256 !== sha2563) throw new Error(`voice_reference_stale: ${character.id} sample bytes changed`);
   const provenance = declared.tts && declared.sha256 ? "pinned_settings_and_bytes" : "legacy_sample_unverified";
   if (provenance === "legacy_sample_unverified") warnings.push(`${character.id}: sample identity is unverified; a file name or hash is not a listening review.`);
   return { path: absolute, sha256: sha2563, provenance };
 }
 function msrSubject(character, refs, context2) {
-  const owned = object3(character.voiceReference).imagePaths;
+  const owned = object4(character.voiceReference).imagePaths;
   let ownedPaths;
-  const declared = [].concat(object3(context2.shot.visual).character ?? []).map((entry2) => typeof entry2 === "string" ? entry2 : text(object3(entry2).id));
-  if ((declared.includes(text(character.id)) || context2.sceneDirection?.openingPositions.some((p) => p.character === character.id && p.images.length)) && existsSync20(path21.join(context2.episode, "storyboard", "cast.json"))) {
-    const { sheetPanels, canonicalReferences } = load3("../../skills/channel/references/character-panels.js");
-    const dir = path21.join(context2.episode, "storyboard");
-    const panels = sheetPanels(dir, [text(character.id)]).get(text(character.id));
-    const combined = object3(object3(context2.shot.visual).video).referenceLayout === "combined";
-    const files3 = combined ? canonicalReferences(dir, text(context2.shot.id), [text(character.id)], "video", { combined: true }).map((ref) => ref.path) : Object.values(panels);
-    ownedPaths = files3.map((file) => realpathSync5(path21.resolve(dir, file)));
-  } else ownedPaths = Array.isArray(owned) ? owned.map((value) => realpathSync5(path21.resolve(context2.episode, "storyboard", String(value)))) : [];
+  const declared = [].concat(object4(context2.shot.visual).character ?? []).map((entry2) => typeof entry2 === "string" ? entry2 : text2(object4(entry2).id));
+  if ((declared.includes(text2(character.id)) || context2.sceneDirection?.openingPositions.some((p) => p.character === character.id && p.images.length)) && existsSync20(path22.join(context2.episode, "storyboard", "cast.json"))) {
+    const { sheetPanels, canonicalReferences } = load5("../../skills/channel/references/character-panels.js");
+    const dir = path22.join(context2.episode, "storyboard");
+    const panels = sheetPanels(dir, [text2(character.id)]).get(text2(character.id));
+    const combined = object4(object4(context2.shot.visual).video).referenceLayout === "combined";
+    const files3 = combined ? canonicalReferences(dir, text2(context2.shot.id), [text2(character.id)], "video", { combined: true }).map((ref) => ref.path) : Object.values(panels);
+    ownedPaths = files3.map((file) => realpathSync6(path22.resolve(dir, file)));
+  } else ownedPaths = Array.isArray(owned) ? owned.map((value) => realpathSync6(path22.resolve(context2.episode, "storyboard", String(value)))) : [];
   let subject = 0, index = -1, slot = 0;
   refs.forEach((ref, i2) => {
     if (ref.background) return;
     subject += 1;
-    const file = text(ref.imagePath);
-    if (index < 0 && file && ownedPaths.includes(realpathSync5(path21.resolve(context2.episode, file)))) {
+    const file = text2(ref.imagePath);
+    if (index < 0 && file && ownedPaths.includes(realpathSync6(path22.resolve(context2.episode, file)))) {
       index = i2;
       slot = subject;
     }
@@ -118434,7 +119295,7 @@ function msrSubject(character, refs, context2) {
 }
 function sampleSeconds(file) {
   try {
-    const seconds2 = Number(execFileSync13("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], { encoding: "utf8", timeout: 15e3 }));
+    const seconds2 = Number(execFileSync14("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], { encoding: "utf8", timeout: 15e3 }));
     return Number.isFinite(seconds2) ? seconds2 : void 0;
   } catch {
     return void 0;
@@ -118449,20 +119310,20 @@ function afterImageBlock(prompt, lines) {
 }
 function prepareVideoVoice(tool2, input, context2) {
   const args = { ...input };
-  const lines = (Array.isArray(context2.shot.narration) ? context2.shot.narration : []).map(object3).filter((line) => text(line.tts));
+  const lines = (Array.isArray(context2.shot.narration) ? context2.shot.narration : []).map(object4).filter((line) => text2(line.tts));
   const pinnedMsr = tool2 === "astra_genai_img2video" && args.generateAudio !== false && hasSubjectInput(args.references) && lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen");
   if (pinnedMsr && lines.some((line) => line.delivery === "voiceover"))
     throw new Error("msr_speech_route: split physical dialogue and inner thoughts into separate shots");
   const msr = tool2 === "astra_genai_msr" || pinnedMsr;
   const vendor = VENDOR_REFERENCE_TOOLS.includes(tool2);
   if (msr) {
-    if (object3(context2.shot.visual).video && object3(object3(context2.shot.visual).video).voice !== void 0)
+    if (object4(context2.shot.visual).video && object4(object4(context2.shot.visual).video).voice !== void 0)
       throw new Error("visual.video.voice is retired: MSR uses the speaker's voice sample when one is pinned");
   }
   if (!lines.length) return { args };
-  const doc = object3(context2.board.SB_DOC), raw = doc.characters;
-  const characters = Array.isArray(raw) ? raw.map(object3) : Object.entries(object3(raw)).map(([id, value]) => ({ ...object3(value), id }));
-  const visual = object3(context2.shot.visual);
+  const doc = object4(context2.board.SB_DOC), raw = doc.characters;
+  const characters = Array.isArray(raw) ? raw.map(object4) : Object.entries(object4(raw)).map(([id, value]) => ({ ...object4(value), id }));
+  const visual = object4(context2.shot.visual);
   const nativeSlot = Boolean(visual.clip) || context2.shot.type === "broll";
   const audible = msr || (tool2 !== "astra_genai_desktop_keyframes" || args.audio === true) && (tool2 === "fasth3_omni_reference" || tool2.startsWith("minimax_") || tool2.startsWith("heygen_") || (tool2.startsWith("astra_") ? args.generateAudio !== false : args.generateAudio === true));
   const lane = msr ? "reference" : VIDEO_ADAPTERS[tool2]?.voice ?? "none";
@@ -118477,21 +119338,21 @@ function prepareVideoVoice(tool2, input, context2) {
   const warnings = [];
   const speakers = [];
   const nativeLines = msr || vendor || nativeSlot || sceneDialogue ? lines : lines.filter((line) => line.delivery === "on_screen");
-  const ids = [...new Set((native ? nativeLines : lines).map((line) => text(line.speaker) || text(doc.narratorCharacterId)))];
+  const ids = [...new Set((native ? nativeLines : lines).map((line) => text2(line.speaker) || text2(doc.narratorCharacterId)))];
   const prompt = [];
-  const audioOffset = tool2 === "fasth3_omni_reference" && Array.isArray(args.referenceVideoPaths) ? fasth3VideoAudioCount(args.referenceVideoPaths.map((file) => path21.resolve(context2.episode, String(file)))) : 0;
-  const audioPaths = Array.isArray(args.referenceAudioPaths) ? args.referenceAudioPaths.map((value) => realpathSync5(path21.resolve(context2.episode, String(value)))) : [];
-  const imagePaths = Array.isArray(args.referenceImagePaths) ? args.referenceImagePaths.map((value) => realpathSync5(path21.resolve(context2.episode, String(value)))) : [];
-  const msrRefs = msr && Array.isArray(args.references) ? args.references.map((ref) => ({ ...object3(ref) })) : [];
+  const audioOffset = tool2 === "fasth3_omni_reference" && Array.isArray(args.referenceVideoPaths) ? fasth3VideoAudioCount(args.referenceVideoPaths.map((file) => path22.resolve(context2.episode, String(file)))) : 0;
+  const audioPaths = Array.isArray(args.referenceAudioPaths) ? args.referenceAudioPaths.map((value) => realpathSync6(path22.resolve(context2.episode, String(value)))) : [];
+  const imagePaths = Array.isArray(args.referenceImagePaths) ? args.referenceImagePaths.map((value) => realpathSync6(path22.resolve(context2.episode, String(value)))) : [];
+  const msrRefs = msr && Array.isArray(args.references) ? args.references.map((ref) => ({ ...object4(ref) })) : [];
   const msrAudio = [];
-  const screenBindings = msr ? external_exports.array(speakerBindingSchema).max(2).parse(object3(visual.video).speakerBindings ?? []) : [];
+  const screenBindings = msr ? external_exports.array(speakerBindingSchema).max(2).parse(object4(visual.video).speakerBindings ?? []) : [];
   if (new Set(screenBindings.map((binding) => binding.speaker)).size !== screenBindings.length)
     throw new Error("video_speaker_binding_invalid: each speaker needs one screen binding");
   for (const binding of screenBindings) {
     if (!characters.some((character) => character.id === binding.speaker) || nonEnglishOutsideQuotes(binding.description))
       throw new Error("video_speaker_binding_invalid: use a cast id and an English appearance description");
   }
-  const visibleSpeakers = [...new Set(nativeLines.filter((line) => line.delivery === "on_screen").map((line) => text(line.speaker)))];
+  const visibleSpeakers = [...new Set(nativeLines.filter((line) => line.delivery === "on_screen").map((line) => text2(line.speaker)))];
   if (msr && context2.sceneDirection && visibleSpeakers.some((id) => !context2.sceneDirection.openingPositions.some((p) => p.character === id)))
     throw new Error("openingPositions: describe each speaker in the scene opening");
   if (msr && !context2.sceneDirection && visibleSpeakers.length > 1 && visibleSpeakers.some((id) => !screenBindings.some((binding) => binding.speaker === id)))
@@ -118499,8 +119360,8 @@ function prepareVideoVoice(tool2, input, context2) {
   if (msr && !context2.sceneDirection && visibleSpeakers.length > 1 && new Set(screenBindings.filter((binding) => visibleSpeakers.includes(binding.speaker)).map((binding) => binding.screenPosition)).size !== visibleSpeakers.length)
     throw new Error("video_speaker_binding_invalid: on-screen speakers need distinct screen positions");
   if (msr && screenBindings.length) {
-    const start = text(object3(visual.frames).start), expected = text(object3(visual.video).speakerBindingImageSha256);
-    if (expected && (!start || fileHash(path21.resolve(context2.episode, "storyboard", start)) !== expected))
+    const start = text2(object4(visual.frames).start), expected = text2(object4(visual.video).speakerBindingImageSha256);
+    if (expected && (!start || fileHash(path22.resolve(context2.episode, "storyboard", start)) !== expected))
       throw new Error("video_speaker_binding_stale: the start image changed; inspect its positions and rewrite shot_prompt speakerBindings");
   }
   for (const id of ids) {
@@ -118510,11 +119371,11 @@ function prepareVideoVoice(tool2, input, context2) {
       continue;
     }
     const character = resolveCharacterVoice(matches[0], context2, warnings);
-    if (!Object.keys(object3(character.tts)).length) {
+    if (!Object.keys(object4(character.tts)).length) {
       warnings.push(`${id}: no pinned TTS settings in the storyboard or character identity; voice samples were not resolved.`);
       continue;
     }
-    const speaker = { speaker: id, name: text(character.name) || id, tts: object3(character.tts), description: voiceDescription(character) };
+    const speaker = { speaker: id, name: text2(character.name) || id, tts: object4(character.tts), description: voiceDescription(character) };
     const screenBinding = screenBindings.find((binding) => binding.speaker === id);
     if (screenBinding) speaker.screenBinding = screenBinding;
     const label = nonEnglishOutsideQuotes(speaker.name) ? id : speaker.name;
@@ -118522,7 +119383,7 @@ function prepareVideoVoice(tool2, input, context2) {
       const { index, slot } = msrSubject(character, msrRefs, context2);
       if (index >= 0) speaker.imageIndices = [index + 1];
       speaker.reference = voiceReference(character, context2, warnings);
-      const current = index < 0 ? "" : text(msrRefs[index].audioPath);
+      const current = index < 0 ? "" : text2(msrRefs[index].audioPath);
       const problem = !speaker.reference ? "no pinned voice sample" : context2.msrVoice !== true ? "the GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities)" : index < 0 ? "no MSR subject image matches voiceReference.imagePaths" : slot > 2 ? `MSR subject ${slot} takes no sample; only subjects 1 and 2 do` : current && current !== speaker.reference.path ? `Image ${index + 1} already carries another speaker's sample` : "";
       if (problem) {
         warnings.push(`${id}: ${problem}; MSR voices this speaker from the prompt.`);
@@ -118543,8 +119404,8 @@ function prepareVideoVoice(tool2, input, context2) {
           audioPaths.push(speaker.reference.path);
         }
         speaker.audioIndex = index + 1 + audioOffset;
-        const owned = object3(character.voiceReference).imagePaths;
-        const ownedPaths = Array.isArray(owned) ? owned.map((value) => realpathSync5(path21.resolve(context2.episode, "storyboard", String(value)))) : [];
+        const owned = object4(character.voiceReference).imagePaths;
+        const ownedPaths = Array.isArray(owned) ? owned.map((value) => realpathSync6(path22.resolve(context2.episode, "storyboard", String(value)))) : [];
         speaker.imageIndices = imagePaths.flatMap((file, i2) => ownedPaths.includes(file) ? [i2 + 1] : []);
         if (imagePaths.length && !speaker.imageIndices.length) warnings.push(`${id}: no explicit image ownership matched the request; add voiceReference.imagePaths to bind this speaker to the correct Image N.`);
         const images = speaker.imageIndices.map((i2) => referenceLabel(tool2, "image", i2, args.model)).join(", ");
@@ -118557,34 +119418,34 @@ function prepareVideoVoice(tool2, input, context2) {
       if (nonEnglishOutsideQuotes(speaker.description)) warnings.push(`${id}: supply an English translation of the pinned acoustic description in the authored prompt; video prompts are English only. The original description stays in this plan.`);
       else prompt.push(`Stable voice for ${label} (speaker ${id}): ${speaker.description}`);
     }
-    if (native && !text(object3(character.tts).voiceDirection) && !text(object3(character.tts).stylePrompt) && !text(object3(object3(object3(character.character).speech).timbre).value))
+    if (native && !text2(object4(character.tts).voiceDirection) && !text2(object4(character.tts).stylePrompt) && !text2(object4(object4(object4(character.character).speech).timbre).value))
       warnings.push(`${id}: no authored acoustic description; the TTS voice ID is not a video-model voice selector.`);
   }
   const turnScript = () => {
     const img = (n) => referenceLabel(tool2, "image", n, args.model), aud = (n) => referenceLabel(tool2, "audio", n, args.model);
     const quoted = [...String(args.prompt).matchAll(/"([^"]*)"|“([^”]*)”|「([^」]*)」/g)].map((match2) => match2[1] ?? match2[2] ?? match2[3]);
-    if (lines.some((line) => quoted.some((words) => words.includes(text(line.tts)))))
+    if (lines.some((line) => quoted.some((words) => words.includes(text2(line.tts)))))
       throw new Error("video_dialogue_embedded: keep authored dialogue in shot_dialogue, not args.prompt/action/sound; video_plan compiles every turn with its speaker binding in order");
     const bySpeaker = new Map(speakers.map((speaker) => [speaker.speaker, speaker]));
     const script = lines.map((line, turn) => {
-      const id = text(line.speaker) || text(doc.narratorCharacterId), speaker = bySpeaker.get(id);
-      const image2 = speaker?.imageIndices?.[0], audio = speaker?.audioIndex, direction = text(object3(line.acting).direction);
+      const id = text2(line.speaker) || text2(doc.narratorCharacterId), speaker = bySpeaker.get(id);
+      const image2 = speaker?.imageIndices?.[0], audio = speaker?.audioIndex, direction = text2(object4(line.acting).direction);
       const who = image2 ? img(image2) : speaker?.name ?? id;
       if (context2.sceneDirection) {
         const owner = context2.sceneDirection.openingPositions.find((p) => p.character === id);
         const imageSlot = image2 ?? owner?.images[0];
         const binding2 = [imageSlot && img(imageSlot), audio && aud(audio), line.delivery === "off_screen" && "off screen"].filter(Boolean).join(", ");
-        return `${id}${binding2 ? " (" + binding2 + ")" : ""}: "${text(line.tts)}"`;
+        return `${id}${binding2 ? " (" + binding2 + ")" : ""}: "${text2(line.tts)}"`;
       }
       if (line.delivery !== "on_screen") {
         const label2 = nonEnglishOutsideQuotes(speaker?.name ?? "") ? id : speaker?.name ?? id;
         const delivery2 = line.delivery === "off_screen" ? "off screen" : "in voiceover";
-        return `${label2} speaks ${delivery2}${direction ? ` (${direction})` : ""}${audio ? ` using ${aud(audio)}` : ""}. Keep the speaking face outside the authored crop; retain any planned hands or body detail. Do not add a portrait or animate any visible mouth during this line. ${audio ? `${aud(audio)} (${label2})` : label2}: "${text(line.tts)}"`;
+        return `${label2} speaks ${delivery2}${direction ? ` (${direction})` : ""}${audio ? ` using ${aud(audio)}` : ""}. Keep the speaking face outside the authored crop; retain any planned hands or body detail. Do not add a portrait or animate any visible mouth during this line. ${audio ? `${aud(audio)} (${label2})` : label2}: "${text2(line.tts)}"`;
       }
       const binding = speaker?.screenBinding;
       const label = nonEnglishOutsideQuotes(speaker?.name ?? "") ? id : speaker?.name ?? id;
       const identity = binding ? `${who}, ${label} at SCREEN ${binding.screenPosition.toUpperCase()} (${binding.description})` : `${who} (${label})`;
-      return `Turn ${turn + 1}: ${identity} speaks${direction ? ` (${direction})` : ""}${audio ? ` using ${aud(audio)}` : ""}. Only this speaker's mouth moves; other visible mouths stay closed. ${audio ? `${aud(audio)} (${who})` : who}: "${text(line.tts)}"`;
+      return `Turn ${turn + 1}: ${identity} speaks${direction ? ` (${direction})` : ""}${audio ? ` using ${aud(audio)}` : ""}. Only this speaker's mouth moves; other visible mouths stay closed. ${audio ? `${aud(audio)} (${who})` : who}: "${text2(line.tts)}"`;
     });
     if (screenBindings.length) prompt.push("Screen positions use the viewer's left and right in the opening image. Preserve these positions and each character's appearance.");
     if (speakers.length > 1) prompt.push("Speak the following turns in order, with a brief pause between speakers and no overlapping speech.");
@@ -118594,8 +119455,8 @@ function prepareVideoVoice(tool2, input, context2) {
     args.references = msrRefs;
     turnScript();
     if (typeof args.prompt === "string" && msrAudio.length) args.prompt = afterImageBlock(args.prompt, msrAudio.sort());
-    const spoken = object3(context2.board.STORY).language;
-    if (typeof spoken === "string" ? !/^en\b/i.test(spoken) : lines.some((line) => /[^\P{L}A-Za-z]/u.test(text(line.tts)))) warnings.push("MSR training captions were English; speech in another language and cross-language voice are not established (arXiv 2609.18393).");
+    const spoken = object4(context2.board.STORY).language;
+    if (typeof spoken === "string" ? !/^en\b/i.test(spoken) : lines.some((line) => /[^\P{L}A-Za-z]/u.test(text2(line.tts)))) warnings.push("MSR training captions were English; speech in another language and cross-language voice are not established (arXiv 2609.18393).");
     if (speakers.some((speaker) => speaker.audioIndex)) warnings.push("Reference voice is imitation, not preservation of the original WAV or exact speech timing.");
   } else if (reference2) {
     args.referenceAudioPaths = audioPaths;
@@ -118625,202 +119486,12 @@ function prepareVideoVoice(tool2, input, context2) {
   } };
 }
 
-// src/video-prompt.ts
-import { createRequire as createRequire9 } from "node:module";
-var load4 = createRequire9(import.meta.url);
-var object4 = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
-var text2 = (value) => typeof value === "string" ? value.trim() : "";
-function planVideoPerformance(shot, options = {}) {
-  const acting = load4("../../skills/_shared/scene-acting.js");
-  const timeline = acting.planScenePerformance(shot, options.measureAudio);
-  return { ...timeline, timing: options.mode === "native" && timeline.timing === "needs_audio_duration" ? "model_timed" : timeline.timing };
-}
-var sentence = (value) => {
-  const s2 = value.trim(), capped2 = s2.charAt(0).toUpperCase() + s2.slice(1);
-  return !s2 ? "" : /[.!?]["'”’)]+$/.test(capped2) ? capped2 : capped2.replace(/[.!?]*$/, "") + ".";
-};
-function expressionWords(shot, names = {}) {
-  return Object.entries(object4(object4(shot.visual).expression)).filter(([, cue]) => text2(cue)).map(([id, cue]) => `${names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id}: ${text2(cue).replace(/[.\s]+$/, "")}`).join("; ");
-}
-var heldMove = /^(?:static|fixed|locked(?:[- ]off)?)(?: (?:camera|frame|shot))?[.!]?$/i;
-function cameraMoveWords(camera) {
-  const movement = text2(camera.movement), speed = text2(camera.speed), target = text2(camera.target);
-  if (!movement) return "";
-  if (heldMove.test(movement)) return "The camera holds a static frame.";
-  const catalogue = load4("../../skills/storyboard/references/film-techniques.js");
-  const move = catalogue.entries.find((entry2) => entry2.fields.movement === movement.toLowerCase())?.prompt;
-  const pace = { slow: "slowly", steady: "steadily", fast: "quickly" }[speed];
-  const travels = load4("../../skills/storyboard/references/production-mode.js").travels(camera);
-  const ends = travels ? ", with a short pause on the opening and closing pictures" : "";
-  if (move) {
-    const path35 = /[;.!?]\s|^(?:after|when|once|follow|track|pan|tilt|dolly|orbit|keep|start|end)\b/i.test(target);
-    const words = move.replace("{target}", () => path35 || !target ? "the subject" : target);
-    return [sentence("The camera " + (pace ? pace + " " : "") + words + (speed && !pace ? " at a " + speed + " pace" : "") + ends), path35 && sentence(target)].filter(Boolean).join(" ");
-  }
-  return [sentence("Camera: " + [speed, movement].filter(Boolean).join(" ") + ends), target && sentence("Camera target: " + target)].filter(Boolean).join(" ");
-}
-function sceneCameraDirection(members, explicit) {
-  function mapped(instruction, value) {
-    const binding = { attribute: "move", value, via: "prompt", instruction };
-    return { instruction, warnings: [], bindings: [binding] };
-  }
-  if (explicit) return mapped(explicit, { source: "videoDirection.camera" });
-  let elapsed = 0;
-  const moves = members.flatMap((shot) => {
-    const camera = object4(object4(shot.visual).camera), movement = text2(camera.movement);
-    const start = elapsed;
-    elapsed += Number(shot.duration);
-    if (!movement || members.length > 1 && heldMove.test(movement)) return [];
-    return [{ id: text2(shot.id), movement, words: cameraMoveWords(camera), landing: text2(camera.end), start, end: elapsed }];
-  });
-  if (!moves.length) return { instruction: "", warnings: [], bindings: [] };
-  const first = moves[0];
-  const wholeTake = moves.length === members.length && moves.every((m2) => m2.words === first.words && m2.landing === first.landing);
-  if ((wholeTake || moves.length === 1) && !nonEnglishOutsideQuotes(first.words + " " + first.landing)) {
-    const end = Number(first.end.toFixed(3));
-    const cue = wholeTake ? "" : "From " + Number(first.start.toFixed(3)) + " to " + end + " seconds: ";
-    const landing = first.landing && sentence((wholeTake ? "Closing frame: " : "By " + end + " seconds: ") + first.landing);
-    return mapped([cue + first.words, landing].filter(Boolean).join(" "), { source: "visual.camera", shotIds: moves.map((m2) => m2.id) });
-  }
-  const cards = moves.map((m2) => m2.id + " (" + m2.movement + ")").join(", ");
-  return { instruction: "", bindings: [], warnings: ["scene_camera_unresolved: " + cards + " \u2014 write the intended camera cue and landing for this take in English in story_scene.videoDirection.camera"] };
-}
-var directedMoves = [
-  /\bpan(?:s|ning)? left\b/i,
-  /\bpan(?:s|ning)? right\b/i,
-  /\btilt(?:s|ing)? up(?:wards?)?\b/i,
-  /\btilt(?:s|ing)? down(?:wards?)?\b/i,
-  /\b(?:dolly|dollies|push(?:es|ing)?) in\b/i,
-  /\b(?:dolly|dollies) out\b|\bpull(?:s|ing)? (?:back|out)\b/i,
-  /\bzoom(?:s|ing)? in\b/i,
-  /\bzoom(?:s|ing)? out\b/i,
-  /\b(?:truck|track)(?:s|ing)? (?:parallel|sideways|alongside|laterally)\b/i,
-  /\btrack(?:s|ing)? backward\b/i,
-  /\b(?:track|follow)(?:s|ing)? (?:\w+ )?(?:from )?behind\b/i
-];
-function cameraDrift(prompt, movement) {
-  if (!movement.trim()) return null;
-  const prose = prompt.replace(/"[^"]*"|“[^”]*”|「[^」]*」/g, " ");
-  const clauses = prose.split(/[.!?;\n]+/).map((s2) => s2.trim());
-  const said = clauses.map((s2) => {
-    const imperative = /^(?:(?:do not|never|slowly|steadily|quickly) )*(?:pan|dolly|push in|pull back|crane|tilt|zoom|truck|orbit|track|follow|whip pan)\b/i;
-    const camera = /\b(?:(?:static|locked(?:[- ]off)?|fixed) )?camera\b|\bshot (?=tracking|panning|tilting|following|moving|zooming)/i.exec(s2);
-    const predicate = imperative.test(s2) ? s2 : camera ? s2.slice(camera.index) : "";
-    return predicate.split(/\s+(?:while|as|so that)\s+/i)[0];
-  }).filter(Boolean);
-  const holds = (s2) => !/\bzoom/i.test(s2) && /^(?:static|locked(?:[- ]off)?|fixed) camera\b|\bcamera[: ]+(?:(?:is|stays?|remains?) |holds? (?:a |the )?)?(?:steady|still|static|fixed|locked|put)\b|\bcamera (?:does not|doesn't|never) moves?\b/i.test(s2);
-  const moves = /\b(push(?:es|ing)?|pull(?:s|ing)?|dolly|dollies|truck(?:s|ing)?|track(?:s|ing)?|follow(?:s|ing)?|pan(?:s|ning)?|tilt(?:s|ing)?|zoom(?:s|ing)?|crane(?:s)?|pedestal|orbit(?:s|ing)?|arc(?:s)?|circles?|approach(?:es)?|glides?|rises?|lowers?|handheld|body-mounted|whip|moves?|travels?|sweeps?|drifts?|recoils?|rides?|chases?|flies|swings?)\b/i;
-  const negated = /^(?:camera[: ]+)?(?:never|do(?:es)? not|doesn't|don't|must not)\b/i;
-  const moving = said.filter((s2) => moves.test(s2) && !holds(s2) && !negated.test(s2));
-  if (heldMove.test(movement.trim())) return moving.length ? "contradicted" : null;
-  const expected = directedMoves.find((re) => re.test(movement));
-  if (expected && !moving.some((s2) => expected.test(s2)) && (moving.some((s2) => directedMoves.some((re) => re.test(s2))) || said.some((s2) => negated.test(s2) && expected.test(s2)))) return "contradicted";
-  const fixedFrame = /\b(?:preserve|maintain|lock) the (?:opening |original |same )?(?:image )?(?:composition|framing|crop)\b/i;
-  if (clauses.some((s2) => fixedFrame.test(s2) && !/\b(?:at first|initially|until|then|first frame only)\b/i.test(s2))) return "contradicted";
-  if (moving.length) return null;
-  return said.some(holds) ? "contradicted" : "missing";
-}
-function compileVideoPrompt(shot, source, names = {}, options = {}) {
-  const plan2 = object4(shot.shot), visual = object4(shot.visual), frames = object4(visual.frames), camera = object4(visual.camera);
-  const msr = frames.mode === "reference";
-  const words = load4("../../skills/storyboard/references/assemble-bg-prompt.js");
-  const views = load4("../../skills/storyboard/references/shot-view.js");
-  const viewWords = camera.view === void 0 ? "" : views.instructions(camera.view);
-  const sizes = viewWords ? words.SIZE_WORDS_OBJECT : words.SIZE_WORDS;
-  const catalogue = load4("../../skills/storyboard/references/film-techniques.js");
-  const contract2 = load4("../../skills/storyboard/references/structure-contract.js");
-  const picked = (Array.isArray(plan2.techniques) ? plan2.techniques : []).map(object4).map((t2) => ({
-    id: text2(t2.id),
-    from: text2(t2.from),
-    to: text2(t2.to),
-    on: text2(t2.on),
-    entry: catalogue.byId[text2(t2.id)]
-  }));
-  const movement = text2(camera.movement), settle = text2(camera.end), moveWords = cameraMoveWords(camera);
-  const rack = picked.find((t2) => t2.entry?.fields.focus);
-  const focusWords = !rack ? "" : sentence(rack.from && rack.to ? `Rack focus from ${rack.from} to ${rack.to}` : `${rack.entry.label.en} from the near subject to the far subject`);
-  const sizeWords = sentence(sizes[text2(plan2.size)] || ""), angleWords = sentence(words.ANGLE_WORDS[text2(plan2.angle)] || "");
-  const framing = sentence([sizes[text2(plan2.size)], words.ANGLE_WORDS[text2(plan2.angle)]].filter(Boolean).join(", "));
-  const depthWords = plan2.depth ? sentence(contract2.depthText(plan2.depth)) : "";
-  const other = picked.filter((t2) => t2.entry && ["camera", "framing"].includes(t2.entry.category) && !t2.entry.fields.movement && !t2.entry.fields.focus && !t2.entry.fields.size && !t2.entry.fields.angle && !(viewWords && t2.entry.fields.viewpoint));
-  const lines = (Array.isArray(shot.narration) ? shot.narration : []).map(object4);
-  const mode = options.mode ?? (lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen") ? "native" : "voiceover");
-  const design = object4(plan2.videoDesign);
-  const motion = object4(design.motion);
-  const states = [...new Set((Array.isArray(motion.beats) ? motion.beats : []).map((beat) => text2(object4(beat).state)).filter(Boolean))];
-  const performance2 = planVideoPerformance(shot, { ...options, mode });
-  const acting = load4("../../skills/_shared/scene-acting.js");
-  const beats = acting.performanceBeats(performance2.performance, mode, !msr && !options.bindDialogueSeparately);
-  const worn = expressionWords(shot, names);
-  const called = (id) => names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id;
-  const seen = (Array.isArray(visual.bystanders) ? visual.bystanders : []).map(text2).filter(Boolean), extras = text2(visual.extras);
-  const plain = (value) => text2(value).replace(/[.\s]+$/, "").toLowerCase();
-  const actionInBeat = performance2.performance.some((event) => event.kind === "action" && plain(event.videoDirection || event.text) === plain(source.action));
-  const parts = (step2) => [
-    msr ? framing : "Start from the given first frame.",
-    msr ? depthWords : "",
-    moveWords,
-    settle ? sentence(`Closing frame: ${settle}`) : "",
-    focusWords,
-    // A beat accent (speed ramp, impact shake) names the moment it fires on.
-    ...other.map((t2) => sentence(t2.entry.fields.accent && t2.entry.prompt ? t2.entry.prompt.replace("{cue}", t2.on || t2.entry.fields.cue) : t2.entry.instruction)),
-    viewWords || (text2(camera.framing) ? sentence(`Opening composition: ${text2(camera.framing)}`) : ""),
-    !viewWords && camera.rear && !other.some((t2) => t2.entry.fields.viewpoint === "rear") ? "View the subject from behind." : "",
-    !viewWords && camera.pov && !other.some((t2) => t2.entry.fields.viewpoint === "pov") ? sentence(`Point of view: ${text2(camera.pov) || "the named character"}`) : "",
-    actionInBeat ? "" : sentence(source.action),
-    seen.length ? sentence(`The opening picture also shows ${seen.map(called).join(" and ")}, who ${seen.length > 1 ? "stay" : "stays"} in the frame and never speaks`) : "",
-    extras ? sentence(`Unnamed people in the frame: ${extras}`) : "",
-    ...step2 >= 1 ? [] : ["before", "after", "continuity"].map((key) => text2(design[key]) ? sentence(`${key}: ${text2(design[key])}`) : ""),
-    ...step2 >= 1 ? [] : states.filter((state) => ![source.action, design.before, design.after, design.continuity].includes(state)).map((state) => sentence(`Visible state: ${state}`)),
-    !lines.length && beats.length ? "Perform the planned action without invented speech or voiceover." : "",
-    ...step2 >= 2 ? acting.performanceBeats(performance2.performance, mode, !msr && !options.bindDialogueSeparately, { brief: true }) : beats,
-    // The model's default face is pleasant; the authored state has to be named and held (LTX guide: physical cues, state after the action).
-    worn && step2 < 3 ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : "",
-    frames.mode === "first_last" ? sentence(`End on the given last frame${source.end ? ": " + source.end : ""}`) : source.end ? sentence(`End on ${source.end}`) : "",
-    sentence(`Audio: ${source.sound ? source.sound + (/\b(music|soundtrack|score|bgm|melody|orchestral|song)\b/i.test(source.sound) ? "" : ", no music") : "no music"}`),
-    acting.VIDEO_TEXT_POLICY
-  ].filter(Boolean);
-  const limit2 = options.maxCharacters, dropped = ["design notes and visible states", "acting fields of the beats", "expressions"];
-  let step = 0, prompt = parts(0).join(" ");
-  while (limit2 && prompt.length > limit2 && step < dropped.length) prompt = parts(++step).join(" ");
-  const fitWarnings = !limit2 || !step ? [] : [prompt.length > limit2 ? `prompt_over_limit: ${prompt.length} characters after leaving out the ${dropped.slice(0, step).join(", ")}; the adapter takes ${limit2}. Shorten the action, end or sound in shot_prompt` : `prompt_fitted: left out the ${dropped.slice(0, step).join(", ")} to fit the adapter's ${limit2} characters; the camera, action and lines are whole`];
-  const foreign = nonEnglishOutsideQuotes(prompt);
-  if (foreign && options.validateLanguage !== false) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks; write action and direction in English`);
-  const bindings = [
-    { attribute: "render", value: object4(plan2.render).mode, via: "adapter" },
-    { attribute: "size", value: plan2.size, via: !sizeWords ? "unmapped" : msr ? "prompt" : "image", instruction: sizeWords },
-    { attribute: "angle", value: plan2.angle, via: !angleWords ? "unmapped" : msr ? "prompt" : "image", instruction: angleWords },
-    { attribute: "view", value: camera.view, via: "prompt", instruction: viewWords },
-    { attribute: "move", value: camera, via: movement ? "prompt" : "unmapped", instruction: moveWords },
-    { attribute: "focus", value: rack ? { id: rack.id, from: rack.from, to: rack.to } : void 0, via: "prompt", instruction: focusWords },
-    { attribute: "depth", value: plan2.depth, via: msr ? "prompt" : "image", instruction: depthWords },
-    { attribute: "framePlan", value: frames.mode, via: "adapter" },
-    ...picked.map((t2) => ({
-      attribute: "technique",
-      value: t2.id,
-      via: !t2.entry ? "unmapped" : t2.entry.category === "character" ? "image" : t2.entry.category === "timing" ? "guidance" : t2.entry.category === "framing" || t2.entry.fields.angle ? msr ? "prompt" : "image" : "prompt",
-      instruction: t2.entry?.instruction
-    })),
-    { attribute: "transition", value: shot.transition, via: "assembly" },
-    ...beats.length ? [{ attribute: "performance", value: performance2, via: "prompt", instruction: beats.join("\n") }] : []
-  ];
-  return { prompt, performance: performance2, directionBindings: bindings.filter((b) => b.value !== void 0), warnings: [
-    ...performance2.warnings,
-    ...fitWarnings,
-    ...cameraDrift([source.action, source.end].filter(Boolean).join("\n"), movement) === "contradicted" ? ["camera_move_contradicted: shot_prompt action or end conflicts with the camera direction. Reconcile the action cue and landing with visual.camera."] : [],
-    // An unchosen move leaves the camera to the model; on mochi_bo 29 of 33 shots of one episode went out so.
-    ...movement ? [] : ["camera_move_unset: no camera move is chosen, so the video model decides the camera \u2014 set shot_icons move (camera.static for a deliberate hold)"],
-    ...bindings.filter((b) => b.value !== void 0 && b.via === "unmapped" && b.attribute !== "move").map((b) => `No prompt mapping for ${b.attribute}: ${JSON.stringify(b.value)}`),
-    ...rack && !(rack.from && rack.to) ? ["the rack focus names no subjects \u2014 give focus.from and focus.to in shot_icons"] : []
-  ] };
-}
-
 // src/video-routing.ts
-var load5 = createRequire10(import.meta.url);
+var load6 = createRequire11(import.meta.url);
 var shared2 = fileURLToPath7(new URL("../../skills/_shared/video-selection.js", import.meta.url));
 var modelSettings = fileURLToPath7(new URL("../../skills/_shared/model-settings.js", import.meta.url));
 var CHANNEL_ASSET_RE = /^data\/[a-z0-9][a-z0-9-]*\/assets(\/|$)/;
-var routingContext = (episode, shotId, sceneNo) => load5(shared2).readVideoContext(episode, shotId, sceneNo);
+var routingContext = (episode, shotId, sceneNo) => load6(shared2).readVideoContext(episode, shotId, sceneNo);
 function selectedVideoTool(selection, operation = selection.operation) {
   return Object.entries(VIDEO_ADAPTERS).find(([name, a]) => a.engine === selection.engine && a.operation === operation && (a.engine !== "mlx" || !selection.model || localVideoStrategy(name)?.acceptsModel(selection.model)))?.[0];
 }
@@ -118830,9 +119501,9 @@ function shotVideoTiming(context2, tool2, args) {
   if (context2.sceneNo !== void 0) {
     coverage2 = { requiredSeconds: Number(shot.duration) };
   } else if (shot.duration !== void 0) {
-    const edit2 = load5(fileURLToPath7(new URL("../../skills/produce/references/edit-plan.js", import.meta.url))).preview(context2.board.SCENES, { videoWarningsApproved: true });
+    const edit2 = load6(fileURLToPath7(new URL("../../skills/produce/references/edit-plan.js", import.meta.url))).preview(context2.board.SCENES, { videoWarningsApproved: true });
     const index = context2.board.SCENES.indexOf(shot);
-    const timing = load5(fileURLToPath7(new URL("../../skills/_shared/video-duration.js", import.meta.url)));
+    const timing = load6(fileURLToPath7(new URL("../../skills/_shared/video-duration.js", import.meta.url)));
     const planned = edit2.find((entry2) => entry2.card === index);
     const ownVoice = shot.sound?.audioSource === "video";
     coverage2 = timing.shotTiming(shot, { edit: ownVoice && planned ? { ...planned, in: 0 } : planned });
@@ -118850,7 +119521,7 @@ function shotVideoTiming(context2, tool2, args) {
   };
 }
 function nativeSpeechTiming(shot, language) {
-  const acting = load5(fileURLToPath7(new URL("../../skills/_shared/scene-acting.js", import.meta.url)));
+  const acting = load6(fileURLToPath7(new URL("../../skills/_shared/scene-acting.js", import.meta.url)));
   let estimatedSeconds, unmeasuredRate = false;
   try {
     estimatedSeconds = acting.planScenePerformance(shot, (line) => {
@@ -118871,7 +119542,7 @@ function nativeSpeechFit(shot, requestedSeconds, limits, language) {
   const unmeasuredRate = speechRate === "uncalibrated";
   let shortest;
   try {
-    shortest = load5(fileURLToPath7(new URL("../../skills/_shared/video-duration.js", import.meta.url))).minimumDuration(estimatedSeconds, limits);
+    shortest = load6(fileURLToPath7(new URL("../../skills/_shared/video-duration.js", import.meta.url))).minimumDuration(estimatedSeconds, limits);
   } catch {
     return void 0;
   }
@@ -118924,14 +119595,14 @@ var videoPlanSchema = external_exports.object({
 }).strict().refine((v) => Boolean(v.shotId) !== (v.sceneNo !== void 0), "Choose sceneNo or shotId");
 var videoExecuteSchema = external_exports.object({ episode: external_exports.string().min(1), planId: external_exports.string().regex(/^[a-f0-9]{64}$/) }).strict();
 function within(root, file) {
-  const relative4 = path22.relative(root, file);
-  return relative4 === "" || !relative4.startsWith(".." + path22.sep) && relative4 !== ".." && !path22.isAbsolute(relative4);
+  const relative4 = path23.relative(root, file);
+  return relative4 === "" || !relative4.startsWith(".." + path23.sep) && relative4 !== ".." && !path23.isAbsolute(relative4);
 }
 function canonical2(file) {
   if (fs19.existsSync(file)) return fs19.realpathSync(file);
-  const parent = path22.dirname(file);
+  const parent = path23.dirname(file);
   if (parent === file) throw new Error("Cannot resolve path");
-  return path22.join(canonical2(parent), path22.basename(file));
+  return path23.join(canonical2(parent), path23.basename(file));
 }
 function inputFiles(args, episode) {
   const files3 = {};
@@ -118939,7 +119610,7 @@ function inputFiles(args, episode) {
     if (Array.isArray(value)) return value.map((v) => visit(v, key.endsWith("Paths") ? key.slice(0, -1) : key));
     if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, visit(v, k)]));
     if (typeof value === "string" && key.endsWith("Path") && key !== "outputPath") {
-      const absolute = fs19.realpathSync(path22.resolve(episode, value));
+      const absolute = fs19.realpathSync(path23.resolve(episode, value));
       if (!fs19.statSync(absolute).isFile()) throw new Error("Input is not a regular file: " + key);
       files3[absolute] = createHash16("sha256").update(fs19.readFileSync(absolute)).digest("hex");
       return absolute;
@@ -119003,26 +119674,38 @@ function checkVideoEnvironment(tool2) {
   if (!ready) throw new Error("video_provider_unconfigured: " + engine);
 }
 function saveVideoPlan(plan2) {
-  const file = path22.join(plan2.episode, ".work/video-routing/plans", plan2.id + ".json");
+  const file = path23.join(plan2.episode, ".work/video-routing/plans", plan2.id + ".json");
   if (!fs19.existsSync(file)) atomicJson(file, plan2);
   refreshVideoReview(plan2.episode);
   return plan2;
 }
-async function planVideoForGateway(raw) {
+async function planManagedVideo(raw) {
   const plan2 = planVideo(raw, false);
   await checkGenaiVideoOptions(plan2.tool, plan2.args);
+  if (plan2.sceneRequest) await checkSceneDeployment(plan2.sceneRequest, plan2.tool, plan2.args);
   return saveVideoPlan(plan2);
 }
 function planVideo(raw, persist = true) {
   const input = videoPlanSchema.parse(raw);
   requireReadyProject(input.episode, { allowVideoSnapshot: true });
-  const context2 = routingContext(input.episode, input.shotId, input.sceneNo);
+  let context2 = routingContext(input.episode, input.shotId, input.sceneNo);
+  if (input.shotId && context2.shot.scene !== void 0) {
+    const sceneNo = Number(context2.shot.scene);
+    const owner = context2.board.STRUCTURE?.scenes?.find((s2) => s2.no === sceneNo);
+    const members2 = context2.board.SCENES.filter((shot2) => shot2.scene === sceneNo);
+    const timed = owner?.videoDirection && members2.length > 1 || owner?.videoDirection?.oneTake || owner?.videoDirection?.audio || owner?.videoDirection?.fps || members2.some((shot2) => shot2.timeline || shot2.visual?.frames?.storyboardKeyframes || owner?.videoDirection && shot2.visual?.frames?.keyframes);
+    if (timed) {
+      if (members2.length !== 1) throw new Error("scene_video_scope: plan the timed shot and its scene inputs with sceneNo " + sceneNo);
+      input.sceneNo = sceneNo;
+      context2 = routingContext(input.episode, void 0, sceneNo);
+    }
+  }
   const scene = context2.sceneDirection && sceneVideoDirectionSchema.parse(context2.sceneDirection);
   const take = { ...scene ? { sceneNo: context2.sceneNo, sceneDurationSeconds: Number(context2.shot.duration), shotIds: context2.shotIds } : {}, ...input.purpose ? { purpose: input.purpose } : {}, ...input.basedOnRequestId ? { basedOnRequestId: input.basedOnRequestId } : {}, ...input.changeNote ? { changeNote: input.changeNote } : {} };
   if (input.basedOnRequestId) {
-    const directory2 = path22.join(context2.episode, ".work/video-routing/plans");
+    const directory2 = path23.join(context2.episode, ".work/video-routing/plans");
     const parent = input.basedOnRequestId !== input.requestId && fs19.existsSync(directory2) && fs19.readdirSync(directory2).filter((file) => /^[a-f0-9]{64}\.json$/.test(file)).some((file) => {
-      const plan3 = JSON.parse(fs19.readFileSync(path22.join(directory2, file), "utf8"));
+      const plan3 = JSON.parse(fs19.readFileSync(path23.join(directory2, file), "utf8"));
       return plan3.requestId === input.basedOnRequestId && plan3.shotId === context2.shotId && plan3.sceneNo === input.sceneNo && plan3.episode === context2.episode;
     });
     if (!parent) throw new Error("video_parent_missing: name a different existing request for this shot");
@@ -119052,7 +119735,7 @@ function planVideo(raw, persist = true) {
   const requestsSilence = /(?:^|\bAudio:\s*)silent\b/i.test(String(writtenAudio ?? "").trim());
   const generateAudio = input.args.generateAudio ?? (sound?.audioSource !== "speech" && !requestsSilence);
   const includeEffects = supportsAudioToggle && lines.length === 0 && generateAudio === true;
-  const shot = tool2 === "astra_genai_img2video" && silentPicture && visual?.frames?.mode === "reference" ? { ...context2.shot, visual: {
+  let shot = tool2 === "astra_genai_img2video" && silentPicture && visual?.frames?.mode === "reference" ? { ...context2.shot, visual: {
     ...visual,
     frames: { mode: "first", start: visual.frames.start },
     references: visual.references ?? []
@@ -119065,14 +119748,16 @@ function planVideo(raw, persist = true) {
   const measureAudio = (line) => {
     const audio = line.audio;
     if (mode === "native" || !audio?.path || !audio.sha256) return null;
-    const file = path22.resolve(context2.episode, "storyboard", audio.path);
+    const file = path23.resolve(context2.episode, "storyboard", audio.path);
     if (!fs19.existsSync(file) || createHash16("sha256").update(fs19.readFileSync(file)).digest("hex") !== audio.sha256) return null;
-    const seconds2 = Number(execFileSync14("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", file], { encoding: "utf8", timeout: 1e4 }));
+    const seconds2 = Number(execFileSync15("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", file], { encoding: "utf8", timeout: 1e4 }));
     if (!Number.isFinite(seconds2) || seconds2 <= 0) return null;
     performanceInputs[file] = audio.sha256;
     return seconds2;
   };
-  const imageWithReferences = tool2 === "astra_genai_img2video" && (hasVideoSubjectReferences(shot) || hasSubjectInput(input.args.references));
+  const timedSubject = scene && context2.sceneMembers?.some((member) => member.timeline?.images?.some((p) => ["face", "outfit"].includes(p.role)));
+  const subjectReferences = Boolean(timedSubject || hasVideoSubjectReferences(shot));
+  const imageWithReferences = tool2 === "astra_genai_img2video" && (subjectReferences || hasSubjectInput(input.args.references));
   const bindDialogueSeparately = imageWithReferences && !silentPicture && input.args.generateAudio !== false;
   const silentSuffix = silentPicture && (supportsAudioToggle || tool2 === "minimax_img2video" || tool2 === "heygen_img2video") ? `No speech or vocalization. All visible mouths stay closed; ${includeEffects ? "include natural ambience for the location and sound effects from the visible actions." : "perform the planned silent action."}` : "";
   const promptLimit = tool2 === "astra_genai_msr" || imageWithReferences ? genaiMsrPromptLimit() : tool2 === "astra_genai_img2video" ? 2e3 : tool2 ? videoPromptLimit(tool2) : void 0;
@@ -119082,7 +119767,7 @@ function planVideo(raw, persist = true) {
     bindDialogueSeparately,
     ...budget ? { maxCharacters: budget - (silentSuffix ? silentSuffix.length + 1 : 0) } : {}
   });
-  let compiled = input.args.prompt === void 0 && video2?.promptSource ? compileFor(promptLimit) : void 0;
+  let compiled = !scene && input.args.prompt === void 0 && video2?.promptSource ? compileFor(promptLimit) : void 0;
   const withPrompt = (prompt) => {
     const args2 = input.args.prompt === void 0 && typeof prompt === "string" ? { ...input.args, prompt } : input.args;
     return silentSuffix ? {
@@ -119092,19 +119777,31 @@ function planVideo(raw, persist = true) {
     } : args2;
   };
   let callArgs = withPrompt(compiled?.prompt ?? video2?.prompt);
-  if (scene && input.args.prompt !== void 0)
+  if (scene && (input.args.prompt !== void 0 || input.args.shots !== void 0))
     throw new Error("scene_video_prompt: edit story_scene.videoDirection and the authored dialogue to revise the scene");
-  const sceneCamera = scene && sceneCameraDirection(context2.sceneMembers, scene.camera);
+  const members = context2.sceneMembers ?? [];
+  const bindTurns = Boolean(bindDialogueSeparately || tool2 === "astra_genai_msr" || tool2 && VENDOR_REFERENCE_TOOLS.includes(tool2));
+  const bindOpening = tool2 === "astra_genai_msr" || tool2 === "astra_genai_img2video" && subjectReferences;
+  const prepared = scene && context2.timed ? prepareSceneRequest(
+    context2.sceneNo,
+    members,
+    scene,
+    context2.episode,
+    lines,
+    { bindDialogue: bindTurns, bindOpening, suffix: silentSuffix },
+    (request) => bindSceneAdapter(request, tool2 ?? "host_external", selection.model, shot, input.args, context2.episode)
+  ) : void 0;
+  const sceneRequest = prepared?.request;
+  const sceneCamera = prepared?.camera ?? (scene && sceneCameraDirection(members, scene.camera));
+  const timedImages2 = prepared?.mapped.timedImages;
   if (scene) {
-    const boundTurns = bindDialogueSeparately || tool2 === "astra_genai_msr" || tool2 && VENDOR_REFERENCE_TOOLS.includes(tool2);
-    const sceneText2 = [
-      scene.emotion,
-      scene.action,
-      scene.sound,
-      sceneCamera?.instruction,
-      ...!boundTurns ? lines.filter((l) => l.delivery !== "voiceover").map((l) => l.speaker + " (" + l.delivery + '): "' + l.tts + '"') : []
-    ].filter(Boolean).join("\n");
-    callArgs = withPrompt(tool2 === "astra_genai_msr" || tool2 === "astra_genai_img2video" && hasVideoSubjectReferences(shot) ? sceneText2 : openingPrompt(sceneText2, scene.openingPositions));
+    if (prepared) {
+      shot = prepared.mapped.shot;
+      callArgs = { ...withPrompt(""), ...prepared.mapped.args, prompt: prepared.providerPrompt };
+    } else {
+      const sceneText2 = scenePromptText(scene, sceneCamera?.instruction, void 0, lines, bindTurns);
+      callArgs = withPrompt(bindOpening ? sceneText2 : openingPrompt(sceneText2, scene.openingPositions));
+    }
     if (tool2 === "seedance_reference" && !silentPicture) {
       if (input.args.generateAudio === false) throw new Error("scene_dialogue_audio_required: this scene has native spoken dialogue");
       callArgs = { ...callArgs, generateAudio: true };
@@ -119132,6 +119829,7 @@ function planVideo(raw, persist = true) {
       requestId: input.requestId,
       tool: "host_external",
       args: callArgs,
+      ...sceneRequest ? { sceneRequest } : {},
       ...direction,
       ...images2.imageBindings ? { imageBindings: images2.imageBindings, imageHandoff: images2.imageHandoff } : {},
       selection,
@@ -119158,6 +119856,8 @@ function planVideo(raw, persist = true) {
     }
     if (typeof bound.duration === "number" && bound.duration < durationPlan.requiredSeconds)
       throw new Error(`video_duration_short: ${context2.shotId} needs ${durationPlan.requiredSeconds}s but the request covers ${bound.duration}s`);
+    if (sceneRequest && bound.duration == null && bound.numFrames === void 0 && !Number.isInteger(sceneRequest.frameCount / sceneRequest.fps))
+      bound.numFrames = sceneRequest.frameCount;
     if (typeof bound.numFrames === "number") {
       if (bound.numFrames / Number(bound.fps ?? 24) < durationPlan.requiredSeconds)
         throw new Error("video_duration_short: numFrames does not cover the shot at the selected fps");
@@ -119167,20 +119867,33 @@ function planVideo(raw, persist = true) {
     const exact = ["duration", "durationSeconds", "numFrames", "frames", "autoDuration", "audioMaxDuration"].some((key) => bound[key] !== void 0);
     if (!exact) bound = resolveVideoDuration(tool2, { ...bound, requiredSeconds: durationPlan.requiredSeconds }).args;
   }
-  let images = prepareVideoImages(tool2, bound, shot, context2.episode, context2.sceneMembers);
+  const bindImages = (args2) => {
+    if (timedImages2) return { args: args2, imageBindings: timedImages2.imageBindings };
+    if (sceneRequest && !sceneRequest.images.length) return { args: args2, imageBindings: void 0 };
+    const images2 = prepareVideoImages(tool2, args2, shot, context2.episode);
+    const extra = prepared?.mapped.gatewayKeyframes;
+    if (!extra) return images2;
+    return { args: { ...images2.args, ...extra.args }, imageBindings: [...images2.imageBindings ?? [], ...extra.imageBindings] };
+  };
+  let images = bindImages(bound);
   let voice = prepareVideoVoice(tool2, images.args, { ...context2, shot, msrVoice: genaiMsrVoiceReferences() });
   const submittedLength = typeof voice.args.prompt === "string" ? openingPrompt(voice.args.prompt, voice.args.openingPositions).length : 0;
   if (compiled && promptLimit && typeof bound.prompt === "string" && submittedLength > promptLimit) {
     compiled = compileFor(promptLimit - (submittedLength - bound.prompt.length));
     bound = { ...bound, prompt: withPrompt(compiled.prompt).prompt };
     direction = directionOf(compiled);
-    images = prepareVideoImages(tool2, bound, shot, context2.episode, context2.sceneMembers);
+    images = bindImages(bound);
     voice = prepareVideoVoice(tool2, images.args, { ...context2, shot, msrVoice: genaiMsrVoiceReferences() });
   }
   const args = parseVideoArgs(tool2, voice.args);
+  if (sceneRequest && !sceneRequest.audio) {
+    const frames = typeof args.numFrames === "number" ? args.numFrames : typeof args.durationSeconds === "number" ? Math.round(args.durationSeconds * sceneRequest.fps) : typeof args.duration === "number" ? Math.round(args.duration * sceneRequest.fps) : void 0;
+    if (frames !== void 0 && frames !== sceneRequest.frameCount)
+      throw new Error("scene_video_timing: adapter ends at frame " + (frames - 1) + ", storyboard ends at " + (sceneRequest.frameCount - 1));
+  }
   if (Array.isArray(args.openingPositions)) args.prompt = openingPrompt(String(args.prompt), args.openingPositions);
   if (VIDEO_ADAPTERS[tool2].voice === "supplied" && typeof args.audioPath === "string" && durationPlan.requiredSeconds !== void 0) {
-    const sourceSeconds = ltxApiAudioSeconds(path22.resolve(context2.episode, args.audioPath));
+    const sourceSeconds = ltxApiAudioSeconds(path23.resolve(context2.episode, args.audioPath));
     const fps = Number(args.fps ?? args.frameRate ?? 24);
     let playable = sourceSeconds;
     if (tool2 === "astra_audio2video") {
@@ -119204,7 +119917,7 @@ function planVideo(raw, persist = true) {
   const speechFit = VIDEO_ADAPTERS[tool2].voice === "reference" && playSeconds !== void 0 && durationPlan.limits && lines.some((line) => line.delivery !== "voiceover") ? nativeSpeechFit(shot, playSeconds, durationPlan.limits, context2.board.STORY?.language) : void 0;
   const foreign = typeof args.prompt === "string" ? nonEnglishOutsideQuotes(args.prompt) : null;
   if (foreign) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks. Write the video prompt in English; only dialogue, inside quotes, uses the video's language.`);
-  const output2 = canonical2(path22.resolve(context2.episode, typeof args.outputPath === "string" ? args.outputPath : ".work/video"));
+  const output2 = canonical2(path23.resolve(context2.episode, typeof args.outputPath === "string" ? args.outputPath : ".work/video"));
   if (!within(context2.episode, output2)) throw new Error("Video output must stay inside the selected episode");
   args.outputPath = output2;
   args.filename ??= `video-${input.requestId}.mp4`;
@@ -119219,7 +119932,7 @@ function planVideo(raw, persist = true) {
   if (tool2 === "heygen_img2video") checkHeygenInputs(heygenImg2VideoSchema.parse(args));
   if (tool2 === "heygen_reference") checkHeygenInputs(heygenReferenceSchema.parse(args));
   if (tool2 === "astra_video_retake" && selection.resolution) {
-    const probe5 = JSON.parse(execFileSync14("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "json", String(args.sourceVideoPath)], { encoding: "utf8", timeout: 15e3 }));
+    const probe5 = JSON.parse(execFileSync15("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "json", String(args.sourceVideoPath)], { encoding: "utf8", timeout: 15e3 }));
     const stream = probe5.streams?.[0];
     if (!stream || `${stream.width}x${stream.height}` !== selection.resolution)
       throw new Error("model_selection_mismatch: retake inherits source dimensions; select the source resolution");
@@ -119227,13 +119940,14 @@ function planVideo(raw, persist = true) {
   const quote = quoteVideo(tool2, args);
   const body = {
     ...take,
+    ...sceneRequest ? { sceneRequest: { ...sceneRequest, prompt: String(args.prompt) } } : {},
     version: 1,
     episode: context2.episode,
     shotId: context2.shotId,
     requestId: input.requestId,
     tool: tool2,
     args,
-    ...images.imageBindings ? { imageBindings: images.imageBindings } : {},
+    ...images.imageBindings ? { imageBindings: sceneRequest ? sceneImageBindings(sceneRequest, tool2, images.imageBindings) : images.imageBindings } : {},
     sourceArgs: input.args,
     durationPlan,
     ...selection.engine === "veo" ? { providerProject: config.googleCloudProject } : {},
@@ -119266,7 +119980,7 @@ function authorization(context2) {
   const approval = external_exports.object({ kind: external_exports.enum(["user", "standing"]), reference: external_exports.string().min(1), at: external_exports.string().min(1), quoteFingerprint: external_exports.string().min(1) }).passthrough().parse(p.approval);
   if (!Number.isFinite(Date.parse(approval.at))) throw new Error("Invalid spending approval date");
   const helper2 = fileURLToPath7(new URL("../../skills/autoproduce/references/production-cost.js", import.meta.url));
-  const quote = load5(helper2).quote(context2.board);
+  const quote = load6(helper2).quote(context2.board);
   if (quote.quoteFingerprint !== approval.quoteFingerprint) throw new Error("Existing quote changed; spending authorization does not cover this plan");
   return {
     maxUsd: external_exports.number().finite().nonnegative().parse(p.videoBudgetUsd),
@@ -119280,13 +119994,13 @@ var videoApproveSchema = external_exports.object({
   auto: external_exports.boolean().optional().describe("true: the user approves every shot's video from now on; false: ask before each shot again"),
   request: external_exports.string().trim().min(1).describe("The user's own words that gave this approval")
 }).strict().refine((input) => input.planIds !== void 0 || input.auto !== void 0, "name planIds or auto");
-var approvalsFile = (episode) => path22.join(episode, ".work/video-routing/approvals.json");
+var approvalsFile = (episode) => path23.join(episode, ".work/video-routing/approvals.json");
 function readApprovals(episode) {
   return fs19.existsSync(approvalsFile(episode)) ? JSON.parse(fs19.readFileSync(approvalsFile(episode), "utf8")) : { plans: {} };
 }
 function writeApprovalView(episode, approvals) {
-  const dir = path22.join(episode, "storyboard");
-  if (!fs19.existsSync(path22.join(dir, "scenes.js"))) return;
+  const dir = path23.join(episode, "storyboard");
+  if (!fs19.existsSync(path23.join(dir, "scenes.js"))) return;
   const shots = {};
   const scenes = {};
   for (const [planId, entry2] of Object.entries(approvals.plans)) {
@@ -119295,7 +120009,7 @@ function writeApprovalView(episode, approvals) {
     if (!group[key] || entry2.at >= group[key].at) group[key] = { planId, ...entry2.sceneNo !== void 0 ? { requestId: entry2.requestId } : {}, at: entry2.at, ...entry2.shown ? { shown: entry2.shown } : {} };
   }
   const view = { auto: approvals.auto?.at ?? null, shots, scenes };
-  fs19.writeFileSync(path22.join(dir, "video-approvals.js"), "window.VIDEO_APPROVALS = " + JSON.stringify(view).replace(/</g, "\\u003c") + ";\n");
+  fs19.writeFileSync(path23.join(dir, "video-approvals.js"), "window.VIDEO_APPROVALS = " + JSON.stringify(view).replace(/</g, "\\u003c") + ";\n");
 }
 function approveVideo(raw) {
   const input = videoApproveSchema.parse(raw), episode = fs19.realpathSync(input.episode);
@@ -119304,7 +120018,7 @@ function approveVideo(raw) {
   if (input.auto) approvals.auto = { request: input.request, at };
   else if (input.auto === false) delete approvals.auto;
   for (const id of input.planIds ?? []) {
-    const plan2 = JSON.parse(fs19.readFileSync(path22.join(episode, ".work/video-routing/plans", id + ".json"), "utf8"));
+    const plan2 = JSON.parse(fs19.readFileSync(path23.join(episode, ".work/video-routing/plans", id + ".json"), "utf8"));
     const context2 = routingContext(episode, plan2.shotId, plan2.sceneNo);
     const changedSceneInput = plan2.sceneNo !== void 0 && Object.entries(plan2.inputs).some(([file, digest5]) => !fs19.existsSync(file) || createHash16("sha256").update(fs19.readFileSync(file)).digest("hex") !== digest5);
     if (context2.revision !== plan2.contextRevision || changedSceneInput)
@@ -119324,7 +120038,7 @@ function approveVideo(raw) {
 async function executeVideo(raw, dispatch) {
   const request = videoExecuteSchema.parse(raw), episode = fs19.realpathSync(request.episode);
   requireReadyProject(episode, { allowVideoSnapshot: true });
-  const plan2 = JSON.parse(fs19.readFileSync(path22.join(episode, ".work/video-routing/plans", request.planId + ".json"), "utf8"));
+  const plan2 = JSON.parse(fs19.readFileSync(path23.join(episode, ".work/video-routing/plans", request.planId + ".json"), "utf8"));
   const { id, ...body } = plan2;
   if (id !== request.planId || hash2(body) !== id || plan2.episode !== episode) throw new Error("Invalid video plan");
   if (plan2.execution === "host_handoff") throw new Error("host_handoff_required: use the selected host CLI; no API substitution");
@@ -119333,8 +120047,9 @@ async function executeVideo(raw, dispatch) {
   const context2 = routingContext(episode, plan2.shotId, plan2.sceneNo);
   if (context2.revision !== plan2.contextRevision) throw new Error("video_plan_stale: the shot's frames, prompt, lines, selection or authorization changed");
   if (plan2.tool === "astra_genai_msr" || plan2.tool === "astra_genai_img2video" && plan2.voiceContinuity?.strategy === "reference_voice") await refreshGenaiMsrVoice();
-  const refreshed = planVideo({ episode, ...plan2.sceneNo !== void 0 ? { sceneNo: plan2.sceneNo } : { shotId: plan2.shotId }, requestId: plan2.requestId, tool: plan2.tool, args: plan2.sourceArgs ?? plan2.args, purpose: plan2.purpose, basedOnRequestId: plan2.basedOnRequestId, changeNote: plan2.changeNote });
+  const refreshed = planVideo({ episode, ...plan2.sceneNo !== void 0 ? { sceneNo: plan2.sceneNo } : { shotId: plan2.shotId }, requestId: plan2.requestId, tool: plan2.tool, args: plan2.sourceArgs ?? plan2.args, purpose: plan2.purpose, basedOnRequestId: plan2.basedOnRequestId, changeNote: plan2.changeNote }, false);
   if (refreshed.id !== id) throw new Error("video_plan_stale: inputs, price or adapter contract changed");
+  if (plan2.sceneRequest) await checkSceneDeployment(plan2.sceneRequest, plan2.tool, plan2.args);
   checkVideoEnvironment(plan2.tool);
   const auth2 = authorization(context2);
   const cached2 = videoTransaction(episode, (state) => {
@@ -119346,12 +120061,12 @@ async function executeVideo(raw, dispatch) {
       throw new Error(`video_request_pending: ${existing.status}; provider ID ${existing.providerId || "unknown"}; do not resubmit`);
     }
     const jobs = Object.values(state.jobs);
-    const target = path22.resolve(String(plan2.args.outputPath), String(plan2.args.filename));
+    const target = path23.resolve(String(plan2.args.outputPath), String(plan2.args.filename));
     const priorPlans = jobs.map((job) => JSON.parse(fs19.readFileSync(
-      path22.join(episode, ".work/video-routing/plans", job.planId + ".json"),
+      path23.join(episode, ".work/video-routing/plans", job.planId + ".json"),
       "utf8"
     )));
-    if (fs19.existsSync(target) || priorPlans.some((previous) => path22.resolve(String(previous.args.outputPath), String(previous.args.filename)) === target))
+    if (fs19.existsSync(target) || priorPlans.some((previous) => path23.resolve(String(previous.args.outputPath), String(previous.args.filename)) === target))
       throw new Error("video_output_conflict: use a unique filename for each candidate; preserve existing takes");
     const occupied = jobs.filter((job) => !["completed", "failed"].includes(job.status));
     if (occupied.length >= auth2.maxConcurrent) throw new Error("video_concurrency_limit: pending jobs include ambiguous submissions");
@@ -119431,7 +120146,7 @@ async function executeVideo(raw, dispatch) {
   }
 }
 async function dispatchChannelAsset(tool2, args, root, output2, dispatch) {
-  const read4 = load5(modelSettings).readSettings(root);
+  const read4 = load6(modelSettings).readSettings(root);
   const selection = read4.config?.models?.video;
   if (!selection) throw new Error(`project_setup_required: ${read4.status}; save .social-flow/models.json before generating channel assets`);
   requireSupportedSelection(selection);
@@ -119443,10 +120158,10 @@ async function dispatchChannelAsset(tool2, args, root, output2, dispatch) {
     ok = !result.isError;
     return result;
   } finally {
-    const assets = path22.join(root, ...path22.relative(root, output2).split(path22.sep).slice(0, 3));
-    const file = path22.join(assets, ".work/video-requests.jsonl");
+    const assets = path23.join(root, ...path23.relative(root, output2).split(path23.sep).slice(0, 3));
+    const file = path23.join(assets, ".work/video-requests.jsonl");
     try {
-      fs19.mkdirSync(path22.dirname(file), { recursive: true });
+      fs19.mkdirSync(path23.dirname(file), { recursive: true });
       fs19.appendFileSync(file, JSON.stringify({
         ts: (/* @__PURE__ */ new Date()).toISOString(),
         kind: "channel_asset",
@@ -119469,14 +120184,14 @@ async function routeLegacyVideo(tool2, raw, dispatch) {
   const { videoContext, ...args } = external_exports.record(external_exports.unknown()).parse(raw);
   if (videoContext !== void 0) {
     const ctx = external_exports.object({ episode: external_exports.string().min(1), shotId: external_exports.string().min(1), requestId: idSchema }).strict().parse(videoContext);
-    const plan2 = await planVideoForGateway({ ...ctx, tool: tool2, args });
+    const plan2 = await planManagedVideo({ ...ctx, tool: tool2, args });
     return executeVideo({ episode: plan2.episode, planId: plan2.id }, dispatch);
   }
   if (typeof args.outputPath !== "string" || !args.outputPath.trim())
     throw new Error("project_setup_required: provide the selected project\u2019s output path or an episode videoContext");
-  const output2 = canonical2(path22.resolve(args.outputPath));
+  const output2 = canonical2(path23.resolve(args.outputPath));
   const { workspace: root } = requireReadyProject(output2);
-  if (CHANNEL_ASSET_RE.test(path22.relative(root, output2).split(path22.sep).join("/")))
+  if (CHANNEL_ASSET_RE.test(path23.relative(root, output2).split(path23.sep).join("/")))
     return dispatchChannelAsset(tool2, args, root, output2, dispatch);
   throw new Error("video_context_required: supply the episode or a channel asset output");
 }
@@ -119495,7 +120210,7 @@ async function videoStatus(raw) {
     return readVideoProduction(episode);
   }
   const requestId = input.requestId;
-  const file = path22.join(episode, ".work/video-routing/state.json");
+  const file = path23.join(episode, ".work/video-routing/state.json");
   if (!fs19.existsSync(file)) return { requestId: input.requestId, status: "not_started" };
   if (input.action === "reconcile") {
     if (!input.evidence || input.spentUsd === void 0) throw new Error("video_reconciliation_requires_billing_evidence");
@@ -119514,7 +120229,7 @@ async function videoStatus(raw) {
     if (job.status === "completed") return job;
     const hosted = HOSTED_VIDEO_ROUTES[job.tool];
     if (!hosted && !job.tool.startsWith("astra_genai_desktop_") && !["astra_genai_text2video", "astra_genai_img2video", "astra_genai_audio2video", "astra_genai_msr"].includes(job.tool)) throw new Error("video_refresh_unsupported: use provider-specific recovery");
-    const plan2 = JSON.parse(fs19.readFileSync(path22.join(episode, ".work/video-routing/plans", job.planId + ".json"), "utf8"));
+    const plan2 = JSON.parse(fs19.readFileSync(path23.join(episode, ".work/video-routing/plans", job.planId + ".json"), "utf8"));
     const { id, ...body } = plan2;
     if (id !== job.planId || hash2(body) !== id || plan2.episode !== episode || plan2.tool !== job.tool) throw new Error("Invalid recovery plan");
     checkVideoEnvironment(plan2.tool);
@@ -119533,7 +120248,7 @@ async function videoStatus(raw) {
       });
       return videoStatus({ episode, requestId });
     }
-    const receiptPath2 = path22.join(String(plan2.args.outputPath), String(plan2.args.filename)) + ".astra-genai.json";
+    const receiptPath2 = path23.join(String(plan2.args.outputPath), String(plan2.args.filename)) + ".astra-genai.json";
     const result = job.tool.startsWith("astra_genai_desktop_") ? await desktopVideoStatus(receiptPath2, true) : await getGenaiVideoStatus({ receiptPath: receiptPath2, download: true });
     if (job.providerId && result.jobId !== job.providerId) throw new Error("GenAI recovery job ID mismatch");
     videoTransaction(episode, (current) => Object.assign(current.jobs[requestId], { providerStatus: result.status, observedAt: (/* @__PURE__ */ new Date()).toISOString() }));
@@ -119549,9 +120264,9 @@ async function videoStatus(raw) {
 
 // src/image-routing.ts
 import * as fs21 from "node:fs";
-import path24 from "node:path";
+import path25 from "node:path";
 import os4 from "node:os";
-import { createRequire as createRequire11 } from "node:module";
+import { createRequire as createRequire12 } from "node:module";
 import { fileURLToPath as fileURLToPath8 } from "node:url";
 
 // src/image-pricing.ts
@@ -119581,7 +120296,7 @@ function imageUsageUsd(model2, usage) {
 
 // src/image-state.ts
 import * as fs20 from "node:fs";
-import path23 from "node:path";
+import path24 from "node:path";
 var money = external_exports.number().finite().nonnegative();
 var imageJobSchema = external_exports.object({
   outputFile: external_exports.string(),
@@ -119603,22 +120318,22 @@ var imageJobSchema = external_exports.object({
 }).strict();
 var stateSchema2 = external_exports.object({ version: external_exports.literal(1), openingSpendUsd: money, jobs: external_exports.record(imageJobSchema) }).strict();
 function readImageState(directory2) {
-  const file = path23.join(directory2, ".work/image-routing/state.json");
+  const file = path24.join(directory2, ".work/image-routing/state.json");
   return fs20.existsSync(file) ? stateSchema2.parse(JSON.parse(fs20.readFileSync(file, "utf8"))) : void 0;
 }
 function hasHistory(directory2) {
-  const events = path23.join(directory2, ".work/events.jsonl");
+  const events = path24.join(directory2, ".work/events.jsonl");
   if (fs20.existsSync(events)) for (const line of fs20.readFileSync(events, "utf8").split("\n").filter(Boolean)) {
     const tool2 = String(JSON.parse(line).tool || "");
     if (Object.hasOwn(IMAGE_ADAPTERS, tool2) || /^(gpt_image_|image_local_|mlx_image_)/.test(tool2)) return true;
   }
-  const tally = path23.join(directory2, ".work/cost-tally.tsv");
+  const tally = path24.join(directory2, ".work/cost-tally.tsv");
   return fs20.existsSync(tally) && /^image\./m.test(fs20.readFileSync(tally, "utf8"));
 }
 function imageTransaction(directory2, openingSpendUsd, update) {
-  const folder = path23.join(directory2, ".work/image-routing");
+  const folder = path24.join(directory2, ".work/image-routing");
   fs20.mkdirSync(folder, { recursive: true });
-  const lock2 = path23.join(folder, "state.lock");
+  const lock2 = path24.join(folder, "state.lock");
   let fd;
   try {
     fd = fs20.openSync(lock2, "wx", 384);
@@ -119632,7 +120347,7 @@ function imageTransaction(directory2, openingSpendUsd, update) {
       state = { version: 1, openingSpendUsd: openingSpendUsd ?? 0, jobs: {} };
     }
     const result = update(state);
-    atomicJson(path23.join(folder, "state.json"), stateSchema2.parse(state));
+    atomicJson(path24.join(folder, "state.json"), stateSchema2.parse(state));
     return result;
   } finally {
     fs20.closeSync(fd);
@@ -119641,9 +120356,9 @@ function imageTransaction(directory2, openingSpendUsd, update) {
 }
 
 // src/image-routing.ts
-var load6 = createRequire11(import.meta.url);
+var load7 = createRequire12(import.meta.url);
 var selectionHelper = fileURLToPath8(new URL("../../skills/_shared/image-selection.js", import.meta.url));
-var imageContext = (directory2, assetId) => load6(selectionHelper).readImageContext(directory2, assetId);
+var imageContext = (directory2, assetId) => load7(selectionHelper).readImageContext(directory2, assetId);
 var idSchema2 = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var imagePlanSchema = external_exports.object({
   directory: external_exports.string().min(1),
@@ -119674,14 +120389,14 @@ function environment(tool2) {
   if (engine === "mlx" && !mlxServeConfigured()) throw new Error("image_provider_unconfigured: MLX Core");
   if (engine === "zimage") {
     const bin = mfluxZImageBin();
-    const found = bin.includes(path24.sep) ? fs21.existsSync(bin) : (process.env.PATH || "").split(path24.delimiter).some((dir) => fs21.existsSync(path24.join(dir, bin)));
+    const found = bin.includes(path25.sep) ? fs21.existsSync(bin) : (process.env.PATH || "").split(path25.delimiter).some((dir) => fs21.existsSync(path25.join(dir, bin)));
     if (!found) throw new Error("image_provider_unconfigured: mflux");
   }
 }
 function inputFiles2(args, directory2) {
   const inputs2 = {};
   const resolve14 = (file) => {
-    const resolved = fs21.realpathSync(path24.resolve(directory2, file));
+    const resolved = fs21.realpathSync(path25.resolve(directory2, file));
     if (!fs21.statSync(resolved).isFile()) throw new Error("image_input_not_file");
     inputs2[resolved] = readImageMetadata(resolved).sha256;
     return resolved;
@@ -119723,15 +120438,15 @@ function planImage(raw) {
     if (input.operation === "variation" && (selection.engine !== "mlx" || !args.imagePath)) throw new Error("image_variation_requires_source");
     const ext = args.outputFormat === "jpeg" ? "jpg" : String(args.outputFormat || "png");
     if (selection.engine === "gpt-image") {
-      outputFile = canonicalPath(path24.resolve(context2.directory, typeof args.savePath === "string" ? args.savePath : `.work/images/${input.requestId}.${ext}`));
+      outputFile = canonicalPath(path25.resolve(context2.directory, typeof args.savePath === "string" ? args.savePath : `.work/images/${input.requestId}.${ext}`));
       args.savePath = outputFile;
     } else {
-      const folder = canonicalPath(path24.resolve(context2.directory, typeof args.outputPath === "string" ? args.outputPath : ".work/images"));
+      const folder = canonicalPath(path25.resolve(context2.directory, typeof args.outputPath === "string" ? args.outputPath : ".work/images"));
       args.outputPath = folder;
       args.filename ??= `${input.requestId}.png`;
-      outputFile = canonicalPath(path24.join(folder, String(args.filename)));
+      outputFile = canonicalPath(path25.join(folder, String(args.filename)));
     }
-    const extension2 = path24.extname(outputFile).toLowerCase();
+    const extension2 = path25.extname(outputFile).toLowerCase();
     if (!(selection.engine === "gpt-image" ? ext === "jpg" ? [".jpg", ".jpeg"] : ["." + ext] : [".png"]).includes(extension2)) throw new Error("image_output_extension_mismatch");
     if (!withinDirectory(context2.directory, outputFile)) throw new Error("image_output_outside_directory");
   }
@@ -119758,7 +120473,7 @@ function planImage(raw) {
     execution: selection.engine === "host" ? "host_handoff" : "server"
   };
   const plan2 = { ...body, id: routingHash(body) };
-  atomicJson(path24.join(context2.directory, ".work/image-routing/plans", plan2.id + ".json"), plan2);
+  atomicJson(path25.join(context2.directory, ".work/image-routing/plans", plan2.id + ".json"), plan2);
   return plan2;
 }
 function imagePlanSummary(plan2) {
@@ -119788,7 +120503,7 @@ async function executeImage(raw, dispatch) {
   const input = imageExecuteSchema.parse(raw);
   requireReadyProject(input.directory);
   const directory2 = fs21.realpathSync(input.directory);
-  const plan2 = JSON.parse(fs21.readFileSync(path24.join(directory2, ".work/image-routing/plans", input.planId + ".json"), "utf8"));
+  const plan2 = JSON.parse(fs21.readFileSync(path25.join(directory2, ".work/image-routing/plans", input.planId + ".json"), "utf8"));
   const { id, ...body } = plan2;
   if (id !== input.planId || routingHash(body) !== id || plan2.directory !== directory2) throw new Error("image_plan_invalid");
   if (plan2.execution === "host_handoff") throw new Error("host_handoff_required: call the selected host tool, never substitute an API");
@@ -119852,7 +120567,7 @@ async function executeImage(raw, dispatch) {
     if (!plan2.outputFile) throw new Error("image_output_missing");
     const returned = result.content.find((item) => item.type === "image");
     if (returned?.type === "image" && !fs21.existsSync(plan2.outputFile)) {
-      fs21.mkdirSync(path24.dirname(plan2.outputFile), { recursive: true });
+      fs21.mkdirSync(path25.dirname(plan2.outputFile), { recursive: true });
       fs21.writeFileSync(plan2.outputFile, Buffer.from(returned.data, "base64"), { flag: "wx" });
     }
     const output2 = verifyImageFile(plan2.outputFile);
@@ -119899,11 +120614,11 @@ async function routeLegacyImage(tool2, raw, dispatch) {
   }
   for (const location of [args.savePath, args.outputPath, process.cwd()].filter((v) => typeof v === "string")) {
     if (workflowEpisode(location)) throw new Error("image_context_required: use the episode workflow");
-    let dir = canonicalPath(path24.resolve(location));
+    let dir = canonicalPath(path25.resolve(location));
     for (; ; ) {
-      if (fs21.existsSync(path24.join(dir, ".work/model-settings.json")) || fs21.existsSync(path24.join(dir, ".social-flow/models.json")) || fs21.existsSync(path24.join(dir, "storyboard/scenes.js")))
+      if (fs21.existsSync(path25.join(dir, ".work/model-settings.json")) || fs21.existsSync(path25.join(dir, ".social-flow/models.json")) || fs21.existsSync(path25.join(dir, "storyboard/scenes.js")))
         throw new Error("image_context_required: pass directory, assetId and requestId for configured production");
-      const parent = path24.dirname(dir);
+      const parent = path25.dirname(dir);
       if (parent === dir) break;
       dir = parent;
     }
@@ -119955,7 +120670,7 @@ async function refreshGenaiImage(directory2, requestId) {
   const state = readImageState(directory2);
   const job = state?.jobs[requestId];
   if (!job || !["astra_genai_text2img", "astra_genai_edit", "astra_genai_image_generate", "astra_genai_image_edit"].includes(job.tool)) throw new Error("image_refresh_unsupported: requires an existing GenAI image request");
-  const plan2 = JSON.parse(fs21.readFileSync(path24.join(directory2, ".work/image-routing/plans", job.planId + ".json"), "utf8"));
+  const plan2 = JSON.parse(fs21.readFileSync(path25.join(directory2, ".work/image-routing/plans", job.planId + ".json"), "utf8"));
   const { id, ...body } = plan2;
   if (id !== job.planId || routingHash(body) !== id || plan2.directory !== directory2 || plan2.outputFile !== job.outputFile || plan2.tool !== job.tool)
     throw new Error("image_recovery_plan_invalid");
@@ -119980,7 +120695,7 @@ async function refreshGenaiImage(directory2, requestId) {
 
 // src/storyboard.ts
 import { createHash as createHash17, randomUUID as randomUUID5 } from "node:crypto";
-import { execFileSync as execFileSync15 } from "node:child_process";
+import { execFileSync as execFileSync16 } from "node:child_process";
 
 // src/scenes-vm.ts
 import vm from "node:vm";
@@ -120181,6 +120896,7 @@ var visualSchema = external_exports.object({ camera: cameraSchema.optional() }).
 var shotIdSchema = external_exports.string().regex(/^s\d{4,}$/);
 var shotSchema = external_exports.object({
   id: shotIdSchema.optional(),
+  timeline: shotTimelineSchema.optional(),
   type: tuple(V.TYPES),
   title: external_exports.string().optional(),
   narration: external_exports.array(external_exports.object({ id: external_exports.string().trim().min(1).optional(), delivery: external_exports.enum(["voiceover", "on_screen", "off_screen"]).optional(), tts: external_exports.string(), sub: external_exports.string().optional(), speaker: external_exports.string().trim().min(1).optional() }).passthrough()).optional(),
@@ -121145,7 +121861,7 @@ function applyStoryboard(args, opts = {}) {
     ...audienceResult,
     synced,
     findings,
-    board: [digest5, firstLine, opening, () => cliches().digest(next), () => audienceSound().spottingDigest(next), () => propContinuity().researchDigest(next, (path35) => existsSync24(resolve5(dirname6(file), path35)))].flatMap((read4) => {
+    board: [digest5, firstLine, opening, () => cliches().digest(next), () => audienceSound().spottingDigest(next), () => propContinuity().researchDigest(next, (path36) => existsSync24(resolve5(dirname6(file), path36)))].flatMap((read4) => {
       try {
         return read4();
       } catch {
@@ -121165,7 +121881,7 @@ function applyStoryboard(args, opts = {}) {
       if (!existsSync24(backup)) writeFileSync17(backup, original, { flag: "wx" });
     }
     writeFileSync17(tmp, serializeBoard(next, header), "utf8");
-    execFileSync15("python3", ["-c", [
+    execFileSync16("python3", ["-c", [
       "import fcntl, hashlib, os, sys",
       "from pathlib import Path",
       "target, tmp, before = sys.argv[1:]",
@@ -121228,20 +121944,21 @@ var storyShotSchema = external_exports.object({
   shots: external_exports.array(external_exports.object({
     id: shotIdSchema.optional().describe("Revise this shot; without it a new shot is added at the end of its scene"),
     scene: external_exports.number().int().positive().describe("The scene number \u2014 written first with story_scene"),
-    summary: nonEmpty.describe("The story this shot tells, in one sentence")
+    summary: nonEmpty.describe("The story this shot tells, in one sentence"),
+    timeline: shotTimelineSchema.optional()
   }).strict()).min(1)
 }).strict();
 var emptyStructure = () => ({ version: STRUCTURE_VERSION, sequences: [], scenes: [] });
-function readOutline(path35) {
-  const file = scenesPath(path35);
+function readOutline(path36) {
+  const file = scenesPath(path36);
   requireReadyProject(dirname6(file));
   const win = existsSync24(file) ? readBoard(file).win : {};
   return { win, st: win.STRUCTURE ?? emptyStructure() };
 }
-function writeOutline(path35, win, structure, shots, language, opening) {
+function writeOutline(path36, win, structure, shots, language, opening) {
   const savedStory = win.STORY;
   const story = savedStory?.audienceSoundVersion === 1 && Object.keys(savedStory).length === 1 ? void 0 : savedStory;
-  const file = scenesPath(path35);
+  const file = scenesPath(path36);
   const episode = story ? void 0 : workflowEpisode(dirname6(file));
   if (episode && !existsSync24(file) && basename7(dirname6(episode)) === "episodes") {
     const project = requireReadyProject(episode);
@@ -121261,7 +121978,7 @@ function writeOutline(path35, win, structure, shots, language, opening) {
     ...win.CLICHES === void 0 && !written ? clicheStamp(win.PRODUCTION ?? handoff?.PRODUCTION) : {}
   };
   const result = applyStoryboard({
-    path: path35,
+    path: path36,
     draft: true,
     dryRun: false,
     structure,
@@ -121286,9 +122003,12 @@ function writeStoryScenes(args) {
   let { sequences, scenes } = st;
   for (const { sequence, ...scene } of args.scenes) {
     if (!sequences.some((q) => q.id === sequence)) throw new Error(`story_order: sequence ${sequence} does not exist \u2014 write it with story_sequence`);
-    const opening = win.SCENES?.find((shot) => shot.scene === scene.no)?.visual?.frames;
-    const frame = scene.videoDirection && opening?.start ? resolve5(dirname6(scenesPath(args.path)), opening.start) : void 0;
-    const pin = frame ? { videoOpeningSha256: createHash17("sha256").update(readFileSync26(frame)).digest("hex") } : {};
+    const members = win.SCENES?.filter((shot) => shot.scene === scene.no) ?? [];
+    if (scene.videoDirection?.oneTake && members.length > 1) throw new Error("scene_one_take: this scene already has multiple shot cards");
+    const first = members[0];
+    const opening = first?.timeline?.images?.find((image2) => image2.role === "start")?.path ?? first?.visual?.frames?.start;
+    const frame2 = scene.videoDirection && opening ? resolve5(dirname6(scenesPath(args.path)), opening) : void 0;
+    const pin = frame2 ? { videoOpeningSha256: createHash17("sha256").update(readFileSync26(frame2)).digest("hex") } : {};
     scenes = upsertBy(scenes, [{ ...scenes.find((old) => old.no === scene.no), ...scene, ...pin }], "no");
     sequences = sequences.map((q) => q.id === sequence ? q.scenes.includes(scene.no) ? q : { ...q, scenes: [...q.scenes, scene.no] } : { ...q, scenes: q.scenes.filter((no) => no !== scene.no) });
   }
@@ -121309,7 +122029,14 @@ function writeStoryShots(args) {
     return at;
   };
   const origin = /* @__PURE__ */ new Map();
-  for (const { id, ...story } of args.shots) {
+  for (const { id, ...entry2 } of args.shots) {
+    const fps = st.scenes.find((scene) => scene.no === entry2.scene)?.videoDirection?.fps ?? 24;
+    const timeline = entry2.timeline;
+    const story = timeline ? {
+      ...entry2,
+      duration: (timeline.endFrame - timeline.startFrame) / fps,
+      transition: { open: void 0, hard_cut: "cut", dissolve: "dissolve", fade: "dip" }[timeline.transition]
+    } : entry2;
     if (!order.includes(story.scene)) throw new Error(`story_order: scene ${story.scene} is not in a sequence \u2014 write it with story_scene`);
     if (id) {
       const index = shots.findIndex((shot) => shot.id === id);
@@ -121320,6 +122047,10 @@ function writeStoryShots(args) {
       continue;
     }
     shots.splice(endOf(story.scene), 0, { type: "points", ...story });
+  }
+  for (const scene of st.scenes) {
+    if (scene.videoDirection?.oneTake && shots.filter((shot) => shot.scene === scene.no).length > 1)
+      throw new Error("scene_one_take: scene " + scene.no + " must keep a single uninterrupted shot");
   }
   const before = Array.isArray(win.SCENES) ? win.SCENES : [];
   const position = new Map(shots.map((shot, i2) => [origin.get(shot) ?? shot, i2 + 1]));
@@ -121659,16 +122390,16 @@ function checkCast(storyboardDir, cast) {
   }
   if (problems.length) throw new Error(`${problems.join("; ")} \u2014 finish the character sheets before the episode story; a narrator who is never seen takes "voiceOnly": true in cast.json`);
 }
-function requireEpisodeCast(path35, win) {
-  const dir = dirname6(scenesPath(path35));
+function requireEpisodeCast(path36, win) {
+  const dir = dirname6(scenesPath(path36));
   const story = win.STORY;
   if (!workflowEpisode(dir) || story && story.authoring !== "story-first") return;
   const cast = readCast(dir);
   if (!cast.length) throw new Error("cast_required: an episode story starts after storyboard/cast.json names its characters (storyboard \xA71)");
   checkCast(dir, cast);
 }
-function castRegistry(path35, win) {
-  const dir = dirname6(scenesPath(path35));
+function castRegistry(path36, win) {
+  const dir = dirname6(scenesPath(path36));
   const cast = readCast(dir);
   const storyFirst2 = win.STORY?.authoring === "story-first";
   if (storyFirst2) checkCast(dir, cast);
@@ -121752,7 +122483,8 @@ function writeShotDialogue(args) {
     const index = shotIndex(shots, id, "shot_dialogue");
     const cast = contract().castOf(shots[index]);
     if (!cast) throw new Error(`story_order: set ${id}'s characters with shot_characters before its lines`);
-    if (new Set(lines.map((line) => line.speaker)).size > 1)
+    const oneTake = st.scenes.find((scene) => scene.no === shots[index].scene)?.videoDirection?.oneTake;
+    if (!oneTake && new Set(lines.map((line) => line.speaker)).size > 1)
       throw new Error(`shot_speaker_limit: ${id} has more than one speaker; split at each speaker change, then set each shot's size and angle`);
     const old = shots[index].narration ?? [];
     for (const line of old) if (line.id) used.delete(line.id);
@@ -122080,7 +122812,7 @@ function characterRefs(boardDir, win, shotId, ids, use, warnings, concise = fals
   });
 }
 var propContinuity = () => loadFromHere2(join12(REFERENCES_DIR, "prop-continuity.js"));
-function propRefs(win, index, shotId, ids, frame, warnings) {
+function propRefs(win, index, shotId, ids, frame2, warnings) {
   const warn = (what) => warnings.push({ level: "warn", where: shotId, what });
   const entries = new Map(ids.map((id) => [id, docEntry(win, "props", id)]));
   const refs = [], unseen = [], drawn = [];
@@ -122090,7 +122822,7 @@ function propRefs(win, index, shotId, ids, frame, warnings) {
     drawn.push(id);
     if (snap.errors.length)
       warn(`the prop ledger has errors for the ${id} prop (${snap.errors.join("; ")}), so it goes in without a story state \u2014 fix them with storyboard_apply propSheet`);
-    const state = frame === "end" ? snap.after : snap.before, matched = frame === "end" ? snap.endReferences : snap.references;
+    const state = frame2 === "end" ? snap.after : snap.before, matched = frame2 === "end" ? snap.endReferences : snap.references;
     const all = Array.isArray(entry2.references) ? entry2.references : [];
     const condition = typeof state?.condition === "string" && state.condition !== "unknown" ? state.condition : "";
     const imageUrl = typeof entry2.imageUrl === "string" && entry2.imageUrl ? entry2.imageUrl : void 0;
@@ -122099,16 +122831,16 @@ function propRefs(win, index, shotId, ids, frame, warnings) {
     if (file && !matched.length && condition && all.length)
       warn(`no ${id} reference is drawn as ${condition}, so ${file === imageUrl ? "its imageUrl" : `its ${typeof spare?.condition === "string" ? spare.condition + " " : ""}reference`} stands in \u2014 add one for that condition`);
     const skipped = [];
-    const english = (field2, value) => {
+    const english2 = (field2, value) => {
       if (typeof value !== "string" || !value.trim() || value === "unknown") return "";
       const kept = latin(value);
       if (!kept) skipped.push(field2);
       return kept;
     };
-    const holderId = english("holder", state?.holderId);
+    const holderId = english2("holder", state?.holderId);
     const holder = holderId ? `held by ${holderId}` : state?.holderId === null ? "not held" : "";
-    const place = english("location", state?.location), cond = english("condition", state?.condition), pos = english("position", snap.position);
-    const detail = [english("description", snap.description), holder, place && `at ${place}`, cond && `condition ${cond}`, pos && `screen position ${pos}`].filter(Boolean).join("; ");
+    const place = english2("location", state?.location), cond = english2("condition", state?.condition), pos = english2("position", snap.position);
+    const detail = [english2("description", snap.description), holder, place && `at ${place}`, cond && `condition ${cond}`, pos && `screen position ${pos}`].filter(Boolean).join("; ");
     if (skipped.length) warn(`the ${id} prop's ${skipped.join(", ")} is not English and stays out of the image prompt \u2014 write it in English on the prop sheet, with the words the prop displays inside quotation marks`);
     const purpose = `the ${id} prop` + (detail ? `: ${detail}` : "");
     if (file) refs.push({ id: `${shotId}-prop-${id}`, path: file, role: "prop", use: "image", purpose });
@@ -122127,8 +122859,8 @@ function docEntry(win, kind, id) {
   if (!entry2) throw new Error(`${kind === "locations" ? "location" : "prop"}_unknown: ${id} is not in SB_DOC.${kind}`);
   return entry2;
 }
-function shotImageSourceBasis(path35, id, request) {
-  const { win } = readOutline(path35);
+function shotImageSourceBasis(path36, id, request) {
+  const { win } = readOutline(path36);
   const shot = (win.SCENES ?? [])[shotIndex(win.SCENES ?? [], id, "shot_image")];
   const doc = win.SB_DOC ?? {};
   const rows = (value) => Array.isArray(value) ? value : [];
@@ -122145,7 +122877,7 @@ function shotImageSourceBasis(path35, id, request) {
     } : void 0
   };
   const style = loadFromHere2(join12(REFERENCES_DIR, "production-mode.js")).shotStyle(win, (win.SCENES ?? []).indexOf(shot));
-  const boardDir = dirname6(scenesPath(path35));
+  const boardDir = dirname6(scenesPath(path36));
   const refsFor = (cast) => characterPanels().canonicalReferences(boardDir, id, cast, "image");
   const panels = request.canonicalPanels ? [
     ...refsFor(contract().castOf(shot) ?? []),
@@ -122207,7 +122939,7 @@ function buildShotImageRequest(args) {
       mkdirSync11(dirname6(prepared), { recursive: true });
       const temporary = prepared + "." + randomUUID5() + ".png";
       try {
-        execFileSync15("ffmpeg", ["-v", "error", "-y", "-i", input, "-vf", `crop=${crop.width}:${crop.height}:${crop.x}:${crop.y}:exact=1,scale=${editWidth}:${editHeight}:flags=lanczos`, "-frames:v", "1", temporary], { timeout: 3e4, stdio: "pipe" });
+        execFileSync16("ffmpeg", ["-v", "error", "-y", "-i", input, "-vf", `crop=${crop.width}:${crop.height}:${crop.x}:${crop.y}:exact=1,scale=${editWidth}:${editHeight}:flags=lanczos`, "-frames:v", "1", temporary], { timeout: 3e4, stdio: "pipe" });
         renameSync4(temporary, prepared);
       } finally {
         if (existsSync24(temporary)) unlinkSync5(temporary);
@@ -122428,7 +123160,7 @@ function imageCall(o) {
     if (!existsSync24(out)) {
       mkdirSync11(dirname6(out), { recursive: true });
       try {
-        execFileSync15("ffmpeg", ["-v", "error", "-y", "-i", f3, out], { timeout: 6e4 });
+        execFileSync16("ffmpeg", ["-v", "error", "-y", "-i", f3, out], { timeout: 6e4 });
       } catch (error2) {
         throw new Error(`image_inputs_mixed_format: GPT Image takes one format per request and ffmpeg could not convert ${f3} to PNG (${error2.message.split("\n")[0]}) \u2014 save it as PNG`);
       }
@@ -122589,7 +123321,7 @@ var scenarioCheckResultSchema = external_exports.object({
 function checkScenario(args, checkFile = CHECK_SCENARIO_FILE) {
   let raw = "";
   try {
-    raw = execFileSync15(process.execPath, [checkFile, args.path, "--json"], {
+    raw = execFileSync16(process.execPath, [checkFile, args.path, "--json"], {
       encoding: "utf8",
       timeout: 6e4,
       stdio: ["ignore", "pipe", "pipe"]
@@ -122624,7 +123356,7 @@ function checkStoryboard(args) {
   if (args.draft) argv.push("--draft");
   let raw = "";
   try {
-    raw = execFileSync15(process.execPath, argv, { encoding: "utf8", timeout: 6e4, maxBuffer: 16 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] });
+    raw = execFileSync16(process.execPath, argv, { encoding: "utf8", timeout: 6e4, maxBuffer: 16 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] });
   } catch (e2) {
     const err4 = e2;
     raw = err4.stdout || "";
@@ -123472,13 +124204,13 @@ var import_tts_speed_policy = __toESM(require_tts_speed_policy(), 1);
 import { execFile as execFile5 } from "node:child_process";
 import { createHash as createHash19, randomUUID as randomUUID6 } from "node:crypto";
 import { closeSync as closeSync5, existsSync as existsSync26, mkdirSync as mkdirSync12, openSync as openSync5, readFileSync as readFileSync28, renameSync as renameSync5, rmSync as rmSync12, writeFileSync as writeFileSync20 } from "node:fs";
-import path26 from "node:path";
+import path27 from "node:path";
 import { promisify as promisify3 } from "node:util";
 
 // src/elevenlabs-client.ts
 import * as fs22 from "node:fs";
 import { createHash as createHash18 } from "node:crypto";
-import * as path25 from "node:path";
+import * as path26 from "node:path";
 var ELEVENLABS_MODELS = ["eleven_v4"];
 var DEFAULT_ELEVENLABS_MODEL = "eleven_v4";
 var ELEVENLABS_DIALOGUE_MODEL = DEFAULT_ELEVENLABS_MODEL;
@@ -123559,7 +124291,7 @@ function extensionForFormat(format) {
 function checkFilenameMatchesFormat(value, ctx) {
   if (!value.filename) return;
   const expected = extensionForFormat(value.outputFormat);
-  if (path25.extname(value.filename).toLowerCase() !== expected) {
+  if (path26.extname(value.filename).toLowerCase() !== expected) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
       path: ["filename"],
@@ -123652,7 +124384,7 @@ var elevenLabsSfxSchema = external_exports.object({
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("audio").optional()
 }).superRefine((data, ctx) => {
-  if (data.filename && path25.extname(data.filename).toLowerCase() !== sfxExtensionForFormat(data.outputFormat)) {
+  if (data.filename && path26.extname(data.filename).toLowerCase() !== sfxExtensionForFormat(data.outputFormat)) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
       path: ["filename"],
@@ -123784,13 +124516,13 @@ function wavDurationSeconds(buffer) {
   return void 0;
 }
 function alignmentPathFor(audioPath) {
-  const ext = path25.extname(audioPath);
+  const ext = path26.extname(audioPath);
   return `${audioPath.slice(0, audioPath.length - ext.length)}.alignment.json`;
 }
 function saveTimestamped(body, outputDir, filename, extra) {
   if (!body.audio_base64) throw new Error("with-timestamps response carried no audio_base64");
   const audio = decodeSpeechBase64(body.audio_base64);
-  const duration5 = validateSpeechAudio(audio, path25.extname(filename).slice(1));
+  const duration5 = validateSpeechAudio(audio, path26.extname(filename).slice(1));
   validateSpeechAlignment(body.alignment, duration5);
   validateSpeechAlignment(body.normalized_alignment, duration5);
   validateSpeechSegments(body.voice_segments, duration5, extra.inputs);
@@ -123801,7 +124533,7 @@ function saveTimestamped(body, outputDir, filename, extra) {
     JSON.stringify(
       {
         ...extra,
-        audio: path25.basename(audioPath),
+        audio: path26.basename(audioPath),
         alignment: body.alignment ?? null,
         normalized_alignment: body.normalized_alignment ?? null,
         ...body.voice_segments ? { voice_segments: body.voice_segments } : {}
@@ -123877,7 +124609,7 @@ async function synthesizeElevenLabsDialogue(request) {
         enable_logging: request.enableLogging ?? true,
         ...meta
       });
-      console.error(`[ElevenLabs] Dialogue saved to: ${saved.audioPath} (+ ${path25.basename(saved.alignmentPath)})`);
+      console.error(`[ElevenLabs] Dialogue saved to: ${saved.audioPath} (+ ${path26.basename(saved.alignmentPath)})`);
       return {
         success: true,
         warnings,
@@ -123893,7 +124625,7 @@ async function synthesizeElevenLabsDialogue(request) {
       };
     }
     const audio = Buffer.from(await response.arrayBuffer());
-    validateSpeechAudio(audio, path25.extname(filename).slice(1));
+    validateSpeechAudio(audio, path26.extname(filename).slice(1));
     const audioPath = saveAudioFile(outputDir, filename, audio);
     console.error(`[ElevenLabs] Dialogue saved to: ${audioPath}`);
     return {
@@ -123960,7 +124692,7 @@ async function generateElevenLabsSoundEffect(request) {
   const outputDir = request.outputPath || process.cwd();
   const ext = sfxExtensionForFormat(request.outputFormat);
   const filename = request.filename || `elevenlabs_sfx_${Date.now()}${ext}`;
-  const catalog2 = !!request.filename && path25.resolve(outputDir).endsWith(path25.join(path25.sep, "assets", "audio", "sfx"));
+  const catalog2 = !!request.filename && path26.resolve(outputDir).endsWith(path26.join(path26.sep, "assets", "audio", "sfx"));
   const body = soundEffectRequestBody(request);
   const signature = createHash18("sha256").update(JSON.stringify([body, request.outputFormat])).digest("hex");
   let reservation, submitted = false;
@@ -124039,7 +124771,7 @@ async function generateElevenLabsSoundEffect(request) {
     const sidecarPath = audioPath.replace(/\.(wav|mp3)$/i, "") + ".json";
     fs22.writeFileSync(sidecarPath, JSON.stringify(sidecar, null, 2) + "\n", "utf8");
     if (reservation) fs22.unlinkSync(reservation);
-    console.error(`[ElevenLabs] Sound effect saved to: ${audioPath} (+ ${path25.basename(sidecarPath)})`);
+    console.error(`[ElevenLabs] Sound effect saved to: ${audioPath} (+ ${path26.basename(sidecarPath)})`);
     return {
       success: true,
       audioPath,
@@ -124483,7 +125215,7 @@ async function applySentenceSpacing(output2, request, align) {
     writeFileSync20(output2, result.wav);
     const meta = { policy: SPACING_POLICY, source: sidecar.engine === "asr-aligner" ? "asr-aligner" : "vendor", pause: request.sentencePause, playbackSpeed: request.playbackSpeed, lead: result.lead, gaps: result.gaps, inserted: result.inserted, boundaries: result.boundaries, duration: result.duration, segmentsFrom: request.segments ? "request" : "sentence-final punctuation" };
     writeFileSync20(alignmentPath, JSON.stringify({ ...sidecar, alignment: result.alignment, vendor_alignment: sidecar.vendor_alignment ?? sidecar.alignment, respaced: meta }, null, 2));
-    writeFileSync20(sentencesPathFor(output2), JSON.stringify({ version: 1, ...meta, audio: path26.basename(output2), audioSha256: sha256(result.wav), sentences: result.sentences }, null, 2) + "\n");
+    writeFileSync20(sentencesPathFor(output2), JSON.stringify({ version: 1, ...meta, audio: path27.basename(output2), audioSha256: sha256(result.wav), sentences: result.sentences }, null, 2) + "\n");
     return meta;
   } catch (error2) {
     return { skipped: error2 instanceof Error ? error2.message : String(error2) };
@@ -124518,8 +125250,8 @@ async function generateCheckedSpeech(input, dependencies) {
     generation: (0, import_tts_speed_policy.authorizeSpeed)(request.outputPath, "generation", Number(prepared.args.speed ?? 1)),
     final: (0, import_tts_speed_policy.authorizeSpeed)(request.outputPath, "final", request.playbackSpeed)
   };
-  const output2 = path26.resolve(request.outputPath, request.filename), proofFile = output2 + ".quality.json";
-  mkdirSync12(path26.dirname(output2), { recursive: true });
+  const output2 = path27.resolve(request.outputPath, request.filename), proofFile = output2 + ".quality.json";
+  mkdirSync12(path27.dirname(output2), { recursive: true });
   const lockFile = proofFile + ".lock";
   let lock2;
   try {
@@ -124625,7 +125357,7 @@ async function generateCheckedSpeech(input, dependencies) {
             detail: { ...generated?.requestId ? { requestId: generated.requestId } : {} }
           });
         }
-        if (!generated.success || path26.resolve(generated.audioPath || generated.path || "") !== output2) throw new Error(generated.error || "Generator did not return the requested audio path");
+        if (!generated.success || path27.resolve(generated.audioPath || generated.path || "") !== output2) throw new Error(generated.error || "Generator did not return the requested audio path");
         if (prepared.spacing) take.spacing = await applySentenceSpacing(output2, request, deps.align);
         else {
           rmSync12(sentencesPathFor(output2), { force: true });
@@ -131432,6 +132164,8 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     description: `Use it after story_sequence to upsert scenes by number into a sequence: place, time, the one event, and a one- or two-sentence summary of the scene's story. On story-led work also give turn, charge and out, so the scenes can be read in a row for pressure that changes and ends that hand over the next question (skills/storyboard/references/story-interest.md). A scene moved to another sequence leaves its old one. Refused (story_order) before any sequence exists or for an unknown sequence id, and on a story-first episode board by story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
 
+For generated scenes, videoDirection records the opening positions, shared direction, scene fps and one continuous audio file with beat cues. Set oneTake only for an explicitly uninterrupted camera view. Place every setup on its own story_shot card.
+
 A new scene starts with audienceSound.decision undecided. Set use or none with the dramatic reason. For use, perspective identifies whose experience we hear. The shift names the line or action that reveals a change of feeling or expectation and how the cue follows it. The exit names the beat where it ends. All three notes are optional. Plan and time each chosen effect on its shot with storyboard_apply.audienceEffects.
 
 Do NOT write shots or dialogue here \u2014 story_shot comes next.
@@ -131466,9 +132200,9 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     name: "story_shot",
     title: "Write shot stories (story step 3 of 3)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    description: `Use it after story_scene to write each provisional shot as one sentence summarizing a coherent performance in its scene. A summary may cover several lines and turns; never allocate one shot per sentence or gesture. Name the visible cause, discovery or changed behavior before choosing the cast; avoid a scene made only of speaker A / speaker B summaries. Revisit boundaries after shot_dialogue using storyboard_read.boundaryReview.sceneRuns (the uninterrupted scene) and boundaries (hold, reframe or cut); inspect performanceTiming and videoTiming before images. Without an id the shot is added at the end of its scene and gets a stable id (s0001\u2026); with an id that shot's scene and summary are revised and everything else on it is kept; a new scene moves it to the end of that scene. Refused (story_order) before any scene exists or for a scene outside a sequence. A story-first episode board also repeats story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
+    description: `Keep each camera cut as a separate shot. Track a pan, dolly, zoom or entrance within the same take. Supply timeline with scene-relative frame range, incoming transition, English framing/action and each video image\u2019s role and frame. Record one scene-length soundtrack in story_scene.videoDirection.audio. Use it after story_scene to write each provisional shot as one sentence summarizing a coherent performance in its scene. A summary may cover several lines and turns; never allocate one shot per sentence or gesture. Name the visible cause, discovery or changed behavior before choosing the cast; avoid a scene made only of speaker A / speaker B summaries. Revisit boundaries after shot_dialogue using storyboard_read.boundaryReview.sceneRuns (the uninterrupted scene) and boundaries (hold, reframe or cut); inspect performanceTiming and videoTiming before images. Without an id the shot is added at the end of its scene and gets a stable id (s0001\u2026); with an id that shot's scene and summary are revised and everything else on it is kept; a new scene moves it to the end of that scene. Refused (story_order) before any scene exists or for a scene outside a sequence. A story-first episode board also repeats story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
 
-Do NOT pass characters, dialogue, narration, camera, visual fields or a title \u2014 the input refuses them; a shot's title is on-screen text, which a full_video cut never carries. Once every shot has its story, shot_characters and shot_dialogue come next, then shot_icons; on a board these tools started (STORY.authoring "story-first") storyboard_apply refuses a shot without scene and summary.
+Use timeline.framing for video direction. Do NOT pass top-level characters, dialogue, narration, camera, visual fields or a title \u2014 the input refuses them; a shot's title is on-screen text, which a full_video cut never carries. Once every shot has its story, shot_characters and shot_dialogue come next, then shot_icons; on a board these tools started (STORY.authoring "story-first") storyboard_apply refuses a shot without scene and summary.
 
 Returns: the file written or not, counts, and findings (! violation \xB7 warning).`,
     inputSchema: {
@@ -131479,7 +132213,8 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
         shots: { type: "array", minItems: 1, description: "Shot stories in playback order", items: { type: "object", additionalProperties: false, required: ["scene", "summary"], properties: {
           id: { type: "string", pattern: "^s\\d{4,}$", description: "Stable shot id to revise; omit to add a shot" },
           scene: { type: "integer", minimum: 1, description: "The scene number" },
-          summary: { type: "string", description: "The story this shot tells, in one sentence" }
+          summary: { type: "string", description: "The story this shot tells, in one sentence" },
+          timeline: zodToJsonSchema(shotTimelineSchema, { $refStrategy: "none" })
         } } }
       },
       required: ["path", "shots"]
@@ -131626,7 +132361,7 @@ Returns: the file written or not, counts, findings (! violation \xB7 warning), a
 
 Give each listed character an expression: what their face and body show in this shot, read from the scene's situation (what just happened and what is at stake), since the one-sentence shot story names an action and not a feeling. Write visible cues \u2014 brows, eyes, mouth, shoulders, hands \u2014 and no emotion label alone: "worried" leaves the face to the model, and a model with no cue draws a pleasant face. The silent listener gets one too. shot_image and shot_prompt put these words into the image and video prompts, and shot_image warns (expression_missing) for a face without one. English only (image_prompt_language); a character outside the shot is refused (shot_expression_unknown).
 
-One speaker per shot limits who talks, not who is seen. bystanders lists cast members also in view without an on-screen line \u2014 the listener's friend at the table, the child beside the coach: at most four of the cast on screen, principal characters first. extras describes unnamed people in English (how many, what they look like, what they are doing). shot_image draws bystanders from their face and front panels and extras from the words; the video call references neither, and shot_prompt keeps them in the prompt. Refused: a bystander who is also a character (shot_bystander_listed), more than four of the cast (character_limit), a bystander with an on-screen line (shot_bystander_speaks), non-English extras (image_prompt_language).
+In conventional dialogue coverage each shot has one speaker. An explicit one-take may include replies. bystanders lists cast members also in view without an on-screen line \u2014 the listener's friend at the table, the child beside the coach: at most four of the cast on screen, the two characters first. extras describes unnamed people in English (how many, what they look like, what they are doing). shot_image draws bystanders from their face and front panels and extras from the words; the video call references neither, and shot_prompt keeps them in the prompt. Refused: a bystander who is also a character (shot_bystander_listed), more than three of the cast (character_limit), a bystander with an on-screen line (shot_bystander_speaks), non-English extras (image_prompt_language).
 
 Every board write answers with the board first, as counts: people in frame, shots with and without a line, sizes, the widest shot of each scene. They are counts, not targets.
 
@@ -131657,7 +132392,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
 
 Before writing, read the exchange in order from each speaker's current knowledge: who hears this, what earlier event triggers it, and what response does the speaker want now? A future proposal or scene outcome cannot motivate an earlier reply. Set the actual addressee in performance.to through storyboard_apply; do not assume every line addresses the audience. Use check-story.js --text/--map for review so listeners and event order survive export. See storyboard's causal-dialogue reference. This guidance is editorial, not an automated judgment of meaning.
 
-Use it to write a shot's lines in spoken order, each attributed to a character from the episode cast. The given lines replace the shot's lines; [] makes it silent. Keep consecutive lines from one speaker in the same shot. Split every speaker change first (shot_speaker_limit), including a readable two-shot; visible listeners stay silent. Choose the picture's evidence independently of who speaks: a purposeful listener reaction, hand insert, POV or spatial view can carry off_screen physical speech with the same speaker and addressee. Retain visible body parts in the cast and set delivery explicitly; do not default a hand-only speaking character to on_screen or call physical speech voiceover. Set each resulting shot's size and angle with shot_icons. Inner thoughts use the character's speaker id and voiceover delivery, with image2video and measured, timed TTS instead of MSR. After writing the complete scene, inspect every storyboard_read.boundaryReview join against an uninterrupted performance, merge only redundant boundaries and compare revised performance duration with videoTiming; split for speaker changes, motivated visual changes or verified model capacity. Delivery defaults to on_screen for one of the shot's characters and voiceover for anyone else \u2014 a narrator is a character who speaks without being seen. A line with a known id keeps its acting and audio binding, and changed text makes that audio stale. Refused (story_order) before the shot's characters are set and for an on_screen speaker outside them; an unknown speaker is cast_unknown, and a story-first board repeats story_sequence's cast check (cast_source_missing, character_panel_missing). Local file only; no audio, image or prompt is generated.
+Use it to write a shot's lines in spoken order, each attributed to a character from the episode cast. The given lines replace the shot's lines; [] makes it silent. Keep consecutive lines from one speaker in the same shot. For conventional dialogue coverage split at speaker changes (shot_speaker_limit). An explicitly requested one-take keeps the ordered lines on the same shot, including replies. Choose the picture's evidence independently of who speaks: a purposeful listener reaction, hand insert, POV or spatial view can carry off_screen physical speech with the same speaker and addressee. Retain visible body parts in the cast and set delivery explicitly; do not default a hand-only speaking character to on_screen or call physical speech voiceover. Set each resulting shot's size and angle with shot_icons. Inner thoughts use the character's speaker id and voiceover delivery, with image2video and measured, timed TTS instead of MSR. After writing the complete scene, inspect every storyboard_read.boundaryReview join against an uninterrupted performance, merge only redundant boundaries and compare revised performance duration with videoTiming; preserve an explicit one-take when a route lacks capacity and report that limit. Delivery defaults to on_screen for one of the shot's characters and voiceover for anyone else \u2014 a narrator is a character who speaks without being seen. A line with a known id keeps its acting and audio binding, and changed text makes that audio stale. Refused (story_order) before the shot's characters are set and for an on_screen speaker outside them; an unknown speaker is cast_unknown, and a story-first board repeats story_sequence's cast check (cast_source_missing, character_panel_missing). Local file only; no audio, image or prompt is generated.
 
 Do NOT write a line the approved scenario does not give: where it reports that someone speaks without the words, write no line for that moment \u2014 stage it so the words are not needed (the listener's face, the speaker's back, distance) or ask. Do NOT generate speech here \u2014 speech_manage plans and binds audio later. Do NOT write icon attributes or visual plans; shot_icons comes next, then storyboard_apply.
 
@@ -132036,7 +132771,7 @@ TOOLS.push(
   {
     name: "video_plan",
     title: "Plan a video with saved model settings",
-    description: "Plan one generated scene with episode, sceneNo and requestId. Reads story_scene.videoDirection, ordered member dialogue, duration and opening frame. The result contains one provider prompt, member shotIds, image and voice bindings, a quote and a plan ID for video_approve and video_execute. Use shotId for an explicitly requested single-shot or legacy plan. Saved model, limits and authorization apply. No generation.",
+    description: "Plan one generated scene with episode, sceneNo and requestId. Compiles all member shots in playback order, including framing, actions, timed image roles, cut boundaries and one continuous audio track. Unsupported combinations report each unmapped shot, frame and input before a plan can be approved. The result contains one provider prompt, member shotIds, image and voice bindings, a quote and a plan ID for video_approve and video_execute. Use shotId for an explicitly requested single-shot or legacy plan. Saved model, limits and authorization apply. No generation.",
     inputSchema: { ...videoContextSchema, required: ["episode", "requestId"], oneOf: [{ required: ["sceneNo"] }, { required: ["shotId"] }], properties: {
       ...videoContextSchema.properties,
       sceneNo: { type: "integer", minimum: 1, description: "Storyboard scene number. Plans one clip for all its ordered shots." },
@@ -132162,15 +132897,15 @@ import { existsSync as existsSync41 } from "node:fs";
 
 // src/music-routing.ts
 import * as fs25 from "node:fs";
-import path29 from "node:path";
+import path30 from "node:path";
 import os5 from "node:os";
-import { execFileSync as execFileSync17 } from "node:child_process";
-import { createRequire as createRequire13 } from "node:module";
+import { execFileSync as execFileSync18 } from "node:child_process";
+import { createRequire as createRequire14 } from "node:module";
 import { fileURLToPath as fileURLToPath10 } from "node:url";
 
 // src/music-state.ts
 import * as fs23 from "node:fs";
-import path27 from "node:path";
+import path28 from "node:path";
 var money2 = external_exports.number().finite().nonnegative();
 var musicJobSchema = external_exports.object({
   outputFile: external_exports.string(),
@@ -132192,15 +132927,15 @@ var musicJobSchema = external_exports.object({
 }).strict();
 var stateSchema3 = external_exports.object({ version: external_exports.literal(1), openingSpendUsd: money2, jobs: external_exports.record(musicJobSchema) }).strict();
 function readMusicState(directory2) {
-  const file = path27.join(directory2, ".work/music-routing/state.json");
+  const file = path28.join(directory2, ".work/music-routing/state.json");
   return fs23.existsSync(file) ? stateSchema3.parse(JSON.parse(fs23.readFileSync(file, "utf8"))) : void 0;
 }
 function hasHistory2(directory2) {
-  const events = path27.join(directory2, ".work/events.jsonl");
+  const events = path28.join(directory2, ".work/events.jsonl");
   if (fs23.existsSync(events)) for (const line of fs23.readFileSync(events, "utf8").split("\n").filter(Boolean)) {
     if (/^(music_generate|music_elevenlabs_|suno_generate|mlx_music_)/.test(JSON.parse(line).tool || "")) return true;
   }
-  const tally = path27.join(directory2, ".work/cost-tally.tsv");
+  const tally = path28.join(directory2, ".work/cost-tally.tsv");
   return fs23.existsSync(tally) && /^music\./m.test(fs23.readFileSync(tally, "utf8"));
 }
 var STALE_LOCK_MS = 3e4;
@@ -132223,9 +132958,9 @@ function openLock(lock2) {
   }
 }
 function musicTransaction(directory2, openingSpendUsd, update) {
-  const folder = path27.join(directory2, ".work/music-routing");
+  const folder = path28.join(directory2, ".work/music-routing");
   fs23.mkdirSync(folder, { recursive: true });
-  const lock2 = path27.join(folder, "state.lock");
+  const lock2 = path28.join(folder, "state.lock");
   const fd = openLock(lock2);
   try {
     let state = readMusicState(directory2);
@@ -132234,7 +132969,7 @@ function musicTransaction(directory2, openingSpendUsd, update) {
       state = { version: 1, openingSpendUsd: openingSpendUsd ?? 0, jobs: {} };
     }
     const result = update(state);
-    atomicJson(path27.join(folder, "state.json"), stateSchema3.parse(state));
+    atomicJson(path28.join(folder, "state.json"), stateSchema3.parse(state));
     return result;
   } finally {
     fs23.closeSync(fd);
@@ -132244,11 +132979,11 @@ function musicTransaction(directory2, openingSpendUsd, update) {
 
 // src/music-media.ts
 import * as fs24 from "node:fs";
-import path28 from "node:path";
+import path29 from "node:path";
 import { createHash as createHash20, randomUUID as randomUUID7 } from "node:crypto";
-import { execFileSync as execFileSync16 } from "node:child_process";
+import { execFileSync as execFileSync17 } from "node:child_process";
 function readMusicMetadata(file) {
-  const result = JSON.parse(execFileSync16(
+  const result = JSON.parse(execFileSync17(
     "ffprobe",
     [
       "-v",
@@ -132273,10 +133008,10 @@ function readMusicMetadata(file) {
   };
 }
 function normalizeMusicFile(source, target) {
-  fs24.mkdirSync(path28.dirname(target), { recursive: true });
+  fs24.mkdirSync(path29.dirname(target), { recursive: true });
   const temporary = target + "." + randomUUID7() + ".wav";
   try {
-    execFileSync16(
+    execFileSync17(
       "ffmpeg",
       [
         "-nostdin",
@@ -132310,12 +133045,12 @@ function normalizeMusicFile(source, target) {
 }
 
 // src/music-routing.ts
-var load7 = createRequire13(import.meta.url);
+var load8 = createRequire14(import.meta.url);
 var selectionHelper2 = fileURLToPath10(new URL("../../skills/_shared/music-selection.js", import.meta.url));
 function refreshAudienceOutput(directory2, file) {
-  if (path29.dirname(file) === path29.join(directory2, ".work/music/audience")) refreshAudienceReview(path29.join(directory2, "storyboard"));
+  if (path30.dirname(file) === path30.join(directory2, ".work/music/audience")) refreshAudienceReview(path30.join(directory2, "storyboard"));
 }
-var musicContext = (directory2, assetId) => load7(selectionHelper2).readMusicContext(directory2, assetId);
+var musicContext = (directory2, assetId) => load8(selectionHelper2).readMusicContext(directory2, assetId);
 var idSchema3 = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var musicPlanSchema = external_exports.object({
   directory: external_exports.string().min(1),
@@ -132339,7 +133074,7 @@ function gate2(tool2) {
 }
 function environment2(tool2) {
   gate2(tool2);
-  for (const binary of ["ffmpeg", "ffprobe"]) execFileSync17(binary, ["-version"], { timeout: 1e4, stdio: "ignore" });
+  for (const binary of ["ffmpeg", "ffprobe"]) execFileSync18(binary, ["-version"], { timeout: 1e4, stdio: "ignore" });
   const engine = MUSIC_ADAPTERS[tool2].engine;
   if (engine === "lyria") requireGeminiKey();
   if (engine === "suno-api") requireSunoKey();
@@ -132349,7 +133084,7 @@ function environment2(tool2) {
 function inputFiles3(args, directory2) {
   const inputs2 = {};
   const resolve14 = (file) => {
-    const resolved = fs25.realpathSync(path29.resolve(directory2, file));
+    const resolved = fs25.realpathSync(path30.resolve(directory2, file));
     if (!fs25.statSync(resolved).isFile()) throw new Error("music_input_not_file");
     inputs2[resolved] = readMusicMetadata(resolved).sha256;
     return resolved;
@@ -132379,12 +133114,12 @@ function planMusic(raw) {
   if (!tool2) throw new Error("music_model_unsupported");
   gate2(tool2);
   const args = parseMusicArgs(tool2, bindSelection3(tool2, input.args, selection));
-  const folder = canonicalPath(path29.resolve(context2.directory, typeof args.outputPath === "string" ? args.outputPath : ".work/music"));
+  const folder = canonicalPath(path30.resolve(context2.directory, typeof args.outputPath === "string" ? args.outputPath : ".work/music"));
   const filename = typeof args.filename === "string" ? args.filename : `${input.requestId}.wav`;
   if (!filename.endsWith(".wav")) throw new Error("music_output_requires_wav");
-  const outputFile = canonicalPath(path29.join(folder, filename));
+  const outputFile = canonicalPath(path30.join(folder, filename));
   if (!withinDirectory(context2.directory, outputFile)) throw new Error("music_output_outside_directory");
-  args.outputPath = canonicalPath(path29.join(context2.directory, ".work/music-routing/raw", input.requestId));
+  args.outputPath = canonicalPath(path30.join(context2.directory, ".work/music-routing/raw", input.requestId));
   args.filename = ["music_generate_song", "music_generate_clip", "music_elevenlabs_generate", "suno_generate"].includes(tool2) ? "source.mp3" : "source.wav";
   if (!withinDirectory(context2.directory, String(args.outputPath))) throw new Error("music_raw_output_outside_directory");
   const inputs2 = inputFiles3(args, context2.directory);
@@ -132409,7 +133144,7 @@ function planMusic(raw) {
     quote
   };
   const plan2 = { ...body, id: routingHash(body) };
-  atomicJson(path29.join(context2.directory, ".work/music-routing/plans", plan2.id + ".json"), plan2);
+  atomicJson(path30.join(context2.directory, ".work/music-routing/plans", plan2.id + ".json"), plan2);
   return plan2;
 }
 function musicPlanSummary(plan2) {
@@ -132421,7 +133156,7 @@ async function executeMusic(raw, dispatch) {
   const input = musicExecuteSchema.parse(raw);
   requireReadyProject(input.directory);
   const directory2 = fs25.realpathSync(input.directory);
-  const plan2 = JSON.parse(fs25.readFileSync(path29.join(directory2, ".work/music-routing/plans", input.planId + ".json"), "utf8"));
+  const plan2 = JSON.parse(fs25.readFileSync(path30.join(directory2, ".work/music-routing/plans", input.planId + ".json"), "utf8"));
   const { id, ...body } = plan2;
   if (id !== input.planId || routingHash(body) !== id || plan2.directory !== directory2) throw new Error("music_plan_invalid");
   gate2(plan2.tool);
@@ -132479,7 +133214,7 @@ async function executeMusic(raw, dispatch) {
       throw new Error("music_adapter_failed: " + JSON.stringify(result.content));
     }
     if (!plan2.outputFile) throw new Error("music_output_missing");
-    const sourceFile = receipt?.audioPath || path29.join(String(plan2.args.outputPath), String(plan2.args.filename));
+    const sourceFile = receipt?.audioPath || path30.join(String(plan2.args.outputPath), String(plan2.args.filename));
     if (!withinDirectory(canonicalPath(String(plan2.args.outputPath)), canonicalPath(sourceFile))) throw new Error("music_source_outside_request");
     const output2 = normalizeMusicFile(sourceFile, plan2.outputFile);
     const response = { ...result, content: [...result.content, { type: "text", text: "Music output: " + JSON.stringify(output2) }], musicReceipt: { ...receipt, output: output2, review: "not_reviewed" } };
@@ -132519,11 +133254,11 @@ async function routeLegacyMusic(tool2, raw, dispatch) {
     return executeMusic({ directory: plan2.directory, planId: plan2.id }, dispatch);
   }
   for (const location of [args.outputPath, process.cwd()].filter((v) => typeof v === "string")) {
-    let dir = canonicalPath(path29.resolve(location));
+    let dir = canonicalPath(path30.resolve(location));
     for (; ; ) {
-      if (fs25.existsSync(path29.join(dir, ".work/model-settings.json")) || fs25.existsSync(path29.join(dir, ".social-flow/models.json")) || fs25.existsSync(path29.join(dir, "storyboard/scenes.js")))
+      if (fs25.existsSync(path30.join(dir, ".work/model-settings.json")) || fs25.existsSync(path30.join(dir, ".social-flow/models.json")) || fs25.existsSync(path30.join(dir, "storyboard/scenes.js")))
         throw new Error("music_context_required: pass directory, assetId and requestId for configured production");
-      const parent = path29.dirname(dir);
+      const parent = path30.dirname(dir);
       if (parent === dir) break;
       dir = parent;
     }
@@ -132540,7 +133275,7 @@ async function resumeMusic2(raw) {
   const job = jobs && Object.hasOwn(jobs, input.requestId) ? jobs[input.requestId] : void 0;
   if (!job || job.status !== "submission_unknown" || job.tool !== "suno_generate" || !job.providerId)
     throw new Error("music_resume_requires_unknown_suno_task: only a submission_unknown suno_generate request with a recorded task ID");
-  const plan2 = JSON.parse(fs25.readFileSync(path29.join(directory2, ".work/music-routing/plans", job.planId + ".json"), "utf8"));
+  const plan2 = JSON.parse(fs25.readFileSync(path30.join(directory2, ".work/music-routing/plans", job.planId + ".json"), "utf8"));
   const { id, ...body } = plan2;
   if (id !== job.planId || routingHash(body) !== id || !plan2.outputFile) throw new Error("music_plan_invalid");
   gate2(plan2.tool);
@@ -132651,9 +133386,9 @@ async function routeSpeech(input) {
 import { execFile as execFile8 } from "node:child_process";
 import { promisify as promisify4 } from "node:util";
 import { createHash as createHash21, randomUUID as randomUUID8 } from "node:crypto";
-import { createReadStream as createReadStream4, mkdirSync as mkdirSync16, realpathSync as realpathSync9, statSync as statSync17, writeFileSync as writeFileSync22 } from "node:fs";
+import { createReadStream as createReadStream4, mkdirSync as mkdirSync16, realpathSync as realpathSync10, statSync as statSync17, writeFileSync as writeFileSync22 } from "node:fs";
 import { homedir as homedir4 } from "node:os";
-import path30 from "node:path";
+import path31 from "node:path";
 var exec2 = promisify4(execFile8);
 var axis = external_exports.enum(["composition", "camera", "direction", "continuity", "physicalNaturalness", "facialNaturalness", "speechAccuracy", "vocalEmotion", "audioQuality", "lipSync"]);
 var hostReviewSchema = external_exports.object({
@@ -132681,7 +133416,7 @@ async function digest3(file) {
   return hash7.digest("hex");
 }
 async function hostReview(input) {
-  const r2 = hostReviewSchema.parse(input), file = realpathSync9(r2.mediaPath);
+  const r2 = hostReviewSchema.parse(input), file = realpathSync10(r2.mediaPath);
   if (!statSync17(file).isFile() || !statSync17(file).size) throw new Error("Provide a nonempty local media file");
   const mediaSha256 = await digest3(file);
   const { stdout } = await exec2("ffprobe", ["-v", "error", "-show_format", "-show_streams", "-of", "json", file], { maxBuffer: 4 * 1024 * 1024 });
@@ -132708,7 +133443,7 @@ async function hostReview(input) {
   if (r2.action === "prepare") {
     const frames = [];
     if (r2.mode !== "audio") {
-      const directory3 = path30.join(homedir4(), ".cache", "social-flow", "host-reviews", "evidence", mediaSha256, randomUUID8());
+      const directory3 = path31.join(homedir4(), ".cache", "social-flow", "host-reviews", "evidence", mediaSha256, randomUUID8());
       mkdirSync16(directory3, { recursive: true, mode: 448 });
       const timing = await exec2("ffprobe", [
         "-v",
@@ -132726,7 +133461,7 @@ async function hostReview(input) {
       if (!timestamps.length) throw new Error("Video has no readable presentation timestamps");
       for (let i2 = 0; i2 < 8; i2++) {
         const seconds2 = timestamps[Math.floor((timestamps.length - 1) * i2 / 7)];
-        const output2 = path30.join(directory3, `frame-${i2}.jpg`);
+        const output2 = path31.join(directory3, `frame-${i2}.jpg`);
         await exec2("ffmpeg", [
           "-v",
           "error",
@@ -132773,9 +133508,9 @@ async function hostReview(input) {
     if (o.axis === "lipSync" && !(hasVideo && hasAudio)) throw new Error("Lip sync requires audiovisual playback");
   }
   if (await digest3(file) !== mediaSha256) throw new Error("Media changed while recording observations");
-  const directory2 = path30.join(homedir4(), ".cache", "social-flow", "host-reviews");
+  const directory2 = path31.join(homedir4(), ".cache", "social-flow", "host-reviews");
   mkdirSync16(directory2, { recursive: true, mode: 448 });
-  const receiptPath2 = path30.join(directory2, `${mediaSha256}-${randomUUID8()}.json`);
+  const receiptPath2 = path31.join(directory2, `${mediaSha256}-${randomUUID8()}.json`);
   const result = {
     ...base,
     status: r2.observations.some((o) => o.score !== null) ? "observed" : "unverified",
@@ -132964,7 +133699,7 @@ import { createHash as createHash23, randomUUID as randomUUID9 } from "node:cryp
 import { appendFileSync as appendFileSync3, copyFileSync, existsSync as existsSync32, mkdirSync as mkdirSync18, readFileSync as readFileSync34, writeFileSync as writeFileSync24, renameSync as renameSync7 } from "node:fs";
 import { basename as basename10, dirname as dirname8, join as join16, resolve as resolve9 } from "node:path";
 import { isDeepStrictEqual } from "node:util";
-import { createRequire as createRequire16 } from "node:module";
+import { createRequire as createRequire17 } from "node:module";
 
 // src/voice-lock-config.ts
 var VOICE_LOCK_MODEL = "eleven_multilingual_sts_v2";
@@ -133088,7 +133823,7 @@ function compileSample(text4, acting, voice, turns) {
   const normalize2 = (value) => value.replace(/\s+/g, " ").trim();
   if (acting || normalize2(turns.map((turn) => turn.text).join(" ")) !== normalize2(text4)) throw new Error("Sample turns must reproduce sampleText with per-turn acting only");
   if (voice.engine !== "gemini" || !String(voice.model).startsWith("gemini-3.8-")) throw new Error("Per-turn sample acting requires Gemini 3.8 TTS");
-  const { directionSupport } = createRequire16(import.meta.url)("../../skills/_shared/scene-acting.js");
+  const { directionSupport } = createRequire17(import.meta.url)("../../skills/_shared/scene-acting.js");
   if (turns.some((turn) => !directionSupport(voice, turn.acting).supported)) throw new Error("Per-turn resolved vocal style exceeds the Gemini 3.8 limit of 500 characters; shorten the controls");
   const compiled = turns.map((turn) => compileActing(turn.text, turn.acting, voice));
   return { generator: "tts_gemini_38", generation: { ...compiled[0].generation, turns: compiled.flatMap((turn) => turn.generation.turns) } };
@@ -133097,7 +133832,7 @@ function refreshSheet(identityPath) {
   const folder = dirname8(identityPath);
   if (basename10(dirname8(folder)) !== "characters" || basename10(dirname8(dirname8(folder))) !== "assets") return void 0;
   try {
-    createRequire16(import.meta.url)("../../skills/channel/references/review-library.js").exportChannel(resolve9(folder, "../../.."));
+    createRequire17(import.meta.url)("../../skills/channel/references/review-library.js").exportChannel(resolve9(folder, "../../.."));
     return join16(folder, "index.html");
   } catch (error2) {
     return `sheet refresh failed: ${error2 instanceof Error ? error2.message : String(error2)}`;
@@ -133206,7 +133941,7 @@ function bindRegisteredVoice(args) {
   const chosen = audition.candidates.find((candidate2) => candidate2.id === selection.candidateId);
   if (!chosen || audition.status !== "selected" || chosen.tts.engine !== "astra-genai" || chosen.audioSha256 !== selection.audioSha256 || hash3(readFileSync34(chosen.audioPath)) !== chosen.audioSha256)
     throw new Error("voice_registration_sample_stale: the selected gateway sample or its bytes changed");
-  const handoff = createRequire16(import.meta.url)("../../skills/channel/references/character-sheet.js").selectedVoiceReference(source, ttsSchema.parse(value.tts));
+  const handoff = createRequire17(import.meta.url)("../../skills/channel/references/character-sheet.js").selectedVoiceReference(source, ttsSchema.parse(value.tts));
   if (handoff.voiceReference?.sha256 !== chosen.audioSha256) throw new Error("voice_registration_sample_stale: restore the selected sample settings before binding");
   const tts = ttsSchema.parse({ ...chosen.tts, voiceId: args.registeredVoiceId });
   const registration = {
@@ -133347,13 +134082,13 @@ async function manageLocation(args) {
 
 // src/cover.ts
 import { createHash as createHash24 } from "node:crypto";
-import { execFileSync as execFileSync18, spawn as spawn3 } from "node:child_process";
-import { copyFileSync as copyFileSync2, existsSync as existsSync33, mkdirSync as mkdirSync19, mkdtempSync as mkdtempSync8, readFileSync as readFileSync35, realpathSync as realpathSync10, renameSync as renameSync8, rmSync as rmSync17, statSync as statSync18, writeFileSync as writeFileSync25, openSync as openSync7, readSync, closeSync as closeSync7 } from "node:fs";
+import { execFileSync as execFileSync19, spawn as spawn3 } from "node:child_process";
+import { copyFileSync as copyFileSync2, existsSync as existsSync33, mkdirSync as mkdirSync19, mkdtempSync as mkdtempSync8, readFileSync as readFileSync35, realpathSync as realpathSync11, renameSync as renameSync8, rmSync as rmSync17, statSync as statSync18, writeFileSync as writeFileSync25, openSync as openSync7, readSync, closeSync as closeSync7 } from "node:fs";
 import { tmpdir as tmpdir8 } from "node:os";
 import { basename as basename11, dirname as dirname9, isAbsolute as isAbsolute2, join as join18, relative as relative2, resolve as resolve10, sep as sep2 } from "node:path";
-import { createRequire as createRequire18 } from "node:module";
+import { createRequire as createRequire19 } from "node:module";
 import { pathToFileURL } from "node:url";
-var load8 = createRequire18(import.meta.url);
+var load9 = createRequire19(import.meta.url);
 var COVER_REFS = join18(PLUGIN_ROOT, "skills", "generate-cover", "references");
 var TEMPLATE_FILE = join18(COVER_REFS, "cover-template.html");
 var MOTION_FONT_DIR = join18(PLUGIN_ROOT, "skills", "storyboard", "references", "motion-fonts");
@@ -133387,11 +134122,11 @@ var episodeCoverSchema = external_exports.object({
   action: external_exports.enum(["set", "render", "read"]),
   decision: coverDecisionSchema.optional()
 }).strict();
-function episodeOf(path35) {
-  const board = readBoard(path35);
-  const storyboard = realpathSync10(dirname9(scenesPath(path35)));
+function episodeOf(path36) {
+  const board = readBoard(path36);
+  const storyboard = realpathSync11(dirname9(scenesPath(path36)));
   const format = String(board.win.FORMAT ?? "shorts-9x16");
-  const formats = load8(join18(PLUGIN_ROOT, "skills", "platform-guide", "references", "formats.js")).FORMATS;
+  const formats = load9(join18(PLUGIN_ROOT, "skills", "platform-guide", "references", "formats.js")).FORMATS;
   const spec = formats[format]?.cover;
   if (!spec) throw new Error(`cover_format_unknown: ${format} has no cover block in formats.js`);
   return { board, storyboard, episode: dirname9(storyboard), format, spec };
@@ -133400,7 +134135,7 @@ var landscape = (spec) => spec.canvases[0].w > spec.canvases[0].h;
 function inside(episode, file, what) {
   const abs = isAbsolute2(file) ? file : resolve10(episode, file);
   if (!existsSync33(abs) || !statSync18(abs).isFile()) throw new Error(`cover_source_missing: ${what} ${file} is not a file`);
-  const real = realpathSync10(abs), root = realpathSync10(episode);
+  const real = realpathSync11(abs), root = realpathSync11(episode);
   if (real !== root && !real.startsWith(root + sep2)) throw new Error(`cover_source_outside: ${what} ${file} is outside the episode ${episode}`);
   return real;
 }
@@ -133416,7 +134151,7 @@ function sha256File(file) {
 var sha2562 = (value) => createHash24("sha256").update(value).digest("hex");
 function probe4(file) {
   try {
-    const out = JSON.parse(execFileSync18("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height:format=duration", "-of", "json", file], { encoding: "utf8", timeout: 3e4 }));
+    const out = JSON.parse(execFileSync19("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height:format=duration", "-of", "json", file], { encoding: "utf8", timeout: 3e4 }));
     const s2 = out.streams?.[0];
     if (!s2?.width || !s2?.height) throw new Error("no picture stream");
     const duration5 = Number(out.format?.duration);
@@ -133502,8 +134237,8 @@ function lookOf(ep, base, warnings, label) {
   const source = resolveSource(ep, base.source, warnings);
   return { source, focus: base.focus ?? { x: 0.5, y: 0.5 }, copy: base.copy };
 }
-function setCover(path35, input) {
-  const ep = episodeOf(path35);
+function setCover(path36, input) {
+  const ep = episodeOf(path36);
   if (input.variants.length && !landscape(ep.spec)) throw new Error("cover_variants_longform_only: variants are for YouTube Test & Compare, which long-form videos have and Shorts do not");
   const warnings = [];
   const language = input.language ?? episodeLanguage(ep);
@@ -133593,8 +134328,8 @@ function regionFor(spec, focus) {
   return focus.y <= 0.5 ? { x0: x2.x0, x1: x2.x1, y0: 0.5, y1: core.y1, align: "center" } : { x0: x2.x0, x1: x2.x1, y0: core.y0, y1: 0.5, align: "center" };
 }
 function pickFont(text4, language) {
-  const motion = load8(join18(PLUGIN_ROOT, "skills", "storyboard", "references", "motion-font-data.js"));
-  const cjk = load8(join18(COVER_REFS, "cover-font-data.js"));
+  const motion = load9(join18(PLUGIN_ROOT, "skills", "storyboard", "references", "motion-font-data.js"));
+  const cjk = load9(join18(COVER_REFS, "cover-font-data.js"));
   const all = { ...motion, ...cjk };
   const lang = language.split("-")[0];
   const order = lang === "ja" ? ["notosansjp", "pretendard"] : lang === "zh" ? ["notosanssc", "notosanstc"] : /[\u1100-\u11ff\u3130-\u318f\uac00-\ud7a3]/.test(text4) ? ["paperlogy", "pretendard"] : ["pretendard", "paperlogy"];
@@ -133680,7 +134415,7 @@ function chrome(args, until) {
 }
 function ffmpeg3(args) {
   try {
-    execFileSync18("ffmpeg", ["-v", "error", "-y", ...args], { timeout: 12e4, stdio: ["ignore", "ignore", "pipe"] });
+    execFileSync19("ffmpeg", ["-v", "error", "-y", ...args], { timeout: 12e4, stdio: ["ignore", "ignore", "pipe"] });
   } catch (e2) {
     throw new Error(`cover_ffmpeg_failed: ${(e2.stderr?.toString() || e2.message).trim().split("\n").slice(-2).join(" ")}`);
   }
@@ -133704,7 +134439,7 @@ function luminance([r2, g, b]) {
 function contrastBehind(bg, box, width, height, fills) {
   const x2 = Math.max(0, Math.floor(box.x0 * width)), y = Math.max(0, Math.floor(box.y0 * height));
   const w = Math.max(2, Math.min(width - x2, Math.ceil((box.x1 - box.x0) * width))), h2 = Math.max(2, Math.min(height - y, Math.ceil((box.y1 - box.y0) * height)));
-  const raw = execFileSync18("ffmpeg", ["-v", "error", "-i", bg, "-vf", `crop=${w}:${h2}:${x2}:${y},scale=64:-2:flags=area`, "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], { timeout: 3e4, maxBuffer: 1 << 24 });
+  const raw = execFileSync19("ffmpeg", ["-v", "error", "-i", bg, "-vf", `crop=${w}:${h2}:${x2}:${y},scale=64:-2:flags=area`, "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], { timeout: 3e4, maxBuffer: 1 << 24 });
   const lum = [];
   for (let i2 = 0; i2 + 2 < raw.length; i2 += 3) lum.push(luminance([raw[i2], raw[i2 + 1], raw[i2 + 2]]));
   lum.sort((a, b) => a - b);
@@ -133719,8 +134454,8 @@ function injectConfig(template, config3) {
 var canonical3 = (v) => Array.isArray(v) ? `[${v.map(canonical3).join(",")}]` : v && typeof v === "object" ? `{${Object.keys(v).sort().map((k) => `${JSON.stringify(k)}:${canonical3(v[k])}`).join(",")}}` : JSON.stringify(v) ?? "null";
 var decisionSha = (d) => sha2562(canonical3(d));
 var storyFirst = (win) => win.STORY?.authoring === "story-first";
-async function renderCover(path35) {
-  const ep = episodeOf(path35);
+async function renderCover(path36) {
+  const ep = episodeOf(path36);
   const decision = readDecision(ep);
   if (!decision) throw new Error("cover_decision_missing: write the decision with episode_cover set first");
   if (decision.format !== ep.format) throw new Error(`cover_format_changed: the decision was made for ${decision.format} and the board is now ${ep.format}; set it again`);
@@ -133868,7 +134603,7 @@ async function renderCover(path35) {
     const episodesDir = dirname9(ep.episode);
     if (basename11(ep.storyboard) === "storyboard" && basename11(episodesDir) === "episodes") {
       try {
-        const library = load8(join18(PLUGIN_ROOT, "skills", "channel", "references", "review-library.js"));
+        const library = load9(join18(PLUGIN_ROOT, "skills", "channel", "references", "review-library.js"));
         library.exportChannel(dirname9(episodesDir));
       } catch (error2) {
         const message = error2 instanceof Error ? error2.message : String(error2);
@@ -133914,8 +134649,8 @@ function cutPreviews(shot, dir, stem, kind, spec) {
   cut("sheet", `split=4[f][g][s][c];${sheet};[c]${band(b.core)},scale=852:480:flags=area[c2];[f2][g2][s2][c2]hstack=4`);
   return out;
 }
-function readCover(path35) {
-  const ep = episodeOf(path35);
+function readCover(path36) {
+  const ep = episodeOf(path36);
   const story = ep.board.win.STORY;
   const plan2 = story?.opening?.thumbnail || story?.opening?.title ? { title: story?.opening?.title, thumbnail: story?.opening?.thumbnail } : void 0;
   const base = { format: ep.format, unverified: ep.spec.unverified, ...plan2 ? { plan: plan2 } : {} };
@@ -133999,7 +134734,7 @@ import { createHash as createHash25, randomUUID as randomUUID10 } from "node:cry
 import { readFileSync as readFileSync36, writeFileSync as writeFileSync26, renameSync as renameSync9, mkdirSync as mkdirSync20, existsSync as existsSync34 } from "node:fs";
 import { dirname as dirname10, resolve as resolve11, join as join19, relative as relative3 } from "node:path";
 import * as nodeModule7 from "node:module";
-import { execFileSync as execFileSync19 } from "node:child_process";
+import { execFileSync as execFileSync20 } from "node:child_process";
 var voiceContract = () => nodeModule7.createRequire(import.meta.url)("../../skills/_shared/character-voice.js");
 var characterSpeechContract = () => nodeModule7.createRequire(import.meta.url)("../../skills/_shared/character-speech.js");
 var speechSpanContract = () => nodeModule7.createRequire(import.meta.url)("../../skills/_shared/speech-span.js");
@@ -134025,7 +134760,7 @@ var speechManageSchema = external_exports.object({
 }).strict();
 var hash4 = (s2) => createHash25("sha256").update(s2).digest("hex");
 var object5 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
-var videoSeconds = (file) => Number(execFileSync19(
+var videoSeconds = (file) => Number(execFileSync20(
   "ffprobe",
   ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=duration", "-of", "default=nw=1:nk=1", file],
   { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }
@@ -134116,7 +134851,7 @@ function audioProvenanceStatus(line, character) {
 function measuredDuration(line) {
   if (!line.audio || !existsSync34(line.audio.path)) return null;
   try {
-    const value = Number(execFileSync19("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
+    const value = Number(execFileSync20("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
     return Number.isFinite(value) && value > 0 ? value : null;
   } catch {
     return null;
@@ -134462,8 +135197,8 @@ function manageSpeech(args) {
 // src/acting-review.ts
 import { execFile as execFile9 } from "node:child_process";
 import { createHash as createHash26, randomUUID as randomUUID11 } from "node:crypto";
-import { existsSync as existsSync35, mkdirSync as mkdirSync21, readFileSync as readFileSync37, realpathSync as realpathSync11, renameSync as renameSync10, rmSync as rmSync18, statSync as statSync19, writeFileSync as writeFileSync27 } from "node:fs";
-import path31 from "node:path";
+import { existsSync as existsSync35, mkdirSync as mkdirSync21, readFileSync as readFileSync37, realpathSync as realpathSync12, renameSync as renameSync10, rmSync as rmSync18, statSync as statSync19, writeFileSync as writeFileSync27 } from "node:fs";
+import path32 from "node:path";
 import { homedir as homedir5 } from "node:os";
 import { promisify as promisify5 } from "node:util";
 var exec3 = promisify5(execFile9);
@@ -134792,7 +135527,7 @@ async function reviewActing2(input, deps) {
   if (!deps) return hostReview({ mediaPath: request.mediaPath, mode: request.mode, brief: JSON.stringify(request) });
   actingReviewTimeout(request.focus);
   const policy = request.focus === "cinematography" ? CINEMATOGRAPHY_POLICY : request.mode === "audio" ? AUDIO_POLICY : VISUAL_POLICY;
-  const mediaPath = realpathSync11(request.mediaPath);
+  const mediaPath = realpathSync12(request.mediaPath);
   const stat5 = statSync19(mediaPath);
   if (!stat5.isFile() || stat5.size === 0 || stat5.size > MAX_BYTES) throw new Error("Review requires a nonempty media file no larger than 12 MiB");
   const bytes = readFileSync37(mediaPath);
@@ -134804,8 +135539,8 @@ async function reviewActing2(input, deps) {
   if (currentHash(mediaPath) !== mediaSha256) throw new Error("Source media changed during probe; review was not sent");
   const directionSha256 = hash5(JSON.stringify({ direction: request.direction, expectedText: request.expectedText, mode: request.mode }));
   let requestSha256 = hash5(JSON.stringify({ mediaSha256, directionSha256, model: ACTING_REVIEW_MODEL, policy }));
-  const directory2 = path31.resolve(deps.cacheDirectory || process.env.SOCIAL_FLOW_ACTING_REVIEW_CACHE_DIR?.trim() || path31.join(homedir5(), ".cache", "social-flow", "acting-reviews"));
-  let receiptPath2 = path31.join(directory2, `${requestSha256}.json`);
+  const directory2 = path32.resolve(deps.cacheDirectory || process.env.SOCIAL_FLOW_ACTING_REVIEW_CACHE_DIR?.trim() || path32.join(homedir5(), ".cache", "social-flow", "acting-reviews"));
+  let receiptPath2 = path32.join(directory2, `${requestSha256}.json`);
   mkdirSync21(directory2, { recursive: true, mode: 448 });
   const readMatchingReceipt = (file, expectedHash, retryOf2) => {
     const cached2 = cachedReceiptSchema.parse(JSON.parse(readFileSync37(file, "utf8")));
@@ -134821,7 +135556,7 @@ async function reviewActing2(input, deps) {
       throw new Error("Transport retry requires an unchanged original timeout/abort receipt with no observation; reviewed or rejected observations cannot be rerolled");
     retryOf = requestSha256;
     requestSha256 = hash5(JSON.stringify({ retryOf, attempt: 1, policy: "transport-retry-v1" }));
-    receiptPath2 = path31.join(directory2, `${requestSha256}.json`);
+    receiptPath2 = path32.join(directory2, `${requestSha256}.json`);
   }
   if (existsSync35(receiptPath2)) {
     try {
@@ -134861,7 +135596,7 @@ async function reviewActing2(input, deps) {
   const sourceChanged = currentMediaSha256 !== mediaSha256;
   if (sourceChanged) result = unverified([...result.failures, "Source media changed during review; evidence binds only uploaded bytes"]);
   try {
-    recordUsage(path31.dirname(mediaPath), {
+    recordUsage(path32.dirname(mediaPath), {
       ts: (/* @__PURE__ */ new Date()).toISOString(),
       tool: "acting_review",
       ok: review2 !== null,
@@ -134915,7 +135650,7 @@ async function reviewActing2(input, deps) {
 
 // src/threads-gate.ts
 import { createHash as createHash27, randomUUID as randomUUID12 } from "node:crypto";
-import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync22, readFileSync as readFileSync38, realpathSync as realpathSync12, renameSync as renameSync11, statSync as statSync20, writeFileSync as writeFileSync28 } from "node:fs";
+import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync22, readFileSync as readFileSync38, realpathSync as realpathSync13, renameSync as renameSync11, statSync as statSync20, writeFileSync as writeFileSync28 } from "node:fs";
 import { dirname as dirname11, join as join20, resolve as resolve12 } from "node:path";
 import { fileURLToPath as fileURLToPath11 } from "node:url";
 import { spawnSync as spawnSync3 } from "node:child_process";
@@ -134973,7 +135708,7 @@ function save2(draft) {
   writeFileSync28(temp, JSON.stringify(draft), { mode: 384 });
   renameSync11(temp, file);
 }
-function load9(id) {
+function load10(id) {
   const value = JSON.parse(readFileSync38(draftLocation(id).file, "utf8"));
   draftSchema.parse(value);
   if (value.draftId !== id || value.channel !== draftLocation(id).channel || threadsBodyHash(value.body, value.selfReply) !== value.bodyHash) {
@@ -135014,7 +135749,7 @@ function createThreadsDraft(args) {
 function submitThreadsReview(args) {
   return gateCall("threads_review_submit", args, () => {
     const input = reviewSchema2.strict().parse(args);
-    const draft = load9(input.draftId);
+    const draft = load10(input.draftId);
     if (input.bodyHash !== draft.bodyHash) throw new Error("Review body hash mismatch");
     if (draft.surface === "reply" && input.axis !== "voice") throw new Error("Reply drafts use voice review only");
     const surfaces = (input.axis !== "voice" ? [draft.body] : [draft.body, draft.selfReply ?? ""]).map(whitespace);
@@ -135035,7 +135770,7 @@ function submitThreadsReview(args) {
 function checkThreadsGate(input) {
   return gateCall("threads_publish", input, () => {
     if (!input.draftId) throw new Error("Growth publishing requires draftId");
-    const draft = load9(input.draftId);
+    const draft = load10(input.draftId);
     if (input.channel !== draft.channel) throw new Error("Draft channel mismatch");
     if (input.replyToId !== draft.replyToId) throw new Error("Draft reply target mismatch");
     const bodyHash = threadsBodyHash(input.caption, input.selfReply);
@@ -135057,12 +135792,12 @@ function checkThreadsEpisode(input) {
   gateCall("threads_publish", input, () => {
     const channel = channelSchema2.parse(input.channel);
     const topic = channelSchema2.parse(input.episodeRef);
-    const root = realpathSync12(join20(process.cwd(), "data", channel, "episodes"));
-    const episode = realpathSync12(join20(root, topic));
+    const root = realpathSync13(join20(process.cwd(), "data", channel, "episodes"));
+    const episode = realpathSync13(join20(root, topic));
     if (dirname11(episode) !== root || !statSync20(episode).isDirectory()) throw new Error("Invalid episode directory");
-    const board = realpathSync12(join20(episode, "storyboard", "scenes.js"));
+    const board = realpathSync13(join20(episode, "storyboard", "scenes.js"));
     if (!board.startsWith(episode + "/") || !statSync20(board).isFile()) throw new Error("Missing episode storyboard");
-    const approvalPath = realpathSync12(join20(episode, "threads-publish-approval.json"));
+    const approvalPath = realpathSync13(join20(episode, "threads-publish-approval.json"));
     if (dirname11(approvalPath) !== episode) throw new Error("Invalid episode approval path");
     const approval = JSON.parse(readFileSync38(approvalPath, "utf8"));
     if (approval.approved !== true) throw new Error("Episode publishing approval required");
@@ -135399,9 +136134,9 @@ var OPENAPI_CODE_HELP = {
 };
 async function callOpenApi(input) {
   const key = requireDataGoKrKey();
-  const path35 = input.path.replace(/^\/+/, "");
-  if (path35.includes("..") || path35.includes("://")) return err("path only accepts a route under apis.data.go.kr (e.g. 1360000/VilageFcstInfoService_2.0/getUltraSrtNcst)");
-  const url = `${OPENAPI_BASE}/${path35}${buildQuery({ ...input.params, serviceKey: key })}`;
+  const path36 = input.path.replace(/^\/+/, "");
+  if (path36.includes("..") || path36.includes("://")) return err("path only accepts a route under apis.data.go.kr (e.g. 1360000/VilageFcstInfoService_2.0/getUltraSrtNcst)");
+  const url = `${OPENAPI_BASE}/${path36}${buildQuery({ ...input.params, serviceKey: key })}`;
   const res = await requestRaw("get", url, { "User-Agent": BROWSER_UA });
   const body = res.body;
   if (/^\s*Unauthorized\s*$/i.test(body)) return err(`apis.data.go.kr: ${OPENAPI_AUTH_HELP}`);
@@ -137139,19 +137874,19 @@ var YT_THUMB_MIME_BY_EXT = {
 var YT_THUMB_MAX_BYTES = 50 * 1024 * 1024;
 var CAPTION_MAX_BYTES_YT = 100 * 1024 * 1024;
 var CAPTION_MAX_BYTES_FB = 200 * 1024;
-async function readCaptionFile(path35, maxBytes) {
-  if (extname12(path35).toLowerCase() !== ".srt") {
-    return { error: fail2(400, `Caption file must be .srt (SubRip): ${path35}`) };
+async function readCaptionFile(path36, maxBytes) {
+  if (extname12(path36).toLowerCase() !== ".srt") {
+    return { error: fail2(400, `Caption file must be .srt (SubRip): ${path36}`) };
   }
   let bytes;
   try {
-    bytes = await readFile2(path35);
+    bytes = await readFile2(path36);
   } catch (error2) {
     return { error: fail2(400, `Cannot read caption file: ${error2 instanceof Error ? error2.message : String(error2)}`) };
   }
-  if (bytes.byteLength === 0) return { error: fail2(400, `Caption file is empty: ${path35}`) };
+  if (bytes.byteLength === 0) return { error: fail2(400, `Caption file is empty: ${path36}`) };
   if (bytes.byteLength > maxBytes) {
-    return { error: fail2(400, `Caption file exceeds ${maxBytes} bytes: ${path35} (${bytes.byteLength} bytes)`) };
+    return { error: fail2(400, `Caption file exceeds ${maxBytes} bytes: ${path36} (${bytes.byteLength} bytes)`) };
   }
   return { bytes };
 }
@@ -138495,7 +139230,7 @@ async function checkAccounts(channel) {
 import { execFile as execFile11 } from "node:child_process";
 import { existsSync as existsSync38, mkdtempSync as mkdtempSync9, readFileSync as readFileSync39, rmSync as rmSync19, writeFileSync as writeFileSync29, renameSync as renameSync12, openSync as openSync8, closeSync as closeSync8 } from "node:fs";
 import { tmpdir as tmpdir10 } from "node:os";
-import path32 from "node:path";
+import path33 from "node:path";
 import { promisify as promisify7 } from "node:util";
 var chapters = __toESM(require_final_speech_chapters(), 1);
 var exec4 = promisify7(execFile11);
@@ -138509,7 +139244,7 @@ var finalSpeechSchema = external_exports.object({
   segments: external_exports.array(external_exports.object({ startSeconds: external_exports.number().finite().nonnegative(), expectedText: external_exports.string().trim().min(1).max(1e3) }).strict()).min(1).max(1e3).optional()
 }).strict();
 async function reviewFinalSpeech(input, deps) {
-  const request = finalSpeechSchema.parse(input), media = path32.resolve(request.mediaPath);
+  const request = finalSpeechSchema.parse(input), media = path33.resolve(request.mediaPath);
   if (!deps) {
     const { segments: segments2, mediaPath: _path, ...brief } = request;
     return { ...await hostReview({ mediaPath: media, mode: "audio", brief: JSON.stringify(brief) }), segments: segments2 ?? [] };
@@ -138522,12 +139257,12 @@ async function reviewFinalSpeech(input, deps) {
   } catch {
     return { success: false, status: "unverified", error: "Final speech review is already locked" };
   }
-  const temp = mkdtempSync9(path32.join(tmpdir10(), "speech-final-"));
+  const temp = mkdtempSync9(path33.join(tmpdir10(), "speech-final-"));
   let base = { version: 1, policy: "final-speech-v1", model: REVIEW_MODEL, ...identity, mediaPath: media };
   let singleReviewStarted = false;
   function save3(status, extra) {
     const result = { ...base, status, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
-    const staging = path32.join(temp, "proof.json");
+    const staging = path33.join(temp, "proof.json");
     writeFileSync29(staging, JSON.stringify(result, null, 2) + "\n");
     writeFileSync29(proofPath + ".tmp", readFileSync39(staging));
     renameSync12(proofPath + ".tmp", proofPath);
@@ -138535,7 +139270,7 @@ async function reviewFinalSpeech(input, deps) {
   }
   try {
     base = { ...base, mediaSha256: sha256(readFileSync39(media)), textSha256: sha256(normalizeSpeech(request.expectedText)) };
-    const wav = path32.join(temp, "final.flac");
+    const wav = path33.join(temp, "final.flac");
     await exec4("ffmpeg", ["-y", "-v", "error", "-i", media, "-map", "0:a:0", "-map_metadata", "-1", "-ac", "1", "-ar", "24000", "-c:a", "flac", wav], { timeout: 6e4 });
     base.audioSha256 = sha256(readFileSync39(wav));
     if (sha256(readFileSync39(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
@@ -138564,7 +139299,7 @@ async function reviewFinalSpeech(input, deps) {
         expectedText: request.expectedText.slice(0, 4e3),
         language: request.language,
         delivery: request.delivery,
-        outputPath: path32.dirname(media),
+        outputPath: path33.dirname(media),
         filename: "final.wav"
       }),
       expectedText: request.expectedText,
@@ -138604,7 +139339,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
   try {
     for (const piece of planned) {
       const samples = pcm.subarray(piece.startSample * chapters.BYTES, piece.endSample * chapters.BYTES);
-      const raw = path32.join(temp, "piece.pcm"), file = path32.join(temp, "piece.flac");
+      const raw = path33.join(temp, "piece.pcm"), file = path33.join(temp, "piece.flac");
       writeFileSync29(raw, samples);
       await exec4("ffmpeg", ["-y", "-v", "error", "-f", "s32le", "-ar", String(chapters.RATE), "-ac", "1", "-i", raw, "-map_metadata", "-1", "-c:a", "flac", file], { timeout: 6e4 });
       const payload = readFileSync39(file);
@@ -138625,7 +139360,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
           expectedText: piece.expectedText,
           language: request.language,
           delivery: request.delivery,
-          outputPath: path32.dirname(media),
+          outputPath: path33.dirname(media),
           filename: "final.wav"
         }), transcriptCheck: request.transcriptCheck };
         const result = await deps.listen(file, reviewRequest, true);
@@ -139512,9 +140247,9 @@ function isShortEnough(seconds2, duration5) {
   if (seconds2 == null) return true;
   return seconds2 <= 180;
 }
-async function youtubeGet(path35, params, auth2) {
+async function youtubeGet(path36, params, auth2) {
   const query = auth2.kind === "key" ? { ...params, key: auth2.key } : params;
-  const url = `${YT_DATA_BASE2}/${path35}${buildQuery(query)}`;
+  const url = `${YT_DATA_BASE2}/${path36}${buildQuery(query)}`;
   try {
     const res = await fetch(url, {
       method: "GET",
@@ -139526,7 +140261,7 @@ async function youtubeGet(path35, params, auth2) {
     return { ok: false, status: res.status, body: maskKey4(text4) };
   } catch (error2) {
     const message = error2 instanceof Error ? error2.message : String(error2);
-    return fail3(502, `YouTube Data API call failed (${path35}): ${maskKey4(message)}`);
+    return fail3(502, `YouTube Data API call failed (${path36}): ${maskKey4(message)}`);
   }
 }
 function chunk2(items, size) {
@@ -140325,13 +141060,13 @@ ${errors.join("\n")}`);
 
 // src/capability-status.ts
 import { existsSync as existsSync39 } from "node:fs";
-import path33 from "node:path";
+import path34 from "node:path";
 import os6 from "node:os";
 var has2 = (v) => Boolean(v && v.length > 0);
 var binOk = (p) => {
   try {
-    if (p.includes(path33.sep)) return existsSync39(p);
-    return (process.env.PATH || "").split(path33.delimiter).some((dir) => dir && existsSync39(path33.join(dir, p)));
+    if (p.includes(path34.sep)) return existsSync39(p);
+    return (process.env.PATH || "").split(path34.delimiter).some((dir) => dir && existsSync39(path34.join(dir, p)));
   } catch {
     return false;
   }
@@ -140595,10 +141330,10 @@ function renderCapabilityStatus() {
 
 // src/character-panel.ts
 import { existsSync as existsSync40, readFileSync as readFileSync40, writeFileSync as writeFileSync31 } from "node:fs";
-import { createRequire as createRequire20 } from "node:module";
-import path34 from "node:path";
-var load10 = createRequire20(import.meta.url);
-var shared4 = (file) => load10(`../../skills/${file}`);
+import { createRequire as createRequire21 } from "node:module";
+import path35 from "node:path";
+var load11 = createRequire21(import.meta.url);
+var shared4 = (file) => load11(`../../skills/${file}`);
 var characterPanelSchema = external_exports.object({
   identityPath: external_exports.string().min(1).describe("<channel>/assets/characters/<id>/identity.md"),
   view: external_exports.enum(["face", "front", "back"]),
@@ -140621,19 +141356,19 @@ var NEGATIVE = {
 var PROMPT_LIMIT = { "astra-genai": 800 };
 function characterPanelRequest(raw) {
   const args = characterPanelSchema.parse(raw);
-  const identityPath = path34.resolve(args.identityPath), folder = path34.dirname(identityPath), id = path34.basename(folder);
-  if (path34.basename(identityPath) !== "identity.md" || path34.basename(path34.dirname(folder)) !== "characters" || path34.basename(path34.dirname(path34.dirname(folder))) !== "assets")
+  const identityPath = path35.resolve(args.identityPath), folder = path35.dirname(identityPath), id = path35.basename(folder);
+  if (path35.basename(identityPath) !== "identity.md" || path35.basename(path35.dirname(folder)) !== "characters" || path35.basename(path35.dirname(path35.dirname(folder))) !== "assets")
     throw new Error("character_path_invalid: identityPath must be <channel>/assets/characters/<id>/identity.md");
   const { identityCharacter, sheetPanelPrompt, headsTall } = shared4("_shared/character-identity.js");
   const character = identityCharacter(readFileSync40(identityPath, "utf8"), { ready: false });
-  const panelsFile = path34.join(folder, "panels.json");
+  const panelsFile = path35.join(folder, "panels.json");
   const panels = (existsSync40(panelsFile) ? JSON.parse(readFileSync40(panelsFile, "utf8")).panels : void 0) ?? {};
   const panelFile = (view) => {
     const file = panels[view]?.file;
-    if (!file || !existsSync40(path34.join(folder, file))) throw new Error(`character_panel_missing: make ${id}'s ${view} panel first, or pass references`);
-    return path34.join(folder, file);
+    if (!file || !existsSync40(path35.join(folder, file))) throw new Error(`character_panel_missing: make ${id}'s ${view} panel first, or pass references`);
+    return path35.join(folder, file);
   };
-  const references = (args.references ?? (args.view === "face" ? [] : args.view === "front" ? ["face"] : ["front"]).map(panelFile)).map((file) => path34.resolve(folder, file));
+  const references = (args.references ?? (args.view === "face" ? [] : args.view === "front" ? ["face"] : ["front"]).map(panelFile)).map((file) => path35.resolve(folder, file));
   for (const file of references) if (!existsSync40(file)) throw new Error(`image_input_missing: ${file}`);
   const { findImageWorkspace, readImageContext } = shared4("_shared/image-selection.js");
   const workspace = findImageWorkspace(folder);
@@ -140662,7 +141397,7 @@ function characterPanelRequest(raw) {
     ...headsTall(character) ? [] : [`head_count_missing: the sheet has no head count, so nothing sizes this character's head against its body when a shot joins the face panel to the headless panels \u2014 write it in physical.proportions with character_manage, e.g. "7.5 heads tall"`],
     ...words.expression.length ? [`the sheet's appearance names an expression (${words.expression.join(" ")}) \u2014 it stays out of this neutral face panel; set expressions per shot with shot_characters`] : []
   ];
-  const panel = { file: path34.basename(call2.file), purpose: "character_reference", view: args.view, ...words.wardrobe ? { wardrobe: words.wardrobe } : {}, framing: { status: "not_reviewed" } };
+  const panel = { file: path35.basename(call2.file), purpose: "character_reference", view: args.view, ...words.wardrobe ? { wardrobe: words.wardrobe } : {}, framing: { status: "not_reviewed" } };
   return { workspace, folder, id, view: args.view, panel, panelsFile, prompt, negativePrompt: call2.negativeSent ? negativePrompt : void 0, warnings, ...call2 };
 }
 function recordCharacterPanel(request) {
@@ -140670,7 +141405,7 @@ function recordCharacterPanel(request) {
   doc.panels = { ...doc.panels, [request.view]: request.panel };
   writeFileSync31(request.panelsFile, JSON.stringify(doc, null, 2) + "\n");
   try {
-    shared4("channel/references/review-library.js").exportChannel(path34.resolve(request.folder, "../../.."));
+    shared4("channel/references/review-library.js").exportChannel(path35.resolve(request.folder, "../../.."));
   } catch (error2) {
     request.warnings.push(`sheet refresh failed: ${error2.message}`);
   }
@@ -140950,7 +141685,7 @@ var instagramPublishSchema = external_exports.object({
   isAiGenerated: external_exports.boolean().optional(),
   channel: channelSlugSchema
 }).superRefine((v, ctx) => {
-  const issue2 = (path35, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path35], message });
+  const issue2 = (path36, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path36], message });
   if (!v.imageUrls && !v.videoUrl) issue2("imageUrls", "INSTAGRAM requires imageUrls (1-10) or videoUrl (reel)");
   for (const key of ["shareToFeed", "thumbOffsetMs", "coverUrl", "isAiGenerated"]) {
     if (v[key] !== void 0 && !v.videoUrl) issue2(key, `${key} applies to reels (videoUrl) only`);
@@ -140976,7 +141711,7 @@ var facebookPublishSchema = external_exports.object({
   thumbnailFilePath: external_exports.string().min(1).optional(),
   channel: channelSlugSchema
 }).superRefine((v, ctx) => {
-  const issue2 = (path35, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path35], message });
+  const issue2 = (path36, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path36], message });
   if (v.imageUrls && v.videoUrl) issue2("videoUrl", "imageUrls and videoUrl are mutually exclusive");
   if ((v.reel || v.isAiGenerated !== void 0) && !v.videoUrl) issue2("reel", "reel and isAiGenerated need videoUrl");
   if (v.isAiGenerated !== void 0 && !v.reel) issue2("isAiGenerated", "isAiGenerated is sent on Reels (reel: true) only");
@@ -142137,13 +142872,13 @@ ${styleWarnings.join("\n")}` : head;
   production_workflow: async (args) => text3(JSON.stringify(manageWorkflow(args), null, 2)),
   // ── Storyboard ──
   episode_cover: async (args) => {
-    const { path: path35, action, decision } = parseArgs(episodeCoverSchema, args);
+    const { path: path36, action, decision } = parseArgs(episodeCoverSchema, args);
     if (action === "set") {
       if (!decision) return text3("episode_cover set needs a decision: reason, source and optional focus, copy, language, variants", true);
-      return text3(JSON.stringify(setCover(path35, decision), null, 2));
+      return text3(JSON.stringify(setCover(path36, decision), null, 2));
     }
-    if (action === "render") return text3(JSON.stringify(await renderCover(path35), null, 2));
-    return text3(JSON.stringify(readCover(path35), null, 2));
+    if (action === "render") return text3(JSON.stringify(await renderCover(path36), null, 2));
+    return text3(JSON.stringify(readCover(path36), null, 2));
   },
   location_manage: async (args) => {
     try {
@@ -142266,7 +143001,18 @@ ROUTES.video_plan = async (args) => {
   const input = videoPlanSchema.parse(args);
   requireReadyProject(input.episode);
   if (input.tool === "astra_genai_msr" || input.tool === "astra_genai_img2video" || !input.tool && (!input.operation || input.operation === "reference" || input.operation === "image")) await refreshGenaiMsrVoice();
-  return text3(JSON.stringify(await planVideoForGateway(input), null, 2));
+  try {
+    return text3(JSON.stringify(await planManagedVideo(input), null, 2));
+  } catch (error2) {
+    if (!(error2 instanceof SceneInputError)) throw error2;
+    return { ...text3(JSON.stringify({
+      code: "scene_inputs_unsupported",
+      executable: false,
+      tool: error2.tool,
+      missing: error2.missing,
+      sceneRequest: error2.sceneRequest
+    }, null, 2)), isError: true };
+  }
 };
 ROUTES.video_execute = (args) => executeVideo(args, dispatchVideo);
 ROUTES.video_approve = async (args) => text3(JSON.stringify(approveVideo(args), null, 2));

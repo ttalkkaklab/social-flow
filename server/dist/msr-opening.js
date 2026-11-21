@@ -7,12 +7,41 @@ export const openingPositionsSchema = z.array(z.object({
         .describe('Where the viewer sees this person at the start: side, depth, posture or orientation, and a visible landmark. Describe an off-screen start explicitly.'),
 }).strict(), { required_error: 'openingPositions required: inspect the opening image and describe each character and its reference images' }).describe('Required with MSR references. Identify every character in the opening scene, including silent listeners. Use [] only for a character-free scene.');
 const sceneText = z.string().trim().min(1).refine(value => !nonEnglishOutsideQuotes(value), 'Write scene direction in English');
+const frame = z.number().int().nonnegative();
+export const shotTimelineSchema = z.object({
+    startFrame: frame, endFrame: frame.describe('Exclusive end, in zero-based scene frames.'),
+    transition: z.enum(['open', 'hard_cut', 'dissolve', 'fade']),
+    framing: sceneText, action: sceneText,
+    images: z.array(z.object({
+        path: z.string().trim().min(1), frame, role: z.enum(['start', 'keyframe', 'end', 'face', 'outfit']),
+        character: z.string().trim().min(1).optional(), cue: sceneText.optional(),
+        strength: z.number().min(0).max(1).optional(),
+    }).strict()).optional(),
+}).strict().superRefine((shot, ctx) => {
+    const issue = (message) => ctx.addIssue({ code: 'custom', message });
+    if (shot.startFrame >= shot.endFrame)
+        issue('Shot needs a positive frame interval');
+    for (const image of shot.images ?? []) {
+        if (image.frame < shot.startFrame || image.frame >= shot.endFrame)
+            issue('Image frame outside its shot: ' + image.path);
+        if (image.role === 'start' && image.frame !== shot.startFrame)
+            issue('Start image must anchor the first frame of its shot');
+        if (['face', 'outfit'].includes(image.role) && !image.character)
+            issue('Identify the owner of a face or outfit reference');
+    }
+});
 export const sceneVideoDirectionSchema = z.object({
     openingPositions: openingPositionsSchema,
+    fps: z.number().int().positive().optional().describe('Frames per second on the scene timeline; defaults to 24.'),
+    oneTake: z.boolean().optional().describe('True only for an explicitly requested uninterrupted shot.'),
+    audio: z.object({
+        path: z.string().trim().min(1).describe('Scene-length track from frame zero, including any lead-in silence.'),
+        cues: z.array(z.object({ frame, action: sceneText }).strict()).optional(),
+    }).strict().optional(),
     emotion: sceneText.describe('The emotional change, naming each participant. For a factual scene give its visible subject and purpose.'),
     action: sceneText.optional().describe('Only story-essential movement, tied to the same visible landmark as the opening position.'),
     sound: sceneText.optional().describe('Room tone or sound from an essential action.'),
-    camera: sceneText.optional().describe('Camera direction for the whole take. Name the action cue, path and landing, or an intentional hold. Use it to reconcile different shot-card moves.'),
+    camera: sceneText.optional().describe('Shared camera direction. Each shot keeps its own framing and incoming transition.'),
 }).strict();
 export function openingPrompt(prompt, positions = []) {
     if (!positions.length)

@@ -56,11 +56,12 @@ function devNegativeRule(args: { negativePrompt?: string; model: string }, ctx: 
   if (args.negativePrompt.length > 2000) issue('The dev backend accepts a negativePrompt of at most 2000 characters');
 }
 const exactFrames = z.number().int().min(25).max(361).refine(n => (n - 1) % 8 === 0, 'Use 8k+1 frames');
-const nativeShot = z.object({
+// V2 describes these cuts in the backend prompt. The contract has no frame index.
+export const genaiShotsSchema = z.array(z.object({
   description: z.string().trim().min(1).max(2000),
   audio: z.string().trim().min(1).max(2000).optional(),
   transition: z.literal('hard_cut').optional(),
-}).strict();
+}).strict()).min(2).max(4).refine(shots => !shots[0].transition, 'Omit transition on the opening shot');
 const temporalImages = z.array(z.object({
   imageUri: genaiImageUriSchema.optional(), imagePath: z.string().min(1).optional(),
   frameIdx: z.number().int().min(0).max(360),
@@ -109,10 +110,10 @@ const textVideoFields = z.object({
   model: z.enum(GENAI_VIDEO_MODELS),
   duration: z.number().int().min(1).nullable().optional(),
   numFrames: exactFrames.optional(),
-  shots: z.array(nativeShot).min(2).max(4).optional(),
   resolution: localResolution,
   fps: z.union([z.literal(24), z.literal(25), z.literal(48), z.literal(50)]).default(24),
   generateAudio: z.boolean().default(true),
+  shots: genaiShotsSchema.optional(),
   reserveUsd: z.number().finite().nonnegative(),
   outputPath: z.string().optional(),
   filename: bareFilenameSchema('video').refine(name => name.endsWith('.mp4'), 'Use an .mp4 filename').optional(),

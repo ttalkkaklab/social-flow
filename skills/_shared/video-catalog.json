@@ -6,6 +6,15 @@
       "engine": "seedance",
       "deployment": "byteplus",
       "operation": "text",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -176,6 +185,15 @@
       "engine": "seedance",
       "deployment": "byteplus",
       "operation": "image",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "openingImage": true,
+        "endingImage": true,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -348,6 +366,15 @@
       "engine": "seedance",
       "deployment": "byteplus",
       "operation": "reference",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "reference",
         "dialogue": "allowed",
@@ -522,6 +549,15 @@
       "engine": "astra-genai-desktop",
       "deployment": "gateway-desktop-v1",
       "operation": "text",
+      "sceneInputs": {
+        "fpsField": "fps",
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -555,6 +591,15 @@
       "engine": "astra-genai-desktop",
       "deployment": "gateway-desktop-v1",
       "operation": "image",
+      "sceneInputs": {
+        "fpsField": "fps",
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "openingImage": true,
+        "endingImage": true,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -589,6 +634,15 @@
       "engine": "astra-genai-desktop",
       "deployment": "gateway-desktop-v1",
       "operation": "audio",
+      "sceneInputs": {
+        "fpsField": "fps",
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "openingImage": true,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": true
+      },
       "voice": {
         "lane": "supplied",
         "dialogue": "allowed",
@@ -631,6 +685,15 @@
       "engine": "astra-genai-desktop",
       "deployment": "gateway-desktop-v1",
       "operation": "extend",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -661,6 +724,15 @@
       "engine": "astra-genai-desktop",
       "deployment": "gateway-desktop-v1",
       "operation": "retake",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -692,6 +764,15 @@
       "engine": "astra-genai-desktop",
       "deployment": "gateway-desktop-v1",
       "operation": "keyframe",
+      "sceneInputs": {
+        "fpsField": "fps",
+        "frameAccurateCuts": false,
+        "timedImages": true,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -727,6 +808,15 @@
       "engine": "astra-genai",
       "deployment": "genai-ltx-v2",
       "operation": "text",
+      "sceneInputs": {
+        "fpsField": "fps",
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "gateway_prompt_only",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -746,10 +836,10 @@
         "model",
         "duration",
         "numFrames",
-        "shots",
         "resolution",
         "fps",
         "generateAudio",
+        "shots",
         "reserveUsd",
         "outputPath",
         "filename"
@@ -767,6 +857,15 @@
       "engine": "astra-genai",
       "deployment": "genai-ltx-v2",
       "operation": "image",
+      "sceneInputs": {
+        "fpsField": "fps",
+        "frameAccurateCuts": false,
+        "timedImages": true,
+        "openingImage": true,
+        "endingImage": true,
+        "shotDescriptions": "gateway_prompt_only",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "conditional_reference",
         "dialogue": "requires_subject_references",
@@ -786,10 +885,10 @@
         "model",
         "duration",
         "numFrames",
-        "shots",
         "resolution",
         "fps",
         "generateAudio",
+        "shots",
         "reserveUsd",
         "outputPath",
         "filename",
@@ -832,6 +931,15 @@
       "engine": "astra-genai",
       "deployment": "genai-ltx-v2",
       "operation": "audio",
+      "sceneInputs": {
+        "fpsField": "fps",
+        "frameAccurateCuts": false,
+        "timedImages": true,
+        "openingImage": true,
+        "endingImage": true,
+        "shotDescriptions": "prompt",
+        "sceneAudio": true
+      },
       "voice": {
         "lane": "supplied",
         "dialogue": "allowed",
@@ -873,6 +981,15 @@
       "engine": "astra-genai",
       "deployment": "genai-ltx-msr",
       "operation": "reference",
+      "sceneInputs": {
+        "fpsField": "frameRate",
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "reference",
         "dialogue": "allowed",
@@ -912,6 +1029,15 @@
       "engine": "astra",
       "deployment": "self-hosted-ltx",
       "operation": "text",
+      "sceneInputs": {
+        "fpsField": "frameRate",
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -949,6 +1075,15 @@
       "engine": "astra",
       "deployment": "self-hosted-ltx",
       "operation": "image",
+      "sceneInputs": {
+        "fpsField": "frameRate",
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "openingImage": true,
+        "endingImage": true,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -988,6 +1123,15 @@
       "engine": "astra",
       "deployment": "self-hosted-ltx",
       "operation": "keyframe",
+      "sceneInputs": {
+        "fpsField": "frameRate",
+        "frameAccurateCuts": false,
+        "timedImages": true,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -1021,6 +1165,15 @@
       "engine": "astra",
       "deployment": "self-hosted-ltx",
       "operation": "audio",
+      "sceneInputs": {
+        "fpsField": "frameRate",
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "openingImage": true,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": true
+      },
       "voice": {
         "lane": "supplied",
         "dialogue": "allowed",
@@ -1062,6 +1215,15 @@
       "engine": "astra",
       "deployment": "self-hosted-ltx",
       "operation": "control",
+      "sceneInputs": {
+        "fpsField": "frameRate",
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -1097,6 +1259,15 @@
       "engine": "astra",
       "deployment": "self-hosted-ltx",
       "operation": "retake",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -1124,6 +1295,15 @@
       "engine": "mlx",
       "deployment": "local-mlx",
       "operation": "text",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "openingImage": true,
+        "endingImage": true,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -1162,6 +1342,15 @@
       "engine": "mlx",
       "deployment": "local-mlx",
       "operation": "reference",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "reference",
         "dialogue": "allowed",
@@ -1202,6 +1391,15 @@
       "engine": "mlx",
       "deployment": "local-mlx",
       "operation": "text",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "openingImage": true,
+        "endingImage": true,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -1242,6 +1440,15 @@
       "engine": "ltx-api",
       "deployment": "ltx-api-v2",
       "operation": "image",
+      "sceneInputs": {
+        "fpsField": "fps",
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "openingImage": true,
+        "endingImage": true,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -1426,6 +1633,15 @@
       "engine": "ltx-api",
       "deployment": "ltx-api-v2",
       "operation": "audio",
+      "sceneInputs": {
+        "fpsField": "fps",
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "openingImage": true,
+        "endingImage": true,
+        "shotDescriptions": "prompt",
+        "sceneAudio": true
+      },
       "voice": {
         "lane": "supplied",
         "dialogue": "allowed",
@@ -1609,6 +1825,15 @@
       "engine": "veo",
       "deployment": "google-cloud-us-central1",
       "operation": "text",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -1721,6 +1946,15 @@
       "engine": "veo",
       "deployment": "google-cloud-us-central1",
       "operation": "image",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "openingImage": true,
+        "endingImage": true,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -1835,6 +2069,15 @@
       "engine": "veo",
       "deployment": "google-cloud-us-central1",
       "operation": "reference",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -1948,6 +2191,15 @@
       "engine": "veo",
       "deployment": "google-cloud-us-central1",
       "operation": "extend",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -2060,6 +2312,15 @@
       "engine": "minimax",
       "deployment": "minimax-open-platform-v2",
       "operation": "image",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "openingImage": true,
+        "endingImage": true,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -2093,6 +2354,15 @@
       "engine": "minimax",
       "deployment": "minimax-open-platform-v2",
       "operation": "reference",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "reference",
         "dialogue": "allowed",
@@ -2127,6 +2397,15 @@
       "engine": "heygen",
       "deployment": "heygen-v3",
       "operation": "image",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "openingImage": true,
+        "endingImage": true,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -2158,6 +2437,15 @@
       "engine": "heygen",
       "deployment": "heygen-v3",
       "operation": "reference",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "reference",
         "dialogue": "allowed",

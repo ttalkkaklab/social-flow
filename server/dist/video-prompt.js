@@ -80,6 +80,12 @@ const directedMoves = [
     /\btrack(?:s|ing)? backward\b/i,
     /\b(?:track|follow)(?:s|ing)? (?:\w+ )?(?:from )?behind\b/i,
 ];
+export function scenePromptText(scene, camera, timeline, lines, bindTurns) {
+    const dialogue = bindTurns ? [] : lines.filter(l => l.delivery !== 'voiceover')
+        .map(l => l.speaker + ' (' + l.delivery + '): "' + l.tts + '"');
+    return [scene.emotion, scene.action, scene.sound, camera, scene.oneTake && 'One continuous take. No cuts.', timeline, ...dialogue]
+        .filter(Boolean).join('\n');
+}
 /** Report clear omissions, holds and reversals in uncompiled prompt text. */
 export function cameraDrift(prompt, movement) {
     if (!movement.trim())

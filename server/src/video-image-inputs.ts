@@ -1,4 +1,3 @@
-import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
 import { openingPositionsSchema } from './msr-opening.js';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
@@ -8,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { verifyImageFile, type ImageMetadata } from './image-media.js';
 import { framesForSeconds } from './astra-video-client.js';
 import { resolveVideoDuration } from './video-duration.js';
-import { VIDEO_ADAPTERS, VENDOR_REFERENCE_TOOLS, referenceLabel } from './video-registry.js';
+import { FRAME_FIELDS, VIDEO_ADAPTERS, VENDOR_REFERENCE_TOOLS, referenceLabel } from './video-registry.js';
 
 const load = createRequire(import.meta.url);
 const imageRouting = () => load(fileURLToPath(new URL('../../skills/storyboard/references/render-routing.js', import.meta.url))) as {
@@ -33,14 +32,6 @@ interface ShotVisual {
   frames?: { start?: string; end?: string; storyboardKeyframes?: Array<{file: string; startSeconds: number; description?: string; title?: string}>; keyframes?: { image: string; atSeconds: number; state: string; strength?: number }[] };
   references?: ImageReference[];
 }
-const FRAME_FIELDS: Record<string, [string, string?]> = {
-  seedance_img2video: ['sourceImagePath', 'lastImagePath'], astra_img2video: ['firstFramePath', 'lastFramePath'],
-  astra_audio2video: ['imagePath'], astra_genai_img2video: ['imageUri', 'lastFrameUri'],
-  astra_genai_desktop_img2video: ['imagePath', 'lastFramePath'], astra_genai_desktop_audio2video: ['imagePath'],
-  astra_genai_audio2video: ['imagePath', 'lastFramePath'], mlx_video_generate: ['firstFrameImagePath', 'lastFrameImagePath'], ltx_video_generate: ['firstFrameImagePath', 'lastFrameImagePath'],
-  ...Object.fromEntries(Object.entries(HOSTED_VIDEO_ROUTES).flatMap(([tool, route]) => route.frames ? [[tool, route.frames]] : [])),
-  minimax_img2video: ['sourceImagePath', 'lastImagePath'], heygen_img2video: ['sourceImagePath', 'lastImagePath'],
-};
 /** The listed ratio closest to an image's, for vendors whose adaptive ratio would follow a face panel. */
 function nearestRatio(width: number, height: number): string {
   const ratios = ['21:9', '16:9', '4:3', '1:1', '3:4', '9:16'];
