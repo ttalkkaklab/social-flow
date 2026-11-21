@@ -89,7 +89,7 @@ test('MSR names the character-sheet panels of one character as one subject',t=>{
  assert.match(msr.args.prompt,/\nImage 5: the opening picture, the characters, place and props as the shot begins\nImage 1 \(face\), Image 3 \(headless front body\), Image 4 \(headless back body\) show one character, kardum.*\n\nWalk$/);
  assert.doesNotMatch(prepareVideoImages('seedance_reference',{prompt:'Walk',model:'dreamina-seedance-2-0-260128'},s,root).args.prompt,/show one character/);
  s.visual.references.splice(2,0,{...ref('mid','video','character'),id:'ally'},{...ref('end','video','character'),id:'rival'});
- assert.throws(()=>prepareVideoImages('astra_genai_msr',{prompt:'Walk',width:768,height:1280,duration:5,reserveUsd:0},s,root),/msr_character_limit: references show 4 characters/);
+ assert.throws(()=>prepareVideoImages('astra_genai_msr',{prompt:'Walk',width:768,height:1280,duration:5,reserveUsd:0},s,root),/msr_subject_limit/);
 });
 test('missing, corrupt, conflicting, extra and unsupported image constraints fail without dispatch',t=>{
  const root=fixture(t);
@@ -172,4 +172,48 @@ test('reference preserve and avoid rules reach the mapped image slot and remain 
  assert.deepEqual(p.imageBindings[0].avoid,['the seated pose']);
  s.visual.references[0].avoid='bad';
  assert.throws(()=>prepareVideoImages('seedance_reference',{prompt:'Walk'},s,root),/image_plan_invalid/);
+});
+
+test('distilled I2V can reference every member of a trio or quartet with both temporal endpoints', t => {
+  const episode = fixture(t);
+  const people = ['seorin', 'mai-an', 'tu-vi', 'guest'];
+  const board = path.join(episode, 'storyboard');
+  for (const id of people) fs.writeFileSync(path.join(board, id + '.png'), png);
+  for (const cast of [people.slice(0, 3), people]) {
+    const s = shot('first_last', [ref('room', 'video', 'background'), ...cast.map(id => ref(id))]);
+    s.visual.character = cast;
+    s.visual.video = { openingPositions: cast.map((character, i) => ({ character, images: [i + 1], position: 'by the entrance' })) };
+    const result = prepareVideoImages('astra_genai_img2video', {
+      model: 'ltx-2.5-22b-distilled', prompt: 'The dancers enter.', numFrames: 121, resolution: '1280x720', reserveUsd: 0,
+    }, s, episode);
+    const parsed = parseVideoArgs('astra_genai_img2video', result.args);
+    assert.deepEqual(parsed.references.map(r => path.basename(r.imagePath)), [...cast, 'room'].map(id => id + '.png'));
+    assert.equal(parsed.references.at(-1).background, true);
+    assert.ok(parsed.imageUri && parsed.lastFrameUri);
+  }
+});
+
+test('A2V binds the authored timeline and the held ending alongside the original music', t => {
+  const episode = fixture(t);
+  const s = shot();
+  s.duration = 5;
+  s.visual.frames.storyboardKeyframes = [
+    { file: 'start.png', startSeconds: 0 }, { file: 'mid.png', startSeconds: 1.75 },
+    { file: 'end.png', startSeconds: 4 },
+  ];
+  const result = prepareVideoImages('astra_genai_audio2video', { model: 'ltx-2.5-22b-dev', audioUri: 'https://example.com/music.wav',
+    prompt: 'Three dancers enter.', resolution: '1280x720', reserveUsd: 0, fps: 24 }, s, episode);
+  assert.deepEqual(parseVideoArgs('astra_genai_audio2video', result.args).keyframes.map(p => p.frameIdx), [42, 96]);
+  assert.deepEqual(result.imageBindings.map(b => [b.role, b.submitted]), [['start', true], ['end', true], ['keyframe', true], ['keyframe', true]]);
+});
+
+test('scene plans offset each shot timeline and preserve the cut between shots', t => {
+  const root = fixture(t), first = shot(), second = shot(), scene = shot();
+  first.duration = 2;
+  second.duration = 3;
+  scene.duration = 5;
+  first.visual.frames.keyframes = [{ image: 'mid.png', atSeconds: 0.5, state: 'First entrance' }];
+  second.visual.frames.keyframes = [{ image: 'mid.png', atSeconds: 1, state: 'Second entrance' }];
+  const result = prepareVideoImages('astra_genai_audio2video', { fps: 24 }, scene, root, [first, second]);
+  assert.deepEqual(result.args.keyframes.map(pin => pin.frameIdx), [12, 47, 48, 72]);
 });

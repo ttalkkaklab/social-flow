@@ -9,7 +9,7 @@ import { generateLyriaSong, generateElevenMusic } from './music-song-client.js';
 import { IMAGE_ADAPTERS, imageCatalog } from './image-registry.js';
 import { planImage, imagePlanSummary, executeImage, routeLegacyImage, imageStatus } from './image-routing.js';
 import { videoStatus } from './video-routing.js';
-import { planVideo, executeVideo, routeLegacyVideo, approveVideo } from './video-routing.js';
+import { planVideoForGateway, executeVideo, routeLegacyVideo, approveVideo } from './video-routing.js';
 import { VIDEO_ADAPTERS, videoCatalog } from './video-registry.js';
 import { routeSpeech, speechRouteSchema } from './tts-routing.js';
 import { hostReview } from './host-review.js';
@@ -864,7 +864,7 @@ export const ROUTES = {
     //    Acceptance and result are separate calls, so the client polls; these routes only
     //    parse, call, and report. Failures arrive as thrown errors carrying the server's own
     //    message — never the request headers, which is where the key lives.
-    astra_genai_catalog: async (args) => text(JSON.stringify(await genaiCatalog(z.enum(['image', 'speech', 'video', 'desktop_video', 'loras', 'contracts']).parse(args.kind)))),
+    astra_genai_catalog: async (args) => text(JSON.stringify(await genaiCatalog(z.enum(['image', 'speech', 'video', 'ltx_video', 'desktop_video', 'loras', 'contracts']).parse(args.kind)))),
     tts_astra_genai: async (args) => {
         const generation = genaiSpeechSchema.parse(args);
         const result = await routeSpeech({ action: 'execute', generator: 'tts_astra_genai', requestId: generation.requestId || randomUUID(),
@@ -1586,7 +1586,7 @@ ROUTES.video_plan = async (args) => {
     if (raw.tool === 'astra_genai_msr' || raw.tool === 'astra_genai_img2video' ||
         (!raw.tool && (!raw.operation || raw.operation === 'reference' || raw.operation === 'image')))
         await refreshGenaiMsrVoice();
-    return text(JSON.stringify(planVideo(args), null, 2));
+    return text(JSON.stringify(await planVideoForGateway(args), null, 2));
 };
 ROUTES.video_execute = args => executeVideo(args, dispatchVideo);
 ROUTES.video_approve = async (args) => text(JSON.stringify(approveVideo(args), null, 2));

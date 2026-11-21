@@ -30,7 +30,7 @@ export function openingPrompt(prompt: string, positions: OpeningPosition[] = [])
 }
 
 export function validateOpening(prompt: string, positions: OpeningPosition[] | undefined,
-  references: { background: boolean; nonCharacter?: boolean; audioUri?: string; audioPath?: string }[], issue: (message: string) => void) {
+  references: { background: boolean; nonCharacter?: boolean; audioUri?: string; audioPath?: string }[], issue: (message: string) => void, maxChars = 2000) {
   if (!positions) { issue('openingPositions required: match each character to the opening frame and their subject images'); return; }
   const subjects = references.filter(ref => !ref.background);
   const mapped = new Set<number>();
@@ -48,6 +48,6 @@ export function validateOpening(prompt: string, positions: OpeningPosition[] | u
     if (!mapped.has(i + 1) && (!ref.nonCharacter || ref.audioPath || ref.audioUri))
       issue('openingPositions: identify the character in Image ' + (i + 1) + ' or mark an object reference nonCharacter:true');
   });
-  if (openingPrompt(prompt, positions).length > 2000)
-    issue('The prompt including openingPositions exceeds 2000 characters; shorten the action or placement descriptions');
+  if ([...openingPrompt(prompt, positions)].length > maxChars)
+    issue('The prompt including openingPositions exceeds ' + maxChars + ' characters; shorten the action or placement descriptions');
 }

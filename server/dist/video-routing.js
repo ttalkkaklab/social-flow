@@ -22,7 +22,7 @@ import { quoteVideo } from './video-pricing.js';
 import { atomicJson, videoTransaction } from './video-state.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
 import { videoEvents } from './video-events.js';
-import { getGenaiVideoStatus, genaiMsrSchema, buildGenaiMsrBody, buildGenaiAudioBody, genaiAudioToVideoSchema, genaiMsrVoiceReferences, refreshGenaiMsrVoice, genaiV2Resolution } from './astra-genai-video.js';
+import { genaiMsrPromptLimit, checkGenaiVideoOptions, getGenaiVideoStatus, genaiMsrSchema, buildGenaiMsrBody, buildGenaiAudioBody, genaiAudioToVideoSchema, genaiMsrVoiceReferences, refreshGenaiMsrVoice, genaiV2Resolution } from './astra-genai-video.js';
 import { GenaiRequestError } from './astra-genai-client.js';
 import { hasSubjectInput, hasVideoSubjectReferences, prepareVideoImages } from './video-image-inputs.js';
 import { prepareVideoVoice } from './video-voice.js';
@@ -238,7 +238,19 @@ export function checkVideoEnvironment(tool) {
     if (!ready)
         throw new Error('video_provider_unconfigured: ' + engine);
 }
-export function planVideo(raw) {
+function saveVideoPlan(plan) {
+    const file = path.join(plan.episode, '.work/video-routing/plans', plan.id + '.json');
+    if (!fs.existsSync(file))
+        atomicJson(file, plan);
+    refreshVideoReview(plan.episode);
+    return plan;
+}
+export async function planVideoForGateway(raw) {
+    const plan = planVideo(raw, false);
+    await checkGenaiVideoOptions(plan.tool, plan.args);
+    return saveVideoPlan(plan);
+}
+export function planVideo(raw, persist = true) {
     const input = videoPlanSchema.parse(raw);
     const context = routingContext(input.episode, input.shotId, input.sceneNo);
     const scene = context.sceneDirection && sceneVideoDirectionSchema.parse(context.sceneDirection);
@@ -303,15 +315,16 @@ export function planVideo(raw) {
         performanceInputs[file] = audio.sha256;
         return seconds;
     };
-    const bindDialogueSeparately = tool === 'astra_genai_img2video' && !silentPicture && input.args.generateAudio !== false &&
-        (hasVideoSubjectReferences(shot) || hasSubjectInput(input.args.references));
+    const imageWithReferences = tool === 'astra_genai_img2video' && (hasVideoSubjectReferences(shot) || hasSubjectInput(input.args.references));
+    const bindDialogueSeparately = imageWithReferences && !silentPicture && input.args.generateAudio !== false;
     const silentSuffix = silentPicture && (supportsAudioToggle || tool === 'minimax_img2video' || tool === 'heygen_img2video')
         ? `No speech or vocalization. All visible mouths stay closed; ${includeEffects
             ? 'include natural ambience for the location and sound effects from the visible actions.'
             : 'perform the planned silent action.'}` : '';
     // The board prompt is compiled to the adapter's own limit, so it can go out as written: hand-shortened
     // prompts can discard a planned move, as in mochi_bo EP05 s0015.
-    const promptLimit = tool ? videoPromptLimit(tool) : undefined;
+    const promptLimit = tool === 'astra_genai_msr' || imageWithReferences ? genaiMsrPromptLimit()
+        : tool === 'astra_genai_img2video' ? 2000 : tool ? videoPromptLimit(tool) : undefined;
     const compileFor = (budget) => compileVideoPrompt(shot, video.promptSource, names, { mode, measureAudio, bindDialogueSeparately,
         ...(budget ? { maxCharacters: budget - (silentSuffix ? silentSuffix.length + 1 : 0) } : {}) });
     let compiled = input.args.prompt === undefined && video?.promptSource ? compileFor(promptLimit) : undefined;
@@ -350,16 +363,12 @@ export function planVideo(raw) {
     if (selection.engine === 'host') {
         if (input.tool)
             throw new Error('model_selection_mismatch: host has no server adapter');
-        const images = prepareVideoImages('host_external', callArgs, context.shot, context.episode);
+        const images = prepareVideoImages('host_external', callArgs, context.shot, context.episode, context.sceneMembers);
         const body = { ...take, version: 1, episode: context.episode, shotId: context.shotId, requestId: input.requestId,
             tool: 'host_external', args: callArgs, ...direction, ...(images.imageBindings ? { imageBindings: images.imageBindings, imageHandoff: images.imageHandoff } : {}), selection, source: context.source, contextRevision: context.revision,
             inputs: { ...Object.fromEntries((images.imageBindings ?? []).map(binding => [binding.path, binding.sha256])), ...performanceInputs }, quote: { reserveUsd: 0, estimatedUsd: 0, revision: 'host-allowance-v1', basis: 'External host allowance; limits and actual tool schema must be checked by host; not API enforcement' }, execution: 'host_handoff' };
         const plan = { ...body, id: hash(body) };
-        const planFile = path.join(context.episode, '.work/video-routing/plans', plan.id + '.json');
-        if (!fs.existsSync(planFile))
-            atomicJson(planFile, plan);
-        refreshVideoReview(context.episode);
-        return plan;
+        return persist ? saveVideoPlan(plan) : plan;
     }
     if (!tool)
         throw new Error('Selected deployment has no adapter for this operation');
@@ -368,7 +377,7 @@ export function planVideo(raw) {
     if (durationPlan.status === 'split_required')
         throw new Error(`video_duration_exceeded: ${context.shotId} needs ${durationPlan.requiredSeconds}s; ${tool} allows ${durationPlan.maxSeconds}s. Split at a meaningful performance boundary; never truncate or switch models.`);
     // GenAI I2V's live backend owns the maximum; its integer duration must still cover the shot.
-    if (tool === 'astra_genai_img2video' && durationPlan.requiredSeconds !== undefined) {
+    if ((tool === 'astra_genai_img2video' || tool === 'astra_genai_text2video') && durationPlan.requiredSeconds !== undefined) {
         if (bound.requiredSeconds !== undefined) {
             if (['duration', 'durationSeconds', 'numFrames', 'frames', 'autoDuration', 'audioMaxDuration'].some(key => bound[key] !== undefined))
                 throw new Error('requiredSeconds is mutually exclusive with exact duration arguments; supply the shot need or an exact request, not both');
@@ -376,7 +385,12 @@ export function planVideo(raw) {
         }
         if (typeof bound.duration === 'number' && bound.duration < durationPlan.requiredSeconds)
             throw new Error(`video_duration_short: ${context.shotId} needs ${durationPlan.requiredSeconds}s but the request covers ${bound.duration}s`);
-        bound.duration ??= Math.ceil(durationPlan.requiredSeconds);
+        if (typeof bound.numFrames === 'number') {
+            if (bound.numFrames / Number(bound.fps ?? 24) < durationPlan.requiredSeconds)
+                throw new Error('video_duration_short: numFrames does not cover the shot at the selected fps');
+        }
+        else
+            bound.duration ??= Math.ceil(durationPlan.requiredSeconds);
     }
     // Legacy boards without a duration keep their exact request. Timed new shots cannot fall back to a short adapter default.
     if (durationPlan.status === 'fits' && VIDEO_ADAPTERS[tool].voice !== 'supplied' && DURATION_TOOLS.includes(tool)) {
@@ -384,7 +398,7 @@ export function planVideo(raw) {
         if (!exact)
             bound = resolveVideoDuration(tool, { ...bound, requiredSeconds: durationPlan.requiredSeconds }).args;
     }
-    let images = prepareVideoImages(tool, bound, shot, context.episode);
+    let images = prepareVideoImages(tool, bound, shot, context.episode, context.sceneMembers);
     let voice = prepareVideoVoice(tool, images.args, { ...context, shot, msrVoice: genaiMsrVoiceReferences() });
     // Reference descriptions and Audio lines (MSR) come after the compile; when they push the prompt over the limit,
     // the board prompt is compiled once more into the room they leave.
@@ -393,7 +407,7 @@ export function planVideo(raw) {
         compiled = compileFor(promptLimit - (submittedLength - bound.prompt.length));
         bound = { ...bound, prompt: withPrompt(compiled.prompt).prompt };
         direction = directionOf(compiled);
-        images = prepareVideoImages(tool, bound, shot, context.episode);
+        images = prepareVideoImages(tool, bound, shot, context.episode, context.sceneMembers);
         voice = prepareVideoVoice(tool, images.args, { ...context, shot, msrVoice: genaiMsrVoiceReferences() });
     }
     const args = parseVideoArgs(tool, voice.args);
@@ -455,11 +469,7 @@ export function planVideo(raw) {
         sourceArgs: input.args, durationPlan, ...(speechFit ? { speechFit } : {}), ...direction, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
         selection, source: context.source, contextRevision: context.revision, inputs, quote, execution: 'server' };
     const plan = { ...body, id: hash(body) };
-    const planFile = path.join(context.episode, '.work/video-routing/plans', plan.id + '.json');
-    if (!fs.existsSync(planFile))
-        atomicJson(planFile, plan);
-    refreshVideoReview(context.episode);
-    return plan;
+    return persist ? saveVideoPlan(plan) : plan;
 }
 function authorization(context) {
     const p = context.production;
@@ -691,7 +701,7 @@ export async function routeLegacyVideo(tool, raw, dispatch) {
     const { videoContext, ...args } = raw;
     if (videoContext !== undefined) {
         const ctx = z.object({ episode: z.string().min(1), shotId: z.string().min(1), requestId: idSchema }).strict().parse(videoContext);
-        const plan = planVideo({ ...ctx, tool, args });
+        const plan = await planVideoForGateway({ ...ctx, tool, args });
         return executeVideo({ episode: plan.episode, planId: plan.id }, dispatch);
     }
     const output = canonical(path.resolve(typeof args.outputPath === 'string' ? args.outputPath : process.cwd()));

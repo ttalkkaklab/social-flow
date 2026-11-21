@@ -24,7 +24,7 @@ export function openingPrompt(prompt, positions = []) {
     const prefix = 'Opening frame, from the viewer’s perspective:\n' + header.join('\n') + '\n\n';
     return prompt.startsWith(prefix) ? prompt : prefix + prompt;
 }
-export function validateOpening(prompt, positions, references, issue) {
+export function validateOpening(prompt, positions, references, issue, maxChars = 2000) {
     if (!positions) {
         issue('openingPositions required: match each character to the opening frame and their subject images');
         return;
@@ -46,6 +46,6 @@ export function validateOpening(prompt, positions, references, issue) {
         if (!mapped.has(i + 1) && (!ref.nonCharacter || ref.audioPath || ref.audioUri))
             issue('openingPositions: identify the character in Image ' + (i + 1) + ' or mark an object reference nonCharacter:true');
     });
-    if (openingPrompt(prompt, positions).length > 2000)
-        issue('The prompt including openingPositions exceeds 2000 characters; shorten the action or placement descriptions');
+    if ([...openingPrompt(prompt, positions)].length > maxChars)
+        issue('The prompt including openingPositions exceeds ' + maxChars + ' characters; shorten the action or placement descriptions');
 }

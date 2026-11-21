@@ -339,7 +339,7 @@ Reference/voice requirements cannot be dropped just to fit the cap.
 | Source contains a **live-action person** | An LTX lane (ASTRA GenAI, ASTRA). Seedance 2.x rejects face input |
 | You must **reproduce the composition** of a source picture | First/last frames (`sourceImagePath`+`lastImagePath`), not reference images. References carry look and style, not composition |
 | **Register a character once and keep calling it** | The Seedance asset library (`asset://`) |
-| **Character/product** consistency from several photos | `seedance_reference` · 2.5 (up to 30 images); MSR takes references for at most two characters plus the background |
+| **Character/product** consistency from several photos | `seedance_reference` · 2.5 (up to 30 images); MSR takes up to four subject images plus the background |
 | Transfer a **sketch/toon style** by reference | `seedance_reference` |
 | **Extend** a clip or re-roll one span | `astra_genai_desktop_extend` · `astra_genai_desktop_retake` · `astra_video_retake` |
 | A length past 15s in one call | Seedance 2.5 (4–30s); LTX lanes take frame counts ([video-duration.md](video-duration.md)) |
@@ -541,8 +541,7 @@ real faces.
 
 **Engine routing** — a drawn character goes to the saved reference adapter:
 `seedance_reference` (1–30 images on 2.5, 1–9 on 2.0) or `astra_genai_msr` (one character uses
-its face close-up, headless front and headless back; at most two characters take references,
-`msr_character_limit`). A photorealistic human face goes to an LTX lane; Seedance 2.x rejects
+its face close-up, headless front and headless back; three or four use one face each). A photorealistic human face goes to an LTX lane; Seedance 2.x rejects
 real faces outright. On the image lane, the same panels go to
 the saved image adapter's edit tool as input images, same order, same reason.
 

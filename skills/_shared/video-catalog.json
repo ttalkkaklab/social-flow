@@ -728,10 +728,17 @@
         "review": "not_reviewed"
       },
       "fields": [
+        "seed",
+        "numInferenceSteps",
+        "guidance",
+        "numGeneratedKeyframes",
+        "lora",
         "prompt",
         "negativePrompt",
         "model",
         "duration",
+        "numFrames",
+        "shots",
         "resolution",
         "fps",
         "generateAudio",
@@ -744,7 +751,7 @@
           "ltx-2.5-22b-distilled",
           "ltx-2.5-22b-dev"
         ],
-        "note": "Explicit duration and resolution; server validates deployment limits. No supplied audio, keyframes or LoRA."
+        "note": "Use duration, exact numFrames or automatic duration. Optional shots describe 2–4 cuts. No supplied audio, keyframes or LoRA."
       }
     },
     {
@@ -761,10 +768,17 @@
         "review": "not_reviewed"
       },
       "fields": [
+        "seed",
+        "numInferenceSteps",
+        "guidance",
+        "numGeneratedKeyframes",
+        "lora",
         "prompt",
         "negativePrompt",
         "model",
         "duration",
+        "numFrames",
+        "shots",
         "resolution",
         "fps",
         "generateAudio",
@@ -775,6 +789,10 @@
         "imagePath",
         "lastFrameUri",
         "lastFramePath",
+        "keyframes",
+        "referenceStrength",
+        "referenceFrames",
+        "skipStage2",
         "references",
         "openingPositions",
         "guidanceScale",
@@ -798,7 +816,7 @@
           "capability": "/v1/ltx/msr/capabilities:image_conditioning",
           "voiceCapability": "voice_references"
         },
-        "note": "Start image and optional end frame; additional references use the distilled MSR IC-LoRA with explicit duration. Dev takes start/end only. generateAudio:false removes the soundtrack. No intermediate keyframes or supplied speech."
+        "note": "Start image and optional end frame; additional references use the distilled MSR IC-LoRA with duration or numFrames. Dev takes temporal images. generateAudio:false removes the soundtrack. Timed keyframes require gateway support."
       }
     },
     {
@@ -815,10 +833,14 @@
         "review": "not_reviewed"
       },
       "fields": [
+        "seed",
+        "numInferenceSteps",
+        "guidance",
         "prompt",
         "negativePrompt",
         "model",
         "resolution",
+        "keyframes",
         "fps",
         "audioPath",
         "audioUri",
@@ -832,9 +854,10 @@
       ],
       "modelConstraints": {
         "models": [
-          "ltx-2.5-22b-dev"
+          "ltx-2.5-22b-dev",
+          "ltx-2.5-22b-distilled"
         ],
-        "note": "Length equals the audio, at most 361 frames per fps. Mono/stereo wav, mp3, m4a or ogg; 3+ channels 422. Sample rate kept: AAC standard 7350-96000 Hz only, others 422. Data URI at most 15,000,000 base64 characters."
+        "note": "Up to eight temporal images including endpoints on gateways with keyframes support. Length equals the audio, at most 361 frames per fps. Mono/stereo wav, mp3, m4a or ogg; 3+ channels 422. Sample rate kept: AAC standard 7350-96000 Hz only, others 422. Data URI at most 15,000,000 base64 characters."
       }
     },
     {
@@ -857,6 +880,7 @@
         "nagScale",
         "nagAlpha",
         "nagTau",
+        "skipStage2",
         "references",
         "openingPositions",
         "referenceStrength",

@@ -1732,12 +1732,12 @@ export const shotCharactersSchema = z.object({
   path: outlinePath,
   shots: z.array(z.object({
     id: shotIdSchema,
-    characters: z.array(nonEmpty).max(2).refine((ids) => new Set(ids).size === ids.length, 'a character is listed once')
+    characters: z.array(nonEmpty).max(4).refine((ids) => new Set(ids).size === ids.length, 'a character is listed once')
       .describe('Principal characters on screen, subject first; [] when nobody from the cast is on screen'),
     expression: z.record(nonEmpty, nonEmpty).optional()
       .describe('Each listed character\'s visible state as the shot opens, in English physical cues read from the scene\'s situation: brows, eyes, mouth, posture. Silent listeners and bystanders too. An earlier call\'s entry stays when omitted.'),
     bystanders: z.array(nonEmpty).max(2).refine((ids) => new Set(ids).size === ids.length, 'a character is listed once').optional()
-      .describe('Cast members also seen in this shot who have no on-screen line and take no video reference: the start image draws them from their sheet panels and the clip keeps them from that picture. With characters, at most three of the cast on screen. An earlier call\'s list stays when omitted; [] clears it.'),
+      .describe('Cast members also seen in this shot who have no on-screen line and take no video reference: the start image draws them from their sheet panels and the clip keeps them from that picture. With characters, at most four of the cast on screen. An earlier call\'s list stays when omitted; [] clears it.'),
     extras: z.string().optional()
       .describe('Unnamed people in the frame, in English: how many, what they look like and what they are doing ("six children in orange bibs chasing a ball across the pitch"). The image and video prompts draw them from these words, without a reference. An earlier call\'s text stays when omitted; "" clears it.'),
   }).strict()).min(1),
@@ -1842,7 +1842,7 @@ export function writeShotCharacters(args: z.infer<typeof shotCharactersSchema>):
     const bystanders = (asked ?? bystandersOf(shots[index])).filter((character) => asked || !characters.includes(character));
     const extras = (askedExtras ?? String((shots[index].visual as { extras?: unknown } | undefined)?.extras ?? '')).trim();
     if (bystanders.some((character) => characters.includes(character))) throw new Error(`shot_bystander_listed: a bystander of ${id} is also among its characters — list each person once`);
-    if (characters.length + bystanders.length > 3) throw new Error(`character_limit: ${id} shows ${characters.length + bystanders.length} of the cast; at most three, two of them as characters — describe anyone else in extras`);
+    if (characters.length + bystanders.length > 4) throw new Error(`character_limit: ${id} shows ${characters.length + bystanders.length} of the cast; at most four — describe anyone else in extras`);
     if (nonEnglishOutsideQuotes(extras)) throw new Error(`image_prompt_language: ${id}'s extras must be English; they go into the image and video prompts`);
     for (const [character, cue] of Object.entries(expression ?? {})) {
       if (!characters.includes(character) && !bystanders.includes(character)) throw new Error(`shot_expression_unknown: ${character} is not among ${id}'s characters`);

@@ -312,7 +312,7 @@ targets to reach.
 Each tool refuses a layer
 whose parent is missing (`story_order`). The next step starts once every sequence has scenes,
 every scene has shots and every shot has its story: `shot_characters` sets who is on screen in
-each shot — at most two principal characters, `[]` for nobody, with a third cast member in view as a
+each shot — up to four principal characters, `[]` for nobody, with an unreferenced cast member in view as a
 `bystanders` entry and unnamed people as `extras` (user directive 2026-11-17) — and then `shot_dialogue` writes
 each shot's lines in spoken order, each attributed to a character from `cast.json`. An on-screen
 speaker is one of the shot's characters; a narrator is a character who speaks in `voiceover`
@@ -569,8 +569,8 @@ its `shot.why` still says what it gives the beat. Maintain the saved visual styl
 subtitles or explanatory marks burned into video. Explanatory graphics use their supported
 HTML/diagram route; full-video episodes follow [full-video](../produce/references/full-video.md).
 
-Plan each shot with at most two principal characters in `visual.character`. A third cast member
-who is in view without a line is a bystander, and unnamed people are extras
+Plan each shot with up to four principal characters in `visual.character`. A cast member
+seen without a line or a video reference is a bystander, and unnamed people are extras
 ([character reference](references/scenes-schema.md#character-reference-visualcharacter)).
 For every new generated shot, declare `visual.frames` with explicit start/end planning
 and `visual.references` (empty when none). Each extra image has id, path, role, use

@@ -58,10 +58,11 @@ function readVideoContext(episode, shotId, sceneNo) {
       if (crypto.createHash('sha256').update(bytes).digest('hex') !== scene.videoOpeningSha256)
         throw new Error('openingPositions stale: inspect the new opening frame and update story_scene.videoDirection');
     }
-    const frames = pinned ? { mode: 'first', start: visual.frames.start } : { ...visual.frames };
+    const frames = pinned && visual.frames.mode === 'reference' ? { mode: 'first', start: visual.frames.start } : { ...visual.frames };
     // Only the last member can constrain the ending of a multi-shot scene.
     const last = members[members.length - 1].visual?.frames;
-    if (members.length > 1 || pinned) {
+    if (members.length > 1) {
+      delete frames.storyboardKeyframes;
       delete frames.keyframes;
       delete frames.end;
       if (frames.mode === 'first_last') frames.mode = 'first';

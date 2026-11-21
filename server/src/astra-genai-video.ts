@@ -1,6 +1,7 @@
 /** LTX v2 provider request contract published by the unified GenAI gateway. */
 import { openingPositionsSchema, openingPrompt, validateOpening, type OpeningPosition } from './msr-opening.js';
 import { z } from 'zod';
+import { guidanceSchema, guidanceWireKey } from './astra-video-client.js';
 import { createHash } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -30,6 +31,8 @@ const msrGuidanceFields = {
 };
 type NegativeArgs = { negativePrompt?: string; guidanceScale?: number; nagScale?: number; nagAlpha?: number; nagTau?: number };
 function msrNegativeRule(args: NegativeArgs, issue: (message: string) => void) {
+  if ((args.nagAlpha !== undefined || args.nagTau !== undefined) && args.nagScale === undefined)
+    issue('MSR nagAlpha and nagTau require an explicit nagScale');
   if ((args.nagScale ?? 0) > 0 && args.negativePrompt === undefined)
     issue('MSR nagScale > 0 requires negativePrompt');
   if (args.negativePrompt !== undefined && (args.guidanceScale ?? 1) <= 1 && (args.nagScale ?? 0) === 0)
@@ -52,11 +55,61 @@ function devNegativeRule(args: { negativePrompt?: string; model: string }, ctx: 
   if (args.model !== 'ltx-2.5-22b-dev') issue('negativePrompt requires ltx-2.5-22b-dev, or image-to-video references with guidanceScale > 1 or nagScale > 0');
   if (args.negativePrompt.length > 2000) issue('The dev backend accepts a negativePrompt of at most 2000 characters');
 }
+const exactFrames = z.number().int().min(25).max(361).refine(n => (n - 1) % 8 === 0, 'Use 8k+1 frames');
+const nativeShot = z.object({
+  description: z.string().trim().min(1).max(2000),
+  audio: z.string().trim().min(1).max(2000).optional(),
+  transition: z.literal('hard_cut').optional(),
+}).strict();
+const temporalImages = z.array(z.object({
+  imageUri: genaiImageUriSchema.optional(), imagePath: z.string().min(1).optional(),
+  frameIdx: z.number().int().min(0).max(360),
+  strength: z.number().min(0).max(1).optional(), crf: z.number().int().min(0).max(51).optional(),
+}).strict().refine(pin => !!pin.imageUri !== !!pin.imagePath, 'Supply exactly one imageUri or imagePath')).min(1).max(8);
+type TemporalImages = z.infer<typeof temporalImages>;
+function temporalBody(pins?: TemporalImages) {
+  if (!pins) return {};
+  return { keyframes: pins.map(pin => ({ image_uri: genaiSourceUri(pin.imageUri, pin.imagePath), frame_idx: pin.frameIdx,
+    ...(pin.strength === undefined ? {} : { strength: pin.strength }), ...(pin.crf === undefined ? {} : { crf: pin.crf }) })) };
+}
+function validatePins(pins: TemporalImages | undefined, start: boolean, end: boolean, length: number | undefined, ctx: z.RefinementCtx) {
+  if (!pins) return;
+  const indices = pins.map(pin => pin.frameIdx);
+  if (indices.length + Number(start) + Number(end) > 8 || new Set(indices).size !== indices.length ||
+      indices.some(i => (start && i === 0) || (length !== undefined && i >= length - Number(end))))
+    ctx.addIssue({ code: 'custom', path: ['keyframes'], message: 'Use up to eight distinct frame indices inside the delivered clip, including its pinned endpoints' });
+}
+export const genaiSampling = {
+  seed: z.number().int().min(0).max(2147483647).optional(),
+  numInferenceSteps: z.number().int().min(1).max(50).optional(),
+  guidance: guidanceSchema,
+};
+const loraName = z.string().trim().min(1).max(128);
+export const genaiVisualSampling = {
+  numGeneratedKeyframes: z.number().int().min(0).max(16).optional(),
+  lora: z.array(z.union([loraName, z.object({ name: loraName, strength: z.number().min(0).max(2).optional() }).strict()])).min(1).max(2).optional(),
+};
+interface SamplingArgs {
+  seed?: number; numInferenceSteps?: number; guidance?: z.infer<typeof guidanceSchema>; numGeneratedKeyframes?: number;
+  lora?: z.infer<typeof genaiVisualSampling.lora>;
+}
+function samplingBody(args: SamplingArgs) {
+  return {
+    ...(args.seed === undefined ? {} : { seed: args.seed }),
+    ...(args.numInferenceSteps === undefined ? {} : { num_inference_steps: args.numInferenceSteps }),
+    ...(args.numGeneratedKeyframes === undefined ? {} : { num_generated_keyframes: args.numGeneratedKeyframes }),
+    ...(args.guidance === undefined ? {} : { guidance: Object.fromEntries(Object.entries(args.guidance).map(([k, v]) => [guidanceWireKey(k), v])) }),
+    ...(args.lora === undefined ? {} : { lora: args.lora }),
+  };
+}
 const textVideoFields = z.object({
+  ...genaiSampling, ...genaiVisualSampling,
   prompt: z.string().min(1).max(2000),
   negativePrompt: z.string().trim().min(1).max(5000).optional(),
   model: z.enum(GENAI_VIDEO_MODELS),
-  duration: z.number().int().min(1).nullable(),
+  duration: z.number().int().min(1).nullable().optional(),
+  numFrames: exactFrames.optional(),
+  shots: z.array(nativeShot).min(2).max(4).optional(),
   resolution: localResolution,
   fps: z.union([z.literal(24), z.literal(25), z.literal(48), z.literal(50)]).default(24),
   generateAudio: z.boolean().default(true),
@@ -64,9 +117,30 @@ const textVideoFields = z.object({
   outputPath: z.string().optional(),
   filename: bareFilenameSchema('video').refine(name => name.endsWith('.mp4'), 'Use an .mp4 filename').optional(),
 }).strict();
-function localVideoTiming(args: { duration: number | null; fps: number }, ctx: z.RefinementCtx) {
-  if (args.duration !== null && 8 * Math.ceil((args.duration * args.fps - 1) / 8) + 1 > 361)
+function localVideoTiming(args: z.infer<typeof textVideoFields> & { openingPositions?: OpeningPosition[] }, ctx: z.RefinementCtx) {
+  const refs = 'references' in args && !!args.references;
+  const promptLimit = refs ? 5000 : 2000;
+  if ([...openingPrompt(args.prompt, args.openingPositions)].length > promptLimit)
+    ctx.addIssue({ code: 'custom', path: ['prompt'], message: 'Prompt exceeds ' + promptLimit + ' characters' });
+  if (args.model !== 'ltx-2.5-22b-dev' && (args.guidance || args.numInferenceSteps !== undefined))
+    ctx.addIssue({ code: 'custom', message: 'guidance and numInferenceSteps require dev' });
+  if (args.lora && (args.model !== 'ltx-2.5-22b-distilled' || refs))
+    ctx.addIssue({ code: 'custom', message: 'LoRA selection requires plain distilled T2V or I2V' });
+  if (refs && args.numGeneratedKeyframes !== undefined)
+    ctx.addIssue({ code: 'custom', message: 'MSR does not accept numGeneratedKeyframes' });
+  if (args.duration != null && args.numFrames !== undefined)
+    ctx.addIssue({ code: 'custom', path: ['numFrames'], message: 'Omit duration when using numFrames' });
+  if (args.duration != null && 8 * Math.ceil((args.duration * args.fps - 1) / 8) + 1 > 361)
     ctx.addIssue({ code: 'custom', path: ['duration'], message: 'Duration and fps exceed the local 361-frame limit' });
+  if (args.shots) {
+    if (args.shots[0].transition) ctx.addIssue({ code: 'custom', path: ['shots', 0, 'transition'], message: 'Omit transition on the opening shot' });
+    const parts = [openingPrompt(args.prompt, args.openingPositions)];
+    args.shots.forEach((shot, i) => {
+      parts.push((i === 0 ? 'The opening shot shows ' : 'A hard cut moves to ') + shot.description);
+      if (shot.audio) parts.push('Audio: ' + shot.audio);
+    });
+    if ([...parts.join('\n\n')].length > promptLimit) ctx.addIssue({ code: 'custom', path: ['shots'], message: 'Composed shot prompt exceeds ' + promptLimit + ' characters' });
+  }
 }
 export const genaiTextToVideoSchema = textVideoFields.superRefine((args, ctx) => { localVideoTiming(args, ctx); devNegativeRule(args, ctx); });
 const msrReferences = z.array(z.object({
@@ -89,18 +163,29 @@ function validateVoiceSlots(references: z.infer<typeof msrReferences>, issue: (m
 }
 
 export const genaiImageToVideoSchema = textVideoFields.extend({
+  prompt: z.string().min(1).max(5000),
   imageUri: genaiImageUriSchema.optional(), imagePath: z.string().min(1).optional(),
   lastFrameUri: genaiImageUriSchema.nullable().optional(), lastFramePath: z.string().min(1).optional(),
+  keyframes: temporalImages.optional(),
+  referenceStrength: z.number().finite().min(0).max(1).optional(),
+  referenceFrames: z.union([z.literal(25), z.literal(33)]).optional(),
+  skipStage2: z.boolean().optional(),
   references: msrReferences.optional(), openingPositions: openingPositionsSchema.optional(),
   ...msrGuidanceFields,
 }).strict().superRefine((args, ctx) => {
   const issue = (message: string) => ctx.addIssue({ code: z.ZodIssueCode.custom, message });
   localVideoTiming(args, ctx);
-  if (args.duration === null && (args.lastFrameUri != null || args.lastFramePath !== undefined))
-    issue('A last frame requires an explicit duration');
+  const length = args.numFrames ?? (args.duration == null ? undefined : args.duration * args.fps);
+  const end = args.lastFrameUri != null || args.lastFramePath !== undefined;
+  if (length === undefined && (end || args.keyframes)) issue('Temporal pins require duration or numFrames');
+  validatePins(args.keyframes, true, end, length, ctx);
   if (Number(args.imageUri !== undefined) + Number(args.imagePath !== undefined) !== 1) issue('Supply exactly one imageUri or imagePath');
   if (args.lastFrameUri != null && args.lastFramePath !== undefined) issue('Supply at most one lastFrameUri or lastFramePath');
+  if (args.skipStage2 && args.resolution.split('x').some(side => Number(side) % 4))
+    issue('skipStage2 requires sides divisible by four for an even half-size output');
   if (!args.references) {
+    if (args.referenceStrength !== undefined || args.referenceFrames !== undefined || args.skipStage2 !== undefined)
+      issue('referenceStrength, referenceFrames and skipStage2 require references');
     if (args.openingPositions !== undefined) issue('openingPositions requires MSR references');
     if (Object.keys(msrGuidanceFields).some(key => args[key as keyof typeof msrGuidanceFields] !== undefined))
       issue('guidanceScale and NAG require references (MSR conditioning); ltx-2.5-22b-dev already runs guided');
@@ -110,7 +195,7 @@ export const genaiImageToVideoSchema = textVideoFields.extend({
     validateVoiceSlots(args.references, issue);
     msrNegativeRule(args, issue);
     if (args.model !== 'ltx-2.5-22b-distilled') issue('Additional references require ltx-2.5-22b-distilled (MSR conditioning)');
-    if (args.duration === null) issue('Additional references require an explicit duration');
+    if (length === undefined) issue('Additional references require duration or numFrames');
     const backgrounds = args.references.filter(ref => ref.background).length;
     if (backgrounds > 1 || args.references.length - backgrounds > 4 || backgrounds === args.references.length)
       issue('References require 1..4 subjects and at most one background');
@@ -121,10 +206,12 @@ export const GENAI_AUDIO_TYPES: Readonly<Record<string, string>> = { '.wav': 'au
 export const GENAI_AUDIO_DATA_URI_MAX = 15_000_000;
 const oneOf = (a: unknown, b: unknown) => Number(a !== undefined) + Number(b !== undefined);
 export const genaiAudioToVideoSchema = z.object({
-  prompt: z.string().trim().min(1).max(5000),
+  ...genaiSampling,
+  prompt: z.string().trim().min(1).max(2000),
   negativePrompt: z.string().trim().min(1).max(2000).optional(),
-  model: z.literal('ltx-2.5-22b-dev'),
-  resolution: z.string().min(1),
+  model: z.enum(['ltx-2.5-22b-dev', 'ltx-2.5-22b-distilled']),
+  resolution: localResolution,
+  keyframes: temporalImages.optional(),
   fps: z.union([z.literal(24), z.literal(25), z.literal(48), z.literal(50)]).default(24),
   audioPath: z.string().min(1).optional(), audioUri: z.string().min(1).optional(),
   imagePath: z.string().min(1).optional(), imageUri: genaiImageUriSchema.optional(),
@@ -134,6 +221,9 @@ export const genaiAudioToVideoSchema = z.object({
   filename: bareFilenameSchema('video').refine(name => name.endsWith('.mp4'), 'Use an .mp4 filename').optional(),
 }).strict().superRefine((args, ctx) => {
   const issue = (message: string) => ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+  validatePins(args.keyframes, !!(args.imagePath || args.imageUri), !!(args.lastFramePath || args.lastFrameUri), undefined, ctx);
+  if (args.model === 'ltx-2.5-22b-distilled' && (args.negativePrompt || args.guidance || args.numInferenceSteps !== undefined))
+    issue('The distilled ComfyUI A2V pipeline uses fixed unguided sampling');
   if (oneOf(args.audioPath, args.audioUri) !== 1) issue('Supply exactly one audioPath or audioUri');
   if (oneOf(args.imagePath, args.imageUri) > 1) issue('Supply at most one imagePath or imageUri');
   if (oneOf(args.lastFramePath, args.lastFrameUri) > 1) issue('Supply at most one lastFramePath or lastFrameUri');
@@ -159,15 +249,16 @@ export function buildGenaiAudioBody(args: z.infer<typeof genaiAudioToVideoSchema
   const last = oneOf(args.lastFramePath, args.lastFrameUri) ? genaiSourceUri(args.lastFrameUri, args.lastFramePath) : undefined;
   return { audio_uri: genaiAudioUri(args.audioUri, args.audioPath), prompt: args.prompt, model: args.model, resolution: args.resolution, fps: args.fps,
     ...(image === undefined ? {} : { image_uri: image }), ...(last === undefined ? {} : { last_frame_uri: last }),
-    ...negativeBody({ negativePrompt: args.negativePrompt }) };
+    ...samplingBody(args), ...temporalBody(args.keyframes), ...negativeBody({ negativePrompt: args.negativePrompt }) };
 }
 
 export const GENAI_MSR_FRAMES = { min: 25, max: 361, step: 8, frameRate: 24 } as const;
 
 export const genaiMsrSchema = z.object({
-  prompt: z.string().trim().min(1).max(2000),
+  prompt: z.string().trim().min(1).max(5000),
   negativePrompt: z.string().trim().min(1).max(5000).optional(),
   ...msrGuidanceFields,
+  skipStage2: z.boolean().optional(),
   references: msrReferences, openingPositions: openingPositionsSchema,
   referenceStrength: z.number().finite().min(0).max(1).default(1),
   referenceFrames: z.union([z.literal(25), z.literal(33)]).default(33),
@@ -182,10 +273,10 @@ export const genaiMsrSchema = z.object({
   filename: bareFilenameSchema('video').refine(name => name.endsWith('.mp4'), 'Use a .mp4 filename').optional(),
 }).strict().superRefine((args, ctx) => {
   const issue = (message: string) => ctx.addIssue({ code: z.ZodIssueCode.custom, message });
-  validateOpening(args.prompt, args.openingPositions, args.references, issue);
+  validateOpening(args.prompt, args.openingPositions, args.references, issue, 5000);
   msrNegativeRule(args, issue);
   const backgrounds = args.references.filter(ref => ref.background).length;
-  if (backgrounds > 1 || args.references.length - backgrounds > 4) issue('MSR supports at most four subjects and one background');
+  if (backgrounds === args.references.length || backgrounds > 1 || args.references.length - backgrounds > 4) issue('MSR requires 1..4 subjects and at most one background');
   validateVoiceSlots(args.references, issue);
   if (args.width * args.height > 2064384) issue('MSR maximum is 2,064,384 pixels');
   if (args.duration !== undefined) {
@@ -204,46 +295,55 @@ function referenceBody(ref: z.infer<typeof msrReferences>[number]) {
 export function buildGenaiMsrBody(args: z.infer<typeof genaiMsrSchema>) {
   return { prompt: openingPrompt(args.prompt, args.openingPositions), ...negativeBody(args),
     references: args.references.map(referenceBody),
+    ...(args.skipStage2 === undefined ? {} : { skip_stage_2: args.skipStage2 }),
     reference_strength: args.referenceStrength, reference_frames: args.referenceFrames,
     width: args.width, height: args.height, frame_rate: args.frameRate, seed: args.seed,
     ...(args.duration === undefined ? { num_frames: args.numFrames ?? 121 } : { duration: args.duration }) };
 }
 
-let msrVoiceCache: { value: boolean; at: number; ttl: number } | undefined;
+let msrVoiceCache: { origin: string; promptLimit: number; value: boolean; at: number; ttl: number } | undefined;
 /**
  * Ask the gateway whether its MSR backend takes voice samples. An older gateway
  * (404), a missing key or an unreachable gateway counts as no. Cached so the plan
  * and the execute-time replan see the same answer.
  */
 export async function refreshGenaiMsrVoice(force = false): Promise<boolean> {
-  if (!force && msrVoiceCache && Date.now() - msrVoiceCache.at < msrVoiceCache.ttl) return msrVoiceCache.value;
-  let value = false, ttl = 60_000;
+  const origin = astraGenaiBaseUrl();
+  if (!force && msrVoiceCache?.origin === origin && Date.now() - msrVoiceCache.at < msrVoiceCache.ttl) return msrVoiceCache.value;
+  let value = false, ttl = 60_000, promptLimit = 2000;
   try {
-    const body = z.object({ voice_references: z.boolean() }).passthrough()
+    const body = z.object({ voice_references: z.boolean(), prompt_max_chars: z.number().int().positive().optional() }).passthrough()
       .parse(await requestGenai('GET', '/v1/ltx/msr/capabilities', undefined, 15_000));
-    value = body.voice_references; ttl = 600_000;
+    value = body.voice_references; ttl = 600_000; promptLimit = Math.min(5000, body.prompt_max_chars ?? 2000);
   } catch { /* Unknown support is treated as unsupported; the plan says so. */ }
-  msrVoiceCache = { value, at: Date.now(), ttl };
+  msrVoiceCache = { origin, value, promptLimit, at: Date.now(), ttl };
   return value;
 }
-export function genaiMsrVoiceReferences(): boolean { return msrVoiceCache?.value ?? false; }
+export function genaiMsrVoiceReferences(): boolean { return msrVoiceCache?.origin === astraGenaiBaseUrl() && msrVoiceCache.value; }
+
+export function genaiMsrPromptLimit(): number { return msrVoiceCache?.origin === astraGenaiBaseUrl() ? msrVoiceCache.promptLimit : 2000; }
 
 export type GenaiVideoRequest = z.infer<typeof genaiTextToVideoSchema> & NegativeArgs & {
   imageUri?: string; imagePath?: string; lastFrameUri?: string | null; lastFramePath?: string;
   openingPositions?: OpeningPosition[];
+  keyframes?: TemporalImages; referenceStrength?: number; referenceFrames?: number; skipStage2?: boolean;
   references?: z.infer<typeof genaiImageToVideoSchema>['references'];
 };
 
 /** Only provider fields cross the wire; local output/budget controls never do. */
 export function buildGenaiVideoBody(args: GenaiVideoRequest): Record<string, unknown> {
   return {
-    prompt: openingPrompt(args.prompt, args.openingPositions), model: args.model, duration: args.duration, resolution: args.resolution,
+    prompt: openingPrompt(args.prompt, args.openingPositions), model: args.model, ...(args.numFrames === undefined ? { duration: args.duration ?? null } : { num_frames: args.numFrames }), resolution: args.resolution,
     fps: args.fps, generate_audio: args.generateAudio,
+    ...(args.shots ? { shots: args.shots } : {}), ...samplingBody(args), ...temporalBody(args.keyframes),
     // Local frames travel as checked data URIs, like MSR and audio-to-video.
     ...(args.imageUri === undefined && args.imagePath === undefined ? {} : { image_uri: genaiSourceUri(args.imageUri, args.imagePath) }),
     ...(args.lastFramePath !== undefined ? { last_frame_uri: genaiSourceUri(undefined, args.lastFramePath) }
       : args.lastFrameUri === undefined ? {} : { last_frame_uri: args.lastFrameUri === null ? null : genaiSourceUri(args.lastFrameUri) }),
     ...(args.references === undefined ? {} : { references: args.references.map(referenceBody) }),
+    ...(args.referenceStrength === undefined ? {} : { reference_strength: args.referenceStrength }),
+    ...(args.referenceFrames === undefined ? {} : { reference_frames: args.referenceFrames }),
+    ...(args.skipStage2 === undefined ? {} : { skip_stage_2: args.skipStage2 }),
     ...negativeBody(args),
   };
 }
@@ -311,7 +411,9 @@ export const GENAI_MSR_INLINE_MAX_BYTES = 8 * 1000 * 1000;
  * untouched; a gateway without the upload API keeps the (shrunk) data URIs.
  */
 interface GenaiReferenceBody {
-  references: { image_uri: string; background: boolean; audio_uri?: string }[];
+  keyframes?: {image_uri: string; frame_idx: number}[];
+  audio_uri?: string;
+  references?: { image_uri: string; background: boolean; audio_uri?: string }[];
   width?: number; height?: number; resolution?: string;
   image_uri?: string; last_frame_uri?: string | null;
 }
@@ -330,14 +432,16 @@ export async function prepareGenaiMsrSources(body: GenaiReferenceBody) {
     return id ?? `data:${match[1]};base64,${bytes.toString('base64')}`;
   };
   const references = [];
-  for (const ref of body.references) references.push({ ...ref, image_uri: await send(ref.image_uri, true),
+  for (const ref of body.references ?? []) references.push({ ...ref, image_uri: await send(ref.image_uri, true),
     ...('audio_uri' in ref && typeof ref.audio_uri === 'string' ? { audio_uri: await send(ref.audio_uri, false) } : {}) });
-  const prepared = { ...body, references,
+  const keyframes = [];
+  for (const pin of body.keyframes ?? []) keyframes.push({ ...pin, image_uri: await send(pin.image_uri, false) });
+  const prepared = { ...body, ...(body.references ? { references } : {}), ...(body.keyframes ? { keyframes } : {}),
     ...(body.image_uri === undefined ? {} : { image_uri: await send(body.image_uri, false) }),
     ...(body.last_frame_uri == null ? {} : { last_frame_uri: await send(body.last_frame_uri, false) }),
   };
   const bytes = Buffer.byteLength(JSON.stringify(prepared));
-  if (bytes > GENAI_MSR_INLINE_MAX_BYTES)
+  if (bytes - (body.audio_uri?.length ?? 0) > GENAI_MSR_INLINE_MAX_BYTES)
     throw new Error(`msr_body_too_large: the gateway did not take the chunked upload and the inline request is ${(bytes / 1e6).toFixed(1)} MB (limit 8 MB); nothing was submitted. Try again later, or use a shorter voice sample.`);
   return prepared;
 }
@@ -346,6 +450,63 @@ export async function prepareGenaiMsrSources(body: GenaiReferenceBody) {
 const SUBMIT_TIMEOUT_MS = 15 * 60_000;
 function genaiVideoRoute(operation: Operation): string {
   return operation === 'msr' ? '/v1/ltx/msr' : `/v1/ltx/v2/${operation}`;
+}
+
+const genaiModes = {
+  astra_genai_text2video: 'text2video', astra_genai_img2video: 'image2video',
+  astra_genai_audio2video: 'audio2video', astra_genai_msr: 'msr',
+} as const;
+type GenaiTool = keyof typeof genaiModes;
+const deployedModel = z.object({
+  id: z.string(), parameters_by_mode: z.record(z.array(z.string())).optional(),
+  limits: z.record(z.unknown()).optional(),
+});
+/** Both planning and submission use the selected gateway's contract for version-dependent inputs. */
+export async function checkGenaiVideoOptions(tool: string, args: Record<string, unknown>) {
+  const mode = genaiModes[tool as GenaiTool];
+  if (!mode) return;
+  if (mode === 'msr' || (mode === 'image2video' && args.references)) {
+    const prompt = openingPrompt(String(args.prompt), args.openingPositions as OpeningPosition[] | undefined);
+    const parts = [prompt];
+    for (const [i, shot] of (Array.isArray(args.shots) ? args.shots : []).entries()) {
+      parts.push((i === 0 ? 'The opening shot shows ' : 'A hard cut moves to ') + shot.description);
+      if (shot.audio) parts.push('Audio: ' + shot.audio);
+    }
+    const chars = Math.max([...parts.join('\n\n')].length, [...String(args.negativePrompt ?? '')].length);
+    if (chars > 2000) {
+      const caps = z.object({ prompt_max_chars: z.number().int().optional() }).parse(
+        await requestGenai('GET', '/v1/ltx/msr/capabilities', undefined, 15_000));
+      if (chars > (caps.prompt_max_chars ?? 2000)) throw new GenaiRequestError('msr_prompt_limit: prompt exceeds the deployed backend limit', true, 422);
+    }
+  }
+  const wireFields: Record<string, string> = {
+    seed: 'seed', numInferenceSteps: 'num_inference_steps', guidance: 'guidance', lora: 'lora', numGeneratedKeyframes: 'num_generated_keyframes',
+    numFrames: 'num_frames', shots: 'shots', negativePrompt: 'negative_prompt', guidanceScale: 'guidance_scale',
+    referenceStrength: 'reference_strength', referenceFrames: 'reference_frames',
+    nagScale: 'nag_scale', nagAlpha: 'nag_alpha', nagTau: 'nag_tau', skipStage2: 'skip_stage_2',
+  };
+  const requested = Object.entries(wireFields).filter(([key]) => args[key] !== undefined &&
+    (mode !== 'msr' || key === 'skipStage2'));
+  const needsAudioModel = mode === 'audio2video' && args.model === 'ltx-2.5-22b-distilled';
+  if (!requested.length && !args.keyframes && !needsAudioModel) return;
+  let models;
+  try {
+    const response = await requestGenai('GET', '/v1/models', undefined, 15_000);
+    models = z.object({ data: z.array(deployedModel) }).parse(response).data;
+  } catch {
+    throw new GenaiRequestError('ltx_capabilities_unavailable: cannot verify the requested gateway fields before submission', true, 503);
+  }
+  const model = models.find(entry => entry.id === (mode === 'msr' ? 'ltx-msr' : args.model));
+  const fields = model?.parameters_by_mode?.[mode] ?? [];
+  if (needsAudioModel && !model?.parameters_by_mode?.audio2video)
+    throw new GenaiRequestError('ltx_fields_unsupported: this gateway does not advertise distilled audio2video', true, 422);
+  const missing = requested.filter(([, wire]) => !fields.includes(wire)).map(([key]) => key);
+  if (Array.isArray(args.keyframes)) {
+    const limit = z.object({ temporal_images_including_endpoints: z.number().int() }).safeParse(model?.limits?.[mode]);
+    const count = args.keyframes.length + Number(!!(args.imagePath || args.imageUri)) + Number(!!(args.lastFramePath || args.lastFrameUri));
+    if (!limit.success || count > limit.data.temporal_images_including_endpoints) missing.push('keyframes');
+  }
+  if (missing.length) throw new GenaiRequestError(`ltx_fields_unsupported: ${mode} on ${model?.id ?? args.model} does not advertise ${missing.join(', ')}`, true, 422);
 }
 
 export async function generateGenaiVideo(operation: Operation, input: unknown) {
@@ -366,6 +527,8 @@ export async function generateGenaiVideo(operation: Operation, input: unknown) {
     recordVideoSubmission(previous.jobId);
   } else {
     if (fs.existsSync(videoPath)) throw new Error('GenAI output already exists');
+    const tools = { 'text-to-video': 'astra_genai_text2video', 'image-to-video': 'astra_genai_img2video', 'audio-to-video': 'astra_genai_audio2video', msr: 'astra_genai_msr' };
+    await checkGenaiVideoOptions(tools[operation], args);
     if (operation === 'image-to-video' && usesReferences) {
       let capabilities;
       try {
@@ -377,7 +540,7 @@ export async function generateGenaiVideo(operation: Operation, input: unknown) {
       }
       if (capabilities.image_conditioning !== true)
         throw new GenaiRequestError('image_references_unsupported: the GenAI backend does not advertise combined start/end frames and subject references; no request was submitted', true, 422);
-      if ((body as GenaiReferenceBody).references.some(ref => ref.audio_uri) && capabilities.voice_references !== true)
+      if ((body as GenaiReferenceBody).references?.some(ref => ref.audio_uri) && capabilities.voice_references !== true)
         throw new GenaiRequestError('msr_voice_unsupported: the GenAI MSR backend does not accept voice samples', true, 422);
     }
     // References on image-to-video run on the same MSR backend, so its negatives need the same advertisement.
@@ -386,15 +549,15 @@ export async function generateGenaiVideo(operation: Operation, input: unknown) {
       const capabilities = z.object({ negative_prompt: z.boolean().optional(), nag: z.boolean().optional() }).passthrough()
         .parse(await requestGenai('GET', '/v1/ltx/msr/capabilities', undefined, 15_000));
       if ((msrArgs.nagScale ?? 0) > 0 && capabilities.nag !== true)
-        throw new Error('msr_nag_unsupported: the GenAI MSR backend does not advertise NAG; no request was submitted');
+        throw new GenaiRequestError('msr_nag_unsupported: the GenAI MSR backend does not advertise NAG', true, 422);
       if (capabilities.negative_prompt !== true)
-        throw new Error('msr_negative_unsupported: the GenAI MSR backend does not advertise negative conditioning; no request was submitted');
+        throw new GenaiRequestError('msr_negative_unsupported: the GenAI MSR backend does not advertise negative conditioning', true, 422);
     }
     if (operation === 'msr' && (args as z.infer<typeof genaiMsrSchema>).references.some(ref => oneOf(ref.audioUri, ref.audioPath)) && !await refreshGenaiMsrVoice(true))
       throw new Error('msr_voice_unsupported: the GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities)');
     // Upload before the receipt exists: a failed upload leaves nothing to recover and the call can simply run again.
     // The fingerprint stays on the request as written, so a resumed receipt still matches.
-    const submitted = usesReferences ? await prepareGenaiMsrSources(body as GenaiReferenceBody) : body;
+    const submitted = usesReferences || 'keyframes' in body ? await prepareGenaiMsrSources(body as GenaiReferenceBody) : body;
     const receipt = { version: 1 as const, baseUrl: astraGenaiBaseUrl(), operation, fingerprint, videoPath, status: 'submitting' as const };
     fs.writeFileSync(receiptPath, JSON.stringify(receipt), { flag: 'wx', mode: 0o600 });
     let response: unknown;

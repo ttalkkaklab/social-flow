@@ -517,16 +517,14 @@ function perShotLookFindings(win, { bad, machine, warn }) {
   const optIn = production.cast !== undefined || scenes.some((scene) => scene.shot?.cutType !== undefined);
   const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
 
-  // A shot references at most two principal characters (user directive 2026-10-31): MSR conditions
-  // two characters well, and anyone else on screen is an unreferenced extra the model draws.
   scenes.forEach((scene, index) => {
     const ids = castIds(scene.visual?.character);
-    if (ids.length > 2)
-      bad(`shot ${index + 1}`, `[character-limit] visual.character lists ${ids.length} principal characters (${ids.join(', ')}); keep two as characters, a third of the cast as a bystander (shot_characters bystanders) and anyone else in extras`);
-    // A bystander is a cast member seen without a line or a video reference (user directive 2026-11-17): three of the cast at most.
+    if (ids.length > 4)
+      bad(`shot ${index + 1}`, `[character-limit] visual.character lists ${ids.length} principal characters (${ids.join(', ')}); use up to four subject images`);
+    // A bystander is a cast member seen without a line or a video reference (user directive 2026-11-17): four of the cast at most.
     const seen = Array.isArray(scene.visual?.bystanders) ? scene.visual.bystanders : [];
-    if (seen.some((id) => ids.includes(id)) || ids.length <= 2 && ids.length + seen.length > 3)
-      bad(`shot ${index + 1}`, `[character-limit] visual.bystanders (${seen.join(', ')}) with ${ids.length} character(s): list each person once, three of the cast at most`);
+    if (seen.some((id) => ids.includes(id)) || ids.length + seen.length > 4)
+      bad(`shot ${index + 1}`, `[character-limit] visual.bystanders (${seen.join(', ')}) with ${ids.length} character(s): list each person once, four of the cast at most`);
   });
 
   if (optIn) {
@@ -3030,12 +3028,12 @@ function selftest() {
         !lookHas(findings, 'warn', /\[character-missing\]/);
     }) && !lookHas(perShot(perShotFixture()), 'bad', /\[character-missing\]/);
   })());
-  ok('character-limit rejects three principal characters in one shot and accepts two', (() => {
+  ok('character-limit allows up to four cast members in one shot', (() => {
     const three = perShotFixture(); three.SCENES[0].visual.character = ['yi', 'won', { id: 'kim', scope: 'background only' }];
     const two = perShotFixture(); two.SCENES[0].visual.character = ['yi', 'won'];
     const seen = perShotFixture(); seen.SCENES[0].visual.character = ['yi', 'won']; seen.SCENES[0].visual.bystanders = ['kim'];
-    const crowd = perShotFixture(); crowd.SCENES[0].visual.character = ['yi', 'won']; crowd.SCENES[0].visual.bystanders = ['kim', 'park'];
-    return lookHas(perShot(three), 'bad', /\[character-limit\].*3 principal/) &&
+    const crowd = perShotFixture(); crowd.SCENES[0].visual.character = ['yi', 'won', 'lee']; crowd.SCENES[0].visual.bystanders = ['kim', 'park'];
+    return !lookHas(perShot(three), 'bad', /\[character-limit\]/) &&
       !lookHas(perShot(two), 'bad', /\[character-limit\]/) && !lookHas(perShot(seen), 'bad', /\[character-limit\]/) &&
       lookHas(perShot(crowd), 'bad', /\[character-limit\].*bystanders/);
   })());
