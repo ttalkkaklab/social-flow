@@ -21,11 +21,15 @@ test('model/mode routing validates adapter payloads and preserves explicit flags
     if (/seedance|astra/.test(tool)) assert.equal(p.arguments.generateAudio, true);
   }
   const a2v = prepareVideoSound('astra_audio2video', { prompt: 'Man hangs up.', audioPath: '/tmp/voice.wav' }, intent);
-  assert.equal(a2v.sound.effects[0].delivery, 'post');
+  assert.deepEqual(a2v.sound.effects, []);
+  assert.match(a2v.warnings.join(' '), /omitted from post/);
   assert.doesNotMatch(a2v.arguments.prompt, /Bakelite/);
-  assert.equal(prepareVideoSound('seedance_text2video', { prompt: 'Man', generateAudio: false }, intent).sound.effects[0].delivery, 'post');
+  assert.deepEqual(prepareVideoSound('seedance_text2video', { prompt: 'Man', generateAudio: false }, intent).sound.effects, []);
   assert.equal(prepareVideoSound('seedance_text2video', { prompt: 'Man' }, { effects: [{ sfx: 'old' }] }).arguments.generateAudio, false);
-  assert.equal(prepareVideoSound('astra_text2video', { prompt: 'Man' }, { ...intent, audioSource: 'speech' }).sound.effects[0].delivery, 'post');
+  assert.deepEqual(prepareVideoSound('astra_text2video', { prompt: 'Man' }, { ...intent, audioSource: 'speech' }).sound.effects, []);
+  const oldDetailed = prepareVideoSound('astra_text2video', { prompt: 'Man hangs up.' }, { effects: [{ ...intent.effects[0], delivery: 'post', sfx: 'old' }] });
+  assert.equal(oldDetailed.sound.effects[0].delivery, 'native');
+  assert.match(oldDetailed.arguments.prompt, /Bakelite clack/);
   assert.throws(() => prepareVideoSound('astra_audio2video', { prompt: 'Man', audioPath: '/tmp/a.wav' }, { effects: [{ ...intent.effects[0], delivery: 'native' }] }), /Native SFX/);
   assert.throws(() => prepareVideoSound('astra_text2video', { prompt: 'Man' }, { effects: [{ ...intent.effects[0], delivery: 'input' }] }), /Input SFX/);
   assert.throws(() => prepareVideoSound('astra_text2video', { prompt: 'Man', fakeOption: 1 }, intent), /Unsupported/);
@@ -43,7 +47,7 @@ test('model/mode routing validates adapter payloads and preserves explicit flags
   assert.equal(prepareVideoSound('astra_text2video', once.arguments, once.sound).arguments.prompt, once.arguments.prompt);
 });
 
-test('real audio extraction preserves source samples once, compiler omits native/input and rejects unresolved post', () => {
+test('real audio extraction preserves source samples once, compiler leaves scene effects out of post', () => {
   const dir = mkdtempSync(join(tmpdir(), 'sf-source-sound-'));
   try {
     const board = join(dir, 'storyboard'); mkdirSync(board);
@@ -74,7 +78,7 @@ test('real audio extraction preserves source samples once, compiler omits native
     assert.equal(run().status,0);
     assert.equal(existsSync(join(dir,'sfx.tsv')),false);
     sound.effects[0].delivery='input';save();assert.equal(run().status,0);
-    sound.effects[0].delivery='post';save();assert.notEqual(run().status,0);
+    sound.effects[0].delivery='post';save();assert.match(run().stderr,/omitted 1 untagged scene effect/);
     sound.effects[0].delivery='native';sound.audioSource='speech';save();assert.notEqual(run().status,0);
     prepare(dir, board); assert.match(readFileSync(join(dir,'cards.tsv'),'utf8'), /old.wav/);
     assert.doesNotMatch(readFileSync(join(dir,'cards.tsv'),'utf8'), /sync=1/);
@@ -86,7 +90,7 @@ test('real audio extraction preserves source samples once, compiler omits native
   } finally { rmSync(dir,{recursive:true,force:true}); }
 });
 
-test('native ownership rejects unmanaged and edited manifests without changing bytes; owned stale cues are removed', () => {
+test('compiling a native cue preserves manual legacy manifests and removes compiler-owned stale effect rows', async () => {
   const dir=mkdtempSync(join(tmpdir(),'sf-sound-owner-'));
   try {
     const source=join(dir,'scenes.js'), manifest=join(dir,'sfx.tsv');
@@ -96,15 +100,17 @@ test('native ownership rejects unmanaged and edited manifests without changing b
     for(const delivery of ['native','input']) {
       write([{delivery,description:'clack',trigger:'contact'}]);
       writeFileSync(manifest,row);
-      assert.notEqual(run().status,0);assert.equal(readFileSync(manifest,'utf8'),row);
+      assert.equal(run().status,0);assert.equal(readFileSync(manifest,'utf8'),row);
     }
-    rmSync(manifest);mkdirSync(join(dir,'assets/audio/sfx'),{recursive:true});
-    execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=duration=0.2',join(dir,'assets/audio/sfx/click.wav')]);
-    write([{delivery:'post',sfx:'click',atSeconds:1}]);assert.equal(run().status,0);
-    const owned=readFileSync(manifest,'utf8');
-    writeFileSync(manifest,owned+row);write([{delivery:'native'}]);
-    assert.notEqual(run().status,0);assert.equal(readFileSync(manifest,'utf8'),owned+row);
-    writeFileSync(manifest,owned);assert.equal(run().status,0);assert.equal(existsSync(manifest),false);
+    const marker = join(dir, 'sound-plan.json');
+    const oldHash = (await import('node:crypto')).createHash('sha256').update(row).digest('hex');
+    writeFileSync(marker, JSON.stringify({ files: { 'sfx.tsv': oldHash } }));
+    writeFileSync(manifest, row + 'human edit\n');
+    assert.equal(run().status,0);
+    assert.equal(readFileSync(manifest,'utf8'), row + 'human edit\n');
+    writeFileSync(marker, JSON.stringify({ files: { 'sfx.tsv': oldHash } }));
+    writeFileSync(manifest,row);
+    assert.equal(run().status,0);assert.equal(existsSync(manifest),false);
     writeFileSync(source,'window.SCENES=[{id:"legacy"}];');writeFileSync(manifest,row);
     assert.equal(run().status,0);assert.equal(readFileSync(manifest,'utf8'),row);
   } finally {rmSync(dir,{recursive:true,force:true});}

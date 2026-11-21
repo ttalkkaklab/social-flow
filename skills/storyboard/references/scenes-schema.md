@@ -105,7 +105,7 @@ report missing mappings; they do not certify the scene's artistic quality.
   - [Clip audio (`visual.audio`)](#clip-audio-visualaudio)
   - [Clip prompt — one scene, one call, the prompt stored here](#clip-prompt-one-scene-one-call-the-prompt-stored-here)
   - [Music cues (`window.MUSIC` · `sound`)](#music-cues-windowmusic-sound)
-  - [Sound effects (`window.SFX` · `sound.sfx`)](#sound-effects-windowsfx-soundsfx)
+  - [Sound effects (`window.SFX` · `sound.effects`)](#sound-effects-windowsfx-soundeffects)
   - [Cut length (`duration`) — decided by what the cut is for](#cut-length-duration-decided-by-what-the-cut-is-for)
   - [Motion background (`visual.video`) — a scene background from image to video](#motion-background-visualvideo-a-scene-background-from-image-to-video)
   - [broll — a generated-video stretch (reference only) · spliced between scenes](#broll-a-generated-video-stretch-reference-only-spliced-between-scenes)
@@ -2603,83 +2603,18 @@ these as working practice, as in bgm-scoring §3. On a story-v2 board:
 The review page draws the cue lane under each sequence and scene heading and marks the shots
 that change, drop or empty the bed.
 
-### Sound effects (`window.SFX` · `sound.sfx`)
+### Sound effects (`window.SFX` · `sound.effects`)
 
-The channel SFX instructions below apply to separate edit effects and room tone. Preserve useful scene sounds already in the video. For a viewer-only musical cue on a new board use [audience-only effects](#audience-only-effects) and the saved music model.
+Describe diegetic sound with the action that makes it. An audio-capable video request
+can render it in the clip. A separate effect is an audience cue with
+`sound.effects[].audience.intent`, a visible trigger and a catalog asset. Use the saved
+music model for an original [audience-only effect](#audience-only-effects). Place the cue
+against the chosen picture and record its timing basis.
 
-An effect is heard at the shot's first frame, so it belongs to **the cut** — to what changed
-between the previous shot and this one — not to the shot's content. The clip's own soundtrack
-is `visual.audio` (what the model records); an effect is what the edit lays on top.
-
-```js
-window.SFX = {
-  "whoosh-soft": { prompt: "short soft whoosh, fabric through air, no tail", seconds: 0.8 },
-  "hit-low":     { prompt: "low cinematic impact, single hit, short decay, no music", seconds: 1.5 },
-  "tick":        { asset: "ui-tick" }         // a channel catalog id instead of a generated effect
-};
-```
-
-Each key is an effect id — lowercase letters, digits and hyphens, named by family and variant
-(`whoosh-soft`, `hit-low`, `riser-2s`) so the next episode reuses it. `prompt` goes to
-`sfx_elevenlabs_generate` **once**: produce saves the file as `assets/audio/sfx/<id>.wav` in the
-channel catalog with a `.json` provenance sidecar (tool, model, prompt, seconds, request id, date,
-rights), and every later episode that names the same id fetches it at $0. `seconds` (0.5–30) pins
-the length — 0.6–1.0 for a whoosh, 1–2 for a hit, 2–4 for a riser; `loop: true` with 10–30 s is a
-bed (room tone), never a one-shot. `asset` skips generation and names a catalog id
-(`resolve-asset.py <channel dir> sfx <id>`).
-
-**Without `window.SFX`, `sound.sfx` is a catalog id**, and the full check refuses one whose file
-is missing. With it, `sound.sfx` names a key there, and a name that isn't there is an error.
-
-Which cuts get one — the effect matches the size and speed of what moved on the cut:
-
-| What happened on the cut | Effect | Family |
-|---|---|---|
-| a `whip:` or `push:` transition, a smash `cut` onto a new place | the air moving with the camera | `whoosh` — soft for a push, hard for a whip |
-| the line before `sound.drop` — the hit, then the silence | one low impact on this cut; the drop is the next shot's | `hit` · `braam` |
-| a figure, a stamp or a label landing on a slide (`kind:"diagram"`, a reveal group) | a small dry click as it lands, once per shot at most | `tick` · `pop` |
-| a build across several shots toward the turn | a rise that ends on the cut it aims at | `riser` |
-| an `insert` of a thing doing something on a still — a phone ringing, a stamp coming down | the thing's own sound | the object's family |
-| a `dissolve`, a `dip`, a slow `dolly in`, a caption appearing | **nothing** — a soft picture takes a small sound or none | — |
-
-- **Budget.** A short carries one effect per ~10 s at most and never two on adjacent cards; the
-  hook may carry one. Long-form: one per scene. Past that they read as decoration, and
-  `check-scenes.js` warns.
-- **Not a substitute for a drop.** The drop is the loudest thing an edit can do; an effect
-  announces the drop, it does not replace it.
-- **Not on `broll` or `outro`.** A broll plays its own sound (produce absolute rule 9) and the
-  outro is spliced after the build; the checker refuses both.
-- **Not twice.** When `visual.audio` already asks the clip for the sound (a door closing in the
-  clip), don't add the same door as `sound.sfx` — one source per sound.
-- **Level is measured, not a knob.** The builder measures each effect and gains it so its loudest
-  400 ms sits 6 LU under the narration (`SFX_SEP`), pulled back when its own true peak would pass
-  −1 dBTP, and keys the ducking on the voice alone, so an effect never pushes the bed down. Two
-  effects from two prompts land at the same distance from the voice; what the prompt still owns
-  is the shape ("short decay", "no tail", "no music") — a hit with a musical tail is a bed
-  fragment however quietly it sits (bgm-scoring §effects).
-
-**Room tone — `sound.ambience`.** Between sentences the mix used to fall to digital silence,
-which is what a viewer hears as a loading failure and what makes a cut sound spliced. A shot's
-`sound.ambience` names a `window.SFX` entry with `loop: true` (10–30 s — "quiet office room tone,
-no music, no speech", "night rain on a window, steady") and the room starts on that card and
-holds until a later shot names another or ends it with `ambience: null` (or `"-"` / `"none"`). The builder
-lays it 15 LU under the narration (`AMB_SEP`, the JAES figure for ambience under commentary)
-and never ducks it. One room per place: it changes where `STRUCTURE` changes place, not per
-shot. The checker refuses an entry that isn't a loop and an ambience on a `broll` or the
-`outro`. A hook that opens on room tone is the cheapest fix for the first-second silence.
-
-**A silent clip that needs its own sound.** The plugin has no video-to-audio lane (nothing takes
-a clip and returns synchronised foley — the candidates in the sound-design research need a
-key or a GPU the plugin does not have). What it does have covers most of the need: an effect
-the clip's length, prompted from the action in `visual.prompt` ("a cart rolling over gravel,
-six seconds, no music"), named on that card's `sound.sfx`. It lands on the cut and plays under
-the clip; it is not frame-synchronised to a footstep, so use it for continuous sounds (rolling,
-rain, an engine) and leave a single impact to the cut it belongs to.
-
-Where the numbers under all this come from, and which of them are evidence and which are our own
-practice: [bgm-scoring.md](../../produce/references/bgm-scoring.md). The short version — the bed
-is set 10 LU under the measured narration and the build stops below 4 LU, and those two are the
-only figures here with published listening tests behind them. Where a cue changes is craft.
+Legacy `sound.sfx` and untagged post effects are retained as board metadata. They
+have no playback effect. A generated clip supplies its own room tone when available.
+A still card can name an existing loop as `sound.ambience`; it holds until changed,
+stopped with `null`, or interrupted by a generated clip.
 
 ### Cut length (`duration`) — decided by what the cut is for
 

@@ -76,7 +76,7 @@ window.SCENES=[{id:"s0001",type:"points",scene:1},{id:"s0002",type:"points",scen
     assert.equal(existsSync(join(p.work, 'sound-plan.json')), false);
   });
 
-  it('compiles shot-relative effects, music silence and mix settings using existing asset ids', () => {
+  it('omits old scene effects while compiling music silence and mix settings', () => {
     const p = room();
     writeFileSync(join(p.channel, 'assets/audio/sfx/whoosh.wav'), 'sfx');
     writeFileSync(join(p.work, 'bgm-tense.wav'), 'music');
@@ -97,11 +97,29 @@ window.SCENES=[{type:"cover",duration:5,narration:[{tts:"a"}],sound:{
     assert.equal(result.status, 0, result.stderr);
     assert.equal(JSON.parse(result.stdout).changed, true);
     assert.equal(readFileSync(join(p.work, 'bgm.tsv'), 'utf8'), `0\t${join(p.work, 'bgm-tense.wav')}\n`);
-    assert.equal(readFileSync(join(p.work, 'sfx.tsv'), 'utf8'), `0\t0\t${realpathSync(join(p.channel, 'assets/audio/sfx/whoosh.wav'))}\ton\t1.25\t10\n`);
+    assert.equal(existsSync(join(p.work, 'sfx.tsv')), false);
+    assert.match(result.stderr, /omitted 1 untagged scene effect/);
     assert.equal(readFileSync(join(p.work, 'silence.tsv'), 'utf8'), '0\t2\t2.8\tmusic\n');
     const env = readFileSync(join(p.work, 'sound.env'), 'utf8');
     assert.match(env, /\$\{FINAL_LUFS:=-14\}/);
     assert.match(env, /\$\{DUCK_RELEASE:=250\}/);
+  });
+
+  it('ends an existing room bed before a generated shot and skips that shot’s ambient asset', () => {
+    const p = room();
+    const roomTone = join(p.channel, 'assets/audio/sfx/room.wav');
+    writeFileSync(roomTone, 'room tone');
+    writeFileSync(join(p.board, 'scenes.js'), `window.SCENES=[
+      { id:'s1', sound:{ ambience:'room' } },
+      { id:'insert', type:'broll', shot:{ render:{ mode:'generated_video' } } },
+      { id:'s2', shot:{ render:{ mode:'generated_video' } }, sound:{ ambience:'missing-rain' } },
+      { id:'s3', sound:{ audioSource:'video' } }
+    ];`);
+    const result = run(p);
+    assert.equal(result.status, 0, result.stderr);
+    const rows = readFileSync(join(p.work, 'amb.tsv'), 'utf8').trim().split('\n');
+    assert.match(rows[0], /^0\t.*room\.wav$/);
+    assert.deepEqual(rows.slice(1), ['2\t-']);
   });
 
   it('compiles gain curves and rejects invalid timing without replacing manifests', () => {
@@ -122,33 +140,33 @@ window.SCENES=[{type:"cover",duration:5,narration:[{tts:"a"}],sound:{
     assert.equal(existsSync(join(p.work, 'music-gain.tsv')), false);
   });
 
-  it('removes an effect on the next compile while keeping current mix settings', () => {
+  it('removes a music drop on the next compile while keeping current mix settings', () => {
     const p = room();
     writeFileSync(join(p.channel, 'assets/audio/sfx/whoosh.wav'), 'sfx');
-    writeFileSync(join(p.board, 'scenes.js'), 'window.MUSIC={$mix:{targetLufs:-14}};window.SFX={whoosh:{asset:"whoosh"}};window.SCENES=[{type:"cover",duration:3,sound:{effects:[{sfx:"whoosh",atSeconds:1}]}}];\n');
+    writeFileSync(join(p.board, 'scenes.js'), 'window.MUSIC={$mix:{targetLufs:-14}};window.SFX={whoosh:{asset:"whoosh"}};window.SCENES=[{type:"cover",duration:3,sound:{drop:true}}];\n');
     const first = run(p);
     assert.equal(first.status, 0, first.stderr);
-    assert.equal(existsSync(join(p.work, 'sfx.tsv')), true);
+    assert.equal(existsSync(join(p.work, 'bgm-drops.tsv')), true);
     writeFileSync(join(p.board, 'scenes.js'), 'window.MUSIC={$mix:{targetLufs:-14}};window.SCENES=[{type:"cover",duration:3}];\n');
     const second = run(p);
     assert.equal(second.status, 0, second.stderr);
-    assert.equal(existsSync(join(p.work, 'sfx.tsv')), false);
+    assert.equal(existsSync(join(p.work, 'bgm-drops.tsv')), false);
     assert.match(readFileSync(join(p.work, 'sound.env'), 'utf8'), /FINAL_LUFS/);
   });
 
   it('keeps and warns about a human-edited compiler output when its field is removed', () => {
     const p = room();
     writeFileSync(join(p.channel, 'assets/audio/sfx/whoosh.wav'), 'sfx');
-    writeFileSync(join(p.board, 'scenes.js'), 'window.MUSIC={$mix:{targetLufs:-14}};window.SFX={whoosh:{asset:"whoosh"}};window.SCENES=[{type:"cover",duration:3,sound:{effects:[{sfx:"whoosh",atSeconds:1}]}}];\n');
+    writeFileSync(join(p.board, 'scenes.js'), 'window.MUSIC={$mix:{targetLufs:-14}};window.SFX={whoosh:{asset:"whoosh"}};window.SCENES=[{type:"cover",duration:3,sound:{drop:true}}];\n');
     const first = run(p);
     assert.equal(first.status, 0, first.stderr);
-    writeFileSync(join(p.work, 'sfx.tsv'), 'human edit\n');
+    writeFileSync(join(p.work, 'bgm-drops.tsv'), 'human edit\n');
     writeFileSync(join(p.board, 'scenes.js'), 'window.MUSIC={$mix:{targetLufs:-14}};window.SCENES=[{type:"cover",duration:3}];\n');
     const second = run(p);
     assert.equal(second.status, 0, second.stderr);
-    assert.match(second.stderr, /warning: sfx\.tsv changed after compile/);
-    assert.equal(readFileSync(join(p.work, 'sfx.tsv'), 'utf8'), 'human edit\n');
-    assert.deepEqual(JSON.parse(second.stdout).warnings, ['sfx.tsv changed after compile; keeping the human-edited file']);
+    assert.match(second.stderr, /warning: bgm-drops\.tsv changed after compile/);
+    assert.equal(readFileSync(join(p.work, 'bgm-drops.tsv'), 'utf8'), 'human edit\n');
+    assert.deepEqual(JSON.parse(second.stdout).warnings, ['bgm-drops.tsv changed after compile; keeping the human-edited file']);
   });
 });
 

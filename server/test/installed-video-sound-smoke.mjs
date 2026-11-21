@@ -33,7 +33,8 @@ try {
   writeFileSync(log,result);
 } catch(error) {writeFileSync(log,String(error.stdout||'')+'\n'+String(error.stderr||''));throw error;}
 assert.ok(existsSync(join(work,'reel.mp4')));
-assert.ok(!readFileSync(join(work,'sfx.tsv'),'utf8').split('\n').some(row=>row.split('\t')[2]),'native SFX must not be added again (drop row has no effect asset)');
+assert.equal(existsSync(join(work,'sfx.tsv')),false,'native audio creates no post asset row');
+assert.equal(readFileSync(join(work,'bgm-drops.tsv'),'utf8'),'0\t0\n');
 const samples=execFileSync('ffmpeg',['-v','error','-i',join(work,'reel.mp4'),'-map','0:a:0','-ac','1','-ar','48000','-f','f32le','-']);
 function rms(start,end){let sum=0,n=0;for(let i=Math.round(start*48000);i<Math.round(end*48000);i++){const v=samples.readFloatLE(i*4);sum+=v*v;n++;}return Math.sqrt(sum/n);}
 assert.ok(rms(1.52,1.62)>0.01,'native impulse survives final assembly');

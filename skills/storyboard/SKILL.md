@@ -375,8 +375,9 @@ boards that play one bed keep `sound.cue` (scenes-schema §Placing cues on a sto
 
 **Audience-only sound.** Revisit each scene's `audienceSound` once the lines, shots and music
 are known. Read `storyboard_read.audienceSpotting` for undecided scenes, uses still missing a
-cue and cues on scenes marked `none`. A quiet room belongs in `sound.ambience`; a musical
-underscore belongs in `story_music`. A drone that comes in when a listener's face changes
+cue and cues on scenes marked `none`. Describe room sound in the video prompt. Still cards
+can use existing room tone in `sound.ambience`. A musical underscore belongs in
+`story_music`. A drone that comes in when a listener's face changes
 can play over either. A `none` decision applies only to the audience-only layer.
 
 For each `use`, anchor the cue to the change the viewer should notice. In EP01's

@@ -72,7 +72,7 @@ data/<channel>/episodes/<topic>/
 For independent visual samples, use the installed planner and builder in [animation-review.md](references/animation-review.md). Fix plugin sources and rebuild; never substitute episode-specific scripts. This review mode has its own input contract and does not mark an episode publishable.
 ## Absolute rules
 Read [production-mode.md](../storyboard/references/production-mode.md) at entry. The six video-ratio ids (`full_video` · `video_80` · `video_50` · `video_30` · `video_lt10` · `no_video`) are the project's saved video ratio in `.social-flow/models.json`, written into `PRODUCTION.mode` with `renderRatioVersion:1` when the episode is created; the six-choice menu belongs to project-init or an explicit change request, not to every episode. The per-episode step is the cost quote and its spending approval: present the first-pass and retry-inclusive costs and the budget cap, bind the approval to that quote, and reuse an existing approval on resume. The ratio is a planning target and the cost ceiling — the band's upper bound and the budget are enforced; fewer generated cuts than the target is reported, never padded. Run `check-production.js storyboard/ --selection` before assets.
-For shot effects, follow [model-aware effects](references/video-sound.md): prepare the selected adapter request, persist effect ownership, preserve native/input soundtracks, and resolve post effects against the actual contact frame. Never duplicate an effect across native audio and the post manifest. Read [production-mode.md](../storyboard/references/production-mode.md) at entry: present the six render-ratio choices **with first-pass and retry-inclusive costs and the budget cap**, then persist the user's selection. Reuse an existing approval on resume. Run `check-production.js storyboard/ --selection` before assets.
+For shot effects, follow [model-aware effects](references/video-sound.md): prepare the selected adapter request, persist effect ownership, preserve scene sounds from the chosen video soundtrack, and time separate psychological cues to the visible reaction. Read [production-mode.md](../storyboard/references/production-mode.md) at entry: present the six render-ratio choices **with first-pass and retry-inclusive costs and the budget cap**, then persist the user's selection. Reuse an existing approval on resume. Run `check-production.js storyboard/ --selection` before assets.
 For imported generated clips, follow [the reuse input contract](../storyboard/references/scenes-schema.md#existing-generated-clip-input-visualreuse). Skip source-image and video generation for `visual.reuse`; never send that shot to an API. Existing 720p clips are eligible; the 1080p output canvas is not a source minimum. Repair missing metadata with [inspect-reuse.js](references/inspect-reuse.js) and review the existing playback. Missing old records do not authorize paid regeneration. Run `check-production.js storyboard/ --before-call N` before every new video call in either mode. Before assembly, run `check-production.js storyboard/ --ready --manifest`; hybrid imports require current playback reviews too, and every generated still needs its style read in `.work/still-review.json` ([still-generation.md](references/still-generation.md) §3). `--ready` also measures every accepted clip with [measure-motion.js](references/measure-motion.js) (full-video.md §Measured motion): a clip that reads as a still, or one whose action starts after the first second with `edit.in` at 0, never enters the timeline, and `verify-assembled.js` measures every card of the assembled reel the same way.
 Before every new video request, follow [video-duration.md](references/video-duration.md): calculate measured source coverage and request the shortest supported duration. Preserve the selected model/resolution and refresh the quote and previz when timing changes.
 For `PRODUCTION.mode:"full_video"`, use [full-video.md](references/full-video.md) instead of the hybrid visual steps below. Its source images, spatial prompts, separate narration, video QA and plain-video manifest override the hybrid slot cap, person requirement and HTML-only explanation rules; the no-marks-over-video rule still applies. [spatial-prompts.js](../storyboard/references/spatial-prompts.js) assembles every source and motion prompt from `videoDesign`, the four `visual.camera` slots and the episode style, and on the Seedance lane returns the Seedance wording advice in its `warnings` array (read it before storing the prompt). For partial ratios the selected share of new cuts is the target and the cost ceiling: plan generated video up to the band's upper bound and the budget, use the normal visual steps for the rest, and report when fewer cuts than the target are generated (the lower bound is not enforced). The episode choice overrides the old generated-slot cap; `hook_only`, `stills_only` and `hybrid` are legacy ids kept only for resumed boards.
@@ -519,11 +519,10 @@ All `still_camera` cuts use the unchanged shared camera HTML template and runtim
   `idx` is the **card idx** — 0-based, the shot's array position in scenes.js, the same number
   `sfx.tsv` and `chapters.tsv` use (`broll` and `outro` are spliced in after the build and are
   not cards). Paths are relative to `.work/`.
-  A shot with `sound.drop` becomes an `sfx.tsv` row per segment of that shot, audio column empty
-  and `bgm` set to `off` (§sfx below). A shot with `sound.sfx` becomes one row on **seg 0** — the
-  shot's first frame — with the path `resolve-asset.py <channel dir> sfx <id>` returns.
-  `build-reel.sh` runs `compile-sound-plan.js` before reading `sound.env`. On an extended board, do not hand-write `bgm.tsv` · `sfx.tsv` · `amb.tsv` · `silence.tsv` · `music-gain.tsv` or `sound.env`: the compiler records their hashes in `.work/sound-plan.json`.
-  It removes only a stale file whose hash still matches that marker; human edits are kept with a warning, and a markerless legacy board stays byte-identical.
+  A shot with `sound.drop` creates a segment row in `bgm-drops.tsv`. Legacy `sfx.tsv`
+  still supplies music-off flags. The audio-file column has no playback effect.
+  `build-reel.sh` runs `compile-sound-plan.js` before reading the mix. The compiler
+  records generated manifests in `.work/sound-plan.json` and preserves edited files.
   **The level is not a knob here.** The builder measures the narration and sets the bed
   `BGM_SEP` LU under it (10 by default), clamps the bed's true peak, and warns if the
   voice-to-bed separation **while the voice is up** lands under the configured review threshold.
@@ -549,39 +548,16 @@ All `still_camera` cuts use the unchanged shared camera HTML template and runtim
   `suno-api` means sunoapi.org, not the official Suno Platform. The retired V5 sound
   adapter is disabled; choose a saved V6 model and an instrumental `suno_generate` plan.
 - **Audience-only sound.** Read `storyboard_read.audienceSpotting` for scene decisions and `audienceEffects` on a shots-level read for source details. On a new board, an original psychological cue uses `music_plan → music_execute` with the project's music model. Reuse a chosen catalog asset when available. Place the resulting sound on the accepted reaction with `storyboard_apply.audienceEffects`. Keep the cue on the audience track even when the scene's BGM decision is `none`. [Placement and A/B playback](references/video-sound.md#audience-effects)
-- **Other post effects and room tone.** Preserve sounds already supplied by the video's soundtrack. For a separate physical effect or room recording the edit still needs, resolve its id in the **channel** catalog. Later episodes can reuse that asset.
-  ```bash
-  ASSET=${CLAUDE_PLUGIN_ROOT}/skills/channel/references/resolve-asset.py
-  # For each distinct physical effect or room tone still needed in post:
-  if ! python3 "$ASSET" data/<channel> sfx <id> >/dev/null 2>&1; then
-    # { prompt } entries only — a missing { asset } is a storyboard error, not a generation
-    : # sfx_elevenlabs_generate — text: <prompt>, durationSeconds: <seconds>, loop: <loop>,
-      #   outputPath: data/<channel>/assets/audio/sfx, filename: <id>.wav
-    python3 "$ASSET" --ensure data/<channel> sfx <id> audio/sfx/<id>.wav \
-      "elevenlabs eleven_text_to_sound_v2 · $(date +%F) · see <id>.json"
-    printf 'sfx.elevenlabs\t<measured seconds>\tproduce: sfx <id>\n' >> .work/cost-tally.tsv
-  fi
-  ```
+  Generate a missing asset only for a used audience cue. Describe physical actions and room
+  sound in the video prompt and keep the accepted video soundtrack.
   Listen to a new effect once before it goes into the manifest — a whoosh with a tail under
   the next line, or a hit that arrives as music, gets regenerated with the prompt sharpened
   ("no tail", "no music", "short decay"), not shipped. The `.json` sidecar next to the WAV is
   the provenance record (tool, model, prompt, seconds, request id, date, rights) and the
-  catalog note points at it. For the legacy sound.sfx shorthand, write one `sfx.tsv` row per shot on **seg 0** with
-  the path `resolve-asset.py` returns (§sfx below), `bgm` column `on` — the effect lands on the
-  cut and the bed keeps playing under it. A shot that also drops writes its seg-0 row with the
-  path and `off`, and the drop's other segments as usual. The builder measures each effect
-  the way it measures the bed — its loudest 400 ms lands `SFX_SEP` (6) LU under the narration,
-  pulled back when its own true peak would pass −1 dBTP — so two effects from two prompts sit
-  at the same distance from the voice, and the build report prints where the loudest moment
-  landed (bgm-scoring §effects).
-- **Room tone**: a shot's `sound.ambience` names a `window.SFX` entry with `loop: true`
-  (10–30 s), generated and registered exactly like an effect. Then `amb.tsv`: one row per
-  card where the room starts or changes (`idx <TAB> path`), a `-` row where it ends; cards
-  without a row carry the previous room. The builder renders the lane with `bgm-bed.sh`
-  (measured, `AMB_SEP` (15) LU under the narration, self-looped with a crossfade) and mixes
-  it **un-ducked** — a room that dips at every sentence start is the pumping the ducker is
-  for music, not for the floor of the scene. Without it the gaps between sentences are
-  digital silence, which the ear reads as a splice (bgm-scoring §effects).
+  catalog note points at it. The builder measures each audience effect and uses
+  the cue’s separation and peak limit to set its level against the measured speech
+  or the silent-source reference.
+
 
 **Write one line to `.work/cost-tally.tsv` per call** — the same ledger §1.5 started
 was using. The convention's source of truth is
@@ -857,7 +833,8 @@ Manifest columns:
 ```
 cards.tsv : idx <TAB> absolute audio path <TAB> target chars/sec <TAB> zoom(in|out|auto|none|punch|hold) [<TAB> options]
 segs.tsv  : idx <TAB> seg (0-based) <TAB> visual <TAB> tts sentence <TAB> sub sentence
-sfx.tsv   : idx <TAB> seg <TAB> audio file <TAB> bgm(on|off) [<TAB> shot offset <TAB> separation LU] (optional)
+bgm-drops.tsv : idx <TAB> seg — mute music over the segment (optional)
+sfx-spans.json : compiled audience-only cues (optional)
 bgm.tsv   : idx <TAB> audio file — the music cue changes at that card (optional)
 amb.tsv   : idx <TAB> audio file | - — room tone starts at that card and holds; "-" ends it (optional); silence.tsv: idx <TAB> shot start <TAB> shot end <TAB> music (optional)
 chapters.tsv : idx of the chapter's first card <TAB> chapter title    (long-form)
@@ -982,14 +959,10 @@ path so the source offset advances with the timeline. Every source must cover it
 and any outgoing handle; the builder rejects short sources instead of looping or freezing.
 Check that the intended action finishes at the chosen cut point.
 
-**`sfx.tsv` = sound that plays only in that segment's stretch**. The audio file can be a wav
-or an mp4 (for a video, its sound is used), and leaving it blank with only `bgm` set to `off`
-drops just the music across that stretch. The timing reference is **when that visual
-appears**, not the sentence boundary — xfade starts playing the later input's 0-second mark at
-the offset, so aligning to the boundary puts the sound three or four syllables ahead of the
-picture. Ducking is keyed on the voice alone, so an effect doesn't push the BGM down. Each
-effect is measured and gained so its loudest moment sits `SFX_SEP` LU (6 by default) under the
-narration, and the BGM cut ramp is `BGM_GATE_R` (0.30s by default).
+**Music drops** are timed from the rendered first frame of the segment. A legacy
+`sfx.tsv` row can still mute music through its fourth column. Separate audience
+effects use the placed cue plan in `sfx-spans.json` and the measured reaction time.
+
 **Room tone (`amb.tsv`)** — `idx <TAB> audio file`, the room starting at that card and holding
 until the next row; a `-` in the file column ends it. Rendered by `bgm-bed.sh` like the music
 bed, gained to `AMB_SEP` LU (15 by default) under the narration, never ducked.
@@ -1045,11 +1018,6 @@ resolve finds an old `assets/outro.mp4` too. For the fonts of a requested subtit
 ASS styling (nothing is burned), copy the ttf files from
 `assets/fonts/` into `.work/fonts/` (woff2 won't work — without them the fontconfig fallback
 still gets you publish quality).
-
-The third column of `sfx.tsv` is a file path or a catalog id. With just an id, resolve it with
-`python3 "$ASSET" data/<channel> sfx <id>`. A generated effect is already there by this point — §3's SFX step
-made it from `window.SFX` and registered it — so an id that fails to resolve here is a step
-that was skipped, not a file to invent.
 
 ```bash
 $REF/build-reel.sh .work storyboard/    # → subtitle-free reel.mp4 · cover.jpg · build-report.txt; optional sidecar with SUB=1

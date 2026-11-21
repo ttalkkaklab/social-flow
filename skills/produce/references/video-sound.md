@@ -1,9 +1,9 @@
 # Model-aware effects
 
-Use this before any generated shot with `sound.effects`. Music selection is separate.
-The same sound intent has three owners: `native` (model output), `input` (already in
-the supplied waveform), or `post` (assembly). Never place a native/input effect in
-the post manifest too. A successful request is not evidence that the effect is audible.
+A shot’s video soundtrack carries the ambience and sounds made by visible actions.
+The separate effects track is for emotional cues for the audience, such as a surprise
+hit or a tension rise. Mark those with `sound.effects[].audience`. Music is scored
+separately. An approved request confirms generation, and playback confirms the sound.
 
 ## Author and prepare
 
@@ -32,32 +32,24 @@ model or mode; set effects back to `auto` if a new automatic routing decision is
 ASTRA's shot preparer also returns `soundPlan`; persist that resolved `sound` using this
 command before assembly. Do not feed a previously augmented prompt back into preparation.
 
-| Mode | Auto policy |
+| Mode | Scene sound |
 |---|---|
-| Seedance with audio support | Native effects and explicit generateAudio=true |
-| Explicit generateAudio=false | Post effects |
-| ASTRA ordinary generation | Native effects unless audio was explicitly disabled |
-| ASTRA audio2video | Post effects; its prompt cannot create an additional soundtrack |
-| ASTRA GenAI MSR | Native effects; audioSource=video always (speech is refused) |
-| sound.audioSource=speech | Post effects, retaining the authored speech source |
+| Seedance with audio support | Native sound and explicit generateAudio=true |
+| ASTRA ordinary generation | Native sound when enabled |
+| ASTRA GenAI MSR | The video supplies speech, effects and ambience |
+| Silent, audio-to-video or separate speech route | Keep the chosen speech source. Omit effects that the route cannot render |
 
-Legacy `{sfx, atSeconds}` entries stay post effects. They never silently enable a paid
-audio mode. Explicit unsupported native/input requests fail instead of pretending to work.
-Reference audio in Seedance is conditioning, not a promise of byte-identical preservation.
-When the shot has authored dialogue, the CLI defaults to audioSource=speech to preserve
-the existing voice. MSR is the exception (2026-10-30): its own speech-and-effects
-soundtrack is the cut's audio, voiced from the speaker's pinned sample when one rides on the
-subject image ([GenAI MSR](../../_shared/astra-genai.md#msr-and-v2-video)). Its lines get no
-TTS take: `speech_manage attach_video` binds the clip to their revisions (the `native` route)
-and sets audioSource=video. On other tools, selecting audioSource=video still requires the
-existing line/voice/video provenance for dialogue-bound shots; extraction is not a
-waiver of pinned speech contracts. On silent action shots, native audio is the default.
+Describe each action and its result in the prompt. A legacy cue with a description
+and trigger can be routed to native audio when the selected request allows it.
+Asset-only cues and cues on routes without native sound are omitted from the
+separate effect track. The result reports omissions. Existing conditioned audio
+can already contain sound, so keep its selected clip soundtrack intact. Reference
+audio in Seedance is conditioning and may change.
 
-For audio2video only, choose `delivery:'input'` when the sound must drive motion (a knock
-rhythm, for example). Mix it into the actual `audioPath` before calling the planner.
-The planner does not create or mix it. Describe which hand/object makes it. Review the
-mouth and contact timing; the previous one-seed experiment does not establish reliability
-for overlapping dialogue. Most dialogue-led shots should keep the post default.
+Authored dialogue stays on its existing speech lane. MSR carries dialogue in its
+own clip soundtrack, with the speaker’s pinned sample when available. Use
+`speech_manage attach_video` to bind that soundtrack to the dialogue revisions.
+For other tools, the speech and video provenance requirements still apply.
 
 ## Assembly and corrections
 
@@ -69,38 +61,17 @@ trim the card as one body, picture and sound together
 checks both streams and writes hash-bound extraction evidence to source-audio.json.
 It never silently falls back to TTS when the source audio is missing.
 
-The encoded feature must have a soundtrack with measurable signal. A generated shot
-card whose entire rendered interval is below −60 dBFS needs a repaired soundtrack or
-a post effect or ambience cue before delivery. This check uses the feature's shot
-timeline before separately spliced inserts. Deliberate silent-film builds use the
-existing `SILENT=1` mode. Signal measurements do not identify the intended sounds.
+The audio check measures the delivered soundtrack. If a generated clip is silent or
+missing an important scene sound, fix the native take or keep the documented speech
+route. A separate Foley file would duplicate the scene’s sound ownership. Generated
+cards end any authored room-tone bed at their boundary. Still cards may use an
+existing room tone when specified.
 
-Exact pinned speech and an independently editable native Foley stem are different
-requirements. If exact external speech must be retained, use `audioSource:'speech'` and
-post effects. Do not assume a mixed native soundtrack can be separated losslessly.
-
-After viewing the chosen take, resolve post entries to `{delivery:'post', sfx:'asset-id',
-atSeconds:3.33, separationLu:12}`. The time is relative to the final card/source, not
-the whole episode. Choose level for material, distance and dialogue; 12 LU is an example,
-not a global default. Unresolved assets/timing fail at assembly rather than silently
-placing the cue at zero. Native/input entries generate no sfx.tsv row.
-
-If a native effect is absent, change that event to post and supply the correction asset
-and observed contact time. Keep audioSource=video to preserve the rest of the soundtrack.
-If it is present but wrong, adding another impact will double it: edit/remove the old
-sound first or replace the soundtrack explicitly. The compiler cannot hear duplicates.
-Keep semantic quality `not_reviewed` until actual playback/listening; signal tests only
-establish presence, timing and level, not a convincing performance.
-
-Sources: [Seedance API](https://docs.byteplus.com/en/docs/modelark/create-video-generation-task-api),
-[LTX A2V](https://docs.ltx.io/open-source-model/usage-guides/audio-to-video).
-
-A silent retained soundtrack uses a -16 LUFS mixing reference for post effects and
-ambience; this is a fallback reference, not a measured speech level. The final
-loudness pass can change absolute gain. Check the resulting contact sound in context.
-If native/input ownership meets an unmanaged or edited `sfx.tsv`, reconcile those
-rows explicitly before rebuilding. The compiler preserves the conflicting file and
-reports it rather than silently replaying an old effect over the retained soundtrack.
+Resolve and place only audience cues in post. Use the accepted shot and its actual
+reaction time, then audition the mix at delivery level. The compiler resolves the
+cue’s asset and timing and reads only the music-off flags from a legacy `sfx.tsv`.
+Existing media and manual rows remain available. Signal checks establish level and
+timing. Playback establishes what the sound conveys.
 
 ## Audience effects
 

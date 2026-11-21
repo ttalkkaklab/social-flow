@@ -63,23 +63,26 @@ export function prepareVideoSound(tool, input, sound = {}) {
             throw new Error('Unknown Seedance model: ' + String(model));
         nativeAudio = spec.audio;
     }
-    const resolved = effects.map(effect => {
-        // An existing asset cue is a legacy post effect. Only new described intent opts into auto.
+    const warnings = [];
+    const canGenerateEffects = nativeAudio && input.generateAudio !== false && sound.audioSource !== 'speech';
+    const resolved = effects.flatMap(effect => {
         if (effect.audience && (effect.delivery === 'input' || effect.delivery === 'native'))
             throw new Error('audience_delivery_conflict: ' + effect.id + ' belongs in post');
-        const requested = effect.audience ? 'post' : effect.delivery ?? (effect.sfx ? 'post' : 'auto');
-        const delivery = requested === 'auto'
-            ? nativeAudio && input.generateAudio !== false && sound.audioSource !== 'speech' ? 'native' : 'post'
-            : requested;
+        const delivery = effect.audience ? 'post' : effect.delivery === 'input' ? 'input' : 'native';
+        if (!effect.audience && effect.delivery !== 'native' && effect.delivery !== 'input' &&
+            (!canGenerateEffects || !effect.description || !effect.trigger)) {
+            warnings.push(`Scene effect ${effect.id ?? effect.sfx ?? '(unnamed)'} omitted from post. Describe its action for a video model with native audio.`);
+            return [];
+        }
         if (delivery === 'native' && (!nativeAudio || input.generateAudio === false))
-            throw new Error('Native SFX unavailable in this mode or explicitly disabled; use post');
+            throw new Error('Native SFX unavailable in this mode or explicitly disabled');
         if (delivery === 'input' && !fixedInput)
             throw new Error('Input SFX require ASTRA audio2video; reference audio is not a preserved soundtrack');
         if (delivery !== 'post' && sound.audioSource === 'speech')
             throw new Error('Native/input SFX require audioSource=video; replacing it with speech discards the effects');
         if (delivery !== 'post' && (!effect.description || !effect.trigger))
             throw new Error('Native/input effects need description and trigger');
-        return { ...effect, delivery };
+        return [{ ...effect, delivery }];
     });
     const native = resolved.filter(effect => effect.delivery === 'native');
     const conditioned = resolved.filter(effect => effect.delivery === 'input');
@@ -87,8 +90,6 @@ export function prepareVideoSound(tool, input, sound = {}) {
         throw new Error('audioSource=video conflicts with a silent output; select speech/post or enable supported audio');
     if (native.length && /Audio:\s*silent\b/i.test(String(input.prompt)))
         throw new Error('Native SFX conflict with Audio: silent in the prompt; revise the authored sound direction');
-    if (sound.sfx && resolved.some(effect => effect.delivery !== 'post' && effect.sfx === sound.sfx))
-        throw new Error('The same effect cannot belong to the native/input soundtrack and the legacy post cue');
     const args = { ...input };
     // The genai audio-to-video soundtrack is always the supplied audio; it has no generateAudio switch.
     if ((native.length || conditioned.length || sound.audioSource === 'video') && (tool.startsWith('seedance_') || tool.startsWith('astra_') || tool === 'ltx_api_img2video') && !['astra_genai_audio2video', 'astra_genai_msr'].includes(tool)) {
@@ -110,11 +111,10 @@ export function prepareVideoSound(tool, input, sound = {}) {
     if (unknown.length)
         throw new Error('Unsupported adapter arguments: ' + unknown.join(', '));
     const audioSource = native.length || conditioned.length ? 'video' : sound.audioSource;
-    const warnings = [];
     if (conditioned.length)
         warnings.push('Input effects must already be mixed into audioPath. This planner does not synthesize or mix them; inspect their action and mouth alignment.');
     if (resolved.some(effect => effect.delivery === 'post' && (!effect.sfx || effect.atSeconds === undefined)))
-        warnings.push('Post effects need an asset and an observed shot-relative atSeconds before assembly.');
+        warnings.push('Audience effects need an asset and an observed shot-relative atSeconds before assembly.');
     if (native.length)
         warnings.push('Native audio is a mixed soundtrack. Do not overlay a second dialogue track; inspect missing or unwanted effects before acceptance.');
     return { tool, arguments: parsed, sound: { ...sound, ...(audioSource ? { audioSource } : {}), effects: resolved },
