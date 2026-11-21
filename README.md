@@ -385,9 +385,7 @@ subject viewpoint before rendering. See [asset sheets](skills/storyboard/referen
 
 ## Scene video generation
 
-Each generated scene has one prompt, approval and video request. Save the cast's positions in the actual opening image and the emotional change with `story_scene.videoDirection`. The planner reads the dialogue from all shot cards in order. Use `video_plan` with `sceneNo`, then the existing approval and execution tools. The storyboard scene header holds the direction, generated takes and their submitted prompts. [Scene generation workflow](skills/generate-cut-videos/SKILL.md)
-
-A scene's `videoDirection.camera` controls the take. Without it, a lone shot-card move uses that card's planned interval. Different moves that need a scene-level decision appear in `directionWarnings` with their shot IDs.
+Author each camera setup as a shot. Plan one request for all shots in a scene with `video_plan {episode, sceneNo, requestId}`. Each shot carries its incoming transition, frame interval, framing, action and image roles. The scene supplies opening positions, dialogue in playback order and one continuous soundtrack. A blocked plan identifies the exact shots and inputs that the selected adapter cannot transmit. [Scene generation workflow](skills/generate-cut-videos/SKILL.md) · [Adapter capabilities](skills/_shared/video-routing.md)
 
 ## Persistent 3D locations
 
@@ -1318,7 +1316,7 @@ episode goes cast (`storyboard/cast.json`: each character's `identity.md` and, u
 `voiceOnly`, its face, front and back panels) → story (`story_sequence` → `story_scene` → `story_shot`, the cliché decision with `story_cliche`) → each shot's characters and lines
 (`shot_characters`, with each one's expression → `shot_dialogue`) → each scene's music decision (`story_music`) → icon attributes (`shot_icons`) → props and
 backgrounds → each shot's start image, and the end image a first_last shot needs
-(`shot_image`, generate-cut-images) → each scene’s opening positions and emotion (`story_scene.videoDirection`) → one take per scene
+(`shot_image`, generate-cut-images) → each scene’s opening positions and emotion (`story_scene.videoDirection`) → one request per scene
 after the user's yes (`video_plan` → `video_approve` → `video_execute`, generate-cut-videos).
 `video_approve {auto:true}` records the user's approval of every shot.
 

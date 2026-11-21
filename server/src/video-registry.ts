@@ -94,17 +94,37 @@ export function parseVideoArgs(tool: string, input: Record<string, unknown>): Re
   for (const key of Object.keys(args)) if (!allowed.includes(key)) throw new Error('Unsupported ' + tool + ' argument: ' + key);
   return adapter.schema.parse(args) as Record<string, unknown>;
 }
+export const FRAME_FIELDS: Record<string, [string, string?]> = {
+  seedance_img2video: ['sourceImagePath', 'lastImagePath'], astra_img2video: ['firstFramePath', 'lastFramePath'],
+  astra_audio2video: ['imagePath'], astra_genai_img2video: ['imageUri', 'lastFrameUri'],
+  astra_genai_desktop_img2video: ['imagePath', 'lastFramePath'], astra_genai_desktop_audio2video: ['imagePath'],
+  astra_genai_audio2video: ['imagePath', 'lastFramePath'], mlx_video_generate: ['firstFrameImagePath', 'lastFrameImagePath'], ltx_video_generate: ['firstFrameImagePath', 'lastFrameImagePath'],
+  ...Object.fromEntries(Object.entries(HOSTED_VIDEO_ROUTES).flatMap(([tool, route]) => route.frames ? [[tool, route.frames]] : [])),
+  minimax_img2video: ['sourceImagePath', 'lastImagePath'], heygen_img2video: ['sourceImagePath', 'lastImagePath'],
+};
+export function sceneInputCapabilities(tool: string) {
+  const fields = FRAME_FIELDS[tool];
+  const schemaFields = VIDEO_ADAPTERS[tool] ? keys(VIDEO_ADAPTERS[tool].schema) : [];
+  return {
+    fpsField: schemaFields.includes('frameRate') ? 'frameRate' : schemaFields.includes('fps') ? 'fps' : null,
+    frameAccurateCuts: false, timedImages: ['astra_keyframe_video','astra_genai_desktop_keyframes'].includes(tool),
+    openingImage: Boolean(fields), endingImage: Boolean(fields?.[1]),
+    shotDescriptions: ['astra_genai_text2video','astra_genai_img2video'].includes(tool) ? 'gateway_prompt_only' : 'prompt',
+    sceneAudio: ['astra_genai_audio2video','astra_genai_desktop_audio2video','astra_audio2video','ltx_api_audio2video'].includes(tool),
+  };
+}
+
 export function videoCatalog() {
   return {
     version: 1,
     adapters: Object.entries(VIDEO_ADAPTERS).map(([tool, a]) => ({ tool, engine: a.engine, deployment: a.deployment, operation: a.operation,
-      voice: videoVoiceCapabilities(tool), ...(tool === 'mlx_video_generate' ? { deprecated: true, replacement: 'ltx_video_generate' } : {}),
+      sceneInputs: sceneInputCapabilities(tool), voice: videoVoiceCapabilities(tool), ...(tool === 'mlx_video_generate' ? { deprecated: true, replacement: 'ltx_video_generate' } : {}),
       fields: keys(a.schema), modelConstraints: HOSTED_VIDEO_ROUTES[tool] ? HOSTED_VIDEO_ROUTES[tool].modelConstraints : localVideoStrategy(tool) ? { frames: localVideoStrategy(tool)!.frames, note: tool === 'fasth3_omni_reference' ? '8 steps; 9 images, 3 videos, 3 audios, 12 total; visual reference required; 256 MiB RGB cap; no exact speech preservation.' : 'LTX 8k+1 frames; MLX-Serve backend.' } : a.engine === 'seedance' ? seedance.SEEDANCE_MODEL_SPECS :
         a.engine === 'astra-genai-desktop' ? { discovery: 'astra_genai_catalog', note: 'Gateway /models and /contracts specify installed matrices. I2V: start/end only; A2V: audio and optional start; keyframes: 1..10. LoRA only on text/keyframes; audio truncation defaults false.' } :
         tool === 'astra_genai_msr' ? { note: 'Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. Speech and effects are rendered natively; an optional character voice sample on subject 1 or 2 sets the timbre of that speaker, and the dialogue goes in the prompt.' } :
-        tool === 'astra_genai_audio2video' ? { models: ['ltx-2.5-22b-dev'], note: 'Length equals the audio, at most 361 frames per fps. Mono/stereo wav, mp3, m4a or ogg; 3+ channels 422. Sample rate kept: AAC standard 7350-96000 Hz only, others 422. Data URI at most 15,000,000 base64 characters.' } :
-        tool === 'astra_genai_img2video' ? { models: GENAI_VIDEO_MODELS, references: { subjects: 4, background: 1, model: 'ltx-2.5-22b-distilled', voiceSubjects: [1, 2], capability: '/v1/ltx/msr/capabilities:image_conditioning', voiceCapability: 'voice_references' }, note: 'Start image and optional end frame; additional references use the distilled MSR IC-LoRA with explicit duration. Dev takes start/end only. generateAudio:false removes the soundtrack. No intermediate keyframes or supplied speech.' } :
-        a.engine === 'astra-genai' ? { models: GENAI_VIDEO_MODELS, note: 'Explicit duration and resolution; server validates deployment limits. No supplied audio, keyframes or LoRA.' } :
+        tool === 'astra_genai_audio2video' ? { models: ['ltx-2.5-22b-dev'], note: 'One audio track plus optional start/end. No shots, timed keyframes or subject references. Length equals the audio, at most 361 frames per fps. Mono/stereo wav, mp3, m4a or ogg; 3+ channels 422. Sample rate kept: AAC standard 7350-96000 Hz only, others 422. Data URI at most 15,000,000 base64 characters.' } :
+        tool === 'astra_genai_img2video' ? { models: GENAI_VIDEO_MODELS, references: { subjects: 4, background: 1, model: 'ltx-2.5-22b-distilled', voiceSubjects: [1, 2], capability: '/v1/ltx/msr/capabilities:image_conditioning', voiceCapability: 'voice_references' }, note: 'Start image and optional end frame. Up to four shot descriptions request prompt-guided cuts without frame addresses; additional references use the distilled MSR IC-LoRA with explicit duration. Dev takes start/end only. generateAudio:false removes the soundtrack. No intermediate keyframes or supplied speech.' } :
+        a.engine === 'astra-genai' ? { models: GENAI_VIDEO_MODELS, note: 'Text and up to four shot descriptions. No frame-addressed cuts, supplied images, audio or keyframes.' } :
         a.engine === 'minimax' ? { models: Object.keys(MINIMAX_MODELS), note: 'MiniMax H3 open platform. 4-15 s (Max 5-15), 24 fps, native stereo audio always on. First/last frames and references never share a request: the reference lane sends the start image as its last picture, unpinned. Up to 9 pictures and 3 voice samples (2-15 s each, 15 s total); 5 pictures free (Max 2). No seed.' } :
         a.engine === 'heygen' ? { models: ['heygen-video-1'], note: 'HeyGen Video 1, a MiniMax H3 post-train. 480p/768p, 5-15 s with prompt enhancement disabled, native audio always on. Files upload to /v3/assets first. Reference voice behaviour comes from secondary sources only; the start image rides as the last picture, unpinned.' } :
         { note: 'Use video_plan; deployment-specific schema is authoritative' } })),

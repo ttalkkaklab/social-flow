@@ -1,0 +1,41 @@
+{
+  "scene": {
+    "fps": 24,
+    "openingPositions": [
+      {"character":"seorin","images":[],"position":"Off screen left, behind the stone planter."},
+      {"character":"mai-an","images":[],"position":"Off screen on the left walkway."},
+      {"character":"tu-vi","images":[],"position":"Off screen behind the spectators on the right."}
+    ],
+    "emotion": "The waiting crowd falls quiet. The three dancers exchange smiles as each arrives.",
+    "sound": "Street ambience before contact. The backing track plays across the second cut and rings out after the last accent.",
+    "audio": {
+      "path":"audio/wave-pop-play-cue.wav",
+      "cues":[
+        {"frame":42,"action":"The fingertip touches the play button on the first kick."},
+        {"frame":336,"action":"All three finger hearts land on the last accent."}
+      ]
+    }
+  },
+  "shots": [
+    {"scene":1,"summary":"관객이 빈 광장을 둘러싸고 기다린다.","timeline":{
+      "startFrame":0,"endFrame":42,"transition":"open","framing":"Wide, facing the ring of spectators.",
+      "action":"Keep the centre of the plaza empty. All three performers remain off screen.",
+      "images":[{"path":"images/opening.png","frame":0,"role":"start"}]
+    }},
+    {"scene":1,"summary":"손끝이 재생 버튼에 닿는 순간 음악이 시작된다.","timeline":{
+      "startFrame":42,"endFrame":52,"transition":"hard_cut","framing":"Close-up of the triangular play button.",
+      "action":"Open on contact. The spectator depresses the button and lifts their fingertip.",
+      "images":[{"path":"images/play-contact.png","frame":42,"role":"start"}]
+    }},
+    {"scene":1,"summary":"서린의 독무에 마이안과 투비가 차례로 합류하고 마지막 박에 셋이 손하트를 만든다.","timeline":{
+      "startFrame":52,"endFrame":360,"transition":"hard_cut","framing":"Front-facing full-body view of the plaza.",
+      "action":"Seorin steps in from the planter and dances solo. Keep this angle and the dancers' feet in frame through the final pose.",
+      "images":[
+        {"path":"images/solo.png","frame":52,"role":"start"},
+        {"path":"images/duo.png","frame":112,"role":"keyframe","cue":"Mai An joins Seorin from the left without breaking step."},
+        {"path":"images/trio.png","frame":191,"role":"keyframe","cue":"Tu Vi enters from the right. All three continue the same phrase."},
+        {"path":"images/ending.png","frame":336,"role":"end","cue":"Hold the three finger hearts through the musical tail."}
+      ]
+    }}
+  ]
+}

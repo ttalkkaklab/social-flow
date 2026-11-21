@@ -1,3 +1,4 @@
+import { SceneInputError } from './scene-video.js';
 import * as tiktok from './tiktok-client.js';
 import { upscaleCatalog, startUpscale, controlUpscale } from './video-upscale.js';
 import { existsSync } from 'node:fs';
@@ -9,7 +10,7 @@ import { generateLyriaSong, generateElevenMusic } from './music-song-client.js';
 import { IMAGE_ADAPTERS, imageCatalog } from './image-registry.js';
 import { planImage, imagePlanSummary, executeImage, routeLegacyImage, imageStatus } from './image-routing.js';
 import { videoStatus } from './video-routing.js';
-import { planVideo, executeVideo, routeLegacyVideo, approveVideo, videoPlanSchema } from './video-routing.js';
+import { planManagedVideo, executeVideo, routeLegacyVideo, approveVideo, videoPlanSchema } from './video-routing.js';
 import { VIDEO_ADAPTERS, videoCatalog } from './video-registry.js';
 import { routeSpeech, speechRouteSchema } from './tts-routing.js';
 import { hostReview } from './host-review.js';
@@ -1593,7 +1594,15 @@ ROUTES.video_plan = async (args) => {
     if (input.tool === 'astra_genai_msr' || input.tool === 'astra_genai_img2video' ||
         (!input.tool && (!input.operation || input.operation === 'reference' || input.operation === 'image')))
         await refreshGenaiMsrVoice();
-    return text(JSON.stringify(planVideo(input), null, 2));
+    try {
+        return text(JSON.stringify(await planManagedVideo(input), null, 2));
+    }
+    catch (error) {
+        if (!(error instanceof SceneInputError))
+            throw error;
+        return { ...text(JSON.stringify({ code: 'scene_inputs_unsupported', executable: false, tool: error.tool,
+                missing: error.missing, sceneRequest: error.sceneRequest }, null, 2)), isError: true };
+    }
 };
 ROUTES.video_execute = args => executeVideo(args, dispatchVideo);
 ROUTES.video_approve = async (args) => text(JSON.stringify(approveVideo(args), null, 2));

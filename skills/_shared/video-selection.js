@@ -31,6 +31,7 @@ function readVideoContext(episode, shotId, sceneNo) {
   const choice = s => resolveVideoChoice(production, s, snapshot?.config.models.video);
   let { selection, source } = choice(first);
   let shot = first;
+  let timed = false;
   if (scene) {
     if (!scene.videoDirection) throw new Error('scene_video_direction_missing: author videoDirection with story_scene');
     if (members.some(s => s.shot?.render?.mode && s.shot.render.mode !== 'generated_video'))
@@ -46,36 +47,31 @@ function readVideoContext(episode, shotId, sceneNo) {
       .map(c => typeof c === 'string' ? c : c.id)))];
     for (const id of people) if (!positions.some(p => p.character === id))
       throw new Error('openingPositions: describe where ' + id + ' starts, including an off-screen start');
-    const pinned = selection.engine === 'astra-genai' && selection.model === 'ltx-2.5-22b-distilled' &&
+    timed = Boolean(members.length > 1 || scene.videoDirection.audio || scene.videoDirection.oneTake || scene.videoDirection.fps ||
+      members.some(s => s.timeline || s.visual?.frames?.keyframes || s.visual?.frames?.storyboardKeyframes));
+    const pinned = !scene.videoDirection.audio && selection.engine === 'astra-genai' && selection.model === 'ltx-2.5-22b-distilled' &&
       ['reference','image',undefined].includes(selection.operation);
-    if (pinned) selection = { ...selection, operation: 'image' };
+    if (scene.videoDirection.audio && !selection.operation && selection.engine !== 'host') selection = { ...selection, operation: 'audio' };
+    else if (!selection.operation && ['astra','astra-genai-desktop'].includes(selection.engine) && members.length === 1 &&
+        (first.timeline?.images?.some(p => p.role === 'keyframe' || p.role === 'end' && p.frame !== first.timeline.endFrame - 1) ||
+        first.visual?.frames?.keyframes?.length || first.visual?.frames?.storyboardKeyframes?.length > 2))
+      selection = {...selection,operation:'keyframe'};
+    else if (pinned) selection = { ...selection, operation: 'image' };
     else if (!selection.operation && selection.engine !== 'host') {
       selection = { ...selection, operation: visual.frames?.mode === 'reference' ? 'reference' : 'image' };
     }
-    if (!visual.frames?.start) throw new Error('scene_video_opening_required: select the first member’s opening image');
+    const opening = first.timeline?.images?.find(p => p.role === 'start')?.path ?? visual.frames?.start;
+    if (!timed && !opening && !['text','audio'].includes(selection.operation)) throw new Error('scene_video_opening_required: select the first member’s opening image');
     if (scene.videoOpeningSha256) {
-      const bytes = fs.readFileSync(path.resolve(root, 'storyboard', visual.frames.start));
+      const bytes = fs.readFileSync(path.resolve(root, 'storyboard', opening));
       if (crypto.createHash('sha256').update(bytes).digest('hex') !== scene.videoOpeningSha256)
         throw new Error('openingPositions stale: inspect the new opening frame and update story_scene.videoDirection');
     }
-    const frames = pinned ? { mode: 'first', start: visual.frames.start } : { ...visual.frames };
-    // Only the last member can constrain the ending of a multi-shot scene.
-    const last = members[members.length - 1].visual?.frames;
-    if (members.length > 1 || pinned) {
-      delete frames.keyframes;
-      delete frames.end;
-      if (frames.mode === 'first_last') frames.mode = 'first';
-      if (last?.mode === 'first_last' && last.end) Object.assign(frames, {mode:'first_last', end:last.end});
-    }
+    // A timed scene maps each original member in the planner. Only legacy single shots use this projection.
+    const frames = pinned && !timed && visual.frames?.mode === 'reference' ? { mode: 'first', start: opening } : { ...visual.frames };
     const refs = [...(visual.references ?? [])];
-    for (const member of members.slice(1)) {
-      for (const ref of member.visual?.references ?? []) {
-        if (ref.role === 'character' && ['video','both'].includes(ref.use) &&
-            !refs.some(r => r.path === ref.path && ['video','both'].includes(r.use))) refs.push(ref);
-      }
-    }
     let references = refs;
-    if (pinned) {
+    if (pinned && !timed) {
       const principals = positions.filter(p => p.images?.length).sort((a,b) => Math.min(...a.images) - Math.min(...b.images));
       if (principals.length && fs.existsSync(path.join(root, 'storyboard/cast.json'))) {
         const { canonicalReferences } = require('../channel/references/character-panels.js');
@@ -112,7 +108,7 @@ function readVideoContext(episode, shotId, sceneNo) {
   const spoken = (shot.narration || []).filter(line => typeof line.tts === 'string' && line.tts.trim());
   const speechOnly = ['astra-genai', 'minimax', 'heygen'].includes(selection.engine) && selection.operation === 'reference' ||
     selection.engine === 'ltx-api' && selection.operation === 'audio';
-  if (speechOnly &&
+  if (speechOnly && !scene?.videoDirection?.audio &&
       !spoken.some(line => line.delivery === 'on_screen' || line.delivery === 'off_screen'))
     selection = { ...selection, operation: 'image' };
   if (selection.engine === 'veo' && !selection.operation) {
@@ -121,7 +117,7 @@ function readVideoContext(episode, shotId, sceneNo) {
     selection = { ...selection, operation };
   }
   return { episode: root, shotId, selection, source, snapshotRevision: snapshot?.revision || null,
-    ...(scene ? {sceneNo, shotIds: members.map(s => s.id), sceneDirection: scene.videoDirection, sceneMembers: members} : {}),
+    ...(scene ? {sceneNo, timed, shotIds: members.map(s => s.id), sceneDirection: scene.videoDirection, sceneMembers: members} : {}),
     revision: hash({ ...(scene ? {sceneNo, direction: scene.videoDirection, members} : {}), selection, source, snapshotRevision: snapshot?.revision, overrides, imagePlan: { frames: shot.visual?.frames, references: shot.visual?.references, bg: shot.visual?.bg }, shotPrompt: shot.visual?.video?.prompt, shotLines: videoLines(shot), authorization: production.videoAuthorization,
       budget: production.videoBudgetUsd, approval: production.approval, maxAttempts: production.maxAttempts }),
     lines: videoLines(shot), production, board, shot };

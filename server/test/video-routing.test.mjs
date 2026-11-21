@@ -168,13 +168,13 @@ test('spoken Seedance reference scene requests native audio and the off-screen s
  assert.match(p.args.prompt,/Wait for me/);
  assert.throws(()=>planVideo({...input,args:{generateAudio:false}}),/scene_dialogue_audio_required/);
 });
-test('overlapping scene and shot requests share the attempt limit for every member', async t => {
+test('overlapping scene and shot requests share the member attempt limit', async t => {
  for (const sceneFirst of [false,true]) {
   const f=fixture(t,selection,{maxAttempts:1});
   f.board.STRUCTURE={scenes:[{no:1,videoDirection:{openingPositions:[],emotion:'The lake is calm.'}}]};
   fs.writeFileSync(path.join(f.episode,'storyboard','lake.png'),png);
   for (const shot of f.board.SCENES) {
-   shot.scene=1; shot.duration=4;
+   shot.scene=shot.id === 's2' ? 1 : 2; shot.duration=4;
    shot.visual.frames={mode:'first',start:'lake.png'};
    shot.visual.video.prompt='The lake is calm.';
   }
@@ -697,7 +697,7 @@ test('a hosted reference lane takes the spoken shot from the board: panels, the 
  assert.equal(path.basename(silent.args.sourceImagePath),'start.png');
 });
 
-test('sceneNo plans one pinned clip for two ordered dialogue shots and revalidates the whole scene', async t => {
+test('sceneNo refuses a second pinned angle on I2V and preserves ordered dialogue on a legacy single-shot board', async t => {
  const f = fixture(t, {engine:'astra-genai',model:'ltx-2.5-22b-distilled',resolution:'576x1024',operation:'reference'});
  const positions = [
   {character:'witness',images:[1],position:'standing at the near witness rail'},
@@ -727,8 +727,18 @@ test('sceneNo plans one pinned clip for two ordered dialogue shots and revalidat
  }
  f.save();
  const input={episode:f.episode,sceneNo:1,requestId:'whole-scene',args:{reserveUsd:0.1}};
+ assert.throws(()=>planVideo(input),error => error.missing.some(m => m.shotId === 's2' && m.input === 'image' && m.frame === 96));
+ assert.throws(()=>planVideo({...input,sceneNo:undefined,shotId:'s2'}),/scene_video_scope/);
+ // The older single-camera board has one shot with both turns and both opening reference panels.
+ const [first, second] = f.board.SCENES;
+ first.duration += second.duration;
+ first.narration.push(...second.narration);
+ first.visual.character.push(...second.visual.character);
+ first.visual.references.push(...second.visual.references);
+ f.board.SCENES = [first];
+ f.save();
  const plan=planVideo(input);
- assert.deepEqual(plan.shotIds,['s1','s2']);
+ assert.deepEqual(plan.shotIds,['s1']);
  assert.equal(plan.args.duration,9); assert.equal(plan.sceneNo,1);
  assert.equal(plan.tool,'astra_genai_img2video'); assert.match(plan.args.imageUri,/^data:image\/png/);
  assert.equal(plan.args.references.length,3);
@@ -736,36 +746,6 @@ test('sceneNo plans one pinned clip for two ordered dialogue shots and revalidat
  assert.match(plan.args.prompt,/heir \(Image 2, Audio 2\): "왜 그랬어요\?"[\s\S]+witness \(Image 1, Audio 1\): "제가 찢었습니다\."/);
  assert.equal(plan.args.prompt.split(words[0]).length,2);
  assert.doesNotMatch(plan.args.prompt,/hard cut|camera holds|tripod|gets to his feet|walk over/i);
- // Only the second card moves. Its turn starts four seconds into the scene.
- const moving={movement:'pan right along the rail',speed:'slow',target:'the heir',end:'The heir fills the right third.'};
- f.board.SCENES[0].visual.camera={movement:'static'};
- f.board.SCENES[1].visual.camera=moving;
- f.save();
- const pan=planVideo({...input,requestId:'scene-pan'});
- assert.match(pan.args.prompt,/4[^\n]*9 s[^\n]*pan right along the rail/i);
- assert.match(pan.args.prompt,/the heir fills the right third/i);
- assert.doesNotMatch(pan.args.prompt,/holds a static frame/);
- assert.equal(pan.directionBindings.find(b=>b.attribute==='move').via,'prompt');
- await f.execute(pan,async (tool,args)=>{
-  assert.equal(tool,'astra_genai_img2video');
-  assert.equal(args.prompt,pan.args.prompt);
-  return result;
- });
- f.board.SCENES[0].visual.camera={movement:'dolly out'};
- f.save();
- const conflict=planVideo({...input,requestId:'two-moves'});
- assert.match(conflict.directionWarnings.join(),/scene_camera_unresolved.*s1.*s2/);
- assert.doesNotMatch(conflict.args.prompt,/pulls back|pan right/i);
- direction.camera='Hold both people in the same wide shot.';
- f.save();
- const explicit=planVideo({...input,requestId:'scene-hold'});
- assert.ok(explicit.args.prompt.includes(direction.camera));
- assert.doesNotMatch(explicit.args.prompt,/pulls back|pan right/i);
- assert.deepEqual(explicit.directionWarnings,[]);
- await assert.rejects(f.execute(pan,async()=>assert.fail('superseded camera submitted')),/stale/);
- delete direction.camera;
- for (const shot of f.board.SCENES) delete shot.visual.camera;
- f.save();
  assert.throws(()=>planVideo({...input,shotId:'s1'}),/sceneNo or shotId/);
  assert.throws(()=>planVideo({...input,args:{duration:3}}),/video_duration_short/);
  approveVideo({episode:f.episode,planIds:[plan.id],request:'Approve this whole scene'});
@@ -778,7 +758,7 @@ test('sceneNo plans one pinned clip for two ordered dialogue shots and revalidat
  });
  await f.execute(plan,async()=>assert.fail('duplicate scene submission'));
  assert.equal(calls,1);
- f.board.SCENES[1].narration[0].tts='다른 대사'; f.save();
+ f.board.SCENES[0].narration[1].tts='다른 대사'; f.save();
  assert.throws(()=>approveVideo({episode:f.episode,planIds:[plan.id],request:'old'}),/stale/);
  await assert.rejects(f.execute(plan,async()=>assert.fail('stale scene submitted')),/stale/);
 });

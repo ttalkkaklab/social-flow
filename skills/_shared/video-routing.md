@@ -33,7 +33,30 @@ selected resolution without adding unsupported width/height fields.
 Remote URL contents cannot be pinned; use immutable provider assets or local files.
 Re-plan after changes. No network submission occurs during planning.
 
-A scene plan reads `STRUCTURE.scenes[].videoDirection`, the first card’s opening image and the ordered dialogue and lengths of every member card. Omit `args.prompt`. Changing a later member invalidates the scene plan.
+### Scene frames and adapter inputs
+
+Write one shot per camera setup. A cut from a wide to a hand insert, or a reverse angle, starts a new card. A pan, tilt, dolly, zoom or entrance during continuous filming stays on its card. Set `videoDirection.oneTake` only for an explicitly uninterrupted scene. A duration or generation count does not specify the number of shots.
+
+`story_scene.videoDirection.fps` sets the scene clock (default 24). Each `story_shot.timeline` records `startFrame` inclusive, `endFrame` exclusive, the incoming `transition` (open, hard_cut, dissolve or fade), and English `framing` and `action`. The board assigns stable shot IDs. Each `images[]` entry has a storyboard-relative `path`, scene `frame` and `role` (start, keyframe, end, face or outfit). Face/outfit entries name their `character`. An optional English `cue` describes the action at that frame. An ending pose may begin before the last frame. In one shot, keyframes guide continuous motion. At a cut the new setup must appear at the first frame of the next shot. Describe entrances on the shot timeline, including anyone who starts off screen.
+
+`videoDirection.audio` names one scene-length file with any lead-in mixed in. Its `cues` pair scene frame numbers with actions. Frame 42 at 24 fps means 1.75 seconds from the beginning of the file. A post-production music selection alone does not request model conditioning. Omit `args.prompt` and `args.shots`. The planner compiles the scene from every card. It collects existing frame pairs, intermediate pins and video references as well as explicit timeline entries. Conflicting temporal pins require a storyboard correction.
+
+A single continuous shot with intermediate guides selects the indexed keyframe route on Desktop or direct ASTRA when the saved model leaves the operation open. An explicit operation still governs. Veo Standard and Fast accept up to three scene-wide subject pictures in an eight-second reference-only request; the Lite model has no reference route. Keep the cast’s opening positions and later entrances in the scene direction.
+
+**LTX contracts checked 2026-11-21**
+
+| Operation | Images and cuts | Audio accepted in the same request |
+|---|---|---|
+| GenAI v2 T2V | Prompt plus 2–4 optional shot descriptions. Later shots can request a hard cut in text. No per-shot frame address or image. | Generated sound or mute. |
+| GenAI v2 I2V, dev | First/last plus the same shot descriptions. No intermediate image slots. | Generated sound or mute. |
+| GenAI v2 I2V, distilled | First/last and, with explicit duration and MSR image conditioning, subject references (up to four subjects plus one background). The two leading subjects can carry voice samples with backend support. Reference indices identify subjects. | Generated sound or mute. Voice samples condition identity. No supplied soundtrack slot. |
+| GenAI v2 A2V, dev | Optional first image and an optional last with the first. No shot descriptions, intermediate pins, reference panels or frame-addressed cut boundaries. | One supplied track sets the duration. |
+| Desktop T2V / I2V / A2V | T2V takes text. I2V takes first/last. A2V takes an optional first image. None declares timed cuts or subject slots. | A2V takes one supplied track. |
+| Desktop keyframes / direct ASTRA keyframes | Respectively 1–10 / 2–8 images with frame indices. Temporal conditioning interpolates within a shot. Neither operation exposes a frame-addressed hard cut. | No supplied track in the keyframe request. Desktop also requires an active compatible offering. |
+
+The production [OpenAPI](https://genai.astravision.co.kr/openapi.json) exposes `VideoShot.description`, optional `audio` (text) and `transition`; the [gateway mapper](https://github.com/ASTRA-TECHNOLOGY-COMPANY-LIMITED/genai-gateway/blob/330717ba568710cac2f14130c32de6e52f90adb1/gateway/adapters/video_local.py#L141) converts those entries into prompt sentences. The official [LTX pipelines](https://github.com/Lightricks/LTX-2/blob/main/packages/ltx-pipelines/docs/pipelines.md) support indexed image conditioning and zero-blend chunk seams. The official [A2V implementation](https://github.com/Lightricks/LTX-2/blob/main/packages/ltx-pipelines/src/ltx_pipelines/a2vid_two_stage.py) accepts images alongside conditioning audio. These Python inputs and chunk seams do not supply arbitrary frame-addressed cuts in the v2 HTTP API.
+
+`scene_inputs_unsupported` reports the complete requested scene and every unmapped input. No executable plan ID is issued. A gateway for the full busking scene needs to expose and implement timed images, two frame-addressed cuts and one continuous supplied track together, retaining identity references separately when requested. The offline multipart adapter in the EP01 regression exercises that contract without publishing an endpoint or submitting a job. A compatible subset, such as a one-shot A2V with first/last images, uses the real adapter and its existing request body.
 
 GenAI I2V on `ltx-2.5-22b-distilled` can combine a first image, optional last
 image and four subject references plus one background. `video_plan` keeps the
