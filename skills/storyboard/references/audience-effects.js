@@ -20,13 +20,16 @@ function boardClock(board, dir, channel) {
   const episode = path.dirname(dir), parent = path.dirname(episode);
   channel ??= path.basename(parent) === 'episodes' ? path.dirname(parent) : episode;
   const soundAssets = new Map();
+  const sourceDurations = new Map();
   const files = new Map(), cuts = new Map();
   // verify-assembled and splice-clip insert b-roll at its position in SCENES.
   const order = board.SCENES || [];
+  const marked = board.STORY?.audienceSoundVersion === 1;
   // Reused ids identify one timbre and one file, even when the shots phrase their directions differently.
   const firstDescription = new Map();
   for (const shot of order) for (const effect of Array.isArray(shot?.sound?.effects) ? shot.sound.effects : []) {
-    if (effect?.audience && effect.description && !firstDescription.has(effect.sfx))
+    if (effect?.audience && (effect.audience.source === 'music' || (marked && !board.SFX?.[effect.sfx]?.asset)) &&
+        effect.description && !firstDescription.has(effect.sfx))
       firstDescription.set(effect.sfx, effect.description);
   }
   function media(name) {
@@ -73,14 +76,14 @@ function boardClock(board, dir, channel) {
   }
   function sourceFor(effect) {
     const id = effect.sfx;
-    const marked = board.STORY?.audienceSoundVersion === 1;
+    const music = effect.audience.source === 'music';
     const entry = Object.hasOwn(board.SFX || {}, id) ? board.SFX[id] : undefined;
-    if (!marked) return catalogAsset(entry?.asset || id);
+    if (!marked && !music) return catalogAsset(entry?.asset || id);
     if (typeof id !== 'string' || !/^[a-z0-9][a-z0-9-]*$/.test(id) ||
         (entry?.asset != null && (typeof entry.asset !== 'string' || !/^[a-z0-9][a-z0-9-]*$/.test(entry.asset))))
       throw new Error('audience_asset_id_invalid: use a lowercase catalog id');
-    if (entry?.asset) return catalogAsset(entry.asset);
-    if (!entry?.prompt) {
+    if (!music && entry?.asset) return catalogAsset(entry.asset);
+    if (!music && !entry?.prompt) {
       const existing = catalogAsset(id);
       if (existing.available || existing.lookupError) return existing;
     }
@@ -104,12 +107,29 @@ function boardClock(board, dir, channel) {
     if (a < 0 || b < a || order.slice(a, b + 1).some(s => ['broll','outro'].includes(s.type))) invalid('missing, reversed or spliced card');
     const s = order[a], last = order[b], start = effect.atSeconds;
     if (!Number.isFinite(start) || start < 0 || (Number.isFinite(s.duration) && start >= s.duration)) invalid('start outside shot');
+    if (effect.sourceStartSeconds != null && (!Number.isFinite(effect.sourceStartSeconds) || effect.sourceStartSeconds < 0)) invalid('invalid source audio in-point');
+    const fadeIn = effect.fadeInSeconds ?? 0;
+    if (!Number.isFinite(fadeIn) || fadeIn < 0) invalid('invalid entrance fade');
+    if (effect.sourceStartSeconds > 0 || fadeIn > 0) {
+      const source = sourceFor(effect);
+      if (source.available) {
+        if (!sourceDurations.has(source.path)) {
+          const probe = spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', source.path], { encoding: 'utf8' });
+          sourceDurations.set(source.path, probe.status === 0 ? Number(probe.stdout.trim()) : NaN);
+        }
+        const duration = sourceDurations.get(source.path);
+        const sourceStart = Math.round((effect.sourceStartSeconds ?? 0) * 48000) / 48000;
+        if (!Number.isFinite(duration) || sourceStart >= duration)
+          invalid('source audio in-point outside readable asset');
+        if (fadeIn > duration - sourceStart + 1e-8) invalid('entrance fade exceeds remaining source audio');
+      }
+    }
     if (!effect.end) { if (effect.fadeOutSeconds != null) invalid('a fade needs an end'); return; }
     const offset = effect.end.atSeconds;
     if (offset !== 'end' && (!Number.isFinite(offset) || offset < 0 || (Number.isFinite(last.duration) && offset > last.duration))) invalid('end outside shot');
     const end = offset === 'end' ? last.duration : offset;
     const elapsed = order.slice(a, b).reduce((t, item) => t + (item.duration ?? NaN), 0) + end - start;
-    if (elapsed <= 0 || (effect.fadeOutSeconds ?? 0) > elapsed || !(Number.isFinite(effect.fadeOutSeconds ?? 0) && (effect.fadeOutSeconds ?? 0) >= 0)) invalid('empty interval or fade exceeds span');
+    if (elapsed <= 0 || fadeIn > elapsed + 1e-8 || (effect.fadeOutSeconds ?? 0) > elapsed || !(Number.isFinite(effect.fadeOutSeconds ?? 0) && (effect.fadeOutSeconds ?? 0) >= 0)) invalid('empty interval or fade exceeds span');
   }
   function row(shotId, effect) {
     const currentTimingBasis = basis(shotId, effect, effect.end?.shotId);
@@ -117,7 +137,7 @@ function boardClock(board, dir, channel) {
     if (status === 'placed') { try { bounds(shotId, effect); } catch { status = 'stale'; } }
     const source = sourceFor(effect);
     return { shotId, id: effect.id, intent: effect.audience.intent, trigger: effect.trigger, sfx: effect.sfx,
-      atSeconds: effect.atSeconds, end: effect.end, caseId: effect.audience.caseId, status, currentTimingBasis, placedTimingBasis: effect.audience.timingBasis,
+      atSeconds: effect.atSeconds, sourceStartSeconds: effect.sourceStartSeconds, fadeInSeconds: effect.fadeInSeconds, end: effect.end, caseId: effect.audience.caseId, status, currentTimingBasis, placedTimingBasis: effect.audience.timingBasis,
       source: { ...source, sha256: media(source.path)?.[1] ?? null }, listening: 'not_reviewed' };
   }
   return { basis, bounds, row };
@@ -167,15 +187,15 @@ function patch(board, dir, args) {
     } else {
       const e = { ...old, id, delivery: 'post', audience: { ...old?.audience } };
       if (op.op === 'plan') {
-        for (const k of ['sfx','intent','trigger','description','caseId','release','intensity','separationLu']) {
-          const target = ['intent','caseId','release'].includes(k) ? e.audience : e;
+        for (const k of ['sfx','intent','trigger','description','caseId','release','source','intensity','separationLu']) {
+          const target = ['intent','caseId','release','source'].includes(k) ? e.audience : e;
           if (op[k] === null) delete target[k]; else if (op[k] !== undefined) target[k] = op[k];
         }
         if (![e.sfx,e.description,e.trigger,e.audience.intent].every(v => typeof v === 'string' && v.trim()))
           fail('audience_plan_invalid', shotId, id, 'new plan needs sfx, description, trigger and intent');
       } else {
         if (!old) fail('audience_plan_invalid', shotId, id, 'plan this effect first');
-        for (const k of ['end','fadeOutSeconds']) {
+        for (const k of ['end','fadeOutSeconds','sourceStartSeconds','fadeInSeconds']) {
           if (op[k] === null) delete e[k]; else if (op[k] !== undefined) e[k] = op[k];
         }
         e.atSeconds = op.atSeconds;

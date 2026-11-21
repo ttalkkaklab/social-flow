@@ -30692,7 +30692,7 @@ import * as path2 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.124.0",
+  version: "0.124.1",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -33371,6 +33371,7 @@ var audienceEffectsSchema = external_exports.array(external_exports.discriminate
     trigger: audienceId.optional(),
     description: audienceId.optional(),
     release: audienceId.nullish(),
+    source: external_exports.literal("music").nullish().describe("Use the saved music model for this event, including on a legacy board. Omit to keep its choice or set null to restore the board default."),
     caseId: external_exports.string().regex(/^(00[1-9]|0[1-9]\d|1[01]\d|120)$/).nullish(),
     intensity: external_exports.enum(["subtle", "normal", "strong"]).nullish(),
     separationLu: seconds.max(30).nullish()
@@ -33380,7 +33381,9 @@ var audienceEffectsSchema = external_exports.array(external_exports.discriminate
     op: external_exports.literal("place"),
     atSeconds: seconds,
     timingBasis: external_exports.string().regex(/^[a-f0-9]{64}$/),
+    sourceStartSeconds: seconds.nullish().describe("Start within the full source audio, in seconds. Omit to keep the current in-point or use null to play from zero."),
     end: external_exports.object({ shotId: shotIdSchema, atSeconds: external_exports.union([seconds, external_exports.literal("end")]) }).strict().nullish(),
+    fadeInSeconds: seconds.nullish(),
     fadeOutSeconds: seconds.nullish()
   }).strict(),
   external_exports.object({ ...audienceKey, op: external_exports.literal("remove") }).strict()
@@ -34185,10 +34188,13 @@ var effectSchema = external_exports.object({
     intent: external_exports.string().trim().min(1),
     caseId: external_exports.string().optional(),
     release: external_exports.string().optional(),
+    source: external_exports.literal("music").optional(),
     timingBasis: external_exports.string().optional()
   }).strict().optional(),
   end: external_exports.object({ shotId: external_exports.string().min(1), atSeconds: external_exports.union([external_exports.number().finite().nonnegative(), external_exports.literal("end")]) }).strict().optional(),
+  fadeInSeconds: external_exports.number().finite().nonnegative().optional(),
   fadeOutSeconds: external_exports.number().finite().nonnegative().optional(),
+  sourceStartSeconds: external_exports.number().finite().nonnegative().optional(),
   intensity: external_exports.enum(["subtle", "normal", "strong"]).optional()
 }).strict();
 var schemas = {

@@ -17,10 +17,11 @@ const effectSchema = z.object({
   sfx: z.string().min(1).optional(),
   atSeconds: z.number().finite().nonnegative().optional(),
   separationLu: z.number().finite().min(0).max(30).optional(),
-  audience: z.object({ intent: z.string().trim().min(1), caseId: z.string().optional(), release: z.string().optional(),
+  audience: z.object({ intent: z.string().trim().min(1), caseId: z.string().optional(), release: z.string().optional(), source: z.literal('music').optional(),
     timingBasis: z.string().optional() }).strict().optional(),
   end: z.object({ shotId: z.string().min(1), atSeconds: z.union([z.number().finite().nonnegative(), z.literal('end')]) }).strict().optional(),
-  fadeOutSeconds: z.number().finite().nonnegative().optional(),
+  fadeInSeconds: z.number().finite().nonnegative().optional(), fadeOutSeconds: z.number().finite().nonnegative().optional(),
+  sourceStartSeconds: z.number().finite().nonnegative().optional(),
   intensity: z.enum(['subtle', 'normal', 'strong']).optional(),
 }).strict();
 const schemas: Record<string, z.ZodTypeAny> = {

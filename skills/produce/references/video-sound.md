@@ -127,14 +127,25 @@ Use the parts the scene earns. In this cut the drone needs 3.20 s of sound; an e
 alone cannot extend a shorter recording. Listen for the rise, peak and decay within each
 WAV and use the accepted shots' timings for placement.
 
-Read the planned event in `storyboard_read` at level `shots`. On a new board `source.kind`
+Read the planned event in `storyboard_read` at level `shots`. Its `source.kind`
 is `catalog` for a reused sound or `music` for an original instrumental cue.
+When adding a drone to an existing edit, set `source:"music"` on that event's
+`storyboard_apply.audienceEffects` plan. Its music prompt comes from
+`sfxEntries[id].prompt` or the description of the musical cue. Earlier events keep
+their original sources. Leave the board version as written.
 For a music source, follow [music routing](../../_shared/music-routing.md).
 Pass its `directory`, `assetId` and `requestId` to `music_plan`; pass its `outputPath`
 and `filename` inside `args`. Use its `prompt` and requested length in the selected
 adapter's native arguments. Ask for enough vocal-free material through the release.
 Execute within the approved allocation and check `music_status` after an interruption.
-Once the WAV is available, reread the cue's timing basis and place it. A scene scored
+Once the WAV is available, reread the cue's timing basis and place it. If the recording
+opens with silence or a later passage fits the reaction, set `sourceStartSeconds` on
+`op:"place"`. For example, `atSeconds:0.4, sourceStartSeconds:5.75` starts the sound
+0.4 s into the trimmed shot and plays from 5.75 s into the original WAV. To bring in
+a sustained tone gradually, add `fadeInSeconds` within the length of the excerpt.
+Listen to the entrance and release with the dialogue. The original WAV and music receipt
+keep their full length.
+A scene scored
 with no BGM can still use this audience cue. The post
 mixer places the WAV only on the audience track. When the take already supplies a door,
 footstep or room tone, keep its soundtrack. For a changed timbre, choose a new asset ID.

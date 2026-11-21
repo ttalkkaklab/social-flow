@@ -383,6 +383,8 @@ event IDs, `sfx`, `intent`, the sound's shape in `description`, the visible or s
 and the moment it should release. For an original drone, riser or stinger give the saved
 music model an instrumental direction in `sfxEntries[id].prompt`. Describe the entrance,
 rise and decay around the reaction. The same model can score the BGM separately.
+On an older board, set `source:"music"` on this event's `plan` operation. Record
+`audienceSound` on its scene as usual. The board's version and the sources of its other cues stay as written.
 Preserve action and room sounds already in the approved video. One cue may carry a change across a cut. Place it on
 the accepted footage with `op:"place"`. [Placement and comparison](../produce/references/video-sound.md#audience-effects)
 

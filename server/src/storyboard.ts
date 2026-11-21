@@ -336,10 +336,13 @@ const seconds = z.number().finite().nonnegative();
 export const audienceEffectsSchema = z.array(z.discriminatedUnion('op', [
   z.object({ ...audienceKey, op: z.literal('plan'), sfx: cueId.optional(), intent: audienceId.optional(),
     trigger: audienceId.optional(), description: audienceId.optional(), release: audienceId.nullish(),
+    source: z.literal('music').nullish().describe('Use the saved music model for this event, including on a legacy board. Omit to keep its choice or set null to restore the board default.'),
     caseId: z.string().regex(/^(00[1-9]|0[1-9]\d|1[01]\d|120)$/).nullish(),
     intensity: z.enum(['subtle','normal','strong']).nullish(), separationLu: seconds.max(30).nullish() }).strict(),
   z.object({ ...audienceKey, op: z.literal('place'), atSeconds: seconds, timingBasis: z.string().regex(/^[a-f0-9]{64}$/),
+    sourceStartSeconds: seconds.nullish().describe('Start within the full source audio, in seconds. Omit to keep the current in-point or use null to play from zero.'),
     end: z.object({ shotId: shotIdSchema, atSeconds: z.union([seconds, z.literal('end')]) }).strict().nullish(),
+    fadeInSeconds: seconds.nullish().describe('Fade up over this many seconds of the playable excerpt. Omit to keep it or use null to clear it.'),
     fadeOutSeconds: seconds.nullish() }).strict(),
   z.object({ ...audienceKey, op: z.literal('remove') }).strict(),
 ])).min(1);

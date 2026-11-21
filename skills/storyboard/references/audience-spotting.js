@@ -3,6 +3,8 @@
   'use strict';
   function cueStatus(shotId, effect, row) {
     const matches = row && row.shotId === shotId && row.id === effect.id && row.atSeconds === effect.atSeconds &&
+      (row.sourceStartSeconds ?? 0) === (effect.sourceStartSeconds ?? 0) &&
+      (row.fadeInSeconds ?? 0) === (effect.fadeInSeconds ?? 0) &&
       row.sfx === effect.sfx && row.trigger === effect.trigger && row.placedTimingBasis === effect.audience.timingBasis &&
       row.end?.shotId === effect.end?.shotId && row.end?.atSeconds === effect.end?.atSeconds;
     return matches ? row.status : effect.atSeconds == null ? 'planned' : 'timing_unchecked';

@@ -1956,6 +1956,59 @@ it('keeps scene sound decisions through story and structure writes without marki
   assert.deepEqual(report.scenes.map(s => s.decision), ['unrecorded', 'unrecorded']);
 });
 
+it('adds music to one legacy event while an earlier catalog cue stays placed over the original soundtrack', () => {
+  const episode = tmp(), dir = join(episode, 'storyboard'), work = join(episode, '.work');
+  const catalog = join(episode, 'assets/audio/sfx');
+  mkdirSync(dir); mkdirSync(catalog, { recursive: true });
+  writeFileSync(join(catalog, 'hum.wav'), 'old catalog hum');
+  const native = { id: 'hinge', sfx: 'hinge', delivery: 'native', trigger: 'door opens', description: 'a squeak' };
+  const old = { id: 'prior', sfx: 'hum', delivery: 'post', trigger: 'door closes', description: 'air hiss',
+    audience: { intent: 'she feels alone' }, atSeconds: 1 };
+  const shots = board().map((s, i) => ({ ...s, id: 's000' + (i + 1) }));
+  shots[0].sound = { audioSource: 'video', effects: [native, old] };
+  const legacy = { STRUCTURE: structure([scene(1), scene(2)]), SCENES: shots };
+  const { boardClock } = createRequire(import.meta.url)('../../skills/storyboard/references/audience-effects.js');
+  old.audience.timingBasis = boardClock(legacy, dir).basis(shots[0].id, old);
+  writeFileSync(join(dir, 'scenes.js'), serializeBoard(legacy));
+  const apply = extra => applyStoryboard(storyboardApplySchema.parse({ path: dir, expectedSha256: readBoard(dir).sha256, ...extra }));
+  const read = () => readStoryboard(storyboardReadSchema.parse({ path: dir, level: 'shots', includeTechniques: false })).audienceEffects;
+  const plan = { op: 'plan', id: 'recognition', shotId: shots[0].id, sfx: 'hum', source: 'music',
+    description: 'low rising drone', trigger: 'a second name comes into view', intent: 'share her suspicion' };
+  assert.equal(apply({ scenes: [scene(1, { audienceSound: { decision: 'use', reason: 'She recognises the signature.' } })],
+    audienceEffects: [plan] }).written, true);
+  let [prior, added] = read();
+  assert.deepEqual([prior.status, prior.source.kind, added.status, added.source.kind], ['placed', 'catalog', 'planned', 'music']);
+  assert.equal(added.source.prompt, plan.description);
+  mkdirSync(join(work, 'music/audience'), { recursive: true });
+  execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'sine=frequency=180:duration=0.5', added.source.path]);
+  const key = { shotId: plan.shotId, id: plan.id };
+  const place = { op: 'place', ...key, atSeconds: 1.5, timingBasis: read()[1].currentTimingBasis };
+  assert.throws(() => apply({ audienceEffects: [{ ...place, sourceStartSeconds: .25, fadeInSeconds: .4 }] }), /entrance fade/);
+  apply({ audienceEffects: [{ ...place, sourceStartSeconds: .25, fadeInSeconds: .12 }] });
+  apply({ audienceEffects: [place] });
+  assert.equal(read()[1].sourceStartSeconds, .25);
+  assert.equal(read()[1].fadeInSeconds, .12);
+  const compiler = createRequire(import.meta.url).resolve('../../skills/produce/references/compile-sound-plan.js');
+  execFileSync(process.execPath, [compiler, join(dir, 'scenes.js'), work, episode], { stdio: 'pipe' });
+  const spans = JSON.parse(readFileSync(join(work, 'sfx-spans.json'))).spans;
+  assert.deepEqual(spans.map(s => [s.id, s.assetPath]), [[old.id, prior.source.path], [plan.id, added.source.path]]);
+  assert.equal(spans[1].sourceStartSeconds, .25);
+  assert.equal(spans[1].fadeInSeconds, .12);
+  apply({ audienceEffects: [{ ...place, sourceStartSeconds: null, fadeInSeconds: null }] });
+  assert.equal(read()[1].sourceStartSeconds, undefined);
+  assert.equal(read()[1].fadeInSeconds, undefined);
+  const result = readBoard(dir).win;
+  assert.equal(result.STORY, undefined);
+  assert.deepEqual(result.SCENES[0].sound.effects.slice(0, 2), [native, old]);
+  assert.equal(result.SCENES[0].sound.audioSource, 'video');
+  assert.equal(result.SCENES[0].sound.effects[2].audience.source, 'music');
+  apply({ audienceEffects: [{ op: 'plan', ...key, intent: 'recognition' }] });
+  assert.equal(read()[1].status, 'placed');
+  apply({ audienceEffects: [{ op: 'plan', ...key, source: null }] });
+  [prior, added] = read();
+  assert.deepEqual([prior.status, added.status, added.source.kind], ['placed', 'stale', 'catalog']);
+});
+
 it('plans, retimes and removes only the audience event; take bytes and end shots bind the placement', () => {
   const dir = tmp(), shots = board();
   shots[0].visual = {video:{clip:'selected.mp4'}};

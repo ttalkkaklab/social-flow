@@ -1463,7 +1463,7 @@ function check(win, fmt, opts) {
         }
         const id = typeof effect.sfx === 'string' ? effect.sfx.trim() : '';
         if (!id) bad(at, 'has no sfx');
-        else {
+        else if (!(effect.audience && (effect.audience.source === 'music' || win.STORY?.audienceSoundVersion === 1))) {
           const book = win.SFX && typeof win.SFX === 'object' && !Array.isArray(win.SFX) ? win.SFX : null;
           if (book && !Object.prototype.hasOwnProperty.call(book, id))
             bad(at, `sfx "${id}" is not in window.SFX — the builder has no file to place`);
@@ -2549,6 +2549,10 @@ function selftest() {
      has(bads(run([cover, Object.assign({}, goodShot, { sound: {
        effects: [{ sfx: 'whoosh', atSeconds: 6 }]
      } }), ctaShot], { SFX: { whoosh: { prompt: 'short soft whoosh' } } })), /outside this 6s shot/));
+  const originalDrone = { id: 'pressure', sfx: 'drone', trigger: 'she looks up', description: 'low pulse',
+    delivery: 'post', audience: { intent: 'share her fear', source: 'music' } };
+  ok('an original audience cue can use its description as its music prompt on a legacy board',
+     !has(bads(run([cover, { ...goodShot, sound: { effects: [originalDrone] } }, ctaShot], { SFX: {} })), /not in window\.SFX/));
   ok('a music silence window passes while full-silence scope is refused',
      (() => {
        const pass = run([cover, Object.assign({}, goodShot, { sound: {

@@ -195,7 +195,9 @@ scenes.forEach((shot, idx) => {
       if (placed.status !== 'placed') die(`audience_timing_stale: ${shot.id}/${item.id}`);
       const separationLu = item.separationLu ?? intensitySeparation[item.intensity || 'normal'];
       if (!Number.isFinite(separationLu) || separationLu < 0 || separationLu > 30) die('invalid audience separationLu');
-      audienceSpans.push({ shotId: shot.id, id: item.id, assetPath: file, separationLu,
+      audienceSpans.push({ shotId: shot.id, id: item.id, assetPath: file, sourceSha256: placed.source.sha256, separationLu,
+        ...(item.sourceStartSeconds == null ? {} : { sourceStartSeconds: item.sourceStartSeconds }),
+        ...(item.fadeInSeconds == null ? {} : { fadeInSeconds: item.fadeInSeconds }),
         start: { shotId: shot.id, atSeconds: item.atSeconds }, end: item.end, fadeOutSeconds: item.fadeOutSeconds });
       return;
     }

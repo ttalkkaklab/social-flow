@@ -4052,11 +4052,20 @@ leaves room tone (`sound.ambience`) and music (`scene.music`) under their own co
 `sound.effects[].audience` stores `intent`, optional `caseId` (001–120), `release`, and the
 observed `timingBasis`. The event has a stable `id`, `sfx`, `trigger` and `description`, with
 `delivery:"post"`. Optional `end:{shotId,atSeconds}` accepts a number or `"end"`;
-`fadeOutSeconds` fades that event at its end. Playback stops when the WAV runs out. Choose
+`fadeOutSeconds` fades that event at its end. On `place`, optional `sourceStartSeconds`
+chooses the in-point within the original WAV. It defaults to zero. Set `fadeInSeconds`
+for a gradual entrance within the playable excerpt. A cut into the source uses at least
+a one-millisecond fade. Omit either field on a later placement to keep it, or pass
+`null` to clear it. Playback stops when the WAV runs out. Choose
 a WAV long enough to reach the release, with any rising pitch, swell or changing texture
 already in the recording. For a new instrumental cue write its music direction in
 `sfxEntries[id].prompt`. The detailed board read returns its source for the saved music
 model. Its WAV plays independently of `MUSIC.$timeline`. A registered channel sound
 can be reused with `sfxEntries[id].asset`. Keep physical sounds already present in the
 selected video on its soundtrack. Plan, place and remove through `storyboard_apply.audienceEffects`.
+On an existing board, `{op:"plan",source:"music",...}` sets `effect.audience.source` on
+that event alone. It uses the saved music model even when the same ID exists in the
+channel catalog. Omit `source` on a later edit to keep the choice or pass `null` to
+restore the board's default. A scene's `audienceSound` records the editorial decision
+independently. Both edits work on older boards with no `STORY.audienceSoundVersion`.
 See [situations](audience-sound/index.md) and [production timing](../../produce/references/video-sound.md#audience-effects).
