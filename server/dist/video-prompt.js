@@ -53,7 +53,7 @@ export function compileVideoPrompt(shot, source, names = {}, options = {}) {
     const states = [...new Set((Array.isArray(motion.beats) ? motion.beats : []).map(beat => text(object(beat).state)).filter(Boolean))];
     const performance = planVideoPerformance(shot, { ...options, mode });
     const acting = load('../../skills/_shared/scene-acting.js');
-    const beats = acting.performanceBeats(performance.performance, mode, !msr);
+    const beats = acting.performanceBeats(performance.performance, mode, !msr && !options.bindDialogueSeparately);
     const worn = expressionWords(shot, names);
     // Cast seen without a line and unnamed extras (shot_characters): the opening picture carries them, the prompt keeps them.
     const called = (id) => names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id;

@@ -63,6 +63,12 @@ function characterKey(file) {
 export function hasStructuredImages(shot) {
     return imageRouting().hasStructuredImages(shot);
 }
+export function hasSubjectInput(references) {
+    return Array.isArray(references) && references.some(ref => ref && typeof ref === 'object' && !ref.background);
+}
+export function hasVideoSubjectReferences(shot) {
+    return imageRouting().imageReferences(shot).some(ref => ref.role !== 'background' && ['video', 'both'].includes(ref.use));
+}
 /** Compile authored image roles into adapter arguments; never downgrade a temporal constraint to a reference. */
 export function prepareVideoImages(tool, input, shot, episode) {
     const visual = (shot.visual ?? {});

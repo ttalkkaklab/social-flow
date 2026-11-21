@@ -75,6 +75,30 @@ test('I2V references retain their v2 route and frame fields, and unsupported bac
   await assert.rejects(generateGenaiVideo('image-to-video',args),error=>error.terminal===true);
   assert.equal(posts,1);
 });
+test('I2V keeps the opening frame and both subject voice slots in a single request', async t => {
+  const dir = setup(t);
+  const refs = [1, 2].map(n => ({ imageUri: `https://example.com/${n}.png`, audioUri: `https://example.com/${n}.wav` }));
+  const args = { ...base, imageUri: 'https://example.com/start.png', references: refs, outputPath: dir };
+  for (const references of [[{ ...refs[0], background: true }, refs[1]], [refs[0], refs[1], refs[0]]])
+    assert.equal(genaiImageToVideoSchema.safeParse({ ...args, references }).success, false);
+  let voices = false, posts = 0;
+  globalThis.fetch = async (url, options) => {
+    if (String(url).endsWith('/msr/capabilities')) return Response.json({ image_conditioning: true, voice_references: voices });
+    if (options.method === 'POST') {
+      posts++;
+      const body = JSON.parse(options.body);
+      assert.equal(body.image_uri, args.imageUri);
+      assert.deepEqual(body.references.map(r => [r.image_uri, r.audio_uri]), refs.map(r => [r.imageUri, r.audioUri]));
+      return Response.json({ id: 'pinned' }, { status: 202 });
+    }
+    return Response.json({ id: 'pinned', status: 'failed', error: 'fixture' });
+  };
+  await assert.rejects(generateGenaiVideo('image-to-video', args), /msr_voice_unsupported/);
+  assert.equal(posts, 0);
+  voices = true;
+  await assert.rejects(generateGenaiVideo('image-to-video', args), e => e.terminal === true);
+  assert.equal(posts, 1);
+});
 test('v2 negatives travel only when set and only where the gateway has a negative pass', async t => {
   const { genaiAudioToVideoSchema, buildGenaiAudioBody } = await import('../dist/astra-genai-video.js');
   const negativePrompt = 'has_subtitles, captions, text overlays', imageUri = 'https://example.com/start.png';

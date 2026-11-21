@@ -3,6 +3,11 @@ import { NATIVE_GENAI_TOOLS } from './astra-genai-native-tools.js';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { GENAI_VIDEO_MODELS } from './astra-genai-video.js';
 
+const subjectVoice = {
+  audioPath: { type: 'string', description: 'Local voice sample (wav, mp3, m4a, ogg) for this subject; subjects 1 and 2 only. Voice only, no background sound.' },
+  audioUri: { type: 'string', description: 'HTTPS or audio data URI voice sample, instead of audioPath.' },
+};
+
 const output = {
   outputPath: { type: 'string', description: 'Local output directory; configured production keeps outputs inside its episode/workspace.' },
   filename: { type: 'string', description: 'Bare output filename (.mp4 for video, .png for image). Reuse its receipt after interruption; never overwrite existing media.' },
@@ -33,7 +38,7 @@ export const GENAI_TOOLS: Tool[] = [
     description: 'Generate and save an MP4 through the unified ASTRA GenAI LTX v2 gateway. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY, a separate gk_ token from ASTRA_VIDEO. Persists job identity before polling; recover the same receipt after timeout. Supports text only; for a supplied audio track use astra_genai_audio2video. No LoRA, retake or keyframes. Legacy astra_text2video remains a separate server adapter.',
     inputSchema: { type: 'object', properties: video, required: ['prompt', 'model', 'duration', 'resolution', 'reserveUsd'], additionalProperties: false }, annotations: generation },
   { name: 'astra_genai_img2video', title: 'Generate GenAI LTX video from an image URI',
-    description: 'Generate an MP4 from a start image, optional end and subject references.\nUse for image-to-video, first/last-frame animation and character or object reference guidance. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Give exactly one imageUri or imagePath. Optional references are separate from the start/end frames: 1..4 subject images and at most one background, supported on ltx-2.5-22b-distilled with explicit duration and a backend advertising combined MSR image conditioning. The selected distilled weights run with the MSR IC-LoRA; generateAudio:false removes the generated soundtrack. Dev supports start/end without additional references. No intermediate keyframes. Do NOT use for supplied speech or recovery — use astra_genai_audio2video or astra_genai_video_status. Returns: jobId, status, videoPath, downloaded, review and receiptPath; resume that receipt without resubmitting.',
+    description: 'Generate an MP4 from a start image, optional end and subject references.\nUse for image-to-video, first/last-frame animation and character or object reference guidance. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Give exactly one imageUri or imagePath. Optional references are separate from the start/end frames: 1..4 subject images and at most one background, supported on ltx-2.5-22b-distilled with explicit duration and a backend advertising combined MSR image conditioning. Subjects 1 and 2 can each carry a voice sample (audioPath or audioUri) for native dialogue while imagePath pins the first frame. The selected distilled weights run with the MSR IC-LoRA; generateAudio:false removes the generated soundtrack. Dev supports start/end without additional references. No intermediate keyframes. Do NOT use for supplied speech or recovery — use astra_genai_audio2video or astra_genai_video_status. Returns: jobId, status, videoPath, downloaded, review and receiptPath; resume that receipt without resubmitting.',
     inputSchema: { type: 'object', properties: { ...video,
       imageUri: { type: 'string', description: 'Public HTTPS PNG/JPEG URL or PNG/JPEG data URI. Mutually exclusive with imagePath.' },
       imagePath: { type: 'string', description: 'Local PNG/JPEG start image (at most 32 MiB, 4096 px per side), sent as a data URI.' },
@@ -44,6 +49,7 @@ export const GENAI_TOOLS: Tool[] = [
           imageUri: { type: 'string', description: 'HTTPS/data PNG/JPEG reference, e.g. https://example.com/hero.png; exclusive with imagePath.' },
           imagePath: { type: 'string', description: 'Local PNG/JPEG reference, e.g. /tmp/hero.png; exclusive with imageUri.' },
           background: { type: 'boolean', default: false, description: 'True for the single background reference, e.g. true; false for subjects.' },
+          ...subjectVoice,
         }, oneOf: [{ required: ['imageUri'] }, { required: ['imagePath'] }], additionalProperties: false,
       } },
       // Only with references: they run on the MSR backend, which needs one of these to evaluate negativePrompt.
@@ -103,8 +109,7 @@ export const GENAI_TOOLS: Tool[] = [
           imageUri: { type: 'string', description: 'Public HTTPS PNG/JPEG or data URI.' },
           imagePath: { type: 'string', description: 'Local PNG/JPEG path, instead of imageUri.' },
           background: { type: 'boolean', default: false, description: 'Marks the single background reference; put it last.' },
-          audioPath: { type: 'string', description: 'Local voice sample (wav, mp3, m4a, ogg) for this subject; subjects 1 and 2 only. Voice only, no background sound.' },
-          audioUri: { type: 'string', description: 'HTTPS or audio data URI voice sample, instead of audioPath.' },
+          ...subjectVoice,
         }, additionalProperties: false,
       } },
       referenceStrength: { type: 'number', minimum: 0, maximum: 1, default: 1, description: 'Reference adherence strength.' },

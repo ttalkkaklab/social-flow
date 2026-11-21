@@ -12,6 +12,7 @@ export interface PromptOptions {
   mode?: string;
   measureAudio?: (line: Record<string, unknown>) => number | null;
   validateLanguage?: boolean;
+  bindDialogueSeparately?: boolean;
 }
 export function planVideoPerformance(shot: Record<string, unknown>, options: PromptOptions = {}): PerformancePlan {
   const acting = load('../../skills/_shared/scene-acting.js') as {
@@ -70,7 +71,7 @@ export function compileVideoPrompt(shot: Record<string, unknown>, source: VideoP
   const states = [...new Set((Array.isArray(motion.beats) ? motion.beats : []).map(beat => text(object(beat).state)).filter(Boolean))];
   const performance = planVideoPerformance(shot, { ...options, mode });
   const acting = load('../../skills/_shared/scene-acting.js') as { performanceBeats(plan: unknown[], mode: string, dialogue: boolean): string[]; VIDEO_TEXT_POLICY: string };
-  const beats = acting.performanceBeats(performance.performance, mode, !msr);
+  const beats = acting.performanceBeats(performance.performance, mode, !msr && !options.bindDialogueSeparately);
   const worn = expressionWords(shot, names);
   // Cast seen without a line and unnamed extras (shot_characters): the opening picture carries them, the prompt keeps them.
   const called = (id: string) => names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id;

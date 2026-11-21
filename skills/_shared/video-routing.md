@@ -51,7 +51,9 @@ It saves original `sourceArgs` separately from the compiled request and records
 `voiceContinuity` with hashes, warnings and four independent `not_reviewed` fields.
 Revalidation includes dialogue, acting, cast voice settings and sample bytes.
 The catalog's `voice.lane` is `reference` (sample imitation), `supplied` (animates supplied
-speech) or `none`, with `voice.dialogue: allowed|refused`. `video_plan` refuses a spoken cut
+speech), `conditional_reference` (GenAI distilled I2V with subject images) or `none`.
+For the conditional lane, `voice.dialogue` is `requires_subject_references`. Keep the opening
+frame in `imagePath` and place each voice sample in its subject reference’s `audioPath`. `video_plan` refuses a spoken cut
 on a `none` lane as `voice_lane_required`; narration over a non-speaking picture passes on any
 adapter. These fields never certify perceptual consistency or exact lip sync.
 

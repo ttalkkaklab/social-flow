@@ -753,9 +753,9 @@
       "deployment": "genai-ltx-v2",
       "operation": "image",
       "voice": {
-        "lane": "none",
-        "dialogue": "refused",
-        "voiceReference": "unsupported",
+        "lane": "conditional_reference",
+        "dialogue": "requires_subject_references",
+        "voiceReference": "backend_dependent_with_subject_references",
         "suppliedSpeech": "unsupported",
         "exactAudioPreservation": false,
         "review": "not_reviewed"
@@ -790,7 +790,12 @@
           "subjects": 4,
           "background": 1,
           "model": "ltx-2.5-22b-distilled",
-          "capability": "/v1/ltx/msr/capabilities:image_conditioning"
+          "voiceSubjects": [
+            1,
+            2
+          ],
+          "capability": "/v1/ltx/msr/capabilities:image_conditioning",
+          "voiceCapability": "voice_references"
         },
         "note": "Start image and optional end frame; additional references use the distilled MSR IC-LoRA with explicit duration. Dev takes start/end only. generateAudio:false removes the soundtrack. No intermediate keyframes or supplied speech."
       }

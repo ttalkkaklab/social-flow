@@ -23,7 +23,7 @@ import { priceOf, recordUsage } from './usage-ledger.js';
 import { videoEvents } from './video-events.js';
 import { getGenaiVideoStatus, genaiMsrSchema, buildGenaiMsrBody, buildGenaiAudioBody, genaiAudioToVideoSchema, genaiMsrVoiceReferences, refreshGenaiMsrVoice, genaiV2Resolution } from './astra-genai-video.js';
 import { GenaiRequestError } from './astra-genai-client.js';
-import { prepareVideoImages } from './video-image-inputs.js';
+import { hasSubjectInput, hasVideoSubjectReferences, prepareVideoImages } from './video-image-inputs.js';
 import { prepareVideoVoice } from './video-voice.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { compileVideoPrompt } from './video-prompt.js';
@@ -296,8 +296,10 @@ export function planVideo(raw) {
         performanceInputs[file] = audio.sha256;
         return seconds;
     };
+    const bindDialogueSeparately = tool === 'astra_genai_img2video' && !silentPicture && input.args.generateAudio !== false &&
+        (hasVideoSubjectReferences(shot) || hasSubjectInput(input.args.references));
     const compiled = input.args.prompt === undefined && video?.promptSource
-        ? compileVideoPrompt(shot, video.promptSource, names, { mode, measureAudio }) : undefined;
+        ? compileVideoPrompt(shot, video.promptSource, names, { mode, measureAudio, bindDialogueSeparately }) : undefined;
     const authored = compiled?.prompt ?? video?.prompt;
     let callArgs = input.args.prompt === undefined && typeof authored === 'string' ? { ...input.args, prompt: authored } : input.args;
     if (silentPicture && (supportsAudioToggle || tool === 'minimax_img2video' || tool === 'heygen_img2video')) {
@@ -499,7 +501,7 @@ export async function executeVideo(raw, dispatch) {
     const context = routingContext(episode, plan.shotId);
     if (context.revision !== plan.contextRevision)
         throw new Error('video_plan_stale: the shot\'s frames, prompt, lines, selection or authorization changed');
-    if (plan.tool === 'astra_genai_msr')
+    if (plan.tool === 'astra_genai_msr' || (plan.tool === 'astra_genai_img2video' && plan.voiceContinuity?.strategy === 'reference_voice'))
         await refreshGenaiMsrVoice();
     const refreshed = planVideo({ episode, shotId: plan.shotId, requestId: plan.requestId, tool: plan.tool, args: plan.sourceArgs ?? plan.args, purpose: plan.purpose, basedOnRequestId: plan.basedOnRequestId, changeNote: plan.changeNote });
     if (refreshed.id !== id)

@@ -1,3 +1,4 @@
+import { hasSubjectInput } from './video-image-inputs.js';
 import { fasth3VideoAudioCount } from './fasth3-omni.js';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, realpathSync } from 'node:fs';
@@ -189,7 +190,11 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
 } {
   const args = { ...input };
   const lines = (Array.isArray(context.shot.narration) ? context.shot.narration : []).map(object).filter(line => text(line.tts));
-  const msr = tool === 'astra_genai_msr';
+  const pinnedMsr = tool === 'astra_genai_img2video' && args.generateAudio !== false &&
+    hasSubjectInput(args.references) && lines.some(line => line.delivery === 'on_screen' || line.delivery === 'off_screen');
+  if (pinnedMsr && lines.some(line => line.delivery === 'voiceover'))
+    throw new Error('msr_speech_route: split physical dialogue and inner thoughts into separate shots');
+  const msr = tool === 'astra_genai_msr' || pinnedMsr;
   // The hosted reference lanes speak the shot's dialogue from the prompt as MSR does (reference-frame prompts carry no lines).
   const vendor = VENDOR_REFERENCE_TOOLS.includes(tool);
   // MSR renders authored dialogue and voiceover into its own soundtrack; a pinned sample, when the
@@ -206,7 +211,7 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
   // FastH3 and the hosted MiniMax/HeyGen lanes always render a soundtrack.
   const audible = msr || ((tool !== 'astra_genai_desktop_keyframes' || args.audio === true) && (tool === 'fasth3_omni_reference' || tool.startsWith('minimax_') || tool.startsWith('heygen_') ||
     (tool.startsWith('astra_') ? args.generateAudio !== false : args.generateAudio === true)));
-  const lane = VIDEO_ADAPTERS[tool]?.voice ?? 'none';
+  const lane = msr ? 'reference' : VIDEO_ADAPTERS[tool]?.voice ?? 'none';
   const supplied = lane === 'supplied';
   const onScreen = lines.some(line => line.delivery === 'on_screen');
   const native = !supplied && audible && (msr || vendor || nativeSlot || onScreen);

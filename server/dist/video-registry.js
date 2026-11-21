@@ -83,7 +83,7 @@ export function videoCatalog() {
                 a.engine === 'astra-genai-desktop' ? { discovery: 'astra_genai_catalog', note: 'Gateway /models and /contracts specify installed matrices. I2V: start/end only; A2V: audio and optional start; keyframes: 1..10. LoRA only on text/keyframes; audio truncation defaults false.' } :
                     tool === 'astra_genai_msr' ? { note: 'Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. Speech and effects are rendered natively; an optional character voice sample on subject 1 or 2 sets the timbre of that speaker, and the dialogue goes in the prompt.' } :
                         tool === 'astra_genai_audio2video' ? { models: ['ltx-2.5-22b-dev'], note: 'Length equals the audio, at most 361 frames per fps. Mono/stereo wav, mp3, m4a or ogg; 3+ channels 422. Sample rate kept: AAC standard 7350-96000 Hz only, others 422. Data URI at most 15,000,000 base64 characters.' } :
-                            tool === 'astra_genai_img2video' ? { models: GENAI_VIDEO_MODELS, references: { subjects: 4, background: 1, model: 'ltx-2.5-22b-distilled', capability: '/v1/ltx/msr/capabilities:image_conditioning' }, note: 'Start image and optional end frame; additional references use the distilled MSR IC-LoRA with explicit duration. Dev takes start/end only. generateAudio:false removes the soundtrack. No intermediate keyframes or supplied speech.' } :
+                            tool === 'astra_genai_img2video' ? { models: GENAI_VIDEO_MODELS, references: { subjects: 4, background: 1, model: 'ltx-2.5-22b-distilled', voiceSubjects: [1, 2], capability: '/v1/ltx/msr/capabilities:image_conditioning', voiceCapability: 'voice_references' }, note: 'Start image and optional end frame; additional references use the distilled MSR IC-LoRA with explicit duration. Dev takes start/end only. generateAudio:false removes the soundtrack. No intermediate keyframes or supplied speech.' } :
                                 a.engine === 'astra-genai' ? { models: GENAI_VIDEO_MODELS, note: 'Explicit duration and resolution; server validates deployment limits. No supplied audio, keyframes or LoRA.' } :
                                     a.engine === 'ltx-api' ? { models: ['ltx-2-5-pro', 'ltx-2-5-fast'], note: 'Official LTX API. I2V: 6/8/10 s (Fast at 720p/1080p, 24/25 fps: 6-20 s), first and optional last frame, 7 MB inline images. A2V: the supplied track sets the length (2-10 s; Fast at 720p/1080p up to 20 s), billed on audio seconds. No voice reference, seed or negative prompt.' } :
                                         a.engine === 'minimax' ? { models: Object.keys(MINIMAX_MODELS), note: 'MiniMax H3 open platform. 4-15 s (Max 5-15), 24 fps, native stereo audio always on. First/last frames and references never share a request: the reference lane sends the start image as its last picture, unpinned. Up to 9 pictures and 3 voice samples (2-15 s each, 15 s total); 5 pictures free (Max 2). No seed.' } :
@@ -99,15 +99,15 @@ export function videoVoiceCapabilities(tool) {
     if (!adapter)
         throw new Error('Unsupported video tool: ' + tool);
     return {
-        lane: adapter.voice,
-        dialogue: adapter.voice === 'none' ? 'refused' : 'allowed',
-        voiceReference: adapter.voice !== 'reference' ? 'unsupported' : ['astra_genai_msr', 'heygen_reference'].includes(tool) ? 'backend_dependent' : 'supported',
+        lane: tool === 'astra_genai_img2video' ? 'conditional_reference' : adapter.voice,
+        dialogue: tool === 'astra_genai_img2video' ? 'requires_subject_references' : adapter.voice === 'none' ? 'refused' : 'allowed',
+        voiceReference: tool === 'astra_genai_img2video' ? 'backend_dependent_with_subject_references' : adapter.voice !== 'reference' ? 'unsupported' : ['astra_genai_msr', 'heygen_reference'].includes(tool) ? 'backend_dependent' : 'supported',
         suppliedSpeech: adapter.voice === 'supplied' ? 'audio_conditioned_reencoded' : 'unsupported',
         exactAudioPreservation: false,
         review: 'not_reviewed',
     };
 }
-export function speechVideoCapabilities(provider, model, operation) {
+export function speechVideoCapabilities(provider, model, operation, subjectReferences = false) {
     if (['veo', 'omni'].includes(provider) || (provider === 'seedance' && !Object.hasOwn(seedance.SEEDANCE_MODEL_SPECS, model)))
         throw new Error(`video_engine_unsupported: ${provider} ${model} cannot keep a character's voice; choose a video model again with project_manage`);
     // MSR voices the dialogue written in its prompt; no line audio goes in (2026-10-31).
@@ -116,7 +116,7 @@ export function speechVideoCapabilities(provider, model, operation) {
         return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: 'Native speech from the prompt dialogue with an optional voice sample; voice identity is imitation, not preserved audio' };
     if (provider === 'ltx-api' && operation === 'audio')
         return { provider, model, audioConditioning: true, lipSync: false, postLipSync: false, evidence: 'LTX API audio-to-video conditions on the supplied track; preservation and mouth sync unverified' };
-    if (provider === 'astra-genai' && operation === 'reference')
+    if (provider === 'astra-genai' && (operation === 'reference' || (operation === 'image' && model === 'ltx-2.5-22b-distilled' && subjectReferences)))
         return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: 'MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio' };
     if (provider === 'astra-genai-desktop')
         return { provider, model, audioConditioning: true, lipSync: false, postLipSync: false, evidence: 'Gateway A2V reencodes supplied audio; timing/voice identity not guaranteed; installed model capabilities must be checked' };
