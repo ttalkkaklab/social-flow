@@ -40,7 +40,7 @@ export function characterPanelRequest(raw) {
     const identityPath = path.resolve(args.identityPath), folder = path.dirname(identityPath), id = path.basename(folder);
     if (path.basename(identityPath) !== 'identity.md' || path.basename(path.dirname(folder)) !== 'characters' || path.basename(path.dirname(path.dirname(folder))) !== 'assets')
         throw new Error('character_path_invalid: identityPath must be <channel>/assets/characters/<id>/identity.md');
-    const { identityCharacter, panelPrompt } = shared('_shared/character-identity.js');
+    const { identityCharacter, panelPrompt, headsTall } = shared('_shared/character-identity.js');
     const character = identityCharacter(readFileSync(identityPath, 'utf8'), { ready: false });
     const panelsFile = path.join(folder, 'panels.json');
     const panels = (existsSync(panelsFile) ? JSON.parse(readFileSync(panelsFile, 'utf8')).panels : undefined) ?? {};
@@ -74,6 +74,8 @@ export function characterPanelRequest(raw) {
     const negativePrompt = [NEGATIVE[args.view], args.negativePrompt].filter(Boolean).join(', ');
     const call = imageCall({ directory: workspace, assetId: `${id}-${args.view}`, inputs: references, prompt, negativePrompt, width, height, outDir: folder, stem: `${id}-${args.view}`, what: 'this panel' });
     const warnings = [...(call.negativeSent ? [] : ['no tested negative-prompt setting for this model; exclusions must be expressed in the main prompt']), ...words.skipped.map((field) => `${field} is not English and stays out of the prompt — write it in English on the sheet`),
+        // The head stays out of the body panels, so its size against the body reaches a shot only as the sheet's head count.
+        ...(headsTall(character) ? [] : ['head_count_missing: the sheet has no head count, so nothing sizes this character\'s head against its body when a shot joins the face panel to the headless panels — write it in physical.proportions with character_manage, e.g. "7.5 heads tall"']),
         ...(words.expression.length ? [`the sheet's appearance names an expression (${words.expression.join(' ')}) — it stays out of this neutral face panel; set expressions per shot with shot_characters`] : [])];
     return { workspace, folder, id, view: args.view, panelsFile, prompt, negativePrompt: call.negativeSent ? negativePrompt : undefined, warnings, ...call };
 }

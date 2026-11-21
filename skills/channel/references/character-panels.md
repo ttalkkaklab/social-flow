@@ -37,7 +37,10 @@ removes the rear head.
 
 Center the subject and keep front/back subject heights
 within 3 percentage points. These are generation/comparison targets, not measured
-physical height. They are independent of the episode's 9:16 or 16:9 video format.
+physical height. The panels are framed independently, so they do not show how large the
+head is on the body either: that comes from the head count in the identity's
+`proportions` ("7.5 heads tall"), which `shot_image` states in words. To check a full-figure
+shot, divide crown-to-sole by crown-to-chin and compare it with the sheet's count. They are independent of the episode's 9:16 or 16:9 video format.
 Inspect the actual picture for cropping, perspective, identity and scene props.
 
 Write `panels.json` next to `identity.md`. Slot names are front/back/face, and storyboard
