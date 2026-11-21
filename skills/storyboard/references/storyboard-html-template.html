@@ -1800,6 +1800,7 @@ window.STORYBOARD_READY = (async function () {
       musicBed: "channel bed", musicDrop: "music out", musicSilence: "music gap",
       audienceSound: { label: "Audience-only psychological sound", undecided: "undecided", none: "no cue", use: "use cue",
         preview: "Scene sound design", stem: "Psychological cues only · storyboard timing", audition: "Play cue", original: "Source recording", absent: "Audio pending", error: "Preview unavailable",
+        perspective: "Listening perspective", shift: "What changes for the character", exit: "Cue ending",
         unrecorded: "decision not recorded", needsCue: "choose a shot and cue", conflict: "the board still carries a cue",
         planned: "planned · timing pending", placed: "placed at export", stale: "retime", timing_unchecked: "timing unverified" },
       musicCue: function (name) { return "music → " + name; },
@@ -2162,6 +2163,7 @@ window.STORYBOARD_READY = (async function () {
       musicBed: "채널 기본 곡", musicDrop: "음악 빠짐", musicSilence: "음악 비움",
       audienceSound: { label: "관객용 심리음", undecided: "미정", none: "안 씀", use: "사용",
         preview: "씬 사운드 디자인", stem: "심리음만 듣기 · 스토리보드 시간 기준", audition: "이 구간 듣기", original: "원본 음원", absent: "음원 준비 전", error: "미리듣기를 열 수 없습니다",
+        perspective: "누구의 시점인가", shift: "인물에게 생긴 변화", exit: "소리가 끝나는 순간",
         unrecorded: "결정 기록 없음", needsCue: "샷과 소리 미지정", conflict: "보드에 효과음이 남아 있음",
         planned: "계획됨 · 시점 미정", placed: "페이지 갱신 시 배치 확인", stale: "재배치 필요", timing_unchecked: "배치 시점 미확인" },
       musicCue: function (name) { return "음악 → " + name; },
@@ -5070,13 +5072,23 @@ window.STORYBOARD_READY = (async function () {
     });
     return '<span class="audience-lane">' + text + "</span>";
   }
-  function audiencePlayer(no) {
-    if (!previewCurrent) return "";
-    var p = (window.AUDIENCE_PREVIEWS || {})[no];
-    if (!p || !p.entries || !p.entries.length) return "";
-    var words = T.audienceSound, mix = safeSrc(p.file);
+  function audiencePlayer(no, row) {
+    var p = previewCurrent && (window.AUDIENCE_PREVIEWS || {})[no];
+    var words = T.audienceSound, notes = "";
+    if (row && row.decision === "use") {
+      ["perspective", "shift", "exit"].forEach(function (key) {
+        var value = row[key];
+        if (typeof value === "string" && value.trim())
+          notes += "<dt>" + esc(words[key]) + "</dt><dd>" + copy(value.trim()) + "</dd>";
+      });
+    }
+    var hasCues = p && Array.isArray(p.entries) && p.entries.length;
+    if (!notes && !hasCues) return "";
     var title = words.preview + " · " + T.sceneNamed(no);
     var html = '<section class="scene-sound-player" id="scene-sound-' + esc(String(no)) + '" aria-label="' + esc(title) + '"><h4>' + esc(words.preview) + '</h4>';
+    if (notes) html += '<dl class="cs-facts">' + notes + '</dl>';
+    if (!hasCues) return html + '</section>';
+    var mix = safeSrc(p.file);
     if (mix) html += '<label>' + esc(words.stem) + '<audio class="scene-sound-mix" aria-label="' + esc(title) + '" controls preload="none" src="' + esc(mix) + '"></audio></label>';
     if (p.unavailable) html += '<small>' + esc(words.error) + '</small>';
     html += '<ul class="scene-sound-list">';
@@ -5164,6 +5176,7 @@ window.STORYBOARD_READY = (async function () {
     }
     if (hasSceneField) {
       var sc = stScene(grp.scene);
+      var soundRow = audiencePlan.scenes.find(function (row) { return row.no === grp.scene; });
       var scLen = grp.items.reduce(function (n, it) { return n === null || typeof it.s.duration !== "number" ? null : n + it.s.duration; }, 0);
       var scTitle = grp.slug || (sc && sc.title) || T.sceneNamed(grp.scene);
       var scTurn = sc ? [ (sc.event && sc.event !== scTitle ? sc.event : "") + (sc.charge && sc.charge.open !== undefined && sc.charge.close !== undefined ? " · " + String(sc.charge.open) + " → " + String(sc.charge.close) : ""), sc.turn || "" ]
@@ -5175,11 +5188,11 @@ window.STORYBOARD_READY = (async function () {
            (scPlace || (sc && sc.place) ? '<span class="scene-band-kicker"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>' + copy(scPlace && scPlace.name || sc.place) + "</span>" : "") +
            '<span class="scene-band-title">' + copy(scTitle) + "</span>" +
            (scTurn ? '<span class="scene-turn">' + copy(scTurn) + "</span>" : "") + musicLane(grp.items, sc) +
-           audienceLane(audiencePlan.scenes.find(function (row) { return row.no === grp.scene; })) + clicheLane(grp.scene) +
+           audienceLane(soundRow) + clicheLane(grp.scene) +
            (scSummary ? '<p class="scene-band-synopsis">' + copy(scSummary) + "</p>" : "") +
            sceneOutHtml(sc) + "</span>" +
            '<span class="scene-band-stats">' + esc(T.shotsN(grp.items.length)) + (scLen !== null ? " · " + esc(durTxt(scLen)) : "") + "</span>" +
-           '</summary><div class="scene-band-body">' + audiencePlayer(grp.scene);
+           '</summary><div class="scene-band-body">' + audiencePlayer(grp.scene, soundRow);
     }
     grp.items.forEach(function (item) {
     var s = item.s, i = item.i, g = item.g, no = i + 1;
@@ -5397,6 +5410,7 @@ window.STORYBOARD_READY = (async function () {
     if (hasSceneField && shotGroups.some(function (group) { return group.scene === row.no; })) return;
     var lane = audienceLane(row);
     if (lane) h += '<p><b>' + esc(T.sceneNamed(row.no)) + "</b> · " + lane + "</p>";
+    h += audiencePlayer(row.no, row);
   });
 
   /* ══ Cast ══ — the channel characters this episode uses, with the panels that will be

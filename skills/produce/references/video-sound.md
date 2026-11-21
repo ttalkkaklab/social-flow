@@ -108,6 +108,13 @@ Read `storyboard_read.audienceSpotting` for each scene's decision and reason. Tr
 to the event carrying that moment. If a `none` scene still contains a cue, reread its reason
 and listen for any sound carried from the previous scene. Correct the decision or event to
 match the intended cut. Choose the observable reaction from the [situation index](../../storyboard/references/audience-sound/index.md).
+When the scene names a perspective, shift and exit, watch for those beats on the accepted
+take. For a contestant who smiles before the start call, the cue can follow the smile
+and end before the first syllable. Keep the call and contact on their existing tracks.
+Describe only the cue's pitch, texture and envelope in the music prompt. If the take
+places the smile later, adjust the cue to the performance. When a scene note changes,
+compare the shot event's intent, trigger and release with the revised note. Re-place
+the event if the beat moved. Editing the note alone keeps the WAV and its placement.
 Plan its trigger, release, sound description and emotional change with `storyboard_apply.audienceEffects`.
 Use `expectedSha256` from the latest board read. After viewing the accepted cut, read the cue's
 `currentTimingBasis` and place it at seconds from the first trimmed frame. With a new end shot,

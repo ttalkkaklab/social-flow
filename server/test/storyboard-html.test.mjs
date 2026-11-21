@@ -148,6 +148,41 @@ test('scene audition carries a bounded cue into the next scene and exports playa
   } finally { rmSync(folder,{recursive:true,force:true}); }
 });
 
+test('the scene player shows authored listening notes even before there is a playable cue', () => {
+  const html = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
+  const player = html.slice(html.indexOf('  function audiencePlayer('), html.indexOf('  /* Music lane'));
+  const labels = [...html.matchAll(/^      audienceSound: (\{[^]*?\}),$/gm)].map(m => runInNewContext('(' + m[1] + ')'));
+  const esc = text => String(text).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+  const SCENES = [{ id: 's0001', scene: 1, sound: { audioSource: 'video', effects: [{ id: 'table', delivery: 'native' }] } }];
+  const preview = { file: 'audience-previews/scene.wav', entries: [{ shotId: 's0001', id: 'smile', start: .3, end: 1 }] };
+  const render = (row, p, lang = 0, previewCurrent = true, copy = esc) => runInNewContext(player + '\naudiencePlayer(1, row)', {
+    row, SCENES, window: { AUDIENCE_PREVIEWS: { 1: p } }, previewCurrent, esc, copy, safeSrc: v => v || '',
+    T: { audienceSound: labels[lang], sceneNamed: n => 'Scene ' + n, shotCap: n => 'Shot ' + n },
+  });
+  const row = { decision: 'use', perspective: 'Jin-su', shift: '  <his smile>  ', exit: 'Before the call' };
+  for (const [lang, words] of labels.entries()) {
+    const pending = render(row, undefined, lang);
+    assert.ok(pending.includes('aria-label="' + words.preview + ' · Scene 1"><h4>' + words.preview + '</h4>'));
+    for (const [key, text] of [['perspective', 'Jin-su'], ['shift', '&lt;his smile&gt;'], ['exit', 'Before the call']])
+      assert.ok(pending.includes('<dt>' + words[key] + '</dt><dd>' + text + '</dd>'));
+    assert.doesNotMatch(pending, /<audio|<button|data-cue-|table|<his smile>/);
+  }
+  const content = require('../../skills/storyboard/references/review-localization.js').reader({
+    version: 1, sourceLanguage: 'en', languages: ['en', 'ko'],
+    entries: [{ source: '<his smile>', translations: { ko: '<미소를 짓는다>' } }],
+  }, 'ko');
+  assert.match(render(row, undefined, 0, true, value => esc(content.text(value))), /<dd>&lt;미소를 짓는다&gt;<\/dd>/);
+  const stale = render({ decision: 'use', shift: 'current direction', exit: ' ' }, preview, 0, false);
+  assert.match(stale, /<dd>current direction<\/dd>/);
+  assert.doesNotMatch(stale, /<audio|<button|Cue ending/);
+  assert.equal(render({ decision: 'none', shift: 'old direction' }), '');
+  assert.equal(render({ decision: 'use', shift: ' ' }), '');
+  const legacy = render(undefined, preview);
+  assert.match(legacy, /src="audience-previews\/scene\.wav"/);
+  assert.match(legacy, /data-cue-start="0.3"/);
+  assert.doesNotMatch(legacy, /<dl|table/);
+});
+
 test('the cliché strip and scene lanes show what is in the story, the user\'s pick and a recommendation', () => {
   const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
   const start = template.indexOf('  var CLICHES = window.CLICHES');

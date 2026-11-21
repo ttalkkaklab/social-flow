@@ -4049,6 +4049,22 @@ or `{decision:"none",reason:"The witness's pause lets the denial land."}`. Read
 or a `none` with a cue. An explicitly placed span can cover several scenes. A `none` here
 leaves room tone (`sound.ambience`) and music (`scene.music`) under their own controls.
 
+A `use` decision can also carry three optional strings. For example:
+
+```json
+{
+  "decision": "use",
+  "reason": "Let the audience share his certainty while the outcome is still open.",
+  "perspective": "The contestant who expects to win",
+  "shift": "He looks up from their joined hands and grins.",
+  "exit": "Clear the first syllable of the referee's start call."
+}
+```
+
+The scene card and `audienceSpotting.scenes` show these notes. Write the cue's actual
+start and end on its shot after checking the take. Older decisions with only a reason
+remain valid.
+
 `sound.effects[].audience` stores `intent`, optional `caseId` (001–120), `release`, and the
 observed `timingBasis`. The event has a stable `id`, `sfx`, `trigger` and `description`, with
 `delivery:"post"`. Optional `end:{shotId,atSeconds}` accepts a number or `"end"`;

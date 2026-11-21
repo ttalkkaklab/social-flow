@@ -627,6 +627,10 @@ speech-to-music separation is a review warning, not an assembly gate.
 
 Every scene on a new story-first board also gets a decision about sound heard only by the
 viewer. `story_scene` records `audienceSound` (`use` or `none` with a reason).
+A `use` decision can name whose experience the viewer follows (`perspective`), the change
+visible on screen (`shift`) and the moment the sound ends (`exit`). The scene card shows
+these notes beside the cue preview. For example, a contestant's confident smile can carry
+a short pitched cue that ends just before the start call.
 `storyboard_read.audienceSpotting` shows which decisions or cues still need attention.
 `storyboard_apply.audienceEffects` plans the sound and places it on the accepted cut, so a
 drone can start at a glance, carry over a cut and release before a line. Room tone and the

@@ -1958,6 +1958,44 @@ it('keeps scene sound decisions through story and structure writes without marki
   assert.deepEqual(report.scenes.map(s => s.decision), ['unrecorded', 'unrecorded']);
 });
 
+it('round-trips perspective, shift and exit only while the scene uses audience sound', () => {
+  const dir = tmp(), story = { ...scene(1), sequence: 'q1', summary: 'She recognises the handwriting.' };
+  const use = { decision: 'use', reason: 'Share her growing suspicion.', perspective: 'The reader of the letter',
+    shift: 'Room tone thins as she reads her own name.', exit: 'The envelope slips from her hand.' };
+  const save = audienceSound => writeStoryScenes(storySceneSchema.parse({ path: dir, scenes: [{ ...story, audienceSound }] }));
+  const apply = audienceSound => applyStoryboard(storyboardApplySchema.parse({ path: dir, draft: true, scenes: [scene(1, { summary: story.summary, audienceSound })] }));
+  const stored = () => readBoard(dir).win.STRUCTURE.scenes[0].audienceSound;
+  const spotted = level => readStoryboard({ path: dir, level, includeTechniques: false }).audienceSpotting.scenes[0];
+  writeFileSync(join(dir, 'scenes.js'), serializeBoard({ STRUCTURE: structure([scene(1), scene(2, { summary: 'She lays the letter down.' })]),
+    SCENES: board().map(shot => ({ ...shot, visual: { character: 'reader' }, narration: [], summary: 'She reads the letter.' })) }));
+  assert.equal(save({ ...use, perspective: '  ' + use.perspective + '  ' }).written, true);
+  assert.deepEqual(stored(), use);
+  assert.equal(apply().written, true);
+  for (const level of ['outline', 'shots', 'full'])
+    assert.deepEqual(spotted(level), { no: 1, ...use, cues: [], needsCue: true });
+
+  const none = { decision: 'none', reason: 'Leave the pause after the line clear.' };
+  for (const tool of ['story_scene', 'storyboard_apply']) {
+    const schema = TOOLS.find(t => t.name === tool).inputSchema.properties.scenes.items.properties.audienceSound;
+    const branch = schema.anyOf.find(option => option.properties.decision.const === 'use');
+    for (const field of ['perspective', 'shift', 'exit']) assert.equal(branch.properties[field].type, 'string');
+  }
+  assert.throws(() => save({ ...use, shift: '  ' }));
+  assert.throws(() => apply({ ...none, exit: 'Old cue' }));
+  assert.throws(() => save({ decision: 'undecided', perspective: 'Old point of view' }));
+  assert.deepEqual(stored(), use);
+  assert.equal(apply(none).written, true);
+  assert.deepEqual(stored(), none);
+  assert.deepEqual(spotted('outline'), { no: 1, ...none, cues: [], needsCue: false });
+
+  // A replacement use plan may supply just one of the three notes.
+  const newPlan = { decision: 'use', reason: use.reason, shift: use.shift };
+  assert.equal(apply(newPlan).written, true);
+  assert.equal(save(undefined).written, true);
+  assert.deepEqual(stored(), newPlan);
+  assert.deepEqual(spotted('outline'), { no: 1, ...newPlan, cues: [], needsCue: true });
+});
+
 it('adds music to one legacy event while an earlier catalog cue stays placed over the original soundtrack', () => {
   const episode = tmp(), dir = join(episode, 'storyboard'), work = join(episode, '.work');
   const catalog = join(episode, 'assets/audio/sfx');
