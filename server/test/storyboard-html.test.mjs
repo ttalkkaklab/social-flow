@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { mkdtempSync, readFileSync, writeFileSync, rmSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { runInNewContext } from 'node:vm';
 import { tmpdir } from 'node:os';
 const require = createRequire(import.meta.url);
@@ -114,6 +115,39 @@ test('the scene links its audience cue to the starting shot and distinguishes a 
   assert.match(page(2, words[0]), /no cue — Keep her breath/);
 });
 
+test('scene audition carries a bounded cue into the next scene and exports playable audio only for placed files', () => {
+  const { previews } = require('../../skills/storyboard/references/audience-preview.js');
+  const folder = mkdtempSync(join(tmpdir(), 'storyboard-preview-'));
+  try {
+    const file = join(folder, 'held.wav');
+    execFileSync('ffmpeg', ['-v','error','-f','lavfi','-i','sine=frequency=220:sample_rate=48000:duration=1',file]);
+    const effect = { id:'hesitation', sfx:'held', audience:{intent:'wait'}, atSeconds:.25,
+      sourceStartSeconds:.1, end:{shotId:'s0002', atSeconds:.25}, fadeInSeconds:.05, fadeOutSeconds:.05 };
+    const board = { SCENES:[
+      { id:'s0001', scene:1, duration:.5, sound:{effects:[effect]} },
+      { id:'s0002', scene:2, duration:.5 },
+      { id:'s0003', scene:3, duration:.5, sound:{effects:[{id:'pending', audience:{intent:'pause'}}]} },
+    ] };
+    const rows = [{ id:effect.id, shotId:'s0001', status:'placed', source:{available:true,path:file,sha256:'fixture'} },
+      { id:'pending', shotId:'s0003', status:'planned', source:{available:false} }];
+    assert.equal(previews(board,folder,rows,true).changed.length,2);
+    assert.equal(existsSync(join(folder,'audience-previews')), false);
+    const { scenes } = previews(board,folder,rows,false);
+    assert.deepEqual(Object.values(scenes).map(scene => scene.entries.map(e => [e.start,e.end])),[[[.25,.5]],[[0,.25]],[[undefined,undefined]]]);
+    assert.equal(scenes[3].file,undefined);
+    const broken = join(folder,'unfinished.wav');writeFileSync(broken,'');
+    const pending = previews(board, folder, [{...rows[1], source:{available:true,path:broken}}], false);
+    assert.equal(pending.scenes[3].entries[0].sourceHref,null);
+    for (const [no, activeHalf] of [[1,1],[2,0]]) {
+      const raw = execFileSync('ffmpeg',['-v','error','-i',join(folder,scenes[no].file),'-f','s16le','-']);
+      assert.equal(raw.length,48000);
+      assert.ok(raw.subarray(activeHalf*24000,activeHalf*24000+24000).some(Boolean));
+      assert.ok(raw.subarray((1-activeHalf)*24000,(1-activeHalf)*24000+24000).every(v=>v===0));
+    }
+    assert.deepEqual(previews(board,folder,rows,true).changed,[]);
+  } finally { rmSync(folder,{recursive:true,force:true}); }
+});
+
 test('the cliché strip and scene lanes show what is in the story, the user\'s pick and a recommendation', () => {
   const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
   const start = template.indexOf('  var CLICHES = window.CLICHES');
@@ -156,7 +190,8 @@ test('HTML creation and refresh keep one design while preserving episode metadat
   const dir = mkdtempSync(join(tmpdir(), 'sf-board-html-'));
   try {
     // No scenes, credentials, or network are required to create the review shell.
-    assert.equal(storyboardHtml(dir).length, 24 + FONT_ASSETS.length);
+    assert.equal(storyboardHtml(dir).length, 25 + FONT_ASSETS.length);
+    assert.ok(existsSync(join(dir,'audience-review-data.js')));
     const file = join(dir, 'storyboard.html');
     const original = readFileSync(file, 'utf8');
     const title = '<title>Episode $& — 로컬 검토</title>';
@@ -184,7 +219,7 @@ test('check is read-only and malformed existing metadata is preserved for repair
   const root = mkdtempSync(join(tmpdir(), 'sf-board-html-check-'));
   try {
     const dir = join(root, 'storyboard');
-    assert.equal(storyboardHtml(dir, true).length, 24 + FONT_ASSETS.length);
+    assert.equal(storyboardHtml(dir, true).length, 25 + FONT_ASSETS.length);
     assert.equal(existsSync(dir), false);
     storyboardHtml(dir);
     const file = join(dir, 'storyboard.html');

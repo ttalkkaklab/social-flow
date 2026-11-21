@@ -8,7 +8,7 @@ import { readImageState } from './image-state.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { speakerBindingSchema } from './video-voice.js';
 import { compileVideoPrompt, expressionWords } from './video-prompt.js';
-import { refreshVideoReview } from './video-review.js';
+import { refreshAudienceReview, refreshVideoReview } from './video-review.js';
 import { characterPanels } from './video-image-inputs.js';
 /**
  * Storyboard module — the sequence → scene → shot data behind four tools
@@ -1274,6 +1274,7 @@ export function applyStoryboard(args: StoryboardApplyArgs, opts: { outline?: boo
     throw err;
   }
   refreshVideoReview(dirname(dirname(file)));
+  refreshAudienceReview(dirname(file));
   result.written = true;
   return result;
 }

@@ -18,6 +18,7 @@ const { evaluateWindowScript } = require('../../_shared/scenes-vm.js');
 const { mixFindings, mixEnvironment, musicEnvelopeFindings } = require('./sound-mix-contract.js');
 const { timelineFindings, compileTimeline, spottingReport } = require('./music-timeline.js');
 const audience = require('../../storyboard/references/audience-effects.js');
+const { preparer } = require('./audience-derivation.js');
 const assetResolver = path.resolve(__dirname, '../../channel/references/resolve-asset.py');
 
 function die(message) { process.stderr.write(`compile-sound-plan: ${message}\n`); process.exit(1); }
@@ -152,13 +153,20 @@ const audienceSpans = [];
 const audienceClock = audience.boardClock(win, path.dirname(source), channel);
 const checkedAudienceMusic = new Set();
 function audienceFile(source) {
+  const derivation = source.derivation;
+  if (derivation?.status === 'invalid') die(`audience_derivation_invalid: ${source.assetId}: ${derivation.reason}`);
   if (!source.available) {
     if (source.kind === 'catalog') die(source.lookupError || `cannot resolve audience SFX catalog asset "${source.assetId}"`);
     die(`missing audience music: ${source.path} — use the music_plan handoff in storyboard_read.audienceEffects, then place the cue against that WAV`);
   }
   if (source.kind === 'music' && !checkedAudienceMusic.has(source.path)) {
-    const key = JSON.stringify([source.assetId, fs.realpathSync(source.path)]);
-    if (musicOutputs.get(key) !== source.sha256) warn(`audience cue "${source.assetId}": ${source.path} has no matching generation receipt in this episode (.work/music-routing)`);
+    if (derivation) {
+      const replay = spawnSync('python3', [preparer, source.directory, '--verify-receipt', derivation.receiptPath], { encoding: 'utf8' });
+      if (replay.status !== 0) die(`audience_derivation_invalid: ${source.assetId}: ${replay.stderr?.trim() || replay.error?.message || 'could not reproduce the derivative WAV'}`);
+    } else {
+      const key = JSON.stringify([source.assetId, fs.realpathSync(source.path)]);
+      if (musicOutputs.get(key) !== source.sha256) warn(`audience cue "${source.assetId}": ${source.path} has no matching generation receipt in this episode (.work/music-routing)`);
+    }
     checkedAudienceMusic.add(source.path);
   }
   return safeCell(source.path, 'audience effect path');
@@ -196,6 +204,7 @@ scenes.forEach((shot, idx) => {
       const separationLu = item.separationLu ?? intensitySeparation[item.intensity || 'normal'];
       if (!Number.isFinite(separationLu) || separationLu < 0 || separationLu > 30) die('invalid audience separationLu');
       audienceSpans.push({ shotId: shot.id, id: item.id, assetPath: file, sourceSha256: placed.source.sha256, separationLu,
+        ...(placed.source.derivation ? { derivation: { ...placed.source.derivation, status: 'reproduced' } } : {}),
         ...(item.sourceStartSeconds == null ? {} : { sourceStartSeconds: item.sourceStartSeconds }),
         ...(item.fadeInSeconds == null ? {} : { fadeInSeconds: item.fadeInSeconds }),
         start: { shotId: shot.id, atSeconds: item.atSeconds }, end: item.end, fadeOutSeconds: item.fadeOutSeconds });

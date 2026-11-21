@@ -5,6 +5,7 @@ const { createHash } = require('node:crypto');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { assetPath } = require('../../produce/references/check-production.js');
+const { readDerivation } = require('../../produce/references/audience-derivation.js');
 
 function canonical(value) {
   return JSON.stringify(value, (_, v) => v && typeof v === 'object' && !Array.isArray(v)
@@ -20,6 +21,7 @@ function boardClock(board, dir, channel) {
   const episode = path.dirname(dir), parent = path.dirname(episode);
   channel ??= path.basename(parent) === 'episodes' ? path.dirname(parent) : episode;
   const soundAssets = new Map();
+  const musicDerivations = new Map();
   const sourceDurations = new Map();
   const files = new Map(), cuts = new Map();
   // verify-assembled and splice-clip insert b-roll at its position in SCENES.
@@ -90,15 +92,21 @@ function boardClock(board, dir, channel) {
     if (id.length + '.wav'.length > 255) throw new Error('audience_asset_id_invalid: the WAV filename exceeds 255 bytes');
     const assetId = id.length <= 111 ? 'audience-' + id : 'audience.long.' + createHash('sha256').update(id).digest('hex');
     const outputPath = '.work/music/audience', filename = id + '.wav', file = path.resolve(episode, outputPath, filename);
-    return { kind: 'music', directory: episode, assetId, requestId: assetId, outputPath, filename, path: file,
-      available: fs.existsSync(file) && fs.statSync(file).isFile(), prompt: entry?.prompt || firstDescription.get(id) || effect.description,
+    if (!musicDerivations.has(file)) musicDerivations.set(file, readDerivation(episode, file));
+    const derivation = musicDerivations.get(file);
+    return { kind: 'music', directory: episode, assetId, outputPath, filename, path: file,
+      ...(derivation ? { derivation } : { requestId: assetId }), available: derivation ? derivation.status === 'matched' : fs.existsSync(file) && fs.statSync(file).isFile(),
+      prompt: entry?.prompt || firstDescription.get(id) || effect.description,
       ...(entry?.seconds === undefined ? {} : { seconds: entry.seconds }) };
+  }
+  function sourceHash(source) {
+    return source.derivation ? source.derivation.sha256 ?? null : media(source.path)?.[1] ?? null;
   }
   function basis(shotId, effect, endId) {
     const source = sourceFor(effect);
     // An old catalog timing stamp compares exactly as it did before episode music was introduced.
     const asset = source.kind === 'catalog' ? source.assetId : ['music', source.assetId, source.prompt, source.seconds ?? null];
-    return createHash('sha256').update(canonical([cut(shotId), effect.trigger, effect.audience.release, asset, media(source.path)?.[1] ?? null,
+    return createHash('sha256').update(canonical([cut(shotId), effect.trigger, effect.audience.release, asset, sourceHash(source),
       endId ? [endId, cut(endId)] : null])).digest('hex');
   }
   function bounds(shotId, effect) {
@@ -138,7 +146,7 @@ function boardClock(board, dir, channel) {
     const source = sourceFor(effect);
     return { shotId, id: effect.id, intent: effect.audience.intent, trigger: effect.trigger, sfx: effect.sfx,
       atSeconds: effect.atSeconds, sourceStartSeconds: effect.sourceStartSeconds, fadeInSeconds: effect.fadeInSeconds, end: effect.end, caseId: effect.audience.caseId, status, currentTimingBasis, placedTimingBasis: effect.audience.timingBasis,
-      source: { ...source, sha256: media(source.path)?.[1] ?? null }, listening: 'not_reviewed' };
+      source: { ...source, sha256: sourceHash(source) }, listening: 'not_reviewed' };
   }
   return { basis, bounds, row };
 }

@@ -31,7 +31,7 @@ created: <YYYY-MM-DD>
 ## S#1. <location> / <time>
 
 **Audience-only psychological sound** — <use / none / undecided>. <Why the viewer needs this sound here, or why the scene plays better without it. For example, keep the actor’s breath and room tone already heard in the take.>
-When using a cue, give its shot, the visible trigger, what the viewer hears and where it releases. Mark the timing as planned until the accepted cut sets the placement.
+When using a cue, give its shot, the visible trigger, what the viewer hears and where it releases. Mark the timing as planned until the accepted cut sets the placement. In the HTML review, open the scene’s sound design player to play its audience track on the storyboard clock, or jump to a single cue. A generated source with pending timing can be auditioned on its own.
 
 ### Shot 1 — cover · medium close-up · eye level
 

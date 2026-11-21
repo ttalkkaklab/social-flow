@@ -8,7 +8,7 @@ import { readImageState } from './image-state.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { speakerBindingSchema } from './video-voice.js';
 import { compileVideoPrompt, expressionWords } from './video-prompt.js';
-import { refreshVideoReview } from './video-review.js';
+import { refreshAudienceReview, refreshVideoReview } from './video-review.js';
 import { characterPanels } from './video-image-inputs.js';
 /**
  * Storyboard module — the sequence → scene → shot data behind four tools
@@ -267,7 +267,8 @@ export const audienceEffectsSchema = z.array(z.discriminatedUnion('op', [
     z.object({ ...audienceKey, op: z.literal('place'), atSeconds: seconds, timingBasis: z.string().regex(/^[a-f0-9]{64}$/),
         sourceStartSeconds: seconds.nullish().describe('Start within the full source audio, in seconds. Omit to keep the current in-point or use null to play from zero.'),
         end: z.object({ shotId: shotIdSchema, atSeconds: z.union([seconds, z.literal('end')]) }).strict().nullish(),
-        fadeInSeconds: seconds.nullish(), fadeOutSeconds: seconds.nullish() }).strict(),
+        fadeInSeconds: seconds.nullish().describe('Fade up over this many seconds of the playable excerpt. Omit to keep it or use null to clear it.'),
+        fadeOutSeconds: seconds.nullish() }).strict(),
     z.object({ ...audienceKey, op: z.literal('remove') }).strict(),
 ])).min(1);
 export const sfxEntriesSchema = z.record(cueId, z.object({ asset: cueId.optional(), prompt: audienceId.optional(),
@@ -1254,6 +1255,7 @@ export function applyStoryboard(args, opts = {}) {
         throw err;
     }
     refreshVideoReview(dirname(dirname(file)));
+    refreshAudienceReview(dirname(file));
     result.written = true;
     return result;
 }

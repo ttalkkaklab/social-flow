@@ -13,8 +13,13 @@ import { requireGeminiKey, requireSunoKey, requireElevenLabsKey, mlxServeConfigu
 import { resolveToolGate } from './tool-gate.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
 import { resumeMusic as resumeSunoTask } from './suno-client.js';
+import { refreshAudienceReview } from './video-review.js';
 const load = createRequire(import.meta.url);
 const selectionHelper = fileURLToPath(new URL('../../skills/_shared/music-selection.js', import.meta.url));
+function refreshAudienceOutput(directory, file) {
+    if (path.dirname(file) === path.join(directory, '.work/music/audience'))
+        refreshAudienceReview(path.join(directory, 'storyboard'));
+}
 export const musicContext = (directory, assetId) => load(selectionHelper).readMusicContext(directory, assetId);
 const idSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 export const musicPlanSchema = z.object({ directory: z.string().min(1), assetId: idSchema, requestId: idSchema,
@@ -184,6 +189,7 @@ export async function executeMusic(raw, dispatch) {
             Object.assign(state.jobs[plan.requestId], { status: 'completed', output, result: response, updatedAt: new Date().toISOString() });
         });
         ok = true;
+        refreshAudienceOutput(directory, plan.outputFile);
         return response;
     }
     catch (error) {
@@ -256,6 +262,7 @@ export async function resumeMusic(raw) {
             throw new Error('music_resume_conflict: request changed during resume');
         Object.assign(state.jobs[input.requestId], { status: 'completed', output, result: response, updatedAt: new Date().toISOString() });
     });
+    refreshAudienceOutput(directory, plan.outputFile);
     return response;
 }
 export function musicStatus(raw) {

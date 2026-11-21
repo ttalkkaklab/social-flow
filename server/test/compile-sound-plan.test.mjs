@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -202,13 +202,18 @@ it('hands new audience material to saved music and mixes the receipted WAV only 
   const key = config.elevenLabsApiKey;
   config.elevenLabsApiKey = 'test-only';
   t.after(() => { config.elevenLabsApiKey = key; });
+  const previewFile = join(p.board, 'audience-review-data.js');
+  writeFileSync(previewFile, '// Preview pending');
   await executeMusic({ directory: plan.directory, planId: plan.id }, async (_tool, args) => {
     mkdirSync(args.outputPath, { recursive: true });
     const file = join(args.outputPath, args.filename);
-    const tone = spawnSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'sine=frequency=160:duration=0.2', '-f', 'wav', file]);
+    const tone = spawnSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=2', '-f', 'wav', file]);
     assert.equal(tone.status, 0, String(tone.stderr));
     return { content: [], musicReceipt: { audioPath: file, requestId: 'fixture' } };
   });
+  const preview = (await import('../../skills/_shared/scenes-vm.js')).default.evaluateWindowScript(readFileSync(previewFile, 'utf8'));
+  assert.equal(preview.AUDIENCE_CUES[0].source.available, true);
+  assert.ok(Object.values(preview.AUDIENCE_PREVIEWS).some(scene => scene.entries.some(c => c.sourceHref?.endsWith('/pressure.wav'))));
   cue.audience.timingBasis = row().currentTimingBasis;
   save();
   const compiled = run(p);
@@ -218,6 +223,58 @@ it('hands new audience material to saved music and mixes the receipted WAV only 
   assert.deepEqual(spans.map(s => s.assetPath), [source.path]);
   assert.equal(existsSync(join(p.work, 'bgm.tsv')), false);
   assert.equal(existsSync(join(p.work, 'sfx.tsv')), false);
+
+  const prepare = fileURLToPath(new URL('../../skills/produce/references/prepare-audience-texture.py', import.meta.url));
+  const jobState = join(p.work, 'music-routing/state.json'), generatedState = readFileSync(jobState, 'utf8');
+  const texture = spawnSync('python3', [prepare, p.root, '--job', requestId, '--target', 'texture',
+    '--source-start', '0.1', '--source-duration', '1.2', '--grain', '0.195', '--ratios', '0.77,1.01,0.998',
+    '--highpass', '200', '--lowpass', '1120'], { encoding: 'utf8' });
+  assert.equal(texture.status, 0, texture.stderr);
+  assert.equal(readFileSync(jobState, 'utf8'), generatedState, 'editing creates no new generation receipt');
+  cue.sfx = 'texture';
+  board.SFX.texture = { prompt: 'Hold the generated tone steady.' };
+  const derived = row().source;
+  const { receiptPath } = derived.derivation;
+  assert.equal(derived.derivation.status, 'matched', derived.derivation.reason);
+  assert.equal(derived.derivation.assetId, assetId);
+  assert.equal(derived.requestId, undefined);
+  assert.equal(derived.derivation.providerRequestId, 'fixture');
+  cue.audience.timingBasis = row().currentTimingBasis;
+  save();
+  const verified = run(p);
+  assert.equal(verified.status, 0, verified.stderr);
+  assert.deepEqual(JSON.parse(verified.stdout).warnings, []);
+  const made = JSON.parse(readFileSync(join(p.work, 'sfx-spans.json'))).spans[0];
+  assert.equal(made.assetPath, derived.path);
+  assert.equal(made.derivation.status, 'reproduced');
+  assert.equal(made.derivation.sourceSha256, createHash('sha256').update(readFileSync(source.path)).digest('hex'));
+  const proof = JSON.parse(readFileSync(receiptPath));
+  const outside = join(room().root, 'elsewhere.wav'), link = join(p.root, 'link.wav');
+  writeFileSync(outside, readFileSync(source.path));
+  symlinkSync(outside, link);
+  for (const bad of [{ ...proof, source: link }, { ...proof, providerRequestId: 'other' },
+    { ...proof, grainSeconds: .1 }, { ...proof, scriptSha256: '0'.repeat(64) }]) {
+    writeFileSync(receiptPath, JSON.stringify(bad));
+    assert.match(run(p).stderr, /audience_derivation_invalid/);
+  }
+  writeFileSync(receiptPath, JSON.stringify(proof));
+  const alteredState = JSON.parse(generatedState);
+  alteredState.jobs[requestId].status = 'submission_unknown';
+  writeFileSync(jobState, JSON.stringify(alteredState));
+  assert.match(run(p).stderr, /no matching completed music request/);
+  writeFileSync(jobState, generatedState);
+  const altered = Buffer.concat([readFileSync(derived.path), Buffer.from([0])]);
+  writeFileSync(derived.path, altered);
+  assert.match(run(p).stderr, /derivative WAV hash mismatch/);
+  // An editor can rehash any file. Replaying the recorded recipe still exposes different bytes.
+  writeFileSync(receiptPath, JSON.stringify({ ...proof, sha256: createHash('sha256').update(altered).digest('hex') }));
+  cue.audience.timingBasis = row().currentTimingBasis;
+  save();
+  assert.match(run(p).stderr, /audience_derivation_invalid/);
+
+  cue.sfx = 'pressure';
+  cue.audience.timingBasis = row().currentTimingBasis;
+  save();
   const changed = Buffer.concat([readFileSync(source.path), Buffer.from([0])]);
   writeFileSync(source.path, changed);
   assert.match(run(p).stderr, /audience_timing_stale/);

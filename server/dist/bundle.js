@@ -113957,7 +113957,7 @@ import * as path14 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.124.1",
+  version: "0.124.2",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -116281,6 +116281,14 @@ function refreshVideoReview(episode) {
     process.stderr.write("Video review export needs a refresh; request receipts remain authoritative.\n");
   }
 }
+function refreshAudienceReview(boardDirectory) {
+  try {
+    const data = createRequire5(import.meta.url)("../../skills/storyboard/references/audience-review-data.js");
+    data.refresh(boardDirectory);
+  } catch {
+    process.stderr.write("Audience audio preview needs a refresh.\n");
+  }
+}
 
 // src/video-state.ts
 function historicalSpend(episode) {
@@ -118406,7 +118414,7 @@ var audienceEffectsSchema = external_exports.array(external_exports.discriminate
     timingBasis: external_exports.string().regex(/^[a-f0-9]{64}$/),
     sourceStartSeconds: seconds.nullish().describe("Start within the full source audio, in seconds. Omit to keep the current in-point or use null to play from zero."),
     end: external_exports.object({ shotId: shotIdSchema, atSeconds: external_exports.union([seconds, external_exports.literal("end")]) }).strict().nullish(),
-    fadeInSeconds: seconds.nullish(),
+    fadeInSeconds: seconds.nullish().describe("Fade up over this many seconds of the playable excerpt. Omit to keep it or use null to clear it."),
     fadeOutSeconds: seconds.nullish()
   }).strict(),
   external_exports.object({ ...audienceKey, op: external_exports.literal("remove") }).strict()
@@ -119313,6 +119321,7 @@ function applyStoryboard(args, opts = {}) {
     throw err4;
   }
   refreshVideoReview(dirname6(dirname6(file)));
+  refreshAudienceReview(dirname6(file));
   result.written = true;
   return result;
 }
@@ -130374,6 +130383,9 @@ function normalizeMusicFile(source, target) {
 // src/music-routing.ts
 var load7 = createRequire14(import.meta.url);
 var selectionHelper2 = fileURLToPath10(new URL("../../skills/_shared/music-selection.js", import.meta.url));
+function refreshAudienceOutput(directory2, file) {
+  if (path29.dirname(file) === path29.join(directory2, ".work/music/audience")) refreshAudienceReview(path29.join(directory2, "storyboard"));
+}
 var musicContext = (directory2, assetId) => load7(selectionHelper2).readMusicContext(directory2, assetId);
 var idSchema3 = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var musicPlanSchema = external_exports.object({
@@ -130543,6 +130555,7 @@ async function executeMusic(raw, dispatch) {
       Object.assign(state.jobs[plan2.requestId], { status: "completed", output: output2, result: response, updatedAt: (/* @__PURE__ */ new Date()).toISOString() });
     });
     ok = true;
+    refreshAudienceOutput(directory2, plan2.outputFile);
     return response;
   } catch (error2) {
     musicTransaction(directory2, void 0, (state) => Object.assign(state.jobs[plan2.requestId], {
@@ -130615,6 +130628,7 @@ async function resumeMusic2(raw) {
     if (state.jobs[input.requestId].status !== "submission_unknown") throw new Error("music_resume_conflict: request changed during resume");
     Object.assign(state.jobs[input.requestId], { status: "completed", output: output2, result: response, updatedAt: (/* @__PURE__ */ new Date()).toISOString() });
   });
+  refreshAudienceOutput(directory2, plan2.outputFile);
   return response;
 }
 function musicStatus(raw) {
@@ -140394,7 +140408,7 @@ ROUTES.music_status = async (args) => args?.action === "resume" ? resumeMusic2(a
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.124.1" },
+  { name: "social-flow", version: "0.124.2" },
   { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

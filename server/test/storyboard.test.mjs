@@ -1976,6 +1976,10 @@ it('adds music to one legacy event while an earlier catalog cue stays placed ove
     description: 'low rising drone', trigger: 'a second name comes into view', intent: 'share her suspicion' };
   assert.equal(apply({ scenes: [scene(1, { audienceSound: { decision: 'use', reason: 'She recognises the signature.' } })],
     audienceEffects: [plan] }).written, true);
+  const previewFile = join(dir, 'audience-review-data.js');
+  assert.throws(() => readFileSync(previewFile), { code: 'ENOENT' });
+  writeFileSync(previewFile, '// Previously exported board.');
+  const preview = () => createRequire(import.meta.url)('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(previewFile, 'utf8'));
   let [prior, added] = read();
   assert.deepEqual([prior.status, prior.source.kind, added.status, added.source.kind], ['placed', 'catalog', 'planned', 'music']);
   assert.equal(added.source.prompt, plan.description);
@@ -1985,6 +1989,10 @@ it('adds music to one legacy event while an earlier catalog cue stays placed ove
   const place = { op: 'place', ...key, atSeconds: 1.5, timingBasis: read()[1].currentTimingBasis };
   assert.throws(() => apply({ audienceEffects: [{ ...place, sourceStartSeconds: .25, fadeInSeconds: .4 }] }), /entrance fade/);
   apply({ audienceEffects: [{ ...place, sourceStartSeconds: .25, fadeInSeconds: .12 }] });
+  const placedPreview = preview();
+  assert.equal(placedPreview.AUDIENCE_CUES.find(c => c.id === plan.id).status, 'placed');
+  assert.ok(Object.values(placedPreview.AUDIENCE_PREVIEWS).some(scene => scene.file && scene.entries.some(c => c.id === plan.id)));
+  assert.equal(placedPreview.AUDIENCE_PREVIEW_STAMP, createRequire(import.meta.url)('../../skills/storyboard/references/audience-spotting.js').previewStamp(readBoard(dir).win));
   apply({ audienceEffects: [place] });
   assert.equal(read()[1].sourceStartSeconds, .25);
   assert.equal(read()[1].fadeInSeconds, .12);

@@ -1,6 +1,14 @@
 /* Scene decisions and audience cue coverage on the authored edit. */
 (function (root) {
   'use strict';
+  // An offline page can be reopened after scenes.js was edited separately from its audio export.
+  function previewStamp(board) {
+    const data = JSON.stringify([board.SCENES || [], board.SFX || {}, board.STORY?.audienceSoundVersion,
+      board.SB_DOC?.performanceTimingVersion, board.SB_DOC?.speechPlanVersion]);
+    let hash = 2166136261;
+    for (let i = 0; i < data.length; i++) hash = Math.imul(hash ^ data.charCodeAt(i), 16777619);
+    return data.length + '-' + (hash >>> 0).toString(16);
+  }
   function cueStatus(shotId, effect, row) {
     const matches = row && row.shotId === shotId && row.id === effect.id && row.atSeconds === effect.atSeconds &&
       (row.sourceStartSeconds ?? 0) === (effect.sourceStartSeconds ?? 0) &&
@@ -52,7 +60,7 @@
     if (conflicts.length) notes.push('marked none but contain a cue in scenes ' + conflicts.join(', '));
     return notes.length ? ['Audience sound: ' + notes.join(' / ') + '. See storyboard_read.audienceSpotting.'] : [];
   }
-  const api = { cueStatus, spotting, spottingDigest };
+  const api = { cueStatus, spotting, spottingDigest, previewStamp };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.AUDIENCE_SPOTTING = api;
 })(typeof window === 'object' ? window : globalThis);

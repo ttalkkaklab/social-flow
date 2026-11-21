@@ -145,6 +145,15 @@ opens with silence or a later passage fits the reaction, set `sourceStartSeconds
 a sustained tone gradually, add `fadeInSeconds` within the length of the excerpt.
 Listen to the entrance and release with the dialogue. The original WAV and music receipt
 keep their full length.
+
+When a generated take has the right timbre but its melody distracts from the scene,
+choose a held note and stretch it into a texture with `prepare-audience-texture.py`.
+Give the texture its own cue ID. Keep its WAV and adjacent `<id>.source.json` together
+in the episode's `.work/music/audience/`. The detailed board read matches the original
+music request and the hashes of both WAVs and the recipe. During assembly the compiler
+repeats that recipe and compares its output. The resulting span and delivery proof
+attribute the texture to the original music request.
+
 A scene scored
 with no BGM can still use this audience cue. The post
 mixer places the WAV only on the audience track. When the take already supplies a door,

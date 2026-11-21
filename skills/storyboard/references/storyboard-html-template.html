@@ -628,6 +628,13 @@
   .audience-lane { font-size: var(--t-cap); color: var(--muted); word-break: keep-all; overflow-wrap: anywhere; }
   .audience-lane strong { font-weight: 650; color: var(--text); }
   .audience-lane a { text-underline-offset: 2px; }
+  .scene-sound-player { margin: 12px 0; padding: 12px 16px; border: 1px solid var(--line); border-radius: 10px; }
+  .scene-sound-player h4 { margin: 0 0 8px; }
+  .scene-sound-player audio { display: block; width: min(100%, 32rem); margin: 6px 0; }
+  .scene-sound-player button { font: inherit; color: inherit; background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+  .scene-sound-player button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+  .scene-sound-list { display: grid; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; }
+  .scene-sound-list li { font-size: var(--t-cap); }
   /* Clichés — what story_cliche recorded (window.CLICHES): one strip above the shots and a lane on
      each scene. A recommendation that is not in the story yet is dashed. */
   .cliche-strip { margin: var(--s4) 0 0; padding: 14px 18px; border: 1px solid var(--line); border-radius: var(--ds-radius-lg); background: var(--card); box-shadow: var(--ds-shadow-band); }
@@ -1424,6 +1431,7 @@
 
 <script src="./review-typography.js"></script>
 <script src="./review-files.js"></script>
+<script src="./audience-review-data.js"></script>
 <script src="./audience-spotting.js"></script>
 <script src="./review-localization.js"></script>
 <script src="./video-production.js"></script>
@@ -1791,6 +1799,7 @@ window.STORYBOARD_READY = (async function () {
                (drops ? " · drops out " + drops + "×" : ""); },
       musicBed: "channel bed", musicDrop: "music out", musicSilence: "music gap",
       audienceSound: { label: "Audience-only psychological sound", undecided: "undecided", none: "no cue", use: "use cue",
+        preview: "Scene sound design", stem: "Psychological cues only · storyboard timing", audition: "Play cue", original: "Source recording", absent: "Audio pending", error: "Preview unavailable",
         unrecorded: "decision not recorded", needsCue: "choose a shot and cue", conflict: "the board still carries a cue",
         planned: "planned · timing pending", placed: "placed at export", stale: "retime", timing_unchecked: "timing unverified" },
       musicCue: function (name) { return "music → " + name; },
@@ -2152,6 +2161,7 @@ window.STORYBOARD_READY = (async function () {
                (drops ? " · " + drops + "번 비움" : ""); },
       musicBed: "채널 기본 곡", musicDrop: "음악 빠짐", musicSilence: "음악 비움",
       audienceSound: { label: "관객용 심리음", undecided: "미정", none: "안 씀", use: "사용",
+        preview: "씬 사운드 디자인", stem: "심리음만 듣기 · 스토리보드 시간 기준", audition: "이 구간 듣기", original: "원본 음원", absent: "음원 준비 전", error: "미리듣기를 열 수 없습니다",
         unrecorded: "결정 기록 없음", needsCue: "샷과 소리 미지정", conflict: "보드에 효과음이 남아 있음",
         planned: "계획됨 · 시점 미정", placed: "페이지 갱신 시 배치 확인", stale: "재배치 필요", timing_unchecked: "배치 시점 미확인" },
       musicCue: function (name) { return "음악 → " + name; },
@@ -5042,6 +5052,8 @@ window.STORYBOARD_READY = (async function () {
   var stSeqs = Array.isArray(ST.sequences) ? ST.sequences.filter(function (q) { return q && typeof q === "object"; }) : [];
   var stScene = function (no) { return stScenes.filter(function (x) { return x.no === no; })[0]; };
   var audienceRows = Array.isArray(window.AUDIENCE_CUES) ? window.AUDIENCE_CUES : [];
+  var previewCurrent = window.AUDIENCE_PREVIEW_STAMP === window.AUDIENCE_SPOTTING.previewStamp(window);
+  if (window.AUDIENCE_PREVIEW_STAMP && !previewCurrent) audienceRows = [];
   var audiencePlan = window.AUDIENCE_SPOTTING.spotting(window, audienceRows);
   function audienceLane(row) {
     if (!row || (row.decision === "unrecorded" && !row.cues.length)) return "";
@@ -5057,6 +5069,32 @@ window.STORYBOARD_READY = (async function () {
       text += ' · <a href="#shot-' + (index + 1) + '">' + esc(label) + "</a>";
     });
     return '<span class="audience-lane">' + text + "</span>";
+  }
+  function audiencePlayer(no) {
+    if (!previewCurrent) return "";
+    var p = (window.AUDIENCE_PREVIEWS || {})[no];
+    if (!p || !p.entries || !p.entries.length) return "";
+    var words = T.audienceSound, mix = safeSrc(p.file);
+    var title = words.preview + " · " + T.sceneNamed(no);
+    var html = '<section class="scene-sound-player" id="scene-sound-' + esc(String(no)) + '" aria-label="' + esc(title) + '"><h4>' + esc(words.preview) + '</h4>';
+    if (mix) html += '<label>' + esc(words.stem) + '<audio class="scene-sound-mix" aria-label="' + esc(title) + '" controls preload="none" src="' + esc(mix) + '"></audio></label>';
+    if (p.unavailable) html += '<small>' + esc(words.error) + '</small>';
+    html += '<ul class="scene-sound-list">';
+    p.entries.forEach(function (e) {
+      var index = SCENES.findIndex(function (s) { return s.id === e.shotId; });
+      var label = [index >= 0 ? T.shotCap(index + 1) : e.shotId, e.intent || e.id].join(" · ");
+      html += '<li>';
+      if (mix && Number.isFinite(e.start) && Number.isFinite(e.end)) {
+        html += '<button type="button" data-cue-start="' + e.start + '" data-cue-end="' + e.end + '" aria-label="' + esc(words.audition + " · " + label) + '">▶ ' + esc(label) + ' · ' + e.start.toFixed(2) + '–' + e.end.toFixed(2) + ' s</button>';
+      } else {
+        html += esc(label) + ' · ' + esc(words[e.status] || words.timing_unchecked);
+        var src = safeSrc(e.sourceHref);
+        if (src) html += ' · ' + esc(words.original) + '<audio controls preload="none" aria-label="' + esc(words.original + " · " + label) + '" src="' + esc(src) + '"></audio>';
+        else html += ' · ' + esc(words.absent);
+      }
+      html += '</li>';
+    });
+    return html + '</ul><small role="status" aria-live="polite"></small></section>';
   }
   /* Music lane — the cue each shot plays under (scenes-schema §music cues): a shot's sound.cue
      changes the bed and later shots keep it. Display only; the check strip carries the warnings.
@@ -5141,7 +5179,7 @@ window.STORYBOARD_READY = (async function () {
            (scSummary ? '<p class="scene-band-synopsis">' + copy(scSummary) + "</p>" : "") +
            sceneOutHtml(sc) + "</span>" +
            '<span class="scene-band-stats">' + esc(T.shotsN(grp.items.length)) + (scLen !== null ? " · " + esc(durTxt(scLen)) : "") + "</span>" +
-           '</summary><div class="scene-band-body">';
+           '</summary><div class="scene-band-body">' + audiencePlayer(grp.scene);
     }
     grp.items.forEach(function (item) {
     var s = item.s, i = item.i, g = item.g, no = i + 1;
@@ -5644,6 +5682,33 @@ window.STORYBOARD_READY = (async function () {
        }).join(' · ') + '</footer>';
 
   app.innerHTML = h;
+  app.querySelectorAll(".scene-sound-player").forEach(function (panel) {
+    var audio = panel.querySelector(".scene-sound-mix"), timer = 0;
+    function clearStop() { clearTimeout(timer); timer = 0; }
+    panel.querySelectorAll("audio").forEach(function (player) {
+      player.addEventListener("play", function () {
+        app.querySelectorAll("audio, video").forEach(function (other) { if (other !== player && !other.paused) other.pause(); });
+      });
+      player.addEventListener("error", function () { panel.querySelector('[role="status"]').textContent = T.audienceSound.error; });
+    });
+    if (!audio) return;
+    audio.addEventListener("pause", clearStop);
+    panel.querySelectorAll("[data-cue-start]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        clearStop();
+        var start = Number(button.dataset.cueStart), end = Number(button.dataset.cueEnd);
+        audio.currentTime = start;
+        audio.play().then(function () {
+          function stopAtEnd() {
+            if (audio.paused) return;
+            if (audio.currentTime >= end - 0.015) { audio.pause(); return; }
+            timer = setTimeout(stopAtEnd, Math.min(120, Math.max(10, (end - audio.currentTime) * 1000 / audio.playbackRate)));
+          }
+          clearStop(); stopAtEnd();
+        }).catch(function (err) { if (err.name !== "AbortError") panel.querySelector('[role="status"]').textContent = T.audienceSound.error; });
+      });
+    });
+  });
 
   /* Icon tooltips — first line bold (the term), the rest as written. The server tests render
      this script in a vm with a stub document that has no event API, so bail out there. */
