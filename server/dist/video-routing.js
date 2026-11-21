@@ -27,7 +27,7 @@ import { GenaiRequestError } from './astra-genai-client.js';
 import { hasSubjectInput, hasVideoSubjectReferences, prepareVideoImages } from './video-image-inputs.js';
 import { prepareVideoVoice } from './video-voice.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
-import { cameraDrift, compileVideoPrompt } from './video-prompt.js';
+import { cameraDrift, cameraMoveWords, compileVideoPrompt, sceneCameraDirection } from './video-prompt.js';
 import { readVideoProduction, refreshVideoReview } from './video-review.js';
 const load = createRequire(import.meta.url);
 const shared = fileURLToPath(new URL('../../skills/_shared/video-selection.js', import.meta.url));
@@ -310,7 +310,7 @@ export function planVideo(raw) {
             ? 'include natural ambience for the location and sound effects from the visible actions.'
             : 'perform the planned silent action.'}` : '';
     // The board prompt is compiled to the adapter's own limit, so it can go out as written: hand-shortened
-    // prompts sent instead kept dropping the camera move (mochi_bo 2026-11-20: 23 of 24 moving shots).
+    // prompts can discard a planned move, as in mochi_bo EP05 s0015.
     const promptLimit = tool ? videoPromptLimit(tool) : undefined;
     const compileFor = (budget) => compileVideoPrompt(shot, video.promptSource, names, { mode, measureAudio, bindDialogueSeparately,
         ...(budget ? { maxCharacters: budget - (silentSuffix ? silentSuffix.length + 1 : 0) } : {}) });
@@ -323,9 +323,10 @@ export function planVideo(raw) {
     let callArgs = withPrompt(compiled?.prompt ?? video?.prompt);
     if (scene && input.args.prompt !== undefined)
         throw new Error('scene_video_prompt: edit story_scene.videoDirection and the authored dialogue to revise the scene');
+    const sceneCamera = scene && sceneCameraDirection(context.sceneMembers, scene.camera);
     if (scene) {
         const boundTurns = bindDialogueSeparately || tool === 'astra_genai_msr' || (tool && VENDOR_REFERENCE_TOOLS.includes(tool));
-        const sceneText = [scene.emotion, scene.action, scene.sound, scene.camera,
+        const sceneText = [scene.emotion, scene.action, scene.sound, sceneCamera?.instruction,
             ...(!boundTurns ? lines.filter(l => l.delivery !== 'voiceover').map(l => l.speaker + ' (' + l.delivery + '): "' + l.tts + '"') : [])]
             .filter(Boolean).join('\n');
         callArgs = withPrompt(tool === 'astra_genai_msr' || tool === 'astra_genai_img2video' && hasVideoSubjectReferences(shot)
@@ -337,25 +338,15 @@ export function planVideo(raw) {
         }
     }
     const sourcePrompt = scene ? String(callArgs.prompt) : typeof video?.prompt === 'string' ? video.prompt : '';
-    // A prompt the caller writes is checked against the board's move: missing or contradicted moves are named, never refused.
-    const boardCamera = context.shot.visual?.camera;
-    const drift = input.args.prompt !== undefined ? cameraDrift(String(input.args.prompt), String(boardCamera?.movement ?? '')) : null;
-    // A report never refuses: when the board's own prompt cannot compile, the warning goes without the sentence.
-    const moveSentence = () => {
-        try {
-            return video?.promptSource ? compileVideoPrompt(shot, video.promptSource, names, { mode, validateLanguage: false })
-                .directionBindings.find(b => b.attribute === 'move')?.instruction ?? '' : '';
-        }
-        catch {
-            return '';
-        }
-    };
-    const carried = drift ? moveSentence() : '';
-    const driftWarning = drift ? [`camera_move_${drift}: the board moves this shot (${String(boardCamera?.movement)}) but args.prompt ${drift === 'missing' ? 'names no camera move' : 'holds the camera still'}; omit args.prompt to send the board prompt, which video_plan fits to the adapter limit${carried ? `, or write its camera sentence: "${carried}"` : ''}`] : [];
+    const boardCamera = shot.visual?.camera ?? {};
+    const rawPrompt = input.args.prompt ?? video?.prompt;
+    const drift = !scene && !compiled && typeof rawPrompt === 'string' ? cameraDrift(rawPrompt, String(boardCamera.movement ?? '')) : null;
+    const driftWarning = drift ? [`camera_move_${drift}: the ${input.args.prompt === undefined ? 'saved' : 'explicit'} prompt ${drift === 'missing' ? 'omits' : 'contradicts'} the planned move. Board direction: ${cameraMoveWords(boardCamera)}`] : [];
     const directionOf = (c) => c ? { sourcePrompt, directionBindings: c.directionBindings, directionWarnings: c.warnings, performance: c.performance } :
         { sourcePrompt, directionWarnings: [input.args.prompt !== undefined ? 'Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons.' :
                     'Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.', ...driftWarning] };
-    let direction = scene ? { sourcePrompt, directionWarnings: [] } : directionOf(compiled);
+    let direction = sceneCamera ? { sourcePrompt, directionWarnings: sceneCamera.warnings,
+        ...(sceneCamera.bindings.length ? { directionBindings: sceneCamera.bindings } : {}) } : directionOf(compiled);
     if (selection.engine === 'host') {
         if (input.tool)
             throw new Error('model_selection_mismatch: host has no server adapter');

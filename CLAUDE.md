@@ -415,10 +415,12 @@ approval the user did not give.
 
 ## Camera moves reach the video (user directive, 2026-11-21)
 
-Almost no mochi_bo clip moved its camera. The boards held 337 of 390 video shots and left 29
-unchosen, mostly through one `shot_icons` value mapped over every shot; and 23 of the 24 shots
-that did move went out with a hand-written prompt that dropped or locked the move. On the GenAI
-image and MSR lanes, which take 2,000 characters, 97 of 185 board prompts ran past it (the
+The mochi_bo boards held 337 of 390 video shots and left 29 unchosen in the 2026-11-20 sample,
+mostly through one `shot_icons` value mapped over every shot. Of 24 planned moves, 23 used a
+hand-written prompt. Those requests need individual inspection. EP05 s0015 asked to preserve
+the composition and the sampled frames hold it. EP01 s0104 requested a right pan and the
+cafe doorway shifts left in the footage. On the GenAI image and MSR lanes, which take
+2,000 characters, 97 of 185 board prompts ran past it (the
 audio-to-video lane takes 5,000, and its prompts were rewritten by hand all the same). So
 `video_plan` compiles the board prompt to the adapter's limit, leaving out design notes, the
 beats' acting fields and then expressions before the camera, action or lines; beats say an
@@ -426,7 +428,7 @@ action once and drop voice direction a model does not voice. A hand-written prom
 locks the board's move is named (`camera_move_missing`, `camera_move_contradicted`); `shot_icons`
 names video shots left with no move (`camera_move_unset`) and a call that holds every video shot
 it sets; board writes count unchosen moves. Each of these reports; none refuses, and no share of
-moving shots is asked for. Whether LTX follows a move sentence is not measured. See
+moving shots is asked for. These observations cover two clips. See
 `skills/storyboard/references/action-direction.md` and `skills/generate-cut-videos/SKILL.md`.
 
 ## Music spotting (user directive, 2026-11-14)

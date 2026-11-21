@@ -116,7 +116,7 @@ function readVideoContext(episode, shotId, sceneNo) {
       !spoken.some(line => line.delivery === 'on_screen' || line.delivery === 'off_screen'))
     selection = { ...selection, operation: 'image' };
   return { episode: root, shotId, selection, source, snapshotRevision: snapshot?.revision || null,
-    ...(scene ? {sceneNo, shotIds: members.map(s => s.id), sceneDirection: scene.videoDirection} : {}),
+    ...(scene ? {sceneNo, shotIds: members.map(s => s.id), sceneDirection: scene.videoDirection, sceneMembers: members} : {}),
     revision: hash({ ...(scene ? {sceneNo, direction: scene.videoDirection, members} : {}), selection, source, snapshotRevision: snapshot?.revision, overrides, imagePlan: { frames: shot.visual?.frames, references: shot.visual?.references, bg: shot.visual?.bg }, shotPrompt: shot.visual?.video?.prompt, shotLines: videoLines(shot), authorization: production.videoAuthorization,
       budget: production.videoBudgetUsd, approval: production.approval, maxAttempts: production.maxAttempts }),
     lines: videoLines(shot), production, board, shot };

@@ -37,15 +37,94 @@ export function expressionWords(shot: Record<string, unknown>, names: Record<str
     .map(([id, cue]) => `${names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id}: ${text(cue).replace(/[.\s]+$/, '')}`).join('; ');
 }
 
-/** How a hand-written prompt treats the board's camera move: 'missing' (no camera move named), 'contradicted'
-    (the camera told to hold) or null (named, or the board holds/leaves it unset). Reports only. */
+const heldMove = /^(?:static|fixed|locked(?:[- ]off)?)(?: (?:camera|frame|shot))?[.!]?$/i;
+
+/** Only exact catalogue moves can be expanded without losing an authored path or action cue. */
+export function cameraMoveWords(camera: Record<string, unknown>): string {
+  const movement = text(camera.movement), speed = text(camera.speed), target = text(camera.target);
+  if (!movement) return '';
+  if (heldMove.test(movement)) return 'The camera holds a static frame.';
+  const catalogue = load('../../skills/storyboard/references/film-techniques.js') as {
+    entries: { fields: { movement?: string }; prompt?: string }[];
+  };
+  const move = catalogue.entries.find(entry => entry.fields.movement === movement.toLowerCase())?.prompt;
+  const pace = ({ slow: 'slowly', steady: 'steadily', fast: 'quickly' } as Record<string, string>)[speed];
+  const travels = load('../../skills/storyboard/references/production-mode.js').travels(camera);
+  const ends = travels ? ', with a short pause on the opening and closing pictures' : '';
+  if (move) {
+    // Some existing targets contain full blocking instructions ("Follow Mochi ...; settle on the bed").
+    const path = /[;.!?]\s|^(?:after|when|once|follow|track|pan|tilt|dolly|orbit|keep|start|end)\b/i.test(target);
+    const words = move.replace('{target}', () => path || !target ? 'the subject' : target);
+    return [sentence('The camera ' + (pace ? pace + ' ' : '') + words +
+      (speed && !pace ? ' at a ' + speed + ' pace' : '') + ends), path && sentence(target)].filter(Boolean).join(' ');
+  }
+  return [sentence('Camera: ' + [speed, movement].filter(Boolean).join(' ') + ends), target && sentence('Camera target: ' + target)].filter(Boolean).join(' ');
+}
+
+/** Shot cards are editorial beats. Scope a lone move to its beat and leave conflicting coverage to the scene author. */
+export function sceneCameraDirection(members: Record<string, unknown>[], explicit?: string) {
+  function mapped(instruction: string, value: unknown) {
+    const binding: DirectionBinding = { attribute: 'move', value, via: 'prompt', instruction };
+    return { instruction, warnings: [], bindings: [binding] };
+  }
+  if (explicit) return mapped(explicit, { source: 'videoDirection.camera' });
+  let elapsed = 0;
+  const moves = members.flatMap(shot => {
+    const camera = object(object(shot.visual).camera), movement = text(camera.movement);
+    const start = elapsed;
+    elapsed += Number(shot.duration);
+    if (!movement || (members.length > 1 && heldMove.test(movement))) return [];
+    return [{ id: text(shot.id), movement, words: cameraMoveWords(camera), landing: text(camera.end), start, end: elapsed }];
+  });
+  if (!moves.length) return { instruction: '', warnings: [], bindings: [] };
+  const first = moves[0];
+  const wholeTake = moves.length === members.length && moves.every(m => m.words === first.words && m.landing === first.landing);
+  if ((wholeTake || moves.length === 1) && !nonEnglishOutsideQuotes(first.words + ' ' + first.landing)) {
+    const end = Number(first.end.toFixed(3));
+    const cue = wholeTake ? '' : 'From ' + Number(first.start.toFixed(3)) + ' to ' + end + ' seconds: ';
+    const landing = first.landing && sentence((wholeTake ? 'Closing frame: ' : 'By ' + end + ' seconds: ') + first.landing);
+    return mapped([cue + first.words, landing].filter(Boolean).join(' '), { source: 'visual.camera', shotIds: moves.map(m => m.id) });
+  }
+  const cards = moves.map(m => m.id + ' (' + m.movement + ')').join(', ');
+  return { instruction: '', bindings: [], warnings: ['scene_camera_unresolved: ' + cards +
+    ' — write the intended camera cue and landing for this take in English in story_scene.videoDirection.camera'] };
+}
+
+// Clear reversals in common directed moves. Free-form and compound choreography remains advisory.
+const directedMoves = [
+  /\bpan(?:s|ning)? left\b/i, /\bpan(?:s|ning)? right\b/i,
+  /\btilt(?:s|ing)? up(?:wards?)?\b/i, /\btilt(?:s|ing)? down(?:wards?)?\b/i,
+  /\b(?:dolly|dollies|push(?:es|ing)?) in\b/i, /\b(?:dolly|dollies) out\b|\bpull(?:s|ing)? (?:back|out)\b/i,
+  /\bzoom(?:s|ing)? in\b/i, /\bzoom(?:s|ing)? out\b/i,
+  /\b(?:truck|track)(?:s|ing)? (?:parallel|sideways|alongside|laterally)\b/i,
+  /\btrack(?:s|ing)? backward\b/i,
+  /\b(?:track|follow)(?:s|ing)? (?:\w+ )?(?:from )?behind\b/i,
+];
+
+/** Report clear omissions, holds and reversals in uncompiled prompt text. */
 export function cameraDrift(prompt: string, movement: string): 'missing' | 'contradicted' | null {
-  if (!movement.trim() || /^(static|fixed|locked)/i.test(movement.trim())) return null;
-  const said = prompt.split(/(?<=[.!?])\s+/).filter(s => /\bcamera\b/i.test(s));
+  if (!movement.trim()) return null;
+  const prose = prompt.replace(/"[^"]*"|“[^”]*”|「[^」]*」/g, ' ');
+  const clauses = prose.split(/[.!?;\n]+/).map(s => s.trim());
+  // Read the camera's predicate. Someone approaching or pushing a cart toward the camera is actor motion.
+  const said = clauses.map(s => {
+    const imperative = /^(?:(?:do not|never|slowly|steadily|quickly) )*(?:pan|dolly|push in|pull back|crane|tilt|zoom|truck|orbit|track|follow|whip pan)\b/i;
+    const camera = /\b(?:(?:static|locked(?:[- ]off)?|fixed) )?camera\b|\bshot (?=tracking|panning|tilting|following|moving|zooming)/i.exec(s);
+    const predicate = imperative.test(s) ? s : camera ? s.slice(camera.index) : '';
+    return predicate.split(/\s+(?:while|as|so that)\s+/i)[0];
+  }).filter(Boolean);
   // A zoom "from a fixed position" still moves; "movements" of the actors is not a camera move.
-  const holds = (s: string) => !/\bzoom/i.test(s) && /\b(static|locked|lock(?:ed)?[- ]off|stays? (?:steady|still|fixed|locked|put)|does ?n[o']t move|remains? (?:still|fixed|steady)|holds? (?:a |the )?(?:static|still|fixed|steady))\b/i.test(s);
-  const moves = /\b(push(?:es|ing)?|pull(?:s|ing)?|dolly|dollies|truck(?:s|ing)?|track(?:s|ing)?|follow(?:s|ing)?|pan(?:s|ning)?|tilt(?:s|ing)?|zoom(?:s|ing)?|crane(?:s)?|pedestal|orbit(?:s|ing)?|arc(?:s)?|circles?|approach(?:es)?|glides?|rises?|lowers?|handheld|whip|moves?|travels?|sweeps?|drifts?)\b/i;
-  if (said.some(s => moves.test(s) && !holds(s))) return null;
+  const holds = (s: string) => !/\bzoom/i.test(s) && /^(?:static|locked(?:[- ]off)?|fixed) camera\b|\bcamera[: ]+(?:(?:is|stays?|remains?) |holds? (?:a |the )?)?(?:steady|still|static|fixed|locked|put)\b|\bcamera (?:does not|doesn't|never) moves?\b/i.test(s);
+  const moves = /\b(push(?:es|ing)?|pull(?:s|ing)?|dolly|dollies|truck(?:s|ing)?|track(?:s|ing)?|follow(?:s|ing)?|pan(?:s|ning)?|tilt(?:s|ing)?|zoom(?:s|ing)?|crane(?:s)?|pedestal|orbit(?:s|ing)?|arc(?:s)?|circles?|approach(?:es)?|glides?|rises?|lowers?|handheld|body-mounted|whip|moves?|travels?|sweeps?|drifts?|recoils?|rides?|chases?|flies|swings?)\b/i;
+  const negated = /^(?:camera[: ]+)?(?:never|do(?:es)? not|doesn't|don't|must not)\b/i;
+  const moving = said.filter(s => moves.test(s) && !holds(s) && !negated.test(s));
+  if (heldMove.test(movement.trim())) return moving.length ? 'contradicted' : null;
+  const expected = directedMoves.find(re => re.test(movement));
+  if (expected && !moving.some(s => expected.test(s)) &&
+    (moving.some(s => directedMoves.some(re => re.test(s))) || said.some(s => negated.test(s) && expected.test(s)))) return 'contradicted';
+  const fixedFrame = /\b(?:preserve|maintain|lock) the (?:opening |original |same )?(?:image )?(?:composition|framing|crop)\b/i;
+  if (clauses.some(s => fixedFrame.test(s) && !/\b(?:at first|initially|until|then|first frame only)\b/i.test(s))) return 'contradicted';
+  if (moving.length) return null;
   return said.some(holds) ? 'contradicted' : 'missing';
 }
 
@@ -59,22 +138,11 @@ export function compileVideoPrompt(shot: Record<string, unknown>, source: VideoP
   const sizes = viewWords ? words.SIZE_WORDS_OBJECT : words.SIZE_WORDS;
   const catalogue = load('../../skills/storyboard/references/film-techniques.js') as { byId: Record<string, { category: string; fields: Record<string, string>; prompt?: string; instruction: string; label: { en: string } }> };
   const contract = load('../../skills/storyboard/references/structure-contract.js') as { depthText(value: unknown): string };
-  const travels = (load('../../skills/storyboard/references/production-mode.js') as { travels(value: unknown): boolean }).travels;
   const picked = (Array.isArray(plan.techniques) ? plan.techniques : []).map(object).map(t => ({
     id: text(t.id), from: text(t.from), to: text(t.to), on: text(t.on), entry: catalogue.byId[text(t.id)],
   }));
-  const movement = text(camera.movement), speed = text(camera.speed), target = text(camera.target), settle = text(camera.end);
-  // A movement written without its technique (storyboard_apply, older boards) still takes the catalogue's sentence,
-  // not the bare "Camera: dolly in." label: the longest catalogue movement the authored text opens with.
-  const move = picked.find(t => t.entry?.fields.movement && movement.toLowerCase().startsWith(t.entry.fields.movement))?.entry
-    ?? Object.values(catalogue.byId).filter(e => e.prompt && e.fields.movement && movement.toLowerCase().startsWith(e.fields.movement))
-      .sort((a, b) => b.fields.movement.length - a.fields.movement.length)[0];
+  const movement = text(camera.movement), settle = text(camera.end), moveWords = cameraMoveWords(camera);
   const rack = picked.find(t => t.entry?.fields.focus);
-  const pace = ({ slow: 'slowly', steady: 'steadily', fast: 'quickly' } as Record<string, string>)[speed];
-  const ends = travels(camera) ? ', with a short pause on the opening and closing pictures' : '';
-  const moveWords = !movement ? '' : /^(static|fixed|locked)/i.test(movement) ? 'The camera holds a static frame.'
-    : move?.prompt ? sentence(`The camera ${pace ? pace + ' ' : ''}${move.prompt.replace('{target}', target || 'the subject')}${speed && !pace ? ` at a ${speed} pace` : ''}${ends}`)
-    : sentence(`Camera: ${[speed, movement].filter(Boolean).join(' ')}` + (target ? ` toward ${target}` : '') + ends);
   const focusWords = !rack ? '' : sentence(rack.from && rack.to ? `Rack focus from ${rack.from} to ${rack.to}` : `${rack.entry.label.en} from the near subject to the far subject`);
   const sizeWords = sentence(sizes[text(plan.size)] || ''), angleWords = sentence(words.ANGLE_WORDS[text(plan.angle)] || '');
   const framing = sentence([sizes[text(plan.size)], words.ANGLE_WORDS[text(plan.angle)]].filter(Boolean).join(', '));
@@ -147,6 +215,8 @@ export function compileVideoPrompt(shot: Record<string, unknown>, source: VideoP
   ];
   return { prompt, performance, directionBindings: bindings.filter(b => b.value !== undefined), warnings: [
     ...performance.warnings, ...fitWarnings,
+    ...(cameraDrift([source.action, source.end].filter(Boolean).join('\n'), movement) === 'contradicted'
+      ? ['camera_move_contradicted: shot_prompt action or end conflicts with the camera direction. Reconcile the action cue and landing with visual.camera.'] : []),
     // An unchosen move leaves the camera to the model; on mochi_bo 29 of 33 shots of one episode went out so.
     ...(movement ? [] : ['camera_move_unset: no camera move is chosen, so the video model decides the camera — set shot_icons move (camera.static for a deliberate hold)']),
     ...bindings.filter(b => b.value !== undefined && b.via === 'unmapped' && b.attribute !== 'move').map(b => `No prompt mapping for ${b.attribute}: ${JSON.stringify(b.value)}`),
