@@ -194,6 +194,15 @@ export function prepareVideoImages(tool: string, input: Record<string, unknown>,
     if (tool === 'veo_reference' && sent.some(ref => ref.role === 'style' || ref.role === 'background'))
       throw new Error('image_plan_unsupported: Veo accepts pictures of a single subject; style and scene references cannot be sent as subject assets');
     const paths = sent.map(ref => bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, true));
+    if (tool === 'veo_reference') {
+      const roles = new Set(sent.map(ref => ref.role));
+      const cast = new Set(paths.flatMap((file, i) => {
+        if (sent[i].role !== 'character') return [];
+        const folder = path.dirname(file);
+        return path.basename(path.dirname(folder)) === 'characters' || characterKey(file) === folder ? [folder] : [];
+      }));
+      if (roles.size > 1 || cast.size > 1) throw new Error('image_plan_unsupported: Veo asset references must show the same subject');
+    }
     const start = (msr || vendor) && frames.start ? bind('start', frames.start, 'start', 'video', 'Opening picture', true) : undefined;
     if (msr) put('references', [...paths.map((file, i) => msrReference(file, sent[i].role)), ...(start ? [{ imagePath: start, background: true }] : [])]);
     else put('referenceImagePaths', [...paths, ...(start ? [start] : [])]);

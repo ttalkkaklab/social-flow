@@ -100220,9 +100220,9 @@ function manageProject(args) {
   const project = loadFromHere(helper);
   return project.manageProject(args);
 }
-function requireReadyProject(target) {
+function requireReadyProject(target, options) {
   const project = loadFromHere(helper);
-  return project.requireReadyProject(resolve(target));
+  return project.requireReadyProject(resolve(target), void 0, options);
 }
 function episodeHandoff(episode) {
   const file = join(episode, ".work/model-settings.json");
@@ -117798,6 +117798,15 @@ function prepareVideoImages(tool2, input, shot, episode) {
     if (tool2 === "veo_reference" && sent.some((ref) => ref.role === "style" || ref.role === "background"))
       throw new Error("image_plan_unsupported: Veo accepts pictures of a single subject; style and scene references cannot be sent as subject assets");
     const paths3 = sent.map((ref) => bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, true));
+    if (tool2 === "veo_reference") {
+      const roles = new Set(sent.map((ref) => ref.role));
+      const cast = new Set(paths3.flatMap((file, i2) => {
+        if (sent[i2].role !== "character") return [];
+        const folder = path20.dirname(file);
+        return path20.basename(path20.dirname(folder)) === "characters" || characterKey(file) === folder ? [folder] : [];
+      }));
+      if (roles.size > 1 || cast.size > 1) throw new Error("image_plan_unsupported: Veo asset references must show the same subject");
+    }
     const start = (msr || vendor) && frames.start ? bind("start", frames.start, "start", "video", "Opening picture", true) : void 0;
     if (msr) put2("references", [...paths3.map((file, i2) => msrReference(file, sent[i2].role)), ...start ? [{ imagePath: start, background: true }] : []]);
     else put2("referenceImagePaths", [...paths3, ...start ? [start] : []]);
@@ -118574,7 +118583,7 @@ function checkVideoEnvironment(tool2) {
 }
 function planVideo(raw) {
   const input = videoPlanSchema.parse(raw);
-  requireReadyProject(input.episode);
+  requireReadyProject(input.episode, { allowVideoSnapshot: true });
   const context2 = routingContext(input.episode, input.shotId, input.sceneNo);
   const scene = context2.sceneDirection && sceneVideoDirectionSchema.parse(context2.sceneDirection);
   const take = { ...scene ? { sceneNo: context2.sceneNo, sceneDurationSeconds: Number(context2.shot.duration), shotIds: context2.shotIds } : {}, ...input.purpose ? { purpose: input.purpose } : {}, ...input.basedOnRequestId ? { basedOnRequestId: input.basedOnRequestId } : {}, ...input.changeNote ? { changeNote: input.changeNote } : {} };
@@ -118847,7 +118856,7 @@ function writeApprovalView(episode, approvals) {
 }
 function approveVideo(raw) {
   const input = videoApproveSchema.parse(raw), episode = fs19.realpathSync(input.episode);
-  requireReadyProject(episode);
+  requireReadyProject(episode, { allowVideoSnapshot: true });
   const approvals = readApprovals(episode), at = (/* @__PURE__ */ new Date()).toISOString();
   if (input.auto) approvals.auto = { request: input.request, at };
   else if (input.auto === false) delete approvals.auto;
@@ -118871,7 +118880,7 @@ function approveVideo(raw) {
 }
 async function executeVideo(raw, dispatch) {
   const request = videoExecuteSchema.parse(raw), episode = fs19.realpathSync(request.episode);
-  requireReadyProject(episode);
+  requireReadyProject(episode, { allowVideoSnapshot: true });
   const plan2 = JSON.parse(fs19.readFileSync(path22.join(episode, ".work/video-routing/plans", request.planId + ".json"), "utf8"));
   const { id, ...body } = plan2;
   if (id !== request.planId || hash2(body) !== id || plan2.episode !== episode) throw new Error("Invalid video plan");

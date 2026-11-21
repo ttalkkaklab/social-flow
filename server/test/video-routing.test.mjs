@@ -827,3 +827,14 @@ test('registered hosted tools require episode context and video_execute dispatch
   assert.deepEqual(calls, ['predictLongRunning', 'fetchPredictOperation']);
   assert.equal(f.state().jobs['public-route'].status, 'completed');
 });
+
+test('managed video plans can resume an active snapshot after a workspace Veo preview retires', t => {
+  const f = fixture(t, { engine: 'veo', model: 'veo-3.1-fast-generate-001', resolution: '720p', operation: 'text' });
+  const { file, config: saved } = settings.readSettings(f.root);
+  saved.models.video.model = 'veo-3.1-fast-generate-preview';
+  fs.writeFileSync(file, JSON.stringify(saved));
+  assert.equal(f.plan('resumed').args.model, 'veo-3.1-fast-generate-001');
+  delete saved.workspace;
+  fs.writeFileSync(file, JSON.stringify(saved));
+  assert.throws(() => f.plan('missing-workspace'), /project_setup_required/);
+});

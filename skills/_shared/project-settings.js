@@ -56,7 +56,7 @@ function status(root) {
 
 // Episode and channel paths select their own project, even inside another configured workspace.
 // A missing settings file there must never fall back to an enclosing project's choices.
-function requireReadyProject(target, output) {
+function requireReadyProject(target, output, { allowVideoSnapshot = false } = {}) {
   if (typeof target !== 'string' || !path.isAbsolute(target))
     throw new Error('project_setup_required: workspace — ask the user for the project directory');
   let existing = path.resolve(target);
@@ -74,6 +74,14 @@ function requireReadyProject(target, output) {
       const root = channelPath ? path.dirname(channelData) : dir;
       if (!fs.existsSync(root)) throw new Error(`project_setup_required: workspace — ask the user to select the project directory for ${root}`);
       const state = status(root);
+      if (state.status === 'migration_required' && allowVideoSnapshot && state.missing.every(field => field === 'models.video') &&
+          fs.existsSync(target) && path.dirname(fs.realpathSync(target)) === state.paths?.episodes) {
+        const snapshotFile = managed(root, path.relative(root, path.join(target, models.SNAPSHOT_FILE)), 'file');
+        if (fs.existsSync(snapshotFile)) {
+          const snapshot = models.snapshotSettings(root, target);
+          if (snapshot.source === state.file) return state; // The planner still checks the episode's effective model.
+        }
+      }
       if (state.status !== 'ready') throw new Error(`project_setup_required: ${root} — ${state.missing.join(', ')}; complete project-init for this directory`);
       if (output && requireReadyProject(output).workspace !== state.workspace)
         throw new Error('project_setup_required: the storyboard and output must belong to the same selected workspace');

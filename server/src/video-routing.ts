@@ -247,7 +247,7 @@ export function checkVideoEnvironment(tool: string): void {
 }
 export function planVideo(raw: unknown): VideoPlan {
   const input = videoPlanSchema.parse(raw);
-  requireReadyProject(input.episode);
+  requireReadyProject(input.episode, { allowVideoSnapshot: true });
   const context = routingContext(input.episode, input.shotId, input.sceneNo);
   const scene = context.sceneDirection && sceneVideoDirectionSchema.parse(context.sceneDirection);
   const take = { ...(scene ? { sceneNo: context.sceneNo, sceneDurationSeconds: Number(context.shot.duration), shotIds: context.shotIds } : {}), ...(input.purpose ? { purpose: input.purpose } : {}), ...(input.basedOnRequestId ? { basedOnRequestId: input.basedOnRequestId } : {}), ...(input.changeNote ? { changeNote: input.changeNote } : {}) };
@@ -497,7 +497,7 @@ function writeApprovalView(episode: string, approvals: Approvals) {
 }
 export function approveVideo(raw: unknown): Approvals {
   const input = videoApproveSchema.parse(raw), episode = fs.realpathSync(input.episode);
-  requireReadyProject(episode);
+  requireReadyProject(episode, { allowVideoSnapshot: true });
   const approvals = readApprovals(episode), at = new Date().toISOString();
   if (input.auto) approvals.auto = { request: input.request, at };
   else if (input.auto === false) delete approvals.auto;
@@ -524,7 +524,7 @@ export function approveVideo(raw: unknown): Approvals {
 }
 export async function executeVideo(raw: unknown, dispatch: VideoDispatch): Promise<ToolResult> {
   const request = videoExecuteSchema.parse(raw), episode = fs.realpathSync(request.episode);
-  requireReadyProject(episode);
+  requireReadyProject(episode, { allowVideoSnapshot: true });
   const plan: VideoPlan = JSON.parse(fs.readFileSync(path.join(episode, '.work/video-routing/plans', request.planId + '.json'), 'utf8'));
   const { id, ...body } = plan;
   if (id !== request.planId || hash(body) !== id || plan.episode !== episode) throw new Error('Invalid video plan');
