@@ -25,7 +25,7 @@ export const characterPanelSchema = z.object({
 const FRAMING = {
     face: { size: [1024, 1024], text: 'Head-only identity portrait, front facing, neutral expression, complete hair, ears and chin visible, head filling 70 percent of image height with plain background around it. No shoulders, torso or clothing.' },
     front: { size: [1024, 1536], text: 'Headless front mannequin, neck to feet, square to camera. Neutral stance, arms slightly clear of the waist. Subject fills 85 percent of frame height.' },
-    back: { size: [1024, 1536], text: 'Turn this headless mannequin around 180 degrees. Direct rear view from neck to heels, same build, clothing, stance and scale as the front. Asymmetric details switch sides in the image. Subject fills 85 percent of frame height.' },
+    back: { size: [1024, 1536], text: 'Turn this headless mannequin around 180 degrees. Direct rear view from neck to heels, same build, stance and scale as the front. Asymmetric details switch sides in the image. Subject fills 85 percent of frame height.' },
 };
 // The body panels are edited from the face panel, which pulls a head back in unless the head is ruled out.
 // The back is edited from the front alone with a turn-around instruction: a face reference brings the head back,
@@ -64,8 +64,7 @@ export function characterPanelRequest(raw) {
     const { STYLES } = shared('storyboard/references/production-mode.js');
     const style = preset && STYLES[preset] ? STYLES[preset].prompt : '';
     // A rear view uses the registered front's wardrobe even when drawn from text or custom references.
-    const defaultWardrobe = args.view === 'back' && panels.front?.file ? panels.front.wardrobe ?? 'character' : 'fitting';
-    const words = sheetPanelPrompt(character, args.view, args.wardrobe ?? defaultWardrobe);
+    const words = sheetPanelPrompt(character, args.view, args.wardrobe, panels.front);
     const compose = () => [references.length && args.view !== 'back' ? 'Keep this exact character from the reference images.' : '', FRAMING[args.view].text,
         `Character: ${words.text.replace(/[.]$/, '')}.`, style, 'Soft even studio lighting, plain neutral grey background. One view only. No text, watermark, collage or border.'].filter(Boolean).join(' ');
     // Never drop identity or style to fit a transport limit. Report it before submission.

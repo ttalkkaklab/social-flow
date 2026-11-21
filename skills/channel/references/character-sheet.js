@@ -60,7 +60,9 @@ if (require.main === module) {
     const view = args[1] === '--panel' && ['face', 'front', 'back'].includes(args[2]) ? args[2] : undefined;
     if (args.length !== 1 && !view) throw new Error('Usage: character-sheet.js <identity.md> [--panel face|front|back]');
     if (view) {
-      const { text, skipped } = sheetPanelPrompt(identityCharacter(fs.readFileSync(args[0], 'utf8')), view);
+      const manifest = path.join(path.dirname(args[0]), 'panels.json');
+      const front = view === 'back' && fs.existsSync(manifest) ? JSON.parse(fs.readFileSync(manifest, 'utf8')).panels?.front : undefined;
+      const { text, skipped } = sheetPanelPrompt(identityCharacter(fs.readFileSync(args[0], 'utf8'), { ready: false }), view, undefined, front);
       if (skipped.length) console.error(`Not English, left out: ${skipped.join(', ')}`);
       console.log(text);
     } else console.log(JSON.stringify(handoff(args[0]), null, 2));

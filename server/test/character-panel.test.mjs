@@ -69,6 +69,10 @@ test('costume and legacy fronts keep their wardrobe for the rear edit', t => {
     assert.doesNotMatch(back.prompt, /T-shirt|shorts/);
     assert.equal(characterPanelRequest({ identityPath, view: 'back', references: [] }).panel.wardrobe, 'character');
   }
+  const fittingBack = characterPanelRequest({ identityPath, view: 'back', wardrobe: 'fitting' });
+  assert.equal(fittingBack.panel.wardrobe, 'fitting');
+  assert.match(fittingBack.prompt, /fitted T-shirt/);
+  assert.doesNotMatch(fittingBack.prompt, /plate armor|Match the front panel’s clothing|same build, clothing/);
 });
 
 test('the GenAI cap reports overlength without dropping style or identity', (t) => {

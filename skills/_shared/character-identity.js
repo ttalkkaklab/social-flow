@@ -132,17 +132,21 @@ function panelPrompt(character, view, { includeOutfit = true } = {}) {
 }
 
 // The fitting outfit belongs to the turnaround. physical.outfit describes what the character wears in a scene.
-function sheetPanelPrompt(character, view, wardrobe = 'fitting') {
+function sheetPanelPrompt(character, view, wardrobe, front) {
   if (view === 'face') return panelPrompt(character, view);
+  const frontWardrobe = view === 'back' && front?.file ? front.wardrobe ?? 'character' : undefined;
   const unclothed = character.physical?.outfit?.status === 'not_applicable';
-  const fitting = wardrobe === 'fitting' && !unclothed;
+  const fitting = (wardrobe ?? frontWardrobe ?? 'fitting') === 'fitting' && !unclothed;
   const words = panelPrompt(character, view, { includeOutfit: !fitting });
   const species = character.identity?.species;
   const clothing = fitting
     ? 'Use a plain opaque fitted T-shirt and short mid-thigh shorts where the anatomy allows. Keep the natural silhouette and limb proportions.'
     : unclothed ? 'Keep the natural body surface and markings unclothed.' : '';
-  return { ...words, text: [species?.status === 'confirmed' && species.value, words.text, clothing].filter(Boolean).join('; '),
-    wardrobe: fitting ? 'fitting' : 'character' };
+  const selected = fitting ? 'fitting' : 'character';
+  const match = frontWardrobe === selected ? 'Match the front panel’s clothing.' : '';
+  const description = [species?.status === 'confirmed' && species.value, words.text].filter(Boolean).join('; ').replace(/[.]$/, '');
+  return { ...words, text: [description && description + '.', clothing, match].filter(Boolean).join(' '),
+    wardrobe: selected };
 }
 
 // 등신 (head count): how many of its own head heights the standing figure is tall. The face panel is an

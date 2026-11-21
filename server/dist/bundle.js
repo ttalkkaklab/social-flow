@@ -93971,17 +93971,21 @@ var require_character_identity = __commonJS({
       });
       return { text: words.join("; "), skipped, expression };
     }
-    function sheetPanelPrompt(character, view, wardrobe = "fitting") {
+    function sheetPanelPrompt(character, view, wardrobe, front) {
       if (view === "face") return panelPrompt(character, view);
+      const frontWardrobe = view === "back" && front?.file ? front.wardrobe ?? "character" : void 0;
       const unclothed = character.physical?.outfit?.status === "not_applicable";
-      const fitting = wardrobe === "fitting" && !unclothed;
+      const fitting = (wardrobe ?? frontWardrobe ?? "fitting") === "fitting" && !unclothed;
       const words = panelPrompt(character, view, { includeOutfit: !fitting });
       const species = character.identity?.species;
       const clothing = fitting ? "Use a plain opaque fitted T-shirt and short mid-thigh shorts where the anatomy allows. Keep the natural silhouette and limb proportions." : unclothed ? "Keep the natural body surface and markings unclothed." : "";
+      const selected = fitting ? "fitting" : "character";
+      const match2 = frontWardrobe === selected ? "Match the front panel\u2019s clothing." : "";
+      const description = [species?.status === "confirmed" && species.value, words.text].filter(Boolean).join("; ").replace(/[.]$/, "");
       return {
         ...words,
-        text: [species?.status === "confirmed" && species.value, words.text, clothing].filter(Boolean).join("; "),
-        wardrobe: fitting ? "fitting" : "character"
+        text: [description && description + ".", clothing, match2].filter(Boolean).join(" "),
+        wardrobe: selected
       };
     }
     var HEADS = String.raw`(?<![\d.])(?<!\d\s*(?:[-–~]|to)\s*)(\d+(?:\.\d+)?)(?:\s+(\d)\/(\d))?[\s-]*`;
@@ -94678,7 +94682,9 @@ var require_character_sheet = __commonJS({
         const view = args[1] === "--panel" && ["face", "front", "back"].includes(args[2]) ? args[2] : void 0;
         if (args.length !== 1 && !view) throw new Error("Usage: character-sheet.js <identity.md> [--panel face|front|back]");
         if (view) {
-          const { text: text4, skipped } = sheetPanelPrompt(identityCharacter(fs25.readFileSync(args[0], "utf8")), view);
+          const manifest2 = path35.join(path35.dirname(args[0]), "panels.json");
+          const front = view === "back" && fs25.existsSync(manifest2) ? JSON.parse(fs25.readFileSync(manifest2, "utf8")).panels?.front : void 0;
+          const { text: text4, skipped } = sheetPanelPrompt(identityCharacter(fs25.readFileSync(args[0], "utf8"), { ready: false }), view, void 0, front);
           if (skipped.length) console.error(`Not English, left out: ${skipped.join(", ")}`);
           console.log(text4);
         } else console.log(JSON.stringify(handoff(args[0]), null, 2));
@@ -138968,7 +138974,7 @@ var characterPanelSchema = external_exports.object({
 var FRAMING = {
   face: { size: [1024, 1024], text: "Head-only identity portrait, front facing, neutral expression, complete hair, ears and chin visible, head filling 70 percent of image height with plain background around it. No shoulders, torso or clothing." },
   front: { size: [1024, 1536], text: "Headless front mannequin, neck to feet, square to camera. Neutral stance, arms slightly clear of the waist. Subject fills 85 percent of frame height." },
-  back: { size: [1024, 1536], text: "Turn this headless mannequin around 180 degrees. Direct rear view from neck to heels, same build, clothing, stance and scale as the front. Asymmetric details switch sides in the image. Subject fills 85 percent of frame height." }
+  back: { size: [1024, 1536], text: "Turn this headless mannequin around 180 degrees. Direct rear view from neck to heels, same build, stance and scale as the front. Asymmetric details switch sides in the image. Subject fills 85 percent of frame height." }
 };
 var BODY = "head, face, hair, ears, tusks, helmet, text, watermark, collage, multiple views, border";
 var NEGATIVE = {
@@ -138999,8 +139005,7 @@ function characterPanelRequest(raw) {
   const preset = shared4("_shared/model-settings.js").readSettings(workspace).config?.style?.preset;
   const { STYLES } = shared4("storyboard/references/production-mode.js");
   const style = preset && STYLES[preset] ? STYLES[preset].prompt : "";
-  const defaultWardrobe = args.view === "back" && panels.front?.file ? panels.front.wardrobe ?? "character" : "fitting";
-  const words = sheetPanelPrompt(character, args.view, args.wardrobe ?? defaultWardrobe);
+  const words = sheetPanelPrompt(character, args.view, args.wardrobe, panels.front);
   const compose = () => [
     references.length && args.view !== "back" ? "Keep this exact character from the reference images." : "",
     FRAMING[args.view].text,

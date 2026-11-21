@@ -29,7 +29,7 @@ export type CharacterPanelInput = z.infer<typeof characterPanelSchema>;
 const FRAMING = {
   face: { size: [1024, 1024], text: 'Head-only identity portrait, front facing, neutral expression, complete hair, ears and chin visible, head filling 70 percent of image height with plain background around it. No shoulders, torso or clothing.' },
   front: { size: [1024, 1536], text: 'Headless front mannequin, neck to feet, square to camera. Neutral stance, arms slightly clear of the waist. Subject fills 85 percent of frame height.' },
-  back: { size: [1024, 1536], text: 'Turn this headless mannequin around 180 degrees. Direct rear view from neck to heels, same build, clothing, stance and scale as the front. Asymmetric details switch sides in the image. Subject fills 85 percent of frame height.' },
+  back: { size: [1024, 1536], text: 'Turn this headless mannequin around 180 degrees. Direct rear view from neck to heels, same build, stance and scale as the front. Asymmetric details switch sides in the image. Subject fills 85 percent of frame height.' },
 } as const;
 // The body panels are edited from the face panel, which pulls a head back in unless the head is ruled out.
 // The back is edited from the front alone with a turn-around instruction: a face reference brings the head back,
@@ -48,7 +48,7 @@ export function characterPanelRequest(raw: unknown) {
     throw new Error('character_path_invalid: identityPath must be <channel>/assets/characters/<id>/identity.md');
   const { identityCharacter, sheetPanelPrompt, headsTall } = shared('_shared/character-identity.js') as {
     identityCharacter(source: string, o?: { ready?: boolean }): unknown;
-    sheetPanelPrompt(character: unknown, view: string, wardrobe?: string): { text: string; skipped: string[]; expression: string[]; wardrobe?: 'fitting' | 'character' }; headsTall(character: unknown): number | null };
+    sheetPanelPrompt(character: unknown, view: string, wardrobe?: string, front?: { file?: string; wardrobe?: string }): { text: string; skipped: string[]; expression: string[]; wardrobe?: 'fitting' | 'character' }; headsTall(character: unknown): number | null };
   const character = identityCharacter(readFileSync(identityPath, 'utf8'), { ready: false });
   const panelsFile = path.join(folder, 'panels.json');
   const panels = (existsSync(panelsFile) ? JSON.parse(readFileSync(panelsFile, 'utf8')).panels : undefined) ?? {} as Record<string, { file?: string }>;
@@ -69,8 +69,7 @@ export function characterPanelRequest(raw: unknown) {
   const { STYLES } = shared('storyboard/references/production-mode.js') as { STYLES: Record<string, { prompt: string }> };
   const style = preset && STYLES[preset] ? STYLES[preset].prompt : '';
   // A rear view uses the registered front's wardrobe even when drawn from text or custom references.
-  const defaultWardrobe = args.view === 'back' && panels.front?.file ? panels.front.wardrobe ?? 'character' : 'fitting';
-  const words = sheetPanelPrompt(character, args.view, args.wardrobe ?? defaultWardrobe);
+  const words = sheetPanelPrompt(character, args.view, args.wardrobe, panels.front);
   const compose = () => [references.length && args.view !== 'back' ? 'Keep this exact character from the reference images.' : '', FRAMING[args.view].text,
     `Character: ${words.text.replace(/[.]$/, '')}.`, style, 'Soft even studio lighting, plain neutral grey background. One view only. No text, watermark, collage or border.'].filter(Boolean).join(' ');
   // Never drop identity or style to fit a transport limit. Report it before submission.
