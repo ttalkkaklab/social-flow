@@ -43,6 +43,9 @@ test('image and audio bodies go to their endpoints; audio sets the length', t =>
   assert.equal(spoken.endpoint, 'audio-to-video');
   assert.match(spoken.body.audio_uri, /^data:audio\/wav;base64,/);
   assert.equal(spoken.body.duration, undefined);
+  const withoutImage = buildLtxApiBody(ltxApiAudio2VideoSchema.parse({ prompt: 'A bell rings', audioPath: voice }));
+  assert.equal(Object.hasOwn(withoutImage.body, 'image_uri'), false);
+  assert.equal(ltxApiAudio2VideoSchema.safeParse({ audioPath: voice, lastImagePath: image, prompt: 'x' }).success, false);
   const long = path.join(dir, 'l.wav'); execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'sine=d=12', long]);
   assert.throws(() => buildLtxApiBody(ltxApiAudio2VideoSchema.parse({ prompt: '', sourceImagePath: image, audioPath: long })), /2–10 s/);
 });

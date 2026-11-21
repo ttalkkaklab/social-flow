@@ -131,13 +131,13 @@ export function speechVideoCapabilities(provider: string, model: string, operati
   // MSR voices the dialogue written in its prompt; no line audio goes in (2026-10-31).
   // The hosted reference lanes speak the prompt's dialogue natively, as MSR does; a pinned sample sets the timbre.
   if (['minimax', 'heygen'].includes(provider) && operation === 'reference') return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: 'Native speech from the prompt dialogue with an optional voice sample; voice identity is imitation, not preserved audio' };
-  if (provider === 'ltx-api' && operation === 'audio') return { provider, model, audioConditioning: true, lipSync: false, postLipSync: false, evidence: 'LTX API audio-to-video conditions on the supplied track; preservation and mouth sync unverified' };
   if (provider === 'astra-genai' && (operation === 'reference' || (operation === 'image' && model === 'ltx-2.5-22b-distilled' && subjectReferences))) return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: 'MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio' };
-  if (provider === 'astra-genai-desktop') return { provider, model, audioConditioning: true, lipSync: false, postLipSync: false, evidence: 'Gateway A2V reencodes supplied audio; timing/voice identity not guaranteed; installed model capabilities must be checked' };
-  if (provider === 'astra') return { provider, model, audioConditioning: true, lipSync: true, postLipSync: false, evidence: 'astra_audio2video adapter contract' };
+  if (operation === 'audio' && (provider === 'astra' || provider === 'astra-genai-desktop' || provider === 'ltx-api' ||
+    provider === 'astra-genai' && model === 'ltx-2.5-22b-dev'))
+    return { provider, model, audioConditioning: true, lipSync: false, postLipSync: false, evidence: 'The supplied track conditions video generation. Mouth movement and phoneme alignment require output review.' };
   if (provider === 'seedance' && Object.hasOwn(seedance.SEEDANCE_MODEL_SPECS, model))
     return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, evidence: 'Reference audio does not promise exact recorded-speech timing; no post-lipsync adapter installed' };
-  if (['host', 'veo', 'mlx', 'astra-genai', 'ltx-api', 'minimax', 'heygen'].includes(provider))
+  if (['host', 'veo', 'mlx', 'astra', 'astra-genai', 'astra-genai-desktop', 'ltx-api', 'minimax', 'heygen'].includes(provider))
     return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, evidence: 'No verified external-speech synchronization adapter; voiceover remains available' };
   throw new Error('No verified speech synchronization contract for selected deployment/model');
 }

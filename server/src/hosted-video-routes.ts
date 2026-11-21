@@ -45,7 +45,7 @@ export const HOSTED_VIDEO_ROUTES: Record<string, HostedRoute> = {
     seconds: a => ltxApiSeconds(String(a.model ?? 'ltx-2-5-pro'), String(a.resolution ?? '1920x1080'), Number(a.fps ?? 24)),
     poll: (_, id) => pollLtxApi('image-to-video', id) },
   ltx_api_audio2video: { ...ltx, ...inputs(ltxApiAudio2VideoSchema, buildLtxApiBody, generateLtxApiVideo), operation: 'audio', voice: 'supplied',
-    title: 'Generate an LTX API video from a voice track', description: 'The supplied audio controls the clip length and speech. Requires a start image and LTX_API_KEY.',
+    title: 'Generate an LTX API video from a voice track', description: 'The supplied audio controls the clip length and speech. Supply a prompt or a first image, or both. Requires LTX_API_KEY.',
     poll: (_, id) => pollLtxApi('audio-to-video', id) },
   veo_text2video: { ...veo, ...inputs(veoTextSchema, buildVeoBody, generateVeo), operation: 'text', title: 'Generate a Veo clip from text',
     seconds: () => [4, 6, 8], description: 'Google Cloud Veo 3.1. English scene and optional native sound. Character voice samples are unsupported.' },

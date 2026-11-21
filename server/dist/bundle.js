@@ -77937,10 +77937,10 @@ var init_values = __esm({
 });
 
 // node_modules/openai/internal/utils/sleep.mjs
-var sleep3;
+var sleep4;
 var init_sleep = __esm({
   "node_modules/openai/internal/utils/sleep.mjs"() {
-    sleep3 = (ms) => new Promise((resolve14) => setTimeout(resolve14, ms));
+    sleep4 = (ms) => new Promise((resolve14) => setTimeout(resolve14, ms));
   }
 });
 
@@ -79860,7 +79860,7 @@ var init_resource = __esm({
 function encodeURIPath(str8) {
   return str8.replace(/[^A-Za-z0-9\-._~!$&'()*+,;=:@]+/g, encodeURIComponent);
 }
-var EMPTY, createPathTagFunction, path11;
+var EMPTY, createPathTagFunction, path12;
 var init_path = __esm({
   "node_modules/openai/internal/utils/path.mjs"() {
     init_error();
@@ -79913,7 +79913,7 @@ ${underline}`);
       }
       return path36;
     };
-    path11 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
+    path12 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
   }
 });
 
@@ -79940,7 +79940,7 @@ var init_messages = __esm({
        * ```
        */
       list(completionID, query = {}, options) {
-        return this._client.getAPIList(path11`/chat/completions/${completionID}/messages`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path12`/chat/completions/${completionID}/messages`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -81678,7 +81678,7 @@ var init_completions = __esm({
        * ```
        */
       retrieve(completionID, options) {
-        return this._client.get(path11`/chat/completions/${completionID}`, {
+        return this._client.get(path12`/chat/completions/${completionID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -81697,7 +81697,7 @@ var init_completions = __esm({
        * ```
        */
       update(completionID, body, options) {
-        return this._client.post(path11`/chat/completions/${completionID}`, {
+        return this._client.post(path12`/chat/completions/${completionID}`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -81733,7 +81733,7 @@ var init_completions = __esm({
        * ```
        */
       delete(completionID, options) {
-        return this._client.delete(path11`/chat/completions/${completionID}`, {
+        return this._client.delete(path12`/chat/completions/${completionID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -81843,7 +81843,7 @@ var init_admin_api_keys = __esm({
        * ```
        */
       retrieve(keyID, options) {
-        return this._client.get(path11`/organization/admin_api_keys/${keyID}`, {
+        return this._client.get(path12`/organization/admin_api_keys/${keyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -81878,7 +81878,7 @@ var init_admin_api_keys = __esm({
        * ```
        */
       delete(keyID, options) {
-        return this._client.delete(path11`/organization/admin_api_keys/${keyID}`, {
+        return this._client.delete(path12`/organization/admin_api_keys/${keyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -81959,7 +81959,7 @@ var init_certificates = __esm({
        * ```
        */
       retrieve(certificateID, query = {}, options) {
-        return this._client.get(path11`/organization/certificates/${certificateID}`, {
+        return this._client.get(path12`/organization/certificates/${certificateID}`, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -81977,7 +81977,7 @@ var init_certificates = __esm({
        * ```
        */
       update(certificateID, body, options) {
-        return this._client.post(path11`/organization/certificates/${certificateID}`, {
+        return this._client.post(path12`/organization/certificates/${certificateID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -82011,7 +82011,7 @@ var init_certificates = __esm({
        * ```
        */
       delete(certificateID, options) {
-        return this._client.delete(path11`/organization/certificates/${certificateID}`, {
+        return this._client.delete(path12`/organization/certificates/${certificateID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -82144,7 +82144,7 @@ var init_invites = __esm({
        * ```
        */
       retrieve(inviteID, options) {
-        return this._client.get(path11`/organization/invites/${inviteID}`, {
+        return this._client.get(path12`/organization/invites/${inviteID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -82179,7 +82179,7 @@ var init_invites = __esm({
        * ```
        */
       delete(inviteID, options) {
-        return this._client.delete(path11`/organization/invites/${inviteID}`, {
+        return this._client.delete(path12`/organization/invites/${inviteID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -82225,7 +82225,7 @@ var init_roles = __esm({
        * ```
        */
       retrieve(roleID, options) {
-        return this._client.get(path11`/organization/roles/${roleID}`, {
+        return this._client.get(path12`/organization/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -82241,7 +82241,7 @@ var init_roles = __esm({
        * ```
        */
       update(roleID, body, options) {
-        return this._client.post(path11`/organization/roles/${roleID}`, {
+        return this._client.post(path12`/organization/roles/${roleID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -82276,7 +82276,7 @@ var init_roles = __esm({
        * ```
        */
       delete(roleID, options) {
-        return this._client.delete(path11`/organization/roles/${roleID}`, {
+        return this._client.delete(path12`/organization/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -82329,7 +82329,7 @@ var init_spend_alerts = __esm({
        * ```
        */
       retrieve(alertID, options) {
-        return this._client.get(path11`/organization/spend_alerts/${alertID}`, {
+        return this._client.get(path12`/organization/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -82355,7 +82355,7 @@ var init_spend_alerts = __esm({
        * ```
        */
       update(alertID, body, options) {
-        return this._client.post(path11`/organization/spend_alerts/${alertID}`, {
+        return this._client.post(path12`/organization/spend_alerts/${alertID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -82387,7 +82387,7 @@ var init_spend_alerts = __esm({
        * ```
        */
       delete(alertID, options) {
-        return this._client.delete(path11`/organization/spend_alerts/${alertID}`, {
+        return this._client.delete(path12`/organization/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -82685,7 +82685,7 @@ var init_roles2 = __esm({
        * ```
        */
       create(groupID, body, options) {
-        return this._client.post(path11`/organization/groups/${groupID}/roles`, {
+        return this._client.post(path12`/organization/groups/${groupID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -82705,7 +82705,7 @@ var init_roles2 = __esm({
        */
       retrieve(roleID, params, options) {
         const { group_id } = params;
-        return this._client.get(path11`/organization/groups/${group_id}/roles/${roleID}`, {
+        return this._client.get(path12`/organization/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -82724,7 +82724,7 @@ var init_roles2 = __esm({
        * ```
        */
       list(groupID, query = {}, options) {
-        return this._client.getAPIList(path11`/organization/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path12`/organization/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns an organization role from a group within the organization.
@@ -82740,7 +82740,7 @@ var init_roles2 = __esm({
        */
       delete(roleID, params, options) {
         const { group_id } = params;
-        return this._client.delete(path11`/organization/groups/${group_id}/roles/${roleID}`, {
+        return this._client.delete(path12`/organization/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -82770,7 +82770,7 @@ var init_users = __esm({
        * ```
        */
       create(groupID, body, options) {
-        return this._client.post(path11`/organization/groups/${groupID}/users`, {
+        return this._client.post(path12`/organization/groups/${groupID}/users`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -82790,7 +82790,7 @@ var init_users = __esm({
        */
       retrieve(userID, params, options) {
         const { group_id } = params;
-        return this._client.get(path11`/organization/groups/${group_id}/users/${userID}`, {
+        return this._client.get(path12`/organization/groups/${group_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -82809,7 +82809,7 @@ var init_users = __esm({
        * ```
        */
       list(groupID, query = {}, options) {
-        return this._client.getAPIList(path11`/organization/groups/${groupID}/users`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path12`/organization/groups/${groupID}/users`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Removes a user from a group.
@@ -82825,7 +82825,7 @@ var init_users = __esm({
        */
       delete(userID, params, options) {
         const { group_id } = params;
-        return this._client.delete(path11`/organization/groups/${group_id}/users/${userID}`, {
+        return this._client.delete(path12`/organization/groups/${group_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -82880,7 +82880,7 @@ var init_groups = __esm({
        * ```
        */
       retrieve(groupID, options) {
-        return this._client.get(path11`/organization/groups/${groupID}`, {
+        return this._client.get(path12`/organization/groups/${groupID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -82897,7 +82897,7 @@ var init_groups = __esm({
        * ```
        */
       update(groupID, body, options) {
-        return this._client.post(path11`/organization/groups/${groupID}`, {
+        return this._client.post(path12`/organization/groups/${groupID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -82932,7 +82932,7 @@ var init_groups = __esm({
        * ```
        */
       delete(groupID, options) {
-        return this._client.delete(path11`/organization/groups/${groupID}`, {
+        return this._client.delete(path12`/organization/groups/${groupID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -82965,7 +82965,7 @@ var init_api_keys = __esm({
        */
       retrieve(apiKeyID, params, options) {
         const { project_id } = params;
-        return this._client.get(path11`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
+        return this._client.get(path12`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -82984,7 +82984,7 @@ var init_api_keys = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path11`/organization/projects/${projectID}/api_keys`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path12`/organization/projects/${projectID}/api_keys`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes an API key from the project.
@@ -83003,7 +83003,7 @@ var init_api_keys = __esm({
        */
       delete(apiKeyID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path11`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
+        return this._client.delete(path12`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83034,7 +83034,7 @@ var init_certificates2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path11`/organization/projects/${projectID}/certificates`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path12`/organization/projects/${projectID}/certificates`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Activate certificates at the project level.
@@ -83053,7 +83053,7 @@ var init_certificates2 = __esm({
        * ```
        */
       activate(projectID, body, options) {
-        return this._client.getAPIList(path11`/organization/projects/${projectID}/certificates/activate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path12`/organization/projects/${projectID}/certificates/activate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deactivate certificates at the project level. You can atomically and
@@ -83071,7 +83071,7 @@ var init_certificates2 = __esm({
        * ```
        */
       deactivate(projectID, body, options) {
-        return this._client.getAPIList(path11`/organization/projects/${projectID}/certificates/deactivate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path12`/organization/projects/${projectID}/certificates/deactivate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
   }
@@ -83096,7 +83096,7 @@ var init_data_retention2 = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path11`/organization/projects/${projectID}/data_retention`, {
+        return this._client.get(path12`/organization/projects/${projectID}/data_retention`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83114,7 +83114,7 @@ var init_data_retention2 = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path11`/organization/projects/${projectID}/data_retention`, {
+        return this._client.post(path12`/organization/projects/${projectID}/data_retention`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83143,7 +83143,7 @@ var init_hosted_tool_permissions = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path11`/organization/projects/${projectID}/hosted_tool_permissions`, {
+        return this._client.get(path12`/organization/projects/${projectID}/hosted_tool_permissions`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83160,7 +83160,7 @@ var init_hosted_tool_permissions = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path11`/organization/projects/${projectID}/hosted_tool_permissions`, {
+        return this._client.post(path12`/organization/projects/${projectID}/hosted_tool_permissions`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83189,7 +83189,7 @@ var init_model_permissions = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path11`/organization/projects/${projectID}/model_permissions`, {
+        return this._client.get(path12`/organization/projects/${projectID}/model_permissions`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83207,7 +83207,7 @@ var init_model_permissions = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path11`/organization/projects/${projectID}/model_permissions`, {
+        return this._client.post(path12`/organization/projects/${projectID}/model_permissions`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83225,7 +83225,7 @@ var init_model_permissions = __esm({
        * ```
        */
       delete(projectID, options) {
-        return this._client.delete(path11`/organization/projects/${projectID}/model_permissions`, {
+        return this._client.delete(path12`/organization/projects/${projectID}/model_permissions`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83256,7 +83256,7 @@ var init_rate_limits = __esm({
        * ```
        */
       listRateLimits(projectID, query = {}, options) {
-        return this._client.getAPIList(path11`/organization/projects/${projectID}/rate_limits`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path12`/organization/projects/${projectID}/rate_limits`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Updates a project rate limit.
@@ -83272,7 +83272,7 @@ var init_rate_limits = __esm({
        */
       updateRateLimit(rateLimitID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path11`/organization/projects/${project_id}/rate_limits/${rateLimitID}`, {
+        return this._client.post(path12`/organization/projects/${project_id}/rate_limits/${rateLimitID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83303,7 +83303,7 @@ var init_roles3 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path11`/projects/${projectID}/roles`, {
+        return this._client.post(path12`/projects/${projectID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83323,7 +83323,7 @@ var init_roles3 = __esm({
        */
       retrieve(roleID, params, options) {
         const { project_id } = params;
-        return this._client.get(path11`/projects/${project_id}/roles/${roleID}`, {
+        return this._client.get(path12`/projects/${project_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83342,7 +83342,7 @@ var init_roles3 = __esm({
        */
       update(roleID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path11`/projects/${project_id}/roles/${roleID}`, {
+        return this._client.post(path12`/projects/${project_id}/roles/${roleID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83362,7 +83362,7 @@ var init_roles3 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path11`/projects/${projectID}/roles`, NextCursorPage, {
+        return this._client.getAPIList(path12`/projects/${projectID}/roles`, NextCursorPage, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83382,7 +83382,7 @@ var init_roles3 = __esm({
        */
       delete(roleID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path11`/projects/${project_id}/roles/${roleID}`, {
+        return this._client.delete(path12`/projects/${project_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83420,7 +83420,7 @@ var init_spend_alerts2 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path11`/organization/projects/${projectID}/spend_alerts`, {
+        return this._client.post(path12`/organization/projects/${projectID}/spend_alerts`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83440,7 +83440,7 @@ var init_spend_alerts2 = __esm({
        */
       retrieve(alertID, params, options) {
         const { project_id } = params;
-        return this._client.get(path11`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
+        return this._client.get(path12`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83468,7 +83468,7 @@ var init_spend_alerts2 = __esm({
        */
       update(alertID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path11`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
+        return this._client.post(path12`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83488,7 +83488,7 @@ var init_spend_alerts2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path11`/organization/projects/${projectID}/spend_alerts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path12`/organization/projects/${projectID}/spend_alerts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes a project spend alert.
@@ -83504,7 +83504,7 @@ var init_spend_alerts2 = __esm({
        */
       delete(alertID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path11`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
+        return this._client.delete(path12`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83532,7 +83532,7 @@ var init_spend_limit2 = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path11`/organization/projects/${projectID}/spend_limit`, {
+        return this._client.get(path12`/organization/projects/${projectID}/spend_limit`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83554,7 +83554,7 @@ var init_spend_limit2 = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path11`/organization/projects/${projectID}/spend_limit`, {
+        return this._client.post(path12`/organization/projects/${projectID}/spend_limit`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83572,7 +83572,7 @@ var init_spend_limit2 = __esm({
        * ```
        */
       delete(projectID, options) {
-        return this._client.delete(path11`/organization/projects/${projectID}/spend_limit`, {
+        return this._client.delete(path12`/organization/projects/${projectID}/spend_limit`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83603,7 +83603,7 @@ var init_roles4 = __esm({
        */
       create(groupID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path11`/projects/${project_id}/groups/${groupID}/roles`, {
+        return this._client.post(path12`/projects/${project_id}/groups/${groupID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83623,7 +83623,7 @@ var init_roles4 = __esm({
        */
       retrieve(roleID, params, options) {
         const { project_id, group_id } = params;
-        return this._client.get(path11`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
+        return this._client.get(path12`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83644,7 +83644,7 @@ var init_roles4 = __esm({
        */
       list(groupID, params, options) {
         const { project_id, ...query } = params;
-        return this._client.getAPIList(path11`/projects/${project_id}/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path12`/projects/${project_id}/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns a project role from a group within a project.
@@ -83660,7 +83660,7 @@ var init_roles4 = __esm({
        */
       delete(roleID, params, options) {
         const { project_id, group_id } = params;
-        return this._client.delete(path11`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
+        return this._client.delete(path12`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83696,7 +83696,7 @@ var init_groups2 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path11`/organization/projects/${projectID}/groups`, {
+        return this._client.post(path12`/organization/projects/${projectID}/groups`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83716,7 +83716,7 @@ var init_groups2 = __esm({
        */
       retrieve(groupID, params, options) {
         const { project_id, ...query } = params;
-        return this._client.get(path11`/organization/projects/${project_id}/groups/${groupID}`, {
+        return this._client.get(path12`/organization/projects/${project_id}/groups/${groupID}`, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83736,7 +83736,7 @@ var init_groups2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path11`/organization/projects/${projectID}/groups`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path12`/organization/projects/${projectID}/groups`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Revokes a group's access to a project.
@@ -83752,7 +83752,7 @@ var init_groups2 = __esm({
        */
       delete(groupID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path11`/organization/projects/${project_id}/groups/${groupID}`, {
+        return this._client.delete(path12`/organization/projects/${project_id}/groups/${groupID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83783,7 +83783,7 @@ var init_api_keys2 = __esm({
        */
       create(serviceAccountID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path11`/organization/projects/${project_id}/service_accounts/${serviceAccountID}/api_keys`, { body, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.post(path12`/organization/projects/${project_id}/service_accounts/${serviceAccountID}/api_keys`, { body, ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
   }
@@ -83817,7 +83817,7 @@ var init_service_accounts = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path11`/organization/projects/${projectID}/service_accounts`, {
+        return this._client.post(path12`/organization/projects/${projectID}/service_accounts`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83837,7 +83837,7 @@ var init_service_accounts = __esm({
        */
       retrieve(serviceAccountID, params, options) {
         const { project_id } = params;
-        return this._client.get(path11`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, {
+        return this._client.get(path12`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83856,7 +83856,7 @@ var init_service_accounts = __esm({
        */
       update(serviceAccountID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path11`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { body, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.post(path12`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { body, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Returns a list of service accounts in the project.
@@ -83872,7 +83872,7 @@ var init_service_accounts = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path11`/organization/projects/${projectID}/service_accounts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path12`/organization/projects/${projectID}/service_accounts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes a service account from the project.
@@ -83891,7 +83891,7 @@ var init_service_accounts = __esm({
        */
       delete(serviceAccountID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path11`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.delete(path12`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
     ServiceAccounts.APIKeys = APIKeys2;
@@ -83920,7 +83920,7 @@ var init_roles5 = __esm({
        */
       create(userID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path11`/projects/${project_id}/users/${userID}/roles`, {
+        return this._client.post(path12`/projects/${project_id}/users/${userID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -83940,7 +83940,7 @@ var init_roles5 = __esm({
        */
       retrieve(roleID, params, options) {
         const { project_id, user_id } = params;
-        return this._client.get(path11`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
+        return this._client.get(path12`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -83961,7 +83961,7 @@ var init_roles5 = __esm({
        */
       list(userID, params, options) {
         const { project_id, ...query } = params;
-        return this._client.getAPIList(path11`/projects/${project_id}/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path12`/projects/${project_id}/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns a project role from a user within a project.
@@ -83977,7 +83977,7 @@ var init_roles5 = __esm({
        */
       delete(roleID, params, options) {
         const { project_id, user_id } = params;
-        return this._client.delete(path11`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
+        return this._client.delete(path12`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -84014,7 +84014,7 @@ var init_users2 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path11`/organization/projects/${projectID}/users`, {
+        return this._client.post(path12`/organization/projects/${projectID}/users`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -84034,7 +84034,7 @@ var init_users2 = __esm({
        */
       retrieve(userID, params, options) {
         const { project_id } = params;
-        return this._client.get(path11`/organization/projects/${project_id}/users/${userID}`, {
+        return this._client.get(path12`/organization/projects/${project_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -84053,7 +84053,7 @@ var init_users2 = __esm({
        */
       update(userID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path11`/organization/projects/${project_id}/users/${userID}`, {
+        return this._client.post(path12`/organization/projects/${project_id}/users/${userID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -84073,7 +84073,7 @@ var init_users2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path11`/organization/projects/${projectID}/users`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path12`/organization/projects/${projectID}/users`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes a user from the project.
@@ -84092,7 +84092,7 @@ var init_users2 = __esm({
        */
       delete(userID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path11`/organization/projects/${project_id}/users/${userID}`, {
+        return this._client.delete(path12`/organization/projects/${project_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -84180,7 +84180,7 @@ var init_projects = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path11`/organization/projects/${projectID}`, {
+        return this._client.get(path12`/organization/projects/${projectID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -84197,7 +84197,7 @@ var init_projects = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path11`/organization/projects/${projectID}`, {
+        return this._client.post(path12`/organization/projects/${projectID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -84234,7 +84234,7 @@ var init_projects = __esm({
        * ```
        */
       archive(projectID, options) {
-        return this._client.post(path11`/organization/projects/${projectID}/archive`, {
+        return this._client.post(path12`/organization/projects/${projectID}/archive`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -84276,7 +84276,7 @@ var init_roles6 = __esm({
        * ```
        */
       create(userID, body, options) {
-        return this._client.post(path11`/organization/users/${userID}/roles`, {
+        return this._client.post(path12`/organization/users/${userID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -84296,7 +84296,7 @@ var init_roles6 = __esm({
        */
       retrieve(roleID, params, options) {
         const { user_id } = params;
-        return this._client.get(path11`/organization/users/${user_id}/roles/${roleID}`, {
+        return this._client.get(path12`/organization/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -84315,7 +84315,7 @@ var init_roles6 = __esm({
        * ```
        */
       list(userID, query = {}, options) {
-        return this._client.getAPIList(path11`/organization/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path12`/organization/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns an organization role from a user within the organization.
@@ -84331,7 +84331,7 @@ var init_roles6 = __esm({
        */
       delete(roleID, params, options) {
         const { user_id } = params;
-        return this._client.delete(path11`/organization/users/${user_id}/roles/${roleID}`, {
+        return this._client.delete(path12`/organization/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -84364,7 +84364,7 @@ var init_users3 = __esm({
        * ```
        */
       retrieve(userID, options) {
-        return this._client.get(path11`/organization/users/${userID}`, {
+        return this._client.get(path12`/organization/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -84379,7 +84379,7 @@ var init_users3 = __esm({
        * ```
        */
       update(userID, body, options) {
-        return this._client.post(path11`/organization/users/${userID}`, {
+        return this._client.post(path12`/organization/users/${userID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -84414,7 +84414,7 @@ var init_users3 = __esm({
        * ```
        */
       delete(userID, options) {
-        return this._client.delete(path11`/organization/users/${userID}`, {
+        return this._client.delete(path12`/organization/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -84616,7 +84616,7 @@ var init_batches = __esm({
        * Retrieves a batch.
        */
       retrieve(batchID, options) {
-        return this._client.get(path11`/batches/${batchID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path12`/batches/${batchID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * List your organization's batches.
@@ -84634,7 +84634,7 @@ var init_batches = __esm({
        * (if any) available in the output file.
        */
       cancel(batchID, options) {
-        return this._client.post(path11`/batches/${batchID}/cancel`, {
+        return this._client.post(path12`/batches/${batchID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -84671,7 +84671,7 @@ var init_assistants = __esm({
        * @deprecated
        */
       retrieve(assistantID, options) {
-        return this._client.get(path11`/assistants/${assistantID}`, {
+        return this._client.get(path12`/assistants/${assistantID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -84683,7 +84683,7 @@ var init_assistants = __esm({
        * @deprecated
        */
       update(assistantID, body, options) {
-        return this._client.post(path11`/assistants/${assistantID}`, {
+        return this._client.post(path12`/assistants/${assistantID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -84709,7 +84709,7 @@ var init_assistants = __esm({
        * @deprecated
        */
       delete(assistantID, options) {
-        return this._client.delete(path11`/assistants/${assistantID}`, {
+        return this._client.delete(path12`/assistants/${assistantID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -84848,7 +84848,7 @@ var init_sessions2 = __esm({
        * ```
        */
       cancel(sessionID, options) {
-        return this._client.post(path11`/chatkit/sessions/${sessionID}/cancel`, {
+        return this._client.post(path12`/chatkit/sessions/${sessionID}/cancel`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -84877,7 +84877,7 @@ var init_threads = __esm({
        * ```
        */
       retrieve(threadID, options) {
-        return this._client.get(path11`/chatkit/threads/${threadID}`, {
+        return this._client.get(path12`/chatkit/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -84913,7 +84913,7 @@ var init_threads = __esm({
        * ```
        */
       delete(threadID, options) {
-        return this._client.delete(path11`/chatkit/threads/${threadID}`, {
+        return this._client.delete(path12`/chatkit/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -84933,7 +84933,7 @@ var init_threads = __esm({
        * ```
        */
       listItems(threadID, query = {}, options) {
-        return this._client.getAPIList(path11`/chatkit/threads/${threadID}/items`, ConversationCursorPage, {
+        return this._client.getAPIList(path12`/chatkit/threads/${threadID}/items`, ConversationCursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
@@ -84989,7 +84989,7 @@ var init_input_items = __esm({
        */
       list(responseID, params = {}, options) {
         const { betas, ...query } = params ?? {};
-        return this._client.getAPIList(path11`/responses/${responseID}/input_items?beta=true`, CursorPage, {
+        return this._client.getAPIList(path12`/responses/${responseID}/input_items?beta=true`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([
@@ -85070,7 +85070,7 @@ var init_responses = __esm({
       }
       retrieve(responseID, params = {}, options) {
         const { betas, ...query } = params ?? {};
-        return this._client.get(path11`/responses/${responseID}?beta=true`, {
+        return this._client.get(path12`/responses/${responseID}?beta=true`, {
           query,
           ...options,
           headers: buildHeaders([
@@ -85093,7 +85093,7 @@ var init_responses = __esm({
        */
       delete(responseID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.delete(path11`/responses/${responseID}?beta=true`, {
+        return this._client.delete(path12`/responses/${responseID}?beta=true`, {
           ...options,
           headers: buildHeaders([
             { Accept: "*/*", ...betas?.toString() != null ? { "openai-beta": betas?.toString() } : void 0 },
@@ -85116,7 +85116,7 @@ var init_responses = __esm({
        */
       cancel(responseID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.post(path11`/responses/${responseID}/cancel?beta=true`, {
+        return this._client.post(path12`/responses/${responseID}/cancel?beta=true`, {
           ...options,
           headers: buildHeaders([
             { ...betas?.toString() != null ? { "openai-beta": betas?.toString() } : void 0 },
@@ -85174,7 +85174,7 @@ var init_messages2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       create(threadID, body, options) {
-        return this._client.post(path11`/threads/${threadID}/messages`, {
+        return this._client.post(path12`/threads/${threadID}/messages`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -85188,7 +85188,7 @@ var init_messages2 = __esm({
        */
       retrieve(messageID, params, options) {
         const { thread_id } = params;
-        return this._client.get(path11`/threads/${thread_id}/messages/${messageID}`, {
+        return this._client.get(path12`/threads/${thread_id}/messages/${messageID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -85201,7 +85201,7 @@ var init_messages2 = __esm({
        */
       update(messageID, params, options) {
         const { thread_id, ...body } = params;
-        return this._client.post(path11`/threads/${thread_id}/messages/${messageID}`, {
+        return this._client.post(path12`/threads/${thread_id}/messages/${messageID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -85214,7 +85214,7 @@ var init_messages2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       list(threadID, query = {}, options) {
-        return this._client.getAPIList(path11`/threads/${threadID}/messages`, CursorPage, {
+        return this._client.getAPIList(path12`/threads/${threadID}/messages`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -85228,7 +85228,7 @@ var init_messages2 = __esm({
        */
       delete(messageID, params, options) {
         const { thread_id } = params;
-        return this._client.delete(path11`/threads/${thread_id}/messages/${messageID}`, {
+        return this._client.delete(path12`/threads/${thread_id}/messages/${messageID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -85254,7 +85254,7 @@ var init_steps = __esm({
        */
       retrieve(stepID, params, options) {
         const { thread_id, run_id, ...query } = params;
-        return this._client.get(path11`/threads/${thread_id}/runs/${run_id}/steps/${stepID}`, {
+        return this._client.get(path12`/threads/${thread_id}/runs/${run_id}/steps/${stepID}`, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -85268,7 +85268,7 @@ var init_steps = __esm({
        */
       list(runID, params, options) {
         const { thread_id, ...query } = params;
-        return this._client.getAPIList(path11`/threads/${thread_id}/runs/${runID}/steps`, CursorPage, {
+        return this._client.getAPIList(path12`/threads/${thread_id}/runs/${runID}/steps`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -85857,7 +85857,7 @@ var init_runs = __esm({
       }
       create(threadID, params, options) {
         const { include, ...body } = params;
-        return this._client.post(path11`/threads/${threadID}/runs`, {
+        return this._client.post(path12`/threads/${threadID}/runs`, {
           query: { include },
           body,
           ...options,
@@ -85874,7 +85874,7 @@ var init_runs = __esm({
        */
       retrieve(runID, params, options) {
         const { thread_id } = params;
-        return this._client.get(path11`/threads/${thread_id}/runs/${runID}`, {
+        return this._client.get(path12`/threads/${thread_id}/runs/${runID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -85887,7 +85887,7 @@ var init_runs = __esm({
        */
       update(runID, params, options) {
         const { thread_id, ...body } = params;
-        return this._client.post(path11`/threads/${thread_id}/runs/${runID}`, {
+        return this._client.post(path12`/threads/${thread_id}/runs/${runID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -85900,7 +85900,7 @@ var init_runs = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       list(threadID, query = {}, options) {
-        return this._client.getAPIList(path11`/threads/${threadID}/runs`, CursorPage, {
+        return this._client.getAPIList(path12`/threads/${threadID}/runs`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -85914,7 +85914,7 @@ var init_runs = __esm({
        */
       cancel(runID, params, options) {
         const { thread_id } = params;
-        return this._client.post(path11`/threads/${thread_id}/runs/${runID}/cancel`, {
+        return this._client.post(path12`/threads/${thread_id}/runs/${runID}/cancel`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -85972,7 +85972,7 @@ var init_runs = __esm({
                   }
                 }
               }
-              await sleep3(sleepInterval);
+              await sleep4(sleepInterval);
               break;
             //We return the run in any terminal state.
             case "requires_action":
@@ -85993,7 +85993,7 @@ var init_runs = __esm({
       }
       submitToolOutputs(runID, params, options) {
         const { thread_id, ...body } = params;
-        return this._client.post(path11`/threads/${thread_id}/runs/${runID}/submit_tool_outputs`, {
+        return this._client.post(path12`/threads/${thread_id}/runs/${runID}/submit_tool_outputs`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -86061,7 +86061,7 @@ var init_threads2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       retrieve(threadID, options) {
-        return this._client.get(path11`/threads/${threadID}`, {
+        return this._client.get(path12`/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -86073,7 +86073,7 @@ var init_threads2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       update(threadID, body, options) {
-        return this._client.post(path11`/threads/${threadID}`, {
+        return this._client.post(path12`/threads/${threadID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -86086,7 +86086,7 @@ var init_threads2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       delete(threadID, options) {
-        return this._client.delete(path11`/threads/${threadID}`, {
+        return this._client.delete(path12`/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -86187,7 +86187,7 @@ var init_content = __esm({
        */
       retrieve(fileID, params, options) {
         const { container_id } = params;
-        return this._client.get(path11`/containers/${container_id}/files/${fileID}/content`, {
+        return this._client.get(path12`/containers/${container_id}/files/${fileID}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -86221,14 +86221,14 @@ var init_files = __esm({
        * a JSON request with a file ID.
        */
       create(containerID, body, options) {
-        return this._client.post(path11`/containers/${containerID}/files`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path12`/containers/${containerID}/files`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
       /**
        * Retrieve Container File
        */
       retrieve(fileID, params, options) {
         const { container_id } = params;
-        return this._client.get(path11`/containers/${container_id}/files/${fileID}`, {
+        return this._client.get(path12`/containers/${container_id}/files/${fileID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -86237,7 +86237,7 @@ var init_files = __esm({
        * List Container files
        */
       list(containerID, query = {}, options) {
-        return this._client.getAPIList(path11`/containers/${containerID}/files`, CursorPage, {
+        return this._client.getAPIList(path12`/containers/${containerID}/files`, CursorPage, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -86248,7 +86248,7 @@ var init_files = __esm({
        */
       delete(fileID, params, options) {
         const { container_id } = params;
-        return this._client.delete(path11`/containers/${container_id}/files/${fileID}`, {
+        return this._client.delete(path12`/containers/${container_id}/files/${fileID}`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -86284,7 +86284,7 @@ var init_containers = __esm({
        * Retrieve Container
        */
       retrieve(containerID, options) {
-        return this._client.get(path11`/containers/${containerID}`, {
+        return this._client.get(path12`/containers/${containerID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -86303,7 +86303,7 @@ var init_containers = __esm({
        * Delete Container
        */
       delete(containerID, options) {
-        return this._client.delete(path11`/containers/${containerID}`, {
+        return this._client.delete(path12`/containers/${containerID}`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -86327,7 +86327,7 @@ var init_items = __esm({
        */
       create(conversationID, params, options) {
         const { include, ...body } = params;
-        return this._client.post(path11`/conversations/${conversationID}/items`, {
+        return this._client.post(path12`/conversations/${conversationID}/items`, {
           query: { include },
           body,
           ...options,
@@ -86339,7 +86339,7 @@ var init_items = __esm({
        */
       retrieve(itemID, params, options) {
         const { conversation_id, ...query } = params;
-        return this._client.get(path11`/conversations/${conversation_id}/items/${itemID}`, {
+        return this._client.get(path12`/conversations/${conversation_id}/items/${itemID}`, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -86349,14 +86349,14 @@ var init_items = __esm({
        * List all items for a conversation with the given ID.
        */
       list(conversationID, query = {}, options) {
-        return this._client.getAPIList(path11`/conversations/${conversationID}/items`, ConversationCursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path12`/conversations/${conversationID}/items`, ConversationCursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
       /**
        * Delete an item from a conversation with the given IDs.
        */
       delete(itemID, params, options) {
         const { conversation_id } = params;
-        return this._client.delete(path11`/conversations/${conversation_id}/items/${itemID}`, {
+        return this._client.delete(path12`/conversations/${conversation_id}/items/${itemID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -86388,7 +86388,7 @@ var init_conversations = __esm({
        * Get a conversation
        */
       retrieve(conversationID, options) {
-        return this._client.get(path11`/conversations/${conversationID}`, {
+        return this._client.get(path12`/conversations/${conversationID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -86397,7 +86397,7 @@ var init_conversations = __esm({
        * Update a conversation
        */
       update(conversationID, body, options) {
-        return this._client.post(path11`/conversations/${conversationID}`, {
+        return this._client.post(path12`/conversations/${conversationID}`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -86407,7 +86407,7 @@ var init_conversations = __esm({
        * Delete a conversation. Items in the conversation will not be deleted.
        */
       delete(conversationID, options) {
-        return this._client.delete(path11`/conversations/${conversationID}`, {
+        return this._client.delete(path12`/conversations/${conversationID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -86481,7 +86481,7 @@ var init_output_items = __esm({
        */
       retrieve(outputItemID, params, options) {
         const { eval_id, run_id } = params;
-        return this._client.get(path11`/evals/${eval_id}/runs/${run_id}/output_items/${outputItemID}`, {
+        return this._client.get(path12`/evals/${eval_id}/runs/${run_id}/output_items/${outputItemID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -86491,7 +86491,7 @@ var init_output_items = __esm({
        */
       list(runID, params, options) {
         const { eval_id, ...query } = params;
-        return this._client.getAPIList(path11`/evals/${eval_id}/runs/${runID}/output_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path12`/evals/${eval_id}/runs/${runID}/output_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -86517,7 +86517,7 @@ var init_runs2 = __esm({
        * schema specified in the config of the evaluation.
        */
       create(evalID, body, options) {
-        return this._client.post(path11`/evals/${evalID}/runs`, {
+        return this._client.post(path12`/evals/${evalID}/runs`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -86528,7 +86528,7 @@ var init_runs2 = __esm({
        */
       retrieve(runID, params, options) {
         const { eval_id } = params;
-        return this._client.get(path11`/evals/${eval_id}/runs/${runID}`, {
+        return this._client.get(path12`/evals/${eval_id}/runs/${runID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -86537,7 +86537,7 @@ var init_runs2 = __esm({
        * Get a list of runs for an evaluation.
        */
       list(evalID, query = {}, options) {
-        return this._client.getAPIList(path11`/evals/${evalID}/runs`, CursorPage, {
+        return this._client.getAPIList(path12`/evals/${evalID}/runs`, CursorPage, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -86548,7 +86548,7 @@ var init_runs2 = __esm({
        */
       delete(runID, params, options) {
         const { eval_id } = params;
-        return this._client.delete(path11`/evals/${eval_id}/runs/${runID}`, {
+        return this._client.delete(path12`/evals/${eval_id}/runs/${runID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -86558,7 +86558,7 @@ var init_runs2 = __esm({
        */
       cancel(runID, params, options) {
         const { eval_id } = params;
-        return this._client.post(path11`/evals/${eval_id}/runs/${runID}`, {
+        return this._client.post(path12`/evals/${eval_id}/runs/${runID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -86597,13 +86597,13 @@ var init_evals = __esm({
        * Get an evaluation by ID.
        */
       retrieve(evalID, options) {
-        return this._client.get(path11`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path12`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Update certain properties of an evaluation.
        */
       update(evalID, body, options) {
-        return this._client.post(path11`/evals/${evalID}`, { body, ...options, __security: { bearerAuth: true } });
+        return this._client.post(path12`/evals/${evalID}`, { body, ...options, __security: { bearerAuth: true } });
       }
       /**
        * List evaluations for a project.
@@ -86619,7 +86619,7 @@ var init_evals = __esm({
        * Delete an evaluation.
        */
       delete(evalID, options) {
-        return this._client.delete(path11`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path12`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
       }
     };
     Evals.Runs = Runs2;
@@ -86674,7 +86674,7 @@ var init_files2 = __esm({
        * Returns information about a specific file.
        */
       retrieve(fileID, options) {
-        return this._client.get(path11`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path12`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Returns a list of files.
@@ -86690,13 +86690,13 @@ var init_files2 = __esm({
        * Delete a file and remove it from all vector stores.
        */
       delete(fileID, options) {
-        return this._client.delete(path11`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path12`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Returns the contents of the specified file.
        */
       content(fileID, options) {
-        return this._client.get(path11`/files/${fileID}/content`, {
+        return this._client.get(path12`/files/${fileID}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -86711,7 +86711,7 @@ var init_files2 = __esm({
         const start = Date.now();
         let file = await this.retrieve(id);
         while (!file.status || !TERMINAL_STATES.has(file.status)) {
-          await sleep3(pollInterval);
+          await sleep4(pollInterval);
           file = await this.retrieve(id);
           if (Date.now() - start > maxWait) {
             throw new APIConnectionTimeoutError2({
@@ -86836,7 +86836,7 @@ var init_permissions = __esm({
        * ```
        */
       create(fineTunedModelCheckpoint, body, options) {
-        return this._client.getAPIList(path11`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path12`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * **NOTE:** This endpoint requires an [admin API key](../admin-api-keys).
@@ -86847,7 +86847,7 @@ var init_permissions = __esm({
        * @deprecated Retrieve is deprecated. Please swap to the paginated list method instead.
        */
       retrieve(fineTunedModelCheckpoint, query = {}, options) {
-        return this._client.get(path11`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, {
+        return this._client.get(path12`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -86870,7 +86870,7 @@ var init_permissions = __esm({
        * ```
        */
       list(fineTunedModelCheckpoint, query = {}, options) {
-        return this._client.getAPIList(path11`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path12`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * **NOTE:** This endpoint requires an [admin API key](../admin-api-keys).
@@ -86892,7 +86892,7 @@ var init_permissions = __esm({
        */
       delete(permissionID, params, options) {
         const { fine_tuned_model_checkpoint } = params;
-        return this._client.delete(path11`/fine_tuning/checkpoints/${fine_tuned_model_checkpoint}/permissions/${permissionID}`, { ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.delete(path12`/fine_tuning/checkpoints/${fine_tuned_model_checkpoint}/permissions/${permissionID}`, { ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
   }
@@ -86937,7 +86937,7 @@ var init_checkpoints2 = __esm({
        * ```
        */
       list(fineTuningJobID, query = {}, options) {
-        return this._client.getAPIList(path11`/fine_tuning/jobs/${fineTuningJobID}/checkpoints`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path12`/fine_tuning/jobs/${fineTuningJobID}/checkpoints`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -86990,7 +86990,7 @@ var init_jobs = __esm({
        * ```
        */
       retrieve(fineTuningJobID, options) {
-        return this._client.get(path11`/fine_tuning/jobs/${fineTuningJobID}`, {
+        return this._client.get(path12`/fine_tuning/jobs/${fineTuningJobID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -87024,7 +87024,7 @@ var init_jobs = __esm({
        * ```
        */
       cancel(fineTuningJobID, options) {
-        return this._client.post(path11`/fine_tuning/jobs/${fineTuningJobID}/cancel`, {
+        return this._client.post(path12`/fine_tuning/jobs/${fineTuningJobID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -87043,7 +87043,7 @@ var init_jobs = __esm({
        * ```
        */
       listEvents(fineTuningJobID, query = {}, options) {
-        return this._client.getAPIList(path11`/fine_tuning/jobs/${fineTuningJobID}/events`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path12`/fine_tuning/jobs/${fineTuningJobID}/events`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
       /**
        * Pause a fine-tune job.
@@ -87056,7 +87056,7 @@ var init_jobs = __esm({
        * ```
        */
       pause(fineTuningJobID, options) {
-        return this._client.post(path11`/fine_tuning/jobs/${fineTuningJobID}/pause`, {
+        return this._client.post(path12`/fine_tuning/jobs/${fineTuningJobID}/pause`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -87072,7 +87072,7 @@ var init_jobs = __esm({
        * ```
        */
       resume(fineTuningJobID, options) {
-        return this._client.post(path11`/fine_tuning/jobs/${fineTuningJobID}/resume`, {
+        return this._client.post(path12`/fine_tuning/jobs/${fineTuningJobID}/resume`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -87186,7 +87186,7 @@ var init_models = __esm({
        * the owner and permissioning.
        */
       retrieve(model2, options) {
-        return this._client.get(path11`/models/${model2}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path12`/models/${model2}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Lists the currently available models, and provides basic information about each
@@ -87200,7 +87200,7 @@ var init_models = __esm({
        * delete a model.
        */
       delete(model2, options) {
-        return this._client.delete(path11`/models/${model2}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path12`/models/${model2}`, { ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -87243,7 +87243,7 @@ var init_calls = __esm({
        * ```
        */
       accept(callID, body, options) {
-        return this._client.post(path11`/realtime/calls/${callID}/accept`, {
+        return this._client.post(path12`/realtime/calls/${callID}/accept`, {
           body,
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
@@ -87259,7 +87259,7 @@ var init_calls = __esm({
        * ```
        */
       hangup(callID, options) {
-        return this._client.post(path11`/realtime/calls/${callID}/hangup`, {
+        return this._client.post(path12`/realtime/calls/${callID}/hangup`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -87276,7 +87276,7 @@ var init_calls = __esm({
        * ```
        */
       refer(callID, body, options) {
-        return this._client.post(path11`/realtime/calls/${callID}/refer`, {
+        return this._client.post(path12`/realtime/calls/${callID}/refer`, {
           body,
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
@@ -87292,7 +87292,7 @@ var init_calls = __esm({
        * ```
        */
       reject(callID, body = {}, options) {
-        return this._client.post(path11`/realtime/calls/${callID}/reject`, {
+        return this._client.post(path12`/realtime/calls/${callID}/reject`, {
           body,
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
@@ -88111,7 +88111,7 @@ var init_input_items2 = __esm({
        * ```
        */
       list(responseID, query = {}, options) {
-        return this._client.getAPIList(path11`/responses/${responseID}/input_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path12`/responses/${responseID}/input_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -88178,7 +88178,7 @@ var init_responses2 = __esm({
         });
       }
       retrieve(responseID, query = {}, options) {
-        return this._client.get(path11`/responses/${responseID}`, {
+        return this._client.get(path12`/responses/${responseID}`, {
           query,
           ...options,
           stream: query?.stream ?? false,
@@ -88201,7 +88201,7 @@ var init_responses2 = __esm({
        * ```
        */
       delete(responseID, options) {
-        return this._client.delete(path11`/responses/${responseID}`, {
+        return this._client.delete(path12`/responses/${responseID}`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -88229,7 +88229,7 @@ var init_responses2 = __esm({
        * ```
        */
       cancel(responseID, options) {
-        return this._client.post(path11`/responses/${responseID}/cancel`, {
+        return this._client.post(path12`/responses/${responseID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -88270,7 +88270,7 @@ var init_content2 = __esm({
        * Download a skill zip bundle by its ID.
        */
       retrieve(skillID, options) {
-        return this._client.get(path11`/skills/${skillID}/content`, {
+        return this._client.get(path12`/skills/${skillID}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -88294,7 +88294,7 @@ var init_content3 = __esm({
        */
       retrieve(version2, params, options) {
         const { skill_id } = params;
-        return this._client.get(path11`/skills/${skill_id}/versions/${version2}/content`, {
+        return this._client.get(path12`/skills/${skill_id}/versions/${version2}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -88324,14 +88324,14 @@ var init_versions = __esm({
        * Create a new immutable skill version.
        */
       create(skillID, body = {}, options) {
-        return this._client.post(path11`/skills/${skillID}/versions`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path12`/skills/${skillID}/versions`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
       /**
        * Get a specific skill version.
        */
       retrieve(version2, params, options) {
         const { skill_id } = params;
-        return this._client.get(path11`/skills/${skill_id}/versions/${version2}`, {
+        return this._client.get(path12`/skills/${skill_id}/versions/${version2}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -88340,7 +88340,7 @@ var init_versions = __esm({
        * List skill versions for a skill.
        */
       list(skillID, query = {}, options) {
-        return this._client.getAPIList(path11`/skills/${skillID}/versions`, CursorPage, {
+        return this._client.getAPIList(path12`/skills/${skillID}/versions`, CursorPage, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -88351,7 +88351,7 @@ var init_versions = __esm({
        */
       delete(version2, params, options) {
         const { skill_id } = params;
-        return this._client.delete(path11`/skills/${skill_id}/versions/${version2}`, {
+        return this._client.delete(path12`/skills/${skill_id}/versions/${version2}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -88389,13 +88389,13 @@ var init_skills = __esm({
        * Get a skill by its ID.
        */
       retrieve(skillID, options) {
-        return this._client.get(path11`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path12`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Update the default version pointer for a skill.
        */
       update(skillID, body, options) {
-        return this._client.post(path11`/skills/${skillID}`, {
+        return this._client.post(path12`/skills/${skillID}`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -88415,7 +88415,7 @@ var init_skills = __esm({
        * Delete a skill by its ID.
        */
       delete(skillID, options) {
-        return this._client.delete(path11`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path12`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
       }
     };
     Skills.Content = Content2;
@@ -88445,7 +88445,7 @@ var init_parts = __esm({
        * [complete the Upload](https://platform.openai.com/docs/api-reference/uploads/complete).
        */
       create(uploadID, body, options) {
-        return this._client.post(path11`/uploads/${uploadID}/parts`, multipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path12`/uploads/${uploadID}/parts`, multipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
     };
   }
@@ -88496,7 +88496,7 @@ var init_uploads3 = __esm({
        * Returns the Upload object with status `cancelled`.
        */
       cancel(uploadID, options) {
-        return this._client.post(path11`/uploads/${uploadID}/cancel`, {
+        return this._client.post(path12`/uploads/${uploadID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -88519,7 +88519,7 @@ var init_uploads3 = __esm({
        * object.
        */
       complete(uploadID, body, options) {
-        return this._client.post(path11`/uploads/${uploadID}/complete`, {
+        return this._client.post(path12`/uploads/${uploadID}/complete`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -88569,7 +88569,7 @@ var init_file_batches = __esm({
        * Create a vector store file batch.
        */
       create(vectorStoreID, body, options) {
-        return this._client.post(path11`/vector_stores/${vectorStoreID}/file_batches`, {
+        return this._client.post(path12`/vector_stores/${vectorStoreID}/file_batches`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -88581,7 +88581,7 @@ var init_file_batches = __esm({
        */
       retrieve(batchID, params, options) {
         const { vector_store_id } = params;
-        return this._client.get(path11`/vector_stores/${vector_store_id}/file_batches/${batchID}`, {
+        return this._client.get(path12`/vector_stores/${vector_store_id}/file_batches/${batchID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -88593,7 +88593,7 @@ var init_file_batches = __esm({
        */
       cancel(batchID, params, options) {
         const { vector_store_id } = params;
-        return this._client.post(path11`/vector_stores/${vector_store_id}/file_batches/${batchID}/cancel`, {
+        return this._client.post(path12`/vector_stores/${vector_store_id}/file_batches/${batchID}/cancel`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -88611,7 +88611,7 @@ var init_file_batches = __esm({
        */
       listFiles(batchID, params, options) {
         const { vector_store_id, ...query } = params;
-        return this._client.getAPIList(path11`/vector_stores/${vector_store_id}/file_batches/${batchID}/files`, CursorPage, {
+        return this._client.getAPIList(path12`/vector_stores/${vector_store_id}/file_batches/${batchID}/files`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -88651,7 +88651,7 @@ var init_file_batches = __esm({
                   }
                 }
               }
-              await sleep3(sleepInterval);
+              await sleep4(sleepInterval);
               break;
             case "failed":
             case "cancelled":
@@ -88706,7 +88706,7 @@ var init_files3 = __esm({
        * [vector store](https://platform.openai.com/docs/api-reference/vector-stores/object).
        */
       create(vectorStoreID, body, options) {
-        return this._client.post(path11`/vector_stores/${vectorStoreID}/files`, {
+        return this._client.post(path12`/vector_stores/${vectorStoreID}/files`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -88718,7 +88718,7 @@ var init_files3 = __esm({
        */
       retrieve(fileID, params, options) {
         const { vector_store_id } = params;
-        return this._client.get(path11`/vector_stores/${vector_store_id}/files/${fileID}`, {
+        return this._client.get(path12`/vector_stores/${vector_store_id}/files/${fileID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -88729,7 +88729,7 @@ var init_files3 = __esm({
        */
       update(fileID, params, options) {
         const { vector_store_id, ...body } = params;
-        return this._client.post(path11`/vector_stores/${vector_store_id}/files/${fileID}`, {
+        return this._client.post(path12`/vector_stores/${vector_store_id}/files/${fileID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -88740,7 +88740,7 @@ var init_files3 = __esm({
        * Returns a list of vector store files.
        */
       list(vectorStoreID, query = {}, options) {
-        return this._client.getAPIList(path11`/vector_stores/${vectorStoreID}/files`, CursorPage, {
+        return this._client.getAPIList(path12`/vector_stores/${vectorStoreID}/files`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -88755,7 +88755,7 @@ var init_files3 = __esm({
        */
       delete(fileID, params, options) {
         const { vector_store_id } = params;
-        return this._client.delete(path11`/vector_stores/${vector_store_id}/files/${fileID}`, {
+        return this._client.delete(path12`/vector_stores/${vector_store_id}/files/${fileID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -88801,7 +88801,7 @@ var init_files3 = __esm({
                   }
                 }
               }
-              await sleep3(sleepInterval);
+              await sleep4(sleepInterval);
               break;
             case "failed":
             case "completed":
@@ -88831,7 +88831,7 @@ var init_files3 = __esm({
        */
       content(fileID, params, options) {
         const { vector_store_id } = params;
-        return this._client.getAPIList(path11`/vector_stores/${vector_store_id}/files/${fileID}/content`, Page, {
+        return this._client.getAPIList(path12`/vector_stores/${vector_store_id}/files/${fileID}/content`, Page, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -88874,7 +88874,7 @@ var init_vector_stores = __esm({
        * Retrieves a vector store.
        */
       retrieve(vectorStoreID, options) {
-        return this._client.get(path11`/vector_stores/${vectorStoreID}`, {
+        return this._client.get(path12`/vector_stores/${vectorStoreID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -88884,7 +88884,7 @@ var init_vector_stores = __esm({
        * Modifies a vector store.
        */
       update(vectorStoreID, body, options) {
-        return this._client.post(path11`/vector_stores/${vectorStoreID}`, {
+        return this._client.post(path12`/vector_stores/${vectorStoreID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -88906,7 +88906,7 @@ var init_vector_stores = __esm({
        * Delete a vector store.
        */
       delete(vectorStoreID, options) {
-        return this._client.delete(path11`/vector_stores/${vectorStoreID}`, {
+        return this._client.delete(path12`/vector_stores/${vectorStoreID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -88917,7 +88917,7 @@ var init_vector_stores = __esm({
        * filter.
        */
       search(vectorStoreID, body, options) {
-        return this._client.getAPIList(path11`/vector_stores/${vectorStoreID}/search`, Page, {
+        return this._client.getAPIList(path12`/vector_stores/${vectorStoreID}/search`, Page, {
           body,
           method: "post",
           ...options,
@@ -88951,7 +88951,7 @@ var init_videos = __esm({
        * Fetch the latest metadata for a generated video.
        */
       retrieve(videoID, options) {
-        return this._client.get(path11`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path12`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * List recently generated videos for the current project.
@@ -88967,7 +88967,7 @@ var init_videos = __esm({
        * Permanently delete a completed or failed video and its stored assets.
        */
       delete(videoID, options) {
-        return this._client.delete(path11`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path12`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Create a character from an uploaded video.
@@ -88981,7 +88981,7 @@ var init_videos = __esm({
        * Streams the rendered video content for the specified video job.
        */
       downloadContent(videoID, query = {}, options) {
-        return this._client.get(path11`/videos/${videoID}/content`, {
+        return this._client.get(path12`/videos/${videoID}/content`, {
           query,
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
@@ -89006,7 +89006,7 @@ var init_videos = __esm({
        * Fetch a character.
        */
       getCharacter(characterID, options) {
-        return this._client.get(path11`/videos/characters/${characterID}`, {
+        return this._client.get(path12`/videos/characters/${characterID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -89015,7 +89015,7 @@ var init_videos = __esm({
        * Create a remix of a completed video using a refreshed prompt.
        */
       remix(videoID, body, options) {
-        return this._client.post(path11`/videos/${videoID}/remix`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path12`/videos/${videoID}/remix`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
     };
   }
@@ -89719,7 +89719,7 @@ var init_client = __esm({
           const maxRetries = options.maxRetries ?? this.maxRetries;
           timeoutMillis = this.calculateDefaultRetryTimeoutMillis(retriesRemaining, maxRetries);
         }
-        await sleep3(timeoutMillis);
+        await sleep4(timeoutMillis);
         return this.makeRequest(options, retriesRemaining - 1, requestLogID);
       }
       calculateDefaultRetryTimeoutMillis(retriesRemaining, maxRetries) {
@@ -90872,6 +90872,14 @@ var require_video_catalog = __commonJS({
             "reserveUsd",
             "outputPath",
             "filename",
+            "negativePrompt",
+            "nagScale",
+            "nagAlpha",
+            "nagTau",
+            "passShape",
+            "audioStartTime",
+            "audioMaxDuration",
+            "numFrames",
             "audioPath",
             "imagePath",
             "aspectRatio",
@@ -111923,7 +111931,15 @@ import { createHash as createHash6 } from "node:crypto";
 // src/astra-genai-client.ts
 var import_undici = __toESM(require_undici(), 1);
 import { readFileSync as readFileSync7 } from "node:fs";
+function desktopGatewayKey() {
+  const url = process.env.ASTRA_GENAI_DESKTOP_URL?.replace(/\/+$/, "");
+  if (!url) return config.astraGenaiApiKey;
+  if (process.env.ASTRA_GENAI_DESKTOP_API_KEY) return process.env.ASTRA_GENAI_DESKTOP_API_KEY;
+  if (url === process.env.ASTRA_GENAI_IMAGE_URL?.replace(/\/+$/, "")) return process.env.ASTRA_GENAI_IMAGE_API_KEY;
+  return void 0;
+}
 function override(route) {
+  if (route.startsWith("/v1/ltx/desktop/")) return { url: process.env.ASTRA_GENAI_DESKTOP_URL, key: desktopGatewayKey() };
   if (route.startsWith("/v1/images/")) return { url: process.env.ASTRA_GENAI_IMAGE_URL, key: process.env.ASTRA_GENAI_IMAGE_API_KEY };
   if (route.startsWith("/v1/audio/")) return { url: process.env.ASTRA_GENAI_SPEECH_URL, key: process.env.ASTRA_GENAI_SPEECH_API_KEY };
   return {};
@@ -111934,7 +111950,8 @@ function astraGenaiBaseUrl(route = "") {
 function requireAstraGenaiKey(route = "") {
   const { url, key } = override(route);
   if (url) {
-    if (!key) throw new Error(`${route.startsWith("/v1/images/") ? "ASTRA_GENAI_IMAGE_API_KEY" : "ASTRA_GENAI_SPEECH_API_KEY"} is required with its gateway URL override.`);
+    const lane = route.startsWith("/v1/images/") ? "IMAGE" : route.startsWith("/v1/audio/") ? "SPEECH" : "DESKTOP";
+    if (!key) throw new Error(`ASTRA_GENAI_${lane}_API_KEY is required with its gateway URL override.`);
     return key;
   }
   if (!config.astraGenaiApiKey) throw new Error("ASTRA_GENAI_API_KEY is required: issue a gateway token in the GenAI console; ASTRA_VIDEO is a separate credential.");
@@ -112024,12 +112041,12 @@ function genaiSourceUri(uri, file) {
     throw new Error("GenAI source must be PNG/JPEG, at most 32 MiB and 4096 pixels per side");
   return `data:${meta.mimeType};base64,${bytes.toString("base64")}`;
 }
-async function requestGenaiMedia(route, body) {
+async function requestGenaiMedia(route, body, credentialRoute = route) {
   if (!/^\/v1\/(audio\/speech|ltx\/desktop\/assets(?:\/[A-Za-z0-9_-]+\/bytes)?)$/.test(route))
     throw new Error("Unsupported private gateway media route");
-  const key = requireAstraGenaiKey(route);
+  const key = requireAstraGenaiKey(credentialRoute);
   const form = body instanceof FormData;
-  const response = await fetch(astraGenaiBaseUrl(route) + route, {
+  const response = await fetch(astraGenaiBaseUrl(credentialRoute) + route, {
     method: body === void 0 ? "GET" : "POST",
     redirect: "error",
     signal: AbortSignal.timeout(30 * 6e4),
@@ -112151,10 +112168,19 @@ async function recoverNativeImage(receiptPath2) {
 }
 
 // src/astra-genai-desktop.ts
-import * as fs8 from "node:fs";
-import path7 from "node:path";
+import * as fs9 from "node:fs";
+import path8 from "node:path";
+import { tmpdir as tmpdir3 } from "node:os";
 import { createHash as createHash7 } from "node:crypto";
+import { execFileSync as execFileSync5 } from "node:child_process";
+
+// src/ltx-api-video.ts
 import { execFileSync as execFileSync4 } from "node:child_process";
+
+// src/vendor-video.ts
+import fs8 from "node:fs";
+import path7 from "node:path";
+import { randomUUID as randomUUID3 } from "node:crypto";
 
 // src/video-events.ts
 import { AsyncLocalStorage } from "node:async_hooks";
@@ -112164,6 +112190,215 @@ function recordVideoSubmission(id) {
 }
 function recordVideoTokens(tokens) {
   if (tokens !== void 0) videoEvents.getStore()?.usage(tokens);
+}
+
+// src/vendor-video.ts
+var VendorHttpError = class extends Error {
+  constructor(message, status, terminal) {
+    super(message);
+    this.status = status;
+    this.terminal = terminal;
+  }
+  status;
+  terminal;
+};
+async function vendorJson(url, init) {
+  const response = await fetch(url, { ...init, signal: AbortSignal.timeout(init.timeoutMs ?? 12e4) });
+  const body = await response.text();
+  if (!response.ok) {
+    const terminal = response.status >= 400 && response.status < 500 && ![408, 409, 425, 429].includes(response.status);
+    throw new VendorHttpError(`HTTP ${response.status}: ${body.slice(0, 500)}`, response.status, terminal);
+  }
+  try {
+    return JSON.parse(body);
+  } catch {
+    throw new VendorHttpError(`Non-JSON response: ${body.slice(0, 200)}`, response.status, false);
+  }
+}
+var MIME = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".wav": "audio/wav",
+  ".mp3": "audio/mpeg",
+  ".m4a": "audio/mp4",
+  ".ogg": "audio/ogg"
+};
+function mediaType(file, allowed) {
+  const ext = path7.extname(file).toLowerCase();
+  if (!allowed.includes(ext) || !MIME[ext]) throw new Error(`Unsupported input ${path7.basename(file)}; use ${allowed.join(", ")}`);
+  return MIME[ext];
+}
+function dataUri(file, allowed, maxBytes) {
+  const type = mediaType(file, allowed);
+  const size = fs8.statSync(file).size;
+  if (size > maxBytes) throw new Error(`${path7.basename(file)} is ${(size / 1048576).toFixed(1)} MB; this vendor takes at most ${(maxBytes / 1048576).toFixed(0)} MB inline`);
+  return `data:${type};base64,${fs8.readFileSync(file).toString("base64")}`;
+}
+var sleep3 = (ms) => new Promise((resolve14) => setTimeout(resolve14, ms));
+async function runVendorJob(job) {
+  let target;
+  try {
+    target = resolveOutputFile(job.outputPath, job.filename, "video");
+  } catch (error2) {
+    return { success: false, error: error2 instanceof Error ? error2.message : String(error2), terminal: true };
+  }
+  let id;
+  try {
+    id = await job.submit();
+  } catch (error2) {
+    return {
+      success: false,
+      error: `${job.vendor} submission failed: ${error2 instanceof Error ? error2.message : String(error2)}`,
+      terminal: error2 instanceof VendorHttpError && error2.terminal
+    };
+  }
+  recordVideoSubmission(id);
+  const maxPolls = job.maxPolls ?? 180, interval = job.intervalMs ?? 1e4;
+  let retried2 = false;
+  for (let poll = 1; poll <= maxPolls; poll += 1) {
+    await sleep3(interval);
+    let status;
+    try {
+      status = await job.poll(id);
+      retried2 = false;
+    } catch (error2) {
+      if (retried2) return { success: false, error: `${job.vendor} status check failed: ${error2 instanceof Error ? error2.message : String(error2)}`, terminal: false, providerId: id };
+      retried2 = true;
+      continue;
+    }
+    if (status.state === "running") continue;
+    if (status.state === "failed") return { success: false, error: `${job.vendor} job ${id} failed: ${status.error}`, terminal: true, providerId: id };
+    return saveVendorOutput(status, target, id);
+  }
+  return { success: false, error: `${job.vendor} job ${id} still running after ${maxPolls * interval / 6e4} minutes; check it at the vendor and settle the request with video_status action:reconcile \u2014 do not resubmit`, terminal: false, providerId: id };
+}
+async function saveVendorOutput(status, target, id) {
+  const temporary = target + "." + randomUUID3() + ".tmp";
+  try {
+    let bytes;
+    if ("bytes" in status) bytes = status.bytes;
+    else {
+      const download = await fetch(status.url, { signal: AbortSignal.timeout(10 * 6e4) });
+      if (!download.ok) throw new Error("HTTP " + download.status);
+      bytes = Buffer.from(await download.arrayBuffer());
+    }
+    if (!bytes.length) throw new Error("empty video");
+    fs8.writeFileSync(temporary, bytes, { flag: "wx" });
+    fs8.renameSync(temporary, target);
+    return { success: true, videoPath: target, providerId: id, meta: status.meta ?? {} };
+  } catch (error2) {
+    return { success: false, terminal: false, providerId: id, error: "Output download or save failed: " + String(error2) + "; recover the existing job, do not resubmit" };
+  } finally {
+    fs8.rmSync(temporary, { force: true });
+  }
+}
+
+// src/ltx-api-video.ts
+var LTX_API_BASE_URL = "https://api.ltx.io";
+var LTX_API_MODELS = ["ltx-2-5-pro", "ltx-2-5-fast"];
+var LTX_API_RESOLUTIONS = {
+  "720p": ["1280x720", "720x1280", "720x720", "1080x720", "720x1080"],
+  "1080p": ["1920x1080", "1080x1920", "1080x1080", "1620x1080", "1080x1620"],
+  "1440p": ["2560x1440", "1440x2560", "1440x1440", "2160x1440", "1440x2160"],
+  "4k": ["3840x2160", "2160x3840", "2160x2160", "3240x2160", "2160x3240"]
+};
+var ltxApiTier = (resolution2) => Object.entries(LTX_API_RESOLUTIONS).find(([, sizes]) => sizes.includes(resolution2))?.[0];
+var IMAGE_EXT = [".png", ".jpg", ".jpeg", ".webp"];
+var AUDIO_EXT = [".wav", ".mp3", ".m4a", ".ogg"];
+function ltxApiSeconds(model2, resolution2, fps = 24) {
+  const long = model2 === "ltx-2-5-fast" && ["720p", "1080p"].includes(ltxApiTier(resolution2) ?? "") && fps <= 25;
+  return long ? [6, 8, 10, 12, 14, 16, 18, 20] : [6, 8, 10];
+}
+var ltxApiAudioMax = (model2, resolution2) => model2 === "ltx-2-5-fast" && ["720p", "1080p"].includes(ltxApiTier(resolution2) ?? "") ? 20 : 10;
+var common = {
+  prompt: external_exports.string().max(5e3).describe("English action, camera and sound."),
+  model: external_exports.enum(LTX_API_MODELS).default("ltx-2-5-pro").describe("LTX API model id."),
+  resolution: external_exports.string().refine((value) => Boolean(ltxApiTier(value)), "Use a WIDTHxHEIGHT the LTX API lists, e.g. 1920x1080").default("1920x1080").describe("Output size, e.g. 1920x1080 or 1080x1920."),
+  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24).describe("Frame rate."),
+  cameraMotion: external_exports.enum(["dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"]).optional().describe("Optional preset camera move."),
+  sourceImagePath: external_exports.string().min(1).describe("First frame image (PNG/JPEG/WEBP, 7 MB inline)."),
+  lastImagePath: external_exports.string().min(1).optional().describe("Optional last frame image."),
+  outputPath: external_exports.string().optional().describe("Output directory."),
+  filename: bareFilenameSchema("video").optional().describe("MP4 filename.")
+};
+var ltxApiImg2VideoSchema = external_exports.object({
+  ...common,
+  prompt: common.prompt.min(1),
+  durationSeconds: external_exports.number().int().default(6).describe("6, 8 or 10 seconds (Fast at 720p/1080p, 24/25 fps: up to 20)."),
+  generateAudio: external_exports.boolean().default(false).describe("Generate a soundtrack; false for cuts whose sound comes from assembly.")
+}).strict().superRefine((v, ctx) => {
+  if (!ltxApiSeconds(v.model, v.resolution, v.fps).includes(v.durationSeconds))
+    ctx.addIssue({ code: "custom", path: ["durationSeconds"], message: `${v.model} at ${v.resolution}/${v.fps} fps takes ${ltxApiSeconds(v.model, v.resolution, v.fps).join(", ")} seconds` });
+});
+var ltxApiAudio2VideoSchema = external_exports.object({
+  ...common,
+  sourceImagePath: common.sourceImagePath.optional(),
+  prompt: common.prompt.default(""),
+  audioPath: external_exports.string().min(1).describe("The composed pinned-voice track; its length sets the clip length (2\u201310 s, Fast at 720p/1080p up to 20 s).")
+}).strict().superRefine((args, ctx) => {
+  if (!args.sourceImagePath && (!args.prompt.trim() || args.lastImagePath))
+    ctx.addIssue({ code: "custom", path: ["sourceImagePath"], message: "A first image is required with a last image or an empty prompt" });
+});
+function ltxApiAudioSeconds(file) {
+  const seconds2 = Number(execFileSync4("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], { encoding: "utf8", timeout: 15e3 }));
+  if (!Number.isFinite(seconds2) || seconds2 <= 0) throw new Error("Cannot read the length of " + file);
+  return seconds2;
+}
+function buildLtxApiBody(request) {
+  const image2 = (file) => dataUri(file, IMAGE_EXT, 7 * 1048576);
+  const body = {
+    model: request.model,
+    resolution: request.resolution,
+    fps: request.fps,
+    prompt: request.prompt,
+    ...request.sourceImagePath ? { image_uri: image2(request.sourceImagePath) } : {},
+    ...request.lastImagePath ? { last_frame_uri: image2(request.lastImagePath) } : {},
+    ...request.cameraMotion ? { camera_motion: request.cameraMotion } : {}
+  };
+  if ("audioPath" in request) {
+    const seconds2 = ltxApiAudioSeconds(request.audioPath), max = ltxApiAudioMax(request.model, request.resolution);
+    if (seconds2 < 2 || seconds2 > max) throw new Error(`${request.model} at ${request.resolution} takes 2\u2013${max} s of audio; ${request.audioPath} runs ${seconds2.toFixed(2)} s`);
+    body.audio_uri = dataUri(request.audioPath, AUDIO_EXT, 15 * 1048576);
+  } else Object.assign(body, { duration: request.durationSeconds, generate_audio: request.generateAudio });
+  if (JSON.stringify(body).length > 32 * 1048576) throw new Error("LTX request body exceeds 32 MB; use smaller frames or audio");
+  return { endpoint: "audioPath" in request ? "audio-to-video" : "image-to-video", body };
+}
+function ltxApiStatus(json3) {
+  const status = json3.status, result = json3.result;
+  if (status === "completed") return result?.video_url ? { state: "done", url: result.video_url } : { state: "failed", error: "completed without result.video_url" };
+  if (status === "failed") return { state: "failed", error: json3.error?.message ?? "failed" };
+  return { state: "running" };
+}
+async function pollLtxApi(endpoint2, id) {
+  return ltxApiStatus(await vendorJson(
+    LTX_API_BASE_URL + "/v2/" + endpoint2 + "/" + encodeURIComponent(id),
+    { headers: { Authorization: "Bearer " + config.ltxApiKey, "Content-Type": "application/json" } }
+  ));
+}
+async function generateLtxApiVideo(request) {
+  if (!config.ltxApiKey) return { success: false, error: "LTX_API_KEY is not set", terminal: true };
+  const headers2 = { Authorization: `Bearer ${config.ltxApiKey}`, "Content-Type": "application/json" };
+  let built;
+  try {
+    built = buildLtxApiBody(request);
+  } catch (error2) {
+    return { success: false, error: error2 instanceof Error ? error2.message : String(error2), terminal: true };
+  }
+  return runVendorJob({
+    vendor: "LTX API",
+    outputPath: request.outputPath ?? process.cwd(),
+    filename: request.filename ?? `ltx-${Date.now()}.mp4`,
+    intervalMs: 6e3,
+    maxPolls: 300,
+    submit: async () => {
+      const json3 = await vendorJson(`${LTX_API_BASE_URL}/v2/${built.endpoint}`, { method: "POST", headers: headers2, body: JSON.stringify(built.body), timeoutMs: 5 * 6e4 });
+      if (typeof json3.id !== "string" || !json3.id) throw new Error("No job id in LTX response");
+      return json3.id;
+    },
+    poll: (id) => pollLtxApi("audioPath" in request ? "audio-to-video" : "image-to-video", id)
+  });
 }
 
 // src/astra-genai-desktop.ts
@@ -112178,7 +112413,7 @@ var local = {
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("video").refine((n) => n.endsWith(".mp4")).optional()
 };
-var common = external_exports.object({
+var common2 = external_exports.object({
   model,
   prompt: external_exports.string().trim().min(1),
   resolution,
@@ -112188,19 +112423,33 @@ var common = external_exports.object({
   cameraMotion: external_exports.enum(["none", "dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"]).optional(),
   ...local
 }).strict();
-var desktopTextSchema = common.extend({ duration: duration3, aspectRatio: aspect.default("16:9"), loras: loras.optional() }).strict();
-var desktopImageSchema = common.extend({
+var desktopTextSchema = common2.extend({ duration: duration3, aspectRatio: aspect.default("16:9"), loras: loras.optional() }).strict();
+var desktopImageSchema = common2.extend({
   duration: duration3,
   aspectRatio: external_exports.union([aspect, external_exports.literal("auto")]).default("auto"),
   imagePath: external_exports.string().min(1),
   lastFramePath: external_exports.string().min(1).optional()
 }).strict();
-var desktopAudioSchema = common.extend({
+var desktopAudioSchema = common2.extend({
+  resolution: resolution.default("540p"),
+  prompt: external_exports.string().trim().default(""),
+  seed: external_exports.number().int().safe().nullish(),
+  negativePrompt: external_exports.string().max(2e3).optional(),
+  nagScale: external_exports.number().finite().min(0).max(100).nullish(),
+  nagAlpha: external_exports.number().finite().min(0).max(1).nullish(),
+  nagTau: external_exports.number().finite().min(0).max(10).nullish(),
+  passShape: external_exports.enum(["auto", "one_pass", "parts"]).optional(),
+  audioStartTime: external_exports.number().finite().nonnegative().optional(),
+  audioMaxDuration: external_exports.number().finite().positive().optional(),
+  numFrames: external_exports.number().int().min(9).refine((n) => (n - 1) % 8 === 0, "Use 8k+1 frames").optional(),
   audioPath: external_exports.string().min(1),
   imagePath: external_exports.string().min(1).optional(),
   aspectRatio: external_exports.union([aspect, external_exports.literal("auto")]).default("16:9"),
   allowAudioTruncation: external_exports.boolean().default(false)
-}).strict();
+}).strict().refine(
+  (args) => Boolean(args.prompt || args.imagePath),
+  "A2V needs a prompt or a start image"
+).refine((args) => args.numFrames === void 0 || args.audioMaxDuration === void 0, "Choose numFrames or audioMaxDuration");
 var edit = external_exports.object({
   model,
   prompt: external_exports.string().default(""),
@@ -112246,6 +112495,9 @@ function buildDesktopBody(operation, input, assets) {
     audioPath,
     sourceVideoPath,
     allowAudioTruncation,
+    audioStartTime: _start,
+    audioMaxDuration: _duration,
+    numFrames: _frames,
     targetResolution,
     keyframes,
     ...params
@@ -112267,11 +112519,76 @@ function buildDesktopBody(operation, input, assets) {
     ...operation === "audio-to-video" ? { allowAudioTruncation } : {}
   };
 }
+function desktopAudioWindow(args, sourceSeconds) {
+  const fps = Number(args.fps ?? 24), start = Number(args.audioStartTime ?? 0);
+  const available = sourceSeconds - start;
+  if (available <= 0) throw new Error("audioStartTime is outside the source audio");
+  let seconds2 = Math.min(available, Number(args.audioMaxDuration ?? Infinity));
+  if (typeof args.numFrames === "number") {
+    seconds2 = args.numFrames / fps;
+    if (seconds2 > available + 1e-6) throw new Error("Source audio does not cover the requested numFrames");
+  }
+  const ms = typeof args.numFrames === "number" ? Math.ceil(seconds2 * 1e3) : Math.round(seconds2 * 1e3);
+  const frames = 8 * Math.max(1, Math.floor((ms * fps - 1e3) / 8e3)) + 1;
+  if (ms < 2e3) throw new Error("Desktop A2V needs at least 2 seconds of audio");
+  if (!args.allowAudioTruncation && ms * fps > frames * 1e3 + fps)
+    throw new Error("Desktop frame alignment would truncate audio; choose exact numFrames, pad the source, or allowAudioTruncation");
+  return { start, seconds: seconds2, frames, playbackSeconds: frames / fps, uploadSeconds: typeof args.numFrames === "number" ? ms / 1e3 : seconds2 };
+}
+function desktopAudioBytes(file, args) {
+  const window2 = desktopAudioWindow(args, ltxApiAudioSeconds(file));
+  const filters = [`atrim=duration=${window2.seconds}`, "asetpts=PTS-STARTPTS"];
+  if (window2.uploadSeconds > window2.seconds) filters.push("apad", `atrim=duration=${window2.uploadSeconds}`);
+  const dir = fs9.mkdtempSync(path8.join(tmpdir3(), "social-flow-a2v-"));
+  const target = path8.join(dir, "window.wav");
+  try {
+    execFileSync5(
+      "ffmpeg",
+      [
+        "-nostdin",
+        "-v",
+        "error",
+        "-protocol_whitelist",
+        "file",
+        "-ss",
+        String(window2.start),
+        "-i",
+        file,
+        "-map",
+        "0:a:0",
+        "-vn",
+        "-af",
+        filters.join(","),
+        "-c:a",
+        "pcm_s16le",
+        "-fs",
+        String(100 * 1024 * 1024),
+        target
+      ],
+      { timeout: 3e4 }
+    );
+    if (Math.abs(ltxApiAudioSeconds(target) - window2.uploadSeconds) > 1e-3)
+      throw new Error("Decoded audio does not cover the requested window");
+    return fs9.readFileSync(target);
+  } finally {
+    fs9.rmSync(dir, { recursive: true, force: true });
+  }
+}
 function sourceFiles(args) {
   const files3 = ["imagePath", "lastFramePath", "audioPath", "sourceVideoPath"].flatMap((k) => typeof args[k] === "string" ? [args[k]] : []);
   if (Array.isArray(args.keyframes)) for (const frame of args.keyframes) files3.push(frame.imagePath);
   return [...new Set(files3)];
 }
+var resolvedParamsSchema = external_exports.object({
+  numFrames: external_exports.number().int().positive(),
+  seed: external_exports.number().nullish(),
+  negativePrompt: external_exports.string().optional(),
+  nagScale: external_exports.number().nullish(),
+  nagAlpha: external_exports.number().nullish(),
+  nagTau: external_exports.number().nullish(),
+  passShape: external_exports.string().optional(),
+  promptProvenance: external_exports.string().optional()
+}).partial();
 var receiptSchema = external_exports.object({
   protocol: external_exports.literal("gateway-desktop-v1"),
   baseUrl: external_exports.string(),
@@ -112280,17 +112597,19 @@ var receiptSchema = external_exports.object({
   videoPath: external_exports.string(),
   status: external_exports.enum(["submitting", "submitted", "completed"]),
   jobId: external_exports.string().optional(),
-  sha256: external_exports.string().optional()
+  sha256: external_exports.string().optional(),
+  expectedFrames: external_exports.number().int().positive().optional(),
+  resolvedParams: resolvedParamsSchema.optional()
 }).strict();
 async function desktopVideoStatus(receiptPath2, download = false) {
-  const receipt = receiptSchema.parse(JSON.parse(fs8.readFileSync(receiptPath2, "utf8")));
-  if (receipt.baseUrl !== astraGenaiBaseUrl()) throw new Error("Gateway origin changed; restore it before recovery");
+  const receipt = receiptSchema.parse(JSON.parse(fs9.readFileSync(receiptPath2, "utf8")));
+  if (receipt.baseUrl !== astraGenaiBaseUrl(ROOT + "/")) throw new Error("Gateway origin changed; restore it before recovery");
   if (!receipt.jobId) throw new Error("Submission outcome unknown; inspect gateway generations/usage before retrying");
   if (receipt.status === "completed") {
-    if (createHash7("sha256").update(fs8.readFileSync(receipt.videoPath)).digest("hex") !== receipt.sha256) throw new Error("Cached video changed");
-    return { jobId: receipt.jobId, status: "completed", videoPath: receipt.videoPath, downloaded: true, review: "not_reviewed" };
+    if (createHash7("sha256").update(fs9.readFileSync(receipt.videoPath)).digest("hex") !== receipt.sha256) throw new Error("Cached video changed");
+    return { jobId: receipt.jobId, ...receipt.resolvedParams && { resolvedParams: receipt.resolvedParams }, status: "completed", videoPath: receipt.videoPath, downloaded: true, review: "not_reviewed" };
   }
-  const job = external_exports.object({ id: external_exports.string(), status: external_exports.string(), outputs: external_exports.array(external_exports.object({ url: external_exports.string(), media_kind: external_exports.string() })).default([]) }).passthrough().parse(await requestGenai("GET", `${ROOT}/generations/${encodeURIComponent(receipt.jobId)}`));
+  const job = external_exports.object({ id: external_exports.string(), status: external_exports.string(), resolved_params: resolvedParamsSchema.optional(), outputs: external_exports.array(external_exports.object({ url: external_exports.string(), media_kind: external_exports.string() })).default([]) }).passthrough().parse(await requestGenai("GET", `${ROOT}/generations/${encodeURIComponent(receipt.jobId)}`));
   if (job.id !== receipt.jobId) throw new Error("Job ID mismatch");
   if (["failed", "cancelled"].includes(job.status)) throw new GenaiRequestError(`Gateway video ${job.status}: ${job.id}`, true, 200);
   if (job.status !== "succeeded" || !download) return { jobId: job.id, status: job.status, downloaded: false, review: "not_reviewed" };
@@ -112299,59 +112618,67 @@ async function desktopVideoStatus(receiptPath2, download = false) {
   const bytes = await requestGenaiMedia(video2[0].url);
   const temp = receipt.videoPath + `.${process.pid}.download.mp4`;
   try {
-    fs8.writeFileSync(temp, bytes, { flag: "wx", mode: 384 });
-    const probe5 = JSON.parse(execFileSync4("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height:format=duration", "-of", "json", temp], { encoding: "utf8", timeout: 3e4 }));
-    if (!(probe5.streams?.[0]?.width > 0) || !(Number(probe5.format?.duration) > 0)) throw new Error("Invalid video result");
+    fs9.writeFileSync(temp, bytes, { flag: "wx", mode: 384 });
+    const probe5 = JSON.parse(execFileSync5("ffprobe", ["-v", "error", "-show_entries", "stream=codec_type,width,height,nb_frames:format=duration", "-of", "json", temp], { encoding: "utf8", timeout: 3e4 }));
+    const picture = probe5.streams?.find((s2) => s2.codec_type === "video");
+    if (receipt.operation === "audio-to-video" && !probe5.streams?.some((s2) => s2.codec_type === "audio"))
+      throw new Error("Desktop A2V result is missing its soundtrack; retain the receipt");
+    if (!(picture?.width > 0) || !(Number(probe5.format?.duration) > 0)) throw new Error("Invalid video result");
+    if (receipt.expectedFrames !== void 0 && Number(picture.nb_frames) !== receipt.expectedFrames)
+      throw new Error("Desktop output frame count differs from numFrames; retain the receipt");
     const sha2563 = createHash7("sha256").update(bytes).digest("hex");
-    if (fs8.existsSync(receipt.videoPath)) {
-      if (createHash7("sha256").update(fs8.readFileSync(receipt.videoPath)).digest("hex") !== sha2563) throw new Error("Video output conflicts");
-    } else fs8.linkSync(temp, receipt.videoPath);
-    atomicJson(receiptPath2, { ...receipt, status: "completed", sha256: sha2563 });
+    if (fs9.existsSync(receipt.videoPath)) {
+      if (createHash7("sha256").update(fs9.readFileSync(receipt.videoPath)).digest("hex") !== sha2563) throw new Error("Video output conflicts");
+    } else fs9.linkSync(temp, receipt.videoPath);
+    atomicJson(receiptPath2, { ...receipt, status: "completed", sha256: sha2563, ...job.resolved_params && { resolvedParams: job.resolved_params } });
   } finally {
-    fs8.rmSync(temp, { force: true });
+    fs9.rmSync(temp, { force: true });
   }
-  return { jobId: job.id, status: "completed", videoPath: receipt.videoPath, downloaded: true, review: "not_reviewed" };
+  return { jobId: job.id, ...job.resolved_params && { resolvedParams: job.resolved_params }, status: "completed", videoPath: receipt.videoPath, downloaded: true, review: "not_reviewed" };
 }
 async function generateDesktopVideo(operation, input) {
   const args = DESKTOP_SCHEMAS[operation].parse(input);
-  requireAstraGenaiKey();
+  requireAstraGenaiKey(ROOT + "/");
   const files3 = sourceFiles(args), hashes = {};
   for (const file of files3) {
-    const stat5 = fs8.statSync(file);
+    const stat5 = fs9.statSync(file);
     if (!stat5.isFile() || stat5.size === 0 || stat5.size > 100 * 1024 * 1024) throw new Error("Input must be a nonempty file up to 100 MiB");
-    hashes[file] = createHash7("sha256").update(fs8.readFileSync(file)).digest("hex");
+    hashes[file] = createHash7("sha256").update(fs9.readFileSync(file)).digest("hex");
   }
   const fingerprint = createHash7("sha256").update(JSON.stringify({ operation, args, hashes })).digest("hex");
   const videoPath = resolveOutputFile(String(args.outputPath || process.cwd()), String(args.filename || `desktop-${Date.now()}.mp4`), "video");
   const receiptPath2 = videoPath + ".astra-genai.json";
-  if (fs8.existsSync(receiptPath2)) {
-    const old = receiptSchema.parse(JSON.parse(fs8.readFileSync(receiptPath2, "utf8")));
-    if (old.baseUrl !== astraGenaiBaseUrl() || old.fingerprint !== fingerprint || old.operation !== operation || old.videoPath !== videoPath)
+  if (fs9.existsSync(receiptPath2)) {
+    const old = receiptSchema.parse(JSON.parse(fs9.readFileSync(receiptPath2, "utf8")));
+    if (old.baseUrl !== astraGenaiBaseUrl(ROOT + "/") || old.fingerprint !== fingerprint || old.operation !== operation || old.videoPath !== videoPath)
       throw new Error("Receipt conflicts with request");
     if (!old.jobId) throw new Error("Submission outcome unknown; inspect gateway before retrying");
     recordVideoSubmission(old.jobId);
   } else {
-    if (fs8.existsSync(videoPath)) throw new Error("Output exists");
+    if (fs9.existsSync(videoPath)) throw new Error("Output exists");
     if (operation === "keyframes") {
       const catalog2 = external_exports.object({ data: external_exports.array(external_exports.object({ id: external_exports.string() })), active_model: external_exports.string().optional() }).passthrough().parse(await requestGenai("GET", ROOT + "/models"));
       if (catalog2.active_model !== args.model) throw new Error("Keyframes require selected model to equal gateway active_model");
     }
     const assets = {};
     for (const file of files3) {
-      const bytes = fs8.readFileSync(file);
+      const bytes = fs9.readFileSync(file);
       if (createHash7("sha256").update(bytes).digest("hex") !== hashes[file]) throw new Error("Input changed before upload");
+      const windowed = file === args.audioPath && [args.audioStartTime, args.audioMaxDuration, args.numFrames].some((v) => v !== void 0);
+      const upload = windowed ? desktopAudioBytes(file, args) : bytes;
+      if (windowed && createHash7("sha256").update(fs9.readFileSync(file)).digest("hex") !== hashes[file]) throw new Error("Audio changed during decoding");
       const form = new FormData();
-      form.append("file", new Blob([new Uint8Array(bytes)]), path7.basename(file));
+      form.append("file", new Blob([new Uint8Array(upload)]), windowed ? "audio-window.wav" : path8.basename(file));
       assets[file] = external_exports.object({ id: external_exports.string().min(1) }).parse(JSON.parse((await requestGenaiMedia(ROOT + "/assets", form)).toString())).id;
     }
     const body = buildDesktopBody(operation, args, assets);
-    const receipt = { protocol: "gateway-desktop-v1", baseUrl: astraGenaiBaseUrl(), operation, fingerprint, videoPath, status: "submitting" };
-    fs8.writeFileSync(receiptPath2, JSON.stringify(receipt), { flag: "wx", mode: 384 });
+    const receipt = { protocol: "gateway-desktop-v1", baseUrl: astraGenaiBaseUrl(ROOT + "/"), operation, fingerprint, videoPath, ...typeof args.numFrames === "number" ? { expectedFrames: args.numFrames } : {}, status: "submitting" };
+    fs9.writeFileSync(receiptPath2, JSON.stringify(receipt), { flag: "wx", mode: 384 });
     let response;
     try {
       response = await requestGenai("POST", operation === "keyframes" ? ROOT + "/keyframes" : ROOT + "/generations/" + operation, body, 30 * 6e4);
     } catch (error2) {
-      if (error2 instanceof GenaiRequestError && error2.terminal) fs8.rmSync(receiptPath2, { force: true });
+      if (error2 instanceof GenaiRequestError && error2.terminal) fs9.rmSync(receiptPath2, { force: true });
       throw error2;
     }
     const accepted = external_exports.object({ id: external_exports.string().min(1) }).passthrough().parse(response);
@@ -112363,14 +112690,14 @@ async function generateDesktopVideo(operation, input) {
 }
 
 // src/astra-genai-speech.ts
-import * as fs9 from "node:fs";
-import path8 from "node:path";
+import * as fs10 from "node:fs";
+import path9 from "node:path";
 
 // src/tts-execution.ts
 import { AsyncLocalStorage as AsyncLocalStorage2 } from "node:async_hooks";
-import { createHash as createHash8, randomUUID as randomUUID3 } from "node:crypto";
+import { createHash as createHash8, randomUUID as randomUUID4 } from "node:crypto";
 import { accessSync as accessSync2, constants as constants2, existsSync as existsSync9, lstatSync, mkdirSync as mkdirSync4, readFileSync as readFileSync10, realpathSync as realpathSync3, renameSync as renameSync2, rmSync as rmSync6, statSync as statSync5, writeFileSync as writeFileSync7 } from "node:fs";
-import { tmpdir as tmpdir4 } from "node:os";
+import { tmpdir as tmpdir5 } from "node:os";
 import { extname as extname4, join as join9, resolve as resolve3 } from "node:path";
 
 // src/tts-models.ts
@@ -112384,9 +112711,9 @@ function resolveTtsModel(provider, model2) {
 }
 
 // src/tts-audio.ts
-import { execFileSync as execFileSync5 } from "node:child_process";
-import { mkdtempSync as mkdtempSync3, rmSync as rmSync5, writeFileSync as writeFileSync6 } from "node:fs";
-import { tmpdir as tmpdir3 } from "node:os";
+import { execFileSync as execFileSync6 } from "node:child_process";
+import { mkdtempSync as mkdtempSync4, rmSync as rmSync5, writeFileSync as writeFileSync6 } from "node:fs";
+import { tmpdir as tmpdir4 } from "node:os";
 import { join as join8 } from "node:path";
 function decodeSpeechBase64(data) {
   if (typeof data !== "string" || !data.length || data.length % 4 !== 0 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(data)) {
@@ -112424,11 +112751,11 @@ function validateSpeechAudio(bytes, extension2) {
     if (offset !== bytes.length || !byteRate || !dataSize || dataSize % blockAlign !== 0) throw new Error("Invalid speech WAV data");
     return dataSize / byteRate;
   }
-  const dir = mkdtempSync3(join8(tmpdir3(), "speech-probe-"));
+  const dir = mkdtempSync4(join8(tmpdir4(), "speech-probe-"));
   try {
     const file = join8(dir, `audio.${extension2}`);
     writeFileSync6(file, bytes);
-    const result = JSON.parse(execFileSync5(
+    const result = JSON.parse(execFileSync6(
       "ffprobe",
       [
         "-v",
@@ -112446,7 +112773,7 @@ function validateSpeechAudio(bytes, extension2) {
     if (!names[extension2] || !String(result.format?.format_name).split(",").includes(names[extension2]) || !result.streams?.some((s2) => s2.codec_type === "audio") || !Number.isFinite(duration5) || duration5 <= 0) {
       throw new Error("Invalid speech audio format or duration");
     }
-    const decoded = execFileSync5(
+    const decoded = execFileSync6(
       "ffmpeg",
       [
         "-v",
@@ -112519,7 +112846,7 @@ function canonical(value) {
   return JSON.stringify(value);
 }
 function writeReceipt(file, value) {
-  const temporary = file + "." + randomUUID3() + ".tmp";
+  const temporary = file + "." + randomUUID4() + ".tmp";
   writeFileSync7(temporary, JSON.stringify(value, null, 2) + "\n", { mode: 384 });
   renameSync2(temporary, file);
 }
@@ -112532,7 +112859,7 @@ function lock(directory2) {
   return () => rmSync6(directory2, { recursive: true, force: true });
 }
 function speechSlotsDir(provider, key) {
-  return join9(tmpdir4(), `social-flow-tts-${process.getuid?.() ?? "user"}-${digest2(provider + key).slice(0, 24)}`);
+  return join9(tmpdir5(), `social-flow-tts-${process.getuid?.() ?? "user"}-${digest2(provider + key).slice(0, 24)}`);
 }
 function staleSlot(slot) {
   try {
@@ -112565,7 +112892,7 @@ async function executeSpeech(generator, args, run) {
   const gate3 = resolveToolGate(generator, { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
   if (!gate3.enabled) throw new Error(`Selected speech generator is disabled: ${gate3.reason}`);
   const key = provider === "astra-genai" ? requireAstraGenaiKey("/v1/audio/") : provider === "gemini" ? requireGeminiKey() : requireElevenLabsKey();
-  const id = executionId.getStore() || randomUUID3();
+  const id = executionId.getStore() || randomUUID4();
   const outputPath = resolve3(String(args.outputPath || process.cwd()));
   const extension2 = String(args.outputFormat || "wav").startsWith("mp3") ? "mp3" : "wav";
   const filename = String(args.filename || `${generator}_${id}.${extension2}`);
@@ -112692,8 +113019,8 @@ async function generateGenaiSpeech(input) {
   const run = () => executeSpeech("tts_astra_genai", args, async (output2) => {
     const bytes = await requestGenaiMedia("/v1/audio/speech", buildGenaiSpeechBody(args));
     validateSpeechAudio(bytes, args.outputFormat);
-    const audioPath = path8.join(output2.outputPath, output2.filename);
-    fs9.writeFileSync(audioPath, bytes, { flag: "wx", mode: 384 });
+    const audioPath = path9.join(output2.outputPath, output2.filename);
+    fs10.writeFileSync(audioPath, bytes, { flag: "wx", mode: 384 });
     return { success: true, audioPath, review: "not_reviewed" };
   });
   return args.requestId ? withSpeechRequestId(args.requestId, run) : run();
@@ -112741,6 +113068,13 @@ var descriptions = {
   aspectRatio: "Output aspect ratio. auto derives from source where supported.",
   lastFramePath: "Optional local final PNG/JPEG, e.g. /work/end.png; only I2V, not A2V.",
   audioPath: "Local source audio, e.g. /work/speech.wav. A2V derives duration from its samples.",
+  audioStartTime: "Read the local soundtrack from this offset in seconds, e.g. 1.5.",
+  audioMaxDuration: "Maximum seconds of source audio from audioStartTime; mutually exclusive with numFrames.",
+  numFrames: "Exact 8k+1 frames covered by the source. The plugin prepares the matching audio window before upload.",
+  passShape: "Desktop generation shape: auto, one_pass for one pass, or parts for a split render.",
+  nagScale: "Negative attention guidance strength, e.g. 8; 0 disables it.",
+  nagAlpha: "Negative attention guidance blend, e.g. 0.25.",
+  nagTau: "Negative attention guidance normalization threshold, e.g. 2.5.",
   allowAudioTruncation: "Explicit consent to A2V 8k+1 frame-grid audio loss, e.g. false. Does not bypass maximum duration.",
   sourceVideoPath: "Local source video for extend/retake, e.g. /work/source.mp4.",
   targetResolution: "Optional edit cap, e.g. {width:576,height:320}; source is never upscaled.",
@@ -112782,7 +113116,7 @@ function tool(name, description, schema2, readOnly = false) {
 var NATIVE_GENAI_TOOLS = [
   tool(
     "astra_genai_catalog",
-    "Read configured gateway models and native schemas. Use video for the general /v1/models catalog (including LTX/MSR); desktop_video for Desktop models, which requires a configured Desktop. image/speech read their respective models, loras/contracts are Desktop-only. Requires ASTRA_GENAI_API_KEY and optional ASTRA_GENAI_URL. Configuration discovery is not an inference health check. Select the returned model alias; never infer a runtime or fall back to a different engine.",
+    "Read configured gateway models and native schemas. Use video for the general /v1/models catalog (including LTX/MSR); desktop_video for Desktop models, which requires a configured Desktop. image/speech read their respective models, loras/contracts are Desktop-only. Desktop can use ASTRA_GENAI_DESKTOP_URL with its gateway credential. Configuration discovery is not an inference health check. Select the returned model alias; never infer a runtime or fall back to a different engine.",
     external_exports.object({ kind: external_exports.enum(["image", "speech", "video", "desktop_video", "loras", "contracts"]) }).strict(),
     true
   ),
@@ -112803,16 +113137,16 @@ var NATIVE_GENAI_TOOLS = [
 
 // src/astra-genai-video.ts
 import { createHash as createHash10 } from "node:crypto";
-import * as fs11 from "node:fs";
-import * as path10 from "node:path";
-import { execFileSync as execFileSync7 } from "node:child_process";
+import * as fs12 from "node:fs";
+import * as path11 from "node:path";
+import { execFileSync as execFileSync8 } from "node:child_process";
 
 // src/astra-genai-upload.ts
 import { createHash as createHash9 } from "node:crypto";
-import { execFileSync as execFileSync6 } from "node:child_process";
-import * as fs10 from "node:fs";
+import { execFileSync as execFileSync7 } from "node:child_process";
+import * as fs11 from "node:fs";
 import * as os2 from "node:os";
-import * as path9 from "node:path";
+import * as path10 from "node:path";
 var GENAI_FILE_SCHEME = "genai-file://";
 var genaiUploadSettings = { attempts: 4, retryDelayMs: 2e3, chunkTimeoutMs: 12e4 };
 var UPLOAD_TYPES = /* @__PURE__ */ new Set(["image/png", "image/jpeg", "audio/wav", "audio/mpeg", "audio/mp4", "audio/ogg"]);
@@ -112927,11 +113261,11 @@ function shrinkImageToFit(bytes, width, height) {
   if (meta.width <= width && meta.height <= height) return bytes;
   const ext = meta.mimeType === "image/png" ? ".png" : meta.mimeType === "image/jpeg" ? ".jpg" : void 0;
   if (!ext) return bytes;
-  const dir = fs10.mkdtempSync(path9.join(os2.tmpdir(), "genai-shrink-"));
+  const dir = fs11.mkdtempSync(path10.join(os2.tmpdir(), "genai-shrink-"));
   try {
-    const input = path9.join(dir, `in${ext}`), output2 = path9.join(dir, `out${ext}`);
-    fs10.writeFileSync(input, bytes);
-    execFileSync6("ffmpeg", [
+    const input = path10.join(dir, `in${ext}`), output2 = path10.join(dir, `out${ext}`);
+    fs11.writeFileSync(input, bytes);
+    execFileSync7("ffmpeg", [
       "-v",
       "error",
       "-y",
@@ -112944,12 +113278,12 @@ function shrinkImageToFit(bytes, width, height) {
       ...ext === ".jpg" ? ["-q:v", "2"] : [],
       output2
     ], { timeout: 6e4, stdio: "pipe" });
-    const shrunk = fs10.readFileSync(output2), out = imageMetadata(shrunk);
+    const shrunk = fs11.readFileSync(output2), out = imageMetadata(shrunk);
     return out.mimeType === meta.mimeType && out.width <= width && out.height <= height ? shrunk : bytes;
   } catch {
     return bytes;
   } finally {
-    fs10.rmSync(dir, { recursive: true, force: true });
+    fs11.rmSync(dir, { recursive: true, force: true });
   }
 }
 
@@ -113067,10 +113401,10 @@ var GENAI_AUDIO_TYPES = { ".wav": "audio/wav", ".mp3": "audio/mpeg", ".m4a": "au
 var GENAI_AUDIO_DATA_URI_MAX = 15e6;
 var oneOf = (a, b) => Number(a !== void 0) + Number(b !== void 0);
 var genaiAudioToVideoSchema = external_exports.object({
-  prompt: external_exports.string().trim().min(1).max(5e3),
+  prompt: external_exports.string().trim().min(1).max(2e3),
   negativePrompt: external_exports.string().trim().min(1).max(2e3).optional(),
   model: external_exports.literal("ltx-2.5-22b-dev"),
-  resolution: external_exports.string().min(1),
+  resolution: localResolution,
   fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
   audioPath: external_exports.string().min(1).optional(),
   audioUri: external_exports.string().min(1).optional(),
@@ -113100,10 +113434,10 @@ function genaiAudioUri(uri, file) {
     if (match2[2].length > GENAI_AUDIO_DATA_URI_MAX) throw new Error("GenAI audio data URI exceeds 15,000,000 base64 characters; use an HTTPS URL");
     return uri;
   }
-  const type = GENAI_AUDIO_TYPES[path10.extname(file).toLowerCase()];
+  const type = GENAI_AUDIO_TYPES[path11.extname(file).toLowerCase()];
   if (!type) throw new Error("GenAI audioPath must be .wav, .mp3, .m4a, .ogg or .opus");
-  if (4 * Math.ceil(fs11.statSync(file).size / 3) > GENAI_AUDIO_DATA_URI_MAX) throw new Error("GenAI audioPath exceeds the 15,000,000-character data URI limit (about 11.25 MB); use audioUri with HTTPS");
-  return `data:${type};base64,${fs11.readFileSync(file).toString("base64")}`;
+  if (4 * Math.ceil(fs12.statSync(file).size / 3) > GENAI_AUDIO_DATA_URI_MAX) throw new Error("GenAI audioPath exceeds the 15,000,000-character data URI limit (about 11.25 MB); use audioUri with HTTPS");
+  return `data:${type};base64,${fs12.readFileSync(file).toString("base64")}`;
 }
 function buildGenaiAudioBody(args) {
   const image2 = oneOf(args.imagePath, args.imageUri) ? genaiSourceUri(args.imageUri, args.imagePath) : void 0;
@@ -113222,11 +113556,11 @@ var statusSchema2 = external_exports.object({
 }).passthrough();
 var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
 async function getGenaiVideoStatus(input) {
-  const receipt = receiptSchema2.parse(JSON.parse(fs11.readFileSync(input.receiptPath, "utf8")));
+  const receipt = receiptSchema2.parse(JSON.parse(fs12.readFileSync(input.receiptPath, "utf8")));
   if (receipt.baseUrl !== astraGenaiBaseUrl()) throw new Error("GenAI receipt belongs to a different server; restore ASTRA_GENAI_URL before recovery.");
   if (!receipt.jobId) throw new Error("GenAI submission identity is unknown; inspect server usage before retrying.");
   if (receipt.status === "completed") {
-    const bytes2 = fs11.readFileSync(receipt.videoPath);
+    const bytes2 = fs12.readFileSync(receipt.videoPath);
     if (createHash10("sha256").update(bytes2).digest("hex") !== receipt.sha256) throw new Error("GenAI cached output changed");
     return { jobId: receipt.jobId, status: "completed", videoPath: receipt.videoPath, downloaded: true, review: "not_reviewed" };
   }
@@ -113242,21 +113576,21 @@ async function getGenaiVideoStatus(input) {
     const url = new URL(job.result.video_url, astraGenaiBaseUrl() + "/");
     if (url.origin !== new URL(astraGenaiBaseUrl()).origin || url.username || url.password || url.search || url.hash || !/^\/v1\/ltx\/desktop\/assets\/[A-Za-z0-9_-]+\/bytes$/.test(url.pathname))
       throw new Error("Invalid private GenAI video URL; retain receipt");
-    bytes = await requestGenaiMedia(url.pathname);
+    bytes = await requestGenaiMedia(url.pathname, void 0, route);
   } else bytes = await downloadGenaiResult(job.result.video_url);
   if (bytes.length < 12 || bytes.toString("ascii", 4, 8) !== "ftyp") throw new Error("GenAI result is not MP4");
   const temp = `${receipt.videoPath}.${process.pid}.download.mp4`;
   try {
-    fs11.writeFileSync(temp, bytes, { flag: "wx", mode: 384 });
-    const probe5 = JSON.parse(execFileSync7("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height:format=duration", "-of", "json", temp], { encoding: "utf8", timeout: 3e4 }));
+    fs12.writeFileSync(temp, bytes, { flag: "wx", mode: 384 });
+    const probe5 = JSON.parse(execFileSync8("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height:format=duration", "-of", "json", temp], { encoding: "utf8", timeout: 3e4 }));
     if (!(probe5.streams?.[0]?.width > 0) || !(Number(probe5.format?.duration) > 0)) throw new Error("GenAI result has no usable video stream");
-    if (fs11.existsSync(receipt.videoPath)) {
-      if (createHash10("sha256").update(fs11.readFileSync(receipt.videoPath)).digest("hex") !== createHash10("sha256").update(bytes).digest("hex"))
+    if (fs12.existsSync(receipt.videoPath)) {
+      if (createHash10("sha256").update(fs12.readFileSync(receipt.videoPath)).digest("hex") !== createHash10("sha256").update(bytes).digest("hex"))
         throw new Error("GenAI video output conflicts with download");
-    } else fs11.linkSync(temp, receipt.videoPath);
+    } else fs12.linkSync(temp, receipt.videoPath);
     atomicJson(input.receiptPath, { ...receipt, status: "completed", sha256: createHash10("sha256").update(bytes).digest("hex") });
   } finally {
-    fs11.rmSync(temp, { force: true });
+    fs12.rmSync(temp, { force: true });
   }
   return { jobId: receipt.jobId, status: "completed", videoPath: receipt.videoPath, downloaded: true, review: "not_reviewed" };
 }
@@ -113303,14 +113637,14 @@ async function generateGenaiVideo(operation, input) {
   const fingerprint = createHash10("sha256").update(JSON.stringify(body)).digest("hex");
   const videoPath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.mp4`, "video");
   const receiptPath2 = videoPath + ".astra-genai.json";
-  if (fs11.existsSync(receiptPath2)) {
-    const previous = receiptSchema2.parse(JSON.parse(fs11.readFileSync(receiptPath2, "utf8")));
+  if (fs12.existsSync(receiptPath2)) {
+    const previous = receiptSchema2.parse(JSON.parse(fs12.readFileSync(receiptPath2, "utf8")));
     if (previous.baseUrl !== astraGenaiBaseUrl() || previous.operation !== operation || previous.fingerprint !== fingerprint || previous.videoPath !== videoPath)
       throw new Error("GenAI output receipt conflicts with this request; use a distinct output path.");
     if (!previous.jobId) throw new Error("GenAI submission identity is unknown; inspect usage before retrying.");
     recordVideoSubmission(previous.jobId);
   } else {
-    if (fs11.existsSync(videoPath)) throw new Error("GenAI output already exists");
+    if (fs12.existsSync(videoPath)) throw new Error("GenAI output already exists");
     if (operation === "image-to-video" && usesReferences) {
       let capabilities;
       try {
@@ -113335,7 +113669,7 @@ async function generateGenaiVideo(operation, input) {
       throw new Error("msr_voice_unsupported: the GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities)");
     const submitted = usesReferences ? await prepareGenaiMsrSources(body) : body;
     const receipt = { version: 1, baseUrl: astraGenaiBaseUrl(), operation, fingerprint, videoPath, status: "submitting" };
-    fs11.writeFileSync(receiptPath2, JSON.stringify(receipt), { flag: "wx", mode: 384 });
+    fs12.writeFileSync(receiptPath2, JSON.stringify(receipt), { flag: "wx", mode: 384 });
     let response;
     try {
       try {
@@ -113347,13 +113681,13 @@ async function generateGenaiVideo(operation, input) {
         try {
           again = await prepareGenaiMsrSources(body);
         } catch (uploadError) {
-          fs11.rmSync(receiptPath2, { force: true });
+          fs12.rmSync(receiptPath2, { force: true });
           throw uploadError;
         }
         response = await requestGenai("POST", genaiVideoRoute(operation), again, SUBMIT_TIMEOUT_MS);
       }
     } catch (error2) {
-      if (error2 instanceof GenaiRequestError && error2.terminal) fs11.rmSync(receiptPath2, { force: true });
+      if (error2 instanceof GenaiRequestError && error2.terminal) fs12.rmSync(receiptPath2, { force: true });
       throw error2;
     }
     const accepted = external_exports.object({ id: external_exports.string().min(1) }).passthrough().parse(response);
@@ -113438,7 +113772,7 @@ var GENAI_TOOLS = [
     title: "Generate GenAI LTX video driven by an audio track",
     description: "Render a clip whose length and motion follow a supplied speech or sound track through ASTRA GenAI LTX v2 audio-to-video, then save an MP4. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. The output length equals the audio length (local maximum 361 frames: 15.04 s at 24 fps, 14.44 s at 25, 7.52 s at 48, 7.22 s at 50; longer audio returns 422). Mono or stereo only; three or more channels return 422 instead of a downmix. The sample rate is kept, so only AAC standard rates 7350-96000 Hz (e.g. 48000, 44100) are accepted; others such as 192000 return 422. The gateway copies the backend soundtrack without a second encode, but the backend encodes it once, so the result is not bit-identical to the input. Only ltx-2.5-22b-dev runs this pipeline; no duration, generateAudio, cameraMotion, seed or frame controls. Lip-sync quality is unmeasured; inspect mouths before acceptance. Persists job identity before polling; recover with astra_genai_video_status.",
     inputSchema: { type: "object", properties: {
-      prompt: { ...video.prompt, description: "Speaker, setting and action. Required even with an image; the local backend accepts at most 2000 characters (longer returns 422)." },
+      prompt: { ...video.prompt, maxLength: 2e3, description: "Speaker, setting and action. Required even with an image; the local backend accepts at most 2000 characters (longer returns 422)." },
       negativePrompt: { type: "string", minLength: 1, maxLength: 2e3, description: devNegative },
       model: { type: "string", enum: ["ltx-2.5-22b-dev"], description: "Only the two-stage dev pipeline runs audio-to-video; distilled returns 422." },
       resolution: video.resolution,
@@ -113535,7 +113869,7 @@ var GENAI_TOOLS = [
 ];
 
 // src/astra-genai-image.ts
-import * as fs12 from "node:fs";
+import * as fs13 from "node:fs";
 import { createHash as createHash11 } from "node:crypto";
 var GENAI_IMAGE_ROUTE = "/v1/dashscope/api/v1/services/aigc/multimodal-generation/generation";
 var genaiImageSchema = external_exports.object({
@@ -113612,9 +113946,9 @@ async function generateGenaiImage(input, operation = "text") {
   const receiptPath2 = imagePath + ".astra-genai.json";
   const body = buildGenaiImageBody(args);
   const fingerprint = createHash11("sha256").update(JSON.stringify(body)).digest("hex");
-  if (fs12.existsSync(receiptPath2) || fs12.existsSync(imagePath))
+  if (fs13.existsSync(receiptPath2) || fs13.existsSync(imagePath))
     throw new Error("GenAI image output/receipt already exists; inspect the receipt before any new generation.");
-  fs12.writeFileSync(receiptPath2, JSON.stringify({ baseUrl: astraGenaiBaseUrl(), fingerprint, imagePath, status: "submitting" }), { flag: "wx", mode: 384 });
+  fs13.writeFileSync(receiptPath2, JSON.stringify({ baseUrl: astraGenaiBaseUrl(), fingerprint, imagePath, status: "submitting" }), { flag: "wx", mode: 384 });
   let promptExtension;
   let raw;
   try {
@@ -113653,7 +113987,7 @@ async function recoverGenaiImage(receiptPath2) {
     usage: external_exports.unknown().optional(),
     usedPrompt: external_exports.string().optional(),
     promptExtension: external_exports.enum(["applied", "fallback"]).optional()
-  }).passthrough().parse(JSON.parse(fs12.readFileSync(receiptPath2, "utf8")));
+  }).passthrough().parse(JSON.parse(fs13.readFileSync(receiptPath2, "utf8")));
   if (receipt.baseUrl !== astraGenaiBaseUrl()) throw new Error("GenAI image receipt belongs to a different server");
   const { imagePath, fingerprint } = receipt;
   if (receipt.status === "completed") {
@@ -113669,18 +114003,18 @@ async function recoverGenaiImage(receiptPath2) {
   const bytes = await downloadGenaiResult(images[0]);
   const temp = `${imagePath}.${process.pid}.download.png`;
   try {
-    fs12.writeFileSync(temp, bytes, { flag: "wx", mode: 384 });
+    fs13.writeFileSync(temp, bytes, { flag: "wx", mode: 384 });
     const output2 = verifyImageFile(temp);
     if (output2.mimeType !== "image/png") throw new Error("GenAI image response is not PNG");
-    if (fs12.existsSync(imagePath)) {
+    if (fs13.existsSync(imagePath)) {
       if (verifyImageFile(imagePath).sha256 !== output2.sha256) throw new Error("GenAI image output conflicts with download");
-    } else fs12.linkSync(temp, imagePath);
+    } else fs13.linkSync(temp, imagePath);
     const usedPrompt = response.output.choices[0].message.content.find((item) => item.text !== void 0)?.text;
     const result = { imagePath, usedPrompt, promptExtension: receipt.promptExtension, requestId: response.request_id, usage: response.usage, output: output2, review: "not_reviewed" };
     atomicJson(receiptPath2, { baseUrl: astraGenaiBaseUrl(), fingerprint, ...result, status: "completed" });
     return result;
   } finally {
-    fs12.rmSync(temp, { force: true });
+    fs13.rmSync(temp, { force: true });
   }
 }
 
@@ -114146,16 +114480,16 @@ async function generateLocalVideo(tool2, input) {
 
 // src/seedance-client.ts
 import { execFile as execFile4 } from "node:child_process";
-import * as fs14 from "node:fs";
-import * as path13 from "node:path";
+import * as fs15 from "node:fs";
+import * as path14 from "node:path";
 
 // src/media-publish.ts
 import { spawn as spawn2 } from "node:child_process";
 import { randomBytes as randomBytes2 } from "node:crypto";
-import * as fs13 from "node:fs";
+import * as fs14 from "node:fs";
 import * as http3 from "node:http";
-import * as path12 from "node:path";
-var MIME = {
+import * as path13 from "node:path";
+var MIME2 = {
   ".mp4": "video/mp4",
   ".mov": "video/quicktime",
   ".png": "image/png",
@@ -114196,13 +114530,13 @@ async function publishViaUpload(filePaths, config3) {
   for (const filePath of filePaths) {
     const response = await fetch(config3.endpoint, {
       method: "POST",
-      headers: { "x-api-key": config3.key, "Content-Type": MIME[path12.extname(filePath).toLowerCase()] || "application/octet-stream" },
-      body: fs13.readFileSync(filePath),
+      headers: { "x-api-key": config3.key, "Content-Type": MIME2[path13.extname(filePath).toLowerCase()] || "application/octet-stream" },
+      body: fs14.readFileSync(filePath),
       signal: AbortSignal.timeout(config3.timeoutMs)
     });
     const body = await response.text();
     if (response.status !== 201) {
-      throw new Error(`media hosting refused ${path12.basename(filePath)}: HTTP ${response.status} \u2014 ${body.slice(0, 300)}`);
+      throw new Error(`media hosting refused ${path13.basename(filePath)}: HTTP ${response.status} \u2014 ${body.slice(0, 300)}`);
     }
     let url = "";
     try {
@@ -114217,7 +114551,7 @@ async function publishViaUpload(filePaths, config3) {
 }
 function serveLocally(filePaths) {
   const token = randomBytes2(16).toString("hex");
-  const routes = filePaths.map((p, i2) => `/${token}/${i2}/${encodeURIComponent(path12.basename(p))}`);
+  const routes = filePaths.map((p, i2) => `/${token}/${i2}/${encodeURIComponent(path13.basename(p))}`);
   const byRoute = new Map(routes.map((r2, i2) => [r2, filePaths[i2]]));
   const server2 = http3.createServer((req, res) => {
     const file = byRoute.get((req.url || "").split("?")[0]);
@@ -114227,12 +114561,12 @@ function serveLocally(filePaths) {
     }
     let size = 0;
     try {
-      size = fs13.statSync(file).size;
+      size = fs14.statSync(file).size;
     } catch {
       res.writeHead(404).end();
       return;
     }
-    const type = MIME[path12.extname(file).toLowerCase()] || "application/octet-stream";
+    const type = MIME2[path13.extname(file).toLowerCase()] || "application/octet-stream";
     const range = /^bytes=(\d+)-(\d*)$/.exec(req.headers.range || "");
     let start = 0;
     let end = size - 1;
@@ -114254,7 +114588,7 @@ function serveLocally(filePaths) {
       res.end();
       return;
     }
-    fs13.createReadStream(file, { start, end }).on("error", () => res.destroy()).pipe(res);
+    fs14.createReadStream(file, { start, end }).on("error", () => res.destroy()).pipe(res);
   });
   return new Promise((resolve14, reject) => {
     server2.once("error", reject);
@@ -114342,7 +114676,7 @@ ${log.slice(-600)}`));
 async function publishFiles(filePaths) {
   if (filePaths.length === 0) return { urls: [], how: "upload", close: async () => void 0 };
   for (const filePath of filePaths) {
-    if (!fs13.existsSync(filePath)) throw new Error(`file to publish not found: ${filePath}`);
+    if (!fs14.existsSync(filePath)) throw new Error(`file to publish not found: ${filePath}`);
   }
   const upload = uploadConfig();
   if (upload) return publishViaUpload(filePaths, upload);
@@ -114517,12 +114851,12 @@ var seedanceReferenceSchema = external_exports.object({
       });
     }
     for (const filePath of data.referenceVideoPaths) {
-      const ext = path13.extname(filePath).toLowerCase();
+      const ext = path14.extname(filePath).toLowerCase();
       if (!SEEDANCE_REFERENCE_VIDEO_EXTENSIONS.includes(ext)) {
         ctx.addIssue({
           code: external_exports.ZodIssueCode.custom,
           path: ["referenceVideoPaths"],
-          message: `Reference video must be mp4 or mov (got "${ext}" in ${path13.basename(filePath)}).`
+          message: `Reference video must be mp4 or mov (got "${ext}" in ${path14.basename(filePath)}).`
         });
       }
     }
@@ -114551,12 +114885,12 @@ var seedanceReferenceSchema = external_exports.object({
     });
   }
   for (const filePath of data.referenceAudioPaths) {
-    const ext = path13.extname(filePath).toLowerCase();
+    const ext = path14.extname(filePath).toLowerCase();
     if (!SEEDANCE_REFERENCE_AUDIO_EXTENSIONS.includes(ext)) {
       ctx.addIssue({
         code: external_exports.ZodIssueCode.custom,
         path: ["referenceAudioPaths"],
-        message: `Reference audio must be wav or mp3 (got "${ext}" in ${path13.basename(filePath)}).`
+        message: `Reference audio must be wav or mp3 (got "${ext}" in ${path14.basename(filePath)}).`
       });
     }
   }
@@ -114568,7 +114902,7 @@ var seedanceReferenceSchema = external_exports.object({
     });
   }
 }).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
-function sleep4(ms) {
+function sleep5(ms) {
   return new Promise((resolve14) => setTimeout(resolve14, ms));
 }
 function describeHttpError(status, body) {
@@ -114610,7 +114944,7 @@ async function awaitVideoAndSave(apiKey, taskId, outputPath, filename) {
   let retried2 = false;
   for (let poll = 1; poll <= MAX_POLLS2; poll += 1) {
     console.error(`[Seedance] Generation in progress... (polling ${poll}/${MAX_POLLS2})`);
-    await sleep4(POLL_INTERVAL_MS2);
+    await sleep5(POLL_INTERVAL_MS2);
     let task;
     try {
       task = await getTask(apiKey, taskId);
@@ -114632,27 +114966,27 @@ async function awaitVideoAndSave(apiKey, taskId, outputPath, filename) {
     if (!download.ok) {
       return { error: `Failed to download video: HTTP ${download.status} (URL is valid for 24 hours)` };
     }
-    fs14.writeFileSync(fullPath, Buffer.from(await download.arrayBuffer()));
+    fs15.writeFileSync(fullPath, Buffer.from(await download.arrayBuffer()));
     console.error(`[Seedance] Video saved to: ${fullPath}`);
     return { videoPath: fullPath, task };
   }
   return { error: `Video generation timed out (${MAX_POLLS2 * POLL_INTERVAL_MS2 / 6e4} minutes). Task ${taskId} may still be running \u2014 check the ModelArk console.` };
 }
 function readImageDataUri(filePath) {
-  const stats = fs14.statSync(filePath);
+  const stats = fs15.statSync(filePath);
   if (stats.size > MAX_INPUT_IMAGE_BYTES) {
     throw new Error(
-      `Input image too large: ${path13.basename(filePath)} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 30MB)`
+      `Input image too large: ${path14.basename(filePath)} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 30MB)`
     );
   }
-  const buffer = fs14.readFileSync(filePath);
+  const buffer = fs15.readFileSync(filePath);
   return `data:${mimeFromExtension(filePath, "image")};base64,${buffer.toString("base64")}`;
 }
 function loadImages(filePaths) {
   const uris = [];
   for (const filePath of filePaths) {
     validateFilePath(filePath, { allowedExtensions: ALLOWED_EXTENSIONS.image });
-    if (!fs14.existsSync(filePath)) throw new Error(`Image not found: ${filePath}`);
+    if (!fs15.existsSync(filePath)) throw new Error(`Image not found: ${filePath}`);
     uris.push(readImageDataUri(filePath));
   }
   assertRequestBudget(uris);
@@ -114667,19 +115001,19 @@ function assertRequestBudget(uris) {
   }
 }
 function audioMimeFromExtension(filePath) {
-  return path13.extname(filePath).toLowerCase() === ".mp3" ? "audio/mp3" : "audio/wav";
+  return path14.extname(filePath).toLowerCase() === ".mp3" ? "audio/mp3" : "audio/wav";
 }
 function loadReferenceAudio(filePaths) {
   return filePaths.map((filePath) => {
     validateFilePath(filePath, { allowedExtensions: SEEDANCE_REFERENCE_AUDIO_EXTENSIONS });
-    if (!fs14.existsSync(filePath)) throw new Error(`Reference audio not found: ${filePath}`);
-    const stats = fs14.statSync(filePath);
+    if (!fs15.existsSync(filePath)) throw new Error(`Reference audio not found: ${filePath}`);
+    const stats = fs15.statSync(filePath);
     if (stats.size > MAX_INPUT_AUDIO_BYTES) {
       throw new Error(
-        `Reference audio too large: ${path13.basename(filePath)} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 15MB)`
+        `Reference audio too large: ${path14.basename(filePath)} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 15MB)`
       );
     }
-    return `data:${audioMimeFromExtension(filePath)};base64,${fs14.readFileSync(filePath).toString("base64")}`;
+    return `data:${audioMimeFromExtension(filePath)};base64,${fs15.readFileSync(filePath).toString("base64")}`;
   });
 }
 function probeVideo(filePath) {
@@ -114712,9 +115046,9 @@ async function checkReferenceVideos(filePaths, spec, model2) {
   let total = 0;
   for (const filePath of filePaths) {
     validateFilePath(filePath, { allowedExtensions: SEEDANCE_REFERENCE_VIDEO_EXTENSIONS });
-    if (!fs14.existsSync(filePath)) throw new Error(`Reference video not found: ${filePath}`);
-    const name = path13.basename(filePath);
-    const stats = fs14.statSync(filePath);
+    if (!fs15.existsSync(filePath)) throw new Error(`Reference video not found: ${filePath}`);
+    const name = path14.basename(filePath);
+    const stats = fs15.statSync(filePath);
     if (stats.size > MAX_INPUT_VIDEO_BYTES) {
       throw new Error(`Reference video too large: ${name} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 200MB)`);
     }
@@ -114760,13 +115094,13 @@ async function checkReferenceAudioDurations(filePaths, spec, model2) {
     const seconds2 = await probeAudioSeconds(filePath);
     if (seconds2 === null) {
       console.error(
-        `[Seedance] ffprobe unavailable \u2014 skipping the duration check for ${path13.basename(filePath)} (${model2}: ${minSeconds}~${maxSeconds}s per clip, ${spec.totalSeconds}s total)`
+        `[Seedance] ffprobe unavailable \u2014 skipping the duration check for ${path14.basename(filePath)} (${model2}: ${minSeconds}~${maxSeconds}s per clip, ${spec.totalSeconds}s total)`
       );
       continue;
     }
     if (seconds2 < minSeconds || seconds2 > maxSeconds) {
       throw new Error(
-        `Reference audio ${path13.basename(filePath)} is ${seconds2.toFixed(1)}s \u2014 ${model2} accepts ${minSeconds}~${maxSeconds}s per clip.`
+        `Reference audio ${path14.basename(filePath)} is ${seconds2.toFixed(1)}s \u2014 ${model2} accepts ${minSeconds}~${maxSeconds}s per clip.`
       );
     }
     total += seconds2;
@@ -114927,10 +115261,10 @@ async function generateWithReferences(request) {
 }
 
 // src/astra-video-client.ts
-import { execFileSync as execFileSync8 } from "node:child_process";
+import { execFileSync as execFileSync9 } from "node:child_process";
 import { createHash as createHash12, randomInt } from "node:crypto";
-import * as fs15 from "node:fs";
-import * as path14 from "node:path";
+import * as fs16 from "node:fs";
+import * as path15 from "node:path";
 
 // package.json
 var package_default = {
@@ -115708,8 +116042,8 @@ function upscaleGeometry(width, height, frames) {
   return { ...out, numFrames };
 }
 async function upscaleVideo(args) {
-  const source = path14.resolve(args.sourceVideoPath);
-  const probe5 = JSON.parse(execFileSync8("ffprobe", [
+  const source = path15.resolve(args.sourceVideoPath);
+  const probe5 = JSON.parse(execFileSync9("ffprobe", [
     "-v",
     "error",
     "-count_frames",
@@ -115733,14 +116067,14 @@ async function upscaleVideo(args) {
     frameRate: num5 / (den || 1),
     seed: args.seed,
     generateAudio: false,
-    outputPath: args.outputPath ?? path14.dirname(source),
-    filename: args.filename ?? `${path14.parse(source).name}-x2.mp4`
+    outputPath: args.outputPath ?? path15.dirname(source),
+    filename: args.filename ?? `${path15.parse(source).name}-x2.mp4`
   }));
   if (hasAudio) {
     const muxed = `${result.videoPath}.${process.pid}.mux.mp4`;
-    execFileSync8("ffmpeg", ["-v", "error", "-i", result.videoPath, "-i", source, "-map", "0:v", "-map", "1:a", "-c", "copy", "-shortest", muxed], { timeout: 12e4 });
-    fs15.renameSync(muxed, result.videoPath);
-    result.bytes = fs15.statSync(result.videoPath).size;
+    execFileSync9("ffmpeg", ["-v", "error", "-i", result.videoPath, "-i", source, "-map", "0:v", "-map", "1:a", "-c", "copy", "-shortest", muxed], { timeout: 12e4 });
+    fs16.renameSync(muxed, result.videoPath);
+    result.bytes = fs16.statSync(result.videoPath).size;
   }
   return { ...result, source: { path: source, width: video2.width, height: video2.height, frames }, droppedFrames: frames - geometry.numFrames, audio: hasAudio ? "source_remuxed" : "none" };
 }
@@ -115885,7 +116219,7 @@ function buildJobBody(mode, args) {
   }
   return body;
 }
-function sleep5(ms) {
+function sleep6(ms) {
   return new Promise((resolve14) => setTimeout(resolve14, ms));
 }
 var submitTimestamps = [];
@@ -115900,7 +116234,7 @@ async function waitForSubmitSlot() {
     }
     const minuteWait = recentMinute.length >= ASTRA_VIDEO_SUBMITS_PER_MINUTE ? 6e4 - (now - recentMinute[0]) : 0;
     const hourWait = submitTimestamps.length >= ASTRA_VIDEO_SUBMITS_PER_HOUR ? 36e5 - (now - submitTimestamps[0]) : 0;
-    await sleep5(Math.max(minuteWait, hourWait) + 250);
+    await sleep6(Math.max(minuteWait, hourWait) + 250);
   }
 }
 var uploadTimestamps = [];
@@ -115912,7 +116246,7 @@ async function waitForUploadSlot() {
       uploadTimestamps.push(now);
       return;
     }
-    await sleep5(6e4 - (now - uploadTimestamps[0]) + 250);
+    await sleep6(6e4 - (now - uploadTimestamps[0]) + 250);
   }
 }
 function redactedFailure(what, status, body) {
@@ -115941,7 +116275,7 @@ async function withBackoff(what, call2, baseDelayMs = 2e3) {
     const result = await call2();
     if (result.ok || result.status !== 429 && result.status !== 503) return result;
     last = result;
-    await sleep5(delay2);
+    await sleep6(delay2);
     delay2 *= 2;
   }
   return last;
@@ -115955,7 +116289,7 @@ var CONTENT_TYPE_BY_EXTENSION = {
   ".mp3": { contentType: "audio/mpeg", kind: "audio" }
 };
 function uploadContentType(filePath) {
-  const ext = path14.extname(filePath).toLowerCase();
+  const ext = path15.extname(filePath).toLowerCase();
   const found = CONTENT_TYPE_BY_EXTENSION[ext];
   if (!found) {
     throw new Error(
@@ -115965,13 +116299,13 @@ function uploadContentType(filePath) {
   return found;
 }
 async function uploadFile(filePath) {
-  const resolved = path14.resolve(filePath);
-  if (!fs15.existsSync(resolved)) throw new Error(`File not found: ${filePath}`);
+  const resolved = path15.resolve(filePath);
+  if (!fs16.existsSync(resolved)) throw new Error(`File not found: ${filePath}`);
   const { contentType, kind } = uploadContentType(resolved);
-  const bytes = fs15.statSync(resolved).size;
+  const bytes = fs16.statSync(resolved).size;
   const limit2 = ASTRA_VIDEO_UPLOAD_LIMITS[kind];
   if (bytes > limit2) {
-    throw new Error(`${path14.basename(resolved)} is ${bytes} bytes; the ${kind} upload ceiling is ${limit2} bytes.`);
+    throw new Error(`${path15.basename(resolved)} is ${bytes} bytes; the ${kind} upload ceiling is ${limit2} bytes.`);
   }
   await waitForUploadSlot();
   const headers2 = authHeaders2();
@@ -115980,7 +116314,7 @@ async function uploadFile(filePath) {
       const response = await fetch(`${astraVideoBaseUrl()}/v1/uploads`, {
         method: "POST",
         headers: { ...headers2, "Content-Type": contentType },
-        body: fs15.readFileSync(resolved),
+        body: fs16.readFileSync(resolved),
         signal: AbortSignal.timeout(TRANSFER_TIMEOUT_MS)
       });
       return { ok: response.ok, status: response.status, body: await response.text() };
@@ -115989,7 +116323,7 @@ async function uploadFile(filePath) {
       return { ok: false, status: 502, body: `Upload unreachable: ${message}` };
     }
   });
-  if (!result.ok) throw redactedFailure(`upload of ${path14.basename(resolved)}`, result.status, result.body);
+  if (!result.ok) throw redactedFailure(`upload of ${path15.basename(resolved)}`, result.status, result.body);
   const parsed = JSON.parse(result.body);
   return {
     uploadId: parsed.upload_id,
@@ -116033,7 +116367,7 @@ async function awaitResult(jobId) {
     );
     if (!status.ok) {
       if (isTerminalStatus(status.status)) throw redactedFailure(`status of job ${jobId}`, status.status, status.body);
-      await sleep5(POLL_INTERVAL_MS3);
+      await sleep6(POLL_INTERVAL_MS3);
       continue;
     }
     const job = JSON.parse(status.body);
@@ -116058,7 +116392,7 @@ async function awaitResult(jobId) {
         }
       });
       if (download.status === 409) {
-        await sleep5(POLL_INTERVAL_MS3);
+        await sleep6(POLL_INTERVAL_MS3);
         continue;
       }
       if (!download.ok) {
@@ -116070,7 +116404,7 @@ async function awaitResult(jobId) {
         elapsedSeconds: Math.round((Date.now() - startedAt) / 1e3)
       };
     }
-    await sleep5(POLL_INTERVAL_MS3);
+    await sleep6(POLL_INTERVAL_MS3);
   }
 }
 async function runJob(mode, prompt, body, outputPath, filename) {
@@ -116078,15 +116412,15 @@ async function runJob(mode, prompt, body, outputPath, filename) {
   const receiptPath2 = `${videoPath}.astra-job.json`;
   const writeReceipt2 = (value) => {
     const temp = `${receiptPath2}.${process.pid}.tmp`;
-    fs15.writeFileSync(temp, JSON.stringify(value, null, 2) + "\n", { mode: 384 });
-    fs15.renameSync(temp, receiptPath2);
+    fs16.writeFileSync(temp, JSON.stringify(value, null, 2) + "\n", { mode: 384 });
+    fs16.renameSync(temp, receiptPath2);
   };
   const jobId = await submitJob(body);
   recordVideoSubmission(jobId);
   const submitted = { jobId, mode, prompt, videoPath, submittedAt: (/* @__PURE__ */ new Date()).toISOString(), submittedRequest: body };
   writeReceipt2({ ...submitted, status: "submitted" });
   const { bytes, request, elapsedSeconds } = await awaitResult(jobId);
-  fs15.writeFileSync(videoPath, bytes);
+  fs16.writeFileSync(videoPath, bytes);
   const response = { videoPath, jobId, mode, prompt, bytes: bytes.length, elapsedSeconds, ...request ? { request } : {} };
   writeReceipt2({ ...submitted, ...response, sha256: createHash12("sha256").update(bytes).digest("hex"), status: "completed", completedAt: (/* @__PURE__ */ new Date()).toISOString() });
   return response;
@@ -116169,8 +116503,8 @@ async function generateFromAudio(args) {
 function annotateReceipt(videoPath, extra) {
   const receiptPath2 = `${videoPath}.astra-job.json`;
   const temp = `${receiptPath2}.${process.pid}.tmp`;
-  fs15.writeFileSync(temp, JSON.stringify({ ...JSON.parse(fs15.readFileSync(receiptPath2, "utf8")), ...extra }, null, 2) + "\n", { mode: 384 });
-  fs15.renameSync(temp, receiptPath2);
+  fs16.writeFileSync(temp, JSON.stringify({ ...JSON.parse(fs16.readFileSync(receiptPath2, "utf8")), ...extra }, null, 2) + "\n", { mode: 384 });
+  fs16.renameSync(temp, receiptPath2);
 }
 async function generateIcLora(args) {
   const reference2 = await uploadFile(args.referencePath);
@@ -116203,216 +116537,6 @@ async function retakeVideo(args) {
 
 // src/video-duration.ts
 var import_video_duration = __toESM(require_video_duration(), 1);
-
-// src/ltx-api-video.ts
-import { execFileSync as execFileSync9 } from "node:child_process";
-
-// src/vendor-video.ts
-import fs16 from "node:fs";
-import path15 from "node:path";
-import { randomUUID as randomUUID4 } from "node:crypto";
-var VendorHttpError = class extends Error {
-  constructor(message, status, terminal) {
-    super(message);
-    this.status = status;
-    this.terminal = terminal;
-  }
-  status;
-  terminal;
-};
-async function vendorJson(url, init) {
-  const response = await fetch(url, { ...init, signal: AbortSignal.timeout(init.timeoutMs ?? 12e4) });
-  const body = await response.text();
-  if (!response.ok) {
-    const terminal = response.status >= 400 && response.status < 500 && ![408, 409, 425, 429].includes(response.status);
-    throw new VendorHttpError(`HTTP ${response.status}: ${body.slice(0, 500)}`, response.status, terminal);
-  }
-  try {
-    return JSON.parse(body);
-  } catch {
-    throw new VendorHttpError(`Non-JSON response: ${body.slice(0, 200)}`, response.status, false);
-  }
-}
-var MIME2 = {
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".webp": "image/webp",
-  ".wav": "audio/wav",
-  ".mp3": "audio/mpeg",
-  ".m4a": "audio/mp4",
-  ".ogg": "audio/ogg"
-};
-function mediaType(file, allowed) {
-  const ext = path15.extname(file).toLowerCase();
-  if (!allowed.includes(ext) || !MIME2[ext]) throw new Error(`Unsupported input ${path15.basename(file)}; use ${allowed.join(", ")}`);
-  return MIME2[ext];
-}
-function dataUri(file, allowed, maxBytes) {
-  const type = mediaType(file, allowed);
-  const size = fs16.statSync(file).size;
-  if (size > maxBytes) throw new Error(`${path15.basename(file)} is ${(size / 1048576).toFixed(1)} MB; this vendor takes at most ${(maxBytes / 1048576).toFixed(0)} MB inline`);
-  return `data:${type};base64,${fs16.readFileSync(file).toString("base64")}`;
-}
-var sleep6 = (ms) => new Promise((resolve14) => setTimeout(resolve14, ms));
-async function runVendorJob(job) {
-  let target;
-  try {
-    target = resolveOutputFile(job.outputPath, job.filename, "video");
-  } catch (error2) {
-    return { success: false, error: error2 instanceof Error ? error2.message : String(error2), terminal: true };
-  }
-  let id;
-  try {
-    id = await job.submit();
-  } catch (error2) {
-    return {
-      success: false,
-      error: `${job.vendor} submission failed: ${error2 instanceof Error ? error2.message : String(error2)}`,
-      terminal: error2 instanceof VendorHttpError && error2.terminal
-    };
-  }
-  recordVideoSubmission(id);
-  const maxPolls = job.maxPolls ?? 180, interval = job.intervalMs ?? 1e4;
-  let retried2 = false;
-  for (let poll = 1; poll <= maxPolls; poll += 1) {
-    await sleep6(interval);
-    let status;
-    try {
-      status = await job.poll(id);
-      retried2 = false;
-    } catch (error2) {
-      if (retried2) return { success: false, error: `${job.vendor} status check failed: ${error2 instanceof Error ? error2.message : String(error2)}`, terminal: false, providerId: id };
-      retried2 = true;
-      continue;
-    }
-    if (status.state === "running") continue;
-    if (status.state === "failed") return { success: false, error: `${job.vendor} job ${id} failed: ${status.error}`, terminal: true, providerId: id };
-    return saveVendorOutput(status, target, id);
-  }
-  return { success: false, error: `${job.vendor} job ${id} still running after ${maxPolls * interval / 6e4} minutes; check it at the vendor and settle the request with video_status action:reconcile \u2014 do not resubmit`, terminal: false, providerId: id };
-}
-async function saveVendorOutput(status, target, id) {
-  const temporary = target + "." + randomUUID4() + ".tmp";
-  try {
-    let bytes;
-    if ("bytes" in status) bytes = status.bytes;
-    else {
-      const download = await fetch(status.url, { signal: AbortSignal.timeout(10 * 6e4) });
-      if (!download.ok) throw new Error("HTTP " + download.status);
-      bytes = Buffer.from(await download.arrayBuffer());
-    }
-    if (!bytes.length) throw new Error("empty video");
-    fs16.writeFileSync(temporary, bytes, { flag: "wx" });
-    fs16.renameSync(temporary, target);
-    return { success: true, videoPath: target, providerId: id, meta: status.meta ?? {} };
-  } catch (error2) {
-    return { success: false, terminal: false, providerId: id, error: "Output download or save failed: " + String(error2) + "; recover the existing job, do not resubmit" };
-  } finally {
-    fs16.rmSync(temporary, { force: true });
-  }
-}
-
-// src/ltx-api-video.ts
-var LTX_API_BASE_URL = "https://api.ltx.io";
-var LTX_API_MODELS = ["ltx-2-5-pro", "ltx-2-5-fast"];
-var LTX_API_RESOLUTIONS = {
-  "720p": ["1280x720", "720x1280", "720x720", "1080x720", "720x1080"],
-  "1080p": ["1920x1080", "1080x1920", "1080x1080", "1620x1080", "1080x1620"],
-  "1440p": ["2560x1440", "1440x2560", "1440x1440", "2160x1440", "1440x2160"],
-  "4k": ["3840x2160", "2160x3840", "2160x2160", "3240x2160", "2160x3240"]
-};
-var ltxApiTier = (resolution2) => Object.entries(LTX_API_RESOLUTIONS).find(([, sizes]) => sizes.includes(resolution2))?.[0];
-var IMAGE_EXT = [".png", ".jpg", ".jpeg", ".webp"];
-var AUDIO_EXT = [".wav", ".mp3", ".m4a", ".ogg"];
-function ltxApiSeconds(model2, resolution2, fps = 24) {
-  const long = model2 === "ltx-2-5-fast" && ["720p", "1080p"].includes(ltxApiTier(resolution2) ?? "") && fps <= 25;
-  return long ? [6, 8, 10, 12, 14, 16, 18, 20] : [6, 8, 10];
-}
-var ltxApiAudioMax = (model2, resolution2) => model2 === "ltx-2-5-fast" && ["720p", "1080p"].includes(ltxApiTier(resolution2) ?? "") ? 20 : 10;
-var common2 = {
-  prompt: external_exports.string().max(5e3).describe("English action, camera and sound."),
-  model: external_exports.enum(LTX_API_MODELS).default("ltx-2-5-pro").describe("LTX API model id."),
-  resolution: external_exports.string().refine((value) => Boolean(ltxApiTier(value)), "Use a WIDTHxHEIGHT the LTX API lists, e.g. 1920x1080").default("1920x1080").describe("Output size, e.g. 1920x1080 or 1080x1920."),
-  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24).describe("Frame rate."),
-  cameraMotion: external_exports.enum(["dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"]).optional().describe("Optional preset camera move."),
-  sourceImagePath: external_exports.string().min(1).describe("First frame image (PNG/JPEG/WEBP, 7 MB inline)."),
-  lastImagePath: external_exports.string().min(1).optional().describe("Optional last frame image."),
-  outputPath: external_exports.string().optional().describe("Output directory."),
-  filename: bareFilenameSchema("video").optional().describe("MP4 filename.")
-};
-var ltxApiImg2VideoSchema = external_exports.object({
-  ...common2,
-  prompt: common2.prompt.min(1),
-  durationSeconds: external_exports.number().int().default(6).describe("6, 8 or 10 seconds (Fast at 720p/1080p, 24/25 fps: up to 20)."),
-  generateAudio: external_exports.boolean().default(false).describe("Generate a soundtrack; false for cuts whose sound comes from assembly.")
-}).strict().superRefine((v, ctx) => {
-  if (!ltxApiSeconds(v.model, v.resolution, v.fps).includes(v.durationSeconds))
-    ctx.addIssue({ code: "custom", path: ["durationSeconds"], message: `${v.model} at ${v.resolution}/${v.fps} fps takes ${ltxApiSeconds(v.model, v.resolution, v.fps).join(", ")} seconds` });
-});
-var ltxApiAudio2VideoSchema = external_exports.object({
-  ...common2,
-  audioPath: external_exports.string().min(1).describe("The composed pinned-voice track; its length sets the clip length (2\u201310 s, Fast at 720p/1080p up to 20 s).")
-}).strict();
-function ltxApiAudioSeconds(file) {
-  const seconds2 = Number(execFileSync9("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], { encoding: "utf8", timeout: 15e3 }));
-  if (!Number.isFinite(seconds2) || seconds2 <= 0) throw new Error("Cannot read the length of " + file);
-  return seconds2;
-}
-function buildLtxApiBody(request) {
-  const image2 = (file) => dataUri(file, IMAGE_EXT, 7 * 1048576);
-  const body = {
-    model: request.model,
-    resolution: request.resolution,
-    fps: request.fps,
-    prompt: request.prompt,
-    image_uri: image2(request.sourceImagePath),
-    ...request.lastImagePath ? { last_frame_uri: image2(request.lastImagePath) } : {},
-    ...request.cameraMotion ? { camera_motion: request.cameraMotion } : {}
-  };
-  if ("audioPath" in request) {
-    const seconds2 = ltxApiAudioSeconds(request.audioPath), max = ltxApiAudioMax(request.model, request.resolution);
-    if (seconds2 < 2 || seconds2 > max) throw new Error(`${request.model} at ${request.resolution} takes 2\u2013${max} s of audio; ${request.audioPath} runs ${seconds2.toFixed(2)} s`);
-    body.audio_uri = dataUri(request.audioPath, AUDIO_EXT, 15 * 1048576);
-  } else Object.assign(body, { duration: request.durationSeconds, generate_audio: request.generateAudio });
-  if (JSON.stringify(body).length > 32 * 1048576) throw new Error("LTX request body exceeds 32 MB; use smaller frames or audio");
-  return { endpoint: "audioPath" in request ? "audio-to-video" : "image-to-video", body };
-}
-function ltxApiStatus(json3) {
-  const status = json3.status, result = json3.result;
-  if (status === "completed") return result?.video_url ? { state: "done", url: result.video_url } : { state: "failed", error: "completed without result.video_url" };
-  if (status === "failed") return { state: "failed", error: json3.error?.message ?? "failed" };
-  return { state: "running" };
-}
-async function pollLtxApi(endpoint2, id) {
-  return ltxApiStatus(await vendorJson(
-    LTX_API_BASE_URL + "/v2/" + endpoint2 + "/" + encodeURIComponent(id),
-    { headers: { Authorization: "Bearer " + config.ltxApiKey, "Content-Type": "application/json" } }
-  ));
-}
-async function generateLtxApiVideo(request) {
-  if (!config.ltxApiKey) return { success: false, error: "LTX_API_KEY is not set", terminal: true };
-  const headers2 = { Authorization: `Bearer ${config.ltxApiKey}`, "Content-Type": "application/json" };
-  let built;
-  try {
-    built = buildLtxApiBody(request);
-  } catch (error2) {
-    return { success: false, error: error2 instanceof Error ? error2.message : String(error2), terminal: true };
-  }
-  return runVendorJob({
-    vendor: "LTX API",
-    outputPath: request.outputPath ?? process.cwd(),
-    filename: request.filename ?? `ltx-${Date.now()}.mp4`,
-    intervalMs: 6e3,
-    maxPolls: 300,
-    submit: async () => {
-      const json3 = await vendorJson(`${LTX_API_BASE_URL}/v2/${built.endpoint}`, { method: "POST", headers: headers2, body: JSON.stringify(built.body), timeoutMs: 5 * 6e4 });
-      if (typeof json3.id !== "string" || !json3.id) throw new Error("No job id in LTX response");
-      return json3.id;
-    },
-    poll: (id) => pollLtxApi("audioPath" in request ? "audio-to-video" : "image-to-video", id)
-  });
-}
 
 // src/veo-video.ts
 var import_google_auth_library2 = __toESM(require_src5(), 1);
@@ -116606,7 +116730,7 @@ var HOSTED_VIDEO_ROUTES = {
     operation: "audio",
     voice: "supplied",
     title: "Generate an LTX API video from a voice track",
-    description: "The supplied audio controls the clip length and speech. Requires a start image and LTX_API_KEY.",
+    description: "The supplied audio controls the clip length and speech. Supply a prompt or a first image, or both. Requires LTX_API_KEY.",
     poll: (_, id) => pollLtxApi("audio-to-video", id)
   },
   veo_text2video: {
@@ -117033,13 +117157,12 @@ function speechVideoCapabilities(provider, model2, operation, subjectReferences 
   if (provider === "omni" || provider === "veo" && !Object.hasOwn(HOSTED_VIDEO_ROUTES.veo_img2video.modelConstraints, model2) || provider === "seedance" && !Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
     throw new Error(`video_engine_unsupported: ${provider} ${model2} cannot keep a character's voice; choose a video model again with project_manage`);
   if (["minimax", "heygen"].includes(provider) && operation === "reference") return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "Native speech from the prompt dialogue with an optional voice sample; voice identity is imitation, not preserved audio" };
-  if (provider === "ltx-api" && operation === "audio") return { provider, model: model2, audioConditioning: true, lipSync: false, postLipSync: false, evidence: "LTX API audio-to-video conditions on the supplied track; preservation and mouth sync unverified" };
   if (provider === "astra-genai" && (operation === "reference" || operation === "image" && model2 === "ltx-2.5-22b-distilled" && subjectReferences)) return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio" };
-  if (provider === "astra-genai-desktop") return { provider, model: model2, audioConditioning: true, lipSync: false, postLipSync: false, evidence: "Gateway A2V reencodes supplied audio; timing/voice identity not guaranteed; installed model capabilities must be checked" };
-  if (provider === "astra") return { provider, model: model2, audioConditioning: true, lipSync: true, postLipSync: false, evidence: "astra_audio2video adapter contract" };
+  if (operation === "audio" && (provider === "astra" || provider === "astra-genai-desktop" || provider === "ltx-api" || provider === "astra-genai" && model2 === "ltx-2.5-22b-dev"))
+    return { provider, model: model2, audioConditioning: true, lipSync: false, postLipSync: false, evidence: "The supplied track conditions video generation. Mouth movement and phoneme alignment require output review." };
   if (provider === "seedance" && Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
     return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "Reference audio does not promise exact recorded-speech timing; no post-lipsync adapter installed" };
-  if (["host", "veo", "mlx", "astra-genai", "ltx-api", "minimax", "heygen"].includes(provider))
+  if (["host", "veo", "mlx", "astra", "astra-genai", "astra-genai-desktop", "ltx-api", "minimax", "heygen"].includes(provider))
     return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "No verified external-speech synchronization adapter; voiceover remains available" };
   throw new Error("No verified speech synchronization contract for selected deployment/model");
 }
@@ -118578,7 +118701,7 @@ function checkVideoEnvironment(tool2) {
   const gate3 = resolveToolGate(tool2, { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
   if (!gate3.enabled) throw new Error("video_tool_disabled: " + gate3.reason);
   const engine = VIDEO_ADAPTERS[tool2]?.engine;
-  const ready = HOSTED_VIDEO_ROUTES[tool2] ? HOSTED_VIDEO_ROUTES[tool2].configured() : engine === "seedance" ? Boolean(config.arkApiKey) : engine === "astra" ? Boolean(config.astraVideoApiKey) : ["astra-genai", "astra-genai-desktop"].includes(engine) ? Boolean(config.astraGenaiApiKey) : engine === "minimax" ? Boolean(config.minimaxApiKey) : engine === "heygen" ? Boolean(config.heygenApiKey) : engine === "mlx" && mlxServeConfigured();
+  const ready = HOSTED_VIDEO_ROUTES[tool2] ? HOSTED_VIDEO_ROUTES[tool2].configured() : engine === "seedance" ? Boolean(config.arkApiKey) : engine === "astra" ? Boolean(config.astraVideoApiKey) : engine === "astra-genai-desktop" ? Boolean(desktopGatewayKey()) : engine === "astra-genai" ? Boolean(config.astraGenaiApiKey) : engine === "minimax" ? Boolean(config.minimaxApiKey) : engine === "heygen" ? Boolean(config.heygenApiKey) : engine === "mlx" && mlxServeConfigured();
   if (!ready) throw new Error("video_provider_unconfigured: " + engine);
 }
 function planVideo(raw) {
@@ -118746,6 +118869,19 @@ function planVideo(raw) {
   }
   const args = parseVideoArgs(tool2, voice.args);
   if (Array.isArray(args.openingPositions)) args.prompt = openingPrompt(String(args.prompt), args.openingPositions);
+  if (VIDEO_ADAPTERS[tool2].voice === "supplied" && typeof args.audioPath === "string" && durationPlan.requiredSeconds !== void 0) {
+    const sourceSeconds = ltxApiAudioSeconds(path22.resolve(context2.episode, args.audioPath));
+    const fps = Number(args.fps ?? args.frameRate ?? 24);
+    let playable = sourceSeconds;
+    if (tool2 === "astra_audio2video") {
+      const window2 = Math.min(sourceSeconds - Number(args.audioStartTime ?? 0), Number(args.audioMaxDuration ?? Infinity));
+      playable = Math.min(window2, args.numFrames === void 0 ? (8 * Math.floor((window2 * fps - 1) / 8) + 1) / fps : Number(args.numFrames) / fps);
+    } else if (tool2 === "astra_genai_desktop_audio2video") {
+      playable = desktopAudioWindow(args, sourceSeconds).playbackSeconds;
+    }
+    if (playable + 1e-3 < durationPlan.requiredSeconds)
+      throw new Error(`video_duration_short: ${context2.shotId} needs ${durationPlan.requiredSeconds}s but its supplied audio covers ${playable.toFixed(3)}s of video`);
+  }
   if (durationPlan.status === "fits") {
     const fps = durationPlan.limits?.frameRate ?? 1;
     const frames = typeof args.numFrames === "number" ? args.numFrames : typeof args.duration === "number" && durationPlan.limits?.frameRate ? framesForSeconds(args.duration, fps) : void 0;
@@ -124231,7 +124367,7 @@ async function generateCheckedSpeech(input, dependencies) {
 
 // src/qwen3-asr-client.ts
 import { execFile as execFile6 } from "node:child_process";
-import { existsSync as existsSync27, mkdirSync as mkdirSync13, mkdtempSync as mkdtempSync5, readFileSync as readFileSync29, renameSync as renameSync6, rmSync as rmSync13 } from "node:fs";
+import { existsSync as existsSync27, mkdirSync as mkdirSync13, mkdtempSync as mkdtempSync6, readFileSync as readFileSync29, renameSync as renameSync6, rmSync as rmSync13 } from "node:fs";
 import { homedir as homedir3 } from "node:os";
 import { basename as basename9, extname as extname10, join as join14 } from "node:path";
 var QWEN3_ASR_MODELS = ["Qwen/Qwen3-ASR-1.7B", "Qwen/Qwen3-ASR-0.6B"];
@@ -124401,7 +124537,7 @@ async function transcribeLocal(request) {
   );
   const outDir = request.outputPath || process.cwd();
   mkdirSync13(outDir, { recursive: true });
-  const scratchDir = mkdtempSync5(join14(outDir, ".qwen3-asr-"));
+  const scratchDir = mkdtempSync6(join14(outDir, ".qwen3-asr-"));
   const firstCall = !existsSync27(weightCacheDir2(request.model)) || request.timestamps && !existsSync27(alignerCacheDir());
   if (firstCall) {
     console.error(
@@ -124490,8 +124626,8 @@ ${tail}` : ""}`));
 
 // src/blender-bridge.ts
 import { execFile as execFile7 } from "node:child_process";
-import { existsSync as existsSync28, mkdtempSync as mkdtempSync6, readFileSync as readFileSync30, rmSync as rmSync14, writeFileSync as writeFileSync21 } from "node:fs";
-import { tmpdir as tmpdir6 } from "node:os";
+import { existsSync as existsSync28, mkdtempSync as mkdtempSync7, readFileSync as readFileSync30, rmSync as rmSync14, writeFileSync as writeFileSync21 } from "node:fs";
+import { tmpdir as tmpdir7 } from "node:os";
 import { dirname as dirname7, extname as extname11, join as join15, resolve as resolve7 } from "node:path";
 var BLENDER_PROXY_KINDS = ["person", "dog", "car", "box", "cylinder", "sphere"];
 var BLENDER_INTERPOLATIONS = ["LINEAR", "BEZIER", "CONSTANT"];
@@ -124792,7 +124928,7 @@ function runBridge(job, timeoutMs) {
 async function runBridgeUnlocked(job, timeoutMs) {
   const blender = blenderBin();
   if (!blender) return { success: false, error: installHint3("Blender was not found on this machine.") };
-  const dir = mkdtempSync6(join15(tmpdir6(), "blender-bridge-"));
+  const dir = mkdtempSync7(join15(tmpdir7(), "blender-bridge-"));
   const script = join15(dir, "bridge.py");
   const jobPath = join15(dir, "job.json");
   const resultPath = join15(dir, "result.json");
@@ -132905,8 +133041,8 @@ async function manageLocation(args) {
 // src/cover.ts
 import { createHash as createHash24 } from "node:crypto";
 import { execFileSync as execFileSync18, spawn as spawn3 } from "node:child_process";
-import { copyFileSync as copyFileSync2, existsSync as existsSync33, mkdirSync as mkdirSync19, mkdtempSync as mkdtempSync7, readFileSync as readFileSync35, realpathSync as realpathSync10, renameSync as renameSync8, rmSync as rmSync17, statSync as statSync18, writeFileSync as writeFileSync25, openSync as openSync7, readSync, closeSync as closeSync7 } from "node:fs";
-import { tmpdir as tmpdir7 } from "node:os";
+import { copyFileSync as copyFileSync2, existsSync as existsSync33, mkdirSync as mkdirSync19, mkdtempSync as mkdtempSync8, readFileSync as readFileSync35, realpathSync as realpathSync10, renameSync as renameSync8, rmSync as rmSync17, statSync as statSync18, writeFileSync as writeFileSync25, openSync as openSync7, readSync, closeSync as closeSync7 } from "node:fs";
+import { tmpdir as tmpdir8 } from "node:os";
 import { basename as basename11, dirname as dirname9, isAbsolute as isAbsolute2, join as join18, relative as relative2, resolve as resolve10, sep as sep2 } from "node:path";
 import { createRequire as createRequire18 } from "node:module";
 import { pathToFileURL } from "node:url";
@@ -133014,7 +133150,7 @@ function resolveSource(ep, input, warnings) {
     const file2 = inside(ep.episode, input.video, "video");
     const { duration: duration5 } = probe4(file2);
     if (duration5 === void 0 || input.seconds >= duration5) throw new Error(`cover_frame_outside: ${input.seconds}s is not inside ${input.video} (${duration5 ?? "?"}s)`);
-    const probeDir = mkdtempSync7(join18(tmpdir7(), "sf-cover-frame-")), still = join18(probeDir, "frame.png");
+    const probeDir = mkdtempSync8(join18(tmpdir8(), "sf-cover-frame-")), still = join18(probeDir, "frame.png");
     try {
       try {
         ffmpeg3(["-ss", String(input.seconds), "-i", file2, "-frames:v", "1", still]);
@@ -133185,7 +133321,7 @@ function chromePath() {
 function chrome(args, until) {
   const bin = chromePath();
   if (!bin) return Promise.reject(new Error("cover_chrome_missing: Google Chrome was not found; set CHROME to the binary"));
-  const profile = mkdtempSync7(join18(tmpdir7(), "sf-cover-chrome-"));
+  const profile = mkdtempSync8(join18(tmpdir8(), "sf-cover-chrome-"));
   return new Promise((resolveRun, reject) => {
     const child = spawn3(
       bin,
@@ -133283,7 +133419,7 @@ async function renderCover(path35) {
   if (decision.format !== ep.format) throw new Error(`cover_format_changed: the decision was made for ${decision.format} and the board is now ${ep.format}; set it again`);
   const dir = join18(ep.episode, "output", "cover");
   mkdirSync19(join18(dir, "previews"), { recursive: true });
-  const work = mkdtempSync7(join18(dir, ".work-")), stage = join18(work, "out");
+  const work = mkdtempSync8(join18(dir, ".work-")), stage = join18(work, "out");
   mkdirSync19(join18(stage, "previews"), { recursive: true });
   const previous = previousOutputs(dir);
   try {
@@ -133687,7 +133823,7 @@ function speechVideoPlan(input, capabilities) {
   const physicalSpeech = lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen");
   if (capabilities.nativeSpeech && physicalSpeech && lines.some((line) => line.delivery === "voiceover"))
     throw new Error("msr_speech_route: split physical dialogue and inner thoughts into separate shots; thoughts use image2video with timed TTS");
-  const mode = capabilities.nativeSpeech && physicalSpeech ? "native" : !onScreen ? "voiceover" : capabilities.audioConditioning && capabilities.lipSync ? "audio_conditioned" : capabilities.postLipSync ? "post_lipsync" : null;
+  const mode = capabilities.nativeSpeech && physicalSpeech ? "native" : !onScreen ? "voiceover" : capabilities.audioConditioning ? "audio_conditioned" : capabilities.postLipSync ? "post_lipsync" : null;
   if (!mode) throw new Error("Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting");
   const saved = object5(object5(object5(scene.visual).video).promptSource);
   const design = object5(object5(scene.shot).videoDesign);
@@ -134632,7 +134768,7 @@ function checkThreadsEpisode(input) {
 // src/datago-client.ts
 import { mkdir as mkdir2, writeFile as writeFile3 } from "node:fs/promises";
 import { existsSync as existsSync36 } from "node:fs";
-import { tmpdir as tmpdir8 } from "node:os";
+import { tmpdir as tmpdir9 } from "node:os";
 import { join as join21 } from "node:path";
 var PORTAL_BASE = "https://www.data.go.kr";
 var ODCLOUD_BASE = "https://api.odcloud.kr/api";
@@ -134872,7 +135008,7 @@ async function downloadFile2(input) {
   const cd = fileRes.headers.get("content-disposition") ?? "";
   const rawName = cd.match(/filename\*?=(?:UTF-8''|")?([^";]+)/i)?.[1] ?? `datago-${input.publicDataPk}.bin`;
   const filename = sanitizeFilename(fixHeaderEncoding(rawName.replace(/"/g, "")));
-  const saveDir = input.saveDir ?? join21(tmpdir8(), "social-flow-datago");
+  const saveDir = input.saveDir ?? join21(tmpdir9(), "social-flow-datago");
   await mkdir2(saveDir, { recursive: true });
   let savedPath = join21(saveDir, filename);
   for (let i2 = 1; existsSync36(savedPath); i2++) {
@@ -138050,8 +138186,8 @@ async function checkAccounts(channel) {
 
 // src/tts-final-quality.ts
 import { execFile as execFile11 } from "node:child_process";
-import { existsSync as existsSync38, mkdtempSync as mkdtempSync8, readFileSync as readFileSync39, rmSync as rmSync19, writeFileSync as writeFileSync29, renameSync as renameSync12, openSync as openSync8, closeSync as closeSync8 } from "node:fs";
-import { tmpdir as tmpdir9 } from "node:os";
+import { existsSync as existsSync38, mkdtempSync as mkdtempSync9, readFileSync as readFileSync39, rmSync as rmSync19, writeFileSync as writeFileSync29, renameSync as renameSync12, openSync as openSync8, closeSync as closeSync8 } from "node:fs";
+import { tmpdir as tmpdir10 } from "node:os";
 import path32 from "node:path";
 import { promisify as promisify7 } from "node:util";
 var chapters = __toESM(require_final_speech_chapters(), 1);
@@ -138079,7 +138215,7 @@ async function reviewFinalSpeech(input, deps) {
   } catch {
     return { success: false, status: "unverified", error: "Final speech review is already locked" };
   }
-  const temp = mkdtempSync8(path32.join(tmpdir9(), "speech-final-"));
+  const temp = mkdtempSync9(path32.join(tmpdir10(), "speech-final-"));
   let base = { version: 1, policy: "final-speech-v1", model: REVIEW_MODEL, ...identity, mediaPath: media };
   let singleReviewStarted = false;
   function save3(status, extra) {
@@ -139936,7 +140072,7 @@ function capabilityStatus() {
           needs: "MLX Core.app or mlx-serve on PATH",
           note: "ltx_video_generate \xB7 fasth3_omni_reference \u2014 24fps rgb8 muxed to mp4, RAM-capped; not the default path"
         },
-        { provider: "astra-genai-desktop", configured: has2(config.astraGenaiApiKey), needs: "ASTRA_GENAI_API_KEY", note: "Gateway text/image/audio video, extend/retake/keyframes; discover installed models and LoRA refs with astra_genai_catalog." },
+        { provider: "astra-genai-desktop", configured: has2(desktopGatewayKey()), needs: process.env.ASTRA_GENAI_DESKTOP_URL ? "ASTRA_GENAI_DESKTOP_API_KEY" : "ASTRA_GENAI_API_KEY", note: "Gateway text/image/audio video, extend/retake/keyframes; discover installed models and LoRA refs with astra_genai_catalog." },
         {
           provider: "astra-genai (LTX v2 gateway)",
           configured: has2(config.astraGenaiApiKey),

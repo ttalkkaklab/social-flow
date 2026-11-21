@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { config } from '../dist/config.js';
-import { requestGenai, downloadGenaiResult, genaiCatalog } from '../dist/astra-genai-client.js';
+import { requestGenai, downloadGenaiResult, genaiCatalog, requestGenaiMedia } from '../dist/astra-genai-client.js';
 
 test('gateway authentication is separate, POST errors are redacted and never retried, downloads carry no token', async t => {
   const original = globalThis.fetch, key = config.astraGenaiApiKey, legacy = config.astraVideoApiKey;
@@ -68,4 +68,31 @@ test('general video catalog works without Desktop; Desktop discovery stays expli
   assert.deepEqual(seen, ['https://remote.example/v1/models']);
   await assert.rejects(genaiCatalog('desktop_video'), /503.*Desktop/);
   assert.equal(seen[1], 'https://remote.example/v1/ltx/desktop/models');
+});
+
+test('Desktop discovery and downloads use the configured Desktop origin, v2 downloads retain their own token', async t => {
+  const original = globalThis.fetch, key = config.astraGenaiApiKey, env = { ...process.env };
+  t.after(() => { globalThis.fetch = original; config.astraGenaiApiKey = key; process.env = env; });
+  config.astraGenaiApiKey = 'v2-key';
+  process.env.ASTRA_GENAI_URL = 'https://v2.example';
+  process.env.ASTRA_GENAI_DESKTOP_URL = 'http://127.0.0.1:18081';
+  process.env.ASTRA_GENAI_IMAGE_URL = 'http://127.0.0.1:18082';
+  process.env.ASTRA_GENAI_IMAGE_API_KEY = 'local-image-key';
+  const seen = [];
+  globalThis.fetch = async (url, options) => {
+    seen.push([new URL(url).origin, options.headers.Authorization]);
+    return Response.json({});
+  };
+  await assert.rejects(genaiCatalog('desktop_video'), /ASTRA_GENAI_DESKTOP_API_KEY/);
+  process.env.ASTRA_GENAI_IMAGE_URL = process.env.ASTRA_GENAI_DESKTOP_URL + '/';
+  await genaiCatalog('desktop_video');
+  process.env.ASTRA_GENAI_DESKTOP_API_KEY = 'desktop-key';
+  const media = '/v1/ltx/desktop/assets/id/bytes';
+  await requestGenaiMedia(media);
+  await requestGenaiMedia(media, undefined, '/v1/ltx/v2/audio-to-video');
+  assert.deepEqual(seen, [
+    ['http://127.0.0.1:18081', 'Bearer local-image-key'],
+    ['http://127.0.0.1:18081', 'Bearer desktop-key'],
+    ['https://v2.example', 'Bearer v2-key'],
+  ]);
 });

@@ -1,3 +1,4 @@
+import { desktopGatewayKey } from './astra-genai-client.js';
 /**
  * capability_status — what this machine can actually do right now.
  *
@@ -83,7 +84,7 @@ export function capabilityStatus(): {
           note: 'heygen_img2video (silent cuts, first frame pinned) · heygen_reference (panels, start image, voice sample; first frame not pinned)' },
         { provider: 'mlx-serve (local, MLX Core)', configured: mlx, needs: 'MLX Core.app or mlx-serve on PATH',
           note: 'ltx_video_generate · fasth3_omni_reference — 24fps rgb8 muxed to mp4, RAM-capped; not the default path' },
-        { provider: 'astra-genai-desktop', configured: has(config.astraGenaiApiKey), needs: 'ASTRA_GENAI_API_KEY', note: 'Gateway text/image/audio video, extend/retake/keyframes; discover installed models and LoRA refs with astra_genai_catalog.' },
+        { provider: 'astra-genai-desktop', configured: has(desktopGatewayKey()), needs: process.env.ASTRA_GENAI_DESKTOP_URL ? 'ASTRA_GENAI_DESKTOP_API_KEY' : 'ASTRA_GENAI_API_KEY', note: 'Gateway text/image/audio video, extend/retake/keyframes; discover installed models and LoRA refs with astra_genai_catalog.' },
         { provider: 'astra-genai (LTX v2 gateway)', configured: has(config.astraGenaiApiKey), needs: 'ASTRA_GENAI_API_KEY',
           note: 'astra_genai_text2video · astra_genai_img2video · astra_genai_audio2video (audio-length clip, mono/stereo, 7350-96000 Hz, data URI ≤15,000,000 base64 chars) · astra_genai_msr (four subjects + background) · astra_genai_video_status; separate gateway token, no LoRA; configuration is not a live check' },
         { provider: 'astra video (self-hosted LTX-2.5)', configured: has(config.astraVideoApiKey), needs: 'ASTRA_VIDEO',

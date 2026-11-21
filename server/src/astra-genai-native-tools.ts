@@ -47,6 +47,13 @@ const descriptions: Record<string, string> = {
   aspectRatio: 'Output aspect ratio. auto derives from source where supported.',
   lastFramePath: 'Optional local final PNG/JPEG, e.g. /work/end.png; only I2V, not A2V.',
   audioPath: 'Local source audio, e.g. /work/speech.wav. A2V derives duration from its samples.',
+  audioStartTime: 'Read the local soundtrack from this offset in seconds, e.g. 1.5.',
+  audioMaxDuration: 'Maximum seconds of source audio from audioStartTime; mutually exclusive with numFrames.',
+  numFrames: 'Exact 8k+1 frames covered by the source. The plugin prepares the matching audio window before upload.',
+  passShape: 'Desktop generation shape: auto, one_pass for one pass, or parts for a split render.',
+  nagScale: 'Negative attention guidance strength, e.g. 8; 0 disables it.',
+  nagAlpha: 'Negative attention guidance blend, e.g. 0.25.',
+  nagTau: 'Negative attention guidance normalization threshold, e.g. 2.5.',
   allowAudioTruncation: 'Explicit consent to A2V 8k+1 frame-grid audio loss, e.g. false. Does not bypass maximum duration.',
   sourceVideoPath: 'Local source video for extend/retake, e.g. /work/source.mp4.',
   targetResolution: 'Optional edit cap, e.g. {width:576,height:320}; source is never upscaled.',
@@ -80,7 +87,7 @@ function tool(name: string, description: string, schema: z.ZodTypeAny, readOnly 
     annotations: readOnly ? { readOnlyHint: true, openWorldHint: true } : { readOnlyHint: false, destructiveHint: false, idempotentHint: name.endsWith('_status'), openWorldHint: true } };
 }
 export const NATIVE_GENAI_TOOLS: Tool[] = [
-  tool('astra_genai_catalog', 'Read configured gateway models and native schemas. Use video for the general /v1/models catalog (including LTX/MSR); desktop_video for Desktop models, which requires a configured Desktop. image/speech read their respective models, loras/contracts are Desktop-only. Requires ASTRA_GENAI_API_KEY and optional ASTRA_GENAI_URL. Configuration discovery is not an inference health check. Select the returned model alias; never infer a runtime or fall back to a different engine.',
+  tool('astra_genai_catalog', 'Read configured gateway models and native schemas. Use video for the general /v1/models catalog (including LTX/MSR); desktop_video for Desktop models, which requires a configured Desktop. image/speech read their respective models, loras/contracts are Desktop-only. Desktop can use ASTRA_GENAI_DESKTOP_URL with its gateway credential. Configuration discovery is not an inference health check. Select the returned model alias; never infer a runtime or fall back to a different engine.',
     z.object({ kind: z.enum(['image','speech','video','desktop_video','loras','contracts']) }).strict(), true),
   tool('astra_genai_image_generate', 'Generate one PNG with the configured gateway model alias. Use image_plan/image_execute with engine astra-genai-native and explicit reserveUsd. Optional registered LoRA IDs/scales; consult image catalog for model constraints. No reference images on text requests. Returns verified local output; retain the receipt after errors. Use GPT Image 2 for readable text.', nativeImageSchema),
   tool('astra_genai_image_edit', 'Edit or vary a source PNG/JPEG with a configured gateway alias; up to nine additional local references, ten total in order. Use image_plan operation edit and engine astra-genai-native. Model catalog determines edit/variation, guidance, transparency and registered LoRA support. No arbitrary LoRA paths, masks or silent reference dropping. Returns local PNG and durable receipt; no automatic generation retries.', nativeImageEditSchema),
