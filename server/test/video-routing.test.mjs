@@ -370,7 +370,7 @@ test('managed speech plans an MSR shot as native speech; a named tool keeps its 
  f.board.SB_DOC={characters:[{id:'hero',name:'Hero',tts:{engine:'gemini',voiceId:'Kore',language:'ko',speed:1}}]};f.save();
  const plan=tool=>manageSpeech({path:path.join(f.episode,'storyboard'),action:'plan_video',shotId:'s1',tool}).plan;
  assert.equal(plan().mode,'native');
- assert.throws(()=>plan('astra_genai_audio2video'),/cannot synchronize/);
+ assert.equal(plan('astra_genai_audio2video').mode,'audio_conditioned');
  assert.throws(()=>plan('seedance_text2video'),/model_selection_mismatch/);
  const allFalse={provider:'astra-genai',model:'ltx-2.5-22b-distilled',audioConditioning:false,lipSync:false,postLipSync:false,evidence:'old caller'};
  assert.throws(()=>manageSpeech({path:path.join(f.episode,'storyboard'),action:'plan_video',shotId:'s1',capabilities:allFalse}),/disagree/);
