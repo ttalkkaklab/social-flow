@@ -2242,6 +2242,19 @@ const IMAGE_INPUTS = {
 const MLX_INPUTS = { 'qwen-2.1': 10, 'flux-klein': 4, 'mage-edit': 4 };
 const latin = (value) => typeof value === 'string' && value.trim() && !nonEnglishOutsideQuotes(value) ? value.trim() : '';
 const identityCatalog = () => loadFromHere(join(PLUGIN_ROOT, 'skills', '_shared', 'character-identity.js'));
+// A crop that shows the head without the body below it: head-to-body size has nothing to hold on to there.
+const HEAD_ONLY_SIZES = ['cu', 'choker', 'ecu', 'reaction', 'insert'];
+/**
+ * The face panel is an enlarged close-up and the body panels are headless, so no reference shows how large the head
+ * is on the body. Each character's head count (the sheet's proportions) says it in words; a character without one is
+ * returned in `missing`.
+ */
+function headRatioSentence(win, ids) {
+    const ratios = ids.map((id) => ({ id, ...identityCatalog().headRatio(castEntry(win, id)?.character, id) }));
+    const said = ratios.filter((ratio) => ratio.text);
+    return { missing: ratios.filter((ratio) => !ratio.text).map((ratio) => ratio.id),
+        text: said.length ? `${said.map((ratio) => ratio.text).join(' ')} A face panel is an enlarged close-up and sets no head size: draw ${said.length > 1 ? 'each head' : 'the head'} at this size on its body; the crop still decides how much of the figure shows.` : '' };
+}
 // Two people in one frame: their sheet heights, so the picture keeps the difference the panels cannot show.
 function heightSentence(win, ids) {
     const heights = ids.map((id) => [id, (castEntry(win, id)?.character?.physical?.heightCm)])
@@ -2543,15 +2556,21 @@ function buildShotImageRequest(args) {
     if (blank.length)
         warnings.push({ level: 'warn', code: 'expression_missing', where: args.id,
             what: `expression_missing: ${blank.join(', ')} ${blank.length > 1 ? 'have' : 'has'} no expression for this shot, so the model draws its default pleasant face — set it with shot_characters expression from the scene's situation, or describe brows, eyes and mouth in prompt` });
+    // Head against body, wherever the crop shows a figure below the head (the Qwen path drops every other sheet word).
+    const figures = [...cast, ...seen], bodied = figures.length > 0 && !['object', 'detail'].includes(view?.subjectType ?? '') && !HEAD_ONLY_SIZES.includes(String(plan.size ?? ''));
+    const heads = bodied ? headRatioSentence(win, figures) : { text: '', missing: [] };
+    if (heads.missing.length)
+        warnings.push({ level: 'warn', code: 'head_count_missing', where: args.id,
+            what: `head_count_missing: ${heads.missing.join(', ')} ${heads.missing.length > 1 ? 'have' : 'has'} no head count on the sheet, so nothing sizes the face panel's head against the headless body — write it in physical.proportions with character_manage, e.g. "7.5 heads tall"` });
     const lock = !set ? (selected && args.frame === 'start'
         ? `Preserve the selected background's ${backgroundView} directional geography and the spatial relationships of visible landmarks. The authored crop, camera height and subject viewpoint control the output; do not copy the background sheet's wide framing. Landmarks outside that crop stay outside the frame. The character sheets supply appearance and identity only; their panel poses do not constrain this shot.`
         : view ? `The location and character sheets supply appearance and identity only. Recompose them to the authored ${args.frame === 'end' ? 'closing' : 'opening'} crop and viewpoint; the sheet pose and camera do not constrain this shot.` : '') : args.frame === 'end'
         ? composition.length ? `Use Image ${at(composition[0])}'s closing camera, lens, framing and final object and figure positions. Image 1 supplies the look and every identity; its opening camera does not constrain this closing view.`
             : `Image 1 supplies the opening appearance and identities. Follow the closing camera direction below while preserving the set's world layout.`
-        : `Keep Image 1's camera position, ${lens}${dutch ? '' : ', horizon'} and world layout, and keep every object${set.blocked ? ' and figure' : ''} at its world position in Image 1. The authored composition below controls the final crop, headroom and subject screen placement. Paint its plain unpainted surfaces as the real place, and continue the place into any flat dark area past the set's edge.`
+        : `Keep Image 1's camera position, ${lens}${dutch ? '' : ', horizon'} and world layout, and keep every object${set.blocked ? ' and figure' : ''} at its world position in Image 1.${set.blocked ? ' Its coloured figures mark position, facing and height only; their head size and build are placeholders.' : ''} The authored composition below controls the final crop, headroom and subject screen placement. Paint its plain unpainted surfaces as the real place, and continue the place into any flat dark area past the set's edge.`
             + (dutch ? ' Image 1 is level; tilt the whole picture to the dutch angle described below.' : '')
             + (look.some((ref) => ordered.includes(ref)) ? ` Take only materials, colours and light from Image ${at(look[0])}.` : '');
-    const prompt = [args.frame === 'start' && view ? `Create one opening image with this required crop: ${view.crop}.` : ordered.length ? 'Compose one picture from these images.' : '', roles, lock, heightSentence(win, [...cast, ...seen]),
+    const prompt = [args.frame === 'start' && view ? `Create one opening image with this required crop: ${view.crop}.` : ordered.length ? 'Compose one picture from these images.' : '', roles, lock, heightSentence(win, figures), heads.text,
         seen.length ? `Also in this frame, without a line: ${seen.join(' and ')}, ${ordered.some((ref) => ref.role === 'bystander') ? 'drawn from the reference images that name them' : 'drawn as described below'} and placed as the description below says.` : '',
         extras ? `Unnamed people in the frame, drawn without a reference: ${extras.replace(/[.\s]+$/, '')}.` : '',
         view ? 'Character panels identify the subject; include only the body regions named by the crop. A face reference does not require a face in the output.' : '',
