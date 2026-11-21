@@ -4549,7 +4549,7 @@ Returns revision, ordered matching lines with generationPlan and voice/audio has
 
 The default techniqueCatalog provides the four filmmaking elements and per-technique selection guidance. Store intentional choices as shot.techniques:[{id,reason}] and keep existing camera/size/angle fields consistent.
 
-Read before and after storyboard_apply. Use level=outline to plan edits or level=full for raw shots.
+Use it before and after storyboard_apply. Choose level=outline to plan edits or level=full for raw shots.
 audienceSpotting lists scene decisions, reasons and missing or conflicting cues. A use plan may include perspective, shift and exit. Read level=shots for timing and music or catalog sources. Older scenes may be unrecorded.
 level=direction returns only { file, sha256, format, direction }: each scene's shots in order (size, angle, move, length), the longest runs of one size and of held shots, held shots counted by size with the wide ones (els, ls, ws, fs) held without a reason, lengths by size and the most common lengths, the longest shots with their action and line counts, and reasons — sentences standing as the same reason on several shots, sizes without a why. Counts of the plan as written, not targets; read it once the icons and lengths are written.
 Do NOT use it to validate — storyboard_check runs the contract. A board with no window.STRUCTURE comes back with every shot under unplacedShots; write the structure with story_sequence and story_scene.
