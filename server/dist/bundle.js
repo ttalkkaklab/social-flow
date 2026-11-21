@@ -114071,7 +114071,7 @@ import * as path14 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.125.0",
+  version: "0.125.1",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -119500,7 +119500,7 @@ function applyStoryboard(args, opts = {}) {
     ...audienceResult,
     synced,
     findings,
-    board: [digest5, firstLine, opening, () => cliches().digest(next), () => audienceSound().spottingDigest(next)].flatMap((read4) => {
+    board: [digest5, firstLine, opening, () => cliches().digest(next), () => audienceSound().spottingDigest(next), () => propContinuity().researchDigest(next, (path35) => existsSync24(resolve5(dirname6(file), path35)))].flatMap((read4) => {
       try {
         return read4();
       } catch {
@@ -120431,10 +120431,11 @@ var propContinuity = () => loadFromHere2(join12(REFERENCES_DIR, "prop-continuity
 function propRefs(win, index, shotId, ids, frame, warnings) {
   const warn = (what) => warnings.push({ level: "warn", where: shotId, what });
   const entries = new Map(ids.map((id) => [id, docEntry(win, "props", id)]));
-  const refs = [], unseen = [];
+  const refs = [], unseen = [], drawn = [];
   for (const snap of ids.length ? propContinuity().snapshot(win, index, ids, { lenient: true }) : []) {
     const id = snap.propId, entry2 = entries.get(id);
     if (!snap.visible) continue;
+    drawn.push(id);
     if (snap.errors.length)
       warn(`the prop ledger has errors for the ${id} prop (${snap.errors.join("; ")}), so it goes in without a story state \u2014 fix them with storyboard_apply propSheet`);
     const state = frame === "end" ? snap.after : snap.before, matched = frame === "end" ? snap.endReferences : snap.references;
@@ -120456,7 +120457,7 @@ function propRefs(win, index, shotId, ids, frame, warnings) {
     const holder = holderId ? `held by ${holderId}` : state?.holderId === null ? "not held" : "";
     const place = english("location", state?.location), cond = english("condition", state?.condition), pos = english("position", snap.position);
     const detail = [english("description", snap.description), holder, place && `at ${place}`, cond && `condition ${cond}`, pos && `screen position ${pos}`].filter(Boolean).join("; ");
-    if (skipped.length) warn(`the ${id} prop's ${skipped.join(", ")} is not English and stays out of the image prompt \u2014 write it in English on the prop sheet`);
+    if (skipped.length) warn(`the ${id} prop's ${skipped.join(", ")} is not English and stays out of the image prompt \u2014 write it in English on the prop sheet, with the words the prop displays inside quotation marks`);
     const purpose = `the ${id} prop` + (detail ? `: ${detail}` : "");
     if (file) refs.push({ id: `${shotId}-prop-${id}`, path: file, role: "prop", use: "image", purpose });
     else {
@@ -120464,6 +120465,8 @@ function propRefs(win, index, shotId, ids, frame, warnings) {
       unseen.push(`Also show ${purpose}.`);
     }
   }
+  const unresearched = propContinuity().research(win).undecided.filter((id) => drawn.includes(id));
+  if (unresearched.length) warn(`prop_research_missing: ${unresearched.join(", ")} ${unresearched.length > 1 ? "go" : "goes"} into this frame with no look-up of the real thing recorded \u2014 research it and record research {sources, observed} on the prop sheet, or research:"none" (prop-research.md)`);
   return { refs, unseen };
 }
 function docEntry(win, kind, id) {
@@ -126333,7 +126336,7 @@ Do NOT use for independent body posing or to read an arbitrary .blend \u2014 use
     name: "serp_image_search",
     title: "Google image search (SerpApi)",
     annotations: HINT.read,
-    description: `Google image search (SerpApi) \u2014 for storyboard references and composition research, checking what products/places/people actually look like, and collecting visual grounding for image-generation prompts. Returns source URL, resolution, and origin. **If you are hunting material to place into content as-is, always set license** \u2014 unfiltered results are images with unverified copyright, and putting them in a post is infringement. For images you will create yourself, skip this tool and use image_local_generate (default, free) or gpt_image_text2img (text-bearing, higher quality) \u2014 no rights issues. ${SEARCH_ARG_LINE} ${SERP_QUOTA_LINE}`,
+    description: `Google image search (SerpApi) \u2014 for storyboard references and composition research, checking what products/places/people actually look like, and collecting visual grounding for image-generation prompts. Returns source URL, resolution, and origin. **If you are hunting material to place into content as-is, always set license** \u2014 unfiltered results are images with unverified copyright, and putting them in a post is infringement. For a picture of your own, generate it (image_plan \u2192 image_execute) \u2014 no rights issues \u2014 but when it shows a real document or object, look the real thing up here first and save what you viewed (prop-research.md). ${SEARCH_ARG_LINE} ${SERP_QUOTA_LINE}`,
     inputSchema: {
       type: "object",
       properties: {
@@ -130217,7 +130220,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
         removeSequences: { type: "array", items: { type: "string", description: "Sequence id" }, description: "Sequence ids to drop" },
         globals: { type: "object", description: "Other window.* blocks to set \u2014 FORMAT, THEME (motionGraphicTheme: {id: auto or theme id, context?, reason?} sets the common motion theme; explicit shot ids or contexts override it), COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. CLICHES belongs to story_cliche and cannot be changed here (cliche_record); PRODUCTION.clicheUse keeps the value the board has (cliche_choice_kept), and a PRODUCTION patch that changes whether clich\xE9s apply by default is reported (cliche_mode_changed). MUSIC.$mix is optional sound-design metadata; SFX keeps logical asset ids only. PRODUCTION.mode: full_video, video_80, video_50, video_30, video_lt10, no_video (hook_only/stills_only/hybrid are legacy). New selections write renderRatioVersion:1." },
         expectedSha256: { type: "string", pattern: "^[a-f0-9]{64}$", description: "Current scenes.js hash from storyboard_read; required when editing propSheet on an existing board." },
-        propSheet: { type: "object", additionalProperties: false, required: ["props"], description: "Replace the complete prop sheet atomically. Keep other editorial metadata. Changes validate story-time custody and invalidate approval; original file is backed up.", properties: {
+        propSheet: { type: "object", additionalProperties: false, required: ["props"], description: 'Replace the complete prop sheet atomically. Each prop records research {sources:[{url,title,image}], observed} from looking up the real thing, or "none" (prop-research.md); a prop without it is reported. Keep other editorial metadata. Changes validate story-time custody and invalidate approval; original file is backed up.', properties: {
           props: { type: "array", description: "Complete prop registry for this board", items: { type: "object", additionalProperties: true, required: ["id"], properties: {
             id: { type: "string", description: "Stable prop identity" },
             name: { type: "string", description: "Display name" },
@@ -140670,7 +140673,7 @@ ROUTES.music_status = async (args) => args?.action === "resume" ? resumeMusic2(a
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.125.0" },
+  { name: "social-flow", version: "0.125.1" },
   { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

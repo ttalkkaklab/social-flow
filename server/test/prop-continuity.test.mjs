@@ -15,6 +15,18 @@ test('loan keeps ownership, changes custody, and has an exact boundary', () => {
   assert.equal(api.stateAt(win, 'watch', { day: 1, order: 2 }, 'before').holderId, 'a');
   assert.deepEqual(api.stateAt(win, 'watch', { day: 1, order: 2 }), { ownerId: 'a', holderId: 'b', location: 'right hand', condition: 'intact' });
 });
+test('props with no look-up of the real thing are reported once, never as an error', () => {
+  const win = fixture(), sources = [{ url: 'https://example.test/form', image: 'images/research/will/form.png' }];
+  win.SB_DOC.props.push({ id: 'will', research: { sources, observed: 'handwritten, dated, sealed' } }, { id: 'bowl', research: 'none' },
+    { id: 'notice', research: { sources: [{ url: 'https://example.test/notice' }], observed: 'title, body, seal' } }, { id: 'old', source: 'https://example.test/old' },
+    { id: 'cert', research: { sources } });
+  assert.deepEqual(api.research(win), { undecided: ['watch', 'cert'], unseen: ['notice', 'old'] });
+  assert.deepEqual(api.check(win).filter(f => f.where === 'props').map(f => f.level), ['warn']);
+  assert.deepEqual(api.research(win, () => false).unseen, ['will', 'notice', 'old']);   // a picture that is not on disk was not saved
+  for (const p of win.SB_DOC.props) if (!p.research) p.research = 'none';
+  win.SB_DOC.props.find(p => p.id === 'cert').research = 'none'; win.SB_DOC.props.find(p => p.id === 'notice').research.sources = sources;
+  assert.deepEqual(api.researchDigest(win), []);
+});
 test('flashbacks and shot reorders never rewrite the story', () => {
   const win = fixture(), before = api.snapshot(win, 0); win.SCENES.reverse();
   assert.deepEqual(api.snapshot(win, 1), before);

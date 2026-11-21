@@ -1486,7 +1486,8 @@ describe('images and the video prompt follow the icon attributes', () => {
     const board = readBoard(dir), { win } = board;
     const watch = { id: 'watch', name: '시계', tracking: 'continuity', description: 'a silver pocket watch', appearanceVersion: 'v2', references: [
       { path: 'places/key.png', version: 'v1' }, { path: 'places/watch-cracked.png', version: 'v2', condition: 'cracked' }, { path: 'places/watch-intact.png', version: 'v2', condition: 'intact' }] };
-    const props = [watch, { id: 'key', imageUrl: 'places/key.png' }, { id: 'note', description: '접힌 쪽지' }, { id: 'cup', references: [{ path: 'places/key.png', version: 'v1', condition: 'full' }] }];
+    const props = [watch, { id: 'key', imageUrl: 'places/key.png' }, { id: 'note', description: '접힌 쪽지', research: { sources: [{ url: 'https://example.test/note' }], observed: 'a folded lined page' } },
+      { id: 'cup', references: [{ path: 'places/key.png', version: 'v1', condition: 'full' }] }];
     const continuity = { version: 1, timelineId: 'main', initial: [{ propId: 'watch', at: { day: 1, order: 0 }, state: { ownerId: 'mina', holderId: 'mina', location: 'left hand', condition: 'intact' } }],
       events: [{ id: 'drop', propId: 'watch', kind: 'damage', at: { day: 1, order: 2 }, from: { condition: 'intact' }, to: { condition: 'cracked' }, shotIds: ['s0002'],
         reason: 'Mina drops it', recordedAt: '2026-11-02T00:00:00Z', recordedBy: 'author' }] };
@@ -1500,7 +1501,7 @@ describe('images and the video prompt follow the icon attributes', () => {
     const first = shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'p', location: 'room' });
     assert.deepEqual(first.refs.filter((r) => r.role === 'prop').map((r) => [r.id, r.path]), [['s0001-prop-cup', 'places/key.png']]);
     assert.match(first.prompt, /Also show the note prop\./);
-    assert.deepEqual(first.warnings.map((w) => w.what.split(' ').slice(0, 3).join(' ')).filter((w) => /prop/.test(w)), ["the note prop's", 'the note prop']);
+    assert.deepEqual(first.warnings.map((w) => w.what.split(' ').slice(0, 3).join(' ')).filter((w) => /prop/.test(w)), ["the note prop's", 'the note prop', 'prop_research_missing: cup goes']);   // the hidden key is not drawn, so its missing look-up is not this frame's
     // The opening holds the intact watch of the current version; the closing, after the drop, the cracked one.
     const start = make(dir, 's0002', 'start', { location: 'room' });
     const prop = (request) => request.refs.find((r) => r.role === 'prop');

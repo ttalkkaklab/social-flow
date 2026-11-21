@@ -1250,7 +1250,7 @@ export function applyStoryboard(args: StoryboardApplyArgs, opts: { outline?: boo
   const result: ApplyResult = {
     file, written: false, created: !exists, approvalDropped: header.some((h) => /^\/\/\s*approved:/.test(h)),
     shots: (next.SCENES ?? []).length, scenes: st ? st.scenes.length : 0, sequences: st ? st.sequences.length : 0,
-    ...audienceResult, synced, findings, board: [digest, firstLine, opening, () => cliches().digest(next), () => audienceSound().spottingDigest(next)]
+    ...audienceResult, synced, findings, board: [digest, firstLine, opening, () => cliches().digest(next), () => audienceSound().spottingDigest(next), () => propContinuity().researchDigest(next, (path) => existsSync(resolve(dirname(file), path)))]
       .flatMap((read) => { try { return read(); } catch { return []; } }),
   };
   const audienceOnly = audienceEdit && Object.keys(args).every(k =>
@@ -2254,6 +2254,8 @@ type PropSnap = { propId: string; description: string; references: Array<{ path?
   before: Record<string, unknown> | null; after: Record<string, unknown> | null; visible: boolean; position: string | null; errors: string[] };
 const propContinuity = () => loadFromHere(join(REFERENCES_DIR, 'prop-continuity.js')) as {
   snapshot(win: Board, index: number, ids: string[], opts: { lenient: true }): PropSnap[];
+  research(win: Board): { undecided: string[]; unseen: string[] };
+  researchDigest(win: Board, saved?: (path: string) => boolean): string[];
 };
 /**
  * The props a frame shows, through the shared prop ledger: each visible prop's reference drawn in its condition at the
@@ -2263,10 +2265,11 @@ const propContinuity = () => loadFromHere(join(REFERENCES_DIR, 'prop-continuity.
 function propRefs(win: Board, index: number, shotId: string, ids: string[], frame: 'start' | 'end', warnings: Finding[]): { refs: ImageRef[]; unseen: string[] } {
   const warn = (what: string) => warnings.push({ level: 'warn', where: shotId, what });
   const entries = new Map(ids.map((id) => [id, docEntry(win, 'props', id)]));
-  const refs: ImageRef[] = [], unseen: string[] = [];
+  const refs: ImageRef[] = [], unseen: string[] = [], drawn: string[] = [];
   for (const snap of ids.length ? propContinuity().snapshot(win, index, ids, { lenient: true }) : []) {
     const id = snap.propId, entry = entries.get(id)!;
     if (!snap.visible) continue;   // the author hid it in this shot (propUsage visible:false)
+    drawn.push(id);
     if (snap.errors.length)
       warn(`the prop ledger has errors for the ${id} prop (${snap.errors.join('; ')}), so it goes in without a story state — fix them with storyboard_apply propSheet`);
     const state = frame === 'end' ? snap.after : snap.before, matched = frame === 'end' ? snap.endReferences : snap.references;
@@ -2287,7 +2290,7 @@ function propRefs(win: Board, index: number, shotId: string, ids: string[], fram
     const holder = holderId ? `held by ${holderId}` : state?.holderId === null ? 'not held' : '';
     const place = english('location', state?.location), cond = english('condition', state?.condition), pos = english('position', snap.position);
     const detail = [english('description', snap.description), holder, place && `at ${place}`, cond && `condition ${cond}`, pos && `screen position ${pos}`].filter(Boolean).join('; ');
-    if (skipped.length) warn(`the ${id} prop's ${skipped.join(', ')} is not English and stays out of the image prompt — write it in English on the prop sheet`);
+    if (skipped.length) warn(`the ${id} prop's ${skipped.join(', ')} is not English and stays out of the image prompt — write it in English on the prop sheet, with the words the prop displays inside quotation marks`);
     const purpose = `the ${id} prop` + (detail ? `: ${detail}` : '');
     if (file) refs.push({ id: `${shotId}-prop-${id}`, path: file, role: 'prop', use: 'image', purpose });
     else {
@@ -2295,6 +2298,9 @@ function propRefs(win: Board, index: number, shotId: string, ids: string[], fram
       unseen.push(`Also show ${purpose}.`);
     }
   }
+  // A prop drawn from imagination: nobody recorded what the real thing looks like (prop-research.md). Reported, never refused.
+  const unresearched = propContinuity().research(win).undecided.filter((id) => drawn.includes(id));
+  if (unresearched.length) warn(`prop_research_missing: ${unresearched.join(', ')} ${unresearched.length > 1 ? 'go' : 'goes'} into this frame with no look-up of the real thing recorded — research it and record research {sources, observed} on the prop sheet, or research:"none" (prop-research.md)`);
   return { refs, unseen };
 }
 function docEntry(win: Board, kind: 'locations' | 'props', id: string): Record<string, unknown> {

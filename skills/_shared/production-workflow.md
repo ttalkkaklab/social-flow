@@ -40,6 +40,10 @@ generation authorization and adapter input validation stay. Work in this order:
    `storyboard_read.boundaryReview` and `videoTiming`, revise unnecessary boundaries, and
    preserve speech/performance/continuity before images. This is authoring, not a new gate.
 5. Props and backgrounds — `SB_DOC.props` and `SB_DOC.locations` with their images.
+   Before a prop's description or picture, look up the real thing — the rule or form that
+   makes it genuine and saved pictures of actual examples — and record `research` on its
+   sheet ([prop research](../storyboard/references/prop-research.md), user directive
+   2026-11-21); draw the prop's own picture from the saved real picture.
    Backgrounds default to two separate opposing camera views in `panels.front` and
    `panels.back`; follow [asset sheets](../storyboard/references/asset-sheets.md).
    Set each shot's opening `shot_icons.backgroundView` against that layout before

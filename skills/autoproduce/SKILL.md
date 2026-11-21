@@ -99,7 +99,8 @@ Only the story order is enforced; checks come back once the quality is known.
    (`story_music`), then its icon attributes (`shot_icons`). When writing each scene with
    `story_scene`, give its `audienceSound` decision (`use` or `none`) and reason. Revisit it
    after the lines and music. Read `storyboard_read.audienceSpotting` and plan the selected
-   cues with `storyboard_apply.audienceEffects`. Prepare props and backgrounds with their images.
+   cues with `storyboard_apply.audienceEffects`. Prepare props and backgrounds with their images,
+   each prop after looking up the real thing ([prop research](../storyboard/references/prop-research.md)).
    Record the cliché decision with `story_cliche` after the first `story_sequence`. On a
    drama, comedy or romance episode make the pass yourself and record the uses or `none`.
    On any other type an unattended run has no user to pick: record the candidates with

@@ -190,7 +190,10 @@ story is settled ([cliché use](references/cliche-use.md#3-three-places-in-the-w
 Before shot design, complete the three sheet categories using
 [asset sheet preparation](references/asset-sheets.md). This includes one-off characters,
 story-relevant props and every background/location, not only recurring assets. Reuse actual
-existing sheets; finish props and backgrounds after the text storyboard. Generate front
+existing sheets; finish props and backgrounds after the text storyboard. A document or object
+the viewer knows from real life (a will, a certificate, money, a uniform) is looked up before
+it is described or drawn: search, save and view pictures of the real thing, record `research`
+on its prop sheet and make its picture from them ([prop research](references/prop-research.md)). Generate front
 and back camera views for each background by default (`panels.front`, `panels.back` in
 `SB_DOC.locations`), preserving the same space from opposite sides. Set each shot's
 `shot_icons.backgroundView` from that layout so `shot_image` uses the matching panel;

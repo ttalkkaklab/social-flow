@@ -56,7 +56,11 @@ place (`location` is refused) and records its own props in `frames.endProps`, so
 appears only at the end goes in the end call. Each prop goes in through the prop ledger
 ([prop continuity](../storyboard/references/prop-continuity.md#production-and-review)):
 hidden ones stay out, the picture matches its condition at that end of the shot, and its
-description and state ride on its `Image N` line; a prop without a picture is a warning. Only `still_camera` and `generated_video` cuts
+description and state ride on its `Image N` line; a prop without a picture is a warning.
+A prop with no look-up of the real thing warns `prop_research_missing`: research it and make
+its own picture first ([prop research](../storyboard/references/prop-research.md)), since a
+shot image cannot repair an imagined document. Compare each frame that shows a researched
+prop with its `research.observed` notes and saved real picture. Only `still_camera` and `generated_video` cuts
 take images. The tool adds the size, angle, depth
 and technique words, the episode style and an `Image N` line for every input, then runs
 `image_plan` → `image_execute` with the saved model and the existing spending authorization.
