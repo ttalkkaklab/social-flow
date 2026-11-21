@@ -37,6 +37,7 @@ import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { DEFAULT_MLX_MUSIC_SECONDS, MLX_VIDEO_FPS } from './mlx-serve-client.js';
 import { resolveVideoDuration } from './video-duration.js';
+import { VEO_MODELS, veoPriceKey } from './veo-video.js';
 import { ltxApiTier, ltxApiAudioSeconds } from './ltx-api-video.js';
 /**
  * The marker that says "this is an episode directory".
@@ -198,6 +199,10 @@ export function priceOf(tool, args = {}) {
         return { key: image ? 'image.astra-genai' : 'video.astra-genai', quantity: seconds, note: 'Gateway pricing unverified; managed reservation is authoritative, not a measured bill' };
     }
     // Hosted vendors (vendor-video.ts): one per-second row per model and resolution.
+    if (['veo_text2video', 'veo_img2video', 'veo_reference', 'veo_extend'].includes(tool)) {
+        const key = veoPriceKey(str(args.model, VEO_MODELS[0]), str(args.resolution, '720p'), args.generateAudio !== false);
+        return { key, quantity: tool === 'veo_extend' ? 7 : num(args.durationSeconds, 8), note: 'Google Cloud generated seconds' };
+    }
     if (tool.startsWith('ltx_api_')) {
         const model = str(args.model, 'ltx-2-5-pro'), tier = ltxApiTier(str(args.resolution, '1920x1080'));
         if (!tier)
@@ -376,7 +381,7 @@ export function isBillableTool(tool) {
         return false;
     return ((tool.startsWith('astra_genai_') && !['astra_genai_video_status', 'astra_genai_catalog', 'astra_genai_desktop_status'].includes(tool)) ||
         tool.startsWith('seedance_') ||
-        /^(ltx_api|minimax|heygen)_/.test(tool) ||
+        /^(veo|ltx_api|minimax|heygen)_/.test(tool) ||
         tool.startsWith('gpt_image_') ||
         tool.startsWith('tts_') ||
         tool.startsWith('sfx_') ||

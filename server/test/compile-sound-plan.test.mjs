@@ -1,3 +1,4 @@
+import { setupProject } from './workflow-fixture.mjs';
 import assert from 'node:assert/strict';
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -195,6 +196,7 @@ it('hands new audience material to saved music and mixes the receipted WAV only 
   const { planMusic, executeMusic } = await import('../dist/music-routing.js');
   const { config } = await import('../dist/config.js');
   const p = room(), catalogFile = join(p.channel, 'assets/audio/sfx/pressure.wav');
+  setupProject(p.root, { music: { engine: 'elevenlabs', model: 'music_v2_5' } });
   writeFileSync(catalogFile, 'existing channel variant');
   const cue = { id: 'held-look', sfx: 'pressure', audience: { intent: 'Her suspicion grows' },
     trigger: 'She stops smiling', description: 'Faint tension behind her words', atSeconds: 0.25 };

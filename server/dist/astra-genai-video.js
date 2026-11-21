@@ -404,7 +404,7 @@ export async function getGenaiVideoStatus(input) {
         if (url.origin !== new URL(astraGenaiBaseUrl()).origin || url.username || url.password || url.search || url.hash ||
             !/^\/v1\/ltx\/desktop\/assets\/[A-Za-z0-9_-]+\/bytes$/.test(url.pathname))
             throw new Error('Invalid private GenAI video URL; retain receipt');
-        bytes = await requestGenaiMedia(url.pathname);
+        bytes = await requestGenaiMedia(url.pathname, undefined, route);
     }
     else
         bytes = await downloadGenaiResult(job.result.video_url);

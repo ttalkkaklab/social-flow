@@ -10,6 +10,30 @@ const require = createRequire(import.meta.url);
 const { FONT_ASSETS } = require('../../skills/channel/references/review-fonts.js');
 const { storyboardHtml } = require('../../skills/storyboard/references/storyboard-html.js');
 
+test('offline review shows the selected Veo asset slots before and after a tool is recorded', t => {
+  const directory = mkdtempSync(join(tmpdir(), 'reference-board-'));
+  t.after(() => rmSync(directory, {recursive: true, force: true}));
+  storyboardHtml(directory);
+  const window = {};
+  runInNewContext(readFileSync(join(directory, 'review-files.js'), 'utf8'), {window});
+  runInNewContext(readFileSync(join(directory, 'production-mode.js'), 'utf8'), {window});
+  const template = readFileSync(join(directory, 'storyboard.html'), 'utf8');
+  const select = template.slice(template.indexOf('  function reviewVideoSelection'), template.indexOf('  function clipPromptOf'));
+  const lanes = template.slice(template.indexOf('  var REF_LANES ='), template.indexOf('  // The MSR icon'));
+  const context = {window, LANG: 'en', shot: {id: 's1', visual: {video: {}}}, fp: {mode: 'reference'}};
+  window.REVIEW_VIDEO_SNAPSHOT = {engine: 'ltx-api', model: 'ltx-2-5-pro'};
+  const video = {engine: 'veo', model: 'veo-3.1-fast-generate-001', operation: 'reference'};
+  window.PRODUCTION = {modelSettings: {overrides: [{scope: 'shot', shotId: 's1', video, request: 'Use Veo references'}]}};
+  const lane = () => runInNewContext(select + lanes + '\nrefLane(shot, fp)', context);
+  assert.equal(lane().name, 'Veo');
+  assert.ok(lane().assetsOnly);
+  assert.equal(lane().slots, 3);
+  context.shot.visual.video.tool = 'veo_reference';
+  assert.equal(lane().slots, 3);
+  video.model = 'veo-3.1-lite-generate-001';
+  assert.equal(lane().slots, 0);
+});
+
 test('localized copy is escaped while media attributes and source stay unchanged', () => {
   const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
   const source = template.slice(template.indexOf('  function esc(s)'), template.indexOf('  function strip(s)'));

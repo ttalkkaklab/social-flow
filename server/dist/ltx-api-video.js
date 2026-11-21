@@ -10,13 +10,13 @@ import { bareFilenameSchema } from './media-utils.js';
 import { dataUri, runVendorJob, vendorJson } from './vendor-video.js';
 export const LTX_API_BASE_URL = 'https://api.ltx.io';
 export const LTX_API_MODELS = ['ltx-2-5-pro', 'ltx-2-5-fast'];
-const TIERS = {
+export const LTX_API_RESOLUTIONS = {
     '720p': ['1280x720', '720x1280', '720x720', '1080x720', '720x1080'],
     '1080p': ['1920x1080', '1080x1920', '1080x1080', '1620x1080', '1080x1620'],
     '1440p': ['2560x1440', '1440x2560', '1440x1440', '2160x1440', '1440x2160'],
     '4k': ['3840x2160', '2160x3840', '2160x2160', '3240x2160', '2160x3240'],
 };
-export const ltxApiTier = (resolution) => Object.entries(TIERS).find(([, sizes]) => sizes.includes(resolution))?.[0];
+export const ltxApiTier = (resolution) => Object.entries(LTX_API_RESOLUTIONS).find(([, sizes]) => sizes.includes(resolution))?.[0];
 const IMAGE_EXT = ['.png', '.jpg', '.jpeg', '.webp'], AUDIO_EXT = ['.wav', '.mp3', '.m4a', '.ogg'];
 /** Whole-second lengths the image endpoint takes for a model, resolution and frame rate. */
 export function ltxApiSeconds(model, resolution, fps = 24) {
@@ -45,8 +45,13 @@ export const ltxApiImg2VideoSchema = z.object({ ...common,
         ctx.addIssue({ code: 'custom', path: ['durationSeconds'], message: `${v.model} at ${v.resolution}/${v.fps} fps takes ${ltxApiSeconds(v.model, v.resolution, v.fps).join(', ')} seconds` });
 });
 export const ltxApiAudio2VideoSchema = z.object({ ...common,
+    sourceImagePath: common.sourceImagePath.optional(),
+    prompt: common.prompt.default(''),
     audioPath: z.string().min(1).describe('The composed pinned-voice track; its length sets the clip length (2–10 s, Fast at 720p/1080p up to 20 s).'),
-}).strict();
+}).strict().superRefine((args, ctx) => {
+    if (!args.sourceImagePath && (!args.prompt.trim() || args.lastImagePath))
+        ctx.addIssue({ code: 'custom', path: ['sourceImagePath'], message: 'A first image is required with a last image or an empty prompt' });
+});
 export function ltxApiAudioSeconds(file) {
     const seconds = Number(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', file], { encoding: 'utf8', timeout: 15_000 }));
     if (!Number.isFinite(seconds) || seconds <= 0)
@@ -57,7 +62,7 @@ export function ltxApiAudioSeconds(file) {
 export function buildLtxApiBody(request) {
     const image = (file) => dataUri(file, IMAGE_EXT, 7 * 1048576);
     const body = { model: request.model, resolution: request.resolution, fps: request.fps,
-        prompt: request.prompt, image_uri: image(request.sourceImagePath),
+        prompt: request.prompt, ...(request.sourceImagePath ? { image_uri: image(request.sourceImagePath) } : {}),
         ...(request.lastImagePath ? { last_frame_uri: image(request.lastImagePath) } : {}),
         ...(request.cameraMotion ? { camera_motion: request.cameraMotion } : {}) };
     if ('audioPath' in request) {
@@ -80,6 +85,9 @@ export function ltxApiStatus(json) {
         return { state: 'failed', error: json.error?.message ?? 'failed' };
     return { state: 'running' };
 }
+export async function pollLtxApi(endpoint, id) {
+    return ltxApiStatus(await vendorJson(LTX_API_BASE_URL + '/v2/' + endpoint + '/' + encodeURIComponent(id), { headers: { Authorization: 'Bearer ' + config.ltxApiKey, 'Content-Type': 'application/json' } }));
+}
 export async function generateLtxApiVideo(request) {
     if (!config.ltxApiKey)
         return { success: false, error: 'LTX_API_KEY is not set', terminal: true };
@@ -99,6 +107,6 @@ export async function generateLtxApiVideo(request) {
                 throw new Error('No job id in LTX response');
             return json.id;
         },
-        poll: async (id) => ltxApiStatus(await vendorJson(`${LTX_API_BASE_URL}/v2/${built.endpoint}/${encodeURIComponent(id)}`, { headers })),
+        poll: id => pollLtxApi('audioPath' in request ? 'audio-to-video' : 'image-to-video', id),
     });
 }

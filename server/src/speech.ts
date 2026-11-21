@@ -156,7 +156,7 @@ export function speechVideoPlan(input: Line[] | {narration?: Line[]; [key: strin
   const physicalSpeech = lines.some(line => line.delivery === 'on_screen' || line.delivery === 'off_screen');
   if (capabilities.nativeSpeech && physicalSpeech && lines.some(line => line.delivery === 'voiceover'))
     throw new Error('msr_speech_route: split physical dialogue and inner thoughts into separate shots; thoughts use image2video with timed TTS');
-  const mode = capabilities.nativeSpeech && physicalSpeech ? 'native' : !onScreen ? 'voiceover' : capabilities.audioConditioning && capabilities.lipSync ? 'audio_conditioned' : capabilities.postLipSync ? 'post_lipsync' : null;
+  const mode = capabilities.nativeSpeech && physicalSpeech ? 'native' : !onScreen ? 'voiceover' : capabilities.audioConditioning ? 'audio_conditioned' : capabilities.postLipSync ? 'post_lipsync' : null;
   if (!mode) throw new Error('Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting');
   const saved = object(object(object(scene.visual).video).promptSource);
   const design = object(object(scene.shot).videoDesign);

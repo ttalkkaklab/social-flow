@@ -120,7 +120,7 @@ Every adapter declares a voice lane, shown as `voice.lane` with `voice.dialogue`
 `voice_lane_required` when the shot has an `on_screen` line, or when the model would
 voice lines natively: audio on in a native slot (`visual.clip` or `type:'broll'`).
 Narration or voiceover over a non-speaking picture, an external TTS track, passes on
-any adapter; a `visual.clip` slot with lines sets `generateAudio:false` there. Veo, Gemini Omni and
+any adapter; a `visual.clip` slot with lines sets `generateAudio:false` there. Gemini Developer API Veo previews, Gemini Omni and
 Seedance 1.x left the plugin on 2026-10-31 because none takes a voice reference;
 their existing clips stay reusable through `visual.reuse`.
 

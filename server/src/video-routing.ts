@@ -1,7 +1,8 @@
+import { desktopGatewayKey } from './astra-genai-client.js';
 import { openingPrompt, sceneVideoDirectionSchema, type SceneVideoDirection, type OpeningPosition } from './msr-opening.js';
 import { buildFasth3Body, fasth3OmniSchema } from './fasth3-omni.js';
 import { localVideoStrategy } from './local-video-models.js';
-import { desktopVideoStatus } from './astra-genai-desktop.js';
+import { desktopAudioWindow, desktopVideoStatus } from './astra-genai-desktop.js';
 import * as fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
@@ -14,10 +15,13 @@ import { resolveToolGate } from './tool-gate.js';
 import { framesForSeconds } from './astra-video-client.js';
 import { assessVideoDuration, DURATION_TOOLS, resolveVideoDuration } from './video-duration.js';
 import { VIDEO_ADAPTERS, VENDOR_REFERENCE_TOOLS, parseVideoArgs, videoPromptLimit } from './video-registry.js';
-import { buildLtxApiBody, ltxApiImg2VideoSchema, ltxApiAudio2VideoSchema } from './ltx-api-video.js';
+import { ltxApiAudioSeconds } from './ltx-api-video.js';
+import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
 import { buildMinimaxBody, minimaxImg2VideoSchema, minimaxReferenceSchema } from './minimax-video.js';
 import { checkHeygenInputs, heygenImg2VideoSchema, heygenReferenceSchema } from './heygen-video.js';
 import { SEEDANCE_MODEL_SPECS } from './seedance-client.js';
+import { saveVendorOutput } from './vendor-video.js';
+import { resolveOutputFile } from './media-utils.js';
 import { quoteVideo, type VideoQuote } from './video-pricing.js';
 import { atomicJson, videoTransaction } from './video-state.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
@@ -30,6 +34,7 @@ import type { ToolResult } from './handlers.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { cameraDrift, cameraMoveWords, compileVideoPrompt, sceneCameraDirection, type DirectionBinding, type VideoPromptSource } from './video-prompt.js';
 import { readVideoProduction, refreshVideoReview } from './video-review.js';
+import { requireReadyProject } from './project.js';
 
 const load = createRequire(import.meta.url);
 const shared = fileURLToPath(new URL('../../skills/_shared/video-selection.js', import.meta.url));
@@ -183,8 +188,12 @@ function inputFiles(args: Record<string, unknown>, episode: string): Record<stri
   Object.assign(args, visit(args, '') as Record<string, unknown>);
   return files;
 }
-/** A saved engine without a voice lane (Veo, Gemini Omni, Seedance 1.x) left the plugin on 2026-10-31. */
+/** Keep retired deployments out of new plans, including indirect selections through the host. */
 function requireSupportedSelection(selection: Selection): void {
+  if (selection.engine === 'host' && selection.model?.startsWith('veo-'))
+    throw new Error('model_selection_mismatch: Google Cloud Veo requires the veo engine');
+  if (selection.engine === 'veo' && !Object.hasOwn(HOSTED_VIDEO_ROUTES.veo_img2video.modelConstraints, selection.model ?? ''))
+    throw new Error('video_engine_unsupported: select a current Google Cloud Veo model from video_catalog. Gemini Developer API Veo previews are retired.');
   const retired = selection.engine !== 'host' && !Object.values(VIDEO_ADAPTERS).some(a => a.engine === selection.engine) ||
     selection.engine === 'seedance' && Boolean(selection.model) && !Object.hasOwn(SEEDANCE_MODEL_SPECS, selection.model!);
   if (retired) throw new Error(`video_engine_unsupported: ${selection.engine}${selection.model ? ' ' + selection.model : ''} cannot keep a character's voice ` +
@@ -233,8 +242,8 @@ export function checkVideoEnvironment(tool: string): void {
   const gate = resolveToolGate(tool, { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
   if (!gate.enabled) throw new Error('video_tool_disabled: ' + gate.reason);
   const engine = VIDEO_ADAPTERS[tool]?.engine;
-  const ready = engine === 'seedance' ? Boolean(config.arkApiKey) : engine === 'astra' ? Boolean(config.astraVideoApiKey) :
-    ['astra-genai', 'astra-genai-desktop'].includes(engine) ? Boolean(config.astraGenaiApiKey) : engine === 'ltx-api' ? Boolean(config.ltxApiKey) :
+  const ready = HOSTED_VIDEO_ROUTES[tool] ? HOSTED_VIDEO_ROUTES[tool].configured() : engine === 'seedance' ? Boolean(config.arkApiKey) : engine === 'astra' ? Boolean(config.astraVideoApiKey) :
+    engine === 'astra-genai-desktop' ? Boolean(desktopGatewayKey()) : engine === 'astra-genai' ? Boolean(config.astraGenaiApiKey) :
     engine === 'minimax' ? Boolean(config.minimaxApiKey) : engine === 'heygen' ? Boolean(config.heygenApiKey) : engine === 'mlx' && mlxServeConfigured();
   if (!ready) throw new Error('video_provider_unconfigured: ' + engine);
 }
@@ -253,6 +262,7 @@ export async function planVideoForGateway(raw: unknown) {
 
 export function planVideo(raw: unknown, persist = true): VideoPlan {
   const input = videoPlanSchema.parse(raw);
+  requireReadyProject(input.episode, { allowVideoSnapshot: true });
   const context = routingContext(input.episode, input.shotId, input.sceneNo);
   const scene = context.sceneDirection && sceneVideoDirectionSchema.parse(context.sceneDirection);
   const take = { ...(scene ? { sceneNo: context.sceneNo, sceneDurationSeconds: Number(context.shot.duration), shotIds: context.shotIds } : {}), ...(input.purpose ? { purpose: input.purpose } : {}), ...(input.basedOnRequestId ? { basedOnRequestId: input.basedOnRequestId } : {}), ...(input.changeNote ? { changeNote: input.changeNote } : {}) };
@@ -271,6 +281,8 @@ export function planVideo(raw: unknown, persist = true): VideoPlan {
     .filter(line => line.tts?.trim());
   if (!scene && new Set(lines.map(line => line.speaker)).size > 1)
     throw new Error('shot_speaker_limit: split speaker changes into separate shots, then set each shot\'s framing and camera angle');
+  if (selection.engine === 'veo' && lines.some(line => line.delivery !== 'voiceover'))
+    throw new Error('voice_lane_required: Veo generates scene sound but cannot condition dialogue on a character voice. Use the selected LTX audio or reference route for spoken cuts.');
   const msrRequested = input.tool === 'astra_genai_msr' || selection.engine === 'astra-genai' &&
     (input.operation ?? (input.tool ? undefined : selection.operation)) === 'reference';
   if (msrRequested && (!lines.length || lines.some(line => line.delivery === 'voiceover')))
@@ -285,7 +297,7 @@ export function planVideo(raw: unknown, persist = true): VideoPlan {
     throw new Error(`reference_speech_route: ${tool} renders a shot whose character speaks; plan silent and voiceover/inner-thought shots with operation:"image" and external timed TTS for voiceover; split mixed deliveries first`);
   const visual = context.shot.visual as { frames?: { mode?: string; start?: string }; references?: Array<Record<string, unknown>>; video?: { prompt?: unknown; promptSource?: VideoPromptSource } } | undefined;
   const silentPicture = !lines.some(line => line.delivery === 'on_screen' || line.delivery === 'off_screen');
-  const supportsAudioToggle = tool === 'astra_genai_img2video' || tool === 'ltx_api_img2video';
+  const supportsAudioToggle = tool === 'astra_genai_img2video' || Boolean(tool && HOSTED_VIDEO_ROUTES[tool]?.soundtrack);
   // Voiceover pictures use their own timed speech track.
   const sound = context.shot.sound as { audioSource?: string } | undefined;
   const writtenAudio = input.args.prompt ?? visual?.video?.promptSource?.sound ?? visual?.video?.prompt;
@@ -366,6 +378,7 @@ export function planVideo(raw: unknown, persist = true): VideoPlan {
   }
   if (!tool) throw new Error('Selected deployment has no adapter for this operation');
   let bound = bindSelection(tool, callArgs, selection);
+  if (selection.engine === 'veo' && bound.aspectRatio === undefined && context.board.FORMAT === 'shorts-9x16') bound.aspectRatio = '9:16';
   const durationPlan = shotVideoTiming(context, tool, bound);
   if (durationPlan.status === 'split_required')
     throw new Error(`video_duration_exceeded: ${context.shotId} needs ${durationPlan.requiredSeconds}s; ${tool} allows ${durationPlan.maxSeconds}s. Split at a meaningful performance boundary; never truncate or switch models.`);
@@ -402,6 +415,19 @@ export function planVideo(raw: unknown, persist = true): VideoPlan {
   }
   const args = parseVideoArgs(tool, voice.args);
   if (Array.isArray(args.openingPositions)) args.prompt = openingPrompt(String(args.prompt), args.openingPositions as OpeningPosition[]);
+  if (VIDEO_ADAPTERS[tool].voice === 'supplied' && typeof args.audioPath === 'string' && durationPlan.requiredSeconds !== undefined) {
+    const sourceSeconds = ltxApiAudioSeconds(path.resolve(context.episode, args.audioPath));
+    const fps = Number(args.fps ?? args.frameRate ?? 24);
+    let playable = sourceSeconds;
+    if (tool === 'astra_audio2video') {
+      const window = Math.min(sourceSeconds - Number(args.audioStartTime ?? 0), Number(args.audioMaxDuration ?? Infinity));
+      playable = Math.min(window, args.numFrames === undefined ? (8 * Math.floor((window * fps - 1) / 8) + 1) / fps : Number(args.numFrames) / fps);
+    } else if (tool === 'astra_genai_desktop_audio2video') {
+      playable = desktopAudioWindow(args, sourceSeconds).playbackSeconds;
+    }
+    if (playable + 0.001 < durationPlan.requiredSeconds)
+      throw new Error(`video_duration_short: ${context.shotId} needs ${durationPlan.requiredSeconds}s but its supplied audio covers ${playable.toFixed(3)}s of video`);
+  }
   if (durationPlan.status === 'fits') {
     const fps = durationPlan.limits?.frameRate ?? 1;
     const frames = typeof args.numFrames === 'number' ? args.numFrames : typeof args.duration === 'number' && durationPlan.limits?.frameRate
@@ -428,8 +454,7 @@ export function planVideo(raw: unknown, persist = true): VideoPlan {
   if (tool === 'astra_genai_msr') buildGenaiMsrBody(genaiMsrSchema.parse(args));
   if (tool === 'astra_genai_audio2video') buildGenaiAudioBody(genaiAudioToVideoSchema.parse(args));
   // Vendor bodies are built once here so file types, sizes and sample lengths fail before money is reserved.
-  if (tool === 'ltx_api_img2video') buildLtxApiBody(ltxApiImg2VideoSchema.parse(args));
-  if (tool === 'ltx_api_audio2video') buildLtxApiBody(ltxApiAudio2VideoSchema.parse(args));
+  HOSTED_VIDEO_ROUTES[tool]?.preflight(args);
   if (tool === 'minimax_img2video') buildMinimaxBody(minimaxImg2VideoSchema.parse(args));
   if (tool === 'minimax_reference') buildMinimaxBody(minimaxReferenceSchema.parse(args));
   if (tool === 'heygen_img2video') checkHeygenInputs(heygenImg2VideoSchema.parse(args));
@@ -443,7 +468,7 @@ export function planVideo(raw: unknown, persist = true): VideoPlan {
   const quote = quoteVideo(tool, args);
   const body = { ...take, version: 1 as const, episode: context.episode, shotId: context.shotId, requestId: input.requestId, tool, args,
     ...(images.imageBindings ? { imageBindings: images.imageBindings } : {}),
-    sourceArgs: input.args, durationPlan, ...(speechFit ? { speechFit } : {}), ...direction, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
+    sourceArgs: input.args, durationPlan, ...(selection.engine === 'veo' ? { providerProject: config.googleCloudProject } : {}), ...(speechFit ? { speechFit } : {}), ...direction, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
     selection, source: context.source, contextRevision: context.revision, inputs, quote, execution: 'server' as const };
   const plan = { ...body, id: hash(body) };
   return persist ? saveVideoPlan(plan) : plan;
@@ -498,6 +523,7 @@ function writeApprovalView(episode: string, approvals: Approvals) {
 }
 export function approveVideo(raw: unknown): Approvals {
   const input = videoApproveSchema.parse(raw), episode = fs.realpathSync(input.episode);
+  requireReadyProject(episode, { allowVideoSnapshot: true });
   const approvals = readApprovals(episode), at = new Date().toISOString();
   if (input.auto) approvals.auto = { request: input.request, at };
   else if (input.auto === false) delete approvals.auto;
@@ -524,6 +550,7 @@ export function approveVideo(raw: unknown): Approvals {
 }
 export async function executeVideo(raw: unknown, dispatch: VideoDispatch): Promise<ToolResult> {
   const request = videoExecuteSchema.parse(raw), episode = fs.realpathSync(request.episode);
+  requireReadyProject(episode, { allowVideoSnapshot: true });
   const plan: VideoPlan = JSON.parse(fs.readFileSync(path.join(episode, '.work/video-routing/plans', request.planId + '.json'), 'utf8'));
   const { id, ...body } = plan;
   if (id !== request.planId || hash(body) !== id || plan.episode !== episode) throw new Error('Invalid video plan');
@@ -574,6 +601,7 @@ export async function executeVideo(raw: unknown, dispatch: VideoDispatch): Promi
   // submission_unknown until video_status reconciles it.
   const settle = (terminal: boolean, evidence: string, result?: ToolResult) => videoTransaction(episode, state => {
     const job = state.jobs[plan.requestId];
+    if (job.status === 'completed' || job.status === 'failed') return;
     Object.assign(job, { status: terminal ? 'failed' : 'submission_unknown', ...(terminal ? { finishedAt: new Date().toISOString() } : {}), evidence, updatedAt: new Date().toISOString() }, result ? { result } : {});
     if (terminal && !job.providerId) job.settledUsd = 0;
   });
@@ -645,32 +673,26 @@ async function dispatchChannelAsset(tool: string, args: Record<string, unknown>,
   }
 }
 
-/** Legacy standalone tools remain callable; episode calls cannot bypass selection by using them. */
+/** Direct adapters use an episode plan or the selected project's channel asset directory. */
 export async function routeLegacyVideo(tool: string, raw: unknown, dispatch: VideoDispatch): Promise<ToolResult> {
   const gate = resolveToolGate(tool, { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
   if (!gate.enabled) throw new Error('video_tool_disabled: ' + gate.reason);
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return dispatch(tool, raw as Record<string, unknown>);
-  const { videoContext, ...args } = raw as Record<string, unknown>;
+  const { videoContext, ...args } = z.record(z.unknown()).parse(raw);
   if (videoContext !== undefined) {
     const ctx = z.object({ episode: z.string().min(1), shotId: z.string().min(1), requestId: idSchema }).strict().parse(videoContext);
     const plan = await planVideoForGateway({ ...ctx, tool, args });
     return executeVideo({ episode: plan.episode, planId: plan.id }, dispatch);
   }
-  const output = canonical(path.resolve(typeof args.outputPath === 'string' ? args.outputPath : process.cwd()));
-  let dir = output;
-  for (;;) {
-    if (fs.existsSync(path.join(dir, '.social-flow/models.json')) && CHANNEL_ASSET_RE.test(path.relative(dir, output).split(path.sep).join('/')))
-      return dispatchChannelAsset(tool, args, dir, output, dispatch);
-    if (fs.existsSync(path.join(dir, '.work/model-settings.json')) || fs.existsSync(path.join(dir, '.social-flow/models.json')))
-      throw new Error('video_context_required: pass episode, shotId and requestId for configured production');
-    const parent = path.dirname(dir); if (parent === dir) break; dir = parent;
-  }
-  // The MCP process may run at a configured workspace even if outputPath points outside it.
-  if (fs.existsSync(path.join(process.cwd(), '.social-flow/models.json'))) throw new Error('video_context_required');
-  return dispatch(tool, args);
+  if (typeof args.outputPath !== 'string' || !args.outputPath.trim())
+    throw new Error('project_setup_required: provide the selected project’s output path or an episode videoContext');
+  const output = canonical(path.resolve(args.outputPath));
+  const { workspace: root } = requireReadyProject(output);
+  if (CHANNEL_ASSET_RE.test(path.relative(root, output).split(path.sep).join('/')))
+    return dispatchChannelAsset(tool, args, root, output, dispatch);
+  throw new Error('video_context_required: supply the episode or a channel asset output');
 }
 
-/** Read persisted receipts; refresh polls an existing GenAI job; reconcile settles an unknown request from billing evidence. */
+/** Read persisted receipts; refresh polls an existing provider job; reconcile settles an unknown request from billing evidence. */
 export async function videoStatus(raw: unknown) {
   const input = z.object({ episode: z.string().min(1), requestId: idSchema.optional(), action: z.enum(['read', 'refresh', 'reconcile']).default('read'),
     executorStopped: z.boolean().optional(), evidence: z.string().min(1).optional(), spentUsd: z.number().finite().nonnegative().optional() }).strict().parse(raw);
@@ -697,11 +719,30 @@ export async function videoStatus(raw: unknown) {
   const job = state.jobs?.[input.requestId];
   if (input.action === 'refresh' && job) {
     if (job.status === 'failed') throw new Error('video_request_failed: nothing to recover; plan a new requestId');
-    if (!job.tool.startsWith('astra_genai_desktop_') && !['astra_genai_text2video', 'astra_genai_img2video', 'astra_genai_audio2video', 'astra_genai_msr'].includes(job.tool)) throw new Error('video_refresh_unsupported: use provider-specific recovery');
+    if (job.status === 'completed') return job;
+    const hosted = HOSTED_VIDEO_ROUTES[job.tool];
+    if (!hosted && !job.tool.startsWith('astra_genai_desktop_') && !['astra_genai_text2video', 'astra_genai_img2video', 'astra_genai_audio2video', 'astra_genai_msr'].includes(job.tool)) throw new Error('video_refresh_unsupported: use provider-specific recovery');
     const plan: VideoPlan = JSON.parse(fs.readFileSync(path.join(episode, '.work/video-routing/plans', job.planId + '.json'), 'utf8'));
     const { id, ...body } = plan;
     if (id !== job.planId || hash(body) !== id || plan.episode !== episode || plan.tool !== job.tool) throw new Error('Invalid recovery plan');
     checkVideoEnvironment(plan.tool);
+    if (hosted) {
+      if (!job.providerId) return { ...job, recovery: 'No provider job ID is recorded. Reconcile with the provider before retrying.' };
+      const observed = await hosted.poll(plan.args, job.providerId);
+      if (observed.state === 'running') return { ...job, providerStatus: 'running' };
+      const target = resolveOutputFile(String(plan.args.outputPath), String(plan.args.filename), 'video');
+      const output = observed.state === 'done' ? await saveVendorOutput(observed, target, job.providerId) : null;
+      if (output && !output.success) return { ...job, recovery: output.error };
+      videoTransaction(episode, current => {
+        const item = current.jobs[requestId];
+        if (item.status === 'completed' || item.status === 'failed') return;
+        const now = new Date().toISOString();
+        Object.assign(item, { updatedAt: now, finishedAt: now }, observed.state === 'failed'
+          ? { status: 'failed', evidence: observed.error }
+          : { status: 'completed', result: { content: [{ type: 'text', text: JSON.stringify(output) }] } });
+      });
+      return videoStatus({ episode, requestId });
+    }
     const receiptPath = path.join(String(plan.args.outputPath), String(plan.args.filename)) + '.astra-genai.json';
     const result = job.tool.startsWith('astra_genai_desktop_') ? await desktopVideoStatus(receiptPath, true) : await getGenaiVideoStatus({ receiptPath, download: true });
     if (job.providerId && result.jobId !== job.providerId) throw new Error('GenAI recovery job ID mismatch');

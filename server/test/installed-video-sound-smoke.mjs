@@ -1,3 +1,4 @@
+import { setupProject } from './workflow-fixture.mjs';
 // Fresh installed CLI + complete FFmpeg builder, with a deterministic audio fixture (no vendor spend).
 // Usage: node server/test/installed-video-sound-smoke.mjs PLUGIN_ROOT OUTPUT_DIR
 import assert from 'node:assert/strict';
@@ -8,6 +9,7 @@ import { createHash } from 'node:crypto';
 const root = resolve(process.argv[2]), output = resolve(process.argv[3]);
 const board = join(output,'storyboard'), work = join(output,'work');
 mkdirSync(board,{recursive:true});mkdirSync(work,{recursive:true});
+setupProject(output);
 const refs=join(root,'skills/produce/references');
 const cli=(name,args)=>execFileSync(process.execPath,[join(refs,name),...args],{encoding:'utf8',maxBuffer:8*1024*1024});
 const ff=args=>execFileSync('ffmpeg',['-v','error','-y',...args]);

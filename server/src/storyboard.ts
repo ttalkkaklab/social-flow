@@ -1,6 +1,6 @@
 import { openingPositionsSchema, sceneVideoDirectionSchema } from './msr-opening.js';
 import { readShotVideoTiming } from './video-routing.js';
-import { episodeHandoff, manageProject } from './project.js';
+import { episodeHandoff, manageProject, requireReadyProject } from './project.js';
 import { readImageMetadata, verifyImageFile } from './image-media.js';
 import { gptImageContract, mlxImageFamily } from './image-models.js';
 import { workflowEpisode } from './production-workflow.js';
@@ -1178,6 +1178,7 @@ function episodePlatforms(dir: string): string[] {
 
 export function applyStoryboard(args: StoryboardApplyArgs, opts: { outline?: boolean; cliches?: boolean } = {}): ApplyResult {
   const file = scenesPath(args.path);
+  if (!args.dryRun) requireReadyProject(dirname(file));
   const exists = existsSync(file);
   let header: string[] = [];
   let win: Board = {};
@@ -1339,6 +1340,7 @@ export const storyShotSchema = z.object({
 const emptyStructure = (): Structure => ({ version: STRUCTURE_VERSION, sequences: [], scenes: [] });
 function readOutline(path: string): { win: Board; st: Structure } {
   const file = scenesPath(path);
+  requireReadyProject(dirname(file));
   const win = existsSync(file) ? readBoard(file).win : {};
   return { win, st: win.STRUCTURE ?? emptyStructure() };
 }
@@ -1349,7 +1351,13 @@ function writeOutline(path: string, win: Board, structure: Structure, shots?: Sh
   const savedStory = win.STORY as { language?: unknown; audienceSoundVersion?: number } | undefined;
   // A generic board can carry the scene-sound version before the story tools have started its story.
   const story = savedStory?.audienceSoundVersion === 1 && Object.keys(savedStory).length === 1 ? undefined : savedStory;
-  const episode = story ? undefined : workflowEpisode(dirname(scenesPath(path)));
+  const file = scenesPath(path);
+  const episode = story ? undefined : workflowEpisode(dirname(file));
+  if (episode && !existsSync(file) && basename(dirname(episode)) === 'episodes') {
+    const project = requireReadyProject(episode);
+    if (dirname(episode) !== project.paths.episodes) throw new Error('project_setup_required: choose the project for this episode channel');
+    manageProject({ action: 'episode', workspace: project.workspace, topic: basename(episode) });
+  }
   const handoff = episode ? episodeHandoff(episode) : undefined;
   // The story's language is recorded once: the author's, else the saved languages.speech. A board keeps the one it has,
   // and one written before the record existed is in the language of its shots, not of today's request.

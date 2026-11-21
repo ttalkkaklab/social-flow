@@ -1074,7 +1074,7 @@ Two generated forms count against the slot cap together:
   cuts roughly 8 seconds out of the time spent delivering information). Per slot write the
   **used length `duration` (4s by default) and the reason for it**, `after`, `src`, the camera
   slots and audio, and store the assembled final prompt in `visual.prompt` (§clip prompt —
-  `--clip --engine seedance`). Veo, Gemini Omni and Seedance 1.x left the plugin on 2026-10-31
+  `--clip --engine seedance`). Gemini Developer API Veo previews, Gemini Omni and Seedance 1.x left the plugin on 2026-10-31
   because none takes a voice reference. Two slots using the same PNG means the same shot twice — specify a different
   source per slot.
 - **Motion background (`visual.video`)** — the scene itself as video. The scene's still becomes

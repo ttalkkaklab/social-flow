@@ -11,6 +11,7 @@ import { resolveTtsModel } from './tts-models.js';
 import { validateFilePath } from './media-utils.js';
 import { validateSpeechAudio } from './tts-audio.js';
 import { createRequire } from 'node:module';
+import { requireReadyProject } from './project.js';
 
 export interface SpeechResult {
   success: boolean;
@@ -65,14 +66,20 @@ function staleSlot(slot: string): boolean {
   }
 }
 
+export function validateEpisodeSpeech(generator: string, args: Record<string, unknown>): void {
+  const context = args.speechContext as { path: string } | undefined;
+  if (context) requireReadyProject(context.path);
+  (createRequire(import.meta.url)('../../skills/_shared/character-speech.js') as {
+    validateSpeechContext(generator: string, args: unknown): void;
+  }).validateSpeechContext(generator, args);
+}
+
 export async function executeSpeech<T extends SpeechResult>(
   generator: string,
   args: Record<string, unknown>,
   run: (output: { outputPath: string; filename: string }) => Promise<T>,
 ): Promise<T & SpeechResult> {
-  (createRequire(import.meta.url)('../../skills/_shared/character-speech.js') as {
-    validateSpeechContext(generator: string, args: unknown): void;
-  }).validateSpeechContext(generator, args);
+  validateEpisodeSpeech(generator, args);
   const provider = generator === 'tts_astra_genai' ? 'astra-genai' : generator.startsWith('tts_elevenlabs_') ? 'elevenlabs' : 'gemini';
   const contract = resolveTtsModel(provider, String(args.model));
   if (![contract.single, contract.dialogue].includes(generator)) throw new Error('Generator does not implement selected TTS model');

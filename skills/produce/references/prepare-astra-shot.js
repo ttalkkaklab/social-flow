@@ -9,7 +9,7 @@ const { createHash } = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const continuity = require('../../storyboard/references/shot-continuity.js');
 const caps = { provider: 'astra', model: 'astra', audioConditioning: true,
-  lipSync: true, postLipSync: false,
+  lipSync: false, postLipSync: false,
   evidence: 'ASTRA audio2video accepts supplied stereo audio and one opening image; img2video accepts first/last images. This declares input support, not output quality.' };
 
 function localImage(dir, value) {
@@ -137,6 +137,7 @@ function designDirectionConflict(opening, continuityText) {
 }
 
 async function prepare(target, options) {
+  require('../../_shared/project-settings.js').requireReadyProject(path.resolve(target));
   const dist = path.resolve(__dirname, '../../../server/dist');
   const adapter = await import(pathToFileURL(path.join(dist, 'astra-shot-runtime.bundle.js')).href);
   const { readBoard, manageSpeech } = adapter;
@@ -145,7 +146,9 @@ async function prepare(target, options) {
   if (!scene) throw new Error('Select an existing stable shotId');
   if (scene.visual?.reuse || scene.visual?.video?.engine !== 'astra')
     throw new Error('Prepare only a generated shot already assigned to ASTRA; do not switch or regenerate imported footage');
-  const response = manageSpeech({ path: file, action: 'plan_video', shotId: scene.id, capabilities: caps });
+  const snapshot = fs.existsSync(path.join(dir, '../.work/model-settings.json'));
+  const response = manageSpeech({ path: file, action: 'plan_video', shotId: scene.id,
+    tool: 'astra_audio2video', ...(snapshot ? {} : { capabilities: caps }) });
   const plan = response.plan;
   const video = scene.visual.video;
   const imagePath = localImage(dir, require('../../storyboard/references/render-routing.js').framePlan(scene).start);

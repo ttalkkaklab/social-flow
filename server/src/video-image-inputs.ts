@@ -1,3 +1,4 @@
+import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
 import { openingPositionsSchema } from './msr-opening.js';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
@@ -37,7 +38,7 @@ const FRAME_FIELDS: Record<string, [string, string?]> = {
   astra_audio2video: ['imagePath'], astra_genai_img2video: ['imageUri', 'lastFrameUri'],
   astra_genai_desktop_img2video: ['imagePath', 'lastFramePath'], astra_genai_desktop_audio2video: ['imagePath'],
   astra_genai_audio2video: ['imagePath', 'lastFramePath'], mlx_video_generate: ['firstFrameImagePath', 'lastFrameImagePath'], ltx_video_generate: ['firstFrameImagePath', 'lastFrameImagePath'],
-  ltx_api_img2video: ['sourceImagePath', 'lastImagePath'], ltx_api_audio2video: ['sourceImagePath', 'lastImagePath'],
+  ...Object.fromEntries(Object.entries(HOSTED_VIDEO_ROUTES).flatMap(([tool, route]) => route.frames ? [[tool, route.frames]] : [])),
   minimax_img2video: ['sourceImagePath', 'lastImagePath'], heygen_img2video: ['sourceImagePath', 'lastImagePath'],
 };
 /** The listed ratio closest to an image's, for vendors whose adaptive ratio would follow a face panel. */
@@ -233,7 +234,18 @@ export function prepareVideoImages(tool: string, input: Record<string, unknown>,
     // frame: the start image goes last among the pictures and the place picture stays out (the start image has it).
     const msr = tool === 'astra_genai_msr', vendor = VENDOR_REFERENCE_TOOLS.includes(tool);
     const sent = msr || vendor ? videoRefs.filter(ref => ref.role !== 'background') : videoRefs;
+    if (tool === 'veo_reference' && sent.some(ref => ref.role === 'style' || ref.role === 'background'))
+      throw new Error('image_plan_unsupported: Veo accepts pictures of a single subject; style and scene references cannot be sent as subject assets');
     const paths = sent.map(ref => bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, true));
+    if (tool === 'veo_reference') {
+      const roles = new Set(sent.map(ref => ref.role));
+      const cast = new Set(paths.flatMap((file, i) => {
+        if (sent[i].role !== 'character') return [];
+        const folder = path.dirname(file);
+        return path.basename(path.dirname(folder)) === 'characters' || characterKey(file) === folder ? [folder] : [];
+      }));
+      if (roles.size > 1 || cast.size > 1) throw new Error('image_plan_unsupported: Veo asset references must show the same subject');
+    }
     const start = (msr || vendor) && frames.start ? bind('start', frames.start, 'start', 'video', 'Opening picture', true) : undefined;
     if (msr) put('references', [...paths.map((file, i) => msrReference(file, sent[i].role)), ...(start ? [{ imagePath: start, background: true }] : [])]);
     else put('referenceImagePaths', [...paths, ...(start ? [start] : [])]);

@@ -1,3 +1,4 @@
+import { setupProject } from './workflow-fixture.mjs';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -47,6 +48,7 @@ test('an operator-registered default audition retains its sample lineage through
  const {config}=await import('../dist/config.js');const {manageSpeech}=await import('../dist/speech.js');
  const {routeSpeech}=await import('../dist/tts-routing.js');
  const root=mkdtempSync(path.join(tmpdir(),'voice-registration-')),folder=path.join(root,'assets/characters/hero');mkdirSync(folder,{recursive:true});
+ setupProject(root);
  t.after(()=>rmSync(root,{recursive:true,force:true}));writeFileSync(path.join(root,'profile.md'),'# Channel');
  const hash=bytes=>createHash('sha256').update(bytes).digest('hex'),identityPath=path.join(folder,'identity.md');
  const example=readFileSync(new URL('../../skills/channel/references/character-identity-example.md',import.meta.url),'utf8');

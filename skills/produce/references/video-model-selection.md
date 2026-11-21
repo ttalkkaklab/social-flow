@@ -5,7 +5,7 @@
 > · recheck every 90 days, and when a vendor ships a model tier.
 
 The plugin keeps only video engines that can keep a character's voice, or that render a picture
-nobody speaks in (owner directive 2026-10-31). Veo, Gemini Omni and Seedance 1.x left the plugin
+nobody speaks in (owner directive 2026-10-31). Gemini Developer API Veo previews, Gemini Omni and Seedance 1.x left the plugin
 on 2026-10-31 because none takes a voice reference.
 
 - **ASTRA GenAI** (`astra_genai_*`, `ASTRA_GENAI_API_KEY`) — LTX through the gateway:
@@ -19,6 +19,8 @@ on 2026-10-31 because none takes a voice reference.
 - **ASTRA** (`astra_*`, below) and the **host** tool (§The host video tool comes first)
 
 For normal episode generation plan one scene with `video_plan {episode,sceneNo,requestId}`. Its ordered cards provide dialogue and duration. On distilled LTX the image adapter carries both the first frame and subject references. The shot recipes below also support explicit single-shot work.
+
+Google Cloud Veo 3.1 supports non-speaking scenes, native effects and external narration. [LTX and Google Cloud Veo setup](../../_shared/video-routing.md#ltx-and-google-cloud-veo).
 
 ## ASTRA — our own LTX box
 
@@ -265,7 +267,7 @@ Once a model is saved it serves both slots.
 2.0 mini are on no public arena at all (§Quality). If you want one because it's cheap or
 feature-rich, run the same prompt on both once that episode and decide.
 
-A saved or override selection naming Veo, Omni or Seedance 1.x is refused by `video_plan`
+A saved or override selection naming Gemini Developer API Veo previews, Omni or Seedance 1.x is refused by `video_plan`
 (`video_engine_unsupported`); a `.social-flow/models.json` with such a video choice reads as
 `migration_required` with `retired:['models.video']`, and saving one is refused. Choose again
 with `project_manage`. Existing clips from those engines stay reusable through `visual.reuse`;

@@ -358,7 +358,9 @@ and `ASTRA_GENAI_API_KEY`, except that `/v1/images/*` and `/v1/audio/*` go to
 `ASTRA_GENAI_IMAGE_URL` / `ASTRA_GENAI_SPEECH_URL` with `ASTRA_GENAI_IMAGE_API_KEY` /
 `ASTRA_GENAI_SPEECH_API_KEY` when those URLs are set — e.g. Qwen images and VoxCPM2 speech
 on the local Mac gateway (`http://127.0.0.1:18081`) while video stays remote. The
-DashScope `astra-genai` image route stays on `ASTRA_GENAI_URL`. Receipts record the
+Desktop can use `ASTRA_GENAI_DESKTOP_URL` and `ASTRA_GENAI_DESKTOP_API_KEY`.
+When the Desktop and image gateway URLs match exactly, Desktop can use the same image gateway key.
+The DashScope `astra-genai` image route stays on `ASTRA_GENAI_URL`. Receipts record the
 origin they used. Production may run without MLX.
 
 ```json
@@ -401,7 +403,17 @@ No example grants spending permission. `capability_status` checks credentials on
   The installed offering ID is `ltx-2.5-fast`, never a hosted or v2 checkpoint ID.
   Resolution/fps/duration combinations are device dependent; inspect the live catalog.
   I2V takes `imagePath` and optional `lastFramePath` (two temporal references).
-  A2V takes `audioPath` and optional `imagePath`; no last frame or duration override.
+  A2V takes a local `audioPath` and either a prompt or a starting `imagePath` (or both).
+  The supplied audio conditions motion and becomes the encoded soundtrack. Review mouth timing on the output.
+  Set `audioStartTime` in seconds to start within the track. Choose either `audioMaxDuration` in seconds
+  or an exact `numFrames` on the 8k+1 grid. The plugin extracts that window before uploading it.
+  Desktop derives the output length from the upload. With exact frames the plugin rounds the upload
+  up to the nearest millisecond and checks the MP4 frame count. The minimum upload is two seconds.
+  Desktop accepts `seed`, `negativePrompt` (up to 2000 characters), `nagScale` (0–100),
+  `nagAlpha` (0–1), `nagTau` (0–10) and `passShape` (`auto`, `one_pass`, `parts`).
+  NAG depends on local text encoding and compatible runtime settings. Desktop A2V accepts one opening image.
+  The [upstream two-stage pipeline](https://github.com/Lightricks/LTX-2/blob/daa6b16fc7f0f1628f2c9e36a303e3312b333cc6/packages/ltx-pipelines/src/ltx_pipelines/a2vid_two_stage.py)
+  also exposes multiple image conditions, model weights and sampler settings.
   Text/I2V/A2V/keyframes accept `promptProvenance:"typed"|"enhanced"`.
   Omitted preserves the Desktop default (`typed`), which can rewrite the prompt
   according to the app's enhancement settings. Use `enhanced` for a caller-finished
@@ -409,7 +421,7 @@ No example grants spending permission. `capability_status` checks credentials on
   contract's provenance label, not evidence of approval or visual quality; it does
   not guarantee that the generated action will follow the prompt.
   `allowAudioTruncation` defaults false: pad audio to the next 8k+1 frame boundary
-  or explicitly opt into frame-grid loss. No automatic trim or padding occurs.
+  or explicitly opt into frame-grid loss when using a full track or a duration window.
   Extend/retake use `sourceVideoPath` and optional `targetResolution:{width,height}`.
   Their source dimensions/fps are inherited; a saved p-tier applies to new generation,
   while an explicit saved WIDTHxHEIGHT becomes the edit cap. The server never upscales.

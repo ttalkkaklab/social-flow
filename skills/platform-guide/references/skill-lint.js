@@ -126,7 +126,10 @@ function parseFrontmatter(md) {
   const out = {};
   for (let i = 0; i < lines.length; i++) {
     const kv = /^([A-Za-z][\w-]*):\s*(.*)$/.exec(lines[i]);
-    if (!kv) continue;
+    if (!kv) {
+      if (lines[i].trim() && !lines[i].trimStart().startsWith('#')) return null;
+      continue;
+    }
     const key = kv[1];
     let value = kv[2];
     if (value === '>' || value === '|') {
@@ -159,7 +162,7 @@ function loadSkills() {
   return skillNames().map((name) => {
     const file = path.join(SKILLS_DIR, name, 'SKILL.md');
     const body = read(file);
-    const fm = parseFrontmatter(body);
+    const fm = parseFrontmatter(body) || {};
     return { name, file, rel: `skills/${name}/SKILL.md`, body, fm, tools: allowedTools(fm) };
   });
 }
@@ -517,6 +520,8 @@ function selftest() {
   ok('folds a > block onto one line', fm.description === 'First line. Second line.');
   ok('strips quotes from a scalar', fm['argument-hint'] === '[channel] [topic]');
   ok('reads the tool array', allowedTools(fm).length === 2);
+  ok('rejects tool names after a closed array',
+    parseFrontmatter('---\nname: test\nallowed-tools: ["Read"]\n  "Write"]\n---\n') === null);
   ok('no frontmatter returns null', parseFrontmatter('# just a heading\n') === null);
   ok('an unparseable tool array is undefined, not empty',
     allowedTools({ 'allowed-tools': '[not json' }) === undefined);

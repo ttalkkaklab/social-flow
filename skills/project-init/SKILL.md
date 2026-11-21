@@ -31,15 +31,22 @@ episode work, continue to that skill after setup without asking for the same cho
 
 ## Read and collect
 
-1. Resolve the absolute project directory from the user's request or session. Create
-   that directory if it does not exist, then call `project_manage action:status`.
-   A ready project returns its choices: reuse them. A malformed file is a repair
-   task; do not replace it. `status` itself never writes files.
+1. Establish the project directory first. Use the directory the user named in the request,
+   selected earlier, or identified by asking to work on a specific existing episode.
+   Otherwise ask “이 프로젝트를 어느 폴더에 저장할까요?” and wait for the answer before
+   creating files or collecting model choices. An arbitrary current directory is insufficient.
+   Call `project_manage status` on the selected absolute path if it exists. If it is new,
+   or `missing` includes `workspace`, use `project_manage select` with the path and the user's
+   actual selection as `request`. It creates the directory if needed and saves its canonical
+   path even if model setup is interrupted. A copied or moved settings file needs the user's
+   selection for its new directory. Reuse all choices already present. Repair malformed files explicitly.
 2. For new setup, settle project name and channel slug. If a channel profile already
    exists, read it and keep its identity, tone and pinned voices. With multiple
    channels ask which one this project's defaults should target; do not pick the first.
    `project.channel` selects one primary channel; other existing directories are preserved.
-3. Call `project_manage action:options` and `capability_status`. Follow
+3. Ask the user to choose each missing video, music, image and speech model. Use an explicit
+   choice from this request or the selected directory when one exists. Call
+   `project_manage action:options` and `capability_status`. Follow
    [model settings](../_shared/model-settings.md) in the following order. **Genre → video model and credentials
    → BGM model and credentials, or no new music → image model and credentials → optional TTS**.
    In the host's choice prompt, ask “Which model should make this project's music and
@@ -47,12 +54,14 @@ episode work, continue to that skill after setup without asking for the same cho
    `music_catalog` and the choice to reuse music or leave scenes unscored. Wait for the
    answer unless the user already named the model or explicitly chose reuse.
    Save the selected `models.music:{engine,model}` or `{engine:"none"}`.
-   An existing project without this field can reuse its assets and continue with its saved defaults.
+   If an existing project lacks this field, collect just the missing choice before continuing.
    Recommend ASTRA GenAI (`astra-genai` / `z-image-turbo`) for initial image selection,
    not local mflux; readable-text images require GPT Image 2.
    Complete each credential step before the next model question; follow the shared
    credential procedure, including server reconnect and configuration recheck.
    An explicit no-TTS choice saves `models.speech:{engine:"none"}`. Reuse explicit prior answers and existing settings.
+   For hosted video, show the LTX API and Google Cloud Veo choices from `video_catalog`. LTX can animate a pinned voice track. Veo can generate scene sound and accept external narration in assembly. List only the operations and resolutions the chosen model accepts. [Setup and model IDs](../_shared/video-routing.md#ltx-and-google-cloud-veo).
+
 4. Ask for the missing **visual style**, **video ratio**, and **output format** — asked
    once here, then reused (the owner's exception to assistant-decided preferences).
    Show the rendering descriptions in [visual style](../storyboard/references/visual-style.md).
@@ -112,7 +121,7 @@ After a successful SNS setup or recheck, persist that platform's record with
 episode snapshot. On publishing, recheck live account identity and resolve a
 mismatch with the saved account before uploading.
 
-Read status again. Show the settings path, genre/models, style, ratio, format,
+Read status again and continue episode work only on `ready`. Show the settings path, genre/models, style, ratio, format,
 channel and per-platform connection state. State pending connections honestly.
 `ready` means local authoring is configured, not that every provider or SNS token
 works. Link the channel profile and report any profile/default conflicts without

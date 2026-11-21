@@ -2570,20 +2570,20 @@ window.STORYBOARD_READY = (async function () {
     var v = s.visual || {};
     return s.type === "broll" || !!v.video || !!(v.clip && v.clip.prompt);
   }
-  /* The planned route (scenes-schema §clip prompt) — visual.engine overrides the default,
-     seedance (Veo left on 2026-10-31: no voice reference). The stored prompt is written in this
-     route's grammar, and the timing checks follow it. */
+  function reviewVideoSelection(s) {
+    var production = window.PRODUCTION || {}, visual = s.visual || {};
+    var snapshot = window.REVIEW_VIDEO_SNAPSHOT || (production.modelSettings && production.modelSettings.models && production.modelSettings.models.video);
+    // Older b-roll and speech cards stored the choice directly on visual or visual.clip.
+    var shot = visual.video ? s : Object.assign({}, s, { visual: Object.assign({}, visual, { video: visual.clip || visual }) });
+    try {
+      return window.PRODUCTION_MODE.resolveVideoChoice(production, shot, snapshot).selection;
+    } catch (error) {
+      return null;
+    }
+  }
   function engineOf(s) {
-    var v = s.visual || {};
-    /* A motion background may name its route on the video object itself — the same place the
-       cost panel reads it from. check-scenes.js engineOf resolves it in this order too; a shot that
-       names none takes the episode's saved video engine before the seedance default. */
-    var named = (v.video && v.video.engine) || (v.clip && v.clip.engine) || v.engine;
-    if (["seedance", "host", "astra", "astra-genai"].indexOf(named) !== -1) return named;   // host: the CLI's own video tool; astra: our LTX box
-    var P = window.PRODUCTION || {}, saved = (window.REVIEW_VIDEO_SNAPSHOT || (P.modelSettings && P.modelSettings.models && P.modelSettings.models.video) || {}).engine;
-    if (["seedance", "host", "astra", "astra-genai"].indexOf(saved) !== -1) return saved;
-    if (P.videoProvider === "astra" || P.videoProvider === "host") return P.videoProvider;
-    return "seedance";
+    var selection = reviewVideoSelection(s);
+    return selection ? selection.engine : "seedance";
   }
 
   /* The stored final clip prompt — one home per type (scenes-schema §clip prompt). */
@@ -2625,11 +2625,22 @@ window.STORYBOARD_READY = (async function () {
     fasth3_omni_reference: { name: "FastH3 Omni", slots: 9 }
   };
   function refLane(s, fp) {
-    var tool = s.visual && s.visual.video && s.visual.video.tool;
-    if (tool) return REF_LANES[tool] || { name: tool, slots: 0 };
-    // No call recorded yet: a reference-mode shot goes to MSR (the LTX project default), a
-    // first-frame shot to image-to-video, which takes only the start and end images.
-    return fp.mode === "reference" ? REF_LANES.astra_genai_msr : { name: LANG === "ko" ? "이미지→영상" : "Image to video", slots: 0 };
+    var tool = s.visual && s.visual.video && s.visual.video.tool, selection = reviewVideoSelection(s);
+    var adapters = window.REVIEW_VIDEO_ADAPTERS || [];
+    var operation = selection && selection.operation || (fp.mode === "reference" ? "reference" : "image");
+    var adapter = adapters.find(function (a) {
+      return tool ? a.tool === tool : selection && a.engine === selection.engine && a.operation === operation;
+    });
+    if (adapter && adapter.assetLimits) {
+      var model = selection && selection.model;
+      return { name: "Veo", slots: adapter.assetLimits[model] || 0, assetsOnly: true };
+    }
+    if (tool || adapter) {
+      var name = tool || adapter.tool;
+      return REF_LANES[name] || { name: name, slots: 0 };
+    }
+    if (fp.mode === "reference" && !selection) return REF_LANES.astra_genai_msr;
+    return { name: selection && selection.engine || (LANG === "ko" ? "이미지→영상" : "Image to video"), slots: 0 };
   }
   // The MSR icon belongs to a generated_video cut whose video call goes to MSR
   function msrLane(s, rmode) {
@@ -2666,12 +2677,12 @@ window.STORYBOARD_READY = (async function () {
     var msr = lane === REF_LANES.astra_genai_msr;
     var startFlag = msr ? [ko ? "MSR 5번 칸으로 전송" : "sent to MSR slot 5", ko ? "MSR의 배경 칸에 이 시작 이미지를 보냅니다. 첫 프레임으로 고정하지는 않습니다." : "MSR takes this start image in its background slot; it does not pin the first frame."] : null;
     var left = '<div class="shot-frames' + (WIDE ? " wide" : "") + '">' +
-      frameBox(fp.start, ko ? "시작 이미지" : "Start image", startFlag, T.framePending) +
+      frameBox(lane.assetsOnly ? "" : fp.start, ko ? "시작 이미지" : "Start image", startFlag, lane.assetsOnly ? null : T.framePending) +
       frameBox(fp.mode === "first_last" ? fp.end : "", ko ? "종료 이미지" : "End image",
                fp.mode === "first_last" && fp.endState ? [ko ? "끝 상태" : "End state", fp.endState] : null,
                fp.mode === "first_last" ? T.framePending : msr ? null : (ko ? "종료 이미지 없음" : "No end image")) + "</div>";
     // The frame plan shot_icons wrote (visual.frames.mode · reason)
-    var FRAME_PLAN = { first: ["시작 이미지에서 시작", "Opens on the start image"], first_last: ["시작·종료 이미지 사이", "Runs from the start to the end image"], reference: ["MSR 참조", "MSR references"] };
+    var FRAME_PLAN = { first: ["시작 이미지에서 시작", "Opens on the start image"], first_last: ["시작·종료 이미지 사이", "Runs from the start to the end image"], reference: [lane.name + " 참조 이미지", lane.name + " reference images"] };
     if (s.visual && s.visual.frames && FRAME_PLAN[fp.mode])
       left += '<p class="shot-frame-plan"><b>' + esc(FRAME_PLAN[fp.mode][ko ? 0 : 1]) + "</b>" + (fp.reason ? " · " + esc(fp.reason) : "") + "</p>";
     var n = Math.max(lane.slots, refs.length), slots = "";
@@ -2691,7 +2702,7 @@ window.STORYBOARD_READY = (async function () {
       "</span>" + (lane.slots ? '<span class="shot-refs-count">' + (msr ? Math.min(refs.filter(function (r) { return r.role !== "background"; }).length, 4) + (fp.start ? 1 : 0)
       : Math.min(refs.length, lane.slots)) + " / " + lane.slots + "</span>" : "") + "</div>" +
       (slots ? '<div class="ref-slots">' + slots + "</div>"
-             : '<p class="shot-refs-none">' + (ko ? "이 방식은 시작·종료 이미지만 받습니다. 참조 이미지는 보내지 않습니다." : "This lane takes only the start and end images; no reference images are sent.") + "</p>") + "</div>";
+             : '<p class="shot-refs-none">' + (ko ? "이 모델의 현재 설정에는 참조 이미지 입력이 없습니다." : "This model and operation take no reference images.") + "</p>") + "</div>";
     // Right: story (the shot's one-line summary), lines, prompt — CSS radio tabs
     var story = s.summary ? '<p class="shot-story">' + copy(s.summary) + "</p>" : "";
     // The place and props shot_image composed into the start image (SB_DOC.locations · SB_DOC.props)

@@ -384,7 +384,7 @@ export async function getGenaiVideoStatus(input: z.infer<typeof genaiVideoStatus
     if (url.origin !== new URL(astraGenaiBaseUrl()).origin || url.username || url.password || url.search || url.hash ||
         !/^\/v1\/ltx\/desktop\/assets\/[A-Za-z0-9_-]+\/bytes$/.test(url.pathname))
       throw new Error('Invalid private GenAI video URL; retain receipt');
-    bytes = await requestGenaiMedia(url.pathname);
+    bytes = await requestGenaiMedia(url.pathname, undefined, route);
   } else bytes = await downloadGenaiResult(job.result.video_url);
   // Reject HTML/JSON and probe the actual container before recording completion.
   if (bytes.length < 12 || bytes.toString('ascii', 4, 8) !== 'ftyp') throw new Error('GenAI result is not MP4');
