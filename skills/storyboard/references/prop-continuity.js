@@ -166,7 +166,26 @@
       ...list(object(ledger) ? ledger.events : []).filter(e => object(e) && list(e.shotIds).length).map(e => e.propId)]);
     for (const p of props) if (object(p) && text(p.id) && !shown.has(p.id))
       warn(p.id, 'No shot links this prop yet (visual.props, frames.endProps or an event shotIds); link it to the shots it appears in, or drop it if the story does not need it');
+    for (const line of researchDigest(win)) warn('props', line);
     return findings;
+  }
+  // What each prop's look is based on (prop-research.md): research {sources:[{url,title?,image?}], observed}, or "none"
+  // for a prop with nothing real to look up. A legacy `source` URL counts as a page that was read.
+  function research(win) {
+    const undecided = [], unseen = [];
+    for (const p of data(win).props) {
+      if (!object(p) || !text(p.id) || p.research === 'none') continue;
+      const sources = object(p.research) && Array.isArray(p.research.sources) ? p.research.sources.filter(s => object(s) && text(s.url)) : [];
+      if (!(sources.length && text(p.research.observed)) && !text(p.source)) undecided.push(p.id);
+      else if (!sources.some(s => text(s.image))) unseen.push(p.id);
+    }
+    return { undecided, unseen };
+  }
+  function researchDigest(win) {
+    const { undecided, unseen } = research(win), notes = [];
+    if (undecided.length) notes.push('no look-up of the real thing recorded for ' + undecided.join(', '));
+    if (unseen.length) notes.push('looked up without a saved picture of the real thing: ' + unseen.join(', '));
+    return notes.length ? ['Props: ' + notes.join(' / ') + '. Record research {sources, observed} or "none" on the prop sheet (prop-research.md).'] : [];
   }
   // One prop's slice of the board for a frame: its sheet entry, its ledger history and its usage in this shot only,
   // with the well-formed characters. Checking the slice finds exactly the errors that can make this prop's state wrong.
@@ -216,5 +235,5 @@
       (p.before ? '. Opening state ' + JSON.stringify(p.before) + '; closing state ' + JSON.stringify(p.after) : '. Appearance reference only') +
       (p.position ? '; screen position ' + p.position : '') + '.').join('\n');
   }
-  return { VERSION, ACTIONS, FIELDS, compare, check, stateAt, snapshot, prompt };
+  return { VERSION, ACTIONS, FIELDS, compare, check, stateAt, snapshot, prompt, research, researchDigest };
 });
