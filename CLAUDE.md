@@ -249,6 +249,21 @@ sheet's `appearance` describes structure: `character_panel` leaves smile, grin a
 out of the neutral face panel and reports them. The moment-before rule is about movement; the
 opening face already shows the shot's emotion. See `skills/storyboard/SKILL.md` §3.
 
+## Head against body (user directive, 2026-11-21)
+
+Nothing on a character sheet sized the head against the body: the face panel is an enlarged
+close-up, the front and back panels are headless, and the sheet's `proportions` reached only
+those headless prompts (the Qwen route sent no sheet words at all). The head count is read from
+`physical.proportions` ("7.5 heads tall", "about two heads tall", "3등신") and never guessed from
+age, species or style; a range or two different counts reads as none. `shot_image` states it for each character and bystander wherever the crop
+shows the body — the count, shape words and the head's length in cm, and that a face panel sets
+no head size — and tells a set render's coloured figures apart as position, facing and height
+only. A sheet without a count reads `head_count_missing` in `character_manage`
+(`missing.headCount` and the sheet warnings), `character_panel` and `shot_image`. Each of these reports; none refuses.
+The shape words come from twelve rows by head count, geometry only with no age or style label:
+the rows at 1.5–2, 3, 7.5 and 8 heads follow the pages read, the rest are ours. Whether the
+sentence moves Qwen or any saved model is not measured. Evidence and limits: `docs/research/2026-11-21-head-body-proportion/README.md`.
+
 ## Silence around native lines (user directive, 2026-11-16)
 
 MSR clips kept opening and closing on a silent character: on 299 measured clips half of each

@@ -44,6 +44,7 @@ test('each panel prompt comes from the sheet: the face from appearance, the body
   // The sheet's head words (relativeScale, "head not oversized") drew a head back onto the body panels.
   assert.doesNotMatch(back.prompt, /Character:[^.]*\b(head|ears)\b/);
   assert.match(back.prompt, /about 7\.5 heads tall/);
+  assert.equal(back.warnings.some(w => /^head_count_missing/.test(w)), false);
 });
 
 test('the GenAI cap reports overlength without dropping style or identity', (t) => {
