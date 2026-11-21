@@ -52,6 +52,12 @@ function devNegativeRule(args: { negativePrompt?: string; model: string }, ctx: 
   if (args.model !== 'ltx-2.5-22b-dev') issue('negativePrompt requires ltx-2.5-22b-dev, or image-to-video references with guidanceScale > 1 or nagScale > 0');
   if (args.negativePrompt.length > 2000) issue('The dev backend accepts a negativePrompt of at most 2000 characters');
 }
+// V2 describes these cuts in the backend prompt. The contract has no frame index.
+export const genaiShotsSchema = z.array(z.object({
+  description: z.string().trim().min(1).max(2000),
+  audio: z.string().trim().min(1).max(2000).optional(),
+  transition: z.literal('hard_cut').optional(),
+}).strict()).min(2).max(4).refine(shots => !shots[0].transition, 'Omit transition on the opening shot');
 const textVideoFields = z.object({
   prompt: z.string().min(1).max(2000),
   negativePrompt: z.string().trim().min(1).max(5000).optional(),
@@ -60,11 +66,18 @@ const textVideoFields = z.object({
   resolution: localResolution,
   fps: z.union([z.literal(24), z.literal(25), z.literal(48), z.literal(50)]).default(24),
   generateAudio: z.boolean().default(true),
+  shots: genaiShotsSchema.optional(),
   reserveUsd: z.number().finite().nonnegative(),
   outputPath: z.string().optional(),
   filename: bareFilenameSchema('video').refine(name => name.endsWith('.mp4'), 'Use an .mp4 filename').optional(),
 }).strict();
-function localVideoTiming(args: { duration: number | null; fps: number }, ctx: z.RefinementCtx) {
+function localVideoTiming(args: { duration: number | null; fps: number; prompt: string; shots?: z.infer<typeof genaiShotsSchema>; openingPositions?: OpeningPosition[] }, ctx: z.RefinementCtx) {
+  if (args.shots) {
+    const joined = [openingPrompt(args.prompt,args.openingPositions), ...args.shots.flatMap((shot,i) => [
+      (i ? 'A hard cut moves to ' : 'The opening shot shows ') + shot.description, ...(shot.audio ? ['Audio: ' + shot.audio] : []),
+    ])].join('\n\n');
+    if (joined.length > 2000) ctx.addIssue({code:'custom', path:['shots'], message:'Composed gateway prompt exceeds 2000 characters'});
+  }
   if (args.duration !== null && 8 * Math.ceil((args.duration * args.fps - 1) / 8) + 1 > 361)
     ctx.addIssue({ code: 'custom', path: ['duration'], message: 'Duration and fps exceed the local 361-frame limit' });
 }
@@ -239,6 +252,7 @@ export function buildGenaiVideoBody(args: GenaiVideoRequest): Record<string, unk
   return {
     prompt: openingPrompt(args.prompt, args.openingPositions), model: args.model, duration: args.duration, resolution: args.resolution,
     fps: args.fps, generate_audio: args.generateAudio,
+    ...(args.shots ? { shots: args.shots } : {}),
     // Local frames travel as checked data URIs, like MSR and audio-to-video.
     ...(args.imageUri === undefined && args.imagePath === undefined ? {} : { image_uri: genaiSourceUri(args.imageUri, args.imagePath) }),
     ...(args.lastFramePath !== undefined ? { last_frame_uri: genaiSourceUri(undefined, args.lastFramePath) }

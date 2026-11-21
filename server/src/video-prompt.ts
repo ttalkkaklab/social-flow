@@ -1,3 +1,4 @@
+import type { SceneVideoDirection } from './msr-opening.js';
 import { createRequire } from 'node:module';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 
@@ -100,6 +101,14 @@ const directedMoves = [
   /\btrack(?:s|ing)? backward\b/i,
   /\b(?:track|follow)(?:s|ing)? (?:\w+ )?(?:from )?behind\b/i,
 ];
+
+export function scenePromptText(scene: SceneVideoDirection, camera: string | undefined, timeline: string | undefined,
+  lines: { speaker?: string; delivery?: string; tts?: string }[], bindTurns: boolean) {
+  const dialogue = bindTurns ? [] : lines.filter(l => l.delivery !== 'voiceover')
+    .map(l => l.speaker + ' (' + l.delivery + '): "' + l.tts + '"');
+  return [scene.emotion, scene.action, scene.sound, camera, scene.oneTake && 'One continuous take. No cuts.', timeline, ...dialogue]
+    .filter(Boolean).join('\n');
+}
 
 /** Report clear omissions, holds and reversals in uncompiled prompt text. */
 export function cameraDrift(prompt: string, movement: string): 'missing' | 'contradicted' | null {

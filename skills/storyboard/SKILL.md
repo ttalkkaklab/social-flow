@@ -110,7 +110,7 @@ First complete project setup and follow [production order](../_shared/production
 Prepare characters with text (`character_manage`) and images (`character_panel`) → present the scenario → write the story
 (sequences → scenes → shot stories) → set each shot's characters and each character's lines →
 set each shot's icon attributes → prepare prop and background text/images → make each
-shot's start image, and the end image a first_last shot needs (`shot_image`) → save the opening positions and emotion in each scene's `videoDirection`. When shot-card moves differ, write the cue and landing the continuous take needs in `videoDirection.camera`. Export the bundled review template. Each scene's video waits
+shot's start image, and the end image a first_last shot needs (`shot_image`) → save the opening positions and emotion in each scene's `videoDirection`. A change of camera setup starts a new shot. A pan, tilt, dolly, zoom or an entrance during continuous filming stays on its shot. Record each shot’s frame span, incoming transition, framing, action and timed visual inputs with `story_shot.timeline`. Only an explicit one-take direction sets `videoDirection.oneTake`. A 15-second generation can contain several shots. Export the bundled review template. Each scene's video waits
 for the user's approval (`video_approve`); do not jump from a text plan directly to video.
 Scenario presentation is a progress update, not an approval request. In an interactive
 session, show the premise, characters, causal sequence, ending and selection reason before
@@ -303,7 +303,7 @@ until one is recorded; nothing waits for it.
 A scene's lines do not make its shot list (user directive 2026-11-17). Before any line, write the
 pictures that carry none: where this is and who else is there, a character's work while it is
 happening, the person a line lands on, the walk or wait between two exchanges. A role the cast
-names — a coach, a shop owner — is seen once in the act. One speaker per shot limits who talks,
+names — a coach, a shop owner — is seen once in the act. In conventional dialogue coverage, one speaker per shot limits who talks,
 not who is seen: the listener, a third cast member (`bystanders`) and unnamed people (`extras`)
 can share the frame. Every board write then prints the board as counts — people in frame, shots
 with and without a line, the widest shot of each scene; read them as the board's shape, not as
@@ -337,7 +337,7 @@ once every shot has its icon attributes and the props and backgrounds exist, mak
 picture shot's start image with `shot_image` from its characters' sheet panels, place and
 props — and its end image only for a `first_last` shot. A place whose sheet names a built set
 starts from that set rendered at the shot's size and angle, so block the cast with
-`location_manage bind` first when their places matter. The fifth saves one English video direction per generated scene with `story_scene`. Inspect its opening image, describe each character's posture at a visible landmark and their emotional change, then plan by `sceneNo`. Lines come from the shot cards in order. Add only essential movement. See [scene generation](../generate-cut-videos/SKILL.md).
+`location_manage bind` first when their places matter. The fifth saves one English video direction per generated scene with `story_scene`. Inspect its opening image, describe each character's posture at a visible landmark and their emotional change, then plan by `sceneNo`. The planner reads each shot’s framing, action, lines and image roles in order. Bind the scene-length audio file and its beat cues once in videoDirection.audio. See [scene generation](../generate-cut-videos/SKILL.md).
 Inside an episode a new board starts with `story_sequence`; `storyboard_apply` does not create
 one. The story tools mark it `STORY.authoring:"story-first"`, and every writer then keeps each
 shot's order: story, characters, then lines and icons. `production_workflow` completes
@@ -492,8 +492,7 @@ One shot may carry a complete exchange. Use the ordered `performance` and speech
 references in character-scenarios so that every story event survives the translation.
 Do not add coverage merely to meet a size count or repeat a medium close-up for every line.
 Before committing the shot list, read each complete scene without cuts, then compare the
-proposed boundaries. Merge adjacent shots only when they keep one speaker and the frame carries the
-continuing action. Split when a reveal, reaction, action boundary, viewpoint or necessary
+proposed boundaries. An explicit one-take keeps all turns and continuous action on one card. In conventional dialogue coverage, merge adjacent shots when they keep one speaker and the frame carries the continuing action. Split when a reveal, reaction, action boundary, viewpoint or necessary
 geography changes what the audience follows. A close-up is one possible reason, not a rule.
 Follow [shot boundary decisions](references/shot-boundaries.md) after `shot_dialogue` and
 after later framing/timing changes. Use `storyboard_read.boundaryReview` to inspect every
@@ -501,13 +500,11 @@ actual playback join, including silent action and speaker changes.
 After `shot_dialogue`, read each scene's complete speech and action without the shot breaks.
 Keep a continuing speaker in the same shot while the frame carries the performance; a pause,
 new sentence, changed speech purpose, glance or hand gesture alone does not require a cut.
-Split a two-person exchange at every speaker change, even when both faces are readable.
+For conventional dialogue coverage, plan speaker changes with the following choices.
 For face-to-face generated dialogue, apply [dialogue coverage](references/dialogue-coverage.md):
 use speaker-facing OTS/reverse when the speaking face carries the new information, or
 purposeful off_screen speech over a reaction, detail or spatial view when that carries it.
-Each resulting shot gets its
-own size and angle; a two-shot still has only one speaker. Speaker changes require a
-cut; other cuts need a reveal, reaction, viewpoint change or verified generation limit.
+Give each camera setup its own shot size and angle. In a requested one-take, let the next person speak in the same frame or follow them with a continuous move.
 Revise provisional shots before images: preserve line IDs, order, speaker, delivery and acting;
 use `storyboard_apply.shotsById` and `removeShotIds` to merge, or `story_shot` followed by
 characters/lines to split. Reconcile performance groups, story/event references and continuity

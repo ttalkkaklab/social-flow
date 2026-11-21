@@ -7,18 +7,10 @@ import { fileURLToPath } from 'node:url';
 import { verifyImageFile } from './image-media.js';
 import { framesForSeconds } from './astra-video-client.js';
 import { resolveVideoDuration } from './video-duration.js';
-import { VIDEO_ADAPTERS, VENDOR_REFERENCE_TOOLS, referenceLabel } from './video-registry.js';
+import { FRAME_FIELDS, VIDEO_ADAPTERS, VENDOR_REFERENCE_TOOLS, referenceLabel } from './video-registry.js';
 const load = createRequire(import.meta.url);
 const imageRouting = () => load(fileURLToPath(new URL('../../skills/storyboard/references/render-routing.js', import.meta.url)));
 export const characterPanels = () => load(fileURLToPath(new URL('../../skills/channel/references/character-panels.js', import.meta.url)));
-const FRAME_FIELDS = {
-    seedance_img2video: ['sourceImagePath', 'lastImagePath'], astra_img2video: ['firstFramePath', 'lastFramePath'],
-    astra_audio2video: ['imagePath'], astra_genai_img2video: ['imageUri', 'lastFrameUri'],
-    astra_genai_desktop_img2video: ['imagePath', 'lastFramePath'], astra_genai_desktop_audio2video: ['imagePath'],
-    astra_genai_audio2video: ['imagePath', 'lastFramePath'], mlx_video_generate: ['firstFrameImagePath', 'lastFrameImagePath'], ltx_video_generate: ['firstFrameImagePath', 'lastFrameImagePath'],
-    ltx_api_img2video: ['sourceImagePath', 'lastImagePath'], ltx_api_audio2video: ['sourceImagePath', 'lastImagePath'],
-    minimax_img2video: ['sourceImagePath', 'lastImagePath'], heygen_img2video: ['sourceImagePath', 'lastImagePath'],
-};
 /** The listed ratio closest to an image's, for vendors whose adaptive ratio would follow a face panel. */
 function nearestRatio(width, height) {
     const ratios = ['21:9', '16:9', '4:3', '1:1', '3:4', '9:16'];

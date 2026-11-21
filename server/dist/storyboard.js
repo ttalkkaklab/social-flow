@@ -1,4 +1,4 @@
-import { openingPositionsSchema, sceneVideoDirectionSchema } from './msr-opening.js';
+import { openingPositionsSchema, sceneVideoDirectionSchema, shotTimelineSchema } from './msr-opening.js';
 import { readShotVideoTiming } from './video-routing.js';
 import { episodeHandoff, manageProject } from './project.js';
 import { readImageMetadata, verifyImageFile } from './image-media.js';
@@ -194,6 +194,7 @@ export const shotIdSchema = z.string().regex(/^s\d{4,}$/);
 export const shotSchema = z
     .object({
     id: shotIdSchema.optional(),
+    timeline: shotTimelineSchema.optional(),
     type: tuple(V.TYPES),
     title: z.string().optional(),
     narration: z.array(z.object({ id: z.string().trim().min(1).optional(), delivery: z.enum(['voiceover', 'on_screen', 'off_screen']).optional(), tts: z.string(), sub: z.string().optional(), speaker: z.string().trim().min(1).optional() }).passthrough()).optional(),
@@ -1312,6 +1313,7 @@ export const storyShotSchema = z.object({
         id: shotIdSchema.optional().describe('Revise this shot; without it a new shot is added at the end of its scene'),
         scene: z.number().int().positive().describe('The scene number — written first with story_scene'),
         summary: nonEmpty.describe('The story this shot tells, in one sentence'),
+        timeline: shotTimelineSchema.optional(),
     }).strict()).min(1),
 }).strict();
 const emptyStructure = () => ({ version: STRUCTURE_VERSION, sequences: [], scenes: [] });
@@ -1373,8 +1375,13 @@ export function writeStoryScenes(args) {
     for (const { sequence, ...scene } of args.scenes) {
         if (!sequences.some((q) => q.id === sequence))
             throw new Error(`story_order: sequence ${sequence} does not exist — write it with story_sequence`);
-        const opening = win.SCENES?.find(shot => shot.scene === scene.no)?.visual?.frames;
-        const frame = scene.videoDirection && opening?.start ? resolve(dirname(scenesPath(args.path)), opening.start) : undefined;
+        const members = win.SCENES?.filter(shot => shot.scene === scene.no) ?? [];
+        if (scene.videoDirection?.oneTake && members.length > 1)
+            throw new Error('scene_one_take: this scene already has multiple shot cards');
+        const first = members[0];
+        const opening = first?.timeline?.images?.find(image => image.role === 'start')?.path ??
+            first?.visual?.frames?.start;
+        const frame = scene.videoDirection && opening ? resolve(dirname(scenesPath(args.path)), opening) : undefined;
         const pin = frame ? { videoOpeningSha256: createHash('sha256').update(readFileSync(frame)).digest('hex') } : {};
         scenes = upsertBy(scenes, [{ ...scenes.find((old) => old.no === scene.no), ...scene, ...pin }], 'no');
         sequences = sequences.map((q) => q.id === sequence
@@ -1399,7 +1406,11 @@ export function writeStoryShots(args) {
         return at;
     };
     const origin = new Map();
-    for (const { id, ...story } of args.shots) {
+    for (const { id, ...entry } of args.shots) {
+        const fps = st.scenes.find(scene => scene.no === entry.scene)?.videoDirection?.fps ?? 24;
+        const timeline = entry.timeline;
+        const story = timeline ? { ...entry, duration: (timeline.endFrame - timeline.startFrame) / fps,
+            transition: ({ open: undefined, hard_cut: 'cut', dissolve: 'dissolve', fade: 'dip' })[timeline.transition] } : entry;
         if (!order.includes(story.scene))
             throw new Error(`story_order: scene ${story.scene} is not in a sequence — write it with story_scene`);
         if (id) {
@@ -1412,6 +1423,10 @@ export function writeStoryShots(args) {
             continue;
         }
         shots.splice(endOf(story.scene), 0, { type: 'points', ...story });
+    }
+    for (const scene of st.scenes) {
+        if (scene.videoDirection?.oneTake && shots.filter(shot => shot.scene === scene.no).length > 1)
+            throw new Error('scene_one_take: scene ' + scene.no + ' must keep a single uninterrupted shot');
     }
     // eyeline.matchShot names a position, so it follows its shot through inserts and moves (applyPatch does the same).
     const before = Array.isArray(win.SCENES) ? win.SCENES : [];
@@ -1903,7 +1918,8 @@ export function writeShotDialogue(args) {
         const cast = contract().castOf(shots[index]);
         if (!cast)
             throw new Error(`story_order: set ${id}'s characters with shot_characters before its lines`);
-        if (new Set(lines.map((line) => line.speaker)).size > 1)
+        const oneTake = st.scenes.find(scene => scene.no === shots[index].scene)?.videoDirection?.oneTake;
+        if (!oneTake && new Set(lines.map((line) => line.speaker)).size > 1)
             throw new Error(`shot_speaker_limit: ${id} has more than one speaker; split at each speaker change, then set each shot's size and angle`);
         const old = shots[index].narration ?? [];
         for (const line of old)

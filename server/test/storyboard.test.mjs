@@ -421,6 +421,13 @@ describe('story first, then characters and lines', () => {
     writeStoryScenes(storySceneSchema.parse({path:dir,scenes:[{...scene,videoDirection:direction}]}));
     writeStoryScenes({path:dir,scenes:[scene]});
     assert.deepEqual(readBoard(dir).win.STRUCTURE.scenes[0].videoDirection,direction);
+    writeStoryScenes({path:dir,scenes:[{...scene,videoDirection:{...direction,oneTake:true}}]});
+    writeStoryShots({path:dir,shots:[{scene:1,summary:'Two people share the frame.'}]});
+    assert.throws(() => writeStoryShots({path:dir,shots:[{scene:1,summary:'A reverse.'}]}),/scene_one_take/);
+    castFile(dir,['mina','joon']);
+    writeShotCharacters({path:dir,shots:[{id:'s0001',characters:['mina','joon']}]});
+    writeShotDialogue({path:dir,shots:[{id:'s0001',lines:[{speaker:'mina',tts:'안녕'},{speaker:'joon',tts:'반가워'}]}]});
+    assert.deepEqual(readBoard(dir).win.SCENES[0].narration.map(line=>line.speaker),['mina','joon']);
     assert.equal(storySceneSchema.safeParse({ path: dir, scenes: [{ ...scene, charge: { open: '+', close: '+++' } }] }).success, false);
     assert.deepEqual(TOOLS.find((t) => t.name === 'story_scene').inputSchema.properties.scenes.items.properties.charge.properties.close.enum, ['+', '-', '++', '--']);
   });

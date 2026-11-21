@@ -30,7 +30,7 @@ created: <YYYY-MM-DD>
 
 ## S#1. <location> / <time>
 
-**Scene video** — one prompt and one take for the following shot cards.
+**Scene video** — one prompt and one generation request for the following shots, preserving their cuts.
 - Opening image and positions — <cast ID, subject panels, viewer’s side, depth, posture and landmark for each person, including silent listeners>
 - Emotion — <how each character feels as the exchange unfolds>
 - Essential action, sound or camera — <only when the story requires it>

@@ -23566,24 +23566,24 @@ var require_connection = __commonJS({
         failWebsocketConnection(object4);
         object4.readyState = states.CLOSING;
       } else if (!object4.closeState.has(sentCloseFrameState.SENT) && !object4.closeState.has(sentCloseFrameState.RECEIVED)) {
-        const frame = new WebsocketFrameSend();
+        const frame2 = new WebsocketFrameSend();
         if (reason.length !== 0 && code === null) {
           code = 1e3;
         }
         assert(code === null || Number.isInteger(code));
         if (code === null && reason.length === 0) {
-          frame.frameData = emptyBuffer;
+          frame2.frameData = emptyBuffer;
         } else if (code !== null && reason === null) {
-          frame.frameData = Buffer.allocUnsafe(2);
-          frame.frameData.writeUInt16BE(code, 0);
+          frame2.frameData = Buffer.allocUnsafe(2);
+          frame2.frameData.writeUInt16BE(code, 0);
         } else if (code !== null && reason !== null) {
-          frame.frameData = Buffer.allocUnsafe(2 + Buffer.byteLength(reason));
-          frame.frameData.writeUInt16BE(code, 0);
-          frame.frameData.write(reason, 2, "utf-8");
+          frame2.frameData = Buffer.allocUnsafe(2 + Buffer.byteLength(reason));
+          frame2.frameData.writeUInt16BE(code, 0);
+          frame2.frameData.write(reason, 2, "utf-8");
         } else {
-          frame.frameData = emptyBuffer;
+          frame2.frameData = emptyBuffer;
         }
-        object4.socket.write(frame.createFrame(opcodes.CLOSE));
+        object4.socket.write(frame2.createFrame(opcodes.CLOSE));
         object4.closeState.add(sentCloseFrameState.SENT);
         object4.readyState = states.CLOSING;
       } else {
@@ -24031,8 +24031,8 @@ var require_receiver = __commonJS({
           return false;
         } else if (opcode === opcodes.PING) {
           if (!this.#handler.closeState.has(sentCloseFrameState.RECEIVED)) {
-            const frame = new WebsocketFrameSend(body);
-            this.#handler.socket.write(frame.createFrame(opcodes.PONG));
+            const frame2 = new WebsocketFrameSend(body);
+            this.#handler.socket.write(frame2.createFrame(opcodes.PONG));
             this.#handler.onPing(body);
           }
         } else if (opcode === opcodes.PONG) {
@@ -24537,8 +24537,8 @@ var require_websocket = __commonJS({
         }
         const readyState = ws.#handler.readyState;
         if (isEstablished(readyState) && !isClosing(readyState) && !isClosed(readyState)) {
-          const frame = new WebsocketFrameSend(buffer);
-          ws.#handler.socket.write(frame.createFrame(opcodes.PING));
+          const frame2 = new WebsocketFrameSend(buffer);
+          ws.#handler.socket.write(frame2.createFrame(opcodes.PING));
         }
       }
     };
@@ -24867,8 +24867,8 @@ var require_websocketstream = __commonJS({
           opcode = opcodes.TEXT;
         }
         if (!this.#handler.closeState.has(sentCloseFrameState.SENT) && !this.#handler.closeState.has(sentCloseFrameState.RECEIVED)) {
-          const frame = new WebsocketFrameSend(data);
-          this.#handler.socket.write(frame.createFrame(opcode), () => {
+          const frame2 = new WebsocketFrameSend(data);
+          this.#handler.socket.write(frame2.createFrame(opcode), () => {
             promise.resolve(void 0);
           });
         }
@@ -30011,12 +30011,42 @@ var openingPositionsSchema = external_exports.array(external_exports.object({
   position: external_exports.string().trim().min(1).refine((value) => !nonEnglishOutsideQuotes(value), "Describe the opening position in English").describe("Where the viewer sees this person at the start: side, depth, posture or orientation, and a visible landmark. Describe an off-screen start explicitly.")
 }).strict(), { required_error: "openingPositions required: inspect the opening image and describe each character and its reference images" }).describe("Required with MSR references. Identify every character in the opening scene, including silent listeners. Use [] only for a character-free scene.");
 var sceneText = external_exports.string().trim().min(1).refine((value) => !nonEnglishOutsideQuotes(value), "Write scene direction in English");
+var frame = external_exports.number().int().nonnegative();
+var shotTimelineSchema = external_exports.object({
+  startFrame: frame,
+  endFrame: frame.describe("Exclusive end, in zero-based scene frames."),
+  transition: external_exports.enum(["open", "hard_cut", "dissolve", "fade"]),
+  framing: sceneText,
+  action: sceneText,
+  images: external_exports.array(external_exports.object({
+    path: external_exports.string().trim().min(1),
+    frame,
+    role: external_exports.enum(["start", "keyframe", "end", "face", "outfit"]),
+    character: external_exports.string().trim().min(1).optional(),
+    cue: sceneText.optional(),
+    strength: external_exports.number().min(0).max(1).optional()
+  }).strict()).optional()
+}).strict().superRefine((shot, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: "custom", message });
+  if (shot.startFrame >= shot.endFrame) issue("Shot needs a positive frame interval");
+  for (const image of shot.images ?? []) {
+    if (image.frame < shot.startFrame || image.frame >= shot.endFrame) issue("Image frame outside its shot: " + image.path);
+    if (image.role === "start" && image.frame !== shot.startFrame) issue("Start image must anchor the first frame of its shot");
+    if (["face", "outfit"].includes(image.role) && !image.character) issue("Identify the owner of a face or outfit reference");
+  }
+});
 var sceneVideoDirectionSchema = external_exports.object({
   openingPositions: openingPositionsSchema,
+  fps: external_exports.number().int().positive().optional().describe("Frames per second on the scene timeline; defaults to 24."),
+  oneTake: external_exports.boolean().optional().describe("True only for an explicitly requested uninterrupted shot."),
+  audio: external_exports.object({
+    path: external_exports.string().trim().min(1).describe("Scene-length track from frame zero, including any lead-in silence."),
+    cues: external_exports.array(external_exports.object({ frame, action: sceneText }).strict()).optional()
+  }).strict().optional(),
   emotion: sceneText.describe("The emotional change, naming each participant. For a factual scene give its visible subject and purpose."),
   action: sceneText.optional().describe("Only story-essential movement, tied to the same visible landmark as the opening position."),
   sound: sceneText.optional().describe("Room tone or sound from an essential action."),
-  camera: sceneText.optional().describe("Camera direction for the whole take. Name the action cue, path and landing, or an intentional hold. Use it to reconcile different shot-card moves.")
+  camera: sceneText.optional().describe("Shared camera direction. Each shot keeps its own framing and incoming transition.")
 }).strict();
 function openingPrompt(prompt, positions = []) {
   if (!positions.length) return prompt;
@@ -30052,52 +30082,171 @@ function validateOpening(prompt, positions, references, issue) {
     issue("The prompt including openingPositions exceeds 2000 characters; shorten the action or placement descriptions");
 }
 
-// src/fasth3-omni.ts
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync as readFileSync2, readdirSync, rmSync, statSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join as join2 } from "node:path";
+// src/scene-video.ts
+import { createRequire as createRequire2 } from "node:module";
 
-// src/media-utils.ts
-import * as fs from "node:fs";
-import * as path from "node:path";
-var ALLOWED_EXTENSIONS = {
-  image: [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"],
-  video: [".mp4", ".webm", ".mov", ".avi"],
-  audio: [".wav", ".mp3", ".ogg", ".webm", ".aac", ".flac"],
-  json: [".json"],
-  mesh: [".glb"]
+// src/video-prompt.ts
+import { createRequire } from "node:module";
+var load = createRequire(import.meta.url);
+var object = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
+var text = (value) => typeof value === "string" ? value.trim() : "";
+function planVideoPerformance(shot, options = {}) {
+  const acting = load("../../skills/_shared/scene-acting.js");
+  const timeline = acting.planScenePerformance(shot, options.measureAudio);
+  return { ...timeline, timing: options.mode === "native" && timeline.timing === "needs_audio_duration" ? "model_timed" : timeline.timing };
+}
+var sentence = (value) => {
+  const s = value.trim(), capped2 = s.charAt(0).toUpperCase() + s.slice(1);
+  return !s ? "" : /[.!?]["'”’)]+$/.test(capped2) ? capped2 : capped2.replace(/[.!?]*$/, "") + ".";
 };
-function validateFilePath(filePath, options) {
-  const resolved = path.resolve(filePath);
-  if (filePath.includes("..")) {
-    throw new Error(`Path traversal detected: ${filePath}`);
-  }
-  if (options?.allowedExtensions) {
-    const ext = path.extname(resolved).toLowerCase();
-    if (!options.allowedExtensions.includes(ext)) {
-      throw new Error(
-        `File extension "${ext}" is not allowed. Allowed: ${options.allowedExtensions.join(", ")}`
-      );
-    }
-  }
+function expressionWords(shot, names = {}) {
+  return Object.entries(object(object(shot.visual).expression)).filter(([, cue]) => text(cue)).map(([id, cue]) => `${names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id}: ${text(cue).replace(/[.\s]+$/, "")}`).join("; ");
 }
-function resolveOutputFile(outputDir, filename, kind) {
-  if (/[/\\]/.test(filename) || filename.includes("..")) {
-    throw new Error(`filename must be a bare file name without path separators: "${filename}"`);
+var heldMove = /^(?:static|fixed|locked(?:[- ]off)?)(?: (?:camera|frame|shot))?[.!]?$/i;
+function cameraMoveWords(camera) {
+  const movement = text(camera.movement), speed = text(camera.speed), target = text(camera.target);
+  if (!movement) return "";
+  if (heldMove.test(movement)) return "The camera holds a static frame.";
+  const catalogue = load("../../skills/storyboard/references/film-techniques.js");
+  const move = catalogue.entries.find((entry2) => entry2.fields.movement === movement.toLowerCase())?.prompt;
+  const pace = { slow: "slowly", steady: "steadily", fast: "quickly" }[speed];
+  const travels = load("../../skills/storyboard/references/production-mode.js").travels(camera);
+  const ends = travels ? ", with a short pause on the opening and closing pictures" : "";
+  if (move) {
+    const path6 = /[;.!?]\s|^(?:after|when|once|follow|track|pan|tilt|dolly|orbit|keep|start|end)\b/i.test(target);
+    const words = move.replace("{target}", () => path6 || !target ? "the subject" : target);
+    return [sentence("The camera " + (pace ? pace + " " : "") + words + (speed && !pace ? " at a " + speed + " pace" : "") + ends), path6 && sentence(target)].filter(Boolean).join(" ");
   }
-  validateFilePath(filename, { allowedExtensions: ALLOWED_EXTENSIONS[kind] });
-  const dir = path.resolve(outputDir);
-  fs.mkdirSync(dir, { recursive: true });
-  return path.join(dir, filename);
+  return [sentence("Camera: " + [speed, movement].filter(Boolean).join(" ") + ends), target && sentence("Camera target: " + target)].filter(Boolean).join(" ");
 }
-function bareFilenameSchema(kind) {
-  const allowed = ALLOWED_EXTENSIONS[kind];
-  return external_exports.string().min(1).refine((name) => !/[/\\]/.test(name) && !name.includes(".."), {
-    message: "filename must be a bare file name without path separators (use outputPath for the directory)"
-  }).refine((name) => allowed.includes(path.extname(name).toLowerCase()), {
-    message: `filename extension must be one of: ${allowed.join(", ")}`
-  });
+var directedMoves = [
+  /\bpan(?:s|ning)? left\b/i,
+  /\bpan(?:s|ning)? right\b/i,
+  /\btilt(?:s|ing)? up(?:wards?)?\b/i,
+  /\btilt(?:s|ing)? down(?:wards?)?\b/i,
+  /\b(?:dolly|dollies|push(?:es|ing)?) in\b/i,
+  /\b(?:dolly|dollies) out\b|\bpull(?:s|ing)? (?:back|out)\b/i,
+  /\bzoom(?:s|ing)? in\b/i,
+  /\bzoom(?:s|ing)? out\b/i,
+  /\b(?:truck|track)(?:s|ing)? (?:parallel|sideways|alongside|laterally)\b/i,
+  /\btrack(?:s|ing)? backward\b/i,
+  /\b(?:track|follow)(?:s|ing)? (?:\w+ )?(?:from )?behind\b/i
+];
+function cameraDrift(prompt, movement) {
+  if (!movement.trim()) return null;
+  const prose = prompt.replace(/"[^"]*"|“[^”]*”|「[^」]*」/g, " ");
+  const clauses = prose.split(/[.!?;\n]+/).map((s) => s.trim());
+  const said = clauses.map((s) => {
+    const imperative = /^(?:(?:do not|never|slowly|steadily|quickly) )*(?:pan|dolly|push in|pull back|crane|tilt|zoom|truck|orbit|track|follow|whip pan)\b/i;
+    const camera = /\b(?:(?:static|locked(?:[- ]off)?|fixed) )?camera\b|\bshot (?=tracking|panning|tilting|following|moving|zooming)/i.exec(s);
+    const predicate = imperative.test(s) ? s : camera ? s.slice(camera.index) : "";
+    return predicate.split(/\s+(?:while|as|so that)\s+/i)[0];
+  }).filter(Boolean);
+  const holds = (s) => !/\bzoom/i.test(s) && /^(?:static|locked(?:[- ]off)?|fixed) camera\b|\bcamera[: ]+(?:(?:is|stays?|remains?) |holds? (?:a |the )?)?(?:steady|still|static|fixed|locked|put)\b|\bcamera (?:does not|doesn't|never) moves?\b/i.test(s);
+  const moves = /\b(push(?:es|ing)?|pull(?:s|ing)?|dolly|dollies|truck(?:s|ing)?|track(?:s|ing)?|follow(?:s|ing)?|pan(?:s|ning)?|tilt(?:s|ing)?|zoom(?:s|ing)?|crane(?:s)?|pedestal|orbit(?:s|ing)?|arc(?:s)?|circles?|approach(?:es)?|glides?|rises?|lowers?|handheld|body-mounted|whip|moves?|travels?|sweeps?|drifts?|recoils?|rides?|chases?|flies|swings?)\b/i;
+  const negated = /^(?:camera[: ]+)?(?:never|do(?:es)? not|doesn't|don't|must not)\b/i;
+  const moving = said.filter((s) => moves.test(s) && !holds(s) && !negated.test(s));
+  if (heldMove.test(movement.trim())) return moving.length ? "contradicted" : null;
+  const expected = directedMoves.find((re) => re.test(movement));
+  if (expected && !moving.some((s) => expected.test(s)) && (moving.some((s) => directedMoves.some((re) => re.test(s))) || said.some((s) => negated.test(s) && expected.test(s)))) return "contradicted";
+  const fixedFrame = /\b(?:preserve|maintain|lock) the (?:opening |original |same )?(?:image )?(?:composition|framing|crop)\b/i;
+  if (clauses.some((s) => fixedFrame.test(s) && !/\b(?:at first|initially|until|then|first frame only)\b/i.test(s))) return "contradicted";
+  if (moving.length) return null;
+  return said.some(holds) ? "contradicted" : "missing";
+}
+function compileVideoPrompt(shot, source, names = {}, options = {}) {
+  const plan = object(shot.shot), visual = object(shot.visual), frames = object(visual.frames), camera = object(visual.camera);
+  const msr = frames.mode === "reference";
+  const words = load("../../skills/storyboard/references/assemble-bg-prompt.js");
+  const views = load("../../skills/storyboard/references/shot-view.js");
+  const viewWords = camera.view === void 0 ? "" : views.instructions(camera.view);
+  const sizes = viewWords ? words.SIZE_WORDS_OBJECT : words.SIZE_WORDS;
+  const catalogue = load("../../skills/storyboard/references/film-techniques.js");
+  const contract2 = load("../../skills/storyboard/references/structure-contract.js");
+  const picked = (Array.isArray(plan.techniques) ? plan.techniques : []).map(object).map((t) => ({
+    id: text(t.id),
+    from: text(t.from),
+    to: text(t.to),
+    on: text(t.on),
+    entry: catalogue.byId[text(t.id)]
+  }));
+  const movement = text(camera.movement), settle = text(camera.end), moveWords = cameraMoveWords(camera);
+  const rack = picked.find((t) => t.entry?.fields.focus);
+  const focusWords = !rack ? "" : sentence(rack.from && rack.to ? `Rack focus from ${rack.from} to ${rack.to}` : `${rack.entry.label.en} from the near subject to the far subject`);
+  const sizeWords = sentence(sizes[text(plan.size)] || ""), angleWords = sentence(words.ANGLE_WORDS[text(plan.angle)] || "");
+  const framing = sentence([sizes[text(plan.size)], words.ANGLE_WORDS[text(plan.angle)]].filter(Boolean).join(", "));
+  const depthWords = plan.depth ? sentence(contract2.depthText(plan.depth)) : "";
+  const other = picked.filter((t) => t.entry && ["camera", "framing"].includes(t.entry.category) && !t.entry.fields.movement && !t.entry.fields.focus && !t.entry.fields.size && !t.entry.fields.angle && !(viewWords && t.entry.fields.viewpoint));
+  const lines = (Array.isArray(shot.narration) ? shot.narration : []).map(object);
+  const mode = options.mode ?? (lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen") ? "native" : "voiceover");
+  const design = object(plan.videoDesign);
+  const motion = object(design.motion);
+  const states = [...new Set((Array.isArray(motion.beats) ? motion.beats : []).map((beat) => text(object(beat).state)).filter(Boolean))];
+  const performance2 = planVideoPerformance(shot, { ...options, mode });
+  const acting = load("../../skills/_shared/scene-acting.js");
+  const beats = acting.performanceBeats(performance2.performance, mode, !msr && !options.bindDialogueSeparately);
+  const worn = expressionWords(shot, names);
+  const called = (id) => names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id;
+  const seen = (Array.isArray(visual.bystanders) ? visual.bystanders : []).map(text).filter(Boolean), extras = text(visual.extras);
+  const plain = (value) => text(value).replace(/[.\s]+$/, "").toLowerCase();
+  const actionInBeat = performance2.performance.some((event) => event.kind === "action" && plain(event.videoDirection || event.text) === plain(source.action));
+  const parts = (step2) => [
+    msr ? framing : "Start from the given first frame.",
+    msr ? depthWords : "",
+    moveWords,
+    settle ? sentence(`Closing frame: ${settle}`) : "",
+    focusWords,
+    // A beat accent (speed ramp, impact shake) names the moment it fires on.
+    ...other.map((t) => sentence(t.entry.fields.accent && t.entry.prompt ? t.entry.prompt.replace("{cue}", t.on || t.entry.fields.cue) : t.entry.instruction)),
+    viewWords || (text(camera.framing) ? sentence(`Opening composition: ${text(camera.framing)}`) : ""),
+    !viewWords && camera.rear && !other.some((t) => t.entry.fields.viewpoint === "rear") ? "View the subject from behind." : "",
+    !viewWords && camera.pov && !other.some((t) => t.entry.fields.viewpoint === "pov") ? sentence(`Point of view: ${text(camera.pov) || "the named character"}`) : "",
+    actionInBeat ? "" : sentence(source.action),
+    seen.length ? sentence(`The opening picture also shows ${seen.map(called).join(" and ")}, who ${seen.length > 1 ? "stay" : "stays"} in the frame and never speaks`) : "",
+    extras ? sentence(`Unnamed people in the frame: ${extras}`) : "",
+    ...step2 >= 1 ? [] : ["before", "after", "continuity"].map((key) => text(design[key]) ? sentence(`${key}: ${text(design[key])}`) : ""),
+    ...step2 >= 1 ? [] : states.filter((state) => ![source.action, design.before, design.after, design.continuity].includes(state)).map((state) => sentence(`Visible state: ${state}`)),
+    !lines.length && beats.length ? "Perform the planned action without invented speech or voiceover." : "",
+    ...step2 >= 2 ? acting.performanceBeats(performance2.performance, mode, !msr && !options.bindDialogueSeparately, { brief: true }) : beats,
+    // The model's default face is pleasant; the authored state has to be named and held (LTX guide: physical cues, state after the action).
+    worn && step2 < 3 ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : "",
+    frames.mode === "first_last" ? sentence(`End on the given last frame${source.end ? ": " + source.end : ""}`) : source.end ? sentence(`End on ${source.end}`) : "",
+    sentence(`Audio: ${source.sound ? source.sound + (/\b(music|soundtrack|score|bgm|melody|orchestral|song)\b/i.test(source.sound) ? "" : ", no music") : "no music"}`),
+    acting.VIDEO_TEXT_POLICY
+  ].filter(Boolean);
+  const limit = options.maxCharacters, dropped = ["design notes and visible states", "acting fields of the beats", "expressions"];
+  let step = 0, prompt = parts(0).join(" ");
+  while (limit && prompt.length > limit && step < dropped.length) prompt = parts(++step).join(" ");
+  const fitWarnings = !limit || !step ? [] : [prompt.length > limit ? `prompt_over_limit: ${prompt.length} characters after leaving out the ${dropped.slice(0, step).join(", ")}; the adapter takes ${limit}. Shorten the action, end or sound in shot_prompt` : `prompt_fitted: left out the ${dropped.slice(0, step).join(", ")} to fit the adapter's ${limit} characters; the camera, action and lines are whole`];
+  const foreign = nonEnglishOutsideQuotes(prompt);
+  if (foreign && options.validateLanguage !== false) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks; write action and direction in English`);
+  const bindings = [
+    { attribute: "render", value: object(plan.render).mode, via: "adapter" },
+    { attribute: "size", value: plan.size, via: !sizeWords ? "unmapped" : msr ? "prompt" : "image", instruction: sizeWords },
+    { attribute: "angle", value: plan.angle, via: !angleWords ? "unmapped" : msr ? "prompt" : "image", instruction: angleWords },
+    { attribute: "view", value: camera.view, via: "prompt", instruction: viewWords },
+    { attribute: "move", value: camera, via: movement ? "prompt" : "unmapped", instruction: moveWords },
+    { attribute: "focus", value: rack ? { id: rack.id, from: rack.from, to: rack.to } : void 0, via: "prompt", instruction: focusWords },
+    { attribute: "depth", value: plan.depth, via: msr ? "prompt" : "image", instruction: depthWords },
+    { attribute: "framePlan", value: frames.mode, via: "adapter" },
+    ...picked.map((t) => ({
+      attribute: "technique",
+      value: t.id,
+      via: !t.entry ? "unmapped" : t.entry.category === "character" ? "image" : t.entry.category === "timing" ? "guidance" : t.entry.category === "framing" || t.entry.fields.angle ? msr ? "prompt" : "image" : "prompt",
+      instruction: t.entry?.instruction
+    })),
+    { attribute: "transition", value: shot.transition, via: "assembly" },
+    ...beats.length ? [{ attribute: "performance", value: performance2, via: "prompt", instruction: beats.join("\n") }] : []
+  ];
+  return { prompt, performance: performance2, directionBindings: bindings.filter((b) => b.value !== void 0), warnings: [
+    ...performance2.warnings,
+    ...fitWarnings,
+    ...cameraDrift([source.action, source.end].filter(Boolean).join("\n"), movement) === "contradicted" ? ["camera_move_contradicted: shot_prompt action or end conflicts with the camera direction. Reconcile the action cue and landing with visual.camera."] : [],
+    // An unchosen move leaves the camera to the model; on mochi_bo 29 of 33 shots of one episode went out so.
+    ...movement ? [] : ["camera_move_unset: no camera move is chosen, so the video model decides the camera \u2014 set shot_icons move (camera.static for a deliberate hold)"],
+    ...bindings.filter((b) => b.value !== void 0 && b.via === "unmapped" && b.attribute !== "move").map((b) => `No prompt mapping for ${b.attribute}: ${JSON.stringify(b.value)}`),
+    ...rack && !(rack.from && rack.to) ? ["the rack focus names no subjects \u2014 give focus.from and focus.to in shot_icons"] : []
+  ] };
 }
 
 // src/image-media.ts
@@ -30152,160 +30301,20 @@ function readImageMetadata(file) {
   return imageMetadata(readFileSync(file));
 }
 
-// src/fasth3-omni.ts
-var FASTH3_OMNI_MODEL = "ddalcu/FastH3-Omni-MLX-Serve-8bit";
-var FASTH3_FRAME_LIMITS = { min: 124, max: 362, step: 17, frameRate: 24, frameOffset: 5 };
-var FASTH3_MAX_RGB_BYTES = 256 * 1024 * 1024;
-var MAX_REQUEST_BYTES = 60 * 1024 * 1024;
-var dimension = external_exports.number().int().min(256).max(1536).refine((n) => n % 32 === 0, "Dimensions must be multiples of 32");
-var paths = (max) => external_exports.array(external_exports.string().min(1)).max(max).default([]);
-var fasth3OmniSchema = external_exports.object({
-  prompt: external_exports.string().min(1).max(32e3).describe("Scene and sound, e.g. The person in <Picture 1> waves; birds chirp. References are numbered per type."),
-  model: external_exports.literal(FASTH3_OMNI_MODEL).default(FASTH3_OMNI_MODEL).describe("Installed FastH3 Omni MLX-Serve pack."),
-  width: dimension.default(768).describe("Output width in pixels, e.g. 768."),
-  height: dimension.default(448).describe("Output height in pixels, e.g. 448."),
-  numFrames: external_exports.number().int().min(124).max(362).default(124).describe("Exact 17k+5 frame count at 24 fps, e.g. 124, 243, 362; RGB output must fit 256 MiB."),
-  steps: external_exports.literal(8).default(8).describe("The trained eight-step schedule."),
-  seed: external_exports.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional().describe("Reproducible seed, e.g. 2026."),
-  referenceImagePaths: paths(9).describe('Ordered PNG/JPEG paths, e.g. ["/tmp/character.png"]; <Picture 1> etc.'),
-  referenceVideoPaths: paths(3).describe('Ordered local video paths, e.g. ["/tmp/motion.mp4"]; 2\u201315 seconds each, 15 seconds total. Video sound is included.'),
-  referenceAudioPaths: paths(3).describe('Ordered voice/music paths, e.g. ["/tmp/voice.wav"]; 2\u201315 seconds each. Voice imitation does not preserve exact speech timing.'),
-  trimReferenceVideos: external_exports.boolean().default(false).describe("Allow trimming reference video tails to output length and the 17k+5 ladder; false refuses any trim."),
-  referenceSize: external_exports.enum(["match", "max"]).default("match").describe("match caps references to output area; max preserves more detail at higher memory/time cost."),
-  outputPath: external_exports.string().optional().describe("Output directory, e.g. /tmp/video-test."),
-  filename: bareFilenameSchema("video").optional().describe("MP4 filename, e.g. fasth3.mp4.")
-}).strict().superRefine((v, ctx) => {
-  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-  if (!(v.referenceImagePaths.length + v.referenceVideoPaths.length)) issue("FastH3 Omni needs at least one image or video reference");
-  if (v.referenceImagePaths.length + v.referenceVideoPaths.length + v.referenceAudioPaths.length > 12) issue("At most twelve reference files are supported");
-  if ((v.numFrames - 5) % 17) issue("FastH3 frame counts must be 17k+5");
-  if (v.width * v.height * v.numFrames * 3 > FASTH3_MAX_RGB_BYTES) issue("Decoded RGB exceeds the adapter 256 MiB compatibility limit; reduce dimensions or frames");
-});
-function probe(file) {
-  const data = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration:stream=codec_type", "-of", "json", file], { encoding: "utf8", timeout: 15e3 }));
-  const duration2 = Number(data.format?.duration);
-  if (!Number.isFinite(duration2) || duration2 < 2 || duration2 > 15) throw new Error("Reference media must be 2\u201315 seconds: " + file);
-  return { duration: duration2, hasAudio: data.streams?.some((s) => s.codec_type === "audio") === true };
-}
-function ffmpeg(args) {
-  execFileSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-nostdin", "-y", ...args], { timeout: 12e4, maxBuffer: 1024 * 1024 });
-}
-function buildFasth3Body(raw) {
-  const r = fasth3OmniSchema.parse(raw);
-  const temp = mkdtempSync(join2(tmpdir(), "fasth3-refs-"));
-  let encodedBytes = 0;
-  const encode = (file) => {
-    encodedBytes += 4 * Math.ceil(statSync(file).size / 3);
-    if (encodedBytes > MAX_REQUEST_BYTES - 64e3) throw new Error("Reference payload exceeds the 60 MiB upload limit");
-    return readFileSync2(file).toString("base64");
-  };
-  const audio = (file, name, seconds2) => {
-    const target = join2(temp, name + ".wav");
-    ffmpeg(["-i", file, "-vn", "-ar", "32000", "-ac", "2", "-c:a", "pcm_s16le", ...seconds2 === void 0 ? [] : ["-t", String(seconds2)], target]);
-    return encode(target);
-  };
-  try {
-    const images = r.referenceImagePaths.map((file) => {
-      if (statSync(file).size * 4 / 3 > MAX_REQUEST_BYTES - 64e3) throw new Error("Reference image exceeds upload limit");
-      const meta = readImageMetadata(file);
-      if (!["image/png", "image/jpeg"].includes(meta.mimeType)) throw new Error("FastH3 reference images must be PNG or JPEG");
-      return encode(file);
-    });
-    let videoSeconds2 = 0;
-    const videos = r.referenceVideoPaths.map((file, i) => {
-      const meta = probe(file);
-      videoSeconds2 += meta.duration;
-      if (videoSeconds2 > 15) throw new Error("Reference videos exceed fifteen seconds total");
-      const prefix = `video-${i}-`;
-      ffmpeg(["-i", file, "-an", "-vf", "fps=24,scale=768:768:force_original_aspect_ratio=decrease", "-frames:v", "362", join2(temp, prefix + "%04d.jpg")]);
-      const files = readdirSync(temp).filter((f) => f.startsWith(prefix)).sort();
-      const count = Math.min(files.length, r.numFrames);
-      const accepted = count - (count - 5) % 17;
-      if (accepted < 5) throw new Error("Reference video has too few decoded frames");
-      if (accepted < files.length && !r.trimReferenceVideos) throw new Error("Reference video must fit the requested output frame count and 17k+5 ladder; trim it explicitly before submitting");
-      return { frames: files.slice(0, accepted).map((f) => encode(join2(temp, f))), ...meta.hasAudio ? { audio: audio(file, `video-audio-${i}`, accepted / 24) } : {} };
-    });
-    const audios = r.referenceAudioPaths.map((file, i) => {
-      probe(file);
-      return audio(file, `audio-${i}`);
-    });
-    return {
-      stream: true,
-      model: r.model,
-      prompt: r.prompt,
-      width: r.width,
-      height: r.height,
-      num_frames: r.numFrames,
-      steps: r.steps,
-      ...r.seed === void 0 ? {} : { seed: r.seed },
-      ref_image_size: r.referenceSize,
-      ref_images: images,
-      ref_videos: videos,
-      ref_audios: audios
-    };
-  } finally {
-    rmSync(temp, { recursive: true, force: true });
-  }
-}
-
-// src/mlx-serve-client.ts
-import { existsSync as existsSync2, mkdtempSync as mkdtempSync2, readFileSync as readFileSync4, rmSync as rmSync2, writeFileSync as writeFileSync2 } from "node:fs";
-
-// src/image-models.ts
-var GPT_IMAGE_MODELS = [
-  "gpt-image-2",
-  "gpt-image-1.5",
-  "gpt-image-1",
-  "gpt-image-1-mini",
-  "gpt-image-2-2026-04-21",
-  "gpt-image-1.5-2025-12-16"
-];
-function gptImageFamily(model2) {
-  if (model2 === "gpt-image-2-2026-04-21") return "gpt-image-2";
-  if (model2 === "gpt-image-1.5-2025-12-16") return "gpt-image-1.5";
-  return model2;
-}
-var GPT_IMAGE_CONTRACTS = {
-  "gpt-image-2": { shutdown: null, flexibleSize: true, transparency: "preview", fidelity: [], rates: { text: 5, image: 8, output: 30 } },
-  "gpt-image-1.5": { shutdown: "2026-12-01", flexibleSize: false, transparency: "supported", fidelity: ["low", "high"], rates: { text: 5, image: 8, output: 32 } },
-  "gpt-image-1": { shutdown: "2026-10-23", flexibleSize: false, transparency: "supported", fidelity: ["low", "high"], rates: { text: 5, image: 10, output: 40 } },
-  "gpt-image-1-mini": { shutdown: "2026-12-01", flexibleSize: false, transparency: "supported", fidelity: ["low"], rates: { text: 2, image: 2.5, output: 8 } }
-};
-function gptImageContract(model2) {
-  return GPT_IMAGE_CONTRACTS[gptImageFamily(model2)];
-}
-function mlxImageFamily(model2 = "") {
-  if (/qwen.*image.*2[.-]1/i.test(model2)) return "qwen-2.1";
-  if (/mage[-_]?flow/i.test(model2)) return /edit/i.test(model2) ? "mage-edit" : "mage";
-  if (/krea[-_]?2/i.test(model2)) return "krea";
-  if (/flux[.-]?2[-_]?klein/i.test(model2)) return "flux-klein";
-  return "unknown";
-}
-function validateMlxImageOperation(model2, operation, args) {
-  const family = mlxImageFamily(model2);
-  if (operation === "edit" && !["flux-klein", "mage-edit", "qwen-2.1"].includes(family))
-    throw new Error("image_operation_unsupported: select an identified editing pack");
-  if (operation === "variation" && !["flux-klein", "krea"].includes(family))
-    throw new Error("image_operation_unsupported: this pack has no verified strength-based variation");
-  if (args.transparent === true && family !== "qwen-2.1")
-    throw new Error("image_transparency_unsupported: transparent requires Qwen-Image-2.1");
-  const refs = Array.isArray(args.refImagePaths) ? args.refImagePaths.length : 0;
-  if (refs > (family === "qwen-2.1" ? 9 : 3)) throw new Error("image_reference_limit");
-  if (family === "qwen-2.1" && /turbo/i.test(model2 || "") && args.steps !== void 0 && args.steps !== 8)
-    throw new Error("image_schedule_fixed: Qwen Turbo uses its saved 8-step schedule");
-}
+// src/astra-genai-client.ts
+var import_undici = __toESM(require_undici(), 1);
 
 // src/config.ts
-import { accessSync, constants, existsSync, readFileSync as readFileSync3, readdirSync as readdirSync2, statSync as statSync2 } from "node:fs";
+import { accessSync, constants, existsSync, readFileSync as readFileSync2, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { delimiter, join as join3 } from "node:path";
-function loadEnvFile(file = join3(process.env.SNS_TOKEN_DIR || join3(homedir(), ".config", "social-flow"), ".env")) {
+import { delimiter, join } from "node:path";
+function loadEnvFile(file = join(process.env.SNS_TOKEN_DIR || join(homedir(), ".config", "social-flow"), ".env")) {
   for (const [key, value] of Object.entries(process.env)) {
     if (value && /^\$\{[A-Za-z_][A-Za-z0-9_]*(:-[^}]*)?\}$/.test(value)) delete process.env[key];
   }
   let text3;
   try {
-    text3 = readFileSync3(file, "utf8");
+    text3 = readFileSync2(file, "utf8");
   } catch {
     return [];
   }
@@ -30383,15 +30392,15 @@ var config = {
   youtubeApiKey: process.env.YOUTUBE_API_KEY || "",
   requestTimeoutMs: 15e3
 };
-var snsTokenDir = process.env.SNS_TOKEN_DIR || join3(homedir(), ".config", "social-flow");
+var snsTokenDir = process.env.SNS_TOKEN_DIR || join(homedir(), ".config", "social-flow");
 var defaultSnsCredentialFiles = {
-  THREADS: process.env.THREADS_TOKEN_FILE || join3(snsTokenDir, "threads_token"),
-  INSTAGRAM: process.env.INSTAGRAM_TOKEN_FILE || join3(snsTokenDir, "instagram_token"),
-  FACEBOOK: process.env.FACEBOOK_PAGE_TOKEN_FILE || join3(snsTokenDir, "facebook_page_token"),
-  YOUTUBE: process.env.YOUTUBE_OAUTH_FILE || join3(snsTokenDir, "youtube-oauth-client.json"),
-  TIKTOK: process.env.TIKTOK_OAUTH_FILE || join3(snsTokenDir, "tiktok-oauth.json")
+  THREADS: process.env.THREADS_TOKEN_FILE || join(snsTokenDir, "threads_token"),
+  INSTAGRAM: process.env.INSTAGRAM_TOKEN_FILE || join(snsTokenDir, "instagram_token"),
+  FACEBOOK: process.env.FACEBOOK_PAGE_TOKEN_FILE || join(snsTokenDir, "facebook_page_token"),
+  YOUTUBE: process.env.YOUTUBE_OAUTH_FILE || join(snsTokenDir, "youtube-oauth-client.json"),
+  TIKTOK: process.env.TIKTOK_OAUTH_FILE || join(snsTokenDir, "tiktok-oauth.json")
 };
-var disabledToolsFile = join3(snsTokenDir, "disabled-tools.json");
+var disabledToolsFile = join(snsTokenDir, "disabled-tools.json");
 function astraVideoBaseUrl() {
   return (process.env.ASTRA_VIDEO_URL || "https://video.astravision.co.kr").replace(/\/+$/, "");
 }
@@ -30402,6 +30411,64 @@ function requireAstraVideoKey() {
     );
   }
   return config.astraVideoApiKey;
+}
+
+// src/astra-genai-client.ts
+var genaiImageUriSchema = external_exports.string().min(1).refine((value) => {
+  if (/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/]+=*$/.test(value)) return true;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}, "Use a public HTTPS PNG/JPEG URL or PNG/JPEG data URI");
+
+// src/mlx-serve-client.ts
+import { existsSync as existsSync2, mkdtempSync, readFileSync as readFileSync3, rmSync, writeFileSync as writeFileSync2 } from "node:fs";
+
+// src/image-models.ts
+var GPT_IMAGE_MODELS = [
+  "gpt-image-2",
+  "gpt-image-1.5",
+  "gpt-image-1",
+  "gpt-image-1-mini",
+  "gpt-image-2-2026-04-21",
+  "gpt-image-1.5-2025-12-16"
+];
+function gptImageFamily(model2) {
+  if (model2 === "gpt-image-2-2026-04-21") return "gpt-image-2";
+  if (model2 === "gpt-image-1.5-2025-12-16") return "gpt-image-1.5";
+  return model2;
+}
+var GPT_IMAGE_CONTRACTS = {
+  "gpt-image-2": { shutdown: null, flexibleSize: true, transparency: "preview", fidelity: [], rates: { text: 5, image: 8, output: 30 } },
+  "gpt-image-1.5": { shutdown: "2026-12-01", flexibleSize: false, transparency: "supported", fidelity: ["low", "high"], rates: { text: 5, image: 8, output: 32 } },
+  "gpt-image-1": { shutdown: "2026-10-23", flexibleSize: false, transparency: "supported", fidelity: ["low", "high"], rates: { text: 5, image: 10, output: 40 } },
+  "gpt-image-1-mini": { shutdown: "2026-12-01", flexibleSize: false, transparency: "supported", fidelity: ["low"], rates: { text: 2, image: 2.5, output: 8 } }
+};
+function gptImageContract(model2) {
+  return GPT_IMAGE_CONTRACTS[gptImageFamily(model2)];
+}
+function mlxImageFamily(model2 = "") {
+  if (/qwen.*image.*2[.-]1/i.test(model2)) return "qwen-2.1";
+  if (/mage[-_]?flow/i.test(model2)) return /edit/i.test(model2) ? "mage-edit" : "mage";
+  if (/krea[-_]?2/i.test(model2)) return "krea";
+  if (/flux[.-]?2[-_]?klein/i.test(model2)) return "flux-klein";
+  return "unknown";
+}
+function validateMlxImageOperation(model2, operation, args) {
+  const family = mlxImageFamily(model2);
+  if (operation === "edit" && !["flux-klein", "mage-edit", "qwen-2.1"].includes(family))
+    throw new Error("image_operation_unsupported: select an identified editing pack");
+  if (operation === "variation" && !["flux-klein", "krea"].includes(family))
+    throw new Error("image_operation_unsupported: this pack has no verified strength-based variation");
+  if (args.transparent === true && family !== "qwen-2.1")
+    throw new Error("image_transparency_unsupported: transparent requires Qwen-Image-2.1");
+  const refs = Array.isArray(args.refImagePaths) ? args.refImagePaths.length : 0;
+  if (refs > (family === "qwen-2.1" ? 9 : 3)) throw new Error("image_reference_limit");
+  if (family === "qwen-2.1" && /turbo/i.test(model2 || "") && args.steps !== void 0 && args.steps !== 8)
+    throw new Error("image_schedule_fixed: Qwen Turbo uses its saved 8-step schedule");
 }
 
 // src/http.ts
@@ -30426,6 +30493,48 @@ async function requestRaw(method, url, headers, body, timeoutMs) {
     const message = error instanceof Error ? error.message : String(error);
     return { ok: false, status: 502, body: `Upstream unreachable (${url}): ${message}` };
   }
+}
+
+// src/media-utils.ts
+import * as fs from "node:fs";
+import * as path from "node:path";
+var ALLOWED_EXTENSIONS = {
+  image: [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"],
+  video: [".mp4", ".webm", ".mov", ".avi"],
+  audio: [".wav", ".mp3", ".ogg", ".webm", ".aac", ".flac"],
+  json: [".json"],
+  mesh: [".glb"]
+};
+function validateFilePath(filePath, options) {
+  const resolved = path.resolve(filePath);
+  if (filePath.includes("..")) {
+    throw new Error(`Path traversal detected: ${filePath}`);
+  }
+  if (options?.allowedExtensions) {
+    const ext = path.extname(resolved).toLowerCase();
+    if (!options.allowedExtensions.includes(ext)) {
+      throw new Error(
+        `File extension "${ext}" is not allowed. Allowed: ${options.allowedExtensions.join(", ")}`
+      );
+    }
+  }
+}
+function resolveOutputFile(outputDir, filename, kind) {
+  if (/[/\\]/.test(filename) || filename.includes("..")) {
+    throw new Error(`filename must be a bare file name without path separators: "${filename}"`);
+  }
+  validateFilePath(filename, { allowedExtensions: ALLOWED_EXTENSIONS[kind] });
+  const dir = path.resolve(outputDir);
+  fs.mkdirSync(dir, { recursive: true });
+  return path.join(dir, filename);
+}
+function bareFilenameSchema(kind) {
+  const allowed = ALLOWED_EXTENSIONS[kind];
+  return external_exports.string().min(1).refine((name) => !/[/\\]/.test(name) && !name.includes(".."), {
+    message: "filename must be a bare file name without path separators (use outputPath for the directory)"
+  }).refine((name) => allowed.includes(path.extname(name).toLowerCase()), {
+    message: `filename extension must be one of: ${allowed.join(", ")}`
+  });
 }
 
 // src/mlx-serve-client.ts
@@ -30584,7 +30693,7 @@ function videoMemoryMessage(width, height, frames) {
 function fileToBase64(filePath) {
   if (!existsSync2(filePath)) return { ok: false, error: `File not found: ${filePath}` };
   try {
-    return { ok: true, b64: readFileSync4(filePath).toString("base64") };
+    return { ok: true, b64: readFileSync3(filePath).toString("base64") };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
@@ -30614,6 +30723,106 @@ function buildLtxVideoBody(request) {
   return body;
 }
 
+// src/fasth3-omni.ts
+import { execFileSync } from "node:child_process";
+import { mkdtempSync as mkdtempSync2, readFileSync as readFileSync4, readdirSync as readdirSync2, rmSync as rmSync2, statSync as statSync2 } from "node:fs";
+import { tmpdir } from "node:os";
+import { join as join3 } from "node:path";
+var FASTH3_OMNI_MODEL = "ddalcu/FastH3-Omni-MLX-Serve-8bit";
+var FASTH3_FRAME_LIMITS = { min: 124, max: 362, step: 17, frameRate: 24, frameOffset: 5 };
+var FASTH3_MAX_RGB_BYTES = 256 * 1024 * 1024;
+var MAX_REQUEST_BYTES = 60 * 1024 * 1024;
+var dimension = external_exports.number().int().min(256).max(1536).refine((n) => n % 32 === 0, "Dimensions must be multiples of 32");
+var paths = (max) => external_exports.array(external_exports.string().min(1)).max(max).default([]);
+var fasth3OmniSchema = external_exports.object({
+  prompt: external_exports.string().min(1).max(32e3).describe("Scene and sound, e.g. The person in <Picture 1> waves; birds chirp. References are numbered per type."),
+  model: external_exports.literal(FASTH3_OMNI_MODEL).default(FASTH3_OMNI_MODEL).describe("Installed FastH3 Omni MLX-Serve pack."),
+  width: dimension.default(768).describe("Output width in pixels, e.g. 768."),
+  height: dimension.default(448).describe("Output height in pixels, e.g. 448."),
+  numFrames: external_exports.number().int().min(124).max(362).default(124).describe("Exact 17k+5 frame count at 24 fps, e.g. 124, 243, 362; RGB output must fit 256 MiB."),
+  steps: external_exports.literal(8).default(8).describe("The trained eight-step schedule."),
+  seed: external_exports.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional().describe("Reproducible seed, e.g. 2026."),
+  referenceImagePaths: paths(9).describe('Ordered PNG/JPEG paths, e.g. ["/tmp/character.png"]; <Picture 1> etc.'),
+  referenceVideoPaths: paths(3).describe('Ordered local video paths, e.g. ["/tmp/motion.mp4"]; 2\u201315 seconds each, 15 seconds total. Video sound is included.'),
+  referenceAudioPaths: paths(3).describe('Ordered voice/music paths, e.g. ["/tmp/voice.wav"]; 2\u201315 seconds each. Voice imitation does not preserve exact speech timing.'),
+  trimReferenceVideos: external_exports.boolean().default(false).describe("Allow trimming reference video tails to output length and the 17k+5 ladder; false refuses any trim."),
+  referenceSize: external_exports.enum(["match", "max"]).default("match").describe("match caps references to output area; max preserves more detail at higher memory/time cost."),
+  outputPath: external_exports.string().optional().describe("Output directory, e.g. /tmp/video-test."),
+  filename: bareFilenameSchema("video").optional().describe("MP4 filename, e.g. fasth3.mp4.")
+}).strict().superRefine((v, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  if (!(v.referenceImagePaths.length + v.referenceVideoPaths.length)) issue("FastH3 Omni needs at least one image or video reference");
+  if (v.referenceImagePaths.length + v.referenceVideoPaths.length + v.referenceAudioPaths.length > 12) issue("At most twelve reference files are supported");
+  if ((v.numFrames - 5) % 17) issue("FastH3 frame counts must be 17k+5");
+  if (v.width * v.height * v.numFrames * 3 > FASTH3_MAX_RGB_BYTES) issue("Decoded RGB exceeds the adapter 256 MiB compatibility limit; reduce dimensions or frames");
+});
+function probe(file) {
+  const data = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration:stream=codec_type", "-of", "json", file], { encoding: "utf8", timeout: 15e3 }));
+  const duration2 = Number(data.format?.duration);
+  if (!Number.isFinite(duration2) || duration2 < 2 || duration2 > 15) throw new Error("Reference media must be 2\u201315 seconds: " + file);
+  return { duration: duration2, hasAudio: data.streams?.some((s) => s.codec_type === "audio") === true };
+}
+function ffmpeg(args) {
+  execFileSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-nostdin", "-y", ...args], { timeout: 12e4, maxBuffer: 1024 * 1024 });
+}
+function buildFasth3Body(raw) {
+  const r = fasth3OmniSchema.parse(raw);
+  const temp = mkdtempSync2(join3(tmpdir(), "fasth3-refs-"));
+  let encodedBytes = 0;
+  const encode = (file) => {
+    encodedBytes += 4 * Math.ceil(statSync2(file).size / 3);
+    if (encodedBytes > MAX_REQUEST_BYTES - 64e3) throw new Error("Reference payload exceeds the 60 MiB upload limit");
+    return readFileSync4(file).toString("base64");
+  };
+  const audio = (file, name, seconds2) => {
+    const target = join3(temp, name + ".wav");
+    ffmpeg(["-i", file, "-vn", "-ar", "32000", "-ac", "2", "-c:a", "pcm_s16le", ...seconds2 === void 0 ? [] : ["-t", String(seconds2)], target]);
+    return encode(target);
+  };
+  try {
+    const images = r.referenceImagePaths.map((file) => {
+      if (statSync2(file).size * 4 / 3 > MAX_REQUEST_BYTES - 64e3) throw new Error("Reference image exceeds upload limit");
+      const meta = readImageMetadata(file);
+      if (!["image/png", "image/jpeg"].includes(meta.mimeType)) throw new Error("FastH3 reference images must be PNG or JPEG");
+      return encode(file);
+    });
+    let videoSeconds2 = 0;
+    const videos = r.referenceVideoPaths.map((file, i) => {
+      const meta = probe(file);
+      videoSeconds2 += meta.duration;
+      if (videoSeconds2 > 15) throw new Error("Reference videos exceed fifteen seconds total");
+      const prefix = `video-${i}-`;
+      ffmpeg(["-i", file, "-an", "-vf", "fps=24,scale=768:768:force_original_aspect_ratio=decrease", "-frames:v", "362", join3(temp, prefix + "%04d.jpg")]);
+      const files = readdirSync2(temp).filter((f) => f.startsWith(prefix)).sort();
+      const count = Math.min(files.length, r.numFrames);
+      const accepted = count - (count - 5) % 17;
+      if (accepted < 5) throw new Error("Reference video has too few decoded frames");
+      if (accepted < files.length && !r.trimReferenceVideos) throw new Error("Reference video must fit the requested output frame count and 17k+5 ladder; trim it explicitly before submitting");
+      return { frames: files.slice(0, accepted).map((f) => encode(join3(temp, f))), ...meta.hasAudio ? { audio: audio(file, `video-audio-${i}`, accepted / 24) } : {} };
+    });
+    const audios = r.referenceAudioPaths.map((file, i) => {
+      probe(file);
+      return audio(file, `audio-${i}`);
+    });
+    return {
+      stream: true,
+      model: r.model,
+      prompt: r.prompt,
+      width: r.width,
+      height: r.height,
+      num_frames: r.numFrames,
+      steps: r.steps,
+      ...r.seed === void 0 ? {} : { seed: r.seed },
+      ref_image_size: r.referenceSize,
+      ref_images: images,
+      ref_videos: videos,
+      ref_audios: audios
+    };
+  } finally {
+    rmSync2(temp, { recursive: true, force: true });
+  }
+}
+
 // src/local-video-models.ts
 var LOCAL_VIDEO_MODELS = {
   ltx_video_generate: {
@@ -30637,18 +30846,6 @@ function localVideoStrategy(tool) {
   const name = tool === "mlx_video_generate" ? "ltx_video_generate" : tool;
   return Object.hasOwn(LOCAL_VIDEO_MODELS, name) ? LOCAL_VIDEO_MODELS[name] : void 0;
 }
-
-// src/astra-genai-client.ts
-var import_undici = __toESM(require_undici(), 1);
-var genaiImageUriSchema = external_exports.string().min(1).refine((value) => {
-  if (/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/]+=*$/.test(value)) return true;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" && !url.username && !url.password;
-  } catch {
-    return false;
-  }
-}, "Use a public HTTPS PNG/JPEG URL or PNG/JPEG data URI");
 
 // src/video-events.ts
 import { AsyncLocalStorage } from "node:async_hooks";
@@ -30736,14 +30933,226 @@ var receiptSchema = external_exports.object({
   sha256: external_exports.string().optional()
 }).strict();
 
-// src/video-routing.ts
-import { createRequire as createRequire5 } from "node:module";
-import { fileURLToPath as fileURLToPath3 } from "node:url";
+// src/seedance-client.ts
+import * as path2 from "node:path";
+var VALID_SEEDANCE_RESOLUTIONS = ["480p", "720p", "1080p", "4k"];
+var VALID_SEEDANCE_RATIOS = ["16:9", "9:16", "4:3", "3:4", "1:1", "21:9", "adaptive"];
+var SEEDANCE_MODEL_SPECS = {
+  // 1080p opened on 2026-08-17 (UTC+8) — 10-bit color, and the only tier the discount
+  // campaign covers (28% off list through 2026-09-17). 2.5 has no 4K; 2.0 does.
+  "dreamina-seedance-2-5-260628": {
+    resolutions: ["480p", "720p", "1080p"],
+    duration: [4, 30],
+    lastFrame: true,
+    referenceImages: [1, 30],
+    referenceAudio: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30, audioOnly: true },
+    referenceVideos: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30 },
+    audio: true,
+    realFaceInput: false,
+    activationGate: true
+  },
+  "dreamina-seedance-2-0-260128": {
+    resolutions: ["480p", "720p", "1080p", "4k"],
+    duration: [4, 15],
+    lastFrame: true,
+    referenceImages: [1, 9],
+    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
+    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
+    audio: true,
+    realFaceInput: false,
+    activationGate: true
+  },
+  "dreamina-seedance-2-0-fast-260128": {
+    resolutions: ["480p", "720p"],
+    duration: [4, 15],
+    lastFrame: true,
+    referenceImages: [1, 9],
+    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
+    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
+    audio: true,
+    realFaceInput: false,
+    activationGate: true
+  },
+  "dreamina-seedance-2-0-mini-260615": {
+    resolutions: ["480p", "720p"],
+    duration: [4, 15],
+    lastFrame: true,
+    referenceImages: [1, 9],
+    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
+    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
+    audio: true,
+    realFaceInput: false,
+    activationGate: true
+  }
+};
+var VALID_SEEDANCE_MODELS = Object.keys(SEEDANCE_MODEL_SPECS);
+var DEFAULT_SEEDANCE_MODEL = "dreamina-seedance-2-0-260128";
+var DEFAULT_SEEDANCE_RESOLUTION = "720p";
+var DEFAULT_SEEDANCE_DURATION = 5;
+var MAX_INPUT_IMAGE_BYTES = 30 * 1024 * 1024;
+var MAX_REQUEST_BYTES2 = 64 * 1024 * 1024;
+var MAX_INPUT_AUDIO_BYTES = 15 * 1024 * 1024;
+var MAX_INPUT_VIDEO_BYTES = 200 * 1024 * 1024;
+var SEEDANCE_REFERENCE_AUDIO_EXTENSIONS = [".wav", ".mp3"];
+var SEEDANCE_REFERENCE_VIDEO_EXTENSIONS = [".mp4", ".mov"];
+var commonFields = {
+  prompt: external_exports.string().min(1, "Prompt is required"),
+  model: external_exports.enum(VALID_SEEDANCE_MODELS).optional().default(DEFAULT_SEEDANCE_MODEL),
+  resolution: external_exports.enum(VALID_SEEDANCE_RESOLUTIONS).optional().default(DEFAULT_SEEDANCE_RESOLUTION),
+  durationSeconds: external_exports.number().int().optional(),
+  generateAudio: external_exports.boolean().optional().default(false),
+  watermark: external_exports.boolean().optional().default(false),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").optional()
+};
+function validateCommon(data, ctx) {
+  const spec = SEEDANCE_MODEL_SPECS[data.model];
+  const foreign = nonEnglishOutsideQuotes(data.prompt);
+  if (foreign) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["prompt"],
+      message: `video_prompt_language: "${foreign}" sits outside quotation marks. Write the video prompt in English; only dialogue, inside quotes, uses the video's language.`
+    });
+  }
+  if (!spec.resolutions.includes(data.resolution)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["resolution"],
+      message: `${data.model} does not support ${data.resolution} (supported: ${spec.resolutions.join(", ")}).`
+    });
+  }
+  const [minDuration, maxDuration] = spec.duration;
+  if ((data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) < minDuration || (data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) > maxDuration) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["durationSeconds"],
+      message: `${data.model} supports durations of ${minDuration}~${maxDuration}s (requested: ${data.durationSeconds}s).`
+    });
+  }
+  if (data.generateAudio && !spec.audio) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["generateAudio"],
+      message: `${data.model} is silent-only and cannot generate audio.`
+    });
+  }
+}
+var seedanceText2VideoSchema = external_exports.object({
+  ...commonFields,
+  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("16:9")
+}).superRefine(validateCommon).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
+var seedanceImg2VideoSchema = external_exports.object({
+  ...commonFields,
+  sourceImagePath: external_exports.string().min(1, "Source image path is required"),
+  lastImagePath: external_exports.string().optional(),
+  // Following the input image's ratio is the default — specifying a different
+  // ratio makes the server center-crop the source image (the incident where a
+  // 9:16 cover got cropped).
+  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("adaptive")
+}).superRefine((data, ctx) => {
+  validateCommon(data, ctx);
+  if (data.lastImagePath && !SEEDANCE_MODEL_SPECS[data.model].lastFrame) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["lastImagePath"],
+      message: `${data.model} accepts a first frame only.`
+    });
+  }
+}).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
+var seedanceReferenceSchema = external_exports.object({
+  ...commonFields,
+  referenceImagePaths: external_exports.array(external_exports.string()).optional().default([]),
+  referenceAudioPaths: external_exports.array(external_exports.string()).optional().default([]),
+  referenceVideoPaths: external_exports.array(external_exports.string()).optional().default([]),
+  referenceVideoUrls: external_exports.array(external_exports.string().url()).optional().default([]),
+  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("adaptive")
+}).superRefine((data, ctx) => {
+  validateCommon(data, ctx);
+  const spec = SEEDANCE_MODEL_SPECS[data.model];
+  const [, maxImages] = spec.referenceImages;
+  if (data.referenceImagePaths.length > maxImages) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["referenceImagePaths"],
+      message: `${data.model} allows at most ${maxImages} reference images (requested: ${data.referenceImagePaths.length}).`
+    });
+  }
+  const videoCount = data.referenceVideoPaths.length + data.referenceVideoUrls.length;
+  if (data.referenceImagePaths.length === 0 && data.referenceAudioPaths.length === 0 && videoCount === 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["referenceImagePaths"],
+      message: "At least one reference is required \u2014 referenceImagePaths, referenceAudioPaths, referenceVideoPaths/Urls, or a mix."
+    });
+    return;
+  }
+  if (videoCount > 0) {
+    const video = spec.referenceVideos;
+    if (videoCount > video.maxClips) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["referenceVideoPaths"],
+        message: `${data.model} allows at most ${video.maxClips} reference videos (requested: ${videoCount}).`
+      });
+    }
+    for (const filePath of data.referenceVideoPaths) {
+      const ext = path2.extname(filePath).toLowerCase();
+      if (!SEEDANCE_REFERENCE_VIDEO_EXTENSIONS.includes(ext)) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["referenceVideoPaths"],
+          message: `Reference video must be mp4 or mov (got "${ext}" in ${path2.basename(filePath)}).`
+        });
+      }
+    }
+    if (!/\bvideo\s*1\b/i.test(data.prompt)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["prompt"],
+        message: 'A reference video is bound in the prompt by index \u2014 write "Video 1" (2.5: "@Video 1") and say what it supplies (camera movement, blocking, motion timing) and what it must not (its visual content).'
+      });
+    }
+  }
+  if (data.referenceAudioPaths.length === 0) return;
+  const audio = spec.referenceAudio;
+  if (data.referenceAudioPaths.length > audio.maxClips) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["referenceAudioPaths"],
+      message: `${data.model} allows at most ${audio.maxClips} reference audio clips (requested: ${data.referenceAudioPaths.length}).`
+    });
+  }
+  if (!audio.audioOnly && data.referenceImagePaths.length === 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["referenceImagePaths"],
+      message: `${data.model} needs at least one reference image alongside reference audio \u2014 audio-only input is dreamina-seedance-2-5-260628 only.`
+    });
+  }
+  for (const filePath of data.referenceAudioPaths) {
+    const ext = path2.extname(filePath).toLowerCase();
+    if (!SEEDANCE_REFERENCE_AUDIO_EXTENSIONS.includes(ext)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["referenceAudioPaths"],
+        message: `Reference audio must be wav or mp3 (got "${ext}" in ${path2.basename(filePath)}).`
+      });
+    }
+  }
+  if (!data.generateAudio) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["generateAudio"],
+      message: "Reference audio with generateAudio: false produces a silent video, so the voice reference has nothing to shape. Set generateAudio: true."
+    });
+  }
+}).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
 
 // src/astra-video-client.ts
 import { createHash as createHash2, randomInt } from "node:crypto";
 import * as fs2 from "node:fs";
-import * as path2 from "node:path";
+import * as path3 from "node:path";
 
 // package.json
 var package_default = {
@@ -31632,7 +32041,7 @@ var CONTENT_TYPE_BY_EXTENSION = {
   ".mp3": { contentType: "audio/mpeg", kind: "audio" }
 };
 function uploadContentType(filePath) {
-  const ext = path2.extname(filePath).toLowerCase();
+  const ext = path3.extname(filePath).toLowerCase();
   const found = CONTENT_TYPE_BY_EXTENSION[ext];
   if (!found) {
     throw new Error(
@@ -31642,13 +32051,13 @@ function uploadContentType(filePath) {
   return found;
 }
 async function uploadFile(filePath) {
-  const resolved = path2.resolve(filePath);
+  const resolved = path3.resolve(filePath);
   if (!fs2.existsSync(resolved)) throw new Error(`File not found: ${filePath}`);
   const { contentType, kind } = uploadContentType(resolved);
   const bytes = fs2.statSync(resolved).size;
   const limit = ASTRA_VIDEO_UPLOAD_LIMITS[kind];
   if (bytes > limit) {
-    throw new Error(`${path2.basename(resolved)} is ${bytes} bytes; the ${kind} upload ceiling is ${limit} bytes.`);
+    throw new Error(`${path3.basename(resolved)} is ${bytes} bytes; the ${kind} upload ceiling is ${limit} bytes.`);
   }
   await waitForUploadSlot();
   const headers = authHeaders();
@@ -31666,7 +32075,7 @@ async function uploadFile(filePath) {
       return { ok: false, status: 502, body: `Upload unreachable: ${message}` };
     }
   });
-  if (!result.ok) throw redactedFailure(`upload of ${path2.basename(resolved)}`, result.status, result.body);
+  if (!result.ok) throw redactedFailure(`upload of ${path3.basename(resolved)}`, result.status, result.body);
   const parsed = JSON.parse(result.body);
   return {
     uploadId: parsed.upload_id,
@@ -31880,6 +32289,11 @@ function devNegativeRule(args, ctx) {
   if (args.model !== "ltx-2.5-22b-dev") issue("negativePrompt requires ltx-2.5-22b-dev, or image-to-video references with guidanceScale > 1 or nagScale > 0");
   if (args.negativePrompt.length > 2e3) issue("The dev backend accepts a negativePrompt of at most 2000 characters");
 }
+var genaiShotsSchema = external_exports.array(external_exports.object({
+  description: external_exports.string().trim().min(1).max(2e3),
+  audio: external_exports.string().trim().min(1).max(2e3).optional(),
+  transition: external_exports.literal("hard_cut").optional()
+}).strict()).min(2).max(4).refine((shots) => !shots[0].transition, "Omit transition on the opening shot");
 var textVideoFields = external_exports.object({
   prompt: external_exports.string().min(1).max(2e3),
   negativePrompt: external_exports.string().trim().min(1).max(5e3).optional(),
@@ -31888,11 +32302,19 @@ var textVideoFields = external_exports.object({
   resolution: localResolution,
   fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
   generateAudio: external_exports.boolean().default(true),
+  shots: genaiShotsSchema.optional(),
   reserveUsd: external_exports.number().finite().nonnegative(),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
 }).strict();
 function localVideoTiming(args, ctx) {
+  if (args.shots) {
+    const joined = [openingPrompt(args.prompt, args.openingPositions), ...args.shots.flatMap((shot, i) => [
+      (i ? "A hard cut moves to " : "The opening shot shows ") + shot.description,
+      ...shot.audio ? ["Audio: " + shot.audio] : []
+    ])].join("\n\n");
+    if (joined.length > 2e3) ctx.addIssue({ code: "custom", path: ["shots"], message: "Composed gateway prompt exceeds 2000 characters" });
+  }
   if (args.duration !== null && 8 * Math.ceil((args.duration * args.fps - 1) / 8) + 1 > 361)
     ctx.addIssue({ code: "custom", path: ["duration"], message: "Duration and fps exceed the local 361-frame limit" });
 }
@@ -32030,222 +32452,6 @@ var SUBMIT_TIMEOUT_MS2 = 15 * 6e4;
 
 // src/video-duration.ts
 var import_video_duration = __toESM(require_video_duration(), 1);
-
-// src/seedance-client.ts
-import * as path3 from "node:path";
-var VALID_SEEDANCE_RESOLUTIONS = ["480p", "720p", "1080p", "4k"];
-var VALID_SEEDANCE_RATIOS = ["16:9", "9:16", "4:3", "3:4", "1:1", "21:9", "adaptive"];
-var SEEDANCE_MODEL_SPECS = {
-  // 1080p opened on 2026-08-17 (UTC+8) — 10-bit color, and the only tier the discount
-  // campaign covers (28% off list through 2026-09-17). 2.5 has no 4K; 2.0 does.
-  "dreamina-seedance-2-5-260628": {
-    resolutions: ["480p", "720p", "1080p"],
-    duration: [4, 30],
-    lastFrame: true,
-    referenceImages: [1, 30],
-    referenceAudio: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30, audioOnly: true },
-    referenceVideos: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30 },
-    audio: true,
-    realFaceInput: false,
-    activationGate: true
-  },
-  "dreamina-seedance-2-0-260128": {
-    resolutions: ["480p", "720p", "1080p", "4k"],
-    duration: [4, 15],
-    lastFrame: true,
-    referenceImages: [1, 9],
-    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
-    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
-    audio: true,
-    realFaceInput: false,
-    activationGate: true
-  },
-  "dreamina-seedance-2-0-fast-260128": {
-    resolutions: ["480p", "720p"],
-    duration: [4, 15],
-    lastFrame: true,
-    referenceImages: [1, 9],
-    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
-    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
-    audio: true,
-    realFaceInput: false,
-    activationGate: true
-  },
-  "dreamina-seedance-2-0-mini-260615": {
-    resolutions: ["480p", "720p"],
-    duration: [4, 15],
-    lastFrame: true,
-    referenceImages: [1, 9],
-    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
-    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
-    audio: true,
-    realFaceInput: false,
-    activationGate: true
-  }
-};
-var VALID_SEEDANCE_MODELS = Object.keys(SEEDANCE_MODEL_SPECS);
-var DEFAULT_SEEDANCE_MODEL = "dreamina-seedance-2-0-260128";
-var DEFAULT_SEEDANCE_RESOLUTION = "720p";
-var DEFAULT_SEEDANCE_DURATION = 5;
-var MAX_INPUT_IMAGE_BYTES = 30 * 1024 * 1024;
-var MAX_REQUEST_BYTES2 = 64 * 1024 * 1024;
-var MAX_INPUT_AUDIO_BYTES = 15 * 1024 * 1024;
-var MAX_INPUT_VIDEO_BYTES = 200 * 1024 * 1024;
-var SEEDANCE_REFERENCE_AUDIO_EXTENSIONS = [".wav", ".mp3"];
-var SEEDANCE_REFERENCE_VIDEO_EXTENSIONS = [".mp4", ".mov"];
-var commonFields = {
-  prompt: external_exports.string().min(1, "Prompt is required"),
-  model: external_exports.enum(VALID_SEEDANCE_MODELS).optional().default(DEFAULT_SEEDANCE_MODEL),
-  resolution: external_exports.enum(VALID_SEEDANCE_RESOLUTIONS).optional().default(DEFAULT_SEEDANCE_RESOLUTION),
-  durationSeconds: external_exports.number().int().optional(),
-  generateAudio: external_exports.boolean().optional().default(false),
-  watermark: external_exports.boolean().optional().default(false),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").optional()
-};
-function validateCommon(data, ctx) {
-  const spec = SEEDANCE_MODEL_SPECS[data.model];
-  const foreign = nonEnglishOutsideQuotes(data.prompt);
-  if (foreign) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["prompt"],
-      message: `video_prompt_language: "${foreign}" sits outside quotation marks. Write the video prompt in English; only dialogue, inside quotes, uses the video's language.`
-    });
-  }
-  if (!spec.resolutions.includes(data.resolution)) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["resolution"],
-      message: `${data.model} does not support ${data.resolution} (supported: ${spec.resolutions.join(", ")}).`
-    });
-  }
-  const [minDuration, maxDuration] = spec.duration;
-  if ((data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) < minDuration || (data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) > maxDuration) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["durationSeconds"],
-      message: `${data.model} supports durations of ${minDuration}~${maxDuration}s (requested: ${data.durationSeconds}s).`
-    });
-  }
-  if (data.generateAudio && !spec.audio) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["generateAudio"],
-      message: `${data.model} is silent-only and cannot generate audio.`
-    });
-  }
-}
-var seedanceText2VideoSchema = external_exports.object({
-  ...commonFields,
-  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("16:9")
-}).superRefine(validateCommon).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
-var seedanceImg2VideoSchema = external_exports.object({
-  ...commonFields,
-  sourceImagePath: external_exports.string().min(1, "Source image path is required"),
-  lastImagePath: external_exports.string().optional(),
-  // Following the input image's ratio is the default — specifying a different
-  // ratio makes the server center-crop the source image (the incident where a
-  // 9:16 cover got cropped).
-  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("adaptive")
-}).superRefine((data, ctx) => {
-  validateCommon(data, ctx);
-  if (data.lastImagePath && !SEEDANCE_MODEL_SPECS[data.model].lastFrame) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["lastImagePath"],
-      message: `${data.model} accepts a first frame only.`
-    });
-  }
-}).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
-var seedanceReferenceSchema = external_exports.object({
-  ...commonFields,
-  referenceImagePaths: external_exports.array(external_exports.string()).optional().default([]),
-  referenceAudioPaths: external_exports.array(external_exports.string()).optional().default([]),
-  referenceVideoPaths: external_exports.array(external_exports.string()).optional().default([]),
-  referenceVideoUrls: external_exports.array(external_exports.string().url()).optional().default([]),
-  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("adaptive")
-}).superRefine((data, ctx) => {
-  validateCommon(data, ctx);
-  const spec = SEEDANCE_MODEL_SPECS[data.model];
-  const [, maxImages] = spec.referenceImages;
-  if (data.referenceImagePaths.length > maxImages) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["referenceImagePaths"],
-      message: `${data.model} allows at most ${maxImages} reference images (requested: ${data.referenceImagePaths.length}).`
-    });
-  }
-  const videoCount = data.referenceVideoPaths.length + data.referenceVideoUrls.length;
-  if (data.referenceImagePaths.length === 0 && data.referenceAudioPaths.length === 0 && videoCount === 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["referenceImagePaths"],
-      message: "At least one reference is required \u2014 referenceImagePaths, referenceAudioPaths, referenceVideoPaths/Urls, or a mix."
-    });
-    return;
-  }
-  if (videoCount > 0) {
-    const video = spec.referenceVideos;
-    if (videoCount > video.maxClips) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["referenceVideoPaths"],
-        message: `${data.model} allows at most ${video.maxClips} reference videos (requested: ${videoCount}).`
-      });
-    }
-    for (const filePath of data.referenceVideoPaths) {
-      const ext = path3.extname(filePath).toLowerCase();
-      if (!SEEDANCE_REFERENCE_VIDEO_EXTENSIONS.includes(ext)) {
-        ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
-          path: ["referenceVideoPaths"],
-          message: `Reference video must be mp4 or mov (got "${ext}" in ${path3.basename(filePath)}).`
-        });
-      }
-    }
-    if (!/\bvideo\s*1\b/i.test(data.prompt)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["prompt"],
-        message: 'A reference video is bound in the prompt by index \u2014 write "Video 1" (2.5: "@Video 1") and say what it supplies (camera movement, blocking, motion timing) and what it must not (its visual content).'
-      });
-    }
-  }
-  if (data.referenceAudioPaths.length === 0) return;
-  const audio = spec.referenceAudio;
-  if (data.referenceAudioPaths.length > audio.maxClips) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["referenceAudioPaths"],
-      message: `${data.model} allows at most ${audio.maxClips} reference audio clips (requested: ${data.referenceAudioPaths.length}).`
-    });
-  }
-  if (!audio.audioOnly && data.referenceImagePaths.length === 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["referenceImagePaths"],
-      message: `${data.model} needs at least one reference image alongside reference audio \u2014 audio-only input is dreamina-seedance-2-5-260628 only.`
-    });
-  }
-  for (const filePath of data.referenceAudioPaths) {
-    const ext = path3.extname(filePath).toLowerCase();
-    if (!SEEDANCE_REFERENCE_AUDIO_EXTENSIONS.includes(ext)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["referenceAudioPaths"],
-        message: `Reference audio must be wav or mp3 (got "${ext}" in ${path3.basename(filePath)}).`
-      });
-    }
-  }
-  if (!data.generateAudio) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["generateAudio"],
-      message: "Reference audio with generateAudio: false produces a silent video, so the voice reference has nothing to shape. Set generateAudio: true."
-    });
-  }
-}).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
 
 // src/ltx-api-video.ts
 import { execFileSync as execFileSync2 } from "node:child_process";
@@ -32478,6 +32684,13 @@ function speechVideoCapabilities(provider, model2, operation, subjectReferences 
   throw new Error("No verified speech synchronization contract for selected deployment/model");
 }
 
+// src/scene-video.ts
+var load2 = createRequire2(import.meta.url);
+
+// src/video-routing.ts
+import { createRequire as createRequire6 } from "node:module";
+import { fileURLToPath as fileURLToPath3 } from "node:url";
+
 // src/video-pricing.ts
 import { fileURLToPath } from "node:url";
 
@@ -32673,8 +32886,8 @@ function charUnits(args) {
 var PRICE_FILE = fileURLToPath(new URL("../../skills/autoproduce/references/prices.tsv", import.meta.url));
 
 // src/video-review.ts
-import { createRequire } from "node:module";
-var review = () => createRequire(import.meta.url)("../../skills/storyboard/references/video-production.js");
+import { createRequire as createRequire3 } from "node:module";
+var review = () => createRequire3(import.meta.url)("../../skills/storyboard/references/video-production.js");
 function refreshVideoReview(episode) {
   try {
     review().write(episode);
@@ -32684,10 +32897,10 @@ function refreshVideoReview(episode) {
 }
 
 // src/video-image-inputs.ts
-import { createRequire as createRequire2 } from "node:module";
+import { createRequire as createRequire4 } from "node:module";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
-var load = createRequire2(import.meta.url);
-var imageRouting = () => load(fileURLToPath2(new URL("../../skills/storyboard/references/render-routing.js", import.meta.url)));
+var load3 = createRequire4(import.meta.url);
+var imageRouting = () => load3(fileURLToPath2(new URL("../../skills/storyboard/references/render-routing.js", import.meta.url)));
 function hasVideoSubjectReferences(shot) {
   return imageRouting().imageReferences(shot).some((ref) => ref.role !== "background" && ["video", "both"].includes(ref.use));
 }
@@ -32695,25 +32908,25 @@ function hasVideoSubjectReferences(shot) {
 // src/video-voice.ts
 import { existsSync as existsSync4, readFileSync as readFileSync6, realpathSync } from "node:fs";
 import path5 from "node:path";
-import { createRequire as createRequire3 } from "node:module";
+import { createRequire as createRequire5 } from "node:module";
 var speakerBindingSchema = external_exports.object({
   speaker: external_exports.string().trim().min(1),
   screenPosition: external_exports.enum(["left", "center", "right"]),
   description: external_exports.string().trim().min(1)
 }).strict();
-var load2 = createRequire3(import.meta.url);
-var object = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
-var text = (value) => typeof value === "string" ? value.trim() : "";
+var load4 = createRequire5(import.meta.url);
+var object2 = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
+var text2 = (value) => typeof value === "string" ? value.trim() : "";
 function resolveCharacterVoice(character, context, warnings) {
-  const id = text(character.id);
+  const id = text2(character.id);
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) return character;
   let channel = context.episode;
   while (!existsSync4(path5.join(channel, "profile.md")) && path5.dirname(channel) !== channel) channel = path5.dirname(channel);
   const folder = path5.join(channel, "assets/characters", id), identity = path5.join(folder, "identity.md");
   let resolved = character;
-  if (!Object.keys(object(character.tts)).length && existsSync4(identity)) {
+  if (!Object.keys(object2(character.tts)).length && existsSync4(identity)) {
     try {
-      const { handoff } = load2("../../skills/channel/references/character-sheet.js");
+      const { handoff } = load4("../../skills/channel/references/character-sheet.js");
       const current = handoff(identity, { voiceOnly: character.voiceOnly === true });
       resolved = { ...current, ...character, tts: current.tts };
     } catch (error) {
@@ -32721,185 +32934,21 @@ function resolveCharacterVoice(character, context, warnings) {
       return character;
     }
   }
-  const reference2 = object(resolved.voiceReference);
+  const reference2 = object2(resolved.voiceReference);
   if (!Array.isArray(reference2.imagePaths) && existsSync4(folder)) {
     const root = realpathSync(folder) + path5.sep;
-    const refs = object(context.shot.visual).references;
-    const imagePaths = (Array.isArray(refs) ? refs.map(object) : []).filter((ref) => ref.role === "character" && ["both", "video"].includes(text(ref.use))).map((ref) => text(ref.path)).filter(Boolean).map((file) => path5.resolve(context.episode, "storyboard", file)).filter((file) => existsSync4(file) && realpathSync(file).startsWith(root));
+    const refs = object2(context.shot.visual).references;
+    const imagePaths = (Array.isArray(refs) ? refs.map(object2) : []).filter((ref) => ref.role === "character" && ["both", "video"].includes(text2(ref.use))).map((ref) => text2(ref.path)).filter(Boolean).map((file) => path5.resolve(context.episode, "storyboard", file)).filter((file) => existsSync4(file) && realpathSync(file).startsWith(root));
     if (imagePaths.length) resolved = { ...resolved, voiceReference: { ...reference2, imagePaths } };
   }
   return resolved;
 }
 
-// src/video-prompt.ts
-import { createRequire as createRequire4 } from "node:module";
-var load3 = createRequire4(import.meta.url);
-var object2 = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
-var text2 = (value) => typeof value === "string" ? value.trim() : "";
-function planVideoPerformance(shot, options = {}) {
-  const acting = load3("../../skills/_shared/scene-acting.js");
-  const timeline = acting.planScenePerformance(shot, options.measureAudio);
-  return { ...timeline, timing: options.mode === "native" && timeline.timing === "needs_audio_duration" ? "model_timed" : timeline.timing };
-}
-var sentence = (value) => {
-  const s = value.trim(), capped2 = s.charAt(0).toUpperCase() + s.slice(1);
-  return !s ? "" : /[.!?]["'”’)]+$/.test(capped2) ? capped2 : capped2.replace(/[.!?]*$/, "") + ".";
-};
-function expressionWords(shot, names = {}) {
-  return Object.entries(object2(object2(shot.visual).expression)).filter(([, cue]) => text2(cue)).map(([id, cue]) => `${names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id}: ${text2(cue).replace(/[.\s]+$/, "")}`).join("; ");
-}
-var heldMove = /^(?:static|fixed|locked(?:[- ]off)?)(?: (?:camera|frame|shot))?[.!]?$/i;
-function cameraMoveWords(camera) {
-  const movement = text2(camera.movement), speed = text2(camera.speed), target = text2(camera.target);
-  if (!movement) return "";
-  if (heldMove.test(movement)) return "The camera holds a static frame.";
-  const catalogue = load3("../../skills/storyboard/references/film-techniques.js");
-  const move = catalogue.entries.find((entry2) => entry2.fields.movement === movement.toLowerCase())?.prompt;
-  const pace = { slow: "slowly", steady: "steadily", fast: "quickly" }[speed];
-  const travels = load3("../../skills/storyboard/references/production-mode.js").travels(camera);
-  const ends = travels ? ", with a short pause on the opening and closing pictures" : "";
-  if (move) {
-    const path6 = /[;.!?]\s|^(?:after|when|once|follow|track|pan|tilt|dolly|orbit|keep|start|end)\b/i.test(target);
-    const words = move.replace("{target}", () => path6 || !target ? "the subject" : target);
-    return [sentence("The camera " + (pace ? pace + " " : "") + words + (speed && !pace ? " at a " + speed + " pace" : "") + ends), path6 && sentence(target)].filter(Boolean).join(" ");
-  }
-  return [sentence("Camera: " + [speed, movement].filter(Boolean).join(" ") + ends), target && sentence("Camera target: " + target)].filter(Boolean).join(" ");
-}
-var directedMoves = [
-  /\bpan(?:s|ning)? left\b/i,
-  /\bpan(?:s|ning)? right\b/i,
-  /\btilt(?:s|ing)? up(?:wards?)?\b/i,
-  /\btilt(?:s|ing)? down(?:wards?)?\b/i,
-  /\b(?:dolly|dollies|push(?:es|ing)?) in\b/i,
-  /\b(?:dolly|dollies) out\b|\bpull(?:s|ing)? (?:back|out)\b/i,
-  /\bzoom(?:s|ing)? in\b/i,
-  /\bzoom(?:s|ing)? out\b/i,
-  /\b(?:truck|track)(?:s|ing)? (?:parallel|sideways|alongside|laterally)\b/i,
-  /\btrack(?:s|ing)? backward\b/i,
-  /\b(?:track|follow)(?:s|ing)? (?:\w+ )?(?:from )?behind\b/i
-];
-function cameraDrift(prompt, movement) {
-  if (!movement.trim()) return null;
-  const prose = prompt.replace(/"[^"]*"|“[^”]*”|「[^」]*」/g, " ");
-  const clauses = prose.split(/[.!?;\n]+/).map((s) => s.trim());
-  const said = clauses.map((s) => {
-    const imperative = /^(?:(?:do not|never|slowly|steadily|quickly) )*(?:pan|dolly|push in|pull back|crane|tilt|zoom|truck|orbit|track|follow|whip pan)\b/i;
-    const camera = /\b(?:(?:static|locked(?:[- ]off)?|fixed) )?camera\b|\bshot (?=tracking|panning|tilting|following|moving|zooming)/i.exec(s);
-    const predicate = imperative.test(s) ? s : camera ? s.slice(camera.index) : "";
-    return predicate.split(/\s+(?:while|as|so that)\s+/i)[0];
-  }).filter(Boolean);
-  const holds = (s) => !/\bzoom/i.test(s) && /^(?:static|locked(?:[- ]off)?|fixed) camera\b|\bcamera[: ]+(?:(?:is|stays?|remains?) |holds? (?:a |the )?)?(?:steady|still|static|fixed|locked|put)\b|\bcamera (?:does not|doesn't|never) moves?\b/i.test(s);
-  const moves = /\b(push(?:es|ing)?|pull(?:s|ing)?|dolly|dollies|truck(?:s|ing)?|track(?:s|ing)?|follow(?:s|ing)?|pan(?:s|ning)?|tilt(?:s|ing)?|zoom(?:s|ing)?|crane(?:s)?|pedestal|orbit(?:s|ing)?|arc(?:s)?|circles?|approach(?:es)?|glides?|rises?|lowers?|handheld|body-mounted|whip|moves?|travels?|sweeps?|drifts?|recoils?|rides?|chases?|flies|swings?)\b/i;
-  const negated = /^(?:camera[: ]+)?(?:never|do(?:es)? not|doesn't|don't|must not)\b/i;
-  const moving = said.filter((s) => moves.test(s) && !holds(s) && !negated.test(s));
-  if (heldMove.test(movement.trim())) return moving.length ? "contradicted" : null;
-  const expected = directedMoves.find((re) => re.test(movement));
-  if (expected && !moving.some((s) => expected.test(s)) && (moving.some((s) => directedMoves.some((re) => re.test(s))) || said.some((s) => negated.test(s) && expected.test(s)))) return "contradicted";
-  const fixedFrame = /\b(?:preserve|maintain|lock) the (?:opening |original |same )?(?:image )?(?:composition|framing|crop)\b/i;
-  if (clauses.some((s) => fixedFrame.test(s) && !/\b(?:at first|initially|until|then|first frame only)\b/i.test(s))) return "contradicted";
-  if (moving.length) return null;
-  return said.some(holds) ? "contradicted" : "missing";
-}
-function compileVideoPrompt(shot, source, names = {}, options = {}) {
-  const plan = object2(shot.shot), visual = object2(shot.visual), frames = object2(visual.frames), camera = object2(visual.camera);
-  const msr = frames.mode === "reference";
-  const words = load3("../../skills/storyboard/references/assemble-bg-prompt.js");
-  const views = load3("../../skills/storyboard/references/shot-view.js");
-  const viewWords = camera.view === void 0 ? "" : views.instructions(camera.view);
-  const sizes = viewWords ? words.SIZE_WORDS_OBJECT : words.SIZE_WORDS;
-  const catalogue = load3("../../skills/storyboard/references/film-techniques.js");
-  const contract2 = load3("../../skills/storyboard/references/structure-contract.js");
-  const picked = (Array.isArray(plan.techniques) ? plan.techniques : []).map(object2).map((t) => ({
-    id: text2(t.id),
-    from: text2(t.from),
-    to: text2(t.to),
-    on: text2(t.on),
-    entry: catalogue.byId[text2(t.id)]
-  }));
-  const movement = text2(camera.movement), settle = text2(camera.end), moveWords = cameraMoveWords(camera);
-  const rack = picked.find((t) => t.entry?.fields.focus);
-  const focusWords = !rack ? "" : sentence(rack.from && rack.to ? `Rack focus from ${rack.from} to ${rack.to}` : `${rack.entry.label.en} from the near subject to the far subject`);
-  const sizeWords = sentence(sizes[text2(plan.size)] || ""), angleWords = sentence(words.ANGLE_WORDS[text2(plan.angle)] || "");
-  const framing = sentence([sizes[text2(plan.size)], words.ANGLE_WORDS[text2(plan.angle)]].filter(Boolean).join(", "));
-  const depthWords = plan.depth ? sentence(contract2.depthText(plan.depth)) : "";
-  const other = picked.filter((t) => t.entry && ["camera", "framing"].includes(t.entry.category) && !t.entry.fields.movement && !t.entry.fields.focus && !t.entry.fields.size && !t.entry.fields.angle && !(viewWords && t.entry.fields.viewpoint));
-  const lines = (Array.isArray(shot.narration) ? shot.narration : []).map(object2);
-  const mode = options.mode ?? (lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen") ? "native" : "voiceover");
-  const design = object2(plan.videoDesign);
-  const motion = object2(design.motion);
-  const states = [...new Set((Array.isArray(motion.beats) ? motion.beats : []).map((beat) => text2(object2(beat).state)).filter(Boolean))];
-  const performance2 = planVideoPerformance(shot, { ...options, mode });
-  const acting = load3("../../skills/_shared/scene-acting.js");
-  const beats = acting.performanceBeats(performance2.performance, mode, !msr && !options.bindDialogueSeparately);
-  const worn = expressionWords(shot, names);
-  const called = (id) => names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id;
-  const seen = (Array.isArray(visual.bystanders) ? visual.bystanders : []).map(text2).filter(Boolean), extras = text2(visual.extras);
-  const plain = (value) => text2(value).replace(/[.\s]+$/, "").toLowerCase();
-  const actionInBeat = performance2.performance.some((event) => event.kind === "action" && plain(event.videoDirection || event.text) === plain(source.action));
-  const parts = (step2) => [
-    msr ? framing : "Start from the given first frame.",
-    msr ? depthWords : "",
-    moveWords,
-    settle ? sentence(`Closing frame: ${settle}`) : "",
-    focusWords,
-    // A beat accent (speed ramp, impact shake) names the moment it fires on.
-    ...other.map((t) => sentence(t.entry.fields.accent && t.entry.prompt ? t.entry.prompt.replace("{cue}", t.on || t.entry.fields.cue) : t.entry.instruction)),
-    viewWords || (text2(camera.framing) ? sentence(`Opening composition: ${text2(camera.framing)}`) : ""),
-    !viewWords && camera.rear && !other.some((t) => t.entry.fields.viewpoint === "rear") ? "View the subject from behind." : "",
-    !viewWords && camera.pov && !other.some((t) => t.entry.fields.viewpoint === "pov") ? sentence(`Point of view: ${text2(camera.pov) || "the named character"}`) : "",
-    actionInBeat ? "" : sentence(source.action),
-    seen.length ? sentence(`The opening picture also shows ${seen.map(called).join(" and ")}, who ${seen.length > 1 ? "stay" : "stays"} in the frame and never speaks`) : "",
-    extras ? sentence(`Unnamed people in the frame: ${extras}`) : "",
-    ...step2 >= 1 ? [] : ["before", "after", "continuity"].map((key) => text2(design[key]) ? sentence(`${key}: ${text2(design[key])}`) : ""),
-    ...step2 >= 1 ? [] : states.filter((state) => ![source.action, design.before, design.after, design.continuity].includes(state)).map((state) => sentence(`Visible state: ${state}`)),
-    !lines.length && beats.length ? "Perform the planned action without invented speech or voiceover." : "",
-    ...step2 >= 2 ? acting.performanceBeats(performance2.performance, mode, !msr && !options.bindDialogueSeparately, { brief: true }) : beats,
-    // The model's default face is pleasant; the authored state has to be named and held (LTX guide: physical cues, state after the action).
-    worn && step2 < 3 ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : "",
-    frames.mode === "first_last" ? sentence(`End on the given last frame${source.end ? ": " + source.end : ""}`) : source.end ? sentence(`End on ${source.end}`) : "",
-    sentence(`Audio: ${source.sound ? source.sound + (/\b(music|soundtrack|score|bgm|melody|orchestral|song)\b/i.test(source.sound) ? "" : ", no music") : "no music"}`),
-    acting.VIDEO_TEXT_POLICY
-  ].filter(Boolean);
-  const limit = options.maxCharacters, dropped = ["design notes and visible states", "acting fields of the beats", "expressions"];
-  let step = 0, prompt = parts(0).join(" ");
-  while (limit && prompt.length > limit && step < dropped.length) prompt = parts(++step).join(" ");
-  const fitWarnings = !limit || !step ? [] : [prompt.length > limit ? `prompt_over_limit: ${prompt.length} characters after leaving out the ${dropped.slice(0, step).join(", ")}; the adapter takes ${limit}. Shorten the action, end or sound in shot_prompt` : `prompt_fitted: left out the ${dropped.slice(0, step).join(", ")} to fit the adapter's ${limit} characters; the camera, action and lines are whole`];
-  const foreign = nonEnglishOutsideQuotes(prompt);
-  if (foreign && options.validateLanguage !== false) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks; write action and direction in English`);
-  const bindings = [
-    { attribute: "render", value: object2(plan.render).mode, via: "adapter" },
-    { attribute: "size", value: plan.size, via: !sizeWords ? "unmapped" : msr ? "prompt" : "image", instruction: sizeWords },
-    { attribute: "angle", value: plan.angle, via: !angleWords ? "unmapped" : msr ? "prompt" : "image", instruction: angleWords },
-    { attribute: "view", value: camera.view, via: "prompt", instruction: viewWords },
-    { attribute: "move", value: camera, via: movement ? "prompt" : "unmapped", instruction: moveWords },
-    { attribute: "focus", value: rack ? { id: rack.id, from: rack.from, to: rack.to } : void 0, via: "prompt", instruction: focusWords },
-    { attribute: "depth", value: plan.depth, via: msr ? "prompt" : "image", instruction: depthWords },
-    { attribute: "framePlan", value: frames.mode, via: "adapter" },
-    ...picked.map((t) => ({
-      attribute: "technique",
-      value: t.id,
-      via: !t.entry ? "unmapped" : t.entry.category === "character" ? "image" : t.entry.category === "timing" ? "guidance" : t.entry.category === "framing" || t.entry.fields.angle ? msr ? "prompt" : "image" : "prompt",
-      instruction: t.entry?.instruction
-    })),
-    { attribute: "transition", value: shot.transition, via: "assembly" },
-    ...beats.length ? [{ attribute: "performance", value: performance2, via: "prompt", instruction: beats.join("\n") }] : []
-  ];
-  return { prompt, performance: performance2, directionBindings: bindings.filter((b) => b.value !== void 0), warnings: [
-    ...performance2.warnings,
-    ...fitWarnings,
-    ...cameraDrift([source.action, source.end].filter(Boolean).join("\n"), movement) === "contradicted" ? ["camera_move_contradicted: shot_prompt action or end conflicts with the camera direction. Reconcile the action cue and landing with visual.camera."] : [],
-    // An unchosen move leaves the camera to the model; on mochi_bo 29 of 33 shots of one episode went out so.
-    ...movement ? [] : ["camera_move_unset: no camera move is chosen, so the video model decides the camera \u2014 set shot_icons move (camera.static for a deliberate hold)"],
-    ...bindings.filter((b) => b.value !== void 0 && b.via === "unmapped" && b.attribute !== "move").map((b) => `No prompt mapping for ${b.attribute}: ${JSON.stringify(b.value)}`),
-    ...rack && !(rack.from && rack.to) ? ["the rack focus names no subjects \u2014 give focus.from and focus.to in shot_icons"] : []
-  ] };
-}
-
 // src/video-routing.ts
-var load4 = createRequire5(import.meta.url);
+var load5 = createRequire6(import.meta.url);
 var shared = fileURLToPath3(new URL("../../skills/_shared/video-selection.js", import.meta.url));
 var modelSettings = fileURLToPath3(new URL("../../skills/_shared/model-settings.js", import.meta.url));
-var routingContext = (episode, shotId, sceneNo) => load4(shared).readVideoContext(episode, shotId, sceneNo);
+var routingContext = (episode, shotId, sceneNo) => load5(shared).readVideoContext(episode, shotId, sceneNo);
 var idSchema = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var videoPlanSchema = external_exports.object({
   episode: external_exports.string().min(1),
@@ -32979,7 +33028,7 @@ var nativeImageEditSchema = nativeImageSchema.extend({
 var imageResponse = external_exports.object({ data: external_exports.array(external_exports.object({ b64_json: external_exports.string().min(1) })).length(1) }).passthrough();
 
 // src/image-routing.ts
-import { createRequire as createRequire7 } from "node:module";
+import { createRequire as createRequire8 } from "node:module";
 import { fileURLToPath as fileURLToPath5 } from "node:url";
 
 // src/astra-genai-image.ts
@@ -33185,7 +33234,7 @@ var imageJobSchema = external_exports.object({
 var stateSchema2 = external_exports.object({ version: external_exports.literal(1), openingSpendUsd: money, jobs: external_exports.record(imageJobSchema) }).strict();
 
 // src/image-routing.ts
-var load5 = createRequire7(import.meta.url);
+var load6 = createRequire8(import.meta.url);
 var selectionHelper = fileURLToPath5(new URL("../../skills/_shared/image-selection.js", import.meta.url));
 var idSchema2 = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var imagePlanSchema = external_exports.object({
@@ -33401,6 +33450,7 @@ var visualSchema = external_exports.object({ camera: cameraSchema.optional() }).
 var shotIdSchema = external_exports.string().regex(/^s\d{4,}$/);
 var shotSchema = external_exports.object({
   id: shotIdSchema.optional(),
+  timeline: shotTimelineSchema.optional(),
   type: tuple(V.TYPES),
   title: external_exports.string().optional(),
   narration: external_exports.array(external_exports.object({ id: external_exports.string().trim().min(1).optional(), delivery: external_exports.enum(["voiceover", "on_screen", "off_screen"]).optional(), tts: external_exports.string(), sub: external_exports.string().optional(), speaker: external_exports.string().trim().min(1).optional() }).passthrough()).optional(),
@@ -33671,7 +33721,8 @@ var storyShotSchema = external_exports.object({
   shots: external_exports.array(external_exports.object({
     id: shotIdSchema.optional().describe("Revise this shot; without it a new shot is added at the end of its scene"),
     scene: external_exports.number().int().positive().describe("The scene number \u2014 written first with story_scene"),
-    summary: nonEmpty.describe("The story this shot tells, in one sentence")
+    summary: nonEmpty.describe("The story this shot tells, in one sentence"),
+    timeline: shotTimelineSchema.optional()
   }).strict()).min(1)
 }).strict();
 var musicSeconds = external_exports.number().finite().nonnegative();
@@ -33823,8 +33874,8 @@ function compileActing(text3, acting, voice) {
 }
 
 // src/tts-models.ts
-import { createRequire as createRequire10 } from "node:module";
-var shared2 = () => createRequire10(import.meta.url)("../../skills/_shared/tts-models.js");
+import { createRequire as createRequire11 } from "node:module";
+var shared2 = () => createRequire11(import.meta.url)("../../skills/_shared/tts-models.js");
 function resolveTtsModel(provider, model2) {
   return shared2().resolveTtsModel(provider, model2);
 }
