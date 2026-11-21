@@ -1,9 +1,9 @@
 ---
 name: generate-cut-videos
 description: >
-  Writes each generated_video shot's video prompt, then makes its video after the user approves that shot (or every shot); stops before assembly. Use when videos are requested or the episode order reaches them.
+  Generates one video per storyboard scene from its opening frame and dialogue. Stops before assembly. Use when videos are requested or the episode order reaches them.
 argument-hint: "[episode-or-storyboard-path]"
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent", "AskUserQuestion", "mcp__social-flow__shot_prompt", "mcp__plugin_social-flow_social-flow__shot_prompt", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__video_catalog", "mcp__plugin_social-flow_social-flow__video_catalog", "mcp__social-flow__video_plan", "mcp__plugin_social-flow_social-flow__video_plan", "mcp__social-flow__video_approve", "mcp__plugin_social-flow_social-flow__video_approve", "mcp__social-flow__video_execute", "mcp__plugin_social-flow_social-flow__video_execute", "mcp__social-flow__video_status", "mcp__plugin_social-flow_social-flow__video_status", "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow"]
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent", "AskUserQuestion", "mcp__social-flow__story_scene", "mcp__plugin_social-flow_social-flow__story_scene", "mcp__social-flow__shot_prompt", "mcp__plugin_social-flow_social-flow__shot_prompt", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__video_catalog", "mcp__plugin_social-flow_social-flow__video_catalog", "mcp__social-flow__video_plan", "mcp__plugin_social-flow_social-flow__video_plan", "mcp__social-flow__video_approve", "mcp__plugin_social-flow_social-flow__video_approve", "mcp__social-flow__video_execute", "mcp__plugin_social-flow_social-flow__video_execute", "mcp__social-flow__video_status", "mcp__plugin_social-flow_social-flow__video_status", "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow"]
 ---
 
 # Generate Cut Videos
@@ -11,6 +11,19 @@ allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent", "AskUserQuestion", "mc
 Steps 7–8 of [the production order](../_shared/production-workflow.md) (user directive
 2026-10-31). Read [video model selection](../produce/references/video-model-selection.md)
 and [duration planning](../produce/references/video-duration.md).
+
+## Generate one scene
+
+1. Read the scene and its shot cards in playback order with `storyboard_read`. Use the first card's actual opening image. Keep later cards as dialogue and editorial beats within the same generation.
+2. Save `videoDirection` on the scene with `story_scene` (retain its sequence, number, place, time, event and summary). Identify each person from the viewer's perspective by side, depth, posture and a landmark. Link their face and outfit panels to the same cast ID. Describe an off-screen start when appropriate. Use clothing to disambiguate people who share a desk or row. Coordinates and phrases such as “third man” make poor identifiers.
+3. Write the emotional change in English. Keep the dialogue on the shot cards in the original language. Usually the opening positions, emotion and lines are enough. Include one essential action when the story depends on it, anchored to the same landmark. For example, “He rises behind that same far-right desk and points across the room at Miran.” Add a camera move or cut only when the director requests it. Keep audience-only shock effects on the post-production cue track.
+4. Call `video_plan {episode, sceneNo, requestId}` once per scene. Omit `args.prompt`. Check the actual compiled prompt, input images, speaker and voice assignments, total seconds, resolution and price. Distilled GenAI LTX uses the opening image as the temporal first frame with compatible subject references. For mixed-media scenes, keep editorial inserts on their existing route and plan continuous generated material as its own scene. A larger room or crowd in frame still needs visual review. If a provider cannot fit the scene, report the limit and divide at a story beat before planning again.
+5. Use the existing approval or record the user's approval with `video_approve`, then run `video_execute` once. For a host handoff use the returned frame, prompt and scene duration with the selected host. Resume with `video_status` and the original request ID. The scene header shows the candidate and its actual prompt. Watch the opening second, distance, posture, speaking mouth and reaction through the last line. Report any missing or swapped person, unexpected cut or incomplete dialogue.
+6. Hand the accepted take to assembly once. When editing by shot card, use the observed source intervals from that take. Attaching the whole take separately to every card would repeat the scene.
+
+## When the user requests one shot
+
+Use `shotId` and the following shot workflow for a specific shot correction or an existing single-shot plan.
 
 For dialogue, read [dialogue coverage](../storyboard/references/dialogue-coverage.md)
 before writing prompts. Confirm the visible speaking face and silent foreground listener

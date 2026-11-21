@@ -18,6 +18,8 @@ on 2026-10-31 because none takes a voice reference.
   MiniMax-style pack with a reference voice lane)
 - **ASTRA** (`astra_*`, below) and the **host** tool (§The host video tool comes first)
 
+For normal episode generation plan one scene with `video_plan {episode,sceneNo,requestId}`. Its ordered cards provide dialogue and duration. On distilled LTX the image adapter carries both the first frame and subject references. The shot recipes below also support explicit single-shot work.
+
 ## ASTRA — our own LTX box
 
 **ASTRA video** (`astra_*`, `ASTRA_VIDEO`) is our own

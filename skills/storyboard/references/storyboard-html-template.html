@@ -5193,6 +5193,22 @@ window.STORYBOARD_READY = (async function () {
            sceneOutHtml(sc) + "</span>" +
            '<span class="scene-band-stats">' + esc(T.shotsN(grp.items.length)) + (scLen !== null ? " · " + esc(durTxt(scLen)) : "") + "</span>" +
            '</summary><div class="scene-band-body">' + audiencePlayer(grp.scene, soundRow);
+      if (sc && sc.videoDirection) {
+        var dir = sc.videoDirection, ko = LANG === "ko";
+        var approval = (window.VIDEO_APPROVALS || {}).scenes;
+        var approved = approval && approval[grp.scene];
+        var opening = (dir.openingPositions || []).map(function (p) {
+          return p.character + (p.images.length ? " (Image " + p.images.join(", ") + ")" : "") + " — " + p.position;
+        });
+        var turns = grp.items.flatMap(function (item) {
+          return (item.s.narration || []).filter(function (line) { return line.tts && line.delivery !== "voiceover"; })
+            .map(function (line) { return line.speaker + " · " + line.tts; });
+        });
+        h += '<details class="production-review"><summary>' + (ko ? "씬 영상 연출과 대사" : "Scene direction and dialogue") +
+          '</summary>' + (approved ? '<p>' + esc((ko ? "승인한 계획 · " : "Approved plan · ") + approved.requestId + " · " + String(approved.at).slice(0,10)) + '</p>' : '') +
+          '<pre>' + esc(opening.concat([dir.emotion, dir.action, dir.camera, dir.sound], turns).filter(Boolean).join("\n")) + '</pre></details>';
+      }
+      if (window.VIDEO_PRODUCTION_REVIEW) h += window.VIDEO_PRODUCTION_REVIEW.render(window.VIDEO_PRODUCTION, null, LANG, grp.scene);
     }
     grp.items.forEach(function (item) {
     var s = item.s, i = item.i, g = item.g, no = i + 1;
@@ -5204,7 +5220,7 @@ window.STORYBOARD_READY = (async function () {
     h += '<span class="scene-no" title="' + esc(T.shotCap(no) + " · " + (T.type[s.type] || s.type)) + '"><small>' + (LANG === "ko" ? "샷" : "SHOT") + "</small><b>" + (no < 10 ? "0" : "") + no + "</b></span>";
     if (s.visual && s.visual.video && s.visual.video.speechStatus === 'stale')
       h += '<span class="cut-carry">' + (LANG === 'ko' ? '이전 영상 참고용 · 대사 변경 후 재제작 필요' : 'Previous take only · dialogue changed, rebuild required') + '</span>';
-    h += videoApprovalHtml(s);
+    if (!(sc && sc.videoDirection)) h += videoApprovalHtml(s);
     var drifted = promptDriftText(s);
     if (drifted) h += '<span class="cut-carry prompt-drift">' + esc(drifted) + "</span>";
     // Shot grammar — size tile, angle and render tile — sits on its own row under the head so

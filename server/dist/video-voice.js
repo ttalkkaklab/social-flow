@@ -118,7 +118,7 @@ function msrSubject(character, refs, context) {
     let ownedPaths;
     const declared = [].concat(object(context.shot.visual).character ?? [])
         .map(entry => typeof entry === 'string' ? entry : text(object(entry).id));
-    if (declared.includes(text(character.id)) && existsSync(path.join(context.episode, 'storyboard', 'cast.json'))) {
+    if ((declared.includes(text(character.id)) || context.sceneDirection?.openingPositions.some(p => p.character === character.id && p.images.length)) && existsSync(path.join(context.episode, 'storyboard', 'cast.json'))) {
         const { sheetPanels, canonicalReferences } = load('../../skills/channel/references/character-panels.js');
         const dir = path.join(context.episode, 'storyboard');
         // Planning rebuilt these references from this same registered owner; transport aliases no longer identify the slot.
@@ -219,9 +219,11 @@ export function prepareVideoVoice(tool, input, context) {
             throw new Error('video_speaker_binding_invalid: use a cast id and an English appearance description');
     }
     const visibleSpeakers = [...new Set(nativeLines.filter(line => line.delivery === 'on_screen').map(line => text(line.speaker)))];
-    if (msr && visibleSpeakers.length > 1 && visibleSpeakers.some(id => !screenBindings.some(binding => binding.speaker === id)))
+    if (msr && context.sceneDirection && visibleSpeakers.some(id => !context.sceneDirection.openingPositions.some(p => p.character === id)))
+        throw new Error('openingPositions: describe each speaker in the scene opening');
+    if (msr && !context.sceneDirection && visibleSpeakers.length > 1 && visibleSpeakers.some(id => !screenBindings.some(binding => binding.speaker === id)))
         throw new Error('video_speaker_binding_required: set shot_prompt speakerBindings from the start image for every on-screen speaker; left/right mean the viewer\'s left/right, not Image 1/Image 2');
-    if (msr && visibleSpeakers.length > 1 && new Set(screenBindings.filter(binding => visibleSpeakers.includes(binding.speaker)).map(binding => binding.screenPosition)).size !== visibleSpeakers.length)
+    if (msr && !context.sceneDirection && visibleSpeakers.length > 1 && new Set(screenBindings.filter(binding => visibleSpeakers.includes(binding.speaker)).map(binding => binding.screenPosition)).size !== visibleSpeakers.length)
         throw new Error('video_speaker_binding_invalid: on-screen speakers need distinct screen positions');
     if (msr && screenBindings.length) {
         const start = text(object(visual.frames).start), expected = text(object(visual.video).speakerBindingImageSha256);
@@ -314,6 +316,12 @@ export function prepareVideoVoice(tool, input, context) {
             const id = text(line.speaker) || text(doc.narratorCharacterId), speaker = bySpeaker.get(id);
             const image = speaker?.imageIndices?.[0], audio = speaker?.audioIndex, direction = text(object(line.acting).direction);
             const who = image ? img(image) : speaker?.name ?? id;
+            if (context.sceneDirection) {
+                const owner = context.sceneDirection.openingPositions.find(p => p.character === id);
+                const imageSlot = image ?? owner?.images[0];
+                const binding = [imageSlot && img(imageSlot), audio && aud(audio), line.delivery === 'off_screen' && 'off screen'].filter(Boolean).join(', ');
+                return `${id}${binding ? ' (' + binding + ')' : ''}: "${text(line.tts)}"`;
+            }
             if (line.delivery !== 'on_screen') {
                 const label = nonEnglishOutsideQuotes(speaker?.name ?? '') ? id : speaker?.name ?? id;
                 const delivery = line.delivery === 'off_screen' ? 'off screen' : 'in voiceover';

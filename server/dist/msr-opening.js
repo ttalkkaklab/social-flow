@@ -6,6 +6,14 @@ export const openingPositionsSchema = z.array(z.object({
     position: z.string().trim().min(1).refine(value => !nonEnglishOutsideQuotes(value), 'Describe the opening position in English')
         .describe('Where the viewer sees this person at the start: side, depth, posture or orientation, and a visible landmark. Describe an off-screen start explicitly.'),
 }).strict(), { required_error: 'openingPositions required: inspect the opening image and describe each character and its reference images' }).describe('Required with MSR references. Identify every character in the opening scene, including silent listeners. Use [] only for a character-free scene.');
+const sceneText = z.string().trim().min(1).refine(value => !nonEnglishOutsideQuotes(value), 'Write scene direction in English');
+export const sceneVideoDirectionSchema = z.object({
+    openingPositions: openingPositionsSchema,
+    emotion: sceneText.describe('The emotional change, naming each participant. For a factual scene give its visible subject and purpose.'),
+    action: sceneText.optional().describe('Only story-essential movement, tied to the same visible landmark as the opening position.'),
+    sound: sceneText.optional().describe('Room tone or sound from an essential action.'),
+    camera: sceneText.optional().describe('An intentional camera change, when needed.'),
+}).strict();
 export function openingPrompt(prompt, positions = []) {
     if (!positions.length)
         return prompt;

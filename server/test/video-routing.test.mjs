@@ -625,3 +625,59 @@ test('a hosted reference lane takes the spoken shot from the board: panels, the 
  assert.match(silent.args.prompt,/No speech/);
  assert.equal(path.basename(silent.args.sourceImagePath),'start.png');
 });
+
+test('sceneNo plans one pinned clip for two ordered dialogue shots and revalidates the whole scene', async t => {
+ const f = fixture(t, {engine:'astra-genai',model:'ltx-2.5-22b-distilled',resolution:'576x1024',operation:'reference'});
+ const positions = [
+  {character:'witness',images:[1],position:'standing at the near witness rail'},
+  {character:'heir',images:[2],position:'seated at the far-right desk'},
+ ];
+ const direction = {openingPositions:positions,emotion:'The heir is angry. The witness feels ashamed.'};
+ f.board.STRUCTURE = {version:'1',sequences:[{id:'q',scenes:[1]}],scenes:[{no:1,videoDirection:direction}]};
+ const dir = path.join(f.episode,'storyboard');
+ for (const name of ['opening','witness','heir'])
+  fs.writeFileSync(path.join(dir,name+'.png'),Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=','base64'));
+ f.board.SB_DOC = {characters:positions.map(p=>({id:p.character,tts:{language:'ko',voiceId:'fixture'},voiceReference:{imagePaths:[p.character+'.png']}}))};
+ const oldKey=config.astraGenaiApiKey, oldFetch=globalThis.fetch;
+ config.astraGenaiApiKey='fixture';
+ globalThis.fetch=async()=>Response.json({msr:true,voice_references:true});
+ t.after(()=>{config.astraGenaiApiKey=oldKey;globalThis.fetch=oldFetch;});
+ await refreshGenaiMsrVoice(true);
+ for (const person of f.board.SB_DOC.characters) {
+  person.voiceReference.path=path.join(dir,person.id+'.wav');
+  execFileSync('ffmpeg',['-loglevel','error','-f','lavfi','-i','sine=duration=0.12',person.voiceReference.path]);
+ }
+ const words = ['왜 그랬어요?', '제가 찢었습니다.'];
+ for (const [i,shot] of f.board.SCENES.entries()) {
+  shot.scene=1; shot.duration=4+i; shot.visual.frames={mode:'first',start:'opening.png'};
+  shot.visual.character=[positions[i].character];
+  shot.visual.references=[{id:'p'+i,path:positions[i].character+'.png',use:'both',role:'character',purpose:'Face and clothing.'}];
+  shot.narration=[{id:'l'+i,speaker:positions[1-i].character,tts:words[i],delivery:'on_screen',acting:{direction:'Walk over to the witness.'}}];
+ }
+ f.save();
+ const input={episode:f.episode,sceneNo:1,requestId:'whole-scene',args:{reserveUsd:0.1}};
+ const plan=planVideo(input);
+ assert.deepEqual(plan.shotIds,['s1','s2']);
+ assert.equal(plan.args.duration,9); assert.equal(plan.sceneNo,1);
+ assert.equal(plan.tool,'astra_genai_img2video'); assert.match(plan.args.imageUri,/^data:image\/png/);
+ assert.equal(plan.args.references.length,3);
+ assert.ok(plan.args.prompt.startsWith('Opening frame'));
+ assert.match(plan.args.prompt,/heir \(Image 2, Audio 2\): "왜 그랬어요\?"[\s\S]+witness \(Image 1, Audio 1\): "제가 찢었습니다\."/);
+ assert.equal(plan.args.prompt.split(words[0]).length,2);
+ assert.doesNotMatch(plan.args.prompt,/hard cut|camera holds|tripod|gets to his feet|walk over/i);
+ assert.throws(()=>planVideo({...input,shotId:'s1'}),/sceneNo or shotId/);
+ assert.throws(()=>planVideo({...input,args:{duration:3}}),/video_duration_short/);
+ approveVideo({episode:f.episode,planIds:[plan.id],request:'Approve this whole scene'});
+ let calls=0;
+ await f.execute(plan,async (tool,args)=>{
+  calls++;
+  assert.equal(tool,plan.tool); assert.equal(args.prompt,plan.args.prompt);
+  assert.equal(args.references[1].audioPath,path.join(dir,'heir.wav'));
+  return result;
+ });
+ await f.execute(plan,async()=>assert.fail('duplicate scene submission'));
+ assert.equal(calls,1);
+ f.board.SCENES[1].narration[0].tts='다른 대사'; f.save();
+ assert.throws(()=>approveVideo({episode:f.episode,planIds:[plan.id],request:'old'}),/stale/);
+ await assert.rejects(f.execute(plan,async()=>assert.fail('stale scene submitted')),/stale/);
+});

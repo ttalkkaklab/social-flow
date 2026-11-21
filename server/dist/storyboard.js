@@ -1,4 +1,4 @@
-import { openingPositionsSchema } from './msr-opening.js';
+import { openingPositionsSchema, sceneVideoDirectionSchema } from './msr-opening.js';
 import { readShotVideoTiming } from './video-routing.js';
 import { episodeHandoff, manageProject } from './project.js';
 import { readImageMetadata, verifyImageFile } from './image-media.js';
@@ -146,6 +146,8 @@ export const sceneSchema = z
     out: nonEmpty.optional().describe('The sentence the scene goes out on — the one that forces a 그런데 or 그래서 into the next scene'),
     music: z.object({ decision: z.enum(['score', 'none']), reason: nonEmpty, span: nonEmpty.optional() }).strict().optional()
         .describe('The music decision story_music records: score (with its $timeline span id) or none, and why'),
+    videoDirection: sceneVideoDirectionSchema.optional(),
+    videoOpeningSha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
     audienceSound: audienceDecisionSchema.optional(),
 })
     .strict();
@@ -1298,6 +1300,7 @@ export const storySceneSchema = z.object({
         event: nonEmpty.describe('The one thing that happens in this scene'),
         summary: nonEmpty.describe("The scene's story in one sentence"),
         turn: nonEmpty.optional(), out: nonEmpty.optional(),
+        videoDirection: sceneVideoDirectionSchema.optional(),
         audienceSound: audienceDecisionSchema.optional(),
         // The same signs structure-contract.js reads: the value at the open and at the close.
         charge: z.object({ open: z.enum(['+', '-']), close: z.enum(['+', '-', '++', '--']) }).strict().optional(),
@@ -1370,7 +1373,10 @@ export function writeStoryScenes(args) {
     for (const { sequence, ...scene } of args.scenes) {
         if (!sequences.some((q) => q.id === sequence))
             throw new Error(`story_order: sequence ${sequence} does not exist — write it with story_sequence`);
-        scenes = upsertBy(scenes, [{ ...scenes.find((old) => old.no === scene.no), ...scene }], 'no');
+        const opening = win.SCENES?.find(shot => shot.scene === scene.no)?.visual?.frames;
+        const frame = scene.videoDirection && opening?.start ? resolve(dirname(scenesPath(args.path)), opening.start) : undefined;
+        const pin = frame ? { videoOpeningSha256: createHash('sha256').update(readFileSync(frame)).digest('hex') } : {};
+        scenes = upsertBy(scenes, [{ ...scenes.find((old) => old.no === scene.no), ...scene, ...pin }], 'no');
         sequences = sequences.map((q) => q.id === sequence
             ? (q.scenes.includes(scene.no) ? q : { ...q, scenes: [...q.scenes, scene.no] })
             : { ...q, scenes: q.scenes.filter((no) => no !== scene.no) });

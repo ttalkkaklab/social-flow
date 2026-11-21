@@ -29,6 +29,11 @@ test('local review preserves ambiguous jobs and strips provider secrets; export 
  assert.doesNotMatch(script,/<\/script>/);assert.match(script,/\\u003c/);
  const html=review.render(report,'s0001','en');
  assert.doesNotMatch(html,/<img src=x/);assert.match(html,/&lt;img/);
+ c.sceneNo=2; c.shotIds=['s0001','s0002']; c.clip='take.mp4';
+ assert.match(review.render(report,null,'en',2),/<video/);
+ assert.doesNotMatch(review.render(report,null,'en',2),/attach_video/);
+ assert.equal(review.render(report,'s0001','en'),'');
+ delete c.sceneNo;
  c.clip='javascript:alert(1)';assert.doesNotMatch(review.render(report,'s0001','en'),/<video/);
  fs.writeFileSync(path.join(store,'plans','b'.repeat(64)+'.json'),'broken');
  assert.equal(review.read(board).warnings.length,1);

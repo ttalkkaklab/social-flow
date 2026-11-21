@@ -1,4 +1,4 @@
-import { openingPrompt, type OpeningPosition } from './msr-opening.js';
+import { openingPrompt, sceneVideoDirectionSchema, type SceneVideoDirection, type OpeningPosition } from './msr-opening.js';
 import { buildFasth3Body, fasth3OmniSchema } from './fasth3-omni.js';
 import { localVideoStrategy } from './local-video-models.js';
 import { desktopVideoStatus } from './astra-genai-desktop.js';
@@ -38,12 +38,13 @@ const modelSettings = fileURLToPath(new URL('../../skills/_shared/model-settings
 const CHANNEL_ASSET_RE = /^data\/[a-z0-9][a-z0-9-]*\/assets(\/|$)/;
 interface Selection { engine: string; model?: string; resolution?: string; host?: string; operation?: string }
 interface Context {
+  sceneNo?: number; shotIds?: string[]; sceneDirection?: SceneVideoDirection;
   episode: string; shotId: string; selection: Selection; source: string; revision: string;
   snapshotRevision: string | null;
   lines: string[][]; production: Record<string, unknown>; board: Record<string, unknown>; shot: Record<string, unknown>;
 }
-export const routingContext = (episode: string, shotId: string): Context =>
-  (load(shared) as { readVideoContext(episode: string, shotId: string): Context }).readVideoContext(episode, shotId);
+export const routingContext = (episode: string, shotId?: string, sceneNo?: number): Context =>
+  (load(shared) as { readVideoContext(episode: string, shotId?: string, sceneNo?: number): Context }).readVideoContext(episode, shotId, sceneNo);
 function selectedVideoTool(selection: Selection, operation = selection.operation): string | undefined {
   return Object.entries(VIDEO_ADAPTERS).find(([name, a]) => a.engine === selection.engine && a.operation === operation &&
     (a.engine !== 'mlx' || !selection.model || localVideoStrategy(name)?.acceptsModel(selection.model)))?.[0];
@@ -53,7 +54,9 @@ function selectedVideoTool(selection: Selection, operation = selection.operation
 function shotVideoTiming(context: Context, tool: string, args: Record<string, unknown>) {
   const { shot } = context;
   let coverage: { requiredSeconds: number } | undefined;
-  if (shot.duration !== undefined) {
+  if (context.sceneNo !== undefined) {
+    coverage = { requiredSeconds: Number(shot.duration) };
+  } else if (shot.duration !== undefined) {
     const edit = load(fileURLToPath(new URL('../../skills/produce/references/edit-plan.js', import.meta.url))).preview(context.board.SCENES, { videoWarningsApproved: true });
     const index = (context.board.SCENES as unknown[]).indexOf(shot);
     const timing = load(fileURLToPath(new URL('../../skills/_shared/video-duration.js', import.meta.url)));
@@ -136,12 +139,13 @@ function stable(value: unknown): unknown {
 }
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(stable(value))).digest('hex');
 const idSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
-export const videoPlanSchema = z.object({ episode: z.string().min(1), shotId: z.string().min(1), requestId: idSchema,
+export const videoPlanSchema = z.object({ episode: z.string().min(1), shotId: z.string().min(1).optional(), sceneNo: z.number().int().positive().optional(), requestId: idSchema,
   purpose: z.enum(['draft', 'final', 'revision']).optional(),
   basedOnRequestId: idSchema.optional(), changeNote: z.string().min(1).max(1000).optional(),
-  operation: z.string().optional(), tool: z.string().optional(), args: z.record(z.unknown()).default({}) }).strict();
+  operation: z.string().optional(), tool: z.string().optional(), args: z.record(z.unknown()).default({}) }).strict().refine(v => Boolean(v.shotId) !== (v.sceneNo !== undefined), 'Choose sceneNo or shotId');
 export const videoExecuteSchema = z.object({ episode: z.string().min(1), planId: z.string().regex(/^[a-f0-9]{64}$/) }).strict();
 export interface VideoPlan {
+  sceneNo?: number; shotIds?: string[]; sceneDurationSeconds?: number;
   purpose?: 'draft' | 'final' | 'revision'; basedOnRequestId?: string; changeNote?: string;
   imageBindings?: ImageBinding[];
   version: 1; id: string; episode: string; shotId: string; requestId: string; tool: string;
@@ -236,14 +240,15 @@ export function checkVideoEnvironment(tool: string): void {
 }
 export function planVideo(raw: unknown): VideoPlan {
   const input = videoPlanSchema.parse(raw);
-  const context = routingContext(input.episode, input.shotId);
-  const take = { ...(input.purpose ? { purpose: input.purpose } : {}), ...(input.basedOnRequestId ? { basedOnRequestId: input.basedOnRequestId } : {}), ...(input.changeNote ? { changeNote: input.changeNote } : {}) };
+  const context = routingContext(input.episode, input.shotId, input.sceneNo);
+  const scene = context.sceneDirection && sceneVideoDirectionSchema.parse(context.sceneDirection);
+  const take = { ...(scene ? { sceneNo: context.sceneNo, sceneDurationSeconds: Number(context.shot.duration), shotIds: context.shotIds } : {}), ...(input.purpose ? { purpose: input.purpose } : {}), ...(input.basedOnRequestId ? { basedOnRequestId: input.basedOnRequestId } : {}), ...(input.changeNote ? { changeNote: input.changeNote } : {}) };
   if (input.basedOnRequestId) {
     const directory = path.join(context.episode, '.work/video-routing/plans');
     const parent = input.basedOnRequestId !== input.requestId && fs.existsSync(directory) && fs.readdirSync(directory)
       .filter(file => /^[a-f0-9]{64}\.json$/.test(file)).some(file => {
         const plan = JSON.parse(fs.readFileSync(path.join(directory, file), 'utf8')) as VideoPlan;
-        return plan.requestId === input.basedOnRequestId && plan.shotId === input.shotId && plan.episode === context.episode;
+        return plan.requestId === input.basedOnRequestId && plan.shotId === context.shotId && plan.sceneNo === input.sceneNo && plan.episode === context.episode;
       });
     if (!parent) throw new Error('video_parent_missing: name a different existing request for this shot');
   }
@@ -251,12 +256,14 @@ export function planVideo(raw: unknown): VideoPlan {
   requireSupportedSelection(selection);
   const lines = (context.shot.narration as Array<{ speaker?: string; delivery?: string; tts?: string }> | undefined ?? [])
     .filter(line => line.tts?.trim());
-  if (new Set(lines.map(line => line.speaker)).size > 1)
+  if (!scene && new Set(lines.map(line => line.speaker)).size > 1)
     throw new Error('shot_speaker_limit: split speaker changes into separate shots, then set each shot\'s framing and camera angle');
   const msrRequested = input.tool === 'astra_genai_msr' || selection.engine === 'astra-genai' &&
     (input.operation ?? (input.tool ? undefined : selection.operation)) === 'reference';
   if (msrRequested && (!lines.length || lines.some(line => line.delivery === 'voiceover')))
     throw new Error('msr_speech_route: silent and voiceover/inner-thought shots use image2video with external timed TTS for voiceover; split mixed deliveries first');
+  if (scene && lines.some(l => l.delivery === 'voiceover') && lines.some(l => l.delivery !== 'voiceover'))
+    throw new Error('scene_video_mixed_delivery: keep voiceover on its external track and separate it from native dialogue');
   const operation = input.operation ?? (input.tool ? undefined : selection.operation);
   const tool = input.tool || selectedVideoTool(selection, operation);
   if (input.tool && input.operation && VIDEO_ADAPTERS[input.tool]?.operation !== input.operation) throw new Error('Tool and operation disagree');
@@ -309,7 +316,17 @@ export function planVideo(raw: unknown): VideoPlan {
       prompt: [args.prompt, silentSuffix].filter(Boolean).join(' ') } : args;
   };
   let callArgs = withPrompt(compiled?.prompt ?? video?.prompt);
-  const sourcePrompt = typeof video?.prompt === 'string' ? video.prompt : '';
+  if (scene && input.args.prompt !== undefined)
+    throw new Error('scene_video_prompt: edit story_scene.videoDirection and the authored dialogue to revise the scene');
+  if (scene) {
+    const boundTurns = bindDialogueSeparately || tool === 'astra_genai_msr' || (tool && VENDOR_REFERENCE_TOOLS.includes(tool));
+    const sceneText = [scene.emotion, scene.action, scene.sound, scene.camera,
+      ...(!boundTurns ? lines.filter(l => l.delivery !== 'voiceover').map(l => l.speaker + ' (' + l.delivery + '): "' + l.tts + '"') : [])]
+      .filter(Boolean).join('\n');
+    callArgs = withPrompt(tool === 'astra_genai_msr' || tool === 'astra_genai_img2video' && hasVideoSubjectReferences(shot)
+      ? sceneText : openingPrompt(sceneText, scene.openingPositions));
+  }
+  const sourcePrompt = scene ? String(callArgs.prompt) : typeof video?.prompt === 'string' ? video.prompt : '';
   // A prompt the caller writes is checked against the board's move: missing or contradicted moves are named, never refused.
   const boardCamera = (context.shot.visual as { camera?: { movement?: unknown } } | undefined)?.camera;
   const drift = input.args.prompt !== undefined ? cameraDrift(String(input.args.prompt), String(boardCamera?.movement ?? '')) : null;
@@ -322,11 +339,11 @@ export function planVideo(raw: unknown): VideoPlan {
   const directionOf = (c: typeof compiled) => c ? { sourcePrompt, directionBindings: c.directionBindings, directionWarnings: c.warnings, performance: c.performance } :
     { sourcePrompt, directionWarnings: [input.args.prompt !== undefined ? 'Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons.' :
       'Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.', ...driftWarning] };
-  let direction = directionOf(compiled);
+  let direction = scene ? { sourcePrompt, directionWarnings: [] as string[] } : directionOf(compiled);
   if (selection.engine === 'host') {
     if (input.tool) throw new Error('model_selection_mismatch: host has no server adapter');
     const images = prepareVideoImages('host_external', callArgs, context.shot, context.episode);
-    const body = { ...take, version: 1 as const, episode: context.episode, shotId: input.shotId, requestId: input.requestId,
+    const body = { ...take, version: 1 as const, episode: context.episode, shotId: context.shotId, requestId: input.requestId,
       tool: 'host_external', args: callArgs, ...direction, ...(images.imageBindings ? { imageBindings: images.imageBindings, imageHandoff: images.imageHandoff } : {}), selection, source: context.source, contextRevision: context.revision,
       inputs: { ...Object.fromEntries((images.imageBindings ?? []).map(binding => [binding.path, binding.sha256])), ...performanceInputs }, quote: { reserveUsd: 0, estimatedUsd: 0, revision: 'host-allowance-v1', basis: 'External host allowance; limits and actual tool schema must be checked by host; not API enforcement' }, execution: 'host_handoff' as const };
     const plan = { ...body, id: hash(body) };
@@ -339,7 +356,7 @@ export function planVideo(raw: unknown): VideoPlan {
   let bound = bindSelection(tool, callArgs, selection);
   const durationPlan = shotVideoTiming(context, tool, bound);
   if (durationPlan.status === 'split_required')
-    throw new Error(`video_duration_exceeded: ${input.shotId} needs ${durationPlan.requiredSeconds}s; ${tool} allows ${durationPlan.maxSeconds}s. Split at a meaningful performance boundary; never truncate or switch models.`);
+    throw new Error(`video_duration_exceeded: ${context.shotId} needs ${durationPlan.requiredSeconds}s; ${tool} allows ${durationPlan.maxSeconds}s. Split at a meaningful performance boundary; never truncate or switch models.`);
   // GenAI I2V's live backend owns the maximum; its integer duration must still cover the shot.
   if (tool === 'astra_genai_img2video' && durationPlan.requiredSeconds !== undefined) {
     if (bound.requiredSeconds !== undefined) {
@@ -348,7 +365,7 @@ export function planVideo(raw: unknown): VideoPlan {
       delete bound.requiredSeconds;
     }
     if (typeof bound.duration === 'number' && bound.duration < durationPlan.requiredSeconds)
-      throw new Error(`video_duration_short: ${input.shotId} needs ${durationPlan.requiredSeconds}s but the request covers ${bound.duration}s`);
+      throw new Error(`video_duration_short: ${context.shotId} needs ${durationPlan.requiredSeconds}s but the request covers ${bound.duration}s`);
     bound.duration ??= Math.ceil(durationPlan.requiredSeconds);
   }
   // Legacy boards without a duration keep their exact request. Timed new shots cannot fall back to a short adapter default.
@@ -376,7 +393,7 @@ export function planVideo(raw: unknown): VideoPlan {
       ? framesForSeconds(args.duration, fps) : undefined;
     const requested = frames !== undefined ? frames / fps : args.durationSeconds;
     if (typeof requested === 'number' && requested < durationPlan.requiredSeconds!)
-      throw new Error(`video_duration_short: ${input.shotId} needs ${durationPlan.requiredSeconds}s but the request covers ${requested}s. Use requiredSeconds or revise the shot timing.`);
+      throw new Error(`video_duration_short: ${context.shotId} needs ${durationPlan.requiredSeconds}s but the request covers ${requested}s. Use requiredSeconds or revise the shot timing.`);
   }
   // Seconds this request plays: an exact frame count, a duration, or the adapter's own default.
   const playFps = durationPlan.limits?.frameRate, playFrames = typeof args.numFrames === 'number' ? args.numFrames
@@ -409,7 +426,7 @@ export function planVideo(raw: unknown): VideoPlan {
       throw new Error('model_selection_mismatch: retake inherits source dimensions; select the source resolution');
   }
   const quote = quoteVideo(tool, args);
-  const body = { ...take, version: 1 as const, episode: context.episode, shotId: input.shotId, requestId: input.requestId, tool, args,
+  const body = { ...take, version: 1 as const, episode: context.episode, shotId: context.shotId, requestId: input.requestId, tool, args,
     ...(images.imageBindings ? { imageBindings: images.imageBindings } : {}),
     sourceArgs: input.args, durationPlan, ...(speechFit ? { speechFit } : {}), ...direction, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
     selection, source: context.source, contextRevision: context.revision, inputs, quote, execution: 'server' as const };
@@ -448,7 +465,7 @@ export const videoApproveSchema = z.object({
 // shown: the shot's prompt and frames the approved plan used, so the review page can tell a later edit.
 // callPrompt: the plan sent a prompt named in its call instead of the shot's stored one. lines: structure-contract.js videoLines.
 interface Shown { prompt?: string; callPrompt?: true; start?: string; end?: string; lines?: string[][] }
-interface Approvals { auto?: { request: string; at: string }; plans: Record<string, { shotId: string; requestId: string; request: string; at: string; shown?: Shown }> }
+interface Approvals { auto?: { request: string; at: string }; plans: Record<string, { sceneNo?: number; shotId: string; requestId: string; request: string; at: string; shown?: Shown }> }
 const approvalsFile = (episode: string) => path.join(episode, '.work/video-routing/approvals.json');
 function readApprovals(episode: string): Approvals {
   return fs.existsSync(approvalsFile(episode)) ? JSON.parse(fs.readFileSync(approvalsFile(episode), 'utf8')) : { plans: {} };
@@ -457,10 +474,14 @@ function readApprovals(episode: string): Approvals {
 function writeApprovalView(episode: string, approvals: Approvals) {
   const dir = path.join(episode, 'storyboard');
   if (!fs.existsSync(path.join(dir, 'scenes.js'))) return;
-  const shots: Record<string, { planId: string; at: string; shown?: Shown }> = {};
-  for (const [planId, entry] of Object.entries(approvals.plans))
-    if (!shots[entry.shotId] || entry.at >= shots[entry.shotId].at) shots[entry.shotId] = { planId, at: entry.at, ...(entry.shown ? { shown: entry.shown } : {}) };
-  const view = { auto: approvals.auto?.at ?? null, shots };
+  const shots: Record<string, { planId: string; requestId?: string; at: string; shown?: Shown }> = {};
+  const scenes: typeof shots = {};
+  for (const [planId, entry] of Object.entries(approvals.plans)) {
+    const group = entry.sceneNo === undefined ? shots : scenes;
+    const key = String(entry.sceneNo ?? entry.shotId);
+    if (!group[key] || entry.at >= group[key].at) group[key] = { planId, ...(entry.sceneNo !== undefined ? {requestId: entry.requestId} : {}), at: entry.at, ...(entry.shown ? { shown: entry.shown } : {}) };
+  }
+  const view = { auto: approvals.auto?.at ?? null, shots, scenes };
   fs.writeFileSync(path.join(dir, 'video-approvals.js'), 'window.VIDEO_APPROVALS = ' + JSON.stringify(view).replace(/</g, '\\u003c') + ';\n');
 }
 export function approveVideo(raw: unknown): Approvals {
@@ -471,16 +492,19 @@ export function approveVideo(raw: unknown): Approvals {
   for (const id of input.planIds ?? []) {
     const plan: VideoPlan = JSON.parse(fs.readFileSync(path.join(episode, '.work/video-routing/plans', id + '.json'), 'utf8'));
     // A yes covers the plan the user saw; a plan whose shot changed since cannot run (video_execute), so it takes none.
-    const context = routingContext(episode, plan.shotId);
-    if (context.revision !== plan.contextRevision)
+    const context = routingContext(episode, plan.shotId, plan.sceneNo);
+    const changedSceneInput = plan.sceneNo !== undefined && Object.entries(plan.inputs).some(([file, digest]) =>
+      !fs.existsSync(file) || createHash('sha256').update(fs.readFileSync(file)).digest('hex') !== digest);
+    if (context.revision !== plan.contextRevision || changedSceneInput)
       throw new Error(`video_plan_stale: shot ${plan.shotId}'s frames, prompt, lines or settings changed after this plan — plan it again and show the user the new plan`);
     const visual = (context.shot.visual ?? {}) as { video?: { prompt?: unknown }; frames?: { start?: unknown; end?: unknown } };
     const used = (plan.sourceArgs ?? plan.args).prompt, fromShot = used === undefined || used === visual.video?.prompt;
     const shown = Object.fromEntries(Object.entries({ prompt: fromShot ? visual.video?.prompt : undefined, start: visual.frames?.start, end: visual.frames?.end })
       .filter(([, value]) => typeof value === 'string')) as Shown;
-    if (!fromShot) shown.callPrompt = true;
+    if (plan.sceneNo !== undefined) shown.prompt = String(plan.args.prompt);
+    if (!fromShot || plan.sceneNo !== undefined) shown.callPrompt = true;
     shown.lines = context.lines;
-    approvals.plans[id] = { shotId: plan.shotId, requestId: plan.requestId, request: input.request, at, shown };
+    approvals.plans[id] = { ...(plan.sceneNo === undefined ? {} : { sceneNo: plan.sceneNo }), shotId: plan.shotId, requestId: plan.requestId, request: input.request, at, shown };
   }
   atomicJson(approvalsFile(episode), approvals);
   writeApprovalView(episode, approvals);
@@ -495,10 +519,10 @@ export async function executeVideo(raw: unknown, dispatch: VideoDispatch): Promi
   const approvals = readApprovals(episode);
   if (!approvals.auto && !approvals.plans[id]) throw new Error(`video_approval_required: show the user shot ${plan.shotId}'s prompt, images and cost, ` +
     `then record their yes with video_approve {planIds:["${id}"]}, or auto:true once they approve every shot`);
-  const context = routingContext(episode, plan.shotId);
+  const context = routingContext(episode, plan.shotId, plan.sceneNo);
   if (context.revision !== plan.contextRevision) throw new Error('video_plan_stale: the shot\'s frames, prompt, lines, selection or authorization changed');
   if (plan.tool === 'astra_genai_msr' || (plan.tool === 'astra_genai_img2video' && plan.voiceContinuity?.strategy === 'reference_voice')) await refreshGenaiMsrVoice();
-  const refreshed = planVideo({ episode, shotId: plan.shotId, requestId: plan.requestId, tool: plan.tool, args: plan.sourceArgs ?? plan.args, purpose: plan.purpose, basedOnRequestId: plan.basedOnRequestId, changeNote: plan.changeNote });
+  const refreshed = planVideo({ episode, ...(plan.sceneNo !== undefined ? {sceneNo: plan.sceneNo} : {shotId: plan.shotId}), requestId: plan.requestId, tool: plan.tool, args: plan.sourceArgs ?? plan.args, purpose: plan.purpose, basedOnRequestId: plan.basedOnRequestId, changeNote: plan.changeNote });
   if (refreshed.id !== id) throw new Error('video_plan_stale: inputs, price or adapter contract changed');
   checkVideoEnvironment(plan.tool);
   const auth = authorization(context);
@@ -612,7 +636,7 @@ export async function routeLegacyVideo(tool: string, raw: unknown, dispatch: Vid
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return dispatch(tool, raw as Record<string, unknown>);
   const { videoContext, ...args } = raw as Record<string, unknown>;
   if (videoContext !== undefined) {
-    const ctx = videoPlanSchema.pick({ episode: true, shotId: true, requestId: true }).strict().parse(videoContext);
+    const ctx = z.object({ episode: z.string().min(1), shotId: z.string().min(1), requestId: idSchema }).strict().parse(videoContext);
     const plan = planVideo({ ...ctx, tool, args });
     return executeVideo({ episode: plan.episode, planId: plan.id }, dispatch);
   }

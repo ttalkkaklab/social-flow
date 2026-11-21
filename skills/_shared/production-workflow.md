@@ -47,10 +47,8 @@ generation authorization and adapter input validation stay. Work in this order:
 6. Each shot's start image (`shot_image`), composed from its characters' sheet panels,
    its place and props; then the end image (`frame:"end"`) only for a `first_last` shot.
    A place whose sheet names a built set is rendered from the shot's own camera first (below).
-7. Each `generated_video` shot's video prompt (`shot_prompt`), from its icon attributes,
-   lines and an English action. A later change to what it came from warns and marks the
-   prompt stale on the review page; rewrite it with `shot_prompt`.
-8. Each shot's video: `video_plan` → the user's approval (`video_approve`) → `video_execute`.
+7. Inspect the scene's first frame and save its `videoDirection` with `story_scene`. Keep character positions and emotion on the scene and the lines on their ordered shot cards.
+8. Generate one video for each scene of generated shots with `video_plan {episode,sceneNo,requestId}` → `video_approve` → `video_execute`. A specifically requested single-shot render uses `shot_prompt` and `shotId`.
 9. Assembly and delivery (produce). Place the planned audience cues against the accepted cuts
    and mix them with the scene's voice, room tone and music. [Audience cue placement](../produce/references/video-sound.md#audience-effects)
 
@@ -90,7 +88,7 @@ image takes the end image made from the old one off the shot.
 
 ## Approval before each video (user directive, 2026-10-31)
 
-Before a shot's video, show the user its `video_plan`: the prompt, the start (and end)
+Before generating a scene (or an explicitly selected shot), show the user its `video_plan`: the prompt, the start (and end)
 image and the cost. On their yes, record it with `video_approve {planIds}` in their own
 words; when they approve every shot at once, `video_approve {auto:true}`. `video_execute`
 refuses a plan without one (`video_approval_required`). A changed prompt, image or model

@@ -417,6 +417,10 @@ describe('story first, then characters and lines', () => {
     const scene = { sequence: 'q1', no: 1, place: '숲', time: '낮', event: 'e', summary: '씬', turn: '믿음이 깨진다' };
     writeStoryScenes(storySceneSchema.parse({ path: dir, scenes: [{ ...scene, charge: { open: '-', close: '--' } }] }));
     assert.deepEqual(readBoard(dir).win.STRUCTURE.scenes[0].charge, { open: '-', close: '--' });
+    const direction = { openingPositions: [], emotion: 'The empty courtroom falls quiet.' };
+    writeStoryScenes(storySceneSchema.parse({path:dir,scenes:[{...scene,videoDirection:direction}]}));
+    writeStoryScenes({path:dir,scenes:[scene]});
+    assert.deepEqual(readBoard(dir).win.STRUCTURE.scenes[0].videoDirection,direction);
     assert.equal(storySceneSchema.safeParse({ path: dir, scenes: [{ ...scene, charge: { open: '+', close: '+++' } }] }).success, false);
     assert.deepEqual(TOOLS.find((t) => t.name === 'story_scene').inputSchema.properties.scenes.items.properties.charge.properties.close.enum, ['+', '-', '++', '--']);
   });
