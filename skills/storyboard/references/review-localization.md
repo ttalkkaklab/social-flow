@@ -38,7 +38,8 @@ video model speaks a language well is not checked here: listen to the first clip
 Korean style rules (`korean-style.md`) apply to Korean text only.
 
 For each requested review language, translate the scenario, sequence/scene summaries,
-shot titles and summaries, and dialogue. Preserve relationships, speaker, addressee,
+shot titles and summaries, and dialogue. Include the authored scene sound directions
+in `audienceSound.reason`, `perspective`, `shift` and `exit`. Preserve relationships, speaker, addressee,
 inner thoughts and the point where a secret becomes known. Technical IDs, media paths,
 timestamps, prompts and generation receipts are not translations.
 

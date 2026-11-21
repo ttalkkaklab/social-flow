@@ -280,6 +280,15 @@ behavior in these summaries before choosing the cast; do not reduce every unit t
 "A says / B answers". Revisit boundaries after the lines are written. No
 image, speech, prompt, camera or dialogue work happens in this step.
 
+When writing each scene with `story_scene`, decide what the viewer should hear at its turn.
+Set `scene.audienceSound` to `{decision:"use",reason}` or `{decision:"none",reason}`.
+Work from the action. Whose experience should the viewer share? What changes before the
+outcome, and what does the reaction reveal afterward? A `use` decision accepts three
+optional fields. `perspective` names whose experience we follow, `shift` describes the
+change the viewer can see or hear, and `exit` names the beat that ends the cue. For
+`none`, write the reason the room or the performance carries the turn. Older decisions
+with just a reason still work.
+
 Record the cliché decision on the board (user directive 2026-11-18). After the first
 `story_sequence`, call `story_cliche`: read the report's mode, then record the clichés the
 scenario settled, each with its catalogue id and its `shift`, or `none` with the reason. On a
@@ -349,14 +358,6 @@ before your own taste. Then give every scene one decision with its reason:
 - `none`, where the lines or the room should be heard alone. The reason says why, e.g. "the
   refusal lands harder dry". Silence nobody decided reads `undecided` on the review page.
 
-After dialogue and music are spotted, choose where the audience's understanding changes.
-Open the relevant ten cases in the [audience sound index](references/audience-sound/index.md).
-If performance and music already carry the turn, leave the beat clear. Otherwise use
-`storyboard_apply.audienceEffects` with `op:"plan"`, the shot and event IDs, `sfx`, `intent`,
-`description` and the visible or spoken `trigger`. A late reaction can land after a joke;
-an absent second note works once the audience has heard the pair. View the selected cut before
-placing the cue. [Placement and comparison](../produce/references/video-sound.md#audience-effects).
-
 Define each cue for this episode with a `prompt` (instruments, tempo, mood, how it starts and
 ends, room for speech) and a `reason`, or name a channel bed as an `asset`. A cue made for
 another episode is not a cue for this one. A cue whose opening is quiet starts later with
@@ -372,6 +373,28 @@ in the same turn as a dated line in `production.musicDirection` with `project_ma
 waits for this step and no tool refuses a board without it; `storyboard_read.musicSpotting`,
 `shot_prompt`, the review page and the build report say which scenes are still open. Legacy
 boards that play one bed keep `sound.cue` (scenes-schema §Placing cues on a story board).
+
+**Audience-only sound.** Revisit each scene's `audienceSound` once the lines, shots and music
+are known. Read `storyboard_read.audienceSpotting` for undecided scenes, uses still missing a
+cue and cues on scenes marked `none`. A quiet room belongs in `sound.ambience`; a musical
+underscore belongs in `story_music`. A drone that comes in when a listener's face changes
+can play over either. A `none` decision applies only to the audience-only layer.
+
+For each `use`, anchor the cue to the change the viewer should notice. In EP01's
+arm-wrestling setup the joined hands are still. Jin-su smiles confidently. A single
+warm pluck at his smile can fade before the start call. A later shot of a hand slipping
+or a loser looking away would call for a different choice.
+Compare the chosen moment with the closest situation in the [audience sound index](references/audience-sound/index.md)
+and plan its event with `storyboard_apply.audienceEffects` (`op:"plan"`). Name the shot and
+event IDs, `sfx`, `intent`, the sound's shape in `description`, the visible or spoken `trigger`,
+and the moment it should release. For an original drone, riser or stinger give the saved
+music model an instrumental direction in `sfxEntries[id].prompt`. Describe the entrance,
+rise and decay around the reaction. The same model can score the BGM separately.
+On an older board, set `source:"music"` on this event's `plan` operation. Record
+`audienceSound` on its scene as usual. The board's version and the sources of its other cues stay as written.
+On accepted footage, watch the action once in silence, then listen to the take with its
+dialogue and room sound. Place the cue with `op:"place"`. Compare the same passage with
+the audience cue on and off at the same playback level. [Placement and comparison](../produce/references/video-sound.md#audience-effects)
 
 For dialogue-led work and existing-story rewrites, read [causal dialogue and situational
 comedy](references/causal-dialogue.md). Check what triggers each consequential line, what

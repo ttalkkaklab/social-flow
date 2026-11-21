@@ -40,8 +40,14 @@ episode work, continue to that skill after setup without asking for the same cho
    channels ask which one this project's defaults should target; do not pick the first.
    `project.channel` selects one primary channel; other existing directories are preserved.
 3. Call `project_manage action:options` and `capability_status`. Follow
-   [model settings](../_shared/model-settings.md) for **genre → video model → video credentials → image model → image credentials
-   → TTS needed? → speech model and credentials only if yes → music when wanted**.
+   [model settings](../_shared/model-settings.md) in the following order. **Genre → video model and credentials
+   → BGM model and credentials, or no new music → image model and credentials → optional TTS**.
+   In the host's choice prompt, ask “Which model should make this project's music and
+   audience-only drones, risers or stingers?” Offer exact models from
+   `music_catalog` and the choice to reuse music or leave scenes unscored. Wait for the
+   answer unless the user already named the model or explicitly chose reuse.
+   Save the selected `models.music:{engine,model}` or `{engine:"none"}`.
+   An existing project without this field can reuse its assets and continue with its saved defaults.
    Recommend ASTRA GenAI (`astra-genai` / `z-image-turbo`) for initial image selection,
    not local mflux; readable-text images require GPT Image 2.
    Complete each credential step before the next model question; follow the shared

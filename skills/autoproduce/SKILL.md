@@ -96,7 +96,10 @@ Only the story order is enforced; checks come back once the quality is known.
 
 1. Storyboard: the story (`story_sequence` → `story_scene` → `story_shot`), each shot's
    characters and lines (`shot_characters` → `shot_dialogue`), each scene's music decision
-   (`story_music`), then its icon attributes (`shot_icons`). Prepare props and backgrounds with their images.
+   (`story_music`), then its icon attributes (`shot_icons`). When writing each scene with
+   `story_scene`, give its `audienceSound` decision (`use` or `none`) and reason. Revisit it
+   after the lines and music. Read `storyboard_read.audienceSpotting` and plan the selected
+   cues with `storyboard_apply.audienceEffects`. Prepare props and backgrounds with their images.
    Record the cliché decision with `story_cliche` after the first `story_sequence`. On a
    drama, comedy or romance episode make the pass yourself and record the uses or `none`.
    On any other type an unattended run has no user to pick: record the candidates with
@@ -115,7 +118,8 @@ supplied existing episode, regenerate it in this order; preserve its story when 
 asks to. Enforce real spending/attempt limits. The coordinator never writes a reviewer's verdict.
 
 After the videos, use produce for assembly, music, requested platform copy and final
-delivery verification. Keep speech provenance without automatic speech-scoring/STT gates.
+delivery verification. Place the planned cues on the actual reactions. [Audience cue placement](../produce/references/video-sound.md#audience-effects)
+Keep speech provenance without automatic speech-scoring/STT gates.
 Publishing remains a separate authorization. Preserve actual costs and failed reports.
 
 ## Reviews and explicit improvement loops

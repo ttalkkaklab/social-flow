@@ -41,6 +41,7 @@ export function parseMusicArgs(tool, input) {
 }
 export function musicCatalog() {
     return { version: 1, revision: '2026-10-18', models: MUSIC_MODELS,
+        noGeneration: { engine: 'none' },
         adapters: Object.entries(MUSIC_ADAPTERS).map(([tool, a]) => ({ tool, engine: a.engine, fixedModel: a.fixedModel, fields: Object.keys(shape(a.schema)) })),
         local: { engine: 'mlx', tool: 'mlx_music_generate', model: 'Exact installed MLX Core music pack ID; no automatic pack selection' },
         unimplemented: [{ engine: 'suno-official', reason: 'Official platform exists; authenticated request schema not verified', source: 'https://platform.suno.com/' },

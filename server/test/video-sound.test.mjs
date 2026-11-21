@@ -144,7 +144,7 @@ test('MSR renders effects natively and its own soundtrack carries the dialogue',
 });
 
 test('audience cues stay out of native and conditioned audio alongside scene sounds', () => {
-  const cue = {id:'turn',sfx:'bend',delivery:'auto',trigger:'her smile fades',description:'dry synth bend',audience:{intent:'embarrassment'}};
+  const cue = {id:'turn',sfx:'bend',delivery:'auto',trigger:'her smile fades',description:'dry synth bend',audience:{intent:'embarrassment',source:'music'}};
   const args = {prompt:'She looks up.'};
   const p = prepareVideoSound('astra_text2video',args,{effects:[...intent.effects,cue]});
   assert.deepEqual(p.sound.effects.map(e=>e.delivery),['native','post']);

@@ -283,6 +283,32 @@ ${stage}`;
  for(let i=3;i<rgb.length;i++)assert.equal(rgb[i],rgb[i%3],'caption pixels appeared on the flat blue source');
 });
 
+test('the float audience stem preserves long delays, excerpt entrances and a second cue on the PCM clock', t => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'audience-delay-'));
+  t.after(() => rmSync(dir, {recursive: true, force: true}));
+  const wav = path.join(dir, 'tone.wav');
+  ff(['-f','lavfi','-i','sine=frequency=1200:duration=1:sample_rate=48000', wav]);
+  const firstSample = 1249600, secondSample = 1344000;
+  const list = [[firstSample / 48000,wav,10,.68,0,4800,9600],[secondSample / 48000,wav,10,.20,0,4800,48]];
+  writeFileSync(path.join(dir,'events.tsv'), list.map(row => row.join('\t')).join('\n') + '\n');
+  const stage = builder.slice(builder.indexOf('sfx_measure() {'), builder.indexOf('\nSFXIN=""'));
+  const script = `set -eu
+AUDIENCE_PLAN=0; NT=30; MIX_REFERENCE_I=-18; SFX_SEP=10
+say(){ :; }
+${stage}
+render_sfx events.tsv audience.wav pcm_f32le`;
+  const result = spawnSync('bash', ['-c',script], {cwd:dir, encoding:'utf8'});
+  assert.equal(result.status, 0, result.stderr);
+  const pcm = ff(['-i',path.join(dir,'audience.wav'),'-f','f32le','-']);
+  const amplitude = sample => Math.abs(pcm.readFloatLE(sample * 4));
+  const silence = (start, end) => pcm.subarray(start * 4, end * 4).every(v => v === 0);
+  assert.ok(silence(0, firstSample), 'all samples before 26.033333s must be zero');
+  assert.ok(amplitude(firstSample + 1) > 0 && amplitude(firstSample + 490) < amplitude(firstSample + 9610) / 10);
+  assert.ok(silence(firstSample + .68 * 48000, secondSample));
+  assert.ok(amplitude(secondSample + 1) > 0 && amplitude(secondSample + 50) > .001);
+  assert.ok(silence(secondSample + .2 * 48000, 30 * 48000));
+});
+
 test('audience preview and final mix preserve the source and place only selected tones across trimmed cards', {timeout:90000}, () => {
   const dir = mkdtempSync(path.join(tmpdir(),'audience-render-'));
   try {
@@ -291,15 +317,18 @@ test('audience preview and final mix preserve the source and place only selected
     const source = path.join(work,'source.mp4');
     ff(['-f','lavfi','-i','testsrc2=size=128x224:rate=25:duration=3','-f','lavfi','-i','sine=frequency=200:duration=3:sample_rate=48000',
       '-c:v','libx264','-c:a','aac','-shortest',source]);
-    for (const [name,pitch,duration] of [['drone',900,3],['chirp',1400,.2],['foley',1900,.4]])
+    for (const [name,pitch,duration] of [['drone',900,3],['foley',1900,.4]])
       ff(['-f','lavfi','-i',`sine=frequency=${pitch}:duration=${duration}:sample_rate=48000`,path.join(library,name+'.wav')]);
+    const chirp = path.join(library, 'chirp.wav');
+    ff(['-f','lavfi','-i','sine=frequency=1400:duration=0.2:sample_rate=48000','-af','adelay=600',chirp]);
     const shots = ['s0001','s0002'].map(id => ({id,type:'points',duration:2,narration:[],visual:{clip:source},
       edit:{in:.8,out:2.8},sound:{audioSource:'video',effects:[]}}));
     const make = (id,sfx,atSeconds) => ({id,sfx,atSeconds,delivery:'post',description:'synth',trigger:'shoulders lower',audience:{intent:'relief'}});
     const span = {...make('release','drone',2.2-.8),end:{shotId:'s0002',atSeconds:.5},fadeOutSeconds:.15};
-    const point = make('answer','chirp',.45);
+    const point = { ...make('answer','chirp',.45), sourceStartSeconds: .6 };
     shots[0].sound.effects=[span]; shots[1].sound.effects=[point,{id:'foley',sfx:'foley',atSeconds:.45,delivery:'post'}];
     const win={SCENES:shots,MUSIC:{$timeline:[]}}, clock=require('../../skills/storyboard/references/audience-effects.js').boardClock(win,board);
+    assert.throws(() => clock.bounds('s0002', { ...point, sourceStartSeconds: .8 }), /source audio in-point/);
     for (const [i,e] of [[0,span],[1,point]]) e.audience.timingBasis=clock.basis(shots[i].id,e,e.end?.shotId);
     writeFileSync(path.join(board,'scenes.js'),Object.entries(win).map(([k,v])=>'window.'+k+'='+JSON.stringify(v)+';').join('\n'));
     writeFileSync(path.join(work,'cards.tsv'),shots.map((_,i)=>i+'\tsource.mp4\t1\tnone').join('\n')+'\n');
@@ -310,13 +339,15 @@ test('audience preview and final mix preserve the source and place only selected
     const resolved=JSON.parse(readFileSync(path.join(work,'work/audience-resolved.json')));
     assert.deepEqual(resolved.map(e=>e.bodyStartSeconds),[1.4,2.45]);
     assert.ok(Math.abs(resolved[0].bodyEndSeconds-2.5)<1e-6);
+    assert.equal(resolved[1].sourceStartSeconds, .6);
+    assert.ok(Math.abs(resolved[1].sourceEndSeconds - .8) < 1e-8 && Math.abs(resolved[1].bodyEndSeconds - 2.65) < 1e-8);
     const samples=file=>ff(['-i',path.join(work,file),'-map','0:a:0','-af','pan=mono|c0=c0','-ar','48000','-f','f32le','-']);
     const off=samples('audience-off.mov'),on=samples('audience-on.mov'),final=samples('reel.mp4');
     assert.equal(off.length,on.length);
     assert.deepEqual(frameHashes(path.join(work,'audience-off.mov')),frameHashes(path.join(work,'audience-on.mov')));
     const range=(buf,a,b)=>buf.subarray(Math.round(a*48000)*4,Math.round(b*48000)*4);
-    assert.deepEqual(range(off,0,1.399),range(on,0,1.399));
-    assert.deepEqual(range(off,2.651,3.9),range(on,2.651,3.9));
+    assert.equal(Buffer.compare(range(off,0,1.399),range(on,0,1.399)),0,'before the first cue');
+    assert.equal(Buffer.compare(range(off,2.651,3.9),range(on,2.651,3.9)),0,'after the last cue');
     function band(buf,start,hz,sec=.04) {
       const n=Math.round(sec*48000); let x=0,y=0;
       for(let j=0;j<n;j++){const v=buf.readFloatLE(4*(Math.round(start*48000)+j)),a=2*Math.PI*hz*j/48000;x+=v*Math.cos(a);y+=v*Math.sin(a);}
@@ -334,6 +365,9 @@ test('audience preview and final mix preserve the source and place only selected
     const fast=spawnSync('bash',[path.join(ref,'speedup.sh'),work,'1.25'],{encoding:'utf8',timeout:30000,env:{...process.env,OUTRO:'0',FPS:'25'}});
     assert.equal(fast.status,0,fast.stdout+fast.stderr);
     const delivery=JSON.parse(readFileSync(path.join(work,'delivery-proof.json'))).audienceEffects;
+    assert.equal(delivery[1].effectiveFadeInSeconds, .001);
+    assert.deepEqual([delivery[1].sourceStartSeconds, delivery[1].sourceEndSeconds, delivery[1].sourceSha256],
+      [.6, resolved[1].sourceEndSeconds, require('node:crypto').createHash('sha256').update(readFileSync(chirp)).digest('hex')]);
     assert.ok(Math.abs(delivery[0].deliveryStartSeconds-1.12)<1e-9);
     const shipped=samples('reel-fast.mp4');
     assert.ok(band(shipped,1.06,900,.02)<.002 && band(shipped,1.15,900,.02)>.008,'onset in shipped audio within one frame');
@@ -364,6 +398,16 @@ test('audience preview and final mix preserve the source and place only selected
     const spliced=samples('reel-fast.mp4');
     assert.ok(band(spliced,1.7,420)>.01 && band(spliced,1.7,900)<.002,'insert keeps its own sound and releases the drone');
     assert.ok(band(spliced,withInsert[1].deliveryStartSeconds+.04,1400)>.008,'next reaction uses the measured insert clock');
+
+    // A bounded excerpt at zero contains just the quiet lead-in, even though the full WAV has a loud chirp.
+    point.sourceStartSeconds = 0;
+    point.end = { shotId: 's0002', atSeconds: .65 };
+    point.audience.timingBasis = updated.basis('s0002', point, 's0002');
+    writeFileSync(path.join(board,'scenes.js'),Object.entries(win).map(([k,v])=>'window.'+k+'='+JSON.stringify(v)+';').join('\n'));
+    const silent = spawnSync('bash', [path.join(ref,'build-reel.sh'),work,board], {
+      encoding:'utf8',timeout:40000,env:{...process.env,W:'128',H:'224',OUTRO:'0',FPS:'25',COVER_TS:'1'} });
+    assert.notEqual(silent.status, 0);
+    assert.match(silent.stdout + silent.stderr, /chirp\.wav is silent/);
 
   } finally {rmSync(dir,{recursive:true,force:true});}
 });

@@ -19,12 +19,23 @@ function main([mode, rate, seconds, boardFile, from, to]) {
       if (!(stop > start && fade >= 0 && fade <= stop - start + 1e-8)) throw new Error('audience_span_invalid: ' + span.id);
       const duration = Number(execFileSync('ffprobe', ['-v','error','-show_entries','format=duration','-of','csv=p=0',span.assetPath], {encoding:'utf8'}).trim());
       if (!(duration > 0)) throw new Error('Unreadable audience asset: ' + span.assetPath);
-      const played = Math.min(duration, stop - start);
-      if (!span.end && span.limit && duration > played) fade = Math.min(0.02, played);
+      const inPoint = span.sourceStartSeconds ?? 0;
+      const sourceSample = Math.round(inPoint * 48000), sourceStartSeconds = sourceSample / 48000;
+      if (!Number.isFinite(inPoint) || inPoint < 0 || sourceStartSeconds >= duration)
+        throw new Error('audience_span_invalid: source audio in-point outside asset: ' + span.id);
+      const remaining = duration - sourceStartSeconds, played = Math.min(remaining, stop - start);
+      const fadeIn = span.fadeInSeconds ?? 0;
+      if (!Number.isFinite(fadeIn) || fadeIn < 0 || fadeIn > played + 1e-8)
+        throw new Error('audience_span_invalid: entrance fade exceeds playable excerpt: ' + span.id);
+      // Ramp a nonzero source cut for at least one millisecond to avoid a waveform discontinuity.
+      const entranceSamples = Math.min(Math.round(played * 48000), Math.max(sourceSample > 0 ? 48 : 0, Math.round(fadeIn * 48000)));
+      if (!span.end && span.limit && remaining > played) fade = Math.min(0.02, played);
       // Fade starts relative to the authored endpoint. A shorter asset may already be silent.
       const fadeStart = Math.max(0, stop - start - fade);
-      console.log([start, span.assetPath, span.separationLu, stop - start, fade].join('\t'));
-      return { ...span, bodyStartSeconds:start, bodyEndSeconds:start + played, sourceSeconds:duration, fadeStartSeconds:fade ? start + fadeStart : null, listening:'not_reviewed' };
+      console.log([start, span.assetPath, span.separationLu, stop - start, fade, sourceSample, entranceSamples].join('\t'));
+      return { ...span, bodyStartSeconds:start, bodyEndSeconds:start + played, sourceSeconds:duration,
+        sourceStartSeconds, sourceEndSeconds: sourceStartSeconds + played, effectiveFadeInSeconds: entranceSamples / 48000,
+        fadeStartSeconds:fade ? start + fadeStart : null, listening:'not_reviewed' };
     });
     fs.writeFileSync('work/audience-resolved.json', JSON.stringify(resolved, null, 2) + '\n');
     return;

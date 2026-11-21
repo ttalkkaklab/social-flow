@@ -101587,6 +101587,7 @@ function musicCatalog() {
     version: 1,
     revision: "2026-10-18",
     models: MUSIC_MODELS,
+    noGeneration: { engine: "none" },
     adapters: Object.entries(MUSIC_ADAPTERS).map(([tool2, a]) => ({ tool: tool2, engine: a.engine, fixedModel: a.fixedModel, fields: Object.keys(shape(a.schema)) })),
     local: { engine: "mlx", tool: "mlx_music_generate", model: "Exact installed MLX Core music pack ID; no automatic pack selection" },
     unimplemented: [
@@ -110865,7 +110866,7 @@ var MUSIC_TOOLS = [
   {
     name: "music_catalog",
     title: "Inspect music models",
-    description: "Read music/BGM/song adapters, exact saved model IDs, duration controls and official versus third-party provenance. No API call. Returns models, adapter fields, sources and unimplemented providers. Do NOT use to generate audio \u2014 use music_plan then music_execute.",
+    description: "Read music/BGM/song adapters, exact model IDs, duration controls and provider provenance. At first setup offer a supported model or noGeneration (save engine:none for reuse or no score). Returns models, adapter fields, sources and unimplemented providers without an API call.",
     inputSchema: { type: "object", additionalProperties: false, properties: {} },
     annotations: { readOnlyHint: true, openWorldHint: false }
   },
@@ -113956,7 +113957,7 @@ import * as path14 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.123.0",
+  version: "0.124.3",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -116280,6 +116281,14 @@ function refreshVideoReview(episode) {
     process.stderr.write("Video review export needs a refresh; request receipts remain authoritative.\n");
   }
 }
+function refreshAudienceReview(boardDirectory) {
+  try {
+    const data = createRequire5(import.meta.url)("../../skills/storyboard/references/audience-review-data.js");
+    data.refresh(boardDirectory);
+  } catch {
+    process.stderr.write("Audience audio preview needs a refresh.\n");
+  }
+}
 
 // src/video-state.ts
 function historicalSpend(episode) {
@@ -118258,6 +118267,17 @@ var STRUCTURE_VERSION = (() => {
     return "structure-v1";
   }
 })();
+var audienceDecisionSchema = external_exports.discriminatedUnion("decision", [
+  external_exports.object({ decision: external_exports.literal("undecided") }).strict(),
+  external_exports.object({
+    decision: external_exports.literal("use"),
+    reason: nonEmpty,
+    perspective: nonEmpty.optional().describe("Whose experience guides what the audience hears"),
+    shift: nonEmpty.optional().describe("Which line or action reveals a change in the character's feeling or expectation, and how the cue follows it"),
+    exit: nonEmpty.optional().describe("The line, action or cut where the sound ends or ordinary listening returns")
+  }).strict(),
+  external_exports.object({ decision: external_exports.literal("none"), reason: nonEmpty }).strict()
+]).describe("Whether the scene uses an audience-only sound: use or none with the dramatic reason, or undecided.");
 var sceneSchema = external_exports.object({
   no: external_exports.number().int().positive().describe("Scene number \u2014 the value shots point at with `scene`"),
   place: external_exports.string().optional().describe("One place \u2014 the slugline location"),
@@ -118267,7 +118287,8 @@ var sceneSchema = external_exports.object({
   turn: external_exports.string().optional().describe("What flipped between the open and the close"),
   summary: external_exports.string().optional().describe("The scene's story in one sentence; the storyboard scene header shows it"),
   out: nonEmpty.optional().describe("The sentence the scene goes out on \u2014 the one that forces a \uADF8\uB7F0\uB370 or \uADF8\uB798\uC11C into the next scene"),
-  music: external_exports.object({ decision: external_exports.enum(["score", "none"]), reason: nonEmpty, span: nonEmpty.optional() }).strict().optional().describe("The music decision story_music records: score (with its $timeline span id) or none, and why")
+  music: external_exports.object({ decision: external_exports.enum(["score", "none"]), reason: nonEmpty, span: nonEmpty.optional() }).strict().optional().describe("The music decision story_music records: score (with its $timeline span id) or none, and why"),
+  audienceSound: audienceDecisionSchema.optional()
 }).strict();
 var sequenceSchema = external_exports.object({
   id: nonEmpty.describe('Stable id, e.g. "q1"'),
@@ -118387,6 +118408,7 @@ var audienceEffectsSchema = external_exports.array(external_exports.discriminate
     trigger: audienceId.optional(),
     description: audienceId.optional(),
     release: audienceId.nullish(),
+    source: external_exports.literal("music").nullish().describe("Use the saved music model for this event, including on a legacy board. Omit to keep its choice or set null to restore the board default."),
     caseId: external_exports.string().regex(/^(00[1-9]|0[1-9]\d|1[01]\d|120)$/).nullish(),
     intensity: external_exports.enum(["subtle", "normal", "strong"]).nullish(),
     separationLu: seconds.max(30).nullish()
@@ -118396,7 +118418,9 @@ var audienceEffectsSchema = external_exports.array(external_exports.discriminate
     op: external_exports.literal("place"),
     atSeconds: seconds,
     timingBasis: external_exports.string().regex(/^[a-f0-9]{64}$/),
+    sourceStartSeconds: seconds.nullish().describe("Start within the full source audio, in seconds. Omit to keep the current in-point or use null to play from zero."),
     end: external_exports.object({ shotId: shotIdSchema, atSeconds: external_exports.union([seconds, external_exports.literal("end")]) }).strict().nullish(),
+    fadeInSeconds: seconds.nullish().describe("Fade up over this many seconds of the playable excerpt. Omit to keep it or use null to clear it."),
     fadeOutSeconds: seconds.nullish()
   }).strict(),
   external_exports.object({ ...audienceKey, op: external_exports.literal("remove") }).strict()
@@ -118593,6 +118617,7 @@ function readStoryboard(args) {
   const result = contract().outline(win, args.level);
   if (args.level === "shots" || args.level === "full" || args.audienceEndFor)
     result.audienceEffects = audienceSound().read(win, dirname6(file), args.audienceEndFor, args.shotId);
+  result.audienceSpotting = audienceSound().spotting(win, result.audienceEffects);
   result.file = file;
   result.mediaBaseDirectory = dirname6(file);
   result.sha256 = sha2563;
@@ -118871,6 +118896,9 @@ function applyPatch(win, patch, opts = {}) {
       throw new Error("cliche_record: window.CLICHES is written by story_cliche, which checks the episode type and the user's pick \u2014 storyboard_apply globals cannot change it");
     next[k] = v;
   }
+  const previousStory = win.STORY;
+  if ((opts.creating ?? Object.keys(win).length === 0) || previousStory?.audienceSoundVersion === 1)
+    next.STORY = { ...next.STORY, audienceSoundVersion: 1 };
   let clicheChoiceKept;
   if (patch.globals && Object.hasOwn(patch.globals, "PRODUCTION") && !opts.cliches && Object.keys(win).length) {
     const before2 = win.PRODUCTION?.clicheUse;
@@ -118922,6 +118950,14 @@ function applyPatch(win, patch, opts = {}) {
     const kept = scenes.find((old) => old.no === scene.no)?.music;
     return kept && !("music" in scene) ? { ...scene, music: kept } : scene;
   }), "no");
+  const tracked = next.STORY?.audienceSoundVersion === 1;
+  const oldScenes = Array.isArray(win.STRUCTURE?.scenes) ? win.STRUCTURE.scenes : [];
+  const priorDecisions = new Map(oldScenes.filter((scene) => scene?.audienceSound).map((scene) => [scene.no, scene.audienceSound]));
+  scenes = scenes.map((scene) => {
+    if (scene.audienceSound) return scene;
+    const audienceSound2 = priorDecisions.get(scene.no) ?? (tracked ? { decision: "undecided" } : void 0);
+    return audienceSound2 ? { ...scene, audienceSound: audienceSound2 } : scene;
+  });
   if (patch.removeScenes) {
     const drop = new Set(patch.removeScenes);
     scenes = scenes.filter((sc) => !drop.has(sc.no));
@@ -119188,7 +119224,7 @@ function applyStoryboard(args, opts = {}) {
   const changesProps = !!args.propSheet || !!args.globals && Object.prototype.hasOwnProperty.call(args.globals, "SB_DOC") && ["props", "propContinuity"].some((key) => JSON.stringify(previousDoc?.[key]) !== JSON.stringify(incomingDoc?.[key]));
   if (changesProps && exists && args.expectedSha256 !== originalHash)
     throw new Error("head_moved: propSheet requires the current expectedSha256 from storyboard_read");
-  const { win: next, findings, synced } = applyPatch(win, args, opts);
+  const { win: next, findings, synced } = applyPatch(win, args, { ...opts, creating: !exists });
   const audienceResult = audienceEdit ? audienceSound().patch(next, dirname6(file), args) : void 0;
   const panelIds = [...new Set((next.SCENES ?? []).flatMap((shot) => [...contract().castOf(shot) ?? [], ...bystandersOf(shot)]))];
   if (panelIds.length && existsSync24(join12(dirname6(file), "cast.json"))) {
@@ -119253,7 +119289,7 @@ function applyStoryboard(args, opts = {}) {
     ...audienceResult,
     synced,
     findings,
-    board: [digest5, firstLine, opening, () => cliches().digest(next)].flatMap((read4) => {
+    board: [digest5, firstLine, opening, () => cliches().digest(next), () => audienceSound().spottingDigest(next)].flatMap((read4) => {
       try {
         return read4();
       } catch {
@@ -119291,6 +119327,7 @@ function applyStoryboard(args, opts = {}) {
     throw err4;
   }
   refreshVideoReview(dirname6(dirname6(file)));
+  refreshAudienceReview(dirname6(file));
   result.written = true;
   return result;
 }
@@ -119324,6 +119361,7 @@ var storySceneSchema = external_exports.object({
     summary: nonEmpty.describe("The scene's story in one sentence"),
     turn: nonEmpty.optional(),
     out: nonEmpty.optional(),
+    audienceSound: audienceDecisionSchema.optional(),
     // The same signs structure-contract.js reads: the value at the open and at the close.
     charge: external_exports.object({ open: external_exports.enum(["+", "-"]), close: external_exports.enum(["+", "-", "++", "--"]) }).strict().optional()
   }).strict()).min(1)
@@ -119343,9 +119381,10 @@ function readOutline(path35) {
   return { win, st: win.STRUCTURE ?? emptyStructure() };
 }
 function writeOutline(path35, win, structure, shots, language, opening) {
-  const episode = win.STORY ? void 0 : workflowEpisode(dirname6(scenesPath(path35)));
+  const savedStory = win.STORY;
+  const story = savedStory?.audienceSoundVersion === 1 && Object.keys(savedStory).length === 1 ? void 0 : savedStory;
+  const episode = story ? void 0 : workflowEpisode(dirname6(scenesPath(path35)));
   const handoff = episode ? episodeHandoff(episode) : void 0;
-  const story = win.STORY;
   const speech = language ?? handoff?.LANGUAGES?.speech;
   const written = !!win.SCENES?.length;
   const takesLanguage = !!language && story?.language === void 0 && !written;
@@ -128050,7 +128089,7 @@ Returns: a text block with the saved .wav file path, speaker/voice assignments, 
     annotations: HINT.generate,
     description: `Generate one sound effect from a text description with ElevenLabs (${ELEVENLABS_SFX_MODEL}) \u2014 the lane that fills a channel's sfx catalog so a shot's \`sound.sfx\` has a file behind it.
 
-Use for the cut effects a storyboard names in window.SFX (scenes-schema \xA7sound effects): a whoosh on a whip transition, a low hit on the line before a drop, a tick or pop when a figure lands on a slide, a riser under a build, a 30-second room-tone loop for a bed. Write the prompt as a description in the vendor's own vocabulary (whoosh \xB7 impact \xB7 braam \xB7 riser \xB7 click \xB7 texture \xB7 ambience), one sound per call, with its shape spelled out ("short soft whoosh, fabric through air, no tail"); set durationSeconds for one-shots (a whoosh 0.6\u20131.0 s, a hit 1\u20132 s, a riser 2\u20134 s) and loop: true with 10\u201330 s for a bed. promptInfluence above the ${DEFAULT_ELEVENLABS_SFX_PROMPT_INFLUENCE} default reads the prompt more literally; below it, more freely. Save straight into the channel catalog \u2014 outputPath data/<channel>/assets/audio/sfx, filename <id>.wav \u2014 then register the row with resolve-asset.py --ensure and point its note at the .json sidecar this tool writes next to the file (tool, model, prompt, seconds, request id, date, rights). Generated once, an effect is a channel asset reused at $0 in every later episode.
+Use for an explicitly separate edit effect or a missing physical sound, such as a transition whoosh, a graphic tick or a room-tone loop. Keep action sounds already in the video. New audience-only drones, risers and musical stingers use the saved music model via music_plan and music_execute. Write the prompt as a description in the vendor's own vocabulary (whoosh \xB7 impact \xB7 braam \xB7 riser \xB7 click \xB7 texture \xB7 ambience), one sound per call, with its shape spelled out ("short soft whoosh, fabric through air, no tail"); set durationSeconds for one-shots (a whoosh 0.6\u20131.0 s, a hit 1\u20132 s, a riser 2\u20134 s) and loop: true with 10\u201330 s for a bed. promptInfluence above the ${DEFAULT_ELEVENLABS_SFX_PROMPT_INFLUENCE} default reads the prompt more literally; below it, more freely. Save straight into the channel catalog \u2014 outputPath data/<channel>/assets/audio/sfx, filename <id>.wav \u2014 then register the row with resolve-asset.py --ensure and point its note at the .json sidecar this tool writes next to the file (tool, model, prompt, seconds, request id, date, rights). Generated once, an effect is a channel asset reused at $0 in every later episode.
 Do NOT use for music or a melodic bed \u2014 that is music_plan \u2192 music_execute with the saved music model. Do NOT use for a clip's own soundtrack \u2014 that is the model's native audio through visual.audio. Do NOT request a loop under 5 s (it seams audibly under narration). Prefer the provider's WAV format, which preserves its channel metadata. Legacy PCM sound effects are wrapped as stereo WAV, separately from mono speech. A 403 output_format_not_allowed means the plan lacks that rate; pcm_24000 is the supported lower-rate alternative. API pricing is per minute of generated audio, $${ELEVENLABS_SFX_USD_PER_MINUTE.toFixed(2)} on every plan (pricing/api, read 2026-09-16), so a one-second effect is about $0.002; the ledger key is sfx.elevenlabs with the measured seconds as the quantity. Free-tier output is non-commercial and needs attribution \u2014 check the plan before publishing.
 
 Returns: a text block with the saved WAV path, the provenance sidecar path, the model, format, the measured duration, the USD estimate at the per-minute rate, and the request id.`,
@@ -128438,7 +128477,7 @@ Returns: a text block with the saved .wav path, model, duration, and generation 
 
 Use for initial setup (\uD504\uB85C\uC81D\uD2B8 \uCD08\uAE30 \uC124\uC815), saved genre/style/video ratio, SNS connection records, or a new episode inheriting project defaults. options and status are read-only. init creates missing channel folders, profile, catalog and local .gitignore entries; it preserves existing files and rejects changed preferences. update requires the revision from status and an explicit user request. episode creates a snapshot and directories, returning a new-board handoff; an existing snapshot or legacy board is preserved. All mutations are local, locked and make no network calls.
 Do NOT use to verify credentials \u2014 use sns_account_check. Do NOT use to discover live media engines \u2014 use capability_status. Never pass token values, generate media, or publish as part of setup. Record connected only after an actual account check; enabled platforms may stay pending.
-Returns JSON: status, missing fields, canonical paths, config and revision; episode returns snapshot and handoff (FORMAT/PRODUCTION/SNS). options returns the supported type, style, ratio and format catalog. Errors report invalid choices, path conflicts or stale revisions without changing existing settings. Settings live in WORKSPACE/.social-flow/models.json; snapshots in EPISODE/.work/model-settings.json.`,
+Returns JSON: status, missing fields, canonical paths, config and revision; episode returns snapshot and handoff (FORMAT/PRODUCTION/SNS). options returns the model setup order, music catalog and supported type, style, ratio and format choices. Errors report invalid choices, path conflicts or stale revisions without changing existing settings. Settings live in WORKSPACE/.social-flow/models.json; snapshots in EPISODE/.work/model-settings.json.`,
     inputSchema: {
       type: "object",
       additionalProperties: false,
@@ -128467,13 +128506,13 @@ Returns JSON: status, missing fields, canonical paths, config and revision; epis
               id: { type: "string", description: "Type ID from options, e.g. drama or documentary." },
               detail: { type: "string", description: "Required for custom, e.g. Documentary with acted historical scenes." }
             }, required: ["id"] },
-            models: { type: "object", additionalProperties: false, description: 'Select video and check credentials, then image and check credentials, then decide whether TTS is needed. Use speech:{engine:"none"} to skip TTS; otherwise select speech and check credentials. Music is optional. Use capability_status and host schemas for availability.', properties: Object.fromEntries(["video", "speech", "image", "music"].map((kind) => [kind, {
+            models: { type: "object", additionalProperties: false, description: 'On first setup choose video and check credentials, then ask for the BGM and audience tonal-cue model from music_catalog or save music:{engine:"none"} for reuse or no score. Check the selected provider, then choose image and optional TTS (speech:{engine:"none"} to skip). Reuse saved choices.', properties: Object.fromEntries(["video", "music", "image", "speech"].map((kind) => [kind, {
               type: "object",
               additionalProperties: false,
               description: `${kind} selection; fixed engines omit model, host uses host-managed.`,
               properties: {
-                engine: { type: "string", enum: kind === "video" ? ["host", "seedance", "astra", "astra-genai", "astra-genai-desktop", "mlx", "ltx-api", "minimax", "heygen"] : kind === "speech" ? ["none", "gemini", "elevenlabs", "astra-genai"] : kind === "music" ? ["lyria", "suno-api", "elevenlabs", "mlx"] : ["host", "gpt-image", "zimage", "mlx", "astra-genai", "astra-genai-native"], description: "Selected engine, e.g. host for an exposed host media tool." },
-                model: { type: "string", description: "Supported model ID, e.g. host-managed. Omit for astra, zimage and speech engine none." },
+                engine: { type: "string", enum: kind === "video" ? ["host", "seedance", "astra", "astra-genai", "astra-genai-desktop", "mlx", "ltx-api", "minimax", "heygen"] : kind === "speech" ? ["none", "gemini", "elevenlabs", "astra-genai"] : kind === "music" ? ["lyria", "suno-api", "elevenlabs", "mlx", "none"] : ["host", "gpt-image", "zimage", "mlx", "astra-genai", "astra-genai-native"], description: "Selected engine, e.g. host for an exposed host media tool." },
+                model: { type: "string", description: "Supported model ID, e.g. host-managed. Omit for astra, zimage and engine none (speech or music)." },
                 ...!["speech", "music"].includes(kind) ? { host: { type: "string", description: "Host CLI when engine is host, e.g. codex." } } : {},
                 ...kind === "video" ? {
                   resolution: { type: "string", description: "Supported source resolution, e.g. 720p; MSR takes WIDTHxHEIGHT, e.g. 1792x1024." },
@@ -129384,7 +129423,8 @@ Returns revision, ordered matching lines with generationPlan and voice/audio has
 
 The default techniqueCatalog provides the four filmmaking elements and per-technique selection guidance. Store intentional choices as shot.techniques:[{id,reason}] and keep existing camera/size/angle fields consistent.
 
-Use it before editing an existing board, and after storyboard_apply to see the board the way the approval page groups it. level=outline is enough to plan a change; level=full carries every raw shot object (large \u2014 one shot is ~40 fields).
+Use it before and after storyboard_apply. Choose level=outline to plan edits or level=full for raw shots.
+audienceSpotting lists scene decisions, reasons and missing or conflicting cues. A use plan may include perspective, shift and exit. Read level=shots for timing and music or catalog sources. Older scenes may be unrecorded.
 level=direction returns only { file, sha256, format, direction }: each scene's shots in order (size, angle, move, length), the longest runs of one size and of held shots, held shots counted by size with the wide ones (els, ls, ws, fs) held without a reason, lengths by size and the most common lengths, the longest shots with their action and line counts, and reasons \u2014 sentences standing as the same reason on several shots, sizes without a why. Counts of the plan as written, not targets; read it once the icons and lengths are written.
 Do NOT use it to validate \u2014 storyboard_check runs the contract. A board with no window.STRUCTURE comes back with every shot under unplacedShots; write the structure with story_sequence and story_scene.
 
@@ -129471,6 +129511,8 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     description: `Use it after story_sequence to upsert scenes by number into a sequence: place, time, the one event, and a one- or two-sentence summary of the scene's story. On story-led work also give turn, charge and out, so the scenes can be read in a row for pressure that changes and ends that hand over the next question (skills/storyboard/references/story-interest.md). A scene moved to another sequence leaves its old one. Refused (story_order) before any sequence exists or for an unknown sequence id, and on a story-first episode board by story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
 
+A new scene starts with audienceSound.decision undecided. Set use or none with the dramatic reason. For use, perspective identifies whose experience we hear. The shift names the line or action that reveals a change of feeling or expectation and how the cue follows it. The exit names the beat where it ends. All three notes are optional. Plan and time each chosen effect on its shot with storyboard_apply.audienceEffects.
+
 Do NOT write shots or dialogue here \u2014 story_shot comes next.
 
 Returns: the file written or not, counts, and findings (! violation \xB7 warning).`,
@@ -129487,6 +129529,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
           event: { type: "string", description: "The one thing that happens in this scene" },
           summary: { type: "string", description: "The scene's story in one sentence" },
           turn: { type: "string", description: "What flipped between the open and the close" },
+          audienceSound: zodToJsonSchema(audienceDecisionSchema, { $refStrategy: "none" }),
           out: { type: "string", description: "The line or visible action the scene goes out on \u2014 it leaves the next thing wanted" },
           charge: { type: "object", additionalProperties: false, required: ["open", "close"], description: "The value at the open and at the close; ++ or -- deepens the direction the scene opened in", properties: {
             open: { type: "string", enum: ["+", "-"] },
@@ -129874,7 +129917,7 @@ Returns: the file written and the prompt. Stores promptSource so video_plan reco
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     description: `Write a storyboard's scenes.js from a sequence \u2192 scene \u2192 shot model, or patch part of it, in one call. Every shot is checked against the shot schema (type and render.mode vocabularies, transition join, stable id format and uniqueness, camera input, line-crossing and motion-graphic records), the structure against its schema (version, typed scenes and sequences) and the story order, and the derived shot labels (sceneSlug \xB7 sequence) are written from the structure. Nothing is written when a violation is found \u2014 the findings come back instead. No creative or production rule runs on a write; storyboard_check runs them on request.
 
-A new episode board starts with its story (story_sequence \u2192 story_scene \u2192 story_shot), then each shot's characters and lines (shot_characters \u2192 shot_dialogue), then its icon attributes (shot_icons), its images (shot_image) and its video prompt (shot_prompt); storyboard_apply refuses to create a board inside an episode. Use it after those steps to add camera endpoints, blocking and visual plans (storyboard \xA74), and to change one thing later (scenes / sequences by key, shots by id \u2014 shotsById \xB7 insertShots.afterId \xB7 removeShotIds \u2014 or by position, globals for FORMAT \xB7 THEME \xB7 COMPREHENSION \xB7 STORY \xB7 PRODUCTION \xB7 MUSIC \xB7 SFX). Address shots by id once the board has them (every board written by this tool does): a review note names s0007, and positions shift with every insert; a patch mixes id and position addressing at its own peril \u2014 it is refused. Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. Use audienceEffects to plan, place or remove one audience-only post cue and sfxEntries to register reusable assets. Both require expectedSha256. Read level shots for currentTimingBasis, or audienceEndFor for a proposed end shot. One call carries the whole change \u2014 do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
+A new episode board starts with its story (story_sequence \u2192 story_scene \u2192 story_shot), then each shot's characters and lines (shot_characters \u2192 shot_dialogue), then its icon attributes (shot_icons), its images (shot_image) and its video prompt (shot_prompt); storyboard_apply refuses to create a board inside an episode. Use it after those steps to add camera endpoints, blocking and visual plans (storyboard \xA74), and to change one thing later (scenes / sequences by key, shots by id \u2014 shotsById \xB7 insertShots.afterId \xB7 removeShotIds \u2014 or by position, globals for FORMAT \xB7 THEME \xB7 COMPREHENSION \xB7 STORY \xB7 PRODUCTION \xB7 MUSIC \xB7 SFX). Address shots by id once the board has them (every board written by this tool does): a review note names s0007, and positions shift with every insert; a patch mixes id and position addressing at its own peril \u2014 it is refused. Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. Use audienceEffects to plan, place or remove one audience-only post cue and sfxEntries to register its material. To generate one new cue with the saved music model on an older board, pass source:"music" in that cue\u2019s plan. Both edits require expectedSha256. Read level shots for currentTimingBasis, or audienceEndFor for a proposed end shot. One call carries the whole change \u2014 do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
 storyboard_apply assigns stable shot ids (s0001\u2026) and advances STRUCTURE.nextShotId; preserve those ids and do not edit them by hand.
 Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign, visual.camera and the three plan records shot.eyeline \xB7 shot.composition \xB7 shot.depth in the input schema. shot.depth (L11): count what the viewer must read in the frame at once \u2014 one thing \u2192 shallow with focus (a person's eyes), two or more \u2192 deep with the planes listed front to back; a departure needs a reason, and a still_camera focus-in/rack-focus cut cannot be deep. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
 Do NOT pass a shot's visual plan through a summary \u2014 pass the object scenes-schema.md defines (visual \xB7 shot.space \xB7 visual.camera \xB7 visual.video \u2026); unknown keys on a shot pass through untouched. Nonblocking edit_* findings expose performed-speech changes, removed actions, inherited images and dangling prop-event shot ids. They require an editorial comparison, not regeneration or approval. Editing a board drops its stale \`// approved:\` line; existing task authorization is unchanged.
@@ -129897,7 +129940,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
         },
         structure: { type: "object", description: "Replace window.STRUCTURE only" },
         sequences: { type: "array", items: { type: "object", description: "{ id, title, purpose, question?, payoff?, scenes }" }, description: "Upsert sequences by id" },
-        scenes: { type: "array", items: { type: "object", description: "{ no, place, time, event, summary, charge, turn, out? }" }, description: "Upsert scenes by no: the given fields replace the scene, and its story_music decision is kept" },
+        scenes: { type: "array", items: zodToJsonSchema(sceneSchema, { $refStrategy: "none" }), description: "Upsert scenes by no. Omit music or audienceSound to keep its existing decision. Supplying audienceSound replaces the whole plan, including its optional perspective, shift and exit." },
         shots: { type: "array", items: { type: "object", description: "One positional upsert", properties: { no: { type: "number", description: "1-based position" }, shot: storyboardShotInput }, required: ["no", "shot"] }, description: "Upsert shots by 1-based position; no = length + 1 appends. Not with the id fields in the same patch" },
         audienceEffects: zodToJsonSchema(audienceEffectsSchema, { $refStrategy: "none" }),
         sfxEntries: zodToJsonSchema(sfxEntriesSchema, { $refStrategy: "none" }),
@@ -130346,6 +130389,9 @@ function normalizeMusicFile(source, target) {
 // src/music-routing.ts
 var load7 = createRequire14(import.meta.url);
 var selectionHelper2 = fileURLToPath10(new URL("../../skills/_shared/music-selection.js", import.meta.url));
+function refreshAudienceOutput(directory2, file) {
+  if (path29.dirname(file) === path29.join(directory2, ".work/music/audience")) refreshAudienceReview(path29.join(directory2, "storyboard"));
+}
 var musicContext = (directory2, assetId) => load7(selectionHelper2).readMusicContext(directory2, assetId);
 var idSchema3 = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var musicPlanSchema = external_exports.object({
@@ -130404,6 +130450,7 @@ function planMusic(raw) {
   const input = musicPlanSchema.parse(raw);
   const context2 = musicContext(input.directory, input.assetId);
   const { selection } = context2;
+  if (selection.engine === "none") throw new Error("music_generation_disabled: this selection uses existing music or no score");
   const tool2 = input.tool ?? (selection.engine === "mlx" ? "mlx_music_generate" : MUSIC_MODELS.find((m2) => m2.engine === selection.engine && m2.model === selection.model)?.tool);
   if (!tool2) throw new Error("music_model_unsupported");
   gate2(tool2);
@@ -130514,6 +130561,7 @@ async function executeMusic(raw, dispatch) {
       Object.assign(state.jobs[plan2.requestId], { status: "completed", output: output2, result: response, updatedAt: (/* @__PURE__ */ new Date()).toISOString() });
     });
     ok = true;
+    refreshAudienceOutput(directory2, plan2.outputFile);
     return response;
   } catch (error2) {
     musicTransaction(directory2, void 0, (state) => Object.assign(state.jobs[plan2.requestId], {
@@ -130586,6 +130634,7 @@ async function resumeMusic2(raw) {
     if (state.jobs[input.requestId].status !== "submission_unknown") throw new Error("music_resume_conflict: request changed during resume");
     Object.assign(state.jobs[input.requestId], { status: "completed", output: output2, result: response, updatedAt: (/* @__PURE__ */ new Date()).toISOString() });
   });
+  refreshAudienceOutput(directory2, plan2.outputFile);
   return response;
 }
 function musicStatus(raw) {
@@ -140365,7 +140414,7 @@ ROUTES.music_status = async (args) => args?.action === "resume" ? resumeMusic2(a
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.123.0" },
+  { name: "social-flow", version: "0.124.3" },
   { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

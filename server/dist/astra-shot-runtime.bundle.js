@@ -30692,7 +30692,7 @@ import * as path2 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.123.0",
+  version: "0.124.3",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -33236,6 +33236,17 @@ var STRUCTURE_VERSION = (() => {
     return "structure-v1";
   }
 })();
+var audienceDecisionSchema = external_exports.discriminatedUnion("decision", [
+  external_exports.object({ decision: external_exports.literal("undecided") }).strict(),
+  external_exports.object({
+    decision: external_exports.literal("use"),
+    reason: nonEmpty,
+    perspective: nonEmpty.optional().describe("Whose experience guides what the audience hears"),
+    shift: nonEmpty.optional().describe("Which line or action reveals a change in the character's feeling or expectation, and how the cue follows it"),
+    exit: nonEmpty.optional().describe("The line, action or cut where the sound ends or ordinary listening returns")
+  }).strict(),
+  external_exports.object({ decision: external_exports.literal("none"), reason: nonEmpty }).strict()
+]).describe("Whether the scene uses an audience-only sound: use or none with the dramatic reason, or undecided.");
 var sceneSchema = external_exports.object({
   no: external_exports.number().int().positive().describe("Scene number \u2014 the value shots point at with `scene`"),
   place: external_exports.string().optional().describe("One place \u2014 the slugline location"),
@@ -33245,7 +33256,8 @@ var sceneSchema = external_exports.object({
   turn: external_exports.string().optional().describe("What flipped between the open and the close"),
   summary: external_exports.string().optional().describe("The scene's story in one sentence; the storyboard scene header shows it"),
   out: nonEmpty.optional().describe("The sentence the scene goes out on \u2014 the one that forces a \uADF8\uB7F0\uB370 or \uADF8\uB798\uC11C into the next scene"),
-  music: external_exports.object({ decision: external_exports.enum(["score", "none"]), reason: nonEmpty, span: nonEmpty.optional() }).strict().optional().describe("The music decision story_music records: score (with its $timeline span id) or none, and why")
+  music: external_exports.object({ decision: external_exports.enum(["score", "none"]), reason: nonEmpty, span: nonEmpty.optional() }).strict().optional().describe("The music decision story_music records: score (with its $timeline span id) or none, and why"),
+  audienceSound: audienceDecisionSchema.optional()
 }).strict();
 var sequenceSchema = external_exports.object({
   id: nonEmpty.describe('Stable id, e.g. "q1"'),
@@ -33365,6 +33377,7 @@ var audienceEffectsSchema = external_exports.array(external_exports.discriminate
     trigger: audienceId.optional(),
     description: audienceId.optional(),
     release: audienceId.nullish(),
+    source: external_exports.literal("music").nullish().describe("Use the saved music model for this event, including on a legacy board. Omit to keep its choice or set null to restore the board default."),
     caseId: external_exports.string().regex(/^(00[1-9]|0[1-9]\d|1[01]\d|120)$/).nullish(),
     intensity: external_exports.enum(["subtle", "normal", "strong"]).nullish(),
     separationLu: seconds.max(30).nullish()
@@ -33374,7 +33387,9 @@ var audienceEffectsSchema = external_exports.array(external_exports.discriminate
     op: external_exports.literal("place"),
     atSeconds: seconds,
     timingBasis: external_exports.string().regex(/^[a-f0-9]{64}$/),
+    sourceStartSeconds: seconds.nullish().describe("Start within the full source audio, in seconds. Omit to keep the current in-point or use null to play from zero."),
     end: external_exports.object({ shotId: shotIdSchema, atSeconds: external_exports.union([seconds, external_exports.literal("end")]) }).strict().nullish(),
+    fadeInSeconds: seconds.nullish().describe("Fade up over this many seconds of the playable excerpt. Omit to keep it or use null to clear it."),
     fadeOutSeconds: seconds.nullish()
   }).strict(),
   external_exports.object({ ...audienceKey, op: external_exports.literal("remove") }).strict()
@@ -33539,6 +33554,7 @@ var storySceneSchema = external_exports.object({
     summary: nonEmpty.describe("The scene's story in one sentence"),
     turn: nonEmpty.optional(),
     out: nonEmpty.optional(),
+    audienceSound: audienceDecisionSchema.optional(),
     // The same signs structure-contract.js reads: the value at the open and at the close.
     charge: external_exports.object({ open: external_exports.enum(["+", "-"]), close: external_exports.enum(["+", "-", "++", "--"]) }).strict().optional()
   }).strict()).min(1)
@@ -34178,10 +34194,13 @@ var effectSchema = external_exports.object({
     intent: external_exports.string().trim().min(1),
     caseId: external_exports.string().optional(),
     release: external_exports.string().optional(),
+    source: external_exports.literal("music").optional(),
     timingBasis: external_exports.string().optional()
   }).strict().optional(),
   end: external_exports.object({ shotId: external_exports.string().min(1), atSeconds: external_exports.union([external_exports.number().finite().nonnegative(), external_exports.literal("end")]) }).strict().optional(),
+  fadeInSeconds: external_exports.number().finite().nonnegative().optional(),
   fadeOutSeconds: external_exports.number().finite().nonnegative().optional(),
+  sourceStartSeconds: external_exports.number().finite().nonnegative().optional(),
   intensity: external_exports.enum(["subtle", "normal", "strong"]).optional()
 }).strict();
 var schemas = {

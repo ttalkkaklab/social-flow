@@ -8,7 +8,7 @@ import { readImageState } from './image-state.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { speakerBindingSchema } from './video-voice.js';
 import { compileVideoPrompt, expressionWords } from './video-prompt.js';
-import { refreshVideoReview } from './video-review.js';
+import { refreshAudienceReview, refreshVideoReview } from './video-review.js';
 import { characterPanels } from './video-image-inputs.js';
 /**
  * Storyboard module — the sequence → scene → shot data behind four tools
@@ -184,6 +184,18 @@ const nonEmpty = z.string().trim().min(1);
 
 export const STRUCTURE_VERSION = (() => { try { return contract().VERSION; } catch { return 'structure-v1'; } })();
 
+export const audienceDecisionSchema = z.discriminatedUnion('decision', [
+  z.object({ decision: z.literal('undecided') }).strict(),
+  z.object({
+    decision: z.literal('use'),
+    reason: nonEmpty,
+    perspective: nonEmpty.optional().describe('Whose experience guides what the audience hears'),
+    shift: nonEmpty.optional().describe("Which line or action reveals a change in the character's feeling or expectation, and how the cue follows it"),
+    exit: nonEmpty.optional().describe('The line, action or cut where the sound ends or ordinary listening returns'),
+  }).strict(),
+  z.object({ decision: z.literal('none'), reason: nonEmpty }).strict(),
+]).describe('Whether the scene uses an audience-only sound: use or none with the dramatic reason, or undecided.');
+
 export const sceneSchema = z
   .object({
     no: z.number().int().positive().describe('Scene number — the value shots point at with `scene`'),
@@ -196,6 +208,7 @@ export const sceneSchema = z
     out: nonEmpty.optional().describe('The sentence the scene goes out on — the one that forces a 그런데 or 그래서 into the next scene'),
     music: z.object({ decision: z.enum(['score', 'none']), reason: nonEmpty, span: nonEmpty.optional() }).strict().optional()
       .describe('The music decision story_music records: score (with its $timeline span id) or none, and why'),
+    audienceSound: audienceDecisionSchema.optional(),
   })
   .strict();
 export type Scene = z.infer<typeof sceneSchema>;
@@ -329,10 +342,13 @@ const seconds = z.number().finite().nonnegative();
 export const audienceEffectsSchema = z.array(z.discriminatedUnion('op', [
   z.object({ ...audienceKey, op: z.literal('plan'), sfx: cueId.optional(), intent: audienceId.optional(),
     trigger: audienceId.optional(), description: audienceId.optional(), release: audienceId.nullish(),
+    source: z.literal('music').nullish().describe('Use the saved music model for this event, including on a legacy board. Omit to keep its choice or set null to restore the board default.'),
     caseId: z.string().regex(/^(00[1-9]|0[1-9]\d|1[01]\d|120)$/).nullish(),
     intensity: z.enum(['subtle','normal','strong']).nullish(), separationLu: seconds.max(30).nullish() }).strict(),
   z.object({ ...audienceKey, op: z.literal('place'), atSeconds: seconds, timingBasis: z.string().regex(/^[a-f0-9]{64}$/),
+    sourceStartSeconds: seconds.nullish().describe('Start within the full source audio, in seconds. Omit to keep the current in-point or use null to play from zero.'),
     end: z.object({ shotId: shotIdSchema, atSeconds: z.union([seconds, z.literal('end')]) }).strict().nullish(),
+    fadeInSeconds: seconds.nullish().describe('Fade up over this many seconds of the playable excerpt. Omit to keep it or use null to clear it.'),
     fadeOutSeconds: seconds.nullish() }).strict(),
   z.object({ ...audienceKey, op: z.literal('remove') }).strict(),
 ])).min(1);
@@ -504,6 +520,7 @@ export function readStoryboard(args: z.infer<typeof storyboardReadSchema>): Reco
   const result = contract().outline(win, args.level);
   if (args.level === 'shots' || args.level === 'full' || args.audienceEndFor)
     result.audienceEffects = audienceSound().read(win, dirname(file), args.audienceEndFor, args.shotId);
+  result.audienceSpotting = audienceSound().spotting(win, result.audienceEffects);
   result.file = file;
   result.mediaBaseDirectory = dirname(file);
   result.sha256 = sha256;
@@ -793,7 +810,7 @@ const sameShape = (value: unknown): string | undefined => JSON.stringify(value, 
   v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : v);
 
 /** Apply a patch in memory — the pure half of storyboard_apply, so a test or an API handler can run it without a file. */
-export function applyPatch(win: Board, patch: StoryboardApplyArgs, opts: { outline?: boolean; cliches?: boolean } = {}): { win: Board; findings: Finding[]; synced: number } {
+export function applyPatch(win: Board, patch: StoryboardApplyArgs, opts: { outline?: boolean; cliches?: boolean; creating?: boolean } = {}): { win: Board; findings: Finding[]; synced: number } {
   const next: Board = { ...win };
   if (patch.globals) for (const [k, v] of Object.entries(patch.globals)) {
     if (k === 'SCENES' || k === 'STRUCTURE') throw new Error(`set ${k} through the dedicated fields, not globals`);
@@ -803,6 +820,10 @@ export function applyPatch(win: Board, patch: StoryboardApplyArgs, opts: { outli
       throw new Error('cliche_record: window.CLICHES is written by story_cliche, which checks the episode type and the user\'s pick — storyboard_apply globals cannot change it');
     next[k] = v;
   }
+  // Carry the board's authoring version through a globals.STORY replacement. Earlier files remain opt-in.
+  const previousStory = win.STORY as { audienceSoundVersion?: number } | undefined;
+  if ((opts.creating ?? Object.keys(win).length === 0) || previousStory?.audienceSoundVersion === 1)
+    next.STORY = { ...next.STORY as object, audienceSoundVersion: 1 };
   // PRODUCTION.clicheUse is the channel's saved choice as the board's episode snapshot took it. It decides whether
   // story_cliche applies without a pick, so a PRODUCTION patch keeps the value the board has and says so.
   let clicheChoiceKept: Finding | undefined;
@@ -848,6 +869,14 @@ export function applyPatch(win: Board, patch: StoryboardApplyArgs, opts: { outli
     const kept = scenes.find((old) => old.no === scene.no)?.music;
     return kept && !('music' in scene) ? { ...scene, music: kept } : scene;
   }), 'no');
+  const tracked = (next.STORY as { audienceSoundVersion?: number } | undefined)?.audienceSoundVersion === 1;
+  const oldScenes = Array.isArray(win.STRUCTURE?.scenes) ? win.STRUCTURE.scenes : [];
+  const priorDecisions = new Map(oldScenes.filter(scene => scene?.audienceSound).map(scene => [scene.no, scene.audienceSound]));
+  scenes = scenes.map(scene => {
+    if (scene.audienceSound) return scene;
+    const audienceSound = priorDecisions.get(scene.no) ?? (tracked ? { decision: 'undecided' as const } : undefined);
+    return audienceSound ? { ...scene, audienceSound } : scene;
+  });
   if (patch.removeScenes) {
     const drop = new Set(patch.removeScenes);
     scenes = scenes.filter((sc) => !drop.has(sc.no));
@@ -1164,7 +1193,7 @@ export function applyStoryboard(args: StoryboardApplyArgs, opts: { outline?: boo
     && ['props', 'propContinuity'].some(key => JSON.stringify(previousDoc?.[key]) !== JSON.stringify(incomingDoc?.[key])));
   if (changesProps && exists && args.expectedSha256 !== originalHash)
     throw new Error('head_moved: propSheet requires the current expectedSha256 from storyboard_read');
-  const { win: next, findings, synced } = applyPatch(win, args, opts);
+  const { win: next, findings, synced } = applyPatch(win, args, { ...opts, creating: !exists });
   const audienceResult = audienceEdit ? audienceSound().patch(next, dirname(file), args) : undefined;
   // Keep the review's panel links and the executable MSR references on the same shared sheets.
   const panelIds = [...new Set((next.SCENES ?? []).flatMap(shot => [...(contract().castOf(shot) ?? []), ...bystandersOf(shot)]))];
@@ -1218,7 +1247,8 @@ export function applyStoryboard(args: StoryboardApplyArgs, opts: { outline?: boo
   const result: ApplyResult = {
     file, written: false, created: !exists, approvalDropped: header.some((h) => /^\/\/\s*approved:/.test(h)),
     shots: (next.SCENES ?? []).length, scenes: st ? st.scenes.length : 0, sequences: st ? st.sequences.length : 0,
-    ...audienceResult, synced, findings, board: [digest, firstLine, opening, () => cliches().digest(next)].flatMap((read) => { try { return read(); } catch { return []; } }),
+    ...audienceResult, synced, findings, board: [digest, firstLine, opening, () => cliches().digest(next), () => audienceSound().spottingDigest(next)]
+      .flatMap((read) => { try { return read(); } catch { return []; } }),
   };
   const audienceOnly = audienceEdit && Object.keys(args).every(k =>
     ['path','expectedSha256','draft','dryRun','audienceEffects','sfxEntries'].includes(k));
@@ -1250,6 +1280,7 @@ export function applyStoryboard(args: StoryboardApplyArgs, opts: { outline?: boo
     throw err;
   }
   refreshVideoReview(dirname(dirname(file)));
+  refreshAudienceReview(dirname(file));
   result.written = true;
   return result;
 }
@@ -1287,6 +1318,7 @@ export const storySceneSchema = z.object({
     event: nonEmpty.describe('The one thing that happens in this scene'),
     summary: nonEmpty.describe("The scene's story in one sentence"),
     turn: nonEmpty.optional(), out: nonEmpty.optional(),
+    audienceSound: audienceDecisionSchema.optional(),
     // The same signs structure-contract.js reads: the value at the open and at the close.
     charge: z.object({ open: z.enum(['+', '-']), close: z.enum(['+', '-', '++', '--']) }).strict().optional(),
   }).strict()).min(1),
@@ -1310,11 +1342,13 @@ function writeOutline(path: string, win: Board, structure: Structure, shots?: Sh
   // A board the story tools start is story-first: every writer keeps its layer order (structure-contract.js).
   // Inside an episode it also starts on the episode's saved canvas and production choice, the handoff
   // project_manage gives a new board; without it the board reads as the 9:16 default.
-  const episode = win.STORY ? undefined : workflowEpisode(dirname(scenesPath(path)));
+  const savedStory = win.STORY as { language?: unknown; audienceSoundVersion?: number } | undefined;
+  // A generic board can carry the scene-sound version before the story tools have started its story.
+  const story = savedStory?.audienceSoundVersion === 1 && Object.keys(savedStory).length === 1 ? undefined : savedStory;
+  const episode = story ? undefined : workflowEpisode(dirname(scenesPath(path)));
   const handoff = episode ? episodeHandoff(episode) : undefined;
   // The story's language is recorded once: the author's, else the saved languages.speech. A board keeps the one it has,
   // and one written before the record existed is in the language of its shots, not of today's request.
-  const story = win.STORY as { language?: unknown } | undefined;
   const speech = language ?? handoff?.LANGUAGES?.speech;
   const written = !!win.SCENES?.length;
   const takesLanguage = !!language && story?.language === undefined && !written;

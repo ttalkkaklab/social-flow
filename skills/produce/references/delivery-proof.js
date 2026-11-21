@@ -10,7 +10,9 @@ function audienceDelivery(events, segments, speed) {
     const anchor = segments.filter((s,i) => i === 0 || (end ? s.bodyStart < t - 1e-8 : s.bodyStart <= t + 1e-8)).at(-1);
     return (anchor.splicedStart + t - anchor.bodyStart) / speed;
   };
-  return events.map(({shotId,id,bodyStartSeconds,bodyEndSeconds}) => ({shotId,id,bodyStartSeconds,bodyEndSeconds,
+  return events.map(({shotId,id,bodyStartSeconds,bodyEndSeconds,sourceStartSeconds,sourceEndSeconds,sourceSha256,effectiveFadeInSeconds,derivation}) => ({shotId,id,bodyStartSeconds,bodyEndSeconds,
+    ...(sourceStartSeconds === undefined ? {} : {sourceStartSeconds, sourceEndSeconds, sourceSha256, effectiveFadeInSeconds}),
+    ...(derivation ? {derivation} : {}),
     ...(segments?.length ? {deliveryStartSeconds:convert(bodyStartSeconds,false),deliveryEndSeconds:convert(bodyEndSeconds,true)} : {}),
     listening:'not_reviewed'}));
 }

@@ -146,7 +146,7 @@ checks duration coverage and records the actual image hash;
 audio2video still conditions on one opening image, not the preceding clip or an entire board.
 
 Start a reusable video project with `/social-flow:project-init <directory>`.
-It saves SNS targets and connection records, video genre, video/speech/image
+It saves SNS targets and connection records, video genre, video/BGM/image/speech
 models, visual style, video ratio and output format together in
 `.social-flow/models.json`. It creates the channel profile, shared asset catalog
 and episode directory, preserves existing content, and asks only missing choices.
@@ -166,8 +166,10 @@ and episode creation over MCP; `skills/_shared/project-settings.js` is its CLI.
 Claude Code's read-only SessionStart hook reports missing settings. Other hosts
 use the skill's explicit preflight; neither path silently chooses preferences.
 
-At first setup in a working directory, choose the video type, then the video model
-and its credentials, then the image model and its credentials. Finally choose whether
+At first setup in a working directory, choose the video type and video model. After checking
+its credentials, choose a BGM model for music and audience-only drones, risers and stingers,
+or save `models.music:{engine:"none"}` to reuse music or leave scenes unscored. After the music
+provider check, choose the image model and its credentials. Finally choose whether
 separate TTS is needed; if yes, select its model and configure credentials, otherwise
 save `models.speech:{engine:"none"}`. Reuse configured keys, including shared provider
 keys. Host/local engines need their tools available, not a separate API key. The [type catalog](skills/_shared/video-types.md) covers
@@ -622,6 +624,18 @@ without writing. The channel's notes live in `production.musicDirection` (up to 
 existing defaults. See [timeline scoring](skills/storyboard/references/scenes-schema.md#music-cues-windowmusic-sound).
 Shot-relative music gain curves and configurable ducking shape dialogue and reveals; low
 speech-to-music separation is a review warning, not an assembly gate.
+
+Every scene on a new story-first board also gets a decision about sound heard only by the
+viewer. `story_scene` records `audienceSound` (`use` or `none` with a reason).
+A `use` decision can name whose experience the viewer follows (`perspective`), the change
+visible on screen (`shift`) and the moment the sound ends (`exit`). The scene card shows
+these notes beside the cue preview. For example, a contestant's confident smile can carry
+a short pitched cue that ends just before the start call.
+`storyboard_read.audienceSpotting` shows which decisions or cues still need attention.
+`storyboard_apply.audienceEffects` plans the sound and places it on the accepted cut, so a
+drone can start at a glance, carry over a cut and release before a line. Room tone and the
+music score have their own tracks. New audience drones, risers and stingers use the saved music model and play on the audience track. Physical sounds already heard in the video keep their original soundtrack. See [audience cue placement](skills/produce/references/video-sound.md#audience-effects).
+
 An unverified playback check is recorded as `not_reviewed`; it does not hold the episode from
 the publish queue. These are editorial checks; completion-rate improvements require audience
 measurements.
