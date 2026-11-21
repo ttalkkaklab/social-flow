@@ -3635,15 +3635,15 @@ Returns: a text block with the saved .wav path, model, duration, and generation 
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
         description: `Create or update local project settings and episode directories.
 
-Use for initial setup (프로젝트 초기 설정), saved genre/style/video ratio, SNS connection records, or a new episode inheriting project defaults. options and status are read-only. init creates missing channel folders, profile, catalog and local .gitignore entries; it preserves existing files and rejects changed preferences. update requires the revision from status and an explicit user request. episode creates a snapshot and directories, returning a new-board handoff; an existing snapshot or legacy board is preserved. All mutations are local, locked and make no network calls.
+Use for initial setup (프로젝트 초기 설정), saved genre/style/video ratio, SNS connection records, or a new episode inheriting project defaults. Ask for the project directory if unclear. select records the user-selected absolute directory and can create it. init and update require that directory selection first. options and status are read-only. Require status ready before storyboard writes or production. init creates missing channel folders, profile, catalog and local .gitignore entries; it preserves existing files and rejects changed preferences. update requires the revision from status and an explicit user request. episode creates a snapshot and directories, returning a new-board handoff; an existing snapshot or legacy board is preserved. All mutations are local, locked and make no network calls.
 Do NOT use to verify credentials — use sns_account_check. Do NOT use to discover live media engines — use capability_status. Never pass token values, generate media, or publish as part of setup. Record connected only after an actual account check; enabled platforms may stay pending.
 Returns JSON: status, missing fields, canonical paths, config and revision; episode returns snapshot and handoff (FORMAT/PRODUCTION/SNS). options returns the model setup order, music catalog and supported type, style, ratio and format choices. Errors report invalid choices, path conflicts or stale revisions without changing existing settings. Settings live in WORKSPACE/.social-flow/models.json; snapshots in EPISODE/.work/model-settings.json.`,
         inputSchema: {
             type: 'object', additionalProperties: false,
             properties: {
-                action: { type: 'string', enum: ['options', 'status', 'init', 'update', 'episode'], description: 'Operation; e.g. status before init or update.' },
-                workspace: { type: 'string', description: 'Explicit absolute existing project root, e.g. /workspace/videos. Required except for options; never infer the plugin install directory.' },
-                request: { type: 'string', description: 'Actual user preference request for init/update, e.g. Use webtoon for future episodes. Not an invented approval.' },
+                action: { type: 'string', enum: ['options', 'status', 'select', 'init', 'update', 'episode'], description: 'Operation; e.g. status before init or update.' },
+                workspace: { type: 'string', description: 'User-selected absolute project directory, e.g. /workspace/videos. Required except for options. select can create it. Ask when unclear.' },
+                request: { type: 'string', description: 'Actual directory selection for select or user preference request for init/update, e.g. Use webtoon for future episodes. Not an invented approval.' },
                 expectedRevision: { type: 'string', description: 'Revision returned by status, required for update; e.g. the exact SHA-256 string from the previous result.' },
                 topic: { type: 'string', pattern: '^[a-z0-9][a-z0-9-]{0,63}$', description: 'Episode directory slug for episode, e.g. history-01.' },
                 profileMarkdown: { type: 'string', description: 'Completed channel profile Markdown for a missing profile, e.g. ---\nslug: history\n... . Author from the channel template; an existing different profile is rejected.' },
@@ -5180,7 +5180,7 @@ const videoContextSchema = {
 for (const tool of TOOLS) {
     if (VIDEO_ADAPTERS[tool.name]) {
         // Legacy direct entrypoints: the routing contract comes first in every description.
-        tool.description = `In a configured workspace, episode video goes through video_plan → video_execute; direct calls need videoContext (episode, shotId, requestId), except channel assets under data/<channel>/assets/, which must still match the saved model. ${tool.description}`;
+        tool.description = `Video generation requires a selected, ready project. Episode video goes through video_plan → video_execute; direct calls need videoContext (episode, shotId, requestId), except channel assets under data/<channel>/assets/, which must still match the saved model. ${tool.description}`;
         tool.inputSchema.properties = { ...tool.inputSchema.properties,
             videoContext: { ...videoContextSchema, description: 'Production context. Required for configured episodes; applies saved selection, spending authorization, concurrency and duplicate-submission protection.' } };
     }

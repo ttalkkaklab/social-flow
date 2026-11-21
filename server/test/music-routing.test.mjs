@@ -1,3 +1,4 @@
+import { setupProject } from './workflow-fixture.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -11,6 +12,7 @@ const realSetTimeout = globalThis.setTimeout;
 globalThis.setTimeout = (fn, ms = 0, ...args) => realSetTimeout(fn, ms < 1_000 ? ms : 0, ...args);
 function fixture(t, auth = { reference: 'test allocation', maxUsd: 1, maxConcurrent: 1, maxAttempts: 3 }, music = { engine: 'elevenlabs', model: 'music_v2_5' }) {
   const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'music-route-')));
+  setupProject(dir, { music });
   fs.mkdirSync(path.join(dir, 'storyboard'));
   const board = { modelSettings: { models: { music } }, musicAuthorization: auth };
   const write = () => fs.writeFileSync(path.join(dir, 'storyboard/scenes.js'), 'window.PRODUCTION=' + JSON.stringify(board)); write();
@@ -56,7 +58,7 @@ test('plan binds model, native fields, output location and current selection', a
   assert.throws(() => f.plan('bad', {}, { reserveUsd: 0 }), /quote_required/);
   fs.symlinkSync(os.tmpdir(), path.join(f.dir, 'escape'));
   assert.throws(() => f.plan('bad', { outputPath: 'escape' }), /output_outside/);
-  const p = f.plan(); f.board.modelSettings.models.music.model = 'music_v2'; f.write();
+  const p = f.plan(); f.board.modelSettings.overrides = [{ scope: 'episode', request: 'Change model', music: { engine: 'elevenlabs', model: 'music_v2' } }]; f.write();
   await assert.rejects(f.run(p, async () => assert.fail()), /plan_stale/);
   await assert.rejects(routeLegacyMusic('music_elevenlabs_generate', { prompt: 'p', outputPath: f.dir }, async () => assert.fail()), /context_required/);
 });

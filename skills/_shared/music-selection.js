@@ -29,7 +29,7 @@ function readMusicContext(directory, assetId) {
   } else if (workspace) {
     const config = settings.readSettings(workspace).config;
     if (!config) throw new Error('music_setup_required');
-    selection = config.models.music; source = 'workspace';
+    selection = config.models?.music; source = 'workspace';
   }
   const boardFile = path.join(root, 'storyboard/scenes.js');
   const board = fs.existsSync(boardFile) ? evaluateWindowScript(fs.readFileSync(boardFile, 'utf8'), { filename: boardFile }) : {};

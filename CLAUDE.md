@@ -672,6 +672,11 @@ The builder reruns source-plan checks and records its version and input hashes b
 
 ## Complete project setup (user directive, 2026-10-16)
 
+For every storyboard or video request, establish the user's selected project directory first.
+Ask and wait if it is unclear. Record a new or moved directory with `project_manage select`.
+Require that directory's `project_manage status` to return `ready` before authoring or
+production, including resumed work. Fill missing choices once, including music and separate
+TTS (explicit none is valid), and preserve existing episode snapshots.
 Use `skills/project-init/SKILL.md` for workspace initialization. Save SNS targets
 and connection records, genre, models, visual style, video ratio and format in
 `.social-flow/models.json`. Reuse these defaults for new episodes without repeated

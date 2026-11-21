@@ -9,6 +9,11 @@ export function manageProject(args) {
     const project = loadFromHere(helper);
     return project.manageProject(args);
 }
+/** Resolve the work's own directory before writing a storyboard or starting production. */
+export function requireReadyProject(target) {
+    const project = loadFromHere(helper);
+    return project.requireReadyProject(resolve(target));
+}
 /** The new-board handoff (FORMAT, PRODUCTION, LANGUAGES) from an episode's saved snapshot, or undefined when it has none. */
 export function episodeHandoff(episode) {
     const file = join(episode, '.work/model-settings.json');

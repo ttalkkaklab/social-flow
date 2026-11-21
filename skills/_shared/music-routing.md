@@ -13,8 +13,8 @@ settings helper and the user's actual selection. Valid pairs come from
 First setup asks for this choice directly after the video model and its credentials.
 Save `models.music:{engine:"none"}` when the user chooses existing music or no score.
 This also covers audience-only tonal cues. Requesting a new generation plan with that
-choice reports `music_generation_disabled`. Old projects without music remain valid;
-requesting new music there reports `music_setup_required`. No key is stored here.
+choice reports `music_generation_disabled`. When an older workspace lacks this choice,
+project-init asks before the next storyboard or video task. Existing snapshots stay intact.
 
 1. **Selection:** episode `.work/model-settings.json` wins over workspace settings;
    existing `PRODUCTION.modelSettings.models.music` is the legacy board source.

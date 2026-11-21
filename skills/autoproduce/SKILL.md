@@ -7,7 +7,7 @@ description: >
   plans shots and content-led timing, then produces the media within saved choices and
   spending limits. Storyboard stops at a plan; produce builds an existing approved board.
 argument-hint: "[episode-or-storyboard-path | channel topic]"
-allowed-tools: ["mcp__social-flow__character_manage", "mcp__social-flow__character_panel", "mcp__plugin_social-flow_social-flow__character_manage", "mcp__plugin_social-flow_social-flow__character_panel", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "mcp__social-flow__music_plan", "mcp__plugin_social-flow_social-flow__music_plan", "mcp__social-flow__music_execute", "mcp__plugin_social-flow_social-flow__music_execute", "mcp__social-flow__music_status", "mcp__plugin_social-flow_social-flow__music_status", "mcp__social-flow__music_generate_song", "mcp__plugin_social-flow_social-flow__music_generate_song", "mcp__social-flow__music_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__music_elevenlabs_generate", "mcp__social-flow__suno_generate", "mcp__plugin_social-flow_social-flow__suno_generate", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent", "mcp__social-flow__astra_genai_catalog", "mcp__plugin_social-flow_social-flow__astra_genai_catalog", "mcp__social-flow__tts_astra_genai", "mcp__plugin_social-flow_social-flow__tts_astra_genai", "mcp__social-flow__story_intensity_plan", "mcp__plugin_social-flow_social-flow__story_intensity_plan", "mcp__social-flow__story_catharsis_plan", "mcp__plugin_social-flow_social-flow__story_catharsis_plan"]
+allowed-tools: ["mcp__social-flow__character_manage", "mcp__social-flow__character_panel", "mcp__plugin_social-flow_social-flow__character_manage", "mcp__plugin_social-flow_social-flow__character_panel", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "mcp__social-flow__music_plan", "mcp__plugin_social-flow_social-flow__music_plan", "mcp__social-flow__music_execute", "mcp__plugin_social-flow_social-flow__music_execute", "mcp__social-flow__music_status", "mcp__plugin_social-flow_social-flow__music_status", "mcp__social-flow__music_generate_song", "mcp__plugin_social-flow_social-flow__music_generate_song", "mcp__social-flow__music_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__music_elevenlabs_generate", "mcp__social-flow__suno_generate", "mcp__plugin_social-flow_social-flow__suno_generate", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent", "mcp__social-flow__astra_genai_catalog", "mcp__plugin_social-flow_social-flow__astra_genai_catalog", "mcp__social-flow__tts_astra_genai", "mcp__plugin_social-flow_social-flow__tts_astra_genai", "mcp__social-flow__story_intensity_plan", "mcp__plugin_social-flow_social-flow__story_intensity_plan", "mcp__social-flow__story_catharsis_plan", "mcp__plugin_social-flow_social-flow__story_catharsis_plan",
   "WebSearch", "WebFetch",
   "mcp__social-flow__naver_search", "mcp__plugin_social-flow_social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__plugin_social-flow_social-flow__serp_web_search",
   "mcp__social-flow__serp_news_search", "mcp__plugin_social-flow_social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__plugin_social-flow_social-flow__serp_naver_search",
@@ -24,6 +24,10 @@ allowed-tools: ["mcp__social-flow__character_manage", "mcp__social-flow__charact
 ---
 
 # One topic to a finished local episode
+
+Identify the user's project directory before researching or authoring. If it is unclear,
+ask for it and wait. For an unattended run, report `project_setup_required` and stop.
+Complete [project setup](../project-init/SKILL.md) and require `ready` in that directory.
 
 Read [automation guidance](../_shared/automation-guidance.md). This skill coordinates
 [storyboard](../storyboard/SKILL.md) and [produce](../produce/SKILL.md); it does not contain
@@ -67,7 +71,7 @@ or benchmark request stops with plans even if it tests this automatic route.
 Read the channel profile and [project initialization](../project-init/SKILL.md). Reuse saved
 genre, model, style, ratio, format, voice and SNS targets. Create/snapshot a new episode with
 `project_manage` or its CLI. Existing episodes retain their snapshots and explicit choices.
-Interactive setup asks missing preferences once. An unattended run with incomplete settings
+An unattended run with incomplete settings
 reports `project_setup_required` and the missing fields, then stops before the lock,
 authoring or spending ([setup report](references/unattended-lifecycle.md#setup-report-before-lock));
 it invents no choice. Pending SNS connections alone do not block local work.

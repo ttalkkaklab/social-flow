@@ -119,10 +119,9 @@ hashes live under the episode's `.work/video-routing/` and are local artifacts.
 ## Compatibility and boundaries
 
 Existing video tools accept `videoContext: {episode, shotId, requestId}` and use the
-same service. Calls targeting a configured episode/workspace without context fail.
-Standalone calls outside configured production remain compatible and have no episode
-budget enforcement. The server cannot infer an arbitrary external workspace if neither
-its working directory nor the output path points to that workspace.
+same service. Video plans, approvals and execution require the destination's selected
+workspace to be ready. A direct adapter call needs episode context or a channel asset
+under that ready workspace. Calls without a selected project stop before generation.
 
 Host selection returns `host_handoff`. The host CLI owns its tools, allowance and
 execution; MCP cannot enforce those calls. `video_execute` refuses host plans rather

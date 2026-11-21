@@ -1,3 +1,4 @@
+import { setupProject } from './workflow-fixture.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -39,6 +40,7 @@ test('managed retakes validate the speaker before raw synthesis and bind the com
  const {generateGenaiSpeech}=await import('../dist/astra-genai-speech.js');
  const {pcmToWav}=await import('../dist/media-utils.js');
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'managed-voice-')),target=path.join(dir,'storyboard'),output=path.join(dir,'speech');
+ setupProject(dir);
  fs.mkdirSync(target);t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
  const voice={engine:'astra-genai',model:'voxcpm2',voiceId:'hero',language:'ko',speed:1};
  const line={id:'l1',speaker:'hero',tts:'Hello',delivery:'voiceover',acting:{direction:'Calm'}};
@@ -89,6 +91,10 @@ test('an explicit episode default-voice exception survives planning and inspecti
  const oldFetch=globalThis.fetch,key=config.astraGenaiApiKey;config.astraGenaiApiKey='fixture';let calls=0;
  t.after(()=>{globalThis.fetch=oldFetch;config.astraGenaiApiKey=key;});
  globalThis.fetch=async()=>{calls++;return new Response(pcmToWav(Buffer.alloc(1600),8000,1));};
+ await assert.rejects(routeSpeech({action:'plan',generator:'tts_astra_genai',generation:args}),/project_setup_required/);
+ await assert.rejects(generateGenaiSpeech(args),/project_setup_required/);
+ assert.equal(calls,0);
+ setupProject(dir);
  await assert.rejects(generateGenaiSpeech({...args,instructions:'Use another speaker.'}),/speech_context_mismatch/);
  await assert.rejects(routeSpeech({action:'plan',generator:'tts_astra_genai',generation:{...args,instructions:'Use another speaker.'}}),/speech_context_mismatch/);
  assert.equal(calls,0);

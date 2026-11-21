@@ -71,7 +71,11 @@ function validateProjectFields(config) {
 }
 
 function missingProjectFields(config) {
-  return ['videoType', 'models', ...PROJECT_FIELDS.filter(key => key !== 'languages')].filter(key => config?.[key] === undefined);
+  const missing = ['videoType', ...PROJECT_FIELDS.filter(key => key !== 'languages')].filter(key => config?.[key] === undefined);
+  for (const kind of ['video', 'music', 'image', 'speech']) {
+    if (config?.models?.[kind] === undefined) missing.push('models.' + kind);
+  }
+  return missing;
 }
 
 function options() {

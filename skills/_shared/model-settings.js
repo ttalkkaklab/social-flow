@@ -124,11 +124,14 @@ function readJson(file) {
   }
 }
 
-function validateConfig(config, allowRetired = false) {
+function validateConfig(config, allowRetired = false, allowMissing = false) {
   if (!object(config) || config.version !== 1 || !nonempty(config.request) || !nonempty(config.updatedAt)) {
     throw new Error('Invalid model settings version or selection record; repair explicitly, do not reset');
   }
-  validateModels(config.models, false, allowRetired);
+  const emptyModels = config.models === undefined || (object(config.models) && !Object.keys(config.models).length);
+  if (!allowMissing || !emptyModels) validateModels(config.models, allowMissing, allowRetired);
+  if (config.workspace !== undefined && (typeof config.workspace !== 'string' || !path.isAbsolute(config.workspace)))
+    throw new Error('Invalid saved workspace path');
   if (config.videoType !== undefined) validateVideoType(config.videoType);
   validateProjectFields(config);
   return config;
@@ -143,13 +146,14 @@ function readSettings(workspace) {
   const config = readJson(file);
   if (config === undefined) return { status: 'setup_required', file };
   const retired = ['speech', 'video', 'image'].filter(kind => retiredChoice(kind, config?.models?.[kind]));
-  validateConfig(config, retired.length > 0);
+  validateConfig(config, retired.length > 0, true);
   if (retired.length) return { status: 'migration_required', file, revision: revision(config), config, retired: retired.map(kind => `models.${kind}`), migration: [
     retired.includes('speech') && 'Speech model is retired. Explicitly update speech to Gemini or ElevenLabs eleven_v4 before new generation.',
     retired.includes('video') && 'Video model cannot keep a character\'s voice and is retired (Veo, Gemini Omni, Seedance 1.x). Explicitly choose Seedance 2.x or an LTX engine before new generation.',
     retired.includes('image') && 'Image model reached its provider shutdown date. Explicitly choose a current image model before new generation.',
     'Saved media and episode snapshots are preserved.'].filter(Boolean).join(' ') };
-  return { status: config.videoType ? 'configured' : 'video_type_required', file, revision: revision(config), config };
+  const incomplete = ['video', 'image', 'speech'].some(kind => !config.models?.[kind]);
+  return { status: incomplete ? 'setup_required' : config.videoType ? 'configured' : 'video_type_required', file, revision: revision(config), config };
 }
 
 function writeJson(file, value, exclusive = false) {
@@ -168,10 +172,11 @@ function writeJson(file, value, exclusive = false) {
   }
 }
 
-function saveSettings(workspace, models, { request, expectedRevision, videoType, ...projectFields } = {}) {
+function saveSettings(workspace, models, { request, expectedRevision, videoType, selectedWorkspace, ...projectFields } = {}) {
   if (!nonempty(request)) throw new Error('Record the actual user selection/change request');
   if (Object.keys(projectFields).some(key => !PROJECT_FIELDS.includes(key))) throw new Error('Unknown project setting');
   const file = settingsPath(workspace);
+  if (selectedWorkspace !== undefined && selectedWorkspace !== fs.realpathSync(workspace)) throw new Error('Selected workspace differs from the settings directory');
   // Serialize updates so two sessions cannot both overwrite the same revision.
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const lock = `${file}.lock`;
@@ -180,6 +185,11 @@ function saveSettings(workspace, models, { request, expectedRevision, videoType,
     const current = readSettings(workspace);
     if (expectedRevision === undefined && current.config) throw new Error('Settings already exist; use update with the current revision and explicit user request');
     if (expectedRevision !== undefined && current.revision !== expectedRevision) throw new Error('Settings revision changed or settings are missing; read again');
+    // Keep the user's directory selection across sessions while the model questions are open.
+    if (selectedWorkspace && models === undefined && !videoType && !Object.keys(projectFields).length) {
+      writeJson(file, { ...current.config, version: 1, workspace: selectedWorkspace, updatedAt: new Date().toISOString(), request: request.trim() });
+      return readSettings(workspace);
+    }
     const typeOnly = expectedRevision !== undefined && (videoType !== undefined || Object.keys(projectFields).length > 0) &&
       (models === undefined || (object(models) && !Object.keys(models).length));
     if (!typeOnly) validateModels(models, expectedRevision !== undefined);
@@ -191,6 +201,7 @@ function saveSettings(workspace, models, { request, expectedRevision, videoType,
       models: { ...current.config?.models, ...models },
       ...(videoType || current.config?.videoType ? { videoType: videoType || current.config.videoType } : {}),
       ...projectFields,
+      ...(selectedWorkspace !== undefined ? { workspace: selectedWorkspace } : {}),
       updatedAt: new Date().toISOString(),
       request: request.trim(),
     };
