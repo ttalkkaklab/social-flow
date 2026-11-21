@@ -1,3 +1,4 @@
+import { hasVideoSubjectReferences } from './video-image-inputs.js';
 import { routingContext } from './video-routing.js';
 import { resolveCharacterVoice } from './video-voice.js';
 import { speechVideoCapabilities, VIDEO_ADAPTERS } from './video-registry.js';
@@ -349,7 +350,7 @@ export function manageSpeech(args) {
             const adapter = args.tool ? VIDEO_ADAPTERS[args.tool] : undefined;
             if (args.tool && adapter?.engine !== selection.engine)
                 throw new Error('model_selection_mismatch: tool does not match selected engine');
-            const verified = speechVideoCapabilities(selection.engine, selection.model || selection.engine, adapter?.operation ?? selection.operation);
+            const verified = speechVideoCapabilities(selection.engine, selection.model || selection.engine, adapter?.operation ?? selection.operation, hasVideoSubjectReferences(scene));
             if (args.capabilities && (args.capabilities.provider !== verified.provider || args.capabilities.model !== verified.model ||
                 args.capabilities.audioConditioning !== verified.audioConditioning || args.capabilities.lipSync !== verified.lipSync || args.capabilities.postLipSync !== verified.postLipSync ||
                 Boolean(args.capabilities.nativeSpeech) !== Boolean(verified.nativeSpeech)))

@@ -25955,12 +25955,6 @@ var require_video_duration = __commonJS({
   }
 });
 
-// src/fasth3-omni.ts
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync as readFileSync2, readdirSync, rmSync, statSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join as join2 } from "node:path";
-
 // node_modules/zod/v3/external.js
 var external_exports = {};
 __export(external_exports, {
@@ -30002,6 +29996,68 @@ var coerce = {
 };
 var NEVER = INVALID;
 
+// src/prompt-language.ts
+var QUOTED_SEGMENT = /"[^"]*"|“[^”]*”|「[^」]*」/g;
+var NON_LATIN_RUN = /[^\P{L}\p{Script=Latin}]+(?:[ \t]+[^\P{L}\p{Script=Latin}]+)*/u;
+function nonEnglishOutsideQuotes(prompt) {
+  const match = prompt.replace(QUOTED_SEGMENT, " ").match(NON_LATIN_RUN);
+  return match ? match[0] : null;
+}
+
+// src/msr-opening.ts
+var openingPositionsSchema = external_exports.array(external_exports.object({
+  character: external_exports.string().trim().min(1).describe("Cast ID, or an English character name for a standalone render."),
+  images: external_exports.array(external_exports.number().int().min(1).max(4)).describe("1-based subject image numbers for this person, including clothing panels. Use [] for a bystander without a reference."),
+  position: external_exports.string().trim().min(1).refine((value) => !nonEnglishOutsideQuotes(value), "Describe the opening position in English").describe("Where the viewer sees this person at the start: side, depth, posture or orientation, and a visible landmark. Describe an off-screen start explicitly.")
+}).strict(), { required_error: "openingPositions required: inspect the opening image and describe each character and its reference images" }).describe("Required with MSR references. Identify every character in the opening scene, including silent listeners. Use [] only for a character-free scene.");
+var sceneText = external_exports.string().trim().min(1).refine((value) => !nonEnglishOutsideQuotes(value), "Write scene direction in English");
+var sceneVideoDirectionSchema = external_exports.object({
+  openingPositions: openingPositionsSchema,
+  emotion: sceneText.describe("The emotional change, naming each participant. For a factual scene give its visible subject and purpose."),
+  action: sceneText.optional().describe("Only story-essential movement, tied to the same visible landmark as the opening position."),
+  sound: sceneText.optional().describe("Room tone or sound from an essential action."),
+  camera: sceneText.optional().describe("An intentional camera change, when needed.")
+}).strict();
+function openingPrompt(prompt, positions = []) {
+  if (!positions.length) return prompt;
+  const header = positions.map(({ character, images, position }) => {
+    const refs = images.map((index) => "Image " + index).join(", ");
+    return character + (refs ? " (" + refs + ")" : "") + ": " + position;
+  });
+  const prefix = "Opening frame, from the viewer\u2019s perspective:\n" + header.join("\n") + "\n\n";
+  return prompt.startsWith(prefix) ? prompt : prefix + prompt;
+}
+function validateOpening(prompt, positions, references, issue) {
+  if (!positions) {
+    issue("openingPositions required: match each character to the opening frame and their subject images");
+    return;
+  }
+  const subjects = references.filter((ref) => !ref.background);
+  const mapped = /* @__PURE__ */ new Set();
+  const names = /* @__PURE__ */ new Set();
+  for (const { character, images } of positions) {
+    if (names.has(character)) issue("openingPositions: list each character once");
+    names.add(character);
+    for (const index of images) {
+      if (!subjects[index - 1] || subjects[index - 1].nonCharacter || mapped.has(index))
+        issue("openingPositions: invalid, non-character or repeated subject Image " + index);
+      mapped.add(index);
+    }
+  }
+  subjects.forEach((ref, i) => {
+    if (!mapped.has(i + 1) && (!ref.nonCharacter || ref.audioPath || ref.audioUri))
+      issue("openingPositions: identify the character in Image " + (i + 1) + " or mark an object reference nonCharacter:true");
+  });
+  if (openingPrompt(prompt, positions).length > 2e3)
+    issue("The prompt including openingPositions exceeds 2000 characters; shorten the action or placement descriptions");
+}
+
+// src/fasth3-omni.ts
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync as readFileSync2, readdirSync, rmSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join as join2 } from "node:path";
+
 // src/media-utils.ts
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -30682,7 +30738,7 @@ var receiptSchema = external_exports.object({
 
 // src/video-routing.ts
 import { createRequire as createRequire5 } from "node:module";
-import { fileURLToPath as fileURLToPath2 } from "node:url";
+import { fileURLToPath as fileURLToPath3 } from "node:url";
 
 // src/astra-video-client.ts
 import { createHash as createHash2, randomInt } from "node:crypto";
@@ -30692,7 +30748,7 @@ import * as path2 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.124.6",
+  version: "0.125.1",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -31844,19 +31900,34 @@ var genaiTextToVideoSchema = textVideoFields.superRefine((args, ctx) => {
   localVideoTiming(args, ctx);
   devNegativeRule(args, ctx);
 });
+var msrReferences = external_exports.array(external_exports.object({
+  imageUri: genaiImageUriSchema.optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  background: external_exports.boolean().default(false),
+  nonCharacter: external_exports.boolean().optional(),
+  // Voice sample for this subject; the gateway pairs it with the same picture slot.
+  audioUri: external_exports.string().min(1).optional(),
+  audioPath: external_exports.string().min(1).optional()
+}).strict().refine(
+  (ref) => Number(!!ref.imageUri) + Number(!!ref.imagePath) === 1,
+  "Supply exactly one imageUri or imagePath"
+).refine((ref) => oneOf(ref.audioUri, ref.audioPath) <= 1, "Supply at most one audioUri or audioPath")).min(1).max(5);
+function validateVoiceSlots(references, issue) {
+  let subject = 0;
+  for (const ref of references) {
+    subject += Number(!ref.background);
+    if (!oneOf(ref.audioUri, ref.audioPath)) continue;
+    if (ref.background) issue("MSR voice samples belong to subjects, not the background");
+    else if (subject > 2) issue("MSR voice samples fit the first two subjects only");
+  }
+}
 var genaiImageToVideoSchema = textVideoFields.extend({
   imageUri: genaiImageUriSchema.optional(),
   imagePath: external_exports.string().min(1).optional(),
   lastFrameUri: genaiImageUriSchema.nullable().optional(),
   lastFramePath: external_exports.string().min(1).optional(),
-  references: external_exports.array(external_exports.object({
-    imageUri: genaiImageUriSchema.optional(),
-    imagePath: external_exports.string().min(1).optional(),
-    background: external_exports.boolean().default(false)
-  }).strict().refine(
-    (ref) => Number(ref.imageUri !== void 0) + Number(ref.imagePath !== void 0) === 1,
-    "Supply exactly one imageUri or imagePath per reference"
-  )).min(1).max(5).optional(),
+  references: msrReferences.optional(),
+  openingPositions: openingPositionsSchema.optional(),
   ...msrGuidanceFields
 }).strict().superRefine((args, ctx) => {
   const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
@@ -31866,10 +31937,13 @@ var genaiImageToVideoSchema = textVideoFields.extend({
   if (Number(args.imageUri !== void 0) + Number(args.imagePath !== void 0) !== 1) issue("Supply exactly one imageUri or imagePath");
   if (args.lastFrameUri != null && args.lastFramePath !== void 0) issue("Supply at most one lastFrameUri or lastFramePath");
   if (!args.references) {
+    if (args.openingPositions !== void 0) issue("openingPositions requires MSR references");
     if (Object.keys(msrGuidanceFields).some((key) => args[key] !== void 0))
       issue("guidanceScale and NAG require references (MSR conditioning); ltx-2.5-22b-dev already runs guided");
     devNegativeRule(args, ctx);
   } else {
+    validateOpening(args.prompt, args.openingPositions, args.references, issue);
+    validateVoiceSlots(args.references, issue);
     msrNegativeRule(args, issue);
     if (args.model !== "ltx-2.5-22b-distilled") issue("Additional references require ltx-2.5-22b-distilled (MSR conditioning)");
     if (args.duration === null) issue("Additional references require an explicit duration");
@@ -31906,17 +31980,8 @@ var genaiMsrSchema = external_exports.object({
   prompt: external_exports.string().trim().min(1).max(2e3),
   negativePrompt: external_exports.string().trim().min(1).max(5e3).optional(),
   ...msrGuidanceFields,
-  references: external_exports.array(external_exports.object({
-    imageUri: genaiImageUriSchema.optional(),
-    imagePath: external_exports.string().min(1).optional(),
-    background: external_exports.boolean().default(false),
-    // Voice sample for this subject; the gateway pairs it with the same picture slot.
-    audioUri: external_exports.string().min(1).optional(),
-    audioPath: external_exports.string().min(1).optional()
-  }).strict().refine(
-    (ref) => Number(!!ref.imageUri) + Number(!!ref.imagePath) === 1,
-    "Supply exactly one imageUri or imagePath"
-  ).refine((ref) => oneOf(ref.audioUri, ref.audioPath) <= 1, "Supply at most one audioUri or audioPath")).min(1).max(5),
+  references: msrReferences,
+  openingPositions: openingPositionsSchema,
   referenceStrength: external_exports.number().finite().min(0).max(1).default(1),
   referenceFrames: external_exports.union([external_exports.literal(25), external_exports.literal(33)]).default(33),
   width: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1536),
@@ -31930,16 +31995,11 @@ var genaiMsrSchema = external_exports.object({
   filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use a .mp4 filename").optional()
 }).strict().superRefine((args, ctx) => {
   const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  validateOpening(args.prompt, args.openingPositions, args.references, issue);
   msrNegativeRule(args, issue);
   const backgrounds = args.references.filter((ref) => ref.background).length;
   if (backgrounds > 1 || args.references.length - backgrounds > 4) issue("MSR supports at most four subjects and one background");
-  let subject = 0;
-  for (const ref of args.references) {
-    subject += Number(!ref.background);
-    if (!oneOf(ref.audioUri, ref.audioPath)) continue;
-    if (ref.background) issue("MSR voice samples belong to subjects, not the background");
-    else if (subject > 2) issue("MSR voice samples fit the first two subjects only");
-  }
+  validateVoiceSlots(args.references, issue);
   if (args.width * args.height > 2064384) issue("MSR maximum is 2,064,384 pixels");
   if (args.duration !== void 0) {
     if (args.numFrames !== void 0) issue("Omit numFrames when using duration");
@@ -31973,16 +32033,6 @@ var import_video_duration = __toESM(require_video_duration(), 1);
 
 // src/seedance-client.ts
 import * as path3 from "node:path";
-
-// src/prompt-language.ts
-var QUOTED_SEGMENT = /"[^"]*"|“[^”]*”|「[^」]*」/g;
-var NON_LATIN_RUN = /[^\P{L}\p{Script=Latin}]+(?:[ \t]+[^\P{L}\p{Script=Latin}]+)*/u;
-function nonEnglishOutsideQuotes(prompt) {
-  const match = prompt.replace(QUOTED_SEGMENT, " ").match(NON_LATIN_RUN);
-  return match ? match[0] : null;
-}
-
-// src/seedance-client.ts
 var VALID_SEEDANCE_RESOLUTIONS = ["480p", "720p", "1080p", "4k"];
 var VALID_SEEDANCE_RATIOS = ["16:9", "9:16", "4:3", "3:4", "1:1", "21:9", "adaptive"];
 var SEEDANCE_MODEL_SPECS = {
@@ -32413,12 +32463,12 @@ var VIDEO_ADAPTERS = Object.freeze({
   heygen_reference: reference("heygen", "heygen-v3", heygenReferenceSchema)
 });
 var VENDOR_REFERENCE_TOOLS = ["minimax_reference", "heygen_reference"];
-function speechVideoCapabilities(provider, model2, operation) {
+function speechVideoCapabilities(provider, model2, operation, subjectReferences = false) {
   if (["veo", "omni"].includes(provider) || provider === "seedance" && !Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
     throw new Error(`video_engine_unsupported: ${provider} ${model2} cannot keep a character's voice; choose a video model again with project_manage`);
   if (["minimax", "heygen"].includes(provider) && operation === "reference") return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "Native speech from the prompt dialogue with an optional voice sample; voice identity is imitation, not preserved audio" };
   if (provider === "ltx-api" && operation === "audio") return { provider, model: model2, audioConditioning: true, lipSync: false, postLipSync: false, evidence: "LTX API audio-to-video conditions on the supplied track; preservation and mouth sync unverified" };
-  if (provider === "astra-genai" && operation === "reference") return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio" };
+  if (provider === "astra-genai" && (operation === "reference" || operation === "image" && model2 === "ltx-2.5-22b-distilled" && subjectReferences)) return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio" };
   if (provider === "astra-genai-desktop") return { provider, model: model2, audioConditioning: true, lipSync: false, postLipSync: false, evidence: "Gateway A2V reencodes supplied audio; timing/voice identity not guaranteed; installed model capabilities must be checked" };
   if (provider === "astra") return { provider, model: model2, audioConditioning: true, lipSync: true, postLipSync: false, evidence: "astra_audio2video adapter contract" };
   if (provider === "seedance" && Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
@@ -32635,7 +32685,12 @@ function refreshVideoReview(episode) {
 
 // src/video-image-inputs.ts
 import { createRequire as createRequire2 } from "node:module";
+import { fileURLToPath as fileURLToPath2 } from "node:url";
 var load = createRequire2(import.meta.url);
+var imageRouting = () => load(fileURLToPath2(new URL("../../skills/storyboard/references/render-routing.js", import.meta.url)));
+function hasVideoSubjectReferences(shot) {
+  return imageRouting().imageReferences(shot).some((ref) => ref.role !== "background" && ["video", "both"].includes(ref.use));
+}
 
 // src/video-voice.ts
 import { existsSync as existsSync4, readFileSync as readFileSync6, realpathSync } from "node:fs";
@@ -32728,7 +32783,7 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
   const states = [...new Set((Array.isArray(motion.beats) ? motion.beats : []).map((beat) => text2(object2(beat).state)).filter(Boolean))];
   const performance2 = planVideoPerformance(shot, { ...options, mode });
   const acting = load3("../../skills/_shared/scene-acting.js");
-  const beats = acting.performanceBeats(performance2.performance, mode, !msr);
+  const beats = acting.performanceBeats(performance2.performance, mode, !msr && !options.bindDialogueSeparately);
   const worn = expressionWords(shot, names);
   const called = (id) => names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id;
   const seen = (Array.isArray(visual.bystanders) ? visual.bystanders : []).map(text2).filter(Boolean), extras = text2(visual.extras);
@@ -32751,7 +32806,7 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
     ...step2 >= 1 ? [] : ["before", "after", "continuity"].map((key) => text2(design[key]) ? sentence(`${key}: ${text2(design[key])}`) : ""),
     ...step2 >= 1 ? [] : states.filter((state) => ![source.action, design.before, design.after, design.continuity].includes(state)).map((state) => sentence(`Visible state: ${state}`)),
     !lines.length && beats.length ? "Perform the planned action without invented speech or voiceover." : "",
-    ...step2 >= 2 ? acting.performanceBeats(performance2.performance, mode, !msr, { brief: true }) : beats,
+    ...step2 >= 2 ? acting.performanceBeats(performance2.performance, mode, !msr && !options.bindDialogueSeparately, { brief: true }) : beats,
     // The model's default face is pleasant; the authored state has to be named and held (LTX guide: physical cues, state after the action).
     worn && step2 < 3 ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : "",
     frames.mode === "first_last" ? sentence(`End on the given last frame${source.end ? ": " + source.end : ""}`) : source.end ? sentence(`End on ${source.end}`) : "",
@@ -32794,13 +32849,14 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
 
 // src/video-routing.ts
 var load4 = createRequire5(import.meta.url);
-var shared = fileURLToPath2(new URL("../../skills/_shared/video-selection.js", import.meta.url));
-var modelSettings = fileURLToPath2(new URL("../../skills/_shared/model-settings.js", import.meta.url));
-var routingContext = (episode, shotId) => load4(shared).readVideoContext(episode, shotId);
+var shared = fileURLToPath3(new URL("../../skills/_shared/video-selection.js", import.meta.url));
+var modelSettings = fileURLToPath3(new URL("../../skills/_shared/model-settings.js", import.meta.url));
+var routingContext = (episode, shotId, sceneNo) => load4(shared).readVideoContext(episode, shotId, sceneNo);
 var idSchema = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var videoPlanSchema = external_exports.object({
   episode: external_exports.string().min(1),
-  shotId: external_exports.string().min(1),
+  shotId: external_exports.string().min(1).optional(),
+  sceneNo: external_exports.number().int().positive().optional(),
   requestId: idSchema,
   purpose: external_exports.enum(["draft", "final", "revision"]).optional(),
   basedOnRequestId: idSchema.optional(),
@@ -32808,7 +32864,7 @@ var videoPlanSchema = external_exports.object({
   operation: external_exports.string().optional(),
   tool: external_exports.string().optional(),
   args: external_exports.record(external_exports.unknown()).default({})
-}).strict();
+}).strict().refine((v) => Boolean(v.shotId) !== (v.sceneNo !== void 0), "Choose sceneNo or shotId");
 var videoExecuteSchema = external_exports.object({ episode: external_exports.string().min(1), planId: external_exports.string().regex(/^[a-f0-9]{64}$/) }).strict();
 var videoApproveSchema = external_exports.object({
   episode: external_exports.string().min(1),
@@ -32820,9 +32876,9 @@ var videoApproveSchema = external_exports.object({
 // src/project.ts
 import * as nodeModule from "node:module";
 import { dirname as dirname3, join as join4, resolve as resolve3 } from "node:path";
-import { fileURLToPath as fileURLToPath3 } from "node:url";
+import { fileURLToPath as fileURLToPath4 } from "node:url";
 var loadFromHere = nodeModule.createRequire(import.meta.url);
-var helper = resolve3(dirname3(fileURLToPath3(import.meta.url)), "../../skills/_shared/project-settings.js");
+var helper = resolve3(dirname3(fileURLToPath4(import.meta.url)), "../../skills/_shared/project-settings.js");
 
 // src/production-workflow.ts
 var STAGES = [
@@ -32876,7 +32932,7 @@ var imageResponse = external_exports.object({ data: external_exports.array(exter
 
 // src/image-routing.ts
 import { createRequire as createRequire7 } from "node:module";
-import { fileURLToPath as fileURLToPath4 } from "node:url";
+import { fileURLToPath as fileURLToPath5 } from "node:url";
 
 // src/astra-genai-image.ts
 var genaiImageSchema = external_exports.object({
@@ -33082,7 +33138,7 @@ var stateSchema2 = external_exports.object({ version: external_exports.literal(1
 
 // src/image-routing.ts
 var load5 = createRequire7(import.meta.url);
-var selectionHelper = fileURLToPath4(new URL("../../skills/_shared/image-selection.js", import.meta.url));
+var selectionHelper = fileURLToPath5(new URL("../../skills/_shared/image-selection.js", import.meta.url));
 var idSchema2 = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var imagePlanSchema = external_exports.object({
   directory: external_exports.string().min(1),
@@ -33158,13 +33214,13 @@ function evaluateWindowScript(source, options = {}) {
 import { existsSync as existsSync5, mkdirSync as mkdirSync2, readFileSync as readFileSync7, renameSync as renameSync2, statSync as statSync4, unlinkSync, writeFileSync as writeFileSync4 } from "node:fs";
 import * as nodeModule2 from "node:module";
 import { basename as basename3, dirname as dirname4, join as join5, relative, resolve as resolve4 } from "node:path";
-import { fileURLToPath as fileURLToPath5 } from "node:url";
-var PLUGIN_ROOT = resolve4(dirname4(fileURLToPath5(import.meta.url)), "..", "..");
+import { fileURLToPath as fileURLToPath6 } from "node:url";
+var PLUGIN_ROOT = resolve4(dirname4(fileURLToPath6(import.meta.url)), "..", "..");
 var REFERENCES_DIR = join5(PLUGIN_ROOT, "skills", "storyboard", "references");
 var CONTRACT_FILE = join5(REFERENCES_DIR, "structure-contract.js");
 var CHECK_SCENES_FILE = join5(REFERENCES_DIR, "check-scenes.js");
 var CHECK_SCENARIO_FILE = join5(REFERENCES_DIR, "check-scenario.js");
-var runtimeFile = fileURLToPath5(import.meta.url);
+var runtimeFile = fileURLToPath6(import.meta.url);
 var runtimeModuleSha256 = createHash3("sha256").update(readFileSync7(runtimeFile)).digest("hex");
 var runtimeLoadedAt = (/* @__PURE__ */ new Date()).toISOString();
 var loadFromHere2 = nodeModule2.createRequire(import.meta.url);
@@ -33257,6 +33313,8 @@ var sceneSchema = external_exports.object({
   summary: external_exports.string().optional().describe("The scene's story in one sentence; the storyboard scene header shows it"),
   out: nonEmpty.optional().describe("The sentence the scene goes out on \u2014 the one that forces a \uADF8\uB7F0\uB370 or \uADF8\uB798\uC11C into the next scene"),
   music: external_exports.object({ decision: external_exports.enum(["score", "none"]), reason: nonEmpty, span: nonEmpty.optional() }).strict().optional().describe("The music decision story_music records: score (with its $timeline span id) or none, and why"),
+  videoDirection: sceneVideoDirectionSchema.optional(),
+  videoOpeningSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional(),
   audienceSound: audienceDecisionSchema.optional()
 }).strict();
 var sequenceSchema = external_exports.object({
@@ -33554,6 +33612,7 @@ var storySceneSchema = external_exports.object({
     summary: nonEmpty.describe("The scene's story in one sentence"),
     turn: nonEmpty.optional(),
     out: nonEmpty.optional(),
+    videoDirection: sceneVideoDirectionSchema.optional(),
     audienceSound: audienceDecisionSchema.optional(),
     // The same signs structure-contract.js reads: the value at the open and at the close.
     charge: external_exports.object({ open: external_exports.enum(["+", "-"]), close: external_exports.enum(["+", "-", "++", "--"]) }).strict().optional()
@@ -33675,6 +33734,7 @@ var shotPromptSchema = external_exports.object({
   action: nonEmpty.describe("What happens in the shot, in English: the subjects' movement from the opening picture"),
   end: nonEmpty.optional().describe("The closing picture, in English"),
   sound: nonEmpty.optional().describe(`Ambient sound and effects, in English; the shot's lines come from shot_dialogue. "no music" is added unless it names music`),
+  openingPositions: openingPositionsSchema.optional(),
   speakerBindings: external_exports.array(speakerBindingSchema).max(2).optional().describe('MSR speakers as seen in the start image, e.g. [{speaker:"hero",screenPosition:"left",description:"the man in black armor"}]; viewer coordinates, never reference order')
 }).strict();
 var scenarioCheckResultSchema = external_exports.object({
@@ -34022,7 +34082,7 @@ function manageSpeech(args) {
       const { selection } = routingContext(episode, args.shotId);
       const adapter = args.tool ? VIDEO_ADAPTERS[args.tool] : void 0;
       if (args.tool && adapter?.engine !== selection.engine) throw new Error("model_selection_mismatch: tool does not match selected engine");
-      const verified = speechVideoCapabilities(selection.engine, selection.model || selection.engine, adapter?.operation ?? selection.operation);
+      const verified = speechVideoCapabilities(selection.engine, selection.model || selection.engine, adapter?.operation ?? selection.operation, hasVideoSubjectReferences(scene));
       if (args.capabilities && (args.capabilities.provider !== verified.provider || args.capabilities.model !== verified.model || args.capabilities.audioConditioning !== verified.audioConditioning || args.capabilities.lipSync !== verified.lipSync || args.capabilities.postLipSync !== verified.postLipSync || Boolean(args.capabilities.nativeSpeech) !== Boolean(verified.nativeSpeech)))
         throw new Error("Caller capabilities disagree with selected adapter registry; omit capabilities when the episode has a model snapshot");
       args = { ...args, capabilities: verified };

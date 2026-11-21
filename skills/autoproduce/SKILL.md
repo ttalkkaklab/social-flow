@@ -108,9 +108,7 @@ Only the story order is enforced; checks come back once the quality is known.
    ([cliché use](../storyboard/references/cliche-use.md#6-recommend-then-apply-what-the-user-picks)).
 2. Invoke [generate-cut-images](../generate-cut-images/SKILL.md): each shot's start image,
    and the end image a `first_last` shot needs, with `shot_image`.
-3. Invoke [generate-cut-videos](../generate-cut-videos/SKILL.md): each video prompt with
-   `shot_prompt`, then each shot's video after the user's yes (`video_approve`), or after
-   they approve every shot.
+3. Invoke [generate-cut-videos](../generate-cut-videos/SKILL.md): one `story_scene.videoDirection` and one `video_plan` with `sceneNo` per generated scene. Execute each approved scene once and reuse the original request ID to recover a pending job.
 
 [review-context](../review-context/SKILL.md), [review-camera](../review-camera/SKILL.md),
 [compose-blender](../compose-blender/SKILL.md), [review-cut-images](../review-cut-images/SKILL.md)

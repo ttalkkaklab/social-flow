@@ -12,6 +12,7 @@ export interface PromptOptions {
   mode?: string;
   measureAudio?: (line: Record<string, unknown>) => number | null;
   validateLanguage?: boolean;
+  bindDialogueSeparately?: boolean;
   /** The adapter's prompt limit. Past it the prompt drops its least needed sentences first; the camera, action, lines and text policy stay. */
   maxCharacters?: number;
 }
@@ -88,7 +89,7 @@ export function compileVideoPrompt(shot: Record<string, unknown>, source: VideoP
   const states = [...new Set((Array.isArray(motion.beats) ? motion.beats : []).map(beat => text(object(beat).state)).filter(Boolean))];
   const performance = planVideoPerformance(shot, { ...options, mode });
   const acting = load('../../skills/_shared/scene-acting.js') as { performanceBeats(plan: unknown[], mode: string, dialogue: boolean, options?: { brief?: boolean }): string[]; VIDEO_TEXT_POLICY: string };
-  const beats = acting.performanceBeats(performance.performance, mode, !msr);
+  const beats = acting.performanceBeats(performance.performance, mode, !msr && !options.bindDialogueSeparately);
   const worn = expressionWords(shot, names);
   // Cast seen without a line and unnamed extras (shot_characters): the opening picture carries them, the prompt keeps them.
   const called = (id: string) => names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id;
@@ -113,7 +114,7 @@ export function compileVideoPrompt(shot: Record<string, unknown>, source: VideoP
     ...(step >= 1 ? [] : ['before', 'after', 'continuity'].map(key => text(design[key]) ? sentence(`${key}: ${text(design[key])}`) : '')),
     ...(step >= 1 ? [] : states.filter(state => ![source.action, design.before, design.after, design.continuity].includes(state)).map(state => sentence(`Visible state: ${state}`))),
     !lines.length && beats.length ? 'Perform the planned action without invented speech or voiceover.' : '',
-    ...(step >= 2 ? acting.performanceBeats(performance.performance, mode, !msr, { brief: true }) : beats),
+    ...(step >= 2 ? acting.performanceBeats(performance.performance, mode, !msr && !options.bindDialogueSeparately, { brief: true }) : beats),
     // The model's default face is pleasant; the authored state has to be named and held (LTX guide: physical cues, state after the action).
     worn && step < 3 ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : '',
     frames.mode === 'first_last' ? sentence(`End on the given last frame${source.end ? ': ' + source.end : ''}`) : source.end ? sentence(`End on ${source.end}`) : '',

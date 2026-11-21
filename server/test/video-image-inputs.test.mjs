@@ -41,6 +41,7 @@ test('reference-only inputs keep order and roles; installed adapters enforce the
  assert.doesNotThrow(()=>parseVideoArgs('seedance_reference',p.args));
  // MSR's background slot carries the start image; the plain background only conditioned that image.
  s.visual.frames.start='start.png';
+ s.visual.video={openingPositions:[{character:'hero',images:[1],position:'standing left at the rail'}]};
  const msr=prepareVideoImages('astra_genai_msr',{prompt:'Walk',width:768,height:1280,duration:5,reserveUsd:0},s,root);
  msr.args.references[0].audioUri='https://example.com/voice.wav';
  assert.deepEqual(msr.args.references.map(r=>[path.basename(r.imagePath),!!r.background]),[['hero.png',false],['start.png',true]]);
@@ -51,6 +52,7 @@ test('reference-only inputs keep order and roles; installed adapters enforce the
 });
 test('GenAI I2V preserves first/end frames alongside independent subject and background references',t=>{
  const root=fixture(t),s=shot('first_last',[ref('room','both','background'),ref('hero','video')]);
+ s.visual.video={openingPositions:[{character:'hero',images:[1],position:'at the desk on the left'}]};
  const p=prepareVideoImages('astra_genai_img2video',{prompt:'Walk',model:'ltx-2.5-22b-distilled',resolution:'1280x704',duration:5,reserveUsd:0,generateAudio:false},s,root);
  assert.match(p.args.imageUri,/^data:image\/png;base64,/);assert.match(p.args.lastFrameUri,/^data:image\/png;base64,/);
  assert.deepEqual(p.args.references.map(r=>[path.basename(r.imagePath),!!r.background]),[['hero.png',false],['room.png',true]]);
@@ -61,7 +63,7 @@ test('GenAI I2V preserves first/end frames alongside independent subject and bac
  assert.throws(()=>parseVideoArgs('astra_genai_img2video',{...p.args,model:'ltx-2.5-22b-dev'}),/distilled/);
  // A declared cast cannot promote a source-image-only character into video references.
  fs.writeFileSync(path.join(root,'storyboard/cast.json'),JSON.stringify({characters:[{id:'hero',source:'../assets/characters/hero/identity.md'}]}));
- s.visual.character=['hero'];s.visual.references=[ref('hero','image'),ref('room','video','prop')];
+ s.visual.character=['hero'];s.visual.video.openingPositions[0].images=[];s.visual.references=[ref('hero','image'),ref('room','video','prop')];
  const prop=prepareVideoImages('astra_genai_img2video',{prompt:'Walk',model:'ltx-2.5-22b-distilled',resolution:'1280x704',duration:5,reserveUsd:0},s,root);
  assert.deepEqual(prop.args.references.map(r=>path.basename(r.imagePath)),['room.png']);
  assert.equal(prop.imageBindings.find(b=>b.id==='hero').submitted,false);
@@ -69,6 +71,7 @@ test('GenAI I2V preserves first/end frames alongside independent subject and bac
 test('MSR preserves explicit image references on a legacy board without a declared cast',t=>{
  const root=fixture(t),s=shot('reference',[ref()]);
  s.visual.character=['hero'];s.visual.frames.start='start.png';
+ s.visual.video={openingPositions:[{character:'hero',images:[1],position:'seated in the foreground'}]};
  const p=prepareVideoImages('astra_genai_msr',{prompt:'Walk'},s,root);
  assert.deepEqual(p.args.references.map(r=>path.basename(r.imagePath)),['hero.png','start.png']);
  assert.match(p.args.prompt,/Image 1: character, Preserve hero appearance/);
@@ -80,6 +83,7 @@ test('MSR names the character-sheet panels of one character as one subject',t=>{
  const panel=(id,file)=>({id,path:'../assets/characters/kardum/'+file,role:'character',use:'video',purpose:'Kardum '+id});
  const s=shot('reference',[panel('face','face.png'),ref(),panel('front','body.png'),panel('back','back.png'),ref('room','video','background')]);
  s.visual.frames.start='start.png';
+ s.visual.video={openingPositions:[{character:'kardum',images:[1,3,4],position:'behind the counter'},{character:'hero',images:[2],position:'in the doorway'}]};
  const msr=prepareVideoImages('astra_genai_msr',{prompt:'Walk',width:768,height:1280,duration:5,reserveUsd:0},s,root);
  assert.match(msr.args.prompt,/^Image 1: character, Kardum face\nImage 2: character, Preserve hero appearance\n/);
  assert.match(msr.args.prompt,/\nImage 5: the opening picture, the characters, place and props as the shot begins\nImage 1 \(face\), Image 3 \(headless front body\), Image 4 \(headless back body\) show one character, kardum.*\n\nWalk$/);
@@ -123,6 +127,17 @@ test('declared MSR principals rebuild canonical faces and bodies despite stale t
  fs.writeFileSync(path.join(board,'cast.json'),JSON.stringify({characters:chars.map(id=>({id,source:'../assets/characters/'+id+'/identity.md'}))}));
  const s={...shot('reference',[ref('hero','image'),ref('mid','both')]),id:'s0001'};
  s.visual.character=chars;s.visual.frames.start='start.png';
+ const positions=[{character:'hero',images:[1,3],position:'standing left at the witness rail'},{character:'ally',images:[2,4],position:'sitting on the far right'}];
+ assert.throws(()=>prepareVideoImages('astra_genai_msr',{prompt:'Exchange'},s,root),/openingPositions required/);
+ s.visual.video={openingPositions:positions.map((p,i)=>({...p,images:positions[1-i].images}))};
+ assert.throws(()=>prepareVideoImages('astra_genai_msr',{prompt:'Exchange'},s,root),/owns this panel/);
+ s.visual.video={openingPositions:positions};
+ s.visual.bystanders=['clerk'];
+ assert.throws(()=>prepareVideoImages('astra_genai_msr',{prompt:'Exchange'},s,root),/missing opening position for clerk/);
+ positions.push({character:'clerk',images:[],position:'behind the judge'});
+ s.visual.video.openingImageSha256='outdated';
+ assert.throws(()=>prepareVideoImages('astra_genai_msr',{prompt:'Exchange'},s,root),/openingPositions stale/);
+ delete s.visual.video.openingImageSha256;
  const p=prepareVideoImages('astra_genai_msr',{prompt:'Exchange'},s,root);
  assert.deepEqual(p.args.references.map(r=>path.relative(root,r.imagePath)),[
   'assets/characters/hero/face.png','assets/characters/ally/face.png',
@@ -138,7 +153,7 @@ test('declared MSR principals rebuild canonical faces and bodies despite stale t
   fs.writeFileSync(path.join(folder,'msr.png'),png);
   doc.panels.msr={file:'msr.png',purpose:'character_reference',view:'msr',sha256:hash,sourceHashes:{face:hash,front:hash}};fs.writeFileSync(file,JSON.stringify(doc));
  }
- s.visual.video={referenceLayout:'combined'};
+ s.visual.video={referenceLayout:'combined',openingPositions:positions.map(p=>({...p,images:p.images.slice(0,1)}))};
  const unified=prepareVideoImages('astra_genai_msr',{prompt:'Exchange'},s,root);
  assert.deepEqual(unified.args.references.map(r=>path.basename(r.imagePath)),['msr.png','msr.png','start.png']);
  assert.equal(unified.imageBindings.filter(r=>r.submitted).length,3);

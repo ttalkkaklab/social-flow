@@ -59,11 +59,12 @@ test('an adapter without a voice lane refuses spoken cuts; silent narration b-ro
   for (const tool of ['astra_text2video','astra_img2video','astra_genai_img2video','seedance_img2video','ltx_video_generate'])
     for (const setting of [{},{generateAudio:true},{generateAudio:false}])
       assert.throws(()=>prepareVideoVoice(tool,{prompt:'Act.',...setting},ctx),/voice_lane_required/,tool);
+  assert.throws(() => prepareVideoVoice('astra_genai_img2video', { prompt: 'Act.', references: [{ imagePath: 'room.png', background: true }] }, ctx), /voice_lane_required/);
   ctx.shot.type='broll';ctx.shot.visual={};ctx.shot.narration.forEach(l=>l.delivery='voiceover');
   assert.throws(()=>prepareVideoVoice('astra_genai_img2video',{prompt:'Act.'},ctx),/voice_lane_required.*generateAudio:false/);
   const silent=prepareVideoVoice('astra_genai_img2video',{prompt:'Act.',generateAudio:false},ctx);
   assert.equal(silent.voiceContinuity.strategy,'external_tts');assert.equal(silent.args.prompt,'Act.');
-  assert.equal(videoVoiceCapabilities('astra_genai_img2video').dialogue,'refused');
+  assert.equal(videoVoiceCapabilities('astra_genai_img2video').dialogue,'requires_subject_references');
   assert.equal(videoVoiceCapabilities('seedance_reference').lane,'reference');
 });
 test('supplied-audio tools keep the prompt and skip native voice guidance',t=>{
@@ -119,6 +120,9 @@ test('MSR attaches each pinned sample to the subject that shows its speaker', t 
   const input = { prompt: 'They talk.', reserveUsd: 0,
     references: [{ imagePath: friend.voiceReference.imagePaths[0] }, { imagePath: hero.voiceReference.imagePaths[0] }] };
   const result = prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true });
+  const pinned = prepareVideoVoice('astra_genai_img2video', { ...input, imagePath: 'opening.png' }, { ...ctx, msrVoice: true });
+  assert.deepEqual(pinned.args.references, result.args.references);
+  assert.equal(pinned.args.imagePath, 'opening.png');
   assert.equal(input.references[0].audioPath, undefined);
   assert.deepEqual(result.args.references.map(ref => ref.audioPath), [friend.voiceReference.path, hero.voiceReference.path]);
   assert.match(result.args.prompt, /^Audio 1: friend's voice, belongs only to Image 1\.\nAudio 2: hero's voice, belongs only to Image 2\.\nThey talk\./);

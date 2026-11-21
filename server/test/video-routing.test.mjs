@@ -1,4 +1,4 @@
-import { setupProject } from './workflow-fixture.mjs';
+import { setupProject, png } from './workflow-fixture.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -134,6 +134,41 @@ test('budget and attempts gate before dispatch and include prior successful rese
  f.board.PRODUCTION.videoAuthorization.maxUsd=10;f.board.PRODUCTION.videoAuthorization.maxAttempts=1;f.save();
  await assert.rejects(f.execute(f.plan('c'),async()=>result),/attempt/);
 });
+test('spoken Seedance reference scene requests native audio and the off-screen speaker sample', t => {
+ const f=fixture(t,{...selection,operation:'reference'});
+ const dir=path.join(f.episode,'storyboard');
+ for (const image of ['room.png','hero.png']) fs.writeFileSync(path.join(dir,image),png);
+ fs.writeFileSync(path.join(dir,'voice.wav'),'fixture');
+ f.board.STRUCTURE={scenes:[{no:1,videoDirection:{openingPositions:[{character:'hero',images:[1],position:'outside the frame beyond the side door'}],emotion:'His voice trembles.'}}]};
+ f.board.SB_DOC={characters:[{id:'hero',tts:{language:'en',voiceId:'Kore'},voiceReference:{path:'voice.wav',imagePaths:['hero.png']}}]};
+ const shot=f.board.SCENES[0];
+ Object.assign(shot,{scene:1,duration:5,narration:[{speaker:'hero',delivery:'off_screen',tts:'Wait for me.'}]});
+ Object.assign(shot.visual,{frames:{mode:'reference',start:'room.png'},references:[{id:'hero',role:'character',use:'video',path:'hero.png',purpose:'The speaker.'}]});
+ f.save();
+ const input={episode:f.episode,sceneNo:1,requestId:'seedance-dialogue'};
+ const p=planVideo(input);
+ assert.equal(p.args.generateAudio,true);
+ assert.deepEqual(p.args.referenceAudioPaths,[path.join(dir,'voice.wav')]);
+ assert.match(p.args.prompt,/Wait for me/);
+ assert.throws(()=>planVideo({...input,args:{generateAudio:false}}),/scene_dialogue_audio_required/);
+});
+test('overlapping scene and shot requests share the attempt limit for every member', async t => {
+ for (const sceneFirst of [false,true]) {
+  const f=fixture(t,selection,{maxAttempts:1});
+  f.board.STRUCTURE={scenes:[{no:1,videoDirection:{openingPositions:[],emotion:'The lake is calm.'}}]};
+  fs.writeFileSync(path.join(f.episode,'storyboard','lake.png'),png);
+  for (const shot of f.board.SCENES) {
+   shot.scene=1; shot.duration=4;
+   shot.visual.frames={mode:'first',start:'lake.png'};
+   shot.visual.video.prompt='The lake is calm.';
+  }
+  f.save();
+  const make = target => planVideo({episode:f.episode,operation:'image',args:{generateAudio:false},...target});
+  const scene=make({sceneNo:1,requestId:'lake-scene'}), shot=make({shotId:'s2',requestId:'second-shot'});
+  await f.execute(sceneFirst ? scene : shot,async()=>result);
+  await assert.rejects(f.execute(sceneFirst ? shot : scene,async()=>assert.fail('limit bypassed')),/video_attempt_limit: s2/);
+ }
+});
 test('concurrent execution reserves once; duplicate in-flight call never dispatches',async t=>{
  const f=fixture(t,selection,{maxConcurrent:1});let release;const wait=new Promise(r=>release=r);let calls=0;const p=f.plan();
  const first=f.execute(p,async()=>{calls++;await wait;return result;});
@@ -173,13 +208,14 @@ test('an MSR prompt is fitted again when its reference and audio lines push it o
  f.board.SCENES[0].visual={character:['hero'],frames:{mode:'reference',start:'../image.png'},
   references:[{id:'hero',path:'../face.png',role:'character',use:'video',purpose:'Preserve appearance'}],
   camera:{movement:'dolly in',speed:'slow',target:'the hero'},
-  video:{prompt:'stale',promptSource:{action:'The hero looks up from the letter. '+'Rain taps the glass. '.repeat(40)}}};
+  video:{openingPositions:[{character:'hero',images:[1],position:'standing by the left window'}],prompt:'stale',promptSource:{action:'The hero looks up from the letter. '+'Rain taps the glass. '.repeat(40)}}};
  f.save();
  // Fitted to 2,000 the prompt still fits; the reference and Audio lines then push it over, so it is fitted again.
  const p=planVideo({episode:f.episode,shotId:'s1',requestId:'msr-fit',operation:'reference',args:{reserveUsd:0}});
  assert.equal(p.tool,'astra_genai_msr');
  assert.ok(p.args.prompt.length<=2000,String(p.args.prompt.length));
  assert.match(p.args.prompt,/The camera slowly pushes in toward the hero/);
+ assert.match(p.args.prompt,/hero \(Image 1\): standing by the left window/);
  assert.doesNotMatch(p.args.prompt,/cafe cafe/);
 });
 test('I2V reference capability refusals release managed budget and concurrency before any submission',async t=>{
@@ -188,7 +224,7 @@ test('I2V reference capability refusals release managed budget and concurrency b
  const oldFetch=globalThis.fetch,oldKey=config.astraGenaiApiKey;config.astraGenaiApiKey='fixture';
  t.after(()=>{globalThis.fetch=oldFetch;config.astraGenaiApiKey=oldKey;});
  fs.writeFileSync(path.join(f.episode,'image.png'),Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=','base64'));
- f.board.SCENES[0].visual={frames:{mode:'first',start:'../image.png'},references:[{id:'hero',path:'../image.png',role:'character',use:'video',purpose:'Preserve appearance'}]};
+ f.board.SCENES[0].visual={frames:{mode:'first',start:'../image.png'},video:{openingPositions:[{character:'hero',images:[1],position:'seated on the right'}]},references:[{id:'hero',path:'../image.png',role:'character',use:'video',purpose:'Preserve appearance'}]};
  f.save();let calls=0;
  for(const failure of ['unsupported','network','schema']){
   globalThis.fetch=async(url,options)=>{
@@ -424,15 +460,15 @@ test('a saved reference operation plans MSR with the speaker sample, dimensions 
   globalThis.fetch = async () => Response.json({ msr: true, voice_references: true });
   await refreshGenaiMsrVoice(true);
   fs.writeFileSync(path.join(f.episode, 'invalid.png'), 'not an image');
-  assert.throws(() => planVideo({ episode: f.episode, shotId: 's1', requestId: 'invalid', args: { prompt: 'Walk.', references: [{ imagePath: 'person.png' }, { imagePath: 'invalid.png', background: true }], reserveUsd: 0.25 } }), /image_invalid/);
+  assert.throws(() => planVideo({ episode: f.episode, shotId: 's1', requestId: 'invalid', args: { prompt: 'Walk.', openingPositions: [{ character:'hero', images:[1], position:'on the left beside the desk' }], references: [{ imagePath: 'person.png' }, { imagePath: 'invalid.png', background: true }], reserveUsd: 0.25 } }), /image_invalid/);
   assert.equal(fs.existsSync(path.join(f.episode, '.work/video-routing/state.json')), false);
   const p = planVideo({ episode: f.episode, shotId: 's1', requestId: 'msr', args: {
-    prompt: 'Person in image 1 says hello.', references: [{ imagePath: 'person.png' }], duration: 5, reserveUsd: 0.25,
+    prompt: 'Person in image 1 says hello.', openingPositions: [{ character:'hero', images:[1], position:'on the left beside the desk' }], references: [{ imagePath: 'person.png' }], duration: 5, reserveUsd: 0.25,
     negativePrompt: 'subtitles', guidanceScale: 1, nagScale: 11, nagAlpha: 0.25, nagTau: 2.5,
   } });
   assert.equal(p.tool, 'astra_genai_msr'); assert.equal(p.args.model, undefined); assert.equal(p.args.resolution, undefined);
   assert.equal(p.args.width, 1792); assert.equal(p.args.height, 1024); assert.equal(p.args.references[0].imagePath, ref);
-  assert.equal(p.args.references[0].audioPath, voice); assert.equal(p.quote.reserveUsd, 0.25);
+  assert.match(p.args.prompt, /hero \(Image 1\): on the left beside the desk/); assert.equal(p.args.references[0].audioPath, voice); assert.equal(p.quote.reserveUsd, 0.25);
   const stored = JSON.parse(fs.readFileSync(path.join(f.episode, '.work/video-routing/plans', p.id + '.json')));
   assert.deepEqual([stored.args.nagScale, stored.args.nagAlpha, stored.args.nagTau], [11, 0.25, 2.5]);
   const replanned = planVideo({ episode: f.episode, shotId: p.shotId, requestId: p.requestId, tool: p.tool, args: stored.sourceArgs });
@@ -495,7 +531,7 @@ test('MSR plans cover the whole shot, reject short exact requests and recheck ch
   fs.writeFileSync(ref, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=', 'base64'));
   f.board.SCENES[0].narration = [{ id: 'l1', speaker: 'hero', delivery: 'on_screen', tts: 'Hello' }];
   f.board.SCENES[0].duration = 5.1; f.save();
-  const args = { prompt: 'A person listens.', references: [{ imagePath: ref }], reserveUsd: .25 };
+  const args = { prompt: 'A person listens.', openingPositions: [{character:'hero',images:[1],position:'seated on the left'}], references: [{ imagePath: ref }], reserveUsd: .25 };
   const plan = extra => planVideo({ episode: f.episode, shotId: 's1', requestId: 'timed', args: { ...args, ...extra } });
   const p = plan({});
   assert.equal(p.args.numFrames, 129);
@@ -623,4 +659,60 @@ test('a hosted reference lane takes the spoken shot from the board: panels, the 
  assert.equal(silent.tool,'minimax_img2video');
  assert.match(silent.args.prompt,/No speech/);
  assert.equal(path.basename(silent.args.sourceImagePath),'start.png');
+});
+
+test('sceneNo plans one pinned clip for two ordered dialogue shots and revalidates the whole scene', async t => {
+ const f = fixture(t, {engine:'astra-genai',model:'ltx-2.5-22b-distilled',resolution:'576x1024',operation:'reference'});
+ const positions = [
+  {character:'witness',images:[1],position:'standing at the near witness rail'},
+  {character:'heir',images:[2],position:'seated at the far-right desk'},
+ ];
+ const direction = {openingPositions:positions,emotion:'The heir is angry. The witness feels ashamed.'};
+ f.board.STRUCTURE = {version:'1',sequences:[{id:'q',scenes:[1]}],scenes:[{no:1,videoDirection:direction}]};
+ const dir = path.join(f.episode,'storyboard');
+ for (const name of ['opening','witness','heir'])
+  fs.writeFileSync(path.join(dir,name+'.png'),Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=','base64'));
+ f.board.SB_DOC = {characters:positions.map(p=>({id:p.character,tts:{language:'ko',voiceId:'fixture'},voiceReference:{imagePaths:[p.character+'.png']}}))};
+ const oldKey=config.astraGenaiApiKey, oldFetch=globalThis.fetch;
+ config.astraGenaiApiKey='fixture';
+ globalThis.fetch=async()=>Response.json({msr:true,voice_references:true});
+ t.after(()=>{config.astraGenaiApiKey=oldKey;globalThis.fetch=oldFetch;});
+ await refreshGenaiMsrVoice(true);
+ for (const person of f.board.SB_DOC.characters) {
+  person.voiceReference.path=path.join(dir,person.id+'.wav');
+  execFileSync('ffmpeg',['-loglevel','error','-f','lavfi','-i','sine=duration=0.12',person.voiceReference.path]);
+ }
+ const words = ['왜 그랬어요?', '제가 찢었습니다.'];
+ for (const [i,shot] of f.board.SCENES.entries()) {
+  shot.scene=1; shot.duration=4+i; shot.visual.frames={mode:'first',start:'opening.png'};
+  shot.visual.character=[positions[i].character];
+  shot.visual.references=[{id:'p'+i,path:positions[i].character+'.png',use:'both',role:'character',purpose:'Face and clothing.'}];
+  shot.narration=[{id:'l'+i,speaker:positions[1-i].character,tts:words[i],delivery:'on_screen',acting:{direction:'Walk over to the witness.'}}];
+ }
+ f.save();
+ const input={episode:f.episode,sceneNo:1,requestId:'whole-scene',args:{reserveUsd:0.1}};
+ const plan=planVideo(input);
+ assert.deepEqual(plan.shotIds,['s1','s2']);
+ assert.equal(plan.args.duration,9); assert.equal(plan.sceneNo,1);
+ assert.equal(plan.tool,'astra_genai_img2video'); assert.match(plan.args.imageUri,/^data:image\/png/);
+ assert.equal(plan.args.references.length,3);
+ assert.ok(plan.args.prompt.startsWith('Opening frame'));
+ assert.match(plan.args.prompt,/heir \(Image 2, Audio 2\): "왜 그랬어요\?"[\s\S]+witness \(Image 1, Audio 1\): "제가 찢었습니다\."/);
+ assert.equal(plan.args.prompt.split(words[0]).length,2);
+ assert.doesNotMatch(plan.args.prompt,/hard cut|camera holds|tripod|gets to his feet|walk over/i);
+ assert.throws(()=>planVideo({...input,shotId:'s1'}),/sceneNo or shotId/);
+ assert.throws(()=>planVideo({...input,args:{duration:3}}),/video_duration_short/);
+ approveVideo({episode:f.episode,planIds:[plan.id],request:'Approve this whole scene'});
+ let calls=0;
+ await f.execute(plan,async (tool,args)=>{
+  calls++;
+  assert.equal(tool,plan.tool); assert.equal(args.prompt,plan.args.prompt);
+  assert.equal(args.references[1].audioPath,path.join(dir,'heir.wav'));
+  return result;
+ });
+ await f.execute(plan,async()=>assert.fail('duplicate scene submission'));
+ assert.equal(calls,1);
+ f.board.SCENES[1].narration[0].tts='다른 대사'; f.save();
+ assert.throws(()=>approveVideo({episode:f.episode,planIds:[plan.id],request:'old'}),/stale/);
+ await assert.rejects(f.execute(plan,async()=>assert.fail('stale scene submitted')),/stale/);
 });

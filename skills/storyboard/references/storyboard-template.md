@@ -30,6 +30,12 @@ created: <YYYY-MM-DD>
 
 ## S#1. <location> / <time>
 
+**Scene video** — one prompt and one take for the following shot cards.
+- Opening image and positions — <cast ID, subject panels, viewer’s side, depth, posture and landmark for each person, including silent listeners>
+- Emotion — <how each character feels as the exchange unfolds>
+- Essential action, sound or camera — <only when the story requires it>
+- Dialogue — <the lines on the following cards, in playback order>
+
 **Audience-only psychological sound** — <use / none / undecided>. <Why the viewer needs this sound here, or why the scene plays better without it. For example, keep the actor’s breath and room tone already heard in the take.>
 For `decision:"use"`, the scene’s `audienceSound` may include `perspective`, `shift` and `exit`.
 For example, follow Jin-su while the joined hands hold still, hear his confidence as he smiles,

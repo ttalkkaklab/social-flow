@@ -417,6 +417,10 @@ describe('story first, then characters and lines', () => {
     const scene = { sequence: 'q1', no: 1, place: '숲', time: '낮', event: 'e', summary: '씬', turn: '믿음이 깨진다' };
     writeStoryScenes(storySceneSchema.parse({ path: dir, scenes: [{ ...scene, charge: { open: '-', close: '--' } }] }));
     assert.deepEqual(readBoard(dir).win.STRUCTURE.scenes[0].charge, { open: '-', close: '--' });
+    const direction = { openingPositions: [], emotion: 'The empty courtroom falls quiet.' };
+    writeStoryScenes(storySceneSchema.parse({path:dir,scenes:[{...scene,videoDirection:direction}]}));
+    writeStoryScenes({path:dir,scenes:[scene]});
+    assert.deepEqual(readBoard(dir).win.STRUCTURE.scenes[0].videoDirection,direction);
     assert.equal(storySceneSchema.safeParse({ path: dir, scenes: [{ ...scene, charge: { open: '+', close: '+++' } }] }).success, false);
     assert.deepEqual(TOOLS.find((t) => t.name === 'story_scene').inputSchema.properties.scenes.items.properties.charge.properties.close.enum, ['+', '-', '++', '--']);
   });
@@ -1536,12 +1540,14 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.match(msr, /^Medium shot, waist up, at eye level\. The camera pushes in toward the subject/);
     assert.match(msr, /Mina turns to the door\. Audio: no music\./);
     assert.match(msr, /Keep the entire video image text-free/);
-    writeShotPrompt({ path: join(dir, 'scenes.js'), id: 's0001', action: 'Mina turns to the door.', speakerBindings: [
+    writeShotPrompt({ path: join(dir, 'scenes.js'), id: 's0001', action: 'Mina turns to the door.', openingPositions: [{ character: 'mina', images: [1], position: 'by the door on the left' }], speakerBindings: [
       { speaker: 'mina', screenPosition: 'left', description: 'the woman in blue' }
     ] });
     const bound = readBoard(dir).win.SCENES[0].visual.video;
     assert.deepEqual(bound.promptSource, { action: 'Mina turns to the door.' });
     assert.equal(bound.speakerBindings[0].screenPosition, 'left');
+    assert.equal(bound.openingPositions[0].position, 'by the door on the left');
+    assert.equal(bound.openingImageSha256, bound.speakerBindingImageSha256);
     assert.match(bound.speakerBindingImageSha256, /^[a-f0-9]{64}$/);
     const framed = writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', end: 'she smiles' }).prompt;
     assert.match(framed, /^Start from the given first frame\. Mina looks up\./);

@@ -18,6 +18,8 @@ on 2026-10-31 because none takes a voice reference.
   MiniMax-style pack with a reference voice lane)
 - **ASTRA** (`astra_*`, below) and the **host** tool (§The host video tool comes first)
 
+For normal episode generation plan one scene with `video_plan {episode,sceneNo,requestId}`. Its ordered cards provide dialogue and duration. On distilled LTX the image adapter carries both the first frame and subject references. The shot recipes below also support explicit single-shot work.
+
 ## ASTRA — our own LTX box
 
 **ASTRA video** (`astra_*`, `ASTRA_VIDEO`) is our own
@@ -240,11 +242,11 @@ So we don't reread the price sheet and arena rankings every time, the conclusion
 into four lines.
 
 **1. A spoken cut needs a voice lane.** Every adapter declares one, shown by `video_catalog` as
-`voice.lane` with `voice.dialogue: allowed|refused`: `reference` (`astra_genai_msr`,
+`voice.lane` with `voice.dialogue`: `reference` (`astra_genai_msr`,
 `seedance_reference`, `fasth3_omni_reference` — a pinned per-character voice sample sets the
 speaker's timbre; Seedance binds `@Image N`/`@Audio N` on 2.5 and `Image N`/`Audio N` on 2.0),
 `supplied` (`astra_audio2video`, `astra_genai_audio2video`, `astra_genai_desktop_audio2video` —
-the pinned TTS track drives the clip) or `none` (everything else). `video_plan` refuses a
+the pinned TTS track drives the clip) or `conditional_reference` (distilled GenAI I2V with subject images). Other adapters use `none` (silent picture lanes). `video_plan` refuses a
 lane-`none` adapter with `voice_lane_required` when the shot has an `on_screen` line, or when the
 model would voice lines natively (audio on in a `visual.clip` or `type:'broll'` slot). Narration
 over a non-speaking picture passes on any adapter; a `visual.clip` slot with lines sets

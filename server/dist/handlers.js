@@ -1583,7 +1583,8 @@ ROUTES.video_catalog = async () => text(JSON.stringify(videoCatalog(), null, 2))
 ROUTES.video_plan = async (args) => {
     // MSR voice samples depend on the gateway backend; ask before the synchronous plan.
     const raw = (args ?? {});
-    if (raw.tool === 'astra_genai_msr' || raw.operation === 'reference' || (!raw.tool && !raw.operation))
+    if (raw.tool === 'astra_genai_msr' || raw.tool === 'astra_genai_img2video' ||
+        (!raw.tool && (!raw.operation || raw.operation === 'reference' || raw.operation === 'image')))
         await refreshGenaiMsrVoice();
     return text(JSON.stringify(planVideo(args), null, 2));
 };

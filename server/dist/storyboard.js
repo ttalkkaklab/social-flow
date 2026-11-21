@@ -1,3 +1,4 @@
+import { openingPositionsSchema, sceneVideoDirectionSchema } from './msr-opening.js';
 import { readShotVideoTiming } from './video-routing.js';
 import { episodeHandoff, manageProject } from './project.js';
 import { readImageMetadata, verifyImageFile } from './image-media.js';
@@ -145,6 +146,8 @@ export const sceneSchema = z
     out: nonEmpty.optional().describe('The sentence the scene goes out on — the one that forces a 그런데 or 그래서 into the next scene'),
     music: z.object({ decision: z.enum(['score', 'none']), reason: nonEmpty, span: nonEmpty.optional() }).strict().optional()
         .describe('The music decision story_music records: score (with its $timeline span id) or none, and why'),
+    videoDirection: sceneVideoDirectionSchema.optional(),
+    videoOpeningSha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
     audienceSound: audienceDecisionSchema.optional(),
 })
     .strict();
@@ -1297,6 +1300,7 @@ export const storySceneSchema = z.object({
         event: nonEmpty.describe('The one thing that happens in this scene'),
         summary: nonEmpty.describe("The scene's story in one sentence"),
         turn: nonEmpty.optional(), out: nonEmpty.optional(),
+        videoDirection: sceneVideoDirectionSchema.optional(),
         audienceSound: audienceDecisionSchema.optional(),
         // The same signs structure-contract.js reads: the value at the open and at the close.
         charge: z.object({ open: z.enum(['+', '-']), close: z.enum(['+', '-', '++', '--']) }).strict().optional(),
@@ -1369,7 +1373,10 @@ export function writeStoryScenes(args) {
     for (const { sequence, ...scene } of args.scenes) {
         if (!sequences.some((q) => q.id === sequence))
             throw new Error(`story_order: sequence ${sequence} does not exist — write it with story_sequence`);
-        scenes = upsertBy(scenes, [{ ...scenes.find((old) => old.no === scene.no), ...scene }], 'no');
+        const opening = win.SCENES?.find(shot => shot.scene === scene.no)?.visual?.frames;
+        const frame = scene.videoDirection && opening?.start ? resolve(dirname(scenesPath(args.path)), opening.start) : undefined;
+        const pin = frame ? { videoOpeningSha256: createHash('sha256').update(readFileSync(frame)).digest('hex') } : {};
+        scenes = upsertBy(scenes, [{ ...scenes.find((old) => old.no === scene.no), ...scene, ...pin }], 'no');
         sequences = sequences.map((q) => q.id === sequence
             ? (q.scenes.includes(scene.no) ? q : { ...q, scenes: [...q.scenes, scene.no] })
             : { ...q, scenes: q.scenes.filter((no) => no !== scene.no) });
@@ -2717,6 +2724,7 @@ export const shotPromptSchema = z.object({
     action: nonEmpty.describe('What happens in the shot, in English: the subjects\' movement from the opening picture'),
     end: nonEmpty.optional().describe('The closing picture, in English'),
     sound: nonEmpty.optional().describe('Ambient sound and effects, in English; the shot\'s lines come from shot_dialogue. "no music" is added unless it names music'),
+    openingPositions: openingPositionsSchema.optional(),
     speakerBindings: z.array(speakerBindingSchema).max(2).optional()
         .describe('MSR speakers as seen in the start image, e.g. [{speaker:"hero",screenPosition:"left",description:"the man in black armor"}]; viewer coordinates, never reference order'),
 }).strict();
@@ -2732,6 +2740,17 @@ export function writeShotPrompt(args) {
     if (mode !== 'generated_video')
         throw new Error(`shot_prompt: ${args.id} is a ${mode ?? 'unrouted'} cut; only a generated_video cut takes a video prompt`);
     const frames = (visual.frames ?? {}), msr = frames.mode === 'reference';
+    if (args.openingPositions) {
+        const ids = new Set(args.openingPositions.map(row => row.character));
+        if (ids.size !== args.openingPositions.length)
+            throw new Error('openingPositions: list each character once');
+        const visible = [...(contract().castOf(shot) ?? []), ...bystandersOf(shot)];
+        for (const id of visible)
+            if (!ids.has(id))
+                throw new Error('openingPositions: missing opening position for ' + id);
+        if (visible.length && args.openingPositions.some(row => !visible.includes(row.character)))
+            throw new Error('openingPositions: use the character IDs assigned to this shot');
+    }
     const speakerBindings = args.speakerBindings ?? [];
     const visibleSpeakers = [...new Set((shot.narration ?? []).filter(line => line.delivery === 'on_screen' && line.tts).map(line => line.speaker))];
     if (msr && visibleSpeakers.length > 1 && visibleSpeakers.some(id => !speakerBindings.some(binding => binding.speaker === id)))
@@ -2753,9 +2772,13 @@ export function writeShotPrompt(args) {
     const rawCast = win.SB_DOC?.characters;
     const names = Object.fromEntries((Array.isArray(rawCast) ? rawCast : []).map(c => [c.id, String(c.name ?? '')]));
     const compiled = compileVideoPrompt(shot, source, names), { prompt } = compiled;
-    const { speakerBindings: _oldBindings, speakerBindingImageSha256: _oldImage, ...priorVideo } = (visual.video ?? {});
+    const { openingPositions: oldPositions, openingImageSha256: oldHash, speakerBindings: _oldBindings, speakerBindingImageSha256: _oldImage, ...priorVideo } = (visual.video ?? {});
     const start = visual.frames?.start;
-    shots[index] = { ...shot, visual: { ...visual, video: { ...priorVideo, prompt, promptSource: source, promptBasis: contract().promptBasis(shot, isFocus),
+    const positions = args.openingPositions ?? oldPositions;
+    const openingHash = args.openingPositions && start
+        ? createHash('sha256').update(readFileSync(resolve(dirname(scenesPath(args.path)), start))).digest('hex') : oldHash;
+    shots[index] = { ...shot, visual: { ...visual, video: { ...priorVideo,
+                ...(positions ? { openingPositions: positions, openingImageSha256: openingHash } : {}), prompt, promptSource: source, promptBasis: contract().promptBasis(shot, isFocus),
                 ...(speakerBindings.length ? { speakerBindings, speakerBindingImageSha256: createHash('sha256').update(readFileSync(resolve(dirname(scenesPath(args.path)), start))).digest('hex') } : {}) } } };
     const result = writeOutline(args.path, win, st, shots);
     // The clip is about to be made: say so while the scene's music can still shape its sound.

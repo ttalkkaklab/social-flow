@@ -1,7 +1,6 @@
 # Video routing contract
 
-Use `video_catalog` → `video_plan` → `video_approve` (the user's yes to that shot, or `auto:true`
-for every shot) → `video_execute` for episode video. The registry
+Use `video_catalog` → `video_plan` → `video_approve` (the user's yes to that scene or a standing `auto:true`) → `video_execute` for episode video. The registry
 contains installed adapter contracts, not a vendor availability claim. MiniMax H3
 and the official LTX API remain unimplemented; ASTRA is a separate self-hosted
 LTX deployment. Do not substitute one for another.
@@ -27,7 +26,7 @@ window.PRODUCTION.modelSettings = { overrides: [
 ] };
 ```
 
-`video_plan` accepts `episode`, `shotId`, a stable `requestId`, `operation` (text,
+`video_plan` accepts `episode`, `sceneNo` (or `shotId` for an explicit single shot), a stable `requestId`, `operation` (text,
 image, reference, audio, keyframe, control, extend, edit, retake) and adapter `args`.
 Alternatively specify an exact `tool`. Conflicting tool/operation/model/resolution
 or unknown arguments fail. Local input contents and prices are pinned in a saved plan.
@@ -35,6 +34,8 @@ ASTRA retake inherits source dimensions; planning probes the source and matches 
 selected resolution without adding unsupported width/height fields.
 Remote URL contents cannot be pinned; use immutable provider assets or local files.
 Re-plan after changes. No network submission occurs during planning.
+
+A scene plan reads `STRUCTURE.scenes[].videoDirection`, the first card’s opening image and the ordered dialogue and lengths of every member card. Omit `args.prompt`. Changing a later member invalidates the scene plan.
 
 GenAI I2V on `ltx-2.5-22b-distilled` can combine a first image, optional last
 image and four subject references plus one background. `video_plan` keeps the
@@ -51,7 +52,9 @@ It saves original `sourceArgs` separately from the compiled request and records
 `voiceContinuity` with hashes, warnings and four independent `not_reviewed` fields.
 Revalidation includes dialogue, acting, cast voice settings and sample bytes.
 The catalog's `voice.lane` is `reference` (sample imitation), `supplied` (animates supplied
-speech) or `none`, with `voice.dialogue: allowed|refused`. `video_plan` refuses a spoken cut
+speech), `conditional_reference` (GenAI distilled I2V with subject images) or `none`.
+For the conditional lane, `voice.dialogue` is `requires_subject_references`. Keep the opening
+frame in `imagePath` and place each voice sample in its subject reference’s `audioPath`. `video_plan` refuses a spoken cut
 on a `none` lane as `voice_lane_required`; narration over a non-speaking picture passes on any
 adapter. These fields never certify perceptual consistency or exact lip sync.
 
