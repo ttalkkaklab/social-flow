@@ -9,7 +9,7 @@ import { generateLyriaSong, generateElevenMusic } from './music-song-client.js';
 import { IMAGE_ADAPTERS, imageCatalog } from './image-registry.js';
 import { planImage, imagePlanSummary, executeImage, routeLegacyImage, imageStatus } from './image-routing.js';
 import { videoStatus } from './video-routing.js';
-import { planVideo, executeVideo, routeLegacyVideo, approveVideo } from './video-routing.js';
+import { planVideo, executeVideo, routeLegacyVideo, approveVideo, videoPlanSchema } from './video-routing.js';
 import { VIDEO_ADAPTERS, videoCatalog } from './video-registry.js';
 import { routeSpeech, speechRouteSchema } from './tts-routing.js';
 import { hostReview } from './host-review.js';
@@ -19,7 +19,7 @@ import { reviewActing as reviewTtsActing, actingReviewSchema as ttsActingReviewS
 import { manageVoiceAudition, voiceAuditionSchema } from './voice-audition.js';
 import { manageLocation } from './location.js';
 import { episodeCoverSchema, setCover, renderCover, readCover } from './cover.js';
-import { manageProject } from './project.js';
+import { manageProject, requireReadyProject } from './project.js';
 import { planStoryCatharsis, planStoryIntensity, storyCatharsisSchema, storyIntensitySchema } from './story-devices.js';
 import { manageSpeech, speechManageSchema } from './speech.js';
 import { reviewActing, actingReviewSchema } from './acting-review.js';
@@ -1623,7 +1623,11 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   },
   character_voice_audition: async (args) => text(JSON.stringify(await manageVoiceAudition(voiceAuditionSchema.parse(args)), null, 2)),
   tts_review_acting: async (args) => text(JSON.stringify(await reviewTtsActing(ttsActingReviewSchema.parse(args)), null, 2)),
-  speech_manage: async (args) => text(JSON.stringify(manageSpeech(parseArgs(speechManageSchema, args)), null, 2)),
+  speech_manage: async (args) => {
+    const input = parseArgs(speechManageSchema, args);
+    if (input.action !== 'list') requireReadyProject(input.path);
+    return text(JSON.stringify(manageSpeech(input), null, 2));
+  },
   host_review: async (args) => text(JSON.stringify(await hostReview(args), null, 2)),
   acting_review: async (args) => text(JSON.stringify(await reviewActing(parseArgs(actingReviewSchema, args)), null, 2)),
   storyboard_read: async (args) => {
@@ -1714,17 +1718,18 @@ for (const name of DURATION_TOOLS) {
 // All legacy video entrypoints share the routing service. Capture the raw adapters once;
 // video_execute must not recurse through the public wrapper.
 const videoDispatch = Object.fromEntries(Object.keys(VIDEO_ADAPTERS).map(name => [name, ROUTES[name]]));
-const dispatchVideo = (name: string, args: Record<string, unknown>) => videoDispatch[name](args);
+export const dispatchVideo = (name: string, args: Record<string, unknown>) => videoDispatch[name](args);
 for (const name of Object.keys(VIDEO_ADAPTERS)) {
   ROUTES[name] = args => routeLegacyVideo(name, args, dispatchVideo);
 }
 ROUTES.video_catalog = async () => text(JSON.stringify(videoCatalog(), null, 2));
 ROUTES.video_plan = async args => {
   // MSR voice samples depend on the gateway backend; ask before the synchronous plan.
-  const raw = (args ?? {}) as Record<string, unknown>;
-  if (raw.tool === 'astra_genai_msr' || raw.tool === 'astra_genai_img2video' ||
-      (!raw.tool && (!raw.operation || raw.operation === 'reference' || raw.operation === 'image'))) await refreshGenaiMsrVoice();
-  return text(JSON.stringify(planVideo(args), null, 2));
+  const input = videoPlanSchema.parse(args);
+  requireReadyProject(input.episode);
+  if (input.tool === 'astra_genai_msr' || input.tool === 'astra_genai_img2video' ||
+      (!input.tool && (!input.operation || input.operation === 'reference' || input.operation === 'image'))) await refreshGenaiMsrVoice();
+  return text(JSON.stringify(planVideo(input), null, 2));
 };
 ROUTES.video_execute = args => executeVideo(args, dispatchVideo);
 ROUTES.video_approve = async args => text(JSON.stringify(approveVideo(args), null, 2));
@@ -1742,6 +1747,7 @@ ROUTES.image_status = async args => text(JSON.stringify(await imageStatus(args),
 // character_panel plans and runs one sheet panel from the identity, then records it in panels.json.
 ROUTES.character_panel = async args => {
   const input = parseArgs(characterPanelSchema, args);
+  requireReadyProject(input.identityPath);
   const request = characterPanelRequest(input);
   const plan = planImage({ directory: request.workspace, assetId: `${request.id}-${request.view}`, requestId: request.requestId, operation: request.operation,
     ...(request.tool ? { tool: request.tool } : {}), ...(input.reserveUsd !== undefined ? { reserveUsd: input.reserveUsd } : {}), args: request.args });

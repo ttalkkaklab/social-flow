@@ -1,3 +1,4 @@
+import { setupProject } from './workflow-fixture.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
@@ -9,6 +10,7 @@ import { config } from '../dist/config.js';
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=', 'base64');
 function fixture(t, image = { engine: 'zimage' }, auth) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'image-route-'));
+  setupProject(dir, { image });
   fs.mkdirSync(path.join(dir, 'storyboard'));
   const board = { modelSettings: { models: { image } }, ...(auth ? { imageAuthorization: auth } : {}) };
   const write = () => fs.writeFileSync(path.join(dir, 'storyboard/scenes.js'), 'window.PRODUCTION = ' + JSON.stringify(board));
@@ -61,7 +63,7 @@ test('selection/input changes stale a plan; configured raw calls cannot bypass c
   fs.appendFileSync(path.join(f.dir, 'source.png'), 'changed');
   await assert.rejects(f.run(p, async () => assert.fail('must not dispatch')), /plan_stale/);
   await assert.rejects(routeLegacyImage('image_local_generate', { prompt: 'x', outputPath: f.dir }, async () => assert.fail()), /context_required/);
-  f.board.modelSettings.models.image = { engine: 'host', host: 'codex', model: 'host-managed' }; f.write();
+  f.board.modelSettings.overrides = [{ scope: 'episode', request: 'Use host images', image: { engine: 'host', host: 'codex', model: 'host-managed' } }]; f.write();
   await assert.rejects(f.run(p, async () => assert.fail()), /plan_stale/);
   const host = f.plan('host'); assert.equal(host.execution, 'host_handoff');
   await assert.rejects(f.run(host, async () => assert.fail()), /host_handoff_required/);

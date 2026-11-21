@@ -30737,8 +30737,8 @@ var receiptSchema = external_exports.object({
 }).strict();
 
 // src/video-routing.ts
-import { createRequire as createRequire5 } from "node:module";
-import { fileURLToPath as fileURLToPath3 } from "node:url";
+import { createRequire as createRequire6 } from "node:module";
+import { fileURLToPath as fileURLToPath4 } from "node:url";
 
 // src/astra-video-client.ts
 import { createHash as createHash2, randomInt } from "node:crypto";
@@ -32895,10 +32895,17 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
   ] };
 }
 
+// src/project.ts
+import * as nodeModule from "node:module";
+import { dirname as dirname3, join as join4, resolve as resolve3 } from "node:path";
+import { fileURLToPath as fileURLToPath3 } from "node:url";
+var loadFromHere = nodeModule.createRequire(import.meta.url);
+var helper = resolve3(dirname3(fileURLToPath3(import.meta.url)), "../../skills/_shared/project-settings.js");
+
 // src/video-routing.ts
-var load4 = createRequire5(import.meta.url);
-var shared = fileURLToPath3(new URL("../../skills/_shared/video-selection.js", import.meta.url));
-var modelSettings = fileURLToPath3(new URL("../../skills/_shared/model-settings.js", import.meta.url));
+var load4 = createRequire6(import.meta.url);
+var shared = fileURLToPath4(new URL("../../skills/_shared/video-selection.js", import.meta.url));
+var modelSettings = fileURLToPath4(new URL("../../skills/_shared/model-settings.js", import.meta.url));
 var routingContext = (episode, shotId, sceneNo) => load4(shared).readVideoContext(episode, shotId, sceneNo);
 var idSchema = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var videoPlanSchema = external_exports.object({
@@ -32920,13 +32927,6 @@ var videoApproveSchema = external_exports.object({
   auto: external_exports.boolean().optional().describe("true: the user approves every shot's video from now on; false: ask before each shot again"),
   request: external_exports.string().trim().min(1).describe("The user's own words that gave this approval")
 }).strict().refine((input) => input.planIds !== void 0 || input.auto !== void 0, "name planIds or auto");
-
-// src/project.ts
-import * as nodeModule from "node:module";
-import { dirname as dirname3, join as join4, resolve as resolve3 } from "node:path";
-import { fileURLToPath as fileURLToPath4 } from "node:url";
-var loadFromHere = nodeModule.createRequire(import.meta.url);
-var helper = resolve3(dirname3(fileURLToPath4(import.meta.url)), "../../skills/_shared/project-settings.js");
 
 // src/production-workflow.ts
 var STAGES = [

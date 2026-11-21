@@ -1,3 +1,4 @@
+import { requireReadyProject } from './project.js';
 import * as fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -78,6 +79,7 @@ function bindSelection(tool: string, input: Record<string, unknown>, selection: 
 export function planMusic(raw: unknown): MusicPlan {
   gate('music_plan');
   const input = musicPlanSchema.parse(raw);
+  requireReadyProject(input.directory);
   const context = musicContext(input.directory, input.assetId);
   const { selection } = context;
   if (selection.engine === 'none') throw new Error('music_generation_disabled: this selection uses existing music or no score');
@@ -115,7 +117,9 @@ export function musicPlanSummary(plan: MusicPlan) {
 export type MusicDispatch = (tool: string, args: Record<string, unknown>) => Promise<ToolResult>;
 export async function executeMusic(raw: unknown, dispatch: MusicDispatch): Promise<ToolResult> {
   gate('music_execute');
-  const input = musicExecuteSchema.parse(raw), directory = fs.realpathSync(input.directory);
+  const input = musicExecuteSchema.parse(raw);
+  requireReadyProject(input.directory);
+  const directory = fs.realpathSync(input.directory);
   const plan: MusicPlan = JSON.parse(fs.readFileSync(path.join(directory, '.work/music-routing/plans', input.planId + '.json'), 'utf8'));
   const { id, ...body } = plan;
   if (id !== input.planId || routingHash(body) !== id || plan.directory !== directory) throw new Error('music_plan_invalid');

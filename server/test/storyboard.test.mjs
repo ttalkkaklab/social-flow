@@ -53,10 +53,9 @@ import { setupProject, png } from './workflow-fixture.mjs';
 import { manageProject } from '../dist/project.js';
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
-const settings = createRequire(import.meta.url)('../../skills/_shared/model-settings.js');
 
 const dirs = [];
-const tmp = () => { const d = mkdtempSync(join(tmpdir(), 'sb-')); dirs.push(d); return d; };
+const tmp = () => { const d = mkdtempSync(join(tmpdir(), 'sb-')); dirs.push(d); setupProject(d); return d; };
 // storyboard/cast.json for these ids, each with identity.md and, unless voiceOnly, its face, front and back panels
 // under <root>/assets/characters/<id>/.
 const castFile = (dir, ids, { root = dir, voiceOnly = [] } = {}) => {
@@ -524,7 +523,7 @@ describe('music is decided scene by scene', () => {
     assert.deepEqual([first.time, first.music], ['밤', { decision: 'none', reason: '대사만 듣게 한다' }]);
   });
 
-  it('shows the channel\'s saved music direction and says when no music model is saved', () => {
+  it('shows the channel\'s saved music direction when new music is disabled', () => {
     const root = tmp(), dir = join(root, 'drafts/storyboard');
     const ready = setupProject(root);
     const note = '2026-11-08 user: music under every shot is too much; score the turns';
@@ -534,7 +533,7 @@ describe('music is decided scene by scene', () => {
     outline(dir);
     const r = writeStoryMusic({ path: dir, cues: [tension], spots: [{ scenes: [1, 2, 3], decision: 'score', cue: 'tension', reason: 'r' }] });
     assert.deepEqual(r.spotting.direction, [note]);
-    assert.ok(r.findings.some((f) => /no music model is saved \(models\.music\)/.test(f.what)));
+    assert.deepEqual(ready.config.models.music, { engine: 'none' });
   });
 });
 
@@ -860,15 +859,35 @@ describe('icon attributes come after every shot\'s characters', () => {
     rmSync(join(root, 'data/c/assets/characters/mina/face.png'));
     assert.throws(() => writeStoryScenes({ path: dir, scenes: [{ sequence: 'q1', no: 1, place: '숲', time: '낮', event: 'e', summary: '씬' }] }), /character_panel_missing: mina has no face/);
   });
+  it('direct story writes wait for the target project even inside a ready parent workspace', () => {
+    const parent = tmp(), root = join(parent, 'another project');
+    const board = join(root, 'data/c/episodes/test/storyboard');
+    const write = () => writeStorySequences({ path: board, sequences: [{ id: 'opening', title: 'Opening', purpose: 'Introduce the guide' }] });
+    assert.throws(write, /project_setup_required: workspace/);
+    assert.throws(() => readFileSync(root), { code: 'ENOENT' });
+    mkdirSync(board, { recursive: true });
+    castFile(board, ['guide'], { root: join(root, 'data/c'), voiceOnly: ['guide'] });
+    assert.throws(write, /project_setup_required/);
+    manageProject({ action: 'select', workspace: root, request: 'Use another project' });
+    assert.throws(write, /models\.image/);
+    assert.throws(() => readFileSync(join(board, 'scenes.js')), { code: 'ENOENT' });
+    const ready = setupProject(root);
+    assert.equal(write().written, true);
+    const captured = JSON.parse(readFileSync(join(board, '../.work/model-settings.json')));
+    assert.equal(captured.config.workspace, ready.workspace);
+    assert.deepEqual(readBoard(board).win.PRODUCTION.modelSettings.models, captured.config.models);
+    const prior = readFileSync(join(board, 'scenes.js'));
+    rmSync(join(root, '.social-flow/models.json'));
+    assert.throws(write, /project_setup_required/);
+    assert.deepEqual(readFileSync(join(board, 'scenes.js')), prior);
+  });
   it('a story-first board inside an episode starts on the canvas and production its snapshot hands off', () => {
     const root = tmp();
-    setupProject(root);
+    const ready = setupProject(root);
+    const sns = { ...ready.config.sns, instagram: { ...ready.config.sns.instagram, enabled: true, status: 'pending' } };
+    manageProject({ action: 'update', workspace: root, expectedRevision: ready.revision, request: 'Plan Reels for this episode', settings: { sns } });
     const dir = join(manageProject({ action: 'episode', workspace: root, topic: 'e1' }).episode, 'storyboard');
     castFile(dir, ['mina'], { root: join(root, 'data/c') });
-    // The opening reading names the windows of the platforms the snapshot enables, and only those.
-    const snapshot = join(dirname(dir), '.work/model-settings.json'), saved = JSON.parse(readFileSync(snapshot, 'utf8'));
-    saved.config.sns.instagram.enabled = true;
-    writeFileSync(snapshot, JSON.stringify(saved));
     const started = writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
     assert.match(started.board.find((l) => l.startsWith('opening (')), /^opening \(short-form · Reels: skip rate counts the first 3 s\): no plan/);
     const { win } = readBoard(dir);
@@ -888,7 +907,6 @@ describe('images and the video prompt follow the icon attributes', () => {
   const pictureBoard = () => {
     const root = tmp(), dir = join(root, 'data/c/episodes/e/storyboard'), sheet = join(root, 'data/c/assets/characters/mina');
     mkdirSync(sheet, { recursive: true }); mkdirSync(join(dir, 'places'), { recursive: true });
-    setupProject(root);
     for (const name of ['face', 'body', 'back']) writeFileSync(join(sheet, name + '.png'), png);
     writeFileSync(join(sheet, 'panels.json'), JSON.stringify({ panels: { face: { file: 'face.png' }, front: { file: 'body.png' }, back: { file: 'back.png' } } }));
     writeFileSync(join(sheet, 'identity.md'), '# mina\n');
@@ -903,6 +921,14 @@ describe('images and the video prompt follow the icon attributes', () => {
     writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }, { id: 's0002', characters: ['mina'] }] });
     writeShotDialogue({ path: dir, shots: [{ id: 's0002', lines: [{ speaker: 'mina', tts: '안녕' }] }] });
     return { root, dir };
+  };
+  const chooseEpisodeImage = (dir, image, request) => {
+    const production = readBoard(dir).win.PRODUCTION;
+    const models = production.modelSettings;
+    const changes = [...(models.overrides ?? []), { scope: 'episode', image, request }];
+    applyStoryboard({ path: dir, draft: true, globals: {
+      PRODUCTION: { ...production, modelSettings: { ...models, overrides: changes } },
+    } });
   };
   const icons = (dir) => writeShotIcons({ path: dir, shots: [
     { id: 's0001', render: { mode: 'generated_video', reason: 'r' }, size: 'ms', angle: 'eye', move: { id: 'camera.dolly-in', reason: 'r' }, frames: { mode: 'reference', reason: 'MSR' } },
@@ -1266,9 +1292,7 @@ describe('images and the video prompt follow the icon attributes', () => {
     writeFileSync(join(dir, 'scenes.js'), serializeBoard(board));
     const normal = shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits.' });
     assert.match(normal.prompt, /distinctive amber eyes/);
-    const current = settings.readSettings(root);
-    settings.saveSettings(root, { ...current.config.models, image: { engine: 'astra-genai-native', model: 'qwen-image-fast' } },
-      { expectedRevision: current.revision, request: 'Fixture: Qwen references' });
+    chooseEpisodeImage(dir, { engine: 'astra-genai-native', model: 'qwen-image-fast' }, 'Fixture: Qwen references');
     const qwen = shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits.' });
     assert.doesNotMatch(qwen.prompt, /distinctive amber eyes/);
     assert.match(qwen.prompt, /mina's face and hair/);
@@ -1297,9 +1321,7 @@ describe('images and the video prompt follow the icon attributes', () => {
     const board = readBoard(dir).win;
     board.SB_DOC.characters[0].character = { physical: { heightCm: { status: 'confirmed', value: 165 }, proportions: { status: 'confirmed', value: 'about 7.5 heads tall' } } };
     writeFileSync(join(dir, 'scenes.js'), serializeBoard(board));
-    const current = settings.readSettings(root);
-    settings.saveSettings(root, { ...current.config.models, image: { engine: 'astra-genai-native', model: 'qwen-image-fast' } },
-      { expectedRevision: current.revision, request: 'Fixture: Qwen references' });
+    chooseEpisodeImage(dir, { engine: 'astra-genai-native', model: 'qwen-image-fast' }, 'Fixture: Qwen references');
     const waist = shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits.' });
     assert.match(waist.prompt, /mina is 7\.5 heads tall: .*22 cm of the 165 cm standing height/);
     assert.equal(waist.warnings.some(w => w.code === 'head_count_missing'), false);
@@ -1358,9 +1380,7 @@ describe('images and the video prompt follow the icon attributes', () => {
     applyStoryboard({ path: dir, globals: { FORMAT: 'youtube-long-16x9' } });
     assert.equal(status().status, 'stale');
     assert.equal(shotImageRequest(args).args.size, '1536x864');
-    const current = settings.readSettings(root);
-    settings.saveSettings(root, { ...current.config.models, image: { engine: 'gpt-image', model: 'gpt-image-1.5' } },
-      { expectedRevision: current.revision, request: 'Fixture: fixed size model' });
+    chooseEpisodeImage(dir, { engine: 'gpt-image', model: 'gpt-image-1.5' }, 'Fixture: fixed size model');
     const fixed = shotImageRequest(args);
     assert.equal(fixed.args.size, '1536x1024');
     assert.ok(fixed.warnings.some(f => /image_aspect_mismatch/.test(f.what)));
@@ -1433,15 +1453,12 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.deepEqual(shot.visual.references.map((r) => [r.role, r.use]), [['character', 'both'], ['character', 'both'], ['character', 'both'], ['background', 'image']]);
     assert.throws(() => shotImageRequest({ path: dir, id: 's0001', frame: 'end', prompt: 'p' }), /story_order.*first_last/);
     assert.equal(make(dir, 's0001').requestId, 's0001-start-v2');
-    settings.saveSettings(root, { image: { engine: 'astra-genai', model: 'z-image-turbo' }, video: { engine: 'seedance', model: 'dreamina-seedance-2-0-260128', resolution: '720p' }, speech: { engine: 'none' } },
-      { expectedRevision: settings.readSettings(root).revision, request: 'Fixture: a one-picture image model' });
+    chooseEpisodeImage(dir, { engine: 'astra-genai', model: 'z-image-turbo' }, 'Fixture: a one-picture image model');
     assert.throws(() => shotImageRequest({ path: dir, id: 's0002', frame: 'start', prompt: 'p', location: 'room' }), /image_references_unsupported/);
-    settings.saveSettings(root, { image: { engine: 'mlx', model: 'FLUX.2-klein-4B' }, video: { engine: 'seedance', model: 'dreamina-seedance-2-0-260128', resolution: '720p' }, speech: { engine: 'none' } },
-      { expectedRevision: settings.readSettings(root).revision, request: 'Fixture: an MLX edit pack with three references' });
+    chooseEpisodeImage(dir, { engine: 'mlx', model: 'FLUX.2-klein-4B' }, 'Fixture: an MLX edit pack with three references');
     assert.equal(shotImageRequest({ path: dir, id: 's0002', frame: 'start', prompt: 'p', location: 'room' }).inputs.length, 4);
     assert.throws(() => shotImageRequest({ path: dir, id: 's0002', frame: 'start', prompt: 'p', location: 'room', props: ['key'] }), /image_references_unsupported.*takes 4/);
-    settings.saveSettings(root, { image: { engine: 'mlx', model: 'Qwen-Image-2.1' }, video: { engine: 'seedance', model: 'dreamina-seedance-2-0-260128', resolution: '720p' }, speech: { engine: 'none' } },
-      { expectedRevision: settings.readSettings(root).revision, request: 'Fixture: an MLX edit pack with nine references' });
+    chooseEpisodeImage(dir, { engine: 'mlx', model: 'Qwen-Image-2.1' }, 'Fixture: an MLX edit pack with nine references');
     assert.equal(shotImageRequest({ path: dir, id: 's0002', frame: 'start', prompt: 'p', location: 'room', props: ['key'] }).inputs.length, 5);
     writeShotIcons({ path: dir, shots: [{ id: 's0002', render: { mode: 'motion_html', reason: 'a diagram' } }] });
     assert.throws(() => shotImageRequest({ path: dir, id: 's0002', frame: 'start', prompt: 'p' }), /shot_image: s0002 is a motion_html cut/);
@@ -1613,8 +1630,7 @@ describe('images and the video prompt follow the icon attributes', () => {
     execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=gray:s=16x16', '-frames:v', '1', join(dir, 'places/yard.jpg')]);
     const doc = readBoard(dir).win.SB_DOC;
     applyStoryboard({ path: dir, draft: true, globals: { SB_DOC: { ...doc, locations: [...doc.locations, { id: 'yard', name: '마당', imageUrl: 'places/yard.jpg' }] } } });
-    settings.saveSettings(root, { image: { engine: 'gpt-image', model: 'gpt-image-2', quality: 'low' }, video: { engine: 'seedance', model: 'dreamina-seedance-2-0-260128', resolution: '720p' }, speech: { engine: 'none' } },
-      { expectedRevision: settings.readSettings(root).revision, request: 'Fixture: GPT Image' });
+    chooseEpisodeImage(dir, { engine: 'gpt-image', model: 'gpt-image-2', quality: 'low' }, 'Fixture: GPT Image');
     const ask = () => shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'Mina in the yard.', location: 'yard' });
     const path = process.env.PATH;
     process.env.PATH = '';

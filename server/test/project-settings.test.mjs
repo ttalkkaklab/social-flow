@@ -12,7 +12,7 @@ const modelSettings = require('../../skills/_shared/model-settings.js');
 const hook = require.resolve('../../hooks/project-context.js');
 const defaults = () => ({
   project: { name: 'History', channel: 'history' }, videoType: { id: 'documentary' },
-  models: { video: { engine: 'seedance', model: 'dreamina-seedance-2-0-260128', resolution: '720p' }, speech: { engine: 'elevenlabs', model: 'eleven_v4' }, image: { engine: 'host', model: 'host-managed', host: 'codex' } },
+  models: { music: { engine: 'none' }, video: { engine: 'seedance', model: 'dreamina-seedance-2-0-260128', resolution: '720p' }, speech: { engine: 'elevenlabs', model: 'eleven_v4' }, image: { engine: 'host', model: 'host-managed', host: 'codex' } },
   style: { preset: 'webtoon', palette: 'ochre and blue' },
   production: { mode: 'video_50', renderRatioVersion: 1, format: 'shorts-9x16', previzRenderer: 'blender', episodeBudgetUsd: 5 },
   sns: Object.fromEntries(['threads', 'instagram', 'facebook', 'youtube'].map(p => [p, { enabled: p === 'youtube', status: p === 'youtube' ? 'pending' : 'disabled' }])),
@@ -33,6 +33,7 @@ function workspace(t) {
   return root;
 }
 function init(root, settings = defaults()) {
+  call(root, 'select', { request: 'Use this project directory' });
   return manageProject({ action: 'init', workspace: root, settings, request: 'Use the selected history project defaults', profileMarkdown });
 }
 function call(root, action, extra = {}) { return manageProject({ workspace: root, action, ...extra }); }
@@ -41,6 +42,7 @@ test('initial setup records every preference and creates reusable directories wi
   const root = workspace(t);
   const initial = call(root, 'status');
   assert.equal(initial.status, 'project_setup_required');
+  assert.throws(() => call(root, 'init', { settings: defaults(), profileMarkdown, request: 'Use these models' }), /project_setup_required: workspace/);
   assert.deepEqual(fs.readdirSync(root), []);
   const state = init(root);
   assert.equal(state.status, 'ready');
@@ -52,6 +54,53 @@ test('initial setup records every preference and creates reusable directories wi
   assert.ok(fs.statSync(state.paths.episodes).isDirectory());
   assert.match(fs.readFileSync(path.join(root, '.gitignore'), 'utf8'), /\/\.social-flow\//);
   assert.equal(fs.existsSync(path.join(root, 'data/history/assets/branding')), false);
+});
+
+test('the selected directory persists before setup and copied settings need their own selection', t => {
+  const root = path.join(workspace(t), 'new project');
+  assert.throws(() => manageProject({ action: 'select' }), /project_setup_required: workspace/);
+  assert.throws(() => call(root, 'select'), /directory selection/);
+  assert.ok(!fs.existsSync(root));
+  const selected = call(root, 'select', { request: 'Work in the new project directory' });
+  assert.equal(selected.config.workspace, root);
+  assert.equal(selected.status, 'project_setup_required');
+  const choices = defaults();
+  for (const kind of Object.keys(choices.models)) {
+    const incomplete = structuredClone(choices);
+    delete incomplete.models[kind];
+    assert.ok(selected.missing.includes('models.' + kind));
+    assert.throws(() => init(root, incomplete), new RegExp('models\\.' + kind));
+  }
+  assert.equal(call(root, 'status').revision, selected.revision);
+  assert.throws(() => call(root, 'episode', { topic: 'blocked' }), /project_setup_required/);
+  assert.ok(!fs.existsSync(path.join(root, 'data')));
+  init(root, choices);
+  const other = workspace(t);
+  fs.cpSync(root, other, { recursive: true });
+  const copied = call(other, 'status');
+  assert.deepEqual(copied.missing, ['workspace']);
+  assert.throws(() => call(other, 'episode', { topic: 'blocked' }), /project_setup_required: workspace/);
+  const ready = call(other, 'select', { request: 'Use these choices in the copy' });
+  assert.equal(ready.status, 'ready');
+  assert.deepEqual(ready.config.models, choices.models);
+  assert.equal(call(other, 'episode', { topic: 'first' }).snapshot.config.workspace, other);
+  assert.equal(call(root, 'status').config.workspace, root);
+});
+
+test('legacy settings accept each missing model without changing prior selections or snapshots', t => {
+  const root = workspace(t), state = init(root);
+  const snap = call(root, 'episode', { topic: 'old' }).snapshot.file;
+  const before = fs.readFileSync(snap);
+  const old = state.config;
+  delete old.workspace;
+  delete old.models.music;
+  delete old.models.speech;
+  fs.writeFileSync(state.file, JSON.stringify(old));
+  assert.deepEqual(call(root, 'status').missing.sort(), ['models.music', 'models.speech', 'workspace']);
+  call(root, 'select', { request: 'Keep this workspace' });
+  assert.equal(init(root, { models: { music: { engine: 'none' }, speech: { engine: 'none' } } }).status, 'ready');
+  assert.deepEqual(call(root, 'status').config.models.video, old.models.video);
+  assert.deepEqual(fs.readFileSync(snap), before);
 });
 
 test('first setup offers the BGM choice after video and carries an explicit decline into episodes', t => {
@@ -136,7 +185,7 @@ test('invalid choices and credential payloads fail without creating content or o
     const d = defaults(); mutate(d);
     assert.throws(() => init(root, d));
     assert.equal(fs.existsSync(path.join(root, 'data')), false);
-    assert.equal(fs.existsSync(path.join(root, '.social-flow/models.json')), false);
+    assert.equal(call(root, 'status').config.models, undefined);
   }
   const first = init(root);
   const bytes = fs.readFileSync(first.file, 'utf8');

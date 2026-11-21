@@ -29,6 +29,7 @@ import { prepareVideoVoice } from './video-voice.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { cameraDrift, cameraMoveWords, compileVideoPrompt, sceneCameraDirection } from './video-prompt.js';
 import { readVideoProduction, refreshVideoReview } from './video-review.js';
+import { requireReadyProject } from './project.js';
 const load = createRequire(import.meta.url);
 const shared = fileURLToPath(new URL('../../skills/_shared/video-selection.js', import.meta.url));
 const modelSettings = fileURLToPath(new URL('../../skills/_shared/model-settings.js', import.meta.url));
@@ -240,6 +241,7 @@ export function checkVideoEnvironment(tool) {
 }
 export function planVideo(raw) {
     const input = videoPlanSchema.parse(raw);
+    requireReadyProject(input.episode);
     const context = routingContext(input.episode, input.shotId, input.sceneNo);
     const scene = context.sceneDirection && sceneVideoDirectionSchema.parse(context.sceneDirection);
     const take = { ...(scene ? { sceneNo: context.sceneNo, sceneDurationSeconds: Number(context.shot.duration), shotIds: context.shotIds } : {}), ...(input.purpose ? { purpose: input.purpose } : {}), ...(input.basedOnRequestId ? { basedOnRequestId: input.basedOnRequestId } : {}), ...(input.changeNote ? { changeNote: input.changeNote } : {}) };
@@ -509,6 +511,7 @@ function writeApprovalView(episode, approvals) {
 }
 export function approveVideo(raw) {
     const input = videoApproveSchema.parse(raw), episode = fs.realpathSync(input.episode);
+    requireReadyProject(episode);
     const approvals = readApprovals(episode), at = new Date().toISOString();
     if (input.auto)
         approvals.auto = { request: input.request, at };
@@ -538,6 +541,7 @@ export function approveVideo(raw) {
 }
 export async function executeVideo(raw, dispatch) {
     const request = videoExecuteSchema.parse(raw), episode = fs.realpathSync(request.episode);
+    requireReadyProject(episode);
     const plan = JSON.parse(fs.readFileSync(path.join(episode, '.work/video-routing/plans', request.planId + '.json'), 'utf8'));
     const { id, ...body } = plan;
     if (id !== request.planId || hash(body) !== id || plan.episode !== episode)
@@ -681,35 +685,24 @@ async function dispatchChannelAsset(tool, args, root, output, dispatch) {
         }
     }
 }
-/** Legacy standalone tools remain callable; episode calls cannot bypass selection by using them. */
+/** Direct adapters use an episode plan or the selected project's channel asset directory. */
 export async function routeLegacyVideo(tool, raw, dispatch) {
     const gate = resolveToolGate(tool, { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
     if (!gate.enabled)
         throw new Error('video_tool_disabled: ' + gate.reason);
-    if (!raw || typeof raw !== 'object' || Array.isArray(raw))
-        return dispatch(tool, raw);
-    const { videoContext, ...args } = raw;
+    const { videoContext, ...args } = z.record(z.unknown()).parse(raw);
     if (videoContext !== undefined) {
         const ctx = z.object({ episode: z.string().min(1), shotId: z.string().min(1), requestId: idSchema }).strict().parse(videoContext);
         const plan = planVideo({ ...ctx, tool, args });
         return executeVideo({ episode: plan.episode, planId: plan.id }, dispatch);
     }
-    const output = canonical(path.resolve(typeof args.outputPath === 'string' ? args.outputPath : process.cwd()));
-    let dir = output;
-    for (;;) {
-        if (fs.existsSync(path.join(dir, '.social-flow/models.json')) && CHANNEL_ASSET_RE.test(path.relative(dir, output).split(path.sep).join('/')))
-            return dispatchChannelAsset(tool, args, dir, output, dispatch);
-        if (fs.existsSync(path.join(dir, '.work/model-settings.json')) || fs.existsSync(path.join(dir, '.social-flow/models.json')))
-            throw new Error('video_context_required: pass episode, shotId and requestId for configured production');
-        const parent = path.dirname(dir);
-        if (parent === dir)
-            break;
-        dir = parent;
-    }
-    // The MCP process may run at a configured workspace even if outputPath points outside it.
-    if (fs.existsSync(path.join(process.cwd(), '.social-flow/models.json')))
-        throw new Error('video_context_required');
-    return dispatch(tool, args);
+    if (typeof args.outputPath !== 'string' || !args.outputPath.trim())
+        throw new Error('project_setup_required: provide the selected project’s output path or an episode videoContext');
+    const output = canonical(path.resolve(args.outputPath));
+    const { workspace: root } = requireReadyProject(output);
+    if (CHANNEL_ASSET_RE.test(path.relative(root, output).split(path.sep).join('/')))
+        return dispatchChannelAsset(tool, args, root, output, dispatch);
+    throw new Error('video_context_required: supply the episode or a channel asset output');
 }
 /** Read persisted receipts; refresh polls an existing GenAI job; reconcile settles an unknown request from billing evidence. */
 export async function videoStatus(raw) {

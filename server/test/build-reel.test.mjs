@@ -1,3 +1,4 @@
+import { setupProject } from './workflow-fixture.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
@@ -338,6 +339,7 @@ ${builder.slice(start, end)}`, 'ambience', ref], {cwd:dir, encoding:'utf8'});
 
 test('audience preview and final mix preserve the source and place only selected tones across trimmed cards', {timeout:90000}, () => {
   const dir = mkdtempSync(path.join(tmpdir(),'audience-render-'));
+  setupProject(dir);
   try {
     const board = path.join(dir,'storyboard'), work = path.join(dir,'work'), library = path.join(dir,'assets/audio/sfx');
     mkdirSync(board); mkdirSync(work); mkdirSync(library,{recursive:true});

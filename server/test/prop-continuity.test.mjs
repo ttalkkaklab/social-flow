@@ -1,3 +1,4 @@
+import { setupProject } from './workflow-fixture.mjs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
@@ -86,6 +87,7 @@ test('CLI validates atomically, refuses stale writes, backs up approval, preserv
 
 test('globals prop edits and removals require a current hash and preserve a backup', () => {
   const dir = mkdtempSync(join(tmpdir(), 'props-globals-'));
+  setupProject(dir);
   try {
     const win = fixture();
     win.STRUCTURE = {version:'structure-v1',sequences:[{id:'q1',title:'Loan',purpose:'Track watch',scenes:[1]}],scenes:[{no:1,place:'Room',time:'Day',event:'Loan',charge:{open:'-',close:'+'},turn:'Possession A to B'}]};

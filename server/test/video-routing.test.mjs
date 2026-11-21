@@ -17,6 +17,15 @@ import { TOOLS } from '../dist/tools.js';
 const require = createRequire(import.meta.url);
 const settings = require('../../skills/_shared/model-settings.js');
 const selection = { engine:'seedance', model:'dreamina-seedance-2-0-fast-260128', resolution:'720p' };
+test('a snapshot or a saved plan cannot authorize work in an unconfigured directory', async t => {
+  const f = fixture(t), plan = f.plan();
+  fs.unlinkSync(path.join(f.root, '.social-flow/models.json'));
+  assert.throws(() => f.plan('another'), /project_setup_required/);
+  assert.throws(() => approveVideo({ episode: f.episode, auto: true, request: 'Approve' }), /project_setup_required/);
+  const unused = async () => assert.fail('must stop before the provider');
+  await assert.rejects(executeVideo({ episode: f.episode, planId: plan.id }, unused), /project_setup_required/);
+  await assert.rejects(routeLegacyVideo('seedance_text2video', { prompt: 'A bird', outputPath: f.episode }, unused), /project_setup_required/);
+});
 function fixture(t, video = selection, auth = {}) {
  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'sf-router-')));
  t.after(()=>fs.rmSync(root,{recursive:true,force:true}));

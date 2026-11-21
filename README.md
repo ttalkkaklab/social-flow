@@ -151,6 +151,10 @@ checks duration coverage and records the actual image hash;
 audio2video still conditions on one opening image, not the preceding clip or an entire board.
 
 Start a reusable video project with `/social-flow:project-init <directory>`.
+A storyboard or video request asks for the project directory if the user has not selected
+one. Setup records that directory, then the video, music, image and separate speech choices.
+Music and speech each accept an explicit “none.” Authoring and production wait until
+`project_manage status` returns `ready` for the selected directory.
 It saves SNS targets and connection records, video genre, video/BGM/image/speech
 models, visual style, video ratio and output format together in
 `.social-flow/models.json`. It creates the channel profile, shared asset catalog

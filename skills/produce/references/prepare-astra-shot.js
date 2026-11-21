@@ -137,6 +137,7 @@ function designDirectionConflict(opening, continuityText) {
 }
 
 async function prepare(target, options) {
+  require('../../_shared/project-settings.js').requireReadyProject(path.resolve(target));
   const dist = path.resolve(__dirname, '../../../server/dist');
   const adapter = await import(pathToFileURL(path.join(dist, 'astra-shot-runtime.bundle.js')).href);
   const { readBoard, manageSpeech } = adapter;
