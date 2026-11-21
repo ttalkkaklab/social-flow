@@ -122,6 +122,7 @@ test('declared MSR principals rebuild canonical faces and bodies despite stale t
  for(const id of chars){
   const folder=path.join(root,'assets/characters',id);fs.mkdirSync(folder,{recursive:true});
   const panels={};for(const view of ['face','front','back']){fs.writeFileSync(path.join(folder,view+'.png'),png);panels[view]={file:view+'.png',purpose:'character_reference',view};}
+  if (id === 'hero') panels.front.wardrobe = 'fitting';
   fs.writeFileSync(path.join(folder,'panels.json'),JSON.stringify({schemaVersion:1,panels}));
  }
  fs.writeFileSync(path.join(board,'cast.json'),JSON.stringify({characters:chars.map(id=>({id,source:'../assets/characters/'+id+'/identity.md'}))}));
@@ -143,8 +144,8 @@ test('declared MSR principals rebuild canonical faces and bodies despite stale t
   'assets/characters/hero/face.png','assets/characters/ally/face.png',
   'assets/characters/hero/front.png','assets/characters/ally/front.png','storyboard/start.png']);
  assert.match(p.args.prompt,/Images 1\(face\), 3\(headless front body\): ONE hero/);
- assert.match(p.args.prompt,/head\/hair only from face; physique\/clothes only from body/);
- assert.match(p.args.prompt,/ignore face-panel clothing/);
+ assert.match(p.args.prompt,/ONE hero; head\/hair only from face; physique from body, wardrobe from the scene/);
+ assert.match(p.args.prompt,/ONE ally; head\/hair only from face; physique\/clothes only from body/);
  assert.equal(p.imageBindings.filter(r=>r.submitted).length,5);
  assert.throws(()=>prepareVideoImages('astra_genai_msr',{prompt:'Exchange',references:[{imagePath:path.join(board,'mid.png')}]},s,root),/image_plan_mismatch/);
  const hash=createHash('sha256').update(png).digest('hex');
@@ -157,6 +158,7 @@ test('declared MSR principals rebuild canonical faces and bodies despite stale t
  const unified=prepareVideoImages('astra_genai_msr',{prompt:'Exchange'},s,root);
  assert.deepEqual(unified.args.references.map(r=>path.basename(r.imagePath)),['msr.png','msr.png','start.png']);
  assert.equal(unified.imageBindings.filter(r=>r.submitted).length,3);
+ assert.match(unified.args.prompt,/hero: ONE person, exact face, hair and physique. Match the scene wardrobe/);
  assert.match(unified.args.prompt,/Image 3: opening composition/);
  fs.unlinkSync(path.join(root,'assets/characters/ally/face.png'));
  assert.throws(()=>prepareVideoImages('astra_genai_msr',{prompt:'Exchange'},s,root),/character_panel_missing: ally.*face/);

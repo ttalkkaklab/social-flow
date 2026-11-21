@@ -113,11 +113,11 @@ const BODY_FIELDS = ['heightCm', 'weightKg', 'build', 'proportions', 'outfit'];
 // sheet would be drawn into every shot. Expression belongs to the shot (shot_characters expression).
 // ponytail: keyword filter on smile/grin/laugh clauses; widen the list when another expression leaks.
 const EXPRESSION = /\b(?:smil|grin|laugh)\w*/i;
-function panelPrompt(character, view) {
+function panelPrompt(character, view, { includeOutfit = true } = {}) {
   const physical = character?.physical || {}, skipped = [], expression = [];
   const words = (view === 'face' ? ['appearance'] : BODY_FIELDS).flatMap(key => {
     const field = physical[key];
-    if (field?.status !== 'confirmed') return [];
+    if (field?.status !== 'confirmed' || (key === 'outfit' && !includeOutfit)) return [];
     if (key === 'heightCm') return [`${field.value} cm tall`];
     if (key === 'weightKg') return [`about ${field.value} kg`];
     const value = (Array.isArray(field.value) ? field.value.join(', ') : String(field.value)).trim();
@@ -129,6 +129,24 @@ function panelPrompt(character, view) {
     return text ? [text] : [];
   });
   return { text: words.join('; '), skipped, expression };
+}
+
+// The fitting outfit belongs to the turnaround. physical.outfit describes what the character wears in a scene.
+function sheetPanelPrompt(character, view, wardrobe, front) {
+  if (view === 'face') return panelPrompt(character, view);
+  const frontWardrobe = view === 'back' && front?.file ? front.wardrobe ?? 'character' : undefined;
+  const unclothed = character.physical?.outfit?.status === 'not_applicable';
+  const fitting = (wardrobe ?? frontWardrobe ?? 'fitting') === 'fitting' && !unclothed;
+  const words = panelPrompt(character, view, { includeOutfit: !fitting });
+  const species = character.identity?.species;
+  const clothing = fitting
+    ? 'Use a plain opaque fitted T-shirt and short mid-thigh shorts where the anatomy allows. Keep the natural silhouette and limb proportions.'
+    : unclothed ? 'Keep the natural body surface and markings unclothed.' : '';
+  const selected = fitting ? 'fitting' : 'character';
+  const match = frontWardrobe === selected ? 'Match the front panel’s clothing.' : '';
+  const description = [species?.status === 'confirmed' && species.value, words.text].filter(Boolean).join('; ').replace(/[.]$/, '');
+  return { ...words, text: [description && description + '.', clothing, match].filter(Boolean).join(' '),
+    wardrobe: selected };
 }
 
 // 등신 (head count): how many of its own head heights the standing figure is tall. The face panel is an
@@ -218,4 +236,4 @@ function isVoiceOnly(win, id) {
   });
 }
 
-module.exports = { GROUPS, REQUIRED, identityErrors, identityCharacter, direction, panelPrompt, headsTall, headRatio, boardIdentityErrors, requiresSpeech, isVoiceOnly };
+module.exports = { GROUPS, REQUIRED, identityErrors, identityCharacter, direction, panelPrompt, sheetPanelPrompt, headsTall, headRatio, boardIdentityErrors, requiresSpeech, isVoiceOnly };

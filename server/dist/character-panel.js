@@ -14,6 +14,7 @@ const shared = (file) => load(`../../skills/${file}`);
 export const characterPanelSchema = z.object({
     identityPath: z.string().min(1).describe('<channel>/assets/characters/<id>/identity.md'),
     view: z.enum(['face', 'front', 'back']),
+    wardrobe: z.enum(['fitting', 'character']).optional().describe('Body panels only. Use character for an integral or explicitly requested costume. The back matches its registered front by default.'),
     references: z.array(z.string().min(1)).max(4).optional()
         .describe('Pictures to edit from, in order; default: none for face, the face panel for front, the front panel for back'),
     negativePrompt: z.string().trim().min(1).max(1000).optional()
@@ -22,9 +23,9 @@ export const characterPanelSchema = z.object({
 }).strict();
 // character-panels.md: 1:1 face with the head at 60-75 % of the height; 2:3 headless body panels at 80-90 %.
 const FRAMING = {
-    face: { size: [1024, 1024], text: 'Head-only identity portrait, front facing, neutral expression, complete hair, ears and chin visible, head filling 70 percent of image height with plain background around it. No shoulders, torso or clothing: outfit comes from the body panels.' },
-    front: { size: [1024, 1536], text: 'Headless front costume mannequin of this character: nothing above the neck, from the neck and shoulders down to the shoes, neutral stance, arms relaxed, the subject filling 85 percent of the image height.' },
-    back: { size: [1024, 1536], text: 'Turn this headless costume mannequin around 180 degrees so its back faces the camera, keeping the same costume. Show it from directly behind, from the neck down to the heels: the back of the garments, straps and belt and the heels of the footwear; anything worn on one side now sits on the other side of the image. Nothing above the neck. The subject fills 85 percent of the image height.' },
+    face: { size: [1024, 1024], text: 'Head-only identity portrait, front facing, neutral expression, complete hair, ears and chin visible, head filling 70 percent of image height with plain background around it. No shoulders, torso or clothing.' },
+    front: { size: [1024, 1536], text: 'Headless front mannequin, neck to feet, square to camera. Neutral stance, arms slightly clear of the waist. Subject fills 85 percent of frame height.' },
+    back: { size: [1024, 1536], text: 'Turn this headless mannequin around 180 degrees. Direct rear view from neck to heels, same build, stance and scale as the front. Asymmetric details switch sides in the image. Subject fills 85 percent of frame height.' },
 };
 // The body panels are edited from the face panel, which pulls a head back in unless the head is ruled out.
 // The back is edited from the front alone with a turn-around instruction: a face reference brings the head back,
@@ -40,7 +41,7 @@ export function characterPanelRequest(raw) {
     const identityPath = path.resolve(args.identityPath), folder = path.dirname(identityPath), id = path.basename(folder);
     if (path.basename(identityPath) !== 'identity.md' || path.basename(path.dirname(folder)) !== 'characters' || path.basename(path.dirname(path.dirname(folder))) !== 'assets')
         throw new Error('character_path_invalid: identityPath must be <channel>/assets/characters/<id>/identity.md');
-    const { identityCharacter, panelPrompt, headsTall } = shared('_shared/character-identity.js');
+    const { identityCharacter, sheetPanelPrompt, headsTall } = shared('_shared/character-identity.js');
     const character = identityCharacter(readFileSync(identityPath, 'utf8'), { ready: false });
     const panelsFile = path.join(folder, 'panels.json');
     const panels = (existsSync(panelsFile) ? JSON.parse(readFileSync(panelsFile, 'utf8')).panels : undefined) ?? {};
@@ -62,9 +63,10 @@ export function characterPanelRequest(raw) {
     const preset = shared('_shared/model-settings.js').readSettings(workspace).config?.style?.preset;
     const { STYLES } = shared('storyboard/references/production-mode.js');
     const style = preset && STYLES[preset] ? STYLES[preset].prompt : '';
-    const words = panelPrompt(character, args.view);
+    // A rear view uses the registered front's wardrobe even when drawn from text or custom references.
+    const words = sheetPanelPrompt(character, args.view, args.wardrobe, panels.front);
     const compose = () => [references.length && args.view !== 'back' ? 'Keep this exact character from the reference images.' : '', FRAMING[args.view].text,
-        `Character: ${words.text}.`, style, 'Soft even studio lighting, plain neutral grey background. One view only. No text, watermark, collage or border.'].filter(Boolean).join(' ');
+        `Character: ${words.text.replace(/[.]$/, '')}.`, style, 'Soft even studio lighting, plain neutral grey background. One view only. No text, watermark, collage or border.'].filter(Boolean).join(' ');
     // Never drop identity or style to fit a transport limit. Report it before submission.
     const limit = PROMPT_LIMIT[readImageContext(workspace, `${id}-${args.view}`).selection.engine] ?? Infinity;
     const prompt = [compose(), args.negativePrompt ? `Exclude: ${args.negativePrompt}.` : ''].filter(Boolean).join(' ');
@@ -77,12 +79,13 @@ export function characterPanelRequest(raw) {
         // The head stays out of the body panels, so its size against the body reaches a shot only as the sheet's head count.
         ...(headsTall(character) ? [] : ['head_count_missing: the sheet has no head count, so nothing sizes this character\'s head against its body when a shot joins the face panel to the headless panels — write it in physical.proportions with character_manage, e.g. "7.5 heads tall"']),
         ...(words.expression.length ? [`the sheet's appearance names an expression (${words.expression.join(' ')}) — it stays out of this neutral face panel; set expressions per shot with shot_characters`] : [])];
-    return { workspace, folder, id, view: args.view, panelsFile, prompt, negativePrompt: call.negativeSent ? negativePrompt : undefined, warnings, ...call };
+    const panel = { file: path.basename(call.file), purpose: 'character_reference', view: args.view, ...(words.wardrobe ? { wardrobe: words.wardrobe } : {}), framing: { status: 'not_reviewed' } };
+    return { workspace, folder, id, view: args.view, panel, panelsFile, prompt, negativePrompt: call.negativeSent ? negativePrompt : undefined, warnings, ...call };
 }
 /** Record a generated panel in panels.json; the other slots stay. */
 export function recordCharacterPanel(request) {
     const doc = existsSync(request.panelsFile) ? JSON.parse(readFileSync(request.panelsFile, 'utf8')) : { schemaVersion: 1, panels: {} };
-    doc.panels = { ...doc.panels, [request.view]: { file: path.basename(request.file), purpose: 'character_reference', view: request.view, framing: { status: 'not_reviewed' } } };
+    doc.panels = { ...doc.panels, [request.view]: request.panel };
     writeFileSync(request.panelsFile, JSON.stringify(doc, null, 2) + '\n');
     try {
         shared('channel/references/review-library.js').exportChannel(path.resolve(request.folder, '../../..'));

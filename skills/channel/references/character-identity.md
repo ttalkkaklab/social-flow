@@ -113,25 +113,26 @@ for provider mappings and the distinction between sample imitation and exact spe
 
 1. Author the identity before images, then make each panel with `character_panel`
    (`view` face, front, back). It builds the prompt from the sheet — the face takes
-   `appearance`; the headless front and back take height, weight, relative scale,
-   build, proportions and outfit — and adds the project style and the panel framing.
+   `appearance`. The headless front and back take height, weight, build and
+   proportions. Prefer a fitted T-shirt and short mid-thigh shorts in both body views.
+   Keep the usual scene wardrobe in `physical.outfit`. Use `wardrobe:"character"`
+   when the user requests the costume on the sheet or it is part of the character's body.
    Describe structure in `appearance` — bone shape, eyes, skin, hair — and leave expressions
    out: a smile written there reaches every shot through the face panel, so the tool drops
    smile, grin and laugh clauses from the face prompt and reports them. Habitual expressions
    belong in personality or acting, and each shot sets its own with `shot_characters`.
    Do not write panel prompts by hand; `character-sheet.js <identity.md> --panel <view>`
-   prints the same words for inspection. Image prompts are
-   English, so write those physical text fields in English; a field in another script
-   is reported and left out. `shot_image` reads the same words for each sheet panel and
+   previews the default identity and clothing words. Write physical descriptions in
+   English when possible. `shot_image` reads the character's scene wardrobe and
    adds both heights when two characters share a frame. Create separate front full-body, back full-body,
    and face close-up images following [character-panels.md](character-panels.md).
-   Front and back are headless mannequin-style references for build and wardrobe;
+   Front and back are headless mannequin-style references for build;
    only the face close-up shows the head and face. Match proportions, clothing,
    colors and body landmarks across both body panels. Keep expressions, poses and
    rear-hair details as optional extras, separate from the baseline set.
 2. Follow the saved image model and [image routing](../../_shared/image-routing.md).
    Generate and inspect the face close-up first, then use the identity and approved
-   wardrobe references to create the headless front and matching back.
+   design references to create the headless front and matching back.
    Keep each panel in a separate file;
    do not feed a multi-view composite to an image/video generator.
 3. For a character's voice, cast one voice and generate its sample with

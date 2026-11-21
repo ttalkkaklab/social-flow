@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { execFileSync } = require('node:child_process');
+const { identityCharacter } = require('../../_shared/character-identity.js');
 const sha = file => createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const SLOT_LABELS = { front: '정면', back: '후면', face: '얼굴' };
 const SPECS = { front: { ratio: 2 / 3, min: .80, max: .90 }, back: { ratio: 2 / 3, min: .80, max: .90 }, face: { ratio: 1, min: .60, max: .75 } };
@@ -104,7 +105,7 @@ function boardPanelFindings(win, boardDir, channelDir) {
   return findings;
 }
 // Resolve ownership from the episode cast, never from a transport filename or a scene image.
-function sheetPanels(boardDir, ids) {
+function readPanelSheets(boardDir, ids) {
   let cast = [];
   const castFile = path.join(boardDir, 'cast.json');
   if (fs.existsSync(castFile)) {
@@ -141,31 +142,48 @@ function sheetPanels(boardDir, ids) {
         throw new Error(`character_panel_missing: ${id} has no ${view} panel with a valid character-reference registration`);
       panels[view] = path.relative(boardDir, file).split(path.sep).join('/');
     }
-    return [id, panels];
+    return [id, { folder, paths: panels, entries: manifest.panels }];
   }));
+}
+function sheetPanels(boardDir, ids) {
+  return new Map([...readPanelSheets(boardDir, ids)].map(([id, sheet]) => [id, sheet.paths]));
 }
 function canonicalReferences(boardDir, shotId, ids, use, options = {}) {
   if (ids.length > 2) throw new Error('msr_character_limit: at most two principal characters');
-  const sheets = sheetPanels(boardDir, ids);
+  const sheets = readPanelSheets(boardDir, ids);
   if (options.combined) return ids.map(id => {
-    const sources = sheets.get(id);
-    let folder = path.dirname(path.resolve(boardDir, sources.face));
-    while (path.basename(folder) !== id || path.basename(path.dirname(folder)) !== 'characters') {
-      const parent = path.dirname(folder);
-      if (parent === folder) throw new Error(`character_sheet_missing: ${id} has no shared character folder`);
-      folder = parent;
-    }
-    const entry = JSON.parse(fs.readFileSync(path.join(folder, 'panels.json'), 'utf8')).panels?.msr;
+    const { folder, paths: sources, entries } = sheets.get(id);
+    const entry = entries.msr;
     const file = localFile(folder, entry?.file);
     if (!file || entry.purpose !== 'character_reference' || entry.view !== 'msr')
       throw new Error(`character_msr_reference_missing: ${id} needs a registered unified identity/outfit reference`);
     if (entry.sha256 !== sha(file) || ['face', 'front'].some(view => entry.sourceHashes?.[view] !== sha(path.resolve(boardDir, sources[view]))))
       throw new Error(`character_msr_reference_stale: ${id} unified reference or its canonical sources changed`);
+    const fitting = (entry.wardrobe ?? entries.front.wardrobe) === 'fitting';
     return { id: `${shotId}-${id}-msr`, path: path.relative(boardDir, file).split(path.sep).join('/'),
-      role: 'character', use, purpose: `${id}: ONE person, exact face, hair, physique and outfit` };
+      role: 'character', use, purpose: fitting ? `${id}: ONE person, exact face, hair and physique. Match the scene wardrobe` : `${id}: ONE person, exact face, hair, physique and outfit` };
   });
   const views = ids.length === 1 ? ['face', 'front', 'back'] : ['face', 'front'];
-  return views.flatMap(view => ids.map(id => ({ id: `${shotId}-${id}-${view}`, path: sheets.get(id)[view],
-    role: 'character', use, purpose: view === 'face' ? `${id}'s face and hair` : `${id}'s body and outfit, ${view}` })));
+  // A board may have the panels but no structured cast snapshot yet. Read the usual outfit from its owner.
+  const outfits = new Map();
+  for (const [id, { folder, entries }] of sheets) {
+    if (!views.some(view => entries[view].wardrobe === 'fitting')) continue;
+    const source = localFile(folder, 'identity.md');
+    if (!source) continue;
+    try {
+      const outfit = identityCharacter(fs.readFileSync(source, 'utf8'), { ready: false }).physical.outfit;
+      if (outfit?.status === 'confirmed') outfits.set(id, outfit.value);
+    } catch { /* Older identities may contain prose only. Use the scene description. */ }
+  }
+  return views.flatMap(view => ids.map(id => {
+    const { paths, entries } = sheets.get(id);
+    const fitting = view !== 'face' && entries[view].wardrobe === 'fitting';
+    return { id: `${shotId}-${id}-${view}`, path: paths[view], role: 'character', use,
+      ...(fitting ? { wardrobe: 'fitting' } : {}),
+      ...(fitting && outfits.has(id) ? { defaultOutfit: outfits.get(id) } : {}),
+      purpose: view === 'face' ? `${id}'s face and hair` : fitting
+        ? `${id}'s build and proportions, ${view}. Ignore the fitting clothes and use the scene wardrobe`
+        : `${id}'s body and outfit, ${view}` };
+  }));
 }
 module.exports = { SPECS, dimensions, inspectPanels, boardPanelFindings, sheetPanels, canonicalReferences };
