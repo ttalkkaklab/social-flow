@@ -2258,10 +2258,11 @@ const propContinuity = () => loadFromHere(join(REFERENCES_DIR, 'prop-continuity.
 function propRefs(win: Board, index: number, shotId: string, ids: string[], frame: 'start' | 'end', warnings: Finding[]): { refs: ImageRef[]; unseen: string[] } {
   const warn = (what: string) => warnings.push({ level: 'warn', where: shotId, what });
   const entries = new Map(ids.map((id) => [id, docEntry(win, 'props', id)]));
-  const refs: ImageRef[] = [], unseen: string[] = [];
+  const refs: ImageRef[] = [], unseen: string[] = [], drawn: string[] = [];
   for (const snap of ids.length ? propContinuity().snapshot(win, index, ids, { lenient: true }) : []) {
     const id = snap.propId, entry = entries.get(id)!;
     if (!snap.visible) continue;   // the author hid it in this shot (propUsage visible:false)
+    drawn.push(id);
     if (snap.errors.length)
       warn(`the prop ledger has errors for the ${id} prop (${snap.errors.join('; ')}), so it goes in without a story state — fix them with storyboard_apply propSheet`);
     const state = frame === 'end' ? snap.after : snap.before, matched = frame === 'end' ? snap.endReferences : snap.references;
@@ -2291,7 +2292,7 @@ function propRefs(win: Board, index: number, shotId: string, ids: string[], fram
     }
   }
   // A prop drawn from imagination: nobody recorded what the real thing looks like (prop-research.md). Reported, never refused.
-  const unresearched = propContinuity().research(win).undecided.filter((id) => ids.includes(id));
+  const unresearched = propContinuity().research(win).undecided.filter((id) => drawn.includes(id));
   if (unresearched.length) warn(`prop_research_missing: ${unresearched.join(', ')} ${unresearched.length > 1 ? 'go' : 'goes'} into this frame with no look-up of the real thing recorded — research it and record research {sources, observed} on the prop sheet, or research:"none" (prop-research.md)`);
   return { refs, unseen };
 }

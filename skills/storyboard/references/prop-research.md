@@ -103,8 +103,10 @@ per condition the story reaches (intact, torn, folded) as `references`.
 
 - Give the image model the saved real picture as a reference and ask for the same layout,
   proportions and materials with the description's content: `image_plan` with
-  `operation:"edit"`, the prop's id as `assetId` and the saved file, then `image_execute`,
-  under the existing spending authorization. Without a usable picture, draw from `observed`.
+  `operation:"edit"`, the prop's id as `assetId` and the saved file as the edit's source
+  (`args.imagePath` on the ASTRA GenAI and MLX adapters, `args.sourceImagesBase64` on GPT
+  Image), then `image_execute`, under the existing spending authorization. Without a usable
+  picture, draw from `observed` with `operation:"text"`.
 - The model is the saved image model, except that a prop showing readable words follows the
   [GPT Image 2 rule](../../_shared/image-routing.md#images-containing-text-gpt-image-2-required)
   (its override's `shotId` is the prop's id), or is typeset in code and saved as a picture.
