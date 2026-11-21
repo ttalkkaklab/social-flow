@@ -1257,6 +1257,13 @@ See [the speech contract](skills/produce/references/shot-speech.md). Video model
 replaceable: audio-conditioned generation, post lip-sync and off-screen voiceover are separate
 routes; LTX is one adapter, not the common data model.
 
+### Stream a character live
+
+Use [live-character](skills/live-character/SKILL.md) for a bounded YouTube or TikTok LIVE session.
+It animates a character's saved portrait and voice, answers chat, and writes the actual encoded
+broadcast and event receipts. YouTube supports unlisted setup, native chat and an end-to-end probe.
+TikTok takes a separately approved RTMPS destination and can receive events from an authorized input.
+
 ### Inspect existing content
 
 `inspect-content` reviews existing characters, backgrounds, props, scenarios, individual shots

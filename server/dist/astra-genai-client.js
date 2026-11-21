@@ -57,10 +57,10 @@ export class GenaiRequestError extends Error {
     }
 }
 /** No automatic POST retries: a disconnected request may already be generating. */
-export async function requestGenai(method, route, body, timeoutMs = 60_000, onResponse) {
+export async function requestGenai(method, route, body, timeoutMs = 60_000, onResponse, signal) {
     const key = requireAstraGenaiKey(route);
     const response = await fetch(astraGenaiBaseUrl(route) + route, {
-        method, redirect: 'error', signal: AbortSignal.timeout(timeoutMs), ...{ dispatcher: waitFor(timeoutMs) },
+        method, redirect: 'error', signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs), ...{ dispatcher: waitFor(timeoutMs) },
         headers: { Authorization: `Bearer ${key}`, ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
@@ -147,13 +147,13 @@ export function genaiSourceUri(uri, file) {
     return `data:${meta.mimeType};base64,${bytes.toString('base64')}`;
 }
 /** Authenticated private gateway media; never attach this token to result/CDN URLs. */
-export async function requestGenaiMedia(route, body, credentialRoute = route) {
+export async function requestGenaiMedia(route, body, credentialRoute = route, signal) {
     if (!/^\/v1\/(audio\/speech|ltx\/desktop\/assets(?:\/[A-Za-z0-9_-]+\/bytes)?)$/.test(route))
         throw new Error('Unsupported private gateway media route');
     const key = requireAstraGenaiKey(credentialRoute);
     const form = body instanceof FormData;
     const response = await fetch(astraGenaiBaseUrl(credentialRoute) + route, {
-        method: body === undefined ? 'GET' : 'POST', redirect: 'error', signal: AbortSignal.timeout(30 * 60_000), ...{ dispatcher: waitFor(30 * 60_000) },
+        method: body === undefined ? 'GET' : 'POST', redirect: 'error', signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(30 * 60_000)]) : AbortSignal.timeout(30 * 60_000), ...{ dispatcher: waitFor(30 * 60_000) },
         headers: { Authorization: `Bearer ${key}`, ...(body && !form ? { 'Content-Type': 'application/json' } : {}) },
         ...(body === undefined ? {} : { body: form ? body : JSON.stringify(body) }),
     });
