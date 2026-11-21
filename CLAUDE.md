@@ -642,11 +642,14 @@ and quoting, retain existing spending authorization, and inspect the resulting t
 Do not regenerate existing assets solely to migrate models. Code-rendered typography
 is not a generated-image model call. See [image routing](skills/_shared/image-routing.md).
 
-**Directory model selection (user directive, 2026-10-16) supersedes automatic routing.**
+**Directory model selection (user directive, 2026-11-21) supersedes automatic routing.**
 Once the working directory is known, follow `skills/_shared/model-settings.md`: ask
 for the video type first (drama, comedy, documentary, explainer and the researched
-catalog's other options), then video model and credentials, image model and credentials,
-then whether separate TTS is needed. If yes, select its model and configure credentials;
+catalog's other options), then the video model and its credentials. Ask next for the model
+that makes BGM and audience-only drones, risers and stingers. Use an exact catalog model and
+check its credentials, or save `models.music:{engine:"none"}` for existing music or no score.
+Then ask for the image model and credentials and whether separate TTS is needed.
+If yes, select its model and configure credentials;
 if no, save `models.speech:{engine:"none"}` and skip TTS setup. Save all choices
 in `.social-flow/models.json`, and use
 those settings for subsequent episodes until the user explicitly requests a change.

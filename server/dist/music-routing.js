@@ -73,6 +73,8 @@ export function planMusic(raw) {
     const input = musicPlanSchema.parse(raw);
     const context = musicContext(input.directory, input.assetId);
     const { selection } = context;
+    if (selection.engine === 'none')
+        throw new Error('music_generation_disabled: this selection uses existing music or no score');
     const tool = input.tool ?? (selection.engine === 'mlx' ? 'mlx_music_generate' :
         MUSIC_MODELS.find(m => m.engine === selection.engine && m.model === selection.model)?.tool);
     if (!tool)

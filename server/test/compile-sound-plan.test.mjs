@@ -24,6 +24,23 @@ function run(paths) {
 }
 
 describe('compile-sound-plan', () => {
+  it('reports a missing audience cue even when there are no sound manifests to compile', async () => {
+    const { spottingDigest } = (await import('../../skills/storyboard/references/audience-effects.js')).default;
+    const p = room(), board = {
+      STORY: { audienceSoundVersion: 1 },
+      STRUCTURE: { scenes: [{ no: 1, audienceSound: { decision: 'use', reason: 'A familiar face stops smiling.' } }] },
+      SCENES: [{ id: 's0001', scene: 1, type: 'cover' }],
+    };
+    writeFileSync(join(p.board, 'scenes.js'), Object.entries(board).map(([key, value]) =>
+      'window.' + key + '=' + JSON.stringify(value) + ';').join('\n'));
+    const result = run(p);
+    assert.equal(result.status, 0, result.stderr);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.warnings.length, 1);
+    assert.deepEqual(output.warnings, spottingDigest(board));
+    assert.equal(existsSync(join(p.work, 'sfx-spans.json')), false);
+  });
+
   it('reports a scene with no music decision and a cue file this episode never generated, and still compiles', () => {
     const p = room();
     writeFileSync(join(p.work, 'bgm-tense.wav'), 'copied from another episode');
@@ -153,4 +170,69 @@ it('compiles audience events exactly once, rejects stale media and cleans the ow
   cue.delivery='input'; save(); assert.match(run(p).stderr,/audience_delivery_conflict/);
   cue.delivery='post'; shots[1].duration=3;save();assert.match(run(p).stderr,/audience_timing_stale/);
   shots[0].sound.effects=[];save();assert.equal(run(p).status,0);assert.equal(existsSync(filename),false);
+});
+
+it('hands new audience material to saved music and mixes the receipted WAV only as a timed effect', async t => {
+  const { boardClock } = (await import('../../skills/storyboard/references/audience-effects.js')).default;
+  const { planMusic, executeMusic } = await import('../dist/music-routing.js');
+  const { config } = await import('../dist/config.js');
+  const p = room(), catalogFile = join(p.channel, 'assets/audio/sfx/pressure.wav');
+  writeFileSync(catalogFile, 'existing channel variant');
+  const cue = { id: 'held-look', sfx: 'pressure', audience: { intent: 'Her suspicion grows' },
+    trigger: 'She stops smiling', description: 'Faint tension behind her words', atSeconds: 0.25 };
+  const board = {
+    STORY: { audienceSoundVersion: 1 },
+    PRODUCTION: { modelSettings: { models: { music: { engine: 'elevenlabs', model: 'music_v2_5' } } },
+      musicAuthorization: { reference: 'test', maxUsd: 1 } },
+    SFX: { pressure: { prompt: 'Instrumental low drone with a soft attack', seconds: 3 } },
+    SCENES: [{ id: 's0001', type: 'cover', duration: 2, sound: { audioSource: 'video', effects: [cue] } }],
+  };
+  const save = () => writeFileSync(join(p.board, 'scenes.js'), Object.entries(board)
+    .map(([key, value]) => 'window.' + key + ' = ' + JSON.stringify(value) + ';').join('\n'));
+  const row = () => boardClock(board, p.board, p.channel).row('s0001', cue);
+  const { source } = row();
+  assert.equal(source.kind, 'music');
+  assert.equal(source.available, false);
+  save();
+  assert.match(run(p).stderr, /missing audience music/);
+  const { directory, assetId, requestId, prompt, seconds, filename, outputPath } = source;
+  const plan = planMusic({ directory, assetId, requestId, reserveUsd: 0.1,
+    args: { prompt, forceInstrumental: true, musicLengthMs: seconds * 1000, filename, outputPath } });
+  assert.equal(plan.tool, 'music_elevenlabs_generate');
+  const key = config.elevenLabsApiKey;
+  config.elevenLabsApiKey = 'test-only';
+  t.after(() => { config.elevenLabsApiKey = key; });
+  await executeMusic({ directory: plan.directory, planId: plan.id }, async (_tool, args) => {
+    mkdirSync(args.outputPath, { recursive: true });
+    const file = join(args.outputPath, args.filename);
+    const tone = spawnSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'sine=frequency=160:duration=0.2', '-f', 'wav', file]);
+    assert.equal(tone.status, 0, String(tone.stderr));
+    return { content: [], musicReceipt: { audioPath: file, requestId: 'fixture' } };
+  });
+  cue.audience.timingBasis = row().currentTimingBasis;
+  save();
+  const compiled = run(p);
+  assert.equal(compiled.status, 0, compiled.stderr);
+  assert.deepEqual(JSON.parse(compiled.stdout).warnings, []);
+  const spans = JSON.parse(readFileSync(join(p.work, 'sfx-spans.json'))).spans;
+  assert.deepEqual(spans.map(s => s.assetPath), [source.path]);
+  assert.equal(existsSync(join(p.work, 'bgm.tsv')), false);
+  assert.equal(existsSync(join(p.work, 'sfx.tsv')), false);
+  const changed = Buffer.concat([readFileSync(source.path), Buffer.from([0])]);
+  writeFileSync(source.path, changed);
+  assert.match(run(p).stderr, /audience_timing_stale/);
+  cue.audience.timingBasis = row().currentTimingBasis;
+  save();
+  assert.match(run(p).stderr, /no matching generation receipt/);
+  delete board.SFX.pressure;
+  assert.equal(row().source.path, realpathSync(catalogFile));
+  board.SFX.pressure = { asset: 'pressure' };
+  assert.equal(row().source.kind, 'catalog');
+  cue.sfx = 'fresh';
+  assert.equal(row().source.prompt, cue.description);
+  const repeat = { ...cue, id: 'echo', description: 'Address the same suspicion later.' };
+  board.SCENES[0].sound.effects.push(repeat);
+  assert.deepEqual(boardClock(board, p.board, p.channel).row('s0001', repeat).source, row().source);
+  cue.sfx = '../outside';
+  assert.throws(row, /audience_asset_id_invalid/);
 });

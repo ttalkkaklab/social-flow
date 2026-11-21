@@ -9,7 +9,7 @@ const HELPERS = ['video-production.js', 'source-context.js', 'render-routing.js'
 const REVIEW_ASSETS = path.join(__dirname, '..', '..', 'channel', 'references', 'review-assets');
 const { FONT_ASSETS } = require('../../channel/references/review-fonts.js');
 const ASSETS = ['design-system.css', 'review.css', ...FONT_ASSETS];
-HELPERS.push('review-localization.js');
+HELPERS.push('review-localization.js', 'audience-spotting.js');
 const TITLE = /<title>[^]*?<\/title>/g;
 const METADATA = /\/\* ✎ SB_DOC BEGIN[^]*?\/\* ✎ SB_DOC END \*\//g;
 

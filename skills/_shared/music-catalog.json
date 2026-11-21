@@ -67,6 +67,9 @@
       "provider": "ElevenLabs official"
     }
   ],
+  "noGeneration": {
+    "engine": "none"
+  },
   "adapters": [
     {
       "tool": "music_generate_clip",

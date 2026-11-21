@@ -54,6 +54,17 @@ test('initial setup records every preference and creates reusable directories wi
   assert.equal(fs.existsSync(path.join(root, 'data/history/assets/branding')), false);
 });
 
+test('first setup offers the BGM choice after video and carries an explicit decline into episodes', t => {
+  const root = workspace(t);
+  const menu = call(root, 'options');
+  assert.deepEqual(menu.modelSetupOrder, ['video', 'music', 'image', 'speech']);
+  assert.equal(menu.musicCatalog.noGeneration.engine, 'none');
+  const choices = defaults();
+  choices.models.music = menu.musicCatalog.noGeneration;
+  assert.equal(init(root, choices).status, 'ready');
+  assert.deepEqual(call(root, 'episode', { topic: 'one' }).snapshot.config.models.music, choices.models.music);
+});
+
 test('repeated init and interrupted directory repair preserve settings, assets, profile and custom ignores', t => {
   const root = workspace(t);
   fs.writeFileSync(path.join(root, '.gitignore'), 'custom-file');

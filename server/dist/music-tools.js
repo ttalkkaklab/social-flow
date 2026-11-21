@@ -10,7 +10,7 @@ const context = {
 };
 export const MUSIC_TOOLS = [
     { name: 'music_catalog', title: 'Inspect music models',
-        description: 'Read music/BGM/song adapters, exact saved model IDs, duration controls and official versus third-party provenance. No API call. Returns models, adapter fields, sources and unimplemented providers. Do NOT use to generate audio — use music_plan then music_execute.',
+        description: 'Read music/BGM/song adapters, exact model IDs, duration controls and provider provenance. At first setup offer a supported model or noGeneration (save engine:none for reuse or no score). Returns models, adapter fields, sources and unimplemented providers without an API call.',
         inputSchema: { type: 'object', additionalProperties: false, properties: {} }, annotations: { readOnlyHint: true, openWorldHint: false } },
     { name: 'music_plan', title: 'Plan music from saved settings',
         description: 'Create a local music generation plan using models.music and explicit episode/shot overrides. Checks adapter fields and pins reference hashes, selection and cost reservation. No paid call. Returns plan ID, final WAV path and provenance. Do NOT use to execute — use music_execute. Use music_catalog and adapter schemas for args; omit model to inherit saved selection.',

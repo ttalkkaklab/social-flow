@@ -548,13 +548,11 @@ All `still_camera` cuts use the unchanged shared camera HTML template and runtim
   stereo WAV and measured duration with `not_reviewed`; listening is not an execution gate.
   `suno-api` means sunoapi.org, not the official Suno Platform. The retired V5 sound
   adapter is disabled; choose a saved V6 model and an instrumental `suno_generate` plan.
-- For audience-only cues, follow [spotting, placement and A/B playback](references/video-sound.md#audience-effects).
-- **SFX**: the storyboard's `window.SFX` and each shot's `sound.sfx` (scenes-schema §sound
-  effects). Every id becomes a file in the **channel** catalog, not `.work/` — an effect is
-  generated once and every later episode that names the same id reuses it at $0.
+- **Audience-only sound.** Read `storyboard_read.audienceSpotting` for scene decisions and `audienceEffects` on a shots-level read for source details. On a new board, an original psychological cue uses `music_plan → music_execute` with the project's music model. Reuse a chosen catalog asset when available. Place the resulting sound on the accepted reaction with `storyboard_apply.audienceEffects`. Keep the cue on the audience track even when the scene's BGM decision is `none`. [Placement and A/B playback](references/video-sound.md#audience-effects)
+- **Other post effects and room tone.** Preserve sounds already supplied by the video's soundtrack. For a separate physical effect or room recording the edit still needs, resolve its id in the **channel** catalog. Later episodes can reuse that asset.
   ```bash
   ASSET=${CLAUDE_PLUGIN_ROOT}/skills/channel/references/resolve-asset.py
-  # For each distinct asset actually used in post effects, sound.sfx or ambience:
+  # For each distinct physical effect or room tone still needed in post:
   if ! python3 "$ASSET" data/<channel> sfx <id> >/dev/null 2>&1; then
     # { prompt } entries only — a missing { asset } is a storyboard error, not a generation
     : # sfx_elevenlabs_generate — text: <prompt>, durationSeconds: <seconds>, loop: <loop>,

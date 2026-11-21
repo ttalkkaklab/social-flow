@@ -16,12 +16,19 @@ function checkDelivery(shot, effect) {
     fail('audience_delivery_conflict', shot, effect.id, 'audience effects play in post');
 }
 function boardClock(board, dir, channel) {
+  dir = path.resolve(dir);
   const episode = path.dirname(dir), parent = path.dirname(episode);
   channel ??= path.basename(parent) === 'episodes' ? path.dirname(parent) : episode;
   const soundAssets = new Map();
   const files = new Map(), cuts = new Map();
   // verify-assembled and splice-clip insert b-roll at its position in SCENES.
   const order = board.SCENES || [];
+  // Reused ids identify one timbre and one file, even when the shots phrase their directions differently.
+  const firstDescription = new Map();
+  for (const shot of order) for (const effect of Array.isArray(shot?.sound?.effects) ? shot.sound.effects : []) {
+    if (effect?.audience && effect.description && !firstDescription.has(effect.sfx))
+      firstDescription.set(effect.sfx, effect.description);
+  }
   function media(name) {
     if (!name || typeof name !== 'string') return null;
     const file = assetPath(dir, name);
@@ -54,14 +61,41 @@ function boardClock(board, dir, channel) {
     cuts.set(id, inputs);
     return inputs;
   }
-  function basis(shotId, effect, endId) {
-    const asset = board.SFX?.[effect.sfx]?.asset || effect.sfx;
-    if (!soundAssets.has(asset)) {
+  function catalogAsset(id) {
+    if (!soundAssets.has(id)) {
       const resolver = path.resolve(__dirname, '../../channel/references/resolve-asset.py');
-      const found = spawnSync('python3', [resolver,channel,'sfx',asset], {encoding:'utf8'});
-      soundAssets.set(asset, found.status === 0 ? media(found.stdout.trim())?.[1] : null);
+      const found = spawnSync('python3', [resolver, channel, 'sfx', id], { encoding: 'utf8' });
+      const file = found.status === 0 ? found.stdout.trim() : null;
+      soundAssets.set(id, { kind: 'catalog', catalog: 'sfx', assetId: id, path: file, available: !!file,
+        ...(file || /^no asset:/.test(found.stderr || '') ? {} : { lookupError: found.error?.message || found.stderr?.trim() || 'catalog lookup failed' }) });
     }
-    return createHash('sha256').update(canonical([cut(shotId), effect.trigger, effect.audience.release, asset, soundAssets.get(asset),
+    return soundAssets.get(id);
+  }
+  function sourceFor(effect) {
+    const id = effect.sfx;
+    const marked = board.STORY?.audienceSoundVersion === 1;
+    const entry = Object.hasOwn(board.SFX || {}, id) ? board.SFX[id] : undefined;
+    if (!marked) return catalogAsset(entry?.asset || id);
+    if (typeof id !== 'string' || !/^[a-z0-9][a-z0-9-]*$/.test(id) ||
+        (entry?.asset != null && (typeof entry.asset !== 'string' || !/^[a-z0-9][a-z0-9-]*$/.test(entry.asset))))
+      throw new Error('audience_asset_id_invalid: use a lowercase catalog id');
+    if (entry?.asset) return catalogAsset(entry.asset);
+    if (!entry?.prompt) {
+      const existing = catalogAsset(id);
+      if (existing.available || existing.lookupError) return existing;
+    }
+    if (id.length + '.wav'.length > 255) throw new Error('audience_asset_id_invalid: the WAV filename exceeds 255 bytes');
+    const assetId = id.length <= 111 ? 'audience-' + id : 'audience.long.' + createHash('sha256').update(id).digest('hex');
+    const outputPath = '.work/music/audience', filename = id + '.wav', file = path.resolve(episode, outputPath, filename);
+    return { kind: 'music', directory: episode, assetId, requestId: assetId, outputPath, filename, path: file,
+      available: fs.existsSync(file) && fs.statSync(file).isFile(), prompt: entry?.prompt || firstDescription.get(id) || effect.description,
+      ...(entry?.seconds === undefined ? {} : { seconds: entry.seconds }) };
+  }
+  function basis(shotId, effect, endId) {
+    const source = sourceFor(effect);
+    // An old catalog timing stamp compares exactly as it did before episode music was introduced.
+    const asset = source.kind === 'catalog' ? source.assetId : ['music', source.assetId, source.prompt, source.seconds ?? null];
+    return createHash('sha256').update(canonical([cut(shotId), effect.trigger, effect.audience.release, asset, media(source.path)?.[1] ?? null,
       endId ? [endId, cut(endId)] : null])).digest('hex');
   }
   function bounds(shotId, effect) {
@@ -81,8 +115,10 @@ function boardClock(board, dir, channel) {
     const currentTimingBasis = basis(shotId, effect, effect.end?.shotId);
     let status = effect.atSeconds == null ? 'planned' : effect.audience.timingBasis === currentTimingBasis ? 'placed' : 'stale';
     if (status === 'placed') { try { bounds(shotId, effect); } catch { status = 'stale'; } }
+    const source = sourceFor(effect);
     return { shotId, id: effect.id, intent: effect.audience.intent, trigger: effect.trigger, sfx: effect.sfx,
-      atSeconds: effect.atSeconds, end: effect.end, caseId: effect.audience.caseId, status, currentTimingBasis, placedTimingBasis: effect.audience.timingBasis, listening: 'not_reviewed' };
+      atSeconds: effect.atSeconds, end: effect.end, caseId: effect.audience.caseId, status, currentTimingBasis, placedTimingBasis: effect.audience.timingBasis,
+      source: { ...source, sha256: media(source.path)?.[1] ?? null }, listening: 'not_reviewed' };
   }
   return { basis, bounds, row };
 }
@@ -156,4 +192,4 @@ function patch(board, dir, args) {
   }
   return { changed, needsPlacement: read(board, dir).filter(e => e.status !== 'placed') };
 }
-module.exports = { boardClock, read, patch, checkDelivery };
+module.exports = { boardClock, read, patch, checkDelivery, ...require('./audience-spotting.js') };

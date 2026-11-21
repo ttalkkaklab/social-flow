@@ -93,6 +93,27 @@ test('music lanes show one anchored span across scenes and label the score-free 
   assert.match(runInNewContext(source + '\nmusicLane([{i:1,s:SCENES[1]}])', context), /No score/);
 });
 
+test('the scene links its audience cue to the starting shot and distinguishes a silent choice from pending timing', () => {
+  const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
+  const source = template.slice(template.indexOf('  var audienceRows ='), template.indexOf('  /* Music lane'));
+  const words = [...template.matchAll(/^      audienceSound: (\{[^]*?\}),$/gm)].map(m => runInNewContext('(' + m[1] + ')'));
+  const esc = text => String(text).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+  const effect = { id: 'doubt', sfx: 'bowed-glass', trigger: 'her hand stills', atSeconds: 0.3,
+    end: { shotId: 's0002', atSeconds: 'end' }, audience: { intent: 'doubt' } };
+  const SCENES = [{ id: 's0001', scene: 1, sound: { effects: [effect] } }, { id: 's0002', scene: 2 }];
+  const window = { SCENES, AUDIENCE_SPOTTING: require('../../skills/storyboard/references/audience-spotting.js'),
+    STRUCTURE: { scenes: [{ no: 1 }, { no: 2, audienceSound: { decision: 'use', reason: '<hold her gaze>' } },
+      { no: 3, audienceSound: { decision: 'none', reason: 'Keep her breath.' } }, { no: 4 }] } };
+  const page = (i, labels) => runInNewContext(source + '\naudienceLane(audiencePlan.scenes[' + i + '])', {
+    SCENES, window, T: { audienceSound: labels, shotCap: n => 'Shot ' + n }, esc, copy: esc,
+  });
+  assert.equal(page(3, words[0]), '');
+  window.STORY = { audienceSoundVersion: 1 };
+  assert.match(page(3, words[1]), /관객용 심리음<\/strong> · 미정/);
+  assert.match(page(1, words[0]), /use cue — &lt;hold her gaze&gt; · <a href="#shot-1">Shot 1 · doubt · timing unverified<\/a>/);
+  assert.match(page(2, words[0]), /no cue — Keep her breath/);
+});
+
 test('the cliché strip and scene lanes show what is in the story, the user\'s pick and a recommendation', () => {
   const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
   const start = template.indexOf('  var CLICHES = window.CLICHES');
@@ -135,7 +156,7 @@ test('HTML creation and refresh keep one design while preserving episode metadat
   const dir = mkdtempSync(join(tmpdir(), 'sf-board-html-'));
   try {
     // No scenes, credentials, or network are required to create the review shell.
-    assert.equal(storyboardHtml(dir).length, 23 + FONT_ASSETS.length);
+    assert.equal(storyboardHtml(dir).length, 24 + FONT_ASSETS.length);
     const file = join(dir, 'storyboard.html');
     const original = readFileSync(file, 'utf8');
     const title = '<title>Episode $& — 로컬 검토</title>';
@@ -163,7 +184,7 @@ test('check is read-only and malformed existing metadata is preserved for repair
   const root = mkdtempSync(join(tmpdir(), 'sf-board-html-check-'));
   try {
     const dir = join(root, 'storyboard');
-    assert.equal(storyboardHtml(dir, true).length, 23 + FONT_ASSETS.length);
+    assert.equal(storyboardHtml(dir, true).length, 24 + FONT_ASSETS.length);
     assert.equal(existsSync(dir), false);
     storyboardHtml(dir);
     const file = join(dir, 'storyboard.html');

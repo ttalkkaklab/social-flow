@@ -25,6 +25,12 @@ function wav() {
   data.writeUInt32LE(16000, 28); data.writeUInt16LE(2, 32); data.writeUInt16LE(16, 34); data.write('data', 36); data.writeUInt32LE(1600, 40);
   return data;
 }
+test('a saved no-generation choice rejects music before writing a plan or reservation', t => {
+  const f = fixture(t, undefined, { engine: 'none' });
+  assert.throws(() => f.plan(), /music_generation_disabled/);
+  assert.equal(fs.existsSync(path.join(f.dir, '.work/music-routing')), false);
+});
+
 function output(args) {
   // A tiny valid PCM file; deliberately use the provider's source.mp3 filename.
   const data = wav();
