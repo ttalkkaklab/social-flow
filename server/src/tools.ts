@@ -46,7 +46,7 @@ import {
   VALID_SEEDANCE_RATIOS,
   VALID_SEEDANCE_RESOLUTIONS,
 } from './seedance-client.js';
-import { ltxApiImg2VideoSchema, ltxApiAudio2VideoSchema } from './ltx-api-video.js';
+import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
 import { minimaxImg2VideoSchema, minimaxReferenceSchema } from './minimax-video.js';
 import { heygenImg2VideoSchema, heygenReferenceSchema } from './heygen-video.js';
 import {
@@ -167,7 +167,7 @@ import {
  *
  * Video engines are the ones that can keep a character's voice (owner directive
  * 2026-10-31): LTX through the ASTRA gateways and local runtimes, and Seedance 2.x
- * (ARK_API_KEY). Veo, Gemini Omni and Seedance 1.x left the plugin because none of
+ * (ARK_API_KEY). Gemini Developer API Veo previews, Gemini Omni and Seedance 1.x left the plugin because none of
  * them takes a voice reference. The source of truth for which to use when is
  * skills/produce/references/video-model-selection.md; each tool description carries
  * its own summary so a caller who sees only the tool list can still pick an engine.
@@ -1068,7 +1068,7 @@ export const SERVER_INSTRUCTIONS = `social-flow plans, produces and publishes sh
 
 Start: \`capability_status\` shows which providers are configured on this machine; \`project_manage\` holds the saved project settings (models, visual style, ratio, SNS targets). Reuse saved choices instead of asking again.
 
-Episode video: \`video_catalog\` → \`video_plan\` → \`video_approve\` (the user's yes to that shot, or to every shot) → \`video_execute\`, and \`video_status\` after an interruption. The provider tools (seedance_*, astra_*, ltx_video_generate, fasth3_omni_reference, ltx_api_*, minimax_*, heygen_*) are the adapters that route calls; call one directly only when the user names it.
+Episode video: \`video_catalog\` → \`video_plan\` → \`video_approve\` (the user's yes to that shot, or to every shot) → \`video_execute\`, and \`video_status\` after an interruption. The provider tools (seedance_*, astra_*, ltx_video_generate, fasth3_omni_reference, ltx_api_*, veo_*, minimax_*, heygen_*) are the adapters that route calls; call one directly only when the user names it.
 
 Story planning: use \`story_intensity_plan\` to develop story pressure and \`story_catharsis_plan\` to choose its payoff. Both return authoring guidance for the synopsis and board.
 
@@ -3852,11 +3852,11 @@ Returns JSON: status, missing fields, canonical paths, config and revision; epis
             models: { type: 'object', additionalProperties: false, description: 'On first setup choose video and check credentials, then ask for the BGM and audience tonal-cue model from music_catalog or save music:{engine:"none"} for reuse or no score. Check the selected provider, then choose image and optional TTS (speech:{engine:"none"} to skip). Reuse saved choices.', properties: Object.fromEntries(['video', 'music', 'image', 'speech'].map(kind => [kind, {
               type: 'object', additionalProperties: false, description: `${kind} selection; fixed engines omit model, host uses host-managed.`,
               properties: {
-                engine: { type: 'string', enum: kind === 'video' ? ['host', 'seedance', 'astra', 'astra-genai', 'astra-genai-desktop', 'mlx', 'ltx-api', 'minimax', 'heygen'] : kind === 'speech' ? ['none', 'gemini', 'elevenlabs', 'astra-genai'] : kind === 'music' ? ['lyria', 'suno-api', 'elevenlabs', 'mlx', 'none'] : ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai', 'astra-genai-native'], description: 'Selected engine, e.g. host for an exposed host media tool.' },
+                engine: { type: 'string', enum: kind === 'video' ? ['host', ...new Set(Object.values(VIDEO_ADAPTERS).map(adapter => adapter.engine))] : kind === 'speech' ? ['none', 'gemini', 'elevenlabs', 'astra-genai'] : kind === 'music' ? ['lyria', 'suno-api', 'elevenlabs', 'mlx', 'none'] : ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai', 'astra-genai-native'], description: 'Selected engine, e.g. host for an exposed host media tool.' },
                 model: { type: 'string', description: 'Supported model ID, e.g. host-managed. Omit for astra, zimage and engine none (speech or music).' },
                 ...(!['speech', 'music'].includes(kind) ? { host: { type: 'string', description: 'Host CLI when engine is host, e.g. codex.' } } : {}),
                 ...(kind === 'video' ? { resolution: { type: 'string', description: 'Supported source resolution, e.g. 720p; MSR takes WIDTHxHEIGHT, e.g. 1792x1024.' },
-                  operation: { type: 'string', enum: ['text', 'image', 'audio', 'reference'], description: 'Default video_plan operation when a call names none. An LTX (astra-genai) project saves reference: MSR with character voice samples.' } } : {}),
+                  operation: { type: 'string', enum: ['text', 'image', 'audio', 'reference', 'extend'], description: 'Default video_plan operation when a call names none. An LTX (astra-genai) project saves reference: MSR with character voice samples.' } } : {}),
                 ...(kind === 'image' ? { quality: { type: 'string', description: 'Supported quality, e.g. high; a prompt preference on host tools without a quality parameter.' } } : {}),
               }, required: ['engine'],
             }])) },
@@ -5367,8 +5367,7 @@ const vendorTool = (name: string, title: string, description: string, schema: z.
   inputSchema: zodToJsonSchema(schema, { $refStrategy: 'none' }) as Tool['inputSchema'],
   annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true } });
 TOOLS.push(
-  vendorTool('ltx_api_img2video', 'Generate an LTX API video from a start frame', 'Create a clip with the official hosted LTX API (LTX_API_KEY) from a first frame and an optional last frame. For cuts no character speaks in; 6, 8 or 10 seconds (Fast at 720p/1080p: up to 20). Do NOT use for spoken cuts — use ltx_api_audio2video with the pinned voice track.', ltxApiImg2VideoSchema),
-  vendorTool('ltx_api_audio2video', 'Generate an LTX API video from a voice track', 'Create a clip with the official hosted LTX API whose length and speech follow a supplied audio track (2–10 s; Fast at 720p/1080p up to 20 s). Supply a prompt or a first frame, or both. The supplied voice lane: pass the composed pinned-voice WAV. Do NOT use for silent cuts — use ltx_api_img2video.', ltxApiAudio2VideoSchema),
+  ...Object.entries(HOSTED_VIDEO_ROUTES).map(([name, route]) => vendorTool(name, route.title, route.description, route.schema)),
   vendorTool('minimax_img2video', 'Generate a MiniMax H3 video from frames', 'Create a MiniMax H3 clip (MINIMAX_API_KEY) from a first frame and an optional last frame, 4–15 s, native audio always on. For cuts no character speaks in. Do NOT use for spoken cuts — use minimax_reference with the speaker\'s voice sample.', minimaxImg2VideoSchema),
   vendorTool('minimax_reference', 'Generate a MiniMax H3 video from references', 'Create a MiniMax H3 clip from reference pictures (character panels, the start image last) and voice samples; the prompt names them "reference image N" and "reference audio N". The first frame is not pinned. Do NOT use for silent cuts — use minimax_img2video.', minimaxReferenceSchema),
   vendorTool('heygen_img2video', 'Generate a HeyGen Video 1 clip from frames', 'Create a HeyGen Video 1 clip (HEYGEN_API_KEY) that opens exactly on the first frame, with an optional end image, 5–15 s, native audio always on. Files upload to HeyGen assets first. For cuts no character speaks in. Do NOT use for spoken cuts — use heygen_reference.', heygenImg2VideoSchema),
@@ -5452,8 +5451,8 @@ Returns: the approval record (auto and approved plans).`,
 );
 
 TOOLS.push({ name: 'video_status', title: 'Read a saved video request receipt',
-  description: 'Read a managed video receipt. Omit requestId with action:read for the episode candidate list, actual prompts, input changes, costs and local recovery instructions. Default action:read is local only. action:refresh queries an existing ASTRA GenAI job, downloads completed media and updates the receipt without generation. Other providers do not support refresh. action:reconcile closes a submission_unknown, interrupted or failed request as failed with the verified charge, freeing its concurrency slot, only after the caller supplies terminal/billing evidence and spentUsd. A request the provider rejected outright is already failed. Use after interruption; ambiguous requests keep their reservation until reconciled. Do not reconcile a request still running at the provider.',
-  inputSchema: { type: 'object', additionalProperties: false, properties: { episode: { type: 'string', description: 'Absolute episode directory.' }, requestId: { type: 'string', description: 'Original logical request ID from video_plan.' }, action: { type: 'string', enum: ['read', 'refresh', 'reconcile'], default: 'read', description: 'read is local only; refresh recovers an existing GenAI job and can save completed video; reconcile settles an unknown request from billing evidence.' }, executorStopped: { type: 'boolean', description: 'Required true to reconcile a submitting or submitted request: the executing process has exited and the provider job is terminal.' }, evidence: { type: 'string', description: 'For reconcile: the provider\'s terminal status and billing evidence reference.' }, spentUsd: { type: 'number', minimum: 0, description: 'For reconcile: verified total charge, including failed generation.' } }, required: ['episode'] },
+  description: 'Read a managed video receipt. Omit requestId with action:read for the episode candidate list, actual prompts, input changes, costs and local recovery instructions. Default action:read is local only. action:refresh queries an existing ASTRA GenAI, LTX API or Google Cloud Veo job, downloads completed media and updates the receipt without generation. Other providers do not support refresh. action:reconcile closes a submission_unknown, interrupted or failed request as failed with the verified charge, freeing its concurrency slot, only after the caller supplies terminal/billing evidence and spentUsd. A request the provider rejected outright is already failed. Use after interruption; ambiguous requests keep their reservation until reconciled. Do not reconcile a request still running at the provider.',
+  inputSchema: { type: 'object', additionalProperties: false, properties: { episode: { type: 'string', description: 'Absolute episode directory.' }, requestId: { type: 'string', description: 'Original logical request ID from video_plan.' }, action: { type: 'string', enum: ['read', 'refresh', 'reconcile'], default: 'read', description: 'read is local only; refresh polls a supported provider job and can save its completed video; reconcile settles an unknown request from billing evidence.' }, executorStopped: { type: 'boolean', description: 'Required true to reconcile a submitting or submitted request: the executing process has exited and the provider job is terminal.' }, evidence: { type: 'string', description: 'For reconcile: the provider\'s terminal status and billing evidence reference.' }, spentUsd: { type: 'number', minimum: 0, description: 'For reconcile: verified total charge, including failed generation.' } }, required: ['episode'] },
   annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true } });
 
 const imageContextSchema = { type: 'object' as const, additionalProperties: false,

@@ -2680,7 +2680,7 @@ above.
 
 Use the same fields in `visual` for b-roll and `visual.clip` for speaking clips.
 An actual photoreal face, including a generated face, is ineligible for 2.x. Route such
-an action to an LTX lane instead. Veo, Gemini Omni and Seedance 1.x left the plugin on
+an action to an LTX lane instead. Gemini Developer API Veo previews, Gemini Omni and Seedance 1.x left the plugin on
 2026-10-31 because none takes a voice reference; a slot naming one fails as
 `video_engine_unsupported`, and its existing clip stays reusable under `visual.reuse`.
 

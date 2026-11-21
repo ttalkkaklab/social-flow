@@ -782,3 +782,79 @@ test('sceneNo plans one pinned clip for two ordered dialogue shots and revalidat
  assert.throws(()=>approveVideo({episode:f.episode,planIds:[plan.id],request:'old'}),/stale/);
  await assert.rejects(f.execute(plan,async()=>assert.fail('stale scene submitted')),/stale/);
 });
+
+test('Google Cloud Veo uses saved settings, model-specific budgets, voice policy and polling recovery', async t => {
+  const video = { engine: 'veo', model: 'veo-3.1-fast-generate-001', resolution: '720p', operation: 'text' };
+  const f = fixture(t, video);
+  f.board.FORMAT = 'shorts-9x16';
+  f.save();
+  const old = config.googleCloudProject;
+  config.googleCloudProject = 'test-project';
+  const plan = f.plan('veo-recover');
+  assert.equal(plan.providerProject, 'test-project');
+  assert.equal(plan.tool, 'veo_text2video');
+  assert.equal(plan.args.aspectRatio, '9:16');
+  assert.equal(plan.quote.reserveUsd, 0.8);
+  assert.equal(f.plan('quiet', { generateAudio: false }).quote.reserveUsd, 0.64);
+  f.board.SCENES[0].narration = [{ speaker:'hero', delivery:'off_screen', tts:'Hello' }];
+  f.save();
+  assert.throws(() => f.plan('spoken'), /voice_lane_required/);
+  delete f.board.SCENES[0].narration;
+  f.save();
+  process.env.GOOGLE_OAUTH_ACCESS_TOKEN = 'fixture';
+  t.after(() => { config.googleCloudProject = old; delete process.env.GOOGLE_OAUTH_ACCESS_TOKEN; });
+  const id = 'projects/test-project/locations/us-central1/publishers/google/models/' + video.model + '/operations/abc';
+  const { recordVideoSubmission } = await import('../dist/video-events.js');
+  await f.execute(plan, async () => { recordVideoSubmission(id); return { isError:true, content:[{type:'text',text:'status connection lost'}] }; });
+  let polls = 0;
+  t.mock.method(globalThis, 'fetch', async (url, init) => {
+    assert.ok(url.endsWith(':fetchPredictOperation')); assert.deepEqual(JSON.parse(init.body), { operationName:id }); polls++;
+    return Response.json({ done:true, response:{ videos:[{ mimeType:'video/mp4',bytesBase64Encoded:'AAAAFGZ0eXBpc29tAAAAAGlzb20=' }] } });
+  });
+  const recovery = { episode:f.episode, requestId:plan.requestId, action:'refresh' };
+  assert.equal((await videoStatus(recovery)).status, 'completed');
+  assert.equal((await videoStatus(recovery)).status, 'completed'); assert.equal(polls, 1);
+  assert.equal(fs.readFileSync(path.join(plan.args.outputPath, plan.args.filename)).toString('ascii', 4, 8), 'ftyp');
+  assert.throws(() => settings.validateModels({video:{engine:'host',host:'grok',model:video.model}},true), /engine veo/);
+});
+
+test('registered hosted tools require episode context and video_execute dispatches one paid request', async t => {
+  const model = 'veo-3.1-fast-generate-001';
+  const f = fixture(t, { engine: 'veo', model, resolution: '720p', operation: 'text' });
+  for (const name of ['veo_text2video', 'veo_img2video', 'veo_reference', 'veo_extend', 'ltx_api_img2video', 'ltx_api_audio2video'])
+    await assert.rejects(ROUTES[name]({ outputPath: f.episode }), /video_context_required/);
+  const previous = config.googleCloudProject;
+  config.googleCloudProject = 'test-project';
+  process.env.GOOGLE_OAUTH_ACCESS_TOKEN = 'fixture';
+  t.after(() => { config.googleCloudProject = previous; delete process.env.GOOGLE_OAUTH_ACCESS_TOKEN; });
+  const timer = globalThis.setTimeout;
+  t.mock.method(globalThis, 'setTimeout', (fn, ms, ...args) => timer(fn, ms === 10000 ? 0 : ms, ...args));
+  const calls = [];
+  const operation = 'projects/test-project/locations/us-central1/publishers/google/models/' + model + '/operations/run';
+  t.mock.method(globalThis, 'fetch', async (url) => {
+    calls.push(url.split(':').at(-1));
+    return Response.json(url.endsWith(':predictLongRunning') ? { name: operation } :
+      { done: true, response: { videos: [{ mimeType: 'video/mp4', bytesBase64Encoded: 'AAAAFGZ0eXBpc29tAAAAAGlzb20=' }] } });
+  });
+  const plan = f.plan('public-route');
+  const request = { episode: f.episode, planId: plan.id };
+  config.googleCloudProject = 'changed-project';
+  await assert.rejects(ROUTES.video_execute(request), /video_plan_stale/);
+  config.googleCloudProject = 'test-project';
+  const result = await ROUTES.video_execute(request);
+  assert.ok(!result.isError);
+  await ROUTES.video_execute(request);
+  assert.deepEqual(calls, ['predictLongRunning', 'fetchPredictOperation']);
+  assert.equal(f.state().jobs['public-route'].status, 'completed');
+});
+
+test('managed video plans can resume an active snapshot after a workspace Veo preview retires', t => {
+  const f = fixture(t, { engine: 'veo', model: 'veo-3.1-fast-generate-001', resolution: '720p', operation: 'text' });
+  const { file, config: saved } = settings.readSettings(f.root);
+  saved.models.video.model = 'veo-3.1-fast-generate-preview';
+  fs.writeFileSync(file, JSON.stringify(saved));
+  assert.equal(f.plan('resumed').args.model, 'veo-3.1-fast-generate-001');
+  delete saved.workspace;
+  fs.writeFileSync(file, JSON.stringify(saved));
+  assert.throws(() => f.plan('missing-workspace'), /project_setup_required/);
+});

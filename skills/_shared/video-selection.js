@@ -93,7 +93,7 @@ function readVideoContext(episode, shotId, sceneNo) {
         references.push({id:'scene-opening-background',path:frames.start,role:'background',use:'video',purpose:'Opening setting and landmark positions.'});
       }
     }
-    if (frames.mode === 'reference' && !['astra-genai', 'minimax', 'heygen'].includes(selection.engine) &&
+    if (frames.mode === 'reference' && !['astra-genai', 'minimax', 'heygen', 'veo'].includes(selection.engine) &&
         !references.some(ref => ref.path === frames.start && ['video', 'both'].includes(ref.use))) {
       references.push({id:'scene-opening-frame',path:frames.start,role:'background',use:'video',purpose:'Opening composition and character positions.'});
     }
@@ -115,6 +115,11 @@ function readVideoContext(episode, shotId, sceneNo) {
   if (speechOnly &&
       !spoken.some(line => line.delivery === 'on_screen' || line.delivery === 'off_screen'))
     selection = { ...selection, operation: 'image' };
+  if (selection.engine === 'veo' && !selection.operation) {
+    const mode = shot.visual?.frames?.mode;
+    const operation = mode === 'reference' ? 'reference' : shot.visual?.frames?.start || shot.visual?.bg ? 'image' : 'text';
+    selection = { ...selection, operation };
+  }
   return { episode: root, shotId, selection, source, snapshotRevision: snapshot?.revision || null,
     ...(scene ? {sceneNo, shotIds: members.map(s => s.id), sceneDirection: scene.videoDirection, sceneMembers: members} : {}),
     revision: hash({ ...(scene ? {sceneNo, direction: scene.videoDirection, members} : {}), selection, source, snapshotRevision: snapshot?.revision, overrides, imagePlan: { frames: shot.visual?.frames, references: shot.visual?.references, bg: shot.visual?.bg }, shotPrompt: shot.visual?.video?.prompt, shotLines: videoLines(shot), authorization: production.videoAuthorization,

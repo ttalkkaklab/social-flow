@@ -10,13 +10,13 @@ import { bareFilenameSchema } from './media-utils.js';
 import { dataUri, runVendorJob, vendorJson } from './vendor-video.js';
 export const LTX_API_BASE_URL = 'https://api.ltx.io';
 export const LTX_API_MODELS = ['ltx-2-5-pro', 'ltx-2-5-fast'];
-const TIERS = {
+export const LTX_API_RESOLUTIONS = {
     '720p': ['1280x720', '720x1280', '720x720', '1080x720', '720x1080'],
     '1080p': ['1920x1080', '1080x1920', '1080x1080', '1620x1080', '1080x1620'],
     '1440p': ['2560x1440', '1440x2560', '1440x1440', '2160x1440', '1440x2160'],
     '4k': ['3840x2160', '2160x3840', '2160x2160', '3240x2160', '2160x3240'],
 };
-export const ltxApiTier = (resolution) => Object.entries(TIERS).find(([, sizes]) => sizes.includes(resolution))?.[0];
+export const ltxApiTier = (resolution) => Object.entries(LTX_API_RESOLUTIONS).find(([, sizes]) => sizes.includes(resolution))?.[0];
 const IMAGE_EXT = ['.png', '.jpg', '.jpeg', '.webp'], AUDIO_EXT = ['.wav', '.mp3', '.m4a', '.ogg'];
 /** Whole-second lengths the image endpoint takes for a model, resolution and frame rate. */
 export function ltxApiSeconds(model, resolution, fps = 24) {
@@ -85,6 +85,9 @@ export function ltxApiStatus(json) {
         return { state: 'failed', error: json.error?.message ?? 'failed' };
     return { state: 'running' };
 }
+export async function pollLtxApi(endpoint, id) {
+    return ltxApiStatus(await vendorJson(LTX_API_BASE_URL + '/v2/' + endpoint + '/' + encodeURIComponent(id), { headers: { Authorization: 'Bearer ' + config.ltxApiKey, 'Content-Type': 'application/json' } }));
+}
 export async function generateLtxApiVideo(request) {
     if (!config.ltxApiKey)
         return { success: false, error: 'LTX_API_KEY is not set', terminal: true };
@@ -104,6 +107,6 @@ export async function generateLtxApiVideo(request) {
                 throw new Error('No job id in LTX response');
             return json.id;
         },
-        poll: async (id) => ltxApiStatus(await vendorJson(`${LTX_API_BASE_URL}/v2/${built.endpoint}/${encodeURIComponent(id)}`, { headers })),
+        poll: id => pollLtxApi('audioPath' in request ? 'audio-to-video' : 'image-to-video', id),
     });
 }

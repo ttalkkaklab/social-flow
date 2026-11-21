@@ -173,3 +173,20 @@ test('reference preserve and avoid rules reach the mapped image slot and remain 
  s.visual.references[0].avoid='bad';
  assert.throws(()=>prepareVideoImages('seedance_reference',{prompt:'Walk'},s,root),/image_plan_invalid/);
 });
+
+test('Veo asset references can show multiple views of one subject and never send a storyboard opening', t => {
+  const root = fixture(t);
+  const panel = (name, view) => {
+    const folder = path.join(root, 'assets/characters', name);
+    fs.mkdirSync(folder, { recursive: true });
+    fs.writeFileSync(path.join(folder, view + '.png'), png);
+    return { ...ref(name + '-' + view), path: '../assets/characters/' + name + '/' + view + '.png' };
+  };
+  const s = shot('reference', [panel('hero', 'face'), panel('hero', 'front')]);
+  s.visual.frames.start = 'start.png';
+  const result = prepareVideoImages('veo_reference', { prompt: 'A person turns.' }, s, root);
+  assert.equal(result.args.referenceImagePaths.length, 2);
+  assert.ok(result.args.referenceImagePaths.every(file => file.includes('/characters/hero/')));
+  s.visual.references.push(panel('ally', 'face'));
+  assert.throws(() => prepareVideoImages('veo_reference', { prompt: 'A person turns.' }, s, root), /same subject/);
+});

@@ -32,7 +32,7 @@ import * as qwen3asr from './qwen3-asr-client.js';
 import * as suno from './suno-client.js';
 import * as naver from './naver-client.js';
 import * as seedance from './seedance-client.js';
-import { generateLtxApiVideo, ltxApiImg2VideoSchema, ltxApiAudio2VideoSchema } from './ltx-api-video.js';
+import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
 import { generateMinimaxVideo, minimaxImg2VideoSchema, minimaxReferenceSchema } from './minimax-video.js';
 import { generateHeygenVideo, heygenImg2VideoSchema, heygenReferenceSchema } from './heygen-video.js';
 import * as serp from './serp-client.js';
@@ -971,8 +971,6 @@ export const ROUTES = {
     // billing basis, not a rate-sheet estimate, so per-episode cost tallies should
     // record this number.
     // Hosted vendors through the common layer (vendor-video.ts).
-    ltx_api_img2video: async (args) => vendorReport(await generateLtxApiVideo(parseArgs(ltxApiImg2VideoSchema, args))),
-    ltx_api_audio2video: async (args) => vendorReport(await generateLtxApiVideo(parseArgs(ltxApiAudio2VideoSchema, args))),
     minimax_img2video: async (args) => vendorReport(await generateMinimaxVideo(parseArgs(minimaxImg2VideoSchema, args))),
     minimax_reference: async (args) => vendorReport(await generateMinimaxVideo(parseArgs(minimaxReferenceSchema, args))),
     heygen_img2video: async (args) => vendorReport(await generateHeygenVideo(parseArgs(heygenImg2VideoSchema, args))),
@@ -1563,6 +1561,9 @@ export const ROUTES = {
         return text(JSON.stringify(r, null, 2));
     },
 };
+for (const [name, route] of Object.entries(HOSTED_VIDEO_ROUTES)) {
+    ROUTES[name] = async (args) => vendorReport(await route.generate(args));
+}
 // Normalize before schema validation and before any file upload or paid API call.
 // Keep exact legacy requests intact; new shot calls state their required coverage.
 for (const name of DURATION_TOOLS) {

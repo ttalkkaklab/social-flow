@@ -373,8 +373,7 @@ prompt out as the model card does: reference descriptions first, then the action
 
 ## Voice-consistent video models only (user directive, 2026-10-31)
 
-Video models that cannot keep a character's voice are not supported: Veo, Gemini Omni and
-Seedance 1.x left the plugin. Every adapter in `server/src/video-registry.ts` declares a voice
+Google Cloud Veo 3.1 is supported for non-speaking pictures and external voiceover (2026-11-21). LTX keeps its existing image, reference and supplied-audio routes. New providers declare operation and voice capabilities. Gemini Developer API Veo previews, Gemini Omni and Seedance 1.x remain retired. Every adapter in `server/src/video-registry.ts` declares a voice
 lane — `reference` (a pinned per-character voice sample: `astra_genai_msr`, `seedance_reference`,
 `fasth3_omni_reference`), `supplied` (the pinned TTS track drives the clip: the three
 audio2video adapters) or `none`. `video_plan` refuses `voice_lane_required` when a `none`

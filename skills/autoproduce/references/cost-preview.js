@@ -200,7 +200,7 @@ function readScenes(file) {
  * The fingerprint is duplicated into storyboard-html-template.html so the check strip can
  * tell a stale estimate from a fresh one; --selftest fails if the two copies drift.
  */
-function videoSlots(scenes) {
+function videoSlots(scenes, production) {
   const slots = [];
   scenes.forEach((shot, i) => {
     const s = shot || {};
@@ -210,7 +210,7 @@ function videoSlots(scenes) {
     // A supplied file (a recording, or a free stock clip with its license record) bills nothing.
     if (s.type === 'outro' || (!v.video && (['recording', 'screencast'].includes(v.source) || v.picture === 'recording' ||
         (v.source === 'stock' && typeof v.clip === 'string')))) return;
-    const plan = scenePlan(s);
+    const plan = scenePlan(s, production);
     if (plan && plan.priceKey) {
       slots.push({ shot: shotNo, kind: plan.kind, engine: plan.engine, duration: Number(s.duration),
         plan, label: plan.kind === 'motion' ? 'motion background' : plan.kind === 'quote' ? 'speech clip' : 'b-roll' });
@@ -637,7 +637,7 @@ function main() {
   let slots;
   try {
     slots = stillSlots(scenes, win.PRODUCTION?.imageProvider, win.PRODUCTION?.modelSettings?.models?.image)
-      .concat(videoSlots(scenes));
+      .concat(videoSlots(scenes, win.PRODUCTION));
   }
   catch (e) { die(e.message); }
   const rows = forecastRows(slots);

@@ -7,6 +7,7 @@ const MODELS = {
   'dreamina-seedance-2-0-fast-260128': { family: '2-0-fast', duration: [4, 15], resolutions: ['480p', '720p'], images: 9, videos: 3, audio: true },
   'dreamina-seedance-2-0-mini-260615': { family: '2-0-mini', duration: [4, 15], resolutions: ['480p', '720p'], images: 9, videos: 3, audio: true }
 };
+const { forecastHostedVideo, hostedSelection } = require('../../_shared/hosted-video-forecast.js');
 const DEFAULT_MODEL = 'dreamina-seedance-2-0-260128';
 const { checkFrames, framePlan, previzHandoff } = require('../../storyboard/references/render-routing.js');
 
@@ -25,7 +26,7 @@ const PRICED = new Set([
 const SEEDANCE_KEYS = ['model', 'modelPurpose', 'modelReason', 'referenceImagePaths', 'referenceAudioPaths', 'previz'];
 
 /** Resolve a planned shot before either forecasting or calling the generation tool. */
-function scenePlan(scene) {
+function scenePlan(scene, production) {
   const v = scene.visual || {};
   const mode = require('../../storyboard/references/production-mode.js');
   if (mode.reused(scene)) {
@@ -39,6 +40,11 @@ function scenePlan(scene) {
     : scene.type === 'quote' && v.clip && typeof v.clip === 'object' ? 'quote' : null;
   if (!kind) return null;
   const settings = Object.assign({}, v, kind === 'motion' ? v.video : kind === 'quote' ? v.clip : {});
+  const choice = hostedSelection(production, scene);
+  if (choice) {
+    for (const key of ['engine', 'model', 'resolution', 'operation']) delete settings[key];
+    Object.assign(settings, choice);
+  }
   const frameErrors = checkFrames(scene);
   if (frameErrors.length) throw new Error(frameErrors.join('; '));
   const endFrame = framePlan(scene).end;
@@ -48,10 +54,9 @@ function scenePlan(scene) {
   // `astra` is our own LTX-2.5 box (`astra_*`, video-model-selection §ASTRA). It is opt-in per
   // shot and never a default: a call costs wall clock instead of money and renders one job at a
   // time, so a board only asks for it where nobody is waiting. Like `host` it takes none of the
-  // Seedance planning fields. Veo left on 2026-10-31 (no voice reference); a board that still names
-  // it is asked to choose again rather than silently rerouted.
-  const engine = settings.engine || 'seedance';
-  if (engine === 'veo') throw new Error('video_engine_unsupported: Veo cannot keep a character\'s voice; set engine to seedance, astra or host (reuse an existing clip with visual.reuse)');
+  // Seedance planning fields.
+  const engine = settings.engine || (settings.model?.startsWith('veo-') ? 'veo' : 'seedance');
+  if (['veo', 'ltx-api'].includes(engine)) return forecastHostedVideo({ scene, settings, engine, kind });
   if (!['seedance', 'host', 'astra'].includes(engine)) throw new Error('unknown video engine: ' + engine);
   if (engine !== 'seedance') {
     const refs = Array.isArray(v.references) ? v.references.filter(ref => ['video', 'both'].includes(ref.use)) : [];
