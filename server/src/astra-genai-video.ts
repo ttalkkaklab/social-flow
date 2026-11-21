@@ -134,10 +134,10 @@ export const GENAI_AUDIO_TYPES: Readonly<Record<string, string>> = { '.wav': 'au
 export const GENAI_AUDIO_DATA_URI_MAX = 15_000_000;
 const oneOf = (a: unknown, b: unknown) => Number(a !== undefined) + Number(b !== undefined);
 export const genaiAudioToVideoSchema = z.object({
-  prompt: z.string().trim().min(1).max(5000),
+  prompt: z.string().trim().min(1).max(2000),
   negativePrompt: z.string().trim().min(1).max(2000).optional(),
   model: z.literal('ltx-2.5-22b-dev'),
-  resolution: z.string().min(1),
+  resolution: localResolution,
   fps: z.union([z.literal(24), z.literal(25), z.literal(48), z.literal(50)]).default(24),
   audioPath: z.string().min(1).optional(), audioUri: z.string().min(1).optional(),
   imagePath: z.string().min(1).optional(), imageUri: genaiImageUriSchema.optional(),
@@ -298,7 +298,7 @@ export async function getGenaiVideoStatus(input: z.infer<typeof genaiVideoStatus
     if (url.origin !== new URL(astraGenaiBaseUrl()).origin || url.username || url.password || url.search || url.hash ||
         !/^\/v1\/ltx\/desktop\/assets\/[A-Za-z0-9_-]+\/bytes$/.test(url.pathname))
       throw new Error('Invalid private GenAI video URL; retain receipt');
-    bytes = await requestGenaiMedia(url.pathname);
+    bytes = await requestGenaiMedia(url.pathname, undefined, route);
   } else bytes = await downloadGenaiResult(job.result.video_url);
   // Reject HTML/JSON and probe the actual container before recording completion.
   if (bytes.length < 12 || bytes.toString('ascii', 4, 8) !== 'ftyp') throw new Error('GenAI result is not MP4');

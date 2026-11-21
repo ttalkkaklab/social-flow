@@ -3,7 +3,7 @@ import { FASTH3_MAX_RGB_BYTES } from './fasth3-omni.js';
 import { localVideoStrategy } from './local-video-models.js';
 import { minimumDuration } from '../../skills/_shared/video-duration.js';
 import { SEEDANCE_MODEL_SPECS, DEFAULT_SEEDANCE_MODEL } from './seedance-client.js';
-import { ltxApiSeconds } from './ltx-api-video.js';
+import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
 import { MINIMAX_MODELS, MINIMAX_MAX_SECONDS } from './minimax-video.js';
 import { HEYGEN_SECONDS } from './heygen-video.js';
 import { ASTRA_VIDEO_FRAME_LIMITS, ASTRA_VIDEO_FRAME_STEP, ASTRA_VIDEO_MIN_FRAMES } from './astra-video-client.js';
@@ -11,7 +11,7 @@ export const DURATION_TOOLS = [
     'seedance_text2video', 'seedance_img2video', 'seedance_reference',
     'astra_text2video', 'astra_img2video', 'astra_keyframe_video', 'astra_audio2video',
     'astra_genai_msr', 'mlx_video_generate', 'ltx_video_generate', 'fasth3_omni_reference',
-    'ltx_api_img2video', 'minimax_img2video', 'minimax_reference', 'heygen_img2video', 'heygen_reference',
+    ...Object.keys(HOSTED_VIDEO_ROUTES).filter(tool => HOSTED_VIDEO_ROUTES[tool].seconds), 'minimax_img2video', 'minimax_reference', 'heygen_img2video', 'heygen_reference',
 ];
 /** Adapter-owned duration constraints; unknown deployments need discovery, never a guessed cap. */
 export function videoDurationLimits(tool, input = {}) {
@@ -23,8 +23,8 @@ export function videoDurationLimits(tool, input = {}) {
             throw new Error('Unknown Seedance model: ' + String(model));
         limits = { min: spec.duration[0], max: spec.duration[1] };
     }
-    else if (tool === 'ltx_api_img2video') {
-        limits = { seconds: ltxApiSeconds(String(input.model ?? 'ltx-2-5-pro'), String(input.resolution ?? '1920x1080'), Number(input.fps ?? 24)) };
+    else if (HOSTED_VIDEO_ROUTES[tool]?.seconds) {
+        limits = { seconds: HOSTED_VIDEO_ROUTES[tool].seconds(input) };
     }
     else if (tool.startsWith('minimax_')) {
         const spec = MINIMAX_MODELS[(input.model ?? 'MiniMax-H3')];

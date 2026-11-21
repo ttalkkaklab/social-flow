@@ -29,6 +29,7 @@ export LC_ALL=en_US.UTF-8
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"   # grab before cd (path to bgm-bed.sh)
 WORKDIR="${1:?usage: build-screencast.sh <workdir>}"
 cd "$WORKDIR"
+node "$HERE/../../_shared/project-settings.js" require-ready "$(pwd -P)" >/dev/null
 
 # Format preset — same contract as build-reel.sh. Read **before** the inline defaults.
 [ -f format.env ] && . ./format.env

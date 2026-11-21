@@ -1,3 +1,4 @@
+import { requireReadyProject } from './project.js';
 import { buildNativeImageBody, recoverNativeImage } from './astra-genai-native-image.js';
 import { GenaiRequestError } from './astra-genai-client.js';
 import { workflowEpisode } from './production-workflow.js';
@@ -81,6 +82,7 @@ function bindSelection(tool: string, input: Record<string, unknown>, selection: 
 export function planImage(raw: unknown): ImagePlan {
   gate('image_plan');
   const input = imagePlanSchema.parse(raw);
+  requireReadyProject(input.directory);
   const context = imageContext(input.directory, input.assetId);
   const { selection } = context;
   let tool = input.tool;
@@ -137,7 +139,9 @@ function imageExecutionResult(plan: ImagePlan, status: string, receipt?: { usage
 export type ImageDispatch = (tool: string, args: Record<string, unknown>) => Promise<ToolResult>;
 export async function executeImage(raw: unknown, dispatch: ImageDispatch): Promise<ToolResult> {
   gate('image_execute');
-  const input = imageExecuteSchema.parse(raw), directory = fs.realpathSync(input.directory);
+  const input = imageExecuteSchema.parse(raw);
+  requireReadyProject(input.directory);
+  const directory = fs.realpathSync(input.directory);
   const plan: ImagePlan = JSON.parse(fs.readFileSync(path.join(directory, '.work/image-routing/plans', input.planId + '.json'), 'utf8'));
   const { id, ...body } = plan;
   if (id !== input.planId || routingHash(body) !== id || plan.directory !== directory) throw new Error('image_plan_invalid');

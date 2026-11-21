@@ -119,6 +119,7 @@ if [ "$#" -gt 2 ]; then
   AUDIENCE_COMPARE=1; FROM_SHOT="$6"; TO_SHOT="$8"
 fi
 [ -f "$STORYBOARD/scenes.js" ] || { echo "source storyboard/scenes.js is required; pass the storyboard directory as build-reel.sh argument 2" >&2; exit 1; }
+node "$HERE/../../_shared/project-settings.js" require-ready "$STORYBOARD" "$(cd "$WORKDIR" && pwd -P)" >/dev/null
 [ "${SILENT:-0}" != "1" ] || node "$HERE/silent-plan.js" "$STORYBOARD/scenes.js"
 node "$HERE/compose-speech.js" "$WORKDIR" "$STORYBOARD" >/dev/null
 node "$HERE/prepare-source-audio.js" "$WORKDIR" "$STORYBOARD" >/dev/null

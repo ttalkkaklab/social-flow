@@ -21,7 +21,23 @@ image.local	image	0.000	official	Z-Image Turbo via mflux — on-device. No key, 
 image.host	image	0.000	derived	Host-provided image generation uses the included allowance; no separate API charge. Subscription/allowance limits are not priced here.
 image.mlx	image	0.000	official	mlx_image_generate · mlx_image_edit — MLX Core / mlx-serve on-device. Electricity only
 
-# ── Video (Veo 3.1) ──────────────────────────────────────────────────────
+# Google Cloud Veo at cloud.google.com/model-garden/pricing (2026-11-21); separate from historical Gemini API prices.
+veo.vertex.standard.720p.audio	second	0.40	official	Google Cloud Veo 3.1; generated seconds
+veo.vertex.standard.720p.silent	second	0.20	official	Google Cloud Veo 3.1; generated seconds
+veo.vertex.standard.1080p.audio	second	0.40	official	Google Cloud Veo 3.1; generated seconds
+veo.vertex.standard.1080p.silent	second	0.20	official	Google Cloud Veo 3.1; generated seconds
+veo.vertex.standard.4k.audio	second	0.60	official	Google Cloud Veo 3.1; generated seconds
+veo.vertex.standard.4k.silent	second	0.40	official	Google Cloud Veo 3.1; generated seconds
+veo.vertex.fast.720p.audio	second	0.10	official	Google Cloud Veo 3.1; generated seconds
+veo.vertex.fast.720p.silent	second	0.08	official	Google Cloud Veo 3.1; generated seconds
+veo.vertex.fast.1080p.audio	second	0.12	official	Google Cloud Veo 3.1; generated seconds
+veo.vertex.fast.1080p.silent	second	0.10	official	Google Cloud Veo 3.1; generated seconds
+veo.vertex.lite.720p.audio	second	0.05	official	Google Cloud Veo 3.1; generated seconds
+veo.vertex.lite.720p.silent	second	0.03	official	Google Cloud Veo 3.1; generated seconds
+veo.vertex.lite.1080p.audio	second	0.08	official	Google Cloud Veo 3.1; generated seconds
+veo.vertex.lite.1080p.silent	second	0.05	official	Google Cloud Veo 3.1; generated seconds
+
+# ── Historical Gemini API (Veo 3.1) ──────────────────────────────────────────────────────
 # Retired 2026-10-31 with Gemini Omni and Seedance 1.x below: none of them can keep a character's
 # voice, so the plugin no longer calls them. The rows stay so earlier episode ledgers still price.
 # Billed per second and **audio is always included** — it can't be turned off. No free tier.

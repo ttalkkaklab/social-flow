@@ -8,6 +8,7 @@ import { openingPrompt, shotTimelineSchema } from './msr-opening.js';
 import { cameraMoveWords, sceneCameraDirection, scenePromptText } from './video-prompt.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { verifyImageFile } from './image-media.js';
+import { VEO_CONSTRAINTS } from './veo-video.js';
 import { requestGenai } from './astra-genai-client.js';
 import { FRAME_FIELDS, sceneInputCapabilities, VIDEO_ADAPTERS } from './video-registry.js';
 const load = createRequire(import.meta.url);
@@ -151,7 +152,10 @@ export function mapSceneInputs(request, tool, model) {
     }
     if (request.audio && tool === 'astra_genai_audio2video' && model !== 'ltx-2.5-22b-dev')
         missing.push({ input: 'audio', frame: 0, path: request.audio.path, reason: 'This gateway A2V operation requires ltx-2.5-22b-dev' });
-    for (const p of refs) {
+    for (const [index, p] of refs.entries()) {
+        if (tool === 'veo_reference' && model && index < (VEO_CONSTRAINTS[model]?.maxAssetImages ?? 0) &&
+            p.frame === 0 && ['face', 'outfit', 'character'].includes(p.role))
+            continue;
         if (tool === 'astra_genai_img2video' && model === 'ltx-2.5-22b-distilled' && p.frame === 0)
             continue;
         missing.push({ input: 'reference', shotId: p.shotId, frame: p.frame, path: p.path, role: p.role, reason: 'No compatible subject/reference slot with this frame scope' });
@@ -189,6 +193,13 @@ export function sceneImageBindings(request, tool, bindings) {
 export function bindSceneAdapter(request, tool, model, shot, input, episode) {
     const { pins, refs, caps } = mapSceneInputs(request, tool, model);
     const args = {};
+    const sceneSeconds = request.frameCount / request.fps;
+    for (const field of ['duration', 'durationSeconds', 'requiredSeconds']) {
+        if (input[field] !== undefined && input[field] !== sceneSeconds)
+            throw new Error('scene_video_timing: ' + field + ' differs from the authored scene duration');
+    }
+    if (['numFrames', 'frames'].some(field => input[field] !== undefined && input[field] !== request.frameCount))
+        throw new Error('scene_video_timing: requested frame count differs from the storyboard');
     const { fpsField } = caps;
     if (fpsField) {
         if (input[fpsField] !== undefined && input[fpsField] !== request.fps)
@@ -199,11 +210,8 @@ export function bindSceneAdapter(request, tool, model, shot, input, episode) {
         throw new Error('scene_video_timing: adapter fps is unverified');
     }
     if (request.audio) {
-        const sceneSeconds = request.frameCount / request.fps;
         if (input.allowAudioTruncation === true || Number(input.audioStartTime ?? 0) !== 0 ||
-            input.audioMaxDuration !== undefined && input.audioMaxDuration !== sceneSeconds ||
-            input.duration !== undefined && input.duration !== sceneSeconds ||
-            input.numFrames !== undefined && input.numFrames !== request.frameCount)
+            input.audioMaxDuration !== undefined && input.audioMaxDuration !== sceneSeconds)
             throw new Error('scene_audio_timing: keep the complete scene track at its authored offset');
         if (tool === 'astra_audio2video') {
             if ((request.frameCount - 1) % 8 !== 0)
@@ -244,13 +252,17 @@ export function bindSceneAdapter(request, tool, model, shot, input, episode) {
         purpose: p.character + ' ' + p.role + ' reference only. Use the shot action for entrance timing.' });
     const projected = { ...visual, frames: { mode: end ? 'first_last' : 'first', start: start?.path, end: end?.path }, references,
         bg: start?.path, imagePair: undefined, lastImagePath: undefined };
-    if (caps.timedImages || !request.images.length) {
+    if (caps.timedImages || tool === 'veo_reference' || !request.images.length) {
         const fields = ['images', 'keyframes', 'sourceImagePath', 'lastImagePath', 'imagePath', 'imageUri', 'lastFramePath',
             'firstFramePath', 'firstFrameImagePath', 'lastFrameImagePath', 'lastFrameUri', 'referenceImagePaths', 'references'];
         if (fields.some(k => k in input))
             throw new Error('image_plan_mismatch: declare video images on their storyboard shots');
     }
-    const timedImages = caps.timedImages ? timedImageArgs(tool, pins) : undefined;
+    const timedImages = tool === 'veo_reference' ? {
+        args: { referenceImagePaths: refs.map(p => p.path) },
+        imageBindings: refs.map((p, i) => ({ ...verifyImageFile(p.path), ...p, id: p.reference?.id ?? 'subject-' + i,
+            parameter: 'referenceImagePaths[' + i + ']', use: 'video', purpose: p.cue ?? p.role, submitted: true })),
+    } : caps.timedImages ? timedImageArgs(tool, pins) : undefined;
     Object.assign(args, timedImages?.args);
     if ((tool.startsWith('astra_genai_desktop_') && !request.audio) || tool === 'astra_genai_text2video')
         args.duration = input.duration ?? request.frameCount / request.fps;

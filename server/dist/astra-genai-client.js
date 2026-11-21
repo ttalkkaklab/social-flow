@@ -4,8 +4,21 @@ import { Agent } from 'undici';
 import { z } from 'zod';
 import { imageMetadata } from './image-media.js';
 import { config } from './config.js';
-/** Model-bound images and speech may run on another gateway (e.g. a local Mac one); everything else uses ASTRA_GENAI_URL. */
+export function desktopGatewayKey() {
+    const url = process.env.ASTRA_GENAI_DESKTOP_URL?.replace(/\/+$/, '');
+    if (!url)
+        return config.astraGenaiApiKey;
+    if (process.env.ASTRA_GENAI_DESKTOP_API_KEY)
+        return process.env.ASTRA_GENAI_DESKTOP_API_KEY;
+    // Share the local image gateway credential only when both configured roots match exactly.
+    if (url === process.env.ASTRA_GENAI_IMAGE_URL?.replace(/\/+$/, ''))
+        return process.env.ASTRA_GENAI_IMAGE_API_KEY;
+    return undefined;
+}
+/** Model-bound images and speech may run on another gateway (e.g. a local Mac one); Desktop has its own optional gateway override. */
 function override(route) {
+    if (route.startsWith('/v1/ltx/desktop/'))
+        return { url: process.env.ASTRA_GENAI_DESKTOP_URL, key: desktopGatewayKey() };
     if (route.startsWith('/v1/images/'))
         return { url: process.env.ASTRA_GENAI_IMAGE_URL, key: process.env.ASTRA_GENAI_IMAGE_API_KEY };
     if (route.startsWith('/v1/audio/'))
@@ -18,8 +31,9 @@ export function astraGenaiBaseUrl(route = '') {
 export function requireAstraGenaiKey(route = '') {
     const { url, key } = override(route);
     if (url) {
+        const lane = route.startsWith('/v1/images/') ? 'IMAGE' : route.startsWith('/v1/audio/') ? 'SPEECH' : 'DESKTOP';
         if (!key)
-            throw new Error(`${route.startsWith('/v1/images/') ? 'ASTRA_GENAI_IMAGE_API_KEY' : 'ASTRA_GENAI_SPEECH_API_KEY'} is required with its gateway URL override.`);
+            throw new Error(`ASTRA_GENAI_${lane}_API_KEY is required with its gateway URL override.`);
         return key;
     }
     if (!config.astraGenaiApiKey)
@@ -133,12 +147,12 @@ export function genaiSourceUri(uri, file) {
     return `data:${meta.mimeType};base64,${bytes.toString('base64')}`;
 }
 /** Authenticated private gateway media; never attach this token to result/CDN URLs. */
-export async function requestGenaiMedia(route, body) {
+export async function requestGenaiMedia(route, body, credentialRoute = route) {
     if (!/^\/v1\/(audio\/speech|ltx\/desktop\/assets(?:\/[A-Za-z0-9_-]+\/bytes)?)$/.test(route))
         throw new Error('Unsupported private gateway media route');
-    const key = requireAstraGenaiKey(route);
+    const key = requireAstraGenaiKey(credentialRoute);
     const form = body instanceof FormData;
-    const response = await fetch(astraGenaiBaseUrl(route) + route, {
+    const response = await fetch(astraGenaiBaseUrl(credentialRoute) + route, {
         method: body === undefined ? 'GET' : 'POST', redirect: 'error', signal: AbortSignal.timeout(30 * 60_000), ...{ dispatcher: waitFor(30 * 60_000) },
         headers: { Authorization: `Bearer ${key}`, ...(body && !form ? { 'Content-Type': 'application/json' } : {}) },
         ...(body === undefined ? {} : { body: form ? body : JSON.stringify(body) }),

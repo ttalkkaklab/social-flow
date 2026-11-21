@@ -7,15 +7,23 @@ visual style and format. `request` and `updatedAt` record the last explicit chan
 
 The helper `skills/_shared/project-settings.js` and MCP `project_manage` share the
 same implementation. Every operation needs the explicit absolute workspace except
-`options`. `init`/`update` read JSON on stdin; paths with spaces are supported.
+`options`. `select`, `init` and `update` read JSON on stdin; paths with spaces are supported.
 
 ```bash
 node "$CLAUDE_PLUGIN_ROOT/skills/_shared/project-settings.js" options
 node "$CLAUDE_PLUGIN_ROOT/skills/_shared/project-settings.js" status "$WORKSPACE"
+node "$CLAUDE_PLUGIN_ROOT/skills/_shared/project-settings.js" select "$WORKSPACE" < directory-selection.json
 node "$CLAUDE_PLUGIN_ROOT/skills/_shared/project-settings.js" init "$WORKSPACE" < setup-input.json
 node "$CLAUDE_PLUGIN_ROOT/skills/_shared/project-settings.js" episode "$WORKSPACE" history-01
 node "$CLAUDE_PLUGIN_ROOT/skills/_shared/project-settings.js" update "$WORKSPACE" < change-input.json
 ```
+
+For a new or unbound directory use `project-settings.js select "$WORKSPACE"` with
+`{"request":"<the user's actual directory selection>"}` on stdin. The saved `workspace`
+is the canonical directory. After a copy or move, select its new path once. Status
+lists missing choices individually, including `models.music` and `models.speech`.
+Save explicit `engine:"none"` choices for unused music generation or separate TTS.
+Use `init` to fill missing choices and preserve existing models and episode snapshots.
 
 Example `setup-input.json` (illustrative choices, never automatic defaults):
 

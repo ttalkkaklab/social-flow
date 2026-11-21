@@ -3,7 +3,7 @@ name: generate-cut-videos
 description: >
   Generates one video per scene from its ordered shots, images and sound. Stops before assembly. Use when videos are requested or the episode order reaches them.
 argument-hint: "[episode-or-storyboard-path]"
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent", "AskUserQuestion", "mcp__social-flow__story_scene", "mcp__plugin_social-flow_social-flow__story_scene", "mcp__social-flow__shot_prompt", "mcp__plugin_social-flow_social-flow__shot_prompt", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__video_catalog", "mcp__plugin_social-flow_social-flow__video_catalog", "mcp__social-flow__video_plan", "mcp__plugin_social-flow_social-flow__video_plan", "mcp__social-flow__video_approve", "mcp__plugin_social-flow_social-flow__video_approve", "mcp__social-flow__video_execute", "mcp__plugin_social-flow_social-flow__video_execute", "mcp__social-flow__video_status", "mcp__plugin_social-flow_social-flow__video_status", "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow"]
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent", "AskUserQuestion", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__story_scene", "mcp__plugin_social-flow_social-flow__story_scene", "mcp__social-flow__shot_prompt", "mcp__plugin_social-flow_social-flow__shot_prompt", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__video_catalog", "mcp__plugin_social-flow_social-flow__video_catalog", "mcp__social-flow__video_plan", "mcp__plugin_social-flow_social-flow__video_plan", "mcp__social-flow__video_approve", "mcp__plugin_social-flow_social-flow__video_approve", "mcp__social-flow__video_execute", "mcp__plugin_social-flow_social-flow__video_execute", "mcp__social-flow__video_status", "mcp__plugin_social-flow_social-flow__video_status", "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow"]
 ---
 
 # Generate Cut Videos
@@ -11,6 +11,12 @@ allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent", "AskUserQuestion", "mc
 Steps 7–8 of [the production order](../_shared/production-workflow.md) (user directive
 2026-10-31). Read [video model selection](../produce/references/video-model-selection.md)
 and [duration planning](../produce/references/video-duration.md).
+
+Use the project directory the user named or already selected for this episode. When it is unclear, ask for it and wait. Run `project_manage status` there. Complete [project setup](../project-init/SKILL.md) for the missing fields before starting the scene.
+
+On a saved Google Cloud Veo selection, plan non-speaking scenes with the image route for a pinned opening and optional ending.
+Use its separate reference route for up to three pictures of one subject (Standard/Fast). Lite accepts a pinned opening and optional ending.
+A speaking character needs a voice-capable route such as LTX supplied audio or reference. Use the existing selection change workflow.
 
 ## Generate one scene
 

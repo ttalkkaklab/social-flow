@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { buildDesktopBody, DESKTOP_SCHEMAS, generateDesktopVideo, desktopVideoStatus } from '../dist/astra-genai-desktop.js';
+import { buildDesktopBody, desktopAudioWindow, DESKTOP_SCHEMAS, generateDesktopVideo, desktopVideoStatus } from '../dist/astra-genai-desktop.js';
 import { config } from '../dist/config.js';
 const base={model:'ltx-2.5-fast',prompt:'A ball',duration:2,resolution:'270p',reserveUsd:0};
 test('native feature bodies separate temporal references, audio opt-in, edit caps and keyframe indices',()=>{
@@ -14,6 +14,12 @@ test('native feature bodies separate temporal references, audio opt-in, edit cap
   const {duration,...audio}=base;
   assert.equal(buildDesktopBody('audio-to-video',{...audio,audioPath:'wav'},{wav:'asset-w'}).allowAudioTruncation,false);
   assert.equal(buildDesktopBody('audio-to-video',{...audio,audioPath:'wav',promptProvenance:'enhanced'},{wav:'asset-w'}).params.promptProvenance,'enhanced');
+  const {resolution: _size, ...defaultSize} = audio;
+  assert.equal(buildDesktopBody('audio-to-video',{...defaultSize,audioPath:'wav'},{wav:'w'}).params.resolution,'540p');
+  const controls={negativePrompt:'text',nagScale:8,nagAlpha:0.25,nagTau:2.5,passShape:'parts'};
+  const conditioned=buildDesktopBody('audio-to-video',{...audio,...controls,audioPath:'wav',imagePath:'start',prompt:''},{wav:'asset-w',start:'asset-i'});
+  for(const [key,value] of Object.entries(controls)) assert.equal(conditioned.params[key],value);
+  assert.equal(conditioned.inputs.startFrame.assetId,'asset-i');
   assert.equal(image.params.promptProvenance,undefined);
   assert.throws(()=>buildDesktopBody('image-to-video',{...base,imagePath:'a',promptProvenance:'skip'},{a:'asset-a'}));
   assert.throws(()=>buildDesktopBody('audio-to-video',{...base,audioPath:'wav'},{wav:'w'}));
@@ -24,6 +30,23 @@ test('native feature bodies separate temporal references, audio opt-in, edit cap
   const keyframes=buildDesktopBody('keyframes',pins,{a:'a',b:'b'});
   assert.equal(keyframes.params.model,'fast');assert.equal(keyframes.keyframes[0].strength,0);
   for(const frameIndex of [0,49])assert.equal(DESKTOP_SCHEMAS.keyframes.safeParse({...pins,keyframes:[pins.keyframes[0],{imagePath:'b',frameIndex}]}).success,false);
+});
+test('explicit source windows honor Desktop milliseconds, grid and remaining audio', () => {
+  const args = { ...base, audioPath: 'source.wav' };
+  delete args.duration;
+  const exact = desktopAudioWindow({ ...args, numFrames: 73, audioStartTime: 1 }, 4.1);
+  assert.equal(exact.frames, 73);
+  assert.equal(exact.start, 1);
+  assert.equal(exact.uploadSeconds, 3.042);
+  assert.equal(desktopAudioWindow({ audioMaxDuration: 3, allowAudioTruncation: true }, 8).frames, 65);
+  assert.throws(() => desktopAudioWindow({ audioMaxDuration: 3 }, 8), /alignment/);
+  assert.throws(() => desktopAudioWindow({ numFrames: 73, audioStartTime: 1 }, 4), /cover/);
+  assert.throws(() => desktopAudioWindow({ audioStartTime: 4 }, 3), /outside/);
+  assert.throws(() => desktopAudioWindow({ audioMaxDuration: 1.9 }, 8), /at least 2/);
+  for (const fields of [{ numFrames: 72 }, { numFrames: 73, audioMaxDuration: 4 }])
+    assert.equal(DESKTOP_SCHEMAS['audio-to-video'].safeParse({ ...args, ...fields }).success, false);
+  const { params } = buildDesktopBody('audio-to-video', { ...args, audioStartTime: 1, numFrames: 73 }, { 'source.wav': 'audio' });
+  assert.ok(!('audioStartTime' in params) && !('numFrames' in params));
 });
 test('upload, owned download and durable completed recovery use the gateway credential without resubmission',async t=>{
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),'desktop-client-')), original=globalThis.fetch,key=config.astraGenaiApiKey;

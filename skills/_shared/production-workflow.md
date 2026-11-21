@@ -1,8 +1,19 @@
 # Production order
 
-Run `project_manage status` first. Resolve missing settings through project-init before
-characters or text authoring, including text-only requests. Pending SNS connections do
-not block local work. Create/resume the episode with `project_manage episode`.
+Start every storyboard or video request in the project directory the user selected.
+Reuse an explicit path from the request or session, or the saved workspace of the
+requested episode. If the directory is unclear, ask “어느 폴더에 이 프로젝트를 저장할까요?”
+and wait. An arbitrary current directory, the plugin installation and another project's
+defaults do not answer that question. An unattended caller reports `project_setup_required`
+with `workspace` and stops when it cannot identify the selected directory.
+
+Run `project_manage status` on that absolute path. For a new directory, or when status
+lists `workspace`, record the user's selection with `project_manage select`. It creates
+the directory if needed. Follow [project-init](../project-init/SKILL.md) for the missing
+choices. Before drafting text, preparing the cast, generating media or assembling a video,
+require `status:ready` in that same directory. This also applies to resumed work.
+Reuse explicit choices and existing episode snapshots. Pending SNS connections can wait.
+Create or resume the episode with `project_manage episode`.
 
 ## The order (user directive, 2026-10-31)
 

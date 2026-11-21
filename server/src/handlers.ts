@@ -10,7 +10,7 @@ import { generateLyriaSong, generateElevenMusic } from './music-song-client.js';
 import { IMAGE_ADAPTERS, imageCatalog } from './image-registry.js';
 import { planImage, imagePlanSummary, executeImage, routeLegacyImage, imageStatus } from './image-routing.js';
 import { videoStatus } from './video-routing.js';
-import { planManagedVideo, executeVideo, routeLegacyVideo, approveVideo } from './video-routing.js';
+import { planManagedVideo, executeVideo, routeLegacyVideo, approveVideo, videoPlanSchema } from './video-routing.js';
 import { VIDEO_ADAPTERS, videoCatalog } from './video-registry.js';
 import { routeSpeech, speechRouteSchema } from './tts-routing.js';
 import { hostReview } from './host-review.js';
@@ -20,7 +20,7 @@ import { reviewActing as reviewTtsActing, actingReviewSchema as ttsActingReviewS
 import { manageVoiceAudition, voiceAuditionSchema } from './voice-audition.js';
 import { manageLocation } from './location.js';
 import { episodeCoverSchema, setCover, renderCover, readCover } from './cover.js';
-import { manageProject } from './project.js';
+import { manageProject, requireReadyProject } from './project.js';
 import { planStoryCatharsis, planStoryIntensity, storyCatharsisSchema, storyIntensitySchema } from './story-devices.js';
 import { manageSpeech, speechManageSchema } from './speech.js';
 import { reviewActing, actingReviewSchema } from './acting-review.js';
@@ -35,7 +35,7 @@ import * as suno from './suno-client.js';
 import * as naver from './naver-client.js';
 import * as seedance from './seedance-client.js';
 import type { VendorResult } from './vendor-video.js';
-import { generateLtxApiVideo, ltxApiImg2VideoSchema, ltxApiAudio2VideoSchema } from './ltx-api-video.js';
+import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
 import { generateMinimaxVideo, minimaxImg2VideoSchema, minimaxReferenceSchema } from './minimax-video.js';
 import { generateHeygenVideo, heygenImg2VideoSchema, heygenReferenceSchema } from './heygen-video.js';
 import * as serp from './serp-client.js';
@@ -1064,8 +1064,6 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   // billing basis, not a rate-sheet estimate, so per-episode cost tallies should
   // record this number.
   // Hosted vendors through the common layer (vendor-video.ts).
-  ltx_api_img2video: async (args) => vendorReport(await generateLtxApiVideo(parseArgs(ltxApiImg2VideoSchema, args))),
-  ltx_api_audio2video: async (args) => vendorReport(await generateLtxApiVideo(parseArgs(ltxApiAudio2VideoSchema, args))),
   minimax_img2video: async (args) => vendorReport(await generateMinimaxVideo(parseArgs(minimaxImg2VideoSchema, args))),
   minimax_reference: async (args) => vendorReport(await generateMinimaxVideo(parseArgs(minimaxReferenceSchema, args))),
   heygen_img2video: async (args) => vendorReport(await generateHeygenVideo(parseArgs(heygenImg2VideoSchema, args))),
@@ -1624,7 +1622,11 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   },
   character_voice_audition: async (args) => text(JSON.stringify(await manageVoiceAudition(voiceAuditionSchema.parse(args)), null, 2)),
   tts_review_acting: async (args) => text(JSON.stringify(await reviewTtsActing(ttsActingReviewSchema.parse(args)), null, 2)),
-  speech_manage: async (args) => text(JSON.stringify(manageSpeech(parseArgs(speechManageSchema, args)), null, 2)),
+  speech_manage: async (args) => {
+    const input = parseArgs(speechManageSchema, args);
+    if (input.action !== 'list') requireReadyProject(input.path);
+    return text(JSON.stringify(manageSpeech(input), null, 2));
+  },
   host_review: async (args) => text(JSON.stringify(await hostReview(args), null, 2)),
   acting_review: async (args) => text(JSON.stringify(await reviewActing(parseArgs(actingReviewSchema, args)), null, 2)),
   storyboard_read: async (args) => {
@@ -1699,6 +1701,10 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   },
 };
 
+for (const [name, route] of Object.entries(HOSTED_VIDEO_ROUTES)) {
+  ROUTES[name] = async args => vendorReport(await route.generate(args));
+}
+
 // Normalize before schema validation and before any file upload or paid API call.
 // Keep exact legacy requests intact; new shot calls state their required coverage.
 for (const name of DURATION_TOOLS) {
@@ -1715,17 +1721,18 @@ for (const name of DURATION_TOOLS) {
 // All legacy video entrypoints share the routing service. Capture the raw adapters once;
 // video_execute must not recurse through the public wrapper.
 const videoDispatch = Object.fromEntries(Object.keys(VIDEO_ADAPTERS).map(name => [name, ROUTES[name]]));
-const dispatchVideo = (name: string, args: Record<string, unknown>) => videoDispatch[name](args);
+export const dispatchVideo = (name: string, args: Record<string, unknown>) => videoDispatch[name](args);
 for (const name of Object.keys(VIDEO_ADAPTERS)) {
   ROUTES[name] = args => routeLegacyVideo(name, args, dispatchVideo);
 }
 ROUTES.video_catalog = async () => text(JSON.stringify(videoCatalog(), null, 2));
 ROUTES.video_plan = async args => {
   // MSR voice samples depend on the gateway backend; ask before the synchronous plan.
-  const raw = (args ?? {}) as Record<string, unknown>;
-  if (raw.tool === 'astra_genai_msr' || raw.tool === 'astra_genai_img2video' ||
-      (!raw.tool && (!raw.operation || raw.operation === 'reference' || raw.operation === 'image'))) await refreshGenaiMsrVoice();
-  try { return text(JSON.stringify(await planManagedVideo(args), null, 2)); }
+  const input = videoPlanSchema.parse(args);
+  requireReadyProject(input.episode);
+  if (input.tool === 'astra_genai_msr' || input.tool === 'astra_genai_img2video' ||
+      (!input.tool && (!input.operation || input.operation === 'reference' || input.operation === 'image'))) await refreshGenaiMsrVoice();
+  try { return text(JSON.stringify(await planManagedVideo(input), null, 2)); }
   catch (error) {
     if (!(error instanceof SceneInputError)) throw error;
     return { ...text(JSON.stringify({ code:'scene_inputs_unsupported', executable:false, tool:error.tool,
@@ -1748,6 +1755,7 @@ ROUTES.image_status = async args => text(JSON.stringify(await imageStatus(args),
 // character_panel plans and runs one sheet panel from the identity, then records it in panels.json.
 ROUTES.character_panel = async args => {
   const input = parseArgs(characterPanelSchema, args);
+  requireReadyProject(input.identityPath);
   const request = characterPanelRequest(input);
   const plan = planImage({ directory: request.workspace, assetId: `${request.id}-${request.view}`, requestId: request.requestId, operation: request.operation,
     ...(request.tool ? { tool: request.tool } : {}), ...(input.reserveUsd !== undefined ? { reserveUsd: input.reserveUsd } : {}), args: request.args });

@@ -319,7 +319,7 @@ For the selected provider/model, resolve and record capabilities with evidence:
 |---|---|---|
 | one physical speaker + nativeSpeech (MSR) | native | Regenerate the clip from the edited prompt; no line audio exists |
 | voiceover/off_screen | voiceover | Replace audio, retime subtitles/edit; keep suitable action footage |
-| on_screen + audioConditioning and lipSync | audio_conditioned | Regenerate affected animation from the final voice WAV |
+| on_screen + audioConditioning | audio_conditioned | Regenerate from the final voice WAV and review the visible mouth timing |
 | on_screen + separate postLipSync | post_lipsync | Rerun the selected lip-sync adapter on affected footage |
 | on_screen + neither capability | unsupported | Select a suitable adapter; do not mute the character |
 

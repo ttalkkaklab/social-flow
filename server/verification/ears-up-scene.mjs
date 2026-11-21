@@ -8,6 +8,7 @@ import { planVideo } from '../dist/video-routing.js';
 import { SceneInputError } from '../dist/scene-video.js';
 import { captureScene, readCapture } from '../test/fixtures/scene-capture.mjs';
 import assert from 'node:assert/strict';
+import { setupProject } from '../test/workflow-fixture.mjs';
 
 const [, ,sourceArg,destinationArg] = process.argv;
 if (!sourceArg || !destinationArg) throw new Error('Pass the source EP01 directory and a new destination channel directory');
@@ -24,7 +25,9 @@ const digest = file => createHash('sha256').update(fs.readFileSync(file)).digest
 const digests = () => files.map(f => digest(path.join(source,'storyboard',f)));
 const original = digests();
 fs.mkdirSync(destination);
-const episode = path.join(destination,'episodes',path.basename(source));
+const {engine,model,resolution} = {...board.PRODUCTION.videoModel,...sourceShot.visual.video};
+const project = setupProject(destination,{video:{engine,model,resolution}});
+const episode = path.join(project.paths.episodes,path.basename(source));
 const dir = path.join(episode,'storyboard');
 fs.mkdirSync(dir,{recursive:true});
 for (const file of files.filter(f => f !== preview)) {
@@ -35,7 +38,7 @@ for (const file of files.filter(f => f !== preview)) {
 const framing = {source:preview, frame:42, crop:{x:482,y:768,width:216,height:384}, output:contact};
 execFileSync('ffmpeg',['-nostdin','-v','error','-i',path.join(source,'storyboard',preview),
   '-vf',"select=eq(n\\,42),crop=216:384:482:768",'-frames:v','1',path.join(dir,contact)]);
-fs.cpSync(path.resolve(source,'../../assets/characters'), path.join(destination,'assets/characters'),{recursive:true});
+fs.cpSync(path.resolve(source,'../../assets/characters'), path.resolve(episode,'../../assets/characters'),{recursive:true});
 board.SCENES = [];
 board.STRUCTURE.nextShotId = 1;
 // Preserve episode model selection from the original shot as each new card is authored.

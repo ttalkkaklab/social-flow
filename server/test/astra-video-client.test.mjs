@@ -15,7 +15,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { config } from '../dist/config.js';
-import { ROUTES } from '../dist/handlers.js';
+import { dispatchVideo, ROUTES } from '../dist/handlers.js';
 import { TOOLS } from '../dist/tools.js';
 
 // The client really sleeps 5 s between polls and up to a minute for its rate limits.
@@ -450,7 +450,7 @@ describe('mocked tool calls', () => {
 
   it('uploads audio and portrait, pins frame zero and reports reusable metadata', async () => {
     await withServer(async ({ dir, uploads, jobs }) => {
-      const result = await ROUTES.astra_audio2video({ prompt: 'x', audioPath: path.join(dir, 'a.wav'), imagePath: path.join(dir, 'face.png'), outputPath: dir });
+      const result = await dispatchVideo('astra_audio2video', { prompt: 'x', audioPath: path.join(dir, 'a.wav'), imagePath: path.join(dir, 'face.png'), outputPath: dir });
       assert.deepEqual(uploads, ['audio', 'image']);
       assert.equal(jobs[0].audio_upload_id, 'audio-id');
       assert.deepEqual(jobs[0].images, [{ upload_id: 'image-id', frame_idx: 0, strength: 0.9 }]);
@@ -473,7 +473,7 @@ describe('mocked tool calls', () => {
         assert.equal(saved.submittedRequest.prompt, 'receipt test');
         observedPending = true;
       });
-      await ROUTES.astra_text2video({ prompt: 'receipt test', outputPath: dir, filename: 'recover.mp4' });
+      await dispatchVideo('astra_text2video', { prompt: 'receipt test', outputPath: dir, filename: 'recover.mp4' });
       assert.equal(observedPending, true);
       const saved = JSON.parse(fs.readFileSync(receipt, 'utf8'));
       assert.equal(saved.status, 'completed');
@@ -487,7 +487,7 @@ describe('mocked tool calls', () => {
   it('retains the accepted job identity when status retrieval fails', async () => {
     await withServer(async ({ dir, onStatus }) => {
       onStatus(() => new Response('access denied', { status: 401 }));
-      await assert.rejects(ROUTES.astra_text2video({ prompt: 'pending test', outputPath: dir, filename: 'pending.mp4' }), /401/);
+      await assert.rejects(dispatchVideo('astra_text2video', { prompt: 'pending test', outputPath: dir, filename: 'pending.mp4' }), /401/);
       const saved = JSON.parse(fs.readFileSync(path.join(dir, 'pending.mp4.astra-job.json'), 'utf8'));
       assert.equal(saved.status, 'submitted');
       assert.equal(saved.jobId, 'test-job');
@@ -498,12 +498,12 @@ describe('mocked tool calls', () => {
   it('forwards explicit portrait strength including zero instead of the default', async () => {
     await withServer(async ({ dir, jobs }) => {
       for (const strength of [0, 0.7, 1]) {
-        await ROUTES.astra_audio2video({ prompt: 'x', audioUploadId: 'reuse', imagePath: path.join(dir, 'face.png'), strength, outputPath: dir });
+        await dispatchVideo('astra_audio2video', { prompt: 'x', audioUploadId: 'reuse', imagePath: path.join(dir, 'face.png'), strength, outputPath: dir });
         assert.deepEqual(jobs.at(-1).images, [{ upload_id: 'image-id', frame_idx: 0, strength }]);
         assert.equal(jobs.at(-1).strength, undefined);
       }
       for (const strength of [-0.1, 1.1]) {
-        await assert.rejects(ROUTES.astra_audio2video({ prompt: 'x', audioUploadId: 'reuse', strength, outputPath: dir }));
+        await assert.rejects(dispatchVideo('astra_audio2video', { prompt: 'x', audioUploadId: 'reuse', strength, outputPath: dir }));
       }
       assert.equal(jobs.length, 3);
     });
@@ -511,7 +511,7 @@ describe('mocked tool calls', () => {
 
   it('reuses an id without uploading or source-duration validation', async () => {
     await withServer(async ({ dir, uploads, jobs }) => {
-      const result = await ROUTES.astra_audio2video({ prompt: 'x', audioUploadId: 'reuse', audioStartTime: 999, audioMaxDuration: 99, outputPath: dir });
+      const result = await dispatchVideo('astra_audio2video', { prompt: 'x', audioUploadId: 'reuse', audioStartTime: 999, audioMaxDuration: 99, outputPath: dir });
       assert.deepEqual(uploads, []);
       assert.equal(jobs[0].audio_upload_id, 'reuse');
       assert.equal(jobs[0].audio_start_time, 999);
@@ -524,19 +524,19 @@ describe('mocked tool calls', () => {
 
   it('rejects invalid input and fresh audio duration before job submission', async () => {
     await withServer(async ({ dir, uploads, jobs, setDuration }) => {
-      await assert.rejects(ROUTES.astra_audio2video({ prompt: 'x', audioPath: 'a.wav', audioUploadId: 'reuse' }), /exactly one/);
-      await assert.rejects(ROUTES.astra_audio2video({ prompt: 'x', audioUploadId: 'reuse', imagePath: 'not-image.wav' }), /must be an image/);
-      await assert.rejects(ROUTES.astra_img2video({ prompt: 'x', firstFramePath: 'face.png', tier: 'guided', width: 1080, height: 1920 }), /multiple of 64/);
+      await assert.rejects(dispatchVideo('astra_audio2video', { prompt: 'x', audioPath: 'a.wav', audioUploadId: 'reuse' }), /exactly one/);
+      await assert.rejects(dispatchVideo('astra_audio2video', { prompt: 'x', audioUploadId: 'reuse', imagePath: 'not-image.wav' }), /must be an image/);
+      await assert.rejects(dispatchVideo('astra_img2video', { prompt: 'x', firstFramePath: 'face.png', tier: 'guided', width: 1080, height: 1920 }), /multiple of 64/);
       assert.deepEqual(uploads, []);
       setDuration(1);
-      await assert.rejects(ROUTES.astra_audio2video({ prompt: 'x', audioPath: path.join(dir, 'a.wav'), audioStartTime: 1 }), /source duration/);
+      await assert.rejects(dispatchVideo('astra_audio2video', { prompt: 'x', audioPath: path.join(dir, 'a.wav'), audioStartTime: 1 }), /source duration/);
       assert.deepEqual(jobs, []);
     });
   });
 
   it('guided image calls send the tier and explicit measured default dimensions', async () => {
     await withServer(async ({ dir, jobs }) => {
-      await ROUTES.astra_img2video({ prompt: 'x', tier: 'guided', firstFramePath: path.join(dir, 'face.png'), lastFramePath: path.join(dir, 'face.png'), numFrames: 121, outputPath: dir });
+      await dispatchVideo('astra_img2video', { prompt: 'x', tier: 'guided', firstFramePath: path.join(dir, 'face.png'), lastFramePath: path.join(dir, 'face.png'), numFrames: 121, outputPath: dir });
       assert.equal(jobs[0].mode, 'guided');
       assert.equal(jobs[0].width, 1536);
       assert.equal(jobs[0].height, 1024);
@@ -546,7 +546,7 @@ describe('mocked tool calls', () => {
 
   it('HQ image requests preserve authored portrait dimensions and controls on the wire', async () => {
     await withServer(async ({ dir, jobs }) => {
-      await ROUTES.astra_img2video({ prompt: 'x', tier: 'hq', width: 1024, height: 1920,
+      await dispatchVideo('astra_img2video', { prompt: 'x', tier: 'hq', width: 1024, height: 1920,
         firstFramePath: path.join(dir, 'face.png'), guidance: { videoCfgGuidanceScale: 4 },
         generateAudio: false, duration: 2, outputPath: dir });
       assert.equal(jobs[0].mode, 'guided_hq');
@@ -567,9 +567,9 @@ describe('mocked tool calls', () => {
 
   it('image calls send auto_duration from a first still, and refuse the wrong tier before any upload', async () => {
     await withServer(async ({ dir, uploads, jobs }) => {
-      await assert.rejects(ROUTES.astra_img2video({ prompt: 'x', firstFramePath: path.join(dir, 'face.png'), negativePrompt: 'subtitles' }), /only on tier "guided"/);
+      await assert.rejects(dispatchVideo('astra_img2video', { prompt: 'x', firstFramePath: path.join(dir, 'face.png'), negativePrompt: 'subtitles' }), /only on tier "guided"/);
       assert.deepEqual(uploads, []);
-      await ROUTES.astra_img2video({ prompt: 'x', firstFramePath: path.join(dir, 'face.png'), autoDuration: { minSeconds: 2, maxSeconds: 5 }, outputPath: dir });
+      await dispatchVideo('astra_img2video', { prompt: 'x', firstFramePath: path.join(dir, 'face.png'), autoDuration: { minSeconds: 2, maxSeconds: 5 }, outputPath: dir });
       assert.deepEqual(jobs[0].auto_duration, { min_seconds: 2, max_seconds: 5 });
       assert.equal(jobs[0].num_frames, undefined);
       assert.deepEqual(jobs[0].images.map(i => i.frame_idx), [0]);
@@ -823,9 +823,9 @@ describe('stage 2 — ic_lora, guided_hq, guidance, lora strength', () => {
     };
     for (const f of ['r.png', 'r.mp4', 'm.mp4']) fs.writeFileSync(path.join(dir, f), 'x');
     try {
-      await ROUTES.astra_ic_lora({ prompt: 'x', adapter: 'ingredients', referencePath: path.join(dir, 'r.png'), outputPath: dir, filename: 'a.mp4' });
+      await dispatchVideo('astra_ic_lora', { prompt: 'x', adapter: 'ingredients', referencePath: path.join(dir, 'r.png'), outputPath: dir, filename: 'a.mp4' });
       assert.deepEqual(jobs[0], { mode: 'ingredients', prompt: 'x', references: [{ upload_id: 'image-0' }] });
-      const result = await ROUTES.astra_ic_lora({
+      const result = await dispatchVideo('astra_ic_lora', {
         prompt: 'x', adapter: 'deblur', referencePath: path.join(dir, 'r.mp4'), referenceStrength: 0.8,
         conditioningMaskPath: path.join(dir, 'm.mp4'), conditioningMaskStrength: 0.5, skipStage2: true, outputPath: dir, filename: 'b.mp4',
       });
@@ -837,10 +837,10 @@ describe('stage 2 — ic_lora, guided_hq, guidance, lora strength', () => {
       });
       assert.match(result.content[0].text, /Adapter: deblur/);
       // A moving reference at an output over the ceiling never reaches /v1/jobs.
-      await assert.rejects(ROUTES.astra_ic_lora({ prompt: 'x', adapter: 'deblur', referencePath: path.join(dir, 'r.mp4'), width: 1536, height: 1344, outputPath: dir, filename: 'c.mp4' }), /reference refused/);
+      await assert.rejects(dispatchVideo('astra_ic_lora', { prompt: 'x', adapter: 'deblur', referencePath: path.join(dir, 'r.mp4'), width: 1536, height: 1344, outputPath: dir, filename: 'c.mp4' }), /reference refused/);
       assert.equal(jobs.length, 2);
       // A mask that would trip the engine assert never reaches /v1/jobs either (still reference, clip mask).
-      await assert.rejects(ROUTES.astra_ic_lora({ prompt: 'x', adapter: 'deblur', referencePath: path.join(dir, 'r.png'), conditioningMaskPath: path.join(dir, 'm.mp4'), outputPath: dir, filename: 'd.mp4' }), /conditioning mask refused/);
+      await assert.rejects(dispatchVideo('astra_ic_lora', { prompt: 'x', adapter: 'deblur', referencePath: path.join(dir, 'r.png'), conditioningMaskPath: path.join(dir, 'm.mp4'), outputPath: dir, filename: 'd.mp4' }), /conditioning mask refused/);
       assert.equal(jobs.length, 2);
     } finally { globalThis.fetch = oldFetch; config.astraVideoApiKey = oldKey; fs.rmSync(dir, { recursive: true, force: true }); }
   });
@@ -902,7 +902,7 @@ describe('stage 3 — duration, generateAudio, capabilities', () => {
   });
 
   it('retake takes no duration: the route refuses it as an unknown argument before any upload', async () => {
-    await assert.rejects(ROUTES.astra_video_retake({ prompt: 'x', sourceVideoPath: 's.mp4', startTime: 0, endTime: 1, duration: 2 }), /unknown argument\(s\): duration/);
+    await assert.rejects(dispatchVideo('astra_video_retake', { prompt: 'x', sourceVideoPath: 's.mp4', startTime: 0, endTime: 1, duration: 2 }), /unknown argument\(s\): duration/);
   });
 
   it('generateAudio false is the only value that reaches the wire, on every mode', () => {
@@ -975,13 +975,13 @@ describe('audio2video — audio must cover the video (D6)', () => {
     fs.writeFileSync(path.join(dir, 'a.wav'), 'wave');
     fs.writeFileSync(path.join(dir, 'a.mp3'), 'mp3');
     try {
-      await assert.rejects(ROUTES.astra_audio2video({ prompt: 'x', audioPath: path.join(dir, 'a.wav'), numFrames: 145, outputPath: dir }), /audio is shorter than the video/);
-      await assert.rejects(ROUTES.astra_audio2video({ prompt: 'x', audioPath: path.join(dir, 'a.wav'), duration: 6, outputPath: dir }), /audio is shorter than the video/);
+      await assert.rejects(dispatchVideo('astra_audio2video', { prompt: 'x', audioPath: path.join(dir, 'a.wav'), numFrames: 145, outputPath: dir }), /audio is shorter than the video/);
+      await assert.rejects(dispatchVideo('astra_audio2video', { prompt: 'x', audioPath: path.join(dir, 'a.wav'), duration: 6, outputPath: dir }), /audio is shorter than the video/);
       // expectLipSync takes the retry branch; the D6 check must still run before any job.
-      await assert.rejects(ROUTES.astra_audio2video({ prompt: 'x', audioPath: path.join(dir, 'a.wav'), numFrames: 145, expectLipSync: true, outputPath: dir }), /audio is shorter than the video/);
+      await assert.rejects(dispatchVideo('astra_audio2video', { prompt: 'x', audioPath: path.join(dir, 'a.wav'), numFrames: 145, expectLipSync: true, outputPath: dir }), /audio is shorter than the video/);
       assert.equal(jobs.length, 0);
       // The same short length as mp3 is not judged (its length may be an estimate): it reaches /v1/jobs.
-      await ROUTES.astra_audio2video({ prompt: 'x', audioPath: path.join(dir, 'a.mp3'), numFrames: 145, outputPath: dir, filename: 'mp3.mp4' });
+      await dispatchVideo('astra_audio2video', { prompt: 'x', audioPath: path.join(dir, 'a.mp3'), numFrames: 145, outputPath: dir, filename: 'mp3.mp4' });
       assert.equal(jobs.length, 1);
       assert.equal(jobs[0].num_frames, 145);
     } finally { globalThis.fetch = oldFetch; config.astraVideoApiKey = oldKey; fs.rmSync(dir, { recursive: true, force: true }); }

@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { atomicJson, canonicalPath } from './routing-files.js';
+import { requireReadyProject } from './project.js';
 
 /**
  * A progress record, not a gate (user directive 2026-10-31): stages complete in any order and no
@@ -41,8 +42,16 @@ function read(episode: string): State {
   const raw = JSON.parse(fs.readFileSync(stateFile(episode), 'utf8'));
   return stateSchema.parse({ ...raw, version: 2, completed: raw.completed ?? [] });
 }
+function progress(episode: string, state: State) {
+  const done = new Set(state.completed.map(record => record.stage));
+  return { ...state, next: state.active?.stage ?? STAGES.find(name => !done.has(name)) ?? 'done', episode };
+}
 export function manageWorkflow(raw: unknown) {
-  const input = workflowSchema.parse(raw), episode = fs.realpathSync(input.episode);
+  const input = workflowSchema.parse(raw);
+  if (input.action !== 'status') requireReadyProject(input.episode);
+  const episode = fs.realpathSync(input.episode);
+  if (input.action === 'status') return progress(episode, read(episode));
+  if (!input.stage) throw new Error('workflow_stage_required');
   const folder = path.join(episode, '.work');
   fs.mkdirSync(folder, { recursive: true });
   const lock = path.join(folder, 'production-workflow.lock');
@@ -50,8 +59,7 @@ export function manageWorkflow(raw: unknown) {
   try { fd = fs.openSync(lock, 'wx'); } catch { throw new Error('workflow_busy: retry after the current transition'); }
   try {
     const state = read(episode);
-    if (input.action !== 'status' && !input.stage) throw new Error('workflow_stage_required');
-    const stage = input.stage!;
+    const stage = input.stage;
     if (input.action === 'begin') {
       state.active = { stage, entries: (input.entries ?? []).map(entry => ({ ...entry,
         text: canonicalPath(path.resolve(episode, entry.text)), ...(entry.image ? { image: canonicalPath(path.resolve(episode, entry.image)) } : {}),
@@ -72,9 +80,8 @@ export function manageWorkflow(raw: unknown) {
       state.completed = state.completed.filter(record => record.stage !== stage);
       if (state.active?.stage === stage) delete state.active;
     }
-    if (input.action !== 'status') atomicJson(stateFile(episode), state);
-    const done = new Set(state.completed.map(record => record.stage));
-    return { ...state, next: state.active?.stage ?? STAGES.find(name => !done.has(name)) ?? 'done', episode };
+    atomicJson(stateFile(episode), state);
+    return progress(episode, state);
   } finally { fs.closeSync(fd); fs.unlinkSync(lock); }
 }
 /**

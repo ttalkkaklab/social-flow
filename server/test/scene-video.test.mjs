@@ -10,12 +10,14 @@ import { planManagedVideo, planVideo } from '../dist/video-routing.js';
 import { config } from '../dist/config.js';
 import { ROUTES } from '../dist/handlers.js';
 import { buildGenaiAudioBody } from '../dist/astra-genai-video.js';
+import { buildVeoBody } from '../dist/veo-video.js';
 import { buildDesktopBody } from '../dist/astra-genai-desktop.js';
-import { png } from './workflow-fixture.mjs';
+import { png, setupProject } from './workflow-fixture.mjs';
 
 function busking(t) {
  const episode = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'ears-up-')));
  t.after(()=>fs.rmSync(episode,{recursive:true,force:true}));
+ setupProject(episode);
  const dir = path.join(episode,'storyboard');
  const {scene,shots} = JSON.parse(fs.readFileSync(new URL('./fixtures/ears-up-ep01.json',import.meta.url)));
  fs.mkdirSync(path.join(dir,'images'),{recursive:true});
@@ -119,7 +121,8 @@ test('Desktop keyframes receive each asset index only on an active compatible de
      generation_combinations:{'720p':{fps_to_durations:{24:[4]},aspect_ratios:['16:9']}},
    }]:[]});
  };
- const input={...f.input,operation:'keyframe'};
+ const input=f.input;
+ assert.throws(()=>planVideo({...input,args:{...input.args,duration:8}}),/scene_video_timing/);
  await assert.rejects(planManagedVideo(input),e=>e.missing[0].input==='deployment');
  assert.ok(!fs.existsSync(path.join(f.episode,'.work/video-routing/plans')));
  enabled=true;
@@ -152,4 +155,32 @@ test('a distilled I2V subject panel belongs to an off-screen dancer, separately 
  assert.deepEqual(plan.args.references.map(p=>path.basename(p.imagePath)),['duo.png']);
  assert.equal(plan.imageBindings.find(i=>i.id==='start').path,path.join(f.dir,'images/opening.png'));
  assert.match(plan.args.prompt,/mai-an \(Image 1\): Off screen/);
+});
+
+test('Veo reference-only scenes send owned face and outfit assets without a timed first frame', t => {
+  const f = busking(t), shot = f.members[0];
+  delete f.scene.audio;
+  f.members.splice(1);
+  shot.duration = 8;
+  shot.timeline.endFrame = 192;
+  shot.timeline.images = ['face','outfit'].map((role,i) => ({
+    role, character:'mai-an', frame:0, path:'images/' + ['solo.png','duo.png'][i],
+  }));
+  shot.timeline.action = 'Mai An enters from the left after the spectators turn.';
+  f.scene.openingPositions[1].images = [1,2];
+  shot.visual.video = {engine:'veo',model:'veo-3.1-fast-generate-001',resolution:'720p',operation:'reference'};
+  f.save();
+  const plan = planVideo({...f.input,args:{}});
+  const body = buildVeoBody(plan.args);
+  assert.equal(body.instances[0].referenceImages.length,2);
+  assert.ok(body.instances[0].referenceImages.every(p => p.image.bytesBase64Encoded));
+  assert.deepEqual(plan.imageBindings.map(b => [b.shotId,b.frame,b.role,b.character]),[
+    ['s0001',0,'face','mai-an'],['s0001',0,'outfit','mai-an'],
+  ]);
+  assert.match(plan.args.prompt,/mai-an \(Image 1, Image 2\): Off screen/);
+  shot.timeline.images = [];
+  shot.visual.video.operation='text';
+  f.scene.openingPositions[1].images=[];
+  f.save();
+  assert.throws(()=>planVideo({...f.input,args:{durationSeconds:4}}),/scene_video_timing/);
 });

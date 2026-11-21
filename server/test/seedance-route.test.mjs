@@ -174,3 +174,16 @@ test('a previz cut rides the reference route as Video 1 and bills input + output
   assert.throws(() => scenePlan({ type: 'quote', duration: 6, visual: { bg: 'images/scene-4.png', clip: { ...base, prompt: 'x',
     previz: { ...previz, seconds: 6 } } } }), /motion-background/);
 });
+
+test('the episode cost comparison prices hosted LTX and Veo from the saved selection and shot overrides', () => {
+  const { quote } = require('../../skills/autoproduce/references/production-cost.js');
+  const veo = { engine: 'veo', model: 'veo-3.1-fast-generate-001', resolution: '720p', operation: 'image' };
+  const ltx = { engine: 'ltx-api', model: 'ltx-2-5-pro', resolution: '1920x1080', operation: 'image' };
+  const win = { PRODUCTION: { mode: 'full_video', modelSettings: { models: { video: veo },
+    overrides: [{ scope: 'shot', shotId: 'b', request: 'Use LTX for this cut', video: ltx }] } },
+    SCENES: ['a', 'b'].map(id => ({ id, type: 'points', duration: 5, visual: { video: { prompt: 'A boat drifts. Audio: silent.' } } })) };
+  const { rows } = quote(win).options.full_video;
+  assert.deepEqual(rows.map(r => [r.key, r.seconds]), [['veo.vertex.fast.720p.silent', 6], ['ltx-api.ltx-2-5-pro.1080p', 6]]);
+  for (const row of rows) assert.equal(priceOf(row.generation.tool, row.generation).key, row.key);
+  assert.equal(quote(win).options.video_50.rows[0].key, rows[0].key);
+});

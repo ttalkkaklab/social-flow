@@ -52,6 +52,10 @@ function readVideoContext(episode, shotId, sceneNo) {
     const pinned = !scene.videoDirection.audio && selection.engine === 'astra-genai' && selection.model === 'ltx-2.5-22b-distilled' &&
       ['reference','image',undefined].includes(selection.operation);
     if (scene.videoDirection.audio && !selection.operation && selection.engine !== 'host') selection = { ...selection, operation: 'audio' };
+    else if (!selection.operation && ['astra','astra-genai-desktop'].includes(selection.engine) && members.length === 1 &&
+        (first.timeline?.images?.some(p => p.role === 'keyframe' || p.role === 'end' && p.frame !== first.timeline.endFrame - 1) ||
+        first.visual?.frames?.keyframes?.length || first.visual?.frames?.storyboardKeyframes?.length > 2))
+      selection = {...selection,operation:'keyframe'};
     else if (pinned) selection = { ...selection, operation: 'image' };
     else if (!selection.operation && selection.engine !== 'host') {
       selection = { ...selection, operation: visual.frames?.mode === 'reference' ? 'reference' : 'image' };
@@ -85,7 +89,7 @@ function readVideoContext(episode, shotId, sceneNo) {
         references.push({id:'scene-opening-background',path:frames.start,role:'background',use:'video',purpose:'Opening setting and landmark positions.'});
       }
     }
-    if (frames.mode === 'reference' && !['astra-genai', 'minimax', 'heygen'].includes(selection.engine) &&
+    if (frames.mode === 'reference' && !['astra-genai', 'minimax', 'heygen', 'veo'].includes(selection.engine) &&
         !references.some(ref => ref.path === frames.start && ['video', 'both'].includes(ref.use))) {
       references.push({id:'scene-opening-frame',path:frames.start,role:'background',use:'video',purpose:'Opening composition and character positions.'});
     }
@@ -107,6 +111,11 @@ function readVideoContext(episode, shotId, sceneNo) {
   if (speechOnly && !scene?.videoDirection?.audio &&
       !spoken.some(line => line.delivery === 'on_screen' || line.delivery === 'off_screen'))
     selection = { ...selection, operation: 'image' };
+  if (selection.engine === 'veo' && !selection.operation) {
+    const mode = shot.visual?.frames?.mode;
+    const operation = mode === 'reference' ? 'reference' : shot.visual?.frames?.start || shot.visual?.bg ? 'image' : 'text';
+    selection = { ...selection, operation };
+  }
   return { episode: root, shotId, selection, source, snapshotRevision: snapshot?.revision || null,
     ...(scene ? {sceneNo, timed, shotIds: members.map(s => s.id), sceneDirection: scene.videoDirection, sceneMembers: members} : {}),
     revision: hash({ ...(scene ? {sceneNo, direction: scene.videoDirection, members} : {}), selection, source, snapshotRevision: snapshot?.revision, overrides, imagePlan: { frames: shot.visual?.frames, references: shot.visual?.references, bg: shot.visual?.bg }, shotPrompt: shot.visual?.video?.prompt, shotLines: videoLines(shot), authorization: production.videoAuthorization,
