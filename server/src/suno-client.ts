@@ -24,8 +24,13 @@ export const SUNO_MODELS = ['V4', 'V4_5', 'V4_5PLUS', 'V4_5ALL', 'V5', 'V5_5', .
 export type SunoModel = (typeof SUNO_MODELS)[number];
 export const DEFAULT_SUNO_MODEL: SunoModel = 'V6';
 
-/** Sounds tasks accept V5 only (vendor constraint). */
-export const SUNO_SOUND_MODEL = 'V5' as const;
+/**
+ * Sounds tasks take the V6 family too (docs.sunoapi.org/suno-api/generate-sounds, read 2026-11-21), but the
+ * provider documents no way to fetch a finished sounds task: record-info names Generate and Extend Music only,
+ * and the sounds page has no callback payload. A create call is billed, so the tool stays refused until one
+ * real task has been fetched.
+ */
+export const SUNO_SOUND_UNVERIFIED = 'music_adapter_unverified: sunoapi.org documents no way to fetch a finished sounds task, so a billed sound could not be collected; use a selected V6 instrumental song';
 
 export const SUNO_SOUND_KEYS = [
   'Any', 'Cm', 'C#m', 'Dm', 'D#m', 'Em', 'Fm', 'F#m', 'Gm', 'G#m', 'Am', 'A#m', 'Bm',
@@ -78,12 +83,16 @@ export const sunoGenerateSchema = z.object({
   lyrics: z.string().min(1).max(5000).optional(),
   customMode: z.boolean().default(false),
   instrumental: z.boolean().default(false),
-  style: z.string().optional(),
+  style: z.string().max(1000).optional(),
   title: z.string().optional(),
   model: z.enum(SUNO_MODELS).default(DEFAULT_SUNO_MODEL),
   duration: z.number().int().min(10).max(360).optional(),
   negativeTags: z.string().optional(),
   vocalGender: z.enum(SUNO_VOCAL_GENDERS).optional(),
+  styleWeight: z.number().min(0).max(1).optional(),
+  weirdnessConstraint: z.number().min(0).max(1).optional(),
+  audioWeight: z.number().min(0).max(1).optional(),
+  variety: z.number().int().min(0).max(4).optional(),
   personaId: z.string().min(1).optional(),
   personaModel: z.enum(SUNO_PERSONA_MODELS).optional(),
   pickTrack: z.number().int().min(0).max(1).default(0),
@@ -93,6 +102,7 @@ export const sunoGenerateSchema = z.object({
 
 export const sunoSoundSchema = z.object({
   prompt: z.string().min(1).max(500),
+  model: z.enum(SUNO_V6_MODELS).default('V6'),
   soundLoop: z.boolean().default(true),
   soundTempo: z.number().int().min(1).max(300).optional(),
   soundKey: z.enum(SUNO_SOUND_KEYS).optional(),
@@ -181,7 +191,7 @@ function describeSunoError(code: number | undefined, msg: string | undefined, ht
     case 401:
       return `Unauthorized — SUNO_API_KEY is missing or expired (https://sunoapi.org/api-key). ${text}`;
     case 405:
-      return `Rate limit exceeded (20 req / 10s): ${text}`;
+      return `Rate limit exceeded: ${text}`;
     case 413:
       return `Prompt or style too long: ${text}`;
     case 429:
@@ -465,6 +475,9 @@ async function pollLyrics(taskId: string): Promise<RecordInfo> {
 
 // ── public API ─────────────────────────────────────────────────
 
+/** Custom-mode tuning numbers, sent under the same names. */
+const CUSTOM_TUNING = ['styleWeight', 'weirdnessConstraint', 'audioWeight', 'variety'] as const;
+
 export function assertGenerateArgs(request: SunoGenerateRequest): void {
   if (!(SUNO_V6_MODELS as readonly string[]).includes(request.model)) throw new Error('music_model_retired: select a V6 model explicitly');
   if (request.customMode) {
@@ -473,7 +486,8 @@ export function assertGenerateArgs(request: SunoGenerateRequest): void {
   } else {
     if (!request.style && !request.lyrics) throw new Error('Non-custom mode requires style or lyrics');
     if (request.prompt && request.prompt.length > 3000) throw new Error('prompt exceeds 3000 characters');
-    if (request.duration !== undefined || request.title || request.negativeTags || request.vocalGender || request.personaId || request.personaModel) throw new Error('Custom-only fields require customMode:true');
+    if (request.duration !== undefined || request.title || request.negativeTags || request.vocalGender || request.personaId || request.personaModel
+      || CUSTOM_TUNING.some(key => request[key] !== undefined)) throw new Error('Custom-only fields require customMode:true');
   }
   if (request.negativeTags && request.negativeTags.length > 1000) throw new Error('negativeTags exceeds 1000 characters');
 }
@@ -502,6 +516,7 @@ export async function generateMusic(request: SunoGenerateRequest): Promise<SunoG
     if (request.vocalGender) body.vocalGender = request.vocalGender;
     if (request.personaId) body.personaId = request.personaId;
     if (request.personaModel) body.personaModel = request.personaModel;
+    for (const key of CUSTOM_TUNING) if (request[key] !== undefined) body[key] = request[key];
 
     console.error(`[Suno] Generating music... (model: ${model}, customMode: ${customMode}, instrumental: ${body.instrumental})`);
     const created = await sunoFetch('/api/v1/generate', { method: 'POST', body: JSON.stringify(body) });
@@ -541,17 +556,18 @@ export async function resumeMusic(taskId: string, request: Pick<SunoGenerateRequ
 }
 
 /**
- * Loopable bed/ambience — Sounds task (V5 only).
+ * Loopable bed/ambience — Sounds task. parseMusicArgs refuses the tool before this runs (SUNO_SOUND_UNVERIFIED).
  *
  * A better fit for short-form BGM than a full sung track. Returns a loop
  * without intro/outro, with optional BPM and key. The builder stretches it
  * with `-stream_loop -1`.
  */
 export async function generateSound(request: SunoSoundRequest): Promise<SunoGenerateResponse> {
+  let taskId: string | undefined;
   try {
     const body: Record<string, unknown> = {
       prompt: request.prompt,
-      model: SUNO_SOUND_MODEL,
+      model: request.model,
       soundLoop: request.soundLoop !== false,
       callBackUrl: DUMMY_CALLBACK_URL,
     };
@@ -560,7 +576,7 @@ export async function generateSound(request: SunoSoundRequest): Promise<SunoGene
 
     console.error(`[Suno] Generating sound loop... (tempo: ${request.soundTempo ?? 'auto'}, key: ${request.soundKey ?? 'Any'})`);
     const created = await sunoFetch('/api/v1/generate/sounds', { method: 'POST', body: JSON.stringify(body) });
-    const taskId = taskIdFrom(created.data);
+    taskId = taskIdFrom(created.data);
     const info = await pollRecord(taskId, {
       intervalMs: SOUND_POLL_INTERVAL_MS,
       maxPolls: SOUND_MAX_POLLS,
@@ -574,11 +590,11 @@ export async function generateSound(request: SunoSoundRequest): Promise<SunoGene
       request.pickTrack ?? 0,
     );
     console.error(`[Suno] Sound saved: ${tracks.map((t) => t.audioPath).join(', ')}`);
-    return { success: true, taskId, model: SUNO_SOUND_MODEL, tracks, audioPath: tracks[0]?.audioPath };
+    return { success: true, taskId, model: request.model, tracks, audioPath: tracks[0]?.audioPath };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[Suno] Error: ${message}`);
-    return { success: false, error: message };
+    return { success: false, taskId, error: message, terminal: taskId === undefined && isRejection(error) };
   }
 }
 

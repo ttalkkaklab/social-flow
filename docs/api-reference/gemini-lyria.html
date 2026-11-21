@@ -116,12 +116,12 @@ await session.play();</code></pre>
       <thead><tr><th>apiVersion</th><th>결과</th></tr></thead>
       <tbody>
         <tr><td><code>v1alpha</code></td><td>정상 — 4초 요청에 384,000바이트 수신 (48,000 × 2ch × 2byte × 4s와 정확히 일치)</td></tr>
-        <tr><td><code>v1beta</code></td><td><code>connect()</code>가 반환되지 않고 무한 대기</td></tr>
+        <tr><td><code>v1beta</code></td><td>2026-08에는 <code>connect()</code>가 반환되지 않았다. 2026-11-21에는 반환됐고 <code>setupComplete</code>가 왔다. 이 버전으로 오디오를 받아 보지는 않았다</td></tr>
         <tr><td>(미지정)</td><td>—</td></tr>
       </tbody>
     </table>
     </div>
-    따라서 이 서버는 <code>v1alpha</code>를 유지한다. 문서를 근거로 <code>v1beta</code>로 바꾸면 툴이 조용히 멈춘다.
+    따라서 이 서버는 <code>v1alpha</code>를 유지한다. <code>v1alpha</code>도 2026-11-21에 <code>setupComplete</code>로 답했다. <code>v1beta</code>로는 요청한 바이트가 실제로 들어오는 것을 본 뒤에 옮긴다. 문서만 보고 바꾸지 않는다.
   </div>
 
   <h3>스트림 종료 조건</h3>
