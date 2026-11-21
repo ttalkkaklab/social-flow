@@ -191,7 +191,7 @@ export const genaiImageToVideoSchema = textVideoFields.extend({
       issue('guidanceScale and NAG require references (MSR conditioning); ltx-2.5-22b-dev already runs guided');
     devNegativeRule(args, ctx);
   } else {
-    validateOpening(args.prompt, args.openingPositions, args.references, issue);
+    validateOpening(args.prompt, args.openingPositions, args.references, issue, 5000);
     validateVoiceSlots(args.references, issue);
     msrNegativeRule(args, issue);
     if (args.model !== 'ltx-2.5-22b-distilled') issue('Additional references require ltx-2.5-22b-distilled (MSR conditioning)');

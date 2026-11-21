@@ -50634,7 +50634,7 @@ var genaiImageToVideoSchema = textVideoFields.extend({
       issue("guidanceScale and NAG require references (MSR conditioning); ltx-2.5-22b-dev already runs guided");
     devNegativeRule(args, ctx);
   } else {
-    validateOpening(args.prompt, args.openingPositions, args.references, issue);
+    validateOpening(args.prompt, args.openingPositions, args.references, issue, 5e3);
     validateVoiceSlots(args.references, issue);
     msrNegativeRule(args, issue);
     if (args.model !== "ltx-2.5-22b-distilled") issue("Additional references require ltx-2.5-22b-distilled (MSR conditioning)");
@@ -51355,7 +51355,7 @@ function speechVideoCapabilities(provider, model2, operation, subjectReferences 
     throw new Error(`video_engine_unsupported: ${provider} ${model2} cannot keep a character's voice; choose a video model again with project_manage`);
   if (["minimax", "heygen"].includes(provider) && operation === "reference") return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "Native speech from the prompt dialogue with an optional voice sample; voice identity is imitation, not preserved audio" };
   if (provider === "astra-genai" && (operation === "reference" || operation === "image" && model2 === "ltx-2.5-22b-distilled" && subjectReferences)) return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio" };
-  if (operation === "audio" && (provider === "astra" || provider === "astra-genai-desktop" || provider === "ltx-api" || provider === "astra-genai" && model2 === "ltx-2.5-22b-dev"))
+  if (operation === "audio" && (provider === "astra" || provider === "astra-genai-desktop" || provider === "ltx-api" || provider === "astra-genai" && GENAI_VIDEO_MODELS.some((id) => id === model2)))
     return { provider, model: model2, audioConditioning: true, lipSync: false, postLipSync: false, evidence: "The supplied track conditions video generation. Mouth movement and phoneme alignment require output review." };
   if (provider === "seedance" && Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
     return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "Reference audio does not promise exact recorded-speech timing; no post-lipsync adapter installed" };

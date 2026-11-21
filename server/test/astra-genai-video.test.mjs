@@ -499,3 +499,23 @@ test('exact frames and multishot instructions reach v2 with no seconds conversio
     { shots: [{ description: 'a'.repeat(1990) }, shots[1]] }])
     assert.equal(genaiTextToVideoSchema.safeParse({ ...args, ...change }).success, false);
 });
+
+test('combined image conditioning uses the deployed MSR prompt limit', async t => {
+  setup(t);
+  const { checkGenaiVideoOptions } = await import('../dist/astra-genai-video.js');
+  const members = ['seorin', 'mai-an', 'tu-vi'];
+  const args = genaiImageToVideoSchema.parse({
+    ...base, prompt: 'A'.repeat(2100), imageUri: 'https://example.com/plaza.png',
+    references: members.map(id => ({ imageUri: 'https://example.com/' + id + '.png' })),
+    openingPositions: members.map((character, i) => ({ character, images: [i + 1], position: 'standing beside bench ' + (i + 1) })),
+  });
+  let limit = 5000;
+  globalThis.fetch = async url => {
+    assert.ok(String(url).endsWith('/msr/capabilities'));
+    return Response.json({ prompt_max_chars: limit });
+  };
+  await checkGenaiVideoOptions('astra_genai_img2video', args);
+  limit = 2000;
+  await assert.rejects(checkGenaiVideoOptions('astra_genai_img2video', args), /msr_prompt_limit/);
+  assert.equal(speechVideoCapabilities('astra-genai', base.model, 'audio').audioConditioning, true);
+});

@@ -197,7 +197,7 @@ export const genaiImageToVideoSchema = textVideoFields.extend({
         devNegativeRule(args, ctx);
     }
     else {
-        validateOpening(args.prompt, args.openingPositions, args.references, issue);
+        validateOpening(args.prompt, args.openingPositions, args.references, issue, 5000);
         validateVoiceSlots(args.references, issue);
         msrNegativeRule(args, issue);
         if (args.model !== 'ltx-2.5-22b-distilled')
