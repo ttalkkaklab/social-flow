@@ -33,6 +33,7 @@ export const desktopTextSchema = common.extend({ duration, aspectRatio: aspect.d
 export const desktopImageSchema = common.extend({ duration, aspectRatio: z.union([aspect, z.literal('auto')]).default('auto'),
   imagePath: z.string().min(1), lastFramePath: z.string().min(1).optional() }).strict();
 export const desktopAudioSchema = common.extend({
+  resolution: resolution.default('540p'),
   prompt: z.string().trim().default(''),
   seed: z.number().int().safe().nullish(),
   negativePrompt: z.string().max(2000).optional(),

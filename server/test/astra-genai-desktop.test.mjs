@@ -14,6 +14,8 @@ test('native feature bodies separate temporal references, audio opt-in, edit cap
   const {duration,...audio}=base;
   assert.equal(buildDesktopBody('audio-to-video',{...audio,audioPath:'wav'},{wav:'asset-w'}).allowAudioTruncation,false);
   assert.equal(buildDesktopBody('audio-to-video',{...audio,audioPath:'wav',promptProvenance:'enhanced'},{wav:'asset-w'}).params.promptProvenance,'enhanced');
+  const {resolution: _size, ...defaultSize} = audio;
+  assert.equal(buildDesktopBody('audio-to-video',{...defaultSize,audioPath:'wav'},{wav:'w'}).params.resolution,'540p');
   const controls={negativePrompt:'text',nagScale:8,nagAlpha:0.25,nagTau:2.5,passShape:'parts'};
   const conditioned=buildDesktopBody('audio-to-video',{...audio,...controls,audioPath:'wav',imagePath:'start',prompt:''},{wav:'asset-w',start:'asset-i'});
   for(const [key,value] of Object.entries(controls)) assert.equal(conditioned.params[key],value);

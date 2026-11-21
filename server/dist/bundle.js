@@ -111599,6 +111599,7 @@ var desktopImageSchema = common2.extend({
   lastFramePath: external_exports.string().min(1).optional()
 }).strict();
 var desktopAudioSchema = common2.extend({
+  resolution: resolution.default("540p"),
   prompt: external_exports.string().trim().default(""),
   seed: external_exports.number().int().safe().nullish(),
   negativePrompt: external_exports.string().max(2e3).optional(),
