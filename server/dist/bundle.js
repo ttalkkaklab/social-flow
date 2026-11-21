@@ -100140,7 +100140,7 @@ import * as path5 from "node:path";
 var SUNO_V6_MODELS = ["V6", "V6_MINI", "V6_WILD"];
 var SUNO_MODELS = ["V4", "V4_5", "V4_5PLUS", "V4_5ALL", "V5", "V5_5", ...SUNO_V6_MODELS];
 var DEFAULT_SUNO_MODEL = "V6";
-var SUNO_SOUND_MODEL = "V5";
+var SUNO_SOUND_UNVERIFIED = "music_adapter_unverified: sunoapi.org documents no way to fetch a finished sounds task, so a billed sound could not be collected; use a selected V6 instrumental song";
 var SUNO_SOUND_KEYS = [
   "Any",
   "Cm",
@@ -100194,12 +100194,16 @@ var sunoGenerateSchema = external_exports.object({
   lyrics: external_exports.string().min(1).max(5e3).optional(),
   customMode: external_exports.boolean().default(false),
   instrumental: external_exports.boolean().default(false),
-  style: external_exports.string().optional(),
+  style: external_exports.string().max(1e3).optional(),
   title: external_exports.string().optional(),
   model: external_exports.enum(SUNO_MODELS).default(DEFAULT_SUNO_MODEL),
   duration: external_exports.number().int().min(10).max(360).optional(),
   negativeTags: external_exports.string().optional(),
   vocalGender: external_exports.enum(SUNO_VOCAL_GENDERS).optional(),
+  styleWeight: external_exports.number().min(0).max(1).optional(),
+  weirdnessConstraint: external_exports.number().min(0).max(1).optional(),
+  audioWeight: external_exports.number().min(0).max(1).optional(),
+  variety: external_exports.number().int().min(0).max(4).optional(),
   personaId: external_exports.string().min(1).optional(),
   personaModel: external_exports.enum(SUNO_PERSONA_MODELS).optional(),
   pickTrack: external_exports.number().int().min(0).max(1).default(0),
@@ -100208,6 +100212,7 @@ var sunoGenerateSchema = external_exports.object({
 });
 var sunoSoundSchema = external_exports.object({
   prompt: external_exports.string().min(1).max(500),
+  model: external_exports.enum(SUNO_V6_MODELS).default("V6"),
   soundLoop: external_exports.boolean().default(true),
   soundTempo: external_exports.number().int().min(1).max(300).optional(),
   soundKey: external_exports.enum(SUNO_SOUND_KEYS).optional(),
@@ -100229,7 +100234,7 @@ function describeSunoError(code, msg, httpStatus) {
     case 401:
       return `Unauthorized \u2014 SUNO_API_KEY is missing or expired (https://sunoapi.org/api-key). ${text4}`;
     case 405:
-      return `Rate limit exceeded (20 req / 10s): ${text4}`;
+      return `Rate limit exceeded: ${text4}`;
     case 413:
       return `Prompt or style too long: ${text4}`;
     case 429:
@@ -100454,6 +100459,7 @@ async function pollLyrics(taskId) {
     `Lyrics timed out (${LYRICS_MAX_POLLS * LYRICS_POLL_INTERVAL_MS / 6e4} minutes). Task ${taskId}`
   );
 }
+var CUSTOM_TUNING = ["styleWeight", "weirdnessConstraint", "audioWeight", "variety"];
 function assertGenerateArgs(request) {
   if (!SUNO_V6_MODELS.includes(request.model)) throw new Error("music_model_retired: select a V6 model explicitly");
   if (request.customMode) {
@@ -100462,7 +100468,7 @@ function assertGenerateArgs(request) {
   } else {
     if (!request.style && !request.lyrics) throw new Error("Non-custom mode requires style or lyrics");
     if (request.prompt && request.prompt.length > 3e3) throw new Error("prompt exceeds 3000 characters");
-    if (request.duration !== void 0 || request.title || request.negativeTags || request.vocalGender || request.personaId || request.personaModel) throw new Error("Custom-only fields require customMode:true");
+    if (request.duration !== void 0 || request.title || request.negativeTags || request.vocalGender || request.personaId || request.personaModel || CUSTOM_TUNING.some((key) => request[key] !== void 0)) throw new Error("Custom-only fields require customMode:true");
   }
   if (request.negativeTags && request.negativeTags.length > 1e3) throw new Error("negativeTags exceeds 1000 characters");
 }
@@ -100489,6 +100495,7 @@ async function generateMusic(request) {
     if (request.vocalGender) body.vocalGender = request.vocalGender;
     if (request.personaId) body.personaId = request.personaId;
     if (request.personaModel) body.personaModel = request.personaModel;
+    for (const key of CUSTOM_TUNING) if (request[key] !== void 0) body[key] = request[key];
     console.error(`[Suno] Generating music... (model: ${model2}, customMode: ${customMode}, instrumental: ${body.instrumental})`);
     const created = await sunoFetch("/api/v1/generate", { method: "POST", body: JSON.stringify(body) });
     taskId = taskIdFrom(created.data);
@@ -100526,10 +100533,11 @@ async function resumeMusic(taskId, request) {
   }
 }
 async function generateSound(request) {
+  let taskId;
   try {
     const body = {
       prompt: request.prompt,
-      model: SUNO_SOUND_MODEL,
+      model: request.model,
       soundLoop: request.soundLoop !== false,
       callBackUrl: DUMMY_CALLBACK_URL
     };
@@ -100537,7 +100545,7 @@ async function generateSound(request) {
     if (request.soundKey) body.soundKey = request.soundKey;
     console.error(`[Suno] Generating sound loop... (tempo: ${request.soundTempo ?? "auto"}, key: ${request.soundKey ?? "Any"})`);
     const created = await sunoFetch("/api/v1/generate/sounds", { method: "POST", body: JSON.stringify(body) });
-    const taskId = taskIdFrom(created.data);
+    taskId = taskIdFrom(created.data);
     const info = await pollRecord(taskId, {
       intervalMs: SOUND_POLL_INTERVAL_MS,
       maxPolls: SOUND_MAX_POLLS,
@@ -100551,11 +100559,11 @@ async function generateSound(request) {
       request.pickTrack ?? 0
     );
     console.error(`[Suno] Sound saved: ${tracks.map((t2) => t2.audioPath).join(", ")}`);
-    return { success: true, taskId, model: SUNO_SOUND_MODEL, tracks, audioPath: tracks[0]?.audioPath };
+    return { success: true, taskId, model: request.model, tracks, audioPath: tracks[0]?.audioPath };
   } catch (error2) {
     const message = error2 instanceof Error ? error2.message : String(error2);
     console.error(`[Suno] Error: ${message}`);
-    return { success: false, error: message };
+    return { success: false, taskId, error: message, terminal: taskId === void 0 && isRejection(error2) };
   }
 }
 async function generateLyrics(request) {
@@ -101488,7 +101496,7 @@ var chunk = external_exports.object({
   text: external_exports.string().max(6132),
   durationMs: external_exports.number().int().min(3e3).max(12e4),
   positiveStyles: external_exports.array(external_exports.string().min(1)).max(50),
-  negativeStyles: external_exports.array(external_exports.string().min(1)).max(50),
+  negativeStyles: external_exports.array(external_exports.string().min(1)).max(50).optional(),
   contextAdherence: external_exports.enum(["low", "medium", "high"]).optional()
 }).strict().superRefine((v, ctx) => {
   const lines = v.text.split("\n");
@@ -101572,7 +101580,7 @@ var MUSIC_ADAPTERS = {
   music_generate: { engine: "lyria", schema: musicGenerateSchema, fixedModel: "models/lyria-realtime-exp" },
   music_generate_advanced: { engine: "lyria", schema: musicAdvancedSchema, fixedModel: "models/lyria-realtime-exp" },
   suno_generate: { engine: "suno-api", schema: sunoGenerateSchema, modelField: "model" },
-  suno_generate_sound: { engine: "suno-api", schema: sunoSoundSchema, fixedModel: "V5" },
+  suno_generate_sound: { engine: "suno-api", schema: sunoSoundSchema, modelField: "model" },
   music_elevenlabs_generate: { engine: "elevenlabs", schema: elevenMusicSchema, modelField: "modelId" },
   mlx_music_generate: { engine: "mlx", schema: mlxMusicGenerateSchema, modelField: "model" }
 };
@@ -101586,13 +101594,13 @@ function parseMusicArgs(tool2, input) {
   for (const key of Object.keys(input)) if (!Object.hasOwn(shape(adapter2.schema), key)) throw new Error("music_argument_unsupported: " + key);
   const args = adapter2.schema.parse(input);
   if (tool2 === "suno_generate") assertGenerateArgs(sunoGenerateSchema.parse(args));
-  if (tool2 === "suno_generate_sound") throw new Error("music_model_retired: V5 sound adapter is not verified on the current provider; use a selected V6 instrumental song");
+  if (tool2 === "suno_generate_sound") throw new Error(SUNO_SOUND_UNVERIFIED);
   return args;
 }
 function musicCatalog() {
   return {
     version: 1,
-    revision: "2026-10-18",
+    revision: "2026-11-21",
     models: MUSIC_MODELS,
     noGeneration: { engine: "none" },
     adapters: Object.entries(MUSIC_ADAPTERS).map(([tool2, a]) => ({ tool: tool2, engine: a.engine, fixedModel: a.fixedModel, fields: Object.keys(shape(a.schema)) })),
@@ -101602,8 +101610,8 @@ function musicCatalog() {
       { engine: "lyria-vertex", reason: "Separate Cloud authentication and predict contract; not a Gemini adapter" }
     ],
     sources: [
-      "https://ai.google.dev/gemini-api/docs/music-generation",
-      "https://ai.google.dev/gemini-api/docs/realtime-music-generation",
+      "https://aistudio.google.com/docs/music-generation",
+      "https://aistudio.google.com/docs/realtime-music-generation",
       "https://elevenlabs.io/docs/api-reference/music/compose",
       "https://docs.sunoapi.org/suno-api/generate-music"
     ]
@@ -110997,12 +111005,12 @@ var MUSIC_TOOLS = [
         chunks: { type: "array", minItems: 1, maxItems: 30, description: "Ordered sections, total at most 600000ms.", items: {
           type: "object",
           additionalProperties: false,
-          required: ["text", "durationMs", "positiveStyles", "negativeStyles"],
+          required: ["text", "durationMs", "positiveStyles"],
           properties: {
             text: { type: "string", maxLength: 6132, description: "Lyrics/section cues, e.g. [Verse] followed by Korean lyrics; max 30 lines of 200 characters." },
             durationMs: { type: "integer", minimum: 3e3, maximum: 12e4, description: "Section length, e.g. 15000." },
             positiveStyles: { type: "array", maxItems: 50, items: { type: "string" }, description: 'English musical traits, e.g. ["warm piano", "Korean vocals"].' },
-            negativeStyles: { type: "array", maxItems: 50, items: { type: "string" }, description: 'Traits to avoid, e.g. ["distortion"].' },
+            negativeStyles: { type: "array", maxItems: 50, items: { type: "string" }, description: 'Optional traits to avoid, e.g. ["distortion"].' },
             contextAdherence: { type: "string", enum: ["low", "medium", "high"], description: "Optional consistency with surrounding chunks; high preserves surrounding musical context. Omit for the provider default." }
           }
         } }
@@ -116217,7 +116225,7 @@ function priceOf(tool2, args = {}) {
     };
   }
   if (tool2 === "music_generate_song" && args.model === "lyria-3-clip-preview") return { key: "music.lyria-clip", quantity: 1 };
-  if (tool2 === "music_generate_song") return { key: "music." + String(args.model || "lyria-3.5"), quantity: 1, note: "Price unconfirmed; reconcile provider billing" };
+  if (tool2 === "music_generate_song") return { key: "music." + String(args.model || "lyria-3.5"), quantity: 1 };
   if (tool2 === "music_elevenlabs_generate") return { key: "music.elevenlabs." + String(args.modelId || "music_v2_5"), quantity: 1, note: "Price unconfirmed; reconcile provider billing" };
   if (tool2 === "music_generate_clip") return { key: "music.lyria-clip", quantity: 1 };
   if (tool2 === "music_generate" || tool2 === "music_generate_advanced") {
@@ -128783,7 +128791,8 @@ Returns: categorized text lists \u2014 32 genres, 25 moods, 22 instruments (non-
         },
         style: {
           type: "string",
-          description: 'Music style, usable in either mode. Example: "calm lo-fi, soft piano, space for voiceover"'
+          description: 'Music style, usable in either mode, at most 1000 characters. Example: "calm lo-fi, soft piano, space for voiceover"',
+          maxLength: 1e3
         },
         title: {
           type: "string",
@@ -128810,6 +128819,10 @@ Returns: categorized text lists \u2014 32 genres, 25 moods, 22 instruments (non-
           description: "Preferred vocal gender when not instrumental.",
           enum: [...SUNO_VOCAL_GENDERS]
         },
+        styleWeight: { type: "number", minimum: 0, maximum: 1, description: "Custom mode: how closely to follow style, e.g. 0.65." },
+        weirdnessConstraint: { type: "number", minimum: 0, maximum: 1, description: "Custom mode: how far the result may stray from the expected, e.g. 0.3." },
+        audioWeight: { type: "number", minimum: 0, maximum: 1, description: "Custom mode: weight of the audio input, e.g. 0.5. Not supported without vocals." },
+        variety: { type: "integer", minimum: 0, maximum: 4, description: "Custom mode: 0 off, 1 normal (provider default), 2 high, 3 extra, 4 max." },
         personaId: {
           type: "string",
           description: "Optional persona or Suno Voice id for custom mode."
@@ -128842,7 +128855,7 @@ Returns: categorized text lists \u2014 32 genres, 25 moods, 22 instruments (non-
     name: "suno_generate_sound",
     title: "Suno loopable BGM",
     annotations: HINT.generate,
-    description: `Generate a loopable Suno sound/bed (V5 only) with optional BPM and musical key.
+    description: `Generate a loopable Suno sound/bed with optional BPM and musical key.
 
 Use as the Suno path for short-form BGM under narration \u2014 looping ambient, beds, stings. soundLoop defaults to true. Prompt max 500 chars. Takes about 1\u20133 minutes. For a cheap 30s bed without SUNO_API_KEY, use music_generate_clip (Lyria).
 Do NOT use for a sung song \u2014 that is suno_generate. Do NOT use when you need an exact second-accurate length other than what the model returns; trim with ffmpeg afterwards.
@@ -130399,7 +130412,7 @@ for (const tool2 of TOOLS) {
   if (!MUSIC_ADAPTERS[tool2.name]) continue;
   tool2.description = "Generate music with the selected provider. Configured production requires musicContext and routes through music_plan \u2192 music_execute. Do NOT use to inspect models \u2014 use music_catalog. " + tool2.description;
   tool2.inputSchema.properties = { ...tool2.inputSchema.properties, musicContext: musicContextSchema };
-  if (tool2.name === "suno_generate_sound") tool2.description = "Retired V5 sounds adapter; generation is rejected before submission. Use music_catalog and explicitly select a supported V6 instrumental song instead. Does not automatically substitute models.";
+  if (tool2.name === "suno_generate_sound") tool2.description = "Refused before submission: sunoapi.org documents no way to fetch a finished sounds task, so a billed sound could not be collected. Use music_catalog and explicitly select a supported V6 instrumental song instead. Does not automatically substitute models.";
   if (tool2.name === "suno_generate") {
     tool2.inputSchema.properties.model = { type: "string", enum: [...SUNO_V6_MODELS], default: DEFAULT_SUNO_MODEL, description: "sunoapi.org third-party model ID, not a Suno Platform identifier." };
     tool2.inputSchema.properties.lyrics = { type: "string", maxLength: 5e3, description: "Lyrics, e.g. [Verse] followed by Korean lyrics. Preferred over prompt in custom mode." };

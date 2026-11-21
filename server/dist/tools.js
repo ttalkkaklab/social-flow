@@ -3757,7 +3757,8 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
                 },
                 style: {
                     type: 'string',
-                    description: 'Music style, usable in either mode. Example: "calm lo-fi, soft piano, space for voiceover"',
+                    description: 'Music style, usable in either mode, at most 1000 characters. Example: "calm lo-fi, soft piano, space for voiceover"',
+                    maxLength: 1000,
                 },
                 title: {
                     type: 'string',
@@ -3784,6 +3785,10 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
                     description: 'Preferred vocal gender when not instrumental.',
                     enum: [...SUNO_VOCAL_GENDERS],
                 },
+                styleWeight: { type: 'number', minimum: 0, maximum: 1, description: 'Custom mode: how closely to follow style, e.g. 0.65.' },
+                weirdnessConstraint: { type: 'number', minimum: 0, maximum: 1, description: 'Custom mode: how far the result may stray from the expected, e.g. 0.3.' },
+                audioWeight: { type: 'number', minimum: 0, maximum: 1, description: 'Custom mode: weight of the audio input, e.g. 0.5. Not supported without vocals.' },
+                variety: { type: 'integer', minimum: 0, maximum: 4, description: 'Custom mode: 0 off, 1 normal (provider default), 2 high, 3 extra, 4 max.' },
                 personaId: {
                     type: 'string',
                     description: 'Optional persona or Suno Voice id for custom mode.',
@@ -3816,7 +3821,7 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
         name: 'suno_generate_sound',
         title: 'Suno loopable BGM',
         annotations: HINT.generate,
-        description: `Generate a loopable Suno sound/bed (V5 only) with optional BPM and musical key.
+        description: `Generate a loopable Suno sound/bed with optional BPM and musical key.
 
 Use as the Suno path for short-form BGM under narration — looping ambient, beds, stings. soundLoop defaults to true. Prompt max 500 chars. Takes about 1–3 minutes. For a cheap 30s bed without SUNO_API_KEY, use music_generate_clip (Lyria).
 Do NOT use for a sung song — that is suno_generate. Do NOT use when you need an exact second-accurate length other than what the model returns; trim with ffmpeg afterwards.
@@ -5251,7 +5256,7 @@ for (const tool of TOOLS) {
     tool.description = 'Generate music with the selected provider. Configured production requires musicContext and routes through music_plan → music_execute. Do NOT use to inspect models — use music_catalog. ' + tool.description;
     tool.inputSchema.properties = { ...tool.inputSchema.properties, musicContext: musicContextSchema };
     if (tool.name === 'suno_generate_sound')
-        tool.description = 'Retired V5 sounds adapter; generation is rejected before submission. Use music_catalog and explicitly select a supported V6 instrumental song instead. Does not automatically substitute models.';
+        tool.description = 'Refused before submission: sunoapi.org documents no way to fetch a finished sounds task, so a billed sound could not be collected. Use music_catalog and explicitly select a supported V6 instrumental song instead. Does not automatically substitute models.';
     if (tool.name === 'suno_generate') {
         tool.inputSchema.properties.model = { type: 'string', enum: [...SUNO_V6_MODELS], default: DEFAULT_SUNO_MODEL, description: 'sunoapi.org third-party model ID, not a Suno Platform identifier.' };
         tool.inputSchema.properties.lyrics = { type: 'string', maxLength: 5000, description: 'Lyrics, e.g. [Verse] followed by Korean lyrics. Preferred over prompt in custom mode.' };
