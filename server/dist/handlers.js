@@ -1,4 +1,4 @@
-import { SceneInputError } from './scene-video.js';
+import { inspectSceneInputContract, SceneInputError } from './scene-video.js';
 import * as tiktok from './tiktok-client.js';
 import { upscaleCatalog, startUpscale, controlUpscale } from './video-upscale.js';
 import { existsSync } from 'node:fs';
@@ -1600,7 +1600,8 @@ ROUTES.video_plan = async (args) => {
     catch (error) {
         if (!(error instanceof SceneInputError))
             throw error;
-        return { ...text(JSON.stringify({ code: 'scene_inputs_unsupported', executable: false, tool: error.tool,
+        return { ...text(JSON.stringify({ code: 'scene_inputs_unsupported', executable: false, requestId: input.requestId, tool: error.tool,
+                model: error.model, deployment: await inspectSceneInputContract(error, input.validateScenePayload ? { requestId: input.requestId, args: input.args } : undefined),
                 missing: error.missing, sceneRequest: error.sceneRequest }, null, 2)), isError: true };
     }
 };

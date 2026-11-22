@@ -39,18 +39,29 @@ Write one shot per camera setup. A cut from a wide to a hand insert, or a revers
 
 `story_scene.videoDirection.fps` sets the scene clock (default 24). Each `story_shot.timeline` records `startFrame` inclusive, `endFrame` exclusive, the incoming `transition` (open, hard_cut, dissolve or fade), and English `framing` and `action`. The board assigns stable shot IDs. Each `images[]` entry has a storyboard-relative `path`, scene `frame` and `role` (start, keyframe, end, face or outfit). Face/outfit entries name their `character`. An optional English `cue` describes the action at that frame. An ending pose may begin before the last frame. In one shot, keyframes guide continuous motion. At a cut the new setup must appear at the first frame of the next shot. Describe entrances on the shot timeline, including anyone who starts off screen.
 
-`videoDirection.audio` names one scene-length file with any lead-in mixed in. Its `cues` pair scene frame numbers with actions. Frame 42 at 24 fps means 1.75 seconds from the beginning of the file. A post-production music selection alone does not request model conditioning. Omit `args.prompt` and `args.shots`. The planner compiles the scene from every card. It collects existing frame pairs, intermediate pins and video references as well as explicit timeline entries. Conflicting temporal pins require a storyboard correction.
+`videoDirection.audio` names one scene-length file with any lead-in mixed in. Its `cues` pair scene frame numbers with actions. Frame 42 at 24 fps means 1.75 seconds from the beginning of the file. For per-shot generation the saved dev A2V model conditions each shot on its interval of the continuous file. Choose `audio.mode:"mix"` with distilled I2V to mix the complete file once with native dialogue and ambience. A post-production music selection alone does not request model conditioning. Omit `args.prompt` and `args.shots`. The planner compiles the scene from every card. It collects existing frame pairs, intermediate pins and video references as well as explicit timeline entries. Conflicting temporal pins require a storyboard correction.
+
+Keep each spoken line in its card’s narration. To start a reply on the cut, add
+`timeline.dialogueCues:[{lineId:"s0001-l1",frame:171}]` to the incoming card.
+Its `timeline.openingPositions` uses that card’s subject image numbers. The
+scene manifest keeps each line with its shot interval, cast ID and selected
+voice sample. Native speech without an explicit cue keeps model pacing.
+The I2V refusal includes the deployed endpoint’s input fields when discovery
+succeeds. A refused request has no reservation or provider job.
 
 A single continuous shot with intermediate guides selects the indexed keyframe route on Desktop or direct ASTRA when the saved model leaves the operation open. An explicit operation still governs. Veo Standard and Fast accept up to three scene-wide subject pictures in an eight-second reference-only request; the Lite model has no reference route. Keep the cast’s opening positions and later entrances in the scene direction.
 
-**LTX contracts checked 2026-11-21**
+For a protected storyboard, pass `shotBindings` with the exact shot IDs. Each entry can name existing reference IDs with their cast IDs and roles, opening positions and dialogue cues. A revision can also supply shorter framing and action directions, within-shot keyframes, or MSR negative guidance. For a reviewed camera move, set the card’s `motionPrefix` to a matching MP4 of 9–121 frames on the 8k+1 grid. The renderer fixes its latent frames in both diffusion stages. For a reply on a specific cut, set `performanceAudio` to the timed stereo 48 kHz PCM WAV containing the line and its room sound. Include the selected voice sample as a separate identity reference. Fit the recording to the native frame count, including its short tail. The plan records these choices and hashes its media before approval. The gateway validates the staged files and the chosen model’s limits. On a lost response, `video_status` with `action:"refresh"` looks up the original scene request. A creative revision after a terminal result takes a new request ID and names the previous one in `basedOnRequestId`.
+
+**LTX contracts checked 2026-11-22**
 
 | Operation | Images and cuts | Audio accepted in the same request |
 |---|---|---|
+| GenAI v2 scene-to-video, distilled | With explicit consent, `sceneRendering:"per_shot"` stages the original files and validates the complete scene against the running renderer. Each card has its own temporal pins and cast references. The worker trims each shot and joins the frames at the authored hard cuts. | A single native soundtrack in shot order. Each shot carries its speakers, lines, voice samples and sound direction. A frame-cued line requires a prepared performance WAV. Both diffusion stages condition on its audio, and the renderer returns the original waveform. Review the words and timing in the output. |
 | GenAI v2 T2V | Prompt plus 2–4 optional shot descriptions. Later shots can request a hard cut in text. No per-shot frame address or image. | Generated sound or mute. |
-| GenAI v2 I2V, dev | First/last plus the same shot descriptions. No intermediate image slots. | Generated sound or mute. |
-| GenAI v2 I2V, distilled | First/last and, with explicit duration and MSR image conditioning, subject references (up to four subjects plus one background). The two leading subjects can carry voice samples with backend support. Reference indices identify subjects. | Generated sound or mute. Voice samples condition identity. No supplied soundtrack slot. |
-| GenAI v2 A2V, dev | Optional first image and an optional last with the first. No shot descriptions, intermediate pins, reference panels or frame-addressed cut boundaries. | One supplied track sets the duration. |
+| GenAI v2 I2V, dev | Up to eight temporal images including endpoints. Shot descriptions go into the prompt. | Generated sound or mute. |
+| GenAI v2 I2V, distilled | Up to eight temporal images including endpoints. With explicit length and MSR image conditioning the same generation can use four subject references and one background. The two leading subjects can carry voice samples with backend support. Each subject slot spans the scene. | Generated sound or mute. Voice samples condition identity. |
+| GenAI v2 A2V, dev | Up to eight temporal images including endpoints. The renderer conditions on their frame indices. | One supplied track sets the duration. |
 | Desktop T2V / I2V / A2V | T2V takes text. I2V takes first/last. A2V takes an optional first image. None declares timed cuts or subject slots. | A2V takes one supplied track. |
 | Desktop keyframes / direct ASTRA keyframes | Respectively 1–10 / 2–8 images with frame indices. Temporal conditioning interpolates within a shot. Neither operation exposes a frame-addressed hard cut. | No supplied track in the keyframe request. Desktop also requires an active compatible offering. |
 
@@ -63,8 +74,8 @@ image and four subject references plus one background. `video_plan` keeps the
 temporal frames distinct from `references` and hashes every submitted local
 image. Execution checks the gateway's `image_conditioning` MSR capability
 before upload/submission; an unsupported combination never drops references or
-switches the saved model. Dev and the direct Desktop adapter take start/end
-only. See [GenAI image conditioning](astra-genai.md).
+switches the saved model. Dev takes temporal pins. Direct Desktop I2V takes
+the two endpoints. See [GenAI image conditioning](astra-genai.md).
 
 Character speech also uses the [voice continuity contract](../produce/references/voice-continuity.md).
 The planner adds stable acoustic descriptions and, on audible Seedance reference
@@ -251,3 +262,5 @@ Use `video_status` with the original request ID and `action:"refresh"` after an 
 ### Adding a hosted provider
 
 Implement wire requests and status decoding in a provider module. Register each operation in `server/src/hosted-video-routes.ts` with its input schema, model constraints, frame and sound capabilities, duration grid, configuration check, preflight, generator and status reader. The MCP tool definitions, dispatch, catalogue, duration planning and status recovery consume these registrations. Providers own authentication, data transfer and unit prices. Add the billing mapping to `usage-ledger.ts` and the rates to `prices.tsv`. Register model selection and any new image binding in the shared planner. A visual reference operation can declare voice support independently of its image inputs. Verify the existing LTX contracts and the new provider's mocked submit, poll, output and failure cases before building the distribution.
+
+For an I2V scene refusal, set `validateScenePayload: true` on `video_plan` to send the saved model, geometry, shot images, voice samples, cut frames and dialogue to the gateway’s validation-only route. The planner first checks that the route and submission endpoint use the same schema. The response records the request ID and the validation result. A schema check does not create a generation job.

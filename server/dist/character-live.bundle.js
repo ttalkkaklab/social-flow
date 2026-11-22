@@ -30115,14 +30115,14 @@ var GenaiRequestError = class extends Error {
   terminal;
   httpStatus;
 };
-async function requestGenai(method, route, body, timeoutMs = 6e4, onResponse, signal) {
+async function requestGenai(method, route, body, timeoutMs = 6e4, onResponse, signal, requestId) {
   const key = requireAstraGenaiKey(route);
   const response = await fetch(astraGenaiBaseUrl(route) + route, {
     method,
     redirect: "error",
     signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs),
     ...{ dispatcher: waitFor(timeoutMs) },
-    headers: { Authorization: `Bearer ${key}`, ...body === void 0 ? {} : { "Content-Type": "application/json" } },
+    headers: { Authorization: `Bearer ${key}`, ...requestId ? { "X-Request-ID": requestId } : {}, ...body === void 0 ? {} : { "Content-Type": "application/json" } },
     ...body === void 0 ? {} : { body: JSON.stringify(body) }
   });
   const text = await response.text();

@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 const load = createRequire(import.meta.url);
+export const videoTextPolicy = () => String(load('../../skills/_shared/scene-acting.js').VIDEO_TEXT_POLICY);
 const object = (value) => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 const text = (value) => typeof value === 'string' ? value.trim() : '';
 export function planVideoPerformance(shot, options = {}) {
@@ -83,7 +84,7 @@ const directedMoves = [
 export function scenePromptText(scene, camera, timeline, lines, bindTurns) {
     const dialogue = bindTurns ? [] : lines.filter(l => l.delivery !== 'voiceover')
         .map(l => l.speaker + ' (' + l.delivery + '): "' + l.tts + '"');
-    return [scene.emotion, scene.action, scene.sound, camera, scene.oneTake && 'One continuous take. No cuts.', timeline, ...dialogue]
+    return [scene.emotion, scene.action, scene.sound, camera, scene.oneTake && 'One continuous take. No cuts.', timeline, ...dialogue, videoTextPolicy()]
         .filter(Boolean).join('\n');
 }
 /** Report clear omissions, holds and reversals in uncompiled prompt text. */
