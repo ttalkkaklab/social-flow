@@ -51037,6 +51037,7 @@ function annotateReceipt(videoPath, extra) {
 
 // src/astra-genai-upload.ts
 var GENAI_FILE_SCHEME = "genai-file://";
+var GENAI_MSR_INLINE_MAX_BYTES = 8 * 1e3 * 1e3;
 var UPLOAD_MAX_BYTES = 32 * 1024 * 1024;
 var sessionSchema = external_exports.object({
   upload_id: external_exports.string().min(1),
@@ -51288,7 +51289,6 @@ var statusSchema2 = external_exports.object({
   error: external_exports.unknown().optional()
 }).passthrough();
 var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
-var GENAI_MSR_INLINE_MAX_BYTES = 8 * 1e3 * 1e3;
 var SUBMIT_TIMEOUT_MS2 = 15 * 6e4;
 var deployedModel = external_exports.object({
   id: external_exports.string(),
@@ -51835,6 +51835,15 @@ function mapSceneInputs(request, tool, model2, missing = [], resolution2) {
       frame: shot.startFrame,
       reason: "Write the missing English framing/action in story_shot.timeline"
     });
+    if (tool === "astra_genai_img2video" && request.shots.length > 1 && shot.openingPositions?.length && !caps.shotScopedReferences)
+      missing.push({
+        input: "position",
+        role: "opening_positions",
+        shotId: shot.shotId,
+        frame: shot.startFrame,
+        endFrame: shot.endFrame,
+        reason: "The renderer has no shot-local opening positions for its subject slots"
+      });
     if (!request.audio && !caps.frameAddressedNativeDialogue) for (const line of shot.dialogue ?? []) {
       if (line.delivery === "voiceover" || request.shots.length === 1 && line.frame === void 0) continue;
       const scope = { shotId: shot.shotId, frame: line.frame ?? shot.startFrame, endFrame: shot.endFrame, speaker: line.speaker, lineId: line.lineId };
@@ -51861,6 +51870,15 @@ function mapSceneInputs(request, tool, model2, missing = [], resolution2) {
   const opening = pins.some((p) => p.role === "start" && p.frame === 0);
   const timedLimit = tool === "astra_genai_desktop_keyframes" ? 10 : 8;
   for (const [index, p] of pins.entries()) {
+    if (tool === "astra_genai_img2video" && !caps.frameAccurateCuts && request.cuts.some((cut) => cut.transition === "hard_cut" && (p.role === "start" && p.shotId === cut.to && p.frame === cut.frame || p.role === "end" && p.shotId === cut.from && p.frame === cut.frame - 1)))
+      missing.push({
+        input: "image",
+        shotId: p.shotId,
+        frame: p.frame,
+        path: p.path,
+        role: p.role,
+        reason: "A temporal pin conditions a frame but cannot enforce this image at a shot boundary"
+      });
     if (caps.timedImages && index >= timedLimit) {
       missing.push({ input: "image", shotId: p.shotId, frame: p.frame, path: p.path, role: p.role, reason: "Exceeds the adapter limit of " + timedLimit + " timed images" });
       continue;

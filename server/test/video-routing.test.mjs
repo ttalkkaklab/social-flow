@@ -729,7 +729,7 @@ test('sceneNo refuses a frame-addressed cut on I2V and preserves ordered dialogu
  const input={episode:f.episode,sceneNo:1,requestId:'whole-scene',args:{reserveUsd:0.1}};
  assert.throws(()=>planVideo(input),error => {
    assert.ok(error.missing.some(m => m.shotId === 's2' && m.input === 'transition' && m.frame === 96));
-   assert.ok(!error.missing.some(m => m.input === 'image'));
+   assert.deepEqual(error.missing.filter(m => m.input === 'image').map(m => [m.shotId,m.frame,m.role]), [['s2',96,'start']]);
    for (const [i,card] of error.sceneRequest.shots.entries()) {
      const speaker = positions[1-i].character;
      assert.equal(card.dialogue[0].text,words[i]);

@@ -14,6 +14,7 @@ import { VEO_CONSTRAINTS } from './veo-video.js';
 import { astraGenaiBaseUrl, GenaiRequestError, genaiAudioUri, genaiSourceUri, requestGenai } from './astra-genai-client.js';
 import { FRAME_FIELDS, sceneInputCapabilities, VIDEO_ADAPTERS } from './video-registry.js';
 import { resolveCharacterVoice, voiceReference } from './video-voice.js';
+import { GENAI_MSR_INLINE_MAX_BYTES, uploadGenaiFile } from './astra-genai-upload.js';
 
 const load = createRequire(import.meta.url);
 type Timeline = z.infer<typeof shotTimelineSchema>;
@@ -226,7 +227,8 @@ export async function inspectSceneInputContract(error: SceneInputError, validati
 }
 /** Send the full scene to the authenticated validation-only route. A schema pass never authorizes execution. */
 async function validateScenePayload(endpoint: string, scene: SceneRequest, model: string, resolution: string, requestId: string) {
-  let sent: {bodySha256:string; bytes:number} | undefined;
+  const attachments: {shotId?:string; role:string; frame:number; sha256:string; bytes:number}[] = [];
+  let sent: {bodySha256:string; bytes:number; requestBody?:unknown} | undefined;
   try {
     const shots = scene.shots.map(shot => {
       const images = scene.images.filter(image => image.shotId === shot.shotId).map(image => ({
@@ -248,15 +250,37 @@ async function validateScenePayload(endpoint: string, scene: SceneRequest, model
       image_uri:shots[0]?.images.find(image => image.role === 'start')?.image_uri, shots,
       ...(scene.audio ? {scene_audio:{audio_uri:genaiAudioUri(undefined,scene.audio.path),start_frame:scene.audio.startFrame,
         end_frame:scene.audio.endFrame,cues:scene.audio.cues}} : {})};
-    const wire = JSON.stringify(body);
-    sent = {bodySha256:createHash('sha256').update(wire).digest('hex'), bytes:Buffer.byteLength(wire)};
+    let wire = JSON.stringify(body);
+    if (Buffer.byteLength(wire) > GENAI_MSR_INLINE_MAX_BYTES) {
+      const staged = new Map<string,string>();
+      const stage = async (uri: string, role: string, frame: number, shotId?: string) => {
+        const comma = uri.indexOf(',');
+        const bytes = Buffer.from(uri.slice(comma + 1), 'base64');
+        const sha256 = createHash('sha256').update(bytes).digest('hex');
+        const id = staged.get(sha256) ?? await uploadGenaiFile(bytes, uri.slice(5, uri.indexOf(';')));
+        if (!id) throw new Error('Gateway could not stage the original ' + role + ' file for validation');
+        staged.set(sha256, id);
+        attachments.push({shotId, role, frame, sha256, bytes:bytes.length});
+        return id;
+      };
+      for (const shot of shots) {
+        for (const image of shot.images) image.image_uri = await stage(image.image_uri, image.role, image.frame, shot.shot_id);
+        for (const line of shot.dialogue ?? []) if (line.voice_uri)
+          line.voice_uri = await stage(line.voice_uri, 'voice_reference', line.frame ?? shot.start_frame, shot.shot_id);
+      }
+      body.image_uri = shots[0]?.images.find(image => image.role === 'start')?.image_uri;
+      if (body.scene_audio) body.scene_audio.audio_uri = await stage(body.scene_audio.audio_uri, 'scene_audio', 0);
+      wire = JSON.stringify(body);
+    }
+    sent = {bodySha256:createHash('sha256').update(wire).digest('hex'), bytes:Buffer.byteLength(wire),
+      ...(attachments.length ? {requestBody:body} : {})};
     const result = await requestGenai('POST', endpoint, body, 120000, undefined, requestId);
     const accepted = z.object({schema_valid:z.literal(true),model:z.literal(model)}).safeParse(result);
-    return {endpoint, requestId, ...sent, status:accepted.success ? 'schema_accepted' : 'unverified', result:accepted.data};
+    return {endpoint, requestId, ...sent, ...(attachments.length ? {attachments} : {}), status:accepted.success ? 'schema_accepted' : 'unverified', result:accepted.data};
   } catch (error) {
     if (error instanceof GenaiRequestError && [400,422].includes(error.httpStatus))
-      return {endpoint, requestId, ...sent, status:'schema_rejected', httpStatus:error.httpStatus, detail:error.message};
-    return {endpoint, requestId, ...sent, status:'unverified', detail:error instanceof Error ? error.message : String(error)};
+      return {endpoint, requestId, ...sent, ...(attachments.length ? {attachments} : {}), status:'schema_rejected', httpStatus:error.httpStatus, detail:error.message};
+    return {endpoint, requestId, ...sent, ...(attachments.length ? {attachments} : {}), status:'unverified', detail:error instanceof Error ? error.message : String(error)};
   }
 }
 /** Decide using ALL scene inputs before building any provider fields or saving an executable plan. */
@@ -266,6 +290,9 @@ export function mapSceneInputs(request: SceneRequest, tool: string, model?: stri
   for (const shot of request.shots) {
     if (!shot.framing || !shot.action) missing.push({input:'direction', shotId:shot.shotId, frame:shot.startFrame,
       reason:'Write the missing English framing/action in story_shot.timeline'});
+    if (tool === 'astra_genai_img2video' && request.shots.length > 1 && shot.openingPositions?.length && !caps.shotScopedReferences)
+      missing.push({input:'position', role:'opening_positions', shotId:shot.shotId, frame:shot.startFrame, endFrame:shot.endFrame,
+        reason:'The renderer has no shot-local opening positions for its subject slots'});
     if (!request.audio && !caps.frameAddressedNativeDialogue) for (const line of shot.dialogue ?? []) {
       if (line.delivery === 'voiceover' || request.shots.length === 1 && line.frame === undefined) continue;
       const scope = {shotId:shot.shotId, frame:line.frame ?? shot.startFrame, endFrame:shot.endFrame, speaker:line.speaker, lineId:line.lineId};
@@ -282,6 +309,10 @@ export function mapSceneInputs(request: SceneRequest, tool: string, model?: stri
   const opening = pins.some(p => p.role === 'start' && p.frame === 0);
   const timedLimit = tool === 'astra_genai_desktop_keyframes' ? 10 : 8;
   for (const [index,p] of pins.entries()) {
+    if (tool === 'astra_genai_img2video' && !caps.frameAccurateCuts && request.cuts.some(cut => cut.transition === 'hard_cut' &&
+        ((p.role === 'start' && p.shotId === cut.to && p.frame === cut.frame) || (p.role === 'end' && p.shotId === cut.from && p.frame === cut.frame - 1))))
+      missing.push({input:'image', shotId:p.shotId, frame:p.frame, path:p.path, role:p.role,
+        reason:'A temporal pin conditions a frame but cannot enforce this image at a shot boundary'});
     if (caps.timedImages && index >= timedLimit) {
       missing.push({input:'image',shotId:p.shotId,frame:p.frame,path:p.path,role:p.role,reason:'Exceeds the adapter limit of ' + timedLimit + ' timed images'});
       continue;

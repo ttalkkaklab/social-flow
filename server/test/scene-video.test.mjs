@@ -150,6 +150,9 @@ test('EP2 keeps the dolly in one shot and binds Miran’s line, position and ref
     assert.deepEqual(error.sceneRequest,request);
     assert.deepEqual(error.missing.filter(m=>m.input==='reference').map(m=>m.frame),[0,171]);
     assert.ok(error.missing.some(m=>m.lineId==='s0001-l1' && m.frame===171 && m.speaker==='miran'));
+    assert.deepEqual(error.missing.filter(m=>m.input==='image').map(m=>[m.shotId,m.role,m.frame]),
+      [['s0002','end',170],['s0001','start',171]]);
+    assert.deepEqual(error.missing.filter(m=>m.input==='position').map(m=>m.frame),[0,171]);
     return true;
   });
   assert.equal(fs.existsSync(path.join(f.episode,'.work/video-routing/plans')),false);
@@ -215,6 +218,43 @@ test('a refused I2V scene reads the selected endpoint and renderer contract with
   assert.equal(checked.validation.httpStatus,400);
   assert.equal(checked.validation.bodySha256,wireHash);
   assert.equal(posts,1);
+  // A large soundtrack also used as a voice sample travels unchanged through the standard chunked upload.
+  fs.appendFileSync(voicePath,Buffer.alloc(4_500_000));
+  const sessions=new Map(), finished=new Map();
+  globalThis.fetch=async(url,options)=>{
+    const route=new URL(url).pathname;
+    if(options.method==='GET') return discovery(url,options);
+    if(route==='/v1/uploads'){
+      const info=JSON.parse(options.body), id=String(sessions.size+1);
+      sessions.set(id,info);
+      return Response.json({upload_id:id,chunk_size:5*1024*1024,chunks:1});
+    }
+    if(options.method==='PUT'){
+      const id=route.split('/')[3], sha=createHash('sha256').update(options.body).digest('hex');
+      assert.equal(sha,sessions.get(id).sha256);
+      finished.set(id,sha);
+      return Response.json({});
+    }
+    if(route.endsWith('/complete')){
+      const id=route.split('/')[3];
+      assert.ok(finished.has(id));
+      return Response.json({file_id:id,uri:'genai-file://'+id});
+    }
+    assert.equal(route,endpoint);
+    assert.ok(Buffer.byteLength(options.body)<8000000);
+    const body=JSON.parse(options.body);
+    assert.equal(body.image_uri,body.shots[0].images.find(p=>p.role==='start').image_uri);
+    assert.equal(body.scene_audio.audio_uri,body.shots[1].dialogue[0].voice_uri);
+    assert.ok(body.shots.flatMap(s=>s.images).every(p=>p.image_uri.startsWith('genai-file://')));
+    return Response.json({error:{message:'unsupported shot inputs'}},{status:400});
+  };
+  const staged=(await inspectSceneInputContract(refused,input)).validation;
+  assert.equal(staged.status,'schema_rejected');
+  assert.equal(staged.attachments.length,compiled.images.length+2);
+  assert.equal(staged.requestBody.shots[1].dialogue[0].text,'제가 찢었습니다.');
+  assert.equal(staged.bodySha256,createHash('sha256').update(JSON.stringify(staged.requestBody)).digest('hex'));
+  assert.equal(checked.validation.requestBody,undefined);
+  assert.equal(staged.attachments.at(-1).sha256,createHash('sha256').update(fs.readFileSync(voicePath)).digest('hex'));
   globalThis.fetch=async()=>Response.json({},{status:503});
   assert.equal((await inspectSceneInputContract(refusal)).status,'unverified');
 });

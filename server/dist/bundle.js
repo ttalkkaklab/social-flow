@@ -114860,6 +114860,7 @@ import * as fs12 from "node:fs";
 import * as os2 from "node:os";
 import * as path11 from "node:path";
 var GENAI_FILE_SCHEME = "genai-file://";
+var GENAI_MSR_INLINE_MAX_BYTES = 8 * 1e3 * 1e3;
 var genaiUploadSettings = { attempts: 4, retryDelayMs: 2e3, chunkTimeoutMs: 12e4 };
 var UPLOAD_TYPES = /* @__PURE__ */ new Set(["image/png", "image/jpeg", "audio/wav", "audio/mpeg", "audio/mp4", "audio/ogg"]);
 var UPLOAD_MAX_BYTES = 32 * 1024 * 1024;
@@ -115392,7 +115393,6 @@ async function getGenaiVideoStatus(input) {
   }
   return { jobId: receipt.jobId, status: "completed", videoPath: receipt.videoPath, downloaded: true, review: "not_reviewed" };
 }
-var GENAI_MSR_INLINE_MAX_BYTES = 8 * 1e3 * 1e3;
 async function prepareGenaiMsrSources(body) {
   const size = /^(\d+)x(\d+)$/.exec(body.resolution ?? "");
   const width = body.width ?? Number(size?.[1]), height = body.height ?? Number(size?.[2]);
@@ -119001,6 +119001,7 @@ async function inspectSceneInputContract(error2, validation) {
   }
 }
 async function validateScenePayload(endpoint2, scene, model2, resolution2, requestId) {
+  const attachments = [];
   let sent;
   try {
     const shots = scene.shots.map((shot) => {
@@ -119052,15 +119053,40 @@ async function validateScenePayload(endpoint2, scene, model2, resolution2, reque
         cues: scene.audio.cues
       } } : {}
     };
-    const wire = JSON.stringify(body);
-    sent = { bodySha256: createHash15("sha256").update(wire).digest("hex"), bytes: Buffer.byteLength(wire) };
+    let wire = JSON.stringify(body);
+    if (Buffer.byteLength(wire) > GENAI_MSR_INLINE_MAX_BYTES) {
+      const staged = /* @__PURE__ */ new Map();
+      const stage = async (uri, role, frame2, shotId) => {
+        const comma = uri.indexOf(",");
+        const bytes = Buffer.from(uri.slice(comma + 1), "base64");
+        const sha2563 = createHash15("sha256").update(bytes).digest("hex");
+        const id = staged.get(sha2563) ?? await uploadGenaiFile(bytes, uri.slice(5, uri.indexOf(";")));
+        if (!id) throw new Error("Gateway could not stage the original " + role + " file for validation");
+        staged.set(sha2563, id);
+        attachments.push({ shotId, role, frame: frame2, sha256: sha2563, bytes: bytes.length });
+        return id;
+      };
+      for (const shot of shots) {
+        for (const image2 of shot.images) image2.image_uri = await stage(image2.image_uri, image2.role, image2.frame, shot.shot_id);
+        for (const line of shot.dialogue ?? []) if (line.voice_uri)
+          line.voice_uri = await stage(line.voice_uri, "voice_reference", line.frame ?? shot.start_frame, shot.shot_id);
+      }
+      body.image_uri = shots[0]?.images.find((image2) => image2.role === "start")?.image_uri;
+      if (body.scene_audio) body.scene_audio.audio_uri = await stage(body.scene_audio.audio_uri, "scene_audio", 0);
+      wire = JSON.stringify(body);
+    }
+    sent = {
+      bodySha256: createHash15("sha256").update(wire).digest("hex"),
+      bytes: Buffer.byteLength(wire),
+      ...attachments.length ? { requestBody: body } : {}
+    };
     const result = await requestGenai("POST", endpoint2, body, 12e4, void 0, requestId);
     const accepted = external_exports.object({ schema_valid: external_exports.literal(true), model: external_exports.literal(model2) }).safeParse(result);
-    return { endpoint: endpoint2, requestId, ...sent, status: accepted.success ? "schema_accepted" : "unverified", result: accepted.data };
+    return { endpoint: endpoint2, requestId, ...sent, ...attachments.length ? { attachments } : {}, status: accepted.success ? "schema_accepted" : "unverified", result: accepted.data };
   } catch (error2) {
     if (error2 instanceof GenaiRequestError && [400, 422].includes(error2.httpStatus))
-      return { endpoint: endpoint2, requestId, ...sent, status: "schema_rejected", httpStatus: error2.httpStatus, detail: error2.message };
-    return { endpoint: endpoint2, requestId, ...sent, status: "unverified", detail: error2 instanceof Error ? error2.message : String(error2) };
+      return { endpoint: endpoint2, requestId, ...sent, ...attachments.length ? { attachments } : {}, status: "schema_rejected", httpStatus: error2.httpStatus, detail: error2.message };
+    return { endpoint: endpoint2, requestId, ...sent, ...attachments.length ? { attachments } : {}, status: "unverified", detail: error2 instanceof Error ? error2.message : String(error2) };
   }
 }
 function mapSceneInputs(request, tool2, model2, missing = [], resolution2) {
@@ -119073,6 +119099,15 @@ function mapSceneInputs(request, tool2, model2, missing = [], resolution2) {
       frame: shot.startFrame,
       reason: "Write the missing English framing/action in story_shot.timeline"
     });
+    if (tool2 === "astra_genai_img2video" && request.shots.length > 1 && shot.openingPositions?.length && !caps.shotScopedReferences)
+      missing.push({
+        input: "position",
+        role: "opening_positions",
+        shotId: shot.shotId,
+        frame: shot.startFrame,
+        endFrame: shot.endFrame,
+        reason: "The renderer has no shot-local opening positions for its subject slots"
+      });
     if (!request.audio && !caps.frameAddressedNativeDialogue) for (const line of shot.dialogue ?? []) {
       if (line.delivery === "voiceover" || request.shots.length === 1 && line.frame === void 0) continue;
       const scope = { shotId: shot.shotId, frame: line.frame ?? shot.startFrame, endFrame: shot.endFrame, speaker: line.speaker, lineId: line.lineId };
@@ -119099,6 +119134,15 @@ function mapSceneInputs(request, tool2, model2, missing = [], resolution2) {
   const opening = pins.some((p) => p.role === "start" && p.frame === 0);
   const timedLimit = tool2 === "astra_genai_desktop_keyframes" ? 10 : 8;
   for (const [index, p] of pins.entries()) {
+    if (tool2 === "astra_genai_img2video" && !caps.frameAccurateCuts && request.cuts.some((cut) => cut.transition === "hard_cut" && (p.role === "start" && p.shotId === cut.to && p.frame === cut.frame || p.role === "end" && p.shotId === cut.from && p.frame === cut.frame - 1)))
+      missing.push({
+        input: "image",
+        shotId: p.shotId,
+        frame: p.frame,
+        path: p.path,
+        role: p.role,
+        reason: "A temporal pin conditions a frame but cannot enforce this image at a shot boundary"
+      });
     if (caps.timedImages && index >= timedLimit) {
       missing.push({ input: "image", shotId: p.shotId, frame: p.frame, path: p.path, role: p.role, reason: "Exceeds the adapter limit of " + timedLimit + " timed images" });
       continue;
