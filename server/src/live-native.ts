@@ -59,11 +59,16 @@ export class NativeTalk {
       ? `trim=start_frame=${start}:end_frame=${start + timing.speechFrames},crop=720:1280:8:0`
       : 'crop=720:1280:8:0';
     const rgb = join(this.dir, randomUUID() + '.rgb');
-    await execute('ffmpeg', ['-v', 'error', '-nostdin', '-i', clip, '-an', '-vf', filter,
-      '-pix_fmt', 'rgb24', '-f', 'rawvideo', rgb], { signal });
-    const frames = new MotionFrames(rgb, true, this.width * this.height * 3);
-    this.frames.add(frames);
-    return frames;
+    try {
+      await execute('ffmpeg', ['-v', 'error', '-nostdin', '-i', clip, '-an', '-vf', filter,
+        '-pix_fmt', 'rgb24', '-f', 'rawvideo', rgb], { signal });
+      const frames = new MotionFrames(rgb, true, this.width * this.height * 3);
+      this.frames.add(frames);
+      return frames;
+    } catch (error) {
+      rmSync(rgb, { force: true });
+      throw error;
+    }
   }
 
   async prepareIdle(concept: string, signal: AbortSignal, log: (kind: string, fields: Record<string, unknown>) => void) {

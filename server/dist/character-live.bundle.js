@@ -32253,24 +32253,29 @@ var NativeTalk = class {
       throw Error("Native render and conditioning audio have different frame counts");
     const filter = timing ? `trim=start_frame=${start}:end_frame=${start + timing.speechFrames},crop=720:1280:8:0` : "crop=720:1280:8:0";
     const rgb = join6(this.dir, randomUUID5() + ".rgb");
-    await execute2("ffmpeg", [
-      "-v",
-      "error",
-      "-nostdin",
-      "-i",
-      clip,
-      "-an",
-      "-vf",
-      filter,
-      "-pix_fmt",
-      "rgb24",
-      "-f",
-      "rawvideo",
-      rgb
-    ], { signal });
-    const frames = new MotionFrames(rgb, true, this.width * this.height * 3);
-    this.frames.add(frames);
-    return frames;
+    try {
+      await execute2("ffmpeg", [
+        "-v",
+        "error",
+        "-nostdin",
+        "-i",
+        clip,
+        "-an",
+        "-vf",
+        filter,
+        "-pix_fmt",
+        "rgb24",
+        "-f",
+        "rawvideo",
+        rgb
+      ], { signal });
+      const frames = new MotionFrames(rgb, true, this.width * this.height * 3);
+      this.frames.add(frames);
+      return frames;
+    } catch (error) {
+      rmSync5(rgb, { force: true });
+      throw error;
+    }
   }
   async prepareIdle(concept, signal, log) {
     const paths = await prepareIdleClips(
