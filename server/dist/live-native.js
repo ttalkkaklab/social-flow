@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createRequire } from 'node:module';
@@ -13,10 +13,32 @@ import { astraGenaiBaseUrl } from './astra-genai-client.js';
 const execute = promisify(execFile);
 const { estimateSpeechSeconds } = createRequire(import.meta.url)('../../skills/_shared/scene-acting.js');
 export const talkPrompt = 'Locked chest-up portrait. The host faces the lens with relaxed shoulders. Keep the camera, light and background fixed.';
+function speechFrames(text, language) {
+    const seconds = estimateSpeechSeconds(text, language) ?? Math.max(2, Array.from(text).length / 7);
+    return Math.max(49, 1 + 8 * Math.ceil(((seconds + 0.65) * 24 - 1) / 8));
+}
+export function openingParts(text, language) {
+    if (speechFrames(text, language) <= 361)
+        return [text];
+    const parts = [];
+    let current = '';
+    for (const { segment } of new Intl.Segmenter(language, { granularity: 'word' }).segment(text)) {
+        const units = speechFrames(segment, language) > 361 ? Array.from(segment) : [segment];
+        for (const unit of units) {
+            if (current.trim() && speechFrames(current + unit, language) > 361) {
+                parts.push(current.trim());
+                current = '';
+            }
+            current += unit;
+        }
+    }
+    if (current.trim())
+        parts.push(current.trim());
+    return parts;
+}
 export function spokenVideoRequest(actor, direction, text) {
     const language = new Intl.DisplayNames(['en'], { type: 'language' }).of(actor.language) ?? actor.language;
-    const seconds = estimateSpeechSeconds(text, actor.language) ?? Math.max(2, Array.from(text).length / 7);
-    const numFrames = Math.max(49, 1 + 8 * Math.ceil(((seconds + 0.65) * 24 - 1) / 8));
+    const numFrames = speechFrames(text, actor.language);
     if (numFrames > 361)
         throw Error('Live dialogue exceeds one GenAI clip. Use a shorter line.');
     return {
@@ -39,6 +61,7 @@ export class NativeTalk {
     height = nativeHeight;
     dir = mkdtempSync(join(tmpdir(), 'native-talk-'));
     frames = new Set();
+    downloads = new Map();
     idle = [];
     rotation = new IdleRotation();
     shot = -1;
@@ -82,14 +105,33 @@ export class NativeTalk {
         this.onIdle = (index) => log('idle_clip_playing', { index: index + 1 });
         log('idle_pool_ready', { count: this.idle.length });
     }
-    async render(text, signal) {
+    videoInput(text) {
         const request = spokenVideoRequest(this.actor, this.prompt, text);
         const key = createHash('sha256').update(astraGenaiBaseUrl()).update(JSON.stringify(request))
             .update(readFileSync(this.actor.asset)).update(readFileSync(this.actor.voiceSample)).digest('hex');
         const outputPath = join(this.project, '.social-flow', 'live-genai');
+        return { ...request, outputPath, filename: key + '.mp4' };
+    }
+    async cached(text, signal) {
+        const input = this.videoInput(text);
+        const receipt = join(input.outputPath, input.filename) + '.astra-genai.json';
+        if (!existsSync(receipt) || JSON.parse(readFileSync(receipt, 'utf8')).status !== 'completed')
+            return;
+        return this.render(text, signal);
+    }
+    async render(text, signal) {
+        const input = this.videoInput(text);
+        const { outputPath } = input;
         mkdirSync(outputPath, { recursive: true, mode: 0o700 });
         const started = Date.now();
-        const result = await generateGenaiVideo('image-to-video', { ...request, outputPath, filename: key + '.mp4' }, signal);
+        // Identical replies share the remote job, but each playout owns its own decoded frames.
+        let download = this.downloads.get(input.filename);
+        if (!download) {
+            download = generateGenaiVideo('image-to-video', input, signal)
+                .finally(() => this.downloads.delete(input.filename));
+            this.downloads.set(input.filename, download);
+        }
+        const result = await download;
         signal.throwIfAborted();
         if (!result.downloaded || !result.videoPath)
             throw Error('GenAI dialogue video is still pending: ' + result.receiptPath);

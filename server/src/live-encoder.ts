@@ -37,6 +37,8 @@ function completion(proc: ChildProcess, label: string) {
 }
 export interface Utterance {
   question?: { speaker?: string; text: string };
+  reusable?: boolean;
+  replay?: boolean;
   pcm: Buffer;
   motion?: MotionFrames;
   id: string;
@@ -127,7 +129,8 @@ export async function encode(
     next(speech?: MotionFrames): Buffer;
     release(speech: MotionFrames): void;
   },
-  drain?: () => boolean
+  drain?: () => boolean,
+  finishedSpeaking?: (clip: Utterance) => void
 ) {
   for (const destination of destinations) splitIngest(destination);
   const width = motion?.width ?? WIDTH, height = motion?.height ?? HEIGHT;
@@ -252,7 +255,7 @@ export async function encode(
         offset = 0;
         if (active) {
           motion?.startSpeech();
-          log('speech_start', { source: active.source, id: active.id, text: active.text, frame });
+          log('speech_start', { source: active.source, id: active.id, text: active.text, frame, replay: !!active.replay });
         }
       }
       let pcm = silence;
@@ -265,7 +268,8 @@ export async function encode(
       video.write(motion ? motion.next(active?.motion) : frames[(blink ? 4 : 0) + mouthLevel(pcm)]);
       if (active && offset >= active.pcm.length) {
         log('speech_end', { source: active.source, id: active.id, frame, samplesSent: offset / 2, totalSamples: active.pcm.length / 2 });
-        if (active.motion) motion?.release(active.motion);
+        if (finishedSpeaking) finishedSpeaking(active);
+        else if (active.motion) motion?.release(active.motion);
         active = undefined;
       }
       frame++;

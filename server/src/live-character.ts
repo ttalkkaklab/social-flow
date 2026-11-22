@@ -25,12 +25,16 @@ export const liveConfig = z
     motionVideo: z.string().min(1).optional(),
     idleVideos: z.array(z.string().min(1)).max(6).default([]),
     hostLines: z.array(z.string().trim().min(1).max(300)).max(40).default([]),
+    standbyLines: z.tuple([z.string().trim().min(1).max(300), z.string().trim().min(1).max(300)])
+      .refine(([a,b]) => a !== b, 'Choose two different welcome lines').optional(),
+    topic: z.string().trim().min(1).max(120).optional(),
+    maxConcurrentVideos: z.number().int().positive().safe().default(3),
     character: slug,
     chatModel: z.string().min(1),
     panel: z.string().default('face'),
     mouth: feature.optional(),
     eyes: z.array(feature).length(2).optional(),
-    opening: z.string().trim().min(1).max(300),
+    opening: z.string().trim().min(1).max(300).optional(),
     persona: z.string().max(1500).optional(),
     youtubeChannelId: z
       .string()
@@ -49,7 +53,7 @@ export const liveConfig = z
       .max(32)
       .default([])
   })
-  .strict();
+  .strict().refine(c => c.opening || c.topic, 'Set the broadcast topic or an opening line');
 export type LiveConfig = z.infer<typeof liveConfig>;
 export const WIDTH = 360,
   HEIGHT = 640,
@@ -200,10 +204,33 @@ export function answer(config: LiveConfig, character: Character, question: strin
 }
 
 export function continueBroadcast(config: LiveConfig, character: Character, context: BroadcastContext,
-  cue: string | undefined, signal?: AbortSignal) {
+  cue: string | undefined, signal?: AbortSignal, standalone = false) {
   return spokenLine(config, character,
-    "Continue the show with one concrete observation, example or next thought. Build on the current topic and any scheduled continuation. An optional editorial cue suggests a direction. Do not repeat a greeting or a line already spoken, ask for chat again, or invent a viewer or a question.",
-    { context, cue }, signal);
+    (standalone ? "Write one short, self-contained on-topic remark suitable for replay during a quiet moment. It must make sense on its own at any time. Never reference a viewer, the chat, an earlier sentence or current conditions. " : "Continue the show with one concrete observation, example or next thought. Build on the current topic and any scheduled continuation. ")
+      + "An optional editorial cue suggests a direction. Do not repeat a greeting or a line already spoken, ask for chat again, or invent a viewer or a question.",
+    { context: standalone ? {scheduledHost: context.scheduledHost, onAir: context.onAir.filter(turn => !turn.answering)} : context,
+      cue, topic:config.topic }, signal);
+}
+
+export async function broadcastLines(cfg: LiveConfig, actor: Character, signal?: AbortSignal) {
+  const language = actor.language.split('-')[0];
+  let opening = cfg.opening;
+  if (cfg.topic) {
+    if (language === 'ko') opening = `오늘은 ${cfg.topic} 이야기를 해 볼게요. 여러분 생각도 댓글로 남겨 주세요.`;
+    else if (language === 'en') opening = `Today we're talking about ${cfg.topic}. Tell me what you think in the chat.`;
+    else opening = await spokenLine(cfg, actor, 'Open the show. Name the supplied topic and invite everyone to share their views in chat. Keep it short.', {topic:cfg.topic}, signal);
+  }
+  let standby = cfg.standbyLines;
+  if (!standby) {
+    if (language === 'ko') standby = ['안녕하세요. 지금 입장하신 분들 환영해요.', '편하게 듣고 가세요. 여러분 생각도 들려주세요.'];
+    else if (language === 'en') standby = ['Hello, and welcome if you just joined us.', 'Make yourself comfortable. Feel free to share your thoughts.'];
+    else {
+      const localize = (words: string) => spokenLine(cfg, actor, 'Translate the supplied short welcome for the whole audience. Return only the translation.', {words}, signal);
+      standby = [await localize('Hello, and welcome if you just joined us.'), await localize('Make yourself comfortable. Feel free to share your thoughts.')];
+    }
+  }
+  if (!opening || standby[0] === standby[1]) throw Error('The opening and two distinct welcome lines are required');
+  return {opening, standby};
 }
 
 async function spokenLine(config: LiveConfig, character: Character, direction: string, input: object, signal?: AbortSignal) {

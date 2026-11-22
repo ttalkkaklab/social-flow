@@ -4,7 +4,7 @@ import {execFileSync} from 'node:child_process';
 import {mkdtempSync, rmSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
-import {NativeTalk, spokenVideoRequest, talkPrompt} from '../dist/live-native.js';
+import {NativeTalk, openingParts, spokenVideoRequest, talkPrompt} from '../dist/live-native.js';
 import {genaiImageToVideoSchema} from '../dist/astra-genai-video.js';
 import {SAMPLES} from '../dist/live-character.js';
 
@@ -19,6 +19,11 @@ test('live dialogue binds the exact line and voice reference to the on-screen ho
   assert.ok(request.prompt.includes(JSON.stringify(words)));
   assert.deepEqual(request.openingPositions[0].images, [1]);
   assert.throws(() => spokenVideoRequest(actor, talkPrompt, '한'.repeat(300)), /shorter line/);
+  const longTopic = '오늘은 ' + '바다가 보이는 서점에서 만난 사람들 '.repeat(5) + '이야기를 해 볼게요. 여러분 생각도 댓글로 남겨 주세요.';
+  const parts = openingParts(longTopic, actor.language);
+  assert.ok(parts.length > 1);
+  assert.equal(parts.join('').replaceAll(' ',''),longTopic.replaceAll(' ',''));
+  for (const part of parts) assert.ok(spokenVideoRequest(actor, talkPrompt, part).numFrames <= 361);
 });
 
 test('plays the generated soundtrack on the video clock and rejects a silent clip', async t => {

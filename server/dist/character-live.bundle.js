@@ -30298,12 +30298,15 @@ var liveConfig = external_exports.object({
   motionVideo: external_exports.string().min(1).optional(),
   idleVideos: external_exports.array(external_exports.string().min(1)).max(6).default([]),
   hostLines: external_exports.array(external_exports.string().trim().min(1).max(300)).max(40).default([]),
+  standbyLines: external_exports.tuple([external_exports.string().trim().min(1).max(300), external_exports.string().trim().min(1).max(300)]).refine(([a, b]) => a !== b, "Choose two different welcome lines").optional(),
+  topic: external_exports.string().trim().min(1).max(120).optional(),
+  maxConcurrentVideos: external_exports.number().int().positive().safe().default(3),
   character: slug,
   chatModel: external_exports.string().min(1),
   panel: external_exports.string().default("face"),
   mouth: feature.optional(),
   eyes: external_exports.array(feature).length(2).optional(),
-  opening: external_exports.string().trim().min(1).max(300),
+  opening: external_exports.string().trim().min(1).max(300).optional(),
   persona: external_exports.string().max(1500).optional(),
   youtubeChannelId: external_exports.string().regex(/^UC[\w-]{22}$/).optional(),
   madeForKids: external_exports.boolean().optional(),
@@ -30313,7 +30316,7 @@ var liveConfig = external_exports.object({
       answer: external_exports.string().trim().min(1).max(300)
     }).strict()
   ).max(32).default([])
-}).strict();
+}).strict().refine((c) => c.opening || c.topic, "Set the broadcast topic or an opening line");
 var WIDTH = 360;
 var HEIGHT = 640;
 var FPS = 24;
@@ -30372,14 +30375,38 @@ function answer(config2, character, question, signal, context, speaker, selectiv
     signal
   );
 }
-function continueBroadcast(config2, character, context, cue, signal) {
+function continueBroadcast(config2, character, context, cue, signal, standalone = false) {
   return spokenLine(
     config2,
     character,
-    "Continue the show with one concrete observation, example or next thought. Build on the current topic and any scheduled continuation. An optional editorial cue suggests a direction. Do not repeat a greeting or a line already spoken, ask for chat again, or invent a viewer or a question.",
-    { context, cue },
+    (standalone ? "Write one short, self-contained on-topic remark suitable for replay during a quiet moment. It must make sense on its own at any time. Never reference a viewer, the chat, an earlier sentence or current conditions. " : "Continue the show with one concrete observation, example or next thought. Build on the current topic and any scheduled continuation. ") + "An optional editorial cue suggests a direction. Do not repeat a greeting or a line already spoken, ask for chat again, or invent a viewer or a question.",
+    {
+      context: standalone ? { scheduledHost: context.scheduledHost, onAir: context.onAir.filter((turn) => !turn.answering) } : context,
+      cue,
+      topic: config2.topic
+    },
     signal
   );
+}
+async function broadcastLines(cfg, actor, signal) {
+  const language = actor.language.split("-")[0];
+  let opening = cfg.opening;
+  if (cfg.topic) {
+    if (language === "ko") opening = `\uC624\uB298\uC740 ${cfg.topic} \uC774\uC57C\uAE30\uB97C \uD574 \uBCFC\uAC8C\uC694. \uC5EC\uB7EC\uBD84 \uC0DD\uAC01\uB3C4 \uB313\uAE00\uB85C \uB0A8\uACA8 \uC8FC\uC138\uC694.`;
+    else if (language === "en") opening = `Today we're talking about ${cfg.topic}. Tell me what you think in the chat.`;
+    else opening = await spokenLine(cfg, actor, "Open the show. Name the supplied topic and invite everyone to share their views in chat. Keep it short.", { topic: cfg.topic }, signal);
+  }
+  let standby = cfg.standbyLines;
+  if (!standby) {
+    if (language === "ko") standby = ["\uC548\uB155\uD558\uC138\uC694. \uC9C0\uAE08 \uC785\uC7A5\uD558\uC2E0 \uBD84\uB4E4 \uD658\uC601\uD574\uC694.", "\uD3B8\uD558\uAC8C \uB4E3\uACE0 \uAC00\uC138\uC694. \uC5EC\uB7EC\uBD84 \uC0DD\uAC01\uB3C4 \uB4E4\uB824\uC8FC\uC138\uC694."];
+    else if (language === "en") standby = ["Hello, and welcome if you just joined us.", "Make yourself comfortable. Feel free to share your thoughts."];
+    else {
+      const localize = (words) => spokenLine(cfg, actor, "Translate the supplied short welcome for the whole audience. Return only the translation.", { words }, signal);
+      standby = [await localize("Hello, and welcome if you just joined us."), await localize("Make yourself comfortable. Feel free to share your thoughts.")];
+    }
+  }
+  if (!opening || standby[0] === standby[1]) throw Error("The opening and two distinct welcome lines are required");
+  return { opening, standby };
 }
 async function spokenLine(config2, character, direction, input, signal) {
   const response = await requestGenai(
@@ -30537,7 +30564,7 @@ function checkLiveRelay() {
       "Secure live output needs Python 3 and shared FFmpeg libraries (avformat, avutil). Set SOCIAL_FLOW_LIVE_PYTHON to select an interpreter."
     );
 }
-async function encode(frames, archive, destinations, seconds, signal, pull, log, motion, drain) {
+async function encode(frames, archive, destinations, seconds, signal, pull, log, motion, drain, finishedSpeaking) {
   for (const destination of destinations) splitIngest(destination);
   const width = motion?.width ?? WIDTH, height = motion?.height ?? HEIGHT;
   const encoder = spawn(
@@ -30657,7 +30684,7 @@ async function encode(frames, archive, destinations, seconds, signal, pull, log,
         offset = 0;
         if (active) {
           motion?.startSpeech();
-          log("speech_start", { source: active.source, id: active.id, text: active.text, frame: frame2 });
+          log("speech_start", { source: active.source, id: active.id, text: active.text, frame: frame2, replay: !!active.replay });
         }
       }
       let pcm = silence;
@@ -30670,7 +30697,8 @@ async function encode(frames, archive, destinations, seconds, signal, pull, log,
       video.write(motion ? motion.next(active?.motion) : frames[(blink ? 4 : 0) + mouthLevel(pcm)]);
       if (active && offset >= active.pcm.length) {
         log("speech_end", { source: active.source, id: active.id, frame: frame2, samplesSent: offset / 2, totalSamples: active.pcm.length / 2 });
-        if (active.motion) motion?.release(active.motion);
+        if (finishedSpeaking) finishedSpeaking(active);
+        else if (active.motion) motion?.release(active.motion);
         active = void 0;
       }
       frame2++;
@@ -32484,7 +32512,7 @@ var IdleRotation = class {
 // src/live-native.ts
 import { execFile as execFile2 } from "node:child_process";
 import { createHash as createHash7, randomUUID as randomUUID5 } from "node:crypto";
-import { mkdirSync as mkdirSync5, mkdtempSync as mkdtempSync2, readFileSync as readFileSync6, rmSync as rmSync4 } from "node:fs";
+import { existsSync as existsSync5, mkdirSync as mkdirSync5, mkdtempSync as mkdtempSync2, readFileSync as readFileSync6, rmSync as rmSync4 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join as join4 } from "node:path";
 import { createRequire as createRequire2 } from "node:module";
@@ -32534,10 +32562,30 @@ var MotionFrames = class {
 var execute2 = promisify2(execFile2);
 var { estimateSpeechSeconds } = createRequire2(import.meta.url)("../../skills/_shared/scene-acting.js");
 var talkPrompt = "Locked chest-up portrait. The host faces the lens with relaxed shoulders. Keep the camera, light and background fixed.";
+function speechFrames(text, language) {
+  const seconds = estimateSpeechSeconds(text, language) ?? Math.max(2, Array.from(text).length / 7);
+  return Math.max(49, 1 + 8 * Math.ceil(((seconds + 0.65) * 24 - 1) / 8));
+}
+function openingParts(text, language) {
+  if (speechFrames(text, language) <= 361) return [text];
+  const parts = [];
+  let current = "";
+  for (const { segment } of new Intl.Segmenter(language, { granularity: "word" }).segment(text)) {
+    const units = speechFrames(segment, language) > 361 ? Array.from(segment) : [segment];
+    for (const unit of units) {
+      if (current.trim() && speechFrames(current + unit, language) > 361) {
+        parts.push(current.trim());
+        current = "";
+      }
+      current += unit;
+    }
+  }
+  if (current.trim()) parts.push(current.trim());
+  return parts;
+}
 function spokenVideoRequest(actor, direction, text) {
   const language = new Intl.DisplayNames(["en"], { type: "language" }).of(actor.language) ?? actor.language;
-  const seconds = estimateSpeechSeconds(text, actor.language) ?? Math.max(2, Array.from(text).length / 7);
-  const numFrames = Math.max(49, 1 + 8 * Math.ceil(((seconds + 0.65) * 24 - 1) / 8));
+  const numFrames = speechFrames(text, actor.language);
   if (numFrames > 361) throw Error("Live dialogue exceeds one GenAI clip. Use a shorter line.");
   return {
     model: "ltx-2.5-22b-distilled",
@@ -32573,6 +32621,7 @@ var NativeTalk = class {
   height = nativeHeight;
   dir = mkdtempSync2(join4(tmpdir(), "native-talk-"));
   frames = /* @__PURE__ */ new Set();
+  downloads = /* @__PURE__ */ new Map();
   idle = [];
   rotation = new IdleRotation();
   shot = -1;
@@ -32636,13 +32685,29 @@ var NativeTalk = class {
     this.onIdle = (index) => log("idle_clip_playing", { index: index + 1 });
     log("idle_pool_ready", { count: this.idle.length });
   }
-  async render(text, signal) {
+  videoInput(text) {
     const request = spokenVideoRequest(this.actor, this.prompt, text);
     const key = createHash7("sha256").update(astraGenaiBaseUrl()).update(JSON.stringify(request)).update(readFileSync6(this.actor.asset)).update(readFileSync6(this.actor.voiceSample)).digest("hex");
     const outputPath = join4(this.project, ".social-flow", "live-genai");
+    return { ...request, outputPath, filename: key + ".mp4" };
+  }
+  async cached(text, signal) {
+    const input = this.videoInput(text);
+    const receipt = join4(input.outputPath, input.filename) + ".astra-genai.json";
+    if (!existsSync5(receipt) || JSON.parse(readFileSync6(receipt, "utf8")).status !== "completed") return;
+    return this.render(text, signal);
+  }
+  async render(text, signal) {
+    const input = this.videoInput(text);
+    const { outputPath } = input;
     mkdirSync5(outputPath, { recursive: true, mode: 448 });
     const started = Date.now();
-    const result = await generateGenaiVideo("image-to-video", { ...request, outputPath, filename: key + ".mp4" }, signal);
+    let download = this.downloads.get(input.filename);
+    if (!download) {
+      download = generateGenaiVideo("image-to-video", input, signal).finally(() => this.downloads.delete(input.filename));
+      this.downloads.set(input.filename, download);
+    }
+    const result = await download;
     signal.throwIfAborted();
     if (!result.downloaded || !result.videoPath) throw Error("GenAI dialogue video is still pending: " + result.receiptPath);
     const speech = await this.readSpeech(result.videoPath, signal);
@@ -32714,12 +32779,13 @@ var liveStartChoices = {
   generation: "GenAI LTX 2.5 picture and native dialogue",
   modelCanvas: [720, nativeHeight],
   standbyClips: idleCount,
+  spokenStandbyClips: 2,
   standbySeconds: [3, 5],
   output: [720, 1280],
   spatialUpscale: false,
   faceComposite: false,
   choices: [
-    { id: "ready", label: "\uC900\uBE44\uB418\uBA74 \uBC29\uC1A1 \xB7 \uCCAB \uC778\uC0AC\uC640 \uC774\uC5B4\uC9C8 \uBA58\uD2B8, \uB300\uAE30 \uC601\uC0C1 10\uAC1C\uAC00 \uC900\uBE44\uB418\uBA74 \uBC29\uC1A1\uC744 \uC2DC\uC791\uD574\uC694." },
+    { id: "ready", label: "\uC900\uBE44\uB418\uBA74 \uBC29\uC1A1 \xB7 \uC8FC\uC81C \uC18C\uAC1C\uC640 \uCCAB \uBA58\uD2B8, \uD658\uC601 \uC778\uC0AC \uB450 \uD3B8, \uB300\uAE30 \uC601\uC0C1 10\uAC1C\uB97C \uC900\uBE44\uD558\uACE0 \uC2DC\uC791\uD574\uC694." },
     { id: "preview", label: "\uBBF8\uB9AC\uBCF4\uAE30 \uBA3C\uC800 \xB7 \uCCAB \uC7A5\uBA74\uC744 \uBCF4\uACE0 \uBC29\uC1A1\uD560\uC9C0 \uC815\uD574\uC694." },
     { id: "cancel", label: "\uCDE8\uC18C \xB7 \uC774\uBC88 \uBC29\uC1A1\uC744 \uC2DC\uC791\uD558\uC9C0 \uC54A\uC544\uC694." }
   ]
@@ -32743,7 +32809,29 @@ ${options}
 }
 
 // src/live-program.ts
-var isReply = (source) => source !== "host" && source !== "opening";
+var isReply = (source) => !["host", "opening", "standby"].includes(source);
+var LiveRenderPool = class {
+  constructor(limit) {
+    this.limit = limit;
+  }
+  limit;
+  active = 0;
+  waiting = [];
+  run(viewer, render) {
+    return new Promise((resolve5, reject) => {
+      const start = () => {
+        this.active++;
+        Promise.resolve().then(render).then(resolve5, reject).finally(() => {
+          this.active--;
+          const viewerIndex = this.waiting.findIndex((job) => job.viewer);
+          this.waiting.splice(Math.max(0, viewerIndex), 1)[0]?.start();
+        });
+      };
+      if (this.active < this.limit) start();
+      else this.waiting.push({ viewer, start });
+    });
+  }
+};
 var LiveProgram = class {
   constructor(release) {
     this.release = release;
@@ -32752,7 +32840,10 @@ var LiveProgram = class {
   ready = [];
   history = [];
   chat = [];
-  replies = 0;
+  contextVersion = 0;
+  spokenStandby = [];
+  draftingHosts = /* @__PURE__ */ new Map();
+  draftingReplies = /* @__PURE__ */ new Map();
   hear(event) {
     this.chat.push({ speaker: event.speaker, text: event.text });
     this.chat = this.chat.slice(-12);
@@ -32761,31 +32852,63 @@ var LiveProgram = class {
     return {
       onAir: this.history.slice(),
       recentChat: this.chat.slice(),
-      scheduledHost: this.ready.filter((item) => !isReply(item.source)).map((item) => item.text),
-      scheduledReplies: this.ready.filter((item) => isReply(item.source)).map((item) => ({ host: item.text, answering: item.question }))
+      scheduledHost: [...this.ready.filter((item) => !isReply(item.source)).map((item) => item.text), ...this.draftingHosts.values()],
+      scheduledReplies: [...this.ready.filter((item) => isReply(item.source)).map((item) => ({ host: item.text, answering: item.question })), ...this.draftingReplies.values()]
     };
   }
   get version() {
-    return this.replies;
+    return this.contextVersion;
   }
   get readyReplies() {
     return this.ready.filter((item) => isReply(item.source)).length;
   }
   get canPlanHost() {
-    return this.history.length > 0 && this.readyReplies === 0 && this.ready.length < 2;
+    return this.history.length > 0;
   }
-  queueReply(clip) {
-    this.replies++;
+  changeContext() {
+    this.contextVersion++;
+    this.draftingHosts.clear();
     for (let i = this.ready.length - 1; i >= 0; i--) {
       if (this.ready[i].source === "host") this.release(this.ready.splice(i, 1)[0]);
     }
+  }
+  queueReply(clip, alreadyPlanned = false) {
+    if (!alreadyPlanned) this.changeContext();
     this.ready.push(clip);
   }
-  take(roomLive, allowHost = true) {
-    if (this.ready[0]?.source === "opening" && !roomLive) return;
-    const index = this.ready.findIndex((item) => item.source !== "host" || allowHost);
-    if (index < 0) return;
-    const [clip] = this.ready.splice(index, 1);
+  addStandby(clip) {
+    this.spokenStandby.push(clip);
+  }
+  finish(clip) {
+    if (!["standby", "host"].includes(clip.source) || !clip.reusable || clip.question) {
+      this.release(clip);
+      return;
+    }
+    clip.replay = true;
+    this.spokenStandby.push(clip);
+    if (this.spokenStandby.length > 6) {
+      const oldestHost = this.spokenStandby.findIndex((item) => item.source === "host");
+      if (oldestHost >= 0) this.release(this.spokenStandby.splice(oldestHost, 1)[0]);
+    }
+  }
+  take(roomLive, allowHost = true, awaitingViewer = false) {
+    if (!roomLive) return;
+    let index = this.ready.findIndex((item) => item.source === "opening");
+    if (index < 0) index = this.ready.findIndex((item) => isReply(item.source));
+    if (index < 0 && allowHost && !awaitingViewer && this.ready.length) index = 0;
+    let clip;
+    if (index >= 0) [clip] = this.ready.splice(index, 1);
+    else if (allowHost) {
+      const next = this.spokenStandby.findIndex((item) => (!awaitingViewer || item.source === "standby") && item.text !== this.history.at(-1)?.host);
+      if (next >= 0) {
+        [clip] = this.spokenStandby.splice(next, 1);
+      }
+    }
+    if (!clip) return;
+    if (clip.replay || clip.source === "standby") {
+      const text = clip.text;
+      this.history = this.history.filter((turn) => turn.answering || turn.host !== text);
+    }
     this.history.push({ host: clip.text, ...clip.question && { answering: clip.question } });
     this.history = this.history.slice(-12);
     return clip;
@@ -33239,7 +33362,7 @@ async function main() {
     if (!api || !v.youtube || v.tiktok || start !== "ready" || !v.title?.trim() || v.title.length > 100)
       throw Error("Reserve needs --youtube, --start ready and a YouTube title of 1\u2013100 characters");
     mkdirSync6(out, { mode: 448 });
-    const receipt2 = { channelId: cfg.youtubeChannelId, marker: randomUUID6() };
+    const receipt2 = { channelId: cfg.youtubeChannelId, marker: randomUUID6(), topic: cfg.topic };
     writeReceipt(receipt2);
     await prepareYoutube(api, cfg, v.title, receipt2, () => writeReceipt(receipt2));
     appendFileSync(join6(out, "events.jsonl"), JSON.stringify({
@@ -33282,6 +33405,7 @@ async function main() {
       JSON.stringify({
         localAssetsReady: true,
         liveStart: liveStartChoices,
+        maxConcurrentVideos: cfg.maxConcurrentVideos,
         character: cfg.character,
         language: actor.language,
         youtubeLiveReadAccess: !!api,
@@ -33294,7 +33418,8 @@ async function main() {
     if (api || v.tiktok) throw Error("Warm runs locally");
     const renderer = new NativeTalk(actor, cfg.project, cfg.talkPrompt ?? talkPrompt);
     try {
-      for (const text of /* @__PURE__ */ new Set([cfg.opening, ...cfg.reactions.map((r) => r.answer)])) {
+      const { opening, standby } = await broadcastLines(cfg, actor);
+      for (const text of /* @__PURE__ */ new Set([...openingParts(opening, actor.language), ...standby, ...cfg.reactions.map((r) => r.answer)])) {
         const { motion: motion2 } = await renderer.render(text, new AbortController().signal);
         renderer.release(motion2);
       }
@@ -33326,10 +33451,11 @@ async function main() {
     );
   };
   const prior = v["resume-from"] ? resolve4(v["resume-from"]) : void 0;
-  const receipt = prior ? JSON.parse(readFileSync7(join6(prior, "youtube.json"), "utf8")) : { channelId: cfg.youtubeChannelId ?? "", marker: randomUUID6() };
+  const receipt = prior ? JSON.parse(readFileSync7(join6(prior, "youtube.json"), "utf8")) : { channelId: cfg.youtubeChannelId ?? "", marker: randomUUID6(), topic: cfg.topic };
   if (prior && (receipt.channelId !== cfg.youtubeChannelId || !receipt.broadcastId))
     throw Error("Resume receipt does not belong to this channel");
   if (prior) {
+    if (receipt.topic) cfg.topic = receipt.topic;
     const journal = readFileSync7(join6(prior, "events.jsonl"), "utf8").trim().split("\n");
     const closed = journal.some((line) => {
       const e = JSON.parse(line);
@@ -33350,8 +33476,10 @@ async function main() {
     log("chat_received", { source: event.source, id: event.id, text: event.text });
   });
   let polling, replying, hosting;
-  let acceptingUntil = Infinity, renderingReply = false;
-  let speculative;
+  let acceptingUntil = Infinity, planningReply = false;
+  const pendingHost = /* @__PURE__ */ new Set();
+  const pendingReplies = /* @__PURE__ */ new Set();
+  const speakerOrder = /* @__PURE__ */ new Map();
   let hostLine = 0;
   let received = 0, failedReplies = 0, unfinishedReplies = 0, spokenReplies = 0;
   const unfinished = (source, id, stage) => {
@@ -33363,7 +33491,8 @@ async function main() {
     const roomLive = !api || ingestLive;
     if (!roomLive && Date.now() >= acceptingUntil)
       throw Error("YouTube did not report live before the session deadline");
-    return program.take(roomLive, Date.now() < acceptingUntil);
+    const awaitingAnswer = planningReply || pendingReplies.size > 0 || queue.pending > 0;
+    return program.take(roomLive, Date.now() < acceptingUntil || awaitingAnswer, awaitingAnswer);
   };
   const wait = async (ms) => {
     await sleep4(ms, void 0, { signal: controller.signal }).catch(() => {
@@ -33403,41 +33532,66 @@ async function main() {
   try {
     log("idle_pool_preparing", { total: idleCount });
     await motion.prepareIdle(concept, controller.signal, log);
-    let renderInFlight;
-    async function performance2(text, signal = controller.signal) {
-      while (renderInFlight) await renderInFlight.catch(() => {
-      });
-      signal.throwIfAborted();
-      const job = motion.render(text, signal);
-      renderInFlight = job;
-      try {
-        return await job;
-      } finally {
-        if (renderInFlight === job) renderInFlight = void 0;
-      }
-    }
-    async function prepareHost(preflight, signal = controller.signal) {
+    const pool = new LiveRenderPool(cfg.maxConcurrentVideos);
+    const signal = controller.signal;
+    let hostOrder = Promise.resolve();
+    let orderedVersion = -1;
+    async function prepareHost(preflight) {
       const version = program.version;
       const context = program.context();
       const id = "host-" + (hostLine + 1);
       const stale = () => signal.aborted || !preflight && (Date.now() >= acceptingUntil || version !== program.version);
+      const reusable = !context.scheduledReplies.length && (!context.recentChat.length || hostLine % 2 === 0 && !context.onAir.at(-1)?.answering);
       log("host_generation_started", { id, onAir: context.onAir.length, upcoming: context.scheduledHost.length });
-      const text = await continueBroadcast(cfg, actor, context, cfg.hostLines[hostLine], signal);
-      const previous = [...context.scheduledHost, ...context.onAir.map((turn) => turn.host)];
-      if (previous.some((line) => line.trim() === text)) throw Error("Host repeated a recent line");
+      const text = await continueBroadcast(cfg, actor, context, cfg.hostLines[hostLine], signal, reusable);
       if (stale()) return;
-      const clip = await performance2(text, signal);
-      if (stale()) {
-        motion.release(clip.motion);
-        return;
-      }
-      ready.push({ source: "host", id, text, ...clip });
+      if ([...context.scheduledHost, ...context.onAir.map((turn) => turn.host)].includes(text))
+        throw Error("Host repeated a recent line");
       hostLine++;
-      log("host_segment_ready", { id, preflight });
+      program.draftingHosts.set(id, text);
+      const previous = orderedVersion === version ? hostOrder : Promise.resolve();
+      orderedVersion = version;
+      const render = pool.run(false, async () => {
+        if (!stale()) return motion.render(text, signal);
+      });
+      const job = Promise.all([previous, render]).then(([, clip]) => {
+        if (!clip) return;
+        if (stale()) {
+          motion.release(clip.motion);
+          log("host_segment_discarded", { id, version });
+          return;
+        }
+        ready.push({ source: "host", id, text, reusable, ...clip });
+        log("host_segment_ready", { id, preflight });
+      });
+      hostOrder = job.catch(() => {
+      });
+      const tracked = job.catch((error) => {
+        if (preflight) throw error;
+        if (!signal.aborted) log("host_line_unavailable", { id, reason: error instanceof Error ? error.name : "error" });
+      }).finally(() => {
+        pendingHost.delete(tracked);
+        program.draftingHosts.delete(id);
+      });
+      pendingHost.add(tracked);
+      if (preflight) await tracked;
     }
-    log("native_opening_preparing", liveStartChoices);
-    ready.push({ source: "opening", id: "opening", text: cfg.opening, ...await performance2(cfg.opening) });
-    await prepareHost(true);
+    log("native_opening_preparing", { ...liveStartChoices, maxConcurrentVideos: pool.limit, topic: cfg.topic });
+    const { opening, standby } = await broadcastLines(cfg, actor, signal);
+    const prepared = await Promise.allSettled([
+      (async () => {
+        for (const [index, text] of openingParts(opening, actor.language).entries()) {
+          const clip = await pool.run(false, () => motion.render(text, signal));
+          ready.push({ source: "opening", id: index ? "opening-" + (index + 1) : "opening", text, ...clip });
+        }
+        await prepareHost(true);
+      })(),
+      ...standby.map(async (text, index) => {
+        const clip = await pool.run(false, () => motion.render(text, signal));
+        program.addStandby({ source: "standby", id: "welcome-" + (index + 1), text, reusable: true, ...clip });
+      })
+    ]);
+    for (const result of prepared) if (result.status === "rejected") throw result.reason;
     if (controller.signal.aborted) return;
     let chat;
     const destinations = [];
@@ -33463,15 +33617,9 @@ async function main() {
     hosting = (async () => {
       while (!controller.signal.aborted && Date.now() < acceptingUntil) {
         try {
-          if (program.canPlanHost && !queue.pending && !renderingReply) {
-            speculative = new AbortController();
-            try {
-              await prepareHost(false, AbortSignal.any([controller.signal, speculative.signal]));
-            } catch (error) {
-              if (!speculative.signal.aborted) throw error;
-            } finally {
-              speculative = void 0;
-            }
+          const hostCapacity = Math.max(1, pool.limit - 1);
+          if (program.canPlanHost && !queue.pending && pendingHost.size < hostCapacity && pendingHost.size + ready.length < Math.max(2, pool.limit)) {
+            await prepareHost(false);
           }
         } catch (error) {
           if (!controller.signal.aborted) {
@@ -33483,48 +33631,62 @@ async function main() {
       }
     })();
     replying = (async () => {
-      while (!controller.signal.aborted) {
-        const event = program.readyReplies < 2 && queue.next();
+      while (!signal.aborted) {
+        const event = program.readyReplies + pendingReplies.size < 8 && queue.next();
         if (!event) {
           await wait(50);
           continue;
         }
+        planningReply = true;
+        const key = event.source + ":" + event.id;
+        const speaker = event.source + ":" + (event.speaker ?? "");
+        const question = { speaker: event.speaker, text: event.text };
         let stage = "generating";
+        const failure = (error) => {
+          if (signal.aborted) {
+            unfinished(event.source, event.id, stage);
+            return;
+          }
+          failedReplies++;
+          const reason = error instanceof GenaiRequestError ? "gateway_http_" + error.httpStatus : error instanceof Error ? error.name : "error";
+          log("reply_failed", { source: event.source, id: event.id, stage, reason });
+        };
         try {
-          renderingReply = true;
-          const prepared = preparedReply(cfg, event.text);
+          const prepared2 = preparedReply(cfg, event.text);
           const selective = event.source !== "operator" && event.text !== probe;
-          const text = await answer(cfg, actor, event.text, controller.signal, program.context(), event.speaker, selective);
+          const text = prepared2 ?? await answer(cfg, actor, event.text, signal, program.context(), event.speaker, selective);
           if (selective && text === "[SKIP]") {
             log("chat_skipped", { source: event.source, id: event.id });
             continue;
           }
-          speculative?.abort();
-          log("reply_generated", { source: event.source, id: event.id, prepared: text === prepared });
-          controller.signal.throwIfAborted();
+          program.changeContext();
+          program.draftingReplies.set(key, { host: text, answering: question });
+          log("reply_generated", { source: event.source, id: event.id, prepared: !!prepared2 });
           stage = "generating_av";
-          const clip = await performance2(text);
-          program.queueReply({
-            source: event.source,
-            id: event.id,
-            text,
-            ...clip,
-            question: { speaker: event.speaker, text: event.text }
+          const render = async () => {
+            const cached = prepared2 && await motion.cached(text, signal);
+            if (cached) return cached;
+            return pool.run(true, () => {
+              signal.throwIfAborted();
+              return motion.render(text, signal);
+            });
+          };
+          const previous = speakerOrder.get(speaker);
+          const job = Promise.allSettled([previous, render()]).then(([, result]) => {
+            if (result.status === "rejected") throw result.reason;
+            program.queueReply({ source: event.source, id: event.id, text, question, ...result.value }, true);
+          }).catch(failure);
+          const tracked = job.finally(() => {
+            pendingReplies.delete(tracked);
+            program.draftingReplies.delete(key);
+            if (speakerOrder.get(speaker) === tracked) speakerOrder.delete(speaker);
           });
-        } catch (e) {
-          if (controller.signal.aborted) {
-            unfinished(event.source, event.id, stage);
-            break;
-          }
-          failedReplies++;
-          log("reply_failed", {
-            source: event.source,
-            id: event.id,
-            stage,
-            reason: e instanceof GenaiRequestError ? "gateway_http_" + e.httpStatus : e instanceof Error ? e.name : "error"
-          });
+          pendingReplies.add(tracked);
+          speakerOrder.set(speaker, tracked);
+        } catch (error) {
+          failure(error);
         } finally {
-          renderingReply = false;
+          planningReply = false;
         }
       }
     })();
@@ -33599,7 +33761,8 @@ async function main() {
       take,
       onLog,
       motion,
-      () => renderingReply || queue.pending > 0 || ready.some((e) => isReply(e.source))
+      () => planningReply || pendingReplies.size > 0 || queue.pending > 0 || ready.some((e) => isReply(e.source)),
+      (clip) => program.finish(clip)
     );
   } catch (e) {
     if (api && !receipt.broadcastId) {
@@ -33635,6 +33798,7 @@ async function main() {
       }
     }
     await Promise.allSettled([polling, replying, hosting]);
+    await Promise.allSettled([...pendingHost, ...pendingReplies]);
     wake?.kill();
     motion.close();
     for (const event of ready) if (isReply(event.source)) unfinished(event.source, event.id, "awaiting_playback");
