@@ -48484,7 +48484,7 @@ function validateOpening(prompt, positions, references, issue, maxChars = 2e3) {
 
 // src/scene-video.ts
 import path6 from "node:path";
-import { existsSync as existsSync5, realpathSync as realpathSync2 } from "node:fs";
+import { existsSync as existsSync5, readFileSync as readFileSync7, realpathSync as realpathSync2, statSync as statSync5 } from "node:fs";
 import { createRequire as createRequire4 } from "node:module";
 
 // src/video-prompt.ts
@@ -51803,7 +51803,7 @@ function compileSceneTimeline(raw, scene, episode, board) {
         speaker: line.speaker,
         delivery: line.delivery,
         text: line.tts,
-        ...line.acting?.direction ? { direction: line.acting.direction } : {},
+        ...line.acting?.vocal || line.acting?.direction ? { direction: line.acting?.vocal || line.acting?.direction } : {},
         ...frame2 !== void 0 ? { frame: frame2 } : {},
         ...voice ? { voice } : {},
         ...warnings.length ? { warnings } : {}
@@ -52550,7 +52550,7 @@ function evaluateWindowScript(source, options = {}) {
 }
 
 // src/storyboard.ts
-import { existsSync as existsSync6, mkdirSync as mkdirSync2, readFileSync as readFileSync7, renameSync as renameSync2, statSync as statSync5, unlinkSync, writeFileSync as writeFileSync4 } from "node:fs";
+import { existsSync as existsSync6, mkdirSync as mkdirSync2, readFileSync as readFileSync8, renameSync as renameSync2, statSync as statSync6, unlinkSync, writeFileSync as writeFileSync4 } from "node:fs";
 import * as nodeModule2 from "node:module";
 import { basename as basename4, dirname as dirname4, join as join5, relative, resolve as resolve4 } from "node:path";
 import { fileURLToPath as fileURLToPath6 } from "node:url";
@@ -52560,7 +52560,7 @@ var CONTRACT_FILE = join5(REFERENCES_DIR, "structure-contract.js");
 var CHECK_SCENES_FILE = join5(REFERENCES_DIR, "check-scenes.js");
 var CHECK_SCENARIO_FILE = join5(REFERENCES_DIR, "check-scenario.js");
 var runtimeFile = fileURLToPath6(import.meta.url);
-var runtimeModuleSha256 = createHash4("sha256").update(readFileSync7(runtimeFile)).digest("hex");
+var runtimeModuleSha256 = createHash4("sha256").update(readFileSync8(runtimeFile)).digest("hex");
 var runtimeLoadedAt = (/* @__PURE__ */ new Date()).toISOString();
 var loadFromHere2 = nodeModule2.createRequire(import.meta.url);
 var contractCache;
@@ -52890,8 +52890,8 @@ function scenesPath(target) {
 function readBoard(target, source) {
   const file = scenesPath(target);
   if (!existsSync6(file)) throw new Error(`no scenes.js at ${file}`);
-  if (!statSync5(file).isFile()) throw new Error(`${file} is not a file`);
-  const src = source ?? readFileSync7(file, "utf8");
+  if (!statSync6(file).isFile()) throw new Error(`${file} is not a file`);
+  const src = source ?? readFileSync8(file, "utf8");
   const header = [];
   for (const line of src.split("\n")) {
     if (/^\s*\/\//.test(line)) header.push(line.trim());
@@ -53091,7 +53091,7 @@ var scenarioCheckResultSchema = external_exports.object({
 
 // src/speech.ts
 import { createHash as createHash5, randomUUID as randomUUID3 } from "node:crypto";
-import { readFileSync as readFileSync8, writeFileSync as writeFileSync5, renameSync as renameSync3, mkdirSync as mkdirSync3, existsSync as existsSync7 } from "node:fs";
+import { readFileSync as readFileSync9, writeFileSync as writeFileSync5, renameSync as renameSync3, mkdirSync as mkdirSync3, existsSync as existsSync7 } from "node:fs";
 import { dirname as dirname5, resolve as resolve5, join as join6, relative as relative2 } from "node:path";
 import * as nodeModule4 from "node:module";
 import { execFileSync as execFileSync5 } from "node:child_process";
@@ -53199,7 +53199,7 @@ function speechRevision(line, character) {
 function currentAudio(line, character) {
   try {
     if (line.audio) characterSpeechContract().verifiedSpeechGeneration(line.audio.path, line.audio.generation, character?.tts, line);
-    return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync7(line.audio.path) && hash2(readFileSync8(line.audio.path)) === line.audio.sha256;
+    return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync7(line.audio.path) && hash2(readFileSync9(line.audio.path)) === line.audio.sha256;
   } catch {
     return false;
   }
@@ -53231,7 +53231,7 @@ function audioProvenanceStatus(line, character) {
   const voice = character?.tts;
   const historical = ["supertonic", "mlx"].includes(String(voice?.engine)) || voice?.engine === "elevenlabs" && ["eleven_v3", "eleven_v3_conversational", "eleven_multilingual_v2", "eleven_flash_v2_5", "eleven_turbo_v2_5"].includes(String(voice?.model));
   try {
-    if (historical && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && hash2(readFileSync8(line.audio.path)) === line.audio.sha256) return "preserved_historical_recording_unverified";
+    if (historical && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && hash2(readFileSync9(line.audio.path)) === line.audio.sha256) return "preserved_historical_recording_unverified";
   } catch {
   }
   return "stale_or_missing";
@@ -53282,7 +53282,7 @@ function speechVideoPlan(input, capabilities) {
 function manageSpeech(args) {
   args = speechManageSchema.parse(args);
   const { file, win, header } = readBoard(args.path);
-  const before = readFileSync8(file, "utf8");
+  const before = readFileSync9(file, "utf8");
   const revision = hash2(before);
   const mutates = ["prepare", "update", "attach_audio", "attach_video", "retime"].includes(args.action);
   if (mutates && args.expectedRevision !== revision) throw new Error("Read speech first and supply its current expectedRevision; the storyboard may have changed");
@@ -53356,7 +53356,7 @@ function manageSpeech(args) {
       const voice = audioCharacter(line.speaker)?.tts;
       const voiceErrors = voiceContract().generationVoiceErrors(voice, args.generation, line);
       if (voiceErrors.length) throw new Error("Generation arguments do not match the pinned character voice: " + voiceErrors.join("; "));
-      const bytes = readFileSync8(audioPath);
+      const bytes = readFileSync9(audioPath);
       if (!bytes.length) throw new Error("Audio file is empty");
       const generation = characterSpeechContract().verifiedSpeechGeneration(
         audioPath,
@@ -53434,7 +53434,7 @@ function manageSpeech(args) {
     if (args.action === "attach_video") {
       if (!args.videoPath) throw new Error("videoPath is required");
       const videoPath = resolve5(dirname5(file), args.videoPath);
-      const bytes = readFileSync8(videoPath);
+      const bytes = readFileSync9(videoPath);
       if (!bytes.length) throw new Error("Video file is empty");
       const native = plan.mode === "native";
       const nativeAudio = native ? speechSpanContract().inspect(videoPath) : void 0;
@@ -53446,7 +53446,7 @@ function manageSpeech(args) {
       if (native && sound.audioSource === "speech") throw new Error("Native video speech lives in the clip soundtrack; sound.audioSource speech would drop it");
       const audio = selected.map(({ line }) => {
         if (native) return { lineId: line.id, revision: speechRevision(line, character(line.speaker)) };
-        if (!line.audio || line.audio.revision !== speechRevision(line, character(line.speaker)) || hash2(readFileSync8(line.audio.path)) !== line.audio.sha256) throw new Error("Generate and attach current speech before binding video");
+        if (!line.audio || line.audio.revision !== speechRevision(line, character(line.speaker)) || hash2(readFileSync9(line.audio.path)) !== line.audio.sha256) throw new Error("Generate and attach current speech before binding video");
         const errors = voiceContract().generationVoiceErrors(character(line.speaker)?.tts, line.audio.generation, line);
         if (line.audio.generation.text !== line.tts || errors.length) throw new Error("Speech generation evidence changed: " + errors.join("; "));
         return { lineId: line.id, sha256: line.audio.sha256, revision: line.audio.revision };
@@ -53463,7 +53463,7 @@ function manageSpeech(args) {
       if (args.reuse && !tailTrim) throw new Error("Tail trim requires identical bound audio, unchanged speech/action starts and semantics, and a shorter end. Regenerate changed speech or staging.");
       let quality = { review: "not_reviewed", camera: "not_reviewed", lipSync: "not_reviewed" };
       try {
-        const receipt = JSON.parse(readFileSync8(videoPath + ".astra-job.json", "utf8"));
+        const receipt = JSON.parse(readFileSync9(videoPath + ".astra-job.json", "utf8"));
         if (receipt.sha256 === videoSha256) quality = { ...quality, speechSync: receipt.speechSync || null, selection: receipt.selection || null };
         else if (!receipt.sha256 && receipt.videoPath === videoPath)
           quality = { ...quality, unverifiedSpeechSync: receipt.speechSync || null, receiptBinding: "unverified" };
@@ -53566,7 +53566,7 @@ function manageSpeech(args) {
     const backup = join6(work, revision + ".js");
     if (!existsSync7(backup)) writeFileSync5(backup, before);
     const nextSource = serializeBoard(win, header);
-    if (hash2(readFileSync8(file)) !== revision) throw new Error("Storyboard changed during speech edit");
+    if (hash2(readFileSync9(file)) !== revision) throw new Error("Storyboard changed during speech edit");
     const tmp = file + "." + randomUUID3() + ".tmp";
     writeFileSync5(tmp, nextSource);
     renameSync3(tmp, file);
@@ -53579,7 +53579,7 @@ function manageSpeech(args) {
     } : {} };
     return { shotId: scene.id, lineId: line.id, ...result, generation, arguments: generation };
   }) : void 0;
-  return { revision: hash2(readFileSync8(file)), changed, invalidated, plan, timing, ...soundtrack ? { soundtrack } : {}, ...clearedTrim ? { clearedTrim } : {}, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname5(file), board: win }), audioProvenanceStatus: object3(object3(object3(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
+  return { revision: hash2(readFileSync9(file)), changed, invalidated, plan, timing, ...soundtrack ? { soundtrack } : {}, ...clearedTrim ? { clearedTrim } : {}, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname5(file), board: win }), audioProvenanceStatus: object3(object3(object3(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
 }
 
 // src/video-sound.ts

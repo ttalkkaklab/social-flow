@@ -273,21 +273,21 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
     if (reference && msr) {
       // A pinned sample rides on subject 1 or 2 when the gateway takes samples; otherwise the prompt voices the speaker.
       const { index, slot } = msrSubject(character, msrRefs, context);
-      if (index >= 0) speaker.imageIndices = [index + 1];
+      if (index >= 0) speaker.imageIndices = [slot];
       speaker.reference = voiceReference(character, context, warnings);
       const current = index < 0 ? '' : text(msrRefs[index].audioPath);
       const problem = !speaker.reference ? 'no pinned voice sample'
         : context.msrVoice !== true ? 'the GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities)'
         : index < 0 ? 'no MSR subject image matches voiceReference.imagePaths'
         : slot > 2 ? `MSR subject ${slot} takes no sample; only subjects 1 and 2 do`
-        : current && current !== speaker.reference.path ? `Image ${index + 1} already carries another speaker's sample` : '';
+        : current && current !== speaker.reference.path ? `Image ${slot} already carries another speaker's sample` : '';
       if (problem) {
         warnings.push(`${id}: ${problem}; MSR voices this speaker from the prompt.`);
         delete speaker.reference;
       } else {
         msrRefs[index].audioPath = speaker.reference!.path;
         speaker.audioIndex = slot;
-        msrAudio.push(`Audio ${slot}: ${label}'s voice, belongs only to Image ${index + 1}.`);
+        msrAudio.push(`Audio ${slot}: ${label}'s voice, belongs only to Image ${slot}.`);
         const seconds = sampleSeconds(speaker.reference!.path);
         if (seconds !== undefined && seconds > 10) throw new Error(id + ': MSR voice samples must be at most 10 seconds');
         if (seconds !== undefined && seconds > 5) warnings.push(`${id}: the voice sample runs ${seconds.toFixed(1)} s; MSR conditions on the first 5 seconds and cuts the rest.`);
@@ -331,8 +331,9 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
       if (context.sceneDirection) {
         const owner = context.sceneDirection.openingPositions.find(p => p.character === id);
         const imageSlot = image ?? owner?.images[0];
+        const deliveryCue = text(object(line.acting).vocal) || direction;
         const binding = [imageSlot && img(imageSlot), audio && aud(audio), line.delivery === 'off_screen' && 'off screen'].filter(Boolean).join(', ');
-        return `${direction ? direction + ' ' : ''}${id}${binding ? ' (' + binding + ')' : ''}: "${text(line.tts)}"`;
+        return `${deliveryCue ? deliveryCue + ' ' : ''}${id}${binding ? ' (' + binding + ')' : ''}: "${text(line.tts)}"`;
       }
       if (line.delivery !== 'on_screen') {
         const label = nonEnglishOutsideQuotes(speaker?.name ?? '') ? id : speaker?.name ?? id;

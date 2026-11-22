@@ -278,11 +278,11 @@ function planOutputContract(plan:VideoPlan) {
   const operation = plan.tool === 'astra_genai_msr' ? 'msr' : plan.tool === 'astra_genai_img2video' ? 'image-to-video' : '';
   return msrOutputContract(operation, plan.args);
 }
-async function checkCompletedMedia(plan:VideoPlan) {
+async function checkCompletedMedia(plan:VideoPlan, jobId?:string) {
   const expected = planOutputContract(plan);
   if (!expected) return;
   const target = resolveOutputFile(String(plan.args.outputPath), String(plan.args.filename), 'video');
-  const result = await getGenaiVideoStatus({receiptPath:target + '.astra-genai.json',download:true}, expected);
+  const result = await getGenaiVideoStatus({receiptPath:target + '.astra-genai.json',download:true}, expected, {target, jobId, fingerprint:plan.sceneRendering ? plan.id : undefined});
   if (!result.downloaded) throw new Error('Completed video has no verified local output');
 }
 async function validateShotRenderPlan(plan: VideoPlan) {
@@ -295,22 +295,21 @@ async function validateShotRenderPlan(plan: VideoPlan) {
       throw new Error('scene_audio@0: gateway does not advertise ' + mode + ' for the selected model');
   }
   const prepared = await buildSceneWire(plan.sceneRequest!, String(plan.selection.model), String(plan.selection.resolution), true, plan.shotBindings);
-  const validation = await requestGenai('POST', sceneRoute + '/validate', prepared.body, 120000, undefined, undefined, plan.requestId);
+  const validation = await requestGenai('POST', sceneRoute + '/validate', prepared.body, 120000, undefined, undefined, 'scene-' + plan.id);
   z.object({schema_valid:z.literal(true), model:z.literal(String(plan.selection.model)), shots:z.literal(plan.shotIds!.length)}).parse(validation);
   return prepared;
 }
 
-async function executeShotRenderPlan(plan: VideoPlan): Promise<ToolResult> {
+async function executeShotRenderPlan(plan: VideoPlan, prepared:Awaited<ReturnType<typeof validateShotRenderPlan>>): Promise<ToolResult> {
   const target = resolveOutputFile(String(plan.args.outputPath), String(plan.args.filename), 'video');
   const receiptPath = target + '.astra-genai.json';
-  const prepared = await validateShotRenderPlan(plan);
   fs.mkdirSync(path.dirname(target), {recursive:true});
   const receipt = {version:1, operation:'scene-to-video', baseUrl:astraGenaiBaseUrl(),
-    fingerprint:plan.id, expected:planOutputContract(plan), videoPath:target, requestId:plan.requestId, status:'submitting'};
+    fingerprint:plan.id, expected:planOutputContract(plan), videoPath:target, requestId:'scene-' + plan.id, status:'submitting'};
   fs.writeFileSync(receiptPath, JSON.stringify(receipt), {flag:'wx', mode:0o600});
   atomicJson(target + '.scene-request.json', prepared);
-  const response = await requestGenai('POST', sceneRoute, prepared.body, 120000, undefined, undefined, plan.requestId);
-  const accepted = z.object({id:z.string().min(1),request_id:z.literal(plan.requestId)}).parse(response);
+  const response = await requestGenai('POST', sceneRoute, prepared.body, 120000, undefined, undefined, 'scene-' + plan.id);
+  const accepted = z.object({id:z.string().min(1),request_id:z.literal(receipt.requestId)}).parse(response);
   atomicJson(receiptPath, {...receipt,jobId:accepted.id,status:'submitted'});
   recordVideoSubmission(accepted.id);
   const result = await pollGenaiJob(() => getGenaiVideoStatus({receiptPath, download:true}), 'Poll this scene request with video_status.');
@@ -719,11 +718,17 @@ export async function executeVideo(raw: unknown, dispatch: VideoDispatch): Promi
   if (plan.sceneRequest && !plan.sceneRendering) await checkSceneDeployment(plan.sceneRequest, plan.tool, plan.args);
   checkVideoEnvironment(plan.tool);
   const auth = authorization(context);
+  let stagedScene;
+  if (plan.sceneRendering) {
+    const stateFile = path.join(episode,'.work/video-routing/state.json');
+    const existing = fs.existsSync(stateFile) && JSON.parse(fs.readFileSync(stateFile,'utf8')).jobs?.[plan.requestId];
+    if (!existing) stagedScene = await validateShotRenderPlan(plan);
+  }
   const cached = videoTransaction(episode, state => {
     const existing = state.jobs[plan.requestId];
     if (existing) {
       if (existing.planId !== id) throw new Error('request_id_conflict: same request ID has a different plan');
-      if (existing.status === 'completed') return existing.result as ToolResult;
+      if (existing.status === 'completed') return {result:existing.result as ToolResult, providerId:existing.providerId};
       if (existing.status === 'failed') throw new Error(`video_request_failed: ${existing.evidence || 'the provider rejected it'}; plan a new requestId to try again`);
       throw new Error(`video_request_pending: ${existing.status}; provider ID ${existing.providerId || 'unknown'}; do not resubmit`);
     }
@@ -746,7 +751,7 @@ export async function executeVideo(raw: unknown, dispatch: VideoDispatch): Promi
       status: 'submitting', reserveUsd: plan.quote.reserveUsd, startedAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     return undefined;
   }, auth.openingSpendUsd);
-  if (cached) { await checkCompletedMedia(plan); return cached; }
+  if (cached) { await checkCompletedMedia(plan,cached.providerId); return cached.result; }
   const update = (patch: Record<string, unknown>) => videoTransaction(episode, state => {
     Object.assign(state.jobs[plan.requestId], patch, { updatedAt: new Date().toISOString() });
   });
@@ -769,7 +774,7 @@ export async function executeVideo(raw: unknown, dispatch: VideoDispatch): Promi
         job.providerId = providerId; job.status = 'submitted'; job.updatedAt = new Date().toISOString();
       }),
       usage: tokens => { if (!Number.isFinite(tokens) || tokens < 0) throw new Error('Invalid provider usage'); update({ tokens }); },
-    }, () => plan.sceneRendering ? executeShotRenderPlan(plan) : dispatch(plan.tool, plan.args));
+    }, () => plan.sceneRendering ? executeShotRenderPlan(plan,stagedScene!) : dispatch(plan.tool, plan.args));
     if (result.isError) {
       settle(result.terminal === true, result.content.map(item => item.type === 'text' ? item.text : '').join('\n').slice(0, 1000), result);
       return result;
@@ -879,7 +884,7 @@ export async function videoStatus(raw: unknown) {
     const plan: VideoPlan = JSON.parse(fs.readFileSync(path.join(episode, '.work/video-routing/plans', job.planId + '.json'), 'utf8'));
     const { id, ...body } = plan;
     if (id !== job.planId || hash(body) !== id || plan.episode !== episode || plan.tool !== job.tool) throw new Error('Invalid recovery plan');
-    if (job.status === 'completed') { await checkCompletedMedia(plan); return job; }
+    if (job.status === 'completed') { await checkCompletedMedia(plan,job.providerId); return job; }
     checkVideoEnvironment(plan.tool);
     if (hosted) {
       if (!job.providerId) return { ...job, recovery: 'No provider job ID is recorded. Reconcile with the provider before retrying.' };
@@ -901,7 +906,7 @@ export async function videoStatus(raw: unknown) {
     const receiptPath = path.join(String(plan.args.outputPath), String(plan.args.filename)) + '.astra-genai.json';
     let result;
     try {
-      result = job.tool.startsWith('astra_genai_desktop_') ? await desktopVideoStatus(receiptPath, true) : await getGenaiVideoStatus({ receiptPath, download: true }, planOutputContract(plan));
+      result = job.tool.startsWith('astra_genai_desktop_') ? await desktopVideoStatus(receiptPath, true) : await getGenaiVideoStatus({ receiptPath, download: true }, planOutputContract(plan), {target:path.join(String(plan.args.outputPath),String(plan.args.filename)),jobId:job.providerId,fingerprint:plan.sceneRendering ? plan.id : undefined});
     } catch (error) {
       if (!plan.sceneRendering || !(error instanceof GenaiRequestError && error.terminal && error.httpStatus === 200)) throw error;
       const {jobId} = JSON.parse(fs.readFileSync(receiptPath, 'utf8'));

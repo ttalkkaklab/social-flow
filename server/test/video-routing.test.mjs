@@ -723,7 +723,7 @@ test('sceneNo refuses a frame-addressed cut on I2V and preserves ordered dialogu
   shot.scene=1; shot.duration=4+i; shot.visual.frames={mode:'first',start:'opening.png'};
   shot.visual.character=[positions[i].character];
   shot.visual.references=[{id:'p'+i,path:positions[i].character+'.png',use:'both',role:'character',purpose:'Face and clothing.'}];
-  shot.narration=[{id:'l'+i,speaker:positions[1-i].character,tts:words[i],delivery:'on_screen',acting:{direction:'Whisper the answer.'}}];
+  shot.narration=[{id:'l'+i,speaker:positions[1-i].character,tts:words[i],delivery:'on_screen',acting:{direction:'Walk over to the witness.',vocal:'Whisper the answer.'}}];
  }
  f.save();
  const input={episode:f.episode,sceneNo:1,requestId:'whole-scene',args:{reserveUsd:0.1}};

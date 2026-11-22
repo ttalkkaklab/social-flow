@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { guidanceSchema, guidanceWireKey } from './astra-video-client.js';
 import { createHash, randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { bareFilenameSchema, resolveOutputFile } from './media-utils.js';
 import { GenaiRequestError, astraGenaiBaseUrl, downloadGenaiResult, pollGenaiJob, requestGenai, requireAstraGenaiKey, requestGenaiMedia, genaiImageUriSchema, genaiSourceUri, genaiAudioUri } from './astra-genai-client.js';
@@ -388,12 +389,22 @@ const statusSchema = z.object({ id: z.string().min(1), status: z.enum(['pending'
     result: z.object({ video_url: z.string().min(1).optional() }).passthrough().nullish(), error: z.unknown().optional(),
 }).passthrough();
 export const genaiVideoStatusSchema = z.object({ receiptPath: z.string().min(1), download: z.boolean().default(false) }).strict();
-export async function getGenaiVideoStatus(input, planned) {
+export async function getGenaiVideoStatus(input, planned, binding) {
     const receipt = receiptSchema.parse(JSON.parse(fs.readFileSync(input.receiptPath, 'utf8')));
+    if (binding && (path.resolve(receipt.videoPath) !== path.resolve(binding.target) ||
+        binding.jobId && receipt.jobId && receipt.jobId !== binding.jobId ||
+        binding.fingerprint && receipt.fingerprint !== binding.fingerprint))
+        throw new Error('GenAI receipt does not belong to the approved output or job');
+    if (receipt.expected && planned && JSON.stringify(receipt.expected) !== JSON.stringify(planned))
+        throw new Error('GenAI receipt conflicts with the approved media contract');
     if (receipt.baseUrl !== astraGenaiBaseUrl())
         throw new Error('GenAI receipt belongs to a different server; restore ASTRA_GENAI_URL before recovery.');
     if (!receipt.jobId && receipt.operation === 'scene-to-video' && receipt.requestId) {
+        if (receipt.requestId !== 'scene-' + receipt.fingerprint)
+            throw new Error('Legacy scene receipt has no verified job ID. Reconcile its original submission before linking an output.');
         const found = statusSchema.extend({ request_id: z.literal(receipt.requestId) }).parse(await requestGenai('GET', '/v1/ltx/v2/scene-to-video/requests/' + encodeURIComponent(receipt.requestId)));
+        if (binding?.jobId && binding.jobId !== found.id)
+            throw new Error('GenAI recovery job ID mismatch');
         receipt.jobId = found.id;
         receipt.status = 'submitted';
         atomicJson(input.receiptPath, receipt);

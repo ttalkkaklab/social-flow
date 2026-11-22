@@ -178,13 +178,13 @@ test('EP2 keeps the dolly in one shot and binds Miran’s line, position and ref
       return Response.json({schema_valid:true, model:'ltx-2.5-22b-distilled', shots:2});
     }
     if (pathname === route) {
-      assert.equal(options.headers['X-Request-ID'],requestId);
+      assert.equal(options.headers['X-Request-ID'],'scene-'+plan.id);
       submitted.push(JSON.parse(options.body));
       throw new Error('Lost the response after acceptance');
     }
     assert.equal(options.method,'GET');
-    assert.ok([route+'/requests/'+requestId,route+'/'+jobId].includes(pathname));
-    return Response.json({request_id:requestId,id:jobId,status:providerStatus});
+    assert.ok([route+'/requests/scene-'+plan.id,route+'/'+jobId].includes(pathname));
+    return Response.json({request_id:'scene-'+plan.id,id:jobId,status:providerStatus});
   };
   const plan = await planManagedVideo({...f.input,sceneRendering:'per_shot',shotBindings:[{
     shotId:'s0002', keyframes:[{path:'images/trio.png',frame:48}], guidance:{negativePrompt:'captions',guidanceScale:2},

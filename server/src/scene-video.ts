@@ -2,7 +2,7 @@
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { existsSync, realpathSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { z } from 'zod';
 import { openingPrompt, sceneShotBindingsSchema, shotTimelineSchema, type OpeningPosition, type SceneVideoDirection } from './msr-opening.js';
@@ -11,7 +11,7 @@ import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import type { ImageBinding } from './video-image-inputs.js';
 import { verifyImageFile } from './image-media.js';
 import { VEO_CONSTRAINTS } from './veo-video.js';
-import { astraGenaiBaseUrl, GenaiRequestError, genaiAudioUri, genaiSourceUri, requestGenai } from './astra-genai-client.js';
+import { astraGenaiBaseUrl, GENAI_AUDIO_TYPES, GenaiRequestError, genaiAudioUri, genaiSourceUri, requestGenai } from './astra-genai-client.js';
 import { FRAME_FIELDS, sceneInputCapabilities, VIDEO_ADAPTERS } from './video-registry.js';
 import { resolveCharacterVoice, voiceReference } from './video-voice.js';
 import { GENAI_MSR_INLINE_MAX_BYTES, uploadGenaiFile } from './astra-genai-upload.js';
@@ -22,7 +22,7 @@ type Pin = NonNullable<Timeline['images']>[number];
 interface Reference { id: string; path: string; role: string; use: string; purpose: string }
 interface Member {
   id: string; duration: number; timeline?: Timeline; transition?: string; summary?: string;
-  narration?: { id?: string; speaker?: string; delivery?: string; tts?: string; acting?: {direction?: string} }[];
+  narration?: { id?: string; speaker?: string; delivery?: string; tts?: string; acting?: {direction?: string; vocal?:string} }[];
   shot?: { size?: string; angle?: string; videoDesign?: {before?: string; action?: string; sound?: string} };
   visual?: { action?: string; camera?: Record<string, unknown>; frames?: {
     keyframes?: { image: string; atSeconds: number; state: string; strength?: number }[];
@@ -146,7 +146,7 @@ export function compileSceneTimeline(raw: Record<string, unknown>[], scene: Part
       const warnings: string[] = [];
       const voice = character && voiceReference(resolveCharacterVoice(character, context, warnings), context, warnings);
       return { lineId:line.id, speaker:line.speaker, delivery:line.delivery, text:line.tts!,
-        ...(line.acting?.direction ? { direction:line.acting.direction } : {}),
+        ...((line.acting?.vocal || line.acting?.direction) ? {direction:line.acting?.vocal || line.acting?.direction} : {}),
         ...(frame !== undefined ? {frame} : {}), ...(voice ? {voice} : {}),
         ...(warnings.length ? {warnings} : {}) };
     });
@@ -293,30 +293,37 @@ export async function buildSceneWire(scene: SceneRequest, model: string, resolut
   });
   const direction = scene.sceneDirection;
   const prompt = direction ? [direction.emotion,direction.action,direction.camera,direction.sound].filter(Boolean).join(' ') : '';
+  const trackBytes = scene.audio ? statSync(scene.audio.path).size : 0;
+  if (trackBytes > 32 * 1024 * 1024) throw new Error('scene_audio@0: exceeds the 32 MiB gateway upload limit');
+  const stageTrack = Boolean(scene.audio && (stageFiles || trackBytes * 4 / 3 > GENAI_MSR_INLINE_MAX_BYTES));
   const body = {model, resolution, fps:scene.fps, num_frames:scene.frameCount, generate_audio:true, prompt:prompt || 'Follow the ordered storyboard shots.',
     image_uri:shots[0]?.images.find(image => image.role === 'start')?.image_uri, shots,
-    ...(scene.audio ? {scene_audio:{...(scene.audio.mode ? {mode:scene.audio.mode} : {}),audio_uri:genaiAudioUri(undefined,scene.audio.path),start_frame:scene.audio.startFrame,
+    ...(scene.audio ? {scene_audio:{...(scene.audio.mode ? {mode:scene.audio.mode} : {}),audio_uri:stageTrack ? '' : genaiAudioUri(undefined,scene.audio.path),start_frame:scene.audio.startFrame,
       end_frame:scene.audio.endFrame,cues:scene.audio.cues}} : {})};
   let wire = JSON.stringify(body);
-  if (stageFiles || Buffer.byteLength(wire) > GENAI_MSR_INLINE_MAX_BYTES) {
+  if (stageFiles || stageTrack || Buffer.byteLength(wire) > GENAI_MSR_INLINE_MAX_BYTES) {
     const staged = new Map<string,string>();
-    const stage = async (uri: string, role: string, frame: number, shotId?: string) => {
-      const comma = uri.indexOf(',');
-      const bytes = Buffer.from(uri.slice(comma + 1), 'base64');
+    const stageBytes = async (bytes:Buffer, mime:string, role:string, frame:number, shotId?:string) => {
       const sha256 = createHash('sha256').update(bytes).digest('hex');
-      const id = staged.get(sha256) ?? await uploadGenaiFile(bytes, uri.slice(5, uri.indexOf(';')));
+      const id = staged.get(sha256) ?? await uploadGenaiFile(bytes, mime);
       if (!id) throw new Error('Gateway could not stage the original ' + role + ' file for validation');
       staged.set(sha256, id);
       attachments.push({shotId, role, frame, sha256, bytes:bytes.length});
       return id;
     };
+    const stage = (uri:string, role:string, frame:number, shotId?:string) =>
+      stageBytes(Buffer.from(uri.slice(uri.indexOf(',')+1),'base64'),uri.slice(5,uri.indexOf(';')),role,frame,shotId);
     for (const shot of shots) {
       for (const image of shot.images) image.image_uri = await stage(image.image_uri, image.role, image.frame, shot.shot_id);
       for (const line of shot.dialogue ?? []) if (line.voice_uri)
         line.voice_uri = await stage(line.voice_uri, 'voice_reference', line.frame ?? shot.start_frame, shot.shot_id);
     }
     body.image_uri = shots[0]?.images.find(image => image.role === 'start')?.image_uri;
-    if (body.scene_audio) body.scene_audio.audio_uri = await stage(body.scene_audio.audio_uri, 'scene_audio', 0);
+    if (body.scene_audio && scene.audio) {
+      const mime = GENAI_AUDIO_TYPES[path.extname(scene.audio.path).toLowerCase()];
+      if (!mime) throw new Error('scene_audio@0: unsupported audio format');
+      body.scene_audio.audio_uri = await stageBytes(readFileSync(scene.audio.path),mime,'scene_audio',0);
+    }
     wire = JSON.stringify(body);
   }
   return {body, attachments, bodySha256:createHash('sha256').update(wire).digest('hex'), bytes:Buffer.byteLength(wire)};
