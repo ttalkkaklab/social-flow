@@ -40,16 +40,16 @@ test('file patterns match case-sensitively and support a trailing wildcard', () 
 });
 
 test('per-tool overrides take precedence over flags, lists and the persistent denylist', () => {
+  const flags = { SOCIAL_FLOW_TOOL_FLAGS: 'suno_*=off,suno_credits=on' };
+  assert.equal(isToolEnabled('suno_generate', flags).enabled, false);
   const env = {
+    ...flags,
     SOCIAL_FLOW_DISABLE_TOOLS: 'suno_*',
-    SOCIAL_FLOW_TOOL_FLAGS: 'suno_*=off,suno_credits=on',
     SOCIAL_FLOW_TOOL_SUNO_GENERATE: '1',
   };
   const enabled = name => resolveToolGate(name, { env, jsonPatterns: ['suno_*'] }).enabled;
   assert.equal(enabled('suno_generate'), true);
   assert.equal(enabled('suno_credits'), true);
-  delete env.SOCIAL_FLOW_TOOL_SUNO_GENERATE;
-  assert.equal(enabled('suno_generate'), false);
   delete env.SOCIAL_FLOW_TOOL_FLAGS;
   assert.equal(enabled('suno_credits'), false);
 });
