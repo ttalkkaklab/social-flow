@@ -7,14 +7,14 @@ lives here so the template, the author and the reviewer read one document. Every
 `visual.slide` is a motion slide. There is no still-slide path.
 
 Where the rules come from: three pieces of research. The 2026-08-29 motion-slide lane
-(`docs/research/2026-08-29-motion-slide-lane/`) established that animation raises attention
+([motion slide lane study](https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-08-29-motion-slide-lane)) established that animation raises attention
 and engagement and leaves comprehension unharmed **only when the movement carries meaning**.
-The 2026-09-02 broadcast design pass (`docs/research/2026-09-02-broadcast-slide-design/`)
+The 2026-09-02 broadcast design pass ([broadcast slide design study](https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-09-02-broadcast-slide-design))
 looked at why the finished slides still read as a text document instead of a broadcast
 graphic, and found four structural causes: a flat single-colour ground, type set at UI
 scale, hairlines a phone cannot resolve, and every element entering at the same instant
 with the same curve. The 2026-09-04 object-slide pass
-(`docs/research/2026-09-04-rendered-object-slide/`) asked what stands in the space once the
+([rendered object slide study](https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-09-04-rendered-object-slide)) asked what stands in the space once the
 type and plates are right, compared a vector illustration, a generated image and a lit studio
 plate, and settled on a studio ground with slab materials plus an object that is rendered, not
 drawn (§1, §9). Every rule below serves one of those findings.
@@ -62,7 +62,7 @@ a light on a wall. The studio is a room: a cyclorama cell whose wall and floor m
 seam *below the zone* (y 1560 portrait, y 929 wide — the subtitle band), a key light top-left,
 the floor falling into darkness at the front, the light falling off at the sides. It is one
 270×480 alpha PNG (480×270 wide) in the template head (`.studio-plate`,
-`docs/research/2026-09-04-rendered-object-slide/bake-stage.py`), scaled to the frame, and the
+`skills/storyboard/examples/bake-stage.py`), scaled to the frame, and the
 template turns it on for every `treatment:"editorial"` diagram; `h.stage("flat")` keeps the
 plate. The kinetic-type and character-act templates keep the plate above unchanged, so an
 episode that mixes a kinetic screen with a studio diagram mixes two grounds — the author's

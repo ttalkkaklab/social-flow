@@ -71,7 +71,7 @@ never infer it: a range ("6-7 heads"), two different counts or words without a n
 (`missing.headCount`), `character_panel` and `shot_image` report `head_count_missing`.
 Adding it to an existing sheet raises the identity version, so add it between image batches;
 it is no reason to regenerate panels or shots already made.
-Evidence and limits: [head and body proportion](../../../docs/research/2026-11-21-head-body-proportion/README.md).
+Evidence and limits: [head and body proportion](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-21-head-body-proportion/README.md).
 Traits name the tendency alone; the behavior it drives goes into flaw, examples and acting.
 Goal says what the character pursues; motivation says why, or stays not_applicable. Dialogue examples demonstrate the
 register and vocabulary; acting describes emotional reactions and movement.

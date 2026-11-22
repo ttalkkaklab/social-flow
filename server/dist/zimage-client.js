@@ -6,7 +6,7 @@
  * exchange, mflux and the model weights must be present locally.
  *
  * Division of labor between the two paths (per the 2026-08-12 field study —
- * docs/research/2026-08-12-local-image-generation):
+ * 1eabc4fb:docs/research/2026-08-12-local-image-generation):
  *   - Text-free images (cover backgrounds, b-roll, draft exploration) → this one. Zero cost per image
  *   - Images that carry text, or need a quality boost                 → gpt_image_text2img.
  *     Measured Korean rendering: "딸깍연구소" came out as "달닥연구소" (broken jamo, lookalike glyphs).

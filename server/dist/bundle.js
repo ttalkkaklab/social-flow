@@ -94635,7 +94635,7 @@ var require_production_mode = __commonJS({
           looks: ["webtoon"],
           prompt: "Korean webtoon illustration: consistent expressive character linework, clean contour lines, controlled cel shading, illustrated backgrounds and a coherent drawn palette; skin and cloth are drawn, and the frame is one unbroken picture."
         },
-        // Added 2026-09-08 from the Shorts style survey (docs/research/2026-09-08-shorts-visual-styles).
+        // Added 2026-09-08 from the Shorts style survey (1eabc4fb:docs/research/2026-09-08-shorts-visual-styles).
         // Named studios and living artists stay out of every prompt: the image lane refuses them.
         "claymation": {
           label: "\uD074\uB808\uC774 \uC2A4\uD1B1\uBAA8\uC158",
@@ -138642,7 +138642,7 @@ async function stockSearch(input) {
       media,
       orientation: input.orientation ?? "any",
       providers: summary,
-      note: items.length ? "Every item carries the visual.license block to store on the cut; download files[0] with curl into storyboard/footage/ (video) or storyboard/images/stock/ (photo). People, logos and brands in frame stay a separate rights question on every provider." : 'No usable results. Try English keywords, orientation "any", another media type, or the manual archives in docs/research/2026-09-07-free-stock-sources/index.html.',
+      note: items.length ? "Every item carries the visual.license block to store on the cut; download files[0] with curl into storyboard/footage/ (video) or storyboard/images/stock/ (photo). People, logos and brands in frame stay a separate rights question on every provider." : 'No usable results. Try English keywords, orientation "any", another media type, or the manual archives in docs/stock-media.md.',
       items
     }), null, 1),
     isError: allFailed && items.length === 0

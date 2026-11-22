@@ -255,7 +255,7 @@ Sources for §1: [QoMEX 2023](https://arxiv.org/abs/2305.19100) ·
 §4: [Lyria RealTime docs](https://ai.google.dev/gemini-api/docs/music-generation).
 The survey behind the 2026-09-16 changes — the guide ranges for ducking and EQ, the platform
 figures and the generator prompt grammars, drawn as charts with an evidence grade on each
-number: `docs/research/2026-09-16-bgm-direction/index.html`.
+number: [bgm direction study](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-09-16-bgm-direction/index.html).
 
 
 ## 6. Plan the musical role before choosing a track

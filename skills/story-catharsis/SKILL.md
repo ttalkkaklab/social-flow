@@ -37,5 +37,5 @@ On a storyboard point `sequence.payoff` at the scene that
 delivers it and write visible evidence in the shots there. If the episode uses a catalogued
 cliché, follow the existing [cliché selection rules](../storyboard/references/cliche-use.md).
 
-[Case research and type distinctions](../../docs/research/2026-11-20-story-catharsis/README.md) ·
+[Case research and type distinctions](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-20-story-catharsis/README.md) ·
 [Evaluation examples](references/evals.md)

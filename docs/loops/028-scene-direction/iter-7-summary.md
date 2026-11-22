@@ -1,1 +1,0 @@
-Carry each distinct vocal cue, delivery direction and tag on the structured dialogue turn. Strip duplicate or quoted spoken text, keep independent visual acting in the shot and preserve the legacy untimed reference adapter's direction precedence.

@@ -1,1 +1,0 @@
-Reuse shot action, blocking, sound and timed performance in single-shot and multi-shot prompts and wire bodies. Preserve framing icons, resolve attention, expose image staging on still shots and keep camera rationale. Test the final adapter arguments and offline review.

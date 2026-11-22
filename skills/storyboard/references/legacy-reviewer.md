@@ -835,7 +835,7 @@ whether the declared type tells the truth and whether the declared trigger is re
   picture. Marking one `other`, or replacing it with a still, a clip with marks or labels
   over it, kinetic type, or photo annotations, is a P0 (user directive 2026-09-05 — nothing
   is drawn over video; the slide is held to
-  `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`).
+  `skills/storyboard/examples/reference-slide.html`).
 
 ## What each type has to do (the quality axis yardstick)
 

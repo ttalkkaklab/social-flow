@@ -22,7 +22,7 @@ A camera entry with a movement also carries `prompt`, the verb phrase `shot_prom
 upward, static frame — with the pace and target `shot_icons` recorded ("The camera slowly pushes in
 toward Mina, settling on …").
 
-`techniqueCatalog.guides` (`VALUES` in the module) carries the same card for the `shot_icons` values without an entry: the composition sizes, the `ground` and `over` angles, the depth choices and the still-lane effects. `guide(attribute, value)` returns the entry or the card. `instruction` is the model-facing phrase that reaches the prompt — positive words, no metres, no camera-seat views; author-facing questions belong in `specify`. The cards condense the 2026-10-31 practitioner survey in `docs/research/2026-10-31-directing-technique-conventions/`. Save deliberate choices with `storyboard_apply`:
+`techniqueCatalog.guides` (`VALUES` in the module) carries the same card for the `shot_icons` values without an entry: the composition sizes, the `ground` and `over` angles, the depth choices and the still-lane effects. `guide(attribute, value)` returns the entry or the card. `instruction` is the model-facing phrase that reaches the prompt — positive words, no metres, no camera-seat views; author-facing questions belong in `specify`. The cards condense the 2026-10-31 practitioner survey in [directing technique conventions study](https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-10-31-directing-technique-conventions). Save deliberate choices with `storyboard_apply`:
 
 This example deliberately combines a held viewpoint with a focus reveal; it is not a
 default shot template. Complete the [camera-direction pass](action-direction.md#required-camera-direction-pass)

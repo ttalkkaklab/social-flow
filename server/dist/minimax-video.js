@@ -1,5 +1,5 @@
 /**
- * MiniMax H3 on the MiniMax Open Platform (docs/research/2026-11-18-video-model-api-schemas/minimax-h3.md).
+ * MiniMax H3 on the MiniMax Open Platform (1eabc4fb:docs/research/2026-11-18-video-model-api-schemas/minimax-h3.md).
  * One endpoint, POST /v2/video_generation; content[].role picks the mode. First/last frames and
  * references cannot share a request, so a spoken shot's start image rides as the last reference
  * picture and the first frame is not pinned.

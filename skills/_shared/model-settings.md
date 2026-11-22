@@ -129,7 +129,7 @@ prices. A configured credential does not guarantee a successful generation.
    operation:"audio"}` (`LTX_API_KEY`; `1080x1920` for 9:16). MiniMax and HeyGen take a
    speaker's voice sample but cannot pin the start image as the first frame in the same
    call; LTX takes no voice sample, so its spoken cuts use the pinned TTS track. Prices and
-   field contracts: [API schemas](../../docs/research/2026-11-18-video-model-api-schemas/README.md).
+   field contracts: [API schemas](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-18-video-model-api-schemas/README.md).
 2. **BGM and audience-only tonal cues.** After the video model and its credential
    check, ask which model should make new background music, drones, risers and stingers.
    Read `music_catalog` and offer exact supported model IDs with their duration controls,

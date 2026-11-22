@@ -4,7 +4,7 @@ A story-v1 contract (`STORY.version: story-v1`): story-v2 boards follow
 [character-scenarios.md](character-scenarios.md) and read this file only for the shape.
 A 30–60 s history short about one real person and the one thing that happened to them.
 The shape comes from a survey of seven history shorts channels (2026-09-10 —
-[docs/research/2026-09-10-history-shorts-storytelling](../../../docs/research/2026-09-10-history-shorts-storytelling/));
+[history shorts storytelling study](https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-09-10-history-shorts-storytelling));
 what they share is not a topic but a way of opening, turning and closing, and a screen that
 changes with every sentence. None of it adds a beat: on story-v1 the seven items (scenario-stage
 §the seven items) and hook → drip → cta remain the common shape. It adds one declaration, `STORY.person`, and
@@ -69,7 +69,7 @@ sets `length_max_seconds: 60` in its profile so the band matches the shape, and
 - **Mix the sources by what each sentence needs** — render-routing.md decides the route,
   this is where the person short usually lands: period paintings, photographs, maps and
   documents on `still_camera` with a real image (the free-source list in
-  [docs/research/2026-09-07-free-stock-sources](../../../docs/research/2026-09-07-free-stock-sources/)
+  [stock media sources](../../../docs/stock-media.md)
   covers most of them); one short `generated_video` reenactment on the blow, because that is
   the one cut where continuous action is the meaning; `editorial_html` only when the
   document's own words are the subject. The generated-video cap and the text-plate cap are
@@ -152,6 +152,6 @@ and it reads them only when STORY declares `person`; the checker only holds the 
   History Gossip · 60SecondHistories_ on TikTok) — the opening, the one-person-one-turn
   body, the single closing scene, the per-sentence cut, the word subtitles with coloured
   years and names. Field practice, observed on top episodes; no retention measurement.
-  Collected in [docs/research/2026-09-10-history-shorts-storytelling](../../../docs/research/2026-09-10-history-shorts-storytelling/).
+  Collected in [history shorts storytelling study](https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-09-10-history-shorts-storytelling).
 - scenario-craft §7 (the end is a designed beat, music out at the peak), §9 (the double
   hit), §11 (the cold open) — the rules this shape holds strictly.

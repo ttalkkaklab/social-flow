@@ -320,7 +320,7 @@ as diagnosis after a draft, to find a missing beat. Do not fill them in as a for
 ## 9. Evidence and limits
 
 These are editorial tests, not predictions of retention. Sources and the full grading are in
-the [2026-11-11 survey](../../../docs/research/2026-11-11-story-engagement-craft/index.html).
+the [2026-11-11 survey](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-11-story-engagement-craft/index.html).
 
 The practical additions on costly choices, disclosure and consequences draw on practitioner
 accounts: [Scriptnotes 655, Conflict and Stakes](https://johnaugust.com/2024/scriptnotes-episode-655-conflict-and-stakes-compendium-transcript),
@@ -343,7 +343,7 @@ retention improvement or a guarantee that morally ambiguous characters are more 
 | Unfinished tasks are remembered better (Zeigarnik) | not confirmed in a 2025 meta-analysis; do not cite it as the reason |
 | Close one question and open a larger one at an episode end | inference, not directly tested |
 | Everything in §7 | extrapolation; no peer-reviewed measurement on videos under 60 seconds was found |
-| Rules drawn from the 2026-11-11 review loop: betting on each join, reading the ledger off the screen, a plant noticed not underlined, the wall that holds, a price paid on screen, denying the obvious moment, a changed mind's trigger, keeping a long plant alive, paying what was named | editorial: taken from independent reviews of revised benchmark drafts ([loop record](../../../docs/loops/020-story-interest/README.md)); not measured on audiences, and reviewer-to-reviewer spread in that loop was about three points |
+| Rules drawn from the 2026-11-11 review loop: betting on each join, reading the ledger off the screen, a plant noticed not underlined, the wall that holds, a price paid on screen, denying the obvious moment, a changed mind's trigger, keeping a long plant alive, paying what was named | editorial: taken from independent reviews of revised benchmark drafts; not measured on audiences, and reviewer-to-reviewer spread in that loop was about three points |
 
 Second-by-second retention figures repeated in creator guides could not be traced to a
 source. Do not write them as rules. The channel can test the extrapolation itself: publish
