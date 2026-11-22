@@ -1,12 +1,14 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { createWriteStream } from 'node:fs';
+import { createInterface } from 'node:readline';
 import { finished } from 'node:stream/promises';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { FPS, HEIGHT, mouthLevel, RATE, SAMPLES, WIDTH } from './live-character.js';
-export function splitIngest(value) {
+export function splitIngest(value, allowRtmp = false) {
     const url = new URL(value);
     const slash = url.pathname.lastIndexOf('/');
-    if (url.protocol !== 'rtmps:' ||
+    if ((url.protocol !== 'rtmps:' && !(allowRtmp && url.protocol === 'rtmp:')) ||
+        !url.hostname || /[\s\x00-\x1f]/.test(value) ||
         url.username ||
         url.password ||
         url.hash ||
@@ -15,9 +17,7 @@ export function splitIngest(value) {
         throw Error('Expected an RTMPS server URL and stream key');
     }
     return {
-        base: url.origin === 'null'
-            ? 'rtmps://' + url.host + url.pathname.slice(0, slash)
-            : url.origin + url.pathname.slice(0, slash),
+        base: url.protocol + '//' + url.host + url.pathname.slice(0, slash),
         key: url.pathname.slice(slash + 1) + url.search
     };
 }
@@ -96,9 +96,11 @@ export function checkLiveRelay() {
     if (check.status !== 0)
         throw Error('Secure live output needs Python 3 and shared FFmpeg libraries (avformat, avutil). Set SOCIAL_FLOW_LIVE_PYTHON to select an interpreter.');
 }
-export async function encode(frames, archive, destinations, seconds, signal, pull, log, motion) {
-    for (const destination of destinations)
-        splitIngest(destination);
+export async function encode(frames, archive, destinations, seconds, signal, pull, log, motion, drain, finishedSpeaking) {
+    const targets = destinations.map(target => typeof target === 'string' ? { url: target, platform: undefined, allowRtmp: false } : target);
+    for (const target of targets)
+        splitIngest(target.url, target.allowRtmp);
+    const width = motion?.width ?? WIDTH, height = motion?.height ?? HEIGHT;
     const encoder = spawn('ffmpeg', [
         '-hide_banner',
         '-loglevel',
@@ -116,7 +118,7 @@ export async function encode(frames, archive, destinations, seconds, signal, pul
         '-pix_fmt',
         'rgb24',
         '-s',
-        WIDTH + 'x' + HEIGHT,
+        width + 'x' + height,
         '-r',
         String(FPS),
         '-i',
@@ -135,8 +137,7 @@ export async function encode(frames, archive, destinations, seconds, signal, pul
         '1',
         '-i',
         'pipe:3',
-        '-vf',
-        motion ? 'scale=720:1280' : `scale=740:1316,crop=720:1280:x='10+4*sin(t*0.43)':y='18+5*sin(t*0.71)'`,
+        ...(width === 720 && height === 1280 ? [] : ['-vf', motion ? 'scale=720:1280' : `scale=740:1316,crop=720:1280:x='10+4*sin(t*0.43)':y='18+5*sin(t*0.71)'`]),
         '-c:v',
         'libx264',
         '-preset',
@@ -148,11 +149,11 @@ export async function encode(frames, archive, destinations, seconds, signal, pul
         '-g',
         String(FPS * 2),
         '-b:v',
-        '1700k',
+        width === 720 ? '4500k' : '1700k',
         '-maxrate',
-        '2400k',
+        width === 720 ? '5000k' : '2400k',
         '-bufsize',
-        '3400k',
+        width === 720 ? '9000k' : '3400k',
         '-c:a',
         'aac',
         '-ar',
@@ -179,22 +180,27 @@ export async function encode(frames, archive, destinations, seconds, signal, pul
     const recorded = finished(recording);
     recorded.catch(fail);
     encoder.stdout.pipe(recording);
-    const relays = destinations.map((target) => {
+    const relays = targets.map((target) => {
+        const fields = target.platform ? { platform: target.platform } : {};
         const relay = spawn(relayPython(), ['-c', relayProgram], { stdio: ['pipe', 'ignore', 'pipe', 'pipe'] });
-        relay.stderr.on('data', (chunk) => {
-            const line = String(chunk);
-            if (line.includes('relay_connected'))
-                log('relay_connected', {});
-            const failure = /relay_failure (-?\d+)/.exec(line);
-            if (failure)
-                log('relay_error', { code: Number(failure[1]) });
+        createInterface({ input: relay.stderr }).on('line', (line) => {
+            try {
+                if (line === 'relay_connected')
+                    log('relay_connected', fields);
+                const failure = /^relay_failure (-?\d+)$/.exec(line);
+                if (failure)
+                    log('relay_error', { ...fields, code: Number(failure[1]) });
+            }
+            catch (error) {
+                fail(error instanceof Error ? error : Error('Could not record relay state'));
+            }
         });
         const key = relay.stdio[3];
         key.on('error', fail);
-        key.end(target);
+        key.end(target.url);
         relay.stdin.on('error', fail);
         encoder.stdout.pipe(relay.stdin);
-        const done = completion(relay, 'RTMPS relay');
+        const done = completion(relay, (target.platform ?? 'RTMPS') + ' relay');
         done.catch(fail);
         return { relay, done };
     });
@@ -202,10 +208,10 @@ export async function encode(frames, archive, destinations, seconds, signal, pul
     let active, offset = 0, frame = 0, lastProgress = Date.now();
     const start = performance.now();
     try {
-        while (frame < Math.ceil(seconds * FPS) && !signal.aborted) {
+        while (!signal.aborted && (frame < Math.ceil(seconds * FPS) || (drain && (active || drain())))) {
             if (fault)
                 throw fault;
-            if (video.writableLength > WIDTH * HEIGHT * 3 * 10 || audio.writableLength > RATE * 4) {
+            if (video.writableLength > width * height * 3 * 10 || audio.writableLength > RATE * 4) {
                 if (Date.now() - lastProgress > 12000)
                     throw Error('Encoder backpressure timeout');
                 await sleep(12);
@@ -217,7 +223,7 @@ export async function encode(frames, archive, destinations, seconds, signal, pul
                 offset = 0;
                 if (active) {
                     motion?.startSpeech();
-                    log('speech_start', { source: active.source, id: active.id, text: active.text, frame });
+                    log('speech_start', { source: active.source, id: active.id, text: active.text, frame, replay: !!active.replay });
                 }
             }
             let pcm = silence;
@@ -229,8 +235,10 @@ export async function encode(frames, archive, destinations, seconds, signal, pul
             audio.write(pcm);
             video.write(motion ? motion.next(active?.motion) : frames[(blink ? 4 : 0) + mouthLevel(pcm)]);
             if (active && offset >= active.pcm.length) {
-                log('speech_end', { source: active.source, id: active.id, frame });
-                if (active.motion)
+                log('speech_end', { source: active.source, id: active.id, frame, samplesSent: offset / 2, totalSamples: active.pcm.length / 2 });
+                if (finishedSpeaking)
+                    finishedSpeaking(active);
+                else if (active.motion)
                     motion?.release(active.motion);
                 active = undefined;
             }

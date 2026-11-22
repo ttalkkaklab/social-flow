@@ -57,14 +57,16 @@ function read(directory, board, {verifyInputs=true} = {}) {
   if(receipt?.baseUrl) {try{const u=new URL(receipt.baseUrl);if(['http:','https:'].includes(u.protocol))endpoint=u.origin;}catch{/* Unusable endpoint is not evidence. */}}
   const settings=Object.fromEntries(['durationSeconds','duration','numFrames','frameRate','resolution','width','height','generateAudio'].filter(k=>args[k]!==undefined).map(k=>[k,args[k]]));
   const inputs=Object.entries(obj(plan.inputs)).map(([file,sha256])=>({path:path.relative(dir,file).split(path.sep).join('/'),sha256,changed:verifyInputs?hash(file)!==sha256:null}));
-  const revision=current(plan.shotId,plan.sceneNo),stale=revision!==null&&revision!==plan.contextRevision||inputs.some(i=>i.changed===true)?true:revision===null||inputs.some(i=>i.changed===null)?null:false;
+  const revision=current(plan.shotId,plan.sceneNo);
+  const boardMatches=revision===null?null:revision===plan.contextRevision;
+  const stale=boardMatches===false||inputs.some(i=>i.changed===true)?true:boardMatches===null||inputs.some(i=>i.changed===null)?null:false;
   const attached=typeof video.clip==='string'?video.clip:typeof shot?.visual?.clip==='string'?shot.visual.clip:null;
   const selected=Boolean(clip&&attached&&path.resolve(dir,attached)===path.resolve(dir,clip)&&
    (!plan.sceneNo || plan.shotIds.every(id=>{
     const member=shots.find(s=>s.id===id), file=member?.visual?.video?.clip || member?.visual?.clip;
     return typeof file==='string' && path.resolve(dir,file)===path.resolve(dir,clip);
    })));
-  candidates.push({...(plan.sceneNo ? {sceneNo:plan.sceneNo,shotIds:plan.shotIds} : {}),planId:plan.id,requestId:plan.requestId,shotId:plan.shotId,purpose:plan.purpose||'unspecified',basedOnRequestId:plan.basedOnRequestId||null,changeNote:plan.changeNote||'',
+  candidates.push({...(plan.sceneNo ? {sceneNo:plan.sceneNo,shotIds:plan.shotIds,boardMatches} : {}),planId:plan.id,requestId:plan.requestId,shotId:plan.shotId,purpose:plan.purpose||'unspecified',basedOnRequestId:plan.basedOnRequestId||null,changeNote:plan.changeNote||'',
    createdAt:fs.statSync(path.join(store,'plans',file)).mtime.toISOString(),startedAt:job?.startedAt||null,updatedAt:job?.updatedAt||null,finishedAt:job?.finishedAt||null,
    status:job?.status||'planned',providerStatus:job?.providerStatus||null,observedAt:job?.observedAt||null,providerId:job?.providerId||receipt?.jobId||null,endpoint,
    selection:plan.selection,settings,prompt:typeof args.prompt==='string'?args.prompt:'',sourcePrompt:plan.sourcePrompt||'',currentPrompt:video.prompt||'',

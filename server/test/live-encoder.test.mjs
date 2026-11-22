@@ -54,3 +54,28 @@ test('continuous encoder records live audio, closes utterance and writes decodab
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('standby yields on the next frame and accepted speech drains to its last sample', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'live-switch-'));
+  const pixels = Buffer.alloc(48 * 64 * 3);
+  const sent = [], events = [], queue = [];
+  const voice = (id, samples) => ({id, text:id, source:'operator', pcm:Buffer.alloc(samples * 2, 50), motion:{id}});
+  const first = voice('line', 2 * SAMPLES + 37), second = voice('answer', SAMPLES + 19);
+  const motion = {
+    width:48, height:64, startSpeech() {}, release() {},
+    next(active) {
+      sent.push(active?.id ?? 'standby');
+      if (sent.length === 1) queue.push(first);
+      if (sent.length === 2) queue.push(second);
+      return pixels;
+    }
+  };
+  try {
+    await encode([], join(dir, 'program.flv'), [], 2/24, new AbortController().signal,
+      () => queue.shift(), (kind, fields) => events.push({kind, ...fields}), motion, () => queue.length > 0);
+    assert.deepEqual(sent, ['standby', 'line', 'line', 'line', 'answer', 'answer']);
+    assert.deepEqual(events.filter(e => e.kind === 'speech_end').map(e => [e.id,e.samplesSent,e.totalSamples]),
+      [['line', 2037, 2037], ['answer', 1019, 1019]]);
+    assert.ok(!events.some(e => e.kind === 'speech_interrupted'));
+  } finally { rmSync(dir, {recursive:true, force:true}); }
+});

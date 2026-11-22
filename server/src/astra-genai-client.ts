@@ -1,6 +1,7 @@
 /** Transport shared by the GenAI provider adapters, separate from legacy ASTRA jobs. */
 import { readFileSync, statSync } from 'node:fs';
 import { extname } from 'node:path';
+import { setTimeout as sleep } from 'node:timers/promises';
 import { Agent } from 'undici';
 import { z } from 'zod';
 import { imageMetadata } from './image-media.js';
@@ -17,6 +18,7 @@ export function desktopGatewayKey(): string | undefined {
 
 /** Model-bound images and speech may run on another gateway (e.g. a local Mac one); Desktop has its own optional gateway override. */
 function override(route: string): { url?: string; key?: string } {
+  if (route === '/v1/chat/completions') return { url: process.env.ASTRA_GENAI_CHAT_URL, key: process.env.ASTRA_GENAI_CHAT_API_KEY };
   if (route.startsWith('/v1/ltx/desktop/')) return { url: process.env.ASTRA_GENAI_DESKTOP_URL, key: desktopGatewayKey() };
   if (route.startsWith('/v1/images/')) return { url: process.env.ASTRA_GENAI_IMAGE_URL, key: process.env.ASTRA_GENAI_IMAGE_API_KEY };
   if (route.startsWith('/v1/audio/')) return { url: process.env.ASTRA_GENAI_SPEECH_URL, key: process.env.ASTRA_GENAI_SPEECH_API_KEY };
@@ -30,7 +32,7 @@ export function astraGenaiBaseUrl(route = ''): string {
 export function requireAstraGenaiKey(route = ''): string {
   const { url, key } = override(route);
   if (url) {
-    const lane = route.startsWith('/v1/images/') ? 'IMAGE' : route.startsWith('/v1/audio/') ? 'SPEECH' : 'DESKTOP';
+    const lane = route === '/v1/chat/completions' ? 'CHAT' : route.startsWith('/v1/images/') ? 'IMAGE' : route.startsWith('/v1/audio/') ? 'SPEECH' : 'DESKTOP';
     if (!key) throw new Error(`ASTRA_GENAI_${lane}_API_KEY is required with its gateway URL override.`);
     return key;
   }
@@ -74,24 +76,25 @@ export async function requestGenai(method: 'GET' | 'POST', route: string, body?:
 }
 
 /**
- * Poll a submitted job every 5 s for up to 30 minutes. One transient 5xx on the status GET is
+ * Poll a submitted job every 5 s for up to 30 minutes. Transient 5xx status reads are
  * retried, and an HTTP error on the GET never counts as terminal job evidence; only a job the
  * gateway reports failed (thrown as GenaiRequestError with HTTP 200) does. Never wraps a POST.
  */
-export async function pollGenaiJob<T extends { downloaded: boolean }>(check: () => Promise<T>, pending: string): Promise<T> {
+export async function pollGenaiJob<T extends { downloaded: boolean }>(check: () => Promise<T>, pending: string, signal?: AbortSignal, statusRetries = 1): Promise<T> {
   const deadline = Date.now() + 30 * 60_000;
-  let retried = false;
+  let failures = 0;
   do {
     try {
+      signal?.throwIfAborted();
       const result = await check();
       if (result.downloaded) return result;
-      retried = false;
+      failures = 0;
     } catch (error) {
       if (!(error instanceof GenaiRequestError) || error.httpStatus === 200) throw error;
-      if (error.httpStatus < 500 || retried) throw new Error(error.message);
-      retried = true;
+      if (error.httpStatus < 500 || ++failures > statusRetries) throw new Error(error.message);
     }
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    if (signal) await sleep(5000, undefined, { signal });
+    else await new Promise(resolve => setTimeout(resolve, 5000));
   } while (Date.now() < deadline);
   throw new Error(pending);
 }

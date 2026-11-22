@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { GoogleAuth } from 'google-auth-library';
 import { z } from 'zod';
@@ -14,6 +15,34 @@ export const VEO_CONSTRAINTS = Object.fromEntries(VEO_MODELS.map(model => [model
         durationSeconds: [4, 6, 8], referenceSeconds: 8, extensionSeconds: 7, aspectRatios: ['16:9', '9:16'],
         maxAssetImages: model === lite ? 0 : 3, lastFrame: true, generateAudio: true, voiceReference: false,
     }]));
+/** Validate authored asset identities before serializing the role-free Vertex array. */
+export function veoSubjectIssue(assets, model = standard, owners = [], registered) {
+    const limit = VEO_CONSTRAINTS[model]?.maxAssetImages ?? 0;
+    if (!limit || !assets.length || assets.length > limit)
+        return model + ' accepts ' + (limit ? '1 to ' + limit : 'no') + ' subject images';
+    const subjects = new Set(owners.map(id => 'character:' + id));
+    const folders = new Set();
+    const roles = new Set();
+    for (const asset of assets) {
+        const role = ['face', 'outfit', 'bystander'].includes(asset.role) ? 'character' : asset.role;
+        if (!['character', 'prop', 'continuity'].includes(role))
+            return 'Unsupported Veo subject role: ' + asset.role;
+        if (role !== 'continuity')
+            roles.add(role);
+        if (asset.character)
+            subjects.add('character:' + asset.character);
+        const identities = registered?.get(asset.path);
+        for (const id of identities ?? [])
+            subjects.add(id);
+        const dir = path.dirname(asset.path);
+        if (path.basename(path.dirname(dir)) === 'characters')
+            subjects.add('character:' + path.basename(dir));
+        else if (!identities?.size && fs.existsSync(path.join(dir, 'panels.json')))
+            folders.add(dir);
+    }
+    if (subjects.size > 1 || folders.size > 1 || roles.size > 1)
+        return 'Veo asset references must show the same subject';
+}
 const common = {
     model: z.enum(VEO_MODELS).default(standard), prompt: z.string().trim().min(1),
     resolution: z.enum(['720p', '1080p', '4k']).default('720p'),

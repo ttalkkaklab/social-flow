@@ -26,7 +26,7 @@ test('private media rejects foreign origins and non-asset routes before sending 
    await assert.rejects(requestGenaiMedia(route),/Unsupported/);
 });
 
-test('image and speech routes use their own gateway override; video stays on ASTRA_GENAI_URL', async t => {
+test('chat and media routes keep their gateway credentials separate', async t => {
   const original = globalThis.fetch, key = config.astraGenaiApiKey, env = { ...process.env };
   t.after(() => { globalThis.fetch = original; config.astraGenaiApiKey = key; process.env = env; });
   config.astraGenaiApiKey = 'remote-key'; process.env.ASTRA_GENAI_URL = 'https://remote.example';
@@ -34,10 +34,16 @@ test('image and speech routes use their own gateway override; video stays on AST
   await assert.rejects(requestGenai('GET', '/v1/audio/models'), /ASTRA_GENAI_SPEECH_API_KEY/);
   process.env.ASTRA_GENAI_SPEECH_API_KEY = 'local-key'; const seen = [];
   globalThis.fetch = async (url, options) => { seen.push([url, options.headers.Authorization]); return new Response('{}'); };
+  process.env.ASTRA_GENAI_CHAT_URL = 'http://127.0.0.1:18185';
+  await assert.rejects(requestGenai('POST', '/v1/chat/completions', {}), /ASTRA_GENAI_CHAT_API_KEY/);
+  process.env.ASTRA_GENAI_CHAT_API_KEY = 'chat-key';
+  await requestGenai('POST', '/v1/chat/completions', {});
+  await requestGenai('GET', '/v1/ltx/msr/capabilities');
   await requestGenai('GET', '/v1/audio/models');
   await requestGenai('GET', '/v1/images/models');
   await requestGenai('GET', '/v1/ltx/desktop/models');
-  assert.deepEqual(seen, [['http://127.0.0.1:18081/v1/audio/models', 'Bearer local-key'],
+  assert.deepEqual(seen, [['http://127.0.0.1:18185/v1/chat/completions', 'Bearer chat-key'],
+    ['https://remote.example/v1/ltx/msr/capabilities', 'Bearer remote-key'], ['http://127.0.0.1:18081/v1/audio/models', 'Bearer local-key'],
     ['https://remote.example/v1/images/models', 'Bearer remote-key'], ['https://remote.example/v1/ltx/desktop/models', 'Bearer remote-key']]);
 });
 

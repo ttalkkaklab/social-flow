@@ -450,7 +450,8 @@ test('Veo reference-only scenes send owned face and outfit assets without a time
   }));
   shot.timeline.action = 'Mai An enters from the left after the spectators turn.';
   f.scene.openingPositions[1].images = [1,2];
-  shot.visual.video = {engine:'veo',model:'veo-3.1-fast-generate-001',resolution:'720p',operation:'reference'};
+  shot.visual.video = {engine:'veo',model:'veo-3.1-fast-generate-001',resolution:'720p'};
+  shot.visual.frames = {mode:'reference', start:'images/opening.png'};
   f.save();
   const plan = planVideo({...f.input,args:{}});
   const body = buildVeoBody(plan.args);
@@ -460,6 +461,14 @@ test('Veo reference-only scenes send owned face and outfit assets without a time
     ['s0001',0,'face','mai-an'],['s0001',0,'outfit','mai-an'],
   ]);
   assert.match(plan.args.prompt,/mai-an \(Image 1, Image 2\): Off screen/);
+  shot.timeline.images[1].character = 'other';
+  f.save();
+  assert.throws(() => planVideo({...f.input,args:{}}), /same subject/);
+  shot.timeline.images[1].character = 'mai-an';
+  shot.timeline.images.push({role:'start',path:'images/opening.png',frame:0});
+  f.save();
+  assert.throws(() => planVideo({...f.input,args:{}}), /scene_inputs_unsupported/);
+  delete shot.visual.frames;
   shot.timeline.images = [];
   shot.visual.video.operation='text';
   f.scene.openingPositions[1].images=[];
@@ -482,4 +491,95 @@ test('supplied scene audio binds the selected model and original file to per-sho
     assert.equal(plan.inputs[track.path],createHash('sha256').update(fs.readFileSync(track.path)).digest('hex'));
     assert.equal(track.mode,mode);
   }
+});
+
+test('scene camera returns to its default after the insert and every shot cue reaches the wire body', async () => {
+  const scene = {emotion:'Suspicion turns to relief.', openingPositions:[], fps:24};
+  const defaults = {camera:'camera.static', axis:'Stay on the window side.', lighting:'Dusk light.', attention:'Watch the lamp.'};
+  const board = {STRUCTURE:{scenes:[{no:1,directionDefaults:defaults}]}};
+  const cards = ['Open the letter.','Read the seal.','Lower the letter.'].map((action,i) => ({
+    id:'s'+i, scene:1, duration:1, timeline:{startFrame:i*24,endFrame:(i+1)*24,
+      transition:i?'hard_cut':'open', framing:'Eye level.',action},
+  }));
+  cards[1].visual = {camera:{movement:'dolly in',target:'the broken seal',speed:'slow',end:'Settle on the seal.',
+    view:{mode:'profile-right',subject:'the witness',crop:'Only the cheek and the eye.',reason:'Fear'}},
+    expression:{witness:'The lower eyelid tightens.'},action:'Press the signet into the wax.',
+    video:{promptSource:{action:'Press the signet into the wax.',end:'She folds the letter.'}}};
+  cards[1].performance = [{kind:'action',text:'Tap the brass bell twice.',durationSeconds:1}];
+  cards[1].shot = {size:'cu',angle:'eye',techniques:[{id:'camera.rack-focus',from:'the seal',to:'the lamp'}], space:{light:'A passing shadow.'},
+    videoDesign:{motion:{beats:[{at:0.5,state:'A hairline crack opens in the wax.'}]}}};
+  const build = list => prepareSceneRequest(1,list,scene,'/unused',[],{bindDialogue:false,bindOpening:false,suffix:''},()=>null,board);
+  const {request,providerPrompt} = build(cards);
+  const {buildSceneWire} = await import('../dist/scene-video.js');
+  const {body} = await buildSceneWire(request,'ltx-2.5-22b-distilled','720p');
+  assert.doesNotMatch(body.prompt,/static|Dusk|Watch the lamp/);
+  assert.match(body.prompt,/window side/);
+  for (const i of [0,2]) {
+    assert.match(body.shots[i].description,/static frame/);
+    assert.match(body.shots[i].description,/Dusk light/);
+    assert.match(body.shots[i].description,/Watch the lamp/);
+  }
+  for (const phrase of ['slowly pushes','broken seal','Settle on the seal','right profile','Close-up','eye level','Tap the brass bell twice','Rack focus from the seal to the lamp','lower eyelid','folds the letter','passing shadow']) {
+    assert.ok(body.shots[1].description.includes(phrase),phrase);
+    assert.ok(providerPrompt.includes(phrase),phrase);
+  }
+  assert.doesNotMatch(body.shots[1].description,/static frame|Dusk/);
+  assert.match(body.shots[1].description,/Read the seal.*Press the signet.*At 0.5 s into this shot: A hairline crack/);
+  assert.equal(body.shots[1].description.match(/Press the signet/g).length,1);
+  assert.doesNotMatch(body.prompt + body.shots[2].description,/Press the signet|hairline crack/);
+  const single = await buildSceneWire(build([cards[0]]).request,'ltx-2.5-22b-distilled','720p');
+  assert.match(single.body.prompt,/Suspicion turns to relief/);
+  assert.match(single.body.prompt,/static frame/);
+  const acting = {context:'The clerk is watching.',intent:'Make the guard underestimate her.',emotion:'Panic gives way to defiance.',
+    visual:'Her hand grips the lock.',direction:'Stammer on the first syllable.',vocal:'Drop to a whisper.',tags:['sighs','Sighs.'],leadInSeconds:1.5,tailOutSeconds:0.75};
+  const line = {id:'l1',speaker:'miran',delivery:'on_screen',tts:'Not yet.',acting};
+  const spoken = {...cards[0], narration:[line], timeline:{...cards[0].timeline,dialogueCues:[{lineId:'l1',frame:0}]}};
+  for (const list of [[spoken], [spoken,...cards.slice(1)]]) {
+    const directed = await buildSceneWire(build(list).request,'ltx-2.5-22b-distilled','720p');
+    const first = directed.body.shots[0];
+    for (const cue of [acting.intent,acting.emotion,acting.context,acting.visual,'Anticipation 1.5 seconds','reaction 0.75 seconds'])
+      assert.ok(first.description.includes(cue),cue);
+    assert.equal(first.dialogue[0].text,line.tts);
+    assert.equal(first.dialogue[0].direction,'Stammer on the first syllable. Drop to a whisper. sighs');
+    assert.ok(build(list).providerPrompt.includes(first.dialogue[0].direction));
+    assert.ok(!first.description.includes(acting.vocal));
+    assert.ok(!first.description.includes(line.tts));
+    assert.ok(!directed.body.shots.slice(1).some(s=>s.description.includes(acting.visual)));
+  }
+  const exchange = {...cards[0], narration:[
+    {id:'answer',speaker:'miran',delivery:'on_screen',tts:'Locked.'},
+    {id:'question',speaker:'miran',delivery:'on_screen',tts:'Is it open?'}],
+    timeline:{...cards[0].timeline,dialogueCues:[{lineId:'question',frame:1},{lineId:'answer',frame:20}]},
+    performance:[{kind:'dialogue',group:2,character:'miran'},{kind:'action',text:'Touch the latch.'},{kind:'dialogue',group:1,character:'miran'}]};
+  for (const list of [[exchange],[exchange,...cards.slice(1)]]) {
+    const {request} = build(list);
+    const wire = await buildSceneWire(request,'ltx-2.5-22b-distilled','720p');
+    assert.deepEqual(wire.body.shots[0].dialogue.map(l=>[l.id,l.text,l.frame]),[['question','Is it open?',1],['answer','Locked.',20]]);
+    assert.match(wire.body.shots[0].description,/Beat 1 with line 2.*question.*Beat 2.*Touch the latch.*Beat 3 with line 1.*answer/);
+    assert.doesNotMatch(wire.body.shots[0].description,/Is it open\?|Locked\./);
+  }
+  const film = (await import('../../skills/storyboard/references/film-techniques.js')).default;
+  for (const entry of film.entries.filter(e=>e.fields.movement && e.fields.speed)) {
+    defaults.camera = entry.id;
+    const paced = await buildSceneWire(build([cards[0]]).request,'ltx-2.5-22b-distilled','720p');
+    assert.match(paced.body.prompt, entry.fields.speed === 'slow' ? /slowly/ : /quickly/,entry.id);
+  }
+  defaults.camera = 'camera.static';
+  delete cards[1].visual.camera.view;
+  delete cards[1].visual.video.promptSource.end;
+  cards[1].visual.frames = {mode:'first_last', endState:'The raven closes its claw around the sapphire.'};
+  cards[1].shot.depth = {mode:'shallow',reads:1,focus:'the brass bell',sound:'near'};
+  for (const attention of ['From the seal to the lamp', 'the brass bell']) {
+    const checked = await buildSceneWire(build(cards).request,'ltx-2.5-22b-distilled','720p');
+    assert.doesNotMatch(checked.body.prompt + checked.body.shots[1].description,/Watch the lamp/);
+    assert.ok(checked.body.shots[1].description.includes('Attention: ' + attention));
+    assert.match(checked.body.shots[1].description,/claw around the sapphire/);
+    assert.match(checked.body.shots[2].description,/Watch the lamp/);
+    cards[1].shot.techniques = [];
+  }
+  delete board.STRUCTURE.scenes[0].directionDefaults;
+  scene.camera='Keep the camera locked throughout.';
+  const legacy = build(cards).request;
+  assert.ok(!legacy.sceneDirection.camera && !legacy.shots[1].framing.includes('locked'));
+  assert.match(legacy.shots[2].framing,/locked/);
 });

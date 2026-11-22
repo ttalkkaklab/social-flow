@@ -31,7 +31,9 @@ allowed-tools: ["mcp__social-flow__story_catharsis_plan", "mcp__plugin_social-fl
    and what each source establishes.
 
 For a standalone request deliver the requested story prose. In a synopsis put the payoff
-and response in the storyline. On a storyboard point `sequence.payoff` at the scene that
+and response in the storyline, then follow [storyboard](../storyboard/SKILL.md) for its required
+[reality check](../storyboard/references/synopsis-reality-check.md) before delivery.
+On a storyboard point `sequence.payoff` at the scene that
 delivers it and write visible evidence in the shots there. If the episode uses a catalogued
 cliché, follow the existing [cliché selection rules](../storyboard/references/cliche-use.md).
 

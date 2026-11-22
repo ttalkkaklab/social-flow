@@ -1,5 +1,4 @@
 import { spawnSync } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -53,38 +52,19 @@ test('live performance rejects a held image and advances while no one is speakin
   }
 });
 
-test('a live destination requires driving footage before checking credentials or opening a room', () => {
-  const project = mkdtempSync(join(tmpdir(), 'live-photo-'));
-  try {
-    const config = join(project, 'config.json');
-    writeFileSync(
-      config,
-      JSON.stringify({
-        project,
-        channel: 'test',
-        character: 'host',
-        panel: 'face',
-        opening: 'Hello',
-        chatModel: 'test',
-        mouth: { x: 0.5, y: 0.5, width: 0.1, height: 0.05 }
-      })
-    );
-    for (const destination of ['--youtube', '--tiktok']) {
-      const result = spawnSync(
-        process.execPath,
-        [
-          fileURLToPath(new URL('../dist/character-live.bundle.js', import.meta.url)),
-          'check',
-          '--config',
-          config,
-          destination
-        ],
-        { encoding: 'utf8' }
-      );
-      assert.notEqual(result.status, 0);
-      assert.match(result.stderr, /Set motionVideo/);
-    }
-  } finally {
-    rmSync(project, { recursive: true, force: true });
+test('each external launch needs a start decision before looking up assets or credentials', () => {
+  const cli = fileURLToPath(new URL('../dist/character-live.bundle.js', import.meta.url));
+  const choices = JSON.parse(execFileSync(process.execPath, [cli, 'choices'], { encoding: 'utf8' }));
+  assert.deepEqual(choices.choices.map(choice => choice.id), ['ready', 'preview', 'cancel']);
+  assert.deepEqual(choices.output, [720, 1280]);
+  assert.equal(choices.spatialUpscale, false);
+  assert.equal(choices.faceComposite, false);
+  for (const destination of ['--youtube', '--tiktok']) {
+    const args = [cli, 'run', '--config', '/nonexistent/session.json', destination];
+    const missing = spawnSync(process.execPath, args, { encoding: 'utf8' });
+    assert.notEqual(missing.status, 0);
+    assert.match(missing.stderr, /start choice is required/);
+    const cancelled = JSON.parse(execFileSync(process.execPath, [...args, '--start', 'cancel'], { encoding: 'utf8' }));
+    assert.equal(cancelled.state, 'cancelled');
   }
 });

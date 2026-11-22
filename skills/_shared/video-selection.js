@@ -5,6 +5,54 @@ const crypto = require('node:crypto');
 const settings = require('./model-settings.js');
 const { evaluateWindowScript } = require('./scenes-vm.js');
 const { videoLines } = require('../storyboard/references/structure-contract.js');
+const { framePlan, imageReferences } = require('../storyboard/references/render-routing.js');
+
+// Read image and performance intent before choosing any provider parameter names.
+function storyboardInputs(members, scene) {
+  const images = members.flatMap(shot => shot.timeline?.images ?? []);
+  const frames = members.map(framePlan);
+  const temporal = images.some(p => ['start', 'keyframe', 'end'].includes(p.role));
+  const reference = frames.some(f => f.mode === 'reference') ||
+    images.some(p => ['face', 'outfit', 'prop', 'location'].includes(p.role)) ||
+    members.some(shot => imageReferences(shot).some(ref => ['video', 'both'].includes(ref.use)));
+  return {
+    frames: temporal || frames.some(f => f.mode !== 'reference' && (f.start || f.end)),
+    opening: frames.some(f => f.start) || images.some(p => p.role === 'start'),
+    reference, audio: scene?.videoDirection?.audio,
+    spoken: members.some(shot => (shot.narration ?? []).some(line =>
+      line.tts?.trim() && ['on_screen', 'off_screen'].includes(line.delivery))),
+  };
+}
+
+const operationFor = {
+  veo: input => input.frames ? 'image' : input.reference ? 'reference' : 'text',
+  'ltx-api': input => input.audio || input.spoken ? 'audio' : 'image',
+  'astra-genai': (input, model) => {
+    if (input.audio) return input.audio.mode === 'mix' ? 'image' : 'audio';
+    if (input.frames || input.opening && !input.spoken) return 'image';
+    if (input.reference && input.spoken && model === 'ltx-2.5-22b-distilled') return 'reference';
+    return input.reference || input.opening ? 'image' : 'text';
+  },
+};
+
+function selectOperation(choice, members, scene) {
+  if (choice.operation || !Object.hasOwn(operationFor, choice.engine)) return choice;
+  const inputs = storyboardInputs(members, scene);
+  return { ...choice, operation: operationFor[choice.engine](inputs, choice.model) };
+}
+
+// Older cards stored subject paths on the video settings. Normalize once so
+// operation selection, shot binding and scene projection see identical inputs.
+function withLegacyReferences(shot) {
+  const visual = shot.visual;
+  if (!visual || visual.references !== undefined) return shot;
+  const references = imageReferences(shot);
+  if (!references.length) return shot;
+  const plan = framePlan(shot);
+  const frames = visual.frames ?? (plan.start || plan.end ? plan : { mode: 'reference' });
+  return { ...shot, visual: { ...visual, frames, references } };
+}
+
 const hash = value => crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
 
 class MissingSceneDirection extends Error {
@@ -28,21 +76,23 @@ function readVideoContext(episode, shotId, sceneNo) {
       throw new Error('Invalid episode model snapshot');
   }
   const scenes = board.SCENES || [];
-  const members = sceneNo === undefined ? scenes.filter(s => String(s.id ?? s.shot?.id) === shotId)
+  const storedMembers = sceneNo === undefined ? scenes.filter(s => String(s.id ?? s.shot?.id) === shotId)
     : scenes.filter(s => s.scene === sceneNo);
-  if (sceneNo === undefined && members.length !== 1) throw new Error('shotId must identify exactly one storyboard shot');
-  const first = members[0];
+  if (sceneNo === undefined && storedMembers.length !== 1) throw new Error('shotId must identify exactly one storyboard shot');
   const scene = sceneNo === undefined ? undefined : board.STRUCTURE?.scenes?.find(s => s.no === sceneNo);
-  if (sceneNo !== undefined && (!scene || !first)) throw new Error('sceneNo must identify a storyboard scene with shots');
+  if (sceneNo !== undefined && (!scene || !storedMembers.length)) throw new Error('sceneNo must identify a storyboard scene with shots');
   const { resolveVideoChoice } = require('../storyboard/references/production-mode.js');
   const choice = s => resolveVideoChoice(production, s, snapshot?.config.models.video);
-  let { selection, source } = choice(first);
+  const { selection: savedSelection, source } = choice(storedMembers[0]);
+  const members = Object.hasOwn(operationFor, savedSelection.engine) ? storedMembers.map(withLegacyReferences) : storedMembers;
+  const first = members[0];
+  let selection = selectOperation(savedSelection, members, scene);
   let shot = first;
   let timed = false;
   if (scene) {
     if (members.some(s => s.shot?.render?.mode && s.shot.render.mode !== 'generated_video'))
       throw new Error('scene_video_mixed_media: keep non-generated material on its authored edit route');
-    if (members.some(s => JSON.stringify(choice(s).selection) !== JSON.stringify(selection)))
+    if (members.some(s => JSON.stringify(choice(s).selection) !== JSON.stringify(savedSelection)))
       throw new Error('scene_video_selection_conflict: the scene members select different video models or operations');
     if (members.some(s => !s.id || !Number.isFinite(s.duration) || s.duration <= 0))
       throw new Error('scene_video_timing: each member needs a stable shot id and a positive duration');
@@ -67,15 +117,17 @@ function readVideoContext(episode, shotId, sceneNo) {
     else if (!selection.operation && selection.engine !== 'host') {
       selection = { ...selection, operation: visual.frames?.mode === 'reference' ? 'reference' : 'image' };
     }
-    const opening = first.timeline?.images?.find(p => p.role === 'start')?.path ?? visual.frames?.start;
-    if (!timed && !opening && !['text','audio'].includes(selection.operation)) throw new Error('scene_video_opening_required: select the first member’s opening image');
+    const authoredFrames = framePlan(first);
+    const opening = first.timeline?.images?.find(p => p.role === 'start')?.path || authoredFrames.start;
+    if (!timed && !opening && !['text','audio'].includes(selection.operation) && !(selection.engine === 'veo' && selection.operation === 'reference')) throw new Error('scene_video_opening_required: select the first member’s opening image');
     if (scene.videoOpeningSha256) {
       const bytes = fs.readFileSync(path.resolve(root, 'storyboard', opening));
       if (crypto.createHash('sha256').update(bytes).digest('hex') !== scene.videoOpeningSha256)
         throw new Error('openingPositions stale: inspect the new opening frame and update story_scene.videoDirection');
     }
     // A timed scene maps each original member in the planner. Only legacy single shots use this projection.
-    const frames = pinned && !timed && visual.frames?.mode === 'reference' ? { mode: 'first', start: opening } : { ...visual.frames };
+    const frames = pinned && !timed && visual.frames?.mode === 'reference' ? { mode: 'first', start: opening }
+      : visual.frames ?? (!timed && (opening || authoredFrames.end) ? authoredFrames : {});
     const refs = [...(visual.references ?? [])];
     let references = refs;
     if (pinned && !timed) {
@@ -102,14 +154,13 @@ function readVideoContext(episode, shotId, sceneNo) {
     }
     shotId = first.id;
     shot = { ...first, duration: members.reduce((seconds, s) => seconds + s.duration, 0),
-      narration: members.flatMap(s => s.narration ?? []), performance: undefined, edit: undefined,
-      visual: { ...visual, frames, references, lastImagePath: undefined, imagePair: undefined, video: { ...visual.video, lastImagePath: undefined, referenceImagePaths: undefined, promptSource: undefined, prompt: undefined,
+      narration: members.flatMap(require('../storyboard/references/scene-direction.js').orderedSpeech), performance: undefined, edit: undefined,
+      visual: { ...visual, frames, ...(references.length || visual.references !== undefined || selection.operation !== 'text' ? {references} : {}), lastImagePath: undefined, imagePair: undefined, video: { ...visual.video, lastImagePath: undefined, referenceImagePaths: undefined, promptSource: undefined, prompt: undefined,
         speakerBindings: undefined, openingPositions: positions, openingImageSha256: undefined } } };
   }
   const overrides = production.modelSettings?.overrides || [];
   // A retired engine loads here so video_plan can refuse it as video_engine_unsupported.
   for (const change of overrides) if (change.video) settings.validateModels({ video: change.video }, true, true);
-  if (snapshot || source.endsWith('_override')) settings.validateModels({ video: selection }, true, true);
   // Silent pictures and inner thoughts use I2V in an MSR project (2026-11-09), and likewise on the hosted
   // reference lanes (MiniMax, HeyGen) and the LTX API's audio lane, which only spoken shots take.
   const spoken = (shot.narration || []).filter(line => typeof line.tts === 'string' && line.tts.trim());
@@ -118,14 +169,10 @@ function readVideoContext(episode, shotId, sceneNo) {
   if (speechOnly && !scene?.videoDirection?.audio &&
       !spoken.some(line => line.delivery === 'on_screen' || line.delivery === 'off_screen'))
     selection = { ...selection, operation: 'image' };
-  if (selection.engine === 'veo' && !selection.operation) {
-    const mode = shot.visual?.frames?.mode;
-    const operation = mode === 'reference' ? 'reference' : shot.visual?.frames?.start || shot.visual?.bg ? 'image' : 'text';
-    selection = { ...selection, operation };
-  }
+  if (snapshot || source.endsWith('_override')) settings.validateModels({ video: selection }, true, true);
   return { episode: root, shotId, selection, source, snapshotRevision: snapshot?.revision || null,
     ...(scene ? {sceneNo, timed, shotIds: members.map(s => s.id), sceneDirection: scene.videoDirection, sceneMembers: members} : {}),
-    revision: hash({ ...(scene ? {sceneNo, direction: scene.videoDirection, members} : {}), selection, source, snapshotRevision: snapshot?.revision, overrides, imagePlan: { frames: shot.visual?.frames, references: shot.visual?.references, bg: shot.visual?.bg }, shotPrompt: shot.visual?.video?.prompt, shotLines: videoLines(shot), authorization: production.videoAuthorization,
+    revision: hash({ ...(scene ? {sceneNo, direction: scene.videoDirection, directionDefaults:scene.directionDefaults, members} : {}), selection, source, snapshotRevision: snapshot?.revision, overrides, imagePlan: { frames: shot.visual?.frames, references: shot.visual?.references, bg: shot.visual?.bg }, shotPrompt: shot.visual?.video?.prompt, shotLines: videoLines(shot), authorization: production.videoAuthorization,
       budget: production.videoBudgetUsd, approval: production.approval, maxAttempts: production.maxAttempts }),
     lines: videoLines(shot), production, board, shot };
 }

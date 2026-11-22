@@ -7,6 +7,13 @@ date wins), the branch flow, the commit rules and the Korean prose rules. **Read
 CLAUDE.md before you write anything** — no checker runs on docs, comments or tool
 descriptions, so the writer holds the style line with the D8 scan quoted there.
 
+## Contribution language
+
+Write repository contributions and GitHub communication in English, including
+code comments, commit messages, issues, pull requests, and review replies.
+Follow [the contributor style guide](CONTRIBUTING.md#style) for language-specific
+materials. Use the user's language in direct conversations with them.
+
 ## GitHub authentication — owner directive, 2026-10-16
 
 For this `ttalkkaklab/social-flow` repository, prefer the environment variable

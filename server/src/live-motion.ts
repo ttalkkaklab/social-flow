@@ -44,15 +44,16 @@ export class MotionFrames {
   private file: number;
   constructor(
     private path: string,
-    private remove = false
+    private remove = false,
+    private frameBytes = FRAME_BYTES
   ) {
-    this.count = statSync(path).size / FRAME_BYTES;
+    this.count = statSync(path).size / this.frameBytes;
     if (!Number.isInteger(this.count) || this.count < 1) throw Error('Incomplete motion frame data');
     this.file = openSync(path, 'r');
   }
   at(index: number) {
-    const frame = Buffer.allocUnsafe(FRAME_BYTES);
-    if (readSync(this.file, frame, 0, frame.length, index * FRAME_BYTES) !== frame.length)
+    const frame = Buffer.allocUnsafe(this.frameBytes);
+    if (readSync(this.file, frame, 0, frame.length, index * this.frameBytes) !== frame.length)
       throw Error('Motion frame unavailable');
     return frame;
   }

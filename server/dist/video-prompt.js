@@ -81,9 +81,22 @@ const directedMoves = [
     /\btrack(?:s|ing)? backward\b/i,
     /\b(?:track|follow)(?:s|ing)? (?:\w+ )?(?:from )?behind\b/i,
 ];
+export function sceneVoiceDirection(acting, spoken, legacy = false) {
+    const cues = legacy ? [acting?.vocal || acting?.direction] : [acting?.direction, acting?.vocal];
+    const seen = new Set();
+    return [...cues, ...(acting?.tags || [])].filter((v) => !!v)
+        .map(cue => (spoken ? cue.split(spoken).join('the authored line') : cue).trim())
+        .filter(cue => {
+        const key = cue.toLowerCase().replace(/[.!?\s]+$/, '');
+        if (!key || seen.has(key) || nonEnglishOutsideQuotes(cue))
+            return false;
+        seen.add(key);
+        return true;
+    }).join(' ');
+}
 export function scenePromptText(scene, camera, timeline, lines, bindTurns) {
     const dialogue = bindTurns ? [] : lines.filter(l => l.delivery !== 'voiceover')
-        .map(l => l.speaker + ' (' + l.delivery + '): "' + l.tts + '"');
+        .map(l => [sceneVoiceDirection(l.acting, l.tts), l.speaker + ' (' + l.delivery + '): "' + l.tts + '"'].filter(Boolean).join(' '));
     return [scene.emotion, scene.action, scene.sound, camera, scene.oneTake && 'One continuous take. No cuts.', timeline, ...dialogue, videoTextPolicy()]
         .filter(Boolean).join('\n');
 }
@@ -118,10 +131,8 @@ export function cameraDrift(prompt, movement) {
         return null;
     return said.some(holds) ? 'contradicted' : 'missing';
 }
-/** Compile the current storyboard values at authoring and request time. Never writes the board. */
-export function compileVideoPrompt(shot, source, names = {}, options = {}) {
-    const plan = object(shot.shot), visual = object(shot.visual), frames = object(visual.frames), camera = object(visual.camera);
-    const msr = frames.mode === 'reference';
+export function shotVisualDirection(shot) {
+    const plan = object(shot.shot), camera = object(object(shot.visual).camera);
     const words = load('../../skills/storyboard/references/assemble-bg-prompt.js');
     const views = load('../../skills/storyboard/references/shot-view.js');
     const viewWords = camera.view === undefined ? '' : views.instructions(camera.view);
@@ -140,6 +151,42 @@ export function compileVideoPrompt(shot, source, names = {}, options = {}) {
     // Viewpoint and framing techniques were previously displayed as icons but omitted from shot_prompt.
     const other = picked.filter(t => t.entry && ['camera', 'framing'].includes(t.entry.category) &&
         !t.entry.fields.movement && !t.entry.fields.focus && !t.entry.fields.size && !t.entry.fields.angle && !(viewWords && t.entry.fields.viewpoint));
+    const accentWords = other.map(t => sentence(t.entry.fields.accent && t.entry.prompt ? t.entry.prompt.replace('{cue}', t.on || t.entry.fields.cue) : t.entry.instruction));
+    const openingView = [viewWords || (text(camera.framing) ? sentence(`Opening composition: ${text(camera.framing)}`) : ''),
+        !viewWords && camera.rear && !other.some(t => t.entry.fields.viewpoint === 'rear') ? 'View the subject from behind.' : '',
+        !viewWords && camera.pov && !other.some(t => t.entry.fields.viewpoint === 'pov') ? sentence(`Point of view: ${text(camera.pov) || 'the named character'}`) : '',
+    ].filter(Boolean);
+    return { viewWords, picked, movement, settle, moveWords, rack, focusWords, sizeWords, angleWords, framing, depthWords, other, accentWords, openingView };
+}
+const directions = () => load('../../skills/storyboard/references/scene-direction.js');
+export function resolvedDirection(scene, cards) { return directions().resolve(scene, cards); }
+export function withSceneCamera(shot, scenes) { return directions().withCameraDefaults([shot], scenes)[0]; }
+export function attributeWords(key, row, camera = {}) {
+    if (key === 'camera')
+        return row.id || row.source === 'shot'
+            ? cameraMoveWords({ ...(row.source === 'shot' ? camera : {}), speed: row.speed, movement: row.source === 'shot' ? row.value : directions().movement(row.id) }) : row.value;
+    return nonEnglishOutsideQuotes(row.value) ? '' : sentence(directions().labels[key][1] + ': ' + row.value);
+}
+export function sceneShotNotes(card) {
+    const english = (s) => s && !nonEnglishOutsideQuotes(s) ? s : '';
+    const notes = directions().notes(card, cue => Boolean(english(cue)), true);
+    const actions = notes.actions.map(english).filter(Boolean);
+    return { action: actions.join(' ') || notes.fallback.map(english).find(Boolean) || '', sound: english(notes.sound), blocking: english(notes.blocking),
+        end: english(notes.end), beats: [...notes.beats, ...notes.motion].map(english).filter(Boolean) };
+}
+export function shotVisualWords(shot, rows, common, end, framing) {
+    const dir = shotVisualDirection(shot), visual = object(shot.visual), camera = object(visual.camera);
+    const expression = expressionWords(shot);
+    return [...new Set([framing, dir.framing, ...dir.openingView, dir.focusWords, dir.depthWords, ...dir.accentWords,
+            ...Object.entries(rows).filter(([key]) => !common[key]).map(([key, row]) => attributeWords(key, row, camera)),
+            dir.settle && sentence('Closing frame: ' + dir.settle), expression && sentence('Expressions: ' + expression),
+            end && sentence('End on ' + end)].filter((v) => !!v && !nonEnglishOutsideQuotes(v)))].join(' ');
+}
+/** Compile the current storyboard values at authoring and request time. Never writes the board. */
+export function compileVideoPrompt(shot, source, names = {}, options = {}) {
+    const plan = object(shot.shot), visual = object(shot.visual), frames = object(visual.frames), camera = object(visual.camera);
+    const msr = frames.mode === 'reference';
+    const { viewWords, picked, movement, settle, moveWords, rack, focusWords, sizeWords, angleWords, framing, depthWords, accentWords, openingView } = shotVisualDirection(shot);
     const lines = (Array.isArray(shot.narration) ? shot.narration : []).map(object);
     const mode = options.mode ?? (lines.some(line => line.delivery === 'on_screen' || line.delivery === 'off_screen') ? 'native' : 'voiceover');
     const design = object(plan.videoDesign);
@@ -162,10 +209,7 @@ export function compileVideoPrompt(shot, source, names = {}, options = {}) {
         msr ? framing : 'Start from the given first frame.',
         msr ? depthWords : '', moveWords, settle ? sentence(`Closing frame: ${settle}`) : '', focusWords,
         // A beat accent (speed ramp, impact shake) names the moment it fires on.
-        ...other.map(t => sentence(t.entry.fields.accent && t.entry.prompt ? t.entry.prompt.replace('{cue}', t.on || t.entry.fields.cue) : t.entry.instruction)),
-        viewWords || (text(camera.framing) ? sentence(`Opening composition: ${text(camera.framing)}`) : ''),
-        !viewWords && camera.rear && !other.some(t => t.entry.fields.viewpoint === 'rear') ? 'View the subject from behind.' : '',
-        !viewWords && camera.pov && !other.some(t => t.entry.fields.viewpoint === 'pov') ? sentence(`Point of view: ${text(camera.pov) || 'the named character'}`) : '',
+        ...accentWords, ...openingView,
         actionInBeat ? '' : sentence(source.action),
         seen.length ? sentence(`The opening picture also shows ${seen.map(called).join(' and ')}, who ${seen.length > 1 ? 'stay' : 'stays'} in the frame and never speaks`) : '',
         extras ? sentence(`Unnamed people in the frame: ${extras}`) : '',

@@ -1,0 +1,1 @@
+Order each shot's dialogue by its authored performance groups. Preserve line IDs, voice references and frame cues. Show speech beats around intervening actions even if those lines have no extra acting fields. Verify both the structured adapter body and the legacy spoken-turn prompt.

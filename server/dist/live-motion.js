@@ -29,19 +29,21 @@ export function cycleFrame(step, count) {
 export class MotionFrames {
     path;
     remove;
+    frameBytes;
     count;
     file;
-    constructor(path, remove = false) {
+    constructor(path, remove = false, frameBytes = FRAME_BYTES) {
         this.path = path;
         this.remove = remove;
-        this.count = statSync(path).size / FRAME_BYTES;
+        this.frameBytes = frameBytes;
+        this.count = statSync(path).size / this.frameBytes;
         if (!Number.isInteger(this.count) || this.count < 1)
             throw Error('Incomplete motion frame data');
         this.file = openSync(path, 'r');
     }
     at(index) {
-        const frame = Buffer.allocUnsafe(FRAME_BYTES);
-        if (readSync(this.file, frame, 0, frame.length, index * FRAME_BYTES) !== frame.length)
+        const frame = Buffer.allocUnsafe(this.frameBytes);
+        if (readSync(this.file, frame, 0, frame.length, index * this.frameBytes) !== frame.length)
             throw Error('Motion frame unavailable');
         return frame;
     }

@@ -598,6 +598,7 @@
   /* Scene — a subtitle card under its sequence: an outlined number tile (the sequence's is
      filled), a tinted surface with an accent rail, and the story the scene carries (structure scene.summary) */
   .scene-band { margin: var(--s4) 0 0; }
+  .review-board .scene-band { scroll-margin-top: var(--shot-nav-offset, 24px); }
   .scene-band + .scene-band { margin-top: var(--s5); }
   .scene-band-head {
     position: relative; display: flex; align-items: flex-start; gap: var(--s4); padding: 16px 20px 16px 22px;
@@ -625,10 +626,76 @@
   .scene-band-title { font-size: var(--t-scene); font-weight: 700; letter-spacing: -.01em; line-height: 1.4; color: var(--text); word-break: keep-all; }
   .scene-band-head .scene-turn { font-size: var(--t-cap); color: var(--muted); word-break: keep-all; }
   .music-lane { font-size: var(--t-cap); font-weight: 600; color: var(--accent-ink); word-break: keep-all; }
-  .audience-lane { font-size: var(--t-cap); color: var(--muted); word-break: keep-all; overflow-wrap: anywhere; }
-  .audience-lane strong { font-weight: 650; color: var(--text); }
-  .audience-lane a { text-underline-offset: 2px; }
-  .scene-sound-player { margin: 12px 0; padding: 12px 16px; border: 1px solid var(--line); border-radius: 10px; }
+  .scene-workbench {
+    margin-bottom: var(--s3); overflow-wrap: anywhere; min-width: 0; color: var(--text);
+    border: 1px solid var(--line); border-radius: var(--ds-radius-card);
+    background: var(--card); box-shadow: var(--ds-shadow-glass);
+  }
+  .scene-missing-title { margin: 16px 16px 0; font-size: 1rem; }
+  .scene-tab-bar { display: flex; padding: 10px clamp(12px, 2vw, 20px); border-bottom: 1px solid var(--hair); }
+  .scene-tab-list { display: inline-flex; max-width: 100%; padding: 3px; gap: 2px; border-radius: 12px; background: var(--sunk); }
+  .scene-tab-list button {
+    min-width: 0; min-height: 44px; padding: 5px 14px; border: 0; border-radius: 9px;
+    color: var(--muted); background: transparent; font: inherit; font-size: var(--t-aux); font-weight: 650; cursor: pointer;
+  }
+  .scene-tab-list button[aria-selected="true"] { color: var(--text); background: var(--card); box-shadow: 0 1px 3px rgb(0 0 0 / .15); }
+  .scene-tab-list button:focus-visible, .scene-workbench [role="tabpanel"]:focus-visible {
+    outline: 2px solid var(--accent-ink); outline-offset: -2px;
+  }
+  .scene-notes-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .scene-notes-grid > .scene-note + .scene-note { border-inline-start: 1px solid var(--hair); }
+  .scene-note { min-width: 0; padding: clamp(16px, 2vw, 24px); overflow-wrap: anywhere; }
+  .scene-note-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .scene-note-head h3 { margin: 0; font-size: 1rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.45; }
+  .scene-note-icon {
+    display: inline-grid; place-items: center; flex: none; width: 33px; height: 33px; border-radius: 10px;
+    background: color-mix(in srgb, var(--accent) 9%, var(--card)); color: var(--accent-ink);
+  }
+  .scene-note-icon svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .scene-note-status { margin-left: auto; max-width: 100%; padding: 3px 9px; background: var(--sunk); border-radius: 7px; color: var(--muted); font-size: var(--t-cap); font-weight: 600; }
+  .scene-note p { margin: 8px 0 0; font-size: var(--t-aux); line-height: 1.65; }
+  .scene-note .note-warning { color: var(--warn); }
+  .score-cue { margin-top: 14px; }
+  .score-cue + .score-cue { padding-top: 12px; border-top: 1px solid var(--hair); }
+  .score-name { display: block; font-size: 1.12rem; line-height: 1.35; }
+  .score-player { display: grid; grid-template-columns: 46px minmax(0, 1fr) auto; align-items: center; gap: 6px 11px;
+    padding: 14px; margin: 0; border-radius: 14px; background: linear-gradient(115deg, #20304b, #192236 75%); color: #fff; }
+  .score-player .score-name { font-size: 1rem; overflow-wrap: anywhere; }
+  .score-listening { color: #c6d2e5; font-size: .75rem; }
+  .score-play { grid-row: span 2; width: 46px; height: 46px; display: grid; place-items: center; padding: 0;
+    border: 0; border-radius: 50%; background: #d6e4ff; color: #142a50; cursor: pointer; }
+  .score-play svg { width: 21px; height: 21px; fill: currentColor; }
+  .score-play[data-playing="true"] .score-play-icon, .score-play:not([data-playing="true"]) .score-pause-icon { display: none; }
+  .score-mode { min-height: 36px; border: 1px solid #65738c; border-radius: 999px; padding: 4px 10px; color: #f0f4fb;
+    background: transparent; font: inherit; font-size: .75rem; font-weight: 650; cursor: pointer; }
+  .score-player button:hover { filter: brightness(1.15); }
+  .score-player :is(button,input):focus-visible { outline: 2px solid #b6d1ff; outline-offset: 3px; }
+  .score-scrub { grid-column: 2 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 0 9px; }
+  .score-scrub input { --played: 0%; appearance: none; flex: 1 1 70px; width: 100%; min-width: 0; height: 28px; margin: 0;
+    background: transparent; cursor: pointer; accent-color: #d6e4ff; }
+  .score-scrub input::-webkit-slider-runnable-track { height: 4px; border-radius: 4px; background: linear-gradient(to right, #c3d9ff var(--played), #67758d var(--played)); }
+  .score-scrub input::-webkit-slider-thumb { appearance: none; width: 12px; height: 12px; margin-top: -4px; background: #edf4ff; border-radius: 50%; }
+  .score-scrub input::-moz-range-track { height: 4px; border-radius: 4px; background: #67758d; }
+  .score-scrub input::-moz-range-progress { height: 4px; background: #c3d9ff; }
+  .score-scrub input::-moz-range-thumb { width: 12px; height: 12px; background: #edf4ff; border: 0; border-radius: 50%; }
+  .score-time { color: #dbe6f6; font-size: .75rem; font-variant-numeric: tabular-nums; }
+  .score-player [role="status"]:not(:empty) { grid-column: 1 / -1; font-size: .8rem; color: #ffdfba; }
+  .score-player [role="status"]:empty, .score-player audio { display: none; }
+  .score-unavailable { display: block; color: var(--muted); font-size: var(--t-cap); }
+  .score-clock { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 2px 10px; margin-top: 10px; color: var(--muted); font-size: var(--t-cap); }
+  .score-clock b { color: var(--text); }
+  .score-track { display: block; position: relative; height: 6px; margin-top: 5px; border-radius: 4px; background: var(--sunk); overflow: hidden; }
+  .score-track i { position: absolute; inset-block: 0; background: var(--accent-ink); border-radius: inherit; }
+  .score-continuation { display: block; margin-top: 5px; color: var(--muted); font-size: var(--t-cap); }
+  .scene-note .cue-links { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; }
+  .cue-links a { display: inline-flex; align-items: center; min-height: 32px; padding: 4px 9px; border: 1px solid var(--line); border-radius: 7px; font-size: var(--t-cap); text-decoration: underline; text-underline-offset: 3px; }
+  .scene-note :is(a, button):focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 3px; }
+  .scene-video-prompt pre { margin: 10px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font: .875rem/1.7 ui-monospace, Menlo, monospace; }
+  .prompt-directions { margin: var(--s3) 0 0; }
+  .prompt-directions > div { display: grid; grid-template-columns: minmax(82px, 17%) minmax(0,1fr); gap: 12px; padding: 8px 0; border-top: 1px solid var(--hair); }
+  .prompt-directions dt { color: var(--muted); font-weight: 650; font-size: var(--t-cap); }
+  .prompt-directions dd { margin: 0; white-space: pre-wrap; font-size: var(--t-aux); line-height: 1.6; }
+  .scene-sound-player { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
   .scene-sound-player h4 { margin: 0 0 8px; }
   .scene-sound-player audio { display: block; width: min(100%, 32rem); margin: 6px 0; }
   .scene-sound-player button { font: inherit; color: inherit; background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
@@ -667,6 +734,11 @@
   }
   .scene-band:not([open]) .scene-band-stats::after { transform: rotate(-45deg); }
   .scene-band-body { padding-top: var(--s3); }
+  @container (max-width: 600px) {
+    .scene-notes-grid { grid-template-columns: minmax(0, 1fr); }
+    .scene-notes-grid > .scene-note + .scene-note { border-inline-start: 0; border-top: 1px solid var(--hair); }
+    .prompt-directions > div { grid-template-columns: 1fr; gap: 3px; }
+  }
   @media (max-width: 720px) {
     .scene-band-head { flex-wrap: wrap; gap: var(--s3); padding: 14px 14px 14px 16px; }
     .scene-band-head .sn { width: 36px; height: 36px; border-radius: 10px; }
@@ -935,6 +1007,12 @@
   .cam-keys { display: flex; flex-wrap: wrap; gap: var(--s2); margin: var(--s3) 0 0; padding: var(--s3) var(--s4); border-radius: 12px; background: var(--sunk); }
   .cam-keys > .kt { flex-basis: 100%; font-size: var(--t-micro); color: var(--faint); font-weight: 700; letter-spacing: .06em; }
   /* The shot's plan row under its head — the legend tiles alone; each name is in the tooltip */
+  .direction-attributes { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,185px),1fr)); gap: 8px; margin: 8px 0 14px; }
+  .direction-attribute { display: flex; gap: 9px; align-items: flex-start; padding: 8px 10px; min-width: 0; border: 1px solid var(--line); border-radius: 10px; }
+  .direction-attribute svg { width: 29px; height: 29px; flex: none; }
+  .direction-attribute b, .direction-attribute small { display: block; overflow-wrap: anywhere; }
+  .direction-attribute b { font-size: var(--t-cap); }
+  .direction-attribute small { color: var(--muted); }
   .shot-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: var(--s3) 0 var(--s2); }
   .shot-chip { display: inline-flex; border-radius: 10px; cursor: default; font-size: var(--t-cap); color: var(--muted); }
   .shot-chip .size-ico, .shot-chip svg { width: 36px; height: 36px; border-radius: 10px; flex: none; }
@@ -1408,6 +1486,14 @@
     .scene { break-inside: auto; border-color: #ddd; padding: var(--s4); margin: var(--s3) 0; }
     .scene:has(.conti) { max-width: none; }   /* on paper the print margin decides the width */
     .scene-head { break-after: avoid; }
+    .scene-workbench { box-shadow: none; }
+    .scene-tab-bar { display: none; }
+    .score-player { display: block; background: transparent; color: #111; padding: 0; }
+    .score-player :is(button,.score-scrub,.score-listening) { display: none; }
+    .scene-workbench > [role="tabpanel"][hidden] { display: block; }
+    .scene-notes-grid { display: block; }
+    .scene-notes-grid > .scene-note + .scene-note { border-inline-start: 0; }
+    .scene-note-head { break-after: avoid; }
     .conti-row, .cmeta, .clip { break-inside: avoid; }
     .toolbar, .tl-cap { display: none; }
     .seq-stats::after, .scene-band-stats::after { display: none; }
@@ -1434,6 +1520,7 @@
 <script src="./audience-review-data.js"></script>
 <script src="./audience-spotting.js"></script>
 <script src="./review-localization.js"></script>
+<script src="./score-player.js"></script>
 <script src="./video-production.js"></script>
 <script src="./video-production-data.js"></script>
 <script src="./location-review-data.js"></script>
@@ -1450,6 +1537,7 @@
 <script src="./structure-contract.js"></script>
 <script src="./film-techniques.js"></script>
 <script src="./shot-direction.js"></script>
+<script src="./scene-direction.js"></script>
 <script>
 /* ✎ SB_DOC BEGIN — fill in this block only (editorial metadata that is not in scenes.js).
    Scene titles, dialogue, bullets, shot and duration are never written here — scenes.js is the SoT. */
@@ -2659,7 +2747,180 @@ window.STORYBOARD_READY = (async function () {
   // The shared "off" tile: an input this lane does not take
   var OFF_GLYPH = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M6.5 17.5l11-11"/></svg>';
   function safeSrc(src) { return typeof src === "string" && src && !/^[a-z][a-z0-9+.-]*:|^[/\\]{2}|[\x00-\x1f]/i.test(src) ? src : ""; }
-  function shotBodyHtml(s, narr) {
+  function sceneNoteHead(kind, title, status) {
+    var paths = {
+      music: '<path d="M9 17V6l11-2v11M9 9l11-2"/><ellipse cx="6" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="16" rx="3" ry="2"/>',
+      sound: '<path d="M3 12h3l2-6 4 13 3-15 3 11 1-3h2"/>',
+      prompt: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="m7 9 3 3-3 3m6 0h4"/>'
+    };
+    return '<header class="scene-note-head"><span class="scene-note-icon" aria-hidden="true"><svg viewBox="0 0 24 24">' +
+      paths[kind] + '</svg></span><h3>' + esc(title) + '</h3>' +
+      (status ? '<span class="scene-note-status">' + esc(status) + '</span>' : '') + '</header>';
+  }
+  function directionAttributes(sc, rows, shot, still) {
+    var ko = LANG === 'ko', at = ko ? 0 : 1, content = [];
+    var labels = Object.assign({}, window.SCENE_DIRECTION.labels, {
+      positions:['시작 위치','Opening positions'], emotion:['감정 변화','Emotion'], action:['행동','Action'],
+      sound:['현장음','Scene sound'], audio:['연속 오디오','Continuous audio'], oneTake:['원테이크','One take'],
+      fps:['프레임률','Frame rate'], view:['시점·구도','View and crop'], expression:['표정','Expression'],
+      blocking:['시작 자세','Opening blocking'], beats:['연기 순서','Performance beats'], end:['종료 상태','Closing state'], landing:['무빙 도착점','Camera landing'], framing:['프레이밍','Framing']
+    });
+    var paths = {
+      axis:'M4 17h24M7 8v18m18-18v18', continuity:'M5 10h9v11H5zM18 10h9v11h-9zM11 16h10',
+      lighting:'M10 13a6 6 0 1 1 12 0c0 4-3 5-3 9h-6c0-4-3-5-3-9zM13 26h6',
+      attention:'M3 16q13-17 26 0-13 17-26 0zM13 16a3 3 0 1 0 6 0a3 3 0 1 0-6 0',
+      positions:'M7 27v-7h6v7m-6-15a3 3 0 1 0 6 0a3 3 0 1 0-6 0M21 24V9m-4 5 4-5 4 5',
+      emotion:'M5 15q4-5 8 0m6 0q4-5 8 0M9 20q7 9 14 0',
+      action:'M9 5l17 11-17 11z', sound:'M3 17h5l3-9 5 17 5-21 3 13h5',
+      audio:'M8 5v22m5-18v14m6-18v22m5-16v10', oneTake:'M5 12h17l5 4-5 4H5z',
+      fps:'M16 4a12 12 0 1 0 .1 0M16 9v8l6 3', view:'M4 12V5h7m10 0h7v7m0 8v7h-7m-10 0H4v-7',
+      expression:'M8 14h3m10 0h3M7 8q4-3 8 0m3 0q4 3 8 0M10 23q6-4 12 0',
+      blocking:'M5 25h22M10 20v-8l7 3 5 8m-11-18a3 3 0 1 0 6 0a3 3 0 1 0-6 0', beats:'M4 8h17m-13 8h17m-13 8h17', end:'M5 7h22v18H5zM11 12h10v8H11z', landing:'M6 27V5h18l-5 6 5 5H6',
+      camera:'M4 9h16v14H4zM20 13l8-5v16l-8-5', framing:'M4 5h24v22H4zM10 11h12v10H10z'
+    };
+    function add(key, value, origin, id) {
+      if (!value) return;
+      var label = labels[key][at], icon = id && camIcon(id);
+      if (!icon) icon = '<svg class="size-ico f-group" viewBox="0 0 32 32" aria-hidden="true"><path d="' + paths[key] + '"/></svg>';
+      var caption = origin ? origin + ' · ' + label : label;
+      content.push('<div class="direction-attribute" data-attribute="' + key + '">' + icon +
+        '<div><b>' + esc(caption) + '</b><small>' + esc(value) + '</small></div></div>');
+    }
+    Object.keys(rows).forEach(function (key) {
+      if (still && !['axis','lighting','continuity'].includes(key)) return;
+      var row = rows[key], value = row.value, entry = row.id && window.FILM_TECHNIQUES.byId[row.id];
+      var origin = row.source === 'carry' ? (ko ? '앞 샷에서 이어짐' : 'Carried forward') : row.source === 'scene' ?
+        (ko ? '씬 기본' : 'Scene default') : (sc.directionDefaults && sc.directionDefaults[key] || key === 'camera' && sc.videoDirection && sc.videoDirection.camera ?
+          (ko ? '샷 예외' : 'Shot override') : (ko ? '샷 지정' : 'Shot'));
+      if (entry) value = entry.label[ko ? 'ko' : 'en'];
+      if (key === 'camera' && row.source === 'scene' && row.speed) value += ' · ' + row.speed;
+      if (shot && key === 'camera' && row.source === 'shot') {
+        var cam = (shot.visual || {}).camera || {};
+        value = [value, !entry || entry.fields.movement === row.value ? '' : row.value, row.speed, cam.target].filter(Boolean).join(' · ');
+        var selected = (shot.shot && shot.shot.techniques || []).find(function (choice) { return row.id && choice.id === row.id; });
+        var reason = selected && selected.reason || cam.purpose;
+        if (reason) value += ' · ' + reason;
+      }
+      add(key, value, origin, row.id);
+    });
+    var dir = sc.videoDirection || {}, tl = shot ? shot.timeline || {} : {}, vis = shot && shot.visual || {};
+    var video = vis.video || {}, source = video.promptSource || {}, cam = vis.camera || {};
+    var positions = shot ? tl.openingPositions || video.openingPositions : dir.openingPositions;
+    if (positions) add('positions', positions.map(function (p) { return p.character + ' · ' + p.position; }).join(' / '));
+    if (!shot) {
+      add('emotion', dir.emotion); add('action', dir.action); add('sound', dir.sound);
+      if (dir.audio) add('audio', [dir.audio.path].concat((dir.audio.cues || []).map(function (cue) { return cue.frame + 'f · ' + cue.action; })).join(' / '));
+      if (dir.oneTake) add('oneTake', ko ? '컷 없이 촬영' : 'Uninterrupted');
+      if (dir.fps) add('fps', dir.fps + ' fps');
+    } else if (!still) {
+      var notes = window.SCENE_DIRECTION.notes(shot);
+      add('framing', tl.framing); add('action', notes.actions.join(' / '));
+      add('sound', notes.sound); add('blocking', notes.blocking); add('beats', notes.beats.concat(notes.motion).join(' / '));
+      var view = cam.view;
+      add('view', view ? [view.mode, view.viewerId, view.subject, view.crop].filter(Boolean).join(' · ') : cam.framing);
+      if (vis.expression) add('expression', Object.keys(vis.expression).map(function (id) { return id + ' · ' + vis.expression[id]; }).join(' / '));
+      add('landing', cam.end); add('end', notes.end);
+    }
+    return content.length ? '<div class="direction-attributes" role="group" aria-label="' +
+      (shot ? (ko ? '샷 연출' : 'Shot direction') : (ko ? '씬 연출' : 'Scene direction')) + '">' + content.join('') + '</div>' : '';
+  }
+  function sceneVideoPromptHtml(sc, grp) {
+    var ko = LANG === "ko", dir = sc && sc.videoDirection || {}, members = grp.items.map(function (item) { return item.s; });
+    var ids = members.map(function (s) { return s.id; });
+    var matches = ((window.VIDEO_PRODUCTION || {}).candidates || []).filter(function (c) {
+      return c.sceneNo === grp.scene && (c.stale === false || (c.stale === null && c.boardMatches === true)) && c.prompt && Array.isArray(c.shotIds) &&
+        c.shotIds.length === ids.length && c.shotIds.every(function (id, i) { return id === ids[i]; });
+    });
+    var verified = matches.filter(function (c) { return c.stale === false; });
+    var plan = matches.filter(function (c) { return c.selected; }).pop() || verified.pop() || matches.pop();
+    var approved = ((window.VIDEO_APPROVALS || {}).scenes || {})[grp.scene];
+    var full = "", status = ko ? "스토리보드 초안" : "Storyboard draft";
+    if (plan) {
+      status = plan.stale === null ? (ko ? "저장한 요청 · 참조 파일 미검증" : "Saved request · inputs unverified") :
+        (ko ? "저장한 요청 계획" : "Saved request plan");
+      full = '<p>' + esc((ko ? "요청 " : "Request ") + plan.requestId) + '</p><pre>' + esc(plan.prompt) + '</pre>';
+    } else {
+      var rows = [], resolver = window.SCENE_DIRECTION, coverage = resolver && resolver.resolve(sc || {}, members);
+      function attribute(key, row) {
+        var entry = row.id && window.FILM_TECHNIQUES.byId[row.id];
+        return resolver.labels[key][ko ? 0 : 1] + ' · ' + (entry ? entry.label[ko ? 'ko' : 'en'] : row.value) + (row.speed ? ' · ' + row.speed : '');
+      }
+      function direction(label, value) {
+        if (value) rows.push('<div><dt>' + esc(label) + '</dt><dd>' + esc(value) + '</dd></div>');
+      }
+      var opening = (dir.openingPositions || []).map(function (p) {
+        var refs = (p.images || []).map(function (n) { return "Image " + n; });
+        return p.character + (refs.length ? " (" + refs.join(", ") + ")" : "") + " — " + p.position;
+      });
+      direction(ko ? "시작 위치" : "Opening positions", opening.join("\n"));
+      direction(ko ? "감정" : "Emotion", dir.emotion);
+      direction(ko ? "동작" : "Action", dir.action);
+      if (coverage) Object.entries(coverage.common).forEach(function (pair) {
+        direction(resolver.labels[pair[0]][ko ? 0 : 1], attribute(pair[0], pair[1]).split(' · ').slice(1).join(' · '));
+      });
+      else direction(ko ? "카메라" : "Camera", dir.camera);
+      if (dir.oneTake) direction(ko ? "원테이크" : "One take", "One continuous take.");
+      direction(ko ? "현장음" : "Scene sound", dir.sound);
+      var elapsed = 0, fps = dir.fps || 24;
+      grp.items.forEach(function (item, index) {
+        var s = item.s;
+        var tl = s.timeline || {}, vis = s.visual || {}, video = vis.video || {};
+        var start = Number.isInteger(tl.startFrame) ? tl.startFrame / fps : elapsed;
+        elapsed = Number.isInteger(tl.endFrame) ? tl.endFrame / fps : typeof s.duration === "number" && start !== null ? start + s.duration : null;
+        var interval = start !== null && elapsed !== null ? " · " + Number(start.toFixed(3)) + "–" + Number(elapsed.toFixed(3)) + (ko ? "초" : " s") : "";
+        var action = tl.action || (video.promptSource || {}).action || vis.action || video.prompt || (video.speechBinding || {}).videoPrompt || (vis.clip || {}).prompt || s.summary;
+        var notes = coverage && resolver.notes(s);
+        var body = [tl.transition && tl.transition.replace(/_/g, " "), tl.framing].concat(notes && notes.actions.length ? notes.actions : [action]).filter(Boolean);
+        if (coverage) {
+          Object.entries(coverage.shots[index]).forEach(function (pair) {
+            if (!coverage.common[pair[0]]) body.push(attribute(pair[0], pair[1]));
+          });
+          var camera = vis.camera || {}, view = camera.view || {};
+          (s.shot && s.shot.techniques || []).forEach(function (choice) {
+            var entry = window.FILM_TECHNIQUES.byId[choice.id];
+            if (entry && !entry.fields.movement) body.push([entry.label[ko ? 'ko' : 'en'],choice.from,choice.to,choice.on].filter(Boolean).join(' · '));
+          });
+          body.push.apply(body,[view.mode,view.crop,camera.target,camera.speed,camera.end,notes.blocking,
+            ...notes.beats,...notes.motion,notes.end,notes.sound,...Object.values(vis.expression || {})].filter(Boolean));
+        }
+        (tl.images || []).forEach(function (image) {
+          if (image.cue) body.push("Frame " + image.frame + " · " + image.cue);
+        });
+        (resolver ? resolver.orderedSpeech(s) : s.narration || []).forEach(function (line) {
+          if (line.tts && line.delivery !== "voiceover") body.push([line.speaker, line.tts].filter(Boolean).join(" · "));
+        });
+        direction(T.shotCap(item.i + 1) + interval, body.join("\n"));
+      });
+      (dir.audio && dir.audio.cues || []).forEach(function (cue) {
+        direction((ko ? "프레임 " : "Frame ") + cue.frame, cue.action);
+      });
+      if (rows.length) full = '<dl class="prompt-directions">' + rows.join("") + '</dl>';
+    }
+    return '<section class="scene-note scene-video-prompt">' + sceneNoteHead("prompt", ko ? "씬 영상 프롬프트" : "Scene video prompt", status) +
+      (full || '<p>' + (ko ? "씬 연출 미정" : "Scene direction pending") + '</p>') +
+      (approved && plan && plan.requestId === approved.requestId ? '<p>' +
+        esc((ko ? "승인 기록 · " : "Approval record · ") + approved.requestId + " · " + String(approved.at).slice(0,10)) + '</p>' : '') + '</section>';
+  }
+  function sceneNotesHtml(grp, audio, prompt) {
+    var sound = '<div class="scene-notes-grid">' + audio + '</div>';
+    if (!prompt) return '<div class="scene-workbench">' + sound + '</div>';
+    var ko = LANG === "ko", prefix = "scene-notes-" + (grp.items[0].i + 1);
+    var tabs = [
+      { key: "sound", title: ko ? "음악·심리음" : "Music & audience sound", body: sound },
+      { key: "prompt", title: ko ? "영상 프롬프트" : "Video prompt", body: prompt }
+    ];
+    var buttons = "", panels = "";
+    tabs.forEach(function (tab, i) {
+      var panelId = prefix + "-" + tab.key, tabId = panelId + "-tab";
+      buttons += '<button type="button" role="tab" id="' + tabId + '" aria-controls="' + panelId +
+        '" aria-selected="' + (i === 0) + '" tabindex="' + (i === 0 ? 0 : -1) + '">' + esc(tab.title) + '</button>';
+      panels += '<div role="tabpanel" id="' + panelId + '" aria-labelledby="' + tabId + '" tabindex="0"' +
+        (i === 0 ? "" : " hidden") + '>' + tab.body + '</div>';
+    });
+    return '<div class="scene-workbench"><div class="scene-tab-bar"><div class="scene-tab-list" role="tablist" aria-label="' +
+      esc(T.sceneNamed(grp.scene)) + '">' + buttons + '</div></div>' + panels + '</div>';
+  }
+  function shotBodyHtml(s, narr, grouped) {
     var RR = window.RENDER_ROUTING, ko = LANG === "ko", fp = RR ? RR.framePlan(s) : { mode: "first" }, lane = refLane(s, fp);
     var refs = (RR ? RR.imageReferences(s) : []).filter(function (r) { return r && r.use !== "image"; });
     function frameBox(src, label, flag, emptyText) {
@@ -2703,7 +2964,7 @@ window.STORYBOARD_READY = (async function () {
       : Math.min(refs.length, lane.slots)) + " / " + lane.slots + "</span>" : "") + "</div>" +
       (slots ? '<div class="ref-slots">' + slots + "</div>"
              : '<p class="shot-refs-none">' + (ko ? "이 모델의 현재 설정에는 참조 이미지 입력이 없습니다." : "This model and operation take no reference images.") + "</p>") + "</div>";
-    // Right: story (the shot's one-line summary), lines, prompt — CSS radio tabs
+    // Shot cards carry story, lines and camera direction. Image prompts stay with their frames.
     var story = s.summary ? '<p class="shot-story">' + copy(s.summary) + "</p>" : "";
     // The place and props shot_image composed into the start image (SB_DOC.locations · SB_DOC.props)
     var docName = function (list, id) { var e = (Array.isArray(list) ? list : []).filter(function (x) { return x && x.id === id; })[0]; return (e && e.name) || id; };
@@ -2716,24 +2977,28 @@ window.STORYBOARD_READY = (async function () {
       ((s.visual || {}).locationFrame || {}).set ? (ko ? "세트 렌더 " : "Set render ") + docName(DOC.locations, s.visual.locationFrame.set) +
         (s.visual.locationFrame.blocked ? (ko ? " · 인물 배치 반영" : " · with blocking") : "") : ""].filter(Boolean);
     if (setting.length) story += '<p class="shot-setting">' + esc(setting.join(" · ")) + "</p>";
-    var vis = s.visual || {}, video = vis.video || {}, prompts = [
-      [ko ? "영상 프롬프트" : "Video prompt", video.prompt || (video.speechBinding || {}).videoPrompt],
-      [ko ? "말하는 클립 프롬프트" : "Speech-clip prompt", (vis.clip || {}).prompt],
-      // shot_image writes the start image's prompt to bgPrompt and the end image's to endPrompt
+    var vis = s.visual || {}, video = vis.video || {}, tl = s.timeline || {};
+    function fields(rows) {
+      return rows.filter(function (x) { return typeof x[1] === "string" && x[1]; })
+        .map(function (x) { return '<div class="shot-prompt"><b>' + esc(x[0]) + "</b><pre>" + esc(x[1]) + "</pre></div>"; }).join("");
+    }
+    var images = fields([
       [vis.frames && vis.frames.start && vis.frames.start === vis.bg ? (ko ? "시작 이미지 프롬프트" : "Start image prompt") : (ko ? "배경 프롬프트" : "Background prompt"), vis.bgPrompt],
       [ko ? "종료 이미지 프롬프트" : "End image prompt", vis.endPrompt]
-    ].filter(function (x) { return typeof x[1] === "string" && x[1]; });
-    // MSR speakers as shot_prompt bound them to the start image (viewer-relative position)
-    var bindings = Array.isArray(video.speakerBindings) ? video.speakerBindings : [];
-    if (bindings.length) prompts.push([ko ? "MSR 화자 위치" : "MSR speaker positions", bindings.map(function (b) {
-      return castName(b.speaker) + " — " + b.screenPosition + (b.description ? " (" + b.description + ")" : "");
-    }).join("\n")]);
+    ]);
+    if (images) left += '<details class="production-review"><summary>' + (ko ? "이미지 제작 정보" : "Image generation details") + "</summary>" + images + "</details>";
     var lines = narr.length ? narr.map(function (line, j) { return speechHtml(line, j); }).join("") : '<div class="speech-silent">' + esc(T.speechSilent) + "</div>";
+    var bindings = Array.isArray(video.speakerBindings) ? video.speakerBindings : [];
+    if (bindings.length) lines += fields([[ko ? "MSR 화자 위치" : "MSR speaker positions", bindings.map(function (b) {
+      return castName(b.speaker) + " — " + b.screenPosition + (b.description ? " (" + b.description + ")" : "");
+    }).join("\n")]]);
     var none = function (t) { return '<div class="speech-silent">' + t + "</div>"; };
+    var direction = fields([[ko ? "구도" : "Framing", tl.framing], [ko ? "동작" : "Action", tl.action || (video.promptSource || {}).action || vis.action],
+      [ko ? "화면 전환" : "Transition", tl.transition || s.transition]]);
+    var legacy = grouped ? "" : fields([[ko ? "영상 프롬프트" : "Video prompt", video.prompt || (video.speechBinding || {}).videoPrompt],
+      [ko ? "말하는 클립 프롬프트" : "Speech-clip prompt", (vis.clip || {}).prompt]]);
     var tabs = [[ko ? "스토리" : "Story", story || none(ko ? "스토리 없음" : "No story")], [ko ? "대사" : "Lines", lines],
-      [ko ? "프롬프트" : "Prompt", prompts.length ? (promptDriftText(s) ? '<p class="prompt-drift">' + esc(promptDriftText(s)) + "</p>" : "") +
-        prompts.map(function (x) { return '<div class="shot-prompt"><b>' + esc(x[0]) + "</b><pre>" + esc(x[1]) + "</pre></div>"; }).join("")
-        : none(ko ? "기록된 프롬프트 없음" : "No prompt recorded")]];
+      [ko ? "샷 연출" : "Shot direction", direction + legacy || none(ko ? "기록된 샷 연출 없음" : "No shot direction recorded")]];
     var tabName = "shot-tab-" + esc(String(s.id));
     var right = '<div class="shot-tabs">' + tabs.map(function (t, k) {
       return '<input type="radio" name="' + tabName + '" id="' + tabName + "-" + k + '"' + (k ? "" : " checked") + ">";
@@ -4002,7 +4267,7 @@ window.STORYBOARD_READY = (async function () {
   else if (window.STRUCTURE !== undefined)
     flag("bad", "structure", "Missing structure-contract.js — copy it beside scenes.js; without it the sequence → scene → shot rules are not checked");
   if (window.PRODUCTION_MODE && window.PRODUCTION_MODE.cameraDirectionWarnings)
-    window.PRODUCTION_MODE.cameraDirectionWarnings(SCENES).forEach(function (message) { flag("warn", T.where.production, message); });
+    window.PRODUCTION_MODE.cameraDirectionWarnings(SCENES, window.STRUCTURE && window.STRUCTURE.scenes).forEach(function (message) { flag("warn", T.where.production, message); });
   if (window.PRODUCTION) {
     if (!window.PRODUCTION_MODE) flag("bad", T.where.production, "Missing production-mode.js");
     else {
@@ -4545,7 +4810,9 @@ window.STORYBOARD_READY = (async function () {
     var still = genStill(s);
     var written = !!(sp.layout || sp.facing || sp.line || sp.light);
     // The 180° line is owed on a filmed two-shot as well — it is the sentence the shooting script prints.
-    if ((still || recOf(s) || written) && (charsOf(s).length >= 2 || size === "two" || size === "three" || size === "ots") && !sp.line)
+    var owner = (window.STRUCTURE && window.STRUCTURE.scenes || []).find(function (scene) { return scene.no === s.scene; });
+    if ((still || recOf(s) || written) && (charsOf(s).length >= 2 || size === "two" || size === "three" || size === "ots") && !sp.line &&
+        !(s.shot && s.shot.lineNeutral) && !(owner && owner.directionDefaults && owner.directionDefaults.axis))
       flag("warn", T.shotCap(i + 1), "two people (or a person and what they look at) with no shot.space.line — lock \"A left, B right\" so the still agrees with the 180° sentence");
     // Wherever a space block is written — still, quote clip, filmed shot — its frame and its words are checked.
     if (written && !sp.frame)
@@ -5068,20 +5335,22 @@ window.STORYBOARD_READY = (async function () {
   var previewCurrent = window.AUDIENCE_PREVIEW_STAMP === window.AUDIENCE_SPOTTING.previewStamp(window);
   if (window.AUDIENCE_PREVIEW_STAMP && !previewCurrent) audienceRows = [];
   var audiencePlan = window.AUDIENCE_SPOTTING.spotting(window, audienceRows);
-  function audienceLane(row) {
-    if (!row || (row.decision === "unrecorded" && !row.cues.length)) return "";
+  function audienceCard(no, row) {
     var words = T.audienceSound;
-    var text = "<strong>" + esc(words.label) + "</strong> · " + esc(words[row.decision] || words.undecided);
-    if (row.reason) text += " — " + copy(row.reason);
-    if (row.needsCue) text += " · " + esc(words.needsCue);
-    if (audiencePlan.conflicts.includes(row.no)) text += " · " + esc(words.conflict);
-    row.cues.forEach(function (cue) {
-      var index = SCENES.findIndex(function (shot) { return shot.id === cue.shotId; });
-      if (index < 0) return;
-      var label = [T.shotCap(index + 1), cue.id, words[cue.status] || words.timing_unchecked].join(" · ");
-      text += ' · <a href="#shot-' + (index + 1) + '">' + esc(label) + "</a>";
-    });
-    return '<span class="audience-lane">' + text + "</span>";
+    var html = sceneNoteHead("sound", words.label, words[row && row.decision || "unrecorded"] || words.undecided);
+    if (row) {
+      if (row.reason) html += "<p>" + copy(row.reason) + "</p>";
+      if (row.needsCue) html += '<p class="note-warning">' + esc(words.needsCue) + '</p>';
+      if (audiencePlan.conflicts.includes(no)) html += '<p class="note-warning">' + esc(words.conflict) + '</p>';
+      var links = row.cues.map(function (cue) {
+        var index = SCENES.findIndex(function (shot) { return shot.id === cue.shotId; });
+        if (index < 0) return "";
+        var label = [T.shotCap(index + 1), cue.id, words[cue.status] || words.timing_unchecked].join(" · ");
+        return '<li><a href="' + esc(location.href.split("#")[0] + "#shot-" + (index + 1)) + '">' + esc(label) + "</a></li>";
+      }).join("");
+      if (links) html += '<ul class="cue-links">' + links + '</ul>';
+    }
+    return '<section class="scene-note scene-audience">' + html + audiencePlayer(no, row) + '</section>';
   }
   function audiencePlayer(no, row) {
     var p = previewCurrent && (window.AUDIENCE_PREVIEWS || {})[no];
@@ -5125,42 +5394,130 @@ window.STORYBOARD_READY = (async function () {
   var cueAt = [], cueNow = MUSIC && MUSIC.base ? "base" : "";
   var musicAuthored = SCENES.some(function (s) { var d = s.sound; return d && (d.cue || d.drop || (Array.isArray(d.silence) && d.silence.length)); });
   SCENES.forEach(function (s, i) { if (s.sound && s.sound.cue) cueNow = s.sound.cue; cueAt[i] = cueNow; });
-  /* A scene header passes its STRUCTURE scene: the lane then carries the decision story_music
-     recorded (scene.music) and its reason, and a story-first scene nobody decided reads
-     "undecided", so silence on the page is a choice somebody made. */
   var storyFirst = !!(window.STORY && window.STORY.authoring === "story-first");
-  var musicLane = function (items, scene) {
-    var decided = scene && scene.music && (scene.music.decision === "score" || scene.music.decision === "none") ? scene.music : null;
-    var undecided = scene && storyFirst && !decided;
-    if (MUSIC && Array.isArray(MUSIC.$timeline)) {
-      var anchorText = function (a) { return a.shotId + (a.atSeconds === "end" ? (LANG === "ko" ? " 끝" : " end") : " +" + a.atSeconds + "s"); };
-      var spans = MUSIC.$timeline.filter(function (span) {
-        if (!span || !span.start || !span.end) return false;
-        var first = SCENES.findIndex(function (s) { return s.id === span.start.shotId; });
-        var last = SCENES.findIndex(function (s) { return s.id === span.end.shotId; });
-        if (first < 0 || last < 0) return false;
-        if (span.start.atSeconds === "end") first++;
-        if (span.end.atSeconds === 0) last--;
-        return first >= 0 && items.some(function (it) { return it.i >= first && it.i <= last; });
-      });
-      var text = spans.length ? spans.map(function (span) {
-        return span.cue + " (" + anchorText(span.start) + " → " + anchorText(span.end) + ")";
-      }).join(" · ") : undecided ? (LANG === "ko" ? "음악 미정" : "Music undecided") : (LANG === "ko" ? "음악 없음" : "No score");
-      if (spans.length && undecided) text += LANG === "ko" ? " · 결정 미기록" : " · decision not recorded";
-      if (decided && decided.reason) text += " — " + decided.reason;
-      return '<span class="music-lane">' + esc("♪ " + text) + '</span>';
-    }
-    if (undecided && !musicAuthored) return '<span class="music-lane">' + esc(LANG === "ko" ? "♪ 음악 미정" : "♪ Music undecided") + '</span>';
-    if (!musicAuthored) return "";
+  var musicSpans = MUSIC && Array.isArray(MUSIC.$timeline) ? MUSIC.$timeline.filter(function (span) {
+    return span && span.start && span.end;
+  }).map(function (span) {
+    var first = SCENES.findIndex(function (s) { return s.id === span.start.shotId; });
+    var last = SCENES.findIndex(function (s) { return s.id === span.end.shotId; });
+    var atEnd = span.start.atSeconds === "end" || (first >= 0 && Number.isFinite(SCENES[first].duration) && span.start.atSeconds === SCENES[first].duration);
+    return { cue: span.cue, start: span.start, end: span.end, first: first, last: last, sourceStart: span.sourceStartSeconds || 0,
+      playsFrom: first + (atEnd ? 1 : 0), playsThrough: last - (span.end.atSeconds === 0 ? 1 : 0) };
+  }).filter(function (span) { return span.first >= 0 && span.last >= span.first; }) : null;
+  function spansIn(items) {
+    return musicSpans.filter(function (span) {
+      return items.some(function (it) { return it.i >= span.playsFrom && it.i <= span.playsThrough; });
+    });
+  }
+  function anchorText(a) {
+    return a.shotId + (a.atSeconds === "end" ? (LANG === "ko" ? " 끝" : " end") : " +" + a.atSeconds + "s");
+  }
+  function legacyMusic(items) {
     var names = [], gaps = 0;
     items.forEach(function (it) {
       var c = cueAt[it.i] || T.musicBed, d = it.s.sound;
       if (names[names.length - 1] !== c) names.push(c);
       if (d && (d.drop || (Array.isArray(d.silence) && d.silence.length))) gaps++;
     });
-    var tip = names.map(function (n) { return MUSIC && MUSIC[n] && MUSIC[n].reason ? n + " — " + MUSIC[n].reason : ""; }).filter(Boolean).join("\n");
-    return '<span class="music-lane"' + (tip ? ' title="' + esc(tip) + '"' : "") + ">" + esc(T.musicLane(names, gaps)) + "</span>";
-  };
+    return { names: names, gaps: gaps };
+  }
+  function musicLane(items) {
+    var text;
+    if (musicSpans) {
+      text = spansIn(items).map(function (span) {
+        return span.cue + " (" + anchorText(span.start) + " → " + anchorText(span.end) + ")";
+      }).join(" · ") || (LANG === "ko" ? "음악 없음" : "No score");
+      text = "♪ " + text;
+    } else if (musicAuthored) {
+      var lane = legacyMusic(items);
+      text = T.musicLane(lane.names, lane.gaps);
+    }
+    return text ? '<span class="music-lane">' + esc(text) + '</span>' : "";
+  }
+  // The ruler uses this scene's storyboard clock. Unknown durations retain the authored anchors.
+  function scorePlayerHtml(name, title, sourceStart, skip, length) {
+    var ko = LANG === "ko", cue = MUSIC && MUSIC[name];
+    var entry = (window.REVIEW_SCORE_SOURCES || {})[name];
+    var track = '<strong class="score-name">' + esc(title) + '</strong>';
+    if (!cue) return track;
+    var src = entry && entry.asset === String(cue.asset || "").trim() && safeSrc(entry.href);
+    if (!src) return track + '<small class="score-unavailable">' + (ko ? "연결된 음원 없음" : "No recording linked") + '</small>';
+    var segment = Number.isFinite(length) && length > 0 && Number.isFinite(skip) && skip >= 0 && Number.isFinite(sourceStart) && sourceStart >= 0;
+    return '<div class="score-player"' + (segment ? ' data-length="' + length + '" data-skip="' + skip + '" data-source-start="' + sourceStart + '"' : '') + '>' +
+      '<button type="button" class="score-play" aria-label="' + esc((ko ? '재생 · ' : 'Play · ') + title) + '">' +
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="score-play-icon" d="M7 4.5v15L20 12z"/><path class="score-pause-icon" d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg></button>' +
+      '<div><span class="score-listening">' + (segment ? (ko ? '씬 구간' : 'Scene excerpt') : (ko ? '원곡 전체' : 'Full track')) + '</span>' + track + '</div>' +
+      (segment ? '<button type="button" class="score-mode">' + (ko ? '원곡 전체' : 'Full track') + '</button>' : '') +
+      '<div class="score-scrub"><input type="range" min="0" max="1" step="any" value="0" disabled aria-label="' + esc((ko ? '재생 위치 · ' : 'Playback position · ') + title) +
+      '"><span class="score-time"></span></div><audio preload="metadata" src="' + esc(src) + '"></audio><span role="status"></span></div>';
+  }
+  function scoreCue(span, items, total) {
+    var ko = LANG === "ko";
+    function offset(index, anchor) {
+      if (index < items[0].i) return 0;
+      if (index > items[items.length - 1].i) return total;
+      var time = 0;
+      for (var it of items) {
+        if (it.i === index) {
+          var at = anchor.atSeconds === "end" ? it.s.duration : anchor.atSeconds;
+          return Number.isFinite(at) && at >= 0 && at <= it.s.duration ? time + at : null;
+        }
+        time += it.s.duration;
+      }
+      return null;
+    }
+    var from = offset(span.first, span.start), to = offset(span.last, span.end);
+    var skip = 0;
+    if (span.first < items[0].i) {
+      var startAt = span.start.atSeconds === "end" ? SCENES[span.first].duration : span.start.atSeconds;
+      var prior = SCENES.slice(span.first, items[0].i);
+      skip = prior.every(function (s) { return Number.isFinite(s.duration); }) ?
+        prior.reduce(function (sum, s) { return sum + s.duration; }, -startAt) : null;
+    }
+    var duration = Number.isFinite(total) && Number.isFinite(from) && Number.isFinite(to) ? to - from : null;
+    var html = '<div class="score-cue">' + scorePlayerHtml(span.cue, span.cue, span.sourceStart, skip, duration);
+    if (Number.isFinite(total) && total > 0 && from !== null && to !== null && to > from) {
+      var carriesIn = span.playsFrom < items[0].i, carriesOut = span.playsThrough > items[items.length - 1].i;
+      var continuation = carriesIn && carriesOut ? (ko ? "앞뒤 씬에 이어지는 곡" : "Continues across scenes") :
+        carriesIn ? (ko ? "이전 씬에서 이어짐" : "Continues from previous scene") :
+        carriesOut ? (ko ? "다음 씬까지 이어짐" : "Continues into next scene") : "";
+      html += '<div class="score-clock"><span>' + (ko ? "씬 안의 재생 구간" : "Playback within scene") + '</span><b>' +
+        Number(from.toFixed(3)) + '–' + Number(to.toFixed(3)) + (ko ? '초' : ' s') + '</b></div>' +
+        '<span class="score-track" aria-hidden="true"><i style="left:' + (100 * from / total) + '%;width:' + (100 * (to - from) / total) + '%"></i></span>' +
+        (continuation ? '<small class="score-continuation">' + continuation + '</small>' : '');
+    } else html += '<p>' + esc(anchorText(span.start) + " → " + anchorText(span.end)) + '</p>';
+    var cue = MUSIC[span.cue];
+    return html + (cue && cue.reason ? '<p>' + copy(cue.reason) + '</p>' : '') + '</div>';
+  }
+  function musicCard(items, scene, total) {
+    var ko = LANG === "ko", choice = scene && scene.music || {}, body = "", status = "";
+    var none = ko ? "음악 없음" : "No score";
+    if (choice.decision === "none") status = none;
+    else if (choice.decision === "score") status = ko ? "사용" : "Scored";
+    if (musicSpans) {
+      var spans = spansIn(items);
+      body = spans.map(function (span) { return scoreCue(span, items, total); }).join("");
+      if (!status && storyFirst) status = spans.length ? (ko ? "씬 결정 미기록" : "Decision not recorded") : (ko ? "음악 미정" : "Music undecided");
+      if (!spans.length && !status) status = none;
+      if (choice.decision === "score" && !spans.length)
+        body = '<p class="note-warning">' + (ko ? "재생 구간 미지정" : "No span assigned") + '</p>';
+      if (choice.decision === "none" && spans.length)
+        body += '<p class="note-warning">' + (ko ? "이 씬에 재생 구간이 있습니다." : "A span plays in this scene.") + '</p>';
+    } else if (musicAuthored || MUSIC && MUSIC.base) {
+      var lane = legacyMusic(items);
+      var names = lane.names.map(function (name) { return name === "base" ? (MUSIC && MUSIC.base && MUSIC.base.asset || T.musicBed) : name; });
+      body = '<div class="score-cue">' + lane.names.map(function (name, i) {
+        return scorePlayerHtml(name, names[i]);
+      }).join('') +
+        (lane.gaps ? '<p>' + esc(ko ? "비움 " + lane.gaps + "곳" : "Gaps · " + lane.gaps) + '</p>' : '') +
+        lane.names.map(function (name) {
+          var cue = MUSIC && MUSIC[name];
+          return cue && cue.reason ? '<p>' + copy(cue.reason) + '</p>' : '';
+        }).join("") + '</div>';
+    } else if (!status) status = ko ? "음악 미정" : "Music undecided";
+    if (choice.reason) body += '<p>' + copy(choice.reason) + '</p>';
+    return '<section class="scene-note scene-score">' + sceneNoteHead("music", T.cMusic, status) + body + '</section>';
+  }
   if (window.VIDEO_PRODUCTION_REVIEW) h += window.VIDEO_PRODUCTION_REVIEW.renderSummary(window.VIDEO_PRODUCTION, LANG);
   var seqNo = 0, seqOpen = false;
   var seqHead = function (title, q, groups) {
@@ -5185,43 +5542,37 @@ window.STORYBOARD_READY = (async function () {
                                 shotGroups.filter(function (g) { return g.sequence === grp.sequence; }));
       prevSeq = grp.sequence;
     }
+    var coverage, sc = hasSceneField && stScene(grp.scene);
     if (hasSceneField) {
-      var sc = stScene(grp.scene);
+      coverage = window.SCENE_DIRECTION.resolve(sc || {}, grp.items.map(function (item) { return item.s; }));
       var soundRow = audiencePlan.scenes.find(function (row) { return row.no === grp.scene; });
       var scLen = grp.items.reduce(function (n, it) { return n === null || typeof it.s.duration !== "number" ? null : n + it.s.duration; }, 0);
-      var scTitle = grp.slug || (sc && sc.title) || T.sceneNamed(grp.scene);
+      var scPlace = sc && sc.place ? ((window.SB_DOC && window.SB_DOC.locations) || []).filter(function (l) { return l && l.id === sc.place; })[0] : null;
+      var place = scPlace && scPlace.name || sc && sc.place || "";
+      var setting = [place, sc && sc.time].filter(Boolean).join(" / ");
+      var scTitle = sc && sc.title || (grp.slug !== setting ? grp.slug : "") || sc && sc.event || grp.slug || T.sceneNamed(grp.scene);
       var scTurn = sc ? [ (sc.event && sc.event !== scTitle ? sc.event : "") + (sc.charge && sc.charge.open !== undefined && sc.charge.close !== undefined ? " · " + String(sc.charge.open) + " → " + String(sc.charge.close) : ""), sc.turn || "" ]
         .filter(Boolean).join(", ") : "";
       var scSummary = sc && typeof sc.summary === "string" ? sc.summary.trim() : "";
-      var scPlace = sc && sc.place ? ((window.SB_DOC && window.SB_DOC.locations) || []).filter(function (l) { return l && l.id === sc.place; })[0] : null;
-      h += '<details class="scene-band" open><summary class="scene-band-head"><span class="sn"><small>' + esc(T.sceneKicker) + "</small><b>" + esc(String(grp.scene)) + "</b></span>" +
+      h += '<details class="scene-band" open id="scene-' + esc(String(grp.scene)) + '"><summary class="scene-band-head"><span class="sn"><small>' + esc(T.sceneKicker) + "</small><b>" + esc(String(grp.scene)) + "</b></span>" +
            '<span class="scene-band-main">' +
-           (scPlace || (sc && sc.place) ? '<span class="scene-band-kicker"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>' + copy(scPlace && scPlace.name || sc.place) + "</span>" : "") +
+           (setting ? '<span class="scene-band-kicker"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>' + [place, sc && sc.time].filter(Boolean).map(copy).join(" · ") + "</span>" : "") +
            '<span class="scene-band-title">' + copy(scTitle) + "</span>" +
-           (scTurn ? '<span class="scene-turn">' + copy(scTurn) + "</span>" : "") + musicLane(grp.items, sc) +
-           audienceLane(soundRow) + clicheLane(grp.scene) +
+           (scTurn ? '<span class="scene-turn">' + copy(scTurn) + "</span>" : "") + clicheLane(grp.scene) +
            (scSummary ? '<p class="scene-band-synopsis">' + copy(scSummary) + "</p>" : "") +
            sceneOutHtml(sc) + "</span>" +
            '<span class="scene-band-stats">' + esc(T.shotsN(grp.items.length)) + (scLen !== null ? " · " + esc(durTxt(scLen)) : "") + "</span>" +
-           '</summary><div class="scene-band-body">' + audiencePlayer(grp.scene, soundRow);
-      if (sc && sc.videoDirection) {
-        var dir = sc.videoDirection, ko = LANG === "ko";
-        var approval = (window.VIDEO_APPROVALS || {}).scenes;
-        var approved = approval && approval[grp.scene];
-        var opening = (dir.openingPositions || []).map(function (p) {
-          return p.character + (p.images.length ? " (Image " + p.images.join(", ") + ")" : "") + " — " + p.position;
-        });
-        var turns = grp.items.flatMap(function (item) {
-          return (item.s.narration || []).filter(function (line) { return line.tts && line.delivery !== "voiceover"; })
-            .map(function (line) { return line.speaker + " · " + line.tts; });
-        });
-        h += '<details class="production-review"><summary>' + (ko ? "씬 영상 연출과 대사" : "Scene direction and dialogue") +
-          '</summary>' + (approved ? '<p>' + esc((ko ? "승인한 계획 · " : "Approved plan · ") + approved.requestId + " · " + String(approved.at).slice(0,10)) + '</p>' : '') +
-          '<pre>' + esc(opening.concat([dir.emotion, dir.action, dir.camera, dir.sound], turns).filter(Boolean).join("\n")) + '</pre></details>';
-      }
+           '</summary><div class="scene-band-body">';
+      var hasPrompt = (sc && sc.videoDirection) || grp.items.some(function (it) {
+        var vis = it.s.visual || {};
+        return vis.video || vis.clip && vis.clip.prompt || renderModeOf(it.s, it.g) === "generated_video";
+      });
+      if (sc) h += directionAttributes(sc, coverage.defaults);
+      h += sceneNotesHtml(grp, musicCard(grp.items, sc, scLen) + audienceCard(grp.scene, soundRow),
+        hasPrompt ? sceneVideoPromptHtml(sc, grp) : "");
       if (window.VIDEO_PRODUCTION_REVIEW) h += window.VIDEO_PRODUCTION_REVIEW.render(window.VIDEO_PRODUCTION, null, LANG, grp.scene);
     }
-    grp.items.forEach(function (item) {
+    grp.items.forEach(function (item, memberIndex) {
     var s = item.s, i = item.i, g = item.g, no = i + 1;
     // sceneNotes · audioNotes · privacy are keyed by scene number, not shot number.
     // When one scene holds several shots, they attach to that scene's first shot only.
@@ -5232,7 +5583,7 @@ window.STORYBOARD_READY = (async function () {
     if (s.visual && s.visual.video && s.visual.video.speechStatus === 'stale')
       h += '<span class="cut-carry">' + (LANG === 'ko' ? '이전 영상 참고용 · 대사 변경 후 재제작 필요' : 'Previous take only · dialogue changed, rebuild required') + '</span>';
     if (!(sc && sc.videoDirection)) h += videoApprovalHtml(s);
-    var drifted = promptDriftText(s);
+    var drifted = !hasSceneField && promptDriftText(s);
     if (drifted) h += '<span class="cut-carry prompt-drift">' + esc(drifted) + "</span>";
     // Shot grammar — size tile, angle and render tile — sits on its own row under the head so
     // the head keeps the number, title and beat tags. Icons only: the term, its meaning and
@@ -5339,7 +5690,7 @@ window.STORYBOARD_READY = (async function () {
       if (tip.indexOf(label) !== 0) tip = label + "\n" + tip;
       return '<span class="shot-chip" tabindex="0" role="img" aria-label="' + esc(tip) + '" data-tip="' + esc(tip) + '">' + (icon || esc(label)) + "</span>";
     }
-    var chips = "";
+    var chips = gram;
     if (rmode) chips += chip(renderIcon(rmode), T.render[rmode] || rmode, renderTip(rmode, g.render));
     if (g.size) chips += chip(sizeIcon(g.size), sizeName(g.size), sizeTitle(g.size) + (g.why ? "\n\n" + g.why : ""));
     if (g.angle) chips += chip(angleIcon(g.angle), T.angle[g.angle] || g.angle, angleTitle(g.angle));
@@ -5352,8 +5703,10 @@ window.STORYBOARD_READY = (async function () {
     var camRaw = [camVis.movement, camVis.speed].filter(Boolean).join(" · ");
     var moveWhy = moveReason(camDir, moveSel, camVis);
     var summaryHtml = window.SHOT_DIRECTION.summary(s, i, directionAt > 0 ? directionOrder[directionAt - 1].s : null, LANG, DOC);
-    if (moveId) chips += chip(camIcon(moveId), window.FILM_TECHNIQUES.byId[moveId].label[LANG], camTitle(moveId) + (camRaw ? "\n" + camRaw : "") + (moveWhy ? "\n\n" + moveWhy : ""));
-    else if (!focusSel) {
+    var scopedRows = sc && coverage && (!rmode || rmode === 'generated_video') && coverage.shots[memberIndex];
+    var showMoveChip = !(scopedRows && scopedRows.camera);
+    if (showMoveChip && moveId) chips += chip(camIcon(moveId), window.FILM_TECHNIQUES.byId[moveId].label[LANG], camTitle(moveId) + (camRaw ? "\n" + camRaw : "") + (moveWhy ? "\n\n" + moveWhy : ""));
+    else if (showMoveChip && !focusSel) {
       // A still effect reads its card the way the size and angle chips do (film-techniques.js VALUES.still).
       var stillCard = camDir.still ? window.FILM_TECHNIQUES.guide("still", camDir.camera.effect) : null;
       chips += chip((summaryHtml.match(/<svg[\s\S]*?<\/svg>/) || [""])[0], camDir.label, camDir.label + " · " + camDir.medium +
@@ -5385,6 +5738,9 @@ window.STORYBOARD_READY = (async function () {
       return '<div class="shot-chips">' + chips + (cast ? '<span class="shot-cast">' + cast + "</span>" : "") + "</div>";
     });
 
+    if (scopedRows) h += directionAttributes(sc, scopedRows, s);
+    else if (sc && coverage && rmode === 'still_camera' && sc.directionDefaults)
+      h += directionAttributes(sc, coverage.shots[memberIndex], s, true);
     if (s.type === "broll") {
       var v = s.visual || {};
       h += '<div class="clip">' +
@@ -5404,7 +5760,7 @@ window.STORYBOARD_READY = (async function () {
       var vis = s.visual || {};
       var states = revealsOf(s);
 
-      h += shotBodyHtml(s, narr);
+      h += shotBodyHtml(s, narr, hasSceneField);
       if (window.VIDEO_PRODUCTION_REVIEW) h += window.VIDEO_PRODUCTION_REVIEW.render(window.VIDEO_PRODUCTION, s.id, LANG);
 
       h += '<div id="image-references-' + esc(s.id || '') + '"></div>';
@@ -5435,9 +5791,8 @@ window.STORYBOARD_READY = (async function () {
   // A scene can have a sound decision before its first shot has been authored.
   audiencePlan.scenes.forEach(function (row) {
     if (hasSceneField && shotGroups.some(function (group) { return group.scene === row.no; })) return;
-    var lane = audienceLane(row);
-    if (lane) h += '<p><b>' + esc(T.sceneNamed(row.no)) + "</b> · " + lane + "</p>";
-    h += audiencePlayer(row.no, row);
+    h += '<section class="scene-workbench"><h3 class="scene-missing-title">' + esc(T.sceneNamed(row.no)) + '</h3>' +
+      audienceCard(row.no, row) + '</section>';
   });
 
   /* ══ Cast ══ — the channel characters this episode uses, with the panels that will be
@@ -5723,13 +6078,48 @@ window.STORYBOARD_READY = (async function () {
        }).join(' · ') + '</footer>';
 
   app.innerHTML = h;
+  app.querySelectorAll('.score-player').forEach(function (player) { window.ReviewScorePlayer.mount(player, LANG === "ko"); });
+  app.querySelectorAll('details.scene-band, details.seq').forEach(function (group) {
+    group.addEventListener('toggle', function () {
+      if (!group.open) group.querySelectorAll('.scene-workbench audio').forEach(function (audio) { audio.pause(); });
+    });
+  });
+  app.querySelectorAll('audio, video').forEach(function (media) {
+    media.addEventListener('play', function () {
+      app.querySelectorAll('audio, video').forEach(function (other) { if (other !== media && !other.paused) other.pause(); });
+    });
+  });
+  app.querySelectorAll(".scene-tab-list").forEach(function (list) {
+    var tabs = Array.from(list.querySelectorAll('[role="tab"]'));
+    function selectTab(selected) {
+      tabs.forEach(function (tab) {
+        var active = tab === selected, panel = document.getElementById(tab.getAttribute("aria-controls"));
+        tab.setAttribute("aria-selected", String(active));
+        tab.tabIndex = active ? 0 : -1;
+        if (!active && !panel.hidden) panel.querySelectorAll("audio").forEach(function (audio) { audio.pause(); });
+        panel.hidden = !active;
+      });
+    }
+    tabs.forEach(function (tab, i) {
+      tab.addEventListener("click", function () { selectTab(tab); });
+      tab.addEventListener("keydown", function (event) {
+        var next;
+        switch (event.key) {
+          case "ArrowRight": next = (i + 1) % tabs.length; break;
+          case "ArrowLeft": next = (i + tabs.length - 1) % tabs.length; break;
+          case "Home": next = 0; break;
+          case "End": next = tabs.length - 1; break;
+          default: return;
+        }
+        event.preventDefault();
+        selectTab(tabs[next]); tabs[next].focus();
+      });
+    });
+  });
   app.querySelectorAll(".scene-sound-player").forEach(function (panel) {
     var audio = panel.querySelector(".scene-sound-mix"), timer = 0;
     function clearStop() { clearTimeout(timer); timer = 0; }
     panel.querySelectorAll("audio").forEach(function (player) {
-      player.addEventListener("play", function () {
-        app.querySelectorAll("audio, video").forEach(function (other) { if (other !== player && !other.paused) other.pause(); });
-      });
       player.addEventListener("error", function () { panel.querySelector('[role="status"]').textContent = T.audienceSound.error; });
     });
     if (!audio) return;
@@ -5900,7 +6290,7 @@ window.STORYBOARD_READY = window.STORYBOARD_READY.then(async function () {
     nav.addEventListener('click', scheduleCurrent);
   }
   document.documentElement.dataset.reviewReady = 'true';
-  if (/^#shot-\d+$/.test(location.hash)) {
+  if (/^#(?:shot|scene)-\d+$/.test(location.hash)) {
     const target = document.getElementById(location.hash.slice(1));
     for (let d = target?.closest('details'); d; d = d.parentElement?.closest('details')) d.open = true;
     if (target && typeof target.scrollIntoView === 'function') target.scrollIntoView({block:'start'});

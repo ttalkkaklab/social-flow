@@ -369,8 +369,11 @@
     return warnings;
   }
   // Mechanical symptoms for author review, never a camera quota or semantic certification.
-  function cameraDirectionWarnings(scenes) {
-    const planned = (Array.isArray(scenes) ? scenes : []).map((scene, index) => ({ scene, index }))
+  function cameraDirectionWarnings(scenes, owners) {
+    const cards = Array.isArray(scenes) ? scenes : [];
+    const resolver = typeof module === 'object' && module.exports ? require('./scene-direction.js') : root.SCENE_DIRECTION;
+    const effective = resolver ? resolver.withCameraDefaults(cards, owners) : cards;
+    const planned = effective.map((scene, index) => ({ scene, index }))
       .filter(({scene}) => scene && scene.type !== 'outro' && !reused(scene) &&
         ['generated_video', 'still_camera'].includes(scene.shot?.render?.mode));
     const notes = [], reasons = new Map(), endings = new Map();
@@ -391,7 +394,7 @@
       const written = choices.map(t => t.reason).filter(text);
       const purpose = still ? camera.reason : camera.purpose;
       if (text(purpose)) written.push(purpose);
-      if (!written.length) notes.push(`[camera-purpose-missing] shot ${index + 1}: explain why this camera choice serves this action, discovery or reaction`);
+      if (!written.length && scene === cards[index]) notes.push(`[camera-purpose-missing] shot ${index + 1}: explain why this camera choice serves this action, discovery or reaction`);
       for (const reason of written) {
         remember(reasons, reason, index);
       }
@@ -574,7 +577,7 @@
     const p = win.PRODUCTION, errors = Array.from(win.SCENES || []).flatMap((s, i) => reuseErrors(s).map(e => `shot ${i + 1}: ${e}`));
     // The episode's saved video selection: .work/model-settings.json (video_plan reads it), else the handoff copy.
     const snapshot = snapshotVideo || p?.modelSettings?.models?.video;
-    advice.push(...cameraDirectionWarnings(win.SCENES));
+    advice.push(...cameraDirectionWarnings(win.SCENES, win.STRUCTURE?.scenes));
     if (!p) return requireSelection || (win.SCENES || []).some(reused)
       ? errors.concat(['Choose a production mode with a six-option cost comparison before generation']) : errors;
     if (!MODES[p.mode]) errors.push('PRODUCTION.mode must be one of ' + CHOICES.join(', ') + ' (hook_only, stills_only and hybrid are legacy)');

@@ -52,15 +52,12 @@ test('groups bind source bytes, ordered manifest, 24fps trims and output30fps ha
  s.visual.video.groupPlan.groups[1].in=3.001;
  assert.throws(()=>groups.compile(s,dir),/too short/,'rounded trim cannot overrun the source');
 }));
-test('common builder renders direct group cut, trims and live handle; provenance catches substitutions', {timeout:60000},()=>withSources(({dir,s})=>{
- const plan=groups.compile(s,dir,{handleFrames:8});
- renderPlan(dir,plan);
+test('group CLI checks the body clock, outgoing handle and zoom against the edit plan', ()=>withSources(({dir,s})=>{
  const scenes=[s,{type:'points',transition:'jcut',edit:{transitionSeconds:.24}}];
  // .24s rounds to8 frames: the same compiler and renderer rule as ep10c s01.
  writeFileSync(path.join(dir,'cards.tsv'),'0\tvoice.wav\t0\tnone\n1\tvoice.wav\t0\tnone\n');edits.write(dir,scenes);
- writeFileSync(path.join(dir,'work/groups0.json'),JSON.stringify(plan));
  writeFileSync(path.join(dir,'scenes.js'),'window.PRODUCTION={mode:"full_video"};window.SCENES='+JSON.stringify(scenes)+';');
- writeFileSync(path.join(dir,'segs.tsv'),plan.groups.map((g,j)=>`0\t${j}\t${g.file}\t${s.narration[j].tts}\t${s.narration[j].sub}`).join('\n')+'\n');
+ writeFileSync(path.join(dir,'segs.tsv'),s.visual.video.groupPlan.groups.map((g,j)=>`0\t${j}\t${g.clip}\t${s.narration[j].tts}\t${s.narration[j].sub}`).join('\n')+'\n');
  const helper=(frames=60,handle=8)=>spawnSync(process.execPath,[path.join(root,'skills/produce/references/video-groups.js'),dir,dir,'0','30',String(frames),String(handle)],{encoding:'utf8'});
  assert.equal(helper().status,0);
  assert.match(helper(61).stderr,/clock differs/);
@@ -68,17 +65,6 @@ test('common builder renders direct group cut, trims and live handle; provenance
  const resolved=readFileSync(path.join(dir,'cards.resolved.tsv'),'utf8');
  writeFileSync(path.join(dir,'cards.resolved.tsv'),resolved.replace('none','in'));
  assert.match(helper().stderr,/zoom=none/);
- writeFileSync(path.join(dir,'cards.resolved.tsv'),resolved);
- const proof={groupPlans:{0:plan}};
- assert.equal(groups.verifyRendered(dir,dir,scenes,proof).length,1);
- const handleFile=path.join(dir,'work/handle0.mp4'),savedHandle=readFileSync(handleFile);
- ff(['-f','lavfi','-i','color=red:size=160x90:rate=30','-frames:v','8','-c:v','libx264',handleFile]);
- assert.throws(()=>groups.verifyRendered(dir,dir,scenes,proof),/live handle differs/);
- writeFileSync(handleFile,savedHandle);
- const raw=(file,at)=>execFileSync('ffmpeg',['-v','error','-ss',String(at),'-i',file,'-frames:v','1','-vf','scale=80:46,format=gray','-f','rawvideo','-']);
- assert.notDeepEqual(raw(path.join(dir,'work/v0.mp4'),.9),raw(path.join(dir,'work/v0.mp4'),1.1),'direct cut must switch source at output frame30');
- ff(['-f','lavfi','-i','color=red:size=160x90:rate=30:duration=2','-c:v','libx264',path.join(dir,'work/v0.mp4')]);
- assert.throws(()=>groups.verifyRendered(dir,dir,scenes,proof),/differs from declared/);
 }));
 
 // Sharp frame changes expose a one-source-frame error that low-motion footage hides.

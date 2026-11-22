@@ -1,4 +1,4 @@
-import { sceneShotBindingsSchema, sceneVideoDirectionSchema, shotTimelineSchema } from './msr-opening.js';
+import { sceneDefaultsSchema, sceneShotBindingsSchema, sceneVideoDirectionSchema, shotTimelineSchema } from './msr-opening.js';
 import { TIKTOK_TOOLS } from './tiktok-tools.js';
 import { UPSCALE_TOOLS } from './video-upscale.js';
 import { zodToJsonSchema } from 'zod-to-json-schema';
@@ -1847,7 +1847,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
 
 Use when a generated background or photo has to move and nobody is waiting on it — same trade as astra_text2video: free, ours, one job at a time. Give firstFramePath alone to animate from that frame, or add lastFramePath and the clip lands on it. The tool uploads the files itself; pass local paths, not ids.
 Do NOT use for more than two stills — that is astra_keyframe_video, which pins each image to a frame index.
-tier accepts default (generate), guided, or hq (guided_hq — quality unmeasured). guided and hq images use the 64-pixel grid and pixel ceiling (omitted dimensions default to 1536x1024); fast images are not enabled. lora is default-only; negativePrompt and numInferenceSteps are guided-only, and with guidance also hq. Passing one to the wrong tier is refused before the call.
+tier accepts default, guided, fast and hq. Fast generates in one stage on a 32-pixel grid. Guided and hq use a 64-pixel grid and default to 1536x1024. Only default accepts lora. Guided, fast and hq accept negativePrompt, numInferenceSteps and guidance. Passing one to the wrong tier is refused before the call.
 The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. autoDuration lets the server choose at most 121 frames from a first still alone; it is refused with lastFramePath or numFrames. png, jpg and jpeg are accepted, up to 32 MiB each.
 Warning: image-conditioned generate (width 1280, measured at heights 704/768) failure frames: {121,129,137}; guided (width 1280, measured at height 704) failure frames: {121}. Guided 129/137 succeeded at 1280x704 in server probes (the only guided size probed). Guided and hq sizes follow the server grid and pixel ceiling; unmeasured sizes are not quality guarantees. Within current client limits use generate 113/145 (measured at 1280x704); generate 1536x704 and 1536x1024 at 121 frames also succeeded. Text-only 1280x704 at 121 frames succeeded. An upstream defect is a hypothesis, not a confirmed cause. The server owns the failure-band acceptance gate; this warning adds no client-side block.
 ${ASTRA_LIMITS_LINE}
@@ -1862,8 +1862,8 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                     description: 'What happens between the frames — movement, camera, mood. English recommended. 1-2000 characters.',
                 },
                 tier: {
-                    type: 'string', enum: ['default', 'guided', 'hq'], default: 'default',
-                    description: 'default (generate), guided, or hq (guided_hq, quality unmeasured); all follow the 64-pixel grid and pixel ceiling. fast images are unmeasured and not enabled.',
+                    type: 'string', enum: ['default', 'guided', 'fast', 'hq'], default: 'default',
+                    description: 'Use fast for native single-stage image conditioning on a 32-pixel grid. Default, guided and hq use a 64-pixel grid.',
                 },
                 firstFramePath: {
                     type: 'string',
@@ -4644,7 +4644,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
         description: `Use it after story_sequence to upsert scenes by number into a sequence: place, time, the one event, and a one- or two-sentence summary of the scene's story. On story-led work also give turn, charge and out, so the scenes can be read in a row for pressure that changes and ends that hand over the next question (skills/storyboard/references/story-interest.md). A scene moved to another sequence leaves its old one. Refused (story_order) before any sequence exists or for an unknown sequence id, and on a story-first episode board by story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
 
-For generated scenes, videoDirection records the opening positions, shared direction, scene fps and one continuous audio file with beat cues. Set oneTake only for an explicitly uninterrupted camera view. Place every setup on its own story_shot card.
+Before making shot images, set directionDefaults for a shared camera technique, axis, continuity, lighting and attention. A shot can choose its own move, side or light. For generated scenes, videoDirection records the opening positions, shared direction, scene fps and one continuous audio file with beat cues. Set oneTake only for an explicitly uninterrupted camera view. Place every setup on its own story_shot card.
 
 A new scene starts with audienceSound.decision undecided. Set use or none with the dramatic reason. For use, perspective identifies whose experience we hear. The shift names the line or action that reveals a change of feeling or expectation and how the cue follows it. The exit names the beat where it ends. All three notes are optional. Plan and time each chosen effect on its shot with storyboard_apply.audienceEffects.
 
@@ -4663,6 +4663,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
                             event: { type: 'string', description: 'The one thing that happens in this scene' },
                             summary: { type: 'string', description: "The scene's story in one sentence" },
                             turn: { type: 'string', description: 'What flipped between the open and the close' },
+                            directionDefaults: zodToJsonSchema(sceneDefaultsSchema, { $refStrategy: 'none' }),
                             videoDirection: zodToJsonSchema(sceneVideoDirectionSchema, { $refStrategy: 'none' }),
                             audienceSound: zodToJsonSchema(audienceDecisionSchema, { $refStrategy: 'none' }),
                             out: { type: 'string', description: 'The line or visible action the scene goes out on — it leaves the next thing wanted' },
@@ -4907,7 +4908,7 @@ Refused: missing story/characters (story_order), invalid attributes, incompatibl
                             angle: enumInput(storyboardVocabulary?.ANGLES, 'Camera angle icon: the camera height and tilt; ground and over have cards in techniqueCatalog guides.angle'),
                             view: shotViewInput,
                             backgroundView: { type: 'string', enum: ['front', 'back'], description: 'Opening direction relative to the location sheet: front is the establishing view, back is the opposite side. Saves visual.camera.backgroundView; omitted keeps the choice, initially front. Independent of the subject view.' },
-                            move: { type: 'object', additionalProperties: false, required: ['id'], description: 'Camera move icon. A video shot left without one is named in the result (camera_move_unset: the video model then decides the camera), as is a call that holds every video shot it sets; neither is refused', properties: {
+                            move: { type: ['object', 'null'], additionalProperties: false, required: ['id'], description: 'Choose a shot move. On a video shot null clears the override and restores the scene camera default.', properties: {
                                     id: { type: 'string', enum: [...cameraMoves, ...stillCameraEffects], description: 'A camera.* technique with a movement, or on a still_camera cut a still effect' },
                                     reason: { type: 'string', description: 'Why the camera moves this way in this shot. Required for every move and still effect; camera.static may go without one' },
                                     target: { type: 'string', description: 'What the move is aimed at, in English on a video cut: what it pushes toward or pans and tilts to, or the person it follows, circles or rises above — the prompt reads "pushes in toward <target>", "follows behind <target>". A blast pushback names the source of the blast, a weapon cam what the projectile flies toward, a relay one-take the fighter it starts with' },
@@ -5194,6 +5195,7 @@ TOOLS.push({ name: 'video_catalog', title: 'Inspect installed video adapters', d
             sceneNo: { type: 'integer', minimum: 1, description: 'Storyboard scene number. Plans one clip for all its ordered shots.' },
             shotBindings: zodToJsonSchema(sceneShotBindingsSchema, { $refStrategy: 'none' }),
             sceneRendering: { type: 'string', enum: ['per_shot'], description: 'Select only after user approval. Submit one scene job that renders shot intervals separately and joins the picture and native or supplied scene audio.' },
+            maxCostUsd: { type: 'number', minimum: 0, description: 'Maximum planned USD reservation for this request. Used as the gateway reservation when it has no published rate. Hosted quotes above this amount fail before approval.' },
             validateScenePayload: { type: 'boolean', description: 'On a refused GenAI I2V scene, send its authored media to the deployed schema validation endpoint. No job or usage reservation.' },
             purpose: { type: 'string', enum: ['draft', 'final', 'revision'], description: 'Candidate purpose; does not change model, resolution or authorization.' },
             basedOnRequestId: { type: 'string', description: 'Earlier request for this shot, used to compare candidates.' },
