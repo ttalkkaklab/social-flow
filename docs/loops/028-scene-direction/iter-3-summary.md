@@ -1,0 +1,1 @@
+Keep distinct action detail from the timeline, video prompt source and visual design. Retain shot-relative times for motion states, deduplicate equivalent actions and use the inherited camera in the shot writer.
