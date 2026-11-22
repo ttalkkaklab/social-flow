@@ -1,5 +1,5 @@
 /**
- * episode_cover — the episode's cover and thumbnail (docs/superpowers/specs/2026-11-18-episode-cover-design.md).
+ * episode_cover — the episode's cover and thumbnail (skills/generate-cover/SKILL.md).
  *
  * set    records which moment of the episode the cover shows, its copy and why, in storyboard/cover.json.
  * render makes every platform file from that decision, locally and at $0: ffmpeg crops the source

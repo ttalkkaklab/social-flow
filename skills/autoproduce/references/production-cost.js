@@ -77,10 +77,10 @@ function quote(win, { krwPerUsd = 1400, legacy = false } = {}) {
     scope: 'Video API generation only; images, narration, music, editing, tax and payment fees excluded.',
     priceSource: 'skills/autoproduce/references/prices.tsv',
     vendorSource: 'https://docs.byteplus.com/docs/ModelArk/1099320', options };
-  const hostedEngines = new Set(Object.values(options).flatMap(option => option.rows.map(row => row.generation?.engine)).filter(engine => ['veo', 'ltx-api'].includes(engine)));
+  const hostedEngines = new Set(Object.values(options).flatMap(option => option.rows.map(row => row.generation?.engine)).filter(engine => ['veo', 'ltx-api', 'ltx-desktop-local'].includes(engine)));
   if (hostedEngines.size) {
     result.videoProvider = hostedEngines.size === 1 ? [...hostedEngines][0] : 'mixed';
-    result.vendorSource = [...hostedEngines].map(engine => engine === 'veo' ? 'https://cloud.google.com/model-garden/pricing' : 'https://docs.ltx.io/pricing').join(' ');
+    result.vendorSource = [...hostedEngines].map(engine => engine === 'veo' ? 'https://cloud.google.com/model-garden/pricing' : engine === 'ltx-desktop-local' ? 'Local Desktop GPU' : 'https://docs.ltx.io/pricing').join(' ');
   }
   result.quoteFingerprint = digest(JSON.stringify(result));
   // Resume a pre-six-choice approval only when its original complete quote still matches.

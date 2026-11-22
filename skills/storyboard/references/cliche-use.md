@@ -268,7 +268,7 @@ tradition is recorded by name.
 
 ## 9. Evidence and limits
 
-- Source: `docs/research/2026-11-18-kdrama-cliches/` — a report of 371 numbered entries with
+- Source: [K-drama cliché survey](https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-18-kdrama-cliches) — a report of 371 numbered entries with
   their sources, nine research notes and a visual summary. Catalogue ids 1–371 are the
   report's numbers; higher ids are widely known items the research could not source
   (`evidence: "unverified"`).

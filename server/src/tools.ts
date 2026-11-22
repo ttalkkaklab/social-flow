@@ -180,7 +180,7 @@ import {
  * destructiveHint in particular translates "a call is immediately public" —
  * the nature of this server — into a form **the client can read**: the
  * description prose reaches only the model, never the approval UI.
- * The verdict table in docs/api-reference/mcp-tools.html §7 is the source of truth.
+ * The verdict table in docs/tool-contracts.md is the source of truth.
  */
 
 /**
@@ -504,7 +504,7 @@ const SEARCH_ARG_LINE =
  * call is public the moment it happens — stating that only in description
  * prose reaches the model but never the client.
  *
- * The verdict table in docs/api-reference/mcp-tools.html is the source of truth.
+ * The verdict table in docs/tool-contracts.md is the source of truth.
  */
 const HINT = {
   /** External lookup — no side effects */
@@ -5380,9 +5380,9 @@ TOOLS.push({ name: 'fasth3_omni_reference', title: 'Generate FastH3 Omni video f
   annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false } });
 // Hosted vendors through the common layer (vendor-video.ts); episode calls go through video_plan.
 const vendorTool = (name: string, title: string, description: string, schema: z.ZodTypeAny): Tool => ({ name, title,
-  description: description + ' Billed by the vendor per output second (audio-to-video: per input audio second). Returns the local MP4 path, the vendor job ID and reported duration; failures say whether a job may still be running. Do NOT resubmit a request whose job may still be running; inspect video_status first. Production output still needs playback review.',
+  description: description + (name.startsWith('ltx_desktop_') ? ' Runs on the local GPU.' : ' Billed by the vendor per output second (audio-to-video: per input audio second).') + ' Returns the local MP4 path and job ID; failures say whether a job may still be running. Do NOT resubmit a request whose job may still be running; inspect video_status first. Production output still needs playback review.',
   inputSchema: zodToJsonSchema(schema, { $refStrategy: 'none' }) as Tool['inputSchema'],
-  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true } });
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: !name.startsWith('ltx_desktop_') } });
 TOOLS.push(
   ...Object.entries(HOSTED_VIDEO_ROUTES).map(([name, route]) => vendorTool(name, route.title, route.description, route.schema)),
   vendorTool('minimax_img2video', 'Generate a MiniMax H3 video from frames', 'Create a MiniMax H3 clip (MINIMAX_API_KEY) from a first frame and an optional last frame, 4–15 s, native audio always on. For cuts no character speaks in. Do NOT use for spoken cuts — use minimax_reference with the speaker\'s voice sample.', minimaxImg2VideoSchema),
@@ -5438,8 +5438,8 @@ for (const tool of TOOLS) {
   }
 }
 TOOLS.push(
-  { name: 'video_catalog', title: 'Inspect installed video adapters', description: 'List installed video adapter contracts, deployment identifiers and supported operations. Read-only; no generation or live authentication probe. Use before video_plan; model availability is configuration, not a successful API test.',
-    inputSchema: { type: 'object', properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } },
+  { name: 'video_catalog', title: 'Inspect installed video adapters', description: 'List installed video adapter contracts. Pass engine ltx-desktop-local to query downloaded offerings and supported settings directly from the local Desktop application. Both modes are read-only.',
+    inputSchema: { type: 'object', properties: {engine:{type:'string',enum:['ltx-desktop-local']}}, additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } },
   { name: 'video_plan', title: 'Plan a video with saved model settings', description: 'Plan one generated scene with episode, sceneNo and requestId. Compiles all member shots in playback order, including framing, actions, timed image roles, cut boundaries and one continuous audio track. Unsupported combinations report each unmapped shot, frame and input before a plan can be approved. The result contains one provider prompt, member shotIds, image and voice bindings, a quote and a plan ID for video_approve and video_execute. Use shotId for an explicitly requested single-shot or legacy plan. Saved model, limits and authorization apply. No generation.',
     inputSchema: { ...videoContextSchema, required: ['episode','requestId'], oneOf: [{required:['sceneNo']},{required:['shotId']}], properties: { ...videoContextSchema.properties,
       sceneNo: { type: 'integer', minimum: 1, description: 'Storyboard scene number. Plans one clip for all its ordered shots.' },

@@ -385,7 +385,7 @@ const statusSchema = z.object({ id: z.string().min(1), status: z.enum(['pending'
 }).passthrough();
 export const genaiVideoStatusSchema = z.object({ receiptPath: z.string().min(1), download: z.boolean().default(false) }).strict();
 
-export async function getGenaiVideoStatus(input: z.infer<typeof genaiVideoStatusSchema>, planned?:z.infer<typeof mediaContract>, binding?:{target:string; jobId?:string; fingerprint?:string}) {
+export async function getGenaiVideoStatus(input: z.infer<typeof genaiVideoStatusSchema> & {onJobCompleted?: () => void}, planned?:z.infer<typeof mediaContract>, binding?:{target:string; jobId?:string; fingerprint?:string}) {
   const receipt = receiptSchema.parse(JSON.parse(fs.readFileSync(input.receiptPath, 'utf8')));
   if (binding && (path.resolve(receipt.videoPath) !== path.resolve(binding.target) ||
       binding.jobId && receipt.jobId && receipt.jobId !== binding.jobId ||
@@ -407,6 +407,7 @@ export async function getGenaiVideoStatus(input: z.infer<typeof genaiVideoStatus
   }
   if (!receipt.jobId) throw new Error('GenAI submission identity is unknown; inspect server usage before retrying.');
   if (receipt.status === 'completed') {
+    input.onJobCompleted?.();
     const bytes = fs.readFileSync(receipt.videoPath);
     if (createHash('sha256').update(bytes).digest('hex') !== receipt.sha256) throw new Error('GenAI cached output changed');
     if (receipt.expected || planned || receipt.operation === 'msr' || receipt.operation === 'scene-to-video')
@@ -421,6 +422,7 @@ export async function getGenaiVideoStatus(input: z.infer<typeof genaiVideoStatus
   }
   // The gateway's own failed status is terminal job evidence (managed routing frees the slot).
   if (job.status === 'failed' || job.status === 'cancelled') throw new GenaiRequestError(`GenAI video ${receipt.jobId} ${job.status}: ${JSON.stringify(job.error ?? 'No details').slice(0, 1000)}`, true, 200);
+  if (job.status === 'completed') input.onJobCompleted?.();
   if (job.status !== 'completed' || !input.download)
     return { jobId: receipt.jobId, status: job.status, downloaded: false, review: 'not_reviewed' };
   if (!job.result?.video_url) throw new Error('GenAI completed without result.video_url; retain the receipt, do not resubmit.');
@@ -571,7 +573,8 @@ export async function checkGenaiVideoOptions(tool: string, args: Record<string, 
   if (missing.length) throw new GenaiRequestError(`ltx_fields_unsupported: ${mode} on ${model?.id ?? args.model} does not advertise ${missing.join(', ')}`, true, 422);
 }
 
-export async function generateGenaiVideo(operation: Operation, input: unknown, signal?: AbortSignal) {
+export async function generateGenaiVideo(operation: Operation, input: unknown, signal?: AbortSignal,
+  polling: {statusRetries?: number; onJobCompleted?: () => void} = {}) {
   signal?.throwIfAborted();
   const args = (operation === 'msr' ? genaiMsrSchema : operation === 'audio-to-video' ? genaiAudioToVideoSchema
     : operation === 'text-to-video' ? genaiTextToVideoSchema : genaiImageToVideoSchema).parse(input);
@@ -583,8 +586,8 @@ export async function generateGenaiVideo(operation: Operation, input: unknown, s
   const videoPath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.mp4`, 'video');
   const receiptPath = videoPath + '.astra-genai.json';
   const finish = async () => {
-    const result = await pollGenaiJob(() => getGenaiVideoStatus({ receiptPath, download: true }, msrOutputContract(operation,args)),
-      `GenAI video is still pending; recover using receiptPath ${receiptPath}, never resubmit.`, signal);
+    const result = await pollGenaiJob(() => getGenaiVideoStatus({ receiptPath, download: true, onJobCompleted: polling.onJobCompleted }, msrOutputContract(operation,args)),
+      `GenAI video is still pending; recover using receiptPath ${receiptPath}, never resubmit.`, signal, polling.statusRetries);
     return { ...result, receiptPath };
   };
   async function followSubmission() {

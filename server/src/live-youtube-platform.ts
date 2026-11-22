@@ -14,7 +14,7 @@ export function createYoutubePlatform(options: PlatformOptions, openApi = youtub
   const channelId = config.youtubeChannelId;
   if (!channelId) throw Error('Set youtubeChannelId before connecting');
   const receiptFile = join(out, 'youtube.json');
-  let receipt: YoutubeReceipt = { channelId, marker: randomUUID() };
+  let receipt: YoutubeReceipt = { channelId, marker: randomUUID(), topic: config.topic };
   const save = () => saveLiveReceipt(receiptFile, receipt);
   let client: ReturnType<typeof youtubeApi> | undefined;
   const connect = () => client ??= openApi(config.youtubeCredentialChannel ?? config.channel);
@@ -43,6 +43,7 @@ export function createYoutubePlatform(options: PlatformOptions, openApi = youtub
         (event.event === 'youtube_final' && event.state === 'ready' && event.ingestLive === false));
     });
     if (!closed) throw Error('The prior encoder has not confirmed an unstarted shutdown');
+    if (receipt.topic) config.topic = receipt.topic;
   }
 
   async function recover(action: Exclude<RoomCommand, 'reserve'>) {

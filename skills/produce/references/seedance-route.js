@@ -50,7 +50,7 @@ function scenePlan(scene, production) {
   // time, so a board only asks for it where nobody is waiting. Like `host` it takes none of the
   // Seedance planning fields.
   const engine = settings.engine || (settings.model?.startsWith('veo-') ? 'veo' : 'seedance');
-  if (['veo', 'ltx-api'].includes(engine)) return forecastHostedVideo({ scene, settings, engine, kind });
+  if (['veo', 'ltx-api', 'ltx-desktop-local'].includes(engine)) return forecastHostedVideo({ scene, settings, engine, kind });
   if (!['seedance', 'host', 'astra'].includes(engine)) throw new Error('unknown video engine: ' + engine);
   if (engine !== 'seedance') {
     const refs = Array.isArray(v.references) ? v.references.filter(ref => ['video', 'both'].includes(ref.use)) : [];

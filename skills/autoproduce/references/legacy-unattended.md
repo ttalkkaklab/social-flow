@@ -404,7 +404,7 @@ The rules automated authoring breaks most often:
   causes·mechanisms·state changes are `"principle"`, and the rest is `"other"`. The first three
   use the mandatory moving editorial diagram and mapped role, with one allowed
   `slide.motionBeats` primitive per narration group, on the studio stage, to the bar of
-  `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`. They never fall back
+  `skills/storyboard/examples/reference-slide.html`. They never fall back
   to a still or to a clip with marks over it.
 - `treatment:"footage"` is retired (user directive 2026-09-05 — nothing is drawn over video;
   CLAUDE.md §Nothing is drawn over video). `check-scenes.js` rejects it, so a `scenes.js`
@@ -997,4 +997,4 @@ authorization.
 - `../produce/references/speedup.sh` — the required speed pass (produce §7.5)
 - `../produce/references/build-reel.sh` — the compositing pipeline
 - `../platform-guide/references/platform-playbook.md` · `korean-style.md` · `check-style.py`
-- `../../docs/guides/ai-video-production/index.html` — why hybrid is the default, prompt rules
+- [Production workflow](../../_shared/production-workflow.md) — media order and generation approvals

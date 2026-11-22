@@ -452,7 +452,7 @@
       prompt: 'Photoreal live-action cinematography: life-size human proportions, natural skin and fabric texture, real locations, physically plausible light and photographic lenses; every surface reads as a real material at real scale.' },
     'webtoon': { label: '웹툰풍', looks: ['webtoon'],
       prompt: 'Korean webtoon illustration: consistent expressive character linework, clean contour lines, controlled cel shading, illustrated backgrounds and a coherent drawn palette; skin and cloth are drawn, and the frame is one unbroken picture.' },
-    // Added 2026-09-08 from the Shorts style survey (docs/research/2026-09-08-shorts-visual-styles).
+    // Added 2026-09-08 from the Shorts style survey (1eabc4fb:docs/research/2026-09-08-shorts-visual-styles).
     // Named studios and living artists stay out of every prompt: the image lane refuses them.
     'claymation': { label: '클레이 스톱모션', looks: ['clay'],
       prompt: 'Stop-motion claymation: matte plasticine figures and sets with visible thumbprints and slight surface imperfections, chunky simplified forms, handcrafted miniature props, warm tactile studio light and soft contact shadows; the whole frame is one sculpted scene photographed on a set.' },

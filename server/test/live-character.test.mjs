@@ -94,3 +94,18 @@ test('a prepared question matches NFC case and punctuation, free-form questions 
   assert.equal(preparedReply(config, 'chào Mochi'.normalize('NFD')), 'Chào bạn!');
   assert.equal(preparedReply(config, 'Chào Mochi! Áo bạn màu gì?'), undefined);
 });
+
+test('room topic opens in Korean with a comment invitation and audience-wide welcome clips', async () => {
+  const {broadcastLines} = await import('../dist/live-character.js');
+  const raw = {project:'/tmp',channel:'test',character:'host',chatModel:'local',topic:'잠들기 전에 읽는 책'};
+  const cfg = liveConfig.parse(raw);
+  assert.equal(cfg.maxConcurrentVideos,3);
+  assert.equal(liveConfig.parse({...raw,maxConcurrentVideos:1}).maxConcurrentVideos,1);
+  assert.equal(liveConfig.safeParse({...raw,maxConcurrentVideos:0}).success,false);
+  const lines = await broadcastLines(cfg, {language:'ko-KR'});
+  assert.ok(lines.opening.includes(raw.topic) && lines.opening.includes('댓글'));
+  assert.ok(lines.standby.includes('안녕하세요. 지금 입장하신 분들 환영해요.'));
+  assert.equal(new Set(lines.standby).size,2);
+  const legacy = {...raw,topic:undefined,opening:'Welcome back.',standbyLines:['Welcome.','Please join us.']};
+  assert.deepEqual(await broadcastLines(legacy,{language:'en'}),{opening:legacy.opening,standby:legacy.standbyLines});
+});

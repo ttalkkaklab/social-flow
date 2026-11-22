@@ -4,7 +4,7 @@
 
 
 Read this while planning every editorial HTML slide, before storyboard approval. The visual
-reference is `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`, the
+reference is `skills/storyboard/examples/reference-slide.html`, the
 repository's self-contained copy of the user's `social-flow-3d-object-slide.html` (identical
 SHA-256, verified 2026-09-05). It sets the target: a lit studio, substantial objects, restrained type and a subject whose
 image changes with the sentence. Copy the visual system, not its disc, colours or historical claims.

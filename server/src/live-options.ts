@@ -6,12 +6,13 @@ export const liveStartChoices = {
   generation: 'GenAI LTX 2.5 picture and native dialogue',
   modelCanvas: [720, nativeHeight],
   standbyClips: idleCount,
+  spokenStandbyClips: 2,
   standbySeconds: [3, 5],
   output: [720, 1280],
   spatialUpscale: false,
   faceComposite: false,
   choices: [
-    { id: 'ready', label: '준비되면 방송 · 첫 인사와 이어질 멘트, 대기 영상 10개가 준비되면 방송을 시작해요.' },
+    { id: 'ready', label: '준비되면 방송 · 주제 소개와 첫 멘트, 환영 인사 두 편, 대기 영상 10개를 준비하고 시작해요.' },
     { id: 'preview', label: '미리보기 먼저 · 첫 장면을 보고 방송할지 정해요.' },
     { id: 'cancel', label: '취소 · 이번 방송을 시작하지 않아요.' }
   ]

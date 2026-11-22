@@ -202,7 +202,7 @@ Use [story-quality.md](../storyboard/references/story-quality.md) to improve the
    recording; subtitles and captions are also forbidden on the moving picture. A cut that needs an
    arrow, a figure or a principle is `kind:"diagram", motion:true, treatment:"editorial"` on
    the studio stage, with a rendered object when a thing is the subject, built to the quality
-   of `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`. The footage slide
+   of `skills/storyboard/examples/reference-slide.html`. The footage slide
    (`treatment:"footage"`) is retired and the checkers reject it.
 ## Procedure
 ### 1. Check the inputs
@@ -622,7 +622,7 @@ order.
    or actual mesh parts plus restrained arrows; kinetic `renderKinetic` puts the first art on
    group 1 then the title with `in`; type-only skips arts. An explanation slide is built on
    the studio stage to the bar of
-   `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`; a `slide.object` is
+   `skills/storyboard/examples/reference-slide.html`; a `slide.object` is
    rendered with the mesh lane by default ([mesh-objects.md](../storyboard/references/mesh-objects.md)),
    or baked by Blender Cycles into a sheet when `renderer:"blender"` ([blender-objects.md](../storyboard/references/blender-objects.md) — rebake with the measured `--segs`);
    existing sheet objects are baked first. Use `h.mark.arrow` for refined curved arrows.

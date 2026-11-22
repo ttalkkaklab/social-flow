@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createYoutubePlatform } from '../dist/live-youtube-platform.js';
@@ -29,12 +29,19 @@ test('YouTube adapter keeps ownership, live readiness, native chat, completion a
     if (path === 'liveBroadcasts/transition') { state = 'complete'; return {}; }
     assert.fail(path);
   };
-  const p = createYoutubePlatform({ config: { channel: 'test', youtubeChannelId: channelId, madeForKids: false },
+  const p = createYoutubePlatform({ config: { channel: 'test', youtubeChannelId: channelId, madeForKids: false, topic: 'Night reading' },
     out, title: 'test', log() {} }, async () => api);
   await p.check(true);
   assert.deepEqual(await p.prepare(controller.signal), { platform:'youtube', url:'rtmps://media.example/live/fake-key' });
   assert.equal(p.ready, false);
   assert.doesNotMatch(readFileSync(join(out, 'youtube.json'), 'utf8'), /fake-key/);
+  const saved = JSON.parse(readFileSync(join(out, 'youtube.json'), 'utf8'));
+  assert.equal(saved.topic, 'Night reading');
+  writeFileSync(join(out, 'events.jsonl'), JSON.stringify({event:'youtube_reserved', id:saved.broadcastId}) + '\n');
+  const resumedConfig = {channel:'test', youtubeChannelId:channelId, madeForKids:false, topic:'Other topic'};
+  const resumed = createYoutubePlatform({config:resumedConfig, resumeFrom:out, out:join(out,'session'), title:'test', log() {}}, async () => api);
+  await resumed.check(true);
+  assert.equal(resumedConfig.topic, saved.topic);
   state = 'live';
   const intake = [];
   await p.observe({ signal: controller.signal, stop: () => controller.abort(), acceptingUntil: Date.now() + 5000,

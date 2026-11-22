@@ -82,7 +82,7 @@ const SLIDE_TREATMENTS = ['editorial', 'photo-action'];
    motion background, a b-roll or a recording. The footage treatment (one clip per sentence
    under drawn marks, 0.47–0.53) is retired. A beat that would need an arrow, a figure or a
    principle on screen is an HTML slide on the studio stage (slide-design.md §1 · §9), authored
-   to the quality of docs/research/2026-09-04-rendered-object-slide/reference-slide.html. */
+   to the quality of skills/storyboard/examples/reference-slide.html. */
 const FOOTAGE_RETIRED = 'treatment:"footage" is retired (user directive 2026-09-05) — nothing is drawn over video; ' +
   'an explanation beat (timeline · statistic · principle) is an editorial HTML slide on the studio stage, ' +
   'an event or a place is a motion background or a b-roll with nothing drawn on it';

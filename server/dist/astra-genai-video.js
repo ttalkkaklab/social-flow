@@ -414,6 +414,7 @@ export async function getGenaiVideoStatus(input, planned, binding) {
     if (!receipt.jobId)
         throw new Error('GenAI submission identity is unknown; inspect server usage before retrying.');
     if (receipt.status === 'completed') {
+        input.onJobCompleted?.();
         const bytes = fs.readFileSync(receipt.videoPath);
         if (createHash('sha256').update(bytes).digest('hex') !== receipt.sha256)
             throw new Error('GenAI cached output changed');
@@ -431,6 +432,8 @@ export async function getGenaiVideoStatus(input, planned, binding) {
     // The gateway's own failed status is terminal job evidence (managed routing frees the slot).
     if (job.status === 'failed' || job.status === 'cancelled')
         throw new GenaiRequestError(`GenAI video ${receipt.jobId} ${job.status}: ${JSON.stringify(job.error ?? 'No details').slice(0, 1000)}`, true, 200);
+    if (job.status === 'completed')
+        input.onJobCompleted?.();
     if (job.status !== 'completed' || !input.download)
         return { jobId: receipt.jobId, status: job.status, downloaded: false, review: 'not_reviewed' };
     if (!job.result?.video_url)
@@ -587,7 +590,7 @@ export async function checkGenaiVideoOptions(tool, args) {
     if (missing.length)
         throw new GenaiRequestError(`ltx_fields_unsupported: ${mode} on ${model?.id ?? args.model} does not advertise ${missing.join(', ')}`, true, 422);
 }
-export async function generateGenaiVideo(operation, input, signal) {
+export async function generateGenaiVideo(operation, input, signal, polling = {}) {
     signal?.throwIfAborted();
     const args = (operation === 'msr' ? genaiMsrSchema : operation === 'audio-to-video' ? genaiAudioToVideoSchema
         : operation === 'text-to-video' ? genaiTextToVideoSchema : genaiImageToVideoSchema).parse(input);
@@ -599,7 +602,7 @@ export async function generateGenaiVideo(operation, input, signal) {
     const videoPath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.mp4`, 'video');
     const receiptPath = videoPath + '.astra-genai.json';
     const finish = async () => {
-        const result = await pollGenaiJob(() => getGenaiVideoStatus({ receiptPath, download: true }, msrOutputContract(operation, args)), `GenAI video is still pending; recover using receiptPath ${receiptPath}, never resubmit.`, signal);
+        const result = await pollGenaiJob(() => getGenaiVideoStatus({ receiptPath, download: true, onJobCompleted: polling.onJobCompleted }, msrOutputContract(operation, args)), `GenAI video is still pending; recover using receiptPath ${receiptPath}, never resubmit.`, signal, polling.statusRetries);
         return { ...result, receiptPath };
     };
     async function followSubmission() {

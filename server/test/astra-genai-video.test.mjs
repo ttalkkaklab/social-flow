@@ -169,6 +169,13 @@ test('a rejected submission frees its output name; one status 5xx is polled thro
     : ++gets === 1 ? new Response('busy', { status: 503 }) : Response.json({ id: 'job-3', status: 'failed', error: 'oom' });
   await assert.rejects(generateGenaiVideo('text-to-video', args), error => error.terminal === true && /oom/.test(error.message));
   assert.equal(gets, 2);
+  let recoveryGets = 0;
+  globalThis.fetch = async (_url, options) => {
+    assert.equal(options.method, 'GET');
+    return ++recoveryGets < 4 ? new Response('busy', {status:503}) : Response.json({id:'job-3', status:'cancelled'});
+  };
+  await assert.rejects(generateGenaiVideo('text-to-video', args, undefined, {statusRetries:3}), error => error.terminal && error.httpStatus === 200);
+  assert.equal(recoveryGets, 4);
 });
 test('two live preparations follow the same accepted job after racing to claim its filename', async t => {
   const dir = setup(t), args = { ...base, outputPath: dir, filename: 'shared.mp4' };

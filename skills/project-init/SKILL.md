@@ -8,7 +8,7 @@ description: >
   and format together. For only a channel profile or character edit use channel;
   storyboard plans an episode and autoproduce builds one.
 argument-hint: "[init|status|update] [project-directory]"
-allowed-tools: ["mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "mcp__social-flow__sns_account_check", "mcp__plugin_social-flow_social-flow__sns_account_check", "mcp__social-flow__character_manage", "mcp__social-flow__character_panel", "mcp__plugin_social-flow_social-flow__character_manage", "mcp__plugin_social-flow_social-flow__character_panel", "mcp__social-flow__character_voice_audition", "mcp__plugin_social-flow_social-flow__character_voice_audition", "mcp__social-flow__tts_list_voices", "mcp__plugin_social-flow_social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_voices", "mcp__social-flow__astra_genai_catalog", "mcp__plugin_social-flow_social-flow__astra_genai_catalog"]
+allowed-tools: ["mcp__social-flow__video_catalog", "mcp__plugin_social-flow_social-flow__video_catalog", "mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "mcp__social-flow__sns_account_check", "mcp__plugin_social-flow_social-flow__sns_account_check", "mcp__social-flow__character_manage", "mcp__social-flow__character_panel", "mcp__plugin_social-flow_social-flow__character_manage", "mcp__plugin_social-flow_social-flow__character_panel", "mcp__social-flow__character_voice_audition", "mcp__plugin_social-flow_social-flow__character_voice_audition", "mcp__social-flow__tts_list_voices", "mcp__plugin_social-flow_social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_voices", "mcp__social-flow__astra_genai_catalog", "mcp__plugin_social-flow_social-flow__astra_genai_catalog"]
 ---
 
 Follow [production order](../_shared/production-workflow.md). Project setup precedes
@@ -60,6 +60,8 @@ episode work, continue to that skill after setup without asking for the same cho
    Complete each credential step before the next model question; follow the shared
    credential procedure, including server reconnect and configuration recheck.
    An explicit no-TTS choice saves `models.speech:{engine:"none"}`. Reuse explicit prior answers and existing settings.
+   When the user chooses LTX on the machine running the plugin, call `video_catalog {engine:"ltx-desktop-local"}`.
+   Offer its downloaded models and resolutions. Save `models.video.engine:"ltx-desktop-local"` and the selected model ID and resolution.
    For hosted video, show the LTX API and Google Cloud Veo choices from `video_catalog`. LTX can animate a pinned voice track. Veo can generate scene sound and accept external narration in assembly. List only the operations and resolutions the chosen model accepts. [Setup and model IDs](../_shared/video-routing.md#ltx-and-google-cloud-veo).
 
 4. Ask for the missing **visual style**, **video ratio**, and **output format** — asked

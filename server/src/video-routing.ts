@@ -36,6 +36,7 @@ import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { attributeWords, sceneShotNotes, shotVisualWords, withSceneCamera, cameraDrift, cameraMoveWords, compileVideoPrompt, sceneCameraDirection, scenePromptText, type DirectionBinding, type VideoPromptSource } from './video-prompt.js';
 import { readVideoProduction, refreshVideoReview } from './video-review.js';
 import { requireReadyProject } from './project.js';
+import { checkDesktopOffering, LOCAL_DESKTOP_ENGINE } from './ltx-desktop-local.js';
 
 const load = createRequire(import.meta.url);
 const shared = fileURLToPath(new URL('../../skills/_shared/video-selection.js', import.meta.url));
@@ -362,11 +363,20 @@ export async function planManagedVideo(raw: unknown) {
   const { context, tool } = resolved;
   if (context.selection.engine === 'astra-genai' && (tool === 'astra_genai_msr' || tool === 'astra_genai_img2video'))
     await refreshGenaiMsrVoice();
-  const plan = buildVideoPlan(input, resolved, false);
+  let plan = buildVideoPlan(input, resolved, false);
   if (plan.sceneRendering) { await validateShotRenderPlan(plan); return saveVideoPlan(plan); }
   if (plan.tool === 'seedance_reference' && plan.args.referenceVideoTaskIds)
     await checkSeedanceReferenceTasks(seedanceReferenceSchema.parse(plan.args));
   await checkGenaiVideoOptions(plan.tool, plan.args);
+  if (context.selection.engine === LOCAL_DESKTOP_ENGINE) {
+    const minimum = !plan.sceneRequest && input.args.durationSeconds === undefined && typeof plan.args.durationSeconds === 'number'
+      ? plan.durationPlan?.requiredSeconds ?? plan.args.durationSeconds : undefined;
+    const duration = await checkDesktopOffering(plan.args, minimum);
+    if (minimum !== undefined && duration !== plan.args.durationSeconds) {
+      const { requiredSeconds: _required, ...args } = input.args;
+      plan = buildVideoPlan({ ...input, args: { ...args, durationSeconds: duration } }, resolved, false);
+    }
+  }
   if (plan.sceneRequest) await checkSceneDeployment(plan.sceneRequest, plan.tool, plan.args);
   return saveVideoPlan(plan);
 }
@@ -612,7 +622,7 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
   if (selection.engine === 'seedance' && bound.ratio === undefined && context.board.FORMAT === 'shorts-9x16' &&
       (tool === 'seedance_text2video' || tool === 'seedance_reference' && bound.omniReferenceTaskType === 'reference'))
     bound.ratio = '9:16';
-  if (selection.engine === 'veo' && bound.aspectRatio === undefined && context.board.FORMAT === 'shorts-9x16') bound.aspectRatio = '9:16';
+  if ((selection.engine === 'veo' || selection.engine === LOCAL_DESKTOP_ENGINE) && bound.aspectRatio === undefined && context.board.FORMAT === 'shorts-9x16') bound.aspectRatio = '9:16';
   const durationPlan = shotVideoTiming(context, tool, bound);
   if (tool === 'seedance_reference' && bound.omniReferenceTaskType === 'edit' && bound.durationSeconds === undefined) {
     bound.durationSeconds = -1;
@@ -689,7 +699,7 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
     if (tool === 'astra_audio2video') {
       const window = Math.min(sourceSeconds - Number(args.audioStartTime ?? 0), Number(args.audioMaxDuration ?? Infinity));
       playable = Math.min(window, args.numFrames === undefined ? (8 * Math.floor((window * fps - 1) / 8) + 1) / fps : Number(args.numFrames) / fps);
-    } else if (tool === 'astra_genai_desktop_audio2video') {
+    } else if (tool === 'astra_genai_desktop_audio2video' || tool === 'ltx_desktop_audio2video') {
       playable = desktopAudioWindow(args, sourceSeconds).playbackSeconds;
     }
     if (playable + 0.001 < durationPlan.requiredSeconds)

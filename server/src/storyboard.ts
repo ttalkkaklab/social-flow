@@ -1127,7 +1127,7 @@ export function firstLineReading(win: Board): string[] {
     + (excess > 0.5 && shot.narration?.[0]?.delivery !== 'voiceover' ? ` — that shot's length holds ${excess} s beyond its performance; a natively voiced clip plays them as silence, mostly before the line` : '')];
 }
 
-/** Each platform's published opening window (docs/research/2026-11-18-opening-hooks; opening-by-format.md §4).
+/** Each platform's published opening window (1eabc4fb:docs/research/2026-11-18-opening-hooks; opening-by-format.md §4).
  *  Short-form posts one opening everywhere, so the earliest window, Instagram's 3 s, sets the opening's span. */
 const OPENING_WINDOWS: Record<'short' | 'long', Record<string, string>> = {
   short: {

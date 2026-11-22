@@ -7,7 +7,7 @@ for the episode's format (short-form or long-form) and the platforms it will be 
 It is the default writing process (user directive, 2026-11-18). It is not a score, a schema
 requirement or a gate: board writes print a reading of the plan and never refuse.
 
-Evidence: [research page](../../../docs/research/2026-11-18-opening-hooks/index.html) and its
+Evidence: [research page](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-18-opening-hooks/index.html) and its
 two reports (short-form, long-form) in the same folder. Grades used below: **measured**
 (platform data, an experiment or a large correlational study), **official** (a platform's
 own definition or guidance), **practice** (creators' and tool vendors' rules of thumb),

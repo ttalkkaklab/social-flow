@@ -214,12 +214,12 @@ first-pass observations. Public view counts do not establish why an episode was 
 
 ## Evidence
 
-The [six-video channel analysis](../../../docs/research/2026-11-16-episode-anticipation/README.md)
+The [six-video channel analysis](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-16-episode-anticipation/README.md)
 records observed scenes, approximate timing and limits. It motivates this practical pass;
 it does not establish a universal formula. Borrow causal mechanisms, not a creator's lines,
 distinctive incident sequence, cast, visual template or unverified claim to a true story.
 
-The claim-led section draws on the [2026-11-18 promise-and-proof study](../../../docs/research/2026-11-18-promise-and-proof/README.md).
+The claim-led section draws on the [2026-11-18 promise-and-proof study](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-18-promise-and-proof/README.md).
 
 | Claim | Grade |
 |---|---|

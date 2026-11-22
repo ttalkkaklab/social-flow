@@ -207,6 +207,10 @@ export function priceOf(
     const key = veoPriceKey(str(args.model, VEO_MODELS[0]), str(args.resolution, '720p'), args.generateAudio !== false);
     return { key, quantity: tool === 'veo_extend' ? 7 : num(args.durationSeconds, 8), note: 'Google Cloud generated seconds' };
   }
+  if (tool.startsWith('ltx_desktop_')) {
+    const seconds = tool === 'ltx_desktop_audio2video' ? probeSeconds(str(args.audioPath, '')) : num(args.durationSeconds, 2);
+    return { key: 'video.ltx-desktop-local', quantity: seconds };
+  }
   if (tool.startsWith('ltx_api_')) {
     const model = str(args.model, 'ltx-2-5-pro'), tier = ltxApiTier(str(args.resolution, '1920x1080'));
     if (!tier) return { key: null, quantity: null, note: 'unlisted LTX API resolution' };
@@ -379,7 +383,7 @@ export function isBillableTool(tool: string): boolean {
   return (
     (tool.startsWith('astra_genai_') && !['astra_genai_video_status','astra_genai_catalog','astra_genai_desktop_status'].includes(tool)) ||
     tool.startsWith('seedance_') ||
-    /^(veo|ltx_api|minimax|heygen)_/.test(tool) ||
+    /^(veo|ltx_api|ltx_desktop|minimax|heygen)_/.test(tool) ||
     tool.startsWith('gpt_image_') ||
     tool.startsWith('tts_') ||
     tool.startsWith('sfx_') ||

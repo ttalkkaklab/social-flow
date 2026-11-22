@@ -173,7 +173,7 @@ setup and explicit change requests. Tool descriptions carry their own summaries 
 `skills/autoproduce/references/prices.tsv` is the source of truth for unit prices.
 
 Reference date 2026-08-15. The Seedance side was verified by opening the official BytePlus
-ModelArk docs directly, with the write-up in `docs/api-reference/seedance.html`.
+ModelArk docs directly, with the write-up in [Seedance API notes](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/api-reference/seedance.html).
 
 ---
 
@@ -547,7 +547,7 @@ Check the [ModelArk contract and examples](../../../docs/research/2026-11-22-see
 ## Prompt grammar — Seedance
 
 This is what comes after engine selection. The evidence is the vendor's official docs, with the
-[camera technique research](../../../docs/research/2026-08-15-ai-video-camera-technique/index.html)
+[camera technique research](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-08-15-ai-video-camera-technique/index.html)
 and a 2026-08-25 delta check against the moved official docs.
 
 | | Seedance |
@@ -680,7 +680,7 @@ cut**. Which technique a shot should use — the size, the angle, the move, the 
 sound that serve what the audience should feel there — is owned by
 `../../storyboard/references/directing-grammar.md` (feel → technique); the field contract is
 `../../storyboard/references/scenes-schema.md`. The evidence behind this section is the
-[camera technique research](../../../docs/research/2026-08-15-ai-video-camera-technique/index.html).
+[camera technique research](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-08-15-ai-video-camera-technique/index.html).
 
 **The English column is the pipeline's slot vocabulary** — the words `visual.camera` and
 directing-grammar write into every English prompt. The Seedance column is that vendor's own

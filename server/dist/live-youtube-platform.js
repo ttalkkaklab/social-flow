@@ -10,7 +10,7 @@ export function createYoutubePlatform(options, openApi = youtubeApi) {
     if (!channelId)
         throw Error('Set youtubeChannelId before connecting');
     const receiptFile = join(out, 'youtube.json');
-    let receipt = { channelId, marker: randomUUID() };
+    let receipt = { channelId, marker: randomUUID(), topic: config.topic };
     const save = () => saveLiveReceipt(receiptFile, receipt);
     let client;
     const connect = () => client ??= openApi(config.youtubeCredentialChannel ?? config.channel);
@@ -39,6 +39,8 @@ export function createYoutubePlatform(options, openApi = youtubeApi) {
         });
         if (!closed)
             throw Error('The prior encoder has not confirmed an unstarted shutdown');
+        if (receipt.topic)
+            config.topic = receipt.topic;
     }
     async function recover(action) {
         receipt = readOwned(out);

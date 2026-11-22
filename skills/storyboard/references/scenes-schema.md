@@ -1041,7 +1041,7 @@ shot: {
   cinematic-miniature branch in CLAUDE.md). What no mode relaxes is the no-marks rule: nothing
   is drawn over a moving picture, in any ratio and any style. When a thing is the subject the
   slide carries a rendered object (`slide.object`); the bar is
-  `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`. If one shot needs two
+  `skills/storyboard/examples/reference-slide.html`. If one shot needs two
   types, split the shot; one authored frame carries one visual argument.
 - **`share` is what the viewer would forward.** One sentence, figure or verdict they can pass
   on as-is, written the way `info` is written — the words themselves, not a description of
@@ -1632,7 +1632,7 @@ as `quote` when it's a character asking a question. Either way, write `beat: "ho
   6-second hook and YouTube's 30-second Intro. Revisit with average watch time and retention
   across 3 baseline long-form episodes.
 - **The four things it does** — this is where the sources overlap (evidence:
-  [hooking research](../../../docs/research/2026-08-18-hooking-beat/)).
+  [hooking research](https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-08-18-hooking-beat)).
   1. **Catch** — continue the same subject and the same promise the cover threw. Don't drift to
      material the cover never had. This is the definition of the YouTube Intro metric — did the
      first 30 seconds match the thumbnail and title's promise.
@@ -2578,7 +2578,7 @@ is refused on a 9:16 board** — that license is licensed for long-form only.
 **Placing cues on a story board (craft, 2026-10-31).** Film scoring gives each unit its own job:
 the episode and the sequence carry the theme and the arc, a beat inside a scene decides where a
 cue starts and stops, and the shot is where an accent lands. The sources are practitioner guides
-and glossaries ([research](../../../docs/research/2026-10-31-bgm-cue-units/index.html)), so read
+and glossaries ([research](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-10-31-bgm-cue-units/index.html)), so read
 these as working practice, as in bgm-scoring §3. On a story-v2 board:
 
 - **On a board the story tools started, `story_music` records the decision.** Every scene gets
@@ -3058,7 +3058,7 @@ Some cuts are better real than generated: the street as it was in 1961, a rocket
 leaving the pad, a market at dawn that exists. Free stock sites and public archives hold that
 footage under licenses that allow a monetized, edited cut, and a supplied file costs nothing
 to generate. The sources, their terms and the traps are surveyed in
-[docs/research/2026-09-07-free-stock-sources](../../../docs/research/2026-09-07-free-stock-sources/index.html);
+[stock media sources](../../../docs/stock-media.md);
 `stock_search` covers Pexels, Pixabay, the NASA library and Wikimedia Commons and returns the
 license record below with every item. Korean public material (공공누리 제1유형 on e뮤지엄,
 e영상역사관, 포토코리아; 공유마당's expired and donated works) is found by hand from that survey
@@ -3312,7 +3312,7 @@ Three information types have to be drawn, and there is one route: **the editoria
 the studio stage** (user directive 2026-09-05 — nothing is drawn over video; CLAUDE.md
 §Nothing is drawn over video). The stated value is CSS type that counts while its sentence
 runs; a thing is a rendered object (`slide.object`, §9 of slide-design.md); the bar is
-`docs/research/2026-09-04-rendered-object-slide/reference-slide.html`. These slides sit outside
+`skills/storyboard/examples/reference-slide.html`. These slides sit outside
 `htmlPlateMax`, and because every group declares a movement the static-ground clock runs per
 group. `check-scenes.js` reports another visual on these types, `check-slide.js --require-all`
 fails a missing HTML file, and `render-motion-slide.mjs` stops on a declared movement that is
@@ -3381,7 +3381,7 @@ What replaces it:
   studio stage (§Motion diagram treatments · slide-design.md §1 · §9), with a rendered object
   (`slide.object`) when a thing is the subject. The value is CSS type that counts while the
   sentence runs; the thing is a baked render whose movement is the sentence. The quality bar is
-  `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`.
+  `skills/storyboard/examples/reference-slide.html`.
 - **An event, a place, an action** is a motion background (`visual.video`) or a b-roll clip —
   the generated picture alone. No mark, no label, no callout, no matte, no subtitle.
 
@@ -3395,7 +3395,7 @@ as history and are not called by the flow; `footage-lane.md`, `footage-frames.sh
 For a passage that **states a value** — a count, a comparison, a share, steps that arrive
 one per sentence — the number counts up, the bar reaches its mark, the step enters, **at the
 moment the sentence about it starts**. The research behind the lane
-(`docs/research/2026-08-29-motion-slide-lane/`): animation raises attention and engagement
+([motion slide lane study](https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-08-29-motion-slide-lane)): animation raises attention and engagement
 and leaves comprehension unharmed only when the movement carries the value; decorative
 motion costs comprehension. So the lane is deliberately narrow — beats, not ambience.
 

@@ -124,7 +124,7 @@ seedance.2-0-mini-video.720p	second	0.045	derived	dreamina-seedance-2-0-mini-260
 # at the measured Korean speech rate of 6.55 chars/s and fold the result back to a per-1,000-char price.
 tts.local	1000 chars	0.000	official	Supertonic local — no network, no key. Electricity only
 tts.mlx	1000 chars	0.000	official	mlx_tts_generate — MLX Core / mlx-serve on-device. Quantity is input chars ÷ 1000. Electricity only
-tts.gemini-flash	1000 chars	0.038	derived	$38/1M chars (docs/research/2026-08-11-local-tts-and-commercial-api)
+tts.gemini-flash	1000 chars	0.038	derived	$38/1M chars (1eabc4fb:docs/research/2026-08-11-local-tts-and-commercial-api)
 tts.gemini-pro	1000 chars	0.076	derived	$76/1M chars — fallback when flash refuses
 tts.gemini-3.1-flash	1000 chars	?	unconfirmed	gemini-3.1-flash-tts-preview — no sourced price in this repo; billed as its own row, not as 2.5 flash
 tts.gemini-3.8-flash	1000 chars	?	unconfirmed	tts_gemini_38 gemini-3.8-flash-tts — no sourced price in this repo; the call's provider-usage receipt holds the reported usage
@@ -168,6 +168,7 @@ music.mlx	second	0.000	official	mlx_music_generate — MLX Core / mlx-serve on-d
 
 # ── Local video / 3D (MLX Core) ──────────────────────────────────
 # Same $0 ledger pattern as image.local — a missing key kills the report with exit 1.
+video.ltx-desktop-local	second	0.000	official	Direct LTX Desktop local queue on the plugin host.
 video.mlx	second	0.000	official	mlx_video_generate — MLX Core on-device. Quantity is numFrames / 24 (LTX is 24 fps)
 3d.mlx	mesh	0.000	official	mlx_3d_generate — MLX Core on-device. Pipeline has no GLB consumer; still logged so the tally is complete
 
@@ -179,7 +180,7 @@ video.astra	second	0.000	derived	Our own LTX-2.5 box (astra_* · ASTRA_VIDEO) ru
 video.astra-genai	second	?	unconfirmed	astra_genai_* video (LTX v2 · MSR) through the ASTRA GenAI gateway — no published per-second price; the managed reservation (reserveUsd) is the only budget figure (checked 2026-10-31)
 
 # Hosted video vendors through vendor-video.ts — official list prices checked 2026-11-18
-# (docs/research/2026-11-18-video-model-api-schemas). LTX audio-to-video bills input audio seconds.
+# (1eabc4fb:docs/research/2026-11-18-video-model-api-schemas). LTX audio-to-video bills input audio seconds.
 ltx-api.ltx-2-5-pro.720p	second	0.12	official	LTX API ltx-2-5-pro 720p — T2V/I2V/A2V same rate
 ltx-api.ltx-2-5-pro.1080p	second	0.17	official	LTX API ltx-2-5-pro 1080p
 ltx-api.ltx-2-5-pro.1440p	second	0.25	official	LTX API ltx-2-5-pro 1440p

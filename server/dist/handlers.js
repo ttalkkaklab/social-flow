@@ -63,6 +63,7 @@ import { renderCapabilityStatus } from './capability-status.js';
 import { DURATION_TOOLS, resolveVideoDuration } from './video-duration.js';
 import { manageCharacter } from './character-manage.js';
 import { characterPanelRequest, characterPanelSchema, recordCharacterPanel } from './character-panel.js';
+import { localDesktopCatalog } from './ltx-desktop-local.js';
 function seedancePreflightError(report) {
     return { isError: true, terminal: true, structuredContent: report, content: [{ type: 'text', text: JSON.stringify(report) }] };
 }
@@ -1606,7 +1607,10 @@ export const dispatchVideo = (name, args) => videoDispatch[name](args);
 for (const name of Object.keys(VIDEO_ADAPTERS)) {
     ROUTES[name] = args => routeLegacyVideo(name, args, dispatchVideo);
 }
-ROUTES.video_catalog = async () => text(JSON.stringify(videoCatalog(), null, 2));
+ROUTES.video_catalog = async (args) => {
+    const { engine } = z.object({ engine: z.literal('ltx-desktop-local').optional() }).strict().parse(args ?? {});
+    return text(JSON.stringify(engine ? await localDesktopCatalog() : videoCatalog(), null, 2));
+};
 ROUTES.video_plan = async (args) => {
     const input = videoPlanSchema.parse(args);
     try {

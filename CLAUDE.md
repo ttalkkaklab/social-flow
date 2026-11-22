@@ -2,13 +2,21 @@
 
 Channel-based short-form/long-form content pipeline Claude Code plugin.
 
+## Contribution language (user directive, 2026-11-22)
+
+Use English for repository contributions and GitHub communication, including
+documentation, code comments, commit messages, issue and discussion posts, pull
+request titles and descriptions, reviews, and replies. Follow
+[the contributor style guide](CONTRIBUTING.md#style) for language-specific materials.
+Use the user's language in direct conversations with them.
+
 ## Character live start (owner directive, 2026-11-22)
 
-Before broadcasting, ask whether to start when the spoken opening, first topic segment and ten moving standby clips are ready, show a local preview first,
+Before broadcasting, ask whether to start when the spoken opening, first topic segment, two spoken welcomes and ten moving standby clips are ready, show a local preview first,
 or cancel. Honor the answer for that session. Use a calm fixed shot. Send the host portrait, selected voice sample and exact dialogue
 to GenAI image-to-video with MSR conditioning. Play the generated voice and picture together at 720×1280. Do not offer an upscale, a dance
 loop or a separate mouth composite. A user who asks for the watch link while generation is running
-gets the reserved unlisted room and its actual status. Generate 3–5 second listening clips for the broadcast concept on the production GPU. Anchor both ends to the same shot. Shuffle the standby pool and avoid a repeat across shuffles. Interrupt standby on the first frame with ready speech. Play an on-air utterance through its last sample. Generate the next segment during playout from the current line, recent answers and real chat. Start selected viewer answers ahead of speculative host renders. Replace held standby shots before ingest. See [Character LIVE](skills/live-character/SKILL.md).
+gets the reserved unlisted room and its actual status. Generate 3–5 second listening clips for the broadcast concept on the production GPU. Anchor both ends to the same shot. Shuffle the standby pool and avoid a repeat across shuffles. Interrupt standby on the first frame with ready speech. Play an on-air utterance through its last sample. Generate the next segment during playout from the current line, recent answers and real chat. Use the reserved topic in the opening and invite viewers to comment. While the room is live, rotate welcomes suitable for everyone and self-contained host lines while new videos render. Give ready viewer answers the next sentence boundary. Limit concurrent video requests with `maxConcurrentVideos` (default 3), prioritize viewer jobs and drop stale host results when the conversation changes. Replace held standby shots before ingest. See [Character LIVE](skills/live-character/SKILL.md).
 
 ## Local GenAI routing (owner directive, 2026-11-07)
 
@@ -111,7 +119,7 @@ viewer's doubt and the proof scene. Once the shots before it have lengths, every
 prints when the first spoken line starts, and for a natively voiced line the silence its
 shot's stored length holds. This reports and never refuses. It is writing guidance, not a score, a problem-beat requirement or a deadline for
 the proof: on the one channel studied the earliest proof had the fewest views. Evidence and
-its limits: `docs/research/2026-11-18-promise-and-proof/README.md`.
+its limits: [promise and proof study](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-18-promise-and-proof/README.md).
 
 ## Opening by format and platform (user directive, 2026-11-18)
 
@@ -128,7 +136,7 @@ question (YouTube's Intro reads who is still watching at 30 s). The synopsis giv
 its own paragraph, `story_sequence` records it as `STORY.opening`, and every story-first board
 write prints a reading of it against the format and platforms. This reports and never refuses;
 it is writing guidance, not a score. Follow `skills/storyboard/references/opening-by-format.md`.
-Evidence and its limits: `docs/research/2026-11-18-opening-hooks/`.
+Evidence and its limits: [opening hooks study](https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-18-opening-hooks).
 
 ## Dramatic pressure and payoff (user directive, 2026-11-20)
 
@@ -140,8 +148,8 @@ Apply the devices in the synopsis and in observable setup, choices and outcomes 
 and shots. Respect the requested tone, established canon and factual evidence. Claim-led
 and quiet work can use the uncertainty, proof or discovery already present. This pass uses
 the existing story fields and does not add a write gate. Research:
-[pressure cases](docs/research/2026-11-20-story-intensity/README.md) and
-[payoff cases](docs/research/2026-11-20-story-catharsis/README.md).
+[pressure cases](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-20-story-intensity/README.md) and
+[payoff cases](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-20-story-catharsis/README.md).
 
 ## Clichés as story material (user directive, 2026-11-18)
 
@@ -170,7 +178,7 @@ mode and is reported (`cliche_mode_changed`). A use a hand edit put in the story
 user's pick is reported as `cliche_unpicked`.
 This is writing guidance, not a score, a quota or an approval pause, and a cliché's name never
 answers `necessity`. Follow `skills/storyboard/references/cliche-use.md`. Evidence and its
-limits: `docs/research/2026-11-18-kdrama-cliches/`.
+limits: [K-drama cliché survey](https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-18-kdrama-cliches).
 
 ## Scene sound and audience effects (user directive, 2026-11-21)
 
@@ -317,7 +325,7 @@ only. A sheet without a count reads `head_count_missing` in `character_manage`
 (`missing.headCount` and the sheet warnings), `character_panel` and `shot_image`. Each of these reports; none refuses.
 The shape words come from twelve rows by head count, geometry only with no age or style label:
 the rows at 1.5–2, 3, 7.5 and 8 heads follow the pages read, the rest are ours. Whether the
-sentence moves Qwen or any saved model is not measured. Evidence and limits: `docs/research/2026-11-21-head-body-proportion/README.md`.
+sentence moves Qwen or any saved model is not measured. Evidence and limits: [character proportion study](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-21-head-body-proportion/README.md).
 
 ## Silence around native lines (user directive, 2026-11-16)
 
@@ -524,11 +532,9 @@ family. Wrapping a phenomenon up in a single verb is narration-style prose — a
 Name the subject and write concretely instead — "근거를 남긴다" → "근거를 적어 둔다",
 "추천이 갈린다" → "미용실마다 다른 색을 권한다", "둘로 나뉜다" → "두 갈래다".
 
-**The scope isn't just content copy** — skill docs, code comments, tool descriptions,
-published HTML, commit messages, user responses, all of it. `check-style.py` flags D8
-as an S1 finding on content copy; S1 findings are suggestions, never execution gates
-(2026-10-18). **No checker runs on docs and comments**, so the writer has to hold the
-line. Run this scan when writing or editing a doc:
+Apply D8 wherever this project calls for authored Korean prose, including content
+copy and replies to users. `check-style.py` flags D8 as an S1 finding on content copy.
+S1 findings are suggestions (2026-10-18). Run this scan when writing or editing a doc:
 
 ```bash
 python3 - <<'PY'
@@ -613,7 +619,7 @@ This is an absolute content rule: no marks and no type of any kind over a moving
   `shot.infoType` timeline · statistic · principle, and any beat that would need something
   pointed at on the picture, are `kind:"diagram", motion:true, treatment:"editorial"` on the
   studio stage, with a rendered object when a thing is the subject. The quality bar is
-  `docs/research/2026-09-04-rendered-object-slide/reference-slide.html` — lit slabs, a
+  `skills/storyboard/examples/reference-slide.html` — lit slabs, a
   cyclorama, a baked object whose movement is the sentence, one accent, values that count
   while the sentence runs. Those slides sit outside `html_plate_max`, and the static-ground
   clock runs per reveal group on them.
@@ -820,7 +826,7 @@ regressions and the tool-surface contract.
 - **Readable over DRY.** Inputs that decide the result stay in the test body. Shared
   setup is a factory with defaults, not a `beforeEach` that hides them.
 
-Background and sources: `docs/research/2026-10-18-test-class-practices/README.md`.
+Background and sources: [test design references](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-10-18-test-class-practices/README.md).
 
 ## GitHub authentication
 

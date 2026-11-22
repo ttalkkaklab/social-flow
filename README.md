@@ -1,10 +1,38 @@
+# social-flow
+
+Turn a story into a storyboard, a finished video, and a post you approve. social-flow is a Claude Code plugin built by Zeans at [Ttalkkak Lab](https://github.com/ttalkkaklab).
+
+[<img src="https://i.ytimg.com/vi/cO9SNY7vQRs/mqdefault.jpg" width="320" height="180" alt="Watch Mochi &amp; Bơ, episode 12 on YouTube">](https://www.youtube.com/shorts/cO9SNY7vQRs)
+
+[Watch Mochi & Bơ, episode 12](https://www.youtube.com/shorts/cO9SNY7vQRs) · A Vietnamese-language short made with social-flow. At a café across from the exam hall, Mochi is about to introduce her sister when Bơ asks to break up.
+
+## Quickstart
+
+With Claude Code and Node.js 20 or newer installed, run these in your terminal:
+
+```sh
+claude plugin marketplace add ttalkkaklab/social-flow
+claude plugin install social-flow@social-flow
+claude
+```
+
+In the new session, try `/social-flow:platform-guide What frame size should I use for YouTube Shorts?` This reads the bundled guide. To make an episode, start with `/social-flow:project-init` in your project directory.
+
+**Want to contribute?** [Pick a good first issue](https://github.com/ttalkkaklab/social-flow/contribute) or [reproduce a provider timeout locally](https://ttalkkaklab.github.io/social-flow/guides/image-request-recovery/). The timeout example runs with zero provider keys.
+
+[User manual](docs/README.md) · [Browser edition](https://ttalkkaklab.github.io/social-flow/) · [Other install options](#install) · [Contributing](CONTRIBUTING.md) · [Apache 2.0](LICENSE) · [CI](https://github.com/ttalkkaklab/social-flow/actions/workflows/check.yml)
+
+## How production works
+
+<details>
+<summary>Production order, shot direction and model settings</summary>
+
 Production follows this order: **project setup → characters (text + images) → story →
 each shot's characters and lines → icon attributes → props and backgrounds (text + images)
 → each shot's start (and end) image → video prompt → each shot's video after the user's
 approval**. Only the story order is enforced (user directive, 2026-10-31); reviews and
 Blender compositions run on request. See [the production order](skills/_shared/production-workflow.md).
 
-# social-flow
 
 [Content-led opening views](skills/storyboard/references/shot-view.md) connect the story's
 visible evidence to `shot_icons view`, the Blender camera and the image/video prompt. Explicit
@@ -41,7 +69,7 @@ roles do not acquire compulsory subplots or character arcs.
 viewer wants the next scene: the question each stretch holds open, the order of telling, who
 knows more, pressure that changes and how scenes and serial episodes end. It reuses
 `sequence.question`/`payoff` and `scene.turn`/`charge`/`out`, adds no gate, and grades each
-claim by its evidence ([survey](docs/research/2026-11-11-story-engagement-craft/index.html)).
+claim by its evidence ([survey](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-11-story-engagement-craft/index.html)).
 The reviewer's interest rubric is an on-request read. The
 [episode anticipation pass](skills/storyboard/references/episode-anticipation.md) runs during
 every new or substantially revised synopsis and storyboard: concrete promise, evolving
@@ -55,13 +83,13 @@ for the board's format and enabled platforms: one short-form opening built for t
 window (Reels, 3 s), or on long-form the title and thumbnail first and a first 30 s that
 confirms and widens them. `story_sequence` records it as `STORY.opening`, and every story-first
 board write prints a reading of it without refusing anything
-([research](docs/research/2026-11-18-opening-hooks/index.html)).
+([research](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-18-opening-hooks/index.html)).
 [Story intensity](skills/story-intensity/SKILL.md) uses ten researched kinds of pressure
 to plan how choices become harder. [Story catharsis](skills/story-catharsis/SKILL.md) uses
 fifteen ways to pay off a specific frustration. Storyboard applies both while writing
 story-led synopses and boards. Show the pressure, choice and consequence in the actual scenes.
-See the [130 pressure cases](docs/research/2026-11-20-story-intensity/README.md) and
-[111 payoff cases](docs/research/2026-11-20-story-catharsis/README.md).
+See the [130 pressure cases](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-20-story-intensity/README.md) and
+[111 payoff cases](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-20-story-catharsis/README.md).
 
 [Cliché use](skills/storyboard/references/cliche-use.md) makes researched clichés story material.
 A drama, comedy or romance episode names what its story is missing, takes a few candidates for
@@ -69,13 +97,13 @@ that need from `skills/storyboard/references/cliches.js pick`, moves one propert
 keeps and records the choice with `story_cliche`; every other type gets a recommendation and
 applies only what the user picks. The review page shows the record above the shots and on each
 scene, and none of it scores or blocks
-([research](docs/research/2026-11-18-kdrama-cliches/index.html)).
+([research](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-18-kdrama-cliches/index.html)).
 For an episode that makes a claim (explainer, tutorial, review, advertisement) the same pass
 asks for one result promised in the viewer's words and said aloud, proof the viewer can check
 on screen and an ending where someone uses it. `sequence.question`/`payoff` hold the doubt and
 the proof scene, and once the shots before it have lengths every board write prints when the
 first spoken line starts
-([study and limits](docs/research/2026-11-18-promise-and-proof/README.md)).
+([study and limits](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-18-promise-and-proof/README.md)).
 
 [Material research](skills/storyboard/references/story-material-research.md) now precedes
 new story selection: read existing case collections, verify consequential decisions and
@@ -96,7 +124,7 @@ description and picture: the author looks up the real document or object, saves 
 pictures of actual examples, records `research` on the prop sheet and draws the prop from
 them. Board writes, `shot_image` and the review page report a prop drawn from imagination.
 
-The [filmmaking guide](docs/guides/ai-film-four-elements/index.html) explains character references, camera direction, framing and shot timing. `storyboard_read` exposes the shared 45-entry technique catalogue; `shot.techniques` stores stable IDs with shot-specific reasons. The offline storyboard exports the same catalogue, with a distinct pictogram and explanation for every entry. Camera instructions reach the generic, speech-planning and ASTRA prompt paths. See [technique selection](skills/storyboard/references/film-techniques.md).
+The [filmmaking reference](skills/storyboard/references/film-techniques.md) describes camera direction, framing and shot timing. `storyboard_read` exposes the shared 45-entry technique catalogue; `shot.techniques` stores stable IDs with shot-specific reasons. The offline storyboard exports the same catalogue, with a distinct pictogram and explanation for every entry. Camera instructions reach the generic, speech-planning and ASTRA prompt paths.
 
 Character video requests now compile [voice continuity](skills/produce/references/voice-continuity.md)
 from pinned cast settings. `video_plan` maps Seedance samples to their actual audio
@@ -195,13 +223,7 @@ episode snapshots its settings in `.work/model-settings.json`, so a later defaul
 change does not alter an episode already in progress. An unavailable model is
 reported instead of silently replaced. See [directory model settings](skills/_shared/model-settings.md).
 
-[![check](https://github.com/ttalkkaklab/social-flow/actions/workflows/check.yml/badge.svg)](https://github.com/ttalkkaklab/social-flow/actions/workflows/check.yml)
-[![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-&nbsp;·&nbsp; Docs: [English](docs/index.en.html) · [한국어](docs/index.html)
-
-A Claude Code plugin that runs a channel-based short-form/long-form content pipeline —
-**storyboard (plan only — nothing is generated) → per-platform video & text production →
-HITL-approved publishing** — over a `data/[channel]/episodes/[topic]/` directory tree.
+</details>
 
 A **channel** is one content brand you operate: one `data/` directory per channel, with
 tone, theme and pinned character voice IDs in `profile.md`, and publish targets, genre, models, visual style, video
@@ -280,7 +302,7 @@ cut that needs an arrow, a figure or a principle is an HTML slide on a lit studi
 with a real 3D object when a thing is the subject. The offline mesh lane renders GLB models
 and articulated parts at every frame, with 3D illustration or photoreal materials and refined
 curved arrows ([object authoring](skills/storyboard/references/mesh-objects.md)), held to the quality of
-`docs/research/2026-09-04-rendered-object-slide/reference-slide.html`. Generated video is
+`skills/storyboard/examples/reference-slide.html`. Generated video is
 reserved for essential continuous action, with no subtitles burned into the picture. **Every cut is chosen by purpose** (user directive 2026-09-06):
 the storyboard reads the narration first and writes `shot.render` — a still under a camera
 move, a 3D character scene, a 3D object scene, a data graph, or generated video — with the
@@ -515,8 +537,7 @@ never 0.
 
 Full detail — per-capability setup for both lanes, every key's signup and billing
 steps, the on-device installs, worked cost arithmetic, and how the caps work:
-**[Costs & API keys](docs/guides/costs-and-keys/index.html)**
-([English](docs/guides/costs-and-keys/index.en.html)).
+**[Configuration and costs](docs/configuration.md)**.
 
 ## Install
 
@@ -722,7 +743,7 @@ an information post takes 13), drops "1–3 lines" for "is it read to the last l
 adds the hook-plus-own-replies chain — one short post with the substance in self-replies,
 which `threads_publish`'s `replyToId` already supports. The growth loop reviews a chain as
 one draft and replies to its own post after publishing. See
-[the research](docs/research/2026-09-19-threads-post-styles/README.md).
+[the research](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-09-19-threads-post-styles/README.md).
 
 **Style check** — wherever Korean text is produced (storyboard authoring, produce
 right before TTS and per-platform copy, publish right before approval,
@@ -788,10 +809,10 @@ social-flow/
 ├── mcp.json                     #   its stdio server entry
 ├── manifest.json                # Claude Desktop extension (.mcpb) manifest — .mcpbignore picks the contents
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 165 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 168 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
-│       ├── tools.ts             # tool definitions — 165 tools, including voice auditions and opt-in acting review
+│       ├── tools.ts             # tool definitions — 168 tools, including voice auditions and opt-in acting review
 │       ├── handlers.ts          # zod validation + routing
 │       ├── sns-client.ts        # Threads·IG·FB·YouTube publish/comments
 │       ├── serp-client.ts       # SerpApi (key masking + response slimming)
@@ -866,7 +887,9 @@ visual style, video ratio and format live in the workspace's `.social-flow/model
 each episode snapshots them in `.work/model-settings.json`, and `profile.md` keeps the
 channel's tone, theme and pinned character voice IDs (the speech model itself is the saved `models.speech`).
 
-## MCP tool surface (165 tools)
+<a id="mcp-tools"></a>
+
+## MCP tool surface (168 tools)
 
 `project_manage`: options · status · init · update · episode. Local project setup
 with genre, models, style, ratio, format and SNS records; no generation or publishing.
@@ -890,7 +913,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Research | `sns_issue_scout` | SerpApi Google search with `site:threads.com` · `site:x.com` · `site:instagram.com`, collecting recent posts and counting topic phrases that recur across posts and platforms (+ Google trending searches). **A mention list with no engagement counts** — don't mix it into the same table as YouTube multipliers. Threads keyword search only returns your own posts before advanced access, and the Instagram Login API has no public search, so this is the only no-account path that sees all three at once |
 | Research | `naver_search` | Naver Open API (25,000 calls/day free — first choice for Korean). 8 types: news·blog·web·cafe·kin (Knowledge-iN)·image·encyc·local |
 | Research | `serp_web_search` / `serp_news_search` / `serp_naver_search` / `serp_image_search` / `serp_trending_now` | SerpApi (250 free/month — precision + international). naver takes where=web·news·image·video + a period filter, image takes license/size/aspect filters, trending_now returns per-country Google trending searches (4/24/48/168-hour windows, approximate volume and growth) |
-| Research | `stock_search` | Free stock photos and clips — Pexels · Pixabay (`PEXELS_API_KEY` / `PIXABAY_API_KEY`) · NASA Image and Video Library · Wikimedia Commons (no key). Every item returns the `visual.license` block a `visual.source: "stock"` cut stores; Commons is filtered to public domain, CC0 and CC BY. The survey behind it, with license quotes and the Korean public-domain sources: [free stock sources](docs/research/2026-09-07-free-stock-sources/index.html) (Korean) |
+| Research | `stock_search` | Free stock photos and clips — Pexels · Pixabay (`PEXELS_API_KEY` / `PIXABAY_API_KEY`) · NASA Image and Video Library · Wikimedia Commons (no key). Every item returns the `visual.license` block a `visual.source: "stock"` cut stores; Commons is filtered to public domain, CC0 and CC BY. [Stock sources and attribution](docs/stock-media.md) |
 | Open data | `datago_search` / `datago_detail` / `datago_file_download` | data.go.kr (no auth — search·detail·raw file) |
 | Open data | `datago_file_fetch` / `datago_api_call` | odcloud · apis.data.go.kr (auth key + **per-API usage application** required) |
 | Image routing | `image_catalog` / `image_plan` / `image_execute` / `image_status` | Saved image selection, model-specific capability checks, atomic cost reservations, duplicate protection and measured output receipts. [Routing contract](skills/_shared/image-routing.md). Host execution stays external. |
@@ -903,7 +926,8 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Video generation | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Dreamina Seedance 2.x (ARK_API_KEY, BytePlus ModelArk — 2.5 and 2.5 Flash up to 30s, 2.0 up to 15s, minimum 4s; standard 2.5 and 2.0 reach 4K, Flash reaches 720p, 7 aspect ratios, up to 30 reference images plus reference audio — a character's fixed voice (`referenceAudioPaths`) — plus reference video (`referenceVideoPaths`): an optional 3D previz as `Video 1`, the vendor's clay-model reference — a generated cut may pre-render in Blender or three.js first (user directive 2026-09-11, optional since 2026-10-18), so the camera path and timing land as planned; a local clip is served through `MEDIA_UPLOAD_URL` or a cloudflared quick tunnel for the life of the task. On 2.5 and Flash the reference route also accepts edit or extend. Audio can be turned off. Seedance 2.x rejects real human faces, so photoreal real-person sources go to an LTX lane. Every generated cut uses the saved video model and resolution (`PRODUCTION.videoModel`, from `.social-flow/models.json`); a per-cut change is an explicit user exception in `PRODUCTION.modelSettings.overrides`. The storyboard forecasts that model's cost. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
 | Video references | `fasth3_omni_reference` | FastH3 Omni via MLX-Serve: image/video/audio references, eight steps, video with sound. [Setup and adapter contract](docs/fasth3-omni.md) |
 | Google Cloud Veo | `veo_text2video` / `veo_img2video` / `veo_reference` / `veo_extend` | Veo 3.1 Standard, Fast and Lite in us-central1. Supports native scene sound and external narration. [Model setup and examples](skills/_shared/video-routing.md#ltx-and-google-cloud-veo). |
-| Hosted video vendors | `ltx_api_img2video` / `ltx_api_audio2video` / `minimax_img2video` / `minimax_reference` / `heygen_img2video` / `heygen_reference` | One common layer (`vendor-video.ts`: one paid submit, a durable job ID, polling, download) with an adapter per vendor. Save `{engine:"ltx-api"\|"minimax"\|"heygen", model, resolution, operation}` and episodes plan with `video_plan` as usual: silent shots take the image lane, spoken shots the `reference` lane (MiniMax H3, HeyGen Video 1: the cast's panels, the start image as the last picture and the speaker's voice sample) or LTX audio-to-video (the pinned TTS track). Neither MiniMax nor HeyGen can pin a first frame beside voice samples. Keys: `LTX_API_KEY`, `MINIMAX_API_KEY`, `HEYGEN_API_KEY`. [API schemas](docs/research/2026-11-18-video-model-api-schemas/README.md) |
+| Local LTX Desktop | `ltx_desktop_text2video` / `ltx_desktop_img2video` / `ltx_desktop_audio2video` | Select `ltx-desktop-local` for the machine running the plugin. Query `video_catalog {engine:"ltx-desktop-local"}` for downloaded models, then use the normal episode video workflow. [Setup](skills/_shared/model-settings.md#first-setup-video-type-then-media-models) |
+| Hosted video vendors | `ltx_api_img2video` / `ltx_api_audio2video` / `minimax_img2video` / `minimax_reference` / `heygen_img2video` / `heygen_reference` | One common layer (`vendor-video.ts`: one paid submit, a durable job ID, polling, download) with an adapter per vendor. Save `{engine:"ltx-api"\|"minimax"\|"heygen", model, resolution, operation}` and episodes plan with `video_plan` as usual: silent shots take the image lane, spoken shots the `reference` lane (MiniMax H3, HeyGen Video 1: the cast's panels, the start image as the last picture and the speaker's voice sample) or LTX audio-to-video (the pinned TTS track). Neither MiniMax nor HeyGen can pin a first frame beside voice samples. Keys: `LTX_API_KEY`, `MINIMAX_API_KEY`, `HEYGEN_API_KEY`. [API schemas](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-18-video-model-api-schemas/README.md) |
 | Video generation | `ltx_video_generate` | MLX Core / mlx-serve (24fps rgb8 muxed to mp4 with ffmpeg. Default 768×1280, RAM-capped at 800MB decoded RGB. Not the default path and not on the Seedance face-policy table. Pack install, request grid and measured render times: [LTX 2.5 runbook](docs/mlx-ltx-2.5.md)) |
 | Video generation | `astra_text2video` / `astra_img2video` / `astra_keyframe_video` / `astra_audio2video` / `astra_ic_lora` / `astra_video_upscale` / `astra_video_retake` | ASTRA video API (`ASTRA_VIDEO`, self-hosted LTX-2.5 — **our own box, so no per-call bill and no vendor policy**, but it renders ONE job at a time: 66–184s each plus queue, which makes it the batch lane rather than the interactive one. Seven tools over the server modes; `tier` picks generate·guided·guided_fast·guided_hq, and `astra_ic_lora` runs one reference still or clip through an IC-LoRA adapter (adapters, `guidance`, `conditioning_mask`, `skip_stage_2`, `{name, strength}` lora entries and `generateAudio` are live since the 2026-10-17 server change). The only lane with `lora` adapters (`cinemagraph` · `slow-motion`, generate only), with a keyframe mode that passes through 2–8 supplied stills at chosen frame indices, and with a retake mode that re-rolls one time span of an existing clip. `astra_video_upscale` doubles a clip through the `pixel-upscaler-x2` adapter, sizing the request from the clip and copying its soundtrack back; it is a generative re-render for sources up to about 512×896 ([upscale-video](skills/upscale-video/SKILL.md)). Length is frames (8k+1, 25–361 on every mode, the server's published ceiling); `duration` in seconds is converted to the nearest 8k+1 by the tool. `astra_video_capabilities` reads the live server's own limits; sizes sit on a 64-pixel grid with a 2,064,384-pixel ceiling, so 9:16 is **1024×1920** — 1088×1920 exceeds the area ceiling at every frame count, and 1080×1920 is off-grid. Clips carry 48kHz stereo AAC; `audio2video` carries the supplied sound re-encoded, rather than a newly generated track. Stereo (2-channel) input is required: mono is refused at upload because it fails in the engine audio encoder. With no duration, numFrames or audioMaxDuration, the client explicitly sends 121 frames (~5.04s) for compatibility because server omission metadata conflicts; `audioMaxDuration: 8` selects 185 frames (~7.71s) at 24fps. `generateAudio: false` strips the sound after generation (same GPU time). `expectLipSync: true` (on-screen speech only) measures with ffmpeg whether the picture moves with the supplied speech and re-renders with a new seed when it does not, up to `maxAttempts` (default 2); it never fails the call and leaves phoneme-level sync, the speaking person and voice identity `not_reviewed`. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
 | Unified ASTRA GenAI | `astra_genai_text2video` / `astra_genai_img2video` / `astra_genai_text2img` / `astra_genai_edit` / `astra_genai_msr` / `astra_genai_audio2video` / `astra_genai_video_status` | Separate `astra-genai` engine and `ASTRA_GENAI_API_KEY` gateway token. LTX v2 text/image video, MSR with up to four subjects plus a background (speech and effects rendered natively; subjects 1–2 take the speaker's pinned voice sample by default when the gateway supports it), and Z-Image text/img2img/inpaint with optional prompt expansion. `astra_genai_audio2video` animates supplied speech: the clip is as long as the audio (up to 361 frames), mono or stereo input at a 7350–96000 Hz AAC standard rate, sent as a data URI of at most 15,000,000 base64 characters or an HTTPS URL. Distilled T2V and plain I2V accept LoRAs from the active backend catalog. I2V and A2V accept up to eight timed images including the endpoints when the gateway advertises them. Managed plans require an explicit cost reservation. [Configuration and recovery](skills/_shared/astra-genai.md). |
@@ -1001,7 +1025,7 @@ Local speech synthesis is removed, including Supertonic and MLX TTS.
   resample sources where required. A mixed-speaker dialogue take still needs a supported
   scene/line binding before it can enter the current single-speaker scene builder.
 - **BGM follows saved `models.music`** through `music_plan → music_execute`.
-  Existing channel audio is reused first. See the [provider research](docs/research/2026-10-18-music-models/README.md)
+  Existing channel audio is reused first. See the [provider research](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-10-18-music-models/README.md)
   for official contracts, Korean support evidence and third-party boundaries.
 - **`tts_multi_speaker` on the flash model often rejects short dialogue scripts**
   (`Model tried to generate text…`). The server does not retry: report the failure, and change
@@ -1030,6 +1054,7 @@ works.
 | `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) | tts_generate · tts_multi_speaker · tts_gemini_38 · music_* | — | Gemini API key (aistudio.google.com/apikey — voice and music generation. ElevenLabs uses its own key) |
 | `GOOGLE_CLOUD_PROJECT` | veo_* | — | Use a project with the Vertex AI API enabled in us-central1. The server uses Application Default Credentials. For local setup, run `gcloud auth application-default login`. |
 | `GOOGLE_APPLICATION_CREDENTIALS` | veo_* | ADC discovery | Optional path to a Google credential configuration on the server machine. A short-lived `GOOGLE_OAUTH_ACCESS_TOKEN` takes precedence when supplied. |
+| `LTX_DESKTOP_API_KEY` / `LTX_DESKTOP_BASE_URL` | ltx_desktop_* | `http://127.0.0.1:41954` | Native Desktop backend bearer and optional loopback origin. |
 | `LTX_API_KEY` | ltx_api_* | — | LTX API bearer key for hosted image-to-video and audio-to-video. |
 | `ARK_API_KEY` | seedance_* | — | BytePlus ModelArk API key (ai.byteplus.com/ark — Dreamina Seedance 2.x video. The models require **an account balance over $30 or a resource pack** to activate. The LTX lanes work without this key) |
 | `SUNO_API_KEY` | suno_* | — | sunoapi.org API key (https://sunoapi.org/api-key — third-party REST, not Gemini and not an official Suno Inc. API). Unset, `music_*(Lyria)` still works |
@@ -1077,77 +1102,11 @@ the entry (or delete the file) to turn the tools back on. A per-tool env overrid
 can turn one JSON-disabled tool back on for that session. Values split on commas
 or whitespace; a bare `*` matches every tool.
 
-## Documentation (docs/)
+## Documentation
 
-Latest image model research: **[Image APIs, local models and production tips](docs/research/2026-10-18-image-models/README.md)** — model-by-model official documentation, pricing, retirement dates, generation/editing examples and differences from the current adapters, checked 2026-10-18 (Korean).
-
-Latest video API research: **[Video model API pricing](docs/research/2026-10-18-video-model-api-pricing/README.md)** — official endpoints, model capabilities, per-second/token rates and reference-input charges, checked 2026-10-18 (Korean).
-
-API schema comparison of LTX-2.5 Pro, MiniMax H3 and HeyGen Video 1: **[Video model API schemas](docs/research/2026-11-18-video-model-api-schemas/README.md)** — endpoints, every request field, reference/voice inputs, pricing and fit with the voice lanes, checked 2026-11-18 (Korean).
-
-Manuals are bilingual — Korean pages with English siblings (`*.en.html`).
-Full index: **[docs/index.html](docs/index.html)** (Korean) ·
-**[docs/index.en.html](docs/index.en.html)** (English).
-
-### API reference (docs/api-reference/)
-
-Side-by-side notes on the official contracts of the 11 external APIs the internal MCP
-server calls, and how this implementation honors (or deliberately narrows) each one.
-
-- **[API reference hub](docs/api-reference/index.html)** — inventory · credential matrix · tool↔API map
-- **[MCP tool spec & best practices](docs/api-reference/mcp-tools.html)** — Tool
-  fields, behavior-hint decision table, 7 authoring principles, quality rubric
-- **[Tool quality audit](docs/api-reference/tool-audit.html)** — scores and fixes for
-  the 31 tools as of 2026-07-29 (tools added since are unaudited)
-- Individual APIs — [Gemini TTS](docs/api-reference/gemini-tts.html) ·
-  [ElevenLabs TTS](docs/api-reference/elevenlabs-tts.html) ·
-  [Seedance](docs/api-reference/seedance.html) ·
-  [Seedance people & asset policy](docs/api-reference/seedance-portrait.html) ·
-  [Lyria](docs/api-reference/gemini-lyria.html) ·
-  [Suno](docs/api-reference/suno.html) ·
-  [OpenAI Images](docs/api-reference/openai-images.html) ·
-  [SerpApi](docs/api-reference/serpapi.html) ·
-  [Naver Search](docs/api-reference/naver-search.html) ·
-  [data.go.kr](docs/api-reference/data-go-kr.html) ·
-  [Meta Graph](docs/api-reference/meta-graph.html) ·
-  [YouTube Data](docs/api-reference/youtube-data.html)
-
-The on-device engines (`image_local_generate` ·
-`stt_local_transcribe` · the five `mlx_*` tools) have no
-external vendor contract to document, so their evidence lives in research notes instead —
-[local image generation](docs/research/2026-08-12-local-image-generation/index.html) ·
-[historical local TTS research](docs/research/2026-08-11-local-tts-and-commercial-api/index.html)
-(Korean).
-
-### Guides (docs/guides/)
-
-- **[Getting started](docs/guides/getting-started/index.html)** — install, API key
-  setup, first channel, first episode.
-- **[Costs & API keys](docs/guides/costs-and-keys/index.html)** — what image, video,
-  TTS, and STT actually cost, the on-device alternatives that cost nothing, setup for
-  both lanes, and how the per-episode cap is enforced.
-- **[Improv recording guide](docs/guides/ingest-usage/index.html)** — screen
-  recording (+voice) → timeline → storyboard → publish, with prep, recording tips,
-  and tuning knobs.
-- **[Shooting script guide](docs/guides/screencast-usage/index.html)** — the
-  storyboard-first shooting flow: filming rules, alignment-drift reports, edit-screen
-  layout, troubleshooting.
-- **[Threads growth best practices](docs/guides/threads-growth/index.html)** —
-  per-post review, the ten ranking predictions, measured post types, reply
-  culture. The commentary edition of grow-threads.
-- **[YouTube Shorts growth best practices](docs/guides/youtube-shorts-growth/index.html)** —
-  the AI-disclosure boundary, the 2027 YPP changes, myths the official docs deny. The
-  commentary edition of grow-youtube.
-- **[Instagram Reels growth best practices](docs/guides/instagram-growth/index.html)** —
-  the two gates of account standing and per-post auditions, what ranking actually
-  predicts, 9 myths that died in verification. The commentary edition of grow-instagram.
-- **[Making short-form video with AI](docs/guides/ai-video-production/index.html)** —
-  where the two video engines diverge, official prompt rules, and how to keep optional subtitle files separate from the video.
-- **[Marketing basics](docs/guides/marketing-basics/index.html)** — the vocabulary a
-  marketing beginner needs first.
-- **[Affiliate video compliance](docs/guides/affiliate-video-compliance/index.html)** —
-  the five gates when promoting Shopping Connect products on YouTube; wording for
-  products you haven't used and AI-character disclosure.
+Follow the [user manual](docs/README.md) from installation through your first episode.
+The [configuration guide](docs/configuration.md) explains provider credentials and spending,
+and [troubleshooting](docs/troubleshooting.md) covers missing tools and interrupted renders.
 
 ## Safety contract (summary)
 

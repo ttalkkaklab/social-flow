@@ -1,1 +1,0 @@
-Keep the catalogue speed on every paced camera default. Use the resolved axis when checking the first shot, declared crossing and carried side. Check the serialized request for each paced technique and the review warnings for inherited and explicit axes.

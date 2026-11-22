@@ -116,7 +116,7 @@ every production mode. The miniature pack is attached only for cinematic-miniatu
 every other preset uses its own treatment and approved character references. In
 full_video use the approved look and world bible; physical subjects need no decorative person.
 
-Measured 2026-08-12 (`docs/research/2026-08-12-local-image-generation`).
+Measured 2026-08-12 ([local image generation study](https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-08-12-local-image-generation)).
 
 | Still | Engine | Price | Why |
 |---|---|---|---|

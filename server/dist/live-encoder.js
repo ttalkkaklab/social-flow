@@ -96,7 +96,7 @@ export function checkLiveRelay() {
     if (check.status !== 0)
         throw Error('Secure live output needs Python 3 and shared FFmpeg libraries (avformat, avutil). Set SOCIAL_FLOW_LIVE_PYTHON to select an interpreter.');
 }
-export async function encode(frames, archive, destinations, seconds, signal, pull, log, motion, drain) {
+export async function encode(frames, archive, destinations, seconds, signal, pull, log, motion, drain, finishedSpeaking) {
     const targets = destinations.map(target => typeof target === 'string' ? { url: target, platform: undefined, allowRtmp: false } : target);
     for (const target of targets)
         splitIngest(target.url, target.allowRtmp);
@@ -223,7 +223,7 @@ export async function encode(frames, archive, destinations, seconds, signal, pul
                 offset = 0;
                 if (active) {
                     motion?.startSpeech();
-                    log('speech_start', { source: active.source, id: active.id, text: active.text, frame });
+                    log('speech_start', { source: active.source, id: active.id, text: active.text, frame, replay: !!active.replay });
                 }
             }
             let pcm = silence;
@@ -236,7 +236,9 @@ export async function encode(frames, archive, destinations, seconds, signal, pul
             video.write(motion ? motion.next(active?.motion) : frames[(blink ? 4 : 0) + mouthLevel(pcm)]);
             if (active && offset >= active.pcm.length) {
                 log('speech_end', { source: active.source, id: active.id, frame, samplesSent: offset / 2, totalSamples: active.pcm.length / 2 });
-                if (active.motion)
+                if (finishedSpeaking)
+                    finishedSpeaking(active);
+                else if (active.motion)
                     motion?.release(active.motion);
                 active = undefined;
             }

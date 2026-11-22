@@ -153,7 +153,7 @@ export function sceneInputCapabilities(tool: string) {
     } } : {}),
     openingImage: Boolean(fields), endingImage: Boolean(fields?.[1]),
     shotDescriptions: ['astra_genai_text2video','astra_genai_img2video'].includes(tool) ? 'gateway_prompt_only' : 'prompt',
-    sceneAudio: ['astra_genai_audio2video','astra_genai_desktop_audio2video','astra_audio2video','ltx_api_audio2video'].includes(tool),
+    sceneAudio: ['astra_genai_audio2video','astra_genai_desktop_audio2video','astra_audio2video','ltx_api_audio2video','ltx_desktop_audio2video'].includes(tool),
   };
 }
 
@@ -195,14 +195,14 @@ export function speechVideoCapabilities(provider: string, model: string, operati
   // The hosted reference lanes speak the prompt's dialogue natively, as MSR does; a pinned sample sets the timbre.
   if (['minimax', 'heygen'].includes(provider) && operation === 'reference') return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: 'Native speech from the prompt dialogue with an optional voice sample; voice identity is imitation, not preserved audio' };
   if (provider === 'astra-genai' && (operation === 'reference' || (operation === 'image' && model === 'ltx-2.5-22b-distilled' && subjectReferences))) return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: 'MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio' };
-  if (operation === 'audio' && (provider === 'astra' || provider === 'astra-genai-desktop' || provider === 'ltx-api' ||
+  if (operation === 'audio' && (provider === 'astra' || provider === 'astra-genai-desktop' || provider === 'ltx-api' || provider === 'ltx-desktop-local' ||
     provider === 'astra-genai' && GENAI_VIDEO_MODELS.some(id => id === model)))
     return { provider, model, audioConditioning: true, lipSync: false, postLipSync: false, evidence: 'The supplied track conditions video generation. Mouth movement and phoneme alignment require output review.' };
   if (provider === 'seedance' && operation === 'reference')
     return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: 'Seedance speaks the authored dialogue with an optional voice reference. The sample guides timbre and does not fix phoneme timing.' };
   if (provider === 'seedance' && Object.hasOwn(seedance.SEEDANCE_MODEL_SPECS, model))
     return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, evidence: 'Reference audio does not promise exact recorded-speech timing; no post-lipsync adapter installed' };
-  if (['host', 'veo', 'mlx', 'astra', 'astra-genai', 'astra-genai-desktop', 'ltx-api', 'minimax', 'heygen'].includes(provider))
+  if (['host', 'veo', 'mlx', 'astra', 'astra-genai', 'astra-genai-desktop', 'ltx-desktop-local', 'ltx-api', 'minimax', 'heygen'].includes(provider))
     return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, evidence: 'No verified external-speech synchronization adapter; voiceover remains available' };
   throw new Error('No verified speech synchronization contract for selected deployment/model');
 }

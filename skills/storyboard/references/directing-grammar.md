@@ -28,7 +28,7 @@ and a "cinematic" choice that doesn't serve the beat is a choice against the epi
 
 **Evidence grades.** Every row carries one of three marks. `[study]` — a peer-reviewed
 measurement, cited in
-[the camera research](../../../docs/research/2026-08-15-ai-video-camera-technique/index.html).
+[the camera research](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-08-15-ai-video-camera-technique/index.html).
 `[course]` — a craft rule from a filmmaking course or a practitioner's guide. `[vendor]` — the
 engine's own documentation. A `[course]` rule is the craft consensus, not a measurement — it
 tells you what most crews do, and it is the right default until a `[study]` row says otherwise.
@@ -573,7 +573,7 @@ rack focus, approach a detail, pull back for context), never from the card's odd
 move; drift is spent where presence or unease is the feel, not sprinkled for "energy".
 
 **How hard the window moves follows the beat** `[blog]`. A 46s reference short measured frame
-by frame (docs/research/2026-08-26-still-photo-camera-motion) ran every still on one ladder —
+by frame (https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-08-26-still-photo-camera-motion) ran every still on one ladder —
 the zoom rate tracks the beat's temperature, and the ten-fold spread between rows is what
 makes a still read as footage. The storyboard manages it per scene through the still's
 `visual.camera`: no camera written = the observe row (4%/s, capped at a 1.075 total scale); a camera with a `speed`
@@ -599,7 +599,7 @@ not a cage — when you leave it, write why on the shot. The rows are practition
 not measured effects: no experiment shows a camera move's emotional effect, and the angle
 effects held only when the pictures ran as a story (§3), so the beat around the shot has to
 carry the feel the row names
-([2026-10-31 research](../../../docs/research/2026-10-31-directing-technique-conventions/index.html)). Length follows the action, speech and reaction on every route, within actual adapter limits.
+([2026-10-31 research](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-10-31-directing-technique-conventions/index.html)). Length follows the action, speech and reaction on every route, within actual adapter limits.
 No wide-to-close ratio applies. Sound is what goes into `visual.audio` on a
 generated shot and into the mix note on a filmed one. The Still column is the same feel
 inside the Ken Burns lane (§4 still lane) — produce translates it into build options, and a
@@ -692,7 +692,7 @@ what the audience is supposed to get.
     and a `dutch` spent here still counts against rule 6. `[course]` — the AInspire screenwriting lecture
     (2026-07), §9.
 15. **One world, and it never stops moving.** `[blog]` — an 85 s reference short measured
-    frame by frame (docs/research/2026-08-29-one-world-word-cue): every shot is the same
+    frame by frame (https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-08-29-one-world-word-cue): every shot is the same
     industrial hall (bare concrete, amber work lights, one figure in a white suit), six hard
     cuts in the whole piece, and only 6 of its 86 seconds come near a still frame (mean
     frame-to-frame difference under 1.0 on a 0–255 scale; the piece averages 5.0). Each
@@ -826,11 +826,11 @@ Warnings, not blocks — the reviewer and the person at the approval step weigh 
   an object as the promise it will matter (rule 14). The rest of the lecture is scenario craft,
   not camera — it lives in `scenario-craft.md` §3 · §8–§10.
 - 아니이게무슨, "원전 방호복이 방사선을 못 막는 이유" (YouTube Shorts `b6AygLAYuvY`, 2026-08-26;
-  measured 2026-08-29 — [one world · word cue research](../../../docs/research/2026-08-29-one-world-word-cue/index.html)):
+  measured 2026-08-29 — [one world · word cue research](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-08-29-one-world-word-cue/index.html)):
   one space for 85 s, six hard cuts, motion in every second, one 어절 per subtitle cue at a
   0.47 s median, a re-hook every 15 s on the cut. Rule 15 here, the word-cue subtitle mode in
   produce, the scene-transition table in scenes-schema, and rule 16 here.
-- [AI video camera technique research](../../../docs/research/2026-08-15-ai-video-camera-technique/index.html)
+- [AI video camera technique research](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-08-15-ai-video-camera-technique/index.html)
   (2026-08-15): vendor camera vocabulary (no `push`/`orbit`); move → valence/arousal not
   supported (p=.84 / p=.21), immersion yes (p=.006) on unset cuts; angle → bigger/stronger
   (p<.001), eye level most trusted in talking heads (p=.007); close-up frequency inverted U.
