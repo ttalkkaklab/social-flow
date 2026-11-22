@@ -157,6 +157,7 @@ function stable(value) {
 const hash = (value) => createHash('sha256').update(JSON.stringify(stable(value))).digest('hex');
 const idSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 export const videoPlanSchema = z.object({ episode: z.string().min(1), shotId: z.string().min(1).optional(), sceneNo: z.number().int().positive().optional(), requestId: idSchema,
+    validateScenePayload: z.boolean().optional(),
     purpose: z.enum(['draft', 'final', 'revision']).optional(),
     basedOnRequestId: idSchema.optional(), changeNote: z.string().min(1).max(1000).optional(),
     operation: z.string().optional(), tool: z.string().optional(), args: z.record(z.unknown()).default({}) }).strict().refine(v => Boolean(v.shotId) !== (v.sceneNo !== undefined), 'Choose sceneNo or shotId');
@@ -385,7 +386,7 @@ export function planVideo(raw, persist = true) {
     const members = context.sceneMembers ?? [];
     const bindTurns = Boolean(bindDialogueSeparately || tool === 'astra_genai_msr' || tool && VENDOR_REFERENCE_TOOLS.includes(tool));
     const bindOpening = tool === 'astra_genai_msr' || tool === 'astra_genai_img2video' && subjectReferences;
-    const prepared = scene && context.timed ? prepareSceneRequest(context.sceneNo, members, scene, context.episode, lines, { bindDialogue: bindTurns, bindOpening, suffix: silentSuffix }, request => bindSceneAdapter(request, tool ?? 'host_external', selection.model, shot, input.args, context.episode), context.board) : undefined;
+    const prepared = scene && context.timed ? prepareSceneRequest(context.sceneNo, members, scene, context.episode, lines, { bindDialogue: bindTurns, bindOpening, suffix: silentSuffix }, request => bindSceneAdapter(request, tool ?? 'host_external', selection.model, shot, input.args, context.episode, selection.resolution), context.board) : undefined;
     const sceneRequest = prepared?.request;
     const sceneCamera = prepared?.camera ?? (scene && sceneCameraDirection(members, scene.camera));
     const timedImages = prepared?.mapped.timedImages;

@@ -1,5 +1,6 @@
 // Frame numbers throughout this module are relative to the scene. Shot ends are exclusive.
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { realpathSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -9,7 +10,7 @@ import { cameraMoveWords, sceneCameraDirection, scenePromptText } from './video-
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { verifyImageFile } from './image-media.js';
 import { VEO_CONSTRAINTS } from './veo-video.js';
-import { astraGenaiBaseUrl, requestGenai } from './astra-genai-client.js';
+import { astraGenaiBaseUrl, GenaiRequestError, genaiAudioUri, genaiSourceUri, requestGenai } from './astra-genai-client.js';
 import { FRAME_FIELDS, sceneInputCapabilities, VIDEO_ADAPTERS } from './video-registry.js';
 import { resolveCharacterVoice, voiceReference } from './video-voice.js';
 const load = createRequire(import.meta.url);
@@ -148,7 +149,8 @@ export function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, 
     const prompt = suffix(openingPrompt(complete, scene.openingPositions));
     const text = options.bindDialogue ? scenePromptText(scene, camera.instruction, sceneTimelineWords(timeline, scene, false), dialogue, true) : complete;
     const providerPrompt = suffix(options.bindOpening ? text : openingPrompt(text, scene.openingPositions));
-    const request = { sceneNo, prompt, ...timeline };
+    const request = { sceneNo, prompt, ...timeline, ...(members.length > 1 ? { sceneDirection: { emotion: scene.emotion, ...(scene.action ? { action: scene.action } : {}),
+                ...(scene.camera ? { camera: scene.camera } : {}), ...(scene.sound ? { sound: scene.sound } : {}) } } : {}) };
     return { request, providerPrompt, camera, mapped: mapInputs(request) };
 }
 export class SceneInputError extends Error {
@@ -156,16 +158,18 @@ export class SceneInputError extends Error {
     sceneRequest;
     missing;
     model;
-    constructor(tool, sceneRequest, missing, model) {
+    resolution;
+    constructor(tool, sceneRequest, missing, model, resolution) {
         super('scene_inputs_unsupported: ' + tool + ' ' + JSON.stringify(missing));
         this.tool = tool;
         this.sceneRequest = sceneRequest;
         this.missing = missing;
         this.model = model;
+        this.resolution = resolution;
     }
 }
 /** Read the deployed I2V request grammar for a refused scene. Discovery never enables a mapper. */
-export async function inspectSceneInputContract(error) {
+export async function inspectSceneInputContract(error, validation) {
     if (error.tool !== 'astra_genai_img2video')
         return undefined;
     const endpoint = '/v1/ltx/v2/image-to-video';
@@ -191,7 +195,9 @@ export async function inspectSceneInputContract(error) {
                 throw new Error('Unknown schema reference');
             return Object.keys(document.components.schemas[ref.slice('#/components/schemas/'.length)].properties);
         };
-        const ref = document.paths[endpoint].post.requestBody.content['application/json'].schema.$ref;
+        const schemaRef = (route) => document.paths[route]?.post?.requestBody?.content?.['application/json']?.schema?.$ref;
+        const ref = schemaRef(endpoint);
+        const validationEndpoint = endpoint + '/validate';
         const array = z.object({ items: z.object({ $ref: z.string() }) });
         const arrayFields = (name) => {
             const property = document.components.schemas[ref.split('/').pop()].properties[name];
@@ -203,15 +209,56 @@ export async function inspectSceneInputContract(error) {
             }
             throw new Error('Unknown array schema');
         };
-        return { ...deployment, status: 'verified', requestFields: fields(ref), shotFields: arrayFields('shots'),
+        const contract = { ...deployment, status: 'verified', requestFields: fields(ref), shotFields: arrayFields('shots'),
             temporalImageFields: arrayFields('keyframes'), referenceFields: arrayFields('references') };
+        if (!validation)
+            return contract;
+        if (schemaRef(validationEndpoint) !== ref || !error.model || !error.resolution || Object.keys(validation.args).some(key => key !== 'reserveUsd'))
+            return { ...contract, validation: { status: 'not_sent', reason: 'Requires the deployed submission schema, saved geometry and unmodified adapter settings' } };
+        return { ...contract, validation: await validateScenePayload(validationEndpoint, error.sceneRequest, error.model, error.resolution, validation.requestId) };
     }
     catch {
         return { ...deployment, status: 'unverified' };
     }
 }
+/** Send the full scene to the authenticated validation-only route. A schema pass never authorizes execution. */
+async function validateScenePayload(endpoint, scene, model, resolution, requestId) {
+    let sent;
+    try {
+        const shots = scene.shots.map(shot => {
+            const images = scene.images.filter(image => image.shotId === shot.shotId).map(image => ({
+                frame: image.frame, role: image.role, character: image.character, cue: image.cue, strength: image.strength,
+                ...(image.reference ? { reference_id: image.reference.id, purpose: image.reference.purpose } : {}),
+                image_uri: genaiSourceUri(undefined, image.path),
+            }));
+            return { shot_id: shot.shotId, start_frame: shot.startFrame, end_frame: shot.endFrame,
+                ...(shot.transition === 'open' ? {} : { transition: shot.transition }),
+                description: [shot.framing, shot.action].join(' '), opening_positions: shot.openingPositions,
+                blocking: shot.blocking, audio: shot.sound === scene.sceneDirection?.sound ? undefined : shot.sound, images,
+                dialogue: shot.dialogue?.map(line => ({ id: line.lineId, speaker: line.speaker, text: line.text, delivery: line.delivery,
+                    direction: line.direction, frame: line.frame, ...(line.voice ? { voice_uri: genaiAudioUri(undefined, line.voice.path) } : {}) })),
+            };
+        });
+        const direction = scene.sceneDirection;
+        const prompt = direction ? [direction.emotion, direction.action, direction.camera, direction.sound].filter(Boolean).join(' ') : '';
+        const body = { model, resolution, fps: scene.fps, num_frames: scene.frameCount, generate_audio: true, prompt: prompt || 'Follow the ordered storyboard shots.',
+            image_uri: shots[0]?.images.find(image => image.role === 'start')?.image_uri, shots,
+            ...(scene.audio ? { scene_audio: { audio_uri: genaiAudioUri(undefined, scene.audio.path), start_frame: scene.audio.startFrame,
+                    end_frame: scene.audio.endFrame, cues: scene.audio.cues } } : {}) };
+        const wire = JSON.stringify(body);
+        sent = { bodySha256: createHash('sha256').update(wire).digest('hex'), bytes: Buffer.byteLength(wire) };
+        const result = await requestGenai('POST', endpoint, body, 120000, undefined, requestId);
+        const accepted = z.object({ schema_valid: z.literal(true), model: z.literal(model) }).safeParse(result);
+        return { endpoint, requestId, ...sent, status: accepted.success ? 'schema_accepted' : 'unverified', result: accepted.data };
+    }
+    catch (error) {
+        if (error instanceof GenaiRequestError && [400, 422].includes(error.httpStatus))
+            return { endpoint, requestId, ...sent, status: 'schema_rejected', httpStatus: error.httpStatus, detail: error.message };
+        return { endpoint, requestId, ...sent, status: 'unverified', detail: error instanceof Error ? error.message : String(error) };
+    }
+}
 /** Decide using ALL scene inputs before building any provider fields or saving an executable plan. */
-export function mapSceneInputs(request, tool, model, missing = []) {
+export function mapSceneInputs(request, tool, model, missing = [], resolution) {
     const caps = sceneInputCapabilities(tool);
     if (!caps.frameAccurateCuts)
         missing.push(...request.cuts.map(c => ({ input: 'transition', shotId: c.to, frame: c.frame, role: c.transition, reason: 'No frame-addressed ' + c.transition + ' boundary' })));
@@ -276,7 +323,7 @@ export function mapSceneInputs(request, tool, model, missing = []) {
                 reason: 'Gateway I2V takes whole seconds or 25–361 frames on the 8k+1 grid; the exact scene length must fit' });
     }
     if (missing.length)
-        throw new SceneInputError(tool, request, missing, model);
+        throw new SceneInputError(tool, request, missing, model, resolution);
     return { pins, refs, caps };
 }
 export function timedImageArgs(tool, pins) {
@@ -303,8 +350,8 @@ export function sceneImageBindings(request, tool, bindings) {
 }
 /** Map the accepted scene to the existing image/voice adapter pipeline. Never pass the
  * internal scene manifest as unrecognised provider parameters. */
-export function bindSceneAdapter(request, tool, model, shot, input, episode) {
-    const { pins, refs, caps } = mapSceneInputs(request, tool, model);
+export function bindSceneAdapter(request, tool, model, shot, input, episode, resolution) {
+    const { pins, refs, caps } = mapSceneInputs(request, tool, model, [], resolution);
     const args = {};
     const sceneSeconds = request.frameCount / request.fps;
     for (const field of ['duration', 'durationSeconds', 'requiredSeconds']) {

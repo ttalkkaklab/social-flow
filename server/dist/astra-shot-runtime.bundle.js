@@ -51811,19 +51811,21 @@ function sceneTimelineWords(t2, scene, includeDialogue = true) {
   }), ...t2.audio ? ["Play one continuous scene track from frame 0.", ...t2.audio.cues.map((c) => `Frame ${c.frame}: ${c.action}`)] : []].join("\n");
 }
 var SceneInputError = class extends Error {
-  constructor(tool, sceneRequest, missing, model2) {
+  constructor(tool, sceneRequest, missing, model2, resolution2) {
     super("scene_inputs_unsupported: " + tool + " " + JSON.stringify(missing));
     this.tool = tool;
     this.sceneRequest = sceneRequest;
     this.missing = missing;
     this.model = model2;
+    this.resolution = resolution2;
   }
   tool;
   sceneRequest;
   missing;
   model;
+  resolution;
 };
-function mapSceneInputs(request, tool, model2, missing = []) {
+function mapSceneInputs(request, tool, model2, missing = [], resolution2) {
   const caps = sceneInputCapabilities(tool);
   if (!caps.frameAccurateCuts) missing.push(...request.cuts.map((c) => ({ input: "transition", shotId: c.to, frame: c.frame, role: c.transition, reason: "No frame-addressed " + c.transition + " boundary" })));
   for (const shot of request.shots) {
@@ -51894,7 +51896,7 @@ function mapSceneInputs(request, tool, model2, missing = []) {
         reason: "Gateway I2V takes whole seconds or 25\u2013361 frames on the 8k+1 grid; the exact scene length must fit"
       });
   }
-  if (missing.length) throw new SceneInputError(tool, request, missing, model2);
+  if (missing.length) throw new SceneInputError(tool, request, missing, model2, resolution2);
   return { pins, refs, caps };
 }
 
@@ -52148,6 +52150,7 @@ var videoPlanSchema = external_exports.object({
   shotId: external_exports.string().min(1).optional(),
   sceneNo: external_exports.number().int().positive().optional(),
   requestId: idSchema,
+  validateScenePayload: external_exports.boolean().optional(),
   purpose: external_exports.enum(["draft", "final", "revision"]).optional(),
   basedOnRequestId: idSchema.optional(),
   changeNote: external_exports.string().min(1).max(1e3).optional(),
