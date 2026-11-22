@@ -84,6 +84,7 @@
   background: var(--review-sidebar);
   border-right: var(--review-s1) solid var(--review-line);
 }
+.review-brand img { display: block; width: 144px; max-width: 100%; height: auto; }
 .review-brand { display: block; padding: 0 var(--review-s8) var(--review-s24); font-size: var(--review-s20); font-weight: 700; }
 .review-channel { padding: 0 var(--review-s12) var(--review-s28); font-weight: 600; }
 .review-sidebar nav { display: grid; gap: var(--review-s6); }
