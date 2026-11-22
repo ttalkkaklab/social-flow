@@ -145693,6 +145693,7 @@ Size and length are inherited from the source.`
   },
   seedance_text2video: async (args) => {
     const result = await generateFromText3(parseArgs(seedanceText2VideoSchema, args));
+    if (result.inputProblem) return seedancePreflightError(result.inputProblem);
     if (!result.success) return { ...text3(`Seedance video generation failed: ${result.error}`, true), terminal: result.terminal === true };
     return text3(`Video generated successfully!
 
@@ -145702,6 +145703,7 @@ Prompt: ${result.prompt}`);
   },
   seedance_img2video: async (args) => {
     const result = await generateFromImage3(parseArgs(seedanceImg2VideoSchema, args));
+    if (result.inputProblem) return seedancePreflightError(result.inputProblem);
     if (result.portraitProblem) return seedancePreflightError(result.portraitProblem);
     if (!result.success) return { ...text3(`Seedance video generation from image failed: ${result.error}`, true), terminal: result.terminal === true };
     const lastImageInfo = result.lastImage ? `

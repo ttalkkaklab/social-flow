@@ -1080,11 +1080,13 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   },
   seedance_text2video: async (args) => {
     const result = await seedance.generateFromText(parseArgs(seedance.seedanceText2VideoSchema, args));
+    if (result.inputProblem) return seedancePreflightError(result.inputProblem);
     if (!result.success) return { ...text(`Seedance video generation failed: ${result.error}`, true), terminal: result.terminal === true };
     return text(`Video generated successfully!\n\nFile: ${result.videoPath}\n${seedanceMeta(result)}\nPrompt: ${result.prompt}`);
   },
   seedance_img2video: async (args) => {
     const result = await seedance.generateFromImage(parseArgs(seedance.seedanceImg2VideoSchema, args));
+    if (result.inputProblem) return seedancePreflightError(result.inputProblem);
     if (result.portraitProblem) return seedancePreflightError(result.portraitProblem);
     if (!result.success) return { ...text(`Seedance video generation from image failed: ${result.error}`, true), terminal: result.terminal === true };
     const lastImageInfo = result.lastImage ? `\nLast Frame Image: ${result.lastImage}` : '';

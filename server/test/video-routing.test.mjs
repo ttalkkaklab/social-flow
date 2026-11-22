@@ -17,7 +17,7 @@ import { videoTransaction } from '../dist/video-state.js';
 import { recordVideoSubmission, recordVideoTokens } from '../dist/video-events.js';
 import { config } from '../dist/config.js';
 import { refreshGenaiMsrVoice } from '../dist/astra-genai-video.js';
-import { ROUTES } from '../dist/handlers.js';
+import { dispatchVideo, ROUTES } from '../dist/handlers.js';
 import { TOOLS } from '../dist/tools.js';
 const require = createRequire(import.meta.url);
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -1472,8 +1472,13 @@ test('the paid Seedance body matches the approved set, face, wardrobe and voice 
   // Exercise the cap on the final JSON without allocating a 64 MiB media fixture.
   const byteLength=Buffer.byteLength;
   const size=t.mock.method(Buffer,'byteLength',(value,...rest)=>
-    typeof value==='string' && value.includes('"asset://asset-seoyun"') && value.includes('"image_url"')
+    typeof value==='string' && value.includes('"content":[') && value.includes('"model":"dreamina-seedance')
       ? 64*1024*1024+1 : byteLength(value,...rest));
+  for (const [tool,frames] of [['seedance_text2video',{}],['seedance_img2video',{sourceImagePath:room,lastImagePath:room}]]) {
+    const result=await dispatchVideo(tool,{model:plan.args.model,prompt:'The workshop doors open.',...frames});
+    assert.match(result.structuredContent.message,/exceeds 64 MB/);
+    assert.equal(result.structuredContent.videoSubmitted,false);
+  }
   const oversized=await execute();
   size.mock.restore();
   assert.equal(oversized.structuredContent.stage,'seedance_inputs');
