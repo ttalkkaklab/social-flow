@@ -116,6 +116,23 @@ test('offline direction icons identify inherited shots and show the middle overr
   }
 });
 
+test('the scroll that brings a keyboard-focused icon into view keeps its detail open', () => {
+  const html = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
+  const start = html.indexOf('    function viewportChanged(');
+  const listeners = {}, calls = [];
+  const window = { innerWidth: 375, innerHeight: 700, addEventListener: (type, fn) => { listeners[type] = fn; } };
+  const rect = { top: 540, bottom: 584, left: 24, right: 68 };
+  const button = { matches: selector => selector === ':focus-visible', getBoundingClientRect: () => rect };
+  runInNewContext(html.slice(start, html.indexOf('  })();', start)), {
+    window, box: {}, cur: button, position: r => calls.push(r), hide: () => calls.push('hidden'),
+  });
+  listeners.scroll({target: window});
+  assert.deepEqual(calls, [rect]);
+  rect.top = 720; rect.bottom = 764;
+  listeners.scroll({target: window});
+  assert.deepEqual(calls, [rect, 'hidden']);
+});
+
 test('a background export shows the saved scene prompt when the board matches and references are unchecked', t => {
   const episode = mkdtempSync(join(tmpdir(), 'scene-prompt-export-'));
   t.after(() => rmSync(episode, { recursive: true, force: true }));

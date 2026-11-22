@@ -6172,6 +6172,14 @@ window.STORYBOARD_READY = (async function () {
       }
       box.classList.remove("on"); cur = null; pinned = false;
     }
+    function position(r) {
+      var pad = 8, below = window.innerHeight - r.bottom - pad, above = r.top - pad;
+      box.style.maxHeight = "";
+      var opensAbove = box.offsetHeight > below && above > below;
+      box.style.maxHeight = Math.max(0, opensAbove ? above : below) + "px";
+      box.style.left = Math.max(pad, Math.min(r.left, window.innerWidth - box.offsetWidth - pad)) + "px";
+      box.style.top = (opensAbove ? r.top - box.offsetHeight : r.bottom) + "px";
+    }
     function show(el) {
       if (cur === el) return;
       hide();
@@ -6184,13 +6192,7 @@ window.STORYBOARD_READY = (async function () {
         var heading = document.createElement("b");
         heading.textContent = title; box.prepend(heading);
       }
-      var r = el.getBoundingClientRect(), pad = 8;
-      var below = window.innerHeight - r.bottom - pad, above = r.top - pad;
-      box.style.maxHeight = ""; box.classList.add("on");
-      var opensAbove = box.offsetHeight > below && above > below;
-      box.style.maxHeight = Math.max(0, opensAbove ? above : below) + "px";
-      box.style.left = Math.max(pad, Math.min(r.left, window.innerWidth - box.offsetWidth - pad)) + "px";
-      box.style.top = (opensAbove ? r.top - box.offsetHeight : r.bottom) + "px";
+      box.classList.add("on"); position(el.getBoundingClientRect());
       box.scrollTop = 0; cur = el;
       if (direction) {
         cur.setAttribute("aria-expanded", "true");
@@ -6224,8 +6226,18 @@ window.STORYBOARD_READY = (async function () {
       var step = { ArrowDown: 32, ArrowUp: -32, PageDown: box.clientHeight, PageUp: -box.clientHeight }[e.key];
       if (step) { e.preventDefault(); box.scrollTop += step; }
     });
-    window.addEventListener("resize", hide);
-    window.addEventListener("scroll", function (e) { if (cur && e.target !== box) hide(); }, true);
+    function viewportChanged(e) {
+      if (!cur || e.target === box) return;
+      if (cur.matches(":focus-visible")) {
+        var r = cur.getBoundingClientRect();
+        if (r.bottom > 0 && r.top < window.innerHeight && r.right > 0 && r.left < window.innerWidth) {
+          position(r); return;
+        }
+      }
+      hide();
+    }
+    window.addEventListener("resize", viewportChanged);
+    window.addEventListener("scroll", viewportChanged, true);
   })();
 
   /* Filling the check strip — nothing is missed only once every violation has been registered */
