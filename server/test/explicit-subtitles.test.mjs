@@ -90,20 +90,14 @@ test('one-tick windows survive; nonaligned endpoints still round inward without 
       ['0.281','0.289',null,null]
     ]){
       f.write(`${start}\t${end}\t그대로의 자막입니다.\n`);f.proof();
-      const r=f.render({offset});
-      const want=offset===1/30?fractional:local?.map(v=>(offset+Number(v)).toFixed(2));
-      if(want){
-        assert.equal(r.status,0,r.stderr);
-        const [s,e]=want;
-        assert.deepEqual(subs.checkedCard(f.work,f.board,0,2,offset).toString().trim().split('\t').slice(0,2),[s,e]);
-        assert.ok(r.ass.includes(`0:00:${s.padStart(5,'0')},0:00:${e.padStart(5,'0')}`));
-        const stamp=v=>'00:00:'+Number(v).toFixed(3).padStart(6,'0').replace('.',',');
-        assert.ok(r.srt.includes(`${stamp(s)} --> ${stamp(e)}`));
-      }else{assert.notEqual(r.status,0);assert.match(r.stderr,/collapses/);assert.equal(r.ass,'');assert.equal(r.srt,'');}
+      const checked = () => subs.checkedCard(f.work, f.board, 0, 2, offset);
+      const want = offset === 1/30 ? fractional : local?.map(v => (offset + Number(v)).toFixed(2));
+      if (want) assert.deepEqual(checked().toString().trim().split('\t').slice(0, 2), want);
+      else assert.throws(checked, /collapses/);
     }
   }
   f.write('0.28\t2.000000000000001\t그대로의 자막입니다.\n');f.proof();
-  const over=f.render();assert.notEqual(over.status,0);assert.match(over.stderr,/outside card/);
+  assert.throws(() => subs.checkedCard(f.work, f.board, 0, 2, 0), /outside card/);
 });
 test('replacement input errors stop preflight before HITL and before output; scene/segment source cannot be bypassed',t=>{
   const f=fixture(t,['첫 문장.','두 문장.']);

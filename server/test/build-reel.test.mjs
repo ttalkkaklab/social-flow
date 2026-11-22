@@ -52,6 +52,13 @@ function shortenEditList(file, milliseconds) {
   writeFileSync(file, bytes);
 }
 
+function runConcat(dir, fps) {
+  return spawnSync('bash', ['-c', `set -euo pipefail
+FPS=${fps}
+say() { printf '%s\\n' "$1"; }
+${concat}`], {cwd: dir, encoding: 'utf8', timeout: 30000});
+}
+
 function fixture(fps, fn) {
   const dir = mkdtempSync(path.join(tmpdir(), 'main-concat-'));
   const frames = fps + 1, cards = 8;
@@ -72,11 +79,7 @@ function fixture(fps, fn) {
     }
     writeFileSync(path.join(dir, 'work/order.txt'), ids.join('\n') + '\n');
     writeFileSync(path.join(dir, 'work/edit-timeline.tsv'), ids.map(i => `${i}\t${i * frames}\t${frames}\tcut\t0\t0\t0`).join('\n') + '\n');
-    const run = () => spawnSync('bash', ['-c', `set -euo pipefail
-FPS=${fps}
-say() { printf '%s\\n' "$1"; }
-${concat}`], {cwd: dir, encoding: 'utf8', timeout: 30000});
-    fn({dir, clip, originalFrames, fps, frames, cards, run});
+    fn({ dir, originalFrames, frames, cards, run: () => runConcat(dir, fps) });
   } finally {
     rmSync(dir, {recursive: true, force: true});
   }
@@ -105,31 +108,31 @@ for (const fps of [24, 60]) test(`main concat preserves ${fps}fps packet clock d
   assert.match(result.stdout, /drift 0\.0000s/);
 }));
 
-test('main concat still stops when rendered frames do not cover the declared audio clock', {timeout: 60000}, () => fixture(30, ({dir, frames, run}) => {
-  ff(['-f', 'lavfi', '-i', 'color=red:size=32x32:rate=30', '-frames:v', String(frames - 1),
-    '-c:v', 'libx264', path.join(dir, 'work/v7.mp4')]);
-  const result = run();
-  assert.notEqual(result.status, 0);
-  assert.match(result.stdout, /drift over the 2ms tolerance/);
-}));
+test('concat requires a frame count and rejects drift from a short card', t => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'concat-drift-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const work = path.join(dir, 'work');
+  mkdirSync(work);
+  writeFileSync(path.join(work, 'order.txt'), '0\n');
+  writeFileSync(path.join(work, 'edit-timeline.tsv'), '');
+  const missing = runConcat(dir, 30);
+  assert.equal(missing.status, 1);
+  assert.match(missing.stdout, /missing frame count for card 0/);
 
-test('main concat rejects a missing declared frame count', {timeout: 60000}, () => fixture(30, ({dir, run}) => {
-  writeFileSync(path.join(dir, 'work/edit-timeline.tsv'), '');
-  const result = run();
-  assert.notEqual(result.status, 0);
-  assert.match(result.stdout, /missing frame count for card 0/);
-}));
+  writeFileSync(path.join(work, 'edit-timeline.tsv'), '0\t0\t4\tcut\t0\t0\t0\n');
+  ff(['-f', 'lavfi', '-i', 'color=s=32x32:r=30', '-frames:v', '3', '-c:v', 'libx264', path.join(work, 'v0.mp4')]);
+  ff(['-f', 'lavfi', '-i', 'sine=sample_rate=48000', '-af', 'atrim=end_sample=6400', path.join(work, 'n0.wav')]);
+  const drift = runConcat(dir, 30);
+  assert.equal(drift.status, 1);
+  assert.match(drift.stdout, /drift over the 2ms tolerance/);
 
-test('the existing per-card frame gate rejects a truncated middle card before concat', {timeout: 60000}, () => fixture(30, ({dir, frames}) => {
-  ff(['-f', 'lavfi', '-i', 'color=red:size=32x32:rate=30', '-frames:v', String(frames - 1),
-    '-c:v', 'libx264', path.join(dir, 'work/v3.mp4')]);
-  const result = spawnSync('bash', ['-c', `set -euo pipefail
-IDX=3; FRAMES=${frames}
-say() { printf '%s\\n' "$1"; }
-${frameGate}`], {cwd: dir, encoding: 'utf8', timeout: 30000});
-  assert.equal(result.status, 1);
-  assert.match(result.stdout, /card 3: rendered 30 frames, expected 31/);
-}));
+  const truncated = spawnSync('bash', ['-c', `set -euo pipefail
+IDX=0; FRAMES=4
+say() { echo "$1"; }
+${frameGate}`], { cwd: dir, encoding: 'utf8' });
+  assert.equal(truncated.status, 1);
+  assert.match(truncated.stdout, /card 0: rendered 3 frames, expected 4/);
+});
 
 // ── Per-card renderer: live handles, every transition, authored in-points and reused cards.
 const probeFrames=f=>JSON.parse(execFileSync('ffprobe',['-v','error','-count_frames','-select_streams','v:0','-show_entries','stream=nb_read_frames,duration','-of','json',f],{encoding:'utf8'})).streams[0];

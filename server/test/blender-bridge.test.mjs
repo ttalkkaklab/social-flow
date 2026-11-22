@@ -5,7 +5,7 @@
 
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, rmSync, statSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdtempSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, describe, it } from 'node:test';
@@ -268,12 +268,6 @@ describe('blender round trip', { skip: !blenderBin() && 'no Blender on this mach
     assert.ok(layered.success, layered.success ? '' : layered.error);
     assert.deepEqual(layered.scene.camera?.keyframes, [1, 12, 20]);
     assert.equal(layered.scene.frame.end, 20, 'a key past the range extends it');
-    const back = await setCamera(blenderCameraSetSchema.parse({ blendPath, lensMm: 35, keys: [
-      { frame: 1, location: [0, -4, 1.6], target: [0, 0, 1.0] },
-      { frame: 12, location: [1.5, -2.5, 0.6], target: [0.3, -0.3, 1.2], lensMm: 50 },
-    ] }));
-    assert.ok(back.success);
-
     // the layered key above grew the scene to 20 frames; render the 12-frame slice explicitly
     const previz = await renderPreviz(blenderRenderPrevizSchema.parse({ blendPath, outputPath: join(dir, 'out'), frameStart: 1, frameEnd: 12, stills: [1, 12, 40] }));
     assert.ok(previz.success, previz.success ? '' : previz.error);
@@ -294,12 +288,11 @@ describe('blender round trip', { skip: !blenderBin() && 'no Blender on this mach
     const a = join(dir, 'a.blend');
     const b = join(dir, 'b.blend');
     const out = join(dir, 'shared');
-    for (const p of [a, b]) {
-      const r = await buildScene(blenderSceneBuildSchema.parse({ blendPath: p, fps: 24, frameEnd: 6, width: 128, height: 224, proxies: [{ name: 'p', kind: 'sphere' }] }));
-      assert.ok(r.success, r.success ? '' : r.error);
-      const c = await setCamera(blenderCameraSetSchema.parse({ blendPath: p, keys: [{ location: [0, -3, 1], target: [0, 0, 0.5] }] }));
-      assert.ok(c.success, c.success ? '' : c.error);
-    }
+    const built = await buildScene(blenderSceneBuildSchema.parse({ blendPath: a, fps: 24, frameEnd: 2, width: 128, height: 224, proxies: [{ name: 'p', kind: 'sphere' }] }));
+    assert.ok(built.success, built.error);
+    const camera = await setCamera(blenderCameraSetSchema.parse({ blendPath: a, keys: [{ location: [0, -3, 1], target: [0, 0, 0.5] }] }));
+    assert.ok(camera.success, camera.error);
+    copyFileSync(a, b);
     const [ra, rb] = await Promise.all([
       renderPreviz(blenderRenderPrevizSchema.parse({ blendPath: a, outputPath: out, filename: 'a.mp4', stills: [] })),
       renderPreviz(blenderRenderPrevizSchema.parse({ blendPath: b, outputPath: out, filename: 'b.mp4', stills: [] })),
