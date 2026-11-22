@@ -10,7 +10,7 @@ const LOCATION_ASSETS = path.join(__dirname, '../../storyboard/references');
 const MARKER = '<!-- social-flow:review-library:v1 -->';
 const ASSETS = path.join(__dirname, 'review-assets');
 const { FONT_ASSETS } = require('./review-fonts.js');
-const ASSET_NAMES = ['design-system.css', 'review.css', 'review.js', ...FONT_ASSETS];
+const ASSET_NAMES = ['design-system.css', 'review.css', 'review.js', 'ttalkkak-story.svg', ...FONT_ASSETS];
 const digest = file => require('node:crypto').createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const t = (ko, en) => `<span data-ko="${esc(ko)}" data-en="${esc(en)}">${esc(ko)}</span>`;
@@ -59,7 +59,7 @@ function shell({ file, channelDir, channel, title, section, body }) {
     ['props', '소품 시트', 'Prop sheets', path.join(channelDir, 'assets', 'props', 'index.html')],
     ['locations', '배경 시트', 'Background sheets', path.join(channelDir, 'assets', 'locations', 'index.html')]];
   return `<!doctype html>\n${MARKER}\n<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(title)} · ${esc(channel)}</title><link rel="stylesheet" href="${rel(file, path.join(assets, 'review.css'))}"></head><body class="review-page">
-<a class="review-skip" href="#review-content">${t("본문으로", "Skip to content")}</a><aside class="review-sidebar"><a class="review-brand" href="${rel(file, path.join(channelDir, 'index.html'))}">딸깍스토리</a><div class="review-channel">${esc(channel)}</div><nav aria-label="Navigation">${nav.map(([key, ko, en, target]) => `<a href="${rel(file, target)}"${key === section ? ' aria-current="page"' : ''}>${t(ko, en)}</a>`).join('')}</nav><footer>${t('로컬 라이브러리', 'Local library')}</footer></aside>
+<a class="review-skip" href="#review-content">${t("본문으로", "Skip to content")}</a><aside class="review-sidebar"><a class="review-brand" href="${rel(file, path.join(channelDir, 'index.html'))}"><img src="${rel(file, path.join(assets, 'ttalkkak-story.svg'))}" width="167" height="50" alt="딸깍스토리 / Ttalkkak Story"></a><div class="review-channel">${esc(channel)}</div><nav aria-label="Navigation">${nav.map(([key, ko, en, target]) => `<a href="${rel(file, target)}"${key === section ? ' aria-current="page"' : ''}>${t(ko, en)}</a>`).join('')}</nav><footer>${t('로컬 라이브러리', 'Local library')}</footer></aside>
 <main class="review-main" id="review-content" tabindex="-1"><select class="review-language" data-language aria-label="Language"><option value="ko">한국어</option><option value="en">English</option></select>${body}</main><script src="${rel(file, path.join(assets, 'review.js'))}"></script></body></html>\n`;
 }
 function heading(title, description) { return `<header class="review-header"><h1>${title}</h1><p>${description}</p></header>`; }
