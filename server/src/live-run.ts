@@ -6,6 +6,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import {
   answer,
   ChatQueue,
+  listenChatInput,
   continueBroadcast,
   liveConfig,
   loadCharacter,
@@ -179,30 +180,7 @@ async function main() {
     if (kind === 'speech_interrupted' && isReply(String(fields.source))) unfinishedReplies++;
     if (kind === 'speech_end' && isReply(String(fields.source))) spokenReplies++;
   };
-  let partial = '',
-    discard = false;
-  function receive(bytes: string) {
-    for (const chunk of bytes.split(/(?<=\n)/)) {
-      if (!discard) {
-        partial += chunk;
-        if (partial.length > 1600) {
-          partial = '';
-          discard = true;
-        }
-      }
-      if (!chunk.endsWith('\n')) continue;
-      try {
-        if (!discard && partial.trim()) {
-          const e = JSON.parse(partial);
-          if (Date.now() < acceptingUntil && (e.source === 'operator' || platforms.some(p => p.acceptsStdin && p.id === e.source))) queue.add(e);
-        }
-      } catch {
-        /* Invalid external messages cannot interrupt the show. */
-      }
-      partial = '';
-      discard = false;
-    }
-  }
+  let stopInput: (() => void) | undefined;
   const wake =
     platforms.length > 0 && process.platform === 'darwin'
       ? spawn('/usr/bin/caffeinate', ['-dis', '-w', String(process.pid)], { stdio: 'ignore' })
@@ -248,8 +226,8 @@ async function main() {
       catch (error) { platform.prepareFailed?.(error); throw error; }
     }
     controller.signal.throwIfAborted();
-    process.stdin.setEncoding('utf8');
-    process.stdin.on('data', receive);
+    stopInput = listenChatInput(process.stdin, source => Date.now() < acceptingUntil &&
+      (source === 'operator' || platforms.some(p => p.acceptsStdin && p.id === source)), queue);
     acceptingUntil = Date.now() + seconds * 1000;
     hosting = (async () => {
       while (!controller.signal.aborted && Date.now() < acceptingUntil) {
@@ -335,8 +313,7 @@ async function main() {
     outcome = controller.signal.aborted ? 'interrupted' : 'finished';
   } finally {
     stop();
-    process.stdin.removeListener('data', receive);
-    process.stdin.pause();
+    stopInput?.();
     await Promise.allSettled(observers);
     const [closures] = await Promise.all([
       Promise.allSettled(opened.map(async platform => platform.close?.(outcome))),

@@ -254,6 +254,41 @@ export const chatEvent = z
     text: z.string().trim().min(1).max(500)
 })
     .strict();
+export function listenChatInput(input, allowed, queue) {
+    let partial = '', discard = false;
+    function receive(bytes) {
+        for (const chunk of bytes.split(/(?<=\n)/)) {
+            if (!discard) {
+                partial += chunk;
+                if (partial.length > 1600) {
+                    partial = '';
+                    discard = true;
+                }
+            }
+            if (!chunk.endsWith('\n'))
+                continue;
+            try {
+                if (!discard && partial.trim()) {
+                    const e = JSON.parse(partial);
+                    if (allowed(e?.source))
+                        queue.add(e);
+                }
+            }
+            catch {
+                /* Invalid external messages cannot interrupt the show. */
+            }
+            partial = '';
+            discard = false;
+        }
+    }
+    input.setEncoding('utf8');
+    input.on('data', receive);
+    input.resume(); // Closing a credential prompt explicitly pauses its input.
+    return () => {
+        input.off('data', receive);
+        input.pause();
+    };
+}
 export class ChatQueue {
     accepted;
     constructor(accepted) {

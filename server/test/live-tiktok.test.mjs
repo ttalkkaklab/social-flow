@@ -84,3 +84,20 @@ test('TikTok takes real WebSocket questions after its own relay connects and clo
   assert.equal(platform.problem(), undefined);
   assert.doesNotMatch(JSON.stringify(log) + readFileSync(join(out, 'tiktok.json'), 'utf8'), /test-secret|sig=fixture/);
 });
+
+test('journal failure in a WebSocket callback reaches session cleanup', async t => {
+  const out = mkdtempSync(join(tmpdir(), 'tiktok-monitor-failure-'));
+  const bridge = new WebSocketServer({ host: '127.0.0.1', port: 0 });
+  t.after(() => {
+    for (const socket of bridge.clients) socket.terminate();
+    bridge.close();
+    delete process.env.TIKTOK_LIVE_TIKFINITY_URL;
+    rmSync(out, { recursive: true, force: true });
+  });
+  await once(bridge, 'listening');
+  process.env.TIKTOK_LIVE_TIKFINITY_URL = 'ws://127.0.0.1:' + bridge.address().port;
+  const platform = createTikTokPlatform({ out, config: { channel: 'test', tiktokChat: 'tikfinity' },
+    log() { throw Error('journal unavailable'); } });
+  await assert.rejects(platform.observe({ queue: new ChatQueue(), signal: new AbortController().signal,
+    acceptingUntil: Date.now() + 3000 }), /journal unavailable/);
+});

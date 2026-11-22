@@ -146,37 +146,56 @@ export function createTikTokPlatform({ config, out, log }) {
             const intake = AbortSignal.any([signal, AbortSignal.timeout(Math.max(0, acceptingUntil - Date.now()))]);
             let backoff = 500;
             while (!intake.aborted) {
-                await new Promise((resolve) => {
+                await new Promise((resolve, reject) => {
                     const socket = new WebSocket(address, { handshakeTimeout: 4000, maxPayload: 1024 * 1024 });
                     const stop = () => socket.terminate();
+                    let failure;
+                    // EventEmitter callbacks run outside the observer promise. Deliver journal or
+                    // queue failures to the runner after closing the socket so every relay is stopped.
+                    function record(change) {
+                        if (failure)
+                            return;
+                        try {
+                            change();
+                        }
+                        catch (error) {
+                            failure = error instanceof Error ? error : Error('TikTok chat observer failed');
+                            if (socket.readyState !== WebSocket.CLOSED)
+                                stop();
+                        }
+                    }
                     intake.addEventListener('abort', stop, { once: true });
-                    socket.once('open', () => {
+                    socket.once('open', () => record(() => {
                         chatConnected = true;
                         connections++;
                         backoff = 500;
                         save();
                         log('tiktok_chat_connected', { connections });
-                    });
+                    }));
                     socket.on('message', (raw, binary) => {
                         if (binary || !relayConnected || intake.aborted || Date.now() >= acceptingUntil)
                             return;
                         const event = tikfinityComment(raw.toString(), sessionId);
                         if (event)
-                            queue.add(event);
+                            record(() => { queue.add(event); });
                     });
-                    // ws emits close after handshake and transport errors. Never log frames or connection URLs.
+                    // A transport error is followed by close and retried while intake is open.
                     socket.on('error', () => { });
                     socket.once('close', () => {
                         intake.removeEventListener('abort', stop);
-                        if (!intake.aborted) {
-                            if (chatConnected || backoff === 500)
-                                log('tiktok_chat_unavailable');
-                            if (chatConnected) {
-                                chatConnected = false;
-                                save();
-                            }
-                        }
-                        resolve();
+                        if (!intake.aborted)
+                            record(() => {
+                                if (chatConnected || backoff === 500)
+                                    log('tiktok_chat_unavailable');
+                                if (chatConnected) {
+                                    chatConnected = false;
+                                    save();
+                                }
+                            });
+                        if (failure)
+                            reject(failure);
+                        else
+                            resolve();
                     });
                 });
                 if (!intake.aborted) {

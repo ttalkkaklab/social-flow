@@ -34099,6 +34099,37 @@ var chatEvent = external_exports.object({
   id: external_exports.string().min(1).max(200),
   text: external_exports.string().trim().min(1).max(500)
 }).strict();
+function listenChatInput(input, allowed, queue) {
+  let partial = "", discard = false;
+  function receive(bytes) {
+    for (const chunk of bytes.split(/(?<=\n)/)) {
+      if (!discard) {
+        partial += chunk;
+        if (partial.length > 1600) {
+          partial = "";
+          discard = true;
+        }
+      }
+      if (!chunk.endsWith("\n")) continue;
+      try {
+        if (!discard && partial.trim()) {
+          const e = JSON.parse(partial);
+          if (allowed(e?.source)) queue.add(e);
+        }
+      } catch {
+      }
+      partial = "";
+      discard = false;
+    }
+  }
+  input.setEncoding("utf8");
+  input.on("data", receive);
+  input.resume();
+  return () => {
+    input.off("data", receive);
+    input.pause();
+  };
+}
 var ChatQueue = class {
   constructor(accepted) {
     this.accepted = accepted;
@@ -36638,34 +36669,47 @@ function createTikTokPlatform({ config: config2, out, log }) {
       const intake = AbortSignal.any([signal, AbortSignal.timeout(Math.max(0, acceptingUntil - Date.now()))]);
       let backoff = 500;
       while (!intake.aborted) {
-        await new Promise((resolve5) => {
+        await new Promise((resolve5, reject) => {
           const socket = new wrapper_default(address, { handshakeTimeout: 4e3, maxPayload: 1024 * 1024 });
           const stop = () => socket.terminate();
+          let failure;
+          function record(change) {
+            if (failure) return;
+            try {
+              change();
+            } catch (error) {
+              failure = error instanceof Error ? error : Error("TikTok chat observer failed");
+              if (socket.readyState !== wrapper_default.CLOSED) stop();
+            }
+          }
           intake.addEventListener("abort", stop, { once: true });
-          socket.once("open", () => {
+          socket.once("open", () => record(() => {
             chatConnected = true;
             connections++;
             backoff = 500;
             save();
             log("tiktok_chat_connected", { connections });
-          });
+          }));
           socket.on("message", (raw, binary) => {
             if (binary || !relayConnected || intake.aborted || Date.now() >= acceptingUntil) return;
             const event = tikfinityComment(raw.toString(), sessionId);
-            if (event) queue.add(event);
+            if (event) record(() => {
+              queue.add(event);
+            });
           });
           socket.on("error", () => {
           });
           socket.once("close", () => {
             intake.removeEventListener("abort", stop);
-            if (!intake.aborted) {
+            if (!intake.aborted) record(() => {
               if (chatConnected || backoff === 500) log("tiktok_chat_unavailable");
               if (chatConnected) {
                 chatConnected = false;
                 save();
               }
-            }
-            resolve5();
+            });
+            if (failure) reject(failure);
+            else resolve5();
           });
         });
         if (!intake.aborted) {
@@ -37458,28 +37502,7 @@ async function main() {
     if (kind === "speech_interrupted" && isReply(String(fields.source))) unfinishedReplies++;
     if (kind === "speech_end" && isReply(String(fields.source))) spokenReplies++;
   };
-  let partial = "", discard = false;
-  function receive(bytes) {
-    for (const chunk of bytes.split(/(?<=\n)/)) {
-      if (!discard) {
-        partial += chunk;
-        if (partial.length > 1600) {
-          partial = "";
-          discard = true;
-        }
-      }
-      if (!chunk.endsWith("\n")) continue;
-      try {
-        if (!discard && partial.trim()) {
-          const e = JSON.parse(partial);
-          if (Date.now() < acceptingUntil && (e.source === "operator" || platforms.some((p) => p.acceptsStdin && p.id === e.source))) queue.add(e);
-        }
-      } catch {
-      }
-      partial = "";
-      discard = false;
-    }
-  }
+  let stopInput;
   const wake = platforms.length > 0 && process.platform === "darwin" ? spawn2("/usr/bin/caffeinate", ["-dis", "-w", String(process.pid)], { stdio: "ignore" }) : void 0;
   wake?.on("error", () => log("sleep_prevention_unavailable", {}));
   try {
@@ -37533,8 +37556,7 @@ async function main() {
       }
     }
     controller.signal.throwIfAborted();
-    process.stdin.setEncoding("utf8");
-    process.stdin.on("data", receive);
+    stopInput = listenChatInput(process.stdin, (source) => Date.now() < acceptingUntil && (source === "operator" || platforms.some((p) => p.acceptsStdin && p.id === source)), queue);
     acceptingUntil = Date.now() + seconds * 1e3;
     hosting = (async () => {
       while (!controller.signal.aborted && Date.now() < acceptingUntil) {
@@ -37632,8 +37654,7 @@ async function main() {
     outcome = controller.signal.aborted ? "interrupted" : "finished";
   } finally {
     stop();
-    process.stdin.removeListener("data", receive);
-    process.stdin.pause();
+    stopInput?.();
     await Promise.allSettled(observers);
     const [closures] = await Promise.all([
       Promise.allSettled(opened.map(async (platform) => platform.close?.(outcome))),
