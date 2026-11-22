@@ -6532,7 +6532,7 @@ var require_node_domexception = __commonJS({
 });
 
 // node_modules/fetch-blob/from.js
-import { statSync, createReadStream, promises as fs } from "node:fs";
+import { statSync as statSync2, createReadStream, promises as fs3 } from "node:fs";
 import { basename } from "node:path";
 var import_node_domexception, stat, blobFromSync, blobFrom, fileFrom, fileFromSync, fromBlob, fromFile, BlobDataItem;
 var init_from = __esm({
@@ -6540,23 +6540,23 @@ var init_from = __esm({
     import_node_domexception = __toESM(require_node_domexception(), 1);
     init_file();
     init_fetch_blob();
-    ({ stat } = fs);
-    blobFromSync = (path8, type) => fromBlob(statSync(path8), path8, type);
-    blobFrom = (path8, type) => stat(path8).then((stat2) => fromBlob(stat2, path8, type));
-    fileFrom = (path8, type) => stat(path8).then((stat2) => fromFile(stat2, path8, type));
-    fileFromSync = (path8, type) => fromFile(statSync(path8), path8, type);
-    fromBlob = (stat2, path8, type = "") => new fetch_blob_default([new BlobDataItem({
-      path: path8,
+    ({ stat } = fs3);
+    blobFromSync = (path9, type) => fromBlob(statSync2(path9), path9, type);
+    blobFrom = (path9, type) => stat(path9).then((stat2) => fromBlob(stat2, path9, type));
+    fileFrom = (path9, type) => stat(path9).then((stat2) => fromFile(stat2, path9, type));
+    fileFromSync = (path9, type) => fromFile(statSync2(path9), path9, type);
+    fromBlob = (stat2, path9, type = "") => new fetch_blob_default([new BlobDataItem({
+      path: path9,
       size: stat2.size,
       lastModified: stat2.mtimeMs,
       start: 0
     })], { type });
-    fromFile = (stat2, path8, type = "") => new file_default([new BlobDataItem({
-      path: path8,
+    fromFile = (stat2, path9, type = "") => new file_default([new BlobDataItem({
+      path: path9,
       size: stat2.size,
       lastModified: stat2.mtimeMs,
       start: 0
-    })], basename(path8), { type, lastModified: stat2.mtimeMs });
+    })], basename(path9), { type, lastModified: stat2.mtimeMs });
     BlobDataItem = class _BlobDataItem {
       #path;
       #start;
@@ -11737,7 +11737,7 @@ var require_util2 = __commonJS({
     exports.getWellKnownCertificateConfigFileLocation = getWellKnownCertificateConfigFileLocation;
     var fs6 = __require("fs");
     var os = __require("os");
-    var path8 = __require("path");
+    var path9 = __require("path");
     var WELL_KNOWN_CERTIFICATE_CONFIG_FILE = "certificate_config.json";
     var CLOUDSDK_CONFIG_DIRECTORY = "gcloud";
     function snakeToCamel(str2) {
@@ -11830,8 +11830,8 @@ var require_util2 = __commonJS({
       }
     }
     function getWellKnownCertificateConfigFileLocation() {
-      const configDir = process.env.CLOUDSDK_CONFIG || (_isWindows() ? path8.join(process.env.APPDATA || "", CLOUDSDK_CONFIG_DIRECTORY) : path8.join(process.env.HOME || "", ".config", CLOUDSDK_CONFIG_DIRECTORY));
-      return path8.join(configDir, WELL_KNOWN_CERTIFICATE_CONFIG_FILE);
+      const configDir = process.env.CLOUDSDK_CONFIG || (_isWindows() ? path9.join(process.env.APPDATA || "", CLOUDSDK_CONFIG_DIRECTORY) : path9.join(process.env.HOME || "", ".config", CLOUDSDK_CONFIG_DIRECTORY));
+      return path9.join(configDir, WELL_KNOWN_CERTIFICATE_CONFIG_FILE);
     }
     function _isWindows() {
       return os.platform().startsWith("win");
@@ -13777,7 +13777,7 @@ var require_getCredentials = __commonJS({
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getCredentials = getCredentials;
-    var path8 = __require("path");
+    var path9 = __require("path");
     var fs6 = __require("fs");
     var util_1 = __require("util");
     var errorWithCode_1 = require_errorWithCode();
@@ -13849,7 +13849,7 @@ var require_getCredentials = __commonJS({
        * @returns An instance of a class that implements ICredentialsProvider.
        */
       static create(keyFilePath) {
-        const keyFileExtension = path8.extname(keyFilePath);
+        const keyFileExtension = path9.extname(keyFilePath);
         switch (keyFileExtension) {
           case ExtensionFiles.JSON:
             return new JsonCredentialsProvider(keyFilePath);
@@ -17218,7 +17218,7 @@ var require_googleauth = __commonJS({
     var gaxios_1 = require_src2();
     var gcpMetadata = require_src4();
     var os = __require("os");
-    var path8 = __require("path");
+    var path9 = __require("path");
     var crypto_1 = require_crypto3();
     var computeclient_1 = require_computeclient();
     var idtokenclient_1 = require_idtokenclient();
@@ -17503,19 +17503,19 @@ var require_googleauth = __commonJS({
         if (!configDir) {
           if (this._isWindows()) {
             if (process.env["APPDATA"]) {
-              configDir = path8.join(process.env["APPDATA"], "gcloud");
+              configDir = path9.join(process.env["APPDATA"], "gcloud");
             }
           } else {
             const home = process.env["HOME"];
             if (home) {
-              configDir = path8.join(home, ".config", "gcloud");
+              configDir = path9.join(home, ".config", "gcloud");
             }
           }
         }
         if (!configDir) {
           return null;
         }
-        const location = path8.join(configDir, "application_default_credentials.json");
+        const location = path9.join(configDir, "application_default_credentials.json");
         if (!fs6.existsSync(location)) {
           return null;
         }
@@ -17870,7 +17870,7 @@ var require_googleauth = __commonJS({
         if (this.jsonContent) {
           return this._cacheClientFromJSON(this.jsonContent, this.clientOptions);
         } else if (this.keyFilename) {
-          const filePath = path8.resolve(this.keyFilename);
+          const filePath = path9.resolve(this.keyFilename);
           const stream = fs6.createReadStream(filePath);
           return await this.fromStreamAsync(stream, this.clientOptions);
         } else if (this.apiKey) {
@@ -19525,14 +19525,14 @@ var require_util3 = __commonJS({
         }
         const port = url.port != null ? url.port : url.protocol === "https:" ? 443 : 80;
         let origin = url.origin != null ? url.origin : `${url.protocol || ""}//${url.hostname || ""}:${port}`;
-        let path8 = url.path != null ? url.path : `${url.pathname || ""}${url.search || ""}`;
+        let path9 = url.path != null ? url.path : `${url.pathname || ""}${url.search || ""}`;
         if (origin[origin.length - 1] === "/") {
           origin = origin.slice(0, origin.length - 1);
         }
-        if (path8 && path8[0] !== "/") {
-          path8 = `/${path8}`;
+        if (path9 && path9[0] !== "/") {
+          path9 = `/${path9}`;
         }
-        return new URL(`${origin}${path8}`);
+        return new URL(`${origin}${path9}`);
       }
       if (!isHttpOrHttpsPrefixed(url.origin || url.protocol)) {
         throw new InvalidArgumentError("Invalid URL protocol: the URL must start with `http:` or `https:`.");
@@ -20353,9 +20353,9 @@ var require_diagnostics = __commonJS({
         "undici:client:sendHeaders",
         (evt) => {
           const {
-            request: { method, path: path8, origin }
+            request: { method, path: path9, origin }
           } = evt;
-          debugLog("sending request to %s %s%s", method, origin, path8);
+          debugLog("sending request to %s %s%s", method, origin, path9);
         }
       );
     }
@@ -20373,14 +20373,14 @@ var require_diagnostics = __commonJS({
         "undici:request:headers",
         (evt) => {
           const {
-            request: { method, path: path8, origin },
+            request: { method, path: path9, origin },
             response: { statusCode }
           } = evt;
           debugLog(
             "received response to %s %s%s - HTTP %d",
             method,
             origin,
-            path8,
+            path9,
             statusCode
           );
         }
@@ -20389,23 +20389,23 @@ var require_diagnostics = __commonJS({
         "undici:request:trailers",
         (evt) => {
           const {
-            request: { method, path: path8, origin }
+            request: { method, path: path9, origin }
           } = evt;
-          debugLog("trailers received from %s %s%s", method, origin, path8);
+          debugLog("trailers received from %s %s%s", method, origin, path9);
         }
       );
       diagnosticsChannel.subscribe(
         "undici:request:error",
         (evt) => {
           const {
-            request: { method, path: path8, origin },
+            request: { method, path: path9, origin },
             error
           } = evt;
           debugLog(
             "request to %s %s%s errored - %s",
             method,
             origin,
-            path8,
+            path9,
             error.message
           );
         }
@@ -20520,7 +20520,7 @@ var require_request = __commonJS({
     var kHandler = /* @__PURE__ */ Symbol("handler");
     var Request2 = class {
       constructor(origin, {
-        path: path8,
+        path: path9,
         method,
         body,
         headers: headers2,
@@ -20537,11 +20537,11 @@ var require_request = __commonJS({
         maxRedirections,
         typeOfService
       }, handler) {
-        if (typeof path8 !== "string") {
+        if (typeof path9 !== "string") {
           throw new InvalidArgumentError("path must be a string");
-        } else if (path8[0] !== "/" && !(path8.startsWith("http://") || path8.startsWith("https://")) && method !== "CONNECT") {
+        } else if (path9[0] !== "/" && !(path9.startsWith("http://") || path9.startsWith("https://")) && method !== "CONNECT") {
           throw new InvalidArgumentError("path must be an absolute URL or start with a slash");
-        } else if (invalidPathRegex.test(path8)) {
+        } else if (invalidPathRegex.test(path9)) {
           throw new InvalidArgumentError("invalid request path");
         }
         if (typeof method !== "string") {
@@ -20616,7 +20616,7 @@ var require_request = __commonJS({
         this.completed = false;
         this.aborted = false;
         this.upgrade = upgrade || null;
-        this.path = query ? serializePathWithQuery(path8, query) : path8;
+        this.path = query ? serializePathWithQuery(path9, query) : path9;
         this.origin = origin;
         this.protocol = getProtocolFromUrlString(origin);
         this.idempotent = idempotent == null ? method === "HEAD" || method === "GET" : idempotent;
@@ -25798,7 +25798,7 @@ var require_client_h1 = __commonJS({
       return method !== "GET" && method !== "HEAD" && method !== "OPTIONS" && method !== "TRACE" && method !== "CONNECT";
     }
     function writeH1(client, request) {
-      const { method, path: path8, host, upgrade, blocking, reset } = request;
+      const { method, path: path9, host, upgrade, blocking, reset } = request;
       let { body, headers: headers2, contentLength } = request;
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH" || method === "QUERY" || method === "PROPFIND" || method === "PROPPATCH";
       if (util2.isFormDataLike(body)) {
@@ -25876,7 +25876,7 @@ var require_client_h1 = __commonJS({
       if (socket.setTypeOfService) {
         socket.setTypeOfService(request.typeOfService);
       }
-      let header = `${method} ${path8} HTTP/1.1\r
+      let header = `${method} ${path9} HTTP/1.1\r
 `;
       if (typeof host === "string") {
         header += `host: ${host}\r
@@ -26555,7 +26555,7 @@ var require_client_h2 = __commonJS({
       const headersTimeout = request.headersTimeout ?? client[kHeadersTimeout];
       const bodyTimeout = request.bodyTimeout ?? client[kBodyTimeout];
       const session = client[kHTTP2Session];
-      const { method, path: path8, host, upgrade, expectContinue, signal, protocol, headers: reqHeaders } = request;
+      const { method, path: path9, host, upgrade, expectContinue, signal, protocol, headers: reqHeaders } = request;
       let { body } = request;
       if (upgrade != null && upgrade !== "websocket") {
         util2.errorRequest(client, request, new InvalidArgumentError(`Custom upgrade "${upgrade}" not supported over HTTP/2`));
@@ -26624,7 +26624,7 @@ var require_client_h2 = __commonJS({
           }
           headers2[HTTP2_HEADER_METHOD] = "CONNECT";
           headers2[HTTP2_HEADER_PROTOCOL] = "websocket";
-          headers2[HTTP2_HEADER_PATH] = path8;
+          headers2[HTTP2_HEADER_PATH] = path9;
           if (protocol === "ws:" || protocol === "wss:") {
             headers2[HTTP2_HEADER_SCHEME] = protocol === "ws:" ? "http" : "https";
           } else {
@@ -26666,7 +26666,7 @@ var require_client_h2 = __commonJS({
         stream.setTimeout(headersTimeout);
         return true;
       }
-      headers2[HTTP2_HEADER_PATH] = path8;
+      headers2[HTTP2_HEADER_PATH] = path9;
       headers2[HTTP2_HEADER_SCHEME] = protocol === "http:" ? "http" : "https";
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH";
       if (body && typeof body.read === "function") {
@@ -29018,10 +29018,10 @@ var require_proxy_agent = __commonJS({
         };
         const {
           origin,
-          path: path8 = "/",
+          path: path9 = "/",
           headers: headers2 = {}
         } = opts;
-        opts.path = origin + path8;
+        opts.path = origin + path9;
         if (!("host" in headers2) && !("Host" in headers2)) {
           const { host } = new URL(origin);
           headers2.host = host;
@@ -31130,20 +31130,20 @@ var require_mock_utils = __commonJS({
       }
       return normalizedQp;
     }
-    function safeUrl(path8) {
-      if (typeof path8 !== "string") {
-        return path8;
+    function safeUrl(path9) {
+      if (typeof path9 !== "string") {
+        return path9;
       }
-      const pathSegments = path8.split("?", 3);
+      const pathSegments = path9.split("?", 3);
       if (pathSegments.length !== 2) {
-        return path8;
+        return path9;
       }
       const qp = new URLSearchParams(pathSegments.pop());
       qp.sort();
       return [...pathSegments, qp.toString()].join("?");
     }
-    function matchKey(mockDispatch2, { path: path8, method, body, headers: headers2 }) {
-      const pathMatch = matchValue(mockDispatch2.path, path8);
+    function matchKey(mockDispatch2, { path: path9, method, body, headers: headers2 }) {
+      const pathMatch = matchValue(mockDispatch2.path, path9);
       const methodMatch = matchValue(mockDispatch2.method, method);
       const bodyMatch = typeof mockDispatch2.body !== "undefined" ? matchValue(mockDispatch2.body, body) : true;
       const headersMatch = matchHeaders(mockDispatch2, headers2);
@@ -31168,8 +31168,8 @@ var require_mock_utils = __commonJS({
       const basePath = key.query ? serializePathWithQuery(key.path, key.query) : key.path;
       const resolvedPath = typeof basePath === "string" ? safeUrl(basePath) : basePath;
       const resolvedPathWithoutTrailingSlash = removeTrailingSlash(resolvedPath);
-      let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path: path8, ignoreTrailingSlash }) => {
-        return ignoreTrailingSlash ? matchValue(removeTrailingSlash(safeUrl(path8)), resolvedPathWithoutTrailingSlash) : matchValue(safeUrl(path8), resolvedPath);
+      let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path: path9, ignoreTrailingSlash }) => {
+        return ignoreTrailingSlash ? matchValue(removeTrailingSlash(safeUrl(path9)), resolvedPathWithoutTrailingSlash) : matchValue(safeUrl(path9), resolvedPath);
       });
       if (matchedMockDispatches.length === 0) {
         throw new MockNotMatchedError(`Mock dispatch not matched for path '${resolvedPath}'`);
@@ -31208,19 +31208,19 @@ var require_mock_utils = __commonJS({
         mockDispatches.splice(index, 1);
       }
     }
-    function removeTrailingSlash(path8) {
-      while (path8.endsWith("/")) {
-        path8 = path8.slice(0, -1);
+    function removeTrailingSlash(path9) {
+      while (path9.endsWith("/")) {
+        path9 = path9.slice(0, -1);
       }
-      if (path8.length === 0) {
-        path8 = "/";
+      if (path9.length === 0) {
+        path9 = "/";
       }
-      return path8;
+      return path9;
     }
     function buildKey(opts) {
-      const { path: path8, method, body, headers: headers2, query } = opts;
+      const { path: path9, method, body, headers: headers2, query } = opts;
       return {
-        path: path8,
+        path: path9,
         method,
         body,
         headers: headers2,
@@ -31910,10 +31910,10 @@ var require_pending_interceptors_formatter = __commonJS({
       }
       format(pendingInterceptors) {
         const withPrettyHeaders = pendingInterceptors.map(
-          ({ method, path: path8, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
+          ({ method, path: path9, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
             Method: method,
             Origin: origin,
-            Path: path8,
+            Path: path9,
             "Status code": statusCode,
             Persistent: persist ? PERSISTENT : NOT_PERSISTENT,
             Invocations: timesInvoked,
@@ -31995,9 +31995,9 @@ var require_mock_agent = __commonJS({
         const acceptNonStandardSearchParameters = this[kMockAgentAcceptsNonStandardSearchParameters];
         const dispatchOpts = { ...opts };
         if (acceptNonStandardSearchParameters && dispatchOpts.path) {
-          const [path8, searchParams] = dispatchOpts.path.split("?");
+          const [path9, searchParams] = dispatchOpts.path.split("?");
           const normalizedSearchParams = normalizeSearchParams(searchParams, acceptNonStandardSearchParameters);
-          dispatchOpts.path = `${path8}?${normalizedSearchParams}`;
+          dispatchOpts.path = `${path9}?${normalizedSearchParams}`;
         }
         return this[kAgent].dispatch(dispatchOpts, handler);
       }
@@ -32398,12 +32398,12 @@ var require_snapshot_recorder = __commonJS({
        * @return {Promise<void>} - Resolves when snapshots are loaded
        */
       async loadSnapshots(filePath) {
-        const path8 = filePath || this.#snapshotPath;
-        if (!path8) {
+        const path9 = filePath || this.#snapshotPath;
+        if (!path9) {
           throw new InvalidArgumentError("Snapshot path is required");
         }
         try {
-          const data = await readFile(resolve6(path8), "utf8");
+          const data = await readFile(resolve6(path9), "utf8");
           const parsed = JSON.parse(data);
           if (Array.isArray(parsed)) {
             this.#snapshots.clear();
@@ -32417,7 +32417,7 @@ var require_snapshot_recorder = __commonJS({
           if (error.code === "ENOENT") {
             this.#snapshots.clear();
           } else {
-            throw new UndiciError(`Failed to load snapshots from ${path8}`, { cause: error });
+            throw new UndiciError(`Failed to load snapshots from ${path9}`, { cause: error });
           }
         }
       }
@@ -32428,11 +32428,11 @@ var require_snapshot_recorder = __commonJS({
        * @returns {Promise<void>} - Resolves when snapshots are saved
        */
       async saveSnapshots(filePath) {
-        const path8 = filePath || this.#snapshotPath;
-        if (!path8) {
+        const path9 = filePath || this.#snapshotPath;
+        if (!path9) {
           throw new InvalidArgumentError("Snapshot path is required");
         }
-        const resolvedPath = resolve6(path8);
+        const resolvedPath = resolve6(path9);
         await mkdir(dirname6(resolvedPath), { recursive: true });
         const data = Array.from(this.#snapshots.entries()).map(([hash3, snapshot]) => ({
           hash: hash3,
@@ -33064,15 +33064,15 @@ var require_redirect_handler = __commonJS({
           return;
         }
         const { origin, pathname, search } = util2.parseURL(new URL(this.location, this.opts.origin && new URL(this.opts.path, this.opts.origin)));
-        const path8 = search ? `${pathname}${search}` : pathname;
-        const redirectUrlString = `${origin}${path8}`;
+        const path9 = search ? `${pathname}${search}` : pathname;
+        const redirectUrlString = `${origin}${path9}`;
         for (const historyUrl of this.history) {
           if (historyUrl.toString() === redirectUrlString) {
             throw new InvalidArgumentError(`Redirect loop detected. Cannot redirect to ${origin}. This typically happens when using a Client or Pool with cross-origin redirects. Use an Agent for cross-origin redirects.`);
           }
         }
         this.opts.headers = cleanRequestHeaders(this.opts.headers, statusCode === 303, this.opts.origin !== origin);
-        this.opts.path = path8;
+        this.opts.path = path9;
         this.opts.origin = origin;
         this.opts.query = null;
       }
@@ -34832,10 +34832,10 @@ var require_cache_handler = __commonJS({
       }
       return locationUrl.pathname + locationUrl.search;
     }
-    function deleteCachedUri(store, cacheKey, path8) {
+    function deleteCachedUri(store, cacheKey, path9) {
       deleteCachedValue(store, {
         ...cacheKey,
-        path: path8
+        path: path9
       });
       for (let i2 = 0; i2 < util2.safeHTTPMethods.length; i2++) {
         const method = util2.safeHTTPMethods[i2];
@@ -34843,7 +34843,7 @@ var require_cache_handler = __commonJS({
           deleteCachedValue(store, {
             ...cacheKey,
             method,
-            path: path8
+            path: path9
           });
         }
       }
@@ -34854,9 +34854,9 @@ var require_cache_handler = __commonJS({
       }
       const values = Array.isArray(headerValue) ? headerValue : [headerValue];
       for (let i2 = 0; i2 < values.length; i2++) {
-        const path8 = getSameOriginPath(cacheKey, values[i2]);
-        if (path8 !== void 0) {
-          deleteCachedUri(store, cacheKey, path8);
+        const path9 = getSameOriginPath(cacheKey, values[i2]);
+        if (path9 !== void 0) {
+          deleteCachedUri(store, cacheKey, path9);
         }
       }
     }
@@ -39856,11 +39856,11 @@ var require_fetch = __commonJS({
       function dispatch({ body }) {
         const url = requestCurrentURL(request);
         const agent = fetchParams.controller.dispatcher;
-        const path8 = url.pathname + url.search;
+        const path9 = url.pathname + url.search;
         const hasTrailingQuestionMark = url.search.length === 0 && url.href[url.href.length - url.hash.length - 1] === "?";
         return new Promise((resolve6, reject) => agent.dispatch(
           {
-            path: hasTrailingQuestionMark ? `${path8}?` : path8,
+            path: hasTrailingQuestionMark ? `${path9}?` : path9,
             origin: url.origin,
             method: request.method,
             body: agent.isMockActive ? request.body && (request.body.source || request.body.stream) : body,
@@ -40807,9 +40807,9 @@ var require_util6 = __commonJS({
         }
       }
     }
-    function validateCookiePath(path8) {
-      for (let i2 = 0; i2 < path8.length; ++i2) {
-        const code = path8.charCodeAt(i2);
+    function validateCookiePath(path9) {
+      for (let i2 = 0; i2 < path9.length; ++i2) {
+        const code = path9.charCodeAt(i2);
         if (code < 32 || // exclude CTLs (0-31)
         code > 126 || // exclude DEL and non-ascii
         code === 59) {
@@ -44157,11 +44157,11 @@ var require_undici = __commonJS({
           if (typeof opts.path !== "string") {
             throw new InvalidArgumentError("invalid opts.path");
           }
-          let path8 = opts.path;
+          let path9 = opts.path;
           if (!opts.path.startsWith("/")) {
-            path8 = `/${path8}`;
+            path9 = `/${path9}`;
           }
-          url = new URL(util2.parseOrigin(url).origin + path8);
+          url = new URL(util2.parseOrigin(url).origin + path9);
         } else {
           if (!opts) {
             opts = typeof url === "object" ? url : {};
@@ -44814,8 +44814,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path8, errorMaps, issueData } = params;
-  const fullPath = [...path8, ...issueData.path || []];
+  const { data, path: path9, errorMaps, issueData } = params;
+  const fullPath = [...path9, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -44931,11 +44931,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path8, key) {
+  constructor(parent, value, path9, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path8;
+    this._path = path9;
     this._key = key;
   }
   get path() {
@@ -48496,7 +48496,7 @@ function validateOpening(prompt, positions, references, issue, maxChars = 2e3) {
 }
 
 // src/scene-video.ts
-import path6 from "node:path";
+import path7 from "node:path";
 import { existsSync as existsSync5, readFileSync as readFileSync7, realpathSync as realpathSync2, statSync as statSync5 } from "node:fs";
 import { createRequire as createRequire5 } from "node:module";
 
@@ -48528,9 +48528,9 @@ function cameraMoveWords(camera) {
   const travels = load2("../../skills/storyboard/references/production-mode.js").travels(camera);
   const ends = travels ? ", with a short pause on the opening and closing pictures" : "";
   if (move) {
-    const path8 = /[;.!?]\s|^(?:after|when|once|follow|track|pan|tilt|dolly|orbit|keep|start|end)\b/i.test(target);
-    const words = move.replace("{target}", () => path8 || !target ? "the subject" : target);
-    return [sentence("The camera " + (pace ? pace + " " : "") + words + (speed && !pace ? " at a " + speed + " pace" : "") + ends), path8 && sentence(target)].filter(Boolean).join(" ");
+    const path9 = /[;.!?]\s|^(?:after|when|once|follow|track|pan|tilt|dolly|orbit|keep|start|end)\b/i.test(target);
+    const words = move.replace("{target}", () => path9 || !target ? "the subject" : target);
+    return [sentence("The camera " + (pace ? pace + " " : "") + words + (speed && !pace ? " at a " + speed + " pace" : "") + ends), path9 && sentence(target)].filter(Boolean).join(" ");
   }
   return [sentence("Camera: " + [speed, movement].filter(Boolean).join(" ") + ends), target && sentence("Camera target: " + target)].filter(Boolean).join(" ");
 }
@@ -48771,13 +48771,8 @@ function readImageMetadata(file) {
   return imageMetadata(readFileSync(file));
 }
 
-// src/veo-video.ts
-var import_google_auth_library = __toESM(require_src5(), 1);
-import fs4 from "node:fs";
-import { execFileSync } from "node:child_process";
-
 // src/config.ts
-import { accessSync, constants, existsSync, readFileSync as readFileSync2, readdirSync, statSync as statSync2 } from "node:fs";
+import { accessSync, constants, existsSync, readFileSync as readFileSync2, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, join } from "node:path";
 function loadEnvFile(file = join(process.env.SNS_TOKEN_DIR || join(homedir(), ".config", "social-flow"), ".env")) {
@@ -48886,8 +48881,11 @@ function requireAstraVideoKey() {
   return config.astraVideoApiKey;
 }
 
+// src/ltx-api-video.ts
+import { execFileSync } from "node:child_process";
+
 // src/media-utils.ts
-import * as fs2 from "node:fs";
+import * as fs from "node:fs";
 import * as path from "node:path";
 var ALLOWED_EXTENSIONS = {
   image: [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"],
@@ -48916,7 +48914,7 @@ function resolveOutputFile(outputDir, filename, kind) {
   }
   validateFilePath(filename, { allowedExtensions: ALLOWED_EXTENSIONS[kind] });
   const dir = path.resolve(outputDir);
-  fs2.mkdirSync(dir, { recursive: true });
+  fs.mkdirSync(dir, { recursive: true });
   return path.join(dir, filename);
 }
 function bareFilenameSchema(kind) {
@@ -48929,7 +48927,7 @@ function bareFilenameSchema(kind) {
 }
 
 // src/vendor-video.ts
-import fs3 from "node:fs";
+import fs2 from "node:fs";
 import path2 from "node:path";
 import { randomUUID } from "node:crypto";
 
@@ -48980,9 +48978,9 @@ function mediaType(file, allowed) {
 }
 function dataUri(file, allowed, maxBytes) {
   const type = mediaType(file, allowed);
-  const size = fs3.statSync(file).size;
+  const size = fs2.statSync(file).size;
   if (size > maxBytes) throw new Error(`${path2.basename(file)} is ${(size / 1048576).toFixed(1)} MB; this vendor takes at most ${(maxBytes / 1048576).toFixed(0)} MB inline`);
-  return `data:${type};base64,${fs3.readFileSync(file).toString("base64")}`;
+  return `data:${type};base64,${fs2.readFileSync(file).toString("base64")}`;
 }
 var sleep = (ms) => new Promise((resolve6) => setTimeout(resolve6, ms));
 async function runVendorJob(job) {
@@ -49033,17 +49031,127 @@ async function saveVendorOutput(status, target, id) {
       bytes = Buffer.from(await download.arrayBuffer());
     }
     if (!bytes.length) throw new Error("empty video");
-    fs3.writeFileSync(temporary, bytes, { flag: "wx" });
-    fs3.renameSync(temporary, target);
+    fs2.writeFileSync(temporary, bytes, { flag: "wx" });
+    fs2.renameSync(temporary, target);
     return { success: true, videoPath: target, providerId: id, meta: status.meta ?? {} };
   } catch (error) {
     return { success: false, terminal: false, providerId: id, error: "Output download or save failed: " + String(error) + "; recover the existing job, do not resubmit" };
   } finally {
-    fs3.rmSync(temporary, { force: true });
+    fs2.rmSync(temporary, { force: true });
   }
 }
 
+// src/ltx-api-video.ts
+var LTX_API_BASE_URL = "https://api.ltx.io";
+var LTX_API_MODELS = ["ltx-2-5-pro", "ltx-2-5-fast"];
+var LTX_API_RESOLUTIONS = {
+  "720p": ["1280x720", "720x1280", "720x720", "1080x720", "720x1080"],
+  "1080p": ["1920x1080", "1080x1920", "1080x1080", "1620x1080", "1080x1620"],
+  "1440p": ["2560x1440", "1440x2560", "1440x1440", "2160x1440", "1440x2160"],
+  "4k": ["3840x2160", "2160x3840", "2160x2160", "3240x2160", "2160x3240"]
+};
+var ltxApiTier = (resolution2) => Object.entries(LTX_API_RESOLUTIONS).find(([, sizes]) => sizes.includes(resolution2))?.[0];
+var IMAGE_EXT = [".png", ".jpg", ".jpeg", ".webp"];
+var AUDIO_EXT = [".wav", ".mp3", ".m4a", ".ogg"];
+function ltxApiSeconds(model2, resolution2, fps = 24) {
+  const long = model2 === "ltx-2-5-fast" && ["720p", "1080p"].includes(ltxApiTier(resolution2) ?? "") && fps <= 25;
+  return long ? [6, 8, 10, 12, 14, 16, 18, 20] : [6, 8, 10];
+}
+var ltxApiAudioMax = (model2, resolution2) => model2 === "ltx-2-5-fast" && ["720p", "1080p"].includes(ltxApiTier(resolution2) ?? "") ? 20 : 10;
+var common = {
+  prompt: external_exports.string().max(5e3).describe("English action, camera and sound."),
+  model: external_exports.enum(LTX_API_MODELS).default("ltx-2-5-pro").describe("LTX API model id."),
+  resolution: external_exports.string().refine((value) => Boolean(ltxApiTier(value)), "Use a WIDTHxHEIGHT the LTX API lists, e.g. 1920x1080").default("1920x1080").describe("Output size, e.g. 1920x1080 or 1080x1920."),
+  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24).describe("Frame rate."),
+  cameraMotion: external_exports.enum(["dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"]).optional().describe("Optional preset camera move."),
+  sourceImagePath: external_exports.string().min(1).describe("First frame image (PNG/JPEG/WEBP, 7 MB inline)."),
+  lastImagePath: external_exports.string().min(1).optional().describe("Optional last frame image."),
+  outputPath: external_exports.string().optional().describe("Output directory."),
+  filename: bareFilenameSchema("video").optional().describe("MP4 filename.")
+};
+var ltxApiImg2VideoSchema = external_exports.object({
+  ...common,
+  prompt: common.prompt.min(1),
+  durationSeconds: external_exports.number().int().default(6).describe("6, 8 or 10 seconds (Fast at 720p/1080p, 24/25 fps: up to 20)."),
+  generateAudio: external_exports.boolean().default(false).describe("Generate a soundtrack; false for cuts whose sound comes from assembly.")
+}).strict().superRefine((v, ctx) => {
+  if (!ltxApiSeconds(v.model, v.resolution, v.fps).includes(v.durationSeconds))
+    ctx.addIssue({ code: "custom", path: ["durationSeconds"], message: `${v.model} at ${v.resolution}/${v.fps} fps takes ${ltxApiSeconds(v.model, v.resolution, v.fps).join(", ")} seconds` });
+});
+var ltxApiAudio2VideoSchema = external_exports.object({
+  ...common,
+  sourceImagePath: common.sourceImagePath.optional(),
+  prompt: common.prompt.default(""),
+  audioPath: external_exports.string().min(1).describe("The composed pinned-voice track; its length sets the clip length (2\u201310 s, Fast at 720p/1080p up to 20 s).")
+}).strict().superRefine((args, ctx) => {
+  if (!args.sourceImagePath && (!args.prompt.trim() || args.lastImagePath))
+    ctx.addIssue({ code: "custom", path: ["sourceImagePath"], message: "A first image is required with a last image or an empty prompt" });
+});
+function ltxApiAudioSeconds(file) {
+  const seconds2 = Number(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], { encoding: "utf8", timeout: 15e3 }));
+  if (!Number.isFinite(seconds2) || seconds2 <= 0) throw new Error("Cannot read the length of " + file);
+  return seconds2;
+}
+function buildLtxApiBody(request) {
+  const image2 = (file) => dataUri(file, IMAGE_EXT, 7 * 1048576);
+  const body = {
+    model: request.model,
+    resolution: request.resolution,
+    fps: request.fps,
+    prompt: request.prompt,
+    ...request.sourceImagePath ? { image_uri: image2(request.sourceImagePath) } : {},
+    ...request.lastImagePath ? { last_frame_uri: image2(request.lastImagePath) } : {},
+    ...request.cameraMotion ? { camera_motion: request.cameraMotion } : {}
+  };
+  if ("audioPath" in request) {
+    const seconds2 = ltxApiAudioSeconds(request.audioPath), max = ltxApiAudioMax(request.model, request.resolution);
+    if (seconds2 < 2 || seconds2 > max) throw new Error(`${request.model} at ${request.resolution} takes 2\u2013${max} s of audio; ${request.audioPath} runs ${seconds2.toFixed(2)} s`);
+    body.audio_uri = dataUri(request.audioPath, AUDIO_EXT, 15 * 1048576);
+  } else Object.assign(body, { duration: request.durationSeconds, generate_audio: request.generateAudio });
+  if (JSON.stringify(body).length > 32 * 1048576) throw new Error("LTX request body exceeds 32 MB; use smaller frames or audio");
+  return { endpoint: "audioPath" in request ? "audio-to-video" : "image-to-video", body };
+}
+function ltxApiStatus(json) {
+  const status = json.status, result = json.result;
+  if (status === "completed") return result?.video_url ? { state: "done", url: result.video_url } : { state: "failed", error: "completed without result.video_url" };
+  if (status === "failed") return { state: "failed", error: json.error?.message ?? "failed" };
+  return { state: "running" };
+}
+async function pollLtxApi(endpoint2, id) {
+  return ltxApiStatus(await vendorJson(
+    LTX_API_BASE_URL + "/v2/" + endpoint2 + "/" + encodeURIComponent(id),
+    { headers: { Authorization: "Bearer " + config.ltxApiKey, "Content-Type": "application/json" } }
+  ));
+}
+async function generateLtxApiVideo(request) {
+  if (!config.ltxApiKey) return { success: false, error: "LTX_API_KEY is not set", terminal: true };
+  const headers2 = { Authorization: `Bearer ${config.ltxApiKey}`, "Content-Type": "application/json" };
+  let built;
+  try {
+    built = buildLtxApiBody(request);
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : String(error), terminal: true };
+  }
+  return runVendorJob({
+    vendor: "LTX API",
+    outputPath: request.outputPath ?? process.cwd(),
+    filename: request.filename ?? `ltx-${Date.now()}.mp4`,
+    intervalMs: 6e3,
+    maxPolls: 300,
+    submit: async () => {
+      const json = await vendorJson(`${LTX_API_BASE_URL}/v2/${built.endpoint}`, { method: "POST", headers: headers2, body: JSON.stringify(built.body), timeoutMs: 5 * 6e4 });
+      if (typeof json.id !== "string" || !json.id) throw new Error("No job id in LTX response");
+      return json.id;
+    },
+    poll: (id) => pollLtxApi("audioPath" in request ? "audio-to-video" : "image-to-video", id)
+  });
+}
+
 // src/veo-video.ts
+var import_google_auth_library = __toESM(require_src5(), 1);
+import fs4 from "node:fs";
+import path3 from "node:path";
+import { execFileSync as execFileSync2 } from "node:child_process";
 var VEO_MODELS = ["veo-3.1-generate-001", "veo-3.1-fast-generate-001", "veo-3.1-lite-generate-001"];
 var [standard, fast, lite] = VEO_MODELS;
 var VEO_CONSTRAINTS = Object.fromEntries(VEO_MODELS.map((model2) => [model2, {
@@ -49059,7 +49167,27 @@ var VEO_CONSTRAINTS = Object.fromEntries(VEO_MODELS.map((model2) => [model2, {
   generateAudio: true,
   voiceReference: false
 }]));
-var common = {
+function veoSubjectIssue(assets, model2 = standard, owners = [], registered) {
+  const limit = VEO_CONSTRAINTS[model2]?.maxAssetImages ?? 0;
+  if (!limit || !assets.length || assets.length > limit)
+    return model2 + " accepts " + (limit ? "1 to " + limit : "no") + " subject images";
+  const subjects = new Set(owners.map((id) => "character:" + id));
+  const folders = /* @__PURE__ */ new Set();
+  const roles = /* @__PURE__ */ new Set();
+  for (const asset of assets) {
+    const role = ["face", "outfit", "bystander"].includes(asset.role) ? "character" : asset.role;
+    if (!["character", "prop", "continuity"].includes(role)) return "Unsupported Veo subject role: " + asset.role;
+    if (role !== "continuity") roles.add(role);
+    if (asset.character) subjects.add("character:" + asset.character);
+    const identities = registered?.get(asset.path);
+    for (const id of identities ?? []) subjects.add(id);
+    const dir = path3.dirname(asset.path);
+    if (path3.basename(path3.dirname(dir)) === "characters") subjects.add("character:" + path3.basename(dir));
+    else if (!identities?.size && fs4.existsSync(path3.join(dir, "panels.json"))) folders.add(dir);
+  }
+  if (subjects.size > 1 || folders.size > 1 || roles.size > 1) return "Veo asset references must show the same subject";
+}
+var common2 = {
   model: external_exports.enum(VEO_MODELS).default(standard),
   prompt: external_exports.string().trim().min(1),
   resolution: external_exports.enum(["720p", "1080p", "4k"]).default("720p"),
@@ -49075,17 +49203,17 @@ var checkResolution = (v, ctx) => {
   if (!VEO_CONSTRAINTS[v.model].resolutions.includes(v.resolution))
     ctx.addIssue({ code: "custom", path: ["resolution"], message: "Unsupported resolution for " + v.model });
 };
-var veoTextSchema = external_exports.object({ ...common, ...duration }).strict().superRefine(checkResolution);
-var veoImageSchema = external_exports.object({ ...common, ...duration, sourceImagePath: external_exports.string().min(1), lastImagePath: external_exports.string().min(1).optional() }).strict().superRefine(checkResolution);
+var veoTextSchema = external_exports.object({ ...common2, ...duration }).strict().superRefine(checkResolution);
+var veoImageSchema = external_exports.object({ ...common2, ...duration, sourceImagePath: external_exports.string().min(1), lastImagePath: external_exports.string().min(1).optional() }).strict().superRefine(checkResolution);
 var veoReferenceSchema = external_exports.object({
-  ...common,
+  ...common2,
   durationSeconds: external_exports.literal(8).default(8),
   referenceImagePaths: external_exports.array(external_exports.string().min(1)).min(1).max(3)
 }).strict().superRefine((v, ctx) => {
   checkResolution(v, ctx);
   if (v.model === lite) ctx.addIssue({ code: "custom", path: ["model"], message: "Veo Lite does not accept asset reference images" });
 });
-var veoExtendSchema = external_exports.object({ ...common, aspectRatio: common.aspectRatio.removeDefault().optional(), sourceVideoPath: external_exports.string().min(1) }).strict().superRefine(checkResolution);
+var veoExtendSchema = external_exports.object({ ...common2, aspectRatio: common2.aspectRatio.removeDefault().optional(), sourceVideoPath: external_exports.string().min(1) }).strict().superRefine(checkResolution);
 function image(file) {
   const mimeType = mediaType(file, [".png", ".jpg", ".jpeg"]);
   if (fs4.statSync(file).size > 20 * 1024 * 1024) throw new Error("Veo input image exceeds 20 MB");
@@ -49101,7 +49229,7 @@ function buildVeoBody(request) {
     instance.referenceImages = request.referenceImagePaths.map((file) => ({ referenceType: "asset", image: image(file) }));
   } else if ("sourceVideoPath" in request) {
     const file = request.sourceVideoPath;
-    const probe3 = JSON.parse(execFileSync("ffprobe", [
+    const probe3 = JSON.parse(execFileSync2("ffprobe", [
       "-v",
       "error",
       "-select_streams",
@@ -49186,6 +49314,89 @@ function veoPriceKey(model2, resolution2, audio) {
   const tier = VEO_CONSTRAINTS[model2]?.priceFamily;
   return tier ? ["veo.vertex", tier, resolution2, audio ? "audio" : "silent"].join(".") : null;
 }
+
+// src/hosted-video-routes.ts
+function inputs(schema, build, generate) {
+  return { schema, preflight: (args) => {
+    build(schema.parse(args));
+  }, generate: (args) => generate(schema.parse(args)) };
+}
+var ltx = {
+  engine: "ltx-api",
+  deployment: "ltx-api-v2",
+  configured: () => Boolean(config.ltxApiKey),
+  modelConstraints: {
+    models: [...LTX_API_MODELS],
+    resolutions: LTX_API_RESOLUTIONS,
+    limits: Object.fromEntries(LTX_API_MODELS.map((model2) => [model2, Object.fromEntries(Object.entries(LTX_API_RESOLUTIONS).map(([tier, [size]]) => [tier, { imageSeconds: ltxApiSeconds(model2, size, 24), highFpsSeconds: ltxApiSeconds(model2, size, 48), audioMaxSeconds: ltxApiAudioMax(model2, size) }]))])),
+    note: "Official LTX API. I2V: 6/8/10 s (Fast at 720p/1080p, 24/25 fps: 6-20 s), first and optional last frame, 7 MB inline images. A2V: the supplied track sets the length (2-10 s; Fast at 720p/1080p up to 20 s), billed on audio seconds. No voice reference, seed or negative prompt."
+  },
+  frames: ["sourceImagePath", "lastImagePath"]
+};
+var veo = {
+  engine: "veo",
+  deployment: "google-cloud-us-central1",
+  voice: "none",
+  configured: () => Boolean(config.googleCloudProject),
+  modelConstraints: VEO_CONSTRAINTS,
+  soundtrack: true,
+  poll: (args, id) => pollVeo(String(args.model), id)
+};
+var HOSTED_VIDEO_ROUTES = {
+  ltx_api_img2video: {
+    ...ltx,
+    ...inputs(ltxApiImg2VideoSchema, buildLtxApiBody, generateLtxApiVideo),
+    operation: "image",
+    voice: "none",
+    soundtrack: true,
+    title: "Generate an LTX API video from a start frame",
+    description: "Generate from a first and optional last frame using LTX_API_KEY. Use audio-to-video for supplied speech.",
+    seconds: (a) => ltxApiSeconds(String(a.model ?? "ltx-2-5-pro"), String(a.resolution ?? "1920x1080"), Number(a.fps ?? 24)),
+    poll: (_, id) => pollLtxApi("image-to-video", id)
+  },
+  ltx_api_audio2video: {
+    ...ltx,
+    ...inputs(ltxApiAudio2VideoSchema, buildLtxApiBody, generateLtxApiVideo),
+    operation: "audio",
+    voice: "supplied",
+    title: "Generate an LTX API video from a voice track",
+    description: "The supplied audio controls the clip length and speech. Supply a prompt or a first image, or both. Requires LTX_API_KEY.",
+    poll: (_, id) => pollLtxApi("audio-to-video", id)
+  },
+  veo_text2video: {
+    ...veo,
+    ...inputs(veoTextSchema, buildVeoBody, generateVeo),
+    operation: "text",
+    title: "Generate a Veo clip from text",
+    seconds: () => [4, 6, 8],
+    description: "Google Cloud Veo 3.1. English scene and optional native sound. Character voice samples are unsupported."
+  },
+  veo_img2video: {
+    ...veo,
+    ...inputs(veoImageSchema, buildVeoBody, generateVeo),
+    operation: "image",
+    title: "Animate a first frame with Veo",
+    frames: ["sourceImagePath", "lastImagePath"],
+    seconds: () => [4, 6, 8],
+    description: "Animate a JPEG or PNG with Google Cloud Veo 3.1, optionally pinning the final frame. Use reference mode for asset pictures."
+  },
+  veo_reference: {
+    ...veo,
+    ...inputs(veoReferenceSchema, buildVeoBody, generateVeo),
+    operation: "reference",
+    title: "Generate a Veo clip from subject images",
+    subjectAssets: { parameter: "referenceImagePaths", validate: veoSubjectIssue },
+    seconds: () => [8],
+    description: "Generate eight seconds from one to three images of a subject. Standard and Fast accept assets. No pinned frames or voice samples."
+  },
+  veo_extend: {
+    ...veo,
+    ...inputs(veoExtendSchema, buildVeoBody, generateVeo),
+    operation: "extend",
+    title: "Extend an existing Veo video",
+    description: "Extend a 1\u201330 second, 24 fps MP4 by seven seconds with Google Cloud Veo. Returns the concatenated MP4."
+  }
+};
 
 // src/astra-genai-client.ts
 var import_undici = __toESM(require_undici(), 1);
@@ -49457,7 +49668,7 @@ function buildLtxVideoBody(request) {
 }
 
 // src/fasth3-omni.ts
-import { execFileSync as execFileSync2 } from "node:child_process";
+import { execFileSync as execFileSync3 } from "node:child_process";
 import { mkdtempSync as mkdtempSync2, readFileSync as readFileSync4, readdirSync as readdirSync2, rmSync as rmSync2, statSync as statSync3 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join as join3 } from "node:path";
@@ -49490,13 +49701,13 @@ var fasth3OmniSchema = external_exports.object({
   if (v.width * v.height * v.numFrames * 3 > FASTH3_MAX_RGB_BYTES) issue("Decoded RGB exceeds the adapter 256 MiB compatibility limit; reduce dimensions or frames");
 });
 function probe(file) {
-  const data = JSON.parse(execFileSync2("ffprobe", ["-v", "error", "-show_entries", "format=duration:stream=codec_type", "-of", "json", file], { encoding: "utf8", timeout: 15e3 }));
+  const data = JSON.parse(execFileSync3("ffprobe", ["-v", "error", "-show_entries", "format=duration:stream=codec_type", "-of", "json", file], { encoding: "utf8", timeout: 15e3 }));
   const duration3 = Number(data.format?.duration);
   if (!Number.isFinite(duration3) || duration3 < 2 || duration3 > 15) throw new Error("Reference media must be 2\u201315 seconds: " + file);
   return { duration: duration3, hasAudio: data.streams?.some((s2) => s2.codec_type === "audio") === true };
 }
 function ffmpeg(args) {
-  execFileSync2("ffmpeg", ["-hide_banner", "-loglevel", "error", "-nostdin", "-y", ...args], { timeout: 12e4, maxBuffer: 1024 * 1024 });
+  execFileSync3("ffmpeg", ["-hide_banner", "-loglevel", "error", "-nostdin", "-y", ...args], { timeout: 12e4, maxBuffer: 1024 * 1024 });
 }
 function buildFasth3Body(raw) {
   const r2 = fasth3OmniSchema.parse(raw);
@@ -49578,113 +49789,6 @@ var LOCAL_VIDEO_MODELS = {
 function localVideoStrategy(tool) {
   const name = tool === "mlx_video_generate" ? "ltx_video_generate" : tool;
   return Object.hasOwn(LOCAL_VIDEO_MODELS, name) ? LOCAL_VIDEO_MODELS[name] : void 0;
-}
-
-// src/ltx-api-video.ts
-import { execFileSync as execFileSync3 } from "node:child_process";
-var LTX_API_BASE_URL = "https://api.ltx.io";
-var LTX_API_MODELS = ["ltx-2-5-pro", "ltx-2-5-fast"];
-var LTX_API_RESOLUTIONS = {
-  "720p": ["1280x720", "720x1280", "720x720", "1080x720", "720x1080"],
-  "1080p": ["1920x1080", "1080x1920", "1080x1080", "1620x1080", "1080x1620"],
-  "1440p": ["2560x1440", "1440x2560", "1440x1440", "2160x1440", "1440x2160"],
-  "4k": ["3840x2160", "2160x3840", "2160x2160", "3240x2160", "2160x3240"]
-};
-var ltxApiTier = (resolution2) => Object.entries(LTX_API_RESOLUTIONS).find(([, sizes]) => sizes.includes(resolution2))?.[0];
-var IMAGE_EXT = [".png", ".jpg", ".jpeg", ".webp"];
-var AUDIO_EXT = [".wav", ".mp3", ".m4a", ".ogg"];
-function ltxApiSeconds(model2, resolution2, fps = 24) {
-  const long = model2 === "ltx-2-5-fast" && ["720p", "1080p"].includes(ltxApiTier(resolution2) ?? "") && fps <= 25;
-  return long ? [6, 8, 10, 12, 14, 16, 18, 20] : [6, 8, 10];
-}
-var ltxApiAudioMax = (model2, resolution2) => model2 === "ltx-2-5-fast" && ["720p", "1080p"].includes(ltxApiTier(resolution2) ?? "") ? 20 : 10;
-var common2 = {
-  prompt: external_exports.string().max(5e3).describe("English action, camera and sound."),
-  model: external_exports.enum(LTX_API_MODELS).default("ltx-2-5-pro").describe("LTX API model id."),
-  resolution: external_exports.string().refine((value) => Boolean(ltxApiTier(value)), "Use a WIDTHxHEIGHT the LTX API lists, e.g. 1920x1080").default("1920x1080").describe("Output size, e.g. 1920x1080 or 1080x1920."),
-  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24).describe("Frame rate."),
-  cameraMotion: external_exports.enum(["dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"]).optional().describe("Optional preset camera move."),
-  sourceImagePath: external_exports.string().min(1).describe("First frame image (PNG/JPEG/WEBP, 7 MB inline)."),
-  lastImagePath: external_exports.string().min(1).optional().describe("Optional last frame image."),
-  outputPath: external_exports.string().optional().describe("Output directory."),
-  filename: bareFilenameSchema("video").optional().describe("MP4 filename.")
-};
-var ltxApiImg2VideoSchema = external_exports.object({
-  ...common2,
-  prompt: common2.prompt.min(1),
-  durationSeconds: external_exports.number().int().default(6).describe("6, 8 or 10 seconds (Fast at 720p/1080p, 24/25 fps: up to 20)."),
-  generateAudio: external_exports.boolean().default(false).describe("Generate a soundtrack; false for cuts whose sound comes from assembly.")
-}).strict().superRefine((v, ctx) => {
-  if (!ltxApiSeconds(v.model, v.resolution, v.fps).includes(v.durationSeconds))
-    ctx.addIssue({ code: "custom", path: ["durationSeconds"], message: `${v.model} at ${v.resolution}/${v.fps} fps takes ${ltxApiSeconds(v.model, v.resolution, v.fps).join(", ")} seconds` });
-});
-var ltxApiAudio2VideoSchema = external_exports.object({
-  ...common2,
-  sourceImagePath: common2.sourceImagePath.optional(),
-  prompt: common2.prompt.default(""),
-  audioPath: external_exports.string().min(1).describe("The composed pinned-voice track; its length sets the clip length (2\u201310 s, Fast at 720p/1080p up to 20 s).")
-}).strict().superRefine((args, ctx) => {
-  if (!args.sourceImagePath && (!args.prompt.trim() || args.lastImagePath))
-    ctx.addIssue({ code: "custom", path: ["sourceImagePath"], message: "A first image is required with a last image or an empty prompt" });
-});
-function ltxApiAudioSeconds(file) {
-  const seconds2 = Number(execFileSync3("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], { encoding: "utf8", timeout: 15e3 }));
-  if (!Number.isFinite(seconds2) || seconds2 <= 0) throw new Error("Cannot read the length of " + file);
-  return seconds2;
-}
-function buildLtxApiBody(request) {
-  const image2 = (file) => dataUri(file, IMAGE_EXT, 7 * 1048576);
-  const body = {
-    model: request.model,
-    resolution: request.resolution,
-    fps: request.fps,
-    prompt: request.prompt,
-    ...request.sourceImagePath ? { image_uri: image2(request.sourceImagePath) } : {},
-    ...request.lastImagePath ? { last_frame_uri: image2(request.lastImagePath) } : {},
-    ...request.cameraMotion ? { camera_motion: request.cameraMotion } : {}
-  };
-  if ("audioPath" in request) {
-    const seconds2 = ltxApiAudioSeconds(request.audioPath), max = ltxApiAudioMax(request.model, request.resolution);
-    if (seconds2 < 2 || seconds2 > max) throw new Error(`${request.model} at ${request.resolution} takes 2\u2013${max} s of audio; ${request.audioPath} runs ${seconds2.toFixed(2)} s`);
-    body.audio_uri = dataUri(request.audioPath, AUDIO_EXT, 15 * 1048576);
-  } else Object.assign(body, { duration: request.durationSeconds, generate_audio: request.generateAudio });
-  if (JSON.stringify(body).length > 32 * 1048576) throw new Error("LTX request body exceeds 32 MB; use smaller frames or audio");
-  return { endpoint: "audioPath" in request ? "audio-to-video" : "image-to-video", body };
-}
-function ltxApiStatus(json) {
-  const status = json.status, result = json.result;
-  if (status === "completed") return result?.video_url ? { state: "done", url: result.video_url } : { state: "failed", error: "completed without result.video_url" };
-  if (status === "failed") return { state: "failed", error: json.error?.message ?? "failed" };
-  return { state: "running" };
-}
-async function pollLtxApi(endpoint2, id) {
-  return ltxApiStatus(await vendorJson(
-    LTX_API_BASE_URL + "/v2/" + endpoint2 + "/" + encodeURIComponent(id),
-    { headers: { Authorization: "Bearer " + config.ltxApiKey, "Content-Type": "application/json" } }
-  ));
-}
-async function generateLtxApiVideo(request) {
-  if (!config.ltxApiKey) return { success: false, error: "LTX_API_KEY is not set", terminal: true };
-  const headers2 = { Authorization: `Bearer ${config.ltxApiKey}`, "Content-Type": "application/json" };
-  let built;
-  try {
-    built = buildLtxApiBody(request);
-  } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : String(error), terminal: true };
-  }
-  return runVendorJob({
-    vendor: "LTX API",
-    outputPath: request.outputPath ?? process.cwd(),
-    filename: request.filename ?? `ltx-${Date.now()}.mp4`,
-    intervalMs: 6e3,
-    maxPolls: 300,
-    submit: async () => {
-      const json = await vendorJson(`${LTX_API_BASE_URL}/v2/${built.endpoint}`, { method: "POST", headers: headers2, body: JSON.stringify(built.body), timeoutMs: 5 * 6e4 });
-      if (typeof json.id !== "string" || !json.id) throw new Error("No job id in LTX response");
-      return json.id;
-    },
-    poll: (id) => pollLtxApi("audioPath" in request ? "audio-to-video" : "image-to-video", id)
-  });
 }
 
 // src/astra-genai-desktop.ts
@@ -49793,7 +49897,7 @@ var receiptSchema = external_exports.object({
 }).strict();
 
 // src/seedance-client.ts
-import * as path3 from "node:path";
+import * as path4 from "node:path";
 var VALID_SEEDANCE_RESOLUTIONS = ["480p", "720p", "1080p", "4k"];
 var VALID_SEEDANCE_RATIOS = ["16:9", "9:16", "4:3", "3:4", "1:1", "21:9", "adaptive"];
 var SEEDANCE_MODEL_SPECS = {
@@ -49956,12 +50060,12 @@ var seedanceReferenceSchema = external_exports.object({
       });
     }
     for (const filePath of data.referenceVideoPaths) {
-      const ext = path3.extname(filePath).toLowerCase();
+      const ext = path4.extname(filePath).toLowerCase();
       if (!SEEDANCE_REFERENCE_VIDEO_EXTENSIONS.includes(ext)) {
         ctx.addIssue({
           code: external_exports.ZodIssueCode.custom,
           path: ["referenceVideoPaths"],
-          message: `Reference video must be mp4 or mov (got "${ext}" in ${path3.basename(filePath)}).`
+          message: `Reference video must be mp4 or mov (got "${ext}" in ${path4.basename(filePath)}).`
         });
       }
     }
@@ -49990,12 +50094,12 @@ var seedanceReferenceSchema = external_exports.object({
     });
   }
   for (const filePath of data.referenceAudioPaths) {
-    const ext = path3.extname(filePath).toLowerCase();
+    const ext = path4.extname(filePath).toLowerCase();
     if (!SEEDANCE_REFERENCE_AUDIO_EXTENSIONS.includes(ext)) {
       ctx.addIssue({
         code: external_exports.ZodIssueCode.custom,
         path: ["referenceAudioPaths"],
-        message: `Reference audio must be wav or mp3 (got "${ext}" in ${path3.basename(filePath)}).`
+        message: `Reference audio must be wav or mp3 (got "${ext}" in ${path4.basename(filePath)}).`
       });
     }
   }
@@ -50011,7 +50115,7 @@ var seedanceReferenceSchema = external_exports.object({
 // src/astra-video-client.ts
 import { createHash as createHash2, randomInt, randomUUID as randomUUID2 } from "node:crypto";
 import * as fs5 from "node:fs";
-import * as path4 from "node:path";
+import * as path5 from "node:path";
 
 // package.json
 var package_default = {
@@ -50904,7 +51008,7 @@ var CONTENT_TYPE_BY_EXTENSION = {
   ".mp3": { contentType: "audio/mpeg", kind: "audio" }
 };
 function uploadContentType(filePath) {
-  const ext = path4.extname(filePath).toLowerCase();
+  const ext = path5.extname(filePath).toLowerCase();
   const found = CONTENT_TYPE_BY_EXTENSION[ext];
   if (!found) {
     throw new Error(
@@ -50914,13 +51018,13 @@ function uploadContentType(filePath) {
   return found;
 }
 async function uploadFile(filePath) {
-  const resolved = path4.resolve(filePath);
+  const resolved = path5.resolve(filePath);
   if (!fs5.existsSync(resolved)) throw new Error(`File not found: ${filePath}`);
   const { contentType, kind } = uploadContentType(resolved);
   const bytes = fs5.statSync(resolved).size;
   const limit = ASTRA_VIDEO_UPLOAD_LIMITS[kind];
   if (bytes > limit) {
-    throw new Error(`${path4.basename(resolved)} is ${bytes} bytes; the ${kind} upload ceiling is ${limit} bytes.`);
+    throw new Error(`${path5.basename(resolved)} is ${bytes} bytes; the ${kind} upload ceiling is ${limit} bytes.`);
   }
   await waitForUploadSlot();
   const headers2 = authHeaders();
@@ -50938,7 +51042,7 @@ async function uploadFile(filePath) {
       return { ok: false, status: 502, body: `Upload unreachable: ${message}` };
     }
   });
-  if (!result.ok) throw redactedFailure(`upload of ${path4.basename(resolved)}`, result.status, result.body);
+  if (!result.ok) throw redactedFailure(`upload of ${path5.basename(resolved)}`, result.status, result.body);
   const parsed = JSON.parse(result.body);
   return {
     uploadId: parsed.upload_id,
@@ -51406,88 +51510,6 @@ var deployedModel = external_exports.object({
 // src/video-duration.ts
 var import_video_duration = __toESM(require_video_duration(), 1);
 
-// src/hosted-video-routes.ts
-function inputs(schema, build, generate) {
-  return { schema, preflight: (args) => {
-    build(schema.parse(args));
-  }, generate: (args) => generate(schema.parse(args)) };
-}
-var ltx = {
-  engine: "ltx-api",
-  deployment: "ltx-api-v2",
-  configured: () => Boolean(config.ltxApiKey),
-  modelConstraints: {
-    models: [...LTX_API_MODELS],
-    resolutions: LTX_API_RESOLUTIONS,
-    limits: Object.fromEntries(LTX_API_MODELS.map((model2) => [model2, Object.fromEntries(Object.entries(LTX_API_RESOLUTIONS).map(([tier, [size]]) => [tier, { imageSeconds: ltxApiSeconds(model2, size, 24), highFpsSeconds: ltxApiSeconds(model2, size, 48), audioMaxSeconds: ltxApiAudioMax(model2, size) }]))])),
-    note: "Official LTX API. I2V: 6/8/10 s (Fast at 720p/1080p, 24/25 fps: 6-20 s), first and optional last frame, 7 MB inline images. A2V: the supplied track sets the length (2-10 s; Fast at 720p/1080p up to 20 s), billed on audio seconds. No voice reference, seed or negative prompt."
-  },
-  frames: ["sourceImagePath", "lastImagePath"]
-};
-var veo = {
-  engine: "veo",
-  deployment: "google-cloud-us-central1",
-  voice: "none",
-  configured: () => Boolean(config.googleCloudProject),
-  modelConstraints: VEO_CONSTRAINTS,
-  soundtrack: true,
-  poll: (args, id) => pollVeo(String(args.model), id)
-};
-var HOSTED_VIDEO_ROUTES = {
-  ltx_api_img2video: {
-    ...ltx,
-    ...inputs(ltxApiImg2VideoSchema, buildLtxApiBody, generateLtxApiVideo),
-    operation: "image",
-    voice: "none",
-    soundtrack: true,
-    title: "Generate an LTX API video from a start frame",
-    description: "Generate from a first and optional last frame using LTX_API_KEY. Use audio-to-video for supplied speech.",
-    seconds: (a) => ltxApiSeconds(String(a.model ?? "ltx-2-5-pro"), String(a.resolution ?? "1920x1080"), Number(a.fps ?? 24)),
-    poll: (_, id) => pollLtxApi("image-to-video", id)
-  },
-  ltx_api_audio2video: {
-    ...ltx,
-    ...inputs(ltxApiAudio2VideoSchema, buildLtxApiBody, generateLtxApiVideo),
-    operation: "audio",
-    voice: "supplied",
-    title: "Generate an LTX API video from a voice track",
-    description: "The supplied audio controls the clip length and speech. Supply a prompt or a first image, or both. Requires LTX_API_KEY.",
-    poll: (_, id) => pollLtxApi("audio-to-video", id)
-  },
-  veo_text2video: {
-    ...veo,
-    ...inputs(veoTextSchema, buildVeoBody, generateVeo),
-    operation: "text",
-    title: "Generate a Veo clip from text",
-    seconds: () => [4, 6, 8],
-    description: "Google Cloud Veo 3.1. English scene and optional native sound. Character voice samples are unsupported."
-  },
-  veo_img2video: {
-    ...veo,
-    ...inputs(veoImageSchema, buildVeoBody, generateVeo),
-    operation: "image",
-    title: "Animate a first frame with Veo",
-    frames: ["sourceImagePath", "lastImagePath"],
-    seconds: () => [4, 6, 8],
-    description: "Animate a JPEG or PNG with Google Cloud Veo 3.1, optionally pinning the final frame. Use reference mode for asset pictures."
-  },
-  veo_reference: {
-    ...veo,
-    ...inputs(veoReferenceSchema, buildVeoBody, generateVeo),
-    operation: "reference",
-    title: "Generate a Veo clip from subject images",
-    seconds: () => [8],
-    description: "Generate eight seconds from one to three images of a subject. Standard and Fast accept assets. No pinned frames or voice samples."
-  },
-  veo_extend: {
-    ...veo,
-    ...inputs(veoExtendSchema, buildVeoBody, generateVeo),
-    operation: "extend",
-    title: "Extend an existing Veo video",
-    description: "Extend a 1\u201330 second, 24 fps MP4 by seven seconds with Google Cloud Veo. Returns the concatenated MP4."
-  }
-};
-
 // src/minimax-video.ts
 var MINIMAX_MODELS = {
   "MiniMax-H3": { resolutions: ["768P", "2K"], minSeconds: 4, freeImages: 5 },
@@ -51727,7 +51749,7 @@ function hasVideoSubjectReferences(shot) {
 // src/video-voice.ts
 import { createHash as createHash3 } from "node:crypto";
 import { existsSync as existsSync4, readFileSync as readFileSync6, realpathSync } from "node:fs";
-import path5 from "node:path";
+import path6 from "node:path";
 import { createRequire as createRequire4 } from "node:module";
 var speakerBindingSchema = external_exports.object({
   speaker: external_exports.string().trim().min(1),
@@ -51744,8 +51766,8 @@ function resolveCharacterVoice(character, context, warnings) {
   const id = text2(character.id);
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) return character;
   let channel = context.episode;
-  while (!existsSync4(path5.join(channel, "profile.md")) && path5.dirname(channel) !== channel) channel = path5.dirname(channel);
-  const folder = path5.join(channel, "assets/characters", id), identity = path5.join(folder, "identity.md");
+  while (!existsSync4(path6.join(channel, "profile.md")) && path6.dirname(channel) !== channel) channel = path6.dirname(channel);
+  const folder = path6.join(channel, "assets/characters", id), identity = path6.join(folder, "identity.md");
   let resolved = character;
   if (!Object.keys(object2(character.tts)).length && existsSync4(identity)) {
     try {
@@ -51759,9 +51781,9 @@ function resolveCharacterVoice(character, context, warnings) {
   }
   const reference2 = object2(resolved.voiceReference);
   if (!Array.isArray(reference2.imagePaths) && existsSync4(folder)) {
-    const root = realpathSync(folder) + path5.sep;
+    const root = realpathSync(folder) + path6.sep;
     const refs = object2(context.shot.visual).references;
-    const imagePaths = (Array.isArray(refs) ? refs.map(object2) : []).filter((ref) => ref.role === "character" && ["both", "video"].includes(text2(ref.use))).map((ref) => text2(ref.path)).filter(Boolean).map((file) => path5.resolve(context.episode, "storyboard", file)).filter((file) => existsSync4(file) && realpathSync(file).startsWith(root));
+    const imagePaths = (Array.isArray(refs) ? refs.map(object2) : []).filter((ref) => ref.role === "character" && ["both", "video"].includes(text2(ref.use))).map((ref) => text2(ref.path)).filter(Boolean).map((file) => path6.resolve(context.episode, "storyboard", file)).filter((file) => existsSync4(file) && realpathSync(file).startsWith(root));
     if (imagePaths.length) resolved = { ...resolved, voiceReference: { ...reference2, imagePaths } };
   }
   return resolved;
@@ -51774,14 +51796,14 @@ function voiceReference(character, context, warnings) {
   }
   let file = text2(declared.path);
   if (file) {
-    file = path5.resolve(context.episode, "storyboard", file);
+    file = path6.resolve(context.episode, "storyboard", file);
     if (declared.tts && hash(declared.tts) !== hash(character.tts))
       throw new Error(`voice_reference_stale: ${character.id} sample uses different pinned TTS settings`);
   } else if (/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(text2(character.id))) {
     let channel = context.episode;
-    while (!existsSync4(path5.join(channel, "profile.md")) && path5.dirname(channel) !== channel) channel = path5.dirname(channel);
-    const identity = path5.join(channel, "assets/characters", text2(character.id), "identity.md");
-    const candidate = path5.join(path5.dirname(identity), "voice.wav");
+    while (!existsSync4(path6.join(channel, "profile.md")) && path6.dirname(channel) !== channel) channel = path6.dirname(channel);
+    const identity = path6.join(channel, "assets/characters", text2(character.id), "identity.md");
+    const candidate = path6.join(path6.dirname(identity), "voice.wav");
     if (existsSync4(identity) && existsSync4(candidate)) {
       const { identityVoice } = load4("../../skills/_shared/character-voice.js");
       if (hash(identityVoice(readFileSync6(identity, "utf8"))) !== hash(character.tts)) {
@@ -51807,7 +51829,7 @@ function sceneCoverage(members, scene, board, sceneNo = members[0]?.scene) {
   const owner = board?.STRUCTURE?.scenes?.find((s2) => s2.no === sceneNo);
   return resolvedDirection({ directionDefaults: owner?.directionDefaults, videoDirection: scene }, members);
 }
-function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCoverage(raw, scene, board), shotScoped = false) {
+function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCoverage(raw, scene, board), shotScoped = false, assetOnly = false) {
   const render = load5("../../skills/storyboard/references/render-routing.js");
   const members = raw;
   const fps = scene.fps ?? 24;
@@ -51843,14 +51865,14 @@ function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCovera
       const frame2 = startFrame + Math.round(pin.atSeconds * fps);
       if (!pins.some((p) => p.frame === frame2 && p.path === pin.image)) pins.push({ path: pin.image, frame: frame2, role: "keyframe", cue: english(pin.state), strength: pin.strength });
     }
-    if (frames.start && !pins.some((p) => p.role === "start" && p.path === frames.start)) pins.push({ path: frames.start, frame: startFrame, role: "start" });
+    if (frames.start && !(assetOnly && frames.mode === "reference") && !pins.some((p) => p.role === "start" && p.path === frames.start)) pins.push({ path: frames.start, frame: startFrame, role: "start" });
     if (frames.end && !pins.some((p) => p.role === "end" && p.path === frames.end && (!fallback || p.frame === endFrame - 1))) pins.push({ path: frames.end, frame: endFrame - 1, role: "end" });
     const occupied = /* @__PURE__ */ new Set();
     const references = render.imageReferences(member).filter((r2) => ["video", "both"].includes(r2.use));
     const add = (pin) => {
       if (!Number.isSafeInteger(pin.frame) || pin.frame < startFrame || pin.frame >= endFrame)
         throw new Error("scene_image_timing: " + shotId + " " + pin.path + " at " + pin.frame);
-      const image2 = { ...pin, shotId, path: realpathSync2(path6.resolve(episode, "storyboard", pin.path)) };
+      const image2 = { ...pin, shotId, path: realpathSync2(path7.resolve(episode, "storyboard", pin.path)) };
       if (temporal(image2)) {
         if (occupied.has(pin.frame)) throw new Error("scene_image_conflict: " + shotId + " has two temporal images at frame " + pin.frame);
         occupied.add(pin.frame);
@@ -51910,7 +51932,7 @@ function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCovera
     };
   });
   const cuts = shots.slice(1).map(({ shotId, startFrame: frame2, transition }, i2) => ({ from: shots[i2].shotId, to: shotId, frame: frame2, transition }));
-  const audio = scene.audio && { ...scene.audio.mode ? { mode: scene.audio.mode } : {}, path: realpathSync2(path6.resolve(episode, "storyboard", scene.audio.path)), startFrame: 0, endFrame: cursor, cues: scene.audio.cues ?? [] };
+  const audio = scene.audio && { ...scene.audio.mode ? { mode: scene.audio.mode } : {}, path: realpathSync2(path7.resolve(episode, "storyboard", scene.audio.path)), startFrame: 0, endFrame: cursor, cues: scene.audio.cues ?? [] };
   if (audio?.cues.some((c) => c.frame >= cursor)) throw new Error("scene_audio_timing: cue outside the scene");
   return { fps, frameCount: cursor, shotIds, shots, images, cuts, ...audio ? { audio } : {} };
 }
@@ -52013,12 +52035,24 @@ function mapSceneInputs(request, tool, model2, missing = [], resolution2) {
   }
   if (tool === "astra_genai_img2video" && !pins.some((p) => p.frame === 0 && (p.strength ?? 1) === 1))
     missing.push({ input: "image", frame: 0, reason: "Gateway I2V requires a full-strength opening image" });
-  for (const [index, p] of refs.entries()) {
+  const assets = HOSTED_VIDEO_ROUTES[tool]?.subjectAssets;
+  if (assets) {
+    const issue = assets.validate(refs, model2);
+    if (issue) missing.push(...(refs.length ? refs : [void 0]).map((p) => ({
+      input: "reference",
+      shotId: p?.shotId ?? request.shotIds[0],
+      frame: p?.frame ?? 0,
+      path: p?.path,
+      role: p?.role,
+      reason: issue
+    })));
+  }
+  for (const p of refs) {
     if (request.shots.length > 1 && !caps.shotScopedReferences) {
       missing.push({ input: "reference", shotId: p.shotId, frame: p.frame, path: p.path, role: p.role, reason: "Subject/reference slots apply across the whole generation" });
       continue;
     }
-    if (tool === "veo_reference" && model2 && index < (VEO_CONSTRAINTS[model2]?.maxAssetImages ?? 0) && p.frame === 0 && ["face", "outfit", "character"].includes(p.role)) continue;
+    if (assets && p.frame === 0) continue;
     if (tool === "astra_genai_img2video" && model2 === "ltx-2.5-22b-distilled" && p.frame === 0) continue;
     missing.push({ input: "reference", shotId: p.shotId, frame: p.frame, path: p.path, role: p.role, reason: "No compatible subject/reference slot with this frame scope" });
   }
@@ -52047,8 +52081,8 @@ import { fileURLToPath as fileURLToPath2 } from "node:url";
 
 // src/usage-ledger.ts
 import { execFileSync as execFileSync4 } from "node:child_process";
-import path7 from "node:path";
-var EPISODE_MARKER = path7.join("storyboard", "scenes.js");
+import path8 from "node:path";
+var EPISODE_MARKER = path8.join("storyboard", "scenes.js");
 var SEEDANCE_FAMILY = {
   "dreamina-seedance-2-5-260628": "2-5",
   "dreamina-seedance-2-0-260128": "2-0",
@@ -52294,6 +52328,7 @@ var videoPlanSchema = external_exports.object({
   purpose: external_exports.enum(["draft", "final", "revision"]).optional(),
   basedOnRequestId: idSchema.optional(),
   changeNote: external_exports.string().min(1).max(1e3).optional(),
+  maxCostUsd: external_exports.number().nonnegative().finite().optional(),
   operation: external_exports.string().optional(),
   tool: external_exports.string().optional(),
   args: external_exports.record(external_exports.unknown()).default({})

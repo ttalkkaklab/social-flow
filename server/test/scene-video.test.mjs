@@ -450,7 +450,8 @@ test('Veo reference-only scenes send owned face and outfit assets without a time
   }));
   shot.timeline.action = 'Mai An enters from the left after the spectators turn.';
   f.scene.openingPositions[1].images = [1,2];
-  shot.visual.video = {engine:'veo',model:'veo-3.1-fast-generate-001',resolution:'720p',operation:'reference'};
+  shot.visual.video = {engine:'veo',model:'veo-3.1-fast-generate-001',resolution:'720p'};
+  shot.visual.frames = {mode:'reference', start:'images/opening.png'};
   f.save();
   const plan = planVideo({...f.input,args:{}});
   const body = buildVeoBody(plan.args);
@@ -460,6 +461,14 @@ test('Veo reference-only scenes send owned face and outfit assets without a time
     ['s0001',0,'face','mai-an'],['s0001',0,'outfit','mai-an'],
   ]);
   assert.match(plan.args.prompt,/mai-an \(Image 1, Image 2\): Off screen/);
+  shot.timeline.images[1].character = 'other';
+  f.save();
+  assert.throws(() => planVideo({...f.input,args:{}}), /same subject/);
+  shot.timeline.images[1].character = 'mai-an';
+  shot.timeline.images.push({role:'start',path:'images/opening.png',frame:0});
+  f.save();
+  assert.throws(() => planVideo({...f.input,args:{}}), /scene_inputs_unsupported/);
+  delete shot.visual.frames;
   shot.timeline.images = [];
   shot.visual.video.operation='text';
   f.scene.openingPositions[1].images=[];

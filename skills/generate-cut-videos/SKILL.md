@@ -14,9 +14,7 @@ and [duration planning](../produce/references/video-duration.md).
 
 Use the project directory the user named or already selected for this episode. When it is unclear, ask for it and wait. Run `project_manage status` there. Complete [project setup](../project-init/SKILL.md) for the missing fields before starting the scene.
 
-On a saved Google Cloud Veo selection, plan non-speaking scenes with the image route for a pinned opening and optional ending.
-Use its separate reference route for up to three pictures of one subject (Standard/Fast). Lite accepts a pinned opening and optional ending.
-A speaking character needs a voice-capable route such as LTX supplied audio or reference. Use the existing selection change workflow.
+For LTX and Google Cloud Veo, call `video_plan` with the same scene and request ID. The saved model and the storyboard's frames, reference images and speech select the adapter. Set `maxCostUsd` to the authorized per-request reservation ceiling when using the gateway or bounding a hosted quote. See [LTX and Veo inputs](../_shared/video-routing.md#ltx-and-google-cloud-veo).
 
 ## Generate one scene
 
