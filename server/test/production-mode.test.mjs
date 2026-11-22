@@ -52,6 +52,21 @@ function fixture(n = 3) {
 }
 function approve(win) { win.PRODUCTION.approval = { kind: 'user', at: '2026-09-06T12:00:00+09:00',
   reference: 'User selected full video with the displayed budget.', quoteFingerprint: quote(win).quoteFingerprint }; }
+test('full-video validation accepts both hosted engines from the episode snapshot', () => {
+  for (const video of [
+    {engine: 'ltx-api', model: 'ltx-2-5-pro', resolution: '1920x1080', operation: 'image'},
+    {engine: 'veo', model: 'veo-3.1-fast-generate-001', resolution: '720p', operation: 'image'},
+  ]) {
+    const win = fixture(1);
+    win.PRODUCTION.modelSettings = {models: {video}};
+    delete win.PRODUCTION.videoModel;
+    win.SCENES[0].visual.video = {prompt: 'The building rises.'};
+    const errors = runtimeMode.check(win);
+    assert.deepEqual(errors.filter(message => /selected deployed video engine/.test(message)), []);
+    const unknown = {...video, engine: 'unregistered'};
+    assert.ok(runtimeMode.check(win, {snapshotVideo: unknown}).some(message => /selected deployed video engine/.test(message)));
+  }
+});
 test('ASTRA oversized motion plans fail before generation without truncating the action', () => {
   const win = fixture(1);
   win.SCENES[0].visual.video = { engine: 'astra' };

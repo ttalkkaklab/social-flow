@@ -11,7 +11,7 @@ const context = {
 };
 export const MUSIC_TOOLS: Tool[] = [
   { name: 'music_catalog', title: 'Inspect music models',
-    description: 'Read music/BGM/song adapters, exact saved model IDs, duration controls and official versus third-party provenance. No API call. Returns models, adapter fields, sources and unimplemented providers. Do NOT use to generate audio — use music_plan then music_execute.',
+    description: 'Read music/BGM/song adapters, exact model IDs, duration controls and provider provenance. At first setup offer a supported model or noGeneration (save engine:none for reuse or no score). Returns models, adapter fields, sources and unimplemented providers without an API call.',
     inputSchema: { type: 'object', additionalProperties: false, properties: {} }, annotations: { readOnlyHint: true, openWorldHint: false } },
   { name: 'music_plan', title: 'Plan music from saved settings',
     description: 'Create a local music generation plan using models.music and explicit episode/shot overrides. Checks adapter fields and pins reference hashes, selection and cost reservation. No paid call. Returns plan ID, final WAV path and provenance. Do NOT use to execute — use music_execute. Use music_catalog and adapter schemas for args; omit model to inherit saved selection.',
@@ -51,11 +51,11 @@ export const MUSIC_TOOLS: Tool[] = [
       storeForInpainting: { type: 'boolean', default: false, description: 'Store at provider for later editing, e.g. false. This adapter does not implement inpainting.' },
       compositionPlan: { type: 'object', description: 'Ordered generation chunks, e.g. one 15000ms verse. Mutually exclusive with prompt.', additionalProperties: false, required: ['chunks'], properties: {
         chunks: { type: 'array', minItems: 1, maxItems: 30, description: 'Ordered sections, total at most 600000ms.', items: {
-          type: 'object', additionalProperties: false, required: ['text', 'durationMs', 'positiveStyles', 'negativeStyles'], properties: {
+          type: 'object', additionalProperties: false, required: ['text', 'durationMs', 'positiveStyles'], properties: {
             text: { type: 'string', maxLength: 6132, description: 'Lyrics/section cues, e.g. [Verse] followed by Korean lyrics; max 30 lines of 200 characters.' },
             durationMs: { type: 'integer', minimum: 3000, maximum: 120000, description: 'Section length, e.g. 15000.' },
             positiveStyles: { type: 'array', maxItems: 50, items: { type: 'string' }, description: 'English musical traits, e.g. ["warm piano", "Korean vocals"].' },
-            negativeStyles: { type: 'array', maxItems: 50, items: { type: 'string' }, description: 'Traits to avoid, e.g. ["distortion"].' },
+            negativeStyles: { type: 'array', maxItems: 50, items: { type: 'string' }, description: 'Optional traits to avoid, e.g. ["distortion"].' },
             contextAdherence: { type: 'string', enum: ['low', 'medium', 'high'], description: 'Optional consistency with surrounding chunks; high preserves surrounding musical context. Omit for the provider default.' },
           },
         } },

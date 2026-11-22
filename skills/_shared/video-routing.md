@@ -1,10 +1,7 @@
 # Video routing contract
 
-Use `video_catalog` → `video_plan` → `video_approve` (the user's yes to that shot, or `auto:true`
-for every shot) → `video_execute` for episode video. The registry
-contains installed adapter contracts, not a vendor availability claim. MiniMax H3
-and the official LTX API remain unimplemented; ASTRA is a separate self-hosted
-LTX deployment. Do not substitute one for another.
+Use `video_catalog` → `video_plan` → `video_approve` (the user's yes to that scene or a standing `auto:true`) → `video_execute` for episode video. The registry
+contains installed adapter contracts, not a vendor availability claim. The hosted LTX API and Google Cloud Veo register their operations in `server/src/hosted-video-routes.ts`. ASTRA deployments and local MLX use their existing adapter contracts.
 
 ## Layers and selection
 
@@ -17,7 +14,7 @@ the last explicit change wins. Workspace edits affect future snapshots only.
 `skills/_shared/video-catalog.json` is its committed build projection for CommonJS planners.
 `node skills/_shared/model-settings.js catalog` reads the same projection.
 
-An override replaces the whole video selection; one naming Veo, Gemini Omni or Seedance 1.x
+An override replaces the whole video selection; one naming Gemini Developer API Veo previews, Gemini Omni or Seedance 1.x
 fails with `video_engine_unsupported`. Record the user's actual instruction:
 
 ```js
@@ -27,7 +24,7 @@ window.PRODUCTION.modelSettings = { overrides: [
 ] };
 ```
 
-`video_plan` accepts `episode`, `shotId`, a stable `requestId`, `operation` (text,
+`video_plan` accepts `episode`, `sceneNo` (or `shotId` for an explicit single shot), a stable `requestId`, `operation` (text,
 image, reference, audio, keyframe, control, extend, edit, retake) and adapter `args`.
 Alternatively specify an exact `tool`. Conflicting tool/operation/model/resolution
 or unknown arguments fail. Local input contents and prices are pinned in a saved plan.
@@ -36,13 +33,49 @@ selected resolution without adding unsupported width/height fields.
 Remote URL contents cannot be pinned; use immutable provider assets or local files.
 Re-plan after changes. No network submission occurs during planning.
 
+### Scene frames and adapter inputs
+
+Write one shot per camera setup. A cut from a wide to a hand insert, or a reverse angle, starts a new card. A pan, tilt, dolly, zoom or entrance during continuous filming stays on its card. Set `videoDirection.oneTake` only for an explicitly uninterrupted scene. A duration or generation count does not specify the number of shots.
+
+`story_scene.videoDirection.fps` sets the scene clock (default 24). Each `story_shot.timeline` records `startFrame` inclusive, `endFrame` exclusive, the incoming `transition` (open, hard_cut, dissolve or fade), and English `framing` and `action`. The board assigns stable shot IDs. Each `images[]` entry has a storyboard-relative `path`, scene `frame` and `role` (start, keyframe, end, face or outfit). Face/outfit entries name their `character`. An optional English `cue` describes the action at that frame. An ending pose may begin before the last frame. In one shot, keyframes guide continuous motion. At a cut the new setup must appear at the first frame of the next shot. Describe entrances on the shot timeline, including anyone who starts off screen.
+
+`videoDirection.audio` names one scene-length file with any lead-in mixed in. Its `cues` pair scene frame numbers with actions. Frame 42 at 24 fps means 1.75 seconds from the beginning of the file. For per-shot generation the saved dev A2V model conditions each shot on its interval of the continuous file. Choose `audio.mode:"mix"` with distilled I2V to mix the complete file once with native dialogue and ambience. A post-production music selection alone does not request model conditioning. Omit `args.prompt` and `args.shots`. The planner compiles the scene from every card. It collects existing frame pairs, intermediate pins and video references as well as explicit timeline entries. Conflicting temporal pins require a storyboard correction.
+
+Keep each spoken line in its card’s narration. To start a reply on the cut, add
+`timeline.dialogueCues:[{lineId:"s0001-l1",frame:171}]` to the incoming card.
+Its `timeline.openingPositions` uses that card’s subject image numbers. The
+scene manifest keeps each line with its shot interval, cast ID and selected
+voice sample. Native speech without an explicit cue keeps model pacing.
+The I2V refusal includes the deployed endpoint’s input fields when discovery
+succeeds. A refused request has no reservation or provider job.
+
+A single continuous shot with intermediate guides selects the indexed keyframe route on Desktop or direct ASTRA when the saved model leaves the operation open. An explicit operation still governs. Veo Standard and Fast accept up to three scene-wide subject pictures in an eight-second reference-only request; the Lite model has no reference route. Keep the cast’s opening positions and later entrances in the scene direction.
+
+For a protected storyboard, pass `shotBindings` with the exact shot IDs. Each entry can name existing reference IDs with their cast IDs and roles, opening positions and dialogue cues. A revision can also supply shorter framing and action directions, within-shot keyframes, or MSR negative guidance. For a reviewed camera move, set the card’s `motionPrefix` to a matching MP4 of 9–121 frames on the 8k+1 grid. The renderer fixes its latent frames in both diffusion stages. For a reply on a specific cut, set `performanceAudio` to the timed stereo 48 kHz PCM WAV containing the line and its room sound. Include the selected voice sample as a separate identity reference. Fit the recording to the native frame count, including its short tail. The plan records these choices and hashes its media before approval. The gateway validates the staged files and the chosen model’s limits. On a lost response, `video_status` with `action:"refresh"` looks up the original scene request. A creative revision after a terminal result takes a new request ID and names the previous one in `basedOnRequestId`.
+
+**LTX contracts checked 2026-11-22**
+
+| Operation | Images and cuts | Audio accepted in the same request |
+|---|---|---|
+| GenAI v2 scene-to-video, distilled | With explicit consent, `sceneRendering:"per_shot"` stages the original files and validates the complete scene against the running renderer. Each card has its own temporal pins and cast references. The worker trims each shot and joins the frames at the authored hard cuts. | A single native soundtrack in shot order. Each shot carries its speakers, lines, voice samples and sound direction. A frame-cued line requires a prepared performance WAV. Both diffusion stages condition on its audio, and the renderer returns the original waveform. Review the words and timing in the output. |
+| GenAI v2 T2V | Prompt plus 2–4 optional shot descriptions. Later shots can request a hard cut in text. No per-shot frame address or image. | Generated sound or mute. |
+| GenAI v2 I2V, dev | Up to eight temporal images including endpoints. Shot descriptions go into the prompt. | Generated sound or mute. |
+| GenAI v2 I2V, distilled | Up to eight temporal images including endpoints. With explicit length and MSR image conditioning the same generation can use four subject references and one background. The two leading subjects can carry voice samples with backend support. Each subject slot spans the scene. | Generated sound or mute. Voice samples condition identity. |
+| GenAI v2 A2V, dev | Up to eight temporal images including endpoints. The renderer conditions on their frame indices. | One supplied track sets the duration. |
+| Desktop T2V / I2V / A2V | T2V takes text. I2V takes first/last. A2V takes an optional first image. None declares timed cuts or subject slots. | A2V takes one supplied track. |
+| Desktop keyframes / direct ASTRA keyframes | Respectively 1–10 / 2–8 images with frame indices. Temporal conditioning interpolates within a shot. Neither operation exposes a frame-addressed hard cut. | No supplied track in the keyframe request. Desktop also requires an active compatible offering. |
+
+The production [OpenAPI](https://genai.astravision.co.kr/openapi.json) exposes `VideoShot.description`, optional `audio` (text) and `transition`; the [gateway mapper](https://github.com/ASTRA-TECHNOLOGY-COMPANY-LIMITED/genai-gateway/blob/330717ba568710cac2f14130c32de6e52f90adb1/gateway/adapters/video_local.py#L141) converts those entries into prompt sentences. The official [LTX pipelines](https://github.com/Lightricks/LTX-2/blob/main/packages/ltx-pipelines/docs/pipelines.md) support indexed image conditioning and zero-blend chunk seams. The official [A2V implementation](https://github.com/Lightricks/LTX-2/blob/main/packages/ltx-pipelines/src/ltx_pipelines/a2vid_two_stage.py) accepts images alongside conditioning audio. These Python inputs and chunk seams do not supply arbitrary frame-addressed cuts in the v2 HTTP API.
+
+`scene_inputs_unsupported` reports the complete requested scene and every unmapped input. No executable plan ID is issued. A gateway for the full busking scene needs to expose and implement timed images, two frame-addressed cuts and one continuous supplied track together, retaining identity references separately when requested. The offline multipart adapter in the EP01 regression exercises that contract without publishing an endpoint or submitting a job. A compatible subset, such as a one-shot A2V with first/last images, uses the real adapter and its existing request body.
+
 GenAI I2V on `ltx-2.5-22b-distilled` can combine a first image, optional last
 image and four subject references plus one background. `video_plan` keeps the
 temporal frames distinct from `references` and hashes every submitted local
 image. Execution checks the gateway's `image_conditioning` MSR capability
 before upload/submission; an unsupported combination never drops references or
-switches the saved model. Dev and the direct Desktop adapter take start/end
-only. See [GenAI image conditioning](astra-genai.md).
+switches the saved model. Dev takes temporal pins. Direct Desktop I2V takes
+the two endpoints. See [GenAI image conditioning](astra-genai.md).
 
 Character speech also uses the [voice continuity contract](../produce/references/voice-continuity.md).
 The planner adds stable acoustic descriptions and, on audible Seedance reference
@@ -51,7 +84,9 @@ It saves original `sourceArgs` separately from the compiled request and records
 `voiceContinuity` with hashes, warnings and four independent `not_reviewed` fields.
 Revalidation includes dialogue, acting, cast voice settings and sample bytes.
 The catalog's `voice.lane` is `reference` (sample imitation), `supplied` (animates supplied
-speech) or `none`, with `voice.dialogue: allowed|refused`. `video_plan` refuses a spoken cut
+speech), `conditional_reference` (GenAI distilled I2V with subject images) or `none`.
+For the conditional lane, `voice.dialogue` is `requires_subject_references`. Keep the opening
+frame in `imagePath` and place each voice sample in its subject reference’s `audioPath`. `video_plan` refuses a spoken cut
 on a `none` lane as `voice_lane_required`; narration over a non-speaking picture passes on any
 adapter. These fields never certify perceptual consistency or exact lip sync.
 
@@ -116,10 +151,9 @@ hashes live under the episode's `.work/video-routing/` and are local artifacts.
 ## Compatibility and boundaries
 
 Existing video tools accept `videoContext: {episode, shotId, requestId}` and use the
-same service. Calls targeting a configured episode/workspace without context fail.
-Standalone calls outside configured production remain compatible and have no episode
-budget enforcement. The server cannot infer an arbitrary external workspace if neither
-its working directory nor the output path points to that workspace.
+same service. Video plans, approvals and execution require the destination's selected
+workspace to be ready. A direct adapter call needs episode context or a channel asset
+under that ready workspace. Calls without a selected project stop before generation.
 
 Host selection returns `host_handoff`. The host CLI owns its tools, allowance and
 execution; MCP cannot enforce those calls. `video_execute` refuses host plans rather
@@ -153,6 +187,10 @@ thoughts. `speech_manage` plans external TTS voiceover and binds assembly to
 `sound.audioSource:"speech"`. Generate/attach the character's pinned TTS, compose real
 measured intervals with action and lead-in/tail-out, and plan the full video coverage.
 Missing speech setup must be reported; it does not authorize a new voice or native MSR.
+
+GenAI and LTX API image-to-video plans without dialogue default to a scene soundtrack.
+Describe the room tone and the sounds made by visible actions. Set `generateAudio:false`
+when effects and ambience will be supplied in the edit.
 
 ## Plans, candidate takes and local review
 
@@ -202,3 +240,27 @@ ending, adjust volume, upscale resolution, revise speech, or fix the source imag
 staging before regeneration. Keep the original file. Dubbing native dialogue can break
 lip sync; do not apply it automatically. Unknown submissions retain their original
 request ID and reservation; the review view supplies the same-request status command.
+
+## LTX and Google Cloud Veo
+
+Select an engine, model, resolution and operation in the project's video settings. Existing LTX snapshots keep their selected deployment. The hosted LTX API uses `LTX_API_KEY`. Local LTX and gateway deployments retain their own settings.
+
+For Google Cloud, enable the Vertex AI API in your billing project, grant the caller prediction access and configure Application Default Credentials (for local development, `gcloud auth application-default login`). Set `GOOGLE_CLOUD_PROJECT` in the MCP server's environment. For workload credentials, ADC also supports `GOOGLE_APPLICATION_CREDENTIALS`. Restart the MCP server after changing its environment. The adapter calls `us-central1-aiplatform.googleapis.com`. [Google Cloud authentication](https://cloud.google.com/docs/authentication/provide-credentials-adc) · [Veo model specifications](https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/veo/3-1-generate)
+
+| Example saved video choice | Production use |
+|---|---|
+| `{"engine":"ltx-api","model":"ltx-2-5-pro","resolution":"1920x1080","operation":"audio"}` | Drive a clip with the supplied character track. Non-speaking shots use the existing image route. |
+| `{"engine":"veo","model":"veo-3.1-fast-generate-001","resolution":"720p","operation":"image"}` | Animate a JPEG or PNG opening and optionally pin the ending. Set scene sound or use external narration. |
+| `{"engine":"veo","model":"veo-3.1-generate-001","resolution":"720p","operation":"reference"}` | Generate eight seconds from one to three subject pictures. Keep temporal frames out of this request. |
+
+Veo also accepts text-only requests and extension of a 1–30 second 24 fps MP4 by seven seconds. A scene with a pinned opening uses the image route. Text and extension requests use an unpinned shot or a configured channel asset. Each call produces one local MP4. Lite (`veo-3.1-lite-generate-001`) supports text, frames and extension. Lite is a Google Cloud preview with fixed-quota or provisioned-throughput access. Check the project quota before selecting it. Standard supports 4K. Fast and Lite expose 720p/1080p. A saved Gemini Developer API preview ID requires an explicit model change. Rates in the episode estimate distinguish Google Cloud audio and silent seconds from the historical Gemini rate keys.
+
+The Veo adapter sends one `instances` entry with an English `prompt`. Image requests carry `image` and optionally `lastFrame`. Reference requests carry `referenceImages` entries with `referenceType: "asset"`. Extension requests carry `video`. Local media becomes `{mimeType, bytesBase64Encoded}`. The `parameters` object includes `sampleCount: 1`, aspect ratio, resolution and the sound flag. Text and frame requests take 4, 6 or 8 seconds. Submit with `predictLongRunning`, then send the returned operation name to `fetchPredictOperation`. The local tool schemas in `tools/list` specify the required paths and defaults for each operation. [Veo API reference](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/model-reference/veo-video-generation) · [LTX API specification](https://docs.ltx.io/openapi.json)
+
+Use `video_status` with the original request ID and `action:"refresh"` after an interrupted hosted LTX or Veo request. The provider job ID is recorded before polling. A submission with no known provider ID requires reconciliation. Repeated status reads never submit a generation.
+
+### Adding a hosted provider
+
+Implement wire requests and status decoding in a provider module. Register each operation in `server/src/hosted-video-routes.ts` with its input schema, model constraints, frame and sound capabilities, duration grid, configuration check, preflight, generator and status reader. The MCP tool definitions, dispatch, catalogue, duration planning and status recovery consume these registrations. Providers own authentication, data transfer and unit prices. Add the billing mapping to `usage-ledger.ts` and the rates to `prices.tsv`. Register model selection and any new image binding in the shared planner. A visual reference operation can declare voice support independently of its image inputs. Verify the existing LTX contracts and the new provider's mocked submit, poll, output and failure cases before building the distribution.
+
+For an I2V scene refusal, set `validateScenePayload: true` on `video_plan` to send the saved model, geometry, shot images, voice samples, cut frames and dialogue to the gateway’s validation-only route. The planner first checks that the route and submission endpoint use the same schema. The response records the request ID and the validation result. A schema check does not create a generation job.

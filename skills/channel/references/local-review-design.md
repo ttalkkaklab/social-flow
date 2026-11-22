@@ -27,6 +27,13 @@ and symlinked output paths are refused before any files are written. Export refr
 current views; obsolete generated files are not deleted automatically. Indexes only
 link current records. Production inputs are never moved.
 
+Storyboard cards use the title in `storyboard.md` frontmatter when supplied, then
+the board title, the scenario heading or the storyboard heading. For numbered
+episode slugs like `ep01-opening`, the label is `EP01 · Title`. The main
+`output/cover/cover-9x16.jpg` or `output/cover/thumbnail-16x9.jpg` appears uncropped.
+An existing designed cover may use the same stem with `.png`. If neither file
+exists for the episode format, the card shows a missing-thumbnail placeholder.
+
 A template comparison proves the local copies agree. Verify 1440px and 390px
 renders when changing the shared design.
 

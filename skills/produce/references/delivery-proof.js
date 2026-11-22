@@ -3,6 +3,19 @@
 const fs=require('node:fs'),path=require('node:path'),{createHash}=require('node:crypto');
 const hash=file=>createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const pairs=[['reel-fast.mp4','video.mp4'],['reel-sub-fast.mp4','video-sub.mp4'],['subs-fast.srt','subs.srt']];
+// Start points on a splice boundary belong to the following body segment; end
+// points on that boundary belong to the preceding segment, before the inserted clip.
+function audienceDelivery(events, segments, speed) {
+  const convert = (t, end) => {
+    const anchor = segments.filter((s,i) => i === 0 || (end ? s.bodyStart < t - 1e-8 : s.bodyStart <= t + 1e-8)).at(-1);
+    return (anchor.splicedStart + t - anchor.bodyStart) / speed;
+  };
+  return events.map(({shotId,id,bodyStartSeconds,bodyEndSeconds,sourceStartSeconds,sourceEndSeconds,sourceSha256,effectiveFadeInSeconds,derivation}) => ({shotId,id,bodyStartSeconds,bodyEndSeconds,
+    ...(sourceStartSeconds === undefined ? {} : {sourceStartSeconds, sourceEndSeconds, sourceSha256, effectiveFadeInSeconds}),
+    ...(derivation ? {derivation} : {}),
+    ...(segments?.length ? {deliveryStartSeconds:convert(bodyStartSeconds,false),deliveryEndSeconds:convert(bodyEndSeconds,true)} : {}),
+    listening:'not_reviewed'}));
+}
 function record(work,speed){
   if(!Number.isFinite(speed)||speed<=0)throw new Error('Invalid delivery speed');
   let provenance;
@@ -12,6 +25,12 @@ function record(work,speed){
     require('./verify-assembled.js').check(work,...(spliced?['reel-spliced.mp4','reel-sub-spliced.mp4','subs-spliced.srt']:['reel.mp4','reel-sub.mp4','subs.srt']));
     const source=JSON.parse(fs.readFileSync(sourceProof,'utf8'));
     provenance={kind:'storyboard',scenesSha256:source.scenesSha256,editCheckSha256:hash(path.join(work,'edit-check.json')),assembledSha256:hash(path.join(work,'assembled-check.json'))};
+    const assembled=JSON.parse(fs.readFileSync(path.join(work,'assembled-check.json'),'utf8'));
+    if (assembled.audienceSha256) {
+      const cues=JSON.parse(fs.readFileSync(path.join(work,'work/audience-resolved.json'),'utf8'));
+      const segments=spliced ? JSON.parse(fs.readFileSync(path.join(work,'splice-check.json'),'utf8')).deliverySegments : [{bodyStart:0,splicedStart:0}];
+      provenance.audienceEffects=audienceDelivery(cues,segments,speed);
+    }
   }else{
     const edit=path.join(work,'edit.json');
     if(!fs.existsSync(edit))throw new Error('Delivery requires the common builder proof (or a shooting edit.json)');
@@ -65,5 +84,5 @@ function check(episode){
     return null;
   }catch(e){return 'Delivery has no current assembly proof: '+e.message+'; rebuild through build-reel.sh and speedup.sh, then copy delivery-proof.json with the final files';}
 }
-module.exports={record,check};
+module.exports={record,check,audienceDelivery};
 if(require.main===module){try{record(path.resolve(process.argv[2]||'.'),Number(process.argv[3]||1));}catch(e){console.error(e.message);process.exitCode=1;}}

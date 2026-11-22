@@ -1,3 +1,4 @@
+import { hasSubjectInput } from './video-image-inputs.js';
 import { fasth3VideoAudioCount } from './fasth3-omni.js';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, realpathSync } from 'node:fs';
@@ -69,7 +70,7 @@ export function resolveCharacterVoice(character, context, warnings) {
     }
     return resolved;
 }
-function voiceReference(character, context, warnings) {
+export function voiceReference(character, context, warnings) {
     const declared = object(character.voiceReference);
     if (character.voiceReferenceWarning && !declared.path) {
         warnings.push(`${character.id}: ${character.voiceReferenceWarning}; restore the selected sample instead of substituting an old voice.wav.`);
@@ -117,7 +118,7 @@ function msrSubject(character, refs, context) {
     let ownedPaths;
     const declared = [].concat(object(context.shot.visual).character ?? [])
         .map(entry => typeof entry === 'string' ? entry : text(object(entry).id));
-    if (declared.includes(text(character.id)) && existsSync(path.join(context.episode, 'storyboard', 'cast.json'))) {
+    if ((declared.includes(text(character.id)) || context.sceneDirection?.openingPositions.some(p => p.character === character.id && p.images.length)) && existsSync(path.join(context.episode, 'storyboard', 'cast.json'))) {
         const { sheetPanels, canonicalReferences } = load('../../skills/channel/references/character-panels.js');
         const dir = path.join(context.episode, 'storyboard');
         // Planning rebuilt these references from this same registered owner; transport aliases no longer identify the slot.
@@ -166,7 +167,11 @@ function afterImageBlock(prompt, lines) {
 export function prepareVideoVoice(tool, input, context) {
     const args = { ...input };
     const lines = (Array.isArray(context.shot.narration) ? context.shot.narration : []).map(object).filter(line => text(line.tts));
-    const msr = tool === 'astra_genai_msr';
+    const pinnedMsr = tool === 'astra_genai_img2video' && args.generateAudio !== false &&
+        hasSubjectInput(args.references) && lines.some(line => line.delivery === 'on_screen' || line.delivery === 'off_screen');
+    if (pinnedMsr && lines.some(line => line.delivery === 'voiceover'))
+        throw new Error('msr_speech_route: split physical dialogue and inner thoughts into separate shots');
+    const msr = tool === 'astra_genai_msr' || pinnedMsr;
     // The hosted reference lanes speak the shot's dialogue from the prompt as MSR does (reference-frame prompts carry no lines).
     const vendor = VENDOR_REFERENCE_TOOLS.includes(tool);
     // MSR renders authored dialogue and voiceover into its own soundtrack; a pinned sample, when the
@@ -184,10 +189,11 @@ export function prepareVideoVoice(tool, input, context) {
     // FastH3 and the hosted MiniMax/HeyGen lanes always render a soundtrack.
     const audible = msr || ((tool !== 'astra_genai_desktop_keyframes' || args.audio === true) && (tool === 'fasth3_omni_reference' || tool.startsWith('minimax_') || tool.startsWith('heygen_') ||
         (tool.startsWith('astra_') ? args.generateAudio !== false : args.generateAudio === true)));
-    const lane = VIDEO_ADAPTERS[tool]?.voice ?? 'none';
+    const lane = msr ? 'reference' : VIDEO_ADAPTERS[tool]?.voice ?? 'none';
     const supplied = lane === 'supplied';
     const onScreen = lines.some(line => line.delivery === 'on_screen');
-    const native = !supplied && audible && (msr || vendor || nativeSlot || onScreen);
+    const sceneDialogue = context.sceneDirection && lines.some(line => line.delivery === 'on_screen' || line.delivery === 'off_screen');
+    const native = !supplied && audible && (msr || vendor || nativeSlot || onScreen || Boolean(sceneDialogue));
     // Voice gate (owner directive 2026-10-31): a character the viewer hears or sees speak needs a voice
     // lane. An adapter without one renders only cuts whose lines are external TTS over a non-speaking picture.
     if (lane === 'none' && (native || onScreen))
@@ -197,7 +203,7 @@ export function prepareVideoVoice(tool, input, context) {
     const strategy = supplied ? 'supplied_audio' : reference ? 'reference_voice' : 'external_tts';
     const warnings = [];
     const speakers = [];
-    const nativeLines = msr || vendor || nativeSlot ? lines : lines.filter(line => line.delivery === 'on_screen');
+    const nativeLines = msr || vendor || nativeSlot || sceneDialogue ? lines : lines.filter(line => line.delivery === 'on_screen');
     const ids = [...new Set((native ? nativeLines : lines).map(line => text(line.speaker) || text(doc.narratorCharacterId)))];
     const prompt = [];
     const audioOffset = tool === 'fasth3_omni_reference' && Array.isArray(args.referenceVideoPaths)
@@ -214,9 +220,11 @@ export function prepareVideoVoice(tool, input, context) {
             throw new Error('video_speaker_binding_invalid: use a cast id and an English appearance description');
     }
     const visibleSpeakers = [...new Set(nativeLines.filter(line => line.delivery === 'on_screen').map(line => text(line.speaker)))];
-    if (msr && visibleSpeakers.length > 1 && visibleSpeakers.some(id => !screenBindings.some(binding => binding.speaker === id)))
+    if (msr && context.sceneDirection && visibleSpeakers.some(id => !context.sceneDirection.openingPositions.some(p => p.character === id)))
+        throw new Error('openingPositions: describe each speaker in the scene opening');
+    if (msr && !context.sceneDirection && visibleSpeakers.length > 1 && visibleSpeakers.some(id => !screenBindings.some(binding => binding.speaker === id)))
         throw new Error('video_speaker_binding_required: set shot_prompt speakerBindings from the start image for every on-screen speaker; left/right mean the viewer\'s left/right, not Image 1/Image 2');
-    if (msr && visibleSpeakers.length > 1 && new Set(screenBindings.filter(binding => visibleSpeakers.includes(binding.speaker)).map(binding => binding.screenPosition)).size !== visibleSpeakers.length)
+    if (msr && !context.sceneDirection && visibleSpeakers.length > 1 && new Set(screenBindings.filter(binding => visibleSpeakers.includes(binding.speaker)).map(binding => binding.screenPosition)).size !== visibleSpeakers.length)
         throw new Error('video_speaker_binding_invalid: on-screen speakers need distinct screen positions');
     if (msr && screenBindings.length) {
         const start = text(object(visual.frames).start), expected = text(object(visual.video).speakerBindingImageSha256);
@@ -244,14 +252,14 @@ export function prepareVideoVoice(tool, input, context) {
             // A pinned sample rides on subject 1 or 2 when the gateway takes samples; otherwise the prompt voices the speaker.
             const { index, slot } = msrSubject(character, msrRefs, context);
             if (index >= 0)
-                speaker.imageIndices = [index + 1];
+                speaker.imageIndices = [slot];
             speaker.reference = voiceReference(character, context, warnings);
             const current = index < 0 ? '' : text(msrRefs[index].audioPath);
             const problem = !speaker.reference ? 'no pinned voice sample'
                 : context.msrVoice !== true ? 'the GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities)'
                     : index < 0 ? 'no MSR subject image matches voiceReference.imagePaths'
                         : slot > 2 ? `MSR subject ${slot} takes no sample; only subjects 1 and 2 do`
-                            : current && current !== speaker.reference.path ? `Image ${index + 1} already carries another speaker's sample` : '';
+                            : current && current !== speaker.reference.path ? `Image ${slot} already carries another speaker's sample` : '';
             if (problem) {
                 warnings.push(`${id}: ${problem}; MSR voices this speaker from the prompt.`);
                 delete speaker.reference;
@@ -259,8 +267,10 @@ export function prepareVideoVoice(tool, input, context) {
             else {
                 msrRefs[index].audioPath = speaker.reference.path;
                 speaker.audioIndex = slot;
-                msrAudio.push(`Audio ${slot}: ${label}'s voice, belongs only to Image ${index + 1}.`);
+                msrAudio.push(`Audio ${slot}: ${label}'s voice, belongs only to Image ${slot}.`);
                 const seconds = sampleSeconds(speaker.reference.path);
+                if (seconds !== undefined && seconds > 10)
+                    throw new Error(id + ': MSR voice samples must be at most 10 seconds');
                 if (seconds !== undefined && seconds > 5)
                     warnings.push(`${id}: the voice sample runs ${seconds.toFixed(1)} s; MSR conditions on the first 5 seconds and cuts the rest.`);
             }
@@ -309,6 +319,13 @@ export function prepareVideoVoice(tool, input, context) {
             const id = text(line.speaker) || text(doc.narratorCharacterId), speaker = bySpeaker.get(id);
             const image = speaker?.imageIndices?.[0], audio = speaker?.audioIndex, direction = text(object(line.acting).direction);
             const who = image ? img(image) : speaker?.name ?? id;
+            if (context.sceneDirection) {
+                const owner = context.sceneDirection.openingPositions.find(p => p.character === id);
+                const imageSlot = image ?? owner?.images[0];
+                const deliveryCue = text(object(line.acting).vocal) || direction;
+                const binding = [imageSlot && img(imageSlot), audio && aud(audio), line.delivery === 'off_screen' && 'off screen'].filter(Boolean).join(', ');
+                return `${deliveryCue ? deliveryCue + ' ' : ''}${id}${binding ? ' (' + binding + ')' : ''}: "${text(line.tts)}"`;
+            }
             if (line.delivery !== 'on_screen') {
                 const label = nonEnglishOutsideQuotes(speaker?.name ?? '') ? id : speaker?.name ?? id;
                 const delivery = line.delivery === 'off_screen' ? 'off screen' : 'in voiceover';

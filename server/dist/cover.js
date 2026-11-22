@@ -15,7 +15,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync, spawn } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync, openSync, readSync, closeSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { PLUGIN_ROOT, readBoard, scenesPath, shotIdSchema } from './storyboard.js';
@@ -573,6 +573,17 @@ export async function renderCover(path) {
         const render = { version: 1, renderVersion: RENDER_VERSION, decisionSha256: decisionSha(decision), templateSha256: templateSha(), sources, fonts,
             format: ep.format, files, previews, measurements, warnings, copied };
         atomicWrite(join(dir, 'render.json'), JSON.stringify(render, null, 2) + '\n');
+        const episodesDir = dirname(ep.episode);
+        if (basename(ep.storyboard) === 'storyboard' && basename(episodesDir) === 'episodes') {
+            try {
+                const library = load(join(PLUGIN_ROOT, 'skills', 'channel', 'references', 'review-library.js'));
+                library.exportChannel(dirname(episodesDir));
+            }
+            catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                return { dir, render, libraryWarning: { code: 'cover_library_refresh_failed', message } };
+            }
+        }
         return { dir, render };
     }
     finally {

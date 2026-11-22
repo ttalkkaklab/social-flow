@@ -98,7 +98,7 @@ test('invalid categories, credentials and incomplete engine changes do not enter
   const root = workspace(t);
   const current = settings.saveSettings(root, models, { videoType, request: 'Initial choices' });
   for (const patch of [
-    {}, { music: {} }, { image: { engine: 'unknown' } },
+    {}, { music: {} }, { music: { engine: 'none', model: 'V6' } }, { image: { engine: 'unknown' } },
     { image: { engine: 'gpt-image' } },
     { image: { engine: 'host', model: 'host-managed' } },
     { image: { engine: 'gpt-image', model: 'gpt-image-2', host: 'codex' } },

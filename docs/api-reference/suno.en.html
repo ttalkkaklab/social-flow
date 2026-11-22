@@ -43,7 +43,7 @@
     <tbody>
       <tr><td>Narration-under bed (default)</td><td><code>music_generate_clip</code> 30s, builder loops it</td><td><code>GEMINI_API_KEY</code></td></tr>
       <tr><td>Exact seconds, or a seed to reproduce</td><td><code>music_generate</code> / <code>music_generate_advanced</code></td><td><code>GEMINI_API_KEY</code></td></tr>
-      <tr><td>Narration-under bed (Suno)</td><td><code>suno_generate_sound</code> loop + BPM</td><td><code>SUNO_API_KEY</code></td></tr>
+      <tr><td>Narration-under bed (Suno)</td><td><code>suno_generate</code> with <code>instrumental</code></td><td><code>SUNO_API_KEY</code></td></tr>
       <tr><td>The song is the content</td><td><code>suno_generate</code></td><td><code>SUNO_API_KEY</code></td></tr>
     </tbody>
   </table>
@@ -55,18 +55,18 @@
 
 <section id="generate">
   <h2>2. suno_generate</h2>
-  <p>Exactly two tracks per call. Remote URLs expire after 15 days, so files are saved locally as soon as polling finishes. MCP stdio has no webhook server, so <code>callBackUrl</code> is a dummy (<code>https://httpbin.org/post</code>) and we finish by polling. A callback exception with an audio URL present is treated as success.</p>
+  <p>Exactly two tracks per call. Remote URLs expire after 14 days, so files are saved locally as soon as polling finishes. MCP stdio has no webhook server, so <code>callBackUrl</code> is a dummy (<code>https://httpbin.org/post</code>) and we finish by polling. A callback exception with an audio URL present is treated as success.</p>
   <ul>
-    <li><code>customMode=false</code> — the model writes lyrics and style from prompt alone.</li>
-    <li><code>customMode=true</code> with vocals — prompt is sung as the lyrics. style and title required.</li>
-    <li><code>customMode=true</code> + <code>instrumental=true</code> — no vocals. style and title required.</li>
+    <li><code>customMode=false</code> — needs <code>style</code> or <code>lyrics</code>; a prompt alone is refused. <code>prompt</code> is at most 3,000 characters.</li>
+    <li><code>customMode=true</code> — needs <code>style</code>, <code>lyrics</code> or <code>negativeTags</code>. <code>lyrics</code> (5,000 characters) is sung as written and comes before <code>prompt</code>. <code>style</code> and <code>negativeTags</code> take 1,000 characters each, <code>title</code> 80.</li>
+    <li>Custom mode only: <code>duration</code> (10–360s), <code>vocalGender</code>, a persona, <code>styleWeight</code> · <code>weirdnessConstraint</code> · <code>audioWeight</code> (0–1) and <code>variety</code> (0–4).</li>
   </ul>
-  <p>Default model V5 (up to 8 minutes). <code>duration</code> (10–360s) is accepted only on V5_5 + customMode. Generate costs about 12 credits/call (≈ $0.06 at the $5/1000 pack).</p>
+  <p>The default model is V6; V6_MINI and V6_WILD are the other two. The provider keeps the V4 and V5 families only for old integrations, and this server refuses them. The provider's pages give no credit cost for a V6 call (read 2026-11-21), so read <code>suno_credits</code> before and after.</p>
 </section>
 
 <section id="sound">
   <h2>3. suno_generate_sound</h2>
-  <p>V5-only Sounds task. A loop without intro/outro, with optional BPM and key. The builder stretches it with <code>-stream_loop -1</code>. Set <code>filename</code> to <code>.wav</code> to transcode to 48kHz stereo PCM for <code>.work/bgm.wav</code>.</p>
+  <p>Refused before anything is submitted. The Sounds endpoint takes the V6 family (read 2026-11-21), but the provider's pages say nothing about fetching a finished sounds task: the status endpoint names Generate and Extend Music only, and the Sounds page shows no callback payload. A create call is billed, so the tool opens after one real sounds task has been fetched. For a bed under narration, use <code>suno_generate</code> with <code>instrumental</code>.</p>
 </section>
 
 <section id="impl">

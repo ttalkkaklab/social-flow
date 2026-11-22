@@ -1,6 +1,6 @@
 {
   "name": "@zeans/social-flow-mcp-server",
-  "version": "0.122.1",
+  "version": "0.126.0",
   "license": "Apache-2.0",
   "description": "Built-in MCP server for the social-flow plugin — direct SNS publishing (Threads·Instagram·Facebook·YouTube) + research search (5 SerpApi tools·SNS issue scout·8 Naver Open API types) + image·video·voice·music generation (OpenAI GPT Image·Veo 3.1·Seedance·Gemini TTS·ElevenLabs·Lyria·Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   "type": "module",
@@ -9,18 +9,20 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "tsc && node build-upscale.mjs && node build-video-catalog.mjs && node build-image-catalog.mjs && node build-music-catalog.mjs && npm run bundle && npm run bundle:shot && npm run bundle:mesh",
+    "build": "tsc && node build-upscale.mjs && node build-video-catalog.mjs && node build-image-catalog.mjs && node build-music-catalog.mjs && npm run bundle && npm run bundle:live && npm run bundle:shot && npm run bundle:mesh",
     "start": "node dist/index.js",
     "test": "node --import ./test/isolate.mjs --test test/*.test.mjs",
     "check": "npm run build && npm test",
     "check:dist": "npm run build && node check-dist.mjs",
     "bundle": "esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/bundle.js --banner:js=\"import { createRequire as __socialFlowRequire } from 'node:module'; const require = __socialFlowRequire(import.meta.url);\"",
     "bundle:shot": "esbuild src/astra-shot-runtime.ts --bundle --platform=node --format=esm --outfile=dist/astra-shot-runtime.bundle.js --banner:js=\"import { createRequire as __socialFlowRequire } from 'node:module'; const require = __socialFlowRequire(import.meta.url);\"",
-    "bundle:mesh": "node build-mesh.mjs"
+    "bundle:mesh": "node build-mesh.mjs",
+    "bundle:live": "esbuild src/live-run.ts --bundle --platform=node --format=esm --outfile=dist/character-live.bundle.js --banner:js=\"import { createRequire as __socialFlowRequire } from 'node:module'; const require = __socialFlowRequire(import.meta.url);\""
   },
   "dependencies": {
     "@google/genai": "^2.21.0",
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "google-auth-library": "^10.9.1",
     "openai": "^6.46.0",
     "undici": "^7.29.1",
     "zod": "^3.23.8",

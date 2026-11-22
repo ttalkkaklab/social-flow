@@ -18,9 +18,9 @@ style and ratio without a fresh preference question; quote actual costs and keep
 spending authorization separate. The low-level model CLI below remains available
 for compatibility and explicit model changes; it preserves all project fields.
 
-Owner directive, 2026-10-16: once the production working directory is known, select
-**video type → video model and credentials → image model and credentials →
-TTS needed? → speech model and credentials if yes → music when wanted** once and save them in that directory. Every new
+At first setup, collect the choices in this order (owner directive, 2026-11-21).
+**Video type → video model and credentials → BGM model and credentials, or no new music
+→ image model and credentials → optional TTS model and credentials.** Save the choices once in that directory. Every new
 episode uses those choices until the user explicitly requests a change. This takes
 precedence over automatic host detection, economy/quality routing, per-cut model
 escalation and repeated model questions in older skill sections. It is an explicit
@@ -41,31 +41,31 @@ without substituting another model; an unspecified host model is not GPT Image 2
 Use the working directory the user selected (normally the project root containing
 `data/`). Keep its absolute path as `WORKSPACE` throughout the session, even after
 changing into an episode directory. Do not use the plugin install, `$HOME`, or a
-different channel/project as an implicit settings source. For an existing episode,
-its `.work/model-settings.json` records the original source path. If the workspace
-cannot be identified from the session or that record, ask where to work.
+different project as an implicit settings source. If the request, prior user selection or
+identified episode does not establish one directory, ask for it and wait. Use
+`project_manage select` to record an unbound directory before choosing models. Check
+`project_manage status` in the selected directory before starting or resuming episode work.
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/skills/_shared/model-settings.js" show "$WORKSPACE"
 ```
 
-`configured`: briefly state the saved type and models and continue without another
-question. `setup_required`: select the type, video/image models and explicit TTS choice below before authoring a
+`configured` reports the low-level model choices. Only `project_manage status` returning
+`ready` confirms the selected directory, all four model categories and project setup. `setup_required`: collect the type, video, BGM, image and TTS choices below before authoring a
 new generated episode or making a media call. `video_type_required`: older settings
-already contain models; ask only for the type before the next new episode and save
-it with `update`. Resume an existing episode from its snapshot/board without another
-setup question, even if that legacy snapshot has no type. A malformed file is an error to
+already contain models; collect the type and any missing project fields before episode work and save
+it with `update`. After workspace setup, resume an existing episode from its snapshot/board. A malformed file is an error to
 repair, not permission to overwrite it with defaults. Do not copy choices from a
 previous episode or channel profile into directory settings without the user's
 selection. Existing choices may be offered as candidates.
 
 | Status | Returned by | Meaning |
 |---|---|---|
-| `setup_required` | `model-settings.js show` | No `.social-flow/models.json`; run first setup. |
-| `video_type_required` | `model-settings.js show` | Models saved, type missing; ask only the type. |
+| `setup_required` | `model-settings.js show` | No file or incomplete model choices; collect the missing fields reported by `project_manage status`. |
+| `video_type_required` | `model-settings.js show` | Legacy model choices saved, type missing; also check project status. |
 | `configured` | `model-settings.js show` | Type, video/image models and speech model or explicit none saved (model-only view). |
 | `migration_required` | both | Retired speech or video model; `retired[]` names `models.speech` / `models.video`. Update that choice explicitly before new generation. |
-| `video_engine_unsupported` | `video_plan` | A selection or override names Veo, Gemini Omni or Seedance 1.x; choose a supported video model again (saving one is refused). Existing clips stay reusable. |
+| `video_engine_unsupported` | `video_plan` | A selection or override names Gemini Developer API Veo previews, Gemini Omni or Seedance 1.x; choose a supported video model again (saving one is refused). Existing clips stay reusable. |
 | `voice_lane_required` | `video_plan` | A spoken cut (`on_screen` line, or native audio on `visual.clip` / b-roll) on an adapter with voice lane `none`; use a `reference` or `supplied` lane, or keep narration as TTS with `generateAudio:false`. |
 | `project_setup_required` | `project_manage status` / `episode` | Project, style, production, SNS or channel layout missing; `missing[]` names them. An unattended caller reports it and defers authoring. |
 | `ready` | `project_manage status` | Complete settings; authoring starts without a preference question. |
@@ -101,7 +101,9 @@ known pricing, labelled with its date. Do not invent credentials, exact latency 
 prices. A configured credential does not guarantee a successful generation.
 
 1. **Video model** (first-setup menu; a saved choice is never re-offered). Offer host video when exposed, Seedance 2.x API models and
-   ASTRA or MLX when available. Veo, Gemini Omni and Seedance 1.x left the plugin on
+   Google Cloud Veo 3.1, ASTRA or MLX when available. For Veo save e.g.
+   `{"engine":"veo","model":"veo-3.1-fast-generate-001","resolution":"720p","operation":"image"}`.
+   Use the model-specific reference and resolution limits from `video_catalog`. Gemini Developer API Veo previews, Gemini Omni and Seedance 1.x left the plugin on
    2026-10-31 because none takes a voice reference. Include resolution and reference/audio support.
    Use the installed video-model selection reference and cost tables. Explain the
    change each option makes. The host is the recommended initial choice when it
@@ -121,7 +123,18 @@ prices. A configured credential does not guarantee a successful generation.
    speaker's voice sample but cannot pin the start image as the first frame in the same
    call; LTX takes no voice sample, so its spoken cuts use the pinned TTS track. Prices and
    field contracts: [API schemas](../../docs/research/2026-11-18-video-model-api-schemas/README.md).
-2. **Image model.** Recommend **ASTRA GenAI** first for images without readable
+2. **BGM and audience-only tonal cues.** After the video model and its credential
+   check, ask which model should make new background music, drones, risers and stingers.
+   Read `music_catalog` and offer exact supported model IDs with their duration controls,
+   provider and credential status from `capability_status`. For MLX, offer an exact
+   installed music pack. Save the user's choice as `models.music:{engine,model}`. Also
+   offer “use existing music or leave scenes unscored” and save `models.music:{engine:"none"}`
+   if selected. This choice needs no provider credential. A video clip's own voices,
+   footsteps and other scene sounds stay with its soundtrack. Check the chosen music
+   provider before asking about images. Complete a missing music choice in older workspaces
+   before the next storyboard or video task. [Music routing](music-routing.md)
+
+3. **Image model.** Recommend **ASTRA GenAI** first for images without readable
    text: save `engine:"astra-genai", model:"z-image-turbo"` after the user's choice.
    This is the GenAI gateway, not local mflux (`engine:"zimage"`). Check
    `ASTRA_GENAI_API_KEY` and follow [GenAI setup](astra-genai.md); missing credentials
@@ -132,7 +145,7 @@ prices. A configured credential does not guarantee a successful generation.
    display or preserve readable text require `gpt-image-2` under the scoped exception
    above. Reuse saved choices; this recommendation does not migrate existing projects.
 
-3. **TTS needed?** Ask whether this project needs separately generated speech.
+4. **TTS needed?** Ask whether this project needs separately generated speech.
    If not, save `models.speech:{engine:"none"}` and skip speech model, voice and
    credential questions. This covers silence, supplied recordings and native video
    audio without a separate TTS call. Do not infer this choice from the genre.
@@ -149,46 +162,36 @@ prices. A configured credential does not guarantee a successful generation.
    using such a voice needs an explicit model exception recorded in
    `PRODUCTION.modelSettings.overrides`.
 
-4. **Music model.** Read `music_catalog` (also in `project_manage options`). Save
-   `models.music` as `{engine, model}`: `lyria`, `elevenlabs`, `suno-api` or `mlx`.
-   Offer this choice when new music is wanted. Existing settings without music stay
-   valid; new music generation reports `music_setup_required` until a choice exists.
-   Reusing a channel bed requires no music model choice. A configured model is not
-   spending authorization. See [music routing](music-routing.md).
-   **Music direction.** `production.musicDirection` keeps what the user has said about music
-   on this channel: up to 20 dated one-sentence notes, e.g. `"2026-11-08 user: music under
-   every shot is too much; score the turns"`. Add a note with `project_manage update` (pass
-   the whole `production` block with the new list) in the turn the user gives the feedback.
-   `story_music` shows the list at every spotting, so the next episode starts from it.
-   **Cliché use.** `production.clicheUse` keeps the user's standing choice for researched
-   clichés in stories: `"on"` applies them on every type, `"off"` on none. Without it, drama,
-   comedy and romance episodes apply them and other types get a recommendation. Save it with
-   `project_manage update` (pass the whole `production` block) in the turn the user states the
-   choice; never ask for it at setup. A new episode's board carries it as
-   `PRODUCTION.clicheUse` ([cliché use](../storyboard/references/cliche-use.md)).
+**Music direction.** `production.musicDirection` keeps what the user has said about music
+on this channel: up to 20 dated one-sentence notes, e.g. `"2026-11-08 user: music under
+every shot is too much; score the turns"`. Add a note with `project_manage update` (pass
+the whole `production` block with the new list) in the turn the user gives the feedback.
+`story_music` shows the list at every spotting, so the next episode starts from it.
+
+**Cliché use.** `production.clicheUse` keeps the user's standing choice for researched
+clichés in stories: `"on"` applies them on every type, `"off"` on none. Without it, drama,
+comedy and romance episodes apply them and other types get a recommendation. Save it with
+`project_manage update` (pass the whole `production` block) in the turn the user states the
+choice; never ask for it at setup. A new episode's board carries it as
+`PRODUCTION.clicheUse` ([cliché use](../storyboard/references/cliche-use.md)).
 
 Complete each model selection and its credential step below before asking for the next category.
-Do not batch video, image and speech choices ahead of credential setup. Reuse
+Ask the next model question after checking the previous choice. Reuse
 answers already explicit in the user's request; ask only for missing categories.
 Do not bill for samples during setup unless requested. Do not treat silence as a
 selection. This first setup is a user-requested preference step and is not waived
 by the general automation advice to choose unspecified creative preferences.
 
-Save the type and selected media models together. Example only — these are **not defaults**:
+After selecting the directory, save the type and four media choices with the other
+project preferences. Use `project_manage init` with the user's choices in `settings`,
+or pass the [complete setup input](../project-init/references/settings.md) to the CLI:
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/skills/_shared/model-settings.js" init "$WORKSPACE" <<'JSON'
-{
-  "videoType": {"id":"drama"},
-  "models": {
-    "video": {"engine":"seedance","model":"dreamina-seedance-2-0-fast-260128","resolution":"720p"},
-    "speech": {"engine":"gemini","model":"gemini-2.5-flash-preview-tts"},
-    "image": {"engine":"host","model":"host-managed","host":"codex"}
-  },
-  "request": "Record the actual user's selections here, not this example."
-}
-JSON
+node "${CLAUDE_PLUGIN_ROOT}/skills/_shared/project-settings.js" init "$WORKSPACE" < setup-input.json
+node "${CLAUDE_PLUGIN_ROOT}/skills/_shared/project-settings.js" status "$WORKSPACE"
 ```
+
+Continue when status returns `ready` for that directory.
 
 The file is `.social-flow/models.json`, schema version 1. Store no credentials.
 `engine` is required in each category; `model` is required for selectable engines.
@@ -205,8 +208,8 @@ chosen tool supports. Host `quality` is a prompt preference if no parameter exis
 
 ## Credential step after each selection
 
-After video selection, after image selection, and after speech selection only when
-TTS is enabled, check the selected provider with `capability_status`. Reuse existing
+Check each selected provider with `capability_status` after choosing video, BGM, image
+and finally speech if separate TTS is enabled. Skip the credential step for an explicit `none`. Reuse existing
 credentials; a shared key configured for video must not be requested again for TTS.
 For a host tool, confirm that the tool is exposed and authenticated through the host;
 for local engines, check the installation. Neither requires an invented API token.
@@ -229,17 +232,15 @@ not as proof that the key is valid; do not generate a paid sample to test it.
 
 If setup cannot finish, report the selected provider and missing variable or host/local
 requirement, keep explicit answers in the session and resume at this step. Do not
-silently switch providers or mark setup complete. A user who explicitly defers setup
-may keep a local text-only draft with unresolved production requirements. Unattended
-runs report the missing requirement and defer generation instead of prompting.
-Apply the same credential step to an optional music selection.
+silently switch providers or mark setup complete. When setup is deferred, pause episode
+work, including text-only drafts. Unattended runs report the missing requirements.
 
 ## Apply to authoring and generation
 
 Before the first board is authored, create the episode with `project_manage episode` (or
 `project-settings.js episode`): it creates the directory, the snapshot and the
 `FORMAT`/`PRODUCTION` handoff, including `PRODUCTION.videoModel` from the saved video
-selection. The low-level snapshot below is the legacy path for model-only workspaces:
+selection. The low-level snapshot command remains available for inspecting legacy model records:
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/skills/_shared/model-settings.js" snapshot "$WORKSPACE" "$EPISODE"

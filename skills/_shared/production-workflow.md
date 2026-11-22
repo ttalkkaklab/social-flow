@@ -1,8 +1,19 @@
 # Production order
 
-Run `project_manage status` first. Resolve missing settings through project-init before
-characters or text authoring, including text-only requests. Pending SNS connections do
-not block local work. Create/resume the episode with `project_manage episode`.
+Start every storyboard or video request in the project directory the user selected.
+Reuse an explicit path from the request or session, or the saved workspace of the
+requested episode. If the directory is unclear, ask “어느 폴더에 이 프로젝트를 저장할까요?”
+and wait. An arbitrary current directory, the plugin installation and another project's
+defaults do not answer that question. An unattended caller reports `project_setup_required`
+with `workspace` and stops when it cannot identify the selected directory.
+
+Run `project_manage status` on that absolute path. For a new directory, or when status
+lists `workspace`, record the user's selection with `project_manage select`. It creates
+the directory if needed. Follow [project-init](../project-init/SKILL.md) for the missing
+choices. Before drafting text, preparing the cast, generating media or assembling a video,
+require `status:ready` in that same directory. This also applies to resumed work.
+Reuse explicit choices and existing episode snapshots. Pending SNS connections can wait.
+Create or resume the episode with `project_manage episode`.
 
 ## The order (user directive, 2026-10-31)
 
@@ -21,12 +32,18 @@ generation authorization and adapter input validation stay. Work in this order:
    2026-11-18): the researched clichés the story uses, or `none` with its reason, on drama,
    comedy and romance; on other types the candidates as `offered`, applied only when the
    user picked them. Send each use again with its `scenes` once they are written. Nothing
-   waits for it ([cliché use](../storyboard/references/cliche-use.md)).
+   waits for it ([cliché use](../storyboard/references/cliche-use.md)). With `story_scene`,
+   record each scene's `audienceSound` decision (`use` or `none`) and why a viewer should
+   hear a cue there or why the action or dialogue already carries the moment. For a cue,
+   follow the character or viewer whose expectation changes. Record the visible turn
+   and the word, action or cut that should take over when the cue ends.
 3. Each shot's characters (`shot_characters`, at most two) with each one's `expression` — the
    visible state the scene's situation puts on their face — then their lines (`shot_dialogue`).
    Then each scene's music decision (`story_music`, user directive 2026-11-14): `score` with a
    cue or `none`, each with its reason, read against the channel's saved music direction.
-   Nothing waits for it; an undecided scene is reported on the review page and at assembly.
+   An undecided music choice is reported on the review page and at assembly.
+   Check `storyboard_read.audienceSpotting` against the lines and music. Plan each audience cue
+   with `storyboard_apply.audienceEffects`, naming its trigger and release.
 4. Each shot's icon attributes (`shot_icons`): render route, size, angle, camera move,
    focus, depth, frame plan (`reference` is MSR) and the transition into the next shot (`next`).
    After lines and provisional camera staging, compare the uncut scene with every join
@@ -34,6 +51,10 @@ generation authorization and adapter input validation stay. Work in this order:
    `storyboard_read.boundaryReview` and `videoTiming`, revise unnecessary boundaries, and
    preserve speech/performance/continuity before images. This is authoring, not a new gate.
 5. Props and backgrounds — `SB_DOC.props` and `SB_DOC.locations` with their images.
+   Before a prop's description or picture, look up the real thing — the rule or form that
+   makes it genuine and saved pictures of actual examples — and record `research` on its
+   sheet ([prop research](../storyboard/references/prop-research.md), user directive
+   2026-11-21); draw the prop's own picture from the saved real picture.
    Backgrounds default to two separate opposing camera views in `panels.front` and
    `panels.back`; follow [asset sheets](../storyboard/references/asset-sheets.md).
    Set each shot's opening `shot_icons.backgroundView` against that layout before
@@ -41,11 +62,10 @@ generation authorization and adapter input validation stay. Work in this order:
 6. Each shot's start image (`shot_image`), composed from its characters' sheet panels,
    its place and props; then the end image (`frame:"end"`) only for a `first_last` shot.
    A place whose sheet names a built set is rendered from the shot's own camera first (below).
-7. Each `generated_video` shot's video prompt (`shot_prompt`), from its icon attributes,
-   lines and an English action. A later change to what it came from warns and marks the
-   prompt stale on the review page; rewrite it with `shot_prompt`.
-8. Each shot's video: `video_plan` → the user's approval (`video_approve`) → `video_execute`.
-9. Assembly and delivery (produce).
+7. Inspect the scene's first frame and save its `videoDirection` with `story_scene`. Keep opening positions, emotion and the continuous audio track on the scene. Record each shot’s interval, camera setup, action, dialogue, incoming transition and frame-addressed images on its card.
+8. Generate one video for each scene of generated shots with `video_plan {episode,sceneNo,requestId}` → `video_approve` → `video_execute`. A specifically requested single-shot render uses `shot_prompt` and `shotId`.
+9. Assembly and delivery (produce). Place the planned audience cues against the accepted cuts
+   and mix them with the scene's voice, room tone and music. [Audience cue placement](../produce/references/video-sound.md#audience-effects)
 
 The story tools refuse a layer whose parent is missing (`story_order`): `shot_characters`
 waits for a story with no gaps, `shot_icons` for every shot's characters, `shot_image` for
@@ -83,7 +103,7 @@ image takes the end image made from the old one off the shot.
 
 ## Approval before each video (user directive, 2026-10-31)
 
-Before a shot's video, show the user its `video_plan`: the prompt, the start (and end)
+Before generating a scene (or an explicitly selected shot), show the user its `video_plan`: the prompt, the start (and end)
 image and the cost. On their yes, record it with `video_approve {planIds}` in their own
 words; when they approve every shot at once, `video_approve {auto:true}`. `video_execute`
 refuses a plan without one (`video_approval_required`). A changed prompt, image or model

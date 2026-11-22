@@ -88,7 +88,7 @@ export const ASTRA_VIDEO_GUIDANCE_RANGES = {
 export const ASTRA_VIDEO_GUIDANCE_BLOCK_KEYS = ['video_stg_blocks', 'audio_stg_blocks'];
 /** Tool arguments are camelCase (server-wide convention); the wire keeps the engine's snake_case. */
 export const guidanceToolKey = (wireKey) => wireKey.replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase());
-const guidanceWireKey = (toolKey) => toolKey.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
+export const guidanceWireKey = (toolKey) => toolKey.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
 /** Transformer layers are 0..47; at most 8 distinct blocks per list. */
 export const ASTRA_VIDEO_MAX_STG_BLOCK = 47;
 export const ASTRA_VIDEO_MAX_STG_BLOCKS = 8;
@@ -367,7 +367,7 @@ const guidanceRange = (key) => {
     return number.min(min).max(max).optional();
 };
 /** Omitted keys are omitted from the body, so the engine keeps its own default for each one. */
-const guidanceSchema = z
+export const guidanceSchema = z
     .object({
     ...Object.fromEntries(Object.keys(ASTRA_VIDEO_GUIDANCE_RANGES).map((key) => [guidanceToolKey(key), guidanceRange(key)])),
     videoStgBlocks: stgBlocksSchema,

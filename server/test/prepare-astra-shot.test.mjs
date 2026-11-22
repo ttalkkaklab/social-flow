@@ -1,3 +1,4 @@
+import { setupProject } from './workflow-fixture.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -12,6 +13,7 @@ const { prepare } = require('../../skills/produce/references/prepare-astra-shot.
 const ff = args => execFileSync('ffmpeg', ['-nostdin', '-v', 'error', '-y', ...args], { timeout: 30000 });
 function fixture(t, onScreen = false) {
   const dir = mkdtempSync(path.join(tmpdir(), 'astra-shot-input-'));
+  setupProject(dir);
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   ff(['-f', 'lavfi', '-i', 'color=red:s=128x128', '-frames:v', '1', path.join(dir, 'start.png')]);
   const audio = path.join(dir, 'speech.wav');

@@ -1,3 +1,4 @@
+import { setupProject } from './workflow-fixture.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -121,8 +122,9 @@ test('capture refuses unusable selections and grouped footage without inventing 
 });
 test('installed capture and ASTRA planning run without node_modules', t => {
   const dir = fixture(t), install = path.join(dir, 'install'), board = path.join(dir, 'board');
+  setupProject(dir);
   mkdirSync(board);
-  for (const name of ['skills/_shared', 'skills/storyboard/references', 'skills/produce/references'])
+  for (const name of ['skills/_shared', 'skills/storyboard/references', 'skills/produce/references', 'skills/platform-guide/references/formats.js'])
     cpSync(path.join(root, name), path.join(install, name), { recursive: true });
   mkdirSync(path.join(install, 'server/dist'), { recursive: true });
   copyFileSync(path.join(root, 'server/dist/astra-shot-runtime.bundle.js'), path.join(install, 'server/dist/astra-shot-runtime.bundle.js'));

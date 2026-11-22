@@ -1,3 +1,7 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { setupProject } from './workflow-fixture.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -52,7 +56,11 @@ test('the ledger prices the resolved duration, and an impossible need prices not
   assert.equal(priceOf('seedance_img2video', { requiredSeconds: 99 }).key, null);
 });
 
-test('MCP normalization reaches wire payload and invalid plans never call transport', async () => {
+test('MCP normalization reaches wire payload and invalid plans never call transport', async t => {
+  const workspace = mkdtempSync(join(tmpdir(), 'duration-project-'));
+  t.after(() => rmSync(workspace, { recursive: true, force: true }));
+  setupProject(workspace);
+  const outputPath = join(workspace, 'data/c/assets');
   const { ROUTES } = await import('../dist/handlers.js');
   const { config } = await import('../dist/config.js');
   const oldFetch = globalThis.fetch, oldKey = config.arkApiKey;
@@ -63,13 +71,13 @@ test('MCP normalization reaches wire payload and invalid plans never call transp
     return new Response('{"error":{"message":"mock submission stopped"}}', { status: 400 });
   };
   try {
-    await assert.rejects(ROUTES.seedance_text2video({ prompt: 'A person walks', requiredSeconds: 31 }), /split or replan/);
+    await assert.rejects(ROUTES.seedance_text2video({ outputPath, prompt: 'A person walks', requiredSeconds: 31 }), /split or replan/);
     assert.equal(calls.length, 0);
-    await ROUTES.seedance_text2video({ prompt: 'A person walks', requiredSeconds: 2.4 });
+    await ROUTES.seedance_text2video({ outputPath, prompt: 'A person walks', requiredSeconds: 2.4 });
     assert.equal(calls.length, 1);
     assert.equal(calls[0].duration, 4);
     assert.equal(calls[0].requiredSeconds, undefined);
-    await ROUTES.seedance_text2video({ prompt: 'A person walks', requiredSeconds: 4.2 });
+    await ROUTES.seedance_text2video({ outputPath, prompt: 'A person walks', requiredSeconds: 4.2 });
     assert.equal(calls[1].duration, 5);
     assert.equal(calls[1].frames, undefined);
   } finally { globalThis.fetch = oldFetch; config.arkApiKey = oldKey; }

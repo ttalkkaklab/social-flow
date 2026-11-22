@@ -105,7 +105,7 @@ test('clean-only builds record absence and reject a later stale burned copy',t=>
  const dir=mkdtempSync(path.join(tmpdir(),'clean-only-proof-'));
  try{
   mkdirSync(path.join(dir,'work'));
-  const clip=path.join(dir,'reel.mp4'),r=spawnSync('ffmpeg',['-v','error','-f','lavfi','-i','color=c=black:s=320x180:r=30:d=1','-c:v','libx264','-y',clip]);assert.equal(r.status,0,r.stderr?.toString());
+  const clip=path.join(dir,'reel.mp4'),r=spawnSync('ffmpeg',['-v','error','-f','lavfi','-i','color=c=black:s=320x180:r=30:d=1','-f','lavfi','-i','sine=frequency=440:duration=1','-c:v','libx264','-c:a','aac','-y',clip]);assert.equal(r.status,0,r.stderr?.toString());
   copyFileSync(clip,path.join(dir,'work/v0.mp4'));
   const source='window.SCENES=[{duration:1,type:"points"}];';writeFileSync(path.join(dir,'scenes.js'),source);writeFileSync(path.join(dir,'cards.tsv'),'');writeFileSync(path.join(dir,'segs.tsv'),'');writeFileSync(path.join(dir,'subs.srt'),'');
   writeFileSync(path.join(dir,'cards.tsv'),'0\tvoice.wav\t0\tnone\n');
@@ -117,4 +117,27 @@ test('clean-only builds record absence and reject a later stale burned copy',t=>
   copyFileSync(clip,path.join(dir,'reel-sub.mp4'));
   assert.throws(()=>check(dir,'reel.mp4','reel-sub.mp4','subs.srt'),/checked output was replaced/);
  }finally{rmSync(dir,{recursive:true,force:true})}
+});
+
+test('assembled audio rejects an entirely silent generated shot inside an audible master',t=>{
+ const {checkSound}=require(path.join(root,'skills/produce/references/verify-assembled.js'));
+ const dir=mkdtempSync(path.join(tmpdir(),'assembled-sound-'));
+ t.after(()=>rmSync(dir,{recursive:true,force:true}));
+ const master=path.join(dir,'reel.mp4');
+ const picture=['-f','lavfi','-i','color=s=32x32:r=30:d=2'];
+ const encode=['-c:v','libx264','-pix_fmt','yuv420p'];
+ const scenes=[{}, {id:'s0020',shot:{render:{mode:'generated_video'}}}];
+ const timeline={rows:[[0,0,30],[1,30,30]],fps:30};
+ const write=(...args)=>{
+  const result=spawnSync('ffmpeg',['-v','error','-y',...picture,...args,...encode,master]);
+  assert.equal(result.status,0,result.stderr?.toString());
+ };
+ write();
+ assert.throws(()=>checkSound(master,scenes,timeline),/no audible soundtrack/);
+ write('-f','lavfi','-i','anullsrc=r=48000:d=2','-c:a','aac');
+ assert.throws(()=>checkSound(master,scenes,timeline),/no audible soundtrack/);
+ write('-f','lavfi','-i','sine=frequency=440:duration=2','-af',"volume=enable='gte(t,0.95)':volume=0",'-c:a','aac');
+ assert.throws(()=>checkSound(master,scenes,timeline),/shot 2 \(s0020\) at 1\.00s/);
+ write('-f','lavfi','-i','sine=frequency=100:duration=2','-c:a','aac');
+ assert.doesNotThrow(()=>checkSound(master,scenes,timeline));
 });

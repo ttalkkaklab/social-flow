@@ -187,7 +187,8 @@
     const shots = playbackEntries(scenes).filter(({ s }) => !['broll', 'outro'].includes(s.type)).map(({ s, i }) => {
       const camera = cameraOf(s, 'en');
       return { id: s.id || String(i + 1), scene: s.scene === undefined ? null : s.scene, size: s.shot?.size || '-', angle: s.shot?.angle || '-',
-        move: !camera.raw ? 'unset' : camera.key === 'other' ? camera.raw : String(camera.key).replace(/^camera\./, ''),
+        // A card or HTML cut has no camera to leave unchosen; a cut with no route yet still counts.
+        move: !camera.raw ? (!s.shot?.render?.mode || s.shot.render.mode === 'generated_video' ? 'unset' : '-') : camera.key === 'other' ? camera.raw : String(camera.key).replace(/^camera\./, ''),
         seconds: secondsOf(s), lines: (s.narration || []).length,
         cast: idsOf(s.visual?.character), bystanders: idsOf(s.visual?.bystanders), extras: !!text(s.visual?.extras),
         actions: (Array.isArray(s.performance) ? s.performance : []).filter(event => event?.kind === 'action').length };
@@ -250,7 +251,9 @@
     const alone = f.scenes.filter(sc => sc.alone);
     if (alone.length) lines.push('one person framed where the scene has several: ' + alone.map(sc => `scene ${sc.scene} ${sc.alone}/${sc.shots.length}`).join(' · '));
     if (list(f.sizes)) {
-      lines.push([['sizes', f.sizes], ['angles', f.angles], ['moves', f.moves]].filter(([, tallied]) => list(tallied)).map(([word, tallied]) => word + ' ' + list(tallied)).join(' — '));
+      // An unchosen move is counted too: the video model picks the camera there (mochi_bo ep08: 29 of 33 shots).
+      const moves = list(f.moves) + (f.moves.unset ? `${list(f.moves) ? ' · ' : ''}not chosen ${f.moves.unset}` : '');
+      lines.push([['sizes', list(f.sizes)], ['angles', list(f.angles)], ['moves', moves]].filter(([, words]) => words).map(([word, words]) => word + ' ' + words).join(' — '));
       const byWidest = {};
       f.scenes.forEach(sc => { if (sc.widest) (byWidest[sc.widest] = byWidest[sc.widest] || []).push(sc.scene); });
       lines.push('widest shot of each scene: ' + SIZE_ORDER.filter(size => byWidest[size]).map(size => `${size} in ${byWidest[size].sort((a, b) => a - b).join(', ')}`).join(' · '));

@@ -8,11 +8,13 @@ const { PROJECT_FIELDS, validateProjectFields } = require('./project-config.js')
 const SETTINGS_FILE = '.social-flow/models.json';
 const SNAPSHOT_FILE = '.work/model-settings.json';
 const VIDEO_TYPES = require('./video-types.json').types;
+const VIDEO_ADAPTERS = require('./video-catalog.json').adapters;
+const VIDEO_ENGINES = ['host', ...new Set(VIDEO_ADAPTERS.map(adapter => adapter.engine))];
 const ENGINES = {
-  video: ['host', 'seedance', 'astra', 'astra-genai', 'astra-genai-desktop', 'mlx', 'ltx-api', 'minimax', 'heygen'],
+  video: VIDEO_ENGINES,
   speech: ['none', 'gemini', 'elevenlabs', 'astra-genai'],
   image: ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai', 'astra-genai-native'],
-  music: ['lyria', 'suno-api', 'elevenlabs', 'mlx'],
+  music: ['lyria', 'suno-api', 'elevenlabs', 'mlx', 'none'],
 };
 const RETIRED_ELEVENLABS_MODELS = ['eleven_multilingual_v2', 'eleven_v3', 'eleven_v3_conversational', 'eleven_flash_v2_5', 'eleven_turbo_v2_5'];
 function retiredSpeech(choice) {
@@ -20,7 +22,7 @@ function retiredSpeech(choice) {
 }
 // Video engines that cannot keep a character's voice left on 2026-10-31 (owner directive).
 function retiredVideo(choice) {
-  return Boolean(choice) && (['veo', 'omni'].includes(choice.engine) || (choice.engine === 'seedance' && /^seedance-1-/.test(choice.model)));
+  return Boolean(choice) && ((choice.engine === 'veo' && /(?:-preview|-exp|^veo-[23]\.0-)/.test(choice.model || '')) || choice.engine === 'omni' || (choice.engine === 'seedance' && /^seedance-1-/.test(choice.model)));
 }
 // GPT Image models past the shutdown date in the generated image catalog (snapshots map to their family).
 function retiredImage(choice, today = new Date().toISOString().slice(0, 10)) {
@@ -76,13 +78,22 @@ function validateModels(models, partial = false, allowRetired = false) {
     const choice = models[kind];
     const retired = allowRetired && retiredChoice(kind, choice);
     if (!object(choice) || (!engines.includes(choice.engine) && !retired)) throw new Error(`${kind}.engine must be one of ${engines.join(', ')}`);
+    if (kind === 'video' && choice.engine === 'host' && /^veo-/.test(choice.model || ''))
+      throw new Error('Select engine veo for a Google Cloud Veo model; host handoff cannot verify this model');
+    if (kind === 'video' && choice.engine === 'veo' && !retiredVideo(choice)) {
+      const { modelConstraints } = VIDEO_ADAPTERS.find(a => a.engine === 'veo');
+      if (!Object.hasOwn(modelConstraints, choice.model)) throw new Error('Unknown Google Cloud Veo model; consult video_catalog');
+      const spec = modelConstraints[choice.model];
+      if (choice.resolution && !spec.resolutions.includes(choice.resolution)) throw new Error('Unsupported Veo resolution for ' + choice.model);
+      if (choice.operation && !spec.operations.includes(choice.operation)) throw new Error('Unsupported Veo operation for ' + choice.model);
+    }
     if (kind === 'video' && retiredVideo(choice) && !retired) throw new Error(`${choice.model} cannot keep a character's voice; choose Seedance 2.x or an LTX engine`);
     if (kind === 'image' && retiredImage(choice) && !retired) throw new Error(`${choice.model} reached its shutdown date; choose a current image model from image_catalog`);
     for (const [key, value] of Object.entries(choice)) {
       if (!FIELDS[kind].includes(key) || !nonempty(value)) throw new Error(`Invalid ${kind}.${key}`);
     }
-    if (kind === 'speech' && choice.engine === 'none') {
-      if (Object.keys(choice).length !== 1) throw new Error('speech.none accepts only engine; omit model');
+    if (choice.engine === 'none') {
+      if (Object.keys(choice).length !== 1) throw new Error(`${kind}.none accepts only engine; omit model`);
       continue;
     }
     const fixed = ['zimage', 'astra'].includes(choice.engine) || (retired && choice.engine === 'supertonic');
@@ -100,9 +111,11 @@ function validateModels(models, partial = false, allowRetired = false) {
       }
       if (choice.engine === 'host' && choice.model !== 'host-managed') throw new Error('Host image model must be host-managed');
     }
-    // The default video_plan operation; adapters exist for these four.
-    if (kind === 'video' && choice.operation !== undefined && !['text', 'image', 'audio', 'reference'].includes(choice.operation))
-      throw new Error('video.operation must be text, image, audio or reference');
+    if (kind === 'video' && choice.operation !== undefined) {
+      const keyframes = choice.operation === 'keyframe' && ['astra','astra-genai-desktop'].includes(choice.engine);
+      if (!keyframes && !(choice.engine === 'veo' && choice.operation === 'extend') && !['text','image','audio','reference'].includes(choice.operation))
+        throw new Error('video.operation must be supported by this engine');
+    }
     if (kind === 'music' && choice.engine !== 'mlx') {
       const supported = require('./music-catalog.json').models;
       if (!supported.some(m => m.engine === choice.engine && m.model === choice.model)) throw new Error('Unsupported music selection; consult music_catalog');
@@ -124,11 +137,14 @@ function readJson(file) {
   }
 }
 
-function validateConfig(config, allowRetired = false) {
+function validateConfig(config, allowRetired = false, allowMissing = false) {
   if (!object(config) || config.version !== 1 || !nonempty(config.request) || !nonempty(config.updatedAt)) {
     throw new Error('Invalid model settings version or selection record; repair explicitly, do not reset');
   }
-  validateModels(config.models, false, allowRetired);
+  const emptyModels = config.models === undefined || (object(config.models) && !Object.keys(config.models).length);
+  if (!allowMissing || !emptyModels) validateModels(config.models, allowMissing, allowRetired);
+  if (config.workspace !== undefined && (typeof config.workspace !== 'string' || !path.isAbsolute(config.workspace)))
+    throw new Error('Invalid saved workspace path');
   if (config.videoType !== undefined) validateVideoType(config.videoType);
   validateProjectFields(config);
   return config;
@@ -143,13 +159,14 @@ function readSettings(workspace) {
   const config = readJson(file);
   if (config === undefined) return { status: 'setup_required', file };
   const retired = ['speech', 'video', 'image'].filter(kind => retiredChoice(kind, config?.models?.[kind]));
-  validateConfig(config, retired.length > 0);
+  validateConfig(config, retired.length > 0, true);
   if (retired.length) return { status: 'migration_required', file, revision: revision(config), config, retired: retired.map(kind => `models.${kind}`), migration: [
     retired.includes('speech') && 'Speech model is retired. Explicitly update speech to Gemini or ElevenLabs eleven_v4 before new generation.',
-    retired.includes('video') && 'Video model cannot keep a character\'s voice and is retired (Veo, Gemini Omni, Seedance 1.x). Explicitly choose Seedance 2.x or an LTX engine before new generation.',
+    retired.includes('video') && 'Saved video endpoint is retired. Select a current video_catalog model before new generation; Google Cloud Veo requires its own credentials.',
     retired.includes('image') && 'Image model reached its provider shutdown date. Explicitly choose a current image model before new generation.',
     'Saved media and episode snapshots are preserved.'].filter(Boolean).join(' ') };
-  return { status: config.videoType ? 'configured' : 'video_type_required', file, revision: revision(config), config };
+  const incomplete = ['video', 'image', 'speech'].some(kind => !config.models?.[kind]);
+  return { status: incomplete ? 'setup_required' : config.videoType ? 'configured' : 'video_type_required', file, revision: revision(config), config };
 }
 
 function writeJson(file, value, exclusive = false) {
@@ -168,10 +185,11 @@ function writeJson(file, value, exclusive = false) {
   }
 }
 
-function saveSettings(workspace, models, { request, expectedRevision, videoType, ...projectFields } = {}) {
+function saveSettings(workspace, models, { request, expectedRevision, videoType, selectedWorkspace, ...projectFields } = {}) {
   if (!nonempty(request)) throw new Error('Record the actual user selection/change request');
   if (Object.keys(projectFields).some(key => !PROJECT_FIELDS.includes(key))) throw new Error('Unknown project setting');
   const file = settingsPath(workspace);
+  if (selectedWorkspace !== undefined && selectedWorkspace !== fs.realpathSync(workspace)) throw new Error('Selected workspace differs from the settings directory');
   // Serialize updates so two sessions cannot both overwrite the same revision.
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const lock = `${file}.lock`;
@@ -180,6 +198,11 @@ function saveSettings(workspace, models, { request, expectedRevision, videoType,
     const current = readSettings(workspace);
     if (expectedRevision === undefined && current.config) throw new Error('Settings already exist; use update with the current revision and explicit user request');
     if (expectedRevision !== undefined && current.revision !== expectedRevision) throw new Error('Settings revision changed or settings are missing; read again');
+    // Keep the user's directory selection across sessions while the model questions are open.
+    if (selectedWorkspace && models === undefined && !videoType && !Object.keys(projectFields).length) {
+      writeJson(file, { ...current.config, version: 1, workspace: selectedWorkspace, updatedAt: new Date().toISOString(), request: request.trim() });
+      return readSettings(workspace);
+    }
     const typeOnly = expectedRevision !== undefined && (videoType !== undefined || Object.keys(projectFields).length > 0) &&
       (models === undefined || (object(models) && !Object.keys(models).length));
     if (!typeOnly) validateModels(models, expectedRevision !== undefined);
@@ -191,6 +214,7 @@ function saveSettings(workspace, models, { request, expectedRevision, videoType,
       models: { ...current.config?.models, ...models },
       ...(videoType || current.config?.videoType ? { videoType: videoType || current.config.videoType } : {}),
       ...projectFields,
+      ...(selectedWorkspace !== undefined ? { workspace: selectedWorkspace } : {}),
       updatedAt: new Date().toISOString(),
       request: request.trim(),
     };
@@ -226,7 +250,7 @@ function snapshotSettings(workspace, episode) {
   return { ...snapshot, file, resumed: false };
 }
 
-module.exports = { SETTINGS_FILE, SNAPSHOT_FILE, VIDEO_TYPES, validateVideoType, validateModels, validateConfig, readSettings, saveSettings, snapshotSettings };
+module.exports = { VIDEO_ENGINES, SETTINGS_FILE, SNAPSHOT_FILE, VIDEO_TYPES, validateVideoType, validateModels, validateConfig, readSettings, saveSettings, snapshotSettings };
 
 if (require.main === module) {
   try {

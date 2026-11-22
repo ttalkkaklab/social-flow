@@ -15,8 +15,10 @@ const path = require('path');
 const crypto = require('crypto');
 const { spawnSync } = require('child_process');
 const { evaluateWindowScript } = require('../../_shared/scenes-vm.js');
-const { mixFindings, mixEnvironment, musicEnvelopeFindings } = require('./sound-mix-contract.js');
+const { mixFindings, mixEnvironment, musicEnvelopeFindings, hasClipSound } = require('./sound-mix-contract.js');
 const { timelineFindings, compileTimeline, spottingReport } = require('./music-timeline.js');
+const audience = require('../../storyboard/references/audience-effects.js');
+const { preparer } = require('./audience-derivation.js');
 const assetResolver = path.resolve(__dirname, '../../channel/references/resolve-asset.py');
 
 function die(message) { process.stderr.write(`compile-sound-plan: ${message}\n`); process.exit(1); }
@@ -41,7 +43,7 @@ if (timelineErrors.length) die(timelineErrors.join('; '));
 const hasTimeline = Object.prototype.hasOwnProperty.call(music, '$timeline');
 fs.mkdirSync(work, { recursive: true });
 const markerFile = path.join(work, 'sound-plan.json');
-const ownedNames = new Set(['bgm.tsv', 'sfx.tsv', 'amb.tsv', 'silence.tsv', 'music-gain.tsv', 'sound.env', 'music-timeline.json']);
+const ownedNames = new Set(['bgm.tsv', 'sfx.tsv', 'bgm-drops.tsv', 'amb.tsv', 'silence.tsv', 'music-gain.tsv', 'sound.env', 'music-timeline.json', 'sfx-spans.json']);
 let previous = {};
 if (fs.existsSync(markerFile)) {
   try { previous = record(JSON.parse(fs.readFileSync(markerFile, 'utf8')).files); }
@@ -61,11 +63,18 @@ if (win.STORY?.authoring === 'story-first') {
   if (undecided.length) warn(`${undecided.length} scene(s) have no music decision (scenes ${undecided.join(', ')}) — record score or none with story_music`);
   if (mismatch.length) warn(`the music timeline disagrees with the decision on scenes ${mismatch.join(', ')} — spot them again with story_music`);
 }
+// Report scene decisions before the early return for boards that have no sound files to mix.
+audience.spottingDigest(win).forEach(warn);
 // Files music_execute made for this episode, by content hash (.work/music-routing/state.json).
 const receipts = new Set();
+const musicOutputs = new Map();
 try {
   const state = JSON.parse(fs.readFileSync(path.join(path.dirname(path.dirname(source)), '.work/music-routing/state.json'), 'utf8'));
-  for (const job of Object.values(record(state.jobs))) if (typeof record(job.output).sha256 === 'string') receipts.add(job.output.sha256);
+  for (const job of Object.values(record(state.jobs))) {
+    if (typeof record(job.output).sha256 !== 'string') continue;
+    receipts.add(job.output.sha256);
+    if (job.status === 'completed') musicOutputs.set(JSON.stringify([job.assetId, job.outputFile]), job.output.sha256);
+  }
 } catch { /* no music was generated for this episode */ }
 const cueFiles = new Map();
 function writeOwned(name, content) {
@@ -91,7 +100,8 @@ function cleanPrevious() {
 
 const extended = hasTimeline || Object.keys(mix).length > 0 || scenes.some((shot) => {
   const sound = record(shot && shot.sound);
-  return Array.isArray(sound.effects) || Array.isArray(sound.silence) || sound.musicGain !== undefined;
+  return Array.isArray(sound.effects) || Array.isArray(sound.silence) || sound.musicGain !== undefined ||
+    sound.sfx !== undefined || sound.ambience !== undefined || sound.drop === true;
 });
 if (!extended) {
   cleanPrevious();
@@ -100,18 +110,6 @@ if (!extended) {
     changed: removed.length > 0, reason: 'no extended sound fields', removed, warnings,
   }) + '\n');
   process.exit(0);
-}
-
-// An explicit new owner must not inherit an untracked (or human-edited) effect row.
-// Keep the user's file intact and require reconciliation instead of silently doubling sound.
-const explicitSourceEffects = scenes.some(shot => Array.isArray(shot?.sound?.effects) &&
-  shot.sound.effects.some(effect => ['native', 'input'].includes(effect?.delivery)));
-const oldEffectsFile = path.join(work, 'sfx.tsv');
-if (explicitSourceEffects && fs.existsSync(oldEffectsFile)) {
-  const bytes = fs.readFileSync(oldEffectsFile);
-  const hasEffects = bytes.toString('utf8').split(/\r?\n/).some(row => row.trim() && !row.startsWith('#') && row.split('\t')[2]?.trim());
-  if (hasEffects && previous['sfx.tsv'] !== digest(bytes))
-    die('native/input ownership conflicts with unmanaged or edited sfx.tsv; reconcile its effect rows explicitly (file preserved)');
 }
 
 function catalog(kind, id) {
@@ -139,8 +137,33 @@ function cueFile(name) {
 }
 
 const timelinePlan = hasTimeline ? compileTimeline(music, scenes, cueFile) : null;
-const bgm = [], effects = [], ambience = [], silence = [], musicGain = [];
+const bgm = [], drops = [], ambience = [], silence = [], musicGain = [];
+const audienceSpans = [];
+const audienceClock = audience.boardClock(win, path.dirname(source), channel);
+const checkedAudienceMusic = new Set();
+function audienceFile(source) {
+  const derivation = source.derivation;
+  if (derivation?.status === 'invalid') die(`audience_derivation_invalid: ${source.assetId}: ${derivation.reason}`);
+  if (!source.available) {
+    if (source.kind === 'catalog') die(source.lookupError || `cannot resolve audience SFX catalog asset "${source.assetId}"`);
+    die(`missing audience music: ${source.path} — use the music_plan handoff in storyboard_read.audienceEffects, then place the cue against that WAV`);
+  }
+  if (source.kind === 'music' && !checkedAudienceMusic.has(source.path)) {
+    if (derivation) {
+      const replay = spawnSync('python3', [preparer, source.directory, '--verify-receipt', derivation.receiptPath], { encoding: 'utf8' });
+      if (replay.status !== 0) die(`audience_derivation_invalid: ${source.assetId}: ${replay.stderr?.trim() || replay.error?.message || 'could not reproduce the derivative WAV'}`);
+    } else {
+      const key = JSON.stringify([source.assetId, fs.realpathSync(source.path)]);
+      if (musicOutputs.get(key) !== source.sha256) warn(`audience cue "${source.assetId}": ${source.path} has no matching generation receipt in this episode (.work/music-routing)`);
+    }
+    checkedAudienceMusic.add(source.path);
+  }
+  return safeCell(source.path, 'audience effect path');
+}
+const shots = scenes.map((s, card) => ({ id: s.id, card }));
 const intensitySeparation = { subtle: 10, normal: 6, strong: 3 };
+let ignoredSceneEffects = 0;
+let ambienceActive = false;
 scenes.forEach((shot, idx) => {
   const sound = record(shot && shot.sound);
   if (sound.musicGain) musicGain.push([idx, JSON.stringify(sound.musicGain)]);
@@ -152,34 +175,47 @@ scenes.forEach((shot, idx) => {
   const narrationCount = Array.isArray(shot && shot.narration) ? shot.narration.length : 0;
   if (sound.drop === true) {
     const count = Math.max(1, narrationCount);
-    for (let seg = 0; seg < count; seg++) effects.push([idx, seg, '', 'off', '', '']);
+    for (let seg = 0; seg < count; seg++) drops.push([idx, seg]);
   }
-  if (sound.sfx) effects.push([idx, 0, sfxFile(String(sound.sfx)), 'on', '', '']);
+  if (sound.sfx) ignoredSceneEffects++;
   if (Array.isArray(sound.effects)) { sound.effects.forEach((effect, ei) => {
     const item = record(effect);
+    if (item !== effect) die(`shot ${shot.id || idx + 1} sound.effects[${ei}] must be an effect object`);
+    if (item.audience) {
+      audience.checkDelivery(shot.id, item);
+      if (!item.id || !item.sfx || !item.trigger || !item.description || !item.audience.intent ||
+          sound.effects.filter(e => e?.id === item.id).length !== 1 ||
+          sound.effects.some(e => ['input','native'].includes(e?.delivery) && e.sfx === item.sfx))
+        die(`audience_id_conflict: ${shot.id}/${item.id} needs a unique post event and asset owner`);
+      if (item.atSeconds == null) die(`${shot.id}/${item.id}: planned effect needs observed atSeconds`);
+      audienceClock.bounds(shot.id, item);
+      const placed = audienceClock.row(shot.id, item);
+      const file = audienceFile(placed.source);
+      if (placed.status !== 'placed') die(`audience_timing_stale: ${shot.id}/${item.id}`);
+      const separationLu = item.separationLu ?? intensitySeparation[item.intensity || 'normal'];
+      if (!Number.isFinite(separationLu) || separationLu < 0 || separationLu > 30) die('invalid audience separationLu');
+      audienceSpans.push({ shotId: shot.id, id: item.id, assetPath: file, sourceSha256: placed.source.sha256, separationLu,
+        ...(placed.source.derivation ? { derivation: { ...placed.source.derivation, status: 'reproduced' } } : {}),
+        ...(item.sourceStartSeconds == null ? {} : { sourceStartSeconds: item.sourceStartSeconds }),
+        ...(item.fadeInSeconds == null ? {} : { fadeInSeconds: item.fadeInSeconds }),
+        start: { shotId: shot.id, atSeconds: item.atSeconds }, end: item.end, fadeOutSeconds: item.fadeOutSeconds });
+      return;
+    }
     if (['native', 'input'].includes(item.delivery)) {
       if (sound.audioSource !== 'video') die(`shot ${idx + 1}: ${item.delivery} effects require audioSource=video`);
-      if (item.sfx && sound.sfx === item.sfx) die(`shot ${idx + 1}: native/input effect also appears in legacy sound.sfx`);
       return; // Already in the card soundtrack; never place the same effect twice.
     }
-    if (item.delivery !== undefined && item.delivery !== 'post') die(`shot ${idx + 1}: resolve effect delivery with prepare-video-sound.js before assembly`);
-    if (item.delivery === 'post' && (typeof item.atSeconds !== 'number' || !Number.isFinite(item.atSeconds)))
-      die(`shot ${idx + 1}: post effect needs observed atSeconds`);
-    if (typeof item.sfx !== 'string' || !item.sfx.trim()) die(`shot ${idx + 1}: post effect needs an sfx asset`);
-    const id = safeCell(item.sfx, `shot ${idx + 1} sound.effects[${ei}].sfx`);
-    const offset = finite(item.atSeconds, 0);
-    const separation = item.separationLu === undefined
-      ? intensitySeparation[item.intensity || 'normal']
-      : finite(item.separationLu, NaN);
-    if (offset < 0) die(`shot ${idx + 1} effect ${ei + 1} has a negative atSeconds`);
-    if (Number.isFinite(Number(shot.duration)) && offset >= Number(shot.duration))
-      die(`shot ${idx + 1} effect ${ei + 1} is outside the ${shot.duration}s shot`);
-    if (!Number.isFinite(separation) || separation < 0 || separation > 30) die(`shot ${idx + 1} effect ${ei + 1} has invalid separationLu`);
-    effects.push([idx, 0, sfxFile(id), 'on', offset, separation]);
+    ignoredSceneEffects++;
   }); }
-  if (sound.ambience !== undefined) {
-    const stop = sound.ambience === null || sound.ambience === '-' || sound.ambience === 'none';
-    ambience.push([idx, stop ? '-' : sfxFile(String(sound.ambience))]);
+  if (!['broll', 'outro'].includes(shot.type)) {
+    if (hasClipSound(shot)) {
+      if (ambienceActive || sound.ambience !== undefined) ambience.push([idx, '-']);
+      ambienceActive = false;
+    } else if (sound.ambience !== undefined) {
+      const stop = sound.ambience === null || sound.ambience === '-' || sound.ambience === 'none';
+      ambience.push([idx, stop ? '-' : sfxFile(String(sound.ambience))]);
+      ambienceActive = !stop;
+    }
   }
   if (Array.isArray(sound.silence)) { sound.silence.forEach((window, wi) => {
     const item = record(window), start = finite(item.startSeconds, NaN), end = finite(item.endSeconds, NaN);
@@ -191,9 +227,20 @@ scenes.forEach((shot, idx) => {
     silence.push([idx, start, end, 'music']);
   }); }
 });
+if (ignoredSceneEffects) warn(`omitted ${ignoredSceneEffects} untagged scene effect(s); only audience cues play in post`);
 
+if (audienceSpans.length) {
+  const boundaries = scenes;
+  // Natural tails may cross adjacent cards, but stop where a separately spliced insert begins.
+  for (const span of audienceSpans) {
+    const start = boundaries.findIndex(s => s.id === span.shotId);
+    const boundary = boundaries.findIndex((s, i) => i > start && ['broll','outro'].includes(s.type));
+    if (boundary > start) span.limit = { shotId: boundaries[boundary - 1].id, atSeconds: 'end' };
+  }
+  writeOwned('sfx-spans.json', JSON.stringify({ version: 1, shots, spans: audienceSpans }, null, 2) + '\n');
+}
 writeRows('bgm.tsv', bgm);
-writeRows('sfx.tsv', effects);
+writeRows('bgm-drops.tsv', drops);
 writeRows('amb.tsv', ambience);
 writeRows('silence.tsv', silence);
 writeRows('music-gain.tsv', musicGain);
@@ -211,7 +258,7 @@ fs.writeFileSync(markerFile, JSON.stringify({
 
 process.stdout.write(JSON.stringify({
   changed: true,
-  bgm: bgm.length, effects: effects.filter((row) => row[2]).length,
-  drops: effects.filter((row) => row[3] === 'off').length, ambience: ambience.length,
+  bgm: bgm.length, effects: audienceSpans.length,
+  drops: drops.length, ambience: ambience.length,
   silence: silence.length, env: env.length, removed, warnings,
 }) + '\n');

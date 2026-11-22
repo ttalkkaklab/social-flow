@@ -1,22 +1,16 @@
+import { openingPositionsSchema } from './msr-opening.js';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { existsSync, realpathSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { verifyImageFile } from './image-media.js';
 import { framesForSeconds } from './astra-video-client.js';
 import { resolveVideoDuration } from './video-duration.js';
-import { VIDEO_ADAPTERS, VENDOR_REFERENCE_TOOLS, referenceLabel } from './video-registry.js';
+import { FRAME_FIELDS, VIDEO_ADAPTERS, VENDOR_REFERENCE_TOOLS, referenceLabel } from './video-registry.js';
 const load = createRequire(import.meta.url);
 const imageRouting = () => load(fileURLToPath(new URL('../../skills/storyboard/references/render-routing.js', import.meta.url)));
 export const characterPanels = () => load(fileURLToPath(new URL('../../skills/channel/references/character-panels.js', import.meta.url)));
-const FRAME_FIELDS = {
-    seedance_img2video: ['sourceImagePath', 'lastImagePath'], astra_img2video: ['firstFramePath', 'lastFramePath'],
-    astra_audio2video: ['imagePath'], astra_genai_img2video: ['imageUri', 'lastFrameUri'],
-    astra_genai_desktop_img2video: ['imagePath', 'lastFramePath'], astra_genai_desktop_audio2video: ['imagePath'],
-    astra_genai_audio2video: ['imagePath', 'lastFramePath'], mlx_video_generate: ['firstFrameImagePath', 'lastFrameImagePath'], ltx_video_generate: ['firstFrameImagePath', 'lastFrameImagePath'],
-    ltx_api_img2video: ['sourceImagePath', 'lastImagePath'], ltx_api_audio2video: ['sourceImagePath', 'lastImagePath'],
-    minimax_img2video: ['sourceImagePath', 'lastImagePath'], heygen_img2video: ['sourceImagePath', 'lastImagePath'],
-};
 /** The listed ratio closest to an image's, for vendors whose adaptive ratio would follow a face panel. */
 function nearestRatio(width, height) {
     const ratios = ['21:9', '16:9', '4:3', '1:1', '3:4', '9:16'];
@@ -28,10 +22,11 @@ const PANEL_VIEWS = { face: 'face', front: 'headless front body', back: 'headles
 /**
  * An MSR slot is an input source, not a declared subject, so name the character-sheet panels
  * (panels.json) that show one character: the face close-up carries the head, the headless panels
- * the body and outfit.
+ * the physique. Fitting panels leave scene clothing to the opening image.
  */
 function msrPanelBinding(paths, refs, compact = false) {
     const groups = new Map();
+    const fitting = new Set();
     paths.forEach((file, i) => {
         if (refs[i].role === 'background')
             return;
@@ -43,12 +38,16 @@ function msrPanelBinding(paths, refs, compact = false) {
             return;
         }
         const view = Object.entries(panels).find(([, panel]) => panel.file === path.basename(file))?.[0];
-        if (view && PANEL_VIEWS[view])
-            groups.set(path.dirname(file), [...(groups.get(path.dirname(file)) ?? []), `Image ${i + 1} (${PANEL_VIEWS[view]})`]);
+        if (!view || !PANEL_VIEWS[view])
+            return;
+        const folder = path.dirname(file);
+        groups.set(folder, [...(groups.get(folder) ?? []), `Image ${i + 1} (${PANEL_VIEWS[view]})`]);
+        if (panels[view].wardrobe === 'fitting')
+            fitting.add(folder);
     });
     return [...groups].filter(([, items]) => items.length > 1).map(([folder, items]) => compact
-        ? `Images ${items.map(item => item.replace(/Image (\d+) \(([^)]+)\)/, '$1($2)')).join(', ')}: ONE ${path.basename(folder)}; head/hair only from face; physique/clothes only from body; ignore face-panel clothing.`
-        : `${items.join(', ')} show one character, ${path.basename(folder)}: render one complete character with the head and hair from the face and the body and outfit from the headless panels. Ignore clothing visible in the face panel; never duplicate a person for separate panels.`).join('\n');
+        ? `Images ${items.map(item => item.replace(/Image (\d+) \(([^)]+)\)/, '$1($2)')).join(', ')}: ONE ${path.basename(folder)}; head/hair only from face; ${fitting.has(folder) ? 'physique from body, wardrobe from the scene' : 'physique/clothes only from body'}; ignore face-panel clothing.`
+        : `${items.join(', ')} show one character, ${path.basename(folder)}: render one complete character with the head and hair from the face and ${fitting.has(folder) ? 'physique from the body panels, dressed for the scene' : 'the body and outfit from the headless panels'}. Ignore clothing visible in the face panel; never duplicate a person for separate panels.`).join('\n');
 }
 /** A character-sheet panel counts once per sheet folder; any other character image counts alone. */
 function characterKey(file) {
@@ -63,12 +62,84 @@ function characterKey(file) {
 export function hasStructuredImages(shot) {
     return imageRouting().hasStructuredImages(shot);
 }
+export function hasSubjectInput(references) {
+    return Array.isArray(references) && references.some(ref => ref && typeof ref === 'object' && !ref.background);
+}
+export function hasVideoSubjectReferences(shot) {
+    return imageRouting().imageReferences(shot).some(ref => ref.role !== 'background' && ['video', 'both'].includes(ref.use));
+}
+function msrReference(imagePath, role) {
+    if (role === 'background')
+        return { imagePath, background: true };
+    if (role === 'prop' || role === 'style')
+        return { imagePath, nonCharacter: true };
+    return { imagePath };
+}
+function bindOpeningPositions(input, visual, episode) {
+    const stored = visual.video?.openingPositions;
+    const positions = openingPositionsSchema.parse(stored ?? input.openingPositions);
+    if (stored !== undefined && input.openingPositions !== undefined &&
+        JSON.stringify(positions) !== JSON.stringify(openingPositionsSchema.parse(input.openingPositions)))
+        throw new Error('image_plan_mismatch: openingPositions disagree with shot_prompt');
+    const cast = [visual.character ?? []].flat().map(entry => typeof entry === 'string' ? entry : entry.id);
+    for (const id of [...cast, ...(visual.bystanders ?? [])]) {
+        if (!positions.some(row => row.character === id))
+            throw new Error('openingPositions: missing opening position for ' + id);
+    }
+    if (visual.video?.openingImageSha256) {
+        const start = visual.frames?.start;
+        if (!start || createHash('sha256').update(readFileSync(path.resolve(episode, 'storyboard', start))).digest('hex') !== visual.video.openingImageSha256)
+            throw new Error('openingPositions stale: inspect the changed start image and update shot_prompt');
+    }
+    return positions;
+}
+function timedImages(frames, duration, fps, genai) {
+    if (frames.keyframes !== undefined || !genai || frames.storyboardKeyframes === undefined)
+        return frames.keyframes;
+    const rows = frames.storyboardKeyframes;
+    if (!Array.isArray(rows) || rows.length < 2 || rows[0]?.file !== frames.start ||
+        rows[0]?.startSeconds !== 0 || rows.at(-1)?.file !== frames.end || typeof duration !== 'number')
+        throw new Error('image_plan_invalid: storyboardKeyframes must span the declared opening and ending images');
+    const last = Math.ceil(duration * fps) - 1;
+    const pins = rows.slice(1).filter((row, i) => i !== rows.length - 2 || Math.round(row.startSeconds * fps) !== last);
+    return pins.length ? pins.map(row => ({ image: row.file, atSeconds: row.startSeconds, state: row.description || row.title || row.file })) : undefined;
+}
+function sceneTimedImages(members, fps, genai) {
+    const tracks = members.map(member => {
+        const frames = member.visual?.frames ?? {};
+        const duration = Number(member.duration);
+        return { frames, duration, pins: timedImages(frames, duration, fps, genai) };
+    });
+    if (!tracks.some(track => track.pins?.length))
+        return;
+    const timeline = [];
+    let offset = 0;
+    for (const [i, { frames, duration, pins }] of tracks.entries()) {
+        if (i && frames.start)
+            timeline.push({ atSeconds: offset, image: frames.start, state: 'Shot opening' });
+        for (const pin of pins ?? []) {
+            if (!Number.isFinite(pin.atSeconds) || pin.atSeconds <= 0 || pin.atSeconds >= duration)
+                throw new Error('image_plan_invalid: intermediate frame must fall inside its storyboard shot');
+            timeline.push({ ...pin, atSeconds: offset + pin.atSeconds });
+        }
+        offset += duration;
+        if (i < tracks.length - 1 && frames.end) {
+            const atSeconds = (Math.ceil(offset * fps) - 1) / fps;
+            const previous = timeline.at(-1);
+            if (previous?.image !== frames.end || Math.round(previous.atSeconds * fps) !== Math.round(atSeconds * fps))
+                timeline.push({ atSeconds, image: frames.end, state: 'Shot ending' });
+        }
+    }
+    return timeline;
+}
 /** Compile authored image roles into adapter arguments; never downgrade a temporal constraint to a reference. */
-export function prepareVideoImages(tool, input, shot, episode) {
+export function prepareVideoImages(tool, input, shot, episode, members) {
     const visual = (shot.visual ?? {});
     // Legacy boards keep their adapter contract; new authoring declares references, including an empty array.
-    if (!hasStructuredImages(shot))
-        return { args: input, imageBindings: undefined };
+    if (!hasStructuredImages(shot)) {
+        const msr = tool === 'astra_genai_msr' || (tool === 'astra_genai_img2video' && Array.isArray(input.references));
+        return { args: msr ? { ...input, openingPositions: bindOpeningPositions(input, visual, episode) } : input, imageBindings: undefined };
+    }
     const routing = imageRouting();
     const errors = routing.checkFrames(shot);
     if (errors.length)
@@ -92,13 +163,16 @@ export function prepareVideoImages(tool, input, shot, episode) {
     });
     const videoRefs = references.filter(ref => ['video', 'both'].includes(ref.use));
     const frameMode = frames.mode !== 'reference';
-    const keyframes = visual.frames?.keyframes;
-    if (keyframes !== undefined && (!Array.isArray(keyframes) || !keyframes.length || keyframes.length > 6 || frames.mode !== 'first_last'))
+    const genaiPins = tool === 'astra_genai_img2video' || tool === 'astra_genai_audio2video';
+    const fps = Number(input.fps ?? input.frameRate ?? 24);
+    const keyframes = members && members.length > 1 ? sceneTimedImages(members, fps, genaiPins)
+        : timedImages(visual.frames ?? {}, shot.duration, fps, genaiPins);
+    if (keyframes !== undefined && (!Array.isArray(keyframes) || !keyframes.length || keyframes.length > (frames.end ? 6 : 7) || (frames.mode !== 'first_last' && !(genaiPins && frames.mode === 'first'))))
         throw new Error('image_plan_invalid: intermediate frames require first_last and 1..6 entries');
     const host = tool === 'host_external';
     if (!host && videoRefs.length && frameMode && tool !== 'astra_genai_img2video')
         throw new Error('image_plan_unsupported: this adapter cannot combine pinned start/end frames with additional video references; retain references with use:image or explicitly replan mode:reference');
-    if (!host && keyframes && tool !== 'astra_keyframe_video')
+    if (!host && keyframes && tool !== 'astra_keyframe_video' && !genaiPins)
         throw new Error('image_plan_unsupported: this adapter cannot accept intermediate frames');
     const args = { ...(host ? input : resolveVideoDuration(tool, input).args) };
     const assigned = new Set();
@@ -157,17 +231,32 @@ export function prepareVideoImages(tool, input, shot, episode) {
         // frame: the start image goes last among the pictures and the place picture stays out (the start image has it).
         const msr = tool === 'astra_genai_msr', vendor = VENDOR_REFERENCE_TOOLS.includes(tool);
         const sent = msr || vendor ? videoRefs.filter(ref => ref.role !== 'background') : videoRefs;
+        if (tool === 'veo_reference' && sent.some(ref => ref.role === 'style' || ref.role === 'background'))
+            throw new Error('image_plan_unsupported: Veo accepts pictures of a single subject; style and scene references cannot be sent as subject assets');
         const paths = sent.map(ref => bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, true));
+        if (tool === 'veo_reference') {
+            const roles = new Set(sent.map(ref => ref.role));
+            const cast = new Set(paths.flatMap((file, i) => {
+                if (sent[i].role !== 'character')
+                    return [];
+                const folder = path.dirname(file);
+                return path.basename(path.dirname(folder)) === 'characters' || characterKey(file) === folder ? [folder] : [];
+            }));
+            if (roles.size > 1 || cast.size > 1)
+                throw new Error('image_plan_unsupported: Veo asset references must show the same subject');
+        }
         const start = (msr || vendor) && frames.start ? bind('start', frames.start, 'start', 'video', 'Opening picture', true) : undefined;
         if (msr)
-            put('references', [...paths.map(imagePath => ({ imagePath })), ...(start ? [{ imagePath: start, background: true }] : [])]);
+            put('references', [...paths.map((file, i) => msrReference(file, sent[i].role)), ...(start ? [{ imagePath: start, background: true }] : [])]);
         else
             put('referenceImagePaths', [...paths, ...(start ? [start] : [])]);
         if (vendor && start && args.ratio === undefined) {
             const opening = bindings[bindings.length - 1];
             args.ratio = nearestRatio(opening.width, opening.height);
         }
-        if (msr || vendor) {
+        if (msr && sent.length > 4)
+            throw new Error('msr_subject_limit: at most four subject images plus one background');
+        if (vendor) {
             // Two principal characters take references (user directive 2026-10-31); the model draws anyone else.
             const characters = new Set(sent.flatMap((ref, i) => ref.role === 'character' ? [characterKey(paths[i])] : []));
             if (characters.size > 2)
@@ -187,7 +276,7 @@ export function prepareVideoImages(tool, input, shot, episode) {
             args.prompt = String(args.prompt ?? '') + '\nImage reference roles:\n' + guidance;
         }
     }
-    else if (keyframes) {
+    else if (keyframes && !genaiPins) {
         const fps = Number(args.frameRate ?? 24);
         const count = Number(args.numFrames ?? (args.duration === undefined ? NaN : framesForSeconds(Number(args.duration), fps)));
         if (!Number.isFinite(fps) || fps <= 0 || !Number.isInteger(count) || count < 2)
@@ -221,18 +310,48 @@ export function prepareVideoImages(tool, input, shot, episode) {
         put(fields[0], value('start', frames.start));
         if (frames.end)
             put(fields[1], value('end', frames.end));
+        if (keyframes) {
+            const fps = Number(args.fps ?? 24);
+            const pins = keyframes.map((frame, i) => {
+                if (!Number.isFinite(frame.atSeconds) || frame.atSeconds <= 0 || (typeof shot.duration === 'number' && frame.atSeconds >= shot.duration) || !frame.state?.trim())
+                    throw new Error('image_plan_invalid: intermediate frame needs time and state inside the clip');
+                const strength = frame.strength ?? visual.video?.strength;
+                return { imagePath: bind('keyframe-' + (i + 1), frame.image, 'keyframe', 'video', frame.state, true),
+                    frameIdx: Math.round(frame.atSeconds * fps), ...(strength === undefined ? {} : { strength }) };
+            });
+            if (pins.some((pin, i) => pin.frameIdx <= (i ? pins[i - 1].frameIdx : 0)))
+                throw new Error('image_plan_invalid: intermediate frame indices must increase after the opening frame');
+            put('keyframes', pins);
+        }
         if (tool === 'astra_genai_img2video' && videoRefs.length) {
             const ordered = [...videoRefs].sort((a, b) => Number(a.role === 'background') - Number(b.role === 'background'));
             const paths = ordered.map(ref => bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, true));
-            const characters = new Set(ordered.flatMap((ref, i) => ref.role === 'character' ? [characterKey(paths[i])] : []));
-            if (characters.size > 2)
-                throw new Error('msr_character_limit: reference at most two principal characters');
-            put('references', paths.map((imagePath, i) => ({ imagePath, ...(ordered[i].role === 'background' ? { background: true } : {}) })));
+            if (ordered.filter(ref => ref.role !== 'background').length > 4)
+                throw new Error('msr_subject_limit: at most four subject images plus one background');
+            put('references', paths.map((file, i) => msrReference(file, ordered[i].role)));
             args.prompt = [...ordered.map((ref, i) => `Image ${i + 1}: ${ref.role}, ${ref.purpose}${routing.referenceConstraints(ref) ? " " + routing.referenceConstraints(ref) : ""}`),
                 msrPanelBinding(paths, ordered), '', String(args.prompt ?? '')].filter(Boolean).join('\n');
         }
     }
-    for (const key of ['sourceImagePath', 'lastImagePath', 'firstFramePath', 'lastFramePath', 'imagePath', 'imageUri', 'lastFrameUri', 'firstFrameImagePath', 'lastFrameImagePath', 'referenceImagePaths', 'references', 'images']) {
+    if (tool === 'astra_genai_msr' || (tool === 'astra_genai_img2video' && videoRefs.length)) {
+        // Prop-only boards have enough role information to declare an empty cast.
+        const propsOnly = ![visual.character ?? []].flat().length && !visual.bystanders?.length &&
+            videoRefs.every(ref => ['background', 'prop', 'style'].includes(ref.role));
+        const positions = bindOpeningPositions(propsOnly && !visual.video?.openingPositions && input.openingPositions === undefined
+            ? { ...input, openingPositions: [] } : input, visual, episode);
+        if (canonicalMsr) {
+            const subjects = videoRefs.filter(ref => ref.role !== 'background');
+            for (const [index, ref] of subjects.entries()) {
+                if (ref.role !== 'character')
+                    continue;
+                const owner = positions.find(row => row.images.includes(index + 1));
+                if (!owner || !['face', 'front', 'back', 'msr'].some(panel => ref.id === `${shot.id ?? 'shot'}-${owner.character}-${panel}`))
+                    throw new Error('openingPositions: match Image ' + (index + 1) + ' to the cast member who owns this panel');
+            }
+        }
+        args.openingPositions = positions;
+    }
+    for (const key of ['sourceImagePath', 'lastImagePath', 'firstFramePath', 'lastFramePath', 'imagePath', 'imageUri', 'lastFrameUri', 'firstFrameImagePath', 'lastFrameImagePath', 'referenceImagePaths', 'references', 'keyframes', 'images']) {
         if (input[key] !== undefined && !assigned.has(key))
             throw new Error('image_plan_mismatch: unplanned ' + key);
     }

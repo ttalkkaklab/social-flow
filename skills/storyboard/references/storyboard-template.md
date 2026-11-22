@@ -30,6 +30,18 @@ created: <YYYY-MM-DD>
 
 ## S#1. <location> / <time>
 
+**Scene video** — one prompt and one generation request for the following shots, preserving their cuts.
+- Opening image and positions — <cast ID, subject panels, viewer’s side, depth, posture and landmark for each person, including silent listeners>
+- Emotion — <how each character feels as the exchange unfolds>
+- Essential action, sound or camera — <only when the story requires it>
+- Dialogue — <the lines on the following cards, in playback order>
+
+**Audience-only psychological sound** — <use / none / undecided>. <Why the viewer needs this sound here, or why the scene plays better without it. For example, keep the actor’s breath and room tone already heard in the take.>
+For `decision:"use"`, the scene’s `audienceSound` may include `perspective`, `shift` and `exit`.
+For example, follow Jin-su while the joined hands hold still, hear his confidence as he smiles,
+and let the sound end before the start call. For `decision:"none"`, give the reason the scene plays better without a cue.
+When using a cue, give its shot, the visible trigger, what the viewer hears and where it releases. Mark the timing as planned until the accepted cut sets the placement. In the HTML review, open the scene’s sound design player to play its audience track on the storyboard clock, or jump to a single cue. A generated source with pending timing can be auditioned on its own.
+
 ### Shot 1 — cover · medium close-up · eye level
 
 ![scene-1](images/scene-1.png)
@@ -97,6 +109,9 @@ What the document shows:
   current layout). The header carries the shot's summary, its beat on a story-v1 board, and the
   icon row: render route, size, angle, camera move (plus focus), depth, MSR, and the join into
   the next shot. Entries sharing `scene` are grouped under a scene band (`S#1. location / time`).
+- **Audience-only psychological sound** — the scene band shows the decision and its reason,
+  then links each cue to its starting shot. A cue can carry into the next scene. The shot shows
+  its trigger and timing status. A scene without shots can still show its decision.
 - **Shot body** — on the left the start image, the end image a first_last shot needs and the
   reference slots of its video lane; on the right the shot's lines, speaker by speaker, with its
   story and prompts. No frame preview with text over the picture is drawn: delivered video

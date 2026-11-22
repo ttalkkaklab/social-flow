@@ -76,8 +76,15 @@ test('the board digest counts who is in frame, the widest shot of each scene and
   assert.deepEqual(direction.digest(win).slice(0, 4), [
     '3 shots — on screen: one 1 · two 2 · with extras 1 — a line in 2, none in 1',
     'one person framed where the scene has several: scene 1 1/2',
-    'sizes ms 1 · mcu 1 · ls 1 — angles eye 3',
+    // Sizes without moves: the move was never chosen, so the model decides the camera there.
+    'sizes ms 1 · mcu 1 · ls 1 — angles eye 3 — moves not chosen 3',
     'widest shot of each scene: ls in 2 · ms in 1']);
   // A board with only its story written has nothing to count yet.
   assert.deepEqual(direction.digest({ SCENES: [{ id: 's0001', scene: 1 }] }), []);
+});
+
+test('the digest counts video shots whose camera move was never chosen; a card has no camera to choose', () => {
+  const shot = (id, mode, movement) => ({ id, scene: 1, shot: { size: 'ms', angle: 'eye', render: { mode } }, visual: movement ? { camera: { movement } } : {} });
+  const win = { SCENES: [shot('s0001', 'generated_video', 'static'), shot('s0002', 'generated_video'), shot('s0003', 'generated_video'), shot('s0004', 'editorial_html')] };
+  assert.equal(direction.digest(win)[0], 'sizes ms 4 — angles eye 4 — moves static 1 · not chosen 2');
 });

@@ -1099,6 +1099,7 @@
         props: visual.props || [], propUsage: visual.propUsage || [] };
       row.media = visual;
       if (s.transition) row.transition = s.transition;
+      if (s.timeline) row.timeline = s.timeline;
       if (full) row.raw = s;
       return row;
     };

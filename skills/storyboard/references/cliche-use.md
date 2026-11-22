@@ -120,7 +120,7 @@ Each layer is chosen at the step that can still absorb it.
   [opening by format](opening-by-format.md).
 - **Scenes.** A place or a staged moment the viewer knows saves the seconds an explanation
   would take, which matters most in a short. The speaker rules stand: one speaker per shot, at
-  most two principal characters, and a line pattern borrowed from a cliché still has to be
+  most four principal characters, and a line pattern borrowed from a cliché still has to be
   the line this character would say here.
 - **Shots.** A directing cliché becomes ordinary shot attributes. Nothing is drawn over video
   and delivered video has no subtitles, so a cliché that depends on a caption or a mark is

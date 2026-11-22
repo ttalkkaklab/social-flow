@@ -41,6 +41,7 @@ async function render(target, options) {
   if (path.basename(options.filename) !== options.filename || !options.filename.endsWith('.mp4'))
     throw new Error('Use a plain .mp4 candidate filename');
   const out = path.resolve(options.outputPath, options.filename);
+  require('../../_shared/project-settings.js').requireReadyProject(path.resolve(target), out);
   const record = out + '.render.json';
   // Reserve before preparing audio: concurrent invocations must not submit the same candidate.
   reserveCandidate(out);

@@ -1,3 +1,4 @@
+import { setupProject } from './workflow-fixture.mjs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
@@ -14,6 +15,18 @@ test('loan keeps ownership, changes custody, and has an exact boundary', () => {
   const win = fixture(); assert.deepEqual(bad(win), []);
   assert.equal(api.stateAt(win, 'watch', { day: 1, order: 2 }, 'before').holderId, 'a');
   assert.deepEqual(api.stateAt(win, 'watch', { day: 1, order: 2 }), { ownerId: 'a', holderId: 'b', location: 'right hand', condition: 'intact' });
+});
+test('props with no look-up of the real thing are reported once, never as an error', () => {
+  const win = fixture(), sources = [{ url: 'https://example.test/form', image: 'images/research/will/form.png' }];
+  win.SB_DOC.props.push({ id: 'will', research: { sources, observed: 'handwritten, dated, sealed' } }, { id: 'bowl', research: 'none' },
+    { id: 'notice', research: { sources: [{ url: 'https://example.test/notice' }], observed: 'title, body, seal' } }, { id: 'old', source: 'https://example.test/old' },
+    { id: 'cert', research: { sources } });
+  assert.deepEqual(api.research(win), { undecided: ['watch', 'cert'], unseen: ['notice', 'old'] });
+  assert.deepEqual(api.check(win).filter(f => f.where === 'props').map(f => f.level), ['warn']);
+  assert.deepEqual(api.research(win, () => false).unseen, ['will', 'notice', 'old']);   // a picture that is not on disk was not saved
+  for (const p of win.SB_DOC.props) if (!p.research) p.research = 'none';
+  win.SB_DOC.props.find(p => p.id === 'cert').research = 'none'; win.SB_DOC.props.find(p => p.id === 'notice').research.sources = sources;
+  assert.deepEqual(api.researchDigest(win), []);
 });
 test('flashbacks and shot reorders never rewrite the story', () => {
   const win = fixture(), before = api.snapshot(win, 0); win.SCENES.reverse();
@@ -74,6 +87,7 @@ test('CLI validates atomically, refuses stale writes, backs up approval, preserv
 
 test('globals prop edits and removals require a current hash and preserve a backup', () => {
   const dir = mkdtempSync(join(tmpdir(), 'props-globals-'));
+  setupProject(dir);
   try {
     const win = fixture();
     win.STRUCTURE = {version:'structure-v1',sequences:[{id:'q1',title:'Loan',purpose:'Track watch',scenes:[1]}],scenes:[{no:1,place:'Room',time:'Day',event:'Loan',charge:{open:'-',close:'+'},turn:'Possession A to B'}]};

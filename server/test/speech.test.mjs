@@ -46,18 +46,48 @@ test('stable dialogue addresses survive prepare; edits target one character and 
  assert.equal(manageSpeech({path:target,action:'list',speaker:'narrator'}).lines[0].tts,'Outside');
  assert.throws(()=>manageSpeech({path:target,action:'update',lineId:first.id,expectedRevision:next.revision,patch:{speaker:'missing'}}),/Unknown speaker/);
 });
-test('a speechless replacement retains a real soundtrack but clears an inherited source when no audio stream exists',t=>{
+test('a speechless replacement binds audible effects and reports missing or silent tracks',t=>{
  const {dir,target,r}=setup(t),file=join(target,'scenes.js');
  const read=()=>require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file,'utf8'));
- const win=read();win.SCENES[0].narration=[];win.SCENES[0].sound={audioSource:'video',room:'classroom'};
+ const win=read();win.SCENES[0].narration=[];win.SCENES[0].sound={room:'classroom'};
  writeFileSync(file,Object.entries(win).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
- const withAudio=join(dir,'ambient.mp4'),silent=join(dir,'silent.mp4'),ff=require('node:child_process').execFileSync;
- ff('ffmpeg',['-v','error','-f','lavfi','-i','color=s=16x16:r=24','-f','lavfi','-i','anullsrc=r=48000:cl=mono','-t','0.25','-c:v','libx264','-pix_fmt','yuv420p','-c:a','aac',withAudio]);
- ff('ffmpeg',['-v','error','-f','lavfi','-i','color=s=16x16:r=24','-t','0.25','-c:v','libx264','-pix_fmt','yuv420p',silent]);
+ const withAudio=join(dir,'ambient.mp4'),silent=join(dir,'silent.mp4'),noAudio=join(dir,'no-audio.mp4');
+ const ff=require('node:child_process').execFileSync;
+ const picture=['-v','error','-f','lavfi','-i','color=s=16x16:r=24'];
+ const encode=['-t','0.25','-c:v','libx264','-pix_fmt','yuv420p'];
+ ff('ffmpeg',[...picture,'-f','lavfi','-i','sine=frequency=90:sample_rate=48000',...encode,'-c:a','aac',withAudio]);
+ ff('ffmpeg',[...picture,'-f','lavfi','-i','anullsrc=r=48000:cl=mono',...encode,'-c:a','aac',silent]);
+ ff('ffmpeg',[...picture,...encode,noAudio]);
  const attach=videoPath=>manageSpeech({path:target,action:'attach_video',shotId:r.lines[0].shotId,expectedRevision:manageSpeech({path:target,action:'list'}).revision,videoPath,capabilities:{...caps,audioConditioning:false,lipSync:false}});
  attach(withAudio);assert.equal(read().SCENES[0].sound.audioSource,'video');
- const result=attach(silent);assert.equal(read().SCENES[0].sound.audioSource,undefined);assert.equal(read().SCENES[0].sound.room,'classroom');
- assert.match(result.plan.warnings.join(),/no audio stream/);assert.equal(read().SCENES[0].visual.video.speechBinding.quality.review,'not_reviewed');
+ const quiet=attach(silent);assert.equal(read().SCENES[0].sound.audioSource,undefined);assert.equal(read().SCENES[0].sound.room,'classroom');
+ assert.match(quiet.plan.warnings.join(),/silent audio stream/);
+ const missing=attach(noAudio);assert.match(missing.plan.warnings.join(),/no audio stream/);
+ assert.equal(read().SCENES[0].visual.video.speechBinding.quality.review,'not_reviewed');
+ const save=board=>writeFileSync(file,Object.entries(board).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+ const withJoin=read();
+ withJoin.SCENES[0].duration=0.2;
+ withJoin.SCENES[1].transition='dissolve';
+ save(withJoin);
+ assert.match(attach(withAudio).plan.warnings.join(),/separate assembly audio/);
+ assert.equal(read().SCENES[0].sound.audioSource,undefined);
+ const withoutJoin=read();withoutJoin.SCENES[1].transition='cut';save(withoutJoin);
+ attach(withAudio);
+ assert.equal(read().SCENES[0].sound.audioSource,'video');
+ assert.equal(read().SCENES[0].edit.out,0.2);
+ assert.throws(()=>attach(silent),/revise the authored soundtrack and trim/);
+ const shorter=join(dir,'shorter.mp4');
+ ff('ffmpeg',['-v','error','-i',withAudio,'-t','0.125',shorter]);
+ assert.throws(()=>attach(shorter),/cannot cover edit.out/);
+ assert.equal(read().SCENES[0].visual.video.clip,withAudio);
+ const exactFit=read();
+ exactFit.SCENES[0].duration=0.25;
+ delete exactFit.SCENES[0].edit;
+ delete exactFit.SCENES[0].sound.audioSource;
+ save(exactFit);
+ attach(noAudio);attach(withAudio);
+ assert.equal(read().SCENES[0].edit.out,0.25);
+ assert.throws(()=>attach(shorter),/cannot cover edit.out/);
 });
 test('video adapters select by capabilities, never a provider name',()=>{
  const lines=[{id:'a',speaker:'hero',delivery:'on_screen',tts:'Hello'}];
@@ -384,7 +414,9 @@ describe('scene direction', () => {
   const shotId=state.lines[0].shotId,plan=manageSpeech({path:board,action:'plan_video',shotId,capabilities:caps}).plan;
   assert.deepEqual(plan.performance.map(event=>event.kind),['dialogue','action','dialogue']);
   assert.equal(plan.durationSeconds,3);assert.equal(plan.performance[2].speechStartSeconds,2);
-  assert.match(plan.videoPrompt,/listens to the caller/);assert.match(plan.videoPrompt,/falling|downward/);
+  assert.match(plan.videoPrompt,/listens to the caller/);
+  // The supplied track carries the voice; its vocal direction stays in the TTS style, not the video prompt.
+  assert.doesNotMatch(plan.videoPrompt,/falling|downward/);
   writeFileSync(path.join(work,'cards.tsv'),'0\tphone-0.wav\t1\n');
   const {compose,duration}=require('../../skills/produce/references/compose-speech.js');
   const output=compose(work,board)[0];assert.equal(duration(output.audioPath),3);
@@ -509,7 +541,7 @@ describe('scene direction', () => {
   assert.throws(()=>sceneTiming(scene,'.',1),/finite action timing/);
   scene.performance[0].durationSeconds=2;
   const plan=speechVideoPlan(scene,caps);assert.equal(plan.durationSeconds,2);assert.equal(plan.timing,'planned_actions');
-  assert.match(plan.videoPrompt,/silent scene/);assert.doesNotMatch(plan.videoPrompt,/separately supplied voiceover plays/);
+  assert.match(plan.videoPrompt,/without invented speech or voiceover/);assert.doesNotMatch(plan.videoPrompt,/separately supplied voiceover plays/);
  });
 
  test('ASTRA video plans diagnose the exact adapter prompt limit without truncating performance',()=>{

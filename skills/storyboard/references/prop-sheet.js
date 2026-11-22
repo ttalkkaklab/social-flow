@@ -70,6 +70,20 @@
       }
       else card.append(el('p', t('참조 이미지 대기', 'Reference image pending'), 'prop-muted'));
       if (prop.description) card.append(el('p', prop.description));
+      // What the look is based on (prop-research.md): the saved real pictures sit beside the prop's own picture.
+      const research = prop.research, safe = url => typeof url === 'string' && !/^\s*(?:javascript|data|vbscript):/i.test(url);
+      const sources = [...(research && Array.isArray(research.sources) ? research.sources : []), ...(prop.source ? [{ url: prop.source }] : [])].filter(s => s && safe(s.url));
+      if (research === 'none') card.append(el('p', t('실물 조사: 찾아볼 실물 없음', 'Real-thing look-up: nothing to look up'), 'prop-muted'));
+      else if (!sources.length) card.append(el('p', t('실물 조사 기록 없음 — 상상으로 그린 소품', 'No look-up of the real thing recorded — drawn from imagination'), 'prop-muted'));
+      else {
+        card.append(el('p', t('실물 조사: ', 'Real thing: ') + (research?.observed || t('관찰 내용 미기록', 'observations not recorded'))));
+        for (const s of sources) {
+          const row = el('p', undefined, 'prop-muted'), link = el('a', s.title || s.url);
+          if (/^https?:/i.test(s.url)) { link.href = s.url; link.rel = 'noopener'; link.target = '_blank'; }
+          row.append(link); card.append(row);
+          if (safe(s.image)) { const real = el('img'); real.src = s.image; real.alt = t('실물 참고: ', 'Real reference: ') + (s.title || s.url); real.loading = 'lazy'; card.append(real); }
+        }
+      }
       card.append(el('p', stateText(state), 'prop-state'));
       const history = el('details'); history.append(el('summary', t('변경 이력과 등장 샷', 'History and appearances')));
       const initial = ledger.initial.find(s => s.propId === prop.id);

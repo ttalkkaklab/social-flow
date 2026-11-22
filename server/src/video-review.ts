@@ -13,3 +13,10 @@ export function refreshVideoReview(episode: string): void {
   try { review().write(episode); }
   catch { process.stderr.write('Video review export needs a refresh; request receipts remain authoritative.\n'); }
 }
+
+export function refreshAudienceReview(boardDirectory: string): void {
+  try {
+    const data = createRequire(import.meta.url)('../../skills/storyboard/references/audience-review-data.js') as { refresh(directory: string): void };
+    data.refresh(boardDirectory);
+  } catch { process.stderr.write('Audience audio preview needs a refresh.\n'); }
+}

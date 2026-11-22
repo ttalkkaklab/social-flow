@@ -229,6 +229,10 @@ episode-specific pressure separate from the shared identity; no extra JSON keys 
 
 Export the bundled sheet before any episode candidates or scene images, including drafts with pending media. Make each panel with `character_panel`; it follows the [panel specifications](references/character-panels.md) for purpose, canvas ratio and subject size and builds the prompt from the identity. Never hand-author the review HTML.
 
+Use a fitted T-shirt and short mid-thigh shorts for the front and matching back
+when the character can wear them. Keep the usual scene clothes in `physical.outfit`.
+Pass `wardrobe:"character"` for an integral costume or a specific outfit requested for the sheet.
+
 Every confirmed character sheet includes its selected `tts` in the identity JSON.
 Before the voice audition (requested character work), the draft keeps `tts: null`; do not
 substitute the following example as a confirmed voice. After selection, the block includes:
