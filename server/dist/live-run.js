@@ -3,13 +3,13 @@ import { spawn } from 'node:child_process';
 import { resolve, join } from 'node:path';
 import { existsSync, mkdirSync, readFileSync, appendFileSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { answer, ChatQueue, listenChatInput, continueBroadcast, liveConfig, loadCharacter, preparedReply } from './live-character.js';
+import { answer, broadcastLines, ChatQueue, listenChatInput, continueBroadcast, liveConfig, loadCharacter, preparedReply } from './live-character.js';
 import { GenaiRequestError, requestGenai } from './astra-genai-client.js';
 import { checkLiveRelay, encode } from './live-encoder.js';
 import { prepareIdleClips, idleCount } from './live-idle.js';
-import { NativeTalk, talkPrompt } from './live-native.js';
+import { NativeTalk, openingParts, talkPrompt } from './live-native.js';
 import { liveStartChoice, liveStartChoices } from './live-options.js';
-import { LiveProgram, isReply } from './live-program.js';
+import { LiveProgram, LiveRenderPool, isReply } from './live-program.js';
 import { livePlatformIds } from './live-platform.js';
 import { livePlatforms, selectPlatforms } from './live-platform-registry.js';
 async function main() {
@@ -116,6 +116,7 @@ async function main() {
         console.log(JSON.stringify({
             localAssetsReady: true,
             liveStart: liveStartChoices,
+            maxConcurrentVideos: cfg.maxConcurrentVideos,
             character: cfg.character,
             language: actor.language,
             ...checks,
@@ -126,7 +127,8 @@ async function main() {
     if (action === 'warm') {
         const renderer = new NativeTalk(actor, cfg.project, cfg.talkPrompt ?? talkPrompt);
         try {
-            for (const text of new Set([cfg.opening, ...cfg.reactions.map(r => r.answer)])) {
+            const { opening, standby } = await broadcastLines(cfg, actor);
+            for (const text of new Set([...openingParts(opening, actor.language), ...standby, ...cfg.reactions.map(r => r.answer)])) {
                 const { motion } = await renderer.render(text, new AbortController().signal);
                 renderer.release(motion);
             }
@@ -159,8 +161,10 @@ async function main() {
     let observerError;
     let outcome = 'failed';
     let replying, hosting;
-    let acceptingUntil = Infinity, renderingReply = false;
-    let speculative;
+    let acceptingUntil = Infinity, planningReply = false;
+    const pendingHost = new Set();
+    const pendingReplies = new Set();
+    const speakerOrder = new Map();
     let hostLine = 0;
     let received = 0, failedReplies = 0, unfinishedReplies = 0, spokenReplies = 0;
     const unfinished = (source, id, stage) => {
@@ -172,7 +176,8 @@ async function main() {
         const waiting = platforms.find(platform => !platform.ready);
         if (waiting && Date.now() >= acceptingUntil)
             throw Error(waiting.id + ' was not ready before the session deadline');
-        return program.take(!waiting, Date.now() < acceptingUntil);
+        const awaitingAnswer = planningReply || pendingReplies.size > 0 || queue.pending > 0;
+        return program.take(!waiting, Date.now() < acceptingUntil || awaitingAnswer, awaitingAnswer);
     };
     const wait = async (ms) => {
         await sleep(ms, undefined, { signal: controller.signal }).catch(() => { });
@@ -192,45 +197,75 @@ async function main() {
     try {
         log('idle_pool_preparing', { total: idleCount });
         await motion.prepareIdle(concept, controller.signal, log);
-        let renderInFlight;
-        async function performance(text, signal = controller.signal) {
-            while (renderInFlight)
-                await renderInFlight.catch(() => { });
-            signal.throwIfAborted();
-            const job = motion.render(text, signal);
-            renderInFlight = job;
-            try {
-                return await job;
-            }
-            finally {
-                if (renderInFlight === job)
-                    renderInFlight = undefined;
-            }
-        }
-        async function prepareHost(preflight, signal = controller.signal) {
+        const pool = new LiveRenderPool(cfg.maxConcurrentVideos);
+        const signal = controller.signal;
+        let hostOrder = Promise.resolve();
+        let orderedVersion = -1;
+        async function prepareHost(preflight) {
             const version = program.version;
             const context = program.context();
             const id = 'host-' + (hostLine + 1);
             const stale = () => signal.aborted || (!preflight && (Date.now() >= acceptingUntil || version !== program.version));
+            // After a conversation, alternate contextual follow-ups with independent radio segments.
+            const reusable = !context.scheduledReplies.length &&
+                (!context.recentChat.length || (hostLine % 2 === 0 && !context.onAir.at(-1)?.answering));
             log('host_generation_started', { id, onAir: context.onAir.length, upcoming: context.scheduledHost.length });
-            const text = await continueBroadcast(cfg, actor, context, cfg.hostLines[hostLine], signal);
-            const previous = [...context.scheduledHost, ...context.onAir.map(turn => turn.host)];
-            if (previous.some(line => line.trim() === text))
-                throw Error('Host repeated a recent line');
+            const text = await continueBroadcast(cfg, actor, context, cfg.hostLines[hostLine], signal, reusable);
             if (stale())
                 return;
-            const clip = await performance(text, signal);
-            if (stale()) {
-                motion.release(clip.motion);
-                return;
-            }
-            ready.push({ source: 'host', id, text, ...clip });
+            if ([...context.scheduledHost, ...context.onAir.map(turn => turn.host)].includes(text))
+                throw Error('Host repeated a recent line');
             hostLine++;
-            log('host_segment_ready', { id, preflight });
+            program.draftingHosts.set(id, text);
+            const previous = orderedVersion === version ? hostOrder : Promise.resolve();
+            orderedVersion = version;
+            const render = pool.run(false, async () => {
+                if (!stale())
+                    return motion.render(text, signal);
+            });
+            const job = Promise.all([previous, render]).then(([, clip]) => {
+                if (!clip)
+                    return;
+                if (stale()) {
+                    motion.release(clip.motion);
+                    log('host_segment_discarded', { id, version });
+                    return;
+                }
+                ready.push({ source: 'host', id, text, reusable, ...clip });
+                log('host_segment_ready', { id, preflight });
+            });
+            hostOrder = job.catch(() => { });
+            const tracked = job.catch(error => {
+                if (preflight)
+                    throw error;
+                if (!signal.aborted)
+                    log('host_line_unavailable', { id, reason: error instanceof Error ? error.name : 'error' });
+            }).finally(() => {
+                pendingHost.delete(tracked);
+                program.draftingHosts.delete(id);
+            });
+            pendingHost.add(tracked);
+            if (preflight)
+                await tracked;
         }
-        log('native_opening_preparing', liveStartChoices);
-        ready.push({ source: 'opening', id: 'opening', text: cfg.opening, ...await performance(cfg.opening) });
-        await prepareHost(true);
+        log('native_opening_preparing', { ...liveStartChoices, maxConcurrentVideos: pool.limit, topic: cfg.topic });
+        const { opening, standby } = await broadcastLines(cfg, actor, signal);
+        const prepared = await Promise.allSettled([
+            (async () => {
+                for (const [index, text] of openingParts(opening, actor.language).entries()) {
+                    const clip = await pool.run(false, () => motion.render(text, signal));
+                    ready.push({ source: 'opening', id: index ? 'opening-' + (index + 1) : 'opening', text, ...clip });
+                }
+                await prepareHost(true);
+            })(),
+            ...standby.map(async (text, index) => {
+                const clip = await pool.run(false, () => motion.render(text, signal));
+                program.addStandby({ source: 'standby', id: 'welcome-' + (index + 1), text, reusable: true, ...clip });
+            })
+        ]);
+        for (const result of prepared)
+            if (result.status === 'rejected')
+                throw result.reason;
         if (controller.signal.aborted)
             return;
         const destinations = [];
@@ -252,18 +287,10 @@ async function main() {
         hosting = (async () => {
             while (!controller.signal.aborted && Date.now() < acceptingUntil) {
                 try {
-                    if (program.canPlanHost && !queue.pending && !renderingReply) {
-                        speculative = new AbortController();
-                        try {
-                            await prepareHost(false, AbortSignal.any([controller.signal, speculative.signal]));
-                        }
-                        catch (error) {
-                            if (!speculative.signal.aborted)
-                                throw error;
-                        }
-                        finally {
-                            speculative = undefined;
-                        }
+                    const hostCapacity = Math.max(1, pool.limit - 1);
+                    if (!pool.paused && program.canPlanHost && !queue.pending && pendingHost.size < hostCapacity
+                        && pendingHost.size + ready.length < Math.max(2, pool.limit)) {
+                        await prepareHost(false);
                     }
                 }
                 catch (error) {
@@ -276,48 +303,69 @@ async function main() {
             }
         })();
         replying = (async () => {
-            while (!controller.signal.aborted) {
-                const event = program.readyReplies < 2 && queue.next();
+            while (!signal.aborted) {
+                const event = program.readyReplies + pendingReplies.size < 8 && queue.next();
                 if (!event) {
                     await wait(50);
                     continue;
                 }
+                planningReply = true;
+                const key = event.source + ':' + event.id;
+                const speaker = event.source + ':' + (event.speaker ?? '');
+                const question = { speaker: event.speaker, text: event.text };
                 let stage = 'generating';
+                const failure = (error) => {
+                    program.dropFailedReply(key);
+                    if (signal.aborted) {
+                        unfinished(event.source, event.id, stage);
+                        return;
+                    }
+                    failedReplies++;
+                    const reason = error instanceof GenaiRequestError ? 'gateway_http_' + error.httpStatus
+                        : error instanceof Error ? error.name : 'error';
+                    log('reply_failed', { source: event.source, id: event.id, stage, reason });
+                };
                 try {
-                    renderingReply = true;
                     const prepared = preparedReply(cfg, event.text);
                     const selective = event.source !== 'operator' && !(event.source === 'youtube' && event.text === probe);
-                    const text = await answer(cfg, actor, event.text, controller.signal, program.context(), event.speaker, selective);
+                    const text = prepared ?? await answer(cfg, actor, event.text, signal, program.context(), event.speaker, selective);
                     if (selective && text === '[SKIP]') {
                         log('chat_skipped', { source: event.source, id: event.id });
                         continue;
                     }
-                    speculative?.abort();
-                    log('reply_generated', { source: event.source, id: event.id, prepared: text === prepared });
-                    controller.signal.throwIfAborted();
+                    program.changeContext();
+                    program.draftingReplies.set(key, { host: text, answering: question });
+                    log('reply_generated', { source: event.source, id: event.id, prepared: !!prepared });
                     stage = 'generating_av';
-                    const clip = await performance(text);
-                    program.queueReply({ source: event.source, id: event.id, text, ...clip,
-                        question: { speaker: event.speaker, text: event.text } });
-                }
-                catch (e) {
-                    if (controller.signal.aborted) {
-                        unfinished(event.source, event.id, stage);
-                        break;
-                    }
-                    failedReplies++;
-                    log('reply_failed', {
-                        source: event.source,
-                        id: event.id, stage,
-                        reason: e instanceof GenaiRequestError
-                            ? 'gateway_http_' + e.httpStatus
-                            : e instanceof Error
-                                ? e.name
-                                : 'error'
+                    const render = async () => {
+                        const cached = prepared && await motion.cached(text, signal);
+                        if (cached)
+                            return cached;
+                        return pool.run(true, () => {
+                            signal.throwIfAborted();
+                            return motion.render(text, signal);
+                        });
+                    };
+                    const previous = speakerOrder.get(speaker);
+                    const job = Promise.allSettled([previous, render()]).then(([, result]) => {
+                        if (result.status === 'rejected')
+                            throw result.reason;
+                        program.queueReply({ source: event.source, id: event.id, text, question, ...result.value }, true);
+                    }).catch(failure);
+                    const tracked = job.finally(() => {
+                        pendingReplies.delete(tracked);
+                        program.draftingReplies.delete(key);
+                        if (speakerOrder.get(speaker) === tracked)
+                            speakerOrder.delete(speaker);
                     });
+                    pendingReplies.add(tracked);
+                    speakerOrder.set(speaker, tracked);
+                }
+                catch (error) {
+                    failure(error);
                 }
                 finally {
-                    renderingReply = false;
+                    planningReply = false;
                 }
             }
         })();
@@ -333,9 +381,11 @@ async function main() {
                 stop();
             }));
         }
-        await encode([], join(out, 'recording.flv'), destinations, seconds, controller.signal, take, onLog, motion, () => renderingReply || queue.pending > 0 || ready.some(e => isReply(e.source)));
+        await encode([], join(out, 'recording.flv'), destinations, seconds, controller.signal, take, onLog, motion, () => planningReply || pendingReplies.size > 0 || queue.pending > 0 || ready.some(e => isReply(e.source)), clip => program.finish(clip));
         if (observerError)
             throw observerError;
+        if (pool.paused)
+            throw pool.paused;
         outcome = controller.signal.aborted ? 'interrupted' : 'finished';
     }
     finally {
@@ -346,6 +396,7 @@ async function main() {
             Promise.allSettled(opened.map(async (platform) => platform.close?.(outcome))),
             Promise.allSettled([replying, hosting])
         ]);
+        await Promise.allSettled([...pendingHost, ...pendingReplies]);
         wake?.kill();
         motion.close();
         for (const event of ready)

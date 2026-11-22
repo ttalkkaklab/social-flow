@@ -24,7 +24,7 @@ control (or ask in chat). Wait for the answer. An explicit choice for this
 broadcast in the user's request counts. A previous broadcast, a saved config,
 an unattended schedule or silence cannot choose for the user.
 
-- **Start when ready** (`--start ready`): prepare ten moving listening clips, the spoken opening and the first topic segment on the production GPU before ingest. Send the watch link as soon as YouTube reports live.
+- **Start when ready** (`--start ready`): prepare ten moving listening clips, two short spoken welcomes, the opening and the first topic segment before ingest. Send the watch link as soon as YouTube reports live.
 - **Preview first** (`--start preview`): produce a local recording with sound and stop.
   Show it and wait for a start decision. When the user selects start, use a fresh run
   directory. The renderer can reuse the same generated opening.
@@ -36,20 +36,21 @@ prepares ten silent listening clips, each 3–5 seconds at 24 fps. It pins the s
 portrait to both ends of every shot. The host should visibly look down to read, nod or
 shift their shoulders gently. The runner checks for a held pose across each clip. If a replacement still freezes between identical anchors, it generates a short outward gesture and plays its frames back to the exact starting pose. All ten clips must pass the framing and motion checks before ingest. Ready speech interrupts standby on the
 next output frame. If the queue stays empty, shuffle all ten before repeating a clip.
-A new shuffle starts with a different clip from the last one played.
+A new shuffle starts with a different clip from the last one played. Once the room is live, play ready viewer replies first, then fresh host segments. While rendering, rotate audience-wide welcomes and previously aired self-contained topic lines. Finish each spoken line. Keep viewer answers and the opener out of this rotation.
 To prepare these assets earlier and list their paths, run
 `node server/dist/character-live.bundle.js prepare-idle --config FILE`. This command
 needs no streaming destination. The normal broadcast start also prepares the set.
 Before opening ingest the runner prepares the listening pool, a greeting that opens the show
-and a first topic segment. Write the greeting in the host's voice and introduce today's subject.
+and a first topic segment. Save a chosen subject as `topic` when reserving the room. The opener names it and invites comments, and the receipt keeps it when resuming. Existing configs without a topic use their authored `opening`. Optional `standbyLines` supplies two short, distinct welcomes for anyone joining, in the broadcast language.
 During the YouTube handshake the encoder plays moving standby. Once the room is live it plays
 the greeting. While speech plays, the planner uses the current line, recent spoken exchanges,
 real viewer chat and any queued host line to generate the next segment. Optional `hostLines` give
 topic cues. The host continues after the last cue.
 
-One model call decides whether a viewer message merits an answer and writes it. A selected
-reply takes priority over speculative host production. An on-air line always finishes, including
+One model call decides whether a viewer message merits an answer and writes it. Set `maxConcurrentVideos` to a positive integer (default 3). During playout the host leaves one slot for chat when at least two are available. Selected replies take the next free slots. Plan the next line against recent chat and pending replies. Discard obsolete host results, let submitted jobs finish and keep replies from a single viewer in order. An on-air line always finishes, including
 when the chat intake window closes. Standby fills only gaps between ready spoken segments.
+If repeated status checks leave a video submission unresolved, the runner pauses new video requests
+and keeps playing available clips. The `live_video_unresolved` event records the receipt for recovery.
 The event log records chat admission, skipped messages, generation, and the first frame and last
 audio sample sent. If YouTube exhausts the chat quota, tell the operator that new messages
 may be missed. Standby frames are center-cropped for 720×1280 playout.
@@ -65,8 +66,7 @@ directory, at most 10 seconds long. Keep each spoken line short enough for a 15-
 Check pronunciation, timbre and mouth movement in the local preview.
 The renderer keeps completed clips and job receipts in the project’s `.social-flow/live-genai/`.
 If interrupted, use the same inputs to recover the same job. A receipt with an uncertain
-submission needs reconciliation before another submission. A submitted host job can stay
-in the provider queue after a viewer reply supersedes it.
+submission needs reconciliation before another submission. Superseded host jobs occupy their slot until their request settles. The gateway may queue requests even when the client submits several.
 When chat uses a different GenAI gateway from video, set `ASTRA_GENAI_CHAT_URL` and
 `ASTRA_GENAI_CHAT_API_KEY` for chat alone. The video gateway must advertise
 `image_conditioning` and `voice_references` on `/v1/ltx/msr/capabilities`.
@@ -83,14 +83,14 @@ When chat uses a different GenAI gateway from video, set `ASTRA_GENAI_CHAT_URL` 
    {"project":"/path/to/project","channel":"my-channel","character":"host","panel":"face",
     "broadcastConcept":"Late-night radio in a softly lit studio.",
     "talkPrompt":"Locked camera, quiet conversation, shoulders relaxed, speaking the authored dialogue.",
-    "chatModel":"gateway-text-model","opening":"Welcome to Night Radio. Tonight I brought the book I read before bed.",
+    "chatModel":"gateway-text-model","topic":"books we read before bed","maxConcurrentVideos":3,
     "youtubeChannelId":"UCxxxxxxxxxxxxxxxxxxxxxx","madeForKids":false}
    ```
 
 4. Optionally configure reactions as an array of objects with a questions array and a short spoken
-   answer. The live planner treats an exact match as a suggested answer and considers the conversation. Use
-   `warm --config /path/to/config.json` to generate the opening and prepared response clips
-   before going live. For a new message the chat model writes the answer and GenAI renders
+   answer. An exact configured question uses its authored answer directly. Only add unconditional answers here. Greetings and sound checks are good candidates. Use
+   `warm --config /path/to/config.json` to generate the opening, spoken welcomes and prepared response clips
+   before going live. Already completed configured replies play from the local video cache. For a new message the chat model writes the answer and GenAI renders
    the spoken clip. Exact repeated requests reuse the saved clip and receipt.
 
    Run the shipped CLI with the plugin root as working directory. For a preview, feed an NDJSON
@@ -157,6 +157,8 @@ When chat uses a different GenAI gateway from video, set `ASTRA_GENAI_CHAT_URL` 
    broadcast in TikTok as well as stopping the local encoder. Room reservation and API-driven
    closure are available on YouTube. Specify one platform for status on a simulcast.
    Keep the operator present to monitor chat and stop with SIGINT/SIGTERM. The duration sets the chat intake window. A reply accepted inside that window may finish after it closes. On macOS, the runner keeps the broadcast host awake for the session.
+
+Latency measurements and comparable implementations are in [the live latency study](../../docs/research/2026-11-22-character-live-latency/README.md).
 
 The archive is recording.flv, with chat and audio frame timestamps in events.jsonl. Treat run
 directories as private. Each unique platform message is considered once within a bounded window.

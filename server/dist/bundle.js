@@ -112615,19 +112615,18 @@ async function requestGenai(method, route, body, timeoutMs = 6e4, onResponse, si
     throw new Error("ASTRA GenAI returned a non-JSON response; inspect the existing request before retrying.");
   }
 }
-async function pollGenaiJob(check2, pending2, signal) {
+async function pollGenaiJob(check2, pending2, signal, statusRetries = 1) {
   const deadline = Date.now() + 30 * 6e4;
-  let retried2 = false;
+  let failures = 0;
   do {
     try {
       signal?.throwIfAborted();
       const result = await check2();
       if (result.downloaded) return result;
-      retried2 = false;
+      failures = 0;
     } catch (error2) {
       if (!(error2 instanceof GenaiRequestError) || error2.httpStatus === 200) throw error2;
-      if (error2.httpStatus < 500 || retried2) throw new Error(error2.message);
-      retried2 = true;
+      if (error2.httpStatus < 500 || ++failures > statusRetries) throw new Error(error2.message);
     }
     if (signal) await sleep3(5e3, void 0, { signal });
     else await new Promise((resolve15) => setTimeout(resolve15, 5e3));
@@ -115612,6 +115611,7 @@ async function getGenaiVideoStatus(input, planned, binding) {
   }
   if (!receipt.jobId) throw new Error("GenAI submission identity is unknown; inspect server usage before retrying.");
   if (receipt.status === "completed") {
+    input.onJobCompleted?.();
     const bytes2 = fs12.readFileSync(receipt.videoPath);
     if (createHash11("sha256").update(bytes2).digest("hex") !== receipt.sha256) throw new Error("GenAI cached output changed");
     if (receipt.expected || planned || receipt.operation === "msr" || receipt.operation === "scene-to-video")
@@ -115625,6 +115625,7 @@ async function getGenaiVideoStatus(input, planned, binding) {
     receipt.sceneShots = job.shots;
   }
   if (job.status === "failed" || job.status === "cancelled") throw new GenaiRequestError(`GenAI video ${receipt.jobId} ${job.status}: ${JSON.stringify(job.error ?? "No details").slice(0, 1e3)}`, true, 200);
+  if (job.status === "completed") input.onJobCompleted?.();
   if (job.status !== "completed" || !input.download)
     return { jobId: receipt.jobId, status: job.status, downloaded: false, review: "not_reviewed" };
   if (!job.result?.video_url) throw new Error("GenAI completed without result.video_url; retain the receipt, do not resubmit.");
@@ -115782,7 +115783,7 @@ async function checkGenaiVideoOptions(tool2, args) {
   }
   if (missing.length) throw new GenaiRequestError(`ltx_fields_unsupported: ${mode} on ${model2?.id ?? args.model} does not advertise ${missing.join(", ")}`, true, 422);
 }
-async function generateGenaiVideo(operation, input, signal) {
+async function generateGenaiVideo(operation, input, signal, polling = {}) {
   signal?.throwIfAborted();
   const args = (operation === "msr" ? genaiMsrSchema : operation === "audio-to-video" ? genaiAudioToVideoSchema : operation === "text-to-video" ? genaiTextToVideoSchema : genaiImageToVideoSchema).parse(input);
   requireAstraGenaiKey();
@@ -115793,9 +115794,10 @@ async function generateGenaiVideo(operation, input, signal) {
   const receiptPath2 = videoPath + ".astra-genai.json";
   const finish = async () => {
     const result = await pollGenaiJob(
-      () => getGenaiVideoStatus({ receiptPath: receiptPath2, download: true }, msrOutputContract(operation, args)),
+      () => getGenaiVideoStatus({ receiptPath: receiptPath2, download: true, onJobCompleted: polling.onJobCompleted }, msrOutputContract(operation, args)),
       `GenAI video is still pending; recover using receiptPath ${receiptPath2}, never resubmit.`,
-      signal
+      signal,
+      polling.statusRetries
     );
     return { ...result, receiptPath: receiptPath2 };
   };
