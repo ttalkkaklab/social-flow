@@ -202,3 +202,21 @@ test('saved Flash forecasts editing with its video rate, adaptive duration and i
   assert.equal(spoken.tool, 'seedance_reference');
   assert.equal(spoken.generateAudio, true);
 });
+
+test('original task references forecast the video-input tier on direct and cast-bound boards', () => {
+  const model = 'dreamina-seedance-2-5-flash-261115';
+  for (const task of ['edit', 'extend', undefined]) {
+    const settings = {model, resolution:'720p', realFaceInput:true, omniReferenceTaskType:task};
+    for (const actor of [false, true]) {
+      const shot = scene(actor ? settings : {...settings, referenceVideoTaskIds:['cgt-original']});
+      shot.visual.frames = {mode:'reference'};
+      shot.visual.references = [];
+      if (actor) shot.visual.characterInputs = [{character:'hero', bodyView:'front', faceTaskId:'cgt-original'}];
+      const plan = scenePlan(shot, {modelSettings:{models:{video:{engine:'seedance',model,resolution:'720p'}}}});
+      assert.deepEqual(plan.referenceVideoTaskIds, ['cgt-original']);
+      assert.equal(plan.tool, 'seedance_reference');
+      assert.equal(plan.priceKey, 'seedance.2-5-flash-video.720p');
+      assert.equal(plan.billedSeconds, (task === 'edit' ? 30 : 5) + 30);
+    }
+  }
+});

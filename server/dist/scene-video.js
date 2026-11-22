@@ -11,7 +11,7 @@ import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { verifyImageFile } from './image-media.js';
 import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
 import { astraGenaiBaseUrl, GENAI_AUDIO_TYPES, GenaiRequestError, genaiAudioUri, genaiSourceUri, requestGenai } from './astra-genai-client.js';
-import { FRAME_FIELDS, sceneInputCapabilities, VIDEO_ADAPTERS } from './video-registry.js';
+import { FRAME_FIELDS, requiredCharacters, sceneInputCapabilities, VIDEO_ADAPTERS } from './video-registry.js';
 import { resolveCharacterVoice, voiceReference } from './video-voice.js';
 import { GENAI_MSR_INLINE_MAX_BYTES, uploadGenaiFile } from './astra-genai-upload.js';
 const load = createRequire(import.meta.url);
@@ -119,16 +119,21 @@ export function compileSceneTimeline(raw, scene, episode, board, coverage = scen
             }
             images.push(image);
         };
+        const people = requiredCharacters(raw[index]);
+        const ownerOf = (file) => people.find(person => file === person.face.path || file === person.bodyPath)?.character;
         const claimed = new Set();
         for (const pin of pins.sort((a, b) => a.frame - b.frame)) {
             const ref = ['face', 'outfit'].includes(pin.role) ? references.find(r => r.path === pin.path) : undefined;
             if (ref)
                 claimed.add(ref);
-            add(ref ? { ...pin, reference: ref } : pin);
+            const owner = ref && ownerOf(ref.path);
+            if (owner && pin.character && pin.character !== owner)
+                throw new Error('scene_reference_owner: ' + shotId + ' assigns ' + ref.path + ' to the wrong character');
+            add(ref ? { ...pin, ...(owner ? { character: owner } : {}), reference: ref } : pin);
         }
         for (const ref of references)
             if (!claimed.has(ref))
-                add({ path: ref.path, role: ref.role, frame: startFrame, reference: ref });
+                add({ path: ref.path, role: ref.role, frame: startFrame, reference: ref, ...(ownerOf(ref.path) ? { character: ownerOf(ref.path) } : {}) });
         // Older approved single-shot plans already bind their narration and voices in
         // the adapter. Preserve their manifest and hash unless a timeline adds a binding.
         const scoped = shotScoped || members.length > 1 || timeline?.openingPositions || timeline?.dialogueCues?.length;

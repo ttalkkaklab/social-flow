@@ -8,7 +8,9 @@ allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent", "AskUserQuestion", "mc
 
 # Generate Cut Videos
 
-For a Seedance character portrait, use the sheet's face panel and the selected voice sample. If the sheet lacks a ModelArk portrait type, follow [character portrait registration](../register-seedance-portrait/SKILL.md) before executing the shot. Keep the image in its authored slot. Production resolves its approved asset ID before submitting video; stop on missing entitlement or failed review.
+For a character reference shot, set `visual.character` and the camera’s subject and view. The plan binds the sheet face and the front or rear body panel to that character. Use `visual.characterInputs` to specify each principal’s body view when their directions differ. On-screen and off-screen lines by a principal require the selected voice sample. Check the panel paths and speaker slots before approval.
+
+For a photoreal Seedance sheet face, follow [character portrait registration](../register-seedance-portrait/SKILL.md). When the user selects a previously generated face, set the character’s `faceTaskId` to the eligible same-account Seedance original. The adapter verifies the task and uses its original video for facial identity with the selected body panel and WAV. Reusing a generated face carries that take’s appearance forward.
 
 
 Steps 7–8 of [the production order](../_shared/production-workflow.md) (user directive

@@ -5,6 +5,7 @@ const crypto = require('node:crypto');
 const settings = require('./model-settings.js');
 const { evaluateWindowScript } = require('./scenes-vm.js');
 const { videoSlot, resolveVideoChoice } = require('../storyboard/references/production-mode.js');
+const { resolveShotCharacterInputs } = require('../channel/references/character-panels.js');
 const { videoLines } = require('../storyboard/references/structure-contract.js');
 const { framePlan, imageReferences, previzHandoff } = require('../storyboard/references/render-routing.js');
 
@@ -29,8 +30,16 @@ function storyboardInputs(members, scene) {
 function seedanceMedia(shot) {
   const slot = videoSlot(shot) || {};
   const fields = typeof slot.realFaceInput === 'boolean' ? {realFaceInput:slot.realFaceInput} : {};
-  for (const key of ['omniReferenceTaskType', 'referenceVideoPaths', 'referenceVideoUrls', 'referenceAudioPaths', 'generateAudio'])
+  for (const key of ['omniReferenceTaskType', 'referenceVideoPaths', 'referenceVideoUrls', 'referenceVideoTaskIds', 'referenceAudioPaths', 'generateAudio'])
     if (slot[key] !== undefined) fields[key] = slot[key];
+  const originals = [...new Set((shot.visual?.characterInputs ?? []).map(c => c.faceTaskId ?? c.face?.taskId).filter(Boolean))];
+  if (originals.length) {
+    if (fields.realFaceInput === false || fields.referenceVideoTaskIds !== undefined &&
+        JSON.stringify(fields.referenceVideoTaskIds) !== JSON.stringify(originals))
+      throw new Error('character_inputs_mismatch: use the cast’s declared face sources');
+    fields.referenceVideoTaskIds = originals;
+    fields.realFaceInput = true;
+  }
   if (fields.generateAudio === undefined && shot.sound?.audioSource !== 'speech' &&
       shot.sound?.effects?.some(effect => ['auto','native'].includes(effect.delivery)) &&
       (shot.sound.audioSource === 'video' || !(shot.narration || []).some(line => line.tts?.trim())))
@@ -57,7 +66,7 @@ function selectOperation(choice, members, scene) {
   const inputs = storyboardInputs(members, scene);
   if (choice.engine === 'seedance' && members.some(shot => {
     const media = seedanceMedia(shot);
-    return media.omniReferenceTaskType || media.referenceVideoPaths?.length || media.referenceVideoUrls?.length || media.referenceAudioPaths?.length;
+    return media.omniReferenceTaskType || media.referenceVideoPaths?.length || media.referenceVideoUrls?.length || media.referenceVideoTaskIds?.length || media.referenceAudioPaths?.length;
   })) inputs.reference = true;
   return { ...choice, operation: operationFor[choice.engine](inputs, choice.model) };
 }
@@ -104,13 +113,15 @@ function readVideoContext(episode, shotId, sceneNo) {
   if (sceneNo !== undefined && (!scene || !storedMembers.length)) throw new Error('sceneNo must identify a storyboard scene with shots');
   const choice = s => resolveVideoChoice(production, s, snapshot?.config.models.video);
   const { selection: savedSelection, source } = choice(storedMembers[0]);
-  const members = Object.hasOwn(operationFor, savedSelection.engine) ? storedMembers.map(shot => {
+  const members = storedMembers.map(raw => {
+    const shotWithRefs = Object.hasOwn(operationFor, savedSelection.engine) ? withLegacyReferences(raw) : raw;
+    let shot = resolveShotCharacterInputs(shotWithRefs, path.join(root, 'storyboard'));
     if (savedSelection.engine === 'seedance' && ['quote', 'broll'].includes(shot.type)) {
       const slot = videoSlot(shot);
       if (slot) shot = { ...shot, visual: { ...shot.visual, video:slot } };
     }
-    return withLegacyReferences(shot);
-  }) : storedMembers;
+    return shot;
+  });
   const first = members[0];
   let selection = selectOperation(savedSelection, members, scene);
   let shot = first;
@@ -158,7 +169,7 @@ function readVideoContext(episode, shotId, sceneNo) {
     let references = refs;
     if (pinned && !timed) {
       const principals = positions.filter(p => p.images?.length).sort((a,b) => Math.min(...a.images) - Math.min(...b.images));
-      if (principals.length && fs.existsSync(path.join(root, 'storyboard/cast.json'))) {
+      if (!visual.characterInputs && principals.length && fs.existsSync(path.join(root, 'storyboard/cast.json'))) {
         const { canonicalReferences } = require('../channel/references/character-panels.js');
         const panels = canonicalReferences(path.join(root, 'storyboard'), first.id, principals.map(p => p.character), 'video',
           {combined: visual.video?.referenceLayout === 'combined'});
@@ -199,7 +210,7 @@ function readVideoContext(episode, shotId, sceneNo) {
   const media = selection.engine === 'seedance' ? seedanceMedia(shot) : {};
   return { episode: root, shotId, selection, source, snapshotRevision: snapshot?.revision || null,
     ...(scene ? {sceneNo, timed, shotIds: members.map(s => s.id), sceneDirection: scene.videoDirection, sceneMembers: members} : {}),
-    revision: hash({ ...(Object.keys(media).length ? {seedanceMedia:media} : {}), ...(scene ? {sceneNo, direction: scene.videoDirection, directionDefaults:scene.directionDefaults, members} : {}), selection, source, snapshotRevision: snapshot?.revision, overrides, imagePlan: { frames: shot.visual?.frames, references: shot.visual?.references, bg: shot.visual?.bg }, shotPrompt: shot.visual?.video?.prompt, shotLines: videoLines(shot), authorization: production.videoAuthorization,
+    revision: hash({ ...(Object.keys(media).length ? {seedanceMedia:media} : {}), ...(scene ? {sceneNo, direction: scene.videoDirection, directionDefaults:scene.directionDefaults, members} : {}), selection, source, snapshotRevision: snapshot?.revision, overrides, imagePlan: { characterInputs:shot.visual?.characterInputs, frames: shot.visual?.frames, references: shot.visual?.references, bg: shot.visual?.bg }, shotPrompt: shot.visual?.video?.prompt, shotLines: videoLines(shot), authorization: production.videoAuthorization,
       budget: production.videoBudgetUsd, approval: production.approval, maxAttempts: production.maxAttempts }),
     lines: videoLines(shot), production, board, shot };
 }

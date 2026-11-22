@@ -318,6 +318,13 @@ function costFingerprint(scenes) {
       var config = Object.assign({}, v, slot[0] === "motion" ? v.video : slot[0] === "quote" ? v.clip : {});
       var fields = ["model", "modelPurpose", "modelReason", "resolution", "generateAudio", "realFaceInput", "referenceImagePaths", "referenceAudioPaths", "previz", "frames", "references"];
       var settings = fields.map(function (key) { return config[key] === undefined ? null : config[key]; });
+      var media = slot[0] === "broll" ? Object.assign({}, v.video, v) : config;
+      var extra = {};
+      ["referenceVideoPaths", "referenceVideoUrls", "referenceVideoTaskIds", "omniReferenceTaskType", "durationSeconds"].forEach(function (key) {
+        if (media[key] !== undefined) extra[key] = media[key];
+      });
+      if (v.characterInputs !== undefined) extra.characterInputs = v.characterInputs;
+      if (Object.keys(extra).length) settings.push(extra);
       parts.push((i + 1) + ":" + slot.join("/") + ":" + encodeURIComponent(JSON.stringify(settings)));
     }
     var sl = v.slide;
@@ -531,6 +538,13 @@ function selftest() {
      costFingerprint([{ type: 'points', visual: { slide: { treatment: 'footage', shots: [{ group: 1, duration: 5 }] } } }]) !== 'none');
 
   // The fingerprint moves when a slot's engine, length or position changes, and only then.
+  const originalBoard = [{type:'cover', duration:5, visual:{video:{model:'dreamina-seedance-2-5-flash-261115'}}}];
+  const withoutOriginal = costFingerprint(originalBoard);
+  originalBoard[0].visual.characterInputs = [{character:'hero', faceTaskId:'cgt-original'}];
+  ok('selecting a facial original invalidates the cached quote', costFingerprint(originalBoard) !== withoutOriginal);
+  delete originalBoard[0].visual.characterInputs;
+  originalBoard[0].visual.video.referenceVideoTaskIds = ['cgt-original'];
+  ok('selecting a video task invalidates the cached quote', costFingerprint(originalBoard) !== withoutOriginal);
   const fpA = costFingerprint(sample);
   ok('an episode with no video slots fingerprints as none', costFingerprint([{ type: 'cover' }]) === 'none');
   const swapped = JSON.parse(JSON.stringify(sample));

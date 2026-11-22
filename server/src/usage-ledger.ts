@@ -227,6 +227,7 @@ export function priceOf(
     if (!Object.hasOwn(SEEDANCE_MODEL_SPECS, model)) return { key: null, quantity: seconds, note: `unmapped seedance model: ${model}` };
     const videos = [
       ...(Array.isArray(args.referenceVideoPaths) ? (args.referenceVideoPaths as unknown[]) : []),
+      ...(Array.isArray(args.referenceVideoTaskIds) ? args.referenceVideoTaskIds : []),
       ...(Array.isArray(args.referenceVideoUrls) ? (args.referenceVideoUrls as unknown[]) : []),
     ].filter((v): v is string => typeof v === 'string');
     const family = videos.length ? `${base}-video` : base;

@@ -92357,6 +92357,7 @@ var require_video_catalog = __commonJS({
             "referenceImagePaths",
             "referenceAudioPaths",
             "referenceVideoPaths",
+            "referenceVideoTaskIds",
             "referenceVideoUrls",
             "ratio"
           ],
@@ -118381,6 +118382,7 @@ var seedanceReferenceSchema = external_exports.object({
   referenceImagePaths: external_exports.array(external_exports.string()).optional().default([]),
   referenceAudioPaths: external_exports.array(external_exports.string()).optional().default([]),
   referenceVideoPaths: external_exports.array(external_exports.string()).optional().default([]),
+  referenceVideoTaskIds: external_exports.array(external_exports.string().regex(/^cgt-[A-Za-z0-9_-]{1,120}$/)).optional(),
   referenceVideoUrls: external_exports.array(external_exports.string().url().regex(/^(?:https?:\/\/|asset:\/\/)[^/\s]+/i, "Use a public HTTP(S) video URL or asset:// ID")).optional().default([]),
   ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("adaptive")
 }).superRefine((data, ctx) => {
@@ -118394,7 +118396,7 @@ var seedanceReferenceSchema = external_exports.object({
       message: `${data.model} allows at most ${maxImages} reference images (requested: ${data.referenceImagePaths.length}).`
     });
   }
-  const videoCount = data.referenceVideoPaths.length + data.referenceVideoUrls.length;
+  const videoCount = data.referenceVideoPaths.length + data.referenceVideoUrls.length + (data.referenceVideoTaskIds?.length ?? 0);
   const task = data.omniReferenceTaskType;
   if (task && !spec.referenceTaskTypes.includes(task)) {
     ctx.addIssue({ code: "custom", path: ["omniReferenceTaskType"], message: "Task type selection requires Seedance 2.5 or Flash." });
@@ -118551,6 +118553,28 @@ async function verifySeedanceVideo(file) {
 function checkDimensions2(width, height, name) {
   if (Math.min(width, height) < 300 || Math.max(width, height) > 6e3 || width / height < 0.4 || width / height > 2.5)
     throw new Error(name + " needs 300\u20136000 pixels per side and a width/height ratio in [0.4, 2.5]");
+}
+async function trustedReferenceVideos(apiKey, ids, spec) {
+  return Promise.all(ids.map(async (id) => {
+    const task = await getTask(apiKey, id);
+    const age = Date.now() / 1e3 - Number(task.created_at);
+    const url = task.content?.video_url;
+    const seconds2 = task.duration;
+    if (task.id !== id || task.status !== "succeeded" || !Object.hasOwn(SEEDANCE_MODEL_SPECS, task.model ?? "") || !Number.isFinite(age) || age < 0 || age >= 30 * 86400 || !url || !url.startsWith("https://"))
+      throw new Error("seedance_original_unavailable: select an accessible, completed Seedance 2.x task from this account within 30 days");
+    const [min, max] = spec.referenceVideos.clipSeconds;
+    if (typeof seconds2 !== "number" || !Number.isFinite(seconds2) || seconds2 < min || seconds2 > max)
+      throw new Error("seedance_original_duration: the source task duration is outside this model\u2019s reference limits");
+    return { url, seconds: seconds2 };
+  }));
+}
+async function checkSeedanceReferenceTasks(request) {
+  if (!request.referenceVideoTaskIds?.length) return;
+  const spec = SEEDANCE_MODEL_SPECS[request.model];
+  const originals = await trustedReferenceVideos(requireArkKey(), request.referenceVideoTaskIds, spec);
+  const seconds2 = originals.reduce((total, item) => total + item.seconds, 0);
+  if (seconds2 > spec.referenceVideos.totalSeconds)
+    throw new Error("seedance_original_duration: the original videos exceed the total reference duration");
 }
 async function pollSeedanceTask(id) {
   const task = await getTask(requireArkKey(), id);
@@ -118829,29 +118853,42 @@ async function generateWithReferences(request) {
   let posted = false;
   try {
     const spec = SEEDANCE_MODEL_SPECS[request.model];
+    let originals;
+    try {
+      originals = await trustedReferenceVideos(apiKey, request.referenceVideoTaskIds ?? [], spec);
+    } catch (error2) {
+      const message = error2 instanceof Error ? error2.message : String(error2);
+      return {
+        success: false,
+        terminal: true,
+        error: message,
+        originalProblem: { stage: "seedance_original_lookup", videoSubmitted: false, message }
+      };
+    }
     const images = await prepareImages(
       request.referenceImagePaths,
       request.outputPath,
       request.realFaceInput,
-      request.referenceVideoUrls.some((url) => url.startsWith("asset://"))
+      originals.length > 0 || request.referenceVideoUrls.some((url) => url.startsWith("asset://"))
     );
     const audioUris = loadReferenceAudio(request.referenceAudioPaths);
     assertRequestBudget([...images.filter((input) => typeof input === "string"), ...audioUris]);
     if (audioUris.length > 0) {
       await checkReferenceAudioDurations(request.referenceAudioPaths, spec.referenceAudio, request.model);
     }
-    let referenceVideoSeconds = 0;
+    let referenceVideoSeconds = originals.reduce((sum, item) => sum + item.seconds, 0);
     if (request.referenceVideoPaths.length > 0) {
-      referenceVideoSeconds = await checkReferenceVideos(request.referenceVideoPaths, spec.referenceVideos, request.model, request.omniReferenceTaskType === "edit");
+      referenceVideoSeconds += await checkReferenceVideos(request.referenceVideoPaths, spec.referenceVideos, request.model, request.omniReferenceTaskType === "edit");
     }
     const minimumRemoteSeconds = request.omniReferenceTaskType === "edit" ? 4 : spec.referenceVideos.clipSeconds[0];
+    if (originals.some((item) => item.seconds < minimumRemoteSeconds)) throw new Error("Original reference video is too short for this operation");
     if (referenceVideoSeconds + request.referenceVideoUrls.length * minimumRemoteSeconds > spec.referenceVideos.totalSeconds) {
       throw new Error("Reference videos exceed the model duration limit.");
     }
     const imageUris = await resolvePortraits(images);
     const published = await publishFiles(request.referenceVideoPaths);
     try {
-      const videoUrls = [...published.urls, ...request.referenceVideoUrls];
+      const videoUrls = [...published.urls, ...request.referenceVideoUrls, ...originals.map((item) => item.url)];
       const parts = [
         ...imageUris.map((url) => ({ type: "image_url", image_url: { url }, role: "reference_image" })),
         ...videoUrls.map((url) => ({ type: "video_url", video_url: { url }, role: "reference_video" })),
@@ -118876,8 +118913,8 @@ async function generateWithReferences(request) {
         referenceImages: request.referenceImagePaths,
         referenceAudios: request.referenceAudioPaths,
         ...videoUrls.length > 0 ? {
-          referenceVideos: [...request.referenceVideoPaths, ...request.referenceVideoUrls],
-          referenceVideoSeconds,
+          referenceVideos: [...request.referenceVideoPaths, ...request.referenceVideoUrls, ...request.referenceVideoTaskIds ?? []],
+          ...request.referenceVideoUrls.length ? {} : { referenceVideoSeconds },
           ...published.urls.length > 0 ? { referenceVideoRoute: published.how } : {}
         } : {}
       };
@@ -119440,12 +119477,39 @@ function resolveVideoDuration(tool2, input) {
 }
 
 // src/video-registry.ts
+function requiredCharacters(shot) {
+  const inputs2 = shot.visual?.characterInputs;
+  return Array.isArray(inputs2) ? inputs2.filter((person) => person?.face && typeof person.bodyPath === "string") : [];
+}
 var entry = (engine, deployment, operation, schema2) => ({ engine, deployment, operation, schema: schema2, voice: operation === "audio" ? "supplied" : "none" });
 var reference = (engine, deployment, schema2) => ({ ...entry(engine, deployment, "reference", schema2), voice: "reference" });
 var VIDEO_ADAPTERS = Object.freeze({
   seedance_text2video: entry("seedance", "byteplus", "text", seedanceText2VideoSchema),
   seedance_img2video: entry("seedance", "byteplus", "image", seedanceImg2VideoSchema),
-  seedance_reference: reference("seedance", "byteplus", seedanceReferenceSchema),
+  seedance_reference: {
+    ...reference("seedance", "byteplus", seedanceReferenceSchema),
+    bindCharacterSources(args, cast) {
+      const originals = /* @__PURE__ */ new Map();
+      for (const person of cast) {
+        const id = person.face.taskId;
+        if (!id) continue;
+        if (originals.has(id) && originals.get(id) !== person.character)
+          throw new Error("character_face_source_ambiguous: each facial reference needs one identifiable character");
+        originals.set(id, person.character);
+      }
+      const taskIds = [...originals.keys()];
+      if (args.realFaceInput === false && taskIds.length || taskIds.length && args.referenceVideoTaskIds !== void 0 && JSON.stringify(args.referenceVideoTaskIds) !== JSON.stringify(taskIds))
+        throw new Error("character_inputs_mismatch: use the face sources declared on the storyboard");
+      const videos = [args.referenceVideoPaths, args.referenceVideoUrls];
+      const offset = videos.reduce((count, files3) => count + (Array.isArray(files3) ? files3.length : 0), 0);
+      const notes = [...originals.values()].map((character, index) => `Use Video ${offset + index + 1} only for ${character} facial identity, hair and headwear. Follow the new shot framing, action and dialogue.`);
+      return {
+        ...args,
+        realFaceInput: args.realFaceInput ?? true,
+        ...taskIds.length ? { referenceVideoTaskIds: taskIds, prompt: [args.prompt, ...notes].join("\n") } : {}
+      };
+    }
+  },
   ...Object.fromEntries(Object.entries(DESKTOP_SCHEMAS).map(([feature, schema2]) => [
     "astra_genai_desktop_" + ({ "text-to-video": "text2video", "image-to-video": "img2video", "audio-to-video": "audio2video" }[feature] || feature),
     entry("astra-genai-desktop", "gateway-desktop-v1", { "text-to-video": "text", "image-to-video": "image", "audio-to-video": "audio", keyframes: "keyframe" }[feature] || feature, schema2)
@@ -120133,7 +120197,7 @@ function prepareVideoImages(tool2, input, shot, episode, members) {
   if (errors.length) throw new Error("image_plan_invalid: " + errors.join("; "));
   let references = routing.imageReferences(shot);
   const rawCast = shot.visual?.character;
-  const canonicalMsr = tool2 === "astra_genai_msr" && frames.mode === "reference" && rawCast !== void 0 && existsSync18(path18.join(episode, "storyboard", "cast.json"));
+  const canonicalMsr = !visual.characterInputs && tool2 === "astra_genai_msr" && frames.mode === "reference" && rawCast !== void 0 && existsSync18(path18.join(episode, "storyboard", "cast.json"));
   if (canonicalMsr) {
     const ids = [].concat(rawCast ?? []).map((entry2) => typeof entry2 === "string" ? entry2 : entry2.id);
     if (visual.video?.referenceLayout !== void 0 && !["panels", "combined"].includes(visual.video.referenceLayout))
@@ -120380,19 +120444,32 @@ function resolveCharacterVoice(character, context2, warnings) {
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) return character;
   let channel = context2.episode;
   while (!existsSync19(path19.join(channel, "profile.md")) && path19.dirname(channel) !== channel) channel = path19.dirname(channel);
-  const folder = path19.join(channel, "assets/characters", id), identity = path19.join(folder, "identity.md");
+  const required2 = requiredCharacters(context2.shot).find((person) => person.character === id);
+  const folder = required2 ? path19.dirname(path19.resolve(context2.episode, "storyboard", required2.bodyPath)) : path19.join(channel, "assets/characters", id);
+  const identity = path19.join(folder, "identity.md");
   let resolved = character;
-  if (!Object.keys(object4(character.tts)).length && existsSync19(identity)) {
+  const pinnedSettings = Object.keys(object4(character.tts)).length > 0;
+  if ((!pinnedSettings || required2 && !object4(character.voiceReference).path) && existsSync19(identity)) {
     try {
       const { handoff } = load5("../../skills/channel/references/character-sheet.js");
       const current = handoff(identity, { voiceOnly: character.voiceOnly === true });
-      resolved = { ...current, ...character, tts: current.tts };
+      if (!pinnedSettings || hash(current.tts) === hash(character.tts)) {
+        resolved = { ...current, ...character, tts: current.tts };
+        if (required2 && !object4(resolved.voiceReference).path) {
+          const sample = path19.join(folder, "voice.wav");
+          const selected = object4(current.voiceSelection).audioSha256;
+          if (typeof selected === "string" && existsSync19(sample) && fileHash(sample) === selected)
+            resolved = { ...resolved, voiceReference: { path: sample, sha256: selected, tts: current.tts } };
+          else if (current.voiceReference) resolved.voiceReference = current.voiceReference;
+        }
+      }
     } catch (error2) {
       warnings.push(`${id}: cannot read the selected character voice: ${error2 instanceof Error ? error2.message : String(error2)}`);
       return character;
     }
   }
   const reference2 = object4(resolved.voiceReference);
+  if (required2) return { ...resolved, voiceReference: { ...reference2, imagePaths: [required2.face.path, required2.bodyPath].filter(Boolean) } };
   if (!Array.isArray(reference2.imagePaths) && existsSync19(folder)) {
     const root = realpathSync6(folder) + path19.sep;
     const refs = object4(context2.shot.visual).references;
@@ -120437,7 +120514,9 @@ function msrSubject(character, refs, context2) {
   const owned = object4(character.voiceReference).imagePaths;
   let ownedPaths;
   const declared = [].concat(object4(context2.shot.visual).character ?? []).map((entry2) => typeof entry2 === "string" ? entry2 : text2(object4(entry2).id));
-  if ((declared.includes(text2(character.id)) || context2.sceneDirection?.openingPositions.some((p) => p.character === character.id && p.images.length)) && existsSync19(path19.join(context2.episode, "storyboard", "cast.json"))) {
+  if (requiredCharacters(context2.shot).some((person) => person.character === character.id)) {
+    ownedPaths = owned.map((file) => realpathSync6(path19.resolve(context2.episode, "storyboard", file)));
+  } else if ((declared.includes(text2(character.id)) || context2.sceneDirection?.openingPositions.some((p) => p.character === character.id && p.images.length)) && existsSync19(path19.join(context2.episode, "storyboard", "cast.json"))) {
     const { sheetPanels, canonicalReferences } = load5("../../skills/channel/references/character-panels.js");
     const dir = path19.join(context2.episode, "storyboard");
     const panels = sheetPanels(dir, [text2(character.id)]).get(text2(character.id));
@@ -120744,14 +120823,19 @@ function compileSceneTimeline(raw, scene, episode, board, coverage2 = sceneCover
       }
       images.push(image2);
     };
+    const people = requiredCharacters(raw[index]);
+    const ownerOf = (file) => people.find((person) => file === person.face.path || file === person.bodyPath)?.character;
     const claimed = /* @__PURE__ */ new Set();
     for (const pin of pins.sort((a, b) => a.frame - b.frame)) {
       const ref = ["face", "outfit"].includes(pin.role) ? references.find((r2) => r2.path === pin.path) : void 0;
       if (ref) claimed.add(ref);
-      add(ref ? { ...pin, reference: ref } : pin);
+      const owner = ref && ownerOf(ref.path);
+      if (owner && pin.character && pin.character !== owner)
+        throw new Error("scene_reference_owner: " + shotId + " assigns " + ref.path + " to the wrong character");
+      add(ref ? { ...pin, ...owner ? { character: owner } : {}, reference: ref } : pin);
     }
     for (const ref of references) if (!claimed.has(ref))
-      add({ path: ref.path, role: ref.role, frame: startFrame, reference: ref });
+      add({ path: ref.path, role: ref.role, frame: startFrame, reference: ref, ...ownerOf(ref.path) ? { character: ownerOf(ref.path) } : {} });
     const scoped = shotScoped || members.length > 1 || timeline?.openingPositions || timeline?.dialogueCues?.length;
     if (members.length === 1 && timeline?.openingPositions && scene.openingPositions && JSON.stringify(timeline.openingPositions) !== JSON.stringify(scene.openingPositions))
       throw new Error("scene_opening_positions: a single shot and its scene must have the same opening positions");
@@ -121460,6 +121544,7 @@ function priceOf(tool2, args = {}) {
     if (!Object.hasOwn(SEEDANCE_MODEL_SPECS, model2)) return { key: null, quantity: seconds2, note: `unmapped seedance model: ${model2}` };
     const videos = [
       ...Array.isArray(args.referenceVideoPaths) ? args.referenceVideoPaths : [],
+      ...Array.isArray(args.referenceVideoTaskIds) ? args.referenceVideoTaskIds : [],
       ...Array.isArray(args.referenceVideoUrls) ? args.referenceVideoUrls : []
     ].filter((v) => typeof v === "string");
     const family = videos.length ? `${base}-video` : base;
@@ -121595,7 +121680,7 @@ function quoteVideo(tool2, args) {
   if (tool2.startsWith("seedance_")) {
     const model2 = String(args.model), resolution2 = String(args.resolution);
     const spec = SEEDANCE_MODEL_SPECS[model2];
-    const hasVideo = ["referenceVideoPaths", "referenceVideoUrls"].some((k) => Array.isArray(args[k]) && args[k].length);
+    const hasVideo = ["referenceVideoPaths", "referenceVideoUrls", "referenceVideoTaskIds"].some((k) => Array.isArray(args[k]) && args[k].length);
     const rates = TOKEN_RATES[model2];
     const index = resolution2 === "4k" ? 4 : resolution2 === "1080p" ? 2 : 0;
     const tokenRate = rates?.[index + (hasVideo ? 1 : 0)];
@@ -122068,6 +122153,8 @@ async function planManagedVideo(raw) {
     await validateShotRenderPlan(plan2);
     return saveVideoPlan(plan2);
   }
+  if (plan2.tool === "seedance_reference" && plan2.args.referenceVideoTaskIds)
+    await checkSeedanceReferenceTasks(seedanceReferenceSchema.parse(plan2.args));
   await checkGenaiVideoOptions(plan2.tool, plan2.args);
   if (plan2.sceneRequest) await checkSceneDeployment(plan2.sceneRequest, plan2.tool, plan2.args);
   return saveVideoPlan(plan2);
@@ -122098,9 +122185,17 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     if (!parent) throw new Error("video_parent_missing: name a different existing request for this shot");
   }
   const { selection } = context2;
+  const cast = (context2.sceneMembers ?? [context2.shot]).flatMap(requiredCharacters);
+  if (cast.length && (!tool2 || !VIDEO_ADAPTERS[tool2]))
+    throw new Error("character_inputs_unsupported: the selected route cannot verify the required character inputs");
+  const sourceBinder = tool2 ? VIDEO_ADAPTERS[tool2]?.bindCharacterSources : void 0;
+  if (cast.some((person) => person.face.taskId) && !sourceBinder)
+    throw new Error("character_face_source_unsupported: the selected adapter cannot use a Seedance original for facial identity");
   if (selection.engine === "seedance") {
     const { seedanceMedia } = load7(shared2);
     const media = seedanceMedia(context2.shot);
+    if (input.args.realFaceInput === false && (media.realFaceInput === true || cast.length && media.realFaceInput !== false))
+      throw new Error("character_inputs_mismatch: the request cannot disable the storyboard portrait declaration");
     for (const key of ["referenceVideoPaths", "referenceAudioPaths"]) {
       const paths3 = media[key];
       if (Array.isArray(paths3)) media[key] = paths3.map((file) => path24.resolve(context2.episode, "storyboard", file));
@@ -122135,6 +122230,15 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     );
     bindRegisteredPanels(request, context2.episode, context2.board);
     const missing = [];
+    for (const member of context2.sceneMembers) {
+      for (const person of requiredCharacters(member)) {
+        const required2 = [person.face.path, person.bodyPath].filter((file) => Boolean(file));
+        for (const file of required2) if (!request.images.some((image2) => image2.shotId === member.id && image2.path === fs18.realpathSync(path24.resolve(context2.episode, "storyboard", file))))
+          missing.push(member.id + ": missing character panel for " + person.character);
+        if (person.voiceRequired && !request.shots.find((s2) => s2.shotId === member.id)?.dialogue?.some((d) => d.speaker === person.character && d.voice?.provenance === "pinned_settings_and_bytes"))
+          missing.push(member.id + ": missing required voice sample for " + person.character);
+      }
+    }
     for (const shot2 of request.shots) {
       const binding = input.shotBindings?.find((b) => b.shotId === shot2.shotId);
       const at = shot2.shotId + "@" + shot2.startFrame;
@@ -122177,6 +122281,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
       shotId: context2.shotId,
       requestId: input.requestId,
       sceneRendering: input.sceneRendering,
+      ...cast.length ? { characterInputs: cast } : {},
       ...input.shotBindings ? { shotBindings: input.shotBindings } : {},
       sceneRequest: request,
       tool: tool3,
@@ -122364,6 +122469,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     if (!exact) bound = resolveVideoDuration(tool2, { ...bound, requiredSeconds: durationPlan.requiredSeconds }).args;
   }
   const bindImages = (args2) => {
+    if (cast.length && sourceBinder) args2 = sourceBinder(args2, cast);
     if (timedImages2) return { args: args2, imageBindings: timedImages2.imageBindings };
     if (sceneRequest && !sceneRequest.images.length) return { args: args2, imageBindings: void 0 };
     const images2 = prepareVideoImages(tool2, args2, shot, context2.episode);
@@ -122380,6 +122486,16 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     direction = directionOf(compiled);
     images = bindImages(bound);
     voice = prepareVideoVoice(tool2, images.args, { ...context2, shot, msrVoice: genaiMsrVoiceReferences() });
+  }
+  for (const person of cast) {
+    for (const panel of [person.face.path, person.bodyPath]) {
+      if (!panel) continue;
+      const file = fs18.realpathSync(path24.resolve(context2.episode, "storyboard", panel));
+      if (!images.imageBindings?.some((ref) => ref.path === file && ref.submitted))
+        throw new Error("character_inputs_unsupported: " + tool2 + " cannot carry the required panel for " + person.character);
+    }
+    if (person.voiceRequired && !voice.voiceContinuity?.speakers.some((s2) => s2.speaker === person.character && s2.reference?.provenance === "pinned_settings_and_bytes" && s2.audioIndex))
+      throw new Error("character_voice_required: " + tool2 + " cannot bind the selected voice sample for " + person.character);
   }
   const args = parseVideoArgs(tool2, voice.args);
   const adaptiveDuration = selection.engine === "seedance" && args.durationSeconds === -1;
@@ -122450,6 +122566,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
   const quote = quoteFor(tool2, args);
   const body = {
     ...take,
+    ...cast.length ? { characterInputs: cast } : {},
     ...sceneRequest ? { sceneRequest: { ...sceneRequest, prompt: String(args.prompt) } } : {},
     version: 1,
     episode: context2.episode,
@@ -122630,7 +122747,7 @@ async function executeVideo(raw, dispatch) {
     else if (terminal && job.tokens !== void 0 && plan2.quote.tokenRate !== void 0) job.settledUsd = job.tokens * plan2.quote.tokenRate / 1e6;
   });
   const startedAt = Date.now();
-  let ok = false, portraitPreflightBlocked = false;
+  let ok = false, seedancePreflightBlocked = false;
   try {
     const result = await videoEvents.run({
       submitted: (providerId) => videoTransaction(episode, (state) => {
@@ -122646,13 +122763,13 @@ async function executeVideo(raw, dispatch) {
       }
     }, () => plan2.sceneRendering ? executeShotRenderPlan(plan2, stagedScene) : dispatch(plan2.tool, plan2.args));
     if (result.isError) {
-      if (plan2.selection.engine === "seedance" && result.structuredContent?.stage === "modelark_portrait" && result.structuredContent.videoSubmitted === false) {
+      if (plan2.selection.engine === "seedance" && ["modelark_portrait", "seedance_original_lookup"].includes(String(result.structuredContent?.stage)) && result.structuredContent?.videoSubmitted === false) {
         videoTransaction(episode, (state) => {
           const job = state.jobs[plan2.requestId];
           if (!job || job.providerId || job.status !== "submitting") throw new Error("video_request_pending: reconcile provider submission before retrying");
           delete state.jobs[plan2.requestId];
         });
-        portraitPreflightBlocked = true;
+        seedancePreflightBlocked = true;
         return result;
       }
       settle(result.terminal === true, result.content.map((item) => item.type === "text" ? item.text : "").join("\n").slice(0, 1e3), result);
@@ -122686,7 +122803,7 @@ async function executeVideo(raw, dispatch) {
       ok,
       ms: Date.now() - startedAt,
       ...price,
-      ...portraitPreflightBlocked ? { quantity: 0 } : {},
+      ...seedancePreflightBlocked ? { quantity: 0 } : {},
       note: "Managed routing estimate; authoritative reservations and provider tokens: .work/video-routing/state.json",
       detail: { requestId: plan2.requestId, planId: plan2.id, reserveUsd: plan2.quote.reserveUsd }
     });
@@ -123487,7 +123604,14 @@ var cameraSchema = external_exports.record(external_exports.unknown()).superRefi
   for (const message of cameraContract().cameraInputErrors(value))
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
 });
-var visualSchema = external_exports.object({ camera: cameraSchema.optional() }).passthrough();
+var visualSchema = external_exports.object({
+  camera: cameraSchema.optional(),
+  characterInputs: external_exports.array(external_exports.object({
+    character: external_exports.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+    bodyView: external_exports.enum(["front", "back"]).optional().describe("Body panel for this actor when the camera view is ambiguous"),
+    faceTaskId: external_exports.string().regex(/^cgt-[A-Za-z0-9_-]{1,120}$/).optional().describe("Eligible same-account Seedance original selected for this actor\u2019s face")
+  }).strict()).nonempty().optional()
+}).passthrough();
 var shotIdSchema = external_exports.string().regex(/^s\d{4,}$/);
 var shotSchema = external_exports.object({
   id: shotIdSchema.optional(),
@@ -132400,6 +132524,11 @@ Returns: a text block with the saved .mp4 file path, reference image, video and 
           items: { type: "string" },
           maxItems: 10,
           description: "Absolute paths to local reference videos \u2014 the Blender previz lane (blender_render_previz output as the vendor's clay-model reference) \u2014 mp4 or mov (H.264/H.265), 200MB each at most, 24\u201360 fps, 407,696\u20138,847,360 pixels a frame on 2.5, up to 8,295,044 on 2.0 (720\xD71280 and 1080\xD71920 both pass). dreamina-seedance-2-5-260628 takes up to 10 clips, Flash takes 5, both 2\u201330s (4\u201330s for editing, 30s total); the 2.0 series up to 3 clips of 2\u201315s (15s total). Checked with ffprobe before anything is published or billed. Each file is served to the vendor through MEDIA_UPLOAD_URL (+ MEDIA_UPLOAD_API_KEY) when set, otherwise through a cloudflared quick tunnel for the life of the task. @Video N in the prompt is the Nth entry here (referenceVideoUrls continue the numbering after these). No real human faces \u2014 the same moderation as images."
+        },
+        referenceVideoTaskIds: {
+          type: "array",
+          items: { type: "string" },
+          description: "Completed same-account Seedance 2.x task IDs. Original video URLs are resolved from ModelArk before submission. These video slots follow local videos and referenceVideoUrls."
         },
         referenceVideoUrls: {
           type: "array",
@@ -144041,7 +144170,7 @@ function recordCharacterPanel(request) {
 }
 
 // src/handlers.ts
-function portraitBlocked(report) {
+function seedancePreflightError(report) {
   return { isError: true, terminal: true, structuredContent: report, content: [{ type: "text", text: JSON.stringify(report) }] };
 }
 function text3(message, isError = false) {
@@ -144880,7 +145009,7 @@ Size and length are inherited from the source.`
     try {
       return text3(JSON.stringify(await ensurePortrait(parseArgs(portraitAssetSchema, args))));
     } catch (error2) {
-      if (error2 instanceof PortraitError) return portraitBlocked(error2.report);
+      if (error2 instanceof PortraitError) return seedancePreflightError(error2.report);
       throw error2;
     }
   },
@@ -144895,7 +145024,7 @@ Prompt: ${result.prompt}`);
   },
   seedance_img2video: async (args) => {
     const result = await generateFromImage3(parseArgs(seedanceImg2VideoSchema, args));
-    if (result.portraitProblem) return portraitBlocked(result.portraitProblem);
+    if (result.portraitProblem) return seedancePreflightError(result.portraitProblem);
     if (!result.success) return { ...text3(`Seedance video generation from image failed: ${result.error}`, true), terminal: result.terminal === true };
     const lastImageInfo = result.lastImage ? `
 Last Frame Image: ${result.lastImage}` : "";
@@ -144911,7 +145040,8 @@ Prompt: ${result.prompt}`
   },
   seedance_reference: async (args) => {
     const result = await generateWithReferences(parseArgs(seedanceReferenceSchema, args));
-    if (result.portraitProblem) return portraitBlocked(result.portraitProblem);
+    if (result.originalProblem) return seedancePreflightError(result.originalProblem);
+    if (result.portraitProblem) return seedancePreflightError(result.portraitProblem);
     if (!result.success) return { ...text3(`Seedance video generation with references failed: ${result.error}`, true), terminal: result.terminal === true };
     const refImagesInfo = result.referenceImages?.length ? `
 Reference Images (${result.referenceImages.length}):

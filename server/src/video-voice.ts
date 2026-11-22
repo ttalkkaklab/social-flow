@@ -5,7 +5,7 @@ import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { VIDEO_ADAPTERS, VENDOR_REFERENCE_TOOLS, referenceLabel } from './video-registry.js';
+import { VIDEO_ADAPTERS, VENDOR_REFERENCE_TOOLS, requiredCharacters, referenceLabel } from './video-registry.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { sceneVoiceDirection } from './video-prompt.js';
 import { z } from 'zod';
@@ -75,21 +75,34 @@ export function resolveCharacterVoice(character: Record<string, unknown>, contex
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) return character;
   let channel = context.episode;
   while (!existsSync(path.join(channel, 'profile.md')) && path.dirname(channel) !== channel) channel = path.dirname(channel);
-  const folder = path.join(channel, 'assets/characters', id), identity = path.join(folder, 'identity.md');
+  const required = requiredCharacters(context.shot).find(person => person.character === id);
+  const folder = required ? path.dirname(path.resolve(context.episode, 'storyboard', required.bodyPath)) : path.join(channel, 'assets/characters', id);
+  const identity = path.join(folder, 'identity.md');
   let resolved = character;
-  if (!Object.keys(object(character.tts)).length && existsSync(identity)) {
+  const pinnedSettings = Object.keys(object(character.tts)).length > 0;
+  if ((!pinnedSettings || required && !object(character.voiceReference).path) && existsSync(identity)) {
     try {
       const { handoff } = load('../../skills/channel/references/character-sheet.js') as {
         handoff(file: string, options?: { voiceOnly: boolean }): Record<string, unknown>;
       };
       const current = handoff(identity, { voiceOnly: character.voiceOnly === true });
-      resolved = { ...current, ...character, tts: current.tts };
+      if (!pinnedSettings || hash(current.tts) === hash(character.tts)) {
+        resolved = { ...current, ...character, tts: current.tts };
+        if (required && !object(resolved.voiceReference).path) {
+          const sample = path.join(folder, 'voice.wav');
+          const selected = object(current.voiceSelection).audioSha256;
+          if (typeof selected === 'string' && existsSync(sample) && fileHash(sample) === selected)
+            resolved = { ...resolved, voiceReference:{ path:sample, sha256:selected, tts:current.tts } };
+          else if (current.voiceReference) resolved.voiceReference = current.voiceReference;
+        }
+      }
     } catch (error) {
       warnings.push(`${id}: cannot read the selected character voice: ${error instanceof Error ? error.message : String(error)}`);
       return character;
     }
   }
   const reference = object(resolved.voiceReference);
+  if (required) return {...resolved, voiceReference:{...reference, imagePaths:[required.face.path,required.bodyPath].filter(Boolean)}};
   // Existing ownership wins. Otherwise use only authored character images inside this character's folder.
   if (!Array.isArray(reference.imagePaths) && existsSync(folder)) {
     const root = realpathSync(folder) + path.sep;
@@ -148,7 +161,9 @@ function msrSubject(character: Record<string, unknown>, refs: Record<string, unk
   let ownedPaths: string[];
   const declared = ([] as unknown[]).concat(object(context.shot.visual).character ?? [])
     .map(entry => typeof entry === 'string' ? entry : text(object(entry).id));
-  if ((declared.includes(text(character.id)) || context.sceneDirection?.openingPositions.some(p => p.character === character.id && p.images.length)) && existsSync(path.join(context.episode, 'storyboard', 'cast.json'))) {
+  if (requiredCharacters(context.shot).some(person => person.character === character.id)) {
+    ownedPaths = (owned as string[]).map(file => realpathSync(path.resolve(context.episode, 'storyboard', file)));
+  } else if ((declared.includes(text(character.id)) || context.sceneDirection?.openingPositions.some(p => p.character === character.id && p.images.length)) && existsSync(path.join(context.episode, 'storyboard', 'cast.json'))) {
     const { sheetPanels, canonicalReferences } = load('../../skills/channel/references/character-panels.js') as {
       sheetPanels(dir: string, ids: string[]): Map<string, Record<string, string>>;
       canonicalReferences(dir: string, shotId: string, ids: string[], use: string, options: { combined: boolean }): Array<{ path: string }>;

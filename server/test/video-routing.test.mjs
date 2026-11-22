@@ -1323,3 +1323,120 @@ test('a blocked ModelArk portrait releases the reservation so the same approved 
   assert.equal(calls,1);
   assert.equal(f.state().jobs.a.providerId,'cgt-after-activation');
 });
+
+test('the same character contract selects the camera-facing panel and binds the actor voice on each route', async t => {
+  const cases = [
+    {engine:'seedance', model:'dreamina-seedance-2-0-260128', resolution:'480p'},
+    {engine:'astra-genai', model:'ltx-2.5-22b-distilled', resolution:'576x1024', operation:'reference'},
+    {engine:'veo', model:'veo-3.1-generate-001', resolution:'720p'},
+  ];
+  const key = config.astraGenaiApiKey;
+  config.astraGenaiApiKey = 'fixture';
+  t.after(() => { config.astraGenaiApiKey = key; });
+  t.mock.method(globalThis, 'fetch', async () => Response.json({voice_references:true}));
+  await refreshGenaiMsrVoice(true);
+  for (const video of cases) {
+    const f = fixture(t, video);
+    const board = path.join(f.episode, 'storyboard'), folder = path.join(f.root,'assets/characters/hero');
+    fs.mkdirSync(folder, {recursive:true});
+    const panels = {};
+    for (const view of ['face','front','back']) {
+      fs.writeFileSync(path.join(folder, view+'.png'), png);
+      panels[view] = {file:view+'.png',view,purpose:'character_reference'};
+    }
+    fs.writeFileSync(path.join(folder,'panels.json'), JSON.stringify({panels}));
+    const tts = {engine:'gemini',voiceId:'Kore',language:'ko',speed:1};
+    const wav = path.join(board, 'speaker.wav');
+    execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=440:duration=2','-ar','16000',wav]);
+    const {createHash} = await import('node:crypto');
+    const sha256 = createHash('sha256').update(fs.readFileSync(wav)).digest('hex');
+    f.board.SB_DOC = {characters:[{id:'hero',tts,voiceReference:{path:wav,tts,sha256}}]};
+    const card = f.board.SCENES[0];
+    card.visual.character = 'hero';
+    card.visual.frames = {mode:'reference'};
+    card.visual.video.prompt = 'A person waves from a doorway.';
+    card.visual.video.openingPositions = [{character:'hero',images:[1,2],position:'standing in the doorway'}];
+    card.narration = [{id:'spoken',speaker:'hero',delivery:'on_screen',tts:'문 앞이야.'}];
+    const plan = () => planVideo({episode:f.episode,shotId:'s1',requestId:'cast',maxCostUsd:4}, false);
+    for (const [mode,bodyView] of [['front','front'], ['rear','back']]) {
+      card.visual.camera = {view:{mode,subjectId:'hero',subjectType:'person'}};
+      f.save();
+      if (video.engine === 'veo') {
+        assert.throws(plan, /voice_lane_required/);
+        card.narration = [];
+        f.save();
+      }
+      const p = plan();
+      assert.equal(p.characterInputs[0].bodyView, bodyView);
+      assert.deepEqual(p.imageBindings.filter(ref => ref.submitted).map(ref => path.basename(ref.path)), ['face.png',bodyView+'.png']);
+      if (video.engine === 'astra-genai') assert.equal(p.args.references[0].audioPath, wav);
+      if (video.engine === 'seedance') assert.deepEqual(p.args.referenceAudioPaths, [wav]);
+      if (video.engine !== 'veo') {
+        assert.equal(p.voiceContinuity.speakers[0].reference.sha256, sha256);
+        assert.match(p.args.prompt, /문 앞이야/);
+      }
+      card.narration = [{id:'spoken',speaker:'hero',delivery:'on_screen',tts:'문 앞이야.'}];
+    }
+    if (video.engine === 'seedance') {
+      fs.writeFileSync(path.join(board,'bag.png'),png);
+      card.visual.references = [
+        {id:'prop',path:'bag.png',role:'prop',use:'video',purpose:'A green bag.'},
+        {id:'portrait',path:path.join(folder,'face.png'),role:'character',use:'both',purpose:'Preserve the scar.'},
+      ];
+      card.visual.video.realFaceInput = true;
+      card.visual.video.prompt = 'Image 1 is the green bag. Image 2 is the face.';
+      f.save();
+      const ordered = plan();
+      assert.deepEqual(ordered.args.referenceImagePaths.map(file=>path.basename(file)), ['bag.png','face.png','back.png']);
+      assert.deepEqual(ordered.imageBindings.map(r=>r.id), ['prop','portrait','s1-hero-back']);
+      assert.match(ordered.args.prompt,/Preserve the scar/);
+      assert.throws(() => planVideo({episode:f.episode,shotId:'s1',requestId:'bypass',args:{realFaceInput:false}}), /character_inputs_mismatch/);
+      delete f.board.SB_DOC.characters[0].voiceReference;
+      f.save();
+      assert.throws(plan, /character_voice_required/);
+    }
+  }
+});
+
+test('Seedance original face IDs are checked on the account before saving a plan and never persist a signed URL', async t => {
+  const f = fixture(t, {engine:'seedance',model:'dreamina-seedance-2-0-260128',resolution:'480p'});
+  const board = path.join(f.episode,'storyboard'), sheet = path.join(f.root,'assets/characters/hero');
+  fs.mkdirSync(sheet,{recursive:true});
+  fs.writeFileSync(path.join(sheet,'body.png'),png);
+  fs.writeFileSync(path.join(sheet,'panels.json'),JSON.stringify({panels:{front:{file:'body.png'}}}));
+  const card = f.board.SCENES[0];
+  card.visual = {character:'hero', frames:{mode:'reference'}, video:{prompt:'A full-length dancer taps one shoe.'},
+    characterInputs:[{character:'hero',bodyView:'front',faceTaskId:'cgt-original'}]};
+  f.save();
+  const model = 'dreamina-seedance-2-0-260128', original = 'https://example.org/file?signature=private';
+  const task = {id:'cgt-original',model,status:'succeeded',duration:4,created_at:Math.floor(Date.now()/1000),content:{video_url:original}};
+  let remote = task;
+  const calls = [];
+  t.mock.method(globalThis,'fetch',async (url, options) => {
+    assert.ok(url.endsWith('/cgt-original')); assert.ok(options.headers.Authorization);
+    calls.push(options.method ?? 'GET');
+    return Response.json(remote, {status:remote.status === 'missing' ? 404 : 200});
+  });
+  const {planManagedVideo} = await import('../dist/video-routing.js');
+  const args = {episode:f.episode,shotId:'s1',requestId:'trusted',args:{durationSeconds:4}};
+  for (const bad of [{status:'running'}, {id:'other'}, {created_at:0}, {status:'missing'}, {duration:90}]) {
+    remote = {...task,...bad};
+    await assert.rejects(planManagedVideo(args), /seedance_original_|different task ID|404/);
+  }
+  remote = task;
+  const p = await planManagedVideo(args);
+  assert.deepEqual(p.args.referenceVideoTaskIds,[task.id]);
+  assert.ok(p.quote.tokenRate > 0);
+  assert.match(p.args.prompt,/Video 1 only for hero/);
+  assert.ok(!JSON.stringify(p).includes(original));
+  assert.deepEqual(calls,Array(6).fill('GET'));
+  assert.ok(fs.existsSync(path.join(board,'scenes.js')));
+  remote = {...task,status:'missing'};
+  const blocked = await ROUTES.video_execute({episode:f.episode,planId:p.id});
+  assert.equal(blocked.structuredContent.stage,'seedance_original_lookup');
+  assert.equal(blocked.structuredContent.videoSubmitted,false);
+  assert.deepEqual(f.state().jobs,{});
+  const again = await ROUTES.video_execute({episode:f.episode,planId:p.id});
+  assert.equal(again.structuredContent.videoSubmitted,false);
+  assert.deepEqual(calls,Array(8).fill('GET'));
+});

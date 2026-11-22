@@ -516,6 +516,7 @@
         "referenceImagePaths",
         "referenceAudioPaths",
         "referenceVideoPaths",
+        "referenceVideoTaskIds",
         "referenceVideoUrls",
         "ratio"
       ],

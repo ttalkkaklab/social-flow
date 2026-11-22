@@ -295,6 +295,7 @@ Store the selection fields beside the prompt: `visual.video` for motion backgrou
 | `referenceImagePaths` | Planned character/product panel paths, in prompt reference order; one source frame is not a reference set |
 | `referenceAudioPaths` | Voice samples in prompt order. On 2.0 include an image or video. |
 | `referenceVideoPaths`, `referenceVideoUrls` | Local storyboard paths and public URLs or library assets. Inputs count toward the video rate. |
+| `referenceVideoTaskIds` | Eligible completed same-account Seedance originals. Each receives a video slot after local videos and URLs and counts toward the video-input price. Use the actor’s `visual.characterInputs[].faceTaskId` when that original supplies the face. |
 | `omniReferenceTaskType` | 2.5 and Flash accept `auto`, `reference`, `edit`, or `extend`. Editing keeps the input duration. |
 | `previz` | `{ renderer, clip, firstFrame, sha256, fps, seconds, camera: { movement }, handoff?, actors?, blend? }` with `modelPurpose:"previz"` — the clip rendered at the billed length, `referenceImagePaths[0]` the source still, no end frame; billed as input + output seconds on the `…-video` price rows. On `engine:"host"` the same record carries `handoff:"frame_and_prompt"` and none of the Seedance fields |
 | `model` | Optional exact model ID; omit to use the purpose-based selection. An explicit override must pass the same capability checks |
@@ -302,15 +303,7 @@ Store the selection fields beside the prompt: `visual.video` for motion backgrou
 
 For a photoreal portrait, keep its authored framing and register the corresponding character sheet. A missing library entitlement pauses the approved request until the user activates it.
 
-Produce reads each Seedance row's `generation` object from `cost-preview.js --json` and
-uses its `tool`, `model`, `resolution`, `generateAudio`, and reference paths as the `video_plan`
-operation args, with `requiredSeconds` from `plan-video-duration.js` for the length
-(video-duration.md; the legacy `durationSeconds` is not sent beside it). Resolve relative reference paths from the storyboard directory.
-Add the stored prompt and source/output paths. Do not send planning fields such as
-`modelPurpose`, `modelReason`, `priceKey`, or `kind` as tool arguments.
-`seedance_img2video` takes the existing source still; `seedance_reference` takes the
-resolved reference paths, and on a previz cut `referenceVideoPaths` too. Bind image/video/audio
-indices in the stored prompt before approval.
+Use each Seedance row’s `generation` object to review the forecast. Call `video_plan` with the episode, scene or shot, and request ID. The managed planner reads the prompt, selected model, character panels, voice samples and previz from the storyboard. Compare its actual image, video and audio slots to the authored direction before approval. Set `maxCostUsd` when the user has specified a cap. For a shot that needs a duration override, use `requiredSeconds` from `plan-video-duration.js` or the exact duration field by itself.
 
 The forecast bills the model's minimum duration and rounds fractional used seconds up;
 a 3-second scene therefore pays for 4 seconds. It rejects overlong scenes. Changing

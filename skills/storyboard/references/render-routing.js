@@ -98,7 +98,7 @@
    const paths=v.references.filter(r=>r&&['video','both'].includes(r.use)).map(r=>r.path);
    if(JSON.stringify(paths)!==JSON.stringify(settings.referenceImagePaths))bad('legacy referenceImagePaths disagree with authored video references');
   }
-  const videoOrAudio=[settings.referenceVideoPaths,settings.referenceVideoUrls,settings.referenceAudioPaths].some(list=>Array.isArray(list)&&list.length);
+  const videoOrAudio=[settings.referenceVideoPaths,settings.referenceVideoUrls,settings.referenceVideoTaskIds,settings.referenceAudioPaths,v.characterInputs].some(list=>Array.isArray(list)&&list.length);
   if(v.frames?.mode==='reference'&&!videoOrAudio&&!v.references.some(r=>r&&['video','both'].includes(r.use)))bad('reference mode needs video references');
   if(v.frames?.mode==='first'&&!draft&&!text(framePlan(scene).start))bad('first mode needs a start image');
   return errors;

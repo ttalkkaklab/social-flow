@@ -2322,6 +2322,10 @@ Returns: a text block with the saved .mp4 file path, reference image, video and 
                     maxItems: 10,
                     description: 'Absolute paths to local reference videos — the Blender previz lane (blender_render_previz output as the vendor\'s clay-model reference) — mp4 or mov (H.264/H.265), 200MB each at most, 24–60 fps, 407,696–8,847,360 pixels a frame on 2.5, up to 8,295,044 on 2.0 (720×1280 and 1080×1920 both pass). dreamina-seedance-2-5-260628 takes up to 10 clips, Flash takes 5, both 2–30s (4–30s for editing, 30s total); the 2.0 series up to 3 clips of 2–15s (15s total). Checked with ffprobe before anything is published or billed. Each file is served to the vendor through MEDIA_UPLOAD_URL (+ MEDIA_UPLOAD_API_KEY) when set, otherwise through a cloudflared quick tunnel for the life of the task. @Video N in the prompt is the Nth entry here (referenceVideoUrls continue the numbering after these). No real human faces — the same moderation as images.',
                 },
+                referenceVideoTaskIds: {
+                    type: 'array', items: { type: 'string' },
+                    description: 'Completed same-account Seedance 2.x task IDs. Original video URLs are resolved from ModelArk before submission. These video slots follow local videos and referenceVideoUrls.',
+                },
                 referenceVideoUrls: {
                     type: 'array',
                     items: { type: 'string' },

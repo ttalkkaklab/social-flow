@@ -34,7 +34,7 @@ export function quoteVideo(tool: string, args: Record<string, unknown>): VideoQu
   if (tool.startsWith('seedance_')) {
     const model = String(args.model), resolution = String(args.resolution);
     const spec = SEEDANCE_MODEL_SPECS[model as SeedanceModel];
-    const hasVideo = ['referenceVideoPaths', 'referenceVideoUrls'].some(k => Array.isArray(args[k]) && args[k].length);
+    const hasVideo = ['referenceVideoPaths', 'referenceVideoUrls', 'referenceVideoTaskIds'].some(k => Array.isArray(args[k]) && args[k].length);
     const rates = TOKEN_RATES[model];
     const index = resolution === '4k' ? 4 : resolution === '1080p' ? 2 : 0;
     const tokenRate = rates?.[index + (hasVideo ? 1 : 0)];

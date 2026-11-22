@@ -3695,6 +3695,13 @@ window.STORYBOARD_READY = (async function () {
         var config = Object.assign({}, v, slot[0] === "motion" ? v.video : slot[0] === "quote" ? v.clip : {});
         var fields = ["model", "modelPurpose", "modelReason", "resolution", "generateAudio", "realFaceInput", "referenceImagePaths", "referenceAudioPaths", "previz", "frames", "references"];
         var settings = fields.map(function (key) { return config[key] === undefined ? null : config[key]; });
+        var media = slot[0] === "broll" ? Object.assign({}, v.video, v) : config;
+        var extra = {};
+        ["referenceVideoPaths", "referenceVideoUrls", "referenceVideoTaskIds", "omniReferenceTaskType", "durationSeconds"].forEach(function (key) {
+          if (media[key] !== undefined) extra[key] = media[key];
+        });
+        if (v.characterInputs !== undefined) extra.characterInputs = v.characterInputs;
+        if (Object.keys(extra).length) settings.push(extra);
         parts.push((i + 1) + ":" + slot.join("/") + ":" + encodeURIComponent(JSON.stringify(settings)));
       }
       var sl = v.slide;

@@ -17,7 +17,7 @@ const PRICED = new Set(Object.values(MODELS).flatMap(spec => spec.resolutions.fl
   [`seedance.${spec.family}.${res}`, `seedance.${spec.family}-video.${res}`])));
 
 // Seedance-only settings on another engine's slot would skip every check below.
-const SEEDANCE_KEYS = ['model', 'modelPurpose', 'modelReason', 'referenceImagePaths', 'referenceAudioPaths', 'previz'];
+const SEEDANCE_KEYS = ['model', 'modelPurpose', 'modelReason', 'referenceImagePaths', 'referenceAudioPaths', 'referenceVideoTaskIds', 'previz'];
 
 /** Resolve a planned shot before either forecasting or calling the generation tool. */
 function scenePlan(scene, production) {
@@ -71,6 +71,9 @@ function scenePlan(scene, production) {
   if (v.references !== undefined && references.length && v.frames?.mode !== 'reference') throw new Error('image_plan_unsupported: pinned frames cannot be combined with video references');
   const media = seedanceMedia(scene);
   const paths = media.referenceVideoPaths || [], urls = media.referenceVideoUrls || [];
+  const originals = media.referenceVideoTaskIds ?? [];
+  if (!Array.isArray(originals) || originals.some(id => typeof id !== 'string' || !/^cgt-[A-Za-z0-9_-]{1,120}$/.test(id)))
+    throw new Error('referenceVideoTaskIds must contain Seedance generation task IDs');
   const voices = media.referenceAudioPaths || [];
   for (const [name, values] of [['referenceImagePaths', references], ['referenceAudioPaths', voices], ['referenceVideoPaths', paths], ['referenceVideoUrls', urls]]) {
     if (!Array.isArray(values) || values.some(x => typeof x !== 'string' || !x.trim()))
@@ -99,7 +102,7 @@ function scenePlan(scene, production) {
   const operation = settings.operation || (saved && selectOperation(settings, [scene]).operation);
   const spoken = (scene.narration || []).some(line => line.tts?.trim() && ['on_screen', 'off_screen'].includes(line.delivery));
   const needsVoice = purpose === 'fixed-voice' || voices.length > 0;
-  const videoCount = paths.length + urls.length;
+  const videoCount = paths.length + urls.length + originals.length;
   const task = media.omniReferenceTaskType;
   const needsReference = videoCount > 0 || Boolean(task) || operation === 'reference' || purpose === 'reference' || referencePreviz || references.length > 0 || needsVoice;
   const suggested = needsVoice || references.length > 9 ? 'dreamina-seedance-2-5-260628'
@@ -114,7 +117,7 @@ function scenePlan(scene, production) {
     throw new Error('Editing and extension require a video and adaptive ratio');
   if (referencePreviz && !spec.videos)
     throw new Error(model + ' takes no reference video — use previz.handoff:"frame_and_prompt" and omit reference arrays, or choose a model with video input');
-  if (spec.images && !saved && typeof settings.realFaceInput !== 'boolean')
+  if (spec.images && !saved && typeof media.realFaceInput !== 'boolean')
     throw new Error('Specify realFaceInput:false for ordinary media or true for reviewed ModelArk portrait assets');
   if (needsReference && !spec.images) throw new Error(model + ' does not accept reference images/audio');
   if (references.length > spec.images) throw new Error(model + ' accepts at most ' + spec.images + ' reference images');
@@ -156,12 +159,13 @@ function scenePlan(scene, production) {
     throw new Error(model + ' has no price for ' + resolution +
       (priced.length ? ' — this model is billed at ' + priced.join(', ') : ' — this model has no price row'));
   }
-  return { kind, engine, model, resolution, ...(typeof settings.realFaceInput === 'boolean' ? {realFaceInput:settings.realFaceInput} : {}), durationSeconds: adaptive ? -1 : outputSeconds, generateAudio,
+  return { kind, engine, model, resolution, ...(typeof media.realFaceInput === 'boolean' ? {realFaceInput:media.realFaceInput} : {}), durationSeconds: adaptive ? -1 : outputSeconds, generateAudio,
     tool: needsReference ? 'seedance_reference' : operation === 'text' ? 'seedance_text2video' : 'seedance_img2video',
     referenceImagePaths: references, referenceAudioPaths: voices,
     ...(settings.lastImagePath ? { lastImagePath: settings.lastImagePath } : {}),
     // The vendor bills input + output seconds when a video is attached.
     ...(paths.length ? { referenceVideoPaths: paths } : {}), ...(urls.length ? { referenceVideoUrls: urls } : {}),
+    ...(originals.length ? { referenceVideoTaskIds: originals } : {}),
     ...(task ? { omniReferenceTaskType: task } : {}),
     ...(adaptive || videoCount ? { billedSeconds: outputSeconds + inputSeconds } : {}),
     priceKey,

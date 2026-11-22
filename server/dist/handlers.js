@@ -63,7 +63,7 @@ import { renderCapabilityStatus } from './capability-status.js';
 import { DURATION_TOOLS, resolveVideoDuration } from './video-duration.js';
 import { manageCharacter } from './character-manage.js';
 import { characterPanelRequest, characterPanelSchema, recordCharacterPanel } from './character-panel.js';
-function portraitBlocked(report) {
+function seedancePreflightError(report) {
     return { isError: true, terminal: true, structuredContent: report, content: [{ type: 'text', text: JSON.stringify(report) }] };
 }
 function text(message, isError = false) {
@@ -986,7 +986,7 @@ export const ROUTES = {
         }
         catch (error) {
             if (error instanceof PortraitError)
-                return portraitBlocked(error.report);
+                return seedancePreflightError(error.report);
             throw error;
         }
     },
@@ -999,7 +999,7 @@ export const ROUTES = {
     seedance_img2video: async (args) => {
         const result = await seedance.generateFromImage(parseArgs(seedance.seedanceImg2VideoSchema, args));
         if (result.portraitProblem)
-            return portraitBlocked(result.portraitProblem);
+            return seedancePreflightError(result.portraitProblem);
         if (!result.success)
             return { ...text(`Seedance video generation from image failed: ${result.error}`, true), terminal: result.terminal === true };
         const lastImageInfo = result.lastImage ? `\nLast Frame Image: ${result.lastImage}` : '';
@@ -1008,8 +1008,10 @@ export const ROUTES = {
     },
     seedance_reference: async (args) => {
         const result = await seedance.generateWithReferences(parseArgs(seedance.seedanceReferenceSchema, args));
+        if (result.originalProblem)
+            return seedancePreflightError(result.originalProblem);
         if (result.portraitProblem)
-            return portraitBlocked(result.portraitProblem);
+            return seedancePreflightError(result.portraitProblem);
         if (!result.success)
             return { ...text(`Seedance video generation with references failed: ${result.error}`, true), terminal: result.terminal === true };
         const refImagesInfo = result.referenceImages?.length

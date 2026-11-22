@@ -18,12 +18,27 @@ import { heygenImg2VideoSchema, heygenReferenceSchema } from './heygen-video.js'
  * Engines with no voice lane at all (Veo, Gemini Omni, Seedance 1.x) left the plugin on 2026-10-31.
  */
 export type VoiceLane = 'reference' | 'supplied' | 'none';
+export interface CharacterVideoInput {
+  character: string;
+  face: { path: string; taskId?: never } | { taskId: string; path?: never };
+  bodyView: 'front' | 'back';
+  bodyPath: string;
+  voiceRequired: boolean;
+}
+
+export function requiredCharacters(shot: Record<string, unknown>): CharacterVideoInput[] {
+  const inputs = (shot.visual as { characterInputs?: CharacterVideoInput[] } | undefined)?.characterInputs;
+  // Scene preview also reads authored cards before the sheet resolver has supplied local paths.
+  return Array.isArray(inputs) ? inputs.filter(person => person?.face && typeof person.bodyPath === 'string') : [];
+}
+
 export interface VideoAdapter {
   engine: string;
   deployment: string;
   operation: string;
   schema: z.ZodTypeAny;
   voice: VoiceLane;
+  bindCharacterSources?: (args: Record<string, unknown>, cast: CharacterVideoInput[]) => Record<string, unknown>;
 }
 const entry = (engine: string, deployment: string, operation: string, schema: z.ZodTypeAny): VideoAdapter =>
   ({ engine, deployment, operation, schema, voice: operation === 'audio' ? 'supplied' : 'none' });
@@ -33,7 +48,29 @@ const reference = (engine: string, deployment: string, schema: z.ZodTypeAny): Vi
 export const VIDEO_ADAPTERS: Readonly<Record<string, VideoAdapter>> = Object.freeze({
   seedance_text2video: entry('seedance', 'byteplus', 'text', seedance.seedanceText2VideoSchema),
   seedance_img2video: entry('seedance', 'byteplus', 'image', seedance.seedanceImg2VideoSchema),
-  seedance_reference: reference('seedance', 'byteplus', seedance.seedanceReferenceSchema),
+  seedance_reference: {
+    ...reference('seedance', 'byteplus', seedance.seedanceReferenceSchema),
+    bindCharacterSources(args, cast) {
+      const originals = new Map<string, string>();
+      for (const person of cast) {
+        const id = person.face.taskId;
+        if (!id) continue;
+        if (originals.has(id) && originals.get(id) !== person.character)
+          throw new Error('character_face_source_ambiguous: each facial reference needs one identifiable character');
+        originals.set(id, person.character);
+      }
+      const taskIds = [...originals.keys()];
+      if (args.realFaceInput === false && taskIds.length ||
+          taskIds.length && args.referenceVideoTaskIds !== undefined && JSON.stringify(args.referenceVideoTaskIds) !== JSON.stringify(taskIds))
+        throw new Error('character_inputs_mismatch: use the face sources declared on the storyboard');
+      const videos = [args.referenceVideoPaths, args.referenceVideoUrls];
+      const offset = videos.reduce<number>((count, files) => count + (Array.isArray(files) ? files.length : 0), 0);
+      const notes = [...originals.values()].map((character, index) =>
+        `Use Video ${offset + index + 1} only for ${character} facial identity, hair and headwear. Follow the new shot framing, action and dialogue.`);
+      return { ...args, realFaceInput: args.realFaceInput ?? true,
+        ...(taskIds.length ? { referenceVideoTaskIds: taskIds, prompt:[args.prompt, ...notes].join('\n') } : {}) };
+    },
+  },
   ...Object.fromEntries(Object.entries(DESKTOP_SCHEMAS).map(([feature, schema]) => [
     'astra_genai_desktop_' + ({ 'text-to-video': 'text2video', 'image-to-video': 'img2video', 'audio-to-video': 'audio2video' }[feature] || feature),
     entry('astra-genai-desktop', 'gateway-desktop-v1', ({ 'text-to-video': 'text', 'image-to-video': 'image', 'audio-to-video': 'audio', keyframes: 'keyframe' }[feature] || feature), schema),

@@ -225,6 +225,7 @@ export const seedanceReferenceSchema = z
     referenceImagePaths: z.array(z.string()).optional().default([]),
     referenceAudioPaths: z.array(z.string()).optional().default([]),
     referenceVideoPaths: z.array(z.string()).optional().default([]),
+    referenceVideoTaskIds: z.array(z.string().regex(/^cgt-[A-Za-z0-9_-]{1,120}$/)).optional(),
     referenceVideoUrls: z.array(z.string().url().regex(/^(?:https?:\/\/|asset:\/\/)[^/\s]+/i, 'Use a public HTTP(S) video URL or asset:// ID')).optional().default([]),
     ratio: z.enum(VALID_SEEDANCE_RATIOS).optional().default('adaptive'),
 })
@@ -239,7 +240,7 @@ export const seedanceReferenceSchema = z
             message: `${data.model} allows at most ${maxImages} reference images (requested: ${data.referenceImagePaths.length}).`,
         });
     }
-    const videoCount = data.referenceVideoPaths.length + data.referenceVideoUrls.length;
+    const videoCount = data.referenceVideoPaths.length + data.referenceVideoUrls.length + (data.referenceVideoTaskIds?.length ?? 0);
     const task = data.omniReferenceTaskType;
     if (task && !spec.referenceTaskTypes.includes(task)) {
         ctx.addIssue({ code: 'custom', path: ['omniReferenceTaskType'], message: 'Task type selection requires Seedance 2.5 or Flash.' });
@@ -407,6 +408,32 @@ export async function verifySeedanceVideo(file) {
 function checkDimensions(width, height, name) {
     if (Math.min(width, height) < 300 || Math.max(width, height) > 6000 || width / height < 0.4 || width / height > 2.5)
         throw new Error(name + ' needs 300–6000 pixels per side and a width/height ratio in [0.4, 2.5]');
+}
+/** The account-authenticated task result is the authority for the original, never a caller-supplied URL. */
+async function trustedReferenceVideos(apiKey, ids, spec) {
+    return Promise.all(ids.map(async (id) => {
+        const task = await getTask(apiKey, id);
+        const age = Date.now() / 1000 - Number(task.created_at);
+        const url = task.content?.video_url;
+        const seconds = task.duration;
+        if (task.id !== id || task.status !== 'succeeded' || !Object.hasOwn(SEEDANCE_MODEL_SPECS, task.model ?? '') ||
+            !Number.isFinite(age) || age < 0 || age >= 30 * 86400 || !url || !url.startsWith('https://'))
+            throw new Error('seedance_original_unavailable: select an accessible, completed Seedance 2.x task from this account within 30 days');
+        const [min, max] = spec.referenceVideos.clipSeconds;
+        if (typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds < min || seconds > max)
+            throw new Error('seedance_original_duration: the source task duration is outside this model’s reference limits');
+        return { url, seconds };
+    }));
+}
+/** Verify account access and eligibility at planning time without retaining signed URLs. */
+export async function checkSeedanceReferenceTasks(request) {
+    if (!request.referenceVideoTaskIds?.length)
+        return;
+    const spec = SEEDANCE_MODEL_SPECS[request.model];
+    const originals = await trustedReferenceVideos(requireArkKey(), request.referenceVideoTaskIds, spec);
+    const seconds = originals.reduce((total, item) => total + item.seconds, 0);
+    if (seconds > spec.referenceVideos.totalSeconds)
+        throw new Error('seedance_original_duration: the original videos exceed the total reference duration');
 }
 /** Poll an existing receipt once. A transient read or download failure keeps its reservation open. */
 export async function pollSeedanceTask(id) {
@@ -733,25 +760,36 @@ export async function generateWithReferences(request) {
     let posted = false;
     try {
         const spec = SEEDANCE_MODEL_SPECS[request.model];
-        const images = await prepareImages(request.referenceImagePaths, request.outputPath, request.realFaceInput, request.referenceVideoUrls.some(url => url.startsWith('asset://')));
+        let originals;
+        try {
+            originals = await trustedReferenceVideos(apiKey, request.referenceVideoTaskIds ?? [], spec);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            return { success: false, terminal: true, error: message,
+                originalProblem: { stage: 'seedance_original_lookup', videoSubmitted: false, message } };
+        }
+        const images = await prepareImages(request.referenceImagePaths, request.outputPath, request.realFaceInput, originals.length > 0 || request.referenceVideoUrls.some(url => url.startsWith('asset://')));
         const audioUris = loadReferenceAudio(request.referenceAudioPaths);
         assertRequestBudget([...images.filter(input => typeof input === 'string'), ...audioUris]);
         if (audioUris.length > 0) {
             await checkReferenceAudioDurations(request.referenceAudioPaths, spec.referenceAudio, request.model);
         }
-        let referenceVideoSeconds = 0;
+        let referenceVideoSeconds = originals.reduce((sum, item) => sum + item.seconds, 0);
         if (request.referenceVideoPaths.length > 0) {
-            referenceVideoSeconds = await checkReferenceVideos(request.referenceVideoPaths, spec.referenceVideos, request.model, request.omniReferenceTaskType === 'edit');
+            referenceVideoSeconds += await checkReferenceVideos(request.referenceVideoPaths, spec.referenceVideos, request.model, request.omniReferenceTaskType === 'edit');
         }
         // Remote media duration is checked by ModelArk. Each clip contributes at least its minimum.
         const minimumRemoteSeconds = request.omniReferenceTaskType === 'edit' ? 4 : spec.referenceVideos.clipSeconds[0];
+        if (originals.some(item => item.seconds < minimumRemoteSeconds))
+            throw new Error('Original reference video is too short for this operation');
         if (referenceVideoSeconds + request.referenceVideoUrls.length * minimumRemoteSeconds > spec.referenceVideos.totalSeconds) {
             throw new Error('Reference videos exceed the model duration limit.');
         }
         const imageUris = await resolvePortraits(images);
         const published = await publishFiles(request.referenceVideoPaths);
         try {
-            const videoUrls = [...published.urls, ...request.referenceVideoUrls];
+            const videoUrls = [...published.urls, ...request.referenceVideoUrls, ...originals.map(item => item.url)];
             // Images, then videos, then audio. The prompt's @Image N / @Video N / @Audio N count
             // each kind in its own upload order, so the caller's binding sentence ("Images 1-2 are
             // Character 1 and correspond to Audio 1") reads straight off the arrays.
@@ -779,8 +817,8 @@ export async function generateWithReferences(request) {
                 referenceAudios: request.referenceAudioPaths,
                 ...(videoUrls.length > 0
                     ? {
-                        referenceVideos: [...request.referenceVideoPaths, ...request.referenceVideoUrls],
-                        referenceVideoSeconds,
+                        referenceVideos: [...request.referenceVideoPaths, ...request.referenceVideoUrls, ...(request.referenceVideoTaskIds ?? [])],
+                        ...(request.referenceVideoUrls.length ? {} : { referenceVideoSeconds }),
                         ...(published.urls.length > 0 ? { referenceVideoRoute: published.how } : {}),
                     }
                     : {}),

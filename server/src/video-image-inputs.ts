@@ -29,6 +29,7 @@ export interface ImageBinding extends ImageMetadata {
 interface ShotVisual {
   video?: { strength?: number; referenceLayout?: 'panels' | 'combined'; openingPositions?: unknown; openingImageSha256?: string };
   character?: string | { id: string } | Array<string | { id: string }>;
+  characterInputs?: unknown;
   bystanders?: string[];
   frames?: { start?: string; end?: string; storyboardKeyframes?: Array<{file: string; startSeconds: number; description?: string; title?: string}>; keyframes?: { image: string; atSeconds: number; state: string; strength?: number }[] };
   references?: ImageReference[];
@@ -195,7 +196,7 @@ export function prepareVideoImages(tool: string, input: Record<string, unknown>,
   if (errors.length) throw new Error('image_plan_invalid: ' + errors.join('; '));
   let references = routing.imageReferences(shot);
   const rawCast = (shot.visual as Record<string, unknown> | undefined)?.character;
-  const canonicalMsr = tool === 'astra_genai_msr' && frames.mode === 'reference' && rawCast !== undefined
+  const canonicalMsr = !visual.characterInputs && tool === 'astra_genai_msr' && frames.mode === 'reference' && rawCast !== undefined
     && existsSync(path.join(episode, 'storyboard', 'cast.json'));
   if (canonicalMsr) {
     const ids = ([] as unknown[]).concat(rawCast ?? []).map(entry => typeof entry === 'string' ? entry : (entry as { id: string }).id);

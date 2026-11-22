@@ -213,6 +213,7 @@ export function priceOf(tool, args = {}) {
             return { key: null, quantity: seconds, note: `unmapped seedance model: ${model}` };
         const videos = [
             ...(Array.isArray(args.referenceVideoPaths) ? args.referenceVideoPaths : []),
+            ...(Array.isArray(args.referenceVideoTaskIds) ? args.referenceVideoTaskIds : []),
             ...(Array.isArray(args.referenceVideoUrls) ? args.referenceVideoUrls : []),
         ].filter((v) => typeof v === 'string');
         const family = videos.length ? `${base}-video` : base;

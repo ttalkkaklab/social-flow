@@ -49,6 +49,10 @@ test('Flash reference requests submit one edit or extension with its ModelArk fi
   const bodies = [];
   globalThis.fetch = async (url, init) => {
     if (init.method === 'POST') { bodies.push(JSON.parse(init.body)); return Response.json({id:'cgt-fixture'}); }
+    if (url.endsWith('/cgt-original')) return Response.json({
+      id:'cgt-original',status:'succeeded',created_at:Math.floor(Date.now()/1000),model,duration:6,
+      content:{video_url:'https://example.org/original?signed=temporary'},
+    });
     if (url.endsWith('/cgt-fixture')) return Response.json({status:'succeeded',content:{video_url:'https://example.org/result'},usage:{completion_tokens:100},duration:6});
     assert.equal(init.headers, undefined);
     return new Response(media);
@@ -64,6 +68,14 @@ test('Flash reference requests submit one edit or extension with its ModelArk fi
   assert.deepEqual(bodies.map(b => [b.model, b.omni_reference_task_type, b.ratio, b.duration, b.content[1].role]), [
     [model, 'edit','adaptive',-1,'reference_video'], [model,'extend','adaptive',6,'reference_video'],
   ]);
+  const withOriginal = seedanceReferenceSchema.parse({...base, referenceVideoUrls:[], referenceVideoTaskIds:['cgt-original'],
+    durationSeconds:6, outputPath:dir, filename:'original.mp4', realFaceInput:true});
+  const result = await generateWithReferences(withOriginal);
+  assert.equal(result.success,true);
+  assert.deepEqual(result.referenceVideos,['cgt-original']);
+  assert.equal(result.referenceVideoSeconds,6);
+  assert.deepEqual(bodies.at(-1).content[1], {type:'video_url',role:'reference_video',video_url:{url:'https://example.org/original?signed=temporary'}});
+  assert.ok(!JSON.stringify(result).includes('signed=temporary'));
 });
 
 test('local video validation precedes media hosting and paid creation', async t => {

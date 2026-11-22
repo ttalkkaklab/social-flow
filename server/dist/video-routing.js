@@ -15,12 +15,12 @@ import { config, disabledToolPatterns, disabledToolsFile, mlxServeConfigured } f
 import { resolveToolGate } from './tool-gate.js';
 import { framesForSeconds } from './astra-video-client.js';
 import { assessVideoDuration, DURATION_TOOLS, resolveVideoDuration } from './video-duration.js';
-import { VIDEO_ADAPTERS, VENDOR_REFERENCE_TOOLS, parseVideoArgs, videoPromptLimit } from './video-registry.js';
+import { VIDEO_ADAPTERS, VENDOR_REFERENCE_TOOLS, requiredCharacters, parseVideoArgs, videoPromptLimit } from './video-registry.js';
 import { ltxApiAudioSeconds } from './ltx-api-video.js';
 import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
 import { buildMinimaxBody, minimaxImg2VideoSchema, minimaxReferenceSchema } from './minimax-video.js';
 import { checkHeygenInputs, heygenImg2VideoSchema, heygenReferenceSchema } from './heygen-video.js';
-import { pollSeedanceTask, probeVideo, verifySeedanceVideo, SEEDANCE_MODEL_SPECS } from './seedance-client.js';
+import { checkSeedanceReferenceTasks, seedanceReferenceSchema, pollSeedanceTask, probeVideo, verifySeedanceVideo, SEEDANCE_MODEL_SPECS } from './seedance-client.js';
 import { saveVendorOutput } from './vendor-video.js';
 import { resolveOutputFile } from './media-utils.js';
 import { quoteVideo } from './video-pricing.js';
@@ -370,6 +370,8 @@ export async function planManagedVideo(raw) {
         await validateShotRenderPlan(plan);
         return saveVideoPlan(plan);
     }
+    if (plan.tool === 'seedance_reference' && plan.args.referenceVideoTaskIds)
+        await checkSeedanceReferenceTasks(seedanceReferenceSchema.parse(plan.args));
     await checkGenaiVideoOptions(plan.tool, plan.args);
     if (plan.sceneRequest)
         await checkSceneDeployment(plan.sceneRequest, plan.tool, plan.args);
@@ -405,9 +407,17 @@ function buildVideoPlan(input, { context, tool }, persist) {
             throw new Error('video_parent_missing: name a different existing request for this shot');
     }
     const { selection } = context;
+    const cast = (context.sceneMembers ?? [context.shot]).flatMap(requiredCharacters);
+    if (cast.length && (!tool || !VIDEO_ADAPTERS[tool]))
+        throw new Error('character_inputs_unsupported: the selected route cannot verify the required character inputs');
+    const sourceBinder = tool ? VIDEO_ADAPTERS[tool]?.bindCharacterSources : undefined;
+    if (cast.some(person => person.face.taskId) && !sourceBinder)
+        throw new Error('character_face_source_unsupported: the selected adapter cannot use a Seedance original for facial identity');
     if (selection.engine === 'seedance') {
         const { seedanceMedia } = load(shared);
         const media = seedanceMedia(context.shot);
+        if (input.args.realFaceInput === false && (media.realFaceInput === true || cast.length && media.realFaceInput !== false))
+            throw new Error('character_inputs_mismatch: the request cannot disable the storyboard portrait declaration');
         for (const key of ['referenceVideoPaths', 'referenceAudioPaths']) {
             const paths = media[key];
             if (Array.isArray(paths))
@@ -435,6 +445,17 @@ function buildVideoPlan(input, { context, tool }, persist) {
         const { request } = prepareSceneRequest(input.sceneNo, bindSceneCards(context.sceneMembers, input.shotBindings), scene, context.episode, lines, { bindDialogue: false, bindOpening: false, suffix: '', shotScoped: true }, () => undefined, context.board);
         bindRegisteredPanels(request, context.episode, context.board);
         const missing = [];
+        for (const member of context.sceneMembers) {
+            for (const person of requiredCharacters(member)) {
+                const required = [person.face.path, person.bodyPath].filter((file) => Boolean(file));
+                for (const file of required)
+                    if (!request.images.some(image => image.shotId === member.id &&
+                        image.path === fs.realpathSync(path.resolve(context.episode, 'storyboard', file))))
+                        missing.push(member.id + ': missing character panel for ' + person.character);
+                if (person.voiceRequired && !request.shots.find(s => s.shotId === member.id)?.dialogue?.some(d => d.speaker === person.character && d.voice?.provenance === 'pinned_settings_and_bytes'))
+                    missing.push(member.id + ': missing required voice sample for ' + person.character);
+            }
+        }
         for (const shot of request.shots) {
             const binding = input.shotBindings?.find(b => b.shotId === shot.shotId);
             const at = shot.shotId + '@' + shot.startFrame;
@@ -477,7 +498,7 @@ function buildVideoPlan(input, { context, tool }, persist) {
         resolveOutputFile(outputPath, filename, 'video');
         const args = { model: selection.model, resolution: selection.resolution, prompt: request.prompt, reserveUsd: settings.reserveUsd, outputPath, filename };
         const body = { ...take, version: 1, episode: context.episode, shotId: context.shotId, requestId: input.requestId,
-            sceneRendering: input.sceneRendering, ...(input.shotBindings ? { shotBindings: input.shotBindings } : {}), sceneRequest: request, tool, args, sourceArgs: input.args, inputs, selection,
+            sceneRendering: input.sceneRendering, ...(cast.length ? { characterInputs: cast } : {}), ...(input.shotBindings ? { shotBindings: input.shotBindings } : {}), sceneRequest: request, tool, args, sourceArgs: input.args, inputs, selection,
             source: context.source, contextRevision: context.revision, quote: quoteFor(tool, args), execution: 'server' };
         const plan = { ...body, id: hash(body) };
         if (persist)
@@ -644,6 +665,8 @@ function buildVideoPlan(input, { context, tool }, persist) {
             bound = resolveVideoDuration(tool, { ...bound, requiredSeconds: durationPlan.requiredSeconds }).args;
     }
     const bindImages = (args) => {
+        if (cast.length && sourceBinder)
+            args = sourceBinder(args, cast);
         if (timedImages)
             return { args, imageBindings: timedImages.imageBindings };
         if (sceneRequest && !sceneRequest.images.length)
@@ -665,6 +688,17 @@ function buildVideoPlan(input, { context, tool }, persist) {
         direction = directionOf(compiled);
         images = bindImages(bound);
         voice = prepareVideoVoice(tool, images.args, { ...context, shot, msrVoice: genaiMsrVoiceReferences() });
+    }
+    for (const person of cast) {
+        for (const panel of [person.face.path, person.bodyPath]) {
+            if (!panel)
+                continue;
+            const file = fs.realpathSync(path.resolve(context.episode, 'storyboard', panel));
+            if (!images.imageBindings?.some(ref => ref.path === file && ref.submitted))
+                throw new Error('character_inputs_unsupported: ' + tool + ' cannot carry the required panel for ' + person.character);
+        }
+        if (person.voiceRequired && !voice.voiceContinuity?.speakers.some(s => s.speaker === person.character && s.reference?.provenance === 'pinned_settings_and_bytes' && s.audioIndex))
+            throw new Error('character_voice_required: ' + tool + ' cannot bind the selected voice sample for ' + person.character);
     }
     const args = parseVideoArgs(tool, voice.args);
     const adaptiveDuration = selection.engine === 'seedance' && args.durationSeconds === -1;
@@ -752,7 +786,7 @@ function buildVideoPlan(input, { context, tool }, persist) {
             throw new Error('model_selection_mismatch: retake inherits source dimensions; select the source resolution');
     }
     const quote = quoteFor(tool, args);
-    const body = { ...take, ...(sceneRequest ? { sceneRequest: { ...sceneRequest, prompt: String(args.prompt) } } : {}),
+    const body = { ...take, ...(cast.length ? { characterInputs: cast } : {}), ...(sceneRequest ? { sceneRequest: { ...sceneRequest, prompt: String(args.prompt) } } : {}),
         version: 1, episode: context.episode, shotId: context.shotId, requestId: input.requestId, tool, args,
         ...(images.imageBindings ? { imageBindings: sceneRequest ? sceneImageBindings(sceneRequest, tool, images.imageBindings) : images.imageBindings } : {}),
         sourceArgs: selection.engine === 'seedance' ? sourceArgs : input.args, durationPlan, ...(selection.engine === 'veo' ? { providerProject: config.googleCloudProject } : {}), ...(speechFit ? { speechFit } : {}), ...direction, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
@@ -933,7 +967,7 @@ export async function executeVideo(raw, dispatch) {
             job.settledUsd = job.tokens * plan.quote.tokenRate / 1e6;
     });
     const startedAt = Date.now();
-    let ok = false, portraitPreflightBlocked = false;
+    let ok = false, seedancePreflightBlocked = false;
     try {
         const result = await videoEvents.run({
             submitted: providerId => videoTransaction(episode, state => {
@@ -950,14 +984,14 @@ export async function executeVideo(raw, dispatch) {
             },
         }, () => plan.sceneRendering ? executeShotRenderPlan(plan, stagedScene) : dispatch(plan.tool, plan.args));
         if (result.isError) {
-            if (plan.selection.engine === 'seedance' && result.structuredContent?.stage === 'modelark_portrait' && result.structuredContent.videoSubmitted === false) {
+            if (plan.selection.engine === 'seedance' && ['modelark_portrait', 'seedance_original_lookup'].includes(String(result.structuredContent?.stage)) && result.structuredContent?.videoSubmitted === false) {
                 videoTransaction(episode, state => {
                     const job = state.jobs[plan.requestId];
                     if (!job || job.providerId || job.status !== 'submitting')
                         throw new Error('video_request_pending: reconcile provider submission before retrying');
                     delete state.jobs[plan.requestId];
                 });
-                portraitPreflightBlocked = true;
+                seedancePreflightBlocked = true;
                 return result;
             }
             settle(result.terminal === true, result.content.map(item => item.type === 'text' ? item.text : '').join('\n').slice(0, 1000), result);
@@ -991,7 +1025,7 @@ export async function executeVideo(raw, dispatch) {
     finally {
         const price = priceOf(plan.tool, plan.args);
         recordUsage(String(plan.args.outputPath), { ts: new Date().toISOString(), tool: plan.tool, ok,
-            ms: Date.now() - startedAt, ...price, ...(portraitPreflightBlocked ? { quantity: 0 } : {}),
+            ms: Date.now() - startedAt, ...price, ...(seedancePreflightBlocked ? { quantity: 0 } : {}),
             note: 'Managed routing estimate; authoritative reservations and provider tokens: .work/video-routing/state.json',
             detail: { requestId: plan.requestId, planId: plan.id, reserveUsd: plan.quote.reserveUsd } });
     }

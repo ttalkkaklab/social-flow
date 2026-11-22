@@ -51647,6 +51647,7 @@ var seedanceReferenceSchema = external_exports.object({
   referenceImagePaths: external_exports.array(external_exports.string()).optional().default([]),
   referenceAudioPaths: external_exports.array(external_exports.string()).optional().default([]),
   referenceVideoPaths: external_exports.array(external_exports.string()).optional().default([]),
+  referenceVideoTaskIds: external_exports.array(external_exports.string().regex(/^cgt-[A-Za-z0-9_-]{1,120}$/)).optional(),
   referenceVideoUrls: external_exports.array(external_exports.string().url().regex(/^(?:https?:\/\/|asset:\/\/)[^/\s]+/i, "Use a public HTTP(S) video URL or asset:// ID")).optional().default([]),
   ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("adaptive")
 }).superRefine((data, ctx) => {
@@ -51660,7 +51661,7 @@ var seedanceReferenceSchema = external_exports.object({
       message: `${data.model} allows at most ${maxImages} reference images (requested: ${data.referenceImagePaths.length}).`
     });
   }
-  const videoCount = data.referenceVideoPaths.length + data.referenceVideoUrls.length;
+  const videoCount = data.referenceVideoPaths.length + data.referenceVideoUrls.length + (data.referenceVideoTaskIds?.length ?? 0);
   const task = data.omniReferenceTaskType;
   if (task && !spec.referenceTaskTypes.includes(task)) {
     ctx.addIssue({ code: "custom", path: ["omniReferenceTaskType"], message: "Task type selection requires Seedance 2.5 or Flash." });
@@ -53281,12 +53282,39 @@ function resolveVideoDuration(tool, input) {
 }
 
 // src/video-registry.ts
+function requiredCharacters(shot) {
+  const inputs2 = shot.visual?.characterInputs;
+  return Array.isArray(inputs2) ? inputs2.filter((person) => person?.face && typeof person.bodyPath === "string") : [];
+}
 var entry = (engine, deployment, operation, schema) => ({ engine, deployment, operation, schema, voice: operation === "audio" ? "supplied" : "none" });
 var reference = (engine, deployment, schema) => ({ ...entry(engine, deployment, "reference", schema), voice: "reference" });
 var VIDEO_ADAPTERS = Object.freeze({
   seedance_text2video: entry("seedance", "byteplus", "text", seedanceText2VideoSchema),
   seedance_img2video: entry("seedance", "byteplus", "image", seedanceImg2VideoSchema),
-  seedance_reference: reference("seedance", "byteplus", seedanceReferenceSchema),
+  seedance_reference: {
+    ...reference("seedance", "byteplus", seedanceReferenceSchema),
+    bindCharacterSources(args, cast) {
+      const originals = /* @__PURE__ */ new Map();
+      for (const person of cast) {
+        const id = person.face.taskId;
+        if (!id) continue;
+        if (originals.has(id) && originals.get(id) !== person.character)
+          throw new Error("character_face_source_ambiguous: each facial reference needs one identifiable character");
+        originals.set(id, person.character);
+      }
+      const taskIds = [...originals.keys()];
+      if (args.realFaceInput === false && taskIds.length || taskIds.length && args.referenceVideoTaskIds !== void 0 && JSON.stringify(args.referenceVideoTaskIds) !== JSON.stringify(taskIds))
+        throw new Error("character_inputs_mismatch: use the face sources declared on the storyboard");
+      const videos = [args.referenceVideoPaths, args.referenceVideoUrls];
+      const offset = videos.reduce((count, files) => count + (Array.isArray(files) ? files.length : 0), 0);
+      const notes = [...originals.values()].map((character, index) => `Use Video ${offset + index + 1} only for ${character} facial identity, hair and headwear. Follow the new shot framing, action and dialogue.`);
+      return {
+        ...args,
+        realFaceInput: args.realFaceInput ?? true,
+        ...taskIds.length ? { referenceVideoTaskIds: taskIds, prompt: [args.prompt, ...notes].join("\n") } : {}
+      };
+    }
+  },
   ...Object.fromEntries(Object.entries(DESKTOP_SCHEMAS).map(([feature, schema]) => [
     "astra_genai_desktop_" + ({ "text-to-video": "text2video", "image-to-video": "img2video", "audio-to-video": "audio2video" }[feature] || feature),
     entry("astra-genai-desktop", "gateway-desktop-v1", { "text-to-video": "text", "image-to-video": "image", "audio-to-video": "audio", keyframes: "keyframe" }[feature] || feature, schema)
@@ -53403,19 +53431,32 @@ function resolveCharacterVoice(character, context, warnings) {
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) return character;
   let channel = context.episode;
   while (!existsSync4(path6.join(channel, "profile.md")) && path6.dirname(channel) !== channel) channel = path6.dirname(channel);
-  const folder = path6.join(channel, "assets/characters", id), identity = path6.join(folder, "identity.md");
+  const required = requiredCharacters(context.shot).find((person) => person.character === id);
+  const folder = required ? path6.dirname(path6.resolve(context.episode, "storyboard", required.bodyPath)) : path6.join(channel, "assets/characters", id);
+  const identity = path6.join(folder, "identity.md");
   let resolved = character;
-  if (!Object.keys(object2(character.tts)).length && existsSync4(identity)) {
+  const pinnedSettings = Object.keys(object2(character.tts)).length > 0;
+  if ((!pinnedSettings || required && !object2(character.voiceReference).path) && existsSync4(identity)) {
     try {
       const { handoff } = load4("../../skills/channel/references/character-sheet.js");
       const current = handoff(identity, { voiceOnly: character.voiceOnly === true });
-      resolved = { ...current, ...character, tts: current.tts };
+      if (!pinnedSettings || hash(current.tts) === hash(character.tts)) {
+        resolved = { ...current, ...character, tts: current.tts };
+        if (required && !object2(resolved.voiceReference).path) {
+          const sample = path6.join(folder, "voice.wav");
+          const selected = object2(current.voiceSelection).audioSha256;
+          if (typeof selected === "string" && existsSync4(sample) && fileHash(sample) === selected)
+            resolved = { ...resolved, voiceReference: { path: sample, sha256: selected, tts: current.tts } };
+          else if (current.voiceReference) resolved.voiceReference = current.voiceReference;
+        }
+      }
     } catch (error) {
       warnings.push(`${id}: cannot read the selected character voice: ${error instanceof Error ? error.message : String(error)}`);
       return character;
     }
   }
   const reference2 = object2(resolved.voiceReference);
+  if (required) return { ...resolved, voiceReference: { ...reference2, imagePaths: [required.face.path, required.bodyPath].filter(Boolean) } };
   if (!Array.isArray(reference2.imagePaths) && existsSync4(folder)) {
     const root = realpathSync(folder) + path6.sep;
     const refs = object2(context.shot.visual).references;
@@ -53515,14 +53556,19 @@ function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCovera
       }
       images.push(image2);
     };
+    const people = requiredCharacters(raw[index]);
+    const ownerOf = (file) => people.find((person) => file === person.face.path || file === person.bodyPath)?.character;
     const claimed = /* @__PURE__ */ new Set();
     for (const pin of pins.sort((a, b) => a.frame - b.frame)) {
       const ref = ["face", "outfit"].includes(pin.role) ? references.find((r2) => r2.path === pin.path) : void 0;
       if (ref) claimed.add(ref);
-      add(ref ? { ...pin, reference: ref } : pin);
+      const owner = ref && ownerOf(ref.path);
+      if (owner && pin.character && pin.character !== owner)
+        throw new Error("scene_reference_owner: " + shotId + " assigns " + ref.path + " to the wrong character");
+      add(ref ? { ...pin, ...owner ? { character: owner } : {}, reference: ref } : pin);
     }
     for (const ref of references) if (!claimed.has(ref))
-      add({ path: ref.path, role: ref.role, frame: startFrame, reference: ref });
+      add({ path: ref.path, role: ref.role, frame: startFrame, reference: ref, ...ownerOf(ref.path) ? { character: ownerOf(ref.path) } : {} });
     const scoped = shotScoped || members.length > 1 || timeline?.openingPositions || timeline?.dialogueCues?.length;
     if (members.length === 1 && timeline?.openingPositions && scene.openingPositions && JSON.stringify(timeline.openingPositions) !== JSON.stringify(scene.openingPositions))
       throw new Error("scene_opening_positions: a single shot and its scene must have the same opening positions");
@@ -53785,6 +53831,7 @@ function priceOf(tool, args = {}) {
     if (!Object.hasOwn(SEEDANCE_MODEL_SPECS, model2)) return { key: null, quantity: seconds2, note: `unmapped seedance model: ${model2}` };
     const videos = [
       ...Array.isArray(args.referenceVideoPaths) ? args.referenceVideoPaths : [],
+      ...Array.isArray(args.referenceVideoTaskIds) ? args.referenceVideoTaskIds : [],
       ...Array.isArray(args.referenceVideoUrls) ? args.referenceVideoUrls : []
     ].filter((v) => typeof v === "string");
     const family = videos.length ? `${base}-video` : base;
@@ -54432,7 +54479,14 @@ var cameraSchema = external_exports.record(external_exports.unknown()).superRefi
   for (const message of cameraContract().cameraInputErrors(value))
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
 });
-var visualSchema = external_exports.object({ camera: cameraSchema.optional() }).passthrough();
+var visualSchema = external_exports.object({
+  camera: cameraSchema.optional(),
+  characterInputs: external_exports.array(external_exports.object({
+    character: external_exports.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+    bodyView: external_exports.enum(["front", "back"]).optional().describe("Body panel for this actor when the camera view is ambiguous"),
+    faceTaskId: external_exports.string().regex(/^cgt-[A-Za-z0-9_-]{1,120}$/).optional().describe("Eligible same-account Seedance original selected for this actor\u2019s face")
+  }).strict()).nonempty().optional()
+}).passthrough();
 var shotIdSchema = external_exports.string().regex(/^s\d{4,}$/);
 var shotSchema = external_exports.object({
   id: shotIdSchema.optional(),
