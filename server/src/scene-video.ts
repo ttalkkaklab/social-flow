@@ -2,7 +2,7 @@
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { existsSync, realpathSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { z } from 'zod';
 import { openingPrompt, sceneShotBindingsSchema, shotTimelineSchema, type OpeningPosition, type SceneVideoDirection } from './msr-opening.js';
@@ -276,7 +276,8 @@ export async function inspectSceneInputContract(error: SceneInputError, validati
 export async function buildSceneWire(scene: SceneRequest, model: string, resolution: string, stageFiles = false, bindings?: z.infer<typeof sceneShotBindingsSchema>) {
   const attachments: {shotId?:string; role:string; frame:number; sha256:string; bytes:number}[] = [];
   const shots = scene.shots.map(shot => {
-    const guidance = bindings?.find(binding=>binding.shotId === shot.shotId)?.guidance;
+    const binding = bindings?.find(item=>item.shotId === shot.shotId);
+    const guidance = binding?.guidance;
     const images = scene.images.filter(image => image.shotId === shot.shotId).map(image => ({
       frame:image.frame, role:image.role, character:image.character, cue:image.cue, strength:image.strength,
       ...(image.reference ? {reference_id:image.reference.id, purpose:image.reference.purpose} : {}),
@@ -284,6 +285,8 @@ export async function buildSceneWire(scene: SceneRequest, model: string, resolut
     }));
     return {shot_id:shot.shotId, start_frame:shot.startFrame, end_frame:shot.endFrame,
       ...(guidance ? {negative_prompt:guidance.negativePrompt, guidance_scale:guidance.guidanceScale} : {}),
+      ...(binding?.motionPrefix ? {motion_uri:'data:video/mp4;base64,' + readFileSync(binding.motionPrefix,'base64')} : {}),
+      ...(binding?.performanceAudio ? {performance_uri:genaiAudioUri(undefined,binding.performanceAudio)} : {}),
       ...(shot.transition === 'open' ? {} : {transition:shot.transition}),
       description:[shot.framing,shot.action].join(' '), opening_positions:shot.openingPositions,
       blocking:shot.blocking, audio:shot.sound === scene.sceneDirection?.sound ? undefined : shot.sound, images,
@@ -312,6 +315,8 @@ export async function buildSceneWire(scene: SceneRequest, model: string, resolut
     };
     for (const shot of shots) {
       for (const image of shot.images) image.image_uri = await stage(image.image_uri, image.role, image.frame, shot.shot_id);
+      if (shot.motion_uri) shot.motion_uri = await stage(shot.motion_uri, 'motion_prefix', shot.start_frame, shot.shot_id);
+      if (shot.performance_uri) shot.performance_uri = await stage(shot.performance_uri, 'performance_audio', shot.start_frame, shot.shot_id);
       for (const line of shot.dialogue ?? []) if (line.voice_uri)
         line.voice_uri = await stage(line.voice_uri, 'voice_reference', line.frame ?? shot.start_frame, shot.shot_id);
     }

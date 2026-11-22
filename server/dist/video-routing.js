@@ -378,6 +378,15 @@ export function planVideo(raw, persist = true) {
         if (missing.length)
             throw new Error('scene_render_inputs_unsupported:\n' + missing.join('\n'));
         const files = [...request.images.map(p => p.path), ...request.shots.flatMap(s => (s.dialogue ?? []).flatMap(d => d.voice ? [d.voice.path] : []))];
+        for (const binding of input.shotBindings ?? []) {
+            for (const file of [binding.motionPrefix, binding.performanceAudio]) {
+                if (!file)
+                    continue;
+                if (!path.isAbsolute(file))
+                    throw new Error('scene_render_guide: use the absolute path to the approved guide');
+                files.push(file);
+            }
+        }
         const inputs = Object.fromEntries(files.map(file => [file, createHash('sha256').update(fs.readFileSync(file)).digest('hex')]));
         const outputPath = canonical(path.resolve(context.episode, settings.outputPath ?? '.work/video'));
         if (!within(context.episode, outputPath))

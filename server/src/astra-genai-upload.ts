@@ -18,7 +18,7 @@ export const GENAI_MSR_INLINE_MAX_BYTES = 8 * 1000 * 1000;
 /** Tests set retryDelayMs to 0; a chunk of 5 MiB at 0.4 MB/s takes about 13 s, well inside chunkTimeoutMs. */
 export const genaiUploadSettings = { attempts: 4, retryDelayMs: 2000, chunkTimeoutMs: 120_000 };
 /** Gateway upload contract (2026-11-05): these types only, at most 32 MiB a file. */
-const UPLOAD_TYPES = new Set(['image/png', 'image/jpeg', 'audio/wav', 'audio/mpeg', 'audio/mp4', 'audio/ogg']);
+const UPLOAD_TYPES = new Set(['image/png', 'image/jpeg', 'audio/wav', 'audio/mpeg', 'audio/mp4', 'audio/ogg', 'video/mp4']);
 const UPLOAD_MAX_BYTES = 32 * 1024 * 1024;
 /** The MSR 400 message for an unknown, expired or foreign `genai-file://` id; upload again and resubmit once. */
 export const GENAI_FILE_GONE = /genai-file not found or expired/;
