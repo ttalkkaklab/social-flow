@@ -2719,6 +2719,7 @@ window.STORYBOARD_READY = (async function () {
     var adapter = adapters.find(function (a) {
       return tool ? a.tool === tool : selection && a.engine === selection.engine && a.operation === operation;
     });
+    if (adapter && adapter.referenceLimits) return { name: "Seedance", slots: adapter.referenceLimits[selection && selection.model] || 9 };
     if (adapter && adapter.assetLimits) {
       var model = selection && selection.model;
       return { name: "Veo", slots: adapter.assetLimits[model] || 0, assetsOnly: true };

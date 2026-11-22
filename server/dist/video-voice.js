@@ -187,7 +187,8 @@ export function prepareVideoVoice(tool, input, context) {
     const doc = object(context.board.SB_DOC), raw = doc.characters;
     const characters = Array.isArray(raw) ? raw.map(object) : Object.entries(object(raw)).map(([id, value]) => ({ ...object(value), id }));
     const visual = object(context.shot.visual);
-    const nativeSlot = Boolean(visual.clip) || context.shot.type === 'broll';
+    const seedanceDialogue = tool === 'seedance_reference' && lines.some(line => ['on_screen', 'off_screen'].includes(String(line.delivery)));
+    const nativeSlot = seedanceDialogue || Boolean(visual.clip) || context.shot.type === 'broll';
     // FastH3 and the hosted MiniMax/HeyGen lanes always render a soundtrack.
     const audible = msr || ((tool !== 'astra_genai_desktop_keyframes' || args.audio === true) && (tool === 'fasth3_omni_reference' || tool.startsWith('minimax_') || tool.startsWith('heygen_') ||
         (tool.startsWith('astra_') ? args.generateAudio !== false : args.generateAudio === true)));
@@ -314,6 +315,14 @@ export function prepareVideoVoice(tool, input, context) {
         const img = (n) => referenceLabel(tool, 'image', n, args.model), aud = (n) => referenceLabel(tool, 'audio', n, args.model);
         // Narration is the only script authority. A substring cannot establish speaker ownership or turn order.
         const quoted = [...String(args.prompt).matchAll(/"([^"]*)"|“([^”]*)”|「([^」]*)」/g)].map(match => match[1] ?? match[2] ?? match[3]);
+        // Older Seedance boards sometimes store the whole script in the provider prompt.
+        // Keep it when every authored turn is already quoted once and in order.
+        if (tool === 'seedance_reference') {
+            const authored = lines.map(line => text(line.tts));
+            const embedded = quoted.filter(words => authored.includes(words));
+            if (embedded.length === authored.length && embedded.every((words, i) => words === authored[i]))
+                return;
+        }
         if (lines.some(line => quoted.some(words => words.includes(text(line.tts)))))
             throw new Error('video_dialogue_embedded: keep authored dialogue in shot_dialogue, not args.prompt/action/sound; video_plan compiles every turn with its speaker binding in order');
         const bySpeaker = new Map(speakers.map(speaker => [speaker.speaker, speaker]));
@@ -323,7 +332,8 @@ export function prepareVideoVoice(tool, input, context) {
         const script = lines.map((line, turn) => {
             const id = text(line.speaker) || text(doc.narratorCharacterId), speaker = bySpeaker.get(id);
             const image = speaker?.imageIndices?.[0], audio = speaker?.audioIndex, direction = text(object(line.acting).direction);
-            const who = image ? img(image) : speaker?.name ?? id;
+            const label = nonEnglishOutsideQuotes(speaker?.name ?? '') ? id : speaker?.name ?? id;
+            const who = image ? img(image) : label;
             if (context.sceneDirection) {
                 const owner = context.sceneDirection.openingPositions.find(p => p.character === id);
                 const imageSlot = image ?? owner?.images[0];
@@ -332,13 +342,11 @@ export function prepareVideoVoice(tool, input, context) {
                 return `${deliveryCue ? deliveryCue + ' ' : ''}${id}${binding ? ' (' + binding + ')' : ''}: "${text(line.tts)}"`;
             }
             if (line.delivery !== 'on_screen') {
-                const label = nonEnglishOutsideQuotes(speaker?.name ?? '') ? id : speaker?.name ?? id;
                 const delivery = line.delivery === 'off_screen' ? 'off screen' : 'in voiceover';
                 return `${label} speaks ${delivery}${direction ? ` (${direction})` : ''}${audio ? ` using ${aud(audio)}` : ''}. ` +
                     `Keep the speaking face outside the authored crop; retain any planned hands or body detail. Do not add a portrait or animate any visible mouth during this line. ${audio ? `${aud(audio)} (${label})` : label}: "${text(line.tts)}"`;
             }
             const binding = speaker?.screenBinding;
-            const label = nonEnglishOutsideQuotes(speaker?.name ?? '') ? id : speaker?.name ?? id;
             const identity = binding ? `${who}, ${label} at SCREEN ${binding.screenPosition.toUpperCase()} (${binding.description})` : `${who} (${label})`;
             return `Turn ${turn + 1}: ${identity} speaks${direction ? ` (${direction})` : ''}${audio ? ` using ${aud(audio)}` : ''}` +
                 `. Only this speaker's mouth moves; other visible mouths stay closed. ` +
@@ -363,7 +371,7 @@ export function prepareVideoVoice(tool, input, context) {
     }
     else if (reference) {
         args.referenceAudioPaths = audioPaths;
-        if (vendor)
+        if (vendor || tool === 'seedance_reference')
             turnScript();
         const mapped = new Set(speakers.map(speaker => speaker.audioIndex));
         if (audioPaths.some((_, i) => !mapped.has(i + 1 + audioOffset)))

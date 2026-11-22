@@ -463,7 +463,7 @@ function seedancePromptFindings(prompt, engine, model) {
   // The Audio: sentence is exempt from the negative check — "no music, no speech" is a state.
   const audioAt = text.search(/Audio\s*:/i);
   const body = audioAt >= 0 ? text.slice(0, audioAt) : text;
-  const promptEngine = model === 'dreamina-seedance-2-5-260628' ? 'seedance-2.5' : 'seedance';
+  const promptEngine = String(model).startsWith('dreamina-seedance-2-5-') ? 'seedance-2.5' : 'seedance';
   PROMPT.hangulHits(text, promptEngine).forEach((h) => out.push(
     `the stored clip prompt carries Korean ("${h}") — a seedance body reads Chinese or English; Korean goes inside the quotes of a dialogue line`));
   PROMPT.negDirectiveHits(body, 'seedance').forEach((h) => out.push(

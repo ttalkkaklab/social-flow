@@ -38,10 +38,17 @@
       ],
       "modelConstraints": {
         "dreamina-seedance-2-5-260628": {
+          "referenceTaskTypes": [
+            "auto",
+            "reference",
+            "edit",
+            "extend"
+          ],
           "resolutions": [
             "480p",
             "720p",
-            "1080p"
+            "1080p",
+            "4k"
           ],
           "duration": [
             4,
@@ -71,9 +78,53 @@
           },
           "audio": true,
           "realFaceInput": false,
+          "portraitAssetInput": true,
+          "activationGate": true
+        },
+        "dreamina-seedance-2-5-flash-261115": {
+          "referenceTaskTypes": [
+            "auto",
+            "reference",
+            "edit",
+            "extend"
+          ],
+          "resolutions": [
+            "480p",
+            "720p"
+          ],
+          "duration": [
+            4,
+            30
+          ],
+          "lastFrame": true,
+          "referenceImages": [
+            1,
+            10
+          ],
+          "referenceAudio": {
+            "maxClips": 5,
+            "clipSeconds": [
+              2,
+              30
+            ],
+            "totalSeconds": 30,
+            "audioOnly": true
+          },
+          "referenceVideos": {
+            "maxClips": 5,
+            "clipSeconds": [
+              2,
+              30
+            ],
+            "totalSeconds": 30
+          },
+          "audio": true,
+          "realFaceInput": false,
+          "portraitAssetInput": true,
           "activationGate": true
         },
         "dreamina-seedance-2-0-260128": {
+          "referenceTaskTypes": [],
           "resolutions": [
             "480p",
             "720p",
@@ -108,9 +159,11 @@
           },
           "audio": true,
           "realFaceInput": false,
+          "portraitAssetInput": true,
           "activationGate": true
         },
         "dreamina-seedance-2-0-fast-260128": {
+          "referenceTaskTypes": [],
           "resolutions": [
             "480p",
             "720p"
@@ -143,9 +196,11 @@
           },
           "audio": true,
           "realFaceInput": false,
+          "portraitAssetInput": true,
           "activationGate": true
         },
         "dreamina-seedance-2-0-mini-260615": {
+          "referenceTaskTypes": [],
           "resolutions": [
             "480p",
             "720p"
@@ -178,6 +233,7 @@
           },
           "audio": true,
           "realFaceInput": false,
+          "portraitAssetInput": true,
           "activationGate": true
         }
       }
@@ -215,16 +271,24 @@
         "watermark",
         "outputPath",
         "filename",
+        "realFaceInput",
         "sourceImagePath",
         "lastImagePath",
         "ratio"
       ],
       "modelConstraints": {
         "dreamina-seedance-2-5-260628": {
+          "referenceTaskTypes": [
+            "auto",
+            "reference",
+            "edit",
+            "extend"
+          ],
           "resolutions": [
             "480p",
             "720p",
-            "1080p"
+            "1080p",
+            "4k"
           ],
           "duration": [
             4,
@@ -254,9 +318,53 @@
           },
           "audio": true,
           "realFaceInput": false,
+          "portraitAssetInput": true,
+          "activationGate": true
+        },
+        "dreamina-seedance-2-5-flash-261115": {
+          "referenceTaskTypes": [
+            "auto",
+            "reference",
+            "edit",
+            "extend"
+          ],
+          "resolutions": [
+            "480p",
+            "720p"
+          ],
+          "duration": [
+            4,
+            30
+          ],
+          "lastFrame": true,
+          "referenceImages": [
+            1,
+            10
+          ],
+          "referenceAudio": {
+            "maxClips": 5,
+            "clipSeconds": [
+              2,
+              30
+            ],
+            "totalSeconds": 30,
+            "audioOnly": true
+          },
+          "referenceVideos": {
+            "maxClips": 5,
+            "clipSeconds": [
+              2,
+              30
+            ],
+            "totalSeconds": 30
+          },
+          "audio": true,
+          "realFaceInput": false,
+          "portraitAssetInput": true,
           "activationGate": true
         },
         "dreamina-seedance-2-0-260128": {
+          "referenceTaskTypes": [],
           "resolutions": [
             "480p",
             "720p",
@@ -291,9 +399,11 @@
           },
           "audio": true,
           "realFaceInput": false,
+          "portraitAssetInput": true,
           "activationGate": true
         },
         "dreamina-seedance-2-0-fast-260128": {
+          "referenceTaskTypes": [],
           "resolutions": [
             "480p",
             "720p"
@@ -326,9 +436,11 @@
           },
           "audio": true,
           "realFaceInput": false,
+          "portraitAssetInput": true,
           "activationGate": true
         },
         "dreamina-seedance-2-0-mini-260615": {
+          "referenceTaskTypes": [],
           "resolutions": [
             "480p",
             "720p"
@@ -361,6 +473,7 @@
           },
           "audio": true,
           "realFaceInput": false,
+          "portraitAssetInput": true,
           "activationGate": true
         }
       }
@@ -398,6 +511,8 @@
         "watermark",
         "outputPath",
         "filename",
+        "omniReferenceTaskType",
+        "realFaceInput",
         "referenceImagePaths",
         "referenceAudioPaths",
         "referenceVideoPaths",
@@ -406,10 +521,17 @@
       ],
       "modelConstraints": {
         "dreamina-seedance-2-5-260628": {
+          "referenceTaskTypes": [
+            "auto",
+            "reference",
+            "edit",
+            "extend"
+          ],
           "resolutions": [
             "480p",
             "720p",
-            "1080p"
+            "1080p",
+            "4k"
           ],
           "duration": [
             4,
@@ -439,9 +561,53 @@
           },
           "audio": true,
           "realFaceInput": false,
+          "portraitAssetInput": true,
+          "activationGate": true
+        },
+        "dreamina-seedance-2-5-flash-261115": {
+          "referenceTaskTypes": [
+            "auto",
+            "reference",
+            "edit",
+            "extend"
+          ],
+          "resolutions": [
+            "480p",
+            "720p"
+          ],
+          "duration": [
+            4,
+            30
+          ],
+          "lastFrame": true,
+          "referenceImages": [
+            1,
+            10
+          ],
+          "referenceAudio": {
+            "maxClips": 5,
+            "clipSeconds": [
+              2,
+              30
+            ],
+            "totalSeconds": 30,
+            "audioOnly": true
+          },
+          "referenceVideos": {
+            "maxClips": 5,
+            "clipSeconds": [
+              2,
+              30
+            ],
+            "totalSeconds": 30
+          },
+          "audio": true,
+          "realFaceInput": false,
+          "portraitAssetInput": true,
           "activationGate": true
         },
         "dreamina-seedance-2-0-260128": {
+          "referenceTaskTypes": [],
           "resolutions": [
             "480p",
             "720p",
@@ -476,9 +642,11 @@
           },
           "audio": true,
           "realFaceInput": false,
+          "portraitAssetInput": true,
           "activationGate": true
         },
         "dreamina-seedance-2-0-fast-260128": {
+          "referenceTaskTypes": [],
           "resolutions": [
             "480p",
             "720p"
@@ -511,9 +679,11 @@
           },
           "audio": true,
           "realFaceInput": false,
+          "portraitAssetInput": true,
           "activationGate": true
         },
         "dreamina-seedance-2-0-mini-260615": {
+          "referenceTaskTypes": [],
           "resolutions": [
             "480p",
             "720p"
@@ -546,6 +716,7 @@
           },
           "audio": true,
           "realFaceInput": false,
+          "portraitAssetInput": true,
           "activationGate": true
         }
       }

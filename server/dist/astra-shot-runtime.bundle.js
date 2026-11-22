@@ -31568,7 +31568,7 @@ var require_mock_interceptor = __commonJS({
 var require_mock_client = __commonJS({
   "node_modules/undici/lib/mock/mock-client.js"(exports, module) {
     "use strict";
-    var { promisify: promisify2 } = __require("node:util");
+    var { promisify: promisify3 } = __require("node:util");
     var Client = require_client();
     var { buildMockDispatch } = require_mock_utils();
     var {
@@ -31616,7 +31616,7 @@ var require_mock_client = __commonJS({
         this[kDispatches] = [];
       }
       async [kClose]() {
-        await promisify2(this[kOriginalClose])();
+        await promisify3(this[kOriginalClose])();
         this[kConnected] = 0;
         this[kMockAgent][Symbols.kClients].delete(this[kOrigin]);
       }
@@ -31829,7 +31829,7 @@ var require_mock_call_history = __commonJS({
 var require_mock_pool = __commonJS({
   "node_modules/undici/lib/mock/mock-pool.js"(exports, module) {
     "use strict";
-    var { promisify: promisify2 } = __require("node:util");
+    var { promisify: promisify3 } = __require("node:util");
     var Pool = require_pool();
     var { buildMockDispatch } = require_mock_utils();
     var {
@@ -31877,7 +31877,7 @@ var require_mock_pool = __commonJS({
         this[kDispatches] = [];
       }
       async [kClose]() {
-        await promisify2(this[kOriginalClose])();
+        await promisify3(this[kOriginalClose])();
         this[kConnected] = 0;
         this[kMockAgent][Symbols.kClients].delete(this[kOrigin]);
       }
@@ -44270,6 +44270,1583 @@ ${captureLines}` : capture.stack;
   }
 });
 
+// node_modules/graceful-fs/polyfills.js
+var require_polyfills = __commonJS({
+  "node_modules/graceful-fs/polyfills.js"(exports, module) {
+    var constants2 = __require("constants");
+    var origCwd = process.cwd;
+    var cwd = null;
+    var platform = process.env.GRACEFUL_FS_PLATFORM || process.platform;
+    process.cwd = function() {
+      if (!cwd)
+        cwd = origCwd.call(process);
+      return cwd;
+    };
+    try {
+      process.cwd();
+    } catch (er) {
+    }
+    if (typeof process.chdir === "function") {
+      chdir = process.chdir;
+      process.chdir = function(d) {
+        cwd = null;
+        chdir.call(process, d);
+      };
+      if (Object.setPrototypeOf) Object.setPrototypeOf(process.chdir, chdir);
+    }
+    var chdir;
+    module.exports = patch;
+    function patch(fs6) {
+      if (constants2.hasOwnProperty("O_SYMLINK") && process.version.match(/^v0\.6\.[0-2]|^v0\.5\./)) {
+        patchLchmod(fs6);
+      }
+      if (!fs6.lutimes) {
+        patchLutimes(fs6);
+      }
+      fs6.chown = chownFix(fs6.chown);
+      fs6.fchown = chownFix(fs6.fchown);
+      fs6.lchown = chownFix(fs6.lchown);
+      fs6.chmod = chmodFix(fs6.chmod);
+      fs6.fchmod = chmodFix(fs6.fchmod);
+      fs6.lchmod = chmodFix(fs6.lchmod);
+      fs6.chownSync = chownFixSync(fs6.chownSync);
+      fs6.fchownSync = chownFixSync(fs6.fchownSync);
+      fs6.lchownSync = chownFixSync(fs6.lchownSync);
+      fs6.chmodSync = chmodFixSync(fs6.chmodSync);
+      fs6.fchmodSync = chmodFixSync(fs6.fchmodSync);
+      fs6.lchmodSync = chmodFixSync(fs6.lchmodSync);
+      fs6.stat = statFix(fs6.stat);
+      fs6.fstat = statFix(fs6.fstat);
+      fs6.lstat = statFix(fs6.lstat);
+      fs6.statSync = statFixSync(fs6.statSync);
+      fs6.fstatSync = statFixSync(fs6.fstatSync);
+      fs6.lstatSync = statFixSync(fs6.lstatSync);
+      if (fs6.chmod && !fs6.lchmod) {
+        fs6.lchmod = function(path9, mode, cb) {
+          if (cb) process.nextTick(cb);
+        };
+        fs6.lchmodSync = function() {
+        };
+      }
+      if (fs6.chown && !fs6.lchown) {
+        fs6.lchown = function(path9, uid, gid, cb) {
+          if (cb) process.nextTick(cb);
+        };
+        fs6.lchownSync = function() {
+        };
+      }
+      if (platform === "win32") {
+        fs6.rename = typeof fs6.rename !== "function" ? fs6.rename : (function(fs$rename) {
+          function rename(from, to, cb) {
+            var start = Date.now();
+            var backoff = 0;
+            fs$rename(from, to, function CB(er) {
+              if (er && (er.code === "EACCES" || er.code === "EPERM" || er.code === "EBUSY") && Date.now() - start < 6e4) {
+                setTimeout(function() {
+                  fs6.stat(to, function(stater, st) {
+                    if (stater && stater.code === "ENOENT")
+                      fs$rename(from, to, CB);
+                    else
+                      cb(er);
+                  });
+                }, backoff);
+                if (backoff < 100)
+                  backoff += 10;
+                return;
+              }
+              if (cb) cb(er);
+            });
+          }
+          if (Object.setPrototypeOf) Object.setPrototypeOf(rename, fs$rename);
+          return rename;
+        })(fs6.rename);
+      }
+      fs6.read = typeof fs6.read !== "function" ? fs6.read : (function(fs$read) {
+        function read(fd, buffer, offset, length, position, callback_) {
+          var callback;
+          if (callback_ && typeof callback_ === "function") {
+            var eagCounter = 0;
+            callback = function(er, _, __) {
+              if (er && er.code === "EAGAIN" && eagCounter < 10) {
+                eagCounter++;
+                return fs$read.call(fs6, fd, buffer, offset, length, position, callback);
+              }
+              callback_.apply(this, arguments);
+            };
+          }
+          return fs$read.call(fs6, fd, buffer, offset, length, position, callback);
+        }
+        if (Object.setPrototypeOf) Object.setPrototypeOf(read, fs$read);
+        return read;
+      })(fs6.read);
+      fs6.readSync = typeof fs6.readSync !== "function" ? fs6.readSync : /* @__PURE__ */ (function(fs$readSync) {
+        return function(fd, buffer, offset, length, position) {
+          var eagCounter = 0;
+          while (true) {
+            try {
+              return fs$readSync.call(fs6, fd, buffer, offset, length, position);
+            } catch (er) {
+              if (er.code === "EAGAIN" && eagCounter < 10) {
+                eagCounter++;
+                continue;
+              }
+              throw er;
+            }
+          }
+        };
+      })(fs6.readSync);
+      function patchLchmod(fs7) {
+        fs7.lchmod = function(path9, mode, callback) {
+          fs7.open(
+            path9,
+            constants2.O_WRONLY | constants2.O_SYMLINK,
+            mode,
+            function(err, fd) {
+              if (err) {
+                if (callback) callback(err);
+                return;
+              }
+              fs7.fchmod(fd, mode, function(err2) {
+                fs7.close(fd, function(err22) {
+                  if (callback) callback(err2 || err22);
+                });
+              });
+            }
+          );
+        };
+        fs7.lchmodSync = function(path9, mode) {
+          var fd = fs7.openSync(path9, constants2.O_WRONLY | constants2.O_SYMLINK, mode);
+          var threw = true;
+          var ret;
+          try {
+            ret = fs7.fchmodSync(fd, mode);
+            threw = false;
+          } finally {
+            if (threw) {
+              try {
+                fs7.closeSync(fd);
+              } catch (er) {
+              }
+            } else {
+              fs7.closeSync(fd);
+            }
+          }
+          return ret;
+        };
+      }
+      function patchLutimes(fs7) {
+        if (constants2.hasOwnProperty("O_SYMLINK") && fs7.futimes) {
+          fs7.lutimes = function(path9, at, mt, cb) {
+            fs7.open(path9, constants2.O_SYMLINK, function(er, fd) {
+              if (er) {
+                if (cb) cb(er);
+                return;
+              }
+              fs7.futimes(fd, at, mt, function(er2) {
+                fs7.close(fd, function(er22) {
+                  if (cb) cb(er2 || er22);
+                });
+              });
+            });
+          };
+          fs7.lutimesSync = function(path9, at, mt) {
+            var fd = fs7.openSync(path9, constants2.O_SYMLINK);
+            var ret;
+            var threw = true;
+            try {
+              ret = fs7.futimesSync(fd, at, mt);
+              threw = false;
+            } finally {
+              if (threw) {
+                try {
+                  fs7.closeSync(fd);
+                } catch (er) {
+                }
+              } else {
+                fs7.closeSync(fd);
+              }
+            }
+            return ret;
+          };
+        } else if (fs7.futimes) {
+          fs7.lutimes = function(_a, _b, _c, cb) {
+            if (cb) process.nextTick(cb);
+          };
+          fs7.lutimesSync = function() {
+          };
+        }
+      }
+      function chmodFix(orig) {
+        if (!orig) return orig;
+        return function(target, mode, cb) {
+          return orig.call(fs6, target, mode, function(er) {
+            if (chownErOk(er)) er = null;
+            if (cb) cb.apply(this, arguments);
+          });
+        };
+      }
+      function chmodFixSync(orig) {
+        if (!orig) return orig;
+        return function(target, mode) {
+          try {
+            return orig.call(fs6, target, mode);
+          } catch (er) {
+            if (!chownErOk(er)) throw er;
+          }
+        };
+      }
+      function chownFix(orig) {
+        if (!orig) return orig;
+        return function(target, uid, gid, cb) {
+          return orig.call(fs6, target, uid, gid, function(er) {
+            if (chownErOk(er)) er = null;
+            if (cb) cb.apply(this, arguments);
+          });
+        };
+      }
+      function chownFixSync(orig) {
+        if (!orig) return orig;
+        return function(target, uid, gid) {
+          try {
+            return orig.call(fs6, target, uid, gid);
+          } catch (er) {
+            if (!chownErOk(er)) throw er;
+          }
+        };
+      }
+      function statFix(orig) {
+        if (!orig) return orig;
+        return function(target, options, cb) {
+          if (typeof options === "function") {
+            cb = options;
+            options = null;
+          }
+          function callback(er, stats) {
+            if (stats) {
+              if (stats.uid < 0) stats.uid += 4294967296;
+              if (stats.gid < 0) stats.gid += 4294967296;
+            }
+            if (cb) cb.apply(this, arguments);
+          }
+          return options ? orig.call(fs6, target, options, callback) : orig.call(fs6, target, callback);
+        };
+      }
+      function statFixSync(orig) {
+        if (!orig) return orig;
+        return function(target, options) {
+          var stats = options ? orig.call(fs6, target, options) : orig.call(fs6, target);
+          if (stats) {
+            if (stats.uid < 0) stats.uid += 4294967296;
+            if (stats.gid < 0) stats.gid += 4294967296;
+          }
+          return stats;
+        };
+      }
+      function chownErOk(er) {
+        if (!er)
+          return true;
+        if (er.code === "ENOSYS")
+          return true;
+        var nonroot = !process.getuid || process.getuid() !== 0;
+        if (nonroot) {
+          if (er.code === "EINVAL" || er.code === "EPERM")
+            return true;
+        }
+        return false;
+      }
+    }
+  }
+});
+
+// node_modules/graceful-fs/legacy-streams.js
+var require_legacy_streams = __commonJS({
+  "node_modules/graceful-fs/legacy-streams.js"(exports, module) {
+    var Stream3 = __require("stream").Stream;
+    module.exports = legacy;
+    function legacy(fs6) {
+      return {
+        ReadStream,
+        WriteStream
+      };
+      function ReadStream(path9, options) {
+        if (!(this instanceof ReadStream)) return new ReadStream(path9, options);
+        Stream3.call(this);
+        var self2 = this;
+        this.path = path9;
+        this.fd = null;
+        this.readable = true;
+        this.paused = false;
+        this.flags = "r";
+        this.mode = 438;
+        this.bufferSize = 64 * 1024;
+        options = options || {};
+        var keys2 = Object.keys(options);
+        for (var index = 0, length = keys2.length; index < length; index++) {
+          var key = keys2[index];
+          this[key] = options[key];
+        }
+        if (this.encoding) this.setEncoding(this.encoding);
+        if (this.start !== void 0) {
+          if ("number" !== typeof this.start) {
+            throw TypeError("start must be a Number");
+          }
+          if (this.end === void 0) {
+            this.end = Infinity;
+          } else if ("number" !== typeof this.end) {
+            throw TypeError("end must be a Number");
+          }
+          if (this.start > this.end) {
+            throw new Error("start must be <= end");
+          }
+          this.pos = this.start;
+        }
+        if (this.fd !== null) {
+          process.nextTick(function() {
+            self2._read();
+          });
+          return;
+        }
+        fs6.open(this.path, this.flags, this.mode, function(err, fd) {
+          if (err) {
+            self2.emit("error", err);
+            self2.readable = false;
+            return;
+          }
+          self2.fd = fd;
+          self2.emit("open", fd);
+          self2._read();
+        });
+      }
+      function WriteStream(path9, options) {
+        if (!(this instanceof WriteStream)) return new WriteStream(path9, options);
+        Stream3.call(this);
+        this.path = path9;
+        this.fd = null;
+        this.writable = true;
+        this.flags = "w";
+        this.encoding = "binary";
+        this.mode = 438;
+        this.bytesWritten = 0;
+        options = options || {};
+        var keys2 = Object.keys(options);
+        for (var index = 0, length = keys2.length; index < length; index++) {
+          var key = keys2[index];
+          this[key] = options[key];
+        }
+        if (this.start !== void 0) {
+          if ("number" !== typeof this.start) {
+            throw TypeError("start must be a Number");
+          }
+          if (this.start < 0) {
+            throw new Error("start must be >= zero");
+          }
+          this.pos = this.start;
+        }
+        this.busy = false;
+        this._queue = [];
+        if (this.fd === null) {
+          this._open = fs6.open;
+          this._queue.push([this._open, this.path, this.flags, this.mode, void 0]);
+          this.flush();
+        }
+      }
+    }
+  }
+});
+
+// node_modules/graceful-fs/clone.js
+var require_clone = __commonJS({
+  "node_modules/graceful-fs/clone.js"(exports, module) {
+    "use strict";
+    module.exports = clone2;
+    var getPrototypeOf = Object.getPrototypeOf || function(obj) {
+      return obj.__proto__;
+    };
+    function clone2(obj) {
+      if (obj === null || typeof obj !== "object")
+        return obj;
+      if (obj instanceof Object)
+        var copy = { __proto__: getPrototypeOf(obj) };
+      else
+        var copy = /* @__PURE__ */ Object.create(null);
+      Object.getOwnPropertyNames(obj).forEach(function(key) {
+        Object.defineProperty(copy, key, Object.getOwnPropertyDescriptor(obj, key));
+      });
+      return copy;
+    }
+  }
+});
+
+// node_modules/graceful-fs/graceful-fs.js
+var require_graceful_fs = __commonJS({
+  "node_modules/graceful-fs/graceful-fs.js"(exports, module) {
+    var fs6 = __require("fs");
+    var polyfills = require_polyfills();
+    var legacy = require_legacy_streams();
+    var clone2 = require_clone();
+    var util2 = __require("util");
+    var gracefulQueue;
+    var previousSymbol;
+    if (typeof Symbol === "function" && typeof Symbol.for === "function") {
+      gracefulQueue = /* @__PURE__ */ Symbol.for("graceful-fs.queue");
+      previousSymbol = /* @__PURE__ */ Symbol.for("graceful-fs.previous");
+    } else {
+      gracefulQueue = "___graceful-fs.queue";
+      previousSymbol = "___graceful-fs.previous";
+    }
+    function noop2() {
+    }
+    function publishQueue(context, queue2) {
+      Object.defineProperty(context, gracefulQueue, {
+        get: function() {
+          return queue2;
+        }
+      });
+    }
+    var debug = noop2;
+    if (util2.debuglog)
+      debug = util2.debuglog("gfs4");
+    else if (/\bgfs4\b/i.test(process.env.NODE_DEBUG || ""))
+      debug = function() {
+        var m2 = util2.format.apply(util2, arguments);
+        m2 = "GFS4: " + m2.split(/\n/).join("\nGFS4: ");
+        console.error(m2);
+      };
+    if (!fs6[gracefulQueue]) {
+      queue = global[gracefulQueue] || [];
+      publishQueue(fs6, queue);
+      fs6.close = (function(fs$close) {
+        function close(fd, cb) {
+          return fs$close.call(fs6, fd, function(err) {
+            if (!err) {
+              resetQueue();
+            }
+            if (typeof cb === "function")
+              cb.apply(this, arguments);
+          });
+        }
+        Object.defineProperty(close, previousSymbol, {
+          value: fs$close
+        });
+        return close;
+      })(fs6.close);
+      fs6.closeSync = (function(fs$closeSync) {
+        function closeSync(fd) {
+          fs$closeSync.apply(fs6, arguments);
+          resetQueue();
+        }
+        Object.defineProperty(closeSync, previousSymbol, {
+          value: fs$closeSync
+        });
+        return closeSync;
+      })(fs6.closeSync);
+      if (/\bgfs4\b/i.test(process.env.NODE_DEBUG || "")) {
+        process.on("exit", function() {
+          debug(fs6[gracefulQueue]);
+          __require("assert").equal(fs6[gracefulQueue].length, 0);
+        });
+      }
+    }
+    var queue;
+    if (!global[gracefulQueue]) {
+      publishQueue(global, fs6[gracefulQueue]);
+    }
+    module.exports = patch(clone2(fs6));
+    if (process.env.TEST_GRACEFUL_FS_GLOBAL_PATCH && !fs6.__patched) {
+      module.exports = patch(fs6);
+      fs6.__patched = true;
+    }
+    function patch(fs7) {
+      polyfills(fs7);
+      fs7.gracefulify = patch;
+      fs7.createReadStream = createReadStream2;
+      fs7.createWriteStream = createWriteStream;
+      var fs$readFile = fs7.readFile;
+      fs7.readFile = readFile;
+      function readFile(path9, options, cb) {
+        if (typeof options === "function")
+          cb = options, options = null;
+        return go$readFile(path9, options, cb);
+        function go$readFile(path10, options2, cb2, startTime) {
+          return fs$readFile(path10, options2, function(err) {
+            if (err && (err.code === "EMFILE" || err.code === "ENFILE"))
+              enqueue([go$readFile, [path10, options2, cb2], err, startTime || Date.now(), Date.now()]);
+            else {
+              if (typeof cb2 === "function")
+                cb2.apply(this, arguments);
+            }
+          });
+        }
+      }
+      var fs$writeFile = fs7.writeFile;
+      fs7.writeFile = writeFile;
+      function writeFile(path9, data, options, cb) {
+        if (typeof options === "function")
+          cb = options, options = null;
+        return go$writeFile(path9, data, options, cb);
+        function go$writeFile(path10, data2, options2, cb2, startTime) {
+          return fs$writeFile(path10, data2, options2, function(err) {
+            if (err && (err.code === "EMFILE" || err.code === "ENFILE"))
+              enqueue([go$writeFile, [path10, data2, options2, cb2], err, startTime || Date.now(), Date.now()]);
+            else {
+              if (typeof cb2 === "function")
+                cb2.apply(this, arguments);
+            }
+          });
+        }
+      }
+      var fs$appendFile = fs7.appendFile;
+      if (fs$appendFile)
+        fs7.appendFile = appendFile;
+      function appendFile(path9, data, options, cb) {
+        if (typeof options === "function")
+          cb = options, options = null;
+        return go$appendFile(path9, data, options, cb);
+        function go$appendFile(path10, data2, options2, cb2, startTime) {
+          return fs$appendFile(path10, data2, options2, function(err) {
+            if (err && (err.code === "EMFILE" || err.code === "ENFILE"))
+              enqueue([go$appendFile, [path10, data2, options2, cb2], err, startTime || Date.now(), Date.now()]);
+            else {
+              if (typeof cb2 === "function")
+                cb2.apply(this, arguments);
+            }
+          });
+        }
+      }
+      var fs$copyFile = fs7.copyFile;
+      if (fs$copyFile)
+        fs7.copyFile = copyFile;
+      function copyFile(src, dest, flags, cb) {
+        if (typeof flags === "function") {
+          cb = flags;
+          flags = 0;
+        }
+        return go$copyFile(src, dest, flags, cb);
+        function go$copyFile(src2, dest2, flags2, cb2, startTime) {
+          return fs$copyFile(src2, dest2, flags2, function(err) {
+            if (err && (err.code === "EMFILE" || err.code === "ENFILE"))
+              enqueue([go$copyFile, [src2, dest2, flags2, cb2], err, startTime || Date.now(), Date.now()]);
+            else {
+              if (typeof cb2 === "function")
+                cb2.apply(this, arguments);
+            }
+          });
+        }
+      }
+      var fs$readdir = fs7.readdir;
+      fs7.readdir = readdir;
+      var noReaddirOptionVersions = /^v[0-5]\./;
+      function readdir(path9, options, cb) {
+        if (typeof options === "function")
+          cb = options, options = null;
+        var go$readdir = noReaddirOptionVersions.test(process.version) ? function go$readdir2(path10, options2, cb2, startTime) {
+          return fs$readdir(path10, fs$readdirCallback(
+            path10,
+            options2,
+            cb2,
+            startTime
+          ));
+        } : function go$readdir2(path10, options2, cb2, startTime) {
+          return fs$readdir(path10, options2, fs$readdirCallback(
+            path10,
+            options2,
+            cb2,
+            startTime
+          ));
+        };
+        return go$readdir(path9, options, cb);
+        function fs$readdirCallback(path10, options2, cb2, startTime) {
+          return function(err, files) {
+            if (err && (err.code === "EMFILE" || err.code === "ENFILE"))
+              enqueue([
+                go$readdir,
+                [path10, options2, cb2],
+                err,
+                startTime || Date.now(),
+                Date.now()
+              ]);
+            else {
+              if (files && files.sort)
+                files.sort();
+              if (typeof cb2 === "function")
+                cb2.call(this, err, files);
+            }
+          };
+        }
+      }
+      if (process.version.substr(0, 4) === "v0.8") {
+        var legStreams = legacy(fs7);
+        ReadStream = legStreams.ReadStream;
+        WriteStream = legStreams.WriteStream;
+      }
+      var fs$ReadStream = fs7.ReadStream;
+      if (fs$ReadStream) {
+        ReadStream.prototype = Object.create(fs$ReadStream.prototype);
+        ReadStream.prototype.open = ReadStream$open;
+      }
+      var fs$WriteStream = fs7.WriteStream;
+      if (fs$WriteStream) {
+        WriteStream.prototype = Object.create(fs$WriteStream.prototype);
+        WriteStream.prototype.open = WriteStream$open;
+      }
+      Object.defineProperty(fs7, "ReadStream", {
+        get: function() {
+          return ReadStream;
+        },
+        set: function(val) {
+          ReadStream = val;
+        },
+        enumerable: true,
+        configurable: true
+      });
+      Object.defineProperty(fs7, "WriteStream", {
+        get: function() {
+          return WriteStream;
+        },
+        set: function(val) {
+          WriteStream = val;
+        },
+        enumerable: true,
+        configurable: true
+      });
+      var FileReadStream = ReadStream;
+      Object.defineProperty(fs7, "FileReadStream", {
+        get: function() {
+          return FileReadStream;
+        },
+        set: function(val) {
+          FileReadStream = val;
+        },
+        enumerable: true,
+        configurable: true
+      });
+      var FileWriteStream = WriteStream;
+      Object.defineProperty(fs7, "FileWriteStream", {
+        get: function() {
+          return FileWriteStream;
+        },
+        set: function(val) {
+          FileWriteStream = val;
+        },
+        enumerable: true,
+        configurable: true
+      });
+      function ReadStream(path9, options) {
+        if (this instanceof ReadStream)
+          return fs$ReadStream.apply(this, arguments), this;
+        else
+          return ReadStream.apply(Object.create(ReadStream.prototype), arguments);
+      }
+      function ReadStream$open() {
+        var that = this;
+        open(that.path, that.flags, that.mode, function(err, fd) {
+          if (err) {
+            if (that.autoClose)
+              that.destroy();
+            that.emit("error", err);
+          } else {
+            that.fd = fd;
+            that.emit("open", fd);
+            that.read();
+          }
+        });
+      }
+      function WriteStream(path9, options) {
+        if (this instanceof WriteStream)
+          return fs$WriteStream.apply(this, arguments), this;
+        else
+          return WriteStream.apply(Object.create(WriteStream.prototype), arguments);
+      }
+      function WriteStream$open() {
+        var that = this;
+        open(that.path, that.flags, that.mode, function(err, fd) {
+          if (err) {
+            that.destroy();
+            that.emit("error", err);
+          } else {
+            that.fd = fd;
+            that.emit("open", fd);
+          }
+        });
+      }
+      function createReadStream2(path9, options) {
+        return new fs7.ReadStream(path9, options);
+      }
+      function createWriteStream(path9, options) {
+        return new fs7.WriteStream(path9, options);
+      }
+      var fs$open = fs7.open;
+      fs7.open = open;
+      function open(path9, flags, mode, cb) {
+        if (typeof mode === "function")
+          cb = mode, mode = null;
+        return go$open(path9, flags, mode, cb);
+        function go$open(path10, flags2, mode2, cb2, startTime) {
+          return fs$open(path10, flags2, mode2, function(err, fd) {
+            if (err && (err.code === "EMFILE" || err.code === "ENFILE"))
+              enqueue([go$open, [path10, flags2, mode2, cb2], err, startTime || Date.now(), Date.now()]);
+            else {
+              if (typeof cb2 === "function")
+                cb2.apply(this, arguments);
+            }
+          });
+        }
+      }
+      return fs7;
+    }
+    function enqueue(elem) {
+      debug("ENQUEUE", elem[0].name, elem[1]);
+      fs6[gracefulQueue].push(elem);
+      retry();
+    }
+    var retryTimer;
+    function resetQueue() {
+      var now = Date.now();
+      for (var i2 = 0; i2 < fs6[gracefulQueue].length; ++i2) {
+        if (fs6[gracefulQueue][i2].length > 2) {
+          fs6[gracefulQueue][i2][3] = now;
+          fs6[gracefulQueue][i2][4] = now;
+        }
+      }
+      retry();
+    }
+    function retry() {
+      clearTimeout(retryTimer);
+      retryTimer = void 0;
+      if (fs6[gracefulQueue].length === 0)
+        return;
+      var elem = fs6[gracefulQueue].shift();
+      var fn = elem[0];
+      var args = elem[1];
+      var err = elem[2];
+      var startTime = elem[3];
+      var lastTime = elem[4];
+      if (startTime === void 0) {
+        debug("RETRY", fn.name, args);
+        fn.apply(null, args);
+      } else if (Date.now() - startTime >= 6e4) {
+        debug("TIMEOUT", fn.name, args);
+        var cb = args.pop();
+        if (typeof cb === "function")
+          cb.call(null, err);
+      } else {
+        var sinceAttempt = Date.now() - lastTime;
+        var sinceStart = Math.max(lastTime - startTime, 1);
+        var desiredDelay = Math.min(sinceStart * 1.2, 100);
+        if (sinceAttempt >= desiredDelay) {
+          debug("RETRY", fn.name, args);
+          fn.apply(null, args.concat([startTime]));
+        } else {
+          fs6[gracefulQueue].push(elem);
+        }
+      }
+      if (retryTimer === void 0) {
+        retryTimer = setTimeout(retry, 0);
+      }
+    }
+  }
+});
+
+// node_modules/proper-lockfile/node_modules/retry/lib/retry_operation.js
+var require_retry_operation = __commonJS({
+  "node_modules/proper-lockfile/node_modules/retry/lib/retry_operation.js"(exports, module) {
+    function RetryOperation(timeouts, options) {
+      if (typeof options === "boolean") {
+        options = { forever: options };
+      }
+      this._originalTimeouts = JSON.parse(JSON.stringify(timeouts));
+      this._timeouts = timeouts;
+      this._options = options || {};
+      this._maxRetryTime = options && options.maxRetryTime || Infinity;
+      this._fn = null;
+      this._errors = [];
+      this._attempts = 1;
+      this._operationTimeout = null;
+      this._operationTimeoutCb = null;
+      this._timeout = null;
+      this._operationStart = null;
+      if (this._options.forever) {
+        this._cachedTimeouts = this._timeouts.slice(0);
+      }
+    }
+    module.exports = RetryOperation;
+    RetryOperation.prototype.reset = function() {
+      this._attempts = 1;
+      this._timeouts = this._originalTimeouts;
+    };
+    RetryOperation.prototype.stop = function() {
+      if (this._timeout) {
+        clearTimeout(this._timeout);
+      }
+      this._timeouts = [];
+      this._cachedTimeouts = null;
+    };
+    RetryOperation.prototype.retry = function(err) {
+      if (this._timeout) {
+        clearTimeout(this._timeout);
+      }
+      if (!err) {
+        return false;
+      }
+      var currentTime = (/* @__PURE__ */ new Date()).getTime();
+      if (err && currentTime - this._operationStart >= this._maxRetryTime) {
+        this._errors.unshift(new Error("RetryOperation timeout occurred"));
+        return false;
+      }
+      this._errors.push(err);
+      var timeout = this._timeouts.shift();
+      if (timeout === void 0) {
+        if (this._cachedTimeouts) {
+          this._errors.splice(this._errors.length - 1, this._errors.length);
+          this._timeouts = this._cachedTimeouts.slice(0);
+          timeout = this._timeouts.shift();
+        } else {
+          return false;
+        }
+      }
+      var self2 = this;
+      var timer = setTimeout(function() {
+        self2._attempts++;
+        if (self2._operationTimeoutCb) {
+          self2._timeout = setTimeout(function() {
+            self2._operationTimeoutCb(self2._attempts);
+          }, self2._operationTimeout);
+          if (self2._options.unref) {
+            self2._timeout.unref();
+          }
+        }
+        self2._fn(self2._attempts);
+      }, timeout);
+      if (this._options.unref) {
+        timer.unref();
+      }
+      return true;
+    };
+    RetryOperation.prototype.attempt = function(fn, timeoutOps) {
+      this._fn = fn;
+      if (timeoutOps) {
+        if (timeoutOps.timeout) {
+          this._operationTimeout = timeoutOps.timeout;
+        }
+        if (timeoutOps.cb) {
+          this._operationTimeoutCb = timeoutOps.cb;
+        }
+      }
+      var self2 = this;
+      if (this._operationTimeoutCb) {
+        this._timeout = setTimeout(function() {
+          self2._operationTimeoutCb();
+        }, self2._operationTimeout);
+      }
+      this._operationStart = (/* @__PURE__ */ new Date()).getTime();
+      this._fn(this._attempts);
+    };
+    RetryOperation.prototype.try = function(fn) {
+      console.log("Using RetryOperation.try() is deprecated");
+      this.attempt(fn);
+    };
+    RetryOperation.prototype.start = function(fn) {
+      console.log("Using RetryOperation.start() is deprecated");
+      this.attempt(fn);
+    };
+    RetryOperation.prototype.start = RetryOperation.prototype.try;
+    RetryOperation.prototype.errors = function() {
+      return this._errors;
+    };
+    RetryOperation.prototype.attempts = function() {
+      return this._attempts;
+    };
+    RetryOperation.prototype.mainError = function() {
+      if (this._errors.length === 0) {
+        return null;
+      }
+      var counts = {};
+      var mainError = null;
+      var mainErrorCount = 0;
+      for (var i2 = 0; i2 < this._errors.length; i2++) {
+        var error = this._errors[i2];
+        var message = error.message;
+        var count = (counts[message] || 0) + 1;
+        counts[message] = count;
+        if (count >= mainErrorCount) {
+          mainError = error;
+          mainErrorCount = count;
+        }
+      }
+      return mainError;
+    };
+  }
+});
+
+// node_modules/proper-lockfile/node_modules/retry/lib/retry.js
+var require_retry3 = __commonJS({
+  "node_modules/proper-lockfile/node_modules/retry/lib/retry.js"(exports) {
+    var RetryOperation = require_retry_operation();
+    exports.operation = function(options) {
+      var timeouts = exports.timeouts(options);
+      return new RetryOperation(timeouts, {
+        forever: options && options.forever,
+        unref: options && options.unref,
+        maxRetryTime: options && options.maxRetryTime
+      });
+    };
+    exports.timeouts = function(options) {
+      if (options instanceof Array) {
+        return [].concat(options);
+      }
+      var opts = {
+        retries: 10,
+        factor: 2,
+        minTimeout: 1 * 1e3,
+        maxTimeout: Infinity,
+        randomize: false
+      };
+      for (var key in options) {
+        opts[key] = options[key];
+      }
+      if (opts.minTimeout > opts.maxTimeout) {
+        throw new Error("minTimeout is greater than maxTimeout");
+      }
+      var timeouts = [];
+      for (var i2 = 0; i2 < opts.retries; i2++) {
+        timeouts.push(this.createTimeout(i2, opts));
+      }
+      if (options && options.forever && !timeouts.length) {
+        timeouts.push(this.createTimeout(i2, opts));
+      }
+      timeouts.sort(function(a, b) {
+        return a - b;
+      });
+      return timeouts;
+    };
+    exports.createTimeout = function(attempt, opts) {
+      var random = opts.randomize ? Math.random() + 1 : 1;
+      var timeout = Math.round(random * opts.minTimeout * Math.pow(opts.factor, attempt));
+      timeout = Math.min(timeout, opts.maxTimeout);
+      return timeout;
+    };
+    exports.wrap = function(obj, options, methods) {
+      if (options instanceof Array) {
+        methods = options;
+        options = null;
+      }
+      if (!methods) {
+        methods = [];
+        for (var key in obj) {
+          if (typeof obj[key] === "function") {
+            methods.push(key);
+          }
+        }
+      }
+      for (var i2 = 0; i2 < methods.length; i2++) {
+        var method = methods[i2];
+        var original = obj[method];
+        obj[method] = function retryWrapper(original2) {
+          var op = exports.operation(options);
+          var args = Array.prototype.slice.call(arguments, 1);
+          var callback = args.pop();
+          args.push(function(err) {
+            if (op.retry(err)) {
+              return;
+            }
+            if (err) {
+              arguments[0] = op.mainError();
+            }
+            callback.apply(this, arguments);
+          });
+          op.attempt(function() {
+            original2.apply(obj, args);
+          });
+        }.bind(obj, original);
+        obj[method].options = options;
+      }
+    };
+  }
+});
+
+// node_modules/proper-lockfile/node_modules/retry/index.js
+var require_retry4 = __commonJS({
+  "node_modules/proper-lockfile/node_modules/retry/index.js"(exports, module) {
+    module.exports = require_retry3();
+  }
+});
+
+// node_modules/signal-exit/signals.js
+var require_signals = __commonJS({
+  "node_modules/signal-exit/signals.js"(exports, module) {
+    module.exports = [
+      "SIGABRT",
+      "SIGALRM",
+      "SIGHUP",
+      "SIGINT",
+      "SIGTERM"
+    ];
+    if (process.platform !== "win32") {
+      module.exports.push(
+        "SIGVTALRM",
+        "SIGXCPU",
+        "SIGXFSZ",
+        "SIGUSR2",
+        "SIGTRAP",
+        "SIGSYS",
+        "SIGQUIT",
+        "SIGIOT"
+        // should detect profiler and enable/disable accordingly.
+        // see #21
+        // 'SIGPROF'
+      );
+    }
+    if (process.platform === "linux") {
+      module.exports.push(
+        "SIGIO",
+        "SIGPOLL",
+        "SIGPWR",
+        "SIGSTKFLT",
+        "SIGUNUSED"
+      );
+    }
+  }
+});
+
+// node_modules/signal-exit/index.js
+var require_signal_exit = __commonJS({
+  "node_modules/signal-exit/index.js"(exports, module) {
+    var process2 = global.process;
+    var processOk = function(process3) {
+      return process3 && typeof process3 === "object" && typeof process3.removeListener === "function" && typeof process3.emit === "function" && typeof process3.reallyExit === "function" && typeof process3.listeners === "function" && typeof process3.kill === "function" && typeof process3.pid === "number" && typeof process3.on === "function";
+    };
+    if (!processOk(process2)) {
+      module.exports = function() {
+        return function() {
+        };
+      };
+    } else {
+      assert = __require("assert");
+      signals = require_signals();
+      isWin = /^win/i.test(process2.platform);
+      EE = __require("events");
+      if (typeof EE !== "function") {
+        EE = EE.EventEmitter;
+      }
+      if (process2.__signal_exit_emitter__) {
+        emitter = process2.__signal_exit_emitter__;
+      } else {
+        emitter = process2.__signal_exit_emitter__ = new EE();
+        emitter.count = 0;
+        emitter.emitted = {};
+      }
+      if (!emitter.infinite) {
+        emitter.setMaxListeners(Infinity);
+        emitter.infinite = true;
+      }
+      module.exports = function(cb, opts) {
+        if (!processOk(global.process)) {
+          return function() {
+          };
+        }
+        assert.equal(typeof cb, "function", "a callback must be provided for exit handler");
+        if (loaded === false) {
+          load8();
+        }
+        var ev = "exit";
+        if (opts && opts.alwaysLast) {
+          ev = "afterexit";
+        }
+        var remove = function() {
+          emitter.removeListener(ev, cb);
+          if (emitter.listeners("exit").length === 0 && emitter.listeners("afterexit").length === 0) {
+            unload();
+          }
+        };
+        emitter.on(ev, cb);
+        return remove;
+      };
+      unload = function unload2() {
+        if (!loaded || !processOk(global.process)) {
+          return;
+        }
+        loaded = false;
+        signals.forEach(function(sig) {
+          try {
+            process2.removeListener(sig, sigListeners[sig]);
+          } catch (er) {
+          }
+        });
+        process2.emit = originalProcessEmit;
+        process2.reallyExit = originalProcessReallyExit;
+        emitter.count -= 1;
+      };
+      module.exports.unload = unload;
+      emit = function emit2(event, code, signal) {
+        if (emitter.emitted[event]) {
+          return;
+        }
+        emitter.emitted[event] = true;
+        emitter.emit(event, code, signal);
+      };
+      sigListeners = {};
+      signals.forEach(function(sig) {
+        sigListeners[sig] = function listener() {
+          if (!processOk(global.process)) {
+            return;
+          }
+          var listeners = process2.listeners(sig);
+          if (listeners.length === emitter.count) {
+            unload();
+            emit("exit", null, sig);
+            emit("afterexit", null, sig);
+            if (isWin && sig === "SIGHUP") {
+              sig = "SIGINT";
+            }
+            process2.kill(process2.pid, sig);
+          }
+        };
+      });
+      module.exports.signals = function() {
+        return signals;
+      };
+      loaded = false;
+      load8 = function load9() {
+        if (loaded || !processOk(global.process)) {
+          return;
+        }
+        loaded = true;
+        emitter.count += 1;
+        signals = signals.filter(function(sig) {
+          try {
+            process2.on(sig, sigListeners[sig]);
+            return true;
+          } catch (er) {
+            return false;
+          }
+        });
+        process2.emit = processEmit;
+        process2.reallyExit = processReallyExit;
+      };
+      module.exports.load = load8;
+      originalProcessReallyExit = process2.reallyExit;
+      processReallyExit = function processReallyExit2(code) {
+        if (!processOk(global.process)) {
+          return;
+        }
+        process2.exitCode = code || /* istanbul ignore next */
+        0;
+        emit("exit", process2.exitCode, null);
+        emit("afterexit", process2.exitCode, null);
+        originalProcessReallyExit.call(process2, process2.exitCode);
+      };
+      originalProcessEmit = process2.emit;
+      processEmit = function processEmit2(ev, arg) {
+        if (ev === "exit" && processOk(global.process)) {
+          if (arg !== void 0) {
+            process2.exitCode = arg;
+          }
+          var ret = originalProcessEmit.apply(this, arguments);
+          emit("exit", process2.exitCode, null);
+          emit("afterexit", process2.exitCode, null);
+          return ret;
+        } else {
+          return originalProcessEmit.apply(this, arguments);
+        }
+      };
+    }
+    var assert;
+    var signals;
+    var isWin;
+    var EE;
+    var emitter;
+    var unload;
+    var emit;
+    var sigListeners;
+    var loaded;
+    var load8;
+    var originalProcessReallyExit;
+    var processReallyExit;
+    var originalProcessEmit;
+    var processEmit;
+  }
+});
+
+// node_modules/proper-lockfile/lib/mtime-precision.js
+var require_mtime_precision = __commonJS({
+  "node_modules/proper-lockfile/lib/mtime-precision.js"(exports, module) {
+    "use strict";
+    var cacheSymbol = /* @__PURE__ */ Symbol();
+    function probe3(file, fs6, callback) {
+      const cachedPrecision = fs6[cacheSymbol];
+      if (cachedPrecision) {
+        return fs6.stat(file, (err, stat2) => {
+          if (err) {
+            return callback(err);
+          }
+          callback(null, stat2.mtime, cachedPrecision);
+        });
+      }
+      const mtime = new Date(Math.ceil(Date.now() / 1e3) * 1e3 + 5);
+      fs6.utimes(file, mtime, mtime, (err) => {
+        if (err) {
+          return callback(err);
+        }
+        fs6.stat(file, (err2, stat2) => {
+          if (err2) {
+            return callback(err2);
+          }
+          const precision = stat2.mtime.getTime() % 1e3 === 0 ? "s" : "ms";
+          Object.defineProperty(fs6, cacheSymbol, { value: precision });
+          callback(null, stat2.mtime, precision);
+        });
+      });
+    }
+    function getMtime(precision) {
+      let now = Date.now();
+      if (precision === "s") {
+        now = Math.ceil(now / 1e3) * 1e3;
+      }
+      return new Date(now);
+    }
+    module.exports.probe = probe3;
+    module.exports.getMtime = getMtime;
+  }
+});
+
+// node_modules/proper-lockfile/lib/lockfile.js
+var require_lockfile = __commonJS({
+  "node_modules/proper-lockfile/lib/lockfile.js"(exports, module) {
+    "use strict";
+    var path9 = __require("path");
+    var fs6 = require_graceful_fs();
+    var retry = require_retry4();
+    var onExit = require_signal_exit();
+    var mtimePrecision = require_mtime_precision();
+    var locks = {};
+    function getLockFile(file, options) {
+      return options.lockfilePath || `${file}.lock`;
+    }
+    function resolveCanonicalPath(file, options, callback) {
+      if (!options.realpath) {
+        return callback(null, path9.resolve(file));
+      }
+      options.fs.realpath(file, callback);
+    }
+    function acquireLock(file, options, callback) {
+      const lockfilePath = getLockFile(file, options);
+      options.fs.mkdir(lockfilePath, (err) => {
+        if (!err) {
+          return mtimePrecision.probe(lockfilePath, options.fs, (err2, mtime, mtimePrecision2) => {
+            if (err2) {
+              options.fs.rmdir(lockfilePath, () => {
+              });
+              return callback(err2);
+            }
+            callback(null, mtime, mtimePrecision2);
+          });
+        }
+        if (err.code !== "EEXIST") {
+          return callback(err);
+        }
+        if (options.stale <= 0) {
+          return callback(Object.assign(new Error("Lock file is already being held"), { code: "ELOCKED", file }));
+        }
+        options.fs.stat(lockfilePath, (err2, stat2) => {
+          if (err2) {
+            if (err2.code === "ENOENT") {
+              return acquireLock(file, { ...options, stale: 0 }, callback);
+            }
+            return callback(err2);
+          }
+          if (!isLockStale(stat2, options)) {
+            return callback(Object.assign(new Error("Lock file is already being held"), { code: "ELOCKED", file }));
+          }
+          removeLock(file, options, (err3) => {
+            if (err3) {
+              return callback(err3);
+            }
+            acquireLock(file, { ...options, stale: 0 }, callback);
+          });
+        });
+      });
+    }
+    function isLockStale(stat2, options) {
+      return stat2.mtime.getTime() < Date.now() - options.stale;
+    }
+    function removeLock(file, options, callback) {
+      options.fs.rmdir(getLockFile(file, options), (err) => {
+        if (err && err.code !== "ENOENT") {
+          return callback(err);
+        }
+        callback();
+      });
+    }
+    function updateLock(file, options) {
+      const lock2 = locks[file];
+      if (lock2.updateTimeout) {
+        return;
+      }
+      lock2.updateDelay = lock2.updateDelay || options.update;
+      lock2.updateTimeout = setTimeout(() => {
+        lock2.updateTimeout = null;
+        options.fs.stat(lock2.lockfilePath, (err, stat2) => {
+          const isOverThreshold = lock2.lastUpdate + options.stale < Date.now();
+          if (err) {
+            if (err.code === "ENOENT" || isOverThreshold) {
+              return setLockAsCompromised(file, lock2, Object.assign(err, { code: "ECOMPROMISED" }));
+            }
+            lock2.updateDelay = 1e3;
+            return updateLock(file, options);
+          }
+          const isMtimeOurs = lock2.mtime.getTime() === stat2.mtime.getTime();
+          if (!isMtimeOurs) {
+            return setLockAsCompromised(
+              file,
+              lock2,
+              Object.assign(
+                new Error("Unable to update lock within the stale threshold"),
+                { code: "ECOMPROMISED" }
+              )
+            );
+          }
+          const mtime = mtimePrecision.getMtime(lock2.mtimePrecision);
+          options.fs.utimes(lock2.lockfilePath, mtime, mtime, (err2) => {
+            const isOverThreshold2 = lock2.lastUpdate + options.stale < Date.now();
+            if (lock2.released) {
+              return;
+            }
+            if (err2) {
+              if (err2.code === "ENOENT" || isOverThreshold2) {
+                return setLockAsCompromised(file, lock2, Object.assign(err2, { code: "ECOMPROMISED" }));
+              }
+              lock2.updateDelay = 1e3;
+              return updateLock(file, options);
+            }
+            lock2.mtime = mtime;
+            lock2.lastUpdate = Date.now();
+            lock2.updateDelay = null;
+            updateLock(file, options);
+          });
+        });
+      }, lock2.updateDelay);
+      if (lock2.updateTimeout.unref) {
+        lock2.updateTimeout.unref();
+      }
+    }
+    function setLockAsCompromised(file, lock2, err) {
+      lock2.released = true;
+      if (lock2.updateTimeout) {
+        clearTimeout(lock2.updateTimeout);
+      }
+      if (locks[file] === lock2) {
+        delete locks[file];
+      }
+      lock2.options.onCompromised(err);
+    }
+    function lock(file, options, callback) {
+      options = {
+        stale: 1e4,
+        update: null,
+        realpath: true,
+        retries: 0,
+        fs: fs6,
+        onCompromised: (err) => {
+          throw err;
+        },
+        ...options
+      };
+      options.retries = options.retries || 0;
+      options.retries = typeof options.retries === "number" ? { retries: options.retries } : options.retries;
+      options.stale = Math.max(options.stale || 0, 2e3);
+      options.update = options.update == null ? options.stale / 2 : options.update || 0;
+      options.update = Math.max(Math.min(options.update, options.stale / 2), 1e3);
+      resolveCanonicalPath(file, options, (err, file2) => {
+        if (err) {
+          return callback(err);
+        }
+        const operation = retry.operation(options.retries);
+        operation.attempt(() => {
+          acquireLock(file2, options, (err2, mtime, mtimePrecision2) => {
+            if (operation.retry(err2)) {
+              return;
+            }
+            if (err2) {
+              return callback(operation.mainError());
+            }
+            const lock2 = locks[file2] = {
+              lockfilePath: getLockFile(file2, options),
+              mtime,
+              mtimePrecision: mtimePrecision2,
+              options,
+              lastUpdate: Date.now()
+            };
+            updateLock(file2, options);
+            callback(null, (releasedCallback) => {
+              if (lock2.released) {
+                return releasedCallback && releasedCallback(Object.assign(new Error("Lock is already released"), { code: "ERELEASED" }));
+              }
+              unlock(file2, { ...options, realpath: false }, releasedCallback);
+            });
+          });
+        });
+      });
+    }
+    function unlock(file, options, callback) {
+      options = {
+        fs: fs6,
+        realpath: true,
+        ...options
+      };
+      resolveCanonicalPath(file, options, (err, file2) => {
+        if (err) {
+          return callback(err);
+        }
+        const lock2 = locks[file2];
+        if (!lock2) {
+          return callback(Object.assign(new Error("Lock is not acquired/owned by you"), { code: "ENOTACQUIRED" }));
+        }
+        lock2.updateTimeout && clearTimeout(lock2.updateTimeout);
+        lock2.released = true;
+        delete locks[file2];
+        removeLock(file2, options, callback);
+      });
+    }
+    function check(file, options, callback) {
+      options = {
+        stale: 1e4,
+        realpath: true,
+        fs: fs6,
+        ...options
+      };
+      options.stale = Math.max(options.stale || 0, 2e3);
+      resolveCanonicalPath(file, options, (err, file2) => {
+        if (err) {
+          return callback(err);
+        }
+        options.fs.stat(getLockFile(file2, options), (err2, stat2) => {
+          if (err2) {
+            return err2.code === "ENOENT" ? callback(null, false) : callback(err2);
+          }
+          return callback(null, !isLockStale(stat2, options));
+        });
+      });
+    }
+    function getLocks() {
+      return locks;
+    }
+    onExit(() => {
+      for (const file in locks) {
+        const options = locks[file].options;
+        try {
+          options.fs.rmdirSync(getLockFile(file, options));
+        } catch (e2) {
+        }
+      }
+    });
+    module.exports.lock = lock;
+    module.exports.unlock = unlock;
+    module.exports.check = check;
+    module.exports.getLocks = getLocks;
+  }
+});
+
+// node_modules/proper-lockfile/lib/adapter.js
+var require_adapter = __commonJS({
+  "node_modules/proper-lockfile/lib/adapter.js"(exports, module) {
+    "use strict";
+    var fs6 = require_graceful_fs();
+    function createSyncFs(fs7) {
+      const methods = ["mkdir", "realpath", "stat", "rmdir", "utimes"];
+      const newFs = { ...fs7 };
+      methods.forEach((method) => {
+        newFs[method] = (...args) => {
+          const callback = args.pop();
+          let ret;
+          try {
+            ret = fs7[`${method}Sync`](...args);
+          } catch (err) {
+            return callback(err);
+          }
+          callback(null, ret);
+        };
+      });
+      return newFs;
+    }
+    function toPromise(method) {
+      return (...args) => new Promise((resolve6, reject) => {
+        args.push((err, result) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve6(result);
+          }
+        });
+        method(...args);
+      });
+    }
+    function toSync(method) {
+      return (...args) => {
+        let err;
+        let result;
+        args.push((_err, _result) => {
+          err = _err;
+          result = _result;
+        });
+        method(...args);
+        if (err) {
+          throw err;
+        }
+        return result;
+      };
+    }
+    function toSyncOptions(options) {
+      options = { ...options };
+      options.fs = createSyncFs(options.fs || fs6);
+      if (typeof options.retries === "number" && options.retries > 0 || options.retries && typeof options.retries.retries === "number" && options.retries.retries > 0) {
+        throw Object.assign(new Error("Cannot use retries with the sync api"), { code: "ESYNC" });
+      }
+      return options;
+    }
+    module.exports = {
+      toPromise,
+      toSync,
+      toSyncOptions
+    };
+  }
+});
+
+// node_modules/proper-lockfile/index.js
+var require_proper_lockfile = __commonJS({
+  "node_modules/proper-lockfile/index.js"(exports, module) {
+    "use strict";
+    var lockfile2 = require_lockfile();
+    var { toPromise, toSync, toSyncOptions } = require_adapter();
+    async function lock(file, options) {
+      const release = await toPromise(lockfile2.lock)(file, options);
+      return toPromise(release);
+    }
+    function lockSync(file, options) {
+      const release = toSync(lockfile2.lock)(file, toSyncOptions(options));
+      return toSync(release);
+    }
+    function unlock(file, options) {
+      return toPromise(lockfile2.unlock)(file, options);
+    }
+    function unlockSync(file, options) {
+      return toSync(lockfile2.unlock)(file, toSyncOptions(options));
+    }
+    function check(file, options) {
+      return toPromise(lockfile2.check)(file, options);
+    }
+    function checkSync(file, options) {
+      return toSync(lockfile2.check)(file, toSyncOptions(options));
+    }
+    module.exports = lock;
+    module.exports.lock = lock;
+    module.exports.unlock = unlock;
+    module.exports.lockSync = lockSync;
+    module.exports.unlockSync = unlockSync;
+    module.exports.check = check;
+    module.exports.checkSync = checkSync;
+  }
+});
+
 // ../skills/_shared/video-duration.js
 var require_video_duration = __commonJS({
   "../skills/_shared/video-duration.js"(exports, module) {
@@ -49020,7 +50597,7 @@ async function runVendorJob(job) {
   }
   return { success: false, error: `${job.vendor} job ${id} still running after ${maxPolls * interval / 6e4} minutes; check it at the vendor and settle the request with video_status action:reconcile \u2014 do not resubmit`, terminal: false, providerId: id };
 }
-async function saveVendorOutput(status, target, id) {
+async function saveVendorOutput(status, target, id, verify) {
   const temporary = target + "." + randomUUID() + ".tmp";
   try {
     let bytes;
@@ -49032,6 +50609,7 @@ async function saveVendorOutput(status, target, id) {
     }
     if (!bytes.length) throw new Error("empty video");
     fs2.writeFileSync(temporary, bytes, { flag: "wx" });
+    if (verify) await verify(temporary);
     fs2.renameSync(temporary, target);
     return { success: true, videoPath: target, providerId: id, meta: status.meta ?? {} };
   } catch (error) {
@@ -49897,14 +51475,28 @@ var receiptSchema = external_exports.object({
 }).strict();
 
 // src/seedance-client.ts
+import { execFile } from "node:child_process";
+import { promisify as promisify2 } from "node:util";
 import * as path4 from "node:path";
+
+// src/modelark-assets.ts
+var import_proper_lockfile = __toESM(require_proper_lockfile(), 1);
+var groupType = external_exports.enum(["AIGC", "LivenessFace"]);
+var portraitAssetSchema = external_exports.object({
+  identityPath: external_exports.string().min(1),
+  panel: external_exports.string().min(1).default("face"),
+  groupType: groupType.optional(),
+  verifiedGroupId: external_exports.string().regex(/^group-[\w-]+$/).optional()
+}).strict();
+
+// src/seedance-client.ts
 var VALID_SEEDANCE_RESOLUTIONS = ["480p", "720p", "1080p", "4k"];
 var VALID_SEEDANCE_RATIOS = ["16:9", "9:16", "4:3", "3:4", "1:1", "21:9", "adaptive"];
+var REFERENCE_TASK_TYPES = ["auto", "reference", "edit", "extend"];
 var SEEDANCE_MODEL_SPECS = {
-  // 1080p opened on 2026-08-17 (UTC+8) — 10-bit color, and the only tier the discount
-  // campaign covers (28% off list through 2026-09-17). 2.5 has no 4K; 2.0 does.
   "dreamina-seedance-2-5-260628": {
-    resolutions: ["480p", "720p", "1080p"],
+    referenceTaskTypes: REFERENCE_TASK_TYPES,
+    resolutions: ["480p", "720p", "1080p", "4k"],
     duration: [4, 30],
     lastFrame: true,
     referenceImages: [1, 30],
@@ -49912,9 +51504,24 @@ var SEEDANCE_MODEL_SPECS = {
     referenceVideos: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30 },
     audio: true,
     realFaceInput: false,
+    portraitAssetInput: true,
+    activationGate: true
+  },
+  "dreamina-seedance-2-5-flash-261115": {
+    referenceTaskTypes: REFERENCE_TASK_TYPES,
+    resolutions: ["480p", "720p"],
+    duration: [4, 30],
+    lastFrame: true,
+    referenceImages: [1, 10],
+    referenceAudio: { maxClips: 5, clipSeconds: [2, 30], totalSeconds: 30, audioOnly: true },
+    referenceVideos: { maxClips: 5, clipSeconds: [2, 30], totalSeconds: 30 },
+    audio: true,
+    realFaceInput: false,
+    portraitAssetInput: true,
     activationGate: true
   },
   "dreamina-seedance-2-0-260128": {
+    referenceTaskTypes: [],
     resolutions: ["480p", "720p", "1080p", "4k"],
     duration: [4, 15],
     lastFrame: true,
@@ -49923,9 +51530,11 @@ var SEEDANCE_MODEL_SPECS = {
     referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
     audio: true,
     realFaceInput: false,
+    portraitAssetInput: true,
     activationGate: true
   },
   "dreamina-seedance-2-0-fast-260128": {
+    referenceTaskTypes: [],
     resolutions: ["480p", "720p"],
     duration: [4, 15],
     lastFrame: true,
@@ -49934,9 +51543,11 @@ var SEEDANCE_MODEL_SPECS = {
     referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
     audio: true,
     realFaceInput: false,
+    portraitAssetInput: true,
     activationGate: true
   },
   "dreamina-seedance-2-0-mini-260615": {
+    referenceTaskTypes: [],
     resolutions: ["480p", "720p"],
     duration: [4, 15],
     lastFrame: true,
@@ -49945,6 +51556,7 @@ var SEEDANCE_MODEL_SPECS = {
     referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
     audio: true,
     realFaceInput: false,
+    portraitAssetInput: true,
     activationGate: true
   }
 };
@@ -49986,7 +51598,8 @@ function validateCommon(data, ctx) {
     });
   }
   const [minDuration, maxDuration] = spec.duration;
-  if ((data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) < minDuration || (data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) > maxDuration) {
+  const seconds2 = data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION;
+  if (seconds2 !== -1 && (seconds2 < minDuration || seconds2 > maxDuration)) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
       path: ["durationSeconds"],
@@ -50007,6 +51620,7 @@ var seedanceText2VideoSchema = external_exports.object({
 }).superRefine(validateCommon).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
 var seedanceImg2VideoSchema = external_exports.object({
   ...commonFields,
+  realFaceInput: external_exports.boolean().optional(),
   sourceImagePath: external_exports.string().min(1, "Source image path is required"),
   lastImagePath: external_exports.string().optional(),
   // Following the input image's ratio is the default — specifying a different
@@ -50015,6 +51629,9 @@ var seedanceImg2VideoSchema = external_exports.object({
   ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("adaptive")
 }).superRefine((data, ctx) => {
   validateCommon(data, ctx);
+  if (data.model.startsWith("dreamina-seedance-2-5-") && data.ratio !== "adaptive") {
+    ctx.addIssue({ code: "custom", path: ["ratio"], message: "Seedance 2.5 first-frame generation requires adaptive ratio." });
+  }
   if (data.lastImagePath && !SEEDANCE_MODEL_SPECS[data.model].lastFrame) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
@@ -50025,10 +51642,12 @@ var seedanceImg2VideoSchema = external_exports.object({
 }).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
 var seedanceReferenceSchema = external_exports.object({
   ...commonFields,
+  omniReferenceTaskType: external_exports.enum(REFERENCE_TASK_TYPES).optional(),
+  realFaceInput: external_exports.boolean().optional(),
   referenceImagePaths: external_exports.array(external_exports.string()).optional().default([]),
   referenceAudioPaths: external_exports.array(external_exports.string()).optional().default([]),
   referenceVideoPaths: external_exports.array(external_exports.string()).optional().default([]),
-  referenceVideoUrls: external_exports.array(external_exports.string().url()).optional().default([]),
+  referenceVideoUrls: external_exports.array(external_exports.string().url().regex(/^(?:https?:\/\/|asset:\/\/)[^/\s]+/i, "Use a public HTTP(S) video URL or asset:// ID")).optional().default([]),
   ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("adaptive")
 }).superRefine((data, ctx) => {
   validateCommon(data, ctx);
@@ -50042,6 +51661,16 @@ var seedanceReferenceSchema = external_exports.object({
     });
   }
   const videoCount = data.referenceVideoPaths.length + data.referenceVideoUrls.length;
+  const task = data.omniReferenceTaskType;
+  if (task && !spec.referenceTaskTypes.includes(task)) {
+    ctx.addIssue({ code: "custom", path: ["omniReferenceTaskType"], message: "Task type selection requires Seedance 2.5 or Flash." });
+  }
+  if (task === "edit" || task === "extend") {
+    if (!videoCount) ctx.addIssue({ code: "custom", path: ["referenceVideoPaths"], message: "Editing and extension need a reference video." });
+    if (data.ratio !== "adaptive") ctx.addIssue({ code: "custom", path: ["ratio"], message: "Editing and extension require adaptive ratio." });
+    if (task === "edit" && data.durationSeconds !== void 0 && data.durationSeconds !== -1)
+      ctx.addIssue({ code: "custom", path: ["durationSeconds"], message: "Editing keeps the input duration and requires -1." });
+  }
   if (data.referenceImagePaths.length === 0 && data.referenceAudioPaths.length === 0 && videoCount === 0) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
@@ -50086,11 +51715,11 @@ var seedanceReferenceSchema = external_exports.object({
       message: `${data.model} allows at most ${audio.maxClips} reference audio clips (requested: ${data.referenceAudioPaths.length}).`
     });
   }
-  if (!audio.audioOnly && data.referenceImagePaths.length === 0) {
+  if (!audio.audioOnly && data.referenceImagePaths.length === 0 && !videoCount) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
       path: ["referenceImagePaths"],
-      message: `${data.model} needs at least one reference image alongside reference audio \u2014 audio-only input is dreamina-seedance-2-5-260628 only.`
+      message: `${data.model} needs a reference image or video; audio-only input requires Seedance 2.5.`
     });
   }
   for (const filePath of data.referenceAudioPaths) {
@@ -50110,7 +51739,8 @@ var seedanceReferenceSchema = external_exports.object({
       message: "Reference audio with generateAudio: false produces a silent video, so the voice reference has nothing to shape. Set generateAudio: true."
     });
   }
-}).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
+}).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? (data.omniReferenceTaskType === "edit" ? -1 : DEFAULT_SEEDANCE_DURATION) }));
+var runProbe = promisify2(execFile);
 
 // src/astra-video-client.ts
 import { createHash as createHash2, randomInt, randomUUID as randomUUID2 } from "node:crypto";
@@ -50144,6 +51774,7 @@ var package_default = {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "google-auth-library": "^10.9.1",
     openai: "^6.46.0",
+    "proper-lockfile": "^4.1.2",
     undici: "^7.29.1",
     ws: "8.21.1",
     zod: "^3.23.8",
@@ -50151,6 +51782,7 @@ var package_default = {
   },
   devDependencies: {
     "@types/node": "^20.14.0",
+    "@types/proper-lockfile": "^4.1.4",
     "@types/ws": "^8.18.2",
     esbuild: "^0.28.2",
     three: "0.180.0",
@@ -51732,6 +53364,8 @@ function speechVideoCapabilities(provider, model2, operation, subjectReferences 
   if (provider === "astra-genai" && (operation === "reference" || operation === "image" && model2 === "ltx-2.5-22b-distilled" && subjectReferences)) return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio" };
   if (operation === "audio" && (provider === "astra" || provider === "astra-genai-desktop" || provider === "ltx-api" || provider === "astra-genai" && GENAI_VIDEO_MODELS.some((id) => id === model2)))
     return { provider, model: model2, audioConditioning: true, lipSync: false, postLipSync: false, evidence: "The supplied track conditions video generation. Mouth movement and phoneme alignment require output review." };
+  if (provider === "seedance" && operation === "reference")
+    return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "Seedance speaks the authored dialogue with an optional voice reference. The sample guides timbre and does not fix phoneme timing." };
   if (provider === "seedance" && Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
     return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "Reference audio does not promise exact recorded-speech timing; no post-lipsync adapter installed" };
   if (["host", "veo", "mlx", "astra", "astra-genai", "astra-genai-desktop", "ltx-api", "minimax", "heygen"].includes(provider))
@@ -51831,7 +53465,7 @@ function sceneCoverage(members, scene, board, sceneNo = members[0]?.scene) {
   const owner = board?.STRUCTURE?.scenes?.find((s2) => s2.no === sceneNo);
   return resolvedDirection({ directionDefaults: owner?.directionDefaults, videoDirection: scene }, members);
 }
-function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCoverage(raw, scene, board), shotScoped = false, assetOnly = false) {
+function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCoverage(raw, scene, board), shotScoped = false, namedReferencesOnly = false) {
   const render = load5("../../skills/storyboard/references/render-routing.js");
   const members = raw;
   const fps = scene.fps ?? 24;
@@ -51867,7 +53501,7 @@ function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCovera
       const frame2 = startFrame + Math.round(pin.atSeconds * fps);
       if (!pins.some((p) => p.frame === frame2 && p.path === pin.image)) pins.push({ path: pin.image, frame: frame2, role: "keyframe", cue: english(pin.state), strength: pin.strength });
     }
-    if (frames.start && !(assetOnly && frames.mode === "reference") && !pins.some((p) => p.role === "start" && p.path === frames.start)) pins.push({ path: frames.start, frame: startFrame, role: "start" });
+    if (frames.start && !(namedReferencesOnly && frames.mode === "reference") && !pins.some((p) => p.role === "start" && p.path === frames.start)) pins.push({ path: frames.start, frame: startFrame, role: "start" });
     if (frames.end && !pins.some((p) => p.role === "end" && p.path === frames.end && (!fallback || p.frame === endFrame - 1))) pins.push({ path: frames.end, frame: endFrame - 1, role: "end" });
     const occupied = /* @__PURE__ */ new Set();
     const references = render.imageReferences(member).filter((r2) => ["video", "both"].includes(r2.use));
@@ -52054,7 +53688,7 @@ function mapSceneInputs(request, tool, model2, missing = [], resolution2) {
       missing.push({ input: "reference", shotId: p.shotId, frame: p.frame, path: p.path, role: p.role, reason: "Subject/reference slots apply across the whole generation" });
       continue;
     }
-    if (assets && p.frame === 0) continue;
+    if (p.frame === 0 && (assets || tool === "seedance_reference" && (p.strength ?? 1) === 1)) continue;
     if (tool === "astra_genai_img2video" && model2 === "ltx-2.5-22b-distilled" && p.frame === 0) continue;
     missing.push({ input: "reference", shotId: p.shotId, frame: p.frame, path: p.path, role: p.role, reason: "No compatible subject/reference slot with this frame scope" });
   }
@@ -52085,26 +53719,10 @@ import { fileURLToPath as fileURLToPath2 } from "node:url";
 import { execFileSync as execFileSync4 } from "node:child_process";
 import path8 from "node:path";
 var EPISODE_MARKER = path8.join("storyboard", "scenes.js");
-var SEEDANCE_FAMILY = {
-  "dreamina-seedance-2-5-260628": "2-5",
-  "dreamina-seedance-2-0-260128": "2-0",
-  "dreamina-seedance-2-0-fast-260128": "2-0-fast",
-  "dreamina-seedance-2-0-mini-260615": "2-0-mini"
-};
-var PRICED_VIDEO_KEYS = /* @__PURE__ */ new Set([
-  "seedance.2-0-mini.720p",
-  "seedance.2-0-fast.720p",
-  "seedance.2-0.1080p",
-  "seedance.2-5.720p",
-  "seedance.2-5.1080p",
-  // A request that carries a reference video (the previz lane) bills input + output seconds
-  // at the vendor's lower with-video token rate — its own rows.
-  "seedance.2-0-video.1080p",
-  "seedance.2-5-video.720p",
-  "seedance.2-5-video.1080p",
-  "seedance.2-0-fast-video.720p",
-  "seedance.2-0-mini-video.720p"
-]);
+var PRICED_VIDEO_KEYS = new Set(Object.entries(SEEDANCE_MODEL_SPECS).flatMap(([model2, spec]) => {
+  const family = model2.replace("dreamina-seedance-", "").replace(/-\d{6}$/, "");
+  return spec.resolutions.flatMap((res) => [`seedance.${family}.${res}`, `seedance.${family}-video.${res}`]);
+}));
 var ELEVENLABS_KEY = { eleven_v4: "tts.elevenlabs" };
 var GEMINI_UNPRICED = "unit price unconfirmed (? in prices.tsv) \u2014 cost-report.sh flags the line instead of counting it as $0";
 function probeSeconds(file) {
@@ -52163,8 +53781,8 @@ function priceOf(tool, args = {}) {
     const model2 = str(args.model, "dreamina-seedance-2-0-260128");
     const resolution2 = str(args.resolution, "720p");
     const seconds2 = num(args.durationSeconds, 5);
-    const base = SEEDANCE_FAMILY[model2];
-    if (!base) return { key: null, quantity: seconds2, note: `unmapped seedance model: ${model2}` };
+    const base = model2.replace("dreamina-seedance-", "").replace(/-\d{6}$/, "");
+    if (!Object.hasOwn(SEEDANCE_MODEL_SPECS, model2)) return { key: null, quantity: seconds2, note: `unmapped seedance model: ${model2}` };
     const videos = [
       ...Array.isArray(args.referenceVideoPaths) ? args.referenceVideoPaths : [],
       ...Array.isArray(args.referenceVideoUrls) ? args.referenceVideoUrls : []
@@ -52172,6 +53790,7 @@ function priceOf(tool, args = {}) {
     const family = videos.length ? `${base}-video` : base;
     const key = `seedance.${family}.${resolution2}`;
     if (!PRICED_VIDEO_KEYS.has(key)) return { key: null, quantity: seconds2, note: `no price row for ${key}` };
+    if (seconds2 === -1) return { key, quantity: null, note: "Adaptive output duration; settle using ModelArk completion tokens." };
     if (!videos.length) return { key, quantity: seconds2 };
     let input = 0;
     const unread = [];

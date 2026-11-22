@@ -4,8 +4,9 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const settings = require('./model-settings.js');
 const { evaluateWindowScript } = require('./scenes-vm.js');
+const { videoSlot, resolveVideoChoice } = require('../storyboard/references/production-mode.js');
 const { videoLines } = require('../storyboard/references/structure-contract.js');
-const { framePlan, imageReferences } = require('../storyboard/references/render-routing.js');
+const { framePlan, imageReferences, previzHandoff } = require('../storyboard/references/render-routing.js');
 
 // Read image and performance intent before choosing any provider parameter names.
 function storyboardInputs(members, scene) {
@@ -24,7 +25,23 @@ function storyboardInputs(members, scene) {
   };
 }
 
+// Board media paths are relative to the storyboard. API callers may also pass absolute paths.
+function seedanceMedia(shot) {
+  const slot = videoSlot(shot) || {};
+  const fields = typeof slot.realFaceInput === 'boolean' ? {realFaceInput:slot.realFaceInput} : {};
+  for (const key of ['omniReferenceTaskType', 'referenceVideoPaths', 'referenceVideoUrls', 'referenceAudioPaths', 'generateAudio'])
+    if (slot[key] !== undefined) fields[key] = slot[key];
+  if (fields.generateAudio === undefined && shot.sound?.audioSource !== 'speech' &&
+      shot.sound?.effects?.some(effect => ['auto','native'].includes(effect.delivery)) &&
+      (shot.sound.audioSource === 'video' || !(shot.narration || []).some(line => line.tts?.trim())))
+    fields.generateAudio = true;
+  if (slot.previz?.clip && previzHandoff(shot) === 'reference_video')
+    fields.referenceVideoPaths = [...new Set([slot.previz.clip, ...(fields.referenceVideoPaths || [])])];
+  return fields;
+}
+
 const operationFor = {
+  seedance: input => input.spoken || input.reference ? 'reference' : input.frames ? 'image' : 'text',
   veo: input => input.frames ? 'image' : input.reference ? 'reference' : 'text',
   'ltx-api': input => input.audio || input.spoken ? 'audio' : 'image',
   'astra-genai': (input, model) => {
@@ -38,6 +55,10 @@ const operationFor = {
 function selectOperation(choice, members, scene) {
   if (choice.operation || !Object.hasOwn(operationFor, choice.engine)) return choice;
   const inputs = storyboardInputs(members, scene);
+  if (choice.engine === 'seedance' && members.some(shot => {
+    const media = seedanceMedia(shot);
+    return media.omniReferenceTaskType || media.referenceVideoPaths?.length || media.referenceVideoUrls?.length || media.referenceAudioPaths?.length;
+  })) inputs.reference = true;
   return { ...choice, operation: operationFor[choice.engine](inputs, choice.model) };
 }
 
@@ -81,10 +102,15 @@ function readVideoContext(episode, shotId, sceneNo) {
   if (sceneNo === undefined && storedMembers.length !== 1) throw new Error('shotId must identify exactly one storyboard shot');
   const scene = sceneNo === undefined ? undefined : board.STRUCTURE?.scenes?.find(s => s.no === sceneNo);
   if (sceneNo !== undefined && (!scene || !storedMembers.length)) throw new Error('sceneNo must identify a storyboard scene with shots');
-  const { resolveVideoChoice } = require('../storyboard/references/production-mode.js');
   const choice = s => resolveVideoChoice(production, s, snapshot?.config.models.video);
   const { selection: savedSelection, source } = choice(storedMembers[0]);
-  const members = Object.hasOwn(operationFor, savedSelection.engine) ? storedMembers.map(withLegacyReferences) : storedMembers;
+  const members = Object.hasOwn(operationFor, savedSelection.engine) ? storedMembers.map(shot => {
+    if (savedSelection.engine === 'seedance' && ['quote', 'broll'].includes(shot.type)) {
+      const slot = videoSlot(shot);
+      if (slot) shot = { ...shot, visual: { ...shot.visual, video:slot } };
+    }
+    return withLegacyReferences(shot);
+  }) : storedMembers;
   const first = members[0];
   let selection = selectOperation(savedSelection, members, scene);
   let shot = first;
@@ -119,7 +145,7 @@ function readVideoContext(episode, shotId, sceneNo) {
     }
     const authoredFrames = framePlan(first);
     const opening = first.timeline?.images?.find(p => p.role === 'start')?.path || authoredFrames.start;
-    if (!timed && !opening && !['text','audio'].includes(selection.operation) && !(selection.engine === 'veo' && selection.operation === 'reference')) throw new Error('scene_video_opening_required: select the first member’s opening image');
+    if (!timed && !opening && !['text','audio'].includes(selection.operation) && !(['veo', 'seedance'].includes(selection.engine) && selection.operation === 'reference')) throw new Error('scene_video_opening_required: select the first member’s opening image');
     if (scene.videoOpeningSha256) {
       const bytes = fs.readFileSync(path.resolve(root, 'storyboard', opening));
       if (crypto.createHash('sha256').update(bytes).digest('hex') !== scene.videoOpeningSha256)
@@ -127,7 +153,7 @@ function readVideoContext(episode, shotId, sceneNo) {
     }
     // A timed scene maps each original member in the planner. Only legacy single shots use this projection.
     const frames = pinned && !timed && visual.frames?.mode === 'reference' ? { mode: 'first', start: opening }
-      : visual.frames ?? (!timed && (opening || authoredFrames.end) ? authoredFrames : {});
+      : visual.frames ?? (!timed && (opening || authoredFrames.end) ? authoredFrames : selection.engine === 'seedance' ? undefined : {});
     const refs = [...(visual.references ?? [])];
     let references = refs;
     if (pinned && !timed) {
@@ -148,14 +174,14 @@ function readVideoContext(episode, shotId, sceneNo) {
         references.push({id:'scene-opening-background',path:frames.start,role:'background',use:'video',purpose:'Opening setting and landmark positions.'});
       }
     }
-    if (frames.mode === 'reference' && !['astra-genai', 'minimax', 'heygen', 'veo'].includes(selection.engine) &&
+    if (frames?.mode === 'reference' && frames.start && !['astra-genai', 'minimax', 'heygen', 'veo', 'seedance'].includes(selection.engine) &&
         !references.some(ref => ref.path === frames.start && ['video', 'both'].includes(ref.use))) {
       references.push({id:'scene-opening-frame',path:frames.start,role:'background',use:'video',purpose:'Opening composition and character positions.'});
     }
     shotId = first.id;
     shot = { ...first, duration: members.reduce((seconds, s) => seconds + s.duration, 0),
       narration: members.flatMap(require('../storyboard/references/scene-direction.js').orderedSpeech), performance: undefined, edit: undefined,
-      visual: { ...visual, frames, ...(references.length || visual.references !== undefined || selection.operation !== 'text' ? {references} : {}), lastImagePath: undefined, imagePair: undefined, video: { ...visual.video, lastImagePath: undefined, referenceImagePaths: undefined, promptSource: undefined, prompt: undefined,
+      visual: { ...visual, frames, ...(references.length || visual.references !== undefined || selection.operation !== 'text' && !(selection.engine === 'seedance' && selection.operation === 'reference') ? {references} : {}), lastImagePath: undefined, imagePair: undefined, video: { ...visual.video, lastImagePath: undefined, referenceImagePaths: undefined, promptSource: undefined, prompt: undefined,
         speakerBindings: undefined, openingPositions: positions, openingImageSha256: undefined } } };
   }
   const overrides = production.modelSettings?.overrides || [];
@@ -170,10 +196,11 @@ function readVideoContext(episode, shotId, sceneNo) {
       !spoken.some(line => line.delivery === 'on_screen' || line.delivery === 'off_screen'))
     selection = { ...selection, operation: 'image' };
   if (snapshot || source.endsWith('_override')) settings.validateModels({ video: selection }, true, true);
+  const media = selection.engine === 'seedance' ? seedanceMedia(shot) : {};
   return { episode: root, shotId, selection, source, snapshotRevision: snapshot?.revision || null,
     ...(scene ? {sceneNo, timed, shotIds: members.map(s => s.id), sceneDirection: scene.videoDirection, sceneMembers: members} : {}),
-    revision: hash({ ...(scene ? {sceneNo, direction: scene.videoDirection, directionDefaults:scene.directionDefaults, members} : {}), selection, source, snapshotRevision: snapshot?.revision, overrides, imagePlan: { frames: shot.visual?.frames, references: shot.visual?.references, bg: shot.visual?.bg }, shotPrompt: shot.visual?.video?.prompt, shotLines: videoLines(shot), authorization: production.videoAuthorization,
+    revision: hash({ ...(Object.keys(media).length ? {seedanceMedia:media} : {}), ...(scene ? {sceneNo, direction: scene.videoDirection, directionDefaults:scene.directionDefaults, members} : {}), selection, source, snapshotRevision: snapshot?.revision, overrides, imagePlan: { frames: shot.visual?.frames, references: shot.visual?.references, bg: shot.visual?.bg }, shotPrompt: shot.visual?.video?.prompt, shotLines: videoLines(shot), authorization: production.videoAuthorization,
       budget: production.videoBudgetUsd, approval: production.approval, maxAttempts: production.maxAttempts }),
     lines: videoLines(shot), production, board, shot };
 }
-module.exports = { readVideoContext, MissingSceneDirection };
+module.exports = { readVideoContext, MissingSceneDirection, selectOperation, seedanceMedia };

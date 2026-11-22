@@ -161,6 +161,8 @@ export function speechVideoCapabilities(provider: string, model: string, operati
   if (operation === 'audio' && (provider === 'astra' || provider === 'astra-genai-desktop' || provider === 'ltx-api' ||
     provider === 'astra-genai' && GENAI_VIDEO_MODELS.some(id => id === model)))
     return { provider, model, audioConditioning: true, lipSync: false, postLipSync: false, evidence: 'The supplied track conditions video generation. Mouth movement and phoneme alignment require output review.' };
+  if (provider === 'seedance' && operation === 'reference')
+    return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: 'Seedance speaks the authored dialogue with an optional voice reference. The sample guides timbre and does not fix phoneme timing.' };
   if (provider === 'seedance' && Object.hasOwn(seedance.SEEDANCE_MODEL_SPECS, model))
     return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, evidence: 'Reference audio does not promise exact recorded-speech timing; no post-lipsync adapter installed' };
   if (['host', 'veo', 'mlx', 'astra', 'astra-genai', 'astra-genai-desktop', 'ltx-api', 'minimax', 'heygen'].includes(provider))

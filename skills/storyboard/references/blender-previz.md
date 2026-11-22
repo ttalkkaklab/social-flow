@@ -265,10 +265,10 @@ trade: exact camera and timing from the clip, a close first frame from the still
 - **One flat colour per actor, everything else grey.** `blender_scene_build` proxies take
   `color`. The prompt then binds "the red model in Video 1" to a character image, the way
   the vendor's own example does. Simple primitives beat detailed models for the reference.
-- **No face anywhere in the inputs.** On the 2.x reference-video route, a source
-  still with a real face cannot be generated there at all — take the face out of the still
-  (turned away, small in frame, illustrative) or use a compatible 1.5 or host route. 2.x moderation rejects real human faces in reference
-  images and videos; the mannequin has none, and the still and the sheets must not either.
+- **Keep the mannequin faceless.** On the Seedance reference route the mannequin carries
+  timing and blocking. Supply a visible character's likeness separately from its sheet,
+  in its own reference slot. A photoreal sheet portrait needs an active ModelArk asset.
+  See [portrait registration](../../register-seedance-portrait/SKILL.md).
 
 ### 6.2 What the storyboard stores
 

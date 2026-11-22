@@ -37,13 +37,14 @@ function forecastHostedVideo({ scene, settings, engine, kind }) {
 // Reuse the executor's precedence for saved selections and explicit per-shot overrides.
 function hostedSelection(production = {}, scene) {
   const saved = production.modelSettings?.models?.video;
-  const visual = scene.visual || {};
-  const cut = visual.video || (typeof visual.clip === 'object' && visual.clip) || visual;
-  const relevant = [saved, production.videoModel, cut, ...(production.modelSettings?.overrides || []).map(change => change.video)]
-    .some(choice => choice && (['veo', 'ltx-api'].includes(choice.engine) || /^(veo-|ltx-2-5-(?:pro|fast)$)/.test(choice.model || '')));
+  const {videoSlot, resolveVideoChoice} = require('../storyboard/references/production-mode.js');
+  const cut = videoSlot(scene);
+  const configured = [saved, production.videoModel, ...(production.modelSettings?.overrides || []).map(change => change.video)];
+  const relevant = [...configured, cut].some(choice => choice &&
+    (['veo', 'ltx-api'].includes(choice.engine) || /^(veo-|ltx-2-5-(?:pro|fast)$)/.test(choice.model || ''))) ||
+    configured.some(choice => choice?.engine === 'seedance');
   if (!relevant) return null;
-  const { resolveVideoChoice } = require('../storyboard/references/production-mode.js');
-  return resolveVideoChoice(production, { ...scene, visual: { ...visual, video: cut } }, saved).selection;
+  return resolveVideoChoice(production, scene, saved).selection;
 }
 
 module.exports = { forecastHostedVideo, hostedSelection };

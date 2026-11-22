@@ -68,6 +68,13 @@ test('single-shot scene keeps the performance and sound with and without frame-a
   }
 });
 const result={content:[{type:'text',text:'fixture media'}]};
+function writeTinyMp4(dir, filename, seconds = 1) {
+  fs.mkdirSync(dir, {recursive:true});
+  const file = path.join(dir, filename);
+  execFileSync('ffmpeg', ['-loglevel','error','-f','lavfi','-i','color=s=64x64:r=24:d='+seconds,
+    '-c:v','libx264','-threads','1','-movflags','+faststart',file]);
+  return fs.readFileSync(file);
+}
 test('managed voice guidance is sent once; changed dialogue or pinned voice invalidates the saved plan',async t=>{
  const f=fixture(t);const img=path.join(f.episode,'hero.png');fs.writeFileSync(img,'image');
  f.board.SB_DOC={characters:[{id:'hero',tts:{engine:'gemini',voiceId:'Kore',language:'ko',speed:1,voiceDirection:'Low dry Seoul voice.'}}]};
@@ -138,7 +145,7 @@ test('plan validates selection, unsupported options, cross-field constraints and
  assert.ok(f.plan('ko-quote',{prompt:'The rower says "건너자" and pushes off.'}).id);
 });
 test('completed request is reused and altered request ID payload is rejected',async t=>{
- const f=fixture(t); let calls=0; const dispatch=async()=>{calls++;recordVideoSubmission('op-1');return result;}; const p=f.plan();
+ const f=fixture(t); let calls=0; const dispatch=async(_tool,args)=>{calls++;recordVideoSubmission('op-1');writeTinyMp4(args.outputPath,args.filename);return result;}; const p=f.plan();
  await f.execute(p,dispatch); await f.execute(p,dispatch); assert.equal(calls,1);
  assert.equal(f.state().jobs.a.providerId,'op-1'); assert.equal(f.state().jobs.a.status,'completed');
  await assert.rejects(f.execute(f.plan('a',{prompt:'Different'}),dispatch),/request_id_conflict/);
@@ -191,6 +198,17 @@ test('spoken Seedance reference scene requests native audio and the off-screen s
  assert.deepEqual(p.args.referenceAudioPaths,[path.join(dir,'voice.wav')]);
  assert.match(p.args.prompt,/Wait for me/);
  assert.throws(()=>planVideo({...input,args:{generateAudio:false}}),/scene_dialogue_audio_required/);
+ assert.equal(speechVideoCapabilities('seedance', selection.model, 'reference').nativeSpeech, true);
+ f.board.STRUCTURE.scenes[0].videoDirection.fps = 24;
+ f.save();
+ const timed = planVideo({...input, requestId:'timed-reference'});
+ assert.deepEqual(timed.args.referenceImagePaths, [path.join(dir,'hero.png')]);
+ assert.deepEqual(p.args.referenceImagePaths, timed.args.referenceImagePaths);
+ shot.visual.references.push({id:'opening',role:'composition',use:'both',path:'room.png',purpose:'Opening composition.'});
+ f.save();
+ assert.deepEqual(planVideo({...input,requestId:'named-opening'}).args.referenceImagePaths, [path.join(dir,'hero.png'),path.join(dir,'room.png')]);
+ assert.deepEqual(timed.args.referenceAudioPaths, [path.join(dir,'voice.wav')]);
+ assert.equal(timed.sceneRequest.frameCount, 120);
 });
 test('overlapping scene and shot requests share the member attempt limit', async t => {
  for (const sceneFirst of [false,true]) {
@@ -369,7 +387,7 @@ test('pre-existing per-cut choice survives the episode snapshot',t=>{
 test('provider tokens settle once; status exposes receipt and legacy events are not duplicated',async t=>{
  const f=fixture(t,{engine:'seedance',model:'dreamina-seedance-2-0-260128',resolution:'720p'});
  const old=config.arkApiKey;config.arkApiKey='fixture';t.after(()=>config.arkApiKey=old);
- const p=f.plan();const dispatch=async()=>{recordVideoSubmission('task-2');recordVideoTokens(10000);return result;};
+ const p=f.plan();const dispatch=async(_tool,args)=>{recordVideoSubmission('task-2');recordVideoTokens(10000);writeTinyMp4(args.outputPath,args.filename);return result;};
  await f.execute(p,dispatch);await f.execute(p,dispatch);
  assert.equal(f.state().jobs.a.settledUsd,0.07);
  const status=JSON.parse((await ROUTES.video_status({episode:f.episode,requestId:'a'})).content[0].text);
@@ -1089,4 +1107,219 @@ test('managed video plans can resume an active snapshot after a workspace Veo pr
   delete saved.workspace;
   fs.writeFileSync(file, JSON.stringify(saved));
   assert.throws(() => f.plan('missing-workspace'), /project_setup_required/);
+});
+
+test('the saved Flash model selects text, paired frames and asset references, and refreshes the existing provider ID', async t => {
+ const model='dreamina-seedance-2-5-flash-261115', f=fixture(t,{engine:'seedance',model,resolution:'720p'});
+ const card=f.board.SCENES[0], dir=path.join(f.episode,'storyboard');
+ const plan=(id,args={})=>planVideo({episode:f.episode,shotId:'s1',requestId:id,args:{prompt:'The umbrella opens.',...args}});
+ assert.throws(()=>settings.validateModels({video:{engine:'seedance',model,resolution:'1080p'}},true),/resolution/);
+ assert.throws(()=>settings.validateModels({video:{engine:'seedance',model,operation:'audio'}},true),/operation/);
+ f.board.FORMAT='shorts-9x16'; f.save();
+ const first=plan('flash-text');
+ assert.equal(first.args.generateAudio, false);
+ card.sound = {audioSource:'video', effects:[{delivery:'native'}]}; f.save();
+ assert.equal(plan('flash-effects').args.generateAudio, true);
+ delete card.sound;
+ assert.equal(first.tool,'seedance_text2video'); assert.equal(first.args.model,model); assert.equal(first.args.ratio,'9:16');
+ for (const file of ['open.png','close.png']) fs.writeFileSync(path.join(dir,file),png);
+ card.visual.frames={mode:'first_last',start:'open.png',end:'close.png',reason:'Keep both states.',endState:'Open umbrella.'}; f.save();
+ const image=plan('flash-image');
+ assert.equal(image.tool,'seedance_img2video'); assert.equal(image.args.lastImagePath,path.join(dir,'close.png')); assert.equal(image.args.ratio,'adaptive');
+ card.visual.frames={mode:'reference'}; card.visual.references=[{id:'umbrella',role:'prop',use:'video',path:'open.png',purpose:'Match the umbrella.'}]; f.save();
+ const reference=plan('flash-reference'); assert.equal(reference.tool,'seedance_reference');
+ assert.deepEqual(reference.args.referenceImagePaths,[path.join(dir,'open.png')]);
+ const pending=await f.execute(reference,async()=>{recordVideoSubmission('cgt-test');return {isError:true,content:[{type:'text',text:'poll interrupted'}]};});
+ assert.equal(pending.isError,true);
+ const fetch=globalThis.fetch, methods=[]; t.after(()=>{globalThis.fetch=fetch;});
+ const bytes = writeTinyMp4(dir, 'fixture.mp4');
+ const bodies = [Buffer.from('<html>upstream error</html>'), bytes.subarray(0, Math.floor(bytes.length * .8)), bytes];
+ globalThis.fetch = async (url, init) => {
+   methods.push(init.method || 'GET');
+   return url.endsWith('/cgt-test')
+     ? Response.json({status:'succeeded',content:{video_url:'https://example.org/recovered'},usage:{completion_tokens:100000}})
+     : new Response(bodies.shift());
+ };
+ const refresh = () => videoStatus({episode:f.episode,requestId:'flash-reference',action:'refresh'});
+ const target = path.join(reference.args.outputPath, reference.args.filename);
+ for (let i = 0; i < 2; i++) {
+   const invalid = await refresh();
+   assert.equal(invalid.status, 'submission_unknown');
+   assert.equal(invalid.settledUsd, .7);
+   assert.equal(fs.existsSync(target), false);
+ }
+ const recovered = await refresh();
+ assert.equal(recovered.status,'completed'); assert.equal(recovered.tokens,100000); assert.equal(recovered.settledUsd,.7);
+ assert.equal((await refresh()).status,'completed');
+ assert.deepEqual(methods,Array(6).fill('GET'));
+ fs.unlinkSync(target); bodies.push(bytes);
+ await assert.rejects(f.execute(reference, () => assert.fail('duplicate POST')), /video_output_unverified/);
+ assert.equal((await refresh()).status,'completed');
+ assert.deepEqual(fs.readFileSync(target),bytes);
+ assert.deepEqual(methods,Array(8).fill('GET'));
+});
+
+test('an authored Flash edit keeps its video input, charges actual usage and rejects short footage', async t => {
+  const model = 'dreamina-seedance-2-5-flash-261115';
+  const f = fixture(t, {engine:'seedance', model, resolution:'720p'}, {maxUsd:100});
+  const card = f.board.SCENES[0];
+  Object.assign(card.visual.video, {
+    omniReferenceTaskType:'edit', referenceVideoUrls:['https://example.org/original.mp4']
+  });
+  f.save();
+  const plan = planVideo({episode:f.episode, shotId:'s1', requestId:'short-edit',
+    args:{prompt:'In @Video 1 keep the umbrella open.', requiredSeconds:5}});
+  assert.equal(plan.tool, 'seedance_reference');
+  assert.equal(plan.args.durationSeconds, -1);
+  assert.deepEqual(plan.args.referenceVideoUrls, card.visual.video.referenceVideoUrls);
+  const result = await f.execute(plan, async (_tool, args) => {
+    recordVideoSubmission('cgt-edit');
+    recordVideoTokens(100000);
+    writeTinyMp4(args.outputPath, args.filename);
+    return {content:[{type:'text',text:'Provider finished'}]};
+  });
+  assert.equal(result.isError, true);
+  assert.match(result.content[0].text, /needs 5s/);
+  const job = f.state().jobs['short-edit'];
+  assert.equal(job.status, 'failed');
+  assert.equal(job.settledUsd, .43);
+  assert.ok(fs.existsSync(path.join(plan.args.outputPath, plan.args.filename)));
+  await assert.rejects(f.execute(plan, () => assert.fail('duplicate submission')), /video_request_failed/);
+});
+
+test('approved Seedance media, task type and audio changes invalidate both approval and dispatch', async t => {
+  const f = fixture(t, {engine:'seedance',model:'dreamina-seedance-2-5-flash-261115',resolution:'720p'});
+  const slot = f.board.SCENES[0].visual.video;
+  const original = {referenceVideoUrls:['asset://original'], omniReferenceTaskType:'extend', generateAudio:false};
+  Object.assign(slot, original); f.save();
+  const plan = planVideo({episode:f.episode,shotId:'s1',requestId:'approved',args:{prompt:'Extend @Video 1 as the leaves fall.'}});
+  assert.equal(plan.sourceArgs.referenceVideoUrls, undefined);
+  approveVideo({episode:f.episode,planIds:[plan.id],request:'Use the original clip'});
+  for (const change of [{referenceVideoUrls:['asset://other']},{referenceVideoUrls:undefined},{omniReferenceTaskType:'edit'},{generateAudio:true}]) {
+    Object.assign(slot, original, change); f.save();
+    assert.throws(() => approveVideo({episode:f.episode,planIds:[plan.id],request:'Old approval'}), /video_plan_stale/);
+    await assert.rejects(f.execute(plan, () => assert.fail('stale paid call')), /video_plan_stale/);
+  }
+});
+
+test('Seedance moderation releases the budget on normal polling and recovery', async t => {
+  const f = fixture(t, selection, {maxUsd:1.2,maxAttempts:3});
+  const timer = globalThis.setTimeout;
+  t.mock.method(globalThis, 'setTimeout', (fn, ms, ...args) => timer(fn, ms === 10000 ? 0 : ms, ...args));
+  const calls = [];
+  t.mock.method(globalThis, 'fetch', async (url, init) => {
+    calls.push(init.method || 'GET');
+    return Response.json(init.method === 'POST' ? { id:'cgt-normal' } : {status:'failed',error:{message:'moderation'}});
+  });
+  const first = f.plan('normal');
+  assert.ok(first.quote.reserveUsd * 2 > 1.2);
+  await ROUTES.video_execute({episode:f.episode,planId:first.id});
+  assert.equal(f.state().jobs.normal.settledUsd, 0);
+  const second = f.plan('interrupted');
+  await f.execute(second, () => {
+    recordVideoSubmission('cgt-interrupted');
+    return {isError:true,content:[{type:'text',text:'poll interrupted'}]};
+  });
+  assert.equal(f.state().jobs.interrupted.settledUsd, undefined);
+  const job = await videoStatus({episode:f.episode,requestId:'interrupted',action:'refresh'});
+  assert.equal(job.status,'failed'); assert.equal(job.settledUsd,0);
+  await ROUTES.video_execute({episode:f.episode,planId:f.plan('next').id});
+  assert.deepEqual(calls,['POST','GET','GET','POST','GET']);
+});
+
+test('Seedance quotes, plans and dispatches the authored model and prompt on every video slot', async t => {
+  const {scenePlan} = require('../../skills/produce/references/seedance-route.js');
+  const flash = 'dreamina-seedance-2-5-flash-261115';
+  for (const type of ['points', 'broll', 'quote']) {
+    const f = fixture(t, selection, {maxUsd:100, maxAttempts:5});
+    const slot = {engine:'seedance',model:flash,resolution:'720p',omniReferenceTaskType:'extend',
+      referenceVideoUrls:['asset://source'],prompt:'Extend @Video 1 with a blue light.'};
+    const card = {id:'s1',type,duration:5,summary:'The actor walks home.',visual:type === 'broll' ? slot : type === 'quote' ? {clip:slot} : {video:slot}};
+    f.board.SCENES = [card]; f.save();
+    const quote = scenePlan(card, {modelSettings:{models:{video:selection}}});
+    const planned = planVideo({episode:f.episode,shotId:'s1',requestId:'authored'});
+    assert.equal(quote.model,flash); assert.equal(planned.args.model,quote.model);
+    assert.equal(planned.args.prompt,slot.prompt);
+    await f.execute(planned, (tool, args) => {
+      assert.equal(tool,quote.tool); assert.equal(args.model,flash);
+      assert.deepEqual(args.referenceVideoUrls,['asset://source']); return result;
+    });
+    card.scene=1;
+    if (type === 'quote') { card.visual.frames={mode:'reference'}; card.visual.references=[]; }
+    f.board.STRUCTURE={scenes:[{no:1,videoDirection:{openingPositions:[],emotion:'A calm walk home.'}}]};
+    for (const fps of [undefined,24]) {
+      f.board.STRUCTURE.scenes[0].videoDirection.fps=fps;
+      for (const task of ['edit','extend']) {
+        slot.omniReferenceTaskType=task;
+        slot.prompt = task === 'edit' ? 'Edit @Video 1 to turn the jacket blue.' : 'Extend @Video 1 until the jacket catches the light.';
+        f.save();
+        const plan=planVideo({episode:f.episode,sceneNo:1,requestId:'scene-'+task+(fps||'legacy')});
+        assert.equal(plan.args.model,flash); assert.equal(plan.tool,'seedance_reference');
+        assert.ok(plan.args.prompt.includes(slot.prompt));
+        assert.ok(plan.args.prompt.includes('A calm walk home.'));
+        assert.equal(plan.args.omniReferenceTaskType,task);
+        assert.equal(plan.args.durationSeconds,task==='edit' ? -1 : 5);
+        assert.deepEqual(plan.args.referenceVideoUrls,['asset://source']);
+        approveVideo({episode:f.episode,planIds:[plan.id],request:'Same scene'});
+        await f.execute(plan, (tool,args) => {
+          assert.equal(tool,'seedance_reference'); assert.ok(args.prompt.includes(slot.prompt));
+          assert.ok(args.prompt.includes('A calm walk home.')); assert.deepEqual(args.referenceVideoUrls,['asset://source']);
+          writeTinyMp4(args.outputPath,args.filename,5); return result;
+        });
+        slot.referenceVideoUrls=['asset://changed']; f.save();
+        await assert.rejects(f.execute(plan, () => assert.fail('stale scene')), /video_plan_stale/);
+        slot.referenceVideoUrls=['asset://source'];
+      }
+      delete slot.referenceVideoUrls;
+      delete slot.omniReferenceTaskType;
+      slot.referenceAudioPaths=['voice.wav']; slot.generateAudio=true;
+      fs.writeFileSync(path.join(f.episode,'storyboard','voice.wav'),'planning fixture');
+      f.save();
+      const voice=planVideo({episode:f.episode,sceneNo:1,requestId:'voice'+(fps||'legacy')});
+      assert.deepEqual(voice.args.referenceAudioPaths,[path.join(f.episode,'storyboard','voice.wav')]);
+      assert.equal(voice.args.generateAudio,true);
+      delete slot.referenceAudioPaths; slot.referenceVideoUrls=['asset://source']; delete slot.generateAudio;
+    }
+  }
+});
+
+test('Seedance submits only named video references in shot, legacy scene and timed scene requests', async t => {
+  for (const use of [undefined,'image','both']) {
+    const f=fixture(t,{engine:'seedance',model:'dreamina-seedance-2-5-flash-261115',resolution:'720p'},{maxUsd:100});
+    const dir=path.join(f.episode,'storyboard');
+    for (const name of ['prop.png','open.png']) fs.writeFileSync(path.join(dir,name),png);
+    const card=f.board.SCENES[0];
+    card.duration=5;
+    card.visual.frames={mode:'reference',start:'open.png'};
+    card.visual.references=[{id:'prop',use:'video',role:'prop',path:'prop.png',purpose:'Keep the red umbrella.'}];
+    if (use) card.visual.references.push({id:'display',use,role:'composition',path:'open.png',purpose:'The opening composition.'});
+    card.visual.video.prompt='Follow the red umbrella.';
+    const expected=(use==='both'?['prop.png','open.png']:['prop.png']).map(name=>path.join(dir,name));
+    for (const route of ['shot','legacy','timed']) {
+      if (route!=='shot') {
+        card.scene=1;
+        f.board.STRUCTURE={scenes:[{no:1,videoDirection:{openingPositions:[],emotion:'A calm walk.',...(route==='timed'?{fps:24}:{})}}]};
+      }
+      f.save();
+      const plan=planVideo({episode:f.episode,...(route==='shot'?{shotId:'s1'}:{sceneNo:1}),requestId:route});
+      await f.execute(plan, (tool,args)=>{
+        assert.equal(tool,'seedance_reference');
+        assert.deepEqual(args.referenceImagePaths,expected);
+        return result;
+      });
+    }
+  }
+});
+
+test('a blocked ModelArk portrait releases the reservation so the same approved plan can execute', async t => {
+  const f = fixture(t, selection, {maxAttempts:1, maxConcurrent:1});
+  const plan = f.plan();
+  const detail = {code:'modelark_asset_entitlement_required', stage:'modelark_portrait', providerCode:'SubscriptionRequired', videoSubmitted:false};
+  const blocked = await f.execute(plan, async () => ({isError:true, terminal:true, structuredContent:detail, content:[{type:'text',text:JSON.stringify(detail)}]}));
+  assert.deepEqual(blocked.structuredContent,detail);
+  assert.deepEqual(f.state().jobs,{});
+  let calls=0;
+  await f.execute(plan,async()=>{calls++;recordVideoSubmission('cgt-after-activation');return result;});
+  assert.equal(calls,1);
+  assert.equal(f.state().jobs.a.providerId,'cgt-after-activation');
 });

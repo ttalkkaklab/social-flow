@@ -32,6 +32,7 @@ import * as music from './music-client.js';
 import * as qwen3asr from './qwen3-asr-client.js';
 import * as suno from './suno-client.js';
 import * as naver from './naver-client.js';
+import { ensurePortrait, portraitAssetSchema, PortraitError } from './modelark-assets.js';
 import * as seedance from './seedance-client.js';
 import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
 import { generateMinimaxVideo, minimaxImg2VideoSchema, minimaxReferenceSchema } from './minimax-video.js';
@@ -62,6 +63,9 @@ import { renderCapabilityStatus } from './capability-status.js';
 import { DURATION_TOOLS, resolveVideoDuration } from './video-duration.js';
 import { manageCharacter } from './character-manage.js';
 import { characterPanelRequest, characterPanelSchema, recordCharacterPanel } from './character-panel.js';
+function portraitBlocked(report) {
+    return { isError: true, terminal: true, structuredContent: report, content: [{ type: 'text', text: JSON.stringify(report) }] };
+}
 function text(message, isError = false) {
     return { content: [{ type: 'text', text: message }], isError };
 }
@@ -976,6 +980,16 @@ export const ROUTES = {
     minimax_reference: async (args) => vendorReport(await generateMinimaxVideo(parseArgs(minimaxReferenceSchema, args))),
     heygen_img2video: async (args) => vendorReport(await generateHeygenVideo(parseArgs(heygenImg2VideoSchema, args))),
     heygen_reference: async (args) => vendorReport(await generateHeygenVideo(parseArgs(heygenReferenceSchema, args))),
+    modelark_portrait_register: async (args) => {
+        try {
+            return text(JSON.stringify(await ensurePortrait(parseArgs(portraitAssetSchema, args))));
+        }
+        catch (error) {
+            if (error instanceof PortraitError)
+                return portraitBlocked(error.report);
+            throw error;
+        }
+    },
     seedance_text2video: async (args) => {
         const result = await seedance.generateFromText(parseArgs(seedance.seedanceText2VideoSchema, args));
         if (!result.success)
@@ -984,6 +998,8 @@ export const ROUTES = {
     },
     seedance_img2video: async (args) => {
         const result = await seedance.generateFromImage(parseArgs(seedance.seedanceImg2VideoSchema, args));
+        if (result.portraitProblem)
+            return portraitBlocked(result.portraitProblem);
         if (!result.success)
             return { ...text(`Seedance video generation from image failed: ${result.error}`, true), terminal: result.terminal === true };
         const lastImageInfo = result.lastImage ? `\nLast Frame Image: ${result.lastImage}` : '';
@@ -992,6 +1008,8 @@ export const ROUTES = {
     },
     seedance_reference: async (args) => {
         const result = await seedance.generateWithReferences(parseArgs(seedance.seedanceReferenceSchema, args));
+        if (result.portraitProblem)
+            return portraitBlocked(result.portraitProblem);
         if (!result.success)
             return { ...text(`Seedance video generation with references failed: ${result.error}`, true), terminal: result.terminal === true };
         const refImagesInfo = result.referenceImages?.length

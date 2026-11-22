@@ -64,7 +64,7 @@ export function sceneCoverage(members: Record<string,unknown>[], scene: Partial<
   return resolvedDirection({directionDefaults:owner?.directionDefaults, videoDirection:scene}, members);
 }
 
-export function compileSceneTimeline(raw: Record<string, unknown>[], scene: Partial<SceneVideoDirection>, episode: string, board?: Record<string, unknown>, coverage = sceneCoverage(raw, scene, board), shotScoped = false, assetOnly = false) {
+export function compileSceneTimeline(raw: Record<string, unknown>[], scene: Partial<SceneVideoDirection>, episode: string, board?: Record<string, unknown>, coverage = sceneCoverage(raw, scene, board), shotScoped = false, namedReferencesOnly = false) {
   const render = load('../../skills/storyboard/references/render-routing.js');
   const members = raw as unknown as Member[];
   const fps = scene.fps ?? 24;
@@ -103,9 +103,8 @@ export function compileSceneTimeline(raw: Record<string, unknown>[], scene: Part
       const frame = startFrame + Math.round(pin.atSeconds * fps);
       if (!pins.some(p => p.frame === frame && p.path === pin.image)) pins.push({ path: pin.image, frame, role: 'keyframe', cue: english(pin.state), strength: pin.strength });
     }
-    // In Veo reference mode the board's display image is a composition guide.
-    // Explicit timeline pins still reach validation and cannot share a Vertex asset request.
-    if (frames.start && !(assetOnly && frames.mode === 'reference') && !pins.some(p => p.role === 'start' && p.path === frames.start)) pins.push({ path: frames.start, frame: startFrame, role: 'start' });
+    // Reference-mode display images are not temporal pins. Named video/both assets carry appearance.
+    if (frames.start && !(namedReferencesOnly && frames.mode === 'reference') && !pins.some(p => p.role === 'start' && p.path === frames.start)) pins.push({ path: frames.start, frame: startFrame, role: 'start' });
     if (frames.end && !pins.some(p => p.role === 'end' && p.path === frames.end && (!fallback || p.frame === endFrame - 1))) pins.push({ path: frames.end, frame: endFrame - 1, role: 'end' });
     const occupied = new Set<number>();
     const references: Reference[] = render.imageReferences(member).filter((r: Reference) => ['video','both'].includes(r.use));
@@ -204,12 +203,12 @@ export function sceneTimelineWords(t: SceneTimeline, scene: Partial<SceneVideoDi
 export function prepareSceneRequest<T>(
   sceneNo: number, members: Record<string, unknown>[], scene: SceneVideoDirection, episode: string,
   dialogue: { speaker?: string; delivery?: string; tts?: string }[],
-  options: { bindDialogue: boolean; bindOpening: boolean; suffix: string; shotScoped?: boolean; assetOnly?: boolean },
+  options: { bindDialogue: boolean; bindOpening: boolean; suffix: string; shotScoped?: boolean; namedReferencesOnly?: boolean },
   mapInputs: (request: SceneRequest) => T,
   board?: Record<string, unknown>,
 ) {
   const coverage = sceneCoverage(members, scene, board, sceneNo);
-  const timeline = compileSceneTimeline(members, scene, episode, board, coverage, options.shotScoped, options.assetOnly);
+  const timeline = compileSceneTimeline(members, scene, episode, board, coverage, options.shotScoped, options.namedReferencesOnly);
   const common = coverage.common;
   const camera = sceneCameraDirection([], common.camera && attributeWords('camera', common.camera));
   const staging = Object.entries(common).filter(([key]) => key !== 'camera').map(([key,row]) => attributeWords(key,row)).filter(Boolean).join(' ');
@@ -418,7 +417,7 @@ export function mapSceneInputs(request: SceneRequest, tool: string, model?: stri
       missing.push({input:'reference', shotId:p.shotId, frame:p.frame, path:p.path, role:p.role, reason:'Subject/reference slots apply across the whole generation'});
       continue;
     }
-    if (assets && p.frame === 0) continue;
+    if (p.frame === 0 && (assets || tool === 'seedance_reference' && (p.strength ?? 1) === 1)) continue;
     if (tool === 'astra_genai_img2video' && model === 'ltx-2.5-22b-distilled' && p.frame === 0) continue;
     missing.push({ input:'reference', shotId:p.shotId, frame:p.frame, path:p.path, role:p.role, reason:'No compatible subject/reference slot with this frame scope' });
   }
@@ -453,6 +452,7 @@ export function sceneImageBindings(request: SceneRequest, tool: string, bindings
       : index >= 0 ? refs.splice(index, 1)[0] : undefined;
     if (!image) return binding;
     const parameter = endpoint ? FRAME_FIELDS[tool]?.[binding.id === 'start' ? 0 : 1]
+      : tool === 'seedance_reference' ? 'referenceImagePaths[' + slot++ + ']'
       : assets ? assets.parameter + '[' + slot++ + ']' : 'references[' + slot++ + '].imagePath';
     return { ...binding, shotId:image.shotId, frame:image.frame, role:image.role, parameter, character:image.character };
   });
@@ -466,6 +466,7 @@ export function bindSceneAdapter(request: SceneRequest, tool: string, model: str
   const args: Record<string,unknown> = {};
   const sceneSeconds = request.frameCount / request.fps;
   for (const field of ['duration','durationSeconds','requiredSeconds']) {
+    if (tool.startsWith('seedance_') && field === 'durationSeconds' && input[field] === -1) continue;
     if (input[field] !== undefined && input[field] !== sceneSeconds)
       throw new Error('scene_video_timing: ' + field + ' differs from the authored scene duration');
   }
@@ -533,7 +534,7 @@ export function bindSceneAdapter(request: SceneRequest, tool: string, model: str
     purpose: [p.character,p.role].filter(Boolean).join(' ') + ' reference only. Use the shot action for entrance timing.' });
   // Subject assets go through the shot binder, which attaches the same ordered
   // reference descriptions and preserve/avoid instructions to the provider prompt.
-  const projected = { ...visual, frames: { mode:assets ? 'reference' : end ? 'first_last' : 'first', start:start?.path, end:end?.path }, references,
+  const projected = { ...visual, frames: { mode:assets || tool === 'seedance_reference' ? 'reference' : end ? 'first_last' : 'first', start:start?.path, end:end?.path }, references,
     bg:start?.path, imagePair:undefined, lastImagePath:undefined };
   if (caps.timedImages || assets || !request.images.length) {
     const fields = ['images','keyframes','sourceImagePath','lastImagePath','imagePath','imageUri','lastFramePath',

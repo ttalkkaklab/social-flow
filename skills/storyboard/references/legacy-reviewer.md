@@ -1191,7 +1191,7 @@ finding; a silent departure is.
   12s, a long take holding two moves. The §cut length table is the yardstick. Also flag a
   Seedance shot asking for more seconds than it will use: that engine bills what you request.
 - **P0-8 engine misassignment** — new generation planned on Gemini Developer API Veo previews, Gemini Omni or Seedance 1.x (`video_engine_unsupported`), a
-  real face routed to Seedance 2.x (it refuses them; photoreal real people go to an LTX lane),
+  raw face routed to Seedance 2.x without a reviewed ModelArk portrait,
   a spoken cut on an adapter without a voice lane (`voice_lane_required`), or a
   `visual.character` id that isn't in the channel cast (profile §2 · `assets/characters/<id>/`).
   An entry may be a bare id or `{ id, scope }` — read the id out of either form.

@@ -34587,6 +34587,7 @@ var package_default = {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "google-auth-library": "^10.9.1",
     openai: "^6.46.0",
+    "proper-lockfile": "^4.1.2",
     undici: "^7.29.1",
     ws: "8.21.1",
     zod: "^3.23.8",
@@ -34594,6 +34595,7 @@ var package_default = {
   },
   devDependencies: {
     "@types/node": "^20.14.0",
+    "@types/proper-lockfile": "^4.1.4",
     "@types/ws": "^8.18.2",
     esbuild: "^0.28.2",
     three: "0.180.0",

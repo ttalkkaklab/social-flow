@@ -131,13 +131,13 @@ test('a model and resolution nobody priced comes back null, not as an invented k
   // (480p everywhere with no 480p row).
   const known = priceKeys();
   const combos = [
-    ...['dreamina-seedance-2-5-260628', 'dreamina-seedance-2-0-260128',
+    ...['dreamina-seedance-2-5-flash-261115', 'dreamina-seedance-2-5-260628', 'dreamina-seedance-2-0-260128',
         'dreamina-seedance-2-0-fast-260128', 'dreamina-seedance-2-0-mini-260615']
       .flatMap((model) => ['480p', '720p', '1080p', '4k'].flatMap((resolution) =>
         [false, true].map((generateAudio) =>
           ['seedance_text2video', { model, resolution, generateAudio, durationSeconds: 5 }]))),
     // A reference video (the previz lane) bills on its own with-video rows.
-    ...['dreamina-seedance-2-5-260628', 'dreamina-seedance-2-0-260128',
+    ...['dreamina-seedance-2-5-flash-261115', 'dreamina-seedance-2-5-260628', 'dreamina-seedance-2-0-260128',
         'dreamina-seedance-2-0-fast-260128', 'dreamina-seedance-2-0-mini-260615']
       .flatMap((model) => ['480p', '720p', '1080p', '4k'].map((resolution) =>
         ['seedance_reference', { model, resolution, durationSeconds: 5, referenceVideoUrls: ['https://host/previz.mp4'] }])),

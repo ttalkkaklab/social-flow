@@ -424,7 +424,7 @@ means generating something nobody approved.
   lip-synced speaking cut — pass it as `referenceAudioPaths` and bind it in the prompt right
   after the reference list: `@Image 1-2 are Claude and speak with the voice of @Audio 1`. Two
   speakers, two clips, one sentence each; `@Audio N` is the Nth entry of `referenceAudioPaths`.
-  Use the saved compatible Seedance selection: 2.5 documents explicit mapping; 2.0/Fast/Mini accept reference audio with an image. Do not silently switch grades.
+  Use the saved compatible Seedance selection: 2.5 documents explicit mapping; 2.5 and Flash accept audio alone. On 2.0/Fast/Mini, include an image or video with the reference audio. Do not silently switch grades.
   `video_plan` preserves reference indices and maps pinned samples.
   An adapter whose voice lane is `none` refuses a spoken cut (`voice_lane_required`); use an
   audio2video adapter under shot-speech.md when the finished WAV must drive the mouth. A cut voiced
