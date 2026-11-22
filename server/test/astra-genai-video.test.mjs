@@ -174,7 +174,7 @@ test('a rejected submission frees its output name; one status 5xx is polled thro
     assert.equal(options.method, 'GET');
     return ++recoveryGets < 4 ? new Response('busy', {status:503}) : Response.json({id:'job-3', status:'cancelled'});
   };
-  await assert.rejects(generateGenaiVideo('text-to-video', args, undefined, 3), error => error.terminal && error.httpStatus === 200);
+  await assert.rejects(generateGenaiVideo('text-to-video', args, undefined, {statusRetries:3}), error => error.terminal && error.httpStatus === 200);
   assert.equal(recoveryGets, 4);
 });
 test('two live preparations follow the same accepted job after racing to claim its filename', async t => {

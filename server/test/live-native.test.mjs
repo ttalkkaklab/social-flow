@@ -12,7 +12,7 @@ import {config} from '../dist/config.js';
 
 const actor = {asset:'/host.png',voiceSample:'/voice.wav',language:'ko',voiceDirection:'Warm and relaxed.'};
 
-test('unavailable status for a submitted video preserves the receipt and blocks queued and new submissions', async t => {
+test('an unknown remote job pauses admissions and a completed job with a broken download releases its slot', async t => {
   const dir = mkdtempSync(join(tmpdir(), 'live-unresolved-'));
   const portrait = join(dir, 'host.png'), voice = join(dir, 'voice.wav');
   writeFileSync(portrait, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=', 'base64'));
@@ -21,16 +21,18 @@ test('unavailable status for a submitted video preserves the receipt and blocks 
   const key = config.astraGenaiApiKey;
   config.astraGenaiApiKey = 'test-only';
   t.after(() => { config.astraGenaiApiKey = key; render.close(); rmSync(dir, {recursive:true, force:true}); });
-  let submitted = 0, polled = 0;
+  let submitted = 0, polled = 0, completed = false;
   t.mock.method(globalThis, 'fetch', async (url, init) => {
     const path = new URL(url).pathname;
+    if (path === '/asset.mp4') return new Response(null, {status:502});
     if (path === '/v1/models') return Response.json({data:[{id:'ltx-2.5-22b-distilled', parameters_by_mode:{image2video:['num_frames']}}]});
     if (path.endsWith('/capabilities')) return Response.json({image_conditioning:true, voice_references:true});
     if (path.endsWith('/uploads')) return new Response(null, {status:404});
     if (init.method === 'POST') { submitted++; return Response.json({id:'accepted-job'}); }
     assert.ok(path.endsWith('/accepted-job'));
     polled++;
-    return new Response(null, {status:403});
+    return completed ? Response.json({id:'accepted-job', status:'completed', result:{video_url:'https://cdn.example/asset.mp4'}})
+      : new Response(null, {status:403});
   });
   const pool = new LiveRenderPool(1), signal = new AbortController().signal;
   const schedule = text => pool.run(true, () => render.render(text, signal));
@@ -40,6 +42,12 @@ test('unavailable status for a submitted video preserves the receipt and blocks 
   await assert.rejects(schedule('어서 오세요.'), error => error === pool.paused);
   assert.equal(JSON.parse(readFileSync(pool.paused.receiptPath)).jobId, 'accepted-job');
   assert.deepEqual([submitted, polled], [1, 1]);
+  completed = true;
+  const resumed = new LiveRenderPool(1);
+  const clips = await Promise.allSettled(['안녕하세요.', '다음 이야기예요.'].map(text => resumed.run(false, () => render.render(text, signal))));
+  assert.ok(clips.every(clip => clip.status === 'rejected' && /502/.test(clip.reason.message)));
+  assert.equal(resumed.paused, undefined);
+  assert.deepEqual([submitted, polled], [2, 3]);
 });
 
 test('live dialogue binds the exact line and voice reference to the on-screen host', () => {

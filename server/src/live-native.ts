@@ -127,9 +127,12 @@ export class NativeTalk {
     let download = this.downloads.get(input.filename);
     if (!download) {
       const receiptPath = join(outputPath, input.filename) + '.astra-genai.json';
-      download = generateGenaiVideo('image-to-video', input, signal, 3)
+      let jobCompleted = false;
+      download = generateGenaiVideo('image-to-video', input, signal, {
+        statusRetries: 3, onJobCompleted: () => { jobCompleted = true; }
+      })
         .catch(error => {
-          if (signal.aborted || error instanceof GenaiRequestError && error.terminal && error.httpStatus === 200)
+          if (signal.aborted || jobCompleted || error instanceof GenaiRequestError && error.terminal && error.httpStatus === 200)
             throw error;
           if (existsSync(receiptPath)) {
             let completed = false;
