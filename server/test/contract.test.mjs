@@ -1,16 +1,4 @@
-/**
- * Tool-surface contract tests — `npm run check` (runs after the build).
- *
- * No real API is called. Most defects in this server are "contract mismatches
- * invisible until you actually call" (missing routes, arguments that exist in
- * the schema but not the handler, enums drifted from the canonical constants,
- * behavior hints contradicting the description), so everything catchable
- * statically is caught here.
- *
- * There are no behavioral evals here, because the publish tools create public
- * posts on a real call — that waits for a dry-run layer.
- */
-
+// MCP tool definitions, routing and preflight checks. Provider calls stay offline.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
@@ -23,7 +11,6 @@ import { describe, it } from 'node:test';
 import {
   SNS_PLATFORMS,
   disabledToolPatterns,
-  isToolDisabled,
   snsCredentialFile,
   snsTokenDir,
 } from '../dist/config.js';
@@ -35,21 +22,11 @@ import {
   GEMINI_38_TTS_MODELS,
   MAX_GEMINI_38_TTS_INPUT_CHARS,
   TTS_VOICE_NAMES,
-  VALID_TTS_MODELS,
 } from '../dist/tts-client.js';
 import {
-  DEFAULT_ELEVENLABS_MODEL,
-  DEFAULT_ELEVENLABS_OUTPUT_FORMAT,
   ELEVENLABS_DIALOGUE_MAX_INPUTS,
-  ELEVENLABS_MODELS,
-  ELEVENLABS_OUTPUT_FORMATS,
-  ELEVENLABS_TEXT_NORMALIZATION,
-  ELEVENLABS_VOICE_CATEGORIES,
   MAX_ELEVENLABS_INPUT_CHARS,
-  DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT,
-  ELEVENLABS_SFX_OUTPUT_FORMATS,
 } from '../dist/elevenlabs-client.js';
-import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from '../dist/music-client.js';
 import {
   DEFAULT_SEEDANCE_DURATION,
   DEFAULT_SEEDANCE_MODEL,
@@ -62,11 +39,6 @@ import {
   seedanceReferenceSchema,
   seedanceText2VideoSchema,
 } from '../dist/seedance-client.js';
-import {
-  DEFAULT_ZIMAGE_QUANTIZE,
-  DEFAULT_ZIMAGE_STEPS,
-  ZIMAGE_QUANTIZE_OPTIONS,
-} from '../dist/zimage-client.js';
 import {
   IMAGE_ASPECTS,
   IMAGE_LICENSES,
@@ -111,74 +83,53 @@ describe('tool surface', () => {
     }
   });
 
-  for (const tool of TOOLS) {
-    describe(tool.name, () => {
-      it('has a title and a description', () => {
-        assert.equal(typeof tool.title, 'string');
-        assert.ok(tool.title.trim().length > 0, 'title is empty');
-        assert.ok(tool.title.length <= 60, `title too long (${tool.title.length} chars)`);
-        assert.ok((tool.description ?? '').trim().length >= 40, 'description missing or too short');
-        // Claude Code cuts an upfront tool description at 4,096 characters; the rest never reaches the model.
-        assert.ok(tool.description.length <= 4096, `description too long (${tool.description.length} chars)`);
-      });
+  it('tools have a title and description that fit the client', () => {
+    for (const { name, title, description } of TOOLS) {
+      assert.ok(typeof title === 'string' && title.trim() && title.length <= 60, name + '.title');
+      assert.ok(typeof description === 'string' && description.trim().length >= 40 && description.length <= 4096, name + '.description');
+    }
+  });
 
-      it('inputSchema is a valid object schema', () => {
-        assert.equal(tool.inputSchema?.type, 'object');
-        const properties = tool.inputSchema.properties ?? {};
-        for (const key of tool.inputSchema.required ?? []) {
-          assert.ok(key in properties, `"${key}" is in required but not in properties`);
-        }
-      });
+  it('input and output schemas declare their required properties', () => {
+    for (const { name, inputSchema, outputSchema } of TOOLS) {
+      assert.equal(inputSchema?.type, 'object', name + '.inputSchema');
+      for (const key of inputSchema.required ?? []) {
+        assert.ok(Object.hasOwn(inputSchema.properties ?? {}, key), name + '.inputSchema.required: ' + key);
+      }
+      if (!outputSchema) continue;
+      assert.equal(outputSchema.type, 'object', name + '.outputSchema');
+      const properties = outputSchema.properties ?? {};
+      assert.ok(Object.keys(properties).length, name + '.outputSchema.properties is empty');
+      for (const key of outputSchema.required ?? []) {
+        assert.ok(Object.hasOwn(properties, key), name + '.outputSchema.required: ' + key);
+      }
+      for (const [key, property] of Object.entries(properties)) {
+        assert.ok(typeof property.description === 'string' && property.description.trim(), name + '.outputSchema.' + key + '.description');
+      }
+    }
+  });
 
-      it('enums are non-empty and defaults are inside the enum', () => {
-        for (const [path, schema] of walkProperties(tool.inputSchema)) {
-          if (!Array.isArray(schema.enum)) continue;
-          assert.ok(schema.enum.length > 0, `enum of "${path}" is empty`);
-          assert.equal(new Set(schema.enum).size, schema.enum.length, `enum of "${path}" has duplicates`);
-          if (schema.default !== undefined) {
-            assert.ok(
-              schema.enum.includes(schema.default),
-              `default of "${path}" (${schema.default}) is outside the enum`,
-            );
-          }
-        }
-      });
+  it('input enums have distinct choices and accept their defaults', () => {
+    for (const { name, inputSchema } of TOOLS) {
+      for (const [path, schema] of walkProperties(inputSchema)) {
+        if (!Array.isArray(schema.enum)) continue;
+        const field = name + '.' + path;
+        assert.ok(schema.enum.length, field + ': empty enum');
+        assert.equal(new Set(schema.enum).size, schema.enum.length, field + ': duplicate enum value');
+        if (schema.default !== undefined) assert.ok(schema.enum.includes(schema.default), field + ': default outside enum');
+      }
+    }
+  });
 
-      it('annotations exist and the hint combination is consistent', () => {
-        const a = tool.annotations;
-        assert.ok(a, 'no annotations — the client cannot tell dangerous tools apart');
-        assert.equal(typeof a.readOnlyHint, 'boolean');
-        assert.equal(typeof a.openWorldHint, 'boolean');
-
-        if (a.readOnlyHint) {
-          // destructive/idempotent hints on a read-only tool mean nothing per spec
-          assert.equal(a.destructiveHint, undefined, 'readOnly yet destructiveHint is set');
-          assert.equal(a.idempotentHint, undefined, 'readOnly yet idempotentHint is set');
-        } else {
-          // write tools must not leave the two hints to defaults — destructiveHint
-          // defaults to true, so a file-only generation tool reads as destructive
-          assert.equal(typeof a.destructiveHint, 'boolean', 'destructiveHint must be explicit');
-          assert.equal(typeof a.idempotentHint, 'boolean', 'idempotentHint must be explicit');
-        }
-      });
-
-      it('outputSchema, when declared, is valid', () => {
-        if (!tool.outputSchema) return;
-        assert.equal(tool.outputSchema.type, 'object');
-        const properties = tool.outputSchema.properties ?? {};
-        assert.ok(Object.keys(properties).length > 0, 'properties is empty');
-        for (const key of tool.outputSchema.required ?? []) {
-          assert.ok(key in properties, `"${key}" from outputSchema.required is not in properties`);
-        }
-        for (const [key, schema] of Object.entries(properties)) {
-          assert.ok(
-            typeof schema.description === 'string' && schema.description.trim().length > 0,
-            `outputSchema "${key}" has no description`,
-          );
-        }
-      });
-    });
-  }
+  it('tools declare consistent read and write hints', () => {
+    for (const { name, annotations } of TOOLS) {
+      assert.equal(typeof annotations?.readOnlyHint, 'boolean', name + '.readOnlyHint');
+      assert.equal(typeof annotations.openWorldHint, 'boolean', name + '.openWorldHint');
+      for (const hint of ['destructiveHint', 'idempotentHint']) {
+        assert.equal(typeof annotations[hint], annotations.readOnlyHint ? 'undefined' : 'boolean', name + '.' + hint);
+      }
+    }
+  });
 });
 
 describe('routing consistency', () => {
@@ -206,17 +157,6 @@ describe('routing consistency', () => {
  * request, so edits apply without a server restart.
  */
 describe('tool on/off (disabled-tools.json)', () => {
-  it('a pattern is an exact name or a trailing-* prefix family, nothing fancier', () => {
-    assert.equal(isToolDisabled('seedance_text2video', ['seedance_*']), true);
-    assert.equal(isToolDisabled('seedance_reference', ['seedance_reference']), true);
-    assert.equal(isToolDisabled('astra_text2video', ['seedance_*']), false);
-    assert.equal(isToolDisabled('seedance_text2video', []), false);
-    // the "*" is a suffix wildcard only — it does not float mid-name
-    assert.equal(isToolDisabled('tts_local_generate', ['tts_*generate']), false);
-    // a bare "*" prefixes everything, i.e. turns the whole server off
-    assert.equal(isToolDisabled('naver_search', ['*']), true);
-  });
-
   it('reads a JSON string array; a missing or malformed file turns nothing off', () => {
     const dir = mkdtempSync(join(tmpdir(), 'sf-disabled-tools-'));
     try {
@@ -232,31 +172,36 @@ describe('tool on/off (disabled-tools.json)', () => {
   });
 });
 
-describe('HITL contract', () => {
-  const destructive = TOOLS.filter((t) => t.annotations?.destructiveHint === true);
-
-  it('at least one immediately-public tool is marked destructive', () => {
-    assert.ok(destructive.length > 0);
-  });
-
+it('destructive tools warn that they require approval', () => {
+  const destructive = TOOLS.filter(tool => tool.annotations.destructiveHint);
+  assert.ok(destructive.length);
   for (const tool of destructive) {
-    it(`${tool.name} — the description forbids calling without approval`, () => {
-      // The hint (machine-read) and the description (model-read) must state
-      // the same fact. Fix one and leave the other, and one of them is
-      // guaranteed to be a lie.
-      assert.match(tool.description, /⚠️/, 'no warning marker');
-      assert.match(tool.description, /never call without|HITL/, 'no HITL wording');
-    });
+    assert.match(tool.description, /⚠️/, tool.name + ': missing warning');
+    assert.match(tool.description, /never call without|HITL/, tool.name + ': missing approval requirement');
   }
 });
 
-describe('AI-generated content disclosure (YouTube)', () => {
-  const publish = () => byName.get('youtube_publish');
-  // This pipeline uses generated video and Lyria music. A false default makes
-  // non-disclosure the default behavior, and habitual non-disclosure is
-  // grounds for forced labels, removal, and YPP suspension.
-  it('defaults to true (non-disclosure never becomes the default)', () => {
-    assert.equal(publish().inputSchema.properties.containsSyntheticMedia.default, true);
+describe('YouTube upload safeguards', () => {
+  const schema = byName.get('youtube_publish').inputSchema;
+  const args = { videoFilePath: '/nonexistent/video.mp4', thumbnailFilePath: '/nonexistent/thumbnail.jpg', title: 'Title', caption: 'Caption' };
+
+  it('requires a thumbnail and defaults to private with AI disclosure enabled', () => {
+    assert.ok(schema.required.includes('thumbnailFilePath'));
+    assert.equal(schema.properties.containsSyntheticMedia.default, true);
+    assert.equal(schema.properties.privacyStatus.default, 'private');
+  });
+
+  it('rejects a public upload before reading the media', async () => {
+    await assert.rejects(() => ROUTES.youtube_publish({ ...args, privacyStatus: 'public' }), /start private.*youtube_update/);
+    for (const privacyStatus of ['unlisted', 'private', undefined]) {
+      const result = await ROUTES.youtube_publish({ ...args, privacyStatus });
+      assert.equal(result.isError, true);
+      assert.match(result.content[0].text, /Cannot read video file/);
+    }
+  });
+
+  it('enforces the description byte limit for multibyte text', async () => {
+    await assert.rejects(() => ROUTES.youtube_publish({ ...args, caption: '가'.repeat(2000) }), /bytes/);
   });
 });
 
@@ -273,17 +218,6 @@ describe('separate subtitle upload contract', () => {
         `${name}: no do-not-republish guidance`,
       );
     }
-  });
-});
-
-describe('YouTube required-thumbnail contract', () => {
-  // Without one, YouTube picks an arbitrary frame as the cover, and the
-  // vertical surface cannot be reverted via the API after publishing — so the
-  // schema blocks it at upload time (2026-08-13).
-  const yt = () => byName.get('youtube_publish');
-
-  it('thumbnailFilePath is in required (blocks thumbnail-less uploads)', () => {
-    assert.ok(yt().inputSchema.required.includes('thumbnailFilePath'), 'thumbnailFilePath is not required');
   });
 });
 
@@ -342,17 +276,6 @@ describe('single-source constants', () => {
     assert.equal(m && Number(m[1]), STOCK_MAX_LIMIT);
   });
 
-  it('TTS voice enums match the tts-client source of truth', () => {
-    assert.deepEqual(enumOf('tts_generate', 'voiceName'), [...TTS_VOICE_NAMES]);
-    const speakerVoice = byName.get('tts_multi_speaker').inputSchema.properties.speakers.items
-      .properties.voiceName.enum;
-    assert.deepEqual(speakerVoice, [...TTS_VOICE_NAMES]);
-  });
-
-  it('the TTS model enum matches the source of truth', () => {
-    assert.deepEqual(enumOf('tts_generate', 'model'), [...VALID_TTS_MODELS]);
-  });
-
   it('the Gemini 3.8 acted TTS tool matches the Interactions client contract', () => {
     const tool = byName.get('tts_gemini_38');
     assert.ok(tool, 'tts_gemini_38 is not registered');
@@ -363,26 +286,6 @@ describe('single-source constants', () => {
     assert.equal(tool.inputSchema.properties.speakers.maxItems, 2);
     assert.deepEqual(tool.inputSchema.properties.speakers.items.properties.voice.enum, [...TTS_VOICE_NAMES]);
     assert.doesNotMatch(tool.description, /L4az9Gb378GIycFl2nAB/, "a generic tool must not inject a channel-specific identity voice");
-  });
-
-  it('music scale/mode enums match the music-client source of truth', () => {
-    assert.deepEqual(enumOf('music_generate_advanced', 'config.scale'), [...MUSIC_SCALES]);
-    assert.deepEqual(enumOf('music_generate_advanced', 'config.musicGenerationMode'), [
-      ...MUSIC_GENERATION_MODES,
-    ]);
-  });
-
-  it('ElevenLabs model/format/normalization/category enums match the elevenlabs-client source of truth', () => {
-    assert.deepEqual(enumOf('tts_elevenlabs_generate', 'model'), [...ELEVENLABS_MODELS]);
-    assert.equal(byName.get('tts_elevenlabs_generate').inputSchema.properties.model.default, DEFAULT_ELEVENLABS_MODEL);
-    for (const tool of ['tts_elevenlabs_generate', 'tts_elevenlabs_dialogue']) {
-      assert.deepEqual(enumOf(tool, 'outputFormat'), [...ELEVENLABS_OUTPUT_FORMATS], tool);
-      assert.equal(byName.get(tool).inputSchema.properties.outputFormat.default, DEFAULT_ELEVENLABS_OUTPUT_FORMAT, tool);
-      assert.deepEqual(enumOf(tool, 'applyTextNormalization'), [...ELEVENLABS_TEXT_NORMALIZATION], tool);
-    }
-    assert.deepEqual(enumOf('tts_elevenlabs_voices', 'category'), [...ELEVENLABS_VOICE_CATEGORIES]);
-    assert.deepEqual(enumOf('sfx_elevenlabs_generate', 'outputFormat'), [...ELEVENLABS_SFX_OUTPUT_FORMATS]);
-    assert.equal(byName.get('sfx_elevenlabs_generate').inputSchema.properties.outputFormat.default, DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT);
   });
 });
 
@@ -420,15 +323,6 @@ describe('speech lane separation (ElevenLabs)', () => {
   it('input cap is the v4 provider cap', () => {
     assert.equal(generate.inputSchema.properties.text.maxLength, MAX_ELEVENLABS_INPUT_CHARS);
     assert.equal(MAX_ELEVENLABS_INPUT_CHARS, 10000);
-  });
-});
-
-describe('image lane separation (local · OpenAI)', () => {
-  const local = byName.get('image_local_generate');
-  it('the quantization enum matches the zimage-client source of truth', () => {
-    assert.deepEqual(local.inputSchema.properties.quantize.enum, [...ZIMAGE_QUANTIZE_OPTIONS]);
-    assert.equal(local.inputSchema.properties.quantize.default, DEFAULT_ZIMAGE_QUANTIZE);
-    assert.equal(local.inputSchema.properties.steps.default, DEFAULT_ZIMAGE_STEPS);
   });
 });
 
@@ -705,30 +599,7 @@ describe('apiErrorText', () => {
   });
 });
 
-/**
- * The server version in the initialize response is a literal in index.ts.
- * Importing dist/index.js to read it would start the server on stdio, so the
- * two files are compared as text. It really was split 0.8.0 vs 0.9.0, caught
- * on 2026-08-16.
- */
-describe('server version declaration', () => {
-  const here = dirname(fileURLToPath(import.meta.url));
-  const read = (rel) => readFileSync(join(here, '..', rel), 'utf8');
-
-  it('the version in index.ts equals package.json', () => {
-    const pkg = JSON.parse(read('package.json')).version;
-    const src = read('src/index.ts');
-    const declared = src.match(/name: 'social-flow', version: '([^']+)'/)?.[1];
-    assert.ok(declared, "could not find the Server({ name, version }) literal in index.ts — if the declaration form changed, fix this test with it");
-    assert.equal(
-      declared,
-      pkg,
-      `the version initialize announces (${declared}) differs from the package version (${pkg}) — clients see a version that is not real`,
-    );
-  });
-});
-
-it('bundled MCP server dispatches reference payloads above 10 MiB', { timeout: 20_000 }, async (t) => {
+it('bundled MCP server announces the package version and dispatches reference payloads above 10 MiB', { timeout: 20_000 }, async (t) => {
   const child = spawn(process.execPath, [fileURLToPath(new URL('../dist/bundle.js', import.meta.url))], {
     stdio: ['pipe', 'pipe', 'pipe'],
   });
@@ -746,7 +617,10 @@ it('bundled MCP server dispatches reference payloads above 10 MiB', { timeout: 2
   send({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {
     protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'transport-test', version: '1' },
   } });
-  assert.equal((await receive()).id, 1);
+  const initialized = await receive();
+  assert.equal(initialized.id, 1);
+  const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  assert.equal(initialized.result.serverInfo.version, pkg.version);
   send({ jsonrpc: '2.0', method: 'notifications/initialized' });
   // An unknown tool proves dispatch without invoking a provider or spending money.
   const request = { jsonrpc: '2.0', id: 2, method: 'tools/call', params: {

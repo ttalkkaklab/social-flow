@@ -1,3 +1,4 @@
+import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
 import { openingPositionsSchema } from './msr-opening.js';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
@@ -68,6 +69,39 @@ export function hasSubjectInput(references) {
 export function hasVideoSubjectReferences(shot) {
     return imageRouting().imageReferences(shot).some(ref => ref.role !== 'background' && ['video', 'both'].includes(ref.use));
 }
+/** Look up submitted files in the board's cast and prop sheets, including alternate views and versions. */
+export function registeredVideoSubjects(board, episode, paths) {
+    const sheets = board.SB_DOC;
+    const matches = new Map();
+    const submitted = new Set(paths);
+    const collect = (kind, entries) => {
+        if (!entries)
+            return;
+        const rows = Array.isArray(entries) ? entries : Object.entries(entries).map(([id, entry]) => ({ ...entry, id }));
+        for (const row of rows) {
+            if (!row?.id)
+                continue;
+            const versions = Array.isArray(row.references) ? row.references.map(ref => typeof ref === 'string' ? ref : ref?.path) : [];
+            const files = [row.imageUrl, ...Object.values(row.panels ?? {}), ...versions];
+            for (const file of files) {
+                if (typeof file !== 'string' || !file)
+                    continue;
+                const local = path.resolve(episode, 'storyboard', file);
+                if (!existsSync(local))
+                    continue;
+                const actual = realpathSync(local);
+                if (!submitted.has(actual))
+                    continue;
+                const owners = matches.get(actual) ?? new Set();
+                owners.add(kind + ':' + row.id);
+                matches.set(actual, owners);
+            }
+        }
+    };
+    collect('character', sheets?.characters);
+    collect('prop', sheets?.props);
+    return matches;
+}
 function msrReference(imagePath, role) {
     if (role === 'background')
         return { imagePath, background: true };
@@ -135,16 +169,30 @@ function sceneTimedImages(members, fps, genai) {
 /** Compile authored image roles into adapter arguments; never downgrade a temporal constraint to a reference. */
 export function prepareVideoImages(tool, input, shot, episode, members) {
     const visual = (shot.visual ?? {});
-    // Legacy boards keep their adapter contract; new authoring declares references, including an empty array.
-    if (!hasStructuredImages(shot)) {
+    const routing = imageRouting();
+    const frames = routing.framePlan(shot);
+    const fields = FRAME_FIELDS[tool];
+    const engine = VIDEO_ADAPTERS[tool]?.engine;
+    const structured = hasStructuredImages(shot);
+    const gatewayFrames = tool === 'astra_genai_img2video' || tool === 'astra_genai_audio2video';
+    const openingField = fields && [fields[0], ...(gatewayFrames ? ['imagePath', 'imageUri'] : [])].find(key => input[key] !== undefined);
+    const callerOpening = openingField && input[openingField];
+    // A legacy caller may provide its own opening. An authored pair still binds
+    // both endpoints, even when the caller repeats one of them.
+    const legacyFrames = !structured && ['ltx-api', 'veo', 'astra-genai'].includes(engine) &&
+        (frames.end || frames.mode !== 'reference' && frames.start && !openingField);
+    if (!structured && !legacyFrames) {
         const msr = tool === 'astra_genai_msr' || (tool === 'astra_genai_img2video' && Array.isArray(input.references));
         return { args: msr ? { ...input, openingPositions: bindOpeningPositions(input, visual, episode) } : input, imageBindings: undefined };
     }
-    const routing = imageRouting();
-    const errors = routing.checkFrames(shot);
+    if (legacyFrames && (!fields || frames.end && !fields[1]))
+        throw new Error('image_plan_unsupported: adapter cannot carry the authored frame plan');
+    // A legacy board can leave the opening to its caller. Validate the whole pair
+    // together while keeping the caller's local path or gateway URI on the request.
+    const suppliedStart = !structured && !frames.start && frames.end && typeof callerOpening === 'string' ? callerOpening : undefined;
+    const errors = routing.checkFrames(suppliedStart ? { ...shot, visual: { ...visual, bg: suppliedStart } } : shot);
     if (errors.length)
         throw new Error('image_plan_invalid: ' + errors.join('; '));
-    const frames = routing.framePlan(shot);
     let references = routing.imageReferences(shot);
     const rawCast = shot.visual?.character;
     const canonicalMsr = tool === 'astra_genai_msr' && frames.mode === 'reference' && rawCast !== undefined
@@ -231,19 +279,14 @@ export function prepareVideoImages(tool, input, shot, episode, members) {
         // frame: the start image goes last among the pictures and the place picture stays out (the start image has it).
         const msr = tool === 'astra_genai_msr', vendor = VENDOR_REFERENCE_TOOLS.includes(tool);
         const sent = msr || vendor ? videoRefs.filter(ref => ref.role !== 'background') : videoRefs;
-        if (tool === 'veo_reference' && sent.some(ref => ref.role === 'style' || ref.role === 'background'))
-            throw new Error('image_plan_unsupported: Veo accepts pictures of a single subject; style and scene references cannot be sent as subject assets');
         const paths = sent.map(ref => bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, true));
-        if (tool === 'veo_reference') {
-            const roles = new Set(sent.map(ref => ref.role));
-            const cast = new Set(paths.flatMap((file, i) => {
-                if (sent[i].role !== 'character')
-                    return [];
-                const folder = path.dirname(file);
-                return path.basename(path.dirname(folder)) === 'characters' || characterKey(file) === folder ? [folder] : [];
-            }));
-            if (roles.size > 1 || cast.size > 1)
-                throw new Error('image_plan_unsupported: Veo asset references must show the same subject');
+        const assetContract = HOSTED_VIDEO_ROUTES[tool]?.subjectAssets;
+        if (assetContract) {
+            const positions = visual.video?.openingPositions;
+            const owners = Array.isArray(positions) ? openingPositionsSchema.parse(positions).filter(p => p.images.length).map(p => p.character) : [];
+            const issue = assetContract.validate(sent.map((ref, i) => ({ ...ref, path: paths[i] })), input.model, owners);
+            if (issue)
+                throw new Error('image_plan_unsupported: ' + issue);
         }
         const start = (msr || vendor) && frames.start ? bind('start', frames.start, 'start', 'video', 'Opening picture', true) : undefined;
         if (msr)
@@ -296,20 +339,39 @@ export function prepareVideoImages(tool, input, shot, episode, members) {
         const fields = FRAME_FIELDS[tool];
         if (!fields || (frames.end && !fields[1]))
             throw new Error('image_plan_unsupported: adapter cannot carry the authored frame plan');
-        if (!frames.start)
+        if (!frames.start && !suppliedStart)
             throw new Error('image_plan_invalid: start image is required');
-        const value = (id, file) => {
+        const putFrame = (id, file, field) => {
             const absolute = bind(id, file, id, 'video', id === 'start' ? 'Opening state' : 'Ending state', true);
-            if (tool !== 'astra_genai_img2video')
-                return absolute;
+            if (gatewayFrames) {
+                const local = id === 'start' ? 'imagePath' : 'lastFramePath';
+                const uri = id === 'start' ? 'imageUri' : 'lastFrameUri';
+                if (input[local] !== undefined)
+                    field = local;
+                else if (input[uri] !== undefined)
+                    field = uri;
+            }
+            if (!field.endsWith('Uri'))
+                return put(field, absolute);
             const mime = bindings[bindings.length - 1].mimeType;
             if (!['image/png', 'image/jpeg'].includes(mime))
                 throw new Error('image_plan_unsupported: GenAI frames need PNG/JPEG');
-            return 'data:' + mime + ';base64,' + readFileSync(absolute).toString('base64');
+            put(field, 'data:' + mime + ';base64,' + readFileSync(absolute).toString('base64'));
         };
-        put(fields[0], value('start', frames.start));
+        if (frames.start)
+            putFrame('start', frames.start, fields[0]);
+        else if (openingField)
+            assigned.add(openingField);
         if (frames.end)
-            put(fields[1], value('end', frames.end));
+            putFrame('end', frames.end, fields[1]);
+        // On unstructured cards an explicit last frame may add to the legacy opening.
+        if (!structured && !frames.end && fields[1]) {
+            assigned.add(fields[1]);
+            if (gatewayFrames) {
+                assigned.add('lastFramePath');
+                assigned.add('lastFrameUri');
+            }
+        }
         if (keyframes) {
             const fps = Number(args.fps ?? 24);
             const pins = keyframes.map((frame, i) => {

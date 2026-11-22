@@ -9,7 +9,7 @@ import { openingPrompt, shotTimelineSchema } from './msr-opening.js';
 import { videoTextPolicy, resolvedDirection, attributeWords, sceneShotNotes, shotVisualWords, sceneCameraDirection, scenePromptText, sceneVoiceDirection } from './video-prompt.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { verifyImageFile } from './image-media.js';
-import { VEO_CONSTRAINTS } from './veo-video.js';
+import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
 import { astraGenaiBaseUrl, GENAI_AUDIO_TYPES, GenaiRequestError, genaiAudioUri, genaiSourceUri, requestGenai } from './astra-genai-client.js';
 import { FRAME_FIELDS, sceneInputCapabilities, VIDEO_ADAPTERS } from './video-registry.js';
 import { resolveCharacterVoice, voiceReference } from './video-voice.js';
@@ -56,7 +56,7 @@ export function sceneCoverage(members, scene, board, sceneNo = members[0]?.scene
     const owner = board?.STRUCTURE?.scenes?.find(s => s.no === sceneNo);
     return resolvedDirection({ directionDefaults: owner?.directionDefaults, videoDirection: scene }, members);
 }
-export function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCoverage(raw, scene, board), shotScoped = false) {
+export function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCoverage(raw, scene, board), shotScoped = false, assetOnly = false) {
     const render = load('../../skills/storyboard/references/render-routing.js');
     const members = raw;
     const fps = scene.fps ?? 24;
@@ -101,7 +101,9 @@ export function compileSceneTimeline(raw, scene, episode, board, coverage = scen
             if (!pins.some(p => p.frame === frame && p.path === pin.image))
                 pins.push({ path: pin.image, frame, role: 'keyframe', cue: english(pin.state), strength: pin.strength });
         }
-        if (frames.start && !pins.some(p => p.role === 'start' && p.path === frames.start))
+        // In Veo reference mode the board's display image is a composition guide.
+        // Explicit timeline pins still reach validation and cannot share a Vertex asset request.
+        if (frames.start && !(assetOnly && frames.mode === 'reference') && !pins.some(p => p.role === 'start' && p.path === frames.start))
             pins.push({ path: frames.start, frame: startFrame, role: 'start' });
         if (frames.end && !pins.some(p => p.role === 'end' && p.path === frames.end && (!fallback || p.frame === endFrame - 1)))
             pins.push({ path: frames.end, frame: endFrame - 1, role: 'end' });
@@ -204,7 +206,7 @@ export function sceneTimelineWords(t, scene, includeDialogue = true) {
 /** Compile once, then present the complete scene to the selected adapter's input mapper. */
 export function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options, mapInputs, board) {
     const coverage = sceneCoverage(members, scene, board, sceneNo);
-    const timeline = compileSceneTimeline(members, scene, episode, board, coverage, options.shotScoped);
+    const timeline = compileSceneTimeline(members, scene, episode, board, coverage, options.shotScoped, options.assetOnly);
     const common = coverage.common;
     const camera = sceneCameraDirection([], common.camera && attributeWords('camera', common.camera));
     const staging = Object.entries(common).filter(([key]) => key !== 'camera').map(([key, row]) => attributeWords(key, row)).filter(Boolean).join(' ');
@@ -426,13 +428,20 @@ export function mapSceneInputs(request, tool, model, missing = [], resolution) {
     }
     if (tool === 'astra_genai_img2video' && !pins.some(p => p.frame === 0 && (p.strength ?? 1) === 1))
         missing.push({ input: 'image', frame: 0, reason: 'Gateway I2V requires a full-strength opening image' });
-    for (const [index, p] of refs.entries()) {
+    const assets = HOSTED_VIDEO_ROUTES[tool]?.subjectAssets;
+    if (assets) {
+        const issue = assets.validate(refs, model);
+        if (issue)
+            missing.push(...(refs.length ? refs : [undefined]).map(p => ({
+                input: 'reference', shotId: p?.shotId ?? request.shotIds[0], frame: p?.frame ?? 0, path: p?.path, role: p?.role, reason: issue,
+            })));
+    }
+    for (const p of refs) {
         if (request.shots.length > 1 && !caps.shotScopedReferences) {
             missing.push({ input: 'reference', shotId: p.shotId, frame: p.frame, path: p.path, role: p.role, reason: 'Subject/reference slots apply across the whole generation' });
             continue;
         }
-        if (tool === 'veo_reference' && model && index < (VEO_CONSTRAINTS[model]?.maxAssetImages ?? 0) &&
-            p.frame === 0 && ['face', 'outfit', 'character'].includes(p.role))
+        if (assets && p.frame === 0)
             continue;
         if (tool === 'astra_genai_img2video' && model === 'ltx-2.5-22b-distilled' && p.frame === 0)
             continue;
@@ -459,6 +468,7 @@ export function timedImageArgs(tool, pins) {
 }
 export function sceneImageBindings(request, tool, bindings) {
     const refs = request.images.filter(image => !temporal(image));
+    const assets = HOSTED_VIDEO_ROUTES[tool]?.subjectAssets;
     let slot = 0;
     return bindings.map(binding => {
         if ('parameter' in binding || !binding.submitted)
@@ -469,7 +479,8 @@ export function sceneImageBindings(request, tool, bindings) {
             : index >= 0 ? refs.splice(index, 1)[0] : undefined;
         if (!image)
             return binding;
-        const parameter = endpoint ? FRAME_FIELDS[tool]?.[binding.id === 'start' ? 0 : 1] : 'references[' + slot++ + '].imagePath';
+        const parameter = endpoint ? FRAME_FIELDS[tool]?.[binding.id === 'start' ? 0 : 1]
+            : assets ? assets.parameter + '[' + slot++ + ']' : 'references[' + slot++ + '].imagePath';
         return { ...binding, shotId: image.shotId, frame: image.frame, role: image.role, parameter, character: image.character };
     });
 }
@@ -530,6 +541,9 @@ export function bindSceneAdapter(request, tool, model, shot, input, episode, res
     const visual = shot.visual;
     const positions = shot.visual?.video?.openingPositions ?? [];
     const subjects = refs.filter(p => !['background', 'location'].includes(p.role));
+    const assets = HOSTED_VIDEO_ROUTES[tool]?.subjectAssets;
+    if (assets && positions.filter(p => p.images.length).length > 1)
+        throw new SceneInputError(tool, request, [{ input: 'reference', shotId: request.shotIds[0], frame: 0, reason: 'Veo assets must identify the same subject in openingPositions' }]);
     for (const owner of positions) {
         for (const slot of owner.images) {
             if (!subjects[slot - 1])
@@ -541,11 +555,13 @@ export function bindSceneAdapter(request, tool, model, shot, input, episode, res
         if (p.character && !positions.some(row => row.character === p.character && row.images.includes(i + 1)))
             throw new Error('scene_reference_owner: match ' + p.shotId + ' ' + p.role + ' reference ' + (i + 1) + ' to ' + p.character + ' in openingPositions');
     }
-    const references = refs.map((p, i) => p.reference ?? { id: 'subject-' + i, role: 'character', use: 'video', path: p.path,
-        purpose: p.character + ' ' + p.role + ' reference only. Use the shot action for entrance timing.' });
-    const projected = { ...visual, frames: { mode: end ? 'first_last' : 'first', start: start?.path, end: end?.path }, references,
+    const references = refs.map((p, i) => p.reference ?? { id: 'subject-' + i, role: p.role === 'prop' ? 'prop' : 'character', use: 'video', path: p.path,
+        purpose: [p.character, p.role].filter(Boolean).join(' ') + ' reference only. Use the shot action for entrance timing.' });
+    // Subject assets go through the shot binder, which attaches the same ordered
+    // reference descriptions and preserve/avoid instructions to the provider prompt.
+    const projected = { ...visual, frames: { mode: assets ? 'reference' : end ? 'first_last' : 'first', start: start?.path, end: end?.path }, references,
         bg: start?.path, imagePair: undefined, lastImagePath: undefined };
-    if (caps.timedImages || tool === 'veo_reference' || !request.images.length) {
+    if (caps.timedImages || assets || !request.images.length) {
         const fields = ['images', 'keyframes', 'sourceImagePath', 'lastImagePath', 'imagePath', 'imageUri', 'lastFramePath',
             'firstFramePath', 'firstFrameImagePath', 'lastFrameImagePath', 'lastFrameUri', 'referenceImagePaths', 'references'];
         // Saved gateway plans can repeat their two endpoint fields. prepareVideoImages checks
@@ -554,11 +570,7 @@ export function bindSceneAdapter(request, tool, model, shot, input, episode, res
         if (fields.some(k => k in input && !endpoints?.some(field => field === k)))
             throw new Error('image_plan_mismatch: declare video images on their storyboard shots');
     }
-    const timedImages = tool === 'veo_reference' ? {
-        args: { referenceImagePaths: refs.map(p => p.path) },
-        imageBindings: refs.map((p, i) => ({ ...verifyImageFile(p.path), ...p, id: p.reference?.id ?? 'subject-' + i,
-            parameter: 'referenceImagePaths[' + i + ']', use: 'video', purpose: p.cue ?? p.role, submitted: true })),
-    } : gateway ? (!start ? gatewayKeyframes : undefined) : caps.timedImages ? timedImageArgs(tool, pins) : undefined;
+    const timedImages = gateway ? (!start ? gatewayKeyframes : undefined) : caps.timedImages ? timedImageArgs(tool, pins) : undefined;
     Object.assign(args, timedImages?.args);
     if (tool.startsWith('astra_genai_desktop_') && !request.audio)
         args.duration = input.duration ?? request.frameCount / request.fps;

@@ -2,7 +2,7 @@
 import { z } from 'zod';
 import { config } from './config.js';
 import { buildLtxApiBody, generateLtxApiVideo, LTX_API_MODELS, LTX_API_RESOLUTIONS, ltxApiAudioMax, ltxApiAudio2VideoSchema, ltxApiImg2VideoSchema, ltxApiSeconds, pollLtxApi } from './ltx-api-video.js';
-import { buildVeoBody, generateVeo, pollVeo, VEO_CONSTRAINTS, veoExtendSchema, veoImageSchema, veoReferenceSchema, veoTextSchema } from './veo-video.js';
+import { buildVeoBody, generateVeo, pollVeo, VEO_CONSTRAINTS, veoSubjectIssue, veoExtendSchema, veoImageSchema, veoReferenceSchema, veoTextSchema } from './veo-video.js';
 import type { VendorPoll, VendorResult } from './vendor-video.js';
 
 type Input = Record<string, unknown>;
@@ -18,6 +18,10 @@ interface HostedRoute {
   configured(): boolean;
   soundtrack?: boolean;
   frames?: [string, string?];
+  subjectAssets?: {
+    parameter: 'referenceImagePaths';
+    validate: typeof veoSubjectIssue;
+  };
   seconds?(args: Input): number[];
   preflight(args: Input): void;
   generate(args: unknown): Promise<VendorResult>;
@@ -52,6 +56,7 @@ export const HOSTED_VIDEO_ROUTES: Record<string, HostedRoute> = {
   veo_img2video: { ...veo, ...inputs(veoImageSchema, buildVeoBody, generateVeo), operation: 'image', title: 'Animate a first frame with Veo',
     frames: ['sourceImagePath', 'lastImagePath'], seconds: () => [4, 6, 8], description: 'Animate a JPEG or PNG with Google Cloud Veo 3.1, optionally pinning the final frame. Use reference mode for asset pictures.' },
   veo_reference: { ...veo, ...inputs(veoReferenceSchema, buildVeoBody, generateVeo), operation: 'reference', title: 'Generate a Veo clip from subject images',
+    subjectAssets: {parameter:'referenceImagePaths', validate:veoSubjectIssue},
     seconds: () => [8], description: 'Generate eight seconds from one to three images of a subject. Standard and Fast accept assets. No pinned frames or voice samples.' },
   veo_extend: { ...veo, ...inputs(veoExtendSchema, buildVeoBody, generateVeo), operation: 'extend', title: 'Extend an existing Veo video',
     description: 'Extend a 1–30 second, 24 fps MP4 by seven seconds with Google Cloud Veo. Returns the concatenated MP4.' },

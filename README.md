@@ -1273,7 +1273,13 @@ framing, light and background. GenAI image-to-video generates each 720×1280 spe
 its soundtrack. The host portrait pins the opening frame. An MSR subject reference pairs the
 portrait with the character’s saved voice sample. The encoder plays the model’s audio. YouTube supports unlisted rooms and native chat.
 See [Character LIVE](skills/live-character/SKILL.md) for configuration and recovery.
-TikTok takes a separately approved RTMPS destination and can receive events from an authorized input.
+Select destinations with repeatable `--platform youtube` and `--platform tiktok` options.
+TikTok accepts the server address and stream key issued by LIVE Center and reads viewer
+questions from TikFinity Desktop or an authorized stdin feed. The local TikTok receipt
+records encoder and chat evidence. Check public playback in the TikTok viewer.
+Platform adapters implement [the live session contract](server/src/live-platform.ts) and
+register in [the platform registry](server/src/live-platform-registry.ts). The shared runner
+owns media preparation, encoding and the reply queue.
 
 ### Inspect existing content
 

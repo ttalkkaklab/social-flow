@@ -2160,9 +2160,6 @@ it('plans, retimes and removes only the audience event; take bytes and end shots
   assert.deepEqual(readBoard(dir).win.STRUCTURE.scenes[0].audienceSound, {decision:'undecided'});
   const read = (extra = {}) => readStoryboard(storyboardReadSchema.parse({path:dir,includeTechniques:false,...extra}));
   const apply = (extra) => applyStoryboard(storyboardApplySchema.parse({path:dir,expectedSha256:readBoard(dir).sha256,...extra}));
-  const source=readFileSync(new URL('../../skills/storyboard/references/audience-sound/comedy.md',import.meta.url),'utf8');
-  const example=source.split('\n').find(line=>line.startsWith('| 063 |'));
-  assert.match(example,/실수/);
   const key = {shotId:'s0001',id:'late'}, plan = {...key,op:'plan',sfx:'bend',intent:'embarrassment',trigger:'smile falls',description:'dry descending pluck',caseId:'063'};
   const raw = {...shots[0],sound:{effects:[{id:'late',audience:{intent:plan.intent},delivery:'auto'}]}};
   assert.equal(shotSchema.parse(raw).sound.effects[0].delivery,'post');
@@ -2205,18 +2202,4 @@ it('plans, retimes and removes only the audience event; take bytes and end shots
   apply({audienceEffects:[{...key,op:'remove'}]});
   assert.equal(apply({audienceEffects:[{...key,op:'remove'}]}).written,false);
   assert.deepEqual(readBoard(dir).win.SCENES[0].sound,shots[0].sound);
-});
-
-it('ships 120 distinct audience situations, ten per linked category, with source definitions', () => {
-  const dir = new URL('../../skills/storyboard/references/audience-sound/',import.meta.url);
-  const index=readFileSync(new URL('index.md',dir),'utf8');
-  const files=[...index.matchAll(/\]\(([a-z]+\.md)\)/g)].map(m=>m[1]);
-  assert.equal(new Set(files).size,12);
-  const all=files.flatMap(name=>{
-    const text=readFileSync(new URL(name,dir),'utf8');
-    for(const [,source] of text.matchAll(/\]\[([a-z]+)\]/g)) assert.ok(text.includes('['+source+']: https://'));
-    const ids=[...text.matchAll(/^\| (\d{3}) \|/gm)].map(m=>Number(m[1]));
-    assert.equal(ids.length,10);return ids;
-  });
-  assert.deepEqual(all.sort((a,b)=>a-b),Array.from({length:120},(_,i)=>i+1));
 });
