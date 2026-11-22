@@ -277,7 +277,7 @@ export class YoutubeChat {
     private api: Api,
     private id: string
   ) {}
-  async poll(queue: ChatQueue, observe?: (id: string, text: string, author?: string) => void) {
+  async poll(queue: Pick<ChatQueue, 'add'>, observe?: (id: string, text: string, author?: string) => void) {
     const data = await this.api<{
       items: { id: string; snippet: { type: string; displayMessage?: string; authorChannelId?: string } }[];
       nextPageToken: string;

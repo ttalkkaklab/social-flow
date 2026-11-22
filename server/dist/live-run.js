@@ -1,17 +1,17 @@
 import { parseArgs } from 'node:util';
 import { spawn } from 'node:child_process';
 import { resolve, join } from 'node:path';
-import { mkdirSync, readFileSync, writeFileSync, appendFileSync, renameSync } from 'node:fs';
-import { randomUUID } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, appendFileSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { answer, ChatQueue, continueBroadcast, liveConfig, loadCharacter, preparedReply } from './live-character.js';
 import { GenaiRequestError, requestGenai } from './astra-genai-client.js';
-import { checkLiveRelay, encode, splitIngest } from './live-encoder.js';
+import { checkLiveRelay, encode } from './live-encoder.js';
 import { prepareIdleClips, idleCount } from './live-idle.js';
 import { NativeTalk, talkPrompt } from './live-native.js';
 import { liveStartChoice, liveStartChoices } from './live-options.js';
 import { LiveProgram, isReply } from './live-program.js';
-import { youtubeApi, checkChannel, prepareYoutube, activeChatId, resumeUnstarted, inspectBroadcast, closeBroadcast, broadcastStatus, cancelUnstarted, endBroadcast, missingYoutubeEvidence, YoutubeChat, YoutubeProbe } from './live-youtube.js';
+import { livePlatformIds } from './live-platform.js';
+import { livePlatforms, selectPlatforms } from './live-platform-registry.js';
 async function main() {
     const { values: v, positionals } = parseArgs({
         allowPositionals: true,
@@ -19,6 +19,7 @@ async function main() {
             config: { type: 'string' },
             out: { type: 'string' },
             seconds: { type: 'string', default: '120' },
+            platform: { type: 'string', multiple: true },
             youtube: { type: 'boolean' },
             tiktok: { type: 'boolean' },
             title: { type: 'string' },
@@ -34,8 +35,11 @@ async function main() {
     }
     const recovery = ['status', 'end', 'cancel-unstarted'].includes(action);
     if ((!['check', 'warm', 'prepare-idle', 'run', 'reserve'].includes(action) && !recovery) || !v.config || positionals.length !== 1)
-        throw Error('Use choices|check|warm|prepare-idle|reserve|run|status|end|cancel-unstarted --config file [--out directory] [--youtube] [--tiktok]');
-    const destination = v.youtube || v.tiktok;
+        throw Error('Use choices|check|warm|prepare-idle|reserve|run|status|end|cancel-unstarted --config file [--out directory] [--platform youtube|tiktok] [--youtube] [--tiktok]');
+    const selected = selectPlatforms([
+        ...(v.platform ?? []), ...(v.youtube ? ['youtube'] : []), ...(v.tiktok ? ['tiktok'] : [])
+    ]);
+    const destination = selected.length > 0;
     const start = action === 'run' || action === 'reserve'
         ? await liveStartChoice(v.start ?? (action === 'run' && !destination ? 'preview' : undefined))
         : undefined;
@@ -46,61 +50,51 @@ async function main() {
     if (start === 'ready' && !destination)
         throw Error('Choose a live destination or --start preview');
     const cfg = liveConfig.parse(JSON.parse(readFileSync(v.config, 'utf8')));
-    if (v['resume-from'] && (action !== 'run' || !v.youtube || start !== 'ready' || cfg.madeForKids !== false))
-        throw Error('Resume requires a YouTube run with live chat enabled');
-    const api = (v.youtube && start !== 'preview') || recovery ? await youtubeApi(cfg.youtubeCredentialChannel ?? cfg.channel) : undefined;
-    if (api && !cfg.youtubeChannelId)
-        throw Error('Set youtubeChannelId before connecting');
-    const tiktok = v.tiktok && start !== 'preview' ? process.env.TIKTOK_LIVE_RTMPS_URL : undefined;
-    if (v.tiktok && start !== 'preview' && !tiktok)
-        throw Error('An account-authorized TikTok RTMPS URL is required');
-    if (tiktok)
-        splitIngest(tiktok);
     if (!v.out && !['warm', 'check', 'prepare-idle'].includes(action))
         throw Error('Set --out to a unique session directory');
-    const out = resolve(v.out ?? '.'), receiptFile = join(out, 'youtube.json');
-    const writeReceipt = (r) => {
-        const tmp = receiptFile + '.' + randomUUID() + '.tmp';
-        writeFileSync(tmp, JSON.stringify(r, null, 2), { mode: 0o600, flag: 'wx' });
-        renameSync(tmp, receiptFile);
+    const out = resolve(v.out ?? '.');
+    const platforms = [];
+    const log = (event, fields = {}) => {
+        appendFileSync(join(out, 'events.jsonl'), JSON.stringify({ at: new Date().toISOString(), event, ...fields }) + '\n', { mode: 0o600 });
+        for (const platform of platforms)
+            platform.onEvent?.(event, fields);
     };
-    if (recovery) {
-        const r = JSON.parse(readFileSync(receiptFile, 'utf8'));
-        if (r.channelId !== cfg.youtubeChannelId || !r.broadcastId)
-            throw Error('No owned broadcast receipt');
-        let state;
-        if (action === 'end')
-            state = await endBroadcast(api, r);
-        else if (action === 'cancel-unstarted') {
-            state = await cancelUnstarted(api, r, () => {
-                if (r.cancellation === 'requested')
-                    writeFileSync(join(out, 'cancel-requested'), r.broadcastId, { mode: 0o600, flag: 'wx' });
-                writeReceipt(r);
-            });
-        }
-        else
-            state = await broadcastStatus(api, r);
-        console.log(JSON.stringify({ id: r.broadcastId, state }));
+    const ids = recovery && !destination
+        ? livePlatformIds.filter(id => existsSync(join(out, id + '.json')))
+        : selected;
+    if (recovery && !destination && !ids.length)
+        throw Error('No broadcast receipt in the session directory');
+    const probe = v['youtube-probe']?.trim();
+    if (v['youtube-probe'] !== undefined && (action !== 'run' || start !== 'ready' ||
+        !ids.includes('youtube') || !probe || probe.length > 200))
+        throw Error('Invalid YouTube test message');
+    if (v['resume-from'] && (action !== 'run' || !ids.includes('youtube') || start !== 'ready' || cfg.madeForKids !== false))
+        throw Error('Resume requires a YouTube run with live chat enabled');
+    if (['warm', 'prepare-idle'].includes(action) && destination)
+        throw Error('Prepare clips locally');
+    const options = { config: cfg, out, title: v.title, probe,
+        resumeFrom: v['resume-from'] && resolve(v['resume-from']), log };
+    if ((recovery || action === 'reserve') && ids.length !== 1)
+        throw Error('Choose one --platform for room management');
+    if (start !== 'preview')
+        platforms.push(...ids.map(id => livePlatforms[id](options)));
+    if (recovery || action === 'reserve') {
+        if (action === 'reserve' && start !== 'ready')
+            throw Error('Reserve requires --start ready');
+        const command = platforms[0].commands[action];
+        if (!command)
+            throw Error(platforms[0].id + ' does not support ' + action + ' via API. Use the platform LIVE controls.');
+        console.log(JSON.stringify(await command()));
         return;
     }
-    if (action === 'reserve') {
-        if (!api || !v.youtube || v.tiktok || start !== 'ready' || !v.title?.trim() || v.title.length > 100)
-            throw Error('Reserve needs --youtube, --start ready and a YouTube title of 1–100 characters');
-        mkdirSync(out, { mode: 0o700 });
-        const receipt = { channelId: cfg.youtubeChannelId, marker: randomUUID() };
-        writeReceipt(receipt);
-        await prepareYoutube(api, cfg, v.title, receipt, () => writeReceipt(receipt));
-        appendFileSync(join(out, 'events.jsonl'), JSON.stringify({
-            at: new Date().toISOString(), event: 'youtube_reserved', id: receipt.broadcastId
-        }) + '\n', { mode: 0o600 });
-        console.log(JSON.stringify({ id: receipt.broadcastId, privacy: 'unlisted', state: 'reserved' }));
-        return;
-    }
+    const checks = { youtubeLiveReadAccess: false };
+    if (platforms.length)
+        checkLiveRelay();
+    for (const platform of platforms)
+        Object.assign(checks, await platform.check(action === 'run'));
     const actor = loadCharacter(cfg, action === 'prepare-idle' ? 'standby' : 'native');
     const concept = cfg.broadcastConcept ?? (cfg.talkPrompt ?? cfg.persona ?? talkPrompt).slice(0, 600);
     if (action === 'prepare-idle') {
-        if (destination)
-            throw Error('Prepare standby clips without a live destination');
         const controller = new AbortController();
         const stop = () => controller.abort();
         process.once('SIGTERM', stop);
@@ -115,11 +109,7 @@ async function main() {
         }
         return;
     }
-    if (api || tiktok)
-        checkLiveRelay();
     if (action === 'check') {
-        if (api)
-            await checkChannel(api, cfg.youtubeChannelId);
         const caps = await requestGenai('GET', '/v1/ltx/msr/capabilities', undefined, 15000);
         if (!caps?.image_conditioning || !caps.voice_references)
             throw Error('GenAI needs image conditioning and subject voice references for live dialogue');
@@ -128,14 +118,12 @@ async function main() {
             liveStart: liveStartChoices,
             character: cfg.character,
             language: actor.language,
-            youtubeLiveReadAccess: !!api,
+            ...checks,
             broadcastCreation: 'untested'
         }));
         return;
     }
     if (action === 'warm') {
-        if (api || v.tiktok)
-            throw Error('Warm runs locally');
         const renderer = new NativeTalk(actor, cfg.project, cfg.talkPrompt ?? talkPrompt);
         try {
             for (const text of new Set([cfg.opening, ...cfg.reactions.map(r => r.answer)])) {
@@ -152,39 +140,11 @@ async function main() {
     const seconds = Number(v.seconds);
     if (!Number.isInteger(seconds) || seconds < 5 || seconds > 86400)
         throw Error('Duration must be 5–86400 seconds');
-    if (api && (!v.title?.trim() || v.title.length > 100))
-        throw Error('Set a YouTube title of 1–100 characters');
-    const probe = v['youtube-probe']?.trim();
-    if (v['youtube-probe'] !== undefined && (!api || !probe || probe.length > 200))
-        throw Error('Invalid YouTube test message');
-    if (api)
-        await checkChannel(api, cfg.youtubeChannelId);
     mkdirSync(out, { mode: 0o700 }); // Atomic admission: never repeat side effects in an existing session.
     const controller = new AbortController();
     const stop = () => controller.abort();
     process.once('SIGINT', stop);
     process.once('SIGTERM', stop);
-    const log = (event, fields = {}) => {
-        appendFileSync(join(out, 'events.jsonl'), JSON.stringify({ at: new Date().toISOString(), event, ...fields }) + '\n', { mode: 0o600 });
-    };
-    const prior = v['resume-from'] ? resolve(v['resume-from']) : undefined;
-    const receipt = prior
-        ? JSON.parse(readFileSync(join(prior, 'youtube.json'), 'utf8'))
-        : { channelId: cfg.youtubeChannelId ?? '', marker: randomUUID() };
-    if (prior && (receipt.channelId !== cfg.youtubeChannelId || !receipt.broadcastId))
-        throw Error('Resume receipt does not belong to this channel');
-    if (prior) {
-        const journal = readFileSync(join(prior, 'events.jsonl'), 'utf8').trim().split('\n');
-        const closed = journal.some((line) => {
-            const e = JSON.parse(line);
-            return (e.id === receipt.broadcastId && (e.event === 'youtube_reserved' ||
-                (e.event === 'youtube_final' && e.state === 'ready' && e.ingestLive === false)));
-        });
-        if (!closed)
-            throw Error('The prior encoder has not confirmed an unstarted shutdown');
-    }
-    let ownsRun = !prior;
-    const save = () => writeReceipt(receipt);
     const motion = new NativeTalk(actor, cfg.project, cfg.talkPrompt ?? talkPrompt, log);
     const program = new LiveProgram(clip => { if (clip.motion)
         motion.release(clip.motion); });
@@ -194,7 +154,11 @@ async function main() {
         received++;
         log('chat_received', { source: event.source, id: event.id, text: event.text });
     });
-    let polling, replying, hosting;
+    const observers = [];
+    const opened = [];
+    let observerError;
+    let outcome = 'failed';
+    let replying, hosting;
     let acceptingUntil = Infinity, renderingReply = false;
     let speculative;
     let hostLine = 0;
@@ -204,12 +168,11 @@ async function main() {
             unfinishedReplies++;
         log('reply_unfinished', { source, id, stage });
     };
-    let ingestLive = false, chatReads = 0, probeId = '', probeSpoken = false, finalState = '', endedEarly = false, chatQuotaExhausted = false;
     const take = () => {
-        const roomLive = !api || ingestLive;
-        if (!roomLive && Date.now() >= acceptingUntil)
-            throw Error('YouTube did not report live before the session deadline');
-        return program.take(roomLive, Date.now() < acceptingUntil);
+        const waiting = platforms.find(platform => !platform.ready);
+        if (waiting && Date.now() >= acceptingUntil)
+            throw Error(waiting.id + ' was not ready before the session deadline');
+        return program.take(!waiting, Date.now() < acceptingUntil);
     };
     const wait = async (ms) => {
         await sleep(ms, undefined, { signal: controller.signal }).catch(() => { });
@@ -220,8 +183,6 @@ async function main() {
             unfinishedReplies++;
         if (kind === 'speech_end' && isReply(String(fields.source)))
             spokenReplies++;
-        if (kind === 'speech_end' && probeId && fields.id === probeId && fields.source === 'youtube')
-            probeSpoken = true;
     };
     let partial = '', discard = false;
     function receive(bytes) {
@@ -238,7 +199,7 @@ async function main() {
             try {
                 if (!discard && partial.trim()) {
                     const e = JSON.parse(partial);
-                    if (Date.now() < acceptingUntil && (e.source === 'operator' || (tiktok && e.source === 'tiktok')))
+                    if (Date.now() < acceptingUntil && (e.source === 'operator' || platforms.some(p => p.acceptsStdin && p.id === e.source)))
                         queue.add(e);
                 }
             }
@@ -249,7 +210,7 @@ async function main() {
             discard = false;
         }
     }
-    const wake = (api || tiktok) && process.platform === 'darwin'
+    const wake = platforms.length > 0 && process.platform === 'darwin'
         ? spawn('/usr/bin/caffeinate', ['-dis', '-w', String(process.pid)], { stdio: 'ignore' })
         : undefined;
     wake?.on('error', () => log('sleep_prevention_unavailable', {}));
@@ -297,27 +258,19 @@ async function main() {
         await prepareHost(true);
         if (controller.signal.aborted)
             return;
-        let chat;
         const destinations = [];
-        if (api) {
-            let target;
-            if (prior) {
-                target = await resumeUnstarted(api, receipt);
-                writeFileSync(join(prior, 'resume-claimed'), out, { flag: 'wx', mode: 0o600 });
-                ownsRun = true;
-                save();
+        for (const platform of platforms) {
+            controller.signal.throwIfAborted();
+            opened.push(platform);
+            try {
+                destinations.push(await platform.prepare(controller.signal));
             }
-            else {
-                save();
-                target = await prepareYoutube(api, cfg, v.title, receipt, save);
+            catch (error) {
+                platform.prepareFailed?.(error);
+                throw error;
             }
-            destinations.push(target.url);
-            if (target.chatId)
-                chat = new YoutubeChat(api, target.chatId);
-            log('youtube_prepared', { id: receipt.broadcastId, privacy: 'unlisted' });
         }
-        if (tiktok)
-            destinations.push(tiktok);
+        controller.signal.throwIfAborted();
         process.stdin.setEncoding('utf8');
         process.stdin.on('data', receive);
         acceptingUntil = Date.now() + seconds * 1000;
@@ -358,7 +311,7 @@ async function main() {
                 try {
                     renderingReply = true;
                     const prepared = preparedReply(cfg, event.text);
-                    const selective = event.source !== 'operator' && event.text !== probe;
+                    const selective = event.source !== 'operator' && !(event.source === 'youtube' && event.text === probe);
                     const text = await answer(cfg, actor, event.text, controller.signal, program.context(), event.speaker, selective);
                     if (selective && text === '[SKIP]') {
                         log('chat_skipped', { source: event.source, id: event.id });
@@ -393,116 +346,32 @@ async function main() {
                 }
             }
         })();
-        if (api) {
-            let liveChat = chat;
-            polling = (async () => {
-                let tester;
-                let canonical = false;
-                while (!controller.signal.aborted) {
-                    let delay = 4000;
-                    try {
-                        if (!ingestLive || !liveChat) {
-                            const b = await inspectBroadcast(api, receipt);
-                            if (b.snippet.liveChatId)
-                                liveChat ??= new YoutubeChat(api, b.snippet.liveChatId);
-                            if (!ingestLive && b.status.lifeCycleStatus === 'live') {
-                                ingestLive = true;
-                                if (probe)
-                                    tester = new YoutubeProbe(Date.now());
-                                log('youtube_live', { id: b.id });
-                            }
-                        }
-                        if (ingestLive && !canonical) {
-                            const id = await activeChatId(api, receipt);
-                            if (id) {
-                                liveChat = new YoutubeChat(api, id);
-                                canonical = true;
-                            }
-                        }
-                        if (ingestLive && liveChat && Date.now() < acceptingUntil && !controller.signal.aborted) {
-                            delay = await liveChat.poll(queue, (id, text, author) => {
-                                if (probe && !probeId && text === probe && author === receipt.channelId) {
-                                    probeId = id;
-                                    log('youtube_probe_observed', { id });
-                                }
-                            });
-                            chatReads++;
-                            chatQuotaExhausted = false;
-                            if (chatReads === 1)
-                                log('youtube_chat_connected', { id: receipt.broadcastId });
-                            if (canonical && probe && !probeId && tester?.due(Date.now()) && !controller.signal.aborted) {
-                                const posted = await tester.post(liveChat, probe);
-                                if (posted) {
-                                    probeId = posted;
-                                    log('youtube_probe', { id: posted });
-                                }
-                                else {
-                                    canonical = false;
-                                    log('youtube_probe_not_ready', { id: receipt.broadcastId });
-                                }
-                            }
-                        }
-                    }
-                    catch (e) {
-                        if (e instanceof Error && e.message.includes('403 quotaExceeded')) {
-                            if (!chatQuotaExhausted)
-                                log('youtube_chat_quota_exhausted');
-                            chatQuotaExhausted = true;
-                            delay = 300000;
-                        }
-                        if (!controller.signal.aborted &&
-                            e instanceof Error &&
-                            e.message === 'YouTube GET liveChat/messages 403 liveChatEnded' &&
-                            (await broadcastStatus(api, receipt).catch(() => '')) === 'complete') {
-                            endedEarly = true;
-                            log('youtube_ended_early', { id: receipt.broadcastId });
-                            stop();
-                        }
-                        log('youtube_read_error', { message: e instanceof Error ? e.message : 'failed' });
-                    }
-                    await wait(delay);
-                }
-            })();
+        const observation = {
+            signal: controller.signal, stop, acceptingUntil,
+            queue: { add: (event) => !controller.signal.aborted && Date.now() < acceptingUntil && queue.add(event) }
+        };
+        for (const platform of platforms) {
+            if (!platform.observe)
+                continue;
+            observers.push(platform.observe(observation).catch(error => {
+                observerError = error instanceof Error ? error : Error(platform.id + ' observer failed');
+                stop();
+            }));
         }
         await encode([], join(out, 'recording.flv'), destinations, seconds, controller.signal, take, onLog, motion, () => renderingReply || queue.pending > 0 || ready.some(e => isReply(e.source)));
-    }
-    catch (e) {
-        if (api && !receipt.broadcastId) {
-            const message = e instanceof Error ? e.message : '';
-            const rejected = /^YouTube POST liveBroadcasts 4(00|01|03) [A-Za-z0-9_]+$/.test(message);
-            log('youtube_prepare_failure', {
-                definiteRejection: rejected,
-                reason: rejected ? message : 'inspect existing marker before retry',
-                marker: receipt.marker
-            });
-        }
-        throw e;
+        if (observerError)
+            throw observerError;
+        outcome = controller.signal.aborted ? 'interrupted' : 'finished';
     }
     finally {
         stop();
         process.stdin.removeListener('data', receive);
         process.stdin.pause();
-        if (api && receipt.broadcastId && ownsRun) {
-            try {
-                for (let i = 0; i < 8; i++) {
-                    finalState = await closeBroadcast(api, receipt);
-                    if (finalState === 'complete' || (['created', 'ready'].includes(finalState) && !ingestLive))
-                        break;
-                    await sleep(2500);
-                }
-                log('youtube_final', {
-                    id: receipt.broadcastId,
-                    state: finalState,
-                    ingestLive,
-                    probeId,
-                    probeSpoken
-                });
-            }
-            catch {
-                log('youtube_final_unknown', { id: receipt.broadcastId });
-            }
-        }
-        await Promise.allSettled([polling, replying, hosting]);
+        await Promise.allSettled(observers);
+        const [closures] = await Promise.all([
+            Promise.allSettled(opened.map(async (platform) => platform.close?.(outcome))),
+            Promise.allSettled([replying, hosting])
+        ]);
         wake?.kill();
         motion.close();
         for (const event of ready)
@@ -512,22 +381,17 @@ async function main() {
             unfinished(event.source, event.id, 'queued');
         process.removeListener('SIGINT', stop);
         process.removeListener('SIGTERM', stop);
+        for (const result of closures)
+            if (result.status === 'rejected')
+                throw result.reason;
     }
-    if (api) {
-        const reason = endedEarly
-            ? 'broadcast ended before the encoder finished'
-            : missingYoutubeEvidence({
-                live: ingestLive,
-                finalState,
-                chatReads,
-                probeRequested: !!probe,
-                probeSpoken
-            });
-        log('youtube_chat_summary', { id: receipt.broadcastId, successfulReads: chatReads });
-        if (reason || chatQuotaExhausted) {
-            const problem = reason ?? 'chat quota exhausted';
-            log('session_incomplete', { platform: 'youtube', reason: problem });
-            throw Error('YouTube ' + problem + '; inspect existing receipt');
+    if (observerError)
+        throw observerError;
+    for (const platform of platforms) {
+        const reason = platform.problem();
+        if (reason) {
+            log('session_incomplete', { platform: platform.id, reason });
+            throw Error(platform.id + ' ' + reason + '; inspect existing receipt');
         }
     }
     if (failedReplies || unfinishedReplies) {
@@ -538,11 +402,11 @@ async function main() {
         received,
         failedReplies,
         spokenReplies,
-        platforms: [...(api ? ['youtube'] : []), ...(tiktok ? ['tiktok'] : [])]
+        platforms: platforms.map(platform => platform.id)
     });
     console.log(JSON.stringify({
         out,
-        ...(receipt.broadcastId ? { youtubeId: receipt.broadcastId, finalState, probeSpoken } : {})
+        ...Object.assign({}, ...platforms.map(platform => platform.summary()))
     }));
 }
 main().catch((e) => {
