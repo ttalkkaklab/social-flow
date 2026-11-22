@@ -112310,12 +112310,12 @@ var GenaiRequestError = class extends Error {
   terminal;
   httpStatus;
 };
-async function requestGenai(method, route, body, timeoutMs = 6e4, onResponse) {
+async function requestGenai(method, route, body, timeoutMs = 6e4, onResponse, signal) {
   const key = requireAstraGenaiKey(route);
   const response = await fetch(astraGenaiBaseUrl(route) + route, {
     method,
     redirect: "error",
-    signal: AbortSignal.timeout(timeoutMs),
+    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs),
     ...{ dispatcher: waitFor(timeoutMs) },
     headers: { Authorization: `Bearer ${key}`, ...body === void 0 ? {} : { "Content-Type": "application/json" } },
     ...body === void 0 ? {} : { body: JSON.stringify(body) }
@@ -112383,7 +112383,7 @@ function genaiSourceUri(uri, file) {
     throw new Error("GenAI source must be PNG/JPEG, at most 32 MiB and 4096 pixels per side");
   return `data:${meta.mimeType};base64,${bytes.toString("base64")}`;
 }
-async function requestGenaiMedia(route, body, credentialRoute = route) {
+async function requestGenaiMedia(route, body, credentialRoute = route, signal) {
   if (!/^\/v1\/(audio\/speech|ltx\/desktop\/assets(?:\/[A-Za-z0-9_-]+\/bytes)?)$/.test(route))
     throw new Error("Unsupported private gateway media route");
   const key = requireAstraGenaiKey(credentialRoute);
@@ -112391,7 +112391,7 @@ async function requestGenaiMedia(route, body, credentialRoute = route) {
   const response = await fetch(astraGenaiBaseUrl(credentialRoute) + route, {
     method: body === void 0 ? "GET" : "POST",
     redirect: "error",
-    signal: AbortSignal.timeout(30 * 6e4),
+    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(30 * 6e4)]) : AbortSignal.timeout(30 * 6e4),
     ...{ dispatcher: waitFor(30 * 6e4) },
     headers: { Authorization: `Bearer ${key}`, ...body && !form ? { "Content-Type": "application/json" } : {} },
     ...body === void 0 ? {} : { body: form ? body : JSON.stringify(body) }
@@ -113496,14 +113496,15 @@ var package_default = {
     node: ">=20"
   },
   scripts: {
-    build: "tsc && node build-upscale.mjs && node build-video-catalog.mjs && node build-image-catalog.mjs && node build-music-catalog.mjs && npm run bundle && npm run bundle:shot && npm run bundle:mesh",
+    build: "tsc && node build-upscale.mjs && node build-video-catalog.mjs && node build-image-catalog.mjs && node build-music-catalog.mjs && npm run bundle && npm run bundle:live && npm run bundle:shot && npm run bundle:mesh",
     start: "node dist/index.js",
     test: "node --import ./test/isolate.mjs --test test/*.test.mjs",
     check: "npm run build && npm test",
     "check:dist": "npm run build && node check-dist.mjs",
     bundle: `esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/bundle.js --banner:js="import { createRequire as __socialFlowRequire } from 'node:module'; const require = __socialFlowRequire(import.meta.url);"`,
     "bundle:shot": `esbuild src/astra-shot-runtime.ts --bundle --platform=node --format=esm --outfile=dist/astra-shot-runtime.bundle.js --banner:js="import { createRequire as __socialFlowRequire } from 'node:module'; const require = __socialFlowRequire(import.meta.url);"`,
-    "bundle:mesh": "node build-mesh.mjs"
+    "bundle:mesh": "node build-mesh.mjs",
+    "bundle:live": `esbuild src/live-run.ts --bundle --platform=node --format=esm --outfile=dist/character-live.bundle.js --banner:js="import { createRequire as __socialFlowRequire } from 'node:module'; const require = __socialFlowRequire(import.meta.url);"`
   },
   dependencies: {
     "@google/genai": "^2.21.0",

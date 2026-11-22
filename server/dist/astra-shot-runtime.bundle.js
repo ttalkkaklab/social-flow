@@ -49933,14 +49933,15 @@ var package_default = {
     node: ">=20"
   },
   scripts: {
-    build: "tsc && node build-upscale.mjs && node build-video-catalog.mjs && node build-image-catalog.mjs && node build-music-catalog.mjs && npm run bundle && npm run bundle:shot && npm run bundle:mesh",
+    build: "tsc && node build-upscale.mjs && node build-video-catalog.mjs && node build-image-catalog.mjs && node build-music-catalog.mjs && npm run bundle && npm run bundle:live && npm run bundle:shot && npm run bundle:mesh",
     start: "node dist/index.js",
     test: "node --import ./test/isolate.mjs --test test/*.test.mjs",
     check: "npm run build && npm test",
     "check:dist": "npm run build && node check-dist.mjs",
     bundle: `esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/bundle.js --banner:js="import { createRequire as __socialFlowRequire } from 'node:module'; const require = __socialFlowRequire(import.meta.url);"`,
     "bundle:shot": `esbuild src/astra-shot-runtime.ts --bundle --platform=node --format=esm --outfile=dist/astra-shot-runtime.bundle.js --banner:js="import { createRequire as __socialFlowRequire } from 'node:module'; const require = __socialFlowRequire(import.meta.url);"`,
-    "bundle:mesh": "node build-mesh.mjs"
+    "bundle:mesh": "node build-mesh.mjs",
+    "bundle:live": `esbuild src/live-run.ts --bundle --platform=node --format=esm --outfile=dist/character-live.bundle.js --banner:js="import { createRequire as __socialFlowRequire } from 'node:module'; const require = __socialFlowRequire(import.meta.url);"`
   },
   dependencies: {
     "@google/genai": "^2.21.0",
