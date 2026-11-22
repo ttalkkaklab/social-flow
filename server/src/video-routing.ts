@@ -29,7 +29,7 @@ import { priceOf, recordUsage } from './usage-ledger.js';
 import { recordVideoSubmission, videoEvents } from './video-events.js';
 import { msrOutputContract, genaiMsrPromptLimit, checkGenaiVideoOptions, getGenaiVideoStatus, genaiMsrSchema, buildGenaiMsrBody, buildGenaiAudioBody, genaiAudioToVideoSchema, genaiMsrVoiceReferences, refreshGenaiMsrVoice, genaiV2Resolution } from './astra-genai-video.js';
 import { astraGenaiBaseUrl, GenaiRequestError, pollGenaiJob, requestGenai } from './astra-genai-client.js';
-import { hasSubjectInput, hasVideoSubjectReferences, prepareVideoImages, type ImageBinding } from './video-image-inputs.js';
+import { hasSubjectInput, hasVideoSubjectReferences, prepareVideoImages, registeredVideoSubjects, type ImageBinding } from './video-image-inputs.js';
 import { prepareVideoVoice, type VoiceContinuity } from './video-voice.js';
 import type { ToolResult } from './handlers.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
@@ -79,7 +79,8 @@ function shotVideoTiming(context: Context, tool: string, args: Record<string, un
     coverage = { requiredSeconds: Number(shot.duration) };
   } else if (shot.duration !== undefined) {
     const edit = load(fileURLToPath(new URL('../../skills/produce/references/edit-plan.js', import.meta.url))).preview(context.board.SCENES, { videoWarningsApproved: true });
-    const index = (context.board.SCENES as unknown[]).indexOf(shot);
+    const cards = context.board.SCENES as {id?: string; shot?: {id?: string}}[];
+    const index = cards.findIndex(card => String(card.id ?? card.shot?.id) === context.shotId);
     const timing = load(fileURLToPath(new URL('../../skills/_shared/video-duration.js', import.meta.url)));
     const planned = edit.find((entry: { card: number }) => entry.card === index);
     // edit.in on a card that plays its clip soundtrack trims the clip it has; a new clip owes no extra head.
@@ -164,6 +165,7 @@ export const videoPlanSchema = z.object({ episode: z.string().min(1), shotId: z.
   validateScenePayload: z.boolean().optional(), sceneRendering:z.literal('per_shot').optional(), shotBindings:sceneShotBindingsSchema.optional(),
   purpose: z.enum(['draft', 'final', 'revision']).optional(),
   basedOnRequestId: idSchema.optional(), changeNote: z.string().min(1).max(1000).optional(),
+  maxCostUsd: z.number().nonnegative().finite().optional(),
   operation: z.string().optional(), tool: z.string().optional(), args: z.record(z.unknown()).default({}) }).strict().refine(v => Boolean(v.shotId) !== (v.sceneNo !== undefined), 'Choose sceneNo or shotId');
 export const videoExecuteSchema = z.object({ episode: z.string().min(1), planId: z.string().regex(/^[a-f0-9]{64}$/) }).strict();
 export interface VideoPlan {
@@ -173,7 +175,7 @@ export interface VideoPlan {
   version: 1; id: string; episode: string; shotId: string; requestId: string; tool: string;
   args: Record<string, unknown>; selection: Selection; source: string; contextRevision: string;
   inputs: Record<string, string>; quote: VideoQuote; execution: 'server' | 'host_handoff';
-  sourceArgs?: Record<string, unknown>; voiceContinuity?: VoiceContinuity;
+  maxCostUsd?: number; sourceArgs?: Record<string, unknown>; voiceContinuity?: VoiceContinuity;
   sourcePrompt?: string;
   directionBindings?: DirectionBinding[]; directionWarnings?: string[];
   durationPlan?: ReturnType<typeof shotVideoTiming>;
@@ -321,15 +323,9 @@ async function executeShotRenderPlan(plan: VideoPlan, prepared:Awaited<ReturnTyp
   return {content:[{type:'text',text:JSON.stringify({...result,receiptPath})}]};
 }
 
-export async function planManagedVideo(raw: unknown) {
-  const plan = planVideo(raw, false);
-  if (plan.sceneRendering) { await validateShotRenderPlan(plan); return saveVideoPlan(plan); }
-  await checkGenaiVideoOptions(plan.tool, plan.args);
-  if (plan.sceneRequest) await checkSceneDeployment(plan.sceneRequest, plan.tool, plan.args);
-  return saveVideoPlan(plan);
-}
-export function planVideo(raw: unknown, persist = true): VideoPlan {
-  const input = videoPlanSchema.parse(raw);
+type PlanInput = z.infer<typeof videoPlanSchema>;
+
+function resolvePlanContext(input: PlanInput) {
   requireReadyProject(input.episode, { allowVideoSnapshot: true });
   let context = routingContext(input.episode, input.shotId, input.sceneNo);
   if (input.shotId && context.shot.scene !== undefined) {
@@ -341,12 +337,50 @@ export function planVideo(raw: unknown, persist = true): VideoPlan {
       members.some(shot => shot.timeline || shot.visual?.frames?.storyboardKeyframes || owner?.videoDirection && shot.visual?.frames?.keyframes);
     if (timed) {
       if (members.length !== 1) throw new Error('scene_video_scope: plan the timed shot and its scene inputs with sceneNo ' + sceneNo);
-      input.sceneNo = sceneNo;
       context = routingContext(input.episode, undefined, sceneNo);
     }
   }
+  requireSupportedSelection(context.selection);
+  if (input.tool && VIDEO_ADAPTERS[input.tool]?.engine !== context.selection.engine)
+    throw new Error('model_selection_mismatch: tool does not match selected engine');
+  if (input.tool && input.operation && VIDEO_ADAPTERS[input.tool]?.operation !== input.operation)
+    throw new Error('Tool and operation disagree');
+  const tool = input.tool ?? selectedVideoTool(context.selection, input.operation ?? context.selection.operation);
+  return { context, tool };
+}
+
+export async function planManagedVideo(raw: unknown) {
+  const input = videoPlanSchema.parse(raw);
+  const resolved = resolvePlanContext(input);
+  const { context, tool } = resolved;
+  if (context.selection.engine === 'astra-genai' && (tool === 'astra_genai_msr' || tool === 'astra_genai_img2video'))
+    await refreshGenaiMsrVoice();
+  const plan = buildVideoPlan(input, resolved, false);
+  if (plan.sceneRendering) { await validateShotRenderPlan(plan); return saveVideoPlan(plan); }
+  await checkGenaiVideoOptions(plan.tool, plan.args);
+  if (plan.sceneRequest) await checkSceneDeployment(plan.sceneRequest, plan.tool, plan.args);
+  return saveVideoPlan(plan);
+}
+
+export function planVideo(raw: unknown, persist = true): VideoPlan {
+  const input = videoPlanSchema.parse(raw);
+  return buildVideoPlan(input, resolvePlanContext(input), persist);
+}
+
+function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof resolvePlanContext>, persist: boolean): VideoPlan {
+  input = { ...input, sceneNo: context.sceneNo };
+  // Gateway pricing needs a declared reservation. Hosted adapters compute their quote
+  // from the catalogue and must never receive this accounting field on the wire.
+  if (context.selection.engine === 'astra-genai' && input.maxCostUsd !== undefined && input.args.reserveUsd === undefined)
+    input = { ...input, args: { ...input.args, reserveUsd: input.maxCostUsd } };
+  const quoteFor = (tool: string, args: Record<string, unknown>) => {
+    const quote = quoteVideo(tool, args);
+    if (input.maxCostUsd !== undefined && quote.reserveUsd > input.maxCostUsd)
+      throw new Error('video_quote_exceeded: selected adapter requires $' + quote.reserveUsd + ', request maximum is $' + input.maxCostUsd);
+    return quote;
+  };
   const scene = context.sceneDirection && sceneVideoDirectionSchema.parse(context.sceneDirection);
-  const take = { ...(scene ? { sceneNo: context.sceneNo, sceneDurationSeconds: Number(context.shot.duration), shotIds: context.shotIds } : {}), ...(input.purpose ? { purpose: input.purpose } : {}), ...(input.basedOnRequestId ? { basedOnRequestId: input.basedOnRequestId } : {}), ...(input.changeNote ? { changeNote: input.changeNote } : {}) };
+  const take = { ...(input.maxCostUsd !== undefined ? {maxCostUsd:input.maxCostUsd} : {}), ...(scene ? { sceneNo: context.sceneNo, sceneDurationSeconds: Number(context.shot.duration), shotIds: context.shotIds } : {}), ...(input.purpose ? { purpose: input.purpose } : {}), ...(input.basedOnRequestId ? { basedOnRequestId: input.basedOnRequestId } : {}), ...(input.changeNote ? { changeNote: input.changeNote } : {}) };
   if (input.basedOnRequestId) {
     const directory = path.join(context.episode, '.work/video-routing/plans');
     const parent = input.basedOnRequestId !== input.requestId && fs.existsSync(directory) && fs.readdirSync(directory)
@@ -357,7 +391,6 @@ export function planVideo(raw: unknown, persist = true): VideoPlan {
     if (!parent) throw new Error('video_parent_missing: name a different existing request for this shot');
   }
   const { selection } = context;
-  requireSupportedSelection(selection);
   const lines = (context.shot.narration as Array<{ speaker?: string; delivery?: string; tts?: string }> | undefined ?? [])
     .filter(line => line.tts?.trim());
   if (!scene && new Set(lines.map(line => line.speaker)).size > 1)
@@ -416,20 +449,15 @@ export function planVideo(raw: unknown, persist = true): VideoPlan {
     const args = {model:selection.model,resolution:selection.resolution, prompt:request.prompt, reserveUsd:settings.reserveUsd,outputPath,filename};
     const body = {...take, version:1 as const, episode:context.episode, shotId:context.shotId, requestId:input.requestId,
       sceneRendering:input.sceneRendering, ...(input.shotBindings ? {shotBindings:input.shotBindings} : {}), sceneRequest:request, tool, args, sourceArgs:input.args, inputs, selection,
-      source:context.source, contextRevision:context.revision,quote:quoteVideo(tool,args),execution:'server' as const};
+      source:context.source, contextRevision:context.revision,quote:quoteFor(tool,args),execution:'server' as const};
     const plan = {...body,id:hash(body)};
     if (persist) throw new Error('scene_render_validation: use video_plan to validate deployed renderer inputs before approval');
     return plan;
   }
-  const msrRequested = input.tool === 'astra_genai_msr' || selection.engine === 'astra-genai' &&
-    (input.operation ?? (input.tool ? undefined : selection.operation)) === 'reference';
-  if (msrRequested && (!lines.length || lines.some(line => line.delivery === 'voiceover')))
+  if (tool === 'astra_genai_msr' && (!lines.length || lines.some(line => line.delivery === 'voiceover')))
     throw new Error('msr_speech_route: silent and voiceover/inner-thought shots use image2video with external timed TTS for voiceover; split mixed deliveries first');
   if (scene && lines.some(l => l.delivery === 'voiceover') && lines.some(l => l.delivery !== 'voiceover'))
     throw new Error('scene_video_mixed_delivery: keep voiceover on its external track and separate it from native dialogue');
-  const operation = input.operation ?? (input.tool ? undefined : selection.operation);
-  const tool = input.tool || selectedVideoTool(selection, operation);
-  if (input.tool && input.operation && VIDEO_ADAPTERS[input.tool]?.operation !== input.operation) throw new Error('Tool and operation disagree');
   // The hosted reference lanes take spoken shots only, as MSR does; silent and voiceover shots use the image lane.
   if (tool && VENDOR_REFERENCE_TOOLS.includes(tool) && (!lines.length || lines.some(line => line.delivery === 'voiceover')))
     throw new Error(`reference_speech_route: ${tool} renders a shot whose character speaks; plan silent and voiceover/inner-thought shots with operation:"image" and external timed TTS for voiceover; split mixed deliveries first`);
@@ -489,7 +517,7 @@ export function planVideo(raw: unknown, persist = true): VideoPlan {
   const bindTurns = Boolean(bindDialogueSeparately || tool === 'astra_genai_msr' || tool && VENDOR_REFERENCE_TOOLS.includes(tool));
   const bindOpening = tool === 'astra_genai_msr' || tool === 'astra_genai_img2video' && subjectReferences;
   const prepared = scene && context.timed ? prepareSceneRequest(context.sceneNo!, members, scene, context.episode, lines,
-    { bindDialogue:bindTurns, bindOpening, suffix:silentSuffix }, request => bindSceneAdapter(request, tool ?? 'host_external', selection.model, shot, input.args, context.episode, selection.resolution), context.board) : undefined;
+    { bindDialogue:bindTurns, bindOpening, suffix:silentSuffix, assetOnly:Boolean(tool && HOSTED_VIDEO_ROUTES[tool]?.subjectAssets) }, request => bindSceneAdapter(request, tool ?? 'host_external', selection.model, shot, input.args, context.episode, selection.resolution), context.board) : undefined;
   const sceneRequest = prepared?.request;
   const legacyCoverage = scene && !prepared ? sceneCoverage(members, scene, context.board, context.sceneNo) : undefined;
   const sceneCamera = prepared?.camera ?? (legacyCoverage && sceneCameraDirection([], legacyCoverage.common.camera
@@ -623,6 +651,19 @@ export function planVideo(raw: unknown, persist = true): VideoPlan {
   args.outputPath = output;
   args.filename ??= `video-${input.requestId}.mp4`;
   const inputs = { ...inputFiles(args, context.episode), ...performanceInputs };
+  const assets = HOSTED_VIDEO_ROUTES[tool]?.subjectAssets;
+  if (assets) {
+    const paths = args[assets.parameter] as string[];
+    const registry = registeredVideoSubjects(context.board, context.episode, paths);
+    const refs = paths.map(file => {
+      const pin = sceneRequest?.images.find(image => image.path === file);
+      const binding = images.imageBindings?.find(image => image.path === file);
+      return {path:file, role:pin?.role ?? binding?.role ?? 'continuity', character:pin?.character};
+    });
+    const positions = (shot.visual as {video?: {openingPositions?: OpeningPosition[]}} | undefined)?.video?.openingPositions;
+    const issue = assets.validate(refs, selection.model, positions?.filter(p => p.images?.length).map(p => p.character), registry);
+    if (issue) throw new Error('image_plan_unsupported: ' + issue);
+  }
   for (const binding of images.imageBindings ?? []) inputs[binding.path] = binding.sha256;
   if (tool === 'fasth3_omni_reference') buildFasth3Body(fasth3OmniSchema.parse(args));
   if (tool === 'astra_genai_msr') buildGenaiMsrBody(genaiMsrSchema.parse(args));
@@ -639,7 +680,7 @@ export function planVideo(raw: unknown, persist = true): VideoPlan {
     if (!stream || `${stream.width}x${stream.height}` !== selection.resolution)
       throw new Error('model_selection_mismatch: retake inherits source dimensions; select the source resolution');
   }
-  const quote = quoteVideo(tool, args);
+  const quote = quoteFor(tool, args);
   const body = { ...take, ...(sceneRequest ? { sceneRequest: { ...sceneRequest, prompt:String(args.prompt) } } : {}),
     version: 1 as const, episode: context.episode, shotId: context.shotId, requestId: input.requestId, tool, args,
     ...(images.imageBindings ? { imageBindings: sceneRequest ? sceneImageBindings(sceneRequest, tool, images.imageBindings) : images.imageBindings } : {}),
@@ -736,7 +777,7 @@ export async function executeVideo(raw: unknown, dispatch: VideoDispatch): Promi
   const context = routingContext(episode, plan.shotId, plan.sceneNo);
   if (context.revision !== plan.contextRevision) throw new Error('video_plan_stale: the shot\'s frames, prompt, lines, selection or authorization changed');
   if (plan.tool === 'astra_genai_msr' || (plan.tool === 'astra_genai_img2video' && plan.voiceContinuity?.strategy === 'reference_voice')) await refreshGenaiMsrVoice();
-  const refreshed = planVideo({ episode, ...(plan.sceneNo !== undefined ? {sceneNo: plan.sceneNo} : {shotId: plan.shotId}), requestId: plan.requestId, sceneRendering:plan.sceneRendering, shotBindings:plan.shotBindings, tool: plan.tool, args: plan.sourceArgs ?? plan.args, purpose: plan.purpose, basedOnRequestId: plan.basedOnRequestId, changeNote: plan.changeNote }, false);
+  const refreshed = planVideo({ episode, ...(plan.sceneNo !== undefined ? {sceneNo: plan.sceneNo} : {shotId: plan.shotId}), requestId: plan.requestId, sceneRendering:plan.sceneRendering, shotBindings:plan.shotBindings, maxCostUsd:plan.maxCostUsd, tool: plan.tool, args: plan.sourceArgs ?? plan.args, purpose: plan.purpose, basedOnRequestId: plan.basedOnRequestId, changeNote: plan.changeNote }, false);
   if (refreshed.id !== id) throw new Error('video_plan_stale: inputs, price or adapter contract changed');
   if (plan.sceneRequest && !plan.sceneRendering) await checkSceneDeployment(plan.sceneRequest, plan.tool, plan.args);
   checkVideoEnvironment(plan.tool);

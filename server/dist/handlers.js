@@ -47,7 +47,7 @@ import * as tts from './tts-client.js';
 import { checkedSpeechSchema, generateCheckedSpeech } from './tts-quality.js';
 import { finalSpeechSchema, reviewFinalSpeech } from './tts-final-quality.js';
 import * as astraVideo from './astra-video-client.js';
-import { generateGenaiVideo, getGenaiVideoStatus, genaiVideoStatusSchema, refreshGenaiMsrVoice } from './astra-genai-video.js';
+import { generateGenaiVideo, getGenaiVideoStatus, genaiVideoStatusSchema } from './astra-genai-video.js';
 import { generateNativeImage } from './astra-genai-native-image.js';
 import { generateDesktopVideo, desktopVideoStatus } from './astra-genai-desktop.js';
 import { genaiSpeechSchema } from './astra-genai-speech.js';
@@ -1588,12 +1588,7 @@ for (const name of Object.keys(VIDEO_ADAPTERS)) {
 }
 ROUTES.video_catalog = async () => text(JSON.stringify(videoCatalog(), null, 2));
 ROUTES.video_plan = async (args) => {
-    // MSR voice samples depend on the gateway backend; ask before the synchronous plan.
     const input = videoPlanSchema.parse(args);
-    requireReadyProject(input.episode);
-    if (input.tool === 'astra_genai_msr' || input.tool === 'astra_genai_img2video' ||
-        (!input.tool && (!input.operation || input.operation === 'reference' || input.operation === 'image')))
-        await refreshGenaiMsrVoice();
     try {
         return text(JSON.stringify(await planManagedVideo(input), null, 2));
     }

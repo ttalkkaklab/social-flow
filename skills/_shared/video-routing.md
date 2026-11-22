@@ -243,7 +243,21 @@ request ID and reservation; the review view supplies the same-request status com
 
 ## LTX and Google Cloud Veo
 
-Select an engine, model, resolution and operation in the project's video settings. Existing LTX snapshots keep their selected deployment. The hosted LTX API uses `LTX_API_KEY`. Local LTX and gateway deployments retain their own settings.
+Select the engine, model and resolution in the project's video settings. The operation is optional. Use the same managed call across the gateway LTX, hosted LTX and Google Cloud Veo deployments:
+
+```json
+{"episode":"/absolute/episode","sceneNo":1,"requestId":"scene-1","maxCostUsd":2}
+```
+
+The planner reads the saved choice and the storyboard. Each provider adapter serializes its own request. A numeric `maxCostUsd` caps the planned reservation. The gateway needs an explicit reservation and uses that amount when no legacy `args.reserveUsd` was supplied. Hosted adapters compute their quote from their price table. Approve and execute the resulting plan ID in the usual way.
+
+| Storyboard input | Gateway LTX | Hosted LTX | Google Cloud Veo |
+| --- | --- | --- | --- |
+| First and optional last frame | Image-to-video, `image_uri` and `last_frame_uri` | Image-to-video, `image_uri` and `last_frame_uri` | Image-to-video, `image` and `lastFrame` |
+| Character references | Distilled I2V combines the opening with subject images when supported. Spoken MSR accepts subject images and a background. | The image endpoint requires an opening and has no subject slots. | Standard/Fast accept 1–3 images of one subject for eight seconds. A timeline pin cannot accompany the assets. |
+| Continuous supplied speech | Dev A2V accepts the authored audio track. | Audio-to-video takes the supplied track, which sets the duration. | The managed planner reports unsupported dialogue or supplied scene audio. |
+
+Explicit operations and existing per-shot settings remain available. The planner reports inputs that the selected deployment cannot represent before approval. The hosted LTX API uses `LTX_API_KEY`. Local LTX and gateway deployments retain their own settings.
 
 For Google Cloud, enable the Vertex AI API in your billing project, grant the caller prediction access and configure Application Default Credentials (for local development, `gcloud auth application-default login`). Set `GOOGLE_CLOUD_PROJECT` in the MCP server's environment. For workload credentials, ADC also supports `GOOGLE_APPLICATION_CREDENTIALS`. Restart the MCP server after changing its environment. The adapter calls `us-central1-aiplatform.googleapis.com`. [Google Cloud authentication](https://cloud.google.com/docs/authentication/provide-credentials-adc) · [Veo model specifications](https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/veo/3-1-generate)
 

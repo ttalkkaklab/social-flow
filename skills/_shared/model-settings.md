@@ -102,7 +102,7 @@ prices. A configured credential does not guarantee a successful generation.
 
 1. **Video model** (first-setup menu; a saved choice is never re-offered). Offer host video when exposed, Seedance 2.x API models and
    Google Cloud Veo 3.1, ASTRA or MLX when available. For Veo save e.g.
-   `{"engine":"veo","model":"veo-3.1-fast-generate-001","resolution":"720p","operation":"image"}`.
+   `{"engine":"veo","model":"veo-3.1-fast-generate-001","resolution":"720p"}`. Omit the operation to select text, frames or subject references from each storyboard. Save an operation when the user selects one explicitly.
    Use the model-specific reference and resolution limits from `video_catalog`. Gemini Developer API Veo previews, Gemini Omni and Seedance 1.x left the plugin on
    2026-10-31 because none takes a voice reference. Include resolution and reference/audio support.
    Use the installed video-model selection reference and cost tables. Explain the
