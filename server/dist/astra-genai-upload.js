@@ -13,6 +13,7 @@ import { z } from 'zod';
 import { GenaiRequestError, astraGenaiBaseUrl, requireAstraGenaiKey } from './astra-genai-client.js';
 import { imageMetadata } from './image-media.js';
 export const GENAI_FILE_SCHEME = 'genai-file://';
+export const GENAI_MSR_INLINE_MAX_BYTES = 8 * 1000 * 1000;
 /** Tests set retryDelayMs to 0; a chunk of 5 MiB at 0.4 MB/s takes about 13 s, well inside chunkTimeoutMs. */
 export const genaiUploadSettings = { attempts: 4, retryDelayMs: 2000, chunkTimeoutMs: 120_000 };
 /** Gateway upload contract (2026-11-05): these types only, at most 32 MiB a file. */

@@ -102,7 +102,7 @@ export function resolveCharacterVoice(character: Record<string, unknown>, contex
   return resolved;
 }
 
-function voiceReference(character: Record<string, unknown>, context: VoiceContext, warnings: string[]): SpeakerVoice['reference'] {
+export function voiceReference(character: Record<string, unknown>, context: VoiceContext, warnings: string[]): SpeakerVoice['reference'] {
   const declared = object(character.voiceReference);
   if (character.voiceReferenceWarning && !declared.path) {
     warnings.push(`${character.id}: ${character.voiceReferenceWarning}; restore the selected sample instead of substituting an old voice.wav.`);

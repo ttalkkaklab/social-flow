@@ -2,14 +2,13 @@
 import { openingPositionsSchema, openingPrompt, validateOpening } from './msr-opening.js';
 import { z } from 'zod';
 import { guidanceSchema, guidanceWireKey } from './astra-video-client.js';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
-import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { bareFilenameSchema, resolveOutputFile } from './media-utils.js';
-import { GenaiRequestError, astraGenaiBaseUrl, downloadGenaiResult, pollGenaiJob, requestGenai, requireAstraGenaiKey, requestGenaiMedia, genaiImageUriSchema, genaiSourceUri } from './astra-genai-client.js';
+import { GenaiRequestError, astraGenaiBaseUrl, downloadGenaiResult, pollGenaiJob, requestGenai, requireAstraGenaiKey, requestGenaiMedia, genaiImageUriSchema, genaiSourceUri, genaiAudioUri } from './astra-genai-client.js';
 import { atomicJson } from './routing-files.js';
-import { GENAI_FILE_GONE, GENAI_FILE_SCHEME, forgetGenaiUploads, genaiUploadable, shrinkImageToFit, uploadGenaiFile } from './astra-genai-upload.js';
+import { GENAI_MSR_INLINE_MAX_BYTES, GENAI_FILE_GONE, GENAI_FILE_SCHEME, forgetGenaiUploads, genaiUploadable, shrinkImageToFit, uploadGenaiFile } from './astra-genai-upload.js';
 import { recordVideoSubmission } from './video-events.js';
 export const GENAI_VIDEO_MODELS = ['ltx-2.5-22b-distilled', 'ltx-2.5-22b-dev'];
 /** Preserve selected geometry; the live gateway validates its current backend's supported sizes. */
@@ -211,8 +210,7 @@ export const genaiImageToVideoSchema = textVideoFields.extend({
     }
 });
 // Gateway contract (genai-gateway#13): four data URI MIME types, 15,000,000 base64 characters.
-export const GENAI_AUDIO_TYPES = { '.wav': 'audio/wav', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.ogg': 'audio/ogg', '.opus': 'audio/ogg' };
-export const GENAI_AUDIO_DATA_URI_MAX = 15_000_000;
+export { GENAI_AUDIO_TYPES, GENAI_AUDIO_DATA_URI_MAX, genaiAudioUri } from './astra-genai-client.js';
 const oneOf = (a, b) => Number(a !== undefined) + Number(b !== undefined);
 export const genaiAudioToVideoSchema = z.object({
     ...genaiSampling,
@@ -242,30 +240,6 @@ export const genaiAudioToVideoSchema = z.object({
     if (oneOf(args.lastFramePath, args.lastFrameUri) && !oneOf(args.imagePath, args.imageUri))
         issue('A last frame requires a first image');
 });
-/** Local audio becomes a data URI; HTTPS sources are fetched by the gateway. */
-export function genaiAudioUri(uri, file) {
-    if (uri !== undefined) {
-        if (/^https:/.test(uri)) {
-            const url = new URL(uri);
-            if (url.username || url.password)
-                throw new Error('GenAI audio URL must not carry credentials');
-            return uri;
-        }
-        const match = /^data:([^;,]+);base64,([A-Za-z0-9+/]+=*)$/.exec(uri);
-        if (!match || !Object.values(GENAI_AUDIO_TYPES).includes(match[1]))
-            throw new Error('GenAI audio must be HTTPS or an audio/wav, audio/mpeg, audio/mp4 or audio/ogg data URI');
-        if (match[2].length > GENAI_AUDIO_DATA_URI_MAX)
-            throw new Error('GenAI audio data URI exceeds 15,000,000 base64 characters; use an HTTPS URL');
-        return uri;
-    }
-    const type = GENAI_AUDIO_TYPES[path.extname(file).toLowerCase()];
-    if (!type)
-        throw new Error('GenAI audioPath must be .wav, .mp3, .m4a, .ogg or .opus');
-    // base64 of n bytes is 4*ceil(n/3) characters; reject before reading a large file.
-    if (4 * Math.ceil(fs.statSync(file).size / 3) > GENAI_AUDIO_DATA_URI_MAX)
-        throw new Error('GenAI audioPath exceeds the 15,000,000-character data URI limit (about 11.25 MB); use audioUri with HTTPS');
-    return `data:${type};base64,${fs.readFileSync(file).toString('base64')}`;
-}
 export function buildGenaiAudioBody(args) {
     const image = oneOf(args.imagePath, args.imageUri) ? genaiSourceUri(args.imageUri, args.imagePath) : undefined;
     const last = oneOf(args.lastFramePath, args.lastFrameUri) ? genaiSourceUri(args.lastFrameUri, args.lastFramePath) : undefined;
@@ -367,7 +341,8 @@ export function buildGenaiVideoBody(args) {
 }
 const operationSchema = z.enum(['text-to-video', 'image-to-video', 'audio-to-video', 'msr']);
 const receiptSchema = z.object({
-    version: z.literal(1), baseUrl: z.string(), operation: operationSchema, fingerprint: z.string(),
+    version: z.literal(1), baseUrl: z.string(), operation: z.union([operationSchema, z.literal('scene-to-video')]), fingerprint: z.string(),
+    requestId: z.string().optional(), sceneShots: z.array(z.unknown()).optional(),
     videoPath: z.string(), jobId: z.string().min(1).optional(),
     status: z.enum(['submitting', 'submitted', 'completed']), sha256: z.string().optional(),
 }).strict();
@@ -380,6 +355,13 @@ export async function getGenaiVideoStatus(input) {
     const receipt = receiptSchema.parse(JSON.parse(fs.readFileSync(input.receiptPath, 'utf8')));
     if (receipt.baseUrl !== astraGenaiBaseUrl())
         throw new Error('GenAI receipt belongs to a different server; restore ASTRA_GENAI_URL before recovery.');
+    if (!receipt.jobId && receipt.operation === 'scene-to-video' && receipt.requestId) {
+        const found = statusSchema.extend({ request_id: z.literal(receipt.requestId) }).parse(await requestGenai('GET', '/v1/ltx/v2/scene-to-video/requests/' + encodeURIComponent(receipt.requestId)));
+        receipt.jobId = found.id;
+        receipt.status = 'submitted';
+        atomicJson(input.receiptPath, receipt);
+        recordVideoSubmission(found.id);
+    }
     if (!receipt.jobId)
         throw new Error('GenAI submission identity is unknown; inspect server usage before retrying.');
     if (receipt.status === 'completed') {
@@ -388,10 +370,13 @@ export async function getGenaiVideoStatus(input) {
             throw new Error('GenAI cached output changed');
         return { jobId: receipt.jobId, status: 'completed', videoPath: receipt.videoPath, downloaded: true, review: 'not_reviewed' };
     }
-    const route = `${genaiVideoRoute(receipt.operation)}/${encodeURIComponent(receipt.jobId)}`;
+    const route = `${receipt.operation === 'scene-to-video' ? '/v1/ltx/v2/scene-to-video' : genaiVideoRoute(receipt.operation)}/${encodeURIComponent(receipt.jobId)}`;
     const job = statusSchema.parse(await requestGenai('GET', route));
     if (job.id !== receipt.jobId)
         throw new Error('GenAI status job ID mismatch');
+    if (receipt.operation === 'scene-to-video' && Array.isArray(job.shots)) {
+        receipt.sceneShots = job.shots;
+    }
     // The gateway's own failed status is terminal job evidence (managed routing frees the slot).
     if (job.status === 'failed' || job.status === 'cancelled')
         throw new GenaiRequestError(`GenAI video ${receipt.jobId} ${job.status}: ${JSON.stringify(job.error ?? 'No details').slice(0, 1000)}`, true, 200);
@@ -412,7 +397,7 @@ export async function getGenaiVideoStatus(input) {
     // Reject HTML/JSON and probe the actual container before recording completion.
     if (bytes.length < 12 || bytes.toString('ascii', 4, 8) !== 'ftyp')
         throw new Error('GenAI result is not MP4');
-    const temp = `${receipt.videoPath}.${process.pid}.download.mp4`;
+    const temp = `${receipt.videoPath}.${randomUUID()}.download.mp4`;
     try {
         fs.writeFileSync(temp, bytes, { flag: 'wx', mode: 0o600 });
         const probe = JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height:format=duration', '-of', 'json', temp], { encoding: 'utf8', timeout: 30_000 }));
@@ -432,7 +417,7 @@ export async function getGenaiVideoStatus(input) {
     return { jobId: receipt.jobId, status: 'completed', videoPath: receipt.videoPath, downloaded: true, review: 'not_reviewed' };
 }
 /** A fallback body above this is not sent: voice cannot be shrunk, and so large a body on a slow link meets the edge's 524 again. */
-export const GENAI_MSR_INLINE_MAX_BYTES = 8 * 1000 * 1000;
+export { GENAI_MSR_INLINE_MAX_BYTES } from './astra-genai-upload.js';
 export async function prepareGenaiMsrSources(body) {
     const size = /^(\d+)x(\d+)$/.exec(body.resolution ?? '');
     const width = body.width ?? Number(size?.[1]), height = body.height ?? Number(size?.[2]);
