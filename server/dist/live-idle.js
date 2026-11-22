@@ -31,6 +31,26 @@ export function idleRequests(image, concept) {
         negativePrompt: 'talking, lip movement, dancing, waving, gesturing, posing, swaying, zoom, pan, cuts, changing light, extra people, text',
     }));
 }
+const lastStandbyAttempt = 4;
+export function idleRetake(request, index, concept, attempt) {
+    const candidate = {
+        ...request, seed: request.seed + attempt * 1009, strength: attempt === 1 ? 0.94 : 0.85,
+        prompt: `Broadcast setting: ${concept}. In one locked chest-up shot the host silently lowers the chin and turns slightly to read a monitor below the lens. The shoulders follow, the eyes track a line on screen, then the head rises smoothly to meet the camera again. ${gestures[index]} The head is moving from the start, midway the change in pose is clearly visible, and the return takes the rest of the shot. Relaxed pace, lips closed, hands at rest, same person, clothes, lighting and scale as both references.`,
+    };
+    if (attempt >= 2) {
+        // With identical first/last conditioning some models hold the portrait.
+        // Generate the outward half of a quiet gesture; retrace its real frames to the exact anchor.
+        candidate.lastFramePath = undefined;
+        const half = (request.numFrames + 1) / 2;
+        candidate.numFrames = 1 + Math.ceil((half - 1) / 8) * 8;
+        candidate.prompt = `Broadcast setting: ${concept}. Fixed portrait of the same silent seated host. From the first frame the head slowly turns to one side and lowers toward the chat monitor. Shoulders follow visibly as the host leans slightly forward to read. Continuous calm motion, eyes following the screen, lips closed, fixed camera and light. ${gestures[index]}`;
+    }
+    if (attempt >= 3) {
+        const side = attempt === 3 ? 'left' : 'right';
+        candidate.prompt = `Broadcast setting: ${concept}. The same host sits upright and listens in the reference framing. A chat monitor is just ${side} of the lens at eye level. The eyes move there and the head slowly turns a few degrees in place. A quiet breath lifts the shoulders slightly. Keep the chin level, nose near the center and the complete face in view throughout. Continuous gentle movement, closed lips, steady tripod, same background, outfit and lighting.`;
+    }
+    return candidate;
+}
 export async function prepareIdleClips(image, project, concept, signal, progress) {
     const requests = idleRequests(image, concept);
     const hash = createHash('sha256').update(readFileSync(image)).update(astraVideoBaseUrl());
@@ -43,19 +63,8 @@ export async function prepareIdleClips(image, project, concept, signal, progress
     for (const [index, request] of requests.entries()) {
         for (let attempt = 0;; attempt++) {
             signal.throwIfAborted();
-            const returning = attempt === 2;
-            const candidate = attempt === 0 ? request : {
-                ...request, seed: request.seed + attempt * 1009, strength: attempt === 1 ? 0.94 : 0.85,
-                prompt: `Broadcast setting: ${concept}. In one locked chest-up shot the host silently lowers the chin and turns slightly to read a monitor below the lens. The shoulders follow, the eyes track a line on screen, then the head rises smoothly to meet the camera again. ${gestures[index]} The head is moving from the start, midway the change in pose is clearly visible, and the return takes the rest of the shot. Relaxed pace, lips closed, hands at rest, same person, clothes, lighting and scale as both references.`,
-            };
-            if (returning) {
-                // With identical first/last conditioning some models hold the portrait.
-                // Generate the outward half of a quiet gesture; retrace its real frames to the exact anchor.
-                candidate.lastFramePath = undefined;
-                const half = (request.numFrames + 1) / 2;
-                candidate.numFrames = 1 + Math.ceil((half - 1) / 8) * 8;
-                candidate.prompt = `Broadcast setting: ${concept}. Fixed portrait of the same silent seated host. From the first frame the head slowly turns to one side and lowers toward the chat monitor. Shoulders follow visibly as the host leans slightly forward to read. Continuous calm motion, eyes following the screen, lips closed, fixed camera and light. ${gestures[index]}`;
-            }
+            const returning = attempt >= 2;
+            const candidate = attempt === 0 ? request : idleRetake(request, index, concept, attempt);
             const variant = attempt ? '-moving-' + createHash('sha256').update(JSON.stringify([candidate.seed, candidate.prompt, candidate.strength, ...(returning ? [candidate.numFrames] : [])])).digest('hex').slice(0, 12) : '';
             const filename = `listen-${index + 1}${variant}.mp4`;
             const source = await fetchIdle(candidate, directory, returning ? 'outward-' + filename : filename, signal);
@@ -67,7 +76,7 @@ export async function prepareIdleClips(image, project, concept, signal, progress
                 reference ??= anchor;
             }
             catch (error) {
-                if (!(error instanceof StandbyQualityError) || attempt >= 2)
+                if (!(error instanceof StandbyQualityError) || attempt >= lastStandbyAttempt)
                     throw error;
                 continue;
             }

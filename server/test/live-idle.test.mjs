@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { idleRequests, idleCount, IdleRotation, checkStandbyFraming } from '../dist/live-idle.js';
+import { idleRequests, idleRetake, idleCount, IdleRotation, checkStandbyFraming } from '../dist/live-idle.js';
 import { astraImg2VideoSchema } from '../dist/astra-video-client.js';
 
 test('prepares ten model-native shots pinned to the same host and broadcast setting', () => {
@@ -56,4 +56,18 @@ test('a single blink cannot hide a sustained stationary hold or moving backgroun
   const blink = Buffer.from(base);
   blink.fill(60, 24 * 18 * 3, 24 * 19 * 3);
   assert.throws(() => checkStandbyFraming(Buffer.concat([base, blink, ...held])), /stays still/);
+});
+
+test('a framing rejection can render a distinct centered take without replacing the previous receipt', () => {
+  const index = 4, concept = 'Night radio';
+  const request = idleRequests('/host.png', concept)[index];
+  const takes = [2, 3, 4].map(attempt => idleRetake(request, index, concept, attempt));
+  assert.equal(new Set(takes.map(take => take.seed)).size, takes.length);
+  assert.equal(new Set(takes.map(take => take.prompt)).size, takes.length);
+  for (const take of takes) {
+    assert.equal(take.firstFramePath, request.firstFramePath);
+    assert.equal(take.lastFramePath, undefined);
+    assert.equal(take.numFrames, 1 + 8 * Math.ceil((request.numFrames - 1) / 16));
+    assert.ok(astraImg2VideoSchema.safeParse(take).success);
+  }
 });
