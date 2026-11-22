@@ -747,8 +747,9 @@
         if (['els', 'ls', 'ws'].indexOf(sz) !== -1 && lay && TIGHT_LAYOUT_RE.test(lay) && !/전신|전경|멀리|배경|풍경|넓|방\s?전체|가게\s?전체|서 있|앉아 있/.test(lay))
           warn('shot ' + x.no, `size "${sz}" but the layout is a close view ("${lay.trim().slice(0, 30)}…") — the size is what the frame shows; a wide labelled on a close-up does not set the place (rule 9)`);
       });
-      const lines = xs.map(x => x.s.shot && x.s.shot.space && x.s.shot.space.line).filter(text).map(compact);
-      const locked = xs.map(x => ({ x, line: x.s.shot && x.s.shot.space && x.s.shot.space.line }))
+      const resolver = typeof module === 'object' && module.exports ? require('./scene-direction.js') : root.SCENE_DIRECTION;
+      const scopes = sc?.directionDefaults?.axis && resolver?.resolve(sc, xs.map(x => x.s)).shots;
+      const locked = xs.map((x, i) => ({ x, line: scopes && !x.s.shot?.lineNeutral && !isScreen(x) ? scopes[i].axis?.value : x.s.shot?.space?.line }))
         .filter(row => text(row.line)).map(row => ({ x: row.x, line: compact(row.line) }));
       // A crossing the loop below has judged sound — the only kind that excuses the 30° rule.
       const validCrossings = new Set();
@@ -932,11 +933,11 @@
       const gazes = xs.filter(x => x.s.shot && x.s.shot.space && PERSON_RE.test(String(x.s.shot.space.layout || '') + ' ' + String(x.s.shot.space.facing || '')) && GAZE_RE.test(String(x.s.shot.space.facing || '').replace(CAMERA_RE, '')));
       const pictured = xs.filter(x => x.s.shot && x.s.shot.space && text(x.s.shot.space.layout));
       const peopled = pictured.filter(x => PERSON_RE.test((x.s.shot.space.layout + ' ' + (x.s.shot.space.facing || '')).replace(NO_PERSON_RE, '')));
-      if (!lines.length && pictured.length >= 2 && peopled.length >= 2 && !gazes.length)
+      if (!locked.length && pictured.length >= 2 && peopled.length >= 2 && !gazes.length)
         warn(where, `${peopled.length} picture shots with a person and no space.line — a person and what they handle or look at across two shots fix the 180° line on the first shot that has them (rule 10)`);
-      if (lines.length && peopled.length && !(peopled[0].s.shot.space.line && text(peopled[0].s.shot.space.line)))
+      if (locked.length && peopled.length && !peopled[0].s.shot.lineNeutral && !locked.some(row => row.x === peopled[0]))
         warn(where, `space.line is written on a later shot but not on shot ${peopled[0].no}, the first picture shot with a person — the line is fixed on the first shot that has them and kept (rule 10)`);
-      if (gazes.length && !lines.length && pictured.length >= 2)
+      if (gazes.length && !locked.length && pictured.length >= 2)
         warn(where, `shot ${gazes[0].no}'s facing has someone looking at something ("${String(gazes[0].s.shot.space.facing).trim()}") but no shot of the scene writes space.line — two people, or a person and what they look at, fix the 180° line on the scene's first shot (rule 10)`);
       if (sc && sc.charge && feels.length) {
         const first = signOf(feels[0]);

@@ -166,7 +166,8 @@ function afterImageBlock(prompt, lines) {
 /** Prepare provider arguments before schema validation and pricing. No synthesis or uploads. */
 export function prepareVideoVoice(tool, input, context) {
     const args = { ...input };
-    const lines = (Array.isArray(context.shot.narration) ? context.shot.narration : []).map(object).filter(line => text(line.tts));
+    const ordered = load('../../skills/storyboard/references/scene-direction.js').orderedSpeech;
+    const lines = ordered(context.shot).map(object).filter(line => text(line.tts));
     const pinnedMsr = tool === 'astra_genai_img2video' && args.generateAudio !== false &&
         hasSubjectInput(args.references) && lines.some(line => line.delivery === 'on_screen' || line.delivery === 'off_screen');
     if (pinnedMsr && lines.some(line => line.delivery === 'voiceover'))

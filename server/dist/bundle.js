@@ -1223,7 +1223,7 @@ var require_browser = __commonJS({
   "node_modules/debug/src/browser.js"(exports, module) {
     exports.formatArgs = formatArgs;
     exports.save = save3;
-    exports.load = load12;
+    exports.load = load13;
     exports.useColors = useColors;
     exports.storage = localstorage();
     exports.destroy = /* @__PURE__ */ (() => {
@@ -1359,7 +1359,7 @@ var require_browser = __commonJS({
       } catch (error2) {
       }
     }
-    function load12() {
+    function load13() {
       let r2;
       try {
         r2 = exports.storage.getItem("debug") || exports.storage.getItem("DEBUG");
@@ -1397,7 +1397,7 @@ var require_node = __commonJS({
     exports.log = log;
     exports.formatArgs = formatArgs;
     exports.save = save3;
-    exports.load = load12;
+    exports.load = load13;
     exports.useColors = useColors;
     exports.destroy = util2.deprecate(
       () => {
@@ -1539,7 +1539,7 @@ var require_node = __commonJS({
         delete process.env.DEBUG;
       }
     }
-    function load12() {
+    function load13() {
       return process.env.DEBUG;
     }
     function init(debug) {
@@ -93642,6 +93642,427 @@ var require_seedance_route = __commonJS({
   }
 });
 
+// ../skills/storyboard/references/film-techniques.js
+var require_film_techniques = __commonJS({
+  "../skills/storyboard/references/film-techniques.js"(exports, module) {
+    (function(root) {
+      "use strict";
+      const VERSION2 = "film-techniques-v2";
+      const esc2 = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+      const entries = [];
+      function add(id, category, ko, en, use, instruction, glyph, fields2 = {}) {
+        entries.push({ id, category, label: { ko, en }, use, instruction, glyph, fields: fields2 });
+      }
+      const camera = "M3 12h10v8H3zM13 14l5-3v10l-5-3";
+      const person = "M23 7a3 3 0 1 0 .01 0M23 13v10m-4-7h8m-4 7-3 5m3-5 3 5";
+      add("camera.static", "camera", "\uACE0\uC815", "Static", "\uD504\uB808\uC784\uC744 \uACE0\uC815\uD574 \uAD6C\uB3C4\xB7\uBE14\uB85C\uD0B9\xB7\uC5F0\uAE30\uC5D0 \uC9D1\uC911\uD55C\uB2E4. \uAC1D\uAD00\uC801 \uAC70\uB9AC, \uC624\uB798 \uBD99\uC7A1\uC544 \uC313\uB294 \uAE34\uC7A5, \uB4A4\uC5D0 \uC62C \uC791\uC740 \uC774\uB3D9\uC744 \uD06C\uAC8C \uB9CC\uB4DC\uB294 \uB300\uBE44.", "Static frame: keep camera position, angle and focal length fixed.", camera + "M8 20v9m-4 0 4-9 4 9", { movement: "static" });
+      add("camera.dolly-in", "camera", "\uB2EC\uB9AC \uC778", "Dolly in", "\uAD00\uAC1D\uC744 \uB300\uC0C1 \uCABD\uC73C\uB85C \uAC78\uC5B4 \uB4E4\uC5B4\uAC00\uAC8C \uD55C\uB2E4. \uAE68\uB2EC\uC74C, \uC313\uC774\uB294 \uAE34\uC7A5, \uB450 \uC778\uBB3C\uC758 \uAC00\uAE4C\uC6C0, \uC0AC\uBB3C\uC774 \uC911\uC694\uD558\uB2E4\uB294 \uC2E0\uD638.", "The camera pushes in physically toward the subject from the opening crop and settles on a closer ending crop.", camera + "M19 26h10m-4-4 4 4-4 4", { movement: "dolly in" });
+      add("camera.dolly-out", "camera", "\uB2EC\uB9AC \uC544\uC6C3", "Dolly out", "\uBB3C\uB7EC\uB098\uBA70 \uB9E5\uB77D\uC744 \uB4DC\uB7EC\uB0B8\uB2E4. \uC228\uC740 \uC778\uBB3C\uACFC \uADDC\uBAA8, \uC0DD\uAC01\uBCF4\uB2E4 \uAE4A\uC740 \uACE0\uB9BD, \uC7A5\uBA74\uC758 \uB05D, \uC0AC\uAC74\uC744 \uD654\uBA74 \uBC16\uC5D0 \uB450\uB294 \uC0DD\uB7B5.", "The camera pulls back physically from the subject and settles on a wider ending frame that shows what enters.", camera + "M29 26H19m4-4-4 4 4 4", { movement: "dolly out" });
+      add("camera.slow-zoom-in", "camera", "\uC2AC\uB85C \uC90C \uC778", "Slow zoom in", "\uAC19\uC740 \uC790\uB9AC\uC5D0\uC11C \uD654\uAC01\uB9CC \uC881\uD600 \uD55C \uB300\uC0C1\uC5D0 \uC8FC\uC758\uB97C \uBAA8\uC740\uB2E4. \uAD00\uCC30\uC790\xB7\uAC10\uC2DC\xB7\uC9D1\uCC29\xB7\uACE0\uB9BD, \uCEF7 \uC5C6\uC774 \uC313\uB294 \uAE34\uC7A5.", "Keep camera position fixed and narrow the field of view slowly toward the subject; perspective stays unchanged.", "M3 3h26v26H3zM10 10h12v12H10zM4 4l6 6m16-6-4 6", { movement: "zoom in", speed: "slow" });
+      add("camera.arc", "camera", "\uC544\uD06C \uC0F7", "Arc shot", "\uC778\uBB3C \uC8FC\uC704\uB97C \uC6D0\uD638\uB85C \uB3C8\uB2E4. \uD604\uC5C5\uC740 \uAC70\uC758 \uC6C0\uC9C1\uC774\uC9C0 \uC54A\uB294 \uC778\uBB3C\uC758 \uAE34\uC7A5, \uC704\uD611\uACFC \uAD8C\uB825, \uBB34\uB9AC\uC758 \uACB0\uC18D, \uB0AD\uB9CC\uC801 \uC815\uC810\uC5D0 \uC4F0\uACE0, \uBE60\uB974\uAC8C \uB3CC\uB824 \uB2E4\uAE09\uD55C \uB9C8\uC74C\uC744 \uBCF4\uC778\uB2E4. \uC5B4\uB290 \uCABD\uC73C\uB85C \uC77D\uD790\uC9C0\uB294 \uC55E\uB4A4 \uCEF7\uC774 \uC815\uD55C\uB2E4.", "The camera arcs around the subject in the named direction and angle, keeping the subject centered, and settles on the named ending side.", person + "M6 24C-2 4 30 1 29 22m-5-3 5 3 1-6", { movement: "arc shot" });
+      add("camera.follow", "camera", "\uD314\uB85C\uC6B0 \uC0F7", "Follow shot", "\uC778\uBB3C \uD55C \uAC78\uC74C \uB4A4\uC5D0\uC11C \uB530\uB77C\uAC04\uB2E4. \uAD00\uAC1D\uC744 \uB3D9\uD589\uC2DC\uCF1C \uC0AC\uAC74\uC5D0 \uB04C\uC5B4\uB4E4\uC774\uACE0, \uC0C8 \uC7A5\uC18C\uB97C \uCEF7 \uC5C6\uC774 \uC18C\uAC1C\uD55C\uB2E4.", "The camera follows behind the subject at a steady gap and height along the named path to the named stopping point.", camera + "M23 3v8m-3-3 3 3 3-3M23 23v7", { movement: "tracking from behind" });
+      add("camera.reverse-tracking", "camera", "\uB9AC\uBC84\uC2A4 \uD2B8\uB798\uD0B9", "Reverse tracking", "\uAC77\uB294 \uC778\uBB3C \uC55E\uC5D0\uC11C \uB4A4\uB85C \uBB3C\uB7EC\uB098\uBA70 \uC5BC\uAD74\uACFC \uB300\uD654\uB97C \uACC4\uC18D \uBCF4\uC5EC \uC900\uB2E4(walk and talk). \uAE34\uBC15\uAC10, \uC9C0\uB098\uAC00\uB294 \uACF5\uAC04\uC758 \uC18C\uAC1C, \uC0C8 \uC138\uACC4\uB85C\uC758 \uC785\uC7A5.", "The camera retreats in front of the walking subject, facing them at a steady distance, and stops where the walk ends.", camera + "M23 11V3m-3 3 3-3 3 3M23 23v7", { movement: "tracking backward in front of the subject" });
+      add("camera.handheld", "camera", "\uD578\uB4DC\uD5EC\uB4DC", "Handheld", "\uC190\uC73C\uB85C \uB4E0 \uD754\uB4E4\uB9BC. \uC8FC\uAD00\uC131, \uD604\uC7A5\uAC10\uACFC \uC989\uC2DC\uC131, \uD63C\uB3C8, \uC228 \uC26C\uB4EF \uC57D\uD558\uAC8C \uD754\uB4E4\uB9B4 \uB54C\uC758 \uCE5C\uBC00\uAC10.", "Handheld camera with operated sway at the named intensity: subtle breathing, observational, or frantic.", "M5 8l20-2 2 17-20 2zM2 2l2 2m24 24 2 2M12 12l8 4-8 4z", { movement: "handheld" });
+      add("camera.whip-pan", "camera", "\uD729 \uD32C", "Whip pan", "\uCE74\uBA54\uB77C\uB97C \uAE09\uD788 \uB3CC\uB824 \uB450 \uB300\uC0C1\uC744 \uC787\uB294\uB2E4. \uC6D0\uC778 \u2192 \uACB0\uACFC, \uC2DC\uAC04\xB7\uC7A5\uC18C \uC804\uD658, \uCF54\uBBF8\uB514 \uD0C0\uC774\uBC0D, \uC7A5\uBA74\uC758 \uC5D0\uB108\uC9C0.", "Whip pan fast from the named first subject, blurring through the move, and settle on the named second subject.", "M3 8h15M3 14h20M3 20h26m-6-6 6 6-6 6", { movement: "whip pan", speed: "fast" });
+      add("camera.crane-up", "camera", "\uD06C\uB808\uC778 \uC5C5", "Crane up", "\uCE74\uBA54\uB77C\uAC00 \uC62C\uB77C\uAC00\uBA70 \uC7A5\uBA74\uC744 \uB2EB\uAC70\uB098 \uC704\uCABD \uACF5\uAC04\uC744 \uB4DC\uB7EC\uB0B8\uB2E4. \uACE0\uB9BD\uACFC \uC6B4\uBA85, \uD3EC\uC704, \uC2B9\uB9AC \uB610\uB294 \uBD88\uAE38\uD568.", "The camera rises on a crane from the opening frame, its look direction level or tilting down as named, and settles on a wider high view.", camera + "M24 28V4m-4 4 4-4 4 4", { movement: "crane up" });
+      add("camera.snorricam", "camera", "\uC2A4\uB178\uB9AC\uCEA0", "Snorricam", "\uBAB8\uC5D0 \uACE0\uC815\uD55C \uCE74\uBA54\uB77C\uB85C \uC5BC\uAD74\uC740 \uADF8\uB300\uB85C, \uBC30\uACBD\uB9CC \uD754\uB4E4\uB9B0\uB2E4. \uB9CC\uCDE8\xB7\uC57D\uBB3C\xB7\uD2B8\uB77C\uC6B0\uB9C8\xB7\uD328\uB2C9 \uAC19\uC740 \uBCC0\uC131 \uC0C1\uD0DC\uC640 \uC8FC\uBCC0\uC5D0\uC11C\uC758 \uACE0\uB9BD.", "Camera rigidly mounted to the torso facing the face; the face stays fixed in frame while the background sways and moves.", "M16 2a5 5 0 1 0 .01 0M7 28v-9h18v9M11 19v-5h10v5M2 8l3-3m22 3 3-3", { movement: "handheld body-mounted facing the subject" });
+      add("camera.push-past", "camera", "\uD478\uC2DC \uD328\uC2A4\uD2B8", "Push past", "\uC804\uACBD\uC744 \uC9C0\uB098 \uC228\uC740 \uACF5\uAC04\uC73C\uB85C \uB4E4\uC5B4\uAC04\uB2E4. \uC7A5\uC560\uBB3C\uB85C \uAE30\uB300\uB97C \uC313\uB294 \uC9C4\uC785, \uBC14\uAE65\uC5D0\uC11C \uC0AC\uC801 \uACF5\uAC04\uC73C\uB85C, \uC804\uACBD \uC640\uC774\uD504\uB85C \uCEF7\uC744 \uC228\uAE30\uB294 \uC804\uD658.", "The camera pushes in past the named foreground object or through an open doorway and settles on the named landing view.", "M3 29V3h16v26M10 25l18-14m-7 0h7v7", { movement: "dolly in past foreground" });
+      add("camera.rear", "camera", "\uB9AC\uC5B4 \uC0F7", "Rear shot", "\uC778\uBB3C\uC744 \uB4A4\uC5D0\uC11C \uBCF8\uB2E4. \uC5BC\uAD74\uC744 \uAC10\uCDB0 \uAD00\uAC1D\uC774 \uC0DD\uAC01\uC744 \uCC44\uC6B0\uAC8C \uD558\uACE0, \uC815\uBCF4\uB97C \uC778\uBB3C\uC758 \uC2DC\uC57C\uB85C \uC81C\uD55C\uD558\uACE0, \uAD00\uAC1D\uC744 \uB3D9\uD589\uC2DC\uD0A8\uB2E4.", "View the subject from behind at the named crop, facing the named target.", "M16 3a6 6 0 1 0 .01 0M4 29v-7q12-12 24 0v7M13 7h6", { viewpoint: "rear" });
+      add("camera.low", "camera", "\uB85C\uC6B0 \uC575\uAE00", "Low angle", "\uC544\uB798\uC5D0\uC11C \uC62C\uB824\uB2E4\uBCF8\uB2E4. \uB192\uC774\uC640 \uADDC\uBAA8, \uC774\uBBF8 \uD798\uC744 \uAC00\uC9C4 \uC778\uBB3C\uC758 \uC9C0\uBC30\xB7\uC704\uD611. \uD6A8\uACFC\uB294 \uC774\uC57C\uAE30 \uC21C\uC11C\uC640 \uC778\uBB3C\uC758 \uAD8C\uC704\uC5D0 \uB530\uB77C \uB2EC\uB77C\uC9C4\uB2E4.", "Place the camera below the subject looking upward; show what rises behind and above the subject.", "M3 26h8v4H3zM12 24 25 9m-7 2 7-2-1 7M24 4v24", { angle: "low" });
+      add("camera.high", "camera", "\uD558\uC774 \uC575\uAE00", "High angle", "\uC704\uC5D0\uC11C \uB0B4\uB824\uB2E4\uBCF8\uB2E4. \uC778\uBB3C \uC544\uB798\uC640 \uC8FC\uBCC0\uC758 \uACF5\uAC04\uC774 \uB4E4\uC5B4\uC640 \uADDC\uBAA8\uB97C \uD568\uAED8 \uBCF4\uC5EC \uC900\uB2E4. \uC791\uC544\uC9D0\xB7\uCDE8\uC57D\uD568\uC73C\uB85C \uC77D\uD790\uC9C0 \uB0B4\uB824\uB2E4\uBCF4\uB294 \uCABD\uC758 \uD798\uC73C\uB85C \uC77D\uD790\uC9C0\uB294 \uC55E\uB4A4 \uCEF7\uACFC \uC778\uBB3C\uC774 \uC815\uD55C\uB2E4(\uB192\uC740 \uCE74\uBA54\uB77C\uAC00 \uD654\uC790\uC758 \uC720\uB2A5\uD568 \uD3C9\uAC00\uB97C \uC62C\uB9B0 \uC2E4\uD5D8\uB3C4 \uC788\uB2E4).", "Place the camera above the subject looking down; show the floor and the space around the subject.", "M3 2h8v4H3zM12 8l13 15m-7-2 7 2-1-7M24 4v24", { angle: "high" });
+      add("camera.overhead", "camera", "\uC624\uBC84\uD5E4\uB4DC", "Overhead", "\uBC14\uB85C \uC704\uC5D0\uC11C \uC218\uC9C1\uC73C\uB85C \uBCF8\uB2E4. \uB3D9\uC120\uACFC \uBC30\uCE58\uC758 \uC9C0\uB3C4, \uC0AC\uAC74\uC758 \uADDC\uBAA8\uB098 \uB05D\uB09C \uB4A4\uC758 \uACB0\uACFC, \uC5BC\uAD74\uC744 \uAC10\uCDB0\uC57C \uD558\uB294 \uC21C\uAC04.", "Look straight down at ninety degrees over a readable floor layout, with the horizon out of the picture.", "M12 2h8v5h-8zM16 8v10m-4-4 4 4 4-4M3 25q13-10 26 0-13 10-26 0z", { angle: "overhead" });
+      add("camera.dutch", "camera", "\uB354\uCE58 \uC575\uAE00", "Dutch angle", "\uC218\uD3C9\uC120\uC744 \uAE30\uC6B8\uC778\uB2E4. \uBD88\uC548\xB7\uAD11\uAE30\xB7\uC18C\uC678\uCC98\uB7FC \uBB34\uC5B8\uAC00 \uC5B4\uAE0B\uB0AC\uB2E4\uB294 \uC2E0\uD638\uB85C \uC4F0\uB294 \uAD00\uB840\uC774\uACE0, \uB4DC\uBB3C\uAC8C \uC4F8 \uB54C \uD798\uC774 \uC788\uB2E4. \uC20F \uC548\uC5D0\uC11C \uAE30\uC6B8\uAE30\uB97C \uBC14\uAFB8\uBA74 \uB9C8\uC74C\uC774 \uBC14\uB00C\uB294 \uC21C\uAC04\uC73C\uB85C \uC4F4\uB2E4.", "Tilt the horizon by the chosen angle and direction, with a strong vertical line in the frame showing the tilt.", "M3 10 25 3l6 20-22 7zM8 20l16-5", { angle: "dutch" });
+      add("camera.dolly-zoom", "camera", "\uB3CC\uB9AC \uC90C", "Dolly zoom", "\uC778\uBB3C \uD06C\uAE30\uB294 \uADF8\uB300\uB85C, \uBC30\uACBD \uC6D0\uADFC\uB9CC \uBC14\uB010\uB2E4. \uD604\uAE30\uC99D, \uC555\uB3C4\uC801 \uACF5\uD3EC, \uBAA8\uB4E0 \uAC78 \uB2E4\uC2DC \uBCF4\uAC8C \uB9CC\uB4DC\uB294 \uAE68\uB2EC\uC74C.", "Dolly and zoom in opposite directions together, holding the subject screen size while the background stretches away or rushes closer.", "M3 4h26v24H3zM10 9h12v14H10zM1 16h8m-3-3 3 3-3 3M31 16h-8m3-3-3 3 3 3", { movement: "dolly zoom" });
+      add("camera.rack-focus", "camera", "\uB799 \uD3EC\uCEE4\uC2A4", "Rack focus", "\uCE74\uBA54\uB77C\uB294 \uADF8\uB300\uB85C \uB450\uACE0 \uCD08\uC810\uB9CC \uC62E\uACA8 \uAD00\uC2EC\uC744 \uB118\uAE34\uB2E4. \uC0C8 \uC815\uBCF4 \uACF5\uAC1C, \uAE68\uB2EC\uC74C\uACFC \uBC18\uC751, \uB450 \uC778\uBB3C\uC758 \uAD00\uACC4, \uC11C\uC2A4\uD39C\uC2A4.", "Shift sharp focus from the near subject to the far subject, or the reverse, in a shallow depth of field on a motivated cue.", "M3 18a7 7 0 1 0 .01 0M22 5a4 4 0 1 0 .01 0M12 14l9-5m-6 0h6v6", { focus: "rack" });
+      add("camera.side-tracking", "camera", "\uC0AC\uC774\uB4DC \uD2B8\uB798\uD0B9", "Side tracking", "\uC778\uBB3C \uC606\uC5D0\uC11C \uB098\uB780\uD788 \uC6C0\uC9C1\uC778\uB2E4. \uC0AC\uAC74 \uB4A4 \uACC1\uC5D0 \uBA38\uBB3C\uAE30, \uB298\uC5B4\uC120 \uB300\uC0C1 \uD6D1\uAE30, \uAC70\uB9AC\uB97C \uB454 \uBAA9\uACA9.", "The camera trucks parallel beside the subject at matching speed, with foreground layers passing for parallax.", camera + "M3 27h26m-4-4 4 4-4 4M23 4v14", { movement: "truck parallel to the subject" });
+      add("camera.pov", "camera", "1\uC778\uCE6D \uC2DC\uC810", "First-person POV", "\uAD00\uAC1D\uC774 \uC778\uBB3C\uC758 \uB208\uC73C\uB85C \uBCF8\uB2E4. \uBCF4\uB294 \uC20F\uACFC \uBC18\uC751 \uC20F \uC0AC\uC774\uC5D0 \uB07C\uC6CC \uC778\uBB3C\uC758 \uBC1C\uACAC\xB7\uACF5\uD3EC\xB7\uC8FC\uAD00\uC744 \uD568\uAED8 \uACAA\uAC8C \uD55C\uB2E4.", "View from the character eye height, showing what the character sees.", "M4 10V4h6M22 4h6v6M28 22v6h-6M10 28H4v-6M12 16h8M16 12v8", { viewpoint: "pov" });
+      add("camera.drone-pullback", "camera", "\uB4DC\uB860 \uD480\uBC31", "Drone pullback", "\uB4A4\uB85C \uB0A0\uBA70 \uC624\uB978\uB2E4. \uC7A5\uC18C\uC758 \uADDC\uBAA8, \uACE0\uB9BD, \uC774\uC57C\uAE30\uB97C \uB2EB\uB294 \uD074\uB85C\uC9D5 \uC0F7.", "The camera pulls back and rises together on one smooth path, from a tight start to a wide view of the place.", "M12 10h8v8h-8zM4 5h7M21 5h7M8 5l4 5m8 0 4-5M5 27 27 5m-8 0h8v8", { movement: "aerial backward and upward" });
+      add("camera.pan-left", "camera", "\uC67C\uCABD \uD32C", "Pan left", "\uC81C\uC790\uB9AC\uC5D0\uC11C \uC67C\uCABD\uC73C\uB85C \uB3C8\uB2E4. \uC6C0\uC9C1\uC774\uB294 \uC778\uBB3C \uB530\uB77C\uAC00\uAE30, \uC7A5\uC18C \uACF5\uAC1C, \uC2DC\uC810 \uD32C, \uC228\uC740 \uC704\uD5D8 \uBC1C\uACAC. \uBC29\uD5A5\uC740 \uB300\uC0C1 \uC704\uCE58\uC640 \uC778\uBB3C \uC774\uB3D9\uC774 \uC815\uD55C\uB2E4.", "The camera pans left across from the named first target and settles on the named second target, with a still frame at both ends.", camera + "M29 27H3m5-4-5 4 5 4", { movement: "pan left" });
+      add("camera.pan-right", "camera", "\uC624\uB978\uCABD \uD32C", "Pan right", "\uC81C\uC790\uB9AC\uC5D0\uC11C \uC624\uB978\uCABD\uC73C\uB85C \uB3C8\uB2E4. \uC6C0\uC9C1\uC774\uB294 \uC778\uBB3C \uB530\uB77C\uAC00\uAE30, \uC7A5\uC18C \uACF5\uAC1C, \uC2DC\uC810 \uD32C, \uC228\uC740 \uC704\uD5D8 \uBC1C\uACAC. \uBC29\uD5A5\uC740 \uB300\uC0C1 \uC704\uCE58\uC640 \uC778\uBB3C \uC774\uB3D9\uC774 \uC815\uD55C\uB2E4.", "The camera pans right across from the named first target and settles on the named second target, with a still frame at both ends.", camera + "M3 27h26m-5-4 5 4-5 4", { movement: "pan right" });
+      add("camera.tilt-up", "camera", "\uD2F8\uD2B8 \uC5C5", "Tilt up", "\uC81C\uC790\uB9AC\uC5D0\uC11C \uC704\uB85C \uACE0\uAC1C\uB97C \uB4E0\uB2E4. \uB192\uC774\uC640 \uADDC\uBAA8, \uC774\uC57C\uAE30\uAC00 \uC774\uBBF8 \uD798\uC744 \uC2E4\uC5B4 \uC900 \uC778\uBB3C\uC744 \uC62C\uB824 \uC7A1\uAE30, \uC778\uBB3C\uC774 \uC62C\uB824\uB2E4\uBCF4\uB294 \uC18D\uB3C4\uC5D0 \uB9DE\uCD98 \uACF5\uAC1C.", "The camera tilts upward from the named starting target and settles on the named ending target.", "M4 16h10v8H4zM22 28V4m-5 5 5-5 5 5M3 29h12", { movement: "tilt up" });
+      add("camera.tilt-down", "camera", "\uD2F8\uD2B8 \uB2E4\uC6B4", "Tilt down", "\uC81C\uC790\uB9AC\uC5D0\uC11C \uC544\uB798\uB85C \uB0B4\uB824\uAC04\uB2E4. \uC5BC\uAD74\uC5D0\uC11C \uC190\uC5D0 \uB4E0 \uBB3C\uAC74\uC73C\uB85C \uB0B4\uB824\uAC00\uB294 \uBC1C\uACAC, \uB192\uC740 \uACF3\uC5D0\uC11C \uC778\uBB3C\uB85C \uB0B4\uB824\uC624\uB294 \uC124\uC815, \uC778\uBB3C\uC744 \uC791\uAC8C.", "The camera tilts downward from the named starting target and settles on the named ending target.", "M4 4h10v8H4zM22 4v24m-5-5 5 5 5-5M3 29h12", { movement: "tilt down" });
+      add("camera.eye", "camera", "\uB208\uB192\uC774", "Eye level", "\uC778\uBB3C \uB208\uB192\uC774\uC758 \uC911\uB9BD \uC2DC\uC810. \uB300\uD654\xB7\uC778\uD130\uBDF0\xB7\uCE74\uBA54\uB77C\uB97C \uBCF4\uACE0 \uB9D0\uD558\uB294 \uCEF7\uC758 \uAE30\uBCF8\uC774\uBA70, \uC2E4\uD5D8\uC5D0\uC11C \uC2E0\uB8B0\uB97C \uAC00\uC7A5 \uB9CE\uC774 \uBC1B\uC558\uB2E4.", "Keep the lens level at the eye height of the named subject.", camera + "M19 12h10M23 4v24", { angle: "eye" });
+      add("camera.crash-zoom", "camera", "\uD06C\uB798\uC2DC \uC90C", "Crash zoom", "\uD654\uAC01\uC744 \uC21C\uC2DD\uAC04\uC5D0 \uC881\uD600 \uD55C \uB300\uC0C1\uC5D0 \uAF42\uB294\uB2E4. \uC561\uC158\xB7\uC2A4\uB9B4\uB7EC\uC5D0\uC11C \uC704\uD611\uC774\uB098 \uB2E8\uC11C\uB97C \uBC1C\uACAC\uD558\uB294 \uC21C\uAC04, \uCF54\uBBF8\uB514\uC758 \uD380\uCE58\uB77C\uC778.", "Crash zoom: from a fixed camera position the lens snaps in under half a second from the wide opening frame to a tight close-up of the named target, then holds.", "M3 3h26v26H3zM12 12h8v8h-8zM4 4l6 6m-4 0h4V6M28 28l-6-6m4 0h-4v4", { movement: "zoom in crash", speed: "fast" });
+      add("camera.blast-pushback", "camera", "\uBE14\uB798\uC2A4\uD2B8 \uD478\uC2DC\uBC31", "Blast pushback", "\uD3ED\uBC1C\uC774\uB098 \uCDA9\uACA9\uD30C\uAC00 \uCE74\uBA54\uB77C\uAE4C\uC9C0 \uBC00\uC5B4\uB0B8\uB2E4. \uAD00\uAC1D\uC774 \uCDA9\uACA9\uC744 \uAD6C\uACBD\uD558\uC9C0 \uC54A\uACE0 \uC9C1\uC811 \uB9DE\uAC8C \uD55C\uB2E4.", "The shockwave reaches the camera: it is thrown straight back from the named source, jolts once, and settles on a wider frame that shows the aftermath.", camera + "M19 27H5m4-4-4 4 4 4M26 4v8m-4-6 8 4m-8 0 8-4", { movement: "dolly out blast", speed: "fast" });
+      add("camera.weapon-cam", "camera", "\uC6E8\uD3F0 \uCEA0", "Weapon cam", "\uCE74\uBA54\uB77C\uAC00 \uD654\uC0B4\xB7\uCE7C\xB7\uCD1D\uC54C\uCC98\uB7FC \uB0A0\uC544\uAC00\uB294 \uBB3C\uCCB4\uC5D0 \uC62C\uB77C\uD0C4\uB2E4. \uB358\uC9C0\uAC70\uB098 \uC3DC \uC21C\uAC04\uBD80\uD130 \uBA85\uC911 \uC9C1\uC804\uAE4C\uC9C0\uB97C \uBC1C\uC0AC\uCCB4\uC758 \uC790\uB9AC\uC5D0\uC11C \uC787\uB294\uB2E4.", "The camera rides on the named projectile from its release, the tip fixed low in the frame while the surroundings streak past, and stops just short of the target.", "M3 25 27 9m-7 0h7v7M7 17l6-4 3 5-6 4z", { movement: "tracking mounted on the projectile", speed: "fast" });
+      add("camera.pass-through", "camera", "\uAD00\uD1B5 \uC0F7", "Pass-through shot", "\uB2EC\uC544\uB098\uB294 \uC778\uBB3C \uBC14\uB85C \uB4A4\uB97C \uCAD3\uC73C\uBA70 \uC778\uBB3C\uC774 \uD53C\uD574 \uAC00\uB294 \uC7A5\uC560\uBB3C\uC744 \uCE74\uBA54\uB77C\uB294 \uADF8\uB300\uB85C \uB6AB\uACE0 \uC9C0\uB098\uAC04\uB2E4. \uC881\uC740 \uACF5\uAC04\uC758 \uCD94\uACA9\uC5D0 \uC18D\uB3C4\uC640 \uC5F0\uC18D\uAC10\uC744 \uC900\uB2E4.", "The camera chases close behind the subject in one take and flies straight through each named opening or soft obstacle while the subject ducks under or goes around it.", "M10 3v9m0 8v9M20 3v9m0 8v9M2 16h27m-5-5 5 5-5 5", { movement: "tracking through openings", speed: "fast" });
+      add("camera.drone-dive", "camera", "\uB4DC\uB860 \uB2E4\uC774\uBE0C", "Drone dive", "\uB0AE\uACE0 \uBE60\uB974\uAC8C \uC218\uD3C9\uC73C\uB85C \uB0A0\uB2E4\uAC00 \uAC00\uC7A5\uC790\uB9AC\uC5D0\uC11C \uC544\uB798\uB85C \uAEBE\uC5EC \uB5A8\uC5B4\uC9C4\uB2E4. \uB192\uC774\uAC00 \uC788\uB294 \uCD94\uACA9\uACFC \uB6F0\uC5B4\uB0B4\uB9BC.", "An FPV drone camera flies low and level behind the subject, then pitches straight down at the named edge and dives alongside the fall.", "M3 5h6M13 5h6M6 5l2 3h6l2-3M8 8h6v4H8zM3 18h14q8 0 8 8v3m-4-4 4 4 4-4", { movement: "aerial dive", speed: "fast" });
+      add("camera.relay", "camera", "\uB9B4\uB808\uC774 \uC6D0\uD14C\uC774\uD06C", "Relay one-take", "\uCEF7 \uC5C6\uC774 \uD55C \uC0AC\uB78C\uC5D0\uC11C \uB2E4\uC74C \uC0AC\uB78C\uC73C\uB85C \uCE74\uBA54\uB77C\uB97C \uB118\uAE34\uB2E4. \uC5EC\uB7EC \uBA85\uC774 \uD55C \uACF5\uAC04\uC5D0\uC11C \uC2F8\uC6B0\uB294 \uC7A5\uBA74\uC744 \uD55C \uD638\uD761\uC73C\uB85C \uC787\uB294\uB2E4.", "One unbroken take: the camera stays with one fighter, swings to the next on a named handoff action such as a duck or a throw, and ends on a wider frame that holds everyone.", "M6 4a3 3 0 1 0 .01 0M16 4a3 3 0 1 0 .01 0M26 4a3 3 0 1 0 .01 0M6 13q4.5 8 9 0m-4 1 4-1 1 4M17 13q4.5 8 9 0m-4 1 4-1 1 4M3 27h26", { movement: "handheld relay" });
+      add("camera.speed-ramp", "camera", "\uC2A4\uD53C\uB4DC \uB7A8\uD504", "Speed ramp", "\uC815\uC0C1 \uC18D\uB3C4\uB85C \uAC00\uB2E4\uAC00 \uD55C \uC21C\uAC04\uB9CC \uAC70\uC758 \uBA48\uCD94\uACE0 \uB2E4\uC2DC \uD480\uB9B0\uB2E4. \uACB0\uC815\uD0C0\uAC00 \uB2FF\uB294 \uC21C\uAC04\uC744 \uAE38\uAC8C \uBCF4\uC5EC \uC900\uB2E4. \uBB34\uBE0C \uC704\uC5D0 \uC5B9\uB294 \uC21C\uAC04 \uAC15\uC870\uB2E4.", "Speed ramp: the action runs at normal speed, slows almost to a stop at one named moment, then snaps back to normal speed.", "M3 8h7l4 15h4l4-15h7M3 28h26", { accent: "time", cue: "the moment of contact" });
+      add("camera.impact-shake", "camera", "\uC784\uD329\uD2B8 \uC170\uC774\uD06C", "Impact shake", "\uC0AC\uAC74\uC774 \uC77C\uC5B4\uB0A0 \uB54C\uB9C8\uB2E4 \uD654\uBA74\uC774 \uD55C \uBC88 \uD280\uACE0 \uAC00\uB77C\uC549\uB294\uB2E4. \uAC70\uB300\uD55C \uC874\uC7AC\uC758 \uAC78\uC74C, \uCC29\uC9C0, \uCDA9\uB3CC\uC758 \uBB34\uAC8C. \uBB34\uBE0C \uC704\uC5D0 \uC5B9\uB294 \uC21C\uAC04 \uAC15\uC870\uB2E4.", "Impact shake: the frame jolts once at each named impact and settles completely still between impacts.", "M6 4h20v13H6zM3 25h9l2-5 3 9 2-6 1.5 2H29", { accent: "shake", cue: "each impact" });
+      const sizes = [
+        ["els", "\uC775\uC2A4\uD2B8\uB9BC \uB871\uC0F7", "Extreme long shot", "\uC778\uBB3C\uC744 \uD658\uACBD \uC18D \uC791\uC740 \uC810\uC73C\uB85C \uB450\uC5B4 \uC7A5\uC18C\xB7\uADDC\uBAA8\xB7\uACE0\uB9BD\uC744 \uBCF4\uC5EC \uC900\uB2E4. \uC7A5\uBA74\uC758 \uCCAB \uCEF7\uC774\uB098 \uB9C8\uC9C0\uB9C9 \uCEF7.", "extreme long shot, the subject tiny within the surroundings, under a tenth of the frame height", 9],
+        ["ls", "\uB871\uC0F7", "Long shot", "\uC7A5\uBA74 \uCCAB\uBA38\uB9AC\uC758 \uC124\uC815\uC0F7. \uC5B4\uB514\uC778\uC9C0, \uBA87 \uBA85\uC778\uC9C0, \uC11C\uB85C \uC5BC\uB9C8\uB098 \uB5A8\uC5B4\uC84C\uB294\uC9C0\uB97C \uD55C \uBC88\uC5D0 \uBCF4\uC5EC \uC900\uB2E4.", "wide establishing shot, full body with room above and below, the surroundings readable", 21],
+        ["fs", "\uD480\uC0F7", "Full shot", "\uBAB8 \uC804\uCCB4\uC758 \uB3D9\uC791\uC774 \uC815\uBCF4\uC77C \uB54C. \uAC77\uAE30\xB7\uCDA4\xB7\uACA9\uD22C\xB7\uC758\uC0C1, \uC5EC\uB7EC \uC778\uBB3C\uC744 \uD55C \uCEF7\uC5D0.", "full shot, head to toe, both feet in frame with a small margin below", 28],
+        ["mfs", "\uBBF8\uB514\uC5C4 \uD480\uC0F7", "Medium full shot", "\uD5C8\uBC85\uC9C0 \uC911\uAC04 \uC704\uB97C \uC7A1\uC544 \uD5C8\uB9AC \uB192\uC774\uC758 \uC190\uACFC \uD589\uB3D9\uC744 \uD45C\uC815\uACFC \uD568\uAED8 \uBCF4\uC5EC \uC900\uB2E4(\uCE74\uC6B0\uBCF4\uC774\uC0F7). \uB450 \uC0AC\uB78C\uACFC \uADF8 \uC0AC\uC774 \uAC70\uB9AC\uC5D0\uB3C4 \uC4F4\uB2E4.", "medium full shot, frame bottom at mid-thigh, hands and hips in frame", 37],
+        ["ms", "\uBBF8\uB514\uC5C4 \uC0F7", "Medium shot", "\uD5C8\uB9AC \uC704\uB97C \uC7A1\uC544 \uC0C1\uBC18\uC2E0\uACFC \uC190\uC9D3\uC744 \uBCF4\uC5EC \uC900\uB2E4. \uB300\uD654\uC758 \uCD9C\uBC1C\uC810\uC774\uC790, \uB4A4\uC5D0 \uC62C \uD074\uB85C\uC988\uC5C5\uC744 \uC544\uB07C\uB294 \uC644\uCDA9 \uD06C\uAE30.", "medium shot, waist up", 44],
+        ["mcu", "\uBBF8\uB514\uC5C4 \uD074\uB85C\uC988\uC5C5", "Medium close-up", "\uAC00\uC2B4 \uC704. \uD45C\uC815\uACFC \uC791\uC740 \uBAB8\uC9D3\uC744 \uD568\uAED8 \uBCF4\uC5EC \uC8FC\uB294 \uB300\uD654\uC758 \uC911\uB9BD \uD06C\uAE30\uC774\uC790 \uC778\uD130\uBDF0\xB7\uCE74\uBA54\uB77C\uB97C \uBCF4\uACE0 \uB9D0\uD558\uB294 \uCEF7\uC758 \uAE30\uBCF8.", "medium close-up, chest up, frame bottom at mid-chest, eyes near the upper third", 56],
+        ["cu", "\uD074\uB85C\uC988\uC5C5", "Close-up", "\uC5BC\uAD74\uC774 \uD654\uBA74\uC744 \uCC44\uC6B4\uB2E4. \uADF8 \uC21C\uAC04 \uC774\uC57C\uAE30\uC5D0 \uC911\uC694\uD55C \uAC10\uC815\uACFC \uBC18\uC751, \uACB0\uC815\uC801\uC778 \uD55C \uB9C8\uB514.", "close-up, the face and the top of the shoulders, crown lightly cropped", 75],
+        ["choker", "\uBE45 \uD074\uB85C\uC988\uC5C5", "Big close-up", "\uC774\uB9C8\uC5D0\uC11C \uD131\uAE4C\uC9C0 \uC5BC\uAD74\uB9CC \uAF49 \uCC44\uC6B4\uB2E4. \uACE0\uBC31\xB7\uBD95\uAD34\uCC98\uB7FC \uAC10\uC815\uC774 \uC228\uC744 \uACF3\uC774 \uC5C6\uB294 \uC815\uC810.", "big close-up, the face from forehead to chin fills the frame", 110],
+        ["ecu", "\uC775\uC2A4\uD2B8\uB9BC \uD074\uB85C\uC988\uC5C5", "Extreme close-up", "\uB208\xB7\uC785\xB7\uC190\uB05D\xB7\uBC29\uC544\uC1E0\uCC98\uB7FC \uB514\uD14C\uC77C \uD558\uB098\uAC00 \uD654\uBA74\uC744 \uCC44\uC6B4\uB2E4. \uC815\uC810\uC758 \uB514\uD14C\uC77C.", "extreme close-up, one named detail fills the frame", 180]
+      ];
+      const SIZE_WORDS = {}, SIZE_GLYPHS = {};
+      for (const [key, ko, en, use, instruction, height] of sizes) {
+        const k = height / 100, top = key === "choker" ? -11 : key === "ecu" ? -29 : 2;
+        let glyph = `<g transform="translate(${16 - 50 * k} ${top}) scale(${k})"><circle cx="50" cy="15" r="12"/><path d="M31 72V46q0-12 19-12t19 12v26zM40 72v26M60 72v26"/><path d="M43 14h3m8 0h3M43 22h14"/></g>`;
+        glyph = glyph.replace(/<circle /g, '<circle vector-effect="non-scaling-stroke" ').replace(/<path /g, '<path vector-effect="non-scaling-stroke" ');
+        if (key === "ecu") glyph = '<path d="M1 16Q16 1 31 16Q16 31 1 16Z"/><circle cx="16" cy="16" r="6"/><circle cx="16" cy="16" r="2"/>';
+        if (key === "choker") glyph = '<path d="M4 0V17Q16 38 28 17V0M8 9h5m6 0h5M11 23q5 3 10 0"/>';
+        glyph = '<rect x="1" y="1" width="30" height="30" rx="2" opacity=".3"/>' + glyph;
+        SIZE_WORDS[key] = instruction;
+        SIZE_GLYPHS[key] = glyph;
+        add("framing." + key, "framing", ko, en, use, instruction, glyph, { size: key });
+      }
+      const refs = [["front", "\uC815\uBA74 \uC804\uC2E0", "Front reference", "\uC804\uC2E0\xB7\uC758\uC0C1\xB7\uCCB4\uD615", "Headless front mannequin; preserve build, wardrobe and shoes.", "M8 29V15h16v14M16 15v14"], ["back", "\uD6C4\uBA74 \uC804\uC2E0", "Back reference", "\uD6C4\uBA74\xB7\uB4A4\uB3CC\uC544\uC12C", "Headless rear mannequin; preserve clothing seams and match front scale.", "M8 29V15h16v14M16 15v14M11 17h10"], ["face", "\uC5BC\uAD74 \uCC38\uC870", "Face reference", "\uB300\uC0AC\xB7\uC5BC\uAD74 \uBC18\uC751", "Neutral face including hair; keep identity separate from scene lighting.", "M16 3a12 12 0 1 0 .01 0M10 13h3m6 0h3M12 21h8"], ["costume", "\uC758\uC0C1 \uC804\uC6A9 \uCC38\uC870", "Costume reference", "\uC758\uC0C1\xB7\uCCB4\uD615 \uBCF4\uC870", "Optional wardrobe variant; baseline front/back already omit the head.", "M10 4 3 10l4 7 3-3v15h12V14l3 3 4-7-7-6-6 7z"]];
+      for (const [key, ko, en, use, instruction, glyph] of refs) add("character." + key, "character", ko, en, use, instruction, glyph, { reference: key });
+      const timing = [["insert", "\uC778\uC11C\uD2B8 \uC2DC\uAC04", "Insert timing", "\uB2E8\uC11C\xB7\uC0AC\uBB3C\xB7\uAE00\uC744 \uD655\uC778\uD558\uB294 \uC2DC\uAC04. \uC77D\uC744 \uBD84\uB7C9\uC774 \uAE38\uC774\uB97C \uC815\uD55C\uB2E4.", "Time the actual discovery or reading and its consequence; end when the cue is understood, without a preset insert length.", "M3 8h26v16H3zM11 12h10v8H11z"], ["action", "\uD589\uB3D9 \uC2DC\uAC04", "Action timing", "\uC774\uB3D9\xB7\uC811\uCD09\xB7\uB3C4\uCC29. \uC608\uBE44\uB3D9\uC791, \uB3D9\uC791, \uBC18\uC751\uC774 \uB2E4 \uB4E4\uC5B4\uAC00\uB294 \uC2DC\uAC04.", "Time anticipation, contact and response in order. Overlap simultaneous action; keep one continuous action together unless a new viewpoint reveals its consequence.", "M3 24l8-12 7 8 11-15M3 29h26"], ["dialogue", "\uB300\uC0AC\xB7\uAC10\uC815 \uC2DC\uAC04", "Dialogue timing", "\uB9D0\uACFC \uD45C\uC815\uC758 \uBCC0\uD654. \uC2E4\uCE21\uD55C \uB300\uC0AC \uAE38\uC774\uC640 \uBC18\uC751 \uAF2C\uB9AC\uAC00 \uAE38\uC774\uB97C \uC815\uD55C\uB2E4.", "Time the complete exchange with speaker changes, interruptions and motivated reactions. Two speakers can share one shot; do not add a new shot or a fixed hold for each turn.", "M3 4h26v18H13l-6 7v-7H3zM8 10h16M8 16h10"], ["establishing", "\uACF5\uAC04 \uC18C\uAC1C \uC2DC\uAC04", "Establishing timing", "\uC7A5\uC18C\uC640 \uC704\uCE58 \uAD00\uACC4\uB97C \uC77D\uB294 \uC2DC\uAC04. \uCC98\uC74C \uBCF4\uB294 \uC7A5\uC18C\uB294 \uAE38\uAC8C, \uB2E4\uC2DC \uCC3E\uC740 \uC7A5\uC18C\uB294 \uC9E7\uAC8C.", "Give only the time needed to understand the relevant geography; let story action establish the place whenever possible.", "M3 27V12l13-9 13 9v15zM12 27V16h8v11"], ["long-take", "\uB871\uD14C\uC774\uD06C \uC2DC\uAC04", "Long-take timing", "\uC5F0\uC18D \uC2DC\uAC04 \uC790\uCCB4\uAC00 \uC758\uBBF8\uC778 \uC7A5\uBA74. \uB04A\uC73C\uBA74 \uC758\uBBF8\uAC00 \uAE68\uC9C0\uB294 \uD589\uB3D9.", "Keep continuous time when it carries the event; derive length from its changing action, with no minimum long-take duration. Stay within the adapter limit.", "M2 16h28M3 10v12m6-12v12m6-12v12m6-12v12m6-12v12"]];
+      for (const [key, ko, en, use, instruction, glyph] of timing) add("timing." + key, "timing", ko, en, use, instruction, glyph, { timing: key });
+      const byId = Object.assign(/* @__PURE__ */ Object.create(null), Object.fromEntries(entries.map((entry2) => [entry2.id, entry2])));
+      const GUIDE = {
+        "camera.static": { "avoid": "\uB530\uB77C\uAC00\uAE30\uB098 \uC5F0\uC18D \uACF5\uAC1C\uCC98\uB7FC \uACE0\uC815\uC73C\uB85C\uB294 \uB0BC \uC218 \uC5C6\uB294 \uD6A8\uACFC\uAC00 \uD544\uC694\uD55C \uBE44\uD2B8.", "specify": "\uD504\uB808\uC784 \uC548\uC5D0\uC11C \uBB34\uC5C7\uC774 \uC5B8\uC81C \uC5B4\uB514\uB85C \uC6C0\uC9C1\uC774\uB294\uC9C0(\uC67C\uCABD 3\uBD84\uC758 1, \uAC00\uC6B4\uB370\uCC98\uB7FC \uD504\uB808\uC784 \uAE30\uC900)." },
+        "camera.dolly-in": { "avoid": "\uC2B5\uAD00\uCC98\uB7FC \uBC18\uBCF5\uD558\uB294 \uD478\uC2DC(\uD798\uC774 \uBE60\uC9C4\uB2E4). \uC5FF\uBCF4\uB294 \uAD00\uCC30\uC790 \uC2DC\uC810\uC774 \uBAA9\uC801\uC774\uBA74 \uC90C.", "pair": "\uACE0\uC815 \uC0F7\uC774 \uC774\uC5B4\uC9C4 \uB4A4\uC758 \uC57D\uD55C \uD478\uC2DC\uAC00 \uD06C\uAC8C \uC77D\uD78C\uB2E4.", "specify": "\uC2DC\uC791 \uD06C\uB86D\uACFC \uB05D \uD06C\uB86D(\uB05D\uC5D0 \uC5BC\uAD74\uC774 \uD654\uBA74\uC744 \uC5B4\uB5BB\uAC8C \uCC44\uC6B0\uB294\uC9C0), \uC6C0\uC9C1\uC774\uAE30 \uC2DC\uC791\uD558\uB294 \uB300\uC0AC\uB098 \uBC18\uC751, \uC18D\uB3C4. 2\uCD08 \uC548\uD30E\uC758 \uB290\uB9B0 \uD478\uC2DC\uB294 \uD45C\uB958\uCC98\uB7FC \uBCF4\uC778\uB2E4." },
+        "camera.dolly-out": { "avoid": "\uB4DC\uB7EC\uB098\uB294 \uB0B4\uC6A9\uACFC \uADF8 \uC2DC\uC810\uC774 \uC774\uC57C\uAE30\uC640 \uB9DE\uC9C0 \uC54A\uC744 \uB54C. \uC6D0\uADFC\uC774 \uACE0\uC815\uB41C \uAD11\uD559\uC801 \uD6C4\uD1F4\uBA74 \uC90C \uC544\uC6C3.", "pair": "\uC7A5\uBA74\uC774\uB098 \uC778\uBB3C \uC774\uC57C\uAE30\uC758 \uB9C8\uC9C0\uB9C9 \uCEF7.", "specify": "\uB05D \uD504\uB808\uC784\uC5D0 \uC0C8\uB85C \uB4E4\uC5B4\uC624\uB294 \uAC83\uACFC \uADF8\uB54C \uC778\uBB3C\uC758 \uD06C\uAE30, \uC18D\uB3C4(\uB290\uB9AC\uBA74 \uAC10\uC815\uC774 \uC313\uC774\uACE0 \uBE60\uB974\uBA74 \uCDA9\uACA9\xB7\uD380\uCE58\uB77C\uC778)." },
+        "camera.slow-zoom-in": { "avoid": "\uAD00\uAC1D\uC774 \uACF5\uAC04 \uC548\uC73C\uB85C \uB4E4\uC5B4\uAC00\uB294 \uB290\uB08C\uC774 \uBAA9\uC801\uC774\uBA74 \uB2EC\uB9AC \uC778. \uC90C\uC744 \uB418\uD480\uC774\uD558\uBA74 \uAC70\uC2AC\uB9B0\uB2E4. \uC21C\uC2DD\uAC04\uC5D0 \uAF42\uB294 \uC90C\uC740 \uD06C\uB798\uC2DC \uC90C\uC73C\uB85C \uACE0\uB978\uB2E4.", "specify": "\uB113\uAC8C \uC2DC\uC791\uD574 \uBB34\uC5C7\uC774 \uD654\uBA74\uC744 \uCC44\uC6B0\uBA70 \uB05D\uB098\uB294\uC9C0, \uC18D\uB3C4." },
+        "camera.arc": { "avoid": "\uBA4B\uC744 \uB0B4\uB824\uB294 \uC7A5\uC2DD\uC6A9 \uC544\uD06C, \uC5B4\uC9C0\uB7EC\uC6B4 \uBE60\uB978 \uC544\uD06C. \uD070 \uC544\uD06C\uB294 180\uB3C4 \uC120\uC744 \uB118\uC73C\uB2C8 \uB2E4\uC74C \uCEF7 \uBC29\uD5A5\uC744 \uBBF8\uB9AC \uB9DE\uCD98\uB2E4.", "specify": "\uD68C\uC804 \uBC29\uD5A5(\uC2DC\uACC4\xB7\uBC18\uC2DC\uACC4)\uACFC \uAC01\uB3C4(90\xB0\xB7180\xB0\xB7360\xB0), \uC18D\uB3C4, \uB05D\uC5D0\uC11C \uBCF4\uC774\uB294 \uC778\uBB3C\uC758 \uBA74, \uC778\uBB3C\uC774 \uBA48\uCDB0 \uC788\uB294\uC9C0. \uD55C \uBC14\uD034\uB97C \uB3C4\uB294 \uB300\uCE58\uB77C\uBA74 \uB3C4\uB294 \uB3D9\uC548 \uBC14\uB00C\uB294 \uAC83(\uBB34\uAE30\uB97C \uBF51\uB294\uB2E4, \uD3EC\uC704\uAC00 \uC881\uD600\uC9C4\uB2E4)\uC744 \uD568\uAED8 \uC801\uB294\uB2E4." },
+        "camera.follow": { "avoid": "\uC704\uD611\uC744 \uC758\uB3C4\uD558\uC9C0 \uC54A\uC558\uB294\uB370 \uCC28\uAC11\uACE0 \uB9E4\uB044\uB7FD\uAC8C \uB4A4\uB530\uB974\uBA74 \uAC10\uC2DC\uC790\uCC98\uB7FC \uC77D\uD78C\uB2E4. \uC5BC\uAD74 \uBC18\uC751\uC774 \uD575\uC2EC\uC774\uBA74 \uB4A4\uC5D0\uC11C\uB294 \uAC00\uB824\uC9C4\uB2E4.", "pair": "\uB4B7\uBAA8\uC2B5 \uC2DC\uC810(camera.rear)\uACFC \uD568\uAED8 \uACE0\uB974\uAE30 \uC27D\uB2E4.", "specify": "\uB530\uB974\uB294 \uAC70\uB9AC\uC640 \uCE74\uBA54\uB77C \uB192\uC774, \uACBD\uB85C\xB7\uB79C\uB4DC\uB9C8\uD06C\xB7\uAC77\uB294 \uC18D\uB3C4, \uBA48\uCD94\uB294 \uB05D \uD504\uB808\uC784, \uB4A4\uC5D0\uC11C \uC54C\uC544\uBCFC \uB2E8\uC11C(\uBA38\uB9AC\xB7\uC637).", "vertical": "\uAE38\xB7\uD1B5\uB85C\xB7\uBCF5\uB3C4\uB97C \uB530\uB77C \uC55E\uC73C\uB85C \uB098\uC544\uAC00\uB294 \uC6C0\uC9C1\uC784\uC774 \uC138\uB85C \uD654\uBA74\uC5D0 \uB9DE\uB294\uB2E4." },
+        "camera.reverse-tracking": { "avoid": "\uC2B5\uAD00\uC774 \uB41C walk and talk(\uAD00\uB840\uC774\uC790 \uD074\uB9AC\uC170\uB77C\uB294 \uBE44\uD310\uC774 \uC788\uB2E4).", "specify": "\uC778\uBB3C \uC218\uC640 \uB300\uC5F4, \uAC77\uB294 \uC18D\uB3C4, \uC720\uC9C0\uD560 \uD06C\uAE30, \uBC30\uACBD\uC5D0 \uC9C0\uB098\uAC08 \uC7A5\uC18C, \uBA48\uCD94\uB294 \uC9C0\uC810\uACFC \uADF8\uB54C \uBCF4\uC774\uB294 \uAC83." },
+        "camera.handheld": { "avoid": "\uAD00\uAC1D\uC774 \uACF5\uAC04\uC744 \uD30C\uC545\uD574\uC57C \uD558\uB294 \uCD94\uACA9(\uC9C0\uB9AC\uB97C \uBA3C\uC800 \uC138\uC6E0\uC744 \uB54C\uB9CC), \uC5F0\uAE30 \uB514\uD14C\uC77C\uC774 \uD544\uC694\uD55C \uD074\uB85C\uC988\uC5C5, \uB0A8\uC6A9.", "specify": "\uAC15\uB3C4 \uB2E8\uACC4(\uC228\uC26C\uB4EF\xB7\uAD00\uCC30\uD615\xB7\uACA9\uB82C), \uB530\uB77C\uAC00\uB294 \uB300\uC0C1, \uB05D\uC5D0 \uD504\uB808\uC784\uC774 \uBA48\uCD94\uB294\uC9C0, \uACC4\uC18D \uC77D\uD600\uC57C \uD560 \uC5BC\uAD74\uC774\uB098 \uB79C\uB4DC\uB9C8\uD06C." },
+        "camera.whip-pan": { "avoid": "\uC11C\uC0AC \uC5C6\uC774 \uC774\uC74C\uC0C8\uB85C\uB9CC \uC4F0\uB294 \uB0A8\uC6A9.", "pair": "\uB450 \uD074\uB9BD\uC744 \uC787\uB294 \uC804\uD658\uC774\uBA74 \uB098\uAC00\uB294 \uD074\uB9BD\uACFC \uB4E4\uC5B4\uC624\uB294 \uD074\uB9BD\uC758 \uBC29\uD5A5\xB7\uC18D\uB3C4\xB7\uC870\uBA85\uC744 \uB9DE\uCD98\uB2E4.", "specify": "\uCCAB \uB300\uC0C1\uACFC \uB458\uC9F8 \uB300\uC0C1, \uBC29\uD5A5, \uB3CC\uB9AC\uB294 \uACC4\uAE30(\uACE0\uAC1C \uB3CC\uB9BC\xB7\uC18C\uB9AC), \uB458\uC9F8 \uB300\uC0C1\uC5D0 \uCC29\uC9C0\uD55C \uAD6C\uB3C4." },
+        "camera.crane-up": { "avoid": "\uB3D9\uAE30 \uC5C6\uB294 \uC0C1\uC2B9. \uAC19\uC740 \uC0C1\uC2B9\uC774 \uC2B9\uB9AC\uC640 \uBD88\uAE38\uD568 \uB458 \uB2E4\uB85C \uC77D\uD788\uB2C8 \uC55E\uB4A4 \uCEF7\uC774 \uB73B\uC744 \uC815\uD574\uC57C \uD55C\uB2E4.", "specify": "\uC2DC\uC791 \uD504\uB808\uC784, \uC2DC\uC120\uC774 \uC218\uD3C9\uC778\uC9C0 \uC544\uB798\uB85C \uAE30\uC6B0\uB294\uC9C0, \uB4DC\uB7EC\uB0A0 \uACF5\uAC04\uACFC \uB05D\uC5D0\uC11C \uC778\uBB3C\uC758 \uD06C\uAE30, \uC18D\uB3C4." },
+        "camera.snorricam": { "avoid": "\uAE38\uAC8C, \uC790\uC8FC \uC4F0\uAE30. \uC601\uD654 \uD55C \uD3B8\uC5D0 \uD55C\uB450 \uBC88, \uBA87 \uCD08\uAC00 \uAD00\uB840\uB2E4.", "pair": "\uC2DC\uC810 \uC20F\uACFC \uC9DD\uC9C0\uC5B4 \uC778\uBB3C\uC774 \uB290\uB07C\uB294 \uAC83\uACFC \uBCF4\uB294 \uAC83\uC744 \uB300\uBE44\uD55C\uB2E4.", "specify": "\uC778\uBB3C\uC758 \uC6C0\uC9C1\uC784(\uBE44\uD2C0\uAC70\uB9BC\xB7\uB2EC\uB9AC\uAE30)\uACFC \uC9C4\uD589 \uBC29\uD5A5, \uBC30\uACBD \uC7A5\uC18C." },
+        "camera.push-past": { "avoid": "\uC774\uC57C\uAE30\uC640 \uBB34\uAD00\uD55C \uBB34\uB3D9\uAE30 \uC774\uB3D9. \uC804\uD658\uC6A9\uC774\uBA74 \uC804\uACBD\uC774 \uD504\uB808\uC784\uC744 \uB2E4 \uAC00\uB824\uC57C \uCEF7\uC774 \uD280\uC9C0 \uC54A\uB294\uB2E4.", "specify": "\uC9C0\uB098\uCE60 \uC804\uACBD \uBB3C\uCCB4\uC640 \uD654\uBA74 \uC704\uCE58, \uD1B5\uACFC\uD560 \uD2C8(\uBB38\xB7\uCC3D), \uCC29\uC9C0 \uB4A4 \uD53C\uC0AC\uCCB4\uC758 \uBAA8\uC2B5, \uC804\uD658\uC6A9\uC778\uC9C0 \uACF5\uAC1C\uC6A9\uC778\uC9C0." },
+        "camera.rear": { "avoid": "\uD45C\uC815\uC774 \uC815\uBCF4\uC778 \uC21C\uAC04\uC744 \uC624\uB798 \uAC00\uB9AC\uB294 \uAC83, \uC704\uD611\uC744 \uC758\uB3C4\uD558\uC9C0 \uC54A\uC558\uB294\uB370 \uCC28\uAC11\uAC8C \uB4A4\uB530\uB974\uB294 \uAC83.", "pair": "\uB4A4\uB530\uB974\uB294 \uC774\uB3D9(camera.follow)\uACFC \uD568\uAED8 \uACE0\uB974\uAE30 \uC27D\uB2E4.", "specify": "\uD06C\uB86D(\uBA38\uB9AC\xB7\uC5B4\uAE68/\uD5C8\uB9AC/\uC804\uC2E0), \uCE74\uBA54\uB77C \uB192\uC774, \uC778\uBB3C\uC774 \uBC14\uB77C\uBCF4\uB294 \uB300\uC0C1, \uB4A4\uC5D0\uC11C \uC54C\uC544\uBCFC \uB2E8\uC11C." },
+        "camera.low": { "avoid": "\uC2E0\uB8B0\uAC00 \uD544\uC694\uD55C \uC815\uBA74 \uBC1C\uD654(\uC2E4\uD5D8\uC5D0\uC11C \uB85C\uC6B0\uB294 \uB208\uB192\uC774\uBCF4\uB2E4 \uC2E0\uB8B0\uB97C \uB0AE\uCDC4\uB2E4).", "specify": "\uCE74\uBA54\uB77C \uB192\uC774\uC640 \uC62C\uB824\uBCF4\uB294 \uC815\uB3C4, \uC778\uBB3C \uB4A4\xB7\uC704\uB85C \uBCF4\uC774\uB294 \uAC83(\uCC9C\uC7A5\xB7\uD558\uB298\xB7\uC870\uBA85), \uC5BC\uAD74 \uBC29\uD5A5(\uC815\uBA74 \uC751\uC2DC\uB294 \uC704\uC555, \uCE21\uBA74\uC740 \uC601\uC6C5 \uCABD).", "vertical": "\uC138\uB85C \uD654\uBA74\uC740 \uB192\uC740 \uB300\uC0C1\uC744 \uC62C\uB824\uB2E4\uBCF4\uB294 \uC575\uAE00\uC5D0 \uC704\uC544\uB798 \uACF5\uAC04\uC744 \uB109\uB109\uD788 \uC900\uB2E4. \uD798\uC73C\uB85C \uC77D\uD790\uC9C0\uB294 \uC774\uC57C\uAE30\uAC00 \uC815\uD55C\uB2E4." },
+        "camera.high": { "avoid": "\uAC10\uC2DC\uB2F9\uD558\uB294 \uB290\uB08C\uC740 \uB0B4\uB824\uB2E4\uBCF4\uB294 \uC778\uBB3C\uC774 \uC788\uB294 \uC2DC\uC810 \uC20F\uC5D0\uC11C \uC0DD\uAE34\uB2E4. \uC2E0\uB8B0\uAC00 \uD544\uC694\uD55C \uC815\uBA74 \uBC1C\uD654\uB294 \uB208\uB192\uC774\uAC00 \uB0AB\uB2E4.", "specify": "\uCE74\uBA54\uB77C\uAC00 \uBA38\uB9AC\uBCF4\uB2E4 \uC5BC\uB9C8\uB098 \uC704\uC778\uC9C0, \uC778\uBB3C \uC544\uB798\xB7\uC8FC\uBCC0\uC758 \uBC14\uB2E5\uACFC \uACF5\uAC04, \uD654\uBA74 \uC18D \uC778\uBB3C \uD06C\uAE30, \uB0B4\uB824\uB2E4\uBCF4\uB294 \uC778\uBB3C\uC774 \uC788\uC73C\uBA74 \uADF8 \uC704\uCE58." },
+        "camera.overhead": { "avoid": "\uD45C\uC815\uC774 \uC815\uBCF4\uC778 \uBC18\uC751\xB7\uB300\uC0AC \uCEF7(\uC218\uC9C1\uC73C\uB85C \uB0B4\uB824\uB2E4\uBCF4\uBA74 \uC5BC\uAD74\uC774 \uD654\uBA74\uC5D0 \uB4E4\uC5B4\uC624\uC9C0 \uC54A\uB294\uB2E4).", "specify": "\uBC14\uB2E5 \uBC30\uCE58(\uB204\uAC00 \uC5B4\uB514\uC5D0\uC11C \uC5B4\uB290 \uCABD\uC744 \uD5A5\uD558\uB294\uC9C0), \uBC14\uB2E5 \uC7AC\uC9C8\uACFC \uADF8\uB9BC\uC790 \uBC29\uD5A5." },
+        "camera.dutch": { "avoid": "\uC774\uC720 \uC5C6\uB294 \uBC18\uBCF5. \uBA87 \uCEF7\uC5D0\uB9CC \uC4F8 \uB54C \uD798\uC774 \uC788\uB2E4.", "specify": "\uAE30\uC6B8\uAE30 \uAC01\uB3C4\uC640 \uBC29\uD5A5(\uC608: 15\xB0 clockwise), \uCC98\uC74C\uBD80\uD130 \uAE30\uC6B4 \uC20F\uC778\uC9C0 \uC20F \uC548\uC5D0\uC11C \uAE30\uC6B0\uB294\uC9C0, \uAE30\uC6B8\uC5B4 \uBCF4\uC77C \uC218\uC9C1\uC120(\uBB38\uD2C0\xB7\uBCBD \uBAA8\uC11C\uB9AC)." },
+        "camera.dolly-zoom": { "avoid": "\uD6A8\uACFC\uAC00 \uC544\uC8FC \uD2B9\uC815\uD558\uB2E4. \uADF8 \uC21C\uAC04 \uD558\uB098\uC5D0\uB9CC \uC4F4\uB2E4.", "pair": "\uAE68\uB2EC\uC74C\uC744 \uC77C\uC73C\uD0A4\uB294 \uB300\uC0AC\uB098 \uC18C\uB9AC \uC9C1\uD6C4\uC5D0 \uC2DC\uC791\uD55C\uB2E4.", "specify": "\uBC29\uD5A5(dolly in + zoom out\uC774\uBA74 \uBC30\uACBD\uC774 \uBA40\uC5B4\uC9C0\uACE0, dolly out + zoom in\uC774\uBA74 \uB2E4\uAC00\uC628\uB2E4)\uACFC \uC2DC\uC791 \uACC4\uAE30." },
+        "camera.rack-focus": { "avoid": "\uC2B5\uAD00\uC801 \uC0AC\uC6A9. \uB450 \uB300\uC0C1\uC774 \uAC19\uC740 \uAC70\uB9AC\uC5D0 \uC788\uAC70\uB098 \uAD00\uC2EC\uC744 \uC62E\uAE38 \uACC4\uAE30\uAC00 \uC5C6\uC744 \uB54C.", "specify": "\uAC00\uAE4C\uC6B4 \uB300\uC0C1\uACFC \uBA3C \uB300\uC0C1, \uC21C\uC11C, \uC62E\uACA8 \uAC00\uB294 \uACC4\uAE30(\uB300\uC0AC\xB7\uC18C\uB9AC\xB7\uB3D9\uC791)\uC640 \uC2DC\uC810, \uB05D\uC5D0 \uC120\uBA85\uD55C \uB300\uC0C1. shot_icons focus\uC758 from\xB7to\uC5D0 \uB450 \uB300\uC0C1\uC744 \uC601\uC5B4\uB85C \uC801\uACE0, \uC595\uC740 \uC2EC\uB3C4\uC758 focus\uB294 \uCC98\uC74C \uC120\uBA85\uD55C \uB300\uC0C1(from)\uACFC \uAC19\uAC8C \uB454\uB2E4." },
+        "camera.side-tracking": { "avoid": "\uC5BC\uAD74 \uC815\uBA74\uC774\uB098 \uBAA9\uC801\uC9C0\uAC00 \uD575\uC2EC\uC77C \uB54C. \uC804\uACBD \uCE35\uC774 \uC5C6\uC73C\uBA74 \uD32C\uACFC \uAD6C\uBCC4\uB418\uC9C0 \uC54A\uB294\uB2E4.", "specify": "\uC88C\uC6B0 \uBC29\uD5A5, \uC18D\uB3C4, \uC804\uACBD\xB7\uC911\uACBD\xB7\uBC30\uACBD\uC5D0 \uC9C0\uB098\uAC08 \uAC83, \uC2DC\uC791\uACFC \uB05D \uD504\uB808\uC784.", "vertical": "\uC138\uB85C \uD654\uBA74\uC740 \uC88C\uC6B0 \uC774\uB3D9\uC744 \uACFC\uC7A5\uD55C\uB2E4. \uB290\uB9AC\uAC8C \uC6C0\uC9C1\uC774\uAC70\uB098 \uCE74\uBA54\uB77C\uB97C \uBE44\uC2A4\uB4EC\uD788 \uB450\uC5B4 \uB300\uAC01\uC120 \uC774\uB3D9\uC73C\uB85C \uBC14\uAFBC\uB2E4." },
+        "camera.pov": { "avoid": "\uBC18\uC751\uC774 \uC0AC\uB77C\uC9C8 \uB9CC\uD07C \uAE34 \uC2DC\uC810 \uC20F, \uBCF4\uB294 \uC0AC\uB78C\uC744 \uC138\uC6B0\uC9C0 \uC54A\uC740 \uC2DC\uC810 \uC20F.", "pair": "\uBCF4\uB294 \uC5BC\uAD74 \u2192 \uC2DC\uC810 \uC20F \u2192 \uBC18\uC751 \uC5BC\uAD74.", "specify": "\uB204\uAD6C\uC758 \uB208\uC778\uC9C0, \uB208\uB192\uC774, \uD654\uBA74 \uC544\uB798\uC5D0 \uAC78\uB9AC\uB294 \uC190\uC774\uB098 \uBAB8, \uBCF4\uB294 \uB300\uC0C1\uACFC \uC2DC\uC120\uC774 \uBA38\uBB34\uB294 \uB05D\uC810, \uB2E4\uB978 \uC778\uBB3C\uC774 \uB80C\uC988\uB97C \uBCF4\uB294\uC9C0.", "vertical": "\uC55E\uC73C\uB85C \uB098\uC544\uAC00\uB294 \uAE38\xB7\uBCF5\uB3C4 \uC2DC\uC810\uC774 \uC138\uB85C \uD654\uBA74\uC5D0 \uB9DE\uB294\uB2E4." },
+        "camera.drone-pullback": { "avoid": "\uAC00\uC7A5 \uD754\uD55C \uD074\uB9AC\uC170\uB2E4. \uC7A5\uBA74\uC744 \uB2EB\uB294 \uC21C\uAC04 \uD558\uB098\uC5D0\uB9CC \uC4F4\uB2E4.", "specify": "\uB4DC\uB7EC\uB0A0 \uACF5\uAC04\uACFC \uB05D\uC5D0\uC11C \uC778\uBB3C\uC758 \uD06C\uAE30, \uB290\uB9B0 \uC18D\uB3C4. \uD6C4\uD1F4\uC640 \uC0C1\uC2B9\uC744 \uD55C \uACBD\uB85C\uB85C \uC801\uB294\uB2E4." },
+        "camera.pan-left": { "avoid": "\uB05D\uC5D0 \uB4DC\uB7EC\uB0A0 \uAC83\uC774 \uC5C6\uB294 \uD32C, \uB108\uBB34 \uBE60\uB978 \uD32C(\uD654\uBA74 \uD3ED \uD558\uB098\uB97C 7\uCD08\uBCF4\uB2E4 \uBE68\uB9AC \uC9C0\uB098\uBA74 \uB04A\uACA8 \uBCF4\uC778\uB2E4).", "specify": "\uCD9C\uBC1C \uB300\uC0C1\uACFC \uB3C4\uCC29 \uB300\uC0C1, \uB530\uB77C\uAC00\uB294 \uC778\uBB3C\uC758 \uC774\uB3D9 \uBC29\uD5A5, \uC18D\uB3C4.", "vertical": "\uC138\uB85C \uD654\uBA74\uC740 \uC88C\uC6B0 \uC6C0\uC9C1\uC784\uC744 \uACFC\uC7A5\uD55C\uB2E4. \uB290\uB9AC\uAC8C, \uC791\uAC8C \uC6C0\uC9C1\uC778\uB2E4." },
+        "camera.pan-right": { "avoid": "\uB05D\uC5D0 \uB4DC\uB7EC\uB0A0 \uAC83\uC774 \uC5C6\uB294 \uD32C, \uB108\uBB34 \uBE60\uB978 \uD32C(\uD654\uBA74 \uD3ED \uD558\uB098\uB97C 7\uCD08\uBCF4\uB2E4 \uBE68\uB9AC \uC9C0\uB098\uBA74 \uB04A\uACA8 \uBCF4\uC778\uB2E4).", "specify": "\uCD9C\uBC1C \uB300\uC0C1\uACFC \uB3C4\uCC29 \uB300\uC0C1, \uB530\uB77C\uAC00\uB294 \uC778\uBB3C\uC758 \uC774\uB3D9 \uBC29\uD5A5, \uC18D\uB3C4.", "vertical": "\uC138\uB85C \uD654\uBA74\uC740 \uC88C\uC6B0 \uC6C0\uC9C1\uC784\uC744 \uACFC\uC7A5\uD55C\uB2E4. \uB290\uB9AC\uAC8C, \uC791\uAC8C \uC6C0\uC9C1\uC778\uB2E4." },
+        "camera.tilt-up": { "avoid": "\uB05D\uC5D0 \uC0C8 \uC815\uBCF4\uAC00 \uC5C6\uB294 \uD2F8\uD2B8. \uD5E4\uB4DC\uB8F8\uC744 \uB9DE\uCD94\uB294 \uC791\uC740 \uD2F8\uD2B8\uB294 \uAE30\uBC95\uC774 \uC544\uB2C8\uB77C \uB9AC\uD504\uB808\uC774\uBC0D\uC774\uB2E4.", "specify": "\uC2DC\uC791 \uB300\uC0C1\uACFC \uB05D \uB300\uC0C1, \uB05D\uC5D0\uC11C \uB300\uC0C1\uC774 \uB193\uC77C \uC704\uCE58, \uC18D\uB3C4.", "vertical": "\uC138\uB85C \uD654\uBA74\uC740 \uB192\uC774\uB97C \uBCF4\uC5EC \uC8FC\uB294 \uD2F8\uD2B8\uC5D0 \uB9DE\uB294\uB2E4." },
+        "camera.tilt-down": { "avoid": "\uC57D\uD568\uC744 \uC758\uB3C4\uD558\uC9C0 \uC54A\uC740 \uC778\uBB3C\uC744 \uB0B4\uB824 \uC7A1\uB294 \uAC83, \uD5E4\uB4DC\uB8F8 \uB9DE\uCD94\uAE30\uB97C \uAE30\uBC95\uC73C\uB85C \uC801\uB294 \uAC83.", "specify": "\uC2DC\uC791 \uB300\uC0C1\uACFC \uB05D \uB300\uC0C1, \uB05D\uC5D0\uC11C \uB300\uC0C1\uC774 \uB193\uC77C \uC704\uCE58." },
+        "camera.eye": { "avoid": "\uD0A4\uB098 \uC790\uC138\uAC00 \uB2E4\uB978 \uB450 \uC0AC\uB78C\uC774 \uD568\uAED8 \uC788\uC73C\uBA74 \uB204\uAD6C\uC758 \uB208\uB192\uC774\uC778\uC9C0 \uC815\uD574\uC57C \uB73B\uC774 \uC0DD\uAE34\uB2E4.", "specify": "\uAE30\uC900 \uC778\uBB3C\uACFC \uC790\uC138(\uC11C \uC788\uC74C\xB7\uC549\uC74C), \uC2DC\uC120 \uBC29\uD5A5(\uB80C\uC988 \uC815\uBA74, \uD654\uBA74 \uBC16 \uC67C\uCABD\xB7\uC624\uB978\uCABD)." },
+        "camera.crash-zoom": { "avoid": "\uC870\uC6A9\uD55C \uC815\uADF9\uC758 \uAE68\uB2EC\uC74C(\uCF54\uBBF8\uB514\uB85C \uC77D\uD788\uAE30 \uC27D\uB2E4. \uADF8 \uBE44\uD2B8\uB294 \uBE60\uB978 \uB2EC\uB9AC \uC778). \uD55C \uC7A5\uBA74\uC5D0 \uB450 \uBC88 \uC774\uC0C1, \uB3C4\uCC29 \uB300\uC0C1\uC774 \uB458 \uC774\uC0C1\uC77C \uB54C.", "pair": "\uBCF4\uB294 \uC5BC\uAD74 \u2192 \uD06C\uB798\uC2DC \uC90C \u2192 \uBC18\uC751 \uC5BC\uAD74. \uB113\uC740 \uC2DC\uC791 \uD504\uB808\uC784\uC744 \uC7A0\uAE50 \uBD99\uC7A1\uC740 \uB4A4\uC5D0 \uB4E4\uC5B4\uAC04\uB2E4.", "specify": "\uB3C4\uCC29 \uB300\uC0C1 \uD558\uB098\uC640 \uB05D \uD06C\uB86D, \uC90C\uC774 \uC2DC\uC791\uB418\uB294 \uACC4\uAE30(\uC18C\uB9AC\xB7\uBD88\uBE5B\xB7\uC2DC\uC120). \uD504\uB808\uC784 \uACC4\uD68D\uC774 first_last\uBA74 \uB05D \uC774\uBBF8\uC9C0\uAC00 \uB3C4\uCC29 \uAD6C\uB3C4\uB97C \uACE0\uC815\uD55C\uB2E4." },
+        "camera.blast-pushback": { "avoid": "\uCDA9\uACA9\uC758 \uC6D0\uC778\uC774 \uD654\uBA74\uC5D0 \uC5C6\uC744 \uB54C, \uD55C \uC7A5\uBA74\uC5D0 \uB418\uD480\uC774\uD560 \uB54C.", "pair": "\uBC1C\uB3D9 \uB3D9\uC791(\uB0B4\uB9AC\uCE58\uAE30\xB7\uC810\uD654)\uC744 \uBA3C\uC800 \uBCF4\uC5EC \uC900 \uB4A4\uC5D0 \uC628\uB2E4. \uB05D \uD504\uB808\uC784\uC740 \uACB0\uACFC\uB97C \uBD99\uC7A1\uB294\uB2E4.", "specify": "\uCDA9\uACA9\uC6D0\uACFC \uD130\uC9C0\uB294 \uACC4\uAE30 \uB3D9\uC791, \uBC00\uB824\uB09C \uB4A4\uC758 \uB113\uC740 \uB05D \uD504\uB808\uC784\uC5D0 \uBCF4\uC774\uB294 \uAC83(\uD30C\uC778 \uBC14\uB2E5\xB7\uC4F0\uB7EC\uC9C4 \uC0C1\uB300). \uD504\uB808\uC784 \uACC4\uD68D\uC774 first_last\uBA74 \uB05D \uC774\uBBF8\uC9C0\uC5D0 \uACB0\uACFC\uB97C \uADF8\uB9B0\uB2E4." },
+        "camera.weapon-cam": { "avoid": "\uC3D8\uB294 \uC0AC\uB78C\uACFC \uD45C\uC801\uC758 \uC704\uCE58\uB97C \uC55E\uC5D0\uC11C \uBCF4\uC5EC \uC8FC\uC9C0 \uC54A\uC740 \uCEF7, \uBC1C\uC0AC\uCCB4\uAC00 \uC5EC\uB7FF\uC77C \uB54C.", "pair": "\uB2F9\uAE30\uAC70\uB098 \uACA8\uB204\uB294 \uCEF7 \u2192 \uC6E8\uD3F0 \uCEA0 \u2192 \uBA85\uC911\uC774\uB098 \uBE57\uB098\uAC10\uC758 \uACB0\uACFC \uCEF7.", "specify": "\uD45C\uC801(shot_icons move\uC758 target), \uBC1C\uC0AC\uCCB4\uC640 \uD654\uBA74\uC5D0 \uAC78\uB9AC\uB294 \uBD80\uBD84(\uD654\uC0B4\uCD09\xB7\uCE7C\uB05D)\uC740 action \uBB38\uC7A5\uC5D0, \uC9C0\uB098\uAC00\uB294 \uB79C\uB4DC\uB9C8\uD06C, \uBA48\uCD94\uB294 \uC9C0\uC810\uACFC \uADF8\uB54C \uD45C\uC801\uC758 \uC0C1\uD0DC." },
+        "camera.pass-through": { "avoid": "\uD1B5\uACFC\uD560 \uD2C8\uC774 \uC5C6\uB294 \uD2B8\uC778 \uACF5\uAC04, \uC9C0\uB9AC\uB97C \uC138\uC6B0\uC9C0 \uC54A\uC740 \uCD94\uACA9. \uBB38 \uD558\uB098\uB97C \uC9C0\uB098 \uBA48\uCD94\uB294 \uC9C4\uC785\uC774\uBA74 \uD478\uC2DC \uD328\uC2A4\uD2B8.", "pair": "\uCD94\uACA9\uC758 \uBC29\uD5A5\uACFC \uCD9C\uAD6C\uB97C \uBCF4\uC5EC \uC900 \uB113\uC740 \uCEF7 \uB4A4\uC5D0 \uC628\uB2E4.", "specify": "\uD1B5\uACFC\uD560 \uAC83\uC744 \uC21C\uC11C\uB300\uB85C(\uBE68\uB7AB\uC904\uC758 \uCC9C, \uCC3D\uBB38, \uB09C\uAC04 \uC0AC\uC774), \uADF8\uB54C\uB9C8\uB2E4 \uC778\uBB3C\uC774 \uD558\uB294 \uB2E4\uB978 \uB3D9\uC791(\uC219\uC784\xB7\uB3CC\uC544\uAC10), \uB05D \uD504\uB808\uC784." },
+        "camera.drone-dive": { "avoid": "\uB192\uC774 \uCC28\uAC00 \uC5C6\uB294 \uC7A5\uC18C, \uAEBE\uC774\uB294 \uC9C0\uC810\uC774 \uB450 \uACF3 \uC774\uC0C1\uC778 \uACBD\uB85C. \uC9C0\uD615 \uC0AC\uC774\uC758 \uAD7D\uC740 \uAE38\uC744 \uBCF4\uC5EC \uC8FC\uB294 \uBE44\uD589\uC740 \uB4DC\uB860 \uACBD\uB85C \uD504\uB9AC\uC14B(drone-flythrough)\uC774 \uB9E1\uB294\uB2E4.", "pair": "\uAC00\uC7A5\uC790\uB9AC\uC640 \uADF8 \uC544\uB798 \uB192\uC774\uB97C \uBCF4\uC5EC \uC900 \uCEF7 \uB4A4\uC5D0 \uC628\uB2E4.", "specify": "\uC218\uD3C9 \uAD6C\uAC04\uC758 \uB192\uC774\uC640 \uB530\uB77C\uAC00\uB294 \uB300\uC0C1, \uC218\uD3C9\uC5D0\uC11C \uC218\uC9C1\uC73C\uB85C \uAEBE\uC774\uB294 \uC9C0\uC810(\uC808\uBCBD \uB05D\xB7\uC625\uC0C1 \uB09C\uAC04), \uAEBE\uC778 \uB4A4 \uD654\uBA74 \uC544\uB798\uC5D0 \uBCF4\uC774\uB294 \uAC83. \uD504\uB808\uC784 \uACC4\uD68D\uC774 first_last\uBA74 \uC218\uD3C9 \uC2DC\uC791\uACFC \uB0B4\uB824\uB2E4\uBCF4\uB294 \uB05D\uC744 \uB530\uB85C \uADF8\uB9B0\uB2E4." },
+        "camera.relay": { "avoid": "\uB300\uC0AC\uAC00 \uC624\uAC00\uB294 \uC7A5\uBA74(\uC0F7\uB2F9 \uD654\uC790\uB294 \uD55C \uBA85), \uC778\uBB3C \uC704\uCE58\uB97C \uC138\uC6B0\uC9C0 \uC54A\uC740 \uCCAB \uCEF7, \uC5B4\uB311\uD130 \uAE38\uC774 \uC0C1\uD55C\uC744 \uB118\uB294 \uBD84\uB7C9. \uD55C \uBC88\uC5D0 \uB098\uC624\uC9C0 \uC54A\uC73C\uBA74 \uC0F7\uC744 \uB098\uB220 \uD729 \uC804\uD658\uC73C\uB85C \uC787\uB294\uB2E4.", "pair": "\uACF5\uAC04\uACFC \uC778\uC6D0\uC744 \uBCF4\uC5EC \uC900 \uB113\uC740 \uCEF7 \uB4A4\uC5D0 \uC628\uB2E4. \uB871\uD14C\uC774\uD06C \uC2DC\uAC04(timing.long-take)\uACFC \uD568\uAED8 \uACE0\uB978\uB2E4.", "specify": "\uB118\uAE30\uB294 \uC21C\uC11C(\uB204\uAD6C \u2192 \uB204\uAD6C \u2192 \uB204\uAD6C), \uB118\uAE38 \uB54C\uB9C8\uB2E4\uC758 \uACC4\uAE30 \uB3D9\uC791(\uC219\uC784\xB7\uBA54\uCE58\uAE30), \uB05D \uD504\uB808\uC784. \uCC38\uC870 \uC774\uBBF8\uC9C0\uB97C \uBC1B\uB294 \uC8FC\uC694 \uC778\uBB3C\uC740 \uB450 \uBA85\uAE4C\uC9C0\uC774\uACE0 \uB098\uBA38\uC9C0\uB294 \uAC89\uBAA8\uC2B5\uC73C\uB85C \uC801\uB294\uB2E4." },
+        "camera.speed-ramp": { "avoid": "\uB290\uB824\uC9C0\uB294 \uC9C0\uC810\uC774 \uB450 \uACF3 \uC774\uC0C1\uC778 \uCEF7, \uB300\uC0AC\uAC00 \uC788\uB294 \uCEF7(\uC785 \uBAA8\uC591\uACFC \uC18C\uB9AC\uAC00 \uC5B4\uAE0B\uB09C\uB2E4), \uD0C0\uACA9\uC774 \uC5EC\uB7EC \uBC88\uC778 \uB09C\uC804.", "pair": "\uC55E\uB4A4 \uCEF7\uC740 \uC815\uC0C1 \uC18D\uB3C4\uB85C \uB454\uB2E4. \uB290\uB824\uC9C4 \uB3D9\uC548 \uCE74\uBA54\uB77C\uB294 \uACE0\uC815\uD558\uAC70\uB098 \uCC9C\uCC9C\uD788 \uC606\uC73C\uB85C \uD750\uB978\uB2E4.", "specify": "\uB290\uB824\uC9C0\uB294 \uC21C\uAC04 \uD558\uB098(shot_icons accents\uC758 on\uC5D0 \uC601\uC5B4\uB85C), \uADF8\uB3D9\uC548 \uACF5\uC911\uC5D0 \uB5A0 \uC788\uB294 \uAC83(\uBB3C\uBC29\uC6B8\xB7\uD30C\uD3B8), \uD480\uB9AC\uB294 \uC2DC\uC810." },
+        "camera.impact-shake": { "avoid": "\uACC4\uC18D \uC774\uC5B4\uC9C0\uB294 \uD754\uB4E4\uB9BC(\uADF8\uAC74 \uD578\uB4DC\uD5EC\uB4DC\uB2E4), \uD45C\uC815\uC744 \uC77D\uC5B4\uC57C \uD558\uB294 \uD074\uB85C\uC988\uC5C5, \uC6D0\uC778\uC774 \uD654\uBA74\uC774\uB098 \uC18C\uB9AC\uC5D0 \uC5C6\uB294 \uD754\uB4E4\uB9BC.", "pair": "\uACE0\uC815 \uD504\uB808\uC784 \uC704\uC5D0 \uC5B9\uC744 \uB54C \uAC00\uC7A5 \uD06C\uAC8C \uC77D\uD78C\uB2E4. \uCDA9\uACA9\uC74C\uC744 \uAC19\uC740 \uC0F7\uC758 \uD6A8\uACFC\uC74C\uC5D0 \uC801\uB294\uB2E4.", "specify": "\uD754\uB4E4\uB9BC\uC758 \uC6D0\uC778\uC774 \uB418\uB294 \uC0AC\uAC74(shot_icons accents\uC758 on\uC5D0 \uC601\uC5B4\uB85C: each footfall, the landing), \uD69F\uC218, \uC0AC\uC774\uC0AC\uC774\uC758 \uBA48\uCDA4." },
+        "framing.els": { "avoid": "\uC778\uBB3C\uC744 \uC54C\uC544\uBCF4\uAC70\uB098 \uD45C\uC815\uC744 \uC77D\uC5B4\uC57C \uD558\uB294 \uCEF7. \uD734\uB300\uD3F0 \uD654\uBA74\uC5D0\uC11C\uB294 \uB113\uC740 \uD48D\uACBD\uC758 \uD798\uC774 \uC904\uC5B4\uB4E0\uB2E4.", "pair": "\uAC10\uC815 \uD074\uB85C\uC988\uC5C5\uACFC \uBC88\uAC08\uC544 \uBD99\uC774\uBA74 \uC7A5\uBA74\uC758 \uAC15\uB3C4\uAC00 \uC720\uC9C0\uB41C\uB2E4.", "specify": "\uC778\uBB3C \uC218\uC640 \uD654\uBA74 \uC18D \uC704\uCE58, \uD654\uBA74 \uB192\uC774 \uB300\uBE44 \uD06C\uAE30, \uAE30\uC900 \uB79C\uB4DC\uB9C8\uD06C, \uC9C0\uD3C9\uC120 \uB192\uC774, \uC2DC\uAC04\uB300\xB7\uB0A0\uC528.", "vertical": "\uAC74\uBB3C\xB7\uC808\uBCBD\xB7\uD558\uB298 \uAC19\uC740 \uC138\uB85C \uC694\uC18C\uB97C \uCD95\uC73C\uB85C \uC4F0\uACE0, \uCE74\uBA54\uB77C\uB97C \uBE44\uC2A4\uB4EC\uD788 \uB450\uC5B4 \uD3ED\uC744 \uB9CC\uB4E0\uB2E4. \uC9C0\uD3C9\uC120\uC740 \uD654\uBA74 \uD55C\uAC00\uC6B4\uB370\uB97C \uD53C\uD55C\uB2E4." },
+        "framing.ls": { "avoid": "\uD45C\uC815\uACFC \uBC18\uC751\uC774 \uC815\uBCF4\uC778 \uC21C\uAC04(\uD074\uB85C\uC988\uC5C5\uC73C\uB85C \uC881\uD78C\uB2E4).", "pair": "\uC124\uC815\uC0F7 \u2192 \uAC19\uC740 \uACF5\uAC04 \uC548\uC73C\uB85C \uCEF7\uC778 \u2192 \uD074\uB85C\uC988\uC5C5\uC774 \uC774\uC5B4\uC9C4 \uB4A4 \uC7AC\uC124\uC815\uC0F7. \uAC00\uAE4C\uC6B4 \uD06C\uAE30\uB85C \uC5F0 \uC7A5\uBA74\uC740 \uB2E4\uC74C \uADF8\uB9BC \uCEF7\uC5D0\uC11C \uC774 \uD06C\uAE30\uB85C \uACF5\uAC04\uC744 \uBCF4\uC5EC \uC900\uB2E4.", "specify": "\uC778\uBB3C \uC218, \uAC01\uC790\uC758 \uD654\uBA74 \uC704\uCE58(\uC88C\uC6B0\xB7\uC55E\uB4A4), \uC11C\uB85C\uC758 \uAC04\uACA9, \uBB38\xB7\uCC3D \uAC19\uC740 \uACF5\uAC04 \uAE30\uC900\uC810. \uAC70\uB9AC\uB294 \uC22B\uC790\uAC00 \uC544\uB2C8\uB77C \uD06C\uAE30\uC640 \uBC30\uCE58\uB85C \uC801\uB294\uB2E4.", "vertical": "\uC138\uB85C \uD654\uBA74\uC740 \uC640\uC774\uB4DC\uB85C \uB300\uD654\uB97C \uC138\uC6B0\uAE30 \uC5B4\uB835\uB2E4. \uC778\uBB3C\uC744 \uC606\uC73C\uB85C \uB098\uB780\uD788 \uB450\uC9C0 \uB9D0\uACE0 \uC55E\uB4A4\uB85C \uC313\uACE0, \uCE74\uBA54\uB77C \uCABD\uC73C\uB85C \uC624\uAC00\uAC8C \uC6C0\uC9C1\uC778\uB2E4." },
+        "framing.fs": { "avoid": "\uD45C\uC815\uC774 \uD575\uC2EC\uC778 \uC21C\uAC04. \uBC1C\uBAA9\xB7\uBB34\uB98E \uAC19\uC740 \uAD00\uC808\uC5D0\uC11C \uC790\uB974\uC9C0 \uC54A\uB294\uB2E4.", "pair": "\uB3D9\uC791\uC758 \uC2DC\uC791\uC740 \uD480\uC0F7\uC73C\uB85C \uBCF4\uC5EC \uC8FC\uACE0 \uACB0\uACFC\uB098 \uBC18\uC751\uC740 \uB354 \uAC00\uAE4C\uC6B4 \uD06C\uAE30\uB85C \uBC1B\uB294\uB2E4.", "specify": "\uB3D9\uC791 \uB3D9\uC0AC, \uBC1C\uC774 \uB2FF\uB294 \uBC14\uB2E5, \uC758\uC0C1, \uBC1C\uB05D \uC544\uB798 \uC5EC\uBC31.", "vertical": "\uC138\uB85C \uD654\uBA74\uC740 \uC0AC\uB78C \uD55C \uBA85\uC744 \uBA38\uB9AC\uBD80\uD130 \uBC1C\uB05D\uAE4C\uC9C0 \uB2F4\uAE30\uC5D0 \uC54C\uB9DE\uB2E4. \uC804\uC2E0\uACFC \uCE74\uC6B0\uBCF4\uC774\uC0F7\uC774 \uC138\uB85C\uC5D0\uC11C \uAC00\uC7A5 \uC798 \uB9DE\uB294\uB2E4." },
+        "framing.mfs": { "avoid": "\uBB34\uB98E \uAD00\uC808\uC5D0\uC11C \uC790\uB974\uB294 \uD504\uB808\uC784. \uBB34\uB98E \uC704\uB97C \uC7A1\uB294 \uB2C8\uC0F7\uC740 \uB2E4\uB978 \uD06C\uAE30\uB2E4.", "pair": "\uB300\uCE58\uAC00 \uC2DC\uC791\uB420 \uB54C \uC774 \uD06C\uAE30\uB85C \uC190\uACFC \uAC70\uB9AC\uB97C \uBCF4\uC774\uACE0, \uAE34\uC7A5\uC774 \uC624\uB974\uBA74 \uC5BC\uAD74\uB85C \uC881\uD78C\uB2E4.", "specify": "\uC808\uB2E8\uC120(\uD5C8\uBC85\uC9C0 \uC911\uAC04), \uC190\uC758 \uC704\uCE58, \uB450 \uC0AC\uB78C\uC774\uBA74 \uAC01\uC790\uC758 \uC704\uCE58\uC640 \uAC04\uACA9.", "vertical": "\uC138\uB85C \uD654\uBA74\uC5D0\uC11C \uC804\uC2E0\uC0F7\uACFC \uD568\uAED8 \uAC00\uC7A5 \uC798 \uB9DE\uB294 \uD06C\uAE30." },
+        "framing.ms": { "avoid": "\uAC10\uC815\uC758 \uC808\uC815(\uD074\uB85C\uC988\uC5C5\uC73C\uB85C \uC881\uD78C\uB2E4). \uC5C9\uB369\uC774 \uB192\uC774\uC5D0\uC11C \uC790\uB974\uB294 \uD504\uB808\uC784.", "pair": "\uC0F7/\uB9AC\uBC84\uC2A4\uC0F7\uC740 \uC591\uCABD \uD06C\uAE30\uB97C \uB9DE\uCD98\uB2E4. \uD55C\uCABD\uB9CC \uB2E4\uB974\uAC8C \uC7A1\uC73C\uBA74 \uADF8 \uCC28\uC774\uAC00 \uC758\uBBF8\uAC00 \uB41C\uB2E4.", "specify": "\uC190\uC9D3\uC774 \uC815\uBCF4\uBA74 \uC190\uC774 \uD504\uB808\uC784 \uC548\uC5D0 \uC788\uB2E4\uACE0 \uC801\uB294\uB2E4. \uC2DC\uC120 \uBC29\uD5A5.", "vertical": "\uC138\uB85C \uD654\uBA74\uC5D0\uC11C\uB294 \uAC19\uC740 \uD5C8\uB9AC\uC120\uC774\uB77C\uB3C4 \uC778\uBB3C\uC774 \uD654\uBA74 \uD3ED\uC744 \uB354 \uCC44\uC6CC \uAC00\uB85C \uD074\uB85C\uC988\uC5C5\uC5D0 \uAC00\uAE5D\uAC8C \uC77D\uD78C\uB2E4." },
+        "framing.mcu": { "avoid": "\uAC10\uC815\uC758 \uC808\uC815\uC774\uB098 \uAE68\uB2EC\uC74C. \uADF8 \uC21C\uAC04\uC740 \uD074\uB85C\uC988\uC5C5\uC5D0 \uB9E1\uAE34\uB2E4.", "pair": "\uC7A5\uBA74 \uB300\uBD80\uBD84\uC744 \uC774 \uD06C\uAE30\uB85C \uB450\uBA74 \uD074\uB85C\uC988\uC5C5\uC774 \uAC15\uC870\uB85C \uC0B4\uC544\uB09C\uB2E4.", "specify": "\uC2DC\uC120\uC774 \uB80C\uC988 \uC815\uBA74(\uC9C1\uC811 \uB9D0\uD558\uAE30)\uC778\uC9C0 \uD654\uBA74 \uBC16 \uC0C1\uB300\uC778\uC9C0.", "vertical": "\uC138\uB85C \uD654\uBA74\uC740 \uD1A0\uD0B9\uD5E4\uB4DC\uC640 \uCE74\uBA54\uB77C\uB97C \uBCF4\uACE0 \uB9D0\uD558\uB294 \uCEF7\uC5D0 \uC798 \uB9DE\uB294\uB2E4. \uB208\uC740 \uC704\uCABD 3\uBD84\uC758 1 \uC120 \uADFC\uCC98." },
+        "framing.cu": { "avoid": "\uC774\uC57C\uAE30 \uC815\uBCF4\uAC00 \uC5C6\uB294 \uD074\uB85C\uC988\uC5C5, \uBCC0\uD654 \uC5C6\uB294 \uC5BC\uAD74 \uCEF7\uC758 \uC5F0\uC18D. \uD69F\uC218\uBCF4\uB2E4 \uAC10\uC815\uC774 \uC2E4\uB9B0 \uC21C\uAC04\uC5D0 \uC4F4\uB2E4.", "pair": "\uACF5\uAC04\uC744 \uC138\uC6B4 \uB4A4\uC5D0 \uC628\uB2E4. \uD074\uB85C\uC988\uC5C5\uC5D0\uC11C \uC640\uC774\uB4DC\uB85C \uBC14\uAFB8\uB294 \uCEF7\uC774 \uAC00\uC7A5 \uD06C\uAC8C \uC77D\uD78C\uB2E4.", "specify": "\uD45C\uC815 \uBCC0\uD654(\uC2DC\uC791 \u2192 \uB05D), \uC2DC\uC120 \uBC29\uD5A5, \uB9DD\uC6D0 \uB80C\uC988.", "vertical": "\uAC00\uB85C \uD074\uB85C\uC988\uC5C5\uC744 \uC138\uB85C\uC5D0 \uADF8\uB300\uB85C \uC62E\uAE30\uBA74 \uBE45 \uD074\uB85C\uC988\uC5C5\uCC98\uB7FC \uAF49 \uCC2C\uB2E4. \uAD11\uAC01\uC73C\uB85C \uCC0D\uC73C\uBA74 \uC704\uC544\uB798\uAC00 \uC65C\uACE1\uB41C\uB2E4." },
+        "framing.choker": { "avoid": "\uC77C\uC0C1 \uB300\uD654. \uC790\uC8FC \uC4F0\uBA74 \uD798\uC774 \uBE60\uC9C4\uB2E4. \uB208\uACFC \uC785 \uC0AC\uC774\uB9CC \uB0A8\uAE30\uB294 \uD504\uB808\uC784\uC740 \uCD9C\uCC98\uB9C8\uB2E4 \uC815\uC758\uAC00 \uB2E4\uB974\uB2C8 \uC774 id\uC5D0 \uC11E\uC9C0 \uC54A\uB294\uB2E4.", "pair": "\uAC10\uC815\uC774 \uC313\uC778 \uB4A4\uC758 \uC815\uC810\uC5D0 \uB454\uB2E4. \uBC14\uB85C \uC55E \uCEF7\uC774 \uAC19\uC740 \uC5BC\uAD74\uC758 \uD074\uB85C\uC988\uC5C5\uC774\uBA74 \uCC28\uC774\uAC00 \uC791\uB2E4.", "specify": "\uC808\uB2E8\uC120(\uC774\uB9C8\xB7\uD131), \uD45C\uC815 \uBCC0\uD654.", "vertical": "\uC138\uB85C \uD654\uBA74\uC5D0\uC11C\uB294 \uC704\uC544\uB798 \uC808\uB2E8\uBCF4\uB2E4 \uC5BC\uAD74 \uD3ED\uC774 \uD654\uBA74 \uD3ED\uC744 \uCC44\uC6B0\uB294\uC9C0\uB85C \uC815\uD55C\uB2E4." },
+        "framing.ecu": { "avoid": "\uAD00\uAC1D\uC774 \uBB34\uC5C7\uC758 \uC77C\uBD80\uC778\uC9C0 \uBAA8\uB97C \uB54C(\uC55E\uC5D0\uC11C \uACF5\uAC04\uACFC \uC778\uBB3C\uC744 \uBA3C\uC800 \uBCF4\uC5EC \uC900\uB2E4). \uC0AC\uBB3C\uB9CC \uBCF4\uC774\uBA74 \uC778\uC11C\uD2B8\uB85C \uC801\uB294\uB2E4.", "pair": "\uD3B8\uC9D1\uC774 \uBE68\uB77C\uC9C0\uB294 \uC808\uC815\uC5D0\uC11C \uB208 \uD074\uB85C\uC988\uC5C5\uC744 \uC9E7\uAC8C \uC787\uB294\uB2E4.", "specify": "\uB514\uD14C\uC77C \uD558\uB098\uC758 \uC774\uB984, \uADF8\uAC83\uC774 \uD654\uBA74\uC744 \uCC44\uC6B4\uB2E4\uB294 \uBB38\uC7A5, \uB9E4\uD06C\uB85C\uC640 \uC595\uC740 \uC2EC\uB3C4.", "vertical": "\uC138\uB85C \uD654\uBA74\uC5D0\uC11C\uB294 \uAC00\uB85C \uD074\uB85C\uC988\uC5C5\uB9CC\uC73C\uB85C\uB3C4 \uC774 \uD06C\uAE30\uC5D0 \uAC00\uAE4C\uC6CC\uC9C4\uB2E4." },
+        "timing.insert": { "avoid": "1\uCD08 \uBD84\uB7C9\uC744 3~4\uCD08\uB85C \uCC44\uC6B0\uB294 \uAC83. \uBC18\uBCF5\uD574\uC11C \uBCF4\uC5EC \uC8FC\uB294 \uC778\uC11C\uD2B8\uB294 \uCC98\uC74C\uBCF4\uB2E4 \uC9E7\uAC8C.", "specify": "\uC77D\uC744 \uB300\uC0C1\uACFC \uBD84\uB7C9, \uCCAB \uB4F1\uC7A5\uC778\uC9C0 \uBC18\uBCF5\uC778\uC9C0, \uC0DD\uC131 \uAE38\uC774\uC640 \uC0AC\uC6A9 \uAE38\uC774." },
+        "timing.action": { "avoid": "\uD55C \uD074\uB9BD\uC5D0 \uB3D9\uC791\uC744 \uBAB0\uC544\uB123\uB294 \uAC83. \uBE60\uB978 \uC561\uC158\uC740 \uCEF7\uC744 \uB098\uB220 \uB3D9\uC791 \uC911\uC5D0 \uC790\uB978\uB2E4.", "specify": "\uC138 \uBC15\uC790(\uC608\uBE44\xB7\uC811\uCD09\xB7\uBC18\uC751 \uC815\uCC29)\uC758 \uB300\uB7B5 \uC2DC\uC810, \uB3C4\uCC29 \uC9C0\uC810\uC774 \uD654\uBA74 \uC548\uC5D0 \uB4E4\uC5B4\uC624\uB294\uC9C0." },
+        "timing.dialogue": { "avoid": "\uD55C \uC0AC\uB78C \uC0F7\uC5D0 \uC5EC\uB7EC \uC904\uACFC \uBC18\uC751\uC744 \uAE38\uAC8C \uBB36\uB294 \uAC83(\uD604\uB300 \uB300\uD654 \uD3B8\uC9D1\uC740 \uC904\uACFC \uBC18\uC751\uB9C8\uB2E4 \uC0F7\uC744 \uC900\uB2E4).", "specify": "\uB300\uC0AC \uC6D0\uBB38\uACFC \uBC1C\uD654 \uCD08, \uBC18\uC751\uC774 \uC2DC\uC791\uB418\uB294 \uC9C0\uC810\uACFC \uAF2C\uB9AC, \uD55C \uD074\uB9BD\uC5D0 \uB123\uC744 \uC904 \uC218." },
+        "timing.establishing": { "avoid": "\uC20F\uD3FC\uC758 \uCCAB \uCEF7(\uCCAB 3~6\uCD08 \uD6C5\uACFC \uBD80\uB52A\uCE5C\uB2E4).", "specify": "\uAD00\uAC1D\uC774 \uC77D\uC5B4\uC57C \uD560 \uACF5\uAC04 \uAD00\uACC4, \uCCAB \uBC29\uBB38\uC778\uC9C0 \uC7AC\uBC29\uBB38\uC778\uC9C0." },
+        "timing.long-take": { "avoid": "\uC6C0\uC9C1\uC784 \uC5C6\uC774 \uAE38\uC774\uB9CC \uB298\uB9AC\uB294 \uAC83.", "specify": "\uC5F0\uC18D \uC0AC\uAC74\uC758 \uC2DC\uC791\xB7\uB05D \uC0C1\uD0DC, \uCE74\uBA54\uB77C \uACBD\uB85C\uC758 \uC2DC\uC791\xB7\uB05D, \uC5B4\uB311\uD130 \uAE38\uC774 \uC0C1\uD55C." }
+      };
+      for (const [id, note] of Object.entries(GUIDE)) Object.assign(byId[id], note);
+      const PROMPT = {
+        "camera.static": "holds a static frame",
+        "camera.dolly-in": "pushes in toward {target}",
+        "camera.dolly-out": "pulls back from {target}",
+        "camera.slow-zoom-in": "zooms in on {target} from a fixed position",
+        "camera.arc": "arcs around {target}, keeping it centered",
+        "camera.follow": "follows behind {target} at a steady distance",
+        "camera.reverse-tracking": "tracks backward ahead of {target}, facing it",
+        "camera.handheld": "moves handheld with {target}, with a slight natural sway",
+        "camera.whip-pan": "whip pans to {target}",
+        "camera.crane-up": "cranes up above {target}",
+        "camera.snorricam": "stays body-mounted on {target}, the face fixed in frame while the background moves",
+        "camera.push-past": "pushes in past the foreground toward {target}",
+        "camera.dolly-zoom": "makes a dolly zoom on {target}, its size held while the background stretches",
+        "camera.side-tracking": "trucks sideways alongside {target}",
+        "camera.drone-pullback": "pulls back and rises above {target}",
+        "camera.pan-left": "pans left to {target}",
+        "camera.pan-right": "pans right to {target}",
+        "camera.tilt-up": "tilts upward to {target}",
+        "camera.tilt-down": "tilts downward to {target}",
+        "camera.crash-zoom": "crash zooms onto {target} in under half a second",
+        "camera.blast-pushback": "recoils backward from the shockwave of {target}, jolting once before it settles",
+        "camera.weapon-cam": "rides on the projectile as it flies toward {target}, its tip fixed low in the frame while the surroundings streak past",
+        "camera.pass-through": "chases close behind {target} and flies straight through each opening on the way",
+        "camera.drone-dive": "flies low and level behind {target}, then pitches straight down at the edge and dives",
+        "camera.relay": "stays in one unbroken take with {target}, then swings to the next fighter on each handoff action",
+        // A beat accent is a whole sentence; {cue} is the moment it fires on (the technique's `on`, else fields.cue).
+        "camera.speed-ramp": "Speed ramp: the action runs at normal speed, slows almost to a stop at {cue}, then snaps back to normal speed",
+        "camera.impact-shake": "Impact shake: the frame jolts once on {cue} and settles completely still in between"
+      };
+      for (const [id, prompt] of Object.entries(PROMPT)) byId[id].prompt = prompt;
+      const VALUES = {
+        "size": {
+          "ws": { "label": { "ko": "\uC640\uC774\uB4DC \uC0F7", "en": "Wide shot" }, "use": "\uB871\uC0F7(ls)\uACFC \uAC19\uC740 \uD06C\uAE30\uC758 \uC61B \uD0A4. \uC0C8 \uBCF4\uB4DC\uB294 ls\uB97C \uC4F4\uB2E4.", "avoid": "\uC57D\uC5B4 WS\uB294 \uD55C\uAD6D \uD604\uC7A5\uC5D0\uC11C \uC6E8\uC2A4\uD2B8 \uC0F7(\uD5C8\uB9AC \uC704)\uC73C\uB85C\uB3C4 \uC77D\uD78C\uB2E4.", "specify": "ls\uC640 \uAC19\uB2E4." },
+          "insert": { "label": { "ko": "\uC778\uC11C\uD2B8", "en": "Insert" }, "use": "\uC7A5\uBA74 \uC548\uC758 \uC0AC\uBB3C\xB7\uC190\xB7\uD654\uBA74 \uD558\uB098\uB97C \uB5BC\uC5B4 \uBCF4\uC5EC \uC900\uB2E4. \uC124\uBA85 \uB300\uC0AC \uC5C6\uC774 \uB2E8\uC11C\uC640 \uC815\uBCF4\uB97C \uC900\uB2E4.", "avoid": "\uB2E4\uB978 \uC7A5\uC18C\uB098 \uB2E4\uB978 \uC2DC\uAC04\uC774\uBA74 \uCEF7\uC5B4\uC6E8\uC774\uB2E4. \uC18C\uD488 \uC704\uCE58\uC640 \uC870\uBA85\uC774 \uBCF8 \uC7A5\uBA74\uACFC \uC5B4\uAE0B\uB098\uBA74 \uC5F0\uC18D\uC131\uC774 \uAE68\uC9C4\uB2E4.", "pair": "\uACF5\uAC04\uC744 \uBCF4\uC5EC \uC900 \uCEF7 \uB4A4\uC5D0 \uC624\uACE0, \uBCF4\uD1B5 \uADF8 \uC778\uBB3C\uC758 \uC2DC\uC120 \uAC01\uB3C4\uC5D0\uC11C \uCC0D\uB294\uB2E4.", "specify": "\uC0AC\uBB3C, \uC190\uC758 \uC8FC\uC778, \uC0C1\uD0DC, \uD654\uBA74 \uC18D \uAE00\uC790, \uC2DC\uC120 \uAC01\uB3C4. \uC5BC\uAD74\uC774 \uC5C6\uB2E4\uB294 \uB9D0 \uB300\uC2E0 \uD654\uBA74\uC744 \uCC44\uC6B0\uB294 \uAC83\uB9CC \uC801\uB294\uB2E4(only the hand and the phone fill the frame).", "vertical": "\uC138\uB85C\uB85C \uAE38\uCB49\uD55C \uC0AC\uBB3C\uC740 \uC138\uB85C \uD654\uBA74\uC5D0\uC11C \uAC00\uAE5D\uACE0 \uC790\uC138\uD558\uAC8C \uBCF4\uC778\uB2E4." },
+          "two": { "label": { "ko": "\uD22C\uC0F7", "en": "Two-shot" }, "use": "\uB450 \uC778\uBB3C\uC744 \uD55C \uD504\uB808\uC784\uC5D0 \uB2F4\uC544 \uAD00\uACC4\xB7\uD798\xB7\uAC70\uB9AC\uC640 \uBC18\uC751\uC744 \uD568\uAED8 \uBCF4\uC5EC \uC900\uB2E4. \uD06C\uAE30\uB294 \uB530\uB85C \uC815\uD55C\uB2E4.", "avoid": "\uC758\uB3C4 \uC5C6\uC774 \uBE44\uC881\uAC8C \uCC44\uC6B4 \uD504\uB808\uC784.", "pair": "\uD22C\uC0F7\uC73C\uB85C \uAD00\uACC4\uB97C \uC138\uC6B4 \uB4A4 \uC0F7/\uB9AC\uBC84\uC2A4\uC0F7\uC73C\uB85C \uB4E4\uC5B4\uAC04\uB2E4. \uC9C0\uC18D\uB418\uB294 \uD22C\uC0F7\uC740 \uBC30\uC6B0\uAC00 \uC790\uC138\uC640 \uC0C1\uCCB4\uB85C \uC5F0\uAE30\uD558\uAC8C \uD55C\uB2E4.", "specify": "\uB450 \uC778\uBB3C\uC758 \uC704\uCE58(\uC88C\uC6B0\xB7\uC55E\uB4A4), \uAC04\uACA9, \uC5BC\uAD74 \uBC29\uD5A5, \uC808\uB2E8\uC120, \uB204\uAC00 \uB9D0\uD558\uB294\uC9C0.", "vertical": "\uC606\uC73C\uB85C \uB098\uB780\uD788 \uC11C\uBA74 \uC5BC\uAD74\uC744 \uB123\uAE30 \uC5B4\uB835\uB2E4. \uD55C \uC0AC\uB78C\uC740 \uC55E, \uD55C \uC0AC\uB78C\uC740 \uB4A4\uB85C \uAE4A\uC774\uB97C \uB454\uB2E4." },
+          "three": { "label": { "ko": "\uC4F0\uB9AC\uC0F7", "en": "Three-shot" }, "use": "\uC138 \uC778\uBB3C\uC758 \uAD00\uACC4\uC640 \uC704\uACC4\uB97C \uD55C \uD504\uB808\uC784\uC5D0 \uB2F4\uB294\uB2E4. \uAC00\uC6B4\uB370\uB294 \uAD8C\uC704, \uACE0\uB978 \uAC04\uACA9\uC740 \uC870\uD654, \uB4F1\uC744 \uB3CC\uB9B0 \uD55C \uBA85\uC740 \uAC08\uB4F1. \uC640\uC774\uB4DC\uB85C \uC7A1\uC73C\uBA74 \uC7A5\uC18C\uB3C4 \uD568\uAED8 \uBCF4\uC778\uB2E4.", "avoid": "\uC0F7\uB2F9 \uC8FC\uC694 \uC778\uBB3C\uC740 \uB450 \uBA85\uAE4C\uC9C0\uB2E4. \uC138 \uBC88\uC9F8\uB294 \uCC38\uC870 \uC774\uBBF8\uC9C0 \uC5C6\uB294 \uC5D1\uC2A4\uD2B8\uB77C\uB85C \uBB18\uC0AC\uD558\uAC70\uB098 \uC0F7\uC744 \uB098\uB208\uB2E4.", "pair": "\uC640\uC774\uB4DC \uC4F0\uB9AC\uC0F7\uC73C\uB85C \uBB34\uB9AC\uC640 \uC7A5\uC18C\uB97C \uBCF4\uC778 \uB4A4 \uC2F1\uAE00\uB85C \uB098\uB208\uB2E4.", "specify": "\uC138 \uC0AC\uB78C\uC758 \uBC30\uCE58(\uC0BC\uAC01\uD615\xB7\uC77C\uB82C\xB7\uC55E\uB4A4)\uC640 \uC911\uC2EC\uC778\uBB3C, \uC808\uB2E8\uC120.", "vertical": "\uC138\uB85C \uD654\uBA74\uC5D0\uC11C \uC138 \uC0AC\uB78C\uC758 \uB300\uD654\uB294 \uB9E4\uC6B0 \uC5B4\uB835\uB2E4. \uC55E\xB7\uC911\uAC04\xB7\uB4A4\uB85C \uC313\uB294\uB2E4." },
+          "ots": { "label": { "ko": "\uC624\uBC84 \uB354 \uC204\uB354", "en": "Over the shoulder" }, "use": "\uC55E\uC0AC\uB78C \uC5B4\uAE68 \uB108\uBA38\uB85C \uC0C1\uB300 \uC5BC\uAD74\uC744 \uBCF8\uB2E4. \uB300\uD654\uC758 \uC8FC\uACE0\uBC1B\uC74C, \uC704\uCE58 \uAC10\uAC01, \uB450 \uC778\uBB3C\uC758 \uC5F0\uACB0.", "avoid": "\uB4F1\uC744 \uBCF4\uC774\uB294 \uBC30\uC6B0\uAC00 \uB108\uBB34 \uB9CE\uC774 \uBCF4\uC5EC \uC8FC\uC758\uB97C \uBE7C\uC557\uB294 \uAC01\uB3C4, \uB9AC\uBC84\uC2A4\uC5D0\uC11C 180\uB3C4 \uC120\uC744 \uB118\uB294 \uAC83.", "pair": "\uB450 OTS\uB97C \uBC88\uAC08\uC544 \uC0F7/\uB9AC\uBC84\uC2A4\uC0F7\uC744 \uB9CC\uB4E4\uACE0 \uC591\uCABD \uD06C\uAE30\uB97C \uB9DE\uCD98\uB2E4. OTS\uC5D0\uC11C \uC2F1\uAE00\uB85C \uBE60\uC838\uB098\uC624\uBA74 \uC7A5\uBA74\uC758 \uC804\uD658\uC744 \uC54C\uB9B0\uB2E4.", "specify": "\uC5B4\uAE68 \uC8FC\uC778\uACFC \uD654\uBA74 \uCABD(\uC88C\xB7\uC6B0), \uD750\uB9B0 \uC5B4\uAE68\uC640 \uB4A4\uD1B5\uC218, \uBA3C \uC778\uBB3C\uC758 \uC5BC\uAD74 \uD06C\uAE30\uC640 \uC2DC\uC120, \uC5B4\uAE68 \uB192\uC774 \uCE74\uBA54\uB77C.", "vertical": "\uC55E \uC5B4\uAE68\uB294 \uD654\uBA74 \uC544\uB798\uCABD, \uBA3C \uC5BC\uAD74\uC774 \uB192\uC774\uB97C \uB354 \uCC44\uC6B4\uB2E4. \uB450 OTS\uB97C \uB530\uB85C \uB9CC\uB4E4\uACE0 \uC2DC\uC120\uC744 \uB9DE\uCD98\uB2E4." },
+          "pov": { "label": { "ko": "1\uC778\uCE6D \uC2DC\uC810", "en": "Point of view" }, "use": "\uC778\uBB3C\uC758 \uB208\uB192\uC774\uC5D0\uC11C \uADF8\uAC00 \uBCF4\uB294 \uAC83. \uD06C\uAE30\uB294 \uB530\uB85C \uC815\uD558\uACE0 \uC2DC\uC810\uC740 camera.pov \uAE30\uBC95\uC73C\uB85C\uB3C4 \uC801\uB294\uB2E4.", "avoid": "\uBCF4\uB294 \uC0AC\uB78C\uC744 \uC55E\uB4A4 \uCEF7\uC5D0\uC11C \uC138\uC6B0\uC9C0 \uC54A\uC740 \uC2DC\uC810 \uC20F, \uBC18\uC751\uC774 \uC0AC\uB77C\uC9C8 \uB9CC\uD07C \uAE34 \uC2DC\uC810 \uC20F.", "pair": "\uBCF4\uB294 \uC5BC\uAD74 \u2192 \uC2DC\uC810 \uC20F \u2192 \uBC18\uC751 \uC5BC\uAD74.", "specify": "\uB204\uAD6C\uC758 \uB208\uC778\uC9C0, \uBCF4\uB294 \uB300\uC0C1\uACFC \uAC70\uB9AC, \uD654\uBA74 \uC544\uB798\uC5D0 \uAC78\uB9AC\uB294 \uC190, \uAC78\uC74C\uC758 \uD754\uB4E4\uB9BC.", "vertical": "\uC55E\uC73C\uB85C \uB098\uC544\uAC00\uB294 \uAE38\xB7\uBCF5\uB3C4 \uC2DC\uC810\uC774 \uC138\uB85C \uD654\uBA74\uC5D0 \uB9DE\uB294\uB2E4." },
+          "back": { "label": { "ko": "\uB4B7\uBAA8\uC2B5", "en": "From behind" }, "use": "\uB4A4\uC5D0\uC11C \uBCF8 \uC778\uBB3C. \uC5BC\uAD74\uC744 \uAC10\uCDB0 \uAD00\uAC1D\uC774 \uC0DD\uAC01\uC744 \uCC44\uC6B0\uAC8C \uD558\uACE0 \uC778\uBB3C\uC758 \uC2DC\uC57C\uB97C \uD568\uAED8 \uBCF8\uB2E4. \uC2DC\uC810\uC740 camera.rear\uB85C\uB3C4 \uC801\uACE0 \uD06C\uAE30\uB294 \uB530\uB85C \uC815\uD55C\uB2E4.", "avoid": "\uD45C\uC815\uC774 \uC815\uBCF4\uC778 \uC21C\uAC04.", "pair": "\uB4A4\uB530\uB974\uB294 \uC774\uB3D9(camera.follow)\uACFC \uD568\uAED8 \uACE0\uB974\uAE30 \uC27D\uB2E4.", "specify": "\uD06C\uB86D(\uBA38\uB9AC\xB7\uC5B4\uAE68/\uD5C8\uB9AC/\uC804\uC2E0), \uC778\uBB3C\uC774 \uD5A5\uD558\uB294 \uB300\uC0C1, \uB4A4\uC5D0\uC11C \uC54C\uC544\uBCFC \uB2E8\uC11C(\uBA38\uB9AC\xB7\uC637).", "vertical": "\uAE38\xB7\uD1B5\uB85C\xB7\uBCF5\uB3C4\uB97C \uB530\uB77C\uAC00\uB294 \uCD94\uC801\uC774 \uC138\uB85C \uD654\uBA74\uC5D0 \uB9DE\uB294\uB2E4." },
+          "cutaway": { "label": { "ko": "\uCEF7\uC5B4\uC6E8\uC774", "en": "Cutaway" }, "use": "\uC774\uC5B4\uC9C0\uB294 \uD589\uB3D9\uC744 \uB04A\uACE0 \uB2E4\uB978 \uAC83\uC744 \uBCF4\uC5EC \uC900 \uB4A4 \uB3CC\uC544\uC628\uB2E4. \uC18D\uB3C4 \uC870\uC808, \uC774\uC74C\uC0C8 \uAC10\uCD94\uAE30, \uB2E4\uB978 \uC2DC\uAC04\xB7\uC7A5\uC18C, \uCF54\uBBF8\uB514\uC758 \uD380\uCE58\uB77C\uC778. \uB4E3\uB294 \uC0AC\uB78C\uC774\uB098 \uBC18\uC751 \uAC19\uC740 \uC0AC\uB78C\uB3C4 \uB300\uC0C1\uC774\uB2E4.", "avoid": "\uBCF8 \uD589\uB3D9\uACFC \uAD00\uACC4\uC5C6\uB294 \uADF8\uB9BC.", "pair": "\uB3CC\uC544\uC628 \uC6D0\uB798 \uCEF7\uC5D0 \uC0C8 \uC758\uBBF8\uAC00 \uBD99\uB294\uB2E4.", "specify": "\uBB34\uC5C7\uC744, \uC5B4\uB514\uC11C(\uAC19\uC740 \uC7A5\uC18C\uC778\uC9C0 \uB2E4\uB978 \uC2DC\uAC04\uC778\uC9C0), \uD06C\uAE30, \uB3CC\uC544\uAC08 \uCEF7\uACFC \uC787\uB294 \uC2DC\uC120\xB7\uC18C\uB9AC." },
+          "reaction": { "label": { "ko": "\uB9AC\uC561\uC158 \uC0F7", "en": "Reaction shot" }, "use": "\uD654\uBA74\uC758 \uD589\uB3D9\uC774\uB098 \uB9D0\uC5D0 \uBC18\uC751\uD558\uB294 \uC5BC\uAD74(\uC0AC\uB78C\xB7\uB3D9\uBB3C). \uAD00\uAC1D\uC774 \uC5B4\uB5BB\uAC8C \uB290\uB084\uC9C0 \uC815\uD558\uACE0, \uB300\uD654 \uB9AC\uB4EC\uACFC \uCF54\uBBF8\uB514 \uD0C0\uC774\uBC0D\uC744 \uB9CC\uB4E0\uB2E4.", "avoid": "\uBB34\uC5C7\uC5D0 \uBC18\uC751\uD558\uB294\uC9C0 \uBCF4\uC5EC \uC8FC\uB294 \uC55E \uCEF7 \uC5C6\uC774 \uD640\uB85C \uB454 \uBC18\uC751.", "pair": "\uC790\uADF9(\uD589\uB3D9\xB7\uB9D0\xB7\uBCF8 \uAC83) \u2192 \uBC18\uC751. \uBC18\uC751 \uC5BC\uAD74\uC758 \uB73B\uC740 \uC55E \uCEF7\uC774 \uC815\uD55C\uB2E4.", "specify": "\uBC18\uC751\uD558\uB294 \uC778\uBB3C, \uBB34\uC5C7\uC5D0 \uBC18\uC751\uD558\uB294\uC9C0(\uD654\uBA74 \uBC16 \uBC29\uD5A5\uACFC \uC2DC\uC120), \uD074\uB9BD \uC548 \uD45C\uC815 \uBCC0\uD654(\uC2DC\uC791 \u2192 \uB05D), \uD06C\uAE30.", "vertical": "\uC138\uB85C \uD654\uBA74\uC5D0\uC11C\uB294 \uCDA9\uACA9\uC758 \uC21C\uAC04 \uC5BC\uAD74\uB85C \uB04A\uC5B4 \uAD00\uAC1D\uC774 \uBA3C\uC800 \uC77D\uAC8C \uD55C\uB2E4." }
+        },
+        "angle": {
+          "ground": { "label": { "ko": "\uC9C0\uBA74 \uB192\uC774", "en": "Ground level" }, "use": "\uCE74\uBA54\uB77C\uB97C \uBC14\uB2E5 \uAC00\uAE4C\uC774 \uB454\uB2E4. \uBC1C\uACFC \uBC14\uB2E5 \uC9C8\uAC10, \uC791\uC740 \uC874\uC7AC\uC758 \uC2DC\uC810, \uBC14\uB2E5\uC5D0 \uC549\uAC70\uB098 \uC4F0\uB7EC\uC9C4 \uC778\uBB3C. \uCDE8\uC57D\uD568\uC774\uB098 \uAE34\uC7A5\uC73C\uB85C \uC77D\uD790\uC9C0\uB294 \uC55E\uB4A4 \uCEF7\uC774 \uC815\uD55C\uB2E4.", "avoid": "\uC5BC\uAD74\uC774 \uC815\uBCF4\uC778 \uCEF7(\uB80C\uC988\uAC00 \uC218\uD3C9\uC774\uBA74 \uC120 \uC0AC\uB78C\uC758 \uC5BC\uAD74\uC740 \uD654\uBA74 \uC704\uB85C \uB098\uAC04\uB2E4). \uC704\uB97C \uB611\uBC14\uB85C \uC62C\uB824\uB2E4\uBCF4\uB294 \uC20F\uC740 low\uB85C \uC801\uB294\uB2E4.", "specify": "\uB80C\uC988\uAC00 \uC218\uD3C9\uC778\uC9C0 \uC704\uB85C \uAEBE\uC600\uB294\uC9C0, \uC804\uACBD\uC758 \uBC14\uB2E5\xB7\uBC1C\xB7\uBB3C\uCCB4, \uC5BC\uAD74\uC774 \uD654\uBA74\uC5D0 \uB4E4\uC5B4\uC624\uB294\uC9C0." },
+          "over": { "label": { "ko": "\uC5B4\uAE68 \uB108\uBA38", "en": "Over the shoulder" }, "use": "\uC55E\uC0AC\uB78C \uC5B4\uAE68 \uB108\uBA38\uC758 \uC2DC\uC810. \uB300\uD654\uC758 \uB9AC\uBC84\uC2A4 \uCEE4\uBC84\uB9AC\uC9C0\uC640 \uB450 \uC778\uBB3C\uC758 \uC704\uCE58 \uAD00\uACC4.", "avoid": "\uC575\uAE00 \uCE78\uC5D0 over\uB97C \uB450\uBA74 \uB85C\uC6B0\xB7\uD558\uC774\uB97C \uD568\uAED8 \uC801\uC744 \uC218 \uC5C6\uB2E4. \uB192\uC774\uB294 eye\xB7low\xB7high\uB85C \uACE0\uB974\uACE0 \uC5B4\uAE68 \uB108\uBA38 \uAD6C\uC131\uC740 \uD06C\uAE30 ots\uB098 \uCE74\uBA54\uB77C framing\uC5D0 \uC801\uB294 \uD3B8\uC774 \uB0AB\uB2E4.", "specify": "\uB204\uAD6C\uC758 \uC5B4\uB290 \uC5B4\uAE68\uC778\uC9C0, \uB204\uAD6C\uB97C \uBCF4\uB294\uC9C0, \uB9AC\uBC84\uC2A4\uC5D0\uC11C\uB3C4 \uAC19\uC740 \uD3B8." }
+        },
+        "depth": {
+          "shallow": { "label": { "ko": "\uC595\uC740 \uC2EC\uB3C4", "en": "Shallow focus" }, "use": "\uD55C \uBA74\uB9CC \uC120\uBA85\uD558\uAC8C \uB450\uC5B4 \uC778\uBB3C\uC774\uB098 \uC0AC\uBB3C\uC744 \uBC30\uACBD\uC5D0\uC11C \uB5BC\uC5B4 \uB0B8\uB2E4.", "avoid": "\uAE30\uBCF8\uAC12\uC73C\uB85C \uAE54\uAE30(\uD750\uB9B0 \uBC30\uACBD\uC740 \uAE30\uBCF8\uAC12\uC774 \uC544\uB2C8\uB2E4). \uC77D\uC744 \uAC83\uC774 \uB458\uC774\uBA74 \uB799 \uD3EC\uCEE4\uC2A4\uB098 \uB525\uD3EC\uCEE4\uC2A4.", "specify": "\uC120\uBA85\uD55C \uB300\uC0C1(\uB204\uAD6C\uC758 \uC5B4\uB290 \uB208, \uC5B4\uB5A4 \uBB3C\uCCB4)\uACFC \uD750\uB824\uC9C8 \uAC83, \uC7A5\uCD08\uC810 \uB80C\uC988." },
+          "deep": { "label": { "ko": "\uB525\uD3EC\uCEE4\uC2A4", "en": "Deep focus" }, "use": "\uC55E\uACFC \uB4A4\uC758 \uD589\uB3D9\uC744 \uCEF7 \uC5C6\uC774 \uD55C \uD654\uBA74\uC5D0 \uB2F4\uC544 \uAD00\uAC1D\uC774 \uC7A5\uBA74\uC744 \uC77D\uAC8C \uD55C\uB2E4.", "avoid": "\uBCFC \uC21C\uC11C\uB97C \uC5F0\uCD9C\uD558\uC9C0 \uC54A\uC740 \uB525\uD3EC\uCEE4\uC2A4. \uB300\uC0AC\xB7\uC6C0\uC9C1\uC784\xB7\uBE5B\uC73C\uB85C \uC2DC\uC120 \uC21C\uC11C\uB97C \uC9E0\uB2E4.", "specify": "\uC55E\xB7\uC911\uAC04\xB7\uB4A4 \uBA74\uC744 \uD480\uC5B4 \uC4F4\uB2E4(sharp focus from A in the foreground through B to C in the background), \uBA3C\uC800 \uBCFC \uB300\uC0C1\uACFC \uADF8 \uACC4\uAE30." },
+          "none": { "label": { "ko": "\uC2EC\uB3C4 \uC120\uD0DD \uC5C6\uC74C", "en": "No depth choice" }, "use": "\uD3C9\uBA74 \uB3C4\uD45C\xB7\uAE00\uC790 \uD310\uCC98\uB7FC \uCD08\uC810\uBA74\uC774 \uC5C6\uB294 \uADF8\uB9BC.", "avoid": "3D \uC624\uBE0C\uC81D\uD2B8\uB97C \uB80C\uB354\uD558\uB294 \uC2AC\uB77C\uC774\uB4DC(\uC2EC\uB3C4\uB97C \uACE0\uB97C \uC218 \uC788\uB2E4).", "specify": "\uC2EC\uB3C4 \uB0B1\uB9D0\uC744 \uB123\uC9C0 \uC54A\uB294\uB2E4." }
+        },
+        "still": {
+          "focus-in": { "label": { "ko": "\uD3EC\uCEE4\uC2A4 \uC778", "en": "Focus in" }, "use": "\uC778\uBB3C \uC18C\uAC1C. \uB2E4\uAC00\uAC00\uBA70 \uBC30\uACBD\uC744 \uD750\uB824 \uC5BC\uAD74\uB85C \uAD00\uC2EC\uC744 \uBAA8\uC740\uB2E4.", "avoid": "\uC778\uBB3C\uACFC \uAC19\uC740 \uAC70\uB9AC\uC758 \uC0AC\uBB3C\uC744 \uB2E4\uB974\uAC8C \uD750\uB9AC\uB294 \uADF8\uB9BC, \uC18C\uAC1C\uD560 \uC778\uBB3C\uC774 \uC5C6\uB294 \uCEF7.", "specify": "\uC5BC\uAD74(\uB208) \uC601\uC5ED, \uD568\uAED8 \uC120\uBA85\uD574\uC57C \uD560 \uAC19\uC740 \uAC70\uB9AC\uC758 \uC0AC\uBB3C, \uC778\uBB3C\uC744 \uBD80\uB974\uB294 \uB0B4\uB808\uC774\uC158 \uC2DC\uC810." },
+          "rack-focus": { "label": { "ko": "\uB799 \uD3EC\uCEE4\uC2A4", "en": "Rack focus" }, "use": "\uD55C \uB300\uC0C1\uC5D0\uC11C \uB2E4\uB978 \uB300\uC0C1\uC73C\uB85C \uAD00\uC2EC\uC744 \uC62E\uAE30\uACE0 \uB193\uCE5C \uC694\uC18C\uB97C \uB4DC\uB7EC\uB0B8\uB2E4.", "avoid": "\uB450 \uB300\uC0C1\uC774 \uAC19\uC740 \uAC70\uB9AC\uC5D0 \uC788\uAC70\uB098 \uAD00\uC2EC\uC744 \uC62E\uAE38 \uACC4\uAE30\uAC00 \uC5C6\uC744 \uB54C.", "specify": "\uBA3C\uC800 \uC120\uBA85\uD55C \uC601\uC5ED\uACFC \uB098\uC911 \uC601\uC5ED, \uAC01\uC790\uC758 \uC55E\uB4A4 \uAC70\uB9AC, \uC62E\uAE30\uB294 \uACC4\uAE30." },
+          "approach": { "label": { "ko": "\uC5B4\uD504\uB85C\uCE58", "en": "Approach" }, "use": "\uB2E8\uC11C\uB85C \uCC9C\uCC9C\uD788 \uB2E4\uAC00\uAC04\uB2E4. \uB05D\uC5D0\uC11C \uBB34\uC5B8\uAC00 \uBC14\uB014 \uB54C \uD798\uC774 \uC788\uB2E4.", "avoid": "\uBAA9\uC801\uC9C0 \uC5C6\uB294 \uC90C, \uBAA8\uB4E0 \uCEF7\uC5D0 \uAC19\uC740 \uB2E4\uAC00\uAC00\uAE30.", "specify": "\uB2E8\uC11C \uC601\uC5ED, \uB3C4\uCC29 \uBC30\uC728(\uC5C5\uC2A4\uCF00\uC77C 1.5\uBC30 \uC774\uD558), \uB0B4\uB808\uC774\uC158\uC774 \uB2E8\uC11C\uB97C \uB9D0\uD558\uB294 \uC2DC\uC810." },
+          "pull": { "label": { "ko": "\uD480", "en": "Pull" }, "use": "\uB113\uC5B4\uC9C0\uBA70 \uC7A5\uC18C\xB7\uB2E4\uB978 \uC778\uBB3C\xB7\uACE0\uB9BD\uC744 \uB4DC\uB7EC\uB0B8\uB2E4. \uC7A5\uBA74\uC774 \uB05D\uB09C\uB2E4\uB294 \uC2E0\uD638.", "avoid": "\uB113\uC5B4\uC838\uB3C4 \uC0C8\uB85C \uB4DC\uB7EC\uB098\uB294 \uAC83\uC774 \uC5C6\uC744 \uB54C.", "specify": "\uC2DC\uC791 \uC601\uC5ED\uACFC \uB05D \uD504\uB808\uC784, \uB4DC\uB7EC\uB098\uB294 \uAC83." },
+          "pan": { "label": { "ko": "\uD32C", "en": "Pan" }, "use": "\uD55C \uB300\uC0C1\uC5D0\uC11C \uB2E4\uB978 \uB300\uC0C1\uC73C\uB85C \uC62E\uAE30\uAC70\uB098 \uD654\uBA74 \uBC16 \uACF5\uAC04\uC744 \uB04C\uC5B4\uB4E4\uC778\uB2E4.", "avoid": "\uC6D0\uBCF8\uC774 \uC774\uB3D9 \uBC29\uD5A5\uC73C\uB85C \uD654\uBA74\uBCF4\uB2E4 \uB113\uC9C0 \uC54A\uC744 \uB54C(\uC774\uB3D9 \uD3ED\uC774 \uD654\uBA74\uC758 13% \uC548\uD30E\uC5D0 \uADF8\uCE5C\uB2E4), \uB108\uBB34 \uBE60\uB978 \uC774\uB3D9.", "specify": "\uCD9C\uBC1C\xB7\uB3C4\uCC29 \uC601\uC5ED, \uC6D0\uBCF8 \uBE44\uC728, \uB3C4\uCC29\uACFC \uB0B4\uB808\uC774\uC158\uC758 \uC2DC\uC810." },
+          "tilt": { "label": { "ko": "\uD2F8\uD2B8", "en": "Tilt" }, "use": "\uB192\uC774\uB97C \uC2DC\uAC04\uC73C\uB85C \uBCF4\uC5EC \uC900\uB2E4. \uC5BC\uAD74\uC744 \uB2A6\uAC8C \uB4DC\uB7EC\uB0B4\uB294 \uB9AC\uBE4C. \uC62C\uB824\uB2E4\uBCF4\uB294 \uCABD\uC774 \uD798\uC73C\uB85C \uC77D\uD790\uC9C0 \uCDE8\uC57D\uD568\uC73C\uB85C \uC77D\uD790\uC9C0\uB294 \uC55E\uB4A4 \uCEF7\uC774 \uC815\uD55C\uB2E4.", "avoid": "\uC6D0\uBCF8\uC5D0 \uC138\uB85C \uC5EC\uC720\uAC00 \uC5C6\uC744 \uB54C(9:16 \uD654\uBA74\uC774\uBA74 \uC6D0\uBCF8\uC774 \uD654\uBA74\uBCF4\uB2E4 \uAE38\uCB49\uD574\uC57C \uD55C\uB2E4).", "specify": "\uC544\uB798\xB7\uC704 \uC601\uC5ED, \uB3C4\uCC29\uC810\uC5D0\uC11C \uB4DC\uB7EC\uB098\uB294 \uAC83." },
+          "push": { "label": { "ko": "\uD478\uC2DC", "en": "Push" }, "use": "\uB290\uB9B0 \uC90C\uC778. \uC0AC\uC9C4 \uD55C \uC7A5 \uC548\uC5D0\uC11C \uB514\uD14C\uC77C\uB85C \uB2E4\uAC00\uAC04\uB2E4.", "avoid": "\uBAA9\uC801\uC9C0 \uC5C6\uB294 \uAE30\uBCF8 \uC90C\uC758 \uBC18\uBCF5(\uD074\uB9AC\uC170). \uC2DC\uC791\uACFC \uB05D \uD504\uB808\uC784\uC744 \uACE0\uB978\uB2E4.", "specify": "\uC90C\uC774 \uB05D\uB098\uB294 \uB300\uC0C1 \uC601\uC5ED, \uC6C0\uC9C1\uC5EC\uC57C \uD558\uB294 \uC774\uC720, \uB05D\uC5D0\uC11C \uBC14\uB00C\uB294 \uAC83." },
+          "reveal": { "label": { "ko": "\uB9AC\uBE4C", "en": "Reveal" }, "use": "\uC228\uACA8 \uB454 \uB300\uC0C1\uC744 \uB2A6\uAC8C \uB4DC\uB7EC\uB0B8\uB2E4. \uC804\uACBD \uB808\uC774\uC5B4\uAC00 \uBE44\uD0A4\uB294 \uBC29\uC2DD\uC740 \uC900\uBE44\uB41C \uB808\uC774\uC5B4\uAC00 \uD544\uC694\uD558\uB2E4.", "avoid": "\uC804\uACBD \uC640\uC774\uD504\uC758 \uB0A8\uC6A9, \uB808\uC774\uC5B4 \uB4A4 \uBC30\uACBD\uC758 \uBE48\uD2C8.", "specify": "\uC804\uACBD \uB808\uC774\uC5B4\uC640 \uADF8 \uB4A4 \uBC30\uACBD, \uB4DC\uB7EC\uB098\uB294 \uB300\uC0C1\uACFC \uC2DC\uC810, \uBE60\uC9C0\uB294 \uBC29\uD5A5." },
+          "parallax": { "label": { "ko": "\uD328\uB7F4\uB799\uC2A4", "en": "Parallax" }, "use": "\uD3C9\uBA74 \uC0AC\uC9C4\uC744 \uB808\uC774\uC5B4\uB85C \uB098\uB220 \uC785\uCCB4\uCC98\uB7FC \uC6C0\uC9C1\uC778\uB2E4.", "avoid": "\uD074\uB9AC\uC170\uAC00 \uB418\uAE30 \uC27D\uACE0, \uADF8\uB9BC\uC790\uAC00 \uD568\uAED8 \uC6C0\uC9C1\uC774\uC9C0 \uC54A\uC73C\uBA74 \uAC00\uC9DC\uCC98\uB7FC \uBCF4\uC778\uB2E4. \uC791\uAC8C \uC6C0\uC9C1\uC778\uB2E4.", "specify": "\uB808\uC774\uC5B4 \uBAA9\uB85D(\uC55E \u2192 \uB4A4)\uACFC \uAE4A\uC774, \uB808\uC774\uC5B4\uB9C8\uB2E4 \uB4A4 \uBC30\uACBD \uCC44\uC6C0, \uC791\uC740 \uC774\uB3D9\uB7C9." },
+          "hold": { "label": { "ko": "\uC815\uC9C0", "en": "Hold" }, "use": "\uD504\uB808\uC784\uC744 \uC6C0\uC9C1\uC774\uC9C0 \uC54A\uACE0 \uADF8\uB9BC \uD558\uB098\uB97C \uBD99\uC7A1\uB294\uB2E4. \uD380\uCE58\uB77C\uC778 \uB4A4\uC758 \uC815\uC801, \uC77D\uC5B4\uC57C \uD560 \uBB38\uC11C\xB7\uD45C\uC815, \uC55E\uB4A4 \uC774\uB3D9 \uCEF7 \uC0AC\uC774\uC758 \uC27C\uD45C. \uB4A4\uC5D0 \uC624\uB294 \uC791\uC740 \uC6C0\uC9C1\uC784\uC774 \uCEE4 \uBCF4\uC778\uB2E4.", "avoid": "\uBCF4\uC5EC \uC904 \uBCC0\uD654\uAC00 \uC5C6\uB294 \uAE34 \uCEF7, \uC5F0\uB2EC\uC544 \uBD99\uB294 \uC815\uC9C0 \uCEF7. \uAE38\uAC8C \uBD99\uC7A1\uC744 \uC774\uC720\uAC00 \uC5C6\uC73C\uBA74 \uC9E7\uAC8C \uB04A\uB294\uB2E4.", "specify": "\uBD99\uC7A1\uC744 \uB300\uC0C1(focusTo \uC601\uC5ED\uC774 \uC788\uC73C\uBA74 \uADF8 \uC790\uB9AC), \uBD99\uC7A1\uB294 \uC774\uC720, \uCEF7 \uAE38\uC774." }
+        }
+      };
+      const ENTRY_PREFIX = { size: "framing.", angle: "camera." };
+      const own = (o, k) => o && Object.prototype.hasOwnProperty.call(o, k) ? o[k] : null;
+      function guide(attribute, value) {
+        const prefix = own(ENTRY_PREFIX, attribute);
+        return prefix && own(byId, prefix + value) || own(own(VALUES, attribute), String(value));
+      }
+      const NOTE_LABELS = { avoid: ["\uD53C\uD560 \uB54C", "Avoid"], pair: ["\uC55E\uB4A4 \uCEF7", "Neighbours"], specify: ["\uC801\uC744 \uAC83", "Name in the prompt"], vertical: ["9:16", "9:16"] };
+      function notes(card, lang) {
+        return card ? Object.keys(NOTE_LABELS).filter((key) => card[key]).map((key) => "<p><b>" + NOTE_LABELS[key][lang === "ko" ? 0 : 1] + "</b> " + esc2(card[key]) + "</p>").join("") : "";
+      }
+      function validate2(selection) {
+        if (!Array.isArray(selection)) return ["shot.techniques must be an array"];
+        const errors = [], seen = /* @__PURE__ */ new Set();
+        for (const item of selection) {
+          if (!item || !byId[item.id]) errors.push("Unknown technique: " + String(item?.id));
+          if (seen.has(item?.id)) errors.push("Duplicate technique: " + String(item?.id));
+          seen.add(item?.id);
+          if (item?.id !== "camera.static" && (typeof item?.reason !== "string" || !item.reason.trim())) errors.push("Technique needs this shot\u2019s reason: " + String(item?.id));
+        }
+        return errors;
+      }
+      function selected(scene) {
+        return Array.isArray(scene.shot?.techniques) ? scene.shot.techniques.map((item) => ({ ...item, entry: byId[item?.id] })) : [];
+      }
+      function instructions(scene) {
+        return selected(scene).filter((item) => item.entry && ["camera", "framing"].includes(item.entry.category)).map((item) => item.entry.category === "framing" ? "Opening frame: " + item.entry.instruction + "." : item.entry.instruction).join(" ");
+      }
+      function sourceInstructions(scene, phase = "start", endpoint2 = false) {
+        return selected(scene).filter((item) => item.entry).map(({ entry: entry2, from, to }) => {
+          if (entry2.category === "framing") return endpoint2 ? "" : (phase === "end" ? "Final frame: " : "Opening frame: ") + entry2.instruction + ".";
+          if (entry2.fields.viewpoint || entry2.fields.angle) return endpoint2 ? "" : entry2.instruction;
+          if (entry2.fields.focus === "rack") return from && to ? "Stage " + from + " and " + to + " at clearly different distances from the camera, " + (phase === "end" ? to : from) + " in sharp focus." : "Stage the named near and far focus targets at distinct depths; use the authored " + (phase === "end" ? "closing" : "opening") + " focus.";
+          return "";
+        }).filter(Boolean).join(" ");
+      }
+      function findings(scene) {
+        const selection = scene.shot?.techniques;
+        if (selection === void 0) return [];
+        const notes2 = validate2(selection), sh = scene.shot || {}, cam = scene.visual?.camera || {};
+        const chosen = selected(scene).filter((item) => item.entry);
+        const frames = chosen.filter((item) => item.entry.category === "framing");
+        const viewpoints = new Set(chosen.map((item) => item.entry.fields.viewpoint).filter(Boolean));
+        if (viewpoints.size > 1) notes2.push("Conflicting viewpoints: choose one opening viewpoint; describe a deliberate viewpoint transition in camera.end.");
+        if (frames.length > 1) notes2.push("Multiple starting frame sizes: choose one; describe the ending crop in camera.end.");
+        for (const { entry: entry2 } of chosen) {
+          if (entry2.fields.size && sh.size !== entry2.fields.size) notes2.push(entry2.id + " conflicts with shot.size " + String(sh.size));
+          if (entry2.fields.angle && sh.angle !== entry2.fields.angle) notes2.push(entry2.id + " conflicts with shot.angle " + String(sh.angle));
+          if (entry2.fields.movement && !String(cam.movement || "").toLowerCase().trim().startsWith(entry2.fields.movement)) notes2.push(entry2.id + " needs camera movement " + entry2.fields.movement);
+        }
+        if (chosen.some((x2) => x2.entry.id === "camera.static") && chosen.some((x2) => x2.entry.fields.movement && x2.entry.id !== "camera.static")) notes2.push("Static camera conflicts with a selected moving-camera technique.");
+        return notes2;
+      }
+      function icon(entry2) {
+        const body = entry2.glyph.startsWith("<") ? entry2.glyph : '<path d="' + entry2.glyph + '"/>';
+        return '<svg viewBox="0 0 32 32" width="40" height="40" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' + body + "</svg>";
+      }
+      function tiles(scene, lang) {
+        const items = selected(scene);
+        if (!items.length) return "";
+        return '<div class="technique-tiles">' + items.map(({ entry: entry2, id, reason }) => '<details class="technique-tile"><summary>' + (entry2 ? icon(entry2) : "") + "<span>" + esc2(entry2?.label[lang] || entry2?.label.en || id) + "</span></summary><p>" + esc2(reason) + "</p><p>" + esc2(entry2?.use || "Unknown technique") + "</p>" + notes(entry2, lang) + '<p lang="en">' + esc2(entry2?.instruction || "") + "</p><small>" + esc2(id) + "</small></details>").join("") + "</div>";
+      }
+      function legend(lang) {
+        return '<details class="technique-library"><summary>' + (lang === "ko" ? "\uAE30\uBC95 \uC0AC\uC804 \xB7 \uC544\uC774\uCF58\uACFC \uC120\uD0DD \uAE30\uC900" : "Technique catalogue \xB7 icons and selection guidance") + "</summary><p>" + (lang === "ko" ? "\uC7A5\uBA74\uC758 \uC815\uBCF4\uC640 \uD589\uB3D9\uC744 \uBA3C\uC800 \uC815\uD55C \uB4A4 \uAE30\uBC95\uC744 \uACE0\uB974\uC138\uC694. \uC544\uC774\uCF58\uC740 \uACC4\uD68D\uC744 \uC124\uBA85\uD558\uBA70 \uC2E4\uC81C \uC601\uC0C1 \uAC80\uC99D\uC744 \uB73B\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. \uC4F0\uC784\uC740 \uD604\uC5C5\uC774 \uAE30\uB300\uB294 \uAD00\uB840\uC785\uB2C8\uB2E4. \uCE74\uBA54\uB77C \uC774\uB3D9\uC758 \uC815\uC11C \uD6A8\uACFC\uB294 \uC2E4\uD5D8\uC73C\uB85C \uD655\uC778\uB418\uC9C0 \uC54A\uC558\uACE0, \uC575\uAE00 \uD6A8\uACFC(\uB85C\uC6B0\uB294 \uC138 \uBCF4\uC774\uACE0 \uD558\uC774\uB294 \uC57D\uD574 \uBCF4\uC778\uB2E4)\uB294 \uC0AC\uC9C4\uC744 \uC774\uC57C\uAE30 \uC21C\uC11C\uB85C \uBCFC \uB54C\uB9CC \uB098\uD0C0\uB0AC\uC2B5\uB2C8\uB2E4." : "Choose from the scene\u2019s information and action. Icons describe a plan, not verified footage. Uses are practitioners\u2019 conventions: no experiment shows a camera move\u2019s emotional effect, and the angle effects (low reads strong, high reads weak) appeared only when the pictures ran as a story.") + "</p>" + ["character", "camera", "framing", "timing"].map((category) => "<h3>" + (lang === "ko" ? { character: "\uCE90\uB9AD\uD130 \uCC38\uC870", camera: "\uCE74\uBA54\uB77C \uAE30\uBC95", framing: "\uD504\uB808\uC784 \uD06C\uAE30", timing: "\uCEF7 \uC2DC\uAC04" }[category] : { character: "Character references", camera: "Camera techniques", framing: "Frame sizes", timing: "Cut timing" }[category]) + '</h3><div class="technique-tiles">' + entries.filter((e2) => e2.category === category).map((e2) => '<details class="technique-tile"><summary>' + icon(e2) + "<span>" + esc2(e2.label[lang] || e2.label.en) + "</span></summary><p>" + esc2(e2.use) + "</p>" + notes(e2, lang) + '<p lang="en">' + esc2(e2.instruction) + "</p><small>" + esc2(e2.id) + "</small></details>").join("") + "</div>").join("") + "</details>";
+      }
+      const api2 = { VERSION: VERSION2, entries, byId, VALUES, guide, SIZE_WORDS, SIZE_GLYPHS, validate: validate2, selected, instructions, sourceInstructions, findings, icon, tiles, legend };
+      if (typeof module === "object" && module.exports) module.exports = api2;
+      else root.FILM_TECHNIQUES = api2;
+    })(typeof window === "object" ? window : globalThis);
+  }
+});
+
+// ../skills/storyboard/references/scene-direction.js
+var require_scene_direction = __commonJS({
+  "../skills/storyboard/references/scene-direction.js"(exports, module) {
+    (function(root) {
+      "use strict";
+      const catalogue = () => typeof module === "object" && module.exports ? require_film_techniques() : root.FILM_TECHNIQUES;
+      const labels = {
+        camera: ["\uCE74\uBA54\uB77C", "Camera"],
+        axis: ["\uCD2C\uC601 \uCD95", "Screen axis"],
+        continuity: ["\uACF5\uAC04 \uC5F0\uC18D\uC131", "Continuity"],
+        lighting: ["\uC870\uBA85", "Lighting"],
+        attention: ["\uC2DC\uC120 \uD750\uB984", "Attention"]
+      };
+      const movement = (id) => catalogue().byId[id]?.fields?.movement;
+      const text4 = (value) => typeof value === "string" ? value.trim() : "";
+      function actingFields(acting, includeVocal, seen, redact, accept = Boolean) {
+        const words = [];
+        for (const key of ["direction", "context", "intent", "emotion", "vocal", "visual"]) {
+          const value = text4(acting[key]);
+          if (!value || seen.has(value) || key === "vocal" && !includeVocal) continue;
+          const cue = redact(value);
+          if (!accept(cue)) continue;
+          seen.add(value);
+          words.push(key + ": " + cue);
+        }
+        const tags = (acting.tags || []).map(redact).filter(accept);
+        if (tags.length) words.push("vocal events: " + tags.join(", "));
+        return words;
+      }
+      const actingPauses = (lead, tail) => lead || tail ? "Anticipation " + (lead || 0) + " seconds; reaction " + (tail || 0) + " seconds." : "";
+      function orderedSpeech(card) {
+        const lines = card.narration || [];
+        if (!card.performance?.length) return lines;
+        const groups = /* @__PURE__ */ new Set();
+        for (const event of card.performance) {
+          if ((event.kind === "dialogue" || event.kind === "narration") && Number.isInteger(event.group) && lines[event.group - 1])
+            groups.add(event.group - 1);
+        }
+        lines.forEach((_, index) => groups.add(index));
+        return Array.from(groups, (index) => lines[index]);
+      }
+      function notes(card, accept = Boolean, visualOnly = false) {
+        const visual = card.visual || {}, video2 = visual.video || {}, source = video2.promptSource || {};
+        const design = card.shot?.videoDesign || {}, lines = card.narration || [];
+        const spoken = lines.map((line) => text4(line.tts)).filter(Boolean);
+        const redact = (cue) => spoken.reduce((result, line) => result.split(line).join("the authored line"), cue);
+        const beats = [], groups = /* @__PURE__ */ new Set();
+        function addLine(line, group, prefix, event = {}) {
+          if (!line) return;
+          const acting = { ...line.acting };
+          if (text4(event.videoDirection)) acting.visual = event.videoDirection;
+          if (visualOnly || line.delivery === "voiceover") {
+            delete acting.vocal;
+            delete acting.direction;
+            delete acting.tags;
+          } else if (acting.vocal) delete acting.direction;
+          const fields2 = actingFields(acting, line.delivery !== "voiceover", /* @__PURE__ */ new Set(), redact, accept);
+          const pauses = actingPauses(acting.leadInSeconds, acting.tailOutSeconds);
+          const to = text4(event.to) || text4(line.to);
+          if (to && accept(redact(to))) fields2.unshift("Addressed to " + redact(to) + ".");
+          if (pauses) fields2.push(pauses);
+          if (fields2.length || card.performance?.length) {
+            const who = [line.speaker, line.id].filter(Boolean).join(", ");
+            beats.push(prefix + "line " + group + (who ? " (" + who + ")" : "") + (fields2.length ? ": " + fields2.join(" ") : "."));
+          }
+          groups.add(group);
+        }
+        (card.performance || []).forEach((event, i2) => {
+          if (event.kind !== "action") return addLine(lines[event.group - 1], event.group, "Beat " + (i2 + 1) + " with ", event);
+          const cue = redact(text4(event.videoDirection) || text4(event.text));
+          if (!cue || !accept(cue)) return;
+          const duration5 = event.durationSeconds ? " for " + event.durationSeconds + " s" : "";
+          const withLine = event.withGroup ? " with speech group " + event.withGroup : "";
+          beats.push("Beat " + (i2 + 1) + (event.character ? " (" + event.character + ")" : "") + duration5 + withLine + ": " + cue);
+        });
+        lines.forEach((line, i2) => {
+          if (!groups.has(i2 + 1)) addLine(line, i2 + 1, "With ");
+        });
+        const seen = /* @__PURE__ */ new Set();
+        const actions = [card.timeline?.action, source.action, design.action, visual.action, design.motion?.visibleChange].map(text4).filter((cue) => {
+          const key = cue.toLowerCase().replace(/[.!?\s]+$/, "");
+          if (!key || seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        const fallback = [card.summary, video2.prompt].map(text4).filter(Boolean);
+        const motion = (design.motion?.beats || []).filter((beat) => text4(beat?.state)).map((beat) => (Number.isFinite(beat.at) ? "At " + beat.at + " s into this shot: " : "") + text4(beat.state));
+        return {
+          actions: actions.length ? actions : fallback.slice(0, 1),
+          fallback,
+          motion,
+          blocking: text4(design.before),
+          sound: text4(source.sound) || text4(design.sound),
+          end: text4(source.end) || text4(design.after) || text4(visual.frames?.endState),
+          beats
+        };
+      }
+      function base(scene = {}) {
+        const defaults2 = scene.directionDefaults || {};
+        const rows = {};
+        for (const key of Object.keys(labels)) {
+          const value = defaults2[key] || key === "camera" && scene.videoDirection?.camera;
+          if (!value) continue;
+          const fields2 = key === "camera" && catalogue().byId[value]?.fields;
+          rows[key] = { value, source: "scene", ...fields2?.movement ? { id: value } : {}, ...fields2?.speed ? { speed: fields2.speed } : {} };
+        }
+        return rows;
+      }
+      function withCameraDefaults(cards, scenes) {
+        if (!scenes?.length) return cards;
+        const byScene = new Map(scenes.map((scene) => [scene.no, base(scene).camera]));
+        return cards.map((card) => {
+          const row = byScene.get(card?.scene), mode = card?.shot?.render?.mode;
+          if (!row || mode && mode !== "generated_video" || text4(card.visual?.camera?.movement) || catalogue().selected(card).some((choice2) => choice2.entry?.fields.movement)) return card;
+          const camera = { ...row.speed ? { speed: row.speed } : {}, ...card.visual?.camera, movement: row.id ? movement(row.id) : row.value };
+          const shot = row.id ? { ...card.shot, techniques: [...card.shot?.techniques || [], { id: row.id }] } : card.shot;
+          return { ...card, shot, visual: { ...card.visual, camera } };
+        });
+      }
+      function resolve15(scene, cards) {
+        const defaults2 = base(scene);
+        let crossed;
+        const shots = cards.map((card) => {
+          const plan2 = card.shot || {}, camera = card.visual?.camera || {}, space = plan2.space || {};
+          const rows = { ...defaults2 };
+          if (text4(plan2.lineCrossing?.to)) crossed = text4(plan2.lineCrossing.to);
+          const selected = catalogue().selected(card);
+          const technique = selected.find((t2) => t2.entry?.fields.movement);
+          const move = camera.movement || technique?.entry.fields.movement;
+          if (move) {
+            const entry2 = technique?.entry.fields.movement === move ? technique.entry : catalogue().entries.find((e2) => e2.fields.movement === move);
+            const speed = camera.speed || technique?.entry.fields.speed;
+            rows.camera = { value: move, id: entry2?.id, source: "shot", ...speed ? { speed } : {} };
+          }
+          if (plan2.lineNeutral) rows.axis = { value: "Camera on the axis.", source: "shot" };
+          else if (text4(space.line) || crossed) rows.axis = { value: text4(space.line) || crossed, source: space.line || plan2.lineCrossing ? "shot" : "carry" };
+          if (text4(space.light)) rows.lighting = { value: space.light, source: "shot" };
+          if (text4(plan2.videoDesign?.continuity)) rows.continuity = { value: plan2.videoDesign.continuity, source: "shot" };
+          if (defaults2.attention) {
+            const focus = selected.find((t2) => t2.entry?.fields.focus);
+            const from = text4(focus?.from), to = text4(focus?.to);
+            const shift = from && to ? "From " + from + " to " + to : to || from;
+            const subject = shift || plan2.depth?.mode === "shallow" && text4(plan2.depth.focus) || text4(camera.view?.subject);
+            if (subject) rows.attention = { value: subject, source: "shot" };
+          }
+          return rows;
+        });
+        const common6 = Object.fromEntries(Object.entries(defaults2).filter(([key]) => shots.every((rows) => rows[key]?.source === "scene")));
+        return { defaults: defaults2, common: common6, shots };
+      }
+      const api2 = { labels, movement, notes, base, resolve: resolve15, withCameraDefaults, actingFields, actingPauses, orderedSpeech };
+      if (typeof module === "object" && module.exports) module.exports = api2;
+      else root.SCENE_DIRECTION = api2;
+    })(typeof window === "object" ? window : globalThis);
+  }
+});
+
 // ../skills/storyboard/references/production-mode.js
 var require_production_mode = __commonJS({
   "../skills/storyboard/references/production-mode.js"(exports, module) {
@@ -93990,8 +94411,11 @@ var require_production_mode = __commonJS({
           warnings.push(`a fast ${move.key} strobes at 24 fps when the background holds vertical lines (posts, window frames); if it reads broken, widen the framing and come closer rather than slowing down (L13)`);
         return warnings;
       }
-      function cameraDirectionWarnings(scenes) {
-        const planned = (Array.isArray(scenes) ? scenes : []).map((scene, index) => ({ scene, index })).filter(({ scene }) => scene && scene.type !== "outro" && !reused(scene) && ["generated_video", "still_camera"].includes(scene.shot?.render?.mode));
+      function cameraDirectionWarnings(scenes, owners) {
+        const cards = Array.isArray(scenes) ? scenes : [];
+        const resolver = typeof module === "object" && module.exports ? require_scene_direction() : root.SCENE_DIRECTION;
+        const effective = resolver ? resolver.withCameraDefaults(cards, owners) : cards;
+        const planned = effective.map((scene, index) => ({ scene, index })).filter(({ scene }) => scene && scene.type !== "outro" && !reused(scene) && ["generated_video", "still_camera"].includes(scene.shot?.render?.mode));
         const notes = [], reasons = /* @__PURE__ */ new Map(), endings = /* @__PURE__ */ new Map();
         const remember = (map, value, index) => {
           if (!text4(value)) return;
@@ -94008,7 +94432,7 @@ var require_production_mode = __commonJS({
           const written = choices.map((t2) => t2.reason).filter(text4);
           const purpose = still ? camera.reason : camera.purpose;
           if (text4(purpose)) written.push(purpose);
-          if (!written.length) notes.push(`[camera-purpose-missing] shot ${index + 1}: explain why this camera choice serves this action, discovery or reaction`);
+          if (!written.length && scene === cards[index]) notes.push(`[camera-purpose-missing] shot ${index + 1}: explain why this camera choice serves this action, discovery or reaction`);
           for (const reason of written) {
             remember(reasons, reason, index);
           }
@@ -94218,8 +94642,8 @@ var require_production_mode = __commonJS({
             errors.push("Subject action needs distinct, ordered motion.beats with seconds and visible states within the shot");
           else if (text4(d.after) && normalize2(d.after) !== normalize2(beats[beats.length - 1].state))
             errors.push("videoDesign.after must be the last motion beat, written once; drop after or make the two identical");
-          const directions = [d.action, d.continuity, scene.visual?.video?.prompt].join(" ");
-          if (/keep (?:every|all) (?:person|people|characters?).{0,40}fixed|(?:people|women|characters?) (?:and door )?(?:stay|remain) fixed|only (?:very )?(?:small|subtle) (?:natural )?breathing|no new text, objects or actions/i.test(directions))
+          const directions2 = [d.action, d.continuity, scene.visual?.video?.prompt].join(" ");
+          if (/keep (?:every|all) (?:person|people|characters?).{0,40}fixed|(?:people|women|characters?) (?:and door )?(?:stay|remain) fixed|only (?:very )?(?:small|subtle) (?:natural )?breathing|no new text, objects or actions/i.test(directions2))
             errors.push("Subject action contradicts a global freeze or breathing-only instruction");
         }
         return errors;
@@ -94227,7 +94651,7 @@ var require_production_mode = __commonJS({
       function check2(win, { requireSelection = false, requireApproval = false, draft = false, generatedVideoMax, advice = [], snapshotVideo } = {}) {
         const p = win.PRODUCTION, errors = Array.from(win.SCENES || []).flatMap((s2, i2) => reuseErrors(s2).map((e2) => `shot ${i2 + 1}: ${e2}`));
         const snapshot = snapshotVideo || p?.modelSettings?.models?.video;
-        advice.push(...cameraDirectionWarnings(win.SCENES));
+        advice.push(...cameraDirectionWarnings(win.SCENES, win.STRUCTURE?.scenes));
         if (!p) return requireSelection || (win.SCENES || []).some(reused) ? errors.concat(["Choose a production mode with a six-option cost comparison before generation"]) : errors;
         if (!MODES[p.mode]) errors.push("PRODUCTION.mode must be one of " + CHOICES.join(", ") + " (hook_only, stills_only and hybrid are legacy)");
         if (p.renderRatioVersion !== void 0 && p.renderRatioVersion !== 1) errors.push("renderRatioVersion must be 1");
@@ -94489,270 +94913,6 @@ var require_shot_view = __commonJS({
   }
 });
 
-// ../skills/storyboard/references/film-techniques.js
-var require_film_techniques = __commonJS({
-  "../skills/storyboard/references/film-techniques.js"(exports, module) {
-    (function(root) {
-      "use strict";
-      const VERSION2 = "film-techniques-v2";
-      const esc2 = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-      const entries = [];
-      function add(id, category, ko, en, use, instruction, glyph, fields2 = {}) {
-        entries.push({ id, category, label: { ko, en }, use, instruction, glyph, fields: fields2 });
-      }
-      const camera = "M3 12h10v8H3zM13 14l5-3v10l-5-3";
-      const person = "M23 7a3 3 0 1 0 .01 0M23 13v10m-4-7h8m-4 7-3 5m3-5 3 5";
-      add("camera.static", "camera", "\uACE0\uC815", "Static", "\uD504\uB808\uC784\uC744 \uACE0\uC815\uD574 \uAD6C\uB3C4\xB7\uBE14\uB85C\uD0B9\xB7\uC5F0\uAE30\uC5D0 \uC9D1\uC911\uD55C\uB2E4. \uAC1D\uAD00\uC801 \uAC70\uB9AC, \uC624\uB798 \uBD99\uC7A1\uC544 \uC313\uB294 \uAE34\uC7A5, \uB4A4\uC5D0 \uC62C \uC791\uC740 \uC774\uB3D9\uC744 \uD06C\uAC8C \uB9CC\uB4DC\uB294 \uB300\uBE44.", "Static frame: keep camera position, angle and focal length fixed.", camera + "M8 20v9m-4 0 4-9 4 9", { movement: "static" });
-      add("camera.dolly-in", "camera", "\uB2EC\uB9AC \uC778", "Dolly in", "\uAD00\uAC1D\uC744 \uB300\uC0C1 \uCABD\uC73C\uB85C \uAC78\uC5B4 \uB4E4\uC5B4\uAC00\uAC8C \uD55C\uB2E4. \uAE68\uB2EC\uC74C, \uC313\uC774\uB294 \uAE34\uC7A5, \uB450 \uC778\uBB3C\uC758 \uAC00\uAE4C\uC6C0, \uC0AC\uBB3C\uC774 \uC911\uC694\uD558\uB2E4\uB294 \uC2E0\uD638.", "The camera pushes in physically toward the subject from the opening crop and settles on a closer ending crop.", camera + "M19 26h10m-4-4 4 4-4 4", { movement: "dolly in" });
-      add("camera.dolly-out", "camera", "\uB2EC\uB9AC \uC544\uC6C3", "Dolly out", "\uBB3C\uB7EC\uB098\uBA70 \uB9E5\uB77D\uC744 \uB4DC\uB7EC\uB0B8\uB2E4. \uC228\uC740 \uC778\uBB3C\uACFC \uADDC\uBAA8, \uC0DD\uAC01\uBCF4\uB2E4 \uAE4A\uC740 \uACE0\uB9BD, \uC7A5\uBA74\uC758 \uB05D, \uC0AC\uAC74\uC744 \uD654\uBA74 \uBC16\uC5D0 \uB450\uB294 \uC0DD\uB7B5.", "The camera pulls back physically from the subject and settles on a wider ending frame that shows what enters.", camera + "M29 26H19m4-4-4 4 4 4", { movement: "dolly out" });
-      add("camera.slow-zoom-in", "camera", "\uC2AC\uB85C \uC90C \uC778", "Slow zoom in", "\uAC19\uC740 \uC790\uB9AC\uC5D0\uC11C \uD654\uAC01\uB9CC \uC881\uD600 \uD55C \uB300\uC0C1\uC5D0 \uC8FC\uC758\uB97C \uBAA8\uC740\uB2E4. \uAD00\uCC30\uC790\xB7\uAC10\uC2DC\xB7\uC9D1\uCC29\xB7\uACE0\uB9BD, \uCEF7 \uC5C6\uC774 \uC313\uB294 \uAE34\uC7A5.", "Keep camera position fixed and narrow the field of view slowly toward the subject; perspective stays unchanged.", "M3 3h26v26H3zM10 10h12v12H10zM4 4l6 6m16-6-4 6", { movement: "zoom in", speed: "slow" });
-      add("camera.arc", "camera", "\uC544\uD06C \uC0F7", "Arc shot", "\uC778\uBB3C \uC8FC\uC704\uB97C \uC6D0\uD638\uB85C \uB3C8\uB2E4. \uD604\uC5C5\uC740 \uAC70\uC758 \uC6C0\uC9C1\uC774\uC9C0 \uC54A\uB294 \uC778\uBB3C\uC758 \uAE34\uC7A5, \uC704\uD611\uACFC \uAD8C\uB825, \uBB34\uB9AC\uC758 \uACB0\uC18D, \uB0AD\uB9CC\uC801 \uC815\uC810\uC5D0 \uC4F0\uACE0, \uBE60\uB974\uAC8C \uB3CC\uB824 \uB2E4\uAE09\uD55C \uB9C8\uC74C\uC744 \uBCF4\uC778\uB2E4. \uC5B4\uB290 \uCABD\uC73C\uB85C \uC77D\uD790\uC9C0\uB294 \uC55E\uB4A4 \uCEF7\uC774 \uC815\uD55C\uB2E4.", "The camera arcs around the subject in the named direction and angle, keeping the subject centered, and settles on the named ending side.", person + "M6 24C-2 4 30 1 29 22m-5-3 5 3 1-6", { movement: "arc shot" });
-      add("camera.follow", "camera", "\uD314\uB85C\uC6B0 \uC0F7", "Follow shot", "\uC778\uBB3C \uD55C \uAC78\uC74C \uB4A4\uC5D0\uC11C \uB530\uB77C\uAC04\uB2E4. \uAD00\uAC1D\uC744 \uB3D9\uD589\uC2DC\uCF1C \uC0AC\uAC74\uC5D0 \uB04C\uC5B4\uB4E4\uC774\uACE0, \uC0C8 \uC7A5\uC18C\uB97C \uCEF7 \uC5C6\uC774 \uC18C\uAC1C\uD55C\uB2E4.", "The camera follows behind the subject at a steady gap and height along the named path to the named stopping point.", camera + "M23 3v8m-3-3 3 3 3-3M23 23v7", { movement: "tracking from behind" });
-      add("camera.reverse-tracking", "camera", "\uB9AC\uBC84\uC2A4 \uD2B8\uB798\uD0B9", "Reverse tracking", "\uAC77\uB294 \uC778\uBB3C \uC55E\uC5D0\uC11C \uB4A4\uB85C \uBB3C\uB7EC\uB098\uBA70 \uC5BC\uAD74\uACFC \uB300\uD654\uB97C \uACC4\uC18D \uBCF4\uC5EC \uC900\uB2E4(walk and talk). \uAE34\uBC15\uAC10, \uC9C0\uB098\uAC00\uB294 \uACF5\uAC04\uC758 \uC18C\uAC1C, \uC0C8 \uC138\uACC4\uB85C\uC758 \uC785\uC7A5.", "The camera retreats in front of the walking subject, facing them at a steady distance, and stops where the walk ends.", camera + "M23 11V3m-3 3 3-3 3 3M23 23v7", { movement: "tracking backward in front of the subject" });
-      add("camera.handheld", "camera", "\uD578\uB4DC\uD5EC\uB4DC", "Handheld", "\uC190\uC73C\uB85C \uB4E0 \uD754\uB4E4\uB9BC. \uC8FC\uAD00\uC131, \uD604\uC7A5\uAC10\uACFC \uC989\uC2DC\uC131, \uD63C\uB3C8, \uC228 \uC26C\uB4EF \uC57D\uD558\uAC8C \uD754\uB4E4\uB9B4 \uB54C\uC758 \uCE5C\uBC00\uAC10.", "Handheld camera with operated sway at the named intensity: subtle breathing, observational, or frantic.", "M5 8l20-2 2 17-20 2zM2 2l2 2m24 24 2 2M12 12l8 4-8 4z", { movement: "handheld" });
-      add("camera.whip-pan", "camera", "\uD729 \uD32C", "Whip pan", "\uCE74\uBA54\uB77C\uB97C \uAE09\uD788 \uB3CC\uB824 \uB450 \uB300\uC0C1\uC744 \uC787\uB294\uB2E4. \uC6D0\uC778 \u2192 \uACB0\uACFC, \uC2DC\uAC04\xB7\uC7A5\uC18C \uC804\uD658, \uCF54\uBBF8\uB514 \uD0C0\uC774\uBC0D, \uC7A5\uBA74\uC758 \uC5D0\uB108\uC9C0.", "Whip pan fast from the named first subject, blurring through the move, and settle on the named second subject.", "M3 8h15M3 14h20M3 20h26m-6-6 6 6-6 6", { movement: "whip pan", speed: "fast" });
-      add("camera.crane-up", "camera", "\uD06C\uB808\uC778 \uC5C5", "Crane up", "\uCE74\uBA54\uB77C\uAC00 \uC62C\uB77C\uAC00\uBA70 \uC7A5\uBA74\uC744 \uB2EB\uAC70\uB098 \uC704\uCABD \uACF5\uAC04\uC744 \uB4DC\uB7EC\uB0B8\uB2E4. \uACE0\uB9BD\uACFC \uC6B4\uBA85, \uD3EC\uC704, \uC2B9\uB9AC \uB610\uB294 \uBD88\uAE38\uD568.", "The camera rises on a crane from the opening frame, its look direction level or tilting down as named, and settles on a wider high view.", camera + "M24 28V4m-4 4 4-4 4 4", { movement: "crane up" });
-      add("camera.snorricam", "camera", "\uC2A4\uB178\uB9AC\uCEA0", "Snorricam", "\uBAB8\uC5D0 \uACE0\uC815\uD55C \uCE74\uBA54\uB77C\uB85C \uC5BC\uAD74\uC740 \uADF8\uB300\uB85C, \uBC30\uACBD\uB9CC \uD754\uB4E4\uB9B0\uB2E4. \uB9CC\uCDE8\xB7\uC57D\uBB3C\xB7\uD2B8\uB77C\uC6B0\uB9C8\xB7\uD328\uB2C9 \uAC19\uC740 \uBCC0\uC131 \uC0C1\uD0DC\uC640 \uC8FC\uBCC0\uC5D0\uC11C\uC758 \uACE0\uB9BD.", "Camera rigidly mounted to the torso facing the face; the face stays fixed in frame while the background sways and moves.", "M16 2a5 5 0 1 0 .01 0M7 28v-9h18v9M11 19v-5h10v5M2 8l3-3m22 3 3-3", { movement: "handheld body-mounted facing the subject" });
-      add("camera.push-past", "camera", "\uD478\uC2DC \uD328\uC2A4\uD2B8", "Push past", "\uC804\uACBD\uC744 \uC9C0\uB098 \uC228\uC740 \uACF5\uAC04\uC73C\uB85C \uB4E4\uC5B4\uAC04\uB2E4. \uC7A5\uC560\uBB3C\uB85C \uAE30\uB300\uB97C \uC313\uB294 \uC9C4\uC785, \uBC14\uAE65\uC5D0\uC11C \uC0AC\uC801 \uACF5\uAC04\uC73C\uB85C, \uC804\uACBD \uC640\uC774\uD504\uB85C \uCEF7\uC744 \uC228\uAE30\uB294 \uC804\uD658.", "The camera pushes in past the named foreground object or through an open doorway and settles on the named landing view.", "M3 29V3h16v26M10 25l18-14m-7 0h7v7", { movement: "dolly in past foreground" });
-      add("camera.rear", "camera", "\uB9AC\uC5B4 \uC0F7", "Rear shot", "\uC778\uBB3C\uC744 \uB4A4\uC5D0\uC11C \uBCF8\uB2E4. \uC5BC\uAD74\uC744 \uAC10\uCDB0 \uAD00\uAC1D\uC774 \uC0DD\uAC01\uC744 \uCC44\uC6B0\uAC8C \uD558\uACE0, \uC815\uBCF4\uB97C \uC778\uBB3C\uC758 \uC2DC\uC57C\uB85C \uC81C\uD55C\uD558\uACE0, \uAD00\uAC1D\uC744 \uB3D9\uD589\uC2DC\uD0A8\uB2E4.", "View the subject from behind at the named crop, facing the named target.", "M16 3a6 6 0 1 0 .01 0M4 29v-7q12-12 24 0v7M13 7h6", { viewpoint: "rear" });
-      add("camera.low", "camera", "\uB85C\uC6B0 \uC575\uAE00", "Low angle", "\uC544\uB798\uC5D0\uC11C \uC62C\uB824\uB2E4\uBCF8\uB2E4. \uB192\uC774\uC640 \uADDC\uBAA8, \uC774\uBBF8 \uD798\uC744 \uAC00\uC9C4 \uC778\uBB3C\uC758 \uC9C0\uBC30\xB7\uC704\uD611. \uD6A8\uACFC\uB294 \uC774\uC57C\uAE30 \uC21C\uC11C\uC640 \uC778\uBB3C\uC758 \uAD8C\uC704\uC5D0 \uB530\uB77C \uB2EC\uB77C\uC9C4\uB2E4.", "Place the camera below the subject looking upward; show what rises behind and above the subject.", "M3 26h8v4H3zM12 24 25 9m-7 2 7-2-1 7M24 4v24", { angle: "low" });
-      add("camera.high", "camera", "\uD558\uC774 \uC575\uAE00", "High angle", "\uC704\uC5D0\uC11C \uB0B4\uB824\uB2E4\uBCF8\uB2E4. \uC778\uBB3C \uC544\uB798\uC640 \uC8FC\uBCC0\uC758 \uACF5\uAC04\uC774 \uB4E4\uC5B4\uC640 \uADDC\uBAA8\uB97C \uD568\uAED8 \uBCF4\uC5EC \uC900\uB2E4. \uC791\uC544\uC9D0\xB7\uCDE8\uC57D\uD568\uC73C\uB85C \uC77D\uD790\uC9C0 \uB0B4\uB824\uB2E4\uBCF4\uB294 \uCABD\uC758 \uD798\uC73C\uB85C \uC77D\uD790\uC9C0\uB294 \uC55E\uB4A4 \uCEF7\uACFC \uC778\uBB3C\uC774 \uC815\uD55C\uB2E4(\uB192\uC740 \uCE74\uBA54\uB77C\uAC00 \uD654\uC790\uC758 \uC720\uB2A5\uD568 \uD3C9\uAC00\uB97C \uC62C\uB9B0 \uC2E4\uD5D8\uB3C4 \uC788\uB2E4).", "Place the camera above the subject looking down; show the floor and the space around the subject.", "M3 2h8v4H3zM12 8l13 15m-7-2 7 2-1-7M24 4v24", { angle: "high" });
-      add("camera.overhead", "camera", "\uC624\uBC84\uD5E4\uB4DC", "Overhead", "\uBC14\uB85C \uC704\uC5D0\uC11C \uC218\uC9C1\uC73C\uB85C \uBCF8\uB2E4. \uB3D9\uC120\uACFC \uBC30\uCE58\uC758 \uC9C0\uB3C4, \uC0AC\uAC74\uC758 \uADDC\uBAA8\uB098 \uB05D\uB09C \uB4A4\uC758 \uACB0\uACFC, \uC5BC\uAD74\uC744 \uAC10\uCDB0\uC57C \uD558\uB294 \uC21C\uAC04.", "Look straight down at ninety degrees over a readable floor layout, with the horizon out of the picture.", "M12 2h8v5h-8zM16 8v10m-4-4 4 4 4-4M3 25q13-10 26 0-13 10-26 0z", { angle: "overhead" });
-      add("camera.dutch", "camera", "\uB354\uCE58 \uC575\uAE00", "Dutch angle", "\uC218\uD3C9\uC120\uC744 \uAE30\uC6B8\uC778\uB2E4. \uBD88\uC548\xB7\uAD11\uAE30\xB7\uC18C\uC678\uCC98\uB7FC \uBB34\uC5B8\uAC00 \uC5B4\uAE0B\uB0AC\uB2E4\uB294 \uC2E0\uD638\uB85C \uC4F0\uB294 \uAD00\uB840\uC774\uACE0, \uB4DC\uBB3C\uAC8C \uC4F8 \uB54C \uD798\uC774 \uC788\uB2E4. \uC20F \uC548\uC5D0\uC11C \uAE30\uC6B8\uAE30\uB97C \uBC14\uAFB8\uBA74 \uB9C8\uC74C\uC774 \uBC14\uB00C\uB294 \uC21C\uAC04\uC73C\uB85C \uC4F4\uB2E4.", "Tilt the horizon by the chosen angle and direction, with a strong vertical line in the frame showing the tilt.", "M3 10 25 3l6 20-22 7zM8 20l16-5", { angle: "dutch" });
-      add("camera.dolly-zoom", "camera", "\uB3CC\uB9AC \uC90C", "Dolly zoom", "\uC778\uBB3C \uD06C\uAE30\uB294 \uADF8\uB300\uB85C, \uBC30\uACBD \uC6D0\uADFC\uB9CC \uBC14\uB010\uB2E4. \uD604\uAE30\uC99D, \uC555\uB3C4\uC801 \uACF5\uD3EC, \uBAA8\uB4E0 \uAC78 \uB2E4\uC2DC \uBCF4\uAC8C \uB9CC\uB4DC\uB294 \uAE68\uB2EC\uC74C.", "Dolly and zoom in opposite directions together, holding the subject screen size while the background stretches away or rushes closer.", "M3 4h26v24H3zM10 9h12v14H10zM1 16h8m-3-3 3 3-3 3M31 16h-8m3-3-3 3 3 3", { movement: "dolly zoom" });
-      add("camera.rack-focus", "camera", "\uB799 \uD3EC\uCEE4\uC2A4", "Rack focus", "\uCE74\uBA54\uB77C\uB294 \uADF8\uB300\uB85C \uB450\uACE0 \uCD08\uC810\uB9CC \uC62E\uACA8 \uAD00\uC2EC\uC744 \uB118\uAE34\uB2E4. \uC0C8 \uC815\uBCF4 \uACF5\uAC1C, \uAE68\uB2EC\uC74C\uACFC \uBC18\uC751, \uB450 \uC778\uBB3C\uC758 \uAD00\uACC4, \uC11C\uC2A4\uD39C\uC2A4.", "Shift sharp focus from the near subject to the far subject, or the reverse, in a shallow depth of field on a motivated cue.", "M3 18a7 7 0 1 0 .01 0M22 5a4 4 0 1 0 .01 0M12 14l9-5m-6 0h6v6", { focus: "rack" });
-      add("camera.side-tracking", "camera", "\uC0AC\uC774\uB4DC \uD2B8\uB798\uD0B9", "Side tracking", "\uC778\uBB3C \uC606\uC5D0\uC11C \uB098\uB780\uD788 \uC6C0\uC9C1\uC778\uB2E4. \uC0AC\uAC74 \uB4A4 \uACC1\uC5D0 \uBA38\uBB3C\uAE30, \uB298\uC5B4\uC120 \uB300\uC0C1 \uD6D1\uAE30, \uAC70\uB9AC\uB97C \uB454 \uBAA9\uACA9.", "The camera trucks parallel beside the subject at matching speed, with foreground layers passing for parallax.", camera + "M3 27h26m-4-4 4 4-4 4M23 4v14", { movement: "truck parallel to the subject" });
-      add("camera.pov", "camera", "1\uC778\uCE6D \uC2DC\uC810", "First-person POV", "\uAD00\uAC1D\uC774 \uC778\uBB3C\uC758 \uB208\uC73C\uB85C \uBCF8\uB2E4. \uBCF4\uB294 \uC20F\uACFC \uBC18\uC751 \uC20F \uC0AC\uC774\uC5D0 \uB07C\uC6CC \uC778\uBB3C\uC758 \uBC1C\uACAC\xB7\uACF5\uD3EC\xB7\uC8FC\uAD00\uC744 \uD568\uAED8 \uACAA\uAC8C \uD55C\uB2E4.", "View from the character eye height, showing what the character sees.", "M4 10V4h6M22 4h6v6M28 22v6h-6M10 28H4v-6M12 16h8M16 12v8", { viewpoint: "pov" });
-      add("camera.drone-pullback", "camera", "\uB4DC\uB860 \uD480\uBC31", "Drone pullback", "\uB4A4\uB85C \uB0A0\uBA70 \uC624\uB978\uB2E4. \uC7A5\uC18C\uC758 \uADDC\uBAA8, \uACE0\uB9BD, \uC774\uC57C\uAE30\uB97C \uB2EB\uB294 \uD074\uB85C\uC9D5 \uC0F7.", "The camera pulls back and rises together on one smooth path, from a tight start to a wide view of the place.", "M12 10h8v8h-8zM4 5h7M21 5h7M8 5l4 5m8 0 4-5M5 27 27 5m-8 0h8v8", { movement: "aerial backward and upward" });
-      add("camera.pan-left", "camera", "\uC67C\uCABD \uD32C", "Pan left", "\uC81C\uC790\uB9AC\uC5D0\uC11C \uC67C\uCABD\uC73C\uB85C \uB3C8\uB2E4. \uC6C0\uC9C1\uC774\uB294 \uC778\uBB3C \uB530\uB77C\uAC00\uAE30, \uC7A5\uC18C \uACF5\uAC1C, \uC2DC\uC810 \uD32C, \uC228\uC740 \uC704\uD5D8 \uBC1C\uACAC. \uBC29\uD5A5\uC740 \uB300\uC0C1 \uC704\uCE58\uC640 \uC778\uBB3C \uC774\uB3D9\uC774 \uC815\uD55C\uB2E4.", "The camera pans left across from the named first target and settles on the named second target, with a still frame at both ends.", camera + "M29 27H3m5-4-5 4 5 4", { movement: "pan left" });
-      add("camera.pan-right", "camera", "\uC624\uB978\uCABD \uD32C", "Pan right", "\uC81C\uC790\uB9AC\uC5D0\uC11C \uC624\uB978\uCABD\uC73C\uB85C \uB3C8\uB2E4. \uC6C0\uC9C1\uC774\uB294 \uC778\uBB3C \uB530\uB77C\uAC00\uAE30, \uC7A5\uC18C \uACF5\uAC1C, \uC2DC\uC810 \uD32C, \uC228\uC740 \uC704\uD5D8 \uBC1C\uACAC. \uBC29\uD5A5\uC740 \uB300\uC0C1 \uC704\uCE58\uC640 \uC778\uBB3C \uC774\uB3D9\uC774 \uC815\uD55C\uB2E4.", "The camera pans right across from the named first target and settles on the named second target, with a still frame at both ends.", camera + "M3 27h26m-5-4 5 4-5 4", { movement: "pan right" });
-      add("camera.tilt-up", "camera", "\uD2F8\uD2B8 \uC5C5", "Tilt up", "\uC81C\uC790\uB9AC\uC5D0\uC11C \uC704\uB85C \uACE0\uAC1C\uB97C \uB4E0\uB2E4. \uB192\uC774\uC640 \uADDC\uBAA8, \uC774\uC57C\uAE30\uAC00 \uC774\uBBF8 \uD798\uC744 \uC2E4\uC5B4 \uC900 \uC778\uBB3C\uC744 \uC62C\uB824 \uC7A1\uAE30, \uC778\uBB3C\uC774 \uC62C\uB824\uB2E4\uBCF4\uB294 \uC18D\uB3C4\uC5D0 \uB9DE\uCD98 \uACF5\uAC1C.", "The camera tilts upward from the named starting target and settles on the named ending target.", "M4 16h10v8H4zM22 28V4m-5 5 5-5 5 5M3 29h12", { movement: "tilt up" });
-      add("camera.tilt-down", "camera", "\uD2F8\uD2B8 \uB2E4\uC6B4", "Tilt down", "\uC81C\uC790\uB9AC\uC5D0\uC11C \uC544\uB798\uB85C \uB0B4\uB824\uAC04\uB2E4. \uC5BC\uAD74\uC5D0\uC11C \uC190\uC5D0 \uB4E0 \uBB3C\uAC74\uC73C\uB85C \uB0B4\uB824\uAC00\uB294 \uBC1C\uACAC, \uB192\uC740 \uACF3\uC5D0\uC11C \uC778\uBB3C\uB85C \uB0B4\uB824\uC624\uB294 \uC124\uC815, \uC778\uBB3C\uC744 \uC791\uAC8C.", "The camera tilts downward from the named starting target and settles on the named ending target.", "M4 4h10v8H4zM22 4v24m-5-5 5 5 5-5M3 29h12", { movement: "tilt down" });
-      add("camera.eye", "camera", "\uB208\uB192\uC774", "Eye level", "\uC778\uBB3C \uB208\uB192\uC774\uC758 \uC911\uB9BD \uC2DC\uC810. \uB300\uD654\xB7\uC778\uD130\uBDF0\xB7\uCE74\uBA54\uB77C\uB97C \uBCF4\uACE0 \uB9D0\uD558\uB294 \uCEF7\uC758 \uAE30\uBCF8\uC774\uBA70, \uC2E4\uD5D8\uC5D0\uC11C \uC2E0\uB8B0\uB97C \uAC00\uC7A5 \uB9CE\uC774 \uBC1B\uC558\uB2E4.", "Keep the lens level at the eye height of the named subject.", camera + "M19 12h10M23 4v24", { angle: "eye" });
-      add("camera.crash-zoom", "camera", "\uD06C\uB798\uC2DC \uC90C", "Crash zoom", "\uD654\uAC01\uC744 \uC21C\uC2DD\uAC04\uC5D0 \uC881\uD600 \uD55C \uB300\uC0C1\uC5D0 \uAF42\uB294\uB2E4. \uC561\uC158\xB7\uC2A4\uB9B4\uB7EC\uC5D0\uC11C \uC704\uD611\uC774\uB098 \uB2E8\uC11C\uB97C \uBC1C\uACAC\uD558\uB294 \uC21C\uAC04, \uCF54\uBBF8\uB514\uC758 \uD380\uCE58\uB77C\uC778.", "Crash zoom: from a fixed camera position the lens snaps in under half a second from the wide opening frame to a tight close-up of the named target, then holds.", "M3 3h26v26H3zM12 12h8v8h-8zM4 4l6 6m-4 0h4V6M28 28l-6-6m4 0h-4v4", { movement: "zoom in crash", speed: "fast" });
-      add("camera.blast-pushback", "camera", "\uBE14\uB798\uC2A4\uD2B8 \uD478\uC2DC\uBC31", "Blast pushback", "\uD3ED\uBC1C\uC774\uB098 \uCDA9\uACA9\uD30C\uAC00 \uCE74\uBA54\uB77C\uAE4C\uC9C0 \uBC00\uC5B4\uB0B8\uB2E4. \uAD00\uAC1D\uC774 \uCDA9\uACA9\uC744 \uAD6C\uACBD\uD558\uC9C0 \uC54A\uACE0 \uC9C1\uC811 \uB9DE\uAC8C \uD55C\uB2E4.", "The shockwave reaches the camera: it is thrown straight back from the named source, jolts once, and settles on a wider frame that shows the aftermath.", camera + "M19 27H5m4-4-4 4 4 4M26 4v8m-4-6 8 4m-8 0 8-4", { movement: "dolly out blast", speed: "fast" });
-      add("camera.weapon-cam", "camera", "\uC6E8\uD3F0 \uCEA0", "Weapon cam", "\uCE74\uBA54\uB77C\uAC00 \uD654\uC0B4\xB7\uCE7C\xB7\uCD1D\uC54C\uCC98\uB7FC \uB0A0\uC544\uAC00\uB294 \uBB3C\uCCB4\uC5D0 \uC62C\uB77C\uD0C4\uB2E4. \uB358\uC9C0\uAC70\uB098 \uC3DC \uC21C\uAC04\uBD80\uD130 \uBA85\uC911 \uC9C1\uC804\uAE4C\uC9C0\uB97C \uBC1C\uC0AC\uCCB4\uC758 \uC790\uB9AC\uC5D0\uC11C \uC787\uB294\uB2E4.", "The camera rides on the named projectile from its release, the tip fixed low in the frame while the surroundings streak past, and stops just short of the target.", "M3 25 27 9m-7 0h7v7M7 17l6-4 3 5-6 4z", { movement: "tracking mounted on the projectile", speed: "fast" });
-      add("camera.pass-through", "camera", "\uAD00\uD1B5 \uC0F7", "Pass-through shot", "\uB2EC\uC544\uB098\uB294 \uC778\uBB3C \uBC14\uB85C \uB4A4\uB97C \uCAD3\uC73C\uBA70 \uC778\uBB3C\uC774 \uD53C\uD574 \uAC00\uB294 \uC7A5\uC560\uBB3C\uC744 \uCE74\uBA54\uB77C\uB294 \uADF8\uB300\uB85C \uB6AB\uACE0 \uC9C0\uB098\uAC04\uB2E4. \uC881\uC740 \uACF5\uAC04\uC758 \uCD94\uACA9\uC5D0 \uC18D\uB3C4\uC640 \uC5F0\uC18D\uAC10\uC744 \uC900\uB2E4.", "The camera chases close behind the subject in one take and flies straight through each named opening or soft obstacle while the subject ducks under or goes around it.", "M10 3v9m0 8v9M20 3v9m0 8v9M2 16h27m-5-5 5 5-5 5", { movement: "tracking through openings", speed: "fast" });
-      add("camera.drone-dive", "camera", "\uB4DC\uB860 \uB2E4\uC774\uBE0C", "Drone dive", "\uB0AE\uACE0 \uBE60\uB974\uAC8C \uC218\uD3C9\uC73C\uB85C \uB0A0\uB2E4\uAC00 \uAC00\uC7A5\uC790\uB9AC\uC5D0\uC11C \uC544\uB798\uB85C \uAEBE\uC5EC \uB5A8\uC5B4\uC9C4\uB2E4. \uB192\uC774\uAC00 \uC788\uB294 \uCD94\uACA9\uACFC \uB6F0\uC5B4\uB0B4\uB9BC.", "An FPV drone camera flies low and level behind the subject, then pitches straight down at the named edge and dives alongside the fall.", "M3 5h6M13 5h6M6 5l2 3h6l2-3M8 8h6v4H8zM3 18h14q8 0 8 8v3m-4-4 4 4 4-4", { movement: "aerial dive", speed: "fast" });
-      add("camera.relay", "camera", "\uB9B4\uB808\uC774 \uC6D0\uD14C\uC774\uD06C", "Relay one-take", "\uCEF7 \uC5C6\uC774 \uD55C \uC0AC\uB78C\uC5D0\uC11C \uB2E4\uC74C \uC0AC\uB78C\uC73C\uB85C \uCE74\uBA54\uB77C\uB97C \uB118\uAE34\uB2E4. \uC5EC\uB7EC \uBA85\uC774 \uD55C \uACF5\uAC04\uC5D0\uC11C \uC2F8\uC6B0\uB294 \uC7A5\uBA74\uC744 \uD55C \uD638\uD761\uC73C\uB85C \uC787\uB294\uB2E4.", "One unbroken take: the camera stays with one fighter, swings to the next on a named handoff action such as a duck or a throw, and ends on a wider frame that holds everyone.", "M6 4a3 3 0 1 0 .01 0M16 4a3 3 0 1 0 .01 0M26 4a3 3 0 1 0 .01 0M6 13q4.5 8 9 0m-4 1 4-1 1 4M17 13q4.5 8 9 0m-4 1 4-1 1 4M3 27h26", { movement: "handheld relay" });
-      add("camera.speed-ramp", "camera", "\uC2A4\uD53C\uB4DC \uB7A8\uD504", "Speed ramp", "\uC815\uC0C1 \uC18D\uB3C4\uB85C \uAC00\uB2E4\uAC00 \uD55C \uC21C\uAC04\uB9CC \uAC70\uC758 \uBA48\uCD94\uACE0 \uB2E4\uC2DC \uD480\uB9B0\uB2E4. \uACB0\uC815\uD0C0\uAC00 \uB2FF\uB294 \uC21C\uAC04\uC744 \uAE38\uAC8C \uBCF4\uC5EC \uC900\uB2E4. \uBB34\uBE0C \uC704\uC5D0 \uC5B9\uB294 \uC21C\uAC04 \uAC15\uC870\uB2E4.", "Speed ramp: the action runs at normal speed, slows almost to a stop at one named moment, then snaps back to normal speed.", "M3 8h7l4 15h4l4-15h7M3 28h26", { accent: "time", cue: "the moment of contact" });
-      add("camera.impact-shake", "camera", "\uC784\uD329\uD2B8 \uC170\uC774\uD06C", "Impact shake", "\uC0AC\uAC74\uC774 \uC77C\uC5B4\uB0A0 \uB54C\uB9C8\uB2E4 \uD654\uBA74\uC774 \uD55C \uBC88 \uD280\uACE0 \uAC00\uB77C\uC549\uB294\uB2E4. \uAC70\uB300\uD55C \uC874\uC7AC\uC758 \uAC78\uC74C, \uCC29\uC9C0, \uCDA9\uB3CC\uC758 \uBB34\uAC8C. \uBB34\uBE0C \uC704\uC5D0 \uC5B9\uB294 \uC21C\uAC04 \uAC15\uC870\uB2E4.", "Impact shake: the frame jolts once at each named impact and settles completely still between impacts.", "M6 4h20v13H6zM3 25h9l2-5 3 9 2-6 1.5 2H29", { accent: "shake", cue: "each impact" });
-      const sizes = [
-        ["els", "\uC775\uC2A4\uD2B8\uB9BC \uB871\uC0F7", "Extreme long shot", "\uC778\uBB3C\uC744 \uD658\uACBD \uC18D \uC791\uC740 \uC810\uC73C\uB85C \uB450\uC5B4 \uC7A5\uC18C\xB7\uADDC\uBAA8\xB7\uACE0\uB9BD\uC744 \uBCF4\uC5EC \uC900\uB2E4. \uC7A5\uBA74\uC758 \uCCAB \uCEF7\uC774\uB098 \uB9C8\uC9C0\uB9C9 \uCEF7.", "extreme long shot, the subject tiny within the surroundings, under a tenth of the frame height", 9],
-        ["ls", "\uB871\uC0F7", "Long shot", "\uC7A5\uBA74 \uCCAB\uBA38\uB9AC\uC758 \uC124\uC815\uC0F7. \uC5B4\uB514\uC778\uC9C0, \uBA87 \uBA85\uC778\uC9C0, \uC11C\uB85C \uC5BC\uB9C8\uB098 \uB5A8\uC5B4\uC84C\uB294\uC9C0\uB97C \uD55C \uBC88\uC5D0 \uBCF4\uC5EC \uC900\uB2E4.", "wide establishing shot, full body with room above and below, the surroundings readable", 21],
-        ["fs", "\uD480\uC0F7", "Full shot", "\uBAB8 \uC804\uCCB4\uC758 \uB3D9\uC791\uC774 \uC815\uBCF4\uC77C \uB54C. \uAC77\uAE30\xB7\uCDA4\xB7\uACA9\uD22C\xB7\uC758\uC0C1, \uC5EC\uB7EC \uC778\uBB3C\uC744 \uD55C \uCEF7\uC5D0.", "full shot, head to toe, both feet in frame with a small margin below", 28],
-        ["mfs", "\uBBF8\uB514\uC5C4 \uD480\uC0F7", "Medium full shot", "\uD5C8\uBC85\uC9C0 \uC911\uAC04 \uC704\uB97C \uC7A1\uC544 \uD5C8\uB9AC \uB192\uC774\uC758 \uC190\uACFC \uD589\uB3D9\uC744 \uD45C\uC815\uACFC \uD568\uAED8 \uBCF4\uC5EC \uC900\uB2E4(\uCE74\uC6B0\uBCF4\uC774\uC0F7). \uB450 \uC0AC\uB78C\uACFC \uADF8 \uC0AC\uC774 \uAC70\uB9AC\uC5D0\uB3C4 \uC4F4\uB2E4.", "medium full shot, frame bottom at mid-thigh, hands and hips in frame", 37],
-        ["ms", "\uBBF8\uB514\uC5C4 \uC0F7", "Medium shot", "\uD5C8\uB9AC \uC704\uB97C \uC7A1\uC544 \uC0C1\uBC18\uC2E0\uACFC \uC190\uC9D3\uC744 \uBCF4\uC5EC \uC900\uB2E4. \uB300\uD654\uC758 \uCD9C\uBC1C\uC810\uC774\uC790, \uB4A4\uC5D0 \uC62C \uD074\uB85C\uC988\uC5C5\uC744 \uC544\uB07C\uB294 \uC644\uCDA9 \uD06C\uAE30.", "medium shot, waist up", 44],
-        ["mcu", "\uBBF8\uB514\uC5C4 \uD074\uB85C\uC988\uC5C5", "Medium close-up", "\uAC00\uC2B4 \uC704. \uD45C\uC815\uACFC \uC791\uC740 \uBAB8\uC9D3\uC744 \uD568\uAED8 \uBCF4\uC5EC \uC8FC\uB294 \uB300\uD654\uC758 \uC911\uB9BD \uD06C\uAE30\uC774\uC790 \uC778\uD130\uBDF0\xB7\uCE74\uBA54\uB77C\uB97C \uBCF4\uACE0 \uB9D0\uD558\uB294 \uCEF7\uC758 \uAE30\uBCF8.", "medium close-up, chest up, frame bottom at mid-chest, eyes near the upper third", 56],
-        ["cu", "\uD074\uB85C\uC988\uC5C5", "Close-up", "\uC5BC\uAD74\uC774 \uD654\uBA74\uC744 \uCC44\uC6B4\uB2E4. \uADF8 \uC21C\uAC04 \uC774\uC57C\uAE30\uC5D0 \uC911\uC694\uD55C \uAC10\uC815\uACFC \uBC18\uC751, \uACB0\uC815\uC801\uC778 \uD55C \uB9C8\uB514.", "close-up, the face and the top of the shoulders, crown lightly cropped", 75],
-        ["choker", "\uBE45 \uD074\uB85C\uC988\uC5C5", "Big close-up", "\uC774\uB9C8\uC5D0\uC11C \uD131\uAE4C\uC9C0 \uC5BC\uAD74\uB9CC \uAF49 \uCC44\uC6B4\uB2E4. \uACE0\uBC31\xB7\uBD95\uAD34\uCC98\uB7FC \uAC10\uC815\uC774 \uC228\uC744 \uACF3\uC774 \uC5C6\uB294 \uC815\uC810.", "big close-up, the face from forehead to chin fills the frame", 110],
-        ["ecu", "\uC775\uC2A4\uD2B8\uB9BC \uD074\uB85C\uC988\uC5C5", "Extreme close-up", "\uB208\xB7\uC785\xB7\uC190\uB05D\xB7\uBC29\uC544\uC1E0\uCC98\uB7FC \uB514\uD14C\uC77C \uD558\uB098\uAC00 \uD654\uBA74\uC744 \uCC44\uC6B4\uB2E4. \uC815\uC810\uC758 \uB514\uD14C\uC77C.", "extreme close-up, one named detail fills the frame", 180]
-      ];
-      const SIZE_WORDS = {}, SIZE_GLYPHS = {};
-      for (const [key, ko, en, use, instruction, height] of sizes) {
-        const k = height / 100, top = key === "choker" ? -11 : key === "ecu" ? -29 : 2;
-        let glyph = `<g transform="translate(${16 - 50 * k} ${top}) scale(${k})"><circle cx="50" cy="15" r="12"/><path d="M31 72V46q0-12 19-12t19 12v26zM40 72v26M60 72v26"/><path d="M43 14h3m8 0h3M43 22h14"/></g>`;
-        glyph = glyph.replace(/<circle /g, '<circle vector-effect="non-scaling-stroke" ').replace(/<path /g, '<path vector-effect="non-scaling-stroke" ');
-        if (key === "ecu") glyph = '<path d="M1 16Q16 1 31 16Q16 31 1 16Z"/><circle cx="16" cy="16" r="6"/><circle cx="16" cy="16" r="2"/>';
-        if (key === "choker") glyph = '<path d="M4 0V17Q16 38 28 17V0M8 9h5m6 0h5M11 23q5 3 10 0"/>';
-        glyph = '<rect x="1" y="1" width="30" height="30" rx="2" opacity=".3"/>' + glyph;
-        SIZE_WORDS[key] = instruction;
-        SIZE_GLYPHS[key] = glyph;
-        add("framing." + key, "framing", ko, en, use, instruction, glyph, { size: key });
-      }
-      const refs = [["front", "\uC815\uBA74 \uC804\uC2E0", "Front reference", "\uC804\uC2E0\xB7\uC758\uC0C1\xB7\uCCB4\uD615", "Headless front mannequin; preserve build, wardrobe and shoes.", "M8 29V15h16v14M16 15v14"], ["back", "\uD6C4\uBA74 \uC804\uC2E0", "Back reference", "\uD6C4\uBA74\xB7\uB4A4\uB3CC\uC544\uC12C", "Headless rear mannequin; preserve clothing seams and match front scale.", "M8 29V15h16v14M16 15v14M11 17h10"], ["face", "\uC5BC\uAD74 \uCC38\uC870", "Face reference", "\uB300\uC0AC\xB7\uC5BC\uAD74 \uBC18\uC751", "Neutral face including hair; keep identity separate from scene lighting.", "M16 3a12 12 0 1 0 .01 0M10 13h3m6 0h3M12 21h8"], ["costume", "\uC758\uC0C1 \uC804\uC6A9 \uCC38\uC870", "Costume reference", "\uC758\uC0C1\xB7\uCCB4\uD615 \uBCF4\uC870", "Optional wardrobe variant; baseline front/back already omit the head.", "M10 4 3 10l4 7 3-3v15h12V14l3 3 4-7-7-6-6 7z"]];
-      for (const [key, ko, en, use, instruction, glyph] of refs) add("character." + key, "character", ko, en, use, instruction, glyph, { reference: key });
-      const timing = [["insert", "\uC778\uC11C\uD2B8 \uC2DC\uAC04", "Insert timing", "\uB2E8\uC11C\xB7\uC0AC\uBB3C\xB7\uAE00\uC744 \uD655\uC778\uD558\uB294 \uC2DC\uAC04. \uC77D\uC744 \uBD84\uB7C9\uC774 \uAE38\uC774\uB97C \uC815\uD55C\uB2E4.", "Time the actual discovery or reading and its consequence; end when the cue is understood, without a preset insert length.", "M3 8h26v16H3zM11 12h10v8H11z"], ["action", "\uD589\uB3D9 \uC2DC\uAC04", "Action timing", "\uC774\uB3D9\xB7\uC811\uCD09\xB7\uB3C4\uCC29. \uC608\uBE44\uB3D9\uC791, \uB3D9\uC791, \uBC18\uC751\uC774 \uB2E4 \uB4E4\uC5B4\uAC00\uB294 \uC2DC\uAC04.", "Time anticipation, contact and response in order. Overlap simultaneous action; keep one continuous action together unless a new viewpoint reveals its consequence.", "M3 24l8-12 7 8 11-15M3 29h26"], ["dialogue", "\uB300\uC0AC\xB7\uAC10\uC815 \uC2DC\uAC04", "Dialogue timing", "\uB9D0\uACFC \uD45C\uC815\uC758 \uBCC0\uD654. \uC2E4\uCE21\uD55C \uB300\uC0AC \uAE38\uC774\uC640 \uBC18\uC751 \uAF2C\uB9AC\uAC00 \uAE38\uC774\uB97C \uC815\uD55C\uB2E4.", "Time the complete exchange with speaker changes, interruptions and motivated reactions. Two speakers can share one shot; do not add a new shot or a fixed hold for each turn.", "M3 4h26v18H13l-6 7v-7H3zM8 10h16M8 16h10"], ["establishing", "\uACF5\uAC04 \uC18C\uAC1C \uC2DC\uAC04", "Establishing timing", "\uC7A5\uC18C\uC640 \uC704\uCE58 \uAD00\uACC4\uB97C \uC77D\uB294 \uC2DC\uAC04. \uCC98\uC74C \uBCF4\uB294 \uC7A5\uC18C\uB294 \uAE38\uAC8C, \uB2E4\uC2DC \uCC3E\uC740 \uC7A5\uC18C\uB294 \uC9E7\uAC8C.", "Give only the time needed to understand the relevant geography; let story action establish the place whenever possible.", "M3 27V12l13-9 13 9v15zM12 27V16h8v11"], ["long-take", "\uB871\uD14C\uC774\uD06C \uC2DC\uAC04", "Long-take timing", "\uC5F0\uC18D \uC2DC\uAC04 \uC790\uCCB4\uAC00 \uC758\uBBF8\uC778 \uC7A5\uBA74. \uB04A\uC73C\uBA74 \uC758\uBBF8\uAC00 \uAE68\uC9C0\uB294 \uD589\uB3D9.", "Keep continuous time when it carries the event; derive length from its changing action, with no minimum long-take duration. Stay within the adapter limit.", "M2 16h28M3 10v12m6-12v12m6-12v12m6-12v12m6-12v12"]];
-      for (const [key, ko, en, use, instruction, glyph] of timing) add("timing." + key, "timing", ko, en, use, instruction, glyph, { timing: key });
-      const byId = Object.assign(/* @__PURE__ */ Object.create(null), Object.fromEntries(entries.map((entry2) => [entry2.id, entry2])));
-      const GUIDE = {
-        "camera.static": { "avoid": "\uB530\uB77C\uAC00\uAE30\uB098 \uC5F0\uC18D \uACF5\uAC1C\uCC98\uB7FC \uACE0\uC815\uC73C\uB85C\uB294 \uB0BC \uC218 \uC5C6\uB294 \uD6A8\uACFC\uAC00 \uD544\uC694\uD55C \uBE44\uD2B8.", "specify": "\uD504\uB808\uC784 \uC548\uC5D0\uC11C \uBB34\uC5C7\uC774 \uC5B8\uC81C \uC5B4\uB514\uB85C \uC6C0\uC9C1\uC774\uB294\uC9C0(\uC67C\uCABD 3\uBD84\uC758 1, \uAC00\uC6B4\uB370\uCC98\uB7FC \uD504\uB808\uC784 \uAE30\uC900)." },
-        "camera.dolly-in": { "avoid": "\uC2B5\uAD00\uCC98\uB7FC \uBC18\uBCF5\uD558\uB294 \uD478\uC2DC(\uD798\uC774 \uBE60\uC9C4\uB2E4). \uC5FF\uBCF4\uB294 \uAD00\uCC30\uC790 \uC2DC\uC810\uC774 \uBAA9\uC801\uC774\uBA74 \uC90C.", "pair": "\uACE0\uC815 \uC0F7\uC774 \uC774\uC5B4\uC9C4 \uB4A4\uC758 \uC57D\uD55C \uD478\uC2DC\uAC00 \uD06C\uAC8C \uC77D\uD78C\uB2E4.", "specify": "\uC2DC\uC791 \uD06C\uB86D\uACFC \uB05D \uD06C\uB86D(\uB05D\uC5D0 \uC5BC\uAD74\uC774 \uD654\uBA74\uC744 \uC5B4\uB5BB\uAC8C \uCC44\uC6B0\uB294\uC9C0), \uC6C0\uC9C1\uC774\uAE30 \uC2DC\uC791\uD558\uB294 \uB300\uC0AC\uB098 \uBC18\uC751, \uC18D\uB3C4. 2\uCD08 \uC548\uD30E\uC758 \uB290\uB9B0 \uD478\uC2DC\uB294 \uD45C\uB958\uCC98\uB7FC \uBCF4\uC778\uB2E4." },
-        "camera.dolly-out": { "avoid": "\uB4DC\uB7EC\uB098\uB294 \uB0B4\uC6A9\uACFC \uADF8 \uC2DC\uC810\uC774 \uC774\uC57C\uAE30\uC640 \uB9DE\uC9C0 \uC54A\uC744 \uB54C. \uC6D0\uADFC\uC774 \uACE0\uC815\uB41C \uAD11\uD559\uC801 \uD6C4\uD1F4\uBA74 \uC90C \uC544\uC6C3.", "pair": "\uC7A5\uBA74\uC774\uB098 \uC778\uBB3C \uC774\uC57C\uAE30\uC758 \uB9C8\uC9C0\uB9C9 \uCEF7.", "specify": "\uB05D \uD504\uB808\uC784\uC5D0 \uC0C8\uB85C \uB4E4\uC5B4\uC624\uB294 \uAC83\uACFC \uADF8\uB54C \uC778\uBB3C\uC758 \uD06C\uAE30, \uC18D\uB3C4(\uB290\uB9AC\uBA74 \uAC10\uC815\uC774 \uC313\uC774\uACE0 \uBE60\uB974\uBA74 \uCDA9\uACA9\xB7\uD380\uCE58\uB77C\uC778)." },
-        "camera.slow-zoom-in": { "avoid": "\uAD00\uAC1D\uC774 \uACF5\uAC04 \uC548\uC73C\uB85C \uB4E4\uC5B4\uAC00\uB294 \uB290\uB08C\uC774 \uBAA9\uC801\uC774\uBA74 \uB2EC\uB9AC \uC778. \uC90C\uC744 \uB418\uD480\uC774\uD558\uBA74 \uAC70\uC2AC\uB9B0\uB2E4. \uC21C\uC2DD\uAC04\uC5D0 \uAF42\uB294 \uC90C\uC740 \uD06C\uB798\uC2DC \uC90C\uC73C\uB85C \uACE0\uB978\uB2E4.", "specify": "\uB113\uAC8C \uC2DC\uC791\uD574 \uBB34\uC5C7\uC774 \uD654\uBA74\uC744 \uCC44\uC6B0\uBA70 \uB05D\uB098\uB294\uC9C0, \uC18D\uB3C4." },
-        "camera.arc": { "avoid": "\uBA4B\uC744 \uB0B4\uB824\uB294 \uC7A5\uC2DD\uC6A9 \uC544\uD06C, \uC5B4\uC9C0\uB7EC\uC6B4 \uBE60\uB978 \uC544\uD06C. \uD070 \uC544\uD06C\uB294 180\uB3C4 \uC120\uC744 \uB118\uC73C\uB2C8 \uB2E4\uC74C \uCEF7 \uBC29\uD5A5\uC744 \uBBF8\uB9AC \uB9DE\uCD98\uB2E4.", "specify": "\uD68C\uC804 \uBC29\uD5A5(\uC2DC\uACC4\xB7\uBC18\uC2DC\uACC4)\uACFC \uAC01\uB3C4(90\xB0\xB7180\xB0\xB7360\xB0), \uC18D\uB3C4, \uB05D\uC5D0\uC11C \uBCF4\uC774\uB294 \uC778\uBB3C\uC758 \uBA74, \uC778\uBB3C\uC774 \uBA48\uCDB0 \uC788\uB294\uC9C0. \uD55C \uBC14\uD034\uB97C \uB3C4\uB294 \uB300\uCE58\uB77C\uBA74 \uB3C4\uB294 \uB3D9\uC548 \uBC14\uB00C\uB294 \uAC83(\uBB34\uAE30\uB97C \uBF51\uB294\uB2E4, \uD3EC\uC704\uAC00 \uC881\uD600\uC9C4\uB2E4)\uC744 \uD568\uAED8 \uC801\uB294\uB2E4." },
-        "camera.follow": { "avoid": "\uC704\uD611\uC744 \uC758\uB3C4\uD558\uC9C0 \uC54A\uC558\uB294\uB370 \uCC28\uAC11\uACE0 \uB9E4\uB044\uB7FD\uAC8C \uB4A4\uB530\uB974\uBA74 \uAC10\uC2DC\uC790\uCC98\uB7FC \uC77D\uD78C\uB2E4. \uC5BC\uAD74 \uBC18\uC751\uC774 \uD575\uC2EC\uC774\uBA74 \uB4A4\uC5D0\uC11C\uB294 \uAC00\uB824\uC9C4\uB2E4.", "pair": "\uB4B7\uBAA8\uC2B5 \uC2DC\uC810(camera.rear)\uACFC \uD568\uAED8 \uACE0\uB974\uAE30 \uC27D\uB2E4.", "specify": "\uB530\uB974\uB294 \uAC70\uB9AC\uC640 \uCE74\uBA54\uB77C \uB192\uC774, \uACBD\uB85C\xB7\uB79C\uB4DC\uB9C8\uD06C\xB7\uAC77\uB294 \uC18D\uB3C4, \uBA48\uCD94\uB294 \uB05D \uD504\uB808\uC784, \uB4A4\uC5D0\uC11C \uC54C\uC544\uBCFC \uB2E8\uC11C(\uBA38\uB9AC\xB7\uC637).", "vertical": "\uAE38\xB7\uD1B5\uB85C\xB7\uBCF5\uB3C4\uB97C \uB530\uB77C \uC55E\uC73C\uB85C \uB098\uC544\uAC00\uB294 \uC6C0\uC9C1\uC784\uC774 \uC138\uB85C \uD654\uBA74\uC5D0 \uB9DE\uB294\uB2E4." },
-        "camera.reverse-tracking": { "avoid": "\uC2B5\uAD00\uC774 \uB41C walk and talk(\uAD00\uB840\uC774\uC790 \uD074\uB9AC\uC170\uB77C\uB294 \uBE44\uD310\uC774 \uC788\uB2E4).", "specify": "\uC778\uBB3C \uC218\uC640 \uB300\uC5F4, \uAC77\uB294 \uC18D\uB3C4, \uC720\uC9C0\uD560 \uD06C\uAE30, \uBC30\uACBD\uC5D0 \uC9C0\uB098\uAC08 \uC7A5\uC18C, \uBA48\uCD94\uB294 \uC9C0\uC810\uACFC \uADF8\uB54C \uBCF4\uC774\uB294 \uAC83." },
-        "camera.handheld": { "avoid": "\uAD00\uAC1D\uC774 \uACF5\uAC04\uC744 \uD30C\uC545\uD574\uC57C \uD558\uB294 \uCD94\uACA9(\uC9C0\uB9AC\uB97C \uBA3C\uC800 \uC138\uC6E0\uC744 \uB54C\uB9CC), \uC5F0\uAE30 \uB514\uD14C\uC77C\uC774 \uD544\uC694\uD55C \uD074\uB85C\uC988\uC5C5, \uB0A8\uC6A9.", "specify": "\uAC15\uB3C4 \uB2E8\uACC4(\uC228\uC26C\uB4EF\xB7\uAD00\uCC30\uD615\xB7\uACA9\uB82C), \uB530\uB77C\uAC00\uB294 \uB300\uC0C1, \uB05D\uC5D0 \uD504\uB808\uC784\uC774 \uBA48\uCD94\uB294\uC9C0, \uACC4\uC18D \uC77D\uD600\uC57C \uD560 \uC5BC\uAD74\uC774\uB098 \uB79C\uB4DC\uB9C8\uD06C." },
-        "camera.whip-pan": { "avoid": "\uC11C\uC0AC \uC5C6\uC774 \uC774\uC74C\uC0C8\uB85C\uB9CC \uC4F0\uB294 \uB0A8\uC6A9.", "pair": "\uB450 \uD074\uB9BD\uC744 \uC787\uB294 \uC804\uD658\uC774\uBA74 \uB098\uAC00\uB294 \uD074\uB9BD\uACFC \uB4E4\uC5B4\uC624\uB294 \uD074\uB9BD\uC758 \uBC29\uD5A5\xB7\uC18D\uB3C4\xB7\uC870\uBA85\uC744 \uB9DE\uCD98\uB2E4.", "specify": "\uCCAB \uB300\uC0C1\uACFC \uB458\uC9F8 \uB300\uC0C1, \uBC29\uD5A5, \uB3CC\uB9AC\uB294 \uACC4\uAE30(\uACE0\uAC1C \uB3CC\uB9BC\xB7\uC18C\uB9AC), \uB458\uC9F8 \uB300\uC0C1\uC5D0 \uCC29\uC9C0\uD55C \uAD6C\uB3C4." },
-        "camera.crane-up": { "avoid": "\uB3D9\uAE30 \uC5C6\uB294 \uC0C1\uC2B9. \uAC19\uC740 \uC0C1\uC2B9\uC774 \uC2B9\uB9AC\uC640 \uBD88\uAE38\uD568 \uB458 \uB2E4\uB85C \uC77D\uD788\uB2C8 \uC55E\uB4A4 \uCEF7\uC774 \uB73B\uC744 \uC815\uD574\uC57C \uD55C\uB2E4.", "specify": "\uC2DC\uC791 \uD504\uB808\uC784, \uC2DC\uC120\uC774 \uC218\uD3C9\uC778\uC9C0 \uC544\uB798\uB85C \uAE30\uC6B0\uB294\uC9C0, \uB4DC\uB7EC\uB0A0 \uACF5\uAC04\uACFC \uB05D\uC5D0\uC11C \uC778\uBB3C\uC758 \uD06C\uAE30, \uC18D\uB3C4." },
-        "camera.snorricam": { "avoid": "\uAE38\uAC8C, \uC790\uC8FC \uC4F0\uAE30. \uC601\uD654 \uD55C \uD3B8\uC5D0 \uD55C\uB450 \uBC88, \uBA87 \uCD08\uAC00 \uAD00\uB840\uB2E4.", "pair": "\uC2DC\uC810 \uC20F\uACFC \uC9DD\uC9C0\uC5B4 \uC778\uBB3C\uC774 \uB290\uB07C\uB294 \uAC83\uACFC \uBCF4\uB294 \uAC83\uC744 \uB300\uBE44\uD55C\uB2E4.", "specify": "\uC778\uBB3C\uC758 \uC6C0\uC9C1\uC784(\uBE44\uD2C0\uAC70\uB9BC\xB7\uB2EC\uB9AC\uAE30)\uACFC \uC9C4\uD589 \uBC29\uD5A5, \uBC30\uACBD \uC7A5\uC18C." },
-        "camera.push-past": { "avoid": "\uC774\uC57C\uAE30\uC640 \uBB34\uAD00\uD55C \uBB34\uB3D9\uAE30 \uC774\uB3D9. \uC804\uD658\uC6A9\uC774\uBA74 \uC804\uACBD\uC774 \uD504\uB808\uC784\uC744 \uB2E4 \uAC00\uB824\uC57C \uCEF7\uC774 \uD280\uC9C0 \uC54A\uB294\uB2E4.", "specify": "\uC9C0\uB098\uCE60 \uC804\uACBD \uBB3C\uCCB4\uC640 \uD654\uBA74 \uC704\uCE58, \uD1B5\uACFC\uD560 \uD2C8(\uBB38\xB7\uCC3D), \uCC29\uC9C0 \uB4A4 \uD53C\uC0AC\uCCB4\uC758 \uBAA8\uC2B5, \uC804\uD658\uC6A9\uC778\uC9C0 \uACF5\uAC1C\uC6A9\uC778\uC9C0." },
-        "camera.rear": { "avoid": "\uD45C\uC815\uC774 \uC815\uBCF4\uC778 \uC21C\uAC04\uC744 \uC624\uB798 \uAC00\uB9AC\uB294 \uAC83, \uC704\uD611\uC744 \uC758\uB3C4\uD558\uC9C0 \uC54A\uC558\uB294\uB370 \uCC28\uAC11\uAC8C \uB4A4\uB530\uB974\uB294 \uAC83.", "pair": "\uB4A4\uB530\uB974\uB294 \uC774\uB3D9(camera.follow)\uACFC \uD568\uAED8 \uACE0\uB974\uAE30 \uC27D\uB2E4.", "specify": "\uD06C\uB86D(\uBA38\uB9AC\xB7\uC5B4\uAE68/\uD5C8\uB9AC/\uC804\uC2E0), \uCE74\uBA54\uB77C \uB192\uC774, \uC778\uBB3C\uC774 \uBC14\uB77C\uBCF4\uB294 \uB300\uC0C1, \uB4A4\uC5D0\uC11C \uC54C\uC544\uBCFC \uB2E8\uC11C." },
-        "camera.low": { "avoid": "\uC2E0\uB8B0\uAC00 \uD544\uC694\uD55C \uC815\uBA74 \uBC1C\uD654(\uC2E4\uD5D8\uC5D0\uC11C \uB85C\uC6B0\uB294 \uB208\uB192\uC774\uBCF4\uB2E4 \uC2E0\uB8B0\uB97C \uB0AE\uCDC4\uB2E4).", "specify": "\uCE74\uBA54\uB77C \uB192\uC774\uC640 \uC62C\uB824\uBCF4\uB294 \uC815\uB3C4, \uC778\uBB3C \uB4A4\xB7\uC704\uB85C \uBCF4\uC774\uB294 \uAC83(\uCC9C\uC7A5\xB7\uD558\uB298\xB7\uC870\uBA85), \uC5BC\uAD74 \uBC29\uD5A5(\uC815\uBA74 \uC751\uC2DC\uB294 \uC704\uC555, \uCE21\uBA74\uC740 \uC601\uC6C5 \uCABD).", "vertical": "\uC138\uB85C \uD654\uBA74\uC740 \uB192\uC740 \uB300\uC0C1\uC744 \uC62C\uB824\uB2E4\uBCF4\uB294 \uC575\uAE00\uC5D0 \uC704\uC544\uB798 \uACF5\uAC04\uC744 \uB109\uB109\uD788 \uC900\uB2E4. \uD798\uC73C\uB85C \uC77D\uD790\uC9C0\uB294 \uC774\uC57C\uAE30\uAC00 \uC815\uD55C\uB2E4." },
-        "camera.high": { "avoid": "\uAC10\uC2DC\uB2F9\uD558\uB294 \uB290\uB08C\uC740 \uB0B4\uB824\uB2E4\uBCF4\uB294 \uC778\uBB3C\uC774 \uC788\uB294 \uC2DC\uC810 \uC20F\uC5D0\uC11C \uC0DD\uAE34\uB2E4. \uC2E0\uB8B0\uAC00 \uD544\uC694\uD55C \uC815\uBA74 \uBC1C\uD654\uB294 \uB208\uB192\uC774\uAC00 \uB0AB\uB2E4.", "specify": "\uCE74\uBA54\uB77C\uAC00 \uBA38\uB9AC\uBCF4\uB2E4 \uC5BC\uB9C8\uB098 \uC704\uC778\uC9C0, \uC778\uBB3C \uC544\uB798\xB7\uC8FC\uBCC0\uC758 \uBC14\uB2E5\uACFC \uACF5\uAC04, \uD654\uBA74 \uC18D \uC778\uBB3C \uD06C\uAE30, \uB0B4\uB824\uB2E4\uBCF4\uB294 \uC778\uBB3C\uC774 \uC788\uC73C\uBA74 \uADF8 \uC704\uCE58." },
-        "camera.overhead": { "avoid": "\uD45C\uC815\uC774 \uC815\uBCF4\uC778 \uBC18\uC751\xB7\uB300\uC0AC \uCEF7(\uC218\uC9C1\uC73C\uB85C \uB0B4\uB824\uB2E4\uBCF4\uBA74 \uC5BC\uAD74\uC774 \uD654\uBA74\uC5D0 \uB4E4\uC5B4\uC624\uC9C0 \uC54A\uB294\uB2E4).", "specify": "\uBC14\uB2E5 \uBC30\uCE58(\uB204\uAC00 \uC5B4\uB514\uC5D0\uC11C \uC5B4\uB290 \uCABD\uC744 \uD5A5\uD558\uB294\uC9C0), \uBC14\uB2E5 \uC7AC\uC9C8\uACFC \uADF8\uB9BC\uC790 \uBC29\uD5A5." },
-        "camera.dutch": { "avoid": "\uC774\uC720 \uC5C6\uB294 \uBC18\uBCF5. \uBA87 \uCEF7\uC5D0\uB9CC \uC4F8 \uB54C \uD798\uC774 \uC788\uB2E4.", "specify": "\uAE30\uC6B8\uAE30 \uAC01\uB3C4\uC640 \uBC29\uD5A5(\uC608: 15\xB0 clockwise), \uCC98\uC74C\uBD80\uD130 \uAE30\uC6B4 \uC20F\uC778\uC9C0 \uC20F \uC548\uC5D0\uC11C \uAE30\uC6B0\uB294\uC9C0, \uAE30\uC6B8\uC5B4 \uBCF4\uC77C \uC218\uC9C1\uC120(\uBB38\uD2C0\xB7\uBCBD \uBAA8\uC11C\uB9AC)." },
-        "camera.dolly-zoom": { "avoid": "\uD6A8\uACFC\uAC00 \uC544\uC8FC \uD2B9\uC815\uD558\uB2E4. \uADF8 \uC21C\uAC04 \uD558\uB098\uC5D0\uB9CC \uC4F4\uB2E4.", "pair": "\uAE68\uB2EC\uC74C\uC744 \uC77C\uC73C\uD0A4\uB294 \uB300\uC0AC\uB098 \uC18C\uB9AC \uC9C1\uD6C4\uC5D0 \uC2DC\uC791\uD55C\uB2E4.", "specify": "\uBC29\uD5A5(dolly in + zoom out\uC774\uBA74 \uBC30\uACBD\uC774 \uBA40\uC5B4\uC9C0\uACE0, dolly out + zoom in\uC774\uBA74 \uB2E4\uAC00\uC628\uB2E4)\uACFC \uC2DC\uC791 \uACC4\uAE30." },
-        "camera.rack-focus": { "avoid": "\uC2B5\uAD00\uC801 \uC0AC\uC6A9. \uB450 \uB300\uC0C1\uC774 \uAC19\uC740 \uAC70\uB9AC\uC5D0 \uC788\uAC70\uB098 \uAD00\uC2EC\uC744 \uC62E\uAE38 \uACC4\uAE30\uAC00 \uC5C6\uC744 \uB54C.", "specify": "\uAC00\uAE4C\uC6B4 \uB300\uC0C1\uACFC \uBA3C \uB300\uC0C1, \uC21C\uC11C, \uC62E\uACA8 \uAC00\uB294 \uACC4\uAE30(\uB300\uC0AC\xB7\uC18C\uB9AC\xB7\uB3D9\uC791)\uC640 \uC2DC\uC810, \uB05D\uC5D0 \uC120\uBA85\uD55C \uB300\uC0C1. shot_icons focus\uC758 from\xB7to\uC5D0 \uB450 \uB300\uC0C1\uC744 \uC601\uC5B4\uB85C \uC801\uACE0, \uC595\uC740 \uC2EC\uB3C4\uC758 focus\uB294 \uCC98\uC74C \uC120\uBA85\uD55C \uB300\uC0C1(from)\uACFC \uAC19\uAC8C \uB454\uB2E4." },
-        "camera.side-tracking": { "avoid": "\uC5BC\uAD74 \uC815\uBA74\uC774\uB098 \uBAA9\uC801\uC9C0\uAC00 \uD575\uC2EC\uC77C \uB54C. \uC804\uACBD \uCE35\uC774 \uC5C6\uC73C\uBA74 \uD32C\uACFC \uAD6C\uBCC4\uB418\uC9C0 \uC54A\uB294\uB2E4.", "specify": "\uC88C\uC6B0 \uBC29\uD5A5, \uC18D\uB3C4, \uC804\uACBD\xB7\uC911\uACBD\xB7\uBC30\uACBD\uC5D0 \uC9C0\uB098\uAC08 \uAC83, \uC2DC\uC791\uACFC \uB05D \uD504\uB808\uC784.", "vertical": "\uC138\uB85C \uD654\uBA74\uC740 \uC88C\uC6B0 \uC774\uB3D9\uC744 \uACFC\uC7A5\uD55C\uB2E4. \uB290\uB9AC\uAC8C \uC6C0\uC9C1\uC774\uAC70\uB098 \uCE74\uBA54\uB77C\uB97C \uBE44\uC2A4\uB4EC\uD788 \uB450\uC5B4 \uB300\uAC01\uC120 \uC774\uB3D9\uC73C\uB85C \uBC14\uAFBC\uB2E4." },
-        "camera.pov": { "avoid": "\uBC18\uC751\uC774 \uC0AC\uB77C\uC9C8 \uB9CC\uD07C \uAE34 \uC2DC\uC810 \uC20F, \uBCF4\uB294 \uC0AC\uB78C\uC744 \uC138\uC6B0\uC9C0 \uC54A\uC740 \uC2DC\uC810 \uC20F.", "pair": "\uBCF4\uB294 \uC5BC\uAD74 \u2192 \uC2DC\uC810 \uC20F \u2192 \uBC18\uC751 \uC5BC\uAD74.", "specify": "\uB204\uAD6C\uC758 \uB208\uC778\uC9C0, \uB208\uB192\uC774, \uD654\uBA74 \uC544\uB798\uC5D0 \uAC78\uB9AC\uB294 \uC190\uC774\uB098 \uBAB8, \uBCF4\uB294 \uB300\uC0C1\uACFC \uC2DC\uC120\uC774 \uBA38\uBB34\uB294 \uB05D\uC810, \uB2E4\uB978 \uC778\uBB3C\uC774 \uB80C\uC988\uB97C \uBCF4\uB294\uC9C0.", "vertical": "\uC55E\uC73C\uB85C \uB098\uC544\uAC00\uB294 \uAE38\xB7\uBCF5\uB3C4 \uC2DC\uC810\uC774 \uC138\uB85C \uD654\uBA74\uC5D0 \uB9DE\uB294\uB2E4." },
-        "camera.drone-pullback": { "avoid": "\uAC00\uC7A5 \uD754\uD55C \uD074\uB9AC\uC170\uB2E4. \uC7A5\uBA74\uC744 \uB2EB\uB294 \uC21C\uAC04 \uD558\uB098\uC5D0\uB9CC \uC4F4\uB2E4.", "specify": "\uB4DC\uB7EC\uB0A0 \uACF5\uAC04\uACFC \uB05D\uC5D0\uC11C \uC778\uBB3C\uC758 \uD06C\uAE30, \uB290\uB9B0 \uC18D\uB3C4. \uD6C4\uD1F4\uC640 \uC0C1\uC2B9\uC744 \uD55C \uACBD\uB85C\uB85C \uC801\uB294\uB2E4." },
-        "camera.pan-left": { "avoid": "\uB05D\uC5D0 \uB4DC\uB7EC\uB0A0 \uAC83\uC774 \uC5C6\uB294 \uD32C, \uB108\uBB34 \uBE60\uB978 \uD32C(\uD654\uBA74 \uD3ED \uD558\uB098\uB97C 7\uCD08\uBCF4\uB2E4 \uBE68\uB9AC \uC9C0\uB098\uBA74 \uB04A\uACA8 \uBCF4\uC778\uB2E4).", "specify": "\uCD9C\uBC1C \uB300\uC0C1\uACFC \uB3C4\uCC29 \uB300\uC0C1, \uB530\uB77C\uAC00\uB294 \uC778\uBB3C\uC758 \uC774\uB3D9 \uBC29\uD5A5, \uC18D\uB3C4.", "vertical": "\uC138\uB85C \uD654\uBA74\uC740 \uC88C\uC6B0 \uC6C0\uC9C1\uC784\uC744 \uACFC\uC7A5\uD55C\uB2E4. \uB290\uB9AC\uAC8C, \uC791\uAC8C \uC6C0\uC9C1\uC778\uB2E4." },
-        "camera.pan-right": { "avoid": "\uB05D\uC5D0 \uB4DC\uB7EC\uB0A0 \uAC83\uC774 \uC5C6\uB294 \uD32C, \uB108\uBB34 \uBE60\uB978 \uD32C(\uD654\uBA74 \uD3ED \uD558\uB098\uB97C 7\uCD08\uBCF4\uB2E4 \uBE68\uB9AC \uC9C0\uB098\uBA74 \uB04A\uACA8 \uBCF4\uC778\uB2E4).", "specify": "\uCD9C\uBC1C \uB300\uC0C1\uACFC \uB3C4\uCC29 \uB300\uC0C1, \uB530\uB77C\uAC00\uB294 \uC778\uBB3C\uC758 \uC774\uB3D9 \uBC29\uD5A5, \uC18D\uB3C4.", "vertical": "\uC138\uB85C \uD654\uBA74\uC740 \uC88C\uC6B0 \uC6C0\uC9C1\uC784\uC744 \uACFC\uC7A5\uD55C\uB2E4. \uB290\uB9AC\uAC8C, \uC791\uAC8C \uC6C0\uC9C1\uC778\uB2E4." },
-        "camera.tilt-up": { "avoid": "\uB05D\uC5D0 \uC0C8 \uC815\uBCF4\uAC00 \uC5C6\uB294 \uD2F8\uD2B8. \uD5E4\uB4DC\uB8F8\uC744 \uB9DE\uCD94\uB294 \uC791\uC740 \uD2F8\uD2B8\uB294 \uAE30\uBC95\uC774 \uC544\uB2C8\uB77C \uB9AC\uD504\uB808\uC774\uBC0D\uC774\uB2E4.", "specify": "\uC2DC\uC791 \uB300\uC0C1\uACFC \uB05D \uB300\uC0C1, \uB05D\uC5D0\uC11C \uB300\uC0C1\uC774 \uB193\uC77C \uC704\uCE58, \uC18D\uB3C4.", "vertical": "\uC138\uB85C \uD654\uBA74\uC740 \uB192\uC774\uB97C \uBCF4\uC5EC \uC8FC\uB294 \uD2F8\uD2B8\uC5D0 \uB9DE\uB294\uB2E4." },
-        "camera.tilt-down": { "avoid": "\uC57D\uD568\uC744 \uC758\uB3C4\uD558\uC9C0 \uC54A\uC740 \uC778\uBB3C\uC744 \uB0B4\uB824 \uC7A1\uB294 \uAC83, \uD5E4\uB4DC\uB8F8 \uB9DE\uCD94\uAE30\uB97C \uAE30\uBC95\uC73C\uB85C \uC801\uB294 \uAC83.", "specify": "\uC2DC\uC791 \uB300\uC0C1\uACFC \uB05D \uB300\uC0C1, \uB05D\uC5D0\uC11C \uB300\uC0C1\uC774 \uB193\uC77C \uC704\uCE58." },
-        "camera.eye": { "avoid": "\uD0A4\uB098 \uC790\uC138\uAC00 \uB2E4\uB978 \uB450 \uC0AC\uB78C\uC774 \uD568\uAED8 \uC788\uC73C\uBA74 \uB204\uAD6C\uC758 \uB208\uB192\uC774\uC778\uC9C0 \uC815\uD574\uC57C \uB73B\uC774 \uC0DD\uAE34\uB2E4.", "specify": "\uAE30\uC900 \uC778\uBB3C\uACFC \uC790\uC138(\uC11C \uC788\uC74C\xB7\uC549\uC74C), \uC2DC\uC120 \uBC29\uD5A5(\uB80C\uC988 \uC815\uBA74, \uD654\uBA74 \uBC16 \uC67C\uCABD\xB7\uC624\uB978\uCABD)." },
-        "camera.crash-zoom": { "avoid": "\uC870\uC6A9\uD55C \uC815\uADF9\uC758 \uAE68\uB2EC\uC74C(\uCF54\uBBF8\uB514\uB85C \uC77D\uD788\uAE30 \uC27D\uB2E4. \uADF8 \uBE44\uD2B8\uB294 \uBE60\uB978 \uB2EC\uB9AC \uC778). \uD55C \uC7A5\uBA74\uC5D0 \uB450 \uBC88 \uC774\uC0C1, \uB3C4\uCC29 \uB300\uC0C1\uC774 \uB458 \uC774\uC0C1\uC77C \uB54C.", "pair": "\uBCF4\uB294 \uC5BC\uAD74 \u2192 \uD06C\uB798\uC2DC \uC90C \u2192 \uBC18\uC751 \uC5BC\uAD74. \uB113\uC740 \uC2DC\uC791 \uD504\uB808\uC784\uC744 \uC7A0\uAE50 \uBD99\uC7A1\uC740 \uB4A4\uC5D0 \uB4E4\uC5B4\uAC04\uB2E4.", "specify": "\uB3C4\uCC29 \uB300\uC0C1 \uD558\uB098\uC640 \uB05D \uD06C\uB86D, \uC90C\uC774 \uC2DC\uC791\uB418\uB294 \uACC4\uAE30(\uC18C\uB9AC\xB7\uBD88\uBE5B\xB7\uC2DC\uC120). \uD504\uB808\uC784 \uACC4\uD68D\uC774 first_last\uBA74 \uB05D \uC774\uBBF8\uC9C0\uAC00 \uB3C4\uCC29 \uAD6C\uB3C4\uB97C \uACE0\uC815\uD55C\uB2E4." },
-        "camera.blast-pushback": { "avoid": "\uCDA9\uACA9\uC758 \uC6D0\uC778\uC774 \uD654\uBA74\uC5D0 \uC5C6\uC744 \uB54C, \uD55C \uC7A5\uBA74\uC5D0 \uB418\uD480\uC774\uD560 \uB54C.", "pair": "\uBC1C\uB3D9 \uB3D9\uC791(\uB0B4\uB9AC\uCE58\uAE30\xB7\uC810\uD654)\uC744 \uBA3C\uC800 \uBCF4\uC5EC \uC900 \uB4A4\uC5D0 \uC628\uB2E4. \uB05D \uD504\uB808\uC784\uC740 \uACB0\uACFC\uB97C \uBD99\uC7A1\uB294\uB2E4.", "specify": "\uCDA9\uACA9\uC6D0\uACFC \uD130\uC9C0\uB294 \uACC4\uAE30 \uB3D9\uC791, \uBC00\uB824\uB09C \uB4A4\uC758 \uB113\uC740 \uB05D \uD504\uB808\uC784\uC5D0 \uBCF4\uC774\uB294 \uAC83(\uD30C\uC778 \uBC14\uB2E5\xB7\uC4F0\uB7EC\uC9C4 \uC0C1\uB300). \uD504\uB808\uC784 \uACC4\uD68D\uC774 first_last\uBA74 \uB05D \uC774\uBBF8\uC9C0\uC5D0 \uACB0\uACFC\uB97C \uADF8\uB9B0\uB2E4." },
-        "camera.weapon-cam": { "avoid": "\uC3D8\uB294 \uC0AC\uB78C\uACFC \uD45C\uC801\uC758 \uC704\uCE58\uB97C \uC55E\uC5D0\uC11C \uBCF4\uC5EC \uC8FC\uC9C0 \uC54A\uC740 \uCEF7, \uBC1C\uC0AC\uCCB4\uAC00 \uC5EC\uB7FF\uC77C \uB54C.", "pair": "\uB2F9\uAE30\uAC70\uB098 \uACA8\uB204\uB294 \uCEF7 \u2192 \uC6E8\uD3F0 \uCEA0 \u2192 \uBA85\uC911\uC774\uB098 \uBE57\uB098\uAC10\uC758 \uACB0\uACFC \uCEF7.", "specify": "\uD45C\uC801(shot_icons move\uC758 target), \uBC1C\uC0AC\uCCB4\uC640 \uD654\uBA74\uC5D0 \uAC78\uB9AC\uB294 \uBD80\uBD84(\uD654\uC0B4\uCD09\xB7\uCE7C\uB05D)\uC740 action \uBB38\uC7A5\uC5D0, \uC9C0\uB098\uAC00\uB294 \uB79C\uB4DC\uB9C8\uD06C, \uBA48\uCD94\uB294 \uC9C0\uC810\uACFC \uADF8\uB54C \uD45C\uC801\uC758 \uC0C1\uD0DC." },
-        "camera.pass-through": { "avoid": "\uD1B5\uACFC\uD560 \uD2C8\uC774 \uC5C6\uB294 \uD2B8\uC778 \uACF5\uAC04, \uC9C0\uB9AC\uB97C \uC138\uC6B0\uC9C0 \uC54A\uC740 \uCD94\uACA9. \uBB38 \uD558\uB098\uB97C \uC9C0\uB098 \uBA48\uCD94\uB294 \uC9C4\uC785\uC774\uBA74 \uD478\uC2DC \uD328\uC2A4\uD2B8.", "pair": "\uCD94\uACA9\uC758 \uBC29\uD5A5\uACFC \uCD9C\uAD6C\uB97C \uBCF4\uC5EC \uC900 \uB113\uC740 \uCEF7 \uB4A4\uC5D0 \uC628\uB2E4.", "specify": "\uD1B5\uACFC\uD560 \uAC83\uC744 \uC21C\uC11C\uB300\uB85C(\uBE68\uB7AB\uC904\uC758 \uCC9C, \uCC3D\uBB38, \uB09C\uAC04 \uC0AC\uC774), \uADF8\uB54C\uB9C8\uB2E4 \uC778\uBB3C\uC774 \uD558\uB294 \uB2E4\uB978 \uB3D9\uC791(\uC219\uC784\xB7\uB3CC\uC544\uAC10), \uB05D \uD504\uB808\uC784." },
-        "camera.drone-dive": { "avoid": "\uB192\uC774 \uCC28\uAC00 \uC5C6\uB294 \uC7A5\uC18C, \uAEBE\uC774\uB294 \uC9C0\uC810\uC774 \uB450 \uACF3 \uC774\uC0C1\uC778 \uACBD\uB85C. \uC9C0\uD615 \uC0AC\uC774\uC758 \uAD7D\uC740 \uAE38\uC744 \uBCF4\uC5EC \uC8FC\uB294 \uBE44\uD589\uC740 \uB4DC\uB860 \uACBD\uB85C \uD504\uB9AC\uC14B(drone-flythrough)\uC774 \uB9E1\uB294\uB2E4.", "pair": "\uAC00\uC7A5\uC790\uB9AC\uC640 \uADF8 \uC544\uB798 \uB192\uC774\uB97C \uBCF4\uC5EC \uC900 \uCEF7 \uB4A4\uC5D0 \uC628\uB2E4.", "specify": "\uC218\uD3C9 \uAD6C\uAC04\uC758 \uB192\uC774\uC640 \uB530\uB77C\uAC00\uB294 \uB300\uC0C1, \uC218\uD3C9\uC5D0\uC11C \uC218\uC9C1\uC73C\uB85C \uAEBE\uC774\uB294 \uC9C0\uC810(\uC808\uBCBD \uB05D\xB7\uC625\uC0C1 \uB09C\uAC04), \uAEBE\uC778 \uB4A4 \uD654\uBA74 \uC544\uB798\uC5D0 \uBCF4\uC774\uB294 \uAC83. \uD504\uB808\uC784 \uACC4\uD68D\uC774 first_last\uBA74 \uC218\uD3C9 \uC2DC\uC791\uACFC \uB0B4\uB824\uB2E4\uBCF4\uB294 \uB05D\uC744 \uB530\uB85C \uADF8\uB9B0\uB2E4." },
-        "camera.relay": { "avoid": "\uB300\uC0AC\uAC00 \uC624\uAC00\uB294 \uC7A5\uBA74(\uC0F7\uB2F9 \uD654\uC790\uB294 \uD55C \uBA85), \uC778\uBB3C \uC704\uCE58\uB97C \uC138\uC6B0\uC9C0 \uC54A\uC740 \uCCAB \uCEF7, \uC5B4\uB311\uD130 \uAE38\uC774 \uC0C1\uD55C\uC744 \uB118\uB294 \uBD84\uB7C9. \uD55C \uBC88\uC5D0 \uB098\uC624\uC9C0 \uC54A\uC73C\uBA74 \uC0F7\uC744 \uB098\uB220 \uD729 \uC804\uD658\uC73C\uB85C \uC787\uB294\uB2E4.", "pair": "\uACF5\uAC04\uACFC \uC778\uC6D0\uC744 \uBCF4\uC5EC \uC900 \uB113\uC740 \uCEF7 \uB4A4\uC5D0 \uC628\uB2E4. \uB871\uD14C\uC774\uD06C \uC2DC\uAC04(timing.long-take)\uACFC \uD568\uAED8 \uACE0\uB978\uB2E4.", "specify": "\uB118\uAE30\uB294 \uC21C\uC11C(\uB204\uAD6C \u2192 \uB204\uAD6C \u2192 \uB204\uAD6C), \uB118\uAE38 \uB54C\uB9C8\uB2E4\uC758 \uACC4\uAE30 \uB3D9\uC791(\uC219\uC784\xB7\uBA54\uCE58\uAE30), \uB05D \uD504\uB808\uC784. \uCC38\uC870 \uC774\uBBF8\uC9C0\uB97C \uBC1B\uB294 \uC8FC\uC694 \uC778\uBB3C\uC740 \uB450 \uBA85\uAE4C\uC9C0\uC774\uACE0 \uB098\uBA38\uC9C0\uB294 \uAC89\uBAA8\uC2B5\uC73C\uB85C \uC801\uB294\uB2E4." },
-        "camera.speed-ramp": { "avoid": "\uB290\uB824\uC9C0\uB294 \uC9C0\uC810\uC774 \uB450 \uACF3 \uC774\uC0C1\uC778 \uCEF7, \uB300\uC0AC\uAC00 \uC788\uB294 \uCEF7(\uC785 \uBAA8\uC591\uACFC \uC18C\uB9AC\uAC00 \uC5B4\uAE0B\uB09C\uB2E4), \uD0C0\uACA9\uC774 \uC5EC\uB7EC \uBC88\uC778 \uB09C\uC804.", "pair": "\uC55E\uB4A4 \uCEF7\uC740 \uC815\uC0C1 \uC18D\uB3C4\uB85C \uB454\uB2E4. \uB290\uB824\uC9C4 \uB3D9\uC548 \uCE74\uBA54\uB77C\uB294 \uACE0\uC815\uD558\uAC70\uB098 \uCC9C\uCC9C\uD788 \uC606\uC73C\uB85C \uD750\uB978\uB2E4.", "specify": "\uB290\uB824\uC9C0\uB294 \uC21C\uAC04 \uD558\uB098(shot_icons accents\uC758 on\uC5D0 \uC601\uC5B4\uB85C), \uADF8\uB3D9\uC548 \uACF5\uC911\uC5D0 \uB5A0 \uC788\uB294 \uAC83(\uBB3C\uBC29\uC6B8\xB7\uD30C\uD3B8), \uD480\uB9AC\uB294 \uC2DC\uC810." },
-        "camera.impact-shake": { "avoid": "\uACC4\uC18D \uC774\uC5B4\uC9C0\uB294 \uD754\uB4E4\uB9BC(\uADF8\uAC74 \uD578\uB4DC\uD5EC\uB4DC\uB2E4), \uD45C\uC815\uC744 \uC77D\uC5B4\uC57C \uD558\uB294 \uD074\uB85C\uC988\uC5C5, \uC6D0\uC778\uC774 \uD654\uBA74\uC774\uB098 \uC18C\uB9AC\uC5D0 \uC5C6\uB294 \uD754\uB4E4\uB9BC.", "pair": "\uACE0\uC815 \uD504\uB808\uC784 \uC704\uC5D0 \uC5B9\uC744 \uB54C \uAC00\uC7A5 \uD06C\uAC8C \uC77D\uD78C\uB2E4. \uCDA9\uACA9\uC74C\uC744 \uAC19\uC740 \uC0F7\uC758 \uD6A8\uACFC\uC74C\uC5D0 \uC801\uB294\uB2E4.", "specify": "\uD754\uB4E4\uB9BC\uC758 \uC6D0\uC778\uC774 \uB418\uB294 \uC0AC\uAC74(shot_icons accents\uC758 on\uC5D0 \uC601\uC5B4\uB85C: each footfall, the landing), \uD69F\uC218, \uC0AC\uC774\uC0AC\uC774\uC758 \uBA48\uCDA4." },
-        "framing.els": { "avoid": "\uC778\uBB3C\uC744 \uC54C\uC544\uBCF4\uAC70\uB098 \uD45C\uC815\uC744 \uC77D\uC5B4\uC57C \uD558\uB294 \uCEF7. \uD734\uB300\uD3F0 \uD654\uBA74\uC5D0\uC11C\uB294 \uB113\uC740 \uD48D\uACBD\uC758 \uD798\uC774 \uC904\uC5B4\uB4E0\uB2E4.", "pair": "\uAC10\uC815 \uD074\uB85C\uC988\uC5C5\uACFC \uBC88\uAC08\uC544 \uBD99\uC774\uBA74 \uC7A5\uBA74\uC758 \uAC15\uB3C4\uAC00 \uC720\uC9C0\uB41C\uB2E4.", "specify": "\uC778\uBB3C \uC218\uC640 \uD654\uBA74 \uC18D \uC704\uCE58, \uD654\uBA74 \uB192\uC774 \uB300\uBE44 \uD06C\uAE30, \uAE30\uC900 \uB79C\uB4DC\uB9C8\uD06C, \uC9C0\uD3C9\uC120 \uB192\uC774, \uC2DC\uAC04\uB300\xB7\uB0A0\uC528.", "vertical": "\uAC74\uBB3C\xB7\uC808\uBCBD\xB7\uD558\uB298 \uAC19\uC740 \uC138\uB85C \uC694\uC18C\uB97C \uCD95\uC73C\uB85C \uC4F0\uACE0, \uCE74\uBA54\uB77C\uB97C \uBE44\uC2A4\uB4EC\uD788 \uB450\uC5B4 \uD3ED\uC744 \uB9CC\uB4E0\uB2E4. \uC9C0\uD3C9\uC120\uC740 \uD654\uBA74 \uD55C\uAC00\uC6B4\uB370\uB97C \uD53C\uD55C\uB2E4." },
-        "framing.ls": { "avoid": "\uD45C\uC815\uACFC \uBC18\uC751\uC774 \uC815\uBCF4\uC778 \uC21C\uAC04(\uD074\uB85C\uC988\uC5C5\uC73C\uB85C \uC881\uD78C\uB2E4).", "pair": "\uC124\uC815\uC0F7 \u2192 \uAC19\uC740 \uACF5\uAC04 \uC548\uC73C\uB85C \uCEF7\uC778 \u2192 \uD074\uB85C\uC988\uC5C5\uC774 \uC774\uC5B4\uC9C4 \uB4A4 \uC7AC\uC124\uC815\uC0F7. \uAC00\uAE4C\uC6B4 \uD06C\uAE30\uB85C \uC5F0 \uC7A5\uBA74\uC740 \uB2E4\uC74C \uADF8\uB9BC \uCEF7\uC5D0\uC11C \uC774 \uD06C\uAE30\uB85C \uACF5\uAC04\uC744 \uBCF4\uC5EC \uC900\uB2E4.", "specify": "\uC778\uBB3C \uC218, \uAC01\uC790\uC758 \uD654\uBA74 \uC704\uCE58(\uC88C\uC6B0\xB7\uC55E\uB4A4), \uC11C\uB85C\uC758 \uAC04\uACA9, \uBB38\xB7\uCC3D \uAC19\uC740 \uACF5\uAC04 \uAE30\uC900\uC810. \uAC70\uB9AC\uB294 \uC22B\uC790\uAC00 \uC544\uB2C8\uB77C \uD06C\uAE30\uC640 \uBC30\uCE58\uB85C \uC801\uB294\uB2E4.", "vertical": "\uC138\uB85C \uD654\uBA74\uC740 \uC640\uC774\uB4DC\uB85C \uB300\uD654\uB97C \uC138\uC6B0\uAE30 \uC5B4\uB835\uB2E4. \uC778\uBB3C\uC744 \uC606\uC73C\uB85C \uB098\uB780\uD788 \uB450\uC9C0 \uB9D0\uACE0 \uC55E\uB4A4\uB85C \uC313\uACE0, \uCE74\uBA54\uB77C \uCABD\uC73C\uB85C \uC624\uAC00\uAC8C \uC6C0\uC9C1\uC778\uB2E4." },
-        "framing.fs": { "avoid": "\uD45C\uC815\uC774 \uD575\uC2EC\uC778 \uC21C\uAC04. \uBC1C\uBAA9\xB7\uBB34\uB98E \uAC19\uC740 \uAD00\uC808\uC5D0\uC11C \uC790\uB974\uC9C0 \uC54A\uB294\uB2E4.", "pair": "\uB3D9\uC791\uC758 \uC2DC\uC791\uC740 \uD480\uC0F7\uC73C\uB85C \uBCF4\uC5EC \uC8FC\uACE0 \uACB0\uACFC\uB098 \uBC18\uC751\uC740 \uB354 \uAC00\uAE4C\uC6B4 \uD06C\uAE30\uB85C \uBC1B\uB294\uB2E4.", "specify": "\uB3D9\uC791 \uB3D9\uC0AC, \uBC1C\uC774 \uB2FF\uB294 \uBC14\uB2E5, \uC758\uC0C1, \uBC1C\uB05D \uC544\uB798 \uC5EC\uBC31.", "vertical": "\uC138\uB85C \uD654\uBA74\uC740 \uC0AC\uB78C \uD55C \uBA85\uC744 \uBA38\uB9AC\uBD80\uD130 \uBC1C\uB05D\uAE4C\uC9C0 \uB2F4\uAE30\uC5D0 \uC54C\uB9DE\uB2E4. \uC804\uC2E0\uACFC \uCE74\uC6B0\uBCF4\uC774\uC0F7\uC774 \uC138\uB85C\uC5D0\uC11C \uAC00\uC7A5 \uC798 \uB9DE\uB294\uB2E4." },
-        "framing.mfs": { "avoid": "\uBB34\uB98E \uAD00\uC808\uC5D0\uC11C \uC790\uB974\uB294 \uD504\uB808\uC784. \uBB34\uB98E \uC704\uB97C \uC7A1\uB294 \uB2C8\uC0F7\uC740 \uB2E4\uB978 \uD06C\uAE30\uB2E4.", "pair": "\uB300\uCE58\uAC00 \uC2DC\uC791\uB420 \uB54C \uC774 \uD06C\uAE30\uB85C \uC190\uACFC \uAC70\uB9AC\uB97C \uBCF4\uC774\uACE0, \uAE34\uC7A5\uC774 \uC624\uB974\uBA74 \uC5BC\uAD74\uB85C \uC881\uD78C\uB2E4.", "specify": "\uC808\uB2E8\uC120(\uD5C8\uBC85\uC9C0 \uC911\uAC04), \uC190\uC758 \uC704\uCE58, \uB450 \uC0AC\uB78C\uC774\uBA74 \uAC01\uC790\uC758 \uC704\uCE58\uC640 \uAC04\uACA9.", "vertical": "\uC138\uB85C \uD654\uBA74\uC5D0\uC11C \uC804\uC2E0\uC0F7\uACFC \uD568\uAED8 \uAC00\uC7A5 \uC798 \uB9DE\uB294 \uD06C\uAE30." },
-        "framing.ms": { "avoid": "\uAC10\uC815\uC758 \uC808\uC815(\uD074\uB85C\uC988\uC5C5\uC73C\uB85C \uC881\uD78C\uB2E4). \uC5C9\uB369\uC774 \uB192\uC774\uC5D0\uC11C \uC790\uB974\uB294 \uD504\uB808\uC784.", "pair": "\uC0F7/\uB9AC\uBC84\uC2A4\uC0F7\uC740 \uC591\uCABD \uD06C\uAE30\uB97C \uB9DE\uCD98\uB2E4. \uD55C\uCABD\uB9CC \uB2E4\uB974\uAC8C \uC7A1\uC73C\uBA74 \uADF8 \uCC28\uC774\uAC00 \uC758\uBBF8\uAC00 \uB41C\uB2E4.", "specify": "\uC190\uC9D3\uC774 \uC815\uBCF4\uBA74 \uC190\uC774 \uD504\uB808\uC784 \uC548\uC5D0 \uC788\uB2E4\uACE0 \uC801\uB294\uB2E4. \uC2DC\uC120 \uBC29\uD5A5.", "vertical": "\uC138\uB85C \uD654\uBA74\uC5D0\uC11C\uB294 \uAC19\uC740 \uD5C8\uB9AC\uC120\uC774\uB77C\uB3C4 \uC778\uBB3C\uC774 \uD654\uBA74 \uD3ED\uC744 \uB354 \uCC44\uC6CC \uAC00\uB85C \uD074\uB85C\uC988\uC5C5\uC5D0 \uAC00\uAE5D\uAC8C \uC77D\uD78C\uB2E4." },
-        "framing.mcu": { "avoid": "\uAC10\uC815\uC758 \uC808\uC815\uC774\uB098 \uAE68\uB2EC\uC74C. \uADF8 \uC21C\uAC04\uC740 \uD074\uB85C\uC988\uC5C5\uC5D0 \uB9E1\uAE34\uB2E4.", "pair": "\uC7A5\uBA74 \uB300\uBD80\uBD84\uC744 \uC774 \uD06C\uAE30\uB85C \uB450\uBA74 \uD074\uB85C\uC988\uC5C5\uC774 \uAC15\uC870\uB85C \uC0B4\uC544\uB09C\uB2E4.", "specify": "\uC2DC\uC120\uC774 \uB80C\uC988 \uC815\uBA74(\uC9C1\uC811 \uB9D0\uD558\uAE30)\uC778\uC9C0 \uD654\uBA74 \uBC16 \uC0C1\uB300\uC778\uC9C0.", "vertical": "\uC138\uB85C \uD654\uBA74\uC740 \uD1A0\uD0B9\uD5E4\uB4DC\uC640 \uCE74\uBA54\uB77C\uB97C \uBCF4\uACE0 \uB9D0\uD558\uB294 \uCEF7\uC5D0 \uC798 \uB9DE\uB294\uB2E4. \uB208\uC740 \uC704\uCABD 3\uBD84\uC758 1 \uC120 \uADFC\uCC98." },
-        "framing.cu": { "avoid": "\uC774\uC57C\uAE30 \uC815\uBCF4\uAC00 \uC5C6\uB294 \uD074\uB85C\uC988\uC5C5, \uBCC0\uD654 \uC5C6\uB294 \uC5BC\uAD74 \uCEF7\uC758 \uC5F0\uC18D. \uD69F\uC218\uBCF4\uB2E4 \uAC10\uC815\uC774 \uC2E4\uB9B0 \uC21C\uAC04\uC5D0 \uC4F4\uB2E4.", "pair": "\uACF5\uAC04\uC744 \uC138\uC6B4 \uB4A4\uC5D0 \uC628\uB2E4. \uD074\uB85C\uC988\uC5C5\uC5D0\uC11C \uC640\uC774\uB4DC\uB85C \uBC14\uAFB8\uB294 \uCEF7\uC774 \uAC00\uC7A5 \uD06C\uAC8C \uC77D\uD78C\uB2E4.", "specify": "\uD45C\uC815 \uBCC0\uD654(\uC2DC\uC791 \u2192 \uB05D), \uC2DC\uC120 \uBC29\uD5A5, \uB9DD\uC6D0 \uB80C\uC988.", "vertical": "\uAC00\uB85C \uD074\uB85C\uC988\uC5C5\uC744 \uC138\uB85C\uC5D0 \uADF8\uB300\uB85C \uC62E\uAE30\uBA74 \uBE45 \uD074\uB85C\uC988\uC5C5\uCC98\uB7FC \uAF49 \uCC2C\uB2E4. \uAD11\uAC01\uC73C\uB85C \uCC0D\uC73C\uBA74 \uC704\uC544\uB798\uAC00 \uC65C\uACE1\uB41C\uB2E4." },
-        "framing.choker": { "avoid": "\uC77C\uC0C1 \uB300\uD654. \uC790\uC8FC \uC4F0\uBA74 \uD798\uC774 \uBE60\uC9C4\uB2E4. \uB208\uACFC \uC785 \uC0AC\uC774\uB9CC \uB0A8\uAE30\uB294 \uD504\uB808\uC784\uC740 \uCD9C\uCC98\uB9C8\uB2E4 \uC815\uC758\uAC00 \uB2E4\uB974\uB2C8 \uC774 id\uC5D0 \uC11E\uC9C0 \uC54A\uB294\uB2E4.", "pair": "\uAC10\uC815\uC774 \uC313\uC778 \uB4A4\uC758 \uC815\uC810\uC5D0 \uB454\uB2E4. \uBC14\uB85C \uC55E \uCEF7\uC774 \uAC19\uC740 \uC5BC\uAD74\uC758 \uD074\uB85C\uC988\uC5C5\uC774\uBA74 \uCC28\uC774\uAC00 \uC791\uB2E4.", "specify": "\uC808\uB2E8\uC120(\uC774\uB9C8\xB7\uD131), \uD45C\uC815 \uBCC0\uD654.", "vertical": "\uC138\uB85C \uD654\uBA74\uC5D0\uC11C\uB294 \uC704\uC544\uB798 \uC808\uB2E8\uBCF4\uB2E4 \uC5BC\uAD74 \uD3ED\uC774 \uD654\uBA74 \uD3ED\uC744 \uCC44\uC6B0\uB294\uC9C0\uB85C \uC815\uD55C\uB2E4." },
-        "framing.ecu": { "avoid": "\uAD00\uAC1D\uC774 \uBB34\uC5C7\uC758 \uC77C\uBD80\uC778\uC9C0 \uBAA8\uB97C \uB54C(\uC55E\uC5D0\uC11C \uACF5\uAC04\uACFC \uC778\uBB3C\uC744 \uBA3C\uC800 \uBCF4\uC5EC \uC900\uB2E4). \uC0AC\uBB3C\uB9CC \uBCF4\uC774\uBA74 \uC778\uC11C\uD2B8\uB85C \uC801\uB294\uB2E4.", "pair": "\uD3B8\uC9D1\uC774 \uBE68\uB77C\uC9C0\uB294 \uC808\uC815\uC5D0\uC11C \uB208 \uD074\uB85C\uC988\uC5C5\uC744 \uC9E7\uAC8C \uC787\uB294\uB2E4.", "specify": "\uB514\uD14C\uC77C \uD558\uB098\uC758 \uC774\uB984, \uADF8\uAC83\uC774 \uD654\uBA74\uC744 \uCC44\uC6B4\uB2E4\uB294 \uBB38\uC7A5, \uB9E4\uD06C\uB85C\uC640 \uC595\uC740 \uC2EC\uB3C4.", "vertical": "\uC138\uB85C \uD654\uBA74\uC5D0\uC11C\uB294 \uAC00\uB85C \uD074\uB85C\uC988\uC5C5\uB9CC\uC73C\uB85C\uB3C4 \uC774 \uD06C\uAE30\uC5D0 \uAC00\uAE4C\uC6CC\uC9C4\uB2E4." },
-        "timing.insert": { "avoid": "1\uCD08 \uBD84\uB7C9\uC744 3~4\uCD08\uB85C \uCC44\uC6B0\uB294 \uAC83. \uBC18\uBCF5\uD574\uC11C \uBCF4\uC5EC \uC8FC\uB294 \uC778\uC11C\uD2B8\uB294 \uCC98\uC74C\uBCF4\uB2E4 \uC9E7\uAC8C.", "specify": "\uC77D\uC744 \uB300\uC0C1\uACFC \uBD84\uB7C9, \uCCAB \uB4F1\uC7A5\uC778\uC9C0 \uBC18\uBCF5\uC778\uC9C0, \uC0DD\uC131 \uAE38\uC774\uC640 \uC0AC\uC6A9 \uAE38\uC774." },
-        "timing.action": { "avoid": "\uD55C \uD074\uB9BD\uC5D0 \uB3D9\uC791\uC744 \uBAB0\uC544\uB123\uB294 \uAC83. \uBE60\uB978 \uC561\uC158\uC740 \uCEF7\uC744 \uB098\uB220 \uB3D9\uC791 \uC911\uC5D0 \uC790\uB978\uB2E4.", "specify": "\uC138 \uBC15\uC790(\uC608\uBE44\xB7\uC811\uCD09\xB7\uBC18\uC751 \uC815\uCC29)\uC758 \uB300\uB7B5 \uC2DC\uC810, \uB3C4\uCC29 \uC9C0\uC810\uC774 \uD654\uBA74 \uC548\uC5D0 \uB4E4\uC5B4\uC624\uB294\uC9C0." },
-        "timing.dialogue": { "avoid": "\uD55C \uC0AC\uB78C \uC0F7\uC5D0 \uC5EC\uB7EC \uC904\uACFC \uBC18\uC751\uC744 \uAE38\uAC8C \uBB36\uB294 \uAC83(\uD604\uB300 \uB300\uD654 \uD3B8\uC9D1\uC740 \uC904\uACFC \uBC18\uC751\uB9C8\uB2E4 \uC0F7\uC744 \uC900\uB2E4).", "specify": "\uB300\uC0AC \uC6D0\uBB38\uACFC \uBC1C\uD654 \uCD08, \uBC18\uC751\uC774 \uC2DC\uC791\uB418\uB294 \uC9C0\uC810\uACFC \uAF2C\uB9AC, \uD55C \uD074\uB9BD\uC5D0 \uB123\uC744 \uC904 \uC218." },
-        "timing.establishing": { "avoid": "\uC20F\uD3FC\uC758 \uCCAB \uCEF7(\uCCAB 3~6\uCD08 \uD6C5\uACFC \uBD80\uB52A\uCE5C\uB2E4).", "specify": "\uAD00\uAC1D\uC774 \uC77D\uC5B4\uC57C \uD560 \uACF5\uAC04 \uAD00\uACC4, \uCCAB \uBC29\uBB38\uC778\uC9C0 \uC7AC\uBC29\uBB38\uC778\uC9C0." },
-        "timing.long-take": { "avoid": "\uC6C0\uC9C1\uC784 \uC5C6\uC774 \uAE38\uC774\uB9CC \uB298\uB9AC\uB294 \uAC83.", "specify": "\uC5F0\uC18D \uC0AC\uAC74\uC758 \uC2DC\uC791\xB7\uB05D \uC0C1\uD0DC, \uCE74\uBA54\uB77C \uACBD\uB85C\uC758 \uC2DC\uC791\xB7\uB05D, \uC5B4\uB311\uD130 \uAE38\uC774 \uC0C1\uD55C." }
-      };
-      for (const [id, note] of Object.entries(GUIDE)) Object.assign(byId[id], note);
-      const PROMPT = {
-        "camera.static": "holds a static frame",
-        "camera.dolly-in": "pushes in toward {target}",
-        "camera.dolly-out": "pulls back from {target}",
-        "camera.slow-zoom-in": "zooms in on {target} from a fixed position",
-        "camera.arc": "arcs around {target}, keeping it centered",
-        "camera.follow": "follows behind {target} at a steady distance",
-        "camera.reverse-tracking": "tracks backward ahead of {target}, facing it",
-        "camera.handheld": "moves handheld with {target}, with a slight natural sway",
-        "camera.whip-pan": "whip pans to {target}",
-        "camera.crane-up": "cranes up above {target}",
-        "camera.snorricam": "stays body-mounted on {target}, the face fixed in frame while the background moves",
-        "camera.push-past": "pushes in past the foreground toward {target}",
-        "camera.dolly-zoom": "makes a dolly zoom on {target}, its size held while the background stretches",
-        "camera.side-tracking": "trucks sideways alongside {target}",
-        "camera.drone-pullback": "pulls back and rises above {target}",
-        "camera.pan-left": "pans left to {target}",
-        "camera.pan-right": "pans right to {target}",
-        "camera.tilt-up": "tilts upward to {target}",
-        "camera.tilt-down": "tilts downward to {target}",
-        "camera.crash-zoom": "crash zooms onto {target} in under half a second",
-        "camera.blast-pushback": "recoils backward from the shockwave of {target}, jolting once before it settles",
-        "camera.weapon-cam": "rides on the projectile as it flies toward {target}, its tip fixed low in the frame while the surroundings streak past",
-        "camera.pass-through": "chases close behind {target} and flies straight through each opening on the way",
-        "camera.drone-dive": "flies low and level behind {target}, then pitches straight down at the edge and dives",
-        "camera.relay": "stays in one unbroken take with {target}, then swings to the next fighter on each handoff action",
-        // A beat accent is a whole sentence; {cue} is the moment it fires on (the technique's `on`, else fields.cue).
-        "camera.speed-ramp": "Speed ramp: the action runs at normal speed, slows almost to a stop at {cue}, then snaps back to normal speed",
-        "camera.impact-shake": "Impact shake: the frame jolts once on {cue} and settles completely still in between"
-      };
-      for (const [id, prompt] of Object.entries(PROMPT)) byId[id].prompt = prompt;
-      const VALUES = {
-        "size": {
-          "ws": { "label": { "ko": "\uC640\uC774\uB4DC \uC0F7", "en": "Wide shot" }, "use": "\uB871\uC0F7(ls)\uACFC \uAC19\uC740 \uD06C\uAE30\uC758 \uC61B \uD0A4. \uC0C8 \uBCF4\uB4DC\uB294 ls\uB97C \uC4F4\uB2E4.", "avoid": "\uC57D\uC5B4 WS\uB294 \uD55C\uAD6D \uD604\uC7A5\uC5D0\uC11C \uC6E8\uC2A4\uD2B8 \uC0F7(\uD5C8\uB9AC \uC704)\uC73C\uB85C\uB3C4 \uC77D\uD78C\uB2E4.", "specify": "ls\uC640 \uAC19\uB2E4." },
-          "insert": { "label": { "ko": "\uC778\uC11C\uD2B8", "en": "Insert" }, "use": "\uC7A5\uBA74 \uC548\uC758 \uC0AC\uBB3C\xB7\uC190\xB7\uD654\uBA74 \uD558\uB098\uB97C \uB5BC\uC5B4 \uBCF4\uC5EC \uC900\uB2E4. \uC124\uBA85 \uB300\uC0AC \uC5C6\uC774 \uB2E8\uC11C\uC640 \uC815\uBCF4\uB97C \uC900\uB2E4.", "avoid": "\uB2E4\uB978 \uC7A5\uC18C\uB098 \uB2E4\uB978 \uC2DC\uAC04\uC774\uBA74 \uCEF7\uC5B4\uC6E8\uC774\uB2E4. \uC18C\uD488 \uC704\uCE58\uC640 \uC870\uBA85\uC774 \uBCF8 \uC7A5\uBA74\uACFC \uC5B4\uAE0B\uB098\uBA74 \uC5F0\uC18D\uC131\uC774 \uAE68\uC9C4\uB2E4.", "pair": "\uACF5\uAC04\uC744 \uBCF4\uC5EC \uC900 \uCEF7 \uB4A4\uC5D0 \uC624\uACE0, \uBCF4\uD1B5 \uADF8 \uC778\uBB3C\uC758 \uC2DC\uC120 \uAC01\uB3C4\uC5D0\uC11C \uCC0D\uB294\uB2E4.", "specify": "\uC0AC\uBB3C, \uC190\uC758 \uC8FC\uC778, \uC0C1\uD0DC, \uD654\uBA74 \uC18D \uAE00\uC790, \uC2DC\uC120 \uAC01\uB3C4. \uC5BC\uAD74\uC774 \uC5C6\uB2E4\uB294 \uB9D0 \uB300\uC2E0 \uD654\uBA74\uC744 \uCC44\uC6B0\uB294 \uAC83\uB9CC \uC801\uB294\uB2E4(only the hand and the phone fill the frame).", "vertical": "\uC138\uB85C\uB85C \uAE38\uCB49\uD55C \uC0AC\uBB3C\uC740 \uC138\uB85C \uD654\uBA74\uC5D0\uC11C \uAC00\uAE5D\uACE0 \uC790\uC138\uD558\uAC8C \uBCF4\uC778\uB2E4." },
-          "two": { "label": { "ko": "\uD22C\uC0F7", "en": "Two-shot" }, "use": "\uB450 \uC778\uBB3C\uC744 \uD55C \uD504\uB808\uC784\uC5D0 \uB2F4\uC544 \uAD00\uACC4\xB7\uD798\xB7\uAC70\uB9AC\uC640 \uBC18\uC751\uC744 \uD568\uAED8 \uBCF4\uC5EC \uC900\uB2E4. \uD06C\uAE30\uB294 \uB530\uB85C \uC815\uD55C\uB2E4.", "avoid": "\uC758\uB3C4 \uC5C6\uC774 \uBE44\uC881\uAC8C \uCC44\uC6B4 \uD504\uB808\uC784.", "pair": "\uD22C\uC0F7\uC73C\uB85C \uAD00\uACC4\uB97C \uC138\uC6B4 \uB4A4 \uC0F7/\uB9AC\uBC84\uC2A4\uC0F7\uC73C\uB85C \uB4E4\uC5B4\uAC04\uB2E4. \uC9C0\uC18D\uB418\uB294 \uD22C\uC0F7\uC740 \uBC30\uC6B0\uAC00 \uC790\uC138\uC640 \uC0C1\uCCB4\uB85C \uC5F0\uAE30\uD558\uAC8C \uD55C\uB2E4.", "specify": "\uB450 \uC778\uBB3C\uC758 \uC704\uCE58(\uC88C\uC6B0\xB7\uC55E\uB4A4), \uAC04\uACA9, \uC5BC\uAD74 \uBC29\uD5A5, \uC808\uB2E8\uC120, \uB204\uAC00 \uB9D0\uD558\uB294\uC9C0.", "vertical": "\uC606\uC73C\uB85C \uB098\uB780\uD788 \uC11C\uBA74 \uC5BC\uAD74\uC744 \uB123\uAE30 \uC5B4\uB835\uB2E4. \uD55C \uC0AC\uB78C\uC740 \uC55E, \uD55C \uC0AC\uB78C\uC740 \uB4A4\uB85C \uAE4A\uC774\uB97C \uB454\uB2E4." },
-          "three": { "label": { "ko": "\uC4F0\uB9AC\uC0F7", "en": "Three-shot" }, "use": "\uC138 \uC778\uBB3C\uC758 \uAD00\uACC4\uC640 \uC704\uACC4\uB97C \uD55C \uD504\uB808\uC784\uC5D0 \uB2F4\uB294\uB2E4. \uAC00\uC6B4\uB370\uB294 \uAD8C\uC704, \uACE0\uB978 \uAC04\uACA9\uC740 \uC870\uD654, \uB4F1\uC744 \uB3CC\uB9B0 \uD55C \uBA85\uC740 \uAC08\uB4F1. \uC640\uC774\uB4DC\uB85C \uC7A1\uC73C\uBA74 \uC7A5\uC18C\uB3C4 \uD568\uAED8 \uBCF4\uC778\uB2E4.", "avoid": "\uC0F7\uB2F9 \uC8FC\uC694 \uC778\uBB3C\uC740 \uB450 \uBA85\uAE4C\uC9C0\uB2E4. \uC138 \uBC88\uC9F8\uB294 \uCC38\uC870 \uC774\uBBF8\uC9C0 \uC5C6\uB294 \uC5D1\uC2A4\uD2B8\uB77C\uB85C \uBB18\uC0AC\uD558\uAC70\uB098 \uC0F7\uC744 \uB098\uB208\uB2E4.", "pair": "\uC640\uC774\uB4DC \uC4F0\uB9AC\uC0F7\uC73C\uB85C \uBB34\uB9AC\uC640 \uC7A5\uC18C\uB97C \uBCF4\uC778 \uB4A4 \uC2F1\uAE00\uB85C \uB098\uB208\uB2E4.", "specify": "\uC138 \uC0AC\uB78C\uC758 \uBC30\uCE58(\uC0BC\uAC01\uD615\xB7\uC77C\uB82C\xB7\uC55E\uB4A4)\uC640 \uC911\uC2EC\uC778\uBB3C, \uC808\uB2E8\uC120.", "vertical": "\uC138\uB85C \uD654\uBA74\uC5D0\uC11C \uC138 \uC0AC\uB78C\uC758 \uB300\uD654\uB294 \uB9E4\uC6B0 \uC5B4\uB835\uB2E4. \uC55E\xB7\uC911\uAC04\xB7\uB4A4\uB85C \uC313\uB294\uB2E4." },
-          "ots": { "label": { "ko": "\uC624\uBC84 \uB354 \uC204\uB354", "en": "Over the shoulder" }, "use": "\uC55E\uC0AC\uB78C \uC5B4\uAE68 \uB108\uBA38\uB85C \uC0C1\uB300 \uC5BC\uAD74\uC744 \uBCF8\uB2E4. \uB300\uD654\uC758 \uC8FC\uACE0\uBC1B\uC74C, \uC704\uCE58 \uAC10\uAC01, \uB450 \uC778\uBB3C\uC758 \uC5F0\uACB0.", "avoid": "\uB4F1\uC744 \uBCF4\uC774\uB294 \uBC30\uC6B0\uAC00 \uB108\uBB34 \uB9CE\uC774 \uBCF4\uC5EC \uC8FC\uC758\uB97C \uBE7C\uC557\uB294 \uAC01\uB3C4, \uB9AC\uBC84\uC2A4\uC5D0\uC11C 180\uB3C4 \uC120\uC744 \uB118\uB294 \uAC83.", "pair": "\uB450 OTS\uB97C \uBC88\uAC08\uC544 \uC0F7/\uB9AC\uBC84\uC2A4\uC0F7\uC744 \uB9CC\uB4E4\uACE0 \uC591\uCABD \uD06C\uAE30\uB97C \uB9DE\uCD98\uB2E4. OTS\uC5D0\uC11C \uC2F1\uAE00\uB85C \uBE60\uC838\uB098\uC624\uBA74 \uC7A5\uBA74\uC758 \uC804\uD658\uC744 \uC54C\uB9B0\uB2E4.", "specify": "\uC5B4\uAE68 \uC8FC\uC778\uACFC \uD654\uBA74 \uCABD(\uC88C\xB7\uC6B0), \uD750\uB9B0 \uC5B4\uAE68\uC640 \uB4A4\uD1B5\uC218, \uBA3C \uC778\uBB3C\uC758 \uC5BC\uAD74 \uD06C\uAE30\uC640 \uC2DC\uC120, \uC5B4\uAE68 \uB192\uC774 \uCE74\uBA54\uB77C.", "vertical": "\uC55E \uC5B4\uAE68\uB294 \uD654\uBA74 \uC544\uB798\uCABD, \uBA3C \uC5BC\uAD74\uC774 \uB192\uC774\uB97C \uB354 \uCC44\uC6B4\uB2E4. \uB450 OTS\uB97C \uB530\uB85C \uB9CC\uB4E4\uACE0 \uC2DC\uC120\uC744 \uB9DE\uCD98\uB2E4." },
-          "pov": { "label": { "ko": "1\uC778\uCE6D \uC2DC\uC810", "en": "Point of view" }, "use": "\uC778\uBB3C\uC758 \uB208\uB192\uC774\uC5D0\uC11C \uADF8\uAC00 \uBCF4\uB294 \uAC83. \uD06C\uAE30\uB294 \uB530\uB85C \uC815\uD558\uACE0 \uC2DC\uC810\uC740 camera.pov \uAE30\uBC95\uC73C\uB85C\uB3C4 \uC801\uB294\uB2E4.", "avoid": "\uBCF4\uB294 \uC0AC\uB78C\uC744 \uC55E\uB4A4 \uCEF7\uC5D0\uC11C \uC138\uC6B0\uC9C0 \uC54A\uC740 \uC2DC\uC810 \uC20F, \uBC18\uC751\uC774 \uC0AC\uB77C\uC9C8 \uB9CC\uD07C \uAE34 \uC2DC\uC810 \uC20F.", "pair": "\uBCF4\uB294 \uC5BC\uAD74 \u2192 \uC2DC\uC810 \uC20F \u2192 \uBC18\uC751 \uC5BC\uAD74.", "specify": "\uB204\uAD6C\uC758 \uB208\uC778\uC9C0, \uBCF4\uB294 \uB300\uC0C1\uACFC \uAC70\uB9AC, \uD654\uBA74 \uC544\uB798\uC5D0 \uAC78\uB9AC\uB294 \uC190, \uAC78\uC74C\uC758 \uD754\uB4E4\uB9BC.", "vertical": "\uC55E\uC73C\uB85C \uB098\uC544\uAC00\uB294 \uAE38\xB7\uBCF5\uB3C4 \uC2DC\uC810\uC774 \uC138\uB85C \uD654\uBA74\uC5D0 \uB9DE\uB294\uB2E4." },
-          "back": { "label": { "ko": "\uB4B7\uBAA8\uC2B5", "en": "From behind" }, "use": "\uB4A4\uC5D0\uC11C \uBCF8 \uC778\uBB3C. \uC5BC\uAD74\uC744 \uAC10\uCDB0 \uAD00\uAC1D\uC774 \uC0DD\uAC01\uC744 \uCC44\uC6B0\uAC8C \uD558\uACE0 \uC778\uBB3C\uC758 \uC2DC\uC57C\uB97C \uD568\uAED8 \uBCF8\uB2E4. \uC2DC\uC810\uC740 camera.rear\uB85C\uB3C4 \uC801\uACE0 \uD06C\uAE30\uB294 \uB530\uB85C \uC815\uD55C\uB2E4.", "avoid": "\uD45C\uC815\uC774 \uC815\uBCF4\uC778 \uC21C\uAC04.", "pair": "\uB4A4\uB530\uB974\uB294 \uC774\uB3D9(camera.follow)\uACFC \uD568\uAED8 \uACE0\uB974\uAE30 \uC27D\uB2E4.", "specify": "\uD06C\uB86D(\uBA38\uB9AC\xB7\uC5B4\uAE68/\uD5C8\uB9AC/\uC804\uC2E0), \uC778\uBB3C\uC774 \uD5A5\uD558\uB294 \uB300\uC0C1, \uB4A4\uC5D0\uC11C \uC54C\uC544\uBCFC \uB2E8\uC11C(\uBA38\uB9AC\xB7\uC637).", "vertical": "\uAE38\xB7\uD1B5\uB85C\xB7\uBCF5\uB3C4\uB97C \uB530\uB77C\uAC00\uB294 \uCD94\uC801\uC774 \uC138\uB85C \uD654\uBA74\uC5D0 \uB9DE\uB294\uB2E4." },
-          "cutaway": { "label": { "ko": "\uCEF7\uC5B4\uC6E8\uC774", "en": "Cutaway" }, "use": "\uC774\uC5B4\uC9C0\uB294 \uD589\uB3D9\uC744 \uB04A\uACE0 \uB2E4\uB978 \uAC83\uC744 \uBCF4\uC5EC \uC900 \uB4A4 \uB3CC\uC544\uC628\uB2E4. \uC18D\uB3C4 \uC870\uC808, \uC774\uC74C\uC0C8 \uAC10\uCD94\uAE30, \uB2E4\uB978 \uC2DC\uAC04\xB7\uC7A5\uC18C, \uCF54\uBBF8\uB514\uC758 \uD380\uCE58\uB77C\uC778. \uB4E3\uB294 \uC0AC\uB78C\uC774\uB098 \uBC18\uC751 \uAC19\uC740 \uC0AC\uB78C\uB3C4 \uB300\uC0C1\uC774\uB2E4.", "avoid": "\uBCF8 \uD589\uB3D9\uACFC \uAD00\uACC4\uC5C6\uB294 \uADF8\uB9BC.", "pair": "\uB3CC\uC544\uC628 \uC6D0\uB798 \uCEF7\uC5D0 \uC0C8 \uC758\uBBF8\uAC00 \uBD99\uB294\uB2E4.", "specify": "\uBB34\uC5C7\uC744, \uC5B4\uB514\uC11C(\uAC19\uC740 \uC7A5\uC18C\uC778\uC9C0 \uB2E4\uB978 \uC2DC\uAC04\uC778\uC9C0), \uD06C\uAE30, \uB3CC\uC544\uAC08 \uCEF7\uACFC \uC787\uB294 \uC2DC\uC120\xB7\uC18C\uB9AC." },
-          "reaction": { "label": { "ko": "\uB9AC\uC561\uC158 \uC0F7", "en": "Reaction shot" }, "use": "\uD654\uBA74\uC758 \uD589\uB3D9\uC774\uB098 \uB9D0\uC5D0 \uBC18\uC751\uD558\uB294 \uC5BC\uAD74(\uC0AC\uB78C\xB7\uB3D9\uBB3C). \uAD00\uAC1D\uC774 \uC5B4\uB5BB\uAC8C \uB290\uB084\uC9C0 \uC815\uD558\uACE0, \uB300\uD654 \uB9AC\uB4EC\uACFC \uCF54\uBBF8\uB514 \uD0C0\uC774\uBC0D\uC744 \uB9CC\uB4E0\uB2E4.", "avoid": "\uBB34\uC5C7\uC5D0 \uBC18\uC751\uD558\uB294\uC9C0 \uBCF4\uC5EC \uC8FC\uB294 \uC55E \uCEF7 \uC5C6\uC774 \uD640\uB85C \uB454 \uBC18\uC751.", "pair": "\uC790\uADF9(\uD589\uB3D9\xB7\uB9D0\xB7\uBCF8 \uAC83) \u2192 \uBC18\uC751. \uBC18\uC751 \uC5BC\uAD74\uC758 \uB73B\uC740 \uC55E \uCEF7\uC774 \uC815\uD55C\uB2E4.", "specify": "\uBC18\uC751\uD558\uB294 \uC778\uBB3C, \uBB34\uC5C7\uC5D0 \uBC18\uC751\uD558\uB294\uC9C0(\uD654\uBA74 \uBC16 \uBC29\uD5A5\uACFC \uC2DC\uC120), \uD074\uB9BD \uC548 \uD45C\uC815 \uBCC0\uD654(\uC2DC\uC791 \u2192 \uB05D), \uD06C\uAE30.", "vertical": "\uC138\uB85C \uD654\uBA74\uC5D0\uC11C\uB294 \uCDA9\uACA9\uC758 \uC21C\uAC04 \uC5BC\uAD74\uB85C \uB04A\uC5B4 \uAD00\uAC1D\uC774 \uBA3C\uC800 \uC77D\uAC8C \uD55C\uB2E4." }
-        },
-        "angle": {
-          "ground": { "label": { "ko": "\uC9C0\uBA74 \uB192\uC774", "en": "Ground level" }, "use": "\uCE74\uBA54\uB77C\uB97C \uBC14\uB2E5 \uAC00\uAE4C\uC774 \uB454\uB2E4. \uBC1C\uACFC \uBC14\uB2E5 \uC9C8\uAC10, \uC791\uC740 \uC874\uC7AC\uC758 \uC2DC\uC810, \uBC14\uB2E5\uC5D0 \uC549\uAC70\uB098 \uC4F0\uB7EC\uC9C4 \uC778\uBB3C. \uCDE8\uC57D\uD568\uC774\uB098 \uAE34\uC7A5\uC73C\uB85C \uC77D\uD790\uC9C0\uB294 \uC55E\uB4A4 \uCEF7\uC774 \uC815\uD55C\uB2E4.", "avoid": "\uC5BC\uAD74\uC774 \uC815\uBCF4\uC778 \uCEF7(\uB80C\uC988\uAC00 \uC218\uD3C9\uC774\uBA74 \uC120 \uC0AC\uB78C\uC758 \uC5BC\uAD74\uC740 \uD654\uBA74 \uC704\uB85C \uB098\uAC04\uB2E4). \uC704\uB97C \uB611\uBC14\uB85C \uC62C\uB824\uB2E4\uBCF4\uB294 \uC20F\uC740 low\uB85C \uC801\uB294\uB2E4.", "specify": "\uB80C\uC988\uAC00 \uC218\uD3C9\uC778\uC9C0 \uC704\uB85C \uAEBE\uC600\uB294\uC9C0, \uC804\uACBD\uC758 \uBC14\uB2E5\xB7\uBC1C\xB7\uBB3C\uCCB4, \uC5BC\uAD74\uC774 \uD654\uBA74\uC5D0 \uB4E4\uC5B4\uC624\uB294\uC9C0." },
-          "over": { "label": { "ko": "\uC5B4\uAE68 \uB108\uBA38", "en": "Over the shoulder" }, "use": "\uC55E\uC0AC\uB78C \uC5B4\uAE68 \uB108\uBA38\uC758 \uC2DC\uC810. \uB300\uD654\uC758 \uB9AC\uBC84\uC2A4 \uCEE4\uBC84\uB9AC\uC9C0\uC640 \uB450 \uC778\uBB3C\uC758 \uC704\uCE58 \uAD00\uACC4.", "avoid": "\uC575\uAE00 \uCE78\uC5D0 over\uB97C \uB450\uBA74 \uB85C\uC6B0\xB7\uD558\uC774\uB97C \uD568\uAED8 \uC801\uC744 \uC218 \uC5C6\uB2E4. \uB192\uC774\uB294 eye\xB7low\xB7high\uB85C \uACE0\uB974\uACE0 \uC5B4\uAE68 \uB108\uBA38 \uAD6C\uC131\uC740 \uD06C\uAE30 ots\uB098 \uCE74\uBA54\uB77C framing\uC5D0 \uC801\uB294 \uD3B8\uC774 \uB0AB\uB2E4.", "specify": "\uB204\uAD6C\uC758 \uC5B4\uB290 \uC5B4\uAE68\uC778\uC9C0, \uB204\uAD6C\uB97C \uBCF4\uB294\uC9C0, \uB9AC\uBC84\uC2A4\uC5D0\uC11C\uB3C4 \uAC19\uC740 \uD3B8." }
-        },
-        "depth": {
-          "shallow": { "label": { "ko": "\uC595\uC740 \uC2EC\uB3C4", "en": "Shallow focus" }, "use": "\uD55C \uBA74\uB9CC \uC120\uBA85\uD558\uAC8C \uB450\uC5B4 \uC778\uBB3C\uC774\uB098 \uC0AC\uBB3C\uC744 \uBC30\uACBD\uC5D0\uC11C \uB5BC\uC5B4 \uB0B8\uB2E4.", "avoid": "\uAE30\uBCF8\uAC12\uC73C\uB85C \uAE54\uAE30(\uD750\uB9B0 \uBC30\uACBD\uC740 \uAE30\uBCF8\uAC12\uC774 \uC544\uB2C8\uB2E4). \uC77D\uC744 \uAC83\uC774 \uB458\uC774\uBA74 \uB799 \uD3EC\uCEE4\uC2A4\uB098 \uB525\uD3EC\uCEE4\uC2A4.", "specify": "\uC120\uBA85\uD55C \uB300\uC0C1(\uB204\uAD6C\uC758 \uC5B4\uB290 \uB208, \uC5B4\uB5A4 \uBB3C\uCCB4)\uACFC \uD750\uB824\uC9C8 \uAC83, \uC7A5\uCD08\uC810 \uB80C\uC988." },
-          "deep": { "label": { "ko": "\uB525\uD3EC\uCEE4\uC2A4", "en": "Deep focus" }, "use": "\uC55E\uACFC \uB4A4\uC758 \uD589\uB3D9\uC744 \uCEF7 \uC5C6\uC774 \uD55C \uD654\uBA74\uC5D0 \uB2F4\uC544 \uAD00\uAC1D\uC774 \uC7A5\uBA74\uC744 \uC77D\uAC8C \uD55C\uB2E4.", "avoid": "\uBCFC \uC21C\uC11C\uB97C \uC5F0\uCD9C\uD558\uC9C0 \uC54A\uC740 \uB525\uD3EC\uCEE4\uC2A4. \uB300\uC0AC\xB7\uC6C0\uC9C1\uC784\xB7\uBE5B\uC73C\uB85C \uC2DC\uC120 \uC21C\uC11C\uB97C \uC9E0\uB2E4.", "specify": "\uC55E\xB7\uC911\uAC04\xB7\uB4A4 \uBA74\uC744 \uD480\uC5B4 \uC4F4\uB2E4(sharp focus from A in the foreground through B to C in the background), \uBA3C\uC800 \uBCFC \uB300\uC0C1\uACFC \uADF8 \uACC4\uAE30." },
-          "none": { "label": { "ko": "\uC2EC\uB3C4 \uC120\uD0DD \uC5C6\uC74C", "en": "No depth choice" }, "use": "\uD3C9\uBA74 \uB3C4\uD45C\xB7\uAE00\uC790 \uD310\uCC98\uB7FC \uCD08\uC810\uBA74\uC774 \uC5C6\uB294 \uADF8\uB9BC.", "avoid": "3D \uC624\uBE0C\uC81D\uD2B8\uB97C \uB80C\uB354\uD558\uB294 \uC2AC\uB77C\uC774\uB4DC(\uC2EC\uB3C4\uB97C \uACE0\uB97C \uC218 \uC788\uB2E4).", "specify": "\uC2EC\uB3C4 \uB0B1\uB9D0\uC744 \uB123\uC9C0 \uC54A\uB294\uB2E4." }
-        },
-        "still": {
-          "focus-in": { "label": { "ko": "\uD3EC\uCEE4\uC2A4 \uC778", "en": "Focus in" }, "use": "\uC778\uBB3C \uC18C\uAC1C. \uB2E4\uAC00\uAC00\uBA70 \uBC30\uACBD\uC744 \uD750\uB824 \uC5BC\uAD74\uB85C \uAD00\uC2EC\uC744 \uBAA8\uC740\uB2E4.", "avoid": "\uC778\uBB3C\uACFC \uAC19\uC740 \uAC70\uB9AC\uC758 \uC0AC\uBB3C\uC744 \uB2E4\uB974\uAC8C \uD750\uB9AC\uB294 \uADF8\uB9BC, \uC18C\uAC1C\uD560 \uC778\uBB3C\uC774 \uC5C6\uB294 \uCEF7.", "specify": "\uC5BC\uAD74(\uB208) \uC601\uC5ED, \uD568\uAED8 \uC120\uBA85\uD574\uC57C \uD560 \uAC19\uC740 \uAC70\uB9AC\uC758 \uC0AC\uBB3C, \uC778\uBB3C\uC744 \uBD80\uB974\uB294 \uB0B4\uB808\uC774\uC158 \uC2DC\uC810." },
-          "rack-focus": { "label": { "ko": "\uB799 \uD3EC\uCEE4\uC2A4", "en": "Rack focus" }, "use": "\uD55C \uB300\uC0C1\uC5D0\uC11C \uB2E4\uB978 \uB300\uC0C1\uC73C\uB85C \uAD00\uC2EC\uC744 \uC62E\uAE30\uACE0 \uB193\uCE5C \uC694\uC18C\uB97C \uB4DC\uB7EC\uB0B8\uB2E4.", "avoid": "\uB450 \uB300\uC0C1\uC774 \uAC19\uC740 \uAC70\uB9AC\uC5D0 \uC788\uAC70\uB098 \uAD00\uC2EC\uC744 \uC62E\uAE38 \uACC4\uAE30\uAC00 \uC5C6\uC744 \uB54C.", "specify": "\uBA3C\uC800 \uC120\uBA85\uD55C \uC601\uC5ED\uACFC \uB098\uC911 \uC601\uC5ED, \uAC01\uC790\uC758 \uC55E\uB4A4 \uAC70\uB9AC, \uC62E\uAE30\uB294 \uACC4\uAE30." },
-          "approach": { "label": { "ko": "\uC5B4\uD504\uB85C\uCE58", "en": "Approach" }, "use": "\uB2E8\uC11C\uB85C \uCC9C\uCC9C\uD788 \uB2E4\uAC00\uAC04\uB2E4. \uB05D\uC5D0\uC11C \uBB34\uC5B8\uAC00 \uBC14\uB014 \uB54C \uD798\uC774 \uC788\uB2E4.", "avoid": "\uBAA9\uC801\uC9C0 \uC5C6\uB294 \uC90C, \uBAA8\uB4E0 \uCEF7\uC5D0 \uAC19\uC740 \uB2E4\uAC00\uAC00\uAE30.", "specify": "\uB2E8\uC11C \uC601\uC5ED, \uB3C4\uCC29 \uBC30\uC728(\uC5C5\uC2A4\uCF00\uC77C 1.5\uBC30 \uC774\uD558), \uB0B4\uB808\uC774\uC158\uC774 \uB2E8\uC11C\uB97C \uB9D0\uD558\uB294 \uC2DC\uC810." },
-          "pull": { "label": { "ko": "\uD480", "en": "Pull" }, "use": "\uB113\uC5B4\uC9C0\uBA70 \uC7A5\uC18C\xB7\uB2E4\uB978 \uC778\uBB3C\xB7\uACE0\uB9BD\uC744 \uB4DC\uB7EC\uB0B8\uB2E4. \uC7A5\uBA74\uC774 \uB05D\uB09C\uB2E4\uB294 \uC2E0\uD638.", "avoid": "\uB113\uC5B4\uC838\uB3C4 \uC0C8\uB85C \uB4DC\uB7EC\uB098\uB294 \uAC83\uC774 \uC5C6\uC744 \uB54C.", "specify": "\uC2DC\uC791 \uC601\uC5ED\uACFC \uB05D \uD504\uB808\uC784, \uB4DC\uB7EC\uB098\uB294 \uAC83." },
-          "pan": { "label": { "ko": "\uD32C", "en": "Pan" }, "use": "\uD55C \uB300\uC0C1\uC5D0\uC11C \uB2E4\uB978 \uB300\uC0C1\uC73C\uB85C \uC62E\uAE30\uAC70\uB098 \uD654\uBA74 \uBC16 \uACF5\uAC04\uC744 \uB04C\uC5B4\uB4E4\uC778\uB2E4.", "avoid": "\uC6D0\uBCF8\uC774 \uC774\uB3D9 \uBC29\uD5A5\uC73C\uB85C \uD654\uBA74\uBCF4\uB2E4 \uB113\uC9C0 \uC54A\uC744 \uB54C(\uC774\uB3D9 \uD3ED\uC774 \uD654\uBA74\uC758 13% \uC548\uD30E\uC5D0 \uADF8\uCE5C\uB2E4), \uB108\uBB34 \uBE60\uB978 \uC774\uB3D9.", "specify": "\uCD9C\uBC1C\xB7\uB3C4\uCC29 \uC601\uC5ED, \uC6D0\uBCF8 \uBE44\uC728, \uB3C4\uCC29\uACFC \uB0B4\uB808\uC774\uC158\uC758 \uC2DC\uC810." },
-          "tilt": { "label": { "ko": "\uD2F8\uD2B8", "en": "Tilt" }, "use": "\uB192\uC774\uB97C \uC2DC\uAC04\uC73C\uB85C \uBCF4\uC5EC \uC900\uB2E4. \uC5BC\uAD74\uC744 \uB2A6\uAC8C \uB4DC\uB7EC\uB0B4\uB294 \uB9AC\uBE4C. \uC62C\uB824\uB2E4\uBCF4\uB294 \uCABD\uC774 \uD798\uC73C\uB85C \uC77D\uD790\uC9C0 \uCDE8\uC57D\uD568\uC73C\uB85C \uC77D\uD790\uC9C0\uB294 \uC55E\uB4A4 \uCEF7\uC774 \uC815\uD55C\uB2E4.", "avoid": "\uC6D0\uBCF8\uC5D0 \uC138\uB85C \uC5EC\uC720\uAC00 \uC5C6\uC744 \uB54C(9:16 \uD654\uBA74\uC774\uBA74 \uC6D0\uBCF8\uC774 \uD654\uBA74\uBCF4\uB2E4 \uAE38\uCB49\uD574\uC57C \uD55C\uB2E4).", "specify": "\uC544\uB798\xB7\uC704 \uC601\uC5ED, \uB3C4\uCC29\uC810\uC5D0\uC11C \uB4DC\uB7EC\uB098\uB294 \uAC83." },
-          "push": { "label": { "ko": "\uD478\uC2DC", "en": "Push" }, "use": "\uB290\uB9B0 \uC90C\uC778. \uC0AC\uC9C4 \uD55C \uC7A5 \uC548\uC5D0\uC11C \uB514\uD14C\uC77C\uB85C \uB2E4\uAC00\uAC04\uB2E4.", "avoid": "\uBAA9\uC801\uC9C0 \uC5C6\uB294 \uAE30\uBCF8 \uC90C\uC758 \uBC18\uBCF5(\uD074\uB9AC\uC170). \uC2DC\uC791\uACFC \uB05D \uD504\uB808\uC784\uC744 \uACE0\uB978\uB2E4.", "specify": "\uC90C\uC774 \uB05D\uB098\uB294 \uB300\uC0C1 \uC601\uC5ED, \uC6C0\uC9C1\uC5EC\uC57C \uD558\uB294 \uC774\uC720, \uB05D\uC5D0\uC11C \uBC14\uB00C\uB294 \uAC83." },
-          "reveal": { "label": { "ko": "\uB9AC\uBE4C", "en": "Reveal" }, "use": "\uC228\uACA8 \uB454 \uB300\uC0C1\uC744 \uB2A6\uAC8C \uB4DC\uB7EC\uB0B8\uB2E4. \uC804\uACBD \uB808\uC774\uC5B4\uAC00 \uBE44\uD0A4\uB294 \uBC29\uC2DD\uC740 \uC900\uBE44\uB41C \uB808\uC774\uC5B4\uAC00 \uD544\uC694\uD558\uB2E4.", "avoid": "\uC804\uACBD \uC640\uC774\uD504\uC758 \uB0A8\uC6A9, \uB808\uC774\uC5B4 \uB4A4 \uBC30\uACBD\uC758 \uBE48\uD2C8.", "specify": "\uC804\uACBD \uB808\uC774\uC5B4\uC640 \uADF8 \uB4A4 \uBC30\uACBD, \uB4DC\uB7EC\uB098\uB294 \uB300\uC0C1\uACFC \uC2DC\uC810, \uBE60\uC9C0\uB294 \uBC29\uD5A5." },
-          "parallax": { "label": { "ko": "\uD328\uB7F4\uB799\uC2A4", "en": "Parallax" }, "use": "\uD3C9\uBA74 \uC0AC\uC9C4\uC744 \uB808\uC774\uC5B4\uB85C \uB098\uB220 \uC785\uCCB4\uCC98\uB7FC \uC6C0\uC9C1\uC778\uB2E4.", "avoid": "\uD074\uB9AC\uC170\uAC00 \uB418\uAE30 \uC27D\uACE0, \uADF8\uB9BC\uC790\uAC00 \uD568\uAED8 \uC6C0\uC9C1\uC774\uC9C0 \uC54A\uC73C\uBA74 \uAC00\uC9DC\uCC98\uB7FC \uBCF4\uC778\uB2E4. \uC791\uAC8C \uC6C0\uC9C1\uC778\uB2E4.", "specify": "\uB808\uC774\uC5B4 \uBAA9\uB85D(\uC55E \u2192 \uB4A4)\uACFC \uAE4A\uC774, \uB808\uC774\uC5B4\uB9C8\uB2E4 \uB4A4 \uBC30\uACBD \uCC44\uC6C0, \uC791\uC740 \uC774\uB3D9\uB7C9." },
-          "hold": { "label": { "ko": "\uC815\uC9C0", "en": "Hold" }, "use": "\uD504\uB808\uC784\uC744 \uC6C0\uC9C1\uC774\uC9C0 \uC54A\uACE0 \uADF8\uB9BC \uD558\uB098\uB97C \uBD99\uC7A1\uB294\uB2E4. \uD380\uCE58\uB77C\uC778 \uB4A4\uC758 \uC815\uC801, \uC77D\uC5B4\uC57C \uD560 \uBB38\uC11C\xB7\uD45C\uC815, \uC55E\uB4A4 \uC774\uB3D9 \uCEF7 \uC0AC\uC774\uC758 \uC27C\uD45C. \uB4A4\uC5D0 \uC624\uB294 \uC791\uC740 \uC6C0\uC9C1\uC784\uC774 \uCEE4 \uBCF4\uC778\uB2E4.", "avoid": "\uBCF4\uC5EC \uC904 \uBCC0\uD654\uAC00 \uC5C6\uB294 \uAE34 \uCEF7, \uC5F0\uB2EC\uC544 \uBD99\uB294 \uC815\uC9C0 \uCEF7. \uAE38\uAC8C \uBD99\uC7A1\uC744 \uC774\uC720\uAC00 \uC5C6\uC73C\uBA74 \uC9E7\uAC8C \uB04A\uB294\uB2E4.", "specify": "\uBD99\uC7A1\uC744 \uB300\uC0C1(focusTo \uC601\uC5ED\uC774 \uC788\uC73C\uBA74 \uADF8 \uC790\uB9AC), \uBD99\uC7A1\uB294 \uC774\uC720, \uCEF7 \uAE38\uC774." }
-        }
-      };
-      const ENTRY_PREFIX = { size: "framing.", angle: "camera." };
-      const own = (o, k) => o && Object.prototype.hasOwnProperty.call(o, k) ? o[k] : null;
-      function guide(attribute, value) {
-        const prefix = own(ENTRY_PREFIX, attribute);
-        return prefix && own(byId, prefix + value) || own(own(VALUES, attribute), String(value));
-      }
-      const NOTE_LABELS = { avoid: ["\uD53C\uD560 \uB54C", "Avoid"], pair: ["\uC55E\uB4A4 \uCEF7", "Neighbours"], specify: ["\uC801\uC744 \uAC83", "Name in the prompt"], vertical: ["9:16", "9:16"] };
-      function notes(card, lang) {
-        return card ? Object.keys(NOTE_LABELS).filter((key) => card[key]).map((key) => "<p><b>" + NOTE_LABELS[key][lang === "ko" ? 0 : 1] + "</b> " + esc2(card[key]) + "</p>").join("") : "";
-      }
-      function validate2(selection) {
-        if (!Array.isArray(selection)) return ["shot.techniques must be an array"];
-        const errors = [], seen = /* @__PURE__ */ new Set();
-        for (const item of selection) {
-          if (!item || !byId[item.id]) errors.push("Unknown technique: " + String(item?.id));
-          if (seen.has(item?.id)) errors.push("Duplicate technique: " + String(item?.id));
-          seen.add(item?.id);
-          if (item?.id !== "camera.static" && (typeof item?.reason !== "string" || !item.reason.trim())) errors.push("Technique needs this shot\u2019s reason: " + String(item?.id));
-        }
-        return errors;
-      }
-      function selected(scene) {
-        return Array.isArray(scene.shot?.techniques) ? scene.shot.techniques.map((item) => ({ ...item, entry: byId[item?.id] })) : [];
-      }
-      function instructions(scene) {
-        return selected(scene).filter((item) => item.entry && ["camera", "framing"].includes(item.entry.category)).map((item) => item.entry.category === "framing" ? "Opening frame: " + item.entry.instruction + "." : item.entry.instruction).join(" ");
-      }
-      function sourceInstructions(scene, phase = "start", endpoint2 = false) {
-        return selected(scene).filter((item) => item.entry).map(({ entry: entry2, from, to }) => {
-          if (entry2.category === "framing") return endpoint2 ? "" : (phase === "end" ? "Final frame: " : "Opening frame: ") + entry2.instruction + ".";
-          if (entry2.fields.viewpoint || entry2.fields.angle) return endpoint2 ? "" : entry2.instruction;
-          if (entry2.fields.focus === "rack") return from && to ? "Stage " + from + " and " + to + " at clearly different distances from the camera, " + (phase === "end" ? to : from) + " in sharp focus." : "Stage the named near and far focus targets at distinct depths; use the authored " + (phase === "end" ? "closing" : "opening") + " focus.";
-          return "";
-        }).filter(Boolean).join(" ");
-      }
-      function findings(scene) {
-        const selection = scene.shot?.techniques;
-        if (selection === void 0) return [];
-        const notes2 = validate2(selection), sh = scene.shot || {}, cam = scene.visual?.camera || {};
-        const chosen = selected(scene).filter((item) => item.entry);
-        const frames = chosen.filter((item) => item.entry.category === "framing");
-        const viewpoints = new Set(chosen.map((item) => item.entry.fields.viewpoint).filter(Boolean));
-        if (viewpoints.size > 1) notes2.push("Conflicting viewpoints: choose one opening viewpoint; describe a deliberate viewpoint transition in camera.end.");
-        if (frames.length > 1) notes2.push("Multiple starting frame sizes: choose one; describe the ending crop in camera.end.");
-        for (const { entry: entry2 } of chosen) {
-          if (entry2.fields.size && sh.size !== entry2.fields.size) notes2.push(entry2.id + " conflicts with shot.size " + String(sh.size));
-          if (entry2.fields.angle && sh.angle !== entry2.fields.angle) notes2.push(entry2.id + " conflicts with shot.angle " + String(sh.angle));
-          if (entry2.fields.movement && !String(cam.movement || "").toLowerCase().trim().startsWith(entry2.fields.movement)) notes2.push(entry2.id + " needs camera movement " + entry2.fields.movement);
-        }
-        if (chosen.some((x2) => x2.entry.id === "camera.static") && chosen.some((x2) => x2.entry.fields.movement && x2.entry.id !== "camera.static")) notes2.push("Static camera conflicts with a selected moving-camera technique.");
-        return notes2;
-      }
-      function icon(entry2) {
-        const body = entry2.glyph.startsWith("<") ? entry2.glyph : '<path d="' + entry2.glyph + '"/>';
-        return '<svg viewBox="0 0 32 32" width="40" height="40" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' + body + "</svg>";
-      }
-      function tiles(scene, lang) {
-        const items = selected(scene);
-        if (!items.length) return "";
-        return '<div class="technique-tiles">' + items.map(({ entry: entry2, id, reason }) => '<details class="technique-tile"><summary>' + (entry2 ? icon(entry2) : "") + "<span>" + esc2(entry2?.label[lang] || entry2?.label.en || id) + "</span></summary><p>" + esc2(reason) + "</p><p>" + esc2(entry2?.use || "Unknown technique") + "</p>" + notes(entry2, lang) + '<p lang="en">' + esc2(entry2?.instruction || "") + "</p><small>" + esc2(id) + "</small></details>").join("") + "</div>";
-      }
-      function legend(lang) {
-        return '<details class="technique-library"><summary>' + (lang === "ko" ? "\uAE30\uBC95 \uC0AC\uC804 \xB7 \uC544\uC774\uCF58\uACFC \uC120\uD0DD \uAE30\uC900" : "Technique catalogue \xB7 icons and selection guidance") + "</summary><p>" + (lang === "ko" ? "\uC7A5\uBA74\uC758 \uC815\uBCF4\uC640 \uD589\uB3D9\uC744 \uBA3C\uC800 \uC815\uD55C \uB4A4 \uAE30\uBC95\uC744 \uACE0\uB974\uC138\uC694. \uC544\uC774\uCF58\uC740 \uACC4\uD68D\uC744 \uC124\uBA85\uD558\uBA70 \uC2E4\uC81C \uC601\uC0C1 \uAC80\uC99D\uC744 \uB73B\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. \uC4F0\uC784\uC740 \uD604\uC5C5\uC774 \uAE30\uB300\uB294 \uAD00\uB840\uC785\uB2C8\uB2E4. \uCE74\uBA54\uB77C \uC774\uB3D9\uC758 \uC815\uC11C \uD6A8\uACFC\uB294 \uC2E4\uD5D8\uC73C\uB85C \uD655\uC778\uB418\uC9C0 \uC54A\uC558\uACE0, \uC575\uAE00 \uD6A8\uACFC(\uB85C\uC6B0\uB294 \uC138 \uBCF4\uC774\uACE0 \uD558\uC774\uB294 \uC57D\uD574 \uBCF4\uC778\uB2E4)\uB294 \uC0AC\uC9C4\uC744 \uC774\uC57C\uAE30 \uC21C\uC11C\uB85C \uBCFC \uB54C\uB9CC \uB098\uD0C0\uB0AC\uC2B5\uB2C8\uB2E4." : "Choose from the scene\u2019s information and action. Icons describe a plan, not verified footage. Uses are practitioners\u2019 conventions: no experiment shows a camera move\u2019s emotional effect, and the angle effects (low reads strong, high reads weak) appeared only when the pictures ran as a story.") + "</p>" + ["character", "camera", "framing", "timing"].map((category) => "<h3>" + (lang === "ko" ? { character: "\uCE90\uB9AD\uD130 \uCC38\uC870", camera: "\uCE74\uBA54\uB77C \uAE30\uBC95", framing: "\uD504\uB808\uC784 \uD06C\uAE30", timing: "\uCEF7 \uC2DC\uAC04" }[category] : { character: "Character references", camera: "Camera techniques", framing: "Frame sizes", timing: "Cut timing" }[category]) + '</h3><div class="technique-tiles">' + entries.filter((e2) => e2.category === category).map((e2) => '<details class="technique-tile"><summary>' + icon(e2) + "<span>" + esc2(e2.label[lang] || e2.label.en) + "</span></summary><p>" + esc2(e2.use) + "</p>" + notes(e2, lang) + '<p lang="en">' + esc2(e2.instruction) + "</p><small>" + esc2(e2.id) + "</small></details>").join("") + "</div>").join("") + "</details>";
-      }
-      const api2 = { VERSION: VERSION2, entries, byId, VALUES, guide, SIZE_WORDS, SIZE_GLYPHS, validate: validate2, selected, instructions, sourceInstructions, findings, icon, tiles, legend };
-      if (typeof module === "object" && module.exports) module.exports = api2;
-      else root.FILM_TECHNIQUES = api2;
-    })(typeof window === "object" ? window : globalThis);
-  }
-});
-
 // ../skills/_shared/scene-acting.js
 var require_scene_acting = __commonJS({
   "../skills/_shared/scene-acting.js"(exports, module) {
@@ -94933,6 +95093,7 @@ var require_scene_acting = __commonJS({
     }
     var VIDEO_TEXT_POLICY = "Keep the entire video image text-free: no subtitles, captions, dialogue text, typography, letters, logos or watermarks, including during speech.";
     function performanceBeats(performance2, mode, includeDialogue = true, { brief = false } = {}) {
+      const { actingFields, actingPauses } = require_scene_direction();
       const dialogue = performance2.filter((line) => line.kind !== "action").map((line) => line.text).filter((text4) => typeof text4 === "string" && text4.length);
       const visualDirection = (value) => {
         let text4 = String(value);
@@ -94949,16 +95110,9 @@ var require_scene_acting = __commonJS({
         const acting = { ...line.acting, ...line.videoDirection ? { visual: line.videoDirection } : {} };
         const delivery2 = line.delivery || "voiceover";
         const mouth = delivery2 === "on_screen" && mode === "native" && includeDialogue ? `Show this speaker physically saying "${line.text}"; every other visible mouth stays closed.` : delivery2 === "on_screen" && mode === "native" ? "Only this speaker speaks the separately mapped authored line; other visible mouths stay closed." : delivery2 === "on_screen" ? "Show this speaker physically speaking; synchronize only this speaker's mouth to their supplied audio during this interval using the selected synchronization route." : delivery2 === "off_screen" ? "Keep the speaking face outside the authored crop; retain any planned hands or body detail. All visible mouths stay closed during this interval; show the planned reaction, detail or action without adding a portrait." : "This is voiceover or narration, not visible physical speech. All visible mouths stay closed during this interval; show the planned action.";
-        const seen = new Set(said);
-        const fields2 = brief ? [] : ["direction", "context", "intent", "emotion", "vocal", "visual"].filter((key) => acting[key] && !(key === "vocal" && mode !== "native")).filter((key) => {
-          const value = String(acting[key]).trim();
-          if (seen.has(value)) return false;
-          seen.add(value);
-          return true;
-        }).map((key) => `${key}: ${visualDirection(acting[key])}`);
-        if (!brief && acting.tags?.length) fields2.push(`vocal events: ${acting.tags.map(visualDirection).join(", ")}`);
+        const fields2 = brief ? [] : actingFields(acting, mode === "native", new Set(said), visualDirection);
         const timing = line.speechStartSeconds == null || line.speechEndSeconds == null ? mode === "native" ? "The model paces this line within the shot." : "" : `Speech interval ${line.speechStartSeconds}\u2013${line.speechEndSeconds} seconds.`;
-        const pauses = line.leadInSeconds || line.tailOutSeconds ? `Anticipation ${line.leadInSeconds || 0} seconds; reaction ${line.tailOutSeconds || 0} seconds.` : "";
+        const pauses = actingPauses(line.leadInSeconds, line.tailOutSeconds);
         return [
           `Beat ${index + 1} (speaker: ${visualDirection(line.speaker || "unspecified")}; delivery: ${delivery2}): ${mouth}`,
           includeDialogue && mode === "native" && delivery2 !== "on_screen" ? 'Speak "' + line.text + '".' : "",
@@ -100736,10 +100890,10 @@ function manageWorkflow(raw) {
 function requireStoryOutline(episode) {
   const file = path2.join(episode, "storyboard/scenes.js");
   if (!fs2.existsSync(file)) return;
-  const load12 = nodeModule2.createRequire(import.meta.url);
-  const board = load12(fileURLToPath2(new URL("../../skills/_shared/scenes-vm.js", import.meta.url))).evaluateWindowScript(fs2.readFileSync(file, "utf8"), { filename: file });
+  const load13 = nodeModule2.createRequire(import.meta.url);
+  const board = load13(fileURLToPath2(new URL("../../skills/_shared/scenes-vm.js", import.meta.url))).evaluateWindowScript(fs2.readFileSync(file, "utf8"), { filename: file });
   if (board.STORY?.version !== "story-v2") return;
-  const contract2 = load12(fileURLToPath2(new URL("../../skills/storyboard/references/structure-contract.js", import.meta.url)));
+  const contract2 = load13(fileURLToPath2(new URL("../../skills/storyboard/references/structure-contract.js", import.meta.url)));
   const gaps = [...contract2.outlineGaps(board), ...contract2.castGaps(board)];
   if (gaps.length) throw new Error("story_outline_required: " + gaps.join("; "));
 }
@@ -111442,6 +111596,9 @@ function describeToolGate(knownNames, env2 = process.env, jsonPatterns = []) {
   return `tool gate ${on.length} on / ${off} off (${bits.join("; ")})`;
 }
 
+// src/msr-opening.ts
+import { createRequire as createRequire3 } from "node:module";
+
 // src/prompt-language.ts
 var QUOTED_SEGMENT = /"[^"]*"|“[^”]*”|「[^」]*」/g;
 var NON_LATIN_RUN = /[^\P{L}\p{Script=Latin}]+(?:[ \t]+[^\P{L}\p{Script=Latin}]+)*/u;
@@ -111457,6 +111614,14 @@ var openingPositionsSchema = external_exports.array(external_exports.object({
   position: external_exports.string().trim().min(1).refine((value) => !nonEnglishOutsideQuotes(value), "Describe the opening position in English").describe("Where the viewer sees this person at the start: side, depth, posture or orientation, and a visible landmark. Describe an off-screen start explicitly.")
 }).strict(), { required_error: "openingPositions required: inspect the opening image and describe each character and its reference images" }).describe("Required with MSR references. Identify every character in the opening scene, including silent listeners. Use [] only for a character-free scene.");
 var sceneText = external_exports.string().trim().min(1).refine((value) => !nonEnglishOutsideQuotes(value), "Write scene direction in English");
+var load = createRequire3(import.meta.url);
+var sceneDefaultsSchema = external_exports.object({
+  camera: sceneText.refine((id) => !!load("../../skills/storyboard/references/scene-direction.js").movement(id), "Choose a movement ID from the camera catalogue").optional(),
+  axis: sceneText.optional(),
+  continuity: sceneText.optional(),
+  lighting: sceneText.optional(),
+  attention: sceneText.optional()
+}).strict().describe("Optional defaults before shot images: camera movement ID, screen axis, persistent world relationships, lighting and attention across cuts. Shot choices override the matching default.");
 var frame = external_exports.number().int().nonnegative();
 var shotTimelineSchema = external_exports.object({
   startFrame: frame,
@@ -113173,8 +113338,8 @@ import { tmpdir as tmpdir5 } from "node:os";
 import { extname as extname5, join as join9, resolve as resolve3 } from "node:path";
 
 // src/tts-models.ts
-import { createRequire as createRequire3 } from "node:module";
-var shared = () => createRequire3(import.meta.url)("../../skills/_shared/tts-models.js");
+import { createRequire as createRequire4 } from "node:module";
+var shared = () => createRequire4(import.meta.url)("../../skills/_shared/tts-models.js");
 function getTtsModels() {
   return shared().TTS_MODELS;
 }
@@ -113305,7 +113470,7 @@ function validateSpeechSegments(value, duration5, inputs2) {
 }
 
 // src/tts-execution.ts
-import { createRequire as createRequire4 } from "node:module";
+import { createRequire as createRequire5 } from "node:module";
 var executionId = new AsyncLocalStorage2();
 function withSpeechRequestId(id, run) {
   if (!/^[A-Za-z0-9_-]{1,100}$/.test(id)) throw new Error("Invalid speech requestId");
@@ -113354,7 +113519,7 @@ function staleSlot(slot) {
 function validateEpisodeSpeech(generator, args) {
   const context2 = args.speechContext;
   if (context2) requireReadyProject(context2.path);
-  createRequire4(import.meta.url)("../../skills/_shared/character-speech.js").validateSpeechContext(generator, args);
+  createRequire5(import.meta.url)("../../skills/_shared/character-speech.js").validateSpeechContext(generator, args);
 }
 async function executeSpeech(generator, args, run) {
   validateEpisodeSpeech(generator, args);
@@ -117946,10 +118111,10 @@ function isManagedVideoCall(tool2, input) {
 
 // src/character-manage.ts
 import { existsSync as existsSync16, mkdirSync as mkdirSync5, readFileSync as readFileSync17, writeFileSync as writeFileSync13 } from "node:fs";
-import { createRequire as createRequire5 } from "node:module";
+import { createRequire as createRequire6 } from "node:module";
 import path15 from "node:path";
-var load = createRequire5(import.meta.url);
-var catalog = () => load("../../skills/_shared/character-identity.js");
+var load2 = createRequire6(import.meta.url);
+var catalog = () => load2("../../skills/_shared/character-identity.js");
 var pending = external_exports.object({ status: external_exports.literal("pending"), reason: external_exports.string().trim().min(1).max(2e3) }).strict();
 var basic = external_exports.union([external_exports.string().trim().min(1).max(2e3), pending]);
 var field = external_exports.union([
@@ -118026,18 +118191,18 @@ ${source}`;
   mkdirSync5(folder, { recursive: true });
   writeFileSync13(file, source);
   const basics = [...REQUIRED.identity.map((k) => ["identity", k]), ["physical", "heightCm"]].filter(([g, k]) => character[g][k].status === "pending").map(([g, k]) => `${g}.${k}`);
-  const { inspectPanels } = load("../../skills/channel/references/character-panels.js");
+  const { inspectPanels } = load2("../../skills/channel/references/character-panels.js");
   const images = ["face", "front", "back"].filter((view) => !inspectPanels(folder).slots[view]);
   let voice = "missing";
   try {
-    voice = load("../../skills/_shared/character-voice.js").identityVoice(source, { optional: true }) ? "selected" : "missing";
+    voice = load2("../../skills/_shared/character-voice.js").identityVoice(source, { optional: true }) ? "selected" : "missing";
   } catch {
     voice = "invalid";
   }
   const channel = path15.resolve(folder, "../../..");
   let sheet;
   try {
-    const result = load("../../skills/channel/references/review-library.js").exportChannel(channel);
+    const result = load2("../../skills/channel/references/review-library.js").exportChannel(channel);
     sheet = { path: path15.join(folder, "index.html"), warnings: result.contentWarnings.filter((w) => w.characterId === id).map((w) => w.message) };
   } catch (error2) {
     sheet = { error: error2.message };
@@ -118077,16 +118242,16 @@ import path18 from "node:path";
 import { createHash as createHash15 } from "node:crypto";
 import { execFileSync as execFileSync12 } from "node:child_process";
 import { existsSync as existsSync19, readFileSync as readFileSync20, realpathSync as realpathSync6, statSync as statSync11 } from "node:fs";
-import { createRequire as createRequire9 } from "node:module";
+import { createRequire as createRequire10 } from "node:module";
 
 // src/video-prompt.ts
-import { createRequire as createRequire6 } from "node:module";
-var load2 = createRequire6(import.meta.url);
-var videoTextPolicy = () => String(load2("../../skills/_shared/scene-acting.js").VIDEO_TEXT_POLICY);
+import { createRequire as createRequire7 } from "node:module";
+var load3 = createRequire7(import.meta.url);
+var videoTextPolicy = () => String(load3("../../skills/_shared/scene-acting.js").VIDEO_TEXT_POLICY);
 var object3 = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
 var text = (value) => typeof value === "string" ? value.trim() : "";
 function planVideoPerformance(shot, options = {}) {
-  const acting = load2("../../skills/_shared/scene-acting.js");
+  const acting = load3("../../skills/_shared/scene-acting.js");
   const timeline = acting.planScenePerformance(shot, options.measureAudio);
   return { ...timeline, timing: options.mode === "native" && timeline.timing === "needs_audio_duration" ? "model_timed" : timeline.timing };
 }
@@ -118102,10 +118267,10 @@ function cameraMoveWords(camera) {
   const movement = text(camera.movement), speed = text(camera.speed), target = text(camera.target);
   if (!movement) return "";
   if (heldMove.test(movement)) return "The camera holds a static frame.";
-  const catalogue = load2("../../skills/storyboard/references/film-techniques.js");
+  const catalogue = load3("../../skills/storyboard/references/film-techniques.js");
   const move = catalogue.entries.find((entry2) => entry2.fields.movement === movement.toLowerCase())?.prompt;
   const pace = { slow: "slowly", steady: "steadily", fast: "quickly" }[speed];
-  const travels = load2("../../skills/storyboard/references/production-mode.js").travels(camera);
+  const travels = load3("../../skills/storyboard/references/production-mode.js").travels(camera);
   const ends = travels ? ", with a short pause on the opening and closing pictures" : "";
   if (move) {
     const path35 = /[;.!?]\s|^(?:after|when|once|follow|track|pan|tilt|dolly|orbit|keep|start|end)\b/i.test(target);
@@ -118153,8 +118318,11 @@ var directedMoves = [
   /\btrack(?:s|ing)? backward\b/i,
   /\b(?:track|follow)(?:s|ing)? (?:\w+ )?(?:from )?behind\b/i
 ];
+function sceneVoiceDirection(acting, spoken) {
+  return [acting?.vocal || acting?.direction, ...acting?.tags || []].filter((v) => !!v).map((cue) => spoken ? cue.split(spoken).join("the authored line") : cue).filter((cue) => !nonEnglishOutsideQuotes(cue)).join(" ");
+}
 function scenePromptText(scene, camera, timeline, lines, bindTurns) {
-  const dialogue = bindTurns ? [] : lines.filter((l) => l.delivery !== "voiceover").map((l) => l.speaker + " (" + l.delivery + '): "' + l.tts + '"');
+  const dialogue = bindTurns ? [] : lines.filter((l) => l.delivery !== "voiceover").map((l) => [sceneVoiceDirection(l.acting, l.tts), l.speaker + " (" + l.delivery + '): "' + l.tts + '"'].filter(Boolean).join(" "));
   return [scene.emotion, scene.action, scene.sound, camera, scene.oneTake && "One continuous take. No cuts.", timeline, ...dialogue, videoTextPolicy()].filter(Boolean).join("\n");
 }
 function cameraDrift(prompt, movement) {
@@ -118179,15 +118347,14 @@ function cameraDrift(prompt, movement) {
   if (moving.length) return null;
   return said.some(holds) ? "contradicted" : "missing";
 }
-function compileVideoPrompt(shot, source, names = {}, options = {}) {
-  const plan2 = object3(shot.shot), visual = object3(shot.visual), frames = object3(visual.frames), camera = object3(visual.camera);
-  const msr = frames.mode === "reference";
-  const words = load2("../../skills/storyboard/references/assemble-bg-prompt.js");
-  const views = load2("../../skills/storyboard/references/shot-view.js");
+function shotVisualDirection(shot) {
+  const plan2 = object3(shot.shot), camera = object3(object3(shot.visual).camera);
+  const words = load3("../../skills/storyboard/references/assemble-bg-prompt.js");
+  const views = load3("../../skills/storyboard/references/shot-view.js");
   const viewWords = camera.view === void 0 ? "" : views.instructions(camera.view);
   const sizes = viewWords ? words.SIZE_WORDS_OBJECT : words.SIZE_WORDS;
-  const catalogue = load2("../../skills/storyboard/references/film-techniques.js");
-  const contract2 = load2("../../skills/storyboard/references/structure-contract.js");
+  const catalogue = load3("../../skills/storyboard/references/film-techniques.js");
+  const contract2 = load3("../../skills/storyboard/references/structure-contract.js");
   const picked = (Array.isArray(plan2.techniques) ? plan2.techniques : []).map(object3).map((t2) => ({
     id: text(t2.id),
     from: text(t2.from),
@@ -118202,13 +118369,64 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
   const framing = sentence([sizes[text(plan2.size)], words.ANGLE_WORDS[text(plan2.angle)]].filter(Boolean).join(", "));
   const depthWords = plan2.depth ? sentence(contract2.depthText(plan2.depth)) : "";
   const other = picked.filter((t2) => t2.entry && ["camera", "framing"].includes(t2.entry.category) && !t2.entry.fields.movement && !t2.entry.fields.focus && !t2.entry.fields.size && !t2.entry.fields.angle && !(viewWords && t2.entry.fields.viewpoint));
+  const accentWords = other.map((t2) => sentence(t2.entry.fields.accent && t2.entry.prompt ? t2.entry.prompt.replace("{cue}", t2.on || t2.entry.fields.cue) : t2.entry.instruction));
+  const openingView = [
+    viewWords || (text(camera.framing) ? sentence(`Opening composition: ${text(camera.framing)}`) : ""),
+    !viewWords && camera.rear && !other.some((t2) => t2.entry.fields.viewpoint === "rear") ? "View the subject from behind." : "",
+    !viewWords && camera.pov && !other.some((t2) => t2.entry.fields.viewpoint === "pov") ? sentence(`Point of view: ${text(camera.pov) || "the named character"}`) : ""
+  ].filter(Boolean);
+  return { viewWords, picked, movement, settle, moveWords, rack, focusWords, sizeWords, angleWords, framing, depthWords, other, accentWords, openingView };
+}
+var directions = () => load3("../../skills/storyboard/references/scene-direction.js");
+function resolvedDirection(scene, cards) {
+  return directions().resolve(scene, cards);
+}
+function withSceneCamera(shot, scenes) {
+  return directions().withCameraDefaults([shot], scenes)[0];
+}
+function attributeWords(key, row, camera = {}) {
+  if (key === "camera") return row.id || row.source === "shot" ? cameraMoveWords({ ...row.source === "shot" ? camera : {}, speed: row.speed, movement: row.source === "shot" ? row.value : directions().movement(row.id) }) : row.value;
+  return nonEnglishOutsideQuotes(row.value) ? "" : sentence(directions().labels[key][1] + ": " + row.value);
+}
+function sceneShotNotes(card) {
+  const english2 = (s2) => s2 && !nonEnglishOutsideQuotes(s2) ? s2 : "";
+  const notes = directions().notes(card, (cue) => Boolean(english2(cue)), true);
+  const actions = notes.actions.map(english2).filter(Boolean);
+  return {
+    action: actions.join(" ") || notes.fallback.map(english2).find(Boolean) || "",
+    sound: english2(notes.sound),
+    blocking: english2(notes.blocking),
+    end: english2(notes.end),
+    beats: [...notes.beats, ...notes.motion].map(english2).filter(Boolean)
+  };
+}
+function shotVisualWords(shot, rows, common6, end, framing) {
+  const dir = shotVisualDirection(shot), visual = object3(shot.visual), camera = object3(visual.camera);
+  const expression = expressionWords(shot);
+  return [...new Set([
+    framing,
+    dir.framing,
+    ...dir.openingView,
+    dir.focusWords,
+    dir.depthWords,
+    ...dir.accentWords,
+    ...Object.entries(rows).filter(([key]) => !common6[key]).map(([key, row]) => attributeWords(key, row, camera)),
+    dir.settle && sentence("Closing frame: " + dir.settle),
+    expression && sentence("Expressions: " + expression),
+    end && sentence("End on " + end)
+  ].filter((v) => !!v && !nonEnglishOutsideQuotes(v)))].join(" ");
+}
+function compileVideoPrompt(shot, source, names = {}, options = {}) {
+  const plan2 = object3(shot.shot), visual = object3(shot.visual), frames = object3(visual.frames), camera = object3(visual.camera);
+  const msr = frames.mode === "reference";
+  const { viewWords, picked, movement, settle, moveWords, rack, focusWords, sizeWords, angleWords, framing, depthWords, accentWords, openingView } = shotVisualDirection(shot);
   const lines = (Array.isArray(shot.narration) ? shot.narration : []).map(object3);
   const mode = options.mode ?? (lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen") ? "native" : "voiceover");
   const design = object3(plan2.videoDesign);
   const motion = object3(design.motion);
   const states = [...new Set((Array.isArray(motion.beats) ? motion.beats : []).map((beat) => text(object3(beat).state)).filter(Boolean))];
   const performance2 = planVideoPerformance(shot, { ...options, mode });
-  const acting = load2("../../skills/_shared/scene-acting.js");
+  const acting = load3("../../skills/_shared/scene-acting.js");
   const beats = acting.performanceBeats(performance2.performance, mode, !msr && !options.bindDialogueSeparately);
   const worn = expressionWords(shot, names);
   const called = (id) => names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id;
@@ -118222,10 +118440,8 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
     settle ? sentence(`Closing frame: ${settle}`) : "",
     focusWords,
     // A beat accent (speed ramp, impact shake) names the moment it fires on.
-    ...other.map((t2) => sentence(t2.entry.fields.accent && t2.entry.prompt ? t2.entry.prompt.replace("{cue}", t2.on || t2.entry.fields.cue) : t2.entry.instruction)),
-    viewWords || (text(camera.framing) ? sentence(`Opening composition: ${text(camera.framing)}`) : ""),
-    !viewWords && camera.rear && !other.some((t2) => t2.entry.fields.viewpoint === "rear") ? "View the subject from behind." : "",
-    !viewWords && camera.pov && !other.some((t2) => t2.entry.fields.viewpoint === "pov") ? sentence(`Point of view: ${text(camera.pov) || "the named character"}`) : "",
+    ...accentWords,
+    ...openingView,
     actionInBeat ? "" : sentence(source.action),
     seen.length ? sentence(`The opening picture also shows ${seen.map(called).join(" and ")}, who ${seen.length > 1 ? "stay" : "stays"} in the frame and never speaks`) : "",
     extras ? sentence(`Unnamed people in the frame: ${extras}`) : "",
@@ -118278,11 +118494,11 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
 import path16 from "node:path";
 import { createHash as createHash13 } from "node:crypto";
 import { existsSync as existsSync17, realpathSync as realpathSync4, readFileSync as readFileSync18 } from "node:fs";
-import { createRequire as createRequire7 } from "node:module";
+import { createRequire as createRequire8 } from "node:module";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
-var load3 = createRequire7(import.meta.url);
-var imageRouting = () => load3(fileURLToPath4(new URL("../../skills/storyboard/references/render-routing.js", import.meta.url)));
-var characterPanels = () => load3(fileURLToPath4(new URL("../../skills/channel/references/character-panels.js", import.meta.url)));
+var load4 = createRequire8(import.meta.url);
+var imageRouting = () => load4(fileURLToPath4(new URL("../../skills/storyboard/references/render-routing.js", import.meta.url)));
+var characterPanels = () => load4(fileURLToPath4(new URL("../../skills/channel/references/character-panels.js", import.meta.url)));
 function nearestRatio(width, height) {
   const ratios = ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"];
   const value = (ratio) => {
@@ -118602,13 +118818,13 @@ import { createHash as createHash14 } from "node:crypto";
 import { existsSync as existsSync18, readFileSync as readFileSync19, realpathSync as realpathSync5 } from "node:fs";
 import { execFileSync as execFileSync11 } from "node:child_process";
 import path17 from "node:path";
-import { createRequire as createRequire8 } from "node:module";
+import { createRequire as createRequire9 } from "node:module";
 var speakerBindingSchema = external_exports.object({
   speaker: external_exports.string().trim().min(1),
   screenPosition: external_exports.enum(["left", "center", "right"]),
   description: external_exports.string().trim().min(1)
 }).strict();
-var load4 = createRequire8(import.meta.url);
+var load5 = createRequire9(import.meta.url);
 var object4 = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
 var text2 = (value) => typeof value === "string" ? value.trim() : "";
 var stable2 = (value) => Array.isArray(value) ? value.map(stable2) : value && typeof value === "object" ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, v]) => [key, stable2(v)])) : value;
@@ -118637,7 +118853,7 @@ function resolveCharacterVoice(character, context2, warnings) {
   let resolved = character;
   if (!Object.keys(object4(character.tts)).length && existsSync18(identity)) {
     try {
-      const { handoff } = load4("../../skills/channel/references/character-sheet.js");
+      const { handoff } = load5("../../skills/channel/references/character-sheet.js");
       const current = handoff(identity, { voiceOnly: character.voiceOnly === true });
       resolved = { ...current, ...character, tts: current.tts };
     } catch (error2) {
@@ -118671,7 +118887,7 @@ function voiceReference(character, context2, warnings) {
     const identity = path17.join(channel, "assets/characters", text2(character.id), "identity.md");
     const candidate2 = path17.join(path17.dirname(identity), "voice.wav");
     if (existsSync18(identity) && existsSync18(candidate2)) {
-      const { identityVoice } = load4("../../skills/_shared/character-voice.js");
+      const { identityVoice } = load5("../../skills/_shared/character-voice.js");
       if (hash(identityVoice(readFileSync19(identity, "utf8"))) !== hash(character.tts)) {
         warnings.push(`${character.id}: shared voice.wav belongs to different current TTS settings; attach a sample for this episode's pinned voice.`);
         return void 0;
@@ -118691,7 +118907,7 @@ function msrSubject(character, refs, context2) {
   let ownedPaths;
   const declared = [].concat(object4(context2.shot.visual).character ?? []).map((entry2) => typeof entry2 === "string" ? entry2 : text2(object4(entry2).id));
   if ((declared.includes(text2(character.id)) || context2.sceneDirection?.openingPositions.some((p) => p.character === character.id && p.images.length)) && existsSync18(path17.join(context2.episode, "storyboard", "cast.json"))) {
-    const { sheetPanels, canonicalReferences } = load4("../../skills/channel/references/character-panels.js");
+    const { sheetPanels, canonicalReferences } = load5("../../skills/channel/references/character-panels.js");
     const dir = path17.join(context2.episode, "storyboard");
     const panels = sheetPanels(dir, [text2(character.id)]).get(text2(character.id));
     const combined = object4(object4(context2.shot.visual).video).referenceLayout === "combined";
@@ -118727,7 +118943,8 @@ function afterImageBlock(prompt, lines) {
 }
 function prepareVideoVoice(tool2, input, context2) {
   const args = { ...input };
-  const lines = (Array.isArray(context2.shot.narration) ? context2.shot.narration : []).map(object4).filter((line) => text2(line.tts));
+  const ordered = load5("../../skills/storyboard/references/scene-direction.js").orderedSpeech;
+  const lines = ordered(context2.shot).map(object4).filter((line) => text2(line.tts));
   const pinnedMsr = tool2 === "astra_genai_img2video" && args.generateAudio !== false && hasSubjectInput(args.references) && lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen");
   if (pinnedMsr && lines.some((line) => line.delivery === "voiceover"))
     throw new Error("msr_speech_route: split physical dialogue and inner thoughts into separate shots");
@@ -118906,7 +119123,7 @@ function prepareVideoVoice(tool2, input, context2) {
 }
 
 // src/scene-video.ts
-var load5 = createRequire9(import.meta.url);
+var load6 = createRequire10(import.meta.url);
 var temporal = (image2) => ["start", "keyframe", "end"].includes(image2.role) && !image2.reference;
 var english = (value) => value && !nonEnglishOutsideQuotes(value) ? value : "";
 function bindSceneCards(members, bindings) {
@@ -118934,8 +119151,12 @@ function bindSceneCards(members, bindings) {
   }
   return cards;
 }
-function compileSceneTimeline(raw, scene, episode, board) {
-  const render = load5("../../skills/storyboard/references/render-routing.js");
+function sceneCoverage(members, scene, board, sceneNo = members[0]?.scene) {
+  const owner = board?.STRUCTURE?.scenes?.find((s2) => s2.no === sceneNo);
+  return resolvedDirection({ directionDefaults: owner?.directionDefaults, videoDirection: scene }, members);
+}
+function compileSceneTimeline(raw, scene, episode, board, coverage2 = sceneCoverage(raw, scene, board), shotScoped = false) {
+  const render = load6("../../skills/storyboard/references/render-routing.js");
   const members = raw;
   const fps = scene.fps ?? 24;
   if (scene.oneTake && members.length !== 1) throw new Error("scene_one_take: an uninterrupted camera setup must have one shot");
@@ -118952,14 +119173,10 @@ function compileSceneTimeline(raw, scene, episode, board) {
     const transition = timeline?.transition ?? (index === 0 ? "open" : incoming);
     if (endFrame <= cursor || timeline && (timeline.startFrame !== startFrame || timeline.endFrame !== endFrame) || transition === "open" !== (index === 0)) throw new Error("scene_video_timing: inconsistent frame range or transition on " + shotId);
     cursor = endFrame;
-    const move = cameraMoveWords(visual?.camera ?? {});
-    const crop = visual?.camera?.view?.crop;
-    const landing = english(visual?.camera?.end);
-    const camera = timeline?.framing ?? [member.shot?.size, member.shot?.angle, english(crop)].filter(Boolean).join(" ");
-    const shotFraming = [camera, move, landing && "Closing frame: " + landing].filter(Boolean).join(" ");
-    const framing = members.length === 1 && !timeline && scene.camera ? scene.camera : shotFraming || (members.length === 1 ? scene.camera || "Hold the opening composition." : "");
-    const existingAction = [visual?.video?.promptSource?.action, member.shot?.videoDesign?.action, visual?.action, member.summary, visual?.video?.prompt].map(english).find(Boolean);
-    const action = timeline?.action ?? existingAction ?? (members.length === 1 ? scene.action || scene.emotion : "");
+    const notes = sceneShotNotes(raw[index]);
+    const shotFraming = shotVisualWords(raw[index], coverage2.shots[index], coverage2.common, notes.end, timeline?.framing);
+    const framing = shotFraming || (coverage2.common.camera ? attributeWords("camera", coverage2.common.camera) : members.length === 1 ? "Use the opening composition." : "");
+    const action = [notes.action || (members.length === 1 ? scene.action || scene.emotion : ""), ...notes.beats].filter(Boolean).join(" ");
     const pins = [...timeline?.images ?? []];
     const frames = render.framePlan(member);
     const legacy = visual?.frames;
@@ -118996,13 +119213,14 @@ function compileSceneTimeline(raw, scene, episode, board) {
     }
     for (const ref of references) if (!claimed.has(ref))
       add({ path: ref.path, role: ref.role, frame: startFrame, reference: ref });
-    const scoped = members.length > 1 || timeline?.openingPositions || timeline?.dialogueCues?.length;
+    const scoped = shotScoped || members.length > 1 || timeline?.openingPositions || timeline?.dialogueCues?.length;
     if (members.length === 1 && timeline?.openingPositions && scene.openingPositions && JSON.stringify(timeline.openingPositions) !== JSON.stringify(scene.openingPositions))
       throw new Error("scene_opening_positions: a single shot and its scene must have the same opening positions");
     const positions = scoped ? timeline?.openingPositions ?? visual?.video?.openingPositions ?? (index === 0 ? scene.openingPositions : void 0) : void 0;
-    const blocking = scoped && english(member.shot?.videoDesign?.before);
-    const sound = scoped && (english(visual?.video?.promptSource?.sound) || english(member.shot?.videoDesign?.sound));
-    const lines = scoped ? (member.narration ?? []).filter((line) => line.tts?.trim()) : [];
+    const blocking = notes.blocking;
+    const sound = notes.sound;
+    const ordered = load6("../../skills/storyboard/references/scene-direction.js").orderedSpeech;
+    const lines = scoped ? ordered(member).filter((line) => line.tts?.trim()) : [];
     for (const cue of timeline?.dialogueCues ?? []) {
       if (lines.filter((line) => line.id === cue.lineId).length !== 1)
         throw new Error("scene_dialogue_timing: " + shotId + " needs one spoken line with id " + cue.lineId);
@@ -119014,12 +119232,13 @@ function compileSceneTimeline(raw, scene, episode, board) {
       const context2 = { episode, board: board ?? {}, shot: raw[index] };
       const warnings = [];
       const voice = character && voiceReference(resolveCharacterVoice(character, context2, warnings), context2, warnings);
+      const direction = sceneVoiceDirection(line.acting, line.tts);
       return {
         lineId: line.id,
         speaker: line.speaker,
         delivery: line.delivery,
         text: line.tts,
-        ...line.acting?.vocal || line.acting?.direction ? { direction: line.acting?.vocal || line.acting?.direction } : {},
+        ...direction ? { direction } : {},
         ...frame2 !== void 0 ? { frame: frame2 } : {},
         ...voice ? { voice } : {},
         ...warnings.length ? { warnings } : {}
@@ -119069,29 +119288,35 @@ function sceneTimelineWords(t2, scene, includeDialogue = true) {
     const cues = t2.images.filter((p) => p.shotId === s2.shotId && p.cue).map((p) => `Frame ${p.frame}: ${p.cue}`);
     return [
       `${s2.shotId} [${s2.startFrame}\u2013${s2.endFrame - 1}] ${s2.transition.replaceAll("_", " ")}.`,
-      ...[s2.framing, s2.action].filter((text4) => !wholeTake.has(text4)),
+      ...[s2.framing, s2.blocking, s2.action].filter((text4) => text4 && !wholeTake.has(text4)),
       ...cues,
       s2.sound && s2.sound !== scene.sound && "Sound: " + s2.sound,
-      ...includeDialogue ? (s2.dialogue ?? []).filter((l) => l.delivery !== "voiceover").map((l) => (l.frame === void 0 ? "" : "Frame " + l.frame + ": ") + l.speaker + " (" + l.delivery + '): "' + l.text + '"') : []
+      ...includeDialogue ? (s2.dialogue ?? []).filter((l) => l.delivery !== "voiceover").map((l) => (l.frame === void 0 ? "" : "Frame " + l.frame + ": ") + (l.direction ? l.direction + " " : "") + l.speaker + " (" + l.delivery + '): "' + l.text + '"') : []
     ].filter(Boolean).join(" ");
   }), ...t2.audio ? ["Play one continuous scene track from frame 0.", ...t2.audio.cues.map((c) => `Frame ${c.frame}: ${c.action}`)] : []].join("\n");
 }
 function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options, mapInputs, board) {
-  const timeline = compileSceneTimeline(members, scene, episode, board);
-  const camera = sceneCameraDirection([], scene.camera);
+  const coverage2 = sceneCoverage(members, scene, board, sceneNo);
+  const timeline = compileSceneTimeline(members, scene, episode, board, coverage2, options.shotScoped);
+  const common6 = coverage2.common;
+  const camera = sceneCameraDirection([], common6.camera && attributeWords("camera", common6.camera));
+  const staging = Object.entries(common6).filter(([key]) => key !== "camera").map(([key, row]) => attributeWords(key, row)).filter(Boolean).join(" ");
+  const shared5 = [camera.instruction, staging].filter(Boolean).join(" ");
   const words = sceneTimelineWords(timeline, scene);
   const scopedDialogue = timeline.shots.some((s2) => s2.dialogue?.length);
-  const complete = scenePromptText(scene, camera.instruction, words, dialogue, scopedDialogue);
+  const complete = scenePromptText(scene, shared5, words, dialogue, scopedDialogue);
   const suffix = (value) => [value, options.suffix].filter(Boolean).join(" ");
   const prompt = suffix(openingPrompt(complete, scene.openingPositions));
-  const text4 = options.bindDialogue ? scenePromptText(scene, camera.instruction, sceneTimelineWords(timeline, scene, false), dialogue, true) : complete;
+  const text4 = options.bindDialogue ? scenePromptText(scene, shared5, sceneTimelineWords(timeline, scene, false), dialogue, true) : complete;
   const providerPrompt = suffix(options.bindOpening ? text4 : openingPrompt(text4, scene.openingPositions));
-  const request = { sceneNo, prompt, ...timeline, ...members.length > 1 ? { sceneDirection: {
+  const request = { sceneNo, prompt, ...timeline, sceneDirection: {
     emotion: scene.emotion,
     ...scene.action ? { action: scene.action } : {},
-    ...scene.camera ? { camera: scene.camera } : {},
+    ...camera.instruction ? { camera: camera.instruction } : {},
+    ...staging ? { staging } : {},
+    ...scene.oneTake ? { oneTake: true } : {},
     ...scene.sound ? { sound: scene.sound } : {}
-  } } : {} };
+  } };
   return { request, providerPrompt, camera, mapped: mapInputs(request) };
 }
 var SceneInputError = class extends Error {
@@ -119204,7 +119429,7 @@ async function buildSceneWire(scene, model2, resolution2, stageFiles = false, bi
     };
   });
   const direction = scene.sceneDirection;
-  const prompt = direction ? [direction.emotion, direction.action, direction.camera, direction.sound].filter(Boolean).join(" ") : "";
+  const prompt = direction ? [direction.emotion, direction.action, direction.camera, direction.staging, direction.sound, direction.oneTake && "One continuous take. No cuts."].filter(Boolean).join(" ") : "";
   const trackBytes = scene.audio ? statSync11(scene.audio.path).size : 0;
   if (trackBytes > 32 * 1024 * 1024) throw new Error("scene_audio@0: exceeds the 32 MiB gateway upload limit");
   const stageTrack = Boolean(scene.audio && (stageFiles || trackBytes * 4 / 3 > GENAI_MSR_INLINE_MAX_BYTES));
@@ -119562,7 +119787,7 @@ async function checkSceneDeployment(request, tool2, args) {
 import * as fs18 from "node:fs";
 import { execFileSync as execFileSync14 } from "node:child_process";
 import path22 from "node:path";
-import { createRequire as createRequire11 } from "node:module";
+import { createRequire as createRequire12 } from "node:module";
 import { fileURLToPath as fileURLToPath7 } from "node:url";
 import { createHash as createHash17 } from "node:crypto";
 
@@ -119886,9 +120111,9 @@ import path21 from "node:path";
 import { fileURLToPath as fileURLToPath6 } from "node:url";
 
 // src/video-review.ts
-import { createRequire as createRequire10 } from "node:module";
+import { createRequire as createRequire11 } from "node:module";
 import path20 from "node:path";
-var review = () => createRequire10(import.meta.url)("../../skills/storyboard/references/video-production.js");
+var review = () => createRequire11(import.meta.url)("../../skills/storyboard/references/video-production.js");
 function readVideoProduction(episode) {
   return review().read(path20.join(episode, "storyboard"));
 }
@@ -119901,7 +120126,7 @@ function refreshVideoReview(episode) {
 }
 function refreshAudienceReview(boardDirectory) {
   try {
-    const data = createRequire10(import.meta.url)("../../skills/storyboard/references/audience-review-data.js");
+    const data = createRequire11(import.meta.url)("../../skills/storyboard/references/audience-review-data.js");
     data.refresh(boardDirectory);
   } catch {
     process.stderr.write("Audience audio preview needs a refresh.\n");
@@ -119999,12 +120224,12 @@ function videoTransaction(episode, update, openingSpendUsd) {
 }
 
 // src/video-routing.ts
-var load6 = createRequire11(import.meta.url);
+var load7 = createRequire12(import.meta.url);
 var shared2 = fileURLToPath7(new URL("../../skills/_shared/video-selection.js", import.meta.url));
 var modelSettings = fileURLToPath7(new URL("../../skills/_shared/model-settings.js", import.meta.url));
 var CHANNEL_ASSET_RE = /^data\/[a-z0-9][a-z0-9-]*\/assets(\/|$)/;
 function routingContext(episode, shotId, sceneNo) {
-  const reader = load6(shared2);
+  const reader = load7(shared2);
   try {
     return reader.readVideoContext(episode, shotId, sceneNo);
   } catch (error2) {
@@ -120029,9 +120254,9 @@ function shotVideoTiming(context2, tool2, args) {
   if (context2.sceneNo !== void 0) {
     coverage2 = { requiredSeconds: Number(shot.duration) };
   } else if (shot.duration !== void 0) {
-    const edit2 = load6(fileURLToPath7(new URL("../../skills/produce/references/edit-plan.js", import.meta.url))).preview(context2.board.SCENES, { videoWarningsApproved: true });
+    const edit2 = load7(fileURLToPath7(new URL("../../skills/produce/references/edit-plan.js", import.meta.url))).preview(context2.board.SCENES, { videoWarningsApproved: true });
     const index = context2.board.SCENES.indexOf(shot);
-    const timing = load6(fileURLToPath7(new URL("../../skills/_shared/video-duration.js", import.meta.url)));
+    const timing = load7(fileURLToPath7(new URL("../../skills/_shared/video-duration.js", import.meta.url)));
     const planned = edit2.find((entry2) => entry2.card === index);
     const ownVoice = shot.sound?.audioSource === "video";
     coverage2 = timing.shotTiming(shot, { edit: ownVoice && planned ? { ...planned, in: 0 } : planned });
@@ -120049,7 +120274,7 @@ function shotVideoTiming(context2, tool2, args) {
   };
 }
 function nativeSpeechTiming(shot, language) {
-  const acting = load6(fileURLToPath7(new URL("../../skills/_shared/scene-acting.js", import.meta.url)));
+  const acting = load7(fileURLToPath7(new URL("../../skills/_shared/scene-acting.js", import.meta.url)));
   let estimatedSeconds, unmeasuredRate = false;
   try {
     estimatedSeconds = acting.planScenePerformance(shot, (line) => {
@@ -120070,7 +120295,7 @@ function nativeSpeechFit(shot, requestedSeconds, limits, language) {
   const unmeasuredRate = speechRate === "uncalibrated";
   let shortest;
   try {
-    shortest = load6(fileURLToPath7(new URL("../../skills/_shared/video-duration.js", import.meta.url))).minimumDuration(estimatedSeconds, limits);
+    shortest = load7(fileURLToPath7(new URL("../../skills/_shared/video-duration.js", import.meta.url))).minimumDuration(estimatedSeconds, limits);
   } catch {
     return void 0;
   }
@@ -120287,7 +120512,7 @@ function planVideo(raw, persist = true) {
     const sceneNo = Number(context2.shot.scene);
     const owner = context2.board.STRUCTURE?.scenes?.find((s2) => s2.no === sceneNo);
     const members2 = context2.board.SCENES.filter((shot2) => shot2.scene === sceneNo);
-    const timed = owner?.videoDirection && members2.length > 1 || owner?.videoDirection?.oneTake || owner?.videoDirection?.audio || owner?.videoDirection?.fps || members2.some((shot2) => shot2.timeline || shot2.visual?.frames?.storyboardKeyframes || owner?.videoDirection && shot2.visual?.frames?.keyframes);
+    const timed = owner?.videoDirection && (members2.length > 1 || owner.directionDefaults) || owner?.videoDirection?.oneTake || owner?.videoDirection?.audio || owner?.videoDirection?.fps || members2.some((shot2) => shot2.timeline || shot2.visual?.frames?.storyboardKeyframes || owner?.videoDirection && shot2.visual?.frames?.keyframes);
     if (timed) {
       if (members2.length !== 1) throw new Error("scene_video_scope: plan the timed shot and its scene inputs with sceneNo " + sceneNo);
       input.sceneNo = sceneNo;
@@ -120328,7 +120553,7 @@ function planVideo(raw, persist = true) {
       scene,
       context2.episode,
       lines,
-      { bindDialogue: false, bindOpening: false, suffix: "" },
+      { bindDialogue: false, bindOpening: false, suffix: "", shotScoped: true },
       () => void 0,
       context2.board
     );
@@ -120436,7 +120661,7 @@ function planVideo(raw, persist = true) {
   const bindDialogueSeparately = imageWithReferences && !silentPicture && input.args.generateAudio !== false;
   const silentSuffix = silentPicture && (supportsAudioToggle || tool2 === "minimax_img2video" || tool2 === "heygen_img2video") ? `No speech or vocalization. All visible mouths stay closed; ${includeEffects ? "include natural ambience for the location and sound effects from the visible actions." : "perform the planned silent action."}` : "";
   const promptLimit = tool2 === "astra_genai_msr" || imageWithReferences ? genaiMsrPromptLimit() : tool2 === "astra_genai_img2video" ? 2e3 : tool2 ? videoPromptLimit(tool2) : void 0;
-  const compileFor = (budget) => compileVideoPrompt(shot, video2.promptSource, names, {
+  const compileFor = (budget) => compileVideoPrompt(withSceneCamera(shot, context2.board.STRUCTURE?.scenes), video2.promptSource, names, {
     mode,
     measureAudio,
     bindDialogueSeparately,
@@ -120468,14 +120693,25 @@ function planVideo(raw, persist = true) {
     context2.board
   ) : void 0;
   const sceneRequest = prepared?.request;
-  const sceneCamera = prepared?.camera ?? (scene && sceneCameraDirection(members, scene.camera));
+  const legacyCoverage = scene && !prepared ? sceneCoverage(members, scene, context2.board, context2.sceneNo) : void 0;
+  const sceneCamera = prepared?.camera ?? (legacyCoverage && sceneCameraDirection([], legacyCoverage.common.camera ? attributeWords("camera", legacyCoverage.common.camera) : void 0));
   const timedImages2 = prepared?.mapped.timedImages;
   if (scene) {
     if (prepared) {
       shot = prepared.mapped.shot;
       callArgs = { ...withPrompt(""), ...prepared.mapped.args, prompt: prepared.providerPrompt };
     } else {
-      const sceneText2 = scenePromptText(scene, sceneCamera?.instruction, void 0, lines, bindTurns);
+      const coverage2 = legacyCoverage;
+      const notes = sceneShotNotes(members[0]);
+      const details = [
+        ...Object.entries(coverage2.common).filter(([key]) => key !== "camera").map(([key, row]) => attributeWords(key, row)),
+        shotVisualWords(members[0], coverage2.shots[0], coverage2.common, notes.end),
+        notes.blocking,
+        notes.action,
+        ...notes.beats,
+        notes.sound && "Sound: " + notes.sound
+      ].filter(Boolean);
+      const sceneText2 = scenePromptText(scene, sceneCamera?.instruction, [...new Set(details)].join(" "), lines, bindTurns);
       callArgs = withPrompt(bindOpening ? sceneText2 : openingPrompt(sceneText2, scene.openingPositions));
     }
     if (tool2 === "seedance_reference" && !silentPicture) {
@@ -120656,7 +120892,7 @@ function authorization(context2) {
   const approval = external_exports.object({ kind: external_exports.enum(["user", "standing"]), reference: external_exports.string().min(1), at: external_exports.string().min(1), quoteFingerprint: external_exports.string().min(1) }).passthrough().parse(p.approval);
   if (!Number.isFinite(Date.parse(approval.at))) throw new Error("Invalid spending approval date");
   const helper2 = fileURLToPath7(new URL("../../skills/autoproduce/references/production-cost.js", import.meta.url));
-  const quote = load6(helper2).quote(context2.board);
+  const quote = load7(helper2).quote(context2.board);
   if (quote.quoteFingerprint !== approval.quoteFingerprint) throw new Error("Existing quote changed; spending authorization does not cover this plan");
   return {
     maxUsd: external_exports.number().finite().nonnegative().parse(p.videoBudgetUsd),
@@ -120831,7 +121067,7 @@ async function executeVideo(raw, dispatch) {
   }
 }
 async function dispatchChannelAsset(tool2, args, root, output2, dispatch) {
-  const read4 = load6(modelSettings).readSettings(root);
+  const read4 = load7(modelSettings).readSettings(root);
   const selection = read4.config?.models?.video;
   if (!selection) throw new Error(`project_setup_required: ${read4.status}; save .social-flow/models.json before generating channel assets`);
   requireSupportedSelection(selection);
@@ -120969,7 +121205,7 @@ async function videoStatus(raw) {
 import * as fs20 from "node:fs";
 import path24 from "node:path";
 import os3 from "node:os";
-import { createRequire as createRequire12 } from "node:module";
+import { createRequire as createRequire13 } from "node:module";
 import { fileURLToPath as fileURLToPath8 } from "node:url";
 
 // src/image-pricing.ts
@@ -121059,9 +121295,9 @@ function imageTransaction(directory2, openingSpendUsd, update) {
 }
 
 // src/image-routing.ts
-var load7 = createRequire12(import.meta.url);
+var load8 = createRequire13(import.meta.url);
 var selectionHelper = fileURLToPath8(new URL("../../skills/_shared/image-selection.js", import.meta.url));
-var imageContext = (directory2, assetId) => load7(selectionHelper).readImageContext(directory2, assetId);
+var imageContext = (directory2, assetId) => load8(selectionHelper).readImageContext(directory2, assetId);
 var idSchema2 = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var imagePlanSchema = external_exports.object({
   directory: external_exports.string().min(1),
@@ -121559,6 +121795,7 @@ var sceneSchema = external_exports.object({
   summary: external_exports.string().optional().describe("The scene's story in one sentence; the storyboard scene header shows it"),
   out: nonEmpty.optional().describe("The sentence the scene goes out on \u2014 the one that forces a \uADF8\uB7F0\uB370 or \uADF8\uB798\uC11C into the next scene"),
   music: external_exports.object({ decision: external_exports.enum(["score", "none"]), reason: nonEmpty, span: nonEmpty.optional() }).strict().optional().describe("The music decision story_music records: score (with its $timeline span id) or none, and why"),
+  directionDefaults: sceneDefaultsSchema.optional(),
   videoDirection: sceneVideoDirectionSchema.optional(),
   videoOpeningSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional(),
   audienceSound: audienceDecisionSchema.optional()
@@ -121962,8 +122199,8 @@ function readStoryboard(args) {
   };
   const continuity = loadFromHere2(join11(REFERENCES_DIR, "shot-continuity.js"));
   result.continuityFindings = continuity.check(win, dirname6(file));
-  result.cameraDirectionFindings = cameraContract().cameraDirectionWarnings(win.SCENES).map((what) => ({ level: "warn", where: "camera direction", what }));
-  result.imageFraming = (win.SCENES || []).filter((shot) => shot.visual?.frames?.start).map((shot) => imageFramingStatus(shot, win.FORMAT, dirname6(file)));
+  result.cameraDirectionFindings = cameraContract().cameraDirectionWarnings(win.SCENES, win.STRUCTURE?.scenes).map((what) => ({ level: "warn", where: "camera direction", what }));
+  result.imageFraming = (win.SCENES || []).filter((shot) => shot.visual?.frames?.start).map((shot) => imageFramingStatus(shot, win, dirname6(file)));
   result.techniqueFindings = (win.SCENES || []).flatMap((scene, index) => techniqueContract().findings(scene).map((what) => ({ level: "warn", where: "shot " + (index + 1), what })));
   if (args.includeContext) result.reviewContext = {
     story: win.STORY || null,
@@ -122391,7 +122628,7 @@ function editImpact(before, after) {
         warn("edit_action_removed", String(old.id), "shot removed with performance/visual.action/videoDesign evidence; verify its required actions and physical states survive elsewhere or were deliberately omitted.");
       continue;
     }
-    const changed = startImageBasis(old, before.FORMAT) !== startImageBasis(current, after.FORMAT) || old.visual?.bgPrompt !== current.visual?.bgPrompt;
+    const changed = startImageBasis(old, before.FORMAT, sceneImageDirection(before, old)) !== startImageBasis(current, after.FORMAT, sceneImageDirection(after, current)) || old.visual?.bgPrompt !== current.visual?.bgPrompt;
     if (changed) {
       warn("edit_staging_changed", String(current.id), "staging/performance changed; reconcile performance, visual.action, camera endpoints, videoDesign and acting, then re-estimate duration and inspect both joins.");
       const oldVisual = old.visual;
@@ -122636,6 +122873,7 @@ var storySceneSchema = external_exports.object({
     summary: nonEmpty.describe("The scene's story in one sentence"),
     turn: nonEmpty.optional(),
     out: nonEmpty.optional(),
+    directionDefaults: sceneDefaultsSchema.optional(),
     videoDirection: sceneVideoDirectionSchema.optional(),
     audienceSound: audienceDecisionSchema.optional(),
     // The same signs structure-contract.js reads: the value at the open and at the close.
@@ -123234,7 +123472,7 @@ var shotIconsSchema = external_exports.object({
     angle: tuple(V.ANGLES).optional(),
     backgroundView: external_exports.enum(["front", "back"]).optional().describe("Opening camera direction relative to the location sheet: front is its establishing view; back is the opposite view, 180 degrees around the same space. Saved as visual.camera.backgroundView; omitted keeps the choice, initially front."),
     view: shotViewSchema.optional().describe("Content-led opening subject, crop and viewpoint; saved as visual.camera.view"),
-    move: external_exports.object({ id: nonEmpty, reason: nonEmpty.optional(), target: nonEmpty.optional(), speed: external_exports.enum(["very slow", "slow", "steady", "fast", "very fast"]).optional() }).strict().refine((v) => v.id === "camera.static" || !!v.reason, "a camera move carries its reason; only camera.static may go without one").optional().describe("A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold \u2026)"),
+    move: external_exports.object({ id: nonEmpty, reason: nonEmpty.optional(), target: nonEmpty.optional(), speed: external_exports.enum(["very slow", "slow", "steady", "fast", "very fast"]).optional() }).strict().refine((v) => v.id === "camera.static" || !!v.reason, "a camera move carries its reason; only camera.static may go without one").nullable().optional().describe("A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold \u2026)"),
     focus: choice.extend({ from: nonEmpty.optional(), to: nonEmpty.optional() }).strict().nullable().optional().describe("A camera technique with a focus field (camera.rack-focus) and the subjects it hands focus between; null removes it"),
     accents: external_exports.array(choice.extend({ on: nonEmpty.optional() }).strict()).optional().describe("Beat accents laid over the move (camera.speed-ramp, camera.impact-shake), each with the moment it fires on in English; [] removes them"),
     depth: depthSchema.optional(),
@@ -123314,7 +123552,12 @@ function writeShotIcons(args) {
       if (foreign) throw new Error(`video_prompt_language: shot_icons ${id} ${name} has "${foreign}"; write it in English, the image and video prompts quote it`);
     }
     let techniques = Array.isArray(plan2.techniques) ? plan2.techniques : [];
-    if (move && routed.mode === "still_camera") {
+    if (move === null) {
+      if (routed.mode === "still_camera") throw new Error("shot_icons: a still effect is authored on the shot");
+      techniques = techniques.filter((t2) => !field2(t2.id, "movement"));
+      const { movement, speed, target, ...view2 } = visual.camera ?? {};
+      visual.camera = Object.keys(view2).length ? view2 : void 0;
+    } else if (move && routed.mode === "still_camera") {
       if (!stillCameraEffectList().includes(move.id)) throw new Error(`shot_icons ${id}: a still_camera move is one of ${stillCameraEffectList().join(", ")}`);
       if (move.speed && !STILL_SPEEDS.includes(move.speed)) throw new Error(`shot_icons ${id}: a still effect's speed is ${STILL_SPEEDS.join(", ")}`);
       const { target: oldTarget, ...still } = routed.camera ?? {};
@@ -123359,7 +123602,7 @@ function writeShotIcons(args) {
       }
       techniques = [...techniques.filter((t2) => !field2(t2.id, "accent")), ...accents];
     }
-    if (move && routed.mode !== "still_camera" || focus !== void 0 || accents !== void 0) plan2.techniques = techniques;
+    if (move !== void 0 && routed.mode !== "still_camera" || focus !== void 0 || accents !== void 0) plan2.techniques = techniques;
     if (frames) {
       const old = visual.frames ?? {}, next2 = { ...old, ...frames };
       if (old.mode !== frames.mode && !frames.reason) delete next2.reason;
@@ -123406,7 +123649,7 @@ function writeShotIcons(args) {
   if (heldWide.length) notes.push({ level: "warn", where: "shot_icons", what: `wide shots held with no reason: ${heldWide.join(", ")} \u2014 the board does not show whether a move was compared there (action-direction.md step 2)` });
   const cameraOf = (s2) => String(s2.visual?.camera?.movement ?? "").trim();
   const videoSet = shots.filter((s2) => touched.has(String(s2.id)) && s2.shot?.render?.mode === "generated_video");
-  const unchosen = videoSet.filter((s2) => !cameraOf(s2)).map((s2) => s2.id);
+  const unchosen = videoSet.filter((s2) => !cameraOf(s2) && !resolvedDirection(st.scenes.find((sc) => sc.no === s2.scene), [s2]).shots[0].camera).map((s2) => s2.id);
   if (unchosen.length) notes.push({ level: "warn", where: "shot_icons", what: `camera_move_unset on ${unchosen.join(", ")} \u2014 no move is chosen, so the video model decides the camera; set move (camera.static for a deliberate hold)` });
   if (videoSet.length >= 4 && videoSet.every((s2) => /^(static|fixed|locked)/i.test(cameraOf(s2))))
     notes.push({ level: "warn", where: "shot_icons", what: `all ${videoSet.length} video shots this call set are held \u2014 the board does not show a move compared on any; a move earns its place where the subject travels, something enters, or the beat turns while the shot runs (action-direction.md step 2)` });
@@ -123431,10 +123674,18 @@ var shotImageSchema = external_exports.object({
   size: external_exports.string().regex(/^\d{3,4}x\d{3,4}$/).optional().describe("Output WIDTHxHEIGHT; default 1536x864 for 16:9, 864x1536 for 9:16. Fixed-size GPT models keep their supported preset with a framing warning."),
   reserveUsd: external_exports.number().finite().nonnegative().optional()
 }).strict();
-function startImageBasis(shot, format) {
+function sceneImageDirection(win, shot) {
+  const owner = win.STRUCTURE?.scenes.find((scene) => scene.no === shot.scene);
+  if (!owner?.directionDefaults) return "";
+  const sceneCards = (win.SCENES ?? []).filter((card) => card.scene === shot.scene);
+  const spatial = resolvedDirection(owner, sceneCards).shots[sceneCards.indexOf(shot)];
+  return spatial ? ["axis", "continuity", "lighting"].filter((key) => spatial[key]).map((key) => attributeWords(key, spatial[key])).filter(Boolean).join(" ") : "";
+}
+function startImageBasis(shot, format, imageContextWords) {
   const plan2 = shot.shot ?? {}, visual = shot.visual ?? {};
   return createHash18("sha256").update(JSON.stringify({
     format,
+    ...imageContextWords ? { sceneStaging: imageContextWords } : {},
     size: plan2.size,
     angle: plan2.angle,
     space: plan2.space,
@@ -123458,12 +123709,12 @@ function startImageBasis(shot, format) {
     acting: shot.narration?.map((line) => line.acting?.visual)
   })).digest("hex");
 }
-function imageFramingStatus(shot, format, boardDir) {
+function imageFramingStatus(shot, win, boardDir) {
   const visual = shot.visual;
   const frames = visual?.frames;
   const availability = !boardDir ? void 0 : frames?.start && existsSync25(resolve6(boardDir, frames.start)) ? "present" : "missing";
   const promptHash = typeof visual?.bgPrompt === "string" ? createHash18("sha256").update(visual.bgPrompt).digest("hex") : null;
-  const changed = !!frames?.startBasis && frames.startBasis !== startImageBasis(shot, format) || !!frames?.startPromptSha256 && frames.startPromptSha256 !== promptHash;
+  const changed = !!frames?.startBasis && frames.startBasis !== startImageBasis(shot, win.FORMAT, sceneImageDirection(win, shot)) || !!frames?.startPromptSha256 && frames.startPromptSha256 !== promptHash;
   return {
     id: shot.id,
     image: frames?.start,
@@ -123623,6 +123874,7 @@ function buildShotImageRequest(args) {
   if (args.preserve && !args.editExisting) throw new Error("image_edit_required: preserve requires editExisting");
   if (args.reframe && (!args.editExisting || args.frame !== "start")) throw new Error("image_edit_scope: reframe requires editExisting and frame:start");
   if (args.sourceCrop && !args.reframe) throw new Error("image_edit_scope: sourceCrop requires reframe");
+  const imageContextWords = sceneImageDirection(win, shot);
   if (args.editExisting) {
     if (args.location || args.props) throw new Error("image_edit_scope: update location and prop metadata before editing; omit location and props here");
     const source = frames[args.frame];
@@ -123653,7 +123905,7 @@ function buildShotImageRequest(args) {
     const framing = args.reframe ? loadFromHere2(join11(REFERENCES_DIR, "assemble-bg-prompt.js")) : void 0;
     const prompt2 = [
       args.sourceCrop ? "Image 1 is already cropped to the required opening composition. Keep its exact frame boundaries and subject scale. Refine image detail and apply the opening action below without widening the view." : args.reframe ? "Reframe Image 1 to the following opening composition. Zoom and crop the subject to these boundaries; the input image supplies identity, clothing, place and light, not the crop or expression." : "Edit Image 1. Change only: " + args.prompt,
-      framing ? framing.assemble({ ...framing.frameOptions(shot, "start"), scene: args.prompt, noPerson: !cast.length }).prompt : "",
+      framing ? framing.assemble({ ...framing.frameOptions(shot, "start"), scene: [imageContextWords, args.prompt].filter(Boolean).join(" "), noPerson: !cast.length }).prompt : "",
       args.reframe ? "Preserve the visible subject identity, clothing, environment and rendering style. Apply the authored opening state instead of copying a conflicting state from the input." : "Preserve all other visible details, identities, composition, lighting and rendering style unless the requested change requires otherwise.",
       args.preserve ? "Preserve explicitly: " + args.preserve : ""
     ].filter(Boolean).join("\n");
@@ -123669,7 +123921,7 @@ function buildShotImageRequest(args) {
       what: "this frame edit"
     });
     const warnings2 = [];
-    if (imageFramingStatus(shot, win.FORMAT).status === "stale") warnings2.push({ level: "warn", where: args.id, what: "image_framing_stale: this edit inherits an image made from older shot inputs; normal generation rebuilds all current references and framing" });
+    if (imageFramingStatus(shot, win).status === "stale") warnings2.push({ level: "warn", where: args.id, what: "image_framing_stale: this edit inherits an image made from older shot inputs; normal generation rebuilds all current references and framing" });
     if (Math.abs(editWidth / editHeight - (wide ? 16 / 9 : 9 / 16)) > 1e-3)
       warnings2.push({ level: "warn", where: args.id, what: `image_aspect_mismatch: ${editWidth}x${editHeight} differs from the delivery aspect; inspect its final crop` });
     return {
@@ -123771,7 +124023,7 @@ function buildShotImageRequest(args) {
     ...imagePrompts.frameOptions(shot, args.frame),
     ...args.frame === "end" && set?.endCamera && JSON.stringify(set.camera) !== JSON.stringify(set.endCamera) ? { omitFraming: true } : {},
     style: style.preset ? style : null,
-    scene: [opening && `Authored opening state: ${opening}`, args.prompt].filter(Boolean).join(" "),
+    scene: [imageContextWords, opening && `Authored opening state: ${opening}`, args.prompt].filter(Boolean).join(" "),
     noPerson: !cast.length && !seen.length && !extras,
     ...set ? { location: { prompt: args.frame === "end" ? set.endPrompt : set.prompt, paths: [] } } : {}
   }).prompt;
@@ -123841,7 +124093,7 @@ function buildShotImageRequest(args) {
     start: set.start,
     end: set.end
   } : void 0;
-  const startBasis = startImageBasis({ ...shot, visual: { ...visual, ...location ? { locationId: location } : {}, props } }, win.FORMAT);
+  const startBasis = startImageBasis({ ...shot, visual: { ...visual, ...location ? { locationId: location } : {}, props } }, win.FORMAT, imageContextWords);
   return { episode, assetId: args.id, ...call2, canonicalPanels: true, refs: sent, ...location ? { location } : {}, ...locationFrame ? { locationFrame } : {}, props, prompt, warnings, startBasis };
 }
 var PANEL_NEGATIVE_GUIDANCE = { "qwen-image-fast": 4, "qwen-image-2.1-turbo": 4 };
@@ -123993,7 +124245,7 @@ function writeShotPrompt(args) {
   const source = { action: args.action, ...args.end ? { end: args.end } : {}, ...args.sound ? { sound: args.sound } : {} };
   const rawCast = win.SB_DOC?.characters;
   const names = Object.fromEntries((Array.isArray(rawCast) ? rawCast : []).map((c) => [c.id, String(c.name ?? "")]));
-  const compiled = compileVideoPrompt(shot, source, names), { prompt } = compiled;
+  const compiled = compileVideoPrompt(withSceneCamera(shot, st.scenes), source, names), { prompt } = compiled;
   const { openingPositions: oldPositions, openingImageSha256: oldHash, speakerBindings: _oldBindings, speakerBindingImageSha256: _oldImage, ...priorVideo } = visual.video ?? {};
   const start = visual.frames?.start;
   const positions = args.openingPositions ?? oldPositions;
@@ -132867,7 +133119,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     description: `Use it after story_sequence to upsert scenes by number into a sequence: place, time, the one event, and a one- or two-sentence summary of the scene's story. On story-led work also give turn, charge and out, so the scenes can be read in a row for pressure that changes and ends that hand over the next question (skills/storyboard/references/story-interest.md). A scene moved to another sequence leaves its old one. Refused (story_order) before any sequence exists or for an unknown sequence id, and on a story-first episode board by story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
 
-For generated scenes, videoDirection records the opening positions, shared direction, scene fps and one continuous audio file with beat cues. Set oneTake only for an explicitly uninterrupted camera view. Place every setup on its own story_shot card.
+Before making shot images, set directionDefaults for a shared camera technique, axis, continuity, lighting and attention. A shot can choose its own move, side or light. For generated scenes, videoDirection records the opening positions, shared direction, scene fps and one continuous audio file with beat cues. Set oneTake only for an explicitly uninterrupted camera view. Place every setup on its own story_shot card.
 
 A new scene starts with audienceSound.decision undecided. Set use or none with the dramatic reason. For use, perspective identifies whose experience we hear. The shift names the line or action that reveals a change of feeling or expectation and how the cue follows it. The exit names the beat where it ends. All three notes are optional. Plan and time each chosen effect on its shot with storyboard_apply.audienceEffects.
 
@@ -132887,6 +133139,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
           event: { type: "string", description: "The one thing that happens in this scene" },
           summary: { type: "string", description: "The scene's story in one sentence" },
           turn: { type: "string", description: "What flipped between the open and the close" },
+          directionDefaults: zodToJsonSchema(sceneDefaultsSchema, { $refStrategy: "none" }),
           videoDirection: zodToJsonSchema(sceneVideoDirectionSchema, { $refStrategy: "none" }),
           audienceSound: zodToJsonSchema(audienceDecisionSchema, { $refStrategy: "none" }),
           out: { type: "string", description: "The line or visible action the scene goes out on \u2014 it leaves the next thing wanted" },
@@ -133157,7 +133410,7 @@ Refused: missing story/characters (story_order), invalid attributes, incompatibl
           angle: enumInput(storyboardVocabulary?.ANGLES, "Camera angle icon: the camera height and tilt; ground and over have cards in techniqueCatalog guides.angle"),
           view: shotViewInput,
           backgroundView: { type: "string", enum: ["front", "back"], description: "Opening direction relative to the location sheet: front is the establishing view, back is the opposite side. Saves visual.camera.backgroundView; omitted keeps the choice, initially front. Independent of the subject view." },
-          move: { type: "object", additionalProperties: false, required: ["id"], description: "Camera move icon. A video shot left without one is named in the result (camera_move_unset: the video model then decides the camera), as is a call that holds every video shot it sets; neither is refused", properties: {
+          move: { type: ["object", "null"], additionalProperties: false, required: ["id"], description: "Choose a shot move. On a video shot null clears the override and restores the scene camera default.", properties: {
             id: { type: "string", enum: [...cameraMoves, ...stillCameraEffects], description: "A camera.* technique with a movement, or on a still_camera cut a still effect" },
             reason: { type: "string", description: "Why the camera moves this way in this shot. Required for every move and still effect; camera.static may go without one" },
             target: { type: "string", description: 'What the move is aimed at, in English on a video cut: what it pushes toward or pans and tilts to, or the person it follows, circles or rises above \u2014 the prompt reads "pushes in toward <target>", "follows behind <target>". A blast pushback names the source of the blast, a weapon cam what the projectile flies toward, a relay one-take the fighter it starts with' },
@@ -133606,7 +133859,7 @@ import * as fs24 from "node:fs";
 import path29 from "node:path";
 import os4 from "node:os";
 import { execFileSync as execFileSync17 } from "node:child_process";
-import { createRequire as createRequire14 } from "node:module";
+import { createRequire as createRequire15 } from "node:module";
 import { fileURLToPath as fileURLToPath10 } from "node:url";
 
 // src/music-state.ts
@@ -133751,12 +134004,12 @@ function normalizeMusicFile(source, target) {
 }
 
 // src/music-routing.ts
-var load8 = createRequire14(import.meta.url);
+var load9 = createRequire15(import.meta.url);
 var selectionHelper2 = fileURLToPath10(new URL("../../skills/_shared/music-selection.js", import.meta.url));
 function refreshAudienceOutput(directory2, file) {
   if (path29.dirname(file) === path29.join(directory2, ".work/music/audience")) refreshAudienceReview(path29.join(directory2, "storyboard"));
 }
-var musicContext = (directory2, assetId) => load8(selectionHelper2).readMusicContext(directory2, assetId);
+var musicContext = (directory2, assetId) => load9(selectionHelper2).readMusicContext(directory2, assetId);
 var idSchema3 = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var musicPlanSchema = external_exports.object({
   directory: external_exports.string().min(1),
@@ -134405,7 +134658,7 @@ import { createHash as createHash24, randomUUID as randomUUID11 } from "node:cry
 import { appendFileSync as appendFileSync3, copyFileSync, existsSync as existsSync33, mkdirSync as mkdirSync18, readFileSync as readFileSync34, writeFileSync as writeFileSync23, renameSync as renameSync7 } from "node:fs";
 import { basename as basename10, dirname as dirname8, join as join15, resolve as resolve10 } from "node:path";
 import { isDeepStrictEqual } from "node:util";
-import { createRequire as createRequire17 } from "node:module";
+import { createRequire as createRequire18 } from "node:module";
 
 // src/voice-lock-config.ts
 var VOICE_LOCK_MODEL = "eleven_multilingual_sts_v2";
@@ -134529,7 +134782,7 @@ function compileSample(text4, acting, voice, turns) {
   const normalize2 = (value) => value.replace(/\s+/g, " ").trim();
   if (acting || normalize2(turns.map((turn) => turn.text).join(" ")) !== normalize2(text4)) throw new Error("Sample turns must reproduce sampleText with per-turn acting only");
   if (voice.engine !== "gemini" || !String(voice.model).startsWith("gemini-3.8-")) throw new Error("Per-turn sample acting requires Gemini 3.8 TTS");
-  const { directionSupport } = createRequire17(import.meta.url)("../../skills/_shared/scene-acting.js");
+  const { directionSupport } = createRequire18(import.meta.url)("../../skills/_shared/scene-acting.js");
   if (turns.some((turn) => !directionSupport(voice, turn.acting).supported)) throw new Error("Per-turn resolved vocal style exceeds the Gemini 3.8 limit of 500 characters; shorten the controls");
   const compiled = turns.map((turn) => compileActing(turn.text, turn.acting, voice));
   return { generator: "tts_gemini_38", generation: { ...compiled[0].generation, turns: compiled.flatMap((turn) => turn.generation.turns) } };
@@ -134538,7 +134791,7 @@ function refreshSheet(identityPath) {
   const folder = dirname8(identityPath);
   if (basename10(dirname8(folder)) !== "characters" || basename10(dirname8(dirname8(folder))) !== "assets") return void 0;
   try {
-    createRequire17(import.meta.url)("../../skills/channel/references/review-library.js").exportChannel(resolve10(folder, "../../.."));
+    createRequire18(import.meta.url)("../../skills/channel/references/review-library.js").exportChannel(resolve10(folder, "../../.."));
     return join15(folder, "index.html");
   } catch (error2) {
     return `sheet refresh failed: ${error2 instanceof Error ? error2.message : String(error2)}`;
@@ -134647,7 +134900,7 @@ function bindRegisteredVoice(args) {
   const chosen = audition.candidates.find((candidate2) => candidate2.id === selection.candidateId);
   if (!chosen || audition.status !== "selected" || chosen.tts.engine !== "astra-genai" || chosen.audioSha256 !== selection.audioSha256 || hash3(readFileSync34(chosen.audioPath)) !== chosen.audioSha256)
     throw new Error("voice_registration_sample_stale: the selected gateway sample or its bytes changed");
-  const handoff = createRequire17(import.meta.url)("../../skills/channel/references/character-sheet.js").selectedVoiceReference(source, ttsSchema.parse(value.tts));
+  const handoff = createRequire18(import.meta.url)("../../skills/channel/references/character-sheet.js").selectedVoiceReference(source, ttsSchema.parse(value.tts));
   if (handoff.voiceReference?.sha256 !== chosen.audioSha256) throw new Error("voice_registration_sample_stale: restore the selected sample settings before binding");
   const tts = ttsSchema.parse({ ...chosen.tts, voiceId: args.registeredVoiceId });
   const registration = {
@@ -134792,9 +135045,9 @@ import { execFileSync as execFileSync18, spawn as spawn3 } from "node:child_proc
 import { copyFileSync as copyFileSync2, existsSync as existsSync34, mkdirSync as mkdirSync19, mkdtempSync as mkdtempSync7, readFileSync as readFileSync35, realpathSync as realpathSync11, renameSync as renameSync8, rmSync as rmSync17, statSync as statSync19, writeFileSync as writeFileSync24, openSync as openSync7, readSync, closeSync as closeSync7 } from "node:fs";
 import { tmpdir as tmpdir7 } from "node:os";
 import { basename as basename11, dirname as dirname9, isAbsolute as isAbsolute2, join as join17, relative as relative2, resolve as resolve11, sep as sep2 } from "node:path";
-import { createRequire as createRequire19 } from "node:module";
+import { createRequire as createRequire20 } from "node:module";
 import { pathToFileURL } from "node:url";
-var load9 = createRequire19(import.meta.url);
+var load10 = createRequire20(import.meta.url);
 var COVER_REFS = join17(PLUGIN_ROOT, "skills", "generate-cover", "references");
 var TEMPLATE_FILE = join17(COVER_REFS, "cover-template.html");
 var MOTION_FONT_DIR = join17(PLUGIN_ROOT, "skills", "storyboard", "references", "motion-fonts");
@@ -134832,7 +135085,7 @@ function episodeOf(path35) {
   const board = readBoard(path35);
   const storyboard = realpathSync11(dirname9(scenesPath(path35)));
   const format = String(board.win.FORMAT ?? "shorts-9x16");
-  const formats = load9(join17(PLUGIN_ROOT, "skills", "platform-guide", "references", "formats.js")).FORMATS;
+  const formats = load10(join17(PLUGIN_ROOT, "skills", "platform-guide", "references", "formats.js")).FORMATS;
   const spec = formats[format]?.cover;
   if (!spec) throw new Error(`cover_format_unknown: ${format} has no cover block in formats.js`);
   return { board, storyboard, episode: dirname9(storyboard), format, spec };
@@ -135034,8 +135287,8 @@ function regionFor(spec, focus) {
   return focus.y <= 0.5 ? { x0: x2.x0, x1: x2.x1, y0: 0.5, y1: core.y1, align: "center" } : { x0: x2.x0, x1: x2.x1, y0: core.y0, y1: 0.5, align: "center" };
 }
 function pickFont(text4, language) {
-  const motion = load9(join17(PLUGIN_ROOT, "skills", "storyboard", "references", "motion-font-data.js"));
-  const cjk = load9(join17(COVER_REFS, "cover-font-data.js"));
+  const motion = load10(join17(PLUGIN_ROOT, "skills", "storyboard", "references", "motion-font-data.js"));
+  const cjk = load10(join17(COVER_REFS, "cover-font-data.js"));
   const all = { ...motion, ...cjk };
   const lang = language.split("-")[0];
   const order = lang === "ja" ? ["notosansjp", "pretendard"] : lang === "zh" ? ["notosanssc", "notosanstc"] : /[\u1100-\u11ff\u3130-\u318f\uac00-\ud7a3]/.test(text4) ? ["paperlogy", "pretendard"] : ["pretendard", "paperlogy"];
@@ -135309,7 +135562,7 @@ async function renderCover(path35) {
     const episodesDir = dirname9(ep.episode);
     if (basename11(ep.storyboard) === "storyboard" && basename11(episodesDir) === "episodes") {
       try {
-        const library = load9(join17(PLUGIN_ROOT, "skills", "channel", "references", "review-library.js"));
+        const library = load10(join17(PLUGIN_ROOT, "skills", "channel", "references", "review-library.js"));
         library.exportChannel(dirname9(episodesDir));
       } catch (error2) {
         const message = error2 instanceof Error ? error2.message : String(error2);
@@ -136414,7 +136667,7 @@ function save2(draft) {
   writeFileSync27(temp, JSON.stringify(draft), { mode: 384 });
   renameSync11(temp, file);
 }
-function load10(id) {
+function load11(id) {
   const value = JSON.parse(readFileSync38(draftLocation(id).file, "utf8"));
   draftSchema.parse(value);
   if (value.draftId !== id || value.channel !== draftLocation(id).channel || threadsBodyHash(value.body, value.selfReply) !== value.bodyHash) {
@@ -136455,7 +136708,7 @@ function createThreadsDraft(args) {
 function submitThreadsReview(args) {
   return gateCall("threads_review_submit", args, () => {
     const input = reviewSchema2.strict().parse(args);
-    const draft = load10(input.draftId);
+    const draft = load11(input.draftId);
     if (input.bodyHash !== draft.bodyHash) throw new Error("Review body hash mismatch");
     if (draft.surface === "reply" && input.axis !== "voice") throw new Error("Reply drafts use voice review only");
     const surfaces = (input.axis !== "voice" ? [draft.body] : [draft.body, draft.selfReply ?? ""]).map(whitespace);
@@ -136476,7 +136729,7 @@ function submitThreadsReview(args) {
 function checkThreadsGate(input) {
   return gateCall("threads_publish", input, () => {
     if (!input.draftId) throw new Error("Growth publishing requires draftId");
-    const draft = load10(input.draftId);
+    const draft = load11(input.draftId);
     if (input.channel !== draft.channel) throw new Error("Draft channel mismatch");
     if (input.replyToId !== draft.replyToId) throw new Error("Draft reply target mismatch");
     const bodyHash = threadsBodyHash(input.caption, input.selfReply);
@@ -142036,10 +142289,10 @@ function renderCapabilityStatus() {
 
 // src/character-panel.ts
 import { existsSync as existsSync41, readFileSync as readFileSync40, writeFileSync as writeFileSync30 } from "node:fs";
-import { createRequire as createRequire21 } from "node:module";
+import { createRequire as createRequire22 } from "node:module";
 import path34 from "node:path";
-var load11 = createRequire21(import.meta.url);
-var shared4 = (file) => load11(`../../skills/${file}`);
+var load12 = createRequire22(import.meta.url);
+var shared4 = (file) => load12(`../../skills/${file}`);
 var characterPanelSchema = external_exports.object({
   identityPath: external_exports.string().min(1).describe("<channel>/assets/characters/<id>/identity.md"),
   view: external_exports.enum(["face", "front", "back"]),

@@ -6,7 +6,7 @@ import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { z } from 'zod';
 import { openingPrompt, shotTimelineSchema } from './msr-opening.js';
-import { videoTextPolicy, cameraMoveWords, sceneCameraDirection, scenePromptText } from './video-prompt.js';
+import { videoTextPolicy, resolvedDirection, attributeWords, sceneShotNotes, shotVisualWords, sceneCameraDirection, scenePromptText, sceneVoiceDirection } from './video-prompt.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { verifyImageFile } from './image-media.js';
 import { VEO_CONSTRAINTS } from './veo-video.js';
@@ -52,7 +52,11 @@ export function bindSceneCards(members, bindings) {
     }
     return cards;
 }
-export function compileSceneTimeline(raw, scene, episode, board) {
+export function sceneCoverage(members, scene, board, sceneNo = members[0]?.scene) {
+    const owner = board?.STRUCTURE?.scenes?.find(s => s.no === sceneNo);
+    return resolvedDirection({ directionDefaults: owner?.directionDefaults, videoDirection: scene }, members);
+}
+export function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCoverage(raw, scene, board), shotScoped = false) {
     const render = load('../../skills/storyboard/references/render-routing.js');
     const members = raw;
     const fps = scene.fps ?? 24;
@@ -74,15 +78,11 @@ export function compileSceneTimeline(raw, scene, episode, board) {
             (transition === 'open') !== (index === 0))
             throw new Error('scene_video_timing: inconsistent frame range or transition on ' + shotId);
         cursor = endFrame;
-        const move = cameraMoveWords(visual?.camera ?? {});
-        const crop = visual?.camera?.view?.crop;
-        const landing = english(visual?.camera?.end);
-        const camera = timeline?.framing ?? [member.shot?.size, member.shot?.angle, english(crop)].filter(Boolean).join(' ');
-        const shotFraming = [camera, move, landing && 'Closing frame: ' + landing].filter(Boolean).join(' ');
-        const framing = members.length === 1 && !timeline && scene.camera ? scene.camera
-            : shotFraming || (members.length === 1 ? scene.camera || 'Hold the opening composition.' : '');
-        const existingAction = [visual?.video?.promptSource?.action, member.shot?.videoDesign?.action, visual?.action, member.summary, visual?.video?.prompt].map(english).find(Boolean);
-        const action = timeline?.action ?? existingAction ?? (members.length === 1 ? scene.action || scene.emotion : '');
+        const notes = sceneShotNotes(raw[index]);
+        const shotFraming = shotVisualWords(raw[index], coverage.shots[index], coverage.common, notes.end, timeline?.framing);
+        const framing = shotFraming || (coverage.common.camera ? attributeWords('camera', coverage.common.camera)
+            : members.length === 1 ? 'Use the opening composition.' : '');
+        const action = [notes.action || (members.length === 1 ? scene.action || scene.emotion : ''), ...notes.beats].filter(Boolean).join(' ');
         const pins = [...(timeline?.images ?? [])];
         const frames = render.framePlan(member);
         const legacy = visual?.frames;
@@ -130,14 +130,15 @@ export function compileSceneTimeline(raw, scene, episode, board) {
                 add({ path: ref.path, role: ref.role, frame: startFrame, reference: ref });
         // Older approved single-shot plans already bind their narration and voices in
         // the adapter. Preserve their manifest and hash unless a timeline adds a binding.
-        const scoped = members.length > 1 || timeline?.openingPositions || timeline?.dialogueCues?.length;
+        const scoped = shotScoped || members.length > 1 || timeline?.openingPositions || timeline?.dialogueCues?.length;
         if (members.length === 1 && timeline?.openingPositions && scene.openingPositions &&
             JSON.stringify(timeline.openingPositions) !== JSON.stringify(scene.openingPositions))
             throw new Error('scene_opening_positions: a single shot and its scene must have the same opening positions');
         const positions = scoped ? timeline?.openingPositions ?? visual?.video?.openingPositions ?? (index === 0 ? scene.openingPositions : undefined) : undefined;
-        const blocking = scoped && english(member.shot?.videoDesign?.before);
-        const sound = scoped && (english(visual?.video?.promptSource?.sound) || english(member.shot?.videoDesign?.sound));
-        const lines = scoped ? (member.narration ?? []).filter(line => line.tts?.trim()) : [];
+        const blocking = notes.blocking;
+        const sound = notes.sound;
+        const ordered = load('../../skills/storyboard/references/scene-direction.js').orderedSpeech;
+        const lines = scoped ? ordered(member).filter(line => line.tts?.trim()) : [];
         for (const cue of timeline?.dialogueCues ?? []) {
             if (lines.filter(line => line.id === cue.lineId).length !== 1)
                 throw new Error('scene_dialogue_timing: ' + shotId + ' needs one spoken line with id ' + cue.lineId);
@@ -149,8 +150,9 @@ export function compileSceneTimeline(raw, scene, episode, board) {
             const context = { episode, board: board ?? {}, shot: raw[index] };
             const warnings = [];
             const voice = character && voiceReference(resolveCharacterVoice(character, context, warnings), context, warnings);
+            const direction = sceneVoiceDirection(line.acting, line.tts);
             return { lineId: line.id, speaker: line.speaker, delivery: line.delivery, text: line.tts,
-                ...((line.acting?.vocal || line.acting?.direction) ? { direction: line.acting?.vocal || line.acting?.direction } : {}),
+                ...(direction ? { direction } : {}),
                 ...(frame !== undefined ? { frame } : {}), ...(voice ? { voice } : {}),
                 ...(warnings.length ? { warnings } : {}) };
         });
@@ -194,24 +196,28 @@ export function sceneTimelineWords(t, scene, includeDialogue = true) {
     return [`Scene at ${t.fps} fps. Frame numbers start at zero.`, ...t.shots.map(s => {
             const cues = t.images.filter(p => p.shotId === s.shotId && p.cue).map(p => `Frame ${p.frame}: ${p.cue}`);
             return [`${s.shotId} [${s.startFrame}–${s.endFrame - 1}] ${s.transition.replaceAll('_', ' ')}.`,
-                ...[s.framing, s.action].filter(text => !wholeTake.has(text)), ...cues, s.sound && s.sound !== scene.sound && 'Sound: ' + s.sound,
-                ...(includeDialogue ? (s.dialogue ?? []).filter(l => l.delivery !== 'voiceover').map(l => (l.frame === undefined ? '' : 'Frame ' + l.frame + ': ') + l.speaker + ' (' + l.delivery + '): "' + l.text + '"') : []),
+                ...[s.framing, s.blocking, s.action].filter(text => text && !wholeTake.has(text)), ...cues, s.sound && s.sound !== scene.sound && 'Sound: ' + s.sound,
+                ...(includeDialogue ? (s.dialogue ?? []).filter(l => l.delivery !== 'voiceover').map(l => (l.frame === undefined ? '' : 'Frame ' + l.frame + ': ') + (l.direction ? l.direction + ' ' : '') + l.speaker + ' (' + l.delivery + '): "' + l.text + '"') : []),
             ].filter(Boolean).join(' ');
         }), ...(t.audio ? ['Play one continuous scene track from frame 0.', ...t.audio.cues.map(c => `Frame ${c.frame}: ${c.action}`)] : [])].join('\n');
 }
 /** Compile once, then present the complete scene to the selected adapter's input mapper. */
 export function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options, mapInputs, board) {
-    const timeline = compileSceneTimeline(members, scene, episode, board);
-    const camera = sceneCameraDirection([], scene.camera);
+    const coverage = sceneCoverage(members, scene, board, sceneNo);
+    const timeline = compileSceneTimeline(members, scene, episode, board, coverage, options.shotScoped);
+    const common = coverage.common;
+    const camera = sceneCameraDirection([], common.camera && attributeWords('camera', common.camera));
+    const staging = Object.entries(common).filter(([key]) => key !== 'camera').map(([key, row]) => attributeWords(key, row)).filter(Boolean).join(' ');
+    const shared = [camera.instruction, staging].filter(Boolean).join(' ');
     const words = sceneTimelineWords(timeline, scene);
     const scopedDialogue = timeline.shots.some(s => s.dialogue?.length);
-    const complete = scenePromptText(scene, camera.instruction, words, dialogue, scopedDialogue);
+    const complete = scenePromptText(scene, shared, words, dialogue, scopedDialogue);
     const suffix = (value) => [value, options.suffix].filter(Boolean).join(' ');
     const prompt = suffix(openingPrompt(complete, scene.openingPositions));
-    const text = options.bindDialogue ? scenePromptText(scene, camera.instruction, sceneTimelineWords(timeline, scene, false), dialogue, true) : complete;
+    const text = options.bindDialogue ? scenePromptText(scene, shared, sceneTimelineWords(timeline, scene, false), dialogue, true) : complete;
     const providerPrompt = suffix(options.bindOpening ? text : openingPrompt(text, scene.openingPositions));
-    const request = { sceneNo, prompt, ...timeline, ...(members.length > 1 ? { sceneDirection: { emotion: scene.emotion, ...(scene.action ? { action: scene.action } : {}),
-                ...(scene.camera ? { camera: scene.camera } : {}), ...(scene.sound ? { sound: scene.sound } : {}) } } : {}) };
+    const request = { sceneNo, prompt, ...timeline, sceneDirection: { emotion: scene.emotion, ...(scene.action ? { action: scene.action } : {}),
+            ...(camera.instruction ? { camera: camera.instruction } : {}), ...(staging ? { staging } : {}), ...(scene.oneTake ? { oneTake: true } : {}), ...(scene.sound ? { sound: scene.sound } : {}) } };
     return { request, providerPrompt, camera, mapped: mapInputs(request) };
 }
 export class SceneInputError extends Error {
@@ -303,7 +309,7 @@ export async function buildSceneWire(scene, model, resolution, stageFiles = fals
         };
     });
     const direction = scene.sceneDirection;
-    const prompt = direction ? [direction.emotion, direction.action, direction.camera, direction.sound].filter(Boolean).join(' ') : '';
+    const prompt = direction ? [direction.emotion, direction.action, direction.camera, direction.staging, direction.sound, direction.oneTake && 'One continuous take. No cuts.'].filter(Boolean).join(' ') : '';
     const trackBytes = scene.audio ? statSync(scene.audio.path).size : 0;
     if (trackBytes > 32 * 1024 * 1024)
         throw new Error('scene_audio@0: exceeds the 32 MiB gateway upload limit');
