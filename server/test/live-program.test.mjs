@@ -1,0 +1,45 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { config } from '../dist/config.js';
+import { LiveProgram } from '../dist/live-program.js';
+import { answer, ChatQueue, continueBroadcast } from '../dist/live-character.js';
+
+test('plan during the opener, displace speculative host clips with chat, then continue the actual exchange', async (t) => {
+  const discarded = [], requests = [];
+  const program = new LiveProgram(item => discarded.push(item.text));
+  const queue = new ChatQueue(event => program.hear(event));
+  const item = (source, text) => ({ source, id: text, text, pcm: Buffer.alloc(2) });
+  const question = { source: 'youtube', id: 'q1', speaker: 'alice', text: 'Why that book?' };
+  const cfg = { character: 'host', channel: 'radio', broadcastConcept: 'Reading at night', chatModel: 'local', reactions: [] };
+  const actor = { language: 'en', persona: 'A radio reader.' };
+  t.mock.method(globalThis, 'fetch', async (_url, init) => {
+    const request = JSON.parse(init.body);
+    requests.push(JSON.parse(request.messages.at(-1).content));
+    return Response.json({choices: [{ message: { content: 'The pages are full of pencil notes.' } }]});
+  });
+  process.env.ASTRA_GENAI_URL = 'http://localhost.invalid';
+  const key = config.astraGenaiApiKey;
+  t.after(() => { config.astraGenaiApiKey = key; delete process.env.ASTRA_GENAI_URL; });
+  config.astraGenaiApiKey = 'test-only';
+  program.ready.push(item('opening', 'Welcome to the library.'), item('host', 'I brought a picture book.'));
+  assert.equal(program.take(false), undefined);
+  assert.equal(program.canPlanHost, false);
+  assert.equal(program.take(true).source, 'opening');
+  assert.equal(program.canPlanHost, true);
+  const draft = await continueBroadcast(cfg, actor, program.context(), undefined);
+  assert.deepEqual(requests[0].context.onAir, [{host: 'Welcome to the library.'}]);
+  assert.deepEqual(requests[0].context.scheduledHost, ['I brought a picture book.']);
+  program.ready.push(item('host', draft));
+  assert.equal(program.take(true).text, 'I brought a picture book.');
+  queue.add(question);
+  const event = queue.next();
+  const reply = await answer(cfg, actor, event.text, undefined, program.context(), event.speaker);
+  assert.deepEqual(requests[1].question, {speaker:'alice', text:question.text});
+  assert.deepEqual(requests[1].context.recentChat, [requests[1].question]);
+  program.queueReply({...item('youtube', reply), question: requests[1].question});
+  assert.deepEqual(discarded, [draft]);
+  assert.equal(program.take(true).source, 'youtube');
+  await continueBroadcast(cfg, actor, program.context(), undefined);
+  assert.deepEqual(requests[2].context.onAir.at(-1), {host:reply, answering:requests[1].question});
+  assert.deepEqual(requests[2].context.scheduledHost, []);
+});

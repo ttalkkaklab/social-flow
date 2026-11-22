@@ -11,6 +11,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -43,6 +44,7 @@ import {
   astraAudio2VideoSchema,
   astraIcLoraSchema,
   astraImg2VideoSchema,
+  resumeVideoResult,
   astraKeyframeVideoSchema,
   astraText2VideoSchema,
   astraVideoRetakeSchema,
@@ -1013,6 +1015,30 @@ describe('2026-10-18 live contract snapshot (read-only capture; no render claims
         parseFails(astraText2VideoSchema, args(spec.minimum - 1));
         parseFails(astraText2VideoSchema, args(spec.maximum + 1));
       }
+    }
+  });
+});
+
+describe('standby generation receipts', () => {
+  it('reuses verified media offline and preserves a terminal job before a new preparation', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'video-resume-'));
+    const clip = path.join(dir, 'clip.mp4');
+    const receipt = clip + '.astra-job.json';
+    const jobId = 'a'.repeat(32);
+    try {
+      assert.equal(await resumeVideoResult(clip), false);
+      const bytes = Buffer.from('finished clip fixture');
+      fs.writeFileSync(clip, bytes);
+      await assert.rejects(resumeVideoResult(clip), /no generation receipt/);
+      fs.writeFileSync(receipt, JSON.stringify({jobId, status: 'completed',
+        sha256: createHash('sha256').update(bytes).digest('hex')}));
+      assert.equal(await resumeVideoResult(clip), true);
+      fs.unlinkSync(clip);
+      fs.writeFileSync(receipt, JSON.stringify({jobId, status: 'failed', error: 'worker failed'}));
+      assert.equal(await resumeVideoResult(clip), false);
+      assert.equal(JSON.parse(fs.readFileSync(clip + '.' + jobId + '.failed.json')).status, 'failed');
+    } finally {
+      fs.rmSync(dir, {recursive: true, force: true});
     }
   });
 });

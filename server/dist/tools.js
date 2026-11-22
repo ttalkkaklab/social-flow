@@ -1847,7 +1847,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
 
 Use when a generated background or photo has to move and nobody is waiting on it — same trade as astra_text2video: free, ours, one job at a time. Give firstFramePath alone to animate from that frame, or add lastFramePath and the clip lands on it. The tool uploads the files itself; pass local paths, not ids.
 Do NOT use for more than two stills — that is astra_keyframe_video, which pins each image to a frame index.
-tier accepts default (generate), guided, or hq (guided_hq — quality unmeasured). guided and hq images use the 64-pixel grid and pixel ceiling (omitted dimensions default to 1536x1024); fast images are not enabled. lora is default-only; negativePrompt and numInferenceSteps are guided-only, and with guidance also hq. Passing one to the wrong tier is refused before the call.
+tier accepts default, guided, fast and hq. Fast generates in one stage on a 32-pixel grid. Guided and hq use a 64-pixel grid and default to 1536x1024. Only default accepts lora. Guided, fast and hq accept negativePrompt, numInferenceSteps and guidance. Passing one to the wrong tier is refused before the call.
 The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. autoDuration lets the server choose at most 121 frames from a first still alone; it is refused with lastFramePath or numFrames. png, jpg and jpeg are accepted, up to 32 MiB each.
 Warning: image-conditioned generate (width 1280, measured at heights 704/768) failure frames: {121,129,137}; guided (width 1280, measured at height 704) failure frames: {121}. Guided 129/137 succeeded at 1280x704 in server probes (the only guided size probed). Guided and hq sizes follow the server grid and pixel ceiling; unmeasured sizes are not quality guarantees. Within current client limits use generate 113/145 (measured at 1280x704); generate 1536x704 and 1536x1024 at 121 frames also succeeded. Text-only 1280x704 at 121 frames succeeded. An upstream defect is a hypothesis, not a confirmed cause. The server owns the failure-band acceptance gate; this warning adds no client-side block.
 ${ASTRA_LIMITS_LINE}
@@ -1862,8 +1862,8 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                     description: 'What happens between the frames — movement, camera, mood. English recommended. 1-2000 characters.',
                 },
                 tier: {
-                    type: 'string', enum: ['default', 'guided', 'hq'], default: 'default',
-                    description: 'default (generate), guided, or hq (guided_hq, quality unmeasured); all follow the 64-pixel grid and pixel ceiling. fast images are unmeasured and not enabled.',
+                    type: 'string', enum: ['default', 'guided', 'fast', 'hq'], default: 'default',
+                    description: 'Use fast for native single-stage image conditioning on a 32-pixel grid. Default, guided and hq use a 64-pixel grid.',
                 },
                 firstFramePath: {
                     type: 'string',

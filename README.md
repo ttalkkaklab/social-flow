@@ -1259,11 +1259,14 @@ routes; LTX is one adapter, not the common data model.
 
 ### Stream a character live
 
-YouTube and TikTok play a moving performance of the sheet character throughout the show. Select a chest-up reference video and the character's registered voice. The MuseTalk renderer shapes the moving face to each spoken reply on Apple Silicon.
-
-Use [live-character](skills/live-character/SKILL.md) for a bounded YouTube or TikTok LIVE session.
-It animates a character's saved portrait and voice, answers chat, and writes the actual encoded
-broadcast and event receipts. YouTube supports unlisted setup, native chat and an end-to-end probe.
+Before each broadcast, choose to go live when ready, preview, or cancel.
+Before ingest, prepare the spoken greeting, the first topic segment and ten moving 3–5 second listening clips.
+The producer uses the current line, recent exchanges and incoming chat to generate speech while the
+encoder plays. Selected viewer replies take priority. Standby yields on the next frame and each
+spoken segment plays through its last sample. Held standby shots are regenerated with the shared
+framing, light and background. LTX generates the whole 736×1280 frame and the encoder trims
+eight columns per side for 720×1280 playout. YouTube supports unlisted rooms and native chat.
+See [Character LIVE](skills/live-character/SKILL.md) for configuration and recovery.
 TikTok takes a separately approved RTMPS destination and can receive events from an authorized input.
 
 ### Inspect existing content

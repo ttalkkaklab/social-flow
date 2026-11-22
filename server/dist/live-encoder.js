@@ -96,9 +96,10 @@ export function checkLiveRelay() {
     if (check.status !== 0)
         throw Error('Secure live output needs Python 3 and shared FFmpeg libraries (avformat, avutil). Set SOCIAL_FLOW_LIVE_PYTHON to select an interpreter.');
 }
-export async function encode(frames, archive, destinations, seconds, signal, pull, log, motion) {
+export async function encode(frames, archive, destinations, seconds, signal, pull, log, motion, drain) {
     for (const destination of destinations)
         splitIngest(destination);
+    const width = motion?.width ?? WIDTH, height = motion?.height ?? HEIGHT;
     const encoder = spawn('ffmpeg', [
         '-hide_banner',
         '-loglevel',
@@ -116,7 +117,7 @@ export async function encode(frames, archive, destinations, seconds, signal, pul
         '-pix_fmt',
         'rgb24',
         '-s',
-        WIDTH + 'x' + HEIGHT,
+        width + 'x' + height,
         '-r',
         String(FPS),
         '-i',
@@ -135,8 +136,7 @@ export async function encode(frames, archive, destinations, seconds, signal, pul
         '1',
         '-i',
         'pipe:3',
-        '-vf',
-        motion ? 'scale=720:1280' : `scale=740:1316,crop=720:1280:x='10+4*sin(t*0.43)':y='18+5*sin(t*0.71)'`,
+        ...(width === 720 && height === 1280 ? [] : ['-vf', motion ? 'scale=720:1280' : `scale=740:1316,crop=720:1280:x='10+4*sin(t*0.43)':y='18+5*sin(t*0.71)'`]),
         '-c:v',
         'libx264',
         '-preset',
@@ -148,11 +148,11 @@ export async function encode(frames, archive, destinations, seconds, signal, pul
         '-g',
         String(FPS * 2),
         '-b:v',
-        '1700k',
+        width === 720 ? '4500k' : '1700k',
         '-maxrate',
-        '2400k',
+        width === 720 ? '5000k' : '2400k',
         '-bufsize',
-        '3400k',
+        width === 720 ? '9000k' : '3400k',
         '-c:a',
         'aac',
         '-ar',
@@ -202,10 +202,10 @@ export async function encode(frames, archive, destinations, seconds, signal, pul
     let active, offset = 0, frame = 0, lastProgress = Date.now();
     const start = performance.now();
     try {
-        while (frame < Math.ceil(seconds * FPS) && !signal.aborted) {
+        while (!signal.aborted && (frame < Math.ceil(seconds * FPS) || (drain && (active || drain())))) {
             if (fault)
                 throw fault;
-            if (video.writableLength > WIDTH * HEIGHT * 3 * 10 || audio.writableLength > RATE * 4) {
+            if (video.writableLength > width * height * 3 * 10 || audio.writableLength > RATE * 4) {
                 if (Date.now() - lastProgress > 12000)
                     throw Error('Encoder backpressure timeout');
                 await sleep(12);
@@ -229,7 +229,7 @@ export async function encode(frames, archive, destinations, seconds, signal, pul
             audio.write(pcm);
             video.write(motion ? motion.next(active?.motion) : frames[(blink ? 4 : 0) + mouthLevel(pcm)]);
             if (active && offset >= active.pcm.length) {
-                log('speech_end', { source: active.source, id: active.id, frame });
+                log('speech_end', { source: active.source, id: active.id, frame, samplesSent: offset / 2, totalSamples: active.pcm.length / 2 });
                 if (active.motion)
                     motion?.release(active.motion);
                 active = undefined;
