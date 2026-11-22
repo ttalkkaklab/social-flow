@@ -1373,6 +1373,19 @@ test('a workshop and a voice cannot buy an on-screen principal for either legacy
   // A second principal's appearance is evaluated on their own scene interval.
   const later={...shot,id:'s0002',visual:{character:'later-actor'},narration:[]};
   delete shot.visual.character; shot.narration=[];
+  fs.writeFileSync(path.join(f.episode,'storyboard/cast.json'),JSON.stringify({characters:{[character]:{}}}));
+  for (const [view,role] of [
+    [{mode:'front',subjectId:character},'face'],
+    [{mode:'ots',subjectType:'object',subjectId:'workbench',viewerId:character},'body']
+  ]) {
+    shot.visual.camera.view=view;
+    f.save();
+    const camera=await ROUTES.video_plan({...input,shotId:shot.id,requestId:'camera-'+view.mode});
+    assert.equal(camera.structuredContent.character,character);
+    assert.equal(camera.structuredContent.role,role);
+    assert.equal(camera.structuredContent.videoSubmitted,false);
+  }
+  delete shot.visual.camera.view;
   f.board.SCENES.push(later);f.save();
   const blocked=await ROUTES.video_plan({...input,sceneNo:1,requestId:'second-shot'});
   assert.equal(blocked.structuredContent.shotId,'s0002');
@@ -1456,6 +1469,17 @@ test('the paid Seedance body matches the approved set, face, wardrobe and voice 
   assert.equal(bodies.length,0);
   assert.deepEqual(f.state().jobs,{});
   remoteGroup='group-'+character;
+  // Exercise the cap on the final JSON without allocating a 64 MiB media fixture.
+  const byteLength=Buffer.byteLength;
+  const size=t.mock.method(Buffer,'byteLength',(value,...rest)=>
+    typeof value==='string' && value.includes('"asset://asset-seoyun"') && value.includes('"image_url"')
+      ? 64*1024*1024+1 : byteLength(value,...rest));
+  const oversized=await execute();
+  size.mock.restore();
+  assert.equal(oversized.structuredContent.stage,'seedance_inputs');
+  assert.equal(oversized.structuredContent.videoSubmitted,false);
+  assert.equal(bodies.length,0);
+  assert.deepEqual(f.state().jobs,{});
   await execute();
   assert.equal(bodies.length,1);
   const parts=bodies[0].content.filter(p=>p.type!=='text');

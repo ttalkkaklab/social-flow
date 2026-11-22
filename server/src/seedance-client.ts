@@ -507,9 +507,10 @@ function describeHttpError(status: number, body: string): string {
 }
 
 /** Create a task → task ID */
-async function createTask(apiKey: string, body: CreateTaskBody): Promise<string> {
+async function createTask(apiKey: string, body: CreateTaskBody, onPost: () => void): Promise<string> {
   const payload = JSON.stringify(body);
   if (Buffer.byteLength(payload) > MAX_REQUEST_BYTES) throw Object.assign(new Error('Seedance request exceeds 64 MB'), {terminal:true});
+  onPost();
   const response = await fetch(`${arkBaseUrl()}/contents/generations/tasks`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
@@ -960,8 +961,7 @@ export async function generateFromText(
   let posted = false;
   try {
     console.error(`[Seedance] Starting text-to-video generation... (model: ${request.model})`);
-    posted = true;
-    const taskId = await createTask(apiKey, buildBody(request, []));
+    const taskId = await createTask(apiKey, buildBody(request, []), () => { posted = true; });
     recordVideoSubmission(taskId);
 
     const saved = await awaitVideoAndSave(
@@ -997,8 +997,7 @@ export async function generateFromImage(
     console.error(`[Seedance] First frame: ${request.sourceImagePath}`);
     if (request.lastImagePath) console.error(`[Seedance] Last frame: ${request.lastImagePath}`);
 
-    posted = true;
-    const taskId = await createTask(apiKey, buildBody(request, images));
+    const taskId = await createTask(apiKey, buildBody(request, images), () => { posted = true; });
     recordVideoSubmission(taskId);
 
     const saved = await awaitVideoAndSave(
@@ -1074,8 +1073,7 @@ export async function generateWithReferences(
       const body = buildBody(request, parts);
       checkCastParts(body, originals);
       videoEvents.getStore()?.castVerified?.();
-      posted = true;
-      const taskId = await createTask(apiKey, body);
+      const taskId = await createTask(apiKey, body, () => { posted = true; });
       recordVideoSubmission(taskId);
 
       const saved = await awaitVideoAndSave(

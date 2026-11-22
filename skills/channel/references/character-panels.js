@@ -104,14 +104,14 @@ function boardPanelFindings(win, boardDir, channelDir) {
   }
   return findings;
 }
-// Resolve ownership from the episode cast, never from a transport filename or a scene image.
-function readPanelSheets(boardDir, ids, requiredViews) {
-  let cast = [];
+function episodeCast(boardDir) {
   const castFile = path.join(boardDir, 'cast.json');
-  if (fs.existsSync(castFile)) {
-    const value = JSON.parse(fs.readFileSync(castFile, 'utf8')).characters;
-    cast = Array.isArray(value) ? value : Object.entries(value || {}).map(([id, entry]) => ({ ...entry, id }));
-  }
+  if (!fs.existsSync(castFile)) return [];
+  const value = JSON.parse(fs.readFileSync(castFile, 'utf8')).characters;
+  return Array.isArray(value) ? value : Object.entries(value || {}).map(([id, entry]) => ({ ...entry, id }));
+}
+// Resolve ownership from the episode cast, never from a transport filename or a scene image.
+function readPanelSheets(boardDir, ids, requiredViews, cast = episodeCast(boardDir)) {
   return new Map(ids.map(id => {
     const entry = cast.find(c => c.id === id);
     let folder;
@@ -200,11 +200,17 @@ function resolveShotCharacterInputs(shot, boardDir, seedance = false, characters
   const cast = [].concat(visual.character || []).map(c => typeof c === 'string' ? c : c.id);
   const lines = require('../../storyboard/references/scene-direction.js').orderedSpeech(shot);
   const explicit = visual.characterInputs;
+  let registry;
   if (seedance) {
     const people = lines.filter(line => line.delivery === 'on_screen' && line.tts?.trim()).map(line => line.speaker);
-    const namedSubject = Array.isArray(characters) ? characters.some(c => c.id === view?.subjectId)
-      : Object.hasOwn(characters ?? {}, view?.subjectId);
-    if (view?.subjectType === 'person' || namedSubject && !view?.subjectType) people.push(view?.subjectId);
+    if (view?.subjectId && !view.subjectType) {
+      registry = episodeCast(boardDir);
+      const named = Array.isArray(characters) ? characters.some(c => c.id === view.subjectId)
+        : Object.hasOwn(characters ?? {}, view.subjectId);
+      if (named || registry.some(c => c.id === view.subjectId)) people.push(view.subjectId);
+    }
+    if (view?.subjectType === 'person') people.push(view.subjectId);
+    if (view?.mode === 'ots') people.push(view.viewerId);
     for (const id of people) if (id && !cast.includes(id)) cast.push(id);
   }
   const bodyForView = id => {
@@ -254,7 +260,7 @@ function resolveShotCharacterInputs(shot, boardDir, seedance = false, characters
   if (cast.length && (cast.some(id => !views.has(id)) || specs.some(spec => !cast.includes(spec.character))))
     throw new Error('character_inputs_invalid: specify each visible principal in visual.character');
   let sheets;
-  try { sheets = readPanelSheets(boardDir, [...views.keys()].filter(id => !hands.has(id)), views); }
+  try { sheets = readPanelSheets(boardDir, [...views.keys()].filter(id => !hands.has(id)), views, registry); }
   catch (error) {
     if (!seedance) throw error;
     const id = [...views.keys()].find(id => error.message.includes(': ' + id + ' '));
