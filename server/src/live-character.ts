@@ -13,6 +13,14 @@ export const liveConfig = z
   .object({
     project: z.string().min(1),
     channel: slug,
+    youtubeCredentialChannel: slug.optional(),
+    speechLanguage: z
+      .string()
+      .regex(/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/)
+      .optional(),
+    motionVideo: z.string().min(1).optional(),
+    idleVideos: z.array(z.string().min(1)).max(6).default([]),
+    hostLines: z.array(z.string().trim().min(1).max(300)).max(40).default([]),
     character: slug,
     chatModel: z.string().min(1),
     panel: z.string().default('face'),
@@ -67,7 +75,7 @@ export function loadCharacter(config: LiveConfig) {
     settings.models.speech.model !== tts.model
   )
     throw Error('Select a matching ASTRA character voice and project speech model');
-  const language = settings.languages?.speech;
+  const language = config.speechLanguage ?? settings.languages?.speech;
   if (typeof language !== 'string' || !language.trim()) throw Error('Project speech language missing');
   return {
     asset,
@@ -75,7 +83,10 @@ export function loadCharacter(config: LiveConfig) {
     identityHash: createHash('sha256').update(identity).digest('hex'),
     voice: String(tts.voiceId),
     model: String(tts.model),
-    persona: config.persona ?? JSON.stringify(saved.character?.personality ?? {}).slice(0, 1500)
+    persona: [
+      JSON.stringify(saved.character?.identity ?? {}).slice(0, 1400),
+      config.persona ?? JSON.stringify(saved.character?.personality ?? {}).slice(0, 1500)
+    ].join(' ')
   };
 }
 export function ffmpeg(input: string[], bytes?: Buffer, limit = 16 * 1024 * 1024) {

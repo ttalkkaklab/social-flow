@@ -60,6 +60,11 @@ test('live config rejects offsets outside the canvas and path traversal in chann
     chatModel: 'local'
   };
   assert.ok(liveConfig.safeParse(cfg).success);
+  assert.ok(
+    liveConfig.safeParse({ ...cfg, speechLanguage: 'ko', youtubeCredentialChannel: 'destination' }).success
+  );
+  assert.equal(liveConfig.safeParse({ ...cfg, youtubeCredentialChannel: '../other' }).success, false);
+  assert.equal(liveConfig.safeParse({ ...cfg, speechLanguage: 'ko; override' }).success, false);
   assert.equal(liveConfig.safeParse({ ...cfg, channel: '../secrets' }).success, false);
   assert.equal(liveConfig.safeParse({ ...cfg, mouth: { ...cfg.mouth, x: 1.1 } }).success, false);
 });

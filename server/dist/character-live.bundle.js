@@ -2742,9 +2742,9 @@ var require_dispatcher_base = __commonJS({
       }
       close(callback) {
         if (callback === void 0) {
-          return new Promise((resolve2, reject) => {
+          return new Promise((resolve3, reject) => {
             this.close((err, data) => {
-              return err ? reject(err) : resolve2(data);
+              return err ? reject(err) : resolve3(data);
             });
           });
         }
@@ -2782,9 +2782,9 @@ var require_dispatcher_base = __commonJS({
           err = null;
         }
         if (callback === void 0) {
-          return new Promise((resolve2, reject) => {
+          return new Promise((resolve3, reject) => {
             this.destroy(err, (err2, data) => {
-              return err2 ? reject(err2) : resolve2(data);
+              return err2 ? reject(err2) : resolve3(data);
             });
           });
         }
@@ -6281,8 +6281,8 @@ var require_promise = __commonJS({
     function createDeferredPromise() {
       let res;
       let rej;
-      const promise = new Promise((resolve2, reject) => {
-        res = resolve2;
+      const promise = new Promise((resolve3, reject) => {
+        res = resolve3;
         rej = reject;
       });
       return { promise, resolve: res, reject: rej };
@@ -7685,12 +7685,12 @@ upgrade: ${upgrade}\r
           cb();
         }
       }
-      const waitForDrain = () => new Promise((resolve2, reject) => {
+      const waitForDrain = () => new Promise((resolve3, reject) => {
         assert(callback === null);
         if (socket[kError]) {
           reject(socket[kError]);
         } else {
-          callback = resolve2;
+          callback = resolve3;
         }
       });
       socket.on("close", onDrain).on("drain", onDrain);
@@ -8566,12 +8566,12 @@ var require_client_h2 = __commonJS({
           cb();
         }
       }
-      const waitForDrain = () => new Promise((resolve2, reject) => {
+      const waitForDrain = () => new Promise((resolve3, reject) => {
         assert(callback === null);
         if (socket[kError]) {
           reject(socket[kError]);
         } else {
-          callback = resolve2;
+          callback = resolve3;
         }
       });
       h2stream.on("close", onDrain).on("drain", onDrain);
@@ -8887,16 +8887,16 @@ var require_client = __commonJS({
         return this[kNeedDrain] < 2;
       }
       [kClose]() {
-        return new Promise((resolve2) => {
+        return new Promise((resolve3) => {
           if (this[kSize]) {
-            this[kClosedResolve] = resolve2;
+            this[kClosedResolve] = resolve3;
           } else {
-            resolve2(null);
+            resolve3(null);
           }
         });
       }
       [kDestroy](err) {
-        return new Promise((resolve2) => {
+        return new Promise((resolve3) => {
           const requests = this[kQueue].splice(this[kPendingIdx]);
           for (let i = 0; i < requests.length; i++) {
             const request = requests[i];
@@ -8909,7 +8909,7 @@ var require_client = __commonJS({
               this[kClosedResolve]();
               this[kClosedResolve] = null;
             }
-            resolve2(null);
+            resolve3(null);
           };
           if (this[kHTTPContext]) {
             this[kHTTPContext].destroy(err, callback);
@@ -9316,8 +9316,8 @@ var require_pool_base = __commonJS({
           }
           return Promise.all(closeAll);
         } else {
-          return new Promise((resolve2) => {
-            this[kClosedResolve] = resolve2;
+          return new Promise((resolve3) => {
+            this[kClosedResolve] = resolve3;
           });
         }
       }
@@ -10436,7 +10436,7 @@ var require_socks5_proxy_agent = __commonJS({
         const proxyHost = this[kProxyUrl].hostname;
         const proxyPort = parseInt(this[kProxyUrl].port) || 1080;
         debug("creating SOCKS5 connection to", proxyHost, proxyPort);
-        const socket = await new Promise((resolve2, reject) => {
+        const socket = await new Promise((resolve3, reject) => {
           this[kConnector]({
             hostname: proxyHost,
             host: proxyHost,
@@ -10446,7 +10446,7 @@ var require_socks5_proxy_agent = __commonJS({
             if (err) {
               reject(err);
             } else {
-              resolve2(socket2);
+              resolve3(socket2);
             }
           });
         });
@@ -10456,14 +10456,14 @@ var require_socks5_proxy_agent = __commonJS({
           socket.destroy();
         });
         await socks5Client.handshake();
-        await new Promise((resolve2, reject) => {
+        await new Promise((resolve3, reject) => {
           const timeout = setTimeout(() => {
             reject(new Error("SOCKS5 authentication timeout"));
           }, 5e3);
           const onAuthenticated = () => {
             clearTimeout(timeout);
             socks5Client.removeListener("error", onError);
-            resolve2();
+            resolve3();
           };
           const onError = (err) => {
             clearTimeout(timeout);
@@ -10472,14 +10472,14 @@ var require_socks5_proxy_agent = __commonJS({
           };
           if (socks5Client.state === STATES.AUTHENTICATED) {
             clearTimeout(timeout);
-            resolve2();
+            resolve3();
           } else {
             socks5Client.once("authenticated", onAuthenticated);
             socks5Client.once("error", onError);
           }
         });
         await socks5Client.connect(targetHost, targetPort);
-        await new Promise((resolve2, reject) => {
+        await new Promise((resolve3, reject) => {
           const timeout = setTimeout(() => {
             reject(new Error("SOCKS5 connection timeout"));
           }, 5e3);
@@ -10487,7 +10487,7 @@ var require_socks5_proxy_agent = __commonJS({
             debug("SOCKS5 tunnel established to", targetHost, targetPort, "via", info);
             clearTimeout(timeout);
             socks5Client.removeListener("error", onError);
-            resolve2();
+            resolve3();
           };
           const onError = (err) => {
             clearTimeout(timeout);
@@ -10530,8 +10530,8 @@ var require_socks5_proxy_agent = __commonJS({
                       socket,
                       servername: this[kRequestTls]?.servername || targetHost
                     });
-                    await new Promise((resolve2, reject) => {
-                      finalSocket.once("secureConnect", resolve2);
+                    await new Promise((resolve3, reject) => {
+                      finalSocket.once("secureConnect", resolve3);
                       finalSocket.once("error", reject);
                     });
                   }
@@ -11613,7 +11613,7 @@ var require_readable = __commonJS({
         if (this._readableState.closeEmitted) {
           return Promise.resolve(null);
         }
-        return new Promise((resolve2, reject) => {
+        return new Promise((resolve3, reject) => {
           if (this[kContentLength] && this[kContentLength] > limit || this[kBytesRead] > limit) {
             this.destroy(new AbortError());
           }
@@ -11627,11 +11627,11 @@ var require_readable = __commonJS({
               if (signal.aborted) {
                 reject(signal.reason ?? new AbortError());
               } else {
-                resolve2(null);
+                resolve3(null);
               }
             });
           } else {
-            this.on("close", resolve2);
+            this.on("close", resolve3);
           }
           this.on("error", noop).on("data", () => {
             if (this[kBytesRead] > limit) {
@@ -11659,7 +11659,7 @@ var require_readable = __commonJS({
     }
     function consume(stream, type) {
       assert(!stream[kConsume]);
-      return new Promise((resolve2, reject) => {
+      return new Promise((resolve3, reject) => {
         if (isUnusable(stream)) {
           const rState = stream._readableState;
           if (rState.destroyed && rState.closeEmitted === false) {
@@ -11674,7 +11674,7 @@ var require_readable = __commonJS({
             stream[kConsume] = {
               type,
               stream,
-              resolve: resolve2,
+              resolve: resolve3,
               reject,
               length: 0,
               body: []
@@ -11748,18 +11748,18 @@ var require_readable = __commonJS({
       return buffer;
     }
     function consumeEnd(consume2, encoding) {
-      const { type, body, resolve: resolve2, stream, length } = consume2;
+      const { type, body, resolve: resolve3, stream, length } = consume2;
       try {
         if (type === "text") {
-          resolve2(chunksDecode(body, length, encoding));
+          resolve3(chunksDecode(body, length, encoding));
         } else if (type === "json") {
-          resolve2(JSON.parse(chunksDecode(body, length, encoding)));
+          resolve3(JSON.parse(chunksDecode(body, length, encoding)));
         } else if (type === "arrayBuffer") {
-          resolve2(chunksConcat(body, length).buffer);
+          resolve3(chunksConcat(body, length).buffer);
         } else if (type === "blob") {
-          resolve2(new Blob(body, { type: stream[kContentType] }));
+          resolve3(new Blob(body, { type: stream[kContentType] }));
         } else if (type === "bytes") {
-          resolve2(chunksConcat(body, length));
+          resolve3(chunksConcat(body, length));
         }
         consumeFinish(consume2);
       } catch (err) {
@@ -11949,9 +11949,9 @@ var require_api_request = __commonJS({
     };
     function request(opts, callback) {
       if (callback === void 0) {
-        return new Promise((resolve2, reject) => {
+        return new Promise((resolve3, reject) => {
           request.call(this, opts, (err, data) => {
-            return err ? reject(err) : resolve2(data);
+            return err ? reject(err) : resolve3(data);
           });
         });
       }
@@ -12163,9 +12163,9 @@ var require_api_stream = __commonJS({
     };
     function stream(opts, factory, callback) {
       if (callback === void 0) {
-        return new Promise((resolve2, reject) => {
+        return new Promise((resolve3, reject) => {
           stream.call(this, opts, factory, (err, data) => {
-            return err ? reject(err) : resolve2(data);
+            return err ? reject(err) : resolve3(data);
           });
         });
       }
@@ -12453,9 +12453,9 @@ var require_api_upgrade = __commonJS({
     };
     function upgrade(opts, callback) {
       if (callback === void 0) {
-        return new Promise((resolve2, reject) => {
+        return new Promise((resolve3, reject) => {
           upgrade.call(this, opts, (err, data) => {
-            return err ? reject(err) : resolve2(data);
+            return err ? reject(err) : resolve3(data);
           });
         });
       }
@@ -12548,9 +12548,9 @@ var require_api_connect = __commonJS({
     };
     function connect(opts, callback) {
       if (callback === void 0) {
-        return new Promise((resolve2, reject) => {
+        return new Promise((resolve3, reject) => {
           connect.call(this, opts, (err, data) => {
-            return err ? reject(err) : resolve2(data);
+            return err ? reject(err) : resolve3(data);
           });
         });
       }
@@ -13824,7 +13824,7 @@ var require_snapshot_recorder = __commonJS({
   "node_modules/undici/lib/mock/snapshot-recorder.js"(exports, module) {
     "use strict";
     var { writeFile, readFile: readFile2, mkdir } = __require("node:fs/promises");
-    var { dirname: dirname2, resolve: resolve2 } = __require("node:path");
+    var { dirname: dirname2, resolve: resolve3 } = __require("node:path");
     var { setTimeout: setTimeout2, clearTimeout: clearTimeout2 } = __require("node:timers");
     var { InvalidArgumentError, UndiciError } = require_errors();
     var { hashId, isUrlExcludedFactory, normalizeHeaders, createHeaderFilters } = require_snapshot_utils();
@@ -14025,7 +14025,7 @@ var require_snapshot_recorder = __commonJS({
           throw new InvalidArgumentError("Snapshot path is required");
         }
         try {
-          const data = await readFile2(resolve2(path2), "utf8");
+          const data = await readFile2(resolve3(path2), "utf8");
           const parsed = JSON.parse(data);
           if (Array.isArray(parsed)) {
             this.#snapshots.clear();
@@ -14054,7 +14054,7 @@ var require_snapshot_recorder = __commonJS({
         if (!path2) {
           throw new InvalidArgumentError("Snapshot path is required");
         }
-        const resolvedPath = resolve2(path2);
+        const resolvedPath = resolve3(path2);
         await mkdir(dirname2(resolvedPath), { recursive: true });
         const data = Array.from(this.#snapshots.entries()).map(([hash, snapshot]) => ({
           hash,
@@ -21480,7 +21480,7 @@ var require_fetch = __commonJS({
         const agent = fetchParams.controller.dispatcher;
         const path2 = url.pathname + url.search;
         const hasTrailingQuestionMark = url.search.length === 0 && url.href[url.href.length - url.hash.length - 1] === "?";
-        return new Promise((resolve2, reject) => agent.dispatch(
+        return new Promise((resolve3, reject) => agent.dispatch(
           {
             path: hasTrailingQuestionMark ? `${path2}?` : path2,
             origin: url.origin,
@@ -21568,7 +21568,7 @@ var require_fetch = __commonJS({
                 }
               }
               const onError = this.onError.bind(this);
-              resolve2({
+              resolve3({
                 status,
                 statusText,
                 headersList,
@@ -21621,7 +21621,7 @@ var require_fetch = __commonJS({
                   headersList.append(headerName, String(value), true);
                 }
               }
-              resolve2({
+              resolve3({
                 status,
                 statusText: STATUS_CODES[status],
                 headersList,
@@ -21645,7 +21645,7 @@ var require_fetch = __commonJS({
                   headersList.append(nameStr, value.toString("latin1"), true);
                 }
               }
-              resolve2({
+              resolve3({
                 status,
                 statusText: STATUS_CODES[status],
                 headersList,
@@ -25894,9 +25894,10 @@ ${captureLines}` : capture.stack;
 
 // src/live-run.ts
 import { parseArgs } from "node:util";
-import { resolve, join as join4 } from "node:path";
-import { mkdirSync as mkdirSync2, readFileSync as readFileSync3, writeFileSync as writeFileSync3, appendFileSync, renameSync as renameSync2 } from "node:fs";
-import { randomUUID as randomUUID2 } from "node:crypto";
+import { spawn as spawn3 } from "node:child_process";
+import { resolve as resolve2, join as join5 } from "node:path";
+import { mkdirSync as mkdirSync2, readFileSync as readFileSync3, writeFileSync as writeFileSync4, appendFileSync, renameSync as renameSync2 } from "node:fs";
+import { randomUUID as randomUUID3 } from "node:crypto";
 import { setTimeout as sleep2 } from "node:timers/promises";
 
 // src/live-character.ts
@@ -30263,6 +30264,11 @@ var slug = external_exports.string().regex(/^[a-zA-Z0-9_-]+$/);
 var liveConfig = external_exports.object({
   project: external_exports.string().min(1),
   channel: slug,
+  youtubeCredentialChannel: slug.optional(),
+  speechLanguage: external_exports.string().regex(/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/).optional(),
+  motionVideo: external_exports.string().min(1).optional(),
+  idleVideos: external_exports.array(external_exports.string().min(1)).max(6).default([]),
+  hostLines: external_exports.array(external_exports.string().trim().min(1).max(300)).max(40).default([]),
   character: slug,
   chatModel: external_exports.string().min(1),
   panel: external_exports.string().default("face"),
@@ -30300,7 +30306,7 @@ function loadCharacter(config2) {
     throw Error("Panel outside character directory");
   if (settings.models?.speech?.engine !== "astra-genai" || tts?.engine !== "astra-genai" || !tts.voiceId || !settings.models.speech.model || settings.models.speech.model !== tts.model)
     throw Error("Select a matching ASTRA character voice and project speech model");
-  const language = settings.languages?.speech;
+  const language = config2.speechLanguage ?? settings.languages?.speech;
   if (typeof language !== "string" || !language.trim()) throw Error("Project speech language missing");
   return {
     asset,
@@ -30308,7 +30314,10 @@ function loadCharacter(config2) {
     identityHash: createHash("sha256").update(identity).digest("hex"),
     voice: String(tts.voiceId),
     model: String(tts.model),
-    persona: config2.persona ?? JSON.stringify(saved.character?.personality ?? {}).slice(0, 1500)
+    persona: [
+      JSON.stringify(saved.character?.identity ?? {}).slice(0, 1400),
+      config2.persona ?? JSON.stringify(saved.character?.personality ?? {}).slice(0, 1500)
+    ].join(" ")
   };
 }
 function ffmpeg(input, bytes, limit = 16 * 1024 * 1024) {
@@ -30473,7 +30482,7 @@ var ChatQueue = class {
 };
 
 // src/live-encoder.ts
-import { spawn } from "node:child_process";
+import { spawn, spawnSync as spawnSync2 } from "node:child_process";
 import { createWriteStream } from "node:fs";
 import { finished } from "node:stream/promises";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -30489,16 +30498,83 @@ function splitIngest(value) {
   };
 }
 function completion(proc, label) {
-  const result = new Promise((resolve2, reject) => {
+  const result = new Promise((resolve3, reject) => {
     proc.once("error", () => reject(Error(label + " could not start")));
-    proc.once("close", (code) => code === 0 ? resolve2() : reject(Error(label + " exited " + code)));
+    proc.once("close", (code) => code === 0 ? resolve3() : reject(Error(label + " exited " + code)));
   });
   result.catch(() => {
   });
   return result;
 }
-async function encode(frames, archive, destinations, seconds, signal, pull, log) {
-  const targets = destinations.map(splitIngest);
+var relayProgram = `
+import ctypes
+import ctypes.util
+import os
+import sys
+
+def function(lib, name, result, *args):
+    fn = getattr(lib, name)
+    fn.argtypes = args
+    fn.restype = result
+    return fn
+
+def library(name):
+    path = ctypes.util.find_library(name)
+    if not path:
+        raise RuntimeError("Shared FFmpeg library unavailable")
+    return ctypes.CDLL(path)
+
+fmt = library("avformat")
+util = library("avutil")
+ptr, integer, string = ctypes.c_void_p, ctypes.c_int, ctypes.c_char_p
+pointer = ctypes.POINTER(ptr)
+set_option = function(util, "av_dict_set", integer, pointer, string, string, integer)
+free_options = function(util, "av_dict_free", None, pointer)
+connect = function(fmt, "avio_open2", integer, pointer, string, integer, ptr, pointer)
+write = function(fmt, "avio_write", None, ptr, string, integer)
+flush = function(fmt, "avio_flush", None, ptr)
+close = function(fmt, "avio_closep", integer, pointer)
+function(util, "av_log_set_level", None, integer)(-8)
+if sys.argv[1:] == ["check"]:
+    sys.exit(0)
+ctx, options = ptr(), ptr()
+with os.fdopen(3, "rb") as target:
+    url = target.read()
+set_option(ctypes.byref(options), b"tls_verify", b"1", 0)
+set_option(ctypes.byref(options), b"rw_timeout", b"12000000", 0)
+cafile = os.environ.get("SSL_CERT_FILE")
+if cafile:
+    set_option(ctypes.byref(options), b"ca_file", os.fsencode(cafile), 0)
+status = connect(ctypes.byref(ctx), url, 2, None, ctypes.byref(options))
+free_options(ctypes.byref(options))
+if status >= 0:
+    print("relay_connected", file=sys.stderr, flush=True)
+    try:
+        while True:
+            data = os.read(0, 65536)
+            if not data:
+                break
+            write(ctx, data, len(data))
+            flush(ctx)
+    finally:
+        status = close(ctypes.byref(ctx))
+if status < 0:
+    print("relay_failure", status, file=sys.stderr, flush=True)
+    sys.exit(1)
+`;
+var relayPython = () => process.env.SOCIAL_FLOW_LIVE_PYTHON || "python3";
+function checkLiveRelay() {
+  const check = spawnSync2(relayPython(), ["-c", relayProgram, "check"], {
+    stdio: "ignore",
+    timeout: 1e4
+  });
+  if (check.status !== 0)
+    throw Error(
+      "Secure live output needs Python 3 and shared FFmpeg libraries (avformat, avutil). Set SOCIAL_FLOW_LIVE_PYTHON to select an interpreter."
+    );
+}
+async function encode(frames, archive, destinations, seconds, signal, pull, log, motion) {
+  for (const destination of destinations) splitIngest(destination);
   const encoder = spawn(
     "ffmpeg",
     [
@@ -30538,7 +30614,7 @@ async function encode(frames, archive, destinations, seconds, signal, pull, log)
       "-i",
       "pipe:3",
       "-vf",
-      `scale=740:1316,crop=720:1280:x='10+4*sin(t*0.43)':y='18+5*sin(t*0.71)'`,
+      motion ? "scale=720:1280" : `scale=740:1316,crop=720:1280:x='10+4*sin(t*0.43)':y='18+5*sin(t*0.71)'`,
       "-c:v",
       "libx264",
       "-preset",
@@ -30583,34 +30659,17 @@ async function encode(frames, archive, destinations, seconds, signal, pull, log)
   const recorded = finished(recording);
   recorded.catch(fail2);
   encoder.stdout.pipe(recording);
-  const relays = targets.map((target) => {
-    const relay = spawn(
-      "ffmpeg",
-      [
-        "-nostdin",
-        "-loglevel",
-        "error",
-        "-f",
-        "flv",
-        "-i",
-        "pipe:0",
-        "-map",
-        "0",
-        "-c",
-        "copy",
-        "-f",
-        "flv",
-        "-rw_timeout",
-        "12000000",
-        "-fpre",
-        "/dev/fd/3",
-        target.base + "/live"
-      ],
-      { stdio: ["pipe", "ignore", "ignore", "pipe"] }
-    );
+  const relays = destinations.map((target) => {
+    const relay = spawn(relayPython(), ["-c", relayProgram], { stdio: ["pipe", "ignore", "pipe", "pipe"] });
+    relay.stderr.on("data", (chunk) => {
+      const line = String(chunk);
+      if (line.includes("relay_connected")) log("relay_connected", {});
+      const failure = /relay_failure (-?\d+)/.exec(line);
+      if (failure) log("relay_error", { code: Number(failure[1]) });
+    });
     const key = relay.stdio[3];
     key.on("error", fail2);
-    key.end("rtmp_playpath=" + target.key + "\ntls_verify=1\n");
+    key.end(target);
     relay.stdin.on("error", fail2);
     encoder.stdout.pipe(relay.stdin);
     const done = completion(relay, "RTMPS relay");
@@ -30632,7 +30691,10 @@ async function encode(frames, archive, destinations, seconds, signal, pull, log)
       if (!active) {
         active = pull();
         offset = 0;
-        if (active) log("speech_start", { source: active.source, id: active.id, text: active.text, frame });
+        if (active) {
+          motion?.startSpeech();
+          log("speech_start", { source: active.source, id: active.id, text: active.text, frame });
+        }
       }
       let pcm = silence;
       if (active) {
@@ -30641,9 +30703,10 @@ async function encode(frames, archive, destinations, seconds, signal, pull, log)
       }
       const blink = frame % (FPS * 4) < 3;
       audio.write(pcm);
-      video.write(frames[(blink ? 4 : 0) + mouthLevel(pcm)]);
+      video.write(motion ? motion.next(active?.motion) : frames[(blink ? 4 : 0) + mouthLevel(pcm)]);
       if (active && offset >= active.pcm.length) {
         log("speech_end", { source: active.source, id: active.id, frame });
+        if (active.motion) motion?.release(active.motion);
         active = void 0;
       }
       frame++;
@@ -30678,8 +30741,236 @@ async function encode(frames, archive, destinations, seconds, signal, pull, log)
   }
 }
 
+// src/live-motion.ts
+import { spawn as spawn2, spawnSync as spawnSync3 } from "node:child_process";
+import { once } from "node:events";
+import { createInterface } from "node:readline";
+import {
+  mkdtempSync as mkdtempSync2,
+  openSync,
+  closeSync,
+  readSync,
+  statSync as statSync2,
+  writeFileSync as writeFileSync3,
+  rmSync as rmSync2,
+  realpathSync as realpathSync2
+} from "node:fs";
+import { join as join3, resolve, sep } from "node:path";
+import { randomUUID as randomUUID2 } from "node:crypto";
+import { tmpdir as tmpdir2 } from "node:os";
+
+// src/media-utils.ts
+function pcmToWav(pcmData, sampleRate, numChannels) {
+  const bitsPerSample = 16;
+  const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+  const blockAlign = numChannels * (bitsPerSample / 8);
+  const dataSize = pcmData.length;
+  const header = Buffer.alloc(44);
+  header.write("RIFF", 0);
+  header.writeUInt32LE(36 + dataSize, 4);
+  header.write("WAVE", 8);
+  header.write("fmt ", 12);
+  header.writeUInt32LE(16, 16);
+  header.writeUInt16LE(1, 20);
+  header.writeUInt16LE(numChannels, 22);
+  header.writeUInt32LE(sampleRate, 24);
+  header.writeUInt32LE(byteRate, 28);
+  header.writeUInt16LE(blockAlign, 32);
+  header.writeUInt16LE(bitsPerSample, 34);
+  header.write("data", 36);
+  header.writeUInt32LE(dataSize, 40);
+  return Buffer.concat([header, pcmData]);
+}
+
+// src/live-motion.ts
+var AVATAR_FPS = 25;
+var FRAME_BYTES = WIDTH * HEIGHT * 3;
+function differentPixels(a, b) {
+  let changed = 0;
+  for (let offset = 0; offset < FRAME_BYTES; offset += 3 * 97)
+    if (Math.abs(a[offset] - b[offset]) + Math.abs(a[offset + 1] - b[offset + 1]) + Math.abs(a[offset + 2] - b[offset + 2]) > 27)
+      changed++;
+  return changed;
+}
+function cycleFrame(step, count) {
+  const period = 2 * count - 2;
+  const phase = step % period;
+  return phase < count ? phase : period - phase;
+}
+var MotionFrames = class {
+  constructor(path2, remove = false) {
+    this.path = path2;
+    this.remove = remove;
+    this.count = statSync2(path2).size / FRAME_BYTES;
+    if (!Number.isInteger(this.count) || this.count < 1) throw Error("Incomplete motion frame data");
+    this.file = openSync(path2, "r");
+  }
+  path;
+  remove;
+  count;
+  file;
+  at(index) {
+    const frame = Buffer.allocUnsafe(FRAME_BYTES);
+    if (readSync(this.file, frame, 0, frame.length, index * FRAME_BYTES) !== frame.length)
+      throw Error("Motion frame unavailable");
+    return frame;
+  }
+  close() {
+    if (this.file < 0) return;
+    closeSync(this.file);
+    this.file = -1;
+    if (this.remove) rmSync2(this.path, { force: true });
+  }
+};
+var workerCode = `
+import json, os, sys
+from musetalk_avatar_core.avatar import VideoAvatar
+avatar = VideoAvatar(sys.argv[1])
+for line in sys.stdin:
+    request = json.loads(line)
+    try:
+        count = 0
+        with open(request["output"], "xb") as target:
+            for frame in avatar.stream_frames(request["audio"]):
+                if frame.shape != (640, 360, 3):
+                    raise ValueError("Unexpected frame size")
+                target.write(frame.tobytes())
+                count += 1
+        print(json.dumps({"frames": count}), flush=True)
+    except Exception as e:
+        print(json.dumps({"error": type(e).__name__}), flush=True)
+`;
+var MotionAvatar = class {
+  worker;
+  directory = mkdtempSync2(join3(tmpdir2(), "social-flow-avatar-"));
+  cursor = 0;
+  shots = [];
+  shot = 0;
+  captured = /* @__PURE__ */ new Set();
+  constructor(config2) {
+    try {
+      const root = realpathSync2(config2.project);
+      const video = join3(this.directory, "performance.mp4");
+      const convert = (args) => {
+        const r = spawnSync3("ffmpeg", ["-v", "error", "-nostdin", ...args], { timeout: 9e4 });
+        if (r.status !== 0) throw Error("Cannot prepare character performance video");
+      };
+      for (const [i, clip] of [config2.motionVideo, ...config2.idleVideos].entries()) {
+        const source = realpathSync2(resolve(root, clip));
+        if (!source.startsWith(root + sep)) throw Error("Motion video outside character project");
+        const normalized = i === 0 ? video : join3(this.directory, "camera-" + i + ".mp4");
+        const idle = join3(this.directory, "camera-" + i + ".rgb");
+        convert([
+          "-i",
+          source,
+          "-t",
+          "30",
+          "-an",
+          "-vf",
+          `scale=${WIDTH}:${HEIGHT}:force_original_aspect_ratio=increase,crop=${WIDTH}:${HEIGHT},fps=${AVATAR_FPS},setsar=1`,
+          "-c:v",
+          "libx264",
+          "-crf",
+          "14",
+          normalized
+        ]);
+        convert(["-i", normalized, "-an", "-pix_fmt", "rgb24", "-f", "rawvideo", idle]);
+        const shot = new MotionFrames(idle);
+        this.shots.push(shot);
+        if (shot.count < AVATAR_FPS) throw Error("Provide at least one second of moving performance footage");
+        let reference = shot.at(0), lastChange = 0;
+        for (let frame = 5; frame < shot.count; frame += 5) {
+          const sample = shot.at(frame);
+          if (differentPixels(sample, reference) > 14) {
+            reference = sample;
+            lastChange = frame;
+          } else if (frame - lastChange >= AVATAR_FPS)
+            throw Error("The driving video holds a still frame for a second");
+        }
+        if (!lastChange) throw Error("The driving video contains only a still frame");
+      }
+      this.worker = spawn2(
+        process.env.SOCIAL_FLOW_AVATAR_PYTHON || "python3",
+        ["-u", "-c", workerCode, video],
+        { stdio: "pipe" }
+      );
+      this.worker.on("error", () => {
+      });
+      this.worker.stdin.on("error", () => {
+      });
+      this.worker.stderr.resume();
+    } catch (e) {
+      this.close();
+      throw e;
+    }
+  }
+  startSpeech() {
+    this.cursor = 0;
+    this.shot = 0;
+  }
+  next(speech) {
+    let step = Math.floor(this.cursor++ * AVATAR_FPS / FPS);
+    if (speech) return speech.at(Math.min(step, speech.count - 1));
+    if (this.shots.length > 1 && step >= this.shots[this.shot].count) {
+      this.shot = (this.shot + 1) % this.shots.length;
+      this.cursor = 1;
+      step = 0;
+    }
+    const shot = this.shots[this.shot];
+    return shot.at(cycleFrame(step, shot.count));
+  }
+  async render(pcm, signal) {
+    const worker = this.worker;
+    signal.throwIfAborted();
+    if (worker.exitCode !== null || worker.signalCode) throw Error("Motion renderer is unavailable");
+    const prefix = join3(this.directory, randomUUID2());
+    const audio = prefix + ".wav", output = prefix + ".rgb";
+    writeFileSync3(audio, pcmToWav(pcm, RATE, 1), { mode: 384 });
+    const lines = createInterface({ input: worker.stdout });
+    const timeout = AbortSignal.timeout(18e4);
+    const end = AbortSignal.any([signal, timeout]);
+    const listeners = new AbortController();
+    try {
+      const result = Promise.race([
+        once(lines, "line", { signal: listeners.signal }).then(([s]) => JSON.parse(s)),
+        once(worker, "close", { signal: listeners.signal }).then(() => {
+          throw Error("Motion renderer exited; check its Python packages and model files");
+        }),
+        once(end, "abort", { signal: listeners.signal }).then(() => {
+          throw Error("Motion rendering interrupted");
+        })
+      ]);
+      worker.stdin.write(JSON.stringify({ audio, output }) + "\n");
+      const row = await result;
+      if (row.error || !row.frames) throw Error("Motion rendering failed: " + (row.error || "empty video"));
+      const frames = new MotionFrames(output, true);
+      this.captured.add(frames);
+      if (Math.abs(frames.count - pcm.length / (2 * RATE) * AVATAR_FPS) > 3)
+        throw Error("Rendered lips and speech duration differ");
+      return frames;
+    } catch (e) {
+      worker.kill();
+      throw e;
+    } finally {
+      listeners.abort();
+      lines.close();
+      rmSync2(audio, { force: true });
+    }
+  }
+  release(frames) {
+    frames.close();
+    this.captured.delete(frames);
+  }
+  close() {
+    this.worker?.kill();
+    for (const shot of this.shots) shot.close();
+    for (const f of this.captured) f.close();
+    rmSync2(this.directory, { recursive: true, force: true });
+  }
+};
+
 // src/tiktok-client.ts
-import { dirname, extname, isAbsolute, join as join3 } from "node:path";
+import { dirname, extname, isAbsolute, join as join4 } from "node:path";
 var channelSchema = external_exports.string().regex(CHANNEL_SLUG_RE).describe("Channel slug, e.g. mochi-bo. Never falls back to another channel.");
 var handleSchema = external_exports.string().regex(/^[a-zA-Z0-9_.]{1,24}$/);
 var clientSchema = external_exports.object({
@@ -30888,11 +31179,33 @@ async function prepareYoutube(api, config2, title, receipt, save) {
   assertBroadcast(bound, receipt);
   receipt.binding = "confirmed";
   save();
+  return ingestTarget(stream, bound.snippet.liveChatId ?? b.snippet.liveChatId);
+}
+function ingestTarget(stream, chatId) {
   const info = stream.cdn.ingestionInfo;
   if (!info.rtmpsIngestionAddress.startsWith("rtmps://") || !info.streamName)
     throw Error("Secure YouTube ingest unavailable");
-  const chatId = bound.snippet.liveChatId ?? b.snippet.liveChatId;
   return { url: info.rtmpsIngestionAddress + "/" + info.streamName, chatId };
+}
+async function resumeUnstarted(api, receipt) {
+  const b = await inspectBroadcast(api, receipt);
+  if (receipt.cancellation || receipt.binding !== "confirmed" || !receipt.streamId || b.status.lifeCycleStatus !== "ready" || b.snippet.actualStartTime)
+    throw Error("Only an owned, unstarted, bound broadcast can be resumed");
+  const page = await api("GET", "liveStreams", {
+    part: "id,snippet,cdn,status",
+    id: receipt.streamId
+  });
+  const s = page.items[0];
+  if (!s || s.id !== receipt.streamId || s.snippet.channelId !== receipt.channelId || !["ready", "inactive"].includes(s.status.streamStatus))
+    throw Error("Owned stream is unavailable or already receiving");
+  return ingestTarget(s, b.snippet.liveChatId);
+}
+async function activeChatId(api, receipt) {
+  const result = await api("GET", "videos", { part: "snippet,liveStreamingDetails", id: receipt.broadcastId });
+  const video = result.items[0];
+  if (video && (video.id !== receipt.broadcastId || video.snippet.channelId !== receipt.channelId))
+    throw Error("Live chat video owner mismatch");
+  return video?.liveStreamingDetails?.activeLiveChatId;
 }
 function assertBroadcast(b, receipt, allowUnbound = false) {
   const bound = b?.contentDetails?.boundStreamId;
@@ -30969,6 +31282,27 @@ function missingYoutubeEvidence({
   if (probeRequested && !probeSpoken) return "test message did not finish speaking";
   return void 0;
 }
+var YoutubeProbe = class {
+  attempts = 0;
+  next;
+  constructor(liveAt) {
+    this.next = liveAt + 2e4;
+  }
+  due(now) {
+    return now >= this.next && this.attempts < 3;
+  }
+  async post(chat, text) {
+    this.attempts++;
+    this.next = Infinity;
+    try {
+      return (await chat.testMessage(text)).id;
+    } catch (e) {
+      if (!(e instanceof Error && /^YouTube POST liveChat\/messages 404 /.test(e.message))) throw e;
+      this.next = Date.now() + 3e4;
+      return void 0;
+    }
+  }
+};
 var YoutubeChat = class {
   constructor(api, id) {
     this.api = api;
@@ -30977,7 +31311,7 @@ var YoutubeChat = class {
   api;
   id;
   cursor;
-  async poll(queue) {
+  async poll(queue, observe) {
     const data = await this.api("GET", "liveChat/messages", {
       part: "snippet",
       liveChatId: this.id,
@@ -30985,6 +31319,8 @@ var YoutubeChat = class {
     });
     for (const message of data.items ?? []) {
       if (["textMessageEvent", "superChatEvent"].includes(message.snippet.type)) {
+        if (message.snippet.displayMessage)
+          observe?.(message.id, message.snippet.displayMessage, message.snippet.authorChannelId);
         queue.add({ source: "youtube", id: message.id, text: message.snippet.displayMessage });
       }
     }
@@ -31014,7 +31350,8 @@ async function main() {
       youtube: { type: "boolean" },
       tiktok: { type: "boolean" },
       title: { type: "string" },
-      "youtube-probe": { type: "string" }
+      "youtube-probe": { type: "string" },
+      "resume-from": { type: "string" }
     }
   });
   const [action] = positionals;
@@ -31024,17 +31361,21 @@ async function main() {
       "Use check|warm|run|status|end|cancel-unstarted --config file [--out directory] [--youtube] [--tiktok]"
     );
   const cfg = liveConfig.parse(JSON.parse(readFileSync3(v.config, "utf8")));
-  const api = v.youtube || recovery ? await youtubeApi(cfg.channel) : void 0;
+  if ((action === "run" || action === "check") && (v.youtube || v.tiktok) && !cfg.motionVideo)
+    throw Error("Set motionVideo to an approved moving performance before streaming");
+  if (v["resume-from"] && (action !== "run" || !v.youtube || cfg.madeForKids !== false))
+    throw Error("Resume requires a YouTube run with live chat enabled");
+  const api = v.youtube || recovery ? await youtubeApi(cfg.youtubeCredentialChannel ?? cfg.channel) : void 0;
   if (api && !cfg.youtubeChannelId) throw Error("Set youtubeChannelId before connecting");
   const tiktok = v.tiktok ? process.env.TIKTOK_LIVE_RTMPS_URL : void 0;
   if (v.tiktok && !tiktok) throw Error("An account-authorized TikTok RTMPS URL is required");
   if (tiktok) splitIngest(tiktok);
   if (!v.out && action !== "warm" && action !== "check")
     throw Error("Set --out to a unique session directory");
-  const out = resolve(v.out ?? "."), receiptFile = join4(out, "youtube.json");
+  const out = resolve2(v.out ?? "."), receiptFile = join5(out, "youtube.json");
   const writeReceipt = (r) => {
-    const tmp = receiptFile + "." + randomUUID2() + ".tmp";
-    writeFileSync3(tmp, JSON.stringify(r, null, 2), { mode: 384, flag: "wx" });
+    const tmp = receiptFile + "." + randomUUID3() + ".tmp";
+    writeFileSync4(tmp, JSON.stringify(r, null, 2), { mode: 384, flag: "wx" });
     renameSync2(tmp, receiptFile);
   };
   if (recovery) {
@@ -31045,7 +31386,7 @@ async function main() {
     else if (action === "cancel-unstarted") {
       state = await cancelUnstarted(api, r, () => {
         if (r.cancellation === "requested")
-          writeFileSync3(join4(out, "cancel-requested"), r.broadcastId, { mode: 384, flag: "wx" });
+          writeFileSync4(join5(out, "cancel-requested"), r.broadcastId, { mode: 384, flag: "wx" });
         writeReceipt(r);
       });
     } else state = await broadcastStatus(api, r);
@@ -31053,6 +31394,7 @@ async function main() {
     return;
   }
   const actor = loadCharacter(cfg);
+  if (api || tiktok) checkLiveRelay();
   if (action === "check") {
     if (api) await checkChannel(api, cfg.youtubeChannelId);
     console.log(
@@ -31068,7 +31410,7 @@ async function main() {
   }
   if (action === "warm") {
     if (api || v.tiktok) throw Error("Warm runs locally");
-    for (const text of /* @__PURE__ */ new Set([cfg.opening, ...cfg.reactions.map((r) => r.answer)]))
+    for (const text of /* @__PURE__ */ new Set([cfg.opening, ...cfg.hostLines, ...cfg.reactions.map((r) => r.answer)]))
       await preparedSpeech(cfg, actor, text);
     console.log(JSON.stringify({ warmed: true, character: cfg.character }));
     return;
@@ -31089,30 +31431,55 @@ async function main() {
   process.once("SIGTERM", stop);
   const log = (event, fields = {}) => {
     appendFileSync(
-      join4(out, "events.jsonl"),
+      join5(out, "events.jsonl"),
       JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), event, ...fields }) + "\n",
       { mode: 384 }
     );
   };
-  const receipt = { channelId: cfg.youtubeChannelId ?? "", marker: randomUUID2() };
+  const prior = v["resume-from"] ? resolve2(v["resume-from"]) : void 0;
+  const receipt = prior ? JSON.parse(readFileSync3(join5(prior, "youtube.json"), "utf8")) : { channelId: cfg.youtubeChannelId ?? "", marker: randomUUID3() };
+  if (prior && (receipt.channelId !== cfg.youtubeChannelId || !receipt.broadcastId))
+    throw Error("Resume receipt does not belong to this channel");
+  if (prior) {
+    const journal = readFileSync3(join5(prior, "events.jsonl"), "utf8").trim().split("\n");
+    const closed = journal.some((line) => {
+      const e = JSON.parse(line);
+      return e.event === "youtube_final" && e.id === receipt.broadcastId && e.state === "ready" && e.ingestLive === false;
+    });
+    if (!closed) throw Error("The prior encoder has not confirmed an unstarted shutdown");
+  }
+  let ownsRun = !prior;
   const save = () => writeReceipt(receipt);
   const queue = new ChatQueue(), ready = [];
   let polling, replying;
+  let motion;
+  let hostLine = 0, playing = false, lastSpeech = Date.now();
+  const countsAsReply = (source) => source !== "opening" && source !== "host";
   let received = 0, failedReplies = 0, unfinishedReplies = 0, spokenReplies = 0;
   const unfinished = (source, id, stage) => {
-    if (source !== "opening") unfinishedReplies++;
+    if (countsAsReply(source)) unfinishedReplies++;
     log("reply_unfinished", { source, id, stage });
   };
-  let ingestLive = false, chatReads = 0, probeId = "", probeSpoken = false, finalState = "";
-  const take = () => ready.shift();
+  let ingestLive = false, chatReads = 0, probeId = "", probeSpoken = false, finalState = "", endedEarly = false;
+  const take = () => {
+    const viewer = ready.findIndex(
+      (utterance) => utterance.source === "youtube" || utterance.source === "tiktok"
+    );
+    return viewer < 0 ? ready.shift() : ready.splice(viewer, 1)[0];
+  };
   const wait = async (ms) => {
     await sleep2(ms, void 0, { signal: controller.signal }).catch(() => {
     });
   };
   const onLog = (kind, fields) => {
     log(kind, fields);
-    if (kind === "speech_interrupted" && fields.source !== "opening") unfinishedReplies++;
-    if (kind === "speech_end" && fields.source !== "opening") spokenReplies++;
+    if (kind === "speech_start") playing = true;
+    if (kind === "speech_end") {
+      lastSpeech = Date.now();
+      playing = false;
+    }
+    if (kind === "speech_interrupted" && countsAsReply(String(fields.source))) unfinishedReplies++;
+    if (kind === "speech_end" && countsAsReply(String(fields.source))) spokenReplies++;
     if (kind === "speech_end" && probeId && fields.id === probeId && fields.source === "youtube")
       probeSpoken = true;
   };
@@ -31138,20 +31505,33 @@ async function main() {
       discard = false;
     }
   }
+  const wake = (api || tiktok) && process.platform === "darwin" ? spawn3("/usr/bin/caffeinate", ["-dis", "-w", String(process.pid)], { stdio: "ignore" }) : void 0;
+  wake?.on("error", () => log("sleep_prevention_unavailable", {}));
   try {
-    const frames = poses(actor.asset, cfg);
+    if (cfg.motionVideo) motion = new MotionAvatar(cfg);
+    const frames = motion ? [] : poses(actor.asset, cfg);
+    const openingPcm = await preparedSpeech(cfg, actor, cfg.opening, controller.signal);
     ready.push({
       source: "opening",
       id: "opening",
       text: cfg.opening,
-      pcm: await preparedSpeech(cfg, actor, cfg.opening, controller.signal)
+      pcm: openingPcm,
+      motion: await motion?.render(openingPcm, controller.signal)
     });
     if (controller.signal.aborted) return;
     let chat;
     const destinations = [];
     if (api) {
-      save();
-      const target = await prepareYoutube(api, cfg, v.title, receipt, save);
+      let target;
+      if (prior) {
+        writeFileSync4(join5(prior, "resume-claimed"), out, { flag: "wx", mode: 384 });
+        target = await resumeUnstarted(api, receipt);
+        ownsRun = true;
+        save();
+      } else {
+        save();
+        target = await prepareYoutube(api, cfg, v.title, receipt, save);
+      }
       destinations.push(target.url);
       if (target.chatId) chat = new YoutubeChat(api, target.chatId);
       log("youtube_prepared", { id: receipt.broadcastId, privacy: "unlisted" });
@@ -31160,9 +31540,20 @@ async function main() {
     process.stdin.setEncoding("utf8");
     process.stdin.on("data", receive);
     replying = (async () => {
+      const deadline = Date.now() + seconds * 1e3;
       while (!controller.signal.aborted) {
         const event = ready.length < 2 && queue.next();
         if (!event) {
+          if (!playing && !ready.length && hostLine < cfg.hostLines.length && Date.now() - lastSpeech >= 9e3 && deadline - Date.now() > 25e3) {
+            const text = cfg.hostLines[hostLine++];
+            try {
+              const pcm = await preparedSpeech(cfg, actor, text, controller.signal);
+              const rendered = await motion?.render(pcm, controller.signal);
+              ready.push({ source: "host", id: "host-" + hostLine, text, pcm, motion: rendered });
+            } catch {
+              log("host_line_unavailable", { id: "host-" + hostLine });
+            }
+          }
           await wait(100);
           continue;
         }
@@ -31177,7 +31568,9 @@ async function main() {
           stage = "synthesizing";
           const pcm = prepared ? await preparedSpeech(cfg, actor, text, controller.signal) : await synthesize(actor, text, controller.signal);
           controller.signal.throwIfAborted();
-          ready.push({ source: event.source, id: event.id, text, pcm });
+          stage = "animating";
+          const performance2 = await motion?.render(pcm, controller.signal);
+          ready.push({ source: event.source, id: event.id, text, pcm, motion: performance2 });
         } catch (e) {
           if (controller.signal.aborted) {
             unfinished(event.source, event.id, stage);
@@ -31195,7 +31588,8 @@ async function main() {
     if (api) {
       let liveChat = chat;
       polling = (async () => {
-        let sent = false;
+        let tester;
+        let canonical = false;
         while (!controller.signal.aborted) {
           let delay = 4e3;
           try {
@@ -31204,27 +31598,59 @@ async function main() {
               if (b.snippet.liveChatId) liveChat ??= new YoutubeChat(api, b.snippet.liveChatId);
               if (!ingestLive && b.status.lifeCycleStatus === "live") {
                 ingestLive = true;
+                if (probe) tester = new YoutubeProbe(Date.now());
                 log("youtube_live", { id: b.id });
               }
             }
-            if (ingestLive && liveChat && probe && !sent && !controller.signal.aborted) {
-              sent = true;
-              probeId = (await liveChat.testMessage(probe)).id;
-              log("youtube_probe", { id: probeId });
+            if (ingestLive && !canonical) {
+              const id = await activeChatId(api, receipt);
+              if (id) {
+                liveChat = new YoutubeChat(api, id);
+                canonical = true;
+              }
             }
             if (ingestLive && liveChat && !controller.signal.aborted) {
-              delay = await liveChat.poll(queue);
+              delay = await liveChat.poll(queue, (id, text, author) => {
+                if (probe && !probeId && text === probe && author === receipt.channelId) {
+                  probeId = id;
+                  log("youtube_probe_observed", { id });
+                }
+              });
               chatReads++;
               if (chatReads === 1) log("youtube_chat_connected", { id: receipt.broadcastId });
+              if (canonical && probe && !probeId && tester?.due(Date.now()) && !controller.signal.aborted) {
+                const posted = await tester.post(liveChat, probe);
+                if (posted) {
+                  probeId = posted;
+                  log("youtube_probe", { id: posted });
+                } else {
+                  canonical = false;
+                  log("youtube_probe_not_ready", { id: receipt.broadcastId });
+                }
+              }
             }
           } catch (e) {
+            if (!controller.signal.aborted && e instanceof Error && e.message === "YouTube GET liveChat/messages 403 liveChatEnded" && await broadcastStatus(api, receipt).catch(() => "") === "complete") {
+              endedEarly = true;
+              log("youtube_ended_early", { id: receipt.broadcastId });
+              stop();
+            }
             log("youtube_read_error", { message: e instanceof Error ? e.message : "failed" });
           }
           await wait(delay);
         }
       })();
     }
-    await encode(frames, join4(out, "recording.flv"), destinations, seconds, controller.signal, take, onLog);
+    await encode(
+      frames,
+      join5(out, "recording.flv"),
+      destinations,
+      seconds,
+      controller.signal,
+      take,
+      onLog,
+      motion
+    );
   } catch (e) {
     if (api && !receipt.broadcastId) {
       const message = e instanceof Error ? e.message : "";
@@ -31240,7 +31666,7 @@ async function main() {
     stop();
     process.stdin.removeListener("data", receive);
     process.stdin.pause();
-    if (api && receipt.broadcastId) {
+    if (api && receipt.broadcastId && ownsRun) {
       try {
         for (let i = 0; i < 8; i++) {
           finalState = await closeBroadcast(api, receipt);
@@ -31259,13 +31685,15 @@ async function main() {
       }
     }
     await Promise.allSettled([polling, replying]);
+    wake?.kill();
+    motion?.close();
     for (const event of ready) unfinished(event.source, event.id, "awaiting_playback");
     for (let event = queue.next(); event; event = queue.next()) unfinished(event.source, event.id, "queued");
     process.removeListener("SIGINT", stop);
     process.removeListener("SIGTERM", stop);
   }
   if (api) {
-    const reason = missingYoutubeEvidence({
+    const reason = endedEarly ? "broadcast ended before the encoder finished" : missingYoutubeEvidence({
       live: ingestLive,
       finalState,
       chatReads,

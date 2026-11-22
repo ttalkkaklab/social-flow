@@ -1259,6 +1259,8 @@ routes; LTX is one adapter, not the common data model.
 
 ### Stream a character live
 
+YouTube and TikTok play a moving performance of the sheet character throughout the show. Select a chest-up reference video and the character's registered voice. The MuseTalk renderer shapes the moving face to each spoken reply on Apple Silicon.
+
 Use [live-character](skills/live-character/SKILL.md) for a bounded YouTube or TikTok LIVE session.
 It animates a character's saved portrait and voice, answers chat, and writes the actual encoded
 broadcast and event receipts. YouTube supports unlisted setup, native chat and an end-to-end probe.

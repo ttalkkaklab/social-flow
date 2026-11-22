@@ -1,9 +1,10 @@
-import { spawn, type ChildProcess } from 'node:child_process';
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { createWriteStream } from 'node:fs';
 import { finished } from 'node:stream/promises';
 import { type Writable } from 'node:stream';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { FPS, HEIGHT, mouthLevel, RATE, SAMPLES, WIDTH } from './live-character.js';
+import type { MotionAvatar, MotionFrames } from './live-motion.js';
 
 export function splitIngest(value: string) {
   const url = new URL(value);
@@ -36,9 +37,79 @@ function completion(proc: ChildProcess, label: string) {
 }
 export interface Utterance {
   pcm: Buffer;
+  motion?: MotionFrames;
   id: string;
   text: string;
   source: string;
+}
+// Hand the private URL to libavformat on a separate descriptor. Its RTMP writer
+// accepts encoded FLV bytes directly, preserving packet timestamps and stream keys.
+const relayProgram = `
+import ctypes
+import ctypes.util
+import os
+import sys
+
+def function(lib, name, result, *args):
+    fn = getattr(lib, name)
+    fn.argtypes = args
+    fn.restype = result
+    return fn
+
+def library(name):
+    path = ctypes.util.find_library(name)
+    if not path:
+        raise RuntimeError("Shared FFmpeg library unavailable")
+    return ctypes.CDLL(path)
+
+fmt = library("avformat")
+util = library("avutil")
+ptr, integer, string = ctypes.c_void_p, ctypes.c_int, ctypes.c_char_p
+pointer = ctypes.POINTER(ptr)
+set_option = function(util, "av_dict_set", integer, pointer, string, string, integer)
+free_options = function(util, "av_dict_free", None, pointer)
+connect = function(fmt, "avio_open2", integer, pointer, string, integer, ptr, pointer)
+write = function(fmt, "avio_write", None, ptr, string, integer)
+flush = function(fmt, "avio_flush", None, ptr)
+close = function(fmt, "avio_closep", integer, pointer)
+function(util, "av_log_set_level", None, integer)(-8)
+if sys.argv[1:] == ["check"]:
+    sys.exit(0)
+ctx, options = ptr(), ptr()
+with os.fdopen(3, "rb") as target:
+    url = target.read()
+set_option(ctypes.byref(options), b"tls_verify", b"1", 0)
+set_option(ctypes.byref(options), b"rw_timeout", b"12000000", 0)
+cafile = os.environ.get("SSL_CERT_FILE")
+if cafile:
+    set_option(ctypes.byref(options), b"ca_file", os.fsencode(cafile), 0)
+status = connect(ctypes.byref(ctx), url, 2, None, ctypes.byref(options))
+free_options(ctypes.byref(options))
+if status >= 0:
+    print("relay_connected", file=sys.stderr, flush=True)
+    try:
+        while True:
+            data = os.read(0, 65536)
+            if not data:
+                break
+            write(ctx, data, len(data))
+            flush(ctx)
+    finally:
+        status = close(ctypes.byref(ctx))
+if status < 0:
+    print("relay_failure", status, file=sys.stderr, flush=True)
+    sys.exit(1)
+`;
+const relayPython = () => process.env.SOCIAL_FLOW_LIVE_PYTHON || 'python3';
+export function checkLiveRelay() {
+  const check = spawnSync(relayPython(), ['-c', relayProgram, 'check'], {
+    stdio: 'ignore',
+    timeout: 10000
+  });
+  if (check.status !== 0)
+    throw Error(
+      'Secure live output needs Python 3 and shared FFmpeg libraries (avformat, avutil). Set SOCIAL_FLOW_LIVE_PYTHON to select an interpreter.'
+    );
 }
 export async function encode(
   frames: Buffer[],
@@ -47,9 +118,10 @@ export async function encode(
   seconds: number,
   signal: AbortSignal,
   pull: () => Utterance | undefined,
-  log: (kind: string, info: Record<string, unknown>) => void
+  log: (kind: string, info: Record<string, unknown>) => void,
+  motion?: MotionAvatar
 ) {
-  const targets = destinations.map(splitIngest);
+  for (const destination of destinations) splitIngest(destination);
   const encoder = spawn(
     'ffmpeg',
     [
@@ -89,7 +161,7 @@ export async function encode(
       '-i',
       'pipe:3',
       '-vf',
-      `scale=740:1316,crop=720:1280:x='10+4*sin(t*0.43)':y='18+5*sin(t*0.71)'`,
+      motion ? 'scale=720:1280' : `scale=740:1316,crop=720:1280:x='10+4*sin(t*0.43)':y='18+5*sin(t*0.71)'`,
       '-c:v',
       'libx264',
       '-preset',
@@ -135,35 +207,17 @@ export async function encode(
   const recorded = finished(recording);
   recorded.catch(fail);
   encoder.stdout!.pipe(recording);
-  const relays = targets.map((target) => {
-    // FFmpeg reads the secret from an inherited pipe; stream keys never appear in argv.
-    const relay = spawn(
-      'ffmpeg',
-      [
-        '-nostdin',
-        '-loglevel',
-        'error',
-        '-f',
-        'flv',
-        '-i',
-        'pipe:0',
-        '-map',
-        '0',
-        '-c',
-        'copy',
-        '-f',
-        'flv',
-        '-rw_timeout',
-        '12000000',
-        '-fpre',
-        '/dev/fd/3',
-        target.base + '/live'
-      ],
-      { stdio: ['pipe', 'ignore', 'ignore', 'pipe'] }
-    );
+  const relays = destinations.map((target) => {
+    const relay = spawn(relayPython(), ['-c', relayProgram], { stdio: ['pipe', 'ignore', 'pipe', 'pipe'] });
+    relay.stderr!.on('data', (chunk) => {
+      const line = String(chunk);
+      if (line.includes('relay_connected')) log('relay_connected', {});
+      const failure = /relay_failure (-?\d+)/.exec(line);
+      if (failure) log('relay_error', { code: Number(failure[1]) });
+    });
     const key = relay.stdio[3] as Writable;
     key.on('error', fail);
-    key.end('rtmp_playpath=' + target.key + '\ntls_verify=1\n');
+    key.end(target);
     relay.stdin!.on('error', fail);
     encoder.stdout!.pipe(relay.stdin!);
     const done = completion(relay, 'RTMPS relay');
@@ -188,7 +242,10 @@ export async function encode(
       if (!active) {
         active = pull();
         offset = 0;
-        if (active) log('speech_start', { source: active.source, id: active.id, text: active.text, frame });
+        if (active) {
+          motion?.startSpeech();
+          log('speech_start', { source: active.source, id: active.id, text: active.text, frame });
+        }
       }
       let pcm = silence;
       if (active) {
@@ -197,9 +254,10 @@ export async function encode(
       }
       const blink = frame % (FPS * 4) < 3;
       audio.write(pcm);
-      video.write(frames[(blink ? 4 : 0) + mouthLevel(pcm)]);
+      video.write(motion ? motion.next(active?.motion) : frames[(blink ? 4 : 0) + mouthLevel(pcm)]);
       if (active && offset >= active.pcm.length) {
         log('speech_end', { source: active.source, id: active.id, frame });
+        if (active.motion) motion?.release(active.motion);
         active = undefined;
       }
       frame++;

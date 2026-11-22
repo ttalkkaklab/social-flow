@@ -4,7 +4,10 @@ import {
   assertBroadcast,
   checkChannel,
   prepareYoutube,
+  activeChatId,
+  resumeUnstarted,
   YoutubeChat,
+  YoutubeProbe,
   closeBroadcast,
   broadcastStatus,
   cancelUnstarted,
@@ -19,6 +22,22 @@ const broadcast = {
   status: { privacyStatus: 'unlisted', lifeCycleStatus: 'live' },
   contentDetails: { boundStreamId: 's' }
 };
+test('writes to the live video chat ID even when the broadcast list uses another ID', async () => {
+  const video = {
+    id: 'b',
+    snippet: { channelId: 'channel' },
+    liveStreamingDetails: { activeLiveChatId: 'canonical-chat' }
+  };
+  const api = async (method, resource, params) => {
+    assert.equal(method, 'GET');
+    assert.equal(resource, 'videos');
+    assert.equal(params.id, 'b');
+    return { items: [video] };
+  };
+  assert.equal(await activeChatId(api, r), 'canonical-chat');
+  video.snippet.channelId = 'other';
+  await assert.rejects(activeChatId(api, r), /owner/);
+});
 test('refuses another channel, changed visibility and a different bound stream', async () => {
   await assert.rejects(
     checkChannel(async () => ({ items: [{ id: 'other' }] }), 'channel'),
@@ -140,6 +159,28 @@ test('YouTube chat honors polling interval and cursor and ignores non-message ev
   assert.deepEqual(q.next(), { source: 'youtube', id: '1', text: 'hello' });
   assert.equal(q.next(), undefined);
 });
+test('resuming a ready room keeps its original key and never creates or takes over an active stream', async () => {
+  const ready = { ...broadcast, status: { ...broadcast.status, lifeCycleStatus: 'ready' } };
+  const stream = {
+    id: 's',
+    snippet: { channelId: 'channel' },
+    status: { streamStatus: 'ready' },
+    cdn: { ingestionInfo: { rtmpsIngestionAddress: 'rtmps://host/live2', streamName: 'fixture-key' } }
+  };
+  const api = async (method, resource) => {
+    assert.equal(method, 'GET');
+    return { items: [resource === 'liveStreams' ? stream : ready] };
+  };
+  const receipt = { ...r, binding: 'confirmed' };
+  assert.deepEqual(await resumeUnstarted(api, receipt), {
+    url: 'rtmps://host/live2/fixture-key',
+    chatId: 'chat'
+  });
+  stream.status.streamStatus = 'active';
+  await assert.rejects(resumeUnstarted(api, receipt), /already receiving/);
+  ready.status.lifeCycleStatus = 'live';
+  await assert.rejects(resumeUnstarted(api, receipt), /unstarted/);
+});
 test('a quiet YouTube chat counts only after a successful read and a requested probe must finish', async () => {
   const queue = new ChatQueue();
   const quiet = new YoutubeChat(async () => ({ items: [], pollingIntervalMillis: 6000 }), 'chat');
@@ -159,4 +200,32 @@ test('a quiet YouTube chat counts only after a successful read and a requested p
     missingYoutubeEvidence({ ...quietSession, probeRequested: true, probeSpoken: true }),
     undefined
   );
+});
+
+test('a probe waits for chat and retries only a definite 404 at most twice', async () => {
+  const probe = new YoutubeProbe(0);
+  assert.equal(probe.due(1000), false);
+  assert.equal(probe.due(20000), true);
+  const missing = {
+    testMessage: async () => {
+      throw Error('YouTube POST liveChat/messages 404 ERROR_UNSPECIFIED');
+    }
+  };
+  for (let i = 0; i < 3; i++) {
+    await probe.post(missing, 'question');
+    assert.equal(probe.due(Date.now()), false);
+    assert.equal(probe.due(Date.now() + 60000), i < 2);
+  }
+  const ambiguous = new YoutubeProbe(0);
+  await assert.rejects(
+    ambiguous.post(
+      {
+        testMessage: async () => {
+          throw Error('connection lost');
+        }
+      },
+      'question'
+    )
+  );
+  assert.equal(ambiguous.due(Date.now() + 60000), false);
 });

@@ -75,11 +75,40 @@ export async function prepareYoutube(api, config, title, receipt, save) {
     assertBroadcast(bound, receipt);
     receipt.binding = 'confirmed';
     save();
+    return ingestTarget(stream, bound.snippet.liveChatId ?? b.snippet.liveChatId);
+}
+function ingestTarget(stream, chatId) {
     const info = stream.cdn.ingestionInfo;
     if (!info.rtmpsIngestionAddress.startsWith('rtmps://') || !info.streamName)
         throw Error('Secure YouTube ingest unavailable');
-    const chatId = bound.snippet.liveChatId ?? b.snippet.liveChatId;
     return { url: info.rtmpsIngestionAddress + '/' + info.streamName, chatId };
+}
+export async function resumeUnstarted(api, receipt) {
+    const b = await inspectBroadcast(api, receipt);
+    if (receipt.cancellation ||
+        receipt.binding !== 'confirmed' ||
+        !receipt.streamId ||
+        b.status.lifeCycleStatus !== 'ready' ||
+        b.snippet.actualStartTime)
+        throw Error('Only an owned, unstarted, bound broadcast can be resumed');
+    const page = await api('GET', 'liveStreams', {
+        part: 'id,snippet,cdn,status',
+        id: receipt.streamId
+    });
+    const s = page.items[0];
+    if (!s ||
+        s.id !== receipt.streamId ||
+        s.snippet.channelId !== receipt.channelId ||
+        !['ready', 'inactive'].includes(s.status.streamStatus))
+        throw Error('Owned stream is unavailable or already receiving');
+    return ingestTarget(s, b.snippet.liveChatId);
+}
+export async function activeChatId(api, receipt) {
+    const result = await api('GET', 'videos', { part: 'snippet,liveStreamingDetails', id: receipt.broadcastId });
+    const video = result.items[0];
+    if (video && (video.id !== receipt.broadcastId || video.snippet.channelId !== receipt.channelId))
+        throw Error('Live chat video owner mismatch');
+    return video?.liveStreamingDetails?.activeLiveChatId;
 }
 export function assertBroadcast(b, receipt, allowUnbound = false) {
     const bound = b?.contentDetails?.boundStreamId;
@@ -168,6 +197,29 @@ export function missingYoutubeEvidence({ live, finalState, chatReads, probeReque
         return 'test message did not finish speaking';
     return undefined;
 }
+export class YoutubeProbe {
+    attempts = 0;
+    next;
+    constructor(liveAt) {
+        this.next = liveAt + 20_000;
+    }
+    due(now) {
+        return now >= this.next && this.attempts < 3;
+    }
+    async post(chat, text) {
+        this.attempts++;
+        this.next = Infinity; // An uncertain write must never be repeated.
+        try {
+            return (await chat.testMessage(text)).id;
+        }
+        catch (e) {
+            if (!(e instanceof Error && /^YouTube POST liveChat\/messages 404 /.test(e.message)))
+                throw e;
+            this.next = Date.now() + 30_000;
+            return undefined;
+        }
+    }
+}
 export class YoutubeChat {
     api;
     id;
@@ -176,7 +228,7 @@ export class YoutubeChat {
         this.api = api;
         this.id = id;
     }
-    async poll(queue) {
+    async poll(queue, observe) {
         const data = await this.api('GET', 'liveChat/messages', {
             part: 'snippet',
             liveChatId: this.id,
@@ -184,6 +236,8 @@ export class YoutubeChat {
         });
         for (const message of data.items ?? []) {
             if (['textMessageEvent', 'superChatEvent'].includes(message.snippet.type)) {
+                if (message.snippet.displayMessage)
+                    observe?.(message.id, message.snippet.displayMessage, message.snippet.authorChannelId);
                 queue.add({ source: 'youtube', id: message.id, text: message.snippet.displayMessage });
             }
         }
