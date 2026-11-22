@@ -1260,10 +1260,11 @@ routes; LTX is one adapter, not the common data model.
 ### Stream a character live
 
 Before each broadcast, choose to go live when ready, preview, or cancel.
-The production GPU prepares the host’s spoken opening and ten 3–5 second listening clips.
-Each clip starts and ends on the same portrait, with the show’s framing, light and background.
-While an answer renders, the encoder plays the clips in shuffled order. It finishes the current
-clip before switching to speech. LTX generates the whole 736×1280 frame and the encoder trims
+Before ingest, prepare the spoken greeting, the first topic segment and ten moving 3–5 second listening clips.
+The producer uses the current line, recent exchanges and incoming chat to generate speech while the
+encoder plays. Selected viewer replies take priority. Standby yields on the next frame and each
+spoken segment plays through its last sample. Held standby shots are regenerated with the shared
+framing, light and background. LTX generates the whole 736×1280 frame and the encoder trims
 eight columns per side for 720×1280 playout. YouTube supports unlisted rooms and native chat.
 See [Character LIVE](skills/live-character/SKILL.md) for configuration and recovery.
 TikTok takes a separately approved RTMPS destination and can receive events from an authorized input.

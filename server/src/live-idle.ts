@@ -1,9 +1,13 @@
-import { randomInt, createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { randomInt, randomUUID, createHash } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { join } from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execute = promisify(execFile);
 import { astraVideoBaseUrl } from './config.js';
-import { generateFromImage, resumeVideoResult } from './astra-video-client.js';
+import { generateFromImage, resumeVideoResult, type AstraImg2VideoRequest } from './astra-video-client.js';
 
 const gestures = [
   'Blink once slowly, then rest.',
@@ -40,44 +44,94 @@ export async function prepareIdleClips(image: string, project: string, concept: 
   const directory = join(project, '.social-flow', 'live-idle', hash.digest('hex'));
   mkdirSync(directory, {recursive: true, mode: 0o700});
   const paths: string[] = [];
+  let reference: Buffer | undefined;
   for (const [index, request] of requests.entries()) {
-    signal.throwIfAborted();
-    const filename = `listen-${index + 1}.mp4`;
-    const path = join(directory, filename);
-    const claim = path + '.generating';
-    // A persistent claim covers a transport failure between POST and its receipt.
-    // A second preview or live session can follow the first accepted job.
-    if (!(await resumeVideoResult(path, signal))) {
+    for (let attempt = 0; ; attempt++) {
+      signal.throwIfAborted();
+      const returning = attempt === 2;
+      const candidate: AstraImg2VideoRequest = attempt === 0 ? request : {
+        ...request, seed: request.seed + attempt * 1009, strength: attempt === 1 ? 0.94 : 0.85,
+        prompt: `Broadcast setting: ${concept}. In one locked chest-up shot the host silently lowers the chin and turns slightly to read a monitor below the lens. The shoulders follow, the eyes track a line on screen, then the head rises smoothly to meet the camera again. ${gestures[index]} The head is moving from the start, midway the change in pose is clearly visible, and the return takes the rest of the shot. Relaxed pace, lips closed, hands at rest, same person, clothes, lighting and scale as both references.`,
+      };
+      if (returning) {
+        // With identical first/last conditioning some models hold the portrait.
+        // Generate the outward half of a quiet gesture; retrace its real frames to the exact anchor.
+        candidate.lastFramePath = undefined;
+        const half = (request.numFrames + 1) / 2;
+        candidate.numFrames = 1 + Math.ceil((half - 1) / 8) * 8;
+        candidate.prompt = `Broadcast setting: ${concept}. Fixed portrait of the same silent seated host. From the first frame the head slowly turns to one side and lowers toward the chat monitor. Shoulders follow visibly as the host leans slightly forward to read. Continuous calm motion, eyes following the screen, lips closed, fixed camera and light. ${gestures[index]}`;
+      }
+      const variant = attempt ? '-moving-' + createHash('sha256').update(JSON.stringify(
+        [candidate.seed, candidate.prompt, candidate.strength, ...(returning ? [candidate.numFrames] : [])])).digest('hex').slice(0, 12) : '';
+      const filename = `listen-${index + 1}${variant}.mp4`;
+      const source = await fetchIdle(candidate, directory, returning ? 'outward-' + filename : filename, signal);
+      const path = returning ? await returnToAnchor(source, join(directory, filename), request.numFrames, signal) : source;
+      const { stdout } = await execute('ffmpeg', ['-v', 'error', '-nostdin', '-i', path, '-an',
+        '-vf', 'crop=720:1280:8:0,scale=24:40:flags=area', '-pix_fmt', 'rgb24', '-f', 'rawvideo', 'pipe:1'],
+        { signal, encoding: 'buffer', maxBuffer: 512 * 1024 });
       try {
-        writeFileSync(claim, String(process.pid), { flag: 'wx', mode: 0o600 });
-      } catch (e) {
-        if ((e as NodeJS.ErrnoException).code !== 'EEXIST') throw e;
-        const until = Date.now() + 120000;
-        while (!existsSync(path + '.astra-job.json')) {
-          if (Date.now() >= until) throw Error('Standby submission is unconfirmed: ' + filename);
-          const pid = Number(readFileSync(claim, 'utf8'));
-          try { process.kill(pid, 0); } catch {
-            throw Error('Standby generation stopped before its receipt. Inspect the production queue before retrying ' + filename);
-          }
-          await sleep(500, undefined, { signal });
-        }
+        const anchor = checkStandbyFraming(stdout, reference);
+        reference ??= anchor;
+      } catch (error) {
+        if (!(error instanceof StandbyQualityError) || attempt >= 2) throw error;
+        continue;
       }
-      if (!existsSync(path + '.astra-job.json')) {
-        try {
-          await generateFromImage({...request, outputPath: directory, filename}, signal);
-        } finally {
-          if (existsSync(path + '.astra-job.json')) rmSync(claim, { force: true });
-        }
-      } else if (!(await resumeVideoResult(path, signal))) {
-        throw Error('Concurrent standby preparation failed for ' + filename);
-      }
+      paths.push(path);
+      progress(index + 1, path);
+      break;
     }
-    signal.throwIfAborted();
-    progress(index + 1, path);
-    paths.push(path);
   }
   return paths;
 }
+
+async function returnToAnchor(source: string, path: string, count: number, signal: AbortSignal) {
+  if (existsSync(path)) return path;
+  const half = (count + 1) / 2;
+  const filter = `[0:v]split[a][b];[a]trim=end_frame=${half},setpts=PTS-STARTPTS[f];`
+    + `[b]trim=end_frame=${half - 1},reverse,setpts=PTS-STARTPTS[r];[f][r]concat=n=2:v=1:a=0`;
+  const tmp = path + '.' + randomUUID() + '.mp4';
+  try {
+    await execute('ffmpeg', ['-v','error','-nostdin','-i',source,'-an','-filter_complex',filter,
+      '-c:v','libx264','-crf','16','-pix_fmt','yuv420p',tmp], { signal });
+    renameSync(tmp, path);
+    return path;
+  } finally { rmSync(tmp, {force:true}); }
+}
+
+async function fetchIdle(request: AstraImg2VideoRequest, directory: string, filename: string, signal: AbortSignal) {
+  const path = join(directory, filename);
+  const claim = path + '.generating';
+  // A persistent claim covers a transport failure between POST and its receipt.
+  // A second preview or live session can follow the first accepted job.
+  if (!(await resumeVideoResult(path, signal))) {
+    try {
+      writeFileSync(claim, String(process.pid), { flag: 'wx', mode: 0o600 });
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== 'EEXIST') throw e;
+      const until = Date.now() + 120000;
+      while (!existsSync(path + '.astra-job.json')) {
+        if (Date.now() >= until) throw Error('Standby submission is unconfirmed: ' + filename);
+        const pid = Number(readFileSync(claim, 'utf8'));
+        try { process.kill(pid, 0); } catch {
+          throw Error('Standby generation stopped before its receipt. Inspect the production queue before retrying ' + filename);
+        }
+        await sleep(500, undefined, { signal });
+      }
+    }
+    if (!existsSync(path + '.astra-job.json')) {
+      try {
+        await generateFromImage({...request, outputPath: directory, filename}, signal);
+      } finally {
+        if (existsSync(path + '.astra-job.json')) rmSync(claim, { force: true });
+      }
+    } else if (!(await resumeVideoResult(path, signal))) {
+      throw Error('Concurrent standby preparation failed for ' + filename);
+    }
+  }
+  return path;
+}
+
+class StandbyQualityError extends Error {}
 
 // Low-resolution RGB samples check framing on every decoded frame. A blink
 // changes only a small region; a cut or a different camera changes much more.
@@ -90,14 +144,38 @@ export function checkStandbyFraming(samples: Buffer, reference?: Buffer) {
     for (let i = 0; i < size; i++) sum += Math.abs(a[i] - b[i]);
     return sum / size;
   }
-  if (reference && distance(reference, first) > 12) throw Error('Standby clip starts on a different shot');
-  let maximum = 0;
+  if (reference && distance(reference, first) > 12) throw new StandbyQualityError('Standby clip starts on a different shot');
+  let maximum = 0, stillFrames = 0;
+  let previous = first;
+  let anchor = first;
   for (let offset = size; offset < samples.length; offset += size) {
-    maximum = Math.max(maximum, distance(first, samples.subarray(offset, offset + size)));
+    const frame = samples.subarray(offset, offset + size);
+    maximum = Math.max(maximum, distance(first, frame));
+    // A listener can move their head against the same studio background.
+    let corners = 0;
+    for (let y = 0; y < 8; y++) for (const x of [0, 1, 2, 21, 22, 23]) {
+      const i = (y * 24 + x) * 3;
+      for (let c = 0; c < 3; c++) corners += Math.abs(first[i+c] - frame[i+c]);
+    }
+    if (corners / (8 * 6 * 3) > 18 || distance(previous, frame) > 24)
+      throw new StandbyQualityError('Standby clip cuts away from the shared camera framing');
+    previous = frame;
+    // Count moving pixels on the subject at thumbnail scale. Small codec noise
+    // and changes in the studio background must not qualify a held shot.
+    let moved = 0;
+    for (let y = 4; y < 35 && moved < 12; y++) {
+      for (let x = 3; x < 21; x++) {
+        const i = (y * 24 + x) * 3;
+        if (Math.abs(anchor[i] - frame[i]) + Math.abs(anchor[i+1] - frame[i+1]) +
+            Math.abs(anchor[i+2] - frame[i+2]) >= 12) moved++;
+      }
+    }
+    if (moved >= 12) { anchor = frame; stillFrames = 0; }
+    else if (++stillFrames >= nativeFps) throw new StandbyQualityError('Standby host stays still for a second');
   }
-  if (maximum === 0) throw Error('Standby clip contains one still frame');
-  if (maximum > 32 || distance(first, samples.subarray(-size)) > 12)
-    throw Error('Standby clip moves too far from the shared camera framing');
+  if (maximum === 0) throw new StandbyQualityError('Standby clip contains one still frame');
+  if (maximum > 45 || distance(first, samples.subarray(-size)) > 12)
+    throw new StandbyQualityError('Standby clip moves too far from the shared camera framing');
   return Buffer.from(first);
 }
 

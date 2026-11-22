@@ -1,6 +1,5 @@
 """Render a 736x1280 speaking portrait on a CUDA LTX 2.5 worker."""
 import argparse
-import math
 import os
 import wave
 from pathlib import Path
@@ -32,11 +31,13 @@ def render(audio, image, output, prompt):
     )
     device, dtype = torch.device("cuda"), torch.bfloat16
     with wave.open(audio, "rb") as wav:
-        duration = wav.getnframes() / wav.getframerate()
-    if not 0 < duration <= 30.25:
+        samples, rate = wav.getnframes(), wav.getframerate()
+    if not 0 < samples <= rate * 30.5:
         raise ValueError("Speech track exceeds the render limit")
     fps, width, height = 24, 736, 1280
-    frames = max(9, 1 + 8 * math.ceil((duration * fps - 1) / 8))
+    frames, remainder = divmod(samples * fps, rate)
+    if remainder or frames < 9 or (frames - 1) % 8:
+        raise ValueError("Conditioning audio must span exactly 8n + 1 video frames")
     with torch.inference_mode():
         pipe = TI2VidOneStagePipeline(paths, [], device=device)
         generator = torch.Generator(device=device).manual_seed(42)

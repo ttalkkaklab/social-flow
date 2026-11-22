@@ -5,6 +5,7 @@ import io
 import os
 from pathlib import Path
 import shlex
+import shutil
 import subprocess
 import tarfile
 import tempfile
@@ -12,13 +13,16 @@ import tempfile
 # Only the four named files are accepted by the remote process. The prompt
 # travels in the upload, never in a shell command.
 REMOTE = """
-import os, shutil, subprocess, sys, tarfile, tempfile
+import io, os, select, shutil, subprocess, sys, tarfile, tempfile
 from pathlib import Path
 os.umask(0o077)
 with tempfile.TemporaryDirectory(prefix='live-portrait-') as tmp:
     root = Path(tmp)
     names = {'renderer.py', 'voice.wav', 'portrait.png', 'prompt'}
-    with tarfile.open(fileobj=sys.stdin.buffer, mode='r|gz') as archive:
+    size = int.from_bytes(sys.stdin.buffer.read(8), 'big')
+    if not 0 < size <= 100 * 1024 * 1024:
+        raise ValueError('Invalid render payload length')
+    with tarfile.open(fileobj=io.BytesIO(sys.stdin.buffer.read(size)), mode='r:gz') as archive:
         for entry in archive:
             if entry.name not in names or not entry.isfile() or entry.size > 32 * 1024 ** 2:
                 raise ValueError('Unexpected native render input')
@@ -28,9 +32,22 @@ with tempfile.TemporaryDirectory(prefix='live-portrait-') as tmp:
     if names:
         raise ValueError('Incomplete native render inputs')
     result = root / 'render.mp4'
-    subprocess.run([sys.executable, str(root/'renderer.py'), '--audio', str(root/'voice.wav'),
-                    '--image', str(root/'portrait.png'), '--output', str(result),
-                    '--prompt', (root/'prompt').read_text()], stdout=sys.stderr, check=True)
+    with subprocess.Popen([sys.executable, str(root/'renderer.py'), '--audio', str(root/'voice.wav'),
+                           '--image', str(root/'portrait.png'), '--output', str(result),
+                           '--prompt', (root/'prompt').read_text()], stdin=subprocess.DEVNULL, stdout=sys.stderr) as render:
+        try:
+            while render.poll() is None:
+                if select.select([sys.stdin.buffer], [], [], 0.2)[0]:
+                    raise RuntimeError('Caller cancelled the render')
+            if render.returncode:
+                raise RuntimeError('Native renderer failed')
+        finally:
+            if render.poll() is None:
+                render.terminate()
+                try:
+                    render.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    render.kill()
     with result.open('rb') as media:
         shutil.copyfileobj(media, sys.stdout.buffer)
 """
@@ -59,11 +76,21 @@ def main():
             member = tarfile.TarInfo('prompt')
             member.size = len(text)
             archive.addfile(member, io.BytesIO(text))
+        size = payload.tell()
         payload.seek(0)
-        with args.output.open('xb') as result:
-            subprocess.run(['ssh', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes',
-                            '--', host, shlex.join([python, '-c', REMOTE])],
-                           stdin=payload, stdout=result, check=True, timeout=1800)
+        with args.output.open('xb') as result, subprocess.Popen(
+            ['ssh', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes', '--', host,
+             shlex.join([python, '-c', REMOTE])], stdin=subprocess.PIPE, stdout=result) as transport:
+            try:
+                transport.stdin.write(size.to_bytes(8, 'big'))
+                shutil.copyfileobj(payload, transport.stdin)
+                transport.stdin.flush()
+                # Keep stdin open. Its EOF cancels only this remote GPU render.
+                if transport.wait(timeout=1800):
+                    raise RuntimeError('Remote native render failed')
+            finally:
+                transport.stdin.close()
+
 
 
 if __name__ == '__main__':

@@ -45,3 +45,15 @@ test('checks the common camera anchor, rejects cuts and holds, and accepts a qui
   assert.throws(() => checkStandbyFraming(clip(reference, other, reference)), /framing/);
   assert.throws(() => checkStandbyFraming(clip(other, blink, other), reference), /different shot/);
 });
+
+test('a single blink cannot hide a sustained stationary hold or moving background noise', () => {
+  const base = Buffer.alloc(24 * 40 * 3, 100);
+  const held = Array.from({length: 29}, (_, i) => {
+    const frame = Buffer.alloc(base.length, 100 + i % 2);
+    frame.fill(110 + i % 3, 0, 24 * 3);
+    return frame;
+  });
+  const blink = Buffer.from(base);
+  blink.fill(60, 24 * 18 * 3, 24 * 19 * 3);
+  assert.throws(() => checkStandbyFraming(Buffer.concat([base, blink, ...held])), /stays still/);
+});

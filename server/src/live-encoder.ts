@@ -36,6 +36,7 @@ function completion(proc: ChildProcess, label: string) {
   return result;
 }
 export interface Utterance {
+  question?: { speaker?: string; text: string };
   pcm: Buffer;
   motion?: MotionFrames;
   id: string;
@@ -122,7 +123,6 @@ export async function encode(
   motion?: {
     width?: number;
     height?: number;
-    readyToSpeak?(): boolean;
     startSpeech(): void;
     next(speech?: MotionFrames): Buffer;
     release(speech: MotionFrames): void;
@@ -247,14 +247,10 @@ export async function encode(
         continue;
       }
       lastProgress = Date.now();
-      if (!active && (motion?.readyToSpeak?.() ?? true)) {
+      if (!active) {
         active = pull();
         offset = 0;
         if (active) {
-          if (motion?.readyToSpeak && active.motion) {
-            const padding = active.motion.count * SAMPLES * 2 - active.pcm.length;
-            if (padding > 0) active.pcm = Buffer.concat([active.pcm, Buffer.alloc(padding)]);
-          }
           motion?.startSpeech();
           log('speech_start', { source: active.source, id: active.id, text: active.text, frame });
         }
@@ -268,7 +264,7 @@ export async function encode(
       audio.write(pcm);
       video.write(motion ? motion.next(active?.motion) : frames[(blink ? 4 : 0) + mouthLevel(pcm)]);
       if (active && offset >= active.pcm.length) {
-        log('speech_end', { source: active.source, id: active.id, frame });
+        log('speech_end', { source: active.source, id: active.id, frame, samplesSent: offset / 2, totalSamples: active.pcm.length / 2 });
         if (active.motion) motion?.release(active.motion);
         active = undefined;
       }

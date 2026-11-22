@@ -24,7 +24,7 @@ control (or ask in chat). Wait for the answer. An explicit choice for this
 broadcast in the user's request counts. A previous broadcast, a saved config,
 an unattended schedule or silence cannot choose for the user.
 
-- **Start when ready** (`--start ready`): prepare ten listening clips and the spoken opening on the production GPU before ingest. Send the watch link as soon as YouTube reports live.
+- **Start when ready** (`--start ready`): prepare ten moving listening clips, the spoken opening and the first topic segment on the production GPU before ingest. Send the watch link as soon as YouTube reports live.
 - **Preview first** (`--start preview`): produce a local recording with sound and stop.
   Show it and wait for a start decision. When the user selects start, use a fresh run
   directory. The renderer can reuse the same generated opening.
@@ -33,16 +33,26 @@ an unattended schedule or silence cannot choose for the user.
 Use a calm chest-up portrait with a complete face. Set `broadcastConcept` to the
 setting and mood for this show. Use `talkPrompt` for speaking directions. The plugin
 prepares ten silent listening clips, each 3–5 seconds at 24 fps. It pins the same
-portrait to both ends of every shot. While a reply renders, the encoder plays each
-clip once in shuffled order and changes to speech at a clip boundary. A new shuffle
-starts with a different clip from the last one played. A concept or reference
-change prepares a new set. Matching assets can be reused for the same show.
+portrait to both ends of every shot. The host should visibly look down to read, nod or
+shift their shoulders gently. The runner checks for a held pose across each clip. If a replacement still freezes between identical anchors, it generates a short outward gesture and plays its frames back to the exact starting pose. All ten clips must pass the framing and motion checks before ingest. Ready speech interrupts standby on the
+next output frame. If the queue stays empty, shuffle all ten before repeating a clip.
+A new shuffle starts with a different clip from the last one played.
 To prepare these assets earlier and list their paths, run
 `node server/dist/character-live.bundle.js prepare-idle --config FILE`. This command
 needs no streaming destination. The normal broadcast start also prepares the set.
-The encoder opens the destination after validating all ten clips and the opening.
-During the YouTube ingest handshake the encoder plays a listening clip. The opening
-starts at a clip boundary once YouTube reports live. The encoder trims eight columns from each side of the model’s 736×1280 canvas for 720×1280 playout.
+Before opening ingest the runner prepares the listening pool, a greeting that opens the show
+and a first topic segment. Write the greeting in the host's voice and introduce today's subject.
+During the YouTube handshake the encoder plays moving standby. Once the room is live it plays
+the greeting. While speech plays, the planner uses the current line, recent spoken exchanges,
+real viewer chat and any queued host line to generate the next segment. Optional `hostLines` give
+topic cues. The host continues after the last cue.
+
+One model call decides whether a viewer message merits an answer and writes it. A selected
+reply takes priority over speculative host production. An on-air line always finishes, including
+when the chat intake window closes. Standby fills only gaps between ready spoken segments.
+The event log records chat admission, skipped messages, generation, and the first frame and last
+audio sample sent. If YouTube exhausts the chat quota, tell the operator that new messages
+may be missed. The encoder trims eight columns per side of the model’s 736×1280 canvas.
 
 Use the production ASTRA video API (`ASTRA_VIDEO`, optional `ASTRA_VIDEO_URL`) for
 listening clips. For speaking frames set `SOCIAL_FLOW_LIVE_GPU_HOST` to the production
@@ -55,7 +65,11 @@ after writing the result to the supplied path on the broadcast host. On a CUDA h
 with the LTX 2.5 dependencies and split weights, the launcher can be the LTX
 environment’s Python interpreter. Set `SOCIAL_FLOW_LTX_MODELS` on that GPU host
 when the models directory differs from `/data/ltx/models`. The renderer conditions
-the whole frame on the character’s registered voice. Keep host lines brief.
+the whole frame on the exact spoken words and recorded voice. It gives the reference pose a short silent lead-in and removes the lead-in from playout. Keep host lines brief. On a host with MediaPipe, OpenCV and a face landmarker, set `SOCIAL_FLOW_AVATAR_PYTHON`
+and `SOCIAL_FLOW_LIVE_LANDMARKER` (`MUSETALK_LANDMARKER` also works). The tracker compares mouth
+opening against the recording and can shift the whole shot by up to four frames within its
+generated handles. It leaves weak matches on the model clock. Check the recorded mouth closures
+and pauses against the sound when reviewing sync.
 
 1. Read the channel profile and confirm the external destination. Make a session configuration
    outside the plugin, for example in the project's logs. Use the channel ID from its profile.
@@ -69,12 +83,12 @@ the whole frame on the character’s registered voice. Keep host lines brief.
    {"project":"/path/to/project","channel":"my-channel","character":"host","panel":"face",
     "broadcastConcept":"Late-night radio in a softly lit studio.",
     "talkPrompt":"Locked camera, quiet conversation, shoulders relaxed, speaking the supplied audio.",
-    "chatModel":"gateway-text-model","opening":"Hello! What would you like to talk about?",
+    "chatModel":"gateway-text-model","opening":"Welcome to Night Radio. Tonight I brought the book I read before bed.",
     "youtubeChannelId":"UCxxxxxxxxxxxxxxxxxxxxxx","madeForKids":false}
    ```
 
 4. Optionally configure reactions as an array of objects with a questions array and a short spoken
-   answer. The runner matches whole questions ignoring case, spacing and punctuation. Use
+   answer. The live planner treats an exact match as a suggested answer and considers the conversation. Use
    `warm --config /path/to/config.json` to synthesize the opening and these responses with the
    character's voice before going live. Other messages go to the language model and speech
    gateway on demand. The cache stays under the project's .social-flow/live-voices directory.
