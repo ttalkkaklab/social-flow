@@ -13,24 +13,23 @@
 <div class="langbar"><a href="index.en.html" hreflang="en">English</a></div>
 
 <header class="hero">
-  <div class="kicker">SOCIAL-FLOW DOCS</div>
   <h1>social-flow 문서</h1>
-  <p class="sub">채널 기반 쇼트폼·롱폼 콘텐츠 파이프라인 Claude Code 플러그인의 문서 모음. 스킬 사용 가이드, 리서치 기록, 그리고 내부 MCP 서버가 호출하는 전체 외부 API 레퍼런스.</p>
+  <p class="sub">Claude Code에서 이야기로 스토리보드를 짜고 영상을 만든 뒤 게시를 승인할 수 있습니다. 완성된 에피소드를 보거나 내 프로젝트에 설치해 보세요.</p>
+  <p>Zeans · <a href="https://github.com/ttalkkaklab">Ttalkkak Lab</a></p>
   <div class="meta">
-    <span>플러그인 <strong>v0.42.0</strong></span>
-    <span>스킬 <strong>18종</strong></span>
-    <span>MCP 툴 <strong>77종</strong></span>
-    <span>갱신 <strong>2026-08-30</strong></span>
-  </div>
-  <div class="meta">
-    <span>정본 README: <a href="../README.md">README.md</a></span>
-    <span>프로젝트 지침: <a href="../CLAUDE.md">CLAUDE.md</a></span>
+    <a href="https://www.youtube.com/shorts/cO9SNY7vQRs">Mochi &amp; Bơ 12화 보기</a>
+    <a href="https://github.com/ttalkkaklab/social-flow#quickstart">플러그인 설치</a>
+    <a href="https://github.com/ttalkkaklab/social-flow/contribute">첫 기여 이슈 고르기</a>
   </div>
 </header>
 
 <section>
   <h2>처음이라면</h2>
   <div class="cards">
+    <a class="card" href="guides/image-request-recovery/">
+      <h3>이미지 생성 요청이 시간 초과되면 (영문) →</h3>
+      <p>응답이 끊긴 뒤 같은 이미지를 두 번 주문하지 않도록 요청을 기록하는 방법을 살펴봅니다. API 키 없이 같은 상황을 재현할 수 있습니다.</p>
+    </a>
     <a class="card" href="guides/getting-started/index.html">
       <h3>시작하기 — 설치부터 첫 영상까지 →</h3>
       <p>준비물·설치·API 키·첫 영상 네 단계·게시 토큰·자주 막히는 곳. 이 플러그인을 처음 쓰는 사람이 읽는 문서.</p>
@@ -47,40 +46,10 @@
 </section>
 
 <section>
-  <h2>API 키 — 어디까지 넣고 멈출지</h2>
-  <p>키는 서로 독립인 두 묶음이다. <strong>어느 한쪽에서 멈춰도 파이프라인은 돈다.</strong></p>
-  <p><strong>제작 키.</strong> <code>OPENAI_API_KEY</code> 는 커버와 글자가 들어가는 프레임을 그리고 <code>GEMINI_API_KEY</code> 는 생성 영상 클립·연기 나레이션·BGM 을 맡는다. 엄밀히는 둘 다 선택이다 — 씬 배경은 온디바이스 <code>image_local_generate</code>(Z-Image Turbo, 애플 실리콘), 나레이션은 온디바이스 <code>tts_local_generate</code>(Supertonic 3)가 기본 경로라 키 없이도 영상 한 편이 나온다. 다만 <code>OPENAI_API_KEY</code> 가 없으면 글자가 들어간 프레임을 포기해야 한다(로컬 이미지 생성은 한글 자소를 깨뜨린다). <code>GEMINI_API_KEY</code> 가 없으면 움직이는 컷과 음악이 빠진다. 조사용 키(<code>SERPAPI_API_KEY</code>·네이버 한 쌍)도 선택이며, 없으면 스토리보드가 WebSearch 로 조사한다.</p>
-  <p><strong>플랫폼 자격증명(스레드·인스타그램·유튜브·페이스북) — 선택.</strong> 넣어 두면 <code>publish</code> 가 내 계정에 바로 올린다. <code>grow-threads</code>·<code>grow-youtube</code>·<code>grow-instagram</code> 은 <code>/loop</code> 로 채널의 하루 운영을 넘겨받는다 — 댓글 응대, 지표 관찰, 키워드 대화 참여, 대기열 채우기, 게시를 init 때 한 번 승인한 상시 승인서 안에서 알아서 한다. 안 넣어도 제작까지는 그대로 쓴다. <code>produce</code> 가 완성 영상과 플랫폼별 텍스트를 <code>data/&lt;채널&gt;/episodes/&lt;주제&gt;/output/</code> 에 써 주므로 그 파일을 손으로 올리면 된다. 이때는 게시·인사이트 툴 아홉이 목록에 뜨지 않아 <code>tools/list</code> 가 77종 대신 68종을 보여 준다. 플랫폼별로 따로 걸리는 문제라 전부 아니면 전무가 아니다. 나중에 토큰을 추가해도 서버를 다시 띄울 필요가 없다.</p>
-  <div class="note">
-    변수 이름·기본값·자격증명 파일 규약의 정본은 <a href="../README.md">README.md</a> 다. 실제로 넣는 순서는 <a href="guides/getting-started/index.html">시작하기 — 설치부터 첫 영상까지</a>가 안내한다.
-  </div>
-</section>
-
-<section>
-  <h2>스킬 18종 — 무엇을 언제 부르나</h2>
-  <p>채널 하나를 열어 콘텐츠를 올리기까지의 순서다. 각 단계는 앞 단계의 산출물을 검사해서, 스토리보드가 미승인이면 <code>produce</code> 가, 제작이 안 끝났으면 <code>publish</code> 가 멈추고 이전 단계를 안내한다. 인자 형태와 전체 계약의 정본은 <a href="../README.md">README.md</a> 다.</p>
-  <div class="table-scroll">
-  <table>
-    <thead><tr><th>단계</th><th>스킬</th><th>하는 일</th></tr></thead>
-    <tbody>
-      <tr><td rowspan="3">채널 준비<br>(1회)</td><td><code>channel</code></td><td>채널 프로파일 생성·수정 — 톤·보이스·테마·게시 대상을 <code>profile.md</code> 로 고정한다</td></tr>
-      <tr><td><code>branding</code> · <code>intro</code></td><td>프로필 이미지(후보 4종 → 선택 → 95점 수렴)와 채널 인트로 영상(컨셉 4종 → 캐릭터 연기 → 90점 수렴)</td></tr>
-      <tr><td><code>setup-threads</code><br><code>setup-instagram</code><br><code>setup-youtube</code></td><td>ego lite 브라우저로 계정 개설·브랜딩 적용·API 토큰 발급. 사람 손이 필요한 지점(로그인·인증코드·동의)만 넘긴다 — YouTube 신원 인증은 승인에 여러 날 걸리므로 상태를 탐지해 재개한다</td></tr>
-      <tr><td rowspan="3">소재</td><td><code>topic-scout</code></td><td>지금 시장에서 검증된 유튜브 주제 — 채널 최근 업로드 중앙값 대비 5배. 사람이 보는 화면은 퍼널·배수 막대 HTML, 루프는 md를 읽는다. 여기에 SNS 이슈 절을 덧붙인다(<code>sns_issue_scout</code> — 스레드·X·인스타를 <code>site:</code> 검색으로 훑은 언급 목록이다. 참여량 수치가 없으므로 유튜브 배수 표와 같은 표에 섞지 않는다)</td></tr>
-      <tr><td><code>ingest</code></td><td>화면 녹화(+음성)를 타임라인으로 — 웹 조사를 대신하는 소스</td></tr>
-      <tr><td><code>datago</code></td><td>공공데이터 조사·수집·시드 기록</td></tr>
-      <tr><td rowspan="3">제작</td><td><code>storyboard</code></td><td>조사 → 시나리오 후보 3개를 일곱 항목 그대로 보여 주고 택 1 → 추가 조사 → 나레이션부터 쓰기 → <strong>나레이션 통독(§4.4)·어휘(§4.5) 두 읽기</strong>, 문장만 리뷰어에게 인라인으로 넘겨 각각 최대 3회 안에 95점 → 보드(카메라·사운드·슬라이드)는 검사 스크립트와 작성자 자신의 읽기 → 이미지 → 승인. 0.49 의 보드 검증 여섯·플랜 리뷰·슬라이드 루프는 0.50.0 에서 뺐다 — 358회 실측에서 리뷰어 호출 하나가 200만~800만 토큰에 8~14분이었고 한 편이 그걸 스무 번 넘게 불렀다. 못 고친 지적은 그대로 승인 화면에 올라간다</td></tr>
-      <tr><td><code>produce</code></td><td>영상 합성과 플랫폼별 텍스트. 포맷은 두 가지다 — 쇼트폼 9:16(1080×1920/30fps·35~120초, 기본값)과 유튜브 롱폼 16:9(1920×1080·8~15분·챕터). 어느 쪽인지는 스토리보드를 쓸 때 정하고, <code>scenes.js</code> 의 <code>window.FORMAT</code> 한 줄이 이후 빌드 상수를 전부 결정한다. 그 범위 안에서 권장하는 길이는 35~75초다. 채널은 <code>profile.md</code> 의 <code>length_min_seconds</code>·<code>length_max_seconds</code> 로 이 범위를 좁힐 수 있다 — 둘 다 안 적으면 포맷 범위가 그대로 간다. 180초 상한은 플랫폼 쪽이라 채널이 못 건드린다. 롱폼은 사용자가 직접 찍은 클립과 생성 씬을 한 편에 섞으며 촬영 씬은 스토리보드가 내주는 촬영 대본(<code>script.md</code>)을 보고 그대로 찍는다</td></tr>
-      <tr><td><code>autoproduce</code></td><td>주제 문자열 하나로 조사 → 시나리오 후보 3개를 한 번에 묶어 읽고 택 1(무인은 최고점) → 추가 조사 → 나레이션 통독·어휘 각 3회 안에 95점 → 빌드까지 무인 관통 — 사람 승인 자리에 기계 게이트를 세운다</td></tr>
-      <tr><td>게시</td><td><code>publish</code></td><td>계정 점검 → 미디어 호스팅 → <strong>HITL 승인</strong> → 게시 → permalink 기록</td></tr>
-      <tr><td>운영</td><td><code>grow-threads</code><br><code>grow-youtube</code><br><code>grow-instagram</code><br><code>review-recent</code></td><td>플랜(상시 승인서)을 한 번 승인해 두고 <code>/loop</code> 로 반복하는 자율 성장 루프 1틱 — 댓글 응대·지표 관찰·대화 참여·게시. 방금 올린 유튜브 영상에는 속도 관찰이 붙어서 기본 30분 간격으로 조회수 카운터를 읽는다. 채널 평소 흐름보다 앞서 나가는 영상은 스레드 루프가 글 한 편으로 밀어 준다. <code>review-recent</code> 는 최근 5편을 유튜브·인스타로 나눠 퍼널·비교 막대 HTML 로 채점한다</td></tr>
-      <tr><td>지식</td><td><code>platform-guide</code></td><td>플랫폼 문법·영상 규격·한국어 문체 규칙의 정본. 다른 스킬이 불러 읽는다</td></tr>
-    </tbody>
-  </table>
-  </div>
-  <div class="note">
-    <strong>나가는 글은 전부 게이트를 지난다.</strong> 한국어 텍스트가 생기는 지점마다 <code>check-style.py</code> 가 번역투·상투구·조수 말투를 기계로 잡고, 그 위에서 적대적 리뷰어(<code>storyboard-reviewer</code> · <code>content-reviewer</code> · <code>growth-post-reviewer</code>)가 한 번 더 읽는다. 나가는 글은 95점·P0 0건을 요구하고, 스토리보드 원고만 1회 읽기로 사람 승인에 맡긴다. 검사기가 규칙으로 잡는 층과 사람이 읽어야 느끼는 층이 다르기 때문이다.
-  </div>
+  <h2>설치 후 첫 에피소드까지</h2>
+  <p><code>/social-flow:platform-guide</code>로 영상 규격을 물어보세요. 에피소드를 만들 때는 <code>/social-flow:project-init</code>에서 모델과 영상 형식을 고릅니다. 필요한 키와 생성 비용은 모델마다 다릅니다.</p>
+  <p><code>/social-flow:storyboard</code>로 이야기와 장면을 짜고 승인한 스토리보드를 <code>/social-flow:produce</code>에 넘겨 영상을 만듭니다. 완성된 파일을 확인한 뒤 게시 계정을 연결하세요.</p>
+  <p><a href="https://github.com/ttalkkaklab/social-flow#install">설치 방법과 준비물</a> · <a href="https://github.com/ttalkkaklab/social-flow/tree/main/skills">전체 스킬</a></p>
 </section>
 
 <section>
@@ -89,7 +58,7 @@
   <div class="cards">
     <a class="card" href="api-reference/index.html">
       <h3>API 레퍼런스 허브 →</h3>
-      <p>외부 API 13종 인벤토리와 로컬 엔진 3종 + MLX Core 루프백, 자격증명 매트릭스, 툴 77종 ↔ API 매핑표.</p>
+      <p>외부 API와 로컬 엔진의 호출 방식, 연동에 쓰는 인증 정보를 정리했습니다.</p>
     </a>
     <a class="card" href="api-reference/tool-audit.html">
       <h3>툴 품질 감사 리포트 →</h3>
@@ -268,7 +237,7 @@
 </section>
 
 <footer>
-  social-flow — 채널 기반 쇼트폼·롱폼 콘텐츠 파이프라인. 구조·스킬·MCP 툴 목록의 정본은 <a href="../README.md">README.md</a>다.
+  social-flow — 채널 기반 쇼트폼·롱폼 콘텐츠 파이프라인. 구조·스킬·MCP 툴 목록의 정본은 <a href="https://github.com/ttalkkaklab/social-flow#readme">README.md</a>다.
 </footer>
 
 </div>

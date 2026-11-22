@@ -1,10 +1,38 @@
+# social-flow
+
+Turn a story into a storyboard, a finished video, and a post you approve. social-flow is a Claude Code plugin built by Zeans at [Ttalkkak Lab](https://github.com/ttalkkaklab).
+
+[<img src="https://i.ytimg.com/vi/cO9SNY7vQRs/mqdefault.jpg" width="320" height="180" alt="Watch Mochi &amp; Bơ, episode 12 on YouTube">](https://www.youtube.com/shorts/cO9SNY7vQRs)
+
+[Watch Mochi & Bơ, episode 12](https://www.youtube.com/shorts/cO9SNY7vQRs) · A Vietnamese-language short made with social-flow. At a café across from the exam hall, Mochi is about to introduce her sister when Bơ asks to break up.
+
+## Quickstart
+
+With Claude Code and Node.js 20 or newer installed, run these in your terminal:
+
+```sh
+claude plugin marketplace add ttalkkaklab/social-flow
+claude plugin install social-flow@social-flow
+claude
+```
+
+In the new session, try `/social-flow:platform-guide What frame size should I use for YouTube Shorts?` This reads the bundled guide. To make an episode, start with `/social-flow:project-init` in your project directory.
+
+**Want to contribute?** [Pick a good first issue](https://github.com/ttalkkaklab/social-flow/contribute) or [reproduce a provider timeout locally](https://ttalkkaklab.github.io/social-flow/guides/image-request-recovery/). The timeout example runs with zero provider keys.
+
+[English docs](https://ttalkkaklab.github.io/social-flow/index.en.html) · [한국어 문서](https://ttalkkaklab.github.io/social-flow/) · [Other install options](#install) · [Contributing](CONTRIBUTING.md) · [Apache 2.0](LICENSE) · [CI](https://github.com/ttalkkaklab/social-flow/actions/workflows/check.yml)
+
+## How production works
+
+<details>
+<summary>Production order, shot direction and model settings</summary>
+
 Production follows this order: **project setup → characters (text + images) → story →
 each shot's characters and lines → icon attributes → props and backgrounds (text + images)
 → each shot's start (and end) image → video prompt → each shot's video after the user's
 approval**. Only the story order is enforced (user directive, 2026-10-31); reviews and
 Blender compositions run on request. See [the production order](skills/_shared/production-workflow.md).
 
-# social-flow
 
 [Content-led opening views](skills/storyboard/references/shot-view.md) connect the story's
 visible evidence to `shot_icons view`, the Blender camera and the image/video prompt. Explicit
@@ -195,13 +223,7 @@ episode snapshots its settings in `.work/model-settings.json`, so a later defaul
 change does not alter an episode already in progress. An unavailable model is
 reported instead of silently replaced. See [directory model settings](skills/_shared/model-settings.md).
 
-[![check](https://github.com/ttalkkaklab/social-flow/actions/workflows/check.yml/badge.svg)](https://github.com/ttalkkaklab/social-flow/actions/workflows/check.yml)
-[![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-&nbsp;·&nbsp; Docs: [English](docs/index.en.html) · [한국어](docs/index.html)
-
-A Claude Code plugin that runs a channel-based short-form/long-form content pipeline —
-**storyboard (plan only — nothing is generated) → per-platform video & text production →
-HITL-approved publishing** — over a `data/[channel]/episodes/[topic]/` directory tree.
+</details>
 
 A **channel** is one content brand you operate: one `data/` directory per channel, with
 tone, theme and pinned character voice IDs in `profile.md`, and publish targets, genre, models, visual style, video
