@@ -285,13 +285,15 @@ export async function inspectSceneInputContract(error, validation) {
 export async function buildSceneWire(scene, model, resolution, stageFiles = false, bindings) {
     const attachments = [];
     const shots = scene.shots.map(shot => {
-        const guidance = bindings?.find(binding => binding.shotId === shot.shotId)?.guidance;
+        const binding = bindings?.find(item => item.shotId === shot.shotId);
+        const guidance = binding?.guidance;
         const images = scene.images.filter(image => image.shotId === shot.shotId).map(image => ({
             frame: image.frame, role: image.role, character: image.character, cue: image.cue, strength: image.strength,
             ...(image.reference ? { reference_id: image.reference.id, purpose: image.reference.purpose } : {}),
             image_uri: genaiSourceUri(undefined, image.path),
         }));
-        return { shot_id: shot.shotId, start_frame: shot.startFrame, end_frame: shot.endFrame,
+        return { ...(binding?.motionPrefix ? { motion_uri: '' } : {}),
+            ...(binding?.performanceAudio ? { performance_uri: '' } : {}), shot_id: shot.shotId, start_frame: shot.startFrame, end_frame: shot.endFrame,
             ...(guidance ? { negative_prompt: guidance.negativePrompt, guidance_scale: guidance.guidanceScale } : {}),
             ...(shot.transition === 'open' ? {} : { transition: shot.transition }),
             description: [shot.framing, shot.action, videoTextPolicy()].join(' '), opening_positions: shot.openingPositions,
@@ -311,7 +313,7 @@ export async function buildSceneWire(scene, model, resolution, stageFiles = fals
         ...(scene.audio ? { scene_audio: { ...(scene.audio.mode ? { mode: scene.audio.mode } : {}), audio_uri: stageTrack ? '' : genaiAudioUri(undefined, scene.audio.path), start_frame: scene.audio.startFrame,
                 end_frame: scene.audio.endFrame, cues: scene.audio.cues } } : {}) };
     let wire = JSON.stringify(body);
-    if (stageFiles || stageTrack || Buffer.byteLength(wire) > GENAI_MSR_INLINE_MAX_BYTES) {
+    if (stageFiles || stageTrack || bindings?.some(b => b.motionPrefix || b.performanceAudio) || Buffer.byteLength(wire) > GENAI_MSR_INLINE_MAX_BYTES) {
         const staged = new Map();
         const stageBytes = async (bytes, mime, role, frame, shotId) => {
             const sha256 = createHash('sha256').update(bytes).digest('hex');
@@ -324,6 +326,11 @@ export async function buildSceneWire(scene, model, resolution, stageFiles = fals
         };
         const stage = (uri, role, frame, shotId) => stageBytes(Buffer.from(uri.slice(uri.indexOf(',') + 1), 'base64'), uri.slice(5, uri.indexOf(';')), role, frame, shotId);
         for (const shot of shots) {
+            const binding = bindings?.find(b => b.shotId === shot.shot_id);
+            if (binding?.performanceAudio)
+                shot.performance_uri = await stageBytes(readFileSync(binding.performanceAudio), 'audio/wav', 'performance_audio', shot.start_frame, shot.shot_id);
+            if (binding?.motionPrefix)
+                shot.motion_uri = await stageBytes(readFileSync(binding.motionPrefix), 'video/mp4', 'motion_prefix', shot.start_frame, shot.shot_id);
             for (const image of shot.images)
                 image.image_uri = await stage(image.image_uri, image.role, image.frame, shot.shot_id);
             for (const line of shot.dialogue ?? [])

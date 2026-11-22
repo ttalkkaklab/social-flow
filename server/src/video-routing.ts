@@ -288,6 +288,11 @@ async function checkCompletedMedia(plan:VideoPlan, jobId?:string) {
 async function validateShotRenderPlan(plan: VideoPlan) {
   const capabilities = await requestGenai('GET', sceneRoute + '/capabilities', undefined, 15_000);
   z.object({version:z.literal(1), execution:z.literal('per_shot'), transitions:z.array(z.string()).refine(values=>values.includes('hard_cut'))}).parse(capabilities);
+  const guides = z.object({motion_prefix:z.boolean().optional(),timed_dialogue:z.string().nullish()}).parse(capabilities);
+  for (const binding of plan.shotBindings ?? []) {
+    if (binding.motionPrefix && !guides.motion_prefix || binding.performanceAudio && guides.timed_dialogue !== 'supplied_performance')
+      throw new Error('scene_render_guide: ' + binding.shotId + ' requests an unavailable performance or motion guide');
+  }
   if (plan.sceneRequest?.audio) {
     const mode = plan.sceneRequest.audio.mode ?? 'conditioning';
     const contract = z.object({scene_audio_modes:z.record(z.string())}).safeParse(capabilities);
@@ -375,6 +380,7 @@ export function planVideo(raw: unknown, persist = true): VideoPlan {
     const missing: string[] = [];
 
     for (const shot of request.shots) {
+      const binding = input.shotBindings?.find(b=>b.shotId === shot.shotId);
       const at = shot.shotId + '@' + shot.startFrame;
       if (!shot.framing || !shot.action) missing.push(at + ' direction: supply framing and action');
       if (shot.transition !== 'open' && shot.transition !== 'hard_cut') missing.push(at + ' transition: ' + shot.transition);
@@ -384,6 +390,8 @@ export function planVideo(raw: unknown, persist = true): VideoPlan {
         missing.push(at + ' ' + p.role + ': ' + (conditioned ? 'A2V cannot bind subject references' : 'individual reference strength is unsupported'));
       for (const line of shot.dialogue ?? []) {
         const label = shot.shotId + '@' + (line.frame ?? shot.startFrame) + ' ' + line.lineId + ' ' + line.speaker;
+        if (line.frame !== undefined && !binding?.performanceAudio)
+          missing.push(label + ' performance_audio: supply a timed WAV to lock speech to the opening frame');
         if (line.warnings?.length || line.delivery === 'voiceover')
           missing.push(label + ' voice: ' + (line.warnings?.join(' ') ?? line.delivery));
         if (line.voice && !subjects.slice(0,2).some(p => p.character === line.speaker))
@@ -392,6 +400,14 @@ export function planVideo(raw: unknown, persist = true): VideoPlan {
     }
     if (missing.length) throw new Error('scene_render_inputs_unsupported:\n' + missing.join('\n'));
     const files = [...(request.audio ? [request.audio.path] : []),...request.images.map(p=>p.path),...request.shots.flatMap(s=>(s.dialogue ?? []).flatMap(d=>d.voice ? [d.voice.path] : []))];
+    for (const binding of input.shotBindings ?? []) {
+      for (const file of [binding.motionPrefix,binding.performanceAudio]) {
+        if (!file) continue;
+        if (!path.isAbsolute(file) || fs.statSync(file).size > 32 * 1024 * 1024)
+          throw new Error('scene_render_guide: supply an absolute path to a file of at most 32 MiB for ' + binding.shotId);
+        files.push(file);
+      }
+    }
     const inputs = Object.fromEntries(files.map(file=>[file,createHash('sha256').update(fs.readFileSync(file)).digest('hex')]));
     const outputPath = canonical(path.resolve(context.episode,settings.outputPath ?? '.work/video'));
     if (!within(context.episode,outputPath)) throw new Error('video_output_outside_episode');

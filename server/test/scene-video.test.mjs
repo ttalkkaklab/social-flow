@@ -172,7 +172,7 @@ test('EP2 keeps the dolly in one shot and binds Miran’s line, position and ref
     if (pathname === '/v1/uploads') return Response.json({upload_id:file,chunk_size:1048576,chunks:1});
     if (options.method === 'PUT') return Response.json({});
     if (pathname.endsWith('/complete')) return Response.json({file_id:file,uri:'genai-file://'+file});
-    if (pathname === route+'/capabilities') return Response.json({version:1,execution:'per_shot',transitions:['hard_cut']});
+    if (pathname === route+'/capabilities') return Response.json({version:1,execution:'per_shot',transitions:['hard_cut'],motion_prefix:true,timed_dialogue:'supplied_performance'});
     if (pathname === route+'/validate') {
       validated.push(JSON.parse(options.body));
       return Response.json({schema_valid:true, model:'ltx-2.5-22b-distilled', shots:2});
@@ -186,9 +186,12 @@ test('EP2 keeps the dolly in one shot and binds Miran’s line, position and ref
     assert.ok([route+'/requests/scene-'+plan.id,route+'/'+jobId].includes(pathname));
     return Response.json({request_id:'scene-'+plan.id,id:jobId,status:providerStatus});
   };
+  const performanceAudio=path.join(f.dir,'performance.wav'), motionPrefix=path.join(f.dir,'prefix.mp4');
+  fs.writeFileSync(performanceAudio,Buffer.from('fixture-wave'));
+  fs.writeFileSync(motionPrefix,Buffer.from('fixture-motion'));
   const plan = await planManagedVideo({...f.input,sceneRendering:'per_shot',shotBindings:[{
-    shotId:'s0002', keyframes:[{path:'images/trio.png',frame:48}], guidance:{negativePrompt:'captions',guidanceScale:2},
-  }]});
+    motionPrefix,shotId:'s0002', keyframes:[{path:'images/trio.png',frame:48}], guidance:{negativePrompt:'captions',guidanceScale:2},
+  },{shotId:'s0001',performanceAudio}]});
   approveVideo({episode:f.episode,planIds:[plan.id],request:'Generate the two shots under one scene job'});
   const run = () => executeVideo({episode:f.episode,planId:plan.id},()=>assert.fail('unexpected ordinary I2V submission'));
   await assert.rejects(run(), /Lost the response/);
@@ -197,6 +200,8 @@ test('EP2 keeps the dolly in one shot and binds Miran’s line, position and ref
   assert.deepEqual(submitted[0].shots.map(s=>[s.shot_id,s.start_frame,s.end_frame,s.dialogue[0].speaker]),
     [['s0002',0,171,'nephew'],['s0001',171,276,'miran']]);
   assert.equal(submitted[0].shots[1].dialogue[0].frame,171);
+  assert.equal(submitted[0].shots[1].performance_uri,'genai-file://'+file);
+  assert.equal(submitted[0].shots[0].motion_uri,'genai-file://'+file);
   assert.equal(submitted[0].shots[1].transition,'hard_cut');
   assert.deepEqual(submitted[0].shots.map(s=>s.images.map(i=>i.role)),[['start','face','keyframe','end'],['start','face']]);
   assert.equal(submitted[0].shots[0].images[2].frame,48);

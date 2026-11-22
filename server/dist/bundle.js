@@ -111499,6 +111499,8 @@ var sceneShotBindingsSchema = external_exports.array(external_exports.object({
   action: sceneText.optional(),
   keyframes: external_exports.array(external_exports.object({ path: external_exports.string().trim().min(1), frame, strength: external_exports.number().min(0).max(1).optional() }).strict()).min(1).max(7).optional(),
   guidance: external_exports.object({ negativePrompt: sceneText, guidanceScale: external_exports.number().gt(1).max(10) }).strict().optional(),
+  motionPrefix: external_exports.string().trim().min(1).optional().describe("Absolute path to the approved MP4 camera-motion prefix."),
+  performanceAudio: external_exports.string().trim().min(1).optional().describe("Absolute path to a shot-timed 48 kHz stereo PCM WAV."),
   dialogueCues: external_exports.array(external_exports.object({ lineId: external_exports.string().min(1), frame: external_exports.number().int().nonnegative() }).strict()).optional(),
   references: external_exports.array(external_exports.object({ id: external_exports.string().min(1), character: external_exports.string().min(1), role: external_exports.enum(["face", "outfit", "character"]) }).strict()).optional()
 }).strict()).min(1);
@@ -114892,7 +114894,7 @@ import { createHash as createHash10 } from "node:crypto";
 var GENAI_FILE_SCHEME = "genai-file://";
 var GENAI_MSR_INLINE_MAX_BYTES = 8 * 1e3 * 1e3;
 var genaiUploadSettings = { attempts: 4, retryDelayMs: 2e3, chunkTimeoutMs: 12e4 };
-var UPLOAD_TYPES = /* @__PURE__ */ new Set(["image/png", "image/jpeg", "audio/wav", "audio/mpeg", "audio/mp4", "audio/ogg"]);
+var UPLOAD_TYPES = /* @__PURE__ */ new Set(["image/png", "image/jpeg", "audio/wav", "audio/mpeg", "audio/mp4", "audio/ogg", "video/mp4"]);
 var UPLOAD_MAX_BYTES = 32 * 1024 * 1024;
 var GENAI_FILE_GONE = /genai-file not found or expired/;
 var sessionSchema = external_exports.object({
@@ -119149,7 +119151,8 @@ async function inspectSceneInputContract(error2, validation) {
 async function buildSceneWire(scene, model2, resolution2, stageFiles = false, bindings) {
   const attachments = [];
   const shots = scene.shots.map((shot) => {
-    const guidance = bindings?.find((binding) => binding.shotId === shot.shotId)?.guidance;
+    const binding = bindings?.find((item) => item.shotId === shot.shotId);
+    const guidance = binding?.guidance;
     const images = scene.images.filter((image2) => image2.shotId === shot.shotId).map((image2) => ({
       frame: image2.frame,
       role: image2.role,
@@ -119160,6 +119163,8 @@ async function buildSceneWire(scene, model2, resolution2, stageFiles = false, bi
       image_uri: genaiSourceUri(void 0, image2.path)
     }));
     return {
+      ...binding?.motionPrefix ? { motion_uri: "" } : {},
+      ...binding?.performanceAudio ? { performance_uri: "" } : {},
       shot_id: shot.shotId,
       start_frame: shot.startFrame,
       end_frame: shot.endFrame,
@@ -119204,7 +119209,7 @@ async function buildSceneWire(scene, model2, resolution2, stageFiles = false, bi
     } } : {}
   };
   let wire = JSON.stringify(body);
-  if (stageFiles || stageTrack || Buffer.byteLength(wire) > GENAI_MSR_INLINE_MAX_BYTES) {
+  if (stageFiles || stageTrack || bindings?.some((b) => b.motionPrefix || b.performanceAudio) || Buffer.byteLength(wire) > GENAI_MSR_INLINE_MAX_BYTES) {
     const staged = /* @__PURE__ */ new Map();
     const stageBytes = async (bytes, mime, role, frame2, shotId) => {
       const sha2563 = createHash15("sha256").update(bytes).digest("hex");
@@ -119216,6 +119221,9 @@ async function buildSceneWire(scene, model2, resolution2, stageFiles = false, bi
     };
     const stage = (uri, role, frame2, shotId) => stageBytes(Buffer.from(uri.slice(uri.indexOf(",") + 1), "base64"), uri.slice(5, uri.indexOf(";")), role, frame2, shotId);
     for (const shot of shots) {
+      const binding = bindings?.find((b) => b.shotId === shot.shot_id);
+      if (binding?.performanceAudio) shot.performance_uri = await stageBytes(readFileSync20(binding.performanceAudio), "audio/wav", "performance_audio", shot.start_frame, shot.shot_id);
+      if (binding?.motionPrefix) shot.motion_uri = await stageBytes(readFileSync20(binding.motionPrefix), "video/mp4", "motion_prefix", shot.start_frame, shot.shot_id);
       for (const image2 of shot.images) image2.image_uri = await stage(image2.image_uri, image2.role, image2.frame, shot.shot_id);
       for (const line of shot.dialogue ?? []) if (line.voice_uri)
         line.voice_uri = await stage(line.voice_uri, "voice_reference", line.frame ?? shot.start_frame, shot.shot_id);
@@ -120205,6 +120213,11 @@ async function checkCompletedMedia(plan2, jobId) {
 async function validateShotRenderPlan(plan2) {
   const capabilities = await requestGenai("GET", sceneRoute + "/capabilities", void 0, 15e3);
   external_exports.object({ version: external_exports.literal(1), execution: external_exports.literal("per_shot"), transitions: external_exports.array(external_exports.string()).refine((values) => values.includes("hard_cut")) }).parse(capabilities);
+  const guides = external_exports.object({ motion_prefix: external_exports.boolean().optional(), timed_dialogue: external_exports.string().nullish() }).parse(capabilities);
+  for (const binding of plan2.shotBindings ?? []) {
+    if (binding.motionPrefix && !guides.motion_prefix || binding.performanceAudio && guides.timed_dialogue !== "supplied_performance")
+      throw new Error("scene_render_guide: " + binding.shotId + " requests an unavailable performance or motion guide");
+  }
   if (plan2.sceneRequest?.audio) {
     const mode = plan2.sceneRequest.audio.mode ?? "conditioning";
     const contract2 = external_exports.object({ scene_audio_modes: external_exports.record(external_exports.string()) }).safeParse(capabilities);
@@ -120305,6 +120318,7 @@ function planVideo(raw, persist = true) {
     bindRegisteredPanels(request, context2.episode, context2.board);
     const missing = [];
     for (const shot2 of request.shots) {
+      const binding = input.shotBindings?.find((b) => b.shotId === shot2.shotId);
       const at = shot2.shotId + "@" + shot2.startFrame;
       if (!shot2.framing || !shot2.action) missing.push(at + " direction: supply framing and action");
       if (shot2.transition !== "open" && shot2.transition !== "hard_cut") missing.push(at + " transition: " + shot2.transition);
@@ -120314,6 +120328,8 @@ function planVideo(raw, persist = true) {
         missing.push(at + " " + p.role + ": " + (conditioned ? "A2V cannot bind subject references" : "individual reference strength is unsupported"));
       for (const line of shot2.dialogue ?? []) {
         const label = shot2.shotId + "@" + (line.frame ?? shot2.startFrame) + " " + line.lineId + " " + line.speaker;
+        if (line.frame !== void 0 && !binding?.performanceAudio)
+          missing.push(label + " performance_audio: supply a timed WAV to lock speech to the opening frame");
         if (line.warnings?.length || line.delivery === "voiceover")
           missing.push(label + " voice: " + (line.warnings?.join(" ") ?? line.delivery));
         if (line.voice && !subjects.slice(0, 2).some((p) => p.character === line.speaker))
@@ -120322,6 +120338,14 @@ function planVideo(raw, persist = true) {
     }
     if (missing.length) throw new Error("scene_render_inputs_unsupported:\n" + missing.join("\n"));
     const files3 = [...request.audio ? [request.audio.path] : [], ...request.images.map((p) => p.path), ...request.shots.flatMap((s2) => (s2.dialogue ?? []).flatMap((d) => d.voice ? [d.voice.path] : []))];
+    for (const binding of input.shotBindings ?? []) {
+      for (const file of [binding.motionPrefix, binding.performanceAudio]) {
+        if (!file) continue;
+        if (!path22.isAbsolute(file) || fs18.statSync(file).size > 32 * 1024 * 1024)
+          throw new Error("scene_render_guide: supply an absolute path to a file of at most 32 MiB for " + binding.shotId);
+        files3.push(file);
+      }
+    }
     const inputs3 = Object.fromEntries(files3.map((file) => [file, createHash17("sha256").update(fs18.readFileSync(file)).digest("hex")]));
     const outputPath = canonical2(path22.resolve(context2.episode, settings.outputPath ?? ".work/video"));
     if (!within(context2.episode, outputPath)) throw new Error("video_output_outside_episode");

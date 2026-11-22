@@ -48431,6 +48431,8 @@ var sceneShotBindingsSchema = external_exports.array(external_exports.object({
   action: sceneText.optional(),
   keyframes: external_exports.array(external_exports.object({ path: external_exports.string().trim().min(1), frame, strength: external_exports.number().min(0).max(1).optional() }).strict()).min(1).max(7).optional(),
   guidance: external_exports.object({ negativePrompt: sceneText, guidanceScale: external_exports.number().gt(1).max(10) }).strict().optional(),
+  motionPrefix: external_exports.string().trim().min(1).optional().describe("Absolute path to the approved MP4 camera-motion prefix."),
+  performanceAudio: external_exports.string().trim().min(1).optional().describe("Absolute path to a shot-timed 48 kHz stereo PCM WAV."),
   dialogueCues: external_exports.array(external_exports.object({ lineId: external_exports.string().min(1), frame: external_exports.number().int().nonnegative() }).strict()).optional(),
   references: external_exports.array(external_exports.object({ id: external_exports.string().min(1), character: external_exports.string().min(1), role: external_exports.enum(["face", "outfit", "character"]) }).strict()).optional()
 }).strict()).min(1);
