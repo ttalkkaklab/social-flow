@@ -7,6 +7,13 @@ const { evaluateWindowScript } = require('./scenes-vm.js');
 const { videoLines } = require('../storyboard/references/structure-contract.js');
 const hash = value => crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
 
+class MissingSceneDirection extends Error {
+  constructor(members, selection, board) {
+    super('scene_video_direction_missing: author videoDirection with story_scene');
+    Object.assign(this, { members, selection, board });
+  }
+}
+
 function readVideoContext(episode, shotId, sceneNo) {
   const root = fs.realpathSync(episode);
   const boardFile = path.join(root, 'storyboard/scenes.js');
@@ -33,13 +40,13 @@ function readVideoContext(episode, shotId, sceneNo) {
   let shot = first;
   let timed = false;
   if (scene) {
-    if (!scene.videoDirection) throw new Error('scene_video_direction_missing: author videoDirection with story_scene');
     if (members.some(s => s.shot?.render?.mode && s.shot.render.mode !== 'generated_video'))
       throw new Error('scene_video_mixed_media: keep non-generated material on its authored edit route');
     if (members.some(s => JSON.stringify(choice(s).selection) !== JSON.stringify(selection)))
       throw new Error('scene_video_selection_conflict: the scene members select different video models or operations');
     if (members.some(s => !s.id || !Number.isFinite(s.duration) || s.duration <= 0))
       throw new Error('scene_video_timing: each member needs a stable shot id and a positive duration');
+    if (!scene.videoDirection) throw new MissingSceneDirection(members, selection, board);
     const visual = first.visual ?? {};
     const positions = scene.videoDirection.openingPositions;
     if (!Array.isArray(positions)) throw new Error('openingPositions: describe each character in the opening frame');
@@ -122,4 +129,4 @@ function readVideoContext(episode, shotId, sceneNo) {
       budget: production.videoBudgetUsd, approval: production.approval, maxAttempts: production.maxAttempts }),
     lines: videoLines(shot), production, board, shot };
 }
-module.exports = { readVideoContext };
+module.exports = { readVideoContext, MissingSceneDirection };

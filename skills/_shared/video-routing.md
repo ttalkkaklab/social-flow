@@ -41,16 +41,24 @@ Write one shot per camera setup. A cut from a wide to a hand insert, or a revers
 
 `videoDirection.audio` names one scene-length file with any lead-in mixed in. Its `cues` pair scene frame numbers with actions. Frame 42 at 24 fps means 1.75 seconds from the beginning of the file. A post-production music selection alone does not request model conditioning. Omit `args.prompt` and `args.shots`. The planner compiles the scene from every card. It collects existing frame pairs, intermediate pins and video references as well as explicit timeline entries. Conflicting temporal pins require a storyboard correction.
 
+Keep each spoken line in its card’s narration. To start a reply on the cut, add
+`timeline.dialogueCues:[{lineId:"s0001-l1",frame:171}]` to the incoming card.
+Its `timeline.openingPositions` uses that card’s subject image numbers. The
+scene manifest keeps each line with its shot interval, cast ID and selected
+voice sample. Native speech without an explicit cue keeps model pacing.
+The I2V refusal includes the deployed endpoint’s input fields when discovery
+succeeds. A refused request has no reservation or provider job.
+
 A single continuous shot with intermediate guides selects the indexed keyframe route on Desktop or direct ASTRA when the saved model leaves the operation open. An explicit operation still governs. Veo Standard and Fast accept up to three scene-wide subject pictures in an eight-second reference-only request; the Lite model has no reference route. Keep the cast’s opening positions and later entrances in the scene direction.
 
-**LTX contracts checked 2026-11-21**
+**LTX contracts checked 2026-11-22**
 
 | Operation | Images and cuts | Audio accepted in the same request |
 |---|---|---|
 | GenAI v2 T2V | Prompt plus 2–4 optional shot descriptions. Later shots can request a hard cut in text. No per-shot frame address or image. | Generated sound or mute. |
-| GenAI v2 I2V, dev | First/last plus the same shot descriptions. No intermediate image slots. | Generated sound or mute. |
-| GenAI v2 I2V, distilled | First/last and, with explicit duration and MSR image conditioning, subject references (up to four subjects plus one background). The two leading subjects can carry voice samples with backend support. Reference indices identify subjects. | Generated sound or mute. Voice samples condition identity. No supplied soundtrack slot. |
-| GenAI v2 A2V, dev | Optional first image and an optional last with the first. No shot descriptions, intermediate pins, reference panels or frame-addressed cut boundaries. | One supplied track sets the duration. |
+| GenAI v2 I2V, dev | Up to eight temporal images including endpoints. Shot descriptions go into the prompt. | Generated sound or mute. |
+| GenAI v2 I2V, distilled | Up to eight temporal images including endpoints. With explicit length and MSR image conditioning the same generation can use four subject references and one background. The two leading subjects can carry voice samples with backend support. Each subject slot spans the scene. | Generated sound or mute. Voice samples condition identity. |
+| GenAI v2 A2V, dev | Up to eight temporal images including endpoints. The renderer conditions on their frame indices. | One supplied track sets the duration. |
 | Desktop T2V / I2V / A2V | T2V takes text. I2V takes first/last. A2V takes an optional first image. None declares timed cuts or subject slots. | A2V takes one supplied track. |
 | Desktop keyframes / direct ASTRA keyframes | Respectively 1–10 / 2–8 images with frame indices. Temporal conditioning interpolates within a shot. Neither operation exposes a frame-addressed hard cut. | No supplied track in the keyframe request. Desktop also requires an active compatible offering. |
 
@@ -63,8 +71,8 @@ image and four subject references plus one background. `video_plan` keeps the
 temporal frames distinct from `references` and hashes every submitted local
 image. Execution checks the gateway's `image_conditioning` MSR capability
 before upload/submission; an unsupported combination never drops references or
-switches the saved model. Dev and the direct Desktop adapter take start/end
-only. See [GenAI image conditioning](astra-genai.md).
+switches the saved model. Dev takes temporal pins. Direct Desktop I2V takes
+the two endpoints. See [GenAI image conditioning](astra-genai.md).
 
 Character speech also uses the [voice continuity contract](../produce/references/voice-continuity.md).
 The planner adds stable acoustic descriptions and, on audible Seedance reference

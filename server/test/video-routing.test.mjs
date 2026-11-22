@@ -727,8 +727,23 @@ test('sceneNo refuses a frame-addressed cut on I2V and preserves ordered dialogu
  }
  f.save();
  const input={episode:f.episode,sceneNo:1,requestId:'whole-scene',args:{reserveUsd:0.1}};
- assert.throws(()=>planVideo(input),error => error.missing.some(m => m.shotId === 's2' && m.input === 'transition' && m.frame === 96) &&
-   !error.missing.some(m => m.input === 'image'));
+ assert.throws(()=>planVideo(input),error => {
+   assert.ok(error.missing.some(m => m.shotId === 's2' && m.input === 'transition' && m.frame === 96));
+   assert.ok(!error.missing.some(m => m.input === 'image'));
+   for (const [i,card] of error.sceneRequest.shots.entries()) {
+     const speaker = positions[1-i].character;
+     assert.equal(card.dialogue[0].text,words[i]);
+     assert.equal(card.dialogue[0].voice.path,path.join(dir,speaker+'.wav'));
+     assert.ok(error.missing.some(m=>m.input==='voice' && m.shotId===card.shotId && m.speaker===speaker));
+   }
+   return true;
+ });
+ delete f.board.STRUCTURE.scenes[0].videoDirection;
+ f.save();
+ assert.throws(()=>planVideo(input),error=>error.sceneRequest.cuts[0].frame===96 &&
+   error.missing.some(m=>m.role==='scene_direction') && error.missing.some(m=>m.lineId==='l1'));
+ f.board.STRUCTURE.scenes[0].videoDirection=direction;
+ f.save();
  assert.throws(()=>planVideo({...input,sceneNo:undefined,shotId:'s2'}),/scene_video_scope/);
  // The older single-camera board has one shot with both turns and both opening reference panels.
  const [first, second] = f.board.SCENES;

@@ -108,6 +108,7 @@ export function sceneInputCapabilities(tool: string) {
   return {
     fpsField: schemaFields.includes('frameRate') ? 'frameRate' : schemaFields.includes('fps') ? 'fps' : null,
     frameAccurateCuts: false, timedImages: ['astra_keyframe_video','astra_genai_desktop_keyframes','astra_genai_img2video','astra_genai_audio2video'].includes(tool),
+    shotScopedReferences: false, frameAddressedNativeDialogue: false,
     openingImage: Boolean(fields), endingImage: Boolean(fields?.[1]),
     shotDescriptions: ['astra_genai_text2video','astra_genai_img2video'].includes(tool) ? 'gateway_prompt_only' : 'prompt',
     sceneAudio: ['astra_genai_audio2video','astra_genai_desktop_audio2video','astra_audio2video','ltx_api_audio2video'].includes(tool),

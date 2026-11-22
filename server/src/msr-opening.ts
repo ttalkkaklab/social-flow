@@ -15,6 +15,10 @@ export const shotTimelineSchema = z.object({
   startFrame: frame, endFrame: frame.describe('Exclusive end, in zero-based scene frames.'),
   transition: z.enum(['open', 'hard_cut', 'dissolve', 'fade']),
   framing: sceneText, action: sceneText,
+  openingPositions: openingPositionsSchema.optional().describe('Positions at this shot opening. Image numbers refer to this shot’s subject references.'),
+  dialogueCues: z.array(z.object({
+    lineId: z.string().trim().min(1), frame,
+  }).strict()).optional().describe('Exact speech onsets in scene frames for authored narration lines. Omit for model-paced speech.'),
   images: z.array(z.object({
     path: z.string().trim().min(1), frame, role: z.enum(['start', 'keyframe', 'end', 'face', 'outfit']),
     character: z.string().trim().min(1).optional(), cue: sceneText.optional(),
@@ -23,6 +27,12 @@ export const shotTimelineSchema = z.object({
 }).strict().superRefine((shot, ctx) => {
   const issue = (message: string) => ctx.addIssue({ code: 'custom', message });
   if (shot.startFrame >= shot.endFrame) issue('Shot needs a positive frame interval');
+  const lines = new Set<string>();
+  for (const cue of shot.dialogueCues ?? []) {
+    if (cue.frame < shot.startFrame || cue.frame >= shot.endFrame) issue('Dialogue cue outside its shot: ' + cue.lineId);
+    if (lines.has(cue.lineId)) issue('Repeated dialogue cue: ' + cue.lineId);
+    lines.add(cue.lineId);
+  }
   for (const image of shot.images ?? []) {
     if (image.frame < shot.startFrame || image.frame >= shot.endFrame) issue('Image frame outside its shot: ' + image.path);
     if (image.role === 'start' && image.frame !== shot.startFrame) issue('Start image must anchor the first frame of its shot');

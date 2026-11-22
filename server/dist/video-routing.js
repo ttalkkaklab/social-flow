@@ -1,4 +1,4 @@
-import { prepareSceneRequest, bindSceneAdapter, checkSceneDeployment, sceneImageBindings } from './scene-video.js';
+import { prepareSceneRequest, bindSceneAdapter, checkSceneDeployment, compileSceneTimeline, mapSceneInputs, sceneImageBindings, sceneTimelineWords } from './scene-video.js';
 import { desktopGatewayKey } from './astra-genai-client.js';
 import { openingPrompt, sceneVideoDirectionSchema } from './msr-opening.js';
 import { buildFasth3Body, fasth3OmniSchema } from './fasth3-omni.js';
@@ -40,7 +40,22 @@ const shared = fileURLToPath(new URL('../../skills/_shared/video-selection.js', 
 const modelSettings = fileURLToPath(new URL('../../skills/_shared/model-settings.js', import.meta.url));
 /** Channel assets (intro clips, logo motion, growth images) live here; they have no episode or shot. */
 const CHANNEL_ASSET_RE = /^data\/[a-z0-9][a-z0-9-]*\/assets(\/|$)/;
-export const routingContext = (episode, shotId, sceneNo) => load(shared).readVideoContext(episode, shotId, sceneNo);
+export function routingContext(episode, shotId, sceneNo) {
+    const reader = load(shared);
+    try {
+        return reader.readVideoContext(episode, shotId, sceneNo);
+    }
+    catch (error) {
+        if (sceneNo === undefined || !(error instanceof reader.MissingSceneDirection))
+            throw error;
+        // Older storyboards still have ordered cards. Show their inputs in the refusal
+        // without inventing scene direction, approving a plan or rewriting the board.
+        const timeline = compileSceneTimeline(error.members, {}, episode, error.board);
+        const request = { ...timeline, sceneNo, prompt: sceneTimelineWords(timeline, {}) };
+        mapSceneInputs(request, selectedVideoTool(error.selection) ?? error.selection.engine, error.selection.model, [{ input: 'direction', role: 'scene_direction', shotId: timeline.shotIds[0], frame: 0, reason: error.message }]);
+        throw error;
+    }
+}
 function selectedVideoTool(selection, operation = selection.operation) {
     return Object.entries(VIDEO_ADAPTERS).find(([name, a]) => a.engine === selection.engine && a.operation === operation &&
         (a.engine !== 'mlx' || !selection.model || localVideoStrategy(name)?.acceptsModel(selection.model)))?.[0];
@@ -370,7 +385,7 @@ export function planVideo(raw, persist = true) {
     const members = context.sceneMembers ?? [];
     const bindTurns = Boolean(bindDialogueSeparately || tool === 'astra_genai_msr' || tool && VENDOR_REFERENCE_TOOLS.includes(tool));
     const bindOpening = tool === 'astra_genai_msr' || tool === 'astra_genai_img2video' && subjectReferences;
-    const prepared = scene && context.timed ? prepareSceneRequest(context.sceneNo, members, scene, context.episode, lines, { bindDialogue: bindTurns, bindOpening, suffix: silentSuffix }, request => bindSceneAdapter(request, tool ?? 'host_external', selection.model, shot, input.args, context.episode)) : undefined;
+    const prepared = scene && context.timed ? prepareSceneRequest(context.sceneNo, members, scene, context.episode, lines, { bindDialogue: bindTurns, bindOpening, suffix: silentSuffix }, request => bindSceneAdapter(request, tool ?? 'host_external', selection.model, shot, input.args, context.episode), context.board) : undefined;
     const sceneRequest = prepared?.request;
     const sceneCamera = prepared?.camera ?? (scene && sceneCameraDirection(members, scene.camera));
     const timedImages = prepared?.mapped.timedImages;

@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { prepareSceneRequest, mapSceneInputs } from '../dist/scene-video.js';
+import { inspectSceneInputContract, prepareSceneRequest, mapSceneInputs, SceneInputError } from '../dist/scene-video.js';
 import { readCapture, captureScene } from './fixtures/scene-capture.mjs';
 import { planManagedVideo, planVideo } from '../dist/video-routing.js';
 import { config } from '../dist/config.js';
@@ -101,6 +101,87 @@ test('one-take endpoint board reaches the A2V body with a single audio file and 
  first.timeline.images.push({role:'face',frame:0,path:'images/duo.png',character:'mai-an'});
  f.save();
  assert.throws(()=>planVideo(f.input),err=>err.missing.some(m=>m.role==='face' && m.shotId===first.id));
+});
+
+test('EP2 keeps the dolly in one shot and binds Miran’s line, position and references at the cut', async t => {
+  const f = busking(t);
+  f.members.splice(2);
+  delete f.scene.audio;
+  const [accusation, answer] = f.members;
+  const people = [
+    {character:'nephew', images:[1], position:'Seated at the far desk on the right.'},
+    {character:'miran', images:[], position:'Standing at the near left witness rail.'},
+  ];
+  f.scene.openingPositions = people;
+  const setups = [
+    [accusation, 's0002', 0, 171, 'nephew', '그 건물 달라고 했죠?', 'opening', 'solo', people, 'He hits his desk once and rises. Dolly forward and settle before the question.'],
+    [answer, 's0001', 171, 276, 'miran', '이 백억짜리 유언장, 제가 찢었습니다.', 'duo', 'trio',
+      [{character:'miran', images:[1], position:'Hands on the witness rail, facing the bench.'}], 'She raises her eyes from the rail.'],
+  ];
+  for (const [card,id,start,end,speaker,words,opening,face,positions,action] of setups) {
+    card.id = id;
+    card.duration = (end-start)/24;
+    card.visual.video.model = 'ltx-2.5-22b-distilled';
+    card.visual.video.promptSource = {sound:start ? 'Quiet courtroom room tone.' : 'A single desk thud and chair scrape.'};
+    card.timeline = {startFrame:start,endFrame:end,transition:start ? 'hard_cut' : 'open',framing:'Eye level.',action,
+      openingPositions:positions, images:[{role:'start',frame:start,path:'images/'+opening+'.png'},
+        {role:'face',character:speaker,frame:start,path:'images/'+face+'.png'}]};
+    card.narration = [{id:id+'-l1',speaker,tts:words,delivery:'on_screen'}];
+  }
+  accusation.timeline.images.push({role:'end', frame:170,path:'images/ending.png'});
+  answer.timeline.dialogueCues = [{lineId:'s0001-l1',frame:171}];
+  f.save();
+  const {request, mapped} = prepareSceneRequest(1,f.members,f.scene,f.episode,f.members.flatMap(m=>m.narration),
+    {bindDialogue:false,bindOpening:false,suffix:''},captureScene);
+  const wire = await readCapture(mapped);
+  assert.deepEqual(wire.cuts,[{from:'s0002',to:'s0001',frame:171,transition:'hard_cut'}]);
+  assert.deepEqual(wire.images.map(p=>[p.shotId,p.role,p.frame]),[
+    ['s0002','start',0],['s0002','face',0],['s0002','end',170],['s0001','start',171],['s0001','face',171],
+  ]);
+  for (const [i, shot] of wire.shots.entries()) {
+    assert.equal(shot.dialogue[0].speaker, setups[i][4]);
+    assert.equal(shot.dialogue[0].text, setups[i][5]);
+    assert.deepEqual(shot.openingPositions,setups[i][8]);
+    assert.equal(wire.prompt.split(shot.dialogue[0].text).length,2);
+    assert.equal(wire.prompt.split(shot.sound).length,2);
+  }
+  assert.equal(wire.shots[1].dialogue[0].frame,171);
+  assert.throws(()=>planVideo(f.input), error=>{
+    assert.deepEqual(error.sceneRequest,request);
+    assert.deepEqual(error.missing.filter(m=>m.input==='reference').map(m=>m.frame),[0,171]);
+    assert.ok(error.missing.some(m=>m.lineId==='s0001-l1' && m.frame===171 && m.speaker==='miran'));
+    return true;
+  });
+  assert.equal(fs.existsSync(path.join(f.episode,'.work/video-routing/plans')),false);
+  answer.timeline.dialogueCues[0].lineId='missing-line'; f.save();
+  assert.throws(()=>planVideo(f.input),/scene_dialogue_timing/);
+});
+
+test('a refused I2V scene reads the selected endpoint and renderer contract without submitting media',async t=>{
+  const key=config.astraGenaiApiKey, fetch=globalThis.fetch;
+  config.astraGenaiApiKey='fixture';
+  t.after(()=>{config.astraGenaiApiKey=key;globalThis.fetch=fetch});
+  const control={descriptions:'prompt',frame_accurate_cuts:false,shot_scoped_references:false,frame_addressed_native_dialogue:false};
+  const schema=name=>({$ref:'#/components/schemas/'+name});
+  const list=name=>({type:'array',items:schema(name)});
+  const definition={paths:{'/v1/ltx/v2/image-to-video':{post:{requestBody:{content:{'application/json':{schema:schema('Input')}}}}}},
+    components:{schemas:{Input:{properties:{shots:{anyOf:[{type:'null'},list('Shot')]},keyframes:list('Pin'),references:list('Subject')}},
+      Shot:{properties:{description:{},transition:{}}}, Pin:{properties:{frame_idx:{}}},Subject:{properties:{audio_uri:{}}}}}};
+  const routes=[];
+  globalThis.fetch=async(url,options)=>{
+    routes.push(new URL(url).pathname);
+    assert.equal(options.method,'GET'); assert.equal(options.body,undefined);
+    return Response.json(routes.at(-1)==='/openapi.json'?definition:{pipelines:[{pipeline:'msr',shot_control:control}]});
+  };
+  const refusal=new SceneInputError('astra_genai_img2video',{images:[{role:'face'}]},[],'ltx-2.5-22b-distilled');
+  const contract=await inspectSceneInputContract(refusal);
+  assert.deepEqual(routes.sort(),['/openapi.json','/v1/ltx/v2/capabilities']);
+  assert.deepEqual(contract.shotControl,control);
+  assert.deepEqual(contract.shotFields,['description','transition']);
+  assert.deepEqual(contract.temporalImageFields,['frame_idx']);
+  assert.deepEqual(contract.referenceFields,['audio_uri']);
+  globalThis.fetch=async()=>Response.json({},{status:503});
+  assert.equal((await inspectSceneInputContract(refusal)).status,'unverified');
 });
 
 test('Desktop keyframes receive each asset index only on an active compatible deployment',async t=>{

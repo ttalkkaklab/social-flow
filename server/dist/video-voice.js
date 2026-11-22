@@ -70,7 +70,7 @@ export function resolveCharacterVoice(character, context, warnings) {
     }
     return resolved;
 }
-function voiceReference(character, context, warnings) {
+export function voiceReference(character, context, warnings) {
     const declared = object(character.voiceReference);
     if (character.voiceReferenceWarning && !declared.path) {
         warnings.push(`${character.id}: ${character.voiceReferenceWarning}; restore the selected sample instead of substituting an old voice.wav.`);
