@@ -66,7 +66,7 @@ test('a frame source must lie inside its video', t => {
   assert.equal(r.decision.source.path, 'output/video/video.mp4');
 });
 
-test('render makes the platform files, read tracks the source, a legacy board keeps its cover.jpg', { skip: !chromePath() && 'no Chrome' }, async t => {
+test('a shot cover reaches the library and reports a changed source', { skip: !chromePath() && 'no Chrome' }, async t => {
   const { dir, sb, channel } = episode(t, { inChannel: true });
   writeFileSync(join(sb, 'storyboard.html'), '<html><head></head><body></body></html>');
   writeFileSync(join(sb, 'storyboard.md'), '# EP1 · Example');
@@ -91,12 +91,6 @@ test('render makes the platform files, read tracks the source, a legacy board ke
   assert.equal(stale.publish.stale, true);
   await assert.rejects(renderCover(sb), /cover_source_changed/);
 
-  const legacy = episode(t, { storyFirst: false });
-  setCover(legacy.sb, decision());
-  const r = await renderCover(legacy.sb);
-  assert.deepEqual(r.render.copied, []);
-  assert.equal(existsSync(join(legacy.dir, 'output', 'video', 'cover.jpg')), false);
-  assert.ok(JSON.parse(readFileSync(join(legacy.dir, 'output', 'cover', 'render.json'), 'utf8')).files.length >= 1);
 });
 
 test('the configuration stays a literal whatever the copy holds', () => {
@@ -120,14 +114,18 @@ test('a JPEG is fitted under its byte limit, or refused and removed', t => {
   assert.equal(existsSync(out), false);
 });
 
-test('render draws copy with $ patterns from a frame source; read never follows a path out of the episode', { skip: !chromePath() && 'no Chrome' }, async t => {
-  const { dir, sb } = episode(t);
+test('legacy frame covers render literal copy, keep the existing cover and reject an edited path', { skip: !chromePath() && 'no Chrome' }, async t => {
+  const { dir, sb } = episode(t, { storyFirst: false });
   mkdirSync(join(dir, 'output', 'video'), { recursive: true });
   execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'testsrc=s=1080x1920:d=1:r=10', '-pix_fmt', 'yuv420p', join(dir, 'output', 'video', 'video.mp4')]);
+  const existing = join(dir, 'output', 'video', 'cover.jpg');
+  writeFileSync(existing, 'existing cover');
   setCover(sb, decision({ source: { kind: 'frame', video: 'output/video/video.mp4', seconds: 0.5 }, copy: { text: "$& $' 끝", emphasis: '끝' } }));
   const { render } = await renderCover(sb);
   assert.ok(render.measurements['9x16'].fontPx > 0);
   assert.equal(render.measurements['9x16'].minTileFontPx, 10);
+  assert.deepEqual(render.copied, []);
+  assert.equal(readFileSync(existing, 'utf8'), 'existing cover');
   const file = join(sb, 'cover.json');
   const edited = JSON.parse(readFileSync(file, 'utf8'));
   edited.source.path = '../../../../../../etc/hosts';
@@ -181,14 +179,12 @@ test('long-form renders the thumbnail and its Test & Compare variants', { skip: 
 
   // A render that fails part-way leaves the previous files, render.json and output/video copy as they were.
   execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=green:s=1920x1080', '-frames:v', '1', join(sb, 'images', 's0002.png')]);
-  setCover(sb, decision({ copy: null, variants: [{ source: { kind: 'shot', shotId: 's0002' } }] }));
-  await renderCover(sb);
-  const before = ['thumbnail-16x9.jpg', 'render.json'].map(n => readFileSync(join(out, n), 'utf8'));
+  const before = ['thumbnail-16x9.jpg', 'render.json'].map(n => readFileSync(join(out, n)));
   const copyBefore = readFileSync(join(dir, 'output', 'video', 'thumbnail.jpg'));
   setCover(sb, decision({ copy: { text: '바뀐 문구' }, variants: [{ source: { kind: 'shot', shotId: 's0002' } }] }));
   writeFileSync(join(sb, 'images', 's0002.png'), readFileSync(join(sb, 'images', 's0001.png')));
   await assert.rejects(renderCover(sb), /cover_source_changed/);
-  assert.deepEqual(['thumbnail-16x9.jpg', 'render.json'].map(n => readFileSync(join(out, n), 'utf8')), before);
+  assert.deepEqual(['thumbnail-16x9.jpg', 'render.json'].map(n => readFileSync(join(out, n))), before);
   assert.deepEqual(readFileSync(join(dir, 'output', 'video', 'thumbnail.jpg')), copyBefore);
 
   // The board's format changed under the decision.

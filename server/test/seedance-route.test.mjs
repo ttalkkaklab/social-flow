@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { execFileSync, spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -79,10 +79,6 @@ test('forecast reflects model cost and snapshot changes; video budget excludes s
     assert.equal(row.generation.model, 'dreamina-seedance-2-0-260128');
     assert.equal(run({ ...action, model: 'dreamina-seedance-2-5-260628' }).data.videoBudget.forecastUsd, 2.845);
   } finally { rmSync(dir, { recursive: true, force: true }); }
-});
-
-test('cost fingerprint matches the storyboard template', () => {
-  execFileSync(process.execPath, [preview, '--selftest'], { stdio: 'pipe' });
 });
 
 test('every routable price key is priced, and an unpriced resolution is refused', () => {

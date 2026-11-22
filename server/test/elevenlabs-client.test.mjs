@@ -151,7 +151,7 @@ describe('wavDurationSeconds', () => {
   });
 
   it('returns undefined for anything that is not RIFF/WAVE (mp3, truncated, junk)', () => {
-    assert.equal(wavDurationSeconds(Buffer.from('ID3  ')), undefined);
+    assert.equal(wavDurationSeconds(Buffer.from('ID3\x03\x00\x00')), undefined);
     assert.equal(wavDurationSeconds(Buffer.from('RIFF')), undefined);
     assert.equal(wavDurationSeconds(Buffer.alloc(0)), undefined);
     // RIFF/WAVE with no data chunk
@@ -272,7 +272,9 @@ describe('ElevenLabs provider boundary (mocked fetch)', () => {
     } finally { globalThis.fetch = savedFetch; }
   });
 
-  it('provider refusal returns an error without switching models or endpoints', async () => {
+  it('provider refusal returns an error without switching models or endpoints', async t => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'eleven-refusal-'));
+    t.after(() => rmSync(dir, { recursive: true, force: true }));
     const savedFetch = globalThis.fetch;
     const calls = [];
     globalThis.fetch = async (url, init) => {
@@ -280,7 +282,7 @@ describe('ElevenLabs provider boundary (mocked fetch)', () => {
       return new Response(JSON.stringify({ detail: { status: 'model_not_found', message: 'Model unavailable' } }), { status: 400 });
     };
     try {
-      const result = await generateElevenLabsSpeech(elevenLabsGenerateSchema.parse({ text: '안녕', voiceId: VOICE }));
+      const result = await generateElevenLabsSpeech(elevenLabsGenerateSchema.parse({ text: '안녕', voiceId: VOICE, outputPath: dir }));
       assert.equal(result.success, false);
       assert.match(result.error, /eleven_v4/);
       assert.equal(calls.length, 1);
