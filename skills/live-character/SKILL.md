@@ -41,7 +41,8 @@ To prepare these assets earlier and list their paths, run
 `node server/dist/character-live.bundle.js prepare-idle --config FILE`. This command
 needs no streaming destination. The normal broadcast start also prepares the set.
 The encoder opens the destination after validating all ten clips and the opening.
-It trims eight columns from each side of the model’s 736×1280 canvas for 720×1280 playout.
+During the YouTube ingest handshake the encoder plays a listening clip. The opening
+starts at a clip boundary once YouTube reports live. The encoder trims eight columns from each side of the model’s 736×1280 canvas for 720×1280 playout.
 
 Use the production ASTRA video API (`ASTRA_VIDEO`, optional `ASTRA_VIDEO_URL`) for
 listening clips. For speaking frames set `SOCIAL_FLOW_LIVE_GPU_HOST` to the production

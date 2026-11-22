@@ -32813,6 +32813,13 @@ async function main() {
   };
   let ingestLive = false, chatReads = 0, probeId = "", probeSpoken = false, finalState = "", endedEarly = false;
   const take = () => {
+    if (ready[0]?.source === "opening") {
+      if (api && !ingestLive) {
+        if (Date.now() >= acceptingUntil) throw Error("YouTube did not report live before the session deadline");
+        return void 0;
+      }
+      return ready.shift();
+    }
     const viewer = ready.findIndex(
       (utterance) => utterance.source === "youtube" || utterance.source === "tiktok"
     );
