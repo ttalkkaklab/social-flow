@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { bindRegisteredPanels, inspectSceneInputContract, prepareSceneRequest, mapSceneInputs, SceneInputError } from '../dist/scene-video.js';
 import { readCapture, captureScene } from './fixtures/scene-capture.mjs';
 import { approveVideo, executeVideo, planManagedVideo, planVideo, videoStatus } from '../dist/video-routing.js';
@@ -186,11 +187,12 @@ test('EP2 keeps the dolly in one shot and binds Miran’s line, position and ref
     assert.ok([route+'/requests/scene-'+plan.id,route+'/'+jobId].includes(pathname));
     return Response.json({request_id:'scene-'+plan.id,id:jobId,status:providerStatus});
   };
-  const performanceAudio=path.join(f.dir,'performance.wav'), motionPrefix=path.join(f.dir,'prefix.mp4');
-  fs.writeFileSync(performanceAudio,Buffer.from('fixture-wave'));
-  fs.writeFileSync(motionPrefix,Buffer.from('fixture-motion'));
+  const motionPrefix = path.join(f.episode,'camera.mp4'), performanceAudio = path.join(f.episode,'line.wav');
+  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=size=64x64:rate=24','-frames:v','9',motionPrefix]);
+  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','anullsrc=r=48000:cl=stereo','-t','4.375',performanceAudio]);
   const plan = await planManagedVideo({...f.input,sceneRendering:'per_shot',shotBindings:[{
-    motionPrefix,shotId:'s0002', keyframes:[{path:'images/trio.png',frame:48}], guidance:{negativePrompt:'captions',guidanceScale:2},
+    shotId:'s0002', keyframes:[{path:'images/trio.png',frame:48}], guidance:{negativePrompt:'captions',guidanceScale:2},
+    motionPrefix,
   },{shotId:'s0001',performanceAudio}]});
   approveVideo({episode:f.episode,planIds:[plan.id],request:'Generate the two shots under one scene job'});
   const run = () => executeVideo({episode:f.episode,planId:plan.id},()=>assert.fail('unexpected ordinary I2V submission'));
@@ -206,6 +208,8 @@ test('EP2 keeps the dolly in one shot and binds Miran’s line, position and ref
   assert.deepEqual(submitted[0].shots.map(s=>s.images.map(i=>i.role)),[['start','face','keyframe','end'],['start','face']]);
   assert.equal(submitted[0].shots[0].images[2].frame,48);
   assert.deepEqual(submitted[0].shots.map(s=>s.negative_prompt),['captions',undefined]);
+  assert.deepEqual(submitted[0].shots.map(s=>[Boolean(s.motion_uri),Boolean(s.performance_uri)]),[[true,false],[false,true]]);
+  for (const file of [motionPrefix,performanceAudio]) assert.equal(plan.inputs[file],createHash('sha256').update(fs.readFileSync(file)).digest('hex'));
   assert.deepEqual(submitted[0].shots.map(s=>s.opening_positions),setups.map(s=>s[8]));
   await videoStatus({episode:f.episode,requestId,action:'refresh'});
   assert.equal((await videoStatus({episode:f.episode,requestId})).providerId,jobId);
