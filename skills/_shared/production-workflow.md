@@ -17,10 +17,11 @@ Create or resume the episode with `project_manage episode`.
 
 ## The order (user directive, 2026-10-31)
 
-Checks were removed for speed: only the story order and the episode cast (2026-11-01) are
-enforced, and reviews, Blender
-compositions and other checks come back once the quality is known. Spending limits,
-generation authorization and adapter input validation stay. Work in this order:
+The story tools enforce story order and cast readiness. The author completes the required
+[synopsis reality check](../storyboard/references/synopsis-reality-check.md) after drafting or
+revising a synopsis and before handing it over or opening scenes. Independent reviews and
+Blender compositions run on request. Spending limits, generation authorization and adapter
+input validation stay. Work in this order:
 
 1. Characters — identity text (`character_manage`) and sheet images (`character_panel`, which draws
    each panel from the identity's body and face fields; `assets/characters/<id>/`, `panels.json`),
@@ -50,6 +51,7 @@ generation authorization and adapter input validation stay. Work in this order:
    using [shot boundary decisions](../storyboard/references/shot-boundaries.md). Read
    `storyboard_read.boundaryReview` and `videoTiming`, revise unnecessary boundaries, and
    preserve speech/performance/continuity before images. This is authoring, not a new gate.
+   Set shared camera, axis, continuity, lighting and attention with `story_scene.directionDefaults` before the shot images. Set a shot move only where it changes the default.
 5. Props and backgrounds — `SB_DOC.props` and `SB_DOC.locations` with their images.
    Before a prop's description or picture, look up the real thing — the rule or form that
    makes it genuine and saved pictures of actual examples — and record `research` on its
@@ -77,9 +79,10 @@ episode, and `story_scene`/`story_shot` refuse to continue a story-first one, un
 is an existing `assets/characters/<id>/identity.md` (`cast_source_missing`) and every entry
 without `voiceOnly` has its face, front and back panels (`character_panel_missing`). On a
 story-first board `shot_characters` and `shot_dialogue` repeat that check, take the cast from
-`cast.json` alone and refuse a `voiceOnly` character on screen (`cast_voice_only`). Nothing else
-blocks a step. A text-only request stops after step 4, with the cast's panels made first under
-spending authorization; an image request stops after step 6. Missing character media or
+`cast.json` alone and refuse a `voiceOnly` character on screen (`cast_voice_only`). A synopsis-only
+request stops after the reality check. A text-only storyboard request stops after step 4,
+with the cast's panels made first under spending authorization. An image request stops
+after step 6. Missing character media or
 spending authorization is reported, never silently bypassed.
 
 ## Images (step 6)

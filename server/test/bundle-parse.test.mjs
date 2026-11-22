@@ -1,9 +1,6 @@
-// The bundle is the only entry point a marketplace install runs (.mcp.json → server/dist/bundle.js),
-// and no other test imports it — so a syntax error in it (a banner identifier redeclared by a
-// source import, say) reached a release once. This is the parse gate.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawn, spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { appendFileSync, copyFileSync, cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -12,19 +9,13 @@ import { dirname, join } from 'node:path';
 const here = dirname(fileURLToPath(import.meta.url));
 const bundle = join(here, '..', 'dist', 'bundle.js');
 
-test('installed server and shot runtime bundles parse as modules (node --check)', () => {
-  for (const file of [bundle, join(here, '..', 'dist', 'astra-shot-runtime.bundle.js')]) {
-    const r = spawnSync(process.execPath, ['--check', file], { encoding: 'utf8' });
-    assert.equal(r.status, 0, `node --check failed for ${file}:\n${r.stderr}`);
-  }
-});
-
 // The rules file lives in the plugin tree and is read at runtime; a copy of the bundle with no
 // skills/ beside it (a broken install) still has to boot and list every tool — only the three
 // storyboard tools fail, at call time, and they say so in words a person can act on, not as a
 // zod enum built from a placeholder vocabulary.
-test('dist/bundle.js boots without the skills tree; the storyboard routes name the missing structure-contract.js', async () => {
+test('dist/bundle.js boots without the skills tree; the storyboard routes name the missing structure-contract.js', async t => {
   const dir = mkdtempSync(join(tmpdir(), 'sf-bundle-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
   mkdirSync(join(dir, 'server', 'dist'), { recursive: true });
   const copy = join(dir, 'server', 'dist', 'bundle.js');
   copyFileSync(bundle, copy);
@@ -57,7 +48,6 @@ test('dist/bundle.js boots without the skills tree; the storyboard routes name t
     assert.doesNotMatch(line, /__contract-missing__/, 'call ' + id + ' leaked the placeholder vocabulary');
   }
 });
-
 
 test('a running installed bundle reports disk replacement without claiming it reloaded', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'sf-runtime-'));

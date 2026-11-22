@@ -35,6 +35,9 @@
 - [Rising conflict that repeats](#rising-conflict-that-repeats)
 - [Serial episode ending](#serial-episode-ending)
 - [Research before a synopsis](#research-before-a-synopsis)
+- [Scenario 1: Local procedure after drafting](#scenario-1-local-procedure-after-drafting)
+- [Scenario 2: Revised fiction with a fixed ending](#scenario-2-revised-fiction-with-a-fixed-ending)
+- [Scenario 3: An unresolved central claim in autoproduce](#scenario-3-an-unresolved-central-claim-in-autoproduce)
 - [A known secret across three artifacts](#a-known-secret-across-three-artifacts)
 - [Plausible pressure and a fixed ending](#plausible-pressure-and-a-fixed-ending)
 
@@ -284,6 +287,38 @@ The shortlist has genuinely different conflicts and a cooperation example or rel
 counterexample. Timeouts and unread sources stay visible. No fixed search quota, secret
 logging, unrelated episode creation or unsolicited media generation. A supplied settled
 premise without a research request only needs relevant gap checks.
+
+## Scenario 1: Local procedure after drafting
+
+Input: ask for two synopsis options only, set in a real city. Supply background research
+on romance, but let one draft's ending depend on an inherited property passing to a spouse
+on marriage. Baseline: the options are delivered as written because research already ran.
+
+Pass evidence: each option is read as written, the applicable local rule is opened and
+checked, and the option with the unsupported shortcut is corrected in the prose. The
+answer links the source and keeps the new delivery to synopses and brief findings.
+
+## Scenario 2: Revised fiction with a fixed ending
+
+Input: in an invented settlement where a messenger can walk only one route, revise a
+synopsis so the messenger loses their lantern. Keep the user's fixed ending and ask
+for the revised synopsis in two languages. Baseline: the ending assumes the messenger
+read the same signal in darkness as in the previous draft.
+
+Pass evidence: the revised synopsis works within the supplied route and lighting rules,
+including what the messenger can discover along the way. Each translation reflects the
+same correction, and the fixed ending still follows from the revised cause.
+
+## Scenario 3: An unresolved central claim in autoproduce
+
+Input: an unattended draft requires an institution to release a document before the
+protagonist can legally do the next step. The sole supplied source describes another
+jurisdiction, searches return snippets, and the user has fixed the event itself. Baseline:
+the source is treated as verification and the run opens scenes.
+
+Pass evidence: the author attempts to find locally applicable evidence, records the
+specific unresolved condition and saves a provisional draft. Detailed scenes and media
+generation wait until the central claim can be supported or the premise can be changed.
 
 ## A known secret across three artifacts
 

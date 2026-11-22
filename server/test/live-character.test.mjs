@@ -1,3 +1,5 @@
+import { PassThrough } from 'node:stream';
+import { listenChatInput } from '../dist/live-character.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ChatQueue, mouthLevel, liveConfig, RATE, synthesize } from '../dist/live-character.js';
@@ -16,6 +18,23 @@ test('chat deduplicates per platform, caps pending events and refuses malformed 
   assert.deepEqual(q.next(), first);
   assert.equal(q.next().source, 'tiktok');
 });
+test('chat resumes the paused credential input and detaches when the session ends', async () => {
+  const input = new PassThrough();
+  input.pause();
+  const queue = new ChatQueue();
+  const stop = listenChatInput(input, source => source === 'tiktok', queue);
+  const write = (source, id) => input.write(JSON.stringify({ source, id, text: 'hello' }) + '\n');
+  write('youtube', 'wrong-room');
+  write('tiktok', 'viewer-1');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(queue.next()?.id, 'viewer-1');
+  stop();
+  write('tiktok', 'after-session');
+  assert.equal(input.isPaused(), true);
+  assert.equal(queue.pending, 0);
+  input.destroy();
+});
+
 test('audio frame loudness drives multiple distinct mouth positions', () => {
   const levels = [0, 800, 2300, 11000].map((v) => {
     const b = Buffer.alloc(2000);
@@ -74,4 +93,19 @@ test('a prepared question matches NFC case and punctuation, free-form questions 
   const config = { reactions: [{ questions: ['Chào Mochi!'], answer: 'Chào bạn!' }] };
   assert.equal(preparedReply(config, 'chào Mochi'.normalize('NFD')), 'Chào bạn!');
   assert.equal(preparedReply(config, 'Chào Mochi! Áo bạn màu gì?'), undefined);
+});
+
+test('room topic opens in Korean with a comment invitation and audience-wide welcome clips', async () => {
+  const {broadcastLines} = await import('../dist/live-character.js');
+  const raw = {project:'/tmp',channel:'test',character:'host',chatModel:'local',topic:'잠들기 전에 읽는 책'};
+  const cfg = liveConfig.parse(raw);
+  assert.equal(cfg.maxConcurrentVideos,3);
+  assert.equal(liveConfig.parse({...raw,maxConcurrentVideos:1}).maxConcurrentVideos,1);
+  assert.equal(liveConfig.safeParse({...raw,maxConcurrentVideos:0}).success,false);
+  const lines = await broadcastLines(cfg, {language:'ko-KR'});
+  assert.ok(lines.opening.includes(raw.topic) && lines.opening.includes('댓글'));
+  assert.ok(lines.standby.includes('안녕하세요. 지금 입장하신 분들 환영해요.'));
+  assert.equal(new Set(lines.standby).size,2);
+  const legacy = {...raw,topic:undefined,opening:'Welcome back.',standbyLines:['Welcome.','Please join us.']};
+  assert.deepEqual(await broadcastLines(legacy,{language:'en'}),{opening:legacy.opening,standby:legacy.standbyLines});
 });

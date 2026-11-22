@@ -4021,6 +4021,22 @@ See [situations](audience-sound/index.md) and [production timing](../../produce/
 
 ## Scene video direction
 
+Before composing shot images, use `story_scene.directionDefaults` on the scene. Each field is optional. For example:
+
+```js
+directionDefaults: {
+  camera: "camera.static",
+  axis: "Keep the camera on the window side of the table.",
+  continuity: "The sealed envelope is beside the brass lamp.",
+  lighting: "Late afternoon light enters through the window.",
+  attention: "Follow the unopened seal, then the witness's reaction."
+}
+```
+
+Use a movement ID from the film technique catalogue. Leave a shot’s move unset to inherit the default. To restore inheritance on an existing shot, call `shot_icons` with `move:null`. For a single dolly, set that shot’s `shot_icons.move` with its speed and target. The next shot inherits the scene default again. Describe each move once. Existing free-text `videoDirection.camera` supplies the camera default when the scene has no catalogue choice. A shot's own movement, `space.line`, `space.light` or `videoDesign.continuity` takes precedence for that attribute. An explicit axis crossing establishes the new side for following shots. The review page labels each icon with its scope. Location, light and spatial continuity inform the shot images. The scene request carries shared direction once and puts exceptions in their shot intervals.
+
+A shot's rack-focus path, shallow-focus subject or explicit opening view supplies its own attention cue. The next shot resumes the scene subject unless it has a cue of its own. The closing-state icon and video request also read `visual.frames.endState` when the shot has no separate ending in its video direction.
+
 Save `videoDirection` in `STRUCTURE.scenes[]` with `story_scene`. Its fields use English. Keep the original spoken text on the ordered shot cards.
 
 ```js

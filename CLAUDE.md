@@ -2,6 +2,22 @@
 
 Channel-based short-form/long-form content pipeline Claude Code plugin.
 
+## Contribution language (user directive, 2026-11-22)
+
+Use English for repository contributions and GitHub communication, including
+documentation, code comments, commit messages, issue and discussion posts, pull
+request titles and descriptions, reviews, and replies. Follow
+[the contributor style guide](CONTRIBUTING.md#style) for language-specific materials.
+Use the user's language in direct conversations with them.
+
+## Character live start (owner directive, 2026-11-22)
+
+Before broadcasting, ask whether to start when the spoken opening, first topic segment, two spoken welcomes and ten moving standby clips are ready, show a local preview first,
+or cancel. Honor the answer for that session. Use a calm fixed shot. Send the host portrait, selected voice sample and exact dialogue
+to GenAI image-to-video with MSR conditioning. Play the generated voice and picture together at 720×1280. Do not offer an upscale, a dance
+loop or a separate mouth composite. A user who asks for the watch link while generation is running
+gets the reserved unlisted room and its actual status. Generate 3–5 second listening clips for the broadcast concept on the production GPU. Anchor both ends to the same shot. Shuffle the standby pool and avoid a repeat across shuffles. Interrupt standby on the first frame with ready speech. Play an on-air utterance through its last sample. Generate the next segment during playout from the current line, recent answers and real chat. Use the reserved topic in the opening and invite viewers to comment. While the room is live, rotate welcomes suitable for everyone and self-contained host lines while new videos render. Give ready viewer answers the next sentence boundary. Limit concurrent video requests with `maxConcurrentVideos` (default 3), prioritize viewer jobs and drop stale host results when the conversation changes. Replace held standby shots before ingest. See [Character LIVE](skills/live-character/SKILL.md).
+
 ## Local GenAI routing (owner directive, 2026-11-07)
 
 `/Volumes/data/story/insight` uses local GenAI (`http://127.0.0.1:18081`) for
@@ -37,6 +53,16 @@ Carry costly choices, motivated secrets, competing claims and changing alliances
 synopsis into acted scenes and visible storyboard evidence. Use `story-interest.md` as
 guidance, without new score gates or compulsory twists. Synopsis-only requests stop at prose;
 they do not create episode assets. Existing cast, calendar, narrator and ending rules hold.
+
+## Synopsis reality check (user directive, 2026-11-22)
+
+After writing or revising a synopsis, always run the
+[synopsis reality check](skills/storyboard/references/synopsis-reality-check.md) before
+delivery or scene development, including synopsis-only and unattended work. Verify the
+facts and practical conditions the plot depends on for its place and period. Check invented
+mechanisms against the established world. Apply corrections to the synopsis itself and
+record the evidence and any remaining uncertainty. If a central event still depends on an
+unverified assumption, keep the synopsis provisional and pause its downstream production.
 
 ## Story language (user directive, 2026-11-18)
 
@@ -506,11 +532,9 @@ family. Wrapping a phenomenon up in a single verb is narration-style prose — a
 Name the subject and write concretely instead — "근거를 남긴다" → "근거를 적어 둔다",
 "추천이 갈린다" → "미용실마다 다른 색을 권한다", "둘로 나뉜다" → "두 갈래다".
 
-**The scope isn't just content copy** — skill docs, code comments, tool descriptions,
-published HTML, commit messages, user responses, all of it. `check-style.py` flags D8
-as an S1 finding on content copy; S1 findings are suggestions, never execution gates
-(2026-10-18). **No checker runs on docs and comments**, so the writer has to hold the
-line. Run this scan when writing or editing a doc:
+Apply D8 wherever this project calls for authored Korean prose, including content
+copy and replies to users. `check-style.py` flags D8 as an S1 finding on content copy.
+S1 findings are suggestions (2026-10-18). Run this scan when writing or editing a doc:
 
 ```bash
 python3 - <<'PY'

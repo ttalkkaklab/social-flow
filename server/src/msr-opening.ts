@@ -1,3 +1,4 @@
+import { createRequire } from 'node:module';
 import { z } from 'zod';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 
@@ -10,6 +11,12 @@ export const openingPositionsSchema = z.array(z.object({
 export type OpeningPosition = z.infer<typeof openingPositionsSchema>[number];
 
 const sceneText = z.string().trim().min(1).refine(value => !nonEnglishOutsideQuotes(value), 'Write scene direction in English');
+const load = createRequire(import.meta.url);
+export const sceneDefaultsSchema = z.object({
+  camera: sceneText.refine(id => !!load('../../skills/storyboard/references/scene-direction.js').movement(id), 'Choose a movement ID from the camera catalogue').optional(),
+  axis: sceneText.optional(), continuity: sceneText.optional(), lighting: sceneText.optional(), attention: sceneText.optional(),
+}).strict().describe('Optional defaults before shot images: camera movement ID, screen axis, persistent world relationships, lighting and attention across cuts. Shot choices override the matching default.');
+export type SceneDefaults = z.infer<typeof sceneDefaultsSchema>;
 const frame = z.number().int().nonnegative();
 export const shotTimelineSchema = z.object({
   startFrame: frame, endFrame: frame.describe('Exclusive end, in zero-based scene frames.'),

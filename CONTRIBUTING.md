@@ -1,13 +1,14 @@
 # Contributing to social-flow
 
-Thanks for taking a look. This is a working tool before it is a library, so the
-short version is: keep the pipeline honest, and don't break the gates.
+[Choose a good first issue](https://github.com/ttalkkaklab/social-flow/contribute). Each one names the files to open and an outcome you can check locally. Comment on the issue to claim it or ask a question. Send your pull request to `dev` and link the issue so readers can follow the change.
+
+If you work on video or speech adapters and want to tackle a larger change, [open an issue](https://github.com/ttalkkaklab/social-flow/issues) with the model name, a link to its API contract and one input/output example with credentials removed. Zeans maintains the plugin at [Ttalkkak Lab](https://github.com/ttalkkaklab).
 
 ## Getting set up
 
 ```bash
 git clone https://github.com/ttalkkaklab/social-flow.git
-cd social-flow/server && npm install && npm run check
+cd social-flow/server && npm ci && npm run check
 ```
 
 `npm run check` builds the TypeScript and runs the tool contract tests. It makes no
@@ -19,7 +20,7 @@ Load your clone into Claude Code with `claude --plugin-dir /path/to/social-flow`
 ## The one build rule that trips people up
 
 `server/dist/` is committed on purpose. `.mcp.json` runs
-`${CLAUDE_PLUGIN_ROOT}/server/dist/index.js` directly with no build step, so an
+`${CLAUDE_PLUGIN_ROOT}/server/dist/bundle.js` directly with no build step, so an
 un-rebuilt dist means the installed plugin silently runs old code.
 
 **After changing anything in `server/src/`, run `npm run build` and commit
@@ -64,13 +65,17 @@ plus a self-test fixture that fails before your fix and passes after.
 
 ## Style
 
-Docs and comments are English. Code follows whatever the surrounding file already
-does — match the local idiom rather than importing your own.
+Write all new or revised contribution text in English. This includes documentation,
+code comments, commit messages, issue and discussion posts and replies, pull request
+titles and descriptions, review comments and replies, and release notes.
 
-Prose, in either language, reads like a colleague explaining something: say what
-happened, then why. No filler adjectives, no three-item lists as a reflex, no
-"comprehensive" or "seamless". Korean content copy has a machine gate for this; the
-docs rely on the writer.
+Use the intended language for localized strings, language-specific examples and test
+fixtures, and content the plugin produces for users. Keep skill trigger phrases and
+source quotations in their original language.
+
+Write like a colleague explaining something. Say what happened, then why. Skip
+filler adjectives, reflexive three-item lists, and words such as "comprehensive"
+or "seamless". Follow the surrounding code's conventions.
 
 ## Pull requests
 
@@ -122,6 +127,4 @@ for months.
   A flag to skip them turns the default into "ships whatever came out". If a gate is
   wrong, fix the rule and bring the fixture that proves it.
 
-**Response time.** Expect a reply within about a week. If a week passes with nothing,
-say so in the thread — that's a nudge, not a nag, and it's the fastest way to surface
-something that got missed.
+**First review.** We aim to acknowledge a first issue or pull request within 48 hours. That first reply can answer a question, confirm scope or say when a full review is likely. If we miss it, a follow-up in the same thread is welcome.

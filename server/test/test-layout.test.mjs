@@ -8,10 +8,8 @@ import path from 'node:path';
 const here = import.meta.dirname;
 const repo = path.resolve(here, '../..');
 
-// Checks that span the whole tool surface or the build, not one module.
-const CROSS_CUTTING = new Set(['contract', 'check-dist', 'bundle-parse', 'test-layout']);
-// Files other branches were editing on 2026-10-18; fold them into their module's file once those land.
-const PENDING = new Set(['visual-direction', 'film-techniques', 'automatic-production-guidance']);
+// Repository-wide contracts and the legacy visual-direction suite spanning chart rendering and assembly.
+const CROSS_CUTTING = new Set(['contract', 'check-dist', 'bundle-parse', 'test-layout', 'visual-direction']);
 
 function moduleNames() {
   const names = new Set(readdirSync(path.join(repo, 'server/src')).map(f => f.replace(/\.ts$/, '')));
@@ -26,6 +24,6 @@ test('every test file is named after the module it tests', () => {
   const orphans = readdirSync(here)
     .filter(f => f.endsWith('.test.mjs'))
     .map(f => f.slice(0, -'.test.mjs'.length))
-    .filter(name => !modules.has(name) && !CROSS_CUTTING.has(name) && !PENDING.has(name));
+    .filter(name => !modules.has(name) && !CROSS_CUTTING.has(name));
   assert.deepEqual(orphans, [], 'move these cases into server/test/<module>.test.mjs of the module they exercise');
 });

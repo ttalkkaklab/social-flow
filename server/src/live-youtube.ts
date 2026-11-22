@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { loadYoutubeClient, exchangeYoutubeAccessToken } from './sns-client.js';
 import { type LiveConfig, ChatQueue } from './live-character.js';
 
@@ -13,6 +14,7 @@ interface Stream {
   cdn: { ingestionInfo: { rtmpsIngestionAddress: string; streamName: string } };
 }
 export interface YoutubeReceipt {
+  topic?: string;
   channelId: string;
   marker: string;
   broadcastId?: string;
@@ -276,7 +278,7 @@ export class YoutubeChat {
     private api: Api,
     private id: string
   ) {}
-  async poll(queue: ChatQueue, observe?: (id: string, text: string, author?: string) => void) {
+  async poll(queue: Pick<ChatQueue, 'add'>, observe?: (id: string, text: string, author?: string) => void) {
     const data = await this.api<{
       items: { id: string; snippet: { type: string; displayMessage?: string; authorChannelId?: string } }[];
       nextPageToken: string;
@@ -290,7 +292,9 @@ export class YoutubeChat {
       if (['textMessageEvent', 'superChatEvent'].includes(message.snippet.type)) {
         if (message.snippet.displayMessage)
           observe?.(message.id, message.snippet.displayMessage, message.snippet.authorChannelId);
-        queue.add({ source: 'youtube', id: message.id, text: message.snippet.displayMessage });
+        const author = message.snippet.authorChannelId;
+        queue.add({ source: 'youtube', id: message.id, text: message.snippet.displayMessage,
+          ...(author && { speaker: 'yt-' + createHash('sha256').update(this.id).update(author).digest('hex').slice(0, 12) }) });
       }
     }
     this.cursor = data.nextPageToken;

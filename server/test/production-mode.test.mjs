@@ -176,6 +176,15 @@ test('stills_only accepts nine still cuts, keeps the four cost choices and prese
   withImport.SCENES[4].visual.reuse = { clip: 'clips/old.mp4' };
   assert.match(mode.check(withImport).join(), /stills_only plays no video at all/);
 });
+test('a no_video draft can omit style provenance and spending approval', () => {
+  const win = { PRODUCTION: { mode: 'no_video', videoBudgetUsd: 0, maxAttempts: 1, style: { preset: 'webtoon' } }, SCENES: [] };
+  const advice = [];
+  assert.deepEqual(runtimeMode.check(win, { draft: true, requireApproval: true, advice }), []);
+  assert.ok(advice.some(message => message.includes('PRODUCTION.style.selection')));
+  win.PRODUCTION.videoProvider = 'unknown';
+  assert.ok(runtimeMode.check(win, { draft: true }).some(message => message.includes('videoProvider')));
+});
+
 test('the production gate clears a stills_only board with no quote and refuses a video call', () => withBoard(({ board, save }) => {
   save(stillsBoard());
   const gate = production.check(board);

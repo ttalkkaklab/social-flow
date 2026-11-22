@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { loadYoutubeClient, exchangeYoutubeAccessToken } from './sns-client.js';
 export async function youtubeApi(channel) {
     const { client } = await loadYoutubeClient(channel);
@@ -238,7 +239,9 @@ export class YoutubeChat {
             if (['textMessageEvent', 'superChatEvent'].includes(message.snippet.type)) {
                 if (message.snippet.displayMessage)
                     observe?.(message.id, message.snippet.displayMessage, message.snippet.authorChannelId);
-                queue.add({ source: 'youtube', id: message.id, text: message.snippet.displayMessage });
+                const author = message.snippet.authorChannelId;
+                queue.add({ source: 'youtube', id: message.id, text: message.snippet.displayMessage,
+                    ...(author && { speaker: 'yt-' + createHash('sha256').update(this.id).update(author).digest('hex').slice(0, 12) }) });
             }
         }
         this.cursor = data.nextPageToken;

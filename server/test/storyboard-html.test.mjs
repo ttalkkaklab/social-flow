@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { mkdtempSync, readFileSync, writeFileSync, rmSync, existsSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { runInNewContext } from 'node:vm';
@@ -32,6 +32,112 @@ test('offline review shows the selected Veo asset slots before and after a tool 
   assert.equal(lane().slots, 3);
   video.model = 'veo-3.1-lite-generate-001';
   assert.equal(lane().slots, 0);
+});
+
+test('a scene owns one video prompt across its shots, with an ordered draft until a matching plan exists', () => {
+  const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
+  const functions = template.slice(template.indexOf('  function sceneNoteHead'), template.indexOf("  /* The user's yes"));
+  const first = { id: 's0001', duration: 2, timeline: { framing: 'Wide', action: 'Step left' },
+    visual: { bgPrompt: 'Paint the plaza', video: { prompt: 'Earlier single-shot prompt' } } };
+  const second = { id: 's0002', duration: 1, timeline: { action: 'Clap', transition: 'hard_cut' } };
+  const plan = { sceneNo: 1, shotIds: [first.id, second.id], prompt: 'Saved <take>', requestId: 'take-1', stale: false };
+  const context = { LANG: 'en', window: { VIDEO_PRODUCTION: { candidates: [plan] } },
+    grp: { scene: 1, items: [first, second].map((s, i) => ({ s, i })) }, sc: { videoDirection: { sound: 'Street noise' } },
+    first, WIDE: false, REF_LANES: {}, refLane: () => ({ name: 'Test model', slots: 0 }),
+    safeSrc: () => '', esc: s => String(s).replaceAll('<', '&lt;'),
+    T: { shotCap: n => 'Shot ' + n, sceneNamed: n => 'Scene ' + n }, DOC: {}, OFF_GLYPH: '' };
+  const render = expression => runInNewContext(functions + '\n' + expression, context);
+  const scene = () => render('sceneVideoPromptHtml(sc, grp)');
+  assert.match(scene(), /Saved request plan.*Request take-1<\/p><pre>Saved &lt;take><\/pre>/s);
+  for (const candidate of [{ ...plan, stale: true }, { ...plan, stale: null }, { ...plan, shotIds: [second.id, first.id] }]) {
+    context.window.VIDEO_PRODUCTION.candidates = [candidate];
+    const html = scene();
+    assert.match(html, /Storyboard draft.*Street noise.*Shot 1 · 0–2 s.*Step left.*Shot 2 · 2–3 s.*Clap/s);
+    assert.doesNotMatch(html, /<details/);
+    assert.doesNotMatch(html, /Saved &lt;take>/);
+  }
+  const notes = render('sceneNotesHtml(grp, "<b>Sound cues</b>", sceneVideoPromptHtml(sc, grp))');
+  assert.equal(notes.match(/role="tab"/g).length, 2);
+  assert.match(notes, /aria-controls="scene-notes-1-sound" aria-selected="true"/);
+  assert.match(notes, /role="tabpanel" id="scene-notes-1-sound"[^>]*><div[^>]*><b>Sound cues<\/b>/);
+  assert.match(notes, /role="tabpanel" id="scene-notes-1-prompt"[^>]* hidden>.*Street noise/s);
+  assert.doesNotMatch(render('sceneNotesHtml(grp, "Sound only", "")'), /role="tab"/);
+  const card = render('shotBodyHtml(first, [], true)');
+  assert.match(card, /Image generation details.*Paint the plaza.*Shot direction.*Step left/s);
+  assert.doesNotMatch(card, /Earlier single-shot prompt|>Prompt<|>Video prompt</);
+  assert.match(render('shotBodyHtml(first, [], false)'), /Earlier single-shot prompt/);
+});
+
+test('offline direction icons identify inherited shots and show the middle override in both languages', () => {
+  const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url),'utf8');
+  const source = template.slice(template.indexOf('  function directionAttributes'), template.indexOf('  function sceneVideoPromptHtml'));
+  const sc = {directionDefaults:{camera:'camera.static', lighting:'Window <light>', attention:'The clerk.'}, videoDirection:{emotion:'She relaxes.'}};
+  const cards = [{}, {visual:{camera:{movement:'dolly in',target:'the letter',speed:'slow'}, expression:{mina:'Narrowed eyes.'}}}, {}];
+  cards[1].shot = {techniques:[{id:'camera.rack-focus',from:'the ribbon',to:'the bell'}]};
+  cards[1].visual.frames = {mode:'first_last',endState:'The raven closes its claw.'};
+  cards[1].timeline = {action:'Inspect the parcel.'};
+  cards[1].visual.video = {promptSource:{action:'Press the signet into the wax.'}};
+  cards[1].shot.videoDesign = {motion:{beats:[{at:0.8,state:'A crack opens in the wax.'}]}};
+  cards[1].narration = [{id:'l1',speaker:'mina',delivery:'on_screen',tts:'Not yet.',acting:{
+    intent:'Hide the broken seal.',emotion:'Her fear subsides.',leadInSeconds:1.5,tailOutSeconds:0.75}}];
+  const direction = require('../../skills/storyboard/references/scene-direction.js'), film = require('../../skills/storyboard/references/film-techniques.js');
+  const rows = direction.resolve(sc,cards);
+  for (const lang of ['ko','en']) {
+    const context = {LANG:lang, sc, cards, rows, window:{SCENE_DIRECTION:direction,FILM_TECHNIQUES:film},
+      camIcon:id=>'<svg data-camera="'+id+'"></svg>', esc:s=>String(s).replaceAll('<','&lt;')};
+    const render = expr => runInNewContext(source+'\n'+expr,context);
+    const header = render('directionAttributes(sc,rows.defaults)');
+    assert.match(header,/data-camera="camera.static"/); assert.match(header,/Window &lt;light>/);
+    assert.match(header,/data-attribute="emotion"/);
+    const html = cards.map((_,i) => render('directionAttributes(sc,rows.shots['+i+'],cards['+i+'])'));
+    assert.equal(html.filter(value=>value.includes('camera.static')).length,2);
+    assert.match(html[1],/camera.dolly-in/); assert.match(html[1],/slow · the letter/);
+    assert.ok(html[1].includes(lang==='ko'?'샷 예외':'Shot override'));
+    assert.ok(html[2].includes(lang==='ko'?'씬 기본':'Scene default'));
+    assert.match(html[1],/data-attribute="expression"/);
+    assert.match(html[1],/data-attribute="end".*The raven closes its claw/);
+    assert.match(html[1],/data-attribute="action".*Inspect the parcel.*Press the signet/);
+    assert.match(html[1],/data-attribute="beats".*At 0.8 s into this shot: A crack/);
+    assert.match(html[1],/Hide the broken seal.*Her fear subsides.*Anticipation 1.5 seconds.*reaction 0.75 seconds/);
+    assert.match(html[1],/data-attribute="attention".*From the ribbon to the bell/);
+    assert.doesNotMatch(html[1],/The clerk/);
+    assert.match(html[2],/The clerk/);
+    assert.doesNotMatch(html[1],/camera.static/);
+    const still = render('directionAttributes(sc,rows.shots[0],cards[0],true)');
+    assert.match(still,/data-attribute="lighting"/);
+    assert.doesNotMatch(still,/data-attribute="camera"/);
+  }
+});
+
+test('a background export shows the saved scene prompt when the board matches and references are unchecked', t => {
+  const episode = mkdtempSync(join(tmpdir(), 'scene-prompt-export-'));
+  t.after(() => rmSync(episode, { recursive: true, force: true }));
+  const dir = join(episode, 'storyboard'), plans = join(episode, '.work/video-routing/plans');
+  mkdirSync(dir); mkdirSync(plans, { recursive: true });
+  const sc = { no: 1, videoDirection: { openingPositions: [], camera: 'Hold the wide shot.' } };
+  const s = { id: 's0001', scene: 1, duration: 2,
+    visual: { frames: { mode: 'first', start: 'start.png' }, video: { engine: 'veo', model: 'veo-3.1-fast-generate-001' } } };
+  writeFileSync(join(dir, 'scenes.js'), 'window.SCENES=' + JSON.stringify([s]) +
+    ';window.STRUCTURE=' + JSON.stringify({ scenes: [sc] }) + ';');
+  const revision = require('../../skills/_shared/video-selection.js').readVideoContext(episode, s.id, 1).revision;
+  const id = 'c'.repeat(64), prompt = 'First line\n  indentation and <camera> preserved.';
+  const plan = { id, episode, shotId: s.id, sceneNo: 1, shotIds: [s.id], requestId: 'saved-1',
+    inputs: { [join(dir, 'start.png')]: 'd'.repeat(64) }, contextRevision: revision, args: { prompt } };
+  const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
+  const source = template.slice(template.indexOf('  function sceneNoteHead'), template.indexOf('  function shotBodyHtml'));
+  function exportCard(record) {
+    writeFileSync(join(plans, id + '.json'), JSON.stringify(record));
+    require('../../skills/storyboard/references/video-production.js').write(episode);
+    const snapshot = readFileSync(join(dir, 'video-production-data.js'), 'utf8');
+    return runInNewContext(snapshot + source + '\nsceneVideoPromptHtml(sc, grp)', {
+      window: {}, sc, grp: { scene: 1, items: [{ i: 0, s }] }, LANG: 'en', T: { shotCap: n => 'Shot ' + n },
+      esc: value => String(value).replaceAll('<', '&lt;'),
+    });
+  }
+  assert.match(exportCard(plan), /Saved request · inputs unverified.*<pre>First line\n  indentation and &lt;camera> preserved\.<\/pre>/s);
+  const outdated = exportCard({ ...plan, contextRevision: 'older' });
+  assert.match(outdated, /Storyboard draft/);
+  assert.doesNotMatch(outdated, /First line/);
 });
 
 test('localized copy is escaped while media attributes and source stay unchanged', () => {
@@ -106,16 +212,55 @@ test('music lanes show one anchored span across scenes and label the score-free 
   const start = template.indexOf('  var cueAt = []');
   const source = template.slice(start, template.indexOf('  var seqNo =', start));
   const SCENES = [1, 2, 3].map(i => ({ id: 's000' + i }));
-  const context = { SCENES, MUSIC: { $timeline: [{ cue: 'piano', start: { shotId: 's0002', atSeconds: 0.8 }, end: { shotId: 's0003', atSeconds: 'end' } }] },
+  const context = { SCENES, copy: String, sceneNoteHead: (kind, title, status) => status || '', MUSIC: { $timeline: [{ cue: 'piano', start: { shotId: 's0002', atSeconds: 0.8 }, end: { shotId: 's0003', atSeconds: 'end' } }] },
     LANG: 'en', esc: value => String(value), T: {}, window: { STORY: { authoring: 'story-first' } } };
   assert.match(runInNewContext(source + '\nmusicLane([{i:0,s:SCENES[0]}])', context), /No score/);
   // A scene header passes its scene: silence nobody decided reads undecided, a decision shows its reason.
-  assert.match(runInNewContext(source + '\nmusicLane([{i:0,s:SCENES[0]}], {no:1})', context), /Music undecided/);
-  assert.match(runInNewContext(source + '\nmusicLane([{i:0,s:SCENES[0]}], {no:1,music:{decision:"none",reason:"only the line"}})', context), /No score — only the line/);
-  assert.match(runInNewContext(source + '\nmusicLane([{i:1,s:SCENES[1]}], {no:2,music:{decision:"score",reason:"regret"}})', context), /piano \(s0002 \+0.8s → s0003 end\) — regret/);
+  assert.match(runInNewContext(source + '\nmusicCard([{i:0,s:SCENES[0]}], {no:1})', context), /Music undecided/);
+  assert.match(runInNewContext(source + '\nmusicCard([{i:0,s:SCENES[0]}], {no:1,music:{decision:"none",reason:"only the line"}})', context), /No score.*only the line/);
+  assert.match(runInNewContext(source + '\nmusicCard([{i:1,s:SCENES[1]}], {no:2,music:{decision:"score",reason:"regret"}})', context), /Scored.*piano.*s0002 \+0.8s → s0003 end.*regret/);
   for (const index of [1, 2]) assert.match(runInNewContext(source + `\nmusicLane([{i:${index},s:SCENES[${index}]}])`, context), /piano \(s0002 \+0.8s → s0003 end\)/);
+  context.MUSIC.piano = { asset: 'piano' };
+  context.safeSrc = value => value;
+  context.window.REVIEW_SCORE_SOURCES = { piano: { asset: 'piano', href: '../../../assets/piano.wav' } };
+  context.MUSIC.$timeline[0].sourceStartSeconds = 4;
+  SCENES.forEach(s => { s.duration = 2; });
+  const sceneCard = (index) => runInNewContext(source + `\nmusicCard([{i:${index},s:SCENES[${index}]}], {}, 2)`, context);
+  assert.match(sceneCard(1), /0.8–2 s.*left:40%;width:60%/);
+  assert.match(sceneCard(2), /0–2 s.*left:0%;width:100%/);
+  assert.match(sceneCard(1), /data-length="1.2" data-skip="0" data-source-start="4"/);
+  assert.match(sceneCard(2), /data-length="2" data-skip="1.2" data-source-start="4"/);
+  assert.match(sceneCard(2), /<audio preload="metadata" src="\.\.\/\.\.\/\.\.\/assets\/piano.wav"/);
+  context.MUSIC.piano.asset = 'changed';
+  assert.doesNotMatch(sceneCard(2), /<audio /);
+  assert.doesNotMatch(sceneCard(0), /score-track/);
+  context.MUSIC.$timeline[0].end.atSeconds = 0;
+  assert.doesNotMatch(sceneCard(1), /Continues into next scene/);
+  assert.doesNotMatch(sceneCard(2), /score-track/);
+  context.MUSIC.$timeline[0].end.atSeconds = 'end';
+  context.MUSIC.$timeline[0].start.atSeconds = 2;
+  assert.doesNotMatch(sceneCard(1), /score-track/);
+  assert.doesNotMatch(sceneCard(2), /Continues from previous scene/);
   context.MUSIC.$timeline[0].start.atSeconds = 'end';
   assert.match(runInNewContext(source + '\nmusicLane([{i:1,s:SCENES[1]}])', context), /No score/);
+});
+
+test('offline score players resolve the assigned catalog asset and episode recording', t => {
+  const channel = mkdtempSync(join(tmpdir(), 'review-music-'));
+  t.after(() => rmSync(channel, {recursive:true,force:true}));
+  const episode = join(channel, 'episodes', 'one'), dir = join(episode, 'storyboard');
+  mkdirSync(dir, {recursive:true});
+  mkdirSync(join(channel, 'assets', 'music'), {recursive:true});
+  mkdirSync(join(episode, '.work'));
+  writeFileSync(join(channel, 'assets/catalog.md'), '| bgm | original | music/score #1.mp3 | |\n');
+  writeFileSync(join(channel, 'assets/music/score #1.mp3'), 'fixture');
+  writeFileSync(join(episode, '.work/bgm-turn.wav'), 'fixture');
+  const board = { MUSIC: { theme:{asset:'original'}, turn:{prompt:'A piano note'}, missing:{asset:'absent'} } };
+  const {content} = require('../../skills/storyboard/references/audience-review-data.js').exportData(board, dir, true);
+  const window = {}; runInNewContext(content, {window});
+  assert.equal(window.REVIEW_SCORE_SOURCES.theme.href, '../../../assets/music/score%20%231.mp3');
+  assert.equal(window.REVIEW_SCORE_SOURCES.turn.href, '../.work/bgm-turn.wav');
+  assert.equal(window.REVIEW_SCORE_SOURCES.missing, undefined);
 });
 
 test('the scene links its audience cue to the starting shot and distinguishes a silent choice from pending timing', () => {
@@ -129,14 +274,15 @@ test('the scene links its audience cue to the starting shot and distinguishes a 
   const window = { SCENES, AUDIENCE_SPOTTING: require('../../skills/storyboard/references/audience-spotting.js'),
     STRUCTURE: { scenes: [{ no: 1 }, { no: 2, audienceSound: { decision: 'use', reason: '<hold her gaze>' } },
       { no: 3, audienceSound: { decision: 'none', reason: 'Keep her breath.' } }, { no: 4 }] } };
-  const page = (i, labels) => runInNewContext(source + '\naudienceLane(audiencePlan.scenes[' + i + '])', {
-    SCENES, window, T: { audienceSound: labels, shotCap: n => 'Shot ' + n }, esc, copy: esc,
+  const page = (i, labels) => runInNewContext(source + '\naudienceCard(' + (i + 1) + ',audiencePlan.scenes[' + i + '])', {
+    SCENES, window, location: { href: 'file:///library/index.html?lang=en#scene-1' },
+    sceneNoteHead: (kind, title, status) => title + ' / ' + status, T: { audienceSound: labels, shotCap: n => 'Shot ' + n }, esc, copy: esc,
   });
-  assert.equal(page(3, words[0]), '');
+  assert.match(page(3, words[0]), /decision not recorded/);
   window.STORY = { audienceSoundVersion: 1 };
-  assert.match(page(3, words[1]), /관객용 심리음<\/strong> · 미정/);
-  assert.match(page(1, words[0]), /use cue — &lt;hold her gaze&gt; · <a href="#shot-1">Shot 1 · doubt · timing unverified<\/a>/);
-  assert.match(page(2, words[0]), /no cue — Keep her breath/);
+  assert.match(page(3, words[1]), /관객용 심리음 \/ 미정/);
+  assert.match(page(1, words[0]), /use cue.*&lt;hold her gaze&gt;.*<a href="file:\/\/\/library\/index.html\?lang=en#shot-1">Shot 1 · doubt · timing unverified<\/a>/);
+  assert.match(page(2, words[0]), /no cue.*Keep her breath/);
 });
 
 test('scene audition carries a bounded cue into the next scene and exports playable audio only for placed files', () => {
@@ -249,7 +395,7 @@ test('HTML creation and refresh keep one design while preserving episode metadat
   const dir = mkdtempSync(join(tmpdir(), 'sf-board-html-'));
   try {
     // No scenes, credentials, or network are required to create the review shell.
-    assert.equal(storyboardHtml(dir).length, 25 + FONT_ASSETS.length);
+    assert.equal(storyboardHtml(dir).length, 27 + FONT_ASSETS.length);
     assert.ok(existsSync(join(dir,'audience-review-data.js')));
     const file = join(dir, 'storyboard.html');
     const original = readFileSync(file, 'utf8');
@@ -278,7 +424,7 @@ test('check is read-only and malformed existing metadata is preserved for repair
   const root = mkdtempSync(join(tmpdir(), 'sf-board-html-check-'));
   try {
     const dir = join(root, 'storyboard');
-    assert.equal(storyboardHtml(dir, true).length, 25 + FONT_ASSETS.length);
+    assert.equal(storyboardHtml(dir, true).length, 27 + FONT_ASSETS.length);
     assert.equal(existsSync(dir), false);
     storyboardHtml(dir);
     const file = join(dir, 'storyboard.html');

@@ -1,10 +1,38 @@
+# social-flow
+
+Turn a story into a storyboard, a finished video, and a post you approve. social-flow is a Claude Code plugin built by Zeans at [Ttalkkak Lab](https://github.com/ttalkkaklab).
+
+[<img src="https://i.ytimg.com/vi/cO9SNY7vQRs/mqdefault.jpg" width="320" height="180" alt="Watch Mochi &amp; Bơ, episode 12 on YouTube">](https://www.youtube.com/shorts/cO9SNY7vQRs)
+
+[Watch Mochi & Bơ, episode 12](https://www.youtube.com/shorts/cO9SNY7vQRs) · A Vietnamese-language short made with social-flow. At a café across from the exam hall, Mochi is about to introduce her sister when Bơ asks to break up.
+
+## Quickstart
+
+With Claude Code and Node.js 20 or newer installed, run these in your terminal:
+
+```sh
+claude plugin marketplace add ttalkkaklab/social-flow
+claude plugin install social-flow@social-flow
+claude
+```
+
+In the new session, try `/social-flow:platform-guide What frame size should I use for YouTube Shorts?` This reads the bundled guide. To make an episode, start with `/social-flow:project-init` in your project directory.
+
+**Want to contribute?** [Pick a good first issue](https://github.com/ttalkkaklab/social-flow/contribute) or [reproduce a provider timeout locally](https://ttalkkaklab.github.io/social-flow/guides/image-request-recovery/). The timeout example runs with zero provider keys.
+
+[English docs](https://ttalkkaklab.github.io/social-flow/index.en.html) · [한국어 문서](https://ttalkkaklab.github.io/social-flow/) · [Other install options](#install) · [Contributing](CONTRIBUTING.md) · [Apache 2.0](LICENSE) · [CI](https://github.com/ttalkkaklab/social-flow/actions/workflows/check.yml)
+
+## How production works
+
+<details>
+<summary>Production order, shot direction and model settings</summary>
+
 Production follows this order: **project setup → characters (text + images) → story →
 each shot's characters and lines → icon attributes → props and backgrounds (text + images)
 → each shot's start (and end) image → video prompt → each shot's video after the user's
 approval**. Only the story order is enforced (user directive, 2026-10-31); reviews and
 Blender compositions run on request. See [the production order](skills/_shared/production-workflow.md).
 
-# social-flow
 
 [Content-led opening views](skills/storyboard/references/shot-view.md) connect the story's
 visible evidence to `shot_icons view`, the Blender camera and the image/video prompt. Explicit
@@ -85,6 +113,11 @@ Storyboard handles synopsis-only
 requests as prose and carries costly choices, secrets and their consequences into scenarios
 and shots. Research inspiration stays distinct from documented history; search volume is
 not a quality score. SerpApi setup verifies the MCP process with an actual fresh search.
+
+Every new or revised synopsis goes through a [reality check](skills/storyboard/references/synopsis-reality-check.md)
+before delivery or scene development. Storyboard and autoproduce verify the plot's material
+facts for its place and period, revise the prose, and record the sources and unresolved
+assumptions. A synopsis whose central event still depends on an unverified claim stays provisional.
 
 [Prop research](skills/storyboard/references/prop-research.md) precedes every prop's
 description and picture: the author looks up the real document or object, saves and views
@@ -190,13 +223,7 @@ episode snapshots its settings in `.work/model-settings.json`, so a later defaul
 change does not alter an episode already in progress. An unavailable model is
 reported instead of silently replaced. See [directory model settings](skills/_shared/model-settings.md).
 
-[![check](https://github.com/ttalkkaklab/social-flow/actions/workflows/check.yml/badge.svg)](https://github.com/ttalkkaklab/social-flow/actions/workflows/check.yml)
-[![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-&nbsp;·&nbsp; Docs: [English](docs/index.en.html) · [한국어](docs/index.html)
-
-A Claude Code plugin that runs a channel-based short-form/long-form content pipeline —
-**storyboard (plan only — nothing is generated) → per-platform video & text production →
-HITL-approved publishing** — over a `data/[channel]/episodes/[topic]/` directory tree.
+</details>
 
 A **channel** is one content brand you operate: one `data/` directory per channel, with
 tone, theme and pinned character voice IDs in `profile.md`, and publish targets, genre, models, visual style, video
@@ -1259,12 +1286,22 @@ routes; LTX is one adapter, not the common data model.
 
 ### Stream a character live
 
-YouTube and TikTok play a moving performance of the sheet character throughout the show. Select a chest-up reference video and the character's registered voice. The MuseTalk renderer shapes the moving face to each spoken reply on Apple Silicon.
-
-Use [live-character](skills/live-character/SKILL.md) for a bounded YouTube or TikTok LIVE session.
-It animates a character's saved portrait and voice, answers chat, and writes the actual encoded
-broadcast and event receipts. YouTube supports unlisted setup, native chat and an end-to-end probe.
-TikTok takes a separately approved RTMPS destination and can receive events from an authorized input.
+Before each broadcast, choose to go live when ready, preview, or cancel.
+Before ingest, prepare the spoken greeting, the first topic segment and ten moving 3–5 second listening clips.
+The producer uses the current line, recent exchanges and incoming chat to generate speech while the
+encoder plays. Selected viewer replies take priority. Standby yields on the next frame and each
+spoken segment plays through its last sample. Held standby shots are regenerated with the shared
+framing, light and background. GenAI image-to-video generates each 720×1280 speaking clip with
+its soundtrack. The host portrait pins the opening frame. An MSR subject reference pairs the
+portrait with the character’s saved voice sample. The encoder plays the model’s audio. YouTube supports unlisted rooms and native chat.
+See [Character LIVE](skills/live-character/SKILL.md) for configuration and recovery.
+Select destinations with repeatable `--platform youtube` and `--platform tiktok` options.
+TikTok accepts the server address and stream key issued by LIVE Center and reads viewer
+questions from TikFinity Desktop or an authorized stdin feed. The local TikTok receipt
+records encoder and chat evidence. Check public playback in the TikTok viewer.
+Platform adapters implement [the live session contract](server/src/live-platform.ts) and
+register in [the platform registry](server/src/live-platform-registry.ts). The shared runner
+owns media preparation, encoding and the reply queue.
 
 ### Inspect existing content
 

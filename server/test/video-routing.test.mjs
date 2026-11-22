@@ -7,6 +7,9 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { spawn, spawnSync, execFileSync } from 'node:child_process';
 import { planVideo, executeVideo, routeLegacyVideo, routingContext, approveVideo, readShotVideoTiming, videoStatus } from '../dist/video-routing.js';
+import { buildLtxApiBody } from '../dist/ltx-api-video.js';
+import { buildVeoBody } from '../dist/veo-video.js';
+import { buildGenaiVideoBody } from '../dist/astra-genai-video.js';
 import { VIDEO_ADAPTERS, videoCatalog, speechVideoCapabilities } from '../dist/video-registry.js';
 import { videoTransaction } from '../dist/video-state.js';
 import { recordVideoSubmission, recordVideoTokens } from '../dist/video-events.js';
@@ -43,6 +46,27 @@ function fixture(t, video = selection, auth = {}) {
  const state=()=>JSON.parse(fs.readFileSync(path.join(episode,'.work/video-routing/state.json')));
  return {root,episode,board,save,plan,execute,state};
 }
+test('single-shot scene keeps the performance and sound with and without frame-addressed planning', t => {
+  const f = fixture(t,{engine:'astra-genai',model:'ltx-2.5-22b-distilled',operation:'image',resolution:'576x1024'});
+  const shot = f.board.SCENES[0];
+  f.board.SCENES = [shot];
+  shot.scene = 1; shot.duration = 2;
+  shot.shot = {size:'cu',angle:'low',videoDesign:{before:'The envelope rests against the lamp.'}};
+  shot.visual.frames = {mode:'first',start:'start.png'};
+  shot.visual.video.promptSource = {action:'Flip the envelope.',sound:'Paper rustles.'};
+  shot.performance = [{kind:'action',text:'종을 친다.',videoDirection:'Tap the brass bell twice.',durationSeconds:1}];
+  fs.writeFileSync(path.join(f.episode,'storyboard/start.png'),png);
+  const sc = {no:1, directionDefaults:{camera:'camera.static', lighting:'Soft window light.'},
+    videoDirection:{openingPositions:[],emotion:'Doubt turns to hope.'}};
+  f.board.STRUCTURE = {scenes:[sc]};
+  for (const timed of [false,true]) {
+    if (timed) sc.videoDirection.fps = 24;
+    f.save();
+    const plan = planVideo({episode:f.episode,sceneNo:1,requestId:'single',args:{reserveUsd:0}},false);
+    for (const cue of ['Flip the envelope','Paper rustles','The envelope rests','Tap the brass bell twice','Soft window light','static frame','Close-up'])
+      assert.ok(plan.args.prompt.includes(cue), cue + ' timed=' + timed + ': ' + plan.args.prompt);
+  }
+});
 const result={content:[{type:'text',text:'fixture media'}]};
 test('managed voice guidance is sent once; changed dialogue or pinned voice invalidates the saved plan',async t=>{
  const f=fixture(t);const img=path.join(f.episode,'hero.png');fs.writeFileSync(img,'image');
@@ -775,9 +799,220 @@ test('sceneNo refuses a frame-addressed cut on I2V and preserves ordered dialogu
  });
  await assert.rejects(f.execute(plan,async()=>assert.fail('duplicate scene submission')), /ENOENT/);
  assert.equal(calls,1);
+ first.performance=[{kind:'dialogue',group:2,character:first.narration[1].speaker},
+   {kind:'action',text:'Touch the latch.'},{kind:'dialogue',group:1,character:first.narration[0].speaker}];
+ f.save();
+ const reordered=planVideo({...input,requestId:'reordered'},false);
+ const prompt=reordered.args.prompt;
+ assert.ok(prompt.indexOf(words[1])>=0 && prompt.indexOf(words[1])<prompt.indexOf(words[0]));
+ assert.match(prompt,/Beat 1 with line 2[\s\S]*Touch the latch[\s\S]*Beat 3 with line 1/);
+ f.board.STRUCTURE.scenes[0].directionDefaults={camera:'camera.static'};
+ first.narration[0].acting={direction:'Stammer on the first syllable.',vocal:'Whisper the answer.',tags:['sighs']};
+ f.save();
+ const directed=planVideo({...input,requestId:'scene-direction'},false);
+ assert.match(directed.args.prompt,/Stammer on the first syllable\. Whisper the answer\. sighs/);
  f.board.SCENES[0].narration[1].tts='다른 대사'; f.save();
  assert.throws(()=>approveVideo({episode:f.episode,planIds:[plan.id],request:'old'}),/stale/);
  await assert.rejects(f.execute(plan,async()=>assert.fail('stale scene submitted')),/stale/);
+});
+
+test('the same managed call maps storyboard frames to the saved LTX or Veo deployment', async t => {
+  const calls = [];
+  const oldKey = config.astraGenaiApiKey, oldUrl = process.env.ASTRA_GENAI_URL;
+  config.astraGenaiApiKey = 'fixture';
+  process.env.ASTRA_GENAI_URL = 'http://gateway.fixture.invalid';
+  t.after(() => {
+    config.astraGenaiApiKey = oldKey;
+    if (oldUrl === undefined) delete process.env.ASTRA_GENAI_URL;
+    else process.env.ASTRA_GENAI_URL = oldUrl;
+  });
+  t.mock.method(globalThis, 'fetch', async url => {
+    calls.push(String(url));
+    return Response.json({ voice_references: false });
+  });
+  const first = png;
+  const last = execFileSync('ffmpeg', ['-v','error','-f','lavfi','-i','color=red:s=2x2','-frames:v','1','-f','image2pipe','-vcodec','png','pipe:1']);
+  const variants = [
+    [{ engine:'veo', model:'veo-3.1-fast-generate-001', resolution:'720p' }, 'veo_img2video'],
+    [{ engine:'ltx-api', model:'ltx-2-5-pro', resolution:'1280x720' }, 'ltx_api_img2video'],
+    [{ engine:'astra-genai', model:'ltx-2.5-22b-distilled', resolution:'1792x1024' }, 'astra_genai_img2video'],
+  ];
+  for (const [video, tool] of variants) {
+    const f = fixture(t, video);
+    const shot = f.board.SCENES[0];
+    delete shot.visual.video;
+    shot.scene = 1;
+    shot.duration = 8;
+    shot.visual.frames = {mode:'first_last', start:'first.png', end:'last.png'};
+    shot.visual.video = {prompt:'An envelope opens.'};
+    f.board.STRUCTURE = {scenes:[{no:1,videoDirection:{emotion:'Calm.',action:'Open the envelope.',openingPositions:[],fps:24}}]};
+    for (const [file, bytes] of [['first.png',first], ['last.png',last]])
+      fs.writeFileSync(path.join(f.episode,'storyboard',file),bytes);
+    f.save();
+
+    for (const scope of [{sceneNo:1},{shotId:'s1'}]) {
+      if (scope.shotId) {
+        delete f.board.STRUCTURE.scenes[0].videoDirection.fps;
+        f.save();
+      }
+      const input = {episode:f.episode,...scope,requestId:'auto',maxCostUsd:3};
+      const response = await ROUTES.video_plan(input);
+      const plan = JSON.parse(response.content[0].text);
+      assert.equal(plan.tool, tool);
+      assert.equal(plan.sceneNo, scope.sceneNo);
+      assert.equal(plan.args.model, video.model);
+      assert.equal(plan.maxCostUsd, 3);
+      const first64 = first.toString('base64'), last64 = last.toString('base64');
+      if (tool === 'veo_img2video') {
+        const {instances:[instance], parameters} = buildVeoBody(plan.args);
+        assert.equal(instance.image.bytesBase64Encoded, first64);
+        assert.equal(instance.lastFrame.bytesBase64Encoded, last64);
+        assert.equal(parameters.durationSeconds, 8);
+      } else {
+        const wire = tool === 'ltx_api_img2video' ? buildLtxApiBody(plan.args).body : buildGenaiVideoBody(plan.args);
+        assert.equal(wire.image_uri, 'data:image/png;base64,' + first64);
+        assert.equal(wire.last_frame_uri, 'data:image/png;base64,' + last64);
+        assert.equal(wire.duration, 8);
+        assert.equal(wire.reserveUsd, undefined);
+      }
+      if (video.engine !== 'astra-genai') {
+        assert.equal(calls.length, 0);
+        assert.throws(() => planVideo({...input,maxCostUsd:0}), /video_quote_exceeded/);
+      }
+    }
+    shot.visual = {bg:'first.png',video:{lastImagePath:'last.png',prompt:'An envelope opens.'}};
+    f.save();
+    const gateway = video.engine === 'astra-genai';
+    const firstFile = path.join(f.episode, 'storyboard/first.png'), lastFile = path.join(f.episode, 'storyboard/last.png');
+    const explicitFirst = {[gateway ? 'imagePath' : 'sourceImagePath']:firstFile};
+    const explicitLast = {[gateway ? 'lastFramePath' : 'lastImagePath']:lastFile};
+    for (const [opening, args] of [['first.png',explicitFirst], ['first.png',explicitLast], [undefined,explicitFirst]]) {
+      shot.visual.bg = opening;
+      f.save();
+      const response = await ROUTES.video_plan({episode:f.episode,shotId:'s1',requestId:'legacy-pair',maxCostUsd:3,args});
+      const plan = JSON.parse(response.content[0].text);
+      if (video.engine === 'veo') {
+        const {instances:[wire]} = buildVeoBody(plan.args);
+        assert.equal(wire.image.bytesBase64Encoded, first.toString('base64'));
+        assert.equal(wire.lastFrame.bytesBase64Encoded, last.toString('base64'));
+      } else {
+        const wire = gateway ? buildGenaiVideoBody(plan.args) : buildLtxApiBody(plan.args).body;
+        assert.equal(wire.image_uri, 'data:image/png;base64,' + first.toString('base64'));
+        assert.equal(wire.last_frame_uri, 'data:image/png;base64,' + last.toString('base64'));
+      }
+    }
+    if (video.engine === 'veo') {
+      shot.visual.bg = 'first.png';
+      f.board.PRODUCTION.modelSettings = {overrides:[{scope:'episode',request:'Use Veo text.',video:{...video,operation:'text'}}]};
+      for (const end of ['last.png',undefined]) {
+        shot.visual.video.lastImagePath = end;
+        f.save();
+        for (const scope of [{shotId:'s1'}, {sceneNo:1}])
+          await assert.rejects(ROUTES.video_plan({episode:f.episode,...scope,requestId:'text-frames'}), /image_plan_unsupported/);
+      }
+    }
+  }
+  assert.ok(calls.some(url => url.endsWith('/v1/ltx/msr/capabilities')));
+});
+
+test('legacy subject paths feed the same Veo reference request for shots and scenes with or without fps', async t => {
+  const f = fixture(t, {engine:'veo', model:'veo-3.1-generate-001', resolution:'720p'});
+  const card = f.board.SCENES[0];
+  card.scene = 1;
+  card.duration = 8;
+  card.visual = {video:{referenceImagePaths:['ref.png'], prompt:'The animal turns its head.'}};
+  const direction = {emotion:'Calm.', action:'The animal turns its head.', openingPositions:[]};
+  f.board.STRUCTURE = {scenes:[{no:1, videoDirection:direction}]};
+  fs.writeFileSync(path.join(f.episode,'storyboard/ref.png'), png);
+  for (const [scope, fps] of [[{shotId:'s1'}], [{sceneNo:1}], [{sceneNo:1}, 24]]) {
+    direction.fps = fps;
+    f.save();
+    const response = await ROUTES.video_plan({episode:f.episode,...scope,requestId:'legacy-ref',maxCostUsd:4});
+    const plan = JSON.parse(response.content[0].text);
+    assert.equal(plan.tool, 'veo_reference');
+    const {instances:[instance],parameters} = buildVeoBody(plan.args);
+    assert.deepEqual(instance.referenceImages, [{ referenceType:'asset', image:{mimeType:'image/png', bytesBase64Encoded:png.toString('base64')} }]);
+    assert.equal(parameters.durationSeconds, 8);
+    assert.equal(instance.image, undefined);
+    assert.equal(instance.lastFrame, undefined);
+  }
+  delete direction.fps;
+  const guidance = ['Preserve the rabbit seal on the envelope.', 'Keep the red wax seal.', 'Do not copy the blue background.'];
+  const legacyVisual = card.visual;
+  card.visual = {frames:{mode:'reference'},references:[{id:'envelope',path:'ref.png',role:'prop',use:'video',
+    purpose:guidance[0],preserve:[guidance[1]],avoid:[guidance[2]]}],video:{prompt:'The envelope opens.'}};
+  for (const [scope, fps] of [[{shotId:'s1'}], [{sceneNo:1}], [{sceneNo:1},24]]) {
+    direction.fps = fps;
+    f.save();
+    const response = await ROUTES.video_plan({episode:f.episode,...scope,requestId:'envelope',maxCostUsd:4});
+    const plan = JSON.parse(response.content[0].text);
+    const [instance] = buildVeoBody(plan.args).instances;
+    assert.equal(instance.referenceImages[0].image.bytesBase64Encoded,png.toString('base64'));
+    for (const words of guidance) assert.equal(instance.prompt.split(words).length - 1, 1, words);
+    if (fps) assert.equal(plan.imageBindings[0].parameter, 'referenceImagePaths[0]');
+  }
+  card.visual = legacyVisual;
+  delete direction.fps;
+  f.board.SCENES[1].transition = 'dissolve';
+  const structured = {frames:{mode:'reference'}, references:[{id:'animal', path:'ref.png', role:'character', use:'video', purpose:'The animal.'}], video:{prompt:card.visual.video.prompt}};
+  for (const visual of [card.visual, structured]) {
+    card.visual = visual;
+    f.save();
+    await assert.rejects(ROUTES.video_plan({episode:f.episode,shotId:'s1',requestId:'dissolve',maxCostUsd:4}), /video_duration_exceeded: s1 needs 8\.4s/);
+  }
+  delete f.board.SCENES[1].transition;
+  const refs = ['characters/a/face.png','characters/b/face.png'];
+  for (const ref of refs) {
+    const file = path.join(f.episode,'storyboard',ref);
+    fs.mkdirSync(path.dirname(file), {recursive:true});
+    fs.writeFileSync(file, png);
+  }
+  card.visual = {video:{referenceImagePaths:refs, prompt:'The animal turns.'}};
+  for (const [scope, fps] of [[{shotId:'s1'}], [{sceneNo:1},24]]) {
+    direction.fps = fps;
+    f.save();
+    const call = ROUTES.video_plan({episode:f.episode,...scope,requestId:'different-subjects',maxCostUsd:4});
+    if (scope.shotId) await assert.rejects(call, /same subject/);
+    else {
+      const refusal = await call;
+      assert.equal(refusal.isError, true);
+      const detail = JSON.parse(refusal.content[0].text);
+      assert.equal(detail.executable, false);
+      assert.ok(detail.missing.some(issue => issue.reason.includes('same subject')));
+    }
+  }
+});
+
+test('Veo matches submitted references to registered subjects across shots, timed scenes and raw arguments', async t => {
+  const f = fixture(t, {engine:'veo',model:'veo-3.1-generate-001',resolution:'720p'});
+  f.board.SB_DOC = {props:[{id:'clock',imageUrl:'clock.png',references:[{path:'clock-side.png'}]},
+    {id:'phone',imageUrl:'phone.png'}]};
+  const card = f.board.SCENES[0];
+  Object.assign(card, {scene:1,duration:8});
+  card.visual = {frames:{mode:'reference'},video:{prompt:'The clock ticks.'}};
+  const direction = {emotion:'Calm.',action:'The clock ticks.',openingPositions:[]};
+  f.board.STRUCTURE = {scenes:[{no:1,videoDirection:direction}]};
+  const dir = path.join(f.episode,'storyboard');
+  for (const file of ['clock.png','clock-side.png','phone.png']) fs.writeFileSync(path.join(dir,file),png);
+  fs.symlinkSync('clock-side.png',path.join(dir,'side-alias.png'));
+  const input = {episode:f.episode,requestId:'prop-identity',maxCostUsd:4};
+  const refs = paths => paths.map((file,i) => ({id:'view-'+i,path:file,role:'prop',use:'video',purpose:'Match this view.'}));
+  for (const [scope,fps] of [[{shotId:'s1'}],[{sceneNo:1},24]]) {
+    direction.fps = fps;
+    card.visual.references = refs(['clock.png','side-alias.png']);
+    f.save();
+    const ok = await ROUTES.video_plan({...input,...scope});
+    const [instance] = buildVeoBody(JSON.parse(ok.content[0].text).args).instances;
+    assert.equal(instance.referenceImages.length,2);
+    card.visual.references = refs(['side-alias.png','phone.png']);
+    f.save();
+    await assert.rejects(ROUTES.video_plan({...input,...scope}), /same subject/);
+  }
+  delete direction.fps;
+  card.visual = {video:{prompt:'Show the subject.'}};
+  f.save();
+  await assert.rejects(ROUTES.video_plan({...input,shotId:'s1',operation:'reference',
+    args:{referenceImagePaths:['storyboard/clock.png','storyboard/phone.png']}}), /same subject/);
 });
 
 test('Google Cloud Veo uses saved settings, model-specific budgets, voice policy and polling recovery', async t => {
