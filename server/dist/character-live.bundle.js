@@ -25898,7 +25898,7 @@ import { spawn as spawn2 } from "node:child_process";
 import { resolve as resolve4, join as join6 } from "node:path";
 import { mkdirSync as mkdirSync6, readFileSync as readFileSync7, writeFileSync as writeFileSync6, appendFileSync, renameSync as renameSync4 } from "node:fs";
 import { randomUUID as randomUUID6 } from "node:crypto";
-import { setTimeout as sleep3 } from "node:timers/promises";
+import { setTimeout as sleep4 } from "node:timers/promises";
 
 // src/live-character.ts
 import { mkdirSync, readFileSync as readFileSync3, realpathSync, renameSync, writeFileSync } from "node:fs";
@@ -31433,6 +31433,7 @@ import { createHash as createHash5, randomUUID as randomUUID3 } from "node:crypt
 import * as fs3 from "node:fs";
 import * as path5 from "node:path";
 import { execFileSync } from "node:child_process";
+import { setTimeout as sleep3 } from "node:timers/promises";
 
 // src/routing-files.ts
 import * as fs2 from "node:fs";
@@ -32008,10 +32009,13 @@ async function getGenaiVideoStatus(input, planned, binding) {
   try {
     fs3.writeFileSync(temp, bytes, { flag: "wx", mode: 384 });
     checkOutput(temp, receipt.expected ?? planned, receipt.operation === "msr" || receipt.operation === "scene-to-video");
-    if (fs3.existsSync(receipt.videoPath)) {
+    try {
+      fs3.linkSync(temp, receipt.videoPath);
+    } catch (error) {
+      if (error.code !== "EEXIST") throw error;
       if (createHash5("sha256").update(fs3.readFileSync(receipt.videoPath)).digest("hex") !== createHash5("sha256").update(bytes).digest("hex"))
         throw new Error("GenAI video output conflicts with download");
-    } else fs3.linkSync(temp, receipt.videoPath);
+    }
     atomicJson(input.receiptPath, { ...receipt, status: "completed", sha256: createHash5("sha256").update(bytes).digest("hex") });
   } finally {
     fs3.rmSync(temp, { force: true });
@@ -32156,13 +32160,31 @@ async function generateGenaiVideo(operation, input, signal) {
   const fingerprint = createHash5("sha256").update(JSON.stringify(body)).digest("hex");
   const videoPath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.mp4`, "video");
   const receiptPath = videoPath + ".astra-genai.json";
-  if (fs3.existsSync(receiptPath)) {
-    const previous = receiptSchema.parse(JSON.parse(fs3.readFileSync(receiptPath, "utf8")));
-    if (previous.baseUrl !== astraGenaiBaseUrl() || previous.operation !== operation || previous.fingerprint !== fingerprint || previous.videoPath !== videoPath)
-      throw new Error("GenAI output receipt conflicts with this request; use a distinct output path.");
-    if (!previous.jobId) throw new Error("GenAI submission identity is unknown; inspect usage before retrying.");
-    recordVideoSubmission(previous.jobId);
-  } else {
+  const finish = async () => {
+    const result = await pollGenaiJob(
+      () => getGenaiVideoStatus({ receiptPath, download: true }, msrOutputContract(operation, args)),
+      `GenAI video is still pending; recover using receiptPath ${receiptPath}, never resubmit.`,
+      signal
+    );
+    return { ...result, receiptPath };
+  };
+  async function followSubmission() {
+    const deadline = Date.now() + 12e4;
+    for (; ; ) {
+      signal?.throwIfAborted();
+      const previous = receiptSchema.parse(JSON.parse(fs3.readFileSync(receiptPath, "utf8")));
+      if (previous.baseUrl !== astraGenaiBaseUrl() || previous.operation !== operation || previous.fingerprint !== fingerprint || previous.videoPath !== videoPath)
+        throw new Error("GenAI output receipt conflicts with this request; use a distinct output path.");
+      if (previous.jobId) {
+        recordVideoSubmission(previous.jobId);
+        return finish();
+      }
+      if (!signal || Date.now() >= deadline) throw new Error("GenAI submission identity is unknown; inspect usage before retrying.");
+      await sleep3(250, void 0, { signal });
+    }
+  }
+  if (fs3.existsSync(receiptPath)) return followSubmission();
+  else {
     if (fs3.existsSync(videoPath)) throw new Error("GenAI output already exists");
     const tools = { "text-to-video": "astra_genai_text2video", "image-to-video": "astra_genai_img2video", "audio-to-video": "astra_genai_audio2video", msr: "astra_genai_msr" };
     await checkGenaiVideoOptions(tools[operation], args);
@@ -32191,7 +32213,16 @@ async function generateGenaiVideo(operation, input, signal) {
     const submitted = usesReferences || "keyframes" in body ? await prepareGenaiMsrSources(body) : body;
     const receipt = { version: 1, baseUrl: astraGenaiBaseUrl(), operation, fingerprint, videoPath, expected: msrOutputContract(operation, args), status: "submitting" };
     signal?.throwIfAborted();
-    fs3.writeFileSync(receiptPath, JSON.stringify(receipt), { flag: "wx", mode: 384 });
+    const claim = receiptPath + "." + randomUUID3() + ".tmp";
+    try {
+      fs3.writeFileSync(claim, JSON.stringify(receipt), { flag: "wx", mode: 384 });
+      fs3.linkSync(claim, receiptPath);
+    } catch (error) {
+      if (error.code !== "EEXIST") throw error;
+      return followSubmission();
+    } finally {
+      fs3.rmSync(claim, { force: true });
+    }
     let response;
     try {
       try {
@@ -32216,12 +32247,7 @@ async function generateGenaiVideo(operation, input, signal) {
     atomicJson(receiptPath, { ...receipt, jobId: accepted.id, status: "submitted" });
     recordVideoSubmission(accepted.id);
   }
-  const result = await pollGenaiJob(
-    () => getGenaiVideoStatus({ receiptPath, download: true }, msrOutputContract(operation, args)),
-    `GenAI video is still pending; recover using receiptPath ${receiptPath}, never resubmit.`,
-    signal
-  );
-  return { ...result, receiptPath };
+  return finish();
 }
 
 // src/live-idle.ts
@@ -32654,8 +32680,7 @@ var NativeTalk = class {
       this.release(motion);
       throw Error("GenAI speech and video durations differ");
     }
-    const pcm = Buffer.alloc(bytes);
-    audio.copy(pcm, 0, 0, Math.min(bytes, audio.length));
+    const pcm = audio.length < bytes ? Buffer.concat([audio, Buffer.alloc(bytes - audio.length)]) : audio;
     return { pcm, motion };
   }
   startSpeech() {
@@ -33341,7 +33366,7 @@ async function main() {
     return program.take(roomLive, Date.now() < acceptingUntil);
   };
   const wait = async (ms) => {
-    await sleep3(ms, void 0, { signal: controller.signal }).catch(() => {
+    await sleep4(ms, void 0, { signal: controller.signal }).catch(() => {
     });
   };
   const onLog = (kind, fields) => {
@@ -33596,7 +33621,7 @@ async function main() {
         for (let i = 0; i < 8; i++) {
           finalState = await closeBroadcast(api, receipt);
           if (finalState === "complete" || ["created", "ready"].includes(finalState) && !ingestLive) break;
-          await sleep3(2500);
+          await sleep4(2500);
         }
         log("youtube_final", {
           id: receipt.broadcastId,

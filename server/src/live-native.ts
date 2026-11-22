@@ -101,13 +101,12 @@ export class NativeTalk {
     if (!mouthLevel(audio)) throw Error('GenAI dialogue soundtrack is silent');
     const motion = await this.decode(file, signal);
     const bytes = motion.count * SAMPLES * 2;
-    // AAC priming or final packet padding can extend the decoded track beyond its MP4 edit.
+    // Preserve ending syllables. The encoder holds the final frame while trailing samples play.
     if (Math.abs(audio.length - bytes) > RATE * 2 * 0.1) {
       this.release(motion);
       throw Error('GenAI speech and video durations differ');
     }
-    const pcm = Buffer.alloc(bytes);
-    audio.copy(pcm, 0, 0, Math.min(bytes, audio.length));
+    const pcm = audio.length < bytes ? Buffer.concat([audio, Buffer.alloc(bytes - audio.length)]) : audio;
     return {pcm, motion};
   }
   startSpeech() { this.speechIndex = 0; this.shot = -1; }

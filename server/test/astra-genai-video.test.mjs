@@ -170,6 +170,25 @@ test('a rejected submission frees its output name; one status 5xx is polled thro
   await assert.rejects(generateGenaiVideo('text-to-video', args), error => error.terminal === true && /oom/.test(error.message));
   assert.equal(gets, 2);
 });
+test('two live preparations follow the same accepted job after racing to claim its filename', async t => {
+  const dir = setup(t), args = { ...base, outputPath: dir, filename: 'shared.mp4' };
+  let posts = 0;
+  globalThis.fetch = async (_url, options) => {
+    if (options.method === 'POST') {
+      posts++;
+      return Response.json({ id: 'shared-job' });
+    }
+    return Response.json({ id: 'shared-job', status: 'failed', error: 'terminal fixture' });
+  };
+  const run = () => generateGenaiVideo('text-to-video', args, new AbortController().signal);
+  const results = await Promise.allSettled([run(), run()]);
+  assert.equal(posts, 1);
+  for (const result of results) {
+    assert.equal(result.status, 'rejected');
+    assert.match(result.reason.message, /shared-job failed.*terminal fixture/);
+  }
+});
+
 test('completed LTX result downloads verified video and cached recovery needs no network', async t => {
   const dir = setup(t), source = path.join(dir, 'source.mp4');
   execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=s=64x64:d=0.1', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', source]);

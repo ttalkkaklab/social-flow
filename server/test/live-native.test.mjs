@@ -27,14 +27,15 @@ test('plays the generated soundtrack on the video clock and rejects a silent cli
   t.after(() => { render.close(); rmSync(dir,{recursive:true,force:true}); });
   const signal = new AbortController().signal;
   for (const [name, sound] of [['spoken','sine=frequency=510'],['silent','anullsrc']]) {
-    const file = join(dir,name+'.mp4');
-    execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=c=black:s=720x1280:r=24',
-      '-f','lavfi','-i',sound,'-t','0.25','-c:v','libx264','-c:a','aac',file]);
+    const file = join(dir,name+'.mov');
+    execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=c=black:s=720x1280:r=24:d=0.25',
+      '-f','lavfi','-i',sound+',atrim=duration=0.30','-c:v','libx264','-c:a','pcm_s16le',file]);
     if (name === 'silent') await assert.rejects(render.readSpeech(file,signal), /silent/);
     else {
       const {motion,pcm} = await render.readSpeech(file,signal);
       assert.equal(motion.count,6);
-      assert.equal(pcm.length,6*SAMPLES*2);
+      assert.equal(pcm.length,0.30*24000*2);
+      assert.ok(pcm.subarray(6*SAMPLES*2).some(Boolean));
       assert.ok(pcm.some(Boolean));
       render.release(motion);
     }
